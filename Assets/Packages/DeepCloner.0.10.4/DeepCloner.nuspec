@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>DeepCloner</id>
+    <version>0.10.4</version>
+    <title>DeepCloner</title>
+    <authors>force</authors>
+    <owners>force</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>images\deepcloner-nuget-ico.png</icon>
+    <projectUrl>https://github.com/force-net/DeepCloner</projectUrl>
+    <iconUrl>http://files.force-net.com/deepcloner-nuget-ico.png</iconUrl>
+    <description>Small Library for fast deep or shallow cloning .NET objects. It allows to copy everything and has a lot of performance tricks for fast copying.</description>
+    <summary>Small Library for fast deep or shallow cloning .NET objects.</summary>
+    <releaseNotes>Excluded default comparers from cloning. Main fix for .NET6 and HashSet&lt;string&gt; but some other cases can be fixed too.</releaseNotes>
+    <copyright>Copyright by Force 2016-2022</copyright>
+    <tags>.NET shallow deep clone DeepClone fast</tags>
+    <repository type="git" url="https://github.com/force-net/DeepCloner" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.0" />
+      <group targetFramework=".NETStandard1.3">
+        <dependency id="NETStandard.Library" version="1.6.1" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa0ba66953a7d8d438f8ddf781ef3065, type: 3}
+  m_Name: "\u51AC"
+  m_EditorClassIdentifier: 
+  season: 3
+  days:
+  - {fileID: 11400000, guid: cb3d6e7a7ab731040a5b1a0270b45db5, type: 2}
+  - {fileID: 11400000, guid: d562272b911dfdb489c9a487cdc2721c, type: 2}
+  - {fileID: 11400000, guid: 747afae42017afb48b158be75efc3b9c, type: 2}
+  - {fileID: 11400000, guid: fd808b8ce480e434db33551e9791ad97, type: 2}
+  - {fileID: 11400000, guid: 7ae46e625a502e2488b7cde003cb1b9a, type: 2}
+  - {fileID: 11400000, guid: 7a8388a4d4e891a41849a0d090641448, type: 2}
+  - {fileID: 11400000, guid: ea581cc81e7af5e4ca652f63de97a275, type: 2}
+  - {fileID: 11400000, guid: 2e3adf18c4ab8af479783958a34bb666, type: 2}
+  - {fileID: 11400000, guid: 7ff7946644e3d42498b23dcc1427e7ef, type: 2}
+  - {fileID: 11400000, guid: 193f019a39f07c94588039f5956f2a7c, type: 2}
+  gameDayDuration: 1440
+  durationInDays: 10
+  sunriseStartTime: 432.00003
+  sunriseEndTime: 576
+  sunsetStartTime: 864.00006
+  sunsetEndTime: 1008

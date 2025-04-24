@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa0ba66953a7d8d438f8ddf781ef3065, type: 3}
+  m_Name: "\u79CB"
+  m_EditorClassIdentifier: 
+  season: 2
+  seasonName: 
+  days:
+  - {fileID: 11400000, guid: 2fea2442822eab642988f4779dd9d6da, type: 2}
+  - {fileID: 11400000, guid: 1dea698fb34db4a44a2e7bb8e6f43ab8, type: 2}
+  - {fileID: 11400000, guid: 4605b18dd0c45e149bb226de5c9e925e, type: 2}
+  - {fileID: 11400000, guid: 9118ef36eb744ce489fcf2df9d82a221, type: 2}
+  - {fileID: 11400000, guid: dea877fff79489a418ec683a357131da, type: 2}
+  gameDayDuration: 1440
+  durationInDays: 5
+  sunriseStartTime: 360
+  sunriseEndTime: 504
+  sunsetStartTime: 935.99994
+  sunsetEndTime: 1080

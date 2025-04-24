@@ -1,0 +1,68 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ItemPicker : MonoBehaviour
+{
+    [Header("目标物品栏（按优先级排列）")]
+    public List<Inventory> AddTargetInventories = new List<Inventory>(); // 改为列表
+
+    public bool canPickUp = true;
+
+    public bool CanPickUp
+    {
+        get
+        {
+            // 所有目标背包都满了，才不能拾取
+            foreach (var inventory in AddTargetInventories)
+            {
+                if (inventory != null && !inventory.Inventory_Slots_All_IsFull)
+                {
+                    return canPickUp;
+                }
+            }
+            return false;
+        }
+
+        set => canPickUp = value;
+    }
+
+    private void Start()
+    {
+        // 若列表为空则尝试自动获取当前对象上的 Inventory
+        if (AddTargetInventories.Count == 0)
+        {
+            Inventory inv = GetComponent<Inventory>();
+            if (inv != null)
+            {
+                AddTargetInventories.Add(inv);
+            }
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (AddTargetInventories.Count == 0)
+        {
+            Debug.LogWarning("ItemPicker: AddTargetInventories is empty");
+            return;
+        }
+
+        var pickAble = other.GetComponentInParent<ICanBePickUp>();
+        if (pickAble != null)
+        {
+            ItemData itemData = pickAble.PickUp_ItemData;
+
+            // 遍历所有背包，找到第一个可以添加的
+            foreach (var inventory in AddTargetInventories)
+            {
+                if (inventory != null && inventory.CanAddTheItem(itemData))
+                {
+                    inventory.AddItem(pickAble.Pickup());
+                    return; // 添加成功后立即返回
+                }
+            }
+
+            Debug.Log("所有目标背包都满了，无法拾取物品。");
+        }
+    }
+}

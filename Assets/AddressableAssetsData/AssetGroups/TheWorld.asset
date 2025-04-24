@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: TheWorld
+  m_EditorClassIdentifier: 
+  m_GroupName: TheWorld
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 47b73bec22f621a498a1748af8eb38da
+  m_SerializeEntries:
+  - m_GUID: 008f201f47e93ad41bbc3043b64da12e
+    m_Address: Assets/_Prefabs/Bliuding
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 57a79a1f13f8d48488bb32d57e3eb309, type: 2}
+    - {fileID: 11400000, guid: b4e631e6ab9738d4f8001861ad86c5eb, type: 2}

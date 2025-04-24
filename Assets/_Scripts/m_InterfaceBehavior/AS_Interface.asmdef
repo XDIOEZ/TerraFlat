@@ -1,0 +1,17 @@
+{
+    "name": "AS_Interface",
+    "rootNamespace": "",
+    "references": [
+        "GUID:57a6d82589ae03c4cabdc058f719f231",
+        "GUID:b428d770df5b16d49a9a8fa3176ef68a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
