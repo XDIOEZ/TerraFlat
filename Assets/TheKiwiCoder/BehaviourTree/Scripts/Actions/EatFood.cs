@@ -24,7 +24,7 @@ public class EatFood : ActionNode
     {
         if(Time.time - StartEatingTime < EatingTime)
         {
-            Debug.Log("间隔时间未到");
+         //   Debug.Log("间隔时间未到");
             return State.Running;
         }
 
@@ -32,7 +32,7 @@ public class EatFood : ActionNode
         {
             foreach (string tag in item.Item_Data.ItemTags.Item_TypeTag)
             {
-                if (tag == "Food")
+                if (tag == "Food"&& item!= null)
                 {
                     if(Vector2.Distance(context.transform.position, item.transform.position) < EatingRange)
                     {

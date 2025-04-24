@@ -10,6 +10,8 @@ public class Move : ActionNode
     public float SpeedRate = 1f;
     public float max_StopTime = 1f;
     public float minDistance = 0.01f;
+    [Tooltip("向黑板处的目标移动")]
+    public bool MoveToBlackboard = true;
 
     private Vector3 startPos;
     private float startTime;
@@ -40,6 +42,7 @@ public class Move : ActionNode
 
     protected override State OnUpdate()
     {
+        context.mover.TargetPosition = blackboard.TargetPosition;
         context.mover.Move();
 
         float timeElapsed = Time.time - startTime;

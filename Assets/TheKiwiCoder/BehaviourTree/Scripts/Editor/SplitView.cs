@@ -1,9 +1,13 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine.UIElements;
 
-namespace TheKiwiCoder {
-    public class SplitView : TwoPaneSplitView {
-        public new class UxmlFactory : UxmlFactory<SplitView, TwoPaneSplitView.UxmlTraits> { }
+namespace TheKiwiCoder
+{
+    [UxmlElement]
+    public partial class SplitView : TwoPaneSplitView
+    {
+        // 你可以在这里添加属性，并使用 [UxmlAttribute] 特性标记它们
+        // 例如：
+        // [UxmlAttribute]
+        // public int someProperty { get; set; }
     }
 }

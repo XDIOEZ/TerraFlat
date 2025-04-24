@@ -17,7 +17,7 @@ public class ItemDetector : MonoBehaviour, IDebug, IDetector
     [SerializeField, BoxGroup("检测参数")]
     public LayerMask itemLayer;
 
-    [ShowNonSerializedField, BoxGroup("当前状态")]
+    [SerializeField, BoxGroup("当前状态")]
     private List<Item> currentItemsInArea = new List<Item>();
 
     [ShowNativeProperty, Tooltip("当前状态")]

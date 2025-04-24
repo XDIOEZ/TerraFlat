@@ -67,6 +67,7 @@ BoxCollider2D:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 338617639251475548}
   m_Enabled: 1
+  serializedVersion: 3
   m_Density: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -90,7 +91,8 @@ BoxCollider2D:
     m_Bits: 4294967295
   m_IsTrigger: 1
   m_UsedByEffector: 0
-  m_UsedByComposite: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
   m_Offset: {x: 0.07681656, y: 0.21907163}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
@@ -101,7 +103,6 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  serializedVersion: 2
   m_Size: {x: 0.43338203, y: 0.5822518}
   m_EdgeRadius: 0
 --- !u!1 &517253275583645208
@@ -122,7 +123,7 @@ GameObject:
   - component: {fileID: 1381026410777870504}
   - component: {fileID: 4832798682403932357}
   - component: {fileID: 563365390922364489}
-  - component: {fileID: 2218983451190473626}
+  - component: {fileID: 6961296228380297469}
   m_Layer: 9
   m_Name: Chicken
   m_TagString: Untagged
@@ -266,6 +267,7 @@ BoxCollider2D:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 517253275583645208}
   m_Enabled: 1
+  serializedVersion: 3
   m_Density: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -289,7 +291,8 @@ BoxCollider2D:
     m_Bits: 4294967295
   m_IsTrigger: 0
   m_UsedByEffector: 0
-  m_UsedByComposite: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
   m_Offset: {x: 0.007042438, y: 0.04902029}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
@@ -300,12 +303,11 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  serializedVersion: 2
   m_Size: {x: 0.2, y: 0.1}
   m_EdgeRadius: 0
 --- !u!50 &1919864907028793840
 Rigidbody2D:
-  serializedVersion: 4
+  serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -316,8 +318,8 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 1
-  m_LinearDrag: 2
-  m_AngularDrag: 0.05
+  m_LinearDamping: 2
+  m_AngularDamping: 0.05
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -387,7 +389,7 @@ MonoBehaviour:
   itemLayer:
     serializedVersion: 2
     m_Bits: 512
---- !u!114 &2218983451190473626
+--- !u!114 &6961296228380297469
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -396,42 +398,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 517253275583645208}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d7b55c7ecdb49a4a89fa5e6f9022861, type: 3}
+  m_Script: {fileID: 11500000, guid: 58c6f9b140a52a14881ec09eaebb66eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startWhenEnabled: 1
-  asynchronousLoad: 0
-  pauseWhenDisabled: 0
-  restartWhenComplete: 0
-  logTaskChanges: 0
-  group: 0
-  resetValuesOnRestart: 0
-  externalBehavior: {fileID: 11400000, guid: 3ec0ff76393307542822aff959a31f0f, type: 2}
-  mBehaviorSource:
-    behaviorName: Chicken
-    behaviorDescription: 
-    mTaskData:
-      types: []
-      parentIndex: 
-      startIndex: 
-      variableStartIndex: 
-      JSONSerialization: '{"EntryTask":{"Type":"BehaviorDesigner.Runtime.Tasks.EntryTask","NodeData":{"Offset":"(385.6474,-339.514282)"},"ID":0,"Name":"Entry","Instant":true},"RootTask":{"Type":"BehaviorDesigner.Runtime.Tasks.Repeater","NodeData":{"Offset":"(-1.65257835,101.277565)","WatchedFields":["count"]},"ID":1,"Name":"Repeater","Instant":true,"SharedIntcount":{"Type":"BehaviorDesigner.Runtime.SharedInt","Name":"","Int32mValue":16},"SharedBoolrepeatForever":{"Type":"BehaviorDesigner.Runtime.SharedBool","Name":"","BooleanmValue":false},"SharedBoolendOnFailure":{"Type":"BehaviorDesigner.Runtime.SharedBool","Name":"","BooleanmValue":false},"Children":[{"Type":"BehaviorDesigner.Runtime.Tasks.Sequence","NodeData":{"Offset":"(-86.05261,138.085724)"},"ID":2,"Name":"Sequence","Instant":true,"AbortTypeabortType":"None","Children":[{"Type":"UpDateDetector","NodeData":{"Offset":"(-172.631592,110)"},"ID":3,"Name":"Up
-        Date Detector","Instant":true},{"Type":"SetTagItemToTarget","NodeData":{"Offset":"(7.36841,110)"},"ID":4,"Name":"Set
-        Tag Item To Target","Instant":true,"List`1TargetTags":["Player"],"SharedVector2TargetPosition":{"Type":"BehaviorDesigner.Runtime.SharedVector2","Name":"\u76ee\u6807\u5730\u70b9","IsShared":true,"Vector2mValue":"(0,0)"},"SharedTransformTargetTransform":{"Type":"BehaviorDesigner.Runtime.SharedTransform","Name":"\u76ee\u6807\u5bf9\u8c61","IsShared":true}},{"Type":"MoveToTargetPosition","NodeData":{"Offset":"(200.515747,107.68573)"},"ID":5,"Name":"Move
-        To Target Position","Instant":true,"SharedVector2targetPosition":{"Type":"BehaviorDesigner.Runtime.SharedVector2","Name":"\u76ee\u6807\u5730\u70b9","IsShared":true,"Vector2mValue":"(0,0)"},"Mover_AImover":0}]}]},"Variables":[{"Type":"BehaviorDesigner.Runtime.SharedGameObject","Name":"\u81ea\u8eab","IsShared":true,"GameObjectmValue":1},{"Type":"BehaviorDesigner.Runtime.SharedVector2","Name":"\u76ee\u6807\u5730\u70b9","IsShared":true,"Vector2mValue":"(0,0)"},{"Type":"BehaviorDesigner.Runtime.SharedTransform","Name":"\u76ee\u6807\u5bf9\u8c61","IsShared":true}]}'
-      fieldSerializationData:
-        typeName: []
-        fieldNameHash: 
-        startIndex: 
-        dataPosition: 
-        unityObjects:
-        - {fileID: 8711103855526516452}
-        - {fileID: 517253275583645208}
-        byteData: 
-        byteDataArray: 
-      Version: 1.6.6
-  gizmoViewMode: 2
-  showBehaviorDesignerGizmo: 1
+  tree: {fileID: 11400000, guid: 568ced2485457af468d57bfee7e4cb8c, type: 2}
 --- !u!1 &1811850302451972931
 GameObject:
   m_ObjectHideFlags: 0
@@ -483,6 +453,9 @@ SpriteRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 0
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -520,7 +493,7 @@ SpriteRenderer:
   m_SpriteSortPoint: 1
 --- !u!95 &4823985352256617388
 Animator:
-  serializedVersion: 5
+  serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -534,6 +507,7 @@ Animator:
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1

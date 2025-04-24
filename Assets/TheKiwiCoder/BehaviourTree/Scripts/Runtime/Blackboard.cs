@@ -9,6 +9,11 @@ namespace TheKiwiCoder {
     // Add other properties here that make sense for your specific use case.
     [System.Serializable]
     public class Blackboard {
-        public Vector3 moveToPosition;
+        [Tooltip("目标位置")]
+        public Vector3 TargetPosition;
+        [Tooltip("行为树挂接对象")]
+        public GameObject BTUser;
+        [Tooltip("目标对象")]
+        public Transform target;
     }
 }

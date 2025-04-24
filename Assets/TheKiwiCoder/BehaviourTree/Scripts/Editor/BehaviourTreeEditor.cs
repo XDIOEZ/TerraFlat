@@ -116,7 +116,14 @@ namespace TheKiwiCoder {
         }
 
         private void OnDisable() {
-            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+
+            if (tree != null)
+            {
+                EditorUtility.SetDirty(tree);
+                AssetDatabase.SaveAssets();
+            }
+
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         }
 
         private void OnPlayModeStateChanged(PlayModeStateChange obj) {

@@ -26,6 +26,15 @@ public class GetItemPosition : ActionNode
     [Tooltip("逃跑方向的角度波动范围")]
     public float angleVariance = 30f;
 
+    [Tooltip("设置为黑板目标对象")]
+    public bool setBlackboardTarget = true;
+
+
+
+    [Tooltip("什么也不做")]
+    public bool doNothing = false;
+
+
     protected override void OnStart()
     {
     }
@@ -41,22 +50,38 @@ public class GetItemPosition : ActionNode
     }
     protected override State OnUpdate()
     {
+        
         if (context.itemDetector == null || context.itemDetector.CurrentItemsInArea == null)
             return State.Failure;
 
         Item targetItem = null;
-        Debug.Log("GetItemPosition OnDrawGizmos");
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
             if (item != null && ItemType.Exists(type => item.Item_Data.ItemTags.Item_TypeTag.Contains(type)))
             {
                 targetItem = item;
+                if (setBlackboardTarget)
+                {
+                    //设置黑板中的目标物品
+                    blackboard.target = targetItem.transform;
+                }
                 break;
             }
         }
 
         if (targetItem == null)
+        {
+            if (setBlackboardTarget)
+            {
+                blackboard.target = null;
+            }
             return State.Failure;
+        }
+            
+        if (doNothing)
+        {
+            return State.Success;
+        }
 
         // 将物品位置转换为Vector2（仅使用X和Y）
         Vector2 targetPosition = targetItem.transform.position;
@@ -65,7 +90,7 @@ public class GetItemPosition : ActionNode
         {
             case MovementBehaviorType.Chase:
                 // 直接将物品位置设为目标点
-                context.mover.TargetPosition = targetPosition;
+                blackboard.TargetPosition = targetPosition;
                 break;
 
             case MovementBehaviorType.Flee:
@@ -84,7 +109,7 @@ public class GetItemPosition : ActionNode
                 Vector2 escapePoint = currentPosition + rotatedDirection * runDistance;
 
                 // 设置移动目标为逃离点
-                context.mover.TargetPosition = escapePoint;
+                blackboard.TargetPosition = escapePoint;
                 break;
 
         }

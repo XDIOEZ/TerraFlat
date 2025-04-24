@@ -26,15 +26,15 @@ public class RandomPosition : ActionNode
     {
         if (worldType == WorldType.DDD)
         {
-            blackboard.moveToPosition.x = Random.Range(min.x, max.x);
-            blackboard.moveToPosition.z = Random.Range(min.y, max.y);
+            blackboard.TargetPosition.x = Random.Range(min.x, max.x);
+            blackboard.TargetPosition.z = Random.Range(min.y, max.y);
         }
         else if (worldType == WorldType.DD)
         {
            
-            blackboard.moveToPosition.x = Random.Range(min.x, max.x);
-            blackboard.moveToPosition.y = Random.Range(min.y, max.y);
-            context.gameObject.GetComponent<IMover>().TargetPosition = context.gameObject.GetComponent<IMover>().Position + blackboard.moveToPosition;
+            blackboard.TargetPosition.x = Random.Range(min.x, max.x);
+            blackboard.TargetPosition.y = Random.Range(min.y, max.y);
+            context.gameObject.GetComponent<IMover>().TargetPosition = context.gameObject.GetComponent<IMover>().Position + blackboard.TargetPosition;
         }
     
         return State.Success;

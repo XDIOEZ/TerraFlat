@@ -14,6 +14,7 @@ namespace TheKiwiCoder {
         public List<Node> nodes = new List<Node>();
         public Blackboard blackboard = new Blackboard();
 
+
         public Node.State Update() {
             if (rootNode.state == Node.State.Running) {
                 treeState = rootNode.Update();
@@ -88,13 +89,15 @@ namespace TheKiwiCoder {
         }
 
         public void DeleteNode(Node node) {
-            Undo.RecordObject(this, "Behaviour Tree (DeleteNode)");
-            nodes.Remove(node);
 
+            Undo.RecordObject(this, "Behaviour Tree (DeleteNode)");
+
+            nodes.Remove(node);
+          //  Debug.Log("Delete Node " + node.name);
             //AssetDatabase.RemoveObjectFromAsset(node);
             Undo.DestroyObjectImmediate(node);
 
-            AssetDatabase.SaveAssets();
+           // AssetDatabase.SaveAssets();
         }
 
         public void AddChild(Node parent, Node child) {
@@ -117,6 +120,34 @@ namespace TheKiwiCoder {
             }
         }
 
+        public Node CloneNode(Node original)
+        {
+            // 复制并初始化
+            var clone = Instantiate(original);
+            clone.guid = GUID.Generate().ToString();
+            // 加入列表与 Asset
+            nodes.Add(clone);
+#if UNITY_EDITOR
+            AssetDatabase.AddObjectToAsset(clone, this);
+            EditorUtility.SetDirty(this);
+#endif
+            return clone;
+        }
+
+        public Node CloneANode(Node original)
+        {
+
+            // 复制并初始化
+            var clone = Instantiate(original);
+            clone.guid = GUID.Generate().ToString();
+            // 加入列表与 Asset
+#if UNITY_EDITOR
+            AssetDatabase.AddObjectToAsset(clone, this);
+            EditorUtility.SetDirty(this);
+#endif
+            return clone;
+        }
+
         public void RemoveChild(Node parent, Node child) {
             if (parent is DecoratorNode decorator) {
                 Undo.RecordObject(decorator, "Behaviour Tree (RemoveChild)");
@@ -137,6 +168,25 @@ namespace TheKiwiCoder {
             }
         }
 #endif
+        public void RemoveAllChildren(Node node)
+        {
+            if (node is DecoratorNode decorator)
+            {
+                decorator.child = null;
+            }
+            else if (node is RootNode root)
+            {
+                root.child = null;
+            }
+            else if (node is CompositeNode composite)
+            {
+                composite.children.Clear();
+            }
+#if UNITY_EDITOR
+            EditorUtility.SetDirty(node);
+#endif
+        }
+
         #endregion Editor Compatibility
     }
 }

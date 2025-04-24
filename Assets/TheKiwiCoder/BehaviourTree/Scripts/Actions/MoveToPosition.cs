@@ -33,7 +33,7 @@ public class MoveToPosition : ActionNode
         // 设置移动速度
         context.agent.speed = speed;
         // 从黑板获取目标位置并设置为导航目的地
-        context.agent.destination = blackboard.moveToPosition;
+        context.agent.destination = blackboard.TargetPosition;
         // 设置是否更新旋转
         context.agent.updateRotation = updateRotation;
         // 设置加速度参数

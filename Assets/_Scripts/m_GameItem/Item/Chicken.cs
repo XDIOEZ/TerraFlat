@@ -15,7 +15,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public Hunger_Water Foods { get => Data.hunger; set => Data.hunger = value; }
     public float EatingSpeed { get => Data.attackSpeed; set => throw new System.NotImplementedException(); }
     public UltEvent OnNutrientChanged { get; set; }
- 
+
     #endregion
     #region 速度
     // 完善ISpeed接口实现，直接映射AnimalData中的速度属性
