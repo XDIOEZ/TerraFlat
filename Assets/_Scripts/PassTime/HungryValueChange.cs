@@ -46,7 +46,7 @@ public class HungryValueChange : MonoBehaviour, IFunction_ChangeHungryValue
         Debug.Log(rb);
         if (rb != null)
         {
-            Vector2 velocity = rb.linearVelocity;
+            Vector2 velocity = rb.velocity;
             float speed = velocity.magnitude;
 
             // �����ٶ�ÿ����1��λ����������������0.1��λ

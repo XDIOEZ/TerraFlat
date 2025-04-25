@@ -47,7 +47,7 @@ public class Ammo : Item,IColdWeapon
                 Debug.Log("Ammo hit " + _hit.collider.name);
             }
             //�ٶ�С��0.5ʱ����
-            if (rb2d.linearVelocity.magnitude < 0.5f)
+            if (rb2d.velocity.magnitude < 0.5f)
             {
                 Destroy(gameObject);
             }

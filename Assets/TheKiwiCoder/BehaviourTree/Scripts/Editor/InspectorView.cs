@@ -1,32 +1,31 @@
 using System;
-using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.UIElements;
 using UnityEditor;
 
 namespace TheKiwiCoder
 {
-    [UxmlElement]
-    public partial class InspectorView : VisualElement
+    public class InspectorView : VisualElement
     {
-        private Editor editor;
+        public new class UxmlFactory : UxmlFactory<InspectorView, VisualElement.UxmlTraits> { }
+
+        Editor editor;
 
         public InspectorView()
         {
-            // 构造函数中可以添加初始化代码
+
         }
 
         internal void UpdateSelection(NodeView nodeView)
         {
             Clear();
 
-            if (editor != null)
-            {
-                UnityEngine.Object.DestroyImmediate(editor);
-            }
+            UnityEngine.Object.DestroyImmediate(editor);
 
             editor = Editor.CreateEditor(nodeView.node);
             IMGUIContainer container = new IMGUIContainer(() => {
-                if (editor != null && editor.target != null)
+                if (editor && editor.target)
                 {
                     editor.OnInspectorGUI();
                 }

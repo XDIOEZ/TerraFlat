@@ -1,0 +1,1211 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8729773396850758339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2932073b8a6c3b34391576c45d359457, type: 3}
+  m_Name: Parallel(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: 1d8828ec3b47edb41a1a4a496cb33d6a
+  position: {x: -5.599991, y: -6.399048}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &-8187608375957282636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 482043abbf9230d4f9ae2ec563284d59
+  position: {x: 143.20007, y: 464.72006}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 1
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &-7017785880402448327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: a713620aa5dcfe145a16f248cf3ab856
+  position: {x: 343.19995, y: 125.60092}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &-5678598812584990032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b62b8264cbbd7ac4ea00b5c5f8b4f888, type: 3}
+  m_Name: GetItemPosition
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 3cd146a9ab59da24987cd49f72964c45
+  position: {x: -7.199936, y: 464.72006}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  ItemType:
+  - Player
+  BehaviorType: 1
+  minRunDistance: 3
+  maxRunDistance: 7
+  angleVariance: 30
+  setBlackboardTarget: 1
+  doNothing: 0
+--- !u!114 &-5561032898930740796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01950e697db72cf43a7b049d42fe127d, type: 3}
+  m_Name: node_ItemDetector(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: fc7a7ed99a59ea34880895655aef001d
+  position: {x: -272.15314, y: 659.19995}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+--- !u!114 &-5494173148220389092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 387c7cbf634ba7e4ca5318e1c5f2ae2d
+  position: {x: 600.00006, y: 303.99997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 0
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &-5268063916787451260
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeec1388a7dcd794fa29f155d7f1c1ea, type: 3}
+  m_Name: Move(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 90fe733140b9bc445ad4faad6bcd8c14
+  position: {x: 292.80014, y: 490.40002}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  SpeedRate: 1
+  max_StopTime: 1
+  minDistance: 0.01
+  MoveToBlackboard: 1
+--- !u!114 &-5184458804544539822
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae49782b327a97044b9c71d080b2742e, type: 3}
+  m_Name: GetItemPosition
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 7134c3e2d9a91c7429ee757e6c8df60e
+  position: {x: -52.79998, y: 317.60086}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  ItemType:
+  - Player
+  BehaviorType: 0
+  minRunDistance: 5
+  maxRunDistance: 10
+  angleVariance: 90
+  setBlackboardTarget: 1
+  doNothing: 0
+--- !u!114 &-4888733013524504962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6ba1e3a6525d8a4cb47809a94a63e43, type: 3}
+  m_Name: CustomRepeat
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: 60fe616863c84a842897da306c366fb0
+  position: {x: -231.99997, y: 319.12006}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  child: {fileID: 7047017990095040533}
+  repeatInterval: 0.5
+  startImmediately: 1
+  restartOnSuccess: 0
+  restartOnFailure: 0
+--- !u!114 &-4857182795792607677
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7de0254f5c4fa5342adba8283d79894b, type: 3}
+  m_Name: node_ItemDetector
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 466b9c70b9475eb4dba7ada726f6c28c
+  position: {x: -232.79999, y: 317.60086}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+--- !u!114 &-4451666277457492325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: 5bbd9987cd9d1ba4394a2e7b2cdca1d9
+  position: {x: -154.39995, y: 251.2}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &-4061498168913151366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 137021f2815d1974f87b71419c4501df, type: 3}
+  m_Name: ParallelSelector(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 59622a2b0e4ddd34aa9509dfa8db2382
+  position: {x: 0.000015258789, y: 184.42065}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &-4021533006016591115
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 163c147d123e4a945b688eddc64e3ea5, type: 3}
+  m_Name: RootNode(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 6c953130f12032749a7e516bd212112d
+  position: {x: -5.6000366, y: -172.8}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  child: {fileID: 0}
+--- !u!114 &-3236180722478939870
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fdcd7b0107c46e4d809f1298c5a7d8a, type: 3}
+  m_Name: ChangeDicRange
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 3a19ee4eee43626498c542e9b910407b
+  position: {x: 148.79988, y: 304.0009}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  BaseValue: 9
+  Offset: {x: 0, y: 0}
+  Duration: 0
+--- !u!114 &-2764119599675860402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 700f2134ac8804b43b7c18ff81e8bf53
+  position: {x: 451.1999, y: 304.0009}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 0
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &-2716029805465262399
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: a688448816ba1f447814ed92372c10b1
+  position: {x: 299.19998, y: 303.99997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 0
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &-2691504209538584037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b62b8264cbbd7ac4ea00b5c5f8b4f888, type: 3}
+  m_Name: GetItemPosition(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 0962aeebbb119214a82fe58beea0cc9d
+  position: {x: -122.399994, y: 659.2}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  ItemType:
+  - Player
+  BehaviorType: 1
+  minRunDistance: 3
+  maxRunDistance: 7
+  angleVariance: 30
+  setBlackboardTarget: 1
+  doNothing: 0
+--- !u!114 &-2442374599074289774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 3c14532a7f513904baa1558277c229ce
+  position: {x: 343.19995, y: 125.60092}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &-1422783139470495523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 137021f2815d1974f87b71419c4501df, type: 3}
+  m_Name: ParallelSelector
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: efbb7a291c0b011429fd4b9231d6d851
+  position: {x: 0.000061035156, y: 158.32}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: "\u8FFD\u51FB\u6216\u8005\u9003\u8DD1"
+  drawGizmos: 0
+  children:
+  - {fileID: -4888733013524504962}
+  - {fileID: 2460285833675123044}
+--- !u!114 &-916295046722563997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 24db616ce0d094e4bb36ac3f2d343893
+  position: {x: 600.00006, y: 303.99997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 0
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d285eb63c2cdd74180de7cfceaa96ad, type: 3}
+  m_Name: "\u8FFD\u51FB\u6216\u8005\u9003\u8DD1"
+  m_EditorClassIdentifier: 
+  rootNode: {fileID: 3708858939657345456}
+  treeState: 0
+  nodes:
+  - {fileID: 3708858939657345456}
+  - {fileID: 2460285833675123044}
+  - {fileID: -8187608375957282636}
+  - {fileID: 7392851810766156510}
+  - {fileID: -4888733013524504962}
+  - {fileID: 7047017990095040533}
+  - {fileID: 243313899238252768}
+  - {fileID: -5678598812584990032}
+  - {fileID: 8962949448996009876}
+  - {fileID: -1422783139470495523}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+--- !u!114 &243313899238252768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01950e697db72cf43a7b049d42fe127d, type: 3}
+  m_Name: node_ItemDetector
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 130fee3fd4a5fc24b9d0d30a593bbfc1
+  position: {x: -231.99997, y: 586.32007}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+--- !u!114 &505824035141933902
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6ba1e3a6525d8a4cb47809a94a63e43, type: 3}
+  m_Name: CustomRepeat(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: da1bdb9faf69c5d44a43390bc7ed5b79
+  position: {x: -155.19995, y: 125.60092}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  child: {fileID: 0}
+  repeatInterval: 0.5
+  startImmediately: 1
+  restartOnSuccess: 1
+  restartOnFailure: 0
+--- !u!114 &916877493852741703
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 163c147d123e4a945b688eddc64e3ea5, type: 3}
+  m_Name: RootNode(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: a2b86f5a2d9c2fc4b86698aa8e4097ff
+  position: {x: -5.6000366, y: -172.8}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  child: {fileID: 0}
+--- !u!114 &1179193507726010124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 600086c08c0828c4187cbc84acd2187f, type: 3}
+  m_Name: Move(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 3b2870621de82114abcc2c84c3708c0d
+  position: {x: 601.60004, y: 304.0009}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  SpeedRate: 1
+  max_StopTime: 1
+  minDistance: 0.01
+  MoveToBlackboard: 0
+--- !u!114 &1527604533590290825
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6ba1e3a6525d8a4cb47809a94a63e43, type: 3}
+  m_Name: CustomRepeat(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: ba8cd81506af24e45832edceba701a51
+  position: {x: -155.19995, y: 125.60092}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  child: {fileID: 0}
+  repeatInterval: 0.5
+  startImmediately: 1
+  restartOnSuccess: 1
+  restartOnFailure: 0
+--- !u!114 &2460285833675123044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 379980f0ec5b0e6468b85dd63ada449f
+  position: {x: 292.80002, y: 319.92}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children:
+  - {fileID: -5678598812584990032}
+  - {fileID: -8187608375957282636}
+  - {fileID: 8962949448996009876}
+  - {fileID: 7392851810766156510}
+--- !u!114 &2515407918110369352
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 28ddcdc6145ad3445ac82a90032812a6
+  position: {x: 442.40005, y: 490.40002}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 1
+  animationName: Move
+  boolSwitch: 0
+  checkParamName: 1
+--- !u!114 &2699066917014174438
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: a9ac24c9fbee1d84bb1c72997908b8b5
+  position: {x: -232.15312, y: 482.39993}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &3053494004875917523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6ba1e3a6525d8a4cb47809a94a63e43, type: 3}
+  m_Name: CustomRepeat(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: 27eb89846c4339f4dad58200b2f5bcdf
+  position: {x: -232.15312, y: 344.79993}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  child: {fileID: 0}
+  repeatInterval: 0.5
+  startImmediately: 1
+  restartOnSuccess: 1
+  restartOnFailure: 0
+--- !u!114 &3292238125898653228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae49782b327a97044b9c71d080b2742e, type: 3}
+  m_Name: GetItemPosition(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 20882abd896161c40841d990ea9e21c7
+  position: {x: 299.1999, y: 304.0009}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  ItemType:
+  - Player
+  BehaviorType: 0
+  minRunDistance: 5
+  maxRunDistance: 10
+  angleVariance: 90
+  setBlackboardTarget: 1
+  doNothing: 0
+--- !u!114 &3708858939657345456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 163c147d123e4a945b688eddc64e3ea5, type: 3}
+  m_Name: RootNode
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: ef91226d329ae1f4cbab98c90bdb345f
+  position: {x: 0, y: 0}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  child: {fileID: -1422783139470495523}
+--- !u!114 &4542706405845489968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fdcd7b0107c46e4d809f1298c5a7d8a, type: 3}
+  m_Name: ChangeDicRange(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: f5f2461159885c949b83cc7bf28ce6cf
+  position: {x: 148.79988, y: 304.0009}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  BaseValue: 9
+  Offset: {x: 0, y: 0}
+  Duration: 0
+--- !u!114 &4629769371080536491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 600086c08c0828c4187cbc84acd2187f, type: 3}
+  m_Name: Move
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 9ca6f092aa769fe478a1fe80f637b73a
+  position: {x: 449.60004, y: 303.99997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  SpeedRate: 1
+  max_StopTime: 1
+  minDistance: 0.01
+  MoveToBlackboard: 0
+--- !u!114 &4876297244867392421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01950e697db72cf43a7b049d42fe127d, type: 3}
+  m_Name: node_ItemDetector(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 549ecd364f122f84eab7b63f680a63dd
+  position: {x: -272.15314, y: 659.19995}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+--- !u!114 &5054513505167004242
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: 005f0d81b63c5e940ba94c148bace441
+  position: {x: -154.39995, y: 251.2}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &5641494567883909410
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 0305c8f75081c124d92b1b19a841975e
+  position: {x: 143.20001, y: 490.40002}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 1
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &6869757970193636254
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 5ccaa1258c5cec1409d0ba2ffba7b6e6
+  position: {x: 343.19995, y: 125.60092}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &6897845123687707874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 90cdcb82346662a4abd9bb43765d99a0
+  position: {x: 292.72595, y: 345.85403}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &7047017990095040533
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: d4ddc9b352448c949954d64ad98bbf87
+  position: {x: -231.99997, y: 456.72012}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children:
+  - {fileID: 243313899238252768}
+--- !u!114 &7247745672483378734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2932073b8a6c3b34391576c45d359457, type: 3}
+  m_Name: Parallel(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 1
+  guid: e0f5f83df2074d245b775a9073433941
+  position: {x: -5.599991, y: -6.399048}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
+--- !u!114 &7392851810766156510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: fc7707d954b885440b1cfc1931e57f2c
+  position: {x: 442.40012, y: 464.72006}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 1
+  animationName: Move
+  boolSwitch: 0
+  checkParamName: 1
+--- !u!114 &7477378116235963922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b62b8264cbbd7ac4ea00b5c5f8b4f888, type: 3}
+  m_Name: GetItemPosition(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 10402c644f860304eb2e04036e37734a
+  position: {x: -122.399994, y: 659.2}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  ItemType:
+  - Player
+  BehaviorType: 1
+  minRunDistance: 3
+  maxRunDistance: 7
+  angleVariance: 30
+  setBlackboardTarget: 1
+  doNothing: 0
+--- !u!114 &7924839721413244985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: ab5b8459e7299784eae5e3b23e454947
+  position: {x: 752.00006, y: 304.0009}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 0
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &8216842207297888736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
+  m_Name: AnimatorController(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 0a21e14ed6200b94898381cfa34fca6e
+  position: {x: 299.19998, y: 303.99997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  parameterType: 0
+  animationName: Move
+  boolSwitch: 1
+  checkParamName: 1
+--- !u!114 &8962949448996009876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeec1388a7dcd794fa29f155d7f1c1ea, type: 3}
+  m_Name: Move
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: d340fdb25fe877f428fae2af5d639ddc
+  position: {x: 292.80002, y: 464.72006}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  SpeedRate: 1
+  max_StopTime: 1
+  minDistance: 0.01
+  MoveToBlackboard: 1

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Xml.Serialization;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -8,10 +10,10 @@ using UnityEngine.UIElements;
 
 namespace TheKiwiCoder
 {
-    [UxmlElement]
     public partial class BehaviourTreeView : GraphView
     {
         // 记录当前鼠标在 contentViewContainer 中的位置，用于粘贴
+        public new class UxmlFactory : UxmlFactory<BehaviourTreeView, GraphView.UxmlTraits> { }
         private Vector2 lastMouseContentPos;
         public Action<NodeView> OnNodeSelected;
         private BehaviourTree tree;
@@ -178,21 +180,22 @@ namespace TheKiwiCoder
                 lastMouseContentPos = this.ChangeCoordinatesTo(contentViewContainer, e.localPosition);
             });
             void AddManipulators()
-        {
-            this.AddManipulator(new ContentZoomer());
-            this.AddManipulator(new ContentDragger());
-            this.AddManipulator(new DoubleClickSelection());
-            this.AddManipulator(new SelectionDragger());
-            this.AddManipulator(new RectangleSelector());
-        }
+            {
+                this.AddManipulator(new ContentZoomer());
+                this.AddManipulator(new ContentDragger());
+                this.AddManipulator(new DoubleClickSelection());
+                this.AddManipulator(new SelectionDragger());
+                this.AddManipulator(new RectangleSelector());
+            }
         }
 
+        #region 键盘快捷键
 
-        // 键盘事件处理：Ctrl+C / Ctrl+V 快捷复制粘贴
         private void OnKeyDown(KeyDownEvent e)
         {
             bool ctrl = Application.platform == RuntimePlatform.OSXEditor ? e.commandKey : e.ctrlKey;
             if (!ctrl) return;
+
             // Ctrl+C 复制
             if (e.keyCode == KeyCode.C)
             {
@@ -208,26 +211,25 @@ namespace TheKiwiCoder
             {
                 if (Clipboard.Nodes.Any())
                 {
-                    // 将粘贴位置设在当前鼠标位置
                     PasteFromClipboard(lastMouseContentPos);
                     e.StopPropagation();
                 }
             }
-
+            // Ctrl+X 剪切（复制 + 删除）
+           
             // Ctrl+A 全选
-            RegisterCallback<KeyDownEvent>(e => {
-                if (e.actionKey && e.keyCode == KeyCode.A)
+            else if (e.keyCode == KeyCode.A)
+            {
+                ClearSelection();
+                foreach (var node in nodes.OfType<NodeView>())
                 {
-                    ClearSelection();
-                    foreach (var node in nodes.OfType<NodeView>())
-                    {
-                        AddToSelection(node);
-                    }
-                    e.StopPropagation();
+                    AddToSelection(node);
                 }
-            });
-
+                e.StopPropagation();
+            }
         }
+        #endregion
+
 
         private void OnUndoRedo()
         {
@@ -320,48 +322,52 @@ namespace TheKiwiCoder
 
             return graphViewChange;
         }
-
+        #region 右键菜单
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
         {
-            Vector2 mousePos = evt.localMousePosition;
-            Vector2 contentPos = this.ChangeCoordinatesTo(contentViewContainer, mousePos);
+            // 鼠标在 GraphView 中的位置
+            Vector2 nodePosition = this.ChangeCoordinatesTo(contentViewContainer, evt.localMousePosition);
 
-         /*   // 单节点克隆
-            var clicked = nodes.OfType<NodeView>().FirstOrDefault(nv => nv.GetPosition().Contains(contentPos));
-            if (clicked != null)
-            {
-                evt.menu.AppendAction("Clone Node", _ => CloneNode(clicked));
-                evt.menu.AppendSeparator();
-            }*/
-
-            // 复制/粘贴菜单
-            var selected = selection.OfType<NodeView>().ToList();
-            if (selected.Any())
-                evt.menu.AppendAction("复制选中的节点", _ => CopyToClipboard(selected));
-            // 允许跨树和同树粘贴
-            if (Clipboard.Nodes.Any())
-                evt.menu.AppendAction(Clipboard.SourceTree == tree ? "Paste Nodes" : "Paste Nodes from Other Tree", _ => PasteFromClipboard(contentPos));
-            evt.menu.AppendAction("Paste Nodes from Other Tree", _ => PasteFromClipboard(contentPos));
-            if (selected.Count > 1)
-            {
-                evt.menu.AppendAction("Clone Selected Nodes", _ => CloneSelectedNodes(selected));
-                evt.menu.AppendSeparator();
-            }
-
-
-            // 原有创建脚本和节点菜单
-            evt.menu.AppendAction("Create Script.../New Action Node", _ => CreateNewScript(scriptFileAssets[0]));
-            evt.menu.AppendAction("Create Script.../New Composite Node", _ => CreateNewScript(scriptFileAssets[1]));
-            evt.menu.AppendAction("Create Script.../New Decorator Node", _ => CreateNewScript(scriptFileAssets[2]));
+            // 添加创建脚本的静态菜单项
+            evt.menu.AppendAction("Create Script.../New Action Node", (a) => CreateNewScript(scriptFileAssets[0]));
+            evt.menu.AppendAction("Create Script.../New Composite Node", (a) => CreateNewScript(scriptFileAssets[1]));
+            evt.menu.AppendAction("Create Script.../New Decorator Node", (a) => CreateNewScript(scriptFileAssets[2]));
             evt.menu.AppendSeparator();
 
-            foreach (var type in TypeCache.GetTypesDerivedFrom<ActionNode>())
-                evt.menu.AppendAction($"[Action]/{type.Name}", _ => CreateNode(type, contentPos));
-            foreach (var type in TypeCache.GetTypesDerivedFrom<CompositeNode>())
-                evt.menu.AppendAction($"[Composite]/{type.Name}", _ => CreateNode(type, contentPos));
-            foreach (var type in TypeCache.GetTypesDerivedFrom<DecoratorNode>())
-                evt.menu.AppendAction($"[Decorator]/{type.Name}", _ => CreateNode(type, contentPos));
+            // 自动添加 Action 节点类型菜单
+            AddNodeTypeMenuItems<ActionNode>( evt, nodePosition);
+
+            // 自动添加 Composite 节点类型菜单
+            AddNodeTypeMenuItems<CompositeNode>(evt, nodePosition);
+
+            // 自动添加 Decorator 节点类型菜单
+            AddNodeTypeMenuItems<DecoratorNode>(evt, nodePosition);
         }
+
+        private void AddNodeTypeMenuItems<T>(ContextualMenuPopulateEvent evt, Vector2 position)
+        {
+            var types = TypeCache.GetTypesDerivedFrom<T>()
+                                 .OrderBy(type =>
+                                 {
+                                     var attr = type.GetCustomAttribute<NodeMenuAttribute>();
+                                     return attr?.Path ?? type.Name;
+                                 });
+
+            foreach (var type in types)
+            {
+                var attr = type.GetCustomAttribute<NodeMenuAttribute>();
+                if (attr != null)
+                {
+                    evt.menu.AppendAction(attr.Path, (a) => CreateNode(type, position));
+                }
+                else
+                {
+                    evt.menu.AppendAction($"{typeof(T).Name}/{type.Name}", (a) => CreateNode(type, position));
+                }
+            }
+        }
+        #endregion
+
         private void CloneSelectedNodes(List<NodeView> originals)
         {
             Undo.RegisterCompleteObjectUndo(tree, "Clone Selected Nodes");

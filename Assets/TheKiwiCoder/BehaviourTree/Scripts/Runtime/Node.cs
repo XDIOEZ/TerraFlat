@@ -16,8 +16,13 @@ namespace TheKiwiCoder {
         [HideInInspector] public Vector2 position;
         [HideInInspector] public Context context;
         [HideInInspector] public Blackboard blackboard;
+        [HideInInspector] public bool isCollapsed = false;
         [TextArea] public string description;
         public bool drawGizmos = false;
+
+        // 新增字段：用于保存节点是否折叠
+
+ 
 
         public State Update() {
 

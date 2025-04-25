@@ -94,7 +94,7 @@ namespace TheKiwiCoder {
                 });
             });
             toolbarMenu.menu.AppendSeparator();
-            toolbarMenu.menu.AppendAction("New Tree...", (a) => CreateNewTree("NewBehaviourTree"));
+            toolbarMenu.menu.AppendAction("新建行为树", (a) => CreateNewTree("NewBehaviourTree"));
 
             // New Tree Dialog
             treeNameField = root.Q<TextField>("TreeName");
@@ -194,14 +194,49 @@ namespace TheKiwiCoder {
             treeView?.UpdateNodeStates();
         }
 
-        void CreateNewTree(string assetName) {
-            string path = System.IO.Path.Combine(locationPathField.value, $"{assetName}.asset");
+        void CreateNewTree(string assetName)
+        {
+            string folderPath = locationPathField.value.Trim().TrimEnd('/', '\\');
+
+            // 默认路径设为 "Assets/BehaviourTrees" 如果为空
+            if (string.IsNullOrEmpty(folderPath))
+            {
+                folderPath = "Assets/_BehaviourTrees";
+            }
+
+            // 如果文件夹不存在，则创建它
+            if (!AssetDatabase.IsValidFolder(folderPath))
+            {
+                string[] parts = folderPath.Split('/');
+                string current = "Assets";
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    string next = $"{current}/{parts[i]}";
+                    if (!AssetDatabase.IsValidFolder(next))
+                    {
+                        AssetDatabase.CreateFolder(current, parts[i]);
+                    }
+                    current = next;
+                }
+            }
+
+            string path = System.IO.Path.Combine(folderPath, $"{assetName}.asset");
+
+            if (AssetDatabase.LoadAssetAtPath<BehaviourTree>(path) != null)
+            {
+                Debug.LogWarning($"Asset already exists at: {path}");
+                return;
+            }
+            Debug.Log($"Creating new BehaviourTree at: {path}");
             BehaviourTree tree = ScriptableObject.CreateInstance<BehaviourTree>();
-            tree.name = treeNameField.ToString();
+            tree.name = treeNameField.value;
+
             AssetDatabase.CreateAsset(tree, path);
             AssetDatabase.SaveAssets();
+
             Selection.activeObject = tree;
             EditorGUIUtility.PingObject(tree);
         }
+
     }
 }

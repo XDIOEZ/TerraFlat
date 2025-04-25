@@ -6,12 +6,12 @@ using UnityEngine.AI;
 
 public class CheckAICanMoveTo : ActionNode
 {
-    public IAI_NavMesh navMesh;
+    public NavMeshAgent navMesh;
     protected override void OnStart() 
     {
         if (navMesh == null)
         {
-            context.gameObject.TryGetComponent<IAI_NavMesh>(out navMesh);
+            navMesh = context.gameObject.GetComponent<NavMeshAgent>();
         }
     }
 
@@ -22,7 +22,7 @@ public class CheckAICanMoveTo : ActionNode
     {
    
         // 如果路径无效（如目标不可达），返回失败
-        if (navMesh.Agent_Nav.pathStatus == NavMeshPathStatus.PathPartial)
+        if (navMesh.pathStatus == NavMeshPathStatus.PathPartial)
         {
             //   67 78 89 910 1011 1213 1314 1415 1516 1617 1718 1920 2021
             Debug.Log("移动状态异常");

@@ -93,8 +93,8 @@ public class Mover : Organ, IFunction_Move
     /// </summary>
     public float Speed
     {
-        get => Rb ? Rb.linearVelocity.magnitude : 0f;
-        set => Rb.linearVelocity = Rb.linearVelocity.normalized * value;
+        get => Rb ? Rb.velocity.magnitude : 0f;
+        set => Rb.velocity = Rb.velocity.normalized * value;
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public class Mover : Organ, IFunction_Move
     {
         if (direction == Vector2.zero)
         {
-            Rb.linearVelocity = Vector2.zero;
+            Rb.velocity = Vector2.zero;
             if (IsMoving)
             {
                 IsMoving = false;
@@ -195,7 +195,7 @@ public class Mover : Organ, IFunction_Move
         }
 
         Vector2 adjustedVelocity = direction * MoveSpeed;
-        Rb.linearVelocity = adjustedVelocity;
+        Rb.velocity = adjustedVelocity;
     }
 
     /// <summary>
@@ -312,12 +312,12 @@ public class Mover : Organ, IFunction_Move
     /// </summary>
     private IEnumerator SlowDownRoutine()
     {
-        while (Rb.linearVelocity.magnitude > endSpeed)
+        while (Rb.velocity.magnitude > endSpeed)
         {
-            Rb.linearVelocity = Vector2.Lerp(Rb.linearVelocity, Vector2.zero, slowDownSpeed * Time.deltaTime);
+            Rb.velocity = Vector2.Lerp(Rb.velocity, Vector2.zero, slowDownSpeed * Time.deltaTime);
             yield return null;
         }
-        Rb.linearVelocity = Vector2.zero;
+        Rb.velocity = Vector2.zero;
     }
     #endregion
 }

@@ -362,7 +362,7 @@ public class PlayerController : MonoBehaviour
         if (Running != null)
         {
             Running.SwitchToRun(true);
-            Debug.Log("Run");
+           // Debug.Log("Run");
         }
     }
     #endregion
@@ -374,7 +374,7 @@ public class PlayerController : MonoBehaviour
         if (Running != null)
         {
             Running.SwitchToRun(false);
-            Debug.Log("Stop");
+            //Debug.Log("Stop");
         }
     }
     #endregion

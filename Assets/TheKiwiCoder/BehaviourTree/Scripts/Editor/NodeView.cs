@@ -1,158 +1,217 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
+ï»¿using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
-using UnityEditor;
 
 namespace TheKiwiCoder
 {
-
-    // NodeView ÊÇĞĞÎªÊ÷±à¼­Æ÷ÖĞÃ¿¸ö½ÚµãÔÚÍ¼ĞÎ½çÃæÉÏµÄ¿ÉÊÓ»¯±íÊ¾
     public class NodeView : UnityEditor.Experimental.GraphView.Node
     {
-        public Action<NodeView> OnNodeSelected; // ½Úµã±»Ñ¡ÖĞÊ±µÄ»Øµ÷
-        public Node node; // ¶ÔÓ¦µÄÊı¾İÄ£ĞÍ
-        public Port input; // ÊäÈë¶Ë¿Ú
-        public Port output; // Êä³ö¶Ë¿Ú
+        public Action<NodeView> OnNodeSelected;
+        public Node node;
+        public Port input;
+        public Port output;
 
-        // ¹¹Ôìº¯Êı - ¼ÓÔØUXML²¼¾Ö²¢³õÊ¼»¯½Úµã
-        public NodeView(Node node) : base(AssetDatabase.GetAssetPath(BehaviourTreeSettings.GetOrCreateSettings().nodeXml))
+        private bool isCollapsed;
+        private bool skipChildMovement = false;
+        private Button collapseButton;
+
+        public NodeView(Node node)
+            : base(AssetDatabase.GetAssetPath(BehaviourTreeSettings.GetOrCreateSettings().nodeXml))
         {
             this.node = node;
             this.node.name = node.GetType().Name;
             this.title = node.name.Replace("(Clone)", "").Replace("Node", "");
             this.viewDataKey = node.guid;
 
-            // ÉèÖÃ½ÚµãÎ»ÖÃ
+            isCollapsed = node.isCollapsed;
             style.left = node.position.x;
             style.top = node.position.y;
 
-            // ³õÊ¼»¯¶Ë¿ÚºÍÑùÊ½
             CreateInputPorts();
             CreateOutputPorts();
             SetupClasses();
             SetupDataBinding();
+
+            AddCollapseButton();
+            if (isCollapsed)
+                ApplyCollapse(true);
+        }
+        #region æŠ˜å ç›¸å…³å‡½æ•°
+
+        public override void SetPosition(Rect newPos)
+        {
+            Rect oldPos = GetPosition();
+            base.SetPosition(newPos);
+
+            Undo.RecordObject(node, "Behaviour Tree (Set Position)");
+            node.position.x = newPos.xMin;
+            node.position.y = newPos.yMin;
+            EditorUtility.SetDirty(node);
+
+            if (skipChildMovement) return;
+
+            if (isCollapsed && output != null)
+            {
+                Vector2 delta = newPos.position - oldPos.position;
+                foreach (var edge in output.connections.ToList())
+                {
+                    if (edge.input.node is NodeView child)
+                    {
+                        child.skipChildMovement = true;
+                        Rect cr = child.GetPosition();
+                        child.SetPosition(new Rect(cr.x + delta.x, cr.y + delta.y, cr.width, cr.height));
+                        // é€’å½’ç§»åŠ¨æ‰€æœ‰åä»£
+                        MoveSubtree(child, delta);
+                        child.skipChildMovement = false;
+                    }
+                }
+            }
         }
 
-        // °ó¶¨Êı¾İ£¬Ê¹ UI Label ÏÔÊ¾½ÚµãÃèÊö£¨Í¨¹ı SerializedObject ÊµÏÖÊı¾İ°ó¶¨£©
+        // é€’å½’ç§»åŠ¨å­æ ‘æ‰€æœ‰èŠ‚ç‚¹
+        private void MoveSubtree(NodeView parent, Vector2 delta)
+        {
+            if (parent.output == null) return;
+            foreach (var edge in parent.output.connections.ToList())
+            {
+                if (edge.input.node is NodeView child)
+                {
+                    child.skipChildMovement = true;
+                    Rect cr = child.GetPosition();
+                    child.SetPosition(new Rect(cr.x + delta.x, cr.y + delta.y, cr.width, cr.height));
+                    MoveSubtree(child, delta);
+                    child.skipChildMovement = false;
+                }
+            }
+        }
+
+        private void AddCollapseButton()
+        {
+            collapseButton = new Button(() =>
+            {
+                isCollapsed = !isCollapsed;
+                node.isCollapsed = isCollapsed;
+                collapseButton.text = isCollapsed ? "â–²" : "â–¼";
+                ApplyCollapse(isCollapsed);
+            })
+            {
+                text = isCollapsed ? "â–²" : "â–¼",
+                tooltip = "æŠ˜å /å±•å¼€ å­èŠ‚ç‚¹"
+            };
+            collapseButton.style.width = 32;
+            collapseButton.style.height = 16;
+            collapseButton.style.minWidth = 16;
+            collapseButton.style.minHeight = 16;
+            titleContainer.Add(collapseButton);
+            UpdateCollapseButtonVisibility();
+        }
+
+        private void UpdateCollapseButtonVisibility()
+        {
+            bool canHaveChildren = output != null;
+            collapseButton.style.display = canHaveChildren ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        private void ApplyCollapse(bool collapse)
+        {
+            if (output == null) return;
+            foreach (var edge in output.connections.ToList())
+            {
+                if (edge.input.node is NodeView child)
+                {
+                    child.style.visibility = collapse ? Visibility.Hidden : Visibility.Visible;
+                    edge.style.display = collapse ? DisplayStyle.None : DisplayStyle.Flex;
+                    ApplyCollapseToDescendants(child, collapse);
+                }
+            }
+            UpdateCollapseButtonVisibility();
+        }
+
+        private void ApplyCollapseToDescendants(NodeView parent, bool collapse)
+        {
+            if (parent.output == null) return;
+            foreach (var edge in parent.output.connections.ToList())
+            {
+                if (edge.input.node is NodeView child)
+                {
+                    child.style.visibility = collapse ? Visibility.Hidden : Visibility.Visible;
+                    edge.style.display = collapse ? DisplayStyle.None : DisplayStyle.Flex;
+                    ApplyCollapseToDescendants(child, collapse);
+                }
+            }
+        }
+        #endregion
+
+        #region å…¶ä»–æ–¹æ³•
         private void SetupDataBinding()
         {
-            Label descriptionLabel = this.Q<Label>("description"); // ²éÑ¯ UXML ÖĞ id Îª description µÄ Label
-            descriptionLabel.bindingPath = "description"; // °ó¶¨Â·¾¶
-            descriptionLabel.Bind(new SerializedObject(node)); // °ó¶¨µ½½Úµã¶ÔÏó
+            Label descriptionLabel = this.Q<Label>("description");
+            descriptionLabel.bindingPath = "description";
+            descriptionLabel.Bind(new SerializedObject(node));
         }
 
-        // ¸ù¾İ½ÚµãÀàĞÍÉèÖÃ¶ÔÓ¦µÄ CSS ÀàÃû
         private void SetupClasses()
         {
-            if (node is ActionNode)
-            {
-                AddToClassList("action");
-            }
-            else if (node is CompositeNode)
-            {
-                AddToClassList("composite");
-            }
-            else if (node is DecoratorNode)
-            {
-                AddToClassList("decorator");
-            }
-            else if (node is RootNode)
-            {
-                AddToClassList("root");
-            }
+            if (node is ActionNode) AddToClassList("action");
+            else if (node is CompositeNode) AddToClassList("composite");
+            else if (node is DecoratorNode) AddToClassList("decorator");
+            else if (node is RootNode) AddToClassList("root");
         }
 
-        // ´´½¨ÊäÈë¶Ë¿Ú£¬Ö»ÓĞ Root ½ÚµãÃ»ÓĞÊäÈë
         private void CreateInputPorts()
         {
             if (node is ActionNode || node is CompositeNode || node is DecoratorNode)
             {
-                input = new NodePort(Direction.Input, Port.Capacity.Single);
-            }
-
-            if (input != null)
-            {
-                input.portName = "";
-                input.style.flexDirection = FlexDirection.Column;
+                input = new NodePort(Direction.Input, Port.Capacity.Single)
+                {
+                    portName = string.Empty,
+                    style = { flexDirection = FlexDirection.Column }
+                };
                 inputContainer.Add(input);
             }
         }
 
-        // ´´½¨Êä³ö¶Ë¿Ú£¬¸ù¾İ½ÚµãÀàĞÍ²»Í¬·ÖÎªµ¥Êä³ö/¶àÊä³ö/ÎŞÊä³ö
         private void CreateOutputPorts()
         {
             if (node is CompositeNode)
-            {
                 output = new NodePort(Direction.Output, Port.Capacity.Multi);
-            }
             else if (node is DecoratorNode || node is RootNode)
-            {
                 output = new NodePort(Direction.Output, Port.Capacity.Single);
-            }
-
             if (output != null)
             {
-                output.portName = "";
+                output.portName = string.Empty;
                 output.style.flexDirection = FlexDirection.ColumnReverse;
                 outputContainer.Add(output);
             }
         }
 
-        // µ±½ÚµãÎ»ÖÃ±ä¸üÊ±£¬Í¬²½¸üĞÂÊı¾İÄ£ĞÍÖĞ±£´æµÄÎ»ÖÃ
-        public override void SetPosition(Rect newPos)
-        {
-            base.SetPosition(newPos);
-            Undo.RecordObject(node, "Behaviour Tree (Set Position)");
-            node.position.x = newPos.xMin;
-            node.position.y = newPos.yMin;
-            EditorUtility.SetDirty(node); // ±ê¼ÇÎªÒÑĞŞ¸Ä
-        }
-
-        // µ±ÓÃ»§ÔÚ±à¼­Æ÷ÖĞÑ¡ÖĞ½ÚµãÊ±£¬µ÷ÓÃ»Øµ÷
         public override void OnSelected()
         {
             base.OnSelected();
-            if (OnNodeSelected != null)
-            {
-                OnNodeSelected.Invoke(this);
-            }
+            OnNodeSelected?.Invoke(this);
         }
 
-        // Composite ½Úµã¿ÉÒÔÓĞ¶à¸ö×Ó½Úµã£¬½øĞĞÅÅĞòÒÔ±ãÔÚ UI ÖĞ¸üÓĞÂß¼­
         public void SortChildren()
         {
             if (node is CompositeNode composite)
-            {
-                composite.children.Sort(SortByHorizontalPosition);
-            }
+                composite.children.Sort((l, r) => l.position.x.CompareTo(r.position.x));
         }
 
-        // ±È½ÏÁ½¸ö×Ó½ÚµãµÄºá×ø±ê£¬ÓÃÓÚÅÅĞò
-        private int SortByHorizontalPosition(Node left, Node right)
-        {
-            return left.position.x < right.position.x ? -1 : 1;
-        }
-
-        // ÔÚÔËĞĞÊ±¸üĞÂ½Úµã×´Ì¬ÑùÊ½£¨ÔËĞĞÖĞ/³É¹¦/Ê§°Ü£©
         public void UpdateState()
         {
             RemoveFromClassList("running");
             RemoveFromClassList("failure");
             RemoveFromClassList("success");
-
             if (Application.isPlaying)
             {
                 switch (node.state)
                 {
                     case Node.State.Running:
-                        if (node.started)
-                        {
-                            AddToClassList("running");
-                        }
+                        if (node.started) AddToClassList("running");
                         break;
                     case Node.State.Failure:
                         AddToClassList("failure");
@@ -163,5 +222,6 @@ namespace TheKiwiCoder
                 }
             }
         }
+        #endregion
     }
 }

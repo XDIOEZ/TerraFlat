@@ -38,7 +38,7 @@ public class PrefabLauncher : MonoBehaviour
         {
             // ʹ����ת�ķ�������ٶ�
             Vector2 launchDirection = rotation * Vector2.right; // ���ӵ���������Ϊ�ҷ������ת���
-            rb.linearVelocity = launchDirection.normalized * speed; // �����ٶ�
+            rb.velocity = launchDirection.normalized * speed; // �����ٶ�
         }
 
         instance.GetComponent<Item>().Act(); // ʹ�õ�ҩ

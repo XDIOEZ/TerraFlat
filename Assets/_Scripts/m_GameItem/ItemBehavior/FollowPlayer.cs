@@ -28,12 +28,12 @@ public class SmoothFollowPlayerWithRotation : MonoBehaviour
             Vector2 move = direction.normalized * moveSpeed;
 
             // ʹ�� Rigidbody2D �ƶ�����
-            rb.linearVelocity = move;
+            rb.velocity = move;
         }
         else
         {
             // ������С��ֹͣ����ʱ��ֹͣ�ƶ�
-            rb.linearVelocity = Vector2.zero;
+            rb.velocity = Vector2.zero;
         }
 
         // �������峯��Ŀ��
