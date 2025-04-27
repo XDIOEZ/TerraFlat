@@ -2,6 +2,7 @@ using NaughtyAttributes;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Sirenix.OdinInspector; // 别忘了加上这个using！
 
 public class IronSword : Item, IColdWeapon,IAttacker
 {
@@ -24,6 +25,7 @@ public class IronSword : Item, IColdWeapon,IAttacker
             {
                 _sender = GetComponentInChildren<IDamageSender>();
                 _sender.DamageValue = WeaponDamage;
+                _sender.OnDamage += OnSendDamage;//监听造成伤害后激活的事件
             }
             return _sender;
         }
@@ -62,12 +64,17 @@ public class IronSword : Item, IColdWeapon,IAttacker
 
     public void AttackUpdate()
     {
-        // Attack logic
+        //
     }
     public void AttackEnd()
     {
         // Attack logic
         Sender.EndTrySendDamage();
+    }
+
+    public void OnSendDamage(float damage)
+    {
+        _data._lastAttackTime = Time.time;
     }
     #endregion
 }

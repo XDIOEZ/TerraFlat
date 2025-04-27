@@ -10,6 +10,8 @@ using UltEvents;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Sirenix.OdinInspector;
+
 
 // 使用[System.Serializable]特性使该类可以被序列化，以便在Unity编辑器中显示和编辑
 [MemoryPackUnion(0, typeof(WeaponData))]//武器数据
@@ -106,7 +108,7 @@ public  abstract partial class ItemData
         return str;
     }
 
-    [Button("从Excel处同步数据")]
+    [Sirenix.OdinInspector.Button("同步数据")]
     public virtual int SyncData()
     {
         m_ExcelManager.Instance.ChangeWorlSheet(this.GetType().Name);
@@ -139,6 +141,10 @@ public  abstract partial class ItemData
         itemL = excel.FindColumn(0, "ItemSpecialData");
         ItemSpecialData = excel.GetCellValue(itemRow, itemL).ToString();
 
+        // 物品堆叠信息
+        itemL = excel.FindColumn(0, "Volume");
+        Stack.Volume = Convert.ToInt32(excel.GetCellValue(itemRow, itemL));
+
         // 是否可拾取
         itemL = excel.FindColumn(0, "CanBePickedUp");
         object canBePickedUpValue = excel.GetCellValue(itemRow, itemL);
@@ -157,6 +163,7 @@ public  abstract partial class ItemData
         string materialStr = excel.GetCellValue(itemRow, itemL).ToString();
         ItemTags.Item_Material = excel.ParseStringList(materialStr);
 
+        Debug.Log("同步数据成功！");
         return itemRow;
     }
 
@@ -234,4 +241,11 @@ public partial class ItemStack
     {
         return string.Format("物体数量:{0}", Amount);
     }
+
 }
+
+
+
+
+
+

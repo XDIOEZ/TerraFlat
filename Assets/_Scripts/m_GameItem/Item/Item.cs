@@ -1,6 +1,10 @@
 using UnityEngine;
 using System;
 using UltEvents;
+using System.Reflection;
+using NUnit.Framework.Interfaces;
+
+
 
 
 
@@ -78,5 +82,13 @@ public abstract class Item : MonoBehaviour
     {
         Item_Data.Guid = Guid.NewGuid().GetHashCode();
     }
+    [ContextMenu("同步数据")]
+    public void SyncItemData()
+    {
+        Item_Data.SyncData();
+    }
+
+
+
 #endif
 }

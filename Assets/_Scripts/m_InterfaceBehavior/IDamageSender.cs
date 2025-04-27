@@ -1,4 +1,5 @@
 
+using UltEvents;
 using UnityEngine;
 
 public interface IDamageSender
@@ -14,6 +15,9 @@ public interface IDamageSender
     public void StayTrySendDamage();
 
     public void EndTrySendDamage();
+
+    //造成伤害时的回调
+    public UltEvent<float> OnDamage { get; set; }
 
 
 }

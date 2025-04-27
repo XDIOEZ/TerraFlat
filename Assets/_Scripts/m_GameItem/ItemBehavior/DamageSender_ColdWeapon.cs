@@ -1,4 +1,5 @@
 using NaughtyAttributes;
+using UltEvents;
 using UnityEngine;
 
 public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
@@ -27,6 +28,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
         }
     }
 
+    public UltEvent<float> OnDamage { get; set; }
     public void StartTrySendDamage()
     {
         WeaponCollider.enabled = true;
@@ -52,5 +54,8 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
 
         // 调用重载版本，传入命中点
         receiver.TakeDamage(DamageValue, hitPoint);
+
+        // 调用事件 返回输出物理伤害值
+        OnDamage.Invoke(DamageValue.PhysicalDamage);
     }
 }

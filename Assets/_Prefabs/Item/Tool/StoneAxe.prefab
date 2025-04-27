@@ -49,6 +49,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e445398b950e7444833e80090a72e99, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  UpdatedUI_Event:
+    _PersistentCalls: []
   _data:
     Name: StoneAxe
     ID: 10002
@@ -63,7 +65,7 @@ MonoBehaviour:
       - Stone
     Stack:
       Amount: 1
-      Volume: 1
+      Volume: 2
       CanBePickedUp: 1
     _transform:
       Position: {x: 0, y: 0, z: 0}
@@ -72,15 +74,16 @@ MonoBehaviour:
     ItemSpecialData: "\u65E0"
     Guid: 68
     _damage:
-      PhysicalDamage: 30
-      ArmorBreaking: 15
+      PhysicalDamage: 15
+      ArmorBreaking: 0
       MagicDamage: 0
-    _minDamageInterval: 1
+      DamageType: []
+    _minDamageInterval: 2
     _maxAttackDistance: 1
     _attackSpeed: 5
-    _returnSpeed: 10
-    _spinSpeed: 150
-    _energyConsumptionSpeed: 20
+    _returnSpeed: 5
+    _spinSpeed: 200
+    _energyConsumptionSpeed: 30
 --- !u!114 &8178817081069585212
 MonoBehaviour:
   m_ObjectHideFlags: 0

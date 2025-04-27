@@ -48,6 +48,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e9b161493039d74aa8229f739949588, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  UpdatedUI_Event:
+    _PersistentCalls: []
   _data:
     Name: IronSword
     ID: 10001
@@ -62,7 +64,7 @@ MonoBehaviour:
       - Iron
     Stack:
       Amount: 1
-      Volume: 1
+      Volume: 2
       CanBePickedUp: 1
     _transform:
       Position: {x: 0, y: 0, z: 0}
@@ -71,15 +73,15 @@ MonoBehaviour:
     ItemSpecialData: "\u65E0"
     Guid: 0
     _damage:
-      PhysicalDamage: 15
-      ArmorBreaking: 0.1
+      PhysicalDamage: 10
+      ArmorBreaking: 0
       MagicDamage: 0
       DamageType: []
     _minDamageInterval: 1
     _maxAttackDistance: 1
     _attackSpeed: 10
     _returnSpeed: 10
-    _spinSpeed: 400
+    _spinSpeed: 360
     _energyConsumptionSpeed: 10
 --- !u!61 &2482106438656866000
 BoxCollider2D:

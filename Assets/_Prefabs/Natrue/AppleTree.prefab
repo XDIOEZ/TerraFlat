@@ -108,11 +108,11 @@ MonoBehaviour:
       - "\u65A7\u4F24"
       - "\u706B"
     defense:
-      defenseStrength: 10
-      defenseToughness: 0.9
+      defenseStrength: 50
+      defenseToughness: 0.8
       defenseMagic: 50
-      maxDefenseStrength: 10
-      maxDefenseToughness: 0.9
+      maxDefenseStrength: 50
+      maxDefenseToughness: 0.8
       maxDefenseMagic: 50
     loot:
       lootList:

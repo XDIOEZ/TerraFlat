@@ -21,6 +21,8 @@ public partial class ColdWeaponData : ItemData
     public float _spinSpeed;
     [Tooltip("武器精力消耗速度")]
     public float _energyConsumptionSpeed;
+    [Tooltip("上次攻击时间")]
+    public float _lastAttackTime;
 
     [Button("从Excel同步数据")]
     public override int SyncData()

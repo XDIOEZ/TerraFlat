@@ -78,20 +78,16 @@ public partial class Damage
         // 如果没有传入防御属性，则默认为 0
         float defenseStrength = defense?.defenseStrength ?? 0;
         float defenseToughness = defense?.defenseToughness ?? 0;
-
-        // 防止魔法防御值超出范围 [0, 100]，并计算魔法伤害减免比例
         float defenseMagic = defense?.defenseMagic ?? 0; // 默认为 0
-        defenseMagic = Mathf.Clamp(defenseMagic, 0, 100); // 将防御值限制在 0-100 范围内
-        float magicDamageReduction = defenseMagic / 100f; // 计算魔法伤害减免比例
 
 
-        GetPhysicalDamage();
+
         // 计算魔法伤害，应用减免比例
-        damage += MagicDamage * (1 - magicDamageReduction);
+        damage += MagicDamage - (MagicDamage * defenseMagic);
 
-        // 计算破甲能力对伤害的影响
-
-
+       // float EndBreaking = ArmorBreaking - defenseToughness;
+        // 计算物理伤害，应用减免比例
+        damage += PhysicalDamage - (PhysicalDamage * (defenseStrength * 0.01f));
 
 
         if (damage < 0)
@@ -99,22 +95,7 @@ public partial class Damage
             damage = 1;
         }
 
-        void GetPhysicalDamage()
-        {
-            //剩余护甲
-            float remainingArmor = defenseStrength - ((ArmorBreaking * PhysicalDamage) * (1 - defenseToughness)); // 计算防御力减免
-            if (remainingArmor < 0)
-            {
-                remainingArmor = 0;
-            }
-
-            // 计算物理伤害
-            damage += PhysicalDamage - remainingArmor;
-        }
-
         return damage;
-
-
     }
 
 
