@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class StoneAxe : Item, IColdWeapon, IAttacker
+public class StoneAxe : Item, IColdWeapon, IDamager
 {
     #region 属性
     #region 物体数据

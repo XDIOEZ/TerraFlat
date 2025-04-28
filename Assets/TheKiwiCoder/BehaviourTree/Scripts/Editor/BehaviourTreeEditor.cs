@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 using UnityEditor.Callbacks;
+using System.IO;
 
 namespace TheKiwiCoder {
 
@@ -194,17 +195,19 @@ namespace TheKiwiCoder {
             treeView?.UpdateNodeStates();
         }
 
+
         void CreateNewTree(string assetName)
         {
-            string folderPath = locationPathField.value.Trim().TrimEnd('/', '\\');
+            // 获取 Project 窗口当前选中的文件夹路径
+            string folderPath = GetSelectedPathOrFallback();
 
-            // 默认路径设为 "Assets/BehaviourTrees" 如果为空
-            if (string.IsNullOrEmpty(folderPath))
+            // 如果没有选中文件夹，则默认到 "Assets/_BehaviourTrees"
+            if (string.IsNullOrEmpty(folderPath) || folderPath == "Assets")
             {
                 folderPath = "Assets/_BehaviourTrees";
             }
 
-            // 如果文件夹不存在，则创建它
+            // 如果文件夹不存在，则逐层创建
             if (!AssetDatabase.IsValidFolder(folderPath))
             {
                 string[] parts = folderPath.Split('/');
@@ -220,22 +223,45 @@ namespace TheKiwiCoder {
                 }
             }
 
-            string path = System.IO.Path.Combine(folderPath, $"{assetName}.asset");
+            // 最终 asset 路径
+            string path = Path.Combine(folderPath, $"{assetName}.asset");
 
+            // 如果已有同名文件，则警告
             if (AssetDatabase.LoadAssetAtPath<BehaviourTree>(path) != null)
             {
                 Debug.LogWarning($"Asset already exists at: {path}");
                 return;
             }
+
             Debug.Log($"Creating new BehaviourTree at: {path}");
+
             BehaviourTree tree = ScriptableObject.CreateInstance<BehaviourTree>();
-            tree.name = treeNameField.value;
+            tree.name = assetName;  // 注意这里是 assetName，不是 treeNameField.value，避免null
 
             AssetDatabase.CreateAsset(tree, path);
             AssetDatabase.SaveAssets();
 
+            // 自动选中新建的资源
             Selection.activeObject = tree;
             EditorGUIUtility.PingObject(tree);
+        }
+
+        // 工具方法：优先获取选中文件夹路径，否则返回默认
+        static string GetSelectedPathOrFallback()
+        {
+            string path = "Assets";
+
+            // 如果选中了某个资源
+            foreach (var obj in Selection.GetFiltered<UnityEngine.Object>(SelectionMode.Assets))
+            {
+                path = AssetDatabase.GetAssetPath(obj);
+                if (File.Exists(path))
+                {
+                    path = Path.GetDirectoryName(path);
+                }
+                break;
+            }
+            return path.Replace("\\", "/"); // 保证路径分隔符
         }
 
     }

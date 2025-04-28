@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class StoneSword :Item,IColdWeapon,IAttacker
+public class StoneSword :Item,IColdWeapon,IDamager
 {
     public ColdWeaponData _data;
 

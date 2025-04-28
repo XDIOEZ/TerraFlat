@@ -300,6 +300,8 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     {
         base.SyncPosition(); // 同步玩家位置。
         GetDataFrom_GameObjectInventory_SaveTOData();
+
+        //销毁玩家手中的物品实例
     }
 
     [Button("读取玩家数据")]

@@ -17,5 +17,5 @@ public interface ITriggerAttack
 
     public void SetWeapon(GameObject weapon);
 }
-
+[Tooltip("¶¨Òå¹¥»÷×´Ì¬Ã¶¾Ù KeyState")]
 public enum KeyState { Start, Hold, End, Void }

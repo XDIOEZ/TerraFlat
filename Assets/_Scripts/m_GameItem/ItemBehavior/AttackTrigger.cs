@@ -38,7 +38,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
     public void SetWeapon(GameObject _weapon)
     {
         Weapon_GameObject = _weapon;
-        Attacker = weaponGameObject.GetComponent<IAttacker>();
+        Attacker = weaponGameObject.GetComponent<IDamager>();
         WeaponData = weaponGameObject.GetComponent<IColdWeapon>();
     }
     #endregion
@@ -47,9 +47,9 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     // 挂接的攻击行为接口
     [ShowNonSerializedField]
-    private IAttacker attacker;
+    private IDamager attacker;
  
-    public IAttacker Attacker
+    public IDamager Attacker
     {
         get
         {
@@ -189,12 +189,12 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         WeaponData = null;
     }
 
-    public void SetAttacker(IAttacker attacker_)
+    public void SetAttacker(IDamager attacker_)
     {
         Attacker = attacker_;
     }
 
-    public void RemoveAttacker(IAttacker attacker_)
+    public void RemoveAttacker(IDamager attacker_)
     {
         Attacker = null;
     }

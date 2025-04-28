@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -12,14 +12,14 @@ namespace TheKiwiCoder
 {
     public partial class BehaviourTreeView : GraphView
     {
-        // ¼ÇÂ¼µ±Ç°Êó±êÔÚ contentViewContainer ÖĞµÄÎ»ÖÃ£¬ÓÃÓÚÕ³Ìù
+        // è®°å½•å½“å‰é¼ æ ‡åœ¨ contentViewContainer ä¸­çš„ä½ç½®ï¼Œç”¨äºç²˜è´´
         public new class UxmlFactory : UxmlFactory<BehaviourTreeView, GraphView.UxmlTraits> { }
         private Vector2 lastMouseContentPos;
         public Action<NodeView> OnNodeSelected;
         private BehaviourTree tree;
         private BehaviourTreeSettings settings;
 
-        // ¼ôÌù°åµ¥Àı£¬ÓÃÓÚ¿çÊ÷¸´ÖÆÕ³Ìù
+        // å‰ªè´´æ¿å•ä¾‹ï¼Œç”¨äºè·¨æ ‘å¤åˆ¶ç²˜è´´
         private static class Clipboard
         {
             public static List<Node> Nodes = new List<Node>();
@@ -41,14 +41,14 @@ namespace TheKiwiCoder
             Clipboard.Connections.Clear();
             Clipboard.SourceTree = tree;
 
-            // ÓÃÓÚÓ³Éä¾É GUID µ½ĞÂ½Úµã
+            // ç”¨äºæ˜ å°„æ—§ GUID åˆ°æ–°èŠ‚ç‚¹
             var cloneMap = new Dictionary<string, Node>();
 
             foreach (var view in originals)
             {
                 var clone = tree.CloneANode(view.node);
 
-                // ¹Ø¼ü£ºÇå³ıËùÓĞ×Ó½ÚµãÒıÓÃ
+                // å…³é”®ï¼šæ¸…é™¤æ‰€æœ‰å­èŠ‚ç‚¹å¼•ç”¨
                 tree.RemoveAllChildren(clone);
 
                 cloneMap[view.node.guid] = clone;
@@ -56,7 +56,7 @@ namespace TheKiwiCoder
             }
 
 
-            // ¼ÇÂ¼Á¬½Ó¹ØÏµ£¨ĞÂ GUID£©
+            // è®°å½•è¿æ¥å…³ç³»ï¼ˆæ–° GUIDï¼‰
             foreach (var view in originals)
             {
                 var originalGuid = view.node.guid;
@@ -88,20 +88,20 @@ namespace TheKiwiCoder
             float offsetX = pastePosition.x - minX;
             float offsetY = pastePosition.y - minY;
 
-            // ÊµÀı»¯²¢ÒÆ³ı×ÓÒıÓÃ
+            // å®ä¾‹åŒ–å¹¶ç§»é™¤å­å¼•ç”¨
             foreach (var orig in Clipboard.Nodes)
             {
                 var clone = tree.CloneNode(orig);
                 clone.position = new Vector2(orig.position.x + offsetX, orig.position.y + offsetY);
 
-                // Çå³ıÔ­Ê¼×Ó½Úµã½á¹¹£¬±ÜÃâÁ¬½Ó»ìÂÒ
+                // æ¸…é™¤åŸå§‹å­èŠ‚ç‚¹ç»“æ„ï¼Œé¿å…è¿æ¥æ··ä¹±
                 tree.RemoveAllChildren(clone);
 
                 map[orig.guid] = clone;
                 CreateNodeView(clone);
             }
 
-            // ÖØ½¨Á¬½Ó
+            // é‡å»ºè¿æ¥
             foreach (var kv in Clipboard.Connections)
             {
                 if (!map.ContainsKey(kv.Key))
@@ -117,7 +117,7 @@ namespace TheKiwiCoder
 
                     tree.AddChild(parentClone, childClone);
 
-                    // ÖØ½¨Á¬Ïß
+                    // é‡å»ºè¿çº¿
                     var pv = FindNodeView(parentClone);
                     var cv = FindNodeView(childClone);
                     if (pv != null && cv != null)
@@ -128,7 +128,7 @@ namespace TheKiwiCoder
                 }
             }
 
-            // Ñ¡ÖĞÕ³ÌùµÄĞÂ½Úµã
+            // é€‰ä¸­ç²˜è´´çš„æ–°èŠ‚ç‚¹
             ClearSelection();
             foreach (var clone in map.Values)
             {
@@ -171,7 +171,7 @@ namespace TheKiwiCoder
             styleSheets.Add(settings.behaviourTreeStyle);
             Undo.undoRedoPerformed += OnUndoRedo;
 
-            // Ö§³Ö¼üÅÌ¿ì½İ¼ü
+            // æ”¯æŒé”®ç›˜å¿«æ·é”®
             focusable = true;
             RegisterCallback<KeyDownEvent>(OnKeyDown);
 
@@ -189,14 +189,14 @@ namespace TheKiwiCoder
             }
         }
 
-        #region ¼üÅÌ¿ì½İ¼ü
+        #region é”®ç›˜å¿«æ·é”®
 
         private void OnKeyDown(KeyDownEvent e)
         {
             bool ctrl = Application.platform == RuntimePlatform.OSXEditor ? e.commandKey : e.ctrlKey;
             if (!ctrl) return;
 
-            // Ctrl+C ¸´ÖÆ
+            // Ctrl+C å¤åˆ¶
             if (e.keyCode == KeyCode.C)
             {
                 var selected = selection.OfType<NodeView>().ToList();
@@ -206,7 +206,7 @@ namespace TheKiwiCoder
                     e.StopPropagation();
                 }
             }
-            // Ctrl+V Õ³Ìù
+            // Ctrl+V ç²˜è´´
             else if (e.keyCode == KeyCode.V)
             {
                 if (Clipboard.Nodes.Any())
@@ -215,9 +215,9 @@ namespace TheKiwiCoder
                     e.StopPropagation();
                 }
             }
-            // Ctrl+X ¼ôÇĞ£¨¸´ÖÆ + É¾³ı£©
+            // Ctrl+X å‰ªåˆ‡ï¼ˆå¤åˆ¶ + åˆ é™¤ï¼‰
            
-            // Ctrl+A È«Ñ¡
+            // Ctrl+A å…¨é€‰
             else if (e.keyCode == KeyCode.A)
             {
                 ClearSelection();
@@ -257,10 +257,10 @@ namespace TheKiwiCoder
                 AssetDatabase.SaveAssets();
             }
 
-            // ´´½¨½ÚµãÊÓÍ¼
+            // åˆ›å»ºèŠ‚ç‚¹
             tree.nodes.ForEach(n => CreateNodeView(n));
 
-            // Create edges£¨½¨Òé¼Ó¸ö null ¼ì²é£©
+            // åˆ›å»ºè¿çº¿
             tree.nodes.ForEach(n => {
                 var children = BehaviourTree.GetChildren(n);
                 children.ForEach(c => {
@@ -276,7 +276,13 @@ namespace TheKiwiCoder
                 });
             });
 
+            // âœ¨âœ¨âœ¨ è¿™é‡ŒåŠ ä¸ŠæŠ˜å é€»è¾‘ âœ¨âœ¨âœ¨
+            foreach (var nodeView in nodes.OfType<NodeView>())
+            {
+                nodeView.ApplyInitialCollapse();
+            }
         }
+
 
         public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapter)
         {
@@ -322,25 +328,25 @@ namespace TheKiwiCoder
 
             return graphViewChange;
         }
-        #region ÓÒ¼ü²Ëµ¥
+        #region å³é”®èœå•
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
         {
-            // Êó±êÔÚ GraphView ÖĞµÄÎ»ÖÃ
+            // é¼ æ ‡åœ¨ GraphView ä¸­çš„ä½ç½®
             Vector2 nodePosition = this.ChangeCoordinatesTo(contentViewContainer, evt.localMousePosition);
 
-            // Ìí¼Ó´´½¨½Å±¾µÄ¾²Ì¬²Ëµ¥Ïî
+            // æ·»åŠ åˆ›å»ºè„šæœ¬çš„é™æ€èœå•é¡¹
             evt.menu.AppendAction("Create Script.../New Action Node", (a) => CreateNewScript(scriptFileAssets[0]));
             evt.menu.AppendAction("Create Script.../New Composite Node", (a) => CreateNewScript(scriptFileAssets[1]));
             evt.menu.AppendAction("Create Script.../New Decorator Node", (a) => CreateNewScript(scriptFileAssets[2]));
             evt.menu.AppendSeparator();
 
-            // ×Ô¶¯Ìí¼Ó Action ½ÚµãÀàĞÍ²Ëµ¥
+            // è‡ªåŠ¨æ·»åŠ  Action èŠ‚ç‚¹ç±»å‹èœå•
             AddNodeTypeMenuItems<ActionNode>( evt, nodePosition);
 
-            // ×Ô¶¯Ìí¼Ó Composite ½ÚµãÀàĞÍ²Ëµ¥
+            // è‡ªåŠ¨æ·»åŠ  Composite èŠ‚ç‚¹ç±»å‹èœå•
             AddNodeTypeMenuItems<CompositeNode>(evt, nodePosition);
 
-            // ×Ô¶¯Ìí¼Ó Decorator ½ÚµãÀàĞÍ²Ëµ¥
+            // è‡ªåŠ¨æ·»åŠ  Decorator èŠ‚ç‚¹ç±»å‹èœå•
             AddNodeTypeMenuItems<DecoratorNode>(evt, nodePosition);
         }
 
@@ -411,7 +417,7 @@ namespace TheKiwiCoder
 
 
         /// <summary>
-        /// ¿ËÂ¡Ö¸¶¨µÄ½Úµã£¨²»º¬×ÓÁ¬½Ó£©
+        /// å…‹éš†æŒ‡å®šçš„èŠ‚ç‚¹ï¼ˆä¸å«å­è¿æ¥ï¼‰
         /// </summary>
         private void CloneNode(NodeView original)
         {
@@ -454,7 +460,7 @@ namespace TheKiwiCoder
         }
 
 
-        // ĞŞ¸Ä CreateNodeView ·µ»Ø NodeView ÒÔ±ãÒıÓÃ
+        // ä¿®æ”¹ CreateNodeView è¿”å› NodeView ä»¥ä¾¿å¼•ç”¨
         private NodeView CreateNodeView(Node node)
         {
             var nodeView = new NodeView(node);

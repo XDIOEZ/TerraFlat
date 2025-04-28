@@ -11,7 +11,7 @@ public interface IColdWeapon
 
 }
 
-public interface IAttacker
+public interface IDamager
 {
     IDamageSender Sender { get; set; }
 

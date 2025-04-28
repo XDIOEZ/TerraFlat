@@ -5,6 +5,8 @@ using TMPro;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
+using DG.Tweening;
 
 public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
 {
@@ -13,6 +15,7 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
     public NavMeshAgent agent;
 
     public bool isMoving;
+    public Rigidbody2D rb2D;
 
     public UltEvent OnStartMoving { get; set; }
     public UltEvent OnStopMoving { get; set; }
@@ -26,7 +29,10 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
         set
         {
             targetPosition = value;
-            agent.SetDestination(value);
+            if (agent.isOnNavMesh)
+            {
+                agent.SetDestination(value);
+            }
             //Debug.Log("New target position: " + value);
 
             // 如果路径无效（如目标不可达），返回失败
@@ -69,12 +75,13 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
     }
 
     public NavMeshAgent Agent_Nav { get => agent; set => agent = value; }
-
+    private Tweener moveTween; // 记录DoTween的tween，方便控制
     void Start()
     {
         agent= GetComponent<NavMeshAgent>();
         agent.updateUpAxis = false;
         agent.updateRotation = false;
+        rb2D = GetComponent<Rigidbody2D>();
     }
 
     public void FixedUpdate()
@@ -103,7 +110,9 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
         {
             IsMoving = false;
             Debug.Log("Arrived");
-            OnStopMoving.Invoke();
+            OnStopMoving?.Invoke();
+            moveTween?.Kill(); // 停止Tween
+            rb2D.velocity = Vector2.zero; // 停止速度
             return;
         }
 
@@ -112,13 +121,36 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
             TargetPosition = target.position;
         }
 
-        agent.SetDestination(TargetPosition);
-        //print("Moving to " + TargetPosition);
-      //  print("Distance to target: " + Vector2.Distance(transform.position, TargetPosition));
-        if (IsMoving == false)
+        // 判断NavMeshAgent能否用
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
         {
-            OnStartMoving.Invoke();
+            agent.SetDestination(TargetPosition);
+        }
+        else
+        {
+            MoveWithDoTween();
+        }
+
+        if (!IsMoving)
+        {
+            OnStartMoving?.Invoke();
             IsMoving = true;
         }
+    }
+
+    private void MoveWithDoTween()
+    {
+        if (rb2D == null)
+        {
+            rb2D = GetComponent<Rigidbody2D>();
+            if (rb2D == null)
+            {
+                Debug.LogError("没有找到 Rigidbody2D 组件！");
+                return;
+            }
+        }
+
+        Vector2 direction = (TargetPosition - transform.position).normalized;
+        rb2D.velocity = direction * Speed;
     }
 }

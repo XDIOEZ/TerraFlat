@@ -22,8 +22,8 @@ public class NavMeshRuntimeBake : MonoBehaviour
     public  void UpdateNavMeshAsync()
     {
 
-        surface.BuildNavMesh();  // ÔËÐÐÊ±ºæ±º}
+        surface.BuildNavMesh();  // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½æ±º}
 
-        Debug.Log("ºæ±ºÍê³É");
+        Debug.Log("ï¿½æ±ºï¿½ï¿½ï¿½");
     }
 }

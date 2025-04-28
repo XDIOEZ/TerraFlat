@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Sirenix.OdinInspector; // 别忘了加上这个using！
 
-public class IronSword : Item, IColdWeapon,IAttacker
+public class IronSword : Item, IColdWeapon,IDamager
 {
     #region 属性
     #region 物体数据

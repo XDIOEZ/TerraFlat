@@ -18,7 +18,6 @@ namespace TheKiwiCoder
         private bool isCollapsed;
         private bool skipChildMovement = false;
         private Button collapseButton;
-
         public NodeView(Node node)
             : base(AssetDatabase.GetAssetPath(BehaviourTreeSettings.GetOrCreateSettings().nodeXml))
         {
@@ -36,10 +35,11 @@ namespace TheKiwiCoder
             SetupClasses();
             SetupDataBinding();
 
-            AddCollapseButton();
-            if (isCollapsed)
-                ApplyCollapse(true);
+            AddCollapseButton();    // 先添加按钮
+
+            ApplyCollapse(isCollapsed);  // 再根据 isCollapsed 应用折叠状态
         }
+
         #region 折叠相关函数
 
         public override void SetPosition(Rect newPos)
@@ -114,6 +114,15 @@ namespace TheKiwiCoder
         {
             bool canHaveChildren = output != null;
             collapseButton.style.display = canHaveChildren ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        // 添加新的方法
+        public void ApplyInitialCollapse()
+        {
+            if (node.isCollapsed)
+            {
+                ApplyCollapse(true);
+            }
         }
 
         private void ApplyCollapse(bool collapse)
