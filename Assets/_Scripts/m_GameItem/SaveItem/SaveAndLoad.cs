@@ -1,11 +1,10 @@
 using MemoryPack;
-using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Newtonsoft.Json;
 
 public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 {
@@ -308,24 +307,34 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     [Button("初始化启动游戏方法")]
     public void ChangeScene(string sceneName = "平原")
     {
-        // 等待 Save() 完成（Save() 是协程）
         Save();
-        // 异步加载场景
         StartCoroutine(EnterScene(sceneName));
     }
-    // 协程：异步加载场景并加载地图
+
     public IEnumerator EnterScene(string sceneName = "平原")
     {
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
+        // 0. 记录当前活动场景（上一个场景） 
+        Scene previousScene = SceneManager.GetActiveScene();
 
-        // 等待场景加载完成
-        while (!asyncLoad.isDone)
+        // 1. 创建新的临时场景并设为活动场景 
+        Scene newScene = SceneManager.CreateScene(sceneName);
+        SceneManager.SetActiveScene(newScene);
+
+
+        // 3. 异步卸载上一个场景（如果它不是初始启动场景）
+        if (previousScene.IsValid()) // 替换"InitScene"为你的初始场景名 
         {
-            yield return null;
+            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(previousScene);
+            while (!unloadOp.isDone)
+            {
+                yield return null;
+            }
         }
 
-        // 场景加载完成后加载地图
+        // 4. 加载新场景的内容 
         LoadMap(sceneName);
+
+        yield return null;
     }
 
 
@@ -338,7 +347,7 @@ public partial class MapSave
 {
     public string MapName;
 
-    [ShowNonSerializedField]
+    [ShowInInspector]
     // 将原先存储单个 ItemData 的字典改为存储 List<ItemData>，key 为物品名称
     public Dictionary<string, List<ItemData>> items = new Dictionary<string, List<ItemData>>();
 
@@ -351,12 +360,12 @@ public partial class MapSave
 [System.Serializable]
 public partial class GameSaveData
 {
-    public string saveName= "defaultSaveName";//存档名称
-    [ShowNonSerializedField]
+    public string saveName = "defaultSaveName";//存档名称
+    [ShowInInspector]
     //存档数据结构
     public Dictionary<string, MapSave> MapSaves_Dict = new Dictionary<string, MapSave>();
     //玩家数据
-    [ShowNonSerializedField]
+    [ShowInInspector]
     public Dictionary<string, PlayerData> PlayerData_Dict = new Dictionary<string, PlayerData>();
 
     public string leaveTime = "0";//离开时间

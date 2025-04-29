@@ -21,8 +21,10 @@ public partial class ColdWeaponData : ItemData
     public float _spinSpeed;
     [Tooltip("武器精力消耗速度")]
     public float _energyConsumptionSpeed;
-    [Tooltip("上次攻击时间")]
-    public float _lastAttackTime;
+    [Tooltip("上次造成伤害的时间")]
+    public float _lastDamageTime;
+    [Tooltip("武器单次出鞘最多可造成的伤害次数")]
+    public float _maxAttackCount;
 
     [Button("从Excel同步数据")]
     public override int SyncData()
@@ -66,6 +68,10 @@ public partial class ColdWeaponData : ItemData
         // 武器精力消耗速度（float）
         _energyConsumptionSpeed = m_ExcelManager.Instance.GetConvertedValue<float>(
             "EnergyConsumptionSpeed", itemRow, 0.0f);
+        //输出窗口（float）
+        _maxAttackCount = m_ExcelManager.Instance.GetConvertedValue<float>(
+            "MaxAttackCount", itemRow, 0.0f);
+        Debug.Log("从Excel同步数据成功！"+ GetType().Name);
         return itemRow;
     }
 }

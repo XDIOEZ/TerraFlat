@@ -1,9 +1,14 @@
 using NaughtyAttributes;
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 
+<<<<<<< Updated upstream
 public class StoneAxe : Item, IColdWeapon, IDamager
+=======
+public class StoneAxe : Item, IColdWeapon, IAttackState
+>>>>>>> Stashed changes
 {
     #region 属性
     #region 物体数据
@@ -37,6 +42,7 @@ public class StoneAxe : Item, IColdWeapon, IDamager
     #endregion
 
     #region 武器数据
+
     // 通过 _data 映射接口属性
     public Damage WeaponDamage
     {
@@ -80,33 +86,25 @@ public class StoneAxe : Item, IColdWeapon, IDamager
         set => _data._energyConsumptionSpeed = value;
     }
 
+    public float LastDamageTime { get => _data._lastDamageTime; set => _data._lastDamageTime = value; }
+    //武器伤害输出窗口
+    public float MaxDamageCount { get => _data._maxAttackCount; set => _data._maxAttackCount = value; }
+    #endregion
+
+    #region 攻击状态
+    public UltEvent OnAttackStart { get; set; } = new UltEvent();
+    public UltEvent OnAttackUpdate { get; set; } = new UltEvent();
+    public UltEvent OnAttackEnd { get; set; } = new UltEvent();
+
     #endregion
     #endregion
 
     #region 方法
-    // 实现 IAttacker 接口
-    public void AttackStart()
-    {
-        Sender.StartTrySendDamage();
-    }
-
-    public void AttackUpdate()
-    {
-        
-    }
-
-    public void AttackEnd()
-    {
-        Sender.EndTrySendDamage();
-        // 重置武器状态
-        //Debug.Log("攻击结束，武器返回速度：" + ReturnSpeed);
-    }
 
     // 重写 Item 的 Act() 方法
     public override void Act()
     {
-        // 示例：触发攻击开始
-        AttackStart();
+
     }
     #endregion
 }

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Ammo : Item,IColdWeapon
+public class Ammo : Item
 {
     public IDamageSender damageSender;
     public Rigidbody2D rb2d;

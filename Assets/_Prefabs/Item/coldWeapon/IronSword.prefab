@@ -83,6 +83,8 @@ MonoBehaviour:
     _returnSpeed: 10
     _spinSpeed: 360
     _energyConsumptionSpeed: 10
+    _lastDamageTime: 0
+    _maxAttackCount: 5
 --- !u!61 &2482106438656866000
 BoxCollider2D:
   m_ObjectHideFlags: 0

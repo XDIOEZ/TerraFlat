@@ -167,6 +167,8 @@ MonoBehaviour:
     _returnSpeed: 0
     _spinSpeed: 0
     _energyConsumptionSpeed: 0
+    _lastDamageTime: 0
+    _damageWindow: 0
 --- !u!61 &7369073139988494441
 BoxCollider2D:
   m_ObjectHideFlags: 0

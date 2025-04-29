@@ -329,7 +329,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     #region 保存和加载
     public void Save()
     {
-        throw new System.NotImplementedException();
+        //TODO 保存数据
     }
 
     public void Load()

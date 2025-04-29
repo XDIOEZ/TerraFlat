@@ -3,22 +3,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Pickaxe : Weapon, IColdWeapon
+public class Pickaxe : Item, IColdWeapon
 {
-
-    public PickaxeToolData stonePicaxeData;
+    //ÎäÆ÷ÉËº¦Êä³ö´°¿Ú
+    public float MaxDamageCount { get => _data._maxAttackCount; set => _data._maxAttackCount = value; }
+    public ColdWeaponData _data;
 
     public DamageSender_ColdWeapon damageSender;
+
     public override ItemData Item_Data
     {
         get
         {
-            return stonePicaxeData;
+            return _data;
         }
 
         set
         {
-            stonePicaxeData = (PickaxeToolData)value;
+            _data = (ColdWeaponData)value;
         }
     }
 
@@ -26,12 +28,12 @@ public class Pickaxe : Weapon, IColdWeapon
     {
         get
         {
-            return stonePicaxeData._damage;
+            return _data._damage;
         }
 
         set
         {
-            stonePicaxeData._damage = value;
+            _data._damage = value;
         }
     }
 
@@ -39,12 +41,12 @@ public class Pickaxe : Weapon, IColdWeapon
     {
         get
         {
-            return stonePicaxeData._minDamageInterval;
+            return _data._minDamageInterval;
         }
 
         set
         {
-            stonePicaxeData._minDamageInterval = value;
+            _data._minDamageInterval = value;
         }
     }
 
@@ -54,41 +56,13 @@ public class Pickaxe : Weapon, IColdWeapon
     public float ReturnSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float SpinSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float EnergyCostSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
-
-    public new void Start()
-    {
-        damageSender = GetComponentInChildren<DamageSender_ColdWeapon>();
-     //   damageSender.+= Attack;
-        base.Start();
-    }
-    public new void OnDisable()
-    {
-        base.OnDisable();
-    }
-
-    public  void Attack(IReceiveDamage BeAttacker)
-    {
-        BeAttacker.ReceiveDamage(0);
-
-    }
-    public override void StartAttack()
-    {
-        damageSender.IsDamageModeEnabled = true;
-    //    damageSender.damageCount = 0;
-        // Debug.Log("Stone Axe Attack");
-    }
-    public override void StopAttack()
-    {
-        damageSender.IsDamageModeEnabled = false;
-    //    damageSender.damageCount = 1;
-        // Debug.Log("Stone Axe Stop Attack");
-    }
-
-    public override void StayAttack()
-    {
-        // Debug.Log("Stone Axe Stay Attack");
-    }
+    public float LastDamageTime { get => _data._lastDamageTime; set => _data._lastDamageTime = value; }
 
 
+
+    public override void Act()
+    {
+        throw new System.NotImplementedException();
+    }
 }
 

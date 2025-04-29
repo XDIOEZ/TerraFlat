@@ -38,7 +38,11 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
     public void SetWeapon(GameObject _weapon)
     {
         Weapon_GameObject = _weapon;
+<<<<<<< Updated upstream
         Attacker = weaponGameObject.GetComponent<IDamager>();
+=======
+        Attacker = weaponGameObject.GetComponent<IAttackState>();
+>>>>>>> Stashed changes
         WeaponData = weaponGameObject.GetComponent<IColdWeapon>();
     }
     #endregion
@@ -47,9 +51,15 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     // 挂接的攻击行为接口
     [ShowNonSerializedField]
+<<<<<<< Updated upstream
     private IDamager attacker;
  
     public IDamager Attacker
+=======
+    private IAttackState attacker;
+ 
+    public IAttackState Attacker
+>>>>>>> Stashed changes
     {
         get
         {
@@ -146,7 +156,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
             {
                 MouseTarget = Target; // 同步鼠标目标位置
 
-                Attacker?.AttackStart();
+                Attacker?.StartAttack();
                 StartAttack();
                 OnStartAttack?.Invoke(); // 触发攻击开始事件
             }
@@ -158,7 +168,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
                 MouseTarget = Target; // 同步鼠标目标位置
                 if (Attacker != null)
                 {
-                    Attacker.AttackEnd();
+                    Attacker.EndAttack();
                 }
                 StopAttack();
                 OnEndAttack?.Invoke(); // 触发攻击结束事件
@@ -171,7 +181,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
                 MouseTarget = Target; // 同步鼠标目标位置
                 if (Attacker != null)
                 {
-                    Attacker.AttackUpdate();
+                    Attacker.UpdateAttack();
                 }
                 StayAttack();
                 OnStayAttack?.Invoke(); // 触发攻击持续事件
@@ -189,12 +199,20 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         WeaponData = null;
     }
 
+<<<<<<< Updated upstream
     public void SetAttacker(IDamager attacker_)
+=======
+    public void SetAttacker(IAttackState attacker_)
+>>>>>>> Stashed changes
     {
         Attacker = attacker_;
     }
 
+<<<<<<< Updated upstream
     public void RemoveAttacker(IDamager attacker_)
+=======
+    public void RemoveAttacker(IAttackState attacker_)
+>>>>>>> Stashed changes
     {
         Attacker = null;
     }

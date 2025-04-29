@@ -3,12 +3,18 @@ using NaughtyAttributes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 
+<<<<<<< Updated upstream
 public class StoneSword :Item,IColdWeapon,IDamager
+=======
+public class StoneSword :Item,IColdWeapon,IAttackState
+>>>>>>> Stashed changes
 {
     public ColdWeaponData _data;
 
+    #region ÊôÐÔ
     public Damage WeaponDamage
     {
         get
@@ -19,7 +25,7 @@ public class StoneSword :Item,IColdWeapon,IDamager
         {
             _data._damage = value;
         }
-    
+
     }
 
     public float MinDamageInterval
@@ -32,7 +38,7 @@ public class StoneSword :Item,IColdWeapon,IDamager
         {
             _data._minDamageInterval = value;
         }
-    
+
     }
 
     public override ItemData Item_Data { get => _data; set => _data = (ColdWeaponData)value; }
@@ -61,6 +67,16 @@ public class StoneSword :Item,IColdWeapon,IDamager
     public float ReturnSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float SpinSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float EnergyCostSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    public float LastDamageTime { get =>_data._lastDamageTime; set => _data._lastDamageTime = value; }
+    //ÎäÆ÷ÉËº¦Êä³ö´°¿Ú
+    public float MaxDamageCount { get => _data._maxAttackCount; set => _data._maxAttackCount = value; }
+    #endregion
+
+    #region ¹¥»÷ÐÐÎª¼àÌý
+    public UltEvent OnAttackStart { get; set; } = new UltEvent();
+    public UltEvent OnAttackUpdate { get; set; } = new UltEvent();
+    public UltEvent OnAttackEnd { get; set; } = new UltEvent();
+    #endregion
 
     public override void Act()
     {
