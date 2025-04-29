@@ -7,18 +7,18 @@ using UnityEngine;
 public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 {
     public float DefaultRotationSpeed = 360f;
-    #region ÊÂ¼ş
-    // ÊÂ¼ş--Î¯ÍĞ
+    #region äº‹ä»¶
+    // äº‹ä»¶--å§”æ‰˜
     public UltEvent onStartAttack;
     public UltEvent onStayAttack;
     public UltEvent onEndAttack;
-    // ÊÂ¼ş--ÊôĞÔ
+    // äº‹ä»¶--å±æ€§
     public UltEvent OnStartAttack { get=> onStartAttack; set=> onStartAttack = value; }
     public UltEvent OnStayAttack { get=> onStayAttack; set=> onStayAttack = value; }
     public UltEvent OnEndAttack { get=> onEndAttack; set=> onEndAttack = value; }
     #endregion
 
-    #region µ±Ç°Ê¹ÓÃµÄÎäÆ÷¶ÔÏó
+    #region å½“å‰ä½¿ç”¨çš„æ­¦å™¨å¯¹è±¡
     [ShowNonSerializedField]
     GameObject weaponGameObject;
 
@@ -33,33 +33,23 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
             weaponGameObject = value;
         }
     
-    } // ÎäÆ÷¶ÔÏó
+    } // æ­¦å™¨å¯¹è±¡
 
     public void SetWeapon(GameObject _weapon)
     {
         Weapon_GameObject = _weapon;
-<<<<<<< Updated upstream
-        Attacker = weaponGameObject.GetComponent<IDamager>();
-=======
         Attacker = weaponGameObject.GetComponent<IAttackState>();
->>>>>>> Stashed changes
         WeaponData = weaponGameObject.GetComponent<IColdWeapon>();
     }
     #endregion
 
-    #region ¹Ò½ÓµÄÎäÆ÷Êı¾İºÍĞĞÎª½Ó¿Ú
+    #region æŒ‚æ¥çš„æ­¦å™¨æ•°æ®å’Œè¡Œä¸ºæ¥å£
 
-    // ¹Ò½ÓµÄ¹¥»÷ĞĞÎª½Ó¿Ú
+    // æŒ‚æ¥çš„æ”»å‡»è¡Œä¸ºæ¥å£
     [ShowNonSerializedField]
-<<<<<<< Updated upstream
-    private IDamager attacker;
- 
-    public IDamager Attacker
-=======
     private IAttackState attacker;
  
     public IAttackState Attacker
->>>>>>> Stashed changes
     {
         get
         {
@@ -71,7 +61,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         }
     }
     [ShowNonSerializedField]
-    // ¹Ò½ÓµÄÎäÆ÷Êı¾İ
+    // æŒ‚æ¥çš„æ­¦å™¨æ•°æ®
     private IColdWeapon weapon;
     public IColdWeapon WeaponData
     {
@@ -105,29 +95,29 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     #endregion
 
-    #region ¹¥»÷ĞĞÎªµÄ×´Ì¬²ÎÊı
-    public Vector2 StartPosition; // ±£´æ³õÊ¼Î»ÖÃ
+    #region æ”»å‡»è¡Œä¸ºçš„çŠ¶æ€å‚æ•°
+    public Vector2 StartPosition; // ä¿å­˜åˆå§‹ä½ç½®
     public Vector3 MouseTarget;
     public bool CanAttack;
-    public AttackState CurrentState = AttackState.Idle; // µ±Ç°×´Ì¬
+    public AttackState CurrentState = AttackState.Idle; // å½“å‰çŠ¶æ€
     private Coroutine returnCoroutine;
     #endregion
 
-    #region (×¢²á¹¥»÷
+    #region (æ³¨å†Œæ”»å‡»
     private void Start()
     {
         StaminaManager staminaManager = transform.parent.GetComponentInChildren<StaminaManager>();
         if (staminaManager != null)
         {
-            // Ê¹ÓÃEffectiveStaminaCost±£Ö¤ÎäÆ÷Êı¾İ¸üĞÂÊ±¾«Á¦ÏûºÄÖµÒ²¸ú×Å¸üĞÂ
+            // ä½¿ç”¨EffectiveStaminaCostä¿è¯æ­¦å™¨æ•°æ®æ›´æ–°æ—¶ç²¾åŠ›æ¶ˆè€—å€¼ä¹Ÿè·Ÿç€æ›´æ–°
             OnStartAttack += () => staminaManager.StartReduceStamina(WeaponData.EnergyCostSpeed, "AttackTrigger");
             OnEndAttack += () => staminaManager.StopReduceStamina("AttackTrigger");
-            staminaManager.OnStaminaChanged += SetCanAttack; // ×¢²á¾«Á¦Öµ±ä»¯ÊÂ¼ş
+            staminaManager.OnStaminaChanged += SetCanAttack; // æ³¨å†Œç²¾åŠ›å€¼å˜åŒ–äº‹ä»¶
         }
     }
     #endregion
 
-    #region (ÉèÖÃÊÇ·ñ¿ÉÒÔ¹¥»÷, ´¥·¢¹¥»÷)Íâ²¿½Ó¿Ú
+    #region (è®¾ç½®æ˜¯å¦å¯ä»¥æ”»å‡», è§¦å‘æ”»å‡»)å¤–éƒ¨æ¥å£
 
     public void SetCanAttack(float Stamina)
     {
@@ -154,37 +144,37 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         {
             if (CanAttack && CurrentState == AttackState.Idle)
             {
-                MouseTarget = Target; // Í¬²½Êó±êÄ¿±êÎ»ÖÃ
+                MouseTarget = Target; // åŒæ­¥é¼ æ ‡ç›®æ ‡ä½ç½®
 
                 Attacker?.StartAttack();
                 StartAttack();
-                OnStartAttack?.Invoke(); // ´¥·¢¹¥»÷¿ªÊ¼ÊÂ¼ş
+                OnStartAttack?.Invoke(); // è§¦å‘æ”»å‡»å¼€å§‹äº‹ä»¶
             }
         }
         else if (keyState == KeyState.End || CanAttack == false)
         {
             if (CurrentState == AttackState.Attacking)
             {
-                MouseTarget = Target; // Í¬²½Êó±êÄ¿±êÎ»ÖÃ
+                MouseTarget = Target; // åŒæ­¥é¼ æ ‡ç›®æ ‡ä½ç½®
                 if (Attacker != null)
                 {
                     Attacker.EndAttack();
                 }
                 StopAttack();
-                OnEndAttack?.Invoke(); // ´¥·¢¹¥»÷½áÊøÊÂ¼ş
+                OnEndAttack?.Invoke(); // è§¦å‘æ”»å‡»ç»“æŸäº‹ä»¶
             }
         }
         else if (keyState == KeyState.Hold)
         {
             if (CanAttack && CurrentState == AttackState.Attacking)
             {
-                MouseTarget = Target; // Í¬²½Êó±êÄ¿±êÎ»ÖÃ
+                MouseTarget = Target; // åŒæ­¥é¼ æ ‡ç›®æ ‡ä½ç½®
                 if (Attacker != null)
                 {
                     Attacker.UpdateAttack();
                 }
                 StayAttack();
-                OnStayAttack?.Invoke(); // ´¥·¢¹¥»÷³ÖĞøÊÂ¼ş
+                OnStayAttack?.Invoke(); // è§¦å‘æ”»å‡»æŒç»­äº‹ä»¶
             }
         }
     }
@@ -199,55 +189,47 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         WeaponData = null;
     }
 
-<<<<<<< Updated upstream
-    public void SetAttacker(IDamager attacker_)
-=======
     public void SetAttacker(IAttackState attacker_)
->>>>>>> Stashed changes
     {
         Attacker = attacker_;
     }
 
-<<<<<<< Updated upstream
-    public void RemoveAttacker(IDamager attacker_)
-=======
     public void RemoveAttacker(IAttackState attacker_)
->>>>>>> Stashed changes
     {
         Attacker = null;
     }
 
     #endregion
 
-    #region (´Ì»÷¡¢·µ»Ø¡¢¼ì²é¹¥»÷×´Ì¬)Ë½ÓĞ·½·¨
+    #region (åˆºå‡»ã€è¿”å›ã€æ£€æŸ¥æ”»å‡»çŠ¶æ€)ç§æœ‰æ–¹æ³•
 
     public void PerformStab(Vector2 startTarget, float speed, float maxDistance)
     {
-        // ×ø±êÏµ×ª»»£ºÈç¹ûÓĞ¸¸¶ÔÏó£¬Ôò½«Êó±êÄ¿±ê×ª»»Îª±¾µØ×ø±ê
+        // åæ ‡ç³»è½¬æ¢ï¼šå¦‚æœæœ‰çˆ¶å¯¹è±¡ï¼Œåˆ™å°†é¼ æ ‡ç›®æ ‡è½¬æ¢ä¸ºæœ¬åœ°åæ ‡
         Vector2 mouseTargetLocal = transform.parent != null ?
             (Vector2)transform.parent.InverseTransformPoint(MouseTarget) :
             (Vector2)MouseTarget;
 
         Vector2 currentLocalPos = (Vector2)transform.localPosition;
 
-        // ¼ÆËã´ÓÆğÊ¼µãµ½Ä¿±êµãµÄÏòÁ¿¼°Æä³¤¶È
+        // è®¡ç®—ä»èµ·å§‹ç‚¹åˆ°ç›®æ ‡ç‚¹çš„å‘é‡åŠå…¶é•¿åº¦
         Vector2 toTarget = mouseTargetLocal - startTarget;
         float targetDistance = toTarget.magnitude;
 
-        // ÈôÄ¿±ê³¬³ö×î´ó·¶Î§£¬ÔòÏÈ¶ÔÄ¿±ê½øĞĞÏŞÖÆ
+        // è‹¥ç›®æ ‡è¶…å‡ºæœ€å¤§èŒƒå›´ï¼Œåˆ™å…ˆå¯¹ç›®æ ‡è¿›è¡Œé™åˆ¶
         if (targetDistance > maxDistance)
         {
             mouseTargetLocal = startTarget + toTarget.normalized * maxDistance;
         }
 
-        // ¼ÆËãÒÆ¶¯·½Ïò
+        // è®¡ç®—ç§»åŠ¨æ–¹å‘
         Vector2 direction = (mouseTargetLocal - currentLocalPos).normalized;
-        // ±¾Ö¡ÒÆ¶¯µÄ¾àÀë
+        // æœ¬å¸§ç§»åŠ¨çš„è·ç¦»
         float distanceToMove = speed * Time.deltaTime;
-        // ¼ÆËãĞÂµÄÎ»ÖÃ
+        // è®¡ç®—æ–°çš„ä½ç½®
         Vector2 newPosition = currentLocalPos + direction * distanceToMove;
 
-        // ÅĞ¶ÏÊ£Óà¾àÀë£¬Èô¹ı½üÔòÖ±½ÓÉèÖÃÎªÄ¿±êÎ»ÖÃ£¨²¢È·±£²»³¬³ö×î´ó·¶Î§£©
+        // åˆ¤æ–­å‰©ä½™è·ç¦»ï¼Œè‹¥è¿‡è¿‘åˆ™ç›´æ¥è®¾ç½®ä¸ºç›®æ ‡ä½ç½®ï¼ˆå¹¶ç¡®ä¿ä¸è¶…å‡ºæœ€å¤§èŒƒå›´ï¼‰
         float remainingDistance = Vector2.Distance(currentLocalPos, mouseTargetLocal);
         if (remainingDistance < 0.1f)
         {
@@ -258,7 +240,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         }
         else
         {
-            // ³£¹æÒÆ¶¯Ê±¼ì²éÊÇ·ñ³¬¹ı×î´ó·¶Î§
+            // å¸¸è§„ç§»åŠ¨æ—¶æ£€æŸ¥æ˜¯å¦è¶…è¿‡æœ€å¤§èŒƒå›´
             float currentDistance = Vector2.Distance(startTarget, newPosition);
             if (currentDistance > maxDistance)
             {
@@ -266,10 +248,10 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
             }
         }
 
-        // ¸üĞÂ±¾µØÎ»ÖÃ
+        // æ›´æ–°æœ¬åœ°ä½ç½®
         transform.localPosition = newPosition;
 
-        // µ÷ÊÔ»æÖÆ£¬´ÓÆğÊ¼µãµ½µ±Ç°Î»ÖÃµÄÁ¬Ïß£¨×ª»»ÎªÊÀ½ç×ø±ê£©
+        // è°ƒè¯•ç»˜åˆ¶ï¼Œä»èµ·å§‹ç‚¹åˆ°å½“å‰ä½ç½®çš„è¿çº¿ï¼ˆè½¬æ¢ä¸ºä¸–ç•Œåæ ‡ï¼‰
         Debug.DrawLine(
             transform.parent.TransformPoint(startTarget),
             transform.parent.TransformPoint(newPosition),
@@ -303,7 +285,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     #endregion
 
-    #region ÎäÆ÷¹¥»÷×´Ì¬µÄÇĞ»»
+    #region æ­¦å™¨æ”»å‡»çŠ¶æ€çš„åˆ‡æ¢
     public void StartAttack()
     {
         CurrentState = AttackState.Attacking;
@@ -312,7 +294,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     public void StayAttack()
     {
-        // Ö±½ÓÊ¹ÓÃEffectiveAttackSpeedºÍEffectiveMaxAttackDistance
+        // ç›´æ¥ä½¿ç”¨EffectiveAttackSpeedå’ŒEffectiveMaxAttackDistance
         PerformStab(StartPosition, WeaponData.AttackSpeed, WeaponData.MaxAttackDistance);
     }
 

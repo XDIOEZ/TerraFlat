@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-<<<<<<< Updated upstream
+/*<<<<<<< Updated upstream
 public class StoneSword :Item,IColdWeapon,IDamager
-=======
+=======*/
 public class StoneSword :Item,IColdWeapon,IAttackState
->>>>>>> Stashed changes
+//>>>>>>> Stashed changes
 {
     public ColdWeaponData _data;
 

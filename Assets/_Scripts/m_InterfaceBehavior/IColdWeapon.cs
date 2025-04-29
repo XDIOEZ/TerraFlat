@@ -17,10 +17,12 @@ public interface IColdWeapon
 
 }
 
-<<<<<<< Updated upstream
+//<<<<<<< Updated upstream
+
 public interface IDamager
 {
-    IDamageSender Sender { get; set; }
-=======
->>>>>>> Stashed changes
+    IDamageSender Sender { get; set; } 
+}
+//=======
+//>>>>>>> Stashed changes
 

@@ -5,11 +5,11 @@ using UnityEngine;
 using Sirenix.OdinInspector;
 using UltEvents; // 别忘了加上这个using！
 
-<<<<<<< Updated upstream
+/*<<<<<<< Updated upstream
 public class IronSword : Item, IColdWeapon,IDamager
-=======
+=======*/
 public class IronSword : Item, IColdWeapon,IAttackState
->>>>>>> Stashed changes
+//>>>>>>> Stashed changes
 {
     #region 属性
     #region 物体数据

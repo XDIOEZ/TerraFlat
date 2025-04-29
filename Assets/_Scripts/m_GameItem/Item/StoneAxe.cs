@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-<<<<<<< Updated upstream
+/*<<<<<<< Updated upstream
 public class StoneAxe : Item, IColdWeapon, IDamager
-=======
+=======*/
 public class StoneAxe : Item, IColdWeapon, IAttackState
->>>>>>> Stashed changes
+//>>>>>>> Stashed changes
 {
     #region 属性
     #region 物体数据
