@@ -16,7 +16,7 @@ public class AnimatorController : ActionNode
     }
 
     [Header("动画类型")]
-    public ParameterType parameterType;
+    public ParameterType parameterType = ParameterType.SetBool;
 
     [Header("动画参数名")]
     public string animationName;

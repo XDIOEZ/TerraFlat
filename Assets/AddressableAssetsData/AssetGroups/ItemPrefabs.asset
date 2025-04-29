@@ -95,6 +95,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 939d63540274d5649acb1084d09fcf44
+    m_Address: Assets/_Prefabs/coldWeapon
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a0c6d4be2d56204468cebe6e395aedf0
     m_Address: 'Pickaxe '
     m_ReadOnly: 0

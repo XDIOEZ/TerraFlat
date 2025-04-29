@@ -2,7 +2,7 @@
 using UltEvents;
 using UnityEngine;
 
-    public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina
+    public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina,ISave_Load
 {
     public AnimalData Data;
     public override ItemData Item_Data { get { return Data; } set { Data = value as AnimalData; } }
@@ -10,7 +10,7 @@ using UnityEngine;
 
     public Hunger_Water Foods { get => Data.hunger; set => Data.hunger = value; }
     public float EatingSpeed { get => Data.attackSpeed; set => throw new System.NotImplementedException(); }
-    public UltEvent OnNutrientChanged { get; set; }
+    public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
 
     #endregion
     #region 速度
@@ -94,11 +94,19 @@ using UnityEngine;
         set => Data.staminaRecoverySpeed = value;
     }
     public UltEvent OnStaminaChanged { get; set; } = new UltEvent();
+    public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    public UltEvent onLoad { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     #endregion
 
     public void Start()
     {
-        OnNutrientChanged = new UltEvent();
+        Load();
+      //  Debug.Log("Wolf Start");
+    }
+
+    public void OnEnable()
+    {
+      
     }
 
     public override void Act()
@@ -127,4 +135,26 @@ using UnityEngine;
     {
         Destroy(gameObject);
     }
+
+    #region 保存与加载
+    public void Save()
+    {
+        GetComponent<ITriggerAttack>().DestroyWeapon();
+    }
+
+    public void Load()
+    {
+        ItemData _WeaponData;
+        if (Data._inventoryData.ContainsKey("武器"))
+        {
+             _WeaponData = Data._inventoryData["武器"].itemSlots[0]._ItemData;
+        }
+        else
+        {
+            _WeaponData = GameRes.Instance.GetPrefab("WolfDefaultWeapon").GetComponent<Item>().Item_Data;
+        }
+
+            GetComponentInChildren<ITriggerAttack>().CreateWeapon(_WeaponData);
+    }
+    #endregion
 }

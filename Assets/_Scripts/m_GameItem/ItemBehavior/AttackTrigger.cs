@@ -173,7 +173,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
                 {
                     Attacker.UpdateAttack();
                 }
-                StayAttack();
+                StayTriggerAttack();
                 OnStayAttack?.Invoke(); // 触发攻击持续事件
             }
         }
@@ -292,7 +292,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         StartPosition = transform.localPosition;
     }
 
-    public void StayAttack()
+    public void StayTriggerAttack()
     {
         // 直接使用EffectiveAttackSpeed和EffectiveMaxAttackDistance
         PerformStab(StartPosition, WeaponData.AttackSpeed, WeaponData.MaxAttackDistance);
@@ -309,6 +309,16 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
 
         StartReturningToStartPosition(StartPosition, WeaponData.ReturnSpeed);
+    }
+
+    public void StopTriggerAttack()
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public void StartTriggerAttack()
+    {
+        throw new System.NotImplementedException();
     }
     #endregion
 

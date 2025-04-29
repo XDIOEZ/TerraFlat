@@ -119,11 +119,11 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
 
             // 获取文本组件（在协程外获取一次）
             TextMeshProUGUI textMeshPro = damagePanel.GetComponentInChildren<TextMeshProUGUI>();
-            textMeshPro.text = i.ToString();
+            textMeshPro.text = Mathf.FloorToInt(i).ToString();
             textMeshPro.color = damagePanelColor;
 
             // 直接传递组件引用
-           ShowDamagePanel(damagePanel, textMeshPro, hitPoint);
+           ShowDamagePanel(damagePanel, textMeshPro, hitPoint, i);
         }
 
 
@@ -133,41 +133,42 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
     }
 
     #region 数字面板动画
-
-    private void ShowDamagePanel(GameObject damagePanel, TextMeshProUGUI textMeshPro, Vector3 startPos)
+    private void ShowDamagePanel(GameObject damagePanel, TextMeshProUGUI textMeshPro, Vector3 startPos, float damageAmount)
     {
         Transform panelTransform = damagePanel.transform;
         Vector3 randomDirection = Random.insideUnitCircle.normalized;
 
         float duration = damagePanelDuration;
+
+        // 计算根据伤害值动态变化的初始缩放
+        float minScale = 1f;
+        float maxScale = 2f;
+
+        float clampedDamage = Mathf.Clamp(damageAmount, 10f, 100f);
+        float scaleFactor = Mathf.Lerp(minScale, maxScale, (clampedDamage - 10f) / (100f - 10f));
+
         float growDuration = duration * scalePhaseRatio;    // 变大阶段时间
         float shrinkDuration = duration * (1 - scalePhaseRatio); // 变小阶段时间
 
-        // 确保时间比例合法
         growDuration = Mathf.Clamp(growDuration, 0.1f, duration);
         shrinkDuration = Mathf.Max(duration - growDuration, 0.1f);
 
-        // 1. 初始缩放设置为最小值
-        panelTransform.localScale = Vector3.one * startingScale;
+        // 初始缩放设置
+        panelTransform.localScale = Vector3.one * scaleFactor;
 
-        // 2. 创建缩放动画序列（先变大后变小，按比例分配时间）
+        // 创建缩放动画序列（放大一点再缩小回原缩放）
         Sequence scaleSequence = DOTween.Sequence();
-        scaleSequence.Append(panelTransform.DOScale(maximumScale, growDuration));
-        scaleSequence.Append(panelTransform.DOScale(startingScale, shrinkDuration));
+        scaleSequence.Append(panelTransform.DOScale(scaleFactor * maximumScale, growDuration));
+        scaleSequence.Append(panelTransform.DOScale(scaleFactor, shrinkDuration));
 
-        // 3. 主动画序列（移动+同步缩放+颜色渐变）
         Sequence mainSequence = DOTween.Sequence();
-
-        // 移动动画持续总时间
         mainSequence.Append(
             panelTransform.DOMove(
                 startPos + randomDirection * damagePanelSpeed * duration,
                 duration
             )
         )
-        // 同步执行缩放动画
         .Join(scaleSequence)
-        // 同步执行颜色渐变
         .Join(
             DOTween.To(
                 () => textMeshPro.color,
@@ -176,12 +177,15 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
                 duration
             )
         )
-        // 动画结束后销毁
         .OnComplete(() => Destroy(damagePanel));
     }
 
+
     #endregion
 
+
+
+    #region 动画效果
     #region 受伤闪烁动画
 
     private IEnumerator ShakeSprite(Transform spriteTransform)
@@ -203,8 +207,6 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
         spriteTransform.localPosition = originalPos;
     }
     #endregion
-
-
     public void Hit_Flash(SpriteRenderer spriteRenderer)
     {
         StartCoroutine(FlashCoroutine(spriteRenderer));
@@ -223,7 +225,7 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
             yield return StartCoroutine(LerpColor(spriteRenderer, flashColor, originalColor, flashDuration * 0.5f));
         }
         isFlashing = false;
-}
+    }
     private IEnumerator LerpColor(SpriteRenderer spriteRenderer, Color fromColor, Color toColor, float duration)
     {
         float time = 0f;
@@ -276,6 +278,7 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
 
         return null;
     }
+    #endregion
 
 
     private void OnTriggerEnter2D(Collider2D other)

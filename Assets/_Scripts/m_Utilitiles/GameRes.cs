@@ -4,6 +4,8 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.Tilemaps;
 using OfficeOpenXml;
+using Sirenix.OdinInspector;
+
 public class GameRes : SingletonAutoMono<GameRes>
 {
     #region 字段
@@ -17,11 +19,14 @@ public class GameRes : SingletonAutoMono<GameRes>
     public List<string> ADBLabels_TileBase = new List<string>();
 
     // 合并后的预制体字典
+    [ShowInInspector]
     public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>(); // 只保存预制体
 
     // 改为存储配方对象字典
+    [ShowInInspector]
     public Dictionary<string, Recipe> recipeDict = new Dictionary<string, Recipe>();
     // 改为存储TileBase对象字典
+    [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
 
 
@@ -48,6 +53,7 @@ public class GameRes : SingletonAutoMono<GameRes>
     }
     #endregion
 
+    [Button]
     public GameObject InstantiatePrefab(string prefab, Vector3 position = default)
     {
         if (AllPrefabs.ContainsKey(prefab))

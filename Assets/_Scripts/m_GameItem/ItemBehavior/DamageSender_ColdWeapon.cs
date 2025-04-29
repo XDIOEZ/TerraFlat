@@ -1,6 +1,6 @@
 using UltEvents;
 using UnityEngine;
-
+[RequireComponent(typeof(Collider2D))]
 public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
 {
     #region 配置字段
@@ -99,12 +99,14 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
         currentDamageMultiplier = damageFalloffCurve.Evaluate(intervalRatio);
 
         Damage scaledDamage = GetScaledDamage(DamageValue, currentDamageMultiplier);
+
         lastDamageTime = Time.time;
 
         receiver.TakeDamage(scaledDamage, other.ClosestPoint(cachedTransform.position));
         OnDamage?.Invoke(scaledDamage.PhysicalDamage);
 
-        Debug.Log($"[冷兵器] 造成伤害: {scaledDamage} (倍率: {currentDamageMultiplier:F2})", this);
+        Debug.Log($"[冷兵器] 实际间隔: {timeSinceLastDamage:F2}s, 倍率: {currentDamageMultiplier:F2}, 造成伤害: {scaledDamage}", this);
+
     }
     #endregion
 
