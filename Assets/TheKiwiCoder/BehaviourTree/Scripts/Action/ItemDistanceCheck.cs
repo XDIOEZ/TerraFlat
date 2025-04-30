@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
@@ -9,28 +8,16 @@ using UnityEditor;
 public class ItemDistanceCheck : ActionNode
 {
     public Vector2 Range;
-
-    private Item targetItem;
-
-    public List<string> itemTypeTags = new List<string>(); // Inspector 中配置
+    public List<string> itemTypeTags = new List<string>();
+    [Tooltip("本地检测点位置")]
+    public Transform  localPoint;
 
     protected override void OnStart()
     {
-        targetItem = null;
-
-        foreach (var item in context.itemDetector.CurrentItemsInArea)
-        {
-            var itemTags = item.Item_Data.ItemTags.Item_TypeTag;
-
-            // 检查是否有任意一个标签匹配到 itemTypeTags
-            if (itemTags.Any(tag => itemTypeTags.Contains(tag.ToString())))
-            {
-                targetItem = item;
-                break;
-            }
-        }
+        // 不再在这里缓存 targetItem
+        if (localPoint == null)
+        localPoint = context.gameObject.GetComponentInChildren<ITriggerAttack>().Weapon_GameObject.transform;
     }
-
 
     protected override void OnStop()
     {
@@ -38,25 +25,40 @@ public class ItemDistanceCheck : ActionNode
 
     protected override State OnUpdate()
     {
-        if (targetItem == null)
+        if (context?.itemDetector?.CurrentItemsInArea == null || itemTypeTags == null || itemTypeTags.Count == 0)
         {
-            Debug.LogWarning("未找到指定名称的任何目标物体");
+            Debug.LogWarning("检测条件异常，可能是未设置标签或检测器为空");
             return State.Failure;
         }
 
-        float distance = Vector2.Distance(context.transform.position, targetItem.transform.position);
+        // 优化匹配性能
+        HashSet<string> tagSet = new HashSet<string>(itemTypeTags);
 
-        if (distance >= Range.x && distance <= Range.y)
+        foreach (var item in context.itemDetector.CurrentItemsInArea)
         {
-            return State.Success;
+            var itemTags = item.Item_Data.ItemTags.Item_TypeTag;
+
+            bool matches = itemTags.Any(tag => tagSet.Contains(tag.ToString()));
+            if (!matches)
+                continue;
+
+            float distance = Vector2.Distance(
+                new Vector2(context.transform.position.x, context.transform.position.y),
+                new Vector2(item.transform.position.x, item.transform.position.y)
+            );
+
+            if (distance >= Range.x && distance <= Range.y)
+            {
+                return State.Success;
+            }
         }
 
         return State.Failure;
     }
+
     public override void OnDrawGizmos()
     {
         base.OnDrawGizmos();
-
 #if UNITY_EDITOR
         if (context == null || context.transform == null)
             return;
@@ -64,13 +66,10 @@ public class ItemDistanceCheck : ActionNode
         Vector3 position = context.transform.position;
         Handles.color = Color.yellow;
 
+        // 最小距离圈
         Handles.DrawWireDisc(position, Vector3.forward, Range.x);
-
-
         // 最大距离圈
-        Handles.DrawWireDisc(position, Vector3.forward, Range.x);
-
+        Handles.DrawWireDisc(position, Vector3.forward, Range.y);
 #endif
     }
-
 }

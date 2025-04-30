@@ -13,6 +13,7 @@ using UnityEngine;
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
 
     #endregion
+
     #region 速度
     // 完善ISpeed接口实现，直接映射AnimalData中的速度属性
     public float Speed
@@ -129,6 +130,8 @@ using UnityEngine;
     {
         //每秒减少1点食物能量*生产速度
         Data.hunger.Food -= Time.fixedDeltaTime * Data.productionSpeed;
+        //每秒恢复1点血量
+        Data.hp.value += Time.fixedDeltaTime*Data.hp.HpChangSpeed;
     }
 
     public void Death()
@@ -144,17 +147,18 @@ using UnityEngine;
 
     public void Load()
     {
-        ItemData _WeaponData;
+        Item _Weapon;
         if (Data._inventoryData.ContainsKey("武器"))
         {
-             _WeaponData = Data._inventoryData["武器"].itemSlots[0]._ItemData;
+            _Weapon = GameRes.Instance.InstantiatePrefab("WolfDefaultWeapon").GetComponent<Item>();
+            _Weapon.Item_Data = Data._inventoryData["武器"].itemSlots[0]._ItemData;
         }
         else
         {
-            _WeaponData = GameRes.Instance.GetPrefab("WolfDefaultWeapon").GetComponent<Item>().Item_Data;
+            _Weapon = GameRes.Instance.InstantiatePrefab("WolfDefaultWeapon").GetComponent<Item>();
         }
-
-            GetComponentInChildren<ITriggerAttack>().CreateWeapon(_WeaponData);
+         
+            GetComponentInChildren<ITriggerAttack>().GetItemWeapon(_Weapon);
     }
     #endregion
 }

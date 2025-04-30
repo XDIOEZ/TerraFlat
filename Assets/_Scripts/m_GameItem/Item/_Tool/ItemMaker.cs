@@ -40,56 +40,48 @@ public class ItemMaker : MonoBehaviour
     public float bounceHeightMax = 0.5f;
 
     [Button("Drop Item")]
-    public void DropItem(string TableName, float DropRange)
+    [Tooltip("根据LootName掉落物品")]
+    public void DropItemByLootName(string LootName, float DropRange)
     {
-        foreach (var item in loots.GetLoot(TableName).lootList)
+        foreach (var item in loots.GetLoot(LootName).lootList)
         {
-            ItemData _data = GameRes.Instance.GetPrefab(item.lootName).GetComponent<Item>().Item_Data;
-            _data.Stack.Amount = item.lootAmount;
-            DropItemWithAnimation(item.lootName, _data, transform.position, (Vector2)transform.position + (Random.insideUnitCircle * DropRange));
+            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange);
         }
     }
 
+    [Tooltip("根据ItemName和Amount掉落物品")]
+    public void DropItemByNameAndAmount(string ItemName,float Amount,float DropRange)
+    {
+        Item _Item = GameRes.Instance.InstantiatePrefab(ItemName).GetComponent<Item>();
+        _Item.Item_Data.Stack.Amount = Amount;
+        DropItemWithAnimation(_Item, transform.position, (Vector2)transform.position + (Random.insideUnitCircle * DropRange));
+    }
+
+    [Tooltip("根据Loot掉落物品")]
     public void DropItemByLoot(Loot loot, float DropRange)
     {
         foreach (var item in loot.lootList)
         {
-            ItemData _data = GameRes.Instance.GetPrefab(item.lootName).GetComponent<Item>().Item_Data;
-            _data.Stack.Amount = item.lootAmount;
-            DropItemWithAnimation(item.lootName, _data, transform.position, (Vector2)transform.position + (Random.insideUnitCircle * DropRange));
+            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange);
         }
     }
 
+
+    #region 动画函数
+
+    [Tooltip("根据Item掉落物品 附带动画")]
     public void DropItemWithAnimation(
-        string PrefabName,
-        ItemData itemData,
+        Item item,
         Vector3 startPos,
         Vector2 endPos,
         float baseDuration = 0.5f,
         float distanceSensitivity = 0.1f
     )
     {
-        GameObject newObject = GameRes.Instance.InstantiatePrefab(PrefabName, startPos);
-        if (newObject == null)
-        {
-            Debug.LogError("\u5b9e\u4f8b\u5316\u7269\u4f53\u5931\u8d25\uff01");
-            return;
-        }
-
-        Item item = newObject.GetComponent<Item>();
-        if (item == null)
-        {
-            Debug.LogError("\u672a\u627e\u5230 Item \u7ec4\u4ef6\uff01");
-            GameObject.Destroy(newObject);
-            return;
-        }
-
-        item.Item_Data = itemData;
         item.Item_Data.Stack.CanBePickedUp = false;
-
-        newObject.GetComponent<MonoBehaviour>().StartCoroutine(
+        item.GetComponent<MonoBehaviour>().StartCoroutine(
             ParabolaAnimation(
-                newObject.transform,
+                item.transform,
                 startPos,
                 endPos,
                 item,
@@ -102,6 +94,7 @@ public class ItemMaker : MonoBehaviour
         );
     }
 
+    [Tooltip("根据Item掉落物品 附带动画 动画参数通过ItemMaker获取")]
     public void DropItemWithAnimation(
         Transform itemTransform,
         Vector3 startPos,
@@ -124,6 +117,7 @@ public class ItemMaker : MonoBehaviour
         );
     }
 
+    [Tooltip("抛物线动画")]
     public IEnumerator ParabolaAnimation(
         Transform itemTransform,
         Vector3 startPos,
@@ -162,6 +156,7 @@ public class ItemMaker : MonoBehaviour
         item.Item_Data.Stack.CanBePickedUp = true;
     }
 
+    [Tooltip("落地动画")]
     private static IEnumerator LandingSettleEffect(Transform itemTransform, Item item, float bounceHeight = 0.08f)
     {
         float duration = 0.2f;
@@ -183,6 +178,7 @@ public class ItemMaker : MonoBehaviour
         itemTransform.rotation = Quaternion.identity;
     }
 
+    [Tooltip("贝塞尔曲线计算")]
     private static Vector3 CalculateBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
     {
         float u = 1 - t;
@@ -190,4 +186,6 @@ public class ItemMaker : MonoBehaviour
         float uu = u * u;
         return uu * p0 + 2 * u * t * p1 + tt * p2;
     }
+    #endregion
+
 }

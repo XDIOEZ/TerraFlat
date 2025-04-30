@@ -22,6 +22,7 @@ namespace TheKiwiCoder {
         //添加自定义组件
         public IDetector itemDetector;
         public IMover mover;
+        public IHealth health;
         // Add other game specific systems here
 
         public static Context CreateFromGameObject(GameObject gameObject) {
@@ -38,6 +39,7 @@ namespace TheKiwiCoder {
             context.characterController = gameObject.GetComponent<CharacterController>();
             context.itemDetector = gameObject.GetComponentInChildren<IDetector>();
             context.mover = gameObject.GetComponentInChildren<IMover>();
+            context.health = gameObject.GetComponentInChildren<IHealth>();
             // Add whatever else you need here...
 
             return context;

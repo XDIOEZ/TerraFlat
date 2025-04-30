@@ -2,6 +2,7 @@ using MemoryPack;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using NaughtyAttributes;
 
 [System.Serializable]
 [MemoryPackable]
@@ -9,9 +10,11 @@ public partial class Hp
 {
     public float value;
     public float maxValue;
-
+    public float HpChangSpeed;
     // 添加弱点字符串列表
     public List<string> Weaknesses;
+
+    /*public Buffs buff;*/
 
     [MemoryPackConstructor]
     public Hp(float value)
@@ -62,3 +65,81 @@ public partial class Hp
         return false;
     }
 }
+[System.Serializable]
+[MemoryPackable]
+public partial class Buffs
+{
+    public List<Buff> buffs;
+
+    //查找对应名字的buff
+    public Buff FindBuff(string name)
+    {
+        if (buffs == null || buffs.Count == 0)
+        {
+            return null;
+        }
+
+        return buffs.Find(b => b.name == name);
+    }
+
+    //添加buff
+    public void AddBuff(Buff buff)
+    {
+        if (buffs == null)
+        {
+            buffs = new List<Buff>();
+        }
+    buffs.Add(buff);
+    }
+
+    //移除对应名字的buff
+    public void RemoveBuff(string name)
+    {
+        if (buffs == null || buffs.Count == 0)
+        {
+            return;
+        }
+
+        buffs.RemoveAll(b => b.name == name);
+    }
+    //移除所有buff
+    public void RemoveAllBuff()
+    {
+        if (buffs == null || buffs.Count == 0)
+        {
+            return;
+        }
+
+        buffs.Clear();
+    }
+    //修改对应名字的buff
+    public void ModifyBuff(string name, float value)
+    {
+        Buff buff = FindBuff(name);
+        if (buff!= null)
+        {
+            buff.value = value;
+        }
+    }
+
+    //输出所有buff数值总和和
+    public float AllBuffData()
+    {
+        float allValue = 0;
+        foreach (var buff in buffs)
+        {
+            allValue += buff.value;
+        }
+        return allValue;
+    }
+
+}
+
+[System.Serializable]
+[MemoryPackable]
+public partial class Buff
+{
+    public string name;
+    public float value;
+}
+

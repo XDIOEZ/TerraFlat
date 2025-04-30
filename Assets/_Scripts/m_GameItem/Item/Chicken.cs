@@ -189,8 +189,6 @@ public partial class AnimalData : ItemData
     public Hunger_Water hunger = new Hunger_Water(100, 100);
     #endregion
 
-
-
     #region 生产
 
     [Tooltip("生产进度")]
@@ -216,6 +214,7 @@ public partial class AnimalData : ItemData
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
     #endregion
 
-
+    [Tooltip("树的相关数据")]
+    public ItemValues ItemDataValue;
 }
 

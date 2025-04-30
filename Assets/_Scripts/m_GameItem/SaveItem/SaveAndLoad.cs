@@ -118,9 +118,9 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             _data = TemplateSaveData.PlayerData_Dict["Ikun"];
         }
 
-        GameObject player = GameRes.Instance.GetPrefab("Player");
+        GameObject newPlayerObj = GameRes.Instance.InstantiatePrefab("Player");
         //ÊµÀý»¯Íæ¼Ò
-        GameObject newPlayerObj = Instantiate(player, Vector3.zero, Quaternion.identity);
+       // GameObject newPlayerObj = Instantiate(player, Vector3.zero, Quaternion.identity);
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
         newPlayer.Data = _data;
         newPlayer.Data.PlayerUserName = playerName;

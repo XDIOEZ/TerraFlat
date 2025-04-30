@@ -42,6 +42,12 @@ public interface ITriggerAttack
         SetWeapon(weapon_GameObject);
     }
 
+    public void GetItemWeapon(Item weapon)
+    {
+        weapon.Item_Data.Stack.CanBePickedUp = false;
+        SetWeapon(weapon.gameObject);
+    }
+
 
 }
 [Tooltip("¶¨Òå¹¥»÷×´Ì¬Ã¶¾Ù KeyState")]

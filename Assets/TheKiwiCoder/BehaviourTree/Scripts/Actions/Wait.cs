@@ -6,7 +6,9 @@ namespace TheKiwiCoder {
     public class Wait : ActionNode 
     {
         public float duration = 1;
-        float startTime;
+        public float startTime;
+/*        public float currentDuration;
+        public float currentTime;*/
 
         protected override void OnStart() {
             startTime = Time.time;
@@ -16,9 +18,12 @@ namespace TheKiwiCoder {
         }
 
         protected override State OnUpdate() {
-            if (Time.time - startTime > duration) {
+            if (Time.time - startTime >= duration) {
                 return State.Success;
             }
+            Debug.Log("Wait");
+         /*   currentDuration = Time.time - startTime;
+            currentTime = Time.time;*/
             return State.Running;
         }
     }

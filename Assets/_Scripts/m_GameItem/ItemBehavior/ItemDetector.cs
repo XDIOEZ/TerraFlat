@@ -51,6 +51,7 @@ public class ItemDetector : MonoBehaviour, IDebug, IDetector
             .ToList();
 
         Tag_Item_Dict.Clear();
+        CurrentItemsInArea.Clear();
 
         foreach (var item in currentItems)
         {

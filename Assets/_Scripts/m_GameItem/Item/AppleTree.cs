@@ -128,7 +128,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     public void Death()
     {
           Debug.Log("Ê÷±»´Ý»Ù");
-            GetComponentInChildren<ItemMaker>().DropItem("Loots_Death", 1.5f);
+            GetComponentInChildren<ItemMaker>().DropItemByLootName("Loots_Death", 1.5f);
             Destroy(gameObject);
     }
 

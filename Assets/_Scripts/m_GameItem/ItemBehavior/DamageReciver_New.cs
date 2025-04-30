@@ -111,11 +111,9 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
         if (!string.IsNullOrEmpty(DamagePanelName))
         {
             // 创建伤害数字面板
-            GameObject damagePanel = Instantiate(
-                GameRes.Instance.GetPrefab(DamagePanelName),
-                hitPoint,
-                Quaternion.identity
-            );
+
+            GameObject damagePanel = GameRes.Instance.InstantiatePrefab(DamagePanelName, hitPoint);
+
 
             // 获取文本组件（在协程外获取一次）
             TextMeshProUGUI textMeshPro = damagePanel.GetComponentInChildren<TextMeshProUGUI>();
@@ -237,7 +235,6 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
         }
         spriteRenderer.material.color = toColor;
     }
-
     private GameObject CreateMainColorParticle(string prefabName, Vector2 position)
     {
         SpriteRenderer sr = transform.parent.GetComponentInChildren<SpriteRenderer>();
@@ -245,29 +242,49 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
         if (sr != null && sr.sprite != null)
         {
             var colorThief = new ColorThief.ColorThief();
-            List<ColorThief.QuantizedColor> palette = colorThief.GetPalette(sr.sprite.texture, 5); // 获取前5种主色
+            List<ColorThief.QuantizedColor> palette = null;
+
+            try
+            {
+                palette = colorThief.GetPalette(sr.sprite.texture, 5); // 获取前5种主色
+            }
+            catch
+            {
+                Debug.LogWarning("颜色提取失败，使用默认颜色。");
+            }
 
             GameObject particle = GameRes.Instance.InstantiatePrefab(prefabName, position);
             ParticleSystem ps = particle.GetComponent<ParticleSystem>();
 
-            if (ps != null && palette != null && palette.Count > 0)
+            if (ps != null)
             {
                 var colorModule = ps.colorOverLifetime;
                 colorModule.enabled = true;
 
                 Gradient gradient = new Gradient();
-                GradientColorKey[] colorKeys = new GradientColorKey[palette.Count];
+
+                GradientColorKey[] colorKeys;
                 GradientAlphaKey[] alphaKeys = new GradientAlphaKey[1];
-
-                float step = 1f / (palette.Count - 1);
-
-                for (int i = 0; i < palette.Count; i++)
-                {
-                    UnityEngine.Color color = palette[i].UnityColor;
-                    colorKeys[i] = new GradientColorKey(color, i * step);
-                }
-
                 alphaKeys[0] = new GradientAlphaKey(1f, 0f); // 保持不透明度为1
+
+                if (palette != null && palette.Count > 0)
+                {
+                    colorKeys = new GradientColorKey[palette.Count];
+                    float step = 1f / (palette.Count - 1);
+
+                    for (int i = 0; i < palette.Count; i++)
+                    {
+                        UnityEngine.Color color = palette[i].UnityColor;
+                        colorKeys[i] = new GradientColorKey(color, i * step);
+                    }
+                }
+                else
+                {
+                    // 默认使用红色渐变
+                    colorKeys = new GradientColorKey[2];
+                    colorKeys[0] = new GradientColorKey(Color.red, 0f);
+                    colorKeys[1] = new GradientColorKey(Color.red, 1f);
+                }
 
                 gradient.SetKeys(colorKeys, alphaKeys);
                 colorModule.color = new ParticleSystem.MinMaxGradient(gradient);
@@ -278,6 +295,7 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
 
         return null;
     }
+
     #endregion
 
 

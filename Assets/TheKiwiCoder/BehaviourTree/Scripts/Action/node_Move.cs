@@ -12,43 +12,58 @@ public class Move : ActionNode
     public float minDistance = 0.01f;
     [Tooltip("向黑板处的目标移动")]
     public bool MoveToBlackboard = true;
+    [Tooltip("停止距离")]
+    public float stoppingDistance = 0.5f;
     IMover mover;
 
     private Vector3 startPos;
     private float startTime;
 
     public IMover Mover { get => context.mover; set => context.mover = value; }
+    private float originalSpeed;
 
     protected override void OnStart()
     {
-        
         if (Mover == null)
         {
             Mover = context.gameObject.GetComponentInChildren<IMover>();
-            Debug.Log("未找到Mover组件");
+            Debug.LogWarning("未找到 Mover 组件");
         }
 
         if (navMesh == null)
         {
             context.gameObject.TryGetComponent<IAI_NavMesh>(out navMesh);
+            var agent = navMesh?.Agent_Nav;
+            if (agent != null)
+            {
+                agent.stoppingDistance = stoppingDistance;
+                agent.isStopped = false;
+                agent.SetDestination(blackboard.TargetPosition);
+            }
             if (navMesh == null)
-                Debug.LogError("未找到IAI_NavMesh组件");
+                Debug.LogError("未找到 IAI_NavMesh 组件");
         }
 
-        Mover.Speed *= SpeedRate;
+        originalSpeed = Mover.Speed;  // 保存原始速度
+        Mover.Speed = originalSpeed * SpeedRate;
+
         startPos = Mover.Position;
         startTime = Time.time;
     }
 
     protected override void OnStop()
     {
-        context.mover.Speed /= SpeedRate;
+        if (Mover != null && originalSpeed !=0 )
+        {
+            Mover.Speed = originalSpeed;  // 恢复原始速度
+        }
     }
-
     protected override State OnUpdate()
     {
+       
         Mover.TargetPosition = blackboard.TargetPosition;
         Mover.Move();
+       
 
         float timeElapsed = Time.time - startTime;
 
@@ -61,7 +76,7 @@ public class Move : ActionNode
                 return State.Failure;
             }
 
-            float distance = Vector3.Distance(startPos, Mover.Position);
+            float distance = Vector2.Distance(startPos, Mover.Position);
             if (distance < minDistance)
             {
                 Debug.Log("移动停滞，返回失败");
