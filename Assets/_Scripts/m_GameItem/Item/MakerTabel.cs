@@ -358,9 +358,9 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         {
             float Value = damage.Return_EndDamage();
 
-            Hp.value -= Value;
+            Hp.Value -= Value;
 
-            if (Hp.value <= 0)
+            if (Hp.Value <= 0)
             {
                 Death();
             }
@@ -370,9 +370,9 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         {
             float damageValue = damage.Return_EndDamage(Defense);
 
-            Hp.value -= damageValue;
+            Hp.Value -= damageValue;
 
-            if (Hp.value <= 0)
+            if (Hp.Value <= 0)
             {
                 Death();
             }

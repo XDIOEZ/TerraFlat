@@ -1,0 +1,16 @@
+{
+    "name": "BT.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:fbead5203dee18b47b1474a00239042f"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

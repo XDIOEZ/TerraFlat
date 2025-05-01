@@ -1,26 +1,29 @@
-using UltEvents;
+ï»¿using UltEvents;
 using UnityEngine;
 [RequireComponent(typeof(Collider2D))]
 public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
 {
-    #region ÅäÖÃ×Ö¶Î
+    #region é…ç½®å­—æ®µ
     [SerializeField] private float minDamageInterval = 0.5f;
     [SerializeField] private AnimationCurve damageFalloffCurve = AnimationCurve.Linear(0, 1, 1, 0.5f);
     #endregion
 
-    #region ÔËĞĞÊ±×Ö¶Î
+    #region è¿è¡Œæ—¶å­—æ®µ
     private Collider2D weaponCollider;
     private Transform cachedTransform;
     private float currentDamageMultiplier = 1f;
     private float lastDamageTime = 0f;
+    [Tooltip("ç¾¤ä½“è¿˜æ˜¯å•ä½“ä¼¤å®³")]
+    public bool isGroupDamage = false;
+    
     #endregion
 
-    #region ½Ó¿ÚÒıÓÃ
+    #region æ¥å£å¼•ç”¨
     public IAttackState AttackState { get; private set; }
     public IColdWeapon Weapon { get; private set; }
     #endregion
 
-    #region ÊôĞÔ
+    #region å±æ€§
     public bool IsDamageModeEnabled { get; set; } = true;
     public UltEvent<float> OnDamage { get; set; } = new UltEvent<float>();
 
@@ -31,7 +34,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
     }
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
     private void Start()
     {
         cachedTransform = transform;
@@ -41,7 +44,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
 
         if (weaponCollider == null || AttackState == null || Weapon == null)
         {
-            Debug.LogError("×é¼ş³õÊ¼»¯Ê§°Ü£¡", this);
+            Debug.LogError("ç»„ä»¶åˆå§‹åŒ–å¤±è´¥ï¼", this);
             enabled = false;
             return;
         }
@@ -64,36 +67,59 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
     }
     #endregion
 
-    #region ¹¥»÷¿ØÖÆ
+    #region æ”»å‡»æ§åˆ¶
     public void StartTrySendDamage()
     {
         weaponCollider.enabled = true;
         currentDamageMultiplier = 1f;
-        Debug.Log("[Àä±øÆ÷] ¹¥»÷¿ªÊ¼", this);
+        Debug.Log("[å†·å…µå™¨] æ”»å‡»å¼€å§‹", this);
     }
 
     public void EndTrySendDamage()
     {
         weaponCollider.enabled = false;
-        Debug.Log("[Àä±øÆ÷] ¹¥»÷½áÊø", this);
+        Debug.Log("[å†·å…µå™¨] æ”»å‡»ç»“æŸ", this);
     }
 
     public void StayTrySendDamage()
     {
-        // ¿ÉÌí¼Ó¹¥»÷³ÖĞøÆÚ¼äµÄÂß¼­
+        // å¯æ·»åŠ æ”»å‡»æŒç»­æœŸé—´çš„é€»è¾‘
     }
     #endregion
 
-    #region Åö×²´¦Àí
+    #region ç¢°æ’å¤„ç†
     public void OnTriggerEnter2D(Collider2D other)
     {
-        if (!IsDamageModeEnabled || Time.time - lastDamageTime < minDamageInterval * 0.1f)
-            return;
+        if (!isGroupDamage)
+        {
+            if (!IsDamageModeEnabled || Time.time - lastDamageTime < minDamageInterval * 0.1f)
+                return;
+        }
 
         if (!other.TryGetComponent<IDamageReceiver>(out var receiver))
             return;
 
-        // ¼ÆËã¶¯Ì¬ÉËº¦±¶ÂÊ
+        // è·å–è¢«æ”»å‡»è€…çš„å›¢é˜Ÿç»„ä»¶
+        var beAttackTeam = other.GetComponentInParent<ITeam>();
+
+        // è·å–æ”»å‡»è€…çš„å›¢é˜Ÿç»„ä»¶ï¼ˆé€šè¿‡ BelongItemï¼‰
+        var item = GetComponentInParent<Item>();
+        var belongItem = item != null ? item.BelongItem : null;
+        var belongTeam = belongItem != null ? belongItem.GetComponent<ITeam>() : null;
+
+        // âœ… å¦‚æœåŒæ–¹éƒ½æœ‰é˜µè¥ä¿¡æ¯ï¼Œä¸”æ˜¯ç›Ÿå‹ï¼Œåˆ™è·³è¿‡ä¼¤å®³
+        if (beAttackTeam != null && belongTeam != null &&
+            belongTeam.CheckRelation(beAttackTeam.TeamID) == RelationType.Ally)
+        {
+            // Debug.Log("ç›®æ ‡æ˜¯ç›Ÿå‹ï¼Œè·³è¿‡ä¼¤å®³");
+            return;
+        }
+
+        // âœ… å…¶ä½™æƒ…å†µéƒ½é€ æˆä¼¤å®³ï¼ˆåŒ…æ‹¬ nullã€æ•Œäººã€ä¸­ç«‹ï¼‰
+
+
+
+        // è®¡ç®—åŠ¨æ€ä¼¤å®³å€ç‡
         float timeSinceLastDamage = Time.time - lastDamageTime;
         float intervalRatio = Mathf.Clamp01(timeSinceLastDamage / minDamageInterval);
         currentDamageMultiplier = damageFalloffCurve.Evaluate(intervalRatio);
@@ -101,16 +127,18 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
         Damage scaledDamage = GetScaledDamage(DamageValue, currentDamageMultiplier);
 
         lastDamageTime = Time.time;
-
+        // å‘å—ä¼¤è€…å‘é€ä¼¤å®³
         receiver.TakeDamage(scaledDamage, other.ClosestPoint(cachedTransform.position));
+
         OnDamage?.Invoke(scaledDamage.PhysicalDamage);
 
-        Debug.Log($"[Àä±øÆ÷] Êµ¼Ê¼ä¸ô: {timeSinceLastDamage:F2}s, ±¶ÂÊ: {currentDamageMultiplier:F2}, Ôì³ÉÉËº¦: {scaledDamage}", this);
+        Debug.Log($"[å†·å…µå™¨] å®é™…é—´éš”: {timeSinceLastDamage:F2}s, å€ç‡: {currentDamageMultiplier:F2}, é€ æˆä¼¤å®³: {scaledDamage.PhysicalDamage:F2}", this);
 
     }
+
     #endregion
 
-    #region ¸¨Öú·½·¨
+    #region è¾…åŠ©æ–¹æ³•
     private Damage GetScaledDamage(Damage baseDamage, float multiplier)
     {
         return new Damage
@@ -123,7 +151,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
     }
     #endregion
 
-    #region ±à¼­Æ÷µ÷ÊÔ
+    #region ç¼–è¾‘å™¨è°ƒè¯•
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {

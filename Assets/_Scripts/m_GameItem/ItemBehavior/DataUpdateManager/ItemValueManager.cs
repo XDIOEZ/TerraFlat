@@ -4,30 +4,39 @@ using UltEvents;
 using UnityEngine;
 
 public class ItemValuesManager : MonoBehaviour
-{
-    IItemValues _itemValues;
-
+{/*
     public bool IsWorking = false;
-
     [ShowNonSerializedField]
-    public Dictionary<string, ValueChangeSpeedDic> Value_DICT = new Dictionary<string, ValueChangeSpeedDic>();
-
-    public void SetItemValues_AndStart(IItemValues itemValues_)
+    public Dictionary<string, Value_ChangeSpeed_Dic> Value_DICT = new Dictionary<string, Value_ChangeSpeed_Dic>();
+ 
+    public void Start_ValueManager(IItemValues itemValues_)
     {
         IsWorking = true;
 
-        _itemValues = itemValues_;
+        Value_DICT.Clear();
 
-        foreach (var ItemValue_List in itemValues_.ItemValues.ItemValue_List)
+        // 构建字典
+        itemValues_.ItemValues.Build_ItemValueDict();
+
+        // 使用构建好的字典进行初始化
+        foreach (var kvp in itemValues_.ItemValues.ItemValue_Dict)
         {
-            Value_DICT[ItemValue_List.ValueName] = new ValueChangeSpeedDic(ItemValue_List);
+            var valueName = kvp.Key;
+            var itemValue = kvp.Value;
+
+            if (!string.IsNullOrEmpty(valueName) && itemValue != null)
+            {
+                Value_DICT[valueName] = new Value_ChangeSpeed_Dic(itemValue);
+            }
         }
+
         // 启动默认速度
         foreach (var value in Value_DICT.Values)
         {
-            value.StartChangeValue(value.itemValue.DefaultSpeed,"默认速度");
+            value.StartChangeValue(value.itemValue.DefaultSpeed, "默认速度");
         }
     }
+
 
     public void FixedUpdate()
     {
@@ -40,11 +49,12 @@ public class ItemValuesManager : MonoBehaviour
             value.FixedUpdate_Act();
         }
     }
-
+*/
 
 }
+/*
 [System.Serializable]
-public class ValueChangeSpeedDic
+public class Value_ChangeSpeed_Dic
 {
     public ItemValue itemValue;
 
@@ -81,7 +91,7 @@ public class ValueChangeSpeedDic
         CurrentValue += totalSpeed * Time.fixedDeltaTime;
     }
     //构造函数
-    public ValueChangeSpeedDic(ItemValue itemValue_)
+    public Value_ChangeSpeed_Dic(ItemValue itemValue_)
     {
         itemValue = itemValue_;
     }
@@ -111,3 +121,4 @@ public class ValueChangeSpeedDic
         }
     }
 }
+*/

@@ -10,9 +10,9 @@ public interface IHealth
     public float GetDamage(Damage damage)
     {
         float damageValue = damage.Return_EndDamage(Defense);
-        Hp.value -= damageValue;
+        Hp.Value -= damageValue;
 
-        if (Hp.value <= 0)
+        if (Hp.Value <= 0)
         {
             Death();
         }

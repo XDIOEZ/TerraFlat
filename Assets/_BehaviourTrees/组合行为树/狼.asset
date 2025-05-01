@@ -802,7 +802,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 5a0fadd50fca10642af11bb1e3a8e09f
-  position: {x: -460, y: 1976.0001}
+  position: {x: -446.3999, y: 1975.9998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -877,7 +877,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45a452747fbf624459c6b1caeb550617, type: 3}
-  m_Name: HpController
+  m_Name: ItemValuesController
   m_EditorClassIdentifier: 
   state: 0
   started: 0
@@ -890,15 +890,11 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  hp:
-    value: 0
-    operation: 0
-  maxHp:
-    value: 0
-    operation: 0
-  hpChangeSpeed:
-    value: 2
-    operation: 3
+  valueModification:
+    name: "\u8840\u91CF"
+    SpeedName: "\u4F11\u606F"
+    SpeedValue: 1
+    duration: 5
 --- !u!114 &-6405381541786045271
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1022,7 +1018,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 312357c3e3150a245a174a7941d3fb7c
-  position: {x: -309.6, y: 1976.8}
+  position: {x: -295.99994, y: 1976.7998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1810,7 +1806,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 5afa06448cbfddd489b449fcde5077d1
-  position: {x: -160.79999, y: 1976.8}
+  position: {x: -147.19989, y: 1976.7998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2423,7 +2419,6 @@ MonoBehaviour:
   - {fileID: -4580532181828695291}
   - {fileID: -6410828202596455233}
   - {fileID: 8273517638799561736}
-  - {fileID: 1284147363537573852}
 --- !u!114 &-726166274871414383
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2874,7 +2869,6 @@ MonoBehaviour:
   - {fileID: 1839959412941199014}
   - {fileID: -8208284609363075742}
   - {fileID: -6410828202596455233}
-  - {fileID: 1284147363537573852}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3196,38 +3190,6 @@ MonoBehaviour:
   animationName: Run
   boolSwitch: 1
   checkParamName: 1
---- !u!114 &1284147363537573852
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 45a452747fbf624459c6b1caeb550617, type: 3}
-  m_Name: HpController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 2827fe0c7d3471541b279cfd1e9784b4
-  position: {x: 754.39996, y: 1976.8}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  hp:
-    value: 0
-    operation: 0
-  maxHp:
-    value: 0
-    operation: 0
-  hpChangeSpeed:
-    value: 0.5
-    operation: 3
 --- !u!114 &1291026663540441172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4789,15 +4751,11 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  hp:
-    value: 0
-    operation: 0
-  maxHp:
-    value: 0
-    operation: 0
-  hpChangeSpeed:
-    value: 0
-    operation: 0
+  valueModification:
+    name: 
+    SpeedName: 
+    SpeedValue: 0
+    duration: 0
 --- !u!114 &7379666454488160833
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5251,7 +5209,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 0b597201fb98851489e5fe54bb81d18a
-  position: {x: 604, y: 1976.8}
+  position: {x: 609.60004, y: 1975.2002}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -5259,7 +5217,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  duration: 1
+  duration: 5
   startTime: 0
 --- !u!114 &8299736861258386273
 MonoBehaviour:

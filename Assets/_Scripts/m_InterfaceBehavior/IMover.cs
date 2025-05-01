@@ -12,6 +12,8 @@ public interface IMover
 
     void Move();
 
+    void Stop();
+
     UltEvent OnStartMoving { get;set; }
 
     UltEvent OnStopMoving { get;set; }

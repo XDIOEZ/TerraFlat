@@ -161,7 +161,6 @@ public partial class AnimalData : ItemData
     public float attackSpeed = 1;
     #endregion
 
-
     #region 速度
     [Tooltip("默认速度")]
     public float defaultSpeed = 3;
@@ -214,7 +213,17 @@ public partial class AnimalData : ItemData
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
     #endregion
 
-    [Tooltip("树的相关数据")]
+    #region 数据
+
+    [Tooltip("Buff数据")]
     public ItemValues ItemDataValue;
+    #endregion
+
+    #region 团队
+
+    public string TeamID = "";
+
+    public Dictionary<string, RelationType> Relations = new Dictionary<string, RelationType>();
+    #endregion
 }
 

@@ -1,38 +1,135 @@
-using MemoryPack;
-using System.Collections;
+﻿using MemoryPack;
 using System.Collections.Generic;
 using UnityEngine;
+using NaughtyAttributes;
+using UltEvents;
+using Sirenix.OdinInspector;
 
 [System.Serializable]
 [MemoryPackable]
 public partial class ItemValues
 {
-    public List<ItemValue> ItemValue_List;
+    [SerializeField]//物体数据的原始列表
+    private List<ItemValue> ItemValue_List = new List<ItemValue>();//物体数据的相关修改字典
+    [ShowInInspector]
+    public Dictionary<string, ChangeSpeeds> ChangeSpeed_DICT = new Dictionary<string, ChangeSpeeds>();
 
-    public ItemValue GetItemValue(string valueName)
+    public bool IsWork = false;
+    
+    [MemoryPackIgnore]//物体数据的字典缓存
+    public Dictionary<string, ItemValue> ItemValue_Dict = new Dictionary<string, ItemValue>();
+
+    /// <summary>
+    /// 构建或刷新字典缓存
+    /// </summary>
+    public void Build_ItemValueDict()
     {
+        ItemValue_Dict.Clear();
+        foreach (var item in ItemValue_List)
+        {
+            if (!string.IsNullOrEmpty(item.ValueName))
+            {
+                ItemValue_Dict[item.ValueName] = item;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 初始化并启动所有数值逻辑
+    /// </summary>
+    /// <summary>
+    /// 初始化并启动所有数值逻辑
+    /// </summary>
+    public void Start_Work()
+    {
+        IsWork = true;
+        Build_ItemValueDict();
+
+        foreach (var item in ItemValue_List)
+        {
+            if (string.IsNullOrEmpty(item.ValueName)) continue;
+
+            if (!ChangeSpeed_DICT.ContainsKey(item.ValueName))
+            {
+                ChangeSpeed_DICT[item.ValueName] = new ChangeSpeeds();
+                Debug.Log($"[Start_Work] 自动为 '{item.ValueName}' 创建了 ChangeSpeeds 实例。");
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// 在 MonoBehaviour 中手动调用
+    /// </summary>
+    public void FixedUpdate()
+    {
+        if (!IsWork) return;
+        //便利列表数据，更新数值
+        foreach(ItemValue itemValue in ItemValue_List)
+        {
+            itemValue.CurrentValue 
+                += ChangeSpeed_DICT[itemValue.ValueName].GetCurrentSpeedSum(Time.fixedDeltaTime)*Time.fixedDeltaTime;
+        }
+    }
+
+    public ItemValue Get_ItemValue(string valueName)
+    {
+        if (ItemValue_Dict != null && ItemValue_Dict.TryGetValue(valueName, out var value))
+        {
+            return value;
+        }
+
         foreach (ItemValue itemValue in ItemValue_List)
         {
             if (itemValue.ValueName == valueName)
             {
+                Build_ItemValueDict();
                 return itemValue;
             }
         }
-        return null;
+
+        // ❗未找到，自动创建
+        var newItem = new ItemValue
+        {
+            ValueName = valueName,
+            MinValue = 0,
+            MaxValue = 100,
+            CurrentValue = 0
+        };
+        ItemValue_List.Add(newItem);
+        Build_ItemValueDict(); // 确保字典更新
+        Debug.LogWarning($"[Get_ItemValue] 自动创建了新 ItemValue：{valueName}");
+        return newItem;
     }
 
-    public void SetItemValue(ItemValue itemValue)
+
+    public void Set_ItemValue(ItemValue newItem)
     {
-        foreach (var existingItem in ItemValue_List)
+        if (string.IsNullOrEmpty(newItem?.ValueName)) return;
+
+        if (ItemValue_Dict.TryGetValue(newItem.ValueName, out var existingItem))
         {
-            if (existingItem.ValueName == itemValue.ValueName)
-            {
-                existingItem.CurrentValue = itemValue.CurrentValue;
-                return;
-            }
+            existingItem.CurrentValue = newItem.CurrentValue;
+        }
+        else
+        {
+            ItemValue_List.Add(newItem);
+            ItemValue_Dict[newItem.ValueName] = newItem;
+        }
+    }
+
+    public void Add_ChangeSpeed(string valueName, string SpeedName, float SpeedValue, float Duration)
+    {
+        if (!ChangeSpeed_DICT.TryGetValue(valueName, out var changeSpeed))
+        {
+            changeSpeed = new ChangeSpeeds();
+            ChangeSpeed_DICT.Add(valueName, changeSpeed);
+            Debug.LogWarning($"[Add_ChangeSpeed] 参数名 '{valueName}' 不存在于 ChangeSpeed_DICT 中，已自动添加。");
         }
 
-        // �������ڣ��������µ�ֵ
-        ItemValue_List.Add(itemValue);
+        changeSpeed.ADDChangeValue(SpeedValue, SpeedName, Duration);
     }
+
+
+
 }

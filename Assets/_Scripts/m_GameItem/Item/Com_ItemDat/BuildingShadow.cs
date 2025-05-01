@@ -181,7 +181,7 @@ public class Building_InstallAndUninstall
 
         item.Item_Data.Stack.Amount--;
         item.UpdatedUI_Event?.Invoke();
-        Hp.value = Hp.maxValue;
+        Hp.Value = Hp.maxValue;
 
         //实例化新的
         GameObject Installed = GameRes.Instance.InstantiatePrefab(Item_Data.Name, GhostShadow.transform.position);
@@ -208,7 +208,7 @@ public class Building_InstallAndUninstall
         hostTransform.localScale *= 0.7f;
         boxCollider2D.isTrigger = true;
         Item_Data.Stack.CanBePickedUp = true;
-        Hp.value = -1;
+        Hp.Value = -1;
         Item_Data.Durability -= 1;
 
         Vector2 pos = (Vector2)hostTransform.position;

@@ -92,7 +92,7 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
         health = GetComponentInParent<IHealth>();
         if (health == null) return;
 
-        if (health.Hp.value< 0) return;
+        if (health.Hp.Value< 0) return;
 
         float i = health.GetDamage(damage);
 
@@ -138,44 +138,46 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
 
         float duration = damagePanelDuration;
 
-        // 计算根据伤害值动态变化的初始缩放
+        // 计算动态缩放
         float minScale = 1f;
         float maxScale = 2f;
-
         float clampedDamage = Mathf.Clamp(damageAmount, 10f, 100f);
-        float scaleFactor = Mathf.Lerp(minScale, maxScale, (clampedDamage - 10f) / (100f - 10f));
+        float scaleFactor = Mathf.Lerp(minScale, maxScale, (clampedDamage - 10f) / 90f);
 
-        float growDuration = duration * scalePhaseRatio;    // 变大阶段时间
-        float shrinkDuration = duration * (1 - scalePhaseRatio); // 变小阶段时间
+        float growDuration = Mathf.Clamp(duration * scalePhaseRatio, 0.1f, duration);
+        float shrinkDuration = Mathf.Max(duration - growDuration, 0.1f);
 
-        growDuration = Mathf.Clamp(growDuration, 0.1f, duration);
-        shrinkDuration = Mathf.Max(duration - growDuration, 0.1f);
+        // 清理旧动画
+        DOTween.Kill(panelTransform);
 
-        // 初始缩放设置
+        // 重置
         panelTransform.localScale = Vector3.one * scaleFactor;
+        panelTransform.position = startPos;
+        textMeshPro.color = new Color(textMeshPro.color.r, textMeshPro.color.g, textMeshPro.color.b, 1f);
 
-        // 创建缩放动画序列（放大一点再缩小回原缩放）
-        Sequence scaleSequence = DOTween.Sequence();
+        // 创建缩放动画序列
+        Sequence scaleSequence = DOTween.Sequence().SetTarget(panelTransform);
         scaleSequence.Append(panelTransform.DOScale(scaleFactor * maximumScale, growDuration));
         scaleSequence.Append(panelTransform.DOScale(scaleFactor, shrinkDuration));
 
-        Sequence mainSequence = DOTween.Sequence();
-        mainSequence.Append(
-            panelTransform.DOMove(
-                startPos + randomDirection * damagePanelSpeed * duration,
-                duration
-            )
-        )
-        .Join(scaleSequence)
-        .Join(
-            DOTween.To(
+        // 主序列：移动、缩放、淡出
+        Sequence mainSequence = DOTween.Sequence().SetTarget(panelTransform);
+        mainSequence.Append(panelTransform.DOMove(startPos + randomDirection * damagePanelSpeed * duration, duration))
+            .Join(scaleSequence)
+            .Join(DOTween.To(
                 () => textMeshPro.color,
                 x => textMeshPro.color = x,
                 new Color(textMeshPro.color.r, textMeshPro.color.g, textMeshPro.color.b, 0f),
                 duration
-            )
-        )
-        .OnComplete(() => Destroy(damagePanel));
+            ))
+            .OnComplete(() =>
+            {
+                // 可替换为对象池回收
+                damagePanel.SetActive(false);
+                // 或：ObjectPool.Release(damagePanel);
+            });
+
+        damagePanel.SetActive(true);
     }
 
 

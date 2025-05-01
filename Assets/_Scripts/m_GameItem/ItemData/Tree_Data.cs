@@ -31,7 +31,7 @@ public partial class Tree_Data : ItemData
 
         // 同步血量
         hp.maxValue = excel.GetConvertedValue<float>("MaxHp", itemRow, 0.0f);
-        hp.value = excel.GetConvertedValue<float>("Hp", itemRow, 0.0f);
+        hp.Value = excel.GetConvertedValue<float>("Hp", itemRow, 0.0f);
 
         // 同步防御属性
         defense.defenseStrength = excel.GetConvertedValue<float>("DefenseStrength", itemRow, 0.0f);

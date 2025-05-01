@@ -1,8 +1,9 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-    public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina,ISave_Load
+    public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina,ISave_Load,IItemValues,ITeam
 {
     public AnimalData Data;
     public override ItemData Item_Data { get { return Data; } set { Data = value as AnimalData; } }
@@ -97,17 +98,23 @@ using UnityEngine;
     public UltEvent OnStaminaChanged { get; set; } = new UltEvent();
     public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public UltEvent onLoad { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+
+    #endregion
+
+    #region 动态数据
+
+    public ItemValues ItemValues { get => Data.ItemDataValue; set => Data.ItemDataValue = value; }
+
+    #endregion
+
+    #region 团队
+    public string TeamID { get => Data.TeamID; set => Data.TeamID = value; }
+    public Dictionary<string, RelationType> Relations { get => Data.Relations; set => Data.Relations = value; }
     #endregion
 
     public void Start()
     {
         Load();
-      //  Debug.Log("Wolf Start");
-    }
-
-    public void OnEnable()
-    {
-      
     }
 
     public override void Act()
@@ -117,8 +124,10 @@ using UnityEngine;
 
     public void FixedUpdate()
     {
+        //每秒恢复1点精力
         Hungry_Update();
-
+        //更新数值管理器
+        ItemValues.FixedUpdate();
     }
 
     public void Eat(float Be_Eat)
@@ -130,14 +139,29 @@ using UnityEngine;
     {
         //每秒减少1点食物能量*生产速度
         Data.hunger.Food -= Time.fixedDeltaTime * Data.productionSpeed;
-        //每秒恢复1点血量
-        Data.hp.value += Time.fixedDeltaTime*Data.hp.HpChangSpeed;
     }
 
     public void Death()
     {
+        OnStopWork_Event.Invoke();
+        Animator animator = GetComponentInChildren<Animator>();
+        animator.SetTrigger("Death");
+
+
+        StartCoroutine(WaitAndDestroy(animator));
+    }
+
+    private IEnumerator WaitAndDestroy(Animator animator)
+    {
+        // 获取当前动画状态
+        AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+
+        // 等待当前动画状态结束（仅适用于已进入播放状态）
+        yield return new WaitForSeconds(stateInfo.length-0.1f);
+
         Destroy(gameObject);
     }
+
 
     #region 保存与加载
     public void Save()
@@ -158,7 +182,28 @@ using UnityEngine;
             _Weapon = GameRes.Instance.InstantiatePrefab("WolfDefaultWeapon").GetComponent<Item>();
         }
          
-            GetComponentInChildren<ITriggerAttack>().GetItemWeapon(_Weapon);
+        GetComponentInChildren<ITriggerAttack>().GetItemWeapon(_Weapon);
+        //启动数值管理器
+        ItemValues.Start_Work();
+
+        Hp.OnValueChanged += (float f) =>
+        {
+            ItemValues.Get_ItemValue("血量").CurrentValue = f;
+        };
+
+        ItemValues.Get_ItemValue("血量").OnCurrentValueChanged
+            += (float f) => 
+            {
+             Hp.Value = f;
+            };
+
+        if (TeamID == "")
+        {
+            //随机分配一个int范围内的ID
+            TeamID = "WolfTeam";
+            Relations.Add(TeamID, RelationType.Ally);
+        }
+
     }
     #endregion
 }

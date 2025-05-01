@@ -16,6 +16,13 @@ using UnityEditor.AddressableAssets.Settings;
 public abstract class Item : MonoBehaviour
 {
     public abstract ItemData Item_Data { get; set; }
+    #region RunTime
+
+    [Tooltip("此物品属于谁?")]
+    public Item BelongItem;
+    [Tooltip("被销毁时触发的事件")]
+    public UltEvent OnStopWork_Event = new();
+    #endregion
 
     public UltEvent UpdatedUI_Event = new();
 

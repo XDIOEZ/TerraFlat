@@ -48,6 +48,10 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         }
     }
 
+
+
+    #endregion
+    #region 物品数值数据
     public ItemValues ItemValues
     {
         get
@@ -59,7 +63,6 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
             _data.ItemDataValue = value;
         }
     }
-
     #endregion
 
     public void Start()
@@ -67,6 +70,11 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         OnHpChanged = new UltEvent();
         OnDefenseChanged = new UltEvent();
         Load();
+    }
+
+    public void FixedUpdate()
+    {
+        ItemValues.FixedUpdate();
     }
 
 
@@ -96,12 +104,12 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         }
 
         // 扣除 HP 值
-        Hp.value -= finalDamage;
+        Hp.Value -= finalDamage;
 
         // 触发 HP 变化事件
         OnHpChanged.Invoke();
 
-        if (Hp.value <= 0)
+        if (Hp.Value <= 0)
         {
             Death();
         }
@@ -121,7 +129,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         if(value > 100)
         {
             GetComponentInChildren<ItemMaker>().DropItemByLoot(Loots.GetLoot("Loots_Production"), 2f);
-            GetComponentInChildren<ItemValuesManager>().Value_DICT["生产进度"].CurrentValue = -1;
+           ItemValues.Get_ItemValue("生产进度").CurrentValue = -1;
         }
     }
 
@@ -152,12 +160,18 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     {
         onLoad?.Invoke();
         GetComponentInChildren<ItemMaker>().loots = _data.loot;
-        GetComponentInChildren<ItemValuesManager>().SetItemValues_AndStart(this);
-        GetComponentInChildren<ItemValuesManager>().Value_DICT["生产进度"].OnValueChanged += Production;
-        if (GetComponentInChildren<ItemValuesManager>().Value_DICT["生产进度"].CurrentValue == 0)
-        {
-            GetComponentInChildren<ItemValuesManager>().Value_DICT["生产进度"].CurrentValue = Random.Range(0,100);
-        }
+       
+        ItemValues.Get_ItemValue("生产进度").OnCurrentValueChanged += Production;
+       
+            Init();
+        ItemValues.Start_Work();
+    }
+
+    public void Init()
+    {
+        ItemValues.Get_ItemValue("生产进度").CurrentValue = Random.Range(0, 100);
+        ItemValues.Add_ChangeSpeed("生产进度", "呼吸作用", 1, -1);
+        print("初始化");
     }
     #endregion
 }

@@ -55,7 +55,7 @@ public class UI_DataSliderShow : MonoBehaviour
     {
         if (sliders.Count > 0 && sliders[0] != null && _health != null)
         {
-            sliders[0].slider.value = _health.Hp.value;  // 当前值
+            sliders[0].slider.value = _health.Hp.Value;  // 当前值
             sliders[0].slider.maxValue = _health.Hp.maxValue;  // 最大值
             sliders[0].text_name.text = $"HP: {Mathf.FloorToInt(sliders[0].slider.value)}/{Mathf.FloorToInt(sliders[0].slider.maxValue)}";
         }

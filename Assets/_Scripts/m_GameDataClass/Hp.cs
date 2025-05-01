@@ -1,51 +1,66 @@
-using MemoryPack;
+ï»¿using MemoryPack;
 using System.Collections.Generic;
 using System;
 using System.Linq;
 using NaughtyAttributes;
+using UltEvents;
+using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
 public partial class Hp
 {
-    public float value;
+    [SerializeField]
+    private float value;
     public float maxValue;
-    public float HpChangSpeed;
-    // Ìí¼ÓÈõµã×Ö·û´®ÁĞ±í
+    // æ·»åŠ å¼±ç‚¹å­—ç¬¦ä¸²åˆ—è¡¨
     public List<string> Weaknesses;
+    [MemoryPackIgnore]
+    public UltEvent<float> OnValueChanged = new UltEvent<float>();
+
+    public float Value
+    {
+        get => value;
+        set
+        {
+            if (Mathf.Approximately(this.value, value)) return;
+            this.value = value;
+            OnValueChanged.Invoke(this.value); // âœ… ä¼ é€’å½“å‰å€¼
+        }
+    }
 
     /*public Buffs buff;*/
 
     [MemoryPackConstructor]
     public Hp(float value)
     {
-        this.value = value;
+        this.Value = value;
         maxValue = value;
-        Weaknesses = new List<string>(); // ³õÊ¼»¯ÈõµãÁĞ±í
+        Weaknesses = new List<string>(); // åˆå§‹åŒ–å¼±ç‚¹åˆ—è¡¨
     }
 
     /// <summary>
-    /// ¼ì²âÊÇ·ñ´æÔÚÖ¸¶¨µÄÈõµã
+    /// æ£€æµ‹æ˜¯å¦å­˜åœ¨æŒ‡å®šçš„å¼±ç‚¹
     /// </summary>
-    /// <param name="weakness">ĞèÒª¼ì²âµÄÈõµã</param>
-    /// <returns>Èç¹û´æÔÚ·µ»Ø true£¬·ñÔò·µ»Ø false</returns>
+    /// <param name="weakness">éœ€è¦æ£€æµ‹çš„å¼±ç‚¹</param>
+    /// <returns>å¦‚æœå­˜åœ¨è¿”å› trueï¼Œå¦åˆ™è¿”å› false</returns>
     public bool Check_Weakness(string weakness)
     {
-        // ÊäÈëÑéÖ¤£ºÈç¹û weakness Îª¿Õ»òÎŞĞ§£¬Ö±½Ó·µ»Ø false
+        // è¾“å…¥éªŒè¯ï¼šå¦‚æœ weakness ä¸ºç©ºæˆ–æ— æ•ˆï¼Œç›´æ¥è¿”å› false
         if (string.IsNullOrWhiteSpace(weakness))
         {
             return false;
         }
 
-        // ¼ì²é Weaknesses ÁĞ±íÖĞÊÇ·ñ´æÔÚÖ¸¶¨µÄÈõµã£¨ºöÂÔ´óĞ¡Ğ´£©
+        // æ£€æŸ¥ Weaknesses åˆ—è¡¨ä¸­æ˜¯å¦å­˜åœ¨æŒ‡å®šçš„å¼±ç‚¹ï¼ˆå¿½ç•¥å¤§å°å†™ï¼‰
         return Weaknesses.Contains(weakness, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// ¼ì²âÊÇ·ñ´æÔÚÈÎÒâÒ»¸öÖ¸¶¨µÄÈõµã
+    /// æ£€æµ‹æ˜¯å¦å­˜åœ¨ä»»æ„ä¸€ä¸ªæŒ‡å®šçš„å¼±ç‚¹
     /// </summary>
-    /// <param name="weaknessList">ĞèÒª¼ì²âµÄÈõµãÁĞ±í</param>
-    /// <returns>Èç¹ûÖÁÉÙ´æÔÚÒ»¸ö·µ»Ø true£¬·ñÔò·µ»Ø false</returns>
+    /// <param name="weaknessList">éœ€è¦æ£€æµ‹çš„å¼±ç‚¹åˆ—è¡¨</param>
+    /// <returns>å¦‚æœè‡³å°‘å­˜åœ¨ä¸€ä¸ªè¿”å› trueï¼Œå¦åˆ™è¿”å› false</returns>
     public bool Check_Weakness(List<string> weaknessList)
     {
         if (weaknessList == null || weaknessList.Count == 0)
@@ -64,82 +79,5 @@ public partial class Hp
 
         return false;
     }
-}
-[System.Serializable]
-[MemoryPackable]
-public partial class Buffs
-{
-    public List<Buff> buffs;
-
-    //²éÕÒ¶ÔÓ¦Ãû×ÖµÄbuff
-    public Buff FindBuff(string name)
-    {
-        if (buffs == null || buffs.Count == 0)
-        {
-            return null;
-        }
-
-        return buffs.Find(b => b.name == name);
-    }
-
-    //Ìí¼Óbuff
-    public void AddBuff(Buff buff)
-    {
-        if (buffs == null)
-        {
-            buffs = new List<Buff>();
-        }
-    buffs.Add(buff);
-    }
-
-    //ÒÆ³ı¶ÔÓ¦Ãû×ÖµÄbuff
-    public void RemoveBuff(string name)
-    {
-        if (buffs == null || buffs.Count == 0)
-        {
-            return;
-        }
-
-        buffs.RemoveAll(b => b.name == name);
-    }
-    //ÒÆ³ıËùÓĞbuff
-    public void RemoveAllBuff()
-    {
-        if (buffs == null || buffs.Count == 0)
-        {
-            return;
-        }
-
-        buffs.Clear();
-    }
-    //ĞŞ¸Ä¶ÔÓ¦Ãû×ÖµÄbuff
-    public void ModifyBuff(string name, float value)
-    {
-        Buff buff = FindBuff(name);
-        if (buff!= null)
-        {
-            buff.value = value;
-        }
-    }
-
-    //Êä³öËùÓĞbuffÊıÖµ×ÜºÍºÍ
-    public float AllBuffData()
-    {
-        float allValue = 0;
-        foreach (var buff in buffs)
-        {
-            allValue += buff.value;
-        }
-        return allValue;
-    }
-
-}
-
-[System.Serializable]
-[MemoryPackable]
-public partial class Buff
-{
-    public string name;
-    public float value;
 }
 

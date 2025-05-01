@@ -138,6 +138,15 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
         }
     }
 
+    public void Stop()
+    {
+        //Í£Ö¹AIÒÆ¶¯
+        if (agent != null && agent.isActiveAndEnabled)
+        {
+            agent.isStopped = true;
+        }
+    }
+
     private void MoveWithDoTween()
     {
         if (rb2D == null)
