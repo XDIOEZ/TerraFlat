@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7648581722047491402}
   - component: {fileID: 4382824005804895060}
   - component: {fileID: 7337968059605899734}
+  - component: {fileID: 217005334065277130}
   m_Layer: 0
   m_Name: WorldEdge_Up
   m_TagString: Untagged
@@ -172,3 +173,45 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TPTOSceneName: 
+  teleportDelay: 5
+  centerOffset: 2
+--- !u!114 &217005334065277130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2391241655408680288}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22ead5427bc06bc47b99b929d0dad640, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  BelongItem: {fileID: 0}
+  OnStopWork_Event:
+    _PersistentCalls: []
+  UpdatedUI_Event:
+    _PersistentCalls: []
+  Data:
+    Name: 
+    ID: 0
+    Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
+    PrefabPath: 
+    Durability: 1
+    ItemTags:
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
+    Stack:
+      Amount: 1
+      Volume: 1
+      CanBePickedUp: 1
+    _transform:
+      Position: {x: 0, y: 0, z: 0}
+      Rotation: {x: 0, y: 0, z: 0, w: 0}
+      Scale: {x: 0, y: 0, z: 0}
+    ItemSpecialData: 
+    Guid: 0
+    code: 

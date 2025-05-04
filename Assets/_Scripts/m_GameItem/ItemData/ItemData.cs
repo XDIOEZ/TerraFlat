@@ -29,6 +29,8 @@ using Sirenix.OdinInspector;
 [MemoryPackUnion(12, typeof(FoodData))]//食物数据
 [MemoryPackUnion(13, typeof(AnimalData))]//动物数据
 [MemoryPackUnion(14, typeof(TileMapData))]//动物数据
+[MemoryPackUnion(15, typeof(HouseData))]//动物数据
+[MemoryPackUnion(16, typeof(WorldEdgeData))]//墙壁数据
 
 
 [MemoryPackable(SerializeLayout.Explicit)]

@@ -1,5 +1,5 @@
 using MemoryPack;
-using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -16,6 +16,9 @@ public class Map : Item,ISave_Load
     [SerializeField]
     public Tilemap tileMap;
 
+    [Header("实例化的世界边界传送点")]
+    public List<WorldEdge> worldEdges;
+
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData Item_Data { get => tileMapData; set => tileMapData = value as TileMapData; }
     public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
@@ -31,24 +34,49 @@ public class Map : Item,ISave_Load
         print("加载当前场景的Tilemap");
         PullDataToTilemap();
 
-        WorldEdge_NoItem[] worldEdges = GetComponentsInChildren<WorldEdge_NoItem>();
-        foreach (var edge in worldEdges)
-        {
-            edge.TPTOSceneName = tileMapData.Data_MapEdge[edge.gameObject.name];
-        }
+       /* if (worldEdges.Count > 0)
+        {*/
+            foreach (var edgeData in tileMapData.WorldEdgeDatas)
+            {
+                GameObject edgeObj = GameRes.Instance.InstantiatePrefab(edgeData.Name);
+                edgeObj.GetComponent<WorldEdge>().Data = edgeData;
+                edgeObj.GetComponent<ISave_Load>().Load();
+                worldEdges.Add(edgeObj.GetComponent<WorldEdge>());
+                edgeObj.transform.parent = transform;
+            }
+       /* }*/
+        
     }
     [Button("保存地图到数据")]
     public void Save()
     {
-        
-        WorldEdge_NoItem[] worldEdges = transform.GetComponentsInChildren<WorldEdge_NoItem>();
-
-        foreach (var edge in worldEdges)
+        if (worldEdges.Count > 0)
         {
-            tileMapData.Data_MapEdge[edge.gameObject.name] = edge.TPTOSceneName;
+            foreach (var edge in worldEdges)
+            {
+                edge.GetComponent<ISave_Load>().Save();
+                edge.gameObject.SetActive(false);
+                tileMapData.WorldEdgeDatas.Add(edge.Data);
+                Destroy(edge.gameObject);
+            }
+        }
+        else
+        {
+            WorldEdge[] AllWorldEdges = GetComponentsInChildren<WorldEdge>();
+            foreach (var edge in AllWorldEdges)
+            {
+                edge.GetComponent<ISave_Load>().Save();
+                tileMapData.WorldEdgeDatas.Add(edge.Data);
+                edge.gameObject.SetActive(false);
+                SaveAndLoad.Instance.GameObject_False.Add(edge.gameObject);
+               // Destroy(edge.gameObject);
+            }
         }
 
-        print("保存当前场景的tilemap");
+
+
+
+            print("保存当前场景的tilemap");
         SaveTilemapData();
     }
     // --- Odin 按钮区域 ---

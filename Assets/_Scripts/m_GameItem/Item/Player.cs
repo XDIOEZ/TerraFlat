@@ -239,8 +239,6 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     }
     public void Start()
     {
-
-        Save();
         Load();
     }
     public override void Act()
@@ -302,6 +300,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
         GetDataFrom_GameObjectInventory_SaveTOData();
 
         //销毁玩家手中的物品实例
+       // this.gameObject.SetActive(false);
     }
 
     [Button("读取玩家数据")]

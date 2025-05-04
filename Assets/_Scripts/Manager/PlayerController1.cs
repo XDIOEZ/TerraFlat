@@ -81,8 +81,6 @@ public class PlayerController : MonoBehaviour
         SwitchEquip();
         SwitchCraft();
         //    SwitchSetting();
-
-        _mainCamera = Camera.main;
     }
 
     private void Update()

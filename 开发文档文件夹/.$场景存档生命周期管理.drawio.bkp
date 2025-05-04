@@ -1,0 +1,113 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.3 Chrome/130.0.6723.137 Electron/33.2.1 Safari/537.36" version="26.0.3" pages="2">
+  <diagram name="第 1 页" id="v1Y_dvGuoK_rje9SXnHM">
+    <mxGraphModel dx="2182" dy="912" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1000" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="whKkzYMTYlOMaMGwT11x-5" value="1.建筑的数据保存在ItemData中&lt;div&gt;2.建筑结构类继承自ItemData&lt;/div&gt;&lt;div&gt;3.玩家创建建筑-通过合成台制作建筑 便会触发建筑的实例化的生命周期&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="-829" y="-1" width="521" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-6" value="将建筑结构数据类的建筑场景信息作为二进制文件保存到文件夹中&amp;nbsp;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="-1039" y="345.5" width="486" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-35" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-8" target="whKkzYMTYlOMaMGwT11x-34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-8" value="玩家创建建筑" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-474" y="268" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-14" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-9" target="whKkzYMTYlOMaMGwT11x-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-47" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-9" target="whKkzYMTYlOMaMGwT11x-43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-9" value="玩家放下建筑" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-477" y="417" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-10" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.512;entryY=0.133;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-8" target="whKkzYMTYlOMaMGwT11x-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-15" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-11" target="whKkzYMTYlOMaMGwT11x-12">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-419" y="763.8824247472428" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-11" value="玩家进入建筑" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-474" y="579" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-12" value="玩家修改建筑内的信息" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-477" y="753" width="127" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-13" value="玩家离开建筑" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-480" y="936" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-16" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.596;entryY=0.04;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-12" target="whKkzYMTYlOMaMGwT11x-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-34" value="随机生成一个建筑的名字 格式为建筑加当前的现实时间+4位随机数" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="-214" y="268" width="210" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-43" value="Building" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-135" y="448" width="257" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-37" value="BuildingData" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="whKkzYMTYlOMaMGwT11x-43">
+          <mxGeometry y="26" width="257" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-38" value="---建筑链接的场景名字&lt;div&gt;---建筑的当前耐久度//使用Hp类&lt;/div&gt;&lt;div&gt;---建筑的最大耐久度//使用Hp类&lt;/div&gt;&lt;div&gt;---是否处于建筑状态&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="whKkzYMTYlOMaMGwT11x-37">
+          <mxGeometry y="26" width="257" height="69" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-45" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="whKkzYMTYlOMaMGwT11x-43">
+          <mxGeometry y="121" width="257" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-46" value="---进入建筑=调用场景管理器将玩家移动到&lt;div&gt;&lt;div&gt;---建筑被摧毁=监听建筑的耐久度&lt;/div&gt;&lt;div&gt;---安装和拆除=Building_InstallAndUninstall类实现操作&lt;/div&gt;&lt;div&gt;---安装建筑=通过模板创建MapSave保存到存档中 记得将链接的场景名随机化&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="whKkzYMTYlOMaMGwT11x-43">
+          <mxGeometry y="129" width="257" height="111" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-49" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.03;entryY=0.138;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-11" target="whKkzYMTYlOMaMGwT11x-46">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-57" value="&lt;span style=&quot;font-weight: 400;&quot;&gt;重构世界边界类&lt;/span&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-854" y="576" width="239" height="117" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-58" value="&lt;div&gt;--在Lode方法被调用时 根据Mapdata中的List&amp;lt;WorldEdgeData&amp;gt; 实例化世界边界&lt;/div&gt;&lt;div&gt;在save函数中优先获取世界边界类存入MapData类 同时将世界边界预制体卸载&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="whKkzYMTYlOMaMGwT11x-57">
+          <mxGeometry y="26" width="239" height="91" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-62" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="-82.5" y="343.5" width="27" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-63" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.339;entryY=0.015;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-62" target="whKkzYMTYlOMaMGwT11x-43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-64" value="2" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="-732.5" y="465.5" width="27" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-65" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.616;entryY=0.003;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-64" target="whKkzYMTYlOMaMGwT11x-57">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-67" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-66" target="whKkzYMTYlOMaMGwT11x-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-66" value="3" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="-995.5" y="204" width="27" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-68" value="创建建筑结构类模板" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-775" y="820" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-69" value="4" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="-863.5" y="729.5" width="27" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="whKkzYMTYlOMaMGwT11x-70" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.063;entryY=0.133;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="whKkzYMTYlOMaMGwT11x-69" target="whKkzYMTYlOMaMGwT11x-68">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="paNgWG58YWIg6VotEZFd" name="第 2 页">
+    <mxGraphModel dx="1276" dy="665" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1000" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

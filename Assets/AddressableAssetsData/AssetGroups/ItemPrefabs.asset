@@ -23,6 +23,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 04854a1d6e688804d8e7af02ee606d12
+    m_Address: Assets/_Prefabs/Building
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 233b9863906618547b2385f33efcd09b
     m_Address: Fence
     m_ReadOnly: 0
@@ -97,6 +103,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 939d63540274d5649acb1084d09fcf44
     m_Address: Assets/_Prefabs/coldWeapon
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9be04821005e31a49ad056dc0f19839e
+    m_Address: Assets/_Prefabs/House
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
