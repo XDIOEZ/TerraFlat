@@ -9,7 +9,12 @@ public class HandForInteract : MonoBehaviour ,IInteracter
     [Tooltip(" 当前交互对象"),ShowNonSerializedField]
     public IInteract Intractable_go;
 
+    public GameObject User { get => user; set => user = value; }
+
     public SelectSlot _selectSlot;
+    [SerializeField]
+    private GameObject user;
+
     public SelectSlot SelectSlot { get => _selectSlot; set => _selectSlot = value; }
     public void OnTriggerEnter2D(Collider2D collision)
     {

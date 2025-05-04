@@ -1,4 +1,4 @@
-using MemoryPack;
+ï»¿using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,18 +8,18 @@ using UnityEngine.Tilemaps;
 
 public class Map : Item,ISave_Load
 {
-    [Header("µØÍ¼ÅäÖÃ")]
+    [Header("åœ°å›¾é…ç½®")]
     [SerializeField]
     public TileMapData tileMapData;
 
-    [Header("Tilemap ×é¼ş")]
+    [Header("Tilemap ç»„ä»¶")]
     [SerializeField]
     public Tilemap tileMap;
 
-    [Header("ÊµÀı»¯µÄÊÀ½ç±ß½ç´«ËÍµã")]
-    public List<WorldEdge> worldEdges;
+    [Header("å®ä¾‹åŒ–çš„ä¸–ç•Œè¾¹ç•Œä¼ é€ç‚¹")]
+    public List<WorldEdge> worldEdges_GameObject;
 
-    // Ç¿ÖÆÀàĞÍ×ª»»ÊôĞÔ£¨±£³ÖÓë»ùÀà Item µÄ¼æÈİ£©
+    // å¼ºåˆ¶ç±»å‹è½¬æ¢å±æ€§ï¼ˆä¿æŒä¸åŸºç±» Item çš„å…¼å®¹ï¼‰
     public override ItemData Item_Data { get => tileMapData; set => tileMapData = value as TileMapData; }
     public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public UltEvent onLoad { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
@@ -28,58 +28,88 @@ public class Map : Item,ISave_Load
     {
         throw new System.NotImplementedException();
     }
-    [Button("´ÓÊı¾İ¼ÓÔØµØÍ¼")]
+    [Button("ä»æ•°æ®åŠ è½½åœ°å›¾")]
     public void Load()
     {
-        print("¼ÓÔØµ±Ç°³¡¾°µÄTilemap");
+        print("åŠ è½½å½“å‰åœºæ™¯çš„Tilemap");
         PullDataToTilemap();
 
-       /* if (worldEdges.Count > 0)
-        {*/
-            foreach (var edgeData in tileMapData.WorldEdgeDatas)
-            {
-                GameObject edgeObj = GameRes.Instance.InstantiatePrefab(edgeData.Name);
-                edgeObj.GetComponent<WorldEdge>().Data = edgeData;
-                edgeObj.GetComponent<ISave_Load>().Load();
-                worldEdges.Add(edgeObj.GetComponent<WorldEdge>());
-                edgeObj.transform.parent = transform;
-            }
-       /* }*/
-        
+        if (tileMapData.WorldEdgeDatas == null || tileMapData.WorldEdgeDatas.Count == 0)
+        {
+            Debug.LogWarning("[Map.Load] WorldEdgeDatas ä¸ºç©ºï¼Œæœªç”Ÿæˆä»»ä½•è¾¹ç•Œ");
+            return;
+        }
+
+        worldEdges_GameObject.Clear(); // æ¸…ç©ºæ—§çš„å¼•ç”¨åˆ—è¡¨
+
+        foreach (var edgeData in tileMapData.WorldEdgeDatas)
+        {
+            GameObject edgeObj = GameRes.Instance.InstantiatePrefab(edgeData.Name);
+            var worldEdge = edgeObj.GetComponent<WorldEdge>();
+            worldEdge.Data = edgeData;
+            edgeObj.GetComponent<ISave_Load>().Load();
+            worldEdges_GameObject.Add(worldEdge);
+            edgeObj.transform.parent = transform;
+        }
     }
-    [Button("±£´æµØÍ¼µ½Êı¾İ")]
+
+    [Button("ä¿å­˜åœ°å›¾åˆ°æ•°æ®")]
     public void Save()
     {
-        if (worldEdges.Count > 0)
+        Debug.Log($"[Map.Save] å¼€å§‹ä¿å­˜åœ°å›¾æ•°æ®");
+
+        // ğŸ”¥ æ¸…ç©ºæ—§æ•°æ®ï¼Œé˜²æ­¢é‡å¤æ·»åŠ 
+        tileMapData.WorldEdgeDatas.Clear();
+        Debug.Log($"[Map.Save] æ¸…ç©ºæ—§çš„ WorldEdgeDatas");
+
+        if (worldEdges_GameObject.Count > 0)
         {
-            foreach (var edge in worldEdges)
+            Debug.Log($"[Map.Save] ä½¿ç”¨ worldEdges åˆ—è¡¨ï¼Œå…± {worldEdges_GameObject.Count} ä¸ª");
+
+            foreach (var edge in worldEdges_GameObject)
             {
+                var edgeName = edge.name;
+                Debug.Log($"[Map.Save] æ­£åœ¨ä¿å­˜è¾¹ç•Œå¯¹è±¡: {edgeName}");
+
                 edge.GetComponent<ISave_Load>().Save();
                 edge.gameObject.SetActive(false);
                 tileMapData.WorldEdgeDatas.Add(edge.Data);
+
+                Debug.Log($"[Map.Save] ä¿å­˜å¹¶é”€æ¯è¾¹ç•Œå¯¹è±¡: {edgeName}");
                 Destroy(edge.gameObject);
             }
         }
         else
         {
+            Debug.LogWarning("[Map.Save] worldEdges åˆ—è¡¨ä¸ºç©ºï¼Œä»å­ç‰©ä½“ä¸­æŸ¥æ‰¾ WorldEdge");
+
             WorldEdge[] AllWorldEdges = GetComponentsInChildren<WorldEdge>();
+            Debug.Log($"[Map.Save] æ‰¾åˆ° {AllWorldEdges.Length} ä¸ªå­ç‰©ä½“ä¸­çš„ WorldEdge");
+
             foreach (var edge in AllWorldEdges)
             {
+                var edgeName = edge.name;
+                Debug.Log($"[Map.Save] æ­£åœ¨ä¿å­˜å­ç‰©ä½“è¾¹ç•Œå¯¹è±¡: {edgeName}");
+
                 edge.GetComponent<ISave_Load>().Save();
                 tileMapData.WorldEdgeDatas.Add(edge.Data);
                 edge.gameObject.SetActive(false);
+
+                Debug.Log($"[Map.Save] è¾¹ç•Œå¯¹è±¡ {edgeName} å·²ç¦ç”¨å¹¶æ·»åŠ åˆ° GameObject_False åˆ—è¡¨");
                 SaveAndLoad.Instance.GameObject_False.Add(edge.gameObject);
-               // Destroy(edge.gameObject);
             }
         }
 
+        Debug.Log($"[Map.Save] å½“å‰ WorldEdgeDatas æ•°é‡: {tileMapData.WorldEdgeDatas.Count}");
 
-
-
-            print("±£´æµ±Ç°³¡¾°µÄtilemap");
+        Debug.Log("ä¿å­˜å½“å‰åœºæ™¯çš„ tilemap æ•°æ®");
         SaveTilemapData();
+
+        Debug.Log("[Map.Save] åœ°å›¾ä¿å­˜å®Œæˆ");
     }
-    // --- Odin °´Å¥ÇøÓò ---
+
+
+    // --- Odin æŒ‰é’®åŒºåŸŸ ---
 
     public void PullDataToTilemap()
     {
@@ -88,15 +118,15 @@ public class Map : Item,ISave_Load
             string tileName = kvp.Key;
             List<Vector2Int> positions = kvp.Value;
 
-            // Í¨¹ıÃû³Æ»ñÈ¡ TileBase ¶ÔÏó
+            // é€šè¿‡åç§°è·å– TileBase å¯¹è±¡
             TileBase tile = GameRes.Instance.GetTileBase(tileName);
             if (tile == null)
             {
-                Debug.LogError($"ÎŞ·¨¼ÓÔØ Tile: {tileName}");
+                Debug.LogError($"æ— æ³•åŠ è½½ Tile: {tileName}");
                 continue;
             }
 
-            // ±éÀúËùÓĞ×ø±ê²¢ÉèÖÃ Tile
+            // éå†æ‰€æœ‰åæ ‡å¹¶è®¾ç½® Tile
             foreach (Vector2Int pos2D in positions)
             {
                 Vector3Int pos3D = new Vector3Int(pos2D.x, pos2D.y, 0);
@@ -110,23 +140,23 @@ public class Map : Item,ISave_Load
 
     public void SaveTilemapData()
     {
-        // ´´½¨ÁÙÊ±×Öµä´æ´¢ <TileÃû³Æ, ×ø±êÁĞ±í>
+        // åˆ›å»ºä¸´æ—¶å­—å…¸å­˜å‚¨ <Tileåç§°, åæ ‡åˆ—è¡¨>
         var tempData = new Dictionary<string, List<Vector2Int>>();
 
-        // »ñÈ¡ Tilemap µÄ°üÎ§ºĞ·¶Î§
+        // è·å– Tilemap çš„åŒ…å›´ç›’èŒƒå›´
         BoundsInt bounds = tileMap.cellBounds;
 
-        // ±éÀúËùÓĞ¿ÉÄÜµÄ×ø±ê£¨Vector3Int£©
+        // éå†æ‰€æœ‰å¯èƒ½çš„åæ ‡ï¼ˆVector3Intï¼‰
         foreach (Vector3Int pos3D in bounds.allPositionsWithin)
         {
             TileBase currentTile = tileMap.GetTile(pos3D);
             if (currentTile == null) continue;
 
-            // ×ª»»Îª Vector2Int£¨ºöÂÔ Z Öá£©
+            // è½¬æ¢ä¸º Vector2Intï¼ˆå¿½ç•¥ Z è½´ï¼‰
             Vector2Int pos2D = new Vector2Int(pos3D.x, pos3D.y);
             string tileName = currentTile.name;
 
-            // ½«×ø±êÌí¼Óµ½¶ÔÓ¦Ãû³ÆµÄÁĞ±íÖĞ
+            // å°†åæ ‡æ·»åŠ åˆ°å¯¹åº”åç§°çš„åˆ—è¡¨ä¸­
             if (!tempData.ContainsKey(tileName))
             {
                 tempData[tileName] = new List<Vector2Int>();
@@ -134,7 +164,7 @@ public class Map : Item,ISave_Load
             tempData[tileName].Add(pos2D);
         }
 
-        // Ö±½Ó¸³Öµµ½ÏÖÓĞµÄ tileMapData£¨±ÜÃâ´´½¨ĞÂ¶ÔÏó£©
+        // ç›´æ¥èµ‹å€¼åˆ°ç°æœ‰çš„ tileMapDataï¼ˆé¿å…åˆ›å»ºæ–°å¯¹è±¡ï¼‰
         tileMapData.Data = tempData;
     }
 }

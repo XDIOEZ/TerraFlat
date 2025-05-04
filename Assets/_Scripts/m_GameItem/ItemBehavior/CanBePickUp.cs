@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 
 /// <summary>
@@ -27,6 +28,8 @@ public class CanBePickUp : MonoBehaviour, ICanBePickUp
         item = GetComponent<Item>();
     }
 
+    public UltEvent OnPickUp;
+
     /// <summary>
     /// 拾取逻辑，返回物品数据
     /// </summary>
@@ -41,6 +44,8 @@ public class CanBePickUp : MonoBehaviour, ICanBePickUp
 
         // 设置为不可再次拾取
         item.Item_Data.Stack.CanBePickedUp = false;
+
+        OnPickUp.Invoke();
 
         // 销毁物品 GameObject
         Destroy(item.gameObject);

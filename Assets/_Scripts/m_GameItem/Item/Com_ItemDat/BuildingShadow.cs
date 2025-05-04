@@ -112,6 +112,8 @@ public class Building_InstallAndUninstall
     private Hp Hp;
     private ItemData Item_Data;
     private BuildingShadow GhostShadow;
+    [Tooltip("映射的建筑物")]
+    IBuilding building;
 
 
     [Header("放置检测参数")]
@@ -127,30 +129,31 @@ public class Building_InstallAndUninstall
 
     public void Update()
     {
-        if (hostTransform.parent == null || item == null || item.Item_Data.Stack.CanBePickedUp)
-            return;
-
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        mouseWorldPos.z = 0f;
-
-        if (GhostShadow == null)
+        // 未安装状态下，不处理
+        if (building.IsInstalled == false && Item_Data.Stack.CanBePickedUp == false)
         {
-            GhostShadow = GameRes.Instance.InstantiatePrefab("BuildingShadow").GetComponent<BuildingShadow>();
-            GhostShadow.InitShadow(hostRenderer);
+            Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            mouseWorldPos.z = 0f;
+
+            if (GhostShadow == null)
+            {
+                GhostShadow = GameRes.Instance.InstantiatePrefab("BuildingShadow").GetComponent<BuildingShadow>();
+                GhostShadow.InitShadow(hostRenderer);
+            }
+
+            float distance = Vector2.Distance(hostTransform.position, mouseWorldPos);
+            float alpha = Mathf.InverseLerp(maxVisibleDistance, minVisibleDistance, distance);
+            alpha = Mathf.Clamp01(alpha);
+
+            GhostShadow.UpdateAlpha(alpha);
+
+            if (GhostShadow.ShadowRenderer.enabled)
+            {
+                GhostShadow.SmoothMove(mouseWorldPos);
+            }
+
+            GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
         }
-
-        float distance = Vector2.Distance(hostTransform.position, mouseWorldPos);
-        float alpha = Mathf.InverseLerp(maxVisibleDistance, minVisibleDistance, distance);
-        alpha = Mathf.Clamp01(alpha);
-
-        GhostShadow.UpdateAlpha(alpha);
-
-        if (GhostShadow.ShadowRenderer.enabled)
-        {
-            GhostShadow.SmoothMove(mouseWorldPos);
-        }
-
-        GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
     }
 
     public void Init(Transform owner)
@@ -161,6 +164,19 @@ public class Building_InstallAndUninstall
         item = owner.GetComponent<Item>();
         Hp = owner.GetComponent<IHealth>().Hp;
         Item_Data = item?.Item_Data;
+        building = owner.GetComponent<IBuilding>();
+
+        //TODO 根据血量判断是否安装
+        if (Hp.Value > 0)
+        {
+            boxCollider2D.isTrigger = false;
+            building.IsInstalled = true;
+        }
+        else
+        {
+            boxCollider2D.isTrigger = true;
+            building.IsInstalled = false;
+        }
     }
     public void Install()
     {

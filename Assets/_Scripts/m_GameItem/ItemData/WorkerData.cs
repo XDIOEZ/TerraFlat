@@ -15,4 +15,6 @@ public partial class WorkerData :ItemData
 
     public Hp Hp;
     public Defense Defense;
+
+    public bool IsInstalled;
 }

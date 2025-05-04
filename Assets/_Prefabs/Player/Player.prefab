@@ -20570,6 +20570,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _selectSlot: {fileID: 250282679633529571}
+  user: {fileID: 8129587967796350624}
 --- !u!1 &7725849492731075166
 GameObject:
   m_ObjectHideFlags: 0
@@ -21645,6 +21646,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6f6f2106a20d7d4987858d5cc13c5a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  BelongItem: {fileID: 0}
+  OnStopWork_Event:
+    _PersistentCalls: []
   UpdatedUI_Event:
     _PersistentCalls: []
   selectSlot: {fileID: 250282679633529571}
@@ -21676,6 +21680,8 @@ MonoBehaviour:
       value: 30
       maxValue: 30
       Weaknesses: []
+      OnValueChanged:
+        _PersistentCalls: []
     defense:
       defenseStrength: 5
       defenseToughness: 5

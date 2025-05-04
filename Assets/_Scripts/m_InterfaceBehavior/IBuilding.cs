@@ -4,6 +4,7 @@ using UnityEngine;
 
 public  interface IBuilding
 {
+    public bool IsInstalled { get; set; }
     void UnInstall();
 
     void Install();

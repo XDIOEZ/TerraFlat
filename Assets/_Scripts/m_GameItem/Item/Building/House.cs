@@ -10,6 +10,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
 
     public static Dictionary<string,Vector2> housePos = new Dictionary<string, Vector2>();
 
+
     // 接口字段映射到 data 的具体值
     public Hp Hp
     {
@@ -46,7 +47,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public UltEvent onLoad { get; set; } = new UltEvent();
     public UltEvent OnDefenseChanged { get; set; } = new UltEvent();
     public UltEvent OnHpChanged { get; set; } = new UltEvent();
-
+    public bool IsInstalled { get; set; }
     public HouseBuildingSO buildingSO;//房屋数据模板
 
     // Act：建筑可能被攻击等行为
@@ -88,6 +89,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
         }
 
         GetComponentInChildren<SceneChange>().TPTOSceneName = data.sceneName;
+        GetComponentInChildren<SceneChange>().TeleportPosition = buildingSO.buildingEntrance;
         House.housePos[data.sceneName] = GetComponentInChildren<SceneChange>().transform.position;
     }
 
@@ -109,6 +111,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     }
     public void Update()
     {
+        if(data.isBuilding==false)
         _InstallAndUninstall.Update();
     }
 

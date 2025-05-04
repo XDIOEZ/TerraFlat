@@ -8,9 +8,11 @@ using UnityEngine.SceneManagement;
 [CreateAssetMenu(fileName = "New House Building", menuName = "ScriptableObjects/House Building")]
 public class HouseBuildingSO : ScriptableObject
 {
+    [Tooltip("房屋名称")]
     public string buildingName;
-
+    [Tooltip("房屋MapSaveData路径")]
     public string buildingPath = "Assets/Saves/HouseBuilding/";
+    [Tooltip("房屋MapSaveData")]
     public MapSave MapSave
     {
         get
@@ -18,6 +20,8 @@ public class HouseBuildingSO : ScriptableObject
             return LoadByDisk(buildingPath);
         }
     }
+    [Tooltip("建筑入口坐标")]
+    public Vector2 buildingEntrance;
 
     public MapSave LoadByDisk(string _buildingPath)
     {

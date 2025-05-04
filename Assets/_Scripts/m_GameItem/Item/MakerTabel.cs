@@ -78,7 +78,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     public Defense Defense { get => Data.Defense; set => Data.Defense = value; }
     public UltEvent OnHpChanged { get; set; }
     public UltEvent OnDefenseChanged { get; set; }
-
+    public bool IsInstalled { get =>Data.IsInstalled; set => Data.IsInstalled = value; }
     public Building_InstallAndUninstall _InstallAndUninstall = new ();
     #endregion
 
