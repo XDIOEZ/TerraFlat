@@ -253,7 +253,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
         var triggerAttack = GetComponentInChildren<ITriggerAttack>();
         if (triggerAttack == null || triggerAttack.Weapon_GameObject == null)
         {
-            Debug.Log("未找到 ITriggerAttack 或其 Weapon_GameObject！");
+         //   Debug.Log("未找到 ITriggerAttack 或其 Weapon_GameObject！");
             return;
         }
 
@@ -313,6 +313,15 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
 
         inventoryDataInterface = this;
         inventoryDataInterface.FillDict_SetBelongItem(transform.parent);
+
+        foreach (var inventory in Children_Inventory_GameObject.Values)
+        {
+            if (Data_InventoryData.ContainsKey(inventory.Data.inventoryName))
+            {
+                inventory.Data = Data_InventoryData[inventory.Data.inventoryName];
+                inventory.UI.RefreshAllInventoryUI();
+            }
+        }
     }
     #endregion
     #endregion

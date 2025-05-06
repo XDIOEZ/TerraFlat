@@ -32,6 +32,7 @@ public class HouseBuildingSO : ScriptableObject
     [ContextMenu("获取场景中的地图参数保存到对应路径")]
     public void SaveToDisk()
     {
+        SetEntranceFromWorldEdge();
         // 获取当前场景的地图数据（包含所有激活物品）
         MapSave mapSave = SaveActiveScene_Map();
 
@@ -56,6 +57,7 @@ public class HouseBuildingSO : ScriptableObject
             Debug.LogError($"保存地图失败: {fullPath}");
             Debug.LogException(ex);
         }
+        
     }
 
     #region 保存当前激活的场景的地图数据
@@ -83,5 +85,22 @@ public class HouseBuildingSO : ScriptableObject
     }
 
     #endregion
+
+    public void SetEntranceFromWorldEdge()
+    {
+        // 查找当前激活场景中的 WorldEdge 组件
+        WorldEdge worldEdge = GameObject.FindObjectOfType<WorldEdge>();
+
+        if (worldEdge != null)
+        {
+            // 设置 buildingEntrance 为 WorldEdge 的坐标
+            buildingEntrance = new Vector2(worldEdge.transform.position.x, worldEdge.transform.position.y);
+            Debug.Log($"建筑入口设置成功：{buildingEntrance}");
+        }
+        else
+        {
+            Debug.LogWarning("未找到场景中的 WorldEdge 组件，无法设置建筑入口。");
+        }
+    }
 
 }

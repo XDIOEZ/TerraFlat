@@ -49,7 +49,7 @@ public class GameRes : SingletonAutoMono<GameRes>
     }
     void Start()
     {
-        print("GameResManager Start");
+      //  print("GameResManager Start");
     }
     #endregion
 

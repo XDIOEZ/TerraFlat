@@ -171,11 +171,13 @@ public class Building_InstallAndUninstall
         {
             boxCollider2D.isTrigger = false;
             building.IsInstalled = true;
+          //  item.Item_Data.Stack.CanBePickedUp = false;
         }
         else
         {
             boxCollider2D.isTrigger = true;
             building.IsInstalled = false;
+          //  item.Item_Data.Stack.CanBePickedUp = true;
         }
     }
     public void Install()

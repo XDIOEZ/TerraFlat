@@ -59,7 +59,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             playerCount++;
         }
 
-        Debug.Log("玩家数据保存成功！玩家数量：" + playerCount);
+       // Debug.Log("玩家数据保存成功！玩家数量：" + playerCount);
         return playerCount;
     }
 
@@ -76,23 +76,14 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     public void SaveActiveMapToSaveData()
     {
 
-        if (SaveData == null)
-        {
-            SaveData = new GameSaveData();
-            SaveData.MapSaves_Dict = new Dictionary<string, MapSave>();
-            SaveData.PlayerData_Dict = new Dictionary<string, PlayerData>();
-        }
+        SaveData ??= new GameSaveData();
         GameObject_False.Clear();
-
-        // 等待保存玩家数据的协程（如果 SavePlayer 是异步的）
         SavePlayer();
-
         // 保存当前激活的地图
         MapSave mapSave = SaveActiveScene_Map();
-
         SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
 
-        Debug.Log("成功将当前激活场景存入当前使用的存档");
+     //   Debug.Log("成功将当前激活场景存入当前使用的存档");
     }
 
     #endregion
@@ -106,6 +97,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         if (SaveData.PlayerData_Dict.ContainsKey(playerName))
         {
             _data = SaveData.PlayerData_Dict[playerName];
+            Debug.Log("成功加载玩家：" + playerName);
         }
         else
         {
@@ -114,16 +106,14 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 TemplateSaveData = GetSaveByDisk(TemplateSavePath, TemplateSaveName);
             }
             _data = TemplateSaveData.PlayerData_Dict["Ikun"];
+            Debug.Log("未找到玩家数据，加载默认模板玩家数据");
         }
 
         GameObject newPlayerObj = GameRes.Instance.InstantiatePrefab("Player");
-        //实例化玩家
-       // GameObject newPlayerObj = Instantiate(player, Vector3.zero, Quaternion.identity);
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
         newPlayer.Data = _data;
-        newPlayer.Data.PlayerUserName = playerName;
         newPlayer.Load();
-        Debug.Log("玩家加载成功！");
+       // Debug.Log("玩家加载成功！");
     }
 
     [Button("加载存档")]
@@ -140,11 +130,13 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         //检测存档是否存在对应的地图数据 如果没有则加载默认模板
         if (!SaveData.MapSaves_Dict.ContainsKey(mapName))
         {
+            Debug.LogWarning($"未找到地图数据，名称：{mapName} , 加载默认模板");
             mapSave = LoadOnDefaultTemplateMap(mapName);
         }
         else
         {
             mapSave = SaveData.MapSaves_Dict[mapName];
+            Debug.Log("成功加载地图：" + mapName);
         }
        
 
@@ -179,7 +171,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 }
             }
         }
-        Debug.Log("物体加载成功！");
+        //  Debug.Log("物体加载成功！");
 
         LoadPlayer(playerName);
     }
@@ -321,12 +313,18 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     [Button("改变场景")]
     public void ChangeScene(string sceneName = "平原")
     {
+        // 保存当前场景的地图数据
         SaveActiveMapToSaveData();
+        // 切换场景
         EnterScene(sceneName);
     }
 
     private Scene newScene;
 
+    /// <summary>
+    /// 切换场景
+    /// </summary>
+    /// <param name="sceneName"></param>
     public void EnterScene(string sceneName = "平原")
     {
         // 1. 创建新场景（空场景）
@@ -388,4 +386,11 @@ public partial class GameSaveData
     public Dictionary<string, PlayerData> PlayerData_Dict = new Dictionary<string, PlayerData>();
 
     public string leaveTime = "0";//离开时间
+
+    //构造函数
+    public GameSaveData()
+    {
+        MapSaves_Dict = new Dictionary<string, MapSave>();
+        PlayerData_Dict = new Dictionary<string, PlayerData>();
+    }
 }

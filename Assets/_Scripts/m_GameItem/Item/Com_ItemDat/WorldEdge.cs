@@ -39,7 +39,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
 
         if (string.IsNullOrEmpty(extracted))
         {
-            Debug.LogError($"[WorldEdge] 场景名称格式错误（需要两个 '$'）: {sceneName}");
+         //   Debug.LogError($"[WorldEdge] 场景名称格式错误（需要两个 '$'）: {sceneName}");
             return;
         }
 
@@ -94,5 +94,8 @@ public class WorldEdge : Item, ISave_Load, IInteract
     }
 
     public void Interact_Update(IInteracter interacter = null) => throw new System.NotImplementedException();
-    public void Interact_Cancel(IInteracter interacter = null) => throw new System.NotImplementedException();
+    public void Interact_Cancel(IInteracter interacter = null)
+    {
+
+    }
 }

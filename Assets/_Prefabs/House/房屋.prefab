@@ -136,7 +136,7 @@ MonoBehaviour:
     Stack:
       Amount: 1
       Volume: 2
-      CanBePickedUp: 0
+      CanBePickedUp: 1
     _transform:
       Position: {x: 0, y: 0, z: 0}
       Rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -145,8 +145,8 @@ MonoBehaviour:
     Guid: 89
     sceneName: 
     hp:
-      value: 99
-      maxValue: 99
+      value: -1
+      maxValue: 100
       Weaknesses: []
       OnValueChanged:
         _PersistentCalls: []
@@ -200,6 +200,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  OnPickUp:
+    _PersistentCalls: []
 --- !u!1 &1889306391043813095
 GameObject:
   m_ObjectHideFlags: 0
@@ -501,6 +503,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5504ed22f6812574187a52a200dbb92e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TPTOSceneName: "\u5EFA\u7B51"
-  TeleportPosition: {x: 0, y: 0}
+  TPTOSceneName: 
+  TeleportPosition: {x: -16, y: -7}
+  OnTp:
+    _PersistentCalls: []
   _canTeleport: 1

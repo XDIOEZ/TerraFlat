@@ -47,7 +47,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public UltEvent onLoad { get; set; } = new UltEvent();
     public UltEvent OnDefenseChanged { get; set; } = new UltEvent();
     public UltEvent OnHpChanged { get; set; } = new UltEvent();
-    public bool IsInstalled { get; set; }
+    public bool IsInstalled { get => data.isBuilding; set => data.isBuilding = value; }
     public HouseBuildingSO buildingSO;//房屋数据模板
 
     // Act：建筑可能被攻击等行为
@@ -61,6 +61,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     {
         UnInstall();
     }
+
     [Tooltip("进入房屋函数")]
     void EnterHouse()
     {
@@ -89,16 +90,18 @@ public class House : Item, ISave_Load, IHealth, IBuilding
         }
 
         GetComponentInChildren<SceneChange>().TPTOSceneName = data.sceneName;
+        //传送位置设置为SO中的固定入口位置
         GetComponentInChildren<SceneChange>().TeleportPosition = buildingSO.buildingEntrance;
+        //当前房屋的入口位置
         House.housePos[data.sceneName] = GetComponentInChildren<SceneChange>().transform.position;
     }
 
-    void Start()
+    public void Start()
     {
-        GetComponentInChildren<SceneChange>().Ontp += EnterHouse;
+        GetComponentInChildren<SceneChange>().OnTp += EnterHouse;
        _InstallAndUninstall.Init(this.transform);
 
-        if (data.isBuilding)
+        if (IsInstalled)
         {
             //使colliders都有效
             foreach (BoxCollider2D collider in colliders)
@@ -111,7 +114,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     }
     public void Update()
     {
-        if(data.isBuilding==false)
+        if(IsInstalled == false)
         _InstallAndUninstall.Update();
     }
 
@@ -119,14 +122,19 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public void Install()
     {
         _InstallAndUninstall.Install();
-        data.isBuilding = true;
+        IsInstalled = true;
+        //使colliders都有效
+        foreach (BoxCollider2D collider in colliders)
+        {
+            collider.enabled = true;
+        }
     }
 
     // 卸载建筑（比如卸载场景）
     public void UnInstall()
     {
         _InstallAndUninstall.UnInstall();
-        data.isBuilding = false;
+        IsInstalled = false;
 
         //使colliders都失效
         foreach (BoxCollider2D collider in colliders)

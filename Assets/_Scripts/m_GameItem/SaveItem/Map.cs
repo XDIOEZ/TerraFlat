@@ -31,7 +31,7 @@ public class Map : Item,ISave_Load
     [Button("从数据加载地图")]
     public void Load()
     {
-        print("加载当前场景的Tilemap");
+     //   print("加载当前场景的Tilemap");
         PullDataToTilemap();
 
         if (tileMapData.WorldEdgeDatas == null || tileMapData.WorldEdgeDatas.Count == 0)
@@ -56,56 +56,56 @@ public class Map : Item,ISave_Load
     [Button("保存地图到数据")]
     public void Save()
     {
-        Debug.Log($"[Map.Save] 开始保存地图数据");
+      //  Debug.Log($"[Map.Save] 开始保存地图数据");
 
         // 🔥 清空旧数据，防止重复添加
         tileMapData.WorldEdgeDatas.Clear();
-        Debug.Log($"[Map.Save] 清空旧的 WorldEdgeDatas");
+      //  Debug.Log($"[Map.Save] 清空旧的 WorldEdgeDatas");
 
         if (worldEdges_GameObject.Count > 0)
         {
-            Debug.Log($"[Map.Save] 使用 worldEdges 列表，共 {worldEdges_GameObject.Count} 个");
+          //  Debug.Log($"[Map.Save] 使用 worldEdges 列表，共 {worldEdges_GameObject.Count} 个");
 
             foreach (var edge in worldEdges_GameObject)
             {
                 var edgeName = edge.name;
-                Debug.Log($"[Map.Save] 正在保存边界对象: {edgeName}");
+             //   Debug.Log($"[Map.Save] 正在保存边界对象: {edgeName}");
 
                 edge.GetComponent<ISave_Load>().Save();
                 edge.gameObject.SetActive(false);
                 tileMapData.WorldEdgeDatas.Add(edge.Data);
 
-                Debug.Log($"[Map.Save] 保存并销毁边界对象: {edgeName}");
+              //  Debug.Log($"[Map.Save] 保存并销毁边界对象: {edgeName}");
                 Destroy(edge.gameObject);
             }
         }
         else
         {
-            Debug.LogWarning("[Map.Save] worldEdges 列表为空，从子物体中查找 WorldEdge");
+            //Debug.LogWarning("[Map.Save] worldEdges 列表为空，从子物体中查找 WorldEdge");
 
             WorldEdge[] AllWorldEdges = GetComponentsInChildren<WorldEdge>();
-            Debug.Log($"[Map.Save] 找到 {AllWorldEdges.Length} 个子物体中的 WorldEdge");
+         //   Debug.Log($"[Map.Save] 找到 {AllWorldEdges.Length} 个子物体中的 WorldEdge");
 
             foreach (var edge in AllWorldEdges)
             {
                 var edgeName = edge.name;
-                Debug.Log($"[Map.Save] 正在保存子物体边界对象: {edgeName}");
+               // Debug.Log($"[Map.Save] 正在保存子物体边界对象: {edgeName}");
 
                 edge.GetComponent<ISave_Load>().Save();
                 tileMapData.WorldEdgeDatas.Add(edge.Data);
                 edge.gameObject.SetActive(false);
 
-                Debug.Log($"[Map.Save] 边界对象 {edgeName} 已禁用并添加到 GameObject_False 列表");
+               // Debug.Log($"[Map.Save] 边界对象 {edgeName} 已禁用并添加到 GameObject_False 列表");
                 SaveAndLoad.Instance.GameObject_False.Add(edge.gameObject);
             }
         }
 
-        Debug.Log($"[Map.Save] 当前 WorldEdgeDatas 数量: {tileMapData.WorldEdgeDatas.Count}");
+       // Debug.Log($"[Map.Save] 当前 WorldEdgeDatas 数量: {tileMapData.WorldEdgeDatas.Count}");
 
-        Debug.Log("保存当前场景的 tilemap 数据");
+       // Debug.Log("保存当前场景的 tilemap 数据");
         SaveTilemapData();
 
-        Debug.Log("[Map.Save] 地图保存完成");
+     //   Debug.Log("[Map.Save] 地图保存完成");
     }
 
 
