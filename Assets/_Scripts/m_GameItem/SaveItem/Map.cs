@@ -33,7 +33,7 @@ public class Map : Item,ISave_Load
     {
      //   print("加载当前场景的Tilemap");
         PullDataToTilemap();
-
+/*
         if (tileMapData.WorldEdgeDatas == null || tileMapData.WorldEdgeDatas.Count == 0)
         {
             Debug.LogWarning("[Map.Load] WorldEdgeDatas 为空，未生成任何边界");
@@ -42,6 +42,7 @@ public class Map : Item,ISave_Load
 
         worldEdges_GameObject.Clear(); // 清空旧的引用列表
 
+        if (tileMapData.WorldEdgeDatas.Count > 0)
         foreach (var edgeData in tileMapData.WorldEdgeDatas)
         {
             GameObject edgeObj = GameRes.Instance.InstantiatePrefab(edgeData.Name);
@@ -50,7 +51,7 @@ public class Map : Item,ISave_Load
             edgeObj.GetComponent<ISave_Load>().Load();
             worldEdges_GameObject.Add(worldEdge);
             edgeObj.transform.parent = transform;
-        }
+        }*/
     }
 
     [Button("保存地图到数据")]

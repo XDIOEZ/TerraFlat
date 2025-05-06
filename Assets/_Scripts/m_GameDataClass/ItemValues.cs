@@ -120,15 +120,26 @@ public partial class ItemValues
 
     public void Add_ChangeSpeed(string valueName, string SpeedName, float SpeedValue, float Duration)
     {
+        // 检查字典是否已经包含这个 valueName
         if (!ChangeSpeed_DICT.TryGetValue(valueName, out var changeSpeed))
         {
+            // 如果字典中没有，创建新的 ChangeSpeeds 对象并添加
             changeSpeed = new ChangeSpeeds();
             ChangeSpeed_DICT.Add(valueName, changeSpeed);
             Debug.LogWarning($"[Add_ChangeSpeed] 参数名 '{valueName}' 不存在于 ChangeSpeed_DICT 中，已自动添加。");
         }
 
+        // 确保 SpeedName 不重复添加
+        if (changeSpeed.HasChangeSpeed(SpeedName))
+        {
+            Debug.LogWarning($"[Add_ChangeSpeed] {SpeedName} 已存在，跳过重复添加。");
+            return;  // 如果 SpeedName 已经存在，则跳过
+        }
+
+        // 如果 SpeedName 不存在，则添加
         changeSpeed.ADDChangeValue(SpeedValue, SpeedName, Duration);
     }
+
 
 
 

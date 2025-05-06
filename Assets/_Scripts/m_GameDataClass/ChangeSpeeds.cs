@@ -1,14 +1,16 @@
 
 using MemoryPack;
 using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
 [System.Serializable]
-public class ChangeSpeeds
+[MemoryPackable]
+public partial class ChangeSpeeds
 {
-    [ShowNonSerializedField] // 速度字典（恢复）
+    [ShowInInspector] // 速度字典（恢复）
     public Dictionary<string, SpeedDuration> SpeedDurations_DICT = new Dictionary<string, SpeedDuration>();
  
     [Tooltip("添加对应速度(单位/秒)")]
@@ -25,6 +27,12 @@ public class ChangeSpeeds
         {
             data.Duration = newDuration;
         }
+    }
+
+    // 检查是否已经存在该 SpeedName
+    public bool HasChangeSpeed(string speedName)
+    {
+        return SpeedDurations_DICT.ContainsKey(speedName);
     }
 
     [Tooltip("停止对应速度的变化")]

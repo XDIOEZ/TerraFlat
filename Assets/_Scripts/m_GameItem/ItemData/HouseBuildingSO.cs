@@ -1,7 +1,10 @@
 using MemoryPack;
+using Sirenix.OdinInspector;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor.SearchService;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,22 +15,58 @@ public class HouseBuildingSO : ScriptableObject
     public string buildingName;
     [Tooltip("房屋MapSaveData路径")]
     public string buildingPath = "Assets/Saves/HouseBuilding/";
-    [Tooltip("房屋MapSaveData")]
+    [Tooltip("建筑入口坐标")]
+    public Vector2 buildingEntrance;
+
+    // 缓存字段
+    private MapSave _cachedMapSave;
+
+    // 是否已加载
+    private bool _isLoaded = false;
+
+    [ShowInInspector]
+    [Tooltip("房屋MapSaveData（懒加载）")]
     public MapSave MapSave
     {
         get
         {
-            return LoadByDisk(buildingPath);
+            if (!_isLoaded)
+            {
+                _cachedMapSave = LoadByDisk(buildingPath);
+                _isLoaded = true;
+            }
+            return _cachedMapSave;
         }
     }
-    [Tooltip("建筑入口坐标")]
-    public Vector2 buildingEntrance;
+    [Button("强制加载")]
+    public void ForceLoad()
+    {
+        _cachedMapSave = LoadByDisk(buildingPath);
+        _isLoaded = true;
+    }
 
     public MapSave LoadByDisk(string _buildingPath)
     {
-        return MemoryPackSerializer.Deserialize<MapSave>
-             (File.ReadAllBytes(_buildingPath + buildingName + ".Building"));
+        string fullPath = Path.Combine(_buildingPath, buildingName + ".Building");
+        if (File.Exists(fullPath))
+        {
+            try
+            {
+                return MemoryPackSerializer.Deserialize<MapSave>(File.ReadAllBytes(fullPath));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[HouseBuildingSO] 读取文件失败: {fullPath}\n{ex}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[HouseBuildingSO] 文件不存在: {fullPath}");
+        }
+
+        return null;
     }
+
 
     [ContextMenu("获取场景中的地图参数保存到对应路径")]
     public void SaveToDisk()
@@ -50,7 +89,7 @@ public class HouseBuildingSO : ScriptableObject
             // 写入文件
             File.WriteAllBytes(fullPath, bytes);
 
-            Debug.Log($"地图已成功保存至: {fullPath}");
+            Debug.Log($"地图已成功保存至: {fullPath} \\ {mapSave.MapName}" );
         }
         catch (System.Exception ex)
         {

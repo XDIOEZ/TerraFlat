@@ -1,10 +1,14 @@
 using MemoryPack;
+using Meryel.UnityCodeAssist.YamlDotNet.Core;
 using Sirenix.OdinInspector;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.SceneManagement;
 
 public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
@@ -86,35 +90,72 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
      //   Debug.Log("成功将当前激活场景存入当前使用的存档");
     }
 
+    public GameSaveData GetSaveData()
+    {
+        SaveData ??= new GameSaveData();
+        GameObject_False.Clear();
+        SavePlayer();
+        // 保存当前激活的地图
+        MapSave mapSave = SaveActiveScene_Map();
+        SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
+        return SaveData;
+    }
+
     #endregion
 
     #region 加载
+
     [Button("加载玩家")]
     public void LoadPlayer(string playerName)
     {
-        PlayerData _data;
-
         if (SaveData.PlayerData_Dict.ContainsKey(playerName))
         {
-            _data = SaveData.PlayerData_Dict[playerName];
+            PlayerData _data = SaveData.PlayerData_Dict[playerName];
             Debug.Log("成功加载玩家：" + playerName);
+            CreatePlayer(_data);
         }
         else
         {
-            if (TemplateSaveData.PlayerData_Dict.Count == 0)//如果模板存档中没有玩家数据，则加载默认模板存档
+            LoadAsset<WorldSaveSO>("玩家模板", result =>
             {
-                TemplateSaveData = GetSaveByDisk(TemplateSavePath, TemplateSaveName);
-            }
-            _data = TemplateSaveData.PlayerData_Dict["Ikun"];
-            Debug.Log("未找到玩家数据，加载默认模板玩家数据");
-        }
+                PlayerData _data;
 
+                if (result == null)
+                {
+                    Debug.LogWarning("加载失败：WorldSaveSO 对象为空！");
+                    _data = new PlayerData();
+                }
+                else if (result.SaveData == null)
+                {
+                    Debug.LogWarning("加载失败：SaveData 为空！");
+                    _data = new PlayerData();
+                }
+                else if (!result.SaveData.PlayerData_Dict.ContainsKey("默认"))
+                {
+                    Debug.LogWarning("加载成功，但未包含“默认”玩家数据！");
+                    _data = new PlayerData();
+                }
+                else
+                {
+                    _data = result.SaveData.PlayerData_Dict["默认"];
+                    Debug.Log("成功加载默认模板玩家：" + playerName);
+                }
+
+                CreatePlayer(_data);
+            });
+
+        }
+    }
+
+    private void CreatePlayer(PlayerData data)
+    {
         GameObject newPlayerObj = GameRes.Instance.InstantiatePrefab("Player");
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
-        newPlayer.Data = _data;
+        newPlayer.Data = data;
         newPlayer.Load();
-       // Debug.Log("玩家加载成功！");
+        Debug.Log("玩家加载成功！");
     }
+
 
     [Button("加载存档")]
     public void Load()
@@ -122,68 +163,121 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         LoadByDisk(SaveName);
     }
 
+    // Fix for CS7036: Provide the required "onComplete" parameter when calling LoadOnDefaultTemplateMap.
+
     [Button("加载指定地图")]
     public void LoadMap(string mapName)
     {
         MapSave mapSave;
 
-        //检测存档是否存在对应的地图数据 如果没有则加载默认模板
+        // 检测存档是否存在对应的地图数据 如果没有则加载默认模板
         if (!SaveData.MapSaves_Dict.ContainsKey(mapName))
         {
             Debug.LogWarning($"未找到地图数据，名称：{mapName} , 加载默认模板");
-            mapSave = LoadOnDefaultTemplateMap(mapName);
+
+            // Provide a lambda function as the "onComplete" parameter
+            LoadAsset<HouseBuildingSO>(mapName, result =>
+            {
+                if (result != null)
+                {
+                    mapSave = result.MapSave;
+
+                    // 遍历字典中每个键值对
+                    foreach (var kvp in mapSave.items)
+                    {
+                        string itemName = kvp.Key;
+                        List<ItemData> itemDataList = kvp.Value;
+
+                        Debug.Log("加载物品：" + itemName);
+                        // 对于同一名称的多个物品逐个实例化
+                        foreach (ItemData forLoadItemData in itemDataList)
+                        {
+                            GameObject itemPrefab;
+                            if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.Name, out itemPrefab))
+                            {
+                                Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.Name}");
+                                continue;
+                            }
+
+                            GameObject newItemObj = Instantiate(itemPrefab, Vector3.zero, Quaternion.identity);
+                            newItemObj.GetComponent<Item>().Item_Data = forLoadItemData;
+                            newItemObj.transform.position = forLoadItemData._transform.Position;
+                            newItemObj.transform.rotation = forLoadItemData._transform.Rotation;
+                            newItemObj.transform.localScale = forLoadItemData._transform.Scale;
+                            newItemObj.SetActive(true);
+
+                            if (newItemObj.GetComponent<Item>() is ISave_Load save_Load)
+                            {
+                                save_Load.Load();
+                            }
+                        }
+                    }
+
+                    // 加载玩家
+                    LoadPlayer(playerName);
+                }
+                else
+                {
+                    Debug.LogError($"加载默认模板地图失败，名称：{mapName}");
+                }
+            });
         }
         else
         {
             mapSave = SaveData.MapSaves_Dict[mapName];
             Debug.Log("成功加载地图：" + mapName);
-        }
-       
 
-        // 遍历字典中每个键值对
-        foreach (var kvp in mapSave.items)
-        {
-            string itemName = kvp.Key;
-            List<ItemData> itemDataList = kvp.Value;
-            // 对于同一名称的多个物品逐个实例化
-            foreach (ItemData forLoadItemData in itemDataList)
+            // 遍历字典中每个键值对
+            foreach (var kvp in mapSave.items)
             {
-                GameObject itemPrefab;
-                // 假设 GameResManager.Instance.AllPrefabs 以物品名称为 key
-                if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.Name, out itemPrefab))
-                {
-                    Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.Name}");
-                    continue;
-                }
-                // 实例化物品
-                GameObject newItemObj = Instantiate(itemPrefab, Vector3.zero, Quaternion.identity);
-                // 设置物品数据
-                newItemObj.GetComponent<Item>().Item_Data = forLoadItemData;
-                // 设置位置、旋转、缩放
-                newItemObj.transform.position = forLoadItemData._transform.Position;
-                newItemObj.transform.rotation = forLoadItemData._transform.Rotation;
-                newItemObj.transform.localScale = forLoadItemData._transform.Scale;
-                newItemObj.SetActive(true);
+                string itemName = kvp.Key;
+                List<ItemData> itemDataList = kvp.Value;
 
-                if(newItemObj.GetComponent<Item>() is ISave_Load save_Load)
+                // 对于同一名称的多个物品逐个实例化
+                foreach (ItemData forLoadItemData in itemDataList)
                 {
-                    save_Load.Load();
+                    GameObject itemPrefab;
+                    if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.Name, out itemPrefab))
+                    {
+                        Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.Name}");
+                        continue;
+                    }
+
+                    GameObject newItemObj = Instantiate(itemPrefab, Vector3.zero, Quaternion.identity);
+                    newItemObj.GetComponent<Item>().Item_Data = forLoadItemData;
+                    newItemObj.transform.position = forLoadItemData._transform.Position;
+                    newItemObj.transform.rotation = forLoadItemData._transform.Rotation;
+                    newItemObj.transform.localScale = forLoadItemData._transform.Scale;
+                    newItemObj.SetActive(true);
+
+                    if (newItemObj.GetComponent<Item>() is ISave_Load save_Load)
+                    {
+                        save_Load.Load();
+                    }
                 }
             }
-        }
-        //  Debug.Log("物体加载成功！");
 
-        LoadPlayer(playerName);
+            // 加载玩家
+            LoadPlayer(playerName);
+        }
     }
 
-    public MapSave LoadOnDefaultTemplateMap(string mapName)
+public  void LoadAsset<T>(string key, Action<T> onComplete) where T : UnityEngine.Object
+{
+    Addressables.LoadAssetAsync<T>(key).Completed += handle =>
     {
-        if (TemplateSaveData.MapSaves_Dict.Count == 0)
+        if (handle.Status == AsyncOperationStatus.Succeeded)
         {
-            TemplateSaveData = GetSaveByDisk(TemplateSavePath, TemplateSaveName);
+            onComplete?.Invoke(handle.Result);
         }
-        return TemplateSaveData.MapSaves_Dict[mapName];
-    }
+        else
+        {
+            Debug.LogError($"加载失败：{key}");
+            onComplete?.Invoke(null);
+        }
+    };
+}
+
 
     #endregion
 
