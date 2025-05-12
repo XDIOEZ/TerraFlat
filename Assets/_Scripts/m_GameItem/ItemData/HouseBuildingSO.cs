@@ -1,4 +1,4 @@
-using MemoryPack;
+/*using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;
@@ -143,3 +143,4 @@ public class HouseBuildingSO : ScriptableObject
     }
 
 }
+*/

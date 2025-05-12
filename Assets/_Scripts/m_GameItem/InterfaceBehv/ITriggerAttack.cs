@@ -29,6 +29,7 @@ public interface ITriggerAttack
         if (Weapon_GameObject != null)
         {
             Object.Destroy(Weapon_GameObject); // 使用类型名 Object 调用 Destroy 方法
+            Weapon_GameObject.SetActive(false);
             Weapon_GameObject = null;
         }
     }

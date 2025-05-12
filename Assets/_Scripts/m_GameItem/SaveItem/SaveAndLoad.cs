@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -116,7 +117,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         }
         else
         {
-            LoadAsset<WorldSaveSO>("玩家模板", result =>
+            LoadAssetByLabelAndName<WorldSaveSO>("Template_SaveData", "玩家模板", result =>
             {
                 PlayerData _data;
 
@@ -143,7 +144,6 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
                 CreatePlayer(_data);
             });
-
         }
     }
 
@@ -170,26 +170,21 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     {
         MapSave mapSave;
 
-        // 检测存档是否存在对应的地图数据 如果没有则加载默认模板
         if (!SaveData.MapSaves_Dict.ContainsKey(mapName))
         {
-            Debug.LogWarning($"未找到地图数据，名称：{mapName} , 加载默认模板");
+            Debug.LogWarning($"未找到地图数据，名称：{mapName}，加载默认模板");
 
-            // Provide a lambda function as the "onComplete" parameter
-            LoadAsset<HouseBuildingSO>(mapName, result =>
+            LoadAssetByLabelAndName<WorldSaveSO>("Template_SaveData", mapName, result =>
             {
-                if (result != null)
+                if (result != null && result.SaveData != null && result.SaveData.MapSaves_Dict.ContainsKey(mapName))
                 {
-                    mapSave = result.MapSave;
+                    mapSave = result.SaveData.MapSaves_Dict[mapName];
 
-                    // 遍历字典中每个键值对
                     foreach (var kvp in mapSave.items)
                     {
                         string itemName = kvp.Key;
                         List<ItemData> itemDataList = kvp.Value;
 
-                        Debug.Log("加载物品：" + itemName);
-                        // 对于同一名称的多个物品逐个实例化
                         foreach (ItemData forLoadItemData in itemDataList)
                         {
                             GameObject itemPrefab;
@@ -213,7 +208,6 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                         }
                     }
 
-                    // 加载玩家
                     LoadPlayer(playerName);
                 }
                 else
@@ -227,13 +221,11 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             mapSave = SaveData.MapSaves_Dict[mapName];
             Debug.Log("成功加载地图：" + mapName);
 
-            // 遍历字典中每个键值对
             foreach (var kvp in mapSave.items)
             {
                 string itemName = kvp.Key;
                 List<ItemData> itemDataList = kvp.Value;
 
-                // 对于同一名称的多个物品逐个实例化
                 foreach (ItemData forLoadItemData in itemDataList)
                 {
                     GameObject itemPrefab;
@@ -257,26 +249,46 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 }
             }
 
-            // 加载玩家
             LoadPlayer(playerName);
         }
     }
 
-public  void LoadAsset<T>(string key, Action<T> onComplete) where T : UnityEngine.Object
-{
-    Addressables.LoadAssetAsync<T>(key).Completed += handle =>
+    public void LoadAssetByLabelAndName<T>(string label, string name, Action<T> onComplete) where T : UnityEngine.Object
     {
-        if (handle.Status == AsyncOperationStatus.Succeeded)
+        Addressables.LoadResourceLocationsAsync(label).Completed += locationHandle =>
         {
-            onComplete?.Invoke(handle.Result);
-        }
-        else
-        {
-            Debug.LogError($"加载失败：{key}");
-            onComplete?.Invoke(null);
-        }
-    };
-}
+            if (locationHandle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError($"标签加载失败：{label}");
+                onComplete?.Invoke(null);
+                return;
+            }
+
+            var locations = locationHandle.Result;
+            var targetLocation = locations.FirstOrDefault(loc => loc.PrimaryKey.Contains(name));
+
+            if (targetLocation == null)
+            {
+                Debug.LogWarning($"未找到资源，标签：{label}，名称包含：{name}");
+                onComplete?.Invoke(null);
+                return;
+            }
+
+            Addressables.LoadAssetAsync<T>(targetLocation).Completed += assetHandle =>
+            {
+                if (assetHandle.Status == AsyncOperationStatus.Succeeded)
+                {
+                    onComplete?.Invoke(assetHandle.Result);
+                }
+                else
+                {
+                    Debug.LogError($"加载失败：{name}（标签：{label}）");
+                    onComplete?.Invoke(null);
+                }
+            };
+        };
+    }
+
 
 
     #endregion

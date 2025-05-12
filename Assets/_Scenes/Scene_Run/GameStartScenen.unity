@@ -4336,6 +4336,10 @@ PrefabInstance:
       value: WorldManager
       objectReference: {fileID: 0}
     - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: SavePath
+      value: Assets/Saves/
+      objectReference: {fileID: 0}
+    - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
       propertyPath: TemplateSavePath
       value: Assets/Saves/DefaultTemplate/
       objectReference: {fileID: 0}

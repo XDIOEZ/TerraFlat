@@ -166,7 +166,7 @@ using UnityEngine;
     #region 保存与加载
     public void Save()
     {
-        GetComponent<ITriggerAttack>().DestroyWeapon();
+        GetComponentInChildren<ITriggerAttack>().DestroyWeapon();
     }
 
     public void Load()

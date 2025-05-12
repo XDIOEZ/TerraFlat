@@ -110,7 +110,6 @@ public  abstract partial class ItemData
         return str;
     }
 
-    [Sirenix.OdinInspector.Button("同步数据")]
     public virtual int SyncData()
     {
         m_ExcelManager.Instance.ChangeWorlSheet(this.GetType().Name);
@@ -165,7 +164,7 @@ public  abstract partial class ItemData
         string materialStr = excel.GetCellValue(itemRow, itemL).ToString();
         ItemTags.Item_Material = excel.ParseStringList(materialStr);
 
-        Debug.Log("同步数据成功！");
+        Debug.Log("基础数据同步成功！");
         return itemRow;
     }
 

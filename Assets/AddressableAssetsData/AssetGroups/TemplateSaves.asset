@@ -17,15 +17,17 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 7118479ec434f65418b21c7b2333167a
   m_SerializeEntries:
-  - m_GUID: 277b0d408df859143881836608bc7d20
-    m_Address: "\u73A9\u5BB6\u6A21\u677F"
+  - m_GUID: ad52c5aec9272404f9da993c48d52486
+    m_Address: Assets/_SO/Template_MapSave
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - Template_SaveData
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: dce36448a157aae46a7d283bdc611a17
-    m_Address: "\u5E73\u539F"
+  - m_GUID: d5a91582355e7004db64109ae28ed3e2
+    m_Address: Assets/_SO/Template_PlayerSave
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - Template_SaveData
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

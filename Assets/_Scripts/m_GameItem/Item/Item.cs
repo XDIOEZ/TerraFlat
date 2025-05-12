@@ -85,14 +85,16 @@ public abstract class Item : MonoBehaviour
     {
      //   Item_Data.Guid = Guid.NewGuid().GetHashCode();
     }
-     void Start()
-    {
+        void Start()
+       {
         Item_Data.Guid = Guid.NewGuid().GetHashCode();
-    }
-    [ContextMenu("同步数据")]
-    public void SyncItemData()
+       }
+
+
+    [Sirenix.OdinInspector.Button("同步数据")]
+    public virtual int SyncItemData()
     {
-        Item_Data.SyncData();
+       return Item_Data.SyncData();
     }
 
 

@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u6728\u68CD_9"
+  m_EditorClassIdentifier: 
+  version: 1.2.0
+  inputs:
+    RowItems_List:
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: Log
+      amount: 1
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+  outputs:
+    results:
+    - resultItem: "\u6728\u68CD"
+      resultAmount: 4
+  recipeType: 0

@@ -48,7 +48,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public UltEvent OnDefenseChanged { get; set; } = new UltEvent();
     public UltEvent OnHpChanged { get; set; } = new UltEvent();
     public bool IsInstalled { get => data.isBuilding; set => data.isBuilding = value; }
-    public HouseBuildingSO buildingSO;//房屋数据模板
+    public WorldSaveSO buildingSO;//房屋数据模板
 
     // Act：建筑可能被攻击等行为
     public override void Act()
@@ -86,7 +86,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
         if (!SaveAndLoad.Instance.SaveData.MapSaves_Dict.ContainsKey(data.sceneName))
         {
             //地图中不存在对应场景 需要新添加场景固定模板
-            SaveAndLoad.Instance.SaveData.MapSaves_Dict.Add(data.sceneName, buildingSO.MapSave);
+            SaveAndLoad.Instance.SaveData.MapSaves_Dict.Add(data.sceneName, buildingSO.SaveData.MapSaves_Dict[buildingSO.buildingName]);
         }
 
         GetComponentInChildren<SceneChange>().TPTOSceneName = data.sceneName;

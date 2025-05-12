@@ -53,6 +53,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 68bd19d1854535d44b47543b665570ea
+    m_Address: Assets/_Prefabs/Animals
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6cc6a7789d40ef94cbe55e3c1da52b69
     m_Address: Player
     m_ReadOnly: 0
