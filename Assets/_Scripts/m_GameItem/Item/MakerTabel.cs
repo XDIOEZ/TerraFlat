@@ -30,7 +30,6 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
     public UltEvent _onInventoryData_Dict_Changed;
     public UltEvent OnInventoryData_Dict_Changed { get => _onInventoryData_Dict_Changed; set => _onInventoryData_Dict_Changed = value; }
-
     public override ItemData Item_Data
     {
         get
@@ -79,13 +78,14 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     public UltEvent OnHpChanged { get; set; }
     public UltEvent OnDefenseChanged { get; set; }
     public bool IsInstalled { get =>Data.IsInstalled; set => Data.IsInstalled = value; }
+    public bool BePlayerTaken { get => bePlayerTake; set => bePlayerTake = value; }
+
     public Building_InstallAndUninstall _InstallAndUninstall = new ();
+    private bool bePlayerTake = false;
     #endregion
 
     void Start()
     {
-
-        Load();
 
         button.onClick.AddListener(() => Work_Start());
         closeButton.onClick.AddListener(() => CloseUI());
@@ -93,6 +93,11 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         CloseUI();
 
         _InstallAndUninstall.Init(transform);
+
+        if(BelongItem != null)
+        {
+            BePlayerTaken = true;
+        }
 
     }
     public void Update()
@@ -334,6 +339,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
     public void Load()
     {
+        
         IInventoryData inventoryData = this;
         inventoryData.FillDict_SetBelongItem(transform);
 

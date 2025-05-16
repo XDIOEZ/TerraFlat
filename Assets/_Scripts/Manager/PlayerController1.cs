@@ -232,24 +232,23 @@ public class PlayerController : MonoBehaviour
     public void Interact(InputAction.CallbackContext context = default)
     {
         _handForInteract.Interact_Start();
-        _Hunger.Eat(2);
     }
     #endregion
     #region 丢弃物品
     public void PlayerDropItem(InputAction.CallbackContext context = default)
     {
-        if (ItemDroper.DropItem() == false)//如果物品丢弃失败
+        if(Hotbar.currentObject != null)
         {
-            if (CtrlIsDown)
-            {
-                ItemDroper.FastDropItem(2);
-            }
-            else
-            {
-                ItemDroper.FastDropItem();
-            }
-
+            ItemDroper.DropItemBySlot(Hotbar.currentSelectItemSlot);
+            Hotbar.DestroyCurrentObject();
         }
+        else
+        {
+            ItemDroper.FastDropItem();
+
+            Hotbar.UpdateItemSlotUI();
+        }
+        
 
     }
     #endregion

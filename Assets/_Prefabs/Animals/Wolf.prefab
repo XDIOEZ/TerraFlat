@@ -128,7 +128,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &478715881179084011
 Transform:
   m_ObjectHideFlags: 0
@@ -160,7 +160,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46a56fe4c34b8c94a892a0e39f332ad5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  BelongItem: {fileID: 0}
+  OnStopWork_Event:
+    _PersistentCalls: []
   UpdatedUI_Event:
+    _PersistentCalls: []
+  DestroyItem_Event:
     _PersistentCalls: []
   Data:
     Name: Wolf
@@ -190,6 +195,8 @@ MonoBehaviour:
       value: 21.79
       maxValue: 30
       Weaknesses: []
+      OnValueChanged:
+        _PersistentCalls: []
     defense:
       defenseStrength: 5
       defenseToughness: 5
@@ -229,6 +236,7 @@ MonoBehaviour:
         OnCurrentValueChanged:
           _PersistentCalls: []
       IsWork: 0
+    TeamID: 
 --- !u!195 &1497481199498990185
 NavMeshAgent:
   m_ObjectHideFlags: 0

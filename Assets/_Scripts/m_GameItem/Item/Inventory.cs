@@ -1,6 +1,7 @@
 using Force.DeepCloner;
 using MemoryPack;
 using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using UltEvents;
@@ -11,12 +12,15 @@ using UnityEngine;
 public class Inventory : MonoBehaviour
 {
     #region 字段
-    [Tooltip("物品所属对象")]
+    [Tooltip("Data From")]
     [ShowNonSerializedField]
-    public IInventoryData belong_Item;
+    IInventoryData _inventoryData;
+    [Tooltip("所属对象")]
+    public Item _belongItem;
     [Tooltip("对应 UI 管理器")]
     public Inventory_UI _ui;
     [Tooltip("序列化保存的容器数据")]
+    [ShowInInspector]
     public Inventory_Data Data = new Inventory_Data();
     [Tooltip("最小堆叠容量数量")]
     public int MinStackVolume = 2;
@@ -43,15 +47,15 @@ public class Inventory : MonoBehaviour
             return true;
         }
     }
-    public IInventoryData Belong_Item
+    public IInventoryData Belong_Inventory
     {
         get
         {
-            return belong_Item;
+            return _inventoryData;
         }
         set
         {
-            belong_Item = value;
+            _inventoryData = value;
         }
     }
     public Inventory_UI UI
@@ -126,7 +130,7 @@ public class Inventory : MonoBehaviour
         if (stackIndex != -1)
         {
             // 堆叠物品
-            Debug.Log("堆叠物品到槽位: " + stackIndex);
+          //  Debug.Log("堆叠物品到槽位: " + stackIndex);
             ChangeItemDataAmount(stackIndex, inputItemData.Stack.Amount);
         }
         else if (emptyIndex != -1)
@@ -175,7 +179,7 @@ public class Inventory : MonoBehaviour
                 slot._ItemData.Name == inputItemData.Name &&
                 slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
             {
-                Debug.Log("找到可堆叠的槽位");
+              //  Debug.Log("找到可堆叠的槽位");
                 return true;
             }
         }
@@ -196,8 +200,8 @@ public class Inventory : MonoBehaviour
     // 移除物品
     public void RemoveItemAll(ItemSlot itemSlot, int index = 0)
     {
-        itemSlot._ItemData = null;
         onUIChanged.Invoke(index);
+        itemSlot._ItemData = null;
     }
 
     //添加一个新方法 用于减少特定数量的物品

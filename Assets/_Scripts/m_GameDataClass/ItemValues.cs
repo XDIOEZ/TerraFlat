@@ -64,13 +64,27 @@ public partial class ItemValues
     public void FixedUpdate()
     {
         if (!IsWork) return;
-        //便利列表数据，更新数值
-        foreach(ItemValue itemValue in ItemValue_List)
+
+        if (ItemValue_List == null || ItemValue_List.Count == 0) return;
+
+        foreach (ItemValue itemValue in ItemValue_List)
         {
-            itemValue.CurrentValue 
-                += ChangeSpeed_DICT[itemValue.ValueName].GetCurrentSpeedSum(Time.fixedDeltaTime)*Time.fixedDeltaTime;
+            if (itemValue == null || string.IsNullOrEmpty(itemValue.ValueName)) continue;
+
+            // 判断字典中是否有对应的加速数据
+            if (ChangeSpeed_DICT != null && ChangeSpeed_DICT.TryGetValue(itemValue.ValueName, out var speedData))
+            {
+                itemValue.CurrentValue += speedData.GetCurrentSpeedSum(Time.fixedDeltaTime) * Time.fixedDeltaTime;
+            }
+            // 可选：如果你想确保所有参数都有加速数据，可以在这里自动补上
+            // else
+            // {
+            //     ChangeSpeed_DICT[itemValue.ValueName] = new ChangeSpeeds();
+            //     Debug.LogWarning($"[FixedUpdate] 自动为 '{itemValue.ValueName}' 创建了空的 ChangeSpeeds。");
+            // }
         }
     }
+
 
     public ItemValue Get_ItemValue(string valueName)
     {
@@ -140,6 +154,17 @@ public partial class ItemValues
         changeSpeed.ADDChangeValue(SpeedValue, SpeedName, Duration);
     }
 
+    /// <summary>
+    /// 清理所有 ItemValue 对象上的事件监听器
+    /// </summary>
+    public void ClearAllEvents()
+    {
+        foreach (var item in ItemValue_List)
+        {
+            item?.ClearEvents();
+        }
+        Debug.Log("[ClearAllEvents] 所有 ItemValue 的事件监听器已清理。");
+    }
 
 
 

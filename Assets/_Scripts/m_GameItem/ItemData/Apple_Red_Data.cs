@@ -1,4 +1,4 @@
-using MemoryPack;
+/*using MemoryPack;
 using NaughtyAttributes;
 
 [MemoryPackable]
@@ -6,5 +6,5 @@ using NaughtyAttributes;
 public partial class Apple_Red_Data : ItemData
 {
     [ShowNonSerializedField]
-    public Hunger_Water Energy_food;
-}
+    public Hunger_FoodAndWater Energy_food;
+}*/

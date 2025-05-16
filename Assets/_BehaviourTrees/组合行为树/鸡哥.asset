@@ -503,6 +503,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 5
+  startTime: 0
 --- !u!114 &-8127973590997063235
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -578,6 +579,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-7918703311534402407
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -602,6 +604,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 5
+  startTime: 0
 --- !u!114 &-7616642094121311728
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -707,6 +710,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 1
+  startTime: 0
 --- !u!114 &-7297753942490403325
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -761,6 +765,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-7135890979546324356
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -785,6 +790,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 1
+  startTime: 0
 --- !u!114 &-7114304823605319170
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1199,6 +1205,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-6244443948196758352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1223,6 +1230,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 0.5
+  startTime: 0
 --- !u!114 &-6219314154414662205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1301,6 +1309,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 3
+  startTime: 0
 --- !u!114 &-6007495039591050811
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2208,6 +2217,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 0.5
+  startTime: 0
 --- !u!114 &-3699610352770986823
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2775,6 +2785,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-2665475225046071118
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2874,6 +2885,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-2591200067744059014
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3265,6 +3277,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-1287277727043041000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3340,6 +3353,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 0.3
+  startTime: 0
 --- !u!114 &-1093815792315789787
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3475,6 +3489,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-954457951445830831
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3499,6 +3514,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 1
+  startTime: 0
 --- !u!114 &-946927077674463080
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3577,6 +3593,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &-790536660263088212
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4310,6 +4327,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &621985026410840456
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4491,6 +4509,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &1256828609512153232
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4740,6 +4759,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &1869078327617685645
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5533,9 +5553,9 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 1
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  minRunDistance: 5
+  maxRunDistance: 15
+  angleVariance: 90
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &4684489589790364537
@@ -5742,7 +5762,7 @@ MonoBehaviour:
     BTUser: {fileID: 0}
     target: {fileID: 0}
   isCollapsed: 0
-  description: 
+  description: "\u9003\u8DD1"
   drawGizmos: 0
   children:
   - {fileID: 7294186149172628914}
@@ -6000,6 +6020,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 0.5
+  startTime: 0
 --- !u!114 &5994451169671577466
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6024,6 +6045,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 3
+  startTime: 0
 --- !u!114 &6057355377435701424
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6485,6 +6507,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 3
+  startTime: 0
 --- !u!114 &7441492407972220104
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6557,7 +6580,7 @@ MonoBehaviour:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
-  isCollapsed: 1
+  isCollapsed: 0
   description: 
   drawGizmos: 0
   children:
@@ -6596,6 +6619,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &7622328953684034919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6758,6 +6782,7 @@ MonoBehaviour:
   max_StopTime: 1
   minDistance: 0.01
   MoveToBlackboard: 1
+  stoppingDistance: 0.5
 --- !u!114 &8033845971867676223
 MonoBehaviour:
   m_ObjectHideFlags: 0

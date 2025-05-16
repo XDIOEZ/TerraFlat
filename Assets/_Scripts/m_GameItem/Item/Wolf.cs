@@ -9,7 +9,7 @@ using UnityEngine;
     public override ItemData Item_Data { get { return Data; } set { Data = value as AnimalData; } }
     #region 饥饿
 
-    public Hunger_Water Foods { get => Data.hunger; set => Data.hunger = value; }
+    public Hunger_FoodAndWater Foods { get => Data.hunger; set => Data.hunger = value; }
     public float EatingSpeed { get => Data.attackSpeed; set => throw new System.NotImplementedException(); }
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
 
@@ -114,7 +114,6 @@ using UnityEngine;
 
     public void Start()
     {
-        Load();
     }
 
     public override void Act()
@@ -130,9 +129,10 @@ using UnityEngine;
         ItemValues.FixedUpdate();
     }
 
-    public void Eat(float Be_Eat)
+    public void Eat(IFood food)
     {
-        Foods.Food += Be_Eat;
+        Foods.Food += EatingSpeed;
+        food.BeEat(EatingSpeed);
     }
 
     public void Hungry_Update()

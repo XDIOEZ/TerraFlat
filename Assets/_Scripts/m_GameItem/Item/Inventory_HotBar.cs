@@ -25,8 +25,9 @@ public class Inventory_HotBar : MonoBehaviour
     public GameObject SelectBoxPrefab;
     public GameObject SelectBox;
 
+    public ItemSlot currentSelectItemSlot;
+
     #region 当前选择的物品槽
-    public ItemSlot currentSlot;
     public ItemData currentItemData;
     public GameObject currentObject;
     #endregion
@@ -189,24 +190,27 @@ public class Inventory_HotBar : MonoBehaviour
 
     public void UpdateItemSlotUI()
     {
+        if (currentObject == null)
+        {
+            Debug.Log("[UpdateItemSlotUI] 当前物体为空，无法更新 UI！");
+            return;
+        }
         if(currentObject.GetComponent<Item>().Item_Data != null)
         {
-         //   Debug.LogWarning("[ClearItemSlot] 物品槽为空或物品槽中物品不为空，无法清除物品！");
             _inventory_UI.RefreshSlotUI(CurrentIndex);
         }
-       
     }
-
     #endregion
 
     #region 私有方法
 
-    private void DestroyCurrentObject()
+    public void DestroyCurrentObject()
     {
         if (currentObject != null)
         {
+            _inventory_UI.RefreshSlotUI(CurrentIndex);
             Destroy(currentObject);
-            Debug.Log("[DestroyCurrentObject] 销毁当前物体成功");
+          //  Debug.Log("[DestroyCurrentObject] 销毁当前物体成功");
         }
     }
 
@@ -223,6 +227,7 @@ public class Inventory_HotBar : MonoBehaviour
         }
 
         ItemSlot itemSlot = inventory.GetItemSlot(__index);
+        currentSelectItemSlot = itemSlot;
 
         if (itemSlot._ItemData == null)
         {
@@ -254,7 +259,9 @@ public class Inventory_HotBar : MonoBehaviour
             // 获取物品数据并设置
             ItemData itemData = itemSlot._ItemData;
             currentObject.GetComponent<Item>().Item_Data = itemData;
+            currentObject.GetComponent<Item>().BelongItem = currentSelectItemSlot.belong_Inventory._belongItem;
             currentObject.GetComponent<Item>().UpdatedUI_Event += UpdateItemSlotUI;
+            currentObject.GetComponent<Item>().DestroyItem_Event += DestroyCurrentObject;
             spawnLocation.GetComponent<ITriggerAttack>().SetWeapon(currentObject);
          //    Debug.Log($"[ChangeNewObject] 成功实例化物体: {itemData.Name}");
         }

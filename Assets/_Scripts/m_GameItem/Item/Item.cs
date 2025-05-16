@@ -25,6 +25,7 @@ public abstract class Item : MonoBehaviour
     #endregion
 
     public UltEvent UpdatedUI_Event = new();
+    public UltEvent DestroyItem_Event = new();
 
     public void SetItemData(ItemData itemData)
     {

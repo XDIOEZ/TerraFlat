@@ -156,9 +156,9 @@ public class HungerManager : MonoBehaviour, IChangeHungry
         onHungerRecovery += StartRecoverHunger;
 
         // 注册饥饿状态相关的事件回调
-        OnEnterZeroHunger += () => { Debug.Log("角色饥饿值耗尽！"); };
-        OnStayZeroHunger += () => { Debug.Log("角色持续饥饿中！"); };
-        OnExitZeroHunger += () => { Debug.Log("角色饥饿值得到恢复！"); };
+     //   OnEnterZeroHunger += () => { Debug.Log("角色饥饿值耗尽！"); };
+      //  OnStayZeroHunger += () => { Debug.Log("角色持续饥饿中！"); };
+      //  OnExitZeroHunger += () => { Debug.Log("角色饥饿值得到恢复！"); };
     }
 
     private void Start()

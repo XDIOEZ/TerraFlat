@@ -12,6 +12,7 @@ public class Plank : Item,IFuel
         set => _data = (Com_ItemData)value;
     }
 
+    #region 燃料相关
     public float MaxBurnTime { get => maxBurnTime; set => maxBurnTime = value; }
     public float MaxTemptrue { get => maxTemptrue; set => maxTemptrue = value; }
     [Header("非序列化字段")]
@@ -20,19 +21,20 @@ public class Plank : Item,IFuel
     [SerializeField]
     private float maxTemptrue = 300;
 
+    public override int SyncItemData()
+    {
+        int i = base.SyncItemData();
+
+        IFuel fuel = this as IFuel;
+        fuel.SyncFuelData(i);
+
+        return i;
+    }
+    #endregion
+
     public override void Act()
     {
         throw new System.NotImplementedException();
     }
-    public override int SyncItemData()
-    {
-        int i = base.SyncItemData();
-        var manager = m_ExcelManager.Instance;
-        MaxBurnTime = manager.GetConvertedValue<float>(
-        "MaxBurnTime", i, 0.0f);
-        MaxTemptrue = manager.GetConvertedValue<float>(
-        "MaxTemptrue", i, 0.0f);
-        print("Sync Plank Data");
-        return i;
-    }
+    
 }

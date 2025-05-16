@@ -1,5 +1,6 @@
 using MemoryPack;
 using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using UnityEngine;
 public partial class ItemSlot
 {
     // 当前插槽中的物品数据   
-    [ShowNonSerializedField]
+    [ShowInInspector]
     public ItemData _ItemData = null; // 关键修改
 
     public ItemTag CanAcceptItemType = new ItemTag();
@@ -57,7 +58,7 @@ public partial class ItemSlot
     [MemoryPackIgnore]
     public ItemSlot_UI UI { get => uI; set => uI = value; }
     [MemoryPackIgnore]
-    public int Ammount
+    public int Amount
     {
         get
         {
@@ -164,6 +165,11 @@ public partial class ItemSlot
     public void ResetData()
     {
         _ItemData =null;
+        Belong_Inventory.onUIChanged.Invoke(Index);
+    }
+
+    public void RefreshUI()
+    {
         Belong_Inventory.onUIChanged.Invoke(Index);
     }
 

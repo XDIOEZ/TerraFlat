@@ -10,7 +10,6 @@ public class House : Item, ISave_Load, IHealth, IBuilding
 
     public static Dictionary<string,Vector2> housePos = new Dictionary<string, Vector2>();
 
-
     // 接口字段映射到 data 的具体值
     public Hp Hp
     {
@@ -48,6 +47,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public UltEvent OnDefenseChanged { get; set; } = new UltEvent();
     public UltEvent OnHpChanged { get; set; } = new UltEvent();
     public bool IsInstalled { get => data.isBuilding; set => data.isBuilding = value; }
+    public bool BePlayerTaken { get; set; } = false;
     public WorldSaveSO buildingSO;//房屋数据模板
 
     // Act：建筑可能被攻击等行为
@@ -99,18 +99,21 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public void Start()
     {
         GetComponentInChildren<SceneChange>().OnTp += EnterHouse;
+
        _InstallAndUninstall.Init(this.transform);
 
-        if (IsInstalled)
+      /*  if (IsInstalled)
         {
             //使colliders都有效
             foreach (BoxCollider2D collider in colliders)
             {
                 collider.enabled = true;
             }
+        }*/
+        if(BelongItem != null)
+        {
+            BePlayerTaken = true;
         }
-
-      
     }
     public void Update()
     {
@@ -122,25 +125,12 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public void Install()
     {
         _InstallAndUninstall.Install();
-        IsInstalled = true;
-        //使colliders都有效
-        foreach (BoxCollider2D collider in colliders)
-        {
-            collider.enabled = true;
-        }
     }
 
     // 卸载建筑（比如卸载场景）
     public void UnInstall()
     {
         _InstallAndUninstall.UnInstall();
-        IsInstalled = false;
-
-        //使colliders都失效
-        foreach (BoxCollider2D collider in colliders)
-        {
-            collider.enabled = false;
-        }
     }
 
     // 由你自己实现
@@ -156,5 +146,9 @@ public class House : Item, ISave_Load, IHealth, IBuilding
         OnHpChanged?.Invoke();
         OnDefenseChanged?.Invoke();
         onLoad?.Invoke(); // 通知外部已加载完成
+    }
+    public void OnDestroy()
+    {
+        _InstallAndUninstall.CleanupGhost();
     }
 }

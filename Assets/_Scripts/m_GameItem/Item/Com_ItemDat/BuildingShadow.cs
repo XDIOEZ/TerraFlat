@@ -1,8 +1,10 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using Force.DeepCloner;
 using NUnit.Framework.Interfaces;
+using Meryel.UnityCodeAssist.Synchronizer.Model;
+using GameObject = UnityEngine.GameObject;
 
 public class BuildingShadow : MonoBehaviour
 {
@@ -14,13 +16,13 @@ public class BuildingShadow : MonoBehaviour
     private Tween moveTween;
     private Tween colorTween;
 
-    // ĞÂÔö×Ö¶Î¼ÇÂ¼tween 
+    // æ–°å¢å­—æ®µè®°å½•tween 
     private Tween alphaTween;
 
     public bool AroundHaveGameObject => AroundObjects.Count > 0;
     public void OnTriggerEnter2D(Collider2D collision)
     {
-        // Ö»´¦Àí·ÇTrigger¶ÔÏó
+        // åªå¤„ç†éTriggerå¯¹è±¡
         if (!collision.isTrigger)
         {
             AroundObjects.Add(collision.gameObject);
@@ -38,16 +40,16 @@ public class BuildingShadow : MonoBehaviour
     public void OnDestroy()
     {
         AroundObjects.Clear();
-        // ÇåÀíËùÓĞDOTweenµÄtween 
+        // æ¸…ç†æ‰€æœ‰DOTweençš„tween 
         DOTween.Kill(transform);
         DOTween.Kill(ShadowRenderer);
-        // °²È«Ïú»Ù¼ÇÂ¼µÄtween 
+        // å®‰å…¨é”€æ¯è®°å½•çš„tween 
         moveTween?.Kill();
         colorTween?.Kill();
         alphaTween?.Kill();
     }
 
-    // ·â×°ÑÕÉ«±ä¸üÂß¼­ 
+    // å°è£…é¢œè‰²å˜æ›´é€»è¾‘ 
     public void UpdateColor(bool hasOverlap)
     {
         Color targetColor = hasOverlap ? WarringColor : ShadowColor;
@@ -58,7 +60,7 @@ public class BuildingShadow : MonoBehaviour
         }
     }
 
-    // ¿ØÖÆ BoxCollider2D µÄËõ·ÅÏµÊı
+    // æ§åˆ¶ BoxCollider2D çš„ç¼©æ”¾ç³»æ•°
     public Vector2 BoxColliderScale = Vector2.one;
 
     public void InitShadow(SpriteRenderer newRenderer)
@@ -82,19 +84,19 @@ public class BuildingShadow : MonoBehaviour
 
 
 
-// ·â×°Í¸Ã÷¶È±ä»¯ 
+// å°è£…é€æ˜åº¦å˜åŒ– 
 public void UpdateAlpha(float alpha)
     {
         if (ShadowRenderer != null)
         {
             Color color = ShadowRenderer.color;
-            color.a = alpha * 0.5f; // ×î´ó 0.5 
+            color.a = alpha * 0.5f; // æœ€å¤§ 0.5 
             ShadowRenderer.color = color;
             ShadowRenderer.enabled = alpha > 0f;
         }
     }
 
-    // ·â×°ÒÆ¶¯Âß¼­ 
+    // å°è£…ç§»åŠ¨é€»è¾‘ 
     public void SmoothMove(Vector3 targetPosition)
     {
         moveTween?.Kill();
@@ -112,25 +114,25 @@ public class Building_InstallAndUninstall
     private Hp Hp;
     private ItemData Item_Data;
     private BuildingShadow GhostShadow;
-    [Tooltip("Ó³ÉäµÄ½¨ÖşÎï")]
+    [Tooltip("æ˜ å°„çš„å»ºç­‘ç‰©")]
     IBuilding building;
 
 
-    [Header("·ÅÖÃ¼ì²â²ÎÊı")]
+    [Header("æ”¾ç½®æ£€æµ‹å‚æ•°")]
 
-    [Tooltip("ÔÊĞíÍæ¼Ò·ÅÖÃ½¨ÖşÎïµÄ×î´ó¾àÀë")]
+    [Tooltip("å…è®¸ç©å®¶æ”¾ç½®å»ºç­‘ç‰©çš„æœ€å¤§è·ç¦»")]
     public float MaxDistance = 2.0f;
 
-    [Tooltip("ÓÃÓÚ¼ÆËãÍ¸Ã÷¶ÈµÄ×îĞ¡¿É¼û¾àÀë£¨¾àÀë¹ı½üÊ±Í¸Ã÷¶ÈÎª×î´ó£©")]
+    [Tooltip("ç”¨äºè®¡ç®—é€æ˜åº¦çš„æœ€å°å¯è§è·ç¦»ï¼ˆè·ç¦»è¿‡è¿‘æ—¶é€æ˜åº¦ä¸ºæœ€å¤§ï¼‰")]
     [SerializeField] private float minVisibleDistance = 0.3f;
 
-    [Tooltip("ÓÃÓÚ¼ÆËãÍ¸Ã÷¶ÈµÄ×î´ó¿É¼û¾àÀë£¨¾àÀë³¬¹ıÊ±¼¸ºõ²»¿É¼û£©")]
+    [Tooltip("ç”¨äºè®¡ç®—é€æ˜åº¦çš„æœ€å¤§å¯è§è·ç¦»ï¼ˆè·ç¦»è¶…è¿‡æ—¶å‡ ä¹ä¸å¯è§ï¼‰")]
     [SerializeField] private float maxVisibleDistance = 3.5f;
 
     public void Update()
     {
-        // Î´°²×°×´Ì¬ÏÂ£¬²»´¦Àí
-        if (building.IsInstalled == false && Item_Data.Stack.CanBePickedUp == false)
+        // æœªå®‰è£…çŠ¶æ€ä¸‹ï¼Œä¸å¤„ç†
+        if (building.BePlayerTaken == true && building.IsInstalled == false && Item_Data.Stack.CanBePickedUp == false)
         {
             Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             mouseWorldPos.z = 0f;
@@ -139,6 +141,8 @@ public class Building_InstallAndUninstall
             {
                 GhostShadow = GameRes.Instance.InstantiatePrefab("BuildingShadow").GetComponent<BuildingShadow>();
                 GhostShadow.InitShadow(hostRenderer);
+                // ğŸ‘‡ å½±å­åˆå§‹åŒ–æ—¶ç«‹å³è®¾ç½®åœ¨é¼ æ ‡ä½ç½®
+                GhostShadow.transform.position = mouseWorldPos;
             }
 
             float distance = Vector2.Distance(hostTransform.position, mouseWorldPos);
@@ -154,6 +158,10 @@ public class Building_InstallAndUninstall
 
             GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
         }
+        else
+        {
+            CleanupGhost();
+        }
     }
 
     public void Init(Transform owner)
@@ -166,53 +174,61 @@ public class Building_InstallAndUninstall
         Item_Data = item?.Item_Data;
         building = owner.GetComponent<IBuilding>();
 
-        //TODO ¸ù¾İÑªÁ¿ÅĞ¶ÏÊÇ·ñ°²×°
+        if (building.IsInstalled == true && owner.GetComponent<BoxCollider2D>().isTrigger == true)
+        {
+            SetupInstalledItem(owner.gameObject, item);
+        }
+
+        //TODO æ ¹æ®è¡€é‡åˆ¤æ–­æ˜¯å¦å®‰è£…
         if (Hp.Value > 0)
         {
             boxCollider2D.isTrigger = false;
             building.IsInstalled = true;
-          //  item.Item_Data.Stack.CanBePickedUp = false;
+            // æ¿€æ´»å­å¯¹è±¡ä¸Šçš„æ‰€æœ‰ç¢°æ’ä½“ï¼ˆä¼ é€é—¨ç­‰ï¼‰
+            foreach (var col in owner.GetComponentsInChildren<Collider2D>())
+            {
+                col.enabled = true;
+            }
         }
         else
         {
             boxCollider2D.isTrigger = true;
             building.IsInstalled = false;
-          //  item.Item_Data.Stack.CanBePickedUp = true;
         }
     }
     public void Install()
     {
+        // æ£€æŸ¥ GhostShadow æ˜¯å¦ä¸ºç©º æˆ–è€… é™„è¿‘æœ‰å…¶ä»–ç‰©å“é˜»æŒ¡
         if (GhostShadow == null || GhostShadow.AroundHaveGameObject)
         {
-            Debug.Log("¸½½üÓĞÎïÆ·£¬ÎŞ·¨°²×°¡£");
+            Debug.Log("é™„è¿‘æœ‰ç‰©å“ï¼Œæ— æ³•å®‰è£…ã€‚");
             return;
         }
 
+        // æ£€æŸ¥ä¸ç›®æ ‡ä½ç½®çš„è·ç¦»æ˜¯å¦è¶…å‡ºå…è®¸èŒƒå›´
         float distance = Vector2.Distance(hostTransform.position, GhostShadow.transform.position);
         if (distance > MaxDistance)
         {
-            Debug.Log("³¬³ö×î´ó·ÅÖÃ¾àÀë£¬ÎŞ·¨°²×°¡£");
+            Debug.Log("è¶…å‡ºæœ€å¤§æ”¾ç½®è·ç¦»ï¼Œæ— æ³•å®‰è£…ã€‚");
             return;
         }
 
-        if (item == null) return;
+        // æ£€æŸ¥å½“å‰æ˜¯å¦æœ‰å¯ç”¨çš„ item
+        if (item == null)
+        {
+            Debug.Log("æ²¡æœ‰å¯å®‰è£…çš„ç‰©å“ã€‚");
+            return;
+        }
 
+        // å‡å°‘ç‰©å“æ•°é‡å¹¶æ›´æ–° UI
         item.Item_Data.Stack.Amount--;
         item.UpdatedUI_Event?.Invoke();
-        Hp.Value = Hp.maxValue;
 
-        //ÊµÀı»¯ĞÂµÄ
-        GameObject Installed = GameRes.Instance.InstantiatePrefab(Item_Data.Name, GhostShadow.transform.position);
-        Installed.transform.localScale *= 1 / 0.7f;
+        // å®ä¾‹åŒ–é¢„åˆ¶ä½“
+        GameObject installed = GameRes.Instance.InstantiatePrefab(item.Item_Data.Name, GhostShadow.transform.position);
 
-        Item Installed_cloneItem = Installed.GetComponent<Item>();
-
-        Installed_cloneItem.GetComponent<BoxCollider2D>().isTrigger = false;
-        if (Installed_cloneItem != null)
-        {
-            Installed_cloneItem.Item_Data = item.Item_Data.DeepClone();
-            Installed_cloneItem.Item_Data.Stack.Amount = 1;
-        }
+        // å°†å®‰è£…ç›¸å…³çš„æ‰€æœ‰é€»è¾‘éƒ½è½¬ç§»åˆ° SetupInstalledItem
+        SetupInstalledItem(installed, item);
 
         if (item.Item_Data.Stack.Amount <= 0)
         {
@@ -221,6 +237,52 @@ public class Building_InstallAndUninstall
         }
     }
 
+    public void SetupInstalledItem(GameObject installed, Item sourceItem)
+    {
+        if (installed == null || sourceItem == null)
+        {
+            Debug.LogWarning("å®‰è£…å¤±è´¥ï¼šç›®æ ‡å¯¹è±¡æˆ–æºç‰©å“ä¸ºç©ºã€‚");
+            return;
+        }
+
+        // è®¾ç½®ç¼©æ”¾
+        installed.transform.localScale = Vector3.one;
+
+        // è®¾ç½® Item æ•°æ®ï¼ˆæå‰å…‹éš†ï¼‰
+        Item installedItem = installed.GetComponent<Item>();
+        if (installedItem != null)
+        {
+            // æ·±æ‹·è´æ•°æ®
+            installedItem.Item_Data = sourceItem.Item_Data.DeepClone();
+
+            installedItem.Item_Data.Stack.Amount = 1;
+            // é‡ç½®è¡€é‡
+            var Hp_ = installedItem.GetComponent<IHealth>().Hp;
+            Hp_.Value = Hp_.maxValue;
+
+            // æ¿€æ´»å­å¯¹è±¡ä¸Šçš„æ‰€æœ‰ç¢°æ’ä½“ï¼ˆä¼ é€é—¨ç­‰ï¼‰
+            foreach (var col in installedItem.GetComponentsInChildren<Collider2D>())
+            {
+                col.enabled = true;
+            }
+
+            // é…ç½®æœ¬ä½“ç¢°æ’ä½“
+            BoxCollider2D boxCollider = installedItem.GetComponent<BoxCollider2D>();
+            boxCollider.isTrigger = false;
+
+            // è®¾ç½®å»ºç­‘å®‰è£…çŠ¶æ€ï¼ˆå¦‚æœå­˜åœ¨ IBuilding æ¥å£ï¼‰
+            var building = installed.GetComponent<IBuilding>();
+            if (building != null)
+            {
+                building.IsInstalled = true;
+            }
+        }
+
+       
+    }
+
+
+
     public void UnInstall()
     {
         hostTransform.localScale *= 0.7f;
@@ -228,6 +290,12 @@ public class Building_InstallAndUninstall
         Item_Data.Stack.CanBePickedUp = true;
         Hp.Value = -1;
         Item_Data.Durability -= 1;
+
+        var building = item.GetComponent<IBuilding>();
+        if (building != null)
+        {
+            building.IsInstalled = false;
+        }
 
         Vector2 pos = (Vector2)hostTransform.position;
         ItemMaker itemMaker = hostTransform.GetComponent<ItemMaker>();

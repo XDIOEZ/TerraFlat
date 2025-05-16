@@ -34,7 +34,7 @@ public partial class PlayerData : ItemData
 
     #region 食物
     [Tooltip("饥饿值")]
-    public Hunger_Water hunger = new Hunger_Water(100, 100);
+    public Hunger_FoodAndWater hunger = new Hunger_FoodAndWater(100, 100);
     #endregion
 
     #region 库存
@@ -46,5 +46,5 @@ public partial class PlayerData : ItemData
 
     [ShowNonSerializedField]
     [Tooltip("玩家用户名")]
-    public string PlayerUserName = "Ikun";
+    public string Name_User = "Ikun";
 }

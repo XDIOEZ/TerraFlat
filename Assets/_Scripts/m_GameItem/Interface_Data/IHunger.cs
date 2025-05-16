@@ -3,11 +3,11 @@ using UltEvents;
 
 public interface IHunger
 {
-    Hunger_Water Foods { get; set; }
+    Hunger_FoodAndWater Foods { get; set; }
 
     public float EatingSpeed { get; set; }
 
-    void Eat(float EatSpeed);
+    void Eat(IFood food);
 
     public UltEvent OnNutrientChanged { get; set; }
 }

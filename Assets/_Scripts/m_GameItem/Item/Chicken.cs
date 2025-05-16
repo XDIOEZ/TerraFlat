@@ -12,7 +12,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public override ItemData Item_Data { get { return Data; } set { Data = value as AnimalData; } }
     #region 饥饿
 
-    public Hunger_Water Foods { get => Data.hunger; set => Data.hunger = value; }
+    public Hunger_FoodAndWater Foods { get => Data.hunger; set => Data.hunger = value; }
     public float EatingSpeed { get => Data.attackSpeed; set => throw new System.NotImplementedException(); }
     public UltEvent OnNutrientChanged { get; set; }
 
@@ -116,9 +116,10 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
      
     }
 
-    public void Eat(float Be_Eat)
+    public void Eat(IFood food)
     {
-        Foods.Food += Be_Eat;
+        Foods.Food += EatingSpeed;
+        food.BeEat(EatingSpeed);
     }
 
     public void Hungry_Update()
@@ -185,7 +186,7 @@ public partial class AnimalData : ItemData
 
     #region 食物
     [Tooltip("饥饿值")]
-    public Hunger_Water hunger = new Hunger_Water(100, 100);
+    public Hunger_FoodAndWater hunger = new Hunger_FoodAndWater(100, 100);
     #endregion
 
     #region 生产

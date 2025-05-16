@@ -44,10 +44,11 @@ public interface IInventoryData // 定义一个接口，用于管理与物品清
     {
         // 获取指定物品下所有子对象中的 Inventory 组件。
         Inventory[] Inventory_s = Item.GetComponentsInChildren<Inventory>();
+        Item _i = Item.GetComponentInChildren<Item>();
         foreach (var inventory in Inventory_s)
         {
-            inventory.Belong_Item = this; // 将物品清单的归属设置为当前对象。
-
+            inventory.Belong_Inventory = this; // 将物品清单的归属设置为当前对象。
+            inventory._belongItem = _i; // 将物品的归属设置为当前对象。
             inventory.SyncSlotBelongInventory();
             if (inventory.UI.itemSlots_UI[0] == null)
             {

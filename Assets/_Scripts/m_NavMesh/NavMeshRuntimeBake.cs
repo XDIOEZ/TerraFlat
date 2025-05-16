@@ -24,6 +24,6 @@ public class NavMeshRuntimeBake : MonoBehaviour
 
         surface.BuildNavMesh();  // ����ʱ�決}
 
-        Debug.Log("�決���");
+       // Debug.Log("�決���");
     }
 }

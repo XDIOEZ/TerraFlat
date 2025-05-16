@@ -1,4 +1,4 @@
-using MemoryPack;
+ï»¿using MemoryPack;
 using Meryel.UnityCodeAssist.YamlDotNet.Core;
 using Sirenix.OdinInspector;
 using System;
@@ -14,61 +14,64 @@ using UnityEngine.SceneManagement;
 
 public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 {
-    [Header("´æµµÏà¹Ø")]
-    [Tooltip("´æµµÃû³Æ")]
+    [Header("å­˜æ¡£ç›¸å…³")]
+    [Tooltip("å­˜æ¡£åç§°")]
     public string SaveName = "DefaultSave";
-    [Tooltip("´æµµÂ·¾¶")]
+    [Tooltip("å­˜æ¡£è·¯å¾„")]
     public string SavePath = "Assets/Saves/";
-    [Tooltip("µ±Ç°Ê¹ÓÃµÄ´æµµÊı¾İ")]
+    [Tooltip("å½“å‰ä½¿ç”¨çš„å­˜æ¡£æ•°æ®")]
     public GameSaveData SaveData;
 
-    [Tooltip("ÁÙÊ±Ê§Ğ§ÎïÌå")]
+    [Tooltip("ä¸´æ—¶å¤±æ•ˆç‰©ä½“")]
     public List<GameObject> GameObject_False;
-
-    [Header("Ô¤ÉèÄ£°åÏà¹Ø")]
-    [Tooltip("Ô¤ÉèÄ£°å´æµµÃû³Æ")]
-    public string TemplateSaveName = "Ä£°å";
-    [Tooltip("Ô¤ÉèÄ£°å´æµµÈ«Â·¾¶")]
-    public string TemplateSavePath = "Assets/Saves/DefaultTemplate/";
-    [Tooltip("µ±Ç°Ê¹ÓÃµÄÔ¤ÉèÄ£°å´æµµÊı¾İ")]
-    public GameSaveData TemplateSaveData;
-
     public string playerName;
 
-
+    [Header("é»˜è®¤è®¾ç½®")]
+    public DefaultSettings defaultSettings;
     public void Start()
     {
         DontDestroyOnLoad(gameObject);
     }
 
+    [Serializable]
+    public class DefaultSettings
+    {
+        [Tooltip("é»˜è®¤åŠ è½½çš„SaveADDæ ‡ç­¾")]
+        public string Default_ADDTable = "Template_SaveData";
+        [Tooltip("é»˜è®¤ç©å®¶æ¨¡æ¿å­˜æ¡£")]
+        public string Default_PlayerSave = "ç©å®¶";
+        [Tooltip("é»˜è®¤ç©å®¶åå­—")]
+        public string Default_PlayerName = "é»˜è®¤";
+        [Tooltip("é»˜è®¤åˆå§‹åœ°å›¾")]
+        public string Default_Map = "å¹³åŸ";
+    }
 
-
-    #region ±£´æ
+    #region ä¿å­˜
  
-     [Button("±£´æÍæ¼Ò")]
+     [Button("ä¿å­˜ç©å®¶")]
     public int SavePlayer()
     {
         int playerCount = 0;
-        //»ñÈ¡³¡¾°ÖĞËùÓĞPlayer
+        //è·å–åœºæ™¯ä¸­æ‰€æœ‰Player
         Player[] players = FindObjectsOfType<Player>();
 
-        //±£´æÍæ¼ÒÊı¾İ
+        //ä¿å­˜ç©å®¶æ•°æ®
         foreach (Player player in players)
         {
             player.Save();
-            SaveData.PlayerData_Dict[player.Data.PlayerUserName] = player.Data;
+            SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
             player.gameObject.SetActive(false);
-            //´æÈëÁÙÊ±Ê§Ğ§ÎïÌåÁĞ±í
+            //å­˜å…¥ä¸´æ—¶å¤±æ•ˆç‰©ä½“åˆ—è¡¨
             GameObject_False.Add(player.gameObject);
 
             playerCount++;
         }
 
-       // Debug.Log("Íæ¼ÒÊı¾İ±£´æ³É¹¦£¡Íæ¼ÒÊıÁ¿£º" + playerCount);
+       // Debug.Log("ç©å®¶æ•°æ®ä¿å­˜æˆåŠŸï¼ç©å®¶æ•°é‡ï¼š" + playerCount);
         return playerCount;
     }
 
-    [Button("±£´æ´æµµµ½´ÅÅÌÉÏ")]
+    [Button("ä¿å­˜å­˜æ¡£åˆ°ç£ç›˜ä¸Š")]
     void Save()
     {
         SaveActiveMapToSaveData();
@@ -77,18 +80,18 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         
     }
 
-    [Tooltip("±£´æµ±Ç°¼¤»î³¡¾°´æÈëµ±Ç°µÄ³¡¾°×ÖµäÖĞ")]
+    [Tooltip("ä¿å­˜å½“å‰æ¿€æ´»åœºæ™¯å­˜å…¥å½“å‰çš„åœºæ™¯å­—å…¸ä¸­")]
     public void SaveActiveMapToSaveData()
     {
 
         SaveData ??= new GameSaveData();
         GameObject_False.Clear();
         SavePlayer();
-        // ±£´æµ±Ç°¼¤»îµÄµØÍ¼
+        // ä¿å­˜å½“å‰æ¿€æ´»çš„åœ°å›¾
         MapSave mapSave = SaveActiveScene_Map();
         SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
 
-     //   Debug.Log("³É¹¦½«µ±Ç°¼¤»î³¡¾°´æÈëµ±Ç°Ê¹ÓÃµÄ´æµµ");
+     //   Debug.Log("æˆåŠŸå°†å½“å‰æ¿€æ´»åœºæ™¯å­˜å…¥å½“å‰ä½¿ç”¨çš„å­˜æ¡£");
     }
 
     public GameSaveData GetSaveData()
@@ -96,7 +99,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         SaveData ??= new GameSaveData();
         GameObject_False.Clear();
         SavePlayer();
-        // ±£´æµ±Ç°¼¤»îµÄµØÍ¼
+        // ä¿å­˜å½“å‰æ¿€æ´»çš„åœ°å›¾
         MapSave mapSave = SaveActiveScene_Map();
         SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
         return SaveData;
@@ -104,42 +107,43 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     #endregion
 
-    #region ¼ÓÔØ
+    #region åŠ è½½
 
-    [Button("¼ÓÔØÍæ¼Ò")]
+    [Button("åŠ è½½ç©å®¶")]
     public void LoadPlayer(string playerName)
     {
         if (SaveData.PlayerData_Dict.ContainsKey(playerName))
         {
             PlayerData _data = SaveData.PlayerData_Dict[playerName];
-            Debug.Log("³É¹¦¼ÓÔØÍæ¼Ò£º" + playerName);
+            Debug.Log("æˆåŠŸåŠ è½½ç©å®¶ï¼š" + playerName);
             CreatePlayer(_data);
         }
         else
         {
-            LoadAssetByLabelAndName<WorldSaveSO>("Template_SaveData", "Íæ¼ÒÄ£°å", result =>
+            LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, defaultSettings.Default_PlayerSave, result =>
             {
                 PlayerData _data;
 
                 if (result == null)
                 {
-                    Debug.LogWarning("¼ÓÔØÊ§°Ü£ºWorldSaveSO ¶ÔÏóÎª¿Õ£¡");
+                    Debug.LogWarning("åŠ è½½å¤±è´¥ï¼šWorldSaveSO å¯¹è±¡ä¸ºç©ºï¼");
                     _data = new PlayerData();
                 }
                 else if (result.SaveData == null)
                 {
-                    Debug.LogWarning("¼ÓÔØÊ§°Ü£ºSaveData Îª¿Õ£¡");
+                    Debug.LogWarning("åŠ è½½å¤±è´¥ï¼šSaveData ä¸ºç©ºï¼");
                     _data = new PlayerData();
                 }
-                else if (!result.SaveData.PlayerData_Dict.ContainsKey("Ä¬ÈÏ"))
+                else if (!result.SaveData.PlayerData_Dict.ContainsKey("é»˜è®¤"))
                 {
-                    Debug.LogWarning("¼ÓÔØ³É¹¦£¬µ«Î´°üº¬¡°Ä¬ÈÏ¡±Íæ¼ÒÊı¾İ£¡");
+                    Debug.LogWarning("åŠ è½½æˆåŠŸï¼Œä½†æœªåŒ…å«â€œé»˜è®¤â€ç©å®¶æ•°æ®ï¼");
                     _data = new PlayerData();
                 }
                 else
                 {
-                    _data = result.SaveData.PlayerData_Dict["Ä¬ÈÏ"];
-                    Debug.Log("³É¹¦¼ÓÔØÄ¬ÈÏÄ£°åÍæ¼Ò£º" + playerName);
+                    _data = result.SaveData.PlayerData_Dict[defaultSettings.Default_PlayerName];
+                    _data.Name_User = playerName; // âœ… ç›´æ¥ä¿®æ”¹åå­—
+                    Debug.Log($"æˆåŠŸåŠ è½½é»˜è®¤æ¨¡æ¿ç©å®¶ï¼Œå¹¶è®¾ç½®ä¸ºæ–°ç©å®¶åï¼š{playerName}");
                 }
 
                 CreatePlayer(_data);
@@ -147,17 +151,18 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         }
     }
 
+
     private void CreatePlayer(PlayerData data)
     {
         GameObject newPlayerObj = GameRes.Instance.InstantiatePrefab("Player");
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
         newPlayer.Data = data;
         newPlayer.Load();
-        Debug.Log("Íæ¼Ò¼ÓÔØ³É¹¦£¡");
+      //  Debug.Log("ç©å®¶åŠ è½½æˆåŠŸï¼");
     }
 
 
-    [Button("¼ÓÔØ´æµµ")]
+    [Button("åŠ è½½å­˜æ¡£")]
     public void Load()
     {
         LoadByDisk(SaveName);
@@ -165,16 +170,16 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     // Fix for CS7036: Provide the required "onComplete" parameter when calling LoadOnDefaultTemplateMap.
 
-    [Button("¼ÓÔØÖ¸¶¨µØÍ¼")]
+    [Button("åŠ è½½æŒ‡å®šåœ°å›¾")]
     public void LoadMap(string mapName)
     {
         MapSave mapSave;
 
         if (!SaveData.MapSaves_Dict.ContainsKey(mapName))
         {
-            Debug.LogWarning($"Î´ÕÒµ½µØÍ¼Êı¾İ£¬Ãû³Æ£º{mapName}£¬¼ÓÔØÄ¬ÈÏÄ£°å");
+            Debug.LogWarning($"æœªæ‰¾åˆ°åœ°å›¾æ•°æ®ï¼Œåç§°ï¼š{mapName}ï¼ŒåŠ è½½é»˜è®¤æ¨¡æ¿");
 
-            LoadAssetByLabelAndName<WorldSaveSO>("Template_SaveData", mapName, result =>
+            LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, mapName, result =>
             {
                 if (result != null && result.SaveData != null && result.SaveData.MapSaves_Dict.ContainsKey(mapName))
                 {
@@ -190,7 +195,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                             GameObject itemPrefab;
                             if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.Name, out itemPrefab))
                             {
-                                Debug.LogWarning($"Î´ÕÒµ½Ô¤ÖÆÌå£¬Ãû³Æ£º{forLoadItemData.Name}");
+                                Debug.LogWarning($"æœªæ‰¾åˆ°é¢„åˆ¶ä½“ï¼Œåç§°ï¼š{forLoadItemData.Name}");
                                 continue;
                             }
 
@@ -212,14 +217,14 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 }
                 else
                 {
-                    Debug.LogError($"¼ÓÔØÄ¬ÈÏÄ£°åµØÍ¼Ê§°Ü£¬Ãû³Æ£º{mapName}");
+                    Debug.LogError($"åŠ è½½é»˜è®¤æ¨¡æ¿åœ°å›¾å¤±è´¥ï¼Œåç§°ï¼š{mapName}");
                 }
             });
         }
         else
         {
             mapSave = SaveData.MapSaves_Dict[mapName];
-            Debug.Log("³É¹¦¼ÓÔØµØÍ¼£º" + mapName);
+            Debug.Log("æˆåŠŸåŠ è½½åœ°å›¾ï¼š" + mapName);
 
             foreach (var kvp in mapSave.items)
             {
@@ -231,7 +236,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                     GameObject itemPrefab;
                     if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.Name, out itemPrefab))
                     {
-                        Debug.LogWarning($"Î´ÕÒµ½Ô¤ÖÆÌå£¬Ãû³Æ£º{forLoadItemData.Name}");
+                        Debug.LogWarning($"æœªæ‰¾åˆ°é¢„åˆ¶ä½“ï¼Œåç§°ï¼š{forLoadItemData.Name}");
                         continue;
                     }
 
@@ -259,7 +264,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         {
             if (locationHandle.Status != AsyncOperationStatus.Succeeded)
             {
-                Debug.LogError($"±êÇ©¼ÓÔØÊ§°Ü£º{label}");
+                Debug.LogError($"æ ‡ç­¾åŠ è½½å¤±è´¥ï¼š{label}");
                 onComplete?.Invoke(null);
                 return;
             }
@@ -269,7 +274,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
             if (targetLocation == null)
             {
-                Debug.LogWarning($"Î´ÕÒµ½×ÊÔ´£¬±êÇ©£º{label}£¬Ãû³Æ°üº¬£º{name}");
+                Debug.LogWarning($"æœªæ‰¾åˆ°èµ„æºï¼Œæ ‡ç­¾ï¼š{label}ï¼Œåç§°åŒ…å«ï¼š{name}");
                 onComplete?.Invoke(null);
                 return;
             }
@@ -282,7 +287,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 }
                 else
                 {
-                    Debug.LogError($"¼ÓÔØÊ§°Ü£º{name}£¨±êÇ©£º{label}£©");
+                    Debug.LogError($"åŠ è½½å¤±è´¥ï¼š{name}ï¼ˆæ ‡ç­¾ï¼š{label}ï¼‰");
                     onComplete?.Invoke(null);
                 }
             };
@@ -293,34 +298,34 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     #endregion
 
-    #region ¹¤¾ß·½·¨
-    #region ±£´æµ½´ÅÅÌ
+    #region å·¥å…·æ–¹æ³•
+    #region ä¿å­˜åˆ°ç£ç›˜
 
     public void SaveToDisk(GameSaveData SaveData)
     {
         SaveData.saveName = SaveName;
 
         byte[] dataBytes = MemoryPackSerializer.Serialize(SaveData);
-        //»ñÈ¡µ±Ç°³¡¾°Ãû³ÆÉèÖÃÎª´æµµÃû³Æ
+        //è·å–å½“å‰åœºæ™¯åç§°è®¾ç½®ä¸ºå­˜æ¡£åç§°
        // SaveData.saveName = SceneManager.GetActiveScene().name;
-        //±£´æµ½´ÅÅÌ
+        //ä¿å­˜åˆ°ç£ç›˜
         File.WriteAllBytes(SavePath + SaveName + ".QAQ", dataBytes);
-        Debug.Log("´æµµ³É¹¦£¡");
+        Debug.Log("å­˜æ¡£æˆåŠŸï¼");
     }
 
     /// <summary>
-    /// ±£´æµ±Ç°¼¤»îµÄ³¡¾°µÄµØÍ¼Êı¾İ
+    /// ä¿å­˜å½“å‰æ¿€æ´»çš„åœºæ™¯çš„åœ°å›¾æ•°æ®
     /// </summary>
     /// <param name="MapName"></param>
     /// <returns></returns>
     public MapSave SaveActiveScene_Map()
     {
         MapSave worldSave = new MapSave();
-        // »ñÈ¡µ±Ç°¼¤»î³¡¾°µÄÃû³Æ
+        // è·å–å½“å‰æ¿€æ´»åœºæ™¯çš„åç§°
         worldSave.MapName = SceneManager.GetActiveScene().name;
-        // »ñÈ¡µ±Ç°³¡¾°ÖĞµÄËùÓĞÎïÆ·Êı¾İ£¨ÒÑ°´Ãû³Æ·Ö×é£©
+        // è·å–å½“å‰åœºæ™¯ä¸­çš„æ‰€æœ‰ç‰©å“æ•°æ®ï¼ˆå·²æŒ‰åç§°åˆ†ç»„ï¼‰
         worldSave.items = GetActiveSceneAllItemData();
-        //¼¤»îÊ§Ğ§ÎïÌå
+        //æ¿€æ´»å¤±æ•ˆç‰©ä½“
         foreach (GameObject go in GameObject_False)
         {
             go.SetActive(true);
@@ -329,17 +334,17 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         return worldSave;
     }
     /// <summary>
-    /// »ñÈ¡µ±Ç°¼¤»îµÄ³¡¾°ÖĞµÄËùÓĞÎïÆ·Êı¾İ
+    /// è·å–å½“å‰æ¿€æ´»çš„åœºæ™¯ä¸­çš„æ‰€æœ‰ç‰©å“æ•°æ®
     /// </summary>
     /// <returns></returns>
     public Dictionary<string, List<ItemData>> GetActiveSceneAllItemData()
     {
         Dictionary<string, List<ItemData>> itemDataDict = new Dictionary<string, List<ItemData>>();
 
-        // µÚÒ»²½£º»ñÈ¡³¡¾°ÖĞËùÓĞµÄ Item£¨°üÀ¨·Ç¼¤»î×´Ì¬£©
+        // ç¬¬ä¸€æ­¥ï¼šè·å–åœºæ™¯ä¸­æ‰€æœ‰çš„ Itemï¼ˆåŒ…æ‹¬éæ¿€æ´»çŠ¶æ€ï¼‰
         Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
 
-        // µÚ¶ş²½£ºÏÈµ÷ÓÃ Save()£¬±ÜÃâÒÅÂ©
+        // ç¬¬äºŒæ­¥ï¼šå…ˆè°ƒç”¨ Save()ï¼Œé¿å…é—æ¼
         foreach (Item item in allItems)
         {
             if (item == null)
@@ -350,7 +355,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 try
                 {
                     saveableItem.Save();
-                    //½«ÎŞĞ§µÄÎïÆ·Ìí¼Óµ½ÁÙÊ±Ê§Ğ§ÎïÌåÁĞ±í
+                    //å°†æ— æ•ˆçš„ç‰©å“æ·»åŠ åˆ°ä¸´æ—¶å¤±æ•ˆç‰©ä½“åˆ—è¡¨
                     if (!item.gameObject.activeInHierarchy)
                     {
                         GameObject_False.Add(item.gameObject);
@@ -358,7 +363,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 }
                 catch (System.Exception ex)
                 {
-                    Debug.LogError($"±£´æÎïÆ·Ê§°Ü: {item.name}", item);
+                    Debug.LogError($"ä¿å­˜ç‰©å“å¤±è´¥: {item.name}", item);
                     Debug.LogException(ex);
                 }
             }
@@ -366,13 +371,13 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
            
         }
 
-        // µÚÈı²½£ºÔÙ´Î±éÀúËùÓĞ Item£¬É¸Ñ¡³ö still active µÄ£¬²¢Í¬²½Î»ÖÃ¡¢ÊÕ¼¯Êı¾İ
+        // ç¬¬ä¸‰æ­¥ï¼šå†æ¬¡éå†æ‰€æœ‰ Itemï¼Œç­›é€‰å‡º still active çš„ï¼Œå¹¶åŒæ­¥ä½ç½®ã€æ”¶é›†æ•°æ®
         foreach (Item item in allItems)
         {
             if (item == null || item.transform == null || item.gameObject == null)
                 continue;
 
-            // Ö»´¦Àíµ±Ç°ÈÔ´¦ÓÚ¼¤»î×´Ì¬µÄ Item
+            // åªå¤„ç†å½“å‰ä»å¤„äºæ¿€æ´»çŠ¶æ€çš„ Item
             if (!item.gameObject.activeInHierarchy)
                 continue;
 
@@ -397,11 +402,11 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     #endregion
 
 
-    #region ´Ó´ÅÅÌÉÏ¼ÓÔØ
+    #region ä»ç£ç›˜ä¸ŠåŠ è½½
 
     public void LoadByDisk(string Load_saveName)
     {
-        Debug.Log("¿ªÊ¼´Ó´ÅÅÌ¼ÓÔØ´æµµ£º" + Load_saveName);
+        Debug.Log("å¼€å§‹ä»ç£ç›˜åŠ è½½å­˜æ¡£ï¼š" + Load_saveName);
         SaveData = null;
         SaveData = MemoryPackSerializer.Deserialize<GameSaveData>(File.ReadAllBytes(SavePath + Load_saveName + ".QAQ"));
     }
@@ -414,47 +419,54 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     #endregion
 
-    #region ³¡¾°ÇĞ»»
+    #region åœºæ™¯åˆ‡æ¢
 
-    [Button("¸Ä±ä³¡¾°")]
-    public void ChangeScene(string sceneName = "Æ½Ô­")
+    [Button("æ”¹å˜åœºæ™¯")]
+    public void ChangeScene(string sceneName = "")
     {
-        // ±£´æµ±Ç°³¡¾°µÄµØÍ¼Êı¾İ
+        // è‹¥åœºæ™¯åç§°ä¸ºç©ºï¼Œåˆ™ä½¿ç”¨é»˜è®¤åœ°å›¾
+        if(sceneName == "")
+        {
+            sceneName = defaultSettings.Default_Map;
+        }
+
+        // ä¿å­˜å½“å‰åœºæ™¯çš„åœ°å›¾æ•°æ®
         SaveActiveMapToSaveData();
-        // ÇĞ»»³¡¾°
+
+        // è¿›å…¥æ–°åœºæ™¯
         EnterScene(sceneName);
     }
 
     private Scene newScene;
 
     /// <summary>
-    /// ÇĞ»»³¡¾°
+    /// åˆ‡æ¢åœºæ™¯
     /// </summary>
     /// <param name="sceneName"></param>
-    public void EnterScene(string sceneName = "Æ½Ô­")
+    public void EnterScene(string sceneName = "å¹³åŸ")
     {
-        // 1. ´´½¨ĞÂ³¡¾°£¨¿Õ³¡¾°£©
+        // 1. åˆ›å»ºæ–°åœºæ™¯ï¼ˆç©ºåœºæ™¯ï¼‰
         newScene = SceneManager.CreateScene(sceneName);
 
-        // 2. »ñÈ¡µ±Ç°»î¶¯³¡¾°
+        // 2. è·å–å½“å‰æ´»åŠ¨åœºæ™¯
         Scene previousScene = SceneManager.GetActiveScene();
 
-        // 3. ×¢²áĞ¶ÔØÍê³ÉºóµÄ»Øµ÷
+        // 3. æ³¨å†Œå¸è½½å®Œæˆåçš„å›è°ƒ
         SceneManager.sceneUnloaded += OnPreviousSceneUnloaded;
 
-        // 4. ¿ªÊ¼Ğ¶ÔØ¾É³¡¾°
+        // 4. å¼€å§‹å¸è½½æ—§åœºæ™¯
         SceneManager.UnloadSceneAsync(previousScene);
     }
 
     private void OnPreviousSceneUnloaded(Scene unloadedScene)
     {
-        // È¡ÏûÊÂ¼ş×¢²á£¬±ÜÃâÖØ¸´µ÷ÓÃ
+        // å–æ¶ˆäº‹ä»¶æ³¨å†Œï¼Œé¿å…é‡å¤è°ƒç”¨
         SceneManager.sceneUnloaded -= OnPreviousSceneUnloaded;
 
-        // ÉèÎªĞÂ³¡¾°Îª»î¶¯³¡¾°
+        // è®¾ä¸ºæ–°åœºæ™¯ä¸ºæ´»åŠ¨åœºæ™¯
         SceneManager.SetActiveScene(newScene);
 
-        // ¼ÓÔØÄÚÈİ
+        // åŠ è½½å†…å®¹
         LoadMap(newScene.name);
     }
 
@@ -471,11 +483,11 @@ public partial class MapSave
     public string MapName;
 
     [ShowInInspector]
-    // ½«Ô­ÏÈ´æ´¢µ¥¸ö ItemData µÄ×Öµä¸ÄÎª´æ´¢ List<ItemData>£¬key ÎªÎïÆ·Ãû³Æ
+    // å°†åŸå…ˆå­˜å‚¨å•ä¸ª ItemData çš„å­—å…¸æ”¹ä¸ºå­˜å‚¨ List<ItemData>ï¼Œkey ä¸ºç‰©å“åç§°
     public Dictionary<string, List<ItemData>> items = new Dictionary<string, List<ItemData>>();
 
-    // ËµÃ÷£ºÔÚ±£´æÎïÆ·Ê±£¬Í¬Ò»Ãû³ÆµÄÎïÆ·»á´æ´¢ÔÚÍ¬Ò» List ÖĞ£¬
-    // ·½±ãºóĞø¼ÓÔØÊ±ÅúÁ¿ÊµÀı»¯²¢¸³Öµ
+    // è¯´æ˜ï¼šåœ¨ä¿å­˜ç‰©å“æ—¶ï¼ŒåŒä¸€åç§°çš„ç‰©å“ä¼šå­˜å‚¨åœ¨åŒä¸€ List ä¸­ï¼Œ
+    // æ–¹ä¾¿åç»­åŠ è½½æ—¶æ‰¹é‡å®ä¾‹åŒ–å¹¶èµ‹å€¼
 }
 
 
@@ -483,17 +495,17 @@ public partial class MapSave
 [System.Serializable]
 public partial class GameSaveData
 {
-    public string saveName = "defaultSaveName";//´æµµÃû³Æ
+    public string saveName = "defaultSaveName";//å­˜æ¡£åç§°
     [ShowInInspector]
-    //´æµµÊı¾İ½á¹¹
+    //å­˜æ¡£æ•°æ®ç»“æ„
     public Dictionary<string, MapSave> MapSaves_Dict = new Dictionary<string, MapSave>();
-    //Íæ¼ÒÊı¾İ
+    //ç©å®¶æ•°æ®
     [ShowInInspector]
     public Dictionary<string, PlayerData> PlayerData_Dict = new Dictionary<string, PlayerData>();
 
-    public string leaveTime = "0";//Àë¿ªÊ±¼ä
+    public string leaveTime = "0";//ç¦»å¼€æ—¶é—´
 
-    //¹¹Ôìº¯Êı
+    //æ„é€ å‡½æ•°
     public GameSaveData()
     {
         MapSaves_Dict = new Dictionary<string, MapSave>();

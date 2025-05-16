@@ -113,12 +113,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 9be04821005e31a49ad056dc0f19839e
-    m_Address: Assets/_Prefabs/House
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a0c6d4be2d56204468cebe6e395aedf0
     m_Address: 'Pickaxe '
     m_ReadOnly: 0

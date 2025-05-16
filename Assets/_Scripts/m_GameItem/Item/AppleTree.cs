@@ -69,7 +69,6 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     {
         OnHpChanged = new UltEvent();
         OnDefenseChanged = new UltEvent();
-        Load();
     }
 
     public void FixedUpdate()
@@ -154,6 +153,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     {
         onSave?.Invoke();
         _data.loot = GetComponentInChildren<ItemMaker>().loots;
+        _data.ItemDataValue.ClearAllEvents();
     }
     [Button("加载")]
     public void Load()
@@ -163,7 +163,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
        
         ItemValues.Get_ItemValue("生产进度").OnCurrentValueChanged += Production;
        
-            Init();
+        Init();
         ItemValues.Start_Work();
     }
 
@@ -171,7 +171,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     {
         ItemValues.Get_ItemValue("生产进度").CurrentValue = Random.Range(0, 100);
         ItemValues.Add_ChangeSpeed("生产进度", "呼吸作用", 1, -1);
-        print("初始化");
+       // print("初始化");
     }
     #endregion
 }

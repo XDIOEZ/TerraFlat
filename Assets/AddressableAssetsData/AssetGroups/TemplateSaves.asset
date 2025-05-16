@@ -17,8 +17,26 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 7118479ec434f65418b21c7b2333167a
   m_SerializeEntries:
+  - m_GUID: 277b0d408df859143881836608bc7d20
+    m_Address: "Assets/_Scenes/Scene_Template/\u73A9\u5BB6.asset"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Template_SaveData
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 94c67d7fe46e86d4cbe8ed2374deec43
+    m_Address: "Assets/_Scenes/Scene_Template/\u5E73\u539F.asset"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Template_SaveData
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ad52c5aec9272404f9da993c48d52486
     m_Address: Assets/_SO/Template_MapSave
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Template_SaveData
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d34cc3c527b046a4eb78d52022429cb0
+    m_Address: "Assets/_Scenes/Scene_Template/\u623F\u5C4B.asset"
     m_ReadOnly: 0
     m_SerializedLabels:
     - Template_SaveData

@@ -85,7 +85,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
-  m_SpriteSortPoint: 0
+  m_SpriteSortPoint: 1
 --- !u!95 &7013093242723153425
 Animator:
   serializedVersion: 5
@@ -117,6 +117,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2431480046216209440}
   - component: {fileID: 2891261174467680020}
+  - component: {fileID: 1644989590181912926}
   m_Layer: 0
   m_Name: Light2D
   m_TagString: Untagged
@@ -178,7 +179,7 @@ MonoBehaviour:
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
   m_PointLightInnerRadius: 0.1
-  m_PointLightOuterRadius: 5
+  m_PointLightOuterRadius: 8
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -189,6 +190,18 @@ MonoBehaviour:
   - {x: 0.5, y: -0.5, z: 0}
   - {x: 0.5, y: 0.5, z: 0}
   - {x: -0.5, y: 0.5, z: 0}
+--- !u!114 &1644989590181912926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5875249872156340263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 653e406f6d53a4a4c952ad547d56be16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6598347724538692461
 GameObject:
   m_ObjectHideFlags: 0
@@ -300,6 +313,8 @@ MonoBehaviour:
   OnStopWork_Event:
     _PersistentCalls: []
   UpdatedUI_Event:
+    _PersistentCalls: []
+  DestroyItem_Event:
     _PersistentCalls: []
   data:
     Name: "\u706B\u628A"

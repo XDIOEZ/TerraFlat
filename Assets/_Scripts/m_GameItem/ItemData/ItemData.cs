@@ -14,23 +14,20 @@ using Sirenix.OdinInspector;
 
 
 // 使用[System.Serializable]特性使该类可以被序列化，以便在Unity编辑器中显示和编辑
-[MemoryPackUnion(0, typeof(WeaponData))]//武器数据
+[MemoryPackUnion(0, typeof(AnimalData))]//动物数据
 [MemoryPackUnion(1, typeof(ArmorData))]//护甲数据
 [MemoryPackUnion(2, typeof(AmmoData))]//弹药数据
-[MemoryPackUnion(3, typeof(Tree_Data))]//树数据
-[MemoryPackUnion(4, typeof(Apple_Red_Data))]//红苹果数据
-[MemoryPackUnion(5, typeof(PlayerData))]//玩家数据
-[MemoryPackUnion(6, typeof(CoalData))]//煤炭数据
-[MemoryPackUnion(7, typeof(Com_ItemData))]//通用物品数据
-[MemoryPackUnion(8, typeof(PickaxeToolData))]//矿石镐工具数据
-[MemoryPackUnion(9, typeof(WorkerData))]//工作者数据
-[MemoryPackUnion(10, typeof(StorageData))]//仓库数据
-[MemoryPackUnion(11, typeof(ColdWeaponData))]//仓库数据
-[MemoryPackUnion(12, typeof(FoodData))]//食物数据
-[MemoryPackUnion(13, typeof(AnimalData))]//动物数据
-[MemoryPackUnion(14, typeof(TileMapData))]//动物数据
-[MemoryPackUnion(15, typeof(HouseData))]//动物数据
-[MemoryPackUnion(16, typeof(WorldEdgeData))]//墙壁数据
+[MemoryPackUnion(3, typeof(ColdWeaponData))]//冷武器数据
+[MemoryPackUnion(4, typeof(Com_ItemData))]//通用物品数据
+[MemoryPackUnion(5, typeof(FoodData))]//食物数据
+[MemoryPackUnion(6, typeof(HouseData))]//房屋数据
+[MemoryPackUnion(7, typeof(PlayerData))]//玩家数据
+[MemoryPackUnion(8, typeof(StorageData))]//仓库数据
+[MemoryPackUnion(9, typeof(TileMapData))]//瓦片地图数据
+[MemoryPackUnion(10, typeof(Tree_Data))]//树数据
+[MemoryPackUnion(11, typeof(WeaponData))]//武器数据
+[MemoryPackUnion(12, typeof(WorkerData))]//工作者数据
+[MemoryPackUnion(13, typeof(WorldEdgeData))]//墙壁数据
 
 
 [MemoryPackable(SerializeLayout.Explicit)]

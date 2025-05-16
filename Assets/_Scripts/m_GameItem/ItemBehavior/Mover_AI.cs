@@ -109,7 +109,7 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
         if (Vector2.Distance(transform.position, TargetPosition) <= agent.stoppingDistance)
         {
             IsMoving = false;
-            Debug.Log("Arrived");
+          //  Debug.Log("Arrived");
             OnStopMoving?.Invoke();
             moveTween?.Kill(); // ֹͣTween
             rb2D.velocity = Vector2.zero; // ֹͣ�ٶ�

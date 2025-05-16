@@ -5169,7 +5169,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -18.6, y: -0.1, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3494807848842364525}
@@ -5238,6 +5238,8 @@ MonoBehaviour:
     _PersistentCalls: []
   UpdatedUI_Event:
     _PersistentCalls: []
+  DestroyItem_Event:
+    _PersistentCalls: []
   inputInventory: {fileID: 1609159006467445113}
   outputInventory: {fileID: 1624581069281484579}
   button: {fileID: 3537295198632000337}
@@ -5305,6 +5307,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  OnPickUp:
+    _PersistentCalls: []
 --- !u!114 &4050248366307163747
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5337,7 +5341,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 0.315, y: 0.26, z: 0.5}
+  m_Extents: {x: 0.38, y: 0.31, z: 0.5}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
@@ -5428,6 +5432,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _belongItem: {fileID: 0}
   _ui: {fileID: 0}
   Data:
     inventoryName: "\u8F93\u5165"
@@ -6286,6 +6291,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _belongItem: {fileID: 0}
   _ui: {fileID: 0}
   Data:
     inventoryName: "\u8F93\u51FA"

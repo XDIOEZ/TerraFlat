@@ -18,7 +18,7 @@ public class Grass : Item, IFood
         }
     }
     // 实现 IHungry 接口的 Foods 属性
-    public Hunger_Water Foods
+    public Hunger_FoodAndWater Foods
     {
         get => Data.Energy_food; // 如果 Data 未初始化，返回默认值
         set => Data.Energy_food = value;
@@ -37,7 +37,7 @@ public class Grass : Item, IFood
         OnNutrientChanged?.Invoke();
     }
 
-    public Hunger_Water BeEat(float eatSpeed)
+    public Hunger_FoodAndWater BeEat(float eatSpeed)
     {
         if (Item_Data == null || Foods == null) return null;
 
@@ -71,9 +71,9 @@ public class Grass : Item, IFood
 public interface IFood
 {
     [ShowNativeProperty]
-    Hunger_Water Foods { get; set; }
+    Hunger_FoodAndWater Foods { get; set; }
 
-    Hunger_Water BeEat(float BeEatSpeed);
+    Hunger_FoodAndWater BeEat(float BeEatSpeed);
 
     public IFood SelfFood { get => this; set => throw new System.NotImplementedException(); }
 

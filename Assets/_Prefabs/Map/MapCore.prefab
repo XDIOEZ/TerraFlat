@@ -64,6 +64,8 @@ MonoBehaviour:
     _PersistentCalls: []
   UpdatedUI_Event:
     _PersistentCalls: []
+  DestroyItem_Event:
+    _PersistentCalls: []
   tileMapData:
     Name: MapCore
     ID: 51333
@@ -88,8 +90,9 @@ MonoBehaviour:
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: 
     Guid: 87
+    WorldEdgeDatas: []
   tileMap: {fileID: 1341018454356474760}
-  worldEdges: []
+  worldEdges_GameObject: []
 --- !u!1 &5060533163246685201
 GameObject:
   m_ObjectHideFlags: 0
@@ -167,9 +170,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70bd44a44cd62c64fbfc1eea95b24880, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_OverrideByGrid: 0
-  m_UseMeshPrefab: {fileID: 0}
-  m_CompressBounds: 0
+  m_OverrideByGrid: 1
+  m_UseMeshPrefab: {fileID: 7644727334350909016}
+  m_CompressBounds: 1
   m_OverrideVector: {x: 1, y: 1, z: 1}
 --- !u!114 &7640688761861801332
 MonoBehaviour:
@@ -184,7 +187,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   surface: {fileID: 8724474972448035700}
-  OnStartBuild: 0
+  OnStartBuild: 1
 --- !u!1 &7644727334350909016
 GameObject:
   m_ObjectHideFlags: 0

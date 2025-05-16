@@ -21,7 +21,7 @@ namespace TheKiwiCoder {
             if (Time.time - startTime >= duration) {
                 return State.Success;
             }
-            Debug.Log("Wait");
+           // Debug.Log("Wait");
          /*   currentDuration = Time.time - startTime;
             currentTime = Time.time;*/
             return State.Running;

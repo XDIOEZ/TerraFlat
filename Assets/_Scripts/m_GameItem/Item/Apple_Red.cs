@@ -1,63 +1,97 @@
-using ColorThief;
+﻿using UnityEngine;
 using DG.Tweening;
-using MemoryPack;
-using NUnit.Framework.Interfaces;
-using NaughtyAttributes;
-using System.Collections;
-using System.Collections.Generic;
 using UltEvents;
-using UnityEngine;
 
-public class Apple_Red : Item,IFood
+// 🍎 红苹果，作为食物的 Item 实现
+public class Apple_Red : Item, IFood
 {
-    public Apple_Red_Data _data;
+    // 数据引用
+    public FoodData _data;
+
+    // 当前吃掉的数值进度
+    public float EatingValue = 0f;
+
+    // 实现 Item 抽象属性
     public override ItemData Item_Data
     {
-        get
-        {
-            return _data;
-        }
-        set
-        {
-            _data = (Apple_Red_Data)value;
-        }
+        get => _data;
+        set => _data = (FoodData)value;
     }
-    public Hunger_Water Foods { get => _data.Energy_food; set => _data.Energy_food = value; }
-    public UltEvent OnNutrientChanged { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
-    public float EatingValue = 0;
-    public IFood SelfFood { get => this; set => throw new System.NotImplementedException(); }
+
+    // IFood 实现：能量水分数据
+    public Hunger_FoodAndWater Foods
+    {
+        get => _data.Energy_food;
+        set => _data.Energy_food = value;
+    }
+
+    // 抛出未实现异常（可扩展）
+    public UltEvent OnNutrientChanged
+    {
+        get => throw new System.NotImplementedException();
+        set => throw new System.NotImplementedException();
+    }
+
+    public IFood SelfFood
+    {
+        get => this;
+        set => throw new System.NotImplementedException();
+    }
+
+    /// <summary>
+    /// 调用吃的行为
+    /// </summary>
     public override void Act()
     {
+        var hunger = BelongItem.GetComponent<IHunger>();
+        if (hunger == null) return;
+
+        hunger.Eat(this);
+
+
     }
 
-    public Hunger_Water BeEat(float eatSpeed)
+    /// <summary>
+    /// 被吃掉逻辑，返回营养值（如果吃完）
+    /// </summary>
+    public Hunger_FoodAndWater BeEat(float eatSpeed)
     {
-        if (Item_Data == null || Foods == null)  return null;
-
-        // ʹ�� DOTween ����������
-        SelfFood.ShakeItem(this.transform);
+        if (_data == null || Foods == null)
+            return null;
 
         EatingValue += eatSpeed;
+
+        // 抖动动画
+        SelfFood.ShakeItem(transform);
+
         if (EatingValue >= Foods.MaxFood)
         {
+            // 减少堆叠数量
             Item_Data.Stack.Amount--;
 
+            // UI 更新通知
             UpdatedUI_Event?.Invoke();
 
+            // 营养值补满
             Foods.Food = Foods.MaxFood;
             Foods.Water = Foods.MaxWater;
-             
+
             EatingValue = 0;
 
             if (Item_Data.Stack.Amount <= 0)
             {
-                //ֹͣDoTween����
-                transform.DOKill();
-                Destroy(gameObject);
+                Destroy(gameObject); // 吃完销毁
             }
+
             return Foods;
         }
+
         return null;
     }
-}
 
+    public void OnDestroy()
+    {
+        DestroyItem_Event.Invoke();
+        transform.DOKill(); // 停止动画
+    }
+}

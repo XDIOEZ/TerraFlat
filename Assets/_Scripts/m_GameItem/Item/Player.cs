@@ -47,7 +47,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     }
 
     [Tooltip("营养数据")]
-    public Hunger_Water Foods
+    public Hunger_FoodAndWater Foods
     {
         get => Data.hunger;
         set => Data.hunger = value;
@@ -159,6 +159,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     public UltEvent OnNutrientChanged { get; set; }
     public UltEvent onSave { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public UltEvent onLoad { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public Item Belong_Item { get => this;}
 
 
     #endregion
@@ -245,41 +246,46 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     {
         throw new NotImplementedException(); // 抛出未实现异常。
     }
-
-    // 执行吃操作，参数为食物被吃掉的量
-    public void Eat(float eatSpeed = 1f)
+    /// <summary>
+    /// 执行吃操作，参数为吃掉的速度（默认使用玩家速度）
+    /// </summary>
+    public void Eat(IFood food)
     {
-        eatSpeed = Speed; // 吃食物的速度受玩家速度影响。
-        var triggerAttack = GetComponentInChildren<ITriggerAttack>();
-        if (triggerAttack == null || triggerAttack.Weapon_GameObject == null)
+        // 获取武器上的食物接口
+        IFood iFood = food;
+
+        if (iFood == null)
         {
-         //   Debug.Log("未找到 ITriggerAttack 或其 Weapon_GameObject！");
+            Debug.LogWarning("Weapon 上缺少 IFood 接口！");
             return;
         }
 
-        GameObject weapon = triggerAttack.Weapon_GameObject;
+        // 获取食物数据
+        Hunger_FoodAndWater foodData = iFood.Foods;
 
-        IFood iFood = weapon.GetComponent<IFood>();
-        Hunger_Water foods_ = iFood.Foods;
-
-        if (iFood == null || foods_ == null)
+        if (foodData == null)
         {
-            Debug.Log("Weapon 上缺少 IFood 或 Hunger_Water 组件！");
+            Debug.LogWarning("IFood 的 Foods 数据为 null！");
             return;
         }
 
+        // 获取玩家的饥饿数据
         if (Foods == null)
         {
-            Debug.Log("当前对象上的 Foods 数据未设置！");
+            Debug.LogWarning("当前对象上的 Foods 数据未设置！");
             return;
         }
 
-        if(iFood.BeEat(eatSpeed)!= null)
+        // 如果吃成功（食物返回了营养值），则恢复玩家的饥饿值
+        var eatenResult = iFood.BeEat(EatingSpeed);
+
+        if (eatenResult != null)
         {
-            Foods.Food += foods_.Food*0.5f;
-            Foods.Water += foods_.Water * 0.5f;
+            Foods.Food += eatenResult.Food * 0.5f;
+            Foods.Water += eatenResult.Water * 0.5f;
         }
     }
+
 
 
     // 执行死亡操作

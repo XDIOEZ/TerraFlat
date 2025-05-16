@@ -10,11 +10,14 @@ public partial class ItemValue
 {
     [Tooltip("参数名称")]
     public string ValueName;
+
     [Tooltip("最小值")]
     public float MinValue;
+
     [Tooltip("当前值")]
     [SerializeField]
     private float currentValue;
+
     [Tooltip("最大值")]
     public float MaxValue;
 
@@ -32,5 +35,13 @@ public partial class ItemValue
             currentValue = value;
             OnCurrentValueChanged.Invoke(currentValue); // 触发事件
         }
+    }
+
+    /// <summary>
+    /// 清除所有事件监听器，防止内存泄漏或事件重复触发
+    /// </summary>
+    public void ClearEvents()
+    {
+        OnCurrentValueChanged.Clear();
     }
 }

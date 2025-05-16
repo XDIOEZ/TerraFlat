@@ -40,8 +40,7 @@ public class EatFood : ActionNode
 
                         if(Food.Foods.Food > 0)
                         {
-                            Food.BeEat(1/Self.EatingSpeed * EatingSpeedRate) ;
-                            Self.Eat(1/Self.EatingSpeed * EatingSpeedRate);
+                            Self.Eat(Food);
                             StartEatingTime = Time.time;
                         }
 
