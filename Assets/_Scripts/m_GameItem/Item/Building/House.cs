@@ -5,12 +5,24 @@ using UnityEngine.SceneManagement;
 
 public class House : Item, ISave_Load, IHealth, IBuilding
 {
+    #region 字段与序列化字段 
     [Header("房屋数据")]
     [SerializeField] private HouseData data = new HouseData();
 
-    public static Dictionary<string,Vector2> housePos = new Dictionary<string, Vector2>();
+    [Header("组件")]
+    public List<BoxCollider2D> colliders;
+    public Building_InstallAndUninstall _InstallAndUninstall = new();
 
-    // 接口字段映射到 data 的具体值
+    [Header("建筑场景模板")]
+    public WorldSaveSO buildingSO;
+    #endregion
+
+    #region 接口实现 
+    // ISave_Load 接口实现 
+    public UltEvent onSave { get; set; } = new UltEvent();
+    public UltEvent onLoad { get; set; } = new UltEvent();
+
+    // IHealth 接口实现 
     public Hp Hp
     {
         get => data.hp;
@@ -31,124 +43,126 @@ public class House : Item, ISave_Load, IHealth, IBuilding
         }
     }
 
+    public UltEvent OnDefenseChanged { get; set; } = new UltEvent();
+    public UltEvent OnHpChanged { get; set; } = new UltEvent();
+
+    // IBuilding 接口实现 
+    public bool IsInstalled
+    {
+        get => data.isBuilding;
+        set => data.isBuilding = value;
+    }
+
+    public bool BePlayerTaken { get; set; } = false;
+
+    // Item 基类实现 
     public override ItemData Item_Data
     {
         get => data;
         set => data = value as HouseData ?? new HouseData();
     }
+    #endregion
 
-    public List<BoxCollider2D> colliders;
+    #region Unity 生命周期 
+    private void Start()
+    {
+        var sceneChanger = GetComponentInChildren<SceneChange>();
 
-    public Building_InstallAndUninstall _InstallAndUninstall = new();
+        InitHouseInside();
 
-    // 接口事件
-    public UltEvent onSave { get; set; } = new UltEvent();
-    public UltEvent onLoad { get; set; } = new UltEvent();
-    public UltEvent OnDefenseChanged { get; set; } = new UltEvent();
-    public UltEvent OnHpChanged { get; set; } = new UltEvent();
-    public bool IsInstalled { get => data.isBuilding; set => data.isBuilding = value; }
-    public bool BePlayerTaken { get; set; } = false;
-    public WorldSaveSO buildingSO;//房屋数据模板
+       // sceneChanger.OnTp+=InitHouseInside;
+        _InstallAndUninstall.Init(this.transform);
 
-    // Act：建筑可能被攻击等行为
+        if (BelongItem != null)
+        {
+            BePlayerTaken = true;
+        }
+    }
+
+    private void Update()
+    {
+        if (!IsInstalled)
+            _InstallAndUninstall.Update();
+    }
+
+    private void OnDestroy()
+    {
+        _InstallAndUninstall.CleanupGhost();
+    }
+    #endregion
+
+    #region 核心方法 
     public override void Act()
     {
         Install();
     }
 
-    // Death：建筑被摧毁
     public void Death()
     {
         UnInstall();
     }
 
-    [Tooltip("进入房屋函数")]
-    void EnterHouse()
-    {
-        if (data.sceneName == "")
-        {
-            data.sceneName += buildingSO.buildingName;
-           
-
-            Transform TpObject = GetComponentInChildren<SceneChange>().transform;
-            data.sceneName += "=>$";
-
-            //添加当前场景名称
-            data.sceneName += SceneManager.GetActiveScene().name;
-
-            //添加房屋位置
-            data.sceneName += "$<=";
-
-            data.sceneName +=Random.Range(0, 1000000);
-
-        }
-
-        if (!SaveAndLoad.Instance.SaveData.MapSaves_Dict.ContainsKey(data.sceneName))
-        {
-            //地图中不存在对应场景 需要新添加场景固定模板
-            SaveAndLoad.Instance.SaveData.MapSaves_Dict.Add(data.sceneName, buildingSO.SaveData.MapSaves_Dict[buildingSO.buildingName]);
-        }
-
-        GetComponentInChildren<SceneChange>().TPTOSceneName = data.sceneName;
-        //传送位置设置为SO中的固定入口位置
-        GetComponentInChildren<SceneChange>().TeleportPosition = buildingSO.buildingEntrance;
-        //当前房屋的入口位置
-        House.housePos[data.sceneName] = GetComponentInChildren<SceneChange>().transform.position;
-    }
-
-    public void Start()
-    {
-        GetComponentInChildren<SceneChange>().OnTp += EnterHouse;
-
-       _InstallAndUninstall.Init(this.transform);
-
-      /*  if (IsInstalled)
-        {
-            //使colliders都有效
-            foreach (BoxCollider2D collider in colliders)
-            {
-                collider.enabled = true;
-            }
-        }*/
-        if(BelongItem != null)
-        {
-            BePlayerTaken = true;
-        }
-    }
-    public void Update()
-    {
-        if(IsInstalled == false)
-        _InstallAndUninstall.Update();
-    }
-
-    // 安装建筑（比如激活场景）
+    /// <summary>
+    /// 安装建筑（如：激活场景）
+    /// </summary>
     public void Install()
     {
         _InstallAndUninstall.Install();
     }
 
-    // 卸载建筑（比如卸载场景）
+    /// <summary>
+    /// 卸载建筑（如：卸载场景）
+    /// </summary>
     public void UnInstall()
     {
         _InstallAndUninstall.UnInstall();
     }
 
-    // 由你自己实现
+    /// <summary>
+    /// 保存建筑数据 
+    /// </summary>
     public void Save()
     {
-        // TODO: 你来实现保存逻辑
-        onSave?.Invoke(); // 通知外部已保存完成
+        onSave?.Invoke(); // 通知外部：保存已完成 
     }
 
+    /// <summary>
+    /// 加载建筑数据 
+    /// </summary>
     public void Load()
     {
-        // TODO: 你来实现加载逻辑
         OnHpChanged?.Invoke();
         OnDefenseChanged?.Invoke();
-        onLoad?.Invoke(); // 通知外部已加载完成
+        onLoad?.Invoke(); // 通知外部：加载已完成 
     }
-    public void OnDestroy()
+    #endregion
+
+    #region 房屋特有方法 
+    private void InitHouseInside()
     {
-        _InstallAndUninstall.CleanupGhost();
+        // 构造新的嵌套场景路径：当前路径 => 建筑名 + 随机值
+        if (string.IsNullOrEmpty(data.sceneName))
+        {
+            // 生成唯一随机后缀
+            int randomId = Random.Range(0, 1000000); // 范围你可自定义
+            string randomSuffix = $"-{randomId}";
+            data.sceneName = buildingSO.buildingName + randomSuffix;
+            // 初始化房间内部设备
+            if (!SaveAndLoad.Instance.SaveData.MapSaves_Dict.ContainsKey(data.sceneName))
+            {
+                var buildingData = buildingSO.SaveData.MapSaves_Dict[buildingSO.buildingName];
+                SaveAndLoad.Instance.SaveData.MapSaves_Dict.Add(data.sceneName, buildingData);
+            }
+        }
+
+        var changer = GetComponentInChildren<SceneChange>();
+        changer.TPTOSceneName = data.sceneName;
+        changer.TeleportPosition = buildingSO.buildingEntrance;
+
+        SaveAndLoad.Instance.SaveData.Scenen_Building_Pos[data.sceneName] = (Vector2)changer.transform.position;
+        SaveAndLoad.Instance.SaveData.Scenen_Building_Name[data.sceneName] = SceneManager.GetActiveScene().name;
     }
+
+
+    #endregion 
 }

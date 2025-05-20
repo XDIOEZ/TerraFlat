@@ -40,7 +40,32 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         Weapon_GameObject = _weapon;
         Attacker = weaponGameObject.GetComponent<IAttackState>();
         WeaponData = weaponGameObject.GetComponent<IColdWeapon>();
+        if (_weapon.GetComponentInChildren<IDamageSender>()!= null)
+        _weapon.GetComponentInChildren<IDamageSender>().OnDamage += karou;
     }
+    bool HitStop = false;
+    void karou(float damage)
+    {
+        if(damage>1)
+        StartCoroutine(HitPauseTransform());
+    }
+
+    IEnumerator HitPauseTransform()
+    {
+        if (Weapon_GameObject == null) yield break;
+        float rotationSpeed = RotationSpeed;
+        HitStop = true;
+        RotationSpeed= 0;
+
+        yield return new WaitForSeconds(0.15f);
+
+        HitStop = false;  
+        RotationSpeed = rotationSpeed;
+    }
+
+
+
+
     #endregion
 
     #region 挂接的武器数据和行为接口
@@ -205,6 +230,10 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     public void PerformStab(Vector2 startTarget, float speed, float maxDistance)
     {
+        if (HitStop)
+        {
+            speed = 0;
+        }
         // 坐标系转换：如果有父对象，则将鼠标目标转换为本地坐标
         Vector2 mouseTargetLocal = transform.parent != null ?
             (Vector2)transform.parent.InverseTransformPoint(MouseTarget) :

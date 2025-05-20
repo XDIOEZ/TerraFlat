@@ -21783,7 +21783,7 @@ MonoBehaviour:
       Volume: 1
       CanBePickedUp: 1
     _transform:
-      Position: {x: -19.29, y: 1.49, z: 3.34}
+      Position: {x: -19.29, y: 1.49, z: 0}
       Rotation: {x: -0, y: -0, z: -0, w: 1}
       Scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
@@ -21812,7 +21812,7 @@ MonoBehaviour:
       MaxFood: 100
       Water: 100
       MaxWater: 100
-    Name_User: Ikun
+    Name_User: "\u9ED8\u8BA4"
 --- !u!61 &111063900145718861
 BoxCollider2D:
   m_ObjectHideFlags: 0

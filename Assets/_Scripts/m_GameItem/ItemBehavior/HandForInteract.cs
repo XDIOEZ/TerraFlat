@@ -1,4 +1,5 @@
 using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,7 +7,7 @@ using UnityEngine;
 public class HandForInteract : MonoBehaviour ,IInteracter
 {
     
-    [Tooltip(" 当前交互对象"),ShowNonSerializedField]
+    [Tooltip(" 当前交互对象"),ShowInInspector]
     public IInteract Intractable_go;
 
     public GameObject User { get => user; set => user = value; }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UltEvents;
 using UnityEngine;
@@ -32,36 +33,40 @@ public class WorldEdge : Item, ISave_Load, IInteract
         transform.position = Data._transform.Position;
         transform.rotation = Data._transform.Rotation;
         transform.localScale = Data._transform.Scale;
-        TeleportPosition = Data.TeleportPosition;
 
         string sceneName = SceneManager.GetActiveScene().name;
-        string extracted = ExtractContentBetweenDollars(sceneName);
 
-        if (string.IsNullOrEmpty(extracted))
+        string targetScene = ExtractTargetSceneName(sceneName);
+        if (string.IsNullOrEmpty(targetScene))
         {
-         //   Debug.LogError($"[WorldEdge] 场景名称格式错误（需要两个 '$'）: {sceneName}");
+            Debug.LogError($"[WorldEdge] 场景名格式不正确: {sceneName}");
             return;
         }
 
-        TPTOSceneName = extracted;
-        TeleportPosition = House.housePos[sceneName];
+        TPTOSceneName = targetScene;
+       
     }
 
-    public string ExtractContentBetweenDollars(string input)
+
+    /// <summary>
+    /// 从嵌套场景名中提取“目标场景名”
+    /// 示例：从 "A=>B=>C" 中提取 "B"
+    /// </summary>
+    public string ExtractTargetSceneName(string input)
     {
-        int firstIndex = input.IndexOf('$');
-        int secondIndex = input.IndexOf('$', firstIndex + 1);
-        if (firstIndex == -1 || secondIndex == -1 || secondIndex != input.LastIndexOf('$'))
-            return null;
-
-        return input.Substring(firstIndex + 1, secondIndex - firstIndex - 1);
+        /* var parts = input.Split(new[] { "=>" }, StringSplitOptions.RemoveEmptyEntries);
+         if (parts.Length < 2) return null; // 至少需要 A=>B
+         return parts[parts.Length - 2]; // 倒数第二个就是目标场景名*/
+        TeleportPosition = SaveAndLoad.Instance.SaveData.Scenen_Building_Pos[input];
+        return SaveAndLoad.Instance.SaveData.Scenen_Building_Name[input];
     }
+
 
     public void Interact_Start(IInteracter interacter = null)
     {
         if (string.IsNullOrEmpty(TPTOSceneName))
         {
-            Debug.LogWarning("[WorldEdge] 目标场景为空！");
+            Debug.LogWarning("[WorldEdge] 目标场景为空！:"+ TPTOSceneName);
             return;
         }
 

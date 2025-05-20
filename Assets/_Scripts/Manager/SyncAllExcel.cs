@@ -14,7 +14,7 @@ public class SyncAllExcel
         // 然后去做 GameRes.Awake()
 
         var gameRes = GameRes.Instance;
-        gameRes.Awake();
+        gameRes.LoadResources();
 
         // 轮询资源是否加载完成
         EditorApplication.update += CheckResourcesLoaded;

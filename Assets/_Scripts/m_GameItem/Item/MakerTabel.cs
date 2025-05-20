@@ -10,6 +10,8 @@ using System.Linq;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.UI;
+using Sirenix.OdinInspector;
+using ButtonAttribute = Sirenix.OdinInspector.ButtonAttribute;
 
 public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IHealth,IBuilding
 {
@@ -53,7 +55,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         }
     }
 
-    [ShowNonSerializedField]
+    [ShowInInspector]
     public Dictionary<string, Inventory> children_Inventory_GameObject = new Dictionary<string, Inventory>();
     public Dictionary<string, Inventory> Children_Inventory_GameObject
     {
@@ -86,6 +88,8 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
     void Start()
     {
+        IInventoryData inventoryData = this;
+        inventoryData.FillDict_SetBelongItem(transform);
 
         button.onClick.AddListener(() => Work_Start());
         closeButton.onClick.AddListener(() => CloseUI());
@@ -107,7 +111,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
     #region °²×°ºÍ²ð³ý
 
-    [Button]
+    [Sirenix.OdinInspector.Button]
     public void UnInstall()
     {
         _InstallAndUninstall.UnInstall();

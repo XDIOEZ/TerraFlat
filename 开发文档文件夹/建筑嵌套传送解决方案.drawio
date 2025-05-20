@@ -1,0 +1,45 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
+  <diagram id="bRi_iZHggD-AGo6ihj1B" name="5/19">
+    <mxGraphModel dx="1899" dy="636" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-1" value="当前场景 name=Curent_A" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="230" y="550" width="170" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-4" value="房屋_159263" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="334" y="870" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-5" value="" style="triangle;whiteSpace=wrap;html=1;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="344" y="800" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="cKNpxAOtfQrx18BVKeJw-6" target="cKNpxAOtfQrx18BVKeJw-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-8" value="玩家进入房屋" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="cKNpxAOtfQrx18BVKeJw-7">
+          <mxGeometry x="-0.029" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-6" value="Actor" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="470" y="950" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-9" value="房屋_159263&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;玩家在房间需要&lt;/div&gt;&lt;div&gt;返回到上一个场景&lt;/div&gt;" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="-30" y="895" width="170" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-11" value="建筑之间的数据管理单例&amp;nbsp;&lt;div&gt;记录返回时的位置和返回时的场景&lt;/div&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1210" width="270" height="148" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-12" value="字典A(key = 场景的名字) (value = 建筑外部门的位置)&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;字典B(key=当前场景的名字)(value=建筑外部场景的名字 也就是包含建筑的场景的名字)&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="cKNpxAOtfQrx18BVKeJw-11">
+          <mxGeometry y="40" width="270" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-13" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="cKNpxAOtfQrx18BVKeJw-11">
+          <mxGeometry y="114" width="270" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="cKNpxAOtfQrx18BVKeJw-14" value="字典需要交给Manger管理" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="cKNpxAOtfQrx18BVKeJw-11">
+          <mxGeometry y="122" width="270" height="26" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -73,7 +73,7 @@ public  abstract partial class ItemData
     [Foldout("物品数据")]
     [MemoryPackOrder(12)]
     [Tooltip("物品缩放")]
-    public ItemTransform _transform;
+    public ItemTransform _transform = new ();
 
     [Foldout("物品数据")]
     [MemoryPackOrder(13)]

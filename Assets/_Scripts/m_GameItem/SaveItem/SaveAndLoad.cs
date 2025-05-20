@@ -31,6 +31,35 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     public void Start()
     {
         DontDestroyOnLoad(gameObject);
+        //调试模式自动调用场景中所有的load方法
+        //获取所有IloadAndSave接口
+
+        // 第一步：获取场景中所有的 Item（包括非激活状态）
+        Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
+
+        // 第二步：先调用 Save()，避免遗漏
+        foreach (Item item in allItems)
+        {
+            if (item is ISave_Load saveableItem)
+            {
+                try
+                {
+                    saveableItem.Load();
+                    //将无效的物品添加到临时失效物体列表
+                    if (!item.gameObject.activeInHierarchy)
+                    {
+                        GameObject_False.Add(item.gameObject);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"加载物品失败: {item.name}", item);
+                    Debug.LogException(ex);
+                }
+            }
+
+
+        }
     }
 
     [Serializable]
@@ -498,10 +527,20 @@ public partial class GameSaveData
     public string saveName = "defaultSaveName";//存档名称
     [ShowInInspector]
     //存档数据结构
-    public Dictionary<string, MapSave> MapSaves_Dict = new Dictionary<string, MapSave>();
+    public Dictionary<string, MapSave> MapSaves_Dict = new();
     //玩家数据
     [ShowInInspector]
-    public Dictionary<string, PlayerData> PlayerData_Dict = new Dictionary<string, PlayerData>();
+    public Dictionary<string, PlayerData> PlayerData_Dict = new();
+    //建筑与场景之间的切换表_位置
+    [ShowInInspector]
+    public Dictionary<string, Vector2> Scenen_Building_Pos = new();
+    //建筑与场景之间的切换表_名字
+    [ShowInInspector]
+    public Dictionary<string, string> Scenen_Building_Name = new();
+
+
+
+
 
     public string leaveTime = "0";//离开时间
 

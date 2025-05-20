@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -8,48 +8,49 @@ using Sirenix.OdinInspector;
 
 public class GameRes : SingletonAutoMono<GameRes>
 {
-    #region ×Ö¶Î
-    // ¼ÓÔØ½ø¶È
-    public int LoadedCount = 0; // µ±Ç°ÒÑ¼ÓÔØµÄ×ÊÔ´ÊıÁ¿
-    [Header("Prefab±êÇ©ÁĞ±í")]
+    #region å­—æ®µ
+    // åŠ è½½è¿›åº¦
+    public int LoadedCount = 0; // å½“å‰å·²åŠ è½½çš„èµ„æºæ•°é‡
+    [Header("Prefabæ ‡ç­¾åˆ—è¡¨")]
     public List<string> ADBLabels_Prefab = new List<string>();
-    [Header("ºÏ³ÉÅä·½±êÇ©ÁĞ±í")]
+    [Header("åˆæˆé…æ–¹æ ‡ç­¾åˆ—è¡¨")]
     public List<string> ADBLabels_CraftingRecipe = new List<string>();
-    [Header("TileBase±êÇ©ÁĞ±í")]
+    [Header("TileBaseæ ‡ç­¾åˆ—è¡¨")]
     public List<string> ADBLabels_TileBase = new List<string>();
 
-    // ºÏ²¢ºóµÄÔ¤ÖÆÌå×Öµä
+    // åˆå¹¶åçš„é¢„åˆ¶ä½“å­—å…¸
     [ShowInInspector]
-    public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>(); // Ö»±£´æÔ¤ÖÆÌå
+    public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>(); // åªä¿å­˜é¢„åˆ¶ä½“
 
-    // ¸ÄÎª´æ´¢Åä·½¶ÔÏó×Öµä
+    // æ”¹ä¸ºå­˜å‚¨é…æ–¹å¯¹è±¡å­—å…¸
     [ShowInInspector]
     public Dictionary<string, Recipe> recipeDict = new Dictionary<string, Recipe>();
-    // ¸ÄÎª´æ´¢TileBase¶ÔÏó×Öµä
+    // æ”¹ä¸ºå­˜å‚¨TileBaseå¯¹è±¡å­—å…¸
     [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
 
 
     #endregion
 
-    #region UnityÉúÃüÖÜÆÚ·½·¨
+    #region Unityç”Ÿå‘½å‘¨æœŸæ–¹æ³•
 
-    public void Awake()
+    float loadStartTime;
+
+    public void LoadResources()
     {
+        loadStartTime = Time.realtimeSinceStartup; // è®°å½•åŠ è½½å¼€å§‹æ—¶é—´
+
         ADBLabels_Prefab.Add("Prefab");
         ADBLabels_CraftingRecipe.Add("CraftingRecipe");
         ADBLabels_TileBase.Add("TileBase");
 
-        //¼ÓÔØÔ¤ÖÆ¼ş
         LoadPrefabByLabels(ADBLabels_Prefab);
-        //¼ÓÔØÅä·½
         LoadRecipeByLabels(ADBLabels_CraftingRecipe);
-        //¼ÓÔØTileBase
         LoadTileBaseByLabels(ADBLabels_TileBase);
     }
     void Start()
     {
-      //  print("GameResManager Start");
+        LoadResources();
     }
     #endregion
 
@@ -68,7 +69,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
         else
         {
-            Debug.LogError($"Ô¤ÖÆ¼ş²»´æÔÚ: {prefab}");
+            Debug.LogError($"é¢„åˆ¶ä»¶ä¸å­˜åœ¨: {prefab}");
             return null;
         }
     }
@@ -81,7 +82,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
         else
         {
-            Debug.LogWarning($"Î´ÕÒµ½ÃûÎª \"{prefabName}\" µÄÔ¤ÖÆÌå£¡");
+            Debug.LogWarning($"æœªæ‰¾åˆ°åä¸º \"{prefabName}\" çš„é¢„åˆ¶ä½“ï¼");
             return null;
         }
     }
@@ -91,27 +92,27 @@ public class GameRes : SingletonAutoMono<GameRes>
         return tileBaseDict.ContainsKey(tileBaseName)? tileBaseDict[tileBaseName] : null;
     }
 
-    #region Í¨¹ı±êÇ©¼ÓÔØPrefabµÄ·½·¨
+    #region é€šè¿‡æ ‡ç­¾åŠ è½½Prefabçš„æ–¹æ³•
     /// <summary>
-    /// Í¨¹ı±êÇ©ÁĞ±í¼ÓÔØÔ¤ÖÆ¼ş
+    /// é€šè¿‡æ ‡ç­¾åˆ—è¡¨åŠ è½½é¢„åˆ¶ä»¶
     /// </summary>
     public void LoadPrefabByLabels(List<string> labels)
     {
         if (labels == null || labels.Count == 0)
         {
-            Debug.LogWarning("±êÇ©ÁĞ±íÎª¿Õ»òÎ´Ìá¹©¡£");
+            Debug.LogWarning("æ ‡ç­¾åˆ—è¡¨ä¸ºç©ºæˆ–æœªæä¾›ã€‚");
             return;
         }
 
-        // Ê¹ÓÃ±êÇ©ÁĞ±í¼ÓÔØ×ÊÔ´
+        // ä½¿ç”¨æ ‡ç­¾åˆ—è¡¨åŠ è½½èµ„æº
         Addressables.LoadAssetsAsync<GameObject>(labels, null, Addressables.MergeMode.Union).Completed += OnLoadCompleted;
 
     }
 
     /// <summary>
-    /// ×ÊÔ´¼ÓÔØÍê³ÉµÄ»Øµ÷
+    /// èµ„æºåŠ è½½å®Œæˆçš„å›è°ƒ
     /// </summary>
-    /// <param name="handle">Òì²½²Ù×÷¾ä±ú</param>
+    /// <param name="handle">å¼‚æ­¥æ“ä½œå¥æŸ„</param>
     void OnLoadCompleted(AsyncOperationHandle<IList<GameObject>> handle)
     {
         if (handle.Status == AsyncOperationStatus.Succeeded)
@@ -120,49 +121,50 @@ public class GameRes : SingletonAutoMono<GameRes>
             {
                 if (prefab == null)
                 {
-                    Debug.LogError("¼ÓÔØµÄÔ¤ÖÆ¼şÎª¿Õ¡£");
+                    Debug.LogError("åŠ è½½çš„é¢„åˆ¶ä»¶ä¸ºç©ºã€‚");
                     continue;
                 }
 
                 if (AllPrefabs.ContainsKey(prefab.name))
                 {
-                    Debug.LogWarning($"Ô¤ÖÆ¼şÒÑ´æÔÚ: {prefab.name}");
+                    Debug.LogWarning($"é¢„åˆ¶ä»¶å·²å­˜åœ¨: {prefab.name}");
                 }
                 else
                 {
                     AllPrefabs[prefab.name] = prefab;
                     LoadedCount++;
-                    //Debug.Log($"³É¹¦¼ÓÔØ²¢Ìí¼ÓÔ¤ÖÆ¼ş: {prefab.name}");
+                    //Debug.Log($"æˆåŠŸåŠ è½½å¹¶æ·»åŠ é¢„åˆ¶ä»¶: {prefab.name}");
                 }
             }
+            Debug.Log($"é¢„åˆ¶ä½“èµ„æºåŠ è½½å®Œæˆï¼Œæ€»è€—æ—¶: {(Time.realtimeSinceStartup - loadStartTime) * 1000f:F0} ms");
         }
         else
         {
-            Debug.LogError("×ÊÔ´¼ÓÔØÊ§°Ü¡£");
+            Debug.LogError("èµ„æºåŠ è½½å¤±è´¥ã€‚");
         }
     }
     #endregion
 
-    #region Í¨¹ı±êÇ©¼ÓÔØÅä·½µÄ·½·¨
+    #region é€šè¿‡æ ‡ç­¾åŠ è½½é…æ–¹çš„æ–¹æ³•
         /// <summary>
-        /// Í¨¹ı±êÇ©ÁĞ±í¼ÓÔØÅä·½
+        /// é€šè¿‡æ ‡ç­¾åˆ—è¡¨åŠ è½½é…æ–¹
         /// </summary>
         public void LoadRecipeByLabels(List<string> labels)
         {
             if (labels == null || labels.Count == 0)
             {
-                Debug.LogWarning("±êÇ©ÁĞ±íÎª¿Õ»òÎ´Ìá¹©¡£");
+                Debug.LogWarning("æ ‡ç­¾åˆ—è¡¨ä¸ºç©ºæˆ–æœªæä¾›ã€‚");
                 return;
             }
 
-            // Ê¹ÓÃ±êÇ©ÁĞ±í¼ÓÔØ×ÊÔ´
+            // ä½¿ç”¨æ ‡ç­¾åˆ—è¡¨åŠ è½½èµ„æº
             Addressables.LoadAssetsAsync<Recipe>(labels, null, Addressables.MergeMode.Union).Completed += OnRecipeLoadCompleted;
 
         }
         /// <summary>
-        /// Åä·½¼ÓÔØÍê³ÉµÄ»Øµ÷
+        /// é…æ–¹åŠ è½½å®Œæˆçš„å›è°ƒ
         /// </summary>
-        /// <param name="handle">Òì²½²Ù×÷¾ä±ú</param>
+        /// <param name="handle">å¼‚æ­¥æ“ä½œå¥æŸ„</param>
         void OnRecipeLoadCompleted(AsyncOperationHandle<IList<Recipe>> handle)
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
@@ -171,49 +173,50 @@ public class GameRes : SingletonAutoMono<GameRes>
                 {
                     if (recipe == null)
                     {
-                        Debug.LogError("¼ÓÔØµÄÅä·½Îª¿Õ¡£");
+                        Debug.LogError("åŠ è½½çš„é…æ–¹ä¸ºç©ºã€‚");
                         continue;
                     }
 
                     if (recipeDict.ContainsKey(recipe.inputs.ToString()))
                     {
-                        Debug.LogWarning($"Åä·½ÒÑ´æÔÚ: {recipe.name}");
+                        Debug.LogWarning($"é…æ–¹å·²å­˜åœ¨: {recipe.name}");
                     }
                     else
 
                     {
                         recipeDict[recipe.inputs.ToString()] = recipe;
-                       // Debug.Log($"³É¹¦¼ÓÔØ²¢Ìí¼ÓÅä·½: {recipe.name}");
+                       // Debug.Log($"æˆåŠŸåŠ è½½å¹¶æ·»åŠ é…æ–¹: {recipe.name}");
                     }
                 }
-            }
+            Debug.Log($"SOèµ„æºåŠ è½½å®Œæˆï¼Œæ€»è€—æ—¶: {(Time.realtimeSinceStartup - loadStartTime) * 1000f:F0} ms");
+        }
             else
             {
-                Debug.LogError("Åä·½¼ÓÔØÊ§°Ü¡£");
+                Debug.LogError("é…æ–¹åŠ è½½å¤±è´¥ã€‚");
             }
         }
     #endregion
 
-    #region Í¨¹ı±êÇ©¼ÓÔØTileBaseµÄ·½·¨
+    #region é€šè¿‡æ ‡ç­¾åŠ è½½TileBaseçš„æ–¹æ³•
     /// <summary>
-    /// Í¨¹ı±êÇ©ÁĞ±í¼ÓÔØTileBase
+    /// é€šè¿‡æ ‡ç­¾åˆ—è¡¨åŠ è½½TileBase
     /// </summary>
     public void LoadTileBaseByLabels(List<string> labels)
     {
         if (labels == null || labels.Count == 0)
         {
-            Debug.LogWarning("±êÇ©ÁĞ±íÎª¿Õ»òÎ´Ìá¹©¡£");
+            Debug.LogWarning("æ ‡ç­¾åˆ—è¡¨ä¸ºç©ºæˆ–æœªæä¾›ã€‚");
             return;
         }
 
-        // Ê¹ÓÃ±êÇ©ÁĞ±í¼ÓÔØ×ÊÔ´
+        // ä½¿ç”¨æ ‡ç­¾åˆ—è¡¨åŠ è½½èµ„æº
         Addressables.LoadAssetsAsync<TileBase>(labels, null, Addressables.MergeMode.Union).Completed += OnTileBaseLoadCompleted;
 
     }
     /// <summary>
-    /// TileBase¼ÓÔØÍê³ÉµÄ»Øµ÷
+    /// TileBaseåŠ è½½å®Œæˆçš„å›è°ƒ
     /// </summary>
-    /// <param name="handle">Òì²½²Ù×÷¾ä±ú</param>
+    /// <param name="handle">å¼‚æ­¥æ“ä½œå¥æŸ„</param>
     void OnTileBaseLoadCompleted(AsyncOperationHandle<IList<TileBase>> handle)
     {
         if (handle.Status == AsyncOperationStatus.Succeeded)
@@ -222,31 +225,32 @@ public class GameRes : SingletonAutoMono<GameRes>
             {
                 if (tileBase == null)
                 {
-                    Debug.LogError("¼ÓÔØµÄTileBaseÎª¿Õ¡£");
+                    Debug.LogError("åŠ è½½çš„TileBaseä¸ºç©ºã€‚");
                     continue;
                 }
 
                 if (tileBase.name == null)
                 {
-                    Debug.LogError("TileBaseµÄnameÎª¿Õ¡£");
+                    Debug.LogError("TileBaseçš„nameä¸ºç©ºã€‚");
                     continue;
                 }
 
                 if (tileBaseDict.ContainsKey(tileBase.name))
                 {
-                    Debug.LogWarning($"TileBaseÒÑ´æÔÚ: {tileBase.name}");
+                    Debug.LogWarning($"TileBaseå·²å­˜åœ¨: {tileBase.name}");
                 }
                 else
                 {
                     tileBaseDict[tileBase.name] = tileBase;
                     LoadedCount++;
-                    //Debug.Log($"³É¹¦¼ÓÔØ²¢Ìí¼ÓTileBase: {tileBase.name}");
+                    //Debug.Log($"æˆåŠŸåŠ è½½å¹¶æ·»åŠ TileBase: {tileBase.name}");
                 }
             }
+            Debug.Log($"TileBaseèµ„æºåŠ è½½å®Œæˆï¼Œæ€»è€—æ—¶: {(Time.realtimeSinceStartup - loadStartTime) * 1000f:F0} ms");
         }
         else
         {
-            Debug.LogError("TileBase¼ÓÔØÊ§°Ü¡£");
+            Debug.LogError("TileBaseåŠ è½½å¤±è´¥ã€‚");
         }
     }
     #endregion

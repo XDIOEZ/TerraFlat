@@ -1,4 +1,5 @@
-﻿using UltEvents;
+﻿using Sirenix.OdinInspector;
+using UltEvents;
 using UnityEngine;
 [RequireComponent(typeof(Collider2D))]
 public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
@@ -25,6 +26,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
 
     #region 属性
     public bool IsDamageModeEnabled { get; set; } = true;
+    [ShowInInspector]
     public UltEvent<float> OnDamage { get; set; } = new UltEvent<float>();
 
     public Damage DamageValue

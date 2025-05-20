@@ -105,6 +105,7 @@ public class Inventory : MonoBehaviour
                 if (!slot.IsFull && slot._ItemData != null &&
                     slot._ItemData.ItemSpecialData == inputItemData.ItemSpecialData &&
                     slot._ItemData.PrefabPath == inputItemData.PrefabPath &&
+                    slot._ItemData.Name == inputItemData.Name &&
                     slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
                 {
                     stackIndex = i;
@@ -112,6 +113,7 @@ public class Inventory : MonoBehaviour
                 }
             }
         }
+
 
         // 如果无法堆叠，则寻找空槽位
         if (stackIndex == -1)
