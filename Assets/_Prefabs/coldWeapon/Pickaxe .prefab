@@ -132,6 +132,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  OnPickUp:
+    _PersistentCalls: []
 --- !u!61 &2060777651345100344
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -189,41 +191,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35a37698d18ee7c4d8c5e0eb5443b0f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  BelongItem: {fileID: 0}
+  OnStopWork_Event:
+    _PersistentCalls: []
   UpdatedUI_Event:
     _PersistentCalls: []
+  DestroyItem_Event:
+    _PersistentCalls: []
   _data:
-    Name: 
-    ID: 0
-    Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
+    Name: 'Pickaxe '
+    ID: 10004
+    Description: "\u7C97\u7CD9\u7684\u91C7\u77FF\u5DE5\u5177"
     PrefabPath: 
-    Durability: 1
+    Durability: 80
     ItemTags:
       Item_TypeTag:
-      - None
-      - None
+      - Tool
+      - Weapon
       Item_Material:
-      - None
+      - Stone
     Stack:
       Amount: 1
-      Volume: 1
+      Volume: 2
       CanBePickedUp: 1
     _transform:
       Position: {x: 0, y: 0, z: 0}
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: 
+    ItemSpecialData: "\u65E0"
     Guid: 0
     _damage:
-      PhysicalDamage: 0
+      PhysicalDamage: 10
       ArmorBreaking: 0
       MagicDamage: 0
       DamageType: []
-    _minDamageInterval: 0
-    _maxAttackDistance: 0
-    _attackSpeed: 0
-    _returnSpeed: 0
-    _spinSpeed: 0
-    _energyConsumptionSpeed: 0
+    _minDamageInterval: 1
+    _maxAttackDistance: 1
+    _attackSpeed: 8
+    _returnSpeed: 8
+    _spinSpeed: 200
+    _energyConsumptionSpeed: 20
     _lastDamageTime: 0
-    _damageWindow: 0
-  damageSender: {fileID: 0}
+    _maxAttackCount: 1

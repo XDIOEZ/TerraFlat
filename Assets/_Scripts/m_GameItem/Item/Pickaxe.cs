@@ -9,8 +9,6 @@ public class Pickaxe : Item, IColdWeapon
     public float MaxDamageCount { get => _data._maxAttackCount; set => _data._maxAttackCount = value; }
     public ColdWeaponData _data;
 
-    public DamageSender_ColdWeapon damageSender;
-
     public override ItemData Item_Data
     {
         get
@@ -50,7 +48,6 @@ public class Pickaxe : Item, IColdWeapon
         }
     }
 
-    public ColdWeaponData Data { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float MaxAttackDistance { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float AttackSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float ReturnSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }

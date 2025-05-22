@@ -285,7 +285,7 @@ public class Building_InstallAndUninstall
 
     public void UnInstall()
     {
-        hostTransform.localScale *= 0.7f;
+        hostTransform.localScale *= 0.2f;
         boxCollider2D.isTrigger = true;
         Item_Data.Stack.CanBePickedUp = true;
         Hp.Value = -1;
