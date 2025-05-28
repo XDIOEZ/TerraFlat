@@ -7,17 +7,11 @@ using UnityEngine;
 public class WoodStick : Item
 {
     /*    public WoodStickData _data;*/
-    public Com_ItemData Data;
+    public Data_GeneralItem Data;
     public override ItemData Item_Data
     {
-        get
-        {
-            return Data;
-        }
-        set
-        {
-            Data = (Com_ItemData)value;
-        }
+        get => Data;
+        set => Data = (Data_GeneralItem)value;
     }
 
     public override void Act()

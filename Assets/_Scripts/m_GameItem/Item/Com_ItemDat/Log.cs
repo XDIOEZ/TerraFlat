@@ -6,12 +6,12 @@ using UnityEngine;
 
 public class Log : Item,IFuel
 {
-    public Com_ItemData _data;
+    public Data_GeneralItem _data;
 
     public override ItemData Item_Data 
     {
         get => _data;
-        set => _data = (Com_ItemData)value;
+        set => _data = (Data_GeneralItem)value;
     }
 
     #region È¼ÁÏÏà¹Ø

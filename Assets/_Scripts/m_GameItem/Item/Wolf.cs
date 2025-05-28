@@ -5,12 +5,12 @@ using UnityEngine;
 
     public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina,ISave_Load,IItemValues,ITeam
 {
-    public AnimalData Data;
-    public override ItemData Item_Data { get { return Data; } set { Data = value as AnimalData; } }
+    public Data_Creature Data;
+    public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }
     #region 饥饿
 
-    public Hunger_FoodAndWater Foods { get => Data.hunger; set => Data.hunger = value; }
-    public float EatingSpeed { get => Data.attackSpeed; set => throw new System.NotImplementedException(); }
+    public Nutrition Foods { get => Data.NutritionData; set => Data.NutritionData = value; }
+    public float EatingSpeed { get => Data.EatingSpeed; set => throw new System.NotImplementedException(); }
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
 
     #endregion
@@ -25,8 +25,8 @@ using UnityEngine;
 
     public float DefaultSpeed
     {
-        get => Data.defaultSpeed;
-        set => Data.defaultSpeed = value;
+        get => Data.speed_Max;
+        set => Data.speed_Max = value;
     }
 
     public float RunSpeed
@@ -81,13 +81,13 @@ using UnityEngine;
     public float Stamina
     {
         get => Data.stamina;
-        set => Data.stamina = Mathf.Clamp(value, 0, Data.staminaMax);
+        set => Data.stamina = Mathf.Clamp(value, 0, Data.stamina_Max);
     }
 
     public float MaxStamina
     {
-        get => Data.staminaMax;
-        set => Data.staminaMax = value;
+        get => Data.stamina_Max;
+        set => Data.stamina_Max = value;
     }
 
     public float StaminaRecoverySpeed
@@ -138,7 +138,7 @@ using UnityEngine;
     public void Hungry_Update()
     {
         //每秒减少1点食物能量*生产速度
-        Data.hunger.Food -= Time.fixedDeltaTime * Data.productionSpeed;
+        Data.NutritionData.Food -= Time.fixedDeltaTime * Data.productionSpeed;
     }
 
     public void Death()
@@ -188,10 +188,10 @@ using UnityEngine;
 
         Hp.OnValueChanged += (float f) =>
         {
-            ItemValues.Get_ItemValue("血量").CurrentValue = f;
+            ItemValues.GetValue("血量").CurrentValue = f;
         };
 
-        ItemValues.Get_ItemValue("血量").OnCurrentValueChanged
+        ItemValues.GetValue("血量").OnCurrentValueChanged
             += (float f) => 
             {
              Hp.Value = f;

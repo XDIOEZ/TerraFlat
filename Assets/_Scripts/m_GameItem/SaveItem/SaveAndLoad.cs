@@ -143,7 +143,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     {
         if (SaveData.PlayerData_Dict.ContainsKey(playerName))
         {
-            PlayerData _data = SaveData.PlayerData_Dict[playerName];
+            Data_Player _data = SaveData.PlayerData_Dict[playerName];
             Debug.Log("成功加载玩家：" + playerName);
             CreatePlayer(_data);
         }
@@ -151,22 +151,22 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         {
             LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, defaultSettings.Default_PlayerSave, result =>
             {
-                PlayerData _data;
+                Data_Player _data;
 
                 if (result == null)
                 {
                     Debug.LogWarning("加载失败：WorldSaveSO 对象为空！");
-                    _data = new PlayerData();
+                    _data = new Data_Player();
                 }
                 else if (result.SaveData == null)
                 {
                     Debug.LogWarning("加载失败：SaveData 为空！");
-                    _data = new PlayerData();
+                    _data = new Data_Player();
                 }
                 else if (!result.SaveData.PlayerData_Dict.ContainsKey("默认"))
                 {
                     Debug.LogWarning("加载成功，但未包含“默认”玩家数据！");
-                    _data = new PlayerData();
+                    _data = new Data_Player();
                 }
                 else
                 {
@@ -181,7 +181,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     }
 
 
-    private void CreatePlayer(PlayerData data)
+    private void CreatePlayer(Data_Player data)
     {
         GameObject newPlayerObj = GameRes.Instance.InstantiatePrefab("Player");
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
@@ -222,9 +222,9 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                         foreach (ItemData forLoadItemData in itemDataList)
                         {
                             GameObject itemPrefab;
-                            if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.Name, out itemPrefab))
+                            if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.IDName, out itemPrefab))
                             {
-                                Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.Name}");
+                                Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.IDName}");
                                 continue;
                             }
 
@@ -263,9 +263,9 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 foreach (ItemData forLoadItemData in itemDataList)
                 {
                     GameObject itemPrefab;
-                    if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.Name, out itemPrefab))
+                    if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.IDName, out itemPrefab))
                     {
-                        Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.Name}");
+                        Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.IDName}");
                         continue;
                     }
 
@@ -416,10 +416,10 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             if (itemData == null)
                 continue;
 
-            if (!itemDataDict.TryGetValue(itemData.Name, out List<ItemData> list))
+            if (!itemDataDict.TryGetValue(itemData.IDName, out List<ItemData> list))
             {
                 list = new List<ItemData>();
-                itemDataDict[itemData.Name] = list;
+                itemDataDict[itemData.IDName] = list;
             }
 
             list.Add(itemData);
@@ -530,7 +530,7 @@ public partial class GameSaveData
     public Dictionary<string, MapSave> MapSaves_Dict = new();
     //玩家数据
     [ShowInInspector]
-    public Dictionary<string, PlayerData> PlayerData_Dict = new();
+    public Dictionary<string, Data_Player> PlayerData_Dict = new();
     //建筑与场景之间的切换表_位置
     [ShowInInspector]
     public Dictionary<string, Vector2> Scenen_Building_Pos = new();
@@ -548,6 +548,6 @@ public partial class GameSaveData
     public GameSaveData()
     {
         MapSaves_Dict = new Dictionary<string, MapSave>();
-        PlayerData_Dict = new Dictionary<string, PlayerData>();
+        PlayerData_Dict = new Dictionary<string, Data_Player>();
     }
 }

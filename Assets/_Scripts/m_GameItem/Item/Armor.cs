@@ -7,18 +7,12 @@ using UnityEngine;
 
 public class Armor : Item
 {
-    public ArmorData _Data;
+    public Data_Armor _Data;
 
     public override ItemData Item_Data
     {
-        get
-        {
-            return _Data;
-        }
-        set
-        {
-            _Data = (ArmorData)value;
-        }
+        get => _Data;
+        set => _Data = (Data_Armor)value;
     }
 
     // Start is called before the first frame update

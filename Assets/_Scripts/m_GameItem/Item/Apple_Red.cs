@@ -6,37 +6,27 @@ using UltEvents;
 public class Apple_Red : Item, IFood
 {
     // 数据引用
-    public FoodData _data;
+    public Data_Creature data;
 
     // 当前吃掉的数值进度
-    public float EatingValue = 0f;
+    public float EatingProgress = 0f;
 
     // 实现 Item 抽象属性
     public override ItemData Item_Data
     {
-        get => _data;
-        set => _data = (FoodData)value;
+        get => data;
+        set => data = (Data_Creature)value;
     }
 
     // IFood 实现：能量水分数据
-    public Hunger_FoodAndWater Foods
+    public Nutrition NutritionData
     {
-        get => _data.Energy_food;
-        set => _data.Energy_food = value;
+        get => data.NutritionData;
+        set => data.NutritionData = value;
     }
 
-    // 抛出未实现异常（可扩展）
-    public UltEvent OnNutrientChanged
-    {
-        get => throw new System.NotImplementedException();
-        set => throw new System.NotImplementedException();
-    }
-
-    public IFood SelfFood
-    {
-        get => this;
-        set => throw new System.NotImplementedException();
-    }
+    public IFood SelfFood => this;
+ 
 
     /// <summary>
     /// 调用吃的行为
@@ -45,26 +35,23 @@ public class Apple_Red : Item, IFood
     {
         var hunger = BelongItem.GetComponent<IHunger>();
         if (hunger == null) return;
-
         hunger.Eat(this);
-
-
     }
 
     /// <summary>
     /// 被吃掉逻辑，返回营养值（如果吃完）
     /// </summary>
-    public Hunger_FoodAndWater BeEat(float eatSpeed)
+    public Nutrition BeEat(float eatSpeed)
     {
-        if (_data == null || Foods == null)
+        if (data == null || NutritionData == null)
             return null;
 
-        EatingValue += eatSpeed;
+        EatingProgress += eatSpeed;
 
         // 抖动动画
         SelfFood.ShakeItem(transform);
 
-        if (EatingValue >= Foods.MaxFood)
+        if (EatingProgress >= NutritionData.MaxFood)
         {
             // 减少堆叠数量
             Item_Data.Stack.Amount--;
@@ -73,17 +60,17 @@ public class Apple_Red : Item, IFood
             UpdatedUI_Event?.Invoke();
 
             // 营养值补满
-            Foods.Food = Foods.MaxFood;
-            Foods.Water = Foods.MaxWater;
+            NutritionData.Food = NutritionData.MaxFood;
+            NutritionData.Water = NutritionData.MaxWater;
 
-            EatingValue = 0;
+            EatingProgress = 0;
 
             if (Item_Data.Stack.Amount <= 0)
             {
                 Destroy(gameObject); // 吃完销毁
             }
 
-            return Foods;
+            return NutritionData;
         }
 
         return null;

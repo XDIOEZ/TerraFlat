@@ -5,7 +5,7 @@ using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
-public partial class HouseData : ItemData
+public partial class Data_Building : ItemData
 {
     //---建筑链接的场景名字
     public string sceneName;

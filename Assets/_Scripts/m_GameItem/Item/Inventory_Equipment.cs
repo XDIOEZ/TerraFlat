@@ -114,7 +114,7 @@ public class Inventory_Equipment : MonoBehaviour
             Debug.Log("插槽有装备 || 手上无装备"); 
             if(InputSlot._ItemData==null)//如果输入插槽为空
             {
-                ArmorData armorData = (ArmorData)inventory.GetItemData(slotIndex);
+                Data_Armor armorData = (Data_Armor)inventory.GetItemData(slotIndex);
 
                 Entity_Defense -= armorData.defense;
 
@@ -136,13 +136,13 @@ public class Inventory_Equipment : MonoBehaviour
             {
                
 
-                ArmorData armorData = (ArmorData)InputSlot._ItemData;
+                Data_Armor armorData = (Data_Armor)InputSlot._ItemData;
 
                Entity_Defense += armorData.defense;
 
                 inventory.ChangeItemData_Default(slotIndex, InputSlot);
                 // AddTargetInventory.onUIChanged?.Invoke(slotIndex);
-                Debug.Log("装备了: " + inventory.Data.itemSlots[slotIndex]._ItemData.Name + "，防御值为 " + Entity_Defense + "。");
+                Debug.Log("装备了: " + inventory.Data.itemSlots[slotIndex]._ItemData.IDName + "，防御值为 " + Entity_Defense + "。");
                 return;
             }
         }

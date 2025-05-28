@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 [MemoryPackable]
 [System.Serializable]
-public partial class AmmoData:ItemData
+public partial class Data_Ammo:ItemData
 {
     [Header("子弹参数")]
     public float speed;//速度

@@ -7,7 +7,7 @@ using UnityEngine;
 [MemoryPackUnion(1, typeof(PickaxeToolData))]
 [MemoryPackable]
 [System.Serializable]
-public abstract partial class WeaponData : ItemData
+public abstract partial class Data_Weapon : ItemData
 {
     #region 武器数值表现
     [Header("---武器数值---")]

@@ -29,7 +29,7 @@ public abstract class Item : MonoBehaviour
 
     public void SetItemData(ItemData itemData)
     {
-        Debug.LogWarning("设置物品数据：" + itemData.Name);
+        Debug.LogWarning("设置物品数据：" + itemData.IDName);
         Item_Data = itemData;
     }
 
@@ -42,6 +42,17 @@ public abstract class Item : MonoBehaviour
 
     public abstract void Act();
 
+    [Sirenix.OdinInspector.Button("同步物品数据")]
+    public virtual int SyncItemData()
+    {
+        if (Item_Data.IDName != gameObject.name)
+        {
+            Item_Data.IDName = this.gameObject.name;
+            Debug.LogWarning("物品数据IDName为空，已自动设置。");
+        }
+        return Item_Data.SyncData();
+    }
+
     // 添加菜单按钮以同步名称
 #if UNITY_EDITOR
     [ContextMenu("初始化ItemData")] // 修改为中文
@@ -49,8 +60,8 @@ public abstract class Item : MonoBehaviour
     {
         if (Item_Data != null)
         {
-            Item_Data.Name = this.gameObject.name;
-            Debug.Log($"游戏对象名称已同步至 {Item_Data.Name}");
+            Item_Data.IDName = this.gameObject.name;
+            Debug.Log($"游戏对象名称已同步至 {Item_Data.IDName}");
         }
         else
         {
@@ -90,15 +101,5 @@ public abstract class Item : MonoBehaviour
        {
         Item_Data.Guid = Guid.NewGuid().GetHashCode();
        }
-
-
-    [Sirenix.OdinInspector.Button("同步数据")]
-    public virtual int SyncItemData()
-    {
-       return Item_Data.SyncData();
-    }
-
-
-
 #endif
 }

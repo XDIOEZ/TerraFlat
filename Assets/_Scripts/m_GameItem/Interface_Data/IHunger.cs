@@ -3,7 +3,7 @@ using UltEvents;
 
 public interface IHunger
 {
-    Hunger_FoodAndWater Foods { get; set; }
+    Nutrition Foods { get; set; }
 
     public float EatingSpeed { get; set; }
 

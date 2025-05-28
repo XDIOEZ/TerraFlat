@@ -5,7 +5,7 @@ using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
-public partial class WorkerData :ItemData
+public partial class Data_Worker :ItemData
 {
     [Header("存储插槽")]
     [ShowNonSerializedField]

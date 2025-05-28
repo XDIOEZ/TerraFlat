@@ -85,8 +85,12 @@ public partial class ItemValues
         }
     }
 
-
-    public ItemValue Get_ItemValue(string valueName)
+    /// <summary>
+    /// 根据传入的名称 获取 ItemValue 对象
+    /// </summary>
+    /// <param name="valueName">希望查找的数值对象</param>
+    /// <returns></returns>
+    public ItemValue GetValue(string valueName)
     {
         if (ItemValue_Dict != null && ItemValue_Dict.TryGetValue(valueName, out var value))
         {
@@ -116,8 +120,7 @@ public partial class ItemValues
         return newItem;
     }
 
-
-    public void Set_ItemValue(ItemValue newItem)
+    public void SetValue(ItemValue newItem)
     {
         if (string.IsNullOrEmpty(newItem?.ValueName)) return;
 
@@ -165,7 +168,4 @@ public partial class ItemValues
         }
         Debug.Log("[ClearAllEvents] 所有 ItemValue 的事件监听器已清理。");
     }
-
-
-
 }

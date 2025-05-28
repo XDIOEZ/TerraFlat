@@ -237,7 +237,7 @@ public class Inventory_HotBar : MonoBehaviour
 
         // 异步加载预制体
 
-       GameObject go = GameRes.Instance.AllPrefabs[itemSlot._ItemData.Name];
+       GameObject go = GameRes.Instance.AllPrefabs[itemSlot._ItemData.IDName];
         //实例化预制体
         GameObject newObject = Instantiate(go);
 

@@ -10,17 +10,11 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
 {
     #region 基础数据
 
-    public Tree_Data _data;
+    public Data_Creature _data;
     public override ItemData Item_Data
     {
-        get
-        {
-            return _data;
-        }
-        set
-        {
-            _data = (Tree_Data)value;
-        }
+        get => _data;
+        set => _data = (Data_Creature)value;
     }
     #endregion
 
@@ -36,6 +30,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     public UltEvent onSave { get; set; }
 
     public UltEvent onLoad { get; set; }
+
     public List_Loot Loots
     {
         get
@@ -47,9 +42,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
             _data.loot = value;
         }
     }
-
-
-
+    
     #endregion
     #region 物品数值数据
     public ItemValues ItemValues
@@ -128,7 +121,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         if(value > 100)
         {
             GetComponentInChildren<ItemMaker>().DropItemByLoot(Loots.GetLoot("Loots_Production"), 2f);
-           ItemValues.Get_ItemValue("生产进度").CurrentValue = -1;
+           ItemValues.GetValue("生产进度").CurrentValue = -1;
         }
     }
 
@@ -161,7 +154,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         onLoad?.Invoke();
         GetComponentInChildren<ItemMaker>().loots = _data.loot;
        
-        ItemValues.Get_ItemValue("生产进度").OnCurrentValueChanged += Production;
+        ItemValues.GetValue("生产进度").OnCurrentValueChanged += Production;
        
         Init();
         ItemValues.Start_Work();
@@ -169,7 +162,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
 
     public void Init()
     {
-        ItemValues.Get_ItemValue("生产进度").CurrentValue = Random.Range(0, 100);
+        ItemValues.GetValue("生产进度").CurrentValue = Random.Range(0, 100);
         ItemValues.Add_ChangeSpeed("生产进度", "呼吸作用", 1, -1);
        // print("初始化");
     }

@@ -12,7 +12,7 @@ public class StoneSword :Item,IColdWeapon,IDamager
 public class StoneSword :Item,IColdWeapon,IAttackState
 //>>>>>>> Stashed changes
 {
-    public ColdWeaponData _data;
+    public Data_ColdWeapon _data;
 
     #region ÊôÐÔ
     public Damage WeaponDamage
@@ -41,7 +41,7 @@ public class StoneSword :Item,IColdWeapon,IAttackState
 
     }
 
-    public override ItemData Item_Data { get => _data; set => _data = (ColdWeaponData)value; }
+    public override ItemData Item_Data { get => _data; set => _data = (Data_ColdWeapon)value; }
 
     IDamageSender _sender;
     [ShowNativeProperty]
@@ -61,7 +61,7 @@ public class StoneSword :Item,IColdWeapon,IAttackState
         }
     }
 
-    public ColdWeaponData Data { get => _data; set => _data = value; }
+    public Data_ColdWeapon Data { get => _data; set => _data = value; }
     public float MaxAttackDistance { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float AttackSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float ReturnSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }

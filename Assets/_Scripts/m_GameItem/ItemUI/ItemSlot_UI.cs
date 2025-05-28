@@ -156,12 +156,12 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
     private void UpdateItemIcon()
     {
         // 若物品数据为空或预制体路径为空，隐藏图标显示
-        if (ItemSlot._ItemData == null || string.IsNullOrEmpty(ItemSlot._ItemData.Name))
+        if (ItemSlot._ItemData == null || string.IsNullOrEmpty(ItemSlot._ItemData.IDName))
         {
             image.gameObject.SetActive(false);
             return;
         }
-        GameObject go = GameRes.Instance.AllPrefabs[ItemSlot._ItemData.Name];
+        GameObject go = GameRes.Instance.AllPrefabs[ItemSlot._ItemData.IDName];
         SpriteRenderer spriteRenderer = go.GetComponentInChildren<SpriteRenderer>();
         image.sprite = spriteRenderer.sprite;
         //Destroy(go);

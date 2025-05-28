@@ -105,7 +105,7 @@ public class Inventory : MonoBehaviour
                 if (!slot.IsFull && slot._ItemData != null &&
                     slot._ItemData.ItemSpecialData == inputItemData.ItemSpecialData &&
                     slot._ItemData.PrefabPath == inputItemData.PrefabPath &&
-                    slot._ItemData.Name == inputItemData.Name &&
+                    slot._ItemData.IDName == inputItemData.IDName &&
                     slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
                 {
                     stackIndex = i;
@@ -178,7 +178,7 @@ public class Inventory : MonoBehaviour
         {
             if (!slot.IsFull && slot._ItemData != null &&
                 slot._ItemData.ItemSpecialData == inputItemData.ItemSpecialData &&
-                slot._ItemData.Name == inputItemData.Name &&
+                slot._ItemData.IDName == inputItemData.IDName &&
                 slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
             {
               //  Debug.Log("找到可堆叠的槽位");
@@ -277,7 +277,7 @@ public class Inventory : MonoBehaviour
         }
 
         // 物品相同
-        if (inputSlotHand._ItemData.Name == localSlot._ItemData.Name)
+        if (inputSlotHand._ItemData.IDName == localSlot._ItemData.IDName)
         {
             int changeAmount = (int)Mathf.Ceil(localSlot._ItemData.Stack.Amount * ChangeReate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);

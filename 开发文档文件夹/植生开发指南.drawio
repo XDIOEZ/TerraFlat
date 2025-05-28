@@ -1,0 +1,189 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
+  <diagram id="bRi_iZHggD-AGo6ihj1B" name="5/19">
+    <mxGraphModel dx="1072" dy="636" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-1" value="杂合子" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="300" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-2" value="显性纯合子" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="367" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-3" value="隐性纯合子" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="437" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-6" value="性状列表" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=none;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="190" y="315.5" width="140" height="166" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-7" value="最大果实产量" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-6">
+          <mxGeometry y="26" width="140" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-8" value="基础生长速度" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-6">
+          <mxGeometry y="52" width="140" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-12" value="抗病能力" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-6">
+          <mxGeometry y="78" width="140" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-9" value="耐旱能力(生长所需最低水资源)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-6">
+          <mxGeometry y="104" width="140" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-13" value="肥料吸收效果" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-6">
+          <mxGeometry y="140" width="140" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-30" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="540" y="200" width="360" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-14" value="产量-显优型基因" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-30">
+          <mxGeometry x="120" width="120" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-23" value="AA:产量增加&lt;div&gt;1&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-30">
+          <mxGeometry y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-24" value="Aa:产量减少/不变&lt;div&gt;2&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-30">
+          <mxGeometry x="120" y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-25" value="aa:产量减少/不变&lt;div&gt;1&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-30">
+          <mxGeometry x="240" y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-31" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="540" y="310" width="360" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-32" value="产量-杂优型基因" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-31">
+          <mxGeometry x="120" width="120" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-33" value="AA:产量减少/不变&lt;div&gt;1&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-31">
+          <mxGeometry y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-34" value="Aa:产量增加&lt;div&gt;2&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-31">
+          <mxGeometry x="120" y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-35" value="aa:产量减少/不变&lt;div&gt;1&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-31">
+          <mxGeometry x="240" y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-36" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="540" y="418.5" width="360" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-37" value="产量-隐优型基因" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-36">
+          <mxGeometry x="120" width="120" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-38" value="AA:产量减少/不变&lt;div&gt;1&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-36">
+          <mxGeometry y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-39" value="Aa:产量减少/不变&lt;div&gt;2&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-36">
+          <mxGeometry x="120" y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-40" value="aa:产量增加&lt;div&gt;1&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-36">
+          <mxGeometry x="240" y="26" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-41" value="土豆A" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="730" y="760" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-70" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="V-d-saW0YR5Iz8UCoTVw-42">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="910" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="940" y="910" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-71" value="传播花粉" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="V-d-saW0YR5Iz8UCoTVw-70">
+          <mxGeometry x="0.1246" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-42" value="土豆B" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="910" y="760" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-48" value="染色体数据类" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="860" width="185" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-49" value="字段:&lt;div&gt;基因:List&amp;lt;Char&amp;gt; {&#39;A&#39;,&#39;a&#39;}&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); text-align: center;&quot;&gt;突变概率:0.001%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); text-align: center;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;性状:&lt;span style=&quot;text-align: center; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;杂合优产型基因(通过修改不同的性状实现不同的效果)&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;text-align: center; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-48">
+          <mxGeometry y="26" width="185" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-50" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-48">
+          <mxGeometry y="130" width="185" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-51" value="函数:&lt;div&gt;获取当前表达的性状(item 染色体所处的物体上)&lt;/div&gt;&lt;div&gt;{通过So 修改Item内部数值}&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-48">
+          <mxGeometry y="138" width="185" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="V-d-saW0YR5Iz8UCoTVw-48" target="V-d-saW0YR5Iz8UCoTVw-41">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="710" y="890" />
+              <mxPoint x="710" y="800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="V-d-saW0YR5Iz8UCoTVw-57" target="V-d-saW0YR5Iz8UCoTVw-42">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1040" y="998.0000000000002" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-74" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.497;entryY=0.05;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="V-d-saW0YR5Iz8UCoTVw-65" target="V-d-saW0YR5Iz8UCoTVw-83">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="782" y="1276" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-75" value="收获:产量为110% 因为父亲的性状中有增加输出产量" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="V-d-saW0YR5Iz8UCoTVw-74">
+          <mxGeometry x="0.1911" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-76" value="收获11个土豆" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="V-d-saW0YR5Iz8UCoTVw-74">
+          <mxGeometry x="0.5756" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-65" value="繁殖类" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="690" y="990" width="185" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-66" value="字段:" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-65">
+          <mxGeometry y="26" width="185" height="39" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-67" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-65">
+          <mxGeometry y="65" width="185" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-68" value="函数:&lt;div&gt;交配(染色体数据 x,染色体数据y){根据两条染色体中的 基因 生成新的基因对 输出 例如(输出了aa的基因)}&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-65">
+          <mxGeometry y="73" width="185" height="87" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-69" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="V-d-saW0YR5Iz8UCoTVw-41">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="759" y="990" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-72" value="受精" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="V-d-saW0YR5Iz8UCoTVw-69">
+          <mxGeometry x="0.3896" y="-2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-83" value="11个土豆子中&lt;div&gt;5个为Aa&lt;/div&gt;&lt;div&gt;5个为aa&lt;/div&gt;&lt;div&gt;1个为AA(基因突变)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="722.5" y="1280" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="V-d-saW0YR5Iz8UCoTVw-84" target="V-d-saW0YR5Iz8UCoTVw-48">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-89" value="每次Load时都将调用染色体列表中所有的表达性状方法" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="V-d-saW0YR5Iz8UCoTVw-88">
+          <mxGeometry x="-0.0265" y="-2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-84" value="土豆数值类" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="590" width="220" height="151" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-85" value="字段:&lt;div&gt;1.产率:每次收获的土豆数量&lt;/div&gt;&lt;div&gt;2.生长速率:从种子到成熟所消耗的时间&lt;/div&gt;&lt;div&gt;3.营养价值:食用后可回复多少饱食度?&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-84">
+          <mxGeometry y="26" width="220" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-86" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-84">
+          <mxGeometry y="100" width="220" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-87" value="函数:" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="V-d-saW0YR5Iz8UCoTVw-84">
+          <mxGeometry y="108" width="220" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="V-d-saW0YR5Iz8UCoTVw-57" value="字段:&lt;div&gt;基因:List&amp;lt;Char&amp;gt; {&#39;a&#39;,&#39;a&#39;}&lt;div&gt;性状:&lt;span style=&quot;text-align: center; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;杂合优产型基因&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" style="text;strokeColor=default;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="773" width="185" height="54" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

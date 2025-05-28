@@ -153,6 +153,10 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
     #region 查找功能
     public int FindColumn(int row, string value)
     {
+        if (row < 0)
+        {
+            return -1;
+        }
         IRow sheetRow = Worksheet.GetRow(row);
         if (sheetRow == null) return -1;
         for (int i = 0; i < sheetRow.LastCellNum; i++)
@@ -167,7 +171,10 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
     public int FindRow(int colIndex, string value)
     {
         if (colIndex < 0)
-            throw new ArgumentException("列索引必须 >= 0");
+        {
+            return -1;
+        }
+           // throw new ArgumentException("列索引必须 >= 0");
         for (int row = 0; row <= Worksheet.LastRowNum; row++)
         {
             IRow sheetRow = Worksheet.GetRow(row);

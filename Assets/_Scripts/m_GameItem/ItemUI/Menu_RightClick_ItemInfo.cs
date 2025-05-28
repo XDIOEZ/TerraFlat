@@ -68,7 +68,7 @@ public class Menu_RightClick_ItemInfo : MonoBehaviour
 
         transform.position = itemSlot.UI.transform.position;
 
-        Debug.Log("打开右键菜单" + itemSlot._ItemData.Name);
+        Debug.Log("打开右键菜单" + itemSlot._ItemData.IDName);
 
 
     }

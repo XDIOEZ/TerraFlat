@@ -23,7 +23,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
 
 
     [Tooltip("数据")]
-    public PlayerData Data;
+    public Data_Player Data;
 
     [Tooltip("库存字典事件")]
     private UltEvent _onInventoryData_Dict_Changed = new();
@@ -41,13 +41,13 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
         get => Data;
         set
         {
-            Data = value as PlayerData;
+            Data = value as Data_Player;
             OnInventoryData_Dict_Changed?.Invoke();
         }
     }
 
     [Tooltip("营养数据")]
-    public Hunger_FoodAndWater Foods
+    public Nutrition Foods
     {
         get => Data.hunger;
         set => Data.hunger = value;
@@ -261,7 +261,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
         }
 
         // 获取食物数据
-        Hunger_FoodAndWater foodData = iFood.Foods;
+        Nutrition foodData = iFood.NutritionData;
 
         if (foodData == null)
         {

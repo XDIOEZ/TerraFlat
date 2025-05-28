@@ -7,19 +7,13 @@ public class Pickaxe : Item, IColdWeapon
 {
     //ÎäÆ÷ÉËº¦Êä³ö´°¿Ú
     public float MaxDamageCount { get => _data._maxAttackCount; set => _data._maxAttackCount = value; }
-    public ColdWeaponData _data;
+    public Data_ColdWeapon _data;
 
     public override ItemData Item_Data
     {
-        get
-        {
-            return _data;
-        }
+        get => _data;
 
-        set
-        {
-            _data = (ColdWeaponData)value;
-        }
+        set => _data = (Data_ColdWeapon)value;
     }
 
     public Damage WeaponDamage

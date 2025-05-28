@@ -12,7 +12,7 @@ public class ShowBox : MonoBehaviour
     private int minY = -100;
     [SerializeField]
     private int maxY = 99;
-
+    [ContextMenu("CutTiles")]
     public void CutTiles()
     {
         Tilemap tilemap = GetComponent<Tilemap>();

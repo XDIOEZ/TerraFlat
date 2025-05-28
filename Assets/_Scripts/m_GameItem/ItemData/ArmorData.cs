@@ -5,7 +5,7 @@ using UnityEngine;
 
 [MemoryPackable]
 [System.Serializable]
-public partial class ArmorData : ItemData
+public partial class Data_Armor : ItemData
 {
     [Header("---»¤¼×ÊýÖµ---")]
     public Defense defense;

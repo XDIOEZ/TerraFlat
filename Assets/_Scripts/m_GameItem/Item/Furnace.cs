@@ -11,7 +11,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
 {
     #region 属性
     [Tooltip("熔炉数据")]
-    public WorkerData _furnaceData;
+    public Data_Worker _furnaceData;
 
     [Tooltip("是否正在工作")]
     public bool isWorking;
@@ -139,15 +139,12 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
 
     public override ItemData Item_Data
     {
-        get
-        {
-            return _furnaceData;
-        }
+        get => _furnaceData;
         set
         {
          
          
-            _furnaceData = value as WorkerData;
+            _furnaceData = value as Data_Worker;
 
             OnInventoryData_Dict_Changed.Invoke();
             Debug.LogWarning("设置熔炉数据");
@@ -195,7 +192,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                     continue;
                 }
 
-                if (item_slot._ItemData.Name == ingredient.ItemName)
+                if (item_slot._ItemData.IDName == ingredient.ItemName)
                 {
                     if (item_slot._ItemData.Stack.Amount < input_list.RowItems_List[i].amount)
                     {
@@ -238,7 +235,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                 continue;
             }
             // 将该物品及其当前数量添加到当前合成清单
-            currentRecipeList.Add(new CraftingIngredient(item_slot._ItemData.Name));
+            currentRecipeList.Add(new CraftingIngredient(item_slot._ItemData.IDName));
         }
 
         #endregion
@@ -296,7 +293,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                 {
                     var item_slot = inputInventory_.Data.itemSlots[i];
 
-                    if (item_slot._ItemData != null && item_slot._ItemData.Name == currentRecipeList[i].ItemName)
+                    if (item_slot._ItemData != null && item_slot._ItemData.IDName == currentRecipeList[i].ItemName)
                     {
                         if (item_slot._ItemData.Stack.Amount >= input_list.RowItems_List[i].amount)
                         {
@@ -410,7 +407,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                     continue;
                 }
                 // 将该物品及其当前数量添加到当前合成清单
-                currentRecipeList.Add(new CraftingIngredient(item_slot._ItemData.Name));
+                currentRecipeList.Add(new CraftingIngredient(item_slot._ItemData.IDName));
             }
             
             Recipe TempRecipe;
@@ -496,7 +493,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                 continue;
             }
 
-            string itemName = slot._ItemData.Name;
+            string itemName = slot._ItemData.IDName;
 
             IFuel fuel = GameRes.Instance.AllPrefabs[itemName].GetComponent<IFuel>();
 

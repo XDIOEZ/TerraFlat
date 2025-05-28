@@ -4,17 +4,18 @@ using NaughtyAttributes;
 
 [MemoryPackable]
 [System.Serializable]
-public partial class Com_ItemData : ItemData
+public partial class Data_GeneralItem : ItemData
 {
     public string code;
 
-    [Button("从Excel处同步数据")]
+    public ItemValues values;
+
     public override int SyncData()
     {
        int itemRow = base.SyncData();
 
         code = m_ExcelManager.Instance.GetConvertedValue<string>("code", itemRow);
 
-return itemRow;
+        return itemRow;
     }
 }

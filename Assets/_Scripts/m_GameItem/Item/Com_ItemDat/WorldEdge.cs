@@ -7,8 +7,8 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(BoxCollider2D))]
 public class WorldEdge : Item, ISave_Load, IInteract
 {
-    public WorldEdgeData Data;
-    public override ItemData Item_Data { get => Data; set => Data = value as WorldEdgeData; }
+    public Data_Boundary Data;
+    public override ItemData Item_Data { get => Data; set => Data = value as Data_Boundary; }
 
     public string TPTOSceneName { get => Data.TeleportScene; set => Data.TeleportScene = value; }
     public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
@@ -25,7 +25,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
 
     public void Save()
     {
-        Data.SetTransformValue(transform.position, transform.rotation, transform.localScale);
+        this.SyncPosition();
     }
 
     public void Load()

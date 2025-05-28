@@ -6,7 +6,7 @@ public class Ammo : Item
 {
     public IDamageSender damageSender;
     public Rigidbody2D rb2d;
-    public AmmoData ammoData;
+    public Data_Ammo ammoData;
     [Header("���߼���ų�")]
     public LayerMask layerMask;
 
@@ -74,15 +74,9 @@ public class Ammo : Item
 
     public override ItemData Item_Data
     {
-        get
-        {
-            return ammoData;
-        }
+        get => ammoData;
 
-        set
-        {
-            ammoData = (AmmoData)value;
-        }
+        set => ammoData = (Data_Ammo)value;
     }
     public Damage WeaponDamage
     {
@@ -110,7 +104,7 @@ public class Ammo : Item
         }
     }
 
-    public ColdWeaponData Data { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    public Data_ColdWeapon Data { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float MaxAttackDistance { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float AttackSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public float ReturnSpeed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }

@@ -10,17 +10,14 @@ public class Map : Item,ISave_Load
 {
     [Header("地图配置")]
     [SerializeField]
-    public TileMapData tileMapData;
+    public Data_TileMap tileMapData;
 
     [Header("Tilemap 组件")]
     [SerializeField]
     public Tilemap tileMap;
 
-    [Header("实例化的世界边界传送点")]
-    public List<WorldEdge> worldEdges_GameObject;
-
     // 强制类型转换属性（保持与基类 Item 的兼容）
-    public override ItemData Item_Data { get => tileMapData; set => tileMapData = value as TileMapData; }
+    public override ItemData Item_Data { get => tileMapData; set => tileMapData = value as Data_TileMap; }
     public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     public UltEvent onLoad { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
 
@@ -60,10 +57,10 @@ public class Map : Item,ISave_Load
       //  Debug.Log($"[Map.Save] 开始保存地图数据");
 
         // 🔥 清空旧数据，防止重复添加
-        tileMapData.WorldEdgeDatas.Clear();
+       /* tileMapData.WorldEdgeDatas.Clear();*/
       //  Debug.Log($"[Map.Save] 清空旧的 WorldEdgeDatas");
 
-        if (worldEdges_GameObject.Count > 0)
+ /*       if (worldEdges_GameObject.Count > 0)
         {
           //  Debug.Log($"[Map.Save] 使用 worldEdges 列表，共 {worldEdges_GameObject.Count} 个");
 
@@ -99,7 +96,7 @@ public class Map : Item,ISave_Load
                // Debug.Log($"[Map.Save] 边界对象 {edgeName} 已禁用并添加到 GameObject_False 列表");
                 SaveAndLoad.Instance.GameObject_False.Add(edge.gameObject);
             }
-        }
+        }*/
 
        // Debug.Log($"[Map.Save] 当前 WorldEdgeDatas 数量: {tileMapData.WorldEdgeDatas.Count}");
 
@@ -143,7 +140,8 @@ public class Map : Item,ISave_Load
     {
         // 创建临时字典存储 <Tile名称, 坐标列表>
         var tempData = new Dictionary<string, List<Vector2Int>>();
-
+        if(tileMap == null)
+            tileMap= GetComponentInChildren<Tilemap>();
         // 获取 Tilemap 的包围盒范围
         BoundsInt bounds = tileMap.cellBounds;
 

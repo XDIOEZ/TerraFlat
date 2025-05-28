@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Torch : Item, IFuel
 {
-    public Com_ItemData data;
+    public Data_GeneralItem data;
 
     public float MaxBurnTime { get => maxBurnTime; set => maxBurnTime = value; }
     public float MaxTemptrue { get => maxTemptrue; set => maxTemptrue = value; }
@@ -18,8 +18,8 @@ public class Torch : Item, IFuel
 
     public override ItemData Item_Data
     {
-        get { return data; }
-        set { data = (Com_ItemData)value; }
+        get => data;
+        set => data = (Data_GeneralItem)value;
     }
 
     public override void Act()

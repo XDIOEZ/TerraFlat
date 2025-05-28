@@ -5,8 +5,8 @@ using UnityEngine;
 
 public class Coal : Item,IFuel
 {
-    public Com_ItemData _coalData;
-    public override ItemData Item_Data { get { return _coalData; } set { _coalData = value as Com_ItemData; } }
+    public Data_GeneralItem _coalData;
+    public override ItemData Item_Data { get => _coalData; set => _coalData = value as Data_GeneralItem; }
 
       #region 燃料相关
     public float MaxBurnTime { get => maxBurnTime; set => maxBurnTime = value; }
@@ -19,6 +19,12 @@ public class Coal : Item,IFuel
 
     public override int SyncItemData()
     {
+        if (Item_Data.IDName == "")
+        {
+            Item_Data.IDName = this.gameObject.name;
+            Debug.LogWarning("物品数据IDName为空，已自动设置。");
+        }
+
         int i = base.SyncItemData();
 
         IFuel fuel = this as IFuel;

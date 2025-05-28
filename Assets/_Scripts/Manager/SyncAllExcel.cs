@@ -1,22 +1,22 @@
-#if UNITY_EDITOR
+ï»¿#if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
 public class SyncAllExcel
 {
-    [MenuItem("Tools/´ÓExcelÍ¬²½ËùÓĞµÀ¾ßÊı¾İ")]
+    [MenuItem("Tools/ä»ExcelåŒæ­¥æ‰€æœ‰é“å…·æ•°æ®")]
     public static void SyncAll()
     {
-        Debug.Log("¿ªÊ¼Í¬²½ËùÓĞµÀ¾ßÊı¾İ");
+        Debug.Log("å¼€å§‹åŒæ­¥æ‰€æœ‰é“å…·æ•°æ®");
 
-        EditorUtility.DisplayProgressBar("Í¬²½µÀ¾ßÊı¾İ", "ÕıÔÚ×¼±¸×ÊÔ´£¬ÇëÉÔºò...", 0f);
-        // È»ºóÈ¥×ö GameRes.Awake()
+        EditorUtility.DisplayProgressBar("åŒæ­¥é“å…·æ•°æ®", "æ­£åœ¨å‡†å¤‡èµ„æºï¼Œè¯·ç¨å€™...", 0f);
+        // ç„¶åå»åš GameRes.Awake()
 
         var gameRes = GameRes.Instance;
         gameRes.LoadResources();
 
-        // ÂÖÑ¯×ÊÔ´ÊÇ·ñ¼ÓÔØÍê³É
+        // è½®è¯¢èµ„æºæ˜¯å¦åŠ è½½å®Œæˆ
         EditorApplication.update += CheckResourcesLoaded;
     }
 
@@ -41,7 +41,7 @@ public class SyncAllExcel
             _prefabList = new List<KeyValuePair<string, GameObject>>(_gameRes.AllPrefabs);
             _currentIndex = 0;
 
-            // ¿ªÊ¼ÖğÖ¡Í¬²½
+            // å¼€å§‹é€å¸§åŒæ­¥
             EditorApplication.update += ProcessPrefabsStepByStep;
         }
     }
@@ -51,8 +51,8 @@ public class SyncAllExcel
         if (_currentIndex >= _prefabList.Count)
         {
             EditorApplication.update -= ProcessPrefabsStepByStep;
-            EditorUtility.ClearProgressBar(); // ´¦ÀíÍê³ÉºóÇå³ı½ø¶ÈÌõ
-            Debug.Log("ËùÓĞµÀ¾ßÊı¾İÍ¬²½Íê³É£¡");
+            EditorUtility.ClearProgressBar(); // å¤„ç†å®Œæˆåæ¸…é™¤è¿›åº¦æ¡
+            Debug.Log("æ‰€æœ‰é“å…·æ•°æ®åŒæ­¥å®Œæˆï¼");
             CleanupResources();
             return;
         }
@@ -61,27 +61,34 @@ public class SyncAllExcel
         GameObject prefab = pair.Value;
 
         float progress = (float)_currentIndex / _prefabList.Count;
-        EditorUtility.DisplayProgressBar("Í¬²½µÀ¾ßÊı¾İ", $"Í¬²½ {pair.Key}...", progress);
+        EditorUtility.DisplayProgressBar("åŒæ­¥é“å…·æ•°æ®", $"åŒæ­¥ {pair.Key}...", progress);
 
         try
         {
             if (prefab == null)
             {
-                Debug.LogWarning($"Ô¤ÖÆÌå {pair.Key} ÎŞĞ§£¬Ìø¹ıÍ¬²½");
+               // Debug.LogWarning($"é¢„åˆ¶ä½“ {pair.Key} æ— æ•ˆï¼Œè·³è¿‡åŒæ­¥");
             }
             else if (!prefab.TryGetComponent<Item>(out Item item))
             {
-                Debug.LogWarning($"Ô¤ÖÆÌå {pair.Key} Î´ÕÒµ½ Item ×é¼ş£¬Ìø¹ıÍ¬²½");
+               // Debug.LogWarning($"é¢„åˆ¶ä½“ {pair.Key} æœªæ‰¾åˆ° Item ç»„ä»¶ï¼Œè·³è¿‡åŒæ­¥");
             }
             else
             {
-                item.Item_Data.SyncData();
-                Debug.Log($"Í¬²½³É¹¦£º{pair.Key} ({_currentIndex + 1}/{_prefabList.Count})");
+                item.Item_Data.IDName = item.gameObject.name;
+                item.SyncItemData();
+
+                // ğŸ”½ åº”ç”¨ Prefab æ”¹åŠ¨
+                string prefabPath = UnityEditor.AssetDatabase.GetAssetPath(prefab);
+                PrefabUtility.SavePrefabAsset(prefab);
+
+                Debug.Log($"åŒæ­¥å¹¶ä¿å­˜æˆåŠŸï¼š{pair.Key} ({_currentIndex + 1}/{_prefabList.Count})");
             }
+
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"Í¬²½ {pair.Key} Ê±·¢ÉúÒì³££º{ex.Message}\n{ex.StackTrace}");
+            Debug.LogError($"åŒæ­¥ {pair.Key} æ—¶å‘ç”Ÿå¼‚å¸¸ï¼š{ex.Message}\n{ex.StackTrace}");
         }
 
         _currentIndex++;

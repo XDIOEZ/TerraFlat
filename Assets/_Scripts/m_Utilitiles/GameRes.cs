@@ -39,10 +39,16 @@ public class GameRes : SingletonAutoMono<GameRes>
     public void LoadResources()
     {
         loadStartTime = Time.realtimeSinceStartup; // 记录加载开始时间
+        //如果为空，则添加默认标签
+        if (ADBLabels_Prefab.Count == 0)
+        {
+            ADBLabels_Prefab.Add("ItemPrefab");
+            ADBLabels_CraftingRecipe.Add("CraftingRecipe");
+            ADBLabels_TileBase.Add("TileBase");
+            ADBLabels_Prefab.Add("Prefab");
+        }
+      
 
-        ADBLabels_Prefab.Add("Prefab");
-        ADBLabels_CraftingRecipe.Add("CraftingRecipe");
-        ADBLabels_TileBase.Add("TileBase");
 
         LoadPrefabByLabels(ADBLabels_Prefab);
         LoadRecipeByLabels(ADBLabels_CraftingRecipe);
@@ -179,7 +185,7 @@ public class GameRes : SingletonAutoMono<GameRes>
 
                     if (recipeDict.ContainsKey(recipe.inputs.ToString()))
                     {
-                        Debug.LogWarning($"配方已存在: {recipe.name}");
+                        //Debug.LogWarning($"配方已存在: {recipe.name}");
                     }
                     else
 
@@ -237,7 +243,7 @@ public class GameRes : SingletonAutoMono<GameRes>
 
                 if (tileBaseDict.ContainsKey(tileBase.name))
                 {
-                    Debug.LogWarning($"TileBase已存在: {tileBase.name}");
+                    //Debug.LogWarning($"TileBase已存在: {tileBase.name}");
                 }
                 else
                 {

@@ -5,7 +5,7 @@ using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
-public partial class WorldEdgeData : ItemData
+public partial class Data_Boundary : ItemData
 {
     [Tooltip("传送的目标场景")]
     public string TeleportScene;

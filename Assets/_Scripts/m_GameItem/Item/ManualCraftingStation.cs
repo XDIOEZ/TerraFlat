@@ -81,7 +81,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
     {
         // 生成配方键
         string recipeKey = string.Join(",",
-            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.Name ?? ""));
+            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.IDName ?? ""));
 
         // 检查配方存在性及类型
         if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out var recipe) ||
@@ -123,13 +123,13 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
         // 显示合成开始信息
         Debug.Log($"开始合成：{recipe.name}");
         Debug.Log($"输入材料：{recipeKey}");
-        Debug.Log($"输出产物：{string.Join(", ", itemsToAdd.Select(item => $"{item.Stack.Amount}x{item.Name}"))}");
+        Debug.Log($"输出产物：{string.Join(", ", itemsToAdd.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
 
         // 执行合成：添加输出物品
         foreach (var item in itemsToAdd)
         {
             outputInventory_.AddItem(item);
-            Debug.Log($"添加产物：{item.Stack.Amount}x{item.Name}");
+            Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
         }
 
         // 扣除输入材料
@@ -176,7 +176,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
 
             // 检查物品存在且名称匹配
             if (slot._ItemData == null ||
-                slot._ItemData.Name != required.ItemName)
+                slot._ItemData.IDName != required.ItemName)
                 return false;
 
             // 检查数量足够

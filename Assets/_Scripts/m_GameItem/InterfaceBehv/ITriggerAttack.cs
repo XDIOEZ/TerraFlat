@@ -37,7 +37,7 @@ public interface ITriggerAttack
     public void CreateWeapon(ItemData weapon)
     {
         //根據傳入的武器數據 創建一個武器物件
-        GameObject weapon_GameObject = GameRes.Instance.InstantiatePrefab(weapon.Name);
+        GameObject weapon_GameObject = GameRes.Instance.InstantiatePrefab(weapon.IDName);
         weapon_GameObject.GetComponent<Item>().Item_Data = weapon;
         weapon.Stack.CanBePickedUp = false;
         SetWeapon(weapon_GameObject);

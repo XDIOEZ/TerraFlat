@@ -1,11 +1,11 @@
-using MemoryPack;
+/*using MemoryPack;
 using NaughtyAttributes;
 using System.Collections.Generic;
 using UnityEngine;
 
 [MemoryPackable]
 [System.Serializable]
-public partial class Tree_Data : ItemData
+public partial class Data_Tree : ItemData
 {
     [Header("Ê÷Êý¾Ý")]
 
@@ -57,4 +57,4 @@ public partial class Tree_Data : ItemData
         return itemRow;
     }
 
-}
+}*/

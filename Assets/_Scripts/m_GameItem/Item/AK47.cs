@@ -6,15 +6,9 @@ public class AK47 : Gun
 {
     public override ItemData Item_Data
     {
-        get
-        {
-            return gunData;
-        }
+        get => gunData;
 
-        set
-        {
-            gunData = (GunData)value;
-        }
+        set => gunData = (GunData)value;
     }
     #region ÉúÃüÖÜÆÚ
     public new void Start()

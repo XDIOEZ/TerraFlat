@@ -14,7 +14,7 @@ public interface ICanBePickUp
 public abstract class Weapon : Item,IFunction_Attack
 {
     #region 字段 | Fields 
-    public WeaponData _Data;
+    public Data_Weapon _Data;
     public AttackTrigger triggerAttack;
     public AttackTrigger TriggerAttack
     {

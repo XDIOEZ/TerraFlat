@@ -124,7 +124,9 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
         // 计算动态伤害倍率
         float timeSinceLastDamage = Time.time - lastDamageTime;
         float intervalRatio = Mathf.Clamp01(timeSinceLastDamage / minDamageInterval);
-        currentDamageMultiplier = damageFalloffCurve.Evaluate(intervalRatio);
+        float mirroredRatio = 1f - intervalRatio;
+        currentDamageMultiplier = damageFalloffCurve.Evaluate(mirroredRatio);
+
 
         Damage scaledDamage = GetScaledDamage(DamageValue, currentDamageMultiplier);
 

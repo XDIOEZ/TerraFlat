@@ -14,74 +14,53 @@ using Sirenix.OdinInspector;
 
 
 // 使用[System.Serializable]特性使该类可以被序列化，以便在Unity编辑器中显示和编辑
-[MemoryPackUnion(0, typeof(AnimalData))]//动物数据
-[MemoryPackUnion(1, typeof(ArmorData))]//护甲数据
-[MemoryPackUnion(2, typeof(AmmoData))]//弹药数据
-[MemoryPackUnion(3, typeof(ColdWeaponData))]//冷武器数据
-[MemoryPackUnion(4, typeof(Com_ItemData))]//通用物品数据
-[MemoryPackUnion(5, typeof(FoodData))]//食物数据
-[MemoryPackUnion(6, typeof(HouseData))]//房屋数据
-[MemoryPackUnion(7, typeof(PlayerData))]//玩家数据
-[MemoryPackUnion(8, typeof(StorageData))]//仓库数据
-[MemoryPackUnion(9, typeof(TileMapData))]//瓦片地图数据
-[MemoryPackUnion(10, typeof(Tree_Data))]//树数据
-[MemoryPackUnion(11, typeof(WeaponData))]//武器数据
-[MemoryPackUnion(12, typeof(WorkerData))]//工作者数据
-[MemoryPackUnion(13, typeof(WorldEdgeData))]//墙壁数据
+[MemoryPackUnion(0, typeof(Data_Creature))]//动物数据
+[MemoryPackUnion(1, typeof(Data_Armor))]//护甲数据
+[MemoryPackUnion(2, typeof(Data_Ammo))]//弹药数据
+[MemoryPackUnion(3, typeof(Data_ColdWeapon))]//冷武器数据
+[MemoryPackUnion(4, typeof(Data_GeneralItem))]//通用物品数据
+[MemoryPackUnion(5, typeof(Data_Building))]//房屋数据
+[MemoryPackUnion(6, typeof(Data_Player))]//玩家数据
+[MemoryPackUnion(8, typeof(Data_TileMap))]//瓦片地图数据
+[MemoryPackUnion(51, typeof(Data_Weapon))]//武器数据
+[MemoryPackUnion(52, typeof(Data_Worker))]//工作者数据
+[MemoryPackUnion(53, typeof(Data_Boundary))]//墙壁数据
+[MemoryPackUnion(54, typeof(Data_Food))]//墙壁数据
 
-
-[MemoryPackable(SerializeLayout.Explicit)]
-
+[MemoryPackable]
 [System.Serializable]   
 public  abstract partial class ItemData
 {
-    [Foldout("物品数据")]
-    [MemoryPackOrder(0)]
     [Tooltip("物品名称")]
-    public string Name;
+    public string IDName;
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(1)]
+    [Tooltip("物品名称")]
+    public string GameName;
+
     [Tooltip("物品ID")]
     public int ID;
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(2)]
     [Tooltip("物品描述")]
     public string Description = "什么都没有描述";
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(3)]
     [Tooltip("预制体路径")]
     public string PrefabPath = "";
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(5)]
     [Tooltip("物品耐久度")]
     public float Durability = 1;
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(7)]
     [Tooltip("物品标签")]
     public ItemTag ItemTags;
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(8)]
     [Tooltip("物品堆叠信息")]
     public ItemStack Stack;
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(12)]
     [Tooltip("物品缩放")]
-    public ItemTransform _transform = new ();
+    public ItemTransform _transform = new();
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(13)]
     [Tooltip("物品特殊数据")]
     public string ItemSpecialData;
 
-    [Foldout("物品数据")]
-    [MemoryPackOrder(14)]
     [Tooltip("全局唯一标识")]
     public int Guid;
 
@@ -90,7 +69,7 @@ public  abstract partial class ItemData
     public override string ToString()
     {
         string str =
-            $"物品名称：{Name}\n" +
+            $"物品名称：{IDName}\n" +
             $"物品ID：{ID}\n" +
             $"物品描述：{Description}\n" +
             $"物品体积：{Stack.Volume}\n" +
@@ -103,48 +82,54 @@ public  abstract partial class ItemData
             $"物品缩放：{_transform.Scale}\n" +
             $"物品特殊数据：{ItemSpecialData}\n" +
             $"全局唯一标识：{Guid}";
-
         return str;
     }
 
     public virtual int SyncData()
     {
+        //打开对应的Excel表格
         m_ExcelManager.Instance.ChangeWorlSheet(this.GetType().Name);
-
-        if (string.IsNullOrWhiteSpace(Name))
-        {
-            Debug.LogWarning("物品名称为空，无法同步数据");
-            return -1;
-        }
 
         var excel = m_ExcelManager.Instance;
 
-        int nameColumn = excel.FindColumn(0, "Name");
-        int itemRow = excel.FindRow(nameColumn, Name);
+
+        //查找对应的物品IDName
+        int nameColumn = excel.FindColumn(0,ExcelIdentifyRow.IDName);
+
+
+        int itemRow = excel.FindRow(nameColumn, IDName);
         int itemL = -1;
 
+        if (itemRow == -1)
+        {
+            return -1;
+        }
+
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.GameName);
+        GameName = excel.GetCellValue(itemRow, itemL).ToString();
+
         // ID
-        itemL = excel.FindColumn(0, "ID");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.ID);
         ID = Convert.ToInt32(excel.GetCellValue(itemRow, itemL));
 
         // 描述
-        itemL = excel.FindColumn(0, "Description");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.Description);
         Description = excel.GetCellValue(itemRow, itemL).ToString();
 
         // 耐久度
-        itemL = excel.FindColumn(0, "Durability");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.Durability);
         Durability = Convert.ToSingle(excel.GetCellValue(itemRow, itemL));
 
         // 特殊数据
-        itemL = excel.FindColumn(0, "ItemSpecialData");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.ItemSpecialData);
         ItemSpecialData = excel.GetCellValue(itemRow, itemL).ToString();
 
         // 物品堆叠信息
-        itemL = excel.FindColumn(0, "Volume");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.Volume);
         Stack.Volume = Convert.ToInt32(excel.GetCellValue(itemRow, itemL));
 
         // 是否可拾取
-        itemL = excel.FindColumn(0, "CanBePickedUp");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.CanBePickedUp);
         object canBePickedUpValue = excel.GetCellValue(itemRow, itemL);
         if (canBePickedUpValue is double || canBePickedUpValue is int)
             Stack.CanBePickedUp = Convert.ToInt32(canBePickedUpValue) != 0;
@@ -152,31 +137,18 @@ public  abstract partial class ItemData
             Stack.CanBePickedUp = Convert.ToBoolean(canBePickedUpValue);
 
         // 类型标签列表
-        itemL = excel.FindColumn(0, "Item_TypeTag");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.Item_TypeTag);
         string typeTagStr = excel.GetCellValue(itemRow, itemL).ToString();
         ItemTags.Item_TypeTag = excel.ParseStringList(typeTagStr);
 
         // 材质标签列表
-        itemL = excel.FindColumn(0, "Item_Material");
+        itemL = excel.FindColumn(0, ExcelIdentifyRow.Item_Material);
         string materialStr = excel.GetCellValue(itemRow, itemL).ToString();
         ItemTags.Item_Material = excel.ParseStringList(materialStr);
 
         Debug.Log("基础数据同步成功！");
         return itemRow;
     }
-
-
-
-    // 新版方法：通过Vector3参数设置变换数据（含可选参数）
-    public void SetTransformValue(Vector3 position,Quaternion? rotation = null,Vector3? scale = null)
-    {
-        _transform.Position = position;
-
-        // 使用空合并运算符保持原有值
-        _transform.Rotation = rotation ?? _transform.Rotation;
-        _transform.Scale = scale ?? _transform.Scale;
-    }
-
 }
 
 [MemoryPackable]

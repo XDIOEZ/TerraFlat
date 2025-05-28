@@ -28,20 +28,14 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     //面板
     public Canvas canvas;
     // 4.workerData 工作数据
-    public WorkerData Data;
+    public Data_Worker Data;
 
     public UltEvent _onInventoryData_Dict_Changed;
     public UltEvent OnInventoryData_Dict_Changed { get => _onInventoryData_Dict_Changed; set => _onInventoryData_Dict_Changed = value; }
     public override ItemData Item_Data
     {
-        get
-        {
-            return Data;
-        }
-        set
-        {
-            Data = (WorkerData)value;
-        }
+        get => Data;
+        set => Data = (Data_Worker)value;
     }
     public Dictionary<string, Inventory_Data> Data_InventoryData
     {
@@ -134,7 +128,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     {
         // 生成配方键
         string recipeKey = string.Join(",",
-            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.Name ?? ""));
+            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.IDName ?? ""));
 
         // 检查配方存在性及类型
         if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out var recipe) ||
@@ -176,13 +170,13 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         // 显示合成开始信息
         Debug.Log($"开始合成：{recipe.name}");
         Debug.Log($"输入材料：{recipeKey}");
-        Debug.Log($"输出产物：{string.Join(", ", itemsToAdd.Select(item => $"{item.Stack.Amount}x{item.Name}"))}");
+        Debug.Log($"输出产物：{string.Join(", ", itemsToAdd.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
 
         // 执行合成：添加输出物品
         foreach (var item in itemsToAdd)
         {
             outputInventory_.AddItem(item);
-            Debug.Log($"添加产物：{item.Stack.Amount}x{item.Name}");
+            Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
         }
 
         // 扣除输入材料
@@ -237,9 +231,9 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
             }
 
             // 检查名称是否匹配
-            if (slot._ItemData.Name != required.ItemName)
+            if (slot._ItemData.IDName != required.ItemName)
             {
-                Debug.LogWarning($"槽位{i} 物品不匹配，期望 {required.ItemName}，实际是 {slot._ItemData.Name}");
+                Debug.LogWarning($"槽位{i} 物品不匹配，期望 {required.ItemName}，实际是 {slot._ItemData.IDName}");
                 return false;
             }
 
@@ -251,7 +245,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
             }
             else
             {
-                Debug.Log($"槽位{i} 材料检查通过：{slot._ItemData.Name} x{slot._ItemData.Stack.Amount}/{required.amount}");
+                Debug.Log($"槽位{i} 材料检查通过：{slot._ItemData.IDName} x{slot._ItemData.Stack.Amount}/{required.amount}");
             }
         }
 
@@ -260,12 +254,12 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         {
             if (!outputInventory_.CanAddTheItem(item))
             {
-                Debug.LogWarning($"输出物品 {item.Name} 无法加入输出背包，可能空间不足");
+                Debug.LogWarning($"输出物品 {item.IDName} 无法加入输出背包，可能空间不足");
                 return false;
             }
             else
             {
-                Debug.Log($"输出检查通过：可以添加 {item.Name} x{item.Stack.Amount}");
+                Debug.Log($"输出检查通过：可以添加 {item.IDName} x{item.Stack.Amount}");
             }
         }
 

@@ -4,6 +4,7 @@ using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "New WorldSaveSO", menuName = "ScriptableObjects/世界存档")]
@@ -21,8 +22,71 @@ public class WorldSaveSO : ScriptableObject
     [Tooltip("数据结构版本号（用于升级兼容）")]
     public int dataVersion = 1;
 
+    [Tooltip("场景所在路径（相对于 Assets 文件夹）")]
+    public string sceneRelativePath = "_Scenes/Scene_Template";
+    [ContextMenu("自动加载")]
+    public void AutoLoad()
+    {
+        string sceneAssetPath = Path.Combine("Assets", sceneRelativePath, buildingName + ".unity");
+        string sceneName = buildingName; // 用于运行时加载
+
+#if UNITY_EDITOR
+        // 编辑器中：使用路径打开场景
+        if (UnityEditor.AssetDatabase.LoadAssetAtPath<SceneAsset>(sceneAssetPath) != null)
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(sceneAssetPath);
+            Debug.Log($"[WorldSaveSO] 编辑器中已打开场景: {sceneAssetPath}");
+        }
+        else
+        {
+            Debug.LogWarning($"[WorldSaveSO] 找不到场景文件: {sceneAssetPath}");
+        }
+#else
+    // 运行时：用名称加载（场景必须加到 Build Settings）
+    if (Application.CanStreamedLevelBeLoaded(sceneName))
+    {
+        SceneManager.LoadScene(sceneName);
+        Debug.Log($"[WorldSaveSO] 运行时已加载场景: {sceneName}");
+    }
+    else
+    {
+        Debug.LogWarning($"[WorldSaveSO] 运行时无法加载场景（未加入 Build Settings？）: {sceneName}");
+    }
+#endif
+
+        // 加载对应的存档数据
+        SaveToDisk();
+    }
+
     // 缓存字段
     private GameSaveData _cachedMapSave;
+
+    [MenuItem("Tools/同步所有地图数据")]
+    public static void SyncAllMap()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:WorldSaveSO", new[] { "Assets/_Scenes" });
+
+        if (guids.Length == 0)
+        {
+            Debug.LogWarning("未找到任何 WorldSaveSO 资源");
+            return;
+        }
+
+        Debug.Log($"开始同步 {guids.Length} 个地图数据...");
+
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var so = AssetDatabase.LoadAssetAtPath<WorldSaveSO>(path);
+            if (so != null)
+            {
+                Debug.Log($"同步地图数据: {so.name} ({path})");
+                so.AutoLoad(); // 调用自动加载（包括场景 + 存档）
+            }
+        }
+
+        Debug.Log("所有地图数据同步完成！");
+    }
 
     #region 对外接口
 

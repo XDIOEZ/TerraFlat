@@ -9,12 +9,12 @@ public class AI_Weapon : Item, IColdWeapon, IAttackState
     #region 属性
     #region 物体数据
     [Tooltip("数据")]
-    public ColdWeaponData _data;
+    public Data_ColdWeapon _data;
 
     public override ItemData Item_Data
     {
         get => _data;
-        set => _data = (ColdWeaponData)value;
+        set => _data = (Data_ColdWeapon)value;
     }
     #endregion
 

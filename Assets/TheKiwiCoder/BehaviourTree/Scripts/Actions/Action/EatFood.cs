@@ -38,7 +38,7 @@ public class EatFood : ActionNode
                     {
                         Food = item.GetComponent<IFood>();
 
-                        if(Food.Foods.Food > 0)
+                        if(Food.NutritionData.Food > 0)
                         {
                             Self.Eat(Food);
                             StartEatingTime = Time.time;

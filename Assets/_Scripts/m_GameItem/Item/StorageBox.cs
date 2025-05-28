@@ -1,4 +1,4 @@
-using MemoryPack;
+/*using MemoryPack;
 using NaughtyAttributes;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,21 +7,15 @@ using UnityEngine;
 
 public class StorageBox : Item , IInteract,IUI,IInventoryData
 {
-    public StorageData storageData;
+    public Data_Storage storageData;
 
     public UltEvent _onInventoryData_Dict_Changed;
     public UltEvent OnInventoryData_Dict_Changed { get => _onInventoryData_Dict_Changed; set => _onInventoryData_Dict_Changed = value; }
 
     public override ItemData Item_Data
     {
-        get
-        {
-            return storageData;
-        }
-        set
-        {
-            storageData = value as StorageData;
-        }
+        get => storageData;
+        set => storageData = value as Data_Storage;
     }
 
     public SelectSlot SelectSlot { get; set; }
@@ -102,3 +96,4 @@ public class StorageBox : Item , IInteract,IUI,IInventoryData
     #endregion
 }
 
+*/

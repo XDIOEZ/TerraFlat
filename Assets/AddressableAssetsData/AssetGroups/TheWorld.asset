@@ -17,11 +17,11 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
-  - m_GUID: 008f201f47e93ad41bbc3043b64da12e
-    m_Address: Assets/_Prefabs/Bliuding
+  - m_GUID: 362f6253ff34d024ebb4d0f675cb46fa
+    m_Address: Assets/_Prefabs/GamePrefabs
     m_ReadOnly: 0
     m_SerializedLabels:
-    - Prefab
+    - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

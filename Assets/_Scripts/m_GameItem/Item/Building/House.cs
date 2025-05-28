@@ -7,7 +7,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
 {
     #region 字段与序列化字段 
     [Header("房屋数据")]
-    [SerializeField] private HouseData data = new HouseData();
+    [SerializeField] private Data_Building data = new Data_Building();
 
     [Header("组件")]
     public List<BoxCollider2D> colliders;
@@ -59,7 +59,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public override ItemData Item_Data
     {
         get => data;
-        set => data = value as HouseData ?? new HouseData();
+        set => data = value as Data_Building ?? new Data_Building();
     }
     #endregion
 

@@ -17,38 +17,8 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: f9c901d93bba7f74d81e326fd1e13fa4
   m_SerializeEntries:
-  - m_GUID: 0182d20a213f2f44c93addcdbcfccbcc
-    m_Address: Assets/_Prefabs/natrue
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 04854a1d6e688804d8e7af02ee606d12
     m_Address: Assets/_Prefabs/Building
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 233b9863906618547b2385f33efcd09b
-    m_Address: Fence
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 277576181c69cb04bae7907eee0e7bb0
-    m_Address: MapCore
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 4ed054f92372bc644ae2a3773e84e923
-    m_Address: Apple_Red
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 64bb4d453d3500d47841b86e39700604
-    m_Address: Assets/_Prefabs/Item
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -59,26 +29,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6cc6a7789d40ef94cbe55e3c1da52b69
-    m_Address: Player
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6e95d098900244e4fa2755780908114c
     m_Address: Assets/_Prefabs/Com_Item
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 76afaf461fddb7e4c8771cb15aea456f
-    m_Address: WoodStick
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 789943bea24026d43aff45dba8a66fc9
-    m_Address: Stone
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -89,62 +41,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 8f7fea60ead02ff4ebbc095e40970f82
-    m_Address: Assets/_Prefabs/Food
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 90de595a5e2f44c408c0a901088734cc
-    m_Address: Assets/_Prefabs/Entity
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 930b156bccaff9546bf44555d025b90a
-    m_Address: AK47
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 939d63540274d5649acb1084d09fcf44
     m_Address: Assets/_Prefabs/coldWeapon
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a0c6d4be2d56204468cebe6e395aedf0
-    m_Address: 'Pickaxe '
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: aa19bda72c606e84fa6fdcfb1b900d6a
-    m_Address: StoneAxe
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c6f55e2336b63394fbc8d77a46530e95
-    m_Address: TestArmor
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ce24645065817804fbd6156e223ca429
-    m_Address: AppleTree
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e03b8d2961390684a93d01afc3105a12
-    m_Address: Coal
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e20f69bbb0a50124ca7520292175eeff
-    m_Address: Log
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

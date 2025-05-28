@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable, MemoryPackable]
-public partial class PlayerData : ItemData
+public partial class Data_Player : ItemData
 {
     #region 生命
     [Tooltip("血量")]
@@ -34,7 +34,7 @@ public partial class PlayerData : ItemData
 
     #region 食物
     [Tooltip("饥饿值")]
-    public Hunger_FoodAndWater hunger = new Hunger_FoodAndWater(100, 100);
+    public Nutrition hunger = new Nutrition(100, 100);
     #endregion
 
     #region 库存

@@ -4,18 +4,12 @@ using UnityEngine;
 
 public class Stone : Item
 {
-    public Com_ItemData _data;
+    public Data_GeneralItem _data;
 
     public override ItemData Item_Data
     {
-        get
-        {
-            return _data;
-        }
-        set
-        {
-            _data = (Com_ItemData)value;
-        }
+        get => _data;
+        set => _data = (Data_GeneralItem)value;
     }
 /*    public override Item_Data GetData()
     {

@@ -225,7 +225,7 @@ public class Building_InstallAndUninstall
         item.UpdatedUI_Event?.Invoke();
 
         // 实例化预制体
-        GameObject installed = GameRes.Instance.InstantiatePrefab(item.Item_Data.Name, GhostShadow.transform.position);
+        GameObject installed = GameRes.Instance.InstantiatePrefab(item.Item_Data.IDName, GhostShadow.transform.position);
 
         // 将安装相关的所有逻辑都转移到 SetupInstalledItem
         SetupInstalledItem(installed, item);

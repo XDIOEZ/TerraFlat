@@ -5,7 +5,7 @@ using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
-public partial class ColdWeaponData : ItemData
+public partial class Data_ColdWeapon : ItemData
 {
     [Tooltip("伤害组成")]
     public Damage _damage;
@@ -26,7 +26,6 @@ public partial class ColdWeaponData : ItemData
     [Tooltip("武器单次出鞘最多可造成的伤害次数")]
     public float _maxAttackCount;
 
-    [Button("从Excel同步数据")]
     public override int SyncData()
     {
         int itemRow = base.SyncData();
