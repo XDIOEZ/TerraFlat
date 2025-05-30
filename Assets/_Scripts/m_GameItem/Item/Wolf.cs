@@ -174,12 +174,12 @@ using UnityEngine;
         Item _Weapon;
         if (Data._inventoryData.ContainsKey("武器"))
         {
-            _Weapon = GameRes.Instance.InstantiatePrefab("WolfDefaultWeapon").GetComponent<Item>();
+            _Weapon = RunTimeItemManager.Instance.InstantiateItem("WolfDefaultWeapon");
             _Weapon.Item_Data = Data._inventoryData["武器"].itemSlots[0]._ItemData;
         }
         else
         {
-            _Weapon = GameRes.Instance.InstantiatePrefab("WolfDefaultWeapon").GetComponent<Item>();
+            _Weapon = RunTimeItemManager.Instance.InstantiateItem("WolfDefaultWeapon");
         }
          
         GetComponentInChildren<ITriggerAttack>().GetItemWeapon(_Weapon);

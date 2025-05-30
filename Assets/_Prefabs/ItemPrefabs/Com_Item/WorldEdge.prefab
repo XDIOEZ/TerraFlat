@@ -202,7 +202,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: 
-    Guid: 83
+    Guid: 0
     TeleportScene: 
     TeleportPosition: {x: 0, y: 0}
   centerOffset: 2

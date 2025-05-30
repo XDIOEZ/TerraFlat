@@ -52,7 +52,7 @@ public class ItemMaker : MonoBehaviour
     [Tooltip("根据ItemName和Amount掉落物品")]
     public void DropItemByNameAndAmount(string ItemName,float Amount,float DropRange)
     {
-        Item _Item = GameRes.Instance.InstantiatePrefab(ItemName).GetComponent<Item>();
+        Item _Item = RunTimeItemManager.Instance.InstantiateItem(ItemName).GetComponent<Item>();
         _Item.Item_Data.Stack.Amount = Amount;
         DropItemWithAnimation(_Item, transform.position, (Vector2)transform.position + (Random.insideUnitCircle * DropRange));
     }

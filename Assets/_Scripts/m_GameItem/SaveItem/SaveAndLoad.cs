@@ -183,7 +183,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     private void CreatePlayer(Data_Player data)
     {
-        GameObject newPlayerObj = GameRes.Instance.InstantiatePrefab("Player");
+        GameObject newPlayerObj = RunTimeItemManager.Instance.InstantiateItem("Player").gameObject;
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
         newPlayer.Data = data;
         newPlayer.Load();
@@ -202,90 +202,56 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     [Button("加载指定地图")]
     public void LoadMap(string mapName)
     {
-        MapSave mapSave;
-
-        if (!SaveData.MapSaves_Dict.ContainsKey(mapName))
+        if (SaveData.MapSaves_Dict.TryGetValue(mapName, out MapSave mapSave))
         {
-            Debug.LogWarning($"未找到地图数据，名称：{mapName}，加载默认模板");
-
-            LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, mapName, result =>
-            {
-                if (result != null && result.SaveData != null && result.SaveData.MapSaves_Dict.ContainsKey(mapName))
-                {
-                    mapSave = result.SaveData.MapSaves_Dict[mapName];
-
-                    foreach (var kvp in mapSave.items)
-                    {
-                        string itemName = kvp.Key;
-                        List<ItemData> itemDataList = kvp.Value;
-
-                        foreach (ItemData forLoadItemData in itemDataList)
-                        {
-                            GameObject itemPrefab;
-                            if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.IDName, out itemPrefab))
-                            {
-                                Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.IDName}");
-                                continue;
-                            }
-
-                            GameObject newItemObj = Instantiate(itemPrefab, Vector3.zero, Quaternion.identity);
-                            newItemObj.GetComponent<Item>().Item_Data = forLoadItemData;
-                            newItemObj.transform.position = forLoadItemData._transform.Position;
-                            newItemObj.transform.rotation = forLoadItemData._transform.Rotation;
-                            newItemObj.transform.localScale = forLoadItemData._transform.Scale;
-                            newItemObj.SetActive(true);
-
-                            if (newItemObj.GetComponent<Item>() is ISave_Load save_Load)
-                            {
-                                save_Load.Load();
-                            }
-                        }
-                    }
-
-                    LoadPlayer(playerName);
-                }
-                else
-                {
-                    Debug.LogError($"加载默认模板地图失败，名称：{mapName}");
-                }
-            });
-        }
-        else
-        {
-            mapSave = SaveData.MapSaves_Dict[mapName];
-            Debug.Log("成功加载地图：" + mapName);
-
-            foreach (var kvp in mapSave.items)
-            {
-                string itemName = kvp.Key;
-                List<ItemData> itemDataList = kvp.Value;
-
-                foreach (ItemData forLoadItemData in itemDataList)
-                {
-                    GameObject itemPrefab;
-                    if (!GameRes.Instance.AllPrefabs.TryGetValue(forLoadItemData.IDName, out itemPrefab))
-                    {
-                        Debug.LogWarning($"未找到预制体，名称：{forLoadItemData.IDName}");
-                        continue;
-                    }
-
-                    GameObject newItemObj = Instantiate(itemPrefab, Vector3.zero, Quaternion.identity);
-                    newItemObj.GetComponent<Item>().Item_Data = forLoadItemData;
-                    newItemObj.transform.position = forLoadItemData._transform.Position;
-                    newItemObj.transform.rotation = forLoadItemData._transform.Rotation;
-                    newItemObj.transform.localScale = forLoadItemData._transform.Scale;
-                    newItemObj.SetActive(true);
-
-                    if (newItemObj.GetComponent<Item>() is ISave_Load save_Load)
-                    {
-                        save_Load.Load();
-                    }
-                }
-            }
-
+            Debug.Log($"成功加载地图：{mapName}");
+            InstantiateItemsFromMapSave(mapSave);
             LoadPlayer(playerName);
+            return;
+        }
+
+        Debug.LogWarning($"未找到地图数据：{mapName}，尝试加载默认模板");
+
+        LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, mapName, result =>
+        {
+            if (result != null && result.SaveData != null &&
+                result.SaveData.MapSaves_Dict.TryGetValue(mapName, out MapSave defaultMapSave))
+            {
+               InstantiateItemsFromMapSave(defaultMapSave);
+                LoadPlayer(playerName);
+            }
+            else
+            {
+                Debug.LogError($"加载默认模板地图失败，名称：{mapName}");
+            }
+        });
+    }
+
+
+    // 放在 RunTimeItemManager 中
+    public void InstantiateItemsFromMapSave(MapSave mapSave)
+    {
+        foreach (var kvp in mapSave.items)
+        {
+            List<ItemData> itemDataList = kvp.Value;
+
+            foreach (ItemData forLoadItemData in itemDataList)
+            {
+                Item item = RunTimeItemManager.Instance.InstantiateItem(forLoadItemData, forLoadItemData._transform.Position);
+
+                item.transform.rotation = forLoadItemData._transform.Rotation;
+                item.transform.localScale = forLoadItemData._transform.Scale;
+                item.gameObject.SetActive(true);
+
+                if (item is ISave_Load save_Load)
+                    save_Load.Load();
+            }
         }
     }
+
+
+
+
 
     public void LoadAssetByLabelAndName<T>(string label, string name, Action<T> onComplete) where T : UnityEngine.Object
     {
@@ -451,14 +417,14 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     #region 场景切换
 
     [Button("改变场景")]
-    public void ChangeScene(string sceneName = "")
+    public void ChangeScene(string sceneName)
     {
         // 若场景名称为空，则使用默认地图
         if(sceneName == "")
         {
             sceneName = defaultSettings.Default_Map;
         }
-
+        SaveData.ActiveSceneName = sceneName;
         // 保存当前场景的地图数据
         SaveActiveMapToSaveData();
 
@@ -537,6 +503,8 @@ public partial class GameSaveData
     //建筑与场景之间的切换表_名字
     [ShowInInspector]
     public Dictionary<string, string> Scenen_Building_Name = new();
+
+    public string ActiveSceneName = "平原";//当前激活场景名称
 
 
 

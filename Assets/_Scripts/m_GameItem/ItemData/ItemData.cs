@@ -26,6 +26,7 @@ using Sirenix.OdinInspector;
 [MemoryPackUnion(52, typeof(Data_Worker))]//工作者数据
 [MemoryPackUnion(53, typeof(Data_Boundary))]//墙壁数据
 [MemoryPackUnion(54, typeof(Data_Food))]//墙壁数据
+[MemoryPackUnion(55, typeof(Data_Tile_Block))]//材料数据
 
 [MemoryPackable]
 [System.Serializable]   
@@ -146,6 +147,7 @@ public  abstract partial class ItemData
         string materialStr = excel.GetCellValue(itemRow, itemL).ToString();
         ItemTags.Item_Material = excel.ParseStringList(materialStr);
 
+        Guid = 0;
         Debug.Log("基础数据同步成功！");
         return itemRow;
     }

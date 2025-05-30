@@ -5266,7 +5266,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: null
-    Guid: 81
+    Guid: 0
     ItemValues:
       ItemValue_List: []
       IsWork: 0

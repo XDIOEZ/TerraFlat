@@ -90,7 +90,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: 
-    Guid: 87
+    Guid: 0
   tileMap: {fileID: 6321057560787975102}
 --- !u!1 &3401113203274231406
 GameObject:

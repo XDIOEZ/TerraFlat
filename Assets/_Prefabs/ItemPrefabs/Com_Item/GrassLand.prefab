@@ -127,7 +127,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: "\u65E0"
-    Guid: 71
+    Guid: 0
     code: "\u65E0"
     values:
       ItemValue_List: []

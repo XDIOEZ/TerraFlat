@@ -47,6 +47,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e24898600f0cfc24fbc89a5de50c8598
+    m_Address: Assets/_Prefabs/GamePrefabs/Item_TileBlock
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

@@ -443,7 +443,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: 
-    Guid: -1440172019
+    Guid: 0
     ItemValues:
       ItemValue_List: []
       IsWork: 0

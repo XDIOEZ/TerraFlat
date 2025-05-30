@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4647429720153673255}
   - component: {fileID: 604099482529500497}
   - component: {fileID: 1849172738809143305}
+  - component: {fileID: 4112089010760811237}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -48,16 +49,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SaveName: "\u6A21\u677F"
-  SavePath: Assets/Saves/DefaultTemplate/
+  SavePath: Assets/Saves/
   SaveData:
-    saveName: "\u6A21\u677F"
-    leaveTime: 0
-  TemplateSaveName: "\u6A21\u677F"
-  TemplateSavePath: Assets/Saves/DefaultTemplate/
-  TemplateSaveData:
     saveName: defaultSaveName
+    ActiveSceneName: "\u5E73\u539F"
     leaveTime: 0
+  GameObject_False: []
   playerName: 
+  defaultSettings:
+    Default_ADDTable: Template_SaveData
+    Default_PlayerSave: "\u73A9\u5BB6"
+    Default_PlayerName: "\u9ED8\u8BA4"
+    Default_Map: "\u5E73\u539F"
 --- !u!114 &604099482529500497
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -89,6 +92,18 @@ MonoBehaviour:
   path: "Assets/_Data/\u5E73\u5766\u4E16\u754C- \u751F\u7269\u53CA\u7269\u54C1\u6570\u636E.xlsx"
   OpenSheetName: Sheet1
   SheetNames: []
+--- !u!114 &4112089010760811237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 29267274160566871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 852c665edf28b2148bf035d2e1c51649, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7928527311482816772
 GameObject:
   m_ObjectHideFlags: 0

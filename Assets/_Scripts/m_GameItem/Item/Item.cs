@@ -26,13 +26,6 @@ public abstract class Item : MonoBehaviour
 
     public UltEvent UpdatedUI_Event = new();
     public UltEvent DestroyItem_Event = new();
-
-    public void SetItemData(ItemData itemData)
-    {
-        Debug.LogWarning("设置物品数据：" + itemData.IDName);
-        Item_Data = itemData;
-    }
-
     public void SyncPosition()
     {
         Item_Data._transform.Position = transform.position;    
@@ -90,16 +83,12 @@ public abstract class Item : MonoBehaviour
         }
         Item_Data.PrefabPath = prefabPath;
         Item_Data.ID = ++XDTool.ItemId;
-        Item_Data.Guid = XDTool.NextGuid;
+     
         Item_Data.Description = Item_Data.ToString();
     }
     public Item()
     {
      //   Item_Data.Guid = Guid.NewGuid().GetHashCode();
     }
-        void Start()
-       {
-        Item_Data.Guid = Guid.NewGuid().GetHashCode();
-       }
 #endif
 }

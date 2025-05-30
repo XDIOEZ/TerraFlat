@@ -111,7 +111,7 @@ public class ItemDroper : MonoBehaviour
         }
 
         // 实例化物体
-        GameObject newObject = GameRes.Instance.InstantiatePrefab(itemData.IDName);
+        Item newObject = RunTimeItemManager.Instance.InstantiateItem(itemData.IDName);
         if (newObject == null)
         {
             Debug.LogError("实例化失败，找不到对应资源：" + itemData.IDName);

@@ -4,9 +4,8 @@
 TagManager:
   serializedVersion: 2
   tags:
-  - Chunk
-  - LoadingTarget
   - Entity
+  - MapCore
   layers:
   - Default
   - TransparentFX

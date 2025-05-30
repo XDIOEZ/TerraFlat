@@ -73,7 +73,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: "\u65E0"
-    Guid: -44500838
+    Guid: 0
     _damage:
       PhysicalDamage: 10
       ArmorBreaking: 0

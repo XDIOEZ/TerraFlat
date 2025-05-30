@@ -106,7 +106,7 @@ MonoBehaviour:
       Rotation: {x: -0, y: -0, z: -0, w: 1}
       Scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: "\u65E0"
-    Guid: 1442838
+    Guid: 0
     hp:
       value: 100
       maxValue: 100

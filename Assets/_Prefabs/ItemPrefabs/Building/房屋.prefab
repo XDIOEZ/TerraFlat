@@ -140,7 +140,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: null
-    Guid: 89
+    Guid: 0
     sceneName: 
     hp:
       value: -1

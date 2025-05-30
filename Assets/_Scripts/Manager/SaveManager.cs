@@ -176,14 +176,14 @@ public class SaveManager : MonoBehaviour
     public void OnStartGameClicked()
     {
         // 这里可以留空，后续根据需求添加逻辑（例如加载游戏场景）
-        saveAndLoad.ChangeScene();//TODO 默认进入平原 后续修改为从玩家身上获取最后一次离开的场景名称
+        saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);//TODO 默认进入平原 后续修改为从玩家身上获取最后一次离开的场景名称
     }
 
     void On_StartNewSave()
     {
         //saveAndLoad.Save();
         // 这里可以留空，后续根据需求添加逻辑（例如加载游戏场景）
-        saveAndLoad.ChangeScene();//TODO 默认进入平原 后续修改为从玩家身上获取最后一次离开的场景名称
+        saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);//TODO 默认进入平原 后续修改为从玩家身上获取最后一次离开的场景名称
     }
     // Method to handle TMP_InputField value changes
     private void OnPlayerNameChanged(string newName)

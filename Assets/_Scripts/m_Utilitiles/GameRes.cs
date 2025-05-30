@@ -80,7 +80,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
     }
 
-    GameObject GetPrefab(string prefabName)
+    public GameObject GetPrefab(string prefabName)
     {
         if (AllPrefabs.ContainsKey(prefabName))
         {

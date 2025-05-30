@@ -17,8 +17,8 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: a51ad89529d35d248af73423fed177d4
   m_SerializeEntries:
-  - m_GUID: 096f8c556e86ebd47abdf2bd22102e5a
-    m_Address: _Tiles
+  - m_GUID: fbffc25086cf10846861a513617f0dd8
+    m_Address: Assets/_Tiles/WorkTIleBase
     m_ReadOnly: 0
     m_SerializedLabels:
     - TileBase
