@@ -2,23 +2,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Buff : Item,ISave_Load
+public abstract class Buff
 {
-    public BuffData buffData;
-
-    public override ItemData Item_Data { get { return buffData; } set { buffData = (BuffData)value; } }
-    public override void Act()
+    public void Run(Item item, BuffData data)
     {
-        throw new System.NotImplementedException();
+        data.buff_CurrentDuration += Time.fixedDeltaTime;
+        if (data.buff_CurrentDuration >= data.buff_MaxDuration)
+        {
+            OnBuffEnd(item, data);
+        }
     }
 
-    public void Load()
-    {
-        throw new System.NotImplementedException();
-    }
+    public abstract void Effect_Work(Item item, BuffData data);
 
-    public void Save()
+    public abstract void Effect_Stop(Item item, BuffData data);
+
+    protected virtual void OnBuffEnd(Item item, BuffData data)
     {
-        throw new System.NotImplementedException();
+        Effect_Stop(item, data);
     }
 }
+

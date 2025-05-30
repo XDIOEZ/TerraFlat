@@ -43,8 +43,8 @@ public class Menu_RightClick_ItemInfo : MonoBehaviour
         CloseButton.onClick.AddListener(CloseMenu);
 
         //使用
-        UseButton.onClick.RemoveAllListeners();
-        UseButton.onClick.AddListener(() => { CreateAndUseItem(SelectedItemSlot); });
+/*        UseButton.onClick.RemoveAllListeners();
+        UseButton.onClick.AddListener(() => { CreateAndUseItem(SelectedItemSlot); });*/
 
         //物品信息
         InfoButton.onClick.RemoveAllListeners();
@@ -78,7 +78,7 @@ public class Menu_RightClick_ItemInfo : MonoBehaviour
         CanvasGroup.blocksRaycasts = false;
         CanvasGroup.interactable = false;
     }
-
+/*
     void CreateAndUseItem(ItemSlot itemSlot)
     {
         if (itemSlot._ItemData == null)
@@ -114,10 +114,10 @@ public class Menu_RightClick_ItemInfo : MonoBehaviour
                 },
                 (error) =>
                 {
-                    Debug.LogError($"实例化失败: {itemSlot._ItemData.PrefabPath}, 错误信息: {error.Message}");
+                   // Debug.LogError($"实例化失败: {itemSlot._ItemData.PrefabPath}, 错误信息: {error.Message}");
                 }
 );
-    }
+    }*/
 
     void DiscardItem()
     {

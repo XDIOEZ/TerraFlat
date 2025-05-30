@@ -2,7 +2,7 @@
 - Project name: TerraFlat
 - Unity version: Unity 2022.3.51f1c1
 - Active game object:
-  - Name: Fence
-  - Tag: Untagged
-  - Layer: Default
+  - Name: Player
+  - Tag: Entity
+  - Layer: Entity
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

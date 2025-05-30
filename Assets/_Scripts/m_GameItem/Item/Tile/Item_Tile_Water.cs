@@ -1,3 +1,4 @@
+using Codice.CM.WorkspaceServer;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,24 +6,24 @@ using UnityEngine.Tilemaps;
 
 public class Item_Tile_Water : Item, IBlockTile
 {
-    public Data_Tile_Block Data;
+    [SerializeField]
+    private Data_Tile_Block data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Tile_Block; }
     public TileData Data_Tile { get => Data.tileData; set => Data.tileData = value; }
+    public Data_Tile_Block Data { get => data; set => data = value; }
 
     public override void Act()
     {
-        SetTileBase(Data_Tile);
+        Set_TileBase_ToWorld(Data_Tile);
     }
 
-    public void SetTileBase(TileData tileData)
+    public void Set_TileBase_ToWorld(TileData tileData)
     {
         // 获取鼠标在屏幕上的位置
         Vector3 mouseScreenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
-        // 获取 MapCore 对象和 Map 脚本
-        GameObject mapCore = GameObject.FindGameObjectWithTag("MapCore");
-        Map mapCoreScript = mapCore.GetComponent<Map>();
+        Map mapCoreScript = (Map)RunTimeItemManager.Instance.GetItemsByNameID("MapCore")[0];
 
         // 使用 Map 脚本中的 tileMap
         Tilemap tileMap = mapCoreScript.tileMap;
@@ -39,8 +40,22 @@ public class Item_Tile_Water : Item, IBlockTile
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
 
-    public void TileInteract(Item item)
+    public void Tile_Interact(Item item,TileData tileData)
     {
-        //创建一个Buff 传入item 调用Buff的Start方法
+        
+        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        foreach (BuffData buffData in tileData.buffData)
+        {
+            buffManager.AddBuffByData(buffData);
+        }
+    }
+
+    public void Tile_Exit(Item item, TileData tileData)
+    {
+        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        foreach (BuffData buffData in tileData.buffData)
+        {
+            buffManager.RemoveBuffByData(buffData);
+        }
     }
 }

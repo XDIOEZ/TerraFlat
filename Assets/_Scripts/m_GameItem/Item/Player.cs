@@ -77,7 +77,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     }
 
     [Tooltip("默认移动速度")]
-    public float DefaultSpeed
+    public float MaxSpeed
     {
         get => 5f;
         set => throw new NotImplementedException("默认速度不可修改");

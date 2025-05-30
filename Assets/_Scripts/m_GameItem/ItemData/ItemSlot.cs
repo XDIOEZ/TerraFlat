@@ -100,7 +100,7 @@ public partial class ItemSlot
             // 插槽为空，直接放置物品
             _ItemData = itemData;
         }
-        else if (_ItemData.ID == itemData.ID)
+        else if (_ItemData.IDName == itemData.IDName)
         {
             // 插槽中已有相同ID的物品，增加堆叠数量
             _ItemData.Stack.Amount += itemData.Stack.Amount;

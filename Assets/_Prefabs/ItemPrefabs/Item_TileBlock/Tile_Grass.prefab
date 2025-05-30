@@ -169,9 +169,7 @@ MonoBehaviour:
   Data:
     IDName: Tile_Grass
     GameName: "\u8349\u65B9\u5757"
-    ID: 0
     Description: 
-    PrefabPath: 
     Durability: 0
     ItemTags:
       Item_TypeTag:
@@ -191,7 +189,7 @@ MonoBehaviour:
     Guid: 0
     tileData:
       Name_tileBase: TileBase_Grass
-      Name_ItemName: Tile_Water
+      Name_ItemName: Tile_Grass
       position: {x: 0, y: 0, z: 0}
       workTime: 0
       itemValues:
@@ -209,3 +207,4 @@ MonoBehaviour:
           OnCurrentValueChanged:
             _PersistentCalls: []
         IsWork: 0
+    buffs: []

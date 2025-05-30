@@ -1,44 +1,77 @@
-using NUnit.Framework.Interfaces;
+ï»¿using NUnit.Framework.Interfaces;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class RunTimeItemManager :SingletonMono<RunTimeItemManager>
+public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
 {
-    public Dictionary<int, Item> RunTimeItems = new Dictionary<int, Item>();
-    //ÊµÀı»¯Item
+    [ShowInInspector]
+    public Dictionary<int, Item> RunTimeItems = new();
+    [ShowInInspector]
+    public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
+
+    // å®ä¾‹åŒ–ï¼ˆé€šè¿‡åç§°ï¼‰
     public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default)
     {
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemName, position);
         Item item = itemObj.GetComponent<Item>();
-        if(item.Item_Data.Guid > -1000&&item.Item_Data.Guid < 1000)
-           item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
-        //Ìí¼Óµ½ÔËĞĞÊ±ÎïÆ·ÁĞ±í
+
+        if (item.Item_Data.Guid > -1000 && item.Item_Data.Guid < 1000)
+            item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+
         RunTimeItems.Add(item.Item_Data.Guid, item);
+        AddToGroup(item); // æ–°å¢åˆ†ç»„é€»è¾‘
 
         return item;
     }
-    public Item InstantiateItem(ItemData itemData,Vector3 position = default, Quaternion rotation = default)
+
+    // å®ä¾‹åŒ–ï¼ˆé€šè¿‡ ItemDataï¼‰
+    public Item InstantiateItem(ItemData itemData, Vector3 position = default, Quaternion rotation = default)
     {
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position);
         Item item = itemObj.GetComponent<Item>();
         item.Item_Data = itemData;
+
         if (item.Item_Data.Guid > -1000 && item.Item_Data.Guid < 1000)
             item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
-        //Ìí¼Óµ½ÔËĞĞÊ±ÎïÆ·ÁĞ±í
+
         RunTimeItems.Add(item.Item_Data.Guid, item);
+        AddToGroup(item); // æ–°å¢åˆ†ç»„é€»è¾‘
 
         return item;
     }
 
-    //²éÕÒÔËĞĞÊ±ÎïÆ·
-    [Button]
-    public Item FindItem(int guid)
+    // âœ… æ·»åŠ åˆ°åˆ†ç»„
+    private void AddToGroup(Item item)
     {
-        if (RunTimeItems.ContainsKey(guid))
-            return RunTimeItems[guid];
+        string key = item.Item_Data.IDName;
+        if (!RuntimeItemsGroup.TryGetValue(key, out var list))
+        {
+            list = new List<Item>();
+            RuntimeItemsGroup[key] = list;
+        }
+        list.Add(item);
+    }
+
+    // âœ… è·å–åŒç±»ç‰©å“åˆ—è¡¨
+    public List<Item> GetItemsByNameID(string nameId)
+    {
+        if (RuntimeItemsGroup.TryGetValue(nameId, out var list))
+        {
+            return list;
+        }
+        return new List<Item>();
+    }
+
+    // æŸ¥æ‰¾è¿è¡Œæ—¶ç‰©å“
+    [Button]
+    public Item GetItem(int guid)
+    {
+        if (RunTimeItems.TryGetValue(guid, out var item))
+            return item;
         return null;
     }
 }
+

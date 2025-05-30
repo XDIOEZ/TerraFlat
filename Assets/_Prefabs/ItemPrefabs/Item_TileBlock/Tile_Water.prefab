@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5980018067299613541}
   - component: {fileID: 1267169979956396607}
   - component: {fileID: 3875094148810119382}
-  - component: {fileID: 6741262059737866580}
+  - component: {fileID: 4669560730262565499}
   m_Layer: 0
   m_Name: Tile_Water
   m_TagString: Untagged
@@ -147,7 +147,7 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!114 &6741262059737866580
+--- !u!114 &4669560730262565499
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -156,7 +156,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 8511684682374088741}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3dc543b94fef8eb428ede936a0903b0b, type: 3}
+  m_Script: {fileID: 11500000, guid: 81e04751a6f614740a0c8d03443d4259, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
@@ -166,13 +166,13 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
-  Data:
+  data:
     IDName: Tile_Water
-    GameName: "\u6C34\u65B9\u5757"
-    ID: 0
-    Description: 
-    PrefabPath: 
-    Durability: 0
+    GameName: 
+    Description: "\u7269\u54C1\u540D\u79F0\uFF1AWater\n\u7269\u54C1\u63CF\u8FF0\uFF1A\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1ANone(None),\u7269\u54C1\u6750\u8D28\uFF1ANone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u4F4D\u7F6E\uFF1A(0.00,
+      0.00, 0.00)\n\u7269\u54C1\u65CB\u8F6C\uFF1A(0.00000, 0.00000, 0.00000, 0.00000)\n\u7269\u54C1\u7F29\u653E\uFF1A(0.00,
+      0.00, 0.00)\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
+    Durability: 1
     ItemTags:
       Item_TypeTag:
       - None
@@ -195,17 +195,13 @@ MonoBehaviour:
       position: {x: 0, y: 0, z: 0}
       workTime: 0
       itemValues:
-        ItemValue_List:
-        - ValueName: "\u8425\u517B"
-          MinValue: 0
-          currentValue: 0
-          MaxValue: 0
-          OnCurrentValueChanged:
-            _PersistentCalls: []
-        - ValueName: "\u6C34\u5206"
-          MinValue: 0
-          currentValue: 0
-          MaxValue: 0
-          OnCurrentValueChanged:
-            _PersistentCalls: []
+        ItemValue_List: []
         IsWork: 0
+      buffData:
+      - buff_Name: "\u6C34\u4F53\u51CF\u901F"
+        buff_Type: "\u51CF\u901FBuff"
+        buff_ID: 
+        buff_Description: 
+        buff_CurrentDuration: 0
+        buff_MaxDuration: 9999
+        buff_Value: 0.5

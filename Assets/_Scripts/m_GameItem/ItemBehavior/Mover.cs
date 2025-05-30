@@ -133,7 +133,7 @@ public class Mover : Organ, IFunction_Move
     /// <summary>
     /// ��ȡ������Ĭ���ƶ��ٶ�
     /// </summary>
-    public float DefaultMoveSpeed { get => SpeedSource.DefaultSpeed; set => SpeedSource.DefaultSpeed = value; }
+    public float DefaultMoveSpeed { get => SpeedSource.MaxSpeed; set => SpeedSource.MaxSpeed = value; }
     #endregion
 
     #region Unity ����

@@ -8,16 +8,18 @@ using UnityEngine.Tilemaps;
 
 public class Item_Tile_Grass : Item,IBlockTile
 {
-    public Data_Tile_Block Data;
+    [SerializeField]
+    private Data_Tile_Block data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Tile_Block; }
     public TileData Data_Tile { get=> Data.tileData; set=> Data.tileData = value; }
+    public Data_Tile_Block Data { get => data; set => data = value; }
 
     public override void Act()
     {
-        SetTileBase(Data_Tile);
+        Set_TileBase_ToWorld(Data_Tile);
     }
 
-    public void SetTileBase(TileData tileData)
+    public void Set_TileBase_ToWorld(TileData tileData)
     {
         // 获取鼠标在屏幕上的位置
         Vector3 mouseScreenPos = Input.mousePosition;
@@ -42,8 +44,21 @@ public class Item_Tile_Grass : Item,IBlockTile
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
 
-    public void TileInteract(Item item)
+    public void Tile_Exit(Item item, TileData tileData)
     {
+       // throw new System.NotImplementedException();
+    }
+
+    //这可如何是好 水方块只会影响移动效果 我不希望其影响其他的 但是草方块又不是单独只影响移动效果
+    public void Tile_Interact(Item item, TileData tileData)
+    {
+        //ToDo 在此方法中实现减速效果 通过实例化Buff对象完成 而不是直接修改Item的Speed属性
+        //  item.GetComponentInChildren<IMover>().Speed = 0.5f;
+
+        //1. 实例化Buff对象 并设置相关属性
+        //GameObject buffObj = RunTimeItemManager.Instance.InstantiateItem(Data.buff);
+
+        //2.激活Buff对象
 
     }
 }
@@ -51,7 +66,9 @@ public class Item_Tile_Grass : Item,IBlockTile
 public interface IBlockTile
 {
     public TileData Data_Tile { get; set; }
-    public void SetTileBase(TileData tileData);
-    public void TileInteract(Item item);
+    public Data_Tile_Block Data { get; set; }
+    public void Set_TileBase_ToWorld(TileData tileData);
+    public void Tile_Interact(Item item, TileData tileData);
+    public void Tile_Exit(Item item, TileData tileData);
 }
 

@@ -25,7 +25,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
         set => Data.speed = value;
     }
 
-    public float DefaultSpeed
+    public float MaxSpeed
     {
         get => Data.speed_Max;
         set => Data.speed_Max = value;

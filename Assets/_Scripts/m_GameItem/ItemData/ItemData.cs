@@ -38,14 +38,8 @@ public  abstract partial class ItemData
     [Tooltip("物品名称")]
     public string GameName;
 
-    [Tooltip("物品ID")]
-    public int ID;
-
     [Tooltip("物品描述")]
     public string Description = "什么都没有描述";
-
-    [Tooltip("预制体路径")]
-    public string PrefabPath = "";
 
     [Tooltip("物品耐久度")]
     public float Durability = 1;
@@ -71,7 +65,6 @@ public  abstract partial class ItemData
     {
         string str =
             $"物品名称：{IDName}\n" +
-            $"物品ID：{ID}\n" +
             $"物品描述：{Description}\n" +
             $"物品体积：{Stack.Volume}\n" +
             $"物品耐久度：{Durability}\n" +
@@ -108,11 +101,6 @@ public  abstract partial class ItemData
 
         itemL = excel.FindColumn(0, ExcelIdentifyRow.GameName);
         GameName = excel.GetCellValue(itemRow, itemL).ToString();
-
-        // ID
-        itemL = excel.FindColumn(0, ExcelIdentifyRow.ID);
-        ID = Convert.ToInt32(excel.GetCellValue(itemRow, itemL));
-
         // 描述
         itemL = excel.FindColumn(0, ExcelIdentifyRow.Description);
         Description = excel.GetCellValue(itemRow, itemL).ToString();

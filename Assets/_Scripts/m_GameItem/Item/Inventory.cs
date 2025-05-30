@@ -104,7 +104,6 @@ public class Inventory : MonoBehaviour
                 var slot = Data.itemSlots[i];
                 if (!slot.IsFull && slot._ItemData != null &&
                     slot._ItemData.ItemSpecialData == inputItemData.ItemSpecialData &&
-                    slot._ItemData.PrefabPath == inputItemData.PrefabPath &&
                     slot._ItemData.IDName == inputItemData.IDName &&
                     slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
                 {
@@ -286,11 +285,11 @@ public class Inventory : MonoBehaviour
         }
 
         // 两者不为空且物品不相同
-        if (inputDataHand != null && localData != null && localData.PrefabPath != inputDataHand.PrefabPath)
+        if (inputDataHand != null && localData != null && localData.IDName != inputDataHand.IDName)
         {
             localSlot.Change(inputSlotHand);
             onUIChanged.Invoke(index);
-            Debug.Log("(物品不同)交换物品槽位:" + index + " 物品:" + inputSlotHand._ItemData.PrefabPath);
+            Debug.Log("(物品不同)交换物品槽位:" + index + " 物品:" + inputSlotHand._ItemData.IDName);
             return;
         }
     }

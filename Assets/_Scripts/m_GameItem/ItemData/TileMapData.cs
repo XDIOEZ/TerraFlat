@@ -8,6 +8,7 @@ using UnityEngine;
 [MemoryPackable]
 public partial class Data_TileMap : ItemData
 {
+    
     public Dictionary<Vector2Int,List<TileData>> TileData = new();
 }
 
@@ -19,9 +20,7 @@ public partial class TileData
     public string Name_ItemName;    //对应的物品名称
     
     public Vector3Int position;         // Tile 坐标
-
     public float workTime;              // 玩家与 Tile 交互耗时
-
-
-    public ItemValues itemValues;             // 物品属性
+    public ItemValues itemValues;             // 物品属性.
+    public List<BuffData> buffData;             // 物品buff数据.
 }

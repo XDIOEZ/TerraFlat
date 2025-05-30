@@ -81,9 +81,6 @@ public abstract class Item : MonoBehaviour
         {
             Debug.LogWarning("无法获取 Prefab 路径，可能不是 Prefab 实例。");
         }
-        Item_Data.PrefabPath = prefabPath;
-        Item_Data.ID = ++XDTool.ItemId;
-     
         Item_Data.Description = Item_Data.ToString();
     }
     public Item()

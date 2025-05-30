@@ -49,8 +49,22 @@ public class Map : Item,ISave_Load
 
             if (tileDataList == null || tileDataList.Count == 0) continue;
 
-            // 获取最顶层 TileData（即索引最大的那个）
-            TileData topTile = tileDataList[^1]; // C# ^1 表示倒数第一个
+            // 检测 tileDataList[0].Name_ItemName 是否为空
+            if (string.IsNullOrEmpty(tileDataList[0].Name_ItemName))
+            {
+                string baseName = tileDataList[0].Name_tileBase;
+                if (!string.IsNullOrEmpty(baseName) && baseName.StartsWith("TileBase_"))
+                {
+                    tileDataList[0].Name_ItemName = "Tile_" + baseName.Substring("TileBase_".Length);
+                }
+                else
+                {
+                    tileDataList[0].Name_ItemName = "Tile_Default"; // 兜底名字
+                }
+            }
+
+            // 获取最顶层 TileData（倒数第一个）
+            TileData topTile = tileDataList[^1];
 
             TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_tileBase);
             if (tile == null)
@@ -65,6 +79,7 @@ public class Map : Item,ISave_Load
 
         Debug.Log("多层 TileData 已加载到 Tilemap 中");
     }
+
     public void SaveTileData()
     {
         if (tileMap == null)
@@ -116,6 +131,27 @@ public class Map : Item,ISave_Load
 
         UpdateTileBaseAtPosition(position);
     }
+
+    [Button("获取 TileData")]
+    public TileData GetTile(Vector2Int position, int? index = null)
+    {
+        if (!tileMapData.TileData.TryGetValue(position, out var list) || list.Count == 0)
+        {
+            Debug.LogWarning($"位置 {position} 上没有任何 TileData。");
+            return null;
+        }
+
+        int i = index ?? (list.Count - 1); // 默认返回最上层（最后一个）
+
+        if (i < 0 || i >= list.Count)
+        {
+            Debug.LogWarning($"位置 {position} 的索引 {i} 不合法。");
+            return null;
+        }
+
+        return list[i];
+    }
+
 
 
     public void DELTile(Vector2Int position, int? index = null)
