@@ -3,17 +3,37 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[System.Serializable]
-[MemoryPackable]
-public partial class BuffData
+[CreateAssetMenu(fileName = "新的Buff配置", menuName = "ScriptableObjects/新建Buff配置")]
+public class Buff_Info : ScriptableObject
 {
-    public string buff_Name; //Buff Name
-    public string buff_Type; //Buff Type
-    public string buff_ID; //Buff ID
+    //Buff的ID
+    public string buff_ID;
+    //Buff的名字
+    public string buff_Name; 
+    //Buff的类型
+    public string buff_Type; 
+    //Buff的描述
     public string buff_Description;
 
-    public float buff_CurrentDuration = 0f;
-    public float buff_MaxDuration = 5f;
+    //Buff的持续时间
+    public float buff_Duration = 5f;
+    //buff的执行间隔
+    public float buff_Interval = 0f;
+    //buff的最大堆叠数量
+    public int buff_MaxStack = 1;
+    //buff的堆叠类型
+    public BuffStackType buff_StackType;
 
-    public float buff_Value = 0.5f; // 通用数值字段，例如：减速倍率、回血数值等
+    public BuffBehavior buff_Behavior_Start;
+    public BuffBehavior buff_Behavior_Update;
+    public BuffBehavior buff_Behavior_Stop;
 }
+public enum BuffStackType
+{
+    DurationAdd,       // 多次叠加持续时间
+    RefreshDuration,   // 每次刷新持续时间
+    StackCount,         // 增加层数
+        Keep
+}
+
+

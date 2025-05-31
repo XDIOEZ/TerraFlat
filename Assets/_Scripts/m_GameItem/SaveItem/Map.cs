@@ -137,7 +137,7 @@ public class Map : Item,ISave_Load
     {
         if (!tileMapData.TileData.TryGetValue(position, out var list) || list.Count == 0)
         {
-            Debug.LogWarning($"位置 {position} 上没有任何 TileData。");
+          //  Debug.LogWarning($"位置 {position} 上没有任何 TileData。");
             return null;
         }
 

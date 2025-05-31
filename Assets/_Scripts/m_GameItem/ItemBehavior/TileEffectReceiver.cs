@@ -51,39 +51,50 @@ public class TileEffectReceiver : MonoBehaviour
         return new Vector2Int(cellPos.x, cellPos.y);
     }
 
-    void TriggerTile()
-    {
-        Vector3Int cellPos = Cache_map.tileMap.WorldToCell(transform.position);
-        Vector2Int gridPos = new Vector2Int(cellPos.x, cellPos.y);
-
-        TileData tileData = Cache_map.GetTile(gridPos);
-
-        if (tileData != null)
-        {
-            Item tileItem = GameRes.Instance.GetPrefab(tileData.Name_ItemName).GetComponent<Item>();
-            if (tileItem is IBlockTile tileBlock)
-            {
-                tileBlock.Tile_Interact(item, tileBlock.Data.tileData);
-            }
-        }
-    }
-
     void TriggerTileEnter(Vector2Int gridPos)
     {
         TileData tileData = Cache_map.GetTile(gridPos);
-
-        if (tileData != null)
+        if (tileData == null)
         {
-            Item tileItem = GameRes.Instance.GetPrefab(tileData.Name_ItemName).GetComponent<Item>();
-            if (tileItem is IBlockTile tileBlock)
+            return;
+        }
+        GameObject prefab = GameRes.Instance.GetPrefab(tileData.Name_ItemName);
+        if (prefab == null)
+        {
+            Debug.LogError($"找不到或无法实例化Prefab: {tileData.Name_ItemName}");
+            return;
+        }
+   
+        Item tileItem = prefab.GetComponent<Item>();
+
+
+        if (tileItem == null)
+        {
+            Debug.LogError($"Prefab 上缺少 Item 组件: {tileData.Name_ItemName}");
+            return;
+        }
+
+
+        if (tileItem is IBlockTile tileBlock)
+        {
+            if (tileBlock.Data == null)
             {
-                tileBlock.Tile_Interact(item, tileBlock.Data.tileData); // 已有的进入逻辑
+                Debug.LogError("tileBlock.Data 为 null");
+                return;
             }
+
+            tileBlock.Tile_Enter(item, tileBlock.Data.tileData);
+        }
+        else
+        {
+            Debug.LogWarning($"tileItem 并不实现 IBlockTile 接口: {tileData.Name_ItemName}");
         }
     }
 
+
     void TriggerTileExit(Vector2Int gridPos)
     {
+
         TileData tileData = Cache_map.GetTile(gridPos);
 
         if (tileData != null)

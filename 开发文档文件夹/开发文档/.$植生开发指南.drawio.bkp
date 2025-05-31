@@ -1,0 +1,180 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
+  <diagram id="bRi_iZHggD-AGo6ihj1B" name="5/19">
+    <mxGraphModel dx="1554" dy="922" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-56" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="435" width="1040" height="655" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-3" value="规定玩家一天进食的中位数是3次&lt;div&gt;&amp;nbsp;也就是玩家在游戏中期&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;24分钟内&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;平均每6分钟使用鼠标进食一次(不包括增益的食物Buff)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="500" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-7" target="Qvv5qwY-nP6G416FZWJI-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-7" target="Qvv5qwY-nP6G416FZWJI-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-7" value="玩家的饱食度在6分钟内的自然活动&lt;div&gt;下会从100%跌落到0%&lt;/div&gt;&lt;div&gt;(以上数值都为略计算)&lt;div&gt;6分钟 = 360秒&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="490" y="500" width="190" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-3" target="Qvv5qwY-nP6G416FZWJI-7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="490" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-9" value="根据6分钟每次的频率可推导得到" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Qvv5qwY-nP6G416FZWJI-8">
+          <mxGeometry x="-0.0845" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-10" value="&lt;div&gt;设定玩家的基础最大饱食度为:&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;360单位&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="730" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=-0.003;entryY=0.447;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-13" target="Qvv5qwY-nP6G416FZWJI-24">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="750" y="760" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-49" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.016;entryY=0.576;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-13" target="Qvv5qwY-nP6G416FZWJI-47">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="590" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="710" y="590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-13" value="玩家自然饱食度流逝速度:&lt;div&gt;&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;1单位/秒&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="730" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-17" target="Qvv5qwY-nP6G416FZWJI-42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-17" value="设定玩家的血量为:&lt;div&gt;&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;144单位&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="610" y="840" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-19" value="玩家在饱食度&amp;lt;0的情况下生命的流逝速度为&lt;div&gt;&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;1单位/秒&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="940" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-23" target="Qvv5qwY-nP6G416FZWJI-34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-23" value="&lt;span style=&quot;font-weight: 400;&quot;&gt;自然状态下&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); font-weight: 400; background-color: transparent;&quot;&gt;饱食度各个阶段的持续时间&lt;/span&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="710" width="210" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-24" value="&lt;span style=&quot;text-align: center; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;100%-80% 状态以上的时间:72秒&lt;/span&gt;&lt;div&gt;&lt;div style=&quot;text-align: center;&quot;&gt;100%-60% 时间:144秒&lt;/div&gt;&lt;div style=&quot;text-align: center;&quot;&gt;80%-60% 时间:72秒&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-23">
+          <mxGeometry y="26" width="210" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-32" value="玩家在饱食度&amp;gt;80%的条件下&lt;div&gt;生命值回复速度:&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;0.1单位/秒&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="825" y="940" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-37" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-34" target="Qvv5qwY-nP6G416FZWJI-32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-41" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-34" target="Qvv5qwY-nP6G416FZWJI-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-34" value="设定玩家需要消耗一整天(1440s)将血量&lt;div&gt;从0.00回复到1.00&lt;/div&gt;&lt;div&gt;全天候维持80%血量以上&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="807.5" y="840" width="155" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-44" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-42" target="Qvv5qwY-nP6G416FZWJI-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-42" value="设定玩家在饱食度为零后能坚持144s" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="840" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-47" value="玩家维持一天所需的食物单位总量&lt;div&gt;&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;1440单位&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="842.5" y="555" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-53" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-50" target="Qvv5qwY-nP6G416FZWJI-51">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-50" value="一天时间:1440s" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="310" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="Qvv5qwY-nP6G416FZWJI-51" target="Qvv5qwY-nP6G416FZWJI-54">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-51" value="一个季节:&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;6天&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;=8640s&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="410" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-54" value="一年:4个季节&lt;div&gt;=34560s&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="510" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-61" value="&lt;span style=&quot;font-weight: 400;&quot;&gt;小麦(一年一熟)&lt;/span&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="641" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-62" value="&lt;span style=&quot;text-align: center;&quot;&gt;{生长总耗时=34560s}&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-61">
+          <mxGeometry y="26" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-63" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-61">
+          <mxGeometry y="52" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-64" value="消耗游戏天数24天&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-61">
+          <mxGeometry y="60" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-78" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-61">
+          <mxGeometry y="86" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-77" value="&lt;div&gt;消耗现实时间 576min&amp;nbsp; 9.6h&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-61">
+          <mxGeometry y="94" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-65" value="&lt;span style=&quot;font-weight: 400;&quot;&gt;水稻(一年两熟&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); font-weight: 400; background-color: transparent;&quot;&gt;)&lt;/span&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1510" y="641" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-66" value="&lt;span style=&quot;text-align: center;&quot;&gt;{生长总耗时=17280s}&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-65">
+          <mxGeometry y="26" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-67" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-65">
+          <mxGeometry y="52" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-68" value="消耗游戏天数12天" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-65">
+          <mxGeometry y="60" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-79" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-65">
+          <mxGeometry y="86" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-80" value="&lt;div&gt;消耗现实时间 288min&amp;nbsp; 4.8h&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-65">
+          <mxGeometry y="94" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-69" value="&lt;span style=&quot;font-weight: 400;&quot;&gt;杂交水稻(一年三熟&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); font-weight: 400; background-color: transparent;&quot;&gt;)&lt;/span&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="641" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-70" value="&lt;span style=&quot;text-align: center;&quot;&gt;{生长总耗时=11520s}&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;text-align: center;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-69">
+          <mxGeometry y="26" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-71" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-69">
+          <mxGeometry y="52" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-72" value="消耗游戏天数8天" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-69">
+          <mxGeometry y="60" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-85" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-69">
+          <mxGeometry y="86" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-86" value="&lt;div&gt;消耗现实时间 192min&amp;nbsp; 3.2h&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-69">
+          <mxGeometry y="94" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-73" value="蔬菜类（高频收获）" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="644" width="160" height="114" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-74" value="&lt;span style=&quot;text-align: center;&quot;&gt;{生长总耗时=2880s-5760s}&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;text-align: center;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-73">
+          <mxGeometry y="26" width="160" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-75" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-73">
+          <mxGeometry y="52" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-76" value="消耗游戏天数 2天 - 4天&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-73">
+          <mxGeometry y="60" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-87" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-73">
+          <mxGeometry y="80" width="160" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="Qvv5qwY-nP6G416FZWJI-88" value="&lt;div&gt;消耗现实时间 48min&amp;nbsp; 0.8h&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Qvv5qwY-nP6G416FZWJI-73">
+          <mxGeometry y="88" width="160" height="26" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

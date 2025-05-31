@@ -197,11 +197,5 @@ MonoBehaviour:
       itemValues:
         ItemValue_List: []
         IsWork: 0
-      buffData:
-      - buff_Name: "\u6C34\u4F53\u51CF\u901F"
-        buff_Type: "\u51CF\u901FBuff"
-        buff_ID: 
-        buff_Description: 
-        buff_CurrentDuration: 0
-        buff_MaxDuration: 9999
-        buff_Value: 0.5
+  BuffInfo:
+  - {fileID: 11400000, guid: 0a5d871a7f32eac4d892b8b6a621d6a6, type: 2}

@@ -12,6 +12,8 @@ public class Item_Tile_Water : Item, IBlockTile
     public TileData Data_Tile { get => Data.tileData; set => Data.tileData = value; }
     public Data_Tile_Block Data { get => data; set => data = value; }
 
+    public List<Buff_Info> BuffInfo;
+
     public override void Act()
     {
         Set_TileBase_ToWorld(Data_Tile);
@@ -39,23 +41,48 @@ public class Item_Tile_Water : Item, IBlockTile
         mapCoreScript.ADDTile(cellPos2D, tileData);
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
-
-    public void Tile_Interact(Item item,TileData tileData)
+    public void Tile_Enter(Item item, TileData tileData)
     {
-        
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
-        foreach (BuffData buffData in tileData.buffData)
+        if (item == null)
         {
-            buffManager.AddBuffByData(buffData);
+            Debug.LogError("[Tile_Enter] item 是 null，无法执行 Buff 添加");
+            return;
+        }
+
+        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        if (buffManager == null)
+        {
+            Debug.LogError($"[Tile_Enter] item {item.name} 没有找到 BuffManager 组件");
+            return;
+        }
+
+        if (BuffInfo == null || BuffInfo.Count == 0)
+        {
+            Debug.LogWarning("[Tile_Enter] BuffInfo 列表为空，无 Buff 被添加");
+            return;
+        }
+
+       // Debug.Log($"[Tile_Enter] 开始对 item {item.name} 添加 Buff，共计 {BuffInfo.Count} 个");
+
+        foreach (Buff_Info buffData in BuffInfo)
+        {
+            if (buffData == null)
+            {
+                Debug.LogWarning("[Tile_Enter] 检测到空的 Buff_Info，跳过");
+                continue;
+            }
+            Debug.Log($"[Tile_Enter] 添加 Buff: {buffData.buff_Name} 到 {item.name}");
+            buffManager.AddBuffByData(new BuffRunTime(buffData, this, item));
         }
     }
+
 
     public void Tile_Exit(Item item, TileData tileData)
     {
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
-        foreach (BuffData buffData in tileData.buffData)
+        foreach (Buff_Info buffData in BuffInfo)
         {
-            buffManager.RemoveBuffByData(buffData);
+            buffManager.StopBuff(buffData.buff_ID);
         }
     }
 }
