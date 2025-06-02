@@ -1,0 +1,227 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15" pages="2">
+  <diagram id="8yKRzX55yw8iAQM8X-Ct" name="系统循环架构总览">
+    <mxGraphModel dx="1636" dy="971" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-47" value="场景管理系统" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;arcSize=50;" vertex="1" parent="1">
+          <mxGeometry x="1100.27" y="715.91" width="80" height="28.09" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-46" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-1" target="sgZPGOeCJPQWiLNWUdwU-47">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1100.27" y="730.91" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-55" value="装备系统" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;arcSize=50;" vertex="1" parent="1">
+          <mxGeometry x="865" y="704" width="120" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-118" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-66" target="sgZPGOeCJPQWiLNWUdwU-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="283" y="627" />
+              <mxPoint x="283" y="359" />
+              <mxPoint x="1140" y="359" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-119" value="制作生产线中的机器装置需要通过探索遗迹?" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-118">
+          <mxGeometry x="-0.0209" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-127" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-77" target="sgZPGOeCJPQWiLNWUdwU-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-128" value="事件需要玩家通过战斗解决问题" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-127">
+          <mxGeometry x="-0.7728" y="3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-136" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-78" target="sgZPGOeCJPQWiLNWUdwU-66">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="933" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-137" value="四季变化带来的食物短缺" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-136">
+          <mxGeometry x="0.0151" y="-2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-139" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-78" target="sgZPGOeCJPQWiLNWUdwU-91">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="888" y="933" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-140" value="四季变化带来的温度变化:玩家需要保暖效果更好的衣服" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-139">
+          <mxGeometry x="-0.5529" y="-2" relative="1" as="geometry">
+            <mxPoint x="132" y="-47" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-111" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-91" target="sgZPGOeCJPQWiLNWUdwU-113">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="775" y="554" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-112" value="装备需要生产" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-111">
+          <mxGeometry x="0.2326" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-122" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-91" target="sgZPGOeCJPQWiLNWUdwU-55">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-91" value="玩家需要制作高级的装备" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="865" y="597" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-102" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-1" target="sgZPGOeCJPQWiLNWUdwU-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-108" value="探索时会产生战斗" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-102">
+          <mxGeometry x="0.128" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-130" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-1" target="sgZPGOeCJPQWiLNWUdwU-84">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1185" y="232" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-131" value="探索也会触发事件" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-130">
+          <mxGeometry x="-0.7042" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-1" value="探索" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1080.27" y="595.91" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-107" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="1379.27" y="595.91" width="120" height="137" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-48" value="战斗系统" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;arcSize=50;" vertex="1" parent="sgZPGOeCJPQWiLNWUdwU-107">
+          <mxGeometry x="20" y="97" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-100" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="sgZPGOeCJPQWiLNWUdwU-107" source="sgZPGOeCJPQWiLNWUdwU-3" target="sgZPGOeCJPQWiLNWUdwU-48">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-3" value="战斗" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="sgZPGOeCJPQWiLNWUdwU-107">
+          <mxGeometry width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-109" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-3" target="sgZPGOeCJPQWiLNWUdwU-91">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1409" y="453" />
+              <mxPoint x="920" y="453" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-110" value="战斗需要装备" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-109">
+          <mxGeometry x="0.0104" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-115" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-113" target="sgZPGOeCJPQWiLNWUdwU-114">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-116" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-113" target="sgZPGOeCJPQWiLNWUdwU-66">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-117" value="合成高级装备需要大量输入材料" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-116">
+          <mxGeometry x="0.1571" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-144" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-113" target="sgZPGOeCJPQWiLNWUdwU-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="661" y="486" />
+              <mxPoint x="1090" y="486" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-145" value="合成需要的特殊材料需要探索" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-144">
+          <mxGeometry x="-0.2364" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-113" value="合成制作装备和材料" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="601" y="594" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-114" value="合成系统" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;arcSize=50;" vertex="1" parent="1">
+          <mxGeometry x="601" y="710" width="120" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-129" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="1379" y="202" width="120" height="148" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-77" value="游戏随着游戏时长的增加会产生事件" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="sgZPGOeCJPQWiLNWUdwU-129">
+          <mxGeometry y="88" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-126" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="sgZPGOeCJPQWiLNWUdwU-129" source="sgZPGOeCJPQWiLNWUdwU-84" target="sgZPGOeCJPQWiLNWUdwU-77">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-84" value="游戏事件系统" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="sgZPGOeCJPQWiLNWUdwU-129">
+          <mxGeometry width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-133" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-84" target="sgZPGOeCJPQWiLNWUdwU-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1110" y="213" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-134" value="事件需要玩家探索" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-133">
+          <mxGeometry x="-0.0563" y="3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-142" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="578" y="902" width="120" height="165" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-78" value="玩家需要应对游戏四季变化带来的影响" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="sgZPGOeCJPQWiLNWUdwU-142">
+          <mxGeometry width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-141" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="sgZPGOeCJPQWiLNWUdwU-142" source="sgZPGOeCJPQWiLNWUdwU-82" target="sgZPGOeCJPQWiLNWUdwU-78">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-82" value="四季变化系统:DLC" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="sgZPGOeCJPQWiLNWUdwU-142">
+          <mxGeometry y="105" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-148" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-78" target="sgZPGOeCJPQWiLNWUdwU-84">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1556" y="947" />
+              <mxPoint x="1556" y="232" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-149" value="生成季节性事假" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="sgZPGOeCJPQWiLNWUdwU-148">
+          <mxGeometry x="-0.4086" y="3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-96" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sgZPGOeCJPQWiLNWUdwU-66" target="sgZPGOeCJPQWiLNWUdwU-95">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-66" value="生产线" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="288" y="597" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sgZPGOeCJPQWiLNWUdwU-95" value="&lt;a href=&quot;data:page/id,DBMBjDPxNjhQfU15J7hw&quot;&gt;建造系统&lt;/a&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;arcSize=50;" vertex="1" parent="1">
+          <mxGeometry x="298" y="717" width="100" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="DBMBjDPxNjhQfU15J7hw" name="建造系统">
+    <mxGraphModel dx="1554" dy="922" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
