@@ -98,6 +98,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
         set => Data.staminaRecoverySpeed = value;
     }
     public UltEvent OnStaminaChanged { get; set; } = new UltEvent();
+    public Vector3 Direction { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     #endregion
 
     public void Start()

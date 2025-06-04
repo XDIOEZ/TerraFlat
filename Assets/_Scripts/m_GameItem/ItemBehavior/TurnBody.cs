@@ -1,8 +1,9 @@
-using NaughtyAttributes;
+
+using Sirenix.OdinInspector;
 using System.Collections;
 using UnityEngine;
 
-public class TurnBody : MonoBehaviour, ITurnBody
+public class TurnBody : Organ, ITurnBody
 {
     #region 公开字段（Inspector配置）
     [Header("转向控制")]
@@ -24,12 +25,13 @@ public class TurnBody : MonoBehaviour, ITurnBody
     [ReadOnly] // 确保编辑器中不可手动修改
     private bool isTurning = false;
 
+    public IFocusPoint focusPoint;
+
     #endregion
 
-    private Coroutine turnCoroutine; // 确保不会多次启动旋转
-
-    void Awake()
+    public void Start()
     {
+        focusPoint = GetComponentInParent<IFocusPoint>();
         // 初始化 controlledTransform（默认为父对象）
         if (controlledTransform == null)
         {
@@ -40,6 +42,8 @@ public class TurnBody : MonoBehaviour, ITurnBody
             }
         }
     }
+
+    private Coroutine turnCoroutine; // 确保不会多次启动旋转
 
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
@@ -89,5 +93,23 @@ public class TurnBody : MonoBehaviour, ITurnBody
         // 确保最终角度精确
         controlledTransform.rotation = Quaternion.Euler(0f, targetAngle, 0f);
         isTurning = false; // 旋转结束
+    }
+
+    [Button("测试转向")]
+    public override void StartWork()
+    {
+        //TODO 根据聚焦点位自动获取是在左还是右
+
+        TurnBodyToDirection(focusPoint.FocusPointPosition);
+    }
+
+    public override void UpdateWork()
+    {
+        TurnBodyToDirection(focusPoint.FocusPointPosition);
+    }
+
+    public override void StopWork()
+    {
+        throw new System.NotImplementedException();
     }
 }

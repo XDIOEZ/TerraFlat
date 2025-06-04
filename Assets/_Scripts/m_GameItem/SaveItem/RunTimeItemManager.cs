@@ -12,7 +12,8 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     [ShowInInspector]
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
 
-    public void Start()
+
+    public void Awake()
     {
         // 第一步：获取场景中所有的 Item（包括非激活状态）
         Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
@@ -39,6 +40,7 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
             RunTimeItems.Add(item.Item_Data.Guid, item);
             AddToGroup(item); // 新增分组逻辑
         }
+        Debug.Log("物品加载完毕");
     }
     // 实例化（通过名称）
     public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default)

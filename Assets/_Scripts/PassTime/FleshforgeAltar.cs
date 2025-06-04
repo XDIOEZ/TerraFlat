@@ -1,4 +1,4 @@
-using System.Collections;
+/*using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -75,3 +75,4 @@ public interface IFun_FleshForgeAltar
     public bool Composite(); // ºÏ³É
 
 }
+*/

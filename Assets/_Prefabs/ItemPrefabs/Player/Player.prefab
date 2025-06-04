@@ -7090,6 +7090,7 @@ GameObject:
   - component: {fileID: 3865295443736218173}
   - component: {fileID: 3145958991538765701}
   - component: {fileID: 9215300203209194454}
+  - component: {fileID: 4857332124420063422}
   m_Layer: 9
   m_Name: "\u4F24\u5BB3\u63A5\u6536\u5668"
   m_TagString: Untagged
@@ -7183,6 +7184,21 @@ MonoBehaviour:
   BoxCollider2D: {fileID: 3145958991538765701}
   shakeDuration: 0.15
   shakeMagnitude: 0.1
+--- !u!114 &4857332124420063422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2981986529659475333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aea3b0ebad94a5243b635198d0eb213c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lastGridPos: {x: 0, y: 0}
+  item: {fileID: 2656705142630105963}
+  Cache_map: {fileID: 0}
 --- !u!1 &2998648377496043126
 GameObject:
   m_ObjectHideFlags: 0
@@ -10629,7 +10645,6 @@ GameObject:
   - component: {fileID: 2445912756217786260}
   - component: {fileID: 7741850240277451240}
   - component: {fileID: 2907739802715774689}
-  - component: {fileID: 4008775964828844621}
   m_Layer: 9
   m_Name: Mover
   m_TagString: Untagged
@@ -10714,21 +10729,6 @@ MonoBehaviour:
         _Z: 0
         _W: 0
         _Object: {fileID: 0}
---- !u!114 &4008775964828844621
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3832810587504448066}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aea3b0ebad94a5243b635198d0eb213c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  lastGridPos: {x: 0, y: 0}
-  item: {fileID: 2656705142630105963}
-  Cache_map: {fileID: 0}
 --- !u!1 &3850814771679276534
 GameObject:
   m_ObjectHideFlags: 0
@@ -11259,7 +11259,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4144427429731421541}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -19.29, y: 1.49, z: 3.34}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -14188,7 +14188,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5838067322383162069}
   m_HandleRect: {fileID: 5578850271331694060}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -25853,7 +25853,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.00010585785}
+  m_AnchoredPosition: {x: 0, y: 0.000062704086}
   m_SizeDelta: {x: 0, y: 400}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &8039292159986150900

@@ -9,7 +9,10 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 
-public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_Load
+public class Player 
+    : Item,IHunger,ISpeed,
+    IInventoryData,IHealth,IStamina,
+    ISave_Load,IFocusPoint, IRotationSpeed
 {
     #region 字段声明
     [Tooltip("库存数据接口")]
@@ -160,8 +163,9 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     public UltEvent onSave { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public UltEvent onLoad { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public Item Belong_Item { get => this;}
-
-
+    public Vector3 FocusPointPosition { get; set; }
+    public Vector3 Direction { get; set; }
+    public float RotationSpeed { get; set; } = 100;
     #endregion
 
     #region 方法

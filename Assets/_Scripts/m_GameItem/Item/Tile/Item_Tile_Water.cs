@@ -12,7 +12,7 @@ public class Item_Tile_Water : Item, IBlockTile
     public TileData Data_Tile { get => Data.tileData; set => Data.tileData = value; }
     public Data_Tile_Block Data { get => data; set => data = value; }
 
-    public List<Buff_Info> BuffInfo;
+    public List<Buff_Data> BuffInfo;
 
     public override void Act()
     {
@@ -75,7 +75,7 @@ public class Item_Tile_Water : Item, IBlockTile
 
        // Debug.Log($"[Tile_Enter] 开始对 item {item.name} 添加 Buff，共计 {BuffInfo.Count} 个");
 
-        foreach (Buff_Info buffData in BuffInfo)
+        foreach (Buff_Data buffData in BuffInfo)
         {
             if (buffData == null)
             {
@@ -91,7 +91,7 @@ public class Item_Tile_Water : Item, IBlockTile
     public void Tile_Exit(Item item, TileData tileData)
     {
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
-        foreach (Buff_Info buffData in BuffInfo)
+        foreach (Buff_Data buffData in BuffInfo)
         {
             buffManager.StopBuff(buffData.buff_ID);
         }

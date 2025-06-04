@@ -1,120 +1,69 @@
 using NaughtyAttributes;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 /// <summary>
-/// Mover �����ڴ�����Ϸ������ƶ��߼���
+/// Mover 用于处理游戏对象的移动逻辑
 /// </summary>
 public class Mover : Organ, IFunction_Move
 {
-    #region �ֶ�
-    [Header("�ƶ�����")]
-    /// <summary>
-    /// �ٶ���Դ���洢�ٶ������Ϣ
-    /// </summary>
-    [Tooltip("�ٶ���Դ")]
+    #region 字段
+
+    [Header("移动设置")]
+    [Tooltip("速度源")]
     private ISpeed speedSource;
 
-    /// <summary>
-    /// �ٶ�˥�����ʣ�����������ٵĿ���
-    /// </summary>
-    [Tooltip("�ٶ�˥������")]
+    [Tooltip("减速速率")]
     public float slowDownSpeed = 5f;
 
-    /// <summary>
-    /// ֹͣʱ���ٶȣ����ٶ�С�ڸ�ֵʱ����ֹͣ�ƶ�
-    /// </summary>
-    [Tooltip("ֹͣʱ���ٶ�")]
+    [Tooltip("停止时的最小速度，小于该值则停止移动")]
     public float endSpeed = 0.1f;
 
-    /// <summary>
-    /// �ϴ��ƶ��ķ������ڼ�¼�ƶ�����ı仯
-    /// </summary>
     private Vector2 _lastDirection = Vector2.zero;
-
-    /// <summary>
-    /// ����Э�̣����ڿ�������ļ��ٹ���
-    /// </summary>
     private Coroutine _slowDownCoroutine;
 
-    /// <summary>
-    /// ��ʶ�����Ƿ������ƶ�
-    /// </summary>
-    [Tooltip("�Ƿ������ƶ�")]
+    [Tooltip("是否正在移动")]
     public bool IsMoving;
 
-    /// <summary>
-    /// �ƶ������¼���������ֹͣ�ƶ�ʱ����
-    /// </summary>
-    [Tooltip("�ƶ������¼�")]
+    [Tooltip("移动结束事件")]
     public UltEvent OnMoveEnd;
 
-    /// <summary>
-    /// �ƶ������¼����������ƶ������г�������
-    /// </summary>
-    [Tooltip("�ƶ������¼�")]
+    [Tooltip("移动持续事件")]
     public UltEvent OnMoveStay;
 
-    /// <summary>
-    /// �ƶ���ʼ�¼��������忪ʼ�ƶ�ʱ����
-    /// </summary>
-    [Tooltip("�ƶ���ʼ�¼�")]
+    [Tooltip("移动开始事件")]
     public UltEvent OnMoveStart;
 
-    /// <summary>
-    /// �ٶȱ仯�ֵ䣬�洢�����ٶȱ仯����Ϣ
-    /// </summary>
     [ShowNonSerializedField]
-    [Tooltip("�ٶȱ仯�ֵ�")]
-    public Dictionary<(string, ValueChangeType, float), float> SpeedChangeDict = new Dictionary<(string, ValueChangeType, float), float>();
+    [Tooltip("速度变化字典")]
+    public Dictionary<(string, ValueChangeType, float), float> SpeedChangeDict = new();
 
-    /// <summary>
-    /// 2D������������ڿ�������������ƶ�
-    /// </summary>
     private Rigidbody2D _rb;
+
     #endregion
 
-    #region ����
-    /// <summary>
-    /// ��ȡ������ Rigidbody2D �������δ��ֵ��ͨ�����߷������ҡ�
-    /// </summary>
+    #region 属性
+
     public Rigidbody2D Rb
     {
         get => _rb ??= XDTool.GetComponentInChildrenAndParent<Rigidbody2D>(gameObject);
         private set => _rb = value;
     }
 
-    /// <summary>
-    /// ��ȡ�����õ�ǰ���ƶ��ٶȡ�
-    /// </summary>
     public float Speed
     {
         get => Rb ? Rb.velocity.magnitude : 0f;
         set => Rb.velocity = Rb.velocity.normalized * value;
     }
 
-    /// <summary>
-    /// ��ȡ�������ƶ��ٶȣ��ᴥ���ٶ����¼��㡣
-    /// </summary>
     public float MoveSpeed
     {
-        get
-        {
-            return SpeedSource.Speed;
-        }
-        set
-        {
-            SpeedSource.Speed = value;
-        }
+        get => SpeedSource.Speed;
+        set => SpeedSource.Speed = value;
     }
 
-    /// <summary>
-    /// ��ȡ�ٶ���Դ����δ��ʼ����Ӹ������в���
-    /// </summary>
     [ShowNativeProperty]
     public ISpeed SpeedSource
     {
@@ -130,19 +79,18 @@ public class Mover : Organ, IFunction_Move
 
     public IChangeStamina changeStamina { get; set; }
 
-    /// <summary>
-    /// ��ȡ������Ĭ���ƶ��ٶ�
-    /// </summary>
-    public float DefaultMoveSpeed { get => SpeedSource.MaxSpeed; set => SpeedSource.MaxSpeed = value; }
+    public float DefaultMoveSpeed
+    {
+        get => SpeedSource.MaxSpeed;
+        set => SpeedSource.MaxSpeed = value;
+    }
+
     #endregion
 
-    #region Unity ����
-    /// <summary>
-    /// ��ʼ������������ Rigidbody2D ��������ӳ�ʼ�ٶȱ仯��
-    /// </summary>
+    #region Unity 生命周期
+
     private void Start()
     {
-       
         if (Rb == null)
         {
             Rb = GetComponentInParent<Rigidbody2D>();
@@ -150,25 +98,19 @@ public class Mover : Organ, IFunction_Move
 
         changeStamina = transform.parent.GetComponentInChildren<IChangeStamina>();
 
-        OnMoveStart += () => { changeStamina.StartReduceStamina(20, "�ƶ�"); };
-        OnMoveEnd += () => { changeStamina.StopReduceStamina("�ƶ�"); };
-      //  AddSpeedChange(("����", ValueChangeType.Add, 0), +DefaultMoveSpeed);
+        OnMoveStart += () => { changeStamina.StartReduceStamina(20, "移动"); };
+        OnMoveEnd += () => { changeStamina.StopReduceStamina("移动"); };
     }
 
-    /// <summary>
-    /// ��������ʱ�� Rigidbody2D �����ÿա�
-    /// </summary>
     private void OnDestroy()
     {
         _rb = null;
     }
+
     #endregion
 
-    #region ��������
-    /// <summary>
-    /// �����ƶ��������ٶȡ�
-    /// </summary>
-    /// <param name="direction">�ƶ�����</param>
+    #region 公共方法
+
     public void Move(Vector2 direction)
     {
         if (direction == Vector2.zero)
@@ -182,7 +124,7 @@ public class Mover : Organ, IFunction_Move
             return;
         }
 
-        if (IsMoving == false)
+        if (!IsMoving)
         {
             IsMoving = true;
             OnMoveStart?.Invoke();
@@ -198,106 +140,79 @@ public class Mover : Organ, IFunction_Move
         Rb.velocity = adjustedVelocity;
     }
 
-    /// <summary>
-    /// ���ٶȱ仯�ֵ�������һ���ٶȱ仯������¼����ƶ��ٶȡ�
-    /// </summary>
-    /// <param name="Sign_Type_Priority">������ʶ���仯���ͺ����ȼ���Ԫ��</param>
-    /// <param name="Value">�仯��ֵ</param>
-    public void AddSpeedChange((string, ValueChangeType, float) Sign_Type_Priority, float Value)
+    public void AddSpeedChange((string, ValueChangeType, float) key, float value)
     {
-        // �ȼ���Ƿ��Ѿ�����
-        if (SpeedChangeDict.ContainsKey(Sign_Type_Priority))
+        if (SpeedChangeDict.ContainsKey(key))
         {
-            //Debug.LogWarning("�Ѿ�������ͬ�ĸı����ͣ�");
             return;
         }
-        if (Sign_Type_Priority.Item2 == ValueChangeType.Add)
+
+        if (key.Item2 == ValueChangeType.Add || key.Item2 == ValueChangeType.Multiply)
         {
-            SpeedChangeDict[Sign_Type_Priority] = Value;
+            SpeedChangeDict[key] = value;
         }
-        if (Sign_Type_Priority.Item2 == ValueChangeType.Multiply)
+
+        RecalculateMoveSpeed();
+    }
+
+    public void RemoveSpeedChange((string, ValueChangeType, float) key)
+    {
+        if (SpeedChangeDict.ContainsKey(key))
         {
-            SpeedChangeDict[Sign_Type_Priority] = Value;
+            SpeedChangeDict.Remove(key);
         }
         RecalculateMoveSpeed();
     }
 
-    /// <summary>
-    /// ���ٶȱ仯�ֵ����Ƴ�һ���ٶȱ仯������¼����ƶ��ٶȡ�
-    /// </summary>
-    /// <param name="Sign_Type_Priority">������ʶ���仯���ͺ����ȼ���Ԫ��</param>
-    public void RemoveSpeedChange((string, ValueChangeType, float) Sign_Type_Priority)
-    {
-        if (SpeedChangeDict.ContainsKey(Sign_Type_Priority))
-        {
-            SpeedChangeDict.Remove(Sign_Type_Priority);
-        }
-        RecalculateMoveSpeed();
-    }
     #endregion
 
-    #region ˽�д���
-    /// <summary>
-    /// �����ٶȱ仯�ֵ����¼����ƶ��ٶȡ�
-    /// </summary>
+    #region 私有方法
+
     private void RecalculateMoveSpeed()
     {
-        // ���Ĭ���ٶ��Ƿ���Ч
         if (DefaultMoveSpeed <= 0)
         {
-            Debug.Log(DefaultMoveSpeed + " ����Ч��Ĭ���ٶ�");
+            Debug.LogWarning(DefaultMoveSpeed + " 是无效的默认速度");
             return;
         }
 
-        // �����ٶ�
         MoveSpeed = DefaultMoveSpeed;
 
-        // ʹ���б��洢�ֵ��е�Ԫ�أ����������ȼ�����
         var changeList = new List<(string, ValueChangeType, float, float)>();
 
-        // ���ֵ�����ת��Ϊ�б����������ȼ���Ϣ��Item3��
         foreach (var item in SpeedChangeDict)
         {
             changeList.Add((item.Key.Item1, item.Key.Item2, item.Key.Item3, item.Value));
         }
 
-        // �������ȼ���Item3�������б������ȼ�С���ȴ���
         changeList.Sort((a, b) => a.Item3.CompareTo(b.Item3));
 
-        // ��������˳��ִ�мӷ��ͳ˷�
         foreach (var item in changeList)
         {
-            var changeType = item.Item2;
+            var type = item.Item2;
             var value = item.Item4;
 
-            // �����ӷ��仯
-            if (changeType == ValueChangeType.Add)
+            if (type == ValueChangeType.Add)
             {
                 if (value < 0)
                 {
-                    Debug.Log(value + " ����Ч�ļӷ��仯ֵ");
-                    return;
+                    Debug.LogWarning(value + " 是无效的加法变化值");
+                    continue;
                 }
                 MoveSpeed += value;
             }
-            // �����˷��仯
-            else if (changeType == ValueChangeType.Multiply)
+            else if (type == ValueChangeType.Multiply)
             {
                 if (value <= 0)
                 {
-                    Debug.Log(value + " ����Ч�ĳ˷��仯ֵ");
-                    return;
+                    Debug.LogWarning(value + " 是无效的乘法变化值");
+                    continue;
                 }
                 MoveSpeed *= value;
             }
         }
-
-       // Debug.Log("��ǰ�ٶ�: " + MoveSpeed);
     }
 
-    /// <summary>
-    /// ��������Э�̡�
-    /// </summary>
     private void StartSlowDownRoutine()
     {
         if (_slowDownCoroutine != null)
@@ -307,9 +222,6 @@ public class Mover : Organ, IFunction_Move
         _slowDownCoroutine = StartCoroutine(SlowDownRoutine());
     }
 
-    /// <summary>
-    /// �����߼���
-    /// </summary>
     private IEnumerator SlowDownRoutine()
     {
         while (Rb.velocity.magnitude > endSpeed)
@@ -319,11 +231,27 @@ public class Mover : Organ, IFunction_Move
         }
         Rb.velocity = Vector2.zero;
     }
+
+    public override void StartWork()
+    {
+        Move(SpeedSource.Direction);
+    }
+
+    public override void UpdateWork()
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public override void StopWork()
+    {
+        throw new System.NotImplementedException();
+    }
+
     #endregion
 }
 
 /// <summary>
-/// �ٶȱ仯����ö�٣������ӷ��ͳ˷���
+/// 速度变化类型枚举：加法或乘法
 /// </summary>
 public enum ValueChangeType
 {

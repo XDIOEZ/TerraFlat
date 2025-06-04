@@ -110,6 +110,7 @@ using UnityEngine;
     #region 团队
     public string TeamID { get => Data.TeamID; set => Data.TeamID = value; }
     public Dictionary<string, RelationType> Relations { get => Data.Relations; set => Data.Relations = value; }
+    public Vector3 Direction { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     #endregion
 
     public void Start()

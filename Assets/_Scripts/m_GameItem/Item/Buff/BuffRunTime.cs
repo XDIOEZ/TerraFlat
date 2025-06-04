@@ -10,7 +10,7 @@ public class BuffRunTime
 
     [MemoryPackIgnore]
     //引用的buff数据
-    public Buff_Info buff_Info;
+    public Buff_Data buff_Data;
     [MemoryPackIgnore]
     //Buff的发出者
     public Item buff_Sender;
@@ -18,19 +18,20 @@ public class BuffRunTime
     //Buff的接收者
     public Item buff_Receiver;
 
-    public BuffRunTime(Buff_Info buff_Info, Item buff_Sender,Item buff_Receiver)
+    public BuffRunTime(Buff_Data buff_Info, Item buff_Sender,Item buff_Receiver)
     {
-      
         this.buff_Sender = buff_Sender;
         this.buff_Receiver = buff_Receiver;
-        this.buff_Info = buff_Info;
+        this.buff_Data = buff_Info;
         this.buff_SaveData = new BuffSaveData(buff_Info.buff_ID, buff_Sender.Item_Data.Guid, buff_Receiver.Item_Data.Guid);
     }
     public void Run()
     {
         buff_SaveData.buff_CurrentDuration += Time.fixedDeltaTime;
 
-        if (buff_SaveData.buff_CurrentDuration >= buff_Info.buff_Duration)
+        OnBuff_Update();
+
+        if (buff_SaveData.buff_CurrentDuration >= buff_Data.buff_Duration)
         {
             OnBuff_Stop();
         }
@@ -38,18 +39,18 @@ public class BuffRunTime
     //Buff初始化
     public void OnBuff_Start()
     {
-        buff_Info.buff_Behavior_Start.Apply(this);
+        buff_Data.buff_Behavior_Start.Apply(this);
     }
     //Buff更新
     public  void OnBuff_Update()
     {
-        buff_Info.buff_Behavior_Update.Apply(this);
-
+        if(buff_Data.buff_Behavior_Update != null)
+        buff_Data.buff_Behavior_Update.Apply(this);
     }
     //停止Buff
     public  void OnBuff_Stop()
     {
-        buff_Info.buff_Behavior_Stop.Apply(this);
+        buff_Data.buff_Behavior_Stop.Apply(this);
     }
 }
 

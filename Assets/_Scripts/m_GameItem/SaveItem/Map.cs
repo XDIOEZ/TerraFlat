@@ -26,8 +26,11 @@ public class Map : Item,ISave_Load
     [Button("从数据加载地图")]
     public void Load()
     {
+        if(tileMapData.TileData.Count == 0)
+        {
+            Save(); // 若数据为空，先保存一次
+        }
         LoadTileData();
-        
     }
     [Button("保存地图到数据")]
     public void Save()
@@ -114,7 +117,7 @@ public class Map : Item,ISave_Load
 
         tileMapData.TileData = tempTileData;
 
-        Debug.Log("多层 TileData 已保存到 Data_TileMap 中");
+        Debug.Log("多层 TileData 已保存到 Data_TileMap 中"+ tempTileData.Count);
     }
 
     public void ADDTile(Vector2Int position, TileData tileData)

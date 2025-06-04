@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public abstract class BuffBehavior : ScriptableObject
+public abstract class BuffAction : ScriptableObject
 {
     public abstract void Apply(BuffRunTime data);
 }

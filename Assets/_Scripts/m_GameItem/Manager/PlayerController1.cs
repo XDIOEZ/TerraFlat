@@ -1,14 +1,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using NaughtyAttributes;
-using System.Collections.Generic;
-using System.Collections;
-using Cinemachine;
 using InputSystem;
 
 [RequireComponent(typeof(Player))]
 public class PlayerController : MonoBehaviour
 {
+    public IFocusPoint _FocusPoint;
+    public ISpeed _Speed;
     #region 组件引用
     private IFunction_Move movement;
     [ShowNativeProperty] public AttackTrigger Attack { get; private set; }
@@ -80,11 +79,15 @@ public class PlayerController : MonoBehaviour
         SwitchBag();
         SwitchEquip();
         SwitchCraft();
+        _Speed = GetComponentInChildren<ISpeed>();
         //    SwitchSetting();
+        _FocusPoint = GetComponent<IFocusPoint>();
     }
 
     private void Update()
     {
+        //同步聚焦点=鼠标位置
+        _FocusPoint.FocusPointPosition = GetMouseWorldPosition();
         HandleCombatInput();
         HandleBodyTurning();
         HandleMovementInput();
@@ -113,6 +116,7 @@ public class PlayerController : MonoBehaviour
         {
             moveInput.Normalize();
         }
+        _Speed.Direction = moveInput;
         Movement.Move(moveInput);
     }
     #endregion
@@ -170,7 +174,7 @@ public class PlayerController : MonoBehaviour
 
     #region 初始化配置
     #region 初始化各类脚本的引用
-    private void InitializeComponents()
+    private void InitializeComponents() 
     {
         Attack = GetComponentInChildren<AttackTrigger>();
         Facing = GetComponentInChildren<FaceMouse>();

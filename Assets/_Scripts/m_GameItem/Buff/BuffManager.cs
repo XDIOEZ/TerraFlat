@@ -22,10 +22,10 @@ public class BuffManager : MonoBehaviour
 
         if (BuffRunTimeData_Dic.TryGetValue(buffID, out var existingBuff))
         {
-            switch (newBuff.buff_Info.buff_StackType)
+            switch (newBuff.buff_Data.buff_StackType)
             {
                 case BuffStackType.DurationAdd:
-                    float remainingTime = newBuff.buff_Info.buff_Duration - existingBuff.buff_SaveData.buff_CurrentDuration;
+                    float remainingTime = newBuff.buff_Data.buff_Duration - existingBuff.buff_SaveData.buff_CurrentDuration;
                     existingBuff.buff_SaveData.buff_CurrentDuration += remainingTime;
                     break;
 
@@ -34,7 +34,7 @@ public class BuffManager : MonoBehaviour
                     break;
 
                 case BuffStackType.StackCount:
-                    if (existingBuff.buff_SaveData.buff_CurrentStack < existingBuff.buff_Info.buff_MaxStack)
+                    if (existingBuff.buff_SaveData.buff_CurrentStack < existingBuff.buff_Data.buff_MaxStack)
                     {
                         existingBuff.buff_SaveData.buff_CurrentStack += 1;
                     }
@@ -58,10 +58,6 @@ public class BuffManager : MonoBehaviour
         }
     }
 
-
-
-
-
     public void StopBuff(string buff_IDName)
     {
         if (!BuffRunTimeData_Dic.ContainsKey(buff_IDName))
@@ -73,8 +69,6 @@ public class BuffManager : MonoBehaviour
         BuffRunTimeData_Dic.Remove(buff_IDName);
         BuffSaveData_Dic.Remove(buff_IDName);
     }
-
-
 
     // Update is called once per frame
     public void FixedUpdate()

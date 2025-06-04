@@ -4,14 +4,14 @@ using UnityEngine;
 
 public class FaceMouse : Organ, IFunction_FaceToMouse
 {
-public IRotationSpeed RoData;
-    public Vector2 Direction;
+    public IRotationSpeed RoData;
+    
+    public IFocusPoint FocusPoint;
 
-    public float RotationSpeed
+    public float RotationSpeeds
     {
         get
         {
-            
             return RoData.RotationSpeed;
         }
 
@@ -23,45 +23,10 @@ public IRotationSpeed RoData;
 
     public void Start()
     {
-        if (RoData == null)
-        {
-            RoData = GetComponentInParent<IRotationSpeed>();
-        }
+        FocusPoint = GetComponentInParent<IFocusPoint>();
+        RoData = GetComponentInParent<IRotationSpeed>();
     }
 
-    /*
-public void FaceToMouses(Vector3 mousePos)
-{
-// 确保鼠标位置在世界坐标中
-mousePos.z = Camera.main.nearClipPlane;
-Vector3 worldMousePos = Camera.main.ScreenToWorldPoint(mousePos);
-
-// 计算目标方向
-Vector3 direction = (worldMousePos - transform.position).normalized;
-
-// 获取目标旋转
-Quaternion targetRotation;
-if (worldMousePos.x < transform.position.x)
-{
-// 鼠标在左侧，目标旋转面向左
-targetRotation = Quaternion.Euler(0f, 180f, 0f);
-}
-else
-{
-// 鼠标在右侧，目标旋转面向右
-targetRotation = Quaternion.Euler(0f, 0f, 0f);
-}
-
-// 使用 RotateTowards 平滑旋转
-transform.parent.rotation = Quaternion.RotateTowards(
-transform.parent.rotation,
-targetRotation,
-rotationSpeed * Time.deltaTime // 每帧旋转的角度
-);
-
-// 更新 Direction 表示当前是否面向目标方向
-Direction = transform.parent.right;
-}*/
     public void FaceToMouse(Vector3 targetPosition)
     {
         // 计算目标方向
@@ -79,13 +44,30 @@ Direction = transform.parent.right;
 
         // 平滑插值当前角度和目标角度
         float currentAngle = transform.parent.localEulerAngles.z;
-        float angleStep = RotationSpeed * Time.deltaTime; // 使用角速度计算步长
+        float angleStep = RotationSpeeds * Time.deltaTime; // 使用角速度计算步长
         float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, angleStep);
 
         // 应用平滑后的旋转角度
         transform.parent.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
-
-        // 更新 Direction 表示当前是否面向目标方向
-        Direction = transform.parent.right;
     }
+
+    public override void StartWork()
+    {
+        FaceToMouse(FocusPoint.FocusPointPosition);
+    }
+
+    public override void UpdateWork()
+    {
+        FaceToMouse(FocusPoint.FocusPointPosition);
+    }
+
+    public override void StopWork()
+    {
+        // 停止工作时，保持当前角度不变
+    }
+}
+
+public interface IFocusPoint
+{
+    Vector3 FocusPointPosition { get; set; }
 }

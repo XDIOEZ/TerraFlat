@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "新的Buff配置", menuName = "ScriptableObjects/新建Buff配置")]
-public class Buff_Info : ScriptableObject
+public class Buff_Data : ScriptableObject
 {
     //Buff的ID
     public string buff_ID;
@@ -24,9 +24,9 @@ public class Buff_Info : ScriptableObject
     //buff的堆叠类型
     public BuffStackType buff_StackType;
 
-    public BuffBehavior buff_Behavior_Start;
-    public BuffBehavior buff_Behavior_Update;
-    public BuffBehavior buff_Behavior_Stop;
+    public BuffAction buff_Behavior_Start;
+    public BuffAction buff_Behavior_Update;
+    public BuffAction buff_Behavior_Stop;
 }
 public enum BuffStackType
 {
