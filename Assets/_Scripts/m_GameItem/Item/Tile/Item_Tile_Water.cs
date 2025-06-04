@@ -41,6 +41,8 @@ public class Item_Tile_Water : Item, IBlockTile
         mapCoreScript.ADDTile(cellPos2D, tileData);
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
+
+    //tiledata.水的深度 =10m 
     public void Tile_Enter(Item item, TileData tileData)
     {
         if (item == null)
@@ -48,6 +50,15 @@ public class Item_Tile_Water : Item, IBlockTile
             Debug.LogError("[Tile_Enter] item 是 null，无法执行 Buff 添加");
             return;
         }
+        //将tiledata转换为继承tiledata的水体数据
+        //Tile_Water_Data tile_Water = tileData as Tile_Water;
+
+        //tile_Water_data.水的深度 =10m
+
+        //if (tile_Water_data.水的深度 < 10)
+        //{减速玩家百分之50的速度}
+        // 如果>10 item as Player 
+        //
 
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
         if (buffManager == null)
