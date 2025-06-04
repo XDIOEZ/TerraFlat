@@ -724,6 +724,30 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2845678541663995547, guid: 6cc6a7789d40ef94cbe55e3c1da52b69, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2845678541663995547, guid: 6cc6a7789d40ef94cbe55e3c1da52b69, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2845678541663995547, guid: 6cc6a7789d40ef94cbe55e3c1da52b69, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2845678541663995547, guid: 6cc6a7789d40ef94cbe55e3c1da52b69, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2845678541663995547, guid: 6cc6a7789d40ef94cbe55e3c1da52b69, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2845678541663995547, guid: 6cc6a7789d40ef94cbe55e3c1da52b69, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2882296014255767821, guid: 6cc6a7789d40ef94cbe55e3c1da52b69, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -4190,7 +4214,7 @@ MonoBehaviour:
       Rotation: {x: 0, y: 0, z: 0, w: 1}
       Scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 87
+    Guid: 0
   tileMap: {fileID: 6321057559080517336}
 --- !u!50 &8422084922603148161
 Rigidbody2D:

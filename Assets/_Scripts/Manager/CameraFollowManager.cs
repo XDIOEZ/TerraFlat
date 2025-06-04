@@ -29,21 +29,26 @@ public class CameraFollowManager : MonoBehaviour
     }
 
     // Start is called before the first frame update
-    void Start()
+    public void Start()
     {
-        //跟随父对象
-        Vcam.Follow = CameraFollowItem.transform;
-        //重命名物体名字,本体+父对象
-        transform.name = $"{transform.parent.name} 的 Camera";
+        // 解绑父对象，避免受到玩家旋转影响
+        transform.SetParent(null);
 
-        //尝试从CameraFollowItem上获取PlayerController
-        if (CameraFollowItem.GetComponent<PlayerController>()!= null&&PlayerController == null)
+        // 设置跟随目标
+        Vcam.Follow = CameraFollowItem.transform;
+
+        // 重命名物体名字，本体+父对象
+        transform.name = $"{CameraFollowItem.name} 的 Camera";
+
+        // 尝试从 CameraFollowItem 获取 PlayerController
+        if (CameraFollowItem.GetComponent<PlayerController>() != null && PlayerController == null)
         {
             PlayerController = CameraFollowItem.GetComponent<PlayerController>();
         }
 
         PlayerController.VirtualCameraManager = this;
     }
+
 
     //修改视野范围方法
     public void ChangeCameraView(float view)

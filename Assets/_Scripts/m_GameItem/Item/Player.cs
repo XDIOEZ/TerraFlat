@@ -208,7 +208,7 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
     {
         inventoryDataInterface = this; // 将当前对象设置为 inventoryData。
 
-        inventoryDataInterface.FillDict_SetBelongItem(transform.parent); // 设置归属为父物体。
+        inventoryDataInterface.FillDict_SetBelongItem(transform); // 设置归属为父物体。
 
     }
     #endregion
@@ -318,7 +318,8 @@ public class Player : Item,IHunger,ISpeed,IInventoryData,IHealth,IStamina,ISave_
         transform.localScale = Data._transform.Scale; // 恢复缩放比例。
 
         inventoryDataInterface = this;
-        inventoryDataInterface.FillDict_SetBelongItem(transform.parent);
+
+        inventoryDataInterface.FillDict_SetBelongItem(transform);
 
         foreach (var inventory in Children_Inventory_GameObject.Values)
         {

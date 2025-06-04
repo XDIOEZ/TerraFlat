@@ -34,32 +34,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         //调试模式自动调用场景中所有的load方法
         //获取所有IloadAndSave接口
 
-        // 第一步：获取场景中所有的 Item（包括非激活状态）
-        Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
-
-        // 第二步：先调用 Save()，避免遗漏
-        foreach (Item item in allItems)
-        {
-            if (item is ISave_Load saveableItem)
-            {
-                try
-                {
-                    saveableItem.Load();
-                    //将无效的物品添加到临时失效物体列表
-                    if (!item.gameObject.activeInHierarchy)
-                    {
-                        GameObject_False.Add(item.gameObject);
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"加载物品失败: {item.name}", item);
-                    Debug.LogException(ex);
-                }
-            }
-
-
-        }
+        
     }
 
     [Serializable]

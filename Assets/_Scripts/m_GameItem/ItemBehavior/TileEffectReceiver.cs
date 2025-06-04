@@ -22,7 +22,7 @@ public class TileEffectReceiver : MonoBehaviour
         // 缓存 Item 组件
         if (item == null)
         {
-            item = GetComponent<Item>();
+            item = GetComponentInParent<Item>();
         }
     }
 

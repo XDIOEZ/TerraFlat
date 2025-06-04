@@ -12,6 +12,34 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     [ShowInInspector]
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
 
+    public void Start()
+    {
+        // 第一步：获取场景中所有的 Item（包括非激活状态）
+        Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
+
+        foreach (Item item in allItems)
+        {
+            if (item is ISave_Load saveableItem)
+            {
+                try
+                {
+                    saveableItem.Load();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"加载物品失败: {item.name}", item);
+                    Debug.LogException(ex);
+                }
+            }
+            if (item.Item_Data.Guid == 0)
+            {
+               //随机生成一个Guid
+                item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+            }
+            RunTimeItems.Add(item.Item_Data.Guid, item);
+            AddToGroup(item); // 新增分组逻辑
+        }
+    }
     // 实例化（通过名称）
     public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default)
     {
