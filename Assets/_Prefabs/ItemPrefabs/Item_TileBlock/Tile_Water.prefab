@@ -195,7 +195,13 @@ MonoBehaviour:
       position: {x: 0, y: 0, z: 0}
       workTime: 0
       itemValues:
-        ItemValue_List: []
+        ItemValue_List:
+        - ValueName: "\u6C34\u6DF1"
+          MinValue: 0
+          currentValue: 99
+          MaxValue: 0
+          OnCurrentValueChanged:
+            _PersistentCalls: []
         IsWork: 0
   BuffInfo:
   - {fileID: 11400000, guid: 0a5d871a7f32eac4d892b8b6a621d6a6, type: 2}

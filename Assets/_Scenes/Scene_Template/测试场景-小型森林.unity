@@ -1757,11 +1757,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3328875171590734533, guid: cfcaae5d4c4ccea4fb3554ba602b7890, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -16.16
+      value: -16.31
       objectReference: {fileID: 0}
     - target: {fileID: 3328875171590734533, guid: cfcaae5d4c4ccea4fb3554ba602b7890, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.73
+      value: -2.64
       objectReference: {fileID: 0}
     - target: {fileID: 3328875171590734533, guid: cfcaae5d4c4ccea4fb3554ba602b7890, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1795,6 +1795,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4669560730262565499, guid: cfcaae5d4c4ccea4fb3554ba602b7890, type: 3}
+      propertyPath: BuffInfo.Array.data[0]
+      value: 
+      objectReference: {fileID: 11400000, guid: 0a5d871a7f32eac4d892b8b6a621d6a6, type: 2}
     - target: {fileID: 8511684682374088741, guid: cfcaae5d4c4ccea4fb3554ba602b7890, type: 3}
       propertyPath: m_Name
       value: Tile_Water
