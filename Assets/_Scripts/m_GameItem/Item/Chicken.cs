@@ -5,8 +5,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
+using Sirenix.OdinInspector;
 
 public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
+    , IFocusPoint
 {
     public Data_Creature Data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }
@@ -15,7 +17,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public Nutrition Foods { get => Data.NutritionData; set => Data.NutritionData = value; }
     public float EatingSpeed { get => Data.EatingSpeed; set => throw new System.NotImplementedException(); }
     public UltEvent OnNutrientChanged { get; set; }
-
+    public UltEvent OnDeath { get; set; }
     #endregion
     #region 速度
     // 完善ISpeed接口实现，直接映射AnimalData中的速度属性
@@ -98,7 +100,10 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
         set => Data.staminaRecoverySpeed = value;
     }
     public UltEvent OnStaminaChanged { get; set; } = new UltEvent();
-    public Vector3 Direction { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    //移动方向/目标
+    public Vector3 MoveTargetPosition { get; set; }
+    [ShowInInspector]
+    public Vector3 FocusPointPosition { get => MoveTargetPosition; set => MoveTargetPosition = value; }
     #endregion
 
     public void Start()
@@ -113,20 +118,12 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
 
     public void FixedUpdate()
     {
-        Hungry_Update();
-     
     }
 
-    public void Eat(IFood food)
+    public void TakeABite(IFood food)
     {
         Foods.Food += EatingSpeed;
         food.BeEat(EatingSpeed);
-    }
-
-    public void Hungry_Update()
-    {
-        //每秒减少1点食物能量*生产速度
-        Data.NutritionData.Food -= Time.fixedDeltaTime * Data.productionSpeed;
     }
 
     public void Death()

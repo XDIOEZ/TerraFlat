@@ -5,20 +5,16 @@ using UnityEngine;
 
 public class AoutTurnBody : MonoBehaviour
 {
-    [ShowNonSerializedField]
-    public ITurnBody turnBody;
-    [ShowNonSerializedField]
-    public IMover mover;
+    public Organ turnBody;
     // Start is called before the first frame update
-    void Start()
+    public void Start()
     {
-        turnBody = GetComponent<ITurnBody>();
-        mover = GetComponent<IMover>();
+        turnBody = GetComponent<Organ>();
     }
 
     // Update is called once per frame
-    void FixedUpdate()
+    public void Update()
     {
-        turnBody.TurnBodyToDirection(mover.TargetPosition - mover.Position);
+        turnBody.UpdateWork();
     }
 }

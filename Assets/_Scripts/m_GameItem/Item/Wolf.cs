@@ -7,6 +7,7 @@ using UnityEngine;
 {
     public Data_Creature Data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }
+    public UltEvent OnDeath { get; set; }
     #region 饥饿
 
     public Nutrition Foods { get => Data.NutritionData; set => Data.NutritionData = value; }
@@ -110,7 +111,7 @@ using UnityEngine;
     #region 团队
     public string TeamID { get => Data.TeamID; set => Data.TeamID = value; }
     public Dictionary<string, RelationType> Relations { get => Data.Relations; set => Data.Relations = value; }
-    public Vector3 Direction { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    public Vector3 MoveTargetPosition { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     #endregion
 
     public void Start()
@@ -130,7 +131,7 @@ using UnityEngine;
         ItemValues.FixedUpdate();
     }
 
-    public void Eat(IFood food)
+    public void TakeABite(IFood food)
     {
         Foods.Food += EatingSpeed;
         food.BeEat(EatingSpeed);

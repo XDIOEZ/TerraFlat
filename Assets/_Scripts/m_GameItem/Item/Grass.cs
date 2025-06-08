@@ -21,6 +21,8 @@ public class Grass : Item, IFood
         set => Data.NutritionData = value;
     }
     public float EatingValue = 0;
+    [Header("进食难度")]
+    public float MaxEatingValue = 10;
     public IFood SelfFood { get => this; set => throw new System.NotImplementedException(); }
 
 
@@ -42,7 +44,7 @@ public class Grass : Item, IFood
         SelfFood.ShakeItem(this.transform);
 
         EatingValue += eatSpeed;
-        if (EatingValue >= NutritionData.MaxFood)
+        if (EatingValue >= MaxEatingValue)
         {
             Item_Data.Stack.Amount--;
 

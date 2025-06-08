@@ -234,7 +234,7 @@ public class Mover : Organ, IFunction_Move
 
     public override void StartWork()
     {
-        Move(SpeedSource.Direction);
+        Move(SpeedSource.MoveTargetPosition);
     }
 
     public override void UpdateWork()

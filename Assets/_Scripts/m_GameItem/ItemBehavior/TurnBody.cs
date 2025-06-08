@@ -95,18 +95,18 @@ public class TurnBody : Organ, ITurnBody
         isTurning = false; // 旋转结束
     }
 
-    [Button("测试转向")]
     public override void StartWork()
     {
-        //TODO 根据聚焦点位自动获取是在左还是右
-
-        TurnBodyToDirection(focusPoint.FocusPointPosition);
+        Vector2 dir = (Vector2)focusPoint.FocusPointPosition - (Vector2)transform.position;
+        TurnBodyToDirection(dir);
     }
 
     public override void UpdateWork()
     {
-        TurnBodyToDirection(focusPoint.FocusPointPosition);
+        Vector2 dir = (Vector2)focusPoint.FocusPointPosition - (Vector2)transform.position;
+        TurnBodyToDirection(dir);
     }
+
 
     public override void StopWork()
     {

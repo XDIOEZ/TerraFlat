@@ -14,6 +14,7 @@ public class Player
     IInventoryData,IHealth,IStamina,
     ISave_Load,IFocusPoint, IRotationSpeed
 {
+    public UltEvent OnDeath { get; set; }
     #region 字段声明
     [Tooltip("库存数据接口")]
     public IInventoryData inventoryDataInterface;
@@ -164,7 +165,7 @@ public class Player
     public UltEvent onLoad { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public Item Belong_Item { get => this;}
     public Vector3 FocusPointPosition { get; set; }
-    public Vector3 Direction { get; set; }
+    public Vector3 MoveTargetPosition { get; set; }
     public float RotationSpeed { get; set; } = 100;
     #endregion
 
@@ -253,7 +254,7 @@ public class Player
     /// <summary>
     /// 执行吃操作，参数为吃掉的速度（默认使用玩家速度）
     /// </summary>
-    public void Eat(IFood food)
+    public void TakeABite(IFood food)
     {
         // 获取武器上的食物接口
         IFood iFood = food;

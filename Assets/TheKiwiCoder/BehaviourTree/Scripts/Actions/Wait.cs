@@ -7,6 +7,7 @@ namespace TheKiwiCoder {
     {
         public float duration = 1;
         public float startTime;
+        public float intervalTime;
 /*        public float currentDuration;
         public float currentTime;*/
 
@@ -18,12 +19,10 @@ namespace TheKiwiCoder {
         }
 
         protected override State OnUpdate() {
-            if (Time.time - startTime >= duration) {
+            intervalTime = Time.time - startTime;
+            if (intervalTime >= duration) {
                 return State.Success;
             }
-           // Debug.Log("Wait");
-         /*   currentDuration = Time.time - startTime;
-            currentTime = Time.time;*/
             return State.Running;
         }
     }

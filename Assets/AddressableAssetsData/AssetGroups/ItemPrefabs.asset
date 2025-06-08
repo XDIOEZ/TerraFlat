@@ -88,6 +88,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f957fc05ed31858439852f8e5dc0b4c9
+    m_Address: Assets/_Prefabs/Item_Entity
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fe49f63096daf164f9777514e917e13f
     m_Address: Assets/_Prefabs/PassTime
     m_ReadOnly: 0

@@ -255,7 +255,7 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
                 Debug.LogWarning("颜色提取失败，使用默认颜色。");
             }
 
-            GameObject particle = RunTimeItemManager.Instance.InstantiateItem(prefabName, position).gameObject;
+            GameObject particle = GameRes.Instance.InstantiatePrefab(prefabName, position).gameObject;
             ParticleSystem ps = particle.GetComponent<ParticleSystem>();
 
             if (ps != null)

@@ -48,7 +48,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
             Data.Inventory_Data_Dict = value;
         }
     }
-
+    public UltEvent OnDeath { get; set; }
     [ShowInInspector]
     public Dictionary<string, Inventory> children_Inventory_GameObject = new Dictionary<string, Inventory>();
     public Dictionary<string, Inventory> Children_Inventory_GameObject

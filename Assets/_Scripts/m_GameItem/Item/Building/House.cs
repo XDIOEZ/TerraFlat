@@ -22,6 +22,8 @@ public class House : Item, ISave_Load, IHealth, IBuilding
     public UltEvent onSave { get; set; } = new UltEvent();
     public UltEvent onLoad { get; set; } = new UltEvent();
 
+    public UltEvent OnDeath { get; set; }
+
     // IHealth 接口实现 
     public Hp Hp
     {

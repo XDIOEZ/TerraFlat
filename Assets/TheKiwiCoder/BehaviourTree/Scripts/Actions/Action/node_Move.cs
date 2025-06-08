@@ -1,92 +1,98 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 using UnityEngine.AI;
+
 [NodeMenu("ActionNode/行动/移动")]
 public class Move : ActionNode
 {
-    public IAI_NavMesh navMesh;
-    public float SpeedRate = 1f;
-    public float max_StopTime = 1f;
-    public float minDistance = 0.01f;
-    [Tooltip("向黑板处的目标移动")]
-    public bool MoveToBlackboard = true;
-    [Tooltip("停止距离")]
-    public float stoppingDistance = 0.5f;
-    IMover mover;
 
-    private Vector3 startPos;
-    private float startTime;
+    #region 组件和接口引用
 
-    public IMover Mover { get => context.mover; set => context.mover = value; }
-    private float originalSpeed;
+    private ISpeed speeder;
+
+
+
+    #endregion
+
+
+    // 在类中添加这些字段
+    public Vector3 lastPosition;
+    public float lastMoveTime = 0f;
+    public const float STUCK_THRESHOLD = 0.5f; // 2秒不移动视为卡住
+    public const float MIN_MOVE_DISTANCE = 0.1f;
+
+    #region 属性封装
+
+    public IMover Mover
+    {
+        get => context.mover;
+        set => context.mover = value;
+    }
+
+    #endregion
 
     protected override void OnStart()
     {
-        if (Mover == null)
-        {
-            Mover = context.gameObject.GetComponentInChildren<IMover>();
-            Debug.LogWarning("未找到 Mover 组件");
-        }
-
-        if (navMesh == null)
-        {
-            context.gameObject.TryGetComponent<IAI_NavMesh>(out navMesh);
-            var agent = navMesh?.Agent_Nav;
-            if (agent != null)
-            {
-                agent.stoppingDistance = stoppingDistance;
-                agent.isStopped = false;
-                agent.SetDestination(blackboard.TargetPosition);
-            }
-            if (navMesh == null)
-                Debug.LogError("未找到 IAI_NavMesh 组件");
-        }
-
-        originalSpeed = Mover.Speed;  // 保存原始速度
-        Mover.Speed = originalSpeed * SpeedRate;
-
-        startPos = Mover.Position;
-        startTime = Time.time;
+        speeder ??= context.gameObject.GetComponent<ISpeed>();
     }
 
     protected override void OnStop()
     {
-        if (Mover != null && originalSpeed !=0 )
-        {
-            Mover.Speed = originalSpeed;  // 恢复原始速度
-        }
+      
     }
+
     protected override State OnUpdate()
     {
-       
-        Mover.TargetPosition = blackboard.TargetPosition;
-        Mover.Move();
-       
+        context.agent.isStopped = false;
+        Vector3 currentPosition = context.agent.transform.position;
 
-        float timeElapsed = Time.time - startTime;
-
-        if (timeElapsed > max_StopTime)
+        // 初始化时间戳
+        if (lastMoveTime == 0f)
         {
-            NavMeshPathStatus pathStatus = navMesh.Agent_Nav.pathStatus;
-            if (pathStatus != NavMeshPathStatus.PathComplete)
-            {
-                Debug.Log("路径无效或不完整");
-                return State.Failure;
-            }
-
-            float distance = Vector2.Distance(startPos, Mover.Position);
-            if (distance < minDistance)
-            {
-                Debug.Log("移动停滞，返回失败");
-                return State.Failure;
-            }
-            startPos = Mover.Position;
+            lastMoveTime = Time.time;
+            lastPosition = currentPosition;
         }
 
-        if (!Mover.IsMoving)
+        // 检测是否移动
+        if (Vector2.Distance(currentPosition, lastPosition) >= MIN_MOVE_DISTANCE)
         {
+            // 有移动，更新时间戳和位置
+            lastMoveTime = Time.time;
+            lastPosition = currentPosition;
+        }
+        else
+        {
+            // 没有移动，检查是否卡住时间过长
+            if (Time.time - lastMoveTime >= STUCK_THRESHOLD)
+            {
+                if (base.DebugMODE)
+                {
+                    Debug.LogWarning("AI卡住，目标位置无法到达");
+                }
+
+                // 重置并返回失败
+                lastPosition = Vector3.zero;
+                lastMoveTime = 0f;
+                context.agent.isStopped = true;
+                return State.Failure;
+            }
+        }
+
+        Mover.Move(speeder.MoveTargetPosition);
+
+        // 检查是否到达目标
+        if (Vector2.Distance(Mover.TargetPosition, currentPosition) <= context.agent.stoppingDistance)
+        {
+            if (base.DebugMODE)
+            {
+                Debug.Log("Arrived");
+            }
+
+            // 重置状态
+            lastPosition = Vector3.zero;
+            lastMoveTime = 0f;
+            context.agent.isStopped = true;
             return State.Success;
         }
 
@@ -96,11 +102,10 @@ public class Move : ActionNode
     public override void OnDrawGizmos()
     {
         base.OnDrawGizmos();
-
         if (Mover != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(Mover.TargetPosition, 0.3f); // 可调整半径
+            Gizmos.DrawWireSphere(Mover.TargetPosition, 0.2f);
         }
     }
 }

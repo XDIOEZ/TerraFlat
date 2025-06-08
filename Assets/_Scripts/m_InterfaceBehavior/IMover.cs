@@ -10,7 +10,7 @@ public interface IMover
 
     public bool IsMoving { get; set; }
 
-    void Move();
+    void Move(Vector2 TargPos);
 
     void Stop();
 

@@ -116,7 +116,7 @@ public class PlayerController : MonoBehaviour
         {
             moveInput.Normalize();
         }
-        _Speed.Direction = moveInput;
+        _Speed.MoveTargetPosition = moveInput;
         Movement.Move(moveInput);
     }
     #endregion

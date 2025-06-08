@@ -8,6 +8,7 @@ public class RandomPosition : ActionNode
     public WorldType worldType;
     public Vector2 min = Vector2.one * -10;
     public Vector2 max = Vector2.one * 10;
+    ISpeed speed;
 
     public enum WorldType 
     {
@@ -17,6 +18,7 @@ public class RandomPosition : ActionNode
 
     protected override void OnStart() 
     {
+        speed = context.gameObject.GetComponent<ISpeed>();
     }
 
     protected override void OnStop() {
@@ -29,6 +31,7 @@ public class RandomPosition : ActionNode
             blackboard.TargetPosition.x = Random.Range(min.x, max.x);
             blackboard.TargetPosition.z = Random.Range(min.y, max.y);
             blackboard.TargetPosition = context.transform.position + blackboard.TargetPosition;
+            speed.MoveTargetPosition = blackboard.TargetPosition;
         }
         else if (worldType == WorldType.DD)
         {
@@ -36,6 +39,7 @@ public class RandomPosition : ActionNode
             blackboard.TargetPosition.x = Random.Range(min.x, max.x);
             blackboard.TargetPosition.y = Random.Range(min.y, max.y);
             blackboard.TargetPosition = context.transform.position + blackboard.TargetPosition;
+            speed.MoveTargetPosition = blackboard.TargetPosition;
         }
     
         return State.Success;

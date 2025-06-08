@@ -31,6 +31,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
 
     public UltEvent onLoad { get; set; }
 
+
     public List_Loot Loots
     {
         get
@@ -56,6 +57,8 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
             _data.ItemDataValue = value;
         }
     }
+
+    public UltEvent OnDeath { get; set; }
     #endregion
 
     public void Start()

@@ -31,6 +31,7 @@ public class CameraFollowManager : MonoBehaviour
     // Start is called before the first frame update
     public void Start()
     {
+        transform.rotation = Quaternion.identity;
         // 解绑父对象，避免受到玩家旋转影响
         transform.SetParent(null);
 

@@ -54,13 +54,13 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     {
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemName, position);
         Item item = itemObj.GetComponent<Item>();
-
-        if (item.Item_Data.Guid > -1000 && item.Item_Data.Guid < 1000)
-            item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
-
-        RunTimeItems.Add(item.Item_Data.Guid, item);
-        AddToGroup(item); // 新增分组逻辑
-
+        if (item != null)
+        {
+            if (item.Item_Data.Guid > -1000 && item.Item_Data.Guid < 1000)
+                item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+            RunTimeItems.Add(item.Item_Data.Guid, item);
+            AddToGroup(item); // 新增分组逻辑
+        }
         return item;
     }
 

@@ -1,119 +1,266 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
+
 [NodeMenu("ActionNode/搜查/根据ItemType设定为目标")]
 public class GetItemPosition : ActionNode
 {
+    #region 枚举定义
     public enum MovementBehaviorType
     {
-        Chase,
-        Flee
+        Chase,  // 追击
+        Flee    // 逃离
     }
+    #endregion
 
+    #region 序列化字段
+    [Header("物品搜索设置")]
     [Tooltip("要搜索的物品类型列表（部分匹配）")]
-    public List<string> ItemType;
+    public List<string> ItemType = new List<string>();
 
+    [Header("行为设置")]
     [Tooltip("选择行为类型：追击或逃离")]
-    public MovementBehaviorType BehaviorType;
+    public MovementBehaviorType BehaviorType = MovementBehaviorType.Chase;
 
+    [Header("逃离行为参数")]
     [Tooltip("逃跑的最小距离")]
+    [Range(1f, 10f)]
     public float minRunDistance = 3.0f;
 
     [Tooltip("逃跑的最大距离")]
+    [Range(1f, 20f)]
     public float maxRunDistance = 7.0f;
 
-    [Tooltip("逃跑方向的角度波动范围")]
+    [Tooltip("逃跑方向的角度波动范围（度）")]
+    [Range(0f, 180f)]
     public float angleVariance = 30f;
 
-    [Tooltip("设置为黑板目标对象")]
+    [Header("黑板设置")]
+    [Tooltip("是否设置黑板目标对象")]
     public bool setBlackboardTarget = true;
 
-
-
-    [Tooltip("什么也不做")]
+    [Tooltip("找到目标后不执行任何移动操作")]
     public bool doNothing = false;
 
+    public ISpeed Speeder;
+    #endregion
 
+    #region 重写方法
     protected override void OnStart()
     {
+        // 节点开始时的初始化逻辑
+        Speeder = context.gameObject.GetComponent<ISpeed>();
     }
 
     protected override void OnStop()
     {
+        // 节点停止时的清理逻辑
     }
 
     public override void OnDrawGizmos()
     {
         base.OnDrawGizmos();
-        Debug.Log("GetItemPosition OnDrawGizmos");
+
+        // 在Scene视图中绘制调试信息
+        if (Application.isPlaying && context != null)
+        {
+            DrawDebugInfo();
+        }
     }
+
     protected override State OnUpdate()
     {
-        
-        if (context.itemDetector == null || context.itemDetector.CurrentItemsInArea == null)
-            return State.Failure;
-
-        Item targetItem = null;
-        foreach (Item item in context.itemDetector.CurrentItemsInArea)
+        // 验证必要组件
+        if (!ValidateComponents())
         {
-            if (item != null && ItemType.Exists(type => item.Item_Data.ItemTags.Item_TypeTag.Contains(type)))
-            {
-                targetItem = item;
-                if (setBlackboardTarget)
-                {
-                    //设置黑板中的目标物品
-                    blackboard.target = targetItem.transform;
-                }
-                break;
-            }
+            return State.Failure;
         }
 
+        // 查找目标物品
+        Item targetItem = FindTargetItem();
         if (targetItem == null)
         {
-            if (setBlackboardTarget)
-            {
-                blackboard.target = null;
-            }
+            HandleNoTargetFound();
             return State.Failure;
         }
-            
+
+        // 设置黑板目标
+        if (setBlackboardTarget)
+        {
+            blackboard.target = targetItem.transform;
+        }
+
+        // 如果设置为不执行任何操作，直接返回成功
         if (doNothing)
         {
             return State.Success;
         }
 
-        // 将物品位置转换为Vector2（仅使用X和Y）
+        // 根据行为类型处理移动
+        ProcessMovementBehavior(targetItem);
+        return State.Success;
+    }
+    #endregion
+
+    #region 私有方法
+    /// <summary>
+    /// 验证必要的组件是否存在
+    /// </summary>
+    private bool ValidateComponents()
+    {
+        if (context?.itemDetector == null)
+        {
+            Debug.LogWarning($"[{GetType().Name}] ItemDetector组件未找到");
+            return false;
+        }
+
+        if (context.itemDetector.CurrentItemsInArea == null)
+        {
+            Debug.LogWarning($"[{GetType().Name}] 当前区域物品列表为空");
+            return false;
+        }
+
+        if (ItemType == null || ItemType.Count == 0)
+        {
+            Debug.LogWarning($"[{GetType().Name}] 未设置要搜索的物品类型");
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 查找符合条件的目标物品
+    /// </summary>
+    private Item FindTargetItem()
+    {
+        foreach (Item item in context.itemDetector.CurrentItemsInArea)
+        {
+            if (item?.Item_Data?.ItemTags?.Item_TypeTag == null)
+                continue;
+
+            // 检查物品类型是否匹配
+            if (ItemType.Exists(type => item.Item_Data.ItemTags.Item_TypeTag.Contains(type)))
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 处理未找到目标的情况
+    /// </summary>
+    private void HandleNoTargetFound()
+    {
+        if (setBlackboardTarget)
+        {
+            blackboard.target = null;
+        }
+        Debug.Log($"[{GetType().Name}] 未找到匹配的物品类型");
+    }
+
+    /// <summary>
+    /// 根据行为类型处理移动逻辑
+    /// </summary>
+    private void ProcessMovementBehavior(Item targetItem)
+    {
         Vector2 targetPosition = targetItem.transform.position;
 
         switch (BehaviorType)
         {
             case MovementBehaviorType.Chase:
-                // 直接将物品位置设为目标点
-                blackboard.TargetPosition = targetPosition;
+                ProcessChaseMovement(targetPosition);
                 break;
 
             case MovementBehaviorType.Flee:
-                // 获取当前角色的Vector2位置
-                Vector2 currentPosition = context.transform.position;
-                // 计算逃离方向（从物品指向角色的反方向）
-                Vector2 directionAway = (currentPosition - targetPosition).normalized;
-
-                // 添加随机角度偏移（绕Z轴旋转）
-                float angleOffset = Random.Range(-angleVariance, angleVariance);
-                Quaternion rotation = Quaternion.Euler(0, 0, angleOffset);
-                Vector2 rotatedDirection = (Vector2)(rotation * (Vector3)directionAway);
-
-                // 计算逃离点
-                float runDistance = Random.Range(minRunDistance, maxRunDistance);
-                Vector2 escapePoint = currentPosition + rotatedDirection * runDistance;
-
-                // 设置移动目标为逃离点
-                blackboard.TargetPosition = escapePoint;
+                ProcessFleeMovement(targetPosition);
                 break;
 
+            default:
+                Debug.LogError($"[{GetType().Name}] 未知的行为类型: {BehaviorType}");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 处理追击移动
+    /// </summary>
+    private void ProcessChaseMovement(Vector2 targetPosition)
+    {
+        blackboard.TargetPosition = targetPosition;
+        Speeder.MoveTargetPosition = targetPosition;
+        Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
+    }
+
+    /// <summary>
+    /// 处理逃离移动
+    /// </summary>
+    private void ProcessFleeMovement(Vector2 targetPosition)
+    {
+        Vector2 currentPosition = context.transform.position;
+        Vector2 directionAway = (currentPosition - targetPosition).normalized;
+
+        // 添加随机角度偏移
+        float angleOffset = Random.Range(-angleVariance, angleVariance);
+        Vector2 rotatedDirection = RotateVector2(directionAway, angleOffset);
+
+        // 计算逃离点
+        float runDistance = Random.Range(minRunDistance, maxRunDistance);
+        Vector2 escapePoint = currentPosition + rotatedDirection * runDistance;
+
+        blackboard.TargetPosition = escapePoint;
+        Speeder.MoveTargetPosition = escapePoint;
+        Debug.Log($"[{GetType().Name}] 设置逃离目标位置: {escapePoint}");
+    }
+
+    /// <summary>
+    /// 旋转2D向量
+    /// </summary>
+    private Vector2 RotateVector2(Vector2 vector, float angleDegrees)
+    {
+        float angleRadians = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(angleRadians);
+        float sin = Mathf.Sin(angleRadians);
+
+        return new Vector2(
+            vector.x * cos - vector.y * sin,
+            vector.x * sin + vector.y * cos
+        );
+    }
+
+    /// <summary>
+    /// 绘制调试信息
+    /// </summary>
+    private void DrawDebugInfo()
+    {
+        if (context?.itemDetector?.CurrentItemsInArea == null)
+            return;
+
+        // 绘制检测到的物品位置
+        Gizmos.color = Color.yellow;
+        foreach (Item item in context.itemDetector.CurrentItemsInArea)
+        {
+            if (item != null)
+            {
+                Gizmos.DrawWireSphere(item.transform.position, 0.5f);
+            }
+        }
+    }
+    #endregion
+
+    #region 验证方法
+    private void OnValidate()
+    {
+        // 确保距离参数的合理性
+        if (minRunDistance > maxRunDistance)
+        {
+            maxRunDistance = minRunDistance;
         }
 
-        return State.Success;
+        // 确保角度范围合理
+        angleVariance = Mathf.Clamp(angleVariance, 0f, 180f);
     }
+    #endregion
 }

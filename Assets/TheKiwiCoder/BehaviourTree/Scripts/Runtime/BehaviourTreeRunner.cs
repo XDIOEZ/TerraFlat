@@ -18,6 +18,7 @@ namespace TheKiwiCoder
             context = CreateBehaviourTreeContext();
             tree = tree.Clone();
             tree.Bind(context);
+            context.gameObject = gameObject;
         }
 
         void Update()

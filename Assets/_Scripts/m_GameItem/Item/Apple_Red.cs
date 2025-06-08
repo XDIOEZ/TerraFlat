@@ -35,7 +35,7 @@ public class Apple_Red : Item, IFood
     {
         var hunger = BelongItem.GetComponent<IHunger>();
         if (hunger == null) return;
-        hunger.Eat(this);
+        hunger.TakeABite(this);
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 279298097632468998}
   - component: {fileID: 5434521609093507249}
   - component: {fileID: 3707433950502512304}
+  - component: {fileID: 9141630382293879132}
   m_Layer: 9
   m_Name: DamageReceiver
   m_TagString: Untagged
@@ -104,6 +105,25 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.43338203, y: 0.5822518}
   m_EdgeRadius: 0
+--- !u!114 &9141630382293879132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 338617639251475548}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aea3b0ebad94a5243b635198d0eb213c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lastGridPos: {x: 0, y: 0}
+  item: {fileID: 0}
+  Cache_map: {fileID: 0}
+  raycastDistance: 5
+  tileLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1 &517253275583645208
 GameObject:
   m_ObjectHideFlags: 0
@@ -117,6 +137,8 @@ GameObject:
   - component: {fileID: 2384294618824857088}
   - component: {fileID: 1919864907028793840}
   - component: {fileID: 6961296228380297469}
+  - component: {fileID: 3575352115311274905}
+  - component: {fileID: 6957768405987726656}
   m_Layer: 9
   m_Name: Chicken
   m_TagString: Untagged
@@ -165,7 +187,7 @@ MonoBehaviour:
     _PersistentCalls: []
   Data:
     IDName: Chicken
-    GameName: 
+    GameName: "\u9E21"
     Description: "\u7269\u54C1\u540D\u79F0\uFF1AChicken\n\u7269\u54C1ID\uFF1A34\n\u7269\u54C1\u63CF\u8FF0\uFF1A\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1ANone(None),\u7269\u54C1\u6750\u8D28\uFF1ANone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u4F4D\u7F6E\uFF1A(0.00,
       0.00, 0.00)\n\u7269\u54C1\u65CB\u8F6C\uFF1A(0.00000, 0.00000, 0.00000, 0.00000)\n\u7269\u54C1\u7F29\u653E\uFF1A(0.00,
       0.00, 0.00)\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A70"
@@ -203,12 +225,12 @@ MonoBehaviour:
     speed_Max: 3
     speed: 3
     runSpeed: 0.1
-    stamina: 100
+    stamina: 50
     stamina_Max: 100
     staminaRecoverySpeed: 1
     NutritionData:
-      Food: 100
-      MaxFood: 0
+      Food: 50
+      MaxFood: 100
       Water: 100
       MaxWater: 0
     progress: 0
@@ -309,7 +331,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58c6f9b140a52a14881ec09eaebb66eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tree: {fileID: 11400000, guid: 457331b1d9e7df4449292905ef8235df, type: 2}
+  tree: {fileID: 11400000, guid: 6978d3b64138a424b97b1bddad14f011, type: 2}
+--- !u!195 &3575352115311274905
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517253275583645208}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 3.5
+  m_Acceleration: 16
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0.5
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
+--- !u!114 &6957768405987726656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517253275583645208}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d77fcc8d54d6e5e4da9ec23f70d19f9f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
 --- !u!1 &1811850302451972931
 GameObject:
   m_ObjectHideFlags: 0
@@ -479,6 +536,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8eced6a90ad0184e911db2321f57ac4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  turnBody: {fileID: 0}
 --- !u!1 &6387856590930803114
 GameObject:
   m_ObjectHideFlags: 0
@@ -489,7 +547,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4141860901184508101}
   - component: {fileID: 1321391762135378242}
-  - component: {fileID: 7081584821309446040}
   m_Layer: 0
   m_Name: AI_Move
   m_TagString: Untagged
@@ -524,33 +581,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0afa4625e38945140b2421639e9d6c5a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  organName: 
   targetPosition: {x: 0, y: 0, z: 0}
   target: {fileID: 0}
   agent: {fileID: 0}
   rb2D: {fileID: 0}
   isMoving: 0
---- !u!195 &7081584821309446040
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6387856590930803114}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.15
-  m_Speed: 4
-  m_Acceleration: 30
-  avoidancePriority: 50
-  m_AngularSpeed: 180
-  m_StoppingDistance: 1
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 0.1
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
 --- !u!1 &7020901129659560470
 GameObject:
   m_ObjectHideFlags: 0

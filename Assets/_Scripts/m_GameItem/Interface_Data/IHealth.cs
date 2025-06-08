@@ -30,4 +30,6 @@ public interface IHealth
     public UltEvent OnHpChanged { get; set; }
 
     public UltEvent OnDefenseChanged { get; set; }
+
+    public UltEvent OnDeath { get; set; }
 }

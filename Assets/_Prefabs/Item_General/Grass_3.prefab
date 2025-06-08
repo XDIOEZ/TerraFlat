@@ -108,13 +108,12 @@ MonoBehaviour:
   Data:
     IDName: Grass_3
     GameName: "\u8349"
-    ID: 1000001
     Description: "\u8349"
-    PrefabPath: Assets/_Prefabs/Item/natrue/Grass_3.prefab
     Durability: 1
     ItemTags:
       Item_TypeTag:
       - Plant
+      - Food
       Item_Material:
       - Food
     Stack:
@@ -128,10 +127,10 @@ MonoBehaviour:
     ItemSpecialData: "\u65E0"
     Guid: 0
     NutritionData:
-      Food: 0
-      MaxFood: 11
-      Water: 100
-      MaxWater: 11
+      Food: 10
+      MaxFood: 10
+      Water: 10
+      MaxWater: 10
   EatingValue: 0
 --- !u!61 &5620234295959196672
 BoxCollider2D:
