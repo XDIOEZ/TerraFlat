@@ -13,8 +13,9 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
 
 
-    public void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         // 第一步：获取场景中所有的 Item（包括非激活状态）
         Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
 
@@ -42,6 +43,12 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
         }
         Debug.Log("物品加载完毕");
     }
+
+    public void Start()
+    {
+        SaveAndLoad.Instance.OnSceneSwitch += CleanupNullItems;
+    }
+
     // 实例化（通过名称）
     public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default)
     {
@@ -103,5 +110,41 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
             return item;
         return null;
     }
+
+    //TODO 添加一个清理两个字典的中Item空引用的方法
+    [Button("清理空引用")]
+    public void CleanupNullItems()
+    {
+        // 清理 RunTimeItems 中为 null 的条目
+        var keysToRemove = new List<int>();
+        foreach (var pair in RunTimeItems)
+        {
+            if (pair.Value == null)
+            {
+                keysToRemove.Add(pair.Key);
+            }
+        }
+        foreach (int key in keysToRemove)
+        {
+            RunTimeItems.Remove(key);
+        }
+
+        // 清理 RuntimeItemsGroup 中为 null 的列表元素
+        var groupsToClean = new List<string>(RuntimeItemsGroup.Keys);
+        foreach (string key in groupsToClean)
+        {
+            var list = RuntimeItemsGroup[key];
+            list.RemoveAll(item => item == null);
+
+            // 如果列表空了，也可以选择移除整个 key
+            if (list.Count == 0)
+            {
+                RuntimeItemsGroup.Remove(key);
+            }
+        }
+
+        Debug.Log("已清理无效的 Item 引用。");
+    }
+
 }
 

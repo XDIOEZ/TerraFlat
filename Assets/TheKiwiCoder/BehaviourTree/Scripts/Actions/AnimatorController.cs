@@ -4,7 +4,7 @@ using UnityEngine;
 using TheKiwiCoder;
 
 //TODO 如何自定义特性 特性中保存当前节点在右键菜单中的地址
-[NodeMenu("ActionNode/Animator/播放动画")]
+[NodeMenu("ActionNode/Animator/切换动画")]
 public class AnimatorController : ActionNode
 {
 

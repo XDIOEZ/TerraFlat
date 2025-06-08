@@ -8,13 +8,28 @@ public class TileEffectReceiver : MonoBehaviour
     public Item item;
     public Map Cache_map;
 
+    public float raycastDistance = 5f; // 向下检测的距离
+    public LayerMask tileLayerMask;   // 指定哪些图层可以被检测
+
     private void Start()
     {
+        //TODO 获取当前对象脚下的Tilemap
+
         // 缓存 Map 对象
         if (Cache_map == null)
         {
-            Cache_map = (Map)RunTimeItemManager.Instance.GetItemsByNameID("MapCore")[0];
+            foreach (var item in RunTimeItemManager.Instance.GetItemsByNameID("MapCore"))
+            {
+                if (item != null)
+                {
+                    Cache_map = item.GetComponent<Map>();
+                    break;
+                }
+            }
         }
+
+
+   
 
         // 初始化当前格子位置
         lastGridPos = GetCurrentGridPos();
@@ -25,6 +40,45 @@ public class TileEffectReceiver : MonoBehaviour
             item = GetComponentInParent<Item>();
         }
     }
+    /*
+    void TryDetectTileByRaycastZ_2D()
+    {
+        Vector2 origin = (Vector2)transform.position + Vector2.up * 1f; // 起点稍微上移
+        Vector2 direction = Vector2.down; // Unity 2D 中“Z轴负方向”可理解为“向下看”
+
+        RaycastHit2D hit = Physics2D.Raycast(origin, direction, raycastDistance, tileLayerMask);
+
+        if (hit.collider != null)
+        {
+            GameObject hitObj = hit.collider.gameObject;
+
+            // 尝试获取 Map
+            Map map = hitObj.GetComponent<Map>();
+            if (map != null)
+            {
+                Cache_map = map;
+                Debug.Log("通过Z轴射线找到 Map：" + map.name);
+                return;
+            }
+
+            // 尝试获取 Item
+            Item itemOnTile = hitObj.GetComponent<Item>();
+            if (itemOnTile != null)
+            {
+                Debug.Log("找到 Item：" + itemOnTile.name);
+                return;
+            }
+
+            Debug.Log("命中物体但未包含目标组件：" + hitObj.name);
+        }
+        else
+        {
+            Debug.LogWarning("2D射线未命中任何 Tile/Map！");
+        }
+    }*/
+
+
+
 
     private void FixedUpdate()
     {

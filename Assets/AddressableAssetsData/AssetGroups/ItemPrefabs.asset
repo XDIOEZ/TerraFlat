@@ -18,40 +18,81 @@ MonoBehaviour:
   m_GUID: f9c901d93bba7f74d81e326fd1e13fa4
   m_SerializeEntries:
   - m_GUID: 04854a1d6e688804d8e7af02ee606d12
-    m_Address: Assets/_Prefabs/Building
+    m_Address: Assets/_Prefabs/Item_Building
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 41a6d8071825a284695b5b5682b7a3d5
+    m_Address: Assets/_Prefabs/Module_Items
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 68bd19d1854535d44b47543b665570ea
-    m_Address: Assets/_Prefabs/Animals
+    m_Address: Assets/_Prefabs/Item_Creature_Animals
     m_ReadOnly: 0
     m_SerializedLabels:
-    - Prefab
+    - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6e95d098900244e4fa2755780908114c
-    m_Address: Assets/_Prefabs/Com_Item
+    m_Address: Assets/_Prefabs/Item_General
     m_ReadOnly: 0
     m_SerializedLabels:
-    - Prefab
+    - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7ddf59fc00cf0f74c9774fc7e5905e85
-    m_Address: Assets/_Prefabs/Map
+    m_Address: Assets/_Prefabs/Item_Map
     m_ReadOnly: 0
     m_SerializedLabels:
-    - Prefab
+    - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 939d63540274d5649acb1084d09fcf44
-    m_Address: Assets/_Prefabs/coldWeapon
+    m_Address: Assets/_Prefabs/Item_Weapon_Cold
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9e50946f70ff2ff43900f515cd6ca4d8
+    m_Address: Assets/_Prefabs/Item_Creature_Plant
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ab01183caf237184e9d3e82184c23719
+    m_Address: Assets/_Prefabs/Item_Player
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b307f6a7380f7f147a3a66255674fce0
+    m_Address: Assets/_Prefabs/GameManager
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d1f59e5fa050cac4681a4987c2b7f679
+    m_Address: Assets/_Prefabs/UI
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e24898600f0cfc24fbc89a5de50c8598
-    m_Address: Assets/_Prefabs/GamePrefabs/Item_TileBlock
+    m_Address: Assets/_Prefabs/Item_TileBlock
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: eee1bfc010e7ecd41b33e9c09b185d6b
+    m_Address: Assets/_Prefabs/Paticle
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fe49f63096daf164f9777514e917e13f
+    m_Address: Assets/_Prefabs/PassTime
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

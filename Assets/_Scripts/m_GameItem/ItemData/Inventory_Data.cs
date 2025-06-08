@@ -11,6 +11,8 @@ public partial class Inventory_Data
     public string inventoryName = string.Empty;
     // 保存物品的列表
     public List<ItemSlot> itemSlots = new List<ItemSlot>();
+    //当前选择的插槽索引
+    public int selectedSlotIndex = -1;  
 
     // 构造函数
     [MemoryPackConstructor]

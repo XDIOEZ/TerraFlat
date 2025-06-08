@@ -1,21 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Root Type="DevExpress.CodeRush.Foundation.CodePlaces.Options.FavoritesListContainer">
   <Options Language="Neutral">
-    <Groups>
-      <Item Id="{da68e0bb-d002-49a8-9e69-3c1b263aba33}">
-        <GroupName>utility</GroupName>
-        <IsExpanded>True</IsExpanded>
-        <Items>
-          <Item Id="{1939eeb7-057d-4824-81eb-4ef737e1b5e3}">
-            <LogicalPath>&lt;global namespace&gt;\ItemType</LogicalPath>
-            <FilePath>D:\_Unity\_UnityProject\OCosmos\Assets\_Scripts\Item\Base\ItemData.cs</FilePath>
-          </Item>
-          <Item Id="{24daef67-9622-4543-8664-398ad30fc916}">
-            <LogicalPath>&lt;global namespace&gt;\ExcelManager\void ExcelManager.UpdatePrefabProperties(NPOI.SS.UserModel.IRow, UnityEngine.GameObject, string)</LogicalPath>
-            <FilePath>D:\_Unity\_UnityProject\OCosmos\Assets\_Scripts\_Utilities\ExcelManager.cs</FilePath>
-          </Item>
-        </Items>
-      </Item>
-    </Groups>
+    <Groups />
   </Options>
 </Root>

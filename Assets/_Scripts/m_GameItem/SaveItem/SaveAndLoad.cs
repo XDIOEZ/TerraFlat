@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using UltEvents;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -21,6 +22,8 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     public string SavePath = "Assets/Saves/";
     [Tooltip("当前使用的存档数据")]
     public GameSaveData SaveData;
+    [Tooltip("场景切换时 会调用的事件")]
+    public UltEvent OnSceneSwitch;
 
     [Tooltip("临时失效物体")]
     public List<GameObject> GameObject_False;
@@ -394,27 +397,19 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     [Button("改变场景")]
     public void ChangeScene(string sceneName)
     {
+        
         // 若场景名称为空，则使用默认地图
-        if(sceneName == "")
+        if (sceneName == "")
         {
             sceneName = defaultSettings.Default_Map;
         }
         SaveData.ActiveSceneName = sceneName;
+
+
         // 保存当前场景的地图数据
         SaveActiveMapToSaveData();
 
-        // 进入新场景
-        EnterScene(sceneName);
-    }
 
-    private Scene newScene;
-
-    /// <summary>
-    /// 切换场景
-    /// </summary>
-    /// <param name="sceneName"></param>
-    public void EnterScene(string sceneName = "平原")
-    {
         // 1. 创建新场景（空场景）
         newScene = SceneManager.CreateScene(sceneName);
 
@@ -426,6 +421,19 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
         // 4. 开始卸载旧场景
         SceneManager.UnloadSceneAsync(previousScene);
+
+       /* // 进入新场景
+        EnterScene(sceneName);*/
+    }
+
+    private Scene newScene;
+
+    /// <summary>
+    /// 切换场景
+    /// </summary>
+    /// <param name="sceneName"></param>
+    public void EnterScene(string sceneName = "平原")
+    {
     }
 
     private void OnPreviousSceneUnloaded(Scene unloadedScene)
@@ -438,6 +446,8 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
         // 加载内容
         LoadMap(newScene.name);
+
+        OnSceneSwitch?.Invoke();
     }
 
 

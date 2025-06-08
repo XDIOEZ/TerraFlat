@@ -62,7 +62,8 @@ public class Inventory_HotBar : MonoBehaviour
             Debug.LogError("[Awake] 无法获取 Inventory_UI 组件，请确保该组件已正确挂载！");
         }
 
-        
+
+
     }
 
     private void Start()
@@ -118,6 +119,9 @@ public class Inventory_HotBar : MonoBehaviour
             Debug.LogError("[Start] Inventory 为空，无法初始化！");
         }
 
+
+        //根据Data中的index设置初始索引
+        ChangeIndex(inventory.Data.selectedSlotIndex);
     }
     private void SetSelectBoxSortingOrder(int order)
     {
@@ -153,6 +157,7 @@ public class Inventory_HotBar : MonoBehaviour
 
     public void ChangeIndex(int newIndex)
     {
+        inventory.Data.selectedSlotIndex = newIndex;
         // 确保索引在有效范围内
         newIndex = (newIndex + maxIndex) % maxIndex; // 确保索引合法（需确保maxIndex是物品槽数量）
         CurrentIndex = newIndex;

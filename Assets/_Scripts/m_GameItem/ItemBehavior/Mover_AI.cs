@@ -8,95 +8,83 @@ using UnityEngine.AI;
 using UnityEngine.UI;
 using DG.Tweening;
 
-public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
+public class Mover_AI : MonoBehaviour, IMover, IAI_NavMesh
 {
+    [Header("移动目标")]
     public Vector3 targetPosition;
     public Transform target;
-    public NavMeshAgent agent;
 
-    public bool isMoving;
+    [Header("组件引用")]
+    public NavMeshAgent agent;
     public Rigidbody2D rb2D;
+
+    [Header("状态控制")]
+    public bool isMoving;
+    private Tweener moveTween;
 
     public UltEvent OnStartMoving { get; set; }
     public UltEvent OnStopMoving { get; set; }
-    public Vector3 Position { get { return transform.position; } set { transform.position = value; } }
+
+    #region 接口属性实现
+
+    public Vector3 Position
+    {
+        get => transform.position;
+        set => transform.position = value;
+    }
+
     public Vector3 TargetPosition
     {
-        get
-        {
-            return targetPosition;
-        }
+        get => targetPosition;
         set
         {
             targetPosition = value;
             if (agent.isOnNavMesh)
             {
                 agent.SetDestination(value);
-            }
-            //Debug.Log("New target position: " + value);
-
-            // 如果路径无效（如目标不可达），返回失败
-            if (agent.pathStatus == NavMeshPathStatus.PathPartial)
-            {
-                //   67 78 89 910 1011 1213 1314 1415 1516 1617 1718 1920 2021
-                Debug.Log("移动状态异常");
-                
-            }
-            else
-            {
-                //Debug.Log("移动状态正常");
+                if (agent.pathStatus == NavMeshPathStatus.PathPartial)
+                {
+                    Debug.Log("移动状态异常");
+                }
             }
         }
     }
+
     public bool IsMoving
     {
-        get
-        {
-            return isMoving;
-        }
-
-        set
-        {
-            isMoving = value;
-        }
+        get => isMoving;
+        set => isMoving = value;
     }
 
     public float Speed
     {
-        get
-        {
-            return agent.speed;
-        }
-
-        set
-        {
-            agent.speed = value;
-        }
+        get => agent.speed;
+        set => agent.speed = value;
     }
 
-    public NavMeshAgent Agent_Nav { get => agent; set => agent = value; }
-    private Tweener moveTween; // 记录DoTween的tween，方便控制
-    void Start()
+    public NavMeshAgent Agent_Nav
     {
-        agent= GetComponent<NavMeshAgent>();
+        get => agent;
+        set => agent = value;
+    }
+
+    #endregion
+
+    private void Start()
+    {
+        agent = GetComponent<NavMeshAgent>();
         agent.updateUpAxis = false;
         agent.updateRotation = false;
+
         rb2D = GetComponent<Rigidbody2D>();
     }
 
-    public void FixedUpdate()
-    {
-        //Move();
-    }
     [Button("检查目标是否可以到达")]
     public void CheckTargetCanArrive()
     {
-        // 如果路径无效（如目标不可达），返回失败
         if (agent.pathStatus == NavMeshPathStatus.PathPartial)
         {
-            //   67 78 89 910 1011 1213 1314 1415 1516 1617 1718 1920 2021
             Debug.Log("移动状态异常");
-
         }
         else
         {
@@ -109,10 +97,9 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
         if (Vector2.Distance(transform.position, TargetPosition) <= agent.stoppingDistance)
         {
             IsMoving = false;
-          //  Debug.Log("Arrived");
             OnStopMoving?.Invoke();
-            moveTween?.Kill(); // 停止Tween
-            rb2D.velocity = Vector2.zero; // 停止速度
+            moveTween?.Kill();
+            rb2D.velocity = Vector2.zero;
             return;
         }
 
@@ -121,7 +108,6 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
             TargetPosition = target.position;
         }
 
-        // 判断NavMeshAgent能否用
         if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
         {
             agent.SetDestination(TargetPosition);
@@ -140,7 +126,6 @@ public class Mover_AI : MonoBehaviour,IMover,IAI_NavMesh
 
     public void Stop()
     {
-        //停止AI移动
         if (agent != null && agent.isActiveAndEnabled)
         {
             agent.isStopped = true;

@@ -7,7 +7,6 @@ namespace TheKiwiCoder
 {
     public class BehaviourTreeRunner : MonoBehaviour
     {
-
         public BehaviourTree tree;
         Context context;
 

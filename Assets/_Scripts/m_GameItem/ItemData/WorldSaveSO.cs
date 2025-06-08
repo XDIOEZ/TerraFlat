@@ -23,10 +23,14 @@ public class WorldSaveSO : ScriptableObject
     public int dataVersion = 1;
 
     [Tooltip("场景所在路径（相对于 Assets 文件夹）")]
-    public string sceneRelativePath = "_Scenes/Scene_Template";
+    public string sceneRelativePath = "_Scenes/Scene";
     [ContextMenu("自动加载")]
     public void AutoLoad()
     {
+        if (buildingName == "")
+        {
+            buildingName = name;
+        }
         string sceneAssetPath = Path.Combine("Assets", sceneRelativePath, buildingName + ".unity");
         string sceneName = buildingName; // 用于运行时加载
 
@@ -56,6 +60,34 @@ public class WorldSaveSO : ScriptableObject
 
         // 加载对应的存档数据
         SaveToDisk();
+
+        if (buildingEntrance == Vector2.zero)
+        {
+            // 获取场景中的 WorldEdge 组件
+            WorldEdge edge = FindFirstObjectByType<WorldEdge>();
+            if (edge != null)
+            {
+                Vector2 pos = edge.transform.position;
+
+                // 根据位置自动偏移，避免玩家出生在边界物体上
+                // 你可以根据实际边界尺寸调整这个逻辑
+                if (pos.x < 0)
+                    pos.x += 1f;
+                else
+                    pos.x -= 1f;
+
+                if (pos.y < 0)
+                    pos.y += 1f;
+                else
+                    pos.y -= 1f;
+
+                buildingEntrance = pos;
+            }
+            else
+            {
+                Debug.LogWarning("未找到 WorldEdge 组件，无法自动设置 buildingEntrance！");
+            }
+        }
     }
 
     // 缓存字段

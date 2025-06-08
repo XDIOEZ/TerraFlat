@@ -26,6 +26,30 @@ MonoBehaviour:
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
+--- !u!114 &-9048344658177330910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: f93b8a5c27667974d97100c850c137b8
+  position: {x: -221.59999, y: 2555.472}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Move
 --- !u!114 &-9045761151187631323
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -753,7 +777,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 837e872c7b607d548b0b7a9559874a58
-  position: {x: -220.80005, y: 2557.5999}
+  position: {x: -71.19998, y: 2555.472}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1041,15 +1065,15 @@ MonoBehaviour:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
-  isCollapsed: 1
+  isCollapsed: 0
   description: "\u56DB\u5904\u95F2\u901B"
   drawGizmos: 0
   children:
   - {fileID: 5189880206239897153}
   - {fileID: 1904513726363612697}
-  - {fileID: 7898971059995555528}
+  - {fileID: 2490202590588397327}
   - {fileID: -1300137459854858382}
-  - {fileID: -5792896432479499479}
+  - {fileID: -4976821297471249639}
   - {fileID: -7135890979546324356}
 --- !u!114 &-6319298162973964392
 MonoBehaviour:
@@ -1300,7 +1324,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 0710627ca2174b2478ea5485cb3040b0
-  position: {x: 80, y: 2557.5999}
+  position: {x: 230.40002, y: 2555.472}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1434,33 +1458,6 @@ MonoBehaviour:
   description: "\u997F\u4E86\u5417\uFF1F"
   drawGizmos: 0
   children: []
---- !u!114 &-5874829716271615859
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 5225f5e58ce4955489eb38cd3743a2c1
-  position: {x: 2501.576, y: 1188.8}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 0
-  checkParamName: 1
 --- !u!114 &-5831005901107384192
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1476,7 +1473,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: d3bb19963e10d7c4a89f143e4fb37ef3
-  position: {x: 827.19995, y: 2410.4}
+  position: {x: 827.2, y: 2408.272}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1486,37 +1483,8 @@ MonoBehaviour:
   drawGizmos: 0
   children:
   - {fileID: 7441492407972220104}
-  - {fileID: -5056455577989283369}
-  - {fileID: 2945764822251442107}
-  - {fileID: 2945764822251442107}
+  - {fileID: -58261731316407641}
   - {fileID: 6932382878240026029}
---- !u!114 &-5792896432479499479
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: bf8638ba6db628b48812d9454208c7c9
-  position: {x: 2026.8207, y: 2026.6716}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 0
-  checkParamName: 1
 --- !u!114 &-5693035498843894644
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1654,7 +1622,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 7fb60ba3ec3df7b459065f30ab28dbcf
-  position: {x: -521.6001, y: 2557.5999}
+  position: {x: -372, y: 2555.472}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1749,33 +1717,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   children: []
---- !u!114 &-5299460176867299131
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 6fd59fa9596c4a443b5835fd340d116d
-  position: {x: -371.19995, y: 2557.5999}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 1
-  checkParamName: 1
 --- !u!114 &-5119003453446831430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1858,7 +1799,7 @@ MonoBehaviour:
   animationName: Sleep_Trigger
   boolSwitch: 0
   checkParamName: 1
---- !u!114 &-5056455577989283369
+--- !u!114 &-4976821297471249639
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1867,13 +1808,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
   m_EditorClassIdentifier: 
   state: 0
   started: 0
-  guid: 349e33fa0fbf3534c894d2a8913751da
-  position: {x: 730.3999, y: 2555.2}
+  guid: 84403125b8f72f94b977b88b879bde33
+  position: {x: 2027.2, y: 2025.6}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1881,10 +1822,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 0
-  checkParamName: 1
+  animationName: Sit
 --- !u!114 &-4819563498315670503
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1983,6 +1921,30 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   children: []
+--- !u!114 &-4449497535765891144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: cadbacaa1e959a1499d447568b004736
+  position: {x: 277.60007, y: 1542.4003}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Move
 --- !u!114 &-4327766253339643532
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2389,7 +2351,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 451fa58204ea587459ffc2dd2d38390f
-  position: {x: 827.19995, y: 2128.7998}
+  position: {x: 827.2, y: 2126.6719}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2511,7 +2473,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: f84b34a72c472b1479f36f62fc2f6d9f
-  position: {x: 476, y: 1912}
+  position: {x: 476, y: 1909.8721}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2578,9 +2540,8 @@ MonoBehaviour:
   drawGizmos: 0
   children:
   - {fileID: 4467114162203004222}
-  - {fileID: 42266046370208932}
+  - {fileID: 8243046051709102338}
   - {fileID: 7560427577580191489}
-  - {fileID: -5874829716271615859}
 --- !u!114 &-2831756237578787233
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2901,7 +2862,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: d69746b29500e42458456cf31b74e8f7
-  position: {x: 827.19995, y: 2252.7998}
+  position: {x: 827.2, y: 2249.072}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2911,7 +2872,6 @@ MonoBehaviour:
   drawGizmos: 0
   children:
   - {fileID: -5831005901107384192}
-  - {fileID: -2029479399520536252}
 --- !u!114 &-2583178564768957898
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3014,33 +2974,6 @@ MonoBehaviour:
   animationName: Sit
   boolSwitch: 0
   checkParamName: 1
---- !u!114 &-2189395936350601742
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 8f1d8974acafc86479ca71842fba2c38
-  position: {x: -70.3999, y: 2557.5999}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 0
-  checkParamName: 1
 --- !u!114 &-2053789041848108591
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3066,30 +2999,6 @@ MonoBehaviour:
   BaseValue: 10
   Offset: {x: -1, y: 1}
   Duration: 1
---- !u!114 &-2029479399520536252
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e658b1bd308bc5c429f5a9b404a04943, type: 3}
-  m_Name: Inverter
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: b277626ab37b1b94d94379288d889984
-  position: {x: 1295.2, y: 2449.5999}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  child: {fileID: 303160059780890286}
 --- !u!114 &-1982330453759308871
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3213,7 +3122,7 @@ MonoBehaviour:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
-  isCollapsed: 1
+  isCollapsed: 0
   description: "\u627E\u5403\u7684"
   drawGizmos: 0
   children:
@@ -3222,9 +3131,9 @@ MonoBehaviour:
   - {fileID: -9087083426382924986}
   - {fileID: -5553107788926053513}
   - {fileID: 6821103173037256128}
-  - {fileID: 7163944777324842687}
+  - {fileID: -4449497535765891144}
   - {fileID: -967746873441319373}
-  - {fileID: 8360966368067649090}
+  - {fileID: 1191584520508675369}
   - {fileID: 4423611182643814997}
 --- !u!114 &-1431037750364100291
 MonoBehaviour:
@@ -3557,7 +3466,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 47b178ba9cf46674c80e67cde6ba48e3
-  position: {x: -150.3999, y: 2105.5999}
+  position: {x: -150.4, y: 2103.472}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3639,7 +3548,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 035cb6270cfe00f4282fd66ae0fa7124
-  position: {x: -672, y: 2557.5999}
+  position: {x: -522.4, y: 2555.472}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3774,7 +3683,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 1c6fdb0b606b673419289e6a7c17fd52
-  position: {x: 476, y: 1688.7998}
+  position: {x: 476, y: 1686.6721}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3938,6 +3847,30 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 0
   doNothing: 1
+--- !u!114 &-58261731316407641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 0b7a70661ca53424490e391fde7f0042
+  position: {x: 828.00006, y: 2553.072}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Sleep
 --- !u!114 &-23150523691196680
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3990,31 +3923,22 @@ MonoBehaviour:
   - {fileID: -5553107788926053513}
   - {fileID: -9087083426382924986}
   - {fileID: 6821103173037256128}
-  - {fileID: 7163944777324842687}
-  - {fileID: 8360966368067649090}
   - {fileID: -967746873441319373}
   - {fileID: -325122644361000809}
   - {fileID: 7540754587371063373}
-  - {fileID: 2945764822251442107}
   - {fileID: -5831005901107384192}
   - {fileID: -3110401586926857733}
   - {fileID: -920470311227401737}
   - {fileID: 8451427950548158862}
-  - {fileID: -5299460176867299131}
   - {fileID: -714613992537022395}
   - {fileID: -5386316427563047825}
   - {fileID: -7207814173929552876}
-  - {fileID: -2189395936350601742}
   - {fileID: 6932382878240026029}
   - {fileID: -6393906562161185191}
   - {fileID: 1904513726363612697}
-  - {fileID: 7898971059995555528}
-  - {fileID: -5792896432479499479}
   - {fileID: -1300137459854858382}
   - {fileID: 5189880206239897153}
   - {fileID: -2865860833886281631}
-  - {fileID: 42266046370208932}
-  - {fileID: -5874829716271615859}
   - {fileID: 7294186149172628914}
   - {fileID: 1435037227073222082}
   - {fileID: 6586390531020828836}
@@ -4029,18 +3953,22 @@ MonoBehaviour:
   - {fileID: 7441492407972220104}
   - {fileID: -3478153748034677616}
   - {fileID: -7135890979546324356}
-  - {fileID: 303160059780890286}
   - {fileID: -6135019657074101209}
-  - {fileID: 5148362523961677352}
-  - {fileID: -5056455577989283369}
   - {fileID: -2591200067744059014}
-  - {fileID: -2029479399520536252}
   - {fileID: 6613888326653842446}
+  - {fileID: 8243046051709102338}
+  - {fileID: -9048344658177330910}
+  - {fileID: 82041948556680932}
+  - {fileID: -58261731316407641}
+  - {fileID: 2490202590588397327}
+  - {fileID: -4976821297471249639}
+  - {fileID: -4449497535765891144}
+  - {fileID: 1191584520508675369}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
---- !u!114 &42266046370208932
+--- !u!114 &82041948556680932
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -4049,13 +3977,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
   m_EditorClassIdentifier: 
   state: 0
   started: 0
-  guid: 9a71472ad4b6d6641bf6a34fc8fd8c33
-  position: {x: 2202.376, y: 1188.8}
+  guid: c9110ace2389bcd41ab88e24f9259bb0
+  position: {x: 78.400024, y: 2555.472}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -4063,10 +3991,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 1
-  checkParamName: 1
+  animationName: Sit
 --- !u!114 &130767101350970567
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4149,33 +4074,6 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 1
   doNothing: 0
---- !u!114 &303160059780890286
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 7897dc1f6fc84a045b253766895a79c9
-  position: {x: 1295.2, y: 2555.2}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 1
-  checkParamName: 1
 --- !u!114 &321279837832297325
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4510,6 +4408,30 @@ MonoBehaviour:
   minDistance: 0.01
   MoveToBlackboard: 1
   stoppingDistance: 0.5
+--- !u!114 &1191584520508675369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 313d4f0e4d0a8eb46803be0ff7af5d53
+  position: {x: 573.60004, y: 1540.8003}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Sit
 --- !u!114 &1256828609512153232
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5012,6 +4934,30 @@ MonoBehaviour:
   animationName: Move
   boolSwitch: 0
   checkParamName: 1
+--- !u!114 &2490202590588397327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 23d7f0bf30a9ea14eb0d55220d4f3ed0
+  position: {x: 1726.4001, y: 2026.3997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Move
 --- !u!114 &2582024986140091586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5088,33 +5034,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   child: {fileID: 0}
---- !u!114 &2945764822251442107
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: cdefb7319a83cce46bc6329a590e49d5
-  position: {x: 881.6001, y: 2555.2}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 0
-  animationName: Sleep_Trigger
-  boolSwitch: 0
-  checkParamName: 1
 --- !u!114 &3037771294877243393
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5515,7 +5434,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: f591378ee187cd14a95fc33ce1e58230
-  position: {x: 723.2, y: 1540.8}
+  position: {x: 724.0001, y: 1540.8003}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -5542,7 +5461,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 1c371b348fed8ab41a1d17b89ace8f69
-  position: {x: 2052, y: 1188.8}
+  position: {x: 2114.4001, y: 1188.8}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -5688,33 +5607,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   children: []
---- !u!114 &5148362523961677352
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: f646aa1397af64741be43a75d8371d34
-  position: {x: 230.3999, y: 2557.5999}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 0
-  animationName: Sit
-  boolSwitch: 0
-  checkParamName: 1
 --- !u!114 &5189880206239897153
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6239,7 +6131,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 6e95e129c5d0bf24a8c960766a22a35c
-  position: {x: 380.80005, y: 2557.5999}
+  position: {x: 380.8, y: 2555.472}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -6369,7 +6261,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 9928a0b25d0971b4485f54619a14f62b
-  position: {x: 1034.3999, y: 2555.2}
+  position: {x: 978.39996, y: 2553.072}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -6401,33 +6293,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
---- !u!114 &7163944777324842687
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 05bb949bfc588e04fbd4042d862c638d
-  position: {x: 272.82166, y: 1542.3523}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 1
-  checkParamName: 1
 --- !u!114 &7294186149172628914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6523,7 +6388,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 43d38f73ec2b7f94291d3c99abdbb425
-  position: {x: 580, y: 2555.2}
+  position: {x: 677.60004, y: 2553.072}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -6575,7 +6440,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 10cb7f18596405f458ff932f7042cbbd
-  position: {x: -150.3999, y: 2223.2}
+  position: {x: -150.4, y: 2221.072}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -6586,11 +6451,10 @@ MonoBehaviour:
   children:
   - {fileID: -714613992537022395}
   - {fileID: -5386316427563047825}
-  - {fileID: -5299460176867299131}
+  - {fileID: -9048344658177330910}
   - {fileID: -7207814173929552876}
-  - {fileID: -2189395936350601742}
+  - {fileID: 82041948556680932}
   - {fileID: -6135019657074101209}
-  - {fileID: 5148362523961677352}
   - {fileID: 6613888326653842446}
 --- !u!114 &7560427577580191489
 MonoBehaviour:
@@ -6607,7 +6471,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: ad6624d9bb0ca6449b0ab75c2bc63bf9
-  position: {x: 2351.976, y: 1188.8}
+  position: {x: 2415.2, y: 1188.8}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -6728,33 +6592,6 @@ MonoBehaviour:
   StartEatingTime: 0
   EatingTime: 1
   EatingSpeedRate: 20
---- !u!114 &7898971059995555528
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 2ec30ab97fc67334fb34f395f4053038
-  position: {x: 1726.8207, y: 2026.6716}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 1
-  checkParamName: 1
 --- !u!114 &7980565815963818184
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6857,6 +6694,30 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   time: {x: 0, y: 335.79}
+--- !u!114 &8166309912715625820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 842d9eaaf6bce554ab4a7e7e991808a5
+  position: {x: 1726.4001, y: 2026.3997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: 
 --- !u!114 &8203804387326036955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6908,6 +6769,30 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   children: []
+--- !u!114 &8243046051709102338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 15541deb79c347540989119e18e9884b
+  position: {x: 2264.8, y: 1188.8}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Move
 --- !u!114 &8276787649858726322
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6948,33 +6833,6 @@ MonoBehaviour:
   started: 0
   guid: 498f3f837359a6c4489562a44a64fd08
   position: {x: 929.60004, y: 2527.2}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  parameterType: 1
-  animationName: Move
-  boolSwitch: 0
-  checkParamName: 1
---- !u!114 &8360966368067649090
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9969d24352b0bdf4cbbd383636755e40, type: 3}
-  m_Name: AnimatorController
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: c98c900ac22b58a4a9ccf2d31a9fafe3
-  position: {x: 572.8217, y: 1542.3523}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -7028,7 +6886,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 69b2391ba56705d429c7a5dfff47955d
-  position: {x: 101.6001, y: 1932.7998}
+  position: {x: 101.600006, y: 1930.6721}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}

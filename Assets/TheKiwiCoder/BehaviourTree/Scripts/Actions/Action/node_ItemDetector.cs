@@ -9,7 +9,7 @@ public class node_ItemDetector : ActionNode
     protected override void OnStart()
     {
         if (itemDetector == null)
-            itemDetector = context.gameObject.GetComponent<IDetector>();
+            itemDetector = context.gameObject.GetComponentInChildren<IDetector>();
     }
 
     protected override void OnStop()
