@@ -1,164 +1,146 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// 优化版 TileEffectReceiver：
+/// - 缓存 Map 和 Tilemap 引用
+/// - 缓存 Prefab 对应的 IBlockTile 引用，按 Name_ItemName 而非格子位置缓存
+/// - 持续动态获取 TileData，支持地图动态变化
+/// - 完成 Tile_Exit、Tile_Update 方法调用
+/// </summary>
 public class TileEffectReceiver : MonoBehaviour
 {
     public Vector2Int lastGridPos;
     public Item item;
     public Map Cache_map;
 
-    public float raycastDistance = 5f; // 向下检测的距离
-    public LayerMask tileLayerMask;   // 指定哪些图层可以被检测
+    [Header("Raycast Settings (unused now)")]
+    public float raycastDistance = 5f;
+    public LayerMask tileLayerMask;
+
+    // 缓存 Prefab 名称 -> IBlockTile 实例
+    private readonly Dictionary<string, IBlockTile> prefabCache = new Dictionary<string, IBlockTile>();
 
     private void Start()
     {
-        //TODO 获取当前对象脚下的Tilemap
-
         // 缓存 Map 对象
         if (Cache_map == null)
         {
-            foreach (var item in RunTimeItemManager.Instance.GetItemsByNameID("MapCore"))
+            foreach (var mapItem in RunTimeItemManager.Instance.GetItemsByNameID("MapCore"))
             {
-                if (item != null)
+                if (mapItem != null)
                 {
-                    Cache_map = item.GetComponent<Map>();
+                    Cache_map = mapItem.GetComponent<Map>();
                     break;
                 }
             }
         }
 
-
-   
-
-        // 初始化当前格子位置
-        lastGridPos = GetCurrentGridPos();
+        if (Cache_map == null)
+        {
+            Debug.LogError("未找到 MapCore 中的 Map 组件");
+            enabled = false;
+            return;
+        }
 
         // 缓存 Item 组件
         if (item == null)
         {
             item = GetComponentInParent<Item>();
         }
+
+        // 初始化网格位置
+        lastGridPos = GetCurrentGridPos();
     }
-    /*
-    void TryDetectTileByRaycastZ_2D()
+
+    private void Update()
     {
-        Vector2 origin = (Vector2)transform.position + Vector2.up * 1f; // 起点稍微上移
-        Vector2 direction = Vector2.down; // Unity 2D 中“Z轴负方向”可理解为“向下看”
-
-        RaycastHit2D hit = Physics2D.Raycast(origin, direction, raycastDistance, tileLayerMask);
-
-        if (hit.collider != null)
-        {
-            GameObject hitObj = hit.collider.gameObject;
-
-            // 尝试获取 Map
-            Map map = hitObj.GetComponent<Map>();
-            if (map != null)
-            {
-                Cache_map = map;
-                Debug.Log("通过Z轴射线找到 Map：" + map.name);
-                return;
-            }
-
-            // 尝试获取 Item
-            Item itemOnTile = hitObj.GetComponent<Item>();
-            if (itemOnTile != null)
-            {
-                Debug.Log("找到 Item：" + itemOnTile.name);
-                return;
-            }
-
-            Debug.Log("命中物体但未包含目标组件：" + hitObj.name);
-        }
-        else
-        {
-            Debug.LogWarning("2D射线未命中任何 Tile/Map！");
-        }
-    }*/
-
-
-
-
-    private void FixedUpdate()
-    {
-        // 检测位置是否发生1单位变化
         Vector2Int currentGridPos = GetCurrentGridPos();
-
         if (currentGridPos != lastGridPos)
         {
-            // ⚠️ 触发离开旧格子的逻辑
-            TriggerTileExit(lastGridPos);
-
-            // 更新当前位置
+            OnTileExit(lastGridPos);
             lastGridPos = currentGridPos;
+            OnTileEnter(currentGridPos);
+        }
+        OnTileUpdate(currentGridPos);
+    }
 
-            // ✅ 触发进入新格子的逻辑
-            TriggerTileEnter(currentGridPos);
+    private Vector2Int GetCurrentGridPos()
+    {
+        Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
+        return new Vector2Int(cell.x, cell.y);
+    }
+
+    private void OnTileEnter(Vector2Int gridPos)
+    {
+        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
+        {
+            tileBlock.Tile_Enter(item, tileData);
         }
     }
 
-
-    Vector2Int GetCurrentGridPos()
+    private void OnTileExit(Vector2Int gridPos)
     {
-        Vector3Int cellPos = Cache_map.tileMap.WorldToCell(transform.position);
-        return new Vector2Int(cellPos.x, cellPos.y);
+        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
+        {
+            tileBlock.Tile_Exit(item, tileData);
+        }
     }
 
-    void TriggerTileEnter(Vector2Int gridPos)
+    private void OnTileUpdate(Vector2Int gridPos)
     {
-        TileData tileData = Cache_map.GetTile(gridPos);
+        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
+        {
+            tileBlock.Tile_Update(item, tileData);
+        }
+    }
+
+    /// <summary>
+    /// 根据位置获取 TileData，并从 prefabCache 中获取或缓存 IBlockTile
+    /// </summary>
+    private bool TryGetTileBlock(Vector2Int pos, out TileData tileData, out IBlockTile tileBlock)
+    {
+        tileData = Cache_map.GetTile(pos);
         if (tileData == null)
         {
-            return;
-        }
-        GameObject prefab = GameRes.Instance.GetPrefab(tileData.Name_ItemName);
-        if (prefab == null)
-        {
-            Debug.LogError($"找不到或无法实例化Prefab: {tileData.Name_ItemName}");
-            return;
-        }
-   
-        Item tileItem = prefab.GetComponent<Item>();
-
-
-        if (tileItem == null)
-        {
-            Debug.LogError($"Prefab 上缺少 Item 组件: {tileData.Name_ItemName}");
-            return;
+            tileBlock = null;
+            return false;
         }
 
-
-        if (tileItem is IBlockTile tileBlock)
+        if (!prefabCache.TryGetValue(tileData.Name_ItemName, out tileBlock))
         {
-            if (tileBlock.Data == null)
+            var prefab = GameRes.Instance.GetPrefab(tileData.Name_ItemName);
+            if (prefab == null)
             {
-                Debug.LogError("tileBlock.Data 为 null");
-                return;
+                Debug.LogError($"找不到 Prefab: {tileData.Name_ItemName}");
+                prefabCache[tileData.Name_ItemName] = null;
+                return false;
             }
 
-            tileBlock.Tile_Enter(item, tileBlock.Data.tileData);
+            var itemComp = prefab.GetComponent<Item>();
+            if (itemComp is IBlockTile block)
+            {
+                tileBlock = block;
+                prefabCache[tileData.Name_ItemName] = tileBlock;
+            }
+            else
+            {
+                Debug.LogWarning($"Prefab 未实现 IBlockTile: {tileData.Name_ItemName}");
+                prefabCache[tileData.Name_ItemName] = null;
+                tileBlock = null;
+                return false;
+            }
         }
-        else
-        {
-            Debug.LogWarning($"tileItem 并不实现 IBlockTile 接口: {tileData.Name_ItemName}");
-        }
+
+        return tileBlock != null;
     }
 
-
-    void TriggerTileExit(Vector2Int gridPos)
+    /// <summary>
+    /// 获取当前格子的 TileData
+    /// </summary>
+    public TileData GetCurrentTileData()
     {
-
-        TileData tileData = Cache_map.GetTile(gridPos);
-
-        if (tileData != null)
-        {
-            Item tileItem = GameRes.Instance.GetPrefab(tileData.Name_ItemName).GetComponent<Item>();
-            if (tileItem is IBlockTile tileBlock)
-            {
-                tileBlock.Tile_Exit(item,tileBlock.Data.tileData); // 👈 你需要添加这个接口方法
-            }
-        }
+        var pos = GetCurrentGridPos();
+        return Cache_map.GetTile(pos);
     }
-
 }

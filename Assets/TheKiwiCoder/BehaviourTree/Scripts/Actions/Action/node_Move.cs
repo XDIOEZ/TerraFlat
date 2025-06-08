@@ -19,7 +19,7 @@ public class Move : ActionNode
     // 在类中添加这些字段
     public Vector3 lastPosition;
     public float lastMoveTime = 0f;
-    public const float STUCK_THRESHOLD = 0.5f; // 2秒不移动视为卡住
+    public const float STUCK_THRESHOLD = 0.2f; // 2秒不移动视为卡住
     public const float MIN_MOVE_DISTANCE = 0.1f;
 
     #region 属性封装

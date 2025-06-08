@@ -363,7 +363,7 @@ public class PlayerController : MonoBehaviour
     {
         if (Running != null)
         {
-            Running.SwitchToRun(true);
+            Running.StartWork();
            // Debug.Log("Run");
         }
     }
@@ -375,7 +375,7 @@ public class PlayerController : MonoBehaviour
     {
         if (Running != null)
         {
-            Running.SwitchToRun(false);
+            Running.StopWork();
             //Debug.Log("Stop");
         }
     }

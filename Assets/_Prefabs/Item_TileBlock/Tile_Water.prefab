@@ -204,4 +204,4 @@ MonoBehaviour:
             _PersistentCalls: []
         IsWork: 0
   BuffInfo:
-  - {fileID: 11400000, guid: 0a5d871a7f32eac4d892b8b6a621d6a6, type: 2}
+  - {fileID: 11400000, guid: 0aa80856752ea5447b1879e5c8321c5b, type: 2}

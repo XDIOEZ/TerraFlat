@@ -12,7 +12,7 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     [ShowInInspector]
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
 
-
+    [Button("加载所有Runtime物品")]
     protected override void Awake()
     {
         base.Awake();
@@ -38,7 +38,8 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
                //随机生成一个Guid
                 item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
             }
-            RunTimeItems.Add(item.Item_Data.Guid, item);
+        //    RunTimeItems.Add(item.Item_Data.Guid, item);
+            RunTimeItems[item.Item_Data.Guid] = item;
             AddToGroup(item); // 新增分组逻辑
         }
         Debug.Log("物品加载完毕");

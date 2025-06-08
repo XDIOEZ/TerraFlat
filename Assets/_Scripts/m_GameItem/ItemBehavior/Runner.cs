@@ -11,10 +11,23 @@ public class Runner : Organ, IRunner
 {
     public UltEvent OnRunStart;
     public UltEvent OnRunStop;
+    public Buff_Data buffData;
+    public BuffManager buffManager;
+    public Item item;
+    public bool isRun;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        buffManager = GetComponentInParent<BuffManager>();
+        item = GetComponentInParent<Item>();
+    }
 
     public override void StartWork()
     {
         SwitchToRun(true);
+        buffManager.AddBuffByData(new BuffRunTime(buffData, item, item));
+        isRun = true;
     }
 
      public override void UpdateWork()
@@ -25,6 +38,8 @@ public class Runner : Organ, IRunner
     public override void StopWork()
     {
         SwitchToRun(false);
+        buffManager.RemoveBuff(buffData.buff_ID);
+        isRun = false;
     }
 
     public void SwitchToRun(bool isRun)

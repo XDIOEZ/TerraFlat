@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8d8e46a05024d41a9c51244b099006, type: 3}
   m_Name: "\u6C34\u4F53\u51CF\u901F"
   m_EditorClassIdentifier: 
-  buff_ID: "\u6C34\u4F53\u51CF\u901F1"
-  buff_Name: "\u6C34\u4F53\u51CF\u901F1"
+  buff_ID: "\u6C34\u4F53\u51CF\u901F"
+  buff_Name: "\u6C34\u4F53\u51CF\u901F"
   buff_Type: "\u51CF\u901F\u7C7Bbuff"
   buff_Description: "\u8FDB\u5165\u6C34\u540E\u5E26\u6765\u7684\u51CF\u901F"
   buff_Duration: 9999

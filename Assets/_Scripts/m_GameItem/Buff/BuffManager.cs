@@ -58,7 +58,7 @@ public class BuffManager : MonoBehaviour
         }
     }
 
-    public void StopBuff(string buff_IDName)
+    public void RemoveBuff(string buff_IDName)
     {
         if (!BuffRunTimeData_Dic.ContainsKey(buff_IDName))
         {

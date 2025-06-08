@@ -158,7 +158,7 @@ public class GetItemPosition : ActionNode
         {
             blackboard.target = null;
         }
-        Debug.Log($"[{GetType().Name}] 未找到匹配的物品类型");
+     //   Debug.Log($"[{GetType().Name}] 未找到匹配的物品类型");
     }
 
     /// <summary>

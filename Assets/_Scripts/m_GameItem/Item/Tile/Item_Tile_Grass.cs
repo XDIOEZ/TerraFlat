@@ -52,14 +52,16 @@ public class Item_Tile_Grass : Item,IBlockTile
     //这可如何是好 水方块只会影响移动效果 我不希望其影响其他的 但是草方块又不是单独只影响移动效果
     public void Tile_Enter(Item item, TileData tileData)
     {
-        //ToDo 在此方法中实现减速效果 通过实例化Buff对象完成 而不是直接修改Item的Speed属性
-        //  item.GetComponentInChildren<IMover>().Speed = 0.5f;
+        
+    }
 
-        //1. 实例化Buff对象 并设置相关属性
-        //GameObject buffObj = RunTimeItemManager.Instance.InstantiateItem(Data.buff);
-
-        //2.激活Buff对象
-
+    public void Tile_Update(Item item, TileData tileData)
+    {
+        // 判断该物品是否属于“Plant”类型
+        if (item.Item_Data.ItemTags.Item_TypeTag.Exists(x => x == "Plant"))
+        {
+            item.GetComponent<IPlant>().Grow(Time.deltaTime);
+        }
     }
 }
 
@@ -69,6 +71,7 @@ public interface IBlockTile
     public Data_Tile_Block Data { get; set; }
     public void Set_TileBase_ToWorld(TileData tileData);
     public void Tile_Enter(Item item, TileData tileData);
+    public void Tile_Update(Item item, TileData tileData);
     public void Tile_Exit(Item item, TileData tileData);
 }
 

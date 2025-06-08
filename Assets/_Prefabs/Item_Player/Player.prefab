@@ -10737,6 +10737,10 @@ MonoBehaviour:
         _Z: 0
         _W: 0
         _Object: {fileID: 0}
+  buffData: {fileID: 11400000, guid: 0a5d871a7f32eac4d892b8b6a621d6a6, type: 2}
+  buffManager: {fileID: 0}
+  item: {fileID: 0}
+  isRun: 0
 --- !u!1 &3850814771679276534
 GameObject:
   m_ObjectHideFlags: 0
