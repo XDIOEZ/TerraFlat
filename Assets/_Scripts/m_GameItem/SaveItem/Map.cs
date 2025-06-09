@@ -6,8 +6,9 @@ using UltEvents;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class Map : Item,ISave_Load
+public class Map : Item, ISave_Load
 {
+    #region 属性和字段
     [Header("地图配置")]
     [SerializeField]
     public Data_TileMap tileMapData;
@@ -18,25 +19,37 @@ public class Map : Item,ISave_Load
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData Item_Data { get => tileMapData; set => tileMapData = value as Data_TileMap; }
- 
+    #endregion
+
+    #region 基类方法实现
     public override void Act()
     {
         throw new System.NotImplementedException();
     }
+    #endregion
+    #region 保存和加载
     [Button("从数据加载地图")]
     public void Load()
     {
-        if(tileMapData.TileData.Count == 0)
-        {
-            Save(); // 若数据为空，先保存一次
-        }
         LoadTileData();
     }
+
+    //不需要保存数据 因为游戏中的所有对地图的行为 直接影响背后数据
     [Button("保存地图到数据")]
     public void Save()
     {
-        SaveTileData();
+        // 只有 tileMapData 为空或其 TileData 为空时才初始化数据
+        if (tileMapData == null || tileMapData.TileData == null || tileMapData.TileData.Count == 0)
+        {
+            InitTileData();
+        }
     }
+
+    public void Start()
+    {
+        Save();
+    }
+
     public void LoadTileData()
     {
         if (tileMapData.TileData == null || tileMapData.TileData.Count == 0)
@@ -50,22 +63,6 @@ public class Map : Item,ISave_Load
             Vector2Int position2D = kvp.Key;
             List<TileData> tileDataList = kvp.Value;
 
-            if (tileDataList == null || tileDataList.Count == 0) continue;
-
-            // 检测 tileDataList[0].Name_ItemName 是否为空
-            if (string.IsNullOrEmpty(tileDataList[0].Name_ItemName))
-            {
-                string baseName = tileDataList[0].Name_tileBase;
-                if (!string.IsNullOrEmpty(baseName) && baseName.StartsWith("TileBase_"))
-                {
-                    tileDataList[0].Name_ItemName = "Tile_" + baseName.Substring("TileBase_".Length);
-                }
-                else
-                {
-                    tileDataList[0].Name_ItemName = "Tile_Default"; // 兜底名字
-                }
-            }
-
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
@@ -77,13 +74,16 @@ public class Map : Item,ISave_Load
             }
 
             Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+
             tileMap.SetTile(position3D, tile);
         }
 
         Debug.Log("多层 TileData 已加载到 Tilemap 中");
     }
+    #endregion
 
-    public void SaveTileData()
+    #region 数据初始化
+    public void InitTileData()
     {
         if (tileMap == null)
         {
@@ -92,18 +92,22 @@ public class Map : Item,ISave_Load
         }
 
         BoundsInt bounds = tileMap.cellBounds;
+
+        // 临时 TileData 字典
         Dictionary<Vector2Int, List<TileData>> tempTileData = new();
 
+        // 遍历 Tilemap 上的所有 Tile
         foreach (Vector3Int pos3D in bounds.allPositionsWithin)
         {
-            TileBase tile = tileMap.GetTile(pos3D);
-            if (tile == null) continue;
+            TileBase tilebase = tileMap.GetTile(pos3D);
+            if (tilebase == null) continue;
 
             Vector2Int pos2D = new Vector2Int(pos3D.x, pos3D.y);
 
             TileData tileData = new TileData
             {
-                Name_tileBase = tile.name,
+                Name_tileBase = tilebase.name,
+                Name_ItemName = ConvertTileBaseNameToItemName(tilebase.name), // 使用转换方法
                 position = pos3D,
                 workTime = 0f
             };
@@ -117,9 +121,46 @@ public class Map : Item,ISave_Load
 
         tileMapData.TileData = tempTileData;
 
-        Debug.Log("多层 TileData 已保存到 Data_TileMap 中"+ tempTileData.Count);
+        Debug.Log("多层 TileData 已保存到 Data_TileMap 中" + tempTileData.Count);
     }
+    #endregion
 
+    #region 工具方法
+    /// <summary>
+    /// 将TileBase名称转换为对应的ItemName
+    /// 规则：TileBase_XXX -> TileItem_XXX
+    /// </summary>
+    /// <param name="tileBaseName">TileBase的名称</param>
+    /// <returns>对应的ItemName</returns>
+    private string ConvertTileBaseNameToItemName(string tileBaseName)
+    {
+        if (string.IsNullOrEmpty(tileBaseName))
+        {
+            Debug.LogWarning("TileBase名称为空，无法转换为ItemName");
+            return "";
+        }
+
+        // 检查是否以"TileBase_"开头
+        if (tileBaseName.StartsWith("TileBase_"))
+        {
+            // 提取后缀部分（如：Grass, Water, Mountain）
+            string suffix = tileBaseName.Substring("TileBase_".Length);
+
+            // 组合成新的ItemName
+            string itemName = "TileItem_" + suffix;
+
+            Debug.Log($"TileBase名称转换：{tileBaseName} -> {itemName}");
+            return itemName;
+        }
+        else
+        {
+            Debug.LogWarning($"TileBase名称 '{tileBaseName}' 不符合预期格式（应以'TileBase_'开头）");
+            return "";
+        }
+    }
+    #endregion
+
+    #region Tile操作方法
     public void ADDTile(Vector2Int position, TileData tileData)
     {
         tileData.position = (Vector3Int)position;
@@ -140,7 +181,7 @@ public class Map : Item,ISave_Load
     {
         if (!tileMapData.TileData.TryGetValue(position, out var list) || list.Count == 0)
         {
-          //  Debug.LogWarning($"位置 {position} 上没有任何 TileData。");
+            //  Debug.LogWarning($"位置 {position} 上没有任何 TileData。");
             return null;
         }
 
@@ -154,8 +195,6 @@ public class Map : Item,ISave_Load
 
         return list[i];
     }
-
-
 
     public void DELTile(Vector2Int position, int? index = null)
     {
@@ -186,13 +225,13 @@ public class Map : Item,ISave_Load
         UpdateTileBaseAtPosition(position);
     }
 
-
     public void UPDTile(Vector2Int position, int index, TileData tileData)
     {
         tileData.position = (Vector3Int)position;
         tileMapData.TileData[position][index] = tileData;
         UpdateTileBaseAtPosition(position);
     }
+
     public void UpdateTileBaseAtPosition(Vector2Int position)
     {
         Vector3Int position3D = new Vector3Int(position.x, position.y, 0);
@@ -217,6 +256,5 @@ public class Map : Item,ISave_Load
         tileMap.SetTile(position3D, tile);
         Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_tileBase}");
     }
-
-
+    #endregion
 }

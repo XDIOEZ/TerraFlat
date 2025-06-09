@@ -4337,18 +4337,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
       propertyPath: SavePath
-      value: Assets/Saves/
+      value: Assets/Saves/GameSaveData/
       objectReference: {fileID: 0}
     - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
-      propertyPath: TemplateSavePath
-      value: Assets/Saves/DefaultTemplate/
-      objectReference: {fileID: 0}
-    - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
-      propertyPath: SaveData.saveName
-      value: defaultSaveName
-      objectReference: {fileID: 0}
-    - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
-      propertyPath: SaveData.ActiveSceneName
+      propertyPath: defaultSettings.Default_Map
       value: "\u6D4B\u8BD5\u573A\u666F-\u5C0F\u578B\u68EE\u6797"
       objectReference: {fileID: 0}
     - target: {fileID: 8569586147199929775, guid: 708f0b948866b2b459782755afbd1d57, type: 3}

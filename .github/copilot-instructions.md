@@ -2,7 +2,7 @@
 - Project name: TerraFlat
 - Unity version: Unity 2022.3.51f1c1
 - Active game object:
-  - Name: 寻路
+  - Name: WorldManager
   - Tag: Untagged
-  - Layer: Map
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

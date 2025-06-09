@@ -61,11 +61,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SaveName: "\u6A21\u677F"
-  SavePath: Assets/Saves/
+  SavePath: Assets/Saves/LoaclSave
   SaveData:
     saveName: defaultSaveName
     ActiveSceneName: "\u6D4B\u8BD5\u573A\u666F-\u5C0F\u578B\u68EE\u6797"
     leaveTime: 0
+  OnSceneSwitch:
+    _PersistentCalls: []
   GameObject_False: []
   playerName: 
   defaultSettings:

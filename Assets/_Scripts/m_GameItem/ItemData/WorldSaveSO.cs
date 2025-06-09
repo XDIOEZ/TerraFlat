@@ -93,9 +93,12 @@ public class WorldSaveSO : ScriptableObject
     // 缓存字段
     private GameSaveData _cachedMapSave;
 
-    [MenuItem("Tools/同步所有地图数据")]
+    [MenuItem("Tools/模板地图数据_同步")]
     public static void SyncAllMap()
     {
+        // 记录当前激活场景路径
+        string activeScenePath = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().path;
+
         string[] guids = AssetDatabase.FindAssets("t:WorldSaveSO", new[] { "Assets/_Scenes" });
 
         if (guids.Length == 0)
@@ -118,6 +121,17 @@ public class WorldSaveSO : ScriptableObject
         }
 
         Debug.Log("所有地图数据同步完成！");
+
+        // 同步完成后切回原场景
+        if (!string.IsNullOrEmpty(activeScenePath) && File.Exists(activeScenePath))
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(activeScenePath);
+            Debug.Log($"已切回原场景: {activeScenePath}");
+        }
+        else
+        {
+            Debug.LogWarning("无法切回原场景，路径无效或文件不存在: " + activeScenePath);
+        }
     }
 
     #region 对外接口
