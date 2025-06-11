@@ -7,62 +7,68 @@ using NaughtyAttributes;
 
 public class SaveManager : MonoBehaviour
 {
+    [Header("保存与加载")]
     public SaveAndLoad saveAndLoad;
 
+    [Header("存档信息")]
     public List<string> saves = new List<string>();
+    public string PathToSaveFolder = "Assets/Saves/LoaclSave/";
 
-    public string PathToSaveFolder = "Assets/Saves/";
+    [Header("按钮与父物体")]
+    public GameObject Save_Player_SelectButton_Prefab; // 存档/玩家按钮预制体
 
-    public GameObject Save_Player_SelectButton_Prefab;//玩家 存档 按钮预制体
+    public Transform SaveSelectButton_Parent_Content; // 存档按钮父物体
+    public Transform Player_SelectButton_Parent_Content; // 玩家按钮父物体
 
-    public Transform SaveSelectButton_Parent_Content;//存档选择按钮父物体
+    [Header("UI 显示")]
+    public TextMeshProUGUI SelectedSave_Name_Text; // 当前选中的存档名
 
-    public Transform Player_SelectButton_Parent_Content;//玩家选择按钮父物体
 
-    public TextMeshProUGUI SelectedSave_Name_Text;//显示当前选中的存档名称
-    #region 按钮
+    public Button StartGameButton; // 开始游戏按钮
+    [Header("按钮")]
+    public Button DeletSave; // 新游戏按钮
 
-    public Button StartGameButton; // 游戏开始按钮
+    [Header("输入框")]
+    #region 新游戏相关UI
 
-    public Button Start_New_GameButton; // 开始新游戏按钮
+    public TMP_InputField NewPlayer_Name_Text; // 新玩家输入框
+    public TMP_InputField NewSave_Name_Text; // 新存档输入框
+    public Button Start_New_GameButton; // 新游戏按钮
     #endregion
 
-    #region 新玩家和存档输入框
-    [Header("新玩家和存档输入框")]
-    public TMP_InputField NewPlayer_Name_Text;//新玩家输入框
 
-    public TMP_InputField NewSave_Name_Text;//新存档输入框
+    #region 选中的_存档的_玩家的名字
 
-    public TMP_InputField SelectedPlayer_Name_Text;
+    public TMP_InputField SelectedPlayer_Name_Text; // 当前选中玩家显示框
+
     #endregion
-    [ShowNativeProperty]
-    public string PlayerName
+
+    
+
+    #region 初始化
+    private void Start()
     {
-        get
+        LoadSaveFileNames();
+        GenerateSaveButtons();
+
+        if (StartGameButton != null)
         {
-            return saveAndLoad.playerName;
+            StartGameButton.onClick.AddListener(OnClick_StartGame_Button);
+            Start_New_GameButton.onClick.AddListener(OnClick_StartNewGame_Button);
         }
-        set
+        else
         {
-            saveAndLoad.playerName = value;
+            Debug.LogError("StartGameButton 未正确赋值！");
         }
+
+        SelectedPlayer_Name_Text.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
+        NewPlayer_Name_Text.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
+        NewSave_Name_Text.onValueChanged.AddListener(OnPlayerSaveNameChanged);
+        DeletSave.onClick.AddListener(OnClick_DeletSave_Button);
     }
-[ShowNativeProperty]
-    public string SaveName
-    {
-        get
-        {
-            return saveAndLoad.SaveName;
-        }
-        set
-        {
-            saveAndLoad.SaveName = value;
-        }
-    }
+    #endregion
 
-
-
-
+    #region 存档加载
     // 加载存档文件名
     public void LoadSaveFileNames()
     {
@@ -81,8 +87,9 @@ public class SaveManager : MonoBehaviour
             saves.Add(fileName);
         }
     }
-    #region 列表按钮生成
+    #endregion
 
+    #region 按钮生成
     // 生成存档选择按钮
     public void GenerateSaveButtons()
     {
@@ -98,18 +105,16 @@ public class SaveManager : MonoBehaviour
 
             TextMeshProUGUI tmpText = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
             if (tmpText != null)
-            {
                 tmpText.text = saveName;
-            }
 
             Button btn = buttonObj.GetComponent<Button>();
             if (btn != null)
             {
-                string capturedName = saveName;
-                btn.onClick.AddListener(() => OnClickSaveButton(capturedName));
+                btn.onClick.AddListener(() => OnClick_List_Save_Button(saveName));
             }
         }
     }
+
     // 生成玩家选择按钮
     public void GeneratePlayerButtons()
     {
@@ -125,28 +130,48 @@ public class SaveManager : MonoBehaviour
 
             TextMeshProUGUI tmpText = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
             if (tmpText != null)
-            {
                 tmpText.text = playerName;
-            }
 
             Button btn = buttonObj.GetComponent<Button>();
             if (btn != null)
             {
                 string capturedName = playerName;
-                btn.onClick.AddListener(() => OnClickPlayerButton(capturedName));
+                btn.onClick.AddListener(() => OnClick_List_PlayerName_Button(capturedName));
             }
         }
     }
     #endregion
 
     #region UI事件
-    // 玩家按钮点击事件
-    public void OnClickPlayerButton(string playerName)
+    public void OnClick_DeletSave_Button()
+    {
+        saveAndLoad.DeletSave(saveAndLoad.PlayerSavePath, SelectedSave_Name_Text.text);
+        LoadSaveFileNames();
+        GenerateSaveButtons();
+    }
+
+    // 存档按钮点击事件
+    public void OnClick_List_Save_Button(string saveName)
     {
         if (saveAndLoad != null)
         {
-            PlayerName = playerName;
-            SelectedPlayer_Name_Text.text = playerName;
+            saveAndLoad.LoadSaveByDisk(saveAndLoad.PlayerSavePath+ saveName);
+        }
+        else
+        {
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
+        }
+        //同步存档名字
+        SelectedSave_Name_Text.text = saveName;
+        GeneratePlayerButtons();
+    }
+
+    // 玩家按钮点击事件
+    public void OnClick_List_PlayerName_Button(string playerName)
+    {
+        if (saveAndLoad != null)
+        {
+            saveAndLoad.CurrentContrrolPlayerName = playerName;
         }
         else
         {
@@ -156,74 +181,57 @@ public class SaveManager : MonoBehaviour
         SelectedPlayer_Name_Text.text = playerName;
     }
 
-    // 存档按钮点击事件
-    public void OnClickSaveButton(string saveName)
+    // 游戏开始按钮点击事件
+    public void OnClick_StartGame_Button()
     {
         if (saveAndLoad != null)
         {
-            saveAndLoad.LoadByDisk(saveName);
+            saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);
         }
         else
         {
             Debug.LogWarning("SaveAndLoad组件未绑定！");
         }
-
-        SelectedSave_Name_Text.text = saveName;
-        GeneratePlayerButtons();
     }
 
-    // 游戏开始按钮的空方法（点击时触发）
-    public void OnStartGameClicked()
+    // 开始新游戏按钮点击事件
+    private void OnClick_StartNewGame_Button()
     {
-        // 这里可以留空，后续根据需求添加逻辑（例如加载游戏场景）
-        saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);//TODO 默认进入平原 后续修改为从玩家身上获取最后一次离开的场景名称
-    }
-
-    void On_StartNewSave()
-    {
-        //saveAndLoad.Save();
-        // 这里可以留空，后续根据需求添加逻辑（例如加载游戏场景）
-        saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);//TODO 默认进入平原 后续修改为从玩家身上获取最后一次离开的场景名称
-    }
-    // Method to handle TMP_InputField value changes
-    private void OnPlayerNameChanged(string newName)
-    {
-        PlayerName = newName; // Update the PlayerName when TMP_InputField changes
-        Debug.Log("PlayerName updated to: " + PlayerName);
-    }
-    // Method to handle TMP_InputField value changes
-    private void OnPlayerSaveNameChanged(string newName)
-    {
-        SaveName = newName; // Update the PlayerName when TMP_InputField changes
-        Debug.Log("PlayerName updated to: " + PlayerName);
-    }
-
-    #endregion
-
-    // 初始化
-    public void Start()
-    {
-        LoadSaveFileNames();
-        GenerateSaveButtons();
-        // 绑定游戏开始按钮的点击事件
-        if (StartGameButton != null)
+        if (saveAndLoad != null)
         {
-            StartGameButton.onClick.AddListener(OnStartGameClicked);
-            Start_New_GameButton.onClick.AddListener(On_StartNewSave);
+            saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);
         }
         else
         {
-            Debug.LogError("StartGameButton 未正确赋值！");
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
         }
-        SelectedPlayer_Name_Text.onValueChanged.AddListener(OnPlayerNameChanged);
-        NewPlayer_Name_Text.onValueChanged.AddListener(OnPlayerNameChanged);
-        NewSave_Name_Text.onValueChanged.AddListener(OnPlayerSaveNameChanged);
     }
 
+    // 玩家输入框更新事件
+    private void OnUpdate_PlayerNameChanged_Text(string newName)
+    {
+        if (saveAndLoad != null)
+        {
+            saveAndLoad.CurrentContrrolPlayerName = newName;
+        }
+    }
+
+    // 存档输入框更新事件
+    private void OnPlayerSaveNameChanged(string newName)
+    {
+        if (saveAndLoad != null && saveAndLoad.SaveData != null)
+        {
+            saveAndLoad.SaveData.saveName = newName;
+        }
+    }
+    #endregion
+
+    #region 公共方法
     // 刷新存档列表
     public void Refresh()
     {
         LoadSaveFileNames();
         GenerateSaveButtons();
     }
+    #endregion
 }

@@ -16,28 +16,30 @@ using UnityEngine.SceneManagement;
 public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 {
     [Header("存档相关")]
-    [Tooltip("存档名称")]
-    public string SaveName = "DefaultSave";
-    [Tooltip("存档路径")]
-    public string SavePath = "Assets/Saves/";
+
+    [Tooltip("模板存档路径")]
+    public string TemplateSavePath = "Assets/Saves/GameSaveData/";
+
+    [Tooltip("玩家的存档路径")]
+    public string PlayerSavePath = "Assets/Saves/LoaclSaveData/";
+
     [Tooltip("当前使用的存档数据")]
     public GameSaveData SaveData;
+
     [Tooltip("场景切换时 会调用的事件")]
     public UltEvent OnSceneSwitch;
 
     [Tooltip("临时失效物体")]
     public List<GameObject> GameObject_False;
-    public string playerName;
+
+    public string CurrentContrrolPlayerName;
 
     [Header("默认设置")]
     public DefaultSettings defaultSettings;
+
     public void Start()
     {
         DontDestroyOnLoad(gameObject);
-        //调试模式自动调用场景中所有的load方法
-        //获取所有IloadAndSave接口
-
-        
     }
 
     [Serializable]
@@ -45,36 +47,38 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     {
         [Tooltip("默认加载的SaveADD标签")]
         public string Default_ADDTable = "Template_SaveData";
+
         [Tooltip("默认玩家模板存档")]
         public string Default_PlayerSave = "玩家";
+
         [Tooltip("默认玩家名字")]
         public string Default_PlayerName = "默认";
+
         [Tooltip("默认初始地图")]
         public string Default_Map = "平原";
     }
 
     #region 保存
- 
-     [Button("保存玩家")]
+
+    [Button("保存玩家")]
     public int SavePlayer()
     {
         int playerCount = 0;
-        //获取场景中所有Player
+        // 获取场景中所有 Player
         Player[] players = FindObjectsOfType<Player>();
 
-        //保存玩家数据
+        // 保存玩家数据
         foreach (Player player in players)
         {
             player.Save();
             SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
             player.gameObject.SetActive(false);
-            //存入临时失效物体列表
-            GameObject_False.Add(player.gameObject);
 
+            // 存入临时失效物体列表
+            GameObject_False.Add(player.gameObject);
             playerCount++;
         }
 
-       // Debug.Log("玩家数据保存成功！玩家数量：" + playerCount);
         return playerCount;
     }
 
@@ -82,23 +86,19 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     void Save()
     {
         SaveActiveMapToSaveData();
-
-        SaveToDisk(SaveData);
-        
+        SaveToDisk(SaveData,PlayerSavePath, SaveData.saveName);
     }
 
     [Tooltip("保存当前激活场景存入当前的场景字典中")]
     public void SaveActiveMapToSaveData()
     {
-
         SaveData ??= new GameSaveData();
         GameObject_False.Clear();
         SavePlayer();
+
         // 保存当前激活的地图
         MapSave mapSave = SaveActiveScene_Map();
         SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
-
-     //   Debug.Log("成功将当前激活场景存入当前使用的存档");
     }
 
     public GameSaveData GetSaveData()
@@ -106,9 +106,10 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         SaveData ??= new GameSaveData();
         GameObject_False.Clear();
         SavePlayer();
-        // 保存当前激活的地图
+
         MapSave mapSave = SaveActiveScene_Map();
         SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
+
         return SaveData;
     }
 
@@ -149,7 +150,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 else
                 {
                     _data = result.SaveData.PlayerData_Dict[defaultSettings.Default_PlayerName];
-                    _data.Name_User = playerName; // ✅ 直接修改名字
+                    _data.Name_User = playerName;
                     Debug.Log($"成功加载默认模板玩家，并设置为新玩家名：{playerName}");
                 }
 
@@ -158,24 +159,14 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         }
     }
 
-
     private void CreatePlayer(Data_Player data)
     {
         GameObject newPlayerObj = RunTimeItemManager.Instance.InstantiateItem("Player").gameObject;
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
         newPlayer.Data = data;
         newPlayer.Load();
-      //  Debug.Log("玩家加载成功！");
     }
 
-
-    [Button("加载存档")]
-    public void Load()
-    {
-        LoadByDisk(SaveName);
-    }
-
-    // Fix for CS7036: Provide the required "onComplete" parameter when calling LoadOnDefaultTemplateMap.
 
     [Button("加载指定地图")]
     public void LoadMap(string mapName)
@@ -184,7 +175,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         {
             Debug.Log($"成功加载地图：{mapName}");
             InstantiateItemsFromMapSave(mapSave);
-            LoadPlayer(playerName);
+            LoadPlayer(CurrentContrrolPlayerName);
             return;
         }
 
@@ -195,8 +186,8 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             if (result != null && result.SaveData != null &&
                 result.SaveData.MapSaves_Dict.TryGetValue(mapName, out MapSave defaultMapSave))
             {
-               InstantiateItemsFromMapSave(defaultMapSave);
-                LoadPlayer(playerName);
+                InstantiateItemsFromMapSave(defaultMapSave);
+                LoadPlayer(CurrentContrrolPlayerName);
             }
             else
             {
@@ -205,8 +196,6 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         });
     }
 
-
-    // 放在 RunTimeItemManager 中
     public void InstantiateItemsFromMapSave(MapSave mapSave)
     {
         foreach (var kvp in mapSave.items)
@@ -226,10 +215,6 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             }
         }
     }
-
-
-
-
 
     public void LoadAssetByLabelAndName<T>(string label, string name, Action<T> onComplete) where T : UnityEngine.Object
     {
@@ -267,38 +252,25 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         };
     }
 
-
-
     #endregion
 
-    #region 工具方法
-    #region 保存到磁盘
+    #region 工具方法 - 保存到磁盘
 
-    public void SaveToDisk(GameSaveData SaveData)
+    public void SaveToDisk(GameSaveData SaveData,string SavePath,string SaveName)
     {
         SaveData.saveName = SaveName;
 
         byte[] dataBytes = MemoryPackSerializer.Serialize(SaveData);
-        //获取当前场景名称设置为存档名称
-       // SaveData.saveName = SceneManager.GetActiveScene().name;
-        //保存到磁盘
         File.WriteAllBytes(SavePath + SaveName + ".QAQ", dataBytes);
         Debug.Log("存档成功！");
     }
 
-    /// <summary>
-    /// 保存当前激活的场景的地图数据
-    /// </summary>
-    /// <param name="MapName"></param>
-    /// <returns></returns>
     public MapSave SaveActiveScene_Map()
     {
         MapSave worldSave = new MapSave();
-        // 获取当前激活场景的名称
         worldSave.MapName = SceneManager.GetActiveScene().name;
-        // 获取当前场景中的所有物品数据（已按名称分组）
         worldSave.items = GetActiveSceneAllItemData();
-        //激活失效物体
+
         foreach (GameObject go in GameObject_False)
         {
             go.SetActive(true);
@@ -306,18 +278,13 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
         return worldSave;
     }
-    /// <summary>
-    /// 获取当前激活的场景中的所有物品数据
-    /// </summary>
-    /// <returns></returns>
+
     public Dictionary<string, List<ItemData>> GetActiveSceneAllItemData()
     {
         Dictionary<string, List<ItemData>> itemDataDict = new Dictionary<string, List<ItemData>>();
 
-        // 第一步：获取场景中所有的 Item（包括非激活状态）
         Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
 
-        // 第二步：先调用 Save()，避免遗漏
         foreach (Item item in allItems)
         {
             if (item == null)
@@ -328,29 +295,25 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
                 try
                 {
                     saveableItem.Save();
-                    //将无效的物品添加到临时失效物体列表
+
                     if (!item.gameObject.activeInHierarchy)
                     {
                         GameObject_False.Add(item.gameObject);
                     }
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
                     Debug.LogError($"保存物品失败: {item.name}", item);
                     Debug.LogException(ex);
                 }
             }
-
-           
         }
 
-        // 第三步：再次遍历所有 Item，筛选出 still active 的，并同步位置、收集数据
         foreach (Item item in allItems)
         {
             if (item == null || item.transform == null || item.gameObject == null)
                 continue;
 
-            // 只处理当前仍处于激活状态的 Item
             if (!item.gameObject.activeInHierarchy)
                 continue;
 
@@ -374,15 +337,15 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     #endregion
 
+    #region 工具方法 - 从磁盘加载
 
-    #region 从磁盘上加载
-
-    public void LoadByDisk(string Load_saveName)
+    public void LoadSaveByDisk(string LoadSavePath)
     {
-        Debug.Log("开始从磁盘加载存档：" + Load_saveName);
+        Debug.Log("开始从磁盘加载存档：" + LoadSavePath);
         SaveData = null;
-        SaveData = MemoryPackSerializer.Deserialize<GameSaveData>(File.ReadAllBytes(SavePath + Load_saveName + ".QAQ"));
+        SaveData = MemoryPackSerializer.Deserialize<GameSaveData>(File.ReadAllBytes(LoadSavePath + ".QAQ"));
     }
+
 
     public GameSaveData GetSaveByDisk(string savePath, string Load_saveName)
     {
@@ -390,117 +353,63 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     }
     #endregion
 
-    #endregion
+    public void DeletSave(string savePath, string saveName)
+    {
+        string filePath = Path.Combine(savePath, saveName + ".QAQ");
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+                Debug.Log($"存档已删除：{filePath}");
+            }
+            else
+            {
+                Debug.LogWarning($"未找到要删除的存档文件：{filePath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"删除存档时发生错误：{filePath}");
+            Debug.LogException(ex);
+        }
+    }
 
     #region 场景切换
 
     [Button("改变场景")]
     public void ChangeScene(string sceneName)
     {
-        
-        // 若场景名称为空，则使用默认地图
         if (sceneName == "")
         {
             sceneName = defaultSettings.Default_Map;
         }
+
         SaveData.ActiveSceneName = sceneName;
 
-
-        // 保存当前场景的地图数据
         SaveActiveMapToSaveData();
 
-
-        // 1. 创建新场景（空场景）
         newScene = SceneManager.CreateScene(sceneName);
 
-        // 2. 获取当前活动场景
         Scene previousScene = SceneManager.GetActiveScene();
 
-        // 3. 注册卸载完成后的回调
         SceneManager.sceneUnloaded += OnPreviousSceneUnloaded;
 
-        // 4. 开始卸载旧场景
         SceneManager.UnloadSceneAsync(previousScene);
-
-       /* // 进入新场景
-        EnterScene(sceneName);*/
     }
 
     private Scene newScene;
 
-    /// <summary>
-    /// 切换场景
-    /// </summary>
-    /// <param name="sceneName"></param>
-    public void EnterScene(string sceneName = "平原")
-    {
-    }
-
     private void OnPreviousSceneUnloaded(Scene unloadedScene)
     {
-        // 取消事件注册，避免重复调用
         SceneManager.sceneUnloaded -= OnPreviousSceneUnloaded;
 
-        // 设为新场景为活动场景
         SceneManager.SetActiveScene(newScene);
 
-        // 加载内容
         LoadMap(newScene.name);
 
         OnSceneSwitch?.Invoke();
     }
 
-
-
-
     #endregion
-}
-
-[MemoryPackable]
-[System.Serializable]
-public partial class MapSave
-{
-    public string MapName;
-
-    [ShowInInspector]
-    // 将原先存储单个 ItemData 的字典改为存储 List<ItemData>，key 为物品名称
-    public Dictionary<string, List<ItemData>> items = new Dictionary<string, List<ItemData>>();
-
-    // 说明：在保存物品时，同一名称的物品会存储在同一 List 中，
-    // 方便后续加载时批量实例化并赋值
-}
-
-
-[MemoryPackable]
-[System.Serializable]
-public partial class GameSaveData
-{
-    public string saveName = "defaultSaveName";//存档名称
-    [ShowInInspector]
-    //存档数据结构
-    public Dictionary<string, MapSave> MapSaves_Dict = new();
-    //玩家数据
-    [ShowInInspector]
-    public Dictionary<string, Data_Player> PlayerData_Dict = new();
-    //建筑与场景之间的切换表_位置
-    [ShowInInspector]
-    public Dictionary<string, Vector2> Scenen_Building_Pos = new();
-    //建筑与场景之间的切换表_名字
-    [ShowInInspector]
-    public Dictionary<string, string> Scenen_Building_Name = new();
-
-    public string ActiveSceneName = "平原";//当前激活场景名称
-
-
-
-
-
-    public string leaveTime = "0";//离开时间
-
-    //构造函数
-    public GameSaveData()
-    {
-        MapSaves_Dict = new Dictionary<string, MapSave>();
-        PlayerData_Dict = new Dictionary<string, Data_Player>();
-    }
 }
