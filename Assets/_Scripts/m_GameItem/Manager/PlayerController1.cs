@@ -2,14 +2,18 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using NaughtyAttributes;
 using InputSystem;
+using Sirenix.OdinInspector;
+using static UnityEngine.InputSystem.Layouts.InputControlLayout;
 
 [RequireComponent(typeof(Player))]
 public class PlayerController : MonoBehaviour
 {
+    [ShowInInspector]
     public IFocusPoint _FocusPoint;
     public ISpeed _Speed;
+    public Item ControledItem;
     #region 组件引用
-    private IFunction_Move movement;
+    private IMove movement;
     [ShowNativeProperty] public AttackTrigger Attack { get; private set; }
     [ShowNativeProperty] public FaceMouse Facing { get; private set; }
     [ShowNativeProperty] public TurnBody BodyTurning { get; private set; }
@@ -22,20 +26,9 @@ public class PlayerController : MonoBehaviour
 
     [ShowNativeProperty] public HandForInteract _handForInteract { get; private set; }
 
-    public IFunction_Move Movement
-    {
-        get
-        {
-            if (movement == null)
-            {
-                movement = GetComponentInChildren<IFunction_Move>();
-                // Debug.Log("movement is null");
-            }
-            return movement;
-        }
-    }
-
-    public ItemUIManager _playerUI;
+    [ShowInInspector]
+    public IMove Mover;
+  
 
     public IHunger _Hunger { get; private set; }
     #endregion
@@ -48,31 +41,14 @@ public class PlayerController : MonoBehaviour
     #endregion
 
     #region Unity生命周期
-    private void Awake()
-    {
-        VirtualCameraManager = GetComponentInChildren<CameraFollowManager>();
-        ItemDroper = GetComponentInChildren<ItemDroper>();
-        _Hunger = GetComponent<IHunger>();
-        Set_InputSystem();
-    }
-
-
-    
-
     public void OnDisable()
     {
         _inputActions.Disable();
     }
 
-    //激活时启动
-    public void OnEnable()
+    public void Start()
     {
-        _inputActions.Enable();
-    }
-
-
-    private void Start()
-    {
+        Set_InputSystem();
         //     _mainCamera = Camera.main;
         InitializeComponents();
 
@@ -80,8 +56,16 @@ public class PlayerController : MonoBehaviour
         SwitchEquip();
         SwitchCraft();
         _Speed = GetComponentInChildren<ISpeed>();
-        //    SwitchSetting();
+        Debug.Log("初始化完成");
         _FocusPoint = GetComponent<IFocusPoint>();
+        ControledItem = GetComponent <Item>();
+        _FocusPoint = ControledItem as IFocusPoint;
+        Mover = GetComponentInChildren<IMove>();
+        VirtualCameraManager = GetComponentInChildren<CameraFollowManager>();
+        ItemDroper = GetComponentInChildren<ItemDroper>();
+        _Hunger = GetComponent<IHunger>();
+
+        
     }
 
     private void Update()
@@ -111,13 +95,13 @@ public class PlayerController : MonoBehaviour
     private void HandleMovementInput()
     {
         Vector2 moveInput = _inputActions.Win10.Move_Player.ReadValue<Vector2>();
-        //检查moveInput是否有效
+      /*  //检查moveInput是否有效
         if (moveInput.magnitude > 1f)
         {
             moveInput.Normalize();
-        }
+        }*/
         _Speed.MoveTargetPosition = moveInput;
-        Movement.Move(moveInput);
+        Mover.Move(moveInput);
     }
     #endregion
 
@@ -181,7 +165,7 @@ public class PlayerController : MonoBehaviour
         BodyTurning = GetComponentInChildren<TurnBody>();
         Running = GetComponentInChildren<Runner>();
         _handForInteract = GetComponentInChildren<HandForInteract>();
-        Hotbar = _playerUI.HotBor.GetComponent<Inventory_HotBar>();
+       // Hotbar = _playerUI.HotBor.GetComponent<Inventory_HotBar>();
     }
     #endregion
 
@@ -190,7 +174,9 @@ public class PlayerController : MonoBehaviour
     {
         //初始化输入系统
         _inputActions = new PlayerInputActions();
+
         _inputActions.Win10.Enable();
+
         var win10 = _inputActions.Win10;
         //监听快捷栏
         win10.SwitchHotBar_Player.started += SwitchHotbar;
@@ -250,7 +236,7 @@ public class PlayerController : MonoBehaviour
         {
             ItemDroper.FastDropItem();
 
-            Hotbar.UpdateItemSlotUI();
+            Hotbar.SyncUI(Hotbar.CurrentIndex);
         }
         
 
@@ -306,6 +292,7 @@ public class PlayerController : MonoBehaviour
 
     private void SwitchHotbarByScroll(InputAction.CallbackContext context)
     {
+        if (Hotbar == null) return;
         if (CtrlIsDown)
         {
             return;
@@ -328,7 +315,7 @@ public class PlayerController : MonoBehaviour
     //开关背包
     public void SwitchBag(InputAction.CallbackContext context = default)
     {
-        _playerUI.Bag.enabled = !_playerUI.Bag.enabled;
+ 
     }
     #endregion
     #region 开关设置面板
@@ -336,7 +323,7 @@ public class PlayerController : MonoBehaviour
     //开关设置面板
     public void SwitchSetting(InputAction.CallbackContext context = default)
     {
-        _playerUI.Setting.enabled = !_playerUI.Setting.enabled;
+        //_playerUI.Setting.enabled = !_playerUI.Setting.enabled;
     }
     #endregion
     #region 开关装备栏位
@@ -344,7 +331,7 @@ public class PlayerController : MonoBehaviour
     //开关装备栏
     public void SwitchEquip(InputAction.CallbackContext context = default)
     {
-        _playerUI.Equip.enabled = !_playerUI.Equip.enabled;
+       // _playerUI.Equip.enabled = !_playerUI.Equip.enabled;
     }
     #endregion
     #region 开关手工合成面板
@@ -352,7 +339,7 @@ public class PlayerController : MonoBehaviour
     //开关制作栏
     public void SwitchCraft(InputAction.CallbackContext context = default)
     {
-        _playerUI.Craft.enabled = !_playerUI.Craft.enabled;
+        //_playerUI.Craft.enabled = !_playerUI.Craft.enabled;
     }
     #endregion
 

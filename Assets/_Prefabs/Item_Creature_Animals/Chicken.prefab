@@ -222,9 +222,10 @@ MonoBehaviour:
       maxDefenseToughness: 0
       maxDefenseMagic: 0
     EatingSpeed: 1
-    speed_Max: 3
-    speed: 3
-    runSpeed: 0.1
+    Speed:
+      BaseValue: 6
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
     stamina: 50
     stamina_Max: 100
     staminaRecoverySpeed: 1

@@ -17,24 +17,7 @@ using UnityEngine;
     #endregion
 
     #region 速度
-    // 完善ISpeed接口实现，直接映射AnimalData中的速度属性
-    public float Speed
-    {
-        get => Data.speed;
-        set => Data.speed = value;
-    }
-
-    public float MaxSpeed
-    {
-        get => Data.speed_Max;
-        set => Data.speed_Max = value;
-    }
-
-    public float RunSpeed
-    {
-        get => Data.runSpeed;
-        set => Data.runSpeed = value;
-    }
+    public GameValue_float Speed { get => Data.Speed; set => Data.Speed = value; }
     #endregion
 
     #region 感知
@@ -112,6 +95,8 @@ using UnityEngine;
     public string TeamID { get => Data.TeamID; set => Data.TeamID = value; }
     public Dictionary<string, RelationType> Relations { get => Data.Relations; set => Data.Relations = value; }
     public Vector3 MoveTargetPosition { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    GameValue_float ISpeed.Speed { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+  
     #endregion
 
     public void Start()

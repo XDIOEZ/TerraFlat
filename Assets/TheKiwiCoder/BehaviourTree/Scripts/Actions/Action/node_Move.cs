@@ -86,7 +86,7 @@ public class Move : ActionNode
         {
             if (base.DebugMODE)
             {
-                Debug.Log("Arrived");
+                //Debug.Log("Arrived");
             }
 
             // ÖØÖÃ×´Ì¬

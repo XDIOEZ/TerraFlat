@@ -21,7 +21,7 @@ public class DraggableUI : MonoBehaviour, IPointerDownHandler, IBeginDragHandler
 
         if (canvas == null)
         {
-            Debug.LogError("DraggableUI 需要在 Canvas 内部使用！");
+            Debug.LogError("DraggableUI 需要在 Canvas 的子物体上使用！");
         }
 
         if (draggableImage == null)

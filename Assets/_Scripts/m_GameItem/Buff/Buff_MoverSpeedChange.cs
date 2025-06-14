@@ -4,15 +4,16 @@ using UnityEngine;
 public class Buff_MoverSpeedChange : BuffAction
 {
     public float SpeedChangeValue;
+
     public override void Apply(BuffRunTime data)
     {
-        ISpeed moverSpeed = data.buff_Receiver as ISpeed;
-        if (moverSpeed == null)
+        ISpeed Speeder = (ISpeed)data.buff_Receiver;
+
+        if (Speeder == null)
         {
             // Buff接受者没有速度接口，取消apply
             return;
         }
-
-        moverSpeed.Speed *= SpeedChangeValue;
+        Speeder.Speed.MultiplicativeModifier *= SpeedChangeValue;
     }
 }

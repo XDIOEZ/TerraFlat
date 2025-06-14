@@ -24,7 +24,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
 
 
     [Tooltip("物体被点击的事件")]
-    public UltEvent<int> onItemClick = new UltEvent<int>();
+    public UltEvent<int> OnItemClick = new UltEvent<int>();
     #endregion
 
     #region Unity生命周期方法
@@ -67,7 +67,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
     // 处理左键点击事件，触发 onItemClick 事件
     private void HandleLeftClick()
     {
-        onItemClick.Invoke(ItemSlot.Index);
+        OnItemClick.Invoke(ItemSlot.Index);
     }
 
     // 处理右键点击事件，显示物品信息菜单

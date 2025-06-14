@@ -10,5 +10,5 @@ public interface IStamina
     [Tooltip("每秒恢复的精力值")]
     public float StaminaRecoverySpeed { get; set; }
 
-    public UltEvent OnStaminaChanged { get; set; }
+    public UltEvent OnStaminaChanged { get; }
 }

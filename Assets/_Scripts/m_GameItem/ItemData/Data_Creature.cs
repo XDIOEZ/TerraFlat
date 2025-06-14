@@ -22,16 +22,11 @@ public partial class Data_Creature : ItemData
     #endregion
 
     #region 速度
-    [Tooltip("最大移动速度")]
-    public float speed_Max = 3;
-    [Tooltip("速度")]
-    public float speed = 3;
-    [Tooltip("奔跑速度")]
-    public float runSpeed = 6;
+    public GameValue_float Speed = new();
     #endregion
 
     #region 精力
-    [Tooltip("精力值")]
+        [Tooltip("精力值")]
     public float stamina = 100;
     [Tooltip("精力上限")]
     public float stamina_Max = 100;

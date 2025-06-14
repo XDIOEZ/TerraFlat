@@ -1,6 +1,7 @@
 
 using MemoryPack;
 using NaughtyAttributes;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,12 +16,7 @@ public partial class Data_Player : ItemData
     public Defense defense = new(5, 5);
     #endregion
     #region 速度
-    [Tooltip("默认速度")]
-    public float defaultSpeed = 3;
-    [Tooltip("速度")]
-    public float speed = 3;
-    [Tooltip("奔跑速度")]
-    public float runSpeed = 6;
+    public GameValue_float Speed = new ();
     #endregion
 
     #region 精力

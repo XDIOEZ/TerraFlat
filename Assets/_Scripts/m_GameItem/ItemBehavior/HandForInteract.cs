@@ -17,6 +17,13 @@ public class HandForInteract : MonoBehaviour ,IInteracter
     private GameObject user;
 
     public SelectSlot SelectSlot { get => _selectSlot; set => _selectSlot = value; }
+    public Item Item { get; set; }
+    public IInventoryData InventoryData { get; set; }
+    public void Start()
+    {
+        Item = GetComponentInParent<Item>();
+        InventoryData = GetComponentInParent<IInventoryData>();
+    }
     public void OnTriggerEnter2D(Collider2D collision)
     {
          var collider    = collision.GetComponent<IInteract>();

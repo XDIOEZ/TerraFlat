@@ -77,7 +77,7 @@ public class Inventory_Equipment : MonoBehaviour
             }
         }
 
-        inventory.onSlotChanged += EquipArmor;
+       // inventory.onSlotChanged += EquipArmor;
     }
 
 
@@ -87,12 +87,12 @@ public class Inventory_Equipment : MonoBehaviour
 
         Protect_entity = GetComponentInParent<ItemUIManager>().CanvasBelong_Item.GetComponent<IReceiveDamage>();
 
-        inventory.onSlotChanged -= inventory.ChangeItemData_Default;
+       // inventory.onSlotChanged -= inventory.ChangeItemData_Default;
     }
 
     public void EquipArmor(int slotIndex, ItemSlot InputSlot)
     {
-        inventory.onSlotChanged -= inventory.ChangeItemData_Default;
+        //inventory.onSlotChanged -= inventory.ChangeItemData_Default;
 
         //Debug.Log("开始装备");
 
@@ -103,23 +103,23 @@ public class Inventory_Equipment : MonoBehaviour
         }
 
         //TODO:如果手和装备都为空,则不做任何操作
-        if (InputSlot._ItemData == null && inventory.GetItemData(slotIndex) == null)
+        if (InputSlot._ItemData == null && inventory.Data.GetItemData(slotIndex) == null)
         {
             return;
         }
 
         //卸下盔甲
-        if (inventory.GetItemData(slotIndex) != null)//如果手上有装备
+        if (inventory.Data.GetItemData(slotIndex) != null)//如果手上有装备
         {
             Debug.Log("插槽有装备 || 手上无装备"); 
             if(InputSlot._ItemData==null)//如果输入插槽为空
             {
-                Data_Armor armorData = (Data_Armor)inventory.GetItemData(slotIndex);
+                Data_Armor armorData = (Data_Armor)inventory.Data.GetItemData(slotIndex);
 
                 Entity_Defense -= armorData.defense;
 
-                inventory.ChangeItemData_Default(slotIndex, InputSlot);
-                inventory.onUIChanged?.Invoke(slotIndex);
+                inventory.Data.ChangeItemData_Default(slotIndex, InputSlot);
+                inventory.Data.onUIChanged?.Invoke(slotIndex);
                 return;
             }
         }
@@ -140,7 +140,7 @@ public class Inventory_Equipment : MonoBehaviour
 
                Entity_Defense += armorData.defense;
 
-                inventory.ChangeItemData_Default(slotIndex, InputSlot);
+                inventory.Data.ChangeItemData_Default(slotIndex, InputSlot);
                 // AddTargetInventory.onUIChanged?.Invoke(slotIndex);
                 Debug.Log("装备了: " + inventory.Data.itemSlots[slotIndex]._ItemData.IDName + "，防御值为 " + Entity_Defense + "。");
                 return;

@@ -25,10 +25,9 @@ public class UI_DataSliderShow : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        Item item = GetComponentInParent<ItemUIManager>().CanvasBelong_Item;
-        _health = item.GetComponent<IHealth>();
-        _nutrition = item.GetComponent<IHunger>();
-        _energy = item.GetComponent<IStamina>();
+        _health = GetComponentInParent<IHealth>();
+        _nutrition = GetComponentInParent<IHunger>();
+        _energy = GetComponentInParent<IStamina>();
 
         // 初始化进度条的最大值，检查列表大小，避免下标越界
         if (sliders.Count > 0)

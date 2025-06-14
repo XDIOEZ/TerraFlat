@@ -33,7 +33,10 @@ public abstract class Item : MonoBehaviour
         Item_Data._transform.Scale = transform.localScale;     
     }
 
-    public abstract void Act();
+    public virtual void Act()
+    {
+        Debug.Log("Item Act");
+    }
 
     [Sirenix.OdinInspector.Button("同步物品数据")]
     public virtual int SyncItemData()

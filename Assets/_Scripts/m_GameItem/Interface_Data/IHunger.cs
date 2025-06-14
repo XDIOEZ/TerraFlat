@@ -9,5 +9,5 @@ public interface IHunger
 
     void TakeABite(IFood food);
 
-    public UltEvent OnNutrientChanged { get; set; }
+    public UltEvent OnNutrientChanged { get; }
 }

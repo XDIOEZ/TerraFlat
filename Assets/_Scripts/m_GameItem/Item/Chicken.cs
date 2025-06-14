@@ -20,24 +20,8 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public UltEvent OnDeath { get; set; }
     #endregion
     #region 速度
-    // 完善ISpeed接口实现，直接映射AnimalData中的速度属性
-    public float Speed
-    {
-        get => Data.speed;
-        set => Data.speed = value;
-    }
-
-    public float MaxSpeed
-    {
-        get => Data.speed_Max;
-        set => Data.speed_Max = value;
-    }
-
-    public float RunSpeed
-    {
-        get => Data.runSpeed;
-        set => Data.runSpeed = value;
-    }
+    public float AdditiveModifier { get; set; }
+    public float MultiplicativeModifier { get; set; }
     #endregion
 
     #region 感知
@@ -45,7 +29,6 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public float sightRange { get => Data.sightRange; set => Data.sightRange = value; }
     #endregion
 
-  
     #region 生命
     public Hp Hp
     {
@@ -104,6 +87,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public Vector3 MoveTargetPosition { get; set; }
     [ShowInInspector]
     public Vector3 FocusPointPosition { get => MoveTargetPosition; set => MoveTargetPosition = value; }
+    GameValue_float ISpeed.Speed { get => Data.Speed; set => Data.Speed = value; }
     #endregion
 
     public void Start()

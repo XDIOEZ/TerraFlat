@@ -164,6 +164,10 @@ public class WorldSaveSO : ScriptableObject
 
     public GameSaveData LoadByDisk(string _buildingPath)
     {
+        if (buildingName == "")
+        {
+            buildingName = name;
+        }
         string fullPath = Path.Combine(_buildingPath, buildingName + ".GameSaveData");
         if (File.Exists(fullPath))
         {

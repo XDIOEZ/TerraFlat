@@ -15,7 +15,7 @@ public class ItemPicker : MonoBehaviour
             // 所有目标背包都满了，才不能拾取
             foreach (var inventory in AddTargetInventories)
             {
-                if (inventory != null && !inventory.Inventory_Slots_All_IsFull)
+                if (inventory != null && !inventory.Data.IsFull)
                 {
                     return canPickUp;
                 }
@@ -55,9 +55,9 @@ public class ItemPicker : MonoBehaviour
             // 遍历所有背包，找到第一个可以添加的
             foreach (var inventory in AddTargetInventories)
             {
-                if (inventory != null && inventory.CanAddTheItem(itemData))
+                if (inventory != null && inventory.Data.CanAddTheItem(itemData))
                 {
-                    inventory.AddItem(pickAble.Pickup());
+                    inventory.Data.AddItem(pickAble.Pickup());
                     return; // 添加成功后立即返回
                 }
             }

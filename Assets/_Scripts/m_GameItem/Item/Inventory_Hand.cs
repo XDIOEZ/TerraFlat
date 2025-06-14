@@ -2,9 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(Inventory))]
-public class Inventory_Hand : MonoBehaviour
+public class Inventory_Hand : Inventory
 {
+    public float GetItemAmountRate = 1;
+    /*
     //获取Inventory组件
     public Inventory inventory;
     //是否获取一半
@@ -12,7 +13,7 @@ public class Inventory_Hand : MonoBehaviour
 
     public bool isGetOne = false;
 
-    public float GetItemAmountRate = 1; 
+
 
     public void Awake()
     {
@@ -41,5 +42,10 @@ public class Inventory_Hand : MonoBehaviour
         {
             GetItemAmountRate = 1;
         }
+    }*/
+
+    public override void OnItemClick(int index)
+    {
+
     }
 }

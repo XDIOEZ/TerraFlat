@@ -81,15 +81,10 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         fuelSlider.maxValue = maxFuelAmount;
         workSlider.maxValue = maxWorkProgress;
     }
-    void Awake()
-    {
-        IInventoryData inventoryData = this;
-        inventoryData.FillDict_SetBelongItem(transform);
-    }
+
     void Start()
     {
         OnInventoryData_Dict_Changed += SetChildInventoryData;
-        OnInventoryData_Dict_Changed += Awake;
 
         InitializeInventory("输入槽", ref Input_inventory);
         InitializeInventory("输出槽", ref Output_inventory);
@@ -128,8 +123,8 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         Inventory[] Inventory_s = GetComponentsInChildren<Inventory>();
         foreach (var inventory_ShowNow in Inventory_s)
         {
-            inventory_ShowNow.Data = Data_InventoryData[inventory_ShowNow.Data.inventoryName];
-            foreach (var itemSlot in Data_InventoryData[inventory_ShowNow.Data.inventoryName].itemSlots)
+            inventory_ShowNow.Data = InventoryData_Dict[inventory_ShowNow.Data.inventoryName];
+            foreach (var itemSlot in InventoryData_Dict[inventory_ShowNow.Data.inventoryName].itemSlots)
             {
                 itemSlot.Belong_Inventory = inventory_ShowNow;
             }
@@ -151,7 +146,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         }
     }
 
-    public Dictionary<string, Inventory_Data> Data_InventoryData
+    public Dictionary<string, Inventory_Data> InventoryData_Dict
     {
         get
         {
@@ -209,11 +204,11 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         // 尝试将所有待添加的物品添加到输出容器
         foreach (var item in itemsToAdd)
         {
-            if (!outputInventory_.CanAddTheItem(item))
+            /*if (!outputInventory_.CanAddTheItem(item))
             {
                 // 如果添加失败，直接返回
                 return false;
-            }
+            }*/
         }
         return true;//成功通过检测
         #endregion
@@ -282,7 +277,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             #region 合成
             foreach (var item in itemsToAdd)
             {
-                outputInventory_.AddItem(item);
+                outputInventory_.Data.AddItem(item);
             }
             // 根据合成清单，删除输入插槽内的物品
 
@@ -302,7 +297,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
 
                             if (item_slot._ItemData.Stack.Amount == 0)
                             {
-                                inputInventory_.RemoveItemAll(item_slot, i);
+                                inputInventory_.Data.RemoveItemAll(item_slot, i);
                             }
                             // 刷新 UI
                             item_slot.UI.RefreshUI();
@@ -543,7 +538,8 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         //遍历这个物品的所有的Value，Children_Inventory_GameObject
         foreach (var inventory in Children_Inventory_GameObject.Values)
         {
-            inventory.UI.TargetSendItemSlot = interacter.SelectSlot;
+            IInventoryData data = (IInventoryData)interacter.Item;
+            inventory.DefaultTarget_Inventory = data.Children_Inventory_GameObject["手部插槽"];
         }
     }
 
@@ -558,7 +554,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         //遍历这个物品的所有的Value，Children_Inventory_GameObject
         foreach (var inventory in Children_Inventory_GameObject.Values)
         {
-            inventory.UI.TargetSendItemSlot = null;
+            inventory.DefaultTarget_Inventory = null;
         }
     }
     public void SwitchUI()

@@ -1,102 +1,109 @@
 ﻿using NaughtyAttributes;
-using System.Collections.Generic; // 引入泛型集合的命名空间，例如 Dictionary。
+using System.Collections.Generic;
 using UltEvents;
-using UnityEngine; // 引入 UltEvents 命名空间，用于事件处理。
+using UnityEngine;
 
-public interface IInventoryData // 定义一个接口，用于管理与物品清单相关的数据和操作。
+/// <summary>
+/// 用于管理与物品清单相关的数据和操作的接口。
+/// </summary>
+public interface IInventoryData
 {
-    // 一个字典，用于将物品清单的名称映射到与 GameObject 相关联的 Inventory 对象。
-    public Dictionary<string, Inventory> Children_Inventory_GameObject { get; set; }
+    /// <summary>
+    /// 以清单名为键，映射到对应的 Inventory 对象。
+    /// </summary>
+    Dictionary<string, Inventory> Children_Inventory_GameObject { get; set; }
 
-    // 一个字典，用于存储物品清单数据，以物品清单的名称作为键。
-    public Dictionary<string, Inventory_Data> Data_InventoryData { get; set; }
+    /// <summary>
+    /// 以清单名为键，存储 Inventory_Data 数据。
+    /// </summary>
+    Dictionary<string, Inventory_Data> InventoryData_Dict { get; set; }
 
-    // 当 Inventory_Data_Dict 发生更改时触发的事件。
-    public UltEvent OnInventoryData_Dict_Changed { get; set; }
+    /// <summary>
+    /// 当 Data_InventoryData 发生变化时触发的事件。
+    /// </summary>
+    UltEvent OnInventoryData_Dict_Changed { get; }
 
+    /// <summary>
+    /// 当前手部选择栏。
+    /// </summary>
     [Tooltip("选择")]
-    public SelectSlot SelectSlot { get; set; }
-
-    // 方法：根据名称获取物品清单数据，默认为 "Default"。
+    SelectSlot SelectSlot { get; set; }
+/*
+    /// <summary>
+    /// 获取指定名称的 Inventory_Data，默认获取 "Default"。
+    /// </summary>
     Inventory_Data GetInventoryData(string inventoryName = "Default")
     {
-        // 检查字典中是否包含指定的物品清单名称。
         if (Data_InventoryData.ContainsKey(inventoryName))
-        {
-            return Data_InventoryData[inventoryName]; // 如果找到则返回对应的物品清单数据。
-        }
+            return Data_InventoryData[inventoryName];
         else
-        {
-            return null; // 如果未找到，返回 null。
-        }
+            return null;
     }
 
-    // 方法：更新物品清单数据并触发更改事件。
+    /// <summary>
+    /// 设置 Inventory_Data 并触发事件。
+    /// </summary>
     void SetInventoryData(Inventory_Data inventoryData)
     {
-        // 使用提供的数据更新字典。
         Data_InventoryData[inventoryData.inventoryName] = inventoryData;
-        OnInventoryData_Dict_Changed.Invoke(); // 通知事件的监听者字典发生了更改。
+        OnInventoryData_Dict_Changed.Invoke();
     }
 
-    // 方法：将物品归属设置为当前对象，并更新子物品清单映射。
-    void FillDict_SetBelongItem(UnityEngine.Transform Item)
+    /// <summary>
+    /// 设置子物品清单的归属关系，并更新字典与 UI。
+    /// </summary>
+    void FillDict_SetBelongItem(Transform item)
     {
-        // 获取指定物品下所有子对象中的 Inventory 组件。
-        Inventory[] Inventory_s = Item.GetComponentsInChildren<Inventory>();
-        Item _i = Item.GetComponentInChildren<Item>();
-        foreach (var inventory in Inventory_s)
+        Inventory[] inventories = item.GetComponentsInChildren<Inventory>();
+        Item itemComponent = item.GetComponentInChildren<Item>();
+
+        foreach (var inventory in inventories)
         {
-            inventory.Belong_Inventory = this; // 将物品清单的归属设置为当前对象。
-            inventory._belongItem = _i; // 将物品的归属设置为当前对象。
-            inventory.SyncSlotBelongInventory();
+
             if (inventory.UI.itemSlots_UI[0] == null)
             {
                 inventory.UI.Instantiate_ItemSlotUI();
             }
+
             inventory.UI.AddListenersToItemSlots();
-
-            Children_Inventory_GameObject[inventory.Data.inventoryName] = inventory; // 更新字典，将物品清单名称与其对应对象关联。
-
-            //遍历这个物品的所有的Value，Children_Inventory_GameObject
-            foreach (var inventory_ in Children_Inventory_GameObject.Values)
-            {
-                inventory_.UI.TargetSendItemSlot = SelectSlot;
-            }
+            Children_Inventory_GameObject[inventory.Data.inventoryName] = inventory;
         }
-        // 如果需要调试，可以取消以下行的注释以记录物品的名称。
-        // Debug.Log("设置物品归属对象" + Item.name);
+
+        // 设置每个物品的目标发送栏为手部选择栏
+        foreach (var inventory in Children_Inventory_GameObject.Values)
+        {
+            inventory.UI.TargetSendItemSlot = SelectSlot;
+        }
     }
 
-    // 方法：根据指定的大小初始化物品清单数据和插槽。
+    /// <summary>
+    /// 初始化指定 Inventory 的数据与插槽。
+    /// </summary>
     void InitializeInventory(Inventory inventory, int inventorySize)
     {
-        // 如果字典中已经存在此物品清单的数据，则跳过初始化。
         if (Data_InventoryData.ContainsKey(inventory.Data.inventoryName))
-        {
-            return; // 直接退出方法。
-        }
+            return;
 
-        // 根据指定大小初始化物品插槽列表（TODO：需完成具体实现）。
         inventory.Data.itemSlots = new List<ItemSlot>();
         for (int i = 0; i < inventorySize; i++)
         {
-            inventory.Data.itemSlots.Add(new ItemSlot(i)); // 按索引添加新插槽。
+            inventory.Data.itemSlots.Add(new ItemSlot(i));
         }
 
-        // 设置每个物品插槽的归属物品清单。
         foreach (var itemSlot in inventory.Data.itemSlots)
         {
-            itemSlot.Belong_Inventory = inventory; // 为插槽分配所属的物品清单引用。
+            itemSlot.Belong_Inventory = inventory;
         }
 
-        // 创建物品插槽的 UI 表现形式。
         inventory.UI.Instantiate_ItemSlotUI();
     }
 
-    // 方法：用于在 Awake 时执行初始化逻辑。
-    public void Awake()
+    /// <summary>
+    /// 初始化方法（目前为空，实现类可根据需要自定义）。
+    /// </summary>
+    void Awake()
     {
-        // 预留初始化逻辑。
-    }
+        // 预留初始化逻辑
+    }*/
 }
+

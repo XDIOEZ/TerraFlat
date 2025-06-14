@@ -6,7 +6,7 @@ public interface IMover
     public Vector3 Position { get; set; }
     public Vector3 TargetPosition { get; set; }
 
-    public float Speed { get; set; }
+    public float Speed { get; }
 
     public bool IsMoving { get; set; }
 

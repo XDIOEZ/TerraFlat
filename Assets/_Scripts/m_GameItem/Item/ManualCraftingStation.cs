@@ -128,7 +128,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
         // 执行合成：添加输出物品
         foreach (var item in itemsToAdd)
         {
-            outputInventory_.AddItem(item);
+            outputInventory_.Data.AddItem(item);
             Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
         }
 
@@ -147,13 +147,13 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
             if (slot._ItemData.Stack.Amount <= 0)
             {
                 Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
-                inputInventory_.RemoveItemAll(slot, i);
+                inputInventory_.Data.RemoveItemAll(slot, i);
             }
             else
             {
                 Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot._ItemData.Stack.Amount}");
             }
-            inputInventory.UI.RefreshSlotUI(i);
+            inputInventory.SyncUI(i);
         }
 
         Debug.Log($"合成完成：{recipe.name}");
@@ -186,7 +186,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
 
         // 检查输出空间
         foreach (var item in itemsToAdd)
-            if (!outputInventory_.CanAddTheItem(item))
+            if (!outputInventory_.Data.CanAddTheItem(item))
                 return false;
 
         return true;

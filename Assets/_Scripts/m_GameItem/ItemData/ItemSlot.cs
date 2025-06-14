@@ -26,8 +26,7 @@ public partial class ItemSlot
     #region  ÁÙÊ±±äÁ¿
 
     [MemoryPackIgnore]
-    [ShowNonSerializedField]
-    public Inventory belong_Inventory = null;
+    public Inventory Belong_Inventory = null;
     [MemoryPackIgnore]
     public ItemSlot_UI uI = null;
 
@@ -41,18 +40,6 @@ public partial class ItemSlot
                 return false;
             }
             return _ItemData.Stack.CurrentVolume >= SlotMaxVolume;
-        }
-    }
-    [MemoryPackIgnore]
-    public Inventory Belong_Inventory
-    {
-        get
-        {
-            return belong_Inventory;
-        }
-        set
-        {
-            belong_Inventory = value;
         }
     }
     [MemoryPackIgnore]
@@ -165,16 +152,16 @@ public partial class ItemSlot
     public void ResetData()
     {
         _ItemData =null;
-        Belong_Inventory.onUIChanged.Invoke(Index);
+        //Belong_Inventory.onUIChanged.Invoke(Index);
     }
 
     public void RefreshUI()
     {
-        Belong_Inventory.onUIChanged.Invoke(Index);
+       // Belong_Inventory.onUIChanged.Invoke(Index);
     }
 
     public void  SetInventory(Inventory Inventory_)
     {
-        Belong_Inventory = Inventory_;
+      //  Belong_Inventory = Inventory_;
     }
 }

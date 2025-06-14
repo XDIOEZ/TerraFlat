@@ -27,9 +27,9 @@ public interface IHealth
 
     public void Death();
 
-    public UltEvent OnHpChanged { get; set; }
+    public UltEvent OnHpChanged { get;  }
 
-    public UltEvent OnDefenseChanged { get; set; }
+    public UltEvent OnDefenseChanged { get; }
 
     public UltEvent OnDeath { get; set; }
 }

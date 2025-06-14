@@ -54,11 +54,7 @@ public class Mover_AI : Organ, IMover, IAI_NavMesh
         set => isMoving = value;
     }
 
-    public float Speed
-    {
-        get => speeder.Speed;
-        set => speeder.Speed = value;
-    }
+    public float Speed { get => speeder.Speed.Value;}
 
     public NavMeshAgent Agent_Nav
     {
@@ -87,7 +83,7 @@ public class Mover_AI : Organ, IMover, IAI_NavMesh
     /// <param name="targetPosition">目标位置</param>
     public void Move(Vector2 targetPosition)
     {
-        agent.speed = speeder.Speed;
+        agent.speed = Speed;
         if (Vector2.Distance(transform.position, TargetPosition) <= agent.stoppingDistance)
         {
             // 已抵达目标

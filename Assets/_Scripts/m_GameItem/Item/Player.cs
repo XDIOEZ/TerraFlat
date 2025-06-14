@@ -8,23 +8,21 @@ using UltEvents;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-
-public class Player 
-    : Item,IHunger,ISpeed,
-    IInventoryData,IHealth,IStamina,
-    ISave_Load,IFocusPoint, IRotationSpeed
+public class Player
+    : Item, IHunger, ISpeed,
+      IInventoryData, IHealth, IStamina,
+      ISave_Load, IFocusPoint, IRotationSpeed
 {
     public UltEvent OnDeath { get; set; }
+
     #region 字段声明
+
     [Tooltip("库存数据接口")]
     public IInventoryData inventoryDataInterface;
 
     [Tooltip("手部选择栏")]
     public SelectSlot selectSlot;
-
     public SelectSlot SelectSlot { get => selectSlot; set => selectSlot = value; }
-
-
 
     [Tooltip("数据")]
     public Data_Player Data;
@@ -33,12 +31,12 @@ public class Player
     private UltEvent _onInventoryData_Dict_Changed = new();
 
     [Tooltip("子库存对象字典"), ShowNonSerializedField]
-    public Dictionary<string, Inventory> children_Inventory_GameObject = new Dictionary<string, Inventory>();
+    public Dictionary<string, Inventory> children_Inventory_GameObject = new();
+
     #endregion
 
     #region 属性封装
 
-    // 基础属性
     [Tooltip("物品数据")]
     public override ItemData Item_Data
     {
@@ -70,32 +68,17 @@ public class Player
         get => Data.hp;
         set => Data.hp = value;
     }
-    public float EatingSpeed { get => Data.speed; set => Data.speed = value; }
 
+    public float EatingSpeed { get; set; } = 1;
 
-    [Tooltip("移动速度")]
-    public float Speed
+    public GameValue_float Speed
     {
-        get => Data.speed;
-        set => Data.speed = value;
-    }
-
-    [Tooltip("默认移动速度")]
-    public float MaxSpeed
-    {
-        get => 5f;
-        set => throw new NotImplementedException("默认速度不可修改");
-    }
-
-    [Tooltip("奔跑速度（计算属性）")]
-    public float RunSpeed
-    {
-        get => Data.runSpeed;
-        set => Data.runSpeed = value;
+        get => Data.Speed;
+        set => Data.Speed = value;
     }
 
     [Tooltip("库存数据字典")]
-    public Dictionary<string, Inventory_Data> Data_InventoryData
+    public Dictionary<string, Inventory_Data> InventoryData_Dict
     {
         get => Data._inventoryData;
         set => Data._inventoryData = value;
@@ -109,14 +92,12 @@ public class Player
     }
 
     #region 精力相关属性
+
     [Tooltip("精力值")]
     public float Stamina
     {
         get => Data.stamina;
-        set
-        {
-            Data.stamina = value;
-        }
+        set => Data.stamina = value;
     }
 
     [Tooltip("最大精力值")]
@@ -128,21 +109,16 @@ public class Player
 
     public float StaminaRecoverySpeed
     {
-        get
-        {
-            return Data.staminaRecoverySpeed;
-        }
-
-        set
-        {
-            Data.staminaRecoverySpeed = value;
-        }
+        get => Data.staminaRecoverySpeed;
+        set => Data.staminaRecoverySpeed = value;
     }
+
     #endregion
 
     #endregion
 
     #region 事件系统
+
     [Tooltip("库存数据变化事件")]
     public UltEvent OnInventoryData_Dict_Changed
     {
@@ -161,102 +137,96 @@ public class Player
 
     [Tooltip("营养值变化事件")]
     public UltEvent OnNutrientChanged { get; set; }
+
     public UltEvent onSave { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public UltEvent onLoad { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public Item Belong_Item { get => this;}
+
+    public Item Belong_Item => this;
     public Vector3 FocusPointPosition { get; set; }
     public Vector3 MoveTargetPosition { get; set; }
     public float RotationSpeed { get; set; } = 100;
+
     #endregion
 
     #region 方法
 
-    #region 将数据移动到游戏物体中
-    // 设置物品清单与数据归属关系
-    void GetChildInventory_SetBelongItem_SelectHandSlot()
+    #region 数据初始化与同步
+
+/*    void GetChildInventory_SetBelongItem_SelectHandSlot()
     {
-        inventoryDataInterface = this; // 将当前对象设置为 inventoryData。
+        inventoryDataInterface = this;
 
-        //inventoryDataInterface.FillDict_SetBelongItem(transform.parent); // 设置归属为父物体。
-
-        //设置手部选择栏位
         foreach (var inventory in Children_Inventory_GameObject.Values)
         {
-            inventory.UI.TargetSendItemSlot = selectSlot; // 将目标发送物品插槽设置为选中插槽。
+            inventory.UI.TargetSendItemSlot = selectSlot;
         }
-    }
+    }*/
 
-    [Button]
-    // 设置子物品栏数据
+/*    [Button]
     public void FillDataTO_ChildInventory_InstantiateSlots()
     {
-        Debug.Log("设置子物品栏数据"); // 打印日志，指示开始设置子物品栏数据。
+        Debug.Log("设置子物品栏数据");
+
         foreach (var inventory_Child in Children_Inventory_GameObject.Values)
         {
-            // 将当前显示的 Inventory 数据设置为字典中的对应数据。
             inventory_Child.Data = Data_InventoryData[inventory_Child.Data.inventoryName];
 
-            // 遍历物品插槽并设置归属的 Inventory。
             foreach (var itemSlot in Data_InventoryData[inventory_Child.Data.inventoryName].itemSlots)
             {
-                itemSlot.Belong_Inventory = inventory_Child; // 设置物品插槽的归属。
+                itemSlot.Belong_Inventory = inventory_Child;
             }
 
-            inventory_Child.UI.Instantiate_ItemSlotUI(); // 实例化物品插槽 UI。
-
-            inventory_Child.UI.RefreshAllInventoryUI(); // 刷新所有物品栏 UI。
+            inventory_Child.UI.Instantiate_ItemSlotUI();
+            inventory_Child.UI.RefreshAllInventoryUI();
         }
     }
 
     [Button("重新实例化对象的所有物品栏")]
     public void Rest_InstantiateSlots()
     {
-        inventoryDataInterface = this; // 将当前对象设置为 inventoryData。
+        inventoryDataInterface = this;
+        inventoryDataInterface.FillDict_SetBelongItem(transform);
+    }*/
 
-        inventoryDataInterface.FillDict_SetBelongItem(transform); // 设置归属为父物体。
-
-    }
-    #endregion
-
-    //将子对象的数据存入ItemData中
-    public void GetDataFrom_GameObjectInventory_SaveTOData()
+/*    public void GetDataFrom_GameObjectInventory_SaveTOData()
     {
         foreach (var inventory in Children_Inventory_GameObject.Values)
         {
             Data_InventoryData[inventory.Data.inventoryName] = inventory.Data;
         }
-    }
+    }*/
 
-
-    public void InitializeInventory()
+/*    public void InitializeInventory()
     {
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["背包"], 24); // 初始化背包插槽大小为 24。
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输入物品槽"], 4); // 初始化输入物品槽大小为 4。
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输出物品槽"], 2); // 初始化输出物品槽大小为 2。
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["装备栏"], 4); // 初始化装备栏大小为 4。
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["快捷栏"], 9); // 初始化快捷栏大小为 9。
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["手部插槽"], 1); // 初始化手部插槽大小为 1。
+        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["背包"], 24);
+        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输入物品槽"], 4);
+        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输出物品槽"], 2);
+        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["装备栏"], 4);
+        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["快捷栏"], 9);
+        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["手部插槽"], 1);
 
-        // 将每个物品清单数据添加到字典中。
         foreach (var item in Children_Inventory_GameObject.Values)
         {
             Data_InventoryData.Add(item.Data.inventoryName, item.Data);
         }
-    }
+    }*/
+
+    #endregion
+
+    #region 生命周期与行为
+
     public void Start()
     {
         Load();
     }
+
     public override void Act()
     {
-        throw new NotImplementedException(); // 抛出未实现异常。
+        throw new NotImplementedException();
     }
-    /// <summary>
-    /// 执行吃操作，参数为吃掉的速度（默认使用玩家速度）
-    /// </summary>
+
     public void TakeABite(IFood food)
     {
-        // 获取武器上的食物接口
         IFood iFood = food;
 
         if (iFood == null)
@@ -265,7 +235,6 @@ public class Player
             return;
         }
 
-        // 获取食物数据
         Nutrition foodData = iFood.NutritionData;
 
         if (foodData == null)
@@ -274,14 +243,12 @@ public class Player
             return;
         }
 
-        // 获取玩家的饥饿数据
         if (Foods == null)
         {
             Debug.LogWarning("当前对象上的 Foods 数据未设置！");
             return;
         }
 
-        // 如果吃成功（食物返回了营养值），则恢复玩家的饥饿值
         var eatenResult = iFood.BeEat(EatingSpeed);
 
         if (eatenResult != null)
@@ -291,40 +258,33 @@ public class Player
         }
     }
 
-
-
-    // 执行死亡操作
     public void Death()
     {
-        // TODO 退出游戏
-        Application.Quit(); // 退出游戏应用程序。
-        Application.OpenURL("https://space.bilibili.com/353520649"); // 打开指定 URL。
+        Application.Quit();
+        Application.OpenURL("https://space.bilibili.com/353520649");
     }
 
-    #region 读取与保存
+    #endregion
+
+    #region 存储与读取
 
     [Button("保存玩家数据")]
-    // 保存玩家数据方法
     public void Save()
     {
-        base.SyncPosition(); // 同步玩家位置。
-        GetDataFrom_GameObjectInventory_SaveTOData();
-
-        //销毁玩家手中的物品实例
-       // this.gameObject.SetActive(false);
+        base.SyncPosition();
+       // GetDataFrom_GameObjectInventory_SaveTOData();
+        // this.gameObject.SetActive(false);
     }
 
     [Button("读取玩家数据")]
-    // 读取玩家数据方法
     public void Load()
     {
-        transform.position = Data._transform.Position; // 恢复位置。
-        transform.rotation = Data._transform.Rotation; // 恢复旋转。
-        transform.localScale = Data._transform.Scale; // 恢复缩放比例。
+        transform.position = Data._transform.Position;
+        transform.rotation = Data._transform.Rotation;
+        transform.localScale = Data._transform.Scale;
 
-        inventoryDataInterface = this;
-
-        inventoryDataInterface.FillDict_SetBelongItem(transform);
+      /*  inventoryDataInterface = this;
+     //   inventoryDataInterface.FillDict_SetBelongItem(transform);
 
         foreach (var inventory in Children_Inventory_GameObject.Values)
         {
@@ -333,12 +293,10 @@ public class Player
                 inventory.Data = Data_InventoryData[inventory.Data.inventoryName];
                 inventory.UI.RefreshAllInventoryUI();
             }
-        }
+        }*/
     }
-    #endregion
+
     #endregion
 
-
+    #endregion
 }
-
-

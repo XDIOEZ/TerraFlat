@@ -37,7 +37,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         get => Data;
         set => Data = (Data_Worker)value;
     }
-    public Dictionary<string, Inventory_Data> Data_InventoryData
+    public Dictionary<string, Inventory_Data> InventoryData_Dict
     {
         get
         {
@@ -82,8 +82,8 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
     void Start()
     {
-        IInventoryData inventoryData = this;
-        inventoryData.FillDict_SetBelongItem(transform);
+       // IInventoryData inventoryData = this;
+     //   inventoryData.FillDict_SetBelongItem(transform);
 
         button.onClick.AddListener(() => Work_Start());
         closeButton.onClick.AddListener(() => CloseUI());
@@ -175,7 +175,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         // 执行合成：添加输出物品
         foreach (var item in itemsToAdd)
         {
-            outputInventory_.AddItem(item);
+            outputInventory_.Data.AddItem(item);
             Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
         }
 
@@ -194,13 +194,13 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
             if (slot._ItemData.Stack.Amount <= 0)
             {
                 Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
-                inputInventory_.RemoveItemAll(slot, i);
+                inputInventory_.Data.RemoveItemAll(slot, i);
             }
             else
             {
                 Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot._ItemData.Stack.Amount}");
             }
-            inputInventory.UI.RefreshSlotUI(i);
+            inputInventory.SyncUI( i);
         }
 
         Debug.Log($"合成完成：{recipe.name}");
@@ -252,7 +252,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         // 检查输出空间
         foreach (var item in itemsToAdd)
         {
-            if (!outputInventory_.CanAddTheItem(item))
+            if (!outputInventory_.Data.CanAddTheItem(item))
             {
                 Debug.LogWarning($"输出物品 {item.IDName} 无法加入输出背包，可能空间不足");
                 return false;
@@ -298,7 +298,8 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
             //遍历这个物品的所有的Value，Children_Inventory_GameObject
             foreach (var inventory in Children_Inventory_GameObject.Values)
             {
-                inventory.UI.TargetSendItemSlot = interacter.SelectSlot;
+                inventory.DefaultTarget_Inventory 
+                    = interacter.InventoryData.Children_Inventory_GameObject["手部插槽"];
             }
         }
     }
@@ -338,16 +339,16 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     public void Load()
     {
         
-        IInventoryData inventoryData = this;
-        inventoryData.FillDict_SetBelongItem(transform);
+        //IInventoryData inventoryData = this;
+        //inventoryData.FillDict_SetBelongItem(transform);
 
         inputInventory = Children_Inventory_GameObject["输入物品槽"];
         outputInventory = Children_Inventory_GameObject["输出物品槽"];
 
-        if (Data_InventoryData.ContainsKey("输入物品槽"))
+        if (InventoryData_Dict.ContainsKey("输入物品槽"))
         {
-            inputInventory.Data = Data_InventoryData["输入物品槽"];
-            outputInventory.Data = Data_InventoryData["输出物品槽"];
+            inputInventory.Data = InventoryData_Dict["输入物品槽"];
+            outputInventory.Data = InventoryData_Dict["输出物品槽"];
         }
     }
 

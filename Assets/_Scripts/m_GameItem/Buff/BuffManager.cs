@@ -9,8 +9,6 @@ public class BuffManager : MonoBehaviour
     public Item item;
     [ShowInInspector]
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
-    [ShowInInspector]
-    public Dictionary<string, BuffSaveData> BuffSaveData_Dic = new Dictionary<string, BuffSaveData>();
 
     public void Start()
     {
@@ -18,29 +16,29 @@ public class BuffManager : MonoBehaviour
 
     public void AddBuffByData(BuffRunTime newBuff)
     {
-        string buffID = newBuff.buff_SaveData.buff_IDName;
+        string buffID = newBuff.buff_IDName;
 
         if (BuffRunTimeData_Dic.TryGetValue(buffID, out var existingBuff))
         {
             switch (newBuff.buff_Data.buff_StackType)
             {
                 case BuffStackType.DurationAdd:
-                    float remainingTime = newBuff.buff_Data.buff_Duration - existingBuff.buff_SaveData.buff_CurrentDuration;
-                    existingBuff.buff_SaveData.buff_CurrentDuration += remainingTime;
+                    float remainingTime = newBuff.buff_Data.buff_Duration - existingBuff.buff_CurrentDuration;
+                    existingBuff.buff_CurrentDuration += remainingTime;
                     break;
 
                 case BuffStackType.RefreshDuration:
-                    existingBuff.buff_SaveData.buff_CurrentDuration = 0;
+                    existingBuff.buff_CurrentDuration = 0;
                     break;
 
                 case BuffStackType.StackCount:
-                    if (existingBuff.buff_SaveData.buff_CurrentStack < existingBuff.buff_Data.buff_MaxStack)
+                    if (existingBuff.buff_CurrentStack < existingBuff.buff_Data.buff_MaxStack)
                     {
-                        existingBuff.buff_SaveData.buff_CurrentStack += 1;
+                        existingBuff.buff_CurrentStack += 1;
                     }
                     else
                     {
-                        existingBuff.buff_SaveData.buff_CurrentDuration = 0;
+                        existingBuff.buff_CurrentDuration = 0;
                     }
                     break;
 
@@ -53,7 +51,6 @@ public class BuffManager : MonoBehaviour
         {
             // 第一次添加该Buff
             BuffRunTimeData_Dic[buffID] = newBuff;
-            BuffSaveData_Dic[buffID] = newBuff.buff_SaveData;
             newBuff.OnBuff_Start();
         }
     }
@@ -67,7 +64,6 @@ public class BuffManager : MonoBehaviour
         BuffRunTimeData_Dic[buff_IDName].OnBuff_Stop();
 
         BuffRunTimeData_Dic.Remove(buff_IDName);
-        BuffSaveData_Dic.Remove(buff_IDName);
     }
 
     // Update is called once per frame

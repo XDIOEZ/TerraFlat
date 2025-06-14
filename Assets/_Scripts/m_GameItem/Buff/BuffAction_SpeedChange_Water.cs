@@ -6,7 +6,7 @@ using UnityEngine;
 public class BuffAction_SpeedChange_Water : BuffAction
 {
     public override void Apply(BuffRunTime data)
-    {
+    {/*
         ISpeed moverSpeed = data.buff_Receiver as ISpeed;
         IBlockTile blockTile = data.buff_Receiver as Item_Tile_Water;
 
@@ -26,6 +26,6 @@ public class BuffAction_SpeedChange_Water : BuffAction
             {
                 moverSpeed.Speed *= 0f;
             }
-        }
+        }*/
     }
 }
