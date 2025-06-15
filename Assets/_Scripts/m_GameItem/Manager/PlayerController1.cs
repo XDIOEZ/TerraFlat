@@ -64,8 +64,10 @@ public class PlayerController : MonoBehaviour
         VirtualCameraManager = GetComponentInChildren<CameraFollowManager>();
         ItemDroper = GetComponentInChildren<ItemDroper>();
         _Hunger = GetComponent<IHunger>();
+        Hotbar = GetComponentInChildren<Inventory_HotBar>();
 
-        
+
+
     }
 
     private void Update()
@@ -229,14 +231,14 @@ public class PlayerController : MonoBehaviour
     {
         if(Hotbar.currentObject != null)
         {
-            ItemDroper.DropItemBySlot(Hotbar.currentSelectItemSlot);
+            ItemDroper.DropItemBySlot(Hotbar.CurrentSelectItemSlot);
             Hotbar.DestroyCurrentObject();
         }
         else
         {
             ItemDroper.FastDropItem();
 
-            Hotbar.SyncUI(Hotbar.CurrentIndex);
+            Hotbar.SyncUIData(Hotbar.CurrentIndex);
         }
         
 
@@ -281,7 +283,7 @@ public class PlayerController : MonoBehaviour
                 int targetIndex = keyNumber - 1;
                 if (targetIndex != Hotbar.CurrentIndex)
                 {
-                    Hotbar.ChangeIndex(targetIndex);
+                    Hotbar.ChangeSelectBoxPosition(targetIndex);
                     return;
                 }
             }
@@ -302,11 +304,11 @@ public class PlayerController : MonoBehaviour
         if (scrollValue.y > 0)
         {
             //Debug.Log(Hotbar.CurrentIndex);
-            Hotbar.ChangeIndex(Hotbar.CurrentIndex - 1);
+            Hotbar.ChangeSelectBoxPosition(Hotbar.CurrentIndex - 1);
         }
         else if (scrollValue.y < 0)
         {
-            Hotbar.ChangeIndex(Hotbar.CurrentIndex + 1);
+            Hotbar.ChangeSelectBoxPosition(Hotbar.CurrentIndex + 1);
         }
     }
     #endregion

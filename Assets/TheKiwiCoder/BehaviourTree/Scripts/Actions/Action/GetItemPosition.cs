@@ -212,7 +212,7 @@ public class GetItemPosition : ActionNode
 
         blackboard.TargetPosition = escapePoint;
         Speeder.MoveTargetPosition = escapePoint;
-        Debug.Log($"[{GetType().Name}] 设置逃离目标位置: {escapePoint}");
+       // Debug.Log($"[{GetType().Name}] 设置逃离目标位置: {escapePoint}");
     }
 
     /// <summary>

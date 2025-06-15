@@ -10,15 +10,13 @@ public class UI_FollowMouse : MonoBehaviour
     [Tooltip("鼠标位置与 UI 元素的偏移量")]
     public Vector3 offset = Vector3.zero;
 
-    private RectTransform rectTransform;
+    public RectTransform rectTransform;
 
     void Start()
     {
-        // 确保绑定了 RectTransform 组件
-        rectTransform = GetComponent<RectTransform>();
         if (rectTransform == null)
         {
-            Debug.LogError("UI_FollowMouse 需要附加在一个拥有 RectTransform 的对象上！");
+            rectTransform = GetComponentInChildren<RectTransform>();
         }
     }
 

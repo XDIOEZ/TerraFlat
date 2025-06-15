@@ -66,7 +66,7 @@ public class Menu_RightClick_ItemInfo : MonoBehaviour
 
         SelectedItemSlot = itemSlot;
 
-        transform.position = itemSlot.UI.transform.position;
+        //transform.position = itemSlot.UI.transform.position;
 
         Debug.Log("´ò¿ªÓÒ¼ü²Ëµ¥" + itemSlot._ItemData.IDName);
 

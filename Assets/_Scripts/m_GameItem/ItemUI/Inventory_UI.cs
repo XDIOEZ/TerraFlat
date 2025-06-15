@@ -23,8 +23,8 @@ public class Inventory_UI : MonoBehaviour
     [Tooltip("背包UI变化事件")]
     public UltEvent<int> OnUIChanged
     {
-        get => inventory.Data.onUIChanged;
-        set => inventory.Data.onUIChanged = value;
+        get => inventory.Data.Event_RefreshUI;
+        set => inventory.Data.Event_RefreshUI = value;
     }
     #endregion
 

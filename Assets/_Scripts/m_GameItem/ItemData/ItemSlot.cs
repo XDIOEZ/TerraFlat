@@ -27,8 +27,6 @@ public partial class ItemSlot
 
     [MemoryPackIgnore]
     public Inventory Belong_Inventory = null;
-    [MemoryPackIgnore]
-    public ItemSlot_UI uI = null;
 
     [MemoryPackIgnore]
     public bool IsFull
@@ -42,8 +40,6 @@ public partial class ItemSlot
             return _ItemData.Stack.CurrentVolume >= SlotMaxVolume;
         }
     }
-    [MemoryPackIgnore]
-    public ItemSlot_UI UI { get => uI; set => uI = value; }
     [MemoryPackIgnore]
     public int Amount
     {
@@ -68,8 +64,10 @@ public partial class ItemSlot
     public ItemSlot(int index = -1)
     {
         Index = index;
-
     }
+
+    //[MemoryPackIgnore]
+    //public UltEvent onSlotDataChanged = new UltEvent();
 
     #endregion
 
@@ -92,6 +90,7 @@ public partial class ItemSlot
             // 插槽中已有相同ID的物品，增加堆叠数量
             _ItemData.Stack.Amount += itemData.Stack.Amount;
         }
+      //  onSlotDataChanged.Invoke();
         // 若插槽中有不同ID的物品，则不进行任何操作
     }
 
@@ -144,7 +143,7 @@ public partial class ItemSlot
         ItemData temp = _ItemData;
         _ItemData = _ItemData_Input._ItemData;
         _ItemData_Input._ItemData = temp;
-        /* }*/
+    
     }
     #endregion
 
@@ -152,16 +151,10 @@ public partial class ItemSlot
     public void ResetData()
     {
         _ItemData =null;
-        //Belong_Inventory.onUIChanged.Invoke(Index);
     }
 
-    public void RefreshUI()
+    public void OnDataChanged()
     {
-       // Belong_Inventory.onUIChanged.Invoke(Index);
-    }
-
-    public void  SetInventory(Inventory Inventory_)
-    {
-      //  Belong_Inventory = Inventory_;
+        Belong_Inventory.SyncUIData(Index);
     }
 }

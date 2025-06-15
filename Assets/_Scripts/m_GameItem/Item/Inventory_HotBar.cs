@@ -5,100 +5,92 @@ public class Inventory_HotBar : Inventory
 {
     #region 字段
 
-    [Tooltip("生成位置")] // 在 Inspector 中显示为 "生成位置"
+    [Header("快捷栏设置")]
+    [Tooltip("生成位置")]
     public Transform spawnLocation;
 
+    [Tooltip("快捷栏最大容量")]
+    public int HotBarMaxVolume = 9;
+
+    [Tooltip("选择框预制体")]
     public GameObject SelectBoxPrefab;
-    public GameObject SelectBox;
 
-    public ItemSlot currentSelectItemSlot;
-
-    //当前选择的物品
-    public ItemData currentItemData;
-    public GameObject currentObject;
-
-
-
-
-    //添加unity特性方便编辑器修改
     [Tooltip("选择框变化时间")]
     [Range(0.01f, 0.5f)]
     public float SelectBoxChangeDuration = 0.1f;
 
-    [Tooltip("快捷栏最大容量")] // 在 Inspector 中显示为 "快捷栏最大容量"
-    public int HotBarMaxVolume = 9;
+    public GameObject SelectBox;
 
+    public ItemSlot CurrentSelectItemSlot;
+
+    // 当前选择的物品
+    public ItemData currentItemData;
+    public GameObject currentObject;
+
+    // 当前索引与最大索引
     public int CurrentIndex { get => Data.selectedSlotIndex; set => Data.selectedSlotIndex = value; }
     public int MaxIndex { get => Data.itemSlots.Count; }
 
     #endregion
 
-    #region Unity 方法
-    /*
-        private void Start()
+    #region 公有方法
+    public new void Start()
+    {
+        base.Start();
+        SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
+    }
+
+    public override void OnItemClick(int index)
+    {
+        //完成基础的物品交换逻辑
+        base.OnItemClick(index);
+        //修改选择框位置
+        ChangeSelectBoxPosition(index);
+        // 同步 UI
+        SyncUIData(CurrentIndex);
+    }
+
+    public void ChangeSelectBoxPosition(int newIndex)
+    {
+        //销毁之前的物品
+        DestroyCurrentObject();
+
+        newIndex = (newIndex + MaxIndex) % MaxIndex; // 确保索引合法
+
+        CurrentIndex = newIndex;
+
+        if (SelectBox != null)
         {
-            if (inventory != null)
-            {
-                //确保在UI监听点击后再注册事件
-             //   _inventory_UI.inventory.onSlotChanged += (int i, ItemSlot itemSlot) => ChangeIndex(i);
+            GameObject targetSlot = itemSlotUIs[newIndex].gameObject;
 
-                // 确保 CurrentIndex 在有效范围内
-                if (CurrentIndex < 0 || CurrentIndex >= inventory.Data.itemSlots.Count)
-                {
-                    CurrentIndex = 0;
-                    Debug.LogWarning("[Start] 当前索引超出范围，已重置为 0");
-                }
+            // 停止之前的动画
+            SelectBox.transform.DOKill();
 
-                // 实例化选择框到初始物品槽的父容器下（确保父容器是 Inventory UI 的根）
-             //   if (_inventory_UI.itemSlots_UI != null && _inventory_UI.itemSlots_UI.Count > CurrentIndex)
-                {
-                    // 1. 实例化选择框并设置父对象为 Inventory UI 的根容器
-                    SelectBox = Instantiate(SelectBoxPrefab,_inventory_UI.transform);
+            // 设置选择框父物体
+            SelectBox.transform.SetParent(targetSlot.transform, worldPositionStays: true);
 
-                    SelectBox.transform.SetParent(_inventory_UI.transform.parent, true);
+            // 平滑移动到目标物品槽中心
+            SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration)
+                .SetEase(Ease.OutQuad);
+        }
+        else
+        {
+            Debug.LogError("[ChangeIndex] SelectBox 为空！");
+        }
 
+        // 切换到新物品
+        ChangeNewObject(newIndex);
+    }
 
+    #endregion
 
+    #region 私有方法
 
-
-                    // 2. 设置初始位置到当前物品槽的坐标
-                //    GameObject initialSlot = _inventory_UI.itemSlots_UI[CurrentIndex].gameObject;
-
-                 //   SelectBox.transform.position = initialSlot.transform.position;
-
-                    SelectBox.transform.position = _inventory_UI.transform.position;
-
-                    // 3. 设置选择框的 Canvas 的 SortingOrder 为 2
-                    SetSelectBoxSortingOrder(2);
-
-                  //  Debug.Log($"[Start] 实例化选择框到索引 {CurrentIndex} 的物品槽");
-               // }
-              //  else
-                {
-                    Debug.LogError($"[Start] 无法实例化 SelectBoxPrefab，itemSlots_UI 为空或索引 {CurrentIndex} 超出范围！");
-                }
-
-                foreach (ItemSlot itemSlot in inventory.Data.itemSlots)
-                {
-                    itemSlot.SlotMaxVolume = HotBarMaxVolume;
-                }
-            }
-            else
-            {
-                Debug.LogError("[Start] Inventory 为空，无法初始化！");
-            }
-
-
-            //根据Data中的index设置初始索引
-            ChangeIndex(inventory.Data.selectedSlotIndex);
-        }*/
     private void SetSelectBoxSortingOrder(int order)
     {
         if (SelectBox != null)
         {
-            // 1. 获取选择框的 Canvas 组件
             Canvas selectBoxCanvas = SelectBox.GetComponent<Canvas>();
-
 
             if (selectBoxCanvas != null)
             {
@@ -106,12 +98,11 @@ public class Inventory_HotBar : Inventory
                 return;
             }
 
-            // 2. 如果没有 Canvas，尝试获取父级的 Canvas（适用于选择框在现有 Canvas 下的情况）
             Canvas parentCanvas = SelectBox.GetComponentInParent<Canvas>();
             if (parentCanvas != null)
             {
                 parentCanvas.sortingOrder = order;
-                Debug.LogWarning("设置父 Canvas 的 sortingOrder，可能影响其他 UI 元素！");
+                Debug.LogWarning("已设置父 Canvas 的 sortingOrder，可能影响其他 UI 元素！");
             }
             else
             {
@@ -120,109 +111,53 @@ public class Inventory_HotBar : Inventory
         }
     }
 
-    #endregion
-
-    #region 公有方法
-
-    public override void OnItemClick(int index)
-    {
-        //交换完毕后
-        base.OnItemClick(index);
-
-        ChangeIndex(index);
-    }
-
-    public void ChangeIndex(int newIndex)
-    {
-        // 确保索引在有效范围内
-        newIndex = (newIndex + MaxIndex) % MaxIndex; // 确保索引合法（需确保maxIndex是物品槽数量）
-
-        CurrentIndex = newIndex;
-
-        if (SelectBox != null)
-        {
-            GameObject temp = itemSlotUIs[newIndex].gameObject;
-            // 1. 立即停止之前的动画
-            SelectBox.transform.DOKill(); // 关键：中断所有未完成的动画
-
-            // 2. 设置父对象并保持世界坐标
-            SelectBox.transform.SetParent(temp.transform, worldPositionStays: true);
-
-            // 3. 使用局部坐标移动动画（确保位置精准）
-            SelectBox.transform.DOLocalMove(
-                Vector3.zero, // 移动到物品槽中心（局部坐标原点）
-                duration: SelectBoxChangeDuration
-            ).SetEase(Ease.OutQuad); // 添加平滑缓动
-
-            // 可选：如果物品槽层级有缩放/旋转，可改为世界坐标移动
-            // currentSelectBox.transform.DOMove(temp.transform.position, 0.2f).SetEase(Ease.OutQuad);
-        }
-        else
-        {
-            Debug.LogError("[ChangeIndex] currentSelectBox 或 temp 为空！");
-        }
-
-        // 其他逻辑
-        ChangeNewObject(newIndex);
-    }
-    #endregion
-
-    #region 私有方法
-
     public void DestroyCurrentObject()
     {
         if (currentObject != null)
         {
-            // 同步UI
-            SyncUI(CurrentIndex);
             Destroy(currentObject);
-            //  Debug.Log("[DestroyCurrentObject] 销毁当前物体成功");
         }
     }
 
     private void ChangeNewObject(int __index)
-
     {
-        // 销毁当前物体
-        DestroyCurrentObject();
-
-        // 检查索引是否有效
         if (__index < 0 || __index >= MaxIndex)
         {
-            //    Debug.LogError($"[ChangeNewObject] 索引 {__index} 超出范围，无法更换物体！");
+            Debug.LogError($"[ChangeNewObject] 索引 {__index} 超出范围！");
+            return;
+        }
+        if (Data.itemSlots[__index]._ItemData == null)
+        {
             return;
         }
 
-
-
-        Item go = RunTimeItemManager.Instance.InstantiateItem(Data.itemSlots[__index]._ItemData.IDName);
-
-        if (go != null)
+        Item item = RunTimeItemManager.Instance.InstantiateItem(Data.itemSlots[__index]._ItemData.IDName);
+        CurrentSelectItemSlot = Data.itemSlots[__index];
+        if (item != null)
         {
-            // 设置父对象
-            go.transform.SetParent(spawnLocation, false);
-            // 修改本地位置，确保位置为 (0, 0, 0)
-            go.transform.localPosition = Vector3.zero;
-            // 修改本地旋转，确保 Z 轴为 0
-            Vector3 localRotation = go.transform.localEulerAngles;
+
+
+            item.transform.SetParent(spawnLocation, false);
+            item.transform.localPosition = Vector3.zero;
+
+            Vector3 localRotation = item.transform.localEulerAngles;
             localRotation.z = 0;
-            go.transform.localEulerAngles = localRotation;
-            // 赋值当前对象
-            currentObject = go.gameObject;
-            // 获取物品数据并设置
+            item.transform.localEulerAngles = localRotation;
+
+            currentObject = item.gameObject;
+
             ItemData itemData = Data.itemSlots[__index]._ItemData;
             currentObject.GetComponent<Item>().Item_Data = itemData;
-            // currentObject.GetComponent<Item>().BelongItem = currentSelectItemSlot.belong_Inventory._belongItem;
-            currentObject.GetComponent<Item>().UpdatedUI_Event += () =>  SyncUI(__index); 
+            currentObject.GetComponent<Item>().BelongItem = CurrentSelectItemSlot.Belong_Inventory.Belong_Item;
+            currentObject.GetComponent<Item>().UpdatedUI_Event += () => SyncUIData(__index);
             currentObject.GetComponent<Item>().DestroyItem_Event += DestroyCurrentObject;
             spawnLocation.GetComponent<ITriggerAttack>().SetWeapon(currentObject);
-            //    Debug.Log($"[ChangeNewObject] 成功实例化物体: {itemData.Name}");
         }
         else
         {
-            //  Debug.LogError("[ChangeNewObject] 实例化的物体为空！");
+            Debug.LogError("[ChangeNewObject] 实例化的物体为空！");
         }
-        SyncUI(CurrentIndex);
+
     }
 
     #endregion

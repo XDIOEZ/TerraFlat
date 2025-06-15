@@ -300,7 +300,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                                 inputInventory_.Data.RemoveItemAll(item_slot, i);
                             }
                             // Ë¢ÐÂ UI
-                            item_slot.UI.RefreshUI();
+                            //item_slot.UI.RefreshUI();
                         }
                     }
                 }
@@ -499,7 +499,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
 
             currentFuelAmount += fuel.MaxBurnTime;
             slot._ItemData.Stack.Amount -= 1;
-            slot.UI.RefreshUI();
+            //slot.UI.RefreshUI();
             return true;
         }
         return false;

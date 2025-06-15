@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
 using MemoryPack;
-using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,10 +16,6 @@ public class Player
     public UltEvent OnDeath { get; set; }
 
     #region 字段声明
-
-    [Tooltip("库存数据接口")]
-    public IInventoryData inventoryDataInterface;
-
     [Tooltip("手部选择栏")]
     public SelectSlot selectSlot;
     public SelectSlot SelectSlot { get => selectSlot; set => selectSlot = value; }
@@ -29,9 +25,6 @@ public class Player
 
     [Tooltip("库存字典事件")]
     private UltEvent _onInventoryData_Dict_Changed = new();
-
-    [Tooltip("子库存对象字典"), ShowNonSerializedField]
-    public Dictionary<string, Inventory> children_Inventory_GameObject = new();
 
     #endregion
 
@@ -85,11 +78,9 @@ public class Player
     }
 
     [Tooltip("子库存对象字典")]
-    public Dictionary<string, Inventory> Children_Inventory_GameObject
-    {
-        get => children_Inventory_GameObject;
-        set => children_Inventory_GameObject = value;
-    }
+    [ShowInInspector]
+    public Dictionary<string, Inventory> Children_Inventory_GameObject { get; set; } = new Dictionary<string, Inventory>();
+   
 
     #region 精力相关属性
 

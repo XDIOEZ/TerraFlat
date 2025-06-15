@@ -1,4 +1,4 @@
-using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using TMPro;
 using UltEvents;
 using UnityEditor.Build.Player;
@@ -11,7 +11,6 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
 {
     #region 字段
     [Tooltip("物体插槽的引用")]
-    [ShowNonSerializedField]
     public ItemSlot ItemSlot;
 
 
@@ -29,12 +28,14 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
 
     #region Unity生命周期方法
     // 在脚本实例被加载时调用，进行一些初始化操作
-    private void Awake()
+    private void Start()
     {
         // 若 image 未赋值，则从子对象中获取 Image 组件
         image = image ?? GetComponentInChildren<Image>();
         // 若 text 未赋值，则从子对象中获取 TMP_Text 组件
         text = text ?? GetComponentInChildren<TMP_Text>();
+
+       // ItemSlot.onSlotDataChanged += RefreshUI;
     }
     #endregion
 

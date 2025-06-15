@@ -36,7 +36,7 @@ public partial class Inventory_Data
     public UltEvent<int, ItemSlot> onSlotChanged = new UltEvent<int, ItemSlot>();
     // 当背包 UI 发生变化时触发的事件
     [MemoryPackIgnore]
-    public UltEvent<int> onUIChanged = new UltEvent<int>();
+    public UltEvent<int> Event_RefreshUI = new UltEvent<int>();
     // 构造函数
     [MemoryPackConstructor]
     public Inventory_Data(List<ItemSlot> itemSlots, string inventoryName)
@@ -51,7 +51,7 @@ public partial class Inventory_Data
     #region 操作方法
     public void RemoveItemAll(ItemSlot itemSlot, int index = 0)
     {
-        onUIChanged.Invoke(index);
+        Event_RefreshUI.Invoke(index);
         itemSlot._ItemData = null;
     }
 
@@ -68,10 +68,6 @@ public partial class Inventory_Data
 
         ItemSlot localSlot = itemSlots[index];
 
-
-
-
-
         // 两者为空
         if (inputDataHand == null && localData == null)
         {
@@ -83,7 +79,7 @@ public partial class Inventory_Data
         {
             int changeAmount = (int)Mathf.Ceil(inputDataHand.Stack.Amount * ChangeReate);
             ChangeItemAmount(inputSlotHand, localSlot, changeAmount);
-            onUIChanged.Invoke(index);
+            Event_RefreshUI.Invoke(index);
             return;
         }
 
@@ -92,7 +88,7 @@ public partial class Inventory_Data
         {
             int changeAmount = (int)Mathf.Ceil(localData.Stack.Amount * ChangeReate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
-            onUIChanged.Invoke(index);
+            Event_RefreshUI.Invoke(index);
             return;
         }
 
@@ -101,7 +97,7 @@ public partial class Inventory_Data
         {
             Debug.Log("特殊交换");
             localSlot.Change(inputSlotHand);
-            onUIChanged.Invoke(index);
+            Event_RefreshUI.Invoke(index);
             return;
         }
 
@@ -110,7 +106,7 @@ public partial class Inventory_Data
         {
             int changeAmount = (int)Mathf.Ceil(localSlot._ItemData.Stack.Amount * ChangeReate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
-            onUIChanged.Invoke(index);
+            Event_RefreshUI.Invoke(index);
             return;
         }
 
@@ -118,7 +114,7 @@ public partial class Inventory_Data
         if (inputDataHand != null && localData != null && localData.IDName != inputDataHand.IDName)
         {
             localSlot.Change(inputSlotHand);
-            onUIChanged.Invoke(index);
+            Event_RefreshUI.Invoke(index);
             Debug.Log("(物品不同)交换物品槽位:" + index + " 物品:" + inputSlotHand._ItemData.IDName);
             return;
         }
@@ -181,7 +177,7 @@ public partial class Inventory_Data
         return GetItemSlot(index)._ItemData;
     }
 
-    public bool AddItem(ItemData inputItemData, int index = -1)
+    public bool AddItem(ItemData inputItemData)
     {
         // 物品为空或无法添加时直接返回
         if (!CanAddTheItem(inputItemData))
@@ -244,6 +240,7 @@ public partial class Inventory_Data
         }
 
         inputItemData.Stack.CanBePickedUp = false;
+        Event_RefreshUI.Invoke(emptyIndex);
         return true;
     }
 

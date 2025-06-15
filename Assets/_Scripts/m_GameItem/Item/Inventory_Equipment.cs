@@ -48,7 +48,7 @@ public class Inventory_Equipment : MonoBehaviour
         for (int i = 0; i < 4; i++)
         {
             ItemSlot slot = new ItemSlot();
-            slot.SetInventory(inventory);
+            //slot.SetInventory(inventory);
             slot._ItemData = null; // ³õÊ¼Îª¿Õ
             inventory.Data.itemSlots.Add(slot);
         }
@@ -119,7 +119,7 @@ public class Inventory_Equipment : MonoBehaviour
                 Entity_Defense -= armorData.defense;
 
                 inventory.Data.ChangeItemData_Default(slotIndex, InputSlot);
-                inventory.Data.onUIChanged?.Invoke(slotIndex);
+                inventory.Data.Event_RefreshUI?.Invoke(slotIndex);
                 return;
             }
         }

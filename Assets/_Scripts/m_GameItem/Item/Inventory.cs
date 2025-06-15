@@ -20,28 +20,44 @@ public class Inventory : MonoBehaviour
 
     public Inventory DefaultTarget_Inventory;
 
-    public
+    public bool UI_IsShow = true;
 
-   void Start()
+
+    public void Awake()
     {
-        if(ItemSlot_Parent == null)
-            ItemSlot_Parent = transform.GetChild(0);
+        // 若未命名，则赋默认名
+        if (string.IsNullOrEmpty(Data.inventoryName))
+            Data.inventoryName = gameObject.name;
 
-        
         Belong_Item = GetComponentInParent<Item>();
         // 初始化数据接口
         DataInterface = GetComponentInParent<IInventoryData>();
+
+        DataInterface.Children_Inventory_GameObject[Data.inventoryName] = this;
+    }
+    public void Start()
+    {
+        if(ItemSlot_Parent == null)
+            ItemSlot_Parent = transform.GetChild(0);
 
         // 尝试获取现有数据，否则赋值默认数据
         if (!DataInterface.InventoryData_Dict.TryGetValue(gameObject.name, out var existingData) || existingData == null)
         {
             DataInterface.InventoryData_Dict[gameObject.name] = Data;
-            DataInterface.Children_Inventory_GameObject[gameObject.name] = this;
+          //  DataInterface.Children_Inventory_GameObject[gameObject.name] = this;
+            //遍历Data 设置索引
+            for (int i = 0; i < Data.itemSlots.Count; i++)
+            {
+                Data.itemSlots[i].Index = i;
+                Data.itemSlots[i].SlotMaxVolume = 100;
+            }
         }
         else
         {
             Data = existingData;
         }
+
+        
 
         // 同步子对象数量与 itemSlots 数量一致
         int currentCount = ItemSlot_Parent.childCount;
@@ -72,14 +88,17 @@ public class Inventory : MonoBehaviour
         // 同步 UI 数据
         SyncData();
 
-        // 若未命名，则赋默认名
-        if (string.IsNullOrEmpty(Data.inventoryName))
-            Data.inventoryName = gameObject.name;
+        
+
+        
 
         if (DefaultTarget_Inventory == null)
+        {
             DefaultTarget_Inventory = DataInterface.Children_Inventory_GameObject["手部插槽"];
-    }
+        }
 
+        Data.Event_RefreshUI += SyncUIData;
+    }
 
     //同步UI的Data
     public void SyncData()
@@ -93,14 +112,28 @@ public class Inventory : MonoBehaviour
         }
     }
 
-    public void SyncUI(int index)
+    public void SyncUIData(int index)
     {
         itemSlotUIs[index].RefreshUI();
     }
 
     public virtual void OnItemClick(int index)
     {
+        Debug.Log("点击了" + index);
         ItemSlot slot = Data.GetItemSlot(index);
+        //默认为交换
+        if(DefaultTarget_Inventory.Data.itemSlots.Count > index)
+        {
+            Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
+            DefaultTarget_Inventory.SyncUIData(index);
+        }
+        else
+        {
+            Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
+            DefaultTarget_Inventory.SyncUIData(0);
+        }
+        SyncUIData(index);
+        
     }
 
 }

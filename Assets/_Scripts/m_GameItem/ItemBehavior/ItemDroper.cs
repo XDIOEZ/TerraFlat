@@ -52,7 +52,7 @@ public class ItemDroper : MonoBehaviour
             HandleDropItem(_ItemData);
         }
 
-        slot.RefreshUI();
+       // slot.RefreshUI();
     }
     
 

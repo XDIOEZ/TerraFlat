@@ -1,6 +1,7 @@
 
 using MemoryPack;
 using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -35,7 +36,7 @@ public partial class Data_Player : ItemData
 
     #region ¿â´æ
 
-    [ShowNonSerializedField]
+    [ShowInInspector]
     [Tooltip("¿â´æÊý¾Ý")]
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
     #endregion
