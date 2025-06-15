@@ -10,14 +10,14 @@ public class ItemInventoryManager : MonoBehaviour
     public Dictionary<string, Inventory_Data> Item_inventory_Data;
     [ShowNonSerializedField]
     public Dictionary<string, Inventory> Item_inventory = new Dictionary<string, Inventory>();
-    [ShowNonSerializedField]
-    public IInventoryData_Dict inventoryData_Dict;
+    //[/*ShowNonSerializedField]
+    //public IInventoryData_Dict inventoryData_Dict;*/
 
     private void Start()
     {
         //从父对象上获取IInventoryData_Dict此接口的实现
-         inventoryData_Dict = transform.parent.GetComponentInChildren<IInventoryData_Dict>();
-        Item_inventory_Data = inventoryData_Dict.Item_inventoryData;
+       //  inventoryData_Dict = transform.parent.GetComponentInChildren<IInventoryData_Dict>();
+       // Item_inventory_Data = inventoryData_Dict.Item_inventoryData;
         InitInventoryDataDictionaries();
     }
 

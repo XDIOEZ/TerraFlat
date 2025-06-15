@@ -3,7 +3,9 @@ guid: 23a38ecfc3348c04c9fd2e8d27d5b0c6
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - BelongItem: {instanceID: 0}
+  - buildingSO: {fileID: 11400000, guid: d34cc3c527b046a4eb78d52022429cb0, type: 2}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

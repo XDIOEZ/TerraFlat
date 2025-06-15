@@ -261,7 +261,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         SaveData.saveName = SaveName;
 
         byte[] dataBytes = MemoryPackSerializer.Serialize(SaveData);
-        File.WriteAllBytes(SavePath + SaveName + ".QAQ", dataBytes);
+        File.WriteAllBytes(SavePath + SaveName + ".GameSaveData", dataBytes);
         Debug.Log("存档成功！");
     }
 
@@ -341,9 +341,9 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     public void LoadSaveByDisk(string LoadSavePath)
     {
-        Debug.Log("开始从磁盘加载存档：" + LoadSavePath);
+        Debug.Log("开始从磁盘加载存档：" + LoadSavePath + ".GameSaveData");
         SaveData = null;
-        SaveData = MemoryPackSerializer.Deserialize<GameSaveData>(File.ReadAllBytes(LoadSavePath + ".QAQ"));
+        SaveData = MemoryPackSerializer.Deserialize<GameSaveData>(File.ReadAllBytes(LoadSavePath + ".GameSaveData"));
     }
 
 
