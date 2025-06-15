@@ -22,6 +22,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
     [ShowNonSerializedField]
     GameObject weaponGameObject;
 
+    public float RotationSpeedCoefficient = 1f;
     public GameObject Weapon_GameObject
     {
         get
@@ -43,11 +44,20 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         if (_weapon.GetComponentInChildren<IDamageSender>()!= null)
         _weapon.GetComponentInChildren<IDamageSender>().OnDamage += karou;
     }
+
+    private Coroutine hitPauseCoroutine;
     bool HitStop = false;
     void karou(float damage)
     {
-        if(damage>1)
-        StartCoroutine(HitPauseTransform());
+        if (damage > 1)
+        {
+            if (hitPauseCoroutine != null)
+            {
+                StopCoroutine(hitPauseCoroutine); // 先停止旧的
+            }
+            hitPauseCoroutine = StartCoroutine(HitPauseTransform());
+        }
+
     }
 
     IEnumerator HitPauseTransform()
@@ -55,12 +65,12 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         if (Weapon_GameObject == null) yield break;
         float rotationSpeed = RotationSpeed;
         HitStop = true;
-        RotationSpeed= 0;
+        RotationSpeedCoefficient = 0;
 
         yield return new WaitForSeconds(0.15f);
 
-        HitStop = false;  
-        RotationSpeed = rotationSpeed;
+        HitStop = false;
+        RotationSpeedCoefficient = rotationSpeed;
     }
 
 
@@ -287,6 +297,29 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
             Color.red
         );
     }
+
+
+    public void FaceToMouse(Vector3 targetPosition)
+    {
+        // 1. 计算目标方向
+        Vector2 direction = targetPosition - transform.position;
+
+        // 2. 计算目标角度（转为角度制）
+        float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+
+        // 3. 获取当前角度（绕 Z 轴的欧拉角）
+        float currentAngle = transform.localEulerAngles.z;
+
+        // 4. 计算插值角度步长（带旋转速度系数）
+        float angleStep = RotationSpeed * Time.deltaTime * RotationSpeedCoefficient;
+
+        // 5. 平滑角度变化（防止角度跳变）
+        float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, angleStep);
+
+        // 6. 应用旋转
+        transform.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
+    }
+
 
     private IEnumerator ReturnToStartPositionCoroutine(Vector2 startTarget, float backSpeed)
     {

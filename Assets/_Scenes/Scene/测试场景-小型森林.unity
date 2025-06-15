@@ -134,10 +134,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Chicken
       objectReference: {fileID: 0}
-    - target: {fileID: 517253275583645208, guid: 30e702c58b0cd384cbe72ae23e80867c, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 4050397865490026434, guid: 30e702c58b0cd384cbe72ae23e80867c, type: 3}
       propertyPath: m_LocalPosition.x
       value: -12.853773
@@ -180,7 +176,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4050397865490026434, guid: 30e702c58b0cd384cbe72ae23e80867c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2104983850}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 30e702c58b0cd384cbe72ae23e80867c, type: 3}
 --- !u!1001 &364927799
@@ -488,6 +487,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+--- !u!4 &1076419639 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4050397865490026434, guid: 30e702c58b0cd384cbe72ae23e80867c, type: 3}
+  m_PrefabInstance: {fileID: 92110803}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1190170099
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1580,11 +1584,59 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8606342080480824626, guid: 1f967c1438ffb184ba5ebe31f2c47e94, type: 3}
+      propertyPath: AddTargetInventories.Array.size
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1f967c1438ffb184ba5ebe31f2c47e94, type: 3}
+--- !u!1 &2104983849
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2104983850}
+  - component: {fileID: 2104983851}
+  m_Layer: 9
+  m_Name: "\u8FDB\u98DF\u6A21\u5757"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2104983850
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2104983849}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1076419639}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2104983851
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2104983849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c4f9b352df17e44893ad71d878196c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &2112938879
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -7,7 +7,5 @@ public interface IHunger
 
     public float EatingSpeed { get; set; }
 
-    void TakeABite(IFood food);
-
     public UltEvent OnNutrientChanged { get; }
 }

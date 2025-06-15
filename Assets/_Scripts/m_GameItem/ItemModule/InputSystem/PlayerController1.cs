@@ -45,7 +45,10 @@ public class PlayerController : MonoBehaviour
     {
         _inputActions.Disable();
     }
-
+    public void Awake()
+    {
+        VirtualCameraManager = GetComponentInChildren<CameraFollowManager>();
+    }
     public void Start()
     {
         Set_InputSystem();
