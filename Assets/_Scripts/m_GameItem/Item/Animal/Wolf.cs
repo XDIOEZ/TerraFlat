@@ -10,7 +10,7 @@ using UnityEngine;
     public UltEvent OnDeath { get; set; }
     #region 饥饿
 
-    public Nutrition Foods { get => Data.NutritionData; set => Data.NutritionData = value; }
+    public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }
     public float EatingSpeed { get => Data.EatingSpeed; set => throw new System.NotImplementedException(); }
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
 
@@ -118,7 +118,7 @@ using UnityEngine;
 
     public void TakeABite(IFood food)
     {
-        Foods.Food += EatingSpeed;
+        Nutrition.Food += EatingSpeed;
         food.BeEat(EatingSpeed);
     }
 

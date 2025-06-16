@@ -33,9 +33,9 @@ public class UI_DataSliderShow : MonoBehaviour
         if (sliders.Count > 0)
         {
             if (sliders.Count > 0) sliders[0].slider.maxValue = _health.Hp.maxValue;  // 生命值进度条
-            if (sliders.Count > 1) sliders[1].slider.maxValue = _nutrition.Foods.MaxFood;  // 营养进度条
+            if (sliders.Count > 1) sliders[1].slider.maxValue = _nutrition.Nutrition.MaxFood;  // 营养进度条
             if (sliders.Count > 2) sliders[2].slider.maxValue = _energy.MaxStamina;  // 精力进度条
-            if (sliders.Count > 3) sliders[3].slider.maxValue = _nutrition.Foods.MaxWater;  // 水份进度条
+            if (sliders.Count > 3) sliders[3].slider.maxValue = _nutrition.Nutrition.MaxWater;  // 水份进度条
         }
         else
         {
@@ -67,8 +67,8 @@ public class UI_DataSliderShow : MonoBehaviour
     {
         if (sliders.Count > 1 && sliders[1] != null && _nutrition != null)
         {
-            sliders[1].slider.value = _nutrition.Foods.Food;  // 当前值
-            sliders[1].slider.maxValue = _nutrition.Foods.MaxFood;  // 最大值
+            sliders[1].slider.value = _nutrition.Nutrition.Food;  // 当前值
+            sliders[1].slider.maxValue = _nutrition.Nutrition.MaxFood;  // 最大值
             sliders[1].text_name.text = $"Nutrition: {Mathf.FloorToInt(sliders[1].slider.value)}/{Mathf.FloorToInt(sliders[1].slider.maxValue)}";
         }
     }
@@ -89,10 +89,10 @@ public class UI_DataSliderShow : MonoBehaviour
     //更新水份进度条（当前值和最大值）
     public void UpdateWaterSlider()
     {
-        if (sliders.Count > 3 && sliders[3] != null && _nutrition.Foods.Water != 0)
+        if (sliders.Count > 3 && sliders[3] != null && _nutrition.Nutrition.Water != 0)
         {
-            sliders[3].slider.value = _nutrition.Foods.Water;  // 当前值
-            sliders[3].slider.maxValue = _nutrition.Foods.MaxWater;  // 最大值
+            sliders[3].slider.value = _nutrition.Nutrition.Water;  // 当前值
+            sliders[3].slider.maxValue = _nutrition.Nutrition.MaxWater;  // 最大值
             sliders[3].text_name.text = $"Water: {Mathf.FloorToInt(sliders[3].slider.value)}/{Mathf.FloorToInt(sliders[3].slider.maxValue)}";
         }
     }

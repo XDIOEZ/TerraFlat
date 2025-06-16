@@ -24,7 +24,7 @@ public class Move : ActionNode
 
     #region  Ù–‘∑‚◊∞
 
-    public IMover Mover
+    public Mover Mover
     {
         get => context.mover;
         set => context.mover = value;
@@ -86,7 +86,7 @@ public class Move : ActionNode
         {
             if (base.DebugMODE)
             {
-                //Debug.Log("Arrived");
+                Debug.Log("Arrived");
             }
 
             // ÷ÿ÷√◊¥Ã¨

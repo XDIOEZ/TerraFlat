@@ -20,15 +20,15 @@ public class FoodSystem : MonoBehaviour
     [Tooltip("当前饥饿值"), ShowNativeProperty]
     public float HungryValue
     {
-        get => IHungry_Food.Foods.Food;
-        set => IHungry_Food.Foods.Food = Mathf.Clamp(value, 0, MaxHungryValue);
+        get => IHungry_Food.Nutrition.Food;
+        set => IHungry_Food.Nutrition.Food = Mathf.Clamp(value, 0, MaxHungryValue);
     }
 
     [Tooltip("最大饥饿值"), ShowNativeProperty]
     public float MaxHungryValue
     {
-        get => IHungry_Food.Foods.MaxFood;
-        set => IHungry_Food.Foods.MaxFood = value;
+        get => IHungry_Food.Nutrition.MaxFood;
+        set => IHungry_Food.Nutrition.MaxFood = value;
     }
 
     [Tooltip("饥饿值接口引用"), ShowNativeProperty]

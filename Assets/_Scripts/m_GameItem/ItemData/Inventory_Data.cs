@@ -14,7 +14,7 @@ public partial class Inventory_Data
     // 保存物品的列表
     public List<ItemSlot> itemSlots = new List<ItemSlot>();
     // 当前选择的插槽索引
-    public int selectedSlotIndex = -1;
+    public int selectedSlotIndex = 0;
 
     public bool IsFull
     {
@@ -154,7 +154,7 @@ public partial class Inventory_Data
             {
                 if (localSlot._ItemData.Stack.Amount <= 0)
                 {
-                    localSlot.ResetData();
+                    localSlot.ClearData();
                 }
                 return true;
             }

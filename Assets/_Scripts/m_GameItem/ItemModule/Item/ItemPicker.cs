@@ -1,3 +1,4 @@
+using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -47,17 +48,20 @@ public class ItemPicker : MonoBehaviour
             return;
         }
 
-        var pickAble = other.GetComponentInParent<ICanBePickUp>();
-        if (pickAble != null)
+        var pickAble = other.GetComponent<Item>();
+ 
+        if (pickAble != null && pickAble.Item_Data.Stack.CanBePickedUp ==true)
         {
-            ItemData itemData = pickAble.PickUp_ItemData;
+            ItemData itemData = pickAble.Item_Data;
 
             // 遍历所有背包，找到第一个可以添加的
             foreach (var inventory in AddTargetInventories)
             {
                 if (inventory != null && inventory.Data.CanAddTheItem(itemData))
                 {
-                    inventory.Data.AddItem(pickAble.Pickup());
+                    Destroy(pickAble.gameObject); // 物品拾取后销毁
+                    itemData.Stack.CanBePickedUp = false; // 物品堆栈的 CanBePickedUp 置为 false
+                    inventory.Data.AddItem(itemData);
                     return; // 添加成功后立即返回
                 }
             }

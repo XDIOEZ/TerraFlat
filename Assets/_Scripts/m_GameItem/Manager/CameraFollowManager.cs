@@ -28,26 +28,31 @@ public class CameraFollowManager : MonoBehaviour
         }
     }
 
+    public Camera ControllerCamera;
+
     // Start is called before the first frame update
     public void Start()
     {
+        ControllerCamera = GetComponentInChildren<Camera>();
+
         transform.rotation = Quaternion.identity;
-        // 解绑父对象，避免受到玩家旋转影响
-        transform.SetParent(null);
+      
+
+
+
+
+        PlayerController = GetComponentInParent<PlayerController>();
+        CameraFollowItem = GetComponentInParent<Item>();
+
 
         // 设置跟随目标
         Vcam.Follow = CameraFollowItem.transform;
 
+
         // 重命名物体名字，本体+父对象
         transform.name = $"{CameraFollowItem.name} 的 Camera";
 
-        // 尝试从 CameraFollowItem 获取 PlayerController
-        if (CameraFollowItem.GetComponent<PlayerController>() != null && PlayerController == null)
-        {
-            PlayerController = CameraFollowItem.GetComponent<PlayerController>();
-        }
-
-        PlayerController.VirtualCameraManager = this;
+        transform.SetParent(null);
     }
 
 

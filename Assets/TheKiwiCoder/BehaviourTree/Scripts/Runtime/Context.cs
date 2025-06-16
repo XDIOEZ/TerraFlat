@@ -21,7 +21,7 @@ namespace TheKiwiCoder {
         public CharacterController characterController;
         //添加自定义组件
         public IDetector itemDetector;
-        public IMover mover;
+        public Mover mover;
         public IItemValues itemValues;
         // Add other game specific systems here
 
@@ -38,7 +38,7 @@ namespace TheKiwiCoder {
             context.capsuleCollider = gameObject.GetComponent<CapsuleCollider>();
             context.characterController = gameObject.GetComponent<CharacterController>();
             context.itemDetector = gameObject.GetComponentInChildren<IDetector>();
-            context.mover = gameObject.GetComponentInChildren<IMover>();
+            context.mover = gameObject.GetComponentInChildren<Mover>();
             context.itemValues = gameObject.GetComponentInChildren<IItemValues>();
             // Add whatever else you need here...
 

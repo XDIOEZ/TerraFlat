@@ -7,7 +7,7 @@ using UnityEditorInternal.Profiling.Memory.Experimental;
 public class EatFood : ActionNode
 {
     public IFood Food;
-    public IHunger Self;
+    public FoodEater Self;
     [Header("进食范围")]
     public float EatingRange = 1f;
     [Header("上一次吃一口的时间")]
@@ -17,7 +17,7 @@ public class EatFood : ActionNode
     [Header("食物Tag")]
     public string FoodTag = "Food";
     protected override void OnStart() {
-        Self = context.gameObject.GetComponent<IHunger>();
+        Self = context.gameObject.GetComponentInChildren<FoodEater>();
         LastEatingTime = Time.time;
     }
 
@@ -50,12 +50,12 @@ public class EatFood : ActionNode
 
                         if(Food.NutritionData.Food > 0)
                         {
-                            Self.TakeABite(Food);
+                            Self.Eat(Food);
                             LastEatingTime = Time.time;
                         }
 
                         //判断是否已经吃饱了
-                        if(Self.Foods.Food >= Self.Foods.MaxFood)
+                        if(Self.hunger.Nutrition.Food >= Self.hunger.Nutrition.MaxFood)
                         {
                             return State.Success;
                         }

@@ -298,7 +298,7 @@ public class Building_InstallAndUninstall
         }
 
         Vector2 pos = (Vector2)hostTransform.position;
-        ItemMaker itemMaker = hostTransform.GetComponent<ItemMaker>();
+        ItemMaker itemMaker = new ItemMaker();
 
         itemMaker.DropItemWithAnimation(
             hostTransform,

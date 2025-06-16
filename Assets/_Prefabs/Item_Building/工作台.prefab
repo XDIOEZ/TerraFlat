@@ -100,23 +100,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 4
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 8413183980626416042}
   text: {fileID: 4844823043478231267}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &1550082629066586722
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -290,23 +278,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 2
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 4228448044016242202}
   text: {fileID: 138716475857408964}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &4132953026206742502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -917,23 +893,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 3
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 2780655822193315754}
   text: {fileID: 4688289746090255574}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &8524967648736313463
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1107,23 +1071,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 6
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 2876764933668172299}
   text: {fileID: 1297199826718950391}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &3841745382616211327
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1294,23 +1246,11 @@ MonoBehaviour:
       Item_Material: []
     SlotMaxVolume: 99
     Index: 1
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 6328127438524862844}
   text: {fileID: 8323140423804773036}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 3920989103361890258}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &8051358030334194326
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1395,7 +1335,6 @@ GameObject:
   - component: {fileID: 7776168222229015262}
   - component: {fileID: 7217972686981905664}
   - component: {fileID: 3362821212264663490}
-  - component: {fileID: 7432070914837371847}
   m_Layer: 9
   m_Name: DamageReceiver
   m_TagString: Untagged
@@ -1489,28 +1428,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.8837209, y: 0.8655622}
   m_EdgeRadius: 0
---- !u!114 &7432070914837371847
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1982999179139060963}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38d8388fde8b4a144a96e4d957eb5843, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  loots:
-    lootList: []
-  DropRange: 2
-  baseDuration: 0.5
-  distanceSensitivity: 0.1
-  baseRotationSpeed: 360
-  rotationSpeedFactor: 0.8
-  maxHeight: 5
-  bounceHeightMin: 0.05
-  bounceHeightMax: 0.5
 --- !u!1 &2166369587029359780
 GameObject:
   m_ObjectHideFlags: 0
@@ -1760,23 +1677,11 @@ MonoBehaviour:
       Item_Material: []
     SlotMaxVolume: 99
     Index: 0
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 8407037260391690537}
   text: {fileID: 4928378713867495588}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 3920989103361890258}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &5195483972922274017
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2025,23 +1930,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 1
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 3555378685352028141}
   text: {fileID: 8252033289851294725}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &2192350445479408705
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2905,23 +2798,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 5
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 1617932256309425316}
   text: {fileID: 8631633758015452242}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &8524195122795737948
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3393,23 +3274,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 8
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 2998952208534146628}
   text: {fileID: 8911009715433485024}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &3558327323013140044
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4401,23 +4270,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 7
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 931659334366132065}
   text: {fileID: 4967509640673027790}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &1367075724903176697
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4591,23 +4448,11 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 100
     Index: 0
-    belong_Inventory: {fileID: 0}
-    uI: {fileID: 0}
+    Belong_Inventory: {fileID: 0}
   image: {fileID: 2180647270611436039}
   text: {fileID: 2681709885142049349}
-  onItemClick:
-    _PersistentCalls:
-    - _Target: {fileID: 5798127373763868588}
-      _MemberName: OnItemSlotClicked
-      _PersistentArguments:
-      - _Type: 3
-        _Int: 0
-        _String: 
-        _X: 0
-        _Y: 0
-        _Z: 0
-        _W: 0
-        _Object: {fileID: 0}
+  OnItemClick:
+    _PersistentCalls: []
 --- !u!114 &7662657525838037874
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5150,7 +4995,6 @@ GameObject:
   - component: {fileID: 1568945604396735626}
   - component: {fileID: 5244761037360717373}
   - component: {fileID: 454778136428453889}
-  - component: {fileID: 4050248366307163747}
   - component: {fileID: 5759420023773717613}
   m_Layer: 0
   m_Name: "\u5DE5\u4F5C\u53F0"
@@ -5248,9 +5092,7 @@ MonoBehaviour:
   Data:
     IDName: "\u5DE5\u4F5C\u53F0"
     GameName: "\u5DE5\u4F5C\u53F0"
-    ID: 114514
     Description: "\u7528\u4E8E\u5408\u6210\u7269\u54C1"
-    PrefabPath: 
     Durability: 100
     ItemTags:
       Item_TypeTag:
@@ -5307,28 +5149,6 @@ MonoBehaviour:
   item: {fileID: 0}
   OnPickUp:
     _PersistentCalls: []
---- !u!114 &4050248366307163747
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6626571208127967517}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38d8388fde8b4a144a96e4d957eb5843, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  loots:
-    lootList: []
-  DropRange: 2
-  baseDuration: 0.3
-  distanceSensitivity: 1
-  baseRotationSpeed: 2000
-  rotationSpeedFactor: 0.8
-  maxHeight: 7
-  bounceHeightMin: 0.05
-  bounceHeightMax: 0.3
 --- !u!208 &5759420023773717613
 NavMeshObstacle:
   m_ObjectHideFlags: 0
@@ -5406,16 +5226,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inventory: {fileID: 1609159006467445113}
-  itemSlots_UI:
-  - {fileID: 1194892061771550767}
-  - {fileID: 6794967735003492565}
-  - {fileID: 2977870095190641222}
-  - {fileID: 5294720954438340987}
-  - {fileID: 786729172017260865}
-  - {fileID: 5050571713857850791}
-  - {fileID: 4658424856108182660}
-  - {fileID: 3851454996979215713}
-  - {fileID: 8544260581194359727}
   itemSlot_UI_prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   TargetSendItemSlot: {fileID: 0}
 --- !u!114 &1609159006467445113
@@ -5430,8 +5240,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _belongItem: {fileID: 0}
-  _ui: {fileID: 0}
+  Belong_Item: {fileID: 0}
+  ItemSlot_Prefab: {fileID: 0}
+  ItemSlot_Parent: {fileID: 0}
   Data:
     inventoryName: "\u8F93\u5165"
     itemSlots:
@@ -5443,8 +5254,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 0
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5453,8 +5263,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 1
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5463,8 +5272,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 2
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5473,8 +5281,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 3
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5483,8 +5290,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 4
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5493,8 +5299,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 5
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5503,8 +5308,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 6
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5513,8 +5317,7 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 7
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -5523,13 +5326,15 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 100
       Index: 8
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
-  MinStackVolume: 2
-  onSlotChanged:
-    _PersistentCalls: []
-  onUIChanged:
-    _PersistentCalls: []
+      Belong_Inventory: {fileID: 0}
+    selectedSlotIndex: -1
+    onSlotChanged:
+      _PersistentCalls: []
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs: []
+  DefaultTarget_Inventory: {fileID: 0}
+  UI_IsShow: 1
 --- !u!114 &6895582487712538481
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6272,9 +6077,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inventory: {fileID: 1624581069281484579}
-  itemSlots_UI:
-  - {fileID: 1948764197455033771}
-  - {fileID: 8761174758210152421}
   itemSlot_UI_prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   TargetSendItemSlot: {fileID: 0}
 --- !u!114 &1624581069281484579
@@ -6289,8 +6091,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _belongItem: {fileID: 0}
-  _ui: {fileID: 0}
+  Belong_Item: {fileID: 0}
+  ItemSlot_Prefab: {fileID: 0}
+  ItemSlot_Parent: {fileID: 0}
   Data:
     inventoryName: "\u8F93\u51FA"
     itemSlots:
@@ -6299,20 +6102,21 @@ MonoBehaviour:
         Item_Material: []
       SlotMaxVolume: 99
       Index: 0
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
+      Belong_Inventory: {fileID: 0}
     - CanAcceptItemType:
         Item_TypeTag: []
         Item_Material: []
       SlotMaxVolume: 99
       Index: 1
-      belong_Inventory: {fileID: 0}
-      uI: {fileID: 0}
-  MinStackVolume: 2
-  onSlotChanged:
-    _PersistentCalls: []
-  onUIChanged:
-    _PersistentCalls: []
+      Belong_Inventory: {fileID: 0}
+    selectedSlotIndex: -1
+    onSlotChanged:
+      _PersistentCalls: []
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs: []
+  DefaultTarget_Inventory: {fileID: 0}
+  UI_IsShow: 1
 --- !u!114 &6981465348859957495
 MonoBehaviour:
   m_ObjectHideFlags: 0

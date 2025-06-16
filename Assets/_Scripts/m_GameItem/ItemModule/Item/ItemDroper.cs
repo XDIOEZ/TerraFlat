@@ -1,29 +1,38 @@
 using Force.DeepCloner;
-using JetBrains.Annotations;
 using NaughtyAttributes;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 public class ItemDroper : MonoBehaviour
 {
-
+    [Header("基础配置")]
     public Inventory DroperInventory;
     public ItemSlot ItemToDrop_Slot;
     public Transform DropPos_UI;
+
     public Vector3 dropPos;
     public int _Index = 0;
-    ItemMaker ItemMaker;
 
-    [Tooltip("抛物线的最大高度")]
-    public float parabolaHeight = 2f; // 可以保留但设为只读 
-    [Tooltip("基础抛物线动画持续时间")]
-    public float baseDropDuration = 0.5f;
-    [Tooltip("距离敏感度，用于调整动画时间随距离的变化速度")]
-    public float distanceSensitivity = 0.1f;
+    [Header("掉落动画参数")]
+    public float parabolaHeight = 2f; // 抛物线最大高度
+    public float baseDropDuration = 0.5f; // 动画基础持续时间
+    public float distanceSensitivity = 0.1f; // 动画时间距离敏感度
 
-    // 新增的公共方法：直接传入 ItemSlot 丢弃物品
+    public ItemMaker ItemMaker = new ItemMaker();
+    public IFocusPoint FocusPoint;
+
+    #region 生命周期
+
+    private void Start()
+    {
+        FocusPoint = GetComponentInParent<IFocusPoint>();
+    }
+
+    #endregion
+
+    #region 物品丢弃接口
+
     [Button("DropItemBySlot")]
     public void DropItemBySlot(ItemSlot slot)
     {
@@ -33,84 +42,85 @@ public class ItemDroper : MonoBehaviour
             return;
         }
 
-        // 调用私有方法处理逻辑
-        DropItemByCount(slot,slot.Amount);
+        DropItemByCount(slot, slot.Amount);
     }
-    //添加一个新方法 丢弃指定数量的物品
+
     public void DropItemByCount(ItemSlot slot, int count)
     {
-        //如果count小于slot的数量 则创建新的ItemSlot 并修改数量
-        if(count <= slot.Amount)
+        if (count <= 0 || slot == null || slot.Amount <= 0)
         {
-            ItemData _ItemData = slot._ItemData.DeepClone();
+            Debug.LogWarning("丢弃数量非法或物品槽为空！");
+            return;
+        }
 
-            _ItemData.Stack.Amount = count;
+        if (count <= slot.Amount)
+        {
+            ItemData newItemData = slot._ItemData.DeepClone();
+            newItemData.Stack.Amount = count;
 
             slot.Amount -= count;
 
-            // 调用私有方法处理逻辑
-            HandleDropItem(_ItemData);
+            if (slot.Amount <= 0)
+            {
+                slot.ClearData();
+            }
+
+            HandleDropItem(newItemData);
         }
 
-       // slot.RefreshUI();
+        // 可视化刷新（如需要）
+         slot.RefreshUI();
     }
-    
 
 
     [Button("快速丢弃")]
     public void FastDropItem(int count = 1)
     {
-        // 获取鼠标位置
         Vector2 mousePosition = Input.mousePosition;
 
-        // 创建一个列表来存储所有击中的 UI 元素
         List<RaycastResult> results = new List<RaycastResult>();
-
-        // 创建一个 PointerEventData
         PointerEventData pointerEventData = new PointerEventData(EventSystem.current)
         {
             position = mousePosition
         };
 
-        // 使用 GraphicRaycaster 来获取 UI 元素
         EventSystem.current.RaycastAll(pointerEventData, results);
 
-        // 如果击中了一些 UI 元素
         if (results.Count > 0)
         {
-            var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>(); // 获取第一个击中的 UI_ItemSlot 组件
+            var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
 
-            if (uiItemSlot != null)
+            if (uiItemSlot != null && uiItemSlot.ItemSlot != null)
             {
-                // 找到 UI_ItemSlot 后，获取其对应的物品槽
-                ItemSlot itemSlot = uiItemSlot.ItemSlot;
-                if (itemSlot != null)
+                // 判断玩家朝向
+                Vector3 offset = Vector3.right;
+
+                if (transform.eulerAngles.y > 0 && transform.eulerAngles.y < 180)
                 {
-                    dropPos = transform.position + Vector3.right;
-                    DropItemByCount(itemSlot, 1); // 丢弃 1 个物品
+                    // 朝向左侧，偏移方向改为左
+                    offset = Vector3.left;
                 }
+
+                dropPos = transform.position + offset;
+
+                DropItemByCount(uiItemSlot.ItemSlot, count);
             }
         }
     }
 
-    /// <summary>
-    /// 私有方法：统一处理物品丢弃逻辑（传入具体的物品数据与数量）
-    /// </summary>
+
+    #endregion
+
+    #region 核心逻辑
+
     private bool HandleDropItem(ItemData itemData)
     {
-        // 数据合法性检查
         if (itemData == null || string.IsNullOrEmpty(itemData.IDName))
         {
             Debug.LogError("无效的物品数据！");
             return false;
         }
 
-        if (ItemMaker == null)
-        {
-            ItemMaker = GetComponent<ItemMaker>();
-        }
-
-        // 实例化物体
         Item newObject = RunTimeItemManager.Instance.InstantiateItem(itemData.IDName);
         if (newObject == null)
         {
@@ -118,28 +128,26 @@ public class ItemDroper : MonoBehaviour
             return false;
         }
 
-        Debug.Log("Instantiate new object: " + newObject.name);
-
         Item newItem = newObject.GetComponent<Item>();
         if (newItem == null)
         {
             Debug.LogError("实例化物体上找不到 Item 组件！");
             return false;
         }
-        itemData.Stack.CanBePickedUp = false;
 
+        Debug.Log($"Instantiate new object: {newObject.name}");
+
+        itemData.Stack.CanBePickedUp = false;
         newItem.Item_Data = itemData;
 
-        // 计算掉落位置
         if (dropPos == Vector3.zero)
         {
-            dropPos = Camera.main.ScreenToWorldPoint(DropPos_UI.position);
+            dropPos = FocusPoint.FocusPointPosition;
             dropPos.z = 0;
         }
 
         float distance = Vector3.Distance(transform.position, dropPos);
 
-        // 播放抛物线动画
         StartCoroutine(
             ItemMaker.ParabolaAnimation(
                 newObject.transform,
@@ -148,16 +156,15 @@ public class ItemDroper : MonoBehaviour
                 newItem,
                 baseDropDuration,
                 distanceSensitivity,
-                90,
+                90f,
                 0.5f,
-                maxHeight: parabolaHeight + (distance * 0.3f)
+                parabolaHeight + (distance * 0.3f)
             )
         );
 
-        // 重置掉落位置
         dropPos = Vector3.zero;
-
         return true;
     }
 
+    #endregion
 }

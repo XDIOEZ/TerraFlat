@@ -1,12 +1,17 @@
-using Org.BouncyCastle.Utilities.IO.Pem;
 using NaughtyAttributes;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
-public class ItemMaker : MonoBehaviour
+[Serializable]
+public class ItemMaker
 {
+    [BoxGroup("掉落配置")]
+    [Tooltip("掉落表")]
     public List_Loot loots;
+
     [BoxGroup("掉落配置")]
     [Tooltip("掉落范围（单位：米）")]
     public float DropRange = 2f;
@@ -39,46 +44,48 @@ public class ItemMaker : MonoBehaviour
     [Tooltip("落地弹动高度最大值")]
     public float bounceHeightMax = 0.5f;
 
+    #region 掉落接口
+
     [Button("Drop Item")]
     [Tooltip("根据LootName掉落物品")]
-    public void DropItemByLootName(string LootName, float DropRange)
+    public void DropItemByLootName(string LootName, float DropRange, Transform transform)
     {
         foreach (var item in loots.GetLoot(LootName).lootList)
         {
-            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange);
+            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange, transform);
         }
     }
 
     [Tooltip("根据ItemName和Amount掉落物品")]
-    public void DropItemByNameAndAmount(string ItemName,float Amount,float DropRange)
+    public void DropItemByNameAndAmount(string ItemName, float Amount, float DropRange,Transform transform)
     {
-        Item _Item = RunTimeItemManager.Instance.InstantiateItem(ItemName).GetComponent<Item>();
-        _Item.Item_Data.Stack.Amount = Amount;
-        DropItemWithAnimation(_Item, transform.position, (Vector2)transform.position + (Random.insideUnitCircle * DropRange));
+        Item item = RunTimeItemManager.Instance.InstantiateItem(ItemName).GetComponent<Item>();
+        item.Item_Data.Stack.Amount = Amount;
+
+        Vector2 randomOffset = Random.insideUnitCircle * DropRange;
+        Vector2 targetPos = (Vector2)transform.position + randomOffset;
+
+        DropItemWithAnimation(item, transform.position, targetPos);
     }
 
     [Tooltip("根据Loot掉落物品")]
-    public void DropItemByLoot(Loot loot, float DropRange)
+    public void DropItemByLoot(Loot loot, float DropRange, Transform transform)
     {
         foreach (var item in loot.lootList)
         {
-            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange);
+            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange, transform);
         }
     }
 
+    #endregion
 
-    #region 动画函数
+    #region 动画核心
 
     [Tooltip("根据Item掉落物品 附带动画")]
-    public void DropItemWithAnimation(
-        Item item,
-        Vector3 startPos,
-        Vector2 endPos,
-        float baseDuration = 0.5f,
-        float distanceSensitivity = 0.1f
-    )
+    public void DropItemWithAnimation(Item item, Vector3 startPos, Vector2 endPos)
     {
         item.Item_Data.Stack.CanBePickedUp = false;
+
         item.GetComponent<MonoBehaviour>().StartCoroutine(
             ParabolaAnimation(
                 item.transform,
@@ -94,13 +101,8 @@ public class ItemMaker : MonoBehaviour
         );
     }
 
-    [Tooltip("根据Item掉落物品 附带动画 动画参数通过ItemMaker获取")]
-    public void DropItemWithAnimation(
-        Transform itemTransform,
-        Vector3 startPos,
-        Vector3 endPos,
-        Item item
-    )
+    [Tooltip("根据Item掉落物品 附带动画（简化参数）")]
+    public void DropItemWithAnimation(Transform itemTransform, Vector3 startPos, Vector3 endPos, Item item)
     {
         itemTransform.GetComponent<MonoBehaviour>().StartCoroutine(
             ParabolaAnimation(
@@ -125,9 +127,9 @@ public class ItemMaker : MonoBehaviour
         Item item,
         float baseDuration,
         float distanceSensitivity,
-        float baseRotationSpeed = 360f,
-        float rotationSpeedFactor = 0.8f,
-        float maxHeight = 5f
+        float baseRotationSpeed,
+        float rotationSpeedFactor,
+        float maxHeight
     )
     {
         float timeElapsed = 0f;
@@ -152,6 +154,7 @@ public class ItemMaker : MonoBehaviour
         }
 
         itemTransform.position = endPos;
+
         item.StartCoroutine(LandingSettleEffect(itemTransform, item, Random.Range(bounceHeightMin, bounceHeightMax)));
         item.Item_Data.Stack.CanBePickedUp = true;
     }
@@ -186,6 +189,6 @@ public class ItemMaker : MonoBehaviour
         float uu = u * u;
         return uu * p0 + 2 * u * t * p1 + tt * p2;
     }
-    #endregion
 
+    #endregion
 }

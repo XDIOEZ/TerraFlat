@@ -121,7 +121,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
             text.gameObject.SetActive(false);
             if (ItemSlot != null)
             {
-                ItemSlot.ResetData();
+                ItemSlot.ClearData();
             }
         }
         else

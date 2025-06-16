@@ -33,9 +33,9 @@ public class Apple_Red : Item, IFood
     /// </summary>
     public override void Act()
     {
-        var hunger = BelongItem.GetComponent<IHunger>();
+        var hunger = BelongItem.GetComponentInChildren<FoodEater>();
         if (hunger == null) return;
-        hunger.TakeABite(this);
+        hunger.Eat(this);
     }
 
     /// <summary>

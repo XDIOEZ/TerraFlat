@@ -161,7 +161,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  worldType: 1
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
 --- !u!114 &-7391974399094868746
@@ -323,6 +322,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
+  Self: {fileID: 0}
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
@@ -1272,7 +1272,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
+  DebugMODE: 1
   animationName: Move
 --- !u!114 &5374869506730407857
 MonoBehaviour:

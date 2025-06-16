@@ -42,7 +42,7 @@ public class Player
     }
 
     [Tooltip("营养数据")]
-    public Nutrition Foods
+    public Nutrition Nutrition
     {
         get => Data.hunger;
         set => Data.hunger = value;
@@ -234,7 +234,7 @@ public class Player
             return;
         }
 
-        if (Foods == null)
+        if (Nutrition == null)
         {
             Debug.LogWarning("当前对象上的 Foods 数据未设置！");
             return;
@@ -244,8 +244,8 @@ public class Player
 
         if (eatenResult != null)
         {
-            Foods.Food += eatenResult.Food * 0.5f;
-            Foods.Water += eatenResult.Water * 0.5f;
+            Nutrition.Food += eatenResult.Food * 0.5f;
+            Nutrition.Water += eatenResult.Water * 0.5f;
         }
     }
 

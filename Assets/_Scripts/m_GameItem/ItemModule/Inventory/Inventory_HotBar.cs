@@ -47,7 +47,7 @@ public class Inventory_HotBar : Inventory
         //修改选择框位置
         ChangeSelectBoxPosition(index);
         // 同步 UI
-        SyncUIData(CurrentIndex);
+        RefreshUI(CurrentIndex);
     }
 
     public void ChangeSelectBoxPosition(int newIndex)
@@ -149,7 +149,7 @@ public class Inventory_HotBar : Inventory
             ItemData itemData = Data.itemSlots[__index]._ItemData;
             currentObject.GetComponent<Item>().Item_Data = itemData;
             currentObject.GetComponent<Item>().BelongItem = CurrentSelectItemSlot.Belong_Inventory.Belong_Item;
-            currentObject.GetComponent<Item>().UpdatedUI_Event += () => SyncUIData(__index);
+            currentObject.GetComponent<Item>().UpdatedUI_Event += () => RefreshUI(__index);
             currentObject.GetComponent<Item>().DestroyItem_Event += DestroyCurrentObject;
             spawnLocation.GetComponent<ITriggerAttack>().SetWeapon(currentObject);
         }

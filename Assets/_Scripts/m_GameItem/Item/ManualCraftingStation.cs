@@ -153,7 +153,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
             {
                 Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot._ItemData.Stack.Amount}");
             }
-            inputInventory.SyncUIData(i);
+            inputInventory.RefreshUI(i);
         }
 
         Debug.Log($"合成完成：{recipe.name}");

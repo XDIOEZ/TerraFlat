@@ -11,7 +11,7 @@ using DG.Tweening;
 /// <summary>
 /// 使用 NavMesh 和 Rigidbody2D 控制的 AI 移动类
 /// </summary>
-public class Mover_AI : Organ, IMover, IAI_NavMesh
+public class Mover_AI : Mover,IAI_NavMesh
 {
     [Header("移动目标")]
     public Vector3 targetPosition; // 目标位置
@@ -19,10 +19,6 @@ public class Mover_AI : Organ, IMover, IAI_NavMesh
 
     [Header("组件引用")]
     public NavMeshAgent agent;     // NavMesh 代理
-    public Rigidbody2D rb2D;       // 2D 刚体
-
-    [Tooltip("速度控制接口（由宿主对象提供）")]
-    public ISpeed speeder;
 
     [Header("状态控制")]
     public bool isMoving;          // 当前是否在移动
@@ -42,19 +38,8 @@ public class Mover_AI : Organ, IMover, IAI_NavMesh
         set => transform.position = value;
     }
 
-    public Vector3 TargetPosition
-    {
-        get => speeder.MoveTargetPosition;
-        set => speeder.MoveTargetPosition = value;
-    }
 
-    public bool IsMoving
-    {
-        get => isMoving;
-        set => isMoving = value;
-    }
-
-    public float Speed { get => speeder.Speed.Value;}
+    public float Speed { get => speedSource.Speed.Value;}
 
     public NavMeshAgent Agent_Nav
     {
@@ -67,21 +52,19 @@ public class Mover_AI : Organ, IMover, IAI_NavMesh
     /// <summary>
     /// 初始化组件引用
     /// </summary>
-    public void Start()
+    public override void Start()
     {
+        base.Start();
         agent = GetComponentInParent<NavMeshAgent>();
         agent.updateUpAxis = false;      // 禁用 Y 轴更新（适用于2D）
         agent.updateRotation = false;    // 禁用自动旋转
-
-        rb2D = GetComponentInParent<Rigidbody2D>();
-        speeder = GetComponentInParent<ISpeed>();
     }
 
     /// <summary>
     /// 主移动逻辑入口，根据是否有NavMeshAgent执行不同移动方式
     /// </summary>
     /// <param name="targetPosition">目标位置</param>
-    public void Move(Vector2 targetPosition)
+    public override void Move(Vector2 targetPosition)
     {
         agent.speed = Speed;
         if (Vector2.Distance(transform.position, TargetPosition) <= agent.stoppingDistance)
@@ -90,7 +73,7 @@ public class Mover_AI : Organ, IMover, IAI_NavMesh
             IsMoving = false;
             OnStopMoving?.Invoke();
             moveTween?.Kill();
-            rb2D.velocity = Vector2.zero;
+            Rb.velocity = Vector2.zero;
             return;
         }
 
@@ -129,7 +112,7 @@ public class Mover_AI : Organ, IMover, IAI_NavMesh
     /// </summary>
     private void MoveWithDoTween(Vector2 targetPosition)
     {
-        rb2D.velocity = (targetPosition - (Vector2)transform.position).normalized * Speed;
+        Rb.velocity = (targetPosition - (Vector2)transform.position).normalized * Speed;
     }
 
     #region Organ 抽象类实现

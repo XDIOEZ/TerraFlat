@@ -5,7 +5,7 @@ using InputSystem;
 using Sirenix.OdinInspector;
 using static UnityEngine.InputSystem.Layouts.InputControlLayout;
 
-[RequireComponent(typeof(Player))]
+[RequireComponent(typeof(Item))]
 public class PlayerController : MonoBehaviour
 {
     [ShowInInspector]
@@ -27,7 +27,7 @@ public class PlayerController : MonoBehaviour
     [ShowNativeProperty] public HandForInteract _handForInteract { get; private set; }
 
     [ShowInInspector]
-    public IMove Mover;
+    public Mover Mover;
   
 
     public IHunger _Hunger { get; private set; }
@@ -48,9 +48,13 @@ public class PlayerController : MonoBehaviour
     public void Awake()
     {
         VirtualCameraManager = GetComponentInChildren<CameraFollowManager>();
+        
+
+
     }
     public void Start()
     {
+        _mainCamera = VirtualCameraManager.ControllerCamera;
         Set_InputSystem();
         //     _mainCamera = Camera.main;
         InitializeComponents();
@@ -61,15 +65,13 @@ public class PlayerController : MonoBehaviour
         _Speed = GetComponentInChildren<ISpeed>();
         Debug.Log("初始化完成");
         _FocusPoint = GetComponent<IFocusPoint>();
-        ControledItem = GetComponent <Item>();
+        ControledItem = GetComponent<Item>();
         _FocusPoint = ControledItem as IFocusPoint;
-        Mover = GetComponentInChildren<IMove>();
+        Mover = GetComponentInChildren<Mover>();
         VirtualCameraManager = GetComponentInChildren<CameraFollowManager>();
         ItemDroper = GetComponentInChildren<ItemDroper>();
         _Hunger = GetComponent<IHunger>();
         Hotbar = GetComponentInChildren<Inventory_HotBar>();
-
-
 
     }
 
@@ -77,9 +79,13 @@ public class PlayerController : MonoBehaviour
     {
         //同步聚焦点=鼠标位置
         _FocusPoint.FocusPointPosition = GetMouseWorldPosition();
+        //处理战斗输入
         HandleCombatInput();
+        //处理转身
         HandleBodyTurning();
+        //处理移动输入
         HandleMovementInput();
+        //处理视角切换
         PlayerTakeItem_FaceMouse();
     }
     #endregion
@@ -88,6 +94,7 @@ public class PlayerController : MonoBehaviour
     #region 处理战斗输入
     private void HandleCombatInput()
     {
+        if(Attack == null) return;
         var mouseState = GetMouseKeyState();
         if (mouseState != KeyState.Void && Attack != null)
         {
@@ -99,23 +106,22 @@ public class PlayerController : MonoBehaviour
     #region 处理玩家移动输入
     private void HandleMovementInput()
     {
+        if (Mover == null) return;
         Vector2 moveInput = _inputActions.Win10.Move_Player.ReadValue<Vector2>();
-      /*  //检查moveInput是否有效
-        if (moveInput.magnitude > 1f)
-        {
-            moveInput.Normalize();
-        }*/
-        _Speed.MoveTargetPosition = moveInput;
-        Mover.Move(moveInput);
+        _Speed.MoveTargetPosition = moveInput + (Vector2)transform.position;
+        Mover.Move(_Speed.MoveTargetPosition);
     }
     #endregion
 
     #region 处理玩家身体转向
     private void HandleBodyTurning()
     {
-        Vector3 mousePos = m_Mouse.Instance.transform.position;
+        // 直接使用 Unity 内置的鼠标位置
+        Vector3 mousePos = _FocusPoint.FocusPointPosition;
+
         // 将鼠标位置转换为世界坐标
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, transform.position.z));
+        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, Camera.main.nearClipPlane));
+
         if (BodyTurning == null) return;
 
         float horizontal = Input.GetAxis("Horizontal");
@@ -137,6 +143,7 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
+
 
     #endregion
     #endregion
@@ -241,7 +248,7 @@ public class PlayerController : MonoBehaviour
         {
             ItemDroper.FastDropItem();
 
-            Hotbar.SyncUIData(Hotbar.CurrentIndex);
+            Hotbar.RefreshUI(Hotbar.CurrentIndex);
         }
         
 
@@ -270,6 +277,8 @@ public class PlayerController : MonoBehaviour
 
     public void PlayerTakeItem_FaceMouse(InputAction.CallbackContext context = default)
     {
+        if(Facing == null)
+            return;
         context.ReadValue<Vector2>();
         //获取鼠标
         Facing.FaceToMouse(GetMouseWorldPosition());

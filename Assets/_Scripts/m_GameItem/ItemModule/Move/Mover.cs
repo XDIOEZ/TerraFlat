@@ -13,7 +13,7 @@ public class Mover : Organ, IMove
 
     [Header("移动设置")]
     [Tooltip("速度源")]
-    private ISpeed speedSource;
+    protected ISpeed speedSource;
 
     [Tooltip("减速速率")]
     public float slowDownSpeed = 5f;
@@ -39,25 +39,26 @@ public class Mover : Organ, IMove
 
     #region 属性
 
-    public Rigidbody2D Rb;
+    protected Rigidbody2D Rb;
 
     #endregion
 
     #region Unity 生命周期
-
-    private void Start()
+    public Vector3 TargetPosition
     {
-        //if (Rb == null)
-      //  {
-            Rb = GetComponentInParent<Rigidbody2D>();
-        //}
+        get => speedSource.MoveTargetPosition;
+        set => speedSource.MoveTargetPosition = value;
+    }
+    public virtual void Start()
+    {
+        Rb = GetComponentInParent<Rigidbody2D>();
         speedSource = GetComponentInParent<ISpeed>();
     }
 
     #endregion
 
     #region 公共方法
-    public void Move(Vector2 direction)
+    public virtual void Move(Vector2 direction)
     {
         bool isZero = direction == Vector2.zero;
 
@@ -80,7 +81,7 @@ public class Mover : Organ, IMove
         // 更新方向（避免重复归一化）
         if (direction != _lastDirection)
         {
-            direction.Normalize();
+            //direction.Normalize();
             _lastDirection = direction;
         }
 

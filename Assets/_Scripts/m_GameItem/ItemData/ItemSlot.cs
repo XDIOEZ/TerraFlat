@@ -148,13 +148,13 @@ public partial class ItemSlot
     #endregion
 
 
-    public void ResetData()
+    public void ClearData()
     {
         _ItemData =null;
     }
 
-    public void OnDataChanged()
+    public void RefreshUI()
     {
-        Belong_Inventory.SyncUIData(Index);
+        Belong_Inventory.RefreshUI(Index);
     }
 }

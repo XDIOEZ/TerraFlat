@@ -14,7 +14,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }
     #region 饥饿
 
-    public Nutrition Foods { get => Data.NutritionData; set => Data.NutritionData = value; }
+    public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }
     public float EatingSpeed { get => Data.EatingSpeed; set => throw new System.NotImplementedException(); }
     public UltEvent OnNutrientChanged { get; set; }
     public UltEvent OnDeath { get; set; }
@@ -86,7 +86,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     //移动方向/目标
     public Vector3 MoveTargetPosition { get; set; }
     [ShowInInspector]
-    public Vector3 FocusPointPosition { get => MoveTargetPosition; set => MoveTargetPosition = value; }
+    public Vector3 FocusPointPosition { get; set; }
     GameValue_float ISpeed.Speed { get => Data.Speed; set => Data.Speed = value; }
     #endregion
 
@@ -106,7 +106,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
 
     public void TakeABite(IFood food)
     {
-        Foods.Food += EatingSpeed;
+        Nutrition.Food += EatingSpeed;
         food.BeEat(EatingSpeed);
     }
 

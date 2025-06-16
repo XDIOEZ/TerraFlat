@@ -123,16 +123,18 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     {
         if(value > 100)
         {
-            GetComponentInChildren<ItemMaker>().DropItemByLoot(Loots.GetLoot("Loots_Production"), 2f);
+            ItemMaker maker = new ItemMaker();
+            maker.DropItemByLoot(Loots.GetLoot("Loots_Production"), 2f,transform);
            ItemValues.GetValue("生产进度").CurrentValue = -1;
         }
     }
 
     public void Death()
     {
-          Debug.Log("树被摧毁");
-            GetComponentInChildren<ItemMaker>().DropItemByLootName("Loots_Death", 1.5f);
-            Destroy(gameObject);
+        Debug.Log("树被摧毁");
+        ItemMaker maker = new ItemMaker();
+        maker.DropItemByLoot(Loots.GetLoot("Loots_Production"), 2f, transform);
+        Destroy(gameObject);
     }
 
     void HpChanged(float value)
@@ -148,15 +150,13 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
     public void Save()
     {
         onSave?.Invoke();
-        _data.loot = GetComponentInChildren<ItemMaker>().loots;
         _data.ItemDataValue.ClearAllEvents();
     }
     [Button("加载")]
     public void Load()
     {
         onLoad?.Invoke();
-        GetComponentInChildren<ItemMaker>().loots = _data.loot;
-       
+
         ItemValues.GetValue("生产进度").OnCurrentValueChanged += Production;
        
         Init();

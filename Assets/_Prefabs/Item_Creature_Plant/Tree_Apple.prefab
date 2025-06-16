@@ -88,9 +88,7 @@ MonoBehaviour:
   _data:
     IDName: Tree_Apple
     GameName: "\u82F9\u679C\u6811"
-    ID: 30001
     Description: "\u4E00\u9897\u4E0D\u90A3\u4E48\u6B63\u5E38\u7684\u82F9\u679C\u6811"
-    PrefabPath: AppleTree
     Durability: 100
     ItemTags:
       Item_TypeTag:
@@ -123,9 +121,10 @@ MonoBehaviour:
       maxDefenseToughness: 0.8
       maxDefenseMagic: 50
     EatingSpeed: 1
-    speed_Max: 3
-    speed: 3
-    runSpeed: 6
+    Speed:
+      BaseValue: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
     stamina: 100
     stamina_Max: 100
     staminaRecoverySpeed: 1
@@ -383,7 +382,6 @@ GameObject:
   - component: {fileID: 484489222091895996}
   - component: {fileID: 3980057059872684393}
   - component: {fileID: 6494196825438754696}
-  - component: {fileID: 104388901397866750}
   m_Layer: 9
   m_Name: DamageReceiver
   m_TagString: Untagged
@@ -477,38 +475,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.3237205, y: 0.61818314}
   m_EdgeRadius: 0
---- !u!114 &104388901397866750
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7901544715287949478}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38d8388fde8b4a144a96e4d957eb5843, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  loots:
-    lootList:
-    - lootsName: Loots_Death
-      lootList:
-      - lootName: Log
-        lootAmount: 4
-      - lootName: Apple_Red
-        lootAmount: 2
-    - lootsName: Loots_Production
-      lootList:
-      - lootName: "\u6728\u68CD"
-        lootAmount: 1
-  DropRange: 2
-  baseDuration: 0.5
-  distanceSensitivity: 0.1
-  baseRotationSpeed: 360
-  rotationSpeedFactor: 0.8
-  maxHeight: 5
-  bounceHeightMin: 0.05
-  bounceHeightMax: 0.5
 --- !u!1001 &2693604294552692670
 PrefabInstance:
   m_ObjectHideFlags: 0

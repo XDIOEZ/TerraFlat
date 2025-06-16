@@ -97,7 +97,7 @@ public class Inventory : MonoBehaviour
             DefaultTarget_Inventory = DataInterface.Children_Inventory_GameObject["手部插槽"];
         }
 
-        Data.Event_RefreshUI += SyncUIData;
+        Data.Event_RefreshUI += RefreshUI;
     }
 
     //同步UI的Data
@@ -112,8 +112,9 @@ public class Inventory : MonoBehaviour
         }
     }
 
-    public void SyncUIData(int index)
+    public void RefreshUI(int index)
     {
+        print("同步UI数据"+ index);
         itemSlotUIs[index].RefreshUI();
     }
 
@@ -125,14 +126,14 @@ public class Inventory : MonoBehaviour
         if(DefaultTarget_Inventory.Data.itemSlots.Count > index)
         {
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
-            DefaultTarget_Inventory.SyncUIData(index);
+            DefaultTarget_Inventory.RefreshUI(index);
         }
         else
         {
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
-            DefaultTarget_Inventory.SyncUIData(0);
+            DefaultTarget_Inventory.RefreshUI(0);
         }
-        SyncUIData(index);
+        RefreshUI(index);
         
     }
 

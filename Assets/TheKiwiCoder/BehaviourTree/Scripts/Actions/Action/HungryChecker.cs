@@ -24,7 +24,7 @@ public class HungryChecker : ActionNode
 
     protected override State OnUpdate() 
     {
-        if(hungryEr.Foods.Food <=  hungryEr.Foods.MaxFood * hungryThreshold)
+        if(hungryEr.Nutrition.Food <=  hungryEr.Nutrition.MaxFood * hungryThreshold)
         {
             return State.Success;
         }

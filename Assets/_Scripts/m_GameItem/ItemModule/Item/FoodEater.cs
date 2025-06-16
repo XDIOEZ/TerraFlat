@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-public class EatFood : MonoBehaviour
+public class FoodEater : MonoBehaviour
 {
     public IHunger hunger;
     public float EatingSpeed { get=> hunger.EatingSpeed; set => hunger.EatingSpeed = value; }
@@ -15,7 +15,7 @@ public class EatFood : MonoBehaviour
 
     public void Eat(IFood food)
     {
-        hunger.Foods.Food += EatingSpeed;
+        hunger.Nutrition.Food += EatingSpeed;
         food.BeEat(EatingSpeed);
     }
 }

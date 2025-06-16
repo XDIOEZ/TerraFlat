@@ -129,8 +129,8 @@ public class HungerManager : MonoBehaviour, IChangeHungry
     /// </summary>
     public float MaxHunger1
     {
-        get => Hunger.Foods.MaxFood;
-        set => Hunger.Foods.MaxFood = value;
+        get => Hunger.Nutrition.MaxFood;
+        set => Hunger.Nutrition.MaxFood = value;
     }
 
     /// <summary>
@@ -138,8 +138,8 @@ public class HungerManager : MonoBehaviour, IChangeHungry
     /// </summary>
     public float CurrentHunger1
     {
-        get => Hunger.Foods.Food;
-        set => Hunger.Foods.Food = value;
+        get => Hunger.Nutrition.Food;
+        set => Hunger.Nutrition.Food = value;
     }
 
     #endregion
@@ -164,7 +164,7 @@ public class HungerManager : MonoBehaviour, IChangeHungry
     private void Start()
     {
         // 添加默认恢复数值：这里假设 EatingSpeed 表示默认恢复速率（根据需要调整）
-        StartReduceHunger(Hunger.Foods.MaxFood*0.02f, "默认恢复");
+        StartReduceHunger(Hunger.Nutrition.MaxFood*0.02f, "默认恢复");
     }
 
     private void OnDisable()
