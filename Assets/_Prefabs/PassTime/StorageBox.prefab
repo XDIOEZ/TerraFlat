@@ -67,8 +67,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -92,7 +92,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -327,17 +327,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 3096589894935386811}
   text: {fileID: 3529483202235314656}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &7856355400326802811
 MonoBehaviour:
@@ -479,8 +481,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -504,7 +506,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -689,8 +691,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -714,7 +716,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -847,17 +849,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 667900279326344801}
   text: {fileID: 2054503660248981117}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &6120920716353012624
 MonoBehaviour:
@@ -999,8 +1003,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1024,7 +1028,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -1209,8 +1213,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1234,7 +1238,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -1344,19 +1348,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inventory: {fileID: 9113297221984958704}
-  itemSlots_UI:
-  - {fileID: 4755110091499621622}
-  - {fileID: 5805665169174608325}
-  - {fileID: 14094649052963087}
-  - {fileID: 4463003245717259367}
-  - {fileID: 6979969155880229018}
-  - {fileID: 1810205971770456409}
-  - {fileID: 6828529207145895775}
-  - {fileID: 3580662023267963863}
-  - {fileID: 222125075786118514}
-  - {fileID: 1392105540066069730}
-  - {fileID: 7170079421478108974}
-  - {fileID: 9044454992487982574}
   itemSlot_UI_prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   TargetSendItemSlot: {fileID: 0}
 --- !u!114 &9113297221984958704
@@ -1371,99 +1362,92 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  uIManager: {fileID: 0}
+  Belong_Item: {fileID: 0}
+  ItemSlot_Prefab: {fileID: 0}
+  ItemSlot_Parent: {fileID: 0}
   Data:
     inventoryName: 
     itemSlots:
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 0
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 1
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 2
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 3
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 4
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 5
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 6
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 7
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 8
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 9
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 10
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
     - CanAcceptItemType:
-        Item_TypeTag: 0000000000000000
-        Item_Material: 00000000
+        Item_TypeTag: []
+        Item_Material: []
       SlotMaxVolume: 128
       Index: 11
       Belong_Inventory: {fileID: 9113297221984958704}
-      UI: {fileID: 0}
-  MinStackVolume: 2
-  onSlotChanged:
-    _PersistentCalls: []
-  onUIChanged:
-    _PersistentCalls: []
+    selectedSlotIndex: 0
+    onSlotChanged:
+      _PersistentCalls: []
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs: []
+  DefaultTarget_Inventory: {fileID: 0}
+  UI_IsShow: 1
 --- !u!114 &6107309173043356592
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1727,8 +1711,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1752,7 +1736,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -1885,17 +1869,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 8225176239298669595}
   text: {fileID: 8157716361012643674}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &2798124990059341618
 MonoBehaviour:
@@ -2037,8 +2023,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2062,7 +2048,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -2195,17 +2181,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 6967549936228764966}
   text: {fileID: 498694724939473433}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &6861135693522929338
 MonoBehaviour:
@@ -2371,17 +2359,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 5520245689201336272}
   text: {fileID: 9161552027935158057}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &3668379144071745808
 MonoBehaviour:
@@ -2547,17 +2537,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 6989624391216460075}
   text: {fileID: 8054905383550974860}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &998026853561100255
 MonoBehaviour:
@@ -2951,17 +2943,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 7209565055052733783}
   text: {fileID: 6340255327727629401}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &4620462426278896816
 MonoBehaviour:
@@ -3179,8 +3173,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3204,7 +3198,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3337,17 +3331,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 8649068963974041414}
   text: {fileID: 243442451076101293}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &1429950448969489429
 MonoBehaviour:
@@ -3513,17 +3509,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 5984570990624916226}
   text: {fileID: 5849719118486649999}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &8188379004607525862
 MonoBehaviour:
@@ -3689,17 +3687,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 6182667977489888769}
   text: {fileID: 9185130351978569775}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &1710978938939064888
 MonoBehaviour:
@@ -3841,8 +3841,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3866,7 +3866,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3917,7 +3917,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7271879047743106543}
-  - component: {fileID: 4538188590233244380}
   - component: {fileID: 5726277889060828530}
   - component: {fileID: 5702747822469780068}
   - component: {fileID: 7560592556831205845}
@@ -3944,39 +3943,6 @@ Transform:
   - {fileID: 2170422264637201883}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4538188590233244380
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6932038231235924595}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 312f1a9e447e41f43a411e956e2a2bea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  storageData:
-    Name: StorageBox
-    ID: 13
-    Description: "\u7269\u54C1\u540D\u79F0\uFF1AStorageBox,\u7269\u54C1ID\uFF1A13,\u7269\u54C1\u63CF\u8FF0\uFF1A\u7269\u54C1\u540D\u79F0\uFF1AStorageBox,\u7269\u54C1ID\uFF1A12,\u7269\u54C1\u63CF\u8FF0\uFF1A\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0,\u7269\u54C1\u4F53\u79EF\uFF1A1,\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1,\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue,\u7269\u54C1\u6807\u7B7E\uFF1AItemTag,\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1AItemStack,\u7269\u54C1\u4F4D\u7F6E\uFF1A(0.00,
-      0.00, 0.00),\u7269\u54C1\u65CB\u8F6C\uFF1A(0.00000, 0.00000, 0.00000, 0.00000),\u7269\u54C1\u7F29\u653E\uFF1A(0.00,
-      0.00, 0.00),\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A,\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A48,\u7269\u54C1\u4F53\u79EF\uFF1A1,\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1,\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue,\u7269\u54C1\u6807\u7B7E\uFF1AItemTag,\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1AItemStack,\u7269\u54C1\u4F4D\u7F6E\uFF1A(0.00,
-      0.00, 0.00),\u7269\u54C1\u65CB\u8F6C\uFF1A(0.00000, 0.00000, 0.00000, 0.00000),\u7269\u54C1\u7F29\u653E\uFF1A(0.00,
-      0.00, 0.00),\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A,\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A49"
-    PrefabPath: Assets/_Prefabs/Item/StorageBox.prefab
-    Volume: 1
-    Durability: 1
-    CanBePickedUp: 1
-    ItemTags:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
-    Stack:
-      amount: 1
-    Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: 
 --- !u!212 &5726277889060828530
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -4320,8 +4286,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4345,7 +4311,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -4630,17 +4596,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 7766469187178007569}
   text: {fileID: 2921067467678881844}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &7644742648796460833
 MonoBehaviour:
@@ -4782,8 +4750,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4807,7 +4775,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -4940,17 +4908,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemSlot:
+  ItemSlot:
     CanAcceptItemType:
-      Item_TypeTag: 0000000000000000
-      Item_Material: 00000000
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-    UI: {fileID: 0}
   image: {fileID: 9128412655388928469}
   text: {fileID: 8713157209303511129}
-  onItemClick:
+  OnItemClick:
     _PersistentCalls: []
 --- !u!114 &1909431400095672315
 MonoBehaviour:
@@ -5168,8 +5138,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
-  m_sharedMaterial: {fileID: 2979193228837331801, guid: eb8bacd46357fb4418b3d529965e7b08, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -5193,7 +5163,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.7
+  m_fontSize: 26.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
