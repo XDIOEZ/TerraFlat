@@ -54,9 +54,10 @@ public class PlayerController : MonoBehaviour
     }
     public void Start()
     {
+        if(_mainCamera == null)
         _mainCamera = VirtualCameraManager.ControllerCamera;
         Set_InputSystem();
-        //     _mainCamera = Camera.main;
+        //_mainCamera = Camera.main;
         InitializeComponents();
 
         SwitchBag();

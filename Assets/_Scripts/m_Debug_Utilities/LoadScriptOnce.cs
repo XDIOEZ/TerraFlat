@@ -11,6 +11,7 @@ public class LoadScriptOnce : Editor
     [MenuItem("CONTEXT/MonoBehaviour/Ö´ÐÐ Start ·½·¨")]
     private static void ExecuteStart(MenuCommand command)
     {
+        ExecuteMethod(command.context as MonoBehaviour, "Awake");
         ExecuteMethod(command.context as MonoBehaviour, "Start");
     }
 
