@@ -107,8 +107,17 @@ public class PlayerController : MonoBehaviour
     private void HandleMovementInput()
     {
         if (Mover == null) return;
+
         Vector2 moveInput = _inputActions.Win10.Move_Player.ReadValue<Vector2>();
-        _Speed.MoveTargetPosition = moveInput + (Vector2)transform.position;
+
+        if (moveInput.magnitude != 0)
+        {
+            _Speed.MoveTargetPosition = moveInput + (Vector2)transform.position;
+        }else
+        {
+            _Speed.MoveTargetPosition = (Vector2)transform.position;
+        }
+
         Mover.Move(_Speed.MoveTargetPosition);
     }
     #endregion
@@ -116,33 +125,30 @@ public class PlayerController : MonoBehaviour
     #region 处理玩家身体转向
     private void HandleBodyTurning()
     {
-        // 直接使用 Unity 内置的鼠标位置
-        Vector3 mousePos = _FocusPoint.FocusPointPosition;
+        if (BodyTurning == null || ControledItem == null) return;
 
-        // 将鼠标位置转换为世界坐标
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, Camera.main.nearClipPlane));
+        // 获取聚焦点的位置（世界坐标）
+        Vector3 focusPos = _FocusPoint.FocusPointPosition;
+        Vector3 itemPos = ControledItem.transform.position;
 
-        if (BodyTurning == null) return;
+        // 判断聚焦点在物体左边还是右边
+        float direction = focusPos.x - itemPos.x;
 
-        float horizontal = Input.GetAxis("Horizontal");
-
-        if (!Mathf.Approximately(horizontal, 0f))
+        if (!Mathf.Approximately(direction, 0f))
         {
-            // 获取屏幕宽度
-            float screenWidth = Screen.width;
-
-            // 判断鼠标是否在屏幕左侧
-            if (mousePos.x < screenWidth / 2 && horizontal < 0)
+            if (direction < 0)
             {
+                // 聚焦点在物体左边
                 BodyTurning.TurnBodyToDirection(Vector2.left);
             }
-            // 判断鼠标是否在屏幕右侧
-            else if (mousePos.x > screenWidth / 2 && horizontal > 0)
+            else
             {
+                // 聚焦点在物体右边
                 BodyTurning.TurnBodyToDirection(Vector2.right);
             }
         }
     }
+
 
 
     #endregion

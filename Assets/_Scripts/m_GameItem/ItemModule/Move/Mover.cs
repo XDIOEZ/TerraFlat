@@ -58,9 +58,9 @@ public class Mover : Organ, IMove
     #endregion
 
     #region 公共方法
-    public virtual void Move(Vector2 direction)
+    public virtual void Move(Vector2 TargetPosition)
     {
-        bool isZero = direction == Vector2.zero;
+        bool isZero = Vector2.Distance(Rb.position, TargetPosition) < endSpeed;
 
         // 移动起止状态切换
         if (IsMoving != !isZero)
@@ -78,15 +78,14 @@ public class Mover : Organ, IMove
             return;
         }
 
-        // 更新方向（避免重复归一化）
+        /*// 更新方向（避免重复归一化）
         if (direction != _lastDirection)
         {
-            //direction.Normalize();
             _lastDirection = direction;
-        }
+        }*/
 
         // 计算最终速度
-        Rb.velocity = direction * speedSource.Speed.Value;
+        Rb.velocity = (TargetPosition - Rb.position).normalized * speedSource.Speed.Value;
     }
 
     #endregion
@@ -100,7 +99,7 @@ public class Mover : Organ, IMove
 
     public override void UpdateWork()
     {
-        Move(speedSource.MoveTargetPosition);
+        //Move(speedSource.MoveTargetPosition);
     }
 
     public override void StopWork()

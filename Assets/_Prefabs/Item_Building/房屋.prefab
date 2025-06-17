@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 2820106487250638790}
   - component: {fileID: 3305477110069938311}
   - component: {fileID: 2397059545901859965}
-  - component: {fileID: 9128072131250245348}
   - component: {fileID: 4510878156682343302}
   m_Layer: 0
   m_Name: "\u623F\u5C4B"
@@ -122,9 +121,7 @@ MonoBehaviour:
   data:
     IDName: "\u623F\u5C4B"
     GameName: "\u623F\u5C4B"
-    ID: 114514
     Description: "\u7528\u4E8E\u5408\u6210\u7269\u54C1"
-    PrefabPath: 
     Durability: 100
     ItemTags:
       Item_TypeTag:
@@ -163,28 +160,6 @@ MonoBehaviour:
     minVisibleDistance: 0.3
     maxVisibleDistance: 3.5
   buildingSO: {fileID: 11400000, guid: d34cc3c527b046a4eb78d52022429cb0, type: 2}
---- !u!114 &9128072131250245348
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1699156683013640394}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38d8388fde8b4a144a96e4d957eb5843, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  loots:
-    lootList: []
-  DropRange: 2
-  baseDuration: 0.5
-  distanceSensitivity: 0.1
-  baseRotationSpeed: 360
-  rotationSpeedFactor: 0.8
-  maxHeight: 5
-  bounceHeightMin: 0.05
-  bounceHeightMax: 0.5
 --- !u!114 &4510878156682343302
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -295,7 +270,6 @@ GameObject:
   - component: {fileID: 104602979169349861}
   - component: {fileID: 7073664171018076644}
   - component: {fileID: 8097506007480486206}
-  - component: {fileID: 129137614549600197}
   m_Layer: 9
   m_Name: DamageReceiver
   m_TagString: Untagged
@@ -389,28 +363,6 @@ MonoBehaviour:
   BoxCollider2D: {fileID: 0}
   shakeDuration: 0.15
   shakeMagnitude: 0.1
---- !u!114 &129137614549600197
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2645367771762912408}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38d8388fde8b4a144a96e4d957eb5843, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  loots:
-    lootList: []
-  DropRange: 2
-  baseDuration: 0.5
-  distanceSensitivity: 0.1
-  baseRotationSpeed: 360
-  rotationSpeedFactor: 0.8
-  maxHeight: 5
-  bounceHeightMin: 0.05
-  bounceHeightMax: 0.5
 --- !u!1 &5023477719192858480
 GameObject:
   m_ObjectHideFlags: 0
