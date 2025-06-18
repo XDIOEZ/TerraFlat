@@ -2,42 +2,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-//C#中 泛型知识点
-//设计模式 单例模式的知识点
-//继承这种自动创建的 单例模式基类 不需要我们手动去拖 或者 api去加了
-//想用他 直接 GetInstance就行了
+/// <summary>
+/// 泛型自动创建的单例基类
+/// 继承这个类后，子类可以全局访问，自动跨场景，且不会重复创建
+/// </summary>
 public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T instance;
 
-    public static T GetInstance()
-    {
-        if( instance == null )
-        {
-            GameObject obj = new GameObject();
-            //设置对象的名字为脚本名
-            obj.name = typeof(T).ToString();
-            //让这个单例模式对象 过场景 不移除
-            //因为 单例模式对象 往往 是存在整个程序生命周期中的
-            DontDestroyOnLoad(obj);
-            instance = obj.AddComponent<T>();
-        }
-        return instance;
-    }
+    /// <summary>
+    /// 单例全局访问
+    /// </summary>
     public static T Instance
     {
         get
         {
             if (instance == null)
             {
-                instance = Object.FindFirstObjectByType<T>();
+                // 优先寻找场景里是否已经存在
+                instance = FindObjectOfType<T>();
+
                 if (instance == null)
                 {
-                    GameObject obj = new GameObject();
-                    //设置对象的名字为脚本名
-                    obj.name = typeof(T).ToString();
-                    //让这个单例模式对象 过场景 不移除
-                    //因为 单例模式对象 往往 是存在整个程序生命周期中的
+                    // 场景不存在就自动创建
+                    GameObject obj = new GameObject(typeof(T).Name);
                     DontDestroyOnLoad(obj);
                     instance = obj.AddComponent<T>();
                 }
@@ -46,4 +34,19 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Awake 防呆，防止场景中手动拖拽多个对象导致冲突
+    /// </summary>
+    protected virtual void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this as T;
+        }
+        else if (instance != this)
+        {
+            // 场景里如果出现重复对象，自动销毁
+            Destroy(gameObject);
+        }
+    }
 }

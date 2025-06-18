@@ -66,6 +66,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         if (AllPrefabs.ContainsKey(prefab))
         {
             GameObject obj = Instantiate(AllPrefabs[prefab]);
+
             if(position == Vector3.zero)
             obj.transform.position = new Vector3(0, 0, 0);
             else

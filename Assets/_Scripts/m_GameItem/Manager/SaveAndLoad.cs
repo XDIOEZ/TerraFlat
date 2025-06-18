@@ -34,12 +34,15 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
     public string CurrentContrrolPlayerName;
 
+    public UltEvent ExitGame_Event;
+    public UltEvent ChangeScene_Event;
+
     [Header("默认设置")]
     public DefaultSettings defaultSettings;
 
     public void Start()
     {
-        DontDestroyOnLoad(gameObject);
+            DontDestroyOnLoad(gameObject);
     }
 
     [Serializable]
@@ -83,8 +86,10 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     }
 
     [Button("保存存档到磁盘上")]
-    void Save()
+    public void Save()
     {
+        
+        ExitGame_Event.Invoke();
         SaveActiveMapToSaveData();
         SaveToDisk(SaveData,PlayerSavePath, SaveData.saveName);
     }
@@ -205,7 +210,11 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             foreach (ItemData forLoadItemData in itemDataList)
             {
                 Item item = RunTimeItemManager.Instance.InstantiateItem(forLoadItemData, forLoadItemData._transform.Position);
-
+                if(item == null)
+                {
+                    Debug.LogError($"加载物品失败：{forLoadItemData.IDName}");
+                    continue;
+                }
                 item.transform.rotation = forLoadItemData._transform.Rotation;
                 item.transform.localScale = forLoadItemData._transform.Scale;
                 item.gameObject.SetActive(true);

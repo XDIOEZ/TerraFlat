@@ -37,6 +37,11 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
 
        // ItemSlot.onSlotDataChanged += RefreshUI;
     }
+
+    public void OnDestroy()
+    {
+        OnItemClick.Clear();
+    }
     #endregion
 
     #region 公共方法

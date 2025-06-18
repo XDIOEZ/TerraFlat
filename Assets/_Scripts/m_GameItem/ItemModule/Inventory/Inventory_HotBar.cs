@@ -4,7 +4,7 @@ using UnityEngine;
 public class Inventory_HotBar : Inventory
 {
     #region 字段
-
+    
     [Header("快捷栏设置")]
     [Tooltip("生成位置")]
     public Transform spawnLocation;

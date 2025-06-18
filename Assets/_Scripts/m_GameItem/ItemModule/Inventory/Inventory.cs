@@ -98,6 +98,8 @@ public class Inventory : MonoBehaviour
         }
 
         Data.Event_RefreshUI += RefreshUI;
+
+        RefreshUI();
     }
 
     //同步UI的Data
@@ -116,6 +118,13 @@ public class Inventory : MonoBehaviour
     {
         print("同步UI数据"+ index);
         itemSlotUIs[index].RefreshUI();
+    }
+    public void RefreshUI()
+    {
+        for (int i = 0; i < itemSlotUIs.Count; i++)
+        {
+            itemSlotUIs[i].RefreshUI();
+        }
     }
 
     public virtual void OnItemClick(int index)

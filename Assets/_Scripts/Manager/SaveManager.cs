@@ -15,7 +15,7 @@ public class SaveManager : MonoBehaviour
 
     [Header("存档信息")]
     public List<string> saves = new List<string>();
-    public string PathToSaveFolder = "Assets/Saves/LoaclSave/";
+    private string pathToSaveFolder = "Assets/Saves/LoaclSave/";
 
     [Header("按钮与父物体")]
     public GameObject Save_Player_SelectButton_Prefab; // 存档/玩家按钮预制体
@@ -35,6 +35,8 @@ public class SaveManager : MonoBehaviour
     [Header("玩家名显示")]
     public TMP_InputField SelectedPlayer_Name_Text; // 当前选中玩家显示框
 
+    public string PathToSaveFolder { get => saveAndLoad.PlayerSavePath;}
+
 
     #endregion
     public void Awake()
@@ -44,6 +46,8 @@ public class SaveManager : MonoBehaviour
     #region 初始化
     private void Start()
     {
+        saveAndLoad = SaveAndLoad.Instance;
+
         LoadSaveFileNames();
         GenerateSaveButtons();
 

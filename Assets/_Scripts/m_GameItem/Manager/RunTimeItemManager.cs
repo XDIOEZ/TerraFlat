@@ -45,9 +45,16 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
         Debug.Log("物品加载完毕");
     }
 
+    private void OnDestroy()
+    {
+       
+    }
+
     public void Start()
     {
         SaveAndLoad.Instance.OnSceneSwitch += CleanupNullItems;
+        SaveAndLoad.Instance.ExitGame_Event +=  RunTimeItems.Clear;
+        SaveAndLoad.Instance.ExitGame_Event += RuntimeItemsGroup.Clear;
     }
 
     // 实例化（通过名称）
@@ -72,14 +79,35 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
         Item item = itemObj.GetComponent<Item>();
         item.Item_Data = itemData;
 
+        // 如果 Guid 在 -1000 到 1000 之间，重新生成唯一 Guid
         if (item.Item_Data.Guid > -1000 && item.Item_Data.Guid < 1000)
             item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+
+        // 检测是否存在重复 GUID
+        if (RunTimeItems.ContainsKey(item.Item_Data.Guid))
+        {
+            Debug.LogError($"【物品实例化错误】检测到重复的GUID：{item.Item_Data.Guid}\n" +
+                $"当前物品：{item.Item_Data.IDName}\n" +
+                $"已存在物品：{RunTimeItems[item.Item_Data.Guid].name}");
+
+
+            return null;
+           /* // 你可以选择直接 return null，或者强制生成新 GUID 继续：
+            item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+
+            // 再检测一次，避免极小概率重复（可选）
+            while (RunTimeItems.ContainsKey(item.Item_Data.Guid))
+            {
+                item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+            }*/
+        }
 
         RunTimeItems.Add(item.Item_Data.Guid, item);
         AddToGroup(item); // 新增分组逻辑
 
         return item;
     }
+
 
     // ✅ 添加到分组
     private void AddToGroup(Item item)

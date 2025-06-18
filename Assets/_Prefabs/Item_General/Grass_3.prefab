@@ -122,7 +122,7 @@ MonoBehaviour:
     Stack:
       Amount: 1
       Volume: 1
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     _transform:
       Position: {x: 0, y: 0, z: 0}
       Rotation: {x: 0, y: 0, z: 0, w: 0}

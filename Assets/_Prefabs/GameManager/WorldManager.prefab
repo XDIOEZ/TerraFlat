@@ -33,7 +33,7 @@ Transform:
   m_LocalScale: {x: 0.4, y: 0.4, z: 0.4}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3574570952645394352}
+  - {fileID: 379186359584385661}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4112089010760811237
@@ -60,8 +60,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c07f428fce108d34b9a11e73ec80d1f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SaveName: "\u6A21\u677F"
-  SavePath: Assets/Saves/LoaclSave
+  TemplateSavePath: Assets/Saves/GameSaveData/
+  PlayerSavePath: Assets/Saves/LoaclSaveData/
   SaveData:
     saveName: defaultSaveName
     ActiveSceneName: "\u6D4B\u8BD5\u573A\u666F-\u5C0F\u578B\u68EE\u6797"
@@ -69,12 +69,12 @@ MonoBehaviour:
   OnSceneSwitch:
     _PersistentCalls: []
   GameObject_False: []
-  playerName: 
+  CurrentContrrolPlayerName: "\u9ED8\u8BA4"
   defaultSettings:
     Default_ADDTable: Template_SaveData
     Default_PlayerSave: "\u73A9\u5BB6"
     Default_PlayerName: "\u9ED8\u8BA4"
-    Default_Map: "\u5E73\u539F"
+    Default_Map: "\u6D4B\u8BD5\u573A\u666F-\u5C0F\u578B\u68EE\u6797"
 --- !u!114 &604099482529500497
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -106,7 +106,7 @@ MonoBehaviour:
   path: "Assets/_Data/\u5E73\u5766\u4E16\u754C- \u751F\u7269\u53CA\u7269\u54C1\u6570\u636E.xlsx"
   OpenSheetName: Sheet1
   SheetNames: []
---- !u!1 &7928527311482816772
+--- !u!1 &8364474139933380118
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -114,119 +114,74 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 3574570952645394352}
-  - component: {fileID: 6935687870675846394}
-  - component: {fileID: 8504383701529834660}
+  - component: {fileID: 379186359584385661}
+  - component: {fileID: 8849573398603692652}
+  - component: {fileID: 7585306296578282548}
   m_Layer: 0
-  m_Name: SunAndMoon
+  m_Name: EventSystem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &3574570952645394352
+--- !u!4 &379186359584385661
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7928527311482816772}
+  m_GameObject: {fileID: 8364474139933380118}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 3435.991, y: 1224.5685, z: 27.055893}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8569586147199929775}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6935687870675846394
+--- !u!114 &8849573398603692652
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7928527311482816772}
+  m_GameObject: {fileID: 8364474139933380118}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad95f218d391ce64cbfb9b0645694630, type: 3}
+  m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentDayTime: 0
-  timeScale: 1
-  globalLight: {fileID: 8504383701529834660}
-  maxLightIntensity: 1
-  minLightIntensity: 0
-  year: 2025
-  day: 1
-  seasonConfigs:
-  - {fileID: 11400000, guid: 0497946208a5e4a46bf80a5e1b41225a, type: 2}
-  - {fileID: 11400000, guid: ab1df0c15f178c342b0974b4ddd29284, type: 2}
-  - {fileID: 11400000, guid: b66ea39bb8765df4797f40c593b2f2c4, type: 2}
-  - {fileID: 11400000, guid: 94d42b4b49da0ef47b136091a2a585ec, type: 2}
-  currentSeason: 1
-  seasonDayCounter: 0
-  currentDayDuration: 0
-  currentSeasonConfig: {fileID: 0}
-  currentSeasonDayIndex: 0
-  currentSeasonTotalDays: 0
-  currentSeasonRemainingDays: 0
-  sunriseStartTime: 0
-  sunriseEndTime: 0
-  sunsetStartTime: 0
-  sunsetEndTime: 0
-  specialDayConfigs:
-  - {fileID: 11400000, guid: 8651118dfb38365469218d73dbdeb6c5, type: 2}
-  isSpecialDayActive: 0
-  currentSpecialDayConfig: {fileID: 0}
-  previousSeasonConfig: {fileID: 0}
-  previousSeasonDayIndex: 0
---- !u!114 &8504383701529834660
+  m_FirstSelected: {fileID: 0}
+  m_sendNavigationEvents: 1
+  m_DragThreshold: 10
+--- !u!114 &7585306296578282548
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7928527311482816772}
+  m_GameObject: {fileID: 8364474139933380118}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 073797afb82c5a1438f328866b10b3f0, type: 3}
+  m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ComponentVersion: 1
-  m_LightType: 4
-  m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.5
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1
-  m_LightVolumeIntensity: 1
-  m_LightVolumeIntensityEnabled: 0
-  m_ApplyToSortingLayers: 69fb64b5132694d400000000676586be63a00c27d9349123
-  m_LightCookieSprite: {fileID: 0}
-  m_DeprecatedPointLightCookieSprite: {fileID: 0}
-  m_LightOrder: 0
-  m_AlphaBlendOnOverlap: 0
-  m_OverlapOperation: 0
-  m_NormalMapDistance: 3
-  m_NormalMapQuality: 2
-  m_UseNormalMap: 0
-  m_ShadowIntensityEnabled: 0
-  m_ShadowIntensity: 0.75
-  m_ShadowVolumeIntensityEnabled: 0
-  m_ShadowVolumeIntensity: 0.75
-  m_LocalBounds:
-    m_Center: {x: 0, y: -0.00000011920929, z: 0}
-    m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
-  m_PointLightInnerAngle: 360
-  m_PointLightOuterAngle: 360
-  m_PointLightInnerRadius: 0
-  m_PointLightOuterRadius: 1
-  m_ShapeLightParametricSides: 5
-  m_ShapeLightParametricAngleOffset: 0
-  m_ShapeLightParametricRadius: 1
-  m_ShapeLightFalloffSize: 0.5
-  m_ShapeLightFalloffOffset: {x: 0, y: 0}
-  m_ShapePath:
-  - {x: -0.5, y: -0.5, z: 0}
-  - {x: 0.5, y: -0.5, z: 0}
-  - {x: 0.5, y: 0.5, z: 0}
-  - {x: -0.5, y: 0.5, z: 0}
+  m_SendPointerHoverToParent: 1
+  m_MoveRepeatDelay: 0.5
+  m_MoveRepeatRate: 0.1
+  m_XRTrackingOrigin: {fileID: 0}
+  m_ActionsAsset: {fileID: -944628639613478452, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_PointAction: {fileID: -1654692200621890270, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_MoveAction: {fileID: -8784545083839296357, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_SubmitAction: {fileID: 392368643174621059, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_CancelAction: {fileID: 7727032971491509709, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_LeftClickAction: {fileID: 3001919216989983466, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_MiddleClickAction: {fileID: -2185481485913320682, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_RightClickAction: {fileID: -4090225696740746782, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_ScrollWheelAction: {fileID: 6240969308177333660, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_TrackedDevicePositionAction: {fileID: 6564999863303420839, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_TrackedDeviceOrientationAction: {fileID: 7970375526676320489, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_DeselectOnBackgroundClick: 1
+  m_PointerBehavior: 0
+  m_CursorLockBehavior: 0
+  m_ScrollDeltaPerTick: 6
