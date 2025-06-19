@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿# if UNITY_EDITOR
+using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
@@ -272,3 +273,4 @@ public class AssetBatchRenamerEditor : EditorWindow
         Debug.Log("❌ 重命名操作已取消！");
     }
 }
+#endif

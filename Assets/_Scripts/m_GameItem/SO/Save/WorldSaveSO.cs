@@ -2,10 +2,12 @@ using Force.DeepCloner;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
-using System.Collections.Generic;
 using System.IO;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [CreateAssetMenu(fileName = "New WorldSaveSO", menuName = "ScriptableObjects/世界存档")]
 public class WorldSaveSO : ScriptableObject
@@ -24,6 +26,8 @@ public class WorldSaveSO : ScriptableObject
 
     [Tooltip("场景所在路径（相对于 Assets 文件夹）")]
     public string sceneRelativePath = "_Scenes/Scene";
+
+#if UNITY_EDITOR
     [ContextMenu("自动加载")]
     public void AutoLoad()
     {
@@ -89,11 +93,14 @@ public class WorldSaveSO : ScriptableObject
             }
         }
     }
+#endif
 
     // 缓存字段
     private GameSaveData _cachedMapSave;
-
+#if UNITY_EDITOR
     [MenuItem("Tools/模板地图数据_同步")]
+
+
     public static void SyncAllMap()
     {
         // 记录当前激活场景路径
@@ -133,6 +140,8 @@ public class WorldSaveSO : ScriptableObject
             Debug.LogWarning("无法切回原场景，路径无效或文件不存在: " + activeScenePath);
         }
     }
+
+#endif
 
     #region 对外接口
 

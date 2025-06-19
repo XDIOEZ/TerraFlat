@@ -1,6 +1,5 @@
-using System.Collections;
+
 using UltEvents;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class AI_AttackTrigger : MonoBehaviour, ITriggerAttack

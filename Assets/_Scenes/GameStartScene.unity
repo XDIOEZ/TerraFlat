@@ -2683,7 +2683,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   saveAndLoad: {fileID: 1578860027}
   saves: []
-  PathToSaveFolder: Assets/Saves/LoaclSaveData/
   Save_Player_SelectButton_Prefab: {fileID: 7670434242629240641, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
   SaveSelectButton_Parent_Content: {fileID: 962964545}
   Player_SelectButton_Parent_Content: {fileID: 195246781}

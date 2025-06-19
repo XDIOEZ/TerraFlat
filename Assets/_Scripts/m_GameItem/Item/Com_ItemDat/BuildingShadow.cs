@@ -2,8 +2,6 @@
 using UnityEngine;
 using DG.Tweening;
 using Force.DeepCloner;
-using NUnit.Framework.Interfaces;
-using Meryel.UnityCodeAssist.Synchronizer.Model;
 using GameObject = UnityEngine.GameObject;
 
 public class BuildingShadow : MonoBehaviour

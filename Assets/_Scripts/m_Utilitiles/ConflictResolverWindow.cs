@@ -1,3 +1,4 @@
+# if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.IO;
@@ -278,3 +279,4 @@ public class ConflictResolverFinal : EditorWindow
         Debug.Log("批量冲突处理完成！");
     }
 }
+# endif

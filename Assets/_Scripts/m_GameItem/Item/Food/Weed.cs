@@ -1,10 +1,7 @@
 using DG.Tweening;
-using log4net.Util;
-using MemoryPack;
 using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
-using Transform = UnityEngine.Transform;
 public class Weed : Item, IFood,IPlant
 {
     [SerializeField]

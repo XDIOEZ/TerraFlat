@@ -1,5 +1,4 @@
 ﻿using MemoryPack;
-using Meryel.UnityCodeAssist.YamlDotNet.Core;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;
