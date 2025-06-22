@@ -7,11 +7,24 @@ using UnityEngine;
 public class BuffManager : MonoBehaviour
 {
     public Item item;
+    public IBuff Buffer;
     [ShowInInspector]
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
 
     public void Start()
     {
+        Buffer = (IBuff)item;
+        if (Buffer == null)
+        {
+            Debug.LogError("Item is not a Buff");
+            return;
+        }
+        Init();
+    }
+
+    void Init()
+    {
+        BuffRunTimeData_Dic = Buffer.BuffRunTimeData_Dic;
     }
 
     public void AddBuffByData(BuffRunTime newBuff)

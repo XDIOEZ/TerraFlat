@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 354889263804409965}
   - component: {fileID: 1096267118403055913}
   - component: {fileID: -5821527496863057093}
+  - component: {fileID: 4895122844487948622}
+  - component: {fileID: 6730923179292221454}
   m_Layer: 9
   m_Name: Apple_Red
   m_TagString: Untagged
@@ -167,12 +169,12 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   data:
     IDName: Apple_Red
     GameName: "\u82F9\u679C"
-    ID: 30002
     Description: "\u82F9\u679C \u4F1A\u957F\u5927\u6210\u82F9\u679C\u6811"
-    PrefabPath: 
     Durability: 100
     ItemTags:
       Item_TypeTag:
@@ -203,10 +205,12 @@ MonoBehaviour:
       maxDefenseStrength: 0
       maxDefenseToughness: 0
       maxDefenseMagic: 50
-    EatingSpeed: 1
-    speed_Max: 3
-    speed: 3
-    runSpeed: 6
+    Speed:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
     stamina: 100
     stamina_Max: 100
     staminaRecoverySpeed: 1
@@ -216,20 +220,60 @@ MonoBehaviour:
       Water: 100
       MaxWater: 20
     progress: 0
-    progress_Max: 100
-    productionSpeed: 1
-    sightRange: 10
-    ItemDataValue:
-      ItemValue_List: []
-      IsWork: 0
+    progress_Max:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints: []
     loot:
       lootList:
       - lootsName: Loots_Death
         lootList: []
       - lootsName: Loots_Production
         lootList: []
+    sightRange: 10
     TeamID: 
   EatingProgress: 0
+--- !u!114 &4895122844487948622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3926578369279844245}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aea3b0ebad94a5243b635198d0eb213c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lastGridPos: {x: 0, y: 0}
+  item: {fileID: 0}
+  Cache_map: {fileID: 0}
+  raycastDistance: 5
+  tileLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+--- !u!114 &6730923179292221454
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3926578369279844245}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d77fcc8d54d6e5e4da9ec23f70d19f9f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
 --- !u!1001 &7828416414188325075
 PrefabInstance:
   m_ObjectHideFlags: 0

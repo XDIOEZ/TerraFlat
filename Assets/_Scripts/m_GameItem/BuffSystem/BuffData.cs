@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "新的Buff配置", menuName = "ScriptableObjects/新建Buff配置")]
+[CreateAssetMenu(fileName = "新的Buff配置", menuName = "Buff/新建BuffBata配置")]
 public class Buff_Data : ScriptableObject
 {
     //Buff的ID

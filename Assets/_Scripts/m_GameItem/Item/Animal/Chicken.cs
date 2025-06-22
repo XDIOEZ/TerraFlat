@@ -15,7 +15,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     #region ¼¢¶ö
 
     public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }
-    public float EatingSpeed { get => Data.EatingSpeed; set => throw new System.NotImplementedException(); }
+    public float EatingSpeed { get;set; } = 1;
     public UltEvent OnNutrientChanged { get; set; }
     public UltEvent OnDeath { get; set; }
     #endregion

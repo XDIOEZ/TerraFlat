@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-    public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina,ISave_Load,IItemValues,ITeam
+    public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina,ISave_Load,ITeam
 {
     public Data_Creature Data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }
@@ -11,7 +11,7 @@ using UnityEngine;
     #region 饥饿
 
     public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }
-    public float EatingSpeed { get => Data.EatingSpeed; set => throw new System.NotImplementedException(); }
+    public float EatingSpeed { get; set; }
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
 
     #endregion
@@ -24,7 +24,6 @@ using UnityEngine;
 
     public float sightRange { get => Data.sightRange; set => Data.sightRange = value; }
     #endregion
-
 
     #region 生命
     public Hp Hp
@@ -85,11 +84,6 @@ using UnityEngine;
 
     #endregion
 
-    #region 动态数据
-
-    public ItemValues ItemValues { get => Data.ItemDataValue; set => Data.ItemDataValue = value; }
-
-    #endregion
 
     #region 团队
     public string TeamID { get => Data.TeamID; set => Data.TeamID = value; }
@@ -110,22 +104,12 @@ using UnityEngine;
 
     public void FixedUpdate()
     {
-        //每秒恢复1点精力
-        Hungry_Update();
-        //更新数值管理器
-        ItemValues.FixedUpdate();
     }
 
     public void TakeABite(IFood food)
     {
         Nutrition.Food += EatingSpeed;
         food.BeEat(EatingSpeed);
-    }
-
-    public void Hungry_Update()
-    {
-        //每秒减少1点食物能量*生产速度
-        Data.NutritionData.Food -= Time.fixedDeltaTime * Data.productionSpeed;
     }
 
     public void Death()
@@ -171,18 +155,13 @@ using UnityEngine;
          
         GetComponentInChildren<ITriggerAttack>().GetItemWeapon(_Weapon);
         //启动数值管理器
-        ItemValues.Start_Work();
+        
 
-        Hp.OnValueChanged += (float f) =>
-        {
-            ItemValues.GetValue("血量").CurrentValue = f;
-        };
-
-        ItemValues.GetValue("血量").OnCurrentValueChanged
-            += (float f) => 
-            {
-             Hp.Value = f;
-            };
+        //ItemValues.GetValue("血量").OnCurrentValueChanged
+        //    += (float f) => 
+        //    {
+        //     Hp.Value = f;
+        //    };
 
         if (TeamID == "")
         {

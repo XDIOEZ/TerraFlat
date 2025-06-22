@@ -16,11 +16,6 @@ public partial class Data_Creature : ItemData
     public Defense defense = new(5, 5);
     #endregion
 
-    #region 攻击
-    [Tooltip("进食速度")]
-    public float EatingSpeed = 1;
-    #endregion
-
     #region 速度
     public GameValue_float Speed = new();
     #endregion
@@ -44,9 +39,13 @@ public partial class Data_Creature : ItemData
     [Tooltip("生产进度")]
     public float progress = 0;
     [Tooltip("生产进度上限")]
-    public float progress_Max = 100;
+    public GameValue_float progress_Max = new();
     [Tooltip("生产速度")]
-    public float productionSpeed = 1;
+    public GameValue_float productionSpeed = new();
+    [Tooltip("特殊生产点")]
+    public List<float> specialProductionPoints = new List<float>();
+    [Tooltip("生产物品")]
+    public List_Loot loot;
 
     #endregion
 
@@ -62,19 +61,13 @@ public partial class Data_Creature : ItemData
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
     #endregion
 
-    #region 数据
-    [Tooltip("物体数据")]
-    public ItemValues ItemDataValue;
-
-    [Tooltip("掉落物品")]
-    public List_Loot loot;
-    #endregion
-
     #region 团队
     public string TeamID = "";
 
     public Dictionary<string, RelationType> Relations = new Dictionary<string, RelationType>();
     #endregion
+
+    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
 
     public override int SyncData()
     {

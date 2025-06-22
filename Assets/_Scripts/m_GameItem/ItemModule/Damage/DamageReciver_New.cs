@@ -94,7 +94,16 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
 
         if (health.Hp.Value< 0) return;
 
+
+
+
         float i = health.GetDamage(damage);
+
+
+
+
+
+
 
         if (!isFlashing)
         {

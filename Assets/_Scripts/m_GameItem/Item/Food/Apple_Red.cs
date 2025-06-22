@@ -1,9 +1,10 @@
 ﻿using UnityEngine;
 using DG.Tweening;
 using UltEvents;
+using System.Collections.Generic;
 
 // 🍎 红苹果，作为食物的 Item 实现
-public class Apple_Red : Item, IFood
+public class Apple_Red : Item, IFood,IBuff
 {
     // 数据引用
     public Data_Creature data;
@@ -26,7 +27,9 @@ public class Apple_Red : Item, IFood
     }
 
     public IFood SelfFood => this;
- 
+
+    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic { get => data.BuffRunTimeData_Dic; set => data.BuffRunTimeData_Dic = value; }
+
 
     /// <summary>
     /// 调用吃的行为
@@ -76,6 +79,9 @@ public class Apple_Red : Item, IFood
         return null;
     }
 
+    //实现苹果变为苹果树
+
+    
     public void OnDestroy()
     {
         DestroyItem_Event.Invoke();

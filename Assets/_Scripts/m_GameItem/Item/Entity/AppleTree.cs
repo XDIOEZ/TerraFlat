@@ -6,60 +6,45 @@ using System.Runtime.CompilerServices;
 using UltEvents;
 using UnityEngine;
 
-public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
+public class AppleTree : Item,IHealth,ISave_Load,ILoot
 {
     #region 基础数据
 
+    // 基础数据字段
     public Data_Creature _data;
-    public override ItemData Item_Data
-    {
-        get => _data;
-        set => _data = (Data_Creature)value;
-    }
+
+    // 物品数据访问
+    public override ItemData Item_Data { get => _data; set => _data = (Data_Creature)value; }
+
     #endregion
 
     #region 健康数据
 
+    // 生命值属性
     public Hp Hp { get => _data.hp; set => _data.hp = value; }
 
+    // 防御属性
     public Defense Defense { get => _data.defense; set => _data.defense = value; }
 
+    // 生命值变化事件
     public UltEvent OnHpChanged { get; set; }
+
+    // 防御变化事件
     public UltEvent OnDefenseChanged { get; set; }
 
+    // 存档事件
     public UltEvent onSave { get; set; }
 
+    // 读档事件
     public UltEvent onLoad { get; set; }
 
+    // 掉落列表属性
+    public List_Loot Loots { get => _data.loot; set => _data.loot = value; }
 
-    public List_Loot Loots
-    {
-        get
-        {
-            return _data.loot;
-        }
-        set
-        {
-            _data.loot = value;
-        }
-    }
-    
     #endregion
-    #region 物品数值数据
-    public ItemValues ItemValues
-    {
-        get
-        {
-            return _data.ItemDataValue;
-        }
-        set
-        {
-            _data.ItemDataValue = value;
-        }
-    }
 
     public UltEvent OnDeath { get; set; }
-    #endregion
+
 
     public void Start()
     {
@@ -69,7 +54,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
 
     public void FixedUpdate()
     {
-        ItemValues.FixedUpdate();
+       
     }
 
 
@@ -119,16 +104,6 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         throw new System.NotImplementedException();
     }
 
-    public void Production(float value)
-    {
-        if(value > 100)
-        {
-            ItemMaker maker = new ItemMaker();
-            maker.DropItemByLoot(Loots.GetLoot("Loots_Production"), 2f,transform);
-           ItemValues.GetValue("生产进度").CurrentValue = -1;
-        }
-    }
-
     public void Death()
     {
         Debug.Log("树被摧毁");
@@ -137,37 +112,16 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot,IItemValues
         Destroy(gameObject);
     }
 
-    void HpChanged(float value)
-    {
-        if(value <= 0)
-        {
-            Death();
-        }
-    }
-
     #region ISave_Load接口实现
     [Button("保存")]
     public void Save()
     {
         onSave?.Invoke();
-        _data.ItemDataValue.ClearAllEvents();
     }
     [Button("加载")]
     public void Load()
     {
         onLoad?.Invoke();
-
-        ItemValues.GetValue("生产进度").OnCurrentValueChanged += Production;
-       
-        Init();
-        ItemValues.Start_Work();
-    }
-
-    public void Init()
-    {
-        ItemValues.GetValue("生产进度").CurrentValue = Random.Range(0, 100);
-        ItemValues.Add_ChangeSpeed("生产进度", "呼吸作用", 1, -1);
-       // print("初始化");
     }
     #endregion
 }
