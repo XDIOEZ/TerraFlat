@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2820106487250638790}
   - component: {fileID: 3305477110069938311}
   - component: {fileID: 2397059545901859965}
-  - component: {fileID: 4510878156682343302}
+  - component: {fileID: 5573615786486319191}
   m_Layer: 0
   m_Name: "\u623F\u5C4B"
   m_TagString: Untagged
@@ -118,6 +118,8 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   data:
     IDName: "\u623F\u5C4B"
     GameName: "\u623F\u5C4B"
@@ -155,12 +157,8 @@ MonoBehaviour:
     isBuilding: 0
   colliders:
   - {fileID: 8923185880049686946}
-  _InstallAndUninstall:
-    MaxDistance: 8
-    minVisibleDistance: 0.3
-    maxVisibleDistance: 3.5
   buildingSO: {fileID: 11400000, guid: d34cc3c527b046a4eb78d52022429cb0, type: 2}
---- !u!114 &4510878156682343302
+--- !u!114 &5573615786486319191
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -169,12 +167,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1699156683013640394}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6385779351add6f46a5682f5092cf92c, type: 3}
+  m_Script: {fileID: 11500000, guid: 96c0b33e34764a64daeeced41471663e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  OnPickUp:
-    _PersistentCalls: []
+  MaxDistance: 2
+  minVisibleDistance: 0.3
+  maxVisibleDistance: 3.5
+  buildingSO: {fileID: 0}
 --- !u!1 &1889306391043813095
 GameObject:
   m_ObjectHideFlags: 0

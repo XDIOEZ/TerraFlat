@@ -1,30 +1,29 @@
 using UnityEngine;
 using UltEvents;
 using System.Collections.Generic;
-using UnityEngine.SceneManagement;
 
-public class House : Item, ISave_Load, IHealth, IBuilding
+public class House : Item, ISave_Load, IHealth, IBuilding,IRoom
 {
-    #region 字段与序列化字段 
+    #region 字段与序列化字段
     [Header("房屋数据")]
-    [SerializeField] private Data_Building data = new Data_Building();
+    [SerializeField]
+    private Data_Building data = new Data_Building();
 
     [Header("组件")]
     public List<BoxCollider2D> colliders;
-    public Building_InstallAndUninstall _InstallAndUninstall = new();
 
     [Header("建筑场景模板")]
-    public WorldSaveSO buildingSO;
+    [SerializeField]
+    private WorldSaveSO buildingSO;
+    public WorldSaveSO BuildingSO { get => buildingSO; set => buildingSO = value; }
     #endregion
 
-    #region 接口实现 
-    // ISave_Load 接口实现 
+    #region 接口实现
+    // ISave_Load
     public UltEvent onSave { get; set; } = new UltEvent();
     public UltEvent onLoad { get; set; } = new UltEvent();
 
-    public UltEvent OnDeath { get; set; }
-
-    // IHealth 接口实现 
+    // IHealth
     public Hp Hp
     {
         get => data.hp;
@@ -47,8 +46,9 @@ public class House : Item, ISave_Load, IHealth, IBuilding
 
     public UltEvent OnDefenseChanged { get; set; } = new UltEvent();
     public UltEvent OnHpChanged { get; set; } = new UltEvent();
+    public UltEvent OnDeath { get; set; }
 
-    // IBuilding 接口实现 
+    // IBuilding
     public bool IsInstalled
     {
         get => data.isBuilding;
@@ -57,114 +57,56 @@ public class House : Item, ISave_Load, IHealth, IBuilding
 
     public bool BePlayerTaken { get; set; } = false;
 
-    // Item 基类实现 
+    // Item
     public override ItemData Item_Data
     {
         get => data;
         set => data = value as Data_Building ?? new Data_Building();
     }
-    #endregion
 
-    #region Unity 生命周期 
-    private void Start()
+    public string RoomName
     {
-        var sceneChanger = GetComponentInChildren<SceneChange>();
-
-        InitHouseInside();
-
-       // sceneChanger.OnTp+=InitHouseInside;
-        _InstallAndUninstall.Init(this.transform);
-
-        if (BelongItem != null)
+        get
         {
-            BePlayerTaken = true;
+            return data.sceneName;
+        }
+        set
+        {
+            data.sceneName = value;
         }
     }
 
-    private void Update()
-    {
-        if (!IsInstalled)
-            _InstallAndUninstall.Update();
-    }
 
-    private void OnDestroy()
+    // 新增：获取建筑数据的方法
+    public Data_Building GetBuildingData() => data;
+    #endregion
+
+    #region Unity生命周期
+    private void Start()
     {
-        _InstallAndUninstall.CleanupGhost();
+        BePlayerTaken = BelongItem != null;
     }
     #endregion
 
-    #region 核心方法 
-    public override void Act()
-    {
-        Install();
-    }
-
-    public void Death()
-    {
-        UnInstall();
-    }
-
-    /// <summary>
-    /// 安装建筑（如：激活场景）
-    /// </summary>
-    public void Install()
-    {
-        _InstallAndUninstall.Install();
-    }
-
-    /// <summary>
-    /// 卸载建筑（如：卸载场景）
-    /// </summary>
-    public void UnInstall()
-    {
-        _InstallAndUninstall.UnInstall();
-    }
-
-    /// <summary>
-    /// 保存建筑数据 
-    /// </summary>
-    public void Save()
-    {
-        onSave?.Invoke(); // 通知外部：保存已完成 
-    }
-
-    /// <summary>
-    /// 加载建筑数据 
-    /// </summary>
+    #region 核心功能
+    public void Save() => onSave?.Invoke();
     public void Load()
     {
         OnHpChanged?.Invoke();
         OnDefenseChanged?.Invoke();
-        onLoad?.Invoke(); // 通知外部：加载已完成 
+        onLoad?.Invoke();
+    }
+
+    public void Death()
+    {
+        OnDeath.Invoke();
+        Destroy(gameObject);
     }
     #endregion
+}
 
-    #region 房屋特有方法 
-    private void InitHouseInside()
-    {
-        // 构造新的嵌套场景路径：当前路径 => 建筑名 + 随机值
-        if (string.IsNullOrEmpty(data.sceneName))
-        {
-            // 生成唯一随机后缀
-            int randomId = Random.Range(0, 1000000); // 范围你可自定义
-            string randomSuffix = $"-{randomId}";
-            data.sceneName = buildingSO.buildingName + randomSuffix;
-            // 初始化房间内部设备
-            if (!SaveAndLoad.Instance.SaveData.MapSaves_Dict.ContainsKey(data.sceneName))
-            {
-                var buildingData = buildingSO.SaveData.MapSaves_Dict[buildingSO.buildingName];
-                SaveAndLoad.Instance.SaveData.MapSaves_Dict.Add(data.sceneName, buildingData);
-            }
-        }
-
-        var changer = GetComponentInChildren<SceneChange>();
-        changer.TPTOSceneName = data.sceneName;
-        changer.TeleportPosition = buildingSO.buildingEntrance;
-
-        SaveAndLoad.Instance.SaveData.Scenen_Building_Pos[data.sceneName] = (Vector2)changer.transform.position;
-        SaveAndLoad.Instance.SaveData.Scenen_Building_Name[data.sceneName] = SceneManager.GetActiveScene().name;
-    }
-
-
-    #endregion 
+public interface IRoom
+{
+    WorldSaveSO BuildingSO { get; }
+    string RoomName { get; set; }
 }

@@ -70,7 +70,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     public bool IsInstalled { get =>Data.IsInstalled; set => Data.IsInstalled = value; }
     public bool BePlayerTaken { get => bePlayerTake; set => bePlayerTake = value; }
 
-    public Building_InstallAndUninstall _InstallAndUninstall = new ();
+    public BaseBuilding _InstallAndUninstall = new ();
     private bool bePlayerTake = false;
     #endregion
 
@@ -84,7 +84,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
         CloseUI();
 
-        _InstallAndUninstall.Init(transform);
+        //_InstallAndUninstall.Init(transform);
 
         if(BelongItem != null)
         {
@@ -94,7 +94,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     }
     public void Update()
     {
-        _InstallAndUninstall.Update();
+       // _InstallAndUninstall.Update();
     }
 
     #region °²×°ºÍ²ð³ý

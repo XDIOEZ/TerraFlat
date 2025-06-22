@@ -6,7 +6,4 @@ public  interface IBuilding
 {
     public bool IsInstalled { get; set; }
     public bool BePlayerTaken { get; set; }
-    void UnInstall();
-
-    void Install();
 }

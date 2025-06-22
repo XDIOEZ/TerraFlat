@@ -1,15 +1,14 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using Sirenix.OdinInspector;
+using System.Collections.Generic;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.Tilemaps;
-using OfficeOpenXml;
-using Sirenix.OdinInspector;
+using UnityEngine;
+using System.Threading;
 
 public class GameRes : SingletonAutoMono<GameRes>
 {
     #region 字段
-    // 加载进度
     public int LoadedCount = 0; // 当前已加载的资源数量
     [Header("Prefab标签列表")]
     public List<string> ADBLabels_Prefab = new List<string>();
@@ -17,18 +16,18 @@ public class GameRes : SingletonAutoMono<GameRes>
     public List<string> ADBLabels_CraftingRecipe = new List<string>();
     [Header("TileBase标签列表")]
     public List<string> ADBLabels_TileBase = new List<string>();
-    [Header("Item")]
 
-    // 合并后的预制体字典
     [ShowInInspector]
-    public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>(); // 只保存预制体
-    // 改为存储配方对象字典
+    public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>();
     [ShowInInspector]
     public Dictionary<string, Recipe> recipeDict = new Dictionary<string, Recipe>();
-    // 改为存储TileBase对象字典
     [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
 
+    public bool isLoadFinish = false;
+    private bool prefabLoaded = false;
+    private bool recipeLoaded = false;
+    private bool tileBaseLoaded = false;
 
     #endregion
 
@@ -47,18 +46,25 @@ public class GameRes : SingletonAutoMono<GameRes>
             ADBLabels_TileBase.Add("TileBase");
             ADBLabels_Prefab.Add("Prefab");
         }
-      
-
 
         LoadPrefabByLabels(ADBLabels_Prefab);
         LoadRecipeByLabels(ADBLabels_CraftingRecipe);
         LoadTileBaseByLabels(ADBLabels_TileBase);
     }
-    void Start()
+
+
+    new void Awake()
     {
+        base.Awake();
         LoadResources();
+
+        // 资源加载完成后
+        Debug.Log("所有资源加载完成！");
     }
+
     #endregion
+    #region 外部接口
+
 
     [Button]
     public GameObject InstantiatePrefab(string prefab, Vector3 position = default)
@@ -67,10 +73,10 @@ public class GameRes : SingletonAutoMono<GameRes>
         {
             GameObject obj = Instantiate(AllPrefabs[prefab]);
 
-            if(position == Vector3.zero)
-            obj.transform.position = new Vector3(0, 0, 0);
+            if (position == Vector3.zero)
+                obj.transform.position = new Vector3(0, 0, 0);
             else
-            obj.transform.position = position;
+                obj.transform.position = position;
 
             return obj;
         }
@@ -81,6 +87,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
     }
 
+    // 获取指定名称的预制体
     public GameObject GetPrefab(string prefabName)
     {
         if (AllPrefabs.ContainsKey(prefabName))
@@ -94,16 +101,32 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
     }
 
+
+    // 获取指定名称的TileBase
     public TileBase GetTileBase(string tileBaseName)
     {
-        return tileBaseDict.ContainsKey(tileBaseName)? tileBaseDict[tileBaseName] : null;
+        if (tileBaseDict.ContainsKey(tileBaseName))
+        {
+            return tileBaseDict[tileBaseName];
+        }
+        else
+        {
+            Debug.LogWarning($"未找到名为 \"{tileBaseName}\" 的TileBase！");
+            return null;
+        }
     }
 
-    #region 通过标签加载Prefab的方法
-    /// <summary>
-    /// 通过标签列表加载预制件
-    /// </summary>
-    public void LoadPrefabByLabels(List<string> labels)
+    #endregion
+
+
+
+    #region 通过标签加载资源的通用方法
+
+
+
+
+    // 通用资源加载方法
+    private void LoadAssetsByLabels<T>(List<string> labels, System.Action<AsyncOperationHandle<IList<T>>> onLoadCompleted)
     {
         if (labels == null || labels.Count == 0)
         {
@@ -111,162 +134,105 @@ public class GameRes : SingletonAutoMono<GameRes>
             return;
         }
 
-        // 使用标签列表加载资源
-        Addressables.LoadAssetsAsync<GameObject>(labels, null, Addressables.MergeMode.Union).Completed += OnLoadCompleted;
-
+        Addressables.LoadAssetsAsync<T>(labels, null, Addressables.MergeMode.Union).Completed += onLoadCompleted;
     }
 
-    /// <summary>
-    /// 资源加载完成的回调
-    /// </summary>
-    /// <param name="handle">异步操作句柄</param>
-    void OnLoadCompleted(AsyncOperationHandle<IList<GameObject>> handle)
+    // 通用加载完成回调
+    private void OnLoadCompleted<T>(AsyncOperationHandle<IList<T>> handle, Dictionary<string, T> assetDict, ref bool loadFlag, string assetType)
     {
         if (handle.Status == AsyncOperationStatus.Succeeded)
         {
-            foreach (var prefab in handle.Result)
+            foreach (var asset in handle.Result)
             {
-                if (prefab == null)
+                if (asset == null)
                 {
-                    Debug.LogError("加载的预制件为空。");
+                    Debug.LogError($"{assetType} 为空。");
                     continue;
                 }
 
-                if (AllPrefabs.ContainsKey(prefab.name))
+                string assetName = asset.ToString();
+
+                // Specifically handle GameObject type
+                if (asset is GameObject prefab)
                 {
-                    Debug.LogWarning($"预制件已存在: {prefab.name}");
-                }
-                else
-                {
+                    assetName = prefab.name;
+
+                    // Handle adding prefab to the dictionary
                     Item item = prefab.GetComponent<Item>();
-                    //如果存在Item组件 
                     if (item != null)
                     {
-                        AllPrefabs[item.Item_Data.IDName] = prefab;
+                        if (assetDict is Dictionary<string, GameObject> gameObjectDict)
+                        {
+                            gameObjectDict[item.Item_Data.IDName] = prefab;
+                        }
                     }
 
-                    AllPrefabs[prefab.name] = prefab;
-                    LoadedCount++;
-
+                    if (assetDict is Dictionary<string, GameObject> gameObjectDict2)
+                    {
+                        gameObjectDict2[prefab.name] = prefab;
+                    }
                 }
+                else if (asset is Recipe recipe)
+                {
+                    // Handle adding Recipe to the dictionary
+                    assetName = recipe.inputs.ToString();
+                    assetDict[assetName] = (T)(object)recipe;
+                }
+                else if (asset is TileBase tileBase)
+                {
+                    // Handle adding TileBase to the dictionary
+                    assetName = tileBase.name;
+                    assetDict[assetName] = (T)(object)tileBase;
+                }
+
+                LoadedCount++;
             }
-            Debug.Log($"预制体资源加载完成，总耗时: {(Time.realtimeSinceStartup - loadStartTime) * 1000f:F0} ms");
+
+            loadFlag = true;
+            CheckLoadFinish();
+            Debug.Log($"{assetType} 资源加载完成，总耗时: {(Time.realtimeSinceStartup - loadStartTime) * 1000f:F0} ms");
         }
         else
         {
-            Debug.LogError("资源加载失败。");
+            Debug.LogError($"{assetType} 加载失败。");
         }
     }
+
+    #endregion
+
+    #region 通过标签加载Prefab的方法
+
+    public void LoadPrefabByLabels(List<string> labels)
+    {
+        LoadAssetsByLabels<GameObject>(labels, (handle) => OnLoadCompleted(handle, AllPrefabs, ref prefabLoaded, "预制体"));
+    }
+
     #endregion
 
     #region 通过标签加载配方的方法
-        /// <summary>
-        /// 通过标签列表加载配方
-        /// </summary>
-        public void LoadRecipeByLabels(List<string> labels)
-        {
-            if (labels == null || labels.Count == 0)
-            {
-                Debug.LogWarning("标签列表为空或未提供。");
-                return;
-            }
 
-            // 使用标签列表加载资源
-            Addressables.LoadAssetsAsync<Recipe>(labels, null, Addressables.MergeMode.Union).Completed += OnRecipeLoadCompleted;
+    public void LoadRecipeByLabels(List<string> labels)
+    {
+        LoadAssetsByLabels<Recipe>(labels, (handle) => OnLoadCompleted(handle, recipeDict, ref recipeLoaded, "配方"));
+    }
 
-        }
-        /// <summary>
-        /// 配方加载完成的回调
-        /// </summary>
-        /// <param name="handle">异步操作句柄</param>
-        void OnRecipeLoadCompleted(AsyncOperationHandle<IList<Recipe>> handle)
-        {
-            if (handle.Status == AsyncOperationStatus.Succeeded)
-            {
-                foreach (var recipe in handle.Result)
-                {
-                    if (recipe == null)
-                    {
-                        Debug.LogError("加载的配方为空。");
-                        continue;
-                    }
-
-                    if (recipeDict.ContainsKey(recipe.inputs.ToString()))
-                    {
-                        //Debug.LogWarning($"配方已存在: {recipe.name}");
-                    }
-                    else
-
-                    {
-                        recipeDict[recipe.inputs.ToString()] = recipe;
-                       // Debug.Log($"成功加载并添加配方: {recipe.name}");
-                    }
-                }
-            Debug.Log($"SO资源加载完成，总耗时: {(Time.realtimeSinceStartup - loadStartTime) * 1000f:F0} ms");
-        }
-            else
-            {
-                Debug.LogError("配方加载失败。");
-            }
-        }
     #endregion
 
     #region 通过标签加载TileBase的方法
-    /// <summary>
-    /// 通过标签列表加载TileBase
-    /// </summary>
+
     public void LoadTileBaseByLabels(List<string> labels)
     {
-        if (labels == null || labels.Count == 0)
-        {
-            Debug.LogWarning("标签列表为空或未提供。");
-            return;
-        }
-
-        // 使用标签列表加载资源
-        Addressables.LoadAssetsAsync<TileBase>(labels, null, Addressables.MergeMode.Union).Completed += OnTileBaseLoadCompleted;
-
+        LoadAssetsByLabels<TileBase>(labels, (handle) => OnLoadCompleted(handle, tileBaseDict, ref tileBaseLoaded, "TileBase"));
     }
-    /// <summary>
-    /// TileBase加载完成的回调
-    /// </summary>
-    /// <param name="handle">异步操作句柄</param>
-    void OnTileBaseLoadCompleted(AsyncOperationHandle<IList<TileBase>> handle)
-    {
-        if (handle.Status == AsyncOperationStatus.Succeeded)
-        {
-            foreach (var tileBase in handle.Result)
-            {
-                if (tileBase == null)
-                {
-                    Debug.LogError("加载的TileBase为空。");
-                    continue;
-                }
 
-                if (tileBase.name == null)
-                {
-                    Debug.LogError("TileBase的name为空。");
-                    continue;
-                }
-
-                if (tileBaseDict.ContainsKey(tileBase.name))
-                {
-                    //Debug.LogWarning($"TileBase已存在: {tileBase.name}");
-                }
-                else
-                {
-                    tileBaseDict[tileBase.name] = tileBase;
-                    LoadedCount++;
-                    //Debug.Log($"成功加载并添加TileBase: {tileBase.name}");
-                }
-            }
-            Debug.Log($"TileBase资源加载完成，总耗时: {(Time.realtimeSinceStartup - loadStartTime) * 1000f:F0} ms");
-        }
-        else
-        {
-            Debug.LogError("TileBase加载失败。");
-        }
-    }
     #endregion
-}
 
+    private void CheckLoadFinish()
+    {
+        if (prefabLoaded && recipeLoaded && tileBaseLoaded)
+        {
+            isLoadFinish = true;
+            Debug.Log("所有资源加载完成！");
+        }
+    }
+}

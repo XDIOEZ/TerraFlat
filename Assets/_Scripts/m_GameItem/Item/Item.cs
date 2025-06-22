@@ -26,6 +26,7 @@ public abstract class Item : MonoBehaviour
 
     public UltEvent UpdatedUI_Event = new();
     public UltEvent DestroyItem_Event = new();
+    public UltEvent OnAction_Event = new();
     public void SyncPosition()
     {
         Item_Data._transform.Position = transform.position;    
@@ -36,6 +37,7 @@ public abstract class Item : MonoBehaviour
     public virtual void Act()
     {
         Debug.Log("Item Act");
+        OnAction_Event.Invoke();
     }
 
     [Sirenix.OdinInspector.Button("同步物品数据")]
