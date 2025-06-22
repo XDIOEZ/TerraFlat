@@ -12,6 +12,7 @@ public class Player
     : Item, IHunger, ISpeed,
       IInventoryData, IHealth, IStamina,
       ISave_Load, IFocusPoint, IRotationSpeed
+    ,IUI
 {
     public UltEvent OnDeath { get; set; }
 
@@ -136,71 +137,71 @@ public class Player
     public Vector3 FocusPointPosition { get; set; }
     public Vector3 MoveTargetPosition { get; set; }
     public float RotationSpeed { get; set; } = 100;
-
+    public Dictionary<string, UIData> UIDataDictionary { get =>Data.UIDataDictionary; set => Data.UIDataDictionary = value; }
     #endregion
 
     #region 方法
 
     #region 数据初始化与同步
 
-/*    void GetChildInventory_SetBelongItem_SelectHandSlot()
-    {
-        inventoryDataInterface = this;
-
-        foreach (var inventory in Children_Inventory_GameObject.Values)
+    /*    void GetChildInventory_SetBelongItem_SelectHandSlot()
         {
-            inventory.UI.TargetSendItemSlot = selectSlot;
-        }
-    }*/
+            inventoryDataInterface = this;
 
-/*    [Button]
-    public void FillDataTO_ChildInventory_InstantiateSlots()
-    {
-        Debug.Log("设置子物品栏数据");
-
-        foreach (var inventory_Child in Children_Inventory_GameObject.Values)
-        {
-            inventory_Child.Data = Data_InventoryData[inventory_Child.Data.inventoryName];
-
-            foreach (var itemSlot in Data_InventoryData[inventory_Child.Data.inventoryName].itemSlots)
+            foreach (var inventory in Children_Inventory_GameObject.Values)
             {
-                itemSlot.Belong_Inventory = inventory_Child;
+                inventory.UI.TargetSendItemSlot = selectSlot;
             }
+        }*/
 
-            inventory_Child.UI.Instantiate_ItemSlotUI();
-            inventory_Child.UI.RefreshAllInventoryUI();
-        }
-    }
-
-    [Button("重新实例化对象的所有物品栏")]
-    public void Rest_InstantiateSlots()
-    {
-        inventoryDataInterface = this;
-        inventoryDataInterface.FillDict_SetBelongItem(transform);
-    }*/
-
-/*    public void GetDataFrom_GameObjectInventory_SaveTOData()
-    {
-        foreach (var inventory in Children_Inventory_GameObject.Values)
+    /*    [Button]
+        public void FillDataTO_ChildInventory_InstantiateSlots()
         {
-            Data_InventoryData[inventory.Data.inventoryName] = inventory.Data;
+            Debug.Log("设置子物品栏数据");
+
+            foreach (var inventory_Child in Children_Inventory_GameObject.Values)
+            {
+                inventory_Child.Data = Data_InventoryData[inventory_Child.Data.inventoryName];
+
+                foreach (var itemSlot in Data_InventoryData[inventory_Child.Data.inventoryName].itemSlots)
+                {
+                    itemSlot.Belong_Inventory = inventory_Child;
+                }
+
+                inventory_Child.UI.Instantiate_ItemSlotUI();
+                inventory_Child.UI.RefreshAllInventoryUI();
+            }
         }
-    }*/
 
-/*    public void InitializeInventory()
-    {
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["背包"], 24);
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输入物品槽"], 4);
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输出物品槽"], 2);
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["装备栏"], 4);
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["快捷栏"], 9);
-        inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["手部插槽"], 1);
-
-        foreach (var item in Children_Inventory_GameObject.Values)
+        [Button("重新实例化对象的所有物品栏")]
+        public void Rest_InstantiateSlots()
         {
-            Data_InventoryData.Add(item.Data.inventoryName, item.Data);
-        }
-    }*/
+            inventoryDataInterface = this;
+            inventoryDataInterface.FillDict_SetBelongItem(transform);
+        }*/
+
+    /*    public void GetDataFrom_GameObjectInventory_SaveTOData()
+        {
+            foreach (var inventory in Children_Inventory_GameObject.Values)
+            {
+                Data_InventoryData[inventory.Data.inventoryName] = inventory.Data;
+            }
+        }*/
+
+    /*    public void InitializeInventory()
+        {
+            inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["背包"], 24);
+            inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输入物品槽"], 4);
+            inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["输出物品槽"], 2);
+            inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["装备栏"], 4);
+            inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["快捷栏"], 9);
+            inventoryDataInterface.InitializeInventory(Children_Inventory_GameObject["手部插槽"], 1);
+
+            foreach (var item in Children_Inventory_GameObject.Values)
+            {
+                Data_InventoryData.Add(item.Data.inventoryName, item.Data);
+            }
+        }*/
 
     #endregion
 

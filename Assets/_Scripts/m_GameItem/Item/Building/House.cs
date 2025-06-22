@@ -100,7 +100,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding,IRoom
     public void Death()
     {
         OnDeath.Invoke();
-        Destroy(gameObject);
+       // Destroy(gameObject);
     }
     #endregion
 }

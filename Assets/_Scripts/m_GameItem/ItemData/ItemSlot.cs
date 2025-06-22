@@ -143,7 +143,9 @@ public partial class ItemSlot
         ItemData temp = _ItemData;
         _ItemData = _ItemData_Input._ItemData;
         _ItemData_Input._ItemData = temp;
-    
+       
+
+
     }
     #endregion
 

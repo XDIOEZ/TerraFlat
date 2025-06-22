@@ -109,7 +109,7 @@ public class Inventory : MonoBehaviour
         {
            ItemSlot_UI itemSlotUI = itemSlotUIs[i];
             itemSlotUI.ItemSlot = Data.itemSlots[i];
-            itemSlotUI.OnItemClick += OnItemClick;
+            itemSlotUI.OnLeftClick += OnItemClick;
             itemSlotUI.ItemSlot.Belong_Inventory = this;
         }
     }
@@ -130,20 +130,35 @@ public class Inventory : MonoBehaviour
     public virtual void OnItemClick(int index)
     {
         Debug.Log("点击了" + index);
+
+
         ItemSlot slot = Data.GetItemSlot(index);
+
+
         //默认为交换
         if(DefaultTarget_Inventory.Data.itemSlots.Count > index)
         {
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
+
+
             DefaultTarget_Inventory.RefreshUI(index);
         }
         else
         {
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
+
+
             DefaultTarget_Inventory.RefreshUI(0);
+
         }
+
         RefreshUI(index);
         
+    }
+
+    public void OnDestroy()
+    {
+       Data. Event_RefreshUI -= RefreshUI;
     }
 
 }

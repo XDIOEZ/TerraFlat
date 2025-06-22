@@ -22,7 +22,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
 
 
     [Tooltip("物体被点击的事件")]
-    public UltEvent<int> OnItemClick = new UltEvent<int>();
+    public UltEvent<int> OnLeftClick = new UltEvent<int>();
     #endregion
 
     #region Unity生命周期方法
@@ -39,7 +39,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
 
     public void OnDestroy()
     {
-        OnItemClick.Clear();
+        OnLeftClick.Clear();
     }
     #endregion
 
@@ -72,7 +72,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
     // 处理左键点击事件，触发 onItemClick 事件
     private void HandleLeftClick()
     {
-        OnItemClick.Invoke(ItemSlot.Index);
+        OnLeftClick.Invoke(ItemSlot.Index);
     }
 
     // 处理右键点击事件，显示物品信息菜单
@@ -114,6 +114,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
         // 检查物品槽是否为空，若为空则不进行更新
         if (IsItemSlotEmpty())
         {
+            text.enabled = (false);
             return;
         }
 
@@ -122,36 +123,25 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
         if (itemAmount == 0)
         {
             // 若数量为 0，隐藏数量显示并重置物品槽数据
-            text.gameObject.SetActive(false);
-            if (ItemSlot != null)
-            {
-                ItemSlot.ClearData();
-            }
+            text.enabled = (false);
+          
+            ItemSlot.ClearData();
+            
         }
         else
         {
             // 若数量不为 0，显示数量
             text.text = itemAmount.ToString();
-            text.gameObject.SetActive(true);
+            text.enabled = (true);
         }
     }
 
     // 检查物品槽是否为空，若为空则输出警告信息
     private bool IsItemSlotEmpty()
     {
-        if (ItemSlot == null)
-        {
-            Debug.LogWarning($"物品槽为空，所在对象：{gameObject.name}");
-            return true;
-        }
         if (ItemSlot._ItemData == null)
         {
-            //Debug.LogWarning($"物品数据为空，所在对象：{gameObject.name}");
-            return true;
-        }
-        if (ItemSlot._ItemData.Stack == null)
-        {
-            // Debug.LogWarning($"物品堆叠为空，所在对象：{gameObject.name}");
+            Debug.LogWarning($"物品数据为空，所在对象：{gameObject.name}");
             return true;
         }
         return false;

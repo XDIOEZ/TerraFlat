@@ -106,7 +106,7 @@ public class BaseBuilding : MonoBehaviour
             if (!hasItemData) debugMsg += "物品数据缺失; ";
             if (!cannotBePickedUp) debugMsg += "可被拾取; ";
 
-            Debug.Log(debugMsg);
+           // Debug.Log(debugMsg);
             CleanupGhost();
             return;
         }
@@ -293,6 +293,7 @@ public class BaseBuilding : MonoBehaviour
             Destroy(hostTransform.gameObject);
         }
 
+        Destroy(item.gameObject);
         Debug.Log("[建筑安装] 安装流程完成");
     }
 

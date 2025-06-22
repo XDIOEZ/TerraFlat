@@ -40,8 +40,10 @@ public partial class Data_Player : ItemData
     [Tooltip("库存数据")]
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
     #endregion
+    [ShowInInspector]
+    public Dictionary<string, UIData> UIDataDictionary = new Dictionary<string, UIData>();
 
-    [ShowNonSerializedField]
+   [ShowNonSerializedField]
     [Tooltip("玩家用户名")]
     public string Name_User = "Ikun";
 }

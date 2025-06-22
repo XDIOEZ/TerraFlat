@@ -59,7 +59,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         LoadResources();
 
         // 资源加载完成后
-        Debug.Log("所有资源加载完成！");
+        //Debug.Log("所有资源加载完成！");
     }
 
     #endregion
