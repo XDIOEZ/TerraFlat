@@ -6,16 +6,32 @@ using UnityEngine.Tilemaps;
 public class Item_Tile_Water : Item, IBlockTile
 {
     [SerializeField]
-    private Data_Tile_Block data;
-    public override ItemData Item_Data { get => Data; set => Data = value as Data_Tile_Block; }
-    public TileData Data_Tile { get => Data.tileData; set => Data.tileData = value; }
-    public Data_Tile_Block Data { get => data; set => data = value; }
+    private BlockData data;
+
+
+    public override ItemData Item_Data { get => data; set => data = value as BlockData; }
+
+
+    [SerializeField]
+    TileData_Water _tileData;
+    public TileData TileData { get => _tileData; set => _tileData = (TileData_Water)value; }
 
     public List<Buff_Data> BuffInfo;
 
+    public void Awake()
+    {
+        if (data.tileData.Name_ItemName == "")
+        {
+            data.tileData = _tileData;
+        }
+        else
+        {
+            _tileData = (TileData_Water)data.tileData;
+        }
+    }
     public override void Act()
     {
-        Set_TileBase_ToWorld(Data_Tile);
+        Set_TileBase_ToWorld(TileData);
     }
 
     public void Set_TileBase_ToWorld(TileData tileData)

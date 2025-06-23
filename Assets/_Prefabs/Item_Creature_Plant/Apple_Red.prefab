@@ -36,6 +36,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8663612773969056445}
+  - {fileID: 1752159837602905489}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1271475636138967308
@@ -242,6 +243,7 @@ MonoBehaviour:
     sightRange: 10
     TeamID: 
   EatingProgress: 0
+  TreeName: Tree_Apple
 --- !u!114 &4895122844487948622
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -274,6 +276,74 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+--- !u!1 &9063328539452382332
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1752159837602905489}
+  - component: {fileID: 57782880397098656}
+  m_Layer: 0
+  m_Name: "\u751F\u957F\u6A21\u5757"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1752159837602905489
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9063328539452382332}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.78513145, y: 0.7296133, z: 1.9519467}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 957358242643349336}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &57782880397098656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9063328539452382332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _data:
+    ModuleName: "\u751F\u957F\u6A21\u5757"
+    isRunning: 0
+    isLoop: 0
+    progress: 0
+    progress_Max:
+      BaseValue: 20
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints:
+    - NodeName: "\u53D1\u80B2\u4E3A\u82F9\u679C\u6811"
+      InvokeValue: 10
+      loot:
+        lootName: 
+        lootAmount: 0
+    nodeIndex: 0
 --- !u!1001 &7828416414188325075
 PrefabInstance:
   m_ObjectHideFlags: 0

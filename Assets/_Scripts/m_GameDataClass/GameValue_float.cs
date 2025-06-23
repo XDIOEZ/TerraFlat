@@ -4,7 +4,7 @@ using MemoryPack;
 [MemoryPackable]
 public partial class GameValue_float
 {
-    public float BaseValue;                      // 基础值
+    public float BaseValue = 1;                      // 基础值
     public float BaseAdditive = 0;               // 基础加算项（装备、Buff等）
     public float AdditiveModifier = 0;           // 百分比加算项（技能、被动加成等）
     public float MultiplicativeModifier = 1;     // 乘算修正（暴击、特殊状态倍率）

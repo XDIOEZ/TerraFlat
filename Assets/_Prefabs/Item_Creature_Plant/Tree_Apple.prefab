@@ -85,6 +85,8 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   _data:
     IDName: Tree_Apple
     GameName: "\u82F9\u679C\u6811"
@@ -120,11 +122,12 @@ MonoBehaviour:
       maxDefenseStrength: 50
       maxDefenseToughness: 0.8
       maxDefenseMagic: 50
-    EatingSpeed: 1
     Speed:
       BaseValue: 0
+      BaseAdditive: 0
       AdditiveModifier: 0
       MultiplicativeModifier: 1
+      FinalAdditive: 0
     stamina: 100
     stamina_Max: 100
     staminaRecoverySpeed: 1
@@ -134,24 +137,19 @@ MonoBehaviour:
       Water: 100
       MaxWater: 0
     progress: 0
-    progress_Max: 100
-    productionSpeed: 1
-    sightRange: 10
-    ItemDataValue:
-      ItemValue_List:
-      - ValueName: "\u751F\u4EA7\u8FDB\u5EA6"
-        MinValue: 0
-        currentValue: 0
-        MaxValue: 100
-        OnCurrentValueChanged:
-          _PersistentCalls: []
-      - ValueName: "\u8840\u91CF"
-        MinValue: 0
-        currentValue: 0
-        MaxValue: 100
-        OnCurrentValueChanged:
-          _PersistentCalls: []
-      IsWork: 0
+    progress_Max:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints: []
     loot:
       lootList:
       - lootsName: Loots_Death
@@ -164,6 +162,7 @@ MonoBehaviour:
         lootList:
         - lootName: "\u6728\u68CD"
           lootAmount: 1
+    sightRange: 10
     TeamID: 
 --- !u!61 &7750936676413998519
 BoxCollider2D:
@@ -235,8 +234,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6283402004694861917}
-  - component: {fileID: 7382680463684648348}
-  - component: {fileID: 3431042577879759521}
+  - component: {fileID: 1890700358386065740}
+  - component: {fileID: 675614112313854105}
   m_Layer: 9
   m_Name: "\u6570\u503C\u7BA1\u7406\u5668"
   m_TagString: Untagged
@@ -259,7 +258,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7293395394034987005}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7382680463684648348
+--- !u!114 &1890700358386065740
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -268,14 +267,44 @@ MonoBehaviour:
   m_GameObject: {fileID: 2802196787596597447}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 690ff99da861b40439a04f13f8382f04, type: 3}
+  m_Script: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalRecoveryRate: 0
-  totalConsumptionRate: 0
-  OnProductionChanged:
-    _PersistentCalls: []
---- !u!114 &3431042577879759521
+  _data:
+    ModuleName: "\u82F9\u679C\u6811\u7684\u6210\u957F"
+    isRunning: 1
+    isLoop: 0
+    progress: 0
+    progress_Max:
+      BaseValue: 300
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints:
+    - NodeName: "\u5E7C\u82D7\u9636\u6BB5"
+      InvokeValue: 0
+      loot:
+        lootName: 
+        lootAmount: 0
+    - NodeName: "\u751F\u957F\u9636\u6BB5"
+      InvokeValue: 5
+      loot:
+        lootName: 
+        lootAmount: 0
+    - NodeName: "\u6210\u719F\u9636\u6BB5"
+      InvokeValue: 10
+      loot:
+        lootName: "\u6728\u68CD"
+        lootAmount: 2
+    nodeIndex: 0
+--- !u!114 &675614112313854105
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -284,9 +313,33 @@ MonoBehaviour:
   m_GameObject: {fileID: 2802196787596597447}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b45a3119b5c258c42910f646dd1d1766, type: 3}
+  m_Script: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _data:
+    ModuleName: "\u82F9\u679C\u6811\u7684\u751F\u4EA7"
+    isRunning: 0
+    isLoop: 1
+    progress: 0
+    progress_Max:
+      BaseValue: 10
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints:
+    - NodeName: "\u751F\u4EA7\u82F9\u679C"
+      InvokeValue: 10
+      loot:
+        lootName: Apple_Red
+        lootAmount: 1
+    nodeIndex: 0
 --- !u!1 &4099061837537365540
 GameObject:
   m_ObjectHideFlags: 0
@@ -382,6 +435,7 @@ GameObject:
   - component: {fileID: 484489222091895996}
   - component: {fileID: 3980057059872684393}
   - component: {fileID: 6494196825438754696}
+  - component: {fileID: 7832515379847446399}
   m_Layer: 9
   m_Name: DamageReceiver
   m_TagString: Untagged
@@ -475,6 +529,29 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.3237205, y: 0.61818314}
   m_EdgeRadius: 0
+--- !u!114 &7832515379847446399
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7901544715287949478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aea3b0ebad94a5243b635198d0eb213c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lastGridPos: {x: 0, y: 0}
+  item: {fileID: 0}
+  Cache_map: {fileID: 0}
+  OnTileEnterEvent:
+    _PersistentCalls: []
+  OnTileExitEvent:
+    _PersistentCalls: []
+  raycastDistance: 5
+  tileLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1001 &2693604294552692670
 PrefabInstance:
   m_ObjectHideFlags: 0

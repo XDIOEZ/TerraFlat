@@ -10,7 +10,7 @@ public class ItemMaker
 {
     [BoxGroup("掉落配置")]
     [Tooltip("掉落表")]
-    public List_Loot loots;
+    public Loot_List loots;
 
     [BoxGroup("掉落配置")]
     [Tooltip("掉落范围（单位：米）")]
@@ -65,7 +65,7 @@ public class ItemMaker
         Vector2 randomOffset = Random.insideUnitCircle * DropRange;
         Vector2 targetPos = (Vector2)transform.position + randomOffset;
 
-        DropItemWithAnimation(item, transform.position, targetPos);
+        DropItem_cric(item, transform.position, 1);
     }
 
     [Tooltip("根据Loot掉落物品")]
@@ -81,11 +81,22 @@ public class ItemMaker
 
     #region 动画核心
 
+    /// <summary>
+    /// 根据Item掉落物品（附带抛物线动画）
+    /// </summary>
+    /// <param name="item">掉落的物品</param>
+    /// <param name="startPos">起始位置</param>
+    /// <param name="radius">随机散落半径</param>
     [Tooltip("根据Item掉落物品 附带动画")]
-    public void DropItemWithAnimation(Item item, Vector3 startPos, Vector2 endPos)
+    public void DropItem_cric(Item item, Vector3 startPos, float radius)
     {
+        // 设置物品暂时不可被拾取
         item.Item_Data.Stack.CanBePickedUp = false;
 
+        // 计算随机目标位置
+        Vector2 endPos = startPos + new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), 0f);
+
+        // 启动抛物线动画协程
         item.GetComponent<MonoBehaviour>().StartCoroutine(
             ParabolaAnimation(
                 item.transform,
@@ -100,6 +111,7 @@ public class ItemMaker
             )
         );
     }
+
 
     [Tooltip("根据Item掉落物品 附带动画（简化参数）")]
     public void DropItemWithAnimation(Transform itemTransform, Vector3 startPos, Vector3 endPos, Item item)

@@ -1,5 +1,6 @@
 using DG.Tweening;
 using Sirenix.OdinInspector;
+using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 public class Weed : Item, IFood,IPlant
@@ -25,7 +26,7 @@ public class Weed : Item, IFood,IPlant
 
     // 实现 IHungry 接口的 OnNutrientChanged 事件
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
-
+    
     public override void Act()
     {
        

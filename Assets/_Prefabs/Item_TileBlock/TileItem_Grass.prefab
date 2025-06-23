@@ -166,6 +166,8 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   data:
     IDName: TileItem_Grass
     GameName: "\u8349\u5757"
@@ -188,10 +190,22 @@ MonoBehaviour:
     ItemSpecialData: 
     Guid: 0
     tileData:
-      Name_tileBase: TileBase_Grass
+      Name_tileBase: 
+      tileBase: {fileID: 0}
       Name_ItemName: TileItem_Grass
+      TileTag: Fertile
       position: {x: 0, y: 0, z: 0}
       workTime: 0
-      itemValues:
-        ItemValue_List: []
-        IsWork: 0
+  tileData:
+    Name_tileBase: TileBase_Grass
+    tileBase: {fileID: 0}
+    Name_ItemName: TileItem_Grass
+    TileTag: none
+    position: {x: 0, y: 0, z: 0}
+    workTime: 0
+    FertileValue:
+      BaseValue: 1.2
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0

@@ -26,7 +26,7 @@ using Sirenix.OdinInspector;
 [MemoryPackUnion(52, typeof(Data_Worker))]//工作者数据
 [MemoryPackUnion(53, typeof(Data_Boundary))]//墙壁数据
 [MemoryPackUnion(54, typeof(Data_Food))]//墙壁数据
-[MemoryPackUnion(55, typeof(Data_Tile_Block))]//材料数据
+[MemoryPackUnion(55, typeof(BlockData))]//材料数据
 
 [MemoryPackable]
 [System.Serializable]   
@@ -59,6 +59,9 @@ public  abstract partial class ItemData
     [Tooltip("全局唯一标识")]
     public int Guid;
 
+    public Dictionary<string,ModuleData> ModuleDataDic =new();
+
+    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
 
     //重写ToString方法，用于在控制台输出物品信息
     public override string ToString()

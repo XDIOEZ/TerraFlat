@@ -9,14 +9,38 @@ using UnityEngine.Tilemaps;
 public class Item_Tile_Grass : Item,IBlockTile
 {
     [SerializeField]
-    private Data_Tile_Block data;
-    public override ItemData Item_Data { get => Data; set => Data = value as Data_Tile_Block; }
-    public TileData Data_Tile { get=> Data.tileData; set=> Data.tileData = value; }
-    public Data_Tile_Block Data { get => data; set => data = value; }
+    private BlockData data = new BlockData();
+    public override ItemData Item_Data { get => data; set => data = value as BlockData; }
+
+
+
+    [SerializeField]
+    TileData_Grass _tileData;
+    public TileData TileData { get => _tileData; set => _tileData = (TileData_Grass)value; }
+
+
+    public void Awake()
+    {
+        if (data.tileData == null || string.IsNullOrEmpty(data.tileData.Name_ItemName))
+        {
+            data.tileData = _tileData;
+        }
+        else
+        {
+            if (data.tileData is TileData_Grass waterTileData)
+            {
+                _tileData = (TileData_Grass)waterTileData;
+            }
+            else
+            {
+                Debug.LogError($"类型转换失败，当前 tileData 实际类型是：{data.tileData.GetType().Name}");
+            }
+        }
+    }
 
     public override void Act()
     {
-        Set_TileBase_ToWorld(Data_Tile);
+      //  Set_TileBase_ToWorld();
     }
 
     public void Set_TileBase_ToWorld(TileData tileData)
@@ -57,18 +81,17 @@ public class Item_Tile_Grass : Item,IBlockTile
 
     public void Tile_Update(Item item, TileData tileData)
     {
-        // 判断该物品是否属于“Plant”类型
+        /*// 判断该物品是否属于“Plant”类型
         if (item.Item_Data.ItemTags.Item_TypeTag.Exists(x => x == "Plant"))
         {
             item.GetComponent<IPlant>().Grow(Time.deltaTime);
-        }
+        }*/
     }
 }
 
 public interface IBlockTile
 {
-    public TileData Data_Tile { get; set; }
-    public Data_Tile_Block Data { get; set; }
+    public TileData TileData { get; set; }
     public void Set_TileBase_ToWorld(TileData tileData);
     public void Tile_Enter(Item item, TileData tileData);
     public void Tile_Update(Item item, TileData tileData);

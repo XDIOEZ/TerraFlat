@@ -5,7 +5,7 @@ using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
-public partial class List_Loot
+public partial class Loot_List
 {
     public List<Loot> lootList;
 

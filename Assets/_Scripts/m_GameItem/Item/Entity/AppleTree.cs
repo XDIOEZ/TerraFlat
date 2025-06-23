@@ -39,7 +39,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
     public UltEvent onLoad { get; set; }
 
     // 掉落列表属性
-    public List_Loot Loots { get => _data.loot; set => _data.loot = value; }
+    public Loot_List Loots { get => _data.loot; set => _data.loot = value; }
 
     #endregion
 
@@ -50,6 +50,10 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
     {
         OnHpChanged = new UltEvent();
         OnDefenseChanged = new UltEvent();
+        Mods["苹果树的成长"].OnAction += Grow;
+
+        GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += ChangeGrow;
+
     }
 
     public void FixedUpdate()
@@ -57,6 +61,32 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
        
     }
 
+    public void Grow(float NodeIndex)
+    {
+        if(NodeIndex == 1)
+        {
+            transform.localScale = Vector3.one * 0.25f;
+        }
+        else if(NodeIndex == 2)
+        {
+            transform.localScale = Vector3.one * 0.5f;
+        }
+        else if(NodeIndex == 3)
+        {
+            transform.localScale = Vector3.one * 1f;
+            Mods["苹果树的生产"].Data.isRunning = true;
+        }
+        else if(NodeIndex == 4)
+        {
+            transform.localScale = Vector3.one * 2f;
+        }
+    }
+
+    void ChangeGrow(TileData tileData)
+    {
+       // if(tileData.)
+    }
+    
 
     public float GetDamage(Damage damage)
     {

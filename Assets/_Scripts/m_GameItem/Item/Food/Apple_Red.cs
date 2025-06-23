@@ -11,7 +11,8 @@ public class Apple_Red : Item, IFood,IBuff
 
     // 当前吃掉的数值进度
     public float EatingProgress = 0f;
-
+    //长大后
+    public string TreeName; 
     // 实现 Item 抽象属性
     public override ItemData Item_Data
     {
@@ -30,7 +31,10 @@ public class Apple_Red : Item, IFood,IBuff
 
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic { get => data.BuffRunTimeData_Dic; set => data.BuffRunTimeData_Dic = value; }
 
-
+    public void Start()
+    {
+        GetComponentInChildren<Mod_PlantGrow>().OnAction += BeToAppleTree;
+    }
     /// <summary>
     /// 调用吃的行为
     /// </summary>
@@ -80,6 +84,15 @@ public class Apple_Red : Item, IFood,IBuff
     }
 
     //实现苹果变为苹果树
+    public void BeToAppleTree(float Index)
+    {
+        Debug.Log(Index);
+        if (Index == 1)
+        {
+            RunTimeItemManager.Instance.InstantiateItem(TreeName, transform.position, transform.rotation);
+            Destroy(gameObject);
+        }
+    }
 
     
     public void OnDestroy()

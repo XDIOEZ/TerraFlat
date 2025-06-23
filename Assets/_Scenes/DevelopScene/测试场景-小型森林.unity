@@ -408,6 +408,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -5821527496863057093, guid: 4ed054f92372bc644ae2a3773e84e923, type: 3}
+      propertyPath: TreeName
+      value: Tree_Apple
+      objectReference: {fileID: 0}
     - target: {fileID: 957358242643349336, guid: 4ed054f92372bc644ae2a3773e84e923, type: 3}
       propertyPath: m_LocalPosition.x
       value: -15.381812
@@ -774,10 +778,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Apple
       objectReference: {fileID: 0}
-    - target: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 7293395394034987005, guid: ce24645065817804fbd6156e223ca429, type: 3}
       propertyPath: m_LocalPosition.x
       value: -18.076036
@@ -818,8 +818,7 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 104388901397866750, guid: ce24645065817804fbd6156e223ca429, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -10470,7 +10469,6 @@ SceneRoots:
   - {fileID: 479339742}
   - {fileID: 92110803}
   - {fileID: 882897240}
-  - {fileID: 4880215419646218542}
   - {fileID: 1828434858}
   - {fileID: 1954058450}
   - {fileID: 1641242167}
@@ -10478,3 +10476,4 @@ SceneRoots:
   - {fileID: 1190170099}
   - {fileID: 2034715540101033974}
   - {fileID: 834640310}
+  - {fileID: 4880215419646218542}

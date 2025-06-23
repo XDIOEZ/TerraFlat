@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 
 /// <summary>
@@ -13,6 +14,8 @@ public class TileEffectReceiver : MonoBehaviour
     public Vector2Int lastGridPos;
     public Item item;
     public Map Cache_map;
+    public UltEvent<TileData>  OnTileEnterEvent = new UltEvent<TileData>();
+    public UltEvent<TileData>  OnTileExitEvent = new UltEvent<TileData>();
 
     [Header("Raycast Settings (unused now)")]
     public float raycastDistance = 5f;
@@ -76,6 +79,7 @@ public class TileEffectReceiver : MonoBehaviour
         if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
         {
             tileBlock.Tile_Enter(item, tileData);
+            OnTileEnterEvent.Invoke(tileData); // 触发进入事件
         }
     }
 
@@ -84,6 +88,7 @@ public class TileEffectReceiver : MonoBehaviour
         if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
         {
             tileBlock.Tile_Exit(item, tileData);
+            OnTileExitEvent.Invoke(tileData); // 触发离开事件
         }
     }
 

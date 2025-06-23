@@ -240,7 +240,31 @@ public partial class Inventory_Data
         }
 
         inputItemData.Stack.CanBePickedUp = false;
-        Event_RefreshUI.Invoke(emptyIndex);
+        // 进行物品添加操作
+        int updatedIndex = -1; // 记录实际更新的槽位索引
+
+        if (stackIndex != -1)
+        {
+            // 堆叠物品
+            // Debug.Log("堆叠物品到槽位: " + stackIndex);
+            ChangeItemDataAmount(stackIndex, inputItemData.Stack.Amount);
+            updatedIndex = stackIndex;
+        }
+        else if (emptyIndex != -1)
+        {
+            // 放入新物品
+            // Debug.Log("放入物品到空槽位: " + emptyIndex);
+            SetOne_ItemData(emptyIndex, inputItemData);
+            updatedIndex = emptyIndex;
+        }
+        else
+        {
+            Debug.LogError("背包已满，无法添加物品");
+            return false;
+        }
+
+        inputItemData.Stack.CanBePickedUp = false;
+        Event_RefreshUI.Invoke(updatedIndex); // 使用实际更新的槽位索引
         return true;
     }
 

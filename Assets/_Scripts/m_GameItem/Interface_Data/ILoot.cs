@@ -4,6 +4,6 @@ using UnityEngine;
 
 public interface ILoot 
 {
-    public List_Loot Loots { get; set; }
+    public Loot_List Loots { get; set; }
 
 }

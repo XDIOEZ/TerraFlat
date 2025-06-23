@@ -45,7 +45,7 @@ public partial class Data_Creature : ItemData
     [Tooltip("特殊生产点")]
     public List<float> specialProductionPoints = new List<float>();
     [Tooltip("生产物品")]
-    public List_Loot loot;
+    public Loot_List loot;
 
     #endregion
 
@@ -67,7 +67,7 @@ public partial class Data_Creature : ItemData
     public Dictionary<string, RelationType> Relations = new Dictionary<string, RelationType>();
     #endregion
 
-    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
+    //public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
 
     public override int SyncData()
     {

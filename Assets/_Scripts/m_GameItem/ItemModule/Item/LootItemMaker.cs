@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class LootItemMaker : MonoBehaviour
 {
-    public List_Loot loots;
+    public Loot_List loots;
 
     public void Start()
     {
