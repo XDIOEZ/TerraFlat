@@ -1,9 +1,10 @@
 
 using Sirenix.OdinInspector;
 using System.Collections;
+using UltEvents;
 using UnityEngine;
 
-public class TurnBody : Organ, ITurnBody
+public class TurnBody : Organ, ITurnBody ,IStaminaEvent
 {
     #region 公开字段（Inspector配置）
     [Header("转向控制")]
@@ -45,6 +46,7 @@ public class TurnBody : Organ, ITurnBody
 
     private Coroutine turnCoroutine; // 确保不会多次启动旋转
 
+    public UltEvent<float> StaminaChange { get;  set; }
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
         // 防止无效操作
@@ -69,6 +71,7 @@ public class TurnBody : Organ, ITurnBody
 
         // 启动旋转协程
         direction = desiredDirection;
+        StaminaChange?.Invoke(10f); // 转向消耗 1 点体力
         turnCoroutine = StartCoroutine(RotateToTarget(desiredDirection));
     }
 

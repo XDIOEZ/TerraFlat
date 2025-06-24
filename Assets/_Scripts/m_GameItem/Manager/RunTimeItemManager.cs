@@ -58,9 +58,13 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     }
 
     // 实例化（通过名称）
-    public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default)
+    public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
     {
-        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemName, position);
+        if (position == default) position = Vector3.zero;
+        if (rotation == default) rotation = Quaternion.identity;
+        if (scale == default) scale = Vector3.one;
+
+        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemName, position, rotation, scale);
         Item item = itemObj.GetComponent<Item>();
         if (item != null)
         {
@@ -73,9 +77,13 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     }
 
     // 实例化（通过 ItemData）
-    public Item InstantiateItem(ItemData itemData, Vector3 position = default, Quaternion rotation = default)
+    public Item InstantiateItem(ItemData itemData, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
     {
-        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position);
+        if (position == default) position = Vector3.zero;
+        if (rotation == default) rotation = Quaternion.identity;
+        if (scale == default) scale = Vector3.one;
+
+        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position, rotation, scale);
         Item item = itemObj.GetComponent<Item>();
         item.Item_Data = itemData;
 
@@ -90,16 +98,7 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
                 $"当前物品：{item.Item_Data.IDName}\n" +
                 $"已存在物品：{RunTimeItems[item.Item_Data.Guid].name}");
 
-
             return null;
-           /* // 你可以选择直接 return null，或者强制生成新 GUID 继续：
-            item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
-
-            // 再检测一次，避免极小概率重复（可选）
-            while (RunTimeItems.ContainsKey(item.Item_Data.Guid))
-            {
-                item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
-            }*/
         }
 
         RunTimeItems.Add(item.Item_Data.Guid, item);
@@ -107,6 +106,7 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
 
         return item;
     }
+
 
 
     // ✅ 添加到分组

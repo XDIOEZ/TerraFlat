@@ -166,6 +166,8 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   data:
     IDName: TileItem_Water
     GameName: 
@@ -190,18 +192,24 @@ MonoBehaviour:
     ItemSpecialData: 
     Guid: 0
     tileData:
-      Name_tileBase: TileBase_Water
+      Name_TileBase: 
       Name_ItemName: TileItem_Water
+      TileTag: 
       position: {x: 0, y: 0, z: 0}
+      DemolitionTime: 0
       workTime: 0
-      itemValues:
-        ItemValue_List:
-        - ValueName: "\u6C34\u6DF1"
-          MinValue: 0
-          currentValue: 99
-          MaxValue: 0
-          OnCurrentValueChanged:
-            _PersistentCalls: []
-        IsWork: 0
+  _tileData:
+    Name_TileBase: TileBase_Water
+    Name_ItemName: TileItem_Water
+    TileTag: 
+    position: {x: 0, y: 0, z: 0}
+    DemolitionTime: 0
+    workTime: 0
+    DeepValue:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
   BuffInfo:
   - {fileID: 11400000, guid: 0aa80856752ea5447b1879e5c8321c5b, type: 2}

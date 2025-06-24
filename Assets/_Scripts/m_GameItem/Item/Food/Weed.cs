@@ -3,7 +3,7 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-public class Weed : Item, IFood,IPlant
+public class Weed : Item, IFood
 {
     [SerializeField]
     private Data_Food Data;
@@ -31,6 +31,10 @@ public class Weed : Item, IFood,IPlant
     {
        
         OnNutrientChanged?.Invoke();
+    }
+    public void Update()
+    {
+        Grow(Time.deltaTime);
     }
 
     //³É³¤
@@ -125,9 +129,4 @@ public class Weed : Item, IFood,IPlant
         }
         return null;
     }
-}
-
-public interface IPlant
-{
-    void Grow(float growValue);
 }

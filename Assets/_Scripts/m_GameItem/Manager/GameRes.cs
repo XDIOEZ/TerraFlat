@@ -34,7 +34,7 @@ public class GameRes : SingletonAutoMono<GameRes>
     #region Unity生命周期方法
 
     float loadStartTime;
-
+    [Button("手动初始化资源")]
     public void LoadResources()
     {
         loadStartTime = Time.realtimeSinceStartup; // 记录加载开始时间
@@ -67,16 +67,20 @@ public class GameRes : SingletonAutoMono<GameRes>
 
 
     [Button]
-    public GameObject InstantiatePrefab(string prefab, Vector3 position = default)
+    public GameObject InstantiatePrefab(string prefab, Vector3? position = null, Quaternion? rotation = null, Vector3? scale = null, Transform parent = null)
     {
         if (AllPrefabs.ContainsKey(prefab))
         {
-            GameObject obj = Instantiate(AllPrefabs[prefab]);
+            GameObject obj = Instantiate(AllPrefabs[prefab], parent);
 
-            if (position == Vector3.zero)
-                obj.transform.position = new Vector3(0, 0, 0);
-            else
-                obj.transform.position = position;
+            // 设置位置
+            obj.transform.position = position ?? Vector3.zero;
+
+            // 设置旋转
+            obj.transform.rotation = rotation ?? Quaternion.identity;
+
+            // 设置缩放
+            obj.transform.localScale = scale ?? Vector3.one;
 
             return obj;
         }
@@ -86,6 +90,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             return null;
         }
     }
+
 
     // 获取指定名称的预制体
     public GameObject GetPrefab(string prefabName)

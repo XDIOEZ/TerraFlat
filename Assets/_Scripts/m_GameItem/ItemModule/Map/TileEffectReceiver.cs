@@ -41,9 +41,10 @@ public class TileEffectReceiver : MonoBehaviour
 
         if (Cache_map == null)
         {
-            Debug.LogError("未找到 MapCore 中的 Map 组件");
+
+           // Debug.LogError("未找到 MapCore 中的 Map 组件");
             enabled = false;
-            return;
+            Cache_map = FindFirstObjectByType<Map>();
         }
 
         // 缓存 Item 组件
@@ -54,6 +55,9 @@ public class TileEffectReceiver : MonoBehaviour
 
         // 初始化网格位置
         lastGridPos = GetCurrentGridPos();
+
+        OnTileEnter(GetCurrentGridPos());
+        this.enabled=true;
     }
 
     private void Update()
@@ -80,6 +84,7 @@ public class TileEffectReceiver : MonoBehaviour
         {
             tileBlock.Tile_Enter(item, tileData);
             OnTileEnterEvent.Invoke(tileData); // 触发进入事件
+            Debug.Log("进入新地块: " + tileData.Name_ItemName);
         }
     }
 

@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>
 /// Mover 用于处理游戏对象的移动逻辑
 /// </summary>
-public class Mover : Organ, IMove
+public class Mover : Organ, IMove ,IStaminaEvent
 {
     #region 字段
 
@@ -35,6 +35,8 @@ public class Mover : Organ, IMove
     [Tooltip("移动开始事件")]
     public UltEvent OnMoveStart;
 
+    public float StaminaChangeSpeed => speedSource.Speed.Value;
+
     #endregion
 
     #region 属性
@@ -49,6 +51,8 @@ public class Mover : Organ, IMove
         get => speedSource.MoveTargetPosition;
         set => speedSource.MoveTargetPosition = value;
     }
+    public UltEvent<float> StaminaChange { get; set; }
+
     public virtual void Start()
     {
         Rb = GetComponentInParent<Rigidbody2D>();
@@ -83,6 +87,7 @@ public class Mover : Organ, IMove
         {
             _lastDirection = direction;
         }*/
+        StaminaChange.Invoke(speedSource.Speed.Value * Time.deltaTime);
 
         // 计算最终速度
         Rb.velocity = (TargetPosition - Rb.position).normalized * speedSource.Speed.Value;

@@ -120,6 +120,10 @@ MonoBehaviour:
   lastGridPos: {x: 0, y: 0}
   item: {fileID: 0}
   Cache_map: {fileID: 0}
+  OnTileEnterEvent:
+    _PersistentCalls: []
+  OnTileExitEvent:
+    _PersistentCalls: []
   raycastDistance: 5
   tileLayerMask:
     serializedVersion: 2
@@ -186,6 +190,8 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   Data:
     IDName: Chicken
     GameName: "\u9E21"
@@ -222,11 +228,12 @@ MonoBehaviour:
       maxDefenseStrength: 0
       maxDefenseToughness: 0
       maxDefenseMagic: 0
-    EatingSpeed: 1
     Speed:
       BaseValue: 6
+      BaseAdditive: 0
       AdditiveModifier: 0
       MultiplicativeModifier: 1
+      FinalAdditive: 0
     stamina: 50
     stamina_Max: 100
     staminaRecoverySpeed: 1
@@ -236,18 +243,26 @@ MonoBehaviour:
       Water: 100
       MaxWater: 0
     progress: 0
-    progress_Max: 100
-    productionSpeed: 1
-    sightRange: 10
-    ItemDataValue:
-      ItemValue_List: []
-      IsWork: 0
+    progress_Max:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints: []
     loot:
       lootList:
       - lootsName: Loots_Death
         lootList: []
       - lootsName: Loots_Production
         lootList: []
+    sightRange: 10
     TeamID: 
 --- !u!61 &2384294618824857088
 BoxCollider2D:
@@ -570,10 +585,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   organName: 
+  slowDownSpeed: 5
+  endSpeed: 0.1
+  IsMoving: 0
+  OnMoveEnd:
+    _PersistentCalls: []
+  OnMoveStay:
+    _PersistentCalls: []
+  OnMoveStart:
+    _PersistentCalls: []
   targetPosition: {x: 0, y: 0, z: 0}
   target: {fileID: 0}
   agent: {fileID: 0}
-  rb2D: {fileID: 0}
   isMoving: 0
 --- !u!1 &6597226300842367791
 GameObject:

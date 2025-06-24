@@ -7,13 +7,11 @@ public class Buff_MoverSpeedChange : BuffAction
 
     public override void Apply(BuffRunTime data)
     {
-        ISpeed Speeder = (ISpeed)data.buff_Receiver;
-
-        if (Speeder == null)
+        if (data.buff_Receiver is not ISpeed speeder)
         {
             // Buff接受者没有速度接口，取消apply
             return;
         }
-        Speeder.Speed.MultiplicativeModifier *= SpeedChangeValue;
+        speeder.Speed.MultiplicativeModifier *= SpeedChangeValue;
     }
 }

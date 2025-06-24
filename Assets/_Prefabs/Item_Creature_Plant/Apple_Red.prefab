@@ -37,6 +37,7 @@ Transform:
   m_Children:
   - {fileID: 8663612773969056445}
   - {fileID: 1752159837602905489}
+  - {fileID: 6799370837357158401}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1271475636138967308
@@ -259,6 +260,10 @@ MonoBehaviour:
   lastGridPos: {x: 0, y: 0}
   item: {fileID: 0}
   Cache_map: {fileID: 0}
+  OnTileEnterEvent:
+    _PersistentCalls: []
+  OnTileExitEvent:
+    _PersistentCalls: []
   raycastDistance: 5
   tileLayerMask:
     serializedVersion: 2
@@ -276,6 +281,50 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+--- !u!1 &6557108144633060648
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6799370837357158401}
+  - component: {fileID: 2752641005529388122}
+  m_Layer: 9
+  m_Name: "\u98DF\u7269\u6A21\u5757"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6799370837357158401
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6557108144633060648}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 957358242643349336}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2752641005529388122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6557108144633060648}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &9063328539452382332
 GameObject:
   m_ObjectHideFlags: 0
@@ -301,8 +350,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9063328539452382332}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.78513145, y: 0.7296133, z: 1.9519467}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -323,10 +372,10 @@ MonoBehaviour:
   _data:
     ModuleName: "\u751F\u957F\u6A21\u5757"
     isRunning: 0
-    isLoop: 0
+    isLoop: 1
     progress: 0
     progress_Max:
-      BaseValue: 20
+      BaseValue: 11
       BaseAdditive: 0
       AdditiveModifier: 0
       MultiplicativeModifier: 1

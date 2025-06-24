@@ -190,21 +190,21 @@ MonoBehaviour:
     ItemSpecialData: 
     Guid: 0
     tileData:
-      Name_tileBase: 
-      tileBase: {fileID: 0}
+      Name_TileBase: 
       Name_ItemName: TileItem_Grass
       TileTag: Fertile
       position: {x: 0, y: 0, z: 0}
+      DemolitionTime: 0
       workTime: 0
-  tileData:
-    Name_tileBase: TileBase_Grass
-    tileBase: {fileID: 0}
+  _tileData:
+    Name_TileBase: TileBase_Grass
     Name_ItemName: TileItem_Grass
     TileTag: none
     position: {x: 0, y: 0, z: 0}
+    DemolitionTime: 0
     workTime: 0
     FertileValue:
-      BaseValue: 1.2
+      BaseValue: 1
       BaseAdditive: 0
       AdditiveModifier: 0
       MultiplicativeModifier: 1

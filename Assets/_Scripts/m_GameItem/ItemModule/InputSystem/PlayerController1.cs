@@ -44,6 +44,11 @@ public class PlayerController : MonoBehaviour
     public void OnDisable()
     {
         _inputActions.Disable();
+
+    }
+    private void OnDestroy()
+    {
+        _inputActions.Win10.Disable();
     }
     public void Awake()
     {
@@ -52,11 +57,15 @@ public class PlayerController : MonoBehaviour
 
 
     }
+    public void OnEnable()
+    {
+        Set_InputSystem();
+    }
     public void Start()
     {
         if(_mainCamera == null)
         _mainCamera = VirtualCameraManager.ControllerCamera;
-        Set_InputSystem();
+      //  Set_InputSystem();
         //_mainCamera = Camera.main;
         InitializeComponents();
 

@@ -5,28 +5,30 @@ using UnityEngine.Tilemaps;
 
 public class Item_Tile_Water : Item, IBlockTile
 {
+    //Item的游戏数据 用于存档
     [SerializeField]
     private BlockData data;
 
-
+    //Item的基础数据
     public override ItemData Item_Data { get => data; set => data = value as BlockData; }
 
-
+    //TileData 方便策划设置 TileData的相关参数 和玩家修改TileData的数据
     [SerializeField]
     TileData_Water _tileData;
+    //实现接口
     public TileData TileData { get => _tileData; set => _tileData = (TileData_Water)value; }
-
+    //挂接的Buff
     public List<Buff_Data> BuffInfo;
 
     public void Awake()
     {
-        if (data.tileData.Name_ItemName == "")
+        if (data.tileData.Name_TileBase == "")
         {
             data.tileData = _tileData;
         }
         else
         {
-            _tileData = (TileData_Water)data.tileData;
+            _tileData = data.tileData as TileData_Water;
         }
     }
     public override void Act()

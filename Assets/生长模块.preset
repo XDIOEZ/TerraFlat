@@ -1,0 +1,139 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!181963792 &2655988077585873504
+Preset:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: "\u751F\u957F\u6A21\u5757"
+  m_TargetType:
+    m_NativeTypeID: 114
+    m_ManagedTypePPtr: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
+    m_ManagedTypeFallback: 
+  m_Properties:
+  - target: {fileID: 0}
+    propertyPath: m_Enabled
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: m_EditorHideFlags
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: m_EditorClassIdentifier
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.ModuleName
+    value: "\u751F\u957F\u6A21\u5757"
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.isRunning
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.isLoop
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.progress
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.progress_Max.BaseValue
+    value: 300
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.progress_Max.BaseAdditive
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.progress_Max.AdditiveModifier
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.progress_Max.MultiplicativeModifier
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.progress_Max.FinalAdditive
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.productionSpeed.BaseValue
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.productionSpeed.BaseAdditive
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.productionSpeed.AdditiveModifier
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.productionSpeed.MultiplicativeModifier
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.productionSpeed.FinalAdditive
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.size
+    value: 3
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[0].NodeName
+    value: "\u5E7C\u82D7\u9636\u6BB5"
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[0].InvokeValue
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[0].loot.lootName
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[0].loot.lootAmount
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[1].NodeName
+    value: "\u751F\u957F\u9636\u6BB5"
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[1].InvokeValue
+    value: 5
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[1].loot.lootName
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[1].loot.lootAmount
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[2].NodeName
+    value: "\u6210\u719F\u9636\u6BB5"
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[2].InvokeValue
+    value: 10
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[2].loot.lootName
+    value: "\u6728\u68CD"
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.specialProductionPoints.Array.data[2].loot.lootAmount
+    value: 2
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _data.nodeIndex
+    value: 0
+    objectReference: {fileID: 0}
+  m_ExcludedProperties: []

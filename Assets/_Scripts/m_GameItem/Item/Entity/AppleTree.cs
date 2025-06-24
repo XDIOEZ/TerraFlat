@@ -50,15 +50,45 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
     {
         OnHpChanged = new UltEvent();
         OnDefenseChanged = new UltEvent();
-        Mods["苹果树的成长"].OnAction += Grow;
+        Mods["生长模块"].OnAction += Grow;
 
-        GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += ChangeGrow;
-
+        //GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += ChangeGrow;
+        GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += OnTileEnter;
     }
 
     public void FixedUpdate()
     {
        
+    }
+    void OnTileEnter(TileData data)
+    {
+        Debug.Log("OnTileEnter");
+
+        if (data == null)
+        {
+            Debug.LogError("TileData 为空，无法处理！");
+            Mods["生长模块"].Data.isRunning = false;
+            return;
+        }
+
+        if (data is not TileData_Grass tileData)
+        {
+            Debug.LogWarning($"TileData 类型错误，当前类型是 {data.GetType().Name}，期望类型是 TileData_Grass");
+            Mods["生长模块"].Data.isRunning = false;
+            return;
+        }
+
+        if (tileData.FertileValue.Value > 0)
+        {
+            Debug.Log("当前格子适合生长，启动生长模块");
+            Mods["生长模块"].Data.isRunning = true;
+        }
+        else
+        {
+            Debug.LogWarning($"当前格子的肥沃度值为 {tileData.FertileValue.Value}，不适合生长");
+            Mods["生长模块"].Data.isRunning = false;
+        }
+
     }
 
     public void Grow(float NodeIndex)
@@ -74,7 +104,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
         else if(NodeIndex == 3)
         {
             transform.localScale = Vector3.one * 1f;
-            Mods["苹果树的生产"].Data.isRunning = true;
+            Mods["生产模块"].Data.isRunning = true;
         }
         else if(NodeIndex == 4)
         {

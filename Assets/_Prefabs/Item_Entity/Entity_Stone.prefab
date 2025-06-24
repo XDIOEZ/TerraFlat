@@ -53,6 +53,8 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   data:
     IDName: Entity_Stone
     GameName: 
@@ -89,10 +91,12 @@ MonoBehaviour:
       maxDefenseStrength: 0
       maxDefenseToughness: 0
       maxDefenseMagic: 0
-    EatingSpeed: 1
-    speed_Max: 3
-    speed: 3
-    runSpeed: 6
+    Speed:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
     stamina: 100
     stamina_Max: 100
     staminaRecoverySpeed: 1
@@ -102,18 +106,26 @@ MonoBehaviour:
       Water: 100
       MaxWater: 100
     progress: 0
-    progress_Max: 100
-    productionSpeed: 1
-    sightRange: 10
-    ItemDataValue:
-      ItemValue_List: []
-      IsWork: 0
+    progress_Max:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints: []
     loot:
       lootList:
       - lootsName: DeathLoot
         lootList:
         - lootName: Stone
           lootAmount: 2
+    sightRange: 10
     TeamID: 
 --- !u!1 &5434032932056920767
 GameObject:

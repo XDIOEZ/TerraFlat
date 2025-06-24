@@ -9,6 +9,6 @@ using UnityEngine;
 public partial class BlockData : ItemData
 {
     [HideInInspector]
-    public TileData tileData = new TileData();
+    public TileData tileData; // าฦณýมห new TileData()
 }
 

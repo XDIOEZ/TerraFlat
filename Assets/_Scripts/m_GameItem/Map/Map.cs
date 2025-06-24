@@ -1,4 +1,5 @@
-﻿using MemoryPack;
+﻿using Force.DeepCloner;
+using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
@@ -66,10 +67,10 @@ public class Map : Item, ISave_Load
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
-            TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_tileBase);
+            TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
             if (tile == null)
             {
-                Debug.LogError($"无法加载 Tile: {topTile.Name_tileBase}");
+                Debug.LogError($"无法加载 Tile: {topTile.Name_TileBase}");
                 continue;
             }
 
@@ -100,17 +101,17 @@ public class Map : Item, ISave_Load
         foreach (Vector3Int pos3D in bounds.allPositionsWithin)
         {
             TileBase tilebase = tileMap.GetTile(pos3D);
+
             if (tilebase == null) continue;
 
             Vector2Int pos2D = new Vector2Int(pos3D.x, pos3D.y);
 
-            TileData tileData = new TileData
-            {
-                Name_tileBase = tilebase.name,
-                Name_ItemName = ConvertTileBaseNameToItemName(tilebase.name), // 使用转换方法
-                position = pos3D,
-                workTime = 0f
-            };
+            string Name_ItemName = ConvertTileBaseNameToItemName(tilebase.name); // 使用转换方法
+
+            TileData tileData;
+            tileData = GameRes.Instance.GetPrefab(Name_ItemName).
+                GetComponent<IBlockTile>().TileData.DeepClone();
+
 
             // 如果该坐标已有列表，添加，否则新建
             if (!tempTileData.ContainsKey(pos2D))
@@ -245,16 +246,16 @@ public class Map : Item, ISave_Load
 
         // 获取该位置最顶层的 TileData（最后一个）
         TileData topTile = tileMapData.TileData[position][^1];
-        TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_tileBase);
+        TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
 
         if (tile == null)
         {
-            Debug.LogError($"无法加载 TileBase：{topTile.Name_tileBase}，更新失败。");
+            Debug.LogError($"无法加载 TileBase：{topTile.Name_TileBase}，更新失败。");
             return;
         }
 
         tileMap.SetTile(position3D, tile);
-        Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_tileBase}");
+        Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_TileBase}");
     }
     #endregion
 }

@@ -12,8 +12,6 @@ public class Item_Tile_Grass : Item,IBlockTile
     private BlockData data = new BlockData();
     public override ItemData Item_Data { get => data; set => data = value as BlockData; }
 
-
-
     [SerializeField]
     TileData_Grass _tileData;
     public TileData TileData { get => _tileData; set => _tileData = (TileData_Grass)value; }
@@ -21,26 +19,18 @@ public class Item_Tile_Grass : Item,IBlockTile
 
     public void Awake()
     {
-        if (data.tileData == null || string.IsNullOrEmpty(data.tileData.Name_ItemName))
+        if (data.tileData.Name_TileBase == "")
         {
             data.tileData = _tileData;
         }
         else
         {
-            if (data.tileData is TileData_Grass waterTileData)
-            {
-                _tileData = (TileData_Grass)waterTileData;
-            }
-            else
-            {
-                Debug.LogError($"类型转换失败，当前 tileData 实际类型是：{data.tileData.GetType().Name}");
-            }
+            _tileData = data.tileData as TileData_Grass;
         }
     }
 
     public override void Act()
     {
-      //  Set_TileBase_ToWorld();
     }
 
     public void Set_TileBase_ToWorld(TileData tileData)

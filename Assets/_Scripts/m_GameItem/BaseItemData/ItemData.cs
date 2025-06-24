@@ -58,7 +58,7 @@ public  abstract partial class ItemData
 
     [Tooltip("全局唯一标识")]
     public int Guid;
-
+    [ShowInInspector]
     public Dictionary<string,ModuleData> ModuleDataDic =new();
 
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
