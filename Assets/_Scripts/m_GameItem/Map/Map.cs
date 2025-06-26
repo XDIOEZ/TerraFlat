@@ -12,16 +12,15 @@ public class Map : Item, ISave_Load
     #region 属性和字段
     [Header("地图配置")]
     [SerializeField]
-    public Data_TileMap tileMapData;
+    public Data_TileMap Data;
 
     [Header("Tilemap 组件")]
     [SerializeField]
     public Tilemap tileMap;
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
-    public override ItemData Item_Data { get => tileMapData; set => tileMapData = value as Data_TileMap; }
+    public override ItemData Item_Data { get => Data; set => Data = value as Data_TileMap; }
     #endregion
-
     #region 基类方法实现
     public override void Act()
     {
@@ -40,7 +39,7 @@ public class Map : Item, ISave_Load
     public void Save()
     {
         // 只有 tileMapData 为空或其 TileData 为空时才初始化数据
-        if (tileMapData == null || tileMapData.TileData == null || tileMapData.TileData.Count == 0)
+        if (Data == null || Data.TileData == null || Data.TileData.Count == 0)
         {
             InitTileData();
         }
@@ -53,13 +52,13 @@ public class Map : Item, ISave_Load
 
     public void LoadTileData()
     {
-        if (tileMapData.TileData == null || tileMapData.TileData.Count == 0)
+        if (Data.TileData == null || Data.TileData.Count == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
             return;
         }
 
-        foreach (var kvp in tileMapData.TileData)
+        foreach (var kvp in Data.TileData)
         {
             Vector2Int position2D = kvp.Key;
             List<TileData> tileDataList = kvp.Value;
@@ -120,7 +119,7 @@ public class Map : Item, ISave_Load
             tempTileData[pos2D].Add(tileData);
         }
 
-        tileMapData.TileData = tempTileData;
+        Data.TileData = tempTileData;
 
         Debug.Log("多层 TileData 已保存到 Data_TileMap 中" + tempTileData.Count);
     }
@@ -167,12 +166,12 @@ public class Map : Item, ISave_Load
         tileData.position = (Vector3Int)position;
 
         // 如果该位置没有初始化 List，就创建一个
-        if (!tileMapData.TileData.ContainsKey(position))
+        if (!Data.TileData.ContainsKey(position))
         {
-            tileMapData.TileData[position] = new List<TileData>();
+            Data.TileData[position] = new List<TileData>();
         }
 
-        tileMapData.TileData[position].Add(tileData);
+        Data.TileData[position].Add(tileData);
 
         UpdateTileBaseAtPosition(position);
     }
@@ -180,7 +179,7 @@ public class Map : Item, ISave_Load
     [Button("获取 TileData")]
     public TileData GetTile(Vector2Int position, int? index = null)
     {
-        if (!tileMapData.TileData.TryGetValue(position, out var list) || list.Count == 0)
+        if (!Data.TileData.TryGetValue(position, out var list) || list.Count == 0)
         {
             //  Debug.LogWarning($"位置 {position} 上没有任何 TileData。");
             return null;
@@ -199,13 +198,13 @@ public class Map : Item, ISave_Load
 
     public void DELTile(Vector2Int position, int? index = null)
     {
-        if (!tileMapData.TileData.ContainsKey(position) || tileMapData.TileData[position].Count == 0)
+        if (!Data.TileData.ContainsKey(position) || Data.TileData[position].Count == 0)
         {
             Debug.LogWarning($"位置 {position} 上没有 TileData 可删除。");
             return;
         }
 
-        List<TileData> list = tileMapData.TileData[position];
+        List<TileData> list = Data.TileData[position];
 
         int removeIndex = index ?? (list.Count - 1); // 若 index 为 null，就删除最后一个
 
@@ -220,7 +219,7 @@ public class Map : Item, ISave_Load
         // 如果该位置已经没有层了，可以考虑移除字典项（可选）
         if (list.Count == 0)
         {
-            tileMapData.TileData.Remove(position);
+            Data.TileData.Remove(position);
         }
 
         UpdateTileBaseAtPosition(position);
@@ -229,7 +228,7 @@ public class Map : Item, ISave_Load
     public void UPDTile(Vector2Int position, int index, TileData tileData)
     {
         tileData.position = (Vector3Int)position;
-        tileMapData.TileData[position][index] = tileData;
+        Data.TileData[position][index] = tileData;
         UpdateTileBaseAtPosition(position);
     }
 
@@ -237,7 +236,7 @@ public class Map : Item, ISave_Load
     {
         Vector3Int position3D = new Vector3Int(position.x, position.y, 0);
 
-        if (!tileMapData.TileData.ContainsKey(position) || tileMapData.TileData[position].Count == 0)
+        if (!Data.TileData.ContainsKey(position) || Data.TileData[position].Count == 0)
         {
             tileMap.SetTile(position3D, null); // 清除该 Tile
             Debug.Log($"清除了位置 {position} 上的 TileBase（无数据）");
@@ -245,7 +244,7 @@ public class Map : Item, ISave_Load
         }
 
         // 获取该位置最顶层的 TileData（最后一个）
-        TileData topTile = tileMapData.TileData[position][^1];
+        TileData topTile = Data.TileData[position][^1];
         TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
 
         if (tile == null)
@@ -255,7 +254,7 @@ public class Map : Item, ISave_Load
         }
 
         tileMap.SetTile(position3D, tile);
-        Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_TileBase}");
+        //Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_TileBase}");
     }
     #endregion
 }

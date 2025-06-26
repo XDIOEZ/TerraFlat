@@ -157,7 +157,7 @@ MonoBehaviour:
     isBuilding: 0
   colliders:
   - {fileID: 8923185880049686946}
-  buildingSO: {fileID: 11400000, guid: d34cc3c527b046a4eb78d52022429cb0, type: 2}
+  buildingSO: {fileID: 11400000, guid: 2f3ee0533105efb44aa3e1cdb432e189, type: 2}
 --- !u!114 &5573615786486319191
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -173,7 +173,7 @@ MonoBehaviour:
   MaxDistance: 2
   minVisibleDistance: 0.3
   maxVisibleDistance: 3.5
-  buildingSO: {fileID: 0}
+  buildingSO: {fileID: 11400000, guid: 2f3ee0533105efb44aa3e1cdb432e189, type: 2}
 --- !u!1 &1889306391043813095
 GameObject:
   m_ObjectHideFlags: 0

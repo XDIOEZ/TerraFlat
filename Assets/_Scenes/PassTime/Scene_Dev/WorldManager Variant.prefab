@@ -91,6 +91,42 @@ PrefabInstance:
       propertyPath: m_Name
       value: WorldManager Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: LoadedCount
+      value: 78
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: isLoadFinish
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: ADBLabels_Prefab.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: ADBLabels_TileBase.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: ADBLabels_Prefab.Array.data[0]
+      value: ItemPrefab
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: ADBLabels_Prefab.Array.data[1]
+      value: Prefab
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: ADBLabels_TileBase.Array.data[0]
+      value: TileBase
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: ADBLabels_CraftingRecipe.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 604099482529500497, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: ADBLabels_CraftingRecipe.Array.data[0]
+      value: CraftingRecipe
+      objectReference: {fileID: 0}
     - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
       propertyPath: TemplateSaveData.saveName
       value: "\u6A21\u677F"
@@ -150,8 +186,29 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8569586147199929775, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7352496318796009389}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 29267274160566871, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3300670493504077628}
   m_SourcePrefab: {fileID: 100100000, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+--- !u!1 &3976974076304344635 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 29267274160566871, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+  m_PrefabInstance: {fileID: 3987645789092230252}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3300670493504077628
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3976974076304344635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 000d1751e4c68b948acc4b05eba47054, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _map: {fileID: 0}
 --- !u!4 &4736590014334990787 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8569586147199929775, guid: 708f0b948866b2b459782755afbd1d57, type: 3}

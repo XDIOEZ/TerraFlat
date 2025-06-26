@@ -62,7 +62,10 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
     {
         if (position == default) position = Vector3.zero;
         if (rotation == default) rotation = Quaternion.identity;
-        if (scale == default) scale = Vector3.one;
+
+        // 修复缩放为0的问题 - 如果未指定缩放，使用Vector3.one
+        if (scale == default || scale == Vector3.zero)
+            scale = Vector3.one;
 
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemName, position, rotation, scale);
         Item item = itemObj.GetComponent<Item>();

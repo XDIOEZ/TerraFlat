@@ -56,7 +56,7 @@ public class TileEffectReceiver : MonoBehaviour
         // 初始化网格位置
         lastGridPos = GetCurrentGridPos();
 
-        OnTileEnter(GetCurrentGridPos());
+        //OnTileEnter(GetCurrentGridPos());
         this.enabled=true;
     }
 

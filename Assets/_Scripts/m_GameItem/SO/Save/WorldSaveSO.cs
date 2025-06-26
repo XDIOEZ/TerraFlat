@@ -103,6 +103,7 @@ public class WorldSaveSO : ScriptableObject
 
     public static void SyncAllMap()
     {
+        GameRes.Instance.LoadResourcesSync();
         // 记录当前激活场景路径
         string activeScenePath = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().path;
 

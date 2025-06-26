@@ -10,10 +10,16 @@ public partial class GameSaveData
 {
     [Tooltip("当前加载着的存档名称")]
     public string saveName = "defaultSaveName";//存档名称
-                                               //[ReadOnly]
+
     public string ActiveSceneName = "平原";//当前激活场景名称
 
+    public Vector2Int ActiveMapPos = new Vector2Int(0, 0);//当前激活地图位置
+
+    public Vector2Int MapSize = new Vector2Int(100, 100);//地图大小
+
     public string leaveTime = "0";
+    //地图种子
+    public string MapSeed = "0";
 
     [ShowInInspector]
     //存档数据结构

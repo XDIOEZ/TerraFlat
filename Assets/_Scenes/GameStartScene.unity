@@ -5218,6 +5218,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: WorldManager
       objectReference: {fileID: 0}
+    - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: SaveData.ActiveSceneName
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4647429720153673255, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
+      propertyPath: defaultSettings.Default_Map
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 8569586147199929775, guid: 708f0b948866b2b459782755afbd1d57, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

@@ -39,6 +39,9 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     [Header("默认设置")]
     public DefaultSettings defaultSettings;
 
+    [Header("模板参考")]
+    public WorldSaveSO templateSaveData;
+
     public void Start()
     {
             DontDestroyOnLoad(gameObject);
@@ -122,53 +125,63 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     #region 加载
 
     [Button("加载玩家")]
-    public void LoadPlayer(string playerName)
+    public Player LoadPlayer(string playerName)
     {
+        Player loadedPlayer = null;
+
         if (SaveData.PlayerData_Dict.ContainsKey(playerName))
         {
             Data_Player _data = SaveData.PlayerData_Dict[playerName];
             Debug.Log("成功加载玩家：" + playerName);
-            CreatePlayer(_data);
+            loadedPlayer = CreatePlayer(_data);
         }
         else
         {
-            LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, defaultSettings.Default_PlayerSave, result =>
-            {
-                Data_Player _data;
+            //LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, defaultSettings.Default_PlayerSave, result =>
+            //{
+            //    Data_Player _data;
 
-                if (result == null)
-                {
-                    Debug.LogWarning("加载失败：WorldSaveSO 对象为空！");
-                    _data = new Data_Player();
-                }
-                else if (result.SaveData == null)
-                {
-                    Debug.LogWarning("加载失败：SaveData 为空！");
-                    _data = new Data_Player();
-                }
-                else if (!result.SaveData.PlayerData_Dict.ContainsKey("默认"))
-                {
-                    Debug.LogWarning("加载成功，但未包含“默认”玩家数据！");
-                    _data = new Data_Player();
-                }
-                else
-                {
-                    _data = result.SaveData.PlayerData_Dict[defaultSettings.Default_PlayerName];
-                    _data.Name_User = playerName;
-                    Debug.Log($"成功加载默认模板玩家，并设置为新玩家名：{playerName}");
-                }
+            //    if (result == null)
+            //    {
+            //        Debug.LogWarning("加载失败：WorldSaveSO 对象为空！");
+            //        _data = new Data_Player();
+            //    }
+            //    else if (result.SaveData == null)
+            //    {
+            //        Debug.LogWarning("加载失败：SaveData 为空！");
+            //        _data = new Data_Player();
+            //    }
+            //    else if (!result.SaveData.PlayerData_Dict.ContainsKey("默认"))
+            //    {
+            //        Debug.LogWarning("加载成功，但未包含“默认”玩家数据！");
+            //        _data = new Data_Player();
+            //    }
+            //    else
+            //    {
+            //        _data = result.SaveData.PlayerData_Dict[defaultSettings.Default_PlayerName];
+            //        _data.Name_User = playerName;
+            //        Debug.Log($"成功加载默认模板玩家，并设置为新玩家名：{playerName}");
+            //    }
 
-                CreatePlayer(_data);
-            });
+            //    _data = new Data_Player();
+            //    _data.Name_User = playerName;
+            //    loadedPlayer = CreatePlayer(_data);
+            //});
+            Data_Player _data = GameRes.Instance.GetPrefab("Player").GetComponent<Player>().Data;
+            _data.Name_User = playerName;
+            loadedPlayer = CreatePlayer(_data);
         }
+
+        return loadedPlayer;
     }
 
-    private void CreatePlayer(Data_Player data)
+    private Player CreatePlayer(Data_Player data)
     {
         GameObject newPlayerObj = RunTimeItemManager.Instance.InstantiateItem("Player").gameObject;
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
         newPlayer.Data = data;
         newPlayer.Load();
+        return newPlayer;
     }
 
 
@@ -384,38 +397,77 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     }
 
     #region 场景切换
-
     [Button("改变场景")]
     public void ChangeScene(string sceneName)
     {
-        if (sceneName == "")
+        if (string.IsNullOrEmpty(sceneName))
         {
-            sceneName = defaultSettings.Default_Map;
+            Debug.LogWarning("场景名称不能为空！");
+            sceneName = new Vector2Int(0, 0).ToString();
         }
+        #region 新建场景
+        // 创建新场景
+        previousSceneName = sceneName;
+        newScene = SceneManager.CreateScene(previousSceneName);
+        // 设置存档数据
+        SaveData.ActiveSceneName = previousSceneName;
+        #endregion
 
-        SaveData.ActiveSceneName = sceneName;
-
+        #region 卸载场景
+        // 保存当前场景数据
         SaveActiveMapToSaveData();
-
-        newScene = SceneManager.CreateScene(sceneName);
-
         Scene previousScene = SceneManager.GetActiveScene();
-
+        // 注册场景卸载完成事件
         SceneManager.sceneUnloaded += OnPreviousSceneUnloaded;
-
         SceneManager.UnloadSceneAsync(previousScene);
+        #endregion
     }
 
     private Scene newScene;
+    private string previousSceneName;
 
     private void OnPreviousSceneUnloaded(Scene unloadedScene)
     {
+        // 解除事件注册，防止重复调用
         SceneManager.sceneUnloaded -= OnPreviousSceneUnloaded;
 
+        // 设置新场景为活动场景
         SceneManager.SetActiveScene(newScene);
+        // 检查目标场景是否存在于存档中
+        bool sceneExistsInSave = SaveData.MapSaves_Dict.ContainsKey(newScene.name);
 
-        LoadMap(newScene.name);
+       
 
+        if (sceneExistsInSave)
+        {
+            // 情况1: 存档中存在该场景数据 - 加载存档中的地图
+            Debug.Log($"从存档加载场景: {newScene.name}");
+            LoadMap(newScene.name);
+        }
+        else
+        {
+            // 情况2: 存档中不存在该场景数据 - 只创建地图核心
+            Debug.Log($"创建新场景: {newScene.name}，仅添加地图核心");
+
+            if (SaveData.PlayerData_Dict.ContainsKey(CurrentContrrolPlayerName))
+            {
+                // 加载当前玩家
+                Item player = LoadPlayer(CurrentContrrolPlayerName);
+            }
+            else
+            {
+                // 加载当前玩家
+                Item player = LoadPlayer(CurrentContrrolPlayerName);
+
+                player.Item_Data._transform.Position = new Vector3(50, 50, 0);
+            }
+           
+
+            // 创建地图核心（地图生成逻辑由地图核心处理）
+            RunTimeItemManager.Instance.InstantiateItem("MapCore");
+        }
+
+        // 触发场景切换事件
         OnSceneSwitch?.Invoke();
     }
 
