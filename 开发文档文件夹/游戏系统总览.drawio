@@ -1,4 +1,4 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.3 Chrome/130.0.6723.137 Electron/33.2.1 Safari/537.36" version="26.0.3" pages="7">
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15" pages="8">
   <diagram id="8yKRzX55yw8iAQM8X-Ct" name="系统循环架构总览">
     <mxGraphModel dx="1554" dy="2091" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -425,51 +425,195 @@
     </mxGraphModel>
   </diagram>
   <diagram id="S1iuna5DHOfvEd7IbMGI" name="地图生成">
-    <mxGraphModel dx="493" dy="317" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1000" pageHeight="1000" math="0" shadow="0">
+    <mxGraphModel dx="2354" dy="922" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1000" pageHeight="1000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="sWdDy9dxzjYvNjNHna18-1" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-1" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="16" y="87" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-2" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-2" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="16" y="167" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-3" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-3" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="96" y="87" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-4" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-4" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="96" y="167" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-5" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-5" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="16" y="247" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-6" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-6" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="96" y="247" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-7" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-7" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="176" y="87" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-8" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-8" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="176" y="167" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-9" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-9" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="176" y="247" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-10" value="X" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-10" value="X" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="1" vertex="1">
           <mxGeometry x="124.5" y="237" width="23" height="15" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-12" value="Y" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-12" value="Y" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="1" vertex="1">
           <mxGeometry x="145" y="187" width="60" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-13" value="0.5X&lt;div&gt;0.5Y&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-13" value="0.5X&lt;div&gt;0.5Y&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="1" vertex="1">
           <mxGeometry x="106" y="187" width="60" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-14" value="X" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-14" value="X" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="1" vertex="1">
           <mxGeometry x="205" y="204" width="23" height="15" as="geometry" />
         </mxCell>
-        <mxCell id="sWdDy9dxzjYvNjNHna18-15" value="Y" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" vertex="1" parent="1">
+        <mxCell id="sWdDy9dxzjYvNjNHna18-15" value="Y" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="1" vertex="1">
           <mxGeometry x="186.5" y="210" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5YbstSo7ZunGX-rjuer3-2" target="5YbstSo7ZunGX-rjuer3-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-2" value="1.玩家需要向边界放向移动2个单位&lt;div&gt;(只有在世界边界的情况下才实现)&lt;/div&gt;" style="rounded=0;html=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="6.5" y="445" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5YbstSo7ZunGX-rjuer3-3" target="5YbstSo7ZunGX-rjuer3-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-3" value="2.切换场景时&amp;nbsp; scene的名字为 当前激活&lt;div&gt;Pos +&amp;nbsp; mapsize&amp;nbsp;&lt;/div&gt;" style="rounded=0;html=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="591" y="445" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-8" value="世界边界" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="306" y="614" width="255" height="141" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-9" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;字段:&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地肥力 //控制作物生长速度的系数之一&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地水分 //控制作物是否能生长的条件之一&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-8">
+          <mxGeometry y="26" width="255" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-10" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-8">
+          <mxGeometry y="90" width="255" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-11" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;函数:&lt;/font&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-8">
+          <mxGeometry y="98" width="255" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-14" value="随机地图生成器" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-186" y="666" width="255" height="141" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-15" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;字段:&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地肥力 //控制作物生长速度的系数之一&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地水分 //控制作物是否能生长的条件之一&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-14">
+          <mxGeometry y="26" width="255" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-16" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-14">
+          <mxGeometry y="90" width="255" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-17" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;函数:&lt;/font&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-14">
+          <mxGeometry y="98" width="255" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5YbstSo7ZunGX-rjuer3-18" target="5YbstSo7ZunGX-rjuer3-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-18" value="生成器需要检测当前地图的位置&lt;div&gt;也就是SaveData中的激活MapPos&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=0;html=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="-460" y="666" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-19" value="调整控制玩家位置" style="rounded=0;html=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="703" y="730" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-20" value="MapCore" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="136" y="997" width="255" height="141" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-21" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;字段:&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地肥力 //控制作物生长速度的系数之一&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地水分 //控制作物是否能生长的条件之一&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-20">
+          <mxGeometry y="26" width="255" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-22" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-20">
+          <mxGeometry y="90" width="255" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-23" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;函数:&lt;/font&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-20">
+          <mxGeometry y="98" width="255" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-25" value="SaveAndLoad" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-313" y="1006" width="255" height="141" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-26" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;字段:&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地肥力 //控制作物生长速度的系数之一&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;float 耕地水分 //控制作物是否能生长的条件之一&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-25">
+          <mxGeometry y="26" width="255" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-27" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-25">
+          <mxGeometry y="90" width="255" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="5YbstSo7ZunGX-rjuer3-28" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;函数:&lt;/font&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="5YbstSo7ZunGX-rjuer3-25">
+          <mxGeometry y="98" width="255" height="43" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="E5EpfP6M5O60pl9ng5tJ" name="第 8 页">
+    <mxGraphModel dx="1567" dy="439" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="0vQLWxVIfncvzvxucptL-1" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="400" y="280" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-2" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="140" y="440" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-3" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="630" y="520" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-4" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="390" y="720" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-5" value="" style="triangle;whiteSpace=wrap;html=1;rotation=-92;" vertex="1" parent="1">
+          <mxGeometry x="354" y="420" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-6" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="344" y="490" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-7" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="480" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-8" value="" style="shape=cube;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;darkOpacity2=0.1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="390" width="34" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-9" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="540" as="sourcePoint" />
+            <mxPoint x="130" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-10" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="130" y="420" as="sourcePoint" />
+            <mxPoint x="330" y="430" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-11" value="" style="curved=1;endArrow=classic;html=1;rounded=0;exitX=0;exitY=0;exitDx=20;exitDy=30;exitPerimeter=0;" edge="1" parent="1" source="0vQLWxVIfncvzvxucptL-8">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="60" y="450" as="sourcePoint" />
+            <mxPoint x="190" y="560" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="20" y="450" />
+              <mxPoint x="60" y="590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-12" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-150" y="700" width="350" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-13" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-150" y="700" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-15" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="10" y="790" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-14" value="" style="shape=cube;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;darkOpacity2=0.1;" vertex="1" parent="1">
+          <mxGeometry x="10" y="750" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-16" value="空岛的模型" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-380" y="680" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-17" value="完好准确的建筑模型" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-380" y="740" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="0vQLWxVIfncvzvxucptL-18" value="空岛背景" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-380" y="800" width="120" height="60" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

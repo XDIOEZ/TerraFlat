@@ -1,9 +1,9 @@
-
-
+using MemoryPack;
 using UnityEngine;
 
 [System.Serializable]
-public class UIData
+[MemoryPackable]
+public partial class UIData
 {
     public Vector2 Position;
     public Vector3 Scale;

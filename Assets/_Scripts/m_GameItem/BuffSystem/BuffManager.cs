@@ -22,6 +22,11 @@ public class BuffManager : MonoBehaviour
         //}
         Init();
     }
+    public bool HasBuff(string buffId)
+    {
+        return BuffRunTimeData_Dic.ContainsKey(buffId); // 举例，如果用 Dictionary 存
+    }
+
 
     void Init()
     {

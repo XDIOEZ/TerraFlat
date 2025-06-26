@@ -70,7 +70,7 @@ MonoBehaviour:
   OnAction_Event:
     _PersistentCalls: []
   Data:
-    IDName: 
+    IDName: MapCore
     GameName: 
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
@@ -91,7 +91,7 @@ MonoBehaviour:
     ItemSpecialData: 
     Guid: 0
     position: {x: 0, y: 0}
-    size: {x: 100, y: 100}
+    size: {x: 600, y: 600}
   tileMap: {fileID: 6321057560787975102}
 --- !u!114 &3175238874894987672
 MonoBehaviour:
@@ -107,9 +107,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   map: {fileID: 8233460568870623006}
   noiseScale: 0.01
-  waterThreshold: 0.3
-  mountainThreshold: 0.7
-  tilesPerFrame: 100
+  biomes:
+  - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
+  - {fileID: 11400000, guid: 81b61c01498513f49a1c1dfe87727434, type: 2}
+  - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
+  tilesPerFrame: 1000
   seamlessBorders: 1
   transitionRange: 5
   onMapGenerated:

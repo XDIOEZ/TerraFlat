@@ -21,12 +21,14 @@ public class Map : Item, ISave_Load
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData Item_Data { get => Data; set => Data = value as Data_TileMap; }
     #endregion
+
     #region 基类方法实现
     public override void Act()
     {
         throw new System.NotImplementedException();
     }
     #endregion
+
     #region 保存和加载
     [Button("从数据加载地图")]
     public void Load()

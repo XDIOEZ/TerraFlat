@@ -95,15 +95,20 @@ public class Item_Tile_Water : Item, IBlockTile
         }
     }
 
-
     public void Tile_Exit(Item item, TileData tileData)
     {
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        if (buffManager == null) return;
+
         foreach (Buff_Data buffData in BuffInfo)
         {
-            buffManager.RemoveBuff(buffData.buff_ID);
+            if (buffManager.HasBuff(buffData.buff_ID))  // 假设有这个方法
+            {
+                buffManager.RemoveBuff(buffData.buff_ID);
+            }
         }
     }
+
 
     public void Tile_Update(Item item, TileData tileData)
     {

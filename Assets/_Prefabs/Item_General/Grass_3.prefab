@@ -108,8 +108,10 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   Data:
-    IDName: Grass_3
+    IDName: Weed
     GameName: "\u8349"
     Description: "\u8349"
     Durability: 1
@@ -196,6 +198,10 @@ MonoBehaviour:
   lastGridPos: {x: 0, y: 0}
   item: {fileID: 0}
   Cache_map: {fileID: 0}
+  OnTileEnterEvent:
+    _PersistentCalls: []
+  OnTileExitEvent:
+    _PersistentCalls: []
   raycastDistance: 5
   tileLayerMask:
     serializedVersion: 2

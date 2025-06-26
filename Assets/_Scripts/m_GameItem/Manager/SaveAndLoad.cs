@@ -405,12 +405,23 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             Debug.LogWarning("场景名称不能为空！");
             sceneName = new Vector2Int(0, 0).ToString();
         }
+
         #region 新建场景
         // 创建新场景
         previousSceneName = sceneName;
         newScene = SceneManager.CreateScene(previousSceneName);
         // 设置存档数据
         SaveData.ActiveSceneName = previousSceneName;
+
+        // 检测场景名是否符合Vector2Int格式
+        if (TryParseVector2Int(sceneName, out Vector2Int mapPos))
+        {
+            SaveData.ActiveMapPos = mapPos;
+        }
+        else
+        {
+            Debug.LogWarning($"场景名称 '{sceneName}' 不符合Vector2Int格式");
+        }
         #endregion
 
         #region 卸载场景
@@ -421,6 +432,26 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         SceneManager.sceneUnloaded += OnPreviousSceneUnloaded;
         SceneManager.UnloadSceneAsync(previousScene);
         #endregion
+    }
+
+    // 辅助方法：尝试将字符串解析为Vector2Int
+    private bool TryParseVector2Int(string str, out Vector2Int result)
+    {
+        result = Vector2Int.zero;
+
+        // 移除所有空白字符和括号
+        string cleaned = str.Replace(" ", "").Replace("(", "").Replace(")", "");
+        string[] parts = cleaned.Split(',');
+
+        if (parts.Length == 2 &&
+            int.TryParse(parts[0], out int x) &&
+            int.TryParse(parts[1], out int y))
+        {
+            result = new Vector2Int(x, y);
+            return true;
+        }
+
+        return false;
     }
 
     private Scene newScene;
@@ -456,7 +487,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             }
             else
             {
-                // 加载当前玩家
+                //创建新的玩家
                 Item player = LoadPlayer(CurrentContrrolPlayerName);
 
                 player.Item_Data._transform.Position = new Vector3(50, 50, 0);

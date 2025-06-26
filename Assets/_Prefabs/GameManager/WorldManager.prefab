@@ -64,17 +64,25 @@ MonoBehaviour:
   PlayerSavePath: Assets/Saves/LoaclSaveData/
   SaveData:
     saveName: defaultSaveName
-    ActiveSceneName: "\u6D4B\u8BD5\u573A\u666F-\u5C0F\u578B\u68EE\u6797"
+    ActiveSceneName: 
+    ActiveMapPos: {x: 0, y: 0}
+    MapSize: {x: 200, y: 200}
     leaveTime: 0
+    MapSeed: 0
   OnSceneSwitch:
     _PersistentCalls: []
   GameObject_False: []
   CurrentContrrolPlayerName: "\u9ED8\u8BA4"
+  ExitGame_Event:
+    _PersistentCalls: []
+  ChangeScene_Event:
+    _PersistentCalls: []
   defaultSettings:
     Default_ADDTable: Template_SaveData
     Default_PlayerSave: "\u73A9\u5BB6"
     Default_PlayerName: "\u9ED8\u8BA4"
-    Default_Map: "\u6D4B\u8BD5\u573A\u666F-\u5C0F\u578B\u68EE\u6797"
+    Default_Map: 
+  templateSaveData: {fileID: 0}
 --- !u!114 &604099482529500497
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -91,6 +99,7 @@ MonoBehaviour:
   ADBLabels_Prefab: []
   ADBLabels_CraftingRecipe: []
   ADBLabels_TileBase: []
+  isLoadFinish: 0
 --- !u!114 &1849172738809143305
 MonoBehaviour:
   m_ObjectHideFlags: 0

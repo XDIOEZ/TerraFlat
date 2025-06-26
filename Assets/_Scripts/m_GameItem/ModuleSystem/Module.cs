@@ -6,14 +6,18 @@ public abstract class Module : MonoBehaviour
     public abstract ModuleData Data { get; set; }
     public Item item { get; set; }
     public UltEvent<float> OnAction { get; set; } = new UltEvent<float>();
+
     public void Awake()
     {
         item = GetComponentInParent<Item>();
+        //向item添加模块
         item.Mods.Add(Data.ModuleName, this);
     }
-    public void OnEnable()
+    public void Start()
     {
-      
+       
+
+        //更新模块数据
         if (item?.Item_Data?.ModuleDataDic != null && !string.IsNullOrEmpty(Data?.ModuleName))
         {
             if (item.Item_Data.ModuleDataDic.TryGetValue(Data.ModuleName, out var existingData))

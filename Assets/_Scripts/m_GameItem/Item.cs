@@ -4,6 +4,8 @@ using UltEvents;
 using System.Reflection;
 using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
+
 
 
 
@@ -18,6 +20,8 @@ using UnityEditor.AddressableAssets.Settings;
 public abstract class Item : MonoBehaviour
 {
     public abstract ItemData Item_Data { get; set; }
+
+    [ShowInInspector]
     public Dictionary<string, Module> Mods { get; set; } = new Dictionary<string, Module>();
 
     #region RunTime

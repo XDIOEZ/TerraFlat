@@ -34,7 +34,7 @@ public class Weed : Item, IFood
     }
     public void Update()
     {
-        Grow(Time.deltaTime);
+        //Grow(Time.deltaTime);
     }
 
     //³É³¤
