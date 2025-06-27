@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: Sand
+  m_Name: TileBase_Dirt
   m_EditorClassIdentifier: 
-  m_Sprite: {fileID: 2011163526, guid: 98ebdcb8b6e10134eac4fd2b786fcbf3, type: 3}
+  m_Sprite: {fileID: -212883575, guid: 681994a92e2392246bb428f4380db0a3, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

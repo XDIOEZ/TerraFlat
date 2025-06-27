@@ -131,7 +131,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
         transform.rotation = Quaternion.identity; // 保证方向统一
 
 
-        Debug.Log($"[WorldEdge] 设置地图边界: {direction}, 目标场景: {TPTOSceneName}, 位置: {position}");
+        //Debug.Log($"[WorldEdge] 设置地图边界: {direction}, 目标场景: {TPTOSceneName}, 位置: {position}");
     }
 
 

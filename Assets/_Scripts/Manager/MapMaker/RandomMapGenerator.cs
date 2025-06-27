@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Force.DeepCloner;
 using UltEvents;
+using NUnit;
 
 /// <summary>
 /// 随机地图生成器：基于噪声与生物群系（Biome）
@@ -21,10 +22,15 @@ public class RandomMapGenerator : MonoBehaviour
     [Tooltip("噪声缩放系数：越小生成越大范围的高低起伏")]
     public float noiseScale = 0.01f;
 
-    //陆地海洋比例
-    [Range(0.0f, 1.0f)]
     [Tooltip("陆地海洋比例：陆地占比，海洋占比")]
     public float landOceanRatio = 0.5f;
+
+    [Tooltip("温度偏移")]
+    public float Temp = 0.5f;
+    [Tooltip("当前经度")]
+    public float Longitude = 0.5f;
+    [Tooltip("当前经度")]
+    public float LongitudeRate = 0.5f;
 
     [Header("生物群系列表")]
     [Tooltip("不同温度/湿度对应的生物群系配置")]
@@ -178,66 +184,66 @@ public class RandomMapGenerator : MonoBehaviour
     #region 地块生成逻辑 (完善 TODO)
     private void GenerateTileAtPosition(Vector2Int position)
     {
-        // 1. 噪声计算（温度、湿度和降水量）
+        // 1. 噪声采样坐标
         float gx = position.x * noiseScale;
         float gy = position.y * noiseScale;
 
-        // 计算并映射噪声值到实际范围
-        float temp = Mathf.Lerp(-20f, 50f, Mathf.PerlinNoise(gx, gy));
-        float humid = Mathf.Lerp(0f, 100f, Mathf.PerlinNoise(gx + 5000f, gy + 5000f));
-        float precipitation = Mathf.Lerp(0f, 4000f, Mathf.PerlinNoise(gx + 10000f, gy + 10000f));
+        // Fixing the CS0019 error by ensuring consistent types for the operation
+        float temp = Mathf.Clamp01(Mathf.PerlinNoise(gx + 2000, gy + 2000) + Temp);
+        float humid = Mathf.Clamp01(Mathf.PerlinNoise(gx + 5000f, gy + 5000f));
+        float precipitation = Mathf.Clamp01(  Mathf.PerlinNoise(gx + 10000f, gy + 10000f)  );
+        float solidityNoise = Mathf.Clamp01(  Mathf.PerlinNoise(gx + 20000f, gy + 20000f)+landOceanRatio);
+        float hightNoise = Mathf.Clamp01(Mathf.PerlinNoise(gx + 220000f, gy + 220000f));
 
-
-        float Soild = Mathf.PerlinNoise(gx, gy);
-
-
-        if (Soild < (landOceanRatio))
+        EnvironmentFactors env = new EnvironmentFactors
         {
-            Soild = 1f;
-        }
-        else
+            Temperature = temp,
+            Humidity = humid,
+            Precipitation = precipitation,
+            Solidity = solidityNoise,
+            Hight = hightNoise
+        };
+
+
+        // 3. Biome 匹配（改为循环版本）
+        BiomeData biome = null;
+        foreach (var b in biomes)
         {
-            Soild = 0f;
+            if (b.IsEnvironmentValid(env))
+            {
+                biome = b;
+                break;  // 找到第一个匹配的就退出循环
+            }
         }
-
-
-            // 2. Biome 匹配
-        BiomeData biome = biomes.Find(b => b.IsEnvironmentValid(temp, humid, precipitation, Soild));
-
-
-
-
+        // 如果找不到合适的Biome，跳过后续步骤
         if (biome == null)
         {
-            Debug.LogWarning($"未匹配 Biome @ {position} T={temp:F2}°C,H={humid:F2}%, P={precipitation:F2}mm" );
-            Debug.LogWarning($"生物群系列表：{Soild}");
+            Debug.LogWarning(env);
             return;
         }
 
-        // 3. 生成地形瓦片
-        GenerateTerrainTile(position, biome);
+        // 4. 生成地形瓦片
+        GenerateTerrainTile(position, biome, env);
 
-        // 4. 生成随机资源
-        GenerateRandomResources(position, biome);
+        // 5. 生成随机资源
+        GenerateRandomResources(position, biome, env);
     }
+
 
     /// <summary>
     /// 生成地形瓦片 (原步骤3)
     /// </summary>
-    private void GenerateTerrainTile(Vector2Int position, BiomeData biome)
+    private void GenerateTerrainTile(Vector2Int position, BiomeData biome, EnvironmentFactors env)
     {
-        string key = biome.BiomeName;
+        // 获取地块预制体
+        string key = biome.TerrainConfig.GetTilePrefab(env);
 
         // 获取或缓存TileData模板
         if (!tileDataCache.ContainsKey(key))
         {
-            if (biome.TileData_Name.Count == 0)
-            {
-                Debug.LogError($"生物群系 {biome.BiomeName} 的 TileData 名称列表为空。");
-                return;
-            }
 
-            string name = biome.TileData_Name[0];
+            string name = biome.TerrainConfig.GetTilePrefab(env);
+
             var prefab = GameRes.Instance.GetPrefab(name);
             if (prefab == null)
             {
@@ -264,9 +270,9 @@ public class RandomMapGenerator : MonoBehaviour
     /// <summary>
     /// 生成随机资源 (原步骤4)
     /// </summary>
-    private void GenerateRandomResources(Vector2Int position, BiomeData biome)
+    private void GenerateRandomResources(Vector2Int position, BiomeData biome, EnvironmentFactors env)
     {
-        foreach (var spawn in biome.ItemSpawn)
+        foreach (var spawn in biome.TerrainConfig.ItemSpawn)
         {
             if (rng.NextDouble() <= spawn.SpawnChance)
             {

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef0d6fc82e9dffd4bb109cc0bc9963b4, type: 3}
+  m_Name: "\u6C99\u6EE9"
+  m_EditorClassIdentifier: 
+  BiomeName: "\u6C99\u6EE9"
+  Description: 
+  PreviewColor: {r: 1, g: 0.9406364, b: 0, a: 1}
+  Condition:
+    TemperatureRange: {x: 0.5, y: 1}
+    HumidityRange: {x: 0, y: 1}
+    PrecipitationRange: {x: 0, y: 1}
+    SolidityRange: {x: 0, y: 1}
+    HightRange: {x: 0.5, y: 0.51}
+  TerrainConfig:
+    TileSpawns:
+    - {fileID: 11400000, guid: d74547dd7960b9f40b6906f23d027810, type: 2}
+    ItemSpawn: []

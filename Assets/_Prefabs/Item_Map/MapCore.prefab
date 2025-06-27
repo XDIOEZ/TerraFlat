@@ -10,8 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4969519381451034378}
   - component: {fileID: 5175292470693907942}
-  - component: {fileID: 8233460568870623006}
   - component: {fileID: 3175238874894987672}
+  - component: {fileID: 8233460568870623006}
   m_Layer: 8
   m_Name: MapCore
   m_TagString: MapCore
@@ -48,6 +48,35 @@ Grid:
   m_CellGap: {x: 0, y: 0, z: 0}
   m_CellLayout: 0
   m_CellSwizzle: 0
+--- !u!114 &3175238874894987672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111103676966031222}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 000d1751e4c68b948acc4b05eba47054, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  map: {fileID: 8233460568870623006}
+  noiseScale: 0.1
+  landOceanRatio: 0
+  Temp: 0
+  Longitude: 0
+  LongitudeRate: 0
+  biomes:
+  - {fileID: 11400000, guid: 26c6f79489f550548b5a365695a0d3bd, type: 2}
+  - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
+  - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
+  - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
+  - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
+  tilesPerFrame: 1000
+  seamlessBorders: 1
+  transitionRange: 5
+  onMapGenerated:
+    _PersistentCalls: []
 --- !u!114 &8233460568870623006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -93,29 +122,6 @@ MonoBehaviour:
     position: {x: 0, y: 0}
     size: {x: 600, y: 600}
   tileMap: {fileID: 6321057560787975102}
---- !u!114 &3175238874894987672
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2111103676966031222}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 000d1751e4c68b948acc4b05eba47054, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  map: {fileID: 8233460568870623006}
-  noiseScale: 0.01
-  biomes:
-  - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
-  - {fileID: 11400000, guid: 81b61c01498513f49a1c1dfe87727434, type: 2}
-  - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
-  tilesPerFrame: 1000
-  seamlessBorders: 1
-  transitionRange: 5
-  onMapGenerated:
-    _PersistentCalls: []
 --- !u!1 &3401113203274231406
 GameObject:
   m_ObjectHideFlags: 0
@@ -162,51 +168,15 @@ Tilemap:
   m_Enabled: 1
   m_Tiles: {}
   m_AnimatedTiles: {}
-  m_TileAssetArray:
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  m_TileSpriteArray:
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
-  m_TileMatrixArray:
-  - m_RefCount: 0
-    m_Data:
-      e00: 7.71e-43
-      e01: 0
-      e02: 1.0355685e-38
-      e03: 1.0355685e-38
-      e10: 0
-      e11: 0
-      e12: 6.21e-43
-      e13: 6.21e-43
-      e20: -18.495575
-      e21: 1.4812142e+20
-      e22: -9.9799804e-17
-      e23: -8.915141e+9
-      e30: 4.5905e-41
-      e31: 6.24e-43
-      e32: 6.21e-43
-      e33: 6.24e-43
-  m_TileColorArray:
-  - m_RefCount: 0
-    m_Data: {r: 5.5477e-41, g: 5.5477e-41, b: 5.5477e-41, a: 5.5477e-41}
+  m_TileAssetArray: []
+  m_TileSpriteArray: []
+  m_TileMatrixArray: []
+  m_TileColorArray: []
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Origin: {x: -505, y: -410, z: 0}
-  m_Size: {x: 1024, y: 929, z: 1}
+  m_Origin: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0, y: 0, z: 1}
   m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
   m_TileOrientation: 0
   m_TileOrientationMatrix:
