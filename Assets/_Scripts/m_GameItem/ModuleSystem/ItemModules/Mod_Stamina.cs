@@ -8,8 +8,9 @@ public class Mod_Stamina : Module, IUI_Slider
     public StaminaData staminaData;
     private List<IStaminaEvent> staminaEvents = new List<IStaminaEvent>();
 
-    public void Start()
+    public new void Start()
     {
+        base.Start();
         // Get all IStaminaEvent components in children
         var events = item.GetComponentsInChildren<IStaminaEvent>();
         staminaEvents.AddRange(events);

@@ -44,7 +44,7 @@ public class EnvironmentConditionRange
     {
         return TemperatureRange.x <= factors.Temperature && factors.Temperature <= TemperatureRange.y &&
                HumidityRange.x <= factors.Humidity && factors.Humidity <= HumidityRange.y &&
-               //PrecipitationRange.x <= precipitation && precipitation <= PrecipitationRange.y &&
+               PrecipitationRange.x <= factors.Precipitation && factors.Precipitation <= PrecipitationRange.y &&
                HightRange.x <= factors.Hight && factors.Hight <= HightRange.y&&
         SolidityRange.x <= factors.Solidity && factors.Solidity <= SolidityRange.y;
     }

@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BiomeName: "\u6D77\u6D0B"
   Description: 
-  PreviewColor: {r: 0, g: 0.75398135, b: 1, a: 1}
+  PreviewColor: {r: 0.19999997, g: 0.7494875, b: 0.84313726, a: 1}
   Condition:
-    TemperatureRange: {x: 0, y: 1}
+    TemperatureRange: {x: 0.25, y: 1}
     HumidityRange: {x: 0, y: 1}
     PrecipitationRange: {x: 0, y: 1}
     SolidityRange: {x: 0, y: 1}

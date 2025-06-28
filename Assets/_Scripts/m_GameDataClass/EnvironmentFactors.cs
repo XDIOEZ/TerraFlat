@@ -18,6 +18,6 @@ public class EnvironmentFactors
 
     public override string ToString()
     {
-        return $"T={Temperature:F1}°„C, H={Humidity:F1}%, P={Precipitation:F1}mm, S={Solidity}";
+        return $"T={Temperature:F3}°„C, H={Humidity:F3}%, P={Precipitation:F3}mm, S={Solidity}";
     }
 }

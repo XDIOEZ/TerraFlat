@@ -64,14 +64,20 @@ MonoBehaviour:
   noiseScale: 0.1
   landOceanRatio: 0
   Temp: 0
-  Longitude: 0
-  LongitudeRate: 0
+  PlantRadius: 1000
+  Equator: 0
   biomes:
-  - {fileID: 11400000, guid: 26c6f79489f550548b5a365695a0d3bd, type: 2}
-  - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
+  - {fileID: 11400000, guid: 1ed370ec7d3b8924ab914f860de614ee, type: 2}
+  - {fileID: 11400000, guid: 08d2de25cd9863844bf65c8cd08b3ddf, type: 2}
   - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
+  - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
   - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
+  - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
+  - {fileID: 11400000, guid: 26c6f79489f550548b5a365695a0d3bd, type: 2}
+  - {fileID: 11400000, guid: ddaeb28c68b0d6b47987775c4594de4f, type: 2}
+  - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
   - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
+  - {fileID: 11400000, guid: 64538378247f79e47931fd77804ae9cd, type: 2}
   tilesPerFrame: 1000
   seamlessBorders: 1
   transitionRange: 5

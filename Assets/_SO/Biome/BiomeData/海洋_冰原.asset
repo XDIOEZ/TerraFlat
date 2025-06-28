@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ef0d6fc82e9dffd4bb109cc0bc9963b4, type: 3}
-  m_Name: "\u6C99\u6EE9"
+  m_Name: "\u6D77\u6D0B_\u51B0\u539F"
   m_EditorClassIdentifier: 
-  BiomeName: "\u6C99\u6EE9"
-  Description: 
-  PreviewColor: {r: 0.84313726, g: 0.6814431, b: 0.19999997, a: 1}
+  BiomeName: "\u5BD2\u5E26\u8352\u6F20"
+  Description: "\u6563\u843D\u7684\u77F3\u5934,\u5C0F\u6C34\u5751,\u7A00\u5C11\u7684\u6811,\u5E7F\u9614\u7684\u8349\u5730"
+  PreviewColor: {r: 0.19999997, g: 0.84313726, b: 0.7664316, a: 1}
   Condition:
-    TemperatureRange: {x: 0.5, y: 1}
+    TemperatureRange: {x: 0, y: 0.25}
     HumidityRange: {x: 0, y: 1}
-    PrecipitationRange: {x: 0, y: 1}
+    PrecipitationRange: {x: 0.75, y: 1}
     SolidityRange: {x: 0, y: 1}
-    HightRange: {x: 0.5, y: 0.51}
+    HightRange: {x: 0.5, y: 1}
   TerrainConfig:
     TileSpawns:
-    - {fileID: 11400000, guid: d74547dd7960b9f40b6906f23d027810, type: 2}
+    - {fileID: 11400000, guid: 62460746569683f428401561801c3b12, type: 2}
     ItemSpawn: []

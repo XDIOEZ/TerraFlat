@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Force.DeepCloner;
 using UltEvents;
 using NUnit;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
 
 /// <summary>
 /// 随机地图生成器：基于噪声与生物群系（Biome）
@@ -26,11 +27,13 @@ public class RandomMapGenerator : MonoBehaviour
     public float landOceanRatio = 0.5f;
 
     [Tooltip("温度偏移")]
-    public float Temp = 0.5f;
-    [Tooltip("当前经度")]
-    public float Longitude = 0.5f;
-    [Tooltip("当前经度")]
-    public float LongitudeRate = 0.5f;
+    public float Temp = 0.0f;
+
+    [Tooltip("地球半径")]
+    public float PlantRadius = 100;
+
+    [Tooltip("赤道坐标")]
+    public float Equator = 0;
 
     [Header("生物群系列表")]
     [Tooltip("不同温度/湿度对应的生物群系配置")]
@@ -57,6 +60,9 @@ public class RandomMapGenerator : MonoBehaviour
     /// 地图尺寸，读取自全局存档
     /// </summary>
     public Vector2Int MapSize => SaveAndLoad.Instance.SaveData.MapSize;
+
+    //Debug使用
+    public Dictionary<Vector2Int,Color> ColorDicitionary  = new ();
     #endregion
 
     #region 内部变量
@@ -101,6 +107,22 @@ public class RandomMapGenerator : MonoBehaviour
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(center, size3D);
 
+
+        //根据ColorDicitionary 显示颜色
+        // 绘制颜色块（根据ColorDictionary）
+/*
+        foreach (var kvp in ColorDicitionary)
+        {
+            Vector2Int cellPos = kvp.Key;
+            Color cellColor = kvp.Value;
+
+            // 计算世界坐标（假设每个单元格为1x1单位）
+            Vector3 worldPos = new Vector3(startPos.x + cellPos.x, startPos.y + cellPos.y, 0f);
+
+            // 设置颜色并绘制立方体
+            Gizmos.color = cellColor;
+            Gizmos.DrawCube(worldPos, new Vector3(1f, 1f, 0.1f));
+        }*/
         // 可选：显示地图信息（不带背景色）
         UnityEditor.Handles.Label(center,
             $"Map:{startPos}\nSize:{size}",
@@ -125,6 +147,7 @@ public class RandomMapGenerator : MonoBehaviour
         rng = new System.Random(seed);
 
         ClearMap();
+
         map.Data.position = SaveAndLoad.Instance.SaveData.ActiveMapPos;
 
         Vector2Int startPos = map.Data.position;
@@ -189,19 +212,24 @@ public class RandomMapGenerator : MonoBehaviour
         float gy = position.y * noiseScale;
 
         // Fixing the CS0019 error by ensuring consistent types for the operation
-        float temp = Mathf.Clamp01(Mathf.PerlinNoise(gx + 2000, gy + 2000) + Temp);
-        float humid = Mathf.Clamp01(Mathf.PerlinNoise(gx + 5000f, gy + 5000f));
-        float precipitation = Mathf.Clamp01(  Mathf.PerlinNoise(gx + 10000f, gy + 10000f)  );
-        float solidityNoise = Mathf.Clamp01(  Mathf.PerlinNoise(gx + 20000f, gy + 20000f)+landOceanRatio);
-        float hightNoise = Mathf.Clamp01(Mathf.PerlinNoise(gx + 220000f, gy + 220000f));
+        float temp = Mathf.PerlinNoise(gx + 2000, gy + 2000);
+        float humid = Mathf.PerlinNoise(gx + 5000f, gy + 5000f);
+        float precip = Mathf.PerlinNoise(gx + 10000f, gy + 10000f) ;
+        float solidity = Mathf.PerlinNoise(gx + 20000f, gy + 20000f);
+        float hight = Mathf.PerlinNoise(gx + 220000f, gy + 220000f);
+        //位于赤道附近 且地球半径为100
+        //(0+ 50)/100 = 0.5 的温度偏移系数   所以赤道的期望温度为 0.5 + 0.5 = 1
+        temp += Temp + (PlantRadius / 2f - Mathf.Abs(position.y)) / PlantRadius;
+        solidity += landOceanRatio;
+
 
         EnvironmentFactors env = new EnvironmentFactors
         {
-            Temperature = temp,
-            Humidity = humid,
-            Precipitation = precipitation,
-            Solidity = solidityNoise,
-            Hight = hightNoise
+            Temperature = Mathf.Clamp01(temp),
+            Humidity = Mathf.Clamp01(humid),
+            Precipitation = Mathf.Clamp01(precip),
+            Solidity = Mathf.Clamp01(solidity),
+            Hight = Mathf.Clamp01(hight)
         };
 
 
@@ -222,6 +250,8 @@ public class RandomMapGenerator : MonoBehaviour
             return;
         }
 
+        //更据biome.PreviewColor 实现Debug颜色的显示 OnDrawGizmos()
+        ColorDicitionary.Add(position, biome.PreviewColor);
         // 4. 生成地形瓦片
         GenerateTerrainTile(position, biome, env);
 
@@ -274,6 +304,7 @@ public class RandomMapGenerator : MonoBehaviour
     {
         foreach (var spawn in biome.TerrainConfig.ItemSpawn)
         {
+            if(spawn.environmentConditionRange.IsMatch(env))
             if (rng.NextDouble() <= spawn.SpawnChance)
             {
                 Vector3 spawnPosition = new Vector3(
