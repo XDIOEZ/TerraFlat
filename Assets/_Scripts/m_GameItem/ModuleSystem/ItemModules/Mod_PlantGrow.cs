@@ -110,14 +110,15 @@ public partial class Mod_PlantGrow_Data : ModuleData
         nodeIndex = 0;
         specialProductionPoints = new List<Float_Loot_List>();
     }
+}
 
-    [System.Serializable]
-    public class Float_Loot_List
-    {
-        public string NodeName;
-        public float InvokeValue;
+[System.Serializable]
+[MemoryPackable]
+public partial class Float_Loot_List
+{
+    public string NodeName;
+    public float InvokeValue;
 
-        [Header("掉落数据")]
-        public LootData loot;
-    }
+    [Header("掉落数据")]
+    public LootData loot;
 }

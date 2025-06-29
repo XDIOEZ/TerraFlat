@@ -64,7 +64,20 @@ public class SaveManager : MonoBehaviour
         SelectedPlayer_Name_Text.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
         NewPlayer_Name_Text.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
         NewSave_Name_Text.onValueChanged.AddListener(OnPlayerSaveNameChanged);
-        DeletSave.onClick.AddListener(OnClick_DeletSave_Button);
+       // DeletSave.onClick.AddListener(OnClick_DeletSave_Button);
+    }
+
+    public void StartGame()
+    {
+        if(SaveAndLoad.Instance.SaveData.SaveSeed == "")
+        {
+            SaveAndLoad.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
+          //  SaveAndLoad.Instance.SaveData.MapSize
+        }
+        // 初始化随机种子并创建系统随机实例
+        SaveAndLoad.Instance.SaveData.Seed = SaveAndLoad.Instance.SaveData.SaveSeed.GetHashCode();
+        Random.InitState(SaveAndLoad.Instance.SaveData.Seed);
+        RandomMapGenerator.rng = new System.Random(SaveAndLoad.Instance.SaveData.Seed);
     }
     #endregion
 
@@ -115,7 +128,7 @@ public class SaveManager : MonoBehaviour
 
             var btn = buttonObj.GetComponent<Button>();
             if (btn != null)
-                btn.onClick.AddListener(() => OnClick_List_Save_Button(saveName));
+                btn.onClick.AddListener(() => OnClick_List_Save_Button(saveName, buttonObj));
         }
     }
 
@@ -157,7 +170,7 @@ public class SaveManager : MonoBehaviour
     /// <summary>
     /// 点击存档按钮
     /// </summary>
-    public void OnClick_List_Save_Button(string saveName)
+    public void OnClick_List_Save_Button(string saveName,GameObject buttonObj)
     {
         if (saveAndLoad != null)
         {
@@ -167,7 +180,12 @@ public class SaveManager : MonoBehaviour
         {
             Debug.LogWarning("SaveAndLoad组件未绑定！");
         }
-
+        // 禁用所有存档按钮的选择图像
+        foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<SaveInfo>())
+        {
+            saveInfo.SelectImage.enabled = false;
+        }
+        buttonObj.GetComponent<SaveInfo>().SelectImage.enabled = true;
         SelectedSave_Name_Text.text = saveName;
         GeneratePlayerButtons();
     }
@@ -194,14 +212,12 @@ public class SaveManager : MonoBehaviour
     /// </summary>
     public void OnClick_StartGame_Button()
     {
-        if (saveAndLoad != null)
+        if (saveAndLoad.SaveData.Seed == 0)
         {
-            saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);
+            Debug.LogWarning("请先选择按钮");
+            return;
         }
-        else
-        {
-            Debug.LogWarning("SaveAndLoad组件未绑定！");
-        }
+        saveAndLoad.ChangeScene(saveAndLoad.SaveData.Active_MapName);
     }
 
     /// <summary>
@@ -211,7 +227,8 @@ public class SaveManager : MonoBehaviour
     {
         if (saveAndLoad != null)
         {
-            saveAndLoad.ChangeScene(saveAndLoad.SaveData.ActiveSceneName);
+            StartGame();
+            saveAndLoad.ChangeScene(saveAndLoad.SaveData.Active_MapName);
         }
         else
         {

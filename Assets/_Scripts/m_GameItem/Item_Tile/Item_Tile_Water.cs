@@ -91,7 +91,7 @@ public class Item_Tile_Water : Item, IBlockTile
                 continue;
             }
         //    Debug.Log($"[Tile_Enter] Ìí¼Ó Buff: {buffData.buff_Name} µ½ {item.name}");
-            buffManager.AddBuffByData(new BuffRunTime(buffData, this, item));
+            buffManager.AddBuffRuntime(buffData, this, item);
         }
     }
 

@@ -1,11 +1,14 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class SaveInfo : MonoBehaviour, IPointerClickHandler
 {
     public string saveName;
     public string savePath;
+
+    public Image SelectImage;
 
     public void Start()
     {

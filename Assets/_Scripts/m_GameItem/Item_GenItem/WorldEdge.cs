@@ -84,8 +84,8 @@ public class WorldEdge : Item, ISave_Load, IInteract
     {
         Data.Boundary_Position = direction;
         // 获取当前地图信息
-        var saveData = SaveAndLoad.Instance.SaveData;
-        Vector2Int activeMapPos = saveData.ActiveMapPos;  // 当前地图格子坐标
+        GameSaveData saveData = SaveAndLoad.Instance.SaveData;
+        Vector2Int activeMapPos = saveData.Active_MapPos;  // 当前地图格子坐标
         Vector2Int mapSize = saveData.MapSize;            // 当前地图大小（单位为格子数）
 
         // 计算地图中心点（便于定位边界）

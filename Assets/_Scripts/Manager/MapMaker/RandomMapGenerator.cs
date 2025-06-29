@@ -5,8 +5,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Force.DeepCloner;
 using UltEvents;
-using NUnit;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
 
 /// <summary>
 /// 随机地图生成器：基于噪声与生物群系（Biome）
@@ -21,16 +19,16 @@ public class RandomMapGenerator : MonoBehaviour
 
     [Header("噪声参数")]
     [Tooltip("噪声缩放系数：越小生成越大范围的高低起伏")]
-    public float noiseScale = 0.01f;
+    private float noiseScale = 0.01f;
 
     [Tooltip("陆地海洋比例：陆地占比，海洋占比")]
-    public float landOceanRatio = 0.5f;
+    private float landOceanRatio = 0.5f;
 
     [Tooltip("温度偏移")]
-    public float Temp = 0.0f;
+    private float temp = 0.0f;
 
     [Tooltip("地球半径")]
-    public float PlantRadius = 100;
+    private float plantRadius = 100;
 
     [Tooltip("赤道坐标")]
     public float Equator = 0;
@@ -56,11 +54,6 @@ public class RandomMapGenerator : MonoBehaviour
     [Tooltip("地图完全生成后触发的事件，可在 Inspector 挂接自定义响应")]
     public UltEvent onMapGenerated = new UltEvent();
 
-    /// <summary>
-    /// 地图尺寸，读取自全局存档
-    /// </summary>
-    public Vector2Int MapSize => SaveAndLoad.Instance.SaveData.MapSize;
-
     //Debug使用
     public Dictionary<Vector2Int,Color> ColorDicitionary  = new ();
     #endregion
@@ -69,17 +62,17 @@ public class RandomMapGenerator : MonoBehaviour
     /// <summary>
     /// 地图种子，字符串形式，从存档读取
     /// </summary>
-    private string Seed => SaveAndLoad.Instance.SaveData.MapSeed;
+    private int Seed => SaveAndLoad.Instance.SaveData.Seed;
 
-    /// <summary>
-    /// 种子整数值，用于初始化随机数
-    /// </summary>
-    private int seed;
+    public float PlantRadius { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.PlanetRadius;}
+    public float Temp { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.TemperatureOffset; }
+    public float LandOceanRatio { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.OceanHeight;}
+    public float NoiseScale { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.NoiseScale;  }
 
     /// <summary>
     /// 系统级可复现随机实例，用于资源生成
     /// </summary>
-    private System.Random rng;
+    public static System.Random rng;
 
     /// <summary>
     /// 缓存 TileData 模板，避免重复加载开销
@@ -99,7 +92,7 @@ public class RandomMapGenerator : MonoBehaviour
         if (map == null || map.Data == null) return;
 
         Vector2Int startPos = map.Data.position;
-        Vector2Int size = MapSize;
+        Vector2Int size = SaveAndLoad.Instance.SaveData.MapSize;
         Vector3 center = new Vector3(startPos.x + size.x / 2f, startPos.y + size.y / 2f, 0f);
         Vector3 size3D = new Vector3(size.x, size.y, 0.1f);
 
@@ -141,17 +134,14 @@ public class RandomMapGenerator : MonoBehaviour
             return;
         }
 
-        // 初始化随机种子并创建系统随机实例
-        seed = string.IsNullOrEmpty(Seed) ? DateTime.Now.GetHashCode() : Seed.GetHashCode();
-        UnityEngine.Random.InitState(seed);
-        rng = new System.Random(seed);
+      
 
         ClearMap();
 
-        map.Data.position = SaveAndLoad.Instance.SaveData.ActiveMapPos;
+        map.Data.position = SaveAndLoad.Instance.SaveData.Active_MapPos;
 
         Vector2Int startPos = map.Data.position;
-        Vector2Int size = MapSize;
+        Vector2Int size = SaveAndLoad.Instance.SaveData.MapSize;
 
         if (tilesPerFrame > 0)
             StartCoroutine(GenerateMapCoroutine(startPos, size));
@@ -208,19 +198,22 @@ public class RandomMapGenerator : MonoBehaviour
     private void GenerateTileAtPosition(Vector2Int position)
     {
         // 1. 噪声采样坐标
-        float gx = position.x * noiseScale;
-        float gy = position.y * noiseScale;
+        float gx = position.x * NoiseScale;
+        float gy = position.y * NoiseScale;
 
         // Fixing the CS0019 error by ensuring consistent types for the operation
-        float temp = Mathf.PerlinNoise(gx + 2000, gy + 2000);
-        float humid = Mathf.PerlinNoise(gx + 5000f, gy + 5000f);
-        float precip = Mathf.PerlinNoise(gx + 10000f, gy + 10000f) ;
-        float solidity = Mathf.PerlinNoise(gx + 20000f, gy + 20000f);
-        float hight = Mathf.PerlinNoise(gx + 220000f, gy + 220000f);
+
+        float seedofNoise = (float)Seed*0.000001f;
+        // 使用种子修改噪声函数的输入
+        float temp = Mathf.PerlinNoise(gx + 2000 + seedofNoise, gy + 2000 + seedofNoise);
+        float humid = Mathf.PerlinNoise(gx + 5000f + seedofNoise, gy + 5000f + seedofNoise);
+        float precip = Mathf.PerlinNoise(gx + 10000f + seedofNoise, gy + 10000f + seedofNoise);
+        float solidity = Mathf.PerlinNoise(gx + 20000f + seedofNoise, gy + 20000f + seedofNoise);
+        float hight = Mathf.PerlinNoise(gx + 220000f + seedofNoise, gy + 220000f + seedofNoise);
         //位于赤道附近 且地球半径为100
         //(0+ 50)/100 = 0.5 的温度偏移系数   所以赤道的期望温度为 0.5 + 0.5 = 1
         temp += Temp + (PlantRadius / 2f - Mathf.Abs(position.y)) / PlantRadius;
-        solidity += landOceanRatio;
+        solidity += LandOceanRatio;
 
 
         EnvironmentFactors env = new EnvironmentFactors
@@ -251,7 +244,7 @@ public class RandomMapGenerator : MonoBehaviour
         }
 
         //更据biome.PreviewColor 实现Debug颜色的显示 OnDrawGizmos()
-        ColorDicitionary.Add(position, biome.PreviewColor);
+        ColorDicitionary[position] =  biome.PreviewColor;
         // 4. 生成地形瓦片
         GenerateTerrainTile(position, biome, env);
 
@@ -331,7 +324,7 @@ public class RandomMapGenerator : MonoBehaviour
     private void OnGenerationComplete()
     {
         map.tileMap?.RefreshAllTiles();
-        Debug.Log($"[RandomMapGenerator] 地图完成 @ {map.Data.position} 大小{map.Data.size} 种子{seed}");
+        Debug.Log($"[RandomMapGenerator] 地图完成 @ {map.Data.position} 大小{map.Data.size} 种子{Seed}");
         onMapGenerated?.Invoke();
     }
     #endregion

@@ -1,4 +1,5 @@
-﻿using MemoryPack;
+﻿using Codice.CM.Common;
+using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;
@@ -45,6 +46,8 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     public void Start()
     {
             DontDestroyOnLoad(gameObject);
+
+        SaveData.PlanetData_Dict.Add("地球", new PlanetData());
     }
 
     [Serializable]
@@ -105,7 +108,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
         // 保存当前激活的地图
         MapSave mapSave = SaveActiveScene_Map();
-        SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
+        SaveData.Active_MapsData_Dict[mapSave.MapName] = mapSave;
     }
 
     public GameSaveData GetSaveData()
@@ -115,7 +118,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         SavePlayer();
 
         MapSave mapSave = SaveActiveScene_Map();
-        SaveData.MapSaves_Dict[mapSave.MapName] = mapSave;
+        SaveData.Active_MapsData_Dict[mapSave.MapName] = mapSave;
 
         return SaveData;
     }
@@ -188,7 +191,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     [Button("加载指定地图")]
     public void LoadMap(string mapName)
     {
-        if (SaveData.MapSaves_Dict.TryGetValue(mapName, out MapSave mapSave))
+        if (SaveData.Active_MapsData_Dict.TryGetValue(mapName, out MapSave mapSave))
         {
             Debug.Log($"成功加载地图：{mapName}");
             InstantiateItemsFromMapSave(mapSave);
@@ -201,7 +204,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, mapName, result =>
         {
             if (result != null && result.SaveData != null &&
-                result.SaveData.MapSaves_Dict.TryGetValue(mapName, out MapSave defaultMapSave))
+                result.SaveData.Active_MapsData_Dict.TryGetValue(mapName, out MapSave defaultMapSave))
             {
                 InstantiateItemsFromMapSave(defaultMapSave);
                 LoadPlayer(CurrentContrrolPlayerName);
@@ -411,12 +414,12 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         previousSceneName = sceneName;
         newScene = SceneManager.CreateScene(previousSceneName);
         // 设置存档数据
-        SaveData.ActiveSceneName = previousSceneName;
+        SaveData.Active_MapName = previousSceneName;
 
         // 检测场景名是否符合Vector2Int格式
         if (TryParseVector2Int(sceneName, out Vector2Int mapPos))
         {
-            SaveData.ActiveMapPos = mapPos;
+            SaveData.Active_MapPos = mapPos;
         }
         else
         {
@@ -465,7 +468,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         // 设置新场景为活动场景
         SceneManager.SetActiveScene(newScene);
         // 检查目标场景是否存在于存档中
-        bool sceneExistsInSave = SaveData.MapSaves_Dict.ContainsKey(newScene.name);
+        bool sceneExistsInSave = SaveData.Active_MapsData_Dict.ContainsKey(newScene.name);
 
        
 

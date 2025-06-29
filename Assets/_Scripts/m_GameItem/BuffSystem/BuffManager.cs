@@ -22,6 +22,17 @@ public class BuffManager : MonoBehaviour
         //}
         Init();
     }
+
+    public void AddBuffRuntime(Buff_Data buffData, Item Sender, Item Receiver)
+    {
+        BuffRunTime newBuff = new BuffRunTime
+        {
+            buffData = buffData,
+            buff_Sender = Sender,
+            buff_Receiver = Receiver,
+        };
+        AddBuffByData(newBuff);
+    }
     public bool HasBuff(string buffId)
     {
         return BuffRunTimeData_Dic.ContainsKey(buffId); // 举例，如果用 Dictionary 存
@@ -39,10 +50,10 @@ public class BuffManager : MonoBehaviour
 
         if (BuffRunTimeData_Dic.TryGetValue(buffID, out var existingBuff))
         {
-            switch (newBuff.buff_Data.buff_StackType)
+            switch (newBuff.buffData.buff_StackType)
             {
                 case BuffStackType.DurationAdd:
-                    float remainingTime = newBuff.buff_Data.buff_Duration - existingBuff.buff_CurrentDuration;
+                    float remainingTime = newBuff.buffData.buff_Duration - existingBuff.buff_CurrentDuration;
                     existingBuff.buff_CurrentDuration += remainingTime;
                     break;
 
@@ -51,7 +62,7 @@ public class BuffManager : MonoBehaviour
                     break;
 
                 case BuffStackType.StackCount:
-                    if (existingBuff.buff_CurrentStack < existingBuff.buff_Data.buff_MaxStack)
+                    if (existingBuff.buff_CurrentStack < existingBuff.buffData.buff_MaxStack)
                     {
                         existingBuff.buff_CurrentStack += 1;
                     }

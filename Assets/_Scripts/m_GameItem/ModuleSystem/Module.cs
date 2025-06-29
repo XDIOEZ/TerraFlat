@@ -20,14 +20,14 @@ public abstract class Module : MonoBehaviour
         //更新模块数据
         if (item?.Item_Data?.ModuleDataDic != null && !string.IsNullOrEmpty(Data?.ModuleName))
         {
-            if (item.Item_Data.ModuleDataDic.TryGetValue(Data.ModuleName, out var existingData))
+            if (item.Item_Data.ModuleDataDic.ContainsKey(Data.ModuleName))
             {
                 Debug.LogWarning("模块数据已存在，将覆盖原有数据");
-                Data = existingData;
+                Data = item.Item_Data.ModuleDataDic[Data.ModuleName];
             }
             else
             {
-                Debug.LogWarning("模块数据已存在，将覆盖原有数据");
+                Debug.LogWarning("模块数据不存在，将添加新数据");
                 item.Item_Data.ModuleDataDic[Data.ModuleName] = Data;
             }
         }
@@ -41,17 +41,6 @@ public abstract class Module : MonoBehaviour
 
     public void OnDestroy()
     {
-       /* if (item?.Item_Data?.ModuleDataDic == null || string.IsNullOrEmpty(Data?.ModuleName))
-        {
-            Debug.LogWarning("无法更新模块数据：item、Item_Data、ModuleDataDic 或 ModuleName 为空");
-            return;
-        }
-
-        if (item.Item_Data.ModuleDataDic.TryGetValue(Data.ModuleName, out var existingData) && existingData == Data)
-        {
-            return;
-        }*/
-
         item.Item_Data.ModuleDataDic[Data.ModuleName] = Data;
     }
 

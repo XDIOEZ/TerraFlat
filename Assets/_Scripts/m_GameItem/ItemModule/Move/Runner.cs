@@ -26,7 +26,11 @@ public class Runner : Organ, IRunner
     public override void StartWork()
     {
         SwitchToRun(true);
-        buffManager.AddBuffByData(new BuffRunTime(buffData, item, item));
+        buffManager.AddBuffByData(new BuffRunTime
+        {
+            buffData = buffData,
+
+        });
         isRun = true;
     }
 

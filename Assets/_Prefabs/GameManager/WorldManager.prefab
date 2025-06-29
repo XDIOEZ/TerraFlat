@@ -64,11 +64,11 @@ MonoBehaviour:
   PlayerSavePath: Assets/Saves/LoaclSaveData/
   SaveData:
     saveName: defaultSaveName
-    ActiveSceneName: 
-    ActiveMapPos: {x: 0, y: 0}
-    MapSize: {x: 100, y: 100}
-    leaveTime: 0
-    MapSeed: 0
+    Active_PlanetName: "\u5730\u7403"
+    Active_MapName: 
+    Active_MapPos: {x: 0, y: 0}
+    SaveSeed: 
+    Seed: 0
   OnSceneSwitch:
     _PersistentCalls: []
   GameObject_False: []
