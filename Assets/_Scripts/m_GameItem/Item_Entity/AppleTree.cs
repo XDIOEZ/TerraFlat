@@ -46,14 +46,14 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
     public UltEvent OnDeath { get; set; }
 
 
-    public void Start()
+    public new void Start()
     {
+        base.Start();
         OnHpChanged = new UltEvent();
         OnDefenseChanged = new UltEvent();
-        Mods["生长模块"].OnAction += Grow;
-
         //GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += ChangeGrow;
         GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += OnTileEnter;
+        Mods["生长模块"].OnAction += Grow;
     }
 
     public void FixedUpdate()

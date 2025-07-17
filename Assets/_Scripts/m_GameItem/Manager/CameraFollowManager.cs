@@ -30,6 +30,8 @@ public class CameraFollowManager : MonoBehaviour
 
     public Camera ControllerCamera;
 
+    public Player Player;
+
     // Start is called before the first frame update
     public void Start()
     {
@@ -53,12 +55,16 @@ public class CameraFollowManager : MonoBehaviour
         transform.name = $"{CameraFollowItem.name} 的 Camera";
 
         transform.SetParent(null);
+
+        Player = CameraFollowItem as Player;
+        Vcam.m_Lens.OrthographicSize = Player.PovValue;
     }
 
 
     //修改视野范围方法
     public void ChangeCameraView(float view)
     {
+        Player.PovValue += view;
         Vcam.m_Lens.OrthographicSize += view;
        // Debug.Log("视野范围修改为：" + Vcam.m_Lens.FieldOfView);
     }

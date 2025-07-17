@@ -199,8 +199,10 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
   _data:
-    IDName: 'Pickaxe '
+    IDName: Pickaxe
     GameName: "\u77F3\u9550"
     Description: "\u7C97\u7CD9\u7684\u91C7\u77FF\u5DE5\u5177"
     Durability: 80

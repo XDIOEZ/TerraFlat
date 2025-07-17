@@ -26,3 +26,6 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 6b011c6baeb9d4140875090c5a56129e, type: 2}
     ItemSpawn:
     - {fileID: 11400000, guid: 312e34b016f480249826e6ef3c7b161b, type: 2}
+    - {fileID: 11400000, guid: 3512e84069dfe5b439f749d34d3b3555, type: 2}
+    - {fileID: 11400000, guid: 60d8bd24243ae0f4cb4c13bf208365d4, type: 2}
+    - {fileID: 11400000, guid: 676f490ecea0b6c4cbac5d9ded2c4c4f, type: 2}

@@ -141,7 +141,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler
     {
         if (ItemSlot._ItemData == null)
         {
-            Debug.LogWarning($"物品数据为空，所在对象：{gameObject.name}");
+           // Debug.LogWarning($"物品数据为空，所在对象：{gameObject.name}");
             return true;
         }
         return false;

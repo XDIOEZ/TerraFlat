@@ -12,7 +12,7 @@ public class Mod_Stamina : Module, IUI_Slider
     {
         base.Start();
         // Get all IStaminaEvent components in children
-        var events = item.GetComponentsInChildren<IStaminaEvent>();
+        var events = BelongItem.GetComponentsInChildren<IStaminaEvent>();
         staminaEvents.AddRange(events);
 
         // Subscribe to all events
@@ -22,9 +22,8 @@ public class Mod_Stamina : Module, IUI_Slider
         }
     }
 
-    private new void OnDestroy()
+    public override void Save()
     {
-        base.OnDestroy();
         // Unsubscribe from all events when destroyed to prevent memory leaks
         foreach (var staminaEvent in staminaEvents)
         {
@@ -38,6 +37,11 @@ public class Mod_Stamina : Module, IUI_Slider
     public void StaminaChanged(float value)
     {
         staminaData.Current_Stamina -= value;
+    }
+
+    public override void Load()
+    {
+        //throw new System.NotImplementedException();
     }
 
     public override ModuleData Data

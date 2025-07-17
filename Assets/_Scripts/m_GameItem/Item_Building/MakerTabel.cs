@@ -70,12 +70,13 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     public bool IsInstalled { get =>Data.IsInstalled; set => Data.IsInstalled = value; }
     public bool BePlayerTaken { get => bePlayerTake; set => bePlayerTake = value; }
 
-    public BaseBuilding _InstallAndUninstall = new ();
+    public BaseBuilding _InstallAndUninstall;
     private bool bePlayerTake = false;
     #endregion
 
-    void Start()
+    new void  Start()
     {
+        base.Start();
        // IInventoryData inventoryData = this;
      //   inventoryData.FillDict_SetBelongItem(transform);
 

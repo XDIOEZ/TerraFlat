@@ -31,22 +31,7 @@ public abstract class Weapon : Item,IFunction_Attack
     }
     #endregion
     #region 生命周期 | Life Cycle 
-    public virtual void OnEnable()
-    {
-        if (TriggerAttack != null)
-        {
-           // TriggerAttack.SetWeapon(this);
-          //  Debug.Log("Weapon Enable");
-        }
-    }
-    public virtual void Start()
-    {
-        if (TriggerAttack != null)
-        {
-          //  TriggerAttack.SetWeapon(this);
-           // Debug.Log("Weapon Start");
-        }
-    }
+
     public virtual void OnDisable()
     {
         if (TriggerAttack != null)

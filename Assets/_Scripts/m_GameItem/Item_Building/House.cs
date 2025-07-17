@@ -82,8 +82,9 @@ public class House : Item, ISave_Load, IHealth, IBuilding,IRoom
     #endregion
 
     #region UnityÉúÃüÖÜÆÚ
-    private void Start()
+    private new void Start()
     {
+        base.Start();
         BePlayerTaken = BelongItem != null;
     }
     #endregion

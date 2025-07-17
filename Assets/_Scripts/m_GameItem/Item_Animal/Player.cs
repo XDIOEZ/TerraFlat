@@ -63,6 +63,12 @@ public class Player
         set => Data.hp = value;
     }
 
+    public float PovValue
+    {
+        get => Data.PlayerPov;
+        set => Data.PlayerPov = value;
+    }
+
     public float EatingSpeed { get; set; } = 1;
 
     public GameValue_float Speed
@@ -206,11 +212,6 @@ public class Player
     #endregion
 
     #region 生命周期与行为
-
-    public void Start()
-    {
-        Load();
-    }
 
     public override void Act()
     {

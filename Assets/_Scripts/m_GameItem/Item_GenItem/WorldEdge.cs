@@ -30,10 +30,6 @@ public class WorldEdge : Item, ISave_Load, IInteract
 
     #region 生命周期
 
-    private void Start()
-    {
-        // TODO: 初始化检测场景名称或传送位置逻辑
-    }
 
     public override void Act()
     {
@@ -83,8 +79,10 @@ public class WorldEdge : Item, ISave_Load, IInteract
     public void SetupMapEdge(Vector2Int direction)
     {
         Data.Boundary_Position = direction;
+
         // 获取当前地图信息
         GameSaveData saveData = SaveAndLoad.Instance.SaveData;
+
         Vector2Int activeMapPos = saveData.Active_MapPos;  // 当前地图格子坐标
         Vector2Int mapSize = saveData.MapSize;            // 当前地图大小（单位为格子数）
 

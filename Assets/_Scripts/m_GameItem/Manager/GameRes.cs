@@ -16,6 +16,8 @@ public class GameRes : SingletonAutoMono<GameRes>
     public List<string> ADBLabels_CraftingRecipe = new List<string>();
     [Header("TileBase 标签列表")]
     public List<string> ADBLabels_TileBase = new List<string>();
+    [Header("BuffData 标签列表")]
+    public List<string> ADBLabels_BuffData = new List<string>();
 
     [ShowInInspector]
     public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>();
@@ -23,6 +25,9 @@ public class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, Recipe> recipeDict = new Dictionary<string, Recipe>();
     [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
+    [ShowInInspector]
+    public Dictionary<string, Buff_Data> BuffData_Dict = new Dictionary<string, Buff_Data>();
+
 
     public bool isLoadFinish = false;
     #endregion
@@ -49,6 +54,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             ADBLabels_Prefab.Add("Prefab");
             ADBLabels_CraftingRecipe.Add("CraftingRecipe");
             ADBLabels_TileBase.Add("TileBase");
+            ADBLabels_BuffData.Add("Buff");
         }
 
         // 分别同步加载
@@ -64,9 +70,14 @@ public class GameRes : SingletonAutoMono<GameRes>
             ADBLabels_TileBase,
             tileBaseDict,
             null);
+        // 额外处理：BuffData
+        SyncLoadAssetsByLabels<Buff_Data>(
+            ADBLabels_BuffData,
+            BuffData_Dict,
+            null);
 
         isLoadFinish = true;
-        Debug.Log($"所有资源同步加载完成！共加载 {LoadedCount} 个资源");
+      //  Debug.Log($"所有资源同步加载完成！共加载 {LoadedCount} 个资源");
     }
 
     // 通用同步加载，并填充到字典
@@ -97,22 +108,20 @@ public class GameRes : SingletonAutoMono<GameRes>
             // 回调（直接传入 asset，就不会有类型转换问题）
             onLoadedAsset?.Invoke(asset);
 
-            // 根据类型取 Key
-            string key;
-            if (asset is GameObject go)
-                key = go.name;
-            else if (asset is Recipe recipe)
-                key = recipe.name;
-            else if (asset is TileBase tile)
-                key = tile.name;
-            else
-                key = asset.ToString();
+            string key = asset switch
+            {
+                GameObject go => go.name,
+                Recipe recipe => recipe.name,
+                TileBase tile => tile.name,
+                Buff_Data buff => buff.name,
+                _ => asset.ToString()
+            };
 
             dict[key] = asset;
             LoadedCount++;
         }
 
-        Debug.Log($"同步加载 {typeof(T).Name} 完成，数量：{assets.Count}");
+      //  Debug.Log($"同步加载 {typeof(T).Name} 完成，数量：{assets.Count}");
     }
 
     // 专门处理 Prefab 的额外逻辑：把 Item ID 也加入字典
@@ -164,6 +173,10 @@ public class GameRes : SingletonAutoMono<GameRes>
     {
         tileBaseDict.TryGetValue(tileBaseName, out var tile);
         return tile;
+    }
+    public Buff_Data GetBuffData( string buffName)
+    {
+        return BuffData_Dict[buffName];
     }
 
     #endregion

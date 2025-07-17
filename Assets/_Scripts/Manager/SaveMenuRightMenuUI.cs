@@ -1,33 +1,60 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class SaveMenuRightMenuUI : MonoBehaviour
 {
     public static SaveMenuRightMenuUI Instance;
     public Transform MenuUI;
-    public SaveInfo UsingSaveInfo;
+    public ButtonInfoData SelectInfo;
+
     public Button Delete_Save_Button;
     public Button ClossSaveMenu_Button;
+    public Button Rename_Button;
 
+    public ReNameSystem ReNameSystem = new();
+    public TMP_InputField InpuFieldSystem;
 
     private void Awake()
     {
         Instance = this;
+        InpuFieldSystem = GetComponentInChildren<TMP_InputField>();
     }
-    // Start is called before the first frame update
+
     void Start()
     {
         ClossSaveMenu_Button.onClick.AddListener(CloseUI);
-        Delete_Save_Button.onClick.AddListener(DeleteSave);
+        Delete_Save_Button.onClick.AddListener(Delete);
+        Rename_Button.onClick.AddListener(Rename);
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Rename()
     {
-        
+        string oldName = SelectInfo.Name;
+        string newName = InpuFieldSystem.text;
+
+        if (string.IsNullOrEmpty(newName))
+        {
+            Debug.LogWarning("新名称不能为空");
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(SelectInfo.Path) && File.Exists(SelectInfo.Path))
+        {
+            ReNameSystem.Rename_SaveName(oldName, SelectInfo.Path, newName);
+        }
+        else
+        {
+            ReNameSystem.Rename_PlayerName(oldName, newName);
+        }
+
+        SaveAndLoad.Instance.Save();
+        SaveManager.Ins.Refresh();
+        CloseUI();
     }
 
     public void CloseUI()
@@ -35,9 +62,18 @@ public class SaveMenuRightMenuUI : MonoBehaviour
         MenuUI.gameObject.SetActive(false);
     }
 
-    public void DeleteSave()
+    public void Delete()
     {
-        File.Delete(UsingSaveInfo.savePath);
+        if (!string.IsNullOrEmpty(SelectInfo.Path))
+        {
+            File.Delete(SelectInfo.Path);
+        }
+        else
+        {
+            SaveAndLoad.Instance.SaveData.PlayerData_Dict.Remove(SelectInfo.Name);
+            SaveAndLoad.Instance.Save();
+        }
+
         SaveManager.Ins.Refresh();
         CloseUI();
     }
@@ -46,43 +82,16 @@ public class SaveMenuRightMenuUI : MonoBehaviour
     {
         RectTransform menuRect = MenuUI.GetComponent<RectTransform>();
 
-        // 获取屏幕尺寸
         float screenWidth = Screen.width;
         float screenHeight = Screen.height;
 
-        Vector2 newPivot = Vector2.zero;
+        Vector2 newPivot = new(
+            Point.x <= screenWidth / 2f ? 0f : 1f,
+            Point.y <= screenHeight / 2f ? 0f : 1f
+        );
 
-        // 判断在哪个屏幕象限
-        if (Point.x <= screenWidth / 2f)
-        {
-            // 左侧
-            newPivot.x = 0f;
-        }
-        else
-        {
-            // 右侧
-            newPivot.x = 1f;
-        }
-
-        if (Point.y <= screenHeight / 2f)
-        {
-            // 下方
-            newPivot.y = 0f;
-        }
-        else
-        {
-            // 上方
-            newPivot.y = 1f;
-        }
-
-        // 设置菜单的 Pivot
         menuRect.pivot = newPivot;
-
-        // 将菜单移动到点击位置
         menuRect.position = Point;
-
-        // 显示菜单
         MenuUI.gameObject.SetActive(true);
     }
-
 }

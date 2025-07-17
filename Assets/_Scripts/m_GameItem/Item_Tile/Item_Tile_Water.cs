@@ -62,38 +62,50 @@ public class Item_Tile_Water : Item, IBlockTile
     //tiledata.水的深度 =10m 
     public void Tile_Enter(Item item, TileData tileData)
     {
-        if (item == null)
+        bool validItem = item != null;
+        BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
+
+        // Buff 添加逻辑
+        if (!validItem)
         {
             Debug.LogError("[Tile_Enter] item 是 null，无法执行 Buff 添加");
-            return;
         }
-
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
-        if (buffManager == null)
+        else if (buffManager == null)
         {
             Debug.LogError($"[Tile_Enter] item {item.name} 没有找到 BuffManager 组件");
-            return;
         }
-
-        if (BuffInfo == null || BuffInfo.Count == 0)
+        else if (BuffInfo == null || BuffInfo.Count == 0)
         {
             Debug.LogWarning("[Tile_Enter] BuffInfo 列表为空，无 Buff 被添加");
-            return;
+        }
+        else
+        {
+            foreach (Buff_Data buffData in BuffInfo)
+            {
+                if (buffData == null)
+                {
+                    Debug.LogWarning("[Tile_Enter] 检测到空的 Buff_Info，跳过");
+                    continue;
+                }
+
+                buffManager.AddBuffRuntime(buffData, this, item);
+            }
         }
 
-       // Debug.Log($"[Tile_Enter] 开始对 item {item.name} 添加 Buff，共计 {BuffInfo.Count} 个");
-
-        foreach (Buff_Data buffData in BuffInfo)
+        // 模块添加逻辑（入水特效）
+        if (validItem && !Module.HasMod(item, "入水特效"))
         {
-            if (buffData == null)
-            {
-                Debug.LogWarning("[Tile_Enter] 检测到空的 Buff_Info，跳过");
-                continue;
-            }
-        //    Debug.Log($"[Tile_Enter] 添加 Buff: {buffData.buff_Name} 到 {item.name}");
-            buffManager.AddBuffRuntime(buffData, this, item);
+            Module.ADDModTOItem(item, "入水特效");
+
+            // 获取模块的 Transform 并修改位置
+            Transform modTransform = Module.GetMod(item, "入水特效").transform;
+            Vector3 pos = modTransform.localPosition;
+            pos.y = -0.6f;
+            pos.x = 0f;
+            modTransform.localPosition = pos;
         }
     }
+
 
     public void Tile_Exit(Item item, TileData tileData)
     {
@@ -107,6 +119,9 @@ public class Item_Tile_Water : Item, IBlockTile
                 buffManager.RemoveBuff(buffData.buff_ID);
             }
         }
+
+        if(Module.HasMod(item, "入水特效")==true)
+        Module.REMOVEModFROMItem(item, "入水特效");
     }
 
 

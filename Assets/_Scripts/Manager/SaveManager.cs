@@ -13,9 +13,10 @@ public class SaveManager : MonoBehaviour
     public SaveAndLoad saveAndLoad;
     public static SaveManager Ins;
 
+    public PlanetData Ready_planetData = new PlanetData();
+
     [Header("存档信息")]
     public List<string> saves = new List<string>();
-    private string pathToSaveFolder = "Assets/Saves/LoaclSave/";
 
     [Header("按钮与父物体")]
     public GameObject Save_Player_SelectButton_Prefab; // 存档/玩家按钮预制体
@@ -30,12 +31,15 @@ public class SaveManager : MonoBehaviour
     [Header("输入框 - 新游戏")]
     public TMP_InputField NewPlayer_Name_Text; // 新玩家输入框
     public TMP_InputField NewSave_Name_Text; // 新存档输入框
+    public TMP_InputField PlanetRediusValue_Text; // 初始星球半径设置
+    public TMP_InputField PlanetNoiseValue_Text; // 星球缩放大小
+
     public Button Start_New_GameButton; // 新游戏按钮
 
     [Header("玩家名显示")]
     public TMP_InputField SelectedPlayer_Name_Text; // 当前选中玩家显示框
 
-    public string PathToSaveFolder { get => saveAndLoad.PlayerSavePath;}
+    public string PathToSaveFolder { get => saveAndLoad.UserSavePath;}
 
 
     #endregion
@@ -64,20 +68,22 @@ public class SaveManager : MonoBehaviour
         SelectedPlayer_Name_Text.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
         NewPlayer_Name_Text.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
         NewSave_Name_Text.onValueChanged.AddListener(OnPlayerSaveNameChanged);
+        PlanetRediusValue_Text.onValueChanged.AddListener(OnPlanetReadiusChanged);
+        PlanetNoiseValue_Text.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
        // DeletSave.onClick.AddListener(OnClick_DeletSave_Button);
     }
 
-    public void StartGame()
+    public void StartNewGame()
     {
-        if(SaveAndLoad.Instance.SaveData.SaveSeed == "")
-        {
-            SaveAndLoad.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
-          //  SaveAndLoad.Instance.SaveData.MapSize
-        }
+        SaveAndLoad.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
         // 初始化随机种子并创建系统随机实例
         SaveAndLoad.Instance.SaveData.Seed = SaveAndLoad.Instance.SaveData.SaveSeed.GetHashCode();
         Random.InitState(SaveAndLoad.Instance.SaveData.Seed);
         RandomMapGenerator.rng = new System.Random(SaveAndLoad.Instance.SaveData.Seed);
+       // SaveAndLoad.Instance.SaveData.PlanetData_Dict.Add("地球", new PlanetData());
+        SaveAndLoad.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
+
+        saveAndLoad.ChangeScene(saveAndLoad.SaveData.Active_MapName);
     }
     #endregion
 
@@ -113,13 +119,16 @@ public class SaveManager : MonoBehaviour
         foreach (Transform child in SaveSelectButton_Parent_Content)
             Destroy(child.gameObject);
 
+        foreach (Transform child in Player_SelectButton_Parent_Content)
+            Destroy(child.gameObject);
+
         foreach (string saveName in saves)
         {
             GameObject buttonObj = Instantiate(Save_Player_SelectButton_Prefab, SaveSelectButton_Parent_Content);
 
-            SaveInfo SaveInfo = buttonObj.GetComponent<SaveInfo>();
-            SaveInfo.saveName = saveName;
-            SaveInfo.savePath = PathToSaveFolder + saveName + ".GameSaveData";
+            ButtonInfoData SaveInfo = buttonObj.GetComponent<ButtonInfoData>();
+            SaveInfo.Name = saveName;
+            SaveInfo.Path = PathToSaveFolder + saveName + ".GameSaveData";
 /*            buttonObj.name = saveName;
 
             var tmpText = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
@@ -129,7 +138,11 @@ public class SaveManager : MonoBehaviour
             var btn = buttonObj.GetComponent<Button>();
             if (btn != null)
                 btn.onClick.AddListener(() => OnClick_List_Save_Button(saveName, buttonObj));
+            GeneratePlayerButtons();
         }
+       
+
+
     }
 
     /// <summary>
@@ -137,6 +150,7 @@ public class SaveManager : MonoBehaviour
     /// </summary>
     public void GeneratePlayerButtons()
     {
+
         foreach (Transform child in Player_SelectButton_Parent_Content)
             Destroy(child.gameObject);
 
@@ -144,6 +158,9 @@ public class SaveManager : MonoBehaviour
         {
             GameObject buttonObj = Instantiate(Save_Player_SelectButton_Prefab, Player_SelectButton_Parent_Content);
             buttonObj.name = playerName;
+
+            ButtonInfoData SaveInfo = buttonObj.GetComponent<ButtonInfoData>();
+            SaveInfo.Name = playerName;
 
             var tmpText = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
             if (tmpText != null)
@@ -163,7 +180,7 @@ public class SaveManager : MonoBehaviour
     /// </summary>
     public void OnClick_DeletSave_Button()
     {
-        saveAndLoad.DeletSave(saveAndLoad.PlayerSavePath, SelectedSave_Name_Text.text);
+        saveAndLoad.DeletSave(saveAndLoad.UserSavePath, SelectedSave_Name_Text.text);
         Refresh();
     }
 
@@ -174,18 +191,18 @@ public class SaveManager : MonoBehaviour
     {
         if (saveAndLoad != null)
         {
-            saveAndLoad.LoadSaveByDisk(saveAndLoad.PlayerSavePath + saveName);
+            saveAndLoad.LoadSaveByDisk(saveAndLoad.UserSavePath + saveName);
         }
         else
         {
             Debug.LogWarning("SaveAndLoad组件未绑定！");
         }
         // 禁用所有存档按钮的选择图像
-        foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<SaveInfo>())
+        foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<ButtonInfoData>())
         {
             saveInfo.SelectImage.enabled = false;
         }
-        buttonObj.GetComponent<SaveInfo>().SelectImage.enabled = true;
+        buttonObj.GetComponent<ButtonInfoData>().SelectImage.enabled = true;
         SelectedSave_Name_Text.text = saveName;
         GeneratePlayerButtons();
     }
@@ -227,8 +244,8 @@ public class SaveManager : MonoBehaviour
     {
         if (saveAndLoad != null)
         {
-            StartGame();
-            saveAndLoad.ChangeScene(saveAndLoad.SaveData.Active_MapName);
+            StartNewGame();
+           
         }
         else
         {
@@ -258,6 +275,41 @@ public class SaveManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 存档名字输入框实时更新事件
+    /// </summary>
+    private void OnPlanetReadiusChanged(string newValue)
+    {
+        // 检测传入的字符串是否为有效的整数
+        if (int.TryParse(newValue, out int radius))
+        {
+            Ready_planetData.Radius = radius;
+        }
+        else
+        {
+            // 非法输入，不做处理，必要时可提示用户
+            Debug.LogWarning($"输入的半径值无效：{newValue}");
+        }
+    }
+
+    /// <summary>
+    /// 存档名字输入框实时更新事件
+    /// </summary>
+    private void OnPlanetNoiseScaleChanged(string newValue)
+    {
+        // 检测传入的字符串是否为有效的整数
+        if (float.TryParse(newValue, out float Noise))
+        {
+            Ready_planetData.NoiseScale = Noise;
+        }
+        else
+        {
+            // 非法输入，不做处理，必要时可提示用户
+            Debug.LogWarning($"输入的值无效：{newValue}");
+        }
+    }
+
+
     #endregion
 
     #region 公共方法
@@ -268,7 +320,10 @@ public class SaveManager : MonoBehaviour
     public void Refresh()
     {
         LoadSaveFileNames();
+
         GenerateSaveButtons();
+
+      
     }
     #endregion
 }

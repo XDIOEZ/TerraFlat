@@ -74,16 +74,13 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
 
     //实例化时初始化Inventory
 
-    public void OnEnable()
+    new void Start()
     {
+        base.Start();
         workButton.onClick.AddListener(Work_Start);
         closeButton.onClick.AddListener(CloseUI);
         fuelSlider.maxValue = maxFuelAmount;
         workSlider.maxValue = maxWorkProgress;
-    }
-
-    void Start()
-    {
         OnInventoryData_Dict_Changed += SetChildInventoryData;
 
         InitializeInventory("输入槽", ref Input_inventory);

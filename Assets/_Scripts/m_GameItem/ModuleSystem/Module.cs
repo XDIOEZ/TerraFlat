@@ -4,44 +4,94 @@ using UnityEngine;
 public abstract class Module : MonoBehaviour
 {
     public abstract ModuleData Data { get; set; }
-    public Item item { get; set; }
+    public Item BelongItem { get; set; }
     public UltEvent<float> OnAction { get; set; } = new UltEvent<float>();
 
-    public void Awake()
+    public void ModuleInit(Item item_)
     {
-        item = GetComponentInParent<Item>();
-        //向item添加模块
-        item.Mods.Add(Data.ModuleName, this);
-    }
-    public void Start()
-    {
-       
+        this.BelongItem = item_;
 
-        //更新模块数据
-        if (item?.Item_Data?.ModuleDataDic != null && !string.IsNullOrEmpty(Data?.ModuleName))
+        if (item_.Item_Data.ModuleDataDic.ContainsKey(Data.Name))
         {
-            if (item.Item_Data.ModuleDataDic.ContainsKey(Data.ModuleName))
-            {
-                Debug.LogWarning("模块数据已存在，将覆盖原有数据");
-                Data = item.Item_Data.ModuleDataDic[Data.ModuleName];
-            }
-            else
-            {
-                Debug.LogWarning("模块数据不存在，将添加新数据");
-                item.Item_Data.ModuleDataDic[Data.ModuleName] = Data;
-            }
+            Debug.LogWarning("模块数据已存在，将覆盖原有数据");
+            Data = item_.Item_Data.ModuleDataDic[Data.Name];
         }
         else
         {
-            Debug.LogWarning("无法分配模块数据：item、Item_Data、ModuleDataDic 或 ModuleName 为空");
+            Debug.LogWarning("模块数据不存在，将添加新数据");
+            item_.Item_Data.ModuleDataDic[Data.Name] = Data;
+        }
+
+        //向item添加模块
+        item_.Mods[Data.Name] = this;
+    }
+    public void Start()
+    {
+        Load();
+        if (Data.Name == "")
+        {
+            Data.Name = this.GetType().ToString();
         }
     }
 
+    public abstract void Load();
+    public abstract void Save();
+
+
+    public static void ADDModTOItem(Item item, string modName)
+    {
+        // 实例化模块预制体
+        GameObject @object = GameRes.Instance.InstantiatePrefab(modName);
+
+        // 设置为 item 的子物体（使用 worldPositionStays = false 以便我们手动设置位置）
+        @object.transform.SetParent(item.transform, worldPositionStays: false);
+
+        // 设置位置、旋转、缩放与 item 一致
+        @object.transform.localPosition = Vector3.zero;
+        @object.transform.localRotation = Quaternion.identity;
+        @object.transform.localScale = Vector3.one;
+
+        // 获取模块并初始化
+        Module module = @object.GetComponent<Module>();
+        module.ModuleInit(item);
+    }
+
+
+    public static void ADDModTOItem(Item item, ModuleData mod)
+    {
+
+        GameObject @object = GameRes.Instance.InstantiatePrefab(mod.Name);
+
+        @object.transform.SetParent(item.transform);
+
+        Module module = @object.GetComponent<Module>();
+
+        module.ModuleInit(item);
+    }
+
+    public static void REMOVEModFROMItem(Item item, string name)
+    {
+        
+        Destroy(item.Mods[name].gameObject);
+        item.Mods.Remove(name);
+        item.Item_Data.ModuleDataDic.Remove(name);
+    }
+
+    public static bool HasMod(Item item, string name)
+    {
+        return item.Mods.ContainsKey(name) && item.Item_Data.ModuleDataDic.ContainsKey(name);
+    }
+    public static Module GetMod(Item item, string name)
+    {
+     
+            return item.Mods[name];
+    }
 
 
     public void OnDestroy()
     {
-        item.Item_Data.ModuleDataDic[Data.ModuleName] = Data;
+        Save();
+        //BelongItem.Item_Data.ModuleDataDic[Data.Name] = Data;
     }
 
 }

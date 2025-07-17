@@ -173,6 +173,7 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAction_Event:
     _PersistentCalls: []
+  Sprite: {fileID: 0}
   data:
     IDName: Apple_Red
     GameName: "\u82F9\u679C"
@@ -370,7 +371,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _data:
-    ModuleName: "\u751F\u957F\u6A21\u5757"
+    Name: "\u751F\u957F\u6A21\u5757"
     isRunning: 0
     isLoop: 1
     progress: 0

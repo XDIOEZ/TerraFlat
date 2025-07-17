@@ -83,10 +83,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
         CurrentOrder++;
         rectTransform.SetSiblingIndex(CurrentOrder);
-    }
 
-    public void OnBeginDrag(PointerEventData eventData)
-    {
         if (!IsPointerOverDraggableImage(eventData) || IsRaycastBlocked(eventData))
             return;
 
@@ -95,6 +92,11 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
         CurrentOrder++;
         canvas.sortingOrder = CurrentOrder;
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+       
     }
 
     public void OnDrag(PointerEventData eventData)

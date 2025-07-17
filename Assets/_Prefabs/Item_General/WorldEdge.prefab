@@ -204,7 +204,8 @@ MonoBehaviour:
       Rotation: {x: -0, y: -0, z: -0, w: 1}
       Scale: {x: 1.933167, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 9
-    TeleportScene: 
-    TeleportPosition: {x: 0, y: 0}
+    Guid: 0
+    TP_SceneName: 
+    TP_Position: {x: 0, y: 0}
+    Boundary_Position: {x: 0, y: 0}
   centerOffset: 2

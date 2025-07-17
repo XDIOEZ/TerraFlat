@@ -13,13 +13,14 @@ using UnityEngine.UI;
 /// </summary>
 public class BasePanel : MonoBehaviour
 {
-    // 存储所有UI控件，使用里式转换原则确保各控件类型可以被存储在一个字典中
-    private Dictionary<string, List<UIBehaviour>> controlDic = new Dictionary<string, List<UIBehaviour>>();
 
-    // 初始化方法，查找所有子控件
+    private Dictionary<string, List<UIBehaviour>> controlDic = new();
+    public CanvasGroup canvasGroup;
+
     protected virtual void Awake()
     {
-        // 自动查找并存储所有需要管理的UI控件
+
+        // 查找组件
         FindChildrenControl<Button>();
         FindChildrenControl<Image>();
         FindChildrenControl<Text>();
@@ -27,6 +28,58 @@ public class BasePanel : MonoBehaviour
         FindChildrenControl<Slider>();
         FindChildrenControl<ScrollRect>();
         FindChildrenControl<InputField>();
+
+        canvasGroup = GetComponentInChildren<CanvasGroup>();
+    }
+
+    public void Start()
+    {
+        // 遍历所有 Button，找到名字中包含“关闭”的按钮，注册关闭事件
+        foreach (var pair in controlDic)
+        {
+            string objName = pair.Key;
+            if (objName.Contains("关闭页面"))
+            {
+                foreach (var control in pair.Value)
+                {
+                    if (control is Button btn)
+                    {
+                        btn.onClick.AddListener(() =>
+                        {
+                            Close(); // 调用封装的关闭方法
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    public void Open()
+    {
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 1;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+        }
+    }
+
+    public void Close()
+    {
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 0;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+        }
+    }
+
+    public bool IsOpen()
+    {
+        return canvasGroup != null &&
+               canvasGroup.alpha > 0 &&
+               canvasGroup.interactable &&
+               canvasGroup.blocksRaycasts;
     }
 
     /// <summary>

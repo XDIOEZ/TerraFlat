@@ -86,6 +86,7 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAction_Event:
     _PersistentCalls: []
+  Sprite: {fileID: 0}
   _data:
     IDName: Tree_Apple
     GameName: "\u82F9\u679C\u6811"
@@ -235,6 +236,7 @@ GameObject:
   - component: {fileID: 6283402004694861917}
   - component: {fileID: 1890700358386065740}
   - component: {fileID: 675614112313854105}
+  - component: {fileID: 2671230964647945301}
   m_Layer: 9
   m_Name: Mods
   m_TagString: Untagged
@@ -270,7 +272,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _data:
-    ModuleName: "\u751F\u957F\u6A21\u5757"
+    Name: "\u751F\u957F\u6A21\u5757"
     isRunning: 1
     isLoop: 0
     progress: 0
@@ -316,7 +318,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _data:
-    ModuleName: "\u751F\u4EA7\u6A21\u5757"
+    Name: "\u751F\u4EA7\u6A21\u5757"
     isRunning: 0
     isLoop: 1
     progress: 0
@@ -339,6 +341,25 @@ MonoBehaviour:
         lootName: Apple_Red
         lootAmount: 1
     nodeIndex: 0
+--- !u!114 &2671230964647945301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2802196787596597447}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34ede1cf358569c4b87e60ea5d56ed1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  modData:
+    Name: "\u4E22\u5F03\u6A21\u5757"
+    isRunning: 1
+    BitData: 
+  drops: []
+  bezierOffset: 1
+  arcHeight: 1
 --- !u!1 &4099061837537365540
 GameObject:
   m_ObjectHideFlags: 0
@@ -578,7 +599,7 @@ MonoBehaviour:
   - {x: 0.18533325, y: 0.06695628, z: 0}
   m_ShapePathHash: 0
   m_Mesh: {fileID: 0}
-  m_InstanceId: 103488
+  m_InstanceId: 127970
   m_LocalBounds:
     m_Center: {x: 0.02347374, y: 0.37604785, z: 0}
     m_Extent: {x: 0.16185951, y: 0.30909157, z: 0}

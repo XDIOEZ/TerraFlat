@@ -30,8 +30,9 @@ public class Apple_Red : Item, IFood,IBuff
 
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic { get => data.BuffRunTimeData_Dic; set => data.BuffRunTimeData_Dic = value; }
 
-    public void Start()
+    public new void Start()
     {
+        base.Start();
         GetComponentInChildren<Mod_PlantGrow>().OnAction += BeToAppleTree;
         GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += OnTileEnter;
     }

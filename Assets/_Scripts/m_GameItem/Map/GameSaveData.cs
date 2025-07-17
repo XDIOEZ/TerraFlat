@@ -13,7 +13,7 @@ public partial class GameSaveData
 
     public string Active_PlanetName = "地球";//当前激活星球名称
 
-    public string Active_MapName = "平原";//当前激活场景名称
+    public string Active_MapName = "(0,0)";//当前激活场景名称
 
     public Vector2Int Active_MapPos = new Vector2Int(0, 0);//当前激活地图位置
     //种子
@@ -85,6 +85,7 @@ public partial class GameSaveData
         }
     }
 
+    [ShowInInspector]
     public PlanetData Active_PlanetData
     {
         get
@@ -129,7 +130,7 @@ public partial class PlanetData
     //星球名称
     public string PlanetName;
     //星球半径
-    public int PlanetRadius = 1000;
+    public int Radius = 1000;
     //温度偏移值
     public int TemperatureOffset = 0;
     //降雨偏移
@@ -137,7 +138,7 @@ public partial class PlanetData
     //海洋高度
     public float OceanHeight = 0;
     //噪声缩放
-    public float NoiseScale = 0.1f;
+    public float NoiseScale = 0.01f;
 
     //星球地图大小
     public Vector2Int MapSize = new Vector2Int(100, 100);

@@ -14,25 +14,37 @@ public class BuffManager : MonoBehaviour
     public void Start()
     {
         item = GetComponentInParent<Item>();
-        //Buffer = item.GetComponent<IBuff>();
-        //if (Buffer == null)
-        //{
-        //    Debug.LogError("Item is not a Buff");
-        //    return;
-        //}
         Init();
     }
 
     public void AddBuffRuntime(Buff_Data buffData, Item Sender, Item Receiver)
     {
+        Debug.Log($"尝试添加 Buff: {buffData?.name}, Sender: {Sender?.name}, Receiver: {Receiver?.name}");
+
+        if (buffData == null || Receiver == null)
+        {
+            Debug.LogWarning("buffData 或 Receiver 为空，不能添加 Buff");
+            return;
+        }
+
         BuffRunTime newBuff = new BuffRunTime
         {
+            buff_IDName = buffData.buff_ID,
             buffData = buffData,
             buff_Sender = Sender,
+            buff_Sender_Guid = Sender.Item_Data.Guid,
             buff_Receiver = Receiver,
+            buff_Receiver_Guid = Receiver.Item_Data.Guid,
         };
+        if(newBuff.buffData.buff_ID == "")
+        {
+            Debug.LogError("Buff ID 为空，不能添加 Buff");
+            return;
+        }
+
         AddBuffByData(newBuff);
     }
+
     public bool HasBuff(string buffId)
     {
         return BuffRunTimeData_Dic.ContainsKey(buffId); // 举例，如果用 Dictionary 存
@@ -42,14 +54,21 @@ public class BuffManager : MonoBehaviour
     void Init()
     {
         BuffRunTimeData_Dic = item.Item_Data.BuffRunTimeData_Dic;
+        //同步Data后，初始化Buff的 BuffData和接受者和发送者
+        foreach (var buff in BuffRunTimeData_Dic.Values)
+        {
+            buff.SetItemSenderAndReceiver();
+        }
     }
-
+ 
     public void AddBuffByData(BuffRunTime newBuff)
     {
         string buffID = newBuff.buff_IDName;
 
-        if (BuffRunTimeData_Dic.TryGetValue(buffID, out var existingBuff))
+       
+        if (HasBuff(buffID))
         {
+            BuffRunTimeData_Dic.TryGetValue(buffID, out var existingBuff);
             switch (newBuff.buffData.buff_StackType)
             {
                 case BuffStackType.DurationAdd:

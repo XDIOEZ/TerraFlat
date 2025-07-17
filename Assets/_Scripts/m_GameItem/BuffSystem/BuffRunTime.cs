@@ -20,17 +20,12 @@ public partial class BuffRunTime
 
     private float lastUpdateCheckTime = 0f;
 
-/*    public BuffRunTime(Buff_Data buff_Data, Item buff_Sender, Item buff_Receiver)
+    public void SetItemSenderAndReceiver()
     {
-        this.buff_Sender = buff_Sender;
-        this.buff_Receiver = buff_Receiver;
-        this.buff_Data = buff_Data;
-        this.buff_IDName = buff_Data.buff_ID;
-        this.buff_Sender_Guid = buff_Sender.Item_Data.Guid;
-        this.buff_Receiver_Guid = buff_Receiver.Item_Data.Guid;
-    }*/
-
-
+        buff_Sender = RunTimeItemManager .Instance.GetItemByGuid(buff_Sender_Guid);
+        buff_Receiver = RunTimeItemManager.Instance.GetItemByGuid(buff_Receiver_Guid);
+        buffData = GameRes.Instance.GetBuffData(buff_IDName);
+    }
 
     public void Run()
     {

@@ -16,7 +16,7 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
 
     public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }
     public float EatingSpeed { get;set; } = 1;
-    public UltEvent OnNutrientChanged { get; set; }
+    public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
     public UltEvent OnDeath { get; set; }
     #endregion
     #region ËÙ¶È
@@ -89,11 +89,6 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public Vector3 FocusPointPosition { get; set; }
     GameValue_float ISpeed.Speed { get => Data.Speed; set => Data.Speed = value; }
     #endregion
-
-    public void Start()
-    {
-        OnNutrientChanged = new UltEvent();
-    }
 
     public override void Act()
     {

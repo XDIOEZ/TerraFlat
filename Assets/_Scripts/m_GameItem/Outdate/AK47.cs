@@ -11,14 +11,6 @@ public class AK47 : Gun
         set => gunData = (GunData)value;
     }
     #region ÉúÃüÖÜÆÚ
-    public new void Start()
-    {
-        base.Start();
-    }
-    new void OnEnable()
-    {
-        base.OnEnable();
-    }
 
     new void OnDisable()
     {

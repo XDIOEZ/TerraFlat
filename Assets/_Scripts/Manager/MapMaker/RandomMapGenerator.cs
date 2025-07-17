@@ -17,7 +17,7 @@ public class RandomMapGenerator : MonoBehaviour
     [Required]
     public Map map;  // 地图管理对象，包含 TileData 和 Tilemap 引用
 
-    [Header("噪声参数")]
+/*    [Header("噪声参数")]
     [Tooltip("噪声缩放系数：越小生成越大范围的高低起伏")]
     private float noiseScale = 0.01f;
 
@@ -28,7 +28,7 @@ public class RandomMapGenerator : MonoBehaviour
     private float temp = 0.0f;
 
     [Tooltip("地球半径")]
-    private float plantRadius = 100;
+    private float plantRadius = 100;*/
 
     [Tooltip("赤道坐标")]
     public float Equator = 0;
@@ -64,7 +64,7 @@ public class RandomMapGenerator : MonoBehaviour
     /// </summary>
     private int Seed => SaveAndLoad.Instance.SaveData.Seed;
 
-    public float PlantRadius { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.PlanetRadius;}
+    public float PlantRadius { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.Radius;}
     public float Temp { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.TemperatureOffset; }
     public float LandOceanRatio { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.OceanHeight;}
     public float NoiseScale { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.NoiseScale;  }
@@ -72,7 +72,7 @@ public class RandomMapGenerator : MonoBehaviour
     /// <summary>
     /// 系统级可复现随机实例，用于资源生成
     /// </summary>
-    public static System.Random rng;
+    public static System.Random  rng;
 
     /// <summary>
     /// 缓存 TileData 模板，避免重复加载开销
@@ -83,8 +83,13 @@ public class RandomMapGenerator : MonoBehaviour
     #region Unity生命周期
     private void Start()
     {
-        if (map.Data.TileData.Count <= 0)
-            GenerateRandomMap();
+        rng = new System.Random(SaveAndLoad.Instance.SaveData.Seed);
+      /*  if (map.Data.TileCount < SaveAndLoad.Instance.SaveData.MapSize.x * SaveAndLoad.Instance.SaveData.MapSize.y)
+            GenerateRandomMap();*/
+    }
+    public void Awake()
+    {
+        map.GenerateMap += GenerateRandomMap;
     }
 #if UNITY_EDITOR
     private void OnDrawGizmos()
@@ -295,7 +300,7 @@ public class RandomMapGenerator : MonoBehaviour
     /// </summary>
     private void GenerateRandomResources(Vector2Int position, BiomeData biome, EnvironmentFactors env)
     {
-        foreach (var spawn in biome.TerrainConfig.ItemSpawn)
+        foreach (Biome_ItemSpawn spawn in biome.TerrainConfig.ItemSpawn)
         {
             if(spawn.environmentConditionRange.IsMatch(env))
             if (rng.NextDouble() <= spawn.SpawnChance)

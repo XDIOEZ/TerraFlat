@@ -74,6 +74,10 @@ public class TileEffectReceiver : MonoBehaviour
 
     private Vector2Int GetCurrentGridPos()
     {
+        if(Cache_map == null)
+        {
+            return Vector2Int.zero;
+        }
         Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
         return new Vector2Int(cell.x, cell.y);
     }
@@ -94,11 +98,16 @@ public class TileEffectReceiver : MonoBehaviour
         {
             tileBlock.Tile_Exit(item, tileData);
             OnTileExitEvent.Invoke(tileData); // 触发离开事件
+            Debug.Log("离开旧地块: " + tileData.Name_ItemName);
         }
     }
 
     private void OnTileUpdate(Vector2Int gridPos)
     {
+        if (Cache_map == null)
+        {
+            return ;
+        }
         if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
         {
             tileBlock.Tile_Update(item, tileData);

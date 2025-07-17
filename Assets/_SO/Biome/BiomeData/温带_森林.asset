@@ -25,4 +25,5 @@ MonoBehaviour:
     TileSpawns:
     - {fileID: 11400000, guid: 6b011c6baeb9d4140875090c5a56129e, type: 2}
     ItemSpawn:
-    - {fileID: 11400000, guid: 36dbf6b0dcf1545418596c90a98a1b90, type: 2}
+    - {fileID: 11400000, guid: fee2f71e14a18934e924e8df99752a8a, type: 2}
+    - {fileID: 11400000, guid: fd30a891d50d53043b59f28ea340f0e8, type: 2}

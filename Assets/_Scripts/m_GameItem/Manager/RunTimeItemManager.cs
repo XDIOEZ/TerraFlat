@@ -33,11 +33,6 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
                     Debug.LogException(ex);
                 }
             }
-            if (item.Item_Data.Guid == 0)
-            {
-               //随机生成一个Guid
-                item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
-            }
         //    RunTimeItems.Add(item.Item_Data.Guid, item);
             RunTimeItems[item.Item_Data.Guid] = item;
             AddToGroup(item); // 新增分组逻辑
@@ -69,10 +64,13 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
 
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemName, position, rotation, scale);
         Item item = itemObj.GetComponent<Item>();
+
         if (item != null)
         {
-            if (item.Item_Data.Guid > -1000 && item.Item_Data.Guid < 1000)
+
+            if (item.Item_Data.Guid ==0)
                 item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+
             RunTimeItems.Add(item.Item_Data.Guid, item);
             AddToGroup(item); // 新增分组逻辑
         }
@@ -136,7 +134,7 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
 
     // 查找运行时物品
     [Button]
-    public Item GetItem(int guid)
+    public Item GetItemByGuid(int guid)
     {
         if (RunTimeItems.TryGetValue(guid, out var item))
             return item;

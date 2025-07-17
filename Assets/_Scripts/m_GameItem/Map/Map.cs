@@ -1,4 +1,5 @@
-﻿using Force.DeepCloner;
+﻿using Codice.Client.BaseCommands;
+using Force.DeepCloner;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections;
@@ -17,6 +18,8 @@ public class Map : Item, ISave_Load
     [Header("Tilemap 组件")]
     [SerializeField]
     public Tilemap tileMap;
+
+    public UltEvent GenerateMap;
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData Item_Data { get => Data; set => Data = value as Data_TileMap; }
@@ -47,9 +50,14 @@ public class Map : Item, ISave_Load
         }
     }
 
-    public void Start()
+    public new void Start()
     {
+        base.Start();
         Save();
+        if (Data.TileCount < SaveAndLoad.Instance.SaveData.MapSize.x * SaveAndLoad.Instance.SaveData.MapSize.y)
+        {
+            GenerateMap.Invoke();
+        }
     }
 
     public void LoadTileData()

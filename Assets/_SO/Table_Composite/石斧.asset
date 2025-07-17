@@ -12,10 +12,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
   m_Name: "\u77F3\u65A7"
   m_EditorClassIdentifier: 
-  recipeID: 40b5f289-d8a8-43bd-be61-1f423ff7dc38
   version: 1.2.0
   inputs:
-    RowItems_List: []
+    RowItems_List:
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
   outputs:
-    results: []
+    results:
+    - resultItem: 
+      resultAmount: 0
   recipeType: 0

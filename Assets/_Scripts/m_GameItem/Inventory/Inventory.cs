@@ -94,7 +94,7 @@ public class Inventory : MonoBehaviour
 
         if (DefaultTarget_Inventory == null)
         {
-            DefaultTarget_Inventory = DataInterface.Children_Inventory_GameObject["手部插槽"];
+            DefaultTarget_Inventory = DataInterface.Children_Inventory_GameObject["UI_手部插槽"];
         }
 
         Data.Event_RefreshUI += RefreshUI;

@@ -46,4 +46,6 @@ public partial class Data_Player : ItemData
    [ShowNonSerializedField]
     [Tooltip("玩家用户名")]
     public string Name_User = "Ikun";
+
+    public float PlayerPov = 10;
 }

@@ -58,8 +58,9 @@ public class Mod_PlantGrow : Module
             // 调用物品管理器实例化物品
             Item product = RunTimeItemManager.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
 
-            new ItemMaker().DropItem_cric(product, transform.position, 2);
+           // new ItemMaker().DropItem_cric(product, transform.position, 2);
 
+            GetComponent<Mod_ItemMaker>().DropItem(product, transform.position, 2, 1);
             // 如果实例化成功，设置物品数量
             if (product != null)
             {
@@ -74,6 +75,16 @@ public class Mod_PlantGrow : Module
         _data.nodeIndex++;
 
         OnAction.Invoke(_data.nodeIndex);
+    }
+
+    public override void Load()
+    {
+      //  throw new System.NotImplementedException();
+    }
+
+    public override void Save()
+    {
+//throw new System.NotImplementedException();
     }
 }
 

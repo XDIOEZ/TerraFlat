@@ -5,6 +5,8 @@ using System.Reflection;
 using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+using System.Linq;
+
 
 
 
@@ -30,11 +32,53 @@ public abstract class Item : MonoBehaviour
     public Item BelongItem;
     [Tooltip("被销毁时触发的事件")]
     public UltEvent OnStopWork_Event = new();
-    #endregion
-
     public UltEvent UpdatedUI_Event = new();
     public UltEvent DestroyItem_Event = new();
     public UltEvent OnAction_Event = new();
+    //游戏的贴图对象
+    public SpriteRenderer Sprite;
+    #endregion
+
+    public void Start()
+    {
+        // 获取自身或子对象的 SpriteRenderer
+        if (Sprite == null)
+            Sprite = GetComponentInChildren<SpriteRenderer>();
+
+        // 获取当前已有的模块（包括自己及所有子对象）
+        var existingModules = GetComponentsInChildren<Module>(true).ToList();
+
+        // 用于查找已有模块是否存在某个名字
+        var existingModuleNames = new HashSet<string>(existingModules.Select(m => m.Data?.Name));
+
+        // 检查是否缺少模块，缺了就补上
+        foreach (var modData in Item_Data.ModuleDataDic.Values)
+        {
+            if (!existingModuleNames.Contains(modData.Name))
+            {
+                // 添加模块（ADDModTOItem 会自动将模块作为子对象挂载到当前物品上）
+                Module.ADDModTOItem(this, modData.Name);
+            }
+        }
+
+        // 再次获取补全后的模块列表
+        existingModules = GetComponentsInChildren<Module>(true).ToList();
+
+        // 初始化并注册所有模块
+        foreach (var mod in existingModules)
+        {
+            if (mod == null || mod.Data == null) continue;
+
+            if (!Mods.ContainsKey(mod.Data.Name))
+            {
+                mod.ModuleInit(this); // 初始化模块，传入宿主物品
+                Mods[mod.Data.Name] = mod; // 添加到字典
+            }
+        }
+    }
+
+
+
     public void SyncPosition()
     {
         Item_Data._transform.Position = transform.position;    

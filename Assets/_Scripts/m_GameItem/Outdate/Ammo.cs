@@ -10,8 +10,9 @@ public class Ammo : Item
     [Header("���߼���ų�")]
     public LayerMask layerMask;
 
-    public void Start()
+    public new void  Start()
     {
+        base.Start();
         DamageSender = GetComponentInChildren<IDamageSender>();
                 rb2d = GetComponent<Rigidbody2D>();
         previousPosition = transform.position;

@@ -27,11 +27,7 @@ public class Stone : Item
         throw new System.NotImplementedException();
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-
-    }
+    // Start is called before the first frame updat
 
     // Update is called once per frame
     void Update()

@@ -93,9 +93,7 @@ using UnityEngine;
   
     #endregion
 
-    public void Start()
-    {
-    }
+
 
     public override void Act()
     {

@@ -11,16 +11,6 @@ public abstract class Gun : Weapon
     #endregion
 
     #region ÉúÃüÖÜÆÚ | Life Cycle 
-    public new void Start()
-    {
-        launcher ??= GetComponent<PrefabLauncher>();
-
-        base.Start();
-    }
-    new void OnEnable()
-    {
-        base.OnEnable();
-    }
     new void OnDisable()
     {
         base.OnDisable();

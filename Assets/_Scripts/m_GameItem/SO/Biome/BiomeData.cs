@@ -58,7 +58,7 @@ public class BiomeTerrainConfig
     public List<BiomeTileSpawn> TileSpawns;
 
     [Tooltip("在该生态群系中可能生成的物品及概率")]
-    public List<Biome_ItemSpawn> ItemSpawn;
+    public List<Biome_ItemSpawn> ItemSpawn = new ();
 
     /// <summary>
     /// 根据环境因子（可包含噪声）返回一个地块预制体

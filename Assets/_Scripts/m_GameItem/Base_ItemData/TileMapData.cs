@@ -2,6 +2,7 @@ using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -17,9 +18,8 @@ public partial class Data_TileMap : ItemData
     public Vector2Int position = new Vector2Int(0,0);
     [Tooltip("地图的大小")]
     public Vector2Int size = new Vector2Int(100,100);
-
-
-
+    [MemoryPackIgnore]
+    public int TileCount => TileData.Count == 0 ? 0 : TileData.Values.Sum(list => list?.Count ?? 0);
 }
 
 [System.Serializable]
