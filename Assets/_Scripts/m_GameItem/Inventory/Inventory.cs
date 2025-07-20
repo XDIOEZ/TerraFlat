@@ -6,62 +6,45 @@ using System.Collections.Generic;
 
 public class Inventory : MonoBehaviour
 {
-    public IInventoryData DataInterface;
-
+    //容器所属对象
     public Item Belong_Item;
-
+    //插槽接口预制体
     public GameObject ItemSlot_Prefab;
-
+    //生成接口的父对象
     public Transform ItemSlot_Parent;
-
+    //数据
     public Inventory_Data Data;
-
+    //UI列表
     public List<ItemSlot_UI> itemSlotUIs;
-
+    //负责交互的Inventory
     public Inventory DefaultTarget_Inventory;
-
-    public bool UI_IsShow = true;
-
 
     public void Awake()
     {
         // 若未命名，则赋默认名
-        if (string.IsNullOrEmpty(Data.inventoryName))
-            Data.inventoryName = gameObject.name;
+        if (string.IsNullOrEmpty(Data.Name))
+            Data.Name = gameObject.name;
 
-        Belong_Item = GetComponentInParent<Item>();
-        // 初始化数据接口
-        DataInterface = GetComponentInParent<IInventoryData>();
+        // 未设置Prefab 自动调用
+        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
 
-        DataInterface.Children_Inventory_GameObject[Data.inventoryName] = this;
+        // 若未设置父对象，则默认为第一个子对象
+        if (ItemSlot_Parent == null)
+            ItemSlot_Parent = transform.GetChild(0);
     }
     public void Start()
     {
-        if(ItemSlot_Parent == null)
-            ItemSlot_Parent = transform.GetChild(0);
-
-        // 尝试获取现有数据，否则赋值默认数据
-        if (!DataInterface.InventoryData_Dict.TryGetValue(gameObject.name, out var existingData) || existingData == null)
-        {
-            DataInterface.InventoryData_Dict[gameObject.name] = Data;
-          //  DataInterface.Children_Inventory_GameObject[gameObject.name] = this;
-            //遍历Data 设置索引
-            for (int i = 0; i < Data.itemSlots.Count; i++)
-            {
-                Data.itemSlots[i].Index = i;
-                Data.itemSlots[i].SlotMaxVolume = 100;
-            }
-        }
-        else
-        {
-            Data = existingData;
-        }
-
-        
+        // 若未设置数据，则自动生成
+         for (int i = 0; i < Data.itemSlots.Count; i++)
+         {
+             Data.itemSlots[i].Index = i;
+             Data.itemSlots[i].SlotMaxVolume = 100;
+         }
 
         // 同步子对象数量与 itemSlots 数量一致
         int currentCount = ItemSlot_Parent.childCount;
         int targetCount = Data.itemSlots.Count;
+        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
 
         // 删除多余的子对象（从后往前删除更安全）
         for (int i = currentCount - 1; i >= targetCount; i--)
@@ -87,18 +70,9 @@ public class Inventory : MonoBehaviour
 
         // 同步 UI 数据
         SyncData();
-
-        
-
-        
-
-        if (DefaultTarget_Inventory == null)
-        {
-            DefaultTarget_Inventory = DataInterface.Children_Inventory_GameObject["UI_手部插槽"];
-        }
-
+        // 注册刷新UI事件
         Data.Event_RefreshUI += RefreshUI;
-
+        //初始化刷新UI
         RefreshUI();
     }
 
@@ -108,15 +82,16 @@ public class Inventory : MonoBehaviour
         for (int i = 0; i < itemSlotUIs.Count; i++)
         {
            ItemSlot_UI itemSlotUI = itemSlotUIs[i];
-            itemSlotUI.ItemSlot = Data.itemSlots[i];
+            itemSlotUI.Data = Data.itemSlots[i];
             itemSlotUI.OnLeftClick += OnItemClick;
-            itemSlotUI.ItemSlot.Belong_Inventory = this;
+            itemSlotUI._OnScroll += OnScroll;
+            itemSlotUI.Data.Belong_Inventory = this;
         }
     }
 
     public void RefreshUI(int index)
     {
-        print("同步UI数据"+ index);
+       // print("同步UI数据"+ index);
         itemSlotUIs[index].RefreshUI();
     }
     public void RefreshUI()
@@ -127,13 +102,21 @@ public class Inventory : MonoBehaviour
         }
     }
 
+    public void OnScroll(int index, float direction)
+    {
+        if(direction > 0)
+        {
+            Data.TransferItemQuantity(DefaultTarget_Inventory.Data.itemSlots[0], Data.itemSlots[index], 1);
+        } else if(direction < 0)
+        {
+            Data.TransferItemQuantity(Data.itemSlots[index], DefaultTarget_Inventory.Data.itemSlots[0], 1);
+        }
+       
+    }
+
     public virtual void OnItemClick(int index)
     {
-        Debug.Log("点击了" + index);
-
-
         ItemSlot slot = Data.GetItemSlot(index);
-
 
         //默认为交换
         if(DefaultTarget_Inventory.Data.itemSlots.Count > index)

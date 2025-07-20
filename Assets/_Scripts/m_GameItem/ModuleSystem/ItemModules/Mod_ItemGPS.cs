@@ -1,0 +1,28 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
+
+public class Mod_ItemGPS : Module
+{
+    public Ex_ModData DebugData;
+    public override ModuleData Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
+
+    public TMP_Text GPS_Text;
+
+    public override void Load()
+    {
+      //  throw new System.NotImplementedException();
+    }
+
+    public override void Save()
+    {
+      //  throw new System.NotImplementedException();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+       GPS_Text.text = this.item.transform.position.ToString();
+    }
+}

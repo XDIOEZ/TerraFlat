@@ -57,11 +57,12 @@ public class ItemPicker : MonoBehaviour
             // 遍历所有背包，找到第一个可以添加的
             foreach (var inventory in AddTargetInventories)
             {
-                if (inventory != null && inventory.Data.CanAddTheItem(itemData))
+                if (inventory != null && inventory.Data.TryAddItem(itemData,false))
                 {
-                    Destroy(pickAble.gameObject); // 物品拾取后销毁
+                    
                     itemData.Stack.CanBePickedUp = false; // 物品堆栈的 CanBePickedUp 置为 false
-                    inventory.Data.AddItem(itemData);
+                    inventory.Data.TryAddItem(itemData);
+                    Destroy(pickAble.gameObject); // 物品拾取后销毁
                     return; // 添加成功后立即返回
                 }
             }

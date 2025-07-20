@@ -45,7 +45,7 @@ public class Mod_PlantGrow : Module
     {
         _data.progress = 0;
         _data.nodeIndex = 0;
-        Debug.Log("模块已重置，循环开始！");
+     //   Debug.Log("模块已重置，循环开始！");
     }
 
     /// <summary>

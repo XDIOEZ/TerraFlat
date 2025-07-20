@@ -1,3 +1,4 @@
+using Force.DeepCloner;
 using JetBrains.Annotations;
 using MemoryPack;
 using Sirenix.OdinInspector;
@@ -30,6 +31,12 @@ public class Player
     #endregion
 
     #region 属性封装
+    [Button("克隆测试")]
+    public void CloneTest()
+    {
+        this.Item_Data = this.Item_Data.DeepClone();
+        Debug.Log("克隆成功");
+    }
 
     [Tooltip("物品数据")]
     public override ItemData Item_Data
@@ -275,18 +282,6 @@ public class Player
         transform.position = Data._transform.Position;
         transform.rotation = Data._transform.Rotation;
         transform.localScale = Data._transform.Scale;
-
-      /*  inventoryDataInterface = this;
-     //   inventoryDataInterface.FillDict_SetBelongItem(transform);
-
-        foreach (var inventory in Children_Inventory_GameObject.Values)
-        {
-            if (Data_InventoryData.ContainsKey(inventory.Data.inventoryName))
-            {
-                inventory.Data = Data_InventoryData[inventory.Data.inventoryName];
-                inventory.UI.RefreshAllInventoryUI();
-            }
-        }*/
     }
 
     #endregion

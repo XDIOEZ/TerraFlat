@@ -8,19 +8,6 @@ public class Mod_Stamina : Module, IUI_Slider
     public StaminaData staminaData;
     private List<IStaminaEvent> staminaEvents = new List<IStaminaEvent>();
 
-    public new void Start()
-    {
-        base.Start();
-        // Get all IStaminaEvent components in children
-        var events = BelongItem.GetComponentsInChildren<IStaminaEvent>();
-        staminaEvents.AddRange(events);
-
-        // Subscribe to all events
-        foreach (var staminaEvent in staminaEvents)
-        {
-            staminaEvent.StaminaChange += StaminaChanged;
-        }
-    }
 
     public override void Save()
     {
@@ -41,7 +28,15 @@ public class Mod_Stamina : Module, IUI_Slider
 
     public override void Load()
     {
+        var events = item.GetComponentsInChildren<IStaminaEvent>();
         //throw new System.NotImplementedException();
+        staminaEvents.AddRange(events);
+
+        // Subscribe to all events
+        foreach (var staminaEvent in staminaEvents)
+        {
+            staminaEvent.StaminaChange += StaminaChanged;
+        }
     }
 
     public override ModuleData Data

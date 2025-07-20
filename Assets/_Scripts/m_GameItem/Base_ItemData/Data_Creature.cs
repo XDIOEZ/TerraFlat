@@ -17,7 +17,7 @@ public partial class Data_Creature : ItemData
     #endregion
 
     #region 速度
-    public GameValue_float Speed = new();
+    public GameValue_float Speed = new(5);
     #endregion
 
     #region 精力

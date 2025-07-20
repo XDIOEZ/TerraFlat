@@ -15,9 +15,6 @@ public class Mod_UI_CanvasManager : Module
 
     private Dictionary<string, TextMeshProUGUI> panelButtonTexts = new();
 
-
-
-
     [ShowInInspector]
     public Dictionary<string, bool> canvasPanelStates = new();
 
@@ -50,7 +47,7 @@ public class Mod_UI_CanvasManager : Module
         canvasPanelStates = exData.GetData<Dictionary<string, bool>>();
 
         panelRegistry.Clear();
-        var allPanels = GetComponentsInChildren<BasePanel>(true); // 只查找自己子物体
+        var allPanels = item.GetComponentsInChildren<BasePanel>(true); // 只查找自己子物体
         foreach (var panel in allPanels)
         {
             string panelName = panel.gameObject.name;
@@ -159,7 +156,7 @@ public class Mod_UI_CanvasManager : Module
             canvasPanelStates[pair.Key] = pair.Value.IsOpen();
         }
 
-        exData.SetData(canvasPanelStates);
+        exData.WriteData(canvasPanelStates);
     }
 
 }
@@ -183,7 +180,7 @@ public partial class Ex_ModData : ModuleData
     }
 
 
-    public void SetData<T>(T bitData)
+    public void WriteData<T>(T bitData)
     {
         BitData = JsonConvert.SerializeObject(bitData);
     }

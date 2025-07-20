@@ -7,20 +7,15 @@ using UnityEngine.UI;
 using Sirenix.OdinInspector;
 using ButtonAttribute = Sirenix.OdinInspector.ButtonAttribute;
 
-public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IHealth,IBuilding
+public class CraftingTable : Item,ISave_Load,IBuilding
 {
     #region 字段
-
-    // 1.inventory 输入容器
-    public Inventory inputInventory;
-    // 3.inventory 输出容器
-    public Inventory outputInventory;
     //合成按钮
     public Button button;
     //关闭按钮
     public Button closeButton;
-    //面板
-    public Canvas canvas;
+
+    public BasePanel panel;
     // 4.workerData 工作数据
     public Data_Worker Data;
 
@@ -77,27 +72,18 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     new void  Start()
     {
         base.Start();
-       // IInventoryData inventoryData = this;
-     //   inventoryData.FillDict_SetBelongItem(transform);
 
-        button.onClick.AddListener(() => Work_Start());
-        closeButton.onClick.AddListener(() => CloseUI());
 
-        CloseUI();
+        panel = GetComponentInChildren<BasePanel>();
 
-        //_InstallAndUninstall.Init(transform);
+        Mods["交互模组"].OnAction_Start += Interact_Start;
+        Mods["交互模组"].OnAction_Start += (Item) => { panel.Toggle(); };
 
-        if(BelongItem != null)
+        if (BelongItem != null)
         {
             BePlayerTaken = true;
         }
-
     }
-    public void Update()
-    {
-       // _InstallAndUninstall.Update();
-    }
-
     #region 安装和拆除
 
     [Sirenix.OdinInspector.Button]
@@ -108,18 +94,18 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
     [Button]
     public void Install()
     {
-        _InstallAndUninstall.Install();
+        Mods["建筑模块"].OnAction.Invoke(1);
     }
 
     public void OnDestroy()
     {
         // 安全销毁 ghost 实例
-        _InstallAndUninstall.CleanupGhost();
+       // _InstallAndUninstall.CleanupGhost();
     }
     #endregion
 
     #region 合成方法
-    public bool Craft(Inventory inputInventory_, Inventory outputInventory_, RecipeType recipeType)
+/*    public bool Craft(Inventory inputInventory_, Inventory outputInventory_, RecipeType recipeType)
     {
         // 生成配方键
         string recipeKey = string.Join(",",
@@ -170,7 +156,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         // 执行合成：添加输出物品
         foreach (var item in itemsToAdd)
         {
-            outputInventory_.Data.AddItem(item);
+            outputInventory_.Data.TryAddItem(item);
             Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
         }
 
@@ -247,7 +233,7 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
         // 检查输出空间
         foreach (var item in itemsToAdd)
         {
-            if (!outputInventory_.Data.CanAddTheItem(item))
+            if (!outputInventory_.Data.TryAddItem(item,false))
             {
                 Debug.LogWarning($"输出物品 {item.IDName} 无法加入输出背包，可能空间不足");
                 return false;
@@ -260,59 +246,32 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
         Debug.Log("所有输入输出检查通过，可以进行合成");
         return true;
-    }
+    }*/
 
     #endregion
 
     #region 世界交互接口实现
-    //切换UI显示状态
-    public void SwitchUI()
-    {
-        canvas.enabled = !canvas.enabled;
-    }
-    //开启Ui
-    public void OpenUI()
-    {
-        canvas.enabled = true;
-    }
-    //关闭Ui
-    public void CloseUI()
-    {
-        canvas.enabled = false;
-    }
+/*
     public void Work_Start()
     {
         Craft(inputInventory, outputInventory, RecipeType.Crafting);
     }
-
-    public void Interact_Start(IInteracter interacter = null)
+*/
+    public void Interact_Start(Item item)
     {
         if (CanInteract)
         {
-            SwitchUI();
-            //遍历这个物品的所有的Value，Children_Inventory_GameObject
-            foreach (var inventory in Children_Inventory_GameObject.Values)
-            {
-                inventory.DefaultTarget_Inventory 
-                    = interacter.InventoryData.Children_Inventory_GameObject["手部插槽"];
-            }
+            Mods["工作台合成模块"].GetComponent<Mod_HandMade>().inputInventory.DefaultTarget_Inventory
+                = item.Mods[Mod_Text.Hand].GetComponent<IInventory>()._Inventory;
+            Mods["工作台合成模块"].GetComponent<Mod_HandMade>().outputInventory.DefaultTarget_Inventory
+                = item.Mods[Mod_Text.Hand].GetComponent<IInventory>()._Inventory;
         }
     }
 
     public override void Act()
     {
         Debug.Log("Act");
-        Install();
-    }
-
-    public void Interact_Cancel(IInteracter interacter = null)
-    {
-        CloseUI();
-    }
-
-    public void Interact_Update(IInteracter interacter = null)
-    {
-        throw new System.NotImplementedException();
+        OnAct.Invoke();
     }
 
     public void Work_Update()
@@ -333,51 +292,14 @@ public class CraftingTable : Item,IWork, IInteract, IInventoryData,ISave_Load,IH
 
     public void Load()
     {
-        
-        //IInventoryData inventoryData = this;
-        //inventoryData.FillDict_SetBelongItem(transform);
-
-        inputInventory = Children_Inventory_GameObject["输入物品槽"];
+        /*inputInventory = Children_Inventory_GameObject["输入物品槽"];
         outputInventory = Children_Inventory_GameObject["输出物品槽"];
 
         if (InventoryData_Dict.ContainsKey("输入物品槽"))
         {
             inputInventory.Data = InventoryData_Dict["输入物品槽"];
             outputInventory.Data = InventoryData_Dict["输出物品槽"];
-        }
-    }
-
-    public void Death()
-    {
-        if (CanInteract)
-            UnInstall();
-    }
-    public float GetDamage(Damage damage)
-    {
-        if (Hp.Check_Weakness(damage.DamageType))
-        {
-            float Value = damage.Return_EndDamage();
-
-            Hp.Value -= Value;
-
-            if (Hp.Value <= 0)
-            {
-                Death();
-            }
-            return Value;
-        }
-        else
-        {
-            float damageValue = damage.Return_EndDamage(Defense);
-
-            Hp.Value -= damageValue;
-
-            if (Hp.Value <= 0)
-            {
-                Death();
-            }
-            return damageValue;
-        }
+        }*/
     }
     #endregion
     #endregion

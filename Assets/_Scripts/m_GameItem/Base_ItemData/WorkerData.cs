@@ -11,7 +11,7 @@ public partial class Data_Worker :ItemData
     [ShowNonSerializedField]
     public Dictionary<string, Inventory_Data> Inventory_Data_Dict = new Dictionary<string, Inventory_Data>();
 
-    public ItemValues ItemValues;
+    //public ItemValues ItemValues;
 
     public Hp Hp;
     public Defense Defense;

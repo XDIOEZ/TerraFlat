@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
   m_Name: "\u65E0\u4E2D\u751F\u6709 1"
   m_EditorClassIdentifier: 
-  recipeID: ca7fa30d-4254-4267-af52-e0838b519e15
   version: 1.2.0
   inputs:
     RowItems_List:
@@ -28,6 +27,6 @@ MonoBehaviour:
     results:
     - resultItem: Log
       resultAmount: 1
-    - resultItem: Coal
+    - resultItem: "\u7164\u70AD"
       resultAmount: 1
   recipeType: 0

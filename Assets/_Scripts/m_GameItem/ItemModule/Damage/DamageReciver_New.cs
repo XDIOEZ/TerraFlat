@@ -5,8 +5,11 @@ using TMPro;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
+public class DamageReceiver_New : Module, IDamageReceiver
 {
+    public Ex_ModData modData;
+    public override ModuleData Data { get => modData; set => modData = (Ex_ModData)value; }
+
     [Header("Damage Panel Settings")]
     public string DamagePanelName = "Panel_DamageText"; // 新增伤害数字面板名称
     public float damagePanelSpeed = 3f; // 伤害数字移动速度
@@ -65,6 +68,7 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
 
     void Start()
     {
+       // base.Start();
         HitParticlesName = "Particle_Hit";
         DamagePanelName = "Panel_DamageText";
         BoxCollider2D = GetComponent<BoxCollider2D>();
@@ -89,21 +93,17 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
 
     public void TakeDamage(Damage damage , Vector2 hitPoint)
     {
+
+        OnAction.Invoke(damage.Return_EndDamage());
+
         health = GetComponentInParent<IHealth>();
         if (health == null) return;
 
         if (health.Hp.Value< 0) return;
 
-
-
-
         float i = health.GetDamage(damage);
 
-
-
-
-
-
+        
 
         if (!isFlashing)
         {
@@ -314,6 +314,16 @@ public class DamageReceiver_New : MonoBehaviour, IDamageReceiver
     {
         // 获取攻击者位置
         hitPoint = other.ClosestPoint(transform.position);
+    }
+
+    public override void Load()
+    {
+       // throw new System.NotImplementedException();
+    }
+
+    public override void Save()
+    {
+       // throw new System.NotImplementedException();
     }
 }
 

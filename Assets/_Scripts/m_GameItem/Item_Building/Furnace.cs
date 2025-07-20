@@ -97,7 +97,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         {
             return;
         }
-        _furnaceData.Inventory_Data_Dict.Add(name, new Inventory_Data());
+       // _furnaceData.Inventory_Data_Dict.Add(name, new Inventory_Data());
         inventory.Data = _furnaceData.Inventory_Data_Dict[name];
         inventory.Data.itemSlots = new List<ItemSlot> 
         {
@@ -105,7 +105,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             new ItemSlot(1),
             new ItemSlot(2) 
         };
-        inventory.Data.inventoryName = name;
+        inventory.Data.Name = name;
 
         foreach (var itemSlot in inventory.Data.itemSlots)
         {
@@ -120,8 +120,8 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         Inventory[] Inventory_s = GetComponentsInChildren<Inventory>();
         foreach (var inventory_ShowNow in Inventory_s)
         {
-            inventory_ShowNow.Data = InventoryData_Dict[inventory_ShowNow.Data.inventoryName];
-            foreach (var itemSlot in InventoryData_Dict[inventory_ShowNow.Data.inventoryName].itemSlots)
+            inventory_ShowNow.Data = InventoryData_Dict[inventory_ShowNow.Data.Name];
+            foreach (var itemSlot in InventoryData_Dict[inventory_ShowNow.Data.Name].itemSlots)
             {
                 itemSlot.Belong_Inventory = inventory_ShowNow;
             }
@@ -274,7 +274,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             #region 合成
             foreach (var item in itemsToAdd)
             {
-                outputInventory_.Data.AddItem(item);
+                outputInventory_.Data.TryAddItem(item);
             }
             // 根据合成清单，删除输入插槽内的物品
 

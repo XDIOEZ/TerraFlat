@@ -55,7 +55,8 @@ public class ItemDroper : MonoBehaviour
 
         if (count <= slot.Amount)
         {
-            ItemData newItemData = slot._ItemData.DeepClone();
+            ItemData newItemData = FastCloner.FastCloner.DeepClone(slot._ItemData);
+            //slot._ItemData.DeepClone();
             newItemData.Stack.Amount = count;
 
             slot.Amount -= count;
@@ -90,7 +91,7 @@ public class ItemDroper : MonoBehaviour
         {
             var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
 
-            if (uiItemSlot != null && uiItemSlot.ItemSlot != null)
+            if (uiItemSlot != null && uiItemSlot.Data != null)
             {
                 // ÅÐ¶ÏÍæ¼Ò³¯Ïò
                 Vector3 offset = Vector3.right;
@@ -103,7 +104,7 @@ public class ItemDroper : MonoBehaviour
 
                 dropPos = transform.position + offset;
 
-                DropItemByCount(uiItemSlot.ItemSlot, count);
+                DropItemByCount(uiItemSlot.Data, count);
             }
         }
     }

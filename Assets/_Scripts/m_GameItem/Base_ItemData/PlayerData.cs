@@ -16,6 +16,7 @@ public partial class Data_Player : ItemData
     [Tooltip("·ÀÓùÁ¦")]
     public Defense defense = new(5, 5);
     #endregion
+
     #region ËÙ¶È
     public GameValue_float Speed = new ();
     #endregion

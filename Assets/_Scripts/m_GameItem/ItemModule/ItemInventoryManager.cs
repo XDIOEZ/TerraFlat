@@ -28,10 +28,10 @@ public class ItemInventoryManager : MonoBehaviour
         Inventory[] allInventories = GetComponentsInChildren<Inventory>();
         foreach (Inventory inventory in allInventories)
         {
-            if (inventory.Data != null && !string.IsNullOrEmpty(inventory.Data.inventoryName))
+            if (inventory.Data != null && !string.IsNullOrEmpty(inventory.Data.Name))
             {
                 // 将 Inventory 存入字典
-                Item_inventory[inventory.Data.inventoryName] = inventory;
+                Item_inventory[inventory.Data.Name] = inventory;
             }
         }
     }
@@ -44,12 +44,12 @@ public class ItemInventoryManager : MonoBehaviour
         Inventory[] allInventories = GetComponentsInChildren<Inventory>();
         foreach (Inventory inventory in allInventories)
         {
-            if (inventory.Data != null && !string.IsNullOrEmpty(inventory.Data.inventoryName))
+            if (inventory.Data != null && !string.IsNullOrEmpty(inventory.Data.Name))
             {
                 // 将 Inventory_Data 存入字典
-                Item_inventory_Data[inventory.Data.inventoryName] = inventory.Data;
+                Item_inventory_Data[inventory.Data.Name] = inventory.Data;
                 // 将 Inventory 存入字典
-                Item_inventory[inventory.Data.inventoryName] = inventory;
+                Item_inventory[inventory.Data.Name] = inventory;
             }
         }
     }
@@ -73,7 +73,7 @@ public class ItemInventoryManager : MonoBehaviour
             {
                 Inventory inventory = Item_inventory[inventoryName];
                 // 这里可以根据实际需求使用 inventoryData 和 inventory 中的信息
-                Debug.Log($"Inventory Name: {inventoryName}, Inventory Data: {inventoryData.inventoryName}");
+                Debug.Log($"Inventory Name: {inventoryName}, Inventory Data: {inventoryData.Name}");
                 inventory.Data = inventoryData;
             }
         }

@@ -19,7 +19,7 @@ public class Inventory_UI : MonoBehaviour
     public SelectSlot TargetSendItemSlot = null;
     #endregion
 
-    #region 属性
+/*    #region 属性
     [Tooltip("背包UI变化事件")]
     public UltEvent<int> OnUIChanged
     {
@@ -27,7 +27,7 @@ public class Inventory_UI : MonoBehaviour
         set => inventory.Data.Event_RefreshUI = value;
     }
     #endregion
-
+*/
     #region Unity生命周期方法
     // 在脚本实例被加载时调用，进行一些初始化操作
     public void Awake()
@@ -169,13 +169,13 @@ public class Inventory_UI : MonoBehaviour
         int LocalIndex = _index_;
         int InputIndex = _index_;
 
-        if (TargetSendItemSlot.HandInventoryUI.inventory.Data.inventoryName == "手部插槽")
+        if (TargetSendItemSlot.HandInventoryUI.inventory.Data.Name == "手部插槽")
         {
             InputIndex = 0;
         }
 
         // 刷新手上插槽的UI
-        TargetSendItemSlot.HandInventoryUI.OnUIChanged.Invoke(InputIndex);
+      //  TargetSendItemSlot.HandInventoryUI.OnUIChanged.Invoke(InputIndex);
     }
     #endregion
 }

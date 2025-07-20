@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System;
 using UltEvents;
 using System.Reflection;
@@ -6,6 +6,8 @@ using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using System.Linq;
+using Force.DeepCloner;
+using FastCloner.Code;
 
 
 
@@ -24,60 +26,87 @@ public abstract class Item : MonoBehaviour
     public abstract ItemData Item_Data { get; set; }
 
     [ShowInInspector]
+    [FastClonerIgnore]
     public Dictionary<string, Module> Mods { get; set; } = new Dictionary<string, Module>();
 
     #region RunTime
 
-    [Tooltip("´ËÎïÆ·ÊôÓÚË­?")]
+    [Tooltip("æ­¤ç‰©å“å±äºè°?")]
     public Item BelongItem;
-    [Tooltip("±»Ïú»ÙÊ±´¥·¢µÄÊÂ¼ş")]
+    [Tooltip("è¢«é”€æ¯æ—¶è§¦å‘çš„äº‹ä»¶")]
     public UltEvent OnStopWork_Event = new();
     public UltEvent UpdatedUI_Event = new();
     public UltEvent DestroyItem_Event = new();
-    public UltEvent OnAction_Event = new();
-    //ÓÎÏ·µÄÌùÍ¼¶ÔÏó
+    public UltEvent OnAct = new();
+    //æ¸¸æˆçš„è´´å›¾å¯¹è±¡
     public SpriteRenderer Sprite;
     #endregion
 
     public void Start()
     {
-        // »ñÈ¡×ÔÉí»ò×Ó¶ÔÏóµÄ SpriteRenderer
         if (Sprite == null)
             Sprite = GetComponentInChildren<SpriteRenderer>();
 
-        // »ñÈ¡µ±Ç°ÒÑÓĞµÄÄ£¿é£¨°üÀ¨×Ô¼º¼°ËùÓĞ×Ó¶ÔÏó£©
-        var existingModules = GetComponentsInChildren<Module>(true).ToList();
-
-        // ÓÃÓÚ²éÕÒÒÑÓĞÄ£¿éÊÇ·ñ´æÔÚÄ³¸öÃû×Ö
-        var existingModuleNames = new HashSet<string>(existingModules.Select(m => m.Data?.Name));
-
-        // ¼ì²éÊÇ·ñÈ±ÉÙÄ£¿é£¬È±ÁË¾Í²¹ÉÏ
-        foreach (var modData in Item_Data.ModuleDataDic.Values)
-        {
-            if (!existingModuleNames.Contains(modData.Name))
-            {
-                // Ìí¼ÓÄ£¿é£¨ADDModTOItem »á×Ô¶¯½«Ä£¿é×÷Îª×Ó¶ÔÏó¹ÒÔØµ½µ±Ç°ÎïÆ·ÉÏ£©
-                Module.ADDModTOItem(this, modData.Name);
-            }
-        }
-
-        // ÔÙ´Î»ñÈ¡²¹È«ºóµÄÄ£¿éÁĞ±í
-        existingModules = GetComponentsInChildren<Module>(true).ToList();
-
-        // ³õÊ¼»¯²¢×¢²áËùÓĞÄ£¿é
-        foreach (var mod in existingModules)
-        {
-            if (mod == null || mod.Data == null) continue;
-
-            if (!Mods.ContainsKey(mod.Data.Name))
-            {
-                mod.ModuleInit(this); // ³õÊ¼»¯Ä£¿é£¬´«ÈëËŞÖ÷ÎïÆ·
-                Mods[mod.Data.Name] = mod; // Ìí¼Óµ½×Öµä
-            }
-        }
+        ModuleLoad();
     }
 
+    /// <summary>
+    /// åŠ è½½å¹¶åˆå§‹åŒ–æ¨¡å—ï¼ˆåŒ…æ‹¬ç¼ºå¤±è¡¥é½ã€åˆå§‹åŒ–å­—å…¸ç­‰ï¼‰
+    /// å¯æ‰‹åŠ¨è°ƒç”¨
+    /// </summary>
+    public void ModuleLoad()
+    {
+        //TODO æ£€æŸ¥æ˜¯å¦æ˜¯ç¬¬ä¸€æ¬¡å¯åŠ¨ æ£€æŸ¥ModDataæ˜¯å¦ä¸ºç©º
+        bool firstStart = false;
 
+        if(Item_Data.ModuleDataDic.Count == 0)
+        {
+            // ç¬¬ä¸€æ¬¡å¯åŠ¨
+            firstStart = true;
+        }
+
+        //ç¬¬ä¸€æ¬¡å¯åŠ¨
+        if (firstStart == true)
+        {
+            var Modules = GetComponentsInChildren<Module>(true).ToList();
+            foreach (var mod in Modules)
+            {
+                Mods[mod.Data.Name] = mod; // æ·»åŠ åˆ°å­—å…¸
+                Item_Data.ModuleDataDic[mod.Data.Name] = mod.Data; // æ·»åŠ åˆ°æ•°æ®å­—å…¸
+            }
+            foreach(var mod in Mods.Values)
+            {
+                mod.ModuleInit(this, null); // åˆå§‹åŒ–æ¨¡å—ï¼Œä¼ å…¥å®¿ä¸»ç‰©å“
+            }
+        }
+        //ä¸æ˜¯ç¬¬ä¸€æ¬¡å¯åŠ¨
+        if(firstStart == false)
+        {
+            var Modules = GetComponentsInChildren<Module>(true).ToList();
+
+            foreach (var mod in Modules)
+            {
+                Mods[mod.Data.Name] = mod; // æ·»åŠ åˆ°å­—å…¸
+            }
+
+            foreach (ModuleData modData in Item_Data.ModuleDataDic.Values)
+            {
+                //æ£€æŸ¥Modsä¸­æ˜¯å¦æœ‰è¯¥æ¨¡å—
+                if (Mods.ContainsKey(modData.Name) == true)
+                { 
+                    //å¦‚æœæœ‰ï¼Œåˆ™æ›´æ–°æ•°æ®
+                    Mods[modData.Name].ModuleInit(this, modData); // åˆå§‹åŒ–æ¨¡å—ï¼Œä¼ å…¥å®¿ä¸»ç‰©å“
+                }
+                else
+                {
+                    //å¦‚æœæ²¡æœ‰ï¼Œåˆ™åˆ›å»ºæ¨¡å—
+                    Module mod = Module.ADDModTOItem(this, modData);
+                    mod.ModuleInit(this, modData); // åˆå§‹åŒ–æ¨¡å—ï¼Œä¼ å…¥å®¿ä¸»ç‰©å“
+                }
+            }
+        }
+
+    }
 
     public void SyncPosition()
     {
@@ -89,54 +118,54 @@ public abstract class Item : MonoBehaviour
     public virtual void Act()
     {
         Debug.Log("Item Act");
-        OnAction_Event.Invoke();
+        OnAct.Invoke();
     }
 
-    [Sirenix.OdinInspector.Button("Í¬²½ÎïÆ·Êı¾İ")]
+    [Sirenix.OdinInspector.Button("åŒæ­¥ç‰©å“æ•°æ®")]
     public virtual int SyncItemData()
     {
         if (Item_Data.IDName != gameObject.name)
         {
             Item_Data.IDName = this.gameObject.name;
-            Debug.LogWarning("ÎïÆ·Êı¾İIDNameÎª¿Õ£¬ÒÑ×Ô¶¯ÉèÖÃ¡£");
+            Debug.LogWarning("ç‰©å“æ•°æ®IDNameä¸ºç©ºï¼Œå·²è‡ªåŠ¨è®¾ç½®ã€‚");
         }
         return Item_Data.SyncData();
     }
 
-    // Ìí¼Ó²Ëµ¥°´Å¥ÒÔÍ¬²½Ãû³Æ
+    // æ·»åŠ èœå•æŒ‰é’®ä»¥åŒæ­¥åç§°
 #if UNITY_EDITOR
-    [ContextMenu("³õÊ¼»¯ItemData")] // ĞŞ¸ÄÎªÖĞÎÄ
+    [ContextMenu("åˆå§‹åŒ–ItemData")] // ä¿®æ”¹ä¸ºä¸­æ–‡
     private void SyncName()
     {
         if (Item_Data != null)
         {
             Item_Data.IDName = this.gameObject.name;
-            Debug.Log($"ÓÎÏ·¶ÔÏóÃû³ÆÒÑÍ¬²½ÖÁ {Item_Data.IDName}");
+            Debug.Log($"æ¸¸æˆå¯¹è±¡åç§°å·²åŒæ­¥è‡³ {Item_Data.IDName}");
         }
         else
         {
-            Debug.LogWarning("ÎïÆ·Êı¾İÎª¿Õ£¬ÎŞ·¨Í¬²½Ãû³Æ¡£");
+            Debug.LogWarning("ç‰©å“æ•°æ®ä¸ºç©ºï¼Œæ— æ³•åŒæ­¥åç§°ã€‚");
         }
-        //TODO »ñÈ¡ÎïÌåµÄPrefabÂ·¾¶ Í¨¹ıAddressableÕÒµ½¶ÔÓ¦µÄ×ÊÔ´,ĞŞ¸ÄAddressableNameÎªPrefabµÄÃû³Æ
+        //TODO è·å–ç‰©ä½“çš„Prefabè·¯å¾„ é€šè¿‡Addressableæ‰¾åˆ°å¯¹åº”çš„èµ„æº,ä¿®æ”¹AddressableNameä¸ºPrefabçš„åç§°
         string prefabPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(this.gameObject);
         if (!string.IsNullOrEmpty(prefabPath))
         {
-            // Í¨¹ıAddressableÕÒµ½¶ÔÓ¦µÄ×ÊÔ´£¬²¢ĞŞ¸ÄAddressableName
+            // é€šè¿‡Addressableæ‰¾åˆ°å¯¹åº”çš„èµ„æºï¼Œå¹¶ä¿®æ”¹AddressableName
             AddressableAssetSettings settings = UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings;
             AddressableAssetEntry entry = settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(prefabPath));
             if (entry != null)
             {
                 entry.SetAddress(this.gameObject.name);
-                Debug.Log($"Addressable ×ÊÔ´Ãû³ÆÒÑĞŞ¸ÄÎª {this.gameObject.name}");
+                Debug.Log($"Addressable èµ„æºåç§°å·²ä¿®æ”¹ä¸º {this.gameObject.name}");
             }
             else
             {
-                Debug.LogError("Î´ÕÒµ½¶ÔÓ¦µÄ Addressable ×ÊÔ´¡£+Çë¼ì²éÊÇ·ñÒÑÌí¼Óµ½ Addressable ÉèÖÃÖĞ¡£");
+                Debug.LogError("æœªæ‰¾åˆ°å¯¹åº”çš„ Addressable èµ„æºã€‚+è¯·æ£€æŸ¥æ˜¯å¦å·²æ·»åŠ åˆ° Addressable è®¾ç½®ä¸­ã€‚");
             }
         }
         else
         {
-            Debug.LogWarning("ÎŞ·¨»ñÈ¡ Prefab Â·¾¶£¬¿ÉÄÜ²»ÊÇ Prefab ÊµÀı¡£");
+            Debug.LogWarning("æ— æ³•è·å– Prefab è·¯å¾„ï¼Œå¯èƒ½ä¸æ˜¯ Prefab å®ä¾‹ã€‚");
         }
         Item_Data.Description = Item_Data.ToString();
     }

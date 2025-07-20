@@ -88,7 +88,7 @@ public class TileEffectReceiver : MonoBehaviour
         {
             tileBlock.Tile_Enter(item, tileData);
             OnTileEnterEvent.Invoke(tileData); // 触发进入事件
-            Debug.Log("进入新地块: " + tileData.Name_ItemName);
+            //Debug.Log("进入新地块: " + tileData.Name_ItemName);
         }
     }
 
@@ -98,7 +98,7 @@ public class TileEffectReceiver : MonoBehaviour
         {
             tileBlock.Tile_Exit(item, tileData);
             OnTileExitEvent.Invoke(tileData); // 触发离开事件
-            Debug.Log("离开旧地块: " + tileData.Name_ItemName);
+         //   Debug.Log("离开旧地块: " + tileData.Name_ItemName);
         }
     }
 

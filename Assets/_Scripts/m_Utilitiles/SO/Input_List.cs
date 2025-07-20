@@ -28,7 +28,7 @@ public class Input_List
             ingredientStrings.Sort();
         }
 
-        return string.Join(", ", ingredientStrings);
+        return string.Join(",", ingredientStrings);
     }
 
 }

@@ -28,4 +28,13 @@ public partial class GameValue_float
             return (BaseValue + BaseAdditive) * (1 + AdditiveModifier) * MultiplicativeModifier + FinalAdditive;
         }
     }
+    [MemoryPackConstructor]
+    public GameValue_float(float BaseValue)
+    {
+        this.BaseValue = BaseValue;
+    }
+
+    public GameValue_float()
+    {
+    }
 }

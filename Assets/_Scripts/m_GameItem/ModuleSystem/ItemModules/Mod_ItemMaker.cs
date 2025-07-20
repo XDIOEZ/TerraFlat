@@ -105,7 +105,7 @@ public class Mod_ItemMaker : Module
 
     public override void Save()
     {
-        modData.SetData(drops);
+        modData.WriteData(drops);
     }
 
     /* ----------------------------------------------------------

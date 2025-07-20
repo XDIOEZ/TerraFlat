@@ -111,7 +111,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             string key = asset switch
             {
                 GameObject go => go.name,
-                Recipe recipe => recipe.name,
+                Recipe recipe => recipe.inputs.ToString(),
                 TileBase tile => tile.name,
                 Buff_Data buff => buff.name,
                 _ => asset.ToString()

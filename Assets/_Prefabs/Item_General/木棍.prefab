@@ -106,12 +106,13 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAction_Event:
+    _PersistentCalls: []
+  Sprite: {fileID: 0}
   Data:
     IDName: "\u6728\u68CD"
     GameName: "\u6728\u68CD"
-    ID: 20001
     Description: "\u53EA\u662F\u4E00\u4E2A\u6728\u68CD"
-    PrefabPath: WoodStick
     Durability: 1
     ItemTags:
       Item_TypeTag:
@@ -126,7 +127,7 @@ MonoBehaviour:
       Position: {x: 0, y: 0, z: 0}
       Rotation: {x: 0, y: 0, z: 0, w: 0}
       Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: "\u65E0"
+    ItemSpecialData: 
     Guid: 0
     code: "\u65E0"
     values:

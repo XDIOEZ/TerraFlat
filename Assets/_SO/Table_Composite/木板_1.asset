@@ -19,12 +19,12 @@ MonoBehaviour:
       amount: 1
     - ItemName: Log
       amount: 1
-    - ItemName: Log
-      amount: 1
-    - ItemName: Log
-      amount: 1
+    - ItemName: 
+      amount: 0
+    - ItemName: 
+      amount: 0
   outputs:
     results:
     - resultItem: "\u6728\u677F"
-      resultAmount: 1
+      resultAmount: 2
   recipeType: 0

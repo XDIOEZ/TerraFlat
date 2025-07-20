@@ -71,7 +71,7 @@ public class BaseBuilding : MonoBehaviour
             if (building != null) building.IsInstalled = false;
         }
 
-        item.OnAction_Event += Install;
+        item.OnAct += Install;
         health.OnDeath += UnInstall;
     }
 
@@ -81,7 +81,7 @@ public class BaseBuilding : MonoBehaviour
         Debug.Log($"[BaseBuilding] 组件被销毁，清理GhostShadow");
 
         // 取消事件订阅
-        if (item != null) item.OnAction_Event -= Install;
+        if (item != null) item.OnAct -= Install;
         if (health != null) health.OnDeath -= UnInstall;
     }
 
@@ -199,15 +199,12 @@ public class BaseBuilding : MonoBehaviour
 
     public virtual void Install()
     {
-        Debug.Log($"[建筑安装] 开始安装流程 (位置: {hostTransform.position})");
-
         // 1. 检查幽灵投影
         if (GhostShadow == null)
         {
             Debug.LogError($"[建筑安装] 安装失败: 幽灵投影对象不存在 (宿主位置: {hostTransform.position})");
             return;
         }
-        Debug.Log($"[建筑安装] 幽灵投影验证通过 (位置: {GhostShadow.transform.position})");
 
         // 2. 检查周围障碍物
         if (GhostShadow.AroundHaveGameObject)
@@ -220,7 +217,6 @@ public class BaseBuilding : MonoBehaviour
             Debug.DrawLine(hostTransform.position, GhostShadow.transform.position, Color.red, 5f);
             return;
         }
-        Debug.Log("[建筑安装] 障碍物检查通过");
 
         // 3. 检查距离限制
         float distance = Vector2.Distance(hostTransform.position, GhostShadow.transform.position);
@@ -230,7 +226,6 @@ public class BaseBuilding : MonoBehaviour
             Debug.DrawLine(hostTransform.position, GhostShadow.transform.position, Color.yellow, 5f);
             return;
         }
-        Debug.Log($"[建筑安装] 距离验证通过 ({distance:F2}m)");
 
         // 4. 检查物品组件
         if (item == null)
@@ -238,7 +233,6 @@ public class BaseBuilding : MonoBehaviour
             Debug.LogError("[建筑安装] 安装失败: 物品组件未分配");
             return;
         }
-        Debug.Log($"[建筑安装] 物品验证通过: {item.Item_Data.IDName}");
 
         // 5. 检查物品数量
         if (item.Item_Data.Stack.Amount <= 0)
@@ -246,24 +240,13 @@ public class BaseBuilding : MonoBehaviour
             Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.Item_Data.Stack.Amount})");
             return;
         }
-        Debug.Log($"[建筑安装] 物品数量充足: {item.Item_Data.Stack.Amount}个");
 
-        // 开始正式安装流程
-        Debug.Log($"[建筑安装] 正在安装 {item.Item_Data.IDName}...");
-
-        // 减少物品数量
+        // 正式安装流程
         item.Item_Data.Stack.Amount--;
-        Debug.Log($"[建筑安装] 物品数量更新: {item.Item_Data.Stack.Amount}个剩余");
 
-        // 更新UI
         if (item.UpdatedUI_Event != null)
         {
             item.UpdatedUI_Event.Invoke();
-            Debug.Log("[建筑安装] UI已更新");
-        }
-        else
-        {
-            Debug.LogWarning("[建筑安装] 未注册UI更新事件");
         }
 
         // 实例化建筑
@@ -279,33 +262,29 @@ public class BaseBuilding : MonoBehaviour
             item.Item_Data.Stack.Amount++;
             return;
         }
-        Debug.Log($"[建筑安装] 实例化成功 (ID: {runtimeItem.Item_Data.IDName})");
 
-        // 设置建筑属性
         SetupInstalledItem(runtimeItem.gameObject, item);
-        Debug.Log("[建筑安装] 建筑属性配置完成");
 
         // 处理物品耗尽情况
         if (item.Item_Data.Stack.Amount <= 0)
         {
-            Debug.Log("[建筑安装] 物品已用完，执行清理");
             CleanupGhost();
             Destroy(hostTransform.gameObject);
         }
 
         Destroy(item.gameObject);
-        Debug.Log("[建筑安装] 安装流程完成");
     }
 
-/*    private void SetupInstalledItem(GameObject newItem, ItemBase sourceItem)
-    {
-        Debug.Log($"[建筑安装] 正在配置新建筑 {newItem.name}...");
 
-        // 这里可以添加具体的配置逻辑
-        // 例如：newItem.GetComponent<Building>().Initialize(sourceItem);
+    /*    private void SetupInstalledItem(GameObject newItem, ItemBase sourceItem)
+        {
+            Debug.Log($"[建筑安装] 正在配置新建筑 {newItem.name}...");
 
-        Debug.Log("[建筑安装] 建筑配置完成");
-    }*/
+            // 这里可以添加具体的配置逻辑
+            // 例如：newItem.GetComponent<Building>().Initialize(sourceItem);
+
+            Debug.Log("[建筑安装] 建筑配置完成");
+        }*/
 
     public virtual void UnInstall()
     {

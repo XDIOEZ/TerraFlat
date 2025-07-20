@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>FastCloner</id>
+    <version>3.3.10</version>
+    <title>FastCloner</title>
+    <authors>Matěj Štágl, Adrian Mos, DeepCloner Collaborators</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>icon.jpg</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/lofcz/FastCloner</projectUrl>
+    <description>Fast deep cloning library for .NET 8+. Supports both deep and shallow cloning. Extensively tested, focused on performance and stability even on complicated object graphs.</description>
+    <copyright>Matěj Štágl - 2025, Adrian Mos - 2024</copyright>
+    <tags>deepclone,clone,fastclone,cloner,replicate,duplicate</tags>
+    <repository type="git" url="https://github.com/lofcz/FastCloner" branch="refs/heads/next" commit="2df97d4163f86bd27e63e31fe3f3e0f2a7ecc637" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6" />
+      <group targetFramework="net8.0" />
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+</package>

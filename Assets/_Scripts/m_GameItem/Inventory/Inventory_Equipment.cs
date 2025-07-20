@@ -41,7 +41,7 @@ public class Inventory_Equipment : MonoBehaviour
     void Awake()
     {
         inventory = GetComponent<Inventory>();
-        inventory.Data.inventoryName = "装备栏";
+        inventory.Data.Name = "装备栏";
         inventory.Data.itemSlots = new List<ItemSlot>();
 
         // 初始化槽位（不创建抽象类实例）

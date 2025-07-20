@@ -128,7 +128,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
         // 执行合成：添加输出物品
         foreach (var item in itemsToAdd)
         {
-            outputInventory_.Data.AddItem(item);
+            outputInventory_.Data.TryAddItem(item);
             Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
         }
 
@@ -186,7 +186,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
 
         // 检查输出空间
         foreach (var item in itemsToAdd)
-            if (!outputInventory_.Data.CanAddTheItem(item))
+            if (!outputInventory_.Data.TryAddItem(item,false))
                 return false;
 
         return true;

@@ -48,7 +48,7 @@ public class Apple_Red : Item, IFood,IBuff
 
     void OnTileEnter(TileData data)
     {
-        Debug.Log("OnTileEnter");
+     //   Debug.Log("OnTileEnter");
 
         if (data == null)
         {
@@ -66,7 +66,7 @@ public class Apple_Red : Item, IFood,IBuff
 
         if (tileData.FertileValue.Value > 0)
         {
-            Debug.Log("当前格子适合生长，启动生长模块");
+       //     Debug.Log("当前格子适合生长，启动生长模块");
             Mods["生长模块"].Data.isRunning = true;
         }
         else
@@ -120,12 +120,12 @@ public class Apple_Red : Item, IFood,IBuff
     // 实现苹果变为苹果树
     public void BeToAppleTree(float Index)
     {
-        Debug.Log(Index);
+       // Debug.Log(Index);
         if (Index == 1)
         {
             if (CheckNearbyObjects())
             {
-                Debug.Log("周围物体过多，无法生成苹果树。");
+            //    Debug.Log("周围物体过多，无法生成苹果树。");
                 return; // 阻止生成苹果树
             }
 

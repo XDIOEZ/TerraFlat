@@ -11,7 +11,7 @@ public class Mod_FVX_Water : Module
     public override void Load()
     {
             // 获取模块的 Transform 并修改位置
-            Transform modTransform = Module.GetMod(BelongItem, "入水特效").transform;
+            Transform modTransform = Module.GetMod(item, "入水特效").transform;
             Vector3 pos = modTransform.localPosition;
             pos.y = -0.6f;
             pos.x = 0f;

@@ -119,46 +119,57 @@ public class Inventory_HotBar : Inventory
         }
     }
 
-    private void ChangeNewObject(int __index)
+    private void ChangeNewObject(int index)
     {
-        if (__index < 0 || __index >= MaxIndex)
+        if (index < 0 || index >= MaxIndex)
         {
-            Debug.LogError($"[ChangeNewObject] 索引 {__index} 超出范围！");
-            return;
-        }
-        if (Data.itemSlots[__index]._ItemData == null)
-        {
+            Debug.LogError($"[ChangeNewObject] 索引 {index} 超出范围！");
             return;
         }
 
-        Item item = RunTimeItemManager.Instance.InstantiateItem(Data.itemSlots[__index]._ItemData.IDName);
-        CurrentSelectItemSlot = Data.itemSlots[__index];
-        if (item != null)
+        var slot = Data.itemSlots[index];
+        if (slot._ItemData == null)
         {
-
-
-            item.transform.SetParent(spawnLocation, false);
-            item.transform.localPosition = Vector3.zero;
-
-            Vector3 localRotation = item.transform.localEulerAngles;
-            localRotation.z = 0;
-            item.transform.localEulerAngles = localRotation;
-
-            currentObject = item.gameObject;
-
-            ItemData itemData = Data.itemSlots[__index]._ItemData;
-            currentObject.GetComponent<Item>().Item_Data = itemData;
-            currentObject.GetComponent<Item>().BelongItem = CurrentSelectItemSlot.Belong_Inventory.Belong_Item;
-            currentObject.GetComponent<Item>().UpdatedUI_Event += () => RefreshUI(__index);
-            currentObject.GetComponent<Item>().DestroyItem_Event += DestroyCurrentObject;
-            spawnLocation.GetComponent<ITriggerAttack>().SetWeapon(currentObject);
+            Debug.LogWarning($"[ChangeNewObject] 索引 {index} 的物品数据为空，无法生成物体。");
+            return;
         }
-        else
+
+        ItemData itemData = slot._ItemData;
+        Item itemInstance = RunTimeItemManager.Instance.InstantiateItem(itemData.IDName);
+
+        if (itemInstance == null)
         {
             Debug.LogError("[ChangeNewObject] 实例化的物体为空！");
+            return;
         }
 
+        // 设置当前选择槽与当前物体引用
+        CurrentSelectItemSlot = slot;
+        currentObject = itemInstance.gameObject;
+
+        // 物体变换设置
+        Transform tf = itemInstance.transform;
+        tf.SetParent(spawnLocation, false);
+        tf.localPosition = Vector3.zero;
+
+        Vector3 rotation = tf.localEulerAngles;
+        rotation.z = 0;
+        tf.localEulerAngles = rotation;
+
+        // 初始化 Item 属性
+        itemInstance.Item_Data = itemData;
+
+        itemInstance.Item_Data.ModuleDataDic = itemData.ModuleDataDic;
+        itemInstance.BelongItem = slot.Belong_Inventory.Belong_Item;
+
+        // 事件绑定
+        itemInstance.UpdatedUI_Event += () => RefreshUI(index);
+        itemInstance.DestroyItem_Event += DestroyCurrentObject;
+
+        // 设置为当前武器
+        spawnLocation.GetComponent<ITriggerAttack>()?.SetWeapon(currentObject);
     }
+
 
     #endregion
 }

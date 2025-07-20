@@ -1,37 +1,33 @@
+using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
 
 public abstract class Module : MonoBehaviour
 {
     public abstract ModuleData Data { get; set; }
-    public Item BelongItem { get; set; }
+    public Item item;
     public UltEvent<float> OnAction { get; set; } = new UltEvent<float>();
+    public UltEvent<Item> OnAction_Start { get; set; } = new UltEvent<Item>();
+    public UltEvent<Item> OnAction_Update { get; set; } = new UltEvent<Item>();
+    public UltEvent<Item> OnAction_End { get; set; } = new UltEvent<Item>();
 
-    public void ModuleInit(Item item_)
+    public void Awake()
     {
-        this.BelongItem = item_;
-
-        if (item_.Item_Data.ModuleDataDic.ContainsKey(Data.Name))
-        {
-            Debug.LogWarning("模块数据已存在，将覆盖原有数据");
-            Data = item_.Item_Data.ModuleDataDic[Data.Name];
-        }
-        else
-        {
-            Debug.LogWarning("模块数据不存在，将添加新数据");
-            item_.Item_Data.ModuleDataDic[Data.Name] = Data;
-        }
-
-        //向item添加模块
-        item_.Mods[Data.Name] = this;
-    }
-    public void Start()
-    {
-        Load();
         if (Data.Name == "")
         {
-            Data.Name = this.GetType().ToString();
+            Data.Name = gameObject.name;
         }
+    }
+    public void ModuleInit(Item item_,ModuleData data)
+    {
+        this.item = item_;
+
+        if (data!= null)
+        {
+            Data = data;
+        }
+
+        Load();
     }
 
     public abstract void Load();
@@ -40,6 +36,10 @@ public abstract class Module : MonoBehaviour
 
     public static void ADDModTOItem(Item item, string modName)
     {
+        if (HasMod(item, modName))
+        {
+            return;
+        }
         // 实例化模块预制体
         GameObject @object = GameRes.Instance.InstantiatePrefab(modName);
 
@@ -51,13 +51,15 @@ public abstract class Module : MonoBehaviour
         @object.transform.localRotation = Quaternion.identity;
         @object.transform.localScale = Vector3.one;
 
+
         // 获取模块并初始化
-        Module module = @object.GetComponent<Module>();
-        module.ModuleInit(item);
+        Module module = @object.GetComponentInChildren<Module>();
+        item.Mods.Add(modName, module);
+        module.ModuleInit(item,null);
     }
 
 
-    public static void ADDModTOItem(Item item, ModuleData mod)
+    public static Module ADDModTOItem(Item item, ModuleData mod)
     {
 
         GameObject @object = GameRes.Instance.InstantiatePrefab(mod.Name);
@@ -66,7 +68,7 @@ public abstract class Module : MonoBehaviour
 
         Module module = @object.GetComponent<Module>();
 
-        module.ModuleInit(item);
+       return module;
     }
 
     public static void REMOVEModFROMItem(Item item, string name)
@@ -79,7 +81,7 @@ public abstract class Module : MonoBehaviour
 
     public static bool HasMod(Item item, string name)
     {
-        return item.Mods.ContainsKey(name) && item.Item_Data.ModuleDataDic.ContainsKey(name);
+        return item.Mods.ContainsKey(name);
     }
     public static Module GetMod(Item item, string name)
     {

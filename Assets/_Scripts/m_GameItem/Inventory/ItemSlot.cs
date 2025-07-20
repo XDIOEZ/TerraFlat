@@ -1,3 +1,4 @@
+using FastCloner.Code;
 using MemoryPack;
 using NaughtyAttributes;
 using Sirenix.OdinInspector;
@@ -12,6 +13,7 @@ using UnityEngine;
 [MemoryPackable]
 public partial class ItemSlot
 {
+    //TODO 设置插槽所属
     // 当前插槽中的物品数据   
     [ShowInInspector]
     public ItemData _ItemData = null; // 关键修改
@@ -26,9 +28,11 @@ public partial class ItemSlot
     #region  临时变量
 
     [MemoryPackIgnore]
+    [FastClonerIgnore]
     public Inventory Belong_Inventory = null;
 
     [MemoryPackIgnore]
+    [FastClonerIgnore]
     public bool IsFull
     {
         get

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Sirenix.OdinInspector;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -53,6 +54,7 @@ public class BasePanel : MonoBehaviour
             }
         }
     }
+    [Button]
 
     public void Open()
     {
@@ -64,6 +66,7 @@ public class BasePanel : MonoBehaviour
         }
     }
 
+    [Button]
     public void Close()
     {
         if (canvasGroup != null)
@@ -73,7 +76,6 @@ public class BasePanel : MonoBehaviour
             canvasGroup.blocksRaycasts = false;
         }
     }
-
     public bool IsOpen()
     {
         return canvasGroup != null &&
@@ -81,6 +83,49 @@ public class BasePanel : MonoBehaviour
                canvasGroup.interactable &&
                canvasGroup.blocksRaycasts;
     }
+    //TODO 添加切换CanvasGroup的开关方法
+    /// <summary>
+    /// 切换当前 CanvasGroup 的显示状态
+    /// 如果当前是打开状态则关闭，否则打开
+    /// </summary>
+    public void Toggle()
+    {
+        if (IsOpen())
+            Close();
+        else
+            Open();
+    }
+
+
+    //TODO 添加切换指定窗口的方法 输入为空表示全部切换
+    /// <summary>
+    /// 切换所有面板或指定面板的显示状态（基于 controlDic 中的控件）。
+    /// 如果 panelName 为空，则切换所有有 CanvasGroup 的面板。
+    /// </summary>
+    /// <param name="panelName">要切换的面板名称，若为空则全部切换</param>
+    public void TogglePanel(string panelName = null)
+    {
+        foreach (var pair in controlDic)
+        {
+            // 如果指定了名字，且当前不匹配则跳过
+            if (!string.IsNullOrEmpty(panelName) && pair.Key != panelName)
+                continue;
+
+            foreach (var uiElement in pair.Value)
+            {
+                var group = uiElement.GetComponent<CanvasGroup>();
+                if (group == null)
+                    continue;
+
+                // 切换状态
+                bool isOpen = group.alpha > 0 && group.interactable && group.blocksRaycasts;
+                group.alpha = isOpen ? 0 : 1;
+                group.interactable = !isOpen;
+                group.blocksRaycasts = !isOpen;
+            }
+        }
+    }
+
 
     /// <summary>
     /// 显示当前面板
