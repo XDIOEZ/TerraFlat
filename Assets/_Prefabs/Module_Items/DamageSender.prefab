@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5854501383382979422}
   - component: {fileID: 1132132357919869270}
-  - component: {fileID: 5869702269791929893}
+  - component: {fileID: 8741024448855339655}
   m_Layer: 7
   m_Name: DamageSender
   m_TagString: Untagged
@@ -78,7 +78,7 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.5601855, y: 0.3007657}
   m_EdgeRadius: 0
---- !u!114 &5869702269791929893
+--- !u!114 &8741024448855339655
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -87,32 +87,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 5547162183614461524}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d9f8e7c9aaeb2624199409cf4b626410, type: 3}
+  m_Script: {fileID: 11500000, guid: d9529b11b3d653f48b2cc652a8f0d8b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minDamageInterval: 0.5
-  damageFalloffCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: -0.5
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 0.5
-      inSlope: -0.5
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  isGroupDamage: 0
+  item: {fileID: 0}
+  Data:
+    Name: 
+    isRunning: 0
+    BitData: 
+  faceMouse: {fileID: 0}
+  CurrentState: 0
+  StartPosition: {x: 0, y: 0}
+  AttackSpeed: 5
+  MaxAttackDistance: 1
+  ReturnSpeed: 5
+  Damage:
+    BaseValue: 20
+    BaseAdditive: 0
+    AdditiveModifier: 0
+    MultiplicativeModifier: 1
+    FinalAdditive: 0
+  MoveTargetTransform: {fileID: 0}
+  damageCollider: {fileID: 0}

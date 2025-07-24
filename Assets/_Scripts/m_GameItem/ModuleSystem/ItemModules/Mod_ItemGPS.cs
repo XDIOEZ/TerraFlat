@@ -6,7 +6,7 @@ using TMPro;
 public class Mod_ItemGPS : Module
 {
     public Ex_ModData DebugData;
-    public override ModuleData Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
+    public override ModuleData _Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
 
     public TMP_Text GPS_Text;
 

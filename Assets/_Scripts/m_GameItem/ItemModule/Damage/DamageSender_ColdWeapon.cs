@@ -10,7 +10,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
     #endregion
 
     #region 运行时字段
-    private Collider2D weaponCollider;
+    public Collider2D weaponCollider;
     private Transform cachedTransform;
     private float currentDamageMultiplier = 1f;
     private float lastDamageTime = 0f;
@@ -41,31 +41,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
     {
         cachedTransform = transform;
         weaponCollider = GetComponent<Collider2D>();
-        AttackState = GetComponentInParent<IAttackState>();
-        Weapon = GetComponentInParent<IColdWeapon>();
-
-        if (weaponCollider == null || AttackState == null || Weapon == null)
-        {
-            Debug.LogError("组件初始化失败！", this);
-            enabled = false;
-            return;
-        }
-
-        AttackState.OnAttackStart += StartTrySendDamage;
-        AttackState.OnAttackUpdate += StayTrySendDamage;
-        AttackState.OnAttackEnd += EndTrySendDamage;
-
         weaponCollider.enabled = false;
-    }
-
-    private void OnDestroy()
-    {
-        if (AttackState != null)
-        {
-            AttackState.OnAttackStart -= StartTrySendDamage;
-            AttackState.OnAttackUpdate -= StayTrySendDamage;
-            AttackState.OnAttackEnd -= EndTrySendDamage;
-        }
     }
     #endregion
 

@@ -2,9 +2,13 @@ using Cinemachine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
-public class CameraFollowManager : MonoBehaviour
+public class CameraFollowManager : Module
 {
+    public Ex_ModData ModData;
+    public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData)value; }
+
     public CinemachineVirtualCamera vcam;
 
     public Item CameraFollowItem;
@@ -32,18 +36,40 @@ public class CameraFollowManager : MonoBehaviour
 
     public Player Player;
 
-    // Start is called before the first frame update
-    public void Start()
+    public new void Awake()
     {
+        if (_Data.Name == "")
+        _Data.Name = ModText.Camera;
+    }
+
+    public void PovValueChanged(InputAction.CallbackContext context = default)
+    {
+        //获取鼠标滚轮数值
+        Vector2 scrollValue = (Vector2)context.ReadValueAsObject();
+        //Debug.Log(scrollValue.y);
+        if (scrollValue.y > 0)
+        {
+            //TODO视野减少
+            ChangeCameraView(-1);
+        }
+        else if (scrollValue.y < 0)
+        {
+            //TODO视野增加
+            ChangeCameraView(1);
+        }
+    }
+
+    // Start is called before the first frame update
+    public override void Load()
+    {
+        item.GetComponent<PlayerController>()._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
+
         ControllerCamera = GetComponentInChildren<Camera>();
 
         transform.rotation = Quaternion.identity;
       
-
-
-
-
         PlayerController = GetComponentInParent<PlayerController>();
+
         CameraFollowItem = GetComponentInParent<Item>();
 
 
@@ -67,5 +93,11 @@ public class CameraFollowManager : MonoBehaviour
         Player.PovValue += view;
         Vcam.m_Lens.OrthographicSize += view;
        // Debug.Log("视野范围修改为：" + Vcam.m_Lens.FieldOfView);
+    }
+
+
+    public override void Save()
+    {
+        //throw new System.NotImplementedException();
     }
 }

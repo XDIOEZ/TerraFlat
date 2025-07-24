@@ -6,27 +6,24 @@ using UnityEngine.UI;
 public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [Header("引用")]
-    public RectTransform rectTransform;    // 当前物体的 RectTransform
-    public Canvas canvas;                  // 所在的 Canvas
-    public Image draggableImage;           // 可拖拽的目标图片
+    public RectTransform rectTransform;
+    public Canvas canvas;
+    public Image draggableImage;
+
     [Header("属性")]
-    public Vector2 originalPosition;       // 拖拽前的位置
-    public Vector2 offset;                 // 鼠标点击点与物体中心的偏移
+    public Vector2 originalPosition;
+    public Vector2 offset;
     public int DefaultOrder = 0;
     [ShowInInspector]
     public static int CurrentOrder = 0;
 
-    public bool IsDragging = false;        // 拖拽状态标志
-    [ShowInInspector]
-    public IUI UIer;
+    public bool IsDragging = false;
 
     private void Start()
     {
-        UIer = gameObject.transform.parent.GetComponentInParent<IUI>();
         rectTransform = GetComponent<RectTransform>();
         canvas = gameObject.transform.parent.GetComponentInParent<Canvas>();
 
-        // 设置初始层级
         rectTransform.SetSiblingIndex(DefaultOrder);
         CurrentOrder = Mathf.Max(CurrentOrder, DefaultOrder);
 
@@ -39,21 +36,12 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
         {
             draggableImage = GetComponentInChildren<Image>();
         }
-
-        if (UIer.UIDataDictionary.ContainsKey(transform.parent.gameObject.name))
-        {
-            SetUIState(UIer.UIDataDictionary[transform.parent.gameObject.name]);
-        }
-        else
-        {
-            UIer.UIDataDictionary[transform.parent.gameObject.name] = GetUIState();
-        }
-           
     }
 
     public void OnDisable()
     {
-        UIer.UIDataDictionary[transform.parent.gameObject.name] = GetUIState();
+        // 这里可以选择保存状态或不保存，这里保留接口调用但不再依赖外部数据字典
+        // 可自行替换为其他保存方式，如 PlayerPrefs 或 ScriptableObject
     }
 
     public void OnPointerDown(PointerEventData eventData)
@@ -61,7 +49,6 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
         if (!IsPointerOverDraggableImage(eventData) || IsRaycastBlocked(eventData))
             return;
 
-        // Get click position in Canvas local space
         Vector2 clickPosInCanvas;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             canvas.transform as RectTransform,
@@ -69,23 +56,11 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
             eventData.pressEventCamera,
             out clickPosInCanvas);
 
-        // Get pivot position in Canvas local space (anchoredPosition is relative to anchor)
-        Vector2 pivotPosInCanvas = rectTransform.anchoredPosition; // Assumes anchor aligns with Canvas coordinates
-
-        // Calculate offset in Canvas local space
+        Vector2 pivotPosInCanvas = rectTransform.anchoredPosition;
         offset = pivotPosInCanvas - clickPosInCanvas;
-
-        // Detect Canvas center and adjust offset
-        RectTransform canvasRect = canvas.GetComponent<RectTransform>();
-        Vector2 canvasCenter = new Vector2(canvasRect.rect.width / 2, canvasRect.rect.height / 2);
-        // Example adjustment: Shift offset relative to center (optional, customize as needed)
-        // offset += canvasCenter; // Uncomment if you want to offset by center
 
         CurrentOrder++;
         rectTransform.SetSiblingIndex(CurrentOrder);
-
-        if (!IsPointerOverDraggableImage(eventData) || IsRaycastBlocked(eventData))
-            return;
 
         IsDragging = true;
         originalPosition = rectTransform.anchoredPosition;
@@ -96,7 +71,6 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-       
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -111,7 +85,6 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
             eventData.pressEventCamera,
             out localPointerPosition))
         {
-            // Set anchoredPosition so click point follows mouse
             rectTransform.anchoredPosition = localPointerPosition + offset;
             rectTransform.SetSiblingIndex(CurrentOrder);
         }

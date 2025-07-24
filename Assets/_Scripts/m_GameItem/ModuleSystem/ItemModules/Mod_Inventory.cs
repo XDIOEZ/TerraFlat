@@ -5,7 +5,7 @@ using UnityEngine;
 public class Mod_Inventory : Module,IInventory
 {
     public InventoryModuleData inventoryModuleData = new InventoryModuleData();
-    public override ModuleData Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
+    public override ModuleData _Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
     public Inventory _Inventory { get => inventory; set => inventory = value; }
     [Tooltip("容器，用于存放物品")]
     public Inventory inventory;
@@ -27,12 +27,16 @@ public class Mod_Inventory : Module,IInventory
 
         inventory.Belong_Item = item;
 
-        inventory.DefaultTarget_Inventory = item.Mods[Mod_Text.Hand].GetComponent<IInventory>()._Inventory;
+        inventory.DefaultTarget_Inventory = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
+
+        /*     if(_Inventory.DefaultTarget_Inventory != null)
+             _Inventory.OnItemClick(_Inventory.Data.Index);*/
+        _Inventory.Init();
     }
 
     public override void Save()
     {
-        item.Item_Data.ModuleDataDic[Data.Name] = Data;
+        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
     }
 
     // Start is called before the first frame update

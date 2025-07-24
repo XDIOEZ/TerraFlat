@@ -25,7 +25,7 @@ public partial class GameValue_float
     {
         get
         {
-            return (BaseValue + BaseAdditive) * (1 + AdditiveModifier) * MultiplicativeModifier + FinalAdditive;
+            return ((BaseValue + BaseAdditive) * (1 + AdditiveModifier) * MultiplicativeModifier )+ FinalAdditive;
         }
     }
     [MemoryPackConstructor]

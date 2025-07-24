@@ -4,18 +4,18 @@ using UnityEngine;
 
 public abstract class Module : MonoBehaviour
 {
-    public abstract ModuleData Data { get; set; }
+    public abstract ModuleData _Data { get; set; }
     public Item item;
     public UltEvent<float> OnAction { get; set; } = new UltEvent<float>();
     public UltEvent<Item> OnAction_Start { get; set; } = new UltEvent<Item>();
     public UltEvent<Item> OnAction_Update { get; set; } = new UltEvent<Item>();
-    public UltEvent<Item> OnAction_End { get; set; } = new UltEvent<Item>();
+    public UltEvent<Item> OnAction_Cancel { get; set; } = new UltEvent<Item>();
 
-    public void Awake()
+    public virtual void Awake()
     {
-        if (Data.Name == "")
+        if (_Data.Name == "")
         {
-            Data.Name = gameObject.name;
+            _Data.Name = gameObject.name;
         }
     }
     public void ModuleInit(Item item_,ModuleData data)
@@ -24,7 +24,7 @@ public abstract class Module : MonoBehaviour
 
         if (data!= null)
         {
-            Data = data;
+            _Data = data;
         }
 
         Load();
@@ -34,7 +34,7 @@ public abstract class Module : MonoBehaviour
     public abstract void Save();
 
 
-    public static void ADDModTOItem(Item item, string modName)
+public static void ADDModTOItem(Item item, string modName)
     {
         if (HasMod(item, modName))
         {
@@ -85,15 +85,10 @@ public abstract class Module : MonoBehaviour
     }
     public static Module GetMod(Item item, string name)
     {
-     
+        if (HasMod(item, name))
+        {
             return item.Mods[name];
+        }
+        return null;
     }
-
-
-    public void OnDestroy()
-    {
-        Save();
-        //BelongItem.Item_Data.ModuleDataDic[Data.Name] = Data;
-    }
-
 }

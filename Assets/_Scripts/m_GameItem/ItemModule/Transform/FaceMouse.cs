@@ -1,73 +1,79 @@
+using MemoryPack;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UIElements.Experimental;
 
-public class FaceMouse : Organ, IFunction_FaceToMouse
+public partial class FaceMouse : Module
 {
-    public IRotationSpeed RoData;
-    
-    public IFocusPoint FocusPoint;
+    public FaceMouseData Data = new FaceMouseData();
+    public Ex_ModData_MemoryPack ModData;
+    public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPack)value; } }
+    public PlayerController PlayerController;
 
-    public float RotationSpeeds
+    public override void Awake()
     {
-        get
+        if(_Data.Name == "")
         {
-            return RoData.RotationSpeed;
-        }
-
-        set
-        {
-            RoData.RotationSpeed  = value;
+            _Data.Name = ModText.FaceMouse;
         }
     }
-
-    public void Start()
+    public override void Load()
     {
-        FocusPoint = GetComponentInParent<IFocusPoint>();
-        RoData = GetComponentInParent<IRotationSpeed>();
+        ModData.ReadData(ref Data);
+        //获取PlayerController
+        PlayerController = item.Mods[ModText.Controller].GetComponent<PlayerController>();
     }
-
+    public void Update()
+    {
+        PlayerTakeItem_FaceMouse();
+    }
+    public void PlayerTakeItem_FaceMouse()
+    {
+        if (PlayerController == null)
+        {
+            return;
+        }
+        //获取鼠标
+        Data.TargetPosition = PlayerController.GetMouseWorldPosition();
+        FaceToMouse(PlayerController.GetMouseWorldPosition());
+    }
     public void FaceToMouse(Vector3 targetPosition)
     {
-        // 计算目标方向
         Vector2 direction = targetPosition - transform.parent.position;
-
-        // 计算目标角度
         float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-        // 如果存在父级对象，并且Y轴旋转角度接近180度，修正目标角度
         Transform grandParent = transform.parent.parent;
         if (grandParent != null && Mathf.Abs(grandParent.localEulerAngles.y - 180f) < 90f)
         {
             targetAngle = 180f - targetAngle;
         }
 
-        // 平滑插值当前角度和目标角度
         float currentAngle = transform.parent.localEulerAngles.z;
-        float angleStep = RotationSpeeds * Time.deltaTime; // 使用角速度计算步长
-        float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, angleStep);
 
-        // 应用平滑后的旋转角度
+        // RotationSpeed in degrees per second
+        float rotationSpeed = 180f / Mathf.Max(0.01f, Data.RotationDuration); // Prevent division by zero
+
+        float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, rotationSpeed * Time.deltaTime);
+
         transform.parent.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
     }
 
-    public override void StartWork()
+
+    public override void Save()
     {
-        FaceToMouse(FocusPoint.FocusPointPosition);
+        ModData.WriteData( Data);
+    }
+    [System.Serializable]
+    [MemoryPackable]
+    public partial class FaceMouseData
+    {
+        //旋转180度所需时间
+        public float RotationDuration = 1;
+        //目标位置
+        public Vector3 TargetPosition = Vector3.zero;
     }
 
-    public override void UpdateWork()
-    {
-        FaceToMouse(FocusPoint.FocusPointPosition);
-    }
-
-    public override void StopWork()
-    {
-        // 停止工作时，保持当前角度不变
-    }
-}
-
-public interface IFocusPoint
-{
-    Vector3 FocusPointPosition { get; set; }
 }

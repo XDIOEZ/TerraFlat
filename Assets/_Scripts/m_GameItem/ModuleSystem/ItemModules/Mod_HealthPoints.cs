@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Mod_HealthPoints : Module
 {
-    public override ModuleData Data { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    public override ModuleData _Data { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
 
     public override void Load()
     {

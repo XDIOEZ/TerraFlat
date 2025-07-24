@@ -1415,7 +1415,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2520175300522458014}
-  - component: {fileID: 6384251905845295368}
   - component: {fileID: 1523449583456271906}
   - component: {fileID: 355877439817621898}
   - component: {fileID: 7601933084094373759}
@@ -1447,21 +1446,6 @@ RectTransform:
   m_AnchoredPosition: {x: -12.620056, y: 4.7543793}
   m_SizeDelta: {x: 301.2187, y: 292.8684}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &6384251905845295368
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4700014921951881315}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 75f302fbf35233f49bce5dcaac873fa7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  inventory: {fileID: 1523449583456271906}
-  itemSlot_UI_prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
-  TargetSendItemSlot: {fileID: 0}
 --- !u!114 &1523449583456271906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1492,7 +1476,7 @@ MonoBehaviour:
       SlotMaxVolume: 100
       Index: 1
       Belong_Inventory: {fileID: 0}
-    selectedSlotIndex: -1
+    Index: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs: []
@@ -1748,7 +1732,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -585, y: -286}
+  m_AnchoredPosition: {x: 422, y: 89}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5462087943532055468
@@ -2960,7 +2944,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5129196381130097201}
-  - component: {fileID: 5971980321227285468}
   - component: {fileID: 2844700870444916106}
   - component: {fileID: 8991726460735763733}
   - component: {fileID: 2156688653556688797}
@@ -2994,21 +2977,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0.000022888, y: -0.00003624}
   m_SizeDelta: {x: 335.2772, y: 388.2149}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &5971980321227285468
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8106301196523760437}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 75f302fbf35233f49bce5dcaac873fa7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  inventory: {fileID: 2844700870444916106}
-  itemSlot_UI_prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
-  TargetSendItemSlot: {fileID: 0}
 --- !u!114 &2844700870444916106
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3057,7 +3025,7 @@ MonoBehaviour:
       SlotMaxVolume: 100
       Index: 3
       Belong_Inventory: {fileID: 0}
-    selectedSlotIndex: -1
+    Index: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs: []

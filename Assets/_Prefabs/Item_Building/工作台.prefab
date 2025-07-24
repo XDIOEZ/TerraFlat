@@ -9,8 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7776168222229015262}
-  - component: {fileID: 7217972686981905664}
   - component: {fileID: 3362821212264663490}
+  - component: {fileID: 3290000933435650850}
   m_Layer: 9
   m_Name: DamageReceiver
   m_TagString: Untagged
@@ -33,37 +33,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 6827304344654898738}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7217972686981905664
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1982999179139060963}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6cbe05dc9e2ebf747bcc0d42f70ec020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  modData:
-    Name: "\u4F24\u5BB3\u6A21\u5757"
-    isRunning: 0
-    BitData: 
-  DamagePanelName: Panel_DamageText
-  damagePanelSpeed: 2
-  damagePanelDuration: 1.5
-  scalePhaseRatio: 0.242
-  startingScale: 1
-  maximumScale: 2
-  damagePanelColor: {r: 1, g: 1, b: 1, a: 1}
-  HitParticlesName: Particle_Hit
-  flashCount: 1
-  flashDuration: 0.2
-  flashColor: {r: 1, g: 0, b: 0, a: 1}
-  BoxCollider2D: {fileID: 3362821212264663490}
-  shakeDuration: 0.15
-  shakeMagnitude: 0.1
 --- !u!61 &3362821212264663490
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -109,6 +78,36 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.8837209, y: 0.8655622}
   m_EdgeRadius: 0
+--- !u!114 &3290000933435650850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1982999179139060963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66936691572dbd04a801f40fe0923069, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  Data:
+    Name: 
+    isRunning: 0
+    BitData: 
+  saveData:
+    Hp: 0
+    MaxHp:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+  flashCount: 1
+  flashDuration: 0.2
+  flashColor: {r: 1, g: 0, b: 0, a: 1}
+  shakeDuration: 0.15
+  shakeMagnitude: 0.1
 --- !u!1 &3635460958367621312
 GameObject:
   m_ObjectHideFlags: 0
@@ -154,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  _Data:
+  Data:
     Hp: -1
     MaxHp:
       BaseValue: 100
@@ -170,6 +169,7 @@ MonoBehaviour:
     BitData: 
   GhostShadow: {fileID: 0}
   boxCollider2D: {fileID: 1568945604396735626}
+  damageReceiver: {fileID: 0}
 --- !u!1 &4582682433376852556
 GameObject:
   m_ObjectHideFlags: 0
@@ -467,6 +467,7 @@ MonoBehaviour:
     Name: "\u4EA4\u4E92\u6A21\u7EC4"
     isRunning: 0
     BitData: 
+  CurentInteractItem: {fileID: 0}
 --- !u!61 &7540695491821249678
 BoxCollider2D:
   m_ObjectHideFlags: 0

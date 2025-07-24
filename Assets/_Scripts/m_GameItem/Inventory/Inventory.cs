@@ -32,14 +32,28 @@ public class Inventory : MonoBehaviour
         if (ItemSlot_Parent == null)
             ItemSlot_Parent = transform.GetChild(0);
     }
-    public void Start()
+
+    //同步UI的Data
+    public void SyncData()
+    {
+        for (int i = 0; i < itemSlotUIs.Count; i++)
+        {
+           ItemSlot_UI itemSlotUI = itemSlotUIs[i];
+            itemSlotUI.Data = Data.itemSlots[i];
+            itemSlotUI.OnLeftClick += OnItemClick;
+            itemSlotUI._OnScroll += OnScroll;
+            itemSlotUI.Data.Belong_Inventory = this;
+        }
+    }
+
+    public virtual void Init()
     {
         // 若未设置数据，则自动生成
-         for (int i = 0; i < Data.itemSlots.Count; i++)
-         {
-             Data.itemSlots[i].Index = i;
-             Data.itemSlots[i].SlotMaxVolume = 100;
-         }
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            Data.itemSlots[i].Index = i;
+            Data.itemSlots[i].SlotMaxVolume = 100;
+        }
 
         // 同步子对象数量与 itemSlots 数量一致
         int currentCount = ItemSlot_Parent.childCount;
@@ -56,7 +70,7 @@ public class Inventory : MonoBehaviour
         for (int i = currentCount; i < targetCount; i++)
         {
             GameObject item = Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false); // false: 保持局部坐标
-          //  item.name = $"Slot_{i}"; // 可选：命名方便调试
+                                                                                    //  item.name = $"Slot_{i}"; // 可选：命名方便调试
         }
 
         // 清空旧列表，重新填充 UI 槽位列表
@@ -74,19 +88,6 @@ public class Inventory : MonoBehaviour
         Data.Event_RefreshUI += RefreshUI;
         //初始化刷新UI
         RefreshUI();
-    }
-
-    //同步UI的Data
-    public void SyncData()
-    {
-        for (int i = 0; i < itemSlotUIs.Count; i++)
-        {
-           ItemSlot_UI itemSlotUI = itemSlotUIs[i];
-            itemSlotUI.Data = Data.itemSlots[i];
-            itemSlotUI.OnLeftClick += OnItemClick;
-            itemSlotUI._OnScroll += OnScroll;
-            itemSlotUI.Data.Belong_Inventory = this;
-        }
     }
 
     public void RefreshUI(int index)

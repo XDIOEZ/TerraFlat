@@ -5,7 +5,7 @@ using UnityEngine;
 public class Mod_ItemMaker : Module
 {
     public Ex_ModData modData;
-    public override ModuleData Data { get => modData; set => modData = (Ex_ModData)value; }
+    public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
 
     public List<Drop> drops = new List<Drop>();
 
@@ -50,7 +50,7 @@ public class Mod_ItemMaker : Module
      * ----------------------------------------------------------*/
     public void Update()
     {
-        if (!Data.isRunning) return;
+        if (!_Data.isRunning) return;
 
         for (int i = drops.Count - 1; i >= 0; i--)
         {

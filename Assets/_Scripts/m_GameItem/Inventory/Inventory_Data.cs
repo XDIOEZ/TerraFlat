@@ -13,7 +13,7 @@ public partial class Inventory_Data
     //TODO 设置Event
     public string Name = string.Empty;                      // 背包名称
     public List<ItemSlot> itemSlots = new List<ItemSlot>(); // 物品槽列表
-    public int selectedSlotIndex = 0;                      // 当前选中槽位索引
+    public int Index = 0;                      // 当前选中槽位索引
 
     [MemoryPackIgnore]
     [FastClonerIgnore]
@@ -64,6 +64,10 @@ public partial class Inventory_Data
     public void ChangeItemData_Default(int index, ItemSlot inputSlotHand)
     {
         float rate = 1f;
+        if (inputSlotHand.Belong_Inventory == null)
+        {
+            return;
+        }
         var handInventory = inputSlotHand.Belong_Inventory.GetComponent<Inventory_Hand>();
         if (handInventory != null)
             rate = handInventory.GetItemAmountRate;

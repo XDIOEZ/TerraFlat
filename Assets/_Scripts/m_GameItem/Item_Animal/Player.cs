@@ -12,7 +12,7 @@ using UnityEngine.UIElements;
 public class Player
     : Item, IHunger, ISpeed,
       IInventoryData, IHealth, IStamina,
-      ISave_Load, IFocusPoint, IRotationSpeed
+      ISave_Load, IRotationSpeed
     ,IUI
 {
     public UltEvent OnDeath { get; set; }

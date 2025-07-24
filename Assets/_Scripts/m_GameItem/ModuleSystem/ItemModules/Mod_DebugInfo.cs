@@ -5,7 +5,7 @@ using TMPro;
 public class Mod_DebugInfo : Module
 {
     public Ex_ModData DebugData;
-    public override ModuleData Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
+    public override ModuleData _Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
 
     [Header("调试面板组件")]
     public BasePanel DebugPanel;        // UI面板（可选）

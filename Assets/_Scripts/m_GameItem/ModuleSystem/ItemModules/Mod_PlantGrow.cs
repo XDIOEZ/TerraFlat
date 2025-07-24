@@ -5,7 +5,7 @@ using UnityEngine;
 public class Mod_PlantGrow : Module
 {
     public Mod_PlantGrow_Data _data = new Mod_PlantGrow_Data();
-    public override ModuleData Data
+    public override ModuleData _Data
     {
         get => _data;
         set => _data = value as Mod_PlantGrow_Data;

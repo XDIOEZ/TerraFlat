@@ -78,6 +78,9 @@ public class CraftingTable : Item,ISave_Load,IBuilding
 
         Mods["交互模组"].OnAction_Start += Interact_Start;
         Mods["交互模组"].OnAction_Start += (Item) => { panel.Toggle(); };
+        Mods["交互模组"].OnAction_Cancel += (Item) => { panel.Close(); };
+
+       /* Mods[ModText.Hp]*/
 
         if (BelongItem != null)
         {
@@ -262,9 +265,9 @@ public class CraftingTable : Item,ISave_Load,IBuilding
         if (CanInteract)
         {
             Mods["工作台合成模块"].GetComponent<Mod_HandMade>().inputInventory.DefaultTarget_Inventory
-                = item.Mods[Mod_Text.Hand].GetComponent<IInventory>()._Inventory;
+                = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
             Mods["工作台合成模块"].GetComponent<Mod_HandMade>().outputInventory.DefaultTarget_Inventory
-                = item.Mods[Mod_Text.Hand].GetComponent<IInventory>()._Inventory;
+                = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
         }
     }
 

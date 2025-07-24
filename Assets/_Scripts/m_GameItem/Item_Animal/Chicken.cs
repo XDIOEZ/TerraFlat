@@ -8,7 +8,6 @@ using UnityEngine;
 using Sirenix.OdinInspector;
 
 public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
-    , IFocusPoint
 {
     public Data_Creature Data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -6,51 +7,104 @@ public interface IRunner
 {
     public void SwitchToRun(bool isRun);
 }
+[Serializable]
+public class Runner_SaveData
+{
+    [Header("跑步相关参数")]
+    public float runStaminaRate = 2f;
+    public float runSpeedRate = 2f;
 
-public class Runner : Organ, IRunner
+    [Header("状态数据")]
+    public bool isRun = false; // 保存当前是否处于跑步状态
+}
+public class Runner : Module, IRunner
 {
     public UltEvent OnRunStart;
     public UltEvent OnRunStop;
+
     public Buff_Data buffData;
     public BuffManager buffManager;
-    public Item item;
-    public bool isRun;
 
-    // Start is called before the first frame update
-    void Start()
+    public Mover mover;
+
+    // 保存数据
+    public Runner_SaveData saveData = new();
+
+    public float runStaminaRate
     {
-        buffManager = GetComponentInParent<BuffManager>();
-        item = GetComponentInParent<Item>();
+        get => saveData.runStaminaRate;
+        set => saveData.runStaminaRate = value;
     }
 
-    public override void StartWork()
+    public float runSpeedRate
     {
+        get => saveData.runSpeedRate;
+        set => saveData.runSpeedRate = value;
+    }
+
+    public bool isRun
+    {
+        get => saveData.isRun;
+        set => saveData.isRun = value;
+    }
+
+    public Ex_ModData modData = new();
+    public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
+
+    public override void Awake()
+    {
+        if (string.IsNullOrEmpty(_Data.Name))
+        {
+            _Data.Name = ModText.Run;
+        }
+    }
+
+    public override void Load()
+    {
+        modData.ReadData(ref saveData);
+
+        if (item.Mods.ContainsKey(ModText.Controller))
+        {
+            var controller = item.Mods[ModText.Controller].GetComponent<PlayerController>();
+            controller._inputActions.Win10.Shift.started += _ => StartWork();
+            controller._inputActions.Win10.Shift.canceled += _ => StopWork();
+        }
+
+        mover = item.Mods[ModText.Mover].GetComponent<Mover>();
+    }
+
+    public override void Save()
+    {
+        modData.WriteData(saveData);
+        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
+    }
+
+    public void StartWork()
+    {
+        if (isRun) return;
+
         SwitchToRun(true);
-        buffManager.AddBuffRuntime(buffData: buffData, Sender: item, Receiver: item);
+        mover.staminaConsumeSpeed.MultiplicativeModifier *= runStaminaRate; 
+        mover.Speed.MultiplicativeModifier *= runSpeedRate;
         isRun = true;
     }
 
-     public override void UpdateWork()
-     {
-        // do nothing
-     }
-
-    public override void StopWork()
+    public void StopWork()
     {
+        if (!isRun) return;
+
         SwitchToRun(false);
-        buffManager.RemoveBuff(buffData.buff_ID);
+        mover.staminaConsumeSpeed.MultiplicativeModifier /= runStaminaRate;
+        mover.Speed.MultiplicativeModifier /= runSpeedRate;
         isRun = false;
     }
 
-    public void SwitchToRun(bool isRun)
+    public void SwitchToRun(bool isRunFlag)
     {
-        if (isRun)
-        {
-            OnRunStart.Invoke();
-        }
+        if (isRunFlag)
+            OnRunStart?.Invoke();
         else
-        {
-            OnRunStop.Invoke();
-        }
+            OnRunStop?.Invoke();
     }
 }
+

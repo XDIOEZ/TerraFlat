@@ -12,6 +12,7 @@ using UnityEngine.UI;
 /// 提供显示与隐藏面板的接口，
 /// 并处理按钮点击和控件值变化的逻辑
 /// </summary>
+[RequireComponent(typeof(CanvasGroup))]
 public class BasePanel : MonoBehaviour
 {
 

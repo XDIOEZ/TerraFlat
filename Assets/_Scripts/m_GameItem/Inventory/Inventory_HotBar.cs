@@ -1,5 +1,6 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Inventory_HotBar : Inventory
 {
@@ -25,19 +26,40 @@ public class Inventory_HotBar : Inventory
 
     // 当前选择的物品
     public ItemData currentItemData;
+    public Item CurentSelectItem;
     public GameObject currentObject;
 
     // 当前索引与最大索引
-    public int CurrentIndex { get => Data.selectedSlotIndex; set => Data.selectedSlotIndex = value; }
+    public int CurrentIndex { get => Data.Index; set => Data.Index = value; }
     public int MaxIndex { get => Data.itemSlots.Count; }
 
     #endregion
 
     #region 公有方法
-    public new void Start()
+
+    public override void Init()
     {
-        base.Start();
+        base.Init();
+
         SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
+
+        Controller_Init();
+        //修改选择框位置
+        ChangeSelectBoxPosition(Data.Index);
+        // 同步 UI
+        RefreshUI(CurrentIndex);
+    }
+
+    public void Controller_Init()
+    {
+        Belong_Item.GetComponent<PlayerController>()._inputActions.Win10.RightClick.performed 
+            += _ => Controller_ItemAct();
+    }
+    
+    //激活手持物品行为
+    public void Controller_ItemAct()
+    {
+        CurentSelectItem.Act();
     }
 
     public override void OnItemClick(int index)
@@ -48,6 +70,21 @@ public class Inventory_HotBar : Inventory
         ChangeSelectBoxPosition(index);
         // 同步 UI
         RefreshUI(CurrentIndex);
+    }
+    private void SwitchHotbar(InputAction.CallbackContext context)
+    {
+        if (context.control.device is Keyboard keyboard)
+        {
+            if (int.TryParse(context.control.displayName, out int keyNumber))
+            {
+                int targetIndex = keyNumber - 1;
+                if (targetIndex != CurrentIndex)
+                {
+                    ChangeSelectBoxPosition(targetIndex);
+                    return;
+                }
+            }
+        }
     }
 
     public void ChangeSelectBoxPosition(int newIndex)
@@ -146,7 +183,7 @@ public class Inventory_HotBar : Inventory
         // 设置当前选择槽与当前物体引用
         CurrentSelectItemSlot = slot;
         currentObject = itemInstance.gameObject;
-
+        CurentSelectItem = itemInstance;
         // 物体变换设置
         Transform tf = itemInstance.transform;
         tf.SetParent(spawnLocation, false);

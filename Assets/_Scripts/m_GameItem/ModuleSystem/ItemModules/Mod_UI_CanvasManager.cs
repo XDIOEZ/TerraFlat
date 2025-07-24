@@ -1,6 +1,7 @@
 using MemoryPack;
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -18,7 +19,7 @@ public class Mod_UI_CanvasManager : Module
     [ShowInInspector]
     public Dictionary<string, bool> canvasPanelStates = new();
 
-    public override ModuleData Data { get => exData; set => exData = (Ex_ModData)value; }
+    public override ModuleData _Data { get => exData; set => exData = (Ex_ModData)value; }
     public Ex_ModData exData = new();
     //启动UI按钮的父物体
 
@@ -183,5 +184,29 @@ public partial class Ex_ModData : ModuleData
     public void WriteData<T>(T bitData)
     {
         BitData = JsonConvert.SerializeObject(bitData);
+    }
+}
+
+[Serializable]
+[MemoryPackable]
+public partial class Ex_ModData_MemoryPack : ModuleData
+{
+    public byte[] BitData;
+
+    public T GetData<T>()
+    {
+        if (BitData == null || BitData.Length == 0) return default;
+        return MemoryPackSerializer.Deserialize<T>(BitData);
+    }
+
+    public void ReadData<T>(ref T setData)
+    {
+        if (BitData == null || BitData.Length == 0) return;
+        setData = MemoryPackSerializer.Deserialize<T>(BitData);
+    }
+
+    public void WriteData<T>(T bitData)
+    {
+        BitData = MemoryPackSerializer.Serialize(bitData);
     }
 }

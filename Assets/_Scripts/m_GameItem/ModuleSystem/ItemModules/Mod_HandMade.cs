@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class Mod_HandMade : Module
 {
     public InventoryModuleData inventoryModuleData = new InventoryModuleData();
-    public override ModuleData Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
+    public override ModuleData _Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
 
     #region 工作变量
 
@@ -43,12 +43,13 @@ public class Mod_HandMade : Module
 
         WorkButton.onClick.AddListener(OnCraftButtonClick);
 
-        if (item.Mods.ContainsKey(Mod_Text.Hand))
+        if (item.Mods.ContainsKey(ModText.Hand))
         {
-        inputInventory.DefaultTarget_Inventory = item.Mods[Mod_Text.Hand].GetComponent<IInventory>()._Inventory;
-        outputInventory.DefaultTarget_Inventory = item.Mods[Mod_Text.Hand].GetComponent<IInventory>()._Inventory;
+        inputInventory.DefaultTarget_Inventory = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
+        outputInventory.DefaultTarget_Inventory = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
         }
-      
+        inputInventory.Init();
+        outputInventory.Init();
     }
 
     private void OnCraftButtonClick()
@@ -139,6 +140,8 @@ public class Mod_HandMade : Module
         }
 
         Debug.Log($"合成完成：{recipe.name}");
+        outputInventory.RefreshUI();
+        inputInventory.RefreshUI();
         return true;
     }
 
@@ -177,7 +180,7 @@ public class Mod_HandMade : Module
     public override void Save()
     {
         // throw new System.NotImplementedException();
-        item.Item_Data.ModuleDataDic[Data.Name] = Data;
+        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
     }
 }
 

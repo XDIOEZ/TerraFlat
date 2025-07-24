@@ -17,8 +17,9 @@ public class SettingCanvas : MonoBehaviour
     //方法:回到主场景
     public void SaveAndExit()
     {
+
         SaveAndLoad.Instance.Save();
-        //TODO:实现回到主场景的功能
+        SaveAndLoad.Instance.OnSceneSwitch.Invoke();
         SceneManager.LoadScene("GameStartScene");
      
     }

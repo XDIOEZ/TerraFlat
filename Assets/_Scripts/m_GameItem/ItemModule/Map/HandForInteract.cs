@@ -6,7 +6,6 @@ using UnityEngine;
 
 public class HandForInteract : MonoBehaviour ,IInteracter
 {
-    
     [Tooltip(" 当前交互对象"),ShowInInspector]
     public IInteract Intractable_go;
 
@@ -23,6 +22,7 @@ public class HandForInteract : MonoBehaviour ,IInteracter
     {
         Item = GetComponentInParent<Item>();
         InventoryData = GetComponentInParent<IInventoryData>();
+        Item.GetComponent<PlayerController>()._inputActions.Win10.E.performed+=_ => Interact_Start();
     }
     public void OnTriggerEnter2D(Collider2D collision)
     {
@@ -39,7 +39,7 @@ public class HandForInteract : MonoBehaviour ,IInteracter
         {    
             return;
         }
-          Interact_Cancel();
+        Interact_Cancel();
         Intractable_go = null;
     }
 

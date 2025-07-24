@@ -1,67 +1,76 @@
 using MemoryPack;
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class Mod_Stamina : Module, IUI_Slider
+public partial class Mod_Stamina : Module
 {
+    [System.Serializable]
+    [MemoryPackable]
+    public partial class StaminaData
+    {
+        public float Current_Stamina;
+        public GameValue_float Max_Stamina;
+    }
+
     public StaminaData staminaData;
-    private List<IStaminaEvent> staminaEvents = new List<IStaminaEvent>();
 
+    public UltEvent OnChangeStamina = new UltEvent();
 
-    public override void Save()
+    public override ModuleData _Data
     {
-        // Unsubscribe from all events when destroyed to prevent memory leaks
-        foreach (var staminaEvent in staminaEvents)
-        {
-            if (staminaEvent != null)
-            {
-                staminaEvent.StaminaChange -= StaminaChanged;
-            }
-        }
+        get => modData;
+        set => modData = (Ex_ModData_MemoryPack)value;
     }
 
-    public void StaminaChanged(float value)
-    {
-        staminaData.Current_Stamina -= value;
-    }
+    public Ex_ModData_MemoryPack modData;
+
+    public Slider slider;
 
     public override void Load()
     {
-        var events = item.GetComponentsInChildren<IStaminaEvent>();
-        //throw new System.NotImplementedException();
-        staminaEvents.AddRange(events);
+        modData.ReadData(ref staminaData);
+        UpdateSlider();
+    
+        if (slider == null)    slider = GetComponentInChildren<Slider>();
+    }
 
-        // Subscribe to all events
-        foreach (var staminaEvent in staminaEvents)
+    public override void Save()
+    {
+        modData.WriteData(staminaData);
+    }
+
+    void Update()
+    {
+        UpdateSlider();
+    }
+
+    private void UpdateSlider()
+    {
+        if (slider != null && MaxValue > 0)
         {
-            staminaEvent.StaminaChange += StaminaChanged;
+            slider.value = CurrentValue / MaxValue;
         }
     }
 
-    public override ModuleData Data
-    {
-        get => staminaData;
-        set => staminaData = (StaminaData)value;
-    }
-
-    // 当前体力值
+    // 当前体力值 - 带事件触发
     public float CurrentValue
     {
         get => staminaData.Current_Stamina;
+        set
+        {
+            staminaData.Current_Stamina = Mathf.Clamp(value, 0, MaxValue);
+            OnChangeStamina.Invoke(); // 值改变时触发事件
+            UpdateSlider(); // 更新Slider显示
+        }
     }
 
-    // 最大体力值
+    // 最大体力值 - 只读属性，不受事件影响
     public float MaxValue
     {
         get => staminaData.Max_Stamina.Value;
+        // 移除了 setter，使其成为只读属性
     }
 }
-[System.Serializable]
-[MemoryPackable]
-public partial class StaminaData : ModuleData
-{
-    public float Current_Stamina;
-    public GameValue_float Max_Stamina;
-}
-

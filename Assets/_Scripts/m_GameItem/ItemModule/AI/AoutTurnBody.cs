@@ -6,18 +6,9 @@ using UnityEngine;
 public class AoutTurnBody : TurnBody
 {
     public ISpeed mover;
-    public new void Start()
+    public new void Load()
     {
-        base.Start();
+        base.Load();
         mover = GetComponentInParent<ISpeed>();
-    }
-    public void Update()
-    {
-        UpdateWork();
-    }
-    public override void UpdateWork()
-    {
-        Vector2 dir = (Vector2)mover.MoveTargetPosition - (Vector2)transform.position;
-        TurnBodyToDirection(dir);
     }
 }

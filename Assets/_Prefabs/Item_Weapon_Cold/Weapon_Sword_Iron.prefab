@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 2078891410120006669}
   - component: {fileID: 619377444006078489}
   - component: {fileID: 2482106438656866000}
-  - component: {fileID: 8200216492207793331}
   m_Layer: 9
   m_Name: Weapon_Sword_Iron
   m_TagString: Untagged
@@ -55,12 +54,13 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
+  OnAct:
+    _PersistentCalls: []
+  Sprite: {fileID: 0}
   _data:
     IDName: IronSword
     GameName: "\u94C1\u5251"
-    ID: 10001
     Description: "\u6D4B\u8BD5"
-    PrefabPath: Assets/_Prefabs/Item/coldWeapon/IronSword.prefab
     Durability: 200
     ItemTags:
       Item_TypeTag:
@@ -136,21 +136,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.5091467, y: 0.19971997}
   m_EdgeRadius: 0
---- !u!114 &8200216492207793331
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1131438331143636471}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6385779351add6f46a5682f5092cf92c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  OnPickUp:
-    _PersistentCalls: []
 --- !u!1 &4203017996904532124
 GameObject:
   m_ObjectHideFlags: 0

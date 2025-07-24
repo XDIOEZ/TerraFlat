@@ -39,7 +39,7 @@ public class Mover_AI : Mover,IAI_NavMesh
     }
 
 
-    public float Speed { get => speedSource.Speed.Value;}
+    public float SpeedValue { get => Speed.Value;}
 
     public NavMeshAgent Agent_Nav
     {
@@ -52,9 +52,9 @@ public class Mover_AI : Mover,IAI_NavMesh
     /// <summary>
     /// 初始化组件引用
     /// </summary>
-    public override void Start()
+    public override void Load()
     {
-        base.Start();
+        base.Load();
         agent = GetComponentInParent<NavMeshAgent>();
         agent.updateUpAxis = false;      // 禁用 Y 轴更新（适用于2D）
         agent.updateRotation = false;    // 禁用自动旋转
@@ -66,7 +66,7 @@ public class Mover_AI : Mover,IAI_NavMesh
     /// <param name="targetPosition">目标位置</param>
     public override void Move(Vector2 targetPosition)
     {
-        agent.speed = Speed;
+        agent.speed = SpeedValue;
         if (Vector2.Distance(transform.position, TargetPosition) <= agent.stoppingDistance)
         {
             // 已抵达目标
@@ -112,25 +112,6 @@ public class Mover_AI : Mover,IAI_NavMesh
     /// </summary>
     private void MoveWithDoTween(Vector2 targetPosition)
     {
-        Rb.velocity = (targetPosition - (Vector2)transform.position).normalized * Speed;
+        Rb.velocity = (targetPosition - (Vector2)transform.position).normalized * SpeedValue;
     }
-
-    #region Organ 抽象类实现
-
-    public override void StartWork()
-    {
-        throw new System.NotImplementedException(); // 待实现逻辑
-    }
-
-    public override void UpdateWork()
-    {
-        throw new System.NotImplementedException(); // 待实现逻辑
-    }
-
-    public override void StopWork()
-    {
-        throw new System.NotImplementedException(); // 待实现逻辑
-    }
-
-    #endregion
 }

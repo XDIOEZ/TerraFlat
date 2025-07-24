@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class ItemDroper : MonoBehaviour
+public class ItemDroper : Module
 {
     [Header("基础配置")]
     public Inventory DroperInventory;
@@ -20,13 +20,34 @@ public class ItemDroper : MonoBehaviour
     public float distanceSensitivity = 0.1f; // 动画时间距离敏感度
 
     public ItemMaker ItemMaker = new ItemMaker();
-    public IFocusPoint FocusPoint;
+    public Inventory_HotBar Hotbar;
+
+    public Ex_ModData modData;
+
+    public override ModuleData _Data { get => modData; set => modData = value as Ex_ModData; }
+
+    private FaceMouse faceMouse;
+    public Vector2 DropPos => faceMouse?.Data.TargetPosition ?? Vector2.zero;
 
     #region 生命周期
-
-    private void Start()
+    public override void Load()
     {
-        FocusPoint = GetComponentInParent<IFocusPoint>();
+        faceMouse = item.Mods[ModText.FaceMouse].GetComponent<FaceMouse>();
+        Hotbar = item.Mods[ModText.Hotbar].GetComponent<Inventory_HotBar>();
+
+        item.GetComponent<PlayerController>()._inputActions.Win10.F.performed += _ =>
+        {
+            if (Hotbar.currentObject != null)
+            {
+                DropItemBySlot(Hotbar.CurrentSelectItemSlot);
+                Hotbar.DestroyCurrentObject();
+            }
+            else
+            {
+                FastDropItem();
+                Hotbar.RefreshUI(Hotbar.CurrentIndex);
+            }
+        };
     }
 
     #endregion
@@ -141,12 +162,6 @@ public class ItemDroper : MonoBehaviour
         itemData.Stack.CanBePickedUp = false;
         newItem.Item_Data = itemData;
 
-        if (dropPos == Vector3.zero)
-        {
-            dropPos = FocusPoint.FocusPointPosition;
-            dropPos.z = 0;
-        }
-
         float distance = Vector3.Distance(transform.position, dropPos);
 
         StartCoroutine(
@@ -165,6 +180,12 @@ public class ItemDroper : MonoBehaviour
 
         dropPos = Vector3.zero;
         return true;
+    }
+
+
+    public override void Save()
+    {
+      //  throw new System.NotImplementedException();
     }
 
     #endregion

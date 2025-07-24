@@ -91,6 +91,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         foreach (Player player in players)
         {
             player.Save();
+            player.ModuleSave();
             SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
             player.gameObject.SetActive(false);
             GameObject_False.Add(player.gameObject);
@@ -335,12 +336,14 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
             if (item == null)
                 continue;
 
+            item.ModuleSave();
+
             if (item is ISave_Load saveableItem)
             {
                 try
                 {
                     saveableItem.Save();
-
+                   
                     if (!item.gameObject.activeInHierarchy)
                     {
                         GameObject_False.Add(item.gameObject);

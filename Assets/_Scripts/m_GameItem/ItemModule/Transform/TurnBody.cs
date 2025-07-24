@@ -1,118 +1,116 @@
-
 using Sirenix.OdinInspector;
 using System.Collections;
 using UltEvents;
 using UnityEngine;
 
-public class TurnBody : Organ, ITurnBody ,IStaminaEvent
+public class TurnBody : Module, ITurnBody
 {
-    #region 公开字段（Inspector配置）
     [Header("转向控制")]
-    [SerializeField]
-    [Tooltip("旋转速度（值越大，旋转越快）")]
-    [Range(1f, 10f)]
-    private float rotationSpeed = 3f; // 默认旋转速度
+    [SerializeField, Range(0.05f, 5f), Tooltip("转向所需时间（秒）")]
+    private float rotationDuration = 0.3f;
 
-    [SerializeField]
-    [Tooltip("需要控制旋转的目标对象，默认为父对象")]
-    private Transform controlledTransform; // 可在 Inspector 设置
+    [SerializeField, Tooltip("需要控制旋转的目标对象，默认为父对象")]
+    private Transform controlledTransform;
 
-    [SerializeField]
-    [Tooltip("当前面向方向，默认右方")]
-    private Vector2 direction = Vector2.right;
+    [SerializeField, Tooltip("当前面向方向，默认右方")]
+    private Vector2 currentDirection = Vector2.right;
 
-    [SerializeField]
-    [Tooltip("是否正在转身（由脚本自动控制）")]
-    [ReadOnly] // 确保编辑器中不可手动修改
+    [SerializeField, ReadOnly, Tooltip("是否正在转身（由脚本自动控制）")]
     private bool isTurning = false;
 
-    public IFocusPoint focusPoint;
+    private float turnTimeElapsed;
+    private float startY;
+    private float targetY;
 
-    #endregion
+    public FaceMouse faceMouse;
 
-    public void Start()
+    public Ex_ModData modData;
+    public override ModuleData _Data
     {
-        focusPoint = GetComponentInParent<IFocusPoint>();
-        // 初始化 controlledTransform（默认为父对象）
-        if (controlledTransform == null)
-        {
-            controlledTransform = transform.parent;
-            if (controlledTransform == null)
-            {
-                Debug.LogError("ControlledTransform 未设置且父对象不存在！请手动配置目标对象。");
-            }
-        }
+        get => modData;
+        set => modData = (Ex_ModData)value;
     }
 
-    private Coroutine turnCoroutine; // 确保不会多次启动旋转
+    public override void Load()
+    {
+        faceMouse = item.Mods[ModText.FaceMouse].GetComponent<FaceMouse>();
+        controlledTransform = item.transform;
 
-    public UltEvent<float> StaminaChange { get;  set; }
+        if (faceMouse == null)
+            Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！");
+        if (controlledTransform == null)
+            Debug.LogError("[TurnBody] 初始化失败：ControlledTransform 未设置！");
+    }
+
+    public void Update()
+    {
+        UpdateWork();
+        UpdateTurn();
+    }
+    private void UpdateWork()
+    {
+        if (faceMouse == null) return;
+
+        Vector2 characterPos = transform.position;
+        Vector2 mousePos = faceMouse.Data.TargetPosition;
+
+        //Debug.Log($"[TurnBody] 角色位置: {characterPos}, 鼠标位置: {mousePos}");
+
+        Vector2 directionToTarget = mousePos - characterPos;
+        if (directionToTarget.sqrMagnitude < 0.001f) return;
+
+        TurnBodyToDirection(directionToTarget);
+    }
+
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
-        // 防止无效操作
-        if (controlledTransform == null)
+        if (controlledTransform == null) return;
+        if (isTurning) return;
+        if (Mathf.Abs(targetDirection.x) < 0.01f) return;
+
+        float facingSign = Mathf.Sign(currentDirection.x);
+        float targetSign = Mathf.Sign(targetDirection.x);
+
+        if (facingSign == targetSign) return;
+
+        currentDirection = (targetDirection.x > 0) ? Vector2.right : Vector2.left;
+        isTurning = true;
+        turnTimeElapsed = 0f;
+        startY = NormalizeAngle(controlledTransform.eulerAngles.y);
+        targetY = (currentDirection == Vector2.right) ? 0f : 180f;
+
+      //  Debug.Log($"[TurnBody] 开始转身 from Y={startY} to Y={targetY}");
+    }
+
+    private void UpdateTurn()
+    {
+        if (!isTurning) return;
+
+        turnTimeElapsed += Time.deltaTime;
+        float t = Mathf.Clamp01(turnTimeElapsed / rotationDuration);
+        float newY = Mathf.LerpAngle(startY, targetY, t);
+        controlledTransform.rotation = Quaternion.Euler(0f, newY, 0f);
+
+        if (Mathf.Abs(Mathf.DeltaAngle(newY, targetY)) < 0.5f || t >= 1f)
         {
-            Debug.LogWarning("ControlledTransform 未设置，无法执行转向！");
-            return;
+            controlledTransform.rotation = Quaternion.Euler(0f, targetY, 0f);
+            isTurning = false;
+          //  Debug.Log($"[TurnBody] 转身完成 到 Y={targetY}");
         }
-
-        if (isTurning) return; // 正在旋转时直接返回
-        if (targetDirection == Vector2.zero) return; // 避免无效输入
-
-        // 确定目标方向
-        Vector2 desiredDirection = targetDirection.x > 0 ? Vector2.right : Vector2.left;
-        if (direction == desiredDirection) return; // 方向未变，无需旋转
-
-        // 停止未完成的协程
-        if (turnCoroutine != null)
-        {
-            StopCoroutine(turnCoroutine);
-        }
-
-        // 启动旋转协程
-        direction = desiredDirection;
-        StaminaChange?.Invoke(10f); // 转向消耗 1 点体力
-        turnCoroutine = StartCoroutine(RotateToTarget(desiredDirection));
+    }
+    private float NormalizeAngle(float angle)
+    {
+        angle %= 360f;
+        if (angle < 0) angle += 360f;
+        return angle;
     }
 
-    private IEnumerator RotateToTarget(Vector2 desiredDirection)
+    public override void Save() { }
+
+    public void ResetTurnState()
     {
-        isTurning = true; // 标记为正在旋转
-
-        float targetAngle = (desiredDirection == Vector2.right) ? 0f : 180f;
-        float startAngle = controlledTransform.eulerAngles.y; // 使用自定义目标对象
-        float elapsedTime = 0f;
-        float duration = 1f / rotationSpeed; // 旋转时间 = 1秒 / 速度
-
-        while (elapsedTime < duration)
-        {
-            // 线性插值旋转
-            float newAngle = Mathf.LerpAngle(startAngle, targetAngle, elapsedTime / duration);
-            controlledTransform.rotation = Quaternion.Euler(0f, newAngle, 0f);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        // 确保最终角度精确
-        controlledTransform.rotation = Quaternion.Euler(0f, targetAngle, 0f);
-        isTurning = false; // 旋转结束
-    }
-
-    public override void StartWork()
-    {
-        Vector2 dir = (Vector2)focusPoint.FocusPointPosition - (Vector2)transform.position;
-        TurnBodyToDirection(dir);
-    }
-
-    public override void UpdateWork()
-    {
-        Vector2 dir = (Vector2)focusPoint.FocusPointPosition - (Vector2)transform.position;
-        TurnBodyToDirection(dir);
-    }
-
-
-    public override void StopWork()
-    {
-        throw new System.NotImplementedException();
+        isTurning = false;
+        turnTimeElapsed = 0f;
+        Debug.Log("[TurnBody] 状态重置");
     }
 }

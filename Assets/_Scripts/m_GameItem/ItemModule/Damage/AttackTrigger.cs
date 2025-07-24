@@ -4,50 +4,58 @@ using UltEvents;
 using UnityEditor;
 using UnityEngine;
 
-public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
+public class AttackTrigger : Module
 {
-    public float DefaultRotationSpeed = 360f;
-    #region 事件
-    // 事件--委托
-    public UltEvent onStartAttack;
-    public UltEvent onStayAttack;
-    public UltEvent onEndAttack;
+    #region 参数
     // 事件--属性
-    public UltEvent OnStartAttack { get=> onStartAttack; set=> onStartAttack = value; }
-    public UltEvent OnStayAttack { get=> onStayAttack; set=> onStayAttack = value; }
-    public UltEvent OnEndAttack { get=> onEndAttack; set=> onEndAttack = value; }
-    #endregion
+    public UltEvent OnStartAttack  = new UltEvent();
+    public UltEvent OnStayAttack = new UltEvent();
+    public UltEvent OnEndAttack  = new UltEvent();
 
-    #region 当前使用的武器对象
-    [ShowNonSerializedField]
-    GameObject weaponGameObject;
-
-    public float RotationSpeedCoefficient = 1f;
-    public GameObject Weapon_GameObject
-    {
-        get
-        {
-            return weaponGameObject;
-        }
-        set
-        {
-            weaponGameObject = value;
-        }
-    
-    } // 武器对象
-
-    public void SetWeapon(GameObject _weapon)
-    {
-        Weapon_GameObject = _weapon;
-        Attacker = weaponGameObject.GetComponent<IAttackState>();
-        WeaponData = weaponGameObject.GetComponent<IColdWeapon>();
-        if (_weapon.GetComponentInChildren<IDamageSender>()!= null)
-        _weapon.GetComponentInChildren<IDamageSender>().OnDamage += karou;
-    }
+    public Item Weapon;
+    public IAttackState Attacker;
 
     private Coroutine hitPauseCoroutine;
+
+    public GameValue_float RotationSpeed;
+
     bool HitStop = false;
-    void karou(float damage)
+
+    #region 攻击行为的状态参数
+    public Vector2 StartPosition; // 保存初始位置
+    public Vector3 MouseTarget;
+    public bool CanAttack;
+    public AttackState CurrentState = AttackState.Idle; // 当前状态
+    public Coroutine returnCoroutine;
+    public IColdWeapon WeaponData;
+
+    public Ex_ModData ModData;
+    public override ModuleData _Data { get => ModData; set => ModData = value as Ex_ModData; }
+    #endregion
+
+    #endregion
+    public override void Load()
+    {
+        StaminaManager staminaManager = transform.parent.GetComponentInChildren<StaminaManager>();
+        if (staminaManager != null)
+        {
+            // 使用EffectiveStaminaCost保证武器数据更新时精力消耗值也跟着更新
+            OnStartAttack += () => staminaManager.StartReduceStamina(WeaponData.EnergyCostSpeed, "AttackTrigger");
+            OnEndAttack += () => staminaManager.StopReduceStamina("AttackTrigger");
+            staminaManager.OnStaminaChanged += SetCanAttack; // 注册精力值变化事件
+        }
+    }
+
+    public void SetWeapon(Item _weapon)
+    {
+        Weapon = _weapon;
+        Attacker = _weapon.GetComponent<IAttackState>();
+        WeaponData = _weapon.GetComponent<IColdWeapon>();
+        if (_weapon.GetComponentInChildren<IDamageSender>()!= null)
+        _weapon.GetComponentInChildren<IDamageSender>().OnDamage += AttackStop;
+    }
+
+    void AttackStop(float damage)
     {
         if (damage > 1)
         {
@@ -62,95 +70,18 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     IEnumerator HitPauseTransform()
     {
-        if (Weapon_GameObject == null) yield break;
-        float rotationSpeed = RotationSpeed;
+        if (Weapon == null) yield break;
+        float rotationSpeed = RotationSpeed.Value;
         HitStop = true;
-        RotationSpeedCoefficient = 0;
+        RotationSpeed.MultiplicativeModifier = 0;
 
         yield return new WaitForSeconds(0.15f);
 
         HitStop = false;
-        RotationSpeedCoefficient = rotationSpeed;
+        RotationSpeed.MultiplicativeModifier = 1;
     }
 
 
-
-
-    #endregion
-
-    #region 挂接的武器数据和行为接口
-
-    // 挂接的攻击行为接口
-    [ShowNonSerializedField]
-    private IAttackState attacker;
- 
-    public IAttackState Attacker
-    {
-        get
-        {
-            return attacker;
-        }
-        set
-        {
-            attacker = value;
-        }
-    }
-    [ShowNonSerializedField]
-    // 挂接的武器数据
-    private IColdWeapon weapon;
-    public IColdWeapon WeaponData
-    {
-        get
-        {
-            return weapon;
-        }
-
-        set
-        {
-            weapon = value;
-        }   
-    }
-
-    public float RotationSpeed
-    {
-        get
-        {
-            if (WeaponData == null)
-            {
-                return DefaultRotationSpeed;
-            }
-          return  WeaponData.SpinSpeed;
-        }
-
-        set
-        {
-            WeaponData.SpinSpeed = value;
-        }
-    }
-
-    #endregion
-
-    #region 攻击行为的状态参数
-    public Vector2 StartPosition; // 保存初始位置
-    public Vector3 MouseTarget;
-    public bool CanAttack;
-    public AttackState CurrentState = AttackState.Idle; // 当前状态
-    private Coroutine returnCoroutine;
-    #endregion
-
-    #region (注册攻击
-    private void Start()
-    {
-        StaminaManager staminaManager = transform.parent.GetComponentInChildren<StaminaManager>();
-        if (staminaManager != null)
-        {
-            // 使用EffectiveStaminaCost保证武器数据更新时精力消耗值也跟着更新
-            OnStartAttack += () => staminaManager.StartReduceStamina(WeaponData.EnergyCostSpeed, "AttackTrigger");
-            OnEndAttack += () => staminaManager.StopReduceStamina("AttackTrigger");
-            staminaManager.OnStaminaChanged += SetCanAttack; // 注册精力值变化事件
-        }
-    }
-    #endregion
 
     #region (设置是否可以攻击, 触发攻击)外部接口
 
@@ -168,7 +99,7 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
 
     public void TriggerAttack(KeyState keyState, Vector3 Target)
     {
-        if (Weapon_GameObject == null || Attacker == null)
+        if (Weapon == null || Attacker == null)
         {
             Attacker = null;
             WeaponData = null;
@@ -298,29 +229,6 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         );
     }
 
-
-    public void FaceToMouse(Vector3 targetPosition)
-    {
-        // 1. 计算目标方向
-        Vector2 direction = targetPosition - transform.position;
-
-        // 2. 计算目标角度（转为角度制）
-        float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-
-        // 3. 获取当前角度（绕 Z 轴的欧拉角）
-        float currentAngle = transform.localEulerAngles.z;
-
-        // 4. 计算插值角度步长（带旋转速度系数）
-        float angleStep = RotationSpeed * Time.deltaTime * RotationSpeedCoefficient;
-
-        // 5. 平滑角度变化（防止角度跳变）
-        float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, angleStep);
-
-        // 6. 应用旋转
-        transform.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
-    }
-
-
     private IEnumerator ReturnToStartPositionCoroutine(Vector2 startTarget, float backSpeed)
     {
 
@@ -367,20 +275,12 @@ public class AttackTrigger : MonoBehaviour, ITriggerAttack ,IRotationSpeed
         if (!gameObject.activeInHierarchy) return;
 #endif
         CurrentState = AttackState.Returning;
-
-
-
         StartReturningToStartPosition(StartPosition, WeaponData.ReturnSpeed);
     }
 
-    public void StopTriggerAttack()
+    public override void Save()
     {
-        throw new System.NotImplementedException();
-    }
-
-    public void StartTriggerAttack()
-    {
-        throw new System.NotImplementedException();
+        //throw new System.NotImplementedException();
     }
     #endregion
 

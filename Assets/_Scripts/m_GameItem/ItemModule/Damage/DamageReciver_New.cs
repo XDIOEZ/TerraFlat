@@ -8,7 +8,7 @@ using UnityEngine;
 public class DamageReceiver_New : Module, IDamageReceiver
 {
     public Ex_ModData modData;
-    public override ModuleData Data { get => modData; set => modData = (Ex_ModData)value; }
+    public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
 
     [Header("Damage Panel Settings")]
     public string DamagePanelName = "Panel_DamageText"; // 新增伤害数字面板名称

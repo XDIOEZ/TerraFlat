@@ -3,25 +3,55 @@ using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Mover 用于处理游戏对象的移动逻辑
 /// </summary>
-public class Mover : Organ, IMove ,IStaminaEvent
+public partial class Mover : Module, IMove
 {
+    #region 保存数据类
+    [System.Serializable]
+    [MemoryPack.MemoryPackable]
+    public partial class Mover_SaveData
+    {
+        [Header("移动设置")]
+        public GameValue_float Speed = new GameValue_float(10f);
+        public float slowDownSpeed = 5f;
+        public float endSpeed = 0.1f;
+
+        // 可根据需要添加更多需要保存的字段
+    }
+    #endregion
+
     #region 字段
 
     [Header("移动设置")]
     [Tooltip("速度源")]
-    protected ISpeed speedSource;
+    [SerializeField]
+    public Mover_SaveData saveData = new Mover_SaveData();
 
-    [Tooltip("减速速率")]
-    public float slowDownSpeed = 5f;
+    // 将需要保存的字段改为属性，引用saveData中的字段
+    public GameValue_float Speed
+    {
+        get => saveData.Speed;
+        set => saveData.Speed = value;
+    }
 
-    [Tooltip("停止时的最小速度，小于该值则停止移动")]
-    public float endSpeed = 0.1f;
+    public float slowDownSpeed
+    {
+        get => saveData.slowDownSpeed;
+        set => saveData.slowDownSpeed = value;
+    }
 
-    private Vector2 _lastDirection = Vector2.zero;
+    public float endSpeed
+    {
+        get => saveData.endSpeed;
+        set => saveData.endSpeed = value;
+    }
+
+    [Tooltip("移动目标")]
+    public Vector3 TargetPosition;
 
     [Tooltip("是否正在移动")]
     public bool IsMoving;
@@ -35,7 +65,12 @@ public class Mover : Organ, IMove ,IStaminaEvent
     [Tooltip("移动开始事件")]
     public UltEvent OnMoveStart;
 
-    public float StaminaChangeSpeed => speedSource.Speed.Value;
+    private InputAction moveAction;
+
+    public Mod_Stamina stamina;
+
+    //每秒精力消耗速度
+    public GameValue_float staminaConsumeSpeed = new(1);
 
     #endregion
 
@@ -45,18 +80,58 @@ public class Mover : Organ, IMove ,IStaminaEvent
 
     #endregion
 
-    #region Unity 生命周期
-    public Vector3 TargetPosition
-    {
-        get => speedSource.MoveTargetPosition;
-        set => speedSource.MoveTargetPosition = value;
-    }
-    public UltEvent<float> StaminaChange { get; set; }
+    #region 数据管理
+    public Ex_ModData_MemoryPack ModDataMemoryPack = new Ex_ModData_MemoryPack();
 
-    public virtual void Start()
+    public override ModuleData _Data { get => ModDataMemoryPack; set => ModDataMemoryPack = (Ex_ModData_MemoryPack)value; }
+    #endregion
+
+    #region Unity 生命周期
+
+    public override void Awake()
     {
+        if (_Data.Name == "")
+        {
+            _Data.Name = ModText.Mover;
+        }
+    }
+
+    public override void Load()
+    {
+        ModDataMemoryPack.ReadData(ref saveData);
+
         Rb = GetComponentInParent<Rigidbody2D>();
-        speedSource = GetComponentInParent<ISpeed>();
+
+        if (item.Mods.ContainsKey(ModText.Controller))
+        {
+            var controller = item.Mods[ModText.Controller].GetComponent<PlayerController>();
+            moveAction = controller._inputActions.Win10.Move_Player;
+        }
+
+        if (item.Mods.ContainsKey(ModText.Stamina))
+        {
+            stamina = item.Mods[ModText.Stamina].GetComponent<Mod_Stamina>();
+        }
+    }
+
+    public void Update()
+    {
+        if (moveAction == null) return;
+
+        Vector2 input = moveAction.ReadValue<Vector2>();
+
+        if (input.sqrMagnitude > 0.001f)
+        {
+            Vector2 target = Rb.position + input.normalized;
+            Move(target);
+            OnMoveStay?.Invoke();
+            if (stamina != null)
+                stamina.CurrentValue -= Time.deltaTime * staminaConsumeSpeed.Value;
+        }
+        else
+        {
+            Move(Rb.position); // 触发停止检测
+        }
     }
 
     #endregion
@@ -82,44 +157,19 @@ public class Mover : Organ, IMove ,IStaminaEvent
             return;
         }
 
-        /*// 更新方向（避免重复归一化）
-        if (direction != _lastDirection)
-        {
-            _lastDirection = direction;
-        }*/
-        StaminaChange.Invoke(speedSource.Speed.Value * Time.deltaTime);
-
         // 计算最终速度
-        Rb.velocity = (TargetPosition - Rb.position).normalized * speedSource.Speed.Value;
+        Rb.velocity = (TargetPosition - Rb.position).normalized * Speed.Value;
     }
 
     #endregion
 
     #region 私有方法
 
-    public override void StartWork()
+    public override void Save()
     {
-        
-    }
-
-    public override void UpdateWork()
-    {
-        //Move(speedSource.MoveTargetPosition);
-    }
-
-    public override void StopWork()
-    {
-        throw new System.NotImplementedException();
+         ModDataMemoryPack.WriteData(saveData);
+        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
     }
 
     #endregion
-}
-
-/// <summary>
-/// 速度变化类型枚举：加法或乘法
-/// </summary>
-public enum ValueChangeType
-{
-    Add,
-    Multiply,
 }

@@ -49,6 +49,10 @@ public abstract class Item : MonoBehaviour
 
         ModuleLoad();
     }
+    public void OnDestroy()
+    {
+        ModuleSave();
+    }
 
     /// <summary>
     /// 加载并初始化模块（包括缺失补齐、初始化字典等）
@@ -71,8 +75,8 @@ public abstract class Item : MonoBehaviour
             var Modules = GetComponentsInChildren<Module>(true).ToList();
             foreach (var mod in Modules)
             {
-                Mods[mod.Data.Name] = mod; // 添加到字典
-                Item_Data.ModuleDataDic[mod.Data.Name] = mod.Data; // 添加到数据字典
+                Mods[mod._Data.Name] = mod; // 添加到字典
+                Item_Data.ModuleDataDic[mod._Data.Name] = mod._Data; // 添加到数据字典
             }
             foreach(var mod in Mods.Values)
             {
@@ -86,7 +90,11 @@ public abstract class Item : MonoBehaviour
 
             foreach (var mod in Modules)
             {
-                Mods[mod.Data.Name] = mod; // 添加到字典
+                Mods[mod._Data.Name] = mod; // 添加到字典
+                if (Item_Data.ModuleDataDic.ContainsKey(mod._Data.Name) == false)
+                {
+                    Item_Data.ModuleDataDic[mod._Data.Name] = mod._Data; // 添加到数据字典
+                }
             }
 
             foreach (ModuleData modData in Item_Data.ModuleDataDic.Values)
@@ -106,6 +114,14 @@ public abstract class Item : MonoBehaviour
             }
         }
 
+    }
+
+    public void ModuleSave()
+    {
+        foreach (Module mod in Mods.Values)
+        {
+            mod.Save();
+        }
     }
 
     public void SyncPosition()
