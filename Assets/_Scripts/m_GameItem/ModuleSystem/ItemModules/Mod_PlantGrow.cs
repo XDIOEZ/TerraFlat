@@ -60,7 +60,7 @@ public class Mod_PlantGrow : Module
 
            // new ItemMaker().DropItem_cric(product, transform.position, 2);
 
-            GetComponent<Mod_ItemMaker>().DropItem(product, transform.position, 2, 1);
+            GetComponent<Mod_ItemMaker>().DropItem_Range(product, transform.position, 2, 1);
             // 如果实例化成功，设置物品数量
             if (product != null)
             {

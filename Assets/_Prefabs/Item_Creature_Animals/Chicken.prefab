@@ -46,6 +46,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6cbe05dc9e2ebf747bcc0d42f70ec020, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 0
+    BitData: 
   DamagePanelName: Panel_DamageText
   damagePanelSpeed: 3
   damagePanelDuration: 1.5
@@ -165,10 +170,11 @@ Transform:
   m_Children:
   - {fileID: 1388989564934479353}
   - {fileID: 279298097632468998}
-  - {fileID: 4141860901184508101}
   - {fileID: 8884633365103484404}
+  - {fileID: 4141860901184508101}
   - {fileID: 8858718869245111966}
   - {fileID: 1487544228942658785}
+  - {fileID: 917846501771513635}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8788730563488070657
@@ -190,8 +196,9 @@ MonoBehaviour:
     _PersistentCalls: []
   DestroyItem_Event:
     _PersistentCalls: []
-  OnAction_Event:
+  OnAct:
     _PersistentCalls: []
+  Sprite: {fileID: 0}
   Data:
     IDName: Chicken
     GameName: "\u9E21"
@@ -535,11 +542,48 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8eced6a90ad0184e911db2321f57ac4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  organName: 
-  rotationSpeed: 3
+  item: {fileID: 0}
+  rotationDuration: 0.3
   controlledTransform: {fileID: 0}
-  direction: {x: 1, y: 0}
+  currentDirection: {x: 1, y: 0}
   isTurning: 0
+  faceMouse: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 0
+    BitData: 
+  mover: {fileID: 0}
+--- !u!1 &3675996636383087212
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2849073660659784377}
+  m_Layer: 9
+  m_Name: FaceItem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2849073660659784377
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3675996636383087212}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 917846501771513635}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6387856590930803114
 GameObject:
   m_ObjectHideFlags: 0
@@ -584,9 +628,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0afa4625e38945140b2421639e9d6c5a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  organName: 
-  slowDownSpeed: 5
-  endSpeed: 0.1
+  item: {fileID: 0}
+  saveData:
+    Speed:
+      BaseValue: 10
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    slowDownSpeed: 5
+    endSpeed: 0.1
+  TargetPosition: {x: 0, y: 0, z: 0}
   IsMoving: 0
   OnMoveEnd:
     _PersistentCalls: []
@@ -594,6 +646,17 @@ MonoBehaviour:
     _PersistentCalls: []
   OnMoveStart:
     _PersistentCalls: []
+  stamina: {fileID: 0}
+  staminaConsumeSpeed:
+    BaseValue: 1
+    BaseAdditive: 0
+    AdditiveModifier: 0
+    MultiplicativeModifier: 1
+    FinalAdditive: 0
+  ModDataMemoryPack:
+    Name: 
+    isRunning: 0
+    BitData: 
   targetPosition: {x: 0, y: 0, z: 0}
   target: {fileID: 0}
   agent: {fileID: 0}
@@ -642,6 +705,61 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &6916727058987276155
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 917846501771513635}
+  - component: {fileID: 2803089907767139299}
+  m_Layer: 9
+  m_Name: FaceMouse
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &917846501771513635
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6916727058987276155}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2849073660659784377}
+  m_Father: {fileID: 4050397865490026434}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2803089907767139299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6916727058987276155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a277cfb9c0e45dc40b7d9eabd4dd8959, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  Data:
+    RotationDuration: 1
+    TargetPosition: {x: 0, y: 0, z: 0}
+  ModData:
+    Name: 
+    isRunning: 0
+    BitData: 
+  PlayerController: {fileID: 0}
+  faceItem: {fileID: 0}
 --- !u!1 &7020901129659560470
 GameObject:
   m_ObjectHideFlags: 0

@@ -42,14 +42,15 @@ public class GetItemPosition : ActionNode
     [Tooltip("找到目标后不执行任何移动操作")]
     public bool doNothing = false;
 
-    public ISpeed Speeder;
+    public Mover Speeder;
     #endregion
 
     #region 重写方法
     protected override void OnStart()
     {
         // 节点开始时的初始化逻辑
-        Speeder = context.gameObject.GetComponent<ISpeed>();
+        Speeder = context.item.Mods[ModText.Mover] as Mover;
+        Debug.Log($"[{GetType().Name}] 速度控制器: {Speeder}");
     }
 
     protected override void OnStop()
@@ -190,7 +191,7 @@ public class GetItemPosition : ActionNode
     private void ProcessChaseMovement(Vector2 targetPosition)
     {
         blackboard.TargetPosition = targetPosition;
-        Speeder.MoveTargetPosition = targetPosition;
+        Speeder.TargetPosition = targetPosition;
         Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
     }
 
@@ -211,7 +212,7 @@ public class GetItemPosition : ActionNode
         Vector2 escapePoint = currentPosition + rotatedDirection * runDistance;
 
         blackboard.TargetPosition = escapePoint;
-        Speeder.MoveTargetPosition = escapePoint;
+        Speeder.TargetPosition = escapePoint;
        // Debug.Log($"[{GetType().Name}] 设置逃离目标位置: {escapePoint}");
     }
 

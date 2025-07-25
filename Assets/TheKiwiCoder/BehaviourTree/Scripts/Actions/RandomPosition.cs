@@ -8,11 +8,11 @@ public class RandomPosition : ActionNode
 
     public Vector2 min = Vector2.one * -10;
     public Vector2 max = Vector2.one * 10;
-    ISpeed speed;
+    Mover speed;
 
     protected override void OnStart() 
     {
-        speed = context.gameObject.GetComponent<ISpeed>();
+        speed = context.item.Mods[ModText.Mover] as Mover;
     }
 
     protected override void OnStop() {
@@ -24,7 +24,7 @@ public class RandomPosition : ActionNode
             blackboard.TargetPosition.y = Random.Range(min.y, max.y);
 
 
-        speed.MoveTargetPosition = context.transform.position + blackboard.TargetPosition;
+        speed.TargetPosition = context.transform.position + blackboard.TargetPosition;
 
     
         return State.Success;

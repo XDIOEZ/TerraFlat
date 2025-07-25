@@ -22,10 +22,10 @@ public partial class Mod_Stamina : Module
     public override ModuleData _Data
     {
         get => modData;
-        set => modData = (Ex_ModData_MemoryPack)value;
+        set => modData = (Ex_ModData_MemoryPackable)value;
     }
 
-    public Ex_ModData_MemoryPack modData;
+    public Ex_ModData_MemoryPackable modData;
 
     public Slider slider;
 

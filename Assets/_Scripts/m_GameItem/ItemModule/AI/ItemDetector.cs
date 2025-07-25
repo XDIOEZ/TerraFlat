@@ -1,4 +1,4 @@
-using NaughtyAttributes;
+ï»¿using NaughtyAttributes;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
@@ -9,44 +9,41 @@ using UnityEditor;
 #endif
 using UnityEngine;
 
-public class ItemDetector : MonoBehaviour, IDebug, IDetector
+public class ItemDetector : Module, IDebug, IDetector
 {
-    [SerializeField, BoxGroup("¼ì²â²ÎÊı")]
+    [SerializeField, BoxGroup("æ£€æµ‹å‚æ•°")]
     private float detectionRadius = 10f;
 
-    [SerializeField, BoxGroup("¼ì²â²ÎÊı")]
+    [SerializeField, BoxGroup("æ£€æµ‹å‚æ•°")]
     public LayerMask itemLayer;
 
-    [SerializeField, BoxGroup("µ±Ç°×´Ì¬")]
+    [SerializeField, BoxGroup("å½“å‰çŠ¶æ€")]
     private List<Item> currentItemsInArea = new List<Item>();
 
-    [ShowNativeProperty, Tooltip("µ±Ç°×´Ì¬")]
+    [ShowNativeProperty, Tooltip("å½“å‰çŠ¶æ€")]
     public int CurrentItemCount => CurrentItemsInArea.Count;
 
-    [Tooltip("stringÎªtag,ItemÎªValueµÄ×Öµä")]
+    [Tooltip("stringä¸ºtag,Itemä¸ºValueçš„å­—å…¸")]
     public Dictionary<string, Item> Tag_Item_Dict = new Dictionary<string, Item>();
 
-    // IDebug½Ó¿ÚÊµÏÖ
+    // IDebugæ¥å£å®ç°
     [ShowNativeProperty]
     public bool DebugMode { get; set; }
     public List<Item> CurrentItemsInArea { get => currentItemsInArea; set => currentItemsInArea = value; }
     public float DetectionRadius { get => detectionRadius; set => detectionRadius = value; }
-
-    [Button("Ç¿ÖÆ¸üĞÂ¼ì²âÆ÷")]
+    public Ex_ModData_MemoryPackable ModData;
+    public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
+    [Button("å¼ºåˆ¶æ›´æ–°æ£€æµ‹å™¨")]
     public void Update_Detector()
     {
         if (DebugMode)
-            Debug.Log($"<color=yellow>=== ¿ªÊ¼¼ì²â£¨Î»ÖÃ£º{transform.position}£¬°ë¾¶£º{DetectionRadius}£©===</color>");
+            Debug.Log($"<color=yellow>=== å¼€å§‹æ£€æµ‹ï¼ˆä½ç½®ï¼š{transform.position}ï¼ŒåŠå¾„ï¼š{DetectionRadius}ï¼‰===</color>");
 
         Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position, DetectionRadius, itemLayer);
 
         List<Item> currentItems = hitColliders
-            .Select(col =>
-            {
-                Item item = col.GetComponent<Item>();
-                return item;
-            })
-            .Where(item => item != null)
+            .Select(col => col.GetComponent<Item>())
+            .Where(item => item != null && item != this.item) // âœ… æ’é™¤è‡ªå·±
             .Distinct()
             .ToList();
 
@@ -67,14 +64,14 @@ public class ItemDetector : MonoBehaviour, IDebug, IDetector
     private void CheckItemEntries(List<Item> currentItems)
     {
         if (DebugMode)
-            Debug.Log($"<color=green>=== ¼ì²âÎïÆ·±ä»¯ ===</color>");
+            Debug.Log($"<color=green>=== æ£€æµ‹ç‰©å“å˜åŒ– ===</color>");
 
         foreach (var item in currentItems)
         {
             if (!CurrentItemsInArea.Contains(item))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=lime>½øÈëÇøÓò£º{item.name}£¨ID£º{item.GetInstanceID()}£©</color>");
+                    Debug.Log($"<color=lime>è¿›å…¥åŒºåŸŸï¼š{item.name}ï¼ˆIDï¼š{item.GetInstanceID()}ï¼‰</color>");
                 OnItemEnter(item);
             }
         }
@@ -84,7 +81,7 @@ public class ItemDetector : MonoBehaviour, IDebug, IDetector
             if (!currentItems.Contains(item))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=orange>Àë¿ªÇøÓò£º{item.name}£¨ID£º{item.GetInstanceID()}£©</color>");
+                    Debug.Log($"<color=orange>ç¦»å¼€åŒºåŸŸï¼š{item.name}ï¼ˆIDï¼š{item.GetInstanceID()}ï¼‰</color>");
                 OnItemExit(item);
             }
         }
@@ -92,26 +89,26 @@ public class ItemDetector : MonoBehaviour, IDebug, IDetector
         CurrentItemsInArea = currentItems;
 
         if (DebugMode)
-            Debug.Log($"<color=blue>µ±Ç°ÇøÓòÎïÆ·×ÜÊı£º{CurrentItemCount}</color>");
+            Debug.Log($"<color=blue>å½“å‰åŒºåŸŸç‰©å“æ€»æ•°ï¼š{CurrentItemCount}</color>");
     }
 
     private void OnItemEnter(Item item)
     {
         if (DebugMode)
-            Debug.Log($"<color=green>´¦Àí½øÈëÊÂ¼ş£º{item.name}</color>");
+            Debug.Log($"<color=green>å¤„ç†è¿›å…¥äº‹ä»¶ï¼š{item.name}</color>");
     }
 
     private void OnItemExit(Item item)
     {
         if (DebugMode)
-            Debug.Log($"<color=orange>´¦ÀíÀë¿ªÊÂ¼ş£º{item.name}</color>");
+            Debug.Log($"<color=orange>å¤„ç†ç¦»å¼€äº‹ä»¶ï¼š{item.name}</color>");
     }
 
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
-        Color transparentYellow = new Color(1f, 0.92f, 0.016f, 0.4f); // ¸üµ­µÄ»Æ
-        Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // µ­ºì
+        Color transparentYellow = new Color(1f, 0.92f, 0.016f, 0.4f); // æ›´æ·¡çš„é»„
+        Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // æ·¡çº¢
 
         Gizmos.color = transparentYellow;
         Gizmos.DrawWireSphere(transform.position, DetectionRadius);
@@ -121,6 +118,16 @@ public class ItemDetector : MonoBehaviour, IDebug, IDetector
             Gizmos.color = transparentRed;
             Gizmos.DrawWireSphere(transform.position, DetectionRadius);
         }
+    }
+
+    public override void Load()
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public override void Save()
+    {
+        throw new System.NotImplementedException();
     }
 #endif
 

@@ -1,6 +1,7 @@
-﻿/*using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -18,6 +19,10 @@ public class BasePanel : MonoBehaviour
 
     private Dictionary<string, List<UIBehaviour>> controlDic = new();
     public CanvasGroup canvasGroup;
+    public bool CanDrag  = false;
+    public UI_Drag Drager;
+
+
     protected virtual void Awake()
     {
 
@@ -30,6 +35,11 @@ public class BasePanel : MonoBehaviour
         FindChildrenControl<ScrollRect>();
         FindChildrenControl<InputField>();
 
+        Drager = GetComponentInChildren<UI_Drag>();
+        if (Drager != null)
+        {
+            CanDrag = true;
+        }
         canvasGroup = GetComponentInChildren<CanvasGroup>();
     }
 
@@ -225,4 +235,3 @@ public class BasePanel : MonoBehaviour
         }
     }
 }
-*/

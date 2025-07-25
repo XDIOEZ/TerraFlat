@@ -8838,15 +8838,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  Speed:
-    BaseValue: 10
-    BaseAdditive: 0
-    AdditiveModifier: 0
-    MultiplicativeModifier: 1
-    FinalAdditive: 0
+  saveData:
+    Speed:
+      BaseValue: 10
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    slowDownSpeed: 5
+    endSpeed: 0.1
   TargetPosition: {x: 0, y: 0, z: 0}
-  slowDownSpeed: 20
-  endSpeed: 0.1
   IsMoving: 0
   OnMoveEnd:
     _PersistentCalls: []
@@ -8854,6 +8855,13 @@ MonoBehaviour:
     _PersistentCalls: []
   OnMoveStart:
     _PersistentCalls: []
+  stamina: {fileID: 0}
+  staminaConsumeSpeed:
+    BaseValue: 1
+    BaseAdditive: 0
+    AdditiveModifier: 0
+    MultiplicativeModifier: 1
+    FinalAdditive: 0
   ModDataMemoryPack:
     Name: 
     isRunning: 0
@@ -8899,7 +8907,11 @@ MonoBehaviour:
         _Object: {fileID: 0}
   buffData: {fileID: 11400000, guid: 0a5d871a7f32eac4d892b8b6a621d6a6, type: 2}
   buffManager: {fileID: 0}
-  isRun: 0
+  mover: {fileID: 0}
+  saveData:
+    runStaminaRate: 2
+    runSpeedRate: 2
+    isRun: 0
   modData:
     Name: 
     isRunning: 0
@@ -20041,7 +20053,7 @@ GameObject:
   - component: {fileID: 8597711395360670053}
   - component: {fileID: 5082210393963432928}
   - component: {fileID: 5473420755578030367}
-  - component: {fileID: 8763388006508951598}
+  - component: {fileID: 5151100702493638091}
   m_Layer: 9
   m_Name: "\u62FE\u53D6\u548C\u4E22\u5F03"
   m_TagString: Untagged
@@ -20125,7 +20137,7 @@ MonoBehaviour:
   - {fileID: 3084396597801062381}
   - {fileID: 2122125434698797065}
   canPickUp: 1
---- !u!114 &8763388006508951598
+--- !u!114 &5151100702493638091
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -20138,36 +20150,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 1
+    BitData: 
+  drops: []
+  bezierOffset: 1
+  arcHeight: 1
   DroperInventory: {fileID: 0}
   ItemToDrop_Slot:
     CanAcceptItemType:
-      Item_TypeTag: []
-      Item_Material: []
-    SlotMaxVolume: 1
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
+    SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
-  DropPos_UI: {fileID: 0}
-  dropPos: {x: 0, y: 0, z: 0}
-  _Index: 0
-  parabolaHeight: 5
-  baseDropDuration: 0.3
-  distanceSensitivity: 0.02
-  ItemMaker:
-    loots:
-      lootList: []
-    DropRange: 2
-    baseDuration: 0.5
-    distanceSensitivity: 0.1
-    baseRotationSpeed: 360
-    rotationSpeedFactor: 0.8
-    maxHeight: 5
-    bounceHeightMin: 0.05
-    bounceHeightMax: 0.5
+  parabolaHeight: 2
+  baseDropDuration: 0.5
+  distanceSensitivity: 0.1
   Hotbar: {fileID: 0}
-  modData:
-    Name: "\u4E22\u5F03\u7269\u54C1\u6A21\u5757"
-    isRunning: 0
-    BitData: 
+  playerController: {fileID: 0}
 --- !u!1 &7502732370491666366
 GameObject:
   m_ObjectHideFlags: 0

@@ -81,9 +81,9 @@ public partial class Mover : Module, IMove
     #endregion
 
     #region 数据管理
-    public Ex_ModData_MemoryPack ModDataMemoryPack = new Ex_ModData_MemoryPack();
+    public Ex_ModData_MemoryPackable ModDataMemoryPack = new Ex_ModData_MemoryPackable();
 
-    public override ModuleData _Data { get => ModDataMemoryPack; set => ModDataMemoryPack = (Ex_ModData_MemoryPack)value; }
+    public override ModuleData _Data { get => ModDataMemoryPack; set => ModDataMemoryPack = (Ex_ModData_MemoryPackable)value; }
     #endregion
 
     #region Unity 生命周期

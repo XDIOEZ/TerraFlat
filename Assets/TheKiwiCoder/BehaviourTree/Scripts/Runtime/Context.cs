@@ -23,6 +23,7 @@ namespace TheKiwiCoder {
         public IDetector itemDetector;
         public Mover mover;
         public IItemValues itemValues;
+        public Item item;
         // Add other game specific systems here
 
         public static Context CreateFromGameObject(GameObject gameObject) {
@@ -40,6 +41,7 @@ namespace TheKiwiCoder {
             context.itemDetector = gameObject.GetComponentInChildren<IDetector>();
             context.mover = gameObject.GetComponentInChildren<Mover>();
             context.itemValues = gameObject.GetComponentInChildren<IItemValues>();
+            context.item = gameObject.GetComponentInChildren<Item>();
             // Add whatever else you need here...
 
             return context;

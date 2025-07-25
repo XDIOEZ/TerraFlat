@@ -5,10 +5,15 @@ using UnityEngine;
 
 public class AoutTurnBody : TurnBody
 {
-    public ISpeed mover;
-    public new void Load()
+    public Mover mover;
+    public override void Load()
     {
         base.Load();
-        mover = GetComponentInParent<ISpeed>();
+        mover = item.Mods[ModText.Mover] as Mover;
+    }
+
+    public override void Update()
+    {
+        TurnBodyToDirection(mover.TargetPosition-item.transform.position);
     }
 }

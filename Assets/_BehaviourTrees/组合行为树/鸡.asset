@@ -152,7 +152,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 300e42cf53443104b8c1dd88dacb8136
-  position: {x: 223.19995, y: 1696}
+  position: {x: 223.20001, y: 1696}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -272,6 +272,7 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 1
   doNothing: 0
+  Speeder: {fileID: 0}
 --- !u!114 &-5490670431961927780
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -359,6 +360,7 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 0
   doNothing: 1
+  Speeder: {fileID: 0}
 --- !u!114 &-4435058565894111619
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -418,6 +420,7 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 1
   doNothing: 0
+  Speeder: {fileID: 0}
 --- !u!114 &-3066632926509538146
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -661,6 +664,7 @@ MonoBehaviour:
   angleVariance: 90
   setBlackboardTarget: 1
   doNothing: 0
+  Speeder: {fileID: 0}
 --- !u!114 &-1251563694989493460
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1032,7 +1036,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 71de7a36c702f8647960848eeda6a800
-  position: {x: 552.23615, y: 859.1998}
+  position: {x: 552.0001, y: 859.20013}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}

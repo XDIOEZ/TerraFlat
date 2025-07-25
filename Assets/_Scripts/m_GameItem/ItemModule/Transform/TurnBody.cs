@@ -42,7 +42,7 @@ public class TurnBody : Module, ITurnBody
             Debug.LogError("[TurnBody] ≥ı ºªØ ß∞‹£∫ControlledTransform Œ¥…Ë÷√£°");
     }
 
-    public void Update()
+    public override void Update()
     {
         UpdateWork();
         UpdateTurn();

@@ -14,7 +14,6 @@ using DG.Tweening;
 public class Mover_AI : Mover,IAI_NavMesh
 {
     [Header("移动目标")]
-    public Vector3 targetPosition; // 目标位置
     public Transform target;       // 目标物体（可选）
 
     [Header("组件引用")]

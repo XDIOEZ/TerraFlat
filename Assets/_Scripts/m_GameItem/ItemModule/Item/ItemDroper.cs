@@ -3,41 +3,50 @@ using NaughtyAttributes;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.XR;
 
-public class ItemDroper : Module
+public class ItemDroper : Mod_ItemMaker
 {
     [Header("基础配置")]
     public Inventory DroperInventory;
     public ItemSlot ItemToDrop_Slot;
-    public Transform DropPos_UI;
-
-    public Vector3 dropPos;
-    public int _Index = 0;
 
     [Header("掉落动画参数")]
     public float parabolaHeight = 2f; // 抛物线最大高度
     public float baseDropDuration = 0.5f; // 动画基础持续时间
     public float distanceSensitivity = 0.1f; // 动画时间距离敏感度
 
-    public ItemMaker ItemMaker = new ItemMaker();
     public Inventory_HotBar Hotbar;
-
-    public Ex_ModData modData;
+    public Mod_Inventory hand;
 
     public override ModuleData _Data { get => modData; set => modData = value as Ex_ModData; }
 
     private FaceMouse faceMouse;
-    public Vector2 DropPos => faceMouse?.Data.TargetPosition ?? Vector2.zero;
+    public PlayerController playerController;
+    public Vector2 DropPos => playerController.GetMouseWorldPosition();
 
     #region 生命周期
+
     public override void Load()
     {
+        base.Load();
+
         faceMouse = item.Mods[ModText.FaceMouse].GetComponent<FaceMouse>();
+
         Hotbar = item.Mods[ModText.Hotbar].GetComponent<Inventory_HotBar>();
 
-        item.GetComponent<PlayerController>()._inputActions.Win10.F.performed += _ =>
+        hand = item.Mods[ModText.Hand].GetComponent<Mod_Inventory>();
+
+        playerController = item.GetComponent<PlayerController>();
+
+        playerController._inputActions.Win10.F.performed += _ =>
         {
-            if (Hotbar.currentObject != null)
+            if (hand.inventory.Data.itemSlots[hand.inventory.Data.Index]._ItemData != null)
+            {
+                DropItemBySlot(hand.inventory.Data.itemSlots[hand.inventory.Data.Index]);
+                hand.inventory.Data.itemSlots[hand.inventory.Data.Index].RefreshUI();
+            }
+           else if (Hotbar.currentObject != null)
             {
                 DropItemBySlot(Hotbar.CurrentSelectItemSlot);
                 Hotbar.DestroyCurrentObject();
@@ -49,7 +58,6 @@ public class ItemDroper : Module
             }
         };
     }
-
     #endregion
 
     #region 物品丢弃接口
@@ -76,23 +84,47 @@ public class ItemDroper : Module
 
         if (count <= slot.Amount)
         {
+            // 克隆数据
             ItemData newItemData = FastCloner.FastCloner.DeepClone(slot._ItemData);
-            //slot._ItemData.DeepClone();
             newItemData.Stack.Amount = count;
+            newItemData.Stack.CanBePickedUp = false;
 
+            // 减少原物品数量
             slot.Amount -= count;
-
             if (slot.Amount <= 0)
-            {
                 slot.ClearData();
+
+            // 实例化新物体
+            Item newObject = RunTimeItemManager.Instance.InstantiateItem(newItemData.IDName);
+            if (newObject == null)
+            {
+                Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);
+                return;
             }
 
-            HandleDropItem(newItemData);
+            Item newItem = newObject.GetComponent<Item>();
+            if (newItem == null)
+            {
+                Debug.LogError("新物体中缺少 Item 组件！");
+                return;
+            }
+
+            newItem.Item_Data = newItemData;
+
+            // 计算位置
+            Vector2 startPos = transform.position;
+            Vector2 endPos = DropPos;
+
+            float distance = Vector2.Distance(startPos, endPos);
+            float animTime = baseDropDuration + distance * distanceSensitivity;
+
+            // 调用父类 DropItem 实现动画控制
+            DropItem_Pos(newItem, startPos, endPos, animTime);
         }
 
-        // 可视化刷新（如需要）
-         slot.RefreshUI();
+        slot.RefreshUI();
     }
+
 
 
     [Button("快速丢弃")]
@@ -123,8 +155,6 @@ public class ItemDroper : Module
                     offset = Vector3.left;
                 }
 
-                dropPos = transform.position + offset;
-
                 DropItemByCount(uiItemSlot.Data, count);
             }
         }
@@ -132,7 +162,7 @@ public class ItemDroper : Module
 
 
     #endregion
-
+/*
     #region 核心逻辑
 
     private bool HandleDropItem(ItemData itemData)
@@ -162,13 +192,13 @@ public class ItemDroper : Module
         itemData.Stack.CanBePickedUp = false;
         newItem.Item_Data = itemData;
 
-        float distance = Vector3.Distance(transform.position, dropPos);
+        float distance = Vector3.Distance(transform.position, DropPos);
 
         StartCoroutine(
             ItemMaker.ParabolaAnimation(
                 newObject.transform,
                 transform.position,
-                dropPos,
+                DropPos,
                 newItem,
                 baseDropDuration,
                 distanceSensitivity,
@@ -183,10 +213,5 @@ public class ItemDroper : Module
     }
 
 
-    public override void Save()
-    {
-      //  throw new System.NotImplementedException();
-    }
-
-    #endregion
+    #endregion*/
 }

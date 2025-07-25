@@ -33,8 +33,13 @@ public abstract class Module : MonoBehaviour
     public abstract void Load();
     public abstract void Save();
 
+    public virtual void Update()
+    {
+      
+    }
 
-public static void ADDModTOItem(Item item, string modName)
+
+    public static void ADDModTOItem(Item item, string modName)
     {
         if (HasMod(item, modName))
         {

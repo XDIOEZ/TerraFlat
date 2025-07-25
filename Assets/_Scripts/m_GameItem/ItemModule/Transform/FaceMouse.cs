@@ -9,8 +9,8 @@ using UnityEngine.UIElements.Experimental;
 public partial class FaceMouse : Module
 {
     public FaceMouseData Data = new FaceMouseData();
-    public Ex_ModData_MemoryPack ModData;
-    public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPack)value; } }
+    public Ex_ModData_MemoryPackable ModData;
+    public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
     public PlayerController PlayerController;
 
     public override void Awake()
@@ -26,7 +26,7 @@ public partial class FaceMouse : Module
         //ªÒ»°PlayerController
         PlayerController = item.Mods[ModText.Controller].GetComponent<PlayerController>();
     }
-    public void Update()
+    public virtual void Update()
     {
         PlayerTakeItem_FaceMouse();
     }

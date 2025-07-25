@@ -17,7 +17,7 @@ public class Mod_ItemMaker : Module
     /* ----------------------------------------------------------
      * 丢弃物品（自动随机终点）
      * ----------------------------------------------------------*/
-    public void DropItem(Item item, Vector2 startPos, float radius, float time)
+    public void DropItem_Range(Item item, Vector2 startPos, float radius, float time)
     {
         item.transform.position = startPos;
 
@@ -44,6 +44,33 @@ public class Mod_ItemMaker : Module
         drops.Add(drop);
         item.Item_Data.Stack.CanBePickedUp   = false;
     }
+
+    /// <summary>
+    /// 丢弃物品（指定起点与终点）
+    /// </summary>
+    public void DropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time)
+    {
+        item.transform.position = startPos;
+
+        // 控制点为中点上移
+        Vector2 mid = (startPos + endPos) * 0.5f;
+        mid.y += bezierOffset;
+
+        Drop drop = new Drop
+        {
+            itemGUID = item.Item_Data.Guid,
+            startPos = startPos,
+            endPos = endPos,
+            controlPos = mid,
+            time = time,
+            progressTime = 0f,
+            item = item
+        };
+
+        drops.Add(drop);
+        item.Item_Data.Stack.CanBePickedUp = false;
+    }
+
 
     /* ----------------------------------------------------------
      * 每帧更新

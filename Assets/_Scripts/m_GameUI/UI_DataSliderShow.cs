@@ -1,4 +1,4 @@
-using System.Collections;
+/*using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -127,3 +127,4 @@ public class UI_DataSliderShow : MonoBehaviour
         public TextMeshProUGUI text_name; // 显示文本（改为TextMeshProUGUI）
     }
 }
+*/

@@ -7,8 +7,8 @@ using MemoryPack;
 
 public partial class Mod_ColdWeapon : Module
 {
-    public Ex_ModData_MemoryPack Data;
-    public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPack)value; }
+    public Ex_ModData_MemoryPackable Data;
+    public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
 
     // 新增的SaveData字段
     [SerializeField]

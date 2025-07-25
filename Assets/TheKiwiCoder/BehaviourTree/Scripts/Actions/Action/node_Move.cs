@@ -9,7 +9,7 @@ public class Move : ActionNode
 
     #region 组件和接口引用
 
-    private ISpeed speeder;
+    private Mover speeder;
 
 
 
@@ -34,7 +34,7 @@ public class Move : ActionNode
 
     protected override void OnStart()
     {
-        speeder ??= context.gameObject.GetComponent<ISpeed>();
+        speeder ??= context.item.Mods[ModText.Mover] as Mover;
     }
 
     protected override void OnStop()
@@ -78,8 +78,7 @@ public class Move : ActionNode
                 return State.Failure;
             }
         }
-
-        Mover.Move(speeder.MoveTargetPosition);
+        Mover.Move(speeder.TargetPosition);
 
         // 检查是否到达目标
         if (Vector2.Distance(Mover.TargetPosition, currentPosition) <= context.agent.stoppingDistance)

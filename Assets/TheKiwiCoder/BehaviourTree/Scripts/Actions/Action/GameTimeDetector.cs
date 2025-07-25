@@ -10,6 +10,7 @@ public class GameTimeDetector : ActionNode
     public Vector2 time;
 
     protected override void OnStart() {
+
     }
 
     protected override void OnStop() {
@@ -17,6 +18,10 @@ public class GameTimeDetector : ActionNode
 
     protected override State OnUpdate()
     {
+        if (DayNightTimeManager.Instance == null)
+        {
+            return State.Failure;
+        }
         if (DayNightTimeManager.Instance.currentDayTime < time.y && DayNightTimeManager.Instance.currentDayTime > time.x)
         {
             return State.Success;
