@@ -45,6 +45,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6cbe05dc9e2ebf747bcc0d42f70ec020, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 1
+    BitData: 
   DamagePanelName: Panel_DamageText
   damagePanelSpeed: 3
   damagePanelDuration: 1.5
@@ -146,6 +151,7 @@ Transform:
   - {fileID: 8892357771786129698}
   - {fileID: 4548020751602066397}
   - {fileID: 7981097217136654052}
+  - {fileID: 1633873775280395439}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5544699969281428624
@@ -161,20 +167,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
+  OnItemDestroy:
     _PersistentCalls: []
-  DestroyItem_Event:
+  OnAct:
     _PersistentCalls: []
+  OnModuleLoadDone:
+    _PersistentCalls: []
+  Sprite: {fileID: 0}
   Data:
     IDName: Wolf
     GameName: 
-    ID: 7
     Description: "\u7269\u54C1\u540D\u79F0\uFF1AWolf\n\u7269\u54C1ID\uFF1A7\n\u7269\u54C1\u63CF\u8FF0\uFF1A\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1ANone(None),\u7269\u54C1\u6750\u8D28\uFF1ANone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u4F4D\u7F6E\uFF1A(0.00,
       0.00, 0.00)\n\u7269\u54C1\u65CB\u8F6C\uFF1A(0.00000, 0.00000, 0.00000, 0.00000)\n\u7269\u54C1\u7F29\u653E\uFF1A(0.00,
       0.00, 0.00)\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A6"
-    PrefabPath: Assets/_Prefabs/Animals/Wolf.prefab
     Durability: 1
     ItemTags:
       Item_TypeTag:
@@ -205,37 +212,36 @@ MonoBehaviour:
       maxDefenseStrength: 0
       maxDefenseToughness: 0
       maxDefenseMagic: 0
-    EatingSpeed: 1
-    speed_Max: 3
-    speed: 3
-    runSpeed: 6
+    Speed:
+      BaseValue: 5
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
     stamina: 100
     stamina_Max: 100
     staminaRecoverySpeed: 1
-    NutritionData:
-      Food: 100
-      MaxFood: 0
-      Water: 100
-      MaxWater: 0
     progress: 0
-    progress_Max: 100
-    productionSpeed: 1
-    sightRange: 10
-    ItemDataValue:
-      ItemValue_List:
-      - ValueName: "\u8840\u91CF"
-        MinValue: 0
-        currentValue: 100
-        MaxValue: 0
-        OnCurrentValueChanged:
-          _PersistentCalls: []
-      IsWork: 0
+    progress_Max:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints: []
     loot:
       lootList:
       - lootsName: Loots_Death
         lootList: []
       - lootsName: Loots_Production
         lootList: []
+    sightRange: 10
     TeamID: 
 --- !u!195 &1497481199498990185
 NavMeshAgent:
@@ -271,11 +277,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0afa4625e38945140b2421639e9d6c5a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetPosition: {x: 0, y: 0, z: 0}
+  item: {fileID: 0}
+  saveData:
+    Speed:
+      BaseValue: 10
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    slowDownSpeed: 5
+    endSpeed: 0.1
+    runStaminaRate: 2
+    runSpeedRate: 2
+    isRunning: 0
+    RunStaminaThreshold: 2
+  hightReaction: 0
+  TargetPosition: {x: 0, y: 0, z: 0}
+  IsMoving: 0
+  OnMoveEnd:
+    _PersistentCalls: []
+  OnMoveStay:
+    _PersistentCalls: []
+  OnMoveStart:
+    _PersistentCalls: []
+  stamina: {fileID: 0}
+  staminaConsumeSpeed:
+    BaseValue: 1
+    BaseAdditive: 0
+    AdditiveModifier: 0
+    MultiplicativeModifier: 1
+    FinalAdditive: 0
+  ModDataMemoryPack:
+    Name: 
+    isRunning: 1
+    BitData: 
   target: {fileID: 0}
   agent: {fileID: 1497481199498990185}
   isMoving: 0
-  rb2D: {fileID: 0}
 --- !u!61 &3390413730269729025
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -360,10 +398,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d7ed45437cf9be340924e1e57191c5b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rotationSpeed: 4
+  item: {fileID: 0}
+  rotationDuration: 0.3
   controlledTransform: {fileID: 478715881179084011}
-  direction: {x: 1, y: 0}
+  currentDirection: {x: 1, y: 0}
   isTurning: 0
+  faceMouse: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 1
+    BitData: 
 --- !u!114 &8098423291859593434
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -376,6 +420,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8eced6a90ad0184e911db2321f57ac4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  rotationDuration: 0.3
+  controlledTransform: {fileID: 0}
+  currentDirection: {x: 1, y: 0}
+  isTurning: 0
+  faceMouse: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 1
+    BitData: 
+  mover: {fileID: 0}
 --- !u!114 &2677880438091384182
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -388,11 +443,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42551f688eba8834586418506b8a82af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 5544699969281428624}
   detectionRadius: 8
   itemLayer:
     serializedVersion: 2
     m_Bits: 512
   currentItemsInArea: []
+  ModData:
+    Name: 
+    isRunning: 1
+    BitData: 
 --- !u!114 &7847266646046080654
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -406,6 +466,110 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tree: {fileID: 11400000, guid: 78dfc521417791348927d25aaf51f1ac, type: 2}
+  item: {fileID: 0}
+--- !u!1 &4966144056429421154
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1633873775280395439}
+  - component: {fileID: 5166719579622757629}
+  m_Layer: 9
+  m_Name: "\u9965\u997F\u6A21\u5757"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1633873775280395439
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4966144056429421154}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 478715881179084011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5166719579622757629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4966144056429421154}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ExData:
+    Name: 
+    isRunning: 1
+    BitData: 
+  Data:
+    nutrition:
+      Carbohydrates: 100
+      Max_Carbohydrates:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Fat: 100
+      Max_Fat:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Protein: 100
+      Max_Protein:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Water: 100
+      Max_Water:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Vitamins: 100
+      Max_Vitamins:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+    Max_EatingProgress: 3
+    AbsorptionRate: 1
+    ShowCanvas: 0
+    nutritionConsumeSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    FeelGood: 0
+  EatingProgress: 0
+  DataUpdate:
+    _PersistentCalls: []
+  PanelPrefab: {fileID: 0}
+  UIValues: {fileID: 0}
+  PanleInstance: {fileID: 0}
+  Stamina: {fileID: 0}
 --- !u!1 &7278589208020093452
 GameObject:
   m_ObjectHideFlags: 0

@@ -4,8 +4,8 @@ using TheKiwiCoder;
 
 public class EatFood : ActionNode
 {
-    public IFood Food;
-    public FoodEater Self;
+    public Mod_Food Food;
+    public Mod_Food Self;
     [Header("进食范围")]
     public float EatingRange = 1f;
     [Header("上一次吃一口的时间")]
@@ -15,7 +15,7 @@ public class EatFood : ActionNode
     [Header("食物Tag")]
     public string FoodTag = "Food";
     protected override void OnStart() {
-        Self = context.gameObject.GetComponentInChildren<FoodEater>();
+        Self = context.gameObject.GetComponentInChildren<Mod_Food>();
         LastEatingTime = Time.time;
     }
 
@@ -38,22 +38,19 @@ public class EatFood : ActionNode
                 continue;
             }
             //判断物体是否是食物
-                foreach (string tag in item.Item_Data.ItemTags.Item_TypeTag)
+            foreach (string tag in item.Item_Data.ItemTags.Item_TypeTag)
             {
 
                 if (tag == FoodTag)
                 {
-                   
-                        Food = item.GetComponent<IFood>();
+                        Food = item.Mods[ModText.Food] as Mod_Food;
 
-                        if(Food.NutritionData.Food > 0)
-                        {
-                            Self.Eat(Food);
-                            LastEatingTime = Time.time;
-                        }
+                        Food.BeEat(Self);
+                        LastEatingTime = Time.time;
+                        
 
                         //判断是否已经吃饱了
-                        if(Self.hunger.Nutrition.Food >= Self.hunger.Nutrition.MaxFood)
+                        if(Food.Data.nutrition.GetHungerRate() > 0.9f)
                         {
                             return State.Success;
                         }

@@ -52,14 +52,14 @@ public class ItemMaker
     {
         foreach (var item in loots.GetLoot(LootName).lootList)
         {
-            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange, transform);
+            DropItemByNameAndAmount(item.lootName, item.LootAmountMin, DropRange, transform);
         }
     }
 
     [Tooltip("根据ItemName和Amount掉落物品")]
     public void DropItemByNameAndAmount(string ItemName, float Amount, float DropRange,Transform transform)
     {
-        Item item = RunTimeItemManager.Instance.InstantiateItem(ItemName).GetComponent<Item>();
+        Item item = GameItemManager.Instance.InstantiateItem(ItemName).GetComponent<Item>();
         item.Item_Data.Stack.Amount = Amount;
 
         Vector2 randomOffset = Random.insideUnitCircle * DropRange;
@@ -73,7 +73,7 @@ public class ItemMaker
     {
         foreach (var item in loot.lootList)
         {
-            DropItemByNameAndAmount(item.lootName, item.lootAmount, DropRange, transform);
+            DropItemByNameAndAmount(item.lootName, item.LootAmountMin, DropRange, transform);
         }
     }
 

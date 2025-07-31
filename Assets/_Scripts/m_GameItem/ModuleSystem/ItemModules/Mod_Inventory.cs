@@ -46,10 +46,7 @@ public class Mod_Inventory : Module,IInventory
     }
 
     // Update is called once per frame
-    void Update()
-    {
-        
-    }
+
 }
 
 public interface IInventory

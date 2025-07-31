@@ -42,15 +42,12 @@ public class GetItemPosition : ActionNode
     [Tooltip("找到目标后不执行任何移动操作")]
     public bool doNothing = false;
 
-    public Mover Speeder;
+    public Mover Speeder =>context.mover;
     #endregion
 
     #region 重写方法
     protected override void OnStart()
     {
-        // 节点开始时的初始化逻辑
-        Speeder = context.item.Mods[ModText.Mover] as Mover;
-        Debug.Log($"[{GetType().Name}] 速度控制器: {Speeder}");
     }
 
     protected override void OnStop()
@@ -192,7 +189,7 @@ public class GetItemPosition : ActionNode
     {
         blackboard.TargetPosition = targetPosition;
         Speeder.TargetPosition = targetPosition;
-        Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
+      //  Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
     }
 
     /// <summary>

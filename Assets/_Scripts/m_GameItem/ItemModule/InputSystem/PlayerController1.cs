@@ -81,17 +81,6 @@ public class PlayerController : Module
 
     }
 
-    private void Update()
-    {
-        //处理战斗输入
-        HandleCombatInput();
-        //处理转身
-        //HandleBodyTurning();
-        //处理移动输入
-        //HandleMovementInput();
-        //处理视角切换
-        //PlayerTakeItem_FaceMouse();
-    }
     #endregion
 
     #region 输入处理

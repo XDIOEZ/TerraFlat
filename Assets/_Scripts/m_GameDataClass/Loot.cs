@@ -47,5 +47,14 @@ public partial class Loot
 public partial class LootData
 {
     public string lootName;
-    public int lootAmount;
+    public Vector2Int lootAmountRange = new Vector2Int(1, 1);
+
+    public int LootAmountMin { get => lootAmountRange.x; }
+    public int LootAmountMax { get => lootAmountRange.y; }
+
+    //随机输出一个lootAmount范围内的随机数
+    public int GetRandomLootAmount()
+    {
+        return Random.Range(lootAmountRange.x, lootAmountRange.y+1);
+    }
 }

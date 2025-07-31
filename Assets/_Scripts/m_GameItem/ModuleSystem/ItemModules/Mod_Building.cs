@@ -51,7 +51,7 @@ public class Mod_Building : Module
         item.Item_Data.ModuleDataDic[_Data.Name] = BuildingData;
     }
 
-    protected virtual void Update()
+    public override void Action(float deltaTime)
     {
         if (item == null)
         {
@@ -196,10 +196,10 @@ public class Mod_Building : Module
 
         // 更新物品状态
         item.Item_Data.Stack.CanBePickedUp = false;
-        item.UpdatedUI_Event?.Invoke();
+        item.OnUIRefresh?.Invoke();
 
         // 实例化建筑
-        var runtimeItem = RunTimeItemManager.Instance.InstantiateItem(
+        var runtimeItem = GameItemManager.Instance.InstantiateItem(
             item.Item_Data.IDName,
             GhostShadow.transform.position
         );

@@ -53,6 +53,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 856e207614bf09b4abcde37328841a5d
+    m_Address: Assets/_Prefabs/Food
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 939d63540274d5649acb1084d09fcf44
     m_Address: Assets/_Prefabs/Item_Weapon_Cold
     m_ReadOnly: 0

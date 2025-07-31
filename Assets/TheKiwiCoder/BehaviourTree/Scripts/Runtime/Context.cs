@@ -24,13 +24,16 @@ namespace TheKiwiCoder {
         public Mover mover;
         public IItemValues itemValues;
         public Item item;
+        public Map map;
         // Add other game specific systems here
 
         public static Context CreateFromGameObject(GameObject gameObject) {
             // Fetch all commonly used components
             Context context = new Context();
+            context.item = gameObject.GetComponent<Item>();
             context.gameObject = gameObject;
             context.transform = gameObject.transform;
+            context.map = GameItemManager.Instance.Map;
             context.animator = gameObject.GetComponentInChildren<Animator>();
             context.physics = gameObject.GetComponent<Rigidbody>();
             context.agent = gameObject.GetComponentInChildren<NavMeshAgent>();
@@ -39,9 +42,10 @@ namespace TheKiwiCoder {
             context.capsuleCollider = gameObject.GetComponent<CapsuleCollider>();
             context.characterController = gameObject.GetComponent<CharacterController>();
             context.itemDetector = gameObject.GetComponentInChildren<IDetector>();
-            context.mover = gameObject.GetComponentInChildren<Mover>();
+            context.mover = context.item.Mods[ModText.Mover] as Mover;
             context.itemValues = gameObject.GetComponentInChildren<IItemValues>();
             context.item = gameObject.GetComponentInChildren<Item>();
+
             // Add whatever else you need here...
 
             return context;

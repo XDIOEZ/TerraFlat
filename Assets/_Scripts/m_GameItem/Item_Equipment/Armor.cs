@@ -15,23 +15,6 @@ public class Armor : Item
         set => _Data = (Data_Armor)value;
     }
 
-    // Start is called before the first frame update
-
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-/*    public override Item_Data GetData()
-    {
-        return _Data;
-    }
-    public override void SetData(Item_Data data)
-    {
-        _Data = (ArmorData)data;
-    }*/
-
     public override void Act()
     {
         throw new NotImplementedException();

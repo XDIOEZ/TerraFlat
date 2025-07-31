@@ -167,12 +167,12 @@ public class Inventory_HotBar : Inventory
         var slot = Data.itemSlots[index];
         if (slot._ItemData == null)
         {
-            Debug.LogWarning($"[ChangeNewObject] 索引 {index} 的物品数据为空，无法生成物体。");
+          //  Debug.LogWarning($"[ChangeNewObject] 索引 {index} 的物品数据为空，无法生成物体。");
             return;
         }
 
         ItemData itemData = slot._ItemData;
-        Item itemInstance = RunTimeItemManager.Instance.InstantiateItem(itemData.IDName);
+        Item itemInstance = GameItemManager.Instance.InstantiateItem(itemData.IDName);
 
         if (itemInstance == null)
         {
@@ -200,8 +200,8 @@ public class Inventory_HotBar : Inventory
         itemInstance.BelongItem = slot.Belong_Inventory.Belong_Item;
 
         // 事件绑定
-        itemInstance.UpdatedUI_Event += () => RefreshUI(index);
-        itemInstance.DestroyItem_Event += DestroyCurrentObject;
+        itemInstance.OnUIRefresh += () => RefreshUI(index);
+        itemInstance.OnItemDestroy += DestroyCurrentObject;
 
         // 设置为当前武器
         spawnLocation.GetComponent<ITriggerAttack>()?.SetWeapon(currentObject);

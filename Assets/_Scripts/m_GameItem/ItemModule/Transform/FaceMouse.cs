@@ -26,7 +26,7 @@ public partial class FaceMouse : Module
         //ªÒ»°PlayerController
         PlayerController = item.Mods[ModText.Controller].GetComponent<PlayerController>();
     }
-    public virtual void Update()
+    public override void Action(float deltaTime)
     {
         PlayerTakeItem_FaceMouse();
     }

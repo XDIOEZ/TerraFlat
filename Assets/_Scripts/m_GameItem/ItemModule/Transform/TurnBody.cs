@@ -42,10 +42,10 @@ public class TurnBody : Module, ITurnBody
             Debug.LogError("[TurnBody] 初始化失败：ControlledTransform 未设置！");
     }
 
-    public override void Update()
+    public override void Action(float deltaTime)
     {
         UpdateWork();
-        UpdateTurn();
+        UpdateTurn(deltaTime);
     }
     private void UpdateWork()
     {
@@ -64,38 +64,38 @@ public class TurnBody : Module, ITurnBody
 
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
-        if (controlledTransform == null) return;
         if (isTurning) return;
         if (Mathf.Abs(targetDirection.x) < 0.01f) return;
 
-        float facingSign = Mathf.Sign(currentDirection.x);
         float targetSign = Mathf.Sign(targetDirection.x);
-
+        float facingSign = Mathf.Sign(currentDirection.x);
         if (facingSign == targetSign) return;
 
         currentDirection = (targetDirection.x > 0) ? Vector2.right : Vector2.left;
+
         isTurning = true;
         turnTimeElapsed = 0f;
+
         startY = NormalizeAngle(controlledTransform.eulerAngles.y);
         targetY = (currentDirection == Vector2.right) ? 0f : 180f;
-
-      //  Debug.Log($"[TurnBody] 开始转身 from Y={startY} to Y={targetY}");
     }
 
-    private void UpdateTurn()
+    public void UpdateTurn(float deltaTime)
     {
         if (!isTurning) return;
 
-        turnTimeElapsed += Time.deltaTime;
+        turnTimeElapsed += deltaTime;
+
         float t = Mathf.Clamp01(turnTimeElapsed / rotationDuration);
+
         float newY = Mathf.LerpAngle(startY, targetY, t);
+
         controlledTransform.rotation = Quaternion.Euler(0f, newY, 0f);
 
         if (Mathf.Abs(Mathf.DeltaAngle(newY, targetY)) < 0.5f || t >= 1f)
         {
             controlledTransform.rotation = Quaternion.Euler(0f, targetY, 0f);
             isTurning = false;
-          //  Debug.Log($"[TurnBody] 转身完成 到 Y={targetY}");
         }
     }
     private float NormalizeAngle(float angle)

@@ -3,7 +3,7 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-public class Weed : Item, IFood
+public class Weed : Item
 {
     [SerializeField]
     private Data_Food Data;
@@ -12,17 +12,10 @@ public class Weed : Item, IFood
         get => Data;
         set => Data = (Data_Food)value;
     }
-    // 实现 IHungry 接口的 Foods 属性
-    public Nutrition NutritionData
-    {
-        get => Data.NutritionData; // 如果 Data 未初始化，返回默认值
-        set => Data.NutritionData = value;
-    }
+
     public float EatingValue = 0;
     [Header("进食难度")]
     public float MaxEatingValue = 10;
-    public IFood SelfFood { get => this; set => throw new System.NotImplementedException(); }
-
 
     // 实现 IHungry 接口的 OnNutrientChanged 事件
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
@@ -32,22 +25,18 @@ public class Weed : Item, IFood
        
         OnNutrientChanged?.Invoke();
     }
-    public void Update()
-    {
-        //Grow(Time.deltaTime);
-    }
 
-    //成长
+/*    //成长
     [Button]
     public void Grow(float growValue)
     {
         
         // 限制能量不超过最大值
-        Data.NutritionData.Food = Mathf.Min(Data.NutritionData.Food + growValue, Data.NutritionData.MaxFood);
-        Data.NutritionData.Water = Mathf.Min(Data.NutritionData.Water + growValue, Data.NutritionData.MaxWater);
+        Data.NutritionData.Food = Mathf.Min(Data.NutritionData.Food + growValue, Data.NutritionData.Max_Carbohydrates);
+        Data.NutritionData.Water = Mathf.Min(Data.NutritionData.Water + growValue, Data.NutritionData.Max_Water);
 
         //如果Food和Water都满了 
-        if (Data.NutritionData.Food >= Data.NutritionData.MaxFood && Data.NutritionData.Water >= Data.NutritionData.MaxWater)
+        if (Data.NutritionData.Food >= Data.NutritionData.Max_Carbohydrates && Data.NutritionData.Water >= Data.NutritionData.Max_Water)
         {
             //开始繁殖
             //检测周围是否半径为2的圆形范围内有没有其他植物
@@ -105,7 +94,7 @@ public class Weed : Item, IFood
         if (Item_Data == null || NutritionData == null) return null;
 
         // 使用 DOTween 做抖动动画
-        SelfFood.ShakeItem(this.transform);
+       // SelfFood.ShakeItem(this.transform);
 
         EatingValue += eatSpeed;
         if (EatingValue >= MaxEatingValue)
@@ -114,8 +103,8 @@ public class Weed : Item, IFood
 
             UpdatedUI_Event?.Invoke();
 
-            NutritionData.Food = NutritionData.MaxFood;
-            NutritionData.Water = NutritionData.MaxWater;
+           // NutritionData.Food = NutritionData.Max_Carbohydrates;
+           // NutritionData.Water = NutritionData.Max_Water;
 
             EatingValue = 0;
 
@@ -128,5 +117,5 @@ public class Weed : Item, IFood
             return NutritionData;
         }
         return null;
-    }
+    }*/
 }

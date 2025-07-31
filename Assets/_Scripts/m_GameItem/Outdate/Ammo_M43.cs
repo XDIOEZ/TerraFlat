@@ -10,11 +10,6 @@ public class Ammo_M43 : Ammo
         base.Start();
     }
 
-     void Update()
-    {
-        //base.Update();
-    }
-
     new void FixedUpdate()
     {
         base.FixedUpdate();

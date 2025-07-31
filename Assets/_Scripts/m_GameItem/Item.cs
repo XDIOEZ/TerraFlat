@@ -33,11 +33,15 @@ public abstract class Item : MonoBehaviour
 
     [Tooltip("此物品属于谁?")]
     public Item BelongItem;
-    [Tooltip("被销毁时触发的事件")]
-    public UltEvent OnStopWork_Event = new();
-    public UltEvent UpdatedUI_Event = new();
-    public UltEvent DestroyItem_Event = new();
+
+    //物品UI更新事件
+    public UltEvent OnUIRefresh = new();
+    //物品被销毁时触发的事件
+    public UltEvent OnItemDestroy = new();
+    //物品被激活时触发的事件
     public UltEvent OnAct = new();
+    //模块加载完成事件
+    public UltEvent OnModuleLoadDone = new();
     //游戏的贴图对象
     public SpriteRenderer Sprite;
     #endregion
@@ -48,9 +52,29 @@ public abstract class Item : MonoBehaviour
             Sprite = GetComponentInChildren<SpriteRenderer>();
 
         ModuleLoad();
+        OnModuleLoadDone.Invoke();
     }
+
+    private float updateInterval = 0.1f; // 每0.1秒执行一次
+    private float updateTimer = 0f;
+
+    public void Update()
+    {
+        updateTimer += Time.deltaTime;
+        if (updateTimer >= updateInterval)
+        {
+            updateTimer = 0f;
+
+            foreach (Module mod in Mods.Values)
+            {
+                mod.Action(updateInterval); // 或者 mod.Action(updateTimer) 视情况而定
+            }
+        }
+    }
+
     public void OnDestroy()
     {
+        OnItemDestroy.Invoke();
         ModuleSave();
     }
 

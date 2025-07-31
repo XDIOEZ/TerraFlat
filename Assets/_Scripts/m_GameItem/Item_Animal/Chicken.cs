@@ -7,13 +7,13 @@ using UltEvents;
 using UnityEngine;
 using Sirenix.OdinInspector;
 
-public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
+public class Chicken : Item, ISpeed, ISight,IHealth,IStamina
 {
     public Data_Creature Data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }
     #region ¼¢¶ö
 
-    public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }
+    /*public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }*/
     public float EatingSpeed { get;set; } = 1;
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
     public UltEvent OnDeath { get; set; }
@@ -97,12 +97,12 @@ public class Chicken : Item, IHunger, ISpeed, ISight,IHealth,IStamina
     public void FixedUpdate()
     {
     }
-
+/*
     public void TakeABite(IFood food)
     {
         Nutrition.Food += EatingSpeed;
         food.BeEat(EatingSpeed);
-    }
+    }*/
 
     public void Death()
     {

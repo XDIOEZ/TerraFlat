@@ -11,12 +11,9 @@ public class NavMeshRuntimeBake : MonoBehaviour
     public NavMeshSurface surface;
     public bool OnStartBuild;
 
-    public void Start()
+    public void Awake()
     {
-        if (OnStartBuild)
-        {
-            surface.BuildNavMeshAsync();
-        }
+        GetComponentInParent<Map>().OnMapGenerated_Stop += UpdateNavMeshAsync;
     }
 
     [Button("Update NavMesh")]
@@ -25,7 +22,7 @@ public class NavMeshRuntimeBake : MonoBehaviour
         // 开始计时
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        UnityEngine.Debug.Log("开始烘焙 NavMesh...");
+     //   UnityEngine.Debug.Log("开始烘焙 NavMesh...");
 
         // 烘焙 NavMesh
         surface.BuildNavMesh();
@@ -34,7 +31,7 @@ public class NavMeshRuntimeBake : MonoBehaviour
         stopwatch.Stop();
 
         // 输出时间统计
-        UnityEngine.Debug.Log($"NavMesh 烘焙完成！耗时: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.Elapsed.TotalSeconds:F2} 秒)");
+       // UnityEngine.Debug.Log($"NavMesh 烘焙完成！耗时: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.Elapsed.TotalSeconds:F2} 秒)");
     }
 
     // 可选：更详细的时间统计版本

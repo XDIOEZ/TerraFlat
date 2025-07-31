@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Force.DeepCloner;
 using UltEvents;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
 
 /// <summary>
 /// 随机地图生成器：基于噪声与生物群系（Biome）
@@ -17,18 +18,8 @@ public class RandomMapGenerator : MonoBehaviour
     [Required]
     public Map map;  // 地图管理对象，包含 TileData 和 Tilemap 引用
 
-/*    [Header("噪声参数")]
-    [Tooltip("噪声缩放系数：越小生成越大范围的高低起伏")]
-    private float noiseScale = 0.01f;
-
-    [Tooltip("陆地海洋比例：陆地占比，海洋占比")]
-    private float landOceanRatio = 0.5f;
-
-    [Tooltip("温度偏移")]
-    private float temp = 0.0f;
-
-    [Tooltip("地球半径")]
-    private float plantRadius = 100;*/
+    [ShowInInspector]
+    public PlanetData plantData => SaveLoadManager.Instance.SaveData.Active_PlanetData;
 
     [Tooltip("赤道坐标")]
     public float Equator = 0;
@@ -62,12 +53,12 @@ public class RandomMapGenerator : MonoBehaviour
     /// <summary>
     /// 地图种子，字符串形式，从存档读取
     /// </summary>
-    private int Seed => SaveAndLoad.Instance.SaveData.Seed;
+    private int Seed => SaveLoadManager.Instance.SaveData.Seed;
 
-    public float PlantRadius { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.Radius;}
-    public float Temp { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.TemperatureOffset; }
-    public float LandOceanRatio { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.OceanHeight;}
-    public float NoiseScale { get => SaveAndLoad.Instance.SaveData.Active_PlanetData.NoiseScale;  }
+    public float PlantRadius { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.Radius;}
+    public float Temp { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.TemperatureOffset; }
+    public float LandOceanRatio { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.OceanHeight;}
+    public float NoiseScale { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.NoiseScale;  }
 
     /// <summary>
     /// 系统级可复现随机实例，用于资源生成
@@ -83,13 +74,11 @@ public class RandomMapGenerator : MonoBehaviour
     #region Unity生命周期
     private void Start()
     {
-        rng = new System.Random(SaveAndLoad.Instance.SaveData.Seed);
-      /*  if (map.Data.TileCount < SaveAndLoad.Instance.SaveData.MapSize.x * SaveAndLoad.Instance.SaveData.MapSize.y)
-            GenerateRandomMap();*/
+        rng = new System.Random(SaveLoadManager.Instance.SaveData.Seed);
     }
     public void Awake()
     {
-        map.GenerateMap += GenerateRandomMap;
+        map.OnMapGenerated_Start += GenerateRandomMap;
     }
 #if UNITY_EDITOR
     private void OnDrawGizmos()
@@ -97,7 +86,7 @@ public class RandomMapGenerator : MonoBehaviour
         if (map == null || map.Data == null) return;
 
         Vector2Int startPos = map.Data.position;
-        Vector2Int size = SaveAndLoad.Instance.SaveData.MapSize;
+        Vector2Int size = SaveLoadManager.Instance.SaveData.MapSize;
         Vector3 center = new Vector3(startPos.x + size.x / 2f, startPos.y + size.y / 2f, 0f);
         Vector3 size3D = new Vector3(size.x, size.y, 0.1f);
 
@@ -143,10 +132,10 @@ public class RandomMapGenerator : MonoBehaviour
 
         ClearMap();
 
-        map.Data.position = SaveAndLoad.Instance.SaveData.Active_MapPos;
+        map.Data.position = SaveLoadManager.Instance.SaveData.Active_MapPos;
 
         Vector2Int startPos = map.Data.position;
-        Vector2Int size = SaveAndLoad.Instance.SaveData.MapSize;
+        Vector2Int size = SaveLoadManager.Instance.SaveData.MapSize;
 
         if (tilesPerFrame > 0)
             StartCoroutine(GenerateMapCoroutine(startPos, size));
@@ -167,7 +156,7 @@ public class RandomMapGenerator : MonoBehaviour
         Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
         foreach (var d in dirs)
         {
-            Item edge = RunTimeItemManager.Instance.InstantiateItem("MapEdge");
+            Item edge = GameItemManager.Instance.InstantiateItem("MapEdge");
             if (edge is WorldEdge we)
                 we.SetupMapEdge(d);
             else
@@ -218,7 +207,8 @@ public class RandomMapGenerator : MonoBehaviour
         //位于赤道附近 且地球半径为100
         //(0+ 50)/100 = 0.5 的温度偏移系数   所以赤道的期望温度为 0.5 + 0.5 = 1
         temp += Temp + (PlantRadius / 2f - Mathf.Abs(position.y)) / PlantRadius;
-        solidity += LandOceanRatio;
+        solidity -= LandOceanRatio;
+        hight -= LandOceanRatio;
 
 
         EnvironmentFactors env = new EnvironmentFactors
@@ -310,7 +300,7 @@ public class RandomMapGenerator : MonoBehaviour
                     position.y + 0.5f,
                     0f);
 
-                RunTimeItemManager.Instance.InstantiateItem(
+                GameItemManager.Instance.InstantiateItem(
                     spawn.itemName,
                     spawnPosition);
             }
@@ -329,8 +319,9 @@ public class RandomMapGenerator : MonoBehaviour
     private void OnGenerationComplete()
     {
         map.tileMap?.RefreshAllTiles();
-        Debug.Log($"[RandomMapGenerator] 地图完成 @ {map.Data.position} 大小{map.Data.size} 种子{Seed}");
+  //      Debug.Log($"[RandomMapGenerator] 地图完成 @ {map.Data.position} 大小{map.Data.size} 种子{Seed}");
         onMapGenerated?.Invoke();
+        map.OnMapGenerated_Stop.Invoke();
     }
     #endregion
 }

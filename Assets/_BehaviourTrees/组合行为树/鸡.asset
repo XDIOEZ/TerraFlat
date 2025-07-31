@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e104977d116dadf4287ec84cab51f82f, type: 3}
-  m_Name: GameTimeDetector
+  m_Name: GameLightDetector
   m_EditorClassIdentifier: 
   state: 0
   started: 0
   guid: 1c4de2e0e9d34ed40bedb88331e40374
-  position: {x: -677.60004, y: 2222.4}
+  position: {x: -677.5998, y: 2222.4}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -24,7 +24,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  time: {x: 0, y: 300}
+  SunlightIntensityThreshold: 0.5
 --- !u!114 &-8093066731600702051
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68,7 +68,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 87aa930c7c1b2ae418026d254e6d08a1
-  position: {x: -528.00006, y: 1795.9999}
+  position: {x: -527.1999, y: 1784.8}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -163,6 +163,7 @@ MonoBehaviour:
   DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &-7391974399094868746
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -239,6 +240,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
+  mod_Food: {fileID: 0}
   hungryThreshold: 0.5
 --- !u!114 &-6247524935218288790
 MonoBehaviour:
@@ -272,7 +274,6 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 1
   doNothing: 0
-  Speeder: {fileID: 0}
 --- !u!114 &-5490670431961927780
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -323,6 +324,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
+  Food: {fileID: 0}
   Self: {fileID: 0}
   EatingRange: 1
   LastEatingTime: 0
@@ -360,7 +362,6 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 0
   doNothing: 1
-  Speeder: {fileID: 0}
 --- !u!114 &-4435058565894111619
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -420,7 +421,6 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 1
   doNothing: 0
-  Speeder: {fileID: 0}
 --- !u!114 &-3066632926509538146
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -460,7 +460,7 @@ MonoBehaviour:
   m_Name: CustomRepeat
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: d372f3016eac151449bc3ba70555d1e1
   position: {x: -191.20004, y: 487.99994}
   blackboard:
@@ -515,7 +515,7 @@ MonoBehaviour:
   m_Name: RootNode
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: a2603d368950894428957120f2b909bb
   position: {x: 0, y: 0}
   blackboard:
@@ -589,7 +589,7 @@ MonoBehaviour:
   m_Name: Sequencer
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: 5db01462969faf74dbde13fab7ebfdee
   position: {x: -819.19995, y: 984.80005}
   blackboard:
@@ -664,7 +664,6 @@ MonoBehaviour:
   angleVariance: 90
   setBlackboardTarget: 1
   doNothing: 0
-  Speeder: {fileID: 0}
 --- !u!114 &-1251563694989493460
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -879,7 +878,7 @@ MonoBehaviour:
   m_Name: Inverter
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: fc4ec0d8115386e489b1cb1ad1ee8e49
   position: {x: -1104.7999, y: 570.4}
   blackboard:
@@ -1137,7 +1136,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 3c20d044b85dde34881ea3bb8a5294c5
-  position: {x: -1124.8, y: 2224.7998}
+  position: {x: -1126.4003, y: 2224.7996}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1188,7 +1187,7 @@ MonoBehaviour:
   m_Name: Parallel
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: a7c4a7b4828ef6b49957e646d376ebee
   position: {x: -472.8, y: 372.8}
   blackboard:
@@ -1213,7 +1212,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
   m_Name: Sequencer
   m_EditorClassIdentifier: 
-  state: 0
+  state: 1
   started: 0
   guid: 5526c82edba49b04d86264106046460c
   position: {x: -879.19995, y: 1356}
@@ -1320,7 +1319,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 3b33a73a1c77889478e29cba7c8316ed
-  position: {x: -974.4001, y: 2224.7998}
+  position: {x: -976.0001, y: 2224.7998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1347,7 +1346,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 7eff25b82af04be41bc779069c357d36
-  position: {x: -1276.7999, y: 2224.7998}
+  position: {x: -1276.8002, y: 2224.7996}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1395,12 +1394,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e104977d116dadf4287ec84cab51f82f, type: 3}
-  m_Name: GameTimeDetector
+  m_Name: GameLightDetector
   m_EditorClassIdentifier: 
-  state: 0
+  state: 1
   started: 0
   guid: e2d3fbd1238a7a6428acc5bbf786fe40
-  position: {x: -1253.6, y: 1599.9999}
+  position: {x: -1255.2, y: 1598.3909}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1409,7 +1408,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  time: {x: 0, y: 300}
+  SunlightIntensityThreshold: 0.5
 --- !u!114 &8180645246291243955
 MonoBehaviour:
   m_ObjectHideFlags: 0

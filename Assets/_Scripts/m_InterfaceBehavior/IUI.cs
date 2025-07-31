@@ -3,7 +3,5 @@ using UnityEngine;
 
 public interface IUI
 {
-    public Dictionary<string,UIData> UIDataDictionary { get; set; }
-
-
+    public Dictionary<string,float> UIValues { get; set; }
 }

@@ -52,7 +52,7 @@ public class WorldEdge_NoItem : MonoBehaviour
                 }
 
                 playerTransform.position = newPosition;
-                SaveAndLoad.Instance.ChangeScene(TPTOSceneName);
+                SaveLoadManager.Instance.ChangeScene(TPTOSceneName);
             }
             else
             {

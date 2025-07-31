@@ -78,13 +78,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
+  OnItemDestroy:
     _PersistentCalls: []
-  DestroyItem_Event:
+  OnAct:
     _PersistentCalls: []
-  OnAction_Event:
+  OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 0}
   _data:
@@ -131,11 +131,6 @@ MonoBehaviour:
     stamina: 100
     stamina_Max: 100
     staminaRecoverySpeed: 1
-    NutritionData:
-      Food: 100
-      MaxFood: 0
-      Water: 100
-      MaxWater: 0
     progress: 0
     progress_Max:
       BaseValue: 0
@@ -155,13 +150,13 @@ MonoBehaviour:
       - lootsName: Loots_Death
         lootList:
         - lootName: Log
-          lootAmount: 4
+          lootAmountRange: {x: 0, y: 0}
         - lootName: Apple_Red
-          lootAmount: 2
+          lootAmountRange: {x: 0, y: 0}
       - lootsName: Loots_Production
         lootList:
         - lootName: "\u6728\u68CD"
-          lootAmount: 1
+          lootAmountRange: {x: 0, y: 0}
     sightRange: 10
     TeamID: 
 --- !u!61 &7750936676413998519
@@ -236,7 +231,7 @@ GameObject:
   - component: {fileID: 6283402004694861917}
   - component: {fileID: 1890700358386065740}
   - component: {fileID: 675614112313854105}
-  - component: {fileID: 2671230964647945301}
+  - component: {fileID: 950637619536004674}
   m_Layer: 9
   m_Name: Mods
   m_TagString: Untagged
@@ -271,9 +266,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   _data:
-    Name: "\u751F\u957F\u6A21\u5757"
-    isRunning: 1
     isLoop: 0
     progress: 0
     progress_Max:
@@ -293,18 +287,25 @@ MonoBehaviour:
       InvokeValue: 0
       loot:
         lootName: 
-        lootAmount: 0
+        lootAmountRange: {x: 0, y: 0}
+      DestroySelf: 0
     - NodeName: "\u751F\u957F\u9636\u6BB5"
       InvokeValue: 5
       loot:
         lootName: 
-        lootAmount: 0
+        lootAmountRange: {x: 0, y: 0}
+      DestroySelf: 0
     - NodeName: "\u6210\u719F\u9636\u6BB5"
       InvokeValue: 10
       loot:
         lootName: "\u6728\u68CD"
-        lootAmount: 2
+        lootAmountRange: {x: 1, y: 1}
+      DestroySelf: 0
     nodeIndex: 0
+  _memoryPackable:
+    Name: "\u751F\u957F\u6A21\u5757"
+    isRunning: 1
+    BitData: 
 --- !u!114 &675614112313854105
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -317,9 +318,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   _data:
-    Name: "\u751F\u4EA7\u6A21\u5757"
-    isRunning: 0
     isLoop: 1
     progress: 0
     progress_Max:
@@ -339,9 +339,14 @@ MonoBehaviour:
       InvokeValue: 10
       loot:
         lootName: Apple_Red
-        lootAmount: 1
+        lootAmountRange: {x: 1, y: 1}
+      DestroySelf: 0
     nodeIndex: 0
---- !u!114 &2671230964647945301
+  _memoryPackable:
+    Name: "\u751F\u4EA7\u6A21\u5757"
+    isRunning: 1
+    BitData: 
+--- !u!114 &950637619536004674
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -350,9 +355,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 2802196787596597447}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 34ede1cf358569c4b87e60ea5d56ed1d, type: 3}
+  m_Script: {fileID: 11500000, guid: 739f70e9d3f158c4bbb73aaa894788ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   modData:
     Name: "\u4E22\u5F03\u6A21\u5757"
     isRunning: 1
@@ -491,6 +497,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6cbe05dc9e2ebf747bcc0d42f70ec020, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 0
+    BitData: 
   DamagePanelName: Panel_DamageText
   damagePanelSpeed: 2
   damagePanelDuration: 1.5
@@ -599,7 +610,7 @@ MonoBehaviour:
   - {x: 0.18533325, y: 0.06695628, z: 0}
   m_ShapePathHash: 0
   m_Mesh: {fileID: 0}
-  m_InstanceId: 127970
+  m_InstanceId: 188104
   m_LocalBounds:
     m_Center: {x: 0.02347374, y: 0.37604785, z: 0}
     m_Extent: {x: 0.16185951, y: 0.30909157, z: 0}

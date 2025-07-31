@@ -5,17 +5,17 @@ using TheKiwiCoder;
 
 public class HungryChecker : ActionNode
 {
-    public IHunger hungryEr;
+    public Mod_Food mod_Food;
 
     [Tooltip("饥饿阈值（百分比）")]
     [Range(0, 1)] // 0~100%的滑动条
-    public float hungryThreshold = 0.3f; // 默认30%
+    public float hungryThreshold = 0.6f; // 默认60%
 
     protected override void OnStart() 
     {
-        if(hungryEr == null)
+        if(mod_Food == null)
         {
-            hungryEr = context.gameObject.GetComponent<IHunger>();
+            mod_Food = context.item.Mods[ModText.Food] as Mod_Food;
         }
     }
 
@@ -24,7 +24,7 @@ public class HungryChecker : ActionNode
 
     protected override State OnUpdate() 
     {
-        if(hungryEr.Nutrition.Food <=  hungryEr.Nutrition.MaxFood * hungryThreshold)
+        if(mod_Food.Data.nutrition.GetHungerRate() <= hungryThreshold)
         {
             return State.Success;
         }

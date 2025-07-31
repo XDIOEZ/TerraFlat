@@ -52,7 +52,7 @@ public class SaveMenuRightMenuUI : MonoBehaviour
             ReNameSystem.Rename_PlayerName(oldName, newName);
         }
 
-        SaveAndLoad.Instance.Save();
+        SaveLoadManager.Instance.Save();
         SaveManager.Ins.Refresh();
         CloseUI();
     }
@@ -70,8 +70,8 @@ public class SaveMenuRightMenuUI : MonoBehaviour
         }
         else
         {
-            SaveAndLoad.Instance.SaveData.PlayerData_Dict.Remove(SelectInfo.Name);
-            SaveAndLoad.Instance.Save();
+            SaveLoadManager.Instance.SaveData.PlayerData_Dict.Remove(SelectInfo.Name);
+            SaveLoadManager.Instance.Save();
         }
 
         SaveManager.Ins.Refresh();

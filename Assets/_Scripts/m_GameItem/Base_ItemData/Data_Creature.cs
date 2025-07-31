@@ -29,11 +29,6 @@ public partial class Data_Creature : ItemData
     public float staminaRecoverySpeed = 1;
     #endregion
 
-    #region 食物
-    [Tooltip("饥饿值/营养值")]
-    public Nutrition NutritionData = new Nutrition(100, 100);
-    #endregion
-
     #region 生产
 
     [Tooltip("生产进度")]
@@ -97,8 +92,8 @@ public partial class Data_Creature : ItemData
             excel.Parse(excel.GetConvertedValue<string>(ExcelIdentifyRow.LootsProduction, itemRow, string.Empty));
 
 
-        NutritionData.MaxFood = excel.GetConvertedValue<float>(ExcelIdentifyRow.MaxFood, itemRow, 0.0f);
-        NutritionData.MaxWater = excel.GetConvertedValue<float>(ExcelIdentifyRow.MaxWater, itemRow, 0.0f);
+        //NutritionData.Max_Carbohydrates = excel.GetConvertedValue<float>(ExcelIdentifyRow.MaxFood, itemRow, 0.0f);
+        //NutritionData.Max_Water = excel.GetConvertedValue<float>(ExcelIdentifyRow.MaxWater, itemRow, 0.0f);
 
         return itemRow;
     }

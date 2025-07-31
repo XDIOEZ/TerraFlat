@@ -175,6 +175,7 @@ Transform:
   - {fileID: 8858718869245111966}
   - {fileID: 1487544228942658785}
   - {fileID: 917846501771513635}
+  - {fileID: 5908602082960922031}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8788730563488070657
@@ -190,13 +191,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
-    _PersistentCalls: []
-  DestroyItem_Event:
+  OnItemDestroy:
     _PersistentCalls: []
   OnAct:
+    _PersistentCalls: []
+  OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 0}
   Data:
@@ -244,11 +245,6 @@ MonoBehaviour:
     stamina: 50
     stamina_Max: 100
     staminaRecoverySpeed: 1
-    NutritionData:
-      Food: 50
-      MaxFood: 100
-      Water: 100
-      MaxWater: 0
     progress: 0
     progress_Max:
       BaseValue: 1
@@ -356,6 +352,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tree: {fileID: 11400000, guid: 6978d3b64138a424b97b1bddad14f011, type: 2}
+  item: {fileID: 8788730563488070657}
 --- !u!195 &3575352115311274905
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -498,6 +495,76 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!1 &2401556671261882084
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5908602082960922031}
+  - component: {fileID: 6957164905672396809}
+  m_Layer: 9
+  m_Name: "\u751F\u4EA7\u6A21\u5757"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5908602082960922031
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2401556671261882084}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4050397865490026434}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6957164905672396809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2401556671261882084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  _data:
+    Name: "\u751F\u4EA7\u6A21\u5757"
+    isRunning: 1
+    isLoop: 1
+    progress: 0
+    progress_Max:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    productionSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    specialProductionPoints:
+    - NodeName: "\u751F\u9E21\u86CB"
+      InvokeValue: 99
+      loot:
+        lootName: Egg
+        lootAmountRange: {x: 1, y: 2}
+      DestroySelf: 0
+    nodeIndex: 0
 --- !u!1 &2960653369821677423
 GameObject:
   m_ObjectHideFlags: 0
@@ -547,12 +614,12 @@ MonoBehaviour:
   controlledTransform: {fileID: 0}
   currentDirection: {x: 1, y: 0}
   isTurning: 0
-  faceMouse: {fileID: 0}
+  faceMouse: {fileID: 2803089907767139299}
   modData:
     Name: 
     isRunning: 0
     BitData: 
-  mover: {fileID: 0}
+  mover: {fileID: 1321391762135378242}
 --- !u!1 &3675996636383087212
 GameObject:
   m_ObjectHideFlags: 0
@@ -638,6 +705,10 @@ MonoBehaviour:
       FinalAdditive: 0
     slowDownSpeed: 5
     endSpeed: 0.1
+    runStaminaRate: 2
+    runSpeedRate: 2
+    isRunning: 0
+    RunStaminaThreshold: 2
   TargetPosition: {x: 0, y: 0, z: 0}
   IsMoving: 0
   OnMoveEnd:
@@ -657,7 +728,6 @@ MonoBehaviour:
     Name: 
     isRunning: 0
     BitData: 
-  targetPosition: {x: 0, y: 0, z: 0}
   target: {fileID: 0}
   agent: {fileID: 0}
   isMoving: 0
@@ -705,6 +775,65 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ExData:
+    Name: 
+    isRunning: 0
+    BitData: 
+  Data:
+    nutrition:
+      Carbohydrates: 100
+      Max_Carbohydrates:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Fat: 100
+      Max_Fat:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Protein: 100
+      Max_Protein:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Water: 100
+      Max_Water:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Vitamins: 100
+      Max_Vitamins:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+    Max_EatingProgress: 3
+    AbsorptionRate: 1
+    ShowCanvas: 0
+    nutritionConsumeSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    FeelGood: 0
+  EatingProgress: 0
+  DataUpdate:
+    _PersistentCalls: []
+  PanelPrefab: {fileID: 0}
+  UIValues: {fileID: 0}
+  PanleInstance: {fileID: 0}
+  Stamina: {fileID: 0}
 --- !u!1 &6916727058987276155
 GameObject:
   m_ObjectHideFlags: 0
@@ -759,7 +888,7 @@ MonoBehaviour:
     isRunning: 0
     BitData: 
   PlayerController: {fileID: 0}
-  faceItem: {fileID: 0}
+  faceItem: {fileID: 2849073660659784377}
 --- !u!1 &7020901129659560470
 GameObject:
   m_ObjectHideFlags: 0
@@ -804,11 +933,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42551f688eba8834586418506b8a82af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   detectionRadius: 8
   itemLayer:
     serializedVersion: 2
     m_Bits: 512
   currentItemsInArea: []
+  ModData:
+    Name: 
+    isRunning: 0
+    BitData: 
 --- !u!1001 &1480365558587204570
 PrefabInstance:
   m_ObjectHideFlags: 0

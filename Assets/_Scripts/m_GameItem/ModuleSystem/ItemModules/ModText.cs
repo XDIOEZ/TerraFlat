@@ -14,4 +14,5 @@ public static class ModText
     public static string Run = "跑步模块";
     public static string Hp = "伤害接受模块";
     public static string Stamina = "精力模块";
+    public static string Food = "食物模块";
 }

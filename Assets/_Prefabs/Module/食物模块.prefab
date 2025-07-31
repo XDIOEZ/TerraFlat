@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5923271790331152526
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6237486111656621479}
+  - component: {fileID: 3386547747097903612}
+  m_Layer: 9
+  m_Name: "\u98DF\u7269\u6A21\u5757"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6237486111656621479
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5923271790331152526}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3386547747097903612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5923271790331152526}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ExData:
+    Name: 
+    isRunning: 0
+    BitData: 
+  Data:
+    nutrition:
+      Carbohydrates: 100
+      Max_Carbohydrates:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Fat: 100
+      Max_Fat:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Protein: 100
+      Max_Protein:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Water: 100
+      Max_Water:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      Vitamins: 100
+      Max_Vitamins:
+        BaseValue: 100
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+    Max_EatingProgress: 3
+    AbsorptionRate: 1
+  EatingProgress: 0
+  ShowCanvas: 0
+  PanelPrefab: {fileID: 1316998372701819345, guid: 215a9df040199634fb89efb65997fb42, type: 3}

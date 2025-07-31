@@ -22,8 +22,8 @@ public partial class BuffRunTime
 
     public void SetItemSenderAndReceiver()
     {
-        buff_Sender = RunTimeItemManager .Instance.GetItemByGuid(buff_Sender_Guid);
-        buff_Receiver = RunTimeItemManager.Instance.GetItemByGuid(buff_Receiver_Guid);
+        buff_Sender = GameItemManager .Instance.GetItemByGuid(buff_Sender_Guid);
+        buff_Receiver = GameItemManager.Instance.GetItemByGuid(buff_Receiver_Guid);
         buffData = GameRes.Instance.GetBuffData(buff_IDName);
     }
 

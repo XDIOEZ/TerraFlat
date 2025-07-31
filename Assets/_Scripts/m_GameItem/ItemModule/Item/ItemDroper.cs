@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.XR;
 
-public class ItemDroper : Mod_ItemMaker
+public class ItemDroper : Mod_ItemDrop
 {
     [Header("基础配置")]
     public Inventory DroperInventory;
@@ -95,7 +95,7 @@ public class ItemDroper : Mod_ItemMaker
                 slot.ClearData();
 
             // 实例化新物体
-            Item newObject = RunTimeItemManager.Instance.InstantiateItem(newItemData.IDName);
+            Item newObject = GameItemManager.Instance.InstantiateItem(newItemData.IDName);
             if (newObject == null)
             {
                 Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);

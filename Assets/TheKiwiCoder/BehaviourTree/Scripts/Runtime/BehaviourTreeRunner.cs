@@ -8,17 +8,23 @@ namespace TheKiwiCoder
     public class BehaviourTreeRunner : MonoBehaviour
     {
         public BehaviourTree tree;
+        public Item item;
         Context context;
 
         private bool isRunning = true; // 控制行为树运行
 
-        void Start()
+        void Awake()
         {
-            GetComponent<Item>().OnStopWork_Event += StopTree;
+            item.OnModuleLoadDone+=InitTree;
+      
+        }
+
+        void InitTree()
+        {
+            GetComponent<Item>().OnItemDestroy += StopTree;
             context = CreateBehaviourTreeContext();
             tree = tree.Clone();
             tree.Bind(context);
-            context.gameObject = gameObject;
         }
 
         void Update()

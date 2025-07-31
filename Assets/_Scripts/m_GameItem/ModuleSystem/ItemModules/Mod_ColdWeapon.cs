@@ -77,14 +77,18 @@ public partial class Mod_ColdWeapon : Module
         // 从Data加载保存的数据到saveData
         Data.ReadData(ref saveData);
 
+        
+
         if (item.BelongItem != null)
+        {
             faceMouse = item.BelongItem.Mods[ModText.FaceMouse] as FaceMouse;
-
-        var controller = item.BelongItem.Mods[ModText.Controller].GetComponent<PlayerController>();
-        InputAction = controller._inputActions.Win10.LeftClick;
-
-        InputAction.started += OnInputActionStarted;
-        InputAction.canceled += OnInputActionCanceled;
+            var controller = item.BelongItem.Mods[ModText.Controller].GetComponent<PlayerController>();
+            InputAction = controller._inputActions.Win10.LeftClick;
+            InputAction.started += OnInputActionStarted;
+            InputAction.canceled += OnInputActionCanceled;
+        }
+    
+    
 
         if (MoveTargetTransform == null)
             MoveTargetTransform = item.transform;
@@ -102,21 +106,24 @@ public partial class Mod_ColdWeapon : Module
             damageCollider.enabled = false; // 默认关闭
     }
 
-    public void Update()
+    public override void Action(float deltaTime)
     {
         if (CurrentState == AttackState.Attacking && InputAction != null && InputAction.IsPressed())
         {
-            OnAttackStay();
+            PerformStab(StartPosition, AttackSpeed, MaxAttackDistance, deltaTime);
         }
 
         if (isReturning)
         {
-            float distanceToMoveBack = ReturnSpeed * Time.deltaTime;
             Vector2 currentPos = (Vector2)MoveTargetTransform.localPosition;
             Vector2 directionBack = (returnTarget - currentPos).normalized;
+            float distanceToMoveBack = ReturnSpeed * deltaTime;
 
-            float dist = Vector2.Distance(currentPos, returnTarget);
-            if (dist <= 0.1f)
+            // 计算“将要走的下一步”位置
+            Vector2 nextPos = currentPos + directionBack * distanceToMoveBack;
+
+            // 如果下一帧会超过目标点，就直接到目标点
+            if (Vector2.Dot(returnTarget - currentPos, returnTarget - nextPos) <= 0f)
             {
                 MoveTargetTransform.localPosition = returnTarget;
                 isReturning = false;
@@ -127,10 +134,11 @@ public partial class Mod_ColdWeapon : Module
             }
             else
             {
-                MoveTargetTransform.localPosition = currentPos + directionBack * distanceToMoveBack;
+                MoveTargetTransform.localPosition = nextPos;
             }
         }
     }
+
 
     public void OnTriggerEnter2D(Collider2D other)
     {
@@ -182,10 +190,10 @@ public partial class Mod_ColdWeapon : Module
 
     public void OnAttackStay()
     {
-        if (CurrentState == AttackState.Attacking)
+ /*       if (CurrentState == AttackState.Attacking)
         {
             PerformStab(StartPosition, AttackSpeed, MaxAttackDistance);
-        }
+        }*/
     }
 
     public void OnAttackStop()
@@ -199,7 +207,7 @@ public partial class Mod_ColdWeapon : Module
         }
     }
 
-    public void PerformStab(Vector2 startTarget, float speed, float maxDistance)
+    public void PerformStab(Vector2 startTarget, float speed, float maxDistance,float deltaTime)
     {
         Vector2 mouseTargetLocal = MoveTargetTransform.parent != null ?
             (Vector2)MoveTargetTransform.parent.InverseTransformPoint(faceMouse.Data.TargetPosition) :
@@ -215,9 +223,12 @@ public partial class Mod_ColdWeapon : Module
             mouseTargetLocal = startTarget + toTarget.normalized * maxDistance;
         }
 
+
         Vector2 direction = (mouseTargetLocal - currentLocalPos).normalized;
-        float distanceToMove = speed * Time.deltaTime;
+        float distanceToMove = speed * deltaTime;
         Vector2 newPosition = currentLocalPos + direction * distanceToMove;
+
+        
 
         float remainingDistance = Vector2.Distance(currentLocalPos, mouseTargetLocal);
         if (remainingDistance < 0.1f)

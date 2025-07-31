@@ -1,6 +1,3 @@
-using NaughtyAttributes;
-using System.Collections;
-using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -16,12 +13,24 @@ public partial class Mover : Module, IMove
     public partial class Mover_SaveData
     {
         [Header("移动设置")]
-        public GameValue_float Speed = new GameValue_float(10f);
+        public GameValue_float Speed = new(10f);
         public float slowDownSpeed = 5f;
         public float endSpeed = 0.1f;
 
-        // 可根据需要添加更多需要保存的字段
+        [Header("跑步设置")]
+        public float runStaminaRate = 2f;
+        public float runSpeedRate = 2f;
+        public bool isRunning = false;
+        public float RunStaminaThreshold = 2f; // 🆕 当体力低于该值时，不能奔跑
     }
+
+    public float RunStaminaThreshold
+    {
+        get => saveData.RunStaminaThreshold;
+        set => saveData.RunStaminaThreshold = value;
+    }
+
+
     #endregion
 
     #region 字段
@@ -30,6 +39,7 @@ public partial class Mover : Module, IMove
     [Tooltip("速度源")]
     [SerializeField]
     public Mover_SaveData saveData = new Mover_SaveData();
+    public bool hightReaction = false;
 
     // 将需要保存的字段改为属性，引用saveData中的字段
     public GameValue_float Speed
@@ -72,6 +82,52 @@ public partial class Mover : Module, IMove
     //每秒精力消耗速度
     public GameValue_float staminaConsumeSpeed = new(1);
 
+    public bool IsRunning
+    {
+        get => saveData.isRunning;
+        private set => saveData.isRunning = value;
+    }
+
+    public float RunStaminaRate
+    {
+        get => saveData.runStaminaRate;
+        set => saveData.runStaminaRate = value;
+    }
+
+    public float RunSpeedRate
+    {
+        get => saveData.runSpeedRate;
+        set => saveData.runSpeedRate = value;
+    }
+
+    public void SetRunState(bool isRun)
+    {
+        if (IsRunning == isRun) return;
+
+        // 🛑 体力不足时禁止跑步
+        if (isRun && stamina != null && stamina.CurrentValue < RunStaminaThreshold)
+        {
+            Debug.Log("体力太低，无法奔跑");
+            return;
+        }
+
+
+        if (isRun)
+        {
+            staminaConsumeSpeed.MultiplicativeModifier *= RunStaminaRate;
+            Speed.MultiplicativeModifier *= RunSpeedRate;
+        }
+        else
+        {
+            staminaConsumeSpeed.MultiplicativeModifier /= RunStaminaRate;
+            Speed.MultiplicativeModifier /= RunSpeedRate;
+        }
+
+        IsRunning = isRun;
+    }
+
+
+
     #endregion
 
     #region 属性
@@ -112,9 +168,23 @@ public partial class Mover : Module, IMove
         {
             stamina = item.Mods[ModText.Stamina].GetComponent<Mod_Stamina>();
         }
+
+        if (item.Mods.ContainsKey(ModText.Controller))
+        {
+            var controller = item.Mods[ModText.Controller].GetComponent<PlayerController>();
+            controller._inputActions.Win10.Shift.started += _ => SetRunState(true);
+            controller._inputActions.Win10.Shift.canceled += _ => SetRunState(false);
+        }
+
     }
 
     public void Update()
+    {
+        if(hightReaction == true)
+        Action(Time.deltaTime); // 调用Action( deltaTime)
+    }
+
+    public override void Action(float deltaTime)
     {
         if (moveAction == null) return;
 
@@ -125,12 +195,23 @@ public partial class Mover : Module, IMove
             Vector2 target = Rb.position + input.normalized;
             Move(target);
             OnMoveStay?.Invoke();
+
             if (stamina != null)
-                stamina.CurrentValue -= Time.deltaTime * staminaConsumeSpeed.Value;
+            {
+                stamina.CurrentValue -= deltaTime * staminaConsumeSpeed.Value;
+
+                // 🛑 自动中断奔跑
+                if (IsRunning && stamina.CurrentValue < RunStaminaThreshold)
+                {
+                    SetRunState(false);
+                    Debug.Log("体力不足，自动停止奔跑");
+                }
+
+            }
         }
         else
         {
-            Move(Rb.position); // 触发停止检测
+            Move(Rb.position); // 停止移动
         }
     }
 

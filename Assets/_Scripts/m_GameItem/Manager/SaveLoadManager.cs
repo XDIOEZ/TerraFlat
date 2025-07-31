@@ -17,7 +17,7 @@ using UltEvents;
 /// <summary>
 /// 游戏存档与加载系统，负责管理游戏数据的保存和加载功能
 /// </summary>
-public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
+public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
 {
     #region 存档配置
     [Header("存档相关")]
@@ -31,7 +31,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     public GameSaveData SaveData;
 
     [Tooltip("场景切换时调用的事件")]
-    public UltEvent OnSceneSwitch;
+    public UltEvent OnSceneSwitchStart;
 
     [Tooltip("临时失效物体")]
     public List<GameObject> GameObject_False;
@@ -40,22 +40,22 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     public string CurrentContrrolPlayerName;
 
     [Tooltip("退出游戏事件")]
-    public UltEvent ExitGame_Event;
-
-    [Tooltip("场景切换事件")]
-    public UltEvent ChangeScene_Event;
+    public UltEvent OnSaveGame;
 
     [Header("默认设置")]
     public DefaultSettings defaultSettings;
 
     [Header("模板参考")]
     public WorldSaveSO templateSaveData;
+
+    public bool IsGameStart = false;
     #endregion
 
     #region 生命周期
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
+       // OnSceneSwitch += Save;
     }
     #endregion
 
@@ -107,7 +107,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     [Button("保存存档到磁盘上")]
     public void Save()
     {
-        ExitGame_Event.Invoke();
+        OnSaveGame.Invoke();
         SaveActiveMapToSaveData();
         SaveToDisk(SaveData, UserSavePath, SaveData.saveName);
     }
@@ -156,7 +156,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
         if (SaveData.PlayerData_Dict.TryGetValue(playerName, out var savedData))
         {
-            Debug.Log($"成功加载已保存的玩家：{playerName}");
+            //Debug.Log($"成功加载已保存的玩家：{playerName}");
             playerData = savedData;
         }
         else
@@ -177,7 +177,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     /// <returns>创建的玩家实例</returns>
     private Player CreatePlayer(Data_Player data)
     {
-        GameObject newPlayerObj = RunTimeItemManager.Instance.InstantiateItem(data).gameObject;
+        GameObject newPlayerObj = GameItemManager.Instance.InstantiateItem(data).gameObject;
         Player newPlayer = newPlayerObj.GetComponentInChildren<Player>();
         newPlayer.Load();
         return newPlayer;
@@ -192,7 +192,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
     {
         if (SaveData.Active_MapsData_Dict.TryGetValue(mapName, out MapSave mapSave))
         {
-            Debug.Log($"成功加载地图：{mapName}");
+        //    Debug.Log($"成功加载地图：{mapName}");
             InstantiateItemsFromMapSave(mapSave);
             LoadPlayer(CurrentContrrolPlayerName);
             return;
@@ -227,7 +227,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
             foreach (ItemData forLoadItemData in itemDataList)
             {
-                Item item = RunTimeItemManager.Instance.InstantiateItem(forLoadItemData, forLoadItemData._transform.Position);
+                Item item = GameItemManager.Instance.InstantiateItem(forLoadItemData, forLoadItemData._transform.Position);
                 if (item == null)
                 {
                     Debug.LogError($"加载物品失败：{forLoadItemData.IDName}");
@@ -526,7 +526,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         SceneManager.sceneUnloaded -= OnPreviousSceneUnloaded;
 
         // 2. 通知切换开始
-        OnSceneSwitch.Invoke();
+        OnSceneSwitchStart.Invoke();
 
         // 3. 设置新场景为当前激活场景
         SceneManager.SetActiveScene(newScene);
@@ -541,7 +541,7 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
         }
         else
         {
-            Debug.Log($"创建新场景: {newScene.name}，仅添加地图核心");
+          //  Debug.Log($"创建新场景: {newScene.name}，仅添加地图核心");
 
             // 玩家数据存在则加载，否则创建并初始化默认位置
             if (SaveData.PlayerData_Dict.ContainsKey(CurrentContrrolPlayerName))
@@ -577,11 +577,11 @@ public class SaveAndLoad : SingletonAutoMono<SaveAndLoad>
 
 
             // 实例化地图核心物体（如地形、障碍物管理器等）
-            RunTimeItemManager.Instance.InstantiateItem("MapCore");
+            GameItemManager.Instance.InstantiateItem("MapCore");
         }
 
-        // 5. 通知场景切换完成
-        OnSceneSwitch?.Invoke();
+        //将地图数据存入SaveData中
+        SaveActiveMapToSaveData();
     }
 
     /// <summary>

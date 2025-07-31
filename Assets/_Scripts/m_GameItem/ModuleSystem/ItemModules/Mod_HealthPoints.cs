@@ -23,8 +23,5 @@ public class Mod_HealthPoints : Module
     }
 
     // Update is called once per frame
-    void Update()
-    {
-        
-    }
+
 }

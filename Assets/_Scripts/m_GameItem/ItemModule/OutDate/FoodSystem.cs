@@ -1,4 +1,4 @@
-using NaughtyAttributes;
+/*using NaughtyAttributes;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -27,8 +27,8 @@ public class FoodSystem : MonoBehaviour
     [Tooltip("最大饥饿值"), ShowNativeProperty]
     public float MaxHungryValue
     {
-        get => IHungry_Food.Nutrition.MaxFood;
-        set => IHungry_Food.Nutrition.MaxFood = value;
+        get => IHungry_Food.Nutrition.Max_Carbohydrates;
+        set => IHungry_Food.Nutrition.Max_Carbohydrates = value;
     }
 
     [Tooltip("饥饿值接口引用"), ShowNativeProperty]
@@ -137,4 +137,4 @@ public class FoodSystem : MonoBehaviour
         // 计算总变化速度（恢复 - 消耗）
         HungryChangeSpeed = recoverSpeed - consumeSpeed;
     }
-}
+}*/

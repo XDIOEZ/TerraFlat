@@ -18,8 +18,9 @@ public class SettingCanvas : MonoBehaviour
     public void SaveAndExit()
     {
 
-        SaveAndLoad.Instance.Save();
-        SaveAndLoad.Instance.OnSceneSwitch.Invoke();
+        SaveLoadManager.Instance.Save();
+        SaveLoadManager.Instance.OnSceneSwitchStart.Invoke();
+        SaveLoadManager.Instance.IsGameStart = false;
         SceneManager.LoadScene("GameStartScene");
      
     }

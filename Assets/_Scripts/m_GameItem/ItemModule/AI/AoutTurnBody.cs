@@ -11,9 +11,15 @@ public class AoutTurnBody : TurnBody
         base.Load();
         mover = item.Mods[ModText.Mover] as Mover;
     }
-
-    public override void Update()
+    public override void Action(float delta)
     {
-        TurnBodyToDirection(mover.TargetPosition-item.transform.position);
+        UpdateTurn(delta);
+
+        if (mover != null)
+        {
+            Vector2 direction = mover.TargetPosition - item.transform.position;
+            TurnBodyToDirection(direction);
+        }
     }
 }
+

@@ -26,7 +26,7 @@ public class SceneChange : MonoBehaviour, IInteract
         print($"[SceneChange] 玩家位置传送至：{interacter.User.transform.position}");
         print($"[SceneChange] 玩家：{interacter.User.name}");
 
-        SaveAndLoad.Instance.ChangeScene(TPTOSceneName);
+        SaveLoadManager.Instance.ChangeScene(TPTOSceneName);
 
         Debug.Log($"[SceneChange] 场景传送至：{TPTOSceneName}");
 

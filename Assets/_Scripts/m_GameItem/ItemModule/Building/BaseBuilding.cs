@@ -244,13 +244,13 @@ public class BaseBuilding : MonoBehaviour
         // 正式安装流程
         item.Item_Data.Stack.Amount--;
 
-        if (item.UpdatedUI_Event != null)
+        if (item.OnUIRefresh != null)
         {
-            item.UpdatedUI_Event.Invoke();
+            item.OnUIRefresh.Invoke();
         }
 
         // 实例化建筑
-        var runtimeItem = RunTimeItemManager.Instance.InstantiateItem(
+        var runtimeItem = GameItemManager.Instance.InstantiateItem(
             item.Item_Data.IDName,
             GhostShadow.transform.position
         );

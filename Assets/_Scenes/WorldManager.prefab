@@ -79,6 +79,104 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
+--- !u!1 &3155864055111466433
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1441996938494261787}
+  - component: {fileID: 2455745498807310259}
+  - component: {fileID: 3397698588488408384}
+  m_Layer: 0
+  m_Name: "\u65E5\u6708\u7CFB\u7EDF"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1441996938494261787
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3155864055111466433}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 891121404665747283}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2455745498807310259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3155864055111466433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f914b0958fba1ba4daac26b71a5e7bc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Sun: {fileID: 3397698588488408384}
+  Current_DayThreshold: 0
+  Current_NightThreshold: 0
+--- !u!114 &3397698588488408384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3155864055111466433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 073797afb82c5a1438f328866b10b3f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_ComponentVersion: 1
+  m_LightType: 4
+  m_BlendStyleIndex: 0
+  m_FalloffIntensity: 0.5
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 1
+  m_LightVolumeIntensity: 1
+  m_LightVolumeIntensityEnabled: 0
+  m_ApplyToSortingLayers: 69fb64b5132694d400000000676586be63a00c27d9349123
+  m_LightCookieSprite: {fileID: 0}
+  m_DeprecatedPointLightCookieSprite: {fileID: 0}
+  m_LightOrder: 0
+  m_AlphaBlendOnOverlap: 0
+  m_OverlapOperation: 0
+  m_NormalMapDistance: 3
+  m_NormalMapQuality: 2
+  m_UseNormalMap: 0
+  m_ShadowIntensityEnabled: 0
+  m_ShadowIntensity: 0.75
+  m_ShadowVolumeIntensityEnabled: 0
+  m_ShadowVolumeIntensity: 0.75
+  m_LocalBounds:
+    m_Center: {x: 0, y: -0.00000011920929, z: 0}
+    m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
+  m_PointLightInnerAngle: 360
+  m_PointLightOuterAngle: 360
+  m_PointLightInnerRadius: 0
+  m_PointLightOuterRadius: 1
+  m_ShapeLightParametricSides: 5
+  m_ShapeLightParametricAngleOffset: 0
+  m_ShapeLightParametricRadius: 1
+  m_ShapeLightFalloffSize: 0.5
+  m_ShapeLightFalloffOffset: {x: 0, y: 0}
+  m_ShapePath:
+  - {x: -0.5, y: -0.5, z: 0}
+  - {x: 0.5, y: -0.5, z: 0}
+  - {x: 0.5, y: 0.5, z: 0}
+  - {x: -0.5, y: 0.5, z: 0}
 --- !u!1 &4565539948505994440
 GameObject:
   m_ObjectHideFlags: 0
@@ -88,10 +186,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 891121404665747283}
-  - component: {fileID: 7469590529243029867}
-  - component: {fileID: 2461255727863929810}
   - component: {fileID: 9058411785591302946}
   - component: {fileID: 7400242115634630897}
+  - component: {fileID: 2634416744218920421}
+  - component: {fileID: 1704115879885880632}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -109,59 +207,13 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.4, y: 0.4, z: 0.4}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1441996938494261787}
   - {fileID: 5897130074279119965}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7469590529243029867
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4565539948505994440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 852c665edf28b2148bf035d2e1c51649, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &2461255727863929810
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4565539948505994440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c07f428fce108d34b9a11e73ec80d1f7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  TemplateSavePath: Assets/Saves/GameSaveData/
-  UserSavePath: Assets/Saves/LoaclSaveData/
-  SaveData:
-    saveName: defaultSaveName
-    Active_PlanetName: "\u5730\u7403"
-    Active_MapName: 
-    Active_MapPos: {x: 0, y: 0}
-    SaveSeed: 
-    Seed: 0
-  OnSceneSwitch:
-    _PersistentCalls: []
-  GameObject_False: []
-  CurrentContrrolPlayerName: "\u9ED8\u8BA4"
-  ExitGame_Event:
-    _PersistentCalls: []
-  ChangeScene_Event:
-    _PersistentCalls: []
-  defaultSettings:
-    Default_ADDTable: Template_SaveData
-    Default_PlayerSave: "\u73A9\u5BB6"
-    Default_PlayerName: "\u9ED8\u8BA4"
-    Default_Map: 
-  templateSaveData: {fileID: 0}
 --- !u!114 &9058411785591302946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -195,3 +247,75 @@ MonoBehaviour:
   path: "Assets/_Data/\u5E73\u5766\u4E16\u754C- \u751F\u7269\u53CA\u7269\u54C1\u6570\u636E.xlsx"
   OpenSheetName: Sheet1
   SheetNames: []
+--- !u!114 &2634416744218920421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b066b741dced9848bd565bb8a2c019e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TemplateSavePath: Assets/Saves/GameSaveData/
+  UserSavePath: Assets/Saves/LoaclSaveData/
+  SaveData:
+    saveName: defaultSaveName
+    Active_PlanetName: "\u5730\u7403"
+    Active_MapName: (0, 0)
+    Active_MapPos: {x: 0, y: 0}
+    SaveSeed: 0
+    Seed: 0
+    Time: 0
+    TimeSpeed: 60
+    Active_PlanetData:
+      PlanetName: 
+      Radius: 1000
+      TemperatureOffset: 0
+      RainOffset: 0
+      OceanHeight: -1
+      NoiseScale: 0.01
+      MapSize: {x: 100, y: 100}
+      TimeData:
+        DayTime: 0
+        SeasonTime: 0
+        YearTime: 0
+        Day: 0
+        Season: 0
+        Year: 0
+        OneDayTime: 1440
+        OneSeasonTime: 8640
+        OneYearTime: 34560
+        RotationSpeed: 1
+        OrbitSpeed: 1
+        SunriseSunsetThreshold_Spring: {x: 0.3, y: 0.2}
+        SunriseSunsetThreshold_Summer: {x: 0.2, y: 0.1}
+        SunriseSunsetThreshold_Autumn: {x: 0.3, y: 0.2}
+        SunriseSunsetThreshold_Winter: {x: 0.5, y: 0.4}
+  OnSceneSwitchStart:
+    _PersistentCalls: []
+  GameObject_False: []
+  CurrentContrrolPlayerName: 
+  OnSaveGame:
+    _PersistentCalls: []
+  defaultSettings:
+    Default_ADDTable: Template_SaveData
+    Default_PlayerSave: "\u73A9\u5BB6"
+    Default_PlayerName: "\u9ED8\u8BA4"
+    Default_Map: "\u5E73\u539F"
+  templateSaveData: {fileID: 0}
+  IsGameStart: 0
+--- !u!114 &1704115879885880632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3694d5a4bab87ba4197d88eba715580d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

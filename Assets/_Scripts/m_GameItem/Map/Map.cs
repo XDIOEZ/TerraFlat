@@ -1,6 +1,7 @@
 ﻿using Codice.Client.BaseCommands;
 using Force.DeepCloner;
 using MemoryPack;
+using NavMeshPlus.Components;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
@@ -19,7 +20,10 @@ public class Map : Item, ISave_Load
     [SerializeField]
     public Tilemap tileMap;
 
-    public UltEvent GenerateMap;
+    public UltEvent OnMapGenerated_Start;
+    public UltEvent OnMapGenerated_Stop;
+
+    public NavMeshModifierTilemap navigationModiferTileMap;
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData Item_Data { get => Data; set => Data = value as Data_TileMap; }
@@ -54,9 +58,9 @@ public class Map : Item, ISave_Load
     {
         base.Start();
         Save();
-        if (Data.TileCount < SaveAndLoad.Instance.SaveData.MapSize.x * SaveAndLoad.Instance.SaveData.MapSize.y)
+        if (Data.TileCount < SaveLoadManager.Instance.SaveData.MapSize.x * SaveLoadManager.Instance.SaveData.MapSize.y)
         {
-            GenerateMap.Invoke();
+            OnMapGenerated_Start.Invoke();
         }
     }
 
@@ -87,8 +91,8 @@ public class Map : Item, ISave_Load
 
             tileMap.SetTile(position3D, tile);
         }
-
-        Debug.Log("多层 TileData 已加载到 Tilemap 中");
+        OnMapGenerated_Stop.Invoke();
+       // Debug.Log("多层 TileData 已加载到 Tilemap 中");
     }
     #endregion
 
@@ -204,6 +208,11 @@ public class Map : Item, ISave_Load
         }
 
         return list[i];
+    }
+
+    public int GetTileArea(Vector2Int position)
+    {
+       return navigationModiferTileMap.GetModifierMap()[tileMap.GetTile((Vector3Int)position)].area;
     }
 
     public void DELTile(Vector2Int position, int? index = null)

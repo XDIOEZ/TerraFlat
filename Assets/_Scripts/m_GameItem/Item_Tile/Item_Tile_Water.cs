@@ -42,7 +42,7 @@ public class Item_Tile_Water : Item, IBlockTile
         Vector3 mouseScreenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
-        Map mapCoreScript = (Map)RunTimeItemManager.Instance.GetItemsByNameID("MapCore")[0];
+        Map mapCoreScript = (Map)GameItemManager.Instance.GetItemsByNameID("MapCore")[0];
 
         // 使用 Map 脚本中的 tileMap
         Tilemap tileMap = mapCoreScript.tileMap;

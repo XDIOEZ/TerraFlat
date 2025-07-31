@@ -33,9 +33,9 @@ public abstract class Module : MonoBehaviour
     public abstract void Load();
     public abstract void Save();
 
-    public virtual void Update()
+    public virtual void Action(float deltaTime)
     {
-      
+
     }
 
 

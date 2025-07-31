@@ -1,4 +1,4 @@
-using NaughtyAttributes;
+/*using NaughtyAttributes;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
@@ -127,12 +127,12 @@ public class HungerManager : MonoBehaviour, IChangeHungry
     /// <summary>
     /// 饥饿最大值代理（通过 IHunger 的 Foods.MaxFood 获取/设置）
     /// </summary>
-    public float MaxHunger1
+*//*    public float MaxHunger1
     {
-        get => Hunger.Nutrition.MaxFood;
-        set => Hunger.Nutrition.MaxFood = value;
-    }
-
+        get => Hunger.Nutrition.Max_Carbohydrates;
+        set => Hunger.Nutrition.Max_Carbohydrates = value;
+    }*/
+/*
     /// <summary>
     /// 饥饿当前值代理（通过 IHunger 的 Foods.Food 获取/设置）
     /// </summary>
@@ -140,7 +140,7 @@ public class HungerManager : MonoBehaviour, IChangeHungry
     {
         get => Hunger.Nutrition.Food;
         set => Hunger.Nutrition.Food = value;
-    }
+    }*//*
 
     #endregion
 
@@ -164,7 +164,7 @@ public class HungerManager : MonoBehaviour, IChangeHungry
     private void Start()
     {
         // 添加默认恢复数值：这里假设 EatingSpeed 表示默认恢复速率（根据需要调整）
-        StartReduceHunger(Hunger.Nutrition.MaxFood*0.02f, "默认恢复");
+        StartReduceHunger(Hunger.Nutrition.Max_Carbohydrates*0.02f, "默认恢复");
     }
 
     private void OnDisable()
@@ -263,3 +263,4 @@ public class HungerManager : MonoBehaviour, IChangeHungry
 
     #endregion
 }
+*/

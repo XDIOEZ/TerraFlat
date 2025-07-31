@@ -5,12 +5,29 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
+public class GameItemManager : SingletonMono<GameItemManager>
 {
     [ShowInInspector]
     public Dictionary<int, Item> RunTimeItems = new();
+
     [ShowInInspector]
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
+
+    private Map _cachedMap;
+    public Map Map
+    {
+        get
+        {
+            if (_cachedMap == null)
+            {
+                if (RuntimeItemsGroup.TryGetValue("MapCore", out var list) && list.Count > 0)
+                {
+                    _cachedMap = (Map)list[0];
+                }
+            }
+            return _cachedMap;
+        }
+    }
 
     [Button("加载所有Runtime物品")]
     protected override void Awake()
@@ -37,7 +54,7 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
             RunTimeItems[item.Item_Data.Guid] = item;
             AddToGroup(item); // 新增分组逻辑
         }
-        Debug.Log("物品加载完毕");
+       // Debug.Log("物品加载完毕");
     }
 
     private void OnDestroy()
@@ -47,9 +64,9 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
 
     public void Start()
     {
-        SaveAndLoad.Instance.OnSceneSwitch += CleanupNullItems;
-        SaveAndLoad.Instance.ExitGame_Event +=  RunTimeItems.Clear;
-        SaveAndLoad.Instance.ExitGame_Event += RuntimeItemsGroup.Clear;
+        SaveLoadManager.Instance.OnSceneSwitchStart += CleanupNullItems;
+        SaveLoadManager.Instance.OnSaveGame +=  RunTimeItems.Clear;
+        SaveLoadManager.Instance.OnSaveGame += RuntimeItemsGroup.Clear;
     }
 
     // 实例化（通过名称）
@@ -173,7 +190,7 @@ public class RunTimeItemManager : SingletonMono<RunTimeItemManager>
             }
         }
 
-        Debug.Log("已清理无效的 Item 引用。");
+      //  Debug.Log("已清理无效的 Item 引用。");
     }
 
 }

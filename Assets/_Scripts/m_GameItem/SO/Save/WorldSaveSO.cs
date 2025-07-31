@@ -243,7 +243,7 @@ public class WorldSaveSO : ScriptableObject
     /// </summary>
     public GameSaveData SaveActiveScene_Map()
     {
-        return SaveAndLoad.Instance.GetSaveData();
+        return SaveLoadManager.Instance.GetSaveData();
     }
 
     #endregion

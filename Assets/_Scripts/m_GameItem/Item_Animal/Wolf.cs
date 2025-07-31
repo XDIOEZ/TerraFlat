@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-    public class Wolf : Item, IHunger, ISpeed, ISight, IHealth, IStamina,ISave_Load,ITeam
+    public class Wolf : Item, ISpeed, ISight, IHealth, IStamina,ISave_Load,ITeam
 {
     public Data_Creature Data;
     public override ItemData Item_Data { get => Data; set => Data = value as Data_Creature; }
     public UltEvent OnDeath { get; set; }
     #region 饥饿
 
-    public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }
+/*    public Nutrition Nutrition { get => Data.NutritionData; set => Data.NutritionData = value; }*/
     public float EatingSpeed { get; set; }
     public UltEvent OnNutrientChanged { get; set; } = new UltEvent();
 
@@ -104,15 +104,14 @@ using UnityEngine;
     {
     }
 
-    public void TakeABite(IFood food)
+/*    public void TakeABite(IFood food)
     {
         Nutrition.Food += EatingSpeed;
         food.BeEat(EatingSpeed);
-    }
+    }*/
 
     public void Death()
     {
-        OnStopWork_Event.Invoke();
         Animator animator = GetComponentInChildren<Animator>();
         animator.SetTrigger("Death");
 
@@ -143,12 +142,12 @@ using UnityEngine;
         Item _Weapon;
         if (Data._inventoryData.ContainsKey("武器"))
         {
-            _Weapon = RunTimeItemManager.Instance.InstantiateItem("WolfDefaultWeapon");
+            _Weapon = GameItemManager.Instance.InstantiateItem("WolfDefaultWeapon");
             _Weapon.Item_Data = Data._inventoryData["武器"].itemSlots[0]._ItemData;
         }
         else
         {
-            _Weapon = RunTimeItemManager.Instance.InstantiateItem("WolfDefaultWeapon");
+            _Weapon = GameItemManager.Instance.InstantiateItem("WolfDefaultWeapon");
         }
          
         GetComponentInChildren<ITriggerAttack>().GetItemWeapon(_Weapon);

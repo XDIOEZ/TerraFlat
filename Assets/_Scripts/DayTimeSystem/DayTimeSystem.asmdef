@@ -1,0 +1,20 @@
+{
+    "name": "DayTimeSystem",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0994f0b99b69bfe47a086609b9a07e33",
+        "GUID:b428d770df5b16d49a9a8fa3176ef68a",
+        "GUID:15fc0a57446b3144c949da3e2b9737a9",
+        "GUID:57a6d82589ae03c4cabdc058f719f231",
+        "GUID:6b2403a08572f7c49b7802a26e472b30"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

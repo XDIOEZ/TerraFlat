@@ -13,5 +13,4 @@ public partial class Data_Boundary : ItemData
     public Vector2 TP_Position;
     [Tooltip("边界的方向位置")]
     public Vector2 Boundary_Position;
-
 }

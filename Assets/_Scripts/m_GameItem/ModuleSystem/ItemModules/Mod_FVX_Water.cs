@@ -28,9 +28,4 @@ public class Mod_FVX_Water : Module
        // throw new System.NotImplementedException();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

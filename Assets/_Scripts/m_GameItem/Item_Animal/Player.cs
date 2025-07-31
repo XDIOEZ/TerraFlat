@@ -10,10 +10,9 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 public class Player
-    : Item, IHunger, ISpeed,
+    : Item, ISpeed,
       IInventoryData, IHealth, IStamina,
       ISave_Load, IRotationSpeed
-    ,IUI
 {
     public UltEvent OnDeath { get; set; }
 
@@ -49,12 +48,12 @@ public class Player
         }
     }
 
-    [Tooltip("营养数据")]
+/*    [Tooltip("营养数据")]
     public Nutrition Nutrition
     {
         get => Data.hunger;
         set => Data.hunger = value;
-    }
+    }*/
 
     [Tooltip("防御属性")]
     public Defense Defense
@@ -225,7 +224,7 @@ public class Player
         throw new NotImplementedException();
     }
 
-    public void TakeABite(IFood food)
+/*    public void TakeABite(IFood food)
     {
         IFood iFood = food;
 
@@ -256,7 +255,7 @@ public class Player
             Nutrition.Food += eatenResult.Food * 0.5f;
             Nutrition.Water += eatenResult.Water * 0.5f;
         }
-    }
+    }*/
 
     public void Death()
     {

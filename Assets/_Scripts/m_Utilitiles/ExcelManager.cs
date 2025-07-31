@@ -221,7 +221,7 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
             if (string.IsNullOrEmpty(name)) continue;
             if (!int.TryParse(parts[1].Trim(), out int amount))
                 amount = 1;
-            list.Add(new LootData { lootName = name, lootAmount = amount });
+          // list.Add(new LootData { lootName = name, LootAmount = amount });
         }
         return list;
     }

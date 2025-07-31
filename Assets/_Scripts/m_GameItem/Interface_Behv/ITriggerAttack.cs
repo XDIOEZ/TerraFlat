@@ -37,7 +37,7 @@ public interface ITriggerAttack
     public void CreateWeapon(ItemData weapon)
     {
         //根據傳入的武器數據 創建一個武器物件
-        GameObject weapon_GameObject = RunTimeItemManager.Instance.InstantiateItem(weapon).gameObject;
+        GameObject weapon_GameObject = GameItemManager.Instance.InstantiateItem(weapon).gameObject;
         weapon.Stack.CanBePickedUp = false;
         SetWeapon(weapon_GameObject);
     }

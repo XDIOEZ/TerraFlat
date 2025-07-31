@@ -23,6 +23,8 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
+  mod_Food: {fileID: 0}
   hungryThreshold: 0.3
 --- !u!114 &-8186232461171443051
 MonoBehaviour:
@@ -47,6 +49,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -122,6 +125,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 0
@@ -149,6 +153,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -176,6 +181,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
+  DebugMODE: 0
 --- !u!114 &-5602860818098736354
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -199,9 +205,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
+  DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &-5590858119394854829
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -225,9 +232,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
+  DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &-5578704052142221024
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -251,10 +259,13 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
+  Food: {fileID: 0}
+  Self: {fileID: 0}
   EatingRange: 1
-  StartEatingTime: 0
+  LastEatingTime: 0
   EatingTime: 1
-  EatingSpeedRate: 20
+  FoodTag: Food
 --- !u!114 &-4917292596704716867
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -330,6 +341,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u4FEE\u6539\u68C0\u6D4B\u8303\u56F4"
   drawGizmos: 0
+  DebugMODE: 0
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
@@ -408,6 +420,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -459,9 +472,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
+  DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &-3893164256628750589
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -485,6 +499,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -597,6 +612,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
+  DebugMODE: 0
   ItemType:
   - Food
   BehaviorType: 0
@@ -628,10 +644,9 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  SpeedRate: 1
-  max_StopTime: 1
-  minDistance: 0.01
-  MoveToBlackboard: 1
+  DebugMODE: 0
+  lastPosition: {x: 0, y: 0, z: 0}
+  lastMoveTime: 0
 --- !u!114 &-1646982958018655224
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -679,6 +694,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -706,6 +722,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
+  DebugMODE: 0
 --- !u!114 &-670766274692621702
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -729,6 +746,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -814,6 +832,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
+  DebugMODE: 0
   ItemType:
   - Food
   BehaviorType: 0
@@ -869,9 +888,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
+  DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &2260948418900366931
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -895,6 +915,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -922,10 +943,9 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  SpeedRate: 1
-  max_StopTime: 1
-  minDistance: 0.01
-  MoveToBlackboard: 1
+  DebugMODE: 0
+  lastPosition: {x: 0, y: 0, z: 0}
+  lastMoveTime: 0
 --- !u!114 &3039972428605687927
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -977,9 +997,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
+  DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &3358643876719034554
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1027,7 +1048,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   duration: 0.5
+  startTime: 0
+  intervalTime: 0
 --- !u!114 &3617600894069424191
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1051,6 +1075,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -1106,9 +1131,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
+  DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &4795041412670203828
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1132,6 +1158,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u4FEE\u6539\u68C0\u6D4B\u8303\u56F4"
   drawGizmos: 0
+  DebugMODE: 0
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
@@ -1158,6 +1185,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -1185,6 +1213,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -1212,6 +1241,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 0
@@ -1263,9 +1293,10 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
+  DebugMODE: 0
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
+  TrueRandom: 0
 --- !u!114 &8126549976338107557
 MonoBehaviour:
   m_ObjectHideFlags: 0

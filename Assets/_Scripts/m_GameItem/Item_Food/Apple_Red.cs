@@ -3,10 +3,11 @@ using DG.Tweening;
 using System.Collections.Generic;
 
 // 🍎 红苹果，作为食物的 Item 实现
-public class Apple_Red : Item, IFood,IBuff
+public class Apple_Red : Item
 {
     // 数据引用
     public Data_Creature data;
+    public Mod_Food mod_food;
 
     // 当前吃掉的数值进度
     public float EatingProgress = 0f;
@@ -19,20 +20,12 @@ public class Apple_Red : Item, IFood,IBuff
         set => data = (Data_Creature)value;
     }
 
-    // IFood 实现：能量水分数据
-    public Nutrition NutritionData
-    {
-        get => data.NutritionData;
-        set => data.NutritionData = value;
-    }
-
-    public IFood SelfFood => this;
-
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic { get => data.BuffRunTimeData_Dic; set => data.BuffRunTimeData_Dic = value; }
 
     public new void Start()
     {
         base.Start();
+        mod_food = Mods[ModText.Food] as Mod_Food;
         GetComponentInChildren<Mod_PlantGrow>().OnAction += BeToAppleTree;
         GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += OnTileEnter;
     }
@@ -41,9 +34,9 @@ public class Apple_Red : Item, IFood,IBuff
     /// </summary>
     public override void Act()
     {
-        var hunger = BelongItem.GetComponentInChildren<FoodEater>();
-        if (hunger == null) return;
-        hunger.Eat(this);
+        var Food = BelongItem.Mods[ModText.Food] as Mod_Food;
+        if (Food == null) return;
+        mod_food.BeEat(Food);
     }
 
     void OnTileEnter(TileData data)
@@ -81,40 +74,7 @@ public class Apple_Red : Item, IFood,IBuff
     /// <summary>
     /// 被吃掉逻辑，返回营养值（如果吃完）
     /// </summary>
-    public Nutrition BeEat(float eatSpeed)
-    {
-        if (data == null || NutritionData == null)
-            return null;
 
-        EatingProgress += eatSpeed;
-
-        // 抖动动画
-        SelfFood.ShakeItem(transform);
-
-        if (EatingProgress >= NutritionData.MaxFood)
-        {
-            // 减少堆叠数量
-            Item_Data.Stack.Amount--;
-
-            // UI 更新通知
-            UpdatedUI_Event?.Invoke();
-
-            // 营养值补满
-            NutritionData.Food = NutritionData.MaxFood;
-            NutritionData.Water = NutritionData.MaxWater;
-
-            EatingProgress = 0;
-
-            if (Item_Data.Stack.Amount <= 0)
-            {
-                Destroy(gameObject); // 吃完销毁
-            }
-
-            return NutritionData;
-        }
-
-        return null;
-    }
 
     // 实现苹果变为苹果树
     // 实现苹果变为苹果树
@@ -129,7 +89,7 @@ public class Apple_Red : Item, IFood,IBuff
                 return; // 阻止生成苹果树
             }
 
-            RunTimeItemManager.Instance.InstantiateItem(TreeName, transform.position, transform.rotation, scale: Vector3.one * 0.25f);
+            GameItemManager.Instance.InstantiateItem(TreeName, transform.position, transform.rotation, scale: Vector3.one * 0.25f);
             Destroy(gameObject);
         }
     }
@@ -163,12 +123,9 @@ public class Apple_Red : Item, IFood,IBuff
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, 2f);
     }
-
-
-
-    public void OnDestroy()
+    public new void OnDestroy()
     {
-        DestroyItem_Event.Invoke();
-        transform.DOKill(); // 停止动画
+        transform.DOKill();
+        base.OnDestroy();
     }
 }

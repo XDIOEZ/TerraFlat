@@ -99,12 +99,6 @@ public class CraftingTable : Item,ISave_Load,IBuilding
     {
         Mods["建筑模块"].OnAction.Invoke(1);
     }
-
-    public void OnDestroy()
-    {
-        // 安全销毁 ghost 实例
-       // _InstallAndUninstall.CleanupGhost();
-    }
     #endregion
 
     #region 合成方法

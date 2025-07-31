@@ -31,8 +31,8 @@ public partial class Data_Player : ItemData
     #endregion
 
     #region 食物
-    [Tooltip("饥饿值")]
-    public Nutrition hunger = new Nutrition(100, 100);
+    /*[Tooltip("饥饿值")]
+    public Nutrition hunger = new Nutrition(100, 100);*/
     #endregion
 
     #region 库存

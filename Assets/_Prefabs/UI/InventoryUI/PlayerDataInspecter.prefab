@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 7641569729814386807}
   - component: {fileID: 8089842330564408316}
-  - component: {fileID: 6142555552429849348}
   - component: {fileID: 2267829005964369254}
   m_Layer: 9
   m_Name: PlayerDataInspecter
@@ -47,27 +46,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3221526705549996}
   m_CullTransparentMesh: 1
---- !u!114 &6142555552429849348
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3221526705549996}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 604ce8578dcc83742809752e70fa5891, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sliders:
-  - slider: {fileID: 4930929081515714267}
-    text_name: {fileID: 5035122819080691996}
-  - slider: {fileID: 2331465289505670718}
-    text_name: {fileID: 3186527343721138180}
-  - slider: {fileID: 8990164640845154182}
-    text_name: {fileID: 4190948896242701647}
-  - slider: {fileID: 6750857970635389650}
-    text_name: {fileID: 3114134828311811072}
 --- !u!223 &2267829005964369254
 Canvas:
   m_ObjectHideFlags: 0

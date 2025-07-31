@@ -47,6 +47,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -98,6 +99,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 1
@@ -129,6 +131,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
 --- !u!114 &-5494173148220389092
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -152,6 +155,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -179,10 +183,9 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  SpeedRate: 1
-  max_StopTime: 1
-  minDistance: 0.01
-  MoveToBlackboard: 1
+  DebugMODE: 0
+  lastPosition: {x: 0, y: 0, z: 0}
+  lastMoveTime: 0
 --- !u!114 &-5184458804544539822
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -386,6 +389,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -413,6 +417,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -440,6 +445,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 1
@@ -521,6 +527,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -577,6 +584,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
 --- !u!114 &505824035141933902
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -735,6 +743,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 0
@@ -922,6 +931,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
 --- !u!114 &5054513505167004242
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -969,6 +979,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -1093,6 +1104,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 0
@@ -1120,6 +1132,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 1
@@ -1151,6 +1164,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -1178,6 +1192,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  DebugMODE: 0
   parameterType: 0
   animationName: Move
   boolSwitch: 1
@@ -1205,7 +1220,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  SpeedRate: 1
-  max_StopTime: 1
-  minDistance: 0.01
-  MoveToBlackboard: 1
+  DebugMODE: 0
+  lastPosition: {x: 0, y: 0, z: 0}
+  lastMoveTime: 0

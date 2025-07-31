@@ -4,31 +4,10 @@ using UnityEngine;
 
 public abstract class Trees : Entity
 {
-    public void GrowUp()
-    {
-
-    }
-/*    public override Item_Data GetData()
-    {
-        throw new System.NotImplementedException();
-    }
-
-    public override void SetData(Item_Data data)
-    {
-        throw new System.NotImplementedException();
-    }*/
 
     public override void Act()
     {
         throw new System.NotImplementedException();
-    }
-
-
-
-    // Update is called once per frame
-    void Update()
-    {
-        
     }
 
     public virtual void DropItemByList(List<DropItem> dropItemList)

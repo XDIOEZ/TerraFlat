@@ -83,10 +83,10 @@ public class Move : ActionNode
         // 检查是否到达目标
         if (Vector2.Distance(Mover.TargetPosition, currentPosition) <= context.agent.stoppingDistance)
         {
-            if (base.DebugMODE)
-            {
-                Debug.Log("Arrived");
-            }
+            //if (base.DebugMODE)
+            //{
+            //    Debug.Log("Arrived");
+            //}
 
             // 重置状态
             lastPosition = Vector3.zero;

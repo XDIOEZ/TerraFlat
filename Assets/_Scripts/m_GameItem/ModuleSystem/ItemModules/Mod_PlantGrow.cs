@@ -5,20 +5,21 @@ using UnityEngine;
 public class Mod_PlantGrow : Module
 {
     public Mod_PlantGrow_Data _data = new Mod_PlantGrow_Data();
+    public Ex_ModData_MemoryPackable _memoryPackable = new Ex_ModData_MemoryPackable();
     public override ModuleData _Data
     {
-        get => _data;
-        set => _data = value as Mod_PlantGrow_Data;
+        get => _memoryPackable;
+        set => _memoryPackable = value as Ex_ModData_MemoryPackable;
     }
-  
 
-    private void Update()
+
+    public override void Action(float deltaTime)
     {
         // 未启动或数据为空或已经完成则不继续执行
-        if (!_data.isRunning || _data == null || _data.progress >= _data.progress_Max.Value)
+        if (!_Data.isRunning || _data == null || _data.progress >= _data.progress_Max.Value)
         {
             // 检查是否需要循环
-            if (_data.isRunning && _data.isLoop && _data.progress >= _data.progress_Max.Value)
+            if (_Data.isRunning && _data.isLoop && _data.progress >= _data.progress_Max.Value)
             {
                 ResetModule();
             }
@@ -26,13 +27,19 @@ public class Mod_PlantGrow : Module
         }
 
         // 更新生产进度
-        _data.progress += _data.productionSpeed.Value * Time.deltaTime;
+        _data.progress += _data.productionSpeed.Value * deltaTime;
 
         // 检查是否达到特殊生产点
         if (_data.nodeIndex < _data.specialProductionPoints.Count &&
             _data.progress > _data.specialProductionPoints[_data.nodeIndex].InvokeValue)
         {
+            if (_data.specialProductionPoints[_data.nodeIndex].DestroySelf)
+            {
+                Destroy(item.gameObject);
+            }
+
             ProduceItem(_data.specialProductionPoints[_data.nodeIndex].loot);
+          
         }
     }
 
@@ -56,15 +63,19 @@ public class Mod_PlantGrow : Module
         if (loot.lootName != "")
         {
             // 调用物品管理器实例化物品
-            Item product = RunTimeItemManager.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
+            Item product = GameItemManager.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
 
-           // new ItemMaker().DropItem_cric(product, transform.position, 2);
+            // new ItemMaker().DropItem_cric(product, transform.position, 2);
+            var dropComp = GetComponent<Mod_ItemDrop>();
+            if (dropComp != null)
+            {
+                dropComp.DropItem_Range(product, transform.position, 2, 1);
+            }
 
-            GetComponent<Mod_ItemMaker>().DropItem_Range(product, transform.position, 2, 1);
             // 如果实例化成功，设置物品数量
             if (product != null)
             {
-                product.Item_Data.Stack.Amount = loot.lootAmount;
+                product.Item_Data.Stack.Amount = loot.GetRandomLootAmount();
             }
             else
             {
@@ -79,11 +90,13 @@ public class Mod_PlantGrow : Module
 
     public override void Load()
     {
+        _memoryPackable.ReadData(ref _data);
       //  throw new System.NotImplementedException();
     }
 
     public override void Save()
     {
+        _memoryPackable.WriteData(_data);
 //throw new System.NotImplementedException();
     }
 }
@@ -91,7 +104,7 @@ public class Mod_PlantGrow : Module
 
 [System.Serializable]
 [MemoryPackable]
-public partial class Mod_PlantGrow_Data : ModuleData
+public partial class Mod_PlantGrow_Data
 {
 
     [Tooltip("是否循环执行")]
@@ -110,12 +123,11 @@ public partial class Mod_PlantGrow_Data : ModuleData
     public List<Float_Loot_List> specialProductionPoints = new();
 
     [Tooltip("当前特殊生产点的索引")]
-    public int nodeIndex;
+    public int nodeIndex= 0;
 
     // 初始化默认值
     public Mod_PlantGrow_Data()
     {
-        isRunning = false;
         isLoop = false;
         progress = 0;
         nodeIndex = 0;
@@ -132,4 +144,6 @@ public partial class Float_Loot_List
 
     [Header("掉落数据")]
     public LootData loot;
+
+    public bool DestroySelf = false;
 }
