@@ -12,15 +12,10 @@ public class CheckHealth : ActionNode
     [SerializeField]
     private bool usePercent = true;
 
-    private IHealth health;
+    private DamageReceiver health => context.damageReciver;
 
     protected override void OnStart()
     {
-        health = context.gameObject.GetComponent<IHealth>();
-        if (health == null)
-        {
-            Debug.LogWarning($"CheckHealth 节点：在 {context.gameObject.name} 上找不到 IHealth 组件！");
-        }
     }
 
     protected override void OnStop()
@@ -29,13 +24,8 @@ public class CheckHealth : ActionNode
 
     protected override State OnUpdate()
     {
-        if (health == null || health.Hp == null)
-        {
-            return State.Failure;
-        }
-
-        float currentHealth = health.Hp.Value;
-        float maxHealth = health.Hp.maxValue;
+        float currentHealth = health.Hp;
+        float maxHealth = health.MaxHp.Value;
 
         if (usePercent)
         {

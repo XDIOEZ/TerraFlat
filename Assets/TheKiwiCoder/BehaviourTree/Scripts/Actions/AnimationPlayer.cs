@@ -14,7 +14,7 @@ public class AnimationPlayer : ActionNode
     }
 
     protected override State OnUpdate() {
-        context.animator.Play(animationName);
+        context.animator.Play(animationName,0);
         return State.Success;
     }
 }

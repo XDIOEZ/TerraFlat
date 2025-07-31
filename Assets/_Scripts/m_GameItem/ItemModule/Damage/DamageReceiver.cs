@@ -1,29 +1,47 @@
 ﻿using MemoryPack;
 using NaughtyAttributes;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// 处理模块伤害接收与反馈动画
+/// </summary>
 public class DamageReceiver : Module
 {
-    public Ex_ModData Data;
-    public override ModuleData _Data { get => Data; set => Data = (Ex_ModData)value; }
+    #region 数据引用
 
-    // 新增的SaveData字段，添加序列化特性以便在检查器中可见
+    public Ex_ModData modData;
+    public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
+
     [SerializeField]
-    public DamageReceiver_SaveData saveData = new DamageReceiver_SaveData();
+    public DamageReceiver_SaveData Data = new DamageReceiver_SaveData();
 
-    // 将血量和最大血量改为属性，引用saveData中的字段
     public GameValue_float MaxHp
     {
-        get => saveData.MaxHp;
-        set => saveData.MaxHp = value;
+        get => Data.MaxHp;
+        set => Data.MaxHp = value;
     }
 
     public float Hp
     {
-        get => saveData.Hp;
-        set => saveData.Hp = value;
+        get => Data.Hp;
+        set => Data.Hp = value;
     }
+
+    [System.Serializable]
+    public class DamageReceiver_SaveData
+    {
+        [Header("生命值设置")]
+        public float Hp = 100;
+        public GameValue_float MaxHp = new GameValue_float(100);
+        [Header("伤害者的UID列表")]
+        public List<int> AttackersUIDs = new List<int>();
+    }
+
+    #endregion
+
+    #region 动画相关参数
 
     [Header("受击动画设置")]
     public int flashCount = 1;
@@ -36,50 +54,67 @@ public class DamageReceiver : Module
     public float shakeMagnitude = 0.1f;
 
     private bool isFlashing = false;
-    private SpriteRenderer cachedSpriteRenderer; // ✅ 缓存 SpriteRenderer
+    private SpriteRenderer cachedSpriteRenderer;
 
-    [System.Serializable]  // 添加序列化特性
-    public class DamageReceiver_SaveData
-    {
-        [Header("生命值设置")]
-        public float Hp = 100;
-        public GameValue_float MaxHp = new GameValue_float(100);
+    #endregion
 
-        // 可根据需要添加更多字段，比如是否死亡等
-    }
+    #region 生命周期函数
 
     public override void Awake()
     {
         if (_Data.Name == "")
-        {
             _Data.Name = ModText.Hp;
-        }
     }
 
-    public virtual void TakeDamage(float damage)
+    public override void Load()
     {
-        // 如果已经死亡（血量 <= 0），则不再处理伤害
+        modData.ReadData(ref Data);
+
+        cachedSpriteRenderer = item.Sprite;
+        if (cachedSpriteRenderer == null)
+            Debug.LogWarning("[DamageReceiver] 未找到 SpriteRenderer。");
+    }
+
+    public override void Save()
+    {
+        modData.WriteData(Data);
+    }
+
+    #endregion
+
+    #region 受击处理
+
+    public virtual void TakeDamage(float damage,Item attacker)
+    {
         if (Hp <= 0) return;
 
         Hp -= damage;
+
+        Data.AttackersUIDs.Add(attacker.Item_Data.Guid);
+        //检测列表是否超过3个 超过则移除第一个
+        if (Data.AttackersUIDs.Count > 3)
+        {
+            Data.AttackersUIDs.RemoveAt(0);
+        }
+
         OnAction.Invoke(Hp);
 
-        // 触发动画和震动效果（仅在存活时）
         if (cachedSpriteRenderer != null && !isFlashing)
         {
             Hit_Flash(cachedSpriteRenderer);
             StartCoroutine(ShakeSprite(cachedSpriteRenderer.transform));
         }
 
-        // 可选：如果血量降到0以下，可以做一些死亡处理
         if (Hp <= 0)
         {
-            // 比如触发死亡事件、播放死亡动画等
+            // 可在此处扩展死亡处理逻辑
             // Die();
         }
     }
 
-    #region 动画效果
+    #endregion
+
+    #region 动画效果实现
 
     public void Hit_Flash(SpriteRenderer spriteRenderer)
     {
@@ -123,7 +158,6 @@ public class DamageReceiver : Module
             float y = Random.Range(-1f, 1f) * shakeMagnitude;
 
             spriteTransform.localPosition = originalPos + new Vector3(x, y, 0f);
-
             elapsed += Time.deltaTime;
             yield return null;
         }
@@ -132,22 +166,4 @@ public class DamageReceiver : Module
     }
 
     #endregion
-
-    public override void Load()
-    {
-        Data.ReadData(ref saveData);
-        // ✅ 只查找一次并缓存
-        cachedSpriteRenderer = item.Sprite;
-        if (cachedSpriteRenderer == null)
-        {
-            Debug.LogWarning("[DamageReceiver] 未找到 SpriteRenderer。");
-        }
-        // 可根据需要填充
-    }
-
-    public override void Save()
-    {
-        // 可根据需要填充
-        Data.WriteData(saveData);
-    }
 }

@@ -13,7 +13,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
     [ShowInInspector]
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
 
-    private Map _cachedMap;
+    public Map _cachedMap;
     public Map Map
     {
         get

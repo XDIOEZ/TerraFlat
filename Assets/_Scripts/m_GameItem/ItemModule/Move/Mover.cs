@@ -61,7 +61,7 @@ public partial class Mover : Module, IMove
     }
 
     [Tooltip("移动目标")]
-    public Vector3 TargetPosition;
+    public Vector2 TargetPosition;
 
     [Tooltip("是否正在移动")]
     public bool IsMoving;

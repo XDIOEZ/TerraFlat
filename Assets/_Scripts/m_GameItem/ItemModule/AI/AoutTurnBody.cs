@@ -17,7 +17,7 @@ public class AoutTurnBody : TurnBody
 
         if (mover != null)
         {
-            Vector2 direction = mover.TargetPosition - item.transform.position;
+            Vector2 direction = mover.TargetPosition - (Vector2)item.transform.position;
             TurnBodyToDirection(direction);
         }
     }

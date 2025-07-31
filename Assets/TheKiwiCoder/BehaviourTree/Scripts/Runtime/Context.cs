@@ -25,6 +25,8 @@ namespace TheKiwiCoder {
         public IItemValues itemValues;
         public Item item;
         public Map map;
+        public DamageReceiver damageReciver;
+        public Mod_ColdWeapon ColdWeapon;
         // Add other game specific systems here
 
         public static Context CreateFromGameObject(GameObject gameObject) {
@@ -45,7 +47,8 @@ namespace TheKiwiCoder {
             context.mover = context.item.Mods[ModText.Mover] as Mover;
             context.itemValues = gameObject.GetComponentInChildren<IItemValues>();
             context.item = gameObject.GetComponentInChildren<Item>();
-
+            context.damageReciver = context.item.Mods[ModText.Hp] as DamageReceiver;
+                context.ColdWeapon = context.item.GetComponentInChildren<Mod_ColdWeapon>();
             // Add whatever else you need here...
 
             return context;

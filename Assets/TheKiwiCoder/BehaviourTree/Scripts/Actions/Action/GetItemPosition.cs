@@ -8,8 +8,8 @@ public class GetItemPosition : ActionNode
     #region 枚举定义
     public enum MovementBehaviorType
     {
-        Chase,  // 追击
-        Flee    // 逃离
+        追击,  // 追击
+        逃离    // 逃离
     }
     #endregion
 
@@ -20,7 +20,7 @@ public class GetItemPosition : ActionNode
 
     [Header("行为设置")]
     [Tooltip("选择行为类型：追击或逃离")]
-    public MovementBehaviorType BehaviorType = MovementBehaviorType.Chase;
+    public MovementBehaviorType BehaviorType = MovementBehaviorType.追击;
 
     [Header("逃离行为参数")]
     [Tooltip("逃跑的最小距离")]
@@ -68,24 +68,11 @@ public class GetItemPosition : ActionNode
 
     protected override State OnUpdate()
     {
-        // 验证必要组件
-        if (!ValidateComponents())
-        {
-            return State.Failure;
-        }
-
         // 查找目标物品
         Item targetItem = FindTargetItem();
         if (targetItem == null)
         {
-            HandleNoTargetFound();
             return State.Failure;
-        }
-
-        // 设置黑板目标
-        if (setBlackboardTarget)
-        {
-            blackboard.target = targetItem.transform;
         }
 
         // 如果设置为不执行任何操作，直接返回成功
@@ -96,36 +83,13 @@ public class GetItemPosition : ActionNode
 
         // 根据行为类型处理移动
         ProcessMovementBehavior(targetItem);
+
         return State.Success;
     }
     #endregion
 
     #region 私有方法
-    /// <summary>
-    /// 验证必要的组件是否存在
-    /// </summary>
-    private bool ValidateComponents()
-    {
-        if (context?.itemDetector == null)
-        {
-            Debug.LogWarning($"[{GetType().Name}] ItemDetector组件未找到");
-            return false;
-        }
 
-        if (context.itemDetector.CurrentItemsInArea == null)
-        {
-            Debug.LogWarning($"[{GetType().Name}] 当前区域物品列表为空");
-            return false;
-        }
-
-        if (ItemType == null || ItemType.Count == 0)
-        {
-            Debug.LogWarning($"[{GetType().Name}] 未设置要搜索的物品类型");
-            return false;
-        }
-
-        return true;
-    }
 
     /// <summary>
     /// 查找符合条件的目标物品
@@ -147,17 +111,6 @@ public class GetItemPosition : ActionNode
         return null;
     }
 
-    /// <summary>
-    /// 处理未找到目标的情况
-    /// </summary>
-    private void HandleNoTargetFound()
-    {
-        if (setBlackboardTarget)
-        {
-            blackboard.target = null;
-        }
-     //   Debug.Log($"[{GetType().Name}] 未找到匹配的物品类型");
-    }
 
     /// <summary>
     /// 根据行为类型处理移动逻辑
@@ -168,11 +121,11 @@ public class GetItemPosition : ActionNode
 
         switch (BehaviorType)
         {
-            case MovementBehaviorType.Chase:
+            case MovementBehaviorType.追击:
                 ProcessChaseMovement(targetPosition);
                 break;
 
-            case MovementBehaviorType.Flee:
+            case MovementBehaviorType.逃离:
                 ProcessFleeMovement(targetPosition);
                 break;
 
@@ -189,7 +142,8 @@ public class GetItemPosition : ActionNode
     {
         blackboard.TargetPosition = targetPosition;
         Speeder.TargetPosition = targetPosition;
-      //  Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
+        context.mover.TargetPosition = targetPosition;
+        //  Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
     }
 
     /// <summary>

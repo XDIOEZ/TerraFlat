@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using static AttackTrigger;
 using MemoryPack;
+using Sirenix.OdinInspector;
 
 public partial class Mod_ColdWeapon : Module
 {
@@ -159,7 +160,10 @@ public partial class Mod_ColdWeapon : Module
             return;
         }
 
-        receiver.TakeDamage(Damage.Value);
+        if(item.BelongItem==null)
+        receiver.TakeDamage(Damage.Value,item);
+        else
+            receiver.TakeDamage(Damage.Value, item.BelongItem);
     }
 
     // 用字段记录是否处于"回归初始位置"的状态和参数
@@ -168,15 +172,15 @@ public partial class Mod_ColdWeapon : Module
 
     private void OnInputActionStarted(InputAction.CallbackContext context)
     {
-        OnAttackStart();
+        StartAttack();
     }
 
     private void OnInputActionCanceled(InputAction.CallbackContext context)
     {
-        OnAttackStop();
+        StopAttack();
     }
-
-    public void OnAttackStart()
+    [Button]
+    public void StartAttack()
     {
         if (CurrentState == AttackState.Idle)
         {
@@ -187,16 +191,7 @@ public partial class Mod_ColdWeapon : Module
                 damageCollider.enabled = true; // 激活碰撞体
         }
     }
-
-    public void OnAttackStay()
-    {
- /*       if (CurrentState == AttackState.Attacking)
-        {
-            PerformStab(StartPosition, AttackSpeed, MaxAttackDistance);
-        }*/
-    }
-
-    public void OnAttackStop()
+    public void StopAttack()
     {
         if (CurrentState == AttackState.Attacking)
         {
@@ -206,6 +201,20 @@ public partial class Mod_ColdWeapon : Module
                 damageCollider.enabled = false; // 关闭碰撞体
         }
     }
+    [Button]
+    public void CancelAttack()
+    {
+        if (CurrentState == AttackState.Attacking)
+        {
+            StartReturningToStartPosition(StartPosition, ReturnSpeed);
+
+            if (damageCollider != null)
+                damageCollider.enabled = false; // 关闭碰撞体
+
+            CurrentState = AttackState.Idle;
+        }
+    }
+
 
     public void PerformStab(Vector2 startTarget, float speed, float maxDistance,float deltaTime)
     {
@@ -261,12 +270,6 @@ public partial class Mod_ColdWeapon : Module
         isReturning = true;
         returnTarget = startTarget;
         ReturnSpeed = backSpeed; // 注意这里应该是设置saveData中的ReturnSpeed
-
-        if (returnCoroutine != null)
-        {
-            StopCoroutine(returnCoroutine);
-            returnCoroutine = null;
-        }
     }
 
     public override void Save()
@@ -281,3 +284,10 @@ public partial class Mod_ColdWeapon : Module
         }
     }
 }
+/*
+public interface IAttack
+{
+    void StartAttack();
+    void StopAttack();
+    void CancelAttack();
+}*/

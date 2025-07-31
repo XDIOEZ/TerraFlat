@@ -27,7 +27,7 @@ public class RandomPosition : ActionNode
 
     protected override State OnUpdate()
     {
-        if (!TrueRandom)
+        if (!TrueRandom&& context.map!= null)
         {
             Vector3 chosenPosition = Vector3.zero;
             bool found = false;

@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1326326382393605835}
   - component: {fileID: 5647647210990008268}
   - component: {fileID: 5478288633440367013}
+  - component: {fileID: 7587861195923453438}
   m_Layer: 0
   m_Name: WorldEdge
   m_TagString: Untagged
@@ -172,11 +173,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
-    _PersistentCalls: []
-  DestroyItem_Event:
+  OnItemDestroy:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
@@ -207,4 +206,19 @@ MonoBehaviour:
     TP_SceneName: 
     TP_Position: {x: 0, y: 0}
     Boundary_Position: {x: 0, y: 0}
-  centerOffset: 2
+--- !u!114 &7587861195923453438
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2273771290473549451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9809bf1345abc5648af68b3a82653f08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_OverrideArea: 1
+  m_Area: 1
+  m_IgnoreFromBuild: 0
+  m_AffectedAgents: ffffffff

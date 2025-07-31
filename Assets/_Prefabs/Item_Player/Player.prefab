@@ -3689,7 +3689,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3411641726888165367}
   m_HandleRect: {fileID: 5761251176041530085}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -6405,8 +6405,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4188271016491195750}
   - component: {fileID: 283365151209159389}
-  - component: {fileID: 5512964748973618785}
   - component: {fileID: 572688492517901847}
+  - component: {fileID: 3229023740499561000}
   m_Layer: 9
   m_Name: "\u4F24\u5BB3\u63A5\u6536\u5668"
   m_TagString: Untagged
@@ -6474,37 +6474,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.6569176, y: 0.86436343}
   m_EdgeRadius: 0
---- !u!114 &5512964748973618785
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2247763634869334042}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6cbe05dc9e2ebf747bcc0d42f70ec020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  modData:
-    Name: 
-    isRunning: 0
-    BitData: 
-  DamagePanelName: Panel_DamageText
-  damagePanelSpeed: 3
-  damagePanelDuration: 1.5
-  scalePhaseRatio: 0.5
-  startingScale: 1
-  maximumScale: 0.8
-  damagePanelColor: {r: 1, g: 1, b: 1, a: 1}
-  HitParticlesName: Particle_Hit
-  flashCount: 1
-  flashDuration: 0.2
-  flashColor: {r: 1, g: 0, b: 0, a: 1}
-  BoxCollider2D: {fileID: 283365151209159389}
-  shakeDuration: 0.15
-  shakeMagnitude: 0.1
 --- !u!114 &572688492517901847
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6528,6 +6497,37 @@ MonoBehaviour:
   tileLayerMask:
     serializedVersion: 2
     m_Bits: 256
+--- !u!114 &3229023740499561000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2247763634869334042}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66936691572dbd04a801f40fe0923069, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    isRunning: 1
+    BitData: 
+  Data:
+    Hp: 100
+    MaxHp:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    AttackersUIDs: 
+  flashCount: 1
+  flashDuration: 0.2
+  flashColor: {r: 1, g: 0, b: 0, a: 1}
+  shakeDuration: 0.15
+  shakeMagnitude: 0.1
 --- !u!1 &2334131393997637821
 GameObject:
   m_ObjectHideFlags: 0
@@ -8821,7 +8821,8 @@ MonoBehaviour:
     runSpeedRate: 2
     isRunning: 0
     RunStaminaThreshold: 10
-  TargetPosition: {x: 0, y: 0, z: 0}
+  hightReaction: 0
+  TargetPosition: {x: 0, y: 0}
   IsMoving: 0
   OnMoveEnd:
     _PersistentCalls: []
@@ -14618,7 +14619,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.000025987625, y: 0}
+  m_AnchoredPosition: {x: -0.00013160706, y: 0}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &7132638982571321051
@@ -22010,11 +22011,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
-    _PersistentCalls: []
-  DestroyItem_Event:
+  OnItemDestroy:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
