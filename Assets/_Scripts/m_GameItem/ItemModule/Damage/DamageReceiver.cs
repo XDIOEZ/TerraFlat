@@ -1,8 +1,10 @@
-﻿using MemoryPack;
-using NaughtyAttributes;
+﻿using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
+using Unity.Collections;
 using UnityEngine;
+using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
 
 /// <summary>
 /// 处理模块伤害接收与反馈动画
@@ -35,8 +37,12 @@ public class DamageReceiver : Module
         [Header("生命值设置")]
         public float Hp = 100;
         public GameValue_float MaxHp = new GameValue_float(100);
+        public GameValue_float Defense = new GameValue_float(0);
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
+
+        public bool ShowCanvas = false;//面板显示状态
+       // public Vector2 PanelPosition = new Vector2(0, 0);
     }
 
     #endregion
@@ -56,23 +62,118 @@ public class DamageReceiver : Module
     private bool isFlashing = false;
     private SpriteRenderer cachedSpriteRenderer;
 
+    public GameObject PanelPrefab;
+    [ReadOnly]
+    public GameObject PanleInstance;
+
+    public UltEvent DataUpdate = new UltEvent();
+
+    public UI_FloatData_Text UIValues;
+    public bool ShowCanvas
+    {
+        get => Data.ShowCanvas;
+        set
+        {
+            if (Data.ShowCanvas != value)
+            {
+                Data.ShowCanvas = value;
+
+                // 根据值调用对应的面板函数
+                if (Data.ShowCanvas)
+                {
+                    ShowPanle();
+                }
+                else
+                {
+                    HidePanle();
+                }
+            }
+        }
+    }
+
     #endregion
 
     #region 生命周期函数
 
     public override void Awake()
     {
-        if (_Data.Name == "")
-            _Data.Name = ModText.Hp;
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Hp;
+        }
+
     }
 
     public override void Load()
     {
         modData.ReadData(ref Data);
 
+        if(item.itemMods.ContainsKey_ID(ModText.Equipment))
+        Equipment_Inventory = item.itemMods.GetMod_ByID(ModText.Equipment) as Mod_Inventory;
+
+        if (Data.ShowCanvas)
+        {
+            ShowPanle();
+        }
+        else
+        {
+            HidePanle();
+        }
+
+
         cachedSpriteRenderer = item.Sprite;
         if (cachedSpriteRenderer == null)
             Debug.LogWarning("[DamageReceiver] 未找到 SpriteRenderer。");
+    }
+
+    [Button("显示面板")]
+    public void ShowPanle()
+    {
+        if (PanleInstance != null) return;
+
+        GameObject panel = Instantiate(PanelPrefab, transform);
+        UIValues = panel.GetComponentInChildren<UI_FloatData_Text>();
+        panel.transform.position = transform.position + Vector3.up * 1f;
+        PanleInstance = panel;
+        DataUpdate += RefreshUI;
+
+        RefreshUI();
+        Data.ShowCanvas = true;
+
+
+        // ✅ 从 UI_Drag 中获取 rectTransform 并恢复位置
+        var s = panel.GetComponentInChildren<UI_Drag>();
+        if (s != null)
+        {
+           // s.rectTransform.anchoredPosition = Data.PanelPosition;
+        }
+    }
+
+    [Button("刷新面板")]
+    public void RefreshUI()
+    {
+        UIValues.UpdateText("血量", Hp, MaxHp.Value);
+    }
+
+
+
+
+    [Button("隐藏面板")]
+    public void HidePanle()
+    {
+        if (PanleInstance == null) return;
+
+        // ✅ 从 UI_Drag 中获取 rectTransform 并保存位置
+        var s = PanleInstance.GetComponentInChildren<UI_Drag>();
+        if (s != null)
+        {
+        //    Data.PanelPosition = s.rectTransform.anchoredPosition;
+        }
+
+        Destroy(PanleInstance);
+        DataUpdate -= RefreshUI;
+        UIValues = null;
+        Data.ShowCanvas = false;
     }
 
     public override void Save()
@@ -84,19 +185,22 @@ public class DamageReceiver : Module
 
     #region 受击处理
 
-    public virtual void TakeDamage(float damage,Item attacker)
+    public virtual void TakeDamage(float damage, Item attacker)
     {
         if (Hp <= 0) return;
 
-        Hp -= damage;
+        Hp -= damage * (1 - (Data.Defense.Value) * 0.01f);
 
-        Data.AttackersUIDs.Add(attacker.Item_Data.Guid);
-        //检测列表是否超过3个 超过则移除第一个
+        // 攻击者记录
+        Data.AttackersUIDs.Add(attacker.itemData.Guid);
         if (Data.AttackersUIDs.Count > 3)
-        {
             Data.AttackersUIDs.RemoveAt(0);
-        }
 
+        RefreshUI();
+        // ↓↓↓ 统一调用耐久消耗
+        ApplyDurabilityDamageToEquipments(1);
+
+        // UI & 特效处理
         OnAction.Invoke(Hp);
 
         if (cachedSpriteRenderer != null && !isFlashing)
@@ -107,8 +211,28 @@ public class DamageReceiver : Module
 
         if (Hp <= 0)
         {
-            // 可在此处扩展死亡处理逻辑
-            // Die();
+            // 死亡逻辑预留
+        }
+    }
+
+    public Mod_Inventory Equipment_Inventory;
+
+    /// <summary>
+    /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值
+    /// </summary>
+    /// <param name="amount">耐久下降的数值</param>
+    protected virtual void ApplyDurabilityDamageToEquipments(int amount = 1)
+    {
+        if (Equipment_Inventory == null)
+        {
+            return;
+        }
+        foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
+        {
+            if (mod.itemData.ItemTags.HasTypeTag(Tag.Equipment))
+            {
+                mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability - amount);
+            }
         }
     }
 

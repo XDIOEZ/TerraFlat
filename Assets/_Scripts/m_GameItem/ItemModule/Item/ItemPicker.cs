@@ -50,9 +50,9 @@ public class ItemPicker : MonoBehaviour
 
         var pickAble = other.GetComponent<Item>();
  
-        if (pickAble != null && pickAble.Item_Data.Stack.CanBePickedUp ==true)
+        if (pickAble != null && pickAble.itemData.Stack.CanBePickedUp ==true)
         {
-            ItemData itemData = pickAble.Item_Data;
+            ItemData itemData = pickAble.itemData;
 
             // 遍历所有背包，找到第一个可以添加的
             foreach (var inventory in AddTargetInventories)

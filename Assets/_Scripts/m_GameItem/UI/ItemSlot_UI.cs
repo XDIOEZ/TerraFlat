@@ -106,7 +106,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     #region 创建右键菜单方法
     void CreateRightClickUI()
     {
-        if (Data == null || Data._ItemData == null || rightClickMenuPrefab == null)
+        if (Data == null || Data.itemData == null || rightClickMenuPrefab == null)
             return;
 
         if (currentMenuInstance != null)
@@ -150,7 +150,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
             return;
         }
 
-        int itemAmount = (int)Data._ItemData.Stack.Amount;
+        int itemAmount = (int)Data.itemData.Stack.Amount;
 
         if (itemAmount == 0)
         {
@@ -166,18 +166,18 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
 
     private bool IsItemSlotEmpty()
     {
-        return Data._ItemData == null;
+        return Data.itemData == null;
     }
 
     private void UpdateItemIcon()
     {
-        if (Data._ItemData == null || string.IsNullOrEmpty(Data._ItemData.IDName))
+        if (Data.itemData == null || string.IsNullOrEmpty(Data.itemData.IDName))
         {
             image.gameObject.SetActive(false);
             return;
         }
 
-        GameObject go = GameRes.Instance.AllPrefabs[Data._ItemData.IDName];
+        GameObject go = GameRes.Instance.AllPrefabs[Data.itemData.IDName];
         SpriteRenderer spriteRenderer = go.GetComponentInChildren<SpriteRenderer>();
         image.sprite = spriteRenderer.sprite;
         image.gameObject.SetActive(true);

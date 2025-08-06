@@ -14,7 +14,7 @@ public class IronSword : Item, IColdWeapon,IAttackState
     #region 属性
     #region 物体数据
     public Data_ColdWeapon _data;
-    public override ItemData Item_Data { get => _data; set => _data = (Data_ColdWeapon)value; }
+    public override ItemData itemData { get => _data; set => _data = (Data_ColdWeapon)value; }
     #endregion
 
     #region 武器数据

@@ -1,157 +1,128 @@
-using JetBrains.Annotations;
-using System.Collections;
+ï»¿using JetBrains.Annotations;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-public class Inventory_Equipment : MonoBehaviour
+public class Inventory_Equipment : Inventory
 {
-    // Start is called before the first frame update
-    public Inventory inventory;
-    public List<string> EquipmentTypes = new List<string>();
-    //¿ø¼×·ÀÓùÁ¦×÷ÓÃÊµÌå
-    public IReceiveDamage Protect_entity;
+    [ShowInInspector]
+    public Dictionary<string, List<Module>> EquipmentModules_Dictionary = new();
 
-    //ÊµÌåÑªÁ¿
-    public Hp Hp
+    public override void OnClick(int index)
     {
-        get
+        // è·å–å½“å‰è£…å¤‡æ§½ä¸­çš„ç‰©å“ï¼ˆå³éœ€è¦è¢«å¸ä¸‹æˆ–è¢«æ›¿æ¢çš„ç‰©å“ï¼‰ã€‚
+        var currentEquippedItem = Data.itemSlots[index].itemData;
+
+        // è·å–ä»æºèƒŒåŒ…ï¼ˆDefaultTarget_Inventoryï¼‰ä¸­å³å°†è£…å¤‡è¿‡æ¥çš„æ–°ç‰©å“ã€‚
+        var newIncomingItem = DefaultTarget_Inventory.Data.itemSlots[0].itemData;
+
+        // --- ç¦ç”¨é˜¶æ®µ (DEACTIVATION PHASE) ---
+        // å¦‚æœå½“å‰æ§½ä½æœ‰è£…å¤‡ï¼Œæˆ‘ä»¬å¿…é¡»ç¦ç”¨å®ƒçš„æ¨¡å—ï¼Œå› ä¸ºå®ƒå³å°†è¢«ç§»é™¤æˆ–æ›¿æ¢ã€‚
+        if (currentEquippedItem != null)
         {
-            return Protect_entity.Hp;
-        }
+            var key = GetKey(currentEquippedItem); // ç°åœ¨è°ƒç”¨æ˜¯å®‰å…¨çš„ï¼Œå› ä¸º currentEquippedItem ä¸ä¸º nullã€‚
 
-        set
-        {
-            Protect_entity.Hp = value;
-        }
-    }
-    //¹Ò½ÓÊµÌå·ÀÓù
-    public Defense Entity_Defense
-    {
-        get
-        {
-            return Protect_entity.DefenseValue;
-        }
-
-        set
-        {
-            Protect_entity.DefenseValue = value;
-        }
-    }
-
-    void Awake()
-    {
-        inventory = GetComponent<Inventory>();
-        inventory.Data.Name = "×°±¸À¸";
-        inventory.Data.itemSlots = new List<ItemSlot>();
-
-        // ³õÊ¼»¯²ÛÎ»£¨²»´´½¨³éÏóÀàÊµÀı£©
-        for (int i = 0; i < 4; i++)
-        {
-            ItemSlot slot = new ItemSlot();
-            //slot.SetInventory(inventory);
-            slot._ItemData = null; // ³õÊ¼Îª¿Õ
-            inventory.Data.itemSlots.Add(slot);
-        }
-
-
-        //ÉèÖÃËùÓĞ²ÛÎ»µÄBseTypeÎªArmor
-        for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
-        {
-            inventory.Data.itemSlots[i].CanAcceptItemType.Item_TypeTag[0] = "Armor";
-        }
-
-        /*        // ³õÊ¼»¯×°±¸ÀàĞÍ
-                EquipmentTypes = new List<string> { "Armor_Hand", "Armor_Head", "Armor_Chest", "Armor_Legs" };*/
-
-        // ±éÀúËùÓĞ²ÛÎ»²¢ÉèÖÃÆäÀàĞÍ
-        for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
-        {
-            if (i < EquipmentTypes.Count)
+            if (EquipmentModules_Dictionary.TryGetValue(key, out var modList))
             {
-                inventory.Data.itemSlots[i].CanAcceptItemType.Item_TypeTag[1] = EquipmentTypes[i];
+                // ä½¿ç”¨ .ToList() ä¼šåˆ›å»ºä¸€ä¸ªä¸´æ—¶å‰¯æœ¬ã€‚è¿™ä¸€ç‚¹è‡³å…³é‡è¦ï¼Œå› ä¸º
+                // DeactivateEquipmentAttributes ä¼šä¿®æ”¹åŸå§‹çš„ 'modList' é›†åˆï¼Œ
+                // è€Œä½ ä¸èƒ½åœ¨éå†ä¸€ä¸ªé›†åˆçš„åŒæ—¶ä¿®æ”¹å®ƒï¼Œå¦åˆ™ä¼šå¼•å‘å¼‚å¸¸ã€‚
+                foreach (var mod in modList.ToList())
+                {
+                    // è¿™æ®µé€»è¾‘çœ‹èµ·æ¥æ˜¯ç”¨äºåœ¨å¸ä¸‹è£…å¤‡å‰ï¼Œå°†æ¨¡å—æ•°æ®æ¢å¤åˆ°ç‰©å“å®ä¾‹ä¸Šã€‚
+                    if (Belong_Item.itemMods.GetMod_ByName(mod._Data.Name) != null)
+                    {
+                        currentEquippedItem.ModuleDataDic[mod._Data.Name] =
+                            Belong_Item.itemMods.GetMod_ByName(mod._Data.Name)._Data;
+                    }
+
+                    DeactivateEquipmentAttributes(Belong_Item, mod._Data, key);
+                }
+            }
+        }
+
+        // --- æ¿€æ´»é˜¶æ®µ (ACTIVATION PHASE) ---
+        // å¦‚æœæœ‰æ–°ç‰©å“è¦è£…å¤‡ï¼Œæ£€æŸ¥å®ƒæ˜¯å¦æ˜¯æœ‰æ•ˆçš„è£…å¤‡ï¼Œç„¶åæ¿€æ´»å…¶æ¨¡å—ã€‚
+        if (newIncomingItem != null)
+        {
+            // æ£€æŸ¥æ–°ç‰©å“æ˜¯å¦æ‹¥æœ‰ç±»å‹ä¸º "Equipment" çš„æ¨¡å—ã€‚
+            bool isEquipment = newIncomingItem.ModuleDataDic.Values.Any(modData => modData.Type == ModuleType.Equipment);
+
+            if (isEquipment)
+            {
+                // æ¿€æ´»æ–°ç‰©å“ä¸Šçš„æ‰€æœ‰è£…å¤‡æ¨¡å—ã€‚
+                foreach (var modData in newIncomingItem.ModuleDataDic.Values)
+                {
+                    if (modData.Type == ModuleType.Equipment)
+                    {
+                        ActivateEquipmentAttributes(Belong_Item, modData, newIncomingItem);
+                    }
+                }
             }
             else
             {
-             //   Debug.LogWarning("×°±¸ÀàĞÍÁĞ±íÖĞµÄÀàĞÍÉÙÓÚ²ÛÎ»ÊıÁ¿¡£");
-                break;
+                // å¯é€‰ï¼šå¦‚æœä½ å°è¯•è£…å¤‡ä¸€ä¸ªéè£…å¤‡ç‰©å“ï¼Œä½ å¯èƒ½å¸Œæœ›é˜»æ­¢äº¤æ¢ã€‚
+                // å¦‚æœæ˜¯è¿™æ ·ï¼Œåœ¨è¿™é‡Œç›´æ¥ 'return;'ã€‚
+                // å¦åˆ™ï¼Œä»£ç ä¼šç»§ç»­æ‰§è¡Œï¼Œå¸ä¸‹æ—§è£…å¤‡ï¼Œå¹¶å°†æ–°çš„éè£…å¤‡ç‰©å“ç§»å…¥è¯¥æ§½ä½ï¼Œè¿™ä¹Ÿè®¸æ˜¯ä½ æœŸæœ›çš„è¡Œä¸ºã€‚
             }
         }
 
-       // inventory.onSlotChanged += EquipArmor;
+        // --- å®Œæˆäº¤æ¢ (FINALIZE SWAP) ---
+        // åœ¨å¤„ç†å®Œå±æ€§åï¼Œæ‰§è¡Œå®é™…çš„ç‰©å“æ§½ä½æ•°æ®äº¤æ¢ã€‚
+        // åªæœ‰åœ¨ç¡®å®å‘ç”Ÿäº†è£…å¤‡æˆ–å¸ä¸‹æ“ä½œæ—¶ï¼ˆå³æ¶‰åŠè‡³å°‘ä¸€ä¸ªç‰©å“ï¼‰ï¼Œæ‰æ‰§è¡Œäº¤æ¢ã€‚
+        if (currentEquippedItem != null || newIncomingItem != null)
+        {
+            base.OnClick(index);
+        }
     }
 
-
-    void Start()
+    public void ActivateEquipmentAttributes(Item player, ModuleData equipment, ItemData sourceItemData)
     {
-        //damageReceiver = GetComponentInParent<ItemUIManager>().CanvasBelong_Item.GetComponentInChildren<DamageReceiver>();
+        // è¿™ä¸ªæ£€æŸ¥å¾ˆé‡è¦ï¼Œå¯ä»¥é˜²æ­¢ sourceItemData ä¸º null æ—¶äº§ç”Ÿé”™è¯¯ã€‚
+        if (sourceItemData == null) return;
 
-        Protect_entity = GetComponentInParent<ItemUIManager>().CanvasBelong_Item.GetComponent<IReceiveDamage>();
+        string key = GetKey(sourceItemData);
 
-       // inventory.onSlotChanged -= inventory.ChangeItemData_Default;
+        if (!EquipmentModules_Dictionary.ContainsKey(key))
+        {
+            EquipmentModules_Dictionary[key] = new List<Module>();
+        }
+
+        Module equipmentModule = Module.ADDModTOItem(player, equipment, sourceItemData);
+        EquipmentModules_Dictionary[key].Add(equipmentModule);
     }
 
-    public void EquipArmor(int slotIndex, ItemSlot InputSlot)
+    public void DeactivateEquipmentAttributes(Item player, ModuleData modData, string key)
     {
-        //inventory.onSlotChanged -= inventory.ChangeItemData_Default;
+        // å¯¹ key æœ¬èº«è¿›è¡Œå®‰å…¨æ£€æŸ¥
+        if (string.IsNullOrEmpty(key)) return;
 
-        //Debug.Log("¿ªÊ¼×°±¸");
-
-        if (Protect_entity == null)
+        if (EquipmentModules_Dictionary.TryGetValue(key, out var moduleList))
         {
-            Debug.LogError("Î´ÕÒµ½ DamageReceiver ×é¼ş¡£");
-            return;
-        }
-
-        //TODO:Èç¹ûÊÖºÍ×°±¸¶¼Îª¿Õ,Ôò²»×öÈÎºÎ²Ù×÷
-        if (InputSlot._ItemData == null && inventory.Data.GetItemData(slotIndex) == null)
-        {
-            return;
-        }
-
-        //Ğ¶ÏÂ¿ø¼×
-        if (inventory.Data.GetItemData(slotIndex) != null)//Èç¹ûÊÖÉÏÓĞ×°±¸
-        {
-            Debug.Log("²å²ÛÓĞ×°±¸ || ÊÖÉÏÎŞ×°±¸"); 
-            if(InputSlot._ItemData==null)//Èç¹ûÊäÈë²å²ÛÎª¿Õ
+            var modInstance = moduleList.FirstOrDefault(m => m._Data == modData);
+            if (modInstance != null)
             {
-                Data_Armor armorData = (Data_Armor)inventory.Data.GetItemData(slotIndex);
+                Module.REMOVEModFROMItem(player, modData);
+                moduleList.Remove(modInstance);
+            }
 
-                Entity_Defense -= armorData.defense;
-
-                inventory.Data.ChangeItemData_Default(slotIndex, InputSlot);
-                inventory.Data.Event_RefreshUI?.Invoke(slotIndex);
-                return;
+            // å¦‚æœè¯¥è£…å¤‡çš„æ‰€æœ‰æ¨¡å—éƒ½å·²è¢«ç§»é™¤ï¼Œå°±ä»å­—å…¸ä¸­ç§»é™¤è¿™ä¸ª keyã€‚
+            if (moduleList.Count == 0)
+            {
+                EquipmentModules_Dictionary.Remove(key);
             }
         }
+    }
 
-        //Ç°ÌáÊÇÊÖ²¿Îª¿Õ,Èç¹ûÓĞ×°±¸Ôò½»»»²å²Û{AddTargetInventory.ChangeItemData_Default( slotIndex, InputSlot );AddTargetInventory.onUIChanged?.Invoke(slotIndex); }
-        //Èç¹ûÊÖÉÏÒ²ÊÇ×°±¸,Ôò½»»»×°±¸
-
-
-        //×°±¸¿ø¼×
-        if (InputSlot._ItemData.ItemTags.Item_TypeTag[0] == "Armor")
+    private string GetKey(ItemData data)
+    {
+        // è¿™é‡Œæ˜¯é”™è¯¯çš„æ ¹æºã€‚æˆ‘ä»¬å¿…é¡»ç¡®ä¿åœ¨è°ƒç”¨æ­¤æ–¹æ³•æ—¶ 'data' æ°¸ä¸ä¸º nullã€‚
+        if (data == null)
         {
-            Debug.Log("²å²ÛÎŞ×°±¸|| ÊÖÉÏÓĞ×°±¸");
-            if (InputSlot._ItemData.ItemTags.Item_TypeTag[0] == inventory.Data.itemSlots[slotIndex].CanAcceptItemType.Item_TypeTag[0])
-            {
-               
-
-                Data_Armor armorData = (Data_Armor)InputSlot._ItemData;
-
-               Entity_Defense += armorData.defense;
-
-                inventory.Data.ChangeItemData_Default(slotIndex, InputSlot);
-                // AddTargetInventory.onUIChanged?.Invoke(slotIndex);
-                Debug.Log("×°±¸ÁË: " + inventory.Data.itemSlots[slotIndex]._ItemData.IDName + "£¬·ÀÓùÖµÎª " + Entity_Defense + "¡£");
-                return;
-            }
+            Debug.LogError("å°è¯•ä»ä¸€ä¸ªä¸º null çš„ ItemData è·å– keyã€‚è¿™ä¸åº”è¯¥å‘ç”Ÿã€‚");
+            return string.Empty; // è¿”å›ç©ºå­—ç¬¦ä¸²ä»¥é¿å…å´©æºƒ
         }
-
-
-        Debug.Log("×°±¸µÄ²»ÊÇ¿ø¼×¡£¶øÊÇ:" + InputSlot._ItemData.ItemTags.Item_TypeTag[0]);
-        Debug.Log(slotIndex + " ºÅ²ÛÎ»µÄ×°±¸ÀàĞÍÓë²ÛÎ»ÀàĞÍ²»Æ¥Åä¡£");
-        Debug.Log("×°±¸µÄ·À¾ßÀàĞÍÓë²ÛÎ»·À¾ßÀàĞÍ²»Æ¥Åä¡£" + InputSlot._ItemData.ItemTags.Item_TypeTag[1] + " Óë " + inventory.Data.itemSlots[slotIndex].CanAcceptItemType.Item_TypeTag[1]);
-    } 
+        return data.IDName + "_" + data.Guid;
+    }
 }
-
-

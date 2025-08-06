@@ -34,6 +34,16 @@ public class AttackTrigger : Module
     #endregion
 
     #endregion
+
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Attacker;
+        }
+ 
+    }
+
     public override void Load()
     {
         StaminaManager staminaManager = transform.parent.GetComponentInChildren<StaminaManager>();

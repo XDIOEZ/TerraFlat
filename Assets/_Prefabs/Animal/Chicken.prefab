@@ -117,7 +117,9 @@ MonoBehaviour:
   item: {fileID: 0}
   modData:
     Name: 
+    ID: 
     isRunning: 1
+    Type: 0
     BitData: 
   Data:
     Hp: 100
@@ -127,12 +129,24 @@ MonoBehaviour:
       AdditiveModifier: 0
       MultiplicativeModifier: 1
       FinalAdditive: 0
+    Defense:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
     AttackersUIDs: 
+    ShowCanvas: 0
   flashCount: 1
   flashDuration: 0.2
   flashColor: {r: 1, g: 0, b: 0, a: 1}
   shakeDuration: 0.15
   shakeMagnitude: 0.1
+  PanelPrefab: {fileID: 0}
+  PanleInstance: {fileID: 0}
+  DataUpdate:
+    _PersistentCalls: []
+  UIValues: {fileID: 0}
 --- !u!1 &517253275583645208
 GameObject:
   m_ObjectHideFlags: 0
@@ -565,7 +579,9 @@ MonoBehaviour:
     nodeIndex: 0
   _memoryPackable:
     Name: 
+    ID: 
     isRunning: 1
+    Type: 0
     BitData: 
 --- !u!1 &2960653369821677423
 GameObject:
@@ -576,7 +592,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8884633365103484404}
-  - component: {fileID: 585137723303896997}
+  - component: {fileID: 727819303940484581}
   m_Layer: 9
   m_Name: AI_TrunBody
   m_TagString: Untagged
@@ -599,7 +615,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4050397865490026434}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &585137723303896997
+--- !u!114 &727819303940484581
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -608,7 +624,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2960653369821677423}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d8eced6a90ad0184e911db2321f57ac4, type: 3}
+  m_Script: {fileID: 11500000, guid: d7ed45437cf9be340924e1e57191c5b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
@@ -616,12 +632,13 @@ MonoBehaviour:
   controlledTransform: {fileID: 0}
   currentDirection: {x: 1, y: 0}
   isTurning: 0
-  faceMouse: {fileID: 2803089907767139299}
+  faceMouse: {fileID: 0}
   modData:
     Name: 
-    isRunning: 0
+    ID: 
+    isRunning: 1
+    Type: 0
     BitData: 
-  mover: {fileID: 1321391762135378242}
 --- !u!1 &3675996636383087212
 GameObject:
   m_ObjectHideFlags: 0
@@ -698,7 +715,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  saveData:
+  Data:
     Speed:
       BaseValue: 10
       BaseAdditive: 0
@@ -729,7 +746,9 @@ MonoBehaviour:
     FinalAdditive: 0
   ModDataMemoryPack:
     Name: 
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
   target: {fileID: 0}
   agent: {fileID: 0}
@@ -781,7 +800,9 @@ MonoBehaviour:
   item: {fileID: 0}
   ExData:
     Name: 
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
   Data:
     nutrition:
@@ -830,12 +851,13 @@ MonoBehaviour:
       MultiplicativeModifier: 1
       FinalAdditive: 0
     FeelGood: 0
+    PanelPosition: {x: 0, y: 0}
   EatingProgress: 0
   DataUpdate:
     _PersistentCalls: []
   PanelPrefab: {fileID: 0}
-  UIValues: {fileID: 0}
   PanleInstance: {fileID: 0}
+  UIValues: {fileID: 0}
   Stamina: {fileID: 0}
 --- !u!1 &6916727058987276155
 GameObject:
@@ -884,14 +906,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   Data:
-    RotationDuration: 1
-    TargetPosition: {x: 0, y: 0, z: 0}
+    RotationSpeed: 180
+    FocusPoint: {x: 0, y: 0}
+    ActivateRotation: 1
   ModData:
     Name: 
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
   PlayerController: {fileID: 0}
-  faceItem: {fileID: 2849073660659784377}
+  mover: {fileID: 0}
 --- !u!1 &7020901129659560470
 GameObject:
   m_ObjectHideFlags: 0
@@ -944,7 +969,9 @@ MonoBehaviour:
   currentItemsInArea: []
   ModData:
     Name: 
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
 --- !u!1001 &1480365558587204570
 PrefabInstance:

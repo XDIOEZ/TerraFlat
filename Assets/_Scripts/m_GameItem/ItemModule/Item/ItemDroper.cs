@@ -31,17 +31,17 @@ public class ItemDroper : Mod_ItemDrop
     {
         base.Load();
 
-        faceMouse = item.Mods[ModText.FaceMouse].GetComponent<FaceMouse>();
+        faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse).GetComponent<FaceMouse>();
 
-        Hotbar = item.Mods[ModText.Hotbar].GetComponent<Inventory_HotBar>();
+        Hotbar = item.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Inventory_HotBar>();
 
-        hand = item.Mods[ModText.Hand].GetComponent<Mod_Inventory>();
+        hand = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<Mod_Inventory>();
 
         playerController = item.GetComponent<PlayerController>();
 
         playerController._inputActions.Win10.F.performed += _ =>
         {
-            if (hand.inventory.Data.itemSlots[hand.inventory.Data.Index]._ItemData != null)
+            if (hand.inventory.Data.itemSlots[hand.inventory.Data.Index].itemData != null)
             {
                 DropItemBySlot(hand.inventory.Data.itemSlots[hand.inventory.Data.Index]);
                 hand.inventory.Data.itemSlots[hand.inventory.Data.Index].RefreshUI();
@@ -85,7 +85,7 @@ public class ItemDroper : Mod_ItemDrop
         if (count <= slot.Amount)
         {
             // 克隆数据
-            ItemData newItemData = FastCloner.FastCloner.DeepClone(slot._ItemData);
+            ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
             newItemData.Stack.Amount = count;
             newItemData.Stack.CanBePickedUp = false;
 
@@ -109,7 +109,7 @@ public class ItemDroper : Mod_ItemDrop
                 return;
             }
 
-            newItem.Item_Data = newItemData;
+            newItem.itemData = newItemData;
 
             // 计算位置
             Vector2 startPos = transform.position;

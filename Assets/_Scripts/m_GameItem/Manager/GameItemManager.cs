@@ -51,7 +51,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
                 }
             }
         //    RunTimeItems.Add(item.Item_Data.Guid, item);
-            RunTimeItems[item.Item_Data.Guid] = item;
+            RunTimeItems[item.itemData.Guid] = item;
             AddToGroup(item); // 新增分组逻辑
         }
        // Debug.Log("物品加载完毕");
@@ -85,10 +85,10 @@ public class GameItemManager : SingletonMono<GameItemManager>
         if (item != null)
         {
 
-            if (item.Item_Data.Guid ==0)
-                item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+            if (item.itemData.Guid ==0)
+                item.itemData.Guid = System.Guid.NewGuid().GetHashCode();
 
-            RunTimeItems.Add(item.Item_Data.Guid, item);
+            RunTimeItems.Add(item.itemData.Guid, item);
             AddToGroup(item); // 新增分组逻辑
         }
         return item;
@@ -103,23 +103,23 @@ public class GameItemManager : SingletonMono<GameItemManager>
 
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position, rotation, scale);
         Item item = itemObj.GetComponent<Item>();
-        item.Item_Data = itemData;
+        item.itemData = itemData;
 
         // 如果 Guid 在 -1000 到 1000 之间，重新生成唯一 Guid
-        if (item.Item_Data.Guid > -1000 && item.Item_Data.Guid < 1000)
-            item.Item_Data.Guid = System.Guid.NewGuid().GetHashCode();
+        if (item.itemData.Guid > -1000 && item.itemData.Guid < 1000)
+            item.itemData.Guid = System.Guid.NewGuid().GetHashCode();
 
         // 检测是否存在重复 GUID
-        if (RunTimeItems.ContainsKey(item.Item_Data.Guid))
+        if (RunTimeItems.ContainsKey(item.itemData.Guid))
         {
-            Debug.LogError($"【物品实例化错误】检测到重复的GUID：{item.Item_Data.Guid}\n" +
-                $"当前物品：{item.Item_Data.IDName}\n" +
-                $"已存在物品：{RunTimeItems[item.Item_Data.Guid].name}");
+            Debug.LogError($"【物品实例化错误】检测到重复的GUID：{item.itemData.Guid}\n" +
+                $"当前物品：{item.itemData.IDName}\n" +
+                $"已存在物品：{RunTimeItems[item.itemData.Guid].name}");
 
             return null;
         }
 
-        RunTimeItems.Add(item.Item_Data.Guid, item);
+        RunTimeItems.Add(item.itemData.Guid, item);
         AddToGroup(item); // 新增分组逻辑
 
         return item;
@@ -130,7 +130,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
     // ✅ 添加到分组
     private void AddToGroup(Item item)
     {
-        string key = item.Item_Data.IDName;
+        string key = item.itemData.IDName;
         if (!RuntimeItemsGroup.TryGetValue(key, out var list))
         {
             list = new List<Item>();

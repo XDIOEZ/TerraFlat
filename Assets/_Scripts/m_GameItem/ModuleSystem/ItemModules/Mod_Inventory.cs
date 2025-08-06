@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,43 +10,56 @@ public class Mod_Inventory : Module,IInventory
     public Inventory _Inventory { get => inventory; set => inventory = value; }
     [Tooltip("容器，用于存放物品")]
     public Inventory inventory;
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Bag;
+        }
+
+    }
 
     public override void Load()
     {
+
         if (_Inventory == null)
         {
             _Inventory = GetComponent<Inventory>();
         }
         if (inventoryModuleData.Data.Count == 0)
         {
-            inventoryModuleData.Data[inventory.Data.Name] = inventory.Data;
+            inventoryModuleData.Data[_Data.Name] = inventory.Data;
         }
         else
         {
-            inventory.Data = inventoryModuleData.Data[inventory.Data.Name];
+            inventory.Data = inventoryModuleData.Data[_Data.Name];
         }
+
+        if(Item_Data.ModuleDataDic.ContainsKey(_Data.Name))
+        _Data = Item_Data.ModuleDataDic[_Data.Name];
 
         inventory.Belong_Item = item;
 
-        inventory.DefaultTarget_Inventory = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
+        if (item.itemMods.GetMod_ByID(ModText.Hand))
+        {
+            inventory.DefaultTarget_Inventory =
+                          item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+        }
+        else
+        {
+            inventory.DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
+           Debug.Log("Mod_Inventory: " + item.name + " 没有找到Mod_Hand");
+        }
 
-        /*     if(_Inventory.DefaultTarget_Inventory != null)
-             _Inventory.OnItemClick(_Inventory.Data.Index);*/
-        _Inventory.Init();
+            _Inventory.Init();
     }
 
+
+    [Button]
     public override void Save()
     {
-        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
+        Item_Data.ModuleDataDic[_Data.Name] = inventoryModuleData;
     }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
 
 }
 

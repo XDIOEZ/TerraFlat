@@ -128,9 +128,9 @@ public class GameRes : SingletonAutoMono<GameRes>
     private void HandlePrefab(GameObject prefab)
     {
         var item = prefab.GetComponent<Item>();
-        if (item != null && !string.IsNullOrEmpty(item.Item_Data.IDName))
+        if (item != null && !string.IsNullOrEmpty(item.itemData.IDName))
         {
-            AllPrefabs[item.Item_Data.IDName] = prefab;
+            AllPrefabs[item.itemData.IDName] = prefab;
         }
     }
 
@@ -159,7 +159,7 @@ public class GameRes : SingletonAutoMono<GameRes>
 
             return obj;
         }
-        Debug.LogError($"预制件不存在: {prefab}");
+        Debug.LogError($"预制件不存在:{prefab}");
         return null;
     }
 

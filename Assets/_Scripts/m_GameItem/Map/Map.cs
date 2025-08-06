@@ -26,7 +26,7 @@ public class Map : Item, ISave_Load
     public NavMeshModifierTilemap navigationModiferTileMap;
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
-    public override ItemData Item_Data { get => Data; set => Data = value as Data_TileMap; }
+    public override ItemData itemData { get => Data; set => Data = value as Data_TileMap; }
     #endregion
 
     #region 基类方法实现
@@ -212,8 +212,35 @@ public class Map : Item, ISave_Load
 
     public int GetTileArea(Vector2Int position)
     {
-       return navigationModiferTileMap.GetModifierMap()[tileMap.GetTile((Vector3Int)position)].area;
+        if (navigationModiferTileMap == null)
+        {
+            Debug.LogWarning("navigationModiferTileMap is null");
+            return -1;
+        }
+
+        var modifierMap = navigationModiferTileMap.GetModifierMap();
+        if (modifierMap == null)
+        {
+            Debug.LogWarning("modifierMap is null");
+            return -1;
+        }
+
+        var tile = tileMap.GetTile((Vector3Int)position);
+        if (tile == null)
+        {
+           // Debug.LogWarning($"No tile found at position {position}");
+            return -1;
+        }
+
+        if (!modifierMap.TryGetValue(tile, out var navModifier))
+        {
+            Debug.LogWarning($"No navigation modifier found for tile at {position}");
+            return -1;
+        }
+
+        return navModifier.area;
     }
+
 
     public void DELTile(Vector2Int position, int? index = null)
     {

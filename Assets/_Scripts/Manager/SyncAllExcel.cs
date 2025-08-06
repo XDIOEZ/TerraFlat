@@ -75,7 +75,7 @@ public class SyncAllExcel
             }
             else
             {
-                item.Item_Data.IDName = item.gameObject.name;
+                item.itemData.IDName = item.gameObject.name;
                 item.SyncItemData();
 
                 // 🔽 应用 Prefab 改动

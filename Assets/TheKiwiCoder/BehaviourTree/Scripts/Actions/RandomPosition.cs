@@ -10,14 +10,11 @@ public class RandomPosition : ActionNode
     public Vector2 max = Vector2.one * 10;
     public bool TrueRandom;
 
-    Mover speed;
-
     private Vector3 lastValidPosition = Vector3.zero;
     private const int maxTries = 5;
 
     protected override void OnStart()
     {
-        speed = context.item.Mods[ModText.Mover] as Mover;
         lastValidPosition = context.transform.position;
     }
 
@@ -63,7 +60,7 @@ public class RandomPosition : ActionNode
                 chosenPosition = context.transform.position + (Vector3)new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
             }
 
-            speed.TargetPosition = chosenPosition;
+            context.mover.TargetPosition = chosenPosition;
             blackboard.TargetPosition = chosenPosition - context.transform.position;
 
             lastValidPosition = context.transform.position;
@@ -73,7 +70,7 @@ public class RandomPosition : ActionNode
         else
         {
             Vector2 randomOffset = new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
-            speed.TargetPosition = context.transform.position + (Vector3)randomOffset;
+            context.mover.TargetPosition = context.transform.position + (Vector3)randomOffset;
             blackboard.TargetPosition = randomOffset;
 
             lastValidPosition = context.transform.position;

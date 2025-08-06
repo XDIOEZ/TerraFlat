@@ -9,7 +9,7 @@ public class Armor : Item
 {
     public Data_Armor _Data;
 
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => _Data;
         set => _Data = (Data_Armor)value;

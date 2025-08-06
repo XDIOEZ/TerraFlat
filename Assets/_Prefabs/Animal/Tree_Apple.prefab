@@ -303,8 +303,10 @@ MonoBehaviour:
       DestroySelf: 0
     nodeIndex: 0
   _memoryPackable:
-    Name: "\u751F\u957F\u6A21\u5757"
+    Name: 
+    ModID: "\u751F\u957F\u6A21\u5757"
     isRunning: 1
+    Type: 0
     BitData: 
 --- !u!114 &675614112313854105
 MonoBehaviour:
@@ -343,8 +345,10 @@ MonoBehaviour:
       DestroySelf: 0
     nodeIndex: 0
   _memoryPackable:
-    Name: "\u751F\u4EA7\u6A21\u5757"
+    Name: 
+    ModID: "\u751F\u4EA7\u6A21\u5757"
     isRunning: 1
+    Type: 0
     BitData: 
 --- !u!114 &950637619536004674
 MonoBehaviour:
@@ -360,8 +364,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   modData:
-    Name: "\u4E22\u5F03\u6A21\u5757"
+    Name: 
+    ModID: "\u4E22\u5F03\u6A21\u5757"
     isRunning: 1
+    Type: 0
     BitData: 
   drops: []
   bezierOffset: 1
@@ -500,7 +506,9 @@ MonoBehaviour:
   item: {fileID: 0}
   modData:
     Name: 
+    ModID: 
     isRunning: 0
+    Type: 0
     BitData: 
   DamagePanelName: Panel_DamageText
   damagePanelSpeed: 2
@@ -610,7 +618,7 @@ MonoBehaviour:
   - {x: 0.18533325, y: 0.06695628, z: 0}
   m_ShapePathHash: 0
   m_Mesh: {fileID: 0}
-  m_InstanceId: 188104
+  m_InstanceId: 98924
   m_LocalBounds:
     m_Center: {x: 0.02347374, y: 0.37604785, z: 0}
     m_Extent: {x: 0.16185951, y: 0.30909157, z: 0}

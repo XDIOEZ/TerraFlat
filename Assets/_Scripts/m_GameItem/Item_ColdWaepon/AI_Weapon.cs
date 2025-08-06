@@ -11,7 +11,7 @@ public class AI_Weapon : Item, IColdWeapon, IAttackState
     [Tooltip("Êý¾Ý")]
     public Data_ColdWeapon _data;
 
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => _data;
         set => _data = (Data_ColdWeapon)value;

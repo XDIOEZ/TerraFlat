@@ -38,7 +38,7 @@ public partial class Mod_ItemMaker : Module
         {
             // 生成物品
             Item item = GameItemManager.Instance.InstantiateItem(Data.itemName);
-            item.Item_Data.Stack.Amount = Data.itemCount;
+            item.itemData.Stack.Amount = Data.itemCount;
 
             // 减去生产时间（防止deltaTime过多漏算）
             Data.ProductionTime -= Data.MaxProductionTime;

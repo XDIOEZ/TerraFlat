@@ -190,6 +190,7 @@ GameObject:
   - component: {fileID: 7400242115634630897}
   - component: {fileID: 2634416744218920421}
   - component: {fileID: 1704115879885880632}
+  - component: {fileID: 3810643327833151}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -264,12 +265,12 @@ MonoBehaviour:
   SaveData:
     saveName: defaultSaveName
     Active_PlanetName: "\u5730\u7403"
-    Active_MapName: (0, 0)
-    Active_MapPos: {x: 0, y: 0}
+    Active_MapName: (0, -100)
+    Active_MapPos: {x: 0, y: -100}
     SaveSeed: 0
     Seed: 0
-    Time: 0
-    TimeSpeed: 60
+    Time: 600
+    TimeSpeed: 1
     Active_PlanetData:
       PlanetName: 
       Radius: 1000
@@ -319,3 +320,54 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3694d5a4bab87ba4197d88eba715580d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _cachedMap: {fileID: 0}
+--- !u!114 &3810643327833151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5342144f569cf9d4aac67929aed1c12b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  saveAndLoad: {fileID: 2634416744218920421}
+  Ready_planetData:
+    PlanetName: "\u5730\u7403"
+    Radius: 100
+    TemperatureOffset: 0
+    RainOffset: 0
+    OceanHeight: -1
+    NoiseScale: 0.01
+    MapSize: {x: 100, y: 100}
+    TimeData:
+      DayTime: 600
+      SeasonTime: 600
+      YearTime: 600
+      Day: 0
+      Season: 0
+      Year: 0
+      OneDayTime: 1440
+      OneSeasonTime: 8640
+      OneYearTime: 34560
+      RotationSpeed: 1
+      OrbitSpeed: 1
+      SunriseSunsetThreshold_Spring: {x: 0.3, y: 0.7}
+      SunriseSunsetThreshold_Summer: {x: 0.5, y: 0.4}
+      SunriseSunsetThreshold_Autumn: {x: 0.7, y: 0.6}
+      SunriseSunsetThreshold_Winter: {x: 0.9, y: 0.8}
+  saves: []
+  Save_Player_SelectButton_Prefab: {fileID: 7670434242629240641, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
+  SaveSelectButton_Parent_Content: {fileID: 0}
+  Player_SelectButton_Parent_Content: {fileID: 0}
+  SelectedSave_Name_Text: {fileID: 0}
+  StartGameButton: {fileID: 0}
+  DeletSave: {fileID: 0}
+  NewPlayer_Name_Text: {fileID: 0}
+  NewSave_Name_Text: {fileID: 0}
+  PlanetRediusValue_Text: {fileID: 0}
+  PlanetNoiseValue_Text: {fileID: 0}
+  Start_New_GameButton: {fileID: 0}
+  SelectedPlayer_Name_Text: {fileID: 0}

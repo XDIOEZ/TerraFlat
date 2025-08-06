@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -24,10 +25,14 @@ public partial class Mover : Module, IMove
         public float RunStaminaThreshold = 2f; // 🆕 当体力低于该值时，不能奔跑
     }
 
+    public List<Vector2> MemoryPath_Forbidden = new List<Vector2>();     // 路径点列表
+
+    public bool IsLock = false;
+
     public float RunStaminaThreshold
     {
-        get => saveData.RunStaminaThreshold;
-        set => saveData.RunStaminaThreshold = value;
+        get => Data.RunStaminaThreshold;
+        set => Data.RunStaminaThreshold = value;
     }
 
 
@@ -38,26 +43,26 @@ public partial class Mover : Module, IMove
     [Header("移动设置")]
     [Tooltip("速度源")]
     [SerializeField]
-    public Mover_SaveData saveData = new Mover_SaveData();
+    public Mover_SaveData Data = new Mover_SaveData();
     public bool hightReaction = false;
 
     // 将需要保存的字段改为属性，引用saveData中的字段
     public GameValue_float Speed
     {
-        get => saveData.Speed;
-        set => saveData.Speed = value;
+        get => Data.Speed;
+        set => Data.Speed = value;
     }
 
     public float slowDownSpeed
     {
-        get => saveData.slowDownSpeed;
-        set => saveData.slowDownSpeed = value;
+        get => Data.slowDownSpeed;
+        set => Data.slowDownSpeed = value;
     }
 
     public float endSpeed
     {
-        get => saveData.endSpeed;
-        set => saveData.endSpeed = value;
+        get => Data.endSpeed;
+        set => Data.endSpeed = value;
     }
 
     [Tooltip("移动目标")]
@@ -84,20 +89,20 @@ public partial class Mover : Module, IMove
 
     public bool IsRunning
     {
-        get => saveData.isRunning;
-        private set => saveData.isRunning = value;
+        get => Data.isRunning;
+        private set => Data.isRunning = value;
     }
 
     public float RunStaminaRate
     {
-        get => saveData.runStaminaRate;
-        set => saveData.runStaminaRate = value;
+        get => Data.runStaminaRate;
+        set => Data.runStaminaRate = value;
     }
 
     public float RunSpeedRate
     {
-        get => saveData.runSpeedRate;
-        set => saveData.runSpeedRate = value;
+        get => Data.runSpeedRate;
+        set => Data.runSpeedRate = value;
     }
 
     public void SetRunState(bool isRun)
@@ -146,36 +151,37 @@ public partial class Mover : Module, IMove
 
     public override void Awake()
     {
-        if (_Data.Name == "")
+        if (_Data.ID == "")
         {
-            _Data.Name = ModText.Mover;
+            _Data.ID = ModText.Mover;
         }
     }
 
     public override void Load()
     {
-        ModDataMemoryPack.ReadData(ref saveData);
+        ModDataMemoryPack.ReadData(ref Data);
 
         Rb = GetComponentInParent<Rigidbody2D>();
 
-        if (item.Mods.ContainsKey(ModText.Controller))
+        // 加载控制器模块
+        if (item.itemMods.GetMod_ByID(ModText.Controller)!= null)
         {
-            var controller = item.Mods[ModText.Controller].GetComponent<PlayerController>();
+            var controller = item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
             moveAction = controller._inputActions.Win10.Move_Player;
-        }
 
-        if (item.Mods.ContainsKey(ModText.Stamina))
-        {
-            stamina = item.Mods[ModText.Stamina].GetComponent<Mod_Stamina>();
-        }
-
-        if (item.Mods.ContainsKey(ModText.Controller))
-        {
-            var controller = item.Mods[ModText.Controller].GetComponent<PlayerController>();
             controller._inputActions.Win10.Shift.started += _ => SetRunState(true);
             controller._inputActions.Win10.Shift.canceled += _ => SetRunState(false);
         }
+        else
+        {
+            Debug.LogWarning("没有找到控制器"+item.itemData.GameName);
+        }
 
+        // 加载体力模块
+        if (item.itemMods.GetMod_ByID(ModText.Stamina)!=null)
+        {
+            stamina = item.itemMods.GetMod_ByID(ModText.Stamina).GetComponent<Mod_Stamina>();
+        }
     }
 
     public void Update()
@@ -188,12 +194,14 @@ public partial class Mover : Module, IMove
     {
         if (moveAction == null) return;
 
-        Vector2 input = moveAction.ReadValue<Vector2>();
+            Vector2 input = moveAction.ReadValue<Vector2>();
 
         if (input.sqrMagnitude > 0.001f)
         {
             Vector2 target = Rb.position + input.normalized;
-            Move(target);
+
+            Move(target, deltaTime);
+
             OnMoveStay?.Invoke();
 
             if (stamina != null)
@@ -211,16 +219,16 @@ public partial class Mover : Module, IMove
         }
         else
         {
-            Move(Rb.position); // 停止移动
+            Move(Rb.position, deltaTime); // 停止移动
         }
     }
 
     #endregion
 
     #region 公共方法
-    public virtual void Move(Vector2 TargetPosition)
+    public virtual void Move(Vector2 targetPosition, float deltaTime)
     {
-        bool isZero = Vector2.Distance(Rb.position, TargetPosition) < endSpeed;
+        bool isZero = Vector2.Distance(transform.position, targetPosition) < endSpeed;
 
         // 移动起止状态切换
         if (IsMoving != !isZero)
@@ -233,14 +241,17 @@ public partial class Mover : Module, IMove
         }
 
         if (isZero)
-        {
-            Rb.velocity = Vector2.zero;
             return;
-        }
 
-        // 计算最终速度
-        Rb.velocity = (TargetPosition - Rb.position).normalized * Speed.Value;
+        // 计算移动方向和距离
+        Vector2 direction = (targetPosition - (Vector2)transform.position).normalized;
+        Vector2 movement = direction * Speed.Value * deltaTime;
+
+
+        item.transform.position += (Vector3)movement;
+        
     }
+
 
     #endregion
 
@@ -248,8 +259,8 @@ public partial class Mover : Module, IMove
 
     public override void Save()
     {
-         ModDataMemoryPack.WriteData(saveData);
-        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
+         ModDataMemoryPack.WriteData(Data);
+         Item_Data.ModuleDataDic[_Data.Name] = _Data;
     }
 
     #endregion

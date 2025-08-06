@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
+using UnityEditor.Rendering.LookDev;
 
 [NodeMenu("ActionNode/搜查/根据ItemType设定为目标")]
 public class GetItemPosition : ActionNode
@@ -42,7 +43,7 @@ public class GetItemPosition : ActionNode
     [Tooltip("找到目标后不执行任何移动操作")]
     public bool doNothing = false;
 
-    public Mover Speeder =>context.mover;
+    public Mover mover =>context.mover;
     #endregion
 
     #region 重写方法
@@ -98,11 +99,11 @@ public class GetItemPosition : ActionNode
     {
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
-            if (item?.Item_Data?.ItemTags?.Item_TypeTag == null)
+            if (item?.itemData?.ItemTags?.Item_TypeTag == null)
                 continue;
 
             // 检查物品类型是否匹配
-            if (ItemType.Exists(type => item.Item_Data.ItemTags.Item_TypeTag.Contains(type)))
+            if (ItemType.Exists(type => item.itemData.ItemTags.Item_TypeTag.Contains(type)))
             {
                 return item;
             }
@@ -110,7 +111,6 @@ public class GetItemPosition : ActionNode
 
         return null;
     }
-
 
     /// <summary>
     /// 根据行为类型处理移动逻辑
@@ -140,8 +140,9 @@ public class GetItemPosition : ActionNode
     /// </summary>
     private void ProcessChaseMovement(Vector2 targetPosition)
     {
+        
         blackboard.TargetPosition = targetPosition;
-        Speeder.TargetPosition = targetPosition;
+        mover.TargetPosition = targetPosition;
         context.mover.TargetPosition = targetPosition;
         //  Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
     }
@@ -162,10 +163,63 @@ public class GetItemPosition : ActionNode
         float runDistance = Random.Range(minRunDistance, maxRunDistance);
         Vector2 escapePoint = currentPosition + rotatedDirection * runDistance;
 
+        escapePoint = GetUnlockedTargetPosition(escapePoint);
+
+        //TODO MemoryPath_Forbidden是一个存储了禁止移动点位 的列表
+        //TODO 在创建escapePoint处理位置时 根据禁止移动点位添加偏移 避免走向禁止点位
+        //TODO 通过向escapePoint添加向量 实现方向的偏移
         blackboard.TargetPosition = escapePoint;
-        Speeder.TargetPosition = escapePoint;
+        mover.TargetPosition = escapePoint;
        // Debug.Log($"[{GetType().Name}] 设置逃离目标位置: {escapePoint}");
     }
+
+    public Vector2 GetUnlockedTargetPosition(Vector2 targetPosition)
+    {
+        Vector2 currentPosition = context.transform.position;
+
+        // 情况 1：当前方向被锁定，强制偏转
+        if (context.mover.IsLock)
+        {
+            Vector2 originalDir = (targetPosition - currentPosition).normalized;
+
+            // ±90~180度偏转
+            float angleOffset = Random.Range(90f, 180f);
+            angleOffset = Random.value < 0.5f ? angleOffset : -angleOffset;
+
+            Vector2 newDir = RotateVector2(originalDir, angleOffset);
+            float runDistance = (targetPosition - currentPosition).magnitude;
+
+            return currentPosition + newDir * runDistance;
+        }
+
+        // 情况 2：正常逃离，但避开危险区域（朝安全方向逃）
+        Vector2 escapeDir = (targetPosition - currentPosition).normalized;
+
+        Vector2 dangerDir = Vector2.zero;
+        foreach (var danger in context.mover.MemoryPath_Forbidden)
+        {
+            dangerDir += (danger - currentPosition).normalized;
+        }
+
+        if (context.mover.MemoryPath_Forbidden.Count > 0)
+        {
+            dangerDir /= context.mover.MemoryPath_Forbidden.Count;
+            context.mover.MemoryPath_Forbidden.RemoveAt(0); // 淘汰最早的
+            // 调整逃离方向：避开危险方向
+            escapeDir = (escapeDir - dangerDir).normalized;
+        }
+
+        float finalDistance = (targetPosition - currentPosition).magnitude;
+
+        // 可选：添加一定角度扰动
+        float angleNoise = Random.Range(-angleVariance, angleVariance);
+        escapeDir = RotateVector2(escapeDir, angleNoise);
+
+        return currentPosition + escapeDir * finalDistance;
+    }
+
+
+
 
     /// <summary>
     /// 旋转2D向量

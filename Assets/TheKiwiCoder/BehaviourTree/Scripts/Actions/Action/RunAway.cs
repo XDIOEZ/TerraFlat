@@ -39,7 +39,7 @@ public class RunAway : ActionNode
 
             foreach (var item in items)
             {
-                if (item.Item_Data.Guid == attackerGuid)
+                if (item.itemData.Guid == attackerGuid)
                 {
                     Vector2 attackerPos = item.transform.position;
                     Vector2 awayDir = (selfPos - attackerPos).normalized;

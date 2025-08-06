@@ -25,7 +25,13 @@ public class Mod_HandMade : Module
     public Button WorkButton;
 
     #endregion
-
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Composite;
+        }
+    }
     [Button]
     public override void Load()
     {
@@ -43,10 +49,10 @@ public class Mod_HandMade : Module
 
         WorkButton.onClick.AddListener(OnCraftButtonClick);
 
-        if (item.Mods.ContainsKey(ModText.Hand))
+        if (item.itemMods.ContainsKey_ID(ModText.Hand))
         {
-        inputInventory.DefaultTarget_Inventory = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
-        outputInventory.DefaultTarget_Inventory = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
+        inputInventory.DefaultTarget_Inventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+        outputInventory.DefaultTarget_Inventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
         }
         inputInventory.Init();
         outputInventory.Init();
@@ -64,7 +70,7 @@ public class Mod_HandMade : Module
     {
         // 生成配方键
         string recipeKey = string.Join(",",
-            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.IDName ?? ""));
+            inputInventory_.Data.itemSlots.Select(slot => slot.itemData?.IDName ?? ""));
 
         // 检查配方存在性及类型
         if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out var recipe) ||
@@ -91,7 +97,7 @@ public class Mod_HandMade : Module
                 Debug.LogError($"预制体不存在：{output.resultItem}（配方：{recipe.name}）");
                 return false;
             }
-            ItemData newItem = prefab.GetComponent<Item>().DeepClone().Item_Data;
+            ItemData newItem = prefab.GetComponent<Item>().DeepClone().itemData;
             newItem.Stack.Amount = output.resultAmount;
             itemsToAdd.Add(newItem);
         }
@@ -124,17 +130,17 @@ public class Mod_HandMade : Module
             if (required.amount == 0) continue;
 
             // 显示详细扣减信息
-            Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot._ItemData.Stack.Amount}");
+            Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot.itemData.Stack.Amount}");
 
-            slot._ItemData.Stack.Amount -= required.amount;
-            if (slot._ItemData.Stack.Amount <= 0)
+            slot.itemData.Stack.Amount -= required.amount;
+            if (slot.itemData.Stack.Amount <= 0)
             {
                 Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
                 inputInventory_.Data.RemoveItemAll(slot, i);
             }
             else
             {
-                Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot._ItemData.Stack.Amount}");
+                Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot.itemData.Stack.Amount}");
             }
             inputInventory.RefreshUI(i);
         }
@@ -160,12 +166,12 @@ public class Mod_HandMade : Module
             if (required.amount == 0) continue;
 
             // 检查物品存在且名称匹配
-            if (slot._ItemData == null ||
-                slot._ItemData.IDName != required.ItemName)
+            if (slot.itemData == null ||
+                slot.itemData.IDName != required.ItemName)
                 return false;
 
             // 检查数量足够
-            if (slot._ItemData.Stack.Amount < required.amount)
+            if (slot.itemData.Stack.Amount < required.amount)
                 return false;
         }
 
@@ -180,7 +186,7 @@ public class Mod_HandMade : Module
     public override void Save()
     {
         // throw new System.NotImplementedException();
-        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
+        item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
 }
 

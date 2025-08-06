@@ -862,12 +862,11 @@ MonoBehaviour:
       SlotMaxVolume: 100
       Index: 8
       Belong_Inventory: {fileID: 0}
-    selectedSlotIndex: -1
+    Index: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs: []
   DefaultTarget_Inventory: {fileID: 0}
-  UI_IsShow: 1
 --- !u!114 &2292921102968366919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1891,12 +1890,11 @@ MonoBehaviour:
       SlotMaxVolume: 100
       Index: 1
       Belong_Inventory: {fileID: 0}
-    selectedSlotIndex: -1
+    Index: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs: []
   DefaultTarget_Inventory: {fileID: 0}
-  UI_IsShow: 1
 --- !u!114 &7488154321530926040
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2185,8 +2183,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   inventoryModuleData:
-    Name: "\u5DE5\u4F5C\u53F0\u5408\u6210\u6A21\u5757"
+    Name: 
+    ModID: "\u5DE5\u4F5C\u53F0\u5408\u6210\u6A21\u5757"
     isRunning: 0
+    Type: 0
   inputInventory: {fileID: 4927351775982424024}
   outputInventory: {fileID: 8520653643835190384}
   WorkButton: {fileID: 940975637965242380}
@@ -2215,6 +2215,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 8319463271093590649}
+  CanDrag: 0
+  Drager: {fileID: 0}
 --- !u!1 &3340922055570554316
 GameObject:
   m_ObjectHideFlags: 0

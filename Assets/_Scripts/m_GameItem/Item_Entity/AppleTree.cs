@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using UltEvents;
 using UnityEngine;
 
-public class AppleTree : Item,IHealth,ISave_Load,ILoot
+public class AppleTree : Item, IHealth, ISave_Load, ILoot, IPlant
 {
     #region 基础数据
 
@@ -14,7 +14,7 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
     public Data_Creature _data;
 
     // 物品数据访问
-    public override ItemData Item_Data { get => _data; set => _data = (Data_Creature)value; }
+    public override ItemData itemData { get => _data; set => _data = (Data_Creature)value; }
 
     #endregion
 
@@ -52,8 +52,8 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
         OnHpChanged = new UltEvent();
         OnDefenseChanged = new UltEvent();
         //GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += ChangeGrow;
-        GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += OnTileEnter;
-        Mods["生长模块"].OnAction += Grow;
+       // GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += OnTileEnter;
+      //  Mods["生长模块"].OnAction += Grow;
     }
 
     public void FixedUpdate()
@@ -186,6 +186,9 @@ public class AppleTree : Item,IHealth,ISave_Load,ILoot
     #endregion
 }
 
+internal interface IPlant
+{
+}
 
 [MemoryPackable]
 [System.Serializable]

@@ -21,6 +21,6 @@ public class LootItemMaker : MonoBehaviour
     {
        Item item = GameItemManager.Instance.InstantiateItem(lootData.lootName);
         item.transform.position = transform.position;
-       item.Item_Data.Stack.Amount = lootData.LootAmountMin;
+       item.itemData.Stack.Amount = lootData.LootAmountMin;
     }
 }

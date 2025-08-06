@@ -153,7 +153,7 @@ public class BuildingShadow : MonoBehaviour
                 0.2f
             );
 
-            ShadowRenderer.enabled = alpha > 0.01f;
+         //   ShadowRenderer.enabled = alpha > 0.01f;
         }
     }
 

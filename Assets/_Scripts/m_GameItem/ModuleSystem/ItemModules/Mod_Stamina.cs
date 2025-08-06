@@ -30,7 +30,13 @@ public partial class Mod_Stamina : Module
     public Ex_ModData_MemoryPackable modData;
 
     public Slider slider;
-
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Stamina;
+        }
+    }
     public override void Load()
     {
         modData.ReadData(ref Data);

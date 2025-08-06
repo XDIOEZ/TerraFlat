@@ -6,7 +6,7 @@ using UnityEngine;
 public class EntityItem_Stone : Item, IHealth, ILoot
 {
     public Data_Creature data;
-    public override ItemData Item_Data { get => data; set => data = (Data_Creature)value; }
+    public override ItemData itemData { get => data; set => data = (Data_Creature)value; }
     public Hp Hp { get => data.hp; set => data.hp = value; }
     public Defense Defense { get => data.defense; set => data.defense = value; }
     public UltEvent OnHpChanged { get; set; }

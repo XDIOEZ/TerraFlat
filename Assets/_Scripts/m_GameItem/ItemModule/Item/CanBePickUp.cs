@@ -16,8 +16,8 @@ public class CanBePickUp : MonoBehaviour, ICanBePickUp
     /// </summary>
     public ItemData PickUp_ItemData
     {
-        get => item.Item_Data;
-        set => item.Item_Data = value;
+        get => item.itemData;
+        set => item.itemData = value;
     }
 
     /// <summary>
@@ -36,14 +36,14 @@ public class CanBePickUp : MonoBehaviour, ICanBePickUp
     public virtual ItemData Pickup()
     {
         // 如果物品设置为不可拾取，则返回 null
-        if (!item.Item_Data.Stack.CanBePickedUp)
+        if (!item.itemData.Stack.CanBePickedUp)
         {
             // Debug.Log("不能被拾取: " + item.Item_Data.Name);
             return null;
         }
 
         // 设置为不可再次拾取
-        item.Item_Data.Stack.CanBePickedUp = false;
+        item.itemData.Stack.CanBePickedUp = false;
 
         OnPickUp.Invoke();
 
@@ -51,7 +51,7 @@ public class CanBePickUp : MonoBehaviour, ICanBePickUp
         Destroy(item.gameObject);
 
         // 返回该物品数据
-        return item.Item_Data;
+        return item.itemData;
     }
 
     /*

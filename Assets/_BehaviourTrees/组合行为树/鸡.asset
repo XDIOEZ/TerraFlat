@@ -51,7 +51,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &-8642021152146277943
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -305,7 +306,7 @@ MonoBehaviour:
   m_Name: Sequencer
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: 05996e4887c38644f9671002ede8e1cb
   position: {x: -1505.6, y: 1890.3998}
   blackboard:
@@ -457,6 +458,62 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sleep
+--- !u!114 &-7294424149878897729
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b62b8264cbbd7ac4ea00b5c5f8b4f888, type: 3}
+  m_Name: GetItemPosition(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 79819dc217aa197409ebaf1df61101c4
+  position: {x: 661.4489, y: 926.39996}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 0
+  ItemType:
+  - Player
+  BehaviorType: 1
+  minRunDistance: 5
+  maxRunDistance: 15
+  angleVariance: 90
+  setBlackboardTarget: 1
+  doNothing: 0
+--- !u!114 &-7277445355064126827
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01950e697db72cf43a7b049d42fe127d, type: 3}
+  m_Name: node_ItemDetector(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 182827513117a2840ad0acf2a56036ec
+  position: {x: 1133.0991, y: 925.60016}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 0
 --- !u!114 &-7227376422107088814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -564,7 +621,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  mod_Food: {fileID: 0}
   hungryThreshold: 0.5
 --- !u!114 &-6247524935218288790
 MonoBehaviour:
@@ -622,6 +678,30 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
+--- !u!114 &-5960161606269679514
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: cb1f80e54a0828640a4635107d7a543f
+  position: {x: 1358.699, y: 759.20013}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
 --- !u!114 &-5910006378869297295
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1176,6 +1256,33 @@ MonoBehaviour:
   angleVariance: 30
   setBlackboardTarget: 1
   doNothing: 0
+--- !u!114 &-4229576915371180510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeec1388a7dcd794fa29f155d7f1c1ea, type: 3}
+  m_Name: Move(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 8113b4f1f7c90714fa724aa6207c013d
+  position: {x: 963.0489, y: 926.39996}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 1
+  lastPosition: {x: 0, y: 0}
+  lastMoveTime: 0
+  AutoRotate: 1
 --- !u!114 &-4064361960298055538
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1460,6 +1567,30 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   child: {fileID: -8093066731600702051}
+--- !u!114 &-2052831166730941564
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: bcaa0b887ac31f041814fed5d3d70ee1
+  position: {x: 736.64886, y: 759.19995}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
 --- !u!114 &-2048060275097959539
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1595,7 +1726,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  mod_Food: {fileID: 0}
   hungryThreshold: 0.5
 --- !u!114 &-1671698008124903119
 MonoBehaviour:
@@ -1749,7 +1879,7 @@ MonoBehaviour:
   m_Name: Failure
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: fd69e6dcb2742b44e8703e2f6a8448d2
   position: {x: -1505.6, y: 1772.8}
   blackboard:
@@ -1808,7 +1938,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &-999972146167919085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1833,7 +1964,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &-778343126685460471
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2234,7 +2366,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &454582737225188075
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3054,7 +3187,7 @@ MonoBehaviour:
   m_Name: Selector
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: 4b1f50a8a10961642baf592515ee8dfe
   position: {x: -879.19995, y: 1579.2001}
   blackboard:
@@ -3275,6 +3408,30 @@ MonoBehaviour:
   duration: 3
   startTime: 0
   intervalTime: 0
+--- !u!114 &4122681931441253354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 460be9e34c566ea45b9e282b1adcb028, type: 3}
+  m_Name: Selector(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 74602a012c08d2447b00f7c8ac0fbccc
+  position: {x: 928.00006, y: 592.80005}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  children: []
 --- !u!114 &4128951441833453670
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3600,7 +3757,7 @@ MonoBehaviour:
   m_Name: Sequencer
   m_EditorClassIdentifier: 
   state: 1
-  started: 0
+  started: 1
   guid: 5526c82edba49b04d86264106046460c
   position: {x: -879.19995, y: 1356}
   blackboard:
@@ -3801,7 +3958,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &5589517622185504171
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3906,7 +4064,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  mod_Food: {fileID: 0}
   hungryThreshold: 0.5
 --- !u!114 &6160784784765250276
 MonoBehaviour:
@@ -4216,6 +4373,30 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+--- !u!114 &7713186367755608092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01950e697db72cf43a7b049d42fe127d, type: 3}
+  m_Name: node_ItemDetector(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 8c3abfcd94d438b4eabbac3ac2a4c286
+  position: {x: 511.04883, y: 926.39996}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 0
 --- !u!114 &7733629893919687357
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4228,7 +4409,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e104977d116dadf4287ec84cab51f82f, type: 3}
   m_Name: GameLightDetector
   m_EditorClassIdentifier: 
-  state: 1
+  state: 2
   started: 0
   guid: e2d3fbd1238a7a6428acc5bbf786fe40
   position: {x: -1255.2, y: 1598.3909}
@@ -4240,7 +4421,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &7955938256420995875
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4290,6 +4472,33 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
+--- !u!114 &8042288640170512124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeec1388a7dcd794fa29f155d7f1c1ea, type: 3}
+  m_Name: Move(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 10cba1c814591ba4bb1b139a76774af9
+  position: {x: 1585.0991, y: 925.60016}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 1
+  lastPosition: {x: 0, y: 0}
+  lastMoveTime: 0
+  AutoRotate: 1
 --- !u!114 &8118348360121584919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4342,6 +4551,33 @@ MonoBehaviour:
   lastPosition: {x: 0, y: 0}
   lastMoveTime: 0
   AutoRotate: 1
+--- !u!114 &8255631480802371185
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041807f91584669468190d519e0488d2, type: 3}
+  m_Name: RunAway(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 5e1f9dca2b6c58a4e9b34bd665ea63d9
+  position: {x: 1284, y: 925.60004}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 0
+  RunAwayDirection: {x: 0, y: 0}
+  RunAwayDistance: 5
+  RandomAngle: 180
 --- !u!114 &8569606646270946982
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4366,6 +4602,31 @@ MonoBehaviour:
   description: "\u627E\u5403\u7684"
   drawGizmos: 0
   children: []
+--- !u!114 &8619562110135107061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 76baf3562cfe02b4b83023e0e8ac546f
+  position: {x: 812.6488, y: 926.39996}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 1
+  animationName: Move
 --- !u!114 &8688849840185264871
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4393,6 +4654,31 @@ MonoBehaviour:
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
+--- !u!114 &8946948294558656572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 55f63322876f59c4ca616bb19d4f25e7
+  position: {x: 1434.6991, y: 925.60016}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 1
+  animationName: Move
 --- !u!114 &9040626265655719005
 MonoBehaviour:
   m_ObjectHideFlags: 0

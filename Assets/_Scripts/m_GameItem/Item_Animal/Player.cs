@@ -33,12 +33,12 @@ public class Player
     [Button("克隆测试")]
     public void CloneTest()
     {
-        this.Item_Data = this.Item_Data.DeepClone();
+        this.itemData = this.itemData.DeepClone();
         Debug.Log("克隆成功");
     }
 
     [Tooltip("物品数据")]
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => Data;
         set

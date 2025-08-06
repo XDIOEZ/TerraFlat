@@ -2,6 +2,8 @@ using System.Collections;
 using UnityEngine;
 using TheKiwiCoder;
 using UnityEngine.AI;
+using UnityEditor.Rendering.LookDev;
+using TMPro;
 
 [NodeMenu("ActionNode/行动/移动")]
 public class Move : ActionNode
@@ -35,7 +37,7 @@ public class Move : ActionNode
 
     protected override void OnStart()
     {
-        speeder ??= context.item.Mods[ModText.Mover] as Mover;
+        speeder ??= context.mover;
     }
 
     protected override void OnStop()
@@ -61,6 +63,8 @@ public class Move : ActionNode
             // 有移动，更新时间戳和位置
             lastMoveTime = Time.time;
             lastPosition = currentPosition;
+            // 解锁
+            context.mover.IsLock = false;
         }
         else
         {
@@ -74,28 +78,26 @@ public class Move : ActionNode
 
                 if (AutoRotate)
                 {
-                    Vector3 dir = (context.agent.destination - context.transform.position).normalized;
-
-                    // 随机选择顺时针或逆时针旋转 90 度
-                    float angle = Random.value > 0.5f ? 120f : -120f;
-                    Vector3 rotatedDir = Quaternion.Euler(0, 0, angle) * dir;
-
-                    // 设定新目标点（距离可以用之前的距离或固定距离）
-                    float dist = Vector3.Distance(context.transform.position, context.agent.destination);
-                    Vector3 newTarget = context.transform.position + rotatedDir * dist;
-
-                    //context.agent.SetDestination(newTarget);
-                    speeder.TargetPosition = newTarget;
-
-                    if (base.DebugMODE)
+                    if (context.mover.IsLock)
                     {
-                        Debug.Log($"[AutoRotate] AI卡住，目标点已偏转{angle}°，新目标: {newTarget}");
+                            Vector2 originalDir = (context.mover.TargetPosition - currentPosition).normalized;
+
+                            // ±90~180度偏转
+                            float angleOffset = Random.Range(90f, 180f);
+                            angleOffset = Random.value < 0.5f ? angleOffset : -angleOffset;
+
+                            Vector2 newDir = RotateVector2(originalDir, angleOffset);
+                            float runDistance = (context.mover.TargetPosition - currentPosition).magnitude;
+
+                        context.mover.TargetPosition = currentPosition + newDir * runDistance;
+                        
+
                     }
+                    context.mover.IsLock = true;
 
-                    // 重置计时器（不直接失败，尝试新方向）
-                    lastPosition = context.transform.position;
-                    lastMoveTime = Time.time;
-
+                    if(context.mover.MemoryPath_Forbidden.Count < 3)
+                    context.mover.MemoryPath_Forbidden.Add(lastPosition);
+                    context.agent.SetDestination(context.mover.TargetPosition);
                     return State.Running; // 继续尝试移动
                 }
 
@@ -107,7 +109,7 @@ public class Move : ActionNode
             }
         }
 
-        Mover.Move(speeder.TargetPosition);
+        Mover.Move(speeder.TargetPosition,0);
 
         // 检查是否到达目标
         if (Vector2.Distance(Mover.TargetPosition, currentPosition) <= context.agent.stoppingDistance)
@@ -125,6 +127,20 @@ public class Move : ActionNode
         }
 
         return State.Running;
+    }
+    /// <summary>
+    /// 旋转2D向量
+    /// </summary>
+    private Vector2 RotateVector2(Vector2 vector, float angleDegrees)
+    {
+        float angleRadians = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(angleRadians);
+        float sin = Mathf.Sin(angleRadians);
+
+        return new Vector2(
+            vector.x * cos - vector.y * sin,
+            vector.x * sin + vector.y * cos
+        );
     }
 
     public override void OnDrawGizmos()

@@ -1970,8 +1970,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   inventoryModuleData:
-    Name: "\u624B\u5DE5\u5408\u6210"
+    Name: 
+    ModID: "\u624B\u5DE5\u5408\u6210"
     isRunning: 0
+    Type: 0
   inputInventory: {fileID: 2844700870444916106}
   outputInventory: {fileID: 1523449583456271906}
   WorkButton: {fileID: 7931987179062465118}
@@ -1988,6 +1990,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1389049930998870942}
+  CanDrag: 0
+  Drager: {fileID: 0}
 --- !u!225 &1389049930998870942
 CanvasGroup:
   m_ObjectHideFlags: 0

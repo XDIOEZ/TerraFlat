@@ -24,7 +24,7 @@ public abstract class Trees : Entity
                 {
                     if (go != null)
                     {
-                        go.GetComponent<Item>().Item_Data.Stack.Amount = dropItem.amount;
+                        go.GetComponent<Item>().itemData.Stack.Amount = dropItem.amount;
                     }
 
                     pendingTasks--; // 任务完成 -1

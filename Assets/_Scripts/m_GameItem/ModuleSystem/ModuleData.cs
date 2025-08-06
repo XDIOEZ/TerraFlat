@@ -8,8 +8,22 @@ using UnityEngine;
 [MemoryPackable]
 public abstract partial class ModuleData
 {
+    [Tooltip("模块独立名称")]
     public string Name;
+    [Tooltip("模块实例化名称")]
+    public string ID;
     [Tooltip("是否正在运行")]
     public bool isRunning = true;
+    public ModuleType Type;
+
+    public void DataUpdate()
+    {
+
+    }
 }
 
+public enum ModuleType
+{
+    None,
+    Equipment,
+}

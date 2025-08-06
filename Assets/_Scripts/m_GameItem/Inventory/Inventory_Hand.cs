@@ -5,6 +5,8 @@ using UnityEngine;
 public class Inventory_Hand : Inventory
 {
     public float GetItemAmountRate = 1;
+
+    public static Inventory PlayerHand;
     /*
     //获取Inventory组件
     public Inventory inventory;
@@ -44,7 +46,13 @@ public class Inventory_Hand : Inventory
         }
     }*/
 
-    public override void OnItemClick(int index)
+    public override void Awake()
+    {
+        base.Awake();
+        PlayerHand = this;
+    }
+
+    public override void OnClick(int index)
     {
 
     }

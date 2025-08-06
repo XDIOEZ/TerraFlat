@@ -62,10 +62,10 @@ public class Inventory_HotBar : Inventory
         CurentSelectItem.Act();
     }
 
-    public override void OnItemClick(int index)
+    public override void OnClick(int index)
     {
         //完成基础的物品交换逻辑
-        base.OnItemClick(index);
+        base.OnClick(index);
         //修改选择框位置
         ChangeSelectBoxPosition(index);
         // 同步 UI
@@ -165,13 +165,13 @@ public class Inventory_HotBar : Inventory
         }
 
         var slot = Data.itemSlots[index];
-        if (slot._ItemData == null)
+        if (slot.itemData == null)
         {
           //  Debug.LogWarning($"[ChangeNewObject] 索引 {index} 的物品数据为空，无法生成物体。");
             return;
         }
 
-        ItemData itemData = slot._ItemData;
+        ItemData itemData = slot.itemData;
         Item itemInstance = GameItemManager.Instance.InstantiateItem(itemData.IDName);
 
         if (itemInstance == null)
@@ -194,9 +194,9 @@ public class Inventory_HotBar : Inventory
         tf.localEulerAngles = rotation;
 
         // 初始化 Item 属性
-        itemInstance.Item_Data = itemData;
+        itemInstance.itemData = itemData;
 
-        itemInstance.Item_Data.ModuleDataDic = itemData.ModuleDataDic;
+        itemInstance.itemData.ModuleDataDic = itemData.ModuleDataDic;
         itemInstance.BelongItem = slot.Belong_Inventory.Belong_Item;
 
         // 事件绑定

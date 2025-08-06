@@ -60,7 +60,7 @@ public class ItemMaker
     public void DropItemByNameAndAmount(string ItemName, float Amount, float DropRange,Transform transform)
     {
         Item item = GameItemManager.Instance.InstantiateItem(ItemName).GetComponent<Item>();
-        item.Item_Data.Stack.Amount = Amount;
+        item.itemData.Stack.Amount = Amount;
 
         Vector2 randomOffset = Random.insideUnitCircle * DropRange;
         Vector2 targetPos = (Vector2)transform.position + randomOffset;
@@ -91,7 +91,7 @@ public class ItemMaker
     public void DropItem_cric(Item item, Vector3 startPos, float radius)
     {
         // 设置物品暂时不可被拾取
-        item.Item_Data.Stack.CanBePickedUp = false;
+        item.itemData.Stack.CanBePickedUp = false;
 
         // 计算随机目标位置
         Vector2 endPos = startPos + new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), 0f);
@@ -168,7 +168,7 @@ public class ItemMaker
         itemTransform.position = endPos;
 
         item.StartCoroutine(LandingSettleEffect(itemTransform, item, Random.Range(bounceHeightMin, bounceHeightMax)));
-        item.Item_Data.Stack.CanBePickedUp = true;
+        item.itemData.Stack.CanBePickedUp = true;
     }
 
     [Tooltip("落地动画")]

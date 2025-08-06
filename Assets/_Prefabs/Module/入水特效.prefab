@@ -96,7 +96,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d009fbf641103df40bf3044b5cd9761c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   data:
-    Name: "\u5165\u6C34\u7279\u6548"
+    Name: 
+    ModID: "\u5165\u6C34\u7279\u6548"
     isRunning: 0
+    Type: 0
     BitData: 

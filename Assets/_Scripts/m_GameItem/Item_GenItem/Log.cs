@@ -8,7 +8,7 @@ public class Log : Item,IFuel
 {
     public Data_GeneralItem _data;
 
-    public override ItemData Item_Data 
+    public override ItemData itemData 
     {
         get => _data;
         set => _data = (Data_GeneralItem)value;

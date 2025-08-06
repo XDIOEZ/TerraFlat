@@ -81,7 +81,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
     {
         // 生成配方键
         string recipeKey = string.Join(",",
-            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.IDName ?? ""));
+            inputInventory_.Data.itemSlots.Select(slot => slot.itemData?.IDName ?? ""));
 
         // 检查配方存在性及类型
         if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out var recipe) ||
@@ -108,7 +108,7 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
                 Debug.LogError($"预制体不存在：{output.resultItem}（配方：{recipe.name}）");
                 return false;
             }
-            ItemData newItem = prefab.GetComponent<Item>().DeepClone().Item_Data;
+            ItemData newItem = prefab.GetComponent<Item>().DeepClone().itemData;
             newItem.Stack.Amount = output.resultAmount;
             itemsToAdd.Add(newItem);
         }
@@ -141,17 +141,17 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
             if (required.amount == 0) continue;
 
             // 显示详细扣减信息
-            Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot._ItemData.Stack.Amount}");
+            Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot.itemData.Stack.Amount}");
 
-            slot._ItemData.Stack.Amount -= required.amount;
-            if (slot._ItemData.Stack.Amount <= 0)
+            slot.itemData.Stack.Amount -= required.amount;
+            if (slot.itemData.Stack.Amount <= 0)
             {
                 Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
                 inputInventory_.Data.RemoveItemAll(slot, i);
             }
             else
             {
-                Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot._ItemData.Stack.Amount}");
+                Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot.itemData.Stack.Amount}");
             }
             inputInventory.RefreshUI(i);
         }
@@ -175,12 +175,12 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
             if (required.amount == 0) continue;
 
             // 检查物品存在且名称匹配
-            if (slot._ItemData == null ||
-                slot._ItemData.IDName != required.ItemName)
+            if (slot.itemData == null ||
+                slot.itemData.IDName != required.ItemName)
                 return false;
 
             // 检查数量足够
-            if (slot._ItemData.Stack.Amount < required.amount)
+            if (slot.itemData.Stack.Amount < required.amount)
                 return false;
         }
 

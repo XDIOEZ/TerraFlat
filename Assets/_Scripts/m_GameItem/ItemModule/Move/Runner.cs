@@ -53,9 +53,9 @@ public class Runner : Module, IRunner
 
     public override void Awake()
     {
-        if (string.IsNullOrEmpty(_Data.Name))
+        if (string.IsNullOrEmpty(_Data.ID))
         {
-            _Data.Name = ModText.Run;
+            _Data.ID = ModText.Run;
         }
     }
 
@@ -76,7 +76,7 @@ public class Runner : Module, IRunner
     public override void Save()
     {
         modData.WriteData(saveData);
-        item.Item_Data.ModuleDataDic[_Data.Name] = _Data;
+        Item_Data.ModuleDataDic[_Data.Name] = _Data;
     }
 
     public void StartWork()

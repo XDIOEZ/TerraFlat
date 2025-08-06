@@ -75,7 +75,7 @@ public class Mod_PlantGrow : Module
             // 如果实例化成功，设置物品数量
             if (product != null)
             {
-                product.Item_Data.Stack.Amount = loot.GetRandomLootAmount();
+                product.itemData.Stack.Amount = loot.GetRandomLootAmount();
             }
             else
             {

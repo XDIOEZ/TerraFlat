@@ -36,7 +36,7 @@ public class ItemDistanceCheck : ActionNode
 
         foreach (var item in context.itemDetector.CurrentItemsInArea)
         {
-            var itemTags = item.Item_Data.ItemTags.Item_TypeTag;
+            var itemTags = item.itemData.ItemTags.Item_TypeTag;
 
             bool matches = itemTags.Any(tag => tagSet.Contains(tag.ToString()));
             if (!matches)

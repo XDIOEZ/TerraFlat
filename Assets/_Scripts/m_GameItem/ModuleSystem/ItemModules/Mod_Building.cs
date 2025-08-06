@@ -40,7 +40,7 @@ public class Mod_Building : Module
     {
         BuildingData.ReadData(ref Data);
         boxCollider2D = item.GetComponentInChildren<BoxCollider2D>();
-        damageReceiver = (DamageReceiver)item.Mods[ModText.Hp];
+        damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID(ModText.Hp);
         damageReceiver.OnAction += OnHit;
         item.OnAct += Install;
     }
@@ -48,7 +48,7 @@ public class Mod_Building : Module
     public override void Save()
     {
         BuildingData.WriteData( Data);
-        item.Item_Data.ModuleDataDic[_Data.Name] = BuildingData;
+        item.itemData.ModuleDataDic[_Data.Name] = BuildingData;
     }
 
     public override void Action(float deltaTime)
@@ -125,9 +125,9 @@ public class Mod_Building : Module
         if (boxCollider2D != null)
             boxCollider2D.isTrigger = true;
 
-        if (item.Item_Data != null)
+        if (item.itemData != null)
         {
-            item.Item_Data.Stack.CanBePickedUp = true;
+            item.itemData.Stack.CanBePickedUp = true;
         }
 
         Data.Hp = 0;
@@ -176,9 +176,9 @@ public class Mod_Building : Module
         }
 
         // 4. 检查物品数量
-        if (item.Item_Data.Stack.Amount <= 0)
+        if (item.itemData.Stack.Amount <= 0)
         {
-            Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.Item_Data.Stack.Amount})");
+            Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.itemData.Stack.Amount})");
             return false;
         }
 
@@ -188,19 +188,19 @@ public class Mod_Building : Module
     private void ExecuteInstallation()
     {
         // 消耗物品
-        item.Item_Data.Stack.Amount--;
+        item.itemData.Stack.Amount--;
 
         // 设置血量
         Data.Hp = Data.MaxHp.Value;
         damageReceiver.Hp = damageReceiver.MaxHp.Value;
 
         // 更新物品状态
-        item.Item_Data.Stack.CanBePickedUp = false;
+        item.itemData.Stack.CanBePickedUp = false;
         item.OnUIRefresh?.Invoke();
 
         // 实例化建筑
         var runtimeItem = GameItemManager.Instance.InstantiateItem(
-            item.Item_Data.IDName,
+            item.itemData.IDName,
             GhostShadow.transform.position
         );
 
@@ -208,14 +208,14 @@ public class Mod_Building : Module
         {
             // 配置新实例
             runtimeItem.transform.localScale = Vector3.one;
-            runtimeItem.Item_Data = FastCloner.FastCloner.DeepClone(runtimeItem.Item_Data);
-            runtimeItem.Item_Data.Stack.Amount = 1;
-            runtimeItem.Item_Data.Stack.CanBePickedUp = false;
+            runtimeItem.itemData = FastCloner.FastCloner.DeepClone(runtimeItem.itemData);
+            runtimeItem.itemData.Stack.Amount = 1;
+            runtimeItem.itemData.Stack.CanBePickedUp = false;
             EnableChildColliders(true, runtimeItem.transform);
         }
 
         // 处理物品耗尽
-        if (item.Item_Data.Stack.Amount <= 0)
+        if (item.itemData.Stack.Amount <= 0)
         {
             CleanupGhost();
             Destroy(item.transform.gameObject);

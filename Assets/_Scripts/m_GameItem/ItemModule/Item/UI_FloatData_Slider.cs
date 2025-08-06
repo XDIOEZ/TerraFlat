@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class UI_FloatData : MonoBehaviour
+public class UI_FloatData_Slider : MonoBehaviour
 {
     public Dictionary<string, Slider> Sliders = new Dictionary<string, Slider>();
 

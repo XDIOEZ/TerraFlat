@@ -19,17 +19,23 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
     public bool IsDragging = false;
 
-    private void Start()
+    public void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         canvas = gameObject.transform.parent.GetComponentInParent<Canvas>();
+    }
+
+    private void Start()
+    {
+       
+      
 
         rectTransform.SetSiblingIndex(DefaultOrder);
         CurrentOrder = Mathf.Max(CurrentOrder, DefaultOrder);
 
         if (canvas == null)
         {
-            Debug.LogError("DraggableUI 需要在 Canvas 的子物体上使用！");
+            Debug.LogError($"DraggableUI 需要在 Canvas {gameObject.name}的子物体上使用！");
         }
 
         if (draggableImage == null)

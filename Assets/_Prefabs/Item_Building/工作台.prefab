@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3362821212264663490}
   - component: {fileID: 3290000933435650850}
   m_Layer: 9
-  m_Name: DamageReceiver
+  m_Name: "\u4F24\u5BB3\u63A5\u6536\u5668"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -91,11 +91,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  Data:
+  modData:
     Name: 
-    isRunning: 0
+    ID: 
+    isRunning: 1
+    Type: 0
     BitData: 
-  saveData:
+  Data:
     Hp: 0
     MaxHp:
       BaseValue: 100
@@ -103,11 +105,24 @@ MonoBehaviour:
       AdditiveModifier: 0
       MultiplicativeModifier: 1
       FinalAdditive: 0
+    Defense:
+      BaseValue: 0
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    AttackersUIDs: 
+    ShowCanvas: 0
   flashCount: 1
   flashDuration: 0.2
   flashColor: {r: 1, g: 0, b: 0, a: 1}
   shakeDuration: 0.15
   shakeMagnitude: 0.1
+  PanelPrefab: {fileID: 0}
+  PanleInstance: {fileID: 0}
+  DataUpdate:
+    _PersistentCalls: []
+  UIValues: {fileID: 0}
 --- !u!1 &3635460958367621312
 GameObject:
   m_ObjectHideFlags: 0
@@ -165,7 +180,9 @@ MonoBehaviour:
     minVisibleDistance: 1
   BuildingData:
     Name: "\u5EFA\u7B51\u6A21\u5757"
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
   GhostShadow: {fileID: 0}
   boxCollider2D: {fileID: 1568945604396735626}
@@ -367,13 +384,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
-    _PersistentCalls: []
-  DestroyItem_Event:
+  OnItemDestroy:
     _PersistentCalls: []
   OnAct:
+    _PersistentCalls: []
+  OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 5660411217501825636}
   button: {fileID: 0}
@@ -465,7 +482,9 @@ MonoBehaviour:
   item: {fileID: 558813593968046057}
   modData:
     Name: "\u4EA4\u4E92\u6A21\u7EC4"
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
   CurentInteractItem: {fileID: 0}
 --- !u!61 &7540695491821249678
@@ -864,6 +883,10 @@ PrefabInstance:
     - target: {fileID: 7961840435426885852, guid: 6fcba68e82bf7914499a1adb225f1c83, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8159281846022184057, guid: 6fcba68e82bf7914499a1adb225f1c83, type: 3}
+      propertyPath: inventoryModuleData.ID
+      value: "\u5408\u6210\u6A21\u5757"
       objectReference: {fileID: 0}
     - target: {fileID: 8299428486344607392, guid: 6fcba68e82bf7914499a1adb225f1c83, type: 3}
       propertyPath: m_AnchorMax.y

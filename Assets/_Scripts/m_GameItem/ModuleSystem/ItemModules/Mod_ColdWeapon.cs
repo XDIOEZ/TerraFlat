@@ -67,9 +67,9 @@ public partial class Mod_ColdWeapon : Module
 
     public override void Awake()
     {
-        if (_Data.Name == "")
+        if (_Data.ID == "")
         {
-            _Data.Name = "ColdWeapon";
+            _Data.ID = "ColdWeapon";
         }
     }
 
@@ -82,8 +82,8 @@ public partial class Mod_ColdWeapon : Module
 
         if (item.BelongItem != null)
         {
-            faceMouse = item.BelongItem.Mods[ModText.FaceMouse] as FaceMouse;
-            var controller = item.BelongItem.Mods[ModText.Controller].GetComponent<PlayerController>();
+            faceMouse = item.BelongItem.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
+            var controller = item.BelongItem.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
             InputAction = controller._inputActions.Win10.LeftClick;
             InputAction.started += OnInputActionStarted;
             InputAction.canceled += OnInputActionCanceled;
@@ -219,8 +219,8 @@ public partial class Mod_ColdWeapon : Module
     public void PerformStab(Vector2 startTarget, float speed, float maxDistance,float deltaTime)
     {
         Vector2 mouseTargetLocal = MoveTargetTransform.parent != null ?
-            (Vector2)MoveTargetTransform.parent.InverseTransformPoint(faceMouse.Data.TargetPosition) :
-            (Vector2)faceMouse.Data.TargetPosition;
+            (Vector2)MoveTargetTransform.parent.InverseTransformPoint(faceMouse.Data.FocusPoint) :
+            (Vector2)faceMouse.Data.FocusPoint;
 
         Vector2 currentLocalPos = (Vector2)MoveTargetTransform.localPosition;
 

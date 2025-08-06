@@ -38,8 +38,13 @@ public class CameraFollowManager : Module
 
     public new void Awake()
     {
+        if (_Data.ID == "")
+        _Data.ID = ModText.Camera;
+
         if (_Data.Name == "")
-        _Data.Name = ModText.Camera;
+        {
+            _Data.Name = _Data.ID + "_" + Random.Range(1000, 9999);
+        }
     }
 
     public void PovValueChanged(InputAction.CallbackContext context = default)

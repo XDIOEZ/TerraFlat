@@ -40,11 +40,11 @@ public class Hunting : ActionNode
     {
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
-            if (item?.Item_Data?.ItemTags?.Item_TypeTag == null)
+            if (item?.itemData?.ItemTags?.Item_TypeTag == null)
                 continue;
 
             // 检查物品类型是否匹配
-            if (ItemType.Exists(type => item.Item_Data.ItemTags.Item_TypeTag.Contains(type)))
+            if (ItemType.Exists(type => item.itemData.ItemTags.Item_TypeTag.Contains(type)))
             {
                 return item;
             }

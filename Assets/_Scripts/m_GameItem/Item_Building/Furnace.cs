@@ -105,7 +105,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             new ItemSlot(1),
             new ItemSlot(2) 
         };
-        inventory.Data.Name = name;
+       // inventory.Data.Name = name;
 
         foreach (var itemSlot in inventory.Data.itemSlots)
         {
@@ -120,7 +120,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         Inventory[] Inventory_s = GetComponentsInChildren<Inventory>();
         foreach (var inventory_ShowNow in Inventory_s)
         {
-            inventory_ShowNow.Data = InventoryData_Dict[inventory_ShowNow.Data.Name];
+        //    inventory_ShowNow.Data = InventoryData_Dict[inventory_ShowNow.Data.Name];
             foreach (var itemSlot in InventoryData_Dict[inventory_ShowNow.Data.Name].itemSlots)
             {
                 itemSlot.Belong_Inventory = inventory_ShowNow;
@@ -129,7 +129,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
     }
 
 
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => _furnaceData;
         set
@@ -179,17 +179,17 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             {
                 var item_slot = inputInventory_.Data.itemSlots[i];
 
-                if (item_slot._ItemData == null)
+                if (item_slot.itemData == null)
                 {
                     continue;
                 }
 
-                if (item_slot._ItemData.IDName == ingredient.ItemName)
+                if (item_slot.itemData.IDName == ingredient.ItemName)
                 {
-                    if (item_slot._ItemData.Stack.Amount < input_list.RowItems_List[i].amount)
+                    if (item_slot.itemData.Stack.Amount < input_list.RowItems_List[i].amount)
                     {
 
-                        Debug.LogError($"合成失败:输出插槽堵塞或者缺少原材料{item_slot._ItemData.Stack.Amount}+{input_list.RowItems_List[i].amount}");
+                        Debug.LogError($"合成失败:输出插槽堵塞或者缺少原材料{item_slot.itemData.Stack.Amount}+{input_list.RowItems_List[i].amount}");
                         return false;
                     }
                 }
@@ -220,14 +220,14 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
 
         foreach (var item_slot in inputInventory_.Data.itemSlots)
         {
-            if (item_slot._ItemData == null)
+            if (item_slot.itemData == null)
             {
                 // 如果插槽为空，添加一个空的 CraftingIngredient 对象到当前合成清单
                 currentRecipeList.Add(new CraftingIngredient(""));
                 continue;
             }
             // 将该物品及其当前数量添加到当前合成清单
-            currentRecipeList.Add(new CraftingIngredient(item_slot._ItemData.IDName));
+            currentRecipeList.Add(new CraftingIngredient(item_slot.itemData.IDName));
         }
 
         #endregion
@@ -251,7 +251,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                 if (prefab != null)
                 {
                     // 克隆预制体的物品数据
-                    ItemData output_item = prefab.GetComponent<Item>().DeepClone().Item_Data;
+                    ItemData output_item = prefab.GetComponent<Item>().DeepClone().itemData;
                     // 设置输出物品的数量
                     output_item.Stack.Amount = output.resultAmount;
                     // 将输出物品添加到待添加列表
@@ -285,14 +285,14 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                 {
                     var item_slot = inputInventory_.Data.itemSlots[i];
 
-                    if (item_slot._ItemData != null && item_slot._ItemData.IDName == currentRecipeList[i].ItemName)
+                    if (item_slot.itemData != null && item_slot.itemData.IDName == currentRecipeList[i].ItemName)
                     {
-                        if (item_slot._ItemData.Stack.Amount >= input_list.RowItems_List[i].amount)
+                        if (item_slot.itemData.Stack.Amount >= input_list.RowItems_List[i].amount)
                         {
                             // 如果物品数量减为 0，从输入容器中移除该物品
-                            item_slot._ItemData.Stack.Amount -= input_list.RowItems_List[i].amount;
+                            item_slot.itemData.Stack.Amount -= input_list.RowItems_List[i].amount;
 
-                            if (item_slot._ItemData.Stack.Amount == 0)
+                            if (item_slot.itemData.Stack.Amount == 0)
                             {
                                 inputInventory_.Data.RemoveItemAll(item_slot, i);
                             }
@@ -359,7 +359,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         bool isInputEmpty = true;
         foreach (var slot in Input_inventory.Data.itemSlots)
         {
-            if (slot._ItemData != null && slot._ItemData.Stack.Amount > 0)
+            if (slot.itemData != null && slot.itemData.Stack.Amount > 0)
             {
                 isInputEmpty = false;
                 break;
@@ -392,14 +392,14 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             {
                 var item_slot = Input_inventory.Data.itemSlots[i];
 
-                if (item_slot._ItemData == null)
+                if (item_slot.itemData == null)
                 {
                     // 如果插槽为空，添加一个空的 CraftingIngredient 对象到当前合成清单
                     currentRecipeList.Add(new CraftingIngredient(""));
                     continue;
                 }
                 // 将该物品及其当前数量添加到当前合成清单
-                currentRecipeList.Add(new CraftingIngredient(item_slot._ItemData.IDName));
+                currentRecipeList.Add(new CraftingIngredient(item_slot.itemData.IDName));
             }
             
             Recipe TempRecipe;
@@ -480,12 +480,12 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
        
         foreach (var slot in Fuel_inventory.Data.itemSlots)
         {
-            if (slot._ItemData == null)
+            if (slot.itemData == null)
             {
                 continue;
             }
 
-            string itemName = slot._ItemData.IDName;
+            string itemName = slot.itemData.IDName;
 
             IFuel fuel = GameRes.Instance.AllPrefabs[itemName].GetComponent<IFuel>();
 
@@ -495,7 +495,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             }
 
             currentFuelAmount += fuel.MaxBurnTime;
-            slot._ItemData.Stack.Amount -= 1;
+            slot.itemData.Stack.Amount -= 1;
             //slot.UI.RefreshUI();
             return true;
         }

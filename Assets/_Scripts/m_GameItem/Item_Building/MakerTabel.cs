@@ -21,7 +21,7 @@ public class CraftingTable : Item,ISave_Load,IBuilding
 
     public UltEvent _onInventoryData_Dict_Changed;
     public UltEvent OnInventoryData_Dict_Changed { get => _onInventoryData_Dict_Changed; set => _onInventoryData_Dict_Changed = value; }
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => Data;
         set => Data = (Data_Worker)value;
@@ -258,10 +258,10 @@ public class CraftingTable : Item,ISave_Load,IBuilding
     {
         if (CanInteract)
         {
-            Mods["工作台合成模块"].GetComponent<Mod_HandMade>().inputInventory.DefaultTarget_Inventory
-                = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
-            Mods["工作台合成模块"].GetComponent<Mod_HandMade>().outputInventory.DefaultTarget_Inventory
-                = item.Mods[ModText.Hand].GetComponent<IInventory>()._Inventory;
+            itemMods.GetMod_ByID(ModText.Composite).GetComponent<Mod_HandMade>().inputInventory.DefaultTarget_Inventory
+                = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+            itemMods.GetMod_ByID(ModText.Composite).GetComponent<Mod_HandMade>().outputInventory.DefaultTarget_Inventory
+                = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
         }
     }
 

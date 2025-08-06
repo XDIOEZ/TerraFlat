@@ -3,6 +3,7 @@ using UnityEngine;
 using NaughtyAttributes;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 public class Inventory : MonoBehaviour
 {
@@ -19,7 +20,7 @@ public class Inventory : MonoBehaviour
     //负责交互的Inventory
     public Inventory DefaultTarget_Inventory;
 
-    public void Awake()
+    public virtual void Awake()
     {
         // 若未命名，则赋默认名
         if (string.IsNullOrEmpty(Data.Name))
@@ -40,7 +41,7 @@ public class Inventory : MonoBehaviour
         {
            ItemSlot_UI itemSlotUI = itemSlotUIs[i];
             itemSlotUI.Data = Data.itemSlots[i];
-            itemSlotUI.OnLeftClick += OnItemClick;
+            itemSlotUI.OnLeftClick += OnClick;
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.Data.Belong_Inventory = this;
         }
@@ -102,7 +103,7 @@ public class Inventory : MonoBehaviour
             itemSlotUIs[i].RefreshUI();
         }
     }
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnScroll(int index, float direction)
     {
         if(direction > 0)
@@ -114,8 +115,8 @@ public class Inventory : MonoBehaviour
         }
        
     }
-
-    public virtual void OnItemClick(int index)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public virtual void OnClick(int index)
     {
         ItemSlot slot = Data.GetItemSlot(index);
 

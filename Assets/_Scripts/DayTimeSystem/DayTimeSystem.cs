@@ -36,6 +36,9 @@ public class DayTimeSystem : MonoBehaviour
     private void Start()
     {
         SaveLoadManager.OnSceneSwitchStart += SyncLight;
+        TimeData.DayTime = SaveData.Time;
+        TimeData.SeasonTime = SaveData.Time;
+        TimeData.YearTime = SaveData.Time;
     }
 
     #region 时间更新系统

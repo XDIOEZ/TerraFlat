@@ -17,6 +17,15 @@ public class Mod_ItemDrop : Module
     /* ----------------------------------------------------------
      * 丢弃物品（自动随机终点）
      * ----------------------------------------------------------*/
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.ItemDorper;
+        }
+ 
+    }
+
     public void DropItem_Range(Item item, Vector2 startPos, float radius, float time)
     {
         item.transform.position = startPos;
@@ -32,7 +41,7 @@ public class Mod_ItemDrop : Module
 
         Drop drop = new Drop
         {
-            itemGUID = item.Item_Data.Guid,
+            itemGUID = item.itemData.Guid,
             startPos = startPos,
             endPos = endPos,
             controlPos = mid,
@@ -42,7 +51,7 @@ public class Mod_ItemDrop : Module
         };
 
         drops.Add(drop);
-        item.Item_Data.Stack.CanBePickedUp   = false;
+        item.itemData.Stack.CanBePickedUp   = false;
     }
 
     /// <summary>
@@ -58,7 +67,7 @@ public class Mod_ItemDrop : Module
 
         Drop drop = new Drop
         {
-            itemGUID = item.Item_Data.Guid,
+            itemGUID = item.itemData.Guid,
             startPos = startPos,
             endPos = endPos,
             controlPos = mid,
@@ -68,7 +77,7 @@ public class Mod_ItemDrop : Module
         };
 
         drops.Add(drop);
-        item.Item_Data.Stack.CanBePickedUp = false;
+        item.itemData.Stack.CanBePickedUp = false;
     }
 
 
@@ -99,7 +108,7 @@ public class Mod_ItemDrop : Module
             if (t >= 1f)
             {
                 drops.RemoveAt(i);
-                drop.item.Item_Data.Stack.CanBePickedUp = true;
+                drop.item.itemData.Stack.CanBePickedUp = true;
             }
         }
     }

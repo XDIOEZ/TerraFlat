@@ -1,4 +1,4 @@
-using DG.Tweening;
+ï»¿using DG.Tweening;
 using MemoryPack;
 using NUnit.Framework.Interfaces;
 using Sirenix.OdinInspector;
@@ -22,9 +22,9 @@ public partial class Mod_Food : Module
 
     public GameObject PanelPrefab;
 
-    public UI_FloatData UIValues;
-
     public GameObject PanleInstance;
+
+    public UI_FloatData_Slider UIValues;
 
     public Mod_Stamina Stamina;
 
@@ -37,7 +37,7 @@ public partial class Mod_Food : Module
             {
                 Data.ShowCanvas = value;
 
-                // ¸ù¾İÖµµ÷ÓÃ¶ÔÓ¦µÄÃæ°åº¯Êı
+                // æ ¹æ®å€¼è°ƒç”¨å¯¹åº”çš„é¢æ¿å‡½æ•°
                 if (Data.ShowCanvas)
                 {
                     ShowPanle();
@@ -54,26 +54,31 @@ public partial class Mod_Food : Module
     [System.Serializable]
     public partial class Mod_Food_Data
     {
-        public Nutrition nutrition = new();//ÓªÑøÖµ
-        public float Max_EatingProgress = 3;//×î´ó½ø¶È
-        public float AbsorptionRate = 1f;//ÎüÊÕÂÊ
-        public bool ShowCanvas = false;//Ãæ°åÏÔÊ¾×´Ì¬
+        public Nutrition nutrition = new();//è¥å…»å€¼
+        public float Max_EatingProgress = 3;//æœ€å¤§è¿›åº¦
+        public float AbsorptionRate = 1f;//å¸æ”¶ç‡
+        public bool ShowCanvas = false;//é¢æ¿æ˜¾ç¤ºçŠ¶æ€
         public GameValue_float nutritionConsumeSpeed = new(1f);
 
-        public bool FeelGood = false; // ¡û ¼ÓÔÚÕâÀï
+        public bool FeelGood = false; // â† åŠ åœ¨è¿™é‡Œ
+        //TODO æ·»åŠ å­å¯¹è±¡çš„é¢æ¿ä½ç½®ä½œä¸º æŒä¹…åŒ–æ•°æ®  åœ¨å®ä¾‹åŒ–é¢æ¿æ—¶ä¿å­˜é¢æ¿ä½ç½®  åœ¨å…³é—­é¢æ¿æ—¶æ¢å¤é¢æ¿ä½ç½® åœ¨Saveå‡½æ•°ä¸­ å¦‚æœé¢æ¿å­˜åœ¨ å°±ä¿å­˜é¢æ¿çš„ä½ç½®
+        public Vector2 PanelPosition = new Vector2(0, 0);
     }
 
     public override void Awake()
     {
-        if (_Data.Name == "")
+        if (_Data.ID == "")
         {
-            _Data.Name = ModText.Food;
+            _Data.ID = ModText.Food;
         }
+ 
     }
 
     public override void Load()
     {
         ExData.ReadData(ref Data);
+
+
         if (Data.ShowCanvas)
         {
             ShowPanle();
@@ -82,15 +87,18 @@ public partial class Mod_Food : Module
         {
             HidePanle();
         }
+
+
+
         if (item.Mods.ContainsKey(ModText.Stamina))
         Stamina = item.Mods[ModText.Stamina] as Mod_Stamina;
 
     }
     public override void Action(float timeDelta)
     {
-        // ÓªÑøÏûºÄ
+        // è¥å…»æ¶ˆè€—
         float totalEnergy = ConsumeNutrition(timeDelta);
-        //¾«Á¦²¹³ä-Ç°ÌáÊÇ´æÔÚ¾«Á¦Ä£¿é
+        //ç²¾åŠ›è¡¥å……-å‰ææ˜¯å­˜åœ¨ç²¾åŠ›æ¨¡å—
         if (Stamina != null)
             Stamina.AddStamina(totalEnergy);
 
@@ -99,28 +107,28 @@ public partial class Mod_Food : Module
 
     private float ConsumeNutrition(float timeDelta)
     {
-        // ÅĞ¶Ïµ±Ç°¾«Á¦ÊÇ·ñÒÑÂú£¬¾ö¶¨ÊÇ·ñ¼õ»ºÓªÑøÏûºÄËÙ¶È
+        // åˆ¤æ–­å½“å‰ç²¾åŠ›æ˜¯å¦å·²æ»¡ï¼Œå†³å®šæ˜¯å¦å‡ç¼“è¥å…»æ¶ˆè€—é€Ÿåº¦
         bool shouldSlow = Stamina != null && Stamina.IsStaminaFull;
 
-        // µ±¾«Á¦ÂúÇÒÖ®Ç°Î´¼õËÙÊ±£¬¼õÂıÏûºÄËÙ¶È²¢±ê¼Ç×´Ì¬
+        // å½“ç²¾åŠ›æ»¡ä¸”ä¹‹å‰æœªå‡é€Ÿæ—¶ï¼Œå‡æ…¢æ¶ˆè€—é€Ÿåº¦å¹¶æ ‡è®°çŠ¶æ€
         if (shouldSlow && !Data.FeelGood)
         {
             Data.nutritionConsumeSpeed.MultiplicativeModifier *= 0.5f;
             Data.FeelGood = true;
         }
-        // µ±¾«Á¦²»ÂúÇÒÖ®Ç°´¦ÓÚ¼õËÙ×´Ì¬Ê±£¬»Ö¸´ÏûºÄËÙ¶È²¢ÖØÖÃ×´Ì¬
+        // å½“ç²¾åŠ›ä¸æ»¡ä¸”ä¹‹å‰å¤„äºå‡é€ŸçŠ¶æ€æ—¶ï¼Œæ¢å¤æ¶ˆè€—é€Ÿåº¦å¹¶é‡ç½®çŠ¶æ€
         else if (!shouldSlow && Data.FeelGood)
         {
             Data.nutritionConsumeSpeed.MultiplicativeModifier *= 2f;
             Data.FeelGood = false;
         }
 
-        // ¼ÆËã±¾´ÎÏûºÄ×ÜÁ¿ = Ê±¼äÔöÁ¿ * ÎüÊÕÂÊ * µ±Ç°ÏûºÄËÙ¶ÈĞŞÕıÖµ
+        // è®¡ç®—æœ¬æ¬¡æ¶ˆè€—æ€»é‡ = æ—¶é—´å¢é‡ * å¸æ”¶ç‡ * å½“å‰æ¶ˆè€—é€Ÿåº¦ä¿®æ­£å€¼
         float delta = timeDelta * Data.AbsorptionRate * Data.nutritionConsumeSpeed.Value;
         float remainingDelta = delta;
         float totalEnergy = 0f;
 
-        // ÓÅÏÈÏûºÄÌ¼Ë®»¯ºÏÎï£¬²»ÄÜ³¬¹ıµ±Ç°Ì¼Ë®Á¿
+        // ä¼˜å…ˆæ¶ˆè€—ç¢³æ°´åŒ–åˆç‰©ï¼Œä¸èƒ½è¶…è¿‡å½“å‰ç¢³æ°´é‡
         float usedCarb = Mathf.Min(Data.nutrition.Carbohydrates, remainingDelta);
         remainingDelta -= usedCarb;
         Data.nutrition.Carbohydrates -= usedCarb;
@@ -130,7 +138,7 @@ public partial class Mod_Food : Module
         float usedProtein = 0f;
         float usedWater = 0f;
 
-        // ÏûºÄÊ£ÓàÁ¿²¿·ÖÓÃÓÚÖ¬·¾£¬²»ÄÜ³¬¹ıµ±Ç°Ö¬·¾Á¿
+        // æ¶ˆè€—å‰©ä½™é‡éƒ¨åˆ†ç”¨äºè„‚è‚ªï¼Œä¸èƒ½è¶…è¿‡å½“å‰è„‚è‚ªé‡
         if (remainingDelta > 0)
         {
             usedFat = Mathf.Min(Data.nutrition.Fat, remainingDelta);
@@ -139,7 +147,7 @@ public partial class Mod_Food : Module
             totalEnergy += usedFat;
         }
 
-        // ÏûºÄÊ£ÓàÁ¿²¿·ÖÓÃÓÚµ°°×ÖÊ£¬²»ÄÜ³¬¹ıµ±Ç°µ°°×ÖÊÁ¿
+        // æ¶ˆè€—å‰©ä½™é‡éƒ¨åˆ†ç”¨äºè›‹ç™½è´¨ï¼Œä¸èƒ½è¶…è¿‡å½“å‰è›‹ç™½è´¨é‡
         if (remainingDelta > 0)
         {
             usedProtein = Mathf.Min(Data.nutrition.Protein, remainingDelta);
@@ -148,64 +156,83 @@ public partial class Mod_Food : Module
             totalEnergy += usedProtein;
         }
 
-        // TODO£ºË®µÄÏûºÄÊÇ³ÖĞøĞÔµÄ£¬ÇÒÏûºÄËÙ¶ÈÊÜµ±Ç°ÏûºÄÎïÖÊÓ°Ïì
-        // ÏûºÄÌ¼Ë®Ê±Ë®ÏûºÄËÙÂÊÎª1£¬Ö¬·¾Îª2£¬µ°°×ÖÊÎª3
+        // TODOï¼šæ°´çš„æ¶ˆè€—æ˜¯æŒç»­æ€§çš„ï¼Œä¸”æ¶ˆè€—é€Ÿåº¦å—å½“å‰æ¶ˆè€—ç‰©è´¨å½±å“
+        // æ¶ˆè€—ç¢³æ°´æ—¶æ°´æ¶ˆè€—é€Ÿç‡ä¸º1ï¼Œè„‚è‚ªä¸º2ï¼Œè›‹ç™½è´¨ä¸º3
         usedWater = usedCarb * 1f + usedFat * 2f + usedProtein * 3f;
 
-        // ¿Û³ıÏàÓ¦µÄË®·Ö£¬Ë®·Ö²»»áµÍÓÚ0
+        // æ‰£é™¤ç›¸åº”çš„æ°´åˆ†ï¼Œæ°´åˆ†ä¸ä¼šä½äº0
         Data.nutrition.Water = Mathf.Max(0, Data.nutrition.Water - usedWater);
 
-        // Î¬ÉúËØ×ÔÈ»ÏûºÄ£¬ËÙ¶ÈÎª0.01±¶Ê±¼äÔöÁ¿
+        // ç»´ç”Ÿç´ è‡ªç„¶æ¶ˆè€—ï¼Œé€Ÿåº¦ä¸º0.01å€æ—¶é—´å¢é‡
         float naturalVitaminLoss = timeDelta * 0.01f;
         Data.nutrition.Vitamins = Mathf.Max(0, Data.nutrition.Vitamins - naturalVitaminLoss);
 
-        // ·µ»Ø±¾´ÎÏûºÄµÄ×ÜÄÜÁ¿Öµ
+        // è¿”å›æœ¬æ¬¡æ¶ˆè€—çš„æ€»èƒ½é‡å€¼
         return totalEnergy;
     }
 
 
 
-    [Button("ÏÔÊ¾Ãæ°å")]
+    [Button("æ˜¾ç¤ºé¢æ¿")]
     public void ShowPanle()
     {
-        //TODO ²»Ê¹ÓÃ×Ö¶Î¾ö¶¨ÊÇ·ñÏÔÊ¾Ãæ°å ¶øÊÇÍ¨¹ı¼ì²âÊÇ·ñ´æÔÚGameObjectÀ´¾ö¶¨
-        if (PanleInstance != null) return; // Ãæ°åÒÑ´æÔÚÔò·µ»Ø
+        if (PanleInstance != null) return;
 
         GameObject panel = Instantiate(PanelPrefab, transform);
-        UIValues = panel.GetComponent<UI_FloatData>();
+        UIValues = panel.GetComponent<UI_FloatData_Slider>();
         PanleInstance = panel;
         DataUpdate += RefreshUI;
 
-        UIValues.Sliders["Ì¼Ë®"].maxValue = Data.nutrition.Max_Carbohydrates.Value;
-        UIValues.Sliders["Ö¬·¾"].maxValue = Data.nutrition.Max_Fat.Value;
-        UIValues.Sliders["µ°°×ÖÊ"].maxValue = Data.nutrition.Max_Protein.Value;
-        UIValues.Sliders["Ë®"].maxValue = Data.nutrition.Max_Water.Value;
-        UIValues.Sliders["Î¬ÉúËØ"].maxValue = Data.nutrition.Max_Vitamins.Value;
+        UIValues.Sliders["ç¢³æ°´"].maxValue = Data.nutrition.Max_Carbohydrates.Value;
+        UIValues.Sliders["è„‚è‚ª"].maxValue = Data.nutrition.Max_Fat.Value;
+        UIValues.Sliders["è›‹ç™½è´¨"].maxValue = Data.nutrition.Max_Protein.Value;
+        UIValues.Sliders["æ°´"].maxValue = Data.nutrition.Max_Water.Value;
+        UIValues.Sliders["ç»´ç”Ÿç´ "].maxValue = Data.nutrition.Max_Vitamins.Value;
 
         RefreshUI();
-        Data.ShowCanvas = true; // È·±£×´Ì¬Í¬²½
+        Data.ShowCanvas = true;
+
+
+        // âœ… ä» UI_Drag ä¸­è·å– rectTransform å¹¶æ¢å¤ä½ç½®
+        var s = panel.GetComponentInChildren<UI_Drag>();
+        if (s != null)
+        {
+            s.rectTransform.anchoredPosition = Data.PanelPosition;
+        }
     }
 
-    [Button("Òş²ØÃæ°å")]
+
+
+
+    [Button("éšè—é¢æ¿")]
     public void HidePanle()
     {
-        if (PanleInstance == null) return; // Ãæ°å²»´æÔÚÔò·µ»Ø
+        if (PanleInstance == null) return;
+
+        // âœ… ä» UI_Drag ä¸­è·å– rectTransform å¹¶ä¿å­˜ä½ç½®
+        var s = PanleInstance.GetComponentInChildren<UI_Drag>();
+        if (s != null)
+        {
+            Data.PanelPosition = s.rectTransform.anchoredPosition;
+        }
 
         Destroy(PanleInstance);
         DataUpdate -= RefreshUI;
         UIValues = null;
-        Data.ShowCanvas = false; // È·±£×´Ì¬Í¬²½
+        Data.ShowCanvas = false;
     }
 
-    [Button("Ë¢ĞÂÃæ°å")]
+
+
+    [Button("åˆ·æ–°é¢æ¿")]
     public void RefreshUI()
     {
-        UIValues.Sliders["Ì¼Ë®"].value = Data.nutrition.Carbohydrates;
-        UIValues.Sliders["Ö¬·¾"].value = Data.nutrition.Fat;
-        UIValues.Sliders["µ°°×ÖÊ"].value = Data.nutrition.Protein;
+        UIValues.Sliders["ç¢³æ°´"].value = Data.nutrition.Carbohydrates;
+        UIValues.Sliders["è„‚è‚ª"].value = Data.nutrition.Fat;
+        UIValues.Sliders["è›‹ç™½è´¨"].value = Data.nutrition.Protein;
 
-        UIValues.Sliders["Ë®"].value = Data.nutrition.Water;
-        UIValues.Sliders["Î¬ÉúËØ"].value = Data.nutrition.Vitamins;
+        UIValues.Sliders["æ°´"].value = Data.nutrition.Water;
+        UIValues.Sliders["ç»´ç”Ÿç´ "].value = Data.nutrition.Vitamins;
     }
 
     public void BeEat(Mod_Food other_Food)
@@ -216,39 +243,39 @@ public partial class Mod_Food : Module
 
         if (EatingProgress >= Data.Max_EatingProgress)
         {
-            // ¼õÉÙ¶ÑµşÊıÁ¿
-            item.Item_Data.Stack.Amount--;
-            // UI ¸üĞÂÍ¨Öª
+            // å‡å°‘å †å æ•°é‡
+            item.itemData.Stack.Amount--;
+            // UI æ›´æ–°é€šçŸ¥
             item.OnUIRefresh?.Invoke();
-            // ÓªÑøÖµ²¹Âú
+            // è¥å…»å€¼è¡¥æ»¡
             Data.nutrition.Max();
-            // ½ø¶È¹éÁã
+            // è¿›åº¦å½’é›¶
             EatingProgress = 0;
 
             other_Food.Data.nutrition = other_Food.Data.nutrition + Data.nutrition;
 
             DataUpdate.Invoke();
 
-            if (item.Item_Data.Stack.Amount <= 0)
+            if (item.itemData.Stack.Amount <= 0)
             {
-                Destroy(item.gameObject); // ³ÔÍêÏú»Ù
+                Destroy(item.gameObject); // åƒå®Œé”€æ¯
             }
         }
     }
 
-    #region ´úÂë¶¯»­
-    [Button("¶¶¶¯")]
+    #region ä»£ç åŠ¨ç”»
+    [Button("æŠ–åŠ¨")]
     void ShakeItem(Transform transform, float duration = 0.2f, float strength = 0.2f, int vibrato = 0)
     {
         if (vibrato == 0)
         {
-            //²úÉúÒ»¸öËæ»úµÄ¶¶¶¯Æ«ÒÆÁ¿
+            //äº§ç”Ÿä¸€ä¸ªéšæœºçš„æŠ–åŠ¨åç§»é‡
             vibrato = Random.Range(15, 30);
         }
-        // ÓÃ DOTween ×ö¾Ö²¿¶¶¶¯
+        // ç”¨ DOTween åšå±€éƒ¨æŠ–åŠ¨
         transform.DOShakePosition(duration, strength, vibrato).SetEase(Ease.OutQuad);
 
-        // µ÷ÓÃ·â×°ºóµÄÁ£×Ó´´½¨·½·¨
+        // è°ƒç”¨å°è£…åçš„ç²’å­åˆ›å»ºæ–¹æ³•
         CreateMainColorParticle(transform, "Particle_BeEat");
     }
 
@@ -279,6 +306,15 @@ public partial class Mod_Food : Module
 
     public override void Save()
     {
+        // ä¿å­˜é¢æ¿ä½ç½®
+        if (PanleInstance != null)
+        {
+            var s = PanleInstance.GetComponentInChildren<UI_Drag>();
+            if (s != null)
+            {
+                Data.PanelPosition = s.rectTransform.anchoredPosition;
+            }
+        }
         ExData.WriteData(Data);
     }
 }

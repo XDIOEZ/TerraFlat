@@ -68,7 +68,7 @@ public class Menu_RightClick_ItemInfo : MonoBehaviour
 
         //transform.position = itemSlot.UI.transform.position;
 
-        Debug.Log("打开右键菜单" + itemSlot._ItemData.IDName);
+        Debug.Log("打开右键菜单" + itemSlot.itemData.IDName);
 
 
     }
@@ -129,7 +129,7 @@ public class Menu_RightClick_ItemInfo : MonoBehaviour
         GameObject gameObject = GameRes.Instance.AllPrefabs["物品信息面板"];
         //实例化gameObject
         GameObject newObj = Instantiate(gameObject);
-        newObj.GetComponentInChildren<ShowItemInfo>().ShowInfo(itemSlot._ItemData);
+        newObj.GetComponentInChildren<ShowItemInfo>().ShowInfo(itemSlot.itemData);
     }
 
 

@@ -5,7 +5,6 @@ using TheKiwiCoder;
 
 public class HungryChecker : ActionNode
 {
-    public Mod_Food mod_Food;
 
     [Tooltip("饥饿阈值（百分比）")]
     [Range(0, 1)] // 0~100%的滑动条
@@ -13,10 +12,7 @@ public class HungryChecker : ActionNode
 
     protected override void OnStart() 
     {
-        if(mod_Food == null)
-        {
-            mod_Food = context.item.Mods[ModText.Food] as Mod_Food;
-        }
+
     }
 
     protected override void OnStop() {
@@ -24,7 +20,7 @@ public class HungryChecker : ActionNode
 
     protected override State OnUpdate() 
     {
-        if(mod_Food.Data.nutrition.GetHungerRate() <= hungryThreshold)
+        if(context.Food.Data.nutrition.GetHungerRate() <= hungryThreshold)
         {
             return State.Success;
         }

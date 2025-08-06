@@ -47,7 +47,9 @@ MonoBehaviour:
   item: {fileID: 0}
   ExData:
     Name: 
+    ModID: "\u98DF\u7269\u6A21\u5757"
     isRunning: 0
+    Type: 0
     BitData: 
   Data:
     nutrition:
@@ -88,6 +90,19 @@ MonoBehaviour:
         FinalAdditive: 0
     Max_EatingProgress: 3
     AbsorptionRate: 1
+    ShowCanvas: 0
+    nutritionConsumeSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    FeelGood: 0
+    PanelPosition: {x: 0, y: 0}
   EatingProgress: 0
-  ShowCanvas: 0
+  DataUpdate:
+    _PersistentCalls: []
   PanelPrefab: {fileID: 1316998372701819345, guid: 215a9df040199634fb89efb65997fb42, type: 3}
+  UIValues: {fileID: 0}
+  PanleInstance: {fileID: 0}
+  Stamina: {fileID: 0}

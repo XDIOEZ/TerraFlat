@@ -15,7 +15,7 @@ public class StoneAxe : Item, IColdWeapon, IAttackState
     [Tooltip("Ê¯¸«Êý¾Ý")]
     public Data_ColdWeapon _data;
 
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => _data;
         set => _data = (Data_ColdWeapon)value;

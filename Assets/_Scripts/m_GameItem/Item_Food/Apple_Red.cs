@@ -14,7 +14,7 @@ public class Apple_Red : Item
     //长大后
     public string TreeName; 
     // 实现 Item 抽象属性
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => data;
         set => data = (Data_Creature)value;

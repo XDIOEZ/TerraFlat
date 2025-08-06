@@ -63,7 +63,7 @@ public class Mover_AI : Mover,IAI_NavMesh
     /// 主移动逻辑入口，根据是否有NavMeshAgent执行不同移动方式
     /// </summary>
     /// <param name="targetPosition">目标位置</param>
-    public override void Move(Vector2 targetPosition)
+    public override void Move(Vector2 targetPosition,float DelayTime)
     {
         agent.speed = SpeedValue;
         if (Vector2.Distance(transform.position, TargetPosition) <= agent.stoppingDistance)

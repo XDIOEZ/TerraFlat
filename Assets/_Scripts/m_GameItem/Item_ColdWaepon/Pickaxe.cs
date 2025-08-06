@@ -9,7 +9,7 @@ public class Pickaxe : Item, IColdWeapon
     public float MaxDamageCount { get => _data._maxAttackCount; set => _data._maxAttackCount = value; }
     public Data_ColdWeapon _data;
 
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => _data;
 

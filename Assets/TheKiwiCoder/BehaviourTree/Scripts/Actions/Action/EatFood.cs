@@ -38,14 +38,15 @@ public class EatFood : ActionNode
                 continue;
             }
             //判断物体是否是食物
-            foreach (string tag in item.Item_Data.ItemTags.Item_TypeTag)
+            foreach (string tag in item.itemData.ItemTags.Item_TypeTag)
             {
 
                 if (tag == FoodTag)
                 {
-                        Food = item.Mods[ModText.Food] as Mod_Food;
+                        Food = item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
 
                         Food.BeEat(Self);
+
                         LastEatingTime = Time.time;
                         
 

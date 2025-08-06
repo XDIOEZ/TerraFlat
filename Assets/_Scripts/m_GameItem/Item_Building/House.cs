@@ -58,7 +58,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding,IRoom
     public bool BePlayerTaken { get; set; } = false;
 
     // Item
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => data;
         set => data = value as Data_Building ?? new Data_Building();

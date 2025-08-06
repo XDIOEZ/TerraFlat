@@ -25,7 +25,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// 尝试将非Data_Boundary类型的值赋给它会抛出ArgumentException。
     /// Throws an ArgumentException if an invalid ItemData type is assigned.
     /// </summary>
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => data;
         set => data = value as Data_Boundary ?? throw new ArgumentException("Invalid ItemData type for WorldEdge.");

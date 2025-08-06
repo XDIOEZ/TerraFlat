@@ -17,7 +17,7 @@ public class FoodChecker : ActionNode
 
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
-            foreach (string tag in item.Item_Data.ItemTags.Item_TypeTag)
+            foreach (string tag in item.itemData.ItemTags.Item_TypeTag)
             {
                 if (tag == "Food")
                 {

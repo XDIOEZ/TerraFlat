@@ -16,7 +16,7 @@ public partial class ItemSlot
     //TODO 设置插槽所属
     // 当前插槽中的物品数据   
     [ShowInInspector]
-    public ItemData _ItemData = null; // 关键修改
+    public ItemData itemData = null; // 关键修改
 
     public ItemTag CanAcceptItemType = new ItemTag();
 
@@ -37,11 +37,11 @@ public partial class ItemSlot
     {
         get
         {
-            if (_ItemData == null)
+            if (itemData == null)
             {
                 return false;
             }
-            return _ItemData.Stack.CurrentVolume >= SlotMaxVolume;
+            return itemData.Stack.CurrentVolume >= SlotMaxVolume;
         }
     }
     [MemoryPackIgnore]
@@ -49,19 +49,19 @@ public partial class ItemSlot
     {
         get
         {
-            if (_ItemData == null)
+            if (itemData == null)
             {
                 return 0;
             }
-            return (int)_ItemData.Stack.Amount;
+            return (int)itemData.Stack.Amount;
         }
         set
         {
-            if (_ItemData == null)
+            if (itemData == null)
             {
                 return;
             }
-            _ItemData.Stack.Amount = value;
+            itemData.Stack.Amount = value;
         }
     }
     [MemoryPackConstructor]
@@ -84,15 +84,15 @@ public partial class ItemSlot
     /// <param name="itemData">要添加的物品数据。</param>
     public void AddItem(ItemData itemData)
     {
-        if (_ItemData == null)
+        if (this.itemData == null)
         {
             // 插槽为空，直接放置物品
-            _ItemData = itemData;
+            this.itemData = itemData;
         }
-        else if (_ItemData.IDName == itemData.IDName)
+        else if (this.itemData.IDName == itemData.IDName)
         {
             // 插槽中已有相同ID的物品，增加堆叠数量
-            _ItemData.Stack.Amount += itemData.Stack.Amount;
+            this.itemData.Stack.Amount += itemData.Stack.Amount;
         }
       //  onSlotDataChanged.Invoke();
         // 若插槽中有不同ID的物品，则不进行任何操作
@@ -105,17 +105,17 @@ public partial class ItemSlot
     /// <param name="destroyCount">要销毁的物品数量。</param>
     public void DestroyItem(float destroyCount)
     {
-        if (_ItemData != null)
+        if (itemData != null)
         {
-            if (_ItemData.Stack.Amount > destroyCount)
+            if (itemData.Stack.Amount > destroyCount)
             {
                 // 销毁数量小于堆叠数量，减少堆叠
-                _ItemData.Stack.Amount -= destroyCount;
+                itemData.Stack.Amount -= destroyCount;
             }
             else
             {
                 // 销毁数量大于或等于堆叠数量，清空插槽
-                _ItemData = null;
+                itemData = null;
             }
         }
     }
@@ -144,9 +144,9 @@ public partial class ItemSlot
         else
         {*/
         // 当前插槽的物品和输入插槽的物品不同，交换物品
-        ItemData temp = _ItemData;
-        _ItemData = _ItemData_Input._ItemData;
-        _ItemData_Input._ItemData = temp;
+        ItemData temp = itemData;
+        itemData = _ItemData_Input.itemData;
+        _ItemData_Input.itemData = temp;
        
 
 
@@ -156,7 +156,7 @@ public partial class ItemSlot
 
     public void ClearData()
     {
-        _ItemData =null;
+        itemData =null;
     }
 
     public void RefreshUI()

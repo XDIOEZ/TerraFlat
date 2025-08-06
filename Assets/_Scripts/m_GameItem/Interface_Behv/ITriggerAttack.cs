@@ -44,7 +44,7 @@ public interface ITriggerAttack
 
     public void GetItemWeapon(Item weapon)
     {
-        weapon.Item_Data.Stack.CanBePickedUp = false;
+        weapon.itemData.Stack.CanBePickedUp = false;
         SetWeapon(weapon.gameObject);
     }
 

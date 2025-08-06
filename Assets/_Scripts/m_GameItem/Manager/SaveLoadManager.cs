@@ -368,7 +368,7 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
 
             item.SyncPosition();
 
-            ItemData itemData = item.Item_Data;
+            ItemData itemData = item.itemData;
             if (itemData == null)
                 continue;
 
@@ -567,8 +567,8 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
                 System.Random rng = new System.Random();
 
                 // 生成在整个地图区域内的随机坐标
-                float randX = (float)rng.NextDouble() * mapWidth;
-                float randY = (float)rng.NextDouble() * mapHeight;
+                float randX = (float)rng.NextDouble() * mapWidth + SaveData.Active_MapPos.x;
+                float randY = (float)rng.NextDouble() * mapHeight + SaveData.Active_MapPos.y;
 
                 Vector3 spawnPos = new Vector3(randX, randY, 0);
                 player.transform.position = spawnPos;

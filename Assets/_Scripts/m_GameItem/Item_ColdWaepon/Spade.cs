@@ -11,7 +11,7 @@ public class Spade : Item, IColdWeapon, IAttackState
 
     public Data_ColdWeapon _data;
 
-    public override ItemData Item_Data { get => _data; set => _data = (Data_ColdWeapon)value; }
+    public override ItemData itemData { get => _data; set => _data = (Data_ColdWeapon)value; }
     #endregion
 
     #region ÎäÆ÷Êı¾İ

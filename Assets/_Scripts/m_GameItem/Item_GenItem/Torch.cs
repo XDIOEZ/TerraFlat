@@ -16,7 +16,7 @@ public class Torch : Item, IFuel
     private float maxTemptrue = 300;
 
 
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => data;
         set => data = (Data_GeneralItem)value;

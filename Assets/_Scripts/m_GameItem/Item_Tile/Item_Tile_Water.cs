@@ -10,7 +10,7 @@ public class Item_Tile_Water : Item, IBlockTile
     private BlockData data;
 
     //Item的基础数据
-    public override ItemData Item_Data { get => data; set => data = value as BlockData; }
+    public override ItemData itemData { get => data; set => data = value as BlockData; }
 
     //TileData 方便策划设置 TileData的相关参数 和玩家修改TileData的数据
     [SerializeField]

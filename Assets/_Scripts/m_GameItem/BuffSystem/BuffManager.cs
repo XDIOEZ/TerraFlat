@@ -32,9 +32,9 @@ public class BuffManager : MonoBehaviour
             buff_IDName = buffData.buff_ID,
             buffData = buffData,
             buff_Sender = Sender,
-            buff_Sender_Guid = Sender.Item_Data.Guid,
+            buff_Sender_Guid = Sender.itemData.Guid,
             buff_Receiver = Receiver,
-            buff_Receiver_Guid = Receiver.Item_Data.Guid,
+            buff_Receiver_Guid = Receiver.itemData.Guid,
         };
         if(newBuff.buffData.buff_ID == "")
         {
@@ -53,7 +53,7 @@ public class BuffManager : MonoBehaviour
 
     void Init()
     {
-        BuffRunTimeData_Dic = item.Item_Data.BuffRunTimeData_Dic;
+        BuffRunTimeData_Dic = item.itemData.BuffRunTimeData_Dic;
         //同步Data后，初始化Buff的 BuffData和接受者和发送者
         foreach (var buff in BuffRunTimeData_Dic.Values)
         {

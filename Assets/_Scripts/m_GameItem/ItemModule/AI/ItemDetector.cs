@@ -52,7 +52,7 @@ public class ItemDetector : Module, IDebug, IDetector
 
         foreach (var item in currentItems)
         {
-            foreach (var tag in item.Item_Data.ItemTags.Item_TypeTag)
+            foreach (var tag in item.itemData.ItemTags.Item_TypeTag)
             {
                 Tag_Item_Dict[tag] = item;
             }

@@ -41,7 +41,7 @@ public class StoneSword :Item,IColdWeapon,IAttackState
 
     }
 
-    public override ItemData Item_Data { get => _data; set => _data = (Data_ColdWeapon)value; }
+    public override ItemData itemData { get => _data; set => _data = (Data_ColdWeapon)value; }
 
     IDamageSender _sender;
     [ShowNativeProperty]

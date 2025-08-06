@@ -7,7 +7,7 @@ public class Weed : Item
 {
     [SerializeField]
     private Data_Food Data;
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => Data;
         set => Data = (Data_Food)value;

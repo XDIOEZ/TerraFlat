@@ -10,7 +10,7 @@ public class Item_Tile_Grass : Item,IBlockTile
 {
     [SerializeField]
     private BlockData data = new BlockData();
-    public override ItemData Item_Data { get => data; set => data = value as BlockData; }
+    public override ItemData itemData { get => data; set => data = value as BlockData; }
 
     [SerializeField]
     TileData_Grass _tileData;

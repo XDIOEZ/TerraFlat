@@ -24,5 +24,4 @@ MonoBehaviour:
   TerrainConfig:
     TileSpawns:
     - {fileID: 11400000, guid: 6b011c6baeb9d4140875090c5a56129e, type: 2}
-    ItemSpawn:
-    - {fileID: 11400000, guid: 36dbf6b0dcf1545418596c90a98a1b90, type: 2}
+    ItemSpawn: []

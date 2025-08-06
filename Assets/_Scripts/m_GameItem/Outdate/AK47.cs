@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class AK47 : Gun
 {
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => gunData;
 

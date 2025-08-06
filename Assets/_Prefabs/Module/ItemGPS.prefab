@@ -45,9 +45,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9141302fe0cd6904d9489b8382b691d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   DebugData:
-    Name: ItemGPS
+    Name: 
+    ModID: ItemGPS
     isRunning: 0
+    Type: 0
     BitData: 
   GPS_Text: {fileID: 4994996355928589428}
 --- !u!1 &1462832882837633522
@@ -377,6 +380,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 3822144343736811}
+  CanDrag: 0
+  Drager: {fileID: 0}
 --- !u!225 &3822144343736811
 CanvasGroup:
   m_ObjectHideFlags: 0

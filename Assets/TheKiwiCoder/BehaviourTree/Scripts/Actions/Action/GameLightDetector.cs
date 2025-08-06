@@ -8,14 +8,13 @@ using Sirenix.OdinInspector;
 public class GameLightDetector : ActionNode
 {
     [Tooltip("触发睡眠的太阳光照强度阈值")]
-    [Range(0, 1)]
-    public float SunlightIntensityThreshold = 0.5f;
+    public Vector2 SunlightIntensityThreshold = new Vector2();
 
     [Tooltip("当前太阳光照强度"), ReadOnly, ShowInInspector]
-    public float CurrentSunLightIntensity => SaveLoadManager.Instance.SaveData.Active_MapData.SunlightIntensity;
+    public float CurrentSunLightIntensity = 0;
 
     protected override void OnStart() {
-
+        CurrentSunLightIntensity = SaveLoadManager.Instance.SaveData.Active_MapData.SunlightIntensity;
     }
 
     protected override void OnStop() {
@@ -29,7 +28,8 @@ public class GameLightDetector : ActionNode
         }
         
         if (SaveLoadManager.Instance.SaveData.Active_MapData.SunlightIntensity 
-            < SunlightIntensityThreshold)
+            < SunlightIntensityThreshold.y && SaveLoadManager.Instance.SaveData.Active_MapData.SunlightIntensity
+            > SunlightIntensityThreshold.y)
         {
             return State.Success;
         }

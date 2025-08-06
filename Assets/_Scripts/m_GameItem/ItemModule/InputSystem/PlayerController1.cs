@@ -33,11 +33,11 @@ public class PlayerController : Module
     public Ex_ModData _modData;
     public override ModuleData _Data { get => _modData; set => _modData = value as Ex_ModData; }
 
-    public new void Awake()
+    public override void Awake()
     {
-        if(_Data.Name == "")
+        if (_Data.ID == "")
         {
-            _Data.Name = ModText.Controller;
+            _Data.ID = ModText.Controller;
         }
     }
 
@@ -112,7 +112,7 @@ public class PlayerController : Module
             _Speed.MoveTargetPosition = (Vector2)transform.position;
         }
 
-        Mover.Move(_Speed.MoveTargetPosition);
+        Mover.Move(_Speed.MoveTargetPosition, 0);
     }
     #endregion
 

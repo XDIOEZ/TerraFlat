@@ -73,7 +73,7 @@ public class Ammo : Item
         }
     }
 
-    public override ItemData Item_Data
+    public override ItemData itemData
     {
         get => ammoData;
 

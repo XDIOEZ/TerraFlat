@@ -39,7 +39,7 @@ public class CheckItemIsAround : ActionNode, IDebug
 
         foreach (var item in itemDetector.CurrentItemsInArea)
         {
-            if ( item.Item_Data.ItemTags.Item_TypeTag.Contains(itemName))
+            if ( item.itemData.ItemTags.Item_TypeTag.Contains(itemName))
             {
                 if (DebugMode)
                 {

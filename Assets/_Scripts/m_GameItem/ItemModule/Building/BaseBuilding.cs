@@ -43,7 +43,7 @@ public class BaseBuilding : MonoBehaviour
 
         if (item != null)
         {
-            Item_Data = item.Item_Data;
+            Item_Data = item.itemData;
         }
 
      
@@ -235,14 +235,14 @@ public class BaseBuilding : MonoBehaviour
         }
 
         // 5. 检查物品数量
-        if (item.Item_Data.Stack.Amount <= 0)
+        if (item.itemData.Stack.Amount <= 0)
         {
-            Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.Item_Data.Stack.Amount})");
+            Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.itemData.Stack.Amount})");
             return;
         }
 
         // 正式安装流程
-        item.Item_Data.Stack.Amount--;
+        item.itemData.Stack.Amount--;
 
         if (item.OnUIRefresh != null)
         {
@@ -251,7 +251,7 @@ public class BaseBuilding : MonoBehaviour
 
         // 实例化建筑
         var runtimeItem = GameItemManager.Instance.InstantiateItem(
-            item.Item_Data.IDName,
+            item.itemData.IDName,
             GhostShadow.transform.position
         );
 
@@ -259,14 +259,14 @@ public class BaseBuilding : MonoBehaviour
         {
             Debug.LogError("[建筑安装] 安装失败: 实例化返回空对象");
             // 回滚物品数量
-            item.Item_Data.Stack.Amount++;
+            item.itemData.Stack.Amount++;
             return;
         }
 
         SetupInstalledItem(runtimeItem.gameObject, item);
 
         // 处理物品耗尽情况
-        if (item.Item_Data.Stack.Amount <= 0)
+        if (item.itemData.Stack.Amount <= 0)
         {
             CleanupGhost();
             Destroy(hostTransform.gameObject);
@@ -331,8 +331,8 @@ public class BaseBuilding : MonoBehaviour
         Item installedItem = installed.GetComponent<Item>();
         if (installedItem != null)
         {
-            installedItem.Item_Data = sourceItem.Item_Data.DeepClone();
-            installedItem.Item_Data.Stack.Amount = 1;
+            installedItem.itemData = sourceItem.itemData.DeepClone();
+            installedItem.itemData.Stack.Amount = 1;
 
             var health = installedItem.GetComponent<IHealth>();
             if (health != null)

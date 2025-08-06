@@ -20,14 +20,16 @@ using FastCloner.Code;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 #endif
-
 public abstract class Item : MonoBehaviour
 {
-    public abstract ItemData Item_Data { get; set; }
+    public abstract ItemData itemData { get; set; }
+
+    [FastClonerIgnore]
+    public ItemMods itemMods = new ItemMods();
 
     [ShowInInspector]
     [FastClonerIgnore]
-    public Dictionary<string, Module> Mods { get; set; } = new Dictionary<string, Module>();
+    public Dictionary<string, Module> Mods { get=> itemMods.Mods; set => itemMods.Mods = value; }
 
     #region RunTime
 
@@ -53,10 +55,23 @@ public abstract class Item : MonoBehaviour
 
         ModuleLoad();
         OnModuleLoadDone.Invoke();
+
+        if(itemData.Guid == 0)
+        {
+            // 自动生成Guid
+            itemData.Guid = Guid.NewGuid().GetHashCode();
+        }
     }
 
-    private float updateInterval = 0.1f; // 每0.1秒执行一次
-    private float updateTimer = 0f;
+    [Button]
+    public void SetUpModeule(string modName)
+    {
+        Module.ADDModTOItem(this, modName);
+    }
+
+    [Tooltip("物品的更新频率，单位：秒")]
+    public float updateInterval = 0.1f; // 每0.1秒执行一次
+    float updateTimer = 0f;
 
     public void Update()
     {
@@ -84,61 +99,79 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void ModuleLoad()
     {
-        //TODO 检查是否是第一次启动 检查ModData是否为空
-        bool firstStart = false;
+        bool firstStart = itemData.ModuleDataDic.Count == 0;
 
-        if(Item_Data.ModuleDataDic.Count == 0)
-        {
-            // 第一次启动
-            firstStart = true;
-        }
+        var modules = GetComponentsInChildren<Module>(true).ToList();
 
-        //第一次启动
-        if (firstStart == true)
+        if (firstStart)
         {
-            var Modules = GetComponentsInChildren<Module>(true).ToList();
-            foreach (var mod in Modules)
+            foreach (var mod in modules)
             {
-                Mods[mod._Data.Name] = mod; // 添加到字典
-                Item_Data.ModuleDataDic[mod._Data.Name] = mod._Data; // 添加到数据字典
+                if (string.IsNullOrWhiteSpace(mod._Data.Name))
+                    mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
+
+                itemMods.AddMod(mod);
+                itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
             }
-            foreach(var mod in Mods.Values)
+
+            // 所有模块加入Mods后统一初始化
+            foreach (var mod in Mods.Values)
             {
-                mod.ModuleInit(this, null); // 初始化模块，传入宿主物品
+                mod.ModuleInit(this, null);
             }
         }
-        //不是第一次启动
-        if(firstStart == false)
+        else
         {
-            var Modules = GetComponentsInChildren<Module>(true).ToList();
+            ItemMods tempMods = new ItemMods();
+            foreach (var mod in modules)
+                tempMods.AddMod(mod);
 
-            foreach (var mod in Modules)
+            List<Module> modsToInit = new();
+
+            foreach (ModuleData modData in itemData.ModuleDataDic.Values)
             {
-                Mods[mod._Data.Name] = mod; // 添加到字典
-                if (Item_Data.ModuleDataDic.ContainsKey(mod._Data.Name) == false)
+                var modList = tempMods.GetModList_ByID(modData.ID);
+                Module mod;
+                if (modList == null || modList.Count == 0)
                 {
-                    Item_Data.ModuleDataDic[mod._Data.Name] = mod._Data; // 添加到数据字典
-                }
-            }
+                
+                    Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {modData.Name} " +
+                        $" ID: {modData.ID}，已自动修复。");
 
-            foreach (ModuleData modData in Item_Data.ModuleDataDic.Values)
-            {
-                //检查Mods中是否有该模块
-                if (Mods.ContainsKey(modData.Name) == true)
-                { 
-                    //如果有，则更新数据
-                    Mods[modData.Name].ModuleInit(this, modData); // 初始化模块，传入宿主物品
+                    GameObject @object = GameRes.Instance.InstantiatePrefab(modData.ID);
+
+                    @object.transform.SetParent(transform);
+
+                     mod = @object.GetComponentInChildren<Module>();
+
+                    tempMods.AddMod(mod); // 添加到临时字典
+
+                    modList = tempMods.GetModList_ByID(modData.ID);
+                }
+               
+                if (modList.Count > 0)
+                {
+                    mod = modList[^1];
+                    mod._Data = modData;
+                    tempMods.RemoveMod(mod);
                 }
                 else
                 {
-                    //如果没有，则创建模块
-                    Module mod = Module.ADDModTOItem(this, modData);
-                    mod.ModuleInit(this, modData); // 初始化模块，传入宿主物品
+                    mod = Module.ADDModTOItem(this, modData);
                 }
+
+                itemMods.AddMod(mod);
+                modsToInit.Add(mod);
+            }
+
+            // 全部加入Mods后再统一初始化（防止初始化中找不到其他模块）
+            foreach (var mod in modsToInit)
+            {
+                mod.ModuleInit(this, mod._Data);
             }
         }
-
     }
+
 
     public void ModuleSave()
     {
@@ -150,9 +183,9 @@ public abstract class Item : MonoBehaviour
 
     public void SyncPosition()
     {
-        Item_Data._transform.Position = transform.position;    
-        Item_Data._transform.Rotation = transform.rotation;    
-        Item_Data._transform.Scale = transform.localScale;     
+        itemData._transform.Position = transform.position;    
+        itemData._transform.Rotation = transform.rotation;    
+        itemData._transform.Scale = transform.localScale;     
     }
 
     public virtual void Act()
@@ -164,12 +197,12 @@ public abstract class Item : MonoBehaviour
     [Sirenix.OdinInspector.Button("同步物品数据")]
     public virtual int SyncItemData()
     {
-        if (Item_Data.IDName != gameObject.name)
+        if (itemData.IDName != gameObject.name)
         {
-            Item_Data.IDName = this.gameObject.name;
+            itemData.IDName = this.gameObject.name;
             Debug.LogWarning("物品数据IDName为空，已自动设置。");
         }
-        return Item_Data.SyncData();
+        return itemData.SyncData();
     }
 
     // 添加菜单按钮以同步名称
@@ -177,10 +210,10 @@ public abstract class Item : MonoBehaviour
     [ContextMenu("初始化ItemData")] // 修改为中文
     private void SyncName()
     {
-        if (Item_Data != null)
+        if (itemData != null)
         {
-            Item_Data.IDName = this.gameObject.name;
-            Debug.Log($"游戏对象名称已同步至 {Item_Data.IDName}");
+            itemData.IDName = this.gameObject.name;
+            Debug.Log($"游戏对象名称已同步至 {itemData.IDName}");
         }
         else
         {
@@ -207,7 +240,7 @@ public abstract class Item : MonoBehaviour
         {
             Debug.LogWarning("无法获取 Prefab 路径，可能不是 Prefab 实例。");
         }
-        Item_Data.Description = Item_Data.ToString();
+        itemData.Description = itemData.ToString();
     }
     public Item()
     {

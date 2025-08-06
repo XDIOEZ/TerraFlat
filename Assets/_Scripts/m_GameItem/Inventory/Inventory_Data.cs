@@ -20,7 +20,7 @@ public partial class Inventory_Data
     public UltEvent<int> Event_RefreshUI = new UltEvent<int>(); // UI刷新事件
 
     [FastClonerIgnore]
-    public bool IsFull => itemSlots.TrueForAll(slot => slot._ItemData != null);
+    public bool IsFull => itemSlots.TrueForAll(slot => slot.itemData != null);
 
     // 构造函数
     [MemoryPackConstructor]
@@ -34,13 +34,13 @@ public partial class Inventory_Data
 
     public void RemoveItemAll(ItemSlot itemSlot, int index = 0)
     {
-        itemSlot._ItemData = null;
+        itemSlot.itemData = null;
         Event_RefreshUI.Invoke(index);
     }
 
     public void SetOne_ItemData(int index, ItemData inputItemData)
     {
-        itemSlots[index]._ItemData = inputItemData;
+        itemSlots[index].itemData = inputItemData;
     }
 
     public ItemSlot GetItemSlot(int index)
@@ -50,11 +50,11 @@ public partial class Inventory_Data
         return itemSlots[index];
     }
 
-    public ItemData GetItemData(int index) => GetItemSlot(index)._ItemData;
+    public ItemData GetItemData(int index) => GetItemSlot(index).itemData;
 
     public void ChangeItemDataAmount(int index, float amount)
     {
-        itemSlots[index]._ItemData.Stack.Amount += amount;
+        itemSlots[index].itemData.Stack.Amount += amount;
     }
 
     #endregion
@@ -73,8 +73,8 @@ public partial class Inventory_Data
             rate = handInventory.GetItemAmountRate;
 
         var localSlot = itemSlots[index];
-        var localData = localSlot._ItemData;
-        var inputData = inputSlotHand._ItemData;
+        var localData = localSlot.itemData;
+        var inputData = inputSlotHand.itemData;
 
         // 情况1：两个都为空
         if (localData == null && inputData == null) return;
@@ -118,33 +118,33 @@ public partial class Inventory_Data
         // 情况6：物品不同，直接交换
         localSlot.Change(inputSlotHand);
         Event_RefreshUI.Invoke(index);
-        Debug.Log($"(物品不同)交换物品槽位:{index} 物品:{inputSlotHand._ItemData.IDName}");
+        Debug.Log($"(物品不同)交换物品槽位:{index} 物品:{inputSlotHand.itemData.IDName}");
     }
 
     public bool ChangeItemAmount(ItemSlot localSlot, ItemSlot inputSlotHand, int count)
     {
-        if (inputSlotHand._ItemData == null)
+        if (inputSlotHand.itemData == null)
         {
-            var tempData = FastCloner.FastCloner.DeepClone(localSlot._ItemData);
+            var tempData = FastCloner.FastCloner.DeepClone(localSlot.itemData);
             tempData.Stack.Amount = 0;
-            inputSlotHand._ItemData = tempData;
+            inputSlotHand.itemData = tempData;
         }
 
-        if (localSlot._ItemData.ItemSpecialData != inputSlotHand._ItemData.ItemSpecialData)
+        if (localSlot.itemData.ItemSpecialData != inputSlotHand.itemData.ItemSpecialData)
             return false;
 
         int changed = 0;
 
         while (changed < count &&
-               localSlot._ItemData.Stack.Amount > 0 &&
-               inputSlotHand._ItemData.Stack.Amount < inputSlotHand.SlotMaxVolume)
+               localSlot.itemData.Stack.Amount > 0 &&
+               inputSlotHand.itemData.Stack.Amount < inputSlotHand.SlotMaxVolume)
         {
-            localSlot._ItemData.Stack.Amount--;
-            inputSlotHand._ItemData.Stack.Amount++;
+            localSlot.itemData.Stack.Amount--;
+            inputSlotHand.itemData.Stack.Amount++;
             changed++;
         }
 
-        if (localSlot._ItemData.Stack.Amount <= 0)
+        if (localSlot.itemData.Stack.Amount <= 0)
             localSlot.ClearData();
 
         return changed > 0;
@@ -167,7 +167,7 @@ public partial class Inventory_Data
         {
             for (int i = 0; i < itemSlots.Count; i++)
             {
-                if (itemSlots[i]._ItemData == null)
+                if (itemSlots[i].itemData == null)
                 {
                     if (doAdd)
                     {
@@ -185,15 +185,15 @@ public partial class Inventory_Data
         for (int i = 0; i < itemSlots.Count && remainingAmount > 0; i++)
         {
             var slot = itemSlots[i];
-            bool hasItem = slot._ItemData != null;
+            bool hasItem = slot.itemData != null;
             bool sameItem = hasItem &&
-                            slot._ItemData.IDName == inputItemData.IDName &&
-                            slot._ItemData.ItemSpecialData == inputItemData.ItemSpecialData;
+                            slot.itemData.IDName == inputItemData.IDName &&
+                            slot.itemData.ItemSpecialData == inputItemData.ItemSpecialData;
 
             if ((!hasItem && slot.IsFull) || (hasItem && (!sameItem || slot.IsFull)))
                 continue;
 
-            float currentVol = hasItem ? slot._ItemData.Stack.CurrentVolume : 0f;
+            float currentVol = hasItem ? slot.itemData.Stack.CurrentVolume : 0f;
             float canAdd = slot.SlotMaxVolume - currentVol;
             float toAdd = Mathf.Min(remainingAmount, canAdd);
             if (toAdd <= 0f) continue;
@@ -239,11 +239,11 @@ public partial class Inventory_Data
         if (slotFrom == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
             return false;
 
-        var dataFrom = slotFrom._ItemData;
+        var dataFrom = slotFrom.itemData;
         if (dataFrom == null || dataFrom.Stack.Amount <= 0)
             return false;
 
-        var dataTo = slotTo._ItemData;
+        var dataTo = slotTo.itemData;
 
         // 若目标槽位已有物品，需确保ID与特殊数据一致
         if (dataTo != null &&
@@ -262,7 +262,7 @@ public partial class Inventory_Data
             if (dataFrom.Stack.Amount == 1)
             {
                 // 直接搬迁引用，不用 Clone（减少 GC）
-                slotTo._ItemData = dataFrom;
+                slotTo.itemData = dataFrom;
                 slotFrom.ClearData();
             }
             else
@@ -271,7 +271,7 @@ public partial class Inventory_Data
                 var newData = dataFrom.DeepClone();
                 newData.Stack.Amount = 1;
                 dataFrom.Stack.Amount -= 1;
-                slotTo._ItemData = newData;
+                slotTo.itemData = newData;
             }
 
             slotFrom.RefreshUI();
@@ -293,7 +293,7 @@ public partial class Inventory_Data
 
         // 如果目标为空，直接赋值，否则叠加数量
         if (dataTo == null)
-            slotTo._ItemData = transferData;
+            slotTo.itemData = transferData;
         else
             dataTo.Stack.Amount += transferCount;
 

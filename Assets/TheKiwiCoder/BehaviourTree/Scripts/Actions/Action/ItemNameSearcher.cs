@@ -26,7 +26,7 @@ public class ItemNameSearcher : ActionNode
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
             // 获取物品的实际名称（确保使用正确的属性）
-            string itemName = item.Item_Data.IDName;
+            string itemName = item.itemData.IDName;
 
             // 检查名称是否在目标列表中（不区分大小写匹配）
             if (searchNames.Contains(itemName))

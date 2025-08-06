@@ -5,5 +5,5 @@ using UnityEngine;
 /// </summary>
 public interface IMove
 {
-    void Move(Vector2 moveInput); // 执行移动
+    void Move(Vector2 moveInput , float speed); // 执行移动
 }
