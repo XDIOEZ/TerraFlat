@@ -50,4 +50,14 @@ public partial class Ex_ModData_MemoryPackable : ModuleData
     {
         BitData = MemoryPackSerializer.Serialize(bitData);
     }
+    public void OutData<T>(out T value)
+    {
+        if (BitData == null || BitData.Length == 0)
+        {
+            value = default;
+            return;
+        }
+        value = MemoryPackSerializer.Deserialize<T>(BitData);
+    }
+
 }

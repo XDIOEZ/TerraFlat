@@ -16,7 +16,6 @@ public class Mod_Inventory : Module,IInventory
         {
             _Data.ID = ModText.Bag;
         }
-
     }
 
     public override void Load()
@@ -48,10 +47,10 @@ public class Mod_Inventory : Module,IInventory
         else
         {
             inventory.DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
-           Debug.Log("Mod_Inventory: " + item.name + " 没有找到Mod_Hand");
+        //   Debug.Log("Mod_Inventory: " + item.name + " 没有找到Mod_Hand");
         }
 
-            _Inventory.Init();
+        _Inventory.Init();
     }
 
 

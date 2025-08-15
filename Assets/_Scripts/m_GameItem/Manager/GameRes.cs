@@ -178,6 +178,11 @@ public class GameRes : SingletonAutoMono<GameRes>
     {
         return BuffData_Dict[buffName];
     }
+    public Recipe GetRecipe(string recipeName)
+    {
+        recipeDict.TryGetValue(recipeName, out var recipe);
+        return recipe;
+    }
 
     #endregion
 }

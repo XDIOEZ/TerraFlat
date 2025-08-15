@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 
 public class TurnBody : Module, ITurnBody
@@ -16,6 +17,8 @@ public class TurnBody : Module, ITurnBody
 
     [SerializeField, ReadOnly, Tooltip("是否正在转身（由脚本自动控制）")]
     private bool isTurning = false;
+
+    public UltEvent<Vector2> OnTrun = new UltEvent<Vector2>();//TODO 转身事件 输入转身的方向
 
     private float turnTimeElapsed;
     private float startY;
@@ -56,19 +59,19 @@ public class TurnBody : Module, ITurnBody
                     controlledTransforms.Add(animator.transform);
             }
         }
-        if(item.itemMods.ContainsKey_ID(ModText.Attacker))
+  /*      if(item.itemMods.ContainsKey_ID(ModText.Attacker))
         controlledTransforms.Add(item.itemMods.GetMod_ByID(ModText.Attacker).transform);
 
         // 如果找不到 Animator，就退回使用父对象
         if (controlledTransforms.Count == 0 && transform.parent != null)
         {
             controlledTransforms.Add(transform.parent);
-        }
+        }*/
 
         if (faceMouse == null)
-            Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！");
-        if (controlledTransforms.Count == 0)
-            Debug.LogError("[TurnBody] 初始化失败：ControlledTransforms 为空！");
+            Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！"+item.name);
+    /*    if (controlledTransforms.Count == 0)
+            Debug.LogError("[TurnBody] 初始化失败：ControlledTransforms 为空！");*/
     }
 
     public override void Action(float deltaTime)
@@ -93,6 +96,8 @@ public class TurnBody : Module, ITurnBody
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
         if (isTurning) return;
+
+        OnTrun.Invoke(targetDirection);
         if (Mathf.Abs(targetDirection.x) < 0.01f) return;
 
         float targetSign = Mathf.Sign(targetDirection.x);
@@ -107,6 +112,7 @@ public class TurnBody : Module, ITurnBody
         if (controlledTransforms.Count == 0) return;
 
         startY = NormalizeAngle(controlledTransforms[0].eulerAngles.y);
+
         targetY = (currentDirection == Vector2.right) ? 0f : 180f;
     }
 

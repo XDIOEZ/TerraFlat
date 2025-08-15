@@ -129,6 +129,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-8093066731600702051
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -406,6 +409,7 @@ MonoBehaviour:
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
   TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &-7391974399094868746
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -458,6 +462,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sleep
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-7294424149878897729
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -752,6 +759,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-5530648673437610737
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -858,6 +868,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 1
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-5340453922887210251
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1097,6 +1110,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-4487381596579155479
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1200,6 +1216,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-4343306461480831279
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1308,6 +1327,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-4005720741064534572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1363,6 +1385,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-3066632926509538146
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1494,6 +1519,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 1
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-2488068551663369374
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1543,6 +1571,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 1
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &-2080328270758231185
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2393,6 +2424,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &628465106466111142
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2456,7 +2490,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: b8f3ef28a6e4c544386a57cd2dc437ed
-  position: {x: 671.1998, y: 1695.2}
+  position: {x: 671.2, y: 1695.2001}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2466,6 +2500,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &865897254489323633
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2581,7 +2618,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 44a759752a7c3494db5fd9902a26e852
-  position: {x: 1284, y: 925.60004}
+  position: {x: 1283.2001, y: 925.60016}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3013,7 +3050,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 729b0a62e9a91f645b350e3ef8487ee9
-  position: {x: 372.0001, y: 1695.2001}
+  position: {x: 372, y: 1696}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3023,6 +3060,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &2231765032730925998
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3149,6 +3189,7 @@ MonoBehaviour:
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
   TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &2709054245611605593
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3174,6 +3215,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &3272099144204613693
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3542,6 +3586,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &4382255231857341585
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3567,6 +3614,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &4477132143336429095
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3693,6 +3743,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sleep
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &4748145976509575953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3744,6 +3797,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sleep
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &4957581464481874336
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3796,6 +3852,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &5106502407904386356
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3880,6 +3939,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 1
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &5374869506730407857
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3985,6 +4047,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &5713511774784325415
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4116,6 +4181,7 @@ MonoBehaviour:
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
   TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &6252286918552723540
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4189,6 +4255,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Sit
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &6561495454422715152
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4269,6 +4338,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 1
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &6884450940563578556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4373,6 +4445,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &7713186367755608092
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4448,6 +4523,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &8009384673478999251
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4524,6 +4602,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &8180645246291243955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4627,6 +4708,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 1
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &8688849840185264871
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4679,6 +4763,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 1
   animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
 --- !u!114 &9040626265655719005
 MonoBehaviour:
   m_ObjectHideFlags: 0

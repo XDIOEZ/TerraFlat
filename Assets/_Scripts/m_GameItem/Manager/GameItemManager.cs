@@ -101,6 +101,16 @@ public class GameItemManager : SingletonMono<GameItemManager>
         if (rotation == default) rotation = Quaternion.identity;
         if (scale == default) scale = Vector3.one;
 
+        // 检测是否存在重复 GUID
+        if (RunTimeItems.ContainsKey(itemData.Guid))
+        {
+            Debug.LogError($"【物品实例化错误】检测到重复的GUID：{itemData.Guid}\n" +
+                $"当前物品：{itemData.IDName}\n" +
+                $"已存在物品：{RunTimeItems[itemData.Guid].name}");
+
+            return null;
+        }
+
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position, rotation, scale);
         Item item = itemObj.GetComponent<Item>();
         item.itemData = itemData;
@@ -109,15 +119,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
         if (item.itemData.Guid > -1000 && item.itemData.Guid < 1000)
             item.itemData.Guid = System.Guid.NewGuid().GetHashCode();
 
-        // 检测是否存在重复 GUID
-        if (RunTimeItems.ContainsKey(item.itemData.Guid))
-        {
-            Debug.LogError($"【物品实例化错误】检测到重复的GUID：{item.itemData.Guid}\n" +
-                $"当前物品：{item.itemData.IDName}\n" +
-                $"已存在物品：{RunTimeItems[item.itemData.Guid].name}");
-
-            return null;
-        }
+      
 
         RunTimeItems.Add(item.itemData.Guid, item);
         AddToGroup(item); // 新增分组逻辑

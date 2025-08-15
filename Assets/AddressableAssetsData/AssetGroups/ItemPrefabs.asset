@@ -23,12 +23,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 41a6d8071825a284695b5b5682b7a3d5
-    m_Address: Assets/_Prefabs/Module_Items
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 68bd19d1854535d44b47543b665570ea
     m_Address: Assets/_Prefabs/Item_Creature_Animals
     m_ReadOnly: 0
@@ -52,6 +46,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 831f25d745a488a47b9743c641d12651
+    m_Address: Assets/_Prefabs
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 856e207614bf09b4abcde37328841a5d
     m_Address: Assets/_Prefabs/Food

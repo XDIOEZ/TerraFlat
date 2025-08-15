@@ -1,7 +1,13 @@
 {
     "name": "M_Editor",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:0994f0b99b69bfe47a086609b9a07e33",
+        "GUID:6b2403a08572f7c49b7802a26e472b30",
+        "GUID:b428d770df5b16d49a9a8fa3176ef68a",
+        "GUID:26201a8de44cbb84c80cc799d5c40f02",
+        "GUID:7baea1a086362ef42a47c71f6c0b003f"
+    ],
     "includePlatforms": [
         "Editor"
     ],

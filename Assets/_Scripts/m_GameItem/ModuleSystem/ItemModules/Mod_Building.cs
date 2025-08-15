@@ -1,6 +1,7 @@
 using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System;
+using UltEvents;
 using UnityEngine;
 using static Mod_Building;
 
@@ -10,8 +11,6 @@ public class Mod_Building : Module
     [Serializable]
     public class Building_Data
     {
-        public float Hp = -1f;
-        public GameValue_float MaxHp = new(100f);
         public float maxVisibleDistance = 10f;
         public float minVisibleDistance = 1f;
     }
@@ -23,6 +22,8 @@ public class Mod_Building : Module
     public BuildingShadow GhostShadow;
     public BoxCollider2D boxCollider2D;
     public DamageReceiver damageReceiver;
+    public UltEvent StartInstall = new UltEvent();
+    public UltEvent StartUnInstall = new UltEvent();
     #endregion
 
     #region 属性
@@ -81,7 +82,7 @@ public class Mod_Building : Module
     public void OnDestroy()
     {
         CleanupGhost();
-        Debug.Log($"[BaseBuilding] 组件被销毁，清理GhostShadow");
+      //  Debug.Log($"[BaseBuilding] 组件被销毁，清理GhostShadow");
 
         if (item != null)
             item.OnAct -= Install;
@@ -91,7 +92,6 @@ public class Mod_Building : Module
     #region 伤害处理
     private void OnHit(float hp)
     {
-        Data.Hp = hp;
         if (hp <= 0)
         {
             UnInstall();
@@ -120,6 +120,8 @@ public class Mod_Building : Module
     [Button]
     public virtual void UnInstall()
     {
+        StartUnInstall.Invoke();
+        OnAction_Cancel.Invoke(item);
         item.transform.localScale *= 0.5f;
 
         if (boxCollider2D != null)
@@ -129,8 +131,6 @@ public class Mod_Building : Module
         {
             item.itemData.Stack.CanBePickedUp = true;
         }
-
-        Data.Hp = 0;
 
         Vector2 pos = (Vector2)item.transform.position;
         ItemMaker itemMaker = new ItemMaker();
@@ -187,11 +187,11 @@ public class Mod_Building : Module
 
     private void ExecuteInstallation()
     {
+        StartInstall.Invoke();
+        OnAction_Start.Invoke(item);
         // 消耗物品
         item.itemData.Stack.Amount--;
 
-        // 设置血量
-        Data.Hp = Data.MaxHp.Value;
         damageReceiver.Hp = damageReceiver.MaxHp.Value;
 
         // 更新物品状态
@@ -206,9 +206,10 @@ public class Mod_Building : Module
 
         if (runtimeItem != null)
         {
+            item.ModuleSave();
             // 配置新实例
             runtimeItem.transform.localScale = Vector3.one;
-            runtimeItem.itemData = FastCloner.FastCloner.DeepClone(runtimeItem.itemData);
+            runtimeItem.itemData = FastCloner.FastCloner.DeepClone(item.itemData);
             runtimeItem.itemData.Stack.Amount = 1;
             runtimeItem.itemData.Stack.CanBePickedUp = false;
             EnableChildColliders(true, runtimeItem.transform);

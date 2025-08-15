@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -41,7 +42,7 @@ public class Mod_ItemDrop : Module
 
         Drop drop = new Drop
         {
-            itemGUID = item.itemData.Guid,
+            itemGuid = item.itemData.Guid,
             startPos = startPos,
             endPos = endPos,
             controlPos = mid,
@@ -50,8 +51,11 @@ public class Mod_ItemDrop : Module
             item = item
         };
 
-        drops.Add(drop);
-        item.itemData.Stack.CanBePickedUp   = false;
+        // drops.Add(drop);
+        //  drops.Add(drop);
+        item.itemData.Stack.CanBePickedUp = false;
+        Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+        itemDrop.drop = drop;
     }
 
     /// <summary>
@@ -67,7 +71,7 @@ public class Mod_ItemDrop : Module
 
         Drop drop = new Drop
         {
-            itemGUID = item.itemData.Guid,
+            itemGuid = item.itemData.Guid,
             startPos = startPos,
             endPos = endPos,
             controlPos = mid,
@@ -76,8 +80,10 @@ public class Mod_ItemDrop : Module
             item = item
         };
 
-        drops.Add(drop);
+      //  drops.Add(drop);
         item.itemData.Stack.CanBePickedUp = false;
+        Mod_Droping itemDrop  = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+        itemDrop.drop = drop;
     }
 
 
@@ -134,7 +140,7 @@ public class Mod_ItemDrop : Module
 
         foreach (Drop drop in drops)
         {
-            drop.item = GameItemManager.Instance.GetItemByGuid(drop.itemGUID);
+            drop.item = GameItemManager.Instance.GetItemByGuid(drop.itemGuid);
             if (drop.item == null)
                 toRemove.Add(drop); // 延迟移除
         }
@@ -158,7 +164,7 @@ public class Mod_ItemDrop : Module
     [System.Serializable]
     public class Drop
     {
-        public int itemGUID;
+        public int itemGuid;
 
         // 原来的 Vector2 改为 x 和 y 两个 float
         public float startX, startY;
@@ -168,6 +174,7 @@ public class Mod_ItemDrop : Module
         public float time;
         public float progressTime;
         [JsonIgnore]
+        [ShowInInspector]
         [System.NonSerialized] public Item item;
 
         // 属性封装，方便使用 Vector2 接口

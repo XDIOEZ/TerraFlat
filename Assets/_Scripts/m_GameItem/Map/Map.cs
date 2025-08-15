@@ -58,8 +58,10 @@ public class Map : Item, ISave_Load
     {
         base.Start();
         Save();
-        if (Data.TileCount < SaveLoadManager.Instance.SaveData.MapSize.x * SaveLoadManager.Instance.SaveData.MapSize.y)
+        LoadTileData();
+        if (Data.TileCount <=0)
         {
+         //  if(tileMap.)
             OnMapGenerated_Start.Invoke();
         }
     }

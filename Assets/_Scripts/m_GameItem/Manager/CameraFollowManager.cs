@@ -40,11 +40,6 @@ public class CameraFollowManager : Module
     {
         if (_Data.ID == "")
         _Data.ID = ModText.Camera;
-
-        if (_Data.Name == "")
-        {
-            _Data.Name = _Data.ID + "_" + Random.Range(1000, 9999);
-        }
     }
 
     public void PovValueChanged(InputAction.CallbackContext context = default)

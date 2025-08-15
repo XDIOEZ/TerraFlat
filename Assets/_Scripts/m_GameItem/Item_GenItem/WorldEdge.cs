@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UltEvents;
 using Sirenix.OdinInspector;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 /// <summary>
 /// 地图边界控制器：负责边界生成、传送逻辑及保存加载功能。
@@ -101,11 +102,14 @@ public class WorldEdge : Item, ISave_Load, IInteract
             Debug.LogWarning("[WorldEdge] 加载失败：边界数据或变换数据为空");
             return;
         }
-
-        var t = data._transform; // 获取保存的变换数据
-        transform.position = t.Position; // 恢复位置
-        transform.rotation = t.Rotation; // 恢复旋转
-        transform.localScale = t.Scale; // 恢复缩放
+        if (data._transform.Scale != Vector3.zero)
+        {
+            var t = data._transform; // 获取保存的变换数据
+            transform.position = t.Position; // 恢复位置
+            transform.rotation = t.Rotation; // 恢复旋转
+            transform.localScale = t.Scale; // 恢复缩放
+        }
+    
 
         string currentScene = SceneManager.GetActiveScene().name; // 获取当前活跃的场景名称
         string targetScene = ExtractTargetSceneName(currentScene); // 从当前场景名称中提取目标场景名称
@@ -227,6 +231,8 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <param name="interacter">交互者 (通常是玩家)</param>
     public void Interact_Start(IInteracter interacter = null)
     {
+        if(Mod_Scene.CurrentMapSave==null)
+        Mod_Scene.CurrentMapSave = SaveLoadManager.Instance.SaveActiveScene_Map(); // 保存当前地图数据
         var player = interacter?.User; // 获取交互者 (玩家)
 
         var saveData = SaveLoadManager.Instance.SaveData; // 获取保存数据
@@ -242,6 +248,12 @@ public class WorldEdge : Item, ISave_Load, IInteract
         player.transform.position = new Vector3(wrappedPos.x, wrappedPos.y, player.transform.position.z);
 
         Debug.Log($"[WorldEdge] 无缝传送至场景: {TPTOSceneName}, 玩家位置: {player.transform.position}");
+
+        if(data.TP_Position != Vector2.zero)
+        {
+            player.transform.position = data.TP_Position; // 如果有设置传送位置，则直接设置玩家位置
+        }
+
         SaveLoadManager.Instance.ChangeScene(TPTOSceneName); // 切换到目标场景
     }
 

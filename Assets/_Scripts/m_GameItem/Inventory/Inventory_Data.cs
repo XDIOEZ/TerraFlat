@@ -1,6 +1,7 @@
 using FastCloner.Code;
 using Force.DeepCloner;
 using MemoryPack;
+using Meryel.UnityCodeAssist.YamlDotNet.Core.Tokens;
 using System;
 using System.Collections.Generic;
 using UltEvents;
@@ -76,6 +77,8 @@ public partial class Inventory_Data
         var localData = localSlot.itemData;
         var inputData = inputSlotHand.itemData;
 
+
+
         // 情况1：两个都为空
         if (localData == null && inputData == null) return;
 
@@ -93,6 +96,14 @@ public partial class Inventory_Data
         {
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
+            Event_RefreshUI.Invoke(index);
+            return;
+        }
+
+        // 情况4：特殊交换（特殊数据不一致）
+        if (inputData.Stack.Volume >= 2 || localData.Stack.Volume >= 2)
+        {
+            localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
             return;
         }
@@ -305,4 +316,64 @@ public partial class Inventory_Data
 
 
     #endregion
+
+
+    public ItemData FindItemByTag_First(string tag)
+    {
+        foreach (var slot in itemSlots)
+        {
+            if(slot.itemData!= null && slot.itemData.ItemTags.HasTypeTag(tag))
+            {
+                return slot.itemData;
+            }
+        }
+        return null;
+    }
+    public List<ItemData> FindItemByTag_All(string tag)
+    {
+        List<ItemData> result = new List<ItemData>();
+        foreach (var slot in itemSlots)
+        {
+            if (slot.itemData!= null && slot.itemData.ItemTags.HasTypeTag(tag))
+            {
+                result.Add(slot.itemData);
+            }
+        }
+
+        return result;
+    }
+    public ModuleData GetModuleByID(string ID)
+    {
+        foreach (var slot in itemSlots)
+        {
+            if (slot.itemData != null)
+            {
+                var moduledata = slot.itemData.GetModuleData_Frist(ID);
+                if (moduledata != null)
+                {
+                    return moduledata;
+                }
+            }
+        }
+        return null;
+    }
+    //TODO 增加根据ID获取物品的方法
+    public ItemSlot GetItemSlotByModuleID(string moduleID)
+    {
+        foreach (var slot in itemSlots)
+        {
+            if (slot.itemData != null)
+            {
+                var module = slot.itemData.GetModuleData_Frist(moduleID); // 你已有的方法
+                if (module != null)
+                {
+                    return slot;
+                }
+            }
+        }
+        return null;
+    }
+
+  
+
 }

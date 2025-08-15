@@ -14,6 +14,8 @@ public static class Tag
     public const string Plant = "Plant";
     [Tooltip("Ê÷")]
     public const string Tree = "Tree";
+    [Tooltip("·À¾ß")]
+    public const string Armor = "Armor";
 
 
 }

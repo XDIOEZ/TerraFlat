@@ -142,6 +142,18 @@ public  abstract partial class ItemData
         Debug.Log("基础数据同步成功！");
         return itemRow;
     }
+
+    public ModuleData GetModuleData_Frist(string moduleID)
+    {
+        foreach (var item in ModuleDataDic.Values)
+        {
+            if (item.ID == moduleID)
+            {
+                return item;
+            }
+        }
+        return null;
+    }
 }
 [MemoryPackable]
 [System.Serializable]
@@ -223,6 +235,15 @@ public partial class ItemStack
 
 }
 
+[System.Serializable]
+[MemoryPackable]
+public partial class ModuleDatas
+{
+    [ShowInInspector]
+    public Dictionary<string, ModuleData> ModuleDataDic = new();
+    [ShowInInspector]
+    public Dictionary<string, List<ModuleData>> ModuleDataDic_ID = new();
+}
 
 
 

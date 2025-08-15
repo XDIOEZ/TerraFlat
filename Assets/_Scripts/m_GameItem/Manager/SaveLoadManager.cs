@@ -34,7 +34,7 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
     public UltEvent OnSceneSwitchStart;
 
     [Tooltip("临时失效物体")]
-    public List<GameObject> GameObject_False;
+    public List<GameObject> GameObject_False = new List<GameObject>();
 
     [Tooltip("当前控制的玩家名称")]
     public string CurrentContrrolPlayerName;
@@ -119,10 +119,13 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
     public void SaveActiveMapToSaveData()
     {
         SaveData ??= new GameSaveData();
+
         GameObject_False.Clear();
+
         SavePlayer();
 
         MapSave mapSave = SaveActiveScene_Map();
+
         SaveData.Active_MapsData_Dict[mapSave.MapName] = mapSave;
     }
 
@@ -134,7 +137,7 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
     {
         SaveData ??= new GameSaveData();
         GameObject_False.Clear();
-        SavePlayer();
+       
 
         MapSave mapSave = SaveActiveScene_Map();
         SaveData.Active_MapsData_Dict[mapSave.MapName] = mapSave;
@@ -152,6 +155,7 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
     [Button("加载玩家")]
     public Player LoadPlayer(string playerName)
     {
+        Debug.Log("开始加载玩家");
         Data_Player playerData;
 
         if (SaveData.PlayerData_Dict.TryGetValue(playerName, out var savedData))
@@ -192,28 +196,68 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
     {
         if (SaveData.Active_MapsData_Dict.TryGetValue(mapName, out MapSave mapSave))
         {
-        //    Debug.Log($"成功加载地图：{mapName}");
+            Debug.Log($"成功加载地图：{mapName}");
             InstantiateItemsFromMapSave(mapSave);
             LoadPlayer(CurrentContrrolPlayerName);
             return;
         }
 
         Debug.LogWarning($"未找到地图数据：{mapName}，尝试加载默认模板");
-
-      /*  LoadAssetByLabelAndName<WorldSaveSO>(defaultSettings.Default_ADDTable, mapName, result =>
-        {
-            if (result != null && result.SaveData != null &&
-                result.SaveData.Active_MapsData_Dict.TryGetValue(mapName, out MapSave defaultMapSave))
-            {
-                //InstantiateItemsFromMapSave(defaultMapSave);
-                LoadPlayer(CurrentContrrolPlayerName);
-            }
-            else
-            {
-                Debug.LogError($"加载默认模板地图失败，名称：{mapName}");
-            }
-        });*/
     }
+    #region 通过MapSave切换场景的方法
+    private MapSave targetMap; // 新增字段，保存要切换的 MapSave
+    [Button("切换指定地图")]
+    public void ChangeTOMapByMapSave(MapSave map)
+    {
+        #region 新建场景
+
+        // 2. 记录当前将要切换的场景名
+        previousSceneName = map.MapName;
+
+        // 3. 创建一个新的空场景（用于后续地图加载）
+        newScene = SceneManager.CreateScene(map.MapName);
+
+        // 4. 设置当前激活地图名称为该场景名
+        SaveData.Active_MapName = previousSceneName;
+
+        targetMap = map;
+        #endregion
+
+        #region 卸载旧场景
+
+        // 7. 获取当前激活场景
+        Scene previousScene = SceneManager.GetActiveScene();
+
+        // 8. 注册卸载回调方法
+        SceneManager.sceneUnloaded += SaveMap_SceneUnloaded;
+
+        // 9. 异步卸载当前场景，卸载完成后调用 OnPreviousSceneUnloaded
+        SceneManager.UnloadSceneAsync(previousScene);
+
+        #endregion
+    }
+    /// <summary>
+    /// 当旧场景卸载完成时执行（自动回调）
+    /// </summary>
+    /// <param name="unloadedScene">被卸载的场景</param>
+    void SaveMap_SceneUnloaded(Scene unloadedScene)
+    {
+       
+        // 1. 注销事件监听，避免重复调用
+        SceneManager.sceneUnloaded -= SaveMap_SceneUnloaded;
+
+        // 2. 通知切换开始
+        OnSceneSwitchStart.Invoke();
+
+        // 3. 设置新场景为当前激活场景
+        SceneManager.SetActiveScene(newScene);
+
+        InstantiateItemsFromMapSave(targetMap);
+
+        LoadPlayer(CurrentContrrolPlayerName);
+        targetMap = null;
+    }
+    #endregion
 
     /// <summary>
     /// 从地图保存数据中实例化所有物品
@@ -309,16 +353,87 @@ public class SaveLoadManager : SingletonAutoMono<SaveLoadManager>
     /// <returns>地图保存数据</returns>
     public MapSave SaveActiveScene_Map()
     {
+        SavePlayer();
         MapSave worldSave = new MapSave();
         worldSave.MapName = SceneManager.GetActiveScene().name;
         worldSave.items = GetActiveSceneAllItemData();
 
         foreach (GameObject go in GameObject_False)
         {
+            if(go != null)
             go.SetActive(true);
         }
 
         return worldSave;
+    }
+    /// <summary>
+    /// 保存当前活动场景为地图保存数据
+    /// </summary>
+    /// <returns>地图保存数据</returns>
+    public static MapSave GetCurrentMapStatic()
+    {
+        MapSave worldSave = new MapSave();
+        worldSave.MapName = SceneManager.GetActiveScene().name;
+        worldSave.items = GetActiveSceneAllItemData_Static();
+
+        return worldSave;
+    }
+    /// <summary>
+    /// 获取当前活动场景中所有物品的数据
+    /// </summary>
+    /// <returns>物品数据字典</returns>
+    public static Dictionary<string, List<ItemData>> GetActiveSceneAllItemData_Static()
+    {
+        Dictionary<string, List<ItemData>> itemDataDict = new Dictionary<string, List<ItemData>>();
+        Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
+
+        // 先处理可保存物品
+        foreach (Item item in allItems)
+        {
+            if (item == null)
+                continue;
+
+            item.ModuleSave();
+
+            if (item is ISave_Load saveableItem)
+            {
+                try
+                {
+                    saveableItem.Save();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"保存物品失败: {item.name}", item);
+                    Debug.LogException(ex);
+                }
+            }
+        }
+
+        // 再收集所有活动物品数据
+        foreach (Item item in allItems)
+        {
+            if (item == null || item.transform == null || item.gameObject == null)
+                continue;
+
+            if (!item.gameObject.activeInHierarchy)
+                continue;
+
+            item.SyncPosition();
+
+            ItemData itemData = item.itemData;
+            if (itemData == null)
+                continue;
+
+            if (!itemDataDict.TryGetValue(itemData.IDName, out List<ItemData> list))
+            {
+                list = new List<ItemData>();
+                itemDataDict[itemData.IDName] = list;
+            }
+
+            list.Add(itemData);
+        }
+
+        return itemDataDict;
     }
 
     /// <summary>

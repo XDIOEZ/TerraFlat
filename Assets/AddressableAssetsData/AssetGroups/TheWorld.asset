@@ -16,7 +16,13 @@ MonoBehaviour:
   m_Data:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 2ab92c92c067d914bb3e171a8e640471
+    m_Address: Assets/Saves/GameSaveData
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - GameMap
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

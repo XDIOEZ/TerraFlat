@@ -110,13 +110,13 @@ public class Recipe : ScriptableObject
             int colName = excel.FindColumn(0, resultCols[i]);
             int colAmt = excel.FindColumn(0, resultamountCols[i]);
 
-            outputs.results[i].resultItem = excel.GetCellValue(itemRow, colName)?.ToString() ?? "";
+            outputs.results[i].item = excel.GetCellValue(itemRow, colName)?.ToString() ?? "";
 
             object amt = excel.GetCellValue(itemRow, colAmt);
             if (amt != null && int.TryParse(amt.ToString(), out int parsed))
-                outputs.results[i].resultAmount = parsed;
+                outputs.results[i].amount = parsed;
             else
-                outputs.results[i].resultAmount = 0;
+                outputs.results[i].amount = 0;
         }
 
 

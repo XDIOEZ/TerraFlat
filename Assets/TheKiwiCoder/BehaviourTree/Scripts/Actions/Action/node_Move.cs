@@ -47,39 +47,40 @@ public class Move : ActionNode
 
     protected override State OnUpdate()
     {
-        context.agent.isStopped = false;
         Vector2 currentPosition = context.agent.transform.position;
-
-        // 初始化时间戳
-        if (lastMoveTime == 0f)
+        if (context.agent.isOnNavMesh)
         {
-            lastMoveTime = Time.time;
-            lastPosition = currentPosition;
-        }
-
-        // 检测是否移动
-        if (Vector2.Distance(currentPosition, lastPosition) >= MIN_MOVE_DISTANCE)
-        {
-            // 有移动，更新时间戳和位置
-            lastMoveTime = Time.time;
-            lastPosition = currentPosition;
-            // 解锁
-            context.mover.IsLock = false;
-        }
-        else
-        {
-            // 没有移动，检查是否卡住时间过长
-            if (Time.time - lastMoveTime >= STUCK_THRESHOLD)
+            context.agent.isStopped = false;
+            // 初始化时间戳
+            if (lastMoveTime == 0f)
             {
-                if (base.DebugMODE)
-                {
-                    Debug.LogWarning("AI卡住，目标位置无法到达");
-                }
+                lastMoveTime = Time.time;
+                lastPosition = currentPosition;
+            }
 
-                if (AutoRotate)
+            // 检测是否移动
+            if (Vector2.Distance(currentPosition, lastPosition) >= MIN_MOVE_DISTANCE)
+            {
+                // 有移动，更新时间戳和位置
+                lastMoveTime = Time.time;
+                lastPosition = currentPosition;
+                // 解锁
+                context.mover.IsLock = false;
+            }
+            else
+            {
+                // 没有移动，检查是否卡住时间过长
+                if (Time.time - lastMoveTime >= STUCK_THRESHOLD)
                 {
-                    if (context.mover.IsLock)
+                    if (base.DebugMODE)
                     {
+                        Debug.LogWarning("AI卡住，目标位置无法到达");
+                    }
+
+                    if (AutoRotate)
+                    {
+                        if (context.mover.IsLock)
+                        {
                             Vector2 originalDir = (context.mover.TargetPosition - currentPosition).normalized;
 
                             // ±90~180度偏转
@@ -89,40 +90,38 @@ public class Move : ActionNode
                             Vector2 newDir = RotateVector2(originalDir, angleOffset);
                             float runDistance = (context.mover.TargetPosition - currentPosition).magnitude;
 
-                        context.mover.TargetPosition = currentPosition + newDir * runDistance;
-                        
+                            context.mover.TargetPosition = currentPosition + newDir * runDistance;
 
+
+                        }
+                        context.mover.IsLock = true;
+
+                        if (context.mover.MemoryPath_Forbidden.Count < 3)
+                            context.mover.MemoryPath_Forbidden.Add(lastPosition);
+                        context.agent.SetDestination(context.mover.TargetPosition);
+                        return State.Running; // 继续尝试移动
                     }
-                    context.mover.IsLock = true;
 
-                    if(context.mover.MemoryPath_Forbidden.Count < 3)
-                    context.mover.MemoryPath_Forbidden.Add(lastPosition);
-                    context.agent.SetDestination(context.mover.TargetPosition);
-                    return State.Running; // 继续尝试移动
+                    // 重置并返回失败
+                    lastPosition = Vector3.zero;
+                    lastMoveTime = 0f;
+                    context.agent.isStopped = true;
+                    return State.Failure;
                 }
-
-                // 重置并返回失败
-                lastPosition = Vector3.zero;
-                lastMoveTime = 0f;
-                context.agent.isStopped = true;
-                return State.Failure;
             }
         }
+      
 
         Mover.Move(speeder.TargetPosition,0);
 
         // 检查是否到达目标
         if (Vector2.Distance(Mover.TargetPosition, currentPosition) <= context.agent.stoppingDistance)
         {
-            //if (base.DebugMODE)
-            //{
-            //    Debug.Log("Arrived");
-            //}
-
             // 重置状态
             lastPosition = Vector3.zero;
             lastMoveTime = 0f;
-            context.agent.isStopped = true;
+            if (context.agent.isOnNavMesh)
+                context.agent.isStopped = true;
             return State.Success;
         }
 

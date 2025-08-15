@@ -13,12 +13,15 @@ namespace TheKiwiCoder {
         public GameObject gameObject;
         public Transform transform;
         public Animator animator;
+        public bool animationCanChange;
         public Rigidbody physics;
         public NavMeshAgent agent;
         public SphereCollider sphereCollider;
         public BoxCollider boxCollider;
         public CapsuleCollider capsuleCollider;
         public CharacterController characterController;
+        public float lastAttackTime;
+
         //添加自定义组件
         public IDetector itemDetector;
         public Mover mover;
@@ -28,6 +31,7 @@ namespace TheKiwiCoder {
         public DamageReceiver damageReciver;
         public Mod_ColdWeapon ColdWeapon;
         public Mod_Food Food;
+
         // Add other game specific systems here
 
         public static Context CreateFromGameObject(GameObject gameObject) {

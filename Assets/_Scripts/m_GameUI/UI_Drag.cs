@@ -52,7 +52,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (!IsPointerOverDraggableImage(eventData) || IsRaycastBlocked(eventData))
+        if (!IsPointerOverDraggableImage(eventData))
             return;
 
         Vector2 clickPosInCanvas;

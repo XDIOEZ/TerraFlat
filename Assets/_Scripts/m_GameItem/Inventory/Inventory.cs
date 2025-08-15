@@ -141,9 +141,19 @@ public class Inventory : MonoBehaviour
         
     }
 
+    [Sirenix.OdinInspector.Button]
+    public void SyncSlotCount()
+    {
+        Data.itemSlots.Clear();
+        int currentCount = ItemSlot_Parent.childCount;
+        for (int i = 0; i < ItemSlot_Parent.childCount; i++)
+        {
+            Data.itemSlots.Add(new ItemSlot());
+        }
+    }
+
     public void OnDestroy()
     {
        Data. Event_RefreshUI -= RefreshUI;
     }
-
 }

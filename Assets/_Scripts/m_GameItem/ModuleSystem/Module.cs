@@ -14,10 +14,6 @@ public abstract class Module : MonoBehaviour
         {
             _Data.ID = ModText.Controller;
         }
-        if (_Data.Name == "")
-        {
-            _Data.Name = _Data.ID + "_" + Random.Range(1000, 9999);
-        }
     }
 
         public override void Load()
@@ -62,8 +58,6 @@ public abstract class Module : MonoBehaviour
         {
             _Data = data;
         }
-
-        Load();
     }
 
     public abstract void Load();
@@ -75,11 +69,21 @@ public abstract class Module : MonoBehaviour
     }
 
 
-    public static void ADDModTOItem(Item item, string modName)
+
+    /// <summary>
+    /// 生成模块唯一名称
+    /// </summary>
+    public static string GenerateUniqueModName(string id)
+    {
+        return id + "_" + UnityEngine.Random.Range(1000, 9999);
+    }
+
+    #region 添加模块
+    public static Module ADDModTOItem(Item item, string modName)
     {
         if (HasMod(item, modName))
         {
-            return;
+            return null;
         }
         // 实例化模块预制体
         GameObject @object = GameRes.Instance.InstantiatePrefab(modName);
@@ -99,16 +103,9 @@ public abstract class Module : MonoBehaviour
         module._Data.ID = modName;
         module._Data.Name = GenerateUniqueModName(module._Data.ID);
         item.Mods.Add(module._Data.Name, module);
-        module.ModuleInit(item,null);
+        module.ModuleInit(item, null);
+        return module;
     }
-    /// <summary>
-    /// 生成模块唯一名称
-    /// </summary>
-    public static string GenerateUniqueModName(string id)
-    {
-        return id + "_" + UnityEngine.Random.Range(1000, 9999);
-    }
-
 
     public static Module ADDModTOItem(Item item, ModuleData mod)
     {
@@ -122,10 +119,11 @@ public abstract class Module : MonoBehaviour
         item.itemMods.AddMod(module); // 添加到字典
 
         module.ModuleInit(item, null);
+        module.Load();
 
         return module;
     }
-    public static Module ADDModTOItem(Item item, ModuleData mod,ItemData itemData)
+    public static Module ADDModTOItem(Item item, ModuleData mod, ItemData itemData)
     {
         //TODO 实例化模块 但是如果存在多个名字相同的模块会导致覆盖的问题
         GameObject @object = GameRes.Instance.InstantiatePrefab(mod.ID);
@@ -140,8 +138,11 @@ public abstract class Module : MonoBehaviour
 
         module.ModuleInit(item, mod, itemData);
 
+        module.Load();
         return module;
     }
+    #endregion
+    #region 移除模块
     public static Module REMOVEModFROMItem(Item item, ModuleData mod)
     {
         Module module;
@@ -175,6 +176,8 @@ public abstract class Module : MonoBehaviour
 
         return module;
     }
+    #endregion
+    #region 检测模块
 
     public static bool HasMod(Item item, string name)
     {
@@ -188,4 +191,5 @@ public abstract class Module : MonoBehaviour
         }
         return null;
     }
+    #endregion
 }

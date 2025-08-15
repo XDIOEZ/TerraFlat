@@ -247,20 +247,20 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             foreach (var output in output_list.results)
             {
                 // 同步加载输出物品的预制体
-                GameObject prefab = GameRes.Instance.AllPrefabs[output.resultItem];
+                GameObject prefab = GameRes.Instance.AllPrefabs[output.item];
                 if (prefab != null)
                 {
                     // 克隆预制体的物品数据
                     ItemData output_item = prefab.GetComponent<Item>().DeepClone().itemData;
                     // 设置输出物品的数量
-                    output_item.Stack.Amount = output.resultAmount;
+                    output_item.Stack.Amount = output.amount;
                     // 将输出物品添加到待添加列表
                     itemsToAdd.Add(output_item);
                 }
                 else
                 {
                     // 如果未能找到预制体，输出错误信息
-                    Debug.LogError($"未能找到预制体：{output.resultItem}");
+                    Debug.LogError($"未能找到预制体：{output.item}");
                     return false;
                 }
             }

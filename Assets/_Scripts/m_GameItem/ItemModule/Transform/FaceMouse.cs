@@ -55,18 +55,12 @@ public partial class FaceMouse : Module
         Vector2 direction = targetPosition - transform.parent.position;
         float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-        // ✅ 判断角色是否朝左
-        Transform grandParent = transform.parent.parent;
-        if (grandParent != null && grandParent.lossyScale.x < 0)
-        {
-            targetAngle = 180f - targetAngle;
-        }
-
         float currentAngle = transform.parent.localEulerAngles.z;
         float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, Data.RotationSpeed * deltaTime);
 
         transform.parent.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
     }
+
 
     public override void Save()
     {

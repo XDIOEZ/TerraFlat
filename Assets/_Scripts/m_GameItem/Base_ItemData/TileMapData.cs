@@ -18,6 +18,7 @@ public partial class Data_TileMap : ItemData
     public Vector2Int position = new Vector2Int(0,0);
 
     [MemoryPackIgnore]
+    [ShowInInspector]
     public int TileCount => TileData.Count == 0 ? 0 : TileData.Values.Sum(list => list?.Count ?? 0);
 }
 

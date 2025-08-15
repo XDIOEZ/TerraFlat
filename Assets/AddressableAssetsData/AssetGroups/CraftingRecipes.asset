@@ -23,6 +23,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - CraftingRecipe
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ad835bb3ac4f9ca4891ba15924362b31
+    m_Address: Assets/_SO/Table_Cook
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - CraftingRecipe
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

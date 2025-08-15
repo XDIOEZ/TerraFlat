@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 
 public class Mod_Interaction : Module,IInteract
@@ -8,7 +9,7 @@ public class Mod_Interaction : Module,IInteract
     public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
 
     public Item CurentInteractItem;//当前与之交互的对象
-
+    public UltEvent<Item >FastTest;
     public override void Load()
     {
        // throw new System.NotImplementedException();
@@ -30,6 +31,7 @@ public class Mod_Interaction : Module,IInteract
 
     public void Interact_Start(IInteracter interacter = null)
     {
+        FastTest.Invoke(interacter.Item);
         OnAction_Start.Invoke(interacter.Item);
         CurentInteractItem = interacter.Item;
     }

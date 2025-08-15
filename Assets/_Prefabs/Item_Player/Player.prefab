@@ -2453,9 +2453,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   rotationDuration: 0.3
-  controlledTransform: {fileID: 0}
+  controlledTransforms: []
   currentDirection: {x: 1, y: 0}
   isTurning: 0
+  OnTrun:
+    _PersistentCalls: []
   faceMouse: {fileID: 0}
   modData:
     Name: 
@@ -4504,6 +4506,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  MemoryPath_Forbidden: []
+  IsLock: 0
   Data:
     Speed:
       BaseValue: 5
@@ -6946,7 +6950,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.000091552734, y: 0}
+  m_AnchoredPosition: {x: -0.00008010864, y: 0}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &7132638982571321051
@@ -10356,6 +10360,7 @@ MonoBehaviour:
   OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 4484546128633820161}
+  updateInterval: 0
   selectSlot: {fileID: 6035189940193481208}
   Data:
     IDName: Player
@@ -11070,7 +11075,7 @@ Transform:
   m_GameObject: {fileID: 8650688661528383040}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.38, y: -0.023, z: 0}
+  m_LocalPosition: {x: 0.284, y: -0.058, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -11113,6 +11118,7 @@ MonoBehaviour:
     isRunning: 0
     Type: 0
     BitData: 
+  xOffset: 0.5
 --- !u!61 &4454883684667596010
 BoxCollider2D:
   m_ObjectHideFlags: 0

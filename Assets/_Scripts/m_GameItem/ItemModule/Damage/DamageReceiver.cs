@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UltEvents;
 using Unity.Collections;
 using UnityEngine;
+using static Mod_Building;
 using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
 
 /// <summary>
@@ -41,9 +42,19 @@ public class DamageReceiver : Module
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
 
-        public bool ShowCanvas = false;//面板显示状态
-       // public Vector2 PanelPosition = new Vector2(0, 0);
+        [Header("是否显示面板")]
+        public bool ShowCanvas = false;
+
+        [Header("伤害接收间隔时间 (秒)")]
+        [Min(0f)]
+        public float DamageInterval = 0.1f;
     }
+
+
+    /// <summary>
+    /// 上一次受到伤害的时间（秒）
+    /// </summary>
+    private float lastDamageTime = -999f;
 
     #endregion
 
@@ -109,6 +120,7 @@ public class DamageReceiver : Module
         modData.ReadData(ref Data);
 
         if(item.itemMods.ContainsKey_ID(ModText.Equipment))
+
         Equipment_Inventory = item.itemMods.GetMod_ByID(ModText.Equipment) as Mod_Inventory;
 
         if (Data.ShowCanvas)
@@ -122,6 +134,7 @@ public class DamageReceiver : Module
 
 
         cachedSpriteRenderer = item.Sprite;
+
         if (cachedSpriteRenderer == null)
             Debug.LogWarning("[DamageReceiver] 未找到 SpriteRenderer。");
     }
@@ -176,18 +189,27 @@ public class DamageReceiver : Module
         Data.ShowCanvas = false;
     }
 
+    [Button]
     public override void Save()
     {
         modData.WriteData(Data);
+        item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
 
     #endregion
 
     #region 受击处理
-
+    #region 受击处理
     public virtual void TakeDamage(float damage, Item attacker)
     {
         if (Hp <= 0) return;
+
+        // ⏱️ 受伤间隔判断
+        if (Time.time - lastDamageTime < Data.DamageInterval)
+        {
+            return;
+        }
+        lastDamageTime = Time.time;
 
         Hp -= damage * (1 - (Data.Defense.Value) * 0.01f);
 
@@ -196,8 +218,9 @@ public class DamageReceiver : Module
         if (Data.AttackersUIDs.Count > 3)
             Data.AttackersUIDs.RemoveAt(0);
 
-        RefreshUI();
-        // ↓↓↓ 统一调用耐久消耗
+        if (Data.ShowCanvas)
+            RefreshUI();
+
         ApplyDurabilityDamageToEquipments(1);
 
         // UI & 特效处理
@@ -214,11 +237,12 @@ public class DamageReceiver : Module
             // 死亡逻辑预留
         }
     }
+    #endregion
 
     public Mod_Inventory Equipment_Inventory;
 
     /// <summary>
-    /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值
+    /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
     /// </summary>
     /// <param name="amount">耐久下降的数值</param>
     protected virtual void ApplyDurabilityDamageToEquipments(int amount = 1)
@@ -227,14 +251,30 @@ public class DamageReceiver : Module
         {
             return;
         }
+
         foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
         {
-            if (mod.itemData.ItemTags.HasTypeTag(Tag.Equipment))
+            if (mod.itemData == null) continue;
+
+            if (mod.itemData.ItemTags.HasTypeTag(Tag.Armor))
             {
-                mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability - amount);
+                mod.itemData.Durability -= amount;
+
+                if (mod.itemData.Durability <= 0)
+                {
+                    // 耐久为0，清空该格子
+                    mod.ClearData();
+                    mod.RefreshUI();
+                }
+                else
+                {
+                    // 否则确保耐久不为负
+                    mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability);
+                }
             }
         }
     }
+
 
     #endregion
 

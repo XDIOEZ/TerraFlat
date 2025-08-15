@@ -61,8 +61,13 @@ public class ItemPicker : MonoBehaviour
                 {
                     
                     itemData.Stack.CanBePickedUp = false; // 物品堆栈的 CanBePickedUp 置为 false
+
+                    pickAble.ModuleSave(); // 保存物品堆栈数据
+
                     inventory.Data.TryAddItem(itemData);
+
                     Destroy(pickAble.gameObject); // 物品拾取后销毁
+
                     return; // 添加成功后立即返回
                 }
             }

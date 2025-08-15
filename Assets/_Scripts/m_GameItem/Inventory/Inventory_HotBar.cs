@@ -90,7 +90,7 @@ public class Inventory_HotBar : Inventory
     public void ChangeSelectBoxPosition(int newIndex)
     {
         //销毁之前的物品
-        DestroyCurrentObject();
+        DestroyCurrentObject(CurentSelectItem);
 
         newIndex = (newIndex + MaxIndex) % MaxIndex; // 确保索引合法
 
@@ -148,12 +148,10 @@ public class Inventory_HotBar : Inventory
         }
     }
 
-    public void DestroyCurrentObject()
+    public void DestroyCurrentObject(Item obj)
     {
-        if (currentObject != null)
-        {
-            Destroy(currentObject);
-        }
+        if (obj != null)
+        Destroy(obj.gameObject);
     }
 
     private void ChangeNewObject(int index)

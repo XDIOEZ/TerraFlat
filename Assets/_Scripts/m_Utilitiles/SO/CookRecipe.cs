@@ -4,13 +4,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 
 [CreateAssetMenu(fileName = "新熔炼配方", menuName = "合成/熔炼配方")]
-public class CookRecipe : ScriptableObject
+public class CookRecipe : Recipe
 {
-    [Header("输入材料")]
-    public Input_List inputs = new Input_List();
-
-    [Header("输出产物")]
-    public Output_List outputs = new Output_List();
-
-    public AssetReference assetRef;
+    public float Temperature  = 0;
 }

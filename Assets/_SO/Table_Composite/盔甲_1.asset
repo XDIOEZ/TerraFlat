@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
   m_Name: "\u76D4\u7532_1"
   m_EditorClassIdentifier: 
-  recipeID: 183914ee-45aa-4ae2-b186-0c7d3bfccf1a
   version: 1.2.0
   inputs:
     RowItems_List:
@@ -36,6 +35,6 @@ MonoBehaviour:
       amount: 1
   outputs:
     results:
-    - resultItem: TestArmor
-      resultAmount: 1
+    - item: Stone
+      amount: 1
   recipeType: 0

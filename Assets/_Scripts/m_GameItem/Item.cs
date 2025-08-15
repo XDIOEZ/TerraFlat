@@ -39,7 +39,7 @@ public abstract class Item : MonoBehaviour
     //物品UI更新事件
     public UltEvent OnUIRefresh = new();
     //物品被销毁时触发的事件
-    public UltEvent OnItemDestroy = new();
+    public UltEvent<Item> OnItemDestroy = new();
     //物品被激活时触发的事件
     public UltEvent OnAct = new();
     //模块加载完成事件
@@ -54,6 +54,7 @@ public abstract class Item : MonoBehaviour
             Sprite = GetComponentInChildren<SpriteRenderer>();
 
         ModuleLoad();
+
         OnModuleLoadDone.Invoke();
 
         if(itemData.Guid == 0)
@@ -63,33 +64,82 @@ public abstract class Item : MonoBehaviour
         }
     }
 
+    public void IsPrefabInit()
+    {
+        if (itemData.Guid == 0)
+        {
+            // 自动生成Guid
+            itemData.Guid = Guid.NewGuid().GetHashCode();
+        }
+
+        var modules = GetComponentsInChildren<Module>(true).ToList();
+
+        foreach (var mod in modules)
+            {
+                if (string.IsNullOrWhiteSpace(mod._Data.Name))
+                    mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
+
+                itemMods.AddMod(mod);
+                itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
+            }
+
+            // 所有模块加入Mods后统一初始化
+            foreach (var mod in Mods.Values)
+            {
+                mod.ModuleInit(this, null);
+            }
+            foreach (var mod in Mods.Values)
+            {
+                mod.Load();
+            }
+        foreach (var mod in Mods.Values)
+        {
+            mod.Save();
+        }
+
+    }
+
     [Button]
     public void SetUpModeule(string modName)
     {
         Module.ADDModTOItem(this, modName);
+
+        foreach(var mod in Mods.Values)
+        {
+            mod.Load();
+        }
     }
 
     [Tooltip("物品的更新频率，单位：秒")]
     public float updateInterval = 0.1f; // 每0.1秒执行一次
     float updateTimer = 0f;
-
     public void Update()
     {
+        if (updateInterval == 0f)
+        {
+            foreach (Module mod in Mods.Values.ToList()) // 创建快照
+            {
+                mod.Action(Time.deltaTime);
+            }
+            return;
+        }
+
         updateTimer += Time.deltaTime;
         if (updateTimer >= updateInterval)
         {
             updateTimer = 0f;
 
-            foreach (Module mod in Mods.Values)
+            foreach (Module mod in Mods.Values.ToList()) // 创建快照
             {
-                mod.Action(updateInterval); // 或者 mod.Action(updateTimer) 视情况而定
+                mod.Action(updateInterval);
             }
         }
     }
 
+
     public void OnDestroy()
     {
-        OnItemDestroy.Invoke();
+        OnItemDestroy.Invoke(this);
         ModuleSave();
     }
 
@@ -103,7 +153,8 @@ public abstract class Item : MonoBehaviour
 
         var modules = GetComponentsInChildren<Module>(true).ToList();
 
-        if (firstStart)
+
+        if (firstStart)//第一次启动
         {
             foreach (var mod in modules)
             {
@@ -119,19 +170,30 @@ public abstract class Item : MonoBehaviour
             {
                 mod.ModuleInit(this, null);
             }
+            foreach (var mod in Mods.Values)
+            {
+                mod.Load();
+            }
         }
-        else
+        
+        if(!firstStart)//非第一次启动
         {
             ItemMods tempMods = new ItemMods();
-            foreach (var mod in modules)
-                tempMods.AddMod(mod);
-
             List<Module> modsToInit = new();
 
+            foreach (var mod in modules)
+            {
+                tempMods.AddMod(mod);
+            }
+               
+           
+            //通过数据进行匹配修复
             foreach (ModuleData modData in itemData.ModuleDataDic.Values)
             {
                 var modList = tempMods.GetModList_ByID(modData.ID);
-                Module mod;
+                Module mod;//待安装数据模块引用
+
+                //不存在模块
                 if (modList == null || modList.Count == 0)
                 {
                 
@@ -144,30 +206,58 @@ public abstract class Item : MonoBehaviour
 
                      mod = @object.GetComponentInChildren<Module>();
 
-                    tempMods.AddMod(mod); // 添加到临时字典
+                    mod._Data = modData;
 
-                    modList = tempMods.GetModList_ByID(modData.ID);
+                    itemMods.AddMod(mod);
+
+                    modsToInit.Add(mod);//添加到待初始化列表
                 }
-               
-                if (modList.Count > 0)
+
+                else//存在模块
                 {
                     mod = modList[^1];
-                    mod._Data = modData;
-                    tempMods.RemoveMod(mod);
-                }
-                else
-                {
-                    mod = Module.ADDModTOItem(this, modData);
-                }
 
-                itemMods.AddMod(mod);
-                modsToInit.Add(mod);
+                    mod._Data = modData;
+
+                    tempMods.RemoveMod(mod);
+
+                    modsToInit.Add(mod);//添加到待初始化列表
+
+                    itemMods.AddMod(mod);
+                }
             }
+
+            //收集未解决的模块 并添加修复
+            if (tempMods.Mods_List.Count > 0)
+            {
+                foreach (var LostMod in tempMods.Mods_List.Values)
+                {
+                    foreach(var mod in LostMod)
+                    {
+                        if (string.IsNullOrWhiteSpace(mod._Data.Name))
+                        {
+                            Debug.LogWarning($"物品 {gameObject.name} 额外添加了模块 {mod._Data.Name} " +
+                          $" ID: {mod._Data.ID}，已自动修复。");
+                            mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
+                            itemMods.AddMod(mod);
+                            itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
+                            modsToInit.Add(mod);
+                        }
+                    }
+                  
+                }
+            }
+          
 
             // 全部加入Mods后再统一初始化（防止初始化中找不到其他模块）
             foreach (var mod in modsToInit)
             {
                 mod.ModuleInit(this, mod._Data);
+              
+            }
+            foreach (var mod in modsToInit)
+            {
+                mod.Load();
             }
         }
     }

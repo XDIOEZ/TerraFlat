@@ -1,5 +1,55 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &67723888808210397
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8720678235850708908}
+  - component: {fileID: 1826894797423364858}
+  m_Layer: 0
+  m_Name: "\u573A\u666F\u6253\u5305\u88C5\u7F6E"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8720678235850708908
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 67723888808210397}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 891121404665747283}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1826894797423364858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 67723888808210397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68920c69cea6ab44e81f7f30af127eb3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  savePath: Assets/Saves/Map
+  fileName: 
+  mapSave:
+    MapName: 
+    SunlightIntensity: 0
+  mapSaveAsset: {fileID: 0}
 --- !u!1 &2928034647530205554
 GameObject:
   m_ObjectHideFlags: 0
@@ -79,104 +129,6 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
---- !u!1 &3155864055111466433
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1441996938494261787}
-  - component: {fileID: 2455745498807310259}
-  - component: {fileID: 3397698588488408384}
-  m_Layer: 0
-  m_Name: "\u65E5\u6708\u7CFB\u7EDF"
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1441996938494261787
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3155864055111466433}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 891121404665747283}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2455745498807310259
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3155864055111466433}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f914b0958fba1ba4daac26b71a5e7bc1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Sun: {fileID: 3397698588488408384}
-  Current_DayThreshold: 0
-  Current_NightThreshold: 0
---- !u!114 &3397698588488408384
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3155864055111466433}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 073797afb82c5a1438f328866b10b3f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_ComponentVersion: 1
-  m_LightType: 4
-  m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.5
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1
-  m_LightVolumeIntensity: 1
-  m_LightVolumeIntensityEnabled: 0
-  m_ApplyToSortingLayers: 69fb64b5132694d400000000676586be63a00c27d9349123
-  m_LightCookieSprite: {fileID: 0}
-  m_DeprecatedPointLightCookieSprite: {fileID: 0}
-  m_LightOrder: 0
-  m_AlphaBlendOnOverlap: 0
-  m_OverlapOperation: 0
-  m_NormalMapDistance: 3
-  m_NormalMapQuality: 2
-  m_UseNormalMap: 0
-  m_ShadowIntensityEnabled: 0
-  m_ShadowIntensity: 0.75
-  m_ShadowVolumeIntensityEnabled: 0
-  m_ShadowVolumeIntensity: 0.75
-  m_LocalBounds:
-    m_Center: {x: 0, y: -0.00000011920929, z: 0}
-    m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
-  m_PointLightInnerAngle: 360
-  m_PointLightOuterAngle: 360
-  m_PointLightInnerRadius: 0
-  m_PointLightOuterRadius: 1
-  m_ShapeLightParametricSides: 5
-  m_ShapeLightParametricAngleOffset: 0
-  m_ShapeLightParametricRadius: 1
-  m_ShapeLightFalloffSize: 0.5
-  m_ShapeLightFalloffOffset: {x: 0, y: 0}
-  m_ShapePath:
-  - {x: -0.5, y: -0.5, z: 0}
-  - {x: 0.5, y: -0.5, z: 0}
-  - {x: 0.5, y: 0.5, z: 0}
-  - {x: -0.5, y: 0.5, z: 0}
 --- !u!1 &4565539948505994440
 GameObject:
   m_ObjectHideFlags: 0
@@ -190,7 +142,6 @@ GameObject:
   - component: {fileID: 7400242115634630897}
   - component: {fileID: 2634416744218920421}
   - component: {fileID: 1704115879885880632}
-  - component: {fileID: 3810643327833151}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -211,8 +162,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1441996938494261787}
   - {fileID: 5897130074279119965}
+  - {fileID: 8720678235850708908}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &9058411785591302946
@@ -321,53 +272,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _cachedMap: {fileID: 0}
---- !u!114 &3810643327833151
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4565539948505994440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5342144f569cf9d4aac67929aed1c12b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  saveAndLoad: {fileID: 2634416744218920421}
-  Ready_planetData:
-    PlanetName: "\u5730\u7403"
-    Radius: 100
-    TemperatureOffset: 0
-    RainOffset: 0
-    OceanHeight: -1
-    NoiseScale: 0.01
-    MapSize: {x: 100, y: 100}
-    TimeData:
-      DayTime: 600
-      SeasonTime: 600
-      YearTime: 600
-      Day: 0
-      Season: 0
-      Year: 0
-      OneDayTime: 1440
-      OneSeasonTime: 8640
-      OneYearTime: 34560
-      RotationSpeed: 1
-      OrbitSpeed: 1
-      SunriseSunsetThreshold_Spring: {x: 0.3, y: 0.7}
-      SunriseSunsetThreshold_Summer: {x: 0.5, y: 0.4}
-      SunriseSunsetThreshold_Autumn: {x: 0.7, y: 0.6}
-      SunriseSunsetThreshold_Winter: {x: 0.9, y: 0.8}
-  saves: []
-  Save_Player_SelectButton_Prefab: {fileID: 7670434242629240641, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
-  SaveSelectButton_Parent_Content: {fileID: 0}
-  Player_SelectButton_Parent_Content: {fileID: 0}
-  SelectedSave_Name_Text: {fileID: 0}
-  StartGameButton: {fileID: 0}
-  DeletSave: {fileID: 0}
-  NewPlayer_Name_Text: {fileID: 0}
-  NewSave_Name_Text: {fileID: 0}
-  PlanetRediusValue_Text: {fileID: 0}
-  PlanetNoiseValue_Text: {fileID: 0}
-  Start_New_GameButton: {fileID: 0}
-  SelectedPlayer_Name_Text: {fileID: 0}

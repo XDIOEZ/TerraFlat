@@ -35,7 +35,8 @@ public class DayTimeSystem : MonoBehaviour
 
     private void Start()
     {
-        SaveLoadManager.OnSceneSwitchStart += SyncLight;
+        Sun = GetComponentInChildren<Light2D>();
+        /*SaveLoadManager.OnSceneSwitchStart += SyncLight;*/
         TimeData.DayTime = SaveData.Time;
         TimeData.SeasonTime = SaveData.Time;
         TimeData.YearTime = SaveData.Time;
@@ -45,16 +46,18 @@ public class DayTimeSystem : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (!SaveLoadManager.IsGameStart)
+/*        if (!SaveLoadManager.IsGameStart)
         {
             return;
-        }
+        }*/
 
         UpdatePlanetTime();
 
         UpdateLightThresholds(); // <--- 加这一句
 
         SyncLight();
+
+        UpdateSunPosition();
     }
 
 
@@ -152,8 +155,6 @@ public class DayTimeSystem : MonoBehaviour
         }
         if(SaveData.Active_MapData!=null)
         SaveData.Active_MapData.SunlightIntensity = Sun.intensity;
-
-        UpdateSunPosition();
     }
 
     // 已移除季节修正方法

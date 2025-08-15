@@ -1,21 +1,25 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/ĞĞ¶¯/×Ô¶¯´¥·¢¹¥»÷")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/è‡ªåŠ¨è§¦å‘æ”»å‡»")]
 public class AI_AutoTriggerAttack : ActionNode
 {
-    public float TriggerDistance = 0.5f;     // ¾àÀëµĞÈË¶à½ü»á´¥·¢¹¥»÷
-    public float AttackInterval = 0.5f;      // ¹¥»÷¼ä¸ô
-    public float AttackDuration = 0.2f;      // ¹¥»÷³ÖĞøÊ±¼ä
+    public float TriggerDistance = 0.5f;         // è·ç¦»æ•Œäººå¤šè¿‘ä¼šè§¦å‘æ”»å‡»
+    public float AttackInterval = 0.5f;          // æ”»å‡»é—´éš”
+    public float AttackDuration = 0.2f;          // æ”»å‡»æŒç»­æ—¶é—´
+    public float AttackWaitForAniation = 0.1f;   // ç¡®è®¤èƒ½æ”»å‡»åç­‰å¾…çš„æ—¶é—´ï¼ˆæ’­æ”¾æ”»å‡»åŠ¨ç”»å‰ï¼‰
 
     private float lastAttackTime = -Mathf.Infinity;
     private bool isAttacking = false;
+    private bool isPreparingAttack = false;
+    private float attackPrepareStartTime;
 
     protected override void OnStart()
     {
         isAttacking = false;
+        isPreparingAttack = false;
     }
 
     protected override void OnStop()
@@ -25,44 +29,63 @@ public class AI_AutoTriggerAttack : ActionNode
             context.ColdWeapon.CancelAttack();
             isAttacking = false;
         }
+        isPreparingAttack = false;
     }
 
     protected override State OnUpdate()
     {
         float dist = Vector2.Distance(context.mover.TargetPosition, context.ColdWeapon.transform.position);
 
-        // Èç¹û¾àÀë×ã¹»½ü
+        // è·ç¦»è¶³å¤Ÿè¿‘
         if (dist <= TriggerDistance)
         {
 
-            // µ±Ç°ÕıÔÚ¹¥»÷ÖĞ£¬¼ì²éÊÇ·ñµ½È¡ÏûÊ±¼ä
+            // æ”»å‡»ä¸­ï¼šåˆ¤æ–­æ˜¯å¦æ”»å‡»å®Œæˆ
             if (isAttacking)
             {
                 if (Time.time >= lastAttackTime + AttackDuration)
                 {
-                    context.ColdWeapon.CancelAttack();
+                    context.ColdWeapon.StopAttack();
                     isAttacking = false;
+                    return State.Success;
                 }
                 return State.Running;
             }
 
-            // Èç¹ûÒÑ¾­¹ıÁË¹¥»÷¼ä¸ô£¬Ö´ĞĞ¹¥»÷
-            if (Time.time >= lastAttackTime + AttackInterval)
+            // å‡†å¤‡æ”»å‡»ä¸­ï¼šç­‰å¾…åŠ¨ç”»å‡†å¤‡å®Œæˆ
+            if (isPreparingAttack)
             {
-                context.ColdWeapon.StartAttack();
-                lastAttackTime = Time.time;
-                isAttacking = true;
+                if (Time.time >= attackPrepareStartTime + AttackWaitForAniation)
+                {
+                    context.ColdWeapon.StartAttack();
+                    lastAttackTime = Time.time;
+                    isAttacking = true;
+                    isPreparingAttack = false;
+                    return State.Running;
+                }
                 return State.Running;
             }
+
+            // æ”»å‡»å†·å´æ—¶é—´å·²åˆ°ï¼šè¿›å…¥å‡†å¤‡æ”»å‡»çŠ¶æ€
+            if (Time.time >= lastAttackTime + AttackInterval)
+            {
+                attackPrepareStartTime = Time.time;
+                isPreparingAttack = true;
+                return State.Running;
+            }
+
+            return State.Running; // å†·å´ä¸­
         }
 
-        // Èç¹ûµĞÈËÔ¶ÀëÇÒÔÚ¹¥»÷×´Ì¬ÖĞ£¬Ò²ĞèÒªÈ¡Ïû¹¥»÷
-        if (isAttacking && dist > TriggerDistance)
+        // æ•Œäººè¿œç¦»ï¼šå–æ¶ˆæ‰€æœ‰æ”»å‡»çŠ¶æ€
+        if (isAttacking)
         {
             context.ColdWeapon.CancelAttack();
             isAttacking = false;
         }
 
-        return State.Running;
+        isPreparingAttack = false;
+
+        return State.Failure;
     }
 }

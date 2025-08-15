@@ -5,80 +5,47 @@ using UnityEngine.InputSystem;
 using static AttackTrigger;
 using MemoryPack;
 using Sirenix.OdinInspector;
+using UnityEngine.EventSystems;
 
 public partial class Mod_ColdWeapon : Module
 {
     public Ex_ModData_MemoryPackable Data;
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
 
-    // 新增的SaveData字段
-    [SerializeField]
-    public ColdWeapon_SaveData saveData = new ColdWeapon_SaveData();
+    [SerializeField] public ColdWeapon_SaveData saveData = new ColdWeapon_SaveData();
 
-    // 将需要保存的字段改为属性，引用saveData中的字段
-    public GameValue_float Damage
-    {
-        get => saveData.Damage;
-        set => saveData.Damage = value;
-    }
-
-    public float AttackSpeed
-    {
-        get => saveData.AttackSpeed;
-        set => saveData.AttackSpeed = value;
-    }
-
-    public float MaxAttackDistance
-    {
-        get => saveData.MaxAttackDistance;
-        set => saveData.MaxAttackDistance = value;
-    }
-
-    public float ReturnSpeed
-    {
-        get => saveData.ReturnSpeed;
-        set => saveData.ReturnSpeed = value;
-    }
+    public GameValue_float Damage { get => saveData.Damage; set => saveData.Damage = value; }
+    public float AttackSpeed { get => saveData.AttackSpeed; set => saveData.AttackSpeed = value; }
+    public float MaxAttackDistance { get => saveData.MaxAttackDistance; set => saveData.MaxAttackDistance = value; }
+    public float ReturnSpeed { get => saveData.ReturnSpeed; set => saveData.ReturnSpeed = value; }
 
     public FaceMouse faceMouse;
     public AttackState CurrentState = AttackState.Idle;
-    public Coroutine returnCoroutine;
     public Vector2 StartPosition = Vector2.zero;
-
     public Transform MoveTargetTransform;
+    [SerializeField] protected Collider2D damageCollider;
 
-    [SerializeField] private Collider2D damageCollider; // 统一成Collider2D，支持任意2D碰撞体
-
+    public Transform controllerItem;
     private InputAction InputAction;
+    private Vector2 returnTarget;
 
-    // 保存数据类
     [System.Serializable]
     [MemoryPackable]
     public partial class ColdWeapon_SaveData
     {
         [Header("武器属性设置")]
         public GameValue_float Damage = new GameValue_float(10f);
-        public float AttackSpeed = 10f;
-        public float MaxAttackDistance = 10f;
-        public float ReturnSpeed = 10f;
-
-        // 可根据需要添加更多字段
+        public float AttackSpeed = 10f, MaxAttackDistance = 10f, ReturnSpeed = 10f;
     }
 
     public override void Awake()
     {
-        if (_Data.ID == "")
-        {
-            _Data.ID = "ColdWeapon";
-        }
+        if (_Data.ID == "") _Data.ID = "ColdWeapon";
     }
 
     public override void Load()
     {
-        // 从Data加载保存的数据到saveData
         Data.ReadData(ref saveData);
-
-        
 
         if (item.BelongItem != null)
         {
@@ -88,195 +55,220 @@ public partial class Mod_ColdWeapon : Module
             InputAction.started += OnInputActionStarted;
             InputAction.canceled += OnInputActionCanceled;
         }
-    
-    
+        else
+        {
+            faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
+        }
 
-        if (MoveTargetTransform == null)
+        if (MoveTargetTransform == null&& item.BelongItem!= null) //不等于空 表示有东西拿着 
             MoveTargetTransform = item.transform;
-
+        else
+            MoveTargetTransform = transform.parent;
         if (damageCollider == null)
         {
             damageCollider = GetComponent<Collider2D>();
             if (damageCollider == null)
-            {
                 Debug.LogWarning("[Mod_ColdWeapon] 没有找到Collider2D，请在编辑器里赋值！");
-            }
         }
-
-        if (damageCollider != null)
-            damageCollider.enabled = false; // 默认关闭
     }
 
     public override void Action(float deltaTime)
     {
-        if (CurrentState == AttackState.Attacking && InputAction != null && InputAction.IsPressed())
+        switch (CurrentState)
         {
-            PerformStab(StartPosition, AttackSpeed, MaxAttackDistance, deltaTime);
-        }
+            case AttackState.Attacking:
 
-        if (isReturning)
-        {
-            Vector2 currentPos = (Vector2)MoveTargetTransform.localPosition;
-            Vector2 directionBack = (returnTarget - currentPos).normalized;
-            float distanceToMoveBack = ReturnSpeed * deltaTime;
+                PerformStab(StartPosition, AttackSpeed, MaxAttackDistance, deltaTime);
 
-            // 计算“将要走的下一步”位置
-            Vector2 nextPos = currentPos + directionBack * distanceToMoveBack;
+                break;
 
-            // 如果下一帧会超过目标点，就直接到目标点
-            if (Vector2.Dot(returnTarget - currentPos, returnTarget - nextPos) <= 0f)
-            {
-                MoveTargetTransform.localPosition = returnTarget;
-                isReturning = false;
-                CurrentState = AttackState.Idle;
+            case AttackState.Returning:
+                Vector2 currentPos = (Vector2)MoveTargetTransform.localPosition;
+                Vector2 toTarget = returnTarget - currentPos;
+                float sqrDistance = toTarget.sqrMagnitude;
 
-                if (damageCollider != null)
-                    damageCollider.enabled = false; // 回归结束时关闭碰撞体
-            }
-            else
-            {
-                MoveTargetTransform.localPosition = nextPos;
-            }
+                float threshold = 0.0001f;
+
+                // 如果已经非常接近目标，或下一帧会超过目标，就直接设置到目标点
+                Vector2 move = toTarget.normalized * ReturnSpeed * deltaTime;
+                if (sqrDistance <= threshold || move.sqrMagnitude >= sqrDistance)
+                {
+                    MoveTargetTransform.localPosition = returnTarget;
+                    CurrentState = AttackState.Idle;
+                }
+                else
+                {
+                    MoveTargetTransform.localPosition = currentPos + move;
+                }
+                break;
+
         }
     }
-
 
     public void OnTriggerEnter2D(Collider2D other)
     {
-        // 先尝试自己物体上获取 DamageReceiver
-        if (!other.TryGetComponent<DamageReceiver>(out var receiver))
-        {
-            if (receiver == null) return;
-        }
+        if (!other.TryGetComponent(out DamageReceiver receiver)) return;
 
         var beAttackTeam = other.GetComponentInParent<ITeam>();
         var item = GetComponentInParent<Item>();
-        var belongItem = item != null ? item.BelongItem : null;
-        var belongTeam = belongItem != null ? belongItem.GetComponent<ITeam>() : null;
+        var belongItem = item?.BelongItem;
+        var belongTeam = belongItem?.GetComponent<ITeam>();
 
         if (beAttackTeam != null && belongTeam != null &&
             belongTeam.CheckRelation(beAttackTeam.TeamID) == RelationType.Ally)
-        {
             return;
-        }
 
-        if(item.BelongItem==null)
-        receiver.TakeDamage(Damage.Value,item);
+        if (belongItem == null)
+            receiver.TakeDamage(Damage.Value, item);
         else
-            receiver.TakeDamage(Damage.Value, item.BelongItem);
+            receiver.TakeDamage(Damage.Value, belongItem);
     }
 
-    // 用字段记录是否处于"回归初始位置"的状态和参数
-    private bool isReturning = false;
-    private Vector2 returnTarget;
-
-    private void OnInputActionStarted(InputAction.CallbackContext context)
+    public void OnInputActionStarted(InputAction.CallbackContext context)
     {
-        StartAttack();
+        if (context.started)
+        {
+            StartCoroutine(DelayedCheckUIThenAttack());
+        }
     }
 
-    private void OnInputActionCanceled(InputAction.CallbackContext context)
+    private IEnumerator DelayedCheckUIThenAttack()
     {
-        StopAttack();
+        yield return null; // 延迟到下一帧
+
+        if (!IsPointerOverUI())
+        {
+            StartAttack();
+        }
     }
+
+
+    bool IsPointerOverUI()
+    {
+        if (EventSystem.current == null)
+            return false;
+
+#if UNITY_STANDALONE || UNITY_EDITOR
+        return EventSystem.current.IsPointerOverGameObject(); // 鼠标
+#elif UNITY_ANDROID || UNITY_IOS
+        if (Touchscreen.current != null && Touchscreen.current.touches.Count > 0)
+        {
+            var touch = Touchscreen.current.touches[0];
+            return EventSystem.current.IsPointerOverGameObject(touch.touchId.ReadValue());
+        }
+#endif
+        return false;
+    }
+
+    private void OnInputActionCanceled(InputAction.CallbackContext context) => StopAttack();
+
     [Button]
-    public void StartAttack()
+    public virtual void StartAttack()
     {
-        if (CurrentState == AttackState.Idle)
-        {
-            CurrentState = AttackState.Attacking;
-            StartPosition = MoveTargetTransform.localPosition;
-
-            if (damageCollider != null)
-                damageCollider.enabled = true; // 激活碰撞体
-        }
+        if (CurrentState != AttackState.Idle) return;
+        CurrentState = AttackState.Attacking;
+        StartPosition = MoveTargetTransform.localPosition;
+       damageCollider.enabled = true;
     }
-    public void StopAttack()
+
+    public virtual void StopAttack()
     {
-        if (CurrentState == AttackState.Attacking)
-        {
-            StartReturningToStartPosition(StartPosition, ReturnSpeed);
-
-            if (damageCollider != null)
-                damageCollider.enabled = false; // 关闭碰撞体
-        }
+        if (CurrentState != AttackState.Attacking) return;
+        StartReturningToStartPosition(StartPosition, ReturnSpeed);
+       damageCollider.enabled = false;
     }
+
     [Button]
-    public void CancelAttack()
+    public virtual void CancelAttack()
     {
-        if (CurrentState == AttackState.Attacking)
-        {
-            StartReturningToStartPosition(StartPosition, ReturnSpeed);
-
-            if (damageCollider != null)
-                damageCollider.enabled = false; // 关闭碰撞体
-
-            CurrentState = AttackState.Idle;
-        }
+        if (CurrentState != AttackState.Attacking) return;
+        StartReturningToStartPosition(StartPosition, ReturnSpeed);
+        damageCollider.enabled = false;
+        CurrentState = AttackState.Idle;
     }
-
-
-    public void PerformStab(Vector2 startTarget, float speed, float maxDistance,float deltaTime)
+    public void PerformStab(Vector2 unusedStartPosition, float speed, float maxDistance, float deltaTime)
     {
-        Vector2 mouseTargetLocal = MoveTargetTransform.parent != null ?
-            (Vector2)MoveTargetTransform.parent.InverseTransformPoint(faceMouse.Data.FocusPoint) :
-            (Vector2)faceMouse.Data.FocusPoint;
-
-        Vector2 currentLocalPos = (Vector2)MoveTargetTransform.localPosition;
-
-        Vector2 toTarget = mouseTargetLocal - startTarget;
-        float targetDistance = toTarget.magnitude;
-
-        if (targetDistance > maxDistance)
+        Vector2 startPosition;
+        if (item.transform.parent != null)
         {
-            mouseTargetLocal = startTarget + toTarget.normalized * maxDistance;
-        }
-
-
-        Vector2 direction = (mouseTargetLocal - currentLocalPos).normalized;
-        float distanceToMove = speed * deltaTime;
-        Vector2 newPosition = currentLocalPos + direction * distanceToMove;
-
-        
-
-        float remainingDistance = Vector2.Distance(currentLocalPos, mouseTargetLocal);
-        if (remainingDistance < 0.1f)
-        {
-            float finalDistance = Vector2.Distance(startTarget, mouseTargetLocal);
-            newPosition = finalDistance > maxDistance ?
-                startTarget + (mouseTargetLocal - startTarget).normalized * maxDistance :
-                mouseTargetLocal;
+            startPosition = item.transform.parent.position;
         }
         else
         {
-            float currentDistance = Vector2.Distance(startTarget, newPosition);
-            if (currentDistance > maxDistance)
-            {
-                newPosition = startTarget + (newPosition - startTarget).normalized * maxDistance;
-            }
+            startPosition = transform.parent.position;
         }
 
-        MoveTargetTransform.localPosition = newPosition;
+            Vector2 focusPoint = faceMouse.Data.FocusPoint;
 
-        Debug.DrawLine(
-            MoveTargetTransform.parent.TransformPoint(startTarget),
-            MoveTargetTransform.parent.TransformPoint(newPosition),
-            Color.red
-        );
+        Vector2 swordPos = item.transform.position;
+        Vector2 swordRel = swordPos - startPosition;
+        float swordDist = swordRel.magnitude;
+
+        Vector2 directionVector = focusPoint - startPosition;
+        float mouseDist = directionVector.magnitude;
+
+        float threshold = 0.05f; // 距离阈值，判断剑是否接近圆弧边界
+
+        if (swordDist >= maxDistance - threshold && mouseDist > maxDistance)
+        {
+            // 剑已经接近圆弧边界且鼠标超出攻击范围，使用圆弧移动
+
+            // 当前剑角度
+            float currentAngle = Mathf.Atan2(swordRel.y, swordRel.x);
+
+            // 目标角度（鼠标投影到圆弧上）
+            Vector2 targetOnCircle = startPosition + directionVector.normalized * maxDistance;
+            Vector2 targetRel = targetOnCircle - startPosition;
+            float targetAngle = Mathf.Atan2(targetRel.y, targetRel.x);
+
+            // 角度差（弧度）
+            float angleDiff = Mathf.DeltaAngle(currentAngle * Mathf.Rad2Deg, targetAngle * Mathf.Rad2Deg) * Mathf.Deg2Rad;
+
+            // 最大角速度（rad/s）
+            float maxAngleDelta = speed * deltaTime / maxDistance;
+
+            // 限制移动角度，避免超调
+            float moveAngle = Mathf.Abs(angleDiff) < maxAngleDelta ? angleDiff : Mathf.Sign(angleDiff) * maxAngleDelta;
+
+            float newAngle = currentAngle + moveAngle;
+
+            // 新剑位置
+            Vector2 newPos = startPosition + new Vector2(Mathf.Cos(newAngle), Mathf.Sin(newAngle)) * maxDistance;
+
+            item.transform.position = newPos;
+        }
+        else
+        {
+            // 线性移动，剑尚未到达圆弧边界或鼠标未超出范围
+            Vector2 targetPoint = mouseDist > maxDistance
+                                  ? startPosition + directionVector.normalized * maxDistance
+                                  : focusPoint;
+
+            Vector2 currentPosition = item.transform.position;
+            Vector2 moveDir = (targetPoint - currentPosition).normalized;
+            float moveDist = speed * deltaTime;
+            float remainingDist = Vector2.Distance(currentPosition, targetPoint);
+
+            if (moveDist >= remainingDist)
+                item.transform.position = targetPoint;
+            else
+                item.transform.position = currentPosition + moveDir * moveDist;
+        }
     }
+
+
+
 
     public void StartReturningToStartPosition(Vector2 startTarget, float backSpeed)
     {
-        isReturning = true;
+        CurrentState = AttackState.Returning;
         returnTarget = startTarget;
-        ReturnSpeed = backSpeed; // 注意这里应该是设置saveData中的ReturnSpeed
+        ReturnSpeed = backSpeed;
     }
 
     public override void Save()
     {
-        // 保存saveData到Data
         Data.WriteData(saveData);
-
         if (InputAction != null)
         {
             InputAction.started -= OnInputActionStarted;
@@ -284,10 +276,3 @@ public partial class Mod_ColdWeapon : Module
         }
     }
 }
-/*
-public interface IAttack
-{
-    void StartAttack();
-    void StopAttack();
-    void CancelAttack();
-}*/

@@ -14,6 +14,10 @@ public class GameLightDetector : ActionNode
     public float CurrentSunLightIntensity = 0;
 
     protected override void OnStart() {
+        if (SaveLoadManager.Instance.SaveData.Active_MapData == null)
+        {
+            return;
+        }
         CurrentSunLightIntensity = SaveLoadManager.Instance.SaveData.Active_MapData.SunlightIntensity;
     }
 

@@ -5,23 +5,25 @@ using UltEvents;
 
 namespace TheKiwiCoder
 {
-    public class BehaviourTreeRunner : MonoBehaviour
+    public class BehaviourTreeRunner : Module
     {
         public BehaviourTree tree;
-        public Item item;
         Context context;
 
         private bool isRunning = true; // 控制行为树运行
+        public Ex_ModData_MemoryPackable ModData;
+        public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
 
-        void Awake()
+        public override void Awake()
         {
-            item.OnModuleLoadDone+=InitTree;
-      
+            if (_Data.ID == "")
+            {
+                _Data.ID = gameObject.name;
+            }
         }
 
         void InitTree()
         {
-            GetComponent<Item>().OnItemDestroy += StopTree;
             context = CreateBehaviourTreeContext();
             tree = tree.Clone();
             tree.Bind(context);
@@ -45,7 +47,7 @@ namespace TheKiwiCoder
 
         Context CreateBehaviourTreeContext()
         {
-            return Context.CreateFromGameObject(gameObject);
+            return Context.CreateFromGameObject(item.gameObject);
         }
 
         public void StopTree()
@@ -71,6 +73,16 @@ namespace TheKiwiCoder
                     n.OnDrawGizmos();
                 }
             });
+        }
+
+        public override void Load()
+        {
+            InitTree();
+        }
+
+        public override void Save()
+        {
+            StopTree();
         }
     }
 }

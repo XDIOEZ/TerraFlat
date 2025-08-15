@@ -1,3 +1,4 @@
+using DG.Tweening;
 using NaughtyAttributes;
 using System.Collections;
 using UltEvents;
@@ -20,6 +21,9 @@ public class AttackTrigger : Module
     public GameValue_float RotationSpeed;
 
     bool HitStop = false;
+
+    TurnBody TrunBody;
+
 
     #region 攻击行为的状态参数
     public Vector2 StartPosition; // 保存初始位置
@@ -46,16 +50,31 @@ public class AttackTrigger : Module
 
     public override void Load()
     {
-        StaminaManager staminaManager = transform.parent.GetComponentInChildren<StaminaManager>();
-        if (staminaManager != null)
-        {
-            // 使用EffectiveStaminaCost保证武器数据更新时精力消耗值也跟着更新
-            OnStartAttack += () => staminaManager.StartReduceStamina(WeaponData.EnergyCostSpeed, "AttackTrigger");
-            OnEndAttack += () => staminaManager.StopReduceStamina("AttackTrigger");
-            staminaManager.OnStaminaChanged += SetCanAttack; // 注册精力值变化事件
-        }
+         TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody;
+        TrunBody.OnTrun += ToOtherDirection;
     }
 
+    [SerializeField] private float xOffset = 0.5f;
+    public void ToOtherDirection(Vector2 direction)
+    {
+        float sign = Mathf.Sign(direction.x);
+
+        // 目标 x 位置：根据左右方向决定偏移值
+        float targetX = xOffset * sign;
+
+        // 平滑移动武器的本地 x 坐标
+        Vector3 currentLocalPos = transform.localPosition;
+        Vector3 targetLocalPos = new Vector3(targetX, currentLocalPos.y, currentLocalPos.z);
+
+        // 动画移动（0.15秒，缓出）
+        transform.DOLocalMoveX(targetLocalPos.x, 0.15f).SetEase(Ease.OutSine);
+    }
+
+
+
+    public override void Action(float deltaTime)
+    {
+    }
     public void SetWeapon(Item _weapon)
     {
         Weapon = _weapon;
@@ -291,6 +310,8 @@ public class AttackTrigger : Module
     public override void Save()
     {
         //throw new System.NotImplementedException();
+        //在此处清除Dowten的使用
+        DOTween.Kill(transform);
     }
     #endregion
 

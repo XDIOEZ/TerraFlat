@@ -91,14 +91,17 @@ public class Mod_HandMade : Module
         var itemsToAdd = new List<ItemData>();
         foreach (var output in recipe.outputs.results)
         {
-            var prefab = GameRes.Instance.AllPrefabs[output.resultItem];
+            var prefab = GameRes.Instance.AllPrefabs[output.item];
             if (prefab == null)
             {
-                Debug.LogError($"预制体不存在：{output.resultItem}（配方：{recipe.name}）");
+                Debug.LogError($"预制体不存在：{output.item}（配方：{recipe.name}）");
                 return false;
             }
-            ItemData newItem = prefab.GetComponent<Item>().DeepClone().itemData;
-            newItem.Stack.Amount = output.resultAmount;
+            Item item = prefab.GetComponent<Item>();
+            item.IsPrefabInit();
+
+            ItemData newItem = item.itemData.DeepClone();
+            newItem.Stack.Amount = output.amount;
             itemsToAdd.Add(newItem);
         }
 

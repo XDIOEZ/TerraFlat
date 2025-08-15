@@ -49,7 +49,7 @@ public class ItemDroper : Mod_ItemDrop
            else if (Hotbar.currentObject != null)
             {
                 DropItemBySlot(Hotbar.CurrentSelectItemSlot);
-                Hotbar.DestroyCurrentObject();
+                Hotbar.DestroyCurrentObject(Hotbar.CurentSelectItem);
             }
             else
             {

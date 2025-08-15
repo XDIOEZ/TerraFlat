@@ -315,6 +315,10 @@ public partial class Mod_Food : Module
                 Data.PanelPosition = s.rectTransform.anchoredPosition;
             }
         }
+        //TODO 将Transform从Dotween中恢复
+        DOTween.Kill(item.transform); // 终止所有与该对象相关的 tween（如果存在）
+
         ExData.WriteData(Data);
+        
     }
 }

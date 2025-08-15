@@ -57,9 +57,6 @@ public class ItemMods
 
     public void RemoveMod(Module mod)
     {
-        if (mod == null || string.IsNullOrEmpty(mod._Data.Name) || string.IsNullOrEmpty(mod._Data.ID))
-            return;
-
         // ´Ó Mods ÖÐÒÆ³ý
         Mods.Remove(mod._Data.Name);
 

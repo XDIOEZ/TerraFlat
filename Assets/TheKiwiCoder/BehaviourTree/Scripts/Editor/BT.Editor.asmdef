@@ -2,7 +2,8 @@
     "name": "BT.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:fbead5203dee18b47b1474a00239042f"
+        "GUID:fbead5203dee18b47b1474a00239042f",
+        "GUID:0994f0b99b69bfe47a086609b9a07e33"
     ],
     "includePlatforms": [
         "Editor"
