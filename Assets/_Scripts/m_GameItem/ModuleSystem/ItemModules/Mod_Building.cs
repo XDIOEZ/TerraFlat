@@ -41,7 +41,10 @@ public class Mod_Building : Module
     {
         BuildingData.ReadData(ref Data);
         boxCollider2D = item.GetComponentInChildren<BoxCollider2D>();
-        damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID(ModText.Hp);
+
+        if(damageReceiver == null)
+        damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID    (ModText.Hp);
+
         damageReceiver.OnAction += OnHit;
         item.OnAct += Install;
     }
@@ -96,7 +99,7 @@ public class Mod_Building : Module
         {
             UnInstall();
         }
-        Debug.Log("…À∫¶£∫" + hp);
+       // Debug.Log("…À∫¶£∫" + hp);
     }
     #endregion
 

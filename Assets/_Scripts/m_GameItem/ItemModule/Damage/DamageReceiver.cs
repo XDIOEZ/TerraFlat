@@ -143,8 +143,8 @@ public class DamageReceiver : Module
     public void ShowPanle()
     {
         if (PanleInstance != null) return;
-
-        GameObject panel = Instantiate(PanelPrefab, transform);
+        if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
+        GameObject panel = Instantiate(PanelPrefab,transform);
         UIValues = panel.GetComponentInChildren<UI_FloatData_Text>();
         panel.transform.position = transform.position + Vector3.up * 1f;
         PanleInstance = panel;
@@ -175,6 +175,7 @@ public class DamageReceiver : Module
     public void HidePanle()
     {
         if (PanleInstance == null) return;
+        if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
 
         // ✅ 从 UI_Drag 中获取 rectTransform 并保存位置
         var s = PanleInstance.GetComponentInChildren<UI_Drag>();

@@ -205,7 +205,7 @@ public class PlayerController : Module
         //¼àÌýÊó±ê
        // win10.Mouse.performed += PlayerTakeItem_FaceMouse;
         //¼àÌýÊó±ê¹öÂÖ
-        win10.MouseScroll.performed += SwitchHotbarByScroll;
+  
         //¼àÌýCtrl¼ü
         win10.Ctrl.started += (InputAction.CallbackContext context) => { CtrlIsDown = true; };
         win10.Ctrl.canceled += (InputAction.CallbackContext context) => { CtrlIsDown = false; };
@@ -302,25 +302,25 @@ public class PlayerController : Module
     #endregion*/
     #region Í¨¹ý¹öÂÖÇÐ»»¿ì½ÝÀ¸
 
-    private void SwitchHotbarByScroll(InputAction.CallbackContext context)
-    {
-        if (Hotbar == null) return;
-        if (CtrlIsDown)
-        {
-            return;
-        }
-        Vector2 scrollValue = context.ReadValue<Vector2>();
-        //Debug.Log(scrollValue);
-        if (scrollValue.y > 0)
-        {
-            //Debug.Log(Hotbar.CurrentIndex);
-            Hotbar.ChangeSelectBoxPosition(Hotbar.CurrentIndex - 1);
-        }
-        else if (scrollValue.y < 0)
-        {
-            Hotbar.ChangeSelectBoxPosition(Hotbar.CurrentIndex + 1);
-        }
-    }
+    //private void SwitchHotbarByScroll(InputAction.CallbackContext context)
+    //{
+    //    if (Hotbar == null) return;
+    //    if (CtrlIsDown)
+    //    {
+    //        return;
+    //    }
+    //    Vector2 scrollValue = context.ReadValue<Vector2>();
+    //    //Debug.Log(scrollValue);
+    //    if (scrollValue.y > 0)
+    //    {
+    //        //Debug.Log(Hotbar.CurrentIndex);
+    //        Hotbar.ChangeSelectBoxPosition(Hotbar.CurrentIndex - 1);
+    //    }
+    //    else if (scrollValue.y < 0)
+    //    {
+    //        Hotbar.ChangeSelectBoxPosition(Hotbar.CurrentIndex + 1);
+    //    }
+    //}
     #endregion
     #region ¿ª¹Ø±³°ü
 

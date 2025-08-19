@@ -1,5 +1,8 @@
 using DG.Tweening;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 public class Inventory_HotBar : Inventory
@@ -54,6 +57,8 @@ public class Inventory_HotBar : Inventory
     {
         Belong_Item.GetComponent<PlayerController>()._inputActions.Win10.RightClick.performed 
             += _ => Controller_ItemAct();
+
+        Belong_Item.GetComponent<PlayerController>()._inputActions.Win10.MouseScroll.started += SwitchHotbarByScroll;
     }
     
     //激活手持物品行为
@@ -71,20 +76,43 @@ public class Inventory_HotBar : Inventory
         // 同步 UI
         RefreshUI(CurrentIndex);
     }
-    private void SwitchHotbar(InputAction.CallbackContext context)
+
+
+    private void SwitchHotbarByScroll(InputAction.CallbackContext context)
     {
-        if (context.control.device is Keyboard keyboard)
+        if (IsPointerOverUI())
         {
-            if (int.TryParse(context.control.displayName, out int keyNumber))
-            {
-                int targetIndex = keyNumber - 1;
-                if (targetIndex != CurrentIndex)
-                {
-                    ChangeSelectBoxPosition(targetIndex);
-                    return;
-                }
-            }
+        //    Debug.Log("鼠标在UI上");
+            return;
         }
+        else
+        {
+       //     Debug.Log("鼠标不在UI上");
+        }
+
+        Vector2 scrollValue = context.ReadValue<Vector2>();
+       // Debug.Log(scrollValue);
+
+        if (scrollValue.y > 0)
+        {
+            ChangeSelectBoxPosition(CurrentIndex - 1);
+        }
+        else if (scrollValue.y < 0)
+        {
+            ChangeSelectBoxPosition(CurrentIndex + 1);
+        }
+    }
+
+    private bool IsPointerOverUI()
+    {
+        PointerEventData eventData = new PointerEventData(EventSystem.current)
+        {
+            position = Mouse.current.position.ReadValue() // 新输入系统获取鼠标位置
+        };
+
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventData, results);
+        return results.Count > 0;
     }
 
     public void ChangeSelectBoxPosition(int newIndex)

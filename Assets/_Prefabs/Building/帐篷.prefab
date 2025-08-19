@@ -44,13 +44,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: adaabab31acb6d541867e2b52536d81e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  item: {fileID: 0}
+  item: {fileID: -5184887567455039970}
   _data:
     Name: 
-    ID: 
+    ID: "\u573A\u666F\u6A21\u5757"
     isRunning: 1
     Type: 0
-    BitData: 
+    BitData: 05000000000003000000000000000000000000000000000000000000
   _sceneAsset: {fileID: 4900000, guid: 8ac3cd305127ad441858f6e40b10b293, type: 3}
   Data:
     SceneName: 
@@ -59,6 +59,7 @@ MonoBehaviour:
       MapName: 
       SunlightIntensity: 0
     PlayerPos: {x: 0, y: 0}
+    Encapsulation: 0
   PlayerPosOffset: {x: 0, y: 1}
 --- !u!1 &2964280152372893211
 GameObject:
@@ -218,7 +219,7 @@ MonoBehaviour:
       - None
     Stack:
       Amount: 1
-      Volume: 1
+      Volume: 2
       CanBePickedUp: 1
     _transform:
       Position: {x: 0, y: 0, z: 0}
@@ -284,6 +285,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757"
       objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: item
+      value: 
+      objectReference: {fileID: -5184887567455039970}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.Hp
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: modData.Name
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: modData.BitData
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -324,22 +341,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4890933514158232767, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Size.x
-      value: 0.5778488
-      objectReference: {fileID: 0}
-    - target: {fileID: 4890933514158232767, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Size.y
-      value: 0.56849295
-      objectReference: {fileID: 0}
-    - target: {fileID: 4890933514158232767, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Offset.x
-      value: 0.016622111
-      objectReference: {fileID: 0}
-    - target: {fileID: 4890933514158232767, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Offset.y
-      value: -0.03546557
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -369,38 +370,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8937692265407610597}
     m_Modifications:
-    - target: {fileID: 4760340190715897003, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
-      propertyPath: m_Size.x
-      value: 1.7375422
-      objectReference: {fileID: 0}
-    - target: {fileID: 4760340190715897003, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
-      propertyPath: m_Size.y
-      value: 1.2043788
-      objectReference: {fileID: 0}
-    - target: {fileID: 4760340190715897003, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
-      propertyPath: m_Offset.x
-      value: 0.022215366
-      objectReference: {fileID: 0}
-    - target: {fileID: 4760340190715897003, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
-      propertyPath: m_Offset.y
-      value: -0.47096053
-      objectReference: {fileID: 0}
-    - target: {fileID: 4760340190715897003, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
-      propertyPath: m_IsTrigger
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 5391927010126263884, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
-      propertyPath: FastTest._PersistentCalls.Array.size
-      value: 1
+      propertyPath: item
+      value: 
+      objectReference: {fileID: -5184887567455039970}
+    - target: {fileID: 5391927010126263884, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
+      propertyPath: modData.Name
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 5391927010126263884, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
       propertyPath: FastTest._PersistentCalls.Array.data[0]._Target
       value: 
       objectReference: {fileID: 3581128755899072249}
-    - target: {fileID: 5391927010126263884, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
-      propertyPath: FastTest._PersistentCalls.Array.data[0]._MemberName
-      value: Test
-      objectReference: {fileID: 0}
     - target: {fileID: 7141661056424059175, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
       propertyPath: m_Name
       value: "\u4EA4\u4E92\u6A21\u7EC4"
@@ -464,12 +445,28 @@ PrefabInstance:
     m_TransformParent: {fileID: 8937692265407610597}
     m_Modifications:
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: item
+      value: 
+      objectReference: {fileID: -5184887567455039970}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: boxCollider2D
+      value: 
+      objectReference: {fileID: 7595501820574997015}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: damageReceiver
       value: 
       objectReference: {fileID: 8355309450763203537}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: BuildingData.ID
       value: "\u5EFA\u7B51\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: BuildingData.Name
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: BuildingData.BitData
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

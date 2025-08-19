@@ -98,9 +98,15 @@ public class Mod_HandMade : Module
                 return false;
             }
             Item item = prefab.GetComponent<Item>();
+            var itemdata = item.itemData;
+            item.itemData = item.itemData.DeepClone();
+
             item.IsPrefabInit();
 
-            ItemData newItem = item.itemData.DeepClone();
+            ItemData newItem = item.itemData;
+            item.itemData = itemdata;
+
+
             newItem.Stack.Amount = output.amount;
             itemsToAdd.Add(newItem);
         }

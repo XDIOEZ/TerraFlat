@@ -90,7 +90,7 @@
                     "name": "MouseScroll",
                     "type": "Value",
                     "id": "f6e319e7-656a-4fa8-bf35-d34411cbf865",
-                    "expectedControlType": "",
+                    "expectedControlType": "Vector2",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true

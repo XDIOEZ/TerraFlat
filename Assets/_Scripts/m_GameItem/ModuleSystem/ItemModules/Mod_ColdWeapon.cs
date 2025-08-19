@@ -150,14 +150,14 @@ public partial class Mod_ColdWeapon : Module
 
 #if UNITY_STANDALONE || UNITY_EDITOR
         return EventSystem.current.IsPointerOverGameObject(); // 鼠标
-#elif UNITY_ANDROID || UNITY_IOS
-        if (Touchscreen.current != null && Touchscreen.current.touches.Count > 0)
-        {
-            var touch = Touchscreen.current.touches[0];
-            return EventSystem.current.IsPointerOverGameObject(touch.touchId.ReadValue());
-        }
+        /*#elif UNITY_ANDROID || UNITY_IOS
+                if (Touchscreen.current != null && Touchscreen.current.touches.Count > 0)
+                {
+                    var touch = Touchscreen.current.touches[0];
+                    return EventSystem.current.IsPointerOverGameObject(touch.touchId.ReadValue());
+                }*/
 #endif
-        return false;
+        /*  return false;*/
     }
 
     private void OnInputActionCanceled(InputAction.CallbackContext context) => StopAttack();

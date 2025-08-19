@@ -57,6 +57,7 @@ public static class ModText
     #region S
     public static string Smelting = "熔炼模块";
     public static string Stamina = "精力模块";
+    public static string Space = "空间模块";
     #endregion
 
     #region T

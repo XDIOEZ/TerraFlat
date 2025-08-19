@@ -24,6 +24,15 @@ public class Mod_Scene : Module
     public TextAsset _sceneAsset;
     public SceneData Data;
     public Vector2 PlayerPosOffset;
+
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Space;
+        }
+    }
+
     public override void Load()
     {
         _data.ReadData(ref Data);
@@ -35,7 +44,17 @@ public class Mod_Scene : Module
         {
             mod_Building.StartUnInstall += UnInstall;
         }
-        if (CurrentMapSave != null)
+
+        if (Data.IsInit == false)
+        {
+            Data.MapSave = MemoryPackSerializer.Deserialize<MapSave>(_sceneAsset.bytes);
+            Debug.Log(Data.MapSave.MapName + "初始化完成");
+            Data.MapSave.MapName += "_";
+            Data.MapSave.MapName += Random.Range(1, 1000000).ToString();
+            Data.IsInit = true;
+        }
+
+        if (CurrentMapSave != null && CurrentMapSave.MapName == Data.MapSave.MapName)
         {
             Data.MapSave = CurrentMapSave;
             CurrentMapSave = null;
@@ -43,6 +62,8 @@ public class Mod_Scene : Module
     }
     public void UnInstall()
     {
+        SaveLoadManager.Instance.SaveData.Active_PlanetData.MapData_Dict.Remove(Data.MapSave.MapName);
+
         if (Data.Encapsulation == true)
         {
             return;
@@ -70,6 +91,7 @@ public class Mod_Scene : Module
 
             // 从保存数据中移除该类别
             Data.MapSave.items.Remove(itemListKV.Key);
+           
         }
 
         Debug.Log("屋子内部物品已全部实例化并从 MapSave 移除");
@@ -80,13 +102,6 @@ public class Mod_Scene : Module
     [Button]
     public void Test()
     {
-            if(Data.IsInit == false) 
-            {
-                Data.MapSave = MemoryPackSerializer.Deserialize<MapSave>(_sceneAsset.bytes);
-                Debug.Log(Data.MapSave.MapName+"初始化完成");
-             Data.IsInit = true;
-            }
-
         Data.MapSave.items["MapEdge"].ForEach(item =>
         {
             Data_Boundary boundary = item as Data_Boundary;
@@ -94,12 +109,6 @@ public class Mod_Scene : Module
             boundary.TP_SceneName = SaveLoadManager.Instance.SaveData.Active_MapName;
             Data.PlayerPos = boundary._transform.Position;
         });
-
-        if(CurrentMapSave!= null)
-        {
-            Data.MapSave = CurrentMapSave;
-            CurrentMapSave = null;
-        }
 
         SaveLoadManager.Instance.SaveActiveMapToSaveData();
         SaveLoadManager.Instance.ChangeTOMapByMapSave(Data.MapSave);

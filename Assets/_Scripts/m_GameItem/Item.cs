@@ -66,27 +66,28 @@ public abstract class Item : MonoBehaviour
 
     public void IsPrefabInit()
     {
-        if (itemData.Guid == 0)
-        {
+
             // 自动生成Guid
-            itemData.Guid = Guid.NewGuid().GetHashCode();
-        }
+        itemData.Guid = Guid.NewGuid().GetHashCode();
 
         var modules = GetComponentsInChildren<Module>(true).ToList();
 
-        foreach (var mod in modules)
+            foreach (var mod in modules)
             {
-                if (string.IsNullOrWhiteSpace(mod._Data.Name))
-                    mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
-
+              /*  if (string.IsNullOrWhiteSpace(mod._Data.Name))*/
+                mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
                 itemMods.AddMod(mod);
-                itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
             }
 
-            // 所有模块加入Mods后统一初始化
+             foreach (var mod in Mods.Values)
+             {
+                 mod._Data = mod._Data.DeepClone();
+                 itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
+             }
+             // 所有模块加入Mods后统一初始化
             foreach (var mod in Mods.Values)
             {
-                mod.ModuleInit(this, null);
+                mod.ModuleInit(this,null);
             }
             foreach (var mod in Mods.Values)
             {

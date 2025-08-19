@@ -88,7 +88,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
             if (item.itemData.Guid ==0)
                 item.itemData.Guid = System.Guid.NewGuid().GetHashCode();
 
-            RunTimeItems.Add(item.itemData.Guid, item);
+            RunTimeItems[item.itemData.Guid] = item;
             AddToGroup(item); // 新增分组逻辑
         }
         return item;
