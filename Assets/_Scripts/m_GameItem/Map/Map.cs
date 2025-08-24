@@ -14,16 +14,18 @@ public class Map : Item, ISave_Load
     #region 属性和字段
     [Header("地图配置")]
     [SerializeField]
-    public Data_TileMap Data;
+    public Data_TileMap Data = new Data_TileMap();
 
     [Header("Tilemap 组件")]
     [SerializeField]
     public Tilemap tileMap;
 
     public UltEvent OnMapGenerated_Start;
-    public UltEvent OnMapGenerated_Stop;
 
     public NavMeshModifierTilemap navigationModiferTileMap;
+
+    public GameObject ParentObject;
+
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData itemData { get => Data; set => Data = value as Data_TileMap; }
@@ -32,7 +34,11 @@ public class Map : Item, ISave_Load
     #region 基类方法实现
     public override void Act()
     {
-        throw new System.NotImplementedException();
+        if (Data.TileLoaded == false)
+        {
+            OnMapGenerated_Start.Invoke();
+        }
+        LoadTileData_To_TileMap();
     }
     #endregion
 
@@ -40,7 +46,7 @@ public class Map : Item, ISave_Load
     [Button("从数据加载地图")]
     public void Load()
     {
-        LoadTileData();
+        LoadTileData_To_TileMap();
     }
 
     //不需要保存数据 因为游戏中的所有对地图的行为 直接影响背后数据
@@ -50,23 +56,18 @@ public class Map : Item, ISave_Load
         // 只有 tileMapData 为空或其 TileData 为空时才初始化数据
         if (Data == null || Data.TileData == null || Data.TileData.Count == 0)
         {
-            InitTileData();
+            SaveTileMap_TO_TileData();
         }
     }
 
     public new void Start()
     {
         base.Start();
-        Save();
-        LoadTileData();
-        if (Data.TileCount <=0)
-        {
-         //  if(tileMap.)
-            OnMapGenerated_Start.Invoke();
-        }
+
+        LoadTileData_To_TileMap();
     }
 
-    public void LoadTileData()
+    public void LoadTileData_To_TileMap()
     {
         if (Data.TileData == null || Data.TileData.Count == 0)
         {
@@ -93,13 +94,12 @@ public class Map : Item, ISave_Load
 
             tileMap.SetTile(position3D, tile);
         }
-        OnMapGenerated_Stop.Invoke();
        // Debug.Log("多层 TileData 已加载到 Tilemap 中");
     }
     #endregion
 
     #region 数据初始化
-    public void InitTileData()
+    public void SaveTileMap_TO_TileData()
     {
         if (tileMap == null)
         {

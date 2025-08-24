@@ -132,24 +132,23 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// This method calculates the edge's position and size in the world and sets its teleportation target scene name.
     /// </summary>
     /// <param name="direction">边界方向（上/下/左/右）</param>
-    public void SetupMapEdge(Vector2Int direction)
+    public void SetupMapEdge(Vector2Int direction,Vector2 mapPos)
     {
         // 确保保存管理器和保存数据可用
-        if (SaveLoadManager.Instance?.SaveData == null)
+        if (SaveDataManager.Instance?.SaveData == null)
         {
             Debug.LogError("[WorldEdge] 保存数据不可用");
             return;
         }
 
         data.Boundary_Position = direction; // 记录边界的方向
-        var saveData = SaveLoadManager.Instance.SaveData; // 获取保存数据
-        Vector2Int mapPos = saveData.Active_MapPos; // 当前地图的左下角位置
-        Vector2 mapSize = saveData.MapSize; // 当前地图的大小
+        var saveData = SaveDataManager.Instance.SaveData; // 获取保存数据
+        Vector2 mapSize = saveData.ChunkSize; // 当前地图的大小
         float worldRadius = saveData.Active_PlanetData.Radius; // 当前星球的半径，用于世界环绕逻辑
 
         Vector2 mapCenter = mapPos + mapSize * 0.5f; // 计算当前地图的中心点
-        // 计算目标地图位置，考虑世界环绕
-        Vector2Int targetPos = WrapAroundWorld(mapPos + direction * Vector2Int.RoundToInt(mapSize), worldRadius);
+                                                     // Fix for CS1503: Convert Vector2 to Vector2Int using Vector2Int.RoundToInt
+        Vector2Int targetPos = WrapAroundWorld(Vector2Int.RoundToInt(mapPos + direction * Vector2Int.RoundToInt(mapSize)), worldRadius);
         TPTOSceneName = targetPos.ToString(); // 将目标地图位置转换为场景名称
 
         const float thickness = 1f; // 边界的厚度
@@ -162,7 +161,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
         transform.localScale = scale; // 设置边界的游戏对象缩放
         transform.rotation = Quaternion.identity; // 保持旋转为0
     }
-
+/*
     /// <summary>
     /// 生成所有方向的地图边界。
     /// Generates map edges for all cardinal directions (up, down, left, right).
@@ -191,7 +190,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
         }
 
         Debug.Log("[WorldEdge] 边界生成完成"); // 记录边界生成完成信息
-    }
+    }*/
 
     #endregion
 
@@ -207,7 +206,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <returns>目标场景名称，如果未找到则返回null</returns>
     private string ExtractTargetSceneName(string currentScene)
     {
-        var saveData = SaveLoadManager.Instance?.SaveData;
+        var saveData = SaveDataManager.Instance?.SaveData;
         // 如果保存数据为空或不包含当前场景，则返回null
         if (saveData == null || !saveData.Scenen_Building_Name.ContainsKey(currentScene))
         {
@@ -231,11 +230,9 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <param name="interacter">交互者 (通常是玩家)</param>
     public void Interact_Start(IInteracter interacter = null)
     {
-        if(Mod_Scene.CurrentMapSave==null)
-        Mod_Scene.CurrentMapSave = SaveLoadManager.Instance.SaveActiveScene_Map(); // 保存当前地图数据
         var player = interacter?.User; // 获取交互者 (玩家)
 
-        var saveData = SaveLoadManager.Instance.SaveData; // 获取保存数据
+        var saveData = SaveDataManager.Instance.SaveData; // 获取保存数据
         float worldRadius = saveData.Active_PlanetData.Radius; // 获取星球半径
         // 将目标场景名称解析为地图坐标
         Vector2Int targetMapPos = ParseSceneNameToMapPos(TPTOSceneName);
@@ -243,7 +240,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
         // 计算玩家进入新场景的精确位置
         Vector2 entryPos2D = CalculateWrappedEntryPosition(player, data.Boundary_Position, targetMapPos);
         // 对最终位置进行世界环绕处理
-        Vector2 wrappedPos = WrapAroundWorldFloat(playerEnterPos:entryPos2D, Direction: data.Boundary_Position, worldRadius, targetMapPos: targetMapPos,MapSize: saveData.MapSize);
+        Vector2 wrappedPos = WrapAroundWorldFloat(playerEnterPos:entryPos2D, Direction: data.Boundary_Position, worldRadius, targetMapPos: targetMapPos,MapSize: saveData.ChunkSize);
         // 设置玩家的新位置 (Z轴保持不变)
         player.transform.position = new Vector3(wrappedPos.x, wrappedPos.y, player.transform.position.z);
 
@@ -254,8 +251,14 @@ public class WorldEdge : Item, ISave_Load, IInteract
             player.transform.position = data.TP_Position; // 如果有设置传送位置，则直接设置玩家位置
         }
 
-        SaveLoadManager.Instance.ChangeScene(TPTOSceneName); // 切换到目标场景
+       // GameChunkManager.Instance.ChangeChunk(TPTOSceneName,LastScene:transform.parent.gameObject.Ge); // 切换到目标场景
     }
+/*
+    public void OnTriggerEnter2D(Collider2D collision)
+    {
+        if(collision.GetComponent<IInteracter>()!= null)
+        Interact_Start(collision.GetComponent<IInteracter>()); // 调用交互开始方法
+    }*/
 
     public void Interact_Update(IInteracter interacter = null) { } // 交互更新（此处未实现具体功能）
     public void Interact_Cancel(IInteracter interacter = null) { } // 交互取消（此处未实现具体功能）
@@ -406,7 +409,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <returns>偏移量</returns>
     private Vector2 CalculateOffsetFromEdge(GameObject player, Vector2 direction)
     {
-        var saveData = SaveLoadManager.Instance.SaveData;
+        var saveData = SaveDataManager.Instance.SaveData;
         // 计算玩家在当前地图内的局部位置
         Vector2 localPos = (Vector2)player.transform.position - saveData.Active_MapPos;
         // 如果是垂直边界，只保留X轴偏移；如果是水平边界，只保留Y轴偏移
@@ -425,9 +428,9 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <returns>玩家在新场景中的进入位置</returns>
     private Vector2 CalculateWrappedEntryPosition(GameObject player, Vector2 direction, Vector2 targetMapPos)
     {
-        var saveData = SaveLoadManager.Instance.SaveData;
+        var saveData = SaveDataManager.Instance.SaveData;
 
-        Vector2 mapSize = saveData.MapSize;
+        Vector2 mapSize = saveData.ChunkSize;
 
         // 计算玩家相对于当前边界的偏移量
         Vector2 offset = CalculateOffsetFromEdge(player, direction);

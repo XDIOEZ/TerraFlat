@@ -19,7 +19,7 @@ public class GameWorldSceneManager : SingletonAutoMono<GameWorldSceneManager>
         SceneManager.LoadScene(NewSceneName);
         //新场景加载完毕后从SaveAndLoad 中读取存档数据
         string currentSceneName = SceneManager.GetActiveScene().name;
-        SaveLoadManager.Instance.LoadMap(NewSceneName);
+       // SaveLoadManager.Instance.LoadMap(NewSceneName);
     }
 
 }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Force.DeepCloner;
 using UltEvents;
 using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
+using Codice.Client.BaseCommands;
 
 /// <summary>
 /// 随机地图生成器：基于噪声与生物群系（Biome）
@@ -19,7 +20,7 @@ public class RandomMapGenerator : MonoBehaviour
     public Map map;  // 地图管理对象，包含 TileData 和 Tilemap 引用
 
     [ShowInInspector]
-    public PlanetData plantData => SaveLoadManager.Instance.SaveData.Active_PlanetData;
+    public PlanetData plantData => SaveDataManager.Instance.SaveData.Active_PlanetData;
 
     [Tooltip("赤道坐标")]
     public float Equator = 0;
@@ -30,7 +31,7 @@ public class RandomMapGenerator : MonoBehaviour
 
     [Header("性能选项")]
     [Tooltip("每帧生成的最大地块数 (0=全部立即生成)")]
-    public int tilesPerFrame = 100;
+    public int tilesPerFrame = 1;
 
     [Header("边界连接")]
     [Tooltip("是否启用与相邻地图区域的无缝对接")]
@@ -40,25 +41,21 @@ public class RandomMapGenerator : MonoBehaviour
     [Range(1, 20)]
     [Tooltip("用于无缝连接时的边界混合宽度（格子数）")]
     public int transitionRange = 5;
-
-    [Header("完成事件")]
-    [Tooltip("地图完全生成后触发的事件，可在 Inspector 挂接自定义响应")]
-    public UltEvent onMapGenerated = new UltEvent();
-
     //Debug使用
     public Dictionary<Vector2Int,Color> ColorDicitionary  = new ();
+
     #endregion
 
     #region 内部变量
     /// <summary>
     /// 地图种子，字符串形式，从存档读取
     /// </summary>
-    private int Seed => SaveLoadManager.Instance.SaveData.Seed;
+    private int Seed => SaveDataManager.Instance.SaveData.Seed;
 
-    public float PlantRadius { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.Radius;}
-    public float Temp { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.TemperatureOffset; }
-    public float LandOceanRatio { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.OceanHeight;}
-    public float NoiseScale { get => SaveLoadManager.Instance.SaveData.Active_PlanetData.NoiseScale;  }
+    public float PlantRadius { get => SaveDataManager.Instance.SaveData.Active_PlanetData.Radius;}
+    public float Temp { get => SaveDataManager.Instance.SaveData.Active_PlanetData.TemperatureOffset; }
+    public float LandOceanRatio { get => SaveDataManager.Instance.SaveData.Active_PlanetData.OceanHeight;}
+    public float NoiseScale { get => SaveDataManager.Instance.SaveData.Active_PlanetData.NoiseScale;  }
 
     /// <summary>
     /// 系统级可复现随机实例，用于资源生成
@@ -72,13 +69,10 @@ public class RandomMapGenerator : MonoBehaviour
     #endregion
 
     #region Unity生命周期
-    private void Start()
-    {
-        rng = new System.Random(SaveLoadManager.Instance.SaveData.Seed);
-    }
     public void Awake()
     {
-        map.OnMapGenerated_Start += GenerateRandomMap;
+        RandomMapGenerator.rng = new System.Random(SaveDataManager.Instance.SaveData.Seed);
+        map.OnMapGenerated_Start += GenerateRandomMap_TileData;
     }
 #if UNITY_EDITOR
     private void OnDrawGizmos()
@@ -86,7 +80,7 @@ public class RandomMapGenerator : MonoBehaviour
         if (map == null || map.Data == null) return;
 
         Vector2Int startPos = map.Data.position;
-        Vector2Int size = SaveLoadManager.Instance.SaveData.MapSize;
+        Vector2Int size = SaveDataManager.Instance.SaveData.ChunkSize;
         Vector3 center = new Vector3(startPos.x + size.x / 2f, startPos.y + size.y / 2f, 0f);
         Vector3 size3D = new Vector3(size.x, size.y, 0.1f);
 
@@ -94,23 +88,6 @@ public class RandomMapGenerator : MonoBehaviour
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(center, size3D);
 
-
-        //根据ColorDicitionary 显示颜色
-        // 绘制颜色块（根据ColorDictionary）
-/*
-        foreach (var kvp in ColorDicitionary)
-        {
-            Vector2Int cellPos = kvp.Key;
-            Color cellColor = kvp.Value;
-
-            // 计算世界坐标（假设每个单元格为1x1单位）
-            Vector3 worldPos = new Vector3(startPos.x + cellPos.x, startPos.y + cellPos.y, 0f);
-
-            // 设置颜色并绘制立方体
-            Gizmos.color = cellColor;
-            Gizmos.DrawCube(worldPos, new Vector3(1f, 1f, 0.1f));
-        }*/
-        // 可选：显示地图信息（不带背景色）
         UnityEditor.Handles.Label(center,
             $"Map:{startPos}\nSize:{size}",
             new GUIStyle { alignment = TextAnchor.MiddleCenter });
@@ -120,7 +97,7 @@ public class RandomMapGenerator : MonoBehaviour
 
     #region 地图生成主逻辑
     [Button("生成随机地图")]
-    public void GenerateRandomMap()
+    public void GenerateRandomMap_TileData()
     {
         if (map == null)
         {
@@ -128,24 +105,28 @@ public class RandomMapGenerator : MonoBehaviour
             return;
         }
 
-      
-
         ClearMap();
 
-        map.Data.position = SaveLoadManager.Instance.SaveData.Active_MapPos;
+
+        // Fix for CS0029: Convert Vector3 to Vector2Int explicitly using Vector3Int.RoundToInt and then accessing x and y properties.
+        map.Data.position = new Vector2Int(
+           Mathf.RoundToInt(transform.parent.transform.position.x),
+           Mathf.RoundToInt(transform.parent.transform.position.y)
+        );
 
         Vector2Int startPos = map.Data.position;
-        Vector2Int size = SaveLoadManager.Instance.SaveData.MapSize;
+        Vector2Int size = SaveDataManager.Instance.SaveData.ChunkSize;
 
-        if (tilesPerFrame > 0)
-            StartCoroutine(GenerateMapCoroutine(startPos, size));
+        if (tilesPerFrame == 114514)
+        {
+            GameChunkManager.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size));
+        }
         else
         {
             GenerateAllTiles(startPos, size);
             OnGenerationComplete();
         }
 
-        GenerateMapEdges();
     }
 
     #endregion
@@ -156,9 +137,9 @@ public class RandomMapGenerator : MonoBehaviour
         Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
         foreach (var d in dirs)
         {
-            Item edge = GameItemManager.Instance.InstantiateItem("MapEdge");
+            Item edge = GameItemManager.Instance.InstantiateItem("MapEdge",default,default,default,map.ParentObject);
             if (edge is WorldEdge we)
-                we.SetupMapEdge(d);
+                we.SetupMapEdge(d, map.Data.position);
             else
                 Debug.LogError("[RandomMapGenerator] 边界对象类型错误");
         }
@@ -169,6 +150,7 @@ public class RandomMapGenerator : MonoBehaviour
     #region 生成流程
     private IEnumerator GenerateMapCoroutine(Vector2Int startPos, Vector2Int size)
     {
+
         int processed = 0;
         for (int x = 0; x < size.x; x++)
             for (int y = 0; y < size.y; y++)
@@ -177,6 +159,8 @@ public class RandomMapGenerator : MonoBehaviour
                 if (++processed % tilesPerFrame == 0)
                     yield return null;
             }
+
+
         OnGenerationComplete();
     }
 
@@ -302,7 +286,11 @@ public class RandomMapGenerator : MonoBehaviour
 
                 GameItemManager.Instance.InstantiateItem(
                     spawn.itemName,
-                    spawnPosition);
+                    spawnPosition,
+                    default,
+                        default,
+                        map.ParentObject
+                        );
             }
         }
     }
@@ -319,9 +307,7 @@ public class RandomMapGenerator : MonoBehaviour
     private void OnGenerationComplete()
     {
         map.tileMap?.RefreshAllTiles();
-  //      Debug.Log($"[RandomMapGenerator] 地图完成 @ {map.Data.position} 大小{map.Data.size} 种子{Seed}");
-        onMapGenerated?.Invoke();
-        map.OnMapGenerated_Stop.Invoke();
+        map.Data.TileLoaded = true;
     }
     #endregion
 }

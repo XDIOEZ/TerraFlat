@@ -1,3 +1,4 @@
+using DG.Tweening.Core.Easing;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,21 +8,16 @@ using UnityEngine.UI;
 public class SettingCanvas : MonoBehaviour
 {
     [Tooltip("退出并保存按钮")]
-    public Button SaveAndExitBtn;
+    public Button Button_ExitGame;
     
 
     public void Start()
     {
-        SaveAndExitBtn.onClick.AddListener(SaveAndExit);
+        Button_ExitGame.onClick.AddListener(ExitGame);
     }
     //方法:回到主场景
-    public void SaveAndExit()
+    public void ExitGame()
     {
-
-        SaveLoadManager.Instance.Save();
-        SaveLoadManager.Instance.OnSceneSwitchStart.Invoke();
-        SaveLoadManager.Instance.IsGameStart = false;
-        SceneManager.LoadScene("GameStartScene");
-     
+        GameManager.Instance.ExitGame();
     }
 }

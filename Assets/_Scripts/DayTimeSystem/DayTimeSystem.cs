@@ -6,7 +6,7 @@ public class DayTimeSystem : MonoBehaviour
 {
     public Light2D Sun;
 
-    public SaveLoadManager SaveLoadManager => SaveLoadManager.Instance;
+    public SaveDataManager SaveLoadManager => SaveDataManager.Instance;
     public GameSaveData SaveData => SaveLoadManager.SaveData;
     [ShowInInspector]
     public PlanetTimeData TimeData => SaveData.Active_PlanetData.TimeData;
@@ -46,11 +46,6 @@ public class DayTimeSystem : MonoBehaviour
 
     private void FixedUpdate()
     {
-/*        if (!SaveLoadManager.IsGameStart)
-        {
-            return;
-        }*/
-
         UpdatePlanetTime();
 
         UpdateLightThresholds(); // <--- 加这一句
@@ -157,9 +152,6 @@ public class DayTimeSystem : MonoBehaviour
         SaveData.Active_MapData.SunlightIntensity = Sun.intensity;
     }
 
-    // 已移除季节修正方法
-    // private float GetSeasonalLightModifier() { ... }
-
     private void UpdateSunPosition()
     {
         float lightX = GetLightCenterX();
@@ -181,23 +173,20 @@ public class DayTimeSystem : MonoBehaviour
     {
         if (TimeData == null) return 0.5f;
 
-        float radius = SaveData.Active_PlanetData.Radius;
-        float mapLength = radius * 2f;
-
+        // 用 DayTime 的比例来计算亮度，不再考虑 tileX
         float t = (TimeData.DayTime / TimeData.OneDayTime) % 1f;
-        float lightCenterX = Mathf.Lerp(radius, -radius, t);
 
-        float lightPos = (lightCenterX + radius) % mapLength;
-        float tilePos = (tileX + radius) % mapLength;
+        // 这里可以用一个简单的 cos 曲线模拟白天黑夜：
+        // t=0.0 -> 午夜（黑暗）
+        // t=0.25 -> 日出
+        // t=0.5 -> 中午（最亮）
+        // t=0.75 -> 日落
+        // t=1.0 -> 午夜
+        float brightness = Mathf.Clamp01(Mathf.Cos((t - 0.5f) * Mathf.PI * 2f) * 0.5f + 0.5f);
 
-        float rawDistance = Mathf.Abs(tilePos - lightPos);
-        float shortestDistance = Mathf.Min(rawDistance, mapLength - rawDistance);
-
-        float brightness = 1f - (shortestDistance / (mapLength / 2f));
-
-
-        return Mathf.Clamp01(brightness);
+        return brightness;
     }
+
 
     public bool IsDaytime()
     {

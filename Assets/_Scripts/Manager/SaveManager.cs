@@ -4,14 +4,15 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using TMPro;
 using Sirenix.OdinInspector;
+using UnityEngine.SceneManagement;
 
-public class SaveManager : MonoBehaviour
+public class SaveManager_ : MonoBehaviour
 {
     #region 字段定义
 
     [Header("保存与加载")]
-    public SaveLoadManager saveAndLoad;
-    public static SaveManager Ins;
+    public SaveDataManager saveAndLoad;
+    public static SaveManager_ Ins;
 
     public PlanetData Ready_planetData = new PlanetData();
 
@@ -50,7 +51,7 @@ public class SaveManager : MonoBehaviour
     #region 初始化
     private void Start()
     {
-        saveAndLoad = SaveLoadManager.Instance;
+        saveAndLoad = SaveDataManager.Instance;
 
         LoadSaveFileNames();
         GenerateSaveButtons();
@@ -75,18 +76,14 @@ public class SaveManager : MonoBehaviour
 
     public void StartNewGame()
     {
-        SaveLoadManager.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
+        SaveDataManager.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
         // 初始化随机种子并创建系统随机实例
-        SaveLoadManager.Instance.SaveData.Seed = SaveLoadManager.Instance.SaveData.SaveSeed.GetHashCode();
-        Random.InitState(SaveLoadManager.Instance.SaveData.Seed);
-        RandomMapGenerator.rng = new System.Random(SaveLoadManager.Instance.SaveData.Seed);
+        SaveDataManager.Instance.SaveData.Seed = SaveDataManager.Instance.SaveData.SaveSeed.GetHashCode();
+        Random.InitState(SaveDataManager.Instance.SaveData.Seed);
+        RandomMapGenerator.rng = new System.Random(SaveDataManager.Instance.SaveData.Seed);
        // SaveAndLoad.Instance.SaveData.PlanetData_Dict.Add("地球", new PlanetData());
-        SaveLoadManager.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
-        SaveLoadManager.Instance.SaveData.Active_PlanetData = Ready_planetData;
-
-        saveAndLoad.ChangeScene(saveAndLoad.SaveData.Active_MapName);
-        saveAndLoad.IsGameStart = true;
-      
+        SaveDataManager.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
+        SaveDataManager.Instance.SaveData.Active_PlanetData = Ready_planetData;
     }
     #endregion
 
@@ -237,7 +234,7 @@ public class SaveManager : MonoBehaviour
             Debug.LogWarning("请先选择按钮");
             return;
         }
-        saveAndLoad.ChangeScene(saveAndLoad.SaveData.Active_MapName);
+        GameManager.Instance.ContinueGame();
     }
 
     /// <summary>
@@ -247,7 +244,7 @@ public class SaveManager : MonoBehaviour
     {
         if (saveAndLoad != null)
         {
-            StartNewGame();
+            GameManager.Instance.StartNewGame();
            
         }
         else

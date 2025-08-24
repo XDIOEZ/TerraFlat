@@ -62,7 +62,7 @@ public class Mod_Scene : Module
     }
     public void UnInstall()
     {
-        SaveLoadManager.Instance.SaveData.Active_PlanetData.MapData_Dict.Remove(Data.MapSave.MapName);
+        SaveDataManager.Instance.SaveData.Active_PlanetData.MapData_Dict.Remove(Data.MapSave.MapName);
 
         if (Data.Encapsulation == true)
         {
@@ -106,15 +106,15 @@ public class Mod_Scene : Module
         {
             Data_Boundary boundary = item as Data_Boundary;
             boundary.TP_Position = transform.position;
-            boundary.TP_SceneName = SaveLoadManager.Instance.SaveData.Active_MapName;
+            boundary.TP_SceneName = SaveDataManager.Instance.SaveData.Active_MapName;
             Data.PlayerPos = boundary._transform.Position;
         });
 
-        SaveLoadManager.Instance.SaveActiveMapToSaveData();
-        SaveLoadManager.Instance.ChangeTOMapByMapSave(Data.MapSave);
+    //    SaveLoadManager.Instance.SaveMap_To_SaveData();
+        //SaveDataManager.Instance.ChangeTOMapByMapSave(Data.MapSave);
 
-        if (SaveLoadManager.Instance.SaveData.PlayerData_Dict.TryGetValue
-         (SaveLoadManager.Instance.CurrentContrrolPlayerName, out var savedData))
+        if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue
+         (SaveDataManager.Instance.CurrentContrrolPlayerName, out var savedData))
         {
             //Debug.Log($"成功加载已保存的玩家：{playerName}");
             Data_Player playerData = savedData;

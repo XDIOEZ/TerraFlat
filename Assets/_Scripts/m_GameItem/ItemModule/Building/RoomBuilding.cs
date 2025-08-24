@@ -141,7 +141,7 @@ public class RoomBuilding : BaseBuilding
             Debug.Log($"[房间初始化] 已生成新房间名称：{_room.RoomName}");
 
             // 检查存档数据中是否已存在该场景
-            bool sceneExists = SaveLoadManager.Instance.SaveData.Active_MapsData_Dict.ContainsKey(_room.RoomName);
+            bool sceneExists = SaveDataManager.Instance.SaveData.Active_MapsData_Dict.ContainsKey(_room.RoomName);
             Debug.Log($"[房间初始化] 场景是否已存在于存档数据中：{sceneExists}");
 
             if (!sceneExists)
@@ -151,7 +151,7 @@ public class RoomBuilding : BaseBuilding
                 if (buildingSO.SaveData.Active_MapsData_Dict.ContainsKey(buildingSO.buildingName))
                 {
                     var buildingDataTemplate = buildingSO.SaveData.Active_MapsData_Dict[buildingSO.buildingName];
-                    SaveLoadManager.Instance.SaveData.Active_MapsData_Dict.Add(_room.RoomName, buildingDataTemplate);
+                    SaveDataManager.Instance.SaveData.Active_MapsData_Dict.Add(_room.RoomName, buildingDataTemplate);
                     Debug.Log($"[房间初始化] 已成功从模板 {buildingSO.buildingName} 创建房间 {_room.RoomName}");
                 }
                 else
@@ -178,8 +178,8 @@ public class RoomBuilding : BaseBuilding
         Vector2 currentPosition = (Vector2)changer.transform.position;
         string currentSceneName = SceneManager.GetActiveScene().name;
 
-        SaveLoadManager.Instance.SaveData.Scenen_Building_Pos[_room.RoomName] = currentPosition;
-        SaveLoadManager.Instance.SaveData.Scenen_Building_Name[_room.RoomName] = currentSceneName;
+        SaveDataManager.Instance.SaveData.Scenen_Building_Pos[_room.RoomName] = currentPosition;
+        SaveDataManager.Instance.SaveData.Scenen_Building_Name[_room.RoomName] = currentSceneName;
 
         Debug.Log($"[房间初始化] 已保存建筑位置信息 - 场景名：{currentSceneName}，位置：{currentPosition}");
         Debug.Log("[房间初始化] 房间初始化完成");

@@ -1016,7 +1016,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  animationName: Sit
+  animationName: Idle
   time: 1
   playType: 0
   Setbool: 1
@@ -4922,6 +4922,7 @@ MonoBehaviour:
   min: {x: -10, y: -10}
   max: {x: 10, y: 10}
   TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &9101329794631181168
 MonoBehaviour:
   m_ObjectHideFlags: 0

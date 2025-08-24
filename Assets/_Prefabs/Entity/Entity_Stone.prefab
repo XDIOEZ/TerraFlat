@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6705025086629224100}
   - component: {fileID: 3437236790193565790}
+  - component: {fileID: 3136577712920988239}
   m_Layer: 0
   m_Name: Entity_Stone
   m_TagString: Untagged
@@ -47,14 +48,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
+  OnItemDestroy:
     _PersistentCalls: []
-  DestroyItem_Event:
+  OnAct:
     _PersistentCalls: []
-  OnAction_Event:
+  OnModuleLoadDone:
     _PersistentCalls: []
+  Sprite: {fileID: 0}
+  updateInterval: 0.1
   data:
     IDName: Entity_Stone
     GameName: 
@@ -100,11 +103,6 @@ MonoBehaviour:
     stamina: 100
     stamina_Max: 100
     staminaRecoverySpeed: 1
-    NutritionData:
-      Food: 100
-      MaxFood: 100
-      Water: 100
-      MaxWater: 100
     progress: 0
     progress_Max:
       BaseValue: 0
@@ -124,9 +122,54 @@ MonoBehaviour:
       - lootsName: DeathLoot
         lootList:
         - lootName: Stone
-          lootAmount: 2
+          lootAmountRange: {x: 1, y: 1}
     sightRange: 10
     TeamID: 
+--- !u!61 &3136577712920988239
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4005766048098034071}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
 --- !u!1 &5434032932056920767
 GameObject:
   m_ObjectHideFlags: 0
@@ -173,6 +216,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6cbe05dc9e2ebf747bcc0d42f70ec020, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
   DamagePanelName: Panel_DamageText
   damagePanelSpeed: 2
   damagePanelDuration: 1.5

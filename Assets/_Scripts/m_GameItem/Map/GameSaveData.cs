@@ -39,7 +39,7 @@ public partial class GameSaveData
     public Dictionary<string, PlanetData> PlanetData_Dict = new();
 
     [ShowInInspector]
-    public Vector2Int MapSize
+    public Vector2Int ChunkSize
     {
         get
         {

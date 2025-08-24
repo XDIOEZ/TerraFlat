@@ -111,7 +111,7 @@ public class MapSaveEditor : MonoBehaviour
             Directory.CreateDirectory(savePath);
         }
 
-        var currentMap = SaveLoadManager.GetCurrentMapStatic();
+        var currentMap = SaveDataManager.GetCurrentMapStatic();
         if (currentMap == null)
         {
             statusMessage = "获取 MapSave 失败，请确保场景已初始化！";

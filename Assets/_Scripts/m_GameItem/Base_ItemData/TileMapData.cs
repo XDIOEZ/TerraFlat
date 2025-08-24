@@ -20,6 +20,8 @@ public partial class Data_TileMap : ItemData
     [MemoryPackIgnore]
     [ShowInInspector]
     public int TileCount => TileData.Count == 0 ? 0 : TileData.Values.Sum(list => list?.Count ?? 0);
+
+    public bool TileLoaded = false;
 }
 
 [System.Serializable]

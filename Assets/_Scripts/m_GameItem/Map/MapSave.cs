@@ -13,6 +13,9 @@ public partial class MapSave
     public Dictionary<string, List<ItemData>> items = new Dictionary<string, List<ItemData>>();
 
     public float SunlightIntensity;
+
+    public UnityEngine.Vector2 MapPosition;
+
     // 说明：在保存物品时，同一名称的物品会存储在同一 List 中，
     // 方便后续加载时批量实例化并赋值
 }

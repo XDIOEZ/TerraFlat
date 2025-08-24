@@ -13,9 +13,4 @@ public class WoodStick : Item
         get => Data;
         set => Data = (Data_GeneralItem)value;
     }
-
-    public override void Act()
-    {
-        throw new System.NotImplementedException();
-    }
 }

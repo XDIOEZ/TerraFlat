@@ -8,27 +8,12 @@ using static UnityEngine.InputSystem.Layouts.InputControlLayout;
 [RequireComponent(typeof(Item))]
 public class PlayerController : Module
 {
-    [ShowInInspector]
-    public ISpeed _Speed;
-    #region 组件引用
-    private IMove movement;
-    [ShowNativeProperty] public AttackTrigger Attack { get; private set; }
-    [ShowNativeProperty] public FaceMouse Facing { get; private set; }
-    [ShowNativeProperty] public TurnBody BodyTurning { get; private set; }
-    [ShowNativeProperty] public Runner Running { get; private set; }
-    [ShowNativeProperty] public Inventory_HotBar Hotbar { get; private set; }
-    //虚拟相机
-    [ShowNativeProperty] public CameraFollowManager VirtualCameraManager { get; set; }
+    #region 输入系统
+    public @PlayerInputActions _inputActions;
+    public Camera _mainCamera;
 
-    [ShowNativeProperty] public ItemDroper ItemDroper { get; private set; }
-
-    [ShowNativeProperty] public HandForInteract _handForInteract { get; private set; }
-
-    [ShowInInspector]
-    public Mover Mover;
-  
-
-    public IHunger _Hunger { get; private set; }
+    public bool CtrlIsDown;
+    #endregion
 
     public Ex_ModData _modData;
     public override ModuleData _Data { get => _modData; set => _modData = value as Ex_ModData; }
@@ -39,125 +24,20 @@ public class PlayerController : Module
         {
             _Data.ID = ModText.Controller;
         }
+        _inputActions = new PlayerInputActions();
     }
 
-    #endregion
 
-    #region 输入系统
-    public @PlayerInputActions _inputActions;
-    public Camera _mainCamera;
-
-    public bool CtrlIsDown;
-    #endregion
 
     #region Unity生命周期
     public void OnDisable()
     {
         _inputActions.Disable();
-
     }
     public void OnEnable()
     {
-        Set_InputSystem();
+        _inputActions.Enable();
     }
-    public void Start()
-    {
-        if(_mainCamera == null)
-        _mainCamera = VirtualCameraManager.ControllerCamera;
-      //  Set_InputSystem();
-        //_mainCamera = Camera.main;
-        InitializeComponents();
-
-        SwitchBag();
-        SwitchEquip();
-        SwitchCraft();
-        _Speed = GetComponentInChildren<ISpeed>();
-        item = GetComponent<Item>();
-        Mover = GetComponentInChildren<Mover>();
-        VirtualCameraManager = GetComponentInChildren<CameraFollowManager>();
-        ItemDroper = GetComponentInChildren<ItemDroper>();
-        _Hunger = GetComponent<IHunger>();
-        Hotbar = GetComponentInChildren<Inventory_HotBar>();
-
-    }
-
-    #endregion
-
-    #region 输入处理
-    #region 处理战斗输入
-    private void HandleCombatInput()
-    {
-        if(Attack == null) return;
-        var mouseState = GetMouseKeyState();
-        if (mouseState != KeyState.Void && Attack != null)
-        {
-            Attack.TriggerAttack(mouseState, GetMouseWorldPosition());
-        }
-    }
-    #endregion
-
-    #region 处理玩家移动输入
-    private void HandleMovementInput()
-    {
-        if (Mover == null) return;
-
-        Vector2 moveInput = _inputActions.Win10.Move_Player.ReadValue<Vector2>();
-
-        if (moveInput.magnitude != 0)
-        {
-            _Speed.MoveTargetPosition = moveInput + (Vector2)transform.position;
-        }
-        else
-        {
-            _Speed.MoveTargetPosition = (Vector2)transform.position;
-        }
-
-        Mover.Move(_Speed.MoveTargetPosition, 0);
-    }
-    #endregion
-
-    #region 处理玩家身体转向
-    /*    private void HandleBodyTurning()
-        {
-            if (BodyTurning == null || item == null) return;
-
-            // 获取聚焦点的位置（世界坐标）
-          //  Vector3 focusPos = _FocusPoint.FocusPointPosition;
-            Vector3 itemPos = item.transform.position;
-
-            // 判断聚焦点在物体左边还是右边
-            float direction = focusPos.x - itemPos.x;
-
-            if (!Mathf.Approximately(direction, 0f))
-            {
-                if (direction < 0)
-                {
-                    // 聚焦点在物体左边
-                    BodyTurning.TurnBodyToDirection(Vector2.left);
-                }
-                else
-                {
-                    // 聚焦点在物体右边
-                    BodyTurning.TurnBodyToDirection(Vector2.right);
-                }
-            }
-        }*/
-
-
-
-    #endregion
-    #endregion
-
-    #region 辅助方法
-    #region 获取鼠标键盘状态
-    private KeyState GetMouseKeyState()
-    {
-        if (Input.GetMouseButtonDown(0)) return KeyState.Start;
-        if (Input.GetMouseButton(0)) return KeyState.Hold;
-        if (Input.GetMouseButtonUp(0)) return KeyState.End;
-        return KeyState.Void;
-    }
-    #endregion
 
     #region 获取鼠标世界坐标
     public Vector3 GetMouseWorldPosition()
@@ -165,27 +45,14 @@ public class PlayerController : Module
         return _mainCamera.ScreenToWorldPoint(Input.mousePosition);
     }
     #endregion
+
     #endregion
 
-
-    #region 初始化配置
-    #region 初始化各类脚本的引用
-    private void InitializeComponents() 
-    {
-        Attack = GetComponentInChildren<AttackTrigger>();
-        Facing = GetComponentInChildren<FaceMouse>();
-        BodyTurning = GetComponentInChildren<TurnBody>();
-        Running = GetComponentInChildren<Runner>();
-        _handForInteract = GetComponentInChildren<HandForInteract>();
-       // Hotbar = _playerUI.HotBor.GetComponent<Inventory_HotBar>();
-    }
-    #endregion
-
-    #region 初始化输入系统的监听
+/*    #region 初始化输入系统的监听
     private void Set_InputSystem()
     {
         //初始化输入系统
-        _inputActions = new PlayerInputActions();
+     
 
         _inputActions.Win10.Enable();
 
@@ -209,13 +76,12 @@ public class PlayerController : Module
         //监听Ctrl键
         win10.Ctrl.started += (InputAction.CallbackContext context) => { CtrlIsDown = true; };
         win10.Ctrl.canceled += (InputAction.CallbackContext context) => { CtrlIsDown = false; };
-/*        //对E键进行监听
-        win10.E.performed += Interact;*/
+*//*        //对E键进行监听
+        win10.E.performed += Interact;*//*
         //监听右键
         //win10.RightClick.performed += UseItem;
     }
-    #endregion
-    #endregion
+    #endregion*/
 
     #region 物品操作
 
@@ -352,19 +218,6 @@ public class PlayerController : Module
     public void SwitchCraft(InputAction.CallbackContext context = default)
     {
         //_playerUI.Craft.enabled = !_playerUI.Craft.enabled;
-    }
-    #endregion
-
-    #region 按住启用奔跑
-
-
-    public void Run(InputAction.CallbackContext context = default)
-    {
-        if (Running != null)
-        {
-            Running.StartWork();
-           // Debug.Log("Run");
-        }
     }
     #endregion
     #region 松开停止奔跑
