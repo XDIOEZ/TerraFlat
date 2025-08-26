@@ -25,19 +25,19 @@ public class Apple_Red : Item
     public new void Start()
     {
         base.Start();
-        mod_food = Mods[ModText.Food] as Mod_Food;
+       // mod_food = Mods[ModText.Food] as Mod_Food;
         GetComponentInChildren<Mod_PlantGrow>().OnAction += BeToAppleTree;
         GetComponentInChildren<TileEffectReceiver>().OnTileEnterEvent += OnTileEnter;
     }
-    /// <summary>
+/*    /// <summary>
     /// 调用吃的行为
     /// </summary>
     public override void Act()
     {
         var Food = BelongItem.Mods[ModText.Food] as Mod_Food;
         if (Food == null) return;
-        mod_food.BeEat(Food);
-    }
+        mod_food.BeEat(Eater:Food);
+    }*/
 
     void OnTileEnter(TileData data)
     {

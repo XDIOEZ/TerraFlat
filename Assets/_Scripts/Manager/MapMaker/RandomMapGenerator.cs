@@ -269,31 +269,34 @@ public class RandomMapGenerator : MonoBehaviour
         map.ADDTile(position, tile);
     }
 
-    /// <summary>
-    /// 生成随机资源 (原步骤4)
-    /// </summary>
-    private void GenerateRandomResources(Vector2Int position, BiomeData biome, EnvironmentFactors env)
+    private void GenerateRandomResources(Vector2Int ChunkPosition, BiomeData biome, EnvironmentFactors env)
     {
         foreach (Biome_ItemSpawn spawn in biome.TerrainConfig.ItemSpawn)
         {
-            if(spawn.environmentConditionRange.IsMatch(env))
-            if (rng.NextDouble() <= spawn.SpawnChance)
+            if (spawn.environmentConditionRange.IsMatch(env))
             {
-                Vector3 spawnPosition = new Vector3(
-                    position.x + 0.5f,
-                    position.y + 0.5f,
-                    0f);
+                // 使用 ChunkPosition 作为种子，确保每个位置的随机数不同
+                System.Random positionRng = new System.Random(ChunkPosition.x + ChunkPosition.y); // 或者其他方式结合 x, y 创建种子
 
-                GameItemManager.Instance.InstantiateItem(
-                    spawn.itemName,
-                    spawnPosition,
-                    default,
+                if (positionRng.NextDouble() <= spawn.SpawnChance)
+                {
+                    Vector2 spawnPosition = new Vector2(
+                        ChunkPosition.x + (float)positionRng.NextDouble(), // 在 [x, x+1) 之间
+                        ChunkPosition.y + (float)positionRng.NextDouble()  // 在 [y, y+1) 之间
+                    );
+
+                    GameItemManager.Instance.InstantiateItem(
+                        spawn.itemName,
+                        spawnPosition,
+                        default,
                         default,
                         map.ParentObject
-                        );
+                    );
+                }
             }
         }
     }
+
     #endregion
 
     #region 工具方法：清除与完成事件

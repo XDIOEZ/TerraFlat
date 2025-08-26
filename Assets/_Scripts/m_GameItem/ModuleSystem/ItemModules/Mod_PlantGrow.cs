@@ -66,7 +66,7 @@ public class Mod_PlantGrow : Module
             Item product = GameItemManager.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
 
             // new ItemMaker().DropItem_cric(product, transform.position, 2);
-            var dropComp = GetComponent<Mod_ItemDrop>();
+            var dropComp = GetComponent<Mod_ItemDroper>();
             if (dropComp != null)
             {
                 dropComp.DropItem_Range(product, transform.position, 2, 1);

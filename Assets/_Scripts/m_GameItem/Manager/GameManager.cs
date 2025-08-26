@@ -20,7 +20,9 @@ public class GameManager : SingletonAutoMono<GameManager>
     public void ExitGame()
     {
         Event_ExitGame_Start.Invoke();
+
         GameItemManager.Instance.SavePlayer();
+        GameItemManager.Instance.CleanupNullItems();
 
         foreach (var go in GameChunkManager.Instance.Chunk_Dic.Values)
         {
@@ -70,14 +72,18 @@ public class GameManager : SingletonAutoMono<GameManager>
             if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out var playerData))
             {
                 Player player = GameItemManager.Instance.LoadPlayer(PlayerName);
+
                 GameItemManager.Instance.Player_DIC[PlayerName] = player;
             }
             else//玩家数据不存在 创建默认模板
             {
                 Player player = GameItemManager.Instance.LoadPlayer(PlayerName);
+
                 GameItemManager.Instance.RandomDropInMap(player.gameObject);
+
                 GameItemManager.Instance.Player_DIC[PlayerName] = player;
             }
+
             Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
         }
     }

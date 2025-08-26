@@ -53,7 +53,7 @@ public class SaveMenuRightMenuUI : MonoBehaviour
         }
 
         SaveDataManager.Instance.Save_And_WriteToDisk();
-        SaveManager_.Ins.Refresh();
+        SaveDataManager_UI.Ins.Refresh();
         CloseUI();
     }
 
@@ -74,7 +74,7 @@ public class SaveMenuRightMenuUI : MonoBehaviour
             SaveDataManager.Instance.Save_And_WriteToDisk();
         }
 
-        SaveManager_.Ins.Refresh();
+        SaveDataManager_UI.Ins.Refresh();
         CloseUI();
     }
 

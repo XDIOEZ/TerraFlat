@@ -33,6 +33,10 @@ public static class ModText
     public static string Food = "食物模块";
     public static string Fuel = "燃料模块";
     #endregion
+    #region G
+    public static string Grow = "生长模块";
+    #endregion
+
 
     #region H
     public static string Hand = "UI_手部插槽";
@@ -48,6 +52,7 @@ public static class ModText
     #region M
     public static string MoveSpeed = "移速模块";
     public static string Mover = "移动模块";
+
     #endregion
 
     #region R

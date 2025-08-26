@@ -4,15 +4,14 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using TMPro;
 using Sirenix.OdinInspector;
-using UnityEngine.SceneManagement;
 
-public class SaveManager_ : MonoBehaviour
+public class SaveDataManager_UI : MonoBehaviour
 {
     #region 字段定义
 
     [Header("保存与加载")]
     public SaveDataManager saveAndLoad;
-    public static SaveManager_ Ins;
+    public static SaveDataManager_UI Ins;
 
     public PlanetData Ready_planetData = new PlanetData();
 
@@ -36,6 +35,8 @@ public class SaveManager_ : MonoBehaviour
     public TMP_InputField PlanetNoiseValue_Text; // 星球缩放大小
 
     public Button Start_New_GameButton; // 新游戏按钮
+    [LabelText("加载选中存档")]
+    public Button LoadSaveData; // 新游戏按钮
 
     [Header("玩家名显示")]
     public TMP_InputField SelectedPlayer_Name_Text; // 当前选中玩家显示框
@@ -71,6 +72,7 @@ public class SaveManager_ : MonoBehaviour
         NewSave_Name_Text.onValueChanged.AddListener(OnPlayerSaveNameChanged);
         PlanetRediusValue_Text.onValueChanged.AddListener(OnPlanetReadiusChanged);
         PlanetNoiseValue_Text.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+        LoadSaveData.onClick.AddListener(OnClick_LoadSaveData_Button);
        // DeletSave.onClick.AddListener(OnClick_DeletSave_Button);
     }
 
@@ -129,11 +131,6 @@ public class SaveManager_ : MonoBehaviour
             ButtonInfoData SaveInfo = buttonObj.GetComponent<ButtonInfoData>();
             SaveInfo.Name = saveName;
             SaveInfo.Path = PathToSaveFolder + saveName + ".GameSaveData";
-/*            buttonObj.name = saveName;
-
-            var tmpText = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-            if (tmpText != null)
-                tmpText.text = saveName;*/
 
             var btn = buttonObj.GetComponent<Button>();
             if (btn != null)
@@ -174,6 +171,22 @@ public class SaveManager_ : MonoBehaviour
     #endregion
 
     #region UI事件
+    #region 存档读取
+
+    public void OnClick_LoadSaveData_Button()
+    {
+        if (saveAndLoad != null)
+        {
+            saveAndLoad.LoadSaveByDisk(saveAndLoad.UserSavePath + SelectedSave_Name_Text.text);
+        }
+        else
+        {
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
+        }
+        // 生成玩家按钮
+        GeneratePlayerButtons();
+    }
+    #endregion
 
     /// <summary>
     /// 删除存档
@@ -184,28 +197,42 @@ public class SaveManager_ : MonoBehaviour
         Refresh();
     }
 
+    #region 存档选择
+
     /// <summary>
     /// 点击存档按钮
     /// </summary>
-    public void OnClick_List_Save_Button(string saveName,GameObject buttonObj)
+    public void OnClick_List_Save_Button(string saveName, GameObject buttonObj)
     {
-        if (saveAndLoad != null)
-        {
-            saveAndLoad.LoadSaveByDisk(saveAndLoad.UserSavePath + saveName);
-        }
-        else
-        {
-            Debug.LogWarning("SaveAndLoad组件未绑定！");
-        }
-        // 禁用所有存档按钮的选择图像
+
+        // 禁用所有存档按钮的选择图像 & 还原颜色
         foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<ButtonInfoData>())
         {
-            saveInfo.SelectImage.enabled = false;
+            if (saveInfo.SelectImage != null)
+                saveInfo.SelectImage.enabled = false;
+
+            var img = saveInfo.GetComponent<UnityEngine.UI.Image>();
+            if (img != null)
+                img.color = Color.white; // 还原为默认白色
         }
-        buttonObj.GetComponent<ButtonInfoData>().SelectImage.enabled = true;
+
+        // 启用当前按钮的选择图像 & 高亮颜色
+        var currentInfo = buttonObj.GetComponent<ButtonInfoData>();
+        if (currentInfo != null && currentInfo.SelectImage != null)
+        {
+            currentInfo.SelectImage.enabled = true;
+        }
+
+        var currentImg = buttonObj.GetComponent<UnityEngine.UI.Image>();
+        if (currentImg != null)
+        {
+            currentImg.color = Color.green; // 选中时变绿
+        }
+
         SelectedSave_Name_Text.text = saveName;
-        GeneratePlayerButtons();
     }
+
+    #endregion
 
     /// <summary>
     /// 点击玩家按钮

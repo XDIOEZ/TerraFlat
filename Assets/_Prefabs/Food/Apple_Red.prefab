@@ -165,19 +165,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
-    _PersistentCalls: []
-  DestroyItem_Event:
+  OnItemDestroy:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
   OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  updateInterval: 0.1
   data:
-    IDName: Apple_Red
+    IDName: "\u82F9\u679C"
     GameName: "\u82F9\u679C"
     Description: "\u82F9\u679C \u4F1A\u957F\u5927\u6210\u82F9\u679C\u6811"
     Durability: 100
@@ -326,8 +325,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   _data:
-    Name: "\u751F\u957F\u6A21\u5757"
-    isRunning: 0
     isLoop: 1
     progress: 0
     progress_Max:
@@ -347,8 +344,15 @@ MonoBehaviour:
       InvokeValue: 10
       loot:
         lootName: 
-        lootAmount: 0
+        lootAmountRange: {x: 1, y: 1}
+      DestroySelf: 0
     nodeIndex: 0
+  _memoryPackable:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
 --- !u!1001 &633942475704849830
 PrefabInstance:
   m_ObjectHideFlags: 0

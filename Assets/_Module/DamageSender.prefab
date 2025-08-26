@@ -91,21 +91,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  AttackEffect: {fileID: 2755864728937266141, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
   Data:
     Name: 
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
+  weaponData:
+    Damage:
+      BaseValue: 10
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    AttackSpeed: 10
+    MaxAttackDistance: 10
+    ReturnSpeed: 10
   faceMouse: {fileID: 0}
   CurrentState: 0
   StartPosition: {x: 0, y: 0}
-  AttackSpeed: 5
-  MaxAttackDistance: 1
-  ReturnSpeed: 5
-  Damage:
-    BaseValue: 20
-    BaseAdditive: 0
-    AdditiveModifier: 0
-    MultiplicativeModifier: 1
-    FinalAdditive: 0
   MoveTargetTransform: {fileID: 0}
   damageCollider: {fileID: 0}

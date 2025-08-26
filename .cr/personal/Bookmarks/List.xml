@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Root Type="DevExpress.CodeRush.Foundation.Markers.SolutionBookmarksContainer">
+  <Options Language="Neutral">
+    <Items>
+      <Item Id="{b3a23896-877a-4b95-8489-d730c0615b16}">
+        <Id>3</Id>
+        <File>FlatWorld\Assets\_Scripts\Manager\SaveManager.cs</File>
+        <Line>233</Line>
+        <ViewportTop>163</ViewportTop>
+        <ViewportTopMax>305</ViewportTopMax>
+        <TopLine>169</TopLine>
+      </Item>
+    </Items>
+  </Options>
+</Root>

@@ -2,12 +2,12 @@ using Sirenix.Reflection.Editor;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static Mod_ItemDrop;
+using static Mod_ItemDroper;
 
 public class Mod_Droping : Module
 {
     public override ModuleData _Data { get =>modData; set => modData = (Ex_ModData)value; }
-    public Mod_ItemDrop.Drop drop;
+    public Mod_ItemDroper.Drop drop;
     public Ex_ModData modData;
 
     [Header("丢弃动画参数")]
@@ -54,6 +54,9 @@ public class Mod_Droping : Module
 
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
         drop.item.transform.Rotate(Vector3.forward * 360f * deltaTime);
+
+        //TODO 归纳到对应Chunk中
+        GameChunkManager.Instance.UpdateItem_ChunkOwner(drop.item);
 
         if (t >= 1f)
         {

@@ -344,6 +344,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eac6a15db88c7564c9612c8da6f2b7c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  saveName: 
-  savePath: 
+  Name: 
+  Path: 
   SelectImage: {fileID: 5854963988225322352}

@@ -107,7 +107,16 @@ public class GameItemManager : SingletonMono<GameItemManager>
         }
         else
         {
-            itemObj.transform.SetParent(GameChunkManager.Instance.Chunk_Dic_Active[Chunk.GetChunkPosition(position).ToString()].transform, true);
+            if(GameChunkManager.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(position).ToString(), out var chunk))
+            {
+                itemObj.transform.SetParent(chunk.transform, true);
+            }
+            else if (GameChunkManager.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(position).ToString(), out var UnActivechunk))
+            {
+                itemObj.transform.SetParent(UnActivechunk.transform, true);
+            }
+
+            GameChunkManager.Instance.UpdateItem_ChunkOwner(item);
         }
 
 
@@ -164,15 +173,18 @@ public class GameItemManager : SingletonMono<GameItemManager>
     public int SavePlayer()
     {
         int playerCount = 0;
-        Player[] players = FindObjectsOfType<Player>();
+        Player[] players = GameItemManager.Instance.Player_DIC.Values.ToArray();
 
         foreach (Player player in players)
         {
             player.Save();
+
             player.ModuleSave();
+
             SaveDataManager.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
+
             player.gameObject.SetActive(false);
-            //GameObject_False.Add(player.gameObject);
+
             playerCount++;
         }
 
@@ -239,7 +251,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
     }
     private Player CreatePlayer(Data_Player data)
     {
-        Player newPlayer = (Player)GameItemManager.Instance.InstantiateItem(data);
+        Player newPlayer = (Player)GameItemManager.Instance.InstantiateItem(data, Vector3.zero, Quaternion.identity, Vector3.one,new GameObject("Players"));
 
         // ✅ 将父对象设置为空（放到场景根节点下）
         newPlayer.transform.SetParent(null, true);

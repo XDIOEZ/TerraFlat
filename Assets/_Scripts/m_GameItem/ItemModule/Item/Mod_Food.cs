@@ -93,6 +93,21 @@ public partial class Mod_Food : Module
         if (item.Mods.ContainsKey(ModText.Stamina))
         Stamina = item.Mods[ModText.Stamina] as Mod_Stamina;
 
+
+            if (item != null)
+            {
+            item.OnAct += Act;
+            }
+
+    }
+
+    /// <summary>
+    /// 调用吃的行为
+    /// </summary>
+    public void Act()
+    {
+        var Player_FoodModule = item.BelongItem.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+        Player_FoodModule.Eat(BeEater: this);
     }
     public override void Action(float timeDelta)
     {
@@ -235,7 +250,7 @@ public partial class Mod_Food : Module
         UIValues.Sliders["维生素"].value = Data.nutrition.Vitamins;
     }
 
-    public void BeEat(Mod_Food other_Food)
+    public void BeEat(Mod_Food Eater)
     {
         ShakeItem(item.transform);
 
@@ -252,7 +267,7 @@ public partial class Mod_Food : Module
             // 进度归零
             EatingProgress = 0;
 
-            other_Food.Data.nutrition = other_Food.Data.nutrition + Data.nutrition;
+            Eater.Data.nutrition = Eater.Data.nutrition + Data.nutrition;
 
             DataUpdate.Invoke();
 
@@ -262,6 +277,37 @@ public partial class Mod_Food : Module
             }
         }
     }
+    public void Eat(Mod_Food BeEater)
+    {
+        ShakeItem(BeEater.item.transform);  // 播放摇晃动画或者其他视觉效果
+
+        BeEater.EatingProgress++;  // 更新被吃食物的进度
+
+        if (BeEater.EatingProgress >= BeEater.Data.Max_EatingProgress)
+        {
+            // 减少被吃食物的堆叠数量
+            BeEater.item.itemData.Stack.Amount--;
+            // UI 更新通知
+            BeEater.item.OnUIRefresh?.Invoke();
+
+            // 当前食物的营养值补满
+            Data.nutrition.Max();
+            EatingProgress = 0; // 吃进度归零
+
+            // 吃掉目标食物的营养值
+            Data.nutrition = Data.nutrition + BeEater.Data.nutrition;
+
+            DataUpdate.Invoke();  // 通知数据更新
+
+            // 如果被吃食物的堆叠数量为 0，销毁该食物
+            if (BeEater.item.itemData.Stack.Amount <= 0)
+            {
+                Destroy(BeEater.item.gameObject);  // 销毁被吃的食物
+            }
+        }
+    }
+
+
 
     #region 代码动画
     [Button("抖动")]
@@ -306,6 +352,10 @@ public partial class Mod_Food : Module
 
     public override void Save()
     {
+        if (item != null)
+        {
+            item.OnAct -= Act;
+        }
         // 保存面板位置
         if (PanleInstance != null)
         {

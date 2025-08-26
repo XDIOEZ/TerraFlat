@@ -354,7 +354,9 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
         SaveData.saveName = SaveName;
 
         byte[] dataBytes = MemoryPackSerializer.Serialize(SaveData);
+
         File.WriteAllBytes(SavePath + SaveName + ".GameSaveData", dataBytes);
+
         Debug.Log("存档成功！");
     }
 

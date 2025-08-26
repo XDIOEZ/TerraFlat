@@ -5,26 +5,32 @@ using UnityEngine;
 public abstract class Module : MonoBehaviour
 {
     /*  ²Î¿¼´úÂë
-        public Ex_ModData_MemoryPackable ModData;
-        public override ModuleData _Data { get { return ModData; }  set { ModData = (Ex_ModData_MemoryPackable)value; } }
+     
+    public Ex_ModData_MemoryPackable ModData;
+    public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
 
     public override void Awake()
     {
         if (_Data.ID == "")
         {
-            _Data.ID = ModText.Controller;
+            _Data.ID = ModText.Grow;
         }
     }
 
-        public override void Load()
-        {
-            throw new System.NotImplementedException();
-        }
+    public override void Load()
+    {
+        throw new System.NotImplementedException();
+    }
 
-        public override void Save()
-        {
-            throw new System.NotImplementedException();
-        }
+    public override void Save()
+    {
+        throw new System.NotImplementedException();
+    }
+    public override void Action(float deltaTime)
+    {
+      
+    }
+
     */
     public abstract ModuleData _Data { get; set; }
     public Item item;

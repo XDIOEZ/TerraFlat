@@ -197,18 +197,14 @@ public class DamageReceiver : Module
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
 
-    #endregion
-
-    #region 受击处理
-    #region 受击处理
-    public virtual void TakeDamage(float damage, Item attacker)
+    public virtual float TakeDamage(float damage, Item attacker)
     {
-        if (Hp <= 0) return;
+        if (Hp <= 0) return -1;
 
         // ⏱️ 受伤间隔判断
         if (Time.time - lastDamageTime < Data.DamageInterval)
         {
-            return;
+            return -1;
         }
         lastDamageTime = Time.time;
 
@@ -236,7 +232,10 @@ public class DamageReceiver : Module
         if (Hp <= 0)
         {
             // 死亡逻辑预留
+            return 0; // Ensure a return value for this path
         }
+
+        return Hp; // Ensure a return value for other paths
     }
     #endregion
 
@@ -276,8 +275,6 @@ public class DamageReceiver : Module
         }
     }
 
-
-    #endregion
 
     #region 动画效果实现
 

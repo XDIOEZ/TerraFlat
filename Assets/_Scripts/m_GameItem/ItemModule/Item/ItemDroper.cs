@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.XR;
 
-public class ItemDroper : Mod_ItemDrop
+public class ItemDroper : Mod_ItemDroper
 {
     [Header("基础配置")]
     public Inventory DroperInventory;
@@ -95,7 +95,8 @@ public class ItemDroper : Mod_ItemDrop
                 slot.ClearData();
 
             // 实例化新物体
-            Item newObject = GameItemManager.Instance.InstantiateItem(newItemData.IDName);
+            GameChunkManager.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
+            Item newObject = GameItemManager.Instance.InstantiateItem(newItemData.IDName,default, default, default, chunk.gameObject);
             if (newObject == null)
             {
                 Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);
@@ -119,7 +120,7 @@ public class ItemDroper : Mod_ItemDrop
             float animTime = baseDropDuration + distance * distanceSensitivity;
 
             // 调用父类 DropItem 实现动画控制
-            DropItem_Pos(newItem, startPos, endPos, animTime);
+            DropItem_Pos  (newItem, startPos, endPos, animTime);
         }
 
         slot.RefreshUI();

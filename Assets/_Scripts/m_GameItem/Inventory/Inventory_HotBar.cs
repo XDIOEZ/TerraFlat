@@ -198,7 +198,7 @@ public class Inventory_HotBar : Inventory
         }
 
         ItemData itemData = slot.itemData;
-        Item itemInstance = GameItemManager.Instance.InstantiateItem(itemData.IDName);
+        Item itemInstance = GameItemManager.Instance.InstantiateItem(itemData.IDName,default,default,default, spawnLocation.gameObject);
 
         if (itemInstance == null)
         {

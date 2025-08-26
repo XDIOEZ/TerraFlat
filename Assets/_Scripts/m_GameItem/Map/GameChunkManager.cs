@@ -22,17 +22,6 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 
     public UltEvent<Chunk> OnChunkLoadFinish = new();
 
-    public void Start()
-    {
-        
-    }
-
-/*    public void ChangeChunk(string NewSceneName, Chunk LastScene)
-    {
-        DestroyChunk(LastScene);
-        LoadChunk(NewSceneName);
-    }*/
-
     public void ClearAllChunk()
     {
         // 清空字典
@@ -94,6 +83,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 
                 if (!Chunk_Dic_Active.ContainsKey(chunkPos.ToString()))//检查是否已经加载过
                 LoadChunk(chunkPos.ToString());
+
             }
         }
     }
@@ -106,7 +96,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
 
         // ✅ 玩家所在 Chunk 的中心点
-        Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos) + chunkSize * 0.5f;
+        Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos);
 
         List<string> toRemove = new List<string>();
 
@@ -115,11 +105,14 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
             if (chunk == null) continue;
 
             // ✅ 区块中心点
-            Vector2 chunkCenter = (Vector2)chunk.transform.position + chunkSize * 0.5f;
+            Vector2 chunkCenter = chunk.MapSave.MapPosition;
 
             // 方形检测：只要在 X 或 Y 上超过范围就移除
-            if (Mathf.Abs(chunkCenter.x - playerChunkCenter.x) > Distance * chunkSize.x ||
-                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) > Distance * chunkSize.y)
+            if (
+                Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x 
+                ||
+                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) >= Distance * chunkSize.y
+               )
             {
                 toRemove.Add(chunk.name);
             }
@@ -135,6 +128,17 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 
         if (toRemove.Count > 0)
             Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
+    }
+
+    public void UpdateItem_ChunkOwner(Item item)
+    {
+        if (Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out Chunk chunk))
+        {
+            chunk.AddItem(item);
+        } else if (Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out chunk))
+        {
+            chunk.AddItem(item);
+        }
     }
 
 
@@ -282,6 +286,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
             Chunk_Dic_Active[mapName] = chunkManager;
             return chunkManager;
         }
+       
         return null;
     }
 

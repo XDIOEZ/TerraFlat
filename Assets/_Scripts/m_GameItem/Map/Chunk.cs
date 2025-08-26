@@ -45,13 +45,32 @@ public class Chunk : MonoBehaviour
     /// </summary>
     [Button]
     public static Vector2Int GetChunkPosition(Vector2 objPos)
-    {
+    {//TODO 因为Transformpos 是在左下角 相对于绘制的中心来说 所以需要微调玩家的位置 来输出确切的区块坐标
         Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
+
        Vector2Int chunkPos = new Vector2Int(
             Mathf.FloorToInt(objPos.x / chunkSize.x) * (int)chunkSize.x,
             Mathf.FloorToInt(objPos.y / chunkSize.y) * (int)chunkSize.y
         );
         return chunkPos;
+    }
+
+    public void AddItem(Item item)
+    {
+        RunTimeItems[item.itemData.Guid] = item;
+        //TODO 设置为子对象
+        item.transform.SetParent(this.transform);
+        AddToGroup(item);
+    }
+
+    public void RemoveItem(Item item)
+    {
+        RunTimeItems.Remove(item.itemData.Guid);
+        string key = item.itemData.IDName;
+        if (RuntimeItemsGroup.TryGetValue(key, out var list))
+        {
+            list.Remove(item);
+        }
     }
 
 }
