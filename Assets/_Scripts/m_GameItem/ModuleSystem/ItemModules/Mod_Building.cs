@@ -218,6 +218,7 @@ public class Mod_Building : Module
             runtimeItem.itemData = FastCloner.FastCloner.DeepClone(item.itemData);
             runtimeItem.itemData.Stack.Amount = 1;
             runtimeItem.itemData.Stack.CanBePickedUp = false;
+            runtimeItem.Load();
             EnableChildColliders(true, runtimeItem.transform);
         }
 

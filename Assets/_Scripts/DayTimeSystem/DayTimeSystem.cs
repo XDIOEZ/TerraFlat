@@ -50,7 +50,7 @@ public class DayTimeSystem : MonoBehaviour
 
         UpdateLightThresholds(); // <--- 加这一句
 
-        SyncLight();
+        //SyncLight();
 
         UpdateSunPosition();
     }
@@ -129,7 +129,7 @@ public class DayTimeSystem : MonoBehaviour
 
 
     public void SyncLight()
-    {
+    {/*
         if (TimeData == null) return;
 
         float brightness = GetLightBrightness(SaveData.Active_MapPos.x);
@@ -149,7 +149,7 @@ public class DayTimeSystem : MonoBehaviour
             Sun.intensity = Mathf.Lerp(0f, 1f, t);
         }
         if(SaveData.Active_MapData!=null)
-        SaveData.Active_MapData.SunlightIntensity = Sun.intensity;
+        SaveData.Active_MapData.SunlightIntensity = Sun.intensity;*/
     }
 
     private void UpdateSunPosition()
@@ -185,12 +185,6 @@ public class DayTimeSystem : MonoBehaviour
         float brightness = Mathf.Clamp01(Mathf.Cos((t - 0.5f) * Mathf.PI * 2f) * 0.5f + 0.5f);
 
         return brightness;
-    }
-
-
-    public bool IsDaytime()
-    {
-        return GetLightBrightness(SaveData.Active_MapPos.x) >= Current_NightThreshold;
     }
     #endregion
 

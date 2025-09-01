@@ -114,37 +114,43 @@ public class Mod_Scene : Module
     [Button]
     public void Test()
     {
-        //创建一个临时场景
-        Scene newScene = SceneManager.CreateScene(Data.SceneName);
+        this.Data.SceneName = this.Data.MapSave.MapName;
 
-        //TODO 0.保存旧场景内物品
-        //1.卸载旧场景内物品
-
-
-        //切换到这个新场景
-        SceneManager.SetActiveScene(newScene);
-
-        //TODO 通过Data.MapSave 还原场景内物品 放入上面的新临时场景
-
-        GameChunkManager.Instance.CreateChun_ByMapSave(Data.MapSave);
-
-        Data.MapSave.items["MapEdge"].ForEach(item =>
+        if (this.Data.MapSave != null)
         {
-            Data_Boundary boundary = item as Data_Boundary;
-            boundary.TP_Position = transform.position;
-            boundary.TP_SceneName = SaveDataManager.Instance.SaveData.Active_MapName;
-            Data.PlayerPos = boundary._transform.Position;
-        });
+            //设置返回的功能
+            this.Data.MapSave.items["MapEdge"].ForEach(item =>
+            {
+                Data_Boundary boundary = item as Data_Boundary;
+                boundary.TP_Position = transform.position;
+                this.Data.PlayerPos = boundary._transform.Position;
+            });
 
-        if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue
-         (SaveDataManager.Instance.CurrentContrrolPlayerName, out var savedData))
-        {
-            //Debug.Log($"成功加载已保存的玩家：{playerName}");
-            Data_Player playerData = savedData;
-            playerData._transform.Position = Data.PlayerPos + PlayerPosOffset;
+            if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue
+             (SaveDataManager.Instance.CurrentContrrolPlayerName, out var Data))
+            {
+                //Debug.Log($"成功加载已保存的玩家：{playerName}");
+                Data_Player playerData = Data;
+                Data.CurrentPlanetName = this.Data.SceneName;
+                playerData._transform.Position = this.Data.PlayerPos + PlayerPosOffset;
+            }
+
+            GameManager.Instance.ChangeScene_ByPlayerData(Data);
+            GameChunkManager.Instance.CreateChun_ByMapSave(this.Data.MapSave);
         }
-
-
+        else
+        {
+            if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue
+           (SaveDataManager.Instance.CurrentContrrolPlayerName, out var Data))
+            {
+                //Debug.Log($"成功加载已保存的玩家：{playerName}");
+                Data_Player playerData = Data;
+                Data.CurrentPlanetName = this.Data.SceneName;
+                playerData._transform.Position = this.Data.PlayerPos + PlayerPosOffset;
+            }
+            GameManager.Instance.ChangeScene_ByPlayerData(Data);
+        }
+     
     }
 
     public override void Save()

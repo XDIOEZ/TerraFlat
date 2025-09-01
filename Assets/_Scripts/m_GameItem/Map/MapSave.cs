@@ -16,6 +16,14 @@ public partial class MapSave
 
     public UnityEngine.Vector2 MapPosition;
 
-    // 说明：在保存物品时，同一名称的物品会存储在同一 List 中，
-    // 方便后续加载时批量实例化并赋值
+    public void AddItemData(ItemData itemData)
+    {
+        string key = itemData.IDName;
+        if (!items.TryGetValue(key, out var list))
+        {
+            list = new List<ItemData>();
+            items[key] = list;
+        }
+        list.Add(itemData);
+    }
 }

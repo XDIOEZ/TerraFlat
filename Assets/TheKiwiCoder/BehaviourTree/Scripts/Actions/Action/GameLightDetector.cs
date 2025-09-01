@@ -14,11 +14,11 @@ public class GameLightDetector : ActionNode
     public float CurrentSunLightIntensity = 0;
 
     protected override void OnStart() {
-        if (SaveDataManager.Instance.SaveData.Active_MapData == null)
+      /*  if (SaveDataManager.Instance.SaveData.Active_MapData == null)
         {
             return;
         }
-        CurrentSunLightIntensity = SaveDataManager.Instance.SaveData.Active_MapData.SunlightIntensity;
+        CurrentSunLightIntensity = SaveDataManager.Instance.SaveData.Active_MapData.SunlightIntensity;*/
     }
 
     protected override void OnStop() {
@@ -26,6 +26,7 @@ public class GameLightDetector : ActionNode
 
     protected override State OnUpdate()
     {
+        /*
         if (SaveDataManager.Instance.SaveData.Active_MapData == null)
         {
             return State.Failure;
@@ -35,12 +36,13 @@ public class GameLightDetector : ActionNode
             < SunlightIntensityThreshold.y && SaveDataManager.Instance.SaveData.Active_MapData.SunlightIntensity
             > SunlightIntensityThreshold.y)
         {
-            return State.Success;
+           
         }
         else 
         {
            
-            return State.Failure;
-        }
+    
+        }*/
+        return State.Failure;
     }
 }

@@ -412,7 +412,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     {
         var saveData = SaveDataManager.Instance.SaveData;
         // 计算玩家在当前地图内的局部位置
-        Vector2 localPos = (Vector2)player.transform.position - saveData.Active_MapPos;
+        Vector2 localPos = (Vector2)player.transform.position;
         // 如果是垂直边界，只保留X轴偏移；如果是水平边界，只保留Y轴偏移
         return IsVerticalEdge(Vector2Int.RoundToInt(direction)) ? new Vector2(localPos.x, 0) : new Vector2(0, localPos.y);
     }

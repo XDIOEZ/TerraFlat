@@ -38,12 +38,17 @@ public class Chunk : MonoBehaviour
     }
 
     public void SaveChunk()
-    { 
+    {
+        MapSave.items.Clear();
       //调用所有item的Save方法
         foreach (var item in RunTimeItems.Values)
         {
-            if (item != null)
+            if (item == null) 
+            { 
+                continue;
+            }
                 item.Save();
+            MapSave.AddItemData(item.itemData);
         }
         SaveDataManager.Instance.SaveData.Active_MapsData_Dict[MapSave.MapName] = MapSave;
     }

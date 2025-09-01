@@ -58,6 +58,7 @@ public class Map : Item, ISave_Load
         {
             SaveTileMap_TO_TileData();
         }
+        base.Save();
     }
 
     public new void Start()

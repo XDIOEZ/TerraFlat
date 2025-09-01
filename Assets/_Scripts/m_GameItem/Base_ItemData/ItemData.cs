@@ -197,7 +197,7 @@ public partial class ItemTransform
     public Quaternion Rotation;
 
     [Tooltip("ŒÔ∆∑Àı∑≈")]
-    public Vector3 Scale;
+    public Vector3 Scale = Vector3.one;
 }
 
 

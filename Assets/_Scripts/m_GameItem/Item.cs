@@ -60,9 +60,6 @@ public abstract class Item : MonoBehaviour
         {
             // 自动生成Guid
             itemData.Guid = Guid.NewGuid().GetHashCode();
-        }
-        if (itemData.ModuleDataDic.Count == 0)
-        {
             Load();
         }
     }
@@ -278,6 +275,12 @@ public abstract class Item : MonoBehaviour
     {
         ModuleLoad();
 
+    }
+    public void LoadDataPosition()
+    {
+        transform.position = itemData._transform.Position;
+        transform.rotation = itemData._transform.Rotation;
+        transform.localScale = itemData._transform.Scale;
     }
     [Button("保存模块")]
     public virtual void Save()

@@ -9,6 +9,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     [SerializeField]
     private GameObject SunAndMoonPrefab;
     public GameObject SunAndMoonObj { get; private set; }
+
     public PlanetData Ready_planetData = new PlanetData();
     public UltEvent Event_GameStart { get; set; } = new UltEvent();
     public UltEvent Event_ExitGame_Start { get;  set; } = new UltEvent();
@@ -27,7 +28,6 @@ public class GameManager : SingletonAutoMono<GameManager>
         
         foreach (var go in GameChunkManager.Instance.Chunk_Dic.Values)
         {
-            //SaveDataManager.Instance.SaveChunk_To_SaveData(go);
             go.SaveChunk();
         }
 
@@ -39,6 +39,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         Event_ExitGame_End.Invoke();
     }
+
     public void StartNewGame()
     {
         //创建随机数        // 初始化随机种子并创建系统随机实例
@@ -48,48 +49,88 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         //创建初始星球的数据
         SaveDataManager.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
-        SaveDataManager.Instance.SaveData.Active_PlanetData = Ready_planetData;
+        SaveDataManager.Instance.SaveData.Active_PlanetName = "地球";
 
 
         ContinueGame();
     }
+
     public void ContinueGame()
     {
         StartGame_By_LoadPlayer(SaveDataManager.Instance.CurrentContrrolPlayerName);
     }
     public void StartGame_By_LoadPlayer(string PlayerName)
     {
-        // 获取玩家数据
-        SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out var playerData);
-
-        // 从玩家数据中读取星球名称，如果没有则用默认名字
+        // 1. 根据存档立即确定星球名
+        SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out Data_Player playerData);
         string planetName = playerData != null ? playerData.CurrentPlanetName : "地球";
 
-        // 创建并切换到新场景
+        // 2. 立刻创建并激活空场景
         Scene newScene = SceneManager.CreateScene(planetName);
         SceneManager.SetActiveScene(newScene);
 
-        // 清理无效物体
-        GameItemManager.Instance.CleanupNullItems();
-
-        Player player;
-        if (playerData != null)
+        // 3. 准备卸载旧场景（如有）
+        Scene startScene = SceneManager.GetSceneByName("GameStartScene");
+        if (startScene.IsValid() && startScene.isLoaded)
         {
-            // 玩家数据存在则加载
-            player = GameItemManager.Instance.LoadPlayer(PlayerName);
+            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(startScene);
+            unloadOp.completed += _ =>
+            {
+                Debug.Log($"旧场景已卸载：{startScene.name}");
+                LoadPlayerAndCreateWorld(PlayerName, playerData);
+            };
         }
         else
         {
-            // 玩家数据不存在 → 创建默认模板并随机放置
-            player = GameItemManager.Instance.LoadPlayer(PlayerName);
-            GameItemManager.Instance.RandomDropInMap(player.gameObject);
+            // 没有旧场景，直接完成后续步骤
+            LoadPlayerAndCreateWorld(PlayerName, playerData);
         }
+    }
+    public void ChangeScene_ByPlayerData(Data_Player playerData)
+    {
+        if(playerData == null)
+        {
+            return;
+        }
+       var PlayerName = playerData.Name_User;
 
-        GameItemManager.Instance.Player_DIC[PlayerName] = player;
+        string planetName = playerData.CurrentPlanetName;
+
+        // 2. 立刻创建并激活空场景
+        Scene newScene = SceneManager.CreateScene(planetName);
+     
+
+        // 3. 准备卸载旧场景（如有）
+        Scene startScene = SceneManager.GetActiveScene();
+        if (startScene.IsValid() && startScene.isLoaded)
+        {
+            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(startScene);
+            unloadOp.completed += _ =>
+            {
+                SceneManager.SetActiveScene(newScene);
+                Debug.Log($"旧场景已卸载：{startScene.name}");
+                Player player = GameItemManager.Instance.LoadPlayer(PlayerName);
+            };
+        }
+    }
+
+    /// <summary>
+    /// 旧场景卸载完之后，再真正加载玩家、创建天体
+    /// </summary>
+    private void LoadPlayerAndCreateWorld(string playerName, Data_Player playerData)
+    {
+        GameItemManager.Instance.CleanupNullItems();
+
+        Player player = GameItemManager.Instance.LoadPlayer(playerName);
+        if (playerData == null)                // 新玩家：随机放到新场景
+            GameItemManager.Instance.RandomDropInMap(player.gameObject);
+
+        GameItemManager.Instance.Player_DIC[playerName] = player;
 
         // 创建天体
-        Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
+        SunAndMoonObj = Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
     }
+
 
 
 }

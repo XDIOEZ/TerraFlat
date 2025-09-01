@@ -417,7 +417,9 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         (GameObject mapObj, Chunk chunk) = CreateMapBase(mapSave);
 
         chunk.LoadChunk();
+
         chunk.Map = chunk.RuntimeItemsGroup["MapCore"][0] as Map;
+
         return chunk;
     }
     #endregion

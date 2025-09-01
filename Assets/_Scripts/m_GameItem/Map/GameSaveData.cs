@@ -1,4 +1,3 @@
-
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
@@ -8,134 +7,100 @@ using UnityEngine;
 [System.Serializable]
 public partial class GameSaveData
 {
+    // ===== 基础存档信息 =====
     [Tooltip("当前加载着的存档名称")]
-    public string saveName = "defaultSaveName";//存档名称
+    public string saveName = "defaultSaveName";
 
-    public string Active_PlanetName = "地球";//当前激活星球名称
+    [Tooltip("当前激活星球名称")]
+    public string Active_PlanetName = "地球";
 
-    public string Active_MapName = "(0,0)";//当前激活场景名称
-
-    public Vector2Int Active_MapPos = new Vector2Int(0, 0);//当前激活地图位置
-    //种子
+    [Tooltip("存档种子（字符串版本）")]
     public string SaveSeed = "0";
-    //随机种子
+
+    [Tooltip("存档随机种子（整数版本）")]
     public int Seed;
 
+    [Tooltip("累计游戏时间")]
     public float Time = 0;
 
-    public float TimeSpeed = 1f; // 每秒流逝的游戏时间（可以外部调节）
+    [Tooltip("时间流速（每秒流逝多少游戏时间）")]
+    public float TimeSpeed = 1f;
 
-    //玩家数据
+
+    // ===== 玩家相关 =====
     [ShowInInspector]
     public Dictionary<string, Data_Player> PlayerData_Dict = new();
 
-    //建筑与场景之间的切换表_位置
-    public Dictionary<string, Vector2> Scenen_Building_Pos = new();
 
-    //建筑与场景之间的切换表_名字
+    // ===== 建筑与场景切换表 =====
+    public Dictionary<string, Vector2> Scenen_Building_Pos = new();
     public Dictionary<string, string> Scenen_Building_Name = new();
-  
+
+
+    // ===== 星球数据 =====
     [ShowInInspector]
     public Dictionary<string, PlanetData> PlanetData_Dict = new();
 
-    [ShowInInspector]
-    public Vector2 ChunkSize
-    {
-        get
-        {
-            return Active_PlanetData.MapSize;
-        }
-    }
 
-    //当前激活星球数据
-    [ShowInInspector]
-    public Dictionary<string, MapSave> Active_MapsData_Dict
-    {
-        get
-        {
-/*            if (PlanetData_Dict == null ||
-                !PlanetData_Dict.ContainsKey(Active_PlanetName) ||
-                PlanetData_Dict[Active_PlanetName] == null ||
-                PlanetData_Dict[Active_PlanetName].MapData_Dict == null)
-            {
-                // Return a default value or throw an exception
-                return new Dictionary<string, MapSave>();
-                // Alternatively:
-                // throw new System.Exception("Unable to get Active_MapsData_Dict - dictionary or planet data is null");
-            }*/
-            return Active_PlanetData.MapData_Dict;
-        }
-        set
-        {
-/*            if (PlanetData_Dict == null ||
-                !PlanetData_Dict.ContainsKey(Active_PlanetName) ||
-                PlanetData_Dict[Active_PlanetName] == null)
-            {
-                // Handle the error case - either create new entries or throw
-                // For example:
-                // throw new System.Exception("Cannot set Active_MapsData_Dict - dictionary or planet data is null");
-                return;
-            }*/
-            Active_PlanetData.MapData_Dict = value;
-        }
-    }
+    // ===== 快捷访问属性 =====
 
-    public MapSave Active_MapData
-    {
-        get
-        {   if(!Active_MapsData_Dict.ContainsKey(Active_MapName))
-            {
-                return null;
-            }
-            return Active_MapsData_Dict[Active_MapName];
-        }
-    }
+    /// <summary> 当前激活星球的地图块大小 </summary>
+    [ShowInInspector]
+    public Vector2 ChunkSize => Active_PlanetData?.MapSize ?? Vector2.one;
+
+    /// <summary> 当前激活星球的数据 </summary>
     [ShowInInspector]
     public PlanetData Active_PlanetData
     {
         get
         {
-            return PlanetData_Dict[Active_PlanetName];
-        }
+            if (PlanetData_Dict != null &&
+                PlanetData_Dict.TryGetValue(Active_PlanetName, out var planetData) &&
+                planetData != null)
+            {
+                return planetData;
+            }
 
+            return null;
+        }
         set
         {
-            PlanetData_Dict[Active_PlanetName] = value;
+            if (PlanetData_Dict != null)
+            {
+                PlanetData_Dict[Active_PlanetName] = value;
+            }
+        }
+    }
+
+    /// <summary> 当前激活星球的所有地图数据 </summary>
+    [ShowInInspector]
+    public Dictionary<string, MapSave> Active_MapsData_Dict
+    {
+        get => Active_PlanetData?.MapData_Dict ?? new Dictionary<string, MapSave>();
+        set
+        {
+            if (Active_PlanetData != null)
+                Active_PlanetData.MapData_Dict = value;
+        }
+    }
+
+    /// <summary> 当前激活地图的数据 </summary>
+    public MapSave Active_MapData
+    {
+        get
+        {
+            if (Active_MapsData_Dict != null &&
+                Active_MapsData_Dict.TryGetValue(Active_MapName, out var mapSave))
+            {
+                return mapSave;
+            }
+
+            return null;
         }
     }
 
 
-    /*  {
-          get
-          {
-              if (PlanetData_Dict == null ||
-                  !PlanetData_Dict.ContainsKey(Active_PlanetName) ||
-                  PlanetData_Dict[Active_PlanetName] == null)
-              {
-                  // Return a default value or throw an exception
-                  return new PlanetData();
-                  // Alternatively:
-                  // throw new System.Exception("Unable to get Active_PlanetData - dictionary or planet data is null");
-              }
-              return PlanetData_Dict[Active_PlanetName];
-          }
-          set
-          {
-              if (PlanetData_Dict == null ||
-                  !PlanetData_Dict.ContainsKey(Active_PlanetName) ||
-                  PlanetData_Dict[Active_PlanetName] == null)
-              {
-                  // Handle the error case - either create new entries or throw
-                  // For example:
-                  // throw new System.Exception("Cannot set Active_PlanetData - dictionary or planet data is null");
-                  return;
-              }
-              PlanetData_Dict[Active_PlanetName] = value;
-          }
-      }*/
-
-
-    //构造函数
+    // ===== 构造函数 =====
     public GameSaveData()
     {
         Active_MapsData_Dict = new Dictionary<string, MapSave>();

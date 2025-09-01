@@ -281,7 +281,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
         newPlayer.transform.SetParent(null, true);
 
         newPlayer.Load();
-
+        newPlayer.LoadDataPosition();
         return newPlayer;
     }
     [Tooltip("随机空投")]
