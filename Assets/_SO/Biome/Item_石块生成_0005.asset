@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9bff3c2c7cc49f64b817032878383326, type: 3}
   m_Name: "Item_\u77F3\u5757\u751F\u6210_0005"
   m_EditorClassIdentifier: 
-  itemName: Entity_Stone
+  itemPrefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
+  itemName: Mine_Stone
   itemCount: 1
   SpawnChance: 0.005
   environmentConditionRange:

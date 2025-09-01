@@ -4,11 +4,14 @@ using NaughtyAttributes;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using UnityEngine;
 
 [System.Serializable, MemoryPackable]
 public partial class Data_Player : ItemData
 {
+    [Tooltip("当前所在星球的名称,用于开始游戏时加载玩家在哪个地图存档")]
+    public string CurrentPlanetName = "地球";
     #region 生命
     [Tooltip("血量")]
     public Hp hp = new Hp(30);

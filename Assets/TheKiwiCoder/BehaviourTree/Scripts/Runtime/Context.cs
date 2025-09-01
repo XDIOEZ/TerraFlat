@@ -24,7 +24,7 @@ namespace TheKiwiCoder {
 
         //添加自定义组件
         public IDetector itemDetector;
-        public Mover mover;
+        public Mover_AI mover;
         public IItemValues itemValues;
         public Item item;
         public Map map;
@@ -51,10 +51,10 @@ namespace TheKiwiCoder {
             context.itemDetector = gameObject.GetComponentInChildren<IDetector>();
             context.itemValues = gameObject.GetComponentInChildren<IItemValues>();
             context.item = gameObject.GetComponentInChildren<Item>();
-                context.ColdWeapon = context.item.GetComponentInChildren<Mod_ColdWeapon>();
+            context.ColdWeapon = context.item.GetComponentInChildren<Mod_ColdWeapon>();
             // Add whatever else you need here...
 
-            context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover;
+            context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover_AI;
             context.Food = context.item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
             context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
 

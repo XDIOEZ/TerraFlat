@@ -7,7 +7,7 @@ using UnityEngine.UI;
 using Sirenix.OdinInspector;
 using ButtonAttribute = Sirenix.OdinInspector.ButtonAttribute;
 
-public class CraftingTable : Item,ISave_Load,IBuilding
+public class CraftingTable : Item,IBuilding
 {
     #region 字段
     //合成按钮
@@ -280,25 +280,6 @@ public class CraftingTable : Item,ISave_Load,IBuilding
     {
         throw new System.NotImplementedException();
     }
-
-    #region 保存和加载
-    public void Save()
-    {
-        //TODO 保存数据
-    }
-
-    public void Load()
-    {
-        /*inputInventory = Children_Inventory_GameObject["输入物品槽"];
-        outputInventory = Children_Inventory_GameObject["输出物品槽"];
-
-        if (InventoryData_Dict.ContainsKey("输入物品槽"))
-        {
-            inputInventory.Data = InventoryData_Dict["输入物品槽"];
-            outputInventory.Data = InventoryData_Dict["输出物品槽"];
-        }*/
-    }
-    #endregion
     #endregion
 
 }

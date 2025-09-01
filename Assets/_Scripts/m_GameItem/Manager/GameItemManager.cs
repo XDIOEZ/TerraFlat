@@ -47,7 +47,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
             {
                 try
                 {
-                    saveableItem.Load();
+         //           saveableItem.Load();
                 }
                 catch (System.Exception ex)
                 {
@@ -85,17 +85,10 @@ public class GameItemManager : SingletonMono<GameItemManager>
     {
         if (position == default) position = Vector3.zero;
         if (rotation == default) rotation = Quaternion.identity;
-        if (scale == default || scale == Vector3.zero)
-            scale = Vector3.one;
+        if (scale == default || scale == Vector3.zero) scale = Vector3.one;
 
-        // 检测是否存在重复 GUID
-        if (RunTimeItems.ContainsKey(itemData.Guid))
-        {
-            Debug.LogError($"【物品实例化错误】检测到重复的GUID：{itemData.Guid}\n" +
-                $"当前物品：{itemData.IDName}\n" +
-                $"已存在物品：{RunTimeItems[itemData.Guid].name}");
-            return null;
-        }
+        itemData.Guid = System.Guid.NewGuid().GetHashCode();
+
 
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position, rotation, scale);
 
@@ -122,21 +115,54 @@ public class GameItemManager : SingletonMono<GameItemManager>
 
         item.itemData = itemData;
 
-        // 如果 Guid 在 -1000 到 1000 之间，重新生成唯一 Guid
-        if (item.itemData.Guid > -1000 && item.itemData.Guid < 1000)
-            item.itemData.Guid = System.Guid.NewGuid().GetHashCode();
-
         RunTimeItems[item.itemData.Guid] = item;
+
         AddToGroup(item); // 分组逻辑
 
         return item;
     }
 
 
+    public Item InstantiateItem(ItemData itemData, GameObject parent = null)
+    {
+        itemData.Guid = System.Guid.NewGuid().GetHashCode();
+
+        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData._transform.Position, itemData._transform.Rotation, itemData._transform.Scale);
+
+        Item item = itemObj.GetComponent<Item>();
+
+        if (parent != null)
+        {
+            itemObj.transform.SetParent(parent.transform, true);
+        }
+        else
+        {
+            if (GameChunkManager.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var chunk))
+            {
+                itemObj.transform.SetParent(chunk.transform, true);
+            }
+            else if (GameChunkManager.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var UnActivechunk))
+            {
+                itemObj.transform.SetParent(UnActivechunk.transform, true);
+            }
+
+            GameChunkManager.Instance.UpdateItem_ChunkOwner(item);
+        }
+
+
+        item.itemData = itemData;
+
+        RunTimeItems[item.itemData.Guid] = item;
+
+        AddToGroup(item); // 分组逻辑
+
+        return item;
+    }
+
     #endregion
 
     // ✅ 添加到分组
-    private void AddToGroup(Item item)
+    public void AddToGroup(Item item)
     {
         string key = item.itemData.IDName;
         if (!RuntimeItemsGroup.TryGetValue(key, out var list))
@@ -178,8 +204,6 @@ public class GameItemManager : SingletonMono<GameItemManager>
         foreach (Player player in players)
         {
             player.Save();
-
-            player.ModuleSave();
 
             SaveDataManager.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
 
@@ -278,8 +302,8 @@ public class GameItemManager : SingletonMono<GameItemManager>
         int tileSizeY = 1;
 
         // 整个地图的大小（每个地图块内是 tileSizeX x tileSizeY）
-        int mapWidth = SaveDataManager.Instance.SaveData.ChunkSize.x * tileSizeX;
-        int mapHeight = SaveDataManager.Instance.SaveData.ChunkSize.y * tileSizeY;
+        float mapWidth = SaveDataManager.Instance.SaveData.ChunkSize.x * tileSizeX;
+        float mapHeight = SaveDataManager.Instance.SaveData.ChunkSize.y * tileSizeY;
 
         // 创建随机生成器
         System.Random rng = new System.Random();

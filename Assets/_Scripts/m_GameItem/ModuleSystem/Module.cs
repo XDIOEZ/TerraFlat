@@ -1,4 +1,5 @@
 using Sirenix.OdinInspector;
+using System;
 using UltEvents;
 using UnityEngine;
 
@@ -53,7 +54,7 @@ public abstract class Module : MonoBehaviour
         this.item = item_;
         if (itemData_== null)
         {
-            Item_Data = item.itemData;
+            Item_Data = item_.itemData;
         }
         else
         {
@@ -198,4 +199,32 @@ public abstract class Module : MonoBehaviour
         return null;
     }
     #endregion
+
+    /// <summary>
+    /// 通用加载模块方法
+    /// </summary>
+    /// <typeparam name="T">要获取的组件类型</typeparam>
+    /// <param name="item">Item 对象</param>
+    /// <param name="modID">模块 ID</param>
+    /// <param name="onLoaded">模块加载成功后的回调</param>
+    /// <returns>找到的组件，没找到返回 null</returns>
+    public static T LoadMod<T>(Item item, string modID, Action<T> onLoaded = null) where T : Component
+    {
+        var mod = item.itemMods.GetMod_ByID(modID);
+        if (mod == null)
+        {
+            Debug.LogWarning($"没有找到模块 {modID} 在 {item.itemData.GameName}");
+            return null;
+        }
+
+        T component = mod.GetComponent<T>();
+        if (component == null)
+        {
+            Debug.LogWarning($"模块 {modID} 中没有找到组件 {typeof(T).Name}");
+            return null;
+        }
+
+        onLoaded?.Invoke(component);
+        return component;
+    }
 }

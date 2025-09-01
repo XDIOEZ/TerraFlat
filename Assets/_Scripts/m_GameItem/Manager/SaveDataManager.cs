@@ -89,24 +89,13 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
         // 先处理可保存物品
         foreach (Item item in MapParent.RunTimeItems.Values)
         {
-            if (item == null)
-                continue;
-
             item.ModuleSave();
-
-            if (item is ISave_Load saveableItem)
-            {
-              saveableItem.Save();
-            }
         }
 
         foreach (Item item in MapParent.RunTimeItems.Values)
         {
             if (item == null)
                 continue;
-            //同步当前位置
-            item.SyncPosition();
-
             ItemData itemData = item.itemData;
 
             if (!itemDataDict.TryGetValue(itemData.IDName, out List<ItemData> list))
@@ -369,7 +358,7 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
     {
         MapSave worldSave = new MapSave();
         worldSave.MapName = SceneManager.GetActiveScene().name;
-        worldSave.items = GetActiveSceneAllItemData_Static();
+       // worldSave.items = GetActiveSceneAllItemData_Static();
 
         return worldSave;
     }
@@ -394,7 +383,7 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
             {
                 try
                 {
-                    saveableItem.Save();
+           //         saveableItem.Save();
                 }
                 catch (Exception ex)
                 {
@@ -413,7 +402,6 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
             if (!item.gameObject.activeInHierarchy)
                 continue;
 
-            item.SyncPosition();
 
             ItemData itemData = item.itemData;
             if (itemData == null)

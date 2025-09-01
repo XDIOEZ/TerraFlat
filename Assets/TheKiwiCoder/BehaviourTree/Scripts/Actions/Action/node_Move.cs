@@ -1,140 +1,156 @@
-using System.Collections;
 using UnityEngine;
 using TheKiwiCoder;
 using UnityEngine.AI;
-using UnityEditor.Rendering.LookDev;
-using TMPro;
 
 [NodeMenu("ActionNode/行动/移动")]
 public class Move : ActionNode
 {
 
-    #region 组件和接口引用
+    #region 字段
 
-    private Mover speeder;
+    private Vector2 lastPosition;     // 上一次位置
+
+    private float lastMoveTime = 0f;  // 上一次移动时间戳
+    private const float STUCK_THRESHOLD = 0.5f;   // 判定卡住的时间阈值
+    private const float MIN_MOVE_DISTANCE = 0.1f; // 认为移动的最小距离
 
 
-
-    #endregion
-
-
-    // 在类中添加这些字段
-    public Vector2 lastPosition;
-    public float lastMoveTime = 0f;
-    public const float STUCK_THRESHOLD = 0.5f; // 2秒不移动视为卡住
-    public const float MIN_MOVE_DISTANCE = 0.1f;
-    public bool AutoRotate = true;
-
-    #region 属性封装
-
-    public Mover Mover
-    {
-        get => context.mover;
-        set => context.mover = value;
-    }
 
     #endregion
+
+    #region 生命周期
 
     protected override void OnStart()
     {
-        speeder ??= context.mover;
+        context.mover.IsRunning = true;
+        context.mover.HasReachedTarget = false;
+        context.mover.Move(context.mover.TargetPosition);
     }
 
     protected override void OnStop()
     {
-      
+        // 停止时无需额外处理，留空
+        context.mover.IsRunning = false;
     }
+
+    #endregion
+
+    #region 行为更新
 
     protected override State OnUpdate()
     {
-        Vector2 currentPosition = context.agent.transform.position;
-        if (context.agent.isOnNavMesh)
-        {
-            context.agent.isStopped = false;
-            // 初始化时间戳
-            if (lastMoveTime == 0f)
-            {
-                lastMoveTime = Time.time;
-                lastPosition = currentPosition;
-            }
+        #region 过时代码
 
-            // 检测是否移动
-            if (Vector2.Distance(currentPosition, lastPosition) >= MIN_MOVE_DISTANCE)
-            {
-                // 有移动，更新时间戳和位置
-                lastMoveTime = Time.time;
-                lastPosition = currentPosition;
-                // 解锁
-                context.mover.IsLock = false;
-            }
-            else
-            {
-                // 没有移动，检查是否卡住时间过长
-                if (Time.time - lastMoveTime >= STUCK_THRESHOLD)
+        /*
+
+                // 确认 Agent 在可用 NavMesh 上
+                if (context.agent.isOnNavMesh)
                 {
-                    if (base.DebugMODE)
+                    Vector2 currentPosition = context.agent.transform.position;
+                    context.agent.isStopped = false;
+
+                    // 初始化位移记录
+                    if (lastMoveTime == 0f)
                     {
-                        Debug.LogWarning("AI卡住，目标位置无法到达");
+                        lastMoveTime = Time.time;
+                        lastPosition = currentPosition;
                     }
 
-                    if (AutoRotate)
+                    // 检测是否有实际移动
+                    if (Vector2.Distance(currentPosition, lastPosition) >= MIN_MOVE_DISTANCE)
                     {
-                        if (context.mover.IsLock)
+                        lastMoveTime = Time.time;
+                        lastPosition = currentPosition;
+                        context.mover.IsLock = false; // 解锁路径修正
+                    }
+                    else
+                    {
+                        // 卡住检测
+                        if (Time.time - lastMoveTime >= STUCK_THRESHOLD)
                         {
-                            Vector2 originalDir = (context.mover.TargetPosition - currentPosition).normalized;
+                            if (base.DebugMODE)
+                            {
+                                Debug.LogWarning("AI卡住，目标位置无法到达");
+                            }
 
-                            // ±90~180度偏转
-                            float angleOffset = Random.Range(90f, 180f);
-                            angleOffset = Random.value < 0.5f ? angleOffset : -angleOffset;
+                            // 自动尝试旋转方向
+                            if (autoRotate)
+                            {
+                                HandleAutoRotate(currentPosition);
+                                return State.Running;
+                            }
 
-                            Vector2 newDir = RotateVector2(originalDir, angleOffset);
-                            float runDistance = (context.mover.TargetPosition - currentPosition).magnitude;
-
-                            context.mover.TargetPosition = currentPosition + newDir * runDistance;
-
-
+                            // 重置并失败
+                            ResetMoveState();
+                            context.agent.isStopped = true;
+                            return State.Failure;
                         }
-                        context.mover.IsLock = true;
-
-                        if (context.mover.MemoryPath_Forbidden.Count < 3)
-                            context.mover.MemoryPath_Forbidden.Add(lastPosition);
-                        context.agent.SetDestination(context.mover.TargetPosition);
-                        return State.Running; // 继续尝试移动
                     }
-
-                    // 重置并返回失败
-                    lastPosition = Vector3.zero;
-                    lastMoveTime = 0f;
-                    context.agent.isStopped = true;
-                    return State.Failure;
                 }
-            }
-        }
-      
 
-        Mover.Move(speeder.TargetPosition,0);
+                // 执行移动
+                context.mover.Move(context.mover.TargetPosition, 0);
 
-        // 检查是否到达目标
-        if (Vector2.Distance(Mover.TargetPosition, currentPosition) <= context.agent.stoppingDistance)
+                // 检查是否到达目标
+                if (Vector2.Distance(context.mover.TargetPosition, currentPosition) <= context.agent.stoppingDistance)
+                {
+                    ResetMoveState();
+                    if (context.agent.isOnNavMesh)
+                    {
+                        context.agent.isStopped = true;
+                    }
+                    return State.Success;
+                }*/
+        #endregion
+
+        if(context.mover.HasReachedTarget == true)
         {
-            // 重置状态
-            lastPosition = Vector3.zero;
-            lastMoveTime = 0f;
-            if (context.agent.isOnNavMesh)
-                context.agent.isStopped = true;
             return State.Success;
         }
 
         return State.Running;
     }
-    /// <summary>
-    /// 旋转2D向量
-    /// </summary>
+
+    #endregion
+
+    #region 私有方法
+
+    /// <summary>自动旋转尝试修正卡住路径</summary>
+    private void HandleAutoRotate(Vector2 currentPosition)
+    {
+        if (context.mover.IsLock)
+        {
+            // 原始方向
+            Vector2 originalDir = (context.mover.TargetPosition - currentPosition).normalized;
+
+            // 随机 ±90~180 度偏转
+            float angleOffset = Random.Range(90f, 180f);
+            angleOffset = Random.value < 0.5f ? angleOffset : -angleOffset;
+
+            Vector2 newDir = RotateVector2(originalDir, angleOffset);
+            float runDistance = (context.mover.TargetPosition - currentPosition).magnitude;
+
+            // 更新新目标位置
+            context.mover.TargetPosition = currentPosition + newDir * runDistance;
+        }
+
+        context.mover.IsLock = true;
+
+        // 记录禁止区域，避免重复尝试
+        if (context.mover.MemoryPath_Forbidden.Count < 3)
+        {
+            context.mover.MemoryPath_Forbidden.Add(lastPosition);
+        }
+
+        context.agent.SetDestination(context.mover.TargetPosition);
+    }
+
+    /// <summary>旋转2D向量</summary>
     private Vector2 RotateVector2(Vector2 vector, float angleDegrees)
     {
-        float angleRadians = angleDegrees * Mathf.Deg2Rad;
-        float cos = Mathf.Cos(angleRadians);
-        float sin = Mathf.Sin(angleRadians);
+        float rad = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad);
+        float sin = Mathf.Sin(rad);
 
         return new Vector2(
             vector.x * cos - vector.y * sin,
@@ -142,13 +158,26 @@ public class Move : ActionNode
         );
     }
 
-    public override void OnDrawGizmos()
+    /// <summary>重置移动状态</summary>
+    private void ResetMoveState()
     {
+        lastPosition = Vector3.zero;
+        lastMoveTime = 0f;
+    }
+
+    #endregion
+
+    #region Gizmos
+
+    public override void OnDrawGizmos()
+    {  
         base.OnDrawGizmos();
-        if (Mover != null)
+        if (context.mover != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(Mover.TargetPosition, 0.2f);
+            Gizmos.DrawWireSphere(context.mover.TargetPosition, 0.2f);
         }
     }
+
+    #endregion
 }

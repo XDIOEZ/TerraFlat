@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 [System.Serializable]
 [MemoryPackable]
 public partial class SceneData
@@ -45,6 +46,7 @@ public class Mod_Scene : Module
             mod_Building.StartUnInstall += UnInstall;
         }
 
+        //检查是否已经初始化过 如果没有就初始化
         if (Data.IsInit == false)
         {
             Data.MapSave = MemoryPackSerializer.Deserialize<MapSave>(_sceneAsset.bytes);
@@ -85,7 +87,7 @@ public class Mod_Scene : Module
             foreach (var mapItem in itemList)
             {
                 // 生成物品实例（内部应该恢复位置、旋转等）
-             Item item =   GameItemManager.Instance.InstantiateItem(mapItem);
+             Item item =   GameItemManager.Instance.InstantiateItem(mapItem,null);
                 item.transform.position = transform.position;
             }
 
@@ -97,11 +99,35 @@ public class Mod_Scene : Module
         Debug.Log("屋子内部物品已全部实例化并从 MapSave 移除");
     }
 
+    [Button]
+    public void AddScene()
+    {
+        // 创建一个新的临时场景，名字可以随便起
+        Scene newScene = SceneManager.CreateScene("TempTentScene");
 
+        // 切换到这个新场景（可选）
+        SceneManager.SetActiveScene(newScene);
+
+        Debug.Log("新场景已创建：" + newScene.name);
+    }
 
     [Button]
     public void Test()
     {
+        //创建一个临时场景
+        Scene newScene = SceneManager.CreateScene(Data.SceneName);
+
+        //TODO 0.保存旧场景内物品
+        //1.卸载旧场景内物品
+
+
+        //切换到这个新场景
+        SceneManager.SetActiveScene(newScene);
+
+        //TODO 通过Data.MapSave 还原场景内物品 放入上面的新临时场景
+
+        GameChunkManager.Instance.CreateChun_ByMapSave(Data.MapSave);
+
         Data.MapSave.items["MapEdge"].ForEach(item =>
         {
             Data_Boundary boundary = item as Data_Boundary;
@@ -109,9 +135,6 @@ public class Mod_Scene : Module
             boundary.TP_SceneName = SaveDataManager.Instance.SaveData.Active_MapName;
             Data.PlayerPos = boundary._transform.Position;
         });
-
-    //    SaveLoadManager.Instance.SaveMap_To_SaveData();
-        //SaveDataManager.Instance.ChangeTOMapByMapSave(Data.MapSave);
 
         if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue
          (SaveDataManager.Instance.CurrentContrrolPlayerName, out var savedData))

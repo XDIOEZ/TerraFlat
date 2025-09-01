@@ -107,7 +107,7 @@ public class AssetBatchRenamerEditor : EditorWindow
         GUILayout.Label($"已添加素材数量：{objectsToRename.Count}");
     }
 
-    private async void RenameAssetsWithProgress()
+    private void RenameAssetsWithProgress()
     {
         if (isRenaming)
         {
@@ -125,66 +125,56 @@ public class AssetBatchRenamerEditor : EditorWindow
             return;
         }
 
-        cancellationTokenSource = new CancellationTokenSource();
-        var token = cancellationTokenSource.Token;
-
         isRenaming = true; // 开始重命名
 
         try
         {
-            await Task.Run(() =>
+            for (int i = 0; i < total; i++)
             {
-                for (int i = 0; i < total; i++)
+                if (cancelRenaming)
                 {
-                    if (token.IsCancellationRequested)
+                    Debug.LogWarning("重命名已取消！");
+                    break;
+                }
+
+                EditorUtility.DisplayProgressBar("重命名资源", $"正在处理 {i + 1}/{total}", (float)(i + 1) / total);
+
+                Object obj = objectsToRename[i];
+                string oldPath = AssetDatabase.GetAssetPath(obj);
+
+                string numberStr = (startIndex + i).ToString().PadLeft(digitCount, '0');
+                string newName = $"{namePrefix}{numberStr}{nameSuffix}";
+
+                if (obj is Sprite sprite)
+                {
+                    string texturePath = AssetDatabase.GetAssetPath(sprite.texture);
+                    string textureDirectory = Path.GetDirectoryName(texturePath);
+                    string extension = Path.GetExtension(texturePath);
+
+                    string newTexturePath = Path.Combine(textureDirectory, newName + extension).Replace("\\", "/");
+                    renameHistory.Push(new KeyValuePair<string, string>(texturePath, newTexturePath));
+
+                    string result = AssetDatabase.RenameAsset(texturePath, newName);
+                    if (!string.IsNullOrEmpty(result))
                     {
-                        break; // 如果被取消，跳出循环
-                    }
-
-                    Object obj = objectsToRename[i];
-                    string oldPath = AssetDatabase.GetAssetPath(obj);
-
-                    // 检查是否是 Sprite 类型
-                    if (obj is Sprite sprite)
-                    {
-                        string texturePath = AssetDatabase.GetAssetPath(sprite.texture);
-                        string textureDirectory = Path.GetDirectoryName(texturePath);
-                        string extension = Path.GetExtension(texturePath);
-
-                        string numberStr = (startIndex + i).ToString().PadLeft(digitCount, '0');
-                        string newName = $"{namePrefix}{numberStr}{nameSuffix}";
-                        string newTexturePath = Path.Combine(textureDirectory, newName + extension).Replace("\\", "/");
-
-                        // 记录旧名字和新名字，以便撤销
-                        renameHistory.Push(new KeyValuePair<string, string>(texturePath, newTexturePath));
-
-                        // 重命名关联的 Texture2D 文件
-                        string result = AssetDatabase.RenameAsset(texturePath, newName);
-                        if (!string.IsNullOrEmpty(result))
-                        {
-                            Debug.LogError(result);
-                        }
-                    }
-                    else
-                    {
-                        string directory = Path.GetDirectoryName(oldPath);
-                        string extension = Path.GetExtension(oldPath);
-
-                        string numberStr = (startIndex + i).ToString().PadLeft(digitCount, '0');
-                        string newName = $"{namePrefix}{numberStr}{nameSuffix}";
-                        string newPath = Path.Combine(directory, newName + extension).Replace("\\", "/");
-
-                        // 记录旧名字和新名字，以便撤销
-                        renameHistory.Push(new KeyValuePair<string, string>(oldPath, newPath));
-
-                        string result = AssetDatabase.RenameAsset(oldPath, newName);
-                        if (!string.IsNullOrEmpty(result))
-                        {
-                            Debug.LogError(result);
-                        }
+                        Debug.LogError(result);
                     }
                 }
-            });
+                else
+                {
+                    string directory = Path.GetDirectoryName(oldPath);
+                    string extension = Path.GetExtension(oldPath);
+                    string newPath = Path.Combine(directory, newName + extension).Replace("\\", "/");
+
+                    renameHistory.Push(new KeyValuePair<string, string>(oldPath, newPath));
+
+                    string result = AssetDatabase.RenameAsset(oldPath, newName);
+                    if (!string.IsNullOrEmpty(result))
+                    {
+                        Debug.LogError(result);
+                    }
+                }
+            }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

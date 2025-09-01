@@ -1,4 +1,4 @@
-using Force.DeepCloner;
+ï»¿using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System;
 using UltEvents;
@@ -7,7 +7,7 @@ using static Mod_Building;
 
 public class Mod_Building : Module
 {
-    #region Êı¾İ¶¨Òå
+    #region æ•°æ®å®šä¹‰
     [Serializable]
     public class Building_Data
     {
@@ -16,7 +16,7 @@ public class Mod_Building : Module
     }
     #endregion
 
-    #region ¹«¹²×Ö¶Î
+    #region å…¬å…±å­—æ®µ
     public Building_Data Data = new Building_Data();
     public Ex_ModData BuildingData;
     public BuildingShadow GhostShadow;
@@ -26,7 +26,7 @@ public class Mod_Building : Module
     public UltEvent StartUnInstall = new UltEvent();
     #endregion
 
-    #region ÊôĞÔ
+    #region å±æ€§
     public override ModuleData _Data
     {
         get => BuildingData;
@@ -36,7 +36,8 @@ public class Mod_Building : Module
     public bool IsItemInInventory => item.BelongItem != null;
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
+
     public override void Load()
     {
         BuildingData.ReadData(ref Data);
@@ -59,25 +60,25 @@ public class Mod_Building : Module
     {
         if (item == null)
         {
-            Debug.LogWarning("item ÉĞÎ´³õÊ¼»¯£¡");
+            Debug.LogWarning("item å°šæœªåˆå§‹åŒ–ï¼");
             return;
         }
-        // Ö»ÓĞÔÚÍæ¼ÒÊÖÉÏÊ±²ÅÏÔÊ¾ÓÄÁéÍ¶Ó°
+        // åªæœ‰åœ¨ç©å®¶æ‰‹ä¸Šæ—¶æ‰æ˜¾ç¤ºå¹½çµæŠ•å½±
         if (IsItemInInventory)
         {
-            // Èç¹ûÒÑ¾­°²×°Íê³É£¬ÇåÀíÓÄÁéÍ¶Ó°
+            // å¦‚æœå·²ç»å®‰è£…å®Œæˆï¼Œæ¸…ç†å¹½çµæŠ•å½±
             if (IsInstalled())
             {
                 CleanupGhost();
                 return;
             }
 
-            // Èç¹û»¹Î´°²×°£¬¼ÌĞøÏÔÊ¾ÓÄÁéÍ¶Ó°
+            // å¦‚æœè¿˜æœªå®‰è£…ï¼Œç»§ç»­æ˜¾ç¤ºå¹½çµæŠ•å½±
             HandleGhostShadow();
         }
         else
         {
-            // ²»ÔÚÍæ¼ÒÊÖÉÏÊ±ÇåÀíÓÄÁéÍ¶Ó°
+            // ä¸åœ¨ç©å®¶æ‰‹ä¸Šæ—¶æ¸…ç†å¹½çµæŠ•å½±
             CleanupGhost();
         }
     }
@@ -85,32 +86,32 @@ public class Mod_Building : Module
     public void OnDestroy()
     {
         CleanupGhost();
-      //  Debug.Log($"[BaseBuilding] ×é¼ş±»Ïú»Ù£¬ÇåÀíGhostShadow");
+      //  Debug.Log($"[BaseBuilding] ç»„ä»¶è¢«é”€æ¯ï¼Œæ¸…ç†GhostShadow");
 
         if (item != null)
             item.OnAct -= Install;
     }
     #endregion
 
-    #region ÉËº¦´¦Àí
+    #region ä¼¤å®³å¤„ç†
     private void OnHit(float hp)
     {
         if (hp <= 0)
         {
             UnInstall();
         }
-       // Debug.Log("ÉËº¦£º" + hp);
+       // Debug.Log("ä¼¤å®³ï¼š" + hp);
     }
     #endregion
 
-    #region ½¨Öş°²×°/Ğ¶ÔØ
+    #region å»ºç­‘å®‰è£…/å¸è½½
     [Button]
     public virtual void Install()
     {
-        // Ö»ÓĞÔÚÍæ¼ÒÊÖÉÏÊ±²ÅÄÜ°²×°
+        // åªæœ‰åœ¨ç©å®¶æ‰‹ä¸Šæ—¶æ‰èƒ½å®‰è£…
         if (!IsItemInInventory)
         {
-            Debug.LogWarning($"[½¨Öş°²×°] °²×°Ê§°Ü: ÎïÆ·²»ÔÚÍæ¼ÒÊÖÉÏ");
+            Debug.LogWarning($"[å»ºç­‘å®‰è£…] å®‰è£…å¤±è´¥: ç‰©å“ä¸åœ¨ç©å®¶æ‰‹ä¸Š");
             return;
         }
 
@@ -118,6 +119,8 @@ public class Mod_Building : Module
             return;
 
         ExecuteInstallation();
+
+      
     }
 
     [Button]
@@ -147,41 +150,41 @@ public class Mod_Building : Module
     }
     #endregion
 
-    #region °²×°ÑéÖ¤
+    #region å®‰è£…éªŒè¯
     private bool CanInstall()
     {
-        // 1. ¼ì²éÓÄÁéÍ¶Ó°
+        // 1. æ£€æŸ¥å¹½çµæŠ•å½±
         if (GhostShadow == null)
         {
-            Debug.LogError($"[½¨Öş°²×°] °²×°Ê§°Ü: ÓÄÁéÍ¶Ó°¶ÔÏó²»´æÔÚ (ËŞÖ÷Î»ÖÃ: {item.transform.position})");
+            Debug.LogError($"[å»ºç­‘å®‰è£…] å®‰è£…å¤±è´¥: å¹½çµæŠ•å½±å¯¹è±¡ä¸å­˜åœ¨ (å®¿ä¸»ä½ç½®: {item.transform.position})");
             return false;
         }
 
-        // 2. ¼ì²éÖÜÎ§ÕÏ°­Îï
+        // 2. æ£€æŸ¥å‘¨å›´éšœç¢ç‰©
         if (GhostShadow.AroundHaveGameObject)
         {
             string obstacleInfo = GhostShadow.obstacleCollider != null ?
-                $"{GhostShadow.obstacleCollider.gameObject.name} (Î»ÖÃ: {GhostShadow.obstacleCollider.transform.position})" :
-                "Î´ÖªÅö×²Ìå";
+                $"{GhostShadow.obstacleCollider.gameObject.name} (ä½ç½®: {GhostShadow.obstacleCollider.transform.position})" :
+                "æœªçŸ¥ç¢°æ’ä½“";
 
-            Debug.LogWarning($"[½¨Öş°²×°] °²×°Ê§°Ü: ¼ì²âµ½ÕÏ°­Îï - {obstacleInfo}");
+            Debug.LogWarning($"[å»ºç­‘å®‰è£…] å®‰è£…å¤±è´¥: æ£€æµ‹åˆ°éšœç¢ç‰© - {obstacleInfo}");
             Debug.DrawLine(item.transform.position, GhostShadow.transform.position, Color.red, 5f);
             return false;
         }
 
-        // 3. ¼ì²é¾àÀëÏŞÖÆ
+        // 3. æ£€æŸ¥è·ç¦»é™åˆ¶
         float distance = Vector2.Distance(item.transform.position, GhostShadow.transform.position);
         if (distance > Data.maxVisibleDistance)
         {
-            Debug.LogWarning($"[½¨Öş°²×°] °²×°Ê§°Ü: ¾àÀë³¬³öÏŞÖÆ {distance:F2}m (×î´óÔÊĞí: {Data.maxVisibleDistance:F2}m)");
+            Debug.LogWarning($"[å»ºç­‘å®‰è£…] å®‰è£…å¤±è´¥: è·ç¦»è¶…å‡ºé™åˆ¶ {distance:F2}m (æœ€å¤§å…è®¸: {Data.maxVisibleDistance:F2}m)");
             Debug.DrawLine(item.transform.position, GhostShadow.transform.position, Color.yellow, 5f);
             return false;
         }
 
-        // 4. ¼ì²éÎïÆ·ÊıÁ¿
+        // 4. æ£€æŸ¥ç‰©å“æ•°é‡
         if (item.itemData.Stack.Amount <= 0)
         {
-            Debug.LogError($"[½¨Öş°²×°] °²×°Ê§°Ü: ÎïÆ·ÊıÁ¿²»×ã (µ±Ç°: {item.itemData.Stack.Amount})");
+            Debug.LogError($"[å»ºç­‘å®‰è£…] å®‰è£…å¤±è´¥: ç‰©å“æ•°é‡ä¸è¶³ (å½“å‰: {item.itemData.Stack.Amount})");
             return false;
         }
 
@@ -192,16 +195,16 @@ public class Mod_Building : Module
     {
         StartInstall.Invoke();
         OnAction_Start.Invoke(item);
-        // ÏûºÄÎïÆ·
+        // æ¶ˆè€—ç‰©å“
         item.itemData.Stack.Amount--;
 
         damageReceiver.Hp = damageReceiver.MaxHp.Value;
 
-        // ¸üĞÂÎïÆ·×´Ì¬
+        // æ›´æ–°ç‰©å“çŠ¶æ€
         item.itemData.Stack.CanBePickedUp = false;
         item.OnUIRefresh?.Invoke();
 
-        // ÊµÀı»¯½¨Öş
+        // å®ä¾‹åŒ–å»ºç­‘
         var runtimeItem = GameItemManager.Instance.InstantiateItem(
             item.itemData.IDName,
             GhostShadow.transform.position
@@ -210,7 +213,7 @@ public class Mod_Building : Module
         if (runtimeItem != null)
         {
             item.ModuleSave();
-            // ÅäÖÃĞÂÊµÀı
+            // é…ç½®æ–°å®ä¾‹
             runtimeItem.transform.localScale = Vector3.one;
             runtimeItem.itemData = FastCloner.FastCloner.DeepClone(item.itemData);
             runtimeItem.itemData.Stack.Amount = 1;
@@ -218,22 +221,28 @@ public class Mod_Building : Module
             EnableChildColliders(true, runtimeItem.transform);
         }
 
-        // ´¦ÀíÎïÆ·ºÄ¾¡
+        // å¤„ç†ç‰©å“è€—å°½
         if (item.itemData.Stack.Amount <= 0)
         {
             CleanupGhost();
             Destroy(item.transform.gameObject);
         }
+        //æ›´æ–°åœ°å›¾
+        AstarGameManager.Instance.UpdateArea_Rectangle(center: runtimeItem.transform.position, length: 3, width: 3);
     }
     #endregion
 
-    #region ¸¨Öú·½·¨
+    #region è¾…åŠ©æ–¹æ³•
     private void HandleGhostShadow()
     {
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
 
-        // ´´½¨ Shadow ÊµÀı£¨Èç¹û²»´æÔÚ£©
+        // âœ¨ å–æ•´åˆ°æ ¼å­å¹¶åç§» 0.5ï¼Œè®©ä½ç½®è½åœ¨æ ¼å­ä¸­å¿ƒ
+        mouseWorldPos.x = Mathf.Floor(mouseWorldPos.x) + 0.5f;
+        mouseWorldPos.y = Mathf.Floor(mouseWorldPos.y) + 0.5f;
+
+        // åˆ›å»º Shadow å®ä¾‹ï¼ˆå¦‚æœä¸å­˜åœ¨ï¼‰
         if (GhostShadow == null)
         {
             CreateGhostShadow();
@@ -241,7 +250,7 @@ public class Mod_Building : Module
 
         if (GhostShadow == null) return;
 
-        // ¼ÆËãÒõÓ°Í¸Ã÷¶ÈÓëÎ»ÖÃ
+        // è®¡ç®—é˜´å½±é€æ˜åº¦ä¸ä½ç½®
         float distance = Vector2.Distance(item.transform.position, mouseWorldPos);
         float alpha = Mathf.InverseLerp(Data.maxVisibleDistance, Data.minVisibleDistance, distance);
         alpha = Mathf.Clamp01(alpha);
@@ -254,11 +263,12 @@ public class Mod_Building : Module
         }
         else
         {
-            Debug.LogWarning("[ShadowÉú³É] ShadowRenderer Î´ÆôÓÃ");
+            Debug.LogWarning("[Shadowç”Ÿæˆ] ShadowRenderer æœªå¯ç”¨");
         }
 
         GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
     }
+
 
     private void CreateGhostShadow()
     {
@@ -269,20 +279,20 @@ public class Mod_Building : Module
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[ShadowÉú³É] ÊµÀı»¯Ô¤ÖÆÌåÊ§°Ü: {ex.Message}");
+            Debug.LogError($"[Shadowç”Ÿæˆ] å®ä¾‹åŒ–é¢„åˆ¶ä½“å¤±è´¥: {ex.Message}");
             return;
         }
 
         if (shadowPrefab == null)
         {
-            Debug.LogError("[ShadowÉú³É] ÎŞ·¨ÊµÀı»¯BuildingShadowÔ¤ÖÆÌå");
+            Debug.LogError("[Shadowç”Ÿæˆ] æ— æ³•å®ä¾‹åŒ–BuildingShadowé¢„åˆ¶ä½“");
             return;
         }
 
         GhostShadow = shadowPrefab.GetComponent<BuildingShadow>();
         if (GhostShadow == null)
         {
-            Debug.LogError("[ShadowÉú³É] BuildingShadowÔ¤ÖÆÌåÈ±ÉÙBuildingShadow×é¼ş");
+            Debug.LogError("[Shadowç”Ÿæˆ] BuildingShadowé¢„åˆ¶ä½“ç¼ºå°‘BuildingShadowç»„ä»¶");
             Destroy(shadowPrefab);
             return;
         }
@@ -293,7 +303,7 @@ public class Mod_Building : Module
         }
         else
         {
-            Debug.LogError("[ShadowÉú³É] hostRendererÎª¿Õ£¬ÎŞ·¨³õÊ¼»¯ÒõÓ°");
+            Debug.LogError("[Shadowç”Ÿæˆ] hostRendererä¸ºç©ºï¼Œæ— æ³•åˆå§‹åŒ–é˜´å½±");
         }
     }
 
@@ -318,7 +328,7 @@ public class Mod_Building : Module
 
     public bool IsInstalled()
     {
-        // µ±ÑªÁ¿´óÓÚ0Ê±£¬±íÊ¾½¨ÖşÒÑ¾­³É¹¦°²×°
+        // å½“è¡€é‡å¤§äº0æ—¶ï¼Œè¡¨ç¤ºå»ºç­‘å·²ç»æˆåŠŸå®‰è£…
         return damageReceiver.Hp > 0;
     }
     #endregion

@@ -1,10 +1,13 @@
-﻿using System.Collections;
+﻿using Sirenix.OdinInspector;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Mod_ItemChunkAssigner : Module
 {
     public Ex_ModData_MemoryPackable ModData;
+    [ShowInInspector]
     private Vector2Int lastChunkPos;
 
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }

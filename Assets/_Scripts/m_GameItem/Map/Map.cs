@@ -44,14 +44,14 @@ public class Map : Item, ISave_Load
 
     #region 保存和加载
     [Button("从数据加载地图")]
-    public void Load()
+    public override void Load()
     {
         LoadTileData_To_TileMap();
     }
 
     //不需要保存数据 因为游戏中的所有对地图的行为 直接影响背后数据
     [Button("保存地图到数据")]
-    public void Save()
+    public override void Save()
     {
         // 只有 tileMapData 为空或其 TileData 为空时才初始化数据
         if (Data == null || Data.TileData == null || Data.TileData.Count == 0)

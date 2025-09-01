@@ -5,12 +5,4 @@ using UnityEngine;
 
 public interface ISave_Load
 {
-    void Save()
-    {
-
-    }
-    void Load()
-    {
-
-    }
 }

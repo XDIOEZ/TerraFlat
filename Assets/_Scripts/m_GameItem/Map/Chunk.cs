@@ -1,8 +1,13 @@
-﻿using Sirenix.OdinInspector;
+﻿using Meryel.UnityCodeAssist.YamlDotNet.Core;
+using Sirenix.OdinInspector;
+using Sirenix.Utilities;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-
+/// <summary>
+/// 管理自己附属的Item
+/// </summary>
 public class Chunk : MonoBehaviour
 {
     [ShowInInspector]
@@ -11,25 +16,45 @@ public class Chunk : MonoBehaviour
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
     public Map Map;
     public MapSave MapSave;
-    public void Init()
+    public string ChunkOwner;
+
+
+    public Chunk LoadChunk()
     {
-        Map = GetComponentInChildren<Map>();
-
-        Map.Act();
-
-        // 第一步：获取场景中所有的 Item（包括非激活状态）
-        Item[] allItems = this.GetComponentsInChildren<Item>(includeInactive: true);
-
-        foreach (Item item in allItems)
+        MapSave.items.ForEach(items =>
         {
-            RunTimeItems[item.itemData.Guid] = item;
-            AddToGroup(item); // 新增分组逻辑
-        }
+            foreach(var itemData in items.Value)
+            {
+               Item item = GameItemManager.Instance.InstantiateItem(itemData,this.gameObject);
+               item.Load();
+                item.transform.position = itemData._transform.Position;
+                item.transform.rotation = itemData._transform.Rotation;
+                item.transform.localScale = itemData._transform.Scale;
+                RunTimeItems.Add(item.itemData.Guid, item);
+               AddToGroup(item);
+            }
+        });
+        return this;
+    }
 
+    public void SaveChunk()
+    { 
+      //调用所有item的Save方法
+        foreach (var item in RunTimeItems.Values)
+        {
+            if (item != null)
+                item.Save();
+        }
+        SaveDataManager.Instance.SaveData.Active_MapsData_Dict[MapSave.MapName] = MapSave;
+    }
+
+    public void DestroyChunk()
+    {
+          Destroy(this.gameObject);
     }
 
     // ✅ 添加到分组s
-    private void AddToGroup(Item item)
+    public void AddToGroup(Item item)
     {
         string key = item.itemData.IDName;
         if (!RuntimeItemsGroup.TryGetValue(key, out var list))
@@ -70,6 +95,33 @@ public class Chunk : MonoBehaviour
         if (RuntimeItemsGroup.TryGetValue(key, out var list))
         {
             list.Remove(item);
+        }
+    }
+
+   public void DestroyItem(Item item)
+    {
+        RunTimeItems.TryGetValue(item.itemData.Guid, out var itemData);
+        if (itemData!= null)
+        {
+            RemoveItem(item);
+            Destroy(item.gameObject);
+        }
+        else
+        {
+            Debug.Log("Item not found in chunk");
+            RunTimeItems.Remove(item.itemData.Guid);
+        }
+    }
+    public void ClearNullItems()
+    {
+        var keysToRemove = RunTimeItems
+            .Where(kvp => kvp.Value == null)
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            RunTimeItems.Remove(key);
         }
     }
 

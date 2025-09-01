@@ -13,15 +13,5 @@ using UnityEngine;
         throw new System.NotImplementedException();
     }
 
-    #region 保存与加载
-    public void Save()
-    {
-        GetComponentInChildren<ITriggerAttack>().DestroyWeapon();
-    }
-
-    public void Load()
-    {
-
-    }
-    #endregion
+ 
 }

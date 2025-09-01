@@ -123,9 +123,4 @@ public class Apple_Red : Item
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, 2f);
     }
-    public new void OnDestroy()
-    {
-        transform.DOKill();
-        base.OnDestroy();
-    }
 }

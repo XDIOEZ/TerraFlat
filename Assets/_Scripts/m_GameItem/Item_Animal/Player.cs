@@ -265,25 +265,5 @@ public class Player
 
     #endregion
 
-    #region 存储与读取
-
-    [Button("保存玩家数据")]
-    public void Save()
-    {
-        base.SyncPosition();
-       // GetDataFrom_GameObjectInventory_SaveTOData();
-        // this.gameObject.SetActive(false);
-    }
-
-    [Button("读取玩家数据")]
-    public void Load()
-    {
-        transform.position = Data._transform.Position;
-        transform.rotation = Data._transform.Rotation;
-        transform.localScale = Data._transform.Scale;
-    }
-
-    #endregion
-
     #endregion
 }

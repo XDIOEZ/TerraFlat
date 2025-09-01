@@ -39,6 +39,7 @@ public  abstract partial class ItemData
     public string GameName;
 
     [Tooltip("物品描述")]
+    [TextArea]
     public string Description = "什么都没有描述";
 
     [Tooltip("物品耐久度")]
@@ -74,9 +75,6 @@ public  abstract partial class ItemData
             $"是否可拾取：{Stack.CanBePickedUp}\n" +
             $"物品标签：{ItemTags}\n" +
             $"物品堆叠信息：{Stack}\n" +
-            $"物品位置：{_transform.Position}\n" +
-            $"物品旋转：{_transform.Rotation}\n" +
-            $"物品缩放：{_transform.Scale}\n" +
             $"物品特殊数据：{ItemSpecialData}\n" +
             $"全局唯一标识：{Guid}";
         return str;

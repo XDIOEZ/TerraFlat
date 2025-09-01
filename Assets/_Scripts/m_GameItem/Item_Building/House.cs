@@ -90,13 +90,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding,IRoom
     #endregion
 
     #region ºËÐÄ¹¦ÄÜ
-    public void Save() => onSave?.Invoke();
-    public void Load()
-    {
-        OnHpChanged?.Invoke();
-        OnDefenseChanged?.Invoke();
-        onLoad?.Invoke();
-    }
+   
 
     public void Death()
     {

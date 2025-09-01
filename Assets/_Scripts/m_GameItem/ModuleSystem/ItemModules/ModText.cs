@@ -6,6 +6,7 @@ public static class ModText
 {
     #region A
     public static string Attacker = "¹¥»÷Ä£¿é";
+    public static string Animation = "¶¯»­Ä£¿é";
     #endregion
 
     #region B
@@ -68,4 +69,11 @@ public static class ModText
     #region T
     public static string TrunBody = "TrunBody";
     #endregion
+}
+public static class AnimationText
+{
+    public static string Idle = "Idle";
+    public static string Move = "Move";
+    public static string Run = "Run";
+    public static string Attack = "Attack";
 }

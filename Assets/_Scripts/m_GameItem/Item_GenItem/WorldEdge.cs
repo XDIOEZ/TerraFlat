@@ -80,9 +80,9 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// 调用此方法会将当前对象的Transform信息同步到其`data`中的`_transform`字段，并触发`onSave`事件。
     /// Calling this method synchronizes the current object's Transform information to the `_transform` field within its `data`, and triggers the `onSave` event.
     /// </summary>
-    public void Save()
+    public override void Save()
     {
-        this.SyncPosition(); // 将当前的Transform信息同步到数据中
+        base.Save(); // 保存Item的状态
         onSave?.Invoke(); // 触发保存事件
     }
 
@@ -94,8 +94,9 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// 加载成功后，会根据当前场景名称解析目标场景名称并设置，然后触发`onLoad`事件。
     /// Upon successful loading, the target scene name is parsed from the current scene name and set, then the `onLoad` event is triggered.
     /// </summary>
-    public void Load()
+    public override void Load()
     {
+        base.Load();
         // 检查数据是否有效，防止空引用错误
         if (data == null || data._transform == null)
         {
@@ -335,7 +336,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <param name="worldRadius">世界半径，地图坐标范围为 [-worldRadius, +worldRadius]。</param>
     /// <param name="TargetMapPosition">原始目标坐标，可能在边界处。</param>
     /// <returns>最终应落入地图内的坐标（做过环绕处理后）。</returns>
-    private Vector2 WrapAroundWorldFloat(Vector2 playerEnterPos, Vector2 Direction, float worldRadius, Vector2 targetMapPos,Vector2Int MapSize)
+    private Vector2 WrapAroundWorldFloat(Vector2 playerEnterPos, Vector2 Direction, float worldRadius, Vector2 targetMapPos,Vector2 MapSize)
     {
         float min = -worldRadius;
         float max = worldRadius;

@@ -24,9 +24,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-8938144140595224153
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -77,9 +74,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-8398322489078601281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -545,9 +539,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-6622164275379785806
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -786,9 +777,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-5490670431961927780
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -813,9 +801,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-5385112494180246701
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1299,9 +1284,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-4064361960298055538
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1412,9 +1394,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-3059358621798475093
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1698,9 +1677,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-1829255504076088894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2021,9 +1997,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-680918877369928179
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2128,9 +2101,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-291641773378769783
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2183,9 +2153,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &-55305958284989786
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3397,9 +3364,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &3799833362423100159
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3558,9 +3522,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &4309859631961361093
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3929,7 +3890,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 948af1597b9034b48b9ad26591144258
-  position: {x: 812.6488, y: 926.39996}
+  position: {x: 811.2, y: 926.4001}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3993,9 +3954,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &5477399652980665433
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4574,9 +4532,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &8118348360121584919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4629,9 +4584,6 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 1
-  lastPosition: {x: 0, y: 0}
-  lastMoveTime: 0
-  AutoRotate: 1
 --- !u!114 &8255631480802371185
 MonoBehaviour:
   m_ObjectHideFlags: 0

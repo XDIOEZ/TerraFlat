@@ -2,12 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UltEvents;
+using Sirenix.OdinInspector;
 
 namespace TheKiwiCoder
 {
     public class BehaviourTreeRunner : Module
     {
         public BehaviourTree tree;
+        [ShowInInspector]
         Context context;
 
         private bool isRunning = true; // 控制行为树运行

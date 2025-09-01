@@ -1,21 +1,30 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
+/// <summary>
+/// 随机生成目标位置，并考虑同类吸引力
+/// </summary>
 public class RandomPosition : ActionNode
 {
+    #region 字段
+
     public Vector2 min = Vector2.one * -10;
     public Vector2 max = Vector2.one * 10;
     public bool TrueRandom;
 
-    // 同类检测与吸引相关参数
-    public float sameTypeAttraction = 3f;   // 同类吸引力强度
+    [Header("同类吸引参数")]
+    public float sameTypeAttraction = 3f;
 
     private Vector3 lastValidPosition = Vector3.zero;
     private const int maxTries = 5;
+
     // 重用列表减少GC分配
-    private List<Vector2> sameTypePositions = new List<Vector2>(8); // 预设容量
+    private readonly List<Vector2> sameTypePositions = new List<Vector2>(8);
+
+    #endregion
+
+    #region 生命周期
 
     protected override void OnStart()
     {
@@ -24,152 +33,154 @@ public class RandomPosition : ActionNode
 
     protected override void OnStop()
     {
+        // 无需操作
     }
+
+    #endregion
+
+    #region 行为逻辑
 
     protected override State OnUpdate()
     {
-        // 获取指向同类的方向向量（已内部处理性能优化）
         Vector2 sameTypeDirection = GetSameTypeAverageDirection();
 
         if (!TrueRandom && context.map != null)
         {
-            Vector3 chosenPosition = Vector3.zero;
-            bool found = false;
-
-            for (int i = 0; i < maxTries; i++)
-            {
-                // 合并随机偏移计算，减少局部变量
-                Vector2 randomOffset = new Vector2(
-                    Random.Range(min.x, max.x),
-                    Random.Range(min.y, max.y)
-                );
-
-                // 添加反向偏移（现有逻辑）
-                if (lastValidPosition != context.transform.position) // 避免零向量检查
-                {
-                    Vector2 direction = (Vector2)(context.transform.position - lastValidPosition).normalized;
-                    randomOffset += direction * 0.5f;
-                }
-
-                // 添加同类吸引偏移（仅在有同类时计算）
-                if (sameTypeDirection.sqrMagnitude > 0.001f) // 比直接比较Vector2.zero更高效
-                {
-                    randomOffset += sameTypeDirection * sameTypeAttraction;
-                }
-
-                // 计算测试位置并验证
-                Vector3 testPosition = context.transform.position + (Vector3)randomOffset;
-                Vector2Int testPositionInt = Vector2Int.FloorToInt(testPosition);
-
-                if (context.map.GetTileArea(testPositionInt) <= 2)
-                {
-                    chosenPosition = testPosition;
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found)
-            {
-                Vector2 randomOffset = new Vector2(
-                    Random.Range(min.x, max.x),
-                    Random.Range(min.y, max.y)
-                );
-
-                if (sameTypeDirection.sqrMagnitude > 0.001f)
-                {
-                    randomOffset += sameTypeDirection * sameTypeAttraction;
-                }
-                chosenPosition = context.transform.position + (Vector3)randomOffset;
-            }
-
-            context.mover.TargetPosition = chosenPosition;
-            blackboard.TargetPosition = chosenPosition - context.transform.position;
-            lastValidPosition = context.transform.position;
-
-            return State.Success;
+            return HandleMapConstrainedMovement(sameTypeDirection);
         }
         else
+        {
+            return HandleFreeMovement(sameTypeDirection);
+        }
+    }
+
+    #endregion
+
+    #region 私有方法
+
+    private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
+    {
+        Vector3 chosenPosition = Vector3.zero;
+        bool found = false;
+
+        for (int i = 0; i < maxTries; i++)
         {
             Vector2 randomOffset = new Vector2(
                 Random.Range(min.x, max.x),
                 Random.Range(min.y, max.y)
             );
 
+            // 添加反向偏移
+            if (lastValidPosition != context.transform.position)
+            {
+                Vector2 direction = ((Vector2)context.transform.position - (Vector2)lastValidPosition).normalized;
+                randomOffset += direction * 0.5f;
+            }
+
+            // 添加同类吸引
             if (sameTypeDirection.sqrMagnitude > 0.001f)
             {
                 randomOffset += sameTypeDirection * sameTypeAttraction;
             }
 
-            context.mover.TargetPosition = context.transform.position + (Vector3)randomOffset;
-            blackboard.TargetPosition = randomOffset;
-            lastValidPosition = context.transform.position;
-
-            return State.Success;
+            // 检查地图可用性
+            Vector3 testPosition = context.transform.position + (Vector3)randomOffset;
+            Vector2Int testPosInt = Vector2Int.FloorToInt(testPosition);
+            if (context.map.GetTileArea(testPosInt) <= 2)
+            {
+                chosenPosition = testPosition;
+                found = true;
+                break;
+            }
         }
+
+        // 如果没有找到合适位置，使用最后一次随机偏移
+        if (!found)
+        {
+            Vector2 randomOffset = new Vector2(
+                Random.Range(min.x, max.x),
+                Random.Range(min.y, max.y)
+            );
+            if (sameTypeDirection.sqrMagnitude > 0.001f)
+                randomOffset += sameTypeDirection * sameTypeAttraction;
+
+            chosenPosition = context.transform.position + (Vector3)randomOffset;
+        }
+
+        SetTargetPosition(chosenPosition);
+        return State.Success;
     }
 
-    // 优化性能的同类方向计算
+    private State HandleFreeMovement(Vector2 sameTypeDirection)
+    {
+        Vector2 randomOffset = new Vector2(
+            Random.Range(min.x, max.x),
+            Random.Range(min.y, max.y)
+        );
+
+        if (sameTypeDirection.sqrMagnitude > 0.001f)
+            randomOffset += sameTypeDirection * sameTypeAttraction;
+
+        SetTargetPosition(context.transform.position + (Vector3)randomOffset, randomOffset);
+        return State.Success;
+    }
+
+    private void SetTargetPosition(Vector3 worldPosition, Vector2? relativeOffset = null)
+    {
+        context.mover.TargetPosition = worldPosition;
+        blackboard.TargetPosition = relativeOffset ?? (worldPosition - context.transform.position);
+        lastValidPosition = context.transform.position;
+    }
+
+    /// <summary>
+    /// 计算同类平均方向
+    /// </summary>
     private Vector2 GetSameTypeAverageDirection()
     {
-        // 清空重用列表（避免每次创建新列表）
         sameTypePositions.Clear();
 
-        // 快速空引用检查
         if (context.itemDetector == null || context.item == null ||
             context.item.itemData == null || context.itemDetector.CurrentItemsInArea == null)
         {
             return Vector2.zero;
         }
 
-        // 缓存自身ID避免重复访问
         string selfId = context.item.itemData.IDName;
 
-        // 遍历已过滤的物品列表
         foreach (var collider in context.itemDetector.CurrentItemsInArea)
         {
-            // 快速排除空引用和自身
-            if (collider == null || collider.transform == context.transform ||
-                collider.itemData == null)
-            {
+            if (collider == null || collider.transform == context.transform || collider.itemData == null)
                 continue;
-            }
 
-            // 匹配同类ID
             if (collider.itemData.IDName == selfId)
-            {
                 sameTypePositions.Add(collider.transform.position);
-            }
         }
 
-        // 无同类直接返回
-        int count = sameTypePositions.Count;
-        if (count == 0)
-        {
-            return Vector2.zero;
-        }
+        if (sameTypePositions.Count == 0) return Vector2.zero;
 
-        // 计算平均位置（使用单循环减少迭代次数）
         Vector2 averagePosition = Vector2.zero;
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < sameTypePositions.Count; i++)
         {
             averagePosition += sameTypePositions[i];
         }
-        averagePosition /= count;
+        averagePosition /= sameTypePositions.Count;
 
-        // 计算方向向量（使用sqrMagnitude判断是否需要归一化）
         Vector2 direction = averagePosition - (Vector2)context.transform.position;
         return direction.sqrMagnitude > 0.001f ? direction.normalized : Vector2.zero;
     }
 
-    // 编辑器Gizmo
+    #endregion
+
+    #region Gizmos
+
     private void OnDrawGizmosSelected()
     {
         if (Application.isPlaying && context != null)
         {
             Gizmos.color = Color.cyan;
-            // 这里可以绘制实际检测范围（如果需要）
-            Gizmos.DrawWireSphere(context.transform.position, 5f); // 可替换为实际范围值
+            Gizmos.DrawWireSphere(context.transform.position, 5f); // 可替换为实际检测范围
         }
     }
+
+    #endregion
 }

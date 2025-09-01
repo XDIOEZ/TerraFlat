@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9bff3c2c7cc49f64b817032878383326, type: 3}
   m_Name: "Item_\u91CE\u8349\u751F\u6210_001"
   m_EditorClassIdentifier: 
+  itemPrefab: {fileID: 463977462678543879, guid: a2d494b844ece424088d4bfb48532082, type: 3}
   itemName: Weed
   itemCount: 1
   SpawnChance: 0.01

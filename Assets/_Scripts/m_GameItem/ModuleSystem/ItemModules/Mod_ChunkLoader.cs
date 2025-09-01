@@ -17,7 +17,7 @@ public class Mod_ChunkLoader : Module
     (int UnActiveDistance, int DestroyChunkDistance, int LoadChunkDistance) Distance
         = (UnActiveDistance: 2, DestroyChunkDistance: 3, LoadChunkDistance: 1);
 
-    private Vector2Int lastChunkPos; // ✅ 记录上一次的区块坐标
+    private Vector2 lastChunkPos; // ✅ 记录上一次的区块坐标
     private float timer = 0f;
     private float updateInterval = 0.5f; // 每 0.5 秒更新一次
 
@@ -42,6 +42,7 @@ public class Mod_ChunkLoader : Module
         GameChunkManager.Instance.DestroyChunk_In_Distance(item.gameObject, Distance: Distance.DestroyChunkDistance);
         GameChunkManager.Instance.LoadChunkCloseToPlayer(item.gameObject, Distance: Distance.LoadChunkDistance);
         GameChunkManager.Instance.SwitchActiveChunks_TO_UnActive(item.gameObject, Distance: Distance.UnActiveDistance);
+        AstarGameManager.Instance.UpdateMeshAsync(lastChunkPos, LoadChunkDistance);
     }
 
     public override void Save()
@@ -53,7 +54,7 @@ public class Mod_ChunkLoader : Module
 
         ModData.WriteData(Distance);
     }
-
+    Vector2 newPos;
     public override void Action(float deltaTime)
     {
         if (_Data.isRunning == false)
@@ -65,16 +66,24 @@ public class Mod_ChunkLoader : Module
             timer = 0f; // 重置
 
             // ✅ 检测是否跨区块
-            Vector2Int currentChunkPos = Chunk.GetChunkPosition(transform.position);
+            Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
             if (currentChunkPos != lastChunkPos)
             {
                 lastChunkPos = currentChunkPos;
 
                 // 跨区块后才更新
-                GameChunkManager.Instance.DestroyChunk_In_Distance(item.gameObject, Distance: Distance.DestroyChunkDistance);
-                GameChunkManager.Instance.LoadChunkCloseToPlayer(item.gameObject, Distance: Distance.LoadChunkDistance);
-                GameChunkManager.Instance.SwitchActiveChunks_TO_UnActive(item.gameObject, Distance: Distance.UnActiveDistance);
+                GameChunkManager.Instance.DestroyChunk_In_Distance(this.gameObject, Distance: Distance.DestroyChunkDistance);
+                GameChunkManager.Instance.LoadChunkCloseToPlayer(this.gameObject, Distance: Distance.LoadChunkDistance);
+                GameChunkManager.Instance.SwitchActiveChunks_TO_UnActive(this.gameObject, Distance: Distance.UnActiveDistance);
+                UpdateMesh(currentChunkPos);
             }
         }
+    }
+    [Button("更新 Mesh")]
+    public void UpdateMesh(Vector2 currentChunkPos)
+    {
+        AstarGameManager.Instance.UpdateMeshAsync
+            (center: currentChunkPos
+                  , radius: Distance.LoadChunkDistance);
     }
 }

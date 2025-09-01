@@ -79,8 +79,8 @@ public class RandomMapGenerator : MonoBehaviour
     {
         if (map == null || map.Data == null) return;
 
-        Vector2Int startPos = map.Data.position;
-        Vector2Int size = SaveDataManager.Instance.SaveData.ChunkSize;
+        Vector2 startPos = map.Data.position;
+        Vector2 size = SaveDataManager.Instance.SaveData.ChunkSize;
         Vector3 center = new Vector3(startPos.x + size.x / 2f, startPos.y + size.y / 2f, 0f);
         Vector3 size3D = new Vector3(size.x, size.y, 0.1f);
 
@@ -115,7 +115,7 @@ public class RandomMapGenerator : MonoBehaviour
         );
 
         Vector2Int startPos = map.Data.position;
-        Vector2Int size = SaveDataManager.Instance.SaveData.ChunkSize;
+        Vector2 size = SaveDataManager.Instance.SaveData.ChunkSize;
 
         if (tilesPerFrame == 114514)
         {
@@ -148,7 +148,7 @@ public class RandomMapGenerator : MonoBehaviour
     #endregion
 
     #region 生成流程
-    private IEnumerator GenerateMapCoroutine(Vector2Int startPos, Vector2Int size)
+    private IEnumerator GenerateMapCoroutine(Vector2Int startPos, Vector2 size)
     {
 
         int processed = 0;
@@ -164,7 +164,7 @@ public class RandomMapGenerator : MonoBehaviour
         OnGenerationComplete();
     }
 
-    private void GenerateAllTiles(Vector2Int startPos, Vector2Int size)
+    private void GenerateAllTiles(Vector2Int startPos, Vector2 size)
     {
         for (int x = 0; x < size.x; x++)
             for (int y = 0; y < size.y; y++)
@@ -268,23 +268,36 @@ public class RandomMapGenerator : MonoBehaviour
         tile.position = new Vector3Int(position.x, position.y, 0);
         map.ADDTile(position, tile);
     }
+    private static uint Xorshift32(ref uint state)
+    {
+        // 简单快速的伪随机数生成器
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        return state;
+    }
 
     private void GenerateRandomResources(Vector2Int ChunkPosition, BiomeData biome, EnvironmentFactors env)
     {
+        // 生成初始种子（唯一且确定性）
+        uint state = (uint)(ChunkPosition.x * 114514 ^ ChunkPosition.y * 1919810);
+
         foreach (Biome_ItemSpawn spawn in biome.TerrainConfig.ItemSpawn)
         {
             if (spawn.environmentConditionRange.IsMatch(env))
             {
-                // 使用 ChunkPosition 作为种子，确保每个位置的随机数不同
-                System.Random positionRng = new System.Random(ChunkPosition.x + ChunkPosition.y); // 或者其他方式结合 x, y 创建种子
+                // 获取 [0,1) 的伪随机数
+                float chance = (Xorshift32(ref state) & 0xFFFFFF) / (float)0x1000000;
 
-                if (positionRng.NextDouble() <= spawn.SpawnChance)
+                if (chance <= spawn.SpawnChance)
                 {
-                    Vector2 spawnPosition = new Vector2(
-                        ChunkPosition.x + (float)positionRng.NextDouble(), // 在 [x, x+1) 之间
-                        ChunkPosition.y + (float)positionRng.NextDouble()  // 在 [y, y+1) 之间
-                    );
+                    float offsetX = (Xorshift32(ref state) & 0xFFFFFF) / (float)0x1000000;
+                    float offsetY = (Xorshift32(ref state) & 0xFFFFFF) / (float)0x1000000;
 
+                    Vector2 spawnPosition = new Vector2(
+                        (ChunkPosition.x + (int)offsetX) - 0.5f,
+                        (ChunkPosition.y + (int)offsetY) - 0.5f
+                    );
                     GameItemManager.Instance.InstantiateItem(
                         spawn.itemName,
                         spawnPosition,
@@ -296,6 +309,8 @@ public class RandomMapGenerator : MonoBehaviour
             }
         }
     }
+
+
 
     #endregion
 

@@ -231,6 +231,7 @@ public class Inventory_HotBar : Inventory
 
         // 设置为当前武器
         spawnLocation.GetComponent<ITriggerAttack>()?.SetWeapon(currentObject);
+        itemInstance.Load();
     }
 
 

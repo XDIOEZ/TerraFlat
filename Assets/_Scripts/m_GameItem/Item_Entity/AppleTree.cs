@@ -171,19 +171,6 @@ public class AppleTree : Item, IHealth, ISave_Load, ILoot, IPlant
         maker.DropItemByLoot(Loots.GetLoot("Loots_Production"), 2f, transform);
         Destroy(gameObject);
     }
-
-    #region ISave_Load接口实现
-    [Button("保存")]
-    public void Save()
-    {
-        onSave?.Invoke();
-    }
-    [Button("加载")]
-    public void Load()
-    {
-        onLoad?.Invoke();
-    }
-    #endregion
 }
 
 internal interface IPlant

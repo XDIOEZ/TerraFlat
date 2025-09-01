@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9bff3c2c7cc49f64b817032878383326, type: 3}
   m_Name: "Item_\u6811\u6728\u751F\u6210_001"
   m_EditorClassIdentifier: 
-  itemName: Tree_Apple
+  itemPrefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
+  itemName: "\u82F9\u679C\u6811"
   itemCount: 1
   SpawnChance: 0.001
   environmentConditionRange:

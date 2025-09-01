@@ -1,116 +1,95 @@
 using NaughtyAttributes;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
 using DG.Tweening;
+using Sirenix.OdinInspector;
+using Pathfinding;
 
 /// <summary>
-/// 使用 NavMesh 和 Rigidbody2D 控制的 AI 移动类
+/// 使用 NavMesh + Rigidbody2D 控制的 AI 移动类
 /// </summary>
-public class Mover_AI : Mover,IAI_NavMesh
+public class Mover_AI : Mover
 {
+    #region 字段
+
+    [Title("AI 相关参数")]
+
+
     [Header("移动目标")]
-    public Transform target;       // 目标物体（可选）
+    public Transform target; // 可选目标物体
 
-    [Header("组件引用")]
-    public NavMeshAgent agent;     // NavMesh 代理
-
-    [Header("状态控制")]
-    public bool isMoving;          // 当前是否在移动
+    [Header("停止距离")]
+    public float stopDistance = 0.1f;
 
     [Header("动画控制")]
-    private Tweener moveTween;     // 用于 DOTween 移动
+    private Tweener moveTween;
 
-    // 移动事件
-    public UltEvent OnStartMoving { get; set; }
-    public UltEvent OnStopMoving { get; set; }
+    [Header("状态控制")]
+    public bool CanMove = true; // 是否可以移动
+    public bool HasReachedTarget = false; // 是否到达目标
 
-    #region 接口属性实现
+    [Header("对象引用")]
+   public IAstarAI aiPath; // AI 路径组件
 
-    public Vector3 Position
+
+    #endregion
+
+    #region 属性
+
+    public float SpeedValue => Speed.Value;
+
+    #endregion
+
+    #region 生命周期
+
+    public override void Load()
     {
-        get => transform.position;
-        set => transform.position = value;
-    }
-
-
-    public float SpeedValue { get => Speed.Value;}
-
-    public NavMeshAgent Agent_Nav
-    {
-        get => agent;
-        set => agent = value;
+        base.Load();
+        aiPath = GetComponentInParent<IAstarAI>();
     }
 
     #endregion
 
-    /// <summary>
-    /// 初始化组件引用
-    /// </summary>
-    public override void Load()
-    {
-        base.Load();
-        agent = GetComponentInParent<NavMeshAgent>();
-        agent.updateUpAxis = false;      // 禁用 Y 轴更新（适用于2D）
-        agent.updateRotation = false;    // 禁用自动旋转
-    }
+    #region 移动逻辑
 
-    /// <summary>
-    /// 主移动逻辑入口，根据是否有NavMeshAgent执行不同移动方式
-    /// </summary>
-    /// <param name="targetPosition">目标位置</param>
-    public override void Move(Vector2 targetPosition,float DelayTime)
+    public override void Action(float deltaTime)
     {
-        agent.speed = SpeedValue;
-        if (Vector2.Distance(transform.position, TargetPosition) <= agent.stoppingDistance)
+      
+        if(CanMove == false)
         {
-            // 已抵达目标
-            IsMoving = false;
-            OnStopMoving?.Invoke();
-            moveTween?.Kill();
-            Rb.velocity = Vector2.zero;
             return;
         }
 
-        // 使用 NavMeshAgent 移动
-        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+        if (target == null)
         {
-            agent.SetDestination(targetPosition);
+            // 调用 Move 实现移动
+            Move(TargetPosition, deltaTime);
+        }
+       
+        if(target != null)
+        {
+            Move(target.position, deltaTime);
+        }
+
+        if (aiPath.remainingDistance <= stopDistance)
+        {
+            HasReachedTarget = true;
         }
         else
         {
-            // 使用 DoTween 或物理力移动（备用方案）
-            MoveWithDoTween(targetPosition);
+            HasReachedTarget = false;
         }
 
-        // 触发开始移动事件
-        if (!IsMoving)
-        {
-            OnStartMoving?.Invoke();
-            IsMoving = true;
-        }
     }
 
-    /// <summary>
-    /// 停止移动
-    /// </summary>
-    public void Stop()
+    public override void Move(Vector2 targetPosition, float deltaTime = 0.0f)
     {
-          agent.isStopped = true;
-          IsMoving = false;
-          OnStopMoving?.Invoke();
-          moveTween?.Kill();
+        aiPath.maxSpeed = SpeedValue;
+        aiPath.destination = targetPosition;
     }
 
-    /// <summary>
-    /// 使用速度矢量进行简易移动（备用方式）
-    /// </summary>
-    private void MoveWithDoTween(Vector2 targetPosition)
-    {
-        Rb.velocity = (targetPosition - (Vector2)transform.position).normalized * SpeedValue;
-    }
+    #endregion
 }

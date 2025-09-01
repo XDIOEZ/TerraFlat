@@ -9,6 +9,9 @@ using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// 负责管理场景中的Chunk
+/// </summary>
 public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 {
     [ShowInInspector]
@@ -29,61 +32,35 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         Chunk_Dic_Active.Clear();
         Chunk_Dic_UnActive.Clear();
     }
-
-    #region   清理距离玩家过远的Chunk
-    public void ClearFarAwayChunks(GameObject player, float Distance)
-    {
-        Vector2 playerPos = player.transform.position;
-        float maxDistance = Distance;
-
-        List<string> toRemove = new List<string>();
-
-        foreach (var kvp in Chunk_Dic)
-        {
-            Chunk chunk = kvp.Value;
-            if (chunk == null) continue;
-
-            float distance = Vector2.Distance(playerPos, chunk.transform.position);
-
-            if (distance > maxDistance)
-            {
-                toRemove.Add(kvp.Key);
-            }
-        }
-
-        foreach (string key in toRemove)
-        {
-            Chunk chunk = Chunk_Dic[key];
-
-            if (chunk != null)
-            {
-                DestroyChunk(chunk);
-            }
-        }
-    }
-    #endregion
     #region 加载距离玩家规定距离的全部Chunk
     [Button("加载距离玩家规定范围的全部Chunk")]
     public void LoadChunkCloseToPlayer(GameObject player, int Distance = 1)
     {
-        // 玩家所在 Chunk（左下角坐标）
-        Vector2Int playerChunkPos = Chunk.GetChunkPosition(player.transform.position);
+        // 最小为 1
+        Distance = Mathf.Max(1, Distance);
+        int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
+
         Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
+        if (chunkSize.x <= 0f || chunkSize.y <= 0f) return; // 保护
 
-        // 遍历正方形范围 (包含中心)
-        for (int x = -Distance; x <= Distance; x++)
+        // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
+        int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / chunkSize.x);
+        int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / chunkSize.y);
+
+        for (int ix = playerChunkIndexX - radius; ix <= playerChunkIndexX + radius; ix++)
         {
-            for (int y = -Distance; y <= Distance; y++)
+            for (int iy = playerChunkIndexY - radius; iy <= playerChunkIndexY + radius; iy++)
             {
-                // 左下角坐标
-                Vector2Int chunkPos = playerChunkPos + new Vector2Int(
-                    Mathf.RoundToInt(x * chunkSize.x),
-                    Mathf.RoundToInt(y * chunkSize.y)
-                );
+                // 计算该 chunk 的左下角世界坐标（保持为整数，和你原来用 RoundToInt 的风格一致）
+                int originX = Mathf.RoundToInt(ix * chunkSize.x);
+                int originY = Mathf.RoundToInt(iy * chunkSize.y);
+                Vector2Int chunkPos = new Vector2Int(originX, originY);
 
-                if (!Chunk_Dic_Active.ContainsKey(chunkPos.ToString()))//检查是否已经加载过
-                LoadChunk(chunkPos.ToString());
-
+                string key = chunkPos.ToString(); // 你原代码用的 key 风格
+                if (!Chunk_Dic_Active.ContainsKey(key))
+                {
+                    LoadChunk(key);
+                }
             }
         }
     }
@@ -92,6 +69,18 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
     [Button("使距离玩家过远的Chunk失去活性 (正方形范围)")]
     public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
     {
+        if (player == null)
+        {
+            Debug.LogError("❌ SwitchActiveChunks_TO_UnActive 调用失败：player 为 null");
+            return;
+        }
+
+        if (SaveDataManager.Instance == null || SaveDataManager.Instance.SaveData == null)
+        {
+            Debug.LogError("❌ SwitchActiveChunks_TO_UnActive 调用失败：SaveDataManager 或 SaveData 为 null");
+            return;
+        }
+
         Vector2 playerPos = player.transform.position;
         Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
 
@@ -102,14 +91,24 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 
         foreach (Chunk chunk in Chunk_Dic_Active.Values)
         {
-            if (chunk == null) continue;
+            if (chunk == null)
+            {
+                Debug.LogWarning("⚠️ Chunk_Dic_Active 里有 null 的 Chunk");
+                continue;
+            }
+
+            if (chunk.MapSave == null)
+            {
+                Debug.LogError($"❌ Chunk {chunk.name} 的 MapSave 为 null");
+                continue;
+            }
 
             // ✅ 区块中心点
             Vector2 chunkCenter = chunk.MapSave.MapPosition;
 
             // 方形检测：只要在 X 或 Y 上超过范围就移除
             if (
-                Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x 
+                Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x
                 ||
                 Mathf.Abs(chunkCenter.y - playerChunkCenter.y) >= Distance * chunkSize.y
                )
@@ -120,8 +119,20 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 
         foreach (string key in toRemove)
         {
-            if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk) && chunk != null)
+            if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk))
             {
+                if (chunk == null)
+                {
+                    Debug.LogWarning($"⚠️ toRemove 中的 Chunk {key} 是 null");
+                    continue;
+                }
+
+                if (chunk.gameObject == null)
+                {
+                    Debug.LogError($"❌ Chunk {key} 的 GameObject 丢失了");
+                    continue;
+                }
+
                 SetChunkActive(chunk, false);
             }
         }
@@ -129,6 +140,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         if (toRemove.Count > 0)
             Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
     }
+
 
     public void UpdateItem_ChunkOwner(Item item)
     {
@@ -141,6 +153,77 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         }
     }
 
+
+
+
+
+    #endregion
+
+    public void SetChunkActive(Chunk chunk, bool isActive)
+    {
+        if (chunk == null)
+        {
+            Debug.LogError("❌ SetChunkActive 失败：chunk 为 null");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(chunk.name))
+        {
+            Debug.LogWarning("⚠️ SetChunkActive：chunk 没有名字，可能未初始化完全");
+        }
+
+        // ✅ 维护字典
+        if (isActive)
+        {
+            if (!Chunk_Dic_Active.ContainsKey(chunk.name))
+                Chunk_Dic_Active[chunk.name] = chunk;
+            Chunk_Dic_UnActive.Remove(chunk.name);
+        }
+        else
+        {
+            if (!Chunk_Dic_UnActive.ContainsKey(chunk.name))
+                Chunk_Dic_UnActive[chunk.name] = chunk;
+            Chunk_Dic_Active.Remove(chunk.name);
+        }
+
+        // ✅ tileMap 判空
+        if (chunk.Map == null)
+        {
+            Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 Map 为 null");
+        }
+        else if (chunk.Map.tileMap == null)
+        {
+            Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 Map.tileMap 为 null");
+        }
+        else
+        {
+            chunk.Map.tileMap.gameObject.SetActive(isActive);
+        }
+
+        // ✅ gameObject 判空
+        if (chunk.gameObject == null)
+        {
+            Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 GameObject 为 null");
+        }
+        else
+        {
+            chunk.gameObject.SetActive(isActive);
+        }
+    }
+    #region 清理区块
+
+    public void DestroyChunk(Chunk chunk)
+    {
+        string key = chunk.name;
+
+        // 从三个字典中移除
+        Chunk_Dic.Remove(key);
+        Chunk_Dic_Active.Remove(key);
+        Chunk_Dic_UnActive.Remove(key);
+
+        // 销毁对象
+        Destroy(chunk.gameObject);
+    }
 
     [Button("清理距离玩家过远的Chunk (正方形范围)")]
     public void DestroyChunk_In_Distance(GameObject player, int Distance = 3)
@@ -169,9 +252,9 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 
         foreach (string key in toRemove)
         {
-            if (Chunk_Dic_UnActive.TryGetValue(key, out Chunk chunk) && chunk != null)
+            if (Chunk_Dic.TryGetValue(key, out Chunk chunk) && chunk != null)
             {
-                SaveDataManager.Instance.SaveChunk_To_SaveData(chunk);
+                chunk.SaveChunk();
                 DestroyChunk(chunk);
             }
         }
@@ -179,40 +262,9 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         if (toRemove.Count > 0)
             Debug.Log($"销毁了 {toRemove.Count} 个远离玩家的区块");
     }
-
-
     #endregion
 
-    public void SetChunkActive(Chunk chunk, bool isActive)
-    {
-        if (isActive)
-        {
-            Chunk_Dic_Active[chunk.name] = chunk;
-            Chunk_Dic_UnActive.Remove(chunk.name);
-        }
-        else
-        {
-            Chunk_Dic_UnActive[chunk.name] = chunk;
-            Chunk_Dic_Active.Remove(chunk.name);
-        }
-
-        chunk.Map.tileMap.gameObject.SetActive(isActive);
-        chunk.gameObject.SetActive(isActive);
-    }
-
-    public void DestroyChunk(Chunk chunk)
-    {
-        string key = chunk.name;
-
-        // 从三个字典中移除
-        Chunk_Dic.Remove(key);
-        Chunk_Dic_Active.Remove(key);
-        Chunk_Dic_UnActive.Remove(key);
-
-        // 销毁对象
-        Destroy(chunk.gameObject);
-    }
-
+    #region 通过名字从存档中加载区块 或者 如果不存在则创建新区块
     public void LoadChunk(string ChunkName)
     {
         Chunk chunk = null;
@@ -224,14 +276,14 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
             // 如果对象存在但处于未激活状态，则激活它
             if (!chunkGameObject.gameObject.activeSelf)
             {
-                 GameChunkManager.Instance.SetChunkActive(chunkGameObject, true);
+                GameChunkManager.Instance.SetChunkActive(chunkGameObject, true);
                 chunk = chunkGameObject;
             }
 
         }
         else//缓存区块不存在
         {
-             chunk = LoadChunk_By_SaveData(ChunkName);
+            chunk = LoadChunk_By_SaveData(ChunkName);
         }
 
         // 如果缓存区块不存在，则创建新区块
@@ -240,9 +292,11 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
             chunk = CreatChunk(ChunkName);
         }
 
-        if (chunk!= null)
+        if (chunk != null)
         {
-            Chunk_Dic_Active[ChunkName] = chunk;
+            // 4. 注册到管理器
+            Chunk_Dic[chunk.MapSave.MapName] = chunk;
+            Chunk_Dic_Active[chunk.MapSave.MapName] = chunk;
             OnChunkLoadFinish.Invoke(chunk);
         }
         else
@@ -255,42 +309,64 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
     {
         if (SaveDataManager.Instance.SaveData.Active_MapsData_Dict.TryGetValue(mapName, out MapSave mapSave))
         {
+            if(mapSave.items.Count == 0)
+            {
+                Debug.LogWarning($"X 缓存区块 {mapName} 存在但没有保存的物品,可能是存档发生错误");
+                return null;
+            }
             GameItemManager.Instance.CleanupNullItems();
-            Debug.Log($"成功获取地图：{mapName}");
 
-            // 1. 清理空物品父物体
             CleanEmptyDicValues();
 
-            // 2. 通过公共方法创建地图对象
-            var (newMapObj, chunkManager) = CreateMapBase(mapSave);
+            var chunkManager = CreateChun_ByMapSave(mapSave);
 
-            // 3. 加载物品
-            foreach (var kvp in mapSave.items)
-            {
-                foreach (ItemData forLoadItemData in kvp.Value)
-                {
-
-                    Item item = GameItemManager.Instance.InstantiateItem
-                        (forLoadItemData, forLoadItemData._transform.Position, default, default, newMapObj);
-                    if (item == null)
-                    {
-                        Debug.LogError($"加载物品失败：{forLoadItemData.IDName}");
-                        continue;
-                    }
-                    item.transform.rotation = forLoadItemData._transform.Rotation;
-                    item.transform.localScale = forLoadItemData._transform.Scale;
-                    item.gameObject.SetActive(true);
-                }
-            }
-            chunkManager.Init();
-            Chunk_Dic_Active[mapName] = chunkManager;
             return chunkManager;
         }
-       
+
         return null;
     }
 
-    private void CleanEmptyDicValues()
+    #region 创建新区块
+    public Chunk CreatChunk(string mapName)
+    {
+        TryParseVector2Int(mapName, out Vector2Int pos);
+
+        MapSave mapSave = new MapSave();
+
+        mapSave.MapName = mapName;
+
+        mapSave.MapPosition = pos;
+
+        var (newMapObj, chunk) = CreateMapBase(mapSave);
+
+
+
+        // 实例化地图核心物体
+        Map map = GameItemManager.Instance.InstantiateItem("MapCore", default, default, default, newMapObj) as Map;
+
+        map.ParentObject = newMapObj;
+
+        chunk.Map = map;
+
+        map.Act();
+
+        // 第一步：获取场景中所有的 Item（包括非激活状态）
+        Item[] allItems = chunk.GetComponentsInChildren<Item>(includeInactive: true);
+
+        foreach (Item item in allItems)
+        {     
+            item.Load();
+            chunk.RunTimeItems[item.itemData.Guid] = item;
+            chunk.AddToGroup(item); // 新增分组逻辑
+        }
+
+        return chunk;
+    }
+    #endregion
+    #endregion
+    #region 清理空字典值
+
+    public void CleanEmptyDicValues()
     {
         CleanEmptyValues(Chunk_Dic);
         CleanEmptyValues(Chunk_Dic_Active);
@@ -307,6 +383,8 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         {
             if (kvp.Value == null)
                 keysToRemove.Add(kvp.Key);
+
+         //   kvp.Value.ClearNullItems();
         }
 
         // 统一删除
@@ -315,6 +393,8 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
             dic.Remove(key);
         }
     }
+    #endregion
+    #region 区块创建工具类
 
     private (GameObject mapObj, Chunk chunk) CreateMapBase(MapSave mapSave)
     {
@@ -328,34 +408,21 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         // 3. 设置位置
         newMapObj.transform.position = mapSave.MapPosition;
 
-        // 4. 注册到管理器
-        GameChunkManager.Instance.Chunk_Dic[mapSave.MapName] = Chunk;
-
         return (newMapObj, Chunk);
     }
 
-
-
-    public Chunk CreatChunk(string mapName)
+    //创建区块 通过 MapSave
+    public Chunk CreateChun_ByMapSave(MapSave mapSave)
     {
-        TryParseVector2Int(mapName, out Vector2Int pos);
+        (GameObject mapObj, Chunk chunk) = CreateMapBase(mapSave);
 
-        MapSave mapSave = new MapSave();
-
-        mapSave.MapName = mapName;
-
-        mapSave.MapPosition = new Vector3(pos.x, pos.y, 0);
-
-        var (newMapObj, chunk) = CreateMapBase(mapSave);
-
-        // 实例化地图核心物体
-        Map map = GameItemManager.Instance.InstantiateItem("MapCore", default, default, default, newMapObj) as Map;
-
-        map.ParentObject = newMapObj;
-        // 初始化区块管理器
-        chunk.Init();
+        chunk.LoadChunk();
+        chunk.Map = chunk.RuntimeItemsGroup["MapCore"][0] as Map;
         return chunk;
     }
+    #endregion
+
+ 
 
     [Tooltip("随机空投")]
     public void RandomDropInMap(GameObject dropObject, Chunk map = null)
@@ -375,8 +442,8 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         int tileSizeY = 1;
 
         // 整个地图的大小（每个地图块内是 tileSizeX x tileSizeY）
-        int mapWidth = SaveDataManager.Instance.SaveData.ChunkSize.x * tileSizeX;
-        int mapHeight = SaveDataManager.Instance.SaveData.ChunkSize.y * tileSizeY;
+        float mapWidth = SaveDataManager.Instance.SaveData.ChunkSize.x * tileSizeX;
+        float mapHeight = SaveDataManager.Instance.SaveData.ChunkSize.y * tileSizeY;
 
         // 创建随机生成器
         System.Random rng = new System.Random();
