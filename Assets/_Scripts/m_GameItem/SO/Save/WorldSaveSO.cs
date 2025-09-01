@@ -156,10 +156,10 @@ public class WorldSaveSO : ScriptableObject
             {
                 _cachedMapSave = LoadByDisk(buildingPath);
             }
-            if (_cachedMapSave.Active_MapsData_Dict.Count <= 0|| _cachedMapSave.PlayerData_Dict.Count <= 0)
+           /* if (_cachedMapSave.Active_MapsData_Dict.Count <= 0|| _cachedMapSave.PlayerData_Dict.Count <= 0)
             {
                 _cachedMapSave = LoadByDisk(buildingPath);
-            }
+            }*/
             return _cachedMapSave?.DeepClone();
         }
     }

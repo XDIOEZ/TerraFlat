@@ -150,6 +150,7 @@ public  abstract partial class ItemData
                 return item;
             }
         }
+        Debug.LogError("没有找到对应的模块数据!,检测ItemData中的Mods是否被初始化,检查mod是否被Save");
         return null;
     }
 }

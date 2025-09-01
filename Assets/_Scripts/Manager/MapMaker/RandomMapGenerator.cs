@@ -20,8 +20,9 @@ public class RandomMapGenerator : MonoBehaviour
     public Map map;  // 地图管理对象，包含 TileData 和 Tilemap 引用
 
     [ShowInInspector]
-    public PlanetData plantData => SaveDataManager.Instance.SaveData.Active_PlanetData;
+    public PlanetData plantData => SaveDataManager.Instance.Active_PlanetData;
 
+    public Vector2 ChunkSize => GameChunkManager.GetChunkSize();
     [Tooltip("赤道坐标")]
     public float Equator = 0;
 
@@ -52,10 +53,10 @@ public class RandomMapGenerator : MonoBehaviour
     /// </summary>
     private int Seed => SaveDataManager.Instance.SaveData.Seed;
 
-    public float PlantRadius { get => SaveDataManager.Instance.SaveData.Active_PlanetData.Radius;}
-    public float Temp { get => SaveDataManager.Instance.SaveData.Active_PlanetData.TemperatureOffset; }
-    public float LandOceanRatio { get => SaveDataManager.Instance.SaveData.Active_PlanetData.OceanHeight;}
-    public float NoiseScale { get => SaveDataManager.Instance.SaveData.Active_PlanetData.NoiseScale;  }
+    public float PlantRadius { get => plantData.Radius;}
+    public float Temp { get => plantData.TemperatureOffset; }
+    public float LandOceanRatio { get => plantData.OceanHeight;}
+    public float NoiseScale { get => plantData.NoiseScale;  }
 
     /// <summary>
     /// 系统级可复现随机实例，用于资源生成
@@ -80,7 +81,7 @@ public class RandomMapGenerator : MonoBehaviour
         if (map == null || map.Data == null) return;
 
         Vector2 startPos = map.Data.position;
-        Vector2 size = SaveDataManager.Instance.SaveData.ChunkSize;
+        Vector2 size = GameChunkManager.GetChunkSize();
         Vector3 center = new Vector3(startPos.x + size.x / 2f, startPos.y + size.y / 2f, 0f);
         Vector3 size3D = new Vector3(size.x, size.y, 0.1f);
 
@@ -115,7 +116,7 @@ public class RandomMapGenerator : MonoBehaviour
         );
 
         Vector2Int startPos = map.Data.position;
-        Vector2 size = SaveDataManager.Instance.SaveData.ChunkSize;
+        Vector2 size = ChunkSize;
 
         if (tilesPerFrame == 114514)
         {

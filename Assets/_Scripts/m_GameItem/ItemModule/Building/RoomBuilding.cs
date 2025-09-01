@@ -130,7 +130,7 @@ public class RoomBuilding : BaseBuilding
         }
         Debug.Log($"[房间初始化] 正在为建筑 {buildingSO.buildingName} 初始化房间");
 
-        // 处理空房间名称的情况
+/*        // 处理空房间名称的情况
         if (string.IsNullOrEmpty(_room.RoomName))
         {
             Debug.Log("[房间初始化] 房间名称未设置，正在生成唯一名称...");
@@ -159,7 +159,7 @@ public class RoomBuilding : BaseBuilding
                     Debug.LogWarning($"[房间初始化] 警告：找不到建筑模板 {buildingSO.buildingName} 的存档数据");
                 }
             }
-        }
+        }*/
 
         // 配置场景切换组件
         var changer = GetComponentInChildren<SceneChange>();

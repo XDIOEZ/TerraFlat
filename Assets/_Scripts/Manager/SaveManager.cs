@@ -85,7 +85,6 @@ public class SaveDataManager_UI : MonoBehaviour
         RandomMapGenerator.rng = new System.Random(SaveDataManager.Instance.SaveData.Seed);
        // SaveAndLoad.Instance.SaveData.PlanetData_Dict.Add("µØÇò", new PlanetData());
         SaveDataManager.Instance.SaveData.PlanetData_Dict["µØÇò"] = Ready_planetData;
-        SaveDataManager.Instance.SaveData.Active_PlanetData = Ready_planetData;
     }
     #endregion
 

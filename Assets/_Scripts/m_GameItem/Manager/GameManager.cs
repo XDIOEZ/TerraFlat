@@ -49,8 +49,6 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         //创建初始星球的数据
         SaveDataManager.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
-        SaveDataManager.Instance.SaveData.Active_PlanetName = "地球";
-
 
         ContinueGame();
     }
@@ -88,18 +86,24 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
     public void ChangeScene_ByPlayerData(Data_Player playerData)
     {
-        if(playerData == null)
+        if (playerData == null)
         {
+            Debug.Log("Player data is null.");
             return;
         }
-       var PlayerName = playerData.Name_User;
+        var PlayerName = playerData.Name_User;
 
         string planetName = playerData.CurrentPlanetName;
 
-        // 2. 立刻创建并激活空场景
-        Scene newScene = SceneManager.CreateScene(planetName);
-     
+        GameItemManager.Instance.SavePlayer();
 
+        foreach (var go in GameChunkManager.Instance.Chunk_Dic.Values)
+        {
+            go.SaveChunk();
+        }
+
+
+        Scene newScene = SceneManager.CreateScene(planetName);
         // 3. 准备卸载旧场景（如有）
         Scene startScene = SceneManager.GetActiveScene();
         if (startScene.IsValid() && startScene.isLoaded)
@@ -123,7 +127,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         Player player = GameItemManager.Instance.LoadPlayer(playerName);
         if (playerData == null)                // 新玩家：随机放到新场景
-            GameItemManager.Instance.RandomDropInMap(player.gameObject);
+            GameItemManager.Instance.RandomDropInMap(player.gameObject,null,new Vector2Int(-1,-1));
 
         GameItemManager.Instance.Player_DIC[playerName] = player;
 

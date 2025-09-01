@@ -111,7 +111,21 @@ public class MapSaveEditor : MonoBehaviour
             Directory.CreateDirectory(savePath);
         }
 
-        var currentMap = SaveDataManager.GetCurrentMapStatic();
+        // 播放游戏（仅编辑器有效）
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = true;
+#endif
+
+        Chunk chunk = GameObject.FindObjectOfType<Chunk>();
+        if (chunk == null)
+        {
+            statusMessage = "未找到 Chunk，请确保场景中存在 Chunk 对象！";
+            Debug.LogWarning(statusMessage);
+            return;
+        }
+
+        chunk.SaveChunk();
+        var currentMap = chunk.MapSave;
         if (currentMap == null)
         {
             statusMessage = "获取 MapSave 失败，请确保场景已初始化！";
@@ -119,15 +133,17 @@ public class MapSaveEditor : MonoBehaviour
             return;
         }
 
-        // 如果玩家没有输入文件名，则使用 MapSave.MapName
         string finalFileName = string.IsNullOrEmpty(fileName) ? currentMap.MapName + ".bytes" : fileName;
+        if (!finalFileName.EndsWith(".bytes")) finalFileName += ".bytes";
 
         try
         {
             byte[] bytes = MemoryPackSerializer.Serialize(currentMap);
             string fullPath = Path.Combine(savePath, finalFileName);
             File.WriteAllBytes(fullPath, bytes);
+#if UNITY_EDITOR
             AssetDatabase.Refresh();
+#endif
             statusMessage = $"保存成功：{fullPath}";
             Debug.Log(statusMessage);
         }
@@ -136,6 +152,14 @@ public class MapSaveEditor : MonoBehaviour
             statusMessage = $"保存失败：{ex.Message}";
             Debug.LogError(statusMessage);
         }
+
+        // 关闭游戏（仅编辑器有效 / 运行时退出）
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+    Application.Quit();
+#endif
     }
+
 
 }

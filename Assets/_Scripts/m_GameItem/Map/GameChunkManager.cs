@@ -1,10 +1,5 @@
-﻿using Force.DeepCloner;
-using Meryel.UnityCodeAssist.YamlDotNet.Core;
-using Sirenix.OdinInspector;
-using System;
-using System.Collections;
+﻿using Sirenix.OdinInspector;
 using System.Collections.Generic;
-using System.Linq;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -40,7 +35,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
 
-        Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
+        Vector2 chunkSize = GameChunkManager.GetChunkSize();
         if (chunkSize.x <= 0f || chunkSize.y <= 0f) return; // 保护
 
         // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
@@ -82,7 +77,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         }
 
         Vector2 playerPos = player.transform.position;
-        Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
+        Vector2 chunkSize = GameChunkManager.GetChunkSize();
 
         // ✅ 玩家所在 Chunk 的中心点
         Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos);
@@ -229,7 +224,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
     public void DestroyChunk_In_Distance(GameObject player, int Distance = 3)
     {
         Vector2 playerPos = player.transform.position;
-        Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
+        Vector2 chunkSize = GameChunkManager.GetChunkSize();
 
         // ✅ 玩家所在 Chunk 的中心点
         Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos) + chunkSize * 0.5f;
@@ -307,7 +302,7 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
 
     public Chunk LoadChunk_By_SaveData(string mapName)
     {
-        if (SaveDataManager.Instance.SaveData.Active_MapsData_Dict.TryGetValue(mapName, out MapSave mapSave))
+        if (SaveDataManager.Instance.Active_PlanetData.MapData_Dict.TryGetValue(mapName, out MapSave mapSave))
         {
             if(mapSave.items.Count == 0)
             {
@@ -440,19 +435,19 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         }
 
         // 地图格子的实际世界尺寸（单位：世界单位，例如每格宽100高120）
-        int tileSizeX = 1; // 根据你的逻辑替换
-        int tileSizeY = 1;
+        int tileSizeX = -1; // 根据你的逻辑替换
+        int tileSizeY = -1;
 
         // 整个地图的大小（每个地图块内是 tileSizeX x tileSizeY）
-        float mapWidth = SaveDataManager.Instance.SaveData.ChunkSize.x * tileSizeX;
-        float mapHeight = SaveDataManager.Instance.SaveData.ChunkSize.y * tileSizeY;
+        float mapWidth = GameChunkManager.GetChunkSize().x * tileSizeX;
+        float mapHeight = GameChunkManager.GetChunkSize().y * tileSizeY;
 
         // 创建随机生成器
         System.Random rng = new System.Random();
 
         // 生成在整个地图区域内的随机坐标
-        float randX = (float)rng.NextDouble() * mapWidth + SaveDataManager.Instance.SaveData.ChunkSize.x;
-        float randY = (float)rng.NextDouble() * mapHeight + SaveDataManager.Instance.SaveData.ChunkSize.y;
+        float randX = (float)rng.NextDouble() * mapWidth + GameChunkManager.GetChunkSize().x;
+        float randY = (float)rng.NextDouble() * mapHeight + GameChunkManager.GetChunkSize().y;
 
         // 设置空投对象位置
         dropObject.transform.position = defaultPosition + new Vector2(randX, randY);
@@ -482,5 +477,22 @@ public class GameChunkManager : SingletonAutoMono<GameChunkManager>
         }
 
         return false;
+    }
+    public static Vector2 GetChunkSize()
+    {
+        var sceneName = SceneManager.GetActiveScene().name;
+        var dict = SaveDataManager.Instance.SaveData.PlanetData_Dict;
+
+        if (dict != null && dict.TryGetValue(sceneName, out var planetData))
+        {
+            return planetData.ChunkSize;
+        }
+
+        // 找不到就返回 Vector2(100,100)
+        return new Vector2(100, 100);
+    }
+    public static float GetRadius()
+    {
+        return SaveDataManager.Instance.SaveData.PlanetData_Dict[SceneManager.GetActiveScene().name].Radius;
     }
 }

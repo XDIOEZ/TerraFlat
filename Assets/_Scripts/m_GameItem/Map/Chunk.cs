@@ -18,7 +18,6 @@ public class Chunk : MonoBehaviour
     public MapSave MapSave;
     public string ChunkOwner;
 
-
     public Chunk LoadChunk()
     {
         MapSave.items.ForEach(items =>
@@ -50,7 +49,9 @@ public class Chunk : MonoBehaviour
                 item.Save();
             MapSave.AddItemData(item.itemData);
         }
-        SaveDataManager.Instance.SaveData.Active_MapsData_Dict[MapSave.MapName] = MapSave;
+        //覆盖当前激活的地图
+        if(SaveDataManager.Instance.Active_PlanetData!= null)
+        SaveDataManager.Instance.Active_PlanetData.MapData_Dict[MapSave.MapName] = MapSave;
     }
 
     public void DestroyChunk()
@@ -74,9 +75,10 @@ public class Chunk : MonoBehaviour
     /// 获取指定玩家或物体所在的区块坐标
     /// </summary>
     [Button]
-    public static Vector2Int GetChunkPosition(Vector2 objPos)
+    public static Vector2Int GetChunkPosition(Vector2 objPos, Vector2 chunkSize = default)
     {//TODO 因为Transformpos 是在左下角 相对于绘制的中心来说 所以需要微调玩家的位置 来输出确切的区块坐标
-        Vector2 chunkSize = SaveDataManager.Instance.SaveData.ChunkSize;
+        if (chunkSize == default)
+         chunkSize = GameChunkManager.GetChunkSize();
 
        Vector2Int chunkPos = new Vector2Int(
             Mathf.FloorToInt(objPos.x / chunkSize.x) * (int)chunkSize.x,

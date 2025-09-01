@@ -39,9 +39,12 @@ public class Mod_ChunkLoader : Module
 
 
         // 跨区块后才更新
-        GameChunkManager.Instance.DestroyChunk_In_Distance(item.gameObject, Distance: Distance.DestroyChunkDistance);
-        GameChunkManager.Instance.LoadChunkCloseToPlayer(item.gameObject, Distance: Distance.LoadChunkDistance);
-        GameChunkManager.Instance.SwitchActiveChunks_TO_UnActive(item.gameObject, Distance: Distance.UnActiveDistance);
+        if (SaveDataManager.Instance.Active_PlanetData != null)
+        {
+            GameChunkManager.Instance.DestroyChunk_In_Distance(item.gameObject, Distance: Distance.DestroyChunkDistance);
+            GameChunkManager.Instance.LoadChunkCloseToPlayer(item.gameObject, Distance: Distance.LoadChunkDistance);
+            GameChunkManager.Instance.SwitchActiveChunks_TO_UnActive(item.gameObject, Distance: Distance.UnActiveDistance);
+        }
         AstarGameManager.Instance.UpdateMeshAsync(lastChunkPos, LoadChunkDistance);
     }
 
@@ -72,9 +75,12 @@ public class Mod_ChunkLoader : Module
                 lastChunkPos = currentChunkPos;
 
                 // 跨区块后才更新
-                GameChunkManager.Instance.DestroyChunk_In_Distance(this.gameObject, Distance: Distance.DestroyChunkDistance);
-                GameChunkManager.Instance.LoadChunkCloseToPlayer(this.gameObject, Distance: Distance.LoadChunkDistance);
-                GameChunkManager.Instance.SwitchActiveChunks_TO_UnActive(this.gameObject, Distance: Distance.UnActiveDistance);
+                if (SaveDataManager.Instance.Active_PlanetData != null)
+                {
+                    GameChunkManager.Instance.DestroyChunk_In_Distance(this.gameObject, Distance: Distance.DestroyChunkDistance);
+                    GameChunkManager.Instance.LoadChunkCloseToPlayer(this.gameObject, Distance: Distance.LoadChunkDistance);
+                    GameChunkManager.Instance.SwitchActiveChunks_TO_UnActive(this.gameObject, Distance: Distance.UnActiveDistance);
+                }
                 UpdateMesh(currentChunkPos);
             }
         }

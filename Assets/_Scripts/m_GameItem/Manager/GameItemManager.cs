@@ -270,7 +270,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
         }
         //更具传入数据创建玩家
         Player player = CreatePlayer(playerData);
-
+        GameItemManager.Instance.Player_DIC[player.Data.Name_User] = player;
         return player;
     }
     private Player CreatePlayer(Data_Player data)
@@ -285,7 +285,7 @@ public class GameItemManager : SingletonMono<GameItemManager>
         return newPlayer;
     }
     [Tooltip("随机空投")]
-    public void RandomDropInMap(GameObject dropObject, Chunk map = null)
+    public void RandomDropInMap(GameObject dropObject, Chunk map = null, Vector2Int quadrant = default)
     {
         Vector2 defaultPosition;
         if (map == null)
@@ -301,18 +301,24 @@ public class GameItemManager : SingletonMono<GameItemManager>
         int tileSizeX = 1; // 根据你的逻辑替换
         int tileSizeY = 1;
 
-        // 整个地图的大小（每个地图块内是 tileSizeX x tileSizeY）
-        float mapWidth = SaveDataManager.Instance.SaveData.ChunkSize.x * tileSizeX;
-        float mapHeight = SaveDataManager.Instance.SaveData.ChunkSize.y * tileSizeY;
+        // 整个地图的大小
+        float mapWidth = GameChunkManager.GetChunkSize().x * tileSizeX;
+        float mapHeight = GameChunkManager.GetChunkSize().y * tileSizeY;
 
-        // 创建随机生成器
+        // 随机数生成器
         System.Random rng = new System.Random();
 
-        // 生成在整个地图区域内的随机坐标
-        float randX = (float)rng.NextDouble() * mapWidth + SaveDataManager.Instance.SaveData.ChunkSize.x;
-        float randY = (float)rng.NextDouble() * mapHeight + SaveDataManager.Instance.SaveData.ChunkSize.y;
+        // 在 [0, mapWidth] 范围内取随机值
+        float randX = (float)rng.NextDouble() * mapWidth;
+        float randY = (float)rng.NextDouble() * mapHeight;
 
-        // 设置空投对象位置
+        // 确定象限，默认(1,1)就是第一象限
+        if (quadrant == default) quadrant = new Vector2Int(1, 1);
+
+        randX *= Mathf.Sign(quadrant.x);
+        randY *= Mathf.Sign(quadrant.y);
+
+        // 设置空投对象位置（相对 map 的位置）
         dropObject.transform.position = defaultPosition + new Vector2(randX, randY);
     }
 

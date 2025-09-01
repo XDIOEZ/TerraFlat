@@ -21,7 +21,7 @@ public partial class PlanetData
     public float NoiseScale = 0.01f;
 
     //星球地图大小
-    public Vector2Int MapSize = new Vector2Int(100, 100);
+    public Vector2Int ChunkSize = new Vector2Int(100, 100);
 
     [ShowInInspector]
     //星球地图数据

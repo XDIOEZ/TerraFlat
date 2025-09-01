@@ -30,7 +30,7 @@ public class Mod_Scene : Module
     {
         if (_Data.ID == "")
         {
-            _Data.ID = ModText.Space;
+            _Data.ID = ModText.Scene;
         }
     }
 
@@ -47,7 +47,7 @@ public class Mod_Scene : Module
         }
 
         //检查是否已经初始化过 如果没有就初始化
-        if (Data.IsInit == false)
+        if (Data.IsInit == false && _sceneAsset!= null)
         {
             Data.MapSave = MemoryPackSerializer.Deserialize<MapSave>(_sceneAsset.bytes);
             Debug.Log(Data.MapSave.MapName + "初始化完成");
@@ -64,7 +64,7 @@ public class Mod_Scene : Module
     }
     public void UnInstall()
     {
-        SaveDataManager.Instance.SaveData.Active_PlanetData.MapData_Dict.Remove(Data.MapSave.MapName);
+        //SaveDataManager.Instance.SaveData.Active_PlanetData.MapData_Dict.Remove(Data.MapSave.MapName);
 
         if (Data.Encapsulation == true)
         {
@@ -114,44 +114,58 @@ public class Mod_Scene : Module
     [Button]
     public void Test()
     {
-        this.Data.SceneName = this.Data.MapSave.MapName;
+        // 确保 SceneName 同步
+        this.Data.SceneName = this.Data.MapSave?.MapName;
+
+        Player player = null;
+
+        // 尝试获取当前控制的玩家
+        if (!GameItemManager.Instance.Player_DIC.TryGetValue(
+            SaveDataManager.Instance.CurrentContrrolPlayerName, out player))
+        {
+            Debug.LogError($"没有找到玩家：{SaveDataManager.Instance.CurrentContrrolPlayerName}");
+            return;
+        }
+
+        Data_Player playerData = player.Data;
+        playerData.CurrentPlanetName = this.Data.SceneName;
 
         if (this.Data.MapSave != null)
         {
-            //设置返回的功能
-            this.Data.MapSave.items["MapEdge"].ForEach(item =>
+            // 遍历门并更新场景数据
+            if (this.Data.MapSave.items.TryGetValue("Door", out var doorItems))
             {
-                Data_Boundary boundary = item as Data_Boundary;
-                boundary.TP_Position = transform.position;
-                this.Data.PlayerPos = boundary._transform.Position;
-            });
+                doorItems.ForEach(item =>
+                {
+                    SceneData sceneData = ExtractData<SceneData>(item, ModText.Scene);
+                    if (sceneData != null)
+                    {
+                        sceneData.SceneName = playerData.CurrentPlanetName;
+                        sceneData.PlayerPos = playerData._transform.Position;
+                    }
 
-            if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue
-             (SaveDataManager.Instance.CurrentContrrolPlayerName, out var Data))
-            {
-                //Debug.Log($"成功加载已保存的玩家：{playerName}");
-                Data_Player playerData = Data;
-                Data.CurrentPlanetName = this.Data.SceneName;
-                playerData._transform.Position = this.Data.PlayerPos + PlayerPosOffset;
+                    // 更新 Data 的 PlayerPos
+                    this.Data.PlayerPos = item._transform.Position;
+                });
             }
 
-            GameManager.Instance.ChangeScene_ByPlayerData(Data);
+            // 设置玩家位置
+            player.transform.position = this.Data.PlayerPos + PlayerPosOffset;
+
+            // 切换场景
+            GameManager.Instance.ChangeScene_ByPlayerData(playerData);
+
+            // 生成 Chunk
             GameChunkManager.Instance.CreateChun_ByMapSave(this.Data.MapSave);
         }
         else
         {
-            if (SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue
-           (SaveDataManager.Instance.CurrentContrrolPlayerName, out var Data))
-            {
-                //Debug.Log($"成功加载已保存的玩家：{playerName}");
-                Data_Player playerData = Data;
-                Data.CurrentPlanetName = this.Data.SceneName;
-                playerData._transform.Position = this.Data.PlayerPos + PlayerPosOffset;
-            }
-            GameManager.Instance.ChangeScene_ByPlayerData(Data);
+            // MapSave 不存在时的处理
+            player.transform.position = this.Data.PlayerPos + PlayerPosOffset;
+            GameManager.Instance.ChangeScene_ByPlayerData(playerData);
         }
-     
     }
+
 
     public override void Save()
     {

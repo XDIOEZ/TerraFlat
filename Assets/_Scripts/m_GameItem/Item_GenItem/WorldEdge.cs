@@ -144,8 +144,8 @@ public class WorldEdge : Item, ISave_Load, IInteract
 
         data.Boundary_Position = direction; // 记录边界的方向
         var saveData = SaveDataManager.Instance.SaveData; // 获取保存数据
-        Vector2 mapSize = saveData.ChunkSize; // 当前地图的大小
-        float worldRadius = saveData.Active_PlanetData.Radius; // 当前星球的半径，用于世界环绕逻辑
+        Vector2 mapSize = GameChunkManager.GetChunkSize(); // 当前地图的大小
+        float worldRadius = GameChunkManager.GetRadius(); // 当前星球的半径，用于世界环绕逻辑
 
         Vector2 mapCenter = mapPos + mapSize * 0.5f; // 计算当前地图的中心点
                                                      // Fix for CS1503: Convert Vector2 to Vector2Int using Vector2Int.RoundToInt
@@ -230,7 +230,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// </summary>
     /// <param name="interacter">交互者 (通常是玩家)</param>
     public void Interact_Start(IInteracter interacter = null)
-    {
+    {/*
         var player = interacter?.User; // 获取交互者 (玩家)
 
         var saveData = SaveDataManager.Instance.SaveData; // 获取保存数据
@@ -250,7 +250,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
         if(data.TP_Position != Vector2.zero)
         {
             player.transform.position = data.TP_Position; // 如果有设置传送位置，则直接设置玩家位置
-        }
+        }*/
 
        // GameChunkManager.Instance.ChangeChunk(TPTOSceneName,LastScene:transform.parent.gameObject.Ge); // 切换到目标场景
     }
@@ -430,9 +430,9 @@ public class WorldEdge : Item, ISave_Load, IInteract
     private Vector2 CalculateWrappedEntryPosition(GameObject player, Vector2 direction, Vector2 targetMapPos)
     {
         var saveData = SaveDataManager.Instance.SaveData;
-
+/*
         Vector2 mapSize = saveData.ChunkSize;
-
+*/
         // 计算玩家相对于当前边界的偏移量
         Vector2 offset = CalculateOffsetFromEdge(player, direction);
 

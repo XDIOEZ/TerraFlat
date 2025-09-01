@@ -28,6 +28,41 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
 
     [Tooltip("当前控制的玩家名称")]
     public string CurrentContrrolPlayerName;
+public PlanetData Active_PlanetData
+{
+    get
+    {
+        if (SaveDataManager.Instance == null)
+        {
+            Debug.LogError("SaveDataManager.Instance is null.");
+            return null;
+        }
+
+        if (SaveDataManager.Instance.SaveData == null)
+        {
+            Debug.LogError("SaveDataManager.Instance.SaveData is null.");
+            return null;
+        }
+
+        if (SaveDataManager.Instance.SaveData.PlanetData_Dict == null)
+        {
+            Debug.LogError("SaveDataManager.Instance.SaveData.PlanetData_Dict is null.");
+            return null;
+        }
+
+        string activeSceneName = SceneManager.GetActiveScene().name;
+        if (SaveDataManager.Instance.SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out PlanetData planetData))
+        {
+            return planetData;
+        }
+        else
+        {
+            Debug.LogError($"No PlanetData found for scene: {activeSceneName}");
+            return null;
+        }
+    }
+}
+
 
     #endregion
 
@@ -49,7 +84,7 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
         SaveToDisk(SaveData, UserSavePath, SaveData.saveName);
     }
 
-    /// <summary>
+/*    /// <summary>
     /// 将当前活动场景保存到存档数据中
     /// </summary>
     [Tooltip("保存当前激活场景存入当前的场景字典中")]
@@ -59,8 +94,8 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
 
         MapSave mapSave = GetMapSave_By_Parent(MapParent);
 
-        SaveData.Active_MapsData_Dict[mapSave.MapName] = mapSave;
-    }
+        SaveDataManager.Instance.Active_MapsData_Dict[mapSave.MapName] = mapSave;
+    }*/
 
     /// <summary>
     /// 保存当前活动场景为地图保存数据
@@ -358,7 +393,7 @@ public class SaveDataManager : SingletonAutoMono<SaveDataManager>
     {
         MapSave worldSave = new MapSave();
         worldSave.MapName = SceneManager.GetActiveScene().name;
-       // worldSave.items = GetActiveSceneAllItemData_Static();
+        worldSave.items = GetActiveSceneAllItemData_Static();
 
         return worldSave;
     }

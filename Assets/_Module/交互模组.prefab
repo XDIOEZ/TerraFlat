@@ -54,10 +54,7 @@ MonoBehaviour:
     BitData: 
   CurentInteractItem: {fileID: 0}
   FastTest:
-    _PersistentCalls:
-    - _Target: {fileID: 0}
-      _MemberName: Test
-      _PersistentArguments: []
+    _PersistentCalls: []
 --- !u!61 &4760340190715897003
 BoxCollider2D:
   m_ObjectHideFlags: 0

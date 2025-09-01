@@ -227,4 +227,24 @@ public abstract class Module : MonoBehaviour
         onLoaded?.Invoke(component);
         return component;
     }
+    public T ExtractData<T>(ItemData itemData, string key) where T : class, new()
+    {
+        ModuleData rawData;
+        if (itemData == null)
+        {
+            Debug.LogError("ItemData is null.");
+            return null;
+        }
+        rawData = itemData.GetModuleData_Frist(key);
+        if (rawData is Ex_ModData_MemoryPackable modData)
+        {
+            T result = new T();
+            modData.ReadData(ref result);
+            return result;
+        }
+
+        Debug.LogWarning($"ItemData {itemData} does not contain valid data for key {key}.");
+        return null;
+    }
+
 }
