@@ -32,6 +32,7 @@ public class DamageReceiver : Module
         set => Data.Hp = value;
     }
 
+    public UltEvent OnDead = new ();
     [System.Serializable]
     public class DamageReceiver_SaveData
     {
@@ -48,6 +49,9 @@ public class DamageReceiver : Module
         [Header("伤害接收间隔时间 (秒)")]
         [Min(0f)]
         public float DamageInterval = 0.1f;
+
+        [Header("血量归零后多久才销毁物体 (秒)")]//-1表示永久存活 0表示不延迟销毁物体 
+        public float DestroyDelay = 0f;
     }
 
 
@@ -71,7 +75,6 @@ public class DamageReceiver : Module
     public float shakeMagnitude = 0.1f;
 
     private bool isFlashing = false;
-    private SpriteRenderer cachedSpriteRenderer;
 
     public GameObject PanelPrefab;
     [ReadOnly]
@@ -131,12 +134,6 @@ public class DamageReceiver : Module
         {
             HidePanle();
         }
-
-
-        cachedSpriteRenderer = item.Sprite;
-
-        if (cachedSpriteRenderer == null)
-            Debug.LogWarning("[DamageReceiver] 未找到 SpriteRenderer。");
     }
 
     [Button("显示面板")]
@@ -223,15 +220,19 @@ public class DamageReceiver : Module
         // UI & 特效处理
         OnAction.Invoke(Hp);
 
-        if (cachedSpriteRenderer != null && !isFlashing)
+        if (item.Sprite != null && !isFlashing)
         {
-            Hit_Flash(cachedSpriteRenderer);
-            StartCoroutine(ShakeSprite(cachedSpriteRenderer.transform));
+            Hit_Flash(item.Sprite);
+            StartCoroutine(ShakeSprite(item.Sprite.transform));
         }
 
         if (Hp <= 0)
         {
-            // 死亡逻辑预留
+            OnDead.Invoke();
+            if (Data.DestroyDelay >= 0)
+            {
+                Destroy(item.gameObject, Data.DestroyDelay);
+            }
             return 0; // Ensure a return value for this path
         }
 

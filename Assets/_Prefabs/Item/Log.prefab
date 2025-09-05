@@ -123,8 +123,6 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0.1
   _data:
@@ -137,6 +135,14 @@ MonoBehaviour:
       - Material
       Item_Material:
       - Ore
+    Tags:
+      keys:
+      - tag: Type
+        values:
+        - Material
+      - tag: Material
+        values:
+        - Wood
     Stack:
       Amount: 3
       Volume: 1

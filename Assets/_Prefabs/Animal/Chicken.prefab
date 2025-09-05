@@ -121,7 +121,7 @@ MonoBehaviour:
   hightReaction: 0
   TargetPosition: {x: 0, y: 0}
   IsMoving: 0
-  Rb: {fileID: 0}
+  rb: {fileID: 0}
   stamina: {fileID: 0}
   staminaConsumeSpeed:
     BaseValue: 1
@@ -337,8 +337,6 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0.1
   Data:
@@ -352,6 +350,19 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values:
+        - Animal
+      - tag: Material
+        values:
+        - Blood
+        - Meat
+      - tag: Creature
+        values:
+        - VegetableAnimal
+        - MeatAnimal
     Stack:
       Amount: 1
       Volume: 1

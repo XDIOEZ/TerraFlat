@@ -4,6 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using MemoryPack;
 using Sirenix.OdinInspector;
+using UnityEngine.SceneManagement;
 
 public class MapSaveEditor : MonoBehaviour
 {
@@ -123,9 +124,10 @@ public class MapSaveEditor : MonoBehaviour
             Debug.LogWarning(statusMessage);
             return;
         }
-
+        chunk.FitChunkItems();
         chunk.SaveChunk();
         var currentMap = chunk.MapSave;
+        currentMap.MapName = chunk.MapSave.MapName;
         if (currentMap == null)
         {
             statusMessage = "获取 MapSave 失败，请确保场景已初始化！";
@@ -133,7 +135,7 @@ public class MapSaveEditor : MonoBehaviour
             return;
         }
 
-        string finalFileName = string.IsNullOrEmpty(fileName) ? currentMap.MapName + ".bytes" : fileName;
+        string finalFileName = string.IsNullOrEmpty(fileName) ? SceneManager.GetActiveScene ().name + ".bytes" : fileName;
         if (!finalFileName.EndsWith(".bytes")) finalFileName += ".bytes";
 
         try

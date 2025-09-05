@@ -50,15 +50,11 @@ MonoBehaviour:
     ID: "\u573A\u666F\u6A21\u5757"
     isRunning: 1
     Type: 0
-    BitData: 05000000000003000000000000000000000000000000000000000000
+    BitData: 
   _sceneAsset: {fileID: 0}
   Data:
     SceneName: 
     IsInit: 0
-    MapSave:
-      MapName: 
-      SunlightIntensity: 0
-      MapPosition: {x: 0, y: 0}
     PlayerPos: {x: 0, y: 0}
     Encapsulation: 0
   PlayerPosOffset: {x: 0, y: 1}

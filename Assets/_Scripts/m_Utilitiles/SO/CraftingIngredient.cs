@@ -1,31 +1,42 @@
-
-using System.Collections.Generic;
+// InputListWithMatrix.cs
 using System;
+using System.Collections.Generic;
+using UnityEngine;
+using Sirenix.OdinInspector;
 
 [Serializable]
 public class CraftingIngredient
 {
-
+    [ReadOnly]
     public string ItemName = "";
+    public GameObject ItemPrefab;
     public int amount = 1;
 
-    public override string ToString()
-    {
-        return $"{ItemName}"; // 直接返回物品名称
-    }
+    public override string ToString() => ItemName;
+
+    // 修复了原来 ToStringList 中使用 IndexOf 的潜在问题
     public string ToStringList(List<CraftingIngredient> list)
     {
-        string[] ingredientStrings = new string[list.Count];
-        foreach (var ingredient in list)
+        if (list == null || list.Count == 0) return "";
+        var strings = new string[list.Count];
+        for (int i = 0; i < list.Count; i++)
         {
-            ingredientStrings[list.IndexOf(ingredient)] = ingredient.ToString();
+            strings[i] = list[i] != null ? list[i].ToString() : "空";
         }
-        return string.Join(",", ingredientStrings); // 直接返回逗号分隔的字符串
+        return string.Join(",", strings);
     }
+
+    public CraftingIngredient() { }
 
     public CraftingIngredient(string inputItem)
     {
         ItemName = inputItem;
         amount = 1;
+    }
+
+    public void SyncItemName()
+    {
+        if (ItemPrefab != null)
+            ItemName = ItemPrefab.name;
     }
 }

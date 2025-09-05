@@ -94,9 +94,14 @@ public class ItemDroper : Mod_ItemDroper
             if (slot.Amount <= 0)
                 slot.ClearData();
 
+            Item newObject = null;
             // 实例化新物体
-            GameChunkManager.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
-            Item newObject = GameItemManager.Instance.InstantiateItem(newItemData.IDName,default, default, default, chunk.gameObject);
+            ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
+            if (chunk != null)
+            {
+                newObject = ItemMgr.Instance.InstantiateItem(newItemData.IDName, default, default, default, chunk.gameObject);
+            }
+
             if (newObject == null)
             {
                 Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);

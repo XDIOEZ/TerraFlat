@@ -33,7 +33,7 @@ public class Mod_Building : Module
         set => BuildingData = (Ex_ModData)value;
     }
 
-    public bool IsItemInInventory => item.BelongItem != null;
+    public bool IsItemInInventory => item.Owner != null;
     #endregion
 
     #region 生命周期
@@ -45,6 +45,8 @@ public class Mod_Building : Module
 
         if(damageReceiver == null)
         damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID    (ModText.Hp);
+
+        damageReceiver.Data.DestroyDelay = -1f;
 
         damageReceiver.OnAction += OnHit;
         item.OnAct += Install;
@@ -191,46 +193,107 @@ public class Mod_Building : Module
         return true;
     }
 
+    /// <summary>
+    /// 执行建筑物安装流程
+    /// </summary>
     private void ExecuteInstallation()
     {
-        StartInstall.Invoke();
-        OnAction_Start.Invoke(item);
-        // 消耗物品
-        item.itemData.Stack.Amount--;
+        // === 触发开始事件 ===
+        StartInstall?.Invoke();
+        OnAction_Start?.Invoke(item);
 
+        // === 消耗物品 ===
+        ConsumeItem(item);
         damageReceiver.Hp = damageReceiver.MaxHp.Value;
 
-        // 更新物品状态
-        item.itemData.Stack.CanBePickedUp = false;
-        item.OnUIRefresh?.Invoke();
+        // === 实例化建筑 ===
+        Item newBuilding = CreateBuildingInstance(item, GhostShadow.transform.position);
 
-        // 实例化建筑
-        var runtimeItem = GameItemManager.Instance.InstantiateItem(
-            item.itemData.IDName,
-            GhostShadow.transform.position
-        );
-
-        if (runtimeItem != null)
+        if (newBuilding != null)
         {
-            item.ModuleSave();
-            // 配置新实例
-            runtimeItem.transform.localScale = Vector3.one;
-            runtimeItem.itemData = FastCloner.FastCloner.DeepClone(item.itemData);
-            runtimeItem.itemData.Stack.Amount = 1;
-            runtimeItem.itemData.Stack.CanBePickedUp = false;
-            runtimeItem.Load();
-            EnableChildColliders(true, runtimeItem.transform);
+            ConfigureNewBuilding(newBuilding, item);
         }
 
-        // 处理物品耗尽
+        // === 如果物品耗尽，清理原始对象 ===
         if (item.itemData.Stack.Amount <= 0)
         {
             CleanupGhost();
-            Destroy(item.transform.gameObject);
+            Destroy(item.gameObject);
         }
-        //更新地图
-        AstarGameManager.Instance.UpdateArea_Rectangle(center: runtimeItem.transform.position, length: 3, width: 3);
+        else
+        {
+            damageReceiver.Hp = 0;
+        }
+
+        // === 更新寻路区域 ===
+        if (newBuilding != null)
+        {
+            UpdateNavigation(newBuilding.transform.position, 3, 3);
+        }
     }
+
+    #region 私有辅助方法
+
+    /// <summary>
+    /// 消耗指定物品（减少数量 + 更新UI）
+    /// </summary>
+    private void ConsumeItem(Item sourceItem)
+    {
+        sourceItem.itemData.Stack.Amount--;
+        sourceItem.itemData.Stack.CanBePickedUp = false;
+        sourceItem.OnUIRefresh?.Invoke();
+    }
+
+    /// <summary>
+    /// 实例化建筑（根据是否在房间内，选择父对象规则）
+    /// </summary>
+    private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
+    {
+        if (ItemMgr.Instance.User_Player.Data.IsInRoom)
+        {
+            ChunkMgr.Instance.GetClosestChunk(position, out var chunk);
+            return ItemMgr.Instance.InstantiateItem(
+                sourceItem.itemData.IDName,
+                parent: chunk.gameObject,
+                position: position
+            );
+        }
+        else
+        {
+            return ItemMgr.Instance.InstantiateItem(
+                sourceItem.itemData.IDName,
+                position
+            );
+        }
+    }
+
+    /// <summary>
+    /// 配置新建筑（克隆数据 + 初始化 + 碰撞体设置）
+    /// </summary>
+    private void ConfigureNewBuilding(Item newBuilding, Item sourceItem)
+    {
+        sourceItem.ModuleSave();
+
+        newBuilding.transform.localScale = Vector3.one;
+        newBuilding.itemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
+
+        newBuilding.itemData.Stack.Amount = 1;
+        newBuilding.itemData.Stack.CanBePickedUp = false;
+
+        newBuilding.Load();
+        EnableChildColliders(true, newBuilding.transform);
+    }
+
+    /// <summary>
+    /// 更新导航区域
+    /// </summary>
+    private void UpdateNavigation(Vector3 center, int length, int width)
+    {
+        AstarGameManager.Instance.UpdateArea_Rectangle(center, length, width);
+    }
+
+    #endregion
+
     #endregion
 
     #region 辅助方法
@@ -310,7 +373,6 @@ public class Mod_Building : Module
 
     protected void EnableChildColliders(bool enable, Transform root = null)
     {
-        root = root ?? transform;
         foreach (var col in root.GetComponentsInChildren<Collider2D>())
         {
             col.enabled = enable;

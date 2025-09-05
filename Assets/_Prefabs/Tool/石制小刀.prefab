@@ -131,14 +131,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e9b161493039d74aa8229f739949588, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
     _PersistentCalls: []
   OnAct:
-    _PersistentCalls: []
-  OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0
@@ -153,6 +151,14 @@ MonoBehaviour:
       - Sword
       Item_Material:
       - Iron
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 2

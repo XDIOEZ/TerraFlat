@@ -29,7 +29,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         else
         {
             // 当前区块大小
-            Vector2 chunkSize = GameChunkManager.GetChunkSize();
+            Vector2 chunkSize = ChunkMgr.GetChunkSize();
 
             // 如果 center 是 Chunk 的左下角，就 +0.5f * size 对齐到中心
             center += chunkSize * 0.5f;

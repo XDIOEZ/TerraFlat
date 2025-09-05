@@ -89,7 +89,7 @@ public class Apple_Red : Item
                 return; // 阻止生成苹果树
             }
 
-            GameItemManager.Instance.InstantiateItem(TreeName, transform.position, transform.rotation, scale: Vector3.one * 0.25f);
+            ItemMgr.Instance.InstantiateItem(TreeName, transform.position, transform.rotation, scale: Vector3.one * 0.25f);
             Destroy(gameObject);
         }
     }

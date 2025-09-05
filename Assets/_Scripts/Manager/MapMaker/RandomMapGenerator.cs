@@ -20,9 +20,9 @@ public class RandomMapGenerator : MonoBehaviour
     public Map map;  // 地图管理对象，包含 TileData 和 Tilemap 引用
 
     [ShowInInspector]
-    public PlanetData plantData => SaveDataManager.Instance.Active_PlanetData;
+    public PlanetData plantData => SaveDataMgr.Instance.Active_PlanetData;
 
-    public Vector2 ChunkSize => GameChunkManager.GetChunkSize();
+    public Vector2 ChunkSize => ChunkMgr.GetChunkSize();
     [Tooltip("赤道坐标")]
     public float Equator = 0;
 
@@ -51,7 +51,7 @@ public class RandomMapGenerator : MonoBehaviour
     /// <summary>
     /// 地图种子，字符串形式，从存档读取
     /// </summary>
-    private int Seed => SaveDataManager.Instance.SaveData.Seed;
+    private int Seed => SaveDataMgr.Instance.SaveData.Seed;
 
     public float PlantRadius { get => plantData.Radius;}
     public float Temp { get => plantData.TemperatureOffset; }
@@ -72,7 +72,7 @@ public class RandomMapGenerator : MonoBehaviour
     #region Unity生命周期
     public void Awake()
     {
-        RandomMapGenerator.rng = new System.Random(SaveDataManager.Instance.SaveData.Seed);
+        RandomMapGenerator.rng = new System.Random(SaveDataMgr.Instance.SaveData.Seed);
         map.OnMapGenerated_Start += GenerateRandomMap_TileData;
     }
 #if UNITY_EDITOR
@@ -81,7 +81,7 @@ public class RandomMapGenerator : MonoBehaviour
         if (map == null || map.Data == null) return;
 
         Vector2 startPos = map.Data.position;
-        Vector2 size = GameChunkManager.GetChunkSize();
+        Vector2 size = ChunkMgr.GetChunkSize();
         Vector3 center = new Vector3(startPos.x + size.x / 2f, startPos.y + size.y / 2f, 0f);
         Vector3 size3D = new Vector3(size.x, size.y, 0.1f);
 
@@ -120,7 +120,7 @@ public class RandomMapGenerator : MonoBehaviour
 
         if (tilesPerFrame == 114514)
         {
-            GameChunkManager.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size));
+            ChunkMgr.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size));
         }
         else
         {
@@ -138,7 +138,7 @@ public class RandomMapGenerator : MonoBehaviour
         Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
         foreach (var d in dirs)
         {
-            Item edge = GameItemManager.Instance.InstantiateItem("MapEdge",default,default,default,map.ParentObject);
+            Item edge = ItemMgr.Instance.InstantiateItem("MapEdge",default,default,default,map.ParentObject);
             if (edge is WorldEdge we)
                 we.SetupMapEdge(d, map.Data.position);
             else
@@ -299,7 +299,7 @@ public class RandomMapGenerator : MonoBehaviour
                         (ChunkPosition.x + (int)offsetX) - 0.5f,
                         (ChunkPosition.y + (int)offsetY) - 0.5f
                     );
-                    GameItemManager.Instance.InstantiateItem(
+                    ItemMgr.Instance.InstantiateItem(
                         spawn.itemName,
                         spawnPosition,
                         default,

@@ -247,7 +247,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
             foreach (var output in output_list.results)
             {
                 // 同步加载输出物品的预制体
-                GameObject prefab = GameRes.Instance.AllPrefabs[output.item];
+                GameObject prefab = GameRes.Instance.AllPrefabs[output.ItemName];
                 if (prefab != null)
                 {
                     // 克隆预制体的物品数据
@@ -260,7 +260,7 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
                 else
                 {
                     // 如果未能找到预制体，输出错误信息
-                    Debug.LogError($"未能找到预制体：{output.item}");
+                    Debug.LogError($"未能找到预制体：{output.ItemName}");
                     return false;
                 }
             }

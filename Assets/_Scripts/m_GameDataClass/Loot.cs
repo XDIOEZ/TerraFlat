@@ -1,4 +1,5 @@
 using MemoryPack;
+using Newtonsoft.Json;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -48,6 +49,9 @@ public partial class LootData
 {
     public string lootName;
     public Vector2Int lootAmountRange = new Vector2Int(1, 1);
+    [MemoryPackIgnore]
+    [JsonIgnore]
+    public GameObject lootPrefab;
 
     public int LootAmountMin { get => lootAmountRange.x; }
     public int LootAmountMax { get => lootAmountRange.y; }
@@ -58,3 +62,4 @@ public partial class LootData
         return Random.Range(lootAmountRange.x, lootAmountRange.y+1);
     }
 }
+//TODO 这是我的战利品基类 结合其重新修改之前的脚本

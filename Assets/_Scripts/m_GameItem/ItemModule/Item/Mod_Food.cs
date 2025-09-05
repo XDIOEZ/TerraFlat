@@ -104,9 +104,9 @@ public partial class Mod_Food : Module
     /// <summary>
     /// 调用吃的行为
     /// </summary>
-    public void Act()
+    public override void Act()
     {
-        var Player_FoodModule = item.BelongItem.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+        var Player_FoodModule = item.Owner.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
         Player_FoodModule.Eat(BeEater: this);
     }
     public override void Action(float timeDelta)

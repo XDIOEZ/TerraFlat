@@ -178,8 +178,8 @@ public class RoomBuilding : BaseBuilding
         Vector2 currentPosition = (Vector2)changer.transform.position;
         string currentSceneName = SceneManager.GetActiveScene().name;
 
-        SaveDataManager.Instance.SaveData.Scenen_Building_Pos[_room.RoomName] = currentPosition;
-        SaveDataManager.Instance.SaveData.Scenen_Building_Name[_room.RoomName] = currentSceneName;
+       // SaveDataManager.Instance.SaveData.Scenen_Building_Pos[_room.RoomName] = currentPosition;
+      //  SaveDataManager.Instance.SaveData.Scenen_Building_Name[_room.RoomName] = currentSceneName;
 
         Debug.Log($"[房间初始化] 已保存建筑位置信息 - 场景名：{currentSceneName}，位置：{currentPosition}");
         Debug.Log("[房间初始化] 房间初始化完成");

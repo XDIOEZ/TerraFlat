@@ -10,7 +10,7 @@ public class SaveDataManager_UI : MonoBehaviour
     #region 字段定义
 
     [Header("保存与加载")]
-    public SaveDataManager saveAndLoad;
+    public SaveDataMgr saveAndLoad;
     public static SaveDataManager_UI Ins;
 
     public PlanetData Ready_planetData = new PlanetData();
@@ -52,7 +52,7 @@ public class SaveDataManager_UI : MonoBehaviour
     #region 初始化
     private void Start()
     {
-        saveAndLoad = SaveDataManager.Instance;
+        saveAndLoad = SaveDataMgr.Instance;
 
         LoadSaveFileNames();
         GenerateSaveButtons();
@@ -78,13 +78,13 @@ public class SaveDataManager_UI : MonoBehaviour
 
     public void StartNewGame()
     {
-        SaveDataManager.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
+        SaveDataMgr.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
         // 初始化随机种子并创建系统随机实例
-        SaveDataManager.Instance.SaveData.Seed = SaveDataManager.Instance.SaveData.SaveSeed.GetHashCode();
-        Random.InitState(SaveDataManager.Instance.SaveData.Seed);
-        RandomMapGenerator.rng = new System.Random(SaveDataManager.Instance.SaveData.Seed);
+        SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
+        Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
+        RandomMapGenerator.rng = new System.Random(SaveDataMgr.Instance.SaveData.Seed);
        // SaveAndLoad.Instance.SaveData.PlanetData_Dict.Add("地球", new PlanetData());
-        SaveDataManager.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
+        SaveDataMgr.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
     }
     #endregion
 

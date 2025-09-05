@@ -139,7 +139,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1888604326910977525}
-  - component: {fileID: 303135312573992145}
+  - component: {fileID: 2754435014423816671}
   m_Layer: 0
   m_Name: "Chunk\u7BA1\u7406\u5668"
   m_TagString: Untagged
@@ -162,7 +162,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 891121404665747283}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &303135312573992145
+--- !u!114 &2754435014423816671
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -171,7 +171,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 3351837829132670548}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4056f06ba3f51954a95c9055250ff355, type: 3}
+  m_Script: {fileID: 11500000, guid: bf2e37602e5361d4db1a8330009483bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   OnChunkLoadFinish:
@@ -187,9 +187,9 @@ GameObject:
   - component: {fileID: 891121404665747283}
   - component: {fileID: 9058411785591302946}
   - component: {fileID: 7400242115634630897}
-  - component: {fileID: 1704115879885880632}
   - component: {fileID: 6502567715825756977}
   - component: {fileID: 2341746562113399121}
+  - component: {fileID: 6280812242651090066}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -249,19 +249,6 @@ MonoBehaviour:
   path: "Assets/_Data/\u5E73\u5766\u4E16\u754C- \u751F\u7269\u53CA\u7269\u54C1\u6570\u636E.xlsx"
   OpenSheetName: Sheet1
   SheetNames: []
---- !u!114 &1704115879885880632
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4565539948505994440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3694d5a4bab87ba4197d88eba715580d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _cachedMap: {fileID: 0}
 --- !u!114 &6502567715825756977
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -277,37 +264,10 @@ MonoBehaviour:
   UserSavePath: Assets/Saves/LoaclSaveData/
   SaveData:
     saveName: defaultSaveName
-    Active_PlanetName: "\u5730\u7403"
-    Active_MapName: (0,0)
-    Active_MapPos: {x: 0, y: 0}
     SaveSeed: 0
     Seed: 0
     Time: 0
     TimeSpeed: 1
-    Active_PlanetData:
-      PlanetName: 
-      Radius: 1000
-      TemperatureOffset: 0
-      RainOffset: 0
-      OceanHeight: -1
-      NoiseScale: 0.01
-      MapSize: {x: 100, y: 100}
-      TimeData:
-        DayTime: 0
-        SeasonTime: 0
-        YearTime: 0
-        Day: 0
-        Season: 0
-        Year: 0
-        OneDayTime: 1440
-        OneSeasonTime: 8640
-        OneYearTime: 34560
-        RotationSpeed: 1
-        OrbitSpeed: 1
-        SunriseSunsetThreshold_Spring: {x: 0.3, y: 0.2}
-        SunriseSunsetThreshold_Summer: {x: 0.2, y: 0.1}
-        SunriseSunsetThreshold_Autumn: {x: 0.3, y: 0.2}
-        SunriseSunsetThreshold_Winter: {x: 0.5, y: 0.4}
   CurrentContrrolPlayerName: 
 --- !u!114 &2341746562113399121
 MonoBehaviour:
@@ -329,7 +289,7 @@ MonoBehaviour:
     RainOffset: 0
     OceanHeight: -1
     NoiseScale: 0.01
-    MapSize: {x: 100, y: 100}
+    ChunkSize: {x: 100, y: 100}
     TimeData:
       DayTime: 0
       SeasonTime: 0
@@ -346,6 +306,19 @@ MonoBehaviour:
       SunriseSunsetThreshold_Summer: {x: 0.2, y: 0.1}
       SunriseSunsetThreshold_Autumn: {x: 0.3, y: 0.2}
       SunriseSunsetThreshold_Winter: {x: 0.5, y: 0.4}
+--- !u!114 &6280812242651090066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212defbe379f6e04e832893eda7ea808, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _cachedMap: {fileID: 0}
 --- !u!1 &8923630362666243623
 GameObject:
   m_ObjectHideFlags: 0
@@ -393,7 +366,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   version: 1
   data:
-    dataString: UEsDBBQAAAgIAABAIexezo8fRgIAAAoFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VE1z2jAQ/SuMzmXG0IQ2vbVASA8EJjSTiy9CWtsaZMmjD74y/PeuZBs7tDlZ3vd29d7u2u9EKFsBc9osjOBLzYH8GJBwJl8GHfgER5prtRFnaDlvgrsikGjkvFAnNMZHIc3qEpwR7KfKZSAnGPRKZNqUc57DVFtnMZxRaQEho13IVhh6H5AjPoYPIeXUpJ7Dc3DBEwPlwHS8/7O8YpKWFfCgtyOPkpaOp0hU6KXhBN1MSylsI4S4UxWNvtBTsMkFRVPx8sAtQOSFw5dxP3GVZRZcI8jQ00wY7E1dkfzSdcNKane1qj2VPl4e1dQll/+gwxrOjC6f2ltrL64QbIf6GLWu189+ePZRtlcHKnd0K+GtAPWsF0Z7xRF0xodUb2E8616vxqYFsF0Xr6XeBH31+WCCh0v0fpxKUW4bCF83Usc+x4mDwYn8RrlxH2zDwmjQ8GrhD837i9MAj8JYh1DjUQVxW+1NoJJ57Fjw4t1UGwWmX6ECRaU7rbGOu53fDfZ51iMN30hze4O1q3+TEsMdP0luoLU+XGdlC31Ygi1W3kmhoGt0AJ6xUVOtVL1efUtt2sabjLJeWu4F/7hZZMLoQ5J8TWAyvpsge5gAjLfsbsSSyXf+7f6exNUTCn1Sua6FNu3BsamuuMI1a38dg4WhVVx1buhhIc6lth1TqExvmAFQq7rCVTgYvAQ/Rz7nAhu0AeeEigMn7ymRmu2Ap9dCaXQ6PzpD065KSiqx1y5EUjKNv4uUhPB1ldcG9gIO4fK22IVc/gJQSwMEFAAACAgAAEAh7F1epkptAAAAeAAAAAkAJABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQGrVipLLSrOzM9TslIw0TPSMzTXUVBKL0osyCgGihiCOKWZKSB2tJJZcqKlgYGxQaqZkYlZWmKyrkFqqlFSsolhsoGZRYq5qalSLFB9SWVBql9ibipET0BiSUZaZl5KZl66nntRZoo7yGil2FoAUEsBAi0AFAAACAgAAEAh7F7Ojx9GAgAACgUAAAsAJAAAAAAAAAAAAAAAAAAAAGdyYXBoMC5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0BUEsBAi0AFAAACAgAAEAh7F1epkptAAAAeAAAAAkAJAAAAAAAAAAAAAAAkwIAAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLBQYAAAAAAgACALgAAABLAwAAAAA=
+    dataString: UEsDBBQAAAgIAABAIeyEJ5S8UQIAABEFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VE1z2jAQ/SuMziVjSKBNby0Q0gOBCe3k4ouQ1liDLHn0wVeG/96VbGNDpyfL+96u3ttd+5MIZUtgTpu5EXyhOZDvPRLO5EuvBV/hSLdarcUZGs6H4C4PJBo579QJjfFBSLO6AGcE+6G2MpATDHolMm2KGd/CRFtnMZxRaQEho13IVhj67JEjPvrPIeVUp57Ds3fBEwPlwHR4w4fhuGYOHh9GN2SvmKRFCTzIbnMGSVMbT5Go0FLNCfKZllLYWg9xpzL6faen4JYLit6ihsDNQWxzhy/DbuIyyyy4Wr2hp6kw2KKqIvmpq74V1O4qVXsqfbw8qqlKLv5B+xWcGV28NrdWXlwu2A71MWpdp63d8PRWtlcHKnd0I+EjB/Wm50Z7xRF0xodUb2E4bV+vxiY5sF0br6TeBX3Z9vp+isHDJXo/TqQoNjWEr2upY5/j4MHgRH6h3LgWtmZhNGj4Y+E33Xb3pwZehLEOodqjCuI22ptAJbPYseDFu4k2Cky3QgmKSndaYR13P7877P9ZLzR8KvXtNdZ8AXcpMdzyk+QOWunDdVY214cF2HzpnRQK2kYH4A0bNdFKVevVtdSkrb3JKOukbb3gt5tFxow+J8ljAuPh0xjZ/QRguGFPA5aMv/GvoxGJqycU+qRyVQmt24NjU21xhWvW/EF6c0PLuOrc0MNcnAttW6ZQmV4zA6CWVYWrcDB4CX6OfMYFNmgNzgkVB04+UyI12wFPr4XS6HR2dIambZWUlGKvXYikZBL/GikJ4esqrwzsBRzC5U2xC7n8BVBLAwQUAAAICAAAQCHsXV6mSm0AAAB4AAAACQAkAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAatWKkstKs7Mz1OyUjDRM9IzNNdRUEovSizIKAaKGII4pZkpIHa0kllyoqWBgbFBqpmRiVlaYrKuQWqqUVKyiWGygZlFirmpqVIsUH1JZUGqX2JuKkRPQGJJRlpmXkpmXrqee1FmijvIaKXYWgBQSwECLQAUAAAICAAAQCHshCeUvFECAAARBQAACwAkAAAAAAAAAAAAAAAAAAAAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwECLQAUAAAICAAAQCHsXV6mSm0AAAB4AAAACQAkAAAAAAAAAAAAAACeAgAAbWV0YS5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0BUEsFBgAAAAACAAIAuAAAAFYDAAAAAA==
     upgradeData: 
     file_cachedStartup: {fileID: 0}
     data_cachedStartup: 
@@ -477,5 +450,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 317b3cff8b7e27b4fb845dcca1ac27ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Pathfinder: {fileID: 0}
-  Init: 0
+  Pathfinder: {fileID: 1944405980370659897}
+  Init: 1

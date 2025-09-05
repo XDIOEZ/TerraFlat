@@ -12,18 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e17da8e390065e6499b50ea2e5604151, type: 3}
   m_Name: "\u539F\u6728\u70E7\u5236\u6728\u70AD"
   m_EditorClassIdentifier: 
-  version: 1.0.0
   inputs:
     RowItems_List:
     - ItemName: Log
-      amount: 1
-    - ItemName: Log
-      amount: 1
-    - ItemName: Log
-      amount: 1
+      ItemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
+      amount: 3
   outputs:
     results:
-    - item: "\u7164\u70AD"
+    - ItemName: Ore_Coal
+      ItemPrefab: {fileID: 288261360578882072, guid: e03b8d2961390684a93d01afc3105a12, type: 3}
       amount: 1
-  recipeType: 0
+  recipeType: 1
   Temperature: 1000

@@ -9415,17 +9415,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
---- !u!114 &1783707698 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-  m_PrefabInstance: {fileID: 4828757420143755386}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 78396926cbbfc4ac3b48fc5fc34a87d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &1799877380
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12139,6 +12128,34 @@ PrefabInstance:
       propertyPath: m_Name
       value: Chicken
       objectReference: {fileID: 0}
+    - target: {fileID: 7050136230430806877, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      propertyPath: Data.Tags.keys.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7050136230430806877, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      propertyPath: Data.Tags.keys.Array.data[0].tag
+      value: Type
+      objectReference: {fileID: 0}
+    - target: {fileID: 7050136230430806877, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      propertyPath: Data.Tags.keys.Array.data[1].tag
+      value: Material
+      objectReference: {fileID: 0}
+    - target: {fileID: 7050136230430806877, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      propertyPath: Data.TagDictionary.keys.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7050136230430806877, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      propertyPath: Data.Tags.keys.Array.data[0].values.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7050136230430806877, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      propertyPath: Data.Tags.keys.Array.data[0].values.Array.data[0]
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7050136230430806877, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      propertyPath: Data.TagDictionary.keys.Array.data[0].values.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 6729442097554026636, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
@@ -12494,25 +12511,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-      propertyPath: data.dataString
-      value: UEsDBBQAAAgIAABAIeyEJ5S8UQIAABEFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VE1z2jAQ/SuMziVjSKBNby0Q0gOBCe3k4ouQ1liDLHn0wVeG/96VbGNDpyfL+96u3ttd+5MIZUtgTpu5EXyhOZDvPRLO5EuvBV/hSLdarcUZGs6H4C4PJBo579QJjfFBSLO6AGcE+6G2MpATDHolMm2KGd/CRFtnMZxRaQEho13IVhj67JEjPvrPIeVUp57Ds3fBEwPlwHR4w4fhuGYOHh9GN2SvmKRFCTzIbnMGSVMbT5Go0FLNCfKZllLYWg9xpzL6faen4JYLit6ihsDNQWxzhy/DbuIyyyy4Wr2hp6kw2KKqIvmpq74V1O4qVXsqfbw8qqlKLv5B+xWcGV28NrdWXlwu2A71MWpdp63d8PRWtlcHKnd0I+EjB/Wm50Z7xRF0xodUb2E4bV+vxiY5sF0br6TeBX3Z9vp+isHDJXo/TqQoNjWEr2upY5/j4MHgRH6h3LgWtmZhNGj4Y+E33Xb3pwZehLEOodqjCuI22ptAJbPYseDFu4k2Cky3QgmKSndaYR13P7877P9ZLzR8KvXtNdZ8AXcpMdzyk+QOWunDdVY214cF2HzpnRQK2kYH4A0bNdFKVevVtdSkrb3JKOukbb3gt5tFxow+J8ljAuPh0xjZ/QRguGFPA5aMv/GvoxGJqycU+qRyVQmt24NjU21xhWvW/EF6c0PLuOrc0MNcnAttW6ZQmV4zA6CWVYWrcDB4CX6OfMYFNmgNzgkVB04+UyI12wFPr4XS6HR2dIambZWUlGKvXYikZBL/GikJ4esqrwzsBRzC5U2xC7n8BVBLAwQUAAAICAAAQCHsXV6mSm0AAAB4AAAACQAkAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAatWKkstKs7Mz1OyUjDRM9IzNNdRUEovSizIKAaKGII4pZkpIHa0kllyoqWBgbFBqpmRiVlaYrKuQWqqUVKyiWGygZlFirmpqVIsUH1JZUGqX2JuKkRPQGJJRlpmXkpmXrqee1FmijvIaKXYWgBQSwECLQAUAAAICAAAQCHshCeUvFECAAARBQAACwAkAAAAAAAAAAAAAAAAAAAAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwECLQAUAAAICAAAQCHsXV6mSm0AAAB4AAAACQAkAAAAAAAAAAAAAACeAgAAbWV0YS5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0BUEsFBgAAAAACAAIAuAAAAFYDAAAAAA==
+    - target: {fileID: 2341746562113399121, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: Ready_planetData.ChunkSize.x
+      value: 20
       objectReference: {fileID: 0}
-    - target: {fileID: 1976977817011761695, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-      propertyPath: Init
-      value: 1
+    - target: {fileID: 2341746562113399121, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: Ready_planetData.ChunkSize.y
+      value: 20
       objectReference: {fileID: 0}
-    - target: {fileID: 1976977817011761695, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-      propertyPath: Pathfinder
-      value: 
-      objectReference: {fileID: 1783707698}
     - target: {fileID: 4565539948505994440, guid: 16f38f33714285247b623a2423e14c90, type: 3}
       propertyPath: m_Name
       value: WorldManager
       objectReference: {fileID: 0}
-    - target: {fileID: 4565539948505994440, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-      propertyPath: m_IsActive
-      value: 1
+    - target: {fileID: 7895695706117877763, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

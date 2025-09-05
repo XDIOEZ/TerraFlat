@@ -138,9 +138,8 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
   Sprite: {fileID: 6754748716343734431}
+  updateInterval: 0.1
   Data:
     IDName: Bag_
     GameName: "\u76AE\u9769\u6536\u7EB3\u888B"
@@ -152,6 +151,13 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values:
+        - Equipment
+      - tag: Material
+        values: []
     Stack:
       Amount: 1
       Volume: 2

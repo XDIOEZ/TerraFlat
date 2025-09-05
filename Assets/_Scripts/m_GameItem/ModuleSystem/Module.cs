@@ -7,8 +7,8 @@ public abstract class Module : MonoBehaviour
 {
     /*  ²Î¿¼´úÂë
      
-    public Ex_ModData_MemoryPackable ModData;
-    public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
     public override void Awake()
     {
@@ -20,18 +20,21 @@ public abstract class Module : MonoBehaviour
 
     public override void Load()
     {
-        throw new System.NotImplementedException();
+        ModSaveData.ReadData(ref );
     }
 
     public override void Save()
     {
-        throw new System.NotImplementedException();
+        ModSaveData.WriteData(ref );
     }
     public override void Action(float deltaTime)
     {
-      
-    }
 
+    }
+        public override void Act()
+    {
+    base.Act();
+    }
     */
     public abstract ModuleData _Data { get; set; }
     public Item item;
@@ -41,6 +44,7 @@ public abstract class Module : MonoBehaviour
     public UltEvent<Item> OnAction_Start { get; set; } = new UltEvent<Item>();
     public UltEvent<Item> OnAction_Update { get; set; } = new UltEvent<Item>();
     public UltEvent<Item> OnAction_Cancel { get; set; } = new UltEvent<Item>();
+    public UltEvent<Module> OnAct { get; set; } = new UltEvent<Module>();
 
     public virtual void Awake()
     {
@@ -73,6 +77,10 @@ public abstract class Module : MonoBehaviour
     public virtual void Action(float deltaTime)
     {
 
+    }
+    public virtual void Act()
+    {
+        OnAct.Invoke(this);
     }
 
 

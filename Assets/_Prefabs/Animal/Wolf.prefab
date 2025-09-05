@@ -208,7 +208,7 @@ MonoBehaviour:
   hightReaction: 0
   TargetPosition: {x: 0, y: 0}
   IsMoving: 0
-  Rb: {fileID: 0}
+  rb: {fileID: 0}
   stamina: {fileID: 0}
   staminaConsumeSpeed:
     BaseValue: 1
@@ -222,6 +222,11 @@ MonoBehaviour:
     isRunning: 0
     Type: 0
     BitData: 
+  animationController: {fileID: 0}
+  OnMoveStart:
+    _PersistentCalls: []
+  OnMoveEnd:
+    _PersistentCalls: []
   target: {fileID: 0}
   stopDistance: 0.1
   CanMove: 1
@@ -291,8 +296,6 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0.1
   Data:
@@ -308,6 +311,18 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values:
+        - Animal
+      - tag: Material
+        values:
+        - Blood
+        - Meat
+      - tag: Creature
+        values:
+        - MeatAnimal
     Stack:
       Amount: 1
       Volume: 1
@@ -725,6 +740,7 @@ MonoBehaviour:
   StartPosition: {x: 0, y: 0}
   MoveTargetTransform: {fileID: 0}
   damageCollider: {fileID: 0}
+  sampleFrames: 2
   TrunBody: {fileID: 0}
   xOffset: 0.5
 --- !u!1 &9216436102404898249

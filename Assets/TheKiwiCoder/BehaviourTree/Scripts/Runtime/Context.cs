@@ -40,7 +40,7 @@ namespace TheKiwiCoder {
             context.item = gameObject.GetComponent<Item>();
             context.gameObject = gameObject;
             context.transform = gameObject.transform;
-            context.map = GameItemManager.Instance.Map;
+            context.map = ItemMgr.Instance.Map;
             context.animator = gameObject.GetComponentInChildren<Animator>();
             context.physics = gameObject.GetComponent<Rigidbody>();
             context.agent = gameObject.GetComponentInChildren<NavMeshAgent>();

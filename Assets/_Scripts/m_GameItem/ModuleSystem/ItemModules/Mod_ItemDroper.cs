@@ -24,7 +24,6 @@ public class Mod_ItemDroper : Module
         {
             _Data.ID = ModText.ItemDorper;
         }
- 
     }
 
     public void DropItem_Range(Item item, Vector2 startPos, float radius, float time)
@@ -51,11 +50,10 @@ public class Mod_ItemDroper : Module
             item = item
         };
 
-        // drops.Add(drop);
-        //  drops.Add(drop);
         item.itemData.Stack.CanBePickedUp = false;
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
         itemDrop.drop = drop;
+        drops.Add(drop);
     }
 
     /// <summary>
@@ -63,13 +61,21 @@ public class Mod_ItemDroper : Module
     /// </summary>
     public void DropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time)
     {
+        StaticDropItem_Pos(item, startPos, endPos, time);
+    }
+
+    /// <summary>
+    /// 【静态方法】供外部模块（如Mod_DeathLoot）调用，复用掉落动画逻辑
+    /// </summary>
+    public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time,float bezierOffset = 1f, float arcHeight = 1f)
+    {
         item.transform.position = startPos;
 
-        // 控制点为中点上移
+        // 计算二阶贝塞尔控制点：中点向上偏移（使用模块的bezierOffset）
         Vector2 mid = (startPos + endPos) * 0.5f;
         mid.y += bezierOffset;
 
-        Drop drop = new Drop
+        Mod_ItemDroper.Drop drop = new Mod_ItemDroper.Drop
         {
             itemGuid = item.itemData.Guid,
             startPos = startPos,
@@ -79,10 +85,10 @@ public class Mod_ItemDroper : Module
             progressTime = 0f,
             item = item
         };
-
-      //  drops.Add(drop);
+        Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+        itemDrop.drop = drop;
         item.itemData.Stack.CanBePickedUp = false;
-        Mod_Droping itemDrop  = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+
         itemDrop.drop = drop;
     }
 
@@ -122,7 +128,7 @@ public class Mod_ItemDroper : Module
     /* ----------------------------------------------------------
      * 二阶贝塞尔曲线
      * ----------------------------------------------------------*/
-    private Vector2 Bezier2(Vector2 p0, Vector2 p1, Vector2 p2, float t)
+    private static Vector2 Bezier2(Vector2 p0, Vector2 p1, Vector2 p2, float t)
     {
         float mt = 1f - t;
         return mt * mt * p0 + 2f * mt * t * p1 + t * t * p2;
@@ -140,7 +146,7 @@ public class Mod_ItemDroper : Module
 
         foreach (Drop drop in drops)
         {
-            drop.item = GameItemManager.Instance.GetItemByGuid(drop.itemGuid);
+            drop.item = ItemMgr.Instance.GetItemByGuid(drop.itemGuid);
             if (drop.item == null)
                 toRemove.Add(drop); // 延迟移除
         }
@@ -197,5 +203,4 @@ public class Mod_ItemDroper : Module
             set { controlX = value.x; controlY = value.y; }
         }
     }
-
 }

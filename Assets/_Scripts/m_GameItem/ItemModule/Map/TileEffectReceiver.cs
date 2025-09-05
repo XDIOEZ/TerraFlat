@@ -29,7 +29,7 @@ public class TileEffectReceiver : MonoBehaviour
         // 缓存 Map 对象
         if (Cache_map == null)
         {
-            foreach (var mapItem in GameItemManager.Instance.GetItemsByNameID("MapCore"))
+            foreach (var mapItem in ItemMgr.Instance.GetItemsByNameID("MapCore"))
             {
                 if (mapItem != null)
                 {

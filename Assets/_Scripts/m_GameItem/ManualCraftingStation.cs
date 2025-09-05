@@ -102,10 +102,10 @@ public class ManualCraftingStation : MonoBehaviour, IInteract
         var itemsToAdd = new List<ItemData>();
         foreach (var output in recipe.outputs.results)
         {
-            var prefab = GameRes.Instance.AllPrefabs[output.item];
+            var prefab = GameRes.Instance.AllPrefabs[output.ItemName];
             if (prefab == null)
             {
-                Debug.LogError($"预制体不存在：{output.item}（配方：{recipe.name}）");
+                Debug.LogError($"预制体不存在：{output.ItemName}（配方：{recipe.name}）");
                 return false;
             }
             ItemData newItem = prefab.GetComponent<Item>().DeepClone().itemData;

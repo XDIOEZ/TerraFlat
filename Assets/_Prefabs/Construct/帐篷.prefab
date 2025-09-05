@@ -154,6 +154,14 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 2
@@ -194,7 +202,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_UsedByComposite: 0
   m_Offset: {x: -0.015888572, y: -0.029422969}
@@ -270,6 +278,38 @@ PrefabInstance:
       propertyPath: _sceneAsset
       value: 
       objectReference: {fileID: 4900000, guid: 8ac3cd305127ad441858f6e40b10b293, type: 3}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.data[0]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.data[1]
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.data[2]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.data[3]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.data[4]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.data[5]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.BitData.Array.data[6]
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

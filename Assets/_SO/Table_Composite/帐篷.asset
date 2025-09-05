@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u5E10\u7BF7"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - ItemName: "\u53F6\u5B50"
+      ItemPrefab: {fileID: 7089920087521160863, guid: 9b7fa0dd7f7673f4cbc1e737865ae62d, type: 3}
+      amount: 2
+    - ItemName: "\u53F6\u5B50"
+      ItemPrefab: {fileID: 7089920087521160863, guid: 9b7fa0dd7f7673f4cbc1e737865ae62d, type: 3}
+      amount: 2
+    - ItemName: "\u53F6\u5B50"
+      ItemPrefab: {fileID: 7089920087521160863, guid: 9b7fa0dd7f7673f4cbc1e737865ae62d, type: 3}
+      amount: 2
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+  outputs:
+    results:
+    - ItemName: "\u5E10\u7BF7"
+      ItemPrefab: {fileID: 5803474980971561914, guid: 2cf443899d309994e8491f7fa4e3026b, type: 3}
+      amount: 1
+  recipeType: 0

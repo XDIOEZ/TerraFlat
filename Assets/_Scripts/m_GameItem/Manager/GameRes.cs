@@ -168,6 +168,11 @@ public class GameRes : SingletonAutoMono<GameRes>
         AllPrefabs.TryGetValue(prefabName, out var go);
         return go;
     }
+    public void GetPrefab(string prefabName , out GameObject go)
+    {
+        AllPrefabs.TryGetValue(prefabName, out go);
+    }
+
     public Item GetItem(string prefabName)
     {
         return GetPrefab(prefabName).GetComponent<Item>();

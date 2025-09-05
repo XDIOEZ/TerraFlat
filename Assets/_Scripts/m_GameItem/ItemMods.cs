@@ -2,6 +2,7 @@
 using FastCloner.Code;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class ItemMods
 {
@@ -24,6 +25,16 @@ public class ItemMods
         if (Mods_List.ContainsKey(modID) == false)
             return null;
         return Mods_List[modID][0];
+    }
+    public void GetMod_ByID<T>(string modID,out T mod) where T : Module
+    {
+        if (Mods_List.ContainsKey(modID) == false)
+        {
+            mod = null;
+            Debug.LogWarning("ModID not found:" + modID);
+            return ;
+        }
+        mod = Mods_List[modID][0] as T;
     }
 
     public Module GetMod_ByName(string name)

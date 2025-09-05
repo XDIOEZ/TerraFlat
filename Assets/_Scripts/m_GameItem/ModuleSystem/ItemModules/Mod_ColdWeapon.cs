@@ -46,10 +46,10 @@ public partial class Mod_ColdWeapon : Module
     {
         Data.ReadData(ref weaponData);
 
-        if (item.BelongItem != null)
+        if (item.Owner != null)
         {
-            faceMouse = item.BelongItem.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
-            var controller = item.BelongItem.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+            faceMouse = item.Owner.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
+            var controller = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
             InputAction = controller._inputActions.Win10.LeftClick;
             InputAction.started += OnInputActionStarted;
             InputAction.canceled += OnInputActionCanceled;
@@ -59,7 +59,7 @@ public partial class Mod_ColdWeapon : Module
             faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
         }
 
-        MoveTargetTransform = (MoveTargetTransform == null && item.BelongItem != null)
+        MoveTargetTransform = (MoveTargetTransform == null && item.Owner != null)
             ? item.transform
             : transform.parent;
 
@@ -229,7 +229,7 @@ public partial class Mod_ColdWeapon : Module
         if (!other.TryGetComponent(out DamageReceiver receiver)) return;
 
         var beAttackTeam = other.GetComponentInParent<ITeam>();
-        var belongItem = item?.BelongItem;
+        var belongItem = item?.Owner;
         var belongTeam = belongItem?.GetComponent<ITeam>();
 
         // 避免打到友军
@@ -243,24 +243,51 @@ public partial class Mod_ColdWeapon : Module
         // 生成攻击特效
         if (AttackEffect != null)
         {
-            // 获取碰撞点（尽量接近击中位置）
             Vector2 hitPoint = other.ClosestPoint(transform.position);
-
-            // 随机旋转（绕 Z 轴）
-            float randomAngle = Random.Range(0f, 360f);
-            Quaternion randomRotation = Quaternion.Euler(0, 0, randomAngle);
-
-            var effect = Instantiate(AttackEffect, hitPoint, randomRotation);
-            Destroy(effect, 0.3f); // 0.3 秒后销毁
+            StartCoroutine(SpawnEffectWithDirection(hitPoint));
         }
-
     }
+    [SerializeField] private int sampleFrames = 2; // 采样帧数，可以在 Inspector 里手动调整
+
+    private IEnumerator SpawnEffectWithDirection(Vector2 hitPoint)
+    {
+        // 记录第一个点
+        Vector2 startPos = transform.position;
+
+        // 多帧采样
+        for (int i = 0; i < sampleFrames; i++)
+            yield return null;
+
+        // 记录最后一个点
+        Vector2 endPos = transform.position;
+
+        // 求平均方向
+        Vector2 dir = (endPos - startPos).normalized;
+
+        // 如果几乎没动，给一个默认方向（比如右）
+        if (dir.sqrMagnitude < 0.0001f)
+            dir = Vector2.right;
+
+        // 基于 prefab 自带的 rotation 做修正，而不是覆盖
+        Quaternion baseRotation = AttackEffect.transform.rotation;
+        Quaternion dirRotation = Quaternion.FromToRotation(Vector2.right, dir);
+
+        // 把方向旋转叠加到 prefab 默认旋转上
+        Quaternion finalRotation = dirRotation * baseRotation;
+
+        // 生成特效
+        var effect = Instantiate(AttackEffect, hitPoint, finalRotation);
+
+        Destroy(effect, 0.3f);
+    }
+
+
     #endregion
 
     public override void Save()
     {
         Data.WriteData(weaponData);
-        if (InputAction != null)
+        if (item.Owner != null)
         {
             InputAction.started -= OnInputActionStarted;
             InputAction.canceled -= OnInputActionCanceled;

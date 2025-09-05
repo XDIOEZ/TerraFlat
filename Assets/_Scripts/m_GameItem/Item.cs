@@ -34,7 +34,7 @@ public abstract class Item : MonoBehaviour
     #region RunTime
 
     [Tooltip("此物品属于谁?")]
-    public Item BelongItem;
+    public Item Owner;
     [HideInInspector]
     //物品UI更新事件
     public UltEvent OnUIRefresh = new();
@@ -61,20 +61,23 @@ public abstract class Item : MonoBehaviour
             // 自动生成Guid
             itemData.Guid = Guid.NewGuid().GetHashCode();
             Load();
+            ChunkMgr.Instance.UpdateItem_ChunkOwner(this);
         }
     }
 
     public void IsPrefabInit()
     {
 
-            // 自动生成Guid
-        itemData.Guid = Guid.NewGuid().GetHashCode();
+        // 自动生成Guid
+        Start();
+    
+/*
 
         var modules = GetComponentsInChildren<Module>(true).ToList();
 
             foreach (var mod in modules)
             {
-              /*  if (string.IsNullOrWhiteSpace(mod._Data.Name))*/
+              *//*  if (string.IsNullOrWhiteSpace(mod._Data.Name))*//*
                 mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
                 itemMods.AddMod(mod);
             }
@@ -96,7 +99,7 @@ public abstract class Item : MonoBehaviour
         foreach (var mod in Mods.Values)
         {
             mod.Save();
-        }
+        }*/
 
     }
 
@@ -268,6 +271,7 @@ public abstract class Item : MonoBehaviour
     public void OnDestroy()
     {
         OnItemDestroy.Invoke(this);
+        ModuleSave();
     }
 
     [Button("加载模块")]
@@ -324,4 +328,9 @@ public abstract class Item : MonoBehaviour
      //   Item_Data.Guid = Guid.NewGuid().GetHashCode();
     }
 #endif
+
+    public void OnValidate()
+    {
+        itemData.Tags.EnsureTagStructure();
+    }
 }

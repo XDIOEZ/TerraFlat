@@ -198,7 +198,7 @@ public class Inventory_HotBar : Inventory
         }
 
         ItemData itemData = slot.itemData;
-        Item itemInstance = GameItemManager.Instance.InstantiateItem(itemData.IDName,default,default,default, spawnLocation.gameObject);
+        Item itemInstance = ItemMgr.Instance.InstantiateItem(itemData.IDName, spawnLocation.gameObject,position:default);
 
         if (itemInstance == null)
         {
@@ -223,7 +223,7 @@ public class Inventory_HotBar : Inventory
         itemInstance.itemData = itemData;
 
         itemInstance.itemData.ModuleDataDic = itemData.ModuleDataDic;
-        itemInstance.BelongItem = slot.Belong_Inventory.Belong_Item;
+        itemInstance.Owner = slot.Belong_Inventory.Belong_Item;
 
         // ÊÂ¼þ°ó¶¨
         itemInstance.OnUIRefresh += () => RefreshUI(index);

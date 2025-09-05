@@ -5,9 +5,9 @@ using UnityEngine.Rendering.Universal;
 public class DayTimeSystem : MonoBehaviour
 {
     public Light2D Sun;
-    public GameSaveData SaveData => SaveDataManager.Instance.SaveData;
+    public GameSaveData SaveData => SaveDataMgr.Instance.SaveData;
     [ShowInInspector]
-    public PlanetTimeData TimeData => SaveDataManager.Instance.Active_PlanetData.TimeData;
+    public PlanetTimeData TimeData => SaveDataMgr.Instance.Active_PlanetData.TimeData;
 
     [ShowInInspector, ReadOnly]
     public string SeasonName
@@ -162,7 +162,7 @@ public class DayTimeSystem : MonoBehaviour
     {
         if (TimeData == null) return 0f;
 
-        float radius = SaveDataManager.Instance.Active_PlanetData.Radius;
+        float radius = SaveDataMgr.Instance.Active_PlanetData.Radius;
         float t = (TimeData.DayTime / TimeData.OneDayTime) % 1f;
         return Mathf.Lerp(radius, -radius, t);
     }

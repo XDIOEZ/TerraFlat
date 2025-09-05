@@ -12,7 +12,7 @@ public class Mod_HandMade : Module
 {
     public InventoryModuleData inventoryModuleData = new InventoryModuleData();
     public override ModuleData _Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
-
+    public BasePanel basePanel;
     #region 工作变量
 
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
@@ -54,17 +54,52 @@ public class Mod_HandMade : Module
         inputInventory.DefaultTarget_Inventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
         outputInventory.DefaultTarget_Inventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
         }
+
+
         inputInventory.Init();
         outputInventory.Init();
+
+        item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod);
+        if (interactMod != null)
+        {
+            interactMod.OnAction_Start += Interact_Start;
+            interactMod.OnAction_Cancel += Interact_Stop;
+        }
+
+        basePanel = GetComponentInChildren<BasePanel>();
+
     }
 
     private void OnCraftButtonClick()
     {
-        if (Craft(inputInventory, outputInventory, RecipeType.Crafting))
-        {
-
-        }
+        Act();
     }
+
+    public override void Act()
+    {
+        Craft(inputInventory, outputInventory, RecipeType.Crafting);
+    }
+
+    //玩家与此发生交互
+    public void Interact_Start(Item item_)
+    {
+        item_.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod);
+        if (handMod == null) return;
+        inputInventory.DefaultTarget_Inventory = handMod.inventory;
+        outputInventory.DefaultTarget_Inventory = handMod.inventory;
+        basePanel.Toggle();
+    }
+    //玩家结束交互
+    public void Interact_Stop(Item item_)
+    { 
+        if (inputInventory.DefaultTarget_Inventory == null&&outputInventory.DefaultTarget_Inventory == null) return;
+        inputInventory.DefaultTarget_Inventory = null;
+        outputInventory.DefaultTarget_Inventory = null;
+        basePanel.Close();
+    }
+
+
+    #region 合成物品逻辑
 
     public bool Craft(Inventory inputInventory_, Inventory outputInventory_, RecipeType recipeType)
     {
@@ -91,10 +126,10 @@ public class Mod_HandMade : Module
         var itemsToAdd = new List<ItemData>();
         foreach (var output in recipe.outputs.results)
         {
-            var prefab = GameRes.Instance.AllPrefabs[output.item];
+            var prefab = GameRes.Instance.AllPrefabs[output.ItemName];
             if (prefab == null)
             {
-                Debug.LogError($"预制体不存在：{output.item}（配方：{recipe.name}）");
+                Debug.LogError($"预制体不存在：{output.ItemName}（配方：{recipe.name}）");
                 return false;
             }
             Item item = prefab.GetComponent<Item>();
@@ -191,10 +226,19 @@ public class Mod_HandMade : Module
 
         return true;
     }
+    #endregion
 
     public override void Save()
     {
         // throw new System.NotImplementedException();
+
+        item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod);
+        if (interactMod != null)
+        {
+            interactMod.OnAction_Start -= Interact_Start;
+            interactMod.OnAction_Cancel -= Interact_Stop;
+        }
+
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
 }

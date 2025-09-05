@@ -10,6 +10,14 @@ public class Mod_Interaction : Module,IInteract
 
     public Item CurentInteractItem;//当前与之交互的对象
     public UltEvent<Item >FastTest;
+
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Interact;
+        }
+    }
     public override void Load()
     {
        // throw new System.NotImplementedException();

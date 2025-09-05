@@ -1,4 +1,5 @@
-﻿using Meryel.UnityCodeAssist.YamlDotNet.Core;
+﻿using MemoryPack;
+using Meryel.UnityCodeAssist.YamlDotNet.Core;
 using Sirenix.OdinInspector;
 using Sirenix.Utilities;
 using System.Collections;
@@ -24,7 +25,7 @@ public class Chunk : MonoBehaviour
         {
             foreach(var itemData in items.Value)
             {
-               Item item = GameItemManager.Instance.InstantiateItem(itemData,this.gameObject);
+               Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject);
                item.Load();
                 item.transform.position = itemData._transform.Position;
                 item.transform.rotation = itemData._transform.Rotation;
@@ -36,7 +37,7 @@ public class Chunk : MonoBehaviour
         return this;
     }
 
-    public void SaveChunk()
+    public Chunk SaveChunk()
     {
         MapSave.items.Clear();
       //调用所有item的Save方法
@@ -49,9 +50,18 @@ public class Chunk : MonoBehaviour
                 item.Save();
             MapSave.AddItemData(item.itemData);
         }
-        //覆盖当前激活的地图
-        if(SaveDataManager.Instance.Active_PlanetData!= null)
-        SaveDataManager.Instance.Active_PlanetData.MapData_Dict[MapSave.MapName] = MapSave;
+        return this;
+    }
+
+    public void FitChunkItems()
+    {
+        var items = GetComponentsInChildren<Item>();
+        foreach(var item in items)
+        {
+            item.Start();
+            RunTimeItems.Add(item.itemData.Guid, item);
+            AddToGroup(item);
+        }
     }
 
     public void DestroyChunk()
@@ -78,7 +88,7 @@ public class Chunk : MonoBehaviour
     public static Vector2Int GetChunkPosition(Vector2 objPos, Vector2 chunkSize = default)
     {//TODO 因为Transformpos 是在左下角 相对于绘制的中心来说 所以需要微调玩家的位置 来输出确切的区块坐标
         if (chunkSize == default)
-         chunkSize = GameChunkManager.GetChunkSize();
+         chunkSize = ChunkMgr.GetChunkSize();
 
        Vector2Int chunkPos = new Vector2Int(
             Mathf.FloorToInt(objPos.x / chunkSize.x) * (int)chunkSize.x,
@@ -131,5 +141,19 @@ public class Chunk : MonoBehaviour
             RunTimeItems.Remove(key);
         }
     }
+    [ContextMenu("Sync MapSave Name")]
+    public void SyncMapSaveName()
+    {
+        MapSave.MapName = MapSave.MapPosition.ToString();
+    }
 
+}
+
+[System.Serializable]
+[MemoryPackable]
+public partial class ChunkData
+{
+    public string ChunkName;
+    public Vector2Int ChunkPosition;
+    public MapSave MapSave;
 }

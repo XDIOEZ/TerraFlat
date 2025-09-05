@@ -33,7 +33,7 @@ public class Mod_Droping : Module
        
         if (drop.item == null)
         {
-            drop.item = GameItemManager.Instance.GetItemByGuid(drop.itemGuid);
+            drop.item = ItemMgr.Instance.GetItemByGuid(drop.itemGuid);
             if(drop.item == null)
             {
                 Debug.LogError("丢弃物品丢失");
@@ -56,7 +56,7 @@ public class Mod_Droping : Module
         drop.item.transform.Rotate(Vector3.forward * 360f * deltaTime);
 
         //TODO 归纳到对应Chunk中
-        GameChunkManager.Instance.UpdateItem_ChunkOwner(drop.item);
+        ChunkMgr.Instance.UpdateItem_ChunkOwner(drop.item);
 
         if (t >= 1f)
         {

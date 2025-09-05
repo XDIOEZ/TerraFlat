@@ -250,7 +250,7 @@ public class BaseBuilding : MonoBehaviour
         }
 
         // 实例化建筑
-        var runtimeItem = GameItemManager.Instance.InstantiateItem(
+        var runtimeItem = ItemMgr.Instance.InstantiateItem(
             item.itemData.IDName,
             GhostShadow.transform.position
         );

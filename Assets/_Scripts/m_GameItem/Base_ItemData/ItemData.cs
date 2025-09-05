@@ -48,6 +48,9 @@ public  abstract partial class ItemData
     [Tooltip("物品标签")]
     public ItemTag ItemTags;
 
+    [Tooltip("新版Tag系统_适配新版合成表")]
+    public TagDictionary Tags = new ();
+
     [Tooltip("物品堆叠信息")]
     public ItemStack Stack;
 

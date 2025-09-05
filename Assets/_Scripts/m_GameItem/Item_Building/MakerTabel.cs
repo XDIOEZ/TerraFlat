@@ -82,7 +82,7 @@ public class CraftingTable : Item,IBuilding
 
        /* Mods[ModText.Hp]*/
 
-        if (BelongItem != null)
+        if (Owner != null)
         {
             BePlayerTaken = true;
         }

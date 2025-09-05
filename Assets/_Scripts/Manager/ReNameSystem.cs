@@ -7,7 +7,7 @@ public class ReNameSystem
     public void Rename_PlayerName(string oldName,string newName)
     {
         // 获取存档数据引用
-        var saveData = SaveDataManager.Instance.SaveData;
+        var saveData = SaveDataMgr.Instance.SaveData;
 
         // 获取对应星球数据
         var planetData = saveData.PlayerData_Dict[oldName];
@@ -19,13 +19,13 @@ public class ReNameSystem
         saveData.PlayerData_Dict.Add(newName, planetData);
 
         // 保存更改
-        SaveDataManager.Instance.Save_And_WriteToDisk();
+        SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
     public void Rename_SaveName(string oldName,string oldSavePath,string newName)
     {
-        SaveDataManager.Instance.SaveData.saveName = newName;
-        SaveDataManager.Instance.DeletSave(oldSavePath);
-        SaveDataManager.Instance.Save_And_WriteToDisk();
+        SaveDataMgr.Instance.SaveData.saveName = newName;
+        SaveDataMgr.Instance.DeletSave(oldSavePath);
+        SaveDataMgr.Instance.Save_And_WriteToDisk();
         SaveDataManager_UI.Ins.Refresh();
     }
 }

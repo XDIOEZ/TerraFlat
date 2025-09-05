@@ -11,20 +11,35 @@ public partial class SceneData
 {
     public string SceneName;
     public bool IsInit = false;
-    public MapSave MapSave;
     public Vector2 PlayerPos;
     public bool Encapsulation;
 }
 
 public class Mod_Scene : Module
 {
-    public static MapSave CurrentMapSave;
     public Ex_ModData_MemoryPackable _data;
     public override ModuleData _Data { get { return _data; } set { _data = (Ex_ModData_MemoryPackable)value; } }
   
     public TextAsset _sceneAsset;
     public SceneData Data;
     public Vector2 PlayerPosOffset;
+
+    public MapSave MapSave
+    {
+        get
+        {
+            if (SaveDataMgr.Instance.SaveData.MapInScene.TryGetValue(Data.SceneName, out var mapSave))
+            {
+                return mapSave;
+            }
+            return null;
+        }
+        set
+        {
+            SaveDataMgr.Instance.SaveData.MapInScene[Data.SceneName] = value;
+        }
+    }
+
 
     public override void Awake()
     {
@@ -40,8 +55,11 @@ public class Mod_Scene : Module
 
 
         var mod_Building = item.itemMods.GetMod_ByID(ModText.Building) as Mod_Building;
+        var Interacter = item.itemMods.GetMod_ByID(ModText.Interact) as Mod_Interaction;
 
-        if(mod_Building!= null)
+        Interacter.OnAction_Start += Interact;
+
+        if (mod_Building!= null)
         {
             mod_Building.StartUnInstall += UnInstall;
         }
@@ -49,53 +67,52 @@ public class Mod_Scene : Module
         //检查是否已经初始化过 如果没有就初始化
         if (Data.IsInit == false && _sceneAsset!= null)
         {
-            Data.MapSave = MemoryPackSerializer.Deserialize<MapSave>(_sceneAsset.bytes);
-            Debug.Log(Data.MapSave.MapName + "初始化完成");
-            Data.MapSave.MapName += "_";
-            Data.MapSave.MapName += Random.Range(1, 1000000).ToString();
-            Data.IsInit = true;
-        }
+            
+            MapSave MapSave = MemoryPackSerializer.Deserialize<MapSave>(_sceneAsset.bytes);
 
-        if (CurrentMapSave != null && CurrentMapSave.MapName == Data.MapSave.MapName)
-        {
-            Data.MapSave = CurrentMapSave;
-            CurrentMapSave = null;
+            Data.SceneName += _sceneAsset.name;
+            Data.SceneName += "_";
+            Data.SceneName += Random.Range(1, 1000000).ToString();
+
+
+            Data.IsInit = true;
+            this.MapSave = MapSave;
+            Debug.Log(Data.SceneName + "初始化完成");
+          
         }
     }
     public void UnInstall()
     {
-        //SaveDataManager.Instance.SaveData.Active_PlanetData.MapData_Dict.Remove(Data.MapSave.MapName);
-
         if (Data.Encapsulation == true)
         {
             return;
         }
-        if (Data?.MapSave == null)
+        if (MapSave == null)
         {
             Debug.LogWarning("MapSave 数据为空，无法卸载屋子物品。");
             return;
         }
 
         // 创建快照，防止遍历中修改字典
-        foreach (var itemListKV in Data.MapSave.items.ToList())
+        foreach (var itemListKV in MapSave.items.ToList())
         {
             // 跳过不需要拆的物品类别
-            if (itemListKV.Key == "MapEdge" || itemListKV.Key == "MapCore"|| itemListKV.Key == "墙壁")
+            if (itemListKV.Key == "MapEdge" || itemListKV.Key == "MapCore"|| itemListKV.Key == "墙壁"|| itemListKV.Key == "Door")
                 continue;
 
             var itemList = itemListKV.Value;
             foreach (var mapItem in itemList)
             {
                 // 生成物品实例（内部应该恢复位置、旋转等）
-             Item item =   GameItemManager.Instance.InstantiateItem(mapItem,null);
+             Item item =   ItemMgr.Instance.InstantiateItem(mapItem,null);
                 item.transform.position = transform.position;
             }
 
             // 从保存数据中移除该类别
-            Data.MapSave.items.Remove(itemListKV.Key);
+            MapSave.items.Remove(itemListKV.Key);
            
         }
-
+        SaveDataMgr.Instance.SaveData.MapInScene.Remove(Data.SceneName);
         Debug.Log("屋子内部物品已全部实例化并从 MapSave 移除");
     }
 
@@ -112,57 +129,80 @@ public class Mod_Scene : Module
     }
 
     [Button]
-    public void Test()
+    public void Interact(Item interacter)
     {
-        // 确保 SceneName 同步
-        this.Data.SceneName = this.Data.MapSave?.MapName;
-
-        Player player = null;
-
-        // 尝试获取当前控制的玩家
-        if (!GameItemManager.Instance.Player_DIC.TryGetValue(
-            SaveDataManager.Instance.CurrentContrrolPlayerName, out player))
+        Player player = interacter as Player;
+        if (player == null)
         {
-            Debug.LogError($"没有找到玩家：{SaveDataManager.Instance.CurrentContrrolPlayerName}");
+            Debug.LogError("Interact 调用失败：传入对象不是 Player");
             return;
         }
 
         Data_Player playerData = player.Data;
-        playerData.CurrentPlanetName = this.Data.SceneName;
+        Vector2 playerPos = player.transform.position;
 
-        if (this.Data.MapSave != null)
+        // ===== 进入房间 =====
+        if (MapSave != null)
         {
-            // 遍历门并更新场景数据
-            if (this.Data.MapSave.items.TryGetValue("Door", out var doorItems))
-            {
-                doorItems.ForEach(item =>
-                {
-                    SceneData sceneData = ExtractData<SceneData>(item, ModText.Scene);
-                    if (sceneData != null)
-                    {
-                        sceneData.SceneName = playerData.CurrentPlanetName;
-                        sceneData.PlayerPos = playerData._transform.Position;
-                    }
 
-                    // 更新 Data 的 PlayerPos
-                    this.Data.PlayerPos = item._transform.Position;
-                });
-            }
+            string lastSceneName = playerData.CurrentSceneName;
 
-            // 设置玩家位置
+            // 设置初始进入房间的位置
             player.transform.position = this.Data.PlayerPos + PlayerPosOffset;
+            //////////下面的操作都是在新场景中进行的//////////////
 
             // 切换场景
-            GameManager.Instance.ChangeScene_ByPlayerData(playerData);
+            GameManager.Instance.ChangeScene_ByPlayerData(lastSceneName, Data.SceneName,() =>
+            {
+                playerData.CurrentSceneName = this.MapSave.MapName;
+                // lastScene 已经被销毁
+                playerData.IsInRoom = true;
 
-            // 生成 Chunk
-            GameChunkManager.Instance.CreateChun_ByMapSave(this.Data.MapSave);
+                // 重新加载玩家
+                Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
+                newPlayer.Load();
+                newPlayer.LoadDataPosition();
+                ItemMgr.Instance.Player_DIC[playerData.Name_User] = newPlayer;
+
+                // 生成 Chunk
+                ChunkMgr.Instance.CleanEmptyDicValues();
+                Chunk chunk = ChunkMgr.Instance.CreateChunK_ByMapSave(MapSave);
+                ChunkMgr.Instance.Chunk_Dic[MapSave.MapName] = chunk;
+                ChunkMgr.Instance.Chunk_Dic_Active[MapSave.MapName] = chunk;
+                // 遍历所有门，设置返回点
+                if (chunk.RuntimeItemsGroup.TryGetValue("Door", out var doors))
+                {
+                    foreach (var door in doors)
+                    {
+                        if (door.itemMods.GetMod_ByID(ModText.Scene) is Mod_Scene sceneMod)
+                        {
+                            sceneMod.Data.SceneName = lastSceneName;
+                            sceneMod.Data.PlayerPos = playerPos;
+
+                            newPlayer.transform.position = (Vector2)door.transform.position + PlayerPosOffset;
+                            this.Data.PlayerPos = door.transform.position;
+                        }
+                    }
+                }
+            });
         }
+        // ===== 离开房间 =====
         else
         {
-            // MapSave 不存在时的处理
+       
             player.transform.position = this.Data.PlayerPos + PlayerPosOffset;
-            GameManager.Instance.ChangeScene_ByPlayerData(playerData);
+
+            GameManager.Instance.ChangeScene_ByPlayerData(playerData.CurrentSceneName, this.Data.SceneName,() =>
+            {
+                playerData.CurrentSceneName = this.Data.SceneName;//更新玩家所处的场景名称
+                playerData.IsInRoom = false;
+
+                // 重新加载玩家
+                Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
+                newPlayer.Load();
+                newPlayer.LoadDataPosition();
+                ItemMgr.Instance.Player_DIC[playerData.Name_User] = newPlayer;
+            });
         }
     }
 

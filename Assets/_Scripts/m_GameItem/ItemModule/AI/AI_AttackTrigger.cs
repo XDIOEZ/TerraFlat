@@ -30,7 +30,7 @@ public class AI_AttackTrigger : MonoBehaviour, ITriggerAttack
         Weapon_GameObject.transform.localPosition = Vector3.zero;
 
         _attackState = Weapon_GameObject.GetComponent<IAttackState>();
-        Weapon_GameObject.GetComponent<Item>().BelongItem = transform.parent.GetComponent<Item>();
+        Weapon_GameObject.GetComponent<Item>().Owner = transform.parent.GetComponent<Item>();
         HasWeapon = true;
         Debug.Log($"Weapon set to: {weapon.name}");
     }

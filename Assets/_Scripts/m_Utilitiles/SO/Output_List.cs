@@ -17,7 +17,7 @@ public class Output_List
         List<string> resultStrings = new List<string>();
         foreach (var result in results)
         {
-            resultStrings.Add($"{result.amount}x{result.item}");
+            resultStrings.Add($"{result.amount}x{result.ItemName}");
         }
         return $"²úÎï: [{string.Join(",",resultStrings)}]";
     }

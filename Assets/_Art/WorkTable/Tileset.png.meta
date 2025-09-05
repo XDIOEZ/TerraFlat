@@ -2454,15 +2454,15 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Tileset_111
+      name: Smelter
       rect:
         serializedVersion: 2
         x: 80
         y: 192
         width: 16
         height: 16
-      alignment: 7
-      pivot: {x: 0.5, y: 0}
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -2545,8 +2545,8 @@ TextureImporter:
         y: 192
         width: 16
         height: 16
-      alignment: 7
-      pivot: {x: 0.5, y: 0}
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -2857,7 +2857,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 144
-        y: 176
+        y: 175
         width: 16
         height: 16
       alignment: 7
@@ -5425,6 +5425,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
+      Smelter: 795886554
       Tileset_0: -1635373760
       Tileset_1: 761703571
       Tileset_10: -664963484
@@ -5440,7 +5441,6 @@ TextureImporter:
       Tileset_109: 1493435393
       Tileset_11: 1954731593
       Tileset_110: 981443718
-      Tileset_111: 795886554
       Tileset_112: -697227502
       Tileset_113: 1385516523
       Tileset_114: 84695415

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -20,20 +21,39 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         Event_ExitGame_Start.Invoke();
 
-        GameItemManager.Instance.CleanupNullItems();
+        ItemMgr.Instance.CleanupNullItems();
 
-        GameChunkManager.Instance.CleanEmptyDicValues();
+        ChunkMgr.Instance.CleanEmptyDicValues();
 
-        GameItemManager.Instance.SavePlayer();
+        ItemMgr.Instance.SavePlayer();
         
-        foreach (var go in GameChunkManager.Instance.Chunk_Dic.Values)
+        if(ChunkMgr.Instance.Chunk_Dic.Count <= 0)
+        {
+            Debug.LogWarning("区块字典为 空 退出时未保存任何 请检查加载时是否向区块字典中填充对象");
+        }
+        foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
         {
             go.SaveChunk();
+            //覆盖当前激活的地图
+            if (ItemMgr.Instance.User_Player.Data.IsInRoom == false)
+            {
+                SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[go.MapSave.MapName] = go.MapSave;
+
+            }
+
+            if (ItemMgr.Instance.User_Player.Data.IsInRoom == true)
+            {
+                SaveDataMgr.Instance.SaveData.MapInScene[ItemMgr.Instance.User_Player.Data.CurrentSceneName] = go.MapSave;
+            }
+
         }
 
-        SaveDataManager.Instance.Save_And_WriteToDisk();
 
-        GameChunkManager.Instance.ClearAllChunk();
+
+
+        SaveDataMgr.Instance.Save_And_WriteToDisk();
+
+        ChunkMgr.Instance.ClearAllChunk();
 
         SceneManager.LoadScene("GameStartScene");
 
@@ -43,25 +63,25 @@ public class GameManager : SingletonAutoMono<GameManager>
     public void StartNewGame()
     {
         //创建随机数        // 初始化随机种子并创建系统随机实例
-        SaveDataManager.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
-        SaveDataManager.Instance.SaveData.Seed = SaveDataManager.Instance.SaveData.SaveSeed.GetHashCode();
-        Random.InitState(SaveDataManager.Instance.SaveData.Seed);
+        SaveDataMgr.Instance.SaveData.SaveSeed = UnityEngine.Random.Range(0, int.MaxValue).ToString();
+        SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
+        UnityEngine.Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
 
         //创建初始星球的数据
-        SaveDataManager.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
-
+        SaveDataMgr.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
         ContinueGame();
     }
 
     public void ContinueGame()
     {
-        StartGame_By_LoadPlayer(SaveDataManager.Instance.CurrentContrrolPlayerName);
+        StartGame_By_LoadPlayer(SaveDataMgr.Instance.CurrentContrrolPlayerName);
     }
+
     public void StartGame_By_LoadPlayer(string PlayerName)
     {
         // 1. 根据存档立即确定星球名
-        SaveDataManager.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out Data_Player playerData);
-        string planetName = playerData != null ? playerData.CurrentPlanetName : "地球";
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out Data_Player playerData);
+        string planetName = playerData != null ? playerData.CurrentSceneName : "地球";
 
         // 2. 立刻创建并激活空场景
         Scene newScene = SceneManager.CreateScene(planetName);
@@ -84,28 +104,36 @@ public class GameManager : SingletonAutoMono<GameManager>
             LoadPlayerAndCreateWorld(PlayerName, playerData);
         }
     }
-    public void ChangeScene_ByPlayerData(Data_Player playerData)
+
+    public void ChangeScene_ByPlayerData(string LastSceneName, string NextSceneName,Action onSceneUnloaded = null)
     {
-        if (playerData == null)
-        {
-            Debug.Log("Player data is null.");
-            return;
-        }
-        var PlayerName = playerData.Name_User;
+        ChunkMgr.Instance.CleanEmptyDicValues();
 
-        string planetName = playerData.CurrentPlanetName;
+        // 保存玩家和区块
+        ItemMgr.Instance.SavePlayer();
 
-        GameItemManager.Instance.SavePlayer();
-
-        foreach (var go in GameChunkManager.Instance.Chunk_Dic.Values)
+        foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
         {
             go.SaveChunk();
+
+            //覆盖当前激活的地图
+            if (ItemMgr.Instance.User_Player.Data.IsInRoom == false)
+            {
+                SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[go.MapSave.MapName] = go.MapSave;
+            }
+
+            if (ItemMgr.Instance.User_Player.Data.IsInRoom == true)
+            {
+                SaveDataMgr.Instance.SaveData.MapInScene[go.MapSave.MapName] = go.MapSave;
+            }
         }
+        ///////////////////////////上面都是对旧场景的处理////////////////////
+        // 创建新场景
+        Scene newScene = SceneManager.CreateScene(NextSceneName);
 
-
-        Scene newScene = SceneManager.CreateScene(planetName);
-        // 3. 准备卸载旧场景（如有）
+        // 卸载旧场景
         Scene startScene = SceneManager.GetActiveScene();
+
         if (startScene.IsValid() && startScene.isLoaded)
         {
             AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(startScene);
@@ -113,8 +141,15 @@ public class GameManager : SingletonAutoMono<GameManager>
             {
                 SceneManager.SetActiveScene(newScene);
                 Debug.Log($"旧场景已卸载：{startScene.name}");
-                Player player = GameItemManager.Instance.LoadPlayer(PlayerName);
+
+               // 触发回调
+               onSceneUnloaded?.Invoke();
             };
+        }
+        else
+        {
+            // 如果没有旧场景，直接执行回调
+            onSceneUnloaded?.Invoke();
         }
     }
 
@@ -123,16 +158,30 @@ public class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     private void LoadPlayerAndCreateWorld(string playerName, Data_Player playerData)
     {
-        GameItemManager.Instance.CleanupNullItems();
-
-        Player player = GameItemManager.Instance.LoadPlayer(playerName);
+        ItemMgr.Instance.CleanupNullItems();
+    
+        Player player = ItemMgr.Instance.LoadPlayer(playerName);
         if (playerData == null)                // 新玩家：随机放到新场景
-            GameItemManager.Instance.RandomDropInMap(player.gameObject,null,new Vector2Int(-1,-1));
+            ItemMgr.Instance.RandomDropInMap(player.gameObject,null,new Vector2Int(-1,-1));
 
-        GameItemManager.Instance.Player_DIC[playerName] = player;
+        ItemMgr.Instance.Player_DIC[playerName] = player;
 
-        // 创建天体
-        SunAndMoonObj = Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
+        player.Load();
+        player.LoadDataPosition();
+
+        
+        if (player.Data.IsInRoom == false)
+        {
+            // 创建天体
+            SunAndMoonObj = Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
+        }
+        else
+        {
+            // 进入房间
+          Chunk chunk = ChunkMgr.Instance.CreateChunK_ByMapSave(SaveDataMgr.Instance.SaveData.MapInScene[playerData.CurrentSceneName]);
+            ChunkMgr.Instance.Chunk_Dic[chunk.MapSave.MapName] = chunk;
+        }
+
     }
 
 

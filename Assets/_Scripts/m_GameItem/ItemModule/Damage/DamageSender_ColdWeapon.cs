@@ -82,7 +82,7 @@ public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
 
         // 获取攻击者的团队组件（通过 BelongItem）
         var item = GetComponentInParent<Item>();
-        var belongItem = item != null ? item.BelongItem : null;
+        var belongItem = item != null ? item.Owner : null;
         var belongTeam = belongItem != null ? belongItem.GetComponent<ITeam>() : null;
 
         // ✅ 如果双方都有阵营信息，且是盟友，则跳过伤害

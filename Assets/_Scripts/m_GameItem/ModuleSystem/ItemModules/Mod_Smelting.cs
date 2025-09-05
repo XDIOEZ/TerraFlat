@@ -247,9 +247,9 @@ public partial class Mod_Smelting : Module
         var itemsToAdd = new List<ItemData>();
         foreach (var output in cookRecipe.outputs.results)
         {
-            if (!GameRes.Instance.AllPrefabs.TryGetValue(output.item, out var prefab) || prefab == null)
+            if (!GameRes.Instance.AllPrefabs.TryGetValue(output.ItemName, out var prefab) || prefab == null)
             {
-                Debug.LogError($"预制体不存在：{output.item}（配方：{recipe.name}）");
+                Debug.LogError($"预制体不存在：{output.ItemName}（配方：{recipe.name}）");
                 return;
             }
 

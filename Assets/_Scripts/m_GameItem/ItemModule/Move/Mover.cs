@@ -44,7 +44,7 @@ public partial class Mover : Module
     public bool IsMoving;
 
     private InputAction moveAction;
-    public Rigidbody2D Rb;
+    public Rigidbody2D rb;
 
     public Mod_Stamina stamina;                         // 体力模块
     public GameValue_float staminaConsumeSpeed = new(1); // 每秒精力消耗速度
@@ -121,7 +121,7 @@ public partial class Mover : Module
     {
         ModDataMemoryPack.ReadData(ref Data);
 
-        Rb = GetComponentInParent<Rigidbody2D>();
+        rb = GetComponentInParent<Rigidbody2D>();
 
         // 加载控制器模块
         LoadMod<PlayerController>(item, ModText.Controller, controller =>
@@ -165,7 +165,7 @@ public partial class Mover : Module
 
         if (isCurrentlyMoving)
         {
-            Vector2 target = Rb.position + input.normalized;
+            Vector2 target = rb.position + input.normalized;
             Move(target, deltaTime);
 
             if (stamina != null)
@@ -182,7 +182,7 @@ public partial class Mover : Module
         }
         else
         {
-            Move(Rb.position, deltaTime); // 停止移动
+            Move(rb.position, deltaTime); // 停止移动
         }
     }
 
@@ -219,14 +219,23 @@ public partial class Mover : Module
 
     public virtual void Move(Vector2 targetPosition, float deltaTime)
     {
-        bool isZero = Vector2.Distance(transform.position, targetPosition) < endSpeed;
-        if (isZero) return;
+        if (rb == null)
+        {
+            Debug.LogError($"{name}: Rigidbody2D 为空，无法执行 Move！");
+            return;
+        }
 
-        Vector2 direction = (targetPosition - (Vector2)transform.position).normalized;
-        Vector2 movement = direction * Speed.Value * deltaTime;
+        float arriveThreshold = 0.1f;
+        if (Vector2.Distance(rb.position, targetPosition) < arriveThreshold)
+        {
+            rb.velocity = Vector2.zero;
+            return;
+        }
 
-        item.transform.position += (Vector3)movement;
+        Vector2 direction = (targetPosition - rb.position).normalized;
+        rb.velocity = direction * Speed.Value;
     }
+
     #endregion
 
     #region 数据存取

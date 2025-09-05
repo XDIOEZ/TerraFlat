@@ -23,6 +23,7 @@ public static class ModText
     #region D
     public static string Defense = "·ÀÓùÄ£¿é";
     public static string Drop = "¶ªÆúÄ£¿é";
+    public static string DeathLoot = "ËÀÍöµôÂäÄ£¿é";
     #endregion
 
     #region E

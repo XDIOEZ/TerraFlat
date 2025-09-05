@@ -30,7 +30,7 @@ public class Mod_ItemChunkAssigner : Module
         if (currentChunkPos != lastChunkPos)
         {
             lastChunkPos = currentChunkPos;
-            GameChunkManager.Instance.UpdateItem_ChunkOwner(item);
+            ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
         }
     }
 }

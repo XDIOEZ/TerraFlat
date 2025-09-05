@@ -160,24 +160,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
+  OnItemDestroy:
     _PersistentCalls: []
-  DestroyItem_Event:
+  OnAct:
     _PersistentCalls: []
+  Sprite: {fileID: 0}
+  updateInterval: 0.1
   _data:
     IDName: "\u6728\u677F"
     GameName: "\u6728\u677F"
-    ID: 20003
     Description: "\u7528\u9014\u975E\u5E38\u5E7F\u6CDB\u7684\u6750\u6599"
-    PrefabPath: 
     Durability: 50
     ItemTags:
       Item_TypeTag:
       - Material
       Item_Material:
       - Wood
+    Tags:
+      keys:
+      - tag: Type
+        values:
+        - Material
+      - tag: Material
+        values:
+        - Wood
     Stack:
       Amount: 1
       Volume: 1
@@ -189,8 +197,5 @@ MonoBehaviour:
     ItemSpecialData: "\u65E0"
     Guid: 0
     code: "\u65E0"
-    values:
-      ItemValue_List: []
-      IsWork: 0
   maxBurnTime: 5
   maxTemptrue: 600

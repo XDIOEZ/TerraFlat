@@ -12,20 +12,11 @@ using Sirenix.OdinInspector;
 public class Recipe : ScriptableObject
 {
     #region Public Fields 
-    [Header("配方基本信息")]
-    public string version = "1.0.0"; // 配方版本 
-    public string recipeID
-    {
-        get { return this.name; }
-        set { this.name = value; }
-    }
-
     [Header("输入材料")]
     public Input_List inputs = new Input_List();
-
     [Header("输出产物")]
     public Output_List outputs = new Output_List();
-
+    [Header("配方类型")]
     public RecipeType recipeType = RecipeType.Crafting;
 
     #endregion
@@ -40,12 +31,10 @@ public class Recipe : ScriptableObject
         return string.Join(",", ingredientStrings); // 直接返回逗号分隔的字符串
     }
 
-    public override string ToString()
+    public void OnValidate()
     {
-        return $"配方名称: {name}\n" +
-               $"版本: {version}\n" +
-               $"输入材料: {inputs.ToString()}\n" +
-               $"输出产物: {outputs.ToString()}";
+        inputs.RowItems_List.ForEach(x => x.SyncItemName());
+        outputs.results.ForEach(x => x.SyncItemName());
     }
 
     [Button("同步数据从Excel")]
@@ -110,7 +99,7 @@ public class Recipe : ScriptableObject
             int colName = excel.FindColumn(0, resultCols[i]);
             int colAmt = excel.FindColumn(0, resultamountCols[i]);
 
-            outputs.results[i].item = excel.GetCellValue(itemRow, colName)?.ToString() ?? "";
+            outputs.results[i].ItemName = excel.GetCellValue(itemRow, colName)?.ToString() ?? "";
 
             object amt = excel.GetCellValue(itemRow, colAmt);
             if (amt != null && int.TryParse(amt.ToString(), out int parsed))
@@ -123,8 +112,6 @@ public class Recipe : ScriptableObject
         itemL = excel.FindColumn(0, dataCols[^1]); // 最后一个列
         return itemL;
     }
-
-
 }
 #region Nested Classes 
 

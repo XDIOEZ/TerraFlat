@@ -85,7 +85,7 @@ public class House : Item, ISave_Load, IHealth, IBuilding,IRoom
     private new void Start()
     {
         base.Start();
-        BePlayerTaken = BelongItem != null;
+        BePlayerTaken = Owner != null;
     }
     #endregion
 

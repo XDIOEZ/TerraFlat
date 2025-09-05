@@ -113,11 +113,11 @@ public class WorldEdge : Item, ISave_Load, IInteract
     
 
         string currentScene = SceneManager.GetActiveScene().name; // 获取当前活跃的场景名称
-        string targetScene = ExtractTargetSceneName(currentScene); // 从当前场景名称中提取目标场景名称
+/*  //      string targetScene = ExtractTargetSceneName(currentScene); // 从当前场景名称中提取目标场景名称
         if (!string.IsNullOrEmpty(targetScene))
         {
             TPTOSceneName = targetScene; // 设置传送目标场景名称
-        }
+        }*/
 
         onLoad?.Invoke(); // 触发加载事件
     }
@@ -136,16 +136,16 @@ public class WorldEdge : Item, ISave_Load, IInteract
     public void SetupMapEdge(Vector2Int direction,Vector2 mapPos)
     {
         // 确保保存管理器和保存数据可用
-        if (SaveDataManager.Instance?.SaveData == null)
+        if (SaveDataMgr.Instance?.SaveData == null)
         {
             Debug.LogError("[WorldEdge] 保存数据不可用");
             return;
         }
 
         data.Boundary_Position = direction; // 记录边界的方向
-        var saveData = SaveDataManager.Instance.SaveData; // 获取保存数据
-        Vector2 mapSize = GameChunkManager.GetChunkSize(); // 当前地图的大小
-        float worldRadius = GameChunkManager.GetRadius(); // 当前星球的半径，用于世界环绕逻辑
+        var saveData = SaveDataMgr.Instance.SaveData; // 获取保存数据
+        Vector2 mapSize = ChunkMgr.GetChunkSize(); // 当前地图的大小
+        float worldRadius = ChunkMgr.GetRadius(); // 当前星球的半径，用于世界环绕逻辑
 
         Vector2 mapCenter = mapPos + mapSize * 0.5f; // 计算当前地图的中心点
                                                      // Fix for CS1503: Convert Vector2 to Vector2Int using Vector2Int.RoundToInt
@@ -197,7 +197,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
 
     #region 场景解析
 
-    /// <summary>
+/*    /// <summary>
     /// 从当前场景提取目标场景名称。
     /// Extracts the target scene name from the current scene name.
     /// 此方法通过查询`SaveLoadManager`中的场景-建筑名称映射来确定目标场景，并设置传送位置。
@@ -216,7 +216,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
 
         TeleportPosition = saveData.Scenen_Building_Pos[currentScene]; // 设置传送目标位置
         return saveData.Scenen_Building_Name[currentScene]; // 返回目标场景名称
-    }
+    }*/
 
     #endregion
 
@@ -410,7 +410,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <returns>偏移量</returns>
     private Vector2 CalculateOffsetFromEdge(GameObject player, Vector2 direction)
     {
-        var saveData = SaveDataManager.Instance.SaveData;
+        var saveData = SaveDataMgr.Instance.SaveData;
         // 计算玩家在当前地图内的局部位置
         Vector2 localPos = (Vector2)player.transform.position;
         // 如果是垂直边界，只保留X轴偏移；如果是水平边界，只保留Y轴偏移
@@ -429,7 +429,7 @@ public class WorldEdge : Item, ISave_Load, IInteract
     /// <returns>玩家在新场景中的进入位置</returns>
     private Vector2 CalculateWrappedEntryPosition(GameObject player, Vector2 direction, Vector2 targetMapPos)
     {
-        var saveData = SaveDataManager.Instance.SaveData;
+        var saveData = SaveDataMgr.Instance.SaveData;
 /*
         Vector2 mapSize = saveData.ChunkSize;
 */

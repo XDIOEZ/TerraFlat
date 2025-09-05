@@ -59,7 +59,7 @@ public class ItemMaker
     [Tooltip("根据ItemName和Amount掉落物品")]
     public void DropItemByNameAndAmount(string ItemName, float Amount, float DropRange,Transform transform)
     {
-        Item item = GameItemManager.Instance.InstantiateItem(ItemName).GetComponent<Item>();
+        Item item = ItemMgr.Instance.InstantiateItem(ItemName).GetComponent<Item>();
         item.itemData.Stack.Amount = Amount;
 
         Vector2 randomOffset = Random.insideUnitCircle * DropRange;

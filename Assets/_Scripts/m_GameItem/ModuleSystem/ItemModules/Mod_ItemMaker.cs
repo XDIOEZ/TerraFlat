@@ -89,7 +89,7 @@ public partial class Mod_Production : Module
                     {
                         data.itemName = data.itemPrefab.GetComponent<Item>().itemData.IDName;
                     }
-                    Item item = GameItemManager.Instance.InstantiateItem(data.itemName);
+                    Item item = ItemMgr.Instance.InstantiateItem(data.itemName);
                     item.itemData.Stack.Amount = data.itemCount;
 
                     // 增加当前生成次数

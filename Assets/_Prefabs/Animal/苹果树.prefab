@@ -147,8 +147,6 @@ MonoBehaviour:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0.1
   Data:
@@ -162,6 +160,17 @@ MonoBehaviour:
       - None
       Item_Material:
       - Wood
+    Tags:
+      keys:
+      - tag: Type
+        values:
+        - Plant
+      - tag: Material
+        values:
+        - Wood
+      - tag: Creature
+        values:
+        - Tree
     Stack:
       Amount: 1
       Volume: 2

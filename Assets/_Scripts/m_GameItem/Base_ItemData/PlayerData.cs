@@ -11,7 +11,9 @@ using UnityEngine;
 public partial class Data_Player : ItemData
 {
     [Tooltip("当前所在星球的名称,用于开始游戏时加载玩家在哪个地图存档")]
-    public string CurrentPlanetName = "地球";
+    public string CurrentSceneName = "地球";
+    [Tooltip("标识玩家是否在房间中,也就是是否随机生成地图")]
+    public bool IsInRoom = false;
     #region 生命
     [Tooltip("血量")]
     public Hp hp = new Hp(30);
