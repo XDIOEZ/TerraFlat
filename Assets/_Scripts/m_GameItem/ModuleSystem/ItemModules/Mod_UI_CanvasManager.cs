@@ -206,6 +206,10 @@ public partial class Mod_UI_CanvasManager : Module
             string panelName = pair.Key;
             BasePanel panel = pair.Value;
 
+            // 如果面板为空则跳过处理
+            if (panel == null)
+                continue;
+
             // 保存开启状态
             canvasPanelState.canvasPanelboolStates[panelName] = panel.IsOpen();
 

@@ -1,4 +1,5 @@
 ﻿using Force.DeepCloner;
+using NUnit.Framework.Interfaces;
 using Sirenix.OdinInspector;
 using System;
 using UltEvents;
@@ -41,7 +42,7 @@ public class Mod_Building : Module
     public override void Load()
     {
         BuildingData.ReadData(ref Data);
-        boxCollider2D = item.GetComponentInChildren<BoxCollider2D>();
+        boxCollider2D = item.GetComponent<BoxCollider2D>();
 
         if(damageReceiver == null)
         damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID    (ModText.Hp);
@@ -50,6 +51,16 @@ public class Mod_Building : Module
 
         damageReceiver.OnAction += OnHit;
         item.OnAct += Install;
+
+
+    }
+    public void Start()
+    {
+        //根据DamageRecver 设置碰撞是否为触发器
+        if (damageReceiver.Hp == 0)
+            boxCollider2D.isTrigger = true;
+        else
+            boxCollider2D.isTrigger = false;
     }
 
     public override void Save()
@@ -122,7 +133,31 @@ public class Mod_Building : Module
 
         ExecuteInstallation();
 
-      
+        // === 触发开始事件 ===
+        StartInstall?.Invoke();
+        OnAction_Start?.Invoke(item);
+
+        // === 消耗物品 ===
+        ConsumeItem(item);
+
+
+        // === 实例化建筑 ===
+        Item newBuilding = CreateBuildingInstance(item, GhostShadow.transform.position);
+
+        // === 如果物品耗尽，清理原始对象 ===
+        if (item.itemData.Stack.Amount <= 0)
+        {
+            CleanupGhost();
+            Destroy(item.gameObject);
+        }
+
+        // === 更新寻路区域 ===
+        if (newBuilding != null)
+        {
+            UpdateNavigation(newBuilding.transform.position, 3, 3);
+        }
+
+
     }
 
     [Button]
@@ -149,6 +184,10 @@ public class Mod_Building : Module
             item);
 
         CleanupGhost();
+
+     
+        UpdateNavigation(transform.position, 3, 3);
+        
     }
     #endregion
 
@@ -198,38 +237,6 @@ public class Mod_Building : Module
     /// </summary>
     private void ExecuteInstallation()
     {
-        // === 触发开始事件 ===
-        StartInstall?.Invoke();
-        OnAction_Start?.Invoke(item);
-
-        // === 消耗物品 ===
-        ConsumeItem(item);
-        damageReceiver.Hp = damageReceiver.MaxHp.Value;
-
-        // === 实例化建筑 ===
-        Item newBuilding = CreateBuildingInstance(item, GhostShadow.transform.position);
-
-        if (newBuilding != null)
-        {
-            ConfigureNewBuilding(newBuilding, item);
-        }
-
-        // === 如果物品耗尽，清理原始对象 ===
-        if (item.itemData.Stack.Amount <= 0)
-        {
-            CleanupGhost();
-            Destroy(item.gameObject);
-        }
-        else
-        {
-            damageReceiver.Hp = 0;
-        }
-
-        // === 更新寻路区域 ===
-        if (newBuilding != null)
-        {
-            UpdateNavigation(newBuilding.transform.position, 3, 3);
-        }
     }
 
     #region 私有辅助方法
@@ -249,40 +256,27 @@ public class Mod_Building : Module
     /// </summary>
     private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
     {
-        if (ItemMgr.Instance.User_Player.Data.IsInRoom)
-        {
-            ChunkMgr.Instance.GetClosestChunk(position, out var chunk);
-            return ItemMgr.Instance.InstantiateItem(
-                sourceItem.itemData.IDName,
-                parent: chunk.gameObject,
+        damageReceiver.Hp = damageReceiver.MaxHp.Value;
+        sourceItem.ModuleSave();
+    
+
+        ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
+
+        Item newItem =  ItemMgr.Instance.InstantiateItem(
+                newitemData,
                 position: position
             );
-        }
-        else
-        {
-            return ItemMgr.Instance.InstantiateItem(
-                sourceItem.itemData.IDName,
-                position
-            );
-        }
+        damageReceiver.Hp = 0;
+        newItem.Load();
+        newItem.transform.localScale = Vector3.one;
+        newItem.itemData.Stack.Amount = 1;
+        newItem.itemData.Stack.CanBePickedUp = false;
+
+
+        EnableChildColliders(true, newItem.transform);
+        return newItem;
     }
 
-    /// <summary>
-    /// 配置新建筑（克隆数据 + 初始化 + 碰撞体设置）
-    /// </summary>
-    private void ConfigureNewBuilding(Item newBuilding, Item sourceItem)
-    {
-        sourceItem.ModuleSave();
-
-        newBuilding.transform.localScale = Vector3.one;
-        newBuilding.itemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
-
-        newBuilding.itemData.Stack.Amount = 1;
-        newBuilding.itemData.Stack.CanBePickedUp = false;
-
-        newBuilding.Load();
-        EnableChildColliders(true, newBuilding.transform);
-    }
 
     /// <summary>
     /// 更新导航区域
@@ -377,7 +371,7 @@ public class Mod_Building : Module
         {
             col.enabled = enable;
         }
-        root.GetComponent<BoxCollider2D>().isTrigger = false;
+   //     root.GetComponent<BoxCollider2D>().isTrigger = false;
     }
 
     public void CleanupGhost()

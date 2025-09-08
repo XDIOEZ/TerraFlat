@@ -207,6 +207,13 @@ public partial class Mod_LootData
 
     public void SyncItemIDName()
     {
+
+        if (ItemPrefab == null)
+        {
+            Debug.LogWarning($"Mod_LootData: 物品预制体为空，跳过同步！");
+            return;
+        }
+
         ItemIDName = ItemPrefab.GetComponent<Item>().itemData.IDName;
     }
 }

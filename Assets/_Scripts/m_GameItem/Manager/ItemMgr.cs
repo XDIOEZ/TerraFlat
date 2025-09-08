@@ -113,12 +113,14 @@ public class ItemMgr : SingletonMono<ItemMgr>
         if (rotation == default) rotation = Quaternion.identity;
         if (scale == default || scale == Vector3.zero) scale = Vector3.one;
 
-        itemData.Guid = System.Guid.NewGuid().GetHashCode();
+        
 
 
         GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position, rotation, scale);
-
+        itemData.Guid = System.Guid.NewGuid().GetHashCode();
         Item item = itemObj.GetComponent<Item>();
+        item.itemData = itemData;
+
 
         if (parent != null)
         {
@@ -145,7 +147,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
         }
 
 
-        item.itemData = itemData;
+       
 
         RunTimeItems[item.itemData.Guid] = item;
 

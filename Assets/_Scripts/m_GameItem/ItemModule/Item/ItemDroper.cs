@@ -100,6 +100,7 @@ public class ItemDroper : Mod_ItemDroper
             if (chunk != null)
             {
                 newObject = ItemMgr.Instance.InstantiateItem(newItemData.IDName, default, default, default, chunk.gameObject);
+                newObject.Load();
             }
 
             if (newObject == null)

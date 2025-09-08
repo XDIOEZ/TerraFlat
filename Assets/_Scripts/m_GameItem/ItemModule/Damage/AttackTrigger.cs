@@ -21,6 +21,7 @@ public class AttackTrigger : Module
     public GameValue_float RotationSpeed;
 
     bool HitStop = false;
+    public bool ChangeHand = false;
 
     TurnBody TrunBody;
 
@@ -57,6 +58,10 @@ public class AttackTrigger : Module
     [SerializeField] private float xOffset = 0.5f;
     public void ToOtherDirection(Vector2 direction)
     {
+        if (ChangeHand == false)
+        {
+            return;
+        }
         float sign = Mathf.Sign(direction.x);
 
         // 目标 x 位置：根据左右方向决定偏移值
