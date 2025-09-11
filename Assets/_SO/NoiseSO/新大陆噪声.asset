@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10e287a02fc482142b7ed008db062b37, type: 3}
+  m_Name: "\u65B0\u5927\u9646\u566A\u58F0"
+  m_EditorClassIdentifier: 
+  frequency: 0.005
+  seedOffset: 0
+  UpdateEvent:
+    _PersistentCalls:
+    - _Target: {fileID: 0}
+      _MemberName: OnNoiseSettingsUpdated
+      _PersistentArguments: []
+  biomeData: {fileID: 0}
+  mainRiverStrength: 1.4
+  mainSmoothness: 5
+  enableTributaries: 1
+  tributaryStrength: 0.8
+  tributaryCount: 2
+  baseWidth: 1.7
+  widthVariation: 0.4

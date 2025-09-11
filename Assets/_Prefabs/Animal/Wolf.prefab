@@ -106,6 +106,7 @@ MonoBehaviour:
     RotationSpeed: 180
     FocusPoint: {x: 0, y: 0}
     ActivateRotation: 1
+    StopRotationDistance: 0.1
   ModData:
     Name: 
     ID: 
@@ -113,6 +114,7 @@ MonoBehaviour:
     Type: 0
     BitData: 
   PlayerController: {fileID: 0}
+  targetRotationTransforms: []
   mover: {fileID: 0}
 --- !u!1 &1474802976760016616
 GameObject:
@@ -289,7 +291,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46a56fe4c34b8c94a892a0e39f332ad5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -423,7 +425,7 @@ MonoBehaviour:
   detailedGizmos: 0
   startEndModifier:
     addPoints: 0
-    exactStartPoint: 4
+    exactStartPoint: 1
     exactEndPoint: 0
     useRaycasting: 0
     mask:
@@ -740,6 +742,7 @@ MonoBehaviour:
   StartPosition: {x: 0, y: 0}
   MoveTargetTransform: {fileID: 0}
   damageCollider: {fileID: 0}
+  maxTrajectoryPoints: 50
   sampleFrames: 2
   TrunBody: {fileID: 0}
   xOffset: 0.5

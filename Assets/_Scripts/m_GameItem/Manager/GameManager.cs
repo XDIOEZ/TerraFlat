@@ -9,6 +9,8 @@ public class GameManager : SingletonAutoMono<GameManager>
 {
     [SerializeField]
     private GameObject SunAndMoonPrefab;
+    [Header("Ѱ·ϵͳ")]
+    public GameObject PathFindingSystem;
     public GameObject SunAndMoonObj { get; private set; }
 
     public PlanetData Ready_planetData = new PlanetData();
@@ -16,7 +18,11 @@ public class GameManager : SingletonAutoMono<GameManager>
     public UltEvent Event_ExitGame_Start { get;  set; } = new UltEvent();
     public UltEvent Event_ExitGame_End { get;  set; } = new UltEvent();
 
-
+    private void Start()
+    {
+        DontDestroyOnLoad(gameObject);
+        PathFindingSystem.SetActive(true);
+    }
     public void ExitGame()
     {
         Event_ExitGame_Start.Invoke();

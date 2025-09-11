@@ -15,7 +15,7 @@ MonoBehaviour:
   itemPrefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
   itemName: "\u82F9\u679C\u6811"
   itemCount: 1
-  SpawnChance: 0.001
+  SpawnChance: 0.05
   environmentConditionRange:
     TemperatureRange: {x: 0, y: 1}
     HumidityRange: {x: 0, y: 1}

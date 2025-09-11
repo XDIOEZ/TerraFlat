@@ -1554,8 +1554,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3411641726888165367}
   m_HandleRect: {fileID: 5761251176041530085}
   m_Direction: 0
-  m_Value: 1
-  m_Size: 1
+  m_Value: 0
+  m_Size: 0
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3966,7 +3966,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecd7e0437b90ca94eb5a40ad94732514, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 1066606598301999008}
   Data:
@@ -4191,7 +4191,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78c11b47d3d359d4d9b8161a394391c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 3563739521202202441}
   Data:
@@ -4298,6 +4298,7 @@ MonoBehaviour:
     SlotMaxVolume: 0
     Index: 0
     Belong_Inventory: {fileID: 0}
+  faceMouse: {fileID: 0}
   CurentSelectItem: {fileID: 0}
   currentObject: {fileID: 0}
 --- !u!225 &2129086608695895907
@@ -4561,7 +4562,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.000030517578, y: 0}
+  m_AnchoredPosition: {x: -0.0002746582, y: 0}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &7132638982571321051
@@ -7394,6 +7395,7 @@ MonoBehaviour:
     AdditiveModifier: 0
     MultiplicativeModifier: 1
     FinalAdditive: 0
+  ChangeHand: 1
   StartPosition: {x: 0, y: 0}
   MouseTarget: {x: 0, y: 0, z: 0}
   CanAttack: 0

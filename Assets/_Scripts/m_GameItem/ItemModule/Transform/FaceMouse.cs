@@ -11,6 +11,10 @@ public partial class FaceMouse : Module
 
     public PlayerController PlayerController;
 
+    // 需要跟随鼠标旋转的对象列表
+    [Tooltip("需要跟随鼠标旋转的对象列表，列表为空时脚本不执行任何操作")]
+    public List<Transform> targetRotationTransforms = new List<Transform>();
+
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -22,11 +26,17 @@ public partial class FaceMouse : Module
     public override void Load()
     {
         ModData.ReadData(ref Data);
-        PlayerController = item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+        // 优先从物品所有者获取Controller
+        PlayerController = item.Owner != null
+            ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>()
+            : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
     }
 
     public override void Action(float deltaTime)
     {
+        // 列表为空时直接返回，不执行任何操作
+        if (targetRotationTransforms.Count == 0) return;
+
         PlayerTakeItem_FaceMouse(deltaTime);
     }
 
@@ -38,29 +48,69 @@ public partial class FaceMouse : Module
             return;
         }
 
+        // 更新鼠标世界位置（供外部脚本调用）
         Data.FocusPoint = PlayerController.GetMouseWorldPosition();
 
-        // ✅ 只有在启用旋转时才执行朝向逻辑
+        // 仅在启用旋转且列表有对象时执行逻辑
         if (Data.ActivateRotation)
         {
             FaceToMouse(Data.FocusPoint, deltaTime);
         }
     }
 
-
+    /// <summary>
+    /// 让旋转列表中的所有有效对象同步朝向鼠标，近距离时停止旋转
+    /// </summary>
     public void FaceToMouse(Vector3 targetPosition, float deltaTime)
     {
-        if (transform.parent == null) return;
+        // 获取有效旋转目标（过滤空对象）
+        List<Transform> validTargets = GetValidRotationTargets();
+        if (validTargets.Count == 0) return;
 
-        Vector2 direction = targetPosition - transform.parent.position;
-        float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        // 遍历所有有效目标执行旋转
+        foreach (var targetTrans in validTargets)
+        {
+            // 计算目标对象到鼠标位置的距离
+            float distanceToMouse = Vector2.Distance(targetTrans.position, targetPosition);
 
-        float currentAngle = transform.parent.localEulerAngles.z;
-        float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, Data.RotationSpeed * deltaTime);
+            // 如果距离小于阈值，则停止旋转，保留当前角度
+            if (distanceToMouse <= Data.StopRotationDistance)
+                continue;
 
-        transform.parent.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
+            // 计算目标对象到鼠标位置的方向
+            Vector2 direction = targetPosition - targetTrans.position;
+            float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+
+            // 平滑旋转到目标角度
+            float currentAngle = targetTrans.localEulerAngles.z;
+            float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, Data.RotationSpeed * deltaTime);
+
+            // 应用旋转（仅Z轴）
+            targetTrans.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
+        }
     }
 
+    /// <summary>
+    /// 获取列表中的有效对象（过滤空引用）
+    /// </summary>
+    private List<Transform> GetValidRotationTargets()
+    {
+        List<Transform> validTargets = new List<Transform>();
+
+        foreach (var trans in targetRotationTransforms)
+        {
+            if (trans != null)
+            {
+                validTargets.Add(trans);
+            }
+            else
+            {
+                Debug.LogWarning($"[FaceMouse] 旋转列表中存在空对象，请移除无效项", this);
+            }
+        }
+
+        return validTargets;
+    }
 
     public override void Save()
     {
@@ -71,12 +121,17 @@ public partial class FaceMouse : Module
     [MemoryPackable]
     public partial class FaceMouseData
     {
-        // ✅ 旋转速度（单位：度/秒），默认 180
+        /// <summary>旋转速度（度/秒）</summary>
         public float RotationSpeed = 180f;
 
-        // 鼠标目标位置
+        /// <summary>鼠标在世界空间中的位置</summary>
         public Vector2 FocusPoint = Vector2.zero;
 
+        /// <summary>是否启用旋转功能</summary>
         public bool ActivateRotation = true;
+
+        /// <summary>停止旋转的距离阈值，鼠标接近到此距离内时不再旋转</summary>
+        [Tooltip("鼠标与物体的距离小于此值时，停止旋转并保留当前角度")]
+        public float StopRotationDistance = 0.1f; // 默认1.5单位距离
     }
 }

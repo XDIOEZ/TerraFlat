@@ -57,7 +57,7 @@ public PlanetData Active_PlanetData
         }
         else
         {
-            Debug.LogError($"No PlanetData found for scene: {activeSceneName}");
+           // Debug.LogError($"No PlanetData found for scene: {activeSceneName}");
             return null;
         }
     }
@@ -65,11 +65,6 @@ public PlanetData Active_PlanetData
 
 
     #endregion
-
-    private void Start()
-    {
-        DontDestroyOnLoad(gameObject);
-    }
 
 
     #region 保存功能

@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 public class Inventory : MonoBehaviour
 {
     //容器所属对象
-    public Item Belong_Item;
+    public Item Owner;
     //插槽接口预制体
     public GameObject ItemSlot_Prefab;
     //生成接口的父对象

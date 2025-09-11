@@ -62,20 +62,18 @@ MonoBehaviour:
   map: {fileID: 8233460568870623006}
   Equator: 0
   biomes:
-  - {fileID: 11400000, guid: 1ed370ec7d3b8924ab914f860de614ee, type: 2}
-  - {fileID: 11400000, guid: 08d2de25cd9863844bf65c8cd08b3ddf, type: 2}
-  - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
-  - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
-  - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
-  - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
-  - {fileID: 11400000, guid: 26c6f79489f550548b5a365695a0d3bd, type: 2}
-  - {fileID: 11400000, guid: ddaeb28c68b0d6b47987775c4594de4f, type: 2}
-  - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
   - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
-  - {fileID: 11400000, guid: 64538378247f79e47931fd77804ae9cd, type: 2}
+  - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
+  - {fileID: 11400000, guid: e5e9fd78101f9d944b68fbd0b7bf50b6, type: 2}
   tilesPerFrame: 1
   seamlessBorders: 1
   transitionRange: 5
+  LandNoise: {fileID: 11400000, guid: a10de3b0d05cf924a9d97497eb998f8d, type: 2}
+  HumidityNoise: {fileID: 11400000, guid: 7e337b6287b4acf4a9476b87a9a99e4a, type: 2}
+  PrecipitationNoise: {fileID: 11400000, guid: b344071298f5ba94d928cde370657f36, type: 2}
+  TemperatureNoise: {fileID: 11400000, guid: 7e337b6287b4acf4a9476b87a9a99e4a, type: 2}
+  RieverNoise: {fileID: 11400000, guid: 3db59eb60d7f87842bce46d0e9fafc0a, type: 2}
+  SolidityNoise: {fileID: 0}
 --- !u!114 &8233460568870623006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -88,14 +86,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f78e9372a97755943957bb88587019ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
     _PersistentCalls: []
   OnAct:
-    _PersistentCalls: []
-  OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0.1
@@ -110,6 +106,14 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 1

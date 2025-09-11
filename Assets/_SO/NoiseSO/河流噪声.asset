@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ff9e21c44e942f4da62e7712a5d41c0, type: 3}
+  m_Name: "\u6CB3\u6D41\u566A\u58F0"
+  m_EditorClassIdentifier: 
+  frequency: 0.01
+  seedOffset: 1981
+  UpdateEvent:
+    _PersistentCalls:
+    - _Target: {fileID: 0}
+      _MemberName: OnNoiseSettingsUpdated
+      _PersistentArguments: []
+  biomeData: {fileID: 11400000, guid: e5e9fd78101f9d944b68fbd0b7bf50b6, type: 2}
+  octaves: 6
+  lacunarity: 3
+  gain: 0.25
+  threshold: 0.45
+  riverWidth: 0.05
+  invertBand: 0
+  landNoise: {fileID: 11400000, guid: a10de3b0d05cf924a9d97497eb998f8d, type: 2}
+  landInfluence: 0.1
+  landNoiseOffset: {x: 0, y: 0}

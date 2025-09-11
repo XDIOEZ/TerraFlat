@@ -37,7 +37,7 @@ public class Mod_Inventory : Module,IInventory
         if(Item_Data.ModuleDataDic.ContainsKey(_Data.Name))
         _Data = Item_Data.ModuleDataDic[_Data.Name];
 
-        inventory.Belong_Item = item;
+        inventory.Owner = item;
 
         if (item.itemMods.GetMod_ByID(ModText.Hand))
         {

@@ -39,6 +39,10 @@ public class Mod_Interaction : Module,IInteract
 
     public void Interact_Start(IInteracter interacter = null)
     {
+        if(item.itemData.Stack.CanBePickedUp == true)
+        {
+            return;
+        }
         FastTest.Invoke(interacter.Item);
         OnAction_Start.Invoke(interacter.Item);
         CurentInteractItem = interacter.Item;

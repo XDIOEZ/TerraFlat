@@ -31,13 +31,13 @@ public class Inventory_Equipment : Inventory
                 foreach (var mod in modList.ToList())
                 {
                     // 这段逻辑看起来是用于在卸下装备前，将模块数据恢复到物品实例上。
-                    if (Belong_Item.itemMods.GetMod_ByName(mod._Data.Name) != null)
+                    if (Owner.itemMods.GetMod_ByName(mod._Data.Name) != null)
                     {
                         currentEquippedItem.ModuleDataDic[mod._Data.Name] =
-                            Belong_Item.itemMods.GetMod_ByName(mod._Data.Name)._Data;
+                            Owner.itemMods.GetMod_ByName(mod._Data.Name)._Data;
                     }
 
-                    DeactivateEquipmentAttributes(Belong_Item, mod._Data, key);
+                    DeactivateEquipmentAttributes(Owner, mod._Data, key);
                 }
             }
         }
@@ -56,7 +56,7 @@ public class Inventory_Equipment : Inventory
                 {
                     if (modData.Type == ModuleType.Equipment)
                     {
-                        ActivateEquipmentAttributes(Belong_Item, modData, newIncomingItem);
+                        ActivateEquipmentAttributes(Owner, modData, newIncomingItem);
                     }
                 }
             }

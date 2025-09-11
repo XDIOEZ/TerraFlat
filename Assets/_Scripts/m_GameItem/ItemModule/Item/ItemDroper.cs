@@ -100,7 +100,7 @@ public class ItemDroper : Mod_ItemDroper
             if (chunk != null)
             {
                 newObject = ItemMgr.Instance.InstantiateItem(newItemData.IDName, default, default, default, chunk.gameObject);
-                newObject.Load();
+                //
             }
 
             if (newObject == null)
@@ -126,6 +126,7 @@ public class ItemDroper : Mod_ItemDroper
             float animTime = baseDropDuration + distance * distanceSensitivity;
 
             // 调用父类 DropItem 实现动画控制
+            newItem.Load();
             DropItem_Pos  (newItem, startPos, endPos, animTime);
         }
 

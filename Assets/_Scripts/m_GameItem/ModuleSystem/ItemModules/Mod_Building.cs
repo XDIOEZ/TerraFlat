@@ -156,8 +156,6 @@ public class Mod_Building : Module
         {
             UpdateNavigation(newBuilding.transform.position, 3, 3);
         }
-
-
     }
 
     [Button]
@@ -258,11 +256,16 @@ public class Mod_Building : Module
     {
         damageReceiver.Hp = damageReceiver.MaxHp.Value;
         sourceItem.ModuleSave();
-    
+
 
         ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
-
-        Item newItem =  ItemMgr.Instance.InstantiateItem(
+        // 将位置取整然后向右上角偏移0.5个单位，确保安装时总是落在格子中心
+        newitemData._transform.Position = new Vector3(
+            Mathf.Floor(position.x) + 0.5f,
+            Mathf.Floor(position.y) + 0.5f,
+            0f
+        );
+        Item newItem = ItemMgr.Instance.InstantiateItem(
                 newitemData,
                 position: position
             );
@@ -296,7 +299,7 @@ public class Mod_Building : Module
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
 
-        // ✨ 取整到格子并偏移 0.5，让位置落在格子中心
+        // 取整到格子并偏移 0.5，让位置落在格子中心
         mouseWorldPos.x = Mathf.Floor(mouseWorldPos.x) + 0.5f;
         mouseWorldPos.y = Mathf.Floor(mouseWorldPos.y) + 0.5f;
 
@@ -308,24 +311,47 @@ public class Mod_Building : Module
 
         if (GhostShadow == null) return;
 
-        // 计算阴影透明度与位置
+        // 计算距离
         float distance = Vector2.Distance(item.transform.position, mouseWorldPos);
-        float alpha = Mathf.InverseLerp(Data.maxVisibleDistance, Data.minVisibleDistance, distance);
-        alpha = Mathf.Clamp01(alpha);
+
+        // 定义过渡区间（距离超过最大可见距离后，在这个范围内逐渐消失）
+        float transitionRange = 1.5f; // 可根据需要调整这个值
+
+        // 计算基础透明度（在有效范围内的正常渐变）
+        float baseAlpha = Mathf.InverseLerp(Data.maxVisibleDistance, Data.minVisibleDistance, distance);
+
+        // 计算超出范围后的衰减因子
+        float overDistance = distance - Data.maxVisibleDistance;
+        float fadeFactor = 1f;
+
+        // 如果超出最大距离，在过渡区间内逐渐降低透明度
+        if (overDistance > 0)
+        {
+            // 超出越多，透明度衰减越多，超过过渡范围后完全透明
+            fadeFactor = 1 - Mathf.InverseLerp(0, transitionRange, overDistance);
+        }
+
+        // 最终透明度 = 基础透明度 × 衰减因子（确保在0-1范围内）
+        float alpha = Mathf.Clamp01(baseAlpha * fadeFactor);
 
         GhostShadow.UpdateAlpha(alpha);
 
-        if (GhostShadow.ShadowRenderer != null && GhostShadow.ShadowRenderer.enabled)
+        // 只有当阴影可见时才执行移动和颜色更新
+        if (alpha > 0f)
         {
-            GhostShadow.SmoothMove(mouseWorldPos);
-        }
-        else
-        {
-            Debug.LogWarning("[Shadow生成] ShadowRenderer 未启用");
-        }
+            if (GhostShadow.ShadowRenderer != null && GhostShadow.ShadowRenderer.enabled)
+            {
+                GhostShadow.SmoothMove(mouseWorldPos);
+            }
+            else
+            {
+                Debug.LogWarning("[Shadow生成] ShadowRenderer 未启用");
+            }
 
-        GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
+            GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
+        }
     }
+
 
 
     private void CreateGhostShadow()

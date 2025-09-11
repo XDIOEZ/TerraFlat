@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 public class Inventory_HotBar : Inventory
 {
     #region 字段
-    
+
     [Header("快捷栏设置")]
     [Tooltip("生成位置")]
     public Transform spawnLocation;
@@ -26,6 +26,8 @@ public class Inventory_HotBar : Inventory
     public GameObject SelectBox;
 
     public ItemSlot CurrentSelectItemSlot;
+
+    public FaceMouse faceMouse; // 用于控制物品旋转的组件
 
     // 当前选择的物品
     public ItemData currentItemData;
@@ -46,6 +48,13 @@ public class Inventory_HotBar : Inventory
 
         SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
 
+        // 获取FaceMouse组件（用于控制物品旋转）
+        Owner.itemMods.GetMod_ByID(ModText.FaceMouse, out faceMouse);
+        if ( faceMouse == null )
+        {
+            Debug.LogWarning("[Inventory_HotBar] 未找到FaceMouse组件，物品将无法跟随鼠标旋转");
+        }
+
         Controller_Init();
         //修改选择框位置
         ChangeSelectBoxPosition(Data.Index);
@@ -55,16 +64,16 @@ public class Inventory_HotBar : Inventory
 
     public void Controller_Init()
     {
-        Belong_Item.GetComponent<PlayerController>()._inputActions.Win10.RightClick.performed 
-            += _ => Controller_ItemAct();
-
-        Belong_Item.GetComponent<PlayerController>()._inputActions.Win10.MouseScroll.started += SwitchHotbarByScroll;
+        var input = Owner.GetComponent<PlayerController>()._inputActions.Win10;
+        input.RightClick.performed += _ => Controller_ItemAct();
+        input.MouseScroll.started += SwitchHotbarByScroll;
     }
-    
+
     //激活手持物品行为
     public void Controller_ItemAct()
     {
-        CurentSelectItem.Act();
+        if (CurentSelectItem != null)
+            CurentSelectItem.Act();
     }
 
     public override void OnClick(int index)
@@ -81,17 +90,9 @@ public class Inventory_HotBar : Inventory
     private void SwitchHotbarByScroll(InputAction.CallbackContext context)
     {
         if (IsPointerOverUI())
-        {
-        //    Debug.Log("鼠标在UI上");
             return;
-        }
-        else
-        {
-       //     Debug.Log("鼠标不在UI上");
-        }
 
         Vector2 scrollValue = context.ReadValue<Vector2>();
-       // Debug.Log(scrollValue);
 
         if (scrollValue.y > 0)
         {
@@ -107,7 +108,7 @@ public class Inventory_HotBar : Inventory
     {
         PointerEventData eventData = new PointerEventData(EventSystem.current)
         {
-            position = Mouse.current.position.ReadValue() // 新输入系统获取鼠标位置
+            position = Mouse.current.position.ReadValue()
         };
 
         List<RaycastResult> results = new List<RaycastResult>();
@@ -117,33 +118,25 @@ public class Inventory_HotBar : Inventory
 
     public void ChangeSelectBoxPosition(int newIndex)
     {
-        //销毁之前的物品
+        // 销毁之前的物品并从旋转列表中移除
         DestroyCurrentObject(CurentSelectItem);
 
         newIndex = (newIndex + MaxIndex) % MaxIndex; // 确保索引合法
-
         CurrentIndex = newIndex;
 
         if (SelectBox != null)
         {
             GameObject targetSlot = itemSlotUIs[newIndex].gameObject;
-
-            // 停止之前的动画
             SelectBox.transform.DOKill();
-
-            // 设置选择框父物体
             SelectBox.transform.SetParent(targetSlot.transform, worldPositionStays: true);
-
-            // 平滑移动到目标物品槽中心
-            SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration)
-                .SetEase(Ease.OutQuad);
+            SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration).SetEase(Ease.OutQuad);
         }
         else
         {
             Debug.LogError("[ChangeIndex] SelectBox 为空！");
         }
 
-        // 切换到新物品
+        // 切换到新物品并添加到旋转列表
         ChangeNewObject(newIndex);
     }
 
@@ -156,7 +149,6 @@ public class Inventory_HotBar : Inventory
         if (SelectBox != null)
         {
             Canvas selectBoxCanvas = SelectBox.GetComponent<Canvas>();
-
             if (selectBoxCanvas != null)
             {
                 selectBoxCanvas.sortingOrder = order;
@@ -179,9 +171,17 @@ public class Inventory_HotBar : Inventory
     public void DestroyCurrentObject(Item obj)
     {
         if (obj != null)
-        Destroy(obj.gameObject);
+        {
+            // 从FaceMouse的旋转列表中移除当前物品
+            if (faceMouse != null)
+            {
+                faceMouse.targetRotationTransforms.Remove(obj.transform);
+            }
+            Destroy(obj.gameObject);
+        }
     }
 
+    // 完成：将新增对象添加到FaceMouse的旋转列表中，实现旋转控制
     private void ChangeNewObject(int index)
     {
         if (index < 0 || index >= MaxIndex)
@@ -193,12 +193,14 @@ public class Inventory_HotBar : Inventory
         var slot = Data.itemSlots[index];
         if (slot.itemData == null)
         {
-          //  Debug.LogWarning($"[ChangeNewObject] 索引 {index} 的物品数据为空，无法生成物体。");
+            // 清空旋转列表（无物品选中时）
+            if (faceMouse != null)
+                faceMouse.targetRotationTransforms.Clear();
             return;
         }
 
         ItemData itemData = slot.itemData;
-        Item itemInstance = ItemMgr.Instance.InstantiateItem(itemData.IDName, spawnLocation.gameObject,position:default);
+        Item itemInstance = ItemMgr.Instance.InstantiateItem(itemData.IDName, spawnLocation.gameObject, position: default);
 
         if (itemInstance == null)
         {
@@ -210,20 +212,19 @@ public class Inventory_HotBar : Inventory
         CurrentSelectItemSlot = slot;
         currentObject = itemInstance.gameObject;
         CurentSelectItem = itemInstance;
+
         // 物体变换设置
         Transform tf = itemInstance.transform;
         tf.SetParent(spawnLocation, false);
         tf.localPosition = Vector3.zero;
-
         Vector3 rotation = tf.localEulerAngles;
         rotation.z = 0;
         tf.localEulerAngles = rotation;
 
         // 初始化 Item 属性
         itemInstance.itemData = itemData;
-
         itemInstance.itemData.ModuleDataDic = itemData.ModuleDataDic;
-        itemInstance.Owner = slot.Belong_Inventory.Belong_Item;
+        itemInstance.Owner = slot.Belong_Inventory.Owner;
 
         // 事件绑定
         itemInstance.OnUIRefresh += () => RefreshUI(index);
@@ -232,8 +233,16 @@ public class Inventory_HotBar : Inventory
         // 设置为当前武器
         spawnLocation.GetComponent<ITriggerAttack>()?.SetWeapon(currentObject);
         itemInstance.Load();
-    }
 
+        // 核心：将新物品添加到FaceMouse的旋转列表，使其跟随鼠标旋转
+        if (faceMouse != null)
+        {
+            // 清空列表确保只有当前物品被旋转
+            faceMouse.targetRotationTransforms.Clear();
+            // 添加当前物品的transform到旋转列表
+            faceMouse.targetRotationTransforms.Add(itemInstance.transform);
+        }
+    }
 
     #endregion
 }
