@@ -1,5 +1,4 @@
-using MemoryPack;
-using System.Collections;
+ï»¿using MemoryPack;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,90 +6,85 @@ using UnityEngine;
 [MemoryPackable]
 public partial class GrowData
 {
-    [Header("µ±Ç°Éú³¤½×¶Î")]
-    public Mod_Grow.GrowState growState = Mod_Grow.GrowState.Ó×Ãç;
+    [Header("å½“å‰ç”Ÿé•¿é˜¶æ®µ")]
+    public Mod_Grow.GrowState growState = Mod_Grow.GrowState.å¹¼è‹—;
 
-    [Header("¸÷½×¶ÎµÄ½ø¶ÈãĞÖµ (0-100)")]
+    [Header("å„é˜¶æ®µçš„è¿›åº¦é˜ˆå€¼ (0-100)")]
     public List<float> growState_Value = new List<float>() { 0, 20, 50, 100 };
 
-    [Header("¸÷½×¶ÎµÄËõ·Å±ÈÀı")]
+    [Header("å„é˜¶æ®µçš„ç¼©æ”¾æ¯”ä¾‹")]
     public List<float> growState_Scale = new List<float>() { 0.1f, 0.2f, 0.6f, 1f };
 
-    [Header("µ±Ç°Éú³¤½ø¶È (0-100)")]
+    [Header("å½“å‰ç”Ÿé•¿è¿›åº¦ (0-100)")]
     public float GrowProgress = 0;
 
-    [Header("×î´óÉú³¤½ø¶È")]
+    [Header("æœ€å¤§ç”Ÿé•¿è¿›åº¦")]
     public float MaxGrowProgress = 100;
 
-    [Header("Éú³¤ËÙ¶È (Ã¿ÃëÔö¼Ó¶àÉÙ½ø¶ÈµãÊı)")]
+    [Header("ç”Ÿé•¿é€Ÿåº¦ (æ¯ç§’å¢åŠ å¤šå°‘è¿›åº¦ç‚¹æ•°)")]
     public float GrowSpeed = 5f;
 }
+
 
 public class Mod_Grow : Module
 {
     public Ex_ModData_MemoryPackable ModData;
-    public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
+    public override ModuleData _Data
+    {
+        get => ModData;
+        set => ModData = (Ex_ModData_MemoryPackable)value;
+    }
 
     [SerializeField]
     public GrowData Data = new GrowData();
 
     public enum GrowState
     {
-        Ó×Ãç,
-        Éú³¤,
-        ·¢Óı,
-        ³ÉÊì,
+        å¹¼è‹—,
+        ç”Ÿé•¿,
+        å‘è‚²,
+        æˆç†Ÿ,
     }
 
     public override void Awake()
     {
         if (_Data.ID == "")
-        {
             _Data.ID = ModText.Grow;
-        }
     }
 
     public override void Load()
     {
-        // ´Ó ModData ·´ĞòÁĞ»¯
+        // ä» ModData ååºåˆ—åŒ–
         ModData.ReadData(ref Data);
-
         UpdateVisual();
     }
 
     public override void Save()
     {
-        // ´æµ½ ModData
+        // å­˜åˆ° ModData
         ModData.WriteData(Data);
     }
 
     public override void Action(float deltaTime)
     {
-        if (Data.growState == GrowState.³ÉÊì) return; // ÒÑ³ÉÊìÔò²»ÔÙÉú³¤
+        if (Data.growState == GrowState.æˆç†Ÿ) return; // å·²æˆç†Ÿåˆ™ä¸å†ç”Ÿé•¿
 
-        // Ôö¼ÓÉú³¤½ø¶È (ÕûÊıÀÛ»ı)
+        // å¢åŠ ç”Ÿé•¿è¿›åº¦
         Data.GrowProgress += Data.GrowSpeed * deltaTime;
 
-
-
-        // ¸üĞÂ±íÏÖ£¨Ëõ·Å£©
+        // æ›´æ–°è¡¨ç°ï¼ˆç¼©æ”¾ï¼‰
         UpdateVisual();
     }
 
     private void UpdateVisual()
     {
-        // ±éÀú¸÷¸ö½×¶ÎµÄ½ø¶ÈãĞÖµ
         for (int i = 0; i < Data.growState_Value.Count; i++)
         {
             if (Data.GrowProgress >= Data.growState_Value[i])
             {
-                // Èç¹ûµ±Ç°½ø¶È³¬¹ıµ±Ç°½×¶ÎµÄãĞÖµ£¬¸üĞÂÉú³¤½×¶Î
                 Data.growState = (GrowState)i;
-
-                // ¸ù¾İµ±Ç°Éú³¤×´Ì¬À´ÉèÖÃÎïÌåµÄËõ·Å
                 item.transform.localScale = new Vector3(Data.growState_Scale[i], Data.growState_Scale[i], 1);
             }
         }
     }
-
 }

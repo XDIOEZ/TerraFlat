@@ -17,10 +17,10 @@ MonoBehaviour:
   PreviewColor: {r: 0.19999997, g: 0.7494875, b: 0.84313726, a: 1}
   Condition:
     TemperatureRange: {x: 0, y: 1}
-    HumidityRange: {x: 0, y: 1}
+    HumidityRange: {x: 1, y: 1}
     PrecipitationRange: {x: 0, y: 1}
-    SolidityRange: {x: 0, y: 1}
-    HightRange: {x: 0, y: 0.5}
+    SolidityRange: {x: 0, y: 0}
+    HightRange: {x: 0.5, y: 1}
   TerrainConfig:
     TileSpawns:
     - {fileID: 11400000, guid: 972b150ebbd791d4c85ebe3a2d0b2326, type: 2}

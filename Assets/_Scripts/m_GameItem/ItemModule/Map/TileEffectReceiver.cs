@@ -1,67 +1,65 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using UltEvents;
 using UnityEngine;
 
-/// <summary>
-/// 优化版 TileEffectReceiver：
-/// - 缓存 Map 和 Tilemap 引用
-/// - 缓存 Prefab 对应的 IBlockTile 引用，按 Name_ItemName 而非格子位置缓存
-/// - 持续动态获取 TileData，支持地图动态变化
-/// - 完成 Tile_Exit、Tile_Update 方法调用
-/// </summary>
 public class TileEffectReceiver : MonoBehaviour
 {
     public Vector2Int lastGridPos;
     public Item item;
     public Map Cache_map;
-    public UltEvent<TileData>  OnTileEnterEvent = new UltEvent<TileData>();
-    public UltEvent<TileData>  OnTileExitEvent = new UltEvent<TileData>();
+    public UltEvent<TileData> OnTileEnterEvent = new UltEvent<TileData>();
+    public UltEvent<TileData> OnTileExitEvent = new UltEvent<TileData>();
 
-    [Header("Raycast Settings (unused now)")]
-    public float raycastDistance = 5f;
-    public LayerMask tileLayerMask;
 
-    // 缓存 Prefab 名称 -> IBlockTile 实例
-    private readonly Dictionary<string, IBlockTile> prefabCache = new Dictionary<string, IBlockTile>();
+    // 改为静态字典，所有实例共享缓存
+    private static readonly Dictionary<string, IBlockTile> prefabCache = new Dictionary<string, IBlockTile>();
+    // 静态锁，确保多线程环境下的字典操作安全
+    private static readonly object cacheLock = new object();
+    // 缓存清理时间戳（用于定期清理）
+    private static float lastCleanupTime;
+    private const float cleanupInterval = 300f; // 5分钟清理一次过期缓存
 
     private void Start()
     {
-        // 缓存 Map 对象
+        // 初始化Map引用
         if (Cache_map == null)
         {
-            foreach (var mapItem in ItemMgr.Instance.GetItemsByNameID("MapCore"))
+            var mapItems = ItemMgr.Instance?.GetItemsByNameID("MapCore");
+            if (mapItems != null && mapItems.Count > 0)
             {
-                if (mapItem != null)
-                {
-                    Cache_map = mapItem.GetComponent<Map>();
-                    break;
-                }
+                Cache_map = mapItems[0].GetComponent<Map>();
             }
         }
 
         if (Cache_map == null)
         {
-
-           // Debug.LogError("未找到 MapCore 中的 Map 组件");
-            enabled = false;
             Cache_map = FindFirstObjectByType<Map>();
         }
 
-        // 缓存 Item 组件
+        if (Cache_map == null)
+        {
+            Debug.LogError("TileEffectReceiver: 未找到有效的 Map 组件！");
+            enabled = false;
+            return;
+        }
+
+        // 初始化Item引用
         if (item == null)
         {
             item = GetComponentInParent<Item>();
         }
 
-        // 初始化网格位置
         lastGridPos = GetCurrentGridPos();
-
-        //OnTileEnter(GetCurrentGridPos());
-        this.enabled=true;
+        enabled = true;
     }
 
     private void Update()
     {
+        // 定期清理缓存（静态方法，全局生效一次）
+        CleanupCacheIfNeeded();
+
         Vector2Int currentGridPos = GetCurrentGridPos();
         if (currentGridPos != lastGridPos)
         {
@@ -72,94 +70,144 @@ public class TileEffectReceiver : MonoBehaviour
         OnTileUpdate(currentGridPos);
     }
 
+    // 静态方法：定期清理无效缓存
+    private static void CleanupCacheIfNeeded()
+    {
+        if (Time.time - lastCleanupTime < cleanupInterval) return;
+
+        lock (cacheLock)
+        {
+            // 清除null值缓存（可能是加载失败的预制体）
+            var invalidKeys = prefabCache.Where(kv => kv.Value == null)
+                                         .Select(kv => kv.Key)
+                                         .ToList();
+
+            foreach (var key in invalidKeys)
+            {
+                prefabCache.Remove(key);
+            }
+
+            lastCleanupTime = Time.time;
+            Debug.Log($"TileEffectReceiver: 清理了 {invalidKeys.Count} 个无效缓存");
+        }
+    }
+
+    // 静态方法：手动清理缓存（如场景切换时调用）
+    public static void ClearCache()
+    {
+        lock (cacheLock)
+        {
+            prefabCache.Clear();
+            Debug.Log("TileEffectReceiver: 已手动清空所有缓存");
+        }
+    }
+
+    // 静态方法：移除特定预制体的缓存
+    public static void RemoveFromCache(string itemName)
+    {
+        lock (cacheLock)
+        {
+            if (prefabCache.ContainsKey(itemName))
+            {
+                prefabCache.Remove(itemName);
+            }
+        }
+    }
+
     private Vector2Int GetCurrentGridPos()
     {
-        if(Cache_map == null)
-        {
-            return Vector2Int.zero;
-        }
         Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
         return new Vector2Int(cell.x, cell.y);
     }
 
     private void OnTileEnter(Vector2Int gridPos)
     {
+        if (item == null) return;
         if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
         {
             tileBlock.Tile_Enter(item, tileData);
-            OnTileEnterEvent.Invoke(tileData); // 触发进入事件
-            //Debug.Log("进入新地块: " + tileData.Name_ItemName);
+            OnTileEnterEvent.Invoke(tileData);
         }
     }
 
     private void OnTileExit(Vector2Int gridPos)
     {
+        if (item == null) return;
         if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
         {
             tileBlock.Tile_Exit(item, tileData);
-            OnTileExitEvent.Invoke(tileData); // 触发离开事件
-         //   Debug.Log("离开旧地块: " + tileData.Name_ItemName);
+            OnTileExitEvent.Invoke(tileData);
         }
     }
 
     private void OnTileUpdate(Vector2Int gridPos)
     {
-        if (Cache_map == null)
-        {
-            return ;
-        }
+        if (Cache_map == null || item == null) return;
         if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
         {
             tileBlock.Tile_Update(item, tileData);
         }
     }
 
-    /// <summary>
-    /// 根据位置获取 TileData，并从 prefabCache 中获取或缓存 IBlockTile
-    /// </summary>
     private bool TryGetTileBlock(Vector2Int pos, out TileData tileData, out IBlockTile tileBlock)
     {
-        tileData = Cache_map.GetTile(pos);
+        tileData = Cache_map?.GetTile(pos);
         if (tileData == null)
         {
             tileBlock = null;
             return false;
         }
 
-        if (!prefabCache.TryGetValue(tileData.Name_ItemName, out tileBlock))
+        // 静态缓存访问加锁
+        lock (cacheLock)
         {
-            var prefab = GameRes.Instance.GetPrefab(tileData.Name_ItemName);
-            if (prefab == null)
+            if (prefabCache.TryGetValue(tileData.Name_ItemName, out tileBlock))
             {
-                Debug.LogError($"找不到 Prefab: {tileData.Name_ItemName}");
-                prefabCache[tileData.Name_ItemName] = null;
-                return false;
-            }
-
-            var itemComp = prefab.GetComponent<Item>();
-            if (itemComp is IBlockTile block)
-            {
-                tileBlock = block;
-                prefabCache[tileData.Name_ItemName] = tileBlock;
-            }
-            else
-            {
-                Debug.LogWarning($"Prefab 未实现 IBlockTile: {tileData.Name_ItemName}");
-                prefabCache[tileData.Name_ItemName] = null;
-                tileBlock = null;
-                return false;
+                return tileBlock != null;
             }
         }
 
-        return tileBlock != null;
+        // 未命中缓存时加载预制体
+        var prefab = GameRes.Instance?.GetPrefab(tileData.Name_ItemName);
+        if (prefab == null)
+        {
+            Debug.LogError($"找不到 Prefab: {tileData.Name_ItemName}");
+            tileBlock = null;
+            return false;
+        }
+
+        var itemComp = prefab.GetComponent<Item>();
+        if (itemComp is IBlockTile block)
+        {
+            tileBlock = block;
+            // 存入静态缓存
+            lock (cacheLock)
+            {
+                prefabCache[tileData.Name_ItemName] = tileBlock;
+            }
+            return true;
+        }
+        else
+        {
+            Debug.LogWarning($"Prefab 未实现 IBlockTile: {tileData.Name_ItemName}");
+            tileBlock = null;
+            return false;
+        }
     }
 
-    /// <summary>
-    /// 获取当前格子的 TileData
-    /// </summary>
     public TileData GetCurrentTileData()
     {
         var pos = GetCurrentGridPos();
-        return Cache_map.GetTile(pos);
+        return Cache_map?.GetTile(pos);
+    }
+
+    // 场景卸载时清理静态缓存（可选，根据需求决定）
+    private void OnDestroy()
+    {
+        // 如果是最后一个实例，清理缓存
+        // if (FindObjectsOfType<TileEffectReceiver>().Length <= 1)
+        // {
+        //     ClearCache();
+        // }
     }
 }

@@ -38,8 +38,11 @@ public class Mod_ChunkLoader : Module
         // 初始化 lastChunkPos
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
 
-
-        // 跨区块后才更新
+        if(ItemMgr.Instance.User_Player == null)
+        {
+            return;
+        }
+            // 跨区块后才更新
         if (ItemMgr.Instance.User_Player.Data.IsInRoom == false)
         {
             ChunkMgr.Instance.DestroyChunk_In_Distance(item.gameObject, Distance: Data.DestroyChunkDistance);

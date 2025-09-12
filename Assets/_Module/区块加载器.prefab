@@ -51,6 +51,6 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
-  UnActiveDistance: 2
+  UnActiveDistance: 1
   DestroyChunkDistance: 3
-  LoadChunkDistance: 2
+  LoadChunkDistance: 1

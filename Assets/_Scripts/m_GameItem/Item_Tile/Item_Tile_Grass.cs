@@ -60,7 +60,7 @@ public class Item_Tile_Grass : Item,IBlockTile
 
     public void Tile_Exit(Item item, TileData tileData)
     {
-       // throw new System.NotImplementedException();
+
     }
 
     //这可如何是好 水方块只会影响移动效果 我不希望其影响其他的 但是草方块又不是单独只影响移动效果
@@ -71,11 +71,7 @@ public class Item_Tile_Grass : Item,IBlockTile
 
     public void Tile_Update(Item item, TileData tileData)
     {
-        /*// 判断该物品是否属于“Plant”类型
-        if (item.Item_Data.ItemTags.Item_TypeTag.Exists(x => x == "Plant"))
-        {
-            item.GetComponent<IPlant>().Grow(Time.deltaTime);
-        }*/
+
     }
 }
 

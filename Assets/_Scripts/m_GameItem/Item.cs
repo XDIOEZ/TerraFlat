@@ -50,7 +50,7 @@ public abstract class Item : MonoBehaviour
     public SpriteRenderer Sprite;
     #endregion
 
-    public void Start()
+    public virtual void Start()
     {
         if (Sprite == null)
             Sprite = GetComponentInChildren<SpriteRenderer>();

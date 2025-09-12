@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 8063647909393400311}
   - component: {fileID: 5632097681439671027}
-  - component: {fileID: 1953912542106231607}
   - component: {fileID: 6132481303215257547}
   - component: {fileID: 8303867005702480832}
   m_Layer: 0
@@ -87,21 +86,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 1
---- !u!114 &1953912542106231607
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4760205662856515192}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6385779351add6f46a5682f5092cf92c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  OnPickUp:
-    _PersistentCalls: []
 --- !u!61 &6132481303215257547
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -159,15 +143,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 850638ad4100fa84f916f2926d7f184d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  Owner: {fileID: 0}
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
+  OnItemDestroy:
     _PersistentCalls: []
-  DestroyItem_Event:
+  OnAct:
     _PersistentCalls: []
-  OnAction_Event:
-    _PersistentCalls: []
+  Sprite: {fileID: 0}
+  updateInterval: 0.1
   data:
     IDName: TileItem_Dirt
     GameName: 
@@ -179,6 +163,14 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 1

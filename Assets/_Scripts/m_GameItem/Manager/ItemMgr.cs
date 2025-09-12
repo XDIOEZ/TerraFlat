@@ -19,7 +19,19 @@ public class ItemMgr : SingletonMono<ItemMgr>
     public Dictionary<string, Player> Player_DIC = new();
 
     public string PlayerInSceneName => Player_DIC[SaveDataMgr.Instance.CurrentContrrolPlayerName].Data.CurrentSceneName;
-    public Player User_Player => Player_DIC[SaveDataMgr.Instance.CurrentContrrolPlayerName];
+    public Player User_Player
+    {
+        get
+        {
+            if (Player_DIC.TryGetValue(SaveDataMgr.Instance.CurrentContrrolPlayerName, out var player))
+            {
+                return player;
+            }
+
+            return null;
+        }
+    }
+
     public Map _cachedMap;
     public Map Map
     {
@@ -237,6 +249,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
         foreach (Player player in players)
         {
+            if (player == null) continue;
             player.Save();
 
             SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;

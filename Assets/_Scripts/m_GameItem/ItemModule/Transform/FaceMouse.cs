@@ -26,11 +26,20 @@ public partial class FaceMouse : Module
     public override void Load()
     {
         ModData.ReadData(ref Data);
+
         // 优先从物品所有者获取Controller
         PlayerController = item.Owner != null
             ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>()
             : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+
+        // 如果列表为空 → 自动装填父对象
+        if (targetRotationTransforms.Count == 0 && transform.parent != null)
+        {
+            targetRotationTransforms.Add(transform.parent);
+            Debug.Log($"[FaceMouse] 自动添加父对象 {transform.parent.name} 到旋转列表", this);
+        }
     }
+
 
     public override void Action(float deltaTime)
     {

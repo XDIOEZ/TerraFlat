@@ -1,119 +1,136 @@
-using System;
+ï»¿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 using Sirenix.OdinInspector;
 using Force.DeepCloner;
 using UltEvents;
+using UnityEngine.Rendering;
 
 /// <summary>
-/// Ëæ»úµØÍ¼Éú³ÉÆ÷£º
-/// - »ùÓÚÔëÉù + ÉúÎïÈºÏµ£¨Biome£©
-/// - Ö§³Ö·ÖÖ¡Éú³É / ´óµØÍ¼ÎŞ·ìÏÎ½Ó / ÈºÏµ×ÊÔ´Ëæ»úÉú³É
+/// éšæœºåœ°å›¾ç”Ÿæˆå™¨ï¼š
+/// - åŸºäºå™ªå£° + ç”Ÿç‰©ç¾¤ç³»ï¼ˆBiomeï¼‰
+/// - æ”¯æŒåˆ†å¸§ç”Ÿæˆ / å¤§åœ°å›¾æ— ç¼è¡”æ¥ / ç¾¤ç³»èµ„æºéšæœºç”Ÿæˆ
+/// - è®°å½•æ¯ä¸ªæ ¼å­çš„ç¯å¢ƒå› å­ (EnvFactorsGrid)
+/// - æ”¯æŒ Gizmos å¯è§†åŒ–è°ƒè¯•
+/// - æ”¯æŒæŒ‰é”®è·å–Tileç¯å¢ƒå‚æ•°ï¼ˆé»˜è®¤F3ï¼‰
 /// </summary>
 public class RandomMapGenerator : MonoBehaviour
 {
-    #region ÅäÖÃ²ÎÊı
-    [Header("µØÍ¼ÅäÖÃ")]
-    [Required] public Map map; // µØÍ¼¹ÜÀí¶ÔÏó
+    #region é…ç½®å‚æ•°
+    [Header("åœ°å›¾é…ç½®")]
+    [Required] public Map map; // åœ°å›¾ç®¡ç†å¯¹è±¡
+    [Tooltip("ï¼ˆå¯é€‰ï¼‰æ‰‹åŠ¨æŒ‡å®šGridç»„ä»¶ï¼ŒæœªæŒ‡å®šåˆ™è‡ªåŠ¨ä»å½“å‰å¯¹è±¡/å­å¯¹è±¡è·å–")]
+    public Grid mapGrid;
+    [Tooltip("ï¼ˆå¯é€‰ï¼‰æ‰‹åŠ¨æŒ‡å®šTilemapç»„ä»¶ï¼ŒæœªæŒ‡å®šåˆ™è‡ªåŠ¨ä»å½“å‰å¯¹è±¡çš„å­å¯¹è±¡è·å–")]
+    public Tilemap targetTilemap;
 
     [ShowInInspector]
     public PlanetData plantData => SaveDataMgr.Instance.Active_PlanetData;
 
     public Vector2 ChunkSize => ChunkMgr.GetChunkSize();
 
-    [Tooltip("³àµÀ×ø±ê")] public float Equator = 0;
+    [Tooltip("èµ¤é“åæ ‡")] public float Equator = 0;
 
-    [Header("ÉúÎïÈºÏµÁĞ±í")]
-    [Tooltip("²»Í¬ÎÂ¶È/Êª¶È¶ÔÓ¦µÄÉúÎïÈºÏµÅäÖÃ")]
+    [Header("ç”Ÿç‰©ç¾¤ç³»åˆ—è¡¨")]
+    [Tooltip("ä¸åŒæ¸©åº¦/æ¹¿åº¦å¯¹åº”çš„ç”Ÿç‰©ç¾¤ç³»é…ç½®")]
     public List<BiomeData> biomes;
 
-    [Header("ĞÔÄÜÑ¡Ïî")]
-    [Tooltip("Ã¿Ö¡Éú³ÉµÄ×î´óµØ¿éÊı (0=Á¢¼´Éú³É)")]
+    [Header("æ€§èƒ½é€‰é¡¹")]
+    [Tooltip("æ¯å¸§ç”Ÿæˆçš„æœ€å¤§åœ°å—æ•° (0=ç«‹å³ç”Ÿæˆ)")]
     public int tilesPerFrame = 1;
 
-    [Header("±ß½çÁ¬½Ó")]
+    [Header("è¾¹ç•Œè¿æ¥")]
     public bool seamlessBorders = true;
 
-    [Header("±ß½ç¹ı¶É·¶Î§")]
-    [Range(1, 20)]
-    [Tooltip("ÓÃÓÚÎŞ·ìÁ¬½ÓÊ±µÄ±ß½ç»ìºÏ¿í¶È£¨¸ñ×ÓÊı£©")]
-    public int transitionRange = 5;
-
-    // Debug µ÷ÊÔÓÃÑÕÉ«×Öµä
+    // Debug è°ƒè¯•ç”¨é¢œè‰²å­—å…¸
     public Dictionary<Vector2Int, Color> ColorDicitionary = new();
 
-    #region ¡ª¡ª Inspector ¿ÉÅäÖÃÔëÉù ¡ª¡ª
-    // ÕâĞ©¶¼¼Ì³Ğ×Ô BaseNoise£¬·½±ãÄãÔÚ Inspector Àï»»²»Í¬ÔëÉùËã·¨
-    [Header("Ó¦ÓÃÔëÉù")]
-    [Tooltip("¸ß¶ÈÔëÉù(Â½µØ/º£Ñó)")]
-    public BaseNoise LandNoise;
+    [Header("åº”ç”¨å™ªå£°")]
+    [Tooltip("å™ªå£°é…ç½®å­—å…¸ï¼Œå¯åœ¨Inspectorä¸­è®¾ç½®ä¸åŒç±»å‹çš„å™ªå£°SOå¼•ç”¨")]
+    public NoiseDictionary Noises = new NoiseDictionary();
 
-    [Tooltip("Êª¶È")]
-    public BaseNoise HumidityNoise;
-
-    [Tooltip("½µË®")]
-    public BaseNoise PrecipitationNoise;
-
-    [Tooltip("ÎÂ¶È")]
-    public BaseNoise TemperatureNoise;
-
-    [Tooltip("ºÓÁ÷")]
-    public BaseNoise RieverNoise;
-
-    [Tooltip("µØ¿é¹Ì»¯³Ì¶È/¼áÓ²¶È (ÀıÈçÑÒÊ¯/ÄàÍÁÇø±ğ)")]
-    public BaseNoise SolidityNoise;
+    [Header("é¼ æ ‡æ£€æµ‹è®¾ç½®")]
+    [Tooltip("è§¦å‘ç¯å¢ƒå‚æ•°æ£€æµ‹çš„æŒ‰é”®ï¼ˆé»˜è®¤F3ï¼‰")]
+    public KeyCode detectKey = KeyCode.F3;
 
     #endregion
-    #endregion
 
-    #region ÄÚ²¿±äÁ¿
+    #region å†…éƒ¨å˜é‡
     private int Seed => SaveDataMgr.Instance.SaveData.Seed;
+    private Camera _mainCamera; // ç¼“å­˜MainCameraå¼•ç”¨
 
     public float PlantRadius => plantData.Radius;
     public float Temp => plantData.TemperatureOffset;
     public float LandOceanRatio => plantData.OceanHeight;
     public float NoiseScale => plantData.NoiseScale;
 
-    public static System.Random rng; // ÏµÍ³¼¶Ëæ»úÊµÀı
+    public static System.Random rng; // ç³»ç»Ÿçº§éšæœºå®ä¾‹
 
-    private Dictionary<string, TileData> tileDataCache = new(); // TileData »º´æ
+    private Dictionary<string, TileData> tileDataCache = new(); // TileData ç¼“å­˜
+
+    // ç¯å¢ƒå› å­äºŒç»´æ•°ç»„
+    public EnvironmentFactors[,] EnvFactorsGrid;
     #endregion
 
-    #region Unity ÉúÃüÖÜÆÚ
+    #region Unity ç”Ÿå‘½å‘¨æœŸ
     public void Awake()
     {
         rng = new System.Random(Seed);
         map.OnMapGenerated_Start += GenerateRandomMap_TileData;
+
+        // 1. è‡ªåŠ¨è·å–Gridç»„ä»¶ï¼ˆä¼˜å…ˆçº§ï¼šæ‰‹åŠ¨æŒ‡å®š > å½“å‰å¯¹è±¡ > å­å¯¹è±¡ï¼‰
+        if (mapGrid == null)
+        {
+            mapGrid = GetComponent<Grid>();
+            if (mapGrid == null)
+            {
+                mapGrid = GetComponentInChildren<Grid>(includeInactive: false);
+            }
+        }
+
+        // 2. è‡ªåŠ¨è·å–å½“å‰å¯¹è±¡çš„å­å¯¹è±¡Tilemap
+        if (targetTilemap == null)
+        {
+            Tilemap[] childTilemaps = GetComponentsInChildren<Tilemap>(includeInactive: false);
+            if (childTilemaps != null && childTilemaps.Length > 0)
+            {
+                targetTilemap = childTilemaps[0];
+                Debug.Log($"[RandomMapGenerator] è‡ªåŠ¨è·å–å­å¯¹è±¡Tilemapï¼š{targetTilemap.name}");
+            }
+            else
+            {
+                Debug.LogError($"[RandomMapGenerator] å½“å‰å¯¹è±¡ä¸‹æœªæ‰¾åˆ°ä»»ä½•Tilemapå­å¯¹è±¡ï¼");
+            }
+        }
+
+        // 3. é€šè¿‡"MainCamera"æ ‡ç­¾è·å–ç›¸æœº
+        _mainCamera = GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
+        if (_mainCamera == null)
+        {
+            Debug.LogError($"[RandomMapGenerator] åœºæ™¯ä¸­æœªæ‰¾åˆ°Tagä¸º'MainCamera'çš„ç›¸æœºï¼");
+        }
     }
 
-#if UNITY_EDITOR
-    private void OnDrawGizmos()
+    private void Update()
     {
-        if (map == null || map.Data == null) return;
-
-        Vector2 startPos = map.Data.position;
-        Vector2 size = ChunkMgr.GetChunkSize();
-        Vector3 center = new(startPos.x + size.x / 2f, startPos.y + size.y / 2f, 0f);
-        Vector3 size3D = new(size.x, size.y, 0.1f);
-
-        Gizmos.color = Color.green;
-        Gizmos.DrawWireCube(center, size3D);
-
-        UnityEditor.Handles.Label(center,
-            $"Map:{startPos}\nSize:{size}",
-            new GUIStyle { alignment = TextAnchor.MiddleCenter });
+        // ä»…é€šè¿‡æŒ‡å®šæŒ‰é”®è§¦å‘ï¼ˆå·²ç§»é™¤é¼ æ ‡å·¦é”®è§¦å‘ï¼‰
+        if (Input.GetKeyDown(detectKey))
+        {
+            GetEnvFactorsAtMousePosition();
+        }
     }
-#endif
+
     #endregion
 
-    #region Ö÷Âß¼­
-    [Button("Éú³ÉËæ»úµØÍ¼")]
+    #region ä¸»é€»è¾‘
+    [Button("ç”Ÿæˆéšæœºåœ°å›¾")]
     public void GenerateRandomMap_TileData()
     {
         if (map == null)
         {
-            Debug.LogError("[RandomMapGenerator] µØÍ¼ÒıÓÃÎ´ÉèÖÃ£¡");
+            Debug.LogError("[RandomMapGenerator] åœ°å›¾å¼•ç”¨æœªè®¾ç½®ï¼");
             return;
         }
 
@@ -127,7 +144,10 @@ public class RandomMapGenerator : MonoBehaviour
         Vector2Int startPos = map.Data.position;
         Vector2 size = ChunkSize;
 
-        if (tilesPerFrame == 114514) // ÌØÊâ£ºĞ­³Ì·ÖÖ¡Éú³É
+        // åˆå§‹åŒ–ç¯å¢ƒå› å­äºŒç»´æ•°ç»„
+        EnvFactorsGrid = new EnvironmentFactors[(int)size.x, (int)size.y];
+
+        if (tilesPerFrame > 0)
             ChunkMgr.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size));
         else
         {
@@ -137,17 +157,21 @@ public class RandomMapGenerator : MonoBehaviour
     }
     #endregion
 
-    #region µØÍ¼Éú³ÉÁ÷³Ì
+    #region åœ°å›¾ç”Ÿæˆæµç¨‹
     private IEnumerator GenerateMapCoroutine(Vector2Int startPos, Vector2 size)
     {
         int processed = 0;
         for (int x = 0; x < size.x; x++)
+        {
             for (int y = 0; y < size.y; y++)
             {
                 GenerateTileAtPosition(new Vector2Int(startPos.x + x, startPos.y + y));
-                if (++processed % tilesPerFrame == 0)
+                processed++;
+
+                if (processed % tilesPerFrame == 0)
                     yield return null;
             }
+        }
 
         OnGenerationComplete();
     }
@@ -160,22 +184,30 @@ public class RandomMapGenerator : MonoBehaviour
     }
     #endregion
 
-    #region µØ¿éÉú³ÉÂß¼­
+    #region åœ°å—ç”Ÿæˆé€»è¾‘
     private void GenerateTileAtPosition(Vector2Int position)
     {
-        // 1. ²ÉÑùÔëÉù ¡ª¡ª ×ª»»³ÉÊÀ½ç×ø±ê
         float gx = position.x * NoiseScale;
         float gy = position.y * NoiseScale;
 
-        // Ê¹ÓÃ ScriptableObject µÄÔëÉùÅäÖÃ½øĞĞ²ÉÑù
-        float temp = TemperatureNoise != null ? TemperatureNoise.Sample(gx, gy, Seed) : 0.5f;
-        float humid = HumidityNoise != null ? HumidityNoise.Sample(gx, gy, Seed) : 0.5f;
-        float precip = PrecipitationNoise != null ? PrecipitationNoise.Sample(gx, gy, Seed) : 0.5f;
-        float solidity = SolidityNoise != null ? SolidityNoise.Sample(gx, gy, Seed) : 0.5f; // solidity ÄãÖ®Ç°Ğ´µÄÊÇ solidit
-        float hight = LandNoise != null ? LandNoise.Sample(gx, gy, Seed) : 0.5f;
-        float Water = RieverNoise.Sample(gx, gy, Seed);
-        // 2. ·â×°Îª»·¾³Òò×Ó
-        EnvironmentFactors env = new()
+        // ä»å™ªå£°é…ç½®ä¸­è·å–å„é¡¹ç¯å¢ƒå‚æ•°
+        float temp = Noises.ContainsKey(NoiseType.Temperature) ? Noises[NoiseType.Temperature].Sample(gx, gy, Seed) : 0.5f;
+        float humid = Noises.ContainsKey(NoiseType.Humidity) ? Noises[NoiseType.Humidity].Sample(gx, gy, Seed) : 0.5f;
+        float precip = Noises.ContainsKey(NoiseType.Precipitation) ? Noises[NoiseType.Precipitation].Sample(gx, gy, Seed) : 0.5f;
+        float solidity = Noises.ContainsKey(NoiseType.Solidity) ? Noises[NoiseType.Solidity].Sample(gx, gy, Seed) : 0.5f;
+        float hight = Noises.ContainsKey(NoiseType.Land) ? Noises[NoiseType.Land].Sample(gx, gy, Seed) : 0.5f;
+
+        // æ²³æµå™ªå£°å¤„ç†
+        float Water = Noises[NoiseType.River].Sample(gx, gy, Seed);
+        if (Water > 0.5f)
+        {
+            // ç”Ÿæˆæ²³æµæ—¶è°ƒæ•´ç¯å¢ƒå‚æ•°
+            solidity -= 1;
+            humid += 1;
+        }
+
+        // æ„å»ºç¯å¢ƒå› å­å¯¹è±¡å¹¶é™åˆ¶åœ¨0-1èŒƒå›´å†…
+        EnvironmentFactors env = new EnvironmentFactors
         {
             Temperature = Mathf.Clamp01(temp),
             Humidity = Mathf.Clamp01(humid),
@@ -184,7 +216,24 @@ public class RandomMapGenerator : MonoBehaviour
             Hight = Mathf.Clamp01(hight)
         };
 
-        // 3. Biome Æ¥Åä ¡ª¡ª ÕÒµ½µÚÒ»¸ö·ûºÏÌõ¼şµÄÈºÏµ
+        // è®¡ç®—æœ¬åœ°åæ ‡å¹¶å­˜å‚¨ç¯å¢ƒå› å­
+        Vector2Int localPos = position - map.Data.position;
+        if (localPos.x >= 0 && localPos.x < EnvFactorsGrid.GetLength(0) &&
+            localPos.y >= 0 && localPos.y < EnvFactorsGrid.GetLength(1))
+        {
+            EnvFactorsGrid[localPos.x, localPos.y] = env;
+        }
+
+        // åŒ¹é…ç”Ÿç‰©ç¾¤ç³»å¹¶ç”Ÿæˆåœ°å—
+        BiomeData biome = MatchAndGenerateBiomeTile(position, env);
+        if (biome != null)
+        {
+            GenerateResourcesForBiome(position, biome, env);
+        }
+    }
+
+    private BiomeData MatchAndGenerateBiomeTile(Vector2Int position, EnvironmentFactors env)
+    {
         BiomeData biome = null;
         foreach (var b in biomes)
         {
@@ -194,70 +243,16 @@ public class RandomMapGenerator : MonoBehaviour
                 break;
             }
         }
-        if (biome == null) return; // Ã»ÓĞÆ¥ÅäÈºÏµ¾ÍÌø¹ı
+        if (biome == null) return null;
 
-        // 4. ÉèÖÃÔ¤ÀÀÑÕÉ«£¨µ÷ÊÔÓÃ£©
+        // è®°å½•è°ƒè¯•é¢œè‰²å¹¶ç”Ÿæˆåœ°å½¢Tile
         ColorDicitionary[position] = biome.PreviewColor;
-
-        // 5. Éú³ÉÍßÆ¬Óë×ÊÔ´
         GenerateTerrainTile(position, biome, env);
-        if(Water > 0.5f)
-        AddTile(position, RieverNoise.biomeData.TerrainConfig.TileSpawns[0].TileDataName);
-        GenerateRandomResources(position, biome, env);
+
+        return biome;
     }
 
-    public void AddTile(Vector2Int position, string key)
-    {
-        if (!tileDataCache.ContainsKey(key))
-        {
-            var prefab = GameRes.Instance.GetPrefab(key);
-            if (prefab == null)
-            {
-                return;
-            }
-
-            var blockTile = prefab.GetComponent<IBlockTile>();
-            if (blockTile == null)
-            {
-                return;
-            }
-
-            tileDataCache[key] = blockTile.TileData;
-        }
-        var tile = tileDataCache[key].DeepClone();
-        map.ADDTile(position, tile);
-    }
-    private void GenerateTerrainTile(Vector2Int position, BiomeData biome, EnvironmentFactors env)
-    {
-        string key = biome.TerrainConfig.GetTilePrefab(env);
-
-        if (!tileDataCache.ContainsKey(key))
-        {
-            var prefab = GameRes.Instance.GetPrefab(key);
-            if (prefab == null)
-            {
-                Debug.LogError($"ÎŞ·¨»ñÈ¡Ô¤ÖÆÌå: {key}£¬ÈºÏµ: {biome.BiomeName}");
-                return;
-            }
-
-            var blockTile = prefab.GetComponent<IBlockTile>();
-            if (blockTile == null)
-            {
-                Debug.LogError($"Ô¤ÖÆÌå {key} È±ÉÙ IBlockTile£¬ÈºÏµ: {biome.BiomeName}");
-                return;
-            }
-
-            tileDataCache[key] = blockTile.TileData;
-        }
-
-        var tile = tileDataCache[key].DeepClone();
-        tile.position = new Vector3Int(position.x, position.y, 0);
-        map.ADDTile(position, tile);
-    }
-
-
-
-    private void GenerateRandomResources(Vector2Int pos, BiomeData biome, EnvironmentFactors env)
+    private void GenerateResourcesForBiome(Vector2Int pos, BiomeData biome, EnvironmentFactors env)
     {
         uint state = (uint)(pos.x * 114514 ^ pos.y * 1919810);
 
@@ -265,52 +260,88 @@ public class RandomMapGenerator : MonoBehaviour
         {
             if (!spawn.environmentConditionRange.IsMatch(env)) continue;
 
+            // éšæœºåˆ¤å®šæ˜¯å¦ç”Ÿæˆèµ„æº
             float chance = (Xorshift32(ref state) & 0xFFFFFF) / (float)0x1000000;
             if (chance > spawn.SpawnChance) continue;
 
-            float offsetX = (Xorshift32(ref state) & 0xFFFFFF) / (float)0x1000000;
-            float offsetY = (Xorshift32(ref state) & 0xFFFFFF) / (float)0x1000000;
+            Vector2 spawnPos = new Vector2(pos.x  + 0.5f, pos.y  + 0.5f);
 
-            Vector2 spawnPos = new(pos.x + offsetX + 0.5f, pos.y + offsetY + 0.5f);
-
+            // å®ä¾‹åŒ–èµ„æºç‰©å“
             ItemMgr.Instance.InstantiateItem(
                 spawn.itemName,
                 spawnPos,
                 default,
                 default,
                 map.ParentObject
-            );
+            ).Load();
         }
+    }
+
+    private void GenerateTerrainTile(Vector2Int position, BiomeData biome, EnvironmentFactors env)
+    {
+        string key = biome.TerrainConfig.GetTilePrefab(env);
+
+        // ç¼“å­˜TileDataé¿å…é‡å¤åŠ è½½
+        if (!tileDataCache.ContainsKey(key))
+        {
+            var prefab = GameRes.Instance.GetPrefab(key);
+            if (prefab == null)
+            {
+                Debug.LogError($"æ— æ³•è·å–é¢„åˆ¶ä½“: {key}ï¼Œç¾¤ç³»: {biome.BiomeName}");
+                return;
+            }
+
+            var blockTile = prefab.GetComponent<IBlockTile>();
+            if (blockTile == null)
+            {
+                Debug.LogError($"é¢„åˆ¶ä½“ {key} ç¼ºå°‘ IBlockTile ç»„ä»¶ï¼Œç¾¤ç³»: {biome.BiomeName}");
+                return;
+            }
+
+            tileDataCache[key] = blockTile.TileData;
+        }
+
+        // å…‹éš†å¹¶æ·»åŠ Tileåˆ°åœ°å›¾
+        var tile = tileDataCache[key].DeepClone();
+        tile.position = new Vector3Int(position.x, position.y, 0);
+        map.ADDTile(position, tile);
     }
     #endregion
 
-    #region ±ß½ç
+    #region è¾¹ç•Œå¤„ç†
     public void GenerateMapEdges()
     {
         Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
         foreach (var d in dirs)
         {
             Item edge = ItemMgr.Instance.InstantiateItem("MapEdge", default, default, default, map.ParentObject);
-            if (edge is WorldEdge we) we.SetupMapEdge(d, map.Data.position);
-            else Debug.LogError("[RandomMapGenerator] ±ß½ç¶ÔÏóÀàĞÍ´íÎó");
+            if (edge is WorldEdge we)
+                we.SetupMapEdge(d, map.Data.position);
+            else
+                Debug.LogError("[RandomMapGenerator] è¾¹ç•Œå¯¹è±¡ç±»å‹é”™è¯¯ï¼Œåº”ä¸ºWorldEdge");
         }
-        Debug.Log("[RandomMapGenerator] ±ß½çÉú³ÉÍê³É");
+        Debug.Log("[RandomMapGenerator] è¾¹ç•Œç”Ÿæˆå®Œæˆ");
     }
     #endregion
 
-    #region ¹¤¾ß·½·¨
+    #region å·¥å…·æ–¹æ³•
     private void ClearMap()
     {
         map.tileMap?.ClearAllTiles();
         map.Data.TileData?.Clear();
-        Debug.Log("[RandomMapGenerator] µØÍ¼ÒÑÇå³ı");
+        Debug.Log("[RandomMapGenerator] åœ°å›¾å·²æ¸…é™¤");
     }
 
     private void OnGenerationComplete()
     {
         map.tileMap?.RefreshAllTiles();
         map.Data.TileLoaded = true;
+        Debug.Log("[RandomMapGenerator] åœ°å›¾ç”Ÿæˆå®Œæˆ");
     }
+
+    /// <summary>
+    /// Xorshift32éšæœºæ•°ç”Ÿæˆå™¨
+    /// </summary>
     private static uint Xorshift32(ref uint state)
     {
         state ^= state << 13;
@@ -319,4 +350,92 @@ public class RandomMapGenerator : MonoBehaviour
         return state;
     }
     #endregion
+
+    #region é¼ æ ‡ä½ç½®ç¯å¢ƒå‚æ•°æ£€æµ‹
+    /// <summary>
+    /// è·å–é¼ æ ‡ä½ç½®ä¸‹çš„ç¯å¢ƒå‚æ•°å¹¶æ‰“å°åˆ°Debugçª—å£
+    /// </summary>
+    private void GetEnvFactorsAtMousePosition()
+    {
+        // å‰ç½®æ£€æŸ¥ï¼šå¿…è¦ç»„ä»¶æ˜¯å¦é½å…¨
+        if (mapGrid == null)
+        {
+            Debug.LogError("[RandomMapGenerator] ç¼ºå°‘Gridç»„ä»¶ï¼Œæ— æ³•è½¬æ¢Tileåæ ‡");
+            return;
+        }
+        if (targetTilemap == null)
+        {
+            Debug.LogError("[RandomMapGenerator] ç¼ºå°‘Tilemapç»„ä»¶ï¼Œæ— æ³•æ£€æµ‹Tile");
+            return;
+        }
+        if (_mainCamera == null)
+        {
+            Debug.LogError("[RandomMapGenerator] ç¼ºå°‘MainCameraï¼Œæ— æ³•è·å–é¼ æ ‡ä¸–ç•Œåæ ‡");
+            return;
+        }
+
+        // 1. é¼ æ ‡å±å¹•åæ ‡ â†’ ä¸–ç•Œåæ ‡
+        Vector3 mouseScreenPos = Input.mousePosition;
+        mouseScreenPos.z = Mathf.Abs(_mainCamera.transform.position.z - targetTilemap.transform.position.z);
+        Vector3 mouseWorldPos = _mainCamera.ScreenToWorldPoint(mouseScreenPos);
+        mouseWorldPos.z = 0; // å¼ºåˆ¶åœ¨Tilemapå¹³é¢
+
+        // 2. ä¸–ç•Œåæ ‡ â†’ Tilemapæ ¼å­åæ ‡
+        Vector3Int cellPos = mapGrid.WorldToCell(mouseWorldPos);
+        Vector2Int gridPos = new Vector2Int(cellPos.x, cellPos.y);
+
+        // 3. æ£€æŸ¥è¯¥æ ¼å­æ˜¯å¦å­˜åœ¨Tile
+        if (!targetTilemap.HasTile(cellPos))
+        {
+            Debug.LogWarning($"[é¼ æ ‡æ£€æµ‹] æ ¼å­({gridPos.x}, {gridPos.y}) æ— Tileï¼Œè·³è¿‡æ£€æµ‹");
+            return;
+        }
+
+        // 4. è®¡ç®—æœ¬åœ°åæ ‡
+        Vector2Int localGridPos = gridPos - map.Data.position;
+
+        // 5. æ£€æµ‹æ˜¯å¦åœ¨æœ‰æ•ˆèŒƒå›´å†…
+        if (EnvFactorsGrid == null ||
+            localGridPos.x < 0 || localGridPos.x >= EnvFactorsGrid.GetLength(0) ||
+            localGridPos.y < 0 || localGridPos.y >= EnvFactorsGrid.GetLength(1))
+        {
+            Debug.LogWarning($"[é¼ æ ‡æ£€æµ‹] æ ¼å­({gridPos.x}, {gridPos.y}) ä¸åœ¨å½“å‰åœ°å›¾æ•°æ®èŒƒå›´å†…");
+            return;
+        }
+
+        // 6. è·å–ç¯å¢ƒå‚æ•°å¹¶æŸ¥æ‰¾ç”Ÿç‰©ç¾¤ç³»
+        EnvironmentFactors env = EnvFactorsGrid[localGridPos.x, localGridPos.y];
+        string biomeName = "æœªçŸ¥";
+        foreach (var biome in biomes)
+        {
+            if (biome.IsEnvironmentValid(env))
+            {
+                biomeName = biome.BiomeName;
+                break;
+            }
+        }
+
+        // 7. æ‰“å°Debugä¿¡æ¯
+        Debug.Log($"=== é¼ æ ‡Tileç¯å¢ƒå‚æ•° ===\n" +
+                  $"æ ¼å­åæ ‡ï¼š({gridPos.x}, {gridPos.y})\n" +
+                  $"ç”Ÿç‰©ç¾¤ç³»ï¼š{biomeName}\n" +
+                  $"æ¸©åº¦ï¼š{env.Temperature:F2} | æ¹¿åº¦ï¼š{env.Humidity:F2}\n" +
+                  $"é™æ°´é‡ï¼š{env.Precipitation:F2} | åšå›ºåº¦ï¼š{env.Solidity:F2}\n" +
+                  $"é«˜åº¦ï¼š{env.Hight:F2}");
+    }
+    #endregion
 }
+
+[Serializable]
+public enum NoiseType
+{
+    Land,
+    Humidity,
+    Precipitation,
+    Temperature,
+    River,
+    Solidity
+}
+
+[Serializable]
+public class NoiseDictionary : SerializedDictionary<NoiseType, BaseNoise> { }

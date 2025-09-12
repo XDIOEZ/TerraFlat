@@ -29,12 +29,11 @@ Transform:
   m_GameObject: {fileID: 480202971505006560}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 7.04, y: -0.14, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5080689173633813162}
-  - {fileID: 6283402004694861917}
   - {fileID: 3588233650230314}
   - {fileID: 5962079056340489156}
   - {fileID: 1587724783941711676}
@@ -140,7 +139,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -182,37 +181,6 @@ MonoBehaviour:
     ItemSpecialData: 
     Guid: 0
     code: 
---- !u!1 &2802196787596597447
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6283402004694861917}
-  m_Layer: 9
-  m_Name: Mods
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6283402004694861917
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2802196787596597447}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7293395394034987005}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4099061837537365540
 GameObject:
   m_ObjectHideFlags: 0
@@ -323,7 +291,7 @@ Transform:
   m_GameObject: {fileID: 4779281695198953166}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -7.04, y: 0.14, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -350,7 +318,6 @@ MonoBehaviour:
     ProductionTime: 0
     MaxProductionCount: 0
     CurrentProductionCount: 0
-    ActiveState: 3
   _ModDataMemoryPackable:
     Name: 
     ID: 
@@ -358,7 +325,7 @@ MonoBehaviour:
     Type: 0
     BitData: 
   growModule: {fileID: 0}
-  ProductionTime: 1
+  ProductionSpeed: 1
 --- !u!1001 &607214197638324720
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -369,11 +336,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 6543955968952562228, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6543955968952562228, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.39
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6543955968952562228, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
       propertyPath: m_LocalPosition.z

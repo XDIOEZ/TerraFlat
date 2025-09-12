@@ -332,28 +332,27 @@ public class NoisePreview : MonoBehaviour
         previewScale = Mathf.Max(0.1f, previewScale);
         pixelBlockSize = Mathf.Clamp(pixelBlockSize, 1, 32);
 
-        // 确保阈值逻辑正确（下阈值不大于上阈值）
         if (hideBelowThreshold > hideAboveThreshold)
         {
             (hideBelowThreshold, hideAboveThreshold) = (hideAboveThreshold, hideBelowThreshold);
         }
 
-        // 关键修改：去掉延迟，直接即时更新（加安全检查避免报错）
-        if (!Application.isPlaying && editModeRealtimeUpdate && isInitialized && noiseTexture != null)
+#if UNITY_EDITOR
+        if (!Application.isPlaying && editModeRealtimeUpdate)
         {
-            // 直接调用生成逻辑，无需延迟
-            GenerateNoiseTexture();
-        }
-        // 若未初始化，先初始化再更新（避免首次参数变化时无响应）
-        else if (!Application.isPlaying && editModeRealtimeUpdate && !isInitialized)
-        {
-            InitializeComponents();
-            if (noiseTexture != null)
+            // 延迟到安全时机再刷新，避免 SendMessage 报错
+            UnityEditor.EditorApplication.delayCall += () =>
             {
-                GenerateNoiseTexture();
-            }
+                if (this != null) // 确保对象还在
+                {
+                    InitializeComponents();
+                    GenerateNoiseTexture();
+                }
+            };
         }
+#endif
     }
+
 
     // 当噪声设置资产更换时重新订阅事件
     private void OnDidApplyAnimationProperties()

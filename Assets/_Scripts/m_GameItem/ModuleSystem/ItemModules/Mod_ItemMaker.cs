@@ -1,4 +1,4 @@
-using MemoryPack;
+ï»¿using MemoryPack;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,23 +10,27 @@ public partial class Mod_Production : Module
     {
         [MemoryPackIgnore]
         public GameObject itemPrefab;
+
         public string itemName;
         public int itemCount;
-        // ×î´óÉú³ÉÊ±¼ä
+
+        [Tooltip("ç”Ÿæˆæ‰€éœ€æ—¶é—´")]
         public float MaxProductionTime;
-        // µ±Ç°Éú²úÊ±¼ä
+
+        [Tooltip("å½“å‰ç´¯è®¡ç”Ÿäº§æ—¶é—´")]
         public float ProductionTime;
-        // ×î´óÉú³É´ÎÊı£¬-1 ±íÊ¾ÎŞÏŞÑ­»·
+
+        [Tooltip("æœ€å¤§ç”Ÿäº§æ¬¡æ•°ï¼Œ-1 è¡¨ç¤ºæ— é™å¾ªç¯")]
         public int MaxProductionCount;
-        // µ±Ç°Éú³É´ÎÊı
+
+        [Tooltip("å½“å‰å·²ç”Ÿäº§æ¬¡æ•°")]
         public int CurrentProductionCount;
-        public Mod_Grow.GrowState ActiveState = Mod_Grow.GrowState.³ÉÊì;
     }
 
     public List<ItemProductionData> ProductionList = new List<ItemProductionData>();
     public Ex_ModData_MemoryPackable _ModDataMemoryPackable;
     public Mod_Grow growModule;
-    public float ProductionTime = 1f; // Éú²úËÙ¶È
+    public float ProductionSpeed = 1f; // ç”Ÿäº§é€Ÿåº¦å€ç‡
 
     public override ModuleData _Data
     {
@@ -36,18 +40,17 @@ public partial class Mod_Production : Module
 
     private void OnValidate()
     {
-        ProductionList.ForEach(data =>
+        foreach (var data in ProductionList)
         {
             if (data.itemPrefab == null)
             {
-                Debug.LogError("ItemPrefab is null in ItemProductionData!");
-            }
-            else
-            {
-                data.itemName = data.itemPrefab.GetComponent<Item>().itemData.IDName;
+                Debug.LogError("âŒ ItemPrefab is null in ItemProductionData!");
+                continue;
             }
 
-        });
+            if (string.IsNullOrEmpty(data.itemName))
+                data.itemName = data.itemPrefab.GetComponent<Item>().itemData.IDName;
+        }
     }
 
     public override void Load()
@@ -57,7 +60,7 @@ public partial class Mod_Production : Module
         if (item.itemMods.ContainsKey_ID(ModText.Grow))
             growModule = item.itemMods.GetMod_ByID(ModText.Grow) as Mod_Grow;
 
-        growModule.Data.growState = Mod_Grow.GrowState.³ÉÊì;
+        Debug.Log($"[Load] è¯»å–å®Œæˆï¼Œå½“å‰ç”Ÿé•¿çŠ¶æ€ = {growModule?.Data.growState}");
     }
 
     public override void Save()
@@ -67,46 +70,52 @@ public partial class Mod_Production : Module
 
     public override void Action(float deltaTime)
     {
+        if (growModule == null)
+        {
+            Debug.LogWarning("âš ï¸ growModule æœªç»‘å®šï¼Œæ— æ³•ç”Ÿäº§ã€‚");
+            return;
+        }
+
+        // åªæœ‰æˆç†ŸçŠ¶æ€æ‰èƒ½ç”Ÿäº§
+        if (growModule.Data.growState != Mod_Grow.GrowState.æˆç†Ÿ)
+        {
+            // Debug.Log("æœªæˆç†Ÿï¼Œä¸ç”Ÿäº§ã€‚");
+            return;
+        }
+
         foreach (var data in ProductionList)
         {
-            // ½öµ± ActiveState Óë growModule ×´Ì¬Æ¥ÅäÊ±²Å½øĞĞÉú²ú
-            if (data.ActiveState == growModule.Data.growState)
+            if (data.itemPrefab == null) continue;
+
+            // åˆ¤æ–­æ˜¯å¦è¾¾åˆ°ç”Ÿäº§ä¸Šé™
+            if (data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
+                continue;
+
+            // ç´¯åŠ ç”Ÿäº§æ—¶é—´
+            data.ProductionTime += deltaTime * ProductionSpeed;
+
+            // ä½¿ç”¨ while ç¡®ä¿ä¸ä¼šæ¼ç®—
+            while (data.ProductionTime >= data.MaxProductionTime)
             {
-                // Èç¹ûµ±Ç°Éú³É´ÎÊıÒÑ´ïµ½×î´ó´ÎÊı£¨ÇÒ×î´ó´ÎÊı²»Îª-1£©£¬Í£Ö¹Éú²ú
+                ProduceItem(data);
+                data.ProductionTime -= data.MaxProductionTime;
+
                 if (data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
-                {
-                    continue; // Ìø¹ıµ±Ç°Ñ­»·£¬²»½øĞĞÉú²ú
-                }
-
-                // ÀÛ¼ÓÉú²úÊ±¼ä
-                data.ProductionTime += deltaTime * ProductionTime; // ¸ù¾İÉú²úËÙ¶Èµ÷½ÚÊ±¼ä
-
-                // µ±µ±Ç°Éú²úÊ±¼ä´ïµ½»ò³¬¹ı×î´óÉú²úÊ±¼ä£¬Éú²úÎïÆ·²¢ÖØÖÃ¼ÆÊ±
-                if (data.ProductionTime >= data.MaxProductionTime)
-                {
-                    // Éú³ÉÎïÆ··½·¨
-                    if(data.itemName == "")
-                    {
-                        data.itemName = data.itemPrefab.GetComponent<Item>().itemData.IDName;
-                    }
-                    Item item = ItemMgr.Instance.InstantiateItem(data.itemName);
-                    item.itemData.Stack.Amount = data.itemCount;
-
-                    // Ôö¼Óµ±Ç°Éú³É´ÎÊı
-                    data.CurrentProductionCount++;
-
-                    // Èç¹ûµ±Ç°Éú³É´ÎÊıĞ¡ÓÚ×î´óÉú³É´ÎÊı»òÕßÎŞÏŞÑ­»·£¨MaxProductionCountÎª-1£©£¬ÖØÖÃÉú²úÊ±¼ä
-                    if (data.MaxProductionCount == -1 || data.CurrentProductionCount < data.MaxProductionCount)
-                    {
-                        data.ProductionTime = 0f; // ÖØÖÃÉú²úÊ±¼ä£¬¼ÌĞøÉú³É
-                    }
-                    else
-                    {
-                        // ´ïµ½×î´óÉú³É´ÎÊıºó£¬²»ÔÙ¼ÌĞøÉú²ú
-                        data.ProductionTime -= data.MaxProductionTime; // ¼õÈ¥Éú²úÊ±¼ä£¨·ÀÖ¹deltaTime¹ı¶àÂ©Ëã£©
-                    }
-                }
+                    break;
             }
         }
+    }
+
+    private void ProduceItem(ItemProductionData data)
+    {
+        if (string.IsNullOrEmpty(data.itemName))
+            data.itemName = data.itemPrefab.GetComponent<Item>().itemData.IDName;
+
+        Item item = ItemMgr.Instance.InstantiateItem(data.itemName);
+        item.itemData.Stack.Amount = data.itemCount;
+
+        data.CurrentProductionCount++;
+
+        Debug.Log($"[ç”Ÿäº§å®Œæˆ] {data.itemName} Ã—{data.itemCount}, å·²ç”Ÿäº§æ¬¡æ•°={data.CurrentProductionCount}");
     }
 }

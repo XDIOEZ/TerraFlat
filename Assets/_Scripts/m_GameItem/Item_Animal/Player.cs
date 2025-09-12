@@ -27,6 +27,7 @@ public class Player
     [Tooltip("库存字典事件")]
     private UltEvent _onInventoryData_Dict_Changed = new();
 
+
     #endregion
 
     #region 属性封装
@@ -218,6 +219,12 @@ public class Player
     #endregion
 
     #region 生命周期与行为
+
+    public override void Start()
+    {
+        ItemMgr.Instance.Player_DIC[Data.Name_User] = this;
+        base.Start();
+    }
 
     public override void Act()
     {
