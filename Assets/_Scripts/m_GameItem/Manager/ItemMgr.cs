@@ -167,7 +167,39 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
         return item;
     }
+    public Item InstantiateItem(ItemData itemData, GameObject parent = null,bool newGuid = false)
+    {
+        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData._transform.Position, itemData._transform.Rotation, itemData._transform.Scale);
 
+        Item item = itemObj.GetComponent<Item>();
+
+        if (parent != null)
+        {
+            itemObj.transform.SetParent(parent.transform, true);
+        }
+        else
+        {
+            if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var chunk))
+            {
+                itemObj.transform.SetParent(chunk.transform, true);
+            }
+            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var UnActivechunk))
+            {
+                itemObj.transform.SetParent(UnActivechunk.transform, true);
+            }
+
+            ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
+        }
+
+
+        item.itemData = itemData;
+
+        RunTimeItems[item.itemData.Guid] = item;
+
+        AddToGroup(item); // 分组逻辑
+
+        return item;
+    }
 
     public Item InstantiateItem(ItemData itemData, GameObject parent = null)
     {

@@ -95,7 +95,7 @@ GameObject:
   - component: {fileID: 7348428604803880190}
   - component: {fileID: 5957708655117159811}
   - component: {fileID: 7793935756207322713}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Mine_Iron
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -176,7 +176,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -196,8 +196,14 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
-    TagDictionary:
-      keys: []
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 2

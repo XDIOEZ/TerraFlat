@@ -93,6 +93,8 @@ public class Map : Item, ISave_Load
 
             Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
 
+            AstarGameManager.Instance.ModifyNodePenalty_Optimized(position3D, topTile.Penalty);
+
             tileMap.SetTile(position3D, tile);
         }
        // Debug.Log("多层 TileData 已加载到 Tilemap 中");

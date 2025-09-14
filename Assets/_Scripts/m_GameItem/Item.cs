@@ -25,9 +25,9 @@ public abstract class Item : MonoBehaviour
     public abstract ItemData itemData { get; set; }
 
     [FastClonerIgnore]
+    [ShowInInspector]
     public ItemMods itemMods = new ItemMods();
 
-    [ShowInInspector]
     [FastClonerIgnore]
     public Dictionary<string, Module> Mods { get=> itemMods.Mods; set => itemMods.Mods = value; }
 

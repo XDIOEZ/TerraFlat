@@ -117,7 +117,8 @@ public abstract class Module : MonoBehaviour
         Module module = @object.GetComponentInChildren<Module>();
         module._Data.ID = modName;
         module._Data.Name = GenerateUniqueModName(module._Data.ID);
-        item.Mods.Add(module._Data.Name, module);
+
+        item.itemMods.AddMod(module);
         module.ModuleInit(item, null);
         return module;
     }
@@ -177,17 +178,13 @@ public abstract class Module : MonoBehaviour
 
     public static Module REMOVEModFROMItem(Item item, string name)
     {
-        Module module;
+        Module module = item.itemMods.GetMod_ByID("入水特效");
 
-        Destroy(item.Mods[name].gameObject);
+        Destroy(module.gameObject);
 
-        item.Mods[name].Save();
+        module.Save();
 
-        module = item.Mods[name];
-
-        item.Mods.Remove(name);
-
-        item.itemData.ModuleDataDic.Remove(name);
+        item.itemMods.RemoveMod(module);
 
         return module;
     }

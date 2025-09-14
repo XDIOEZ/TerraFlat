@@ -250,6 +250,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             if (Chunk_Dic.TryGetValue(key, out Chunk chunk) && chunk != null)
             {
                 chunk.SaveChunk();
+                SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[key] = chunk.MapSave;
                 DestroyChunk(chunk);
             }
         }
@@ -269,7 +270,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(ChunkName, out Chunk chunkGameObject))
         {
             // 如果对象存在但处于未激活状态，则激活它
-            if (!chunkGameObject.gameObject.activeSelf && chunkGameObject != null)
+            if (chunkGameObject != null &&!chunkGameObject.gameObject.activeSelf)
             {
                 ChunkMgr.Instance.SetChunkActive(chunkGameObject, true);
                 chunk = chunkGameObject;
@@ -493,6 +494,11 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public static float GetRadius()
     {
         return SaveDataMgr.Instance.SaveData.PlanetData_Dict[SceneManager.GetActiveScene().name].Radius;
+    }
+
+    public void GetChunkByItemPosition(Vector2 pos, out Chunk chunk)
+    {
+        ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(pos).ToString(), out chunk);
     }
 
     public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)

@@ -153,12 +153,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4778519347457968648}
-  - component: {fileID: 4850197992055457325}
-  - component: {fileID: 1252038616444824146}
   - component: {fileID: 5430792662477495375}
   - component: {fileID: 4010289484235736277}
   - component: {fileID: 7050136230430806877}
-  m_Layer: 9
+  - component: {fileID: 4850197992055457325}
+  m_Layer: 0
   m_Name: Chicken
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -189,78 +188,6 @@ Transform:
   - {fileID: 395832595285550428}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!61 &4850197992055457325
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5065571277225119290}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 1
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0.007042438, y: 0.04902029}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.2}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 1, y: 1}
-    adaptiveTilingThreshold: 0.5
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 0.2, y: 0.1}
-  m_EdgeRadius: 0
---- !u!50 &1252038616444824146
-Rigidbody2D:
-  serializedVersion: 4
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5065571277225119290}
-  m_BodyType: 1
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDrag: 0
-  m_AngularDrag: 0
-  m_GravityScale: 0
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 0
-  m_Constraints: 4
 --- !u!114 &5430792662477495375
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -330,7 +257,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -366,7 +293,7 @@ MonoBehaviour:
     Stack:
       Amount: 1
       Volume: 1
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     _transform:
       Position: {x: 0, y: 0, z: 0}
       Rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -374,6 +301,51 @@ MonoBehaviour:
     ItemSpecialData: 
     Guid: 0
     code: 
+--- !u!61 &4850197992055457325
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5065571277225119290}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0.007042438, y: 0.04902029}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.2}
+    oldSize: {x: 1, y: 1}
+    newSize: {x: 1, y: 1}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 0.2, y: 0.1}
+  m_EdgeRadius: 0
 --- !u!1 &5341392491591430847
 GameObject:
   m_ObjectHideFlags: 0
@@ -384,7 +356,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6339539674819276060}
   - component: {fileID: 4355467631679904903}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: "\u9965\u997F\u6A21\u5757"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -596,7 +568,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4003355562208182651}
   - component: {fileID: 2697192705521632073}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: AI_Searcher
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -652,7 +624,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7794179051791914058}
   - component: {fileID: 9009003475020788583}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: FaceMouse
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -692,6 +664,7 @@ MonoBehaviour:
     RotationSpeed: 180
     FocusPoint: {x: 0, y: 0}
     ActivateRotation: 1
+    StopRotationDistance: 0.1
   ModData:
     Name: 
     ID: 
@@ -699,6 +672,7 @@ MonoBehaviour:
     Type: 0
     BitData: 
   PlayerController: {fileID: 0}
+  targetRotationTransforms: []
   mover: {fileID: 0}
 --- !u!1 &8912185394749784350
 GameObject:
@@ -709,7 +683,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2086040447788963534}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: FaceItem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -742,6 +716,10 @@ PrefabInstance:
     - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_Name
       value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: item
@@ -886,6 +864,10 @@ PrefabInstance:
     - target: {fileID: 2483916936477612025, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
       propertyPath: m_Name
       value: "AI\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 2483916936477612025, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
+      propertyPath: m_Layer
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
       propertyPath: m_LocalPosition.x

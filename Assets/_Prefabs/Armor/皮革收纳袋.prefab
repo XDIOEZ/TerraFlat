@@ -95,7 +95,7 @@ GameObject:
   - component: {fileID: 7070529130677377428}
   - component: {fileID: 1269726057294482851}
   - component: {fileID: 8667576724681055711}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: "\u76AE\u9769\u6536\u7EB3\u888B"
   m_TagString: Untagged
   m_Icon: {fileID: 6519382022992737161, guid: 0000000000000000d000000000000000, type: 0}
@@ -131,7 +131,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:

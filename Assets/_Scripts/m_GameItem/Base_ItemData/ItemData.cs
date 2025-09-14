@@ -65,8 +65,6 @@ public  abstract partial class ItemData
     [ShowInInspector]
     public Dictionary<string,ModuleData> ModuleDataDic =new();
 
-    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
-
     //重写ToString方法，用于在控制台输出物品信息
     public override string ToString()
     {

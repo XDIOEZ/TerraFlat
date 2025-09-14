@@ -13,11 +13,11 @@ TagManager:
   - 
   - Water
   - UI
-  - Player
+  - Collider
+  - DamageReciver
+  - DamageSender
   - 
-  - Map
-  - Entity
-  - Light
+  - 
   - 
   - 
   - 

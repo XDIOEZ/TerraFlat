@@ -7,12 +7,12 @@ public class Buff_MoverSpeedChange : BuffAction
 
     public override void Apply(BuffRunTime data)
     {
-        if (!data.buff_Receiver.Mods.ContainsKey(ModText.Mover))
+        data.buff_Receiver.itemMods.GetMod_ByID(ModText.Mover, out Mover mod);
+        if (mod == null)
         {
             // Buff接受者没有速度接口，取消apply
             return;
         }
-        var speeder = data.buff_Receiver.Mods[ModText.Mover].GetComponent<Mover>();
-        speeder.Speed.MultiplicativeModifier *= SpeedChangeValue;
+        mod.Speed.MultiplicativeModifier *= SpeedChangeValue;
     }
 }

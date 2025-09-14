@@ -20,8 +20,6 @@ public class Apple_Red : Item
         set => data = (Data_Creature)value;
     }
 
-    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic { get => data.BuffRunTimeData_Dic; set => data.BuffRunTimeData_Dic = value; }
-
     public new void Start()
     {
         base.Start();

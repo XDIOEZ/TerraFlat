@@ -58,7 +58,6 @@ public class Item_Tile_Water : Item, IBlockTile
         mapCoreScript.ADDTile(cellPos2D, tileData);
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
-
     //tiledata.水的深度 =10m 
     public void Tile_Enter(Item item, TileData tileData)
     {
@@ -88,23 +87,28 @@ public class Item_Tile_Water : Item, IBlockTile
                     continue;
                 }
 
-                buffManager.AddBuffRuntime(buffData, this, item);
+                buffManager.AddBuffRuntime(buffData,item);
             }
         }
 
         // 模块添加逻辑（入水特效）
-        if (validItem && !Module.HasMod(item, "入水特效"))
+        if (validItem && item.itemMods.GetMod_ByID("入水特效")==null)
         {
             Module.ADDModTOItem(item, "入水特效");
 
             // 获取模块的 Transform 并修改位置
-            Transform modTransform = Module.GetMod(item, "入水特效").transform;
+            Transform modTransform = item.itemMods.GetMod_ByID("入水特效").transform;
             Vector3 pos = modTransform.localPosition;
-            pos.y = -0.6f;
+            //tile的位置
+            //通过Tile获取env的参数
+            TileData_Water water  = tileData as TileData_Water;
+
+            pos.y = Mathf.Lerp(-0.7f, 0,water.DeepValue.Value );
             pos.x = 0f;
             modTransform.localPosition = pos;
         }
     }
+
 
 
     public void Tile_Exit(Item item, TileData tileData)
@@ -120,7 +124,7 @@ public class Item_Tile_Water : Item, IBlockTile
             }
         }
 
-        if(Module.HasMod(item, "入水特效")==true)
+        if (item.itemMods.GetMod_ByID("入水特效") != null)
         Module.REMOVEModFROMItem(item, "入水特效");
     }
 

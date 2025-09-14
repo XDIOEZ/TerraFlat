@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1773393018729648792}
   - component: {fileID: 3045574144487446109}
   m_Layer: 0
-  m_Name: "\u751F\u957F\u6A21\u5757"
+  m_Name: "\u6210\u957F\u6A21\u5757"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -66,6 +66,7 @@ MonoBehaviour:
       loot:
         lootName: Chicken
         lootAmountRange: {x: 0, y: 0}
+        lootPrefab: {fileID: 0}
       DestroySelf: 0
     nodeIndex: 0
   _memoryPackable:
@@ -74,112 +75,6 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
---- !u!1 &2446499760499109157
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7314678335343963363}
-  - component: {fileID: 5482933814532775523}
-  m_Layer: 9
-  m_Name: "\u98DF\u7269\u6A21\u5757"
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7314678335343963363
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2446499760499109157}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3570442893651331518}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5482933814532775523
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2446499760499109157}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  ExData:
-    Name: 
-    ID: 
-    isRunning: 0
-    Type: 0
-    BitData: 
-  Data:
-    nutrition:
-      Carbohydrates: 20
-      Max_Carbohydrates:
-        BaseValue: 20
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
-      Fat: 0
-      Max_Fat:
-        BaseValue: 0
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
-      Protein: 0
-      Max_Protein:
-        BaseValue: 0
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
-      Water: 10
-      Max_Water:
-        BaseValue: 10
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
-      Vitamins: 10
-      Max_Vitamins:
-        BaseValue: 10
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
-    Max_EatingProgress: 3
-    AbsorptionRate: 1
-    ShowCanvas: 0
-    nutritionConsumeSpeed:
-      BaseValue: 1
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-    FeelGood: 0
-    PanelPosition: {x: 0, y: 0}
-  EatingProgress: 0
-  DataUpdate:
-    _PersistentCalls: []
-  PanelPrefab: {fileID: 1316998372701819345, guid: 215a9df040199634fb89efb65997fb42, type: 3}
-  PanleInstance: {fileID: 0}
-  UIValues: {fileID: 0}
-  Stamina: {fileID: 0}
 --- !u!1 &2641514758235206763
 GameObject:
   m_ObjectHideFlags: 0
@@ -189,9 +84,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3570442893651331518}
-  - component: {fileID: 2670190524871535364}
   - component: {fileID: 7921765928723033031}
-  m_Layer: 9
+  - component: {fileID: 2670190524871535364}
+  m_Layer: 0
   m_Name: Egg
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -214,9 +109,59 @@ Transform:
   - {fileID: 3696442672669368330}
   - {fileID: 8704915072736695534}
   - {fileID: 1773393018729648792}
-  - {fileID: 7314678335343963363}
+  - {fileID: 4144747857629859994}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7921765928723033031
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2641514758235206763}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  OnUIRefresh:
+    _PersistentCalls: []
+  OnItemDestroy:
+    _PersistentCalls: []
+  OnAct:
+    _PersistentCalls: []
+  Sprite: {fileID: 826753647801889531}
+  updateInterval: 0.1
+  Data:
+    IDName: Egg
+    GameName: "\u86CB"
+    Description: "\u53EF\u4EE5\u662F\u4EFB\u4F55\u52A8\u7269\u7684\u86CB"
+    Durability: 1
+    ItemTags:
+      Item_TypeTag:
+      - Food
+      Item_Material:
+      - Food
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
+    Stack:
+      Amount: 1
+      Volume: 1
+      CanBePickedUp: 1
+    _transform:
+      Position: {x: 0, y: 0, z: 0}
+      Rotation: {x: 0, y: 0, z: 0, w: 0}
+      Scale: {x: 0, y: 0, z: 0}
+    ItemSpecialData: 
+    Guid: 0
+    code: 
 --- !u!61 &2670190524871535364
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -262,50 +207,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.20431328, y: 0.27009082}
   m_EdgeRadius: 0
---- !u!114 &7921765928723033031
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2641514758235206763}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
-  OnUIRefresh:
-    _PersistentCalls: []
-  OnItemDestroy:
-    _PersistentCalls: []
-  OnAct:
-    _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
-  Sprite: {fileID: 826753647801889531}
-  updateInterval: 0.1
-  Data:
-    IDName: Egg
-    GameName: "\u86CB"
-    Description: "\u53EF\u4EE5\u662F\u4EFB\u4F55\u52A8\u7269\u7684\u86CB"
-    Durability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Food
-      Item_Material:
-      - Food
-    Stack:
-      Amount: 1
-      Volume: 1
-      CanBePickedUp: 1
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: 
-    Guid: 0
-    code: 
 --- !u!1 &6119623198695186858
 GameObject:
   m_ObjectHideFlags: 0
@@ -474,3 +375,69 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1001 &8004333210054911293
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 3570442893651331518}
+    m_Modifications:
+    - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_Name
+      value: "\u98DF\u7269\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+--- !u!4 &4144747857629859994 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+  m_PrefabInstance: {fileID: 8004333210054911293}
+  m_PrefabAsset: {fileID: 0}

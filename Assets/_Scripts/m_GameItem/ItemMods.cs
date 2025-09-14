@@ -1,17 +1,20 @@
 
 using FastCloner.Code;
 using Sirenix.OdinInspector;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[Serializable]
 public class ItemMods
 {
     [ShowInInspector]
     [FastClonerIgnore]
     public Dictionary<string, Module> Mods { get; set; } = new Dictionary<string, Module>();
 
-    [FastClonerIgnore]
+    
     [ShowInInspector]
+    [FastClonerIgnore]
     public Dictionary<string, List<Module>> Mods_List { get; set; } = new();
 
     public List<Module> GetModList_ByID(string modID)
@@ -26,6 +29,7 @@ public class ItemMods
             return null;
         return Mods_List[modID][0];
     }
+
     public void GetMod_ByID<T>(string modID,out T mod) where T : Module
     {
         if (Mods_List.ContainsKey(modID) == false)

@@ -184,6 +184,8 @@ public class Mod_Scene : Module
                         }
                     }
                 }
+
+                AstarGameManager.Instance.UpdateMeshAsync();
             });
         }
         // ===== 离开房间 =====
@@ -196,12 +198,13 @@ public class Mod_Scene : Module
             {
                 playerData.CurrentSceneName = this.Data.SceneName;//更新玩家所处的场景名称
                 playerData.IsInRoom = false;
-
+         
                 // 重新加载玩家
                 Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
                 newPlayer.Load();
                 newPlayer.LoadDataPosition();
                 ItemMgr.Instance.Player_DIC[playerData.Name_User] = newPlayer;
+                AstarGameManager.Instance.UpdateMeshAsync();
             });
         }
     }

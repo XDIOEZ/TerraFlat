@@ -1,25 +1,33 @@
 using Sirenix.OdinInspector;
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BuffManager : MonoBehaviour
+public class BuffManager : Module
 {
-    public Item item;
-    //public IBuff Buffer;
     [ShowInInspector]
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
 
-    public void Start()
+    public Ex_ModData_MemoryPackable ModData;
+    public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
+
+    public override void Load()
     {
-        item = GetComponentInParent<Item>();
-        Init();
+        ModData.ReadData(ref BuffRunTimeData_Dic);
     }
 
-    public void AddBuffRuntime(Buff_Data buffData, Item Sender, Item Receiver)
+
+    public void Start()
     {
-        Debug.Log($"尝试添加 Buff: {buffData?.name}, Sender: {Sender?.name}, Receiver: {Receiver?.name}");
+        Init();
+    }
+    public override void Save()
+    {
+        ModData.WriteData(BuffRunTimeData_Dic);
+    }
+    
+    public void AddBuffRuntime(Buff_Data buffData, Item Receiver)
+    {
+       // Debug.Log($"尝试添加 Buff: {buffData?.name}, Sender: {Sender?.name}, Receiver: {Receiver?.name}");
 
         if (buffData == null || Receiver == null)
         {
@@ -30,13 +38,10 @@ public class BuffManager : MonoBehaviour
         BuffRunTime newBuff = new BuffRunTime
         {
             buff_IDName = buffData.buff_ID,
-            buffData = buffData,
-            buff_Sender = Sender,
-            buff_Sender_Guid = Sender.itemData.Guid,
+            buff = buffData,
             buff_Receiver = Receiver,
-            buff_Receiver_Guid = Receiver.itemData.Guid,
         };
-        if(newBuff.buffData.buff_ID == "")
+        if(newBuff.buff.buff_ID == "")
         {
             Debug.LogError("Buff ID 为空，不能添加 Buff");
             return;
@@ -53,11 +58,10 @@ public class BuffManager : MonoBehaviour
 
     void Init()
     {
-        BuffRunTimeData_Dic = item.itemData.BuffRunTimeData_Dic;
         //同步Data后，初始化Buff的 BuffData和接受者和发送者
         foreach (var buff in BuffRunTimeData_Dic.Values)
         {
-            buff.SetItemSenderAndReceiver();
+            buff.SetBuffData(sender: null, receiver: item);
         }
     }
  
@@ -69,10 +73,10 @@ public class BuffManager : MonoBehaviour
         if (HasBuff(buffID))
         {
             BuffRunTimeData_Dic.TryGetValue(buffID, out var existingBuff);
-            switch (newBuff.buffData.buff_StackType)
+            switch (newBuff.buff.buff_StackType)
             {
                 case BuffStackType.DurationAdd:
-                    float remainingTime = newBuff.buffData.buff_Duration - existingBuff.buff_CurrentDuration;
+                    float remainingTime = newBuff.buff.buff_Duration - existingBuff.buff_CurrentDuration;
                     existingBuff.buff_CurrentDuration += remainingTime;
                     break;
 
@@ -81,7 +85,7 @@ public class BuffManager : MonoBehaviour
                     break;
 
                 case BuffStackType.StackCount:
-                    if (existingBuff.buff_CurrentStack < existingBuff.buffData.buff_MaxStack)
+                    if (existingBuff.buff_CurrentStack < existingBuff.buff.buff_MaxStack)
                     {
                         existingBuff.buff_CurrentStack += 1;
                     }
@@ -123,4 +127,6 @@ public class BuffManager : MonoBehaviour
             buff.Run();
         }
     }
+
+
 }

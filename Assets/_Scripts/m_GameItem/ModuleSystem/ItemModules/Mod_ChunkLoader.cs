@@ -54,7 +54,7 @@ public class Mod_ChunkLoader : Module
 /*                ChunkMgr.Instance.CreateChun_ByMapSave(
                     SaveDataMgr.Instance.SaveData.MapInScene[ItemMgr.Instance.PlayerInSceneName]);*/
         }
-            AstarGameManager.Instance.UpdateMeshAsync(lastChunkPos, LoadChunkDistance);
+        AstarGameManager.Instance.UpdateMeshAsync(lastChunkPos, LoadChunkDistance);
     }
 
     public override void Save()
@@ -90,7 +90,7 @@ public class Mod_ChunkLoader : Module
                     ChunkMgr.Instance.LoadChunkCloseToPlayer(this.gameObject, Distance: Data.LoadChunkDistance);
                     ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(this.gameObject, Distance: Data.UnActiveDistance);
                 }
-                UpdateMesh(currentChunkPos);
+                AstarGameManager.Instance.UpdateMeshAsync(lastChunkPos, LoadChunkDistance);
             }
         }
     }

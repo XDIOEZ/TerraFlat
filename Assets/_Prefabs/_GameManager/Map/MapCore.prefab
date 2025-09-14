@@ -70,14 +70,19 @@ MonoBehaviour:
   tilesPerFrame: 100000
   seamlessBorders: 1
   Noises:
-    m_Keys: 000000000100000002000000030000000400000005000000
-    m_Values:
-    - {fileID: 11400000, guid: a10de3b0d05cf924a9d97497eb998f8d, type: 2}
-    - {fileID: 11400000, guid: f19a0c1862aa7f04ebd029b990d644a5, type: 2}
-    - {fileID: 11400000, guid: b344071298f5ba94d928cde370657f36, type: 2}
-    - {fileID: 11400000, guid: 7e337b6287b4acf4a9476b87a9a99e4a, type: 2}
-    - {fileID: 11400000, guid: 3db59eb60d7f87842bce46d0e9fafc0a, type: 2}
-    - {fileID: 11400000, guid: dd1e1804a2ebcf841ac46e6ef1a9303b, type: 2}
+    _serializedList:
+    - Key: 0
+      Value: {fileID: 11400000, guid: a10de3b0d05cf924a9d97497eb998f8d, type: 2}
+    - Key: 1
+      Value: {fileID: 11400000, guid: f19a0c1862aa7f04ebd029b990d644a5, type: 2}
+    - Key: 2
+      Value: {fileID: 11400000, guid: b344071298f5ba94d928cde370657f36, type: 2}
+    - Key: 3
+      Value: {fileID: 11400000, guid: 7e337b6287b4acf4a9476b87a9a99e4a, type: 2}
+    - Key: 4
+      Value: {fileID: 11400000, guid: 3db59eb60d7f87842bce46d0e9fafc0a, type: 2}
+    - Key: 5
+      Value: {fileID: 11400000, guid: dd1e1804a2ebcf841ac46e6ef1a9303b, type: 2}
   detectKey: 284
 --- !u!114 &8233460568870623006
 MonoBehaviour:
@@ -134,7 +139,7 @@ MonoBehaviour:
   tileMap: {fileID: 6321057560787975102}
   OnMapGenerated_Start:
     _PersistentCalls: []
-  navigationModiferTileMap: {fileID: 4721953735733998556}
+  navigationModiferTileMap: {fileID: 0}
   ParentObject: {fileID: 0}
 --- !u!1 &3401113203274231406
 GameObject:
@@ -147,10 +152,7 @@ GameObject:
   - component: {fileID: 9096885064613800217}
   - component: {fileID: 6321057560787975102}
   - component: {fileID: 5742503804346772835}
-  - component: {fileID: 6409447189036497199}
-  - component: {fileID: 417660990400394032}
-  - component: {fileID: 4721953735733998556}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: "\u5730\u9762"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -259,67 +261,3 @@ TilemapRenderer:
   m_Mode: 0
   m_DetectChunkCullingBounds: 0
   m_MaskInteraction: 0
---- !u!114 &6409447189036497199
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3401113203274231406}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ba7526aa9771f8488419e0af0ceb64c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  minX: -200
-  maxX: 200
-  minY: -200
-  maxY: 200
---- !u!114 &417660990400394032
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3401113203274231406}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9809bf1345abc5648af68b3a82653f08, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_OverrideArea: 1
-  m_Area: 1
-  m_IgnoreFromBuild: 0
-  m_AffectedAgents: ffffffff
---- !u!114 &4721953735733998556
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3401113203274231406}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 709c8d6349be44c68dff3d220992400c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_AffectedAgents: 00000000
-  m_TileModifiers:
-  - tile: {fileID: 11400000, guid: 57d25a3fd2bb6fb4e822c2992f71ab13, type: 2}
-    overrideArea: 1
-    area: 3
-  - tile: {fileID: 11400000, guid: 2ccdd18f6c4787c43a001bbaa64407ab, type: 2}
-    overrideArea: 1
-    area: 0
-  - tile: {fileID: 11400000, guid: 25706c96a4c97da4ea78a1295d5bfc75, type: 2}
-    overrideArea: 1
-    area: 0
-  - tile: {fileID: 11400000, guid: a3f92130325318049ba724dde2f232d5, type: 2}
-    overrideArea: 1
-    area: 0
-  - tile: {fileID: 11400000, guid: 4570b2336b6777244a21458eb41f0152, type: 2}
-    overrideArea: 1
-    area: 0
-  - tile: {fileID: 11400000, guid: 6a48df77088b1594bbc0d911d1f5a7c4, type: 2}
-    overrideArea: 1
-    area: 0

@@ -130,7 +130,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
             if (ItemMgr.Instance.User_Player.Data.IsInRoom == true)
             {
-                SaveDataMgr.Instance.SaveData.MapInScene[go.MapSave.MapName] = go.MapSave;
+                SaveDataMgr.Instance.SaveData.MapInScene[SceneManager.GetActiveScene().name] = go.MapSave;
             }
         }
         ///////////////////////////上面都是对旧场景的处理////////////////////

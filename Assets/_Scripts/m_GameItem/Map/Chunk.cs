@@ -25,7 +25,7 @@ public class Chunk : MonoBehaviour
         {
             foreach(var itemData in items.Value)
             {
-               Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject);
+               Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject,newGuid:false);
                item.Load();
                 item.transform.position = itemData._transform.Position;
                 item.transform.rotation = itemData._transform.Rotation;

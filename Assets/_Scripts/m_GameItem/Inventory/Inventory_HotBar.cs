@@ -195,7 +195,7 @@ public class Inventory_HotBar : Inventory
         {
             // 清空旋转列表（无物品选中时）
             if (faceMouse != null)
-                faceMouse.targetRotationTransforms.Clear();
+                //faceMouse.targetRotationTransforms.Clear();
             return;
         }
 
@@ -238,7 +238,7 @@ public class Inventory_HotBar : Inventory
         if (faceMouse != null)
         {
             // 清空列表确保只有当前物品被旋转
-            faceMouse.targetRotationTransforms.Clear();
+           // faceMouse.targetRotationTransforms.Clear();
             // 添加当前物品的transform到旋转列表
             faceMouse.targetRotationTransforms.Add(itemInstance.transform);
         }

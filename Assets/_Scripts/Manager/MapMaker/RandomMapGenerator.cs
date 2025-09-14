@@ -5,8 +5,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using Sirenix.OdinInspector;
 using Force.DeepCloner;
-using UltEvents;
-using UnityEngine.Rendering;
+using AYellowpaper.SerializedCollections;
 
 /// <summary>
 /// 随机地图生成器：
@@ -66,12 +65,12 @@ public class RandomMapGenerator : MonoBehaviour
     public float LandOceanRatio => plantData.OceanHeight;
     public float NoiseScale => plantData.NoiseScale;
 
+    public EnvironmentFactors[,] EnvFactorsGrid { get => map.Data.EnvironmentData; set => map.Data.EnvironmentData = value; }
+
     public static System.Random rng; // 系统级随机实例
 
     private Dictionary<string, TileData> tileDataCache = new(); // TileData 缓存
 
-    // 环境因子二维数组
-    public EnvironmentFactors[,] EnvFactorsGrid;
     #endregion
 
     #region Unity 生命周期
@@ -303,6 +302,7 @@ public class RandomMapGenerator : MonoBehaviour
 
         // 克隆并添加Tile到地图
         var tile = tileDataCache[key].DeepClone();
+        tile.Initialize(env);
         tile.position = new Vector3Int(position.x, position.y, 0);
         map.ADDTile(position, tile);
     }
@@ -421,7 +421,10 @@ public class RandomMapGenerator : MonoBehaviour
                   $"生物群系：{biomeName}\n" +
                   $"温度：{env.Temperature:F2} | 湿度：{env.Humidity:F2}\n" +
                   $"降水量：{env.Precipitation:F2} | 坚固度：{env.Solidity:F2}\n" +
-                  $"高度：{env.Hight:F2}");
+                  $"高度：{env.Hight:F2}\n" +  // 修正换行符和拼接位置
+                  $"瓦片数据：{map.GetTile(gridPos)}");  // 修正重复的"温度"标签，改为更准确的"瓦片数据"
+
+
     }
     #endregion
 }

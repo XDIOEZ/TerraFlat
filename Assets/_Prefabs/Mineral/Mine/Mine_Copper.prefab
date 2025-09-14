@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 797947779417080107}
   - component: {fileID: 2358069209158274451}
   - component: {fileID: 2535135132041951343}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Mine_Copper
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -93,7 +93,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -113,6 +113,14 @@ MonoBehaviour:
       Item_Material:
       - Stone
       - Cu
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 100
