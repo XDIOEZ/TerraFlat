@@ -67,7 +67,7 @@ public class Map : Item, ISave_Load
 
         LoadTileData_To_TileMap();
     }
-
+    
     public void LoadTileData_To_TileMap()
     {
         if (Data.TileData == null || Data.TileData.Count == 0)
@@ -93,11 +93,32 @@ public class Map : Item, ISave_Load
 
             Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
 
-            AstarGameManager.Instance.ModifyNodePenalty_Optimized(position3D, topTile.Penalty);
+            // tileMap 是你的 Tilemap 组件
+            Vector3 worldPos = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
+
+            // 然后再传给 A* 节点修改
+            AstarGameManager.Instance.ModifyNodePenalty_Optimized(worldPos, topTile.Penalty);
+
 
             tileMap.SetTile(position3D, tile);
         }
        // Debug.Log("多层 TileData 已加载到 Tilemap 中");
+    }
+    [Button("烘焙地块寻路权重")]
+    public void BackTilePenalty()
+    {
+        foreach (var kvp in Data.TileData)
+        {
+            Vector2Int position2D = kvp.Key;
+            List<TileData> tileDataList = kvp.Value;
+
+            // 获取最顶层 TileData（倒数第一个）
+            TileData topTile = tileDataList[^1];
+
+            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+
+            AstarGameManager.Instance.ModifyNodePenalty_Optimized(position3D, topTile.Penalty);
+        }
     }
     #endregion
 
