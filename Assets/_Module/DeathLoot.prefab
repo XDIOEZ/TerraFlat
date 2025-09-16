@@ -51,4 +51,8 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
-  LootList: []
+  LootList:
+  - ItemIDName: 
+    ItemPrefab: {fileID: 0}
+    ItemCountRange: {x: 1, y: 1}
+    LuckFactor: 1

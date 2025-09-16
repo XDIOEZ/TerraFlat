@@ -1,4 +1,5 @@
 using MemoryPack;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -24,8 +25,11 @@ public class Buff_Data : ScriptableObject
     //buffµÄ¶ÑµþÀàÐÍ
     public BuffStackType buff_StackType;
 
+    [InlineEditor]
     public BuffAction buff_Behavior_Start;
+    [InlineEditor]
     public BuffAction buff_Behavior_Update;
+    [InlineEditor]
     public BuffAction buff_Behavior_Stop;
 }
 public enum BuffStackType

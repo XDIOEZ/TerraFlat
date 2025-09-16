@@ -33,10 +33,10 @@ public partial class FaceMouse : Module
             : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
 
         // 如果列表为空 → 自动装填父对象
-        if (targetRotationTransforms.Count == 0 && transform.parent != null)
+        if (targetRotationTransforms.Count == 0 )
         {
-            targetRotationTransforms.Add(transform.parent);
-            Debug.Log($"[FaceMouse] 自动添加父对象 {transform.parent.name} 到旋转列表", this);
+            targetRotationTransforms.Add(transform);
+            Debug.Log($"[FaceMouse] 自动添加对象 {transform.name} 到旋转列表", this);
         }
     }
 

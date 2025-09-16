@@ -64,10 +64,42 @@ public class Inventory_HotBar : Inventory
 
     public void Controller_Init()
     {
-        var input = Owner.GetComponent<PlayerController>()._inputActions.Win10;
+        // 先确保 Owner 存在
+        if (Owner == null)
+        {
+            Debug.LogWarning($"[{name}] Controller_Init: Owner 为空，无法初始化输入");
+            return;
+        }
+
+        // 获取 PlayerController
+        var playerController = Owner.GetComponent<PlayerController>();
+        if (playerController == null)
+        {
+            // 兜底：全局查找
+            playerController = FindObjectOfType<PlayerController>();
+            if (playerController == null)
+            {
+                Debug.LogWarning($"[{name}] Controller_Init: 未找到 PlayerController");
+                return;
+            }
+        }
+
+        // 确保 inputActions 已初始化
+        var inputActions = playerController._inputActions;
+        if (inputActions == null)
+        {
+            Debug.LogWarning($"[{name}] Controller_Init: PlayerController._inputActions 为空");
+            return;
+        }
+
+        // 绑定输入事件
+        var input = inputActions.Win10;
         input.RightClick.performed += _ => Controller_ItemAct();
         input.MouseScroll.started += SwitchHotbarByScroll;
+
+        Debug.Log($"[{name}] 成功绑定输入事件", this);
     }
+
 
     //激活手持物品行为
     public void Controller_ItemAct()
