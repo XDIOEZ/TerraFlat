@@ -6,7 +6,7 @@ using System.Collections.Generic;
 [System.Serializable]
 public partial class MapSave
 {
-    public string MapName;
+    public string Name;
 
     [ShowInInspector]
     // 将原先存储单个 ItemData 的字典改为存储 List<ItemData>，key 为物品名称
@@ -14,7 +14,7 @@ public partial class MapSave
 
     public float SunlightIntensity;
 
-    public UnityEngine.Vector2 MapPosition;
+    public UnityEngine.Vector2Int MapPosition;
 
     public void AddItemData(ItemData itemData)
     {

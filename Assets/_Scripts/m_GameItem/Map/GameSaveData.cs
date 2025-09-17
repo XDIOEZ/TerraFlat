@@ -28,11 +28,6 @@ public partial class GameSaveData
     [ShowInInspector]
     public Dictionary<string, Data_Player> PlayerData_Dict = new();
 
-    [ShowInInspector]
-    // ===== 建筑与场景切换表 =====
-    public Dictionary<string, MapSave> MapInScene = new();
-
-
     // ===== 星球数据 =====
     [ShowInInspector]
     public Dictionary<string, PlanetData> PlanetData_Dict = new();

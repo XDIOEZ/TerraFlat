@@ -14,11 +14,10 @@ public class Mod_ChunkLoader : Module
     public int LoadChunkDistance = 1;
 
     [ShowInInspector]
-    (int UnActiveDistance, int DestroyChunkDistance, int LoadChunkDistance)
-        Data
+    (int UnActiveDistance, int DestroyChunkDistance, int LoadChunkDistance) Data
         = (UnActiveDistance: 2, DestroyChunkDistance: 3, LoadChunkDistance: 1);
 
-    private Vector2 lastChunkPos; // ✅ 记录上一次的区块坐标
+    private Vector2 lastChunkPos;
     private float timer = 0f;
     private float updateInterval = 0.5f; // 每 0.5 秒更新一次
 
@@ -38,23 +37,11 @@ public class Mod_ChunkLoader : Module
         // 初始化 lastChunkPos
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
 
-        if(ItemMgr.Instance.User_Player == null)
-        {
+        if (ItemMgr.Instance.User_Player == null)
             return;
-        }
-            // 跨区块后才更新
-        if (ItemMgr.Instance.User_Player.Data.IsInRoom == false)
-        {
-            ChunkMgr.Instance.DestroyChunk_In_Distance(item.gameObject, Distance: Data.DestroyChunkDistance);
-            ChunkMgr.Instance.LoadChunkCloseToPlayer(item.gameObject, Distance: Data.LoadChunkDistance);
-            ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(item.gameObject, Distance: Data.UnActiveDistance);
-        }
-        else
-        {
-/*                ChunkMgr.Instance.CreateChun_ByMapSave(
-                    SaveDataMgr.Instance.SaveData.MapInScene[ItemMgr.Instance.PlayerInSceneName]);*/
-        }
-        AstarGameManager.Instance.UpdateMeshAsync(lastChunkPos, LoadChunkDistance);
+
+        // 初次加载时直接更新区块
+        UpdateChunks(lastChunkPos);
     }
 
     public override void Save()
@@ -66,7 +53,7 @@ public class Mod_ChunkLoader : Module
 
         ModData.WriteData(Data);
     }
-    Vector2 newPos;
+
     public override void Action(float deltaTime)
     {
         if (_Data.isRunning == false)
@@ -75,30 +62,36 @@ public class Mod_ChunkLoader : Module
         timer += deltaTime;
         if (timer >= updateInterval)
         {
-            timer = 0f; // 重置
+            timer = 0f;
 
             // ✅ 检测是否跨区块
             Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
             if (currentChunkPos != lastChunkPos)
             {
                 lastChunkPos = currentChunkPos;
-
-                // 跨区块后才更新
-                if (ItemMgr.Instance.User_Player.Data.IsInRoom == false)
-                {
-                    ChunkMgr.Instance.DestroyChunk_In_Distance(this.gameObject, Distance: Data.DestroyChunkDistance);
-                    ChunkMgr.Instance.LoadChunkCloseToPlayer(this.gameObject, Distance: Data.LoadChunkDistance);
-                    ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(this.gameObject, Distance: Data.UnActiveDistance);
-                }
-                AstarGameManager.Instance.UpdateMeshAsync(lastChunkPos, LoadChunkDistance);
+                UpdateChunks(lastChunkPos);
             }
         }
     }
+
+    /// <summary>
+    /// 封装区块更新逻辑，避免重复代码
+    /// </summary>
+    private void UpdateChunks(Vector2 chunkPos)
+    {
+        ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
+        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
+        ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
+
+        AstarGameManager.Instance.UpdateMeshAsync(chunkPos, Data.LoadChunkDistance);
+    }
+
     [Button("更新 Mesh")]
     public void UpdateMesh(Vector2 currentChunkPos)
     {
-        AstarGameManager.Instance.UpdateMeshAsync
-            (center: currentChunkPos
-                  , radius: Data.LoadChunkDistance);
+        AstarGameManager.Instance.UpdateMeshAsync(
+            center: currentChunkPos,
+            radius: Data.LoadChunkDistance
+        );
     }
 }

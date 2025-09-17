@@ -127,7 +127,14 @@ public class MapSaveEditor : MonoBehaviour
         chunk.FitChunkItems();
         chunk.SaveChunk();
         var currentMap = chunk.MapSave;
-        currentMap.MapName = chunk.MapSave.MapName;
+        if (chunk.MapSave.Name == "")
+        {
+            chunk.MapSave.Name = chunk.MapSave.MapPosition.ToString();
+        }
+        else
+        {
+            currentMap.Name = chunk.MapSave.Name;
+        }
         if (currentMap == null)
         {
             statusMessage = "获取 MapSave 失败，请确保场景已初始化！";

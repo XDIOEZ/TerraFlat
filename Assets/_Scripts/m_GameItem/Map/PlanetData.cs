@@ -8,7 +8,7 @@ using UnityEngine;
 public partial class PlanetData
 {
     //星球名称
-    public string PlanetName;
+    public string Name;
     //星球半径
     public int Radius = 1000;
     //温度偏移值
@@ -28,5 +28,8 @@ public partial class PlanetData
     public Dictionary<string, MapSave> MapData_Dict = new();
 
     public PlanetTimeData TimeData = new PlanetTimeData();
+
+    [Tooltip("星球是否自动生成地图")]
+    public bool AutoGenerateMap = true;
 
 }

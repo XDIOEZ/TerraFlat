@@ -45,7 +45,7 @@ public class Mod_Building : Module
         boxCollider2D = item.GetComponent<BoxCollider2D>();
 
         if(damageReceiver == null)
-        damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID    (ModText.Hp);
+        damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID(ModText.Hp);
 
         damageReceiver.Data.DestroyDelay = -1f;
 
@@ -154,7 +154,7 @@ public class Mod_Building : Module
         // === 更新寻路区域 ===
         if (newBuilding != null)
         {
-            UpdateNavigation(newBuilding.transform.position, 3, 3);
+            UpdateNavigation(newBuilding.transform.position, 1, 1);
         }
     }
 
@@ -184,7 +184,7 @@ public class Mod_Building : Module
         CleanupGhost();
 
      
-        UpdateNavigation(transform.position, 3, 3);
+        UpdateNavigation(transform.position, 1, 1);
         
     }
     #endregion

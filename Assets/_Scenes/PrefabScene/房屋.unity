@@ -171,6 +171,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1826894797423364858, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: mapSave.Name
+      value: (0, 0)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1826894797423364858, guid: 16f38f33714285247b623a2423e14c90, type: 3}
       propertyPath: mapSaveAsset
       value: 
       objectReference: {fileID: 4900000, guid: 8ac3cd305127ad441858f6e40b10b293, type: 3}
@@ -445,7 +449,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Map: {fileID: 1618626597}
   MapSave:
-    MapName: (0, 0)
+    Name: 
     SunlightIntensity: 0
     MapPosition: {x: 0, y: 0}
   ChunkOwner: 

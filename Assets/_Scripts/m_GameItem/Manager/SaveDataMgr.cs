@@ -102,9 +102,9 @@ public PlanetData Active_PlanetData
       
         worldSave.items = GetActiveSceneAllItemData(MapParent);
 
-        worldSave.MapName = MapParent.name;
+        worldSave.Name = MapParent.name;
 
-        worldSave.MapPosition = MapParent.transform.position;
+        worldSave.MapPosition = new Vector2Int((int)MapParent.transform.position.x, (int)MapParent.transform.position.y);
 
         return worldSave;
     }
@@ -387,7 +387,7 @@ public PlanetData Active_PlanetData
     public static MapSave GetCurrentMapStatic()
     {
         MapSave worldSave = new MapSave();
-        worldSave.MapName = SceneManager.GetActiveScene().name;
+        worldSave.Name = SceneManager.GetActiveScene().name;
         worldSave.items = GetActiveSceneAllItemData_Static();
 
         return worldSave;

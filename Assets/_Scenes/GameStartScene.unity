@@ -3992,66 +3992,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7293395394034987005, guid: ce24645065817804fbd6156e223ca429, type: 3}
   m_PrefabInstance: {fileID: 317140007}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &849517849
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 849517851}
-  - component: {fileID: 849517850}
-  m_Layer: 0
-  m_Name: item
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &849517850
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 849517849}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: efdcc61dd80408248b8bfca364ef7f46, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  verboseLogs: 0
-  gizmosOnSelected: 0
-  customText: 0
-  customIcon: 0
-  customHighlight: 0
-  textColor:
-    serializedVersion: 2
-    rgba: 4289967027
-  iconColor:
-    serializedVersion: 2
-    rgba: 4289967027
-  highlightColor:
-    serializedVersion: 2
-    rgba: 4292850432
-  textStyle: 3
-  textAlignment: 0
---- !u!4 &849517851
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 849517849}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &851828870 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8923630362666243623, guid: 16f38f33714285247b623a2423e14c90, type: 3}
@@ -6544,7 +6484,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 543, y: 1144}
+  m_AnchoredPosition: {x: -2138, y: -1457}
   m_SizeDelta: {x: 261.7257, y: 579.4411}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1231179797
@@ -13676,7 +13616,6 @@ SceneRoots:
   - {fileID: 1499669059}
   - {fileID: 2137552812}
   - {fileID: 207864053}
-  - {fileID: 849517851}
   - {fileID: 751786882}
   - {fileID: 1483007244636100546}
   - {fileID: 2975245968020653467}

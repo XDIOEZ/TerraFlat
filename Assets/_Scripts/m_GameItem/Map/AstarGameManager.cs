@@ -1,4 +1,5 @@
-﻿using NavMeshPlus.Components;
+﻿// （完整类代码 — 基本保留你原来的所有方法，仅在 #region 后面新增了 UpdateAreaPenalty_Rectangle 与协程实现）
+using NavMeshPlus.Components;
 using Pathfinding;
 using Sirenix.OdinInspector;
 using System.Collections;
@@ -40,7 +41,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
 
     [Button("Update NavMesh")]
-    public void UpdateMeshAsync(Vector2 center = default, int radius = 2)
+    public void UpdateMeshAsync(Vector2 center = default, int radius = 1)
     {
         if (!Init)
         {
@@ -51,7 +52,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         {
             Vector2 chunkSize = ChunkMgr.GetChunkSize();
             Vector2 Newcenter = center + chunkSize * 0.5f;
-            AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x,Newcenter.y, 0f);
+            AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
 
             int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
             int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
@@ -118,16 +119,23 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     /// </summary>
     public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000)
     {
+        if (Pathfinder == null || AstarPath.active == null)
+        {
+            // 这里不报错，避免高频调用抛出大量日志
+            return;
+        }
 
         // 1. 获取节点
         NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
         GraphNode targetNode = nnInfo.node;
-
-        if (targetNode == null)
+        if (targetNode == null || !targetNode.Walkable)
         {
-            Debug.LogWarning($"⚠️ 节点获取失败或不可通行，已跳过。位置：{worldPos}");
-            return; // 节点无效或不可通行，直接跳过
+            // 节点无效或不可通行，直接跳过
+            return;
         }
+
+        // 2. 避免重复赋值
+        if (targetNode.Penalty == newPenalty) return;
 
         // 3. 修改权重
         targetNode.Penalty = newPenalty;
@@ -242,6 +250,95 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     }
 
     private List<DebugBounds> updatedBounds = new List<DebugBounds>();
+    //TODO 能参考下面的更新特定区块的烘焙 然后新建一个更新特定区块的权重的方法吗
+
+    // —— 新增方法：按矩形区域更新权重（支持增量 addPenalty 与 逐节点绝对设置两种模式）
+    [Button("更新特定区块权重")]
+    public void UpdateAreaPenalty_Rectangle(Vector2 center, int length, int width, int penaltyValue = 500, bool setAbsolute = false)
+    {
+        if (Pathfinder == null || AstarPath.active == null)
+        {
+            Debug.LogError("❌ AstarPath 组件未初始化！");
+            return;
+        }
+
+        Vector3 boundsCenter = new Vector3(center.x, center.y, 0f);
+        Bounds targetRegion = new Bounds(boundsCenter, new Vector3(length, width, 1f));
+
+        if (!setAbsolute)
+        {
+            // 快速批量：使用 GraphUpdateObject.addPenalty（增量模式，性能最好）
+            GraphUpdateObject guo = new GraphUpdateObject(targetRegion);
+            guo.modifyWalkability = false;
+            guo.addPenalty = penaltyValue;
+            AstarPath.active.UpdateGraphs(guo);
+
+            Debug.Log($"✅ 区域（增量）权重修改成功！ 区域：{targetRegion} 权重增量：{penaltyValue}");
+        }
+        else
+        {
+            // 逐节点绝对赋值（比较耗时，采用协程分帧）
+            int clamped = Mathf.Clamp(penaltyValue, minPenalty, maxPenalty);
+            uint targetPenalty = (uint)clamped;
+
+            // 取 grid 的 nodeSize（如果可用），用于精确采样
+            float nodeSize = 1f;
+            var gg = AstarPath.active.data.gridGraph as GridGraph;
+            if (gg != null) nodeSize = gg.nodeSize;
+
+            // 计算采样的左下角与范围
+            float halfLen = length * 0.5f;
+            float halfWid = width * 0.5f;
+            float left = center.x - halfLen;
+            float bottom = center.y - halfWid;
+
+            // 启动协程做分帧设置（避免卡顿）
+            StartCoroutine(IterateSetPenalty_CoRod(left, bottom, length, width, nodeSize, targetPenalty));
+            Debug.Log($"🔧 已开始异步（分帧）区域绝对权重设置：区域中心 {center} 大小 {length}x{width} 目标权重 {targetPenalty}");
+        }
+
+        // 可视化（区域调整为绿色）
+        penaltyModifiedBounds.Add(new DebugBounds
+        {
+            bounds = targetRegion,
+            time = Time.time,
+            isKeyAdjust = false
+        });
+    }
+
+    // 协程：按 nodeSize 逐点采样并设置权重（带分帧）
+    private IEnumerator IterateSetPenalty_CoRod(float left, float bottom, int length, int width, float nodeSize, uint targetPenalty)
+    {
+        if (AstarPath.active == null) yield break;
+
+        float right = left + length;
+        float top = bottom + width;
+
+        int rows = 0;
+        for (float x = left + nodeSize * 0.5f; x < right; x += nodeSize)
+        {
+            for (float y = bottom + nodeSize * 0.5f; y < top; y += nodeSize)
+            {
+                Vector3 samplePos = new Vector3(x, y, 0f);
+                NNInfo nn = AstarPath.active.GetNearest(samplePos);
+                GraphNode node = nn.node;
+                if (node != null && node.Walkable)
+                {
+                    if (node.Penalty != targetPenalty)
+                    {
+                        node.Penalty = targetPenalty;
+                    }
+                }
+            }
+
+            rows++;
+            // 每处理若干列分帧一次，避免卡顿（数值可调）
+            if (rows % 8 == 0)
+            {
+                yield return null;
+            }
+        }
+    }
 
     public void UpdateArea_Rectangle(Vector2 center, int length, int width)
     {

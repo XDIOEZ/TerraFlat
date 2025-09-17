@@ -290,8 +290,8 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         if (chunk != null)
         {
-            Chunk_Dic[chunk.MapSave.MapName] = chunk;
-            Chunk_Dic_Active[chunk.MapSave.MapName] = chunk;
+            Chunk_Dic[chunk.MapSave.Name] = chunk;
+            Chunk_Dic_Active[chunk.MapSave.Name] = chunk;
             OnChunkLoadFinish.Invoke(chunk);
         }
         else
@@ -328,7 +328,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         MapSave mapSave = new MapSave();
 
-        mapSave.MapName = mapName;
+        mapSave.Name = mapName;
 
         mapSave.MapPosition = pos;
 
@@ -394,14 +394,14 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     private (GameObject mapObj, Chunk chunk) CreateMapBase(MapSave mapSave)
     {
         // 1. 创建地图根物体
-        GameObject newMapObj = new GameObject(mapSave.MapName);
+        GameObject newMapObj = new GameObject(mapSave.Name);
 
         // 2. 添加区块管理器
         Chunk Chunk = newMapObj.AddComponent<Chunk>();
 
         Chunk.MapSave = mapSave;
         // 3. 设置位置
-        newMapObj.transform.position = mapSave.MapPosition;
+        newMapObj.transform.position = new Vector3(mapSave.MapPosition.x, mapSave.MapPosition.y, 0);
 
         return (newMapObj, Chunk);
     }

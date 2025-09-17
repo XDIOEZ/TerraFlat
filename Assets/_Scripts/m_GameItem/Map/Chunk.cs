@@ -144,7 +144,7 @@ public class Chunk : MonoBehaviour
     [ContextMenu("Sync MapSave Name")]
     public void SyncMapSaveName()
     {
-        MapSave.MapName = MapSave.MapPosition.ToString();
+        MapSave.Name = MapSave.MapPosition.ToString();
     }
 
 }

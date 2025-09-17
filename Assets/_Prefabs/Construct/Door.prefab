@@ -131,7 +131,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -151,10 +151,18 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 1
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     _transform:
       Position: {x: 0, y: 0, z: 0}
       Rotation: {x: 0, y: 0, z: 0, w: 0}
