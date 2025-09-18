@@ -39,5 +39,6 @@ public partial class Mod_MoveSpeed : Module
         }
 
         SaveData.WriteData(MoveSpeed);
+        //Tip : 此模块是数值控制模块 不需要将其保存到itemdata.moddata中
     }
 }

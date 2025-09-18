@@ -240,8 +240,6 @@ public partial class ItemStack
 public partial class ModuleDatas
 {
     [ShowInInspector]
-    public Dictionary<string, ModuleData> ModuleDataDic = new();
-    [ShowInInspector]
     public Dictionary<string, List<ModuleData>> ModuleDataDic_ID = new();
 }
 

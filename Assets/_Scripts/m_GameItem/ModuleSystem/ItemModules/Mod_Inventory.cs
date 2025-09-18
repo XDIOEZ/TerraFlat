@@ -57,6 +57,7 @@ public class Mod_Inventory : Module,IInventory
     [Button]
     public override void Save()
     {
+        inventory.Save();
         Item_Data.ModuleDataDic[_Data.Name] = inventoryModuleData;
     }
 

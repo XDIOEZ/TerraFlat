@@ -47,6 +47,7 @@ public class Inventory : MonoBehaviour
         }
     }
 
+    [Tooltip("在Load函数的最后调用,用于初始化")]
     public virtual void Init()
     {
         // 若未设置数据，则自动生成
@@ -89,6 +90,11 @@ public class Inventory : MonoBehaviour
         Data.Event_RefreshUI += RefreshUI;
         //初始化刷新UI
         RefreshUI();
+    }
+
+    public virtual void Save()
+    {
+
     }
 
     public void RefreshUI(int index)

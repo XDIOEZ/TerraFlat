@@ -9,6 +9,56 @@ public class Inventory_Equipment : Inventory
     [ShowInInspector]
     public Dictionary<string, List<Module>> EquipmentModules_Dictionary = new();
 
+    /// <summary>
+    /// 初始化时激活所有已装备物品的模块
+    /// </summary>
+    public override void Init()
+    {
+        base.Init();
+
+        // 遍历所有装备槽
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            var equippedItem = Data.itemSlots[i].itemData;
+
+            // 检查槽位是否有装备
+            if (equippedItem != null)
+            {
+                // 激活该装备的所有Equipment类型模块
+                ActivateAllEquipmentModules(equippedItem);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 保存时移除所有装备模块
+    /// </summary>
+    public override void Save()
+    {
+        base.Save();
+
+        // 创建所有键的副本以避免在遍历中修改字典
+        var allKeys = EquipmentModules_Dictionary.Keys.ToList();
+
+        foreach (var key in allKeys)
+        {
+            // 尝试获取该键对应的所有模块
+            if (EquipmentModules_Dictionary.TryGetValue(key, out var modList))
+            {
+                // 创建模块列表副本进行遍历
+                var modListCopy = modList.ToList();
+
+                foreach (var mod in modListCopy)
+                {
+                    // 移除每个模块
+                    DeactivateEquipmentAttributes(mod);
+                }
+                // 移除该键对应的所有模块
+                EquipmentModules_Dictionary.Remove(key);
+            }
+        }
+    }
+
     public override void OnClick(int index)
     {
         // 获取当前装备槽中的物品（即需要被卸下或被替换的物品）。
@@ -21,23 +71,23 @@ public class Inventory_Equipment : Inventory
         // 如果当前槽位有装备，我们必须禁用它的模块，因为它即将被移除或替换。
         if (currentEquippedItem != null)
         {
-            var key = GetKey(currentEquippedItem); // 现在调用是安全的，因为 currentEquippedItem 不为 null。
+            var key = GetKey(currentEquippedItem);
 
             if (EquipmentModules_Dictionary.TryGetValue(key, out var modList))
             {
-                // 使用 .ToList() 会创建一个临时副本。这一点至关重要，因为
-                // DeactivateEquipmentAttributes 会修改原始的 'modList' 集合，
-                // 而你不能在遍历一个集合的同时修改它，否则会引发异常。
+                // 使用 .ToList() 会创建一个临时副本，避免遍历中修改集合引发异常
                 foreach (var mod in modList.ToList())
                 {
-                    // 这段逻辑看起来是用于在卸下装备前，将模块数据恢复到物品实例上。
-                    if (Owner.itemMods.GetMod_ByName(mod._Data.Name) != null)
+                    // 从EquipmentModules_Dictionary中获取模块，而不是通过Owner.itemMods
+                    // 在卸下装备前，将模块数据恢复到物品实例上
+                    var moduleFromDict = modList.FirstOrDefault(m => m._Data.Name == mod._Data.Name);
+                    if (moduleFromDict != null)
                     {
-                        currentEquippedItem.ModuleDataDic[mod._Data.Name] =
-                            Owner.itemMods.GetMod_ByName(mod._Data.Name)._Data;
+                        currentEquippedItem.ModuleDataDic[mod._Data.Name] = moduleFromDict._Data;
                     }
 
-                    DeactivateEquipmentAttributes(Owner, mod._Data, key);
+                    DeactivateEquipmentAttributes(mod);
+                    EquipmentModules_Dictionary.Remove(key);
                 }
             }
         }
@@ -64,13 +114,11 @@ public class Inventory_Equipment : Inventory
             {
                 // 可选：如果你尝试装备一个非装备物品，你可能希望阻止交换。
                 // 如果是这样，在这里直接 'return;'。
-                // 否则，代码会继续执行，卸下旧装备，并将新的非装备物品移入该槽位，这也许是你期望的行为。
             }
         }
 
         // --- 完成交换 (FINALIZE SWAP) ---
         // 在处理完属性后，执行实际的物品槽位数据交换。
-        // 只有在确实发生了装备或卸下操作时（即涉及至少一个物品），才执行交换。
         if (currentEquippedItem != null || newIncomingItem != null)
         {
             base.OnClick(index);
@@ -79,9 +127,10 @@ public class Inventory_Equipment : Inventory
 
     public void ActivateEquipmentAttributes(Item player, ModuleData equipment, ItemData sourceItemData)
     {
-        // 这个检查很重要，可以防止 sourceItemData 为 null 时产生错误。
+        // 防止 sourceItemData 为 null 时产生错误
         if (sourceItemData == null) return;
 
+        // 使用与Deactivate相同的key生成逻辑，保持一致性
         string key = GetKey(sourceItemData);
 
         if (!EquipmentModules_Dictionary.ContainsKey(key))
@@ -89,40 +138,61 @@ public class Inventory_Equipment : Inventory
             EquipmentModules_Dictionary[key] = new List<Module>();
         }
 
-        Module equipmentModule = Module.ADDModTOItem(player, equipment, sourceItemData);
+        Module equipmentModule = EquipMod(player, equipment, sourceItemData);
         EquipmentModules_Dictionary[key].Add(equipmentModule);
     }
 
-    public void DeactivateEquipmentAttributes(Item player, ModuleData modData, string key)
+    public Module EquipMod(Item item, ModuleData mod, ItemData itemData)
     {
-        // 对 key 本身进行安全检查
-        if (string.IsNullOrEmpty(key)) return;
+        GameObject @object = GameRes.Instance.InstantiatePrefab(mod.ID);
 
-        if (EquipmentModules_Dictionary.TryGetValue(key, out var moduleList))
-        {
-            var modInstance = moduleList.FirstOrDefault(m => m._Data == modData);
-            if (modInstance != null)
-            {
-                Module.REMOVEModFROMItem(player, modData);
-                moduleList.Remove(modInstance);
-            }
+        @object.transform.SetParent(transform);
 
-            // 如果该装备的所有模块都已被移除，就从字典中移除这个 key。
-            if (moduleList.Count == 0)
-            {
-                EquipmentModules_Dictionary.Remove(key);
-            }
-        }
+        Module module = @object.GetComponentInChildren<Module>();
+
+        module._Data = mod;
+
+        module.ModuleInit(item, mod, itemData);
+
+        module.Load();
+        return module;
+    }
+
+    // 其他方法保持不变，确保Deactivate时使用的key与Activate时一致
+    public void DeactivateEquipmentAttributes(Module mod)
+    {
+        // 现有逻辑不变，因为key来自GetKey()，现在与Activate保持一致了
+        mod.Save();
+        Destroy(mod.gameObject);
     }
 
     private string GetKey(ItemData data)
     {
-        // 这里是错误的根源。我们必须确保在调用此方法时 'data' 永不为 null。
         if (data == null)
         {
             Debug.LogError("尝试从一个为 null 的 ItemData 获取 key。这不应该发生。");
-            return string.Empty; // 返回空字符串以避免崩溃
+            return string.Empty;
         }
         return data.IDName + "_" + data.Guid;
+    }
+
+
+    /// <summary>
+    /// 激活物品上所有的Equipment类型模块
+    /// </summary>
+    /// <param name="itemData">要激活模块的物品数据</param>
+    private void ActivateAllEquipmentModules(ItemData itemData)
+    {
+        if (itemData == null) return;
+
+        // 遍历物品的所有模块数据
+        foreach (var modData in itemData.ModuleDataDic.Values)
+        {
+            // 只激活Equipment类型的模块
+            if (modData.Type == ModuleType.Equipment)
+            {
+                ActivateEquipmentAttributes(Owner, modData, itemData);
+            }
+        }
     }
 }

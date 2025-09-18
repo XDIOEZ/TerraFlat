@@ -262,11 +262,17 @@ public abstract class Item : MonoBehaviour
 
     public void ModuleSave()
     {
-        foreach (Module mod in Mods.Values)
+        // 创建Mods.Values的副本，使用ToList()生成新的列表
+        var modsCopy = Mods.Values.ToList();
+
+        // 遍历副本而非原始集合
+        foreach (Module mod in modsCopy)
         {
+            // 即使Save()过程中修改了原始Mods集合，也不会影响当前遍历
             mod.Save();
         }
     }
+
 
     public void OnDestroy()
     {

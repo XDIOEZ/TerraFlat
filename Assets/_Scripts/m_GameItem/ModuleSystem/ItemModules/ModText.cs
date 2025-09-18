@@ -18,6 +18,7 @@ public static class ModText
     public static string Camera = "相机模块";
     public static string Composite = "合成模块";
     public static string Controller = "Controller模块";
+    public static string ColdWeapon = "冷兵器武器模块";
     #endregion
 
     #region D
