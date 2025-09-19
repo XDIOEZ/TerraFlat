@@ -77,6 +77,7 @@ public class Mod_Scene : Module
 
             Data.IsInit = true;
             planetData = new PlanetData();
+            planetData.ChunkSize = new Vector2Int(300, 300);
             planetData.Name = Data.SceneName;
             // 存储到(0,0)位置的地图数据
             planetData.MapData_Dict.Add(MapSave.Name, MapSave);

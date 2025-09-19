@@ -1,4 +1,5 @@
-﻿using Sirenix.OdinInspector;
+﻿using Newtonsoft.Json;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -33,25 +34,88 @@ public class DamageReceiver : Module
     }
 
     public UltEvent OnDead = new ();
-    [System.Serializable]
-    public class DamageReceiver_SaveData
+
+[System.Serializable]
+public class DamageReceiver_SaveData
+{
+    [Header("生命值设置")]
+    public float Hp = 100;
+    public GameValue_float MaxHp = new GameValue_float(100);
+    public GameValue_float Defense = new GameValue_float(0);
+    [Header("伤害者的UID列表")]
+    public List<int> AttackersUIDs = new List<int>();
+
+    [Header("是否显示面板")]
+    public bool ShowCanvas = false;
+
+    [Header("伤害接收间隔时间 (秒)")]
+    [Min(0f)]
+    public float DamageInterval = 0.1f;
+
+    [Header("血量归零后多久才销毁物体 (秒)")]//-1表示永久存活 0表示不延迟销毁物体 
+    public float DestroyDelay = 0f;
+    
+    // 修复循环引用问题：使用字符串存储预制体名称而不是直接引用GameObject
+    [Header("战利品设置")]
+    [ListDrawerSettings()]
+    public List<LootEntry> LootTable = new List<LootEntry>();
+}
+
+// 战利品条目类
+[System.Serializable]
+public class LootEntry
+{
+    [Tooltip("战利品预制体")]
+    [JsonIgnore] // 避免JSON序列化此字段
+    [UnityEngine.Serialization.FormerlySerializedAs("LootPrefab")]
+    public GameObject LootPrefab;
+    
+    [Tooltip("战利品预制体名称")]
+    [SerializeField]
+    [ReadOnly]
+    public string LootPrefabName = "";
+    
+    [Tooltip("掉落概率 (0-1)")]
+    [Range(0f, 1f)]
+    public float DropChance = 1f;
+    
+    [Tooltip("最小掉落数量")]
+    public int MinAmount = 0;
+    
+    [Tooltip("最大掉落数量")]
+    public int MaxAmount = 1;
+    
+    
+    // 公共方法用于更新预制体名称（供编辑器使用）
+    public void UpdatePrefabName()
     {
-        [Header("生命值设置")]
-        public float Hp = 100;
-        public GameValue_float MaxHp = new GameValue_float(100);
-        public GameValue_float Defense = new GameValue_float(0);
-        [Header("伤害者的UID列表")]
-        public List<int> AttackersUIDs = new List<int>();
-
-        [Header("是否显示面板")]
-        public bool ShowCanvas = false;
-
-        [Header("伤害接收间隔时间 (秒)")]
-        [Min(0f)]
-        public float DamageInterval = 0.1f;
-
-        [Header("血量归零后多久才销毁物体 (秒)")]//-1表示永久存活 0表示不延迟销毁物体 
-        public float DestroyDelay = 0f;
+        #if UNITY_EDITOR
+        if (LootPrefab != null)
+        {
+                LootPrefabName = LootPrefab.name;
+        }
+        #endif
+    }
+    
+    // 重置方法，用于清除引用但保留名称
+    public void ClearPrefabReference()
+    {
+        LootPrefab = null;
+    }
+}
+    private void OnValidate()
+    {
+        // 自动更新所有战利品条目的预制体名称
+        if (Data != null && Data.LootTable != null)
+        {
+            foreach (var lootEntry in Data.LootTable)
+            {
+                if (lootEntry != null)
+                {
+                    lootEntry.UpdatePrefabName();
+                }
+            }
+        }
     }
 
 
@@ -231,6 +295,10 @@ public class DamageReceiver : Module
         if (Hp <= 0)
         {
             OnDead.Invoke();
+            
+            // TODO添加战利品掉落逻辑
+            DropLoot();
+            
             if (Data.DestroyDelay >= 0)
             {
                 Destroy(item.gameObject, Data.DestroyDelay);
@@ -278,6 +346,53 @@ public class DamageReceiver : Module
         }
     }
 
+   // TODO实现战利品掉落方法
+/// <summary>
+/// 根据战利品表掉落物品
+/// </summary>
+protected virtual void DropLoot()
+{
+    // 检查是否有战利品表
+    if (Data.LootTable == null || Data.LootTable.Count == 0)
+        return;
+
+    // 遍历战利品表
+    foreach (var lootEntry in Data.LootTable)
+    {
+        // 检查预制体名称是否存在
+        if (string.IsNullOrEmpty(lootEntry.LootPrefabName))
+            continue;
+
+        // 根据掉落概率决定是否掉落
+        if (Random.value > lootEntry.DropChance)
+            continue;
+
+        // 确定掉落数量（在MinAmount和MaxAmount之间）
+        int dropAmount = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
+        
+        // 如果数量为0，跳过
+        if (dropAmount <= 0)
+            continue;
+
+        // 使用自带的实例化方法创建战利品
+        for (int i = 0; i < dropAmount; i++)
+        {
+            // 使用ItemMgr的实例化方法确保一致性
+            Item lootItem = ItemMgr.Instance.InstantiateItem(
+                lootEntry.LootPrefabName, 
+                item.transform.position + new Vector3(Random.Range(-0.5f, 0.5f), Random.Range(-0.5f, 0.5f), 0),
+                Quaternion.identity
+            );
+            
+            // 确保战利品可以被拾取
+            if (lootItem != null && lootItem.itemData != null)
+            {
+                lootItem.itemData.Stack.CanBePickedUp = true;
+                lootItem.Load(); // 确保物品正确加载
+            }
+        }
+    }
+}
 
     #region 动画效果实现
 

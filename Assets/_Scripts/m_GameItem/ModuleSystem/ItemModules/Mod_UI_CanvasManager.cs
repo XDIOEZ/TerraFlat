@@ -15,8 +15,8 @@ public partial class Mod_UI_CanvasManager : Module
 
 
 
-    public GameObject UIOpen_Parent; // 存放动态生成的按钮
-    public GameObject PanelOpenButtonPrefab; // 指定按钮预制体（可在Inspector中拖入）
+    public GameObject UIOpen_Parent; // 用于动态生成的按钮
+    public GameObject PanelOpenButtonPrefab; // 指定按钮预制体（可在Inspector中设置）
 
 
     CanvasSaveData canvasPanelState = new CanvasSaveData();
@@ -27,7 +27,7 @@ public partial class Mod_UI_CanvasManager : Module
     {
         [ShowInInspector]
         public Dictionary<string, bool> canvasPanelboolStates = new();
-        public Dictionary<string,Vector2> DragerPos = new();
+        public Dictionary<string,Vector2> DraggerPos = new(); // 修正：Drager -> Dragger
     }
 
     public override ModuleData _Data { get => exData; set => exData = (Ex_ModData_MemoryPackable)value; }
@@ -59,14 +59,14 @@ public partial class Mod_UI_CanvasManager : Module
         exData.ReadData(ref canvasPanelState);
 
         // 注册所有 UI_Drag
-        var allDrager = item.GetComponentsInChildren<UI_Drag>(true);
-        foreach (var drager in allDrager)
+        var allDragger = item.GetComponentsInChildren<UI_Drag>(true); // 修正：Drager -> Dragger
+        foreach (var dragger in allDragger) // 修正：drager -> dragger
         {
-            dragRegistry[drager.gameObject.name] = drager;
+            dragRegistry[dragger.gameObject.name] = dragger; // 修正：drager -> dragger
 
-            if (canvasPanelState.DragerPos.TryGetValue(drager.gameObject.name, out var pos))
+            if (canvasPanelState.DraggerPos.TryGetValue(dragger.gameObject.name, out var pos)) // 修正：Drager -> Dragger
             {
-                drager.rectTransform.anchoredPosition = pos;
+                dragger.rectTransform.anchoredPosition = pos; // 修正：drager -> dragger
             }
         }
 
@@ -76,13 +76,13 @@ public partial class Mod_UI_CanvasManager : Module
         {
             string panelName = panel.gameObject.name;
 
-            if (panel.CanDrag && panel.Drager != null)
-                dragRegistry[panelName] = panel.Drager;
+            if (panel.CanDrag && panel.Dragger != null) // 修正：Drager -> Dragger
+                dragRegistry[panelName] = panel.Dragger; // 修正：Drager -> Dragger
 
             if (!panelRegistry.ContainsKey(panelName))
                 panelRegistry.Add(panelName, panel);
 
-            // 恢复开启状态
+            // 恢复开关状态
             if (canvasPanelState.canvasPanelboolStates.TryGetValue(panelName, out var isOpen))
             {
                 if (isOpen) panel.Open();
@@ -90,11 +90,11 @@ public partial class Mod_UI_CanvasManager : Module
             }
 
             // 恢复位置
-            if (canvasPanelState.DragerPos.TryGetValue(panelName, out var pos))
+            if (canvasPanelState.DraggerPos.TryGetValue(panelName, out var pos)) // 修正：Drager -> Dragger
             {
-                if (panel.CanDrag && panel.Drager != null)
+                if (panel.CanDrag && panel.Dragger != null) // 修正：Drager -> Dragger
                 {
-                    var dragRT = panel.Drager.GetComponent<RectTransform>();
+                    var dragRT = panel.Dragger.GetComponent<RectTransform>(); // 修正：Drager -> Dragger
                     if (dragRT != null)
                         dragRT.anchoredPosition = pos;
                 }
@@ -107,7 +107,7 @@ public partial class Mod_UI_CanvasManager : Module
             }
         }
 
-        // 生成按钮（不变）
+        // 生成按钮（菜单）
         if (UIOpen_Parent != null && PanelOpenButtonPrefab != null)
         {
             foreach (Transform child in UIOpen_Parent.transform)
@@ -137,7 +137,7 @@ public partial class Mod_UI_CanvasManager : Module
             }
         }
 
-        // 在 Load() 方法最后添加：
+        // 在 Load() 方法最后添加这一行：
         foreach (var kv in panelRegistry)
         {
             string panelName = kv.Key;
@@ -161,12 +161,12 @@ public partial class Mod_UI_CanvasManager : Module
 
             canvasPanelState.canvasPanelboolStates[name] = isOpen;
 
-            RectTransform rt = panel.CanDrag && panel.Drager != null
-                ? panel.Drager.GetComponent<RectTransform>()
+            RectTransform rt = panel.CanDrag && panel.Dragger != null // 修正：Drager -> Dragger
+                ? panel.Dragger.GetComponent<RectTransform>() // 修正：Drager -> Dragger
                 : panel.GetComponent<RectTransform>();
 
             if (rt != null)
-                canvasPanelState.DragerPos[name] = rt.anchoredPosition;
+                canvasPanelState.DraggerPos[name] = rt.anchoredPosition; // 修正：Drager -> Dragger
 
             UpdateButtonVisual(name, isOpen);
         }
@@ -174,7 +174,7 @@ public partial class Mod_UI_CanvasManager : Module
 
 
 
-    // 更新 CanvasSaveData 的方法，包含位置信息
+    // 更新 CanvasSaveData 的方法来保存位置信息
 /*    private void UpdateCanvasSaveData(string panelName, bool isOpen, BasePanel panel)
     {
         Vector3 pos = panel.transform.position;
@@ -197,34 +197,34 @@ public partial class Mod_UI_CanvasManager : Module
     [Button("Save")]
     public override void Save()
     {
-        // 清空之前状态，避免重复/遗留
+        // 清理之前状态，防止重复/冲突
         canvasPanelState.canvasPanelboolStates.Clear();
-        canvasPanelState.DragerPos.Clear();
+        canvasPanelState.DraggerPos.Clear(); // 修正：Drager -> Dragger
 
         foreach (var pair in panelRegistry)
         {
             string panelName = pair.Key;
             BasePanel panel = pair.Value;
 
-            // 如果面板为空则跳过处理
+            // 检查面板是否为null避免空引用
             if (panel == null)
                 continue;
 
-            // 保存开启状态
+            // 保存开关状态
             canvasPanelState.canvasPanelboolStates[panelName] = panel.IsOpen();
 
-            // 保存位置（判断是否可拖拽）
-            if (panel.CanDrag && panel.Drager != null)
+            // 保存位置，判断是否可以拖拽
+            if (panel.CanDrag && panel.Dragger != null) // 修正：Drager -> Dragger
             {
-                var dragRT = panel.Drager.GetComponent<RectTransform>();
+                var dragRT = panel.Dragger.GetComponent<RectTransform>(); // 修正：Drager -> Dragger
                 if (dragRT != null)
-                    canvasPanelState.DragerPos[panelName] = dragRT.anchoredPosition;
+                    canvasPanelState.DraggerPos[panelName] = dragRT.anchoredPosition; // 修正：Drager -> Dragger
             }
             else
             {
                 var selfRT = panel.GetComponent<RectTransform>();
                 if (selfRT != null)
-                    canvasPanelState.DragerPos[panelName] = selfRT.anchoredPosition;
+                    canvasPanelState.DraggerPos[panelName] = selfRT.anchoredPosition; // 修正：Drager -> Dragger
             }
         }
 

@@ -648,7 +648,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: jawbreaker_tiles_25
+      name: Wall_i
       rect:
         serializedVersion: 2
         x: 8
@@ -963,7 +963,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: jawbreaker_tiles_40
+      name: Wall_-
       rect:
         serializedVersion: 2
         x: 0
@@ -1561,6 +1561,8 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
+      Wall_-: 1243839789
+      Wall_i: -1760270757
       jawbreaker_tiles_0: 1113728878
       jawbreaker_tiles_1: -1250361838
       jawbreaker_tiles_10: 522754364
@@ -1579,7 +1581,6 @@ TextureImporter:
       jawbreaker_tiles_22: -1443384394
       jawbreaker_tiles_23: -861054248
       jawbreaker_tiles_24: 1523622613
-      jawbreaker_tiles_25: -1760270757
       jawbreaker_tiles_26: 4567406
       jawbreaker_tiles_27: 661377350
       jawbreaker_tiles_28: 610184121
@@ -1596,7 +1597,6 @@ TextureImporter:
       jawbreaker_tiles_38: 29859121
       jawbreaker_tiles_39: -1602275175
       jawbreaker_tiles_4: -1126858947
-      jawbreaker_tiles_40: 1243839789
       jawbreaker_tiles_41: -1446216078
       jawbreaker_tiles_42: -1487000148
       jawbreaker_tiles_43: 1657573661

@@ -159,15 +159,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3dc543b94fef8eb428ede936a0903b0b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
-  OnStopWork_Event:
+  Owner: {fileID: 0}
+  OnUIRefresh:
     _PersistentCalls: []
-  UpdatedUI_Event:
+  OnItemDestroy:
     _PersistentCalls: []
-  DestroyItem_Event:
+  OnAct:
     _PersistentCalls: []
-  OnAction_Event:
-    _PersistentCalls: []
+  Sprite: {fileID: 0}
+  updateInterval: 0.1
   data:
     IDName: TileItem_Grass
     GameName: "\u8349\u5757"
@@ -179,6 +179,14 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 1
@@ -189,13 +197,6 @@ MonoBehaviour:
       Scale: {x: 0, y: 0, z: 0}
     ItemSpecialData: 
     Guid: 0
-    tileData:
-      Name_TileBase: 
-      Name_ItemName: TileItem_Grass
-      TileTag: Fertile
-      position: {x: 0, y: 0, z: 0}
-      DemolitionTime: 0
-      workTime: 0
   _tileData:
     Name_TileBase: TileBase_Grass
     Name_ItemName: TileItem_Grass
@@ -203,6 +204,7 @@ MonoBehaviour:
     position: {x: 0, y: 0, z: 0}
     DemolitionTime: 0
     workTime: 0
+    Penalty: 1000
     FertileValue:
       BaseValue: 1
       BaseAdditive: 0

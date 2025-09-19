@@ -31,15 +31,16 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         ChunkMgr.Instance.CleanEmptyDicValues();
 
-        ItemMgr.Instance.SavePlayer();
+        ItemMgr.Instance.SavePlayer();//TODO 这里会销毁一些东西 但是因为销毁是延迟一帧的所以可能保存了 才销毁 导致额外保存了不该保存的东西
         
         if(ChunkMgr.Instance.Chunk_Dic.Count <= 0)
         {
             Debug.LogWarning("区块字典为 空 退出时未保存任何 请检查加载时是否向区块字典中填充对象");
         }
+
         foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
         {
-            go.SaveChunk();
+            go.SaveChunk(); //TODO 这里是保存的方法 
             //覆盖当前激活的地图
             SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[go.MapSave.Name] = go.MapSave;
         }
@@ -52,6 +53,85 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         Event_ExitGame_End.Invoke();
     }
+    /// <summary>
+    /// 使用协程处理退出游戏逻辑，解决保存与销毁的时序问题
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerator ExitGameCoroutine()
+    {
+        // 安全检查：确保核心管理器已初始化
+        if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
+            SaveDataMgr.Instance == null)
+        {
+            Debug.LogError("核心管理器未初始化，退出失败！");
+            yield break;
+        }
+
+        // 触发退出开始事件
+        Event_ExitGame_Start?.Invoke();
+
+        // 先执行基础清理
+        ItemMgr.Instance.CleanupNullItems();
+        ChunkMgr.Instance.CleanEmptyDicValues();
+
+        // 提前保存玩家数据（在销毁逻辑执行前）
+        ItemMgr.Instance.SavePlayer();
+
+        // 延迟一帧，等待所有标记为销毁的对象实际销毁
+        yield return null;
+
+        // 延迟一帧后再保存区块数据（此时已完成销毁，不会保存脏数据）
+        SaveAllChunks();
+
+        // 保存数据到磁盘（使用同步方法）
+        SaveDataMgr.Instance.Save_And_WriteToDisk();
+
+        // 清理所有区块
+        ChunkMgr.Instance.ClearAllChunk();
+
+        // 异步加载开始场景
+        var loadOp = SceneManager.LoadSceneAsync("GameStartScene");
+        while (!loadOp.isDone)
+        {
+            yield return null; // 等待场景加载完成
+        }
+
+        // 所有操作完成后触发结束事件
+        Event_ExitGame_End?.Invoke();
+    }
+
+    /// <summary>
+    /// 保存所有区块数据（提取为独立方法，提高可读性）
+    /// </summary>
+    private void SaveAllChunks()
+    {
+        var chunkDic = ChunkMgr.Instance.Chunk_Dic;
+
+        if (chunkDic.Count <= 0)
+        {
+            Debug.LogWarning("区块字典为空，退出时未保存任何区块，请检查加载逻辑");
+            return;
+        }
+
+        foreach (var chunk in chunkDic.Values)
+        {
+            if (chunk == null)
+            {
+                Debug.LogWarning("发现空区块对象，已跳过保存");
+                continue;
+            }
+
+            chunk.SaveChunk();
+            if (chunk.MapSave != null && !string.IsNullOrEmpty(chunk.MapSave.Name))
+            {
+                SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[chunk.MapSave.Name] = chunk.MapSave;
+            }
+        }
+    }
+
+    // 调用方式：在需要退出游戏的地方启动协程
+    // StartCoroutine(ExitGameCoroutine());
+
 
     public void StartNewGame()
     {

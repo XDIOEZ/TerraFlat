@@ -1,0 +1,231 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!181963792 &2655988077585873504
+Preset:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Item_Tile_Grass
+  m_TargetType:
+    m_NativeTypeID: 114
+    m_ManagedTypePPtr: {fileID: 11500000, guid: 3dc543b94fef8eb428ede936a0903b0b, type: 3}
+    m_ManagedTypeFallback: 
+  m_Properties:
+  - target: {fileID: 0}
+    propertyPath: m_Enabled
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: m_EditorHideFlags
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: m_EditorClassIdentifier
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: Owner
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: OnUIRefresh._PersistentCalls.Array.size
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: OnItemDestroy._PersistentCalls.Array.size
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: OnAct._PersistentCalls.Array.size
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: Sprite
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: updateInterval
+    value: 0.1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.IDName
+    value: TileItem_Grass
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.GameName
+    value: "\u8349\u5757"
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Description
+    value: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Durability
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.ItemTags.Item_TypeTag.Array.size
+    value: 2
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.ItemTags.Item_TypeTag.Array.data[0]
+    value: None
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.ItemTags.Item_TypeTag.Array.data[1]
+    value: None
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.ItemTags.Item_Material.Array.size
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.ItemTags.Item_Material.Array.data[0]
+    value: None
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Tags.keys.Array.size
+    value: 3
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Tags.keys.Array.data[0].tag
+    value: Type
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Tags.keys.Array.data[0].values.Array.size
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Tags.keys.Array.data[1].tag
+    value: Material
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Tags.keys.Array.data[1].values.Array.size
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Tags.keys.Array.data[2].tag
+    value: MakeTag
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Tags.keys.Array.data[2].values.Array.size
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Stack.Amount
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Stack.Volume
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Stack.CanBePickedUp
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Position.x
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Position.y
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Position.z
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Rotation.x
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Rotation.y
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Rotation.z
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Rotation.w
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Scale.x
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Scale.y
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data._transform.Scale.z
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.ItemSpecialData
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: data.Guid
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.Name_TileBase
+    value: TileBase_Grass
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.Name_ItemName
+    value: TileItem_Grass
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.TileTag
+    value: none
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.position.x
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.position.y
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.position.z
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.DemolitionTime
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.workTime
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.Penalty
+    value: 1000
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.FertileValue.BaseValue
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.FertileValue.BaseAdditive
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.FertileValue.AdditiveModifier
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.FertileValue.MultiplicativeModifier
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: _tileData.FertileValue.FinalAdditive
+    value: 0
+    objectReference: {fileID: 0}
+  m_ExcludedProperties: []

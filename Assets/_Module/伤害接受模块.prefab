@@ -65,7 +65,7 @@ BoxCollider2D:
   m_IsTrigger: 1
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0.016622111, y: -0.03546557}
+  m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -76,7 +76,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 0.5778488, y: 0.56849295}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &1794842364952349929
 MonoBehaviour:
@@ -115,6 +115,12 @@ MonoBehaviour:
     ShowCanvas: 1
     DamageInterval: 0.1
     DestroyDelay: 0
+    LootTable:
+    - LootPrefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      LootPrefabName: Chicken
+      DropChance: 0.001
+      MinAmount: 0
+      MaxAmount: 1
   OnDead:
     _PersistentCalls: []
   flashCount: 1

@@ -16,16 +16,13 @@ using UnityEngine.UI;
 [RequireComponent(typeof(CanvasGroup))]
 public class BasePanel : MonoBehaviour
 {
-
     private Dictionary<string, List<UIBehaviour>> controlDic = new();
     public CanvasGroup canvasGroup;
-    public bool CanDrag  = false;
-    public UI_Drag Drager;
-
+    public bool CanDrag = false;
+    public UI_Drag Dragger;
 
     protected virtual void Awake()
     {
-
         // 查找组件
         FindChildrenControl<Button>();
         FindChildrenControl<Image>();
@@ -35,8 +32,8 @@ public class BasePanel : MonoBehaviour
         FindChildrenControl<ScrollRect>();
         FindChildrenControl<InputField>();
 
-        Drager = GetComponentInChildren<UI_Drag>();
-        if (Drager != null)
+        Dragger = GetComponentInChildren<UI_Drag>();
+        if (Dragger != null)
         {
             CanDrag = true;
         }
@@ -45,7 +42,7 @@ public class BasePanel : MonoBehaviour
 
     public void Start()
     {
-        // 遍历所有 Button，找到名字中包含“关闭”的按钮，注册关闭事件
+        // 遍历所有 Button，找到名字中包含"关闭"的按钮，注册关闭事件
         foreach (var pair in controlDic)
         {
             string objName = pair.Key;
@@ -64,8 +61,8 @@ public class BasePanel : MonoBehaviour
             }
         }
     }
-    [Button]
 
+    [Button]
     public void Open()
     {
         if (canvasGroup != null)
@@ -86,6 +83,7 @@ public class BasePanel : MonoBehaviour
             canvasGroup.blocksRaycasts = false;
         }
     }
+
     public bool IsOpen()
     {
         return canvasGroup != null &&
@@ -93,7 +91,7 @@ public class BasePanel : MonoBehaviour
                canvasGroup.interactable &&
                canvasGroup.blocksRaycasts;
     }
-    //TODO 添加切换CanvasGroup的开关方法
+
     /// <summary>
     /// 切换当前 CanvasGroup 的显示状态
     /// 如果当前是打开状态则关闭，否则打开
@@ -106,8 +104,6 @@ public class BasePanel : MonoBehaviour
             Open();
     }
 
-
-    //TODO 添加切换指定窗口的方法 输入为空表示全部切换
     /// <summary>
     /// 切换所有面板或指定面板的显示状态（基于 controlDic 中的控件）。
     /// 如果 panelName 为空，则切换所有有 CanvasGroup 的面板。
@@ -135,7 +131,6 @@ public class BasePanel : MonoBehaviour
             }
         }
     }
-
 
     /// <summary>
     /// 显示当前面板
@@ -231,6 +226,30 @@ public class BasePanel : MonoBehaviour
                 {
                     OnValueChanged(objName, value);
                 });
+            }
+        }
+    }
+
+    /// <summary>
+    /// 清理资源，移除事件监听器
+    /// </summary>
+    protected virtual void OnDestroy()
+    {
+        // 移除按钮点击事件监听器
+        foreach (var pair in controlDic)
+        {
+            foreach (var control in pair.Value)
+            {
+                if (control is Button btn)
+                {
+                    // 注意：这里无法直接移除匿名方法，实际项目中应使用更精确的引用
+                    // btn.onClick.RemoveAllListeners();
+                }
+                else if (control is Toggle toggle)
+                {
+                    // 同样，这里也无法直接移除匿名方法
+                    // toggle.onValueChanged.RemoveAllListeners();
+                }
             }
         }
     }

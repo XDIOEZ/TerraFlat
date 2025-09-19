@@ -41,7 +41,7 @@ public partial class Mod_ColdWeapon : Module
     public Vector2 StartPosition = Vector2.zero;
     public Transform MoveTargetTransform;
 
-    [SerializeField] protected Collider2D damageCollider;
+    [SerializeField] public Collider2D damageCollider;
 
     private InputAction InputAction;
     private Vector2 returnTarget;

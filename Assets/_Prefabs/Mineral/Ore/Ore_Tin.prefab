@@ -91,14 +91,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
     _PersistentCalls: []
   OnAct:
-    _PersistentCalls: []
-  OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0.1
@@ -114,6 +112,14 @@ MonoBehaviour:
       Item_Material:
       - Tin
       - Stone
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 1
@@ -198,7 +204,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: f4b1ad2c128ff8f47919ef031ff61bb7, type: 3}
+  m_Sprite: {fileID: 21300000, guid: c422e4cb7f4f5c540a5f83256abdceaf, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0

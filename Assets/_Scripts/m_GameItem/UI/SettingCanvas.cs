@@ -18,6 +18,8 @@ public class SettingCanvas : MonoBehaviour
     //方法:回到主场景
     public void ExitGame()
     {
-        GameManager.Instance.ExitGame();
+        // 必须通过StartCoroutine启动协程
+        // 注意：调用者（此处是SettingCanvas）必须是MonoBehaviour实例
+        GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine());
     }
 }

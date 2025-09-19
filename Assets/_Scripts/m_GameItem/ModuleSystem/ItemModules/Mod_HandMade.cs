@@ -12,7 +12,7 @@ public class Mod_HandMade : Module
 {
     public InventoryModuleData inventoryModuleData = new InventoryModuleData();
     public override ModuleData _Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
-    public BasePanel basePanel;
+    public BasePanel basePanel; //TODO 这个是面板的引用 其里面有个字段    public UI_Drag Dragger; 他的位置便是要存档的位置
     #region 工作变量
 
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
@@ -67,6 +67,12 @@ public class Mod_HandMade : Module
         }
 
         basePanel = GetComponentInChildren<BasePanel>();
+        
+        // TODO完成：从存档数据中恢复面板位置
+        if (basePanel != null && basePanel.Dragger != null)
+        {
+            basePanel.Dragger.transform.position = inventoryModuleData.PanleRectPosition;
+        }
 
     }
 
@@ -230,7 +236,11 @@ public class Mod_HandMade : Module
 
     public override void Save()
     {
-        // throw new System.NotImplementedException();
+        // TODO完成：保存面板位置到存档数据
+        if (basePanel != null && basePanel.Dragger != null)
+        {
+            inventoryModuleData.PanleRectPosition = basePanel.Dragger.transform.position;
+        }
 
         item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod);
         if (interactMod != null)
@@ -249,4 +259,5 @@ public partial class InventoryModuleData : ModuleData
 {
     [ShowInInspector]
     public Dictionary<string,Inventory_Data> Data = new Dictionary<string, Inventory_Data>();
+    public Vector3 PanleRectPosition = Vector3.zero;//TODO 我在这里添加了一个Vector3变量，用于保存面板的位置
 }

@@ -21,7 +21,7 @@ public class Mod_NewItemTransformController : Module
 
     private Item _spawnedItem;
     private string _currentItemName;
-    private const string DEFAULT_ITEM_NAME = "DefaultItem";
+    private const string DEFAULT_ITEM_NAME = "Apple";
 
     private LuaEnv _luaEnv;
     private LuaFunction _updateFunction;
@@ -67,33 +67,36 @@ public class Mod_NewItemTransformController : Module
         ModSaveData.WriteData(Data);
     }
 
-    public override void Act()
+public override void Act()
+{
+    base.Act();
+
+    Debug.Log("触发热更新，重新加载Lua脚本");
+
+    if (string.IsNullOrEmpty(Data.Function_Lua))
     {
-        base.Act();
-
-        Debug.Log("触发热更新，重新加载Lua脚本");
-
-        if (string.IsNullOrEmpty(Data.Function_Lua))
-        {
-            Data.Function_Lua = GetDefaultOrbitScript();
-            Debug.LogWarning("使用默认Lua脚本");
-        }
-
-        // 恢复Act方法中的必要逻辑，确保脚本正确重载
-        if (_updateFunction != null)
-        {
-            _updateFunction.Dispose();
-            _updateFunction = null;
-        }
-
-        if (forceReloadOnAct)
-            InitializeLuaEnv();
-
-        _isLuaEnvDisposed = false;
-        InitializeLuaScript();
-        SpawnItemAsChild();
+        Data.Function_Lua = GetDefaultOrbitScript();
+        Debug.LogWarning("使用默认Lua脚本");
     }
 
+    // 恢复Act方法中的必要逻辑，确保脚本正确重载
+    if (_updateFunction != null)
+    {
+        _updateFunction.Dispose();
+        _updateFunction = null;
+    }
+
+    // TODO优化：不再强制重建Lua环境，避免性能问题
+    // 只有在Lua环境已释放或不存在时才重新初始化
+    if (_luaEnv == null || _isLuaEnvDisposed)
+    {
+        InitializeLuaEnv();
+    }
+
+    _isLuaEnvDisposed = false;
+    InitializeLuaScript();
+    SpawnItemAsChild();
+}
     public override void ModUpdate(float deltaTime)
     {
         base.ModUpdate(deltaTime);
@@ -212,12 +215,12 @@ public class Mod_NewItemTransformController : Module
     {
         return @"
 Config = { 
-    itemName = ""Apple"",
+    itemName = ""Sword_Bronze"",
     orbitRadius = 2.0, 
     orbitSpeed = 1.0, 
     zPosition = 0.0,
     rotateSpeed = 9000.0,   -- 自旋转速度（度/秒）
-    rotateAxis = {x=0, y=1, z=0}  -- 旋转轴（Y轴）
+    rotateAxis = {x=0, y=0, z=1}  -- 旋转轴（Y轴）
 }
 
 function Init(itemTransform)
@@ -288,9 +291,11 @@ end
             return;
         }
 
-        _spawnedItem = ItemMgr.Instance.InstantiateItem(_currentItemName);
+        _spawnedItem = ItemMgr.Instance.InstantiateItem(_currentItemName, transform.gameObject,default);
+
+        _spawnedItem.Load();
         if (_spawnedItem == null)
-        {
+        { 
             Debug.LogError($"物品生成失败！尝试默认物品: {DEFAULT_ITEM_NAME}");
             _spawnedItem = ItemMgr.Instance.InstantiateItem(DEFAULT_ITEM_NAME);
             if (_spawnedItem == null)
@@ -299,8 +304,14 @@ end
                 return;
             }
         }
+        _spawnedItem.itemMods.GetMod_ByID(ModText.ColdWeapon,out Mod_ColdWeapon mod_ColdWeapon);
+        if (mod_ColdWeapon != null)
+        {
+            mod_ColdWeapon.damageCollider.enabled = true;
+        }
 
-        _spawnedItem.transform.SetParent(transform);
+
+        _spawnedItem.itemData.Stack.CanBePickedUp = false;
         _spawnedItem.transform.localPosition = Vector3.zero;
         _spawnedItem.transform.localRotation = Quaternion.identity;
 

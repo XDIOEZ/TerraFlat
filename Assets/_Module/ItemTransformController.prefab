@@ -52,16 +52,5 @@ MonoBehaviour:
     Type: 0
     BitData: 
   Data:
-    Function_Lua: "Config = { \r\n    itemName = \"Apple\",\r\n    orbitRadius =
-      2.0, \r\n    orbitSpeed = 1.0, \r\n    zPosition = 0.0 \r\n}\r\n\r\nfunction
-      Init(itemTransform)\r\n    local centerPos = moduleTransform.position\r\n   
-      local x = centerPos.x + Config.orbitRadius\r\n    local y = centerPos.y\r\n   
-      itemTransform.position = Vector3D(x, y, Config.zPosition)\r\nend\r\n\r\nfunction
-      Update(deltaTime)\r\n    local centerPos = moduleTransform.position\r\n   
-      local angle = controller:GetCurrentAngle()\r\n    angle = angle + deltaTime
-      * Config.orbitSpeed\r\n    controller:SetCurrentAngle(angle)\r\n\r\n    local
-      x = centerPos.x + math.cos(angle) * Config.orbitRadius\r\n    local y = centerPos.y
-      + math.sin(angle) * Config.orbitRadius\r\n\r\n    local itemTransform = controller:GetSpawnedItemTransform()\r\n   
-      if itemTransform then\r\n        itemTransform.position = Vector3D(x, y, Config.zPosition)\r\n   
-      end\r\nend"
+    Function_Lua: 
   forceReloadOnAct: 1

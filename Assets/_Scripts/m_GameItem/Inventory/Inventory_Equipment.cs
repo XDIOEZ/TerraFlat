@@ -60,88 +60,101 @@ public class Inventory_Equipment : Inventory
     }
 
     public override void OnClick(int index)
+{
+    // 获取当前装备槽中的物品（即需要被卸下或被替换的物品）。
+    var currentEquippedItem = Data.itemSlots[index].itemData;
+
+    // 获取从源背包（DefaultTarget_Inventory）中即将装备过来的新物品。
+    var newIncomingItem = DefaultTarget_Inventory.Data.itemSlots[0].itemData;
+
+    // --- 禁用阶段 (DEACTIVATION PHASE) ---
+    // 如果当前槽位有装备，我们必须禁用它的模块，因为它即将被移除或替换。
+    if (currentEquippedItem != null)
     {
-        // 获取当前装备槽中的物品（即需要被卸下或被替换的物品）。
-        var currentEquippedItem = Data.itemSlots[index].itemData;
+        var key = GetKey(currentEquippedItem);
 
-        // 获取从源背包（DefaultTarget_Inventory）中即将装备过来的新物品。
-        var newIncomingItem = DefaultTarget_Inventory.Data.itemSlots[0].itemData;
-
-        // --- 禁用阶段 (DEACTIVATION PHASE) ---
-        // 如果当前槽位有装备，我们必须禁用它的模块，因为它即将被移除或替换。
-        if (currentEquippedItem != null)
+        if (EquipmentModules_Dictionary.TryGetValue(key, out var modList))
         {
-            var key = GetKey(currentEquippedItem);
-
-            if (EquipmentModules_Dictionary.TryGetValue(key, out var modList))
+            // 使用 .ToList() 会创建一个临时副本，避免遍历中修改集合引发异常
+            foreach (var mod in modList.ToList())
             {
-                // 使用 .ToList() 会创建一个临时副本，避免遍历中修改集合引发异常
-                foreach (var mod in modList.ToList())
+                // 如果模块实现了IItemValueModifier接口，则调用Unequip方法
+                if (mod is IItemValueModifier itemValueModifier)
                 {
-                    // 从EquipmentModules_Dictionary中获取模块，而不是通过Owner.itemMods
-                    // 在卸下装备前，将模块数据恢复到物品实例上
-                    var moduleFromDict = modList.FirstOrDefault(m => m._Data.Name == mod._Data.Name);
-                    if (moduleFromDict != null)
-                    {
-                        currentEquippedItem.ModuleDataDic[mod._Data.Name] = moduleFromDict._Data;
-                    }
-
-                    DeactivateEquipmentAttributes(mod);
-                    EquipmentModules_Dictionary.Remove(key);
+                    itemValueModifier.Unequip(Owner, currentEquippedItem);
                 }
-            }
-        }
 
-        // --- 激活阶段 (ACTIVATION PHASE) ---
-        // 如果有新物品要装备，检查它是否是有效的装备，然后激活其模块。
-        if (newIncomingItem != null)
-        {
-            // 检查新物品是否拥有类型为 "Equipment" 的模块。
-            bool isEquipment = newIncomingItem.ModuleDataDic.Values.Any(modData => modData.Type == ModuleType.Equipment);
-
-            if (isEquipment)
-            {
-                // 激活新物品上的所有装备模块。
-                foreach (var modData in newIncomingItem.ModuleDataDic.Values)
+                // 从EquipmentModules_Dictionary中获取模块，而不是通过Owner.itemMods
+                // 在卸下装备前，将模块数据恢复到物品实例上
+                var moduleFromDict = modList.FirstOrDefault(m => m._Data.Name == mod._Data.Name);
+                if (moduleFromDict != null)
                 {
-                    if (modData.Type == ModuleType.Equipment)
-                    {
-                        ActivateEquipmentAttributes(Owner, modData, newIncomingItem);
-                    }
+                    currentEquippedItem.ModuleDataDic[mod._Data.Name] = moduleFromDict._Data;
                 }
-            }
-            else
-            {
-                // 可选：如果你尝试装备一个非装备物品，你可能希望阻止交换。
-                // 如果是这样，在这里直接 'return;'。
-            }
-        }
 
-        // --- 完成交换 (FINALIZE SWAP) ---
-        // 在处理完属性后，执行实际的物品槽位数据交换。
-        if (currentEquippedItem != null || newIncomingItem != null)
-        {
-            base.OnClick(index);
+                DeactivateEquipmentAttributes(mod);
+                EquipmentModules_Dictionary.Remove(key);
+            }
         }
     }
 
-    public void ActivateEquipmentAttributes(Item player, ModuleData equipment, ItemData sourceItemData)
+    // --- 激活阶段 (ACTIVATION PHASE) ---
+    // 如果有新物品要装备，检查它是否是有效的装备，然后激活其模块。
+    if (newIncomingItem != null)
     {
-        // 防止 sourceItemData 为 null 时产生错误
-        if (sourceItemData == null) return;
+        // 检查新物品是否拥有类型为 "Equipment" 的模块。
+        bool isEquipment = newIncomingItem.ModuleDataDic.Values.Any(modData => modData.Type == ModuleType.Equipment);
 
-        // 使用与Deactivate相同的key生成逻辑，保持一致性
-        string key = GetKey(sourceItemData);
-
-        if (!EquipmentModules_Dictionary.ContainsKey(key))
+        if (isEquipment)
         {
-            EquipmentModules_Dictionary[key] = new List<Module>();
+            // 激活新物品上的所有装备模块。
+            foreach (var modData in newIncomingItem.ModuleDataDic.Values)
+            {
+                if (modData.Type == ModuleType.Equipment)
+                {
+                    Module module = ActivateEquipmentAttributes(Owner, modData, newIncomingItem);
+                    
+                    // 如果模块实现了IItemValueModifier接口，则调用Equip方法
+                    if (module is IItemValueModifier itemValueModifier)
+                    {
+                        itemValueModifier.Equip(Owner, newIncomingItem);
+                    }
+                }
+            }
         }
-
-        Module equipmentModule = EquipMod(player, equipment, sourceItemData);
-        EquipmentModules_Dictionary[key].Add(equipmentModule);
+        else
+        {
+            // 可选：如果你尝试装备一个非装备物品，你可能希望阻止交换。
+            // 如果是这样，在这里直接 'return;'。
+        }
     }
 
+    // --- 完成交换 (FINALIZE SWAP) ---
+    // 在处理完属性后，执行实际的物品槽位数据交换。
+    if (currentEquippedItem != null || newIncomingItem != null)
+    {
+        base.OnClick(index);
+    }
+}
+
+public Module ActivateEquipmentAttributes(Item player, ModuleData equipment, ItemData sourceItemData)
+{
+    // 防止 sourceItemData 为 null 时产生错误
+    if (sourceItemData == null) return null;
+
+    // 使用与Deactivate相同的key生成逻辑，保持一致性
+    string key = GetKey(sourceItemData);
+
+    if (!EquipmentModules_Dictionary.ContainsKey(key))
+    {
+        EquipmentModules_Dictionary[key] = new List<Module>();
+    }
+
+    Module equipmentModule = EquipMod(player, equipment, sourceItemData);
+    EquipmentModules_Dictionary[key].Add(equipmentModule);
+    
+    return equipmentModule;
+}
     public Module EquipMod(Item item, ModuleData mod, ItemData itemData)
     {
         GameObject @object = GameRes.Instance.InstantiatePrefab(mod.ID);

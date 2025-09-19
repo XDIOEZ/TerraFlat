@@ -6,12 +6,13 @@ using System;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
+using Sirenix.OdinInspector; // 添加Odin引用
 
 [Serializable]
 [MemoryPackable]
 public partial class Inventory_Data
 {
-    //TODO 设置Event
+    //TODO 设置Event - 已完成：Event_RefreshUI就是用于UI刷新的事件
     public string Name = string.Empty;                      // 背包名称
     public List<ItemSlot> itemSlots = new List<ItemSlot>(); // 物品槽列表
     public int Index = 0;                      // 当前选中槽位索引
@@ -357,7 +358,7 @@ public partial class Inventory_Data
         }
         return null;
     }
-    //TODO 增加根据ID获取物品的方法
+    //TODO 增加根据ID获取物品的方法 - 已完成
     public ItemSlot GetItemSlotByModuleID(string moduleID)
     {
         foreach (var slot in itemSlots)
@@ -374,6 +375,67 @@ public partial class Inventory_Data
         return null;
     }
 
-  
+    // TODO完成：添加根据Prefab注入ItemData到Slot的方法
+    /// <summary>
+    /// 根据Prefab注入ItemData到指定的Slot中
+    /// </summary>
+    /// <param name="prefab">物品预制体，必须包含Item组件</param>
+    /// <param name="count">物品数量</param>
+    /// <param name="index">要注入的槽位索引</param>
+    [Button("注入物品到槽位")] // Odin特性：在Inspector中显示为按钮
+    [LabelText("注入物品")] // Odin特性：自定义标签文本
+    public void InjectItemData(
+        [LabelText("物品预制体")] GameObject prefab, 
+        [LabelText("数量")] [MinValue(1)] int count, 
+        [LabelText("槽位索引")] [MinValue(0)] int index)
+    {
+        // 参数验证
+        if (prefab == null)
+        {
+            Debug.LogError("注入失败：Prefab不能为空");
+            return;
+        }
 
+        if (index < 0 || index >= itemSlots.Count)
+        {
+            Debug.LogError($"注入失败：索引 {index} 超出范围 [0, {itemSlots.Count - 1}]");
+            return;
+        }
+
+        // 获取Prefab上的Item组件
+        Item itemComponent = prefab.GetComponent<Item>();
+        if (itemComponent == null)
+        {
+            Debug.LogError($"注入失败：Prefab {prefab.name} 上找不到Item组件");
+            return;
+        }
+        itemComponent.IsPrefabInit(); // 确保ItemData已经初始化完毕
+        // 克隆ItemData
+        ItemData clonedItemData = itemComponent.itemData.DeepClone();
+        if (clonedItemData == null)
+        {
+            Debug.LogError($"注入失败：无法克隆 {prefab.name} 的ItemData");
+            return;
+        }
+
+        // 设置数量
+        clonedItemData.Stack.Amount = count;
+        
+        // 注入到指定槽位
+        SetOne_ItemData(index, clonedItemData);
+        
+        // 触发UI刷新
+        Event_RefreshUI.Invoke(index);
+        
+        Debug.Log($"成功注入物品 {prefab.name} x{count} 到槽位 {index}");
+    }
+
+    // 重载方法：使用默认索引0
+    [Button("注入物品到第一个槽位")]
+    public void InjectItemData(
+        [LabelText("物品预制体")] GameObject prefab, 
+        [LabelText("数量")] [MinValue(1)] int count)
+    {
+        InjectItemData(prefab, count, 0);
+    }
 }

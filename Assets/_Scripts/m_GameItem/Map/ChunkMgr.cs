@@ -501,42 +501,54 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(pos).ToString(), out chunk);
     }
 
-    public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
+public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
+{
+    closestChunk = null;
+    float minSqrDist = float.MaxValue; // 用平方距离避免开方
+
+    if (Chunk_Dic_Active == null || Chunk_Dic_Active.Count == 0)
     {
-        closestChunk = null;
-        float minSqrDist = float.MaxValue; // 用平方距离避免开方
+        Debug.LogError("GetClosestChunk: Chunk_Dic_Active 为空，无法找到最近的 Chunk！");
+        // TODO完成：将pos转换为Vector2Int然后通过LoadChunk加载
+        Vector2Int chunkPos = Chunk.GetChunkPosition(pos);
+        string chunkName = chunkPos.ToString();
+        LoadChunk(chunkName);
+        // 重新获取加载的chunk
+        Chunk_Dic_Active.TryGetValue(chunkName, out closestChunk);
+        return;
+    }
 
-        if (Chunk_Dic_Active == null || Chunk_Dic_Active.Count == 0)
+    foreach (var chunk in Chunk_Dic_Active.Values)
+    {
+        if (chunk == null)
         {
-            Debug.LogError("GetClosestChunk: Chunk_Dic_Active 为空，无法找到最近的 Chunk！");
-            return;
+            Debug.LogWarning("GetClosestChunk: 遍历到一个空的 Chunk 引用，已跳过。");
+            continue;
         }
 
-        foreach (var chunk in Chunk_Dic_Active.Values)
+        float sqrDist = (pos - (Vector2)chunk.transform.position).sqrMagnitude;
+        if (sqrDist < minSqrDist)
         {
-            if (chunk == null)
-            {
-                Debug.LogWarning("GetClosestChunk: 遍历到一个空的 Chunk 引用，已跳过。");
-                continue;
-            }
-
-            float sqrDist = (pos - (Vector2)chunk.transform.position).sqrMagnitude;
-            if (sqrDist < minSqrDist)
-            {
-                minSqrDist = sqrDist;
-                closestChunk = chunk;
-            }
-        }
-
-        if (closestChunk == null)
-        {
-            Debug.LogError($"GetClosestChunk: 没有找到合法的 Chunk！（输入位置：{pos}）");
-        }
-        else
-        {
-            Debug.Log($"GetClosestChunk: 最近的 Chunk 是 {closestChunk.name}，距离平方：{minSqrDist}");
+            minSqrDist = sqrDist;
+            closestChunk = chunk;
         }
     }
+
+    if (closestChunk == null)
+    {
+        Debug.LogError($"GetClosestChunk: 没有找到合法的 Chunk！（输入位置：{pos}）");
+        // TODO完成：将pos转换为Vector2Int然后通过LoadChunk加载
+        Vector2Int chunkPos = Chunk.GetChunkPosition(pos);
+        string chunkName = chunkPos.ToString();
+        LoadChunk(chunkName);
+        // 重新获取加载的chunk
+        Chunk_Dic_Active.TryGetValue(chunkName, out closestChunk);
+    }
+    else
+    {
+        Debug.Log($"GetClosestChunk: 最近的 Chunk 是 {closestChunk.name}，距离平方：{minSqrDist}");
+    }
+}
 
 
 }

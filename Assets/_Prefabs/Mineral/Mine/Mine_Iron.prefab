@@ -206,8 +206,8 @@ MonoBehaviour:
         values: []
     Stack:
       Amount: 1
-      Volume: 2
-      CanBePickedUp: 1
+      Volume: 100
+      CanBePickedUp: 0
     _transform:
       Position: {x: 0, y: 0, z: 0}
       Rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -227,6 +227,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757"
       objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].MaxAmount
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].MinAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].DropChance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].LootPrefab
+      value: 
+      objectReference: {fileID: 2048408006814487461, guid: d56429304b3eae547a41b59c65691efc, type: 3}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

@@ -92,17 +92,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
     _PersistentCalls: []
   OnAct:
     _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
   Sprite: {fileID: 0}
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
     IDName: Sword_Bronze
     GameName: Sword_Bronze
@@ -114,6 +112,14 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 2
