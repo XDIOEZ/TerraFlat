@@ -61,7 +61,7 @@ public partial class Mod_Smelting : Module
             _Data.ID = ModText.Smelting;
         }
     }
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (Data.IsSmelting) // 已经处于熔炼状态
         {

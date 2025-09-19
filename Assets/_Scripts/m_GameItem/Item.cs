@@ -106,12 +106,12 @@ public abstract class Item : MonoBehaviour
     [Button]
     public void SetUpModeule(string modName)
     {
-        Module.ADDModTOItem(this, modName);
+        Module.ADDModTOItem(this, modName).Load();
 
-        foreach(var mod in Mods.Values)
+     /*   foreach(var mod in Mods.Values)
         {
             mod.Load();
-        }
+        }*/
     }
 
     [Tooltip("物品的更新频率，单位：秒")]
@@ -123,7 +123,7 @@ public abstract class Item : MonoBehaviour
         {
             foreach (Module mod in Mods.Values.ToList()) // 创建快照
             {
-                mod.Action(Time.deltaTime);
+                mod.ModUpdate(Time.deltaTime);
             }
             return;
         }
@@ -135,7 +135,7 @@ public abstract class Item : MonoBehaviour
 
             foreach (Module mod in Mods.Values.ToList()) // 创建快照
             {
-                mod.Action(updateInterval);
+                mod.ModUpdate(updateInterval);
             }
         }
     }

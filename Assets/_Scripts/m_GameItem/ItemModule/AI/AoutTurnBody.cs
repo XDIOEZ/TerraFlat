@@ -11,7 +11,7 @@ public class AoutTurnBody : TurnBody
         base.Load();
         mover = item.Mods[ModText.Mover] as Mover;
     }
-    public override void Action(float delta)
+    public override void ModUpdate(float delta)
     {
         UpdateTurn(delta);
 

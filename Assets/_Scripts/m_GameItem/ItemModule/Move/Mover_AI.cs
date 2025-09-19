@@ -55,7 +55,7 @@ public class Mover_AI : Mover
 
     #region ÒÆ¶¯Âß¼­
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
       
         if(CanMove == false)

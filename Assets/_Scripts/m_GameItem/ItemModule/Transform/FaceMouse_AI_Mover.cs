@@ -12,7 +12,7 @@ public class FaceMouse_AI_Mover : FaceMouse
         mover = item.itemMods.GetMod_ByID(ModText.Mover) as Mover;
     }
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         Data.FocusPoint = mover.TargetPosition;
     }

@@ -1,103 +1,113 @@
 using Cinemachine;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// 管理摄像机跟随逻辑
+/// </summary>
 public class CameraFollowManager : Module
 {
+    [Header("模块数据")]
     public Ex_ModData ModData;
-    public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData)value; }
+    public override ModuleData _Data
+    {
+        get => ModData;
+        set => ModData = (Ex_ModData)value;
+    }
 
+    [Header("摄像机配置")]
     public CinemachineVirtualCamera vcam;
+    public Camera ControllerCamera;
 
+    [Header("跟随目标")]
     public Item CameraFollowItem;
-
+    public Player Player;
     public PlayerController PlayerController;
 
+    /// <summary>
+    /// 获取或设置虚拟摄像机
+    /// </summary>
     public CinemachineVirtualCamera Vcam
     {
         get
         {
             if (vcam == null)
-            {
                 vcam = GetComponentInChildren<CinemachineVirtualCamera>();
-            }
             return vcam;
         }
-
-        set
-        {
-            vcam = value;
-        }
+        set => vcam = value;
     }
 
-    public Camera ControllerCamera;
-
-    public Player Player;
-
+    #region 生命周期方法
     public new void Awake()
     {
-        if (_Data.ID == "")
-        _Data.ID = ModText.Camera;
+        // 如果ID为空，则使用默认名称
+        if (string.IsNullOrEmpty(_Data.ID))
+            _Data.ID = ModText.Camera;
     }
 
-    public void PovValueChanged(InputAction.CallbackContext context = default)
-    {
-        //获取鼠标滚轮数值
-        Vector2 scrollValue = (Vector2)context.ReadValueAsObject();
-        //Debug.Log(scrollValue.y);
-        if (scrollValue.y > 0)
-        {
-            //TODO视野减少
-            ChangeCameraView(-1);
-        }
-        else if (scrollValue.y < 0)
-        {
-            //TODO视野增加
-            ChangeCameraView(1);
-        }
-    }
-
-    // Start is called before the first frame update
     public override void Load()
     {
-        item.GetComponent<PlayerController>()._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
+        // 获取PlayerController并绑定鼠标滚轮事件
+        PlayerController = GetComponentInParent<PlayerController>();
+        PlayerController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
 
+        // 获取跟随物体
+        CameraFollowItem = GetComponentInParent<Item>();
+        Player = CameraFollowItem as Player;
+
+        // 获取主摄像机
         ControllerCamera = GetComponentInChildren<Camera>();
 
-        transform.rotation = Quaternion.identity;
-      
-        PlayerController = GetComponentInParent<PlayerController>();
-
-        CameraFollowItem = GetComponentInParent<Item>();
-
-
-        // 设置跟随目标
+        // 初始化虚拟摄像机跟随目标
         Vcam.Follow = CameraFollowItem.transform;
 
-
-        // 重命名物体名字，本体+父对象
+        // 重命名摄像机物体
         transform.name = $"{CameraFollowItem.name} 的 Camera";
 
-        transform.SetParent(null);
+        // 将摄像机脱离父对象
+        ControllerCamera.transform.SetParent(null);
+        vcam.transform.SetParent(null);
 
-        Player = CameraFollowItem as Player;
+        // 初始化摄像机视野
         Vcam.m_Lens.OrthographicSize = Player.PovValue;
+
+        // 重置旋转
+        transform.rotation = Quaternion.identity;
     }
-
-
-    //修改视野范围方法
-    public void ChangeCameraView(float view)
-    {
-        Player.PovValue += view;
-        Vcam.m_Lens.OrthographicSize += view;
-       // Debug.Log("视野范围修改为：" + Vcam.m_Lens.FieldOfView);
-    }
-
 
     public override void Save()
     {
-        //throw new System.NotImplementedException();
+        // TODO: 实现保存逻辑
     }
+    #endregion
+
+    #region 摄像机操作方法
+    /// <summary>
+    /// 鼠标滚轮调整视野
+    /// </summary>
+    /// <param name="context"></param>
+    public void PovValueChanged(InputAction.CallbackContext context)
+    {
+        Vector2 scrollValue = context.ReadValue<Vector2>();
+        if (scrollValue.y > 0)
+            ChangeCameraView(-1); // 缩小视野
+        else if (scrollValue.y < 0)
+            ChangeCameraView(1);  // 放大视野
+    }
+
+    /// <summary>
+    /// 修改摄像机视野范围
+    /// </summary>
+    /// <param name="delta">视野变化值</param>
+    public void ChangeCameraView(float delta)
+    {
+        if (Player == null) return;
+
+        Player.PovValue += delta;
+        Vcam.m_Lens.OrthographicSize += delta;
+
+        // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
+    }
+    #endregion
 }

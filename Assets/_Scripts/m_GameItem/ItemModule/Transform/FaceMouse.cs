@@ -41,7 +41,7 @@ public partial class FaceMouse : Module
     }
 
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         // 列表为空时直接返回，不执行任何操作
         if (targetRotationTransforms.Count == 0) return;

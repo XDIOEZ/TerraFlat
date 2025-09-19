@@ -68,7 +68,7 @@ public partial class Mod_Production : Module
         _ModDataMemoryPackable.WriteData(ProductionList);
     }
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (growModule == null)
         {

@@ -145,7 +145,7 @@ public partial class Mover : Module
 
     private bool _wasMoving = false;
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (moveAction == null) return;
 

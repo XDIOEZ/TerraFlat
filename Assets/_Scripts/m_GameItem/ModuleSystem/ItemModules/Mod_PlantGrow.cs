@@ -13,7 +13,7 @@ public class Mod_PlantGrow : Module
     }
 
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         // 未启动或数据为空或已经完成则不继续执行
         if (!_Data.isRunning || _data == null || _data.progress >= _data.progress_Max.Value)

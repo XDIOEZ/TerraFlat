@@ -77,7 +77,7 @@ public class AttackTrigger : Module
 
 
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
     }
     public void SetWeapon(Item _weapon)

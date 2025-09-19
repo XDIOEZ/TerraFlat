@@ -31,7 +31,7 @@ public class Mod_DeathLoot : Module
         //   ModSaveData.WriteData(ref ); // 根据项目逻辑补充数据保存
     }
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         // 每帧逻辑（若需要）
     }

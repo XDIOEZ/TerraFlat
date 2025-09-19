@@ -21,7 +21,7 @@ public class Mod_ItemGPS : Module
     }
 
     // Update is called once per frame
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
        GPS_Text.text = this.item.transform.position.ToString();
     }

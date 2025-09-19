@@ -74,7 +74,7 @@ public class TurnBody : Module, ITurnBody
             Debug.LogError("[TurnBody] ³õÊ¼»¯Ê§°Ü£ºControlledTransforms Îª¿Õ£¡");*/
     }
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         UpdateWork();
         UpdateTurn(deltaTime);

@@ -70,14 +70,16 @@ public abstract class Module : MonoBehaviour
             _Data = data;
         }
     }
-
+    [Button("Load")]
     public abstract void Load();
+    [Button("Save")]
     public abstract void Save();
 
-    public virtual void Action(float deltaTime)
+    public virtual void ModUpdate(float deltaTime)
     {
 
     }
+    [Button("Act")]
     public virtual void Act()
     {
         OnAct.Invoke(this);

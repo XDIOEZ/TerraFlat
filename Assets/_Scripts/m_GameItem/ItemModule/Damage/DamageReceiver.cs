@@ -208,7 +208,9 @@ public class DamageReceiver : Module
         Hp -= damage * (1 - (Data.Defense.Value) * 0.01f);
 
         // 攻击者记录
+        if(attacker!= null)
         Data.AttackersUIDs.Add(attacker.itemData.Guid);
+
         if (Data.AttackersUIDs.Count > 3)
             Data.AttackersUIDs.RemoveAt(0);
 

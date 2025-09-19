@@ -58,7 +58,7 @@ public partial class Mod_Stamina : Module
     }
 
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         UpdateSlider();
     }

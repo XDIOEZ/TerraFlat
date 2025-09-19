@@ -21,7 +21,7 @@ public class Mod_ItemChunkAssigner : Module
     {
         ModData.WriteData(lastChunkPos);
     }
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (_Data.isRunning == false)
             return;

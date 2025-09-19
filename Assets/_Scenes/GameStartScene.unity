@@ -10320,6 +10320,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2042394225532128799, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
+      propertyPath: m_Name
+      value: "\u76F8\u673A\u6A21\u5757"
+      objectReference: {fileID: 0}
     - target: {fileID: 2135078199890838923, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
       propertyPath: m_Value
       value: 1
@@ -10570,7 +10574,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3958077112008540435, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -0.0002708435
+      value: -0.00021862984
       objectReference: {fileID: 0}
     - target: {fileID: 3959537113523819178, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
       propertyPath: m_AnchorMax.y
@@ -10695,6 +10699,21 @@ PrefabInstance:
     - target: {fileID: 4656612287825262977, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4893436589404524548, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
+      propertyPath: Data.Function_Lua
+      value: "Config = { \r\n    itemName = \"Sword_Bronze\",\r\n    orbitRadius
+        = 2.0, \r\n    orbitSpeed = 1.0, \r\n    zPosition = 0.0 \r\n}\r\n\r\nfunction
+        Init(itemTransform)\r\n    local centerPos = moduleTransform.position\r\n   
+        local x = centerPos.x + Config.orbitRadius\r\n    local y = centerPos.y\r\n   
+        itemTransform.position = Vector3D(x, y, Config.zPosition)\r\nend\r\n\r\nfunction
+        Update(deltaTime)\r\n    local centerPos = moduleTransform.position\r\n   
+        local angle = controller:GetCurrentAngle()\r\n    angle = angle + deltaTime
+        * Config.orbitSpeed\r\n    controller:SetCurrentAngle(angle)\r\n\r\n    local
+        x = centerPos.x + math.cos(angle) * Config.orbitRadius\r\n    local y = centerPos.y
+        + math.sin(angle) * Config.orbitRadius\r\n\r\n    local itemTransform = controller:GetSpawnedItemTransform()\r\n   
+        if itemTransform then\r\n        itemTransform.position = Vector3D(x, y,
+        Config.zPosition)\r\n    end\r\nend"
       objectReference: {fileID: 0}
     - target: {fileID: 4911806137877748677, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
       propertyPath: m_AnchorMax.y
@@ -12822,7 +12841,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.x
@@ -12830,15 +12849,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 380
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 100
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalPosition.x
@@ -12870,11 +12889,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -50
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -13655,6 +13674,63 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 797947779417080107, guid: 471c4ce24372590429646f3580bb9fd3, type: 3}
   m_PrefabInstance: {fileID: 5216863984064117268}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &6958270235699554584
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1325074094779029787, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
+      propertyPath: m_Name
+      value: ItemTransformController
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
 --- !u!1 &7670434241892192515
 GameObject:
   m_ObjectHideFlags: 0
@@ -13895,3 +13971,4 @@ SceneRoots:
   - {fileID: 702108794}
   - {fileID: 1743513702}
   - {fileID: 1300095267}
+  - {fileID: 6958270235699554584}

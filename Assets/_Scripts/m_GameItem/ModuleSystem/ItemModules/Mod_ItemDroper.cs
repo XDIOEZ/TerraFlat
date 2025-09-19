@@ -96,7 +96,7 @@ public class Mod_ItemDroper : Module
     /* ----------------------------------------------------------
      * Ã¿Ö¡¸üÐÂ
      * ----------------------------------------------------------*/
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (!_Data.isRunning) return;
 

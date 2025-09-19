@@ -109,7 +109,7 @@ public partial class Mod_Food : Module
         var Player_FoodModule = item.Owner.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
         Player_FoodModule.Eat(BeEater: this);
     }
-    public override void Action(float timeDelta)
+    public override void ModUpdate(float timeDelta)
     {
         // 营养消耗
         float totalEnergy = ConsumeNutrition(timeDelta);

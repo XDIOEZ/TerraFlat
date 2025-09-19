@@ -69,7 +69,7 @@ public class Mod_Building : Module
         item.itemData.ModuleDataDic[_Data.Name] = BuildingData;
     }
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (item == null)
         {

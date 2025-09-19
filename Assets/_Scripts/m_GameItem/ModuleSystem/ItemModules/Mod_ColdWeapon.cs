@@ -105,7 +105,7 @@ public partial class Mod_ColdWeapon : Module
     #endregion
 
     #region 主更新/动作
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         switch (CurrentState)
         {

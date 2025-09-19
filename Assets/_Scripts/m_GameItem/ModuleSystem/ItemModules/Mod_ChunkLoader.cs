@@ -54,7 +54,7 @@ public class Mod_ChunkLoader : Module
         ModData.WriteData(Data);
     }
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (_Data.isRunning == false)
             return;

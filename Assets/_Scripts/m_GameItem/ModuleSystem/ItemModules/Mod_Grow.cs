@@ -65,7 +65,7 @@ public class Mod_Grow : Module
         ModData.WriteData(Data);
     }
 
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         if (Data.growState == GrowState.成熟) return; // 已成熟则不再生长
 

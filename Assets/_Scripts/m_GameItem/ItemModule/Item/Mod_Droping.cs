@@ -26,7 +26,7 @@ public class Mod_Droping : Module
         modData.ReadData(ref drop);
       
     }
-    public override void Action(float deltaTime)
+    public override void ModUpdate(float deltaTime)
     {
         //检测droping是否为空
         //如果为空自动销毁模块本身

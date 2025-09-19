@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1325074094779029787
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 394873159625930197}
+  - component: {fileID: 7234256797529213740}
+  m_Layer: 0
+  m_Name: ItemTransformController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &394873159625930197
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325074094779029787}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7234256797529213740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325074094779029787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a99a41f7bd7702349a90d8d3f105992e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: 
+    ID: ItemTransformController
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Data:
+    Function_Lua: "Config = { \r\n    itemName = \"Apple\",\r\n    orbitRadius =
+      2.0, \r\n    orbitSpeed = 1.0, \r\n    zPosition = 0.0 \r\n}\r\n\r\nfunction
+      Init(itemTransform)\r\n    local centerPos = moduleTransform.position\r\n   
+      local x = centerPos.x + Config.orbitRadius\r\n    local y = centerPos.y\r\n   
+      itemTransform.position = Vector3D(x, y, Config.zPosition)\r\nend\r\n\r\nfunction
+      Update(deltaTime)\r\n    local centerPos = moduleTransform.position\r\n   
+      local angle = controller:GetCurrentAngle()\r\n    angle = angle + deltaTime
+      * Config.orbitSpeed\r\n    controller:SetCurrentAngle(angle)\r\n\r\n    local
+      x = centerPos.x + math.cos(angle) * Config.orbitRadius\r\n    local y = centerPos.y
+      + math.sin(angle) * Config.orbitRadius\r\n\r\n    local itemTransform = controller:GetSpawnedItemTransform()\r\n   
+      if itemTransform then\r\n        itemTransform.position = Vector3D(x, y, Config.zPosition)\r\n   
+      end\r\nend"
+  forceReloadOnAct: 1
