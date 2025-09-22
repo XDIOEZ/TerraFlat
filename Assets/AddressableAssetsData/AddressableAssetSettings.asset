@@ -15,7 +15,7 @@ MonoBehaviour:
   m_DefaultGroup: 47b73bec22f621a498a1748af8eb38da
   m_currentHash:
     serializedVersion: 2
-    Hash: e5e4e0da796d48f627040c07d027bddd
+    Hash: 00000000000000000000000000000000
   m_OptimizeCatalogSize: 0
   m_BuildRemoteCatalog: 0
   m_BundleLocalCatalog: 0
@@ -54,6 +54,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 604fb78a7b30c014fa74a0dfa9382e24, type: 2}
   - {fileID: 11400000, guid: b71313ffc7c22db40ac7db7f522a9399, type: 2}
   - {fileID: 11400000, guid: 1a835da1b122c834399efc4eb0382c2b, type: 2}
+  - {fileID: 11400000, guid: 7f4259c1f82edad45a5ca0e1695a9ce7, type: 2}
   m_BuildSettings:
     m_CompileScriptsInVirtualMode: 0
     m_CleanupStreamingAssetsAfterBuilds: 1
@@ -103,6 +104,7 @@ MonoBehaviour:
     - ItemPrefab
     - Buff
     - TileItemPrefab
+    - InventoryInit
   m_SchemaTemplates: []
   m_GroupTemplateObjects:
   - {fileID: 11400000, guid: 81df820a3474c3645bf38f01f1aa6217, type: 2}

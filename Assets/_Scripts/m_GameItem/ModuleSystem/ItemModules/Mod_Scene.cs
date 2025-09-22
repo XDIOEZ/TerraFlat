@@ -200,6 +200,8 @@ public class Mod_Scene : Module
 
                 // Éú³É Chunk
                 ChunkMgr.Instance.CleanEmptyDicValues();
+
+
                 Chunk chunk = ChunkMgr.Instance.CreateChunK_ByMapSave(targetMapSave);
                 ChunkMgr.Instance.Chunk_Dic[targetMapSave.Name] = chunk;
                 ChunkMgr.Instance.Chunk_Dic_Active[targetMapSave.Name] = chunk;

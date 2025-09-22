@@ -421,7 +421,7 @@ protected virtual void DropLoot()
         {
             // 使用ItemMgr的实例化方法确保一致性
             Item lootItem = ItemMgr.Instance.InstantiateItem(
-                lootEntry.LootPrefabName);
+                lootEntry.LootPrefabName,this.transform.position);
                 lootItem.DropInRange();
             // 确保战利品可以被拾取
             if (lootItem != null && lootItem.itemData != null)

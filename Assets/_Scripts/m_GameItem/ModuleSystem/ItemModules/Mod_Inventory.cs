@@ -7,8 +7,8 @@ using UnityEngine;
 
 public class Mod_Inventory : Module,IInventory
 {
-    public InventoryModuleData inventoryModuleData = new InventoryModuleData();
-    public override ModuleData _Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
+    public InventoryModuleData Data = new InventoryModuleData();
+    public override ModuleData _Data { get => Data; set => Data = (InventoryModuleData)value; }
     public Inventory _Inventory { get => inventory; set => inventory = value; }
     [Tooltip("容器，用于存放物品")]
     public Inventory inventory;
@@ -28,13 +28,13 @@ public override void Load()
     {
         _Inventory = GetComponent<Inventory>();
     }
-    if (inventoryModuleData.Data.Count == 0)
+    if (Data.Data.Count == 0)
     {
-        inventoryModuleData.Data[_Data.Name] = inventory.Data;
+        Data.Data[_Data.Name] = inventory.Data;
     }
     else
     {
-        inventory.Data = inventoryModuleData.Data[_Data.Name];
+        inventory.Data = Data.Data[_Data.Name];
     }
 
     if(Item_Data.ModuleDataDic.ContainsKey(_Data.Name))
@@ -63,11 +63,11 @@ public override void Load()
         if (draggerRectTransform != null)
         {
             // 只有当保存的位置数据有效且不为零时才应用位置
-            if (inventoryModuleData.PanleRectPosition != null && 
-                IsValidVector2(inventoryModuleData.PanleRectPosition) &&
-                (inventoryModuleData.PanleRectPosition.x != 0 || inventoryModuleData.PanleRectPosition.y != 0))
+            if (Data.PanleRectPosition != null && 
+                IsValidVector2(Data.PanleRectPosition) &&
+                (Data.PanleRectPosition.x != 0 || Data.PanleRectPosition.y != 0))
             {
-                draggerRectTransform.anchoredPosition = inventoryModuleData.PanleRectPosition;
+                draggerRectTransform.anchoredPosition = Data.PanleRectPosition;
             }
             // 如果是初次加载且位置数据为空，则使用Prefab自带的位置，不需要调整
         }
@@ -80,8 +80,19 @@ public override void Load()
         interactable.OnAction_Stop += Interact_Stop;
     }
 
-    _Inventory.Init();
-}
+
+        _Inventory.Init();
+
+        GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inventoryInit);
+        if (inventoryInit != null)
+        {
+            _Inventory.TryInitializeItems(inventoryInit);
+
+        }
+
+        //初始化刷新UI
+        _Inventory.RefreshUI();
+    }
     //玩家与此发生交互
     public void Interact_Start(Item item_)
     {
@@ -110,13 +121,13 @@ public override void Load()
                 if (draggerRectTransform.anchoredPosition != null &&
                     IsValidVector2(draggerRectTransform.anchoredPosition))
                 {
-                    inventoryModuleData.PanleRectPosition = draggerRectTransform.anchoredPosition;
+                    Data.PanleRectPosition = draggerRectTransform.anchoredPosition;
                 }
             }
         }
 
         inventory.Save();
-        Item_Data.ModuleDataDic[_Data.Name] = inventoryModuleData;
+        Item_Data.ModuleDataDic[_Data.Name] = Data;
     }
 
     // 辅助方法：检查Vector2是否有效
@@ -175,4 +186,5 @@ public partial class InventoryModuleData : ModuleData
     [ShowInInspector]
     public Dictionary<string, Inventory_Data> Data = new Dictionary<string, Inventory_Data>();
     public Vector3 PanleRectPosition = Vector3.zero;//TODO 我在这里添加了一个Vector3变量，用于保存面板的位置
+    public string InventoryInitName = "";
 }

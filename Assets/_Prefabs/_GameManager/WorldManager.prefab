@@ -47,7 +47,7 @@ MonoBehaviour:
   savePath: Assets/Saves/Map
   fileName: 
   mapSave:
-    MapName: 
+    Name: 
     SunlightIntensity: 0
     MapPosition: {x: 0, y: 0}
   mapSaveAsset: {fileID: 0}
@@ -233,6 +233,7 @@ MonoBehaviour:
   ADBLabels_CraftingRecipe: []
   ADBLabels_TileBase: []
   ADBLabels_BuffData: []
+  ADBLabels_InventoryInit: []
   isLoadFinish: 0
 --- !u!114 &7400242115634630897
 MonoBehaviour:
@@ -282,30 +283,103 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SunAndMoonPrefab: {fileID: 8214005867498760089, guid: 5de7be0374cdef34fb44ea8b4db43440, type: 3}
+  PathFindingSystem: {fileID: 8923630362666243623}
   Ready_planetData:
-    PlanetName: "\u5730\u7403"
+    Name: "\u5730\u7403"
     Radius: 1000
     TemperatureOffset: 0
     RainOffset: 0
-    OceanHeight: -1
-    NoiseScale: 0.01
-    ChunkSize: {x: 100, y: 100}
-    TimeData:
-      DayTime: 0
-      SeasonTime: 0
-      YearTime: 0
-      Day: 0
-      Season: 0
-      Year: 0
-      OneDayTime: 1440
-      OneSeasonTime: 8640
-      OneYearTime: 34560
-      RotationSpeed: 1
-      OrbitSpeed: 1
-      SunriseSunsetThreshold_Spring: {x: 0.3, y: 0.2}
-      SunriseSunsetThreshold_Summer: {x: 0.2, y: 0.1}
-      SunriseSunsetThreshold_Autumn: {x: 0.3, y: 0.2}
-      SunriseSunsetThreshold_Winter: {x: 0.5, y: 0.4}
+    OceanHeight: 0
+    NoiseScale: 1
+    ChunkSize: {x: 200, y: 200}
+    AutoGenerateMap: 1
+  Ready_timeData:
+    CurrentTime: 500
+    DayLength: 1440
+    LightParams:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.2
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.25
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.5
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.75
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.2
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    dayNightGradient:
+      serializedVersion: 2
+      key0: {r: 0.11764706, g: 0.15686275, b: 0.3529412, a: 1}
+      key1: {r: 1, g: 0.5882353, b: 0.284, a: 1}
+      key2: {r: 1, g: 0.9607843, b: 0.9019608, a: 1}
+      key3: {r: 1, g: 0.93030524, b: 0.85383594, a: 0}
+      key4: {r: 1, g: 0.5882353, b: 0.3137255, a: 0}
+      key5: {r: 0.11764706, g: 0.15686275, b: 0.3529412, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 6554
+      ctime1: 13107
+      ctime2: 19661
+      ctime3: 45875
+      ctime4: 52428
+      ctime5: 58982
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 33384
+      atime2: 65535
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: 0
+      m_NumColorKeys: 6
+      m_NumAlphaKeys: 3
+    TimeScaleModifier: 1
+    ReferenceScene: 
+    TotalDays: 0
 --- !u!114 &6280812242651090066
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -336,7 +410,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &7895695706117877763
 Transform:
   m_ObjectHideFlags: 0
@@ -346,7 +420,7 @@ Transform:
   m_GameObject: {fileID: 8923630362666243623}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -366,20 +440,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   version: 1
   data:
-    dataString: UEsDBBQAAAgIAABAIeyEJ5S8UQIAABEFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VE1z2jAQ/SuMziVjSKBNby0Q0gOBCe3k4ouQ1liDLHn0wVeG/96VbGNDpyfL+96u3ttd+5MIZUtgTpu5EXyhOZDvPRLO5EuvBV/hSLdarcUZGs6H4C4PJBo579QJjfFBSLO6AGcE+6G2MpATDHolMm2KGd/CRFtnMZxRaQEho13IVhj67JEjPvrPIeVUp57Ds3fBEwPlwHR4w4fhuGYOHh9GN2SvmKRFCTzIbnMGSVMbT5Go0FLNCfKZllLYWg9xpzL6faen4JYLit6ihsDNQWxzhy/DbuIyyyy4Wr2hp6kw2KKqIvmpq74V1O4qVXsqfbw8qqlKLv5B+xWcGV28NrdWXlwu2A71MWpdp63d8PRWtlcHKnd0I+EjB/Wm50Z7xRF0xodUb2E4bV+vxiY5sF0br6TeBX3Z9vp+isHDJXo/TqQoNjWEr2upY5/j4MHgRH6h3LgWtmZhNGj4Y+E33Xb3pwZehLEOodqjCuI22ptAJbPYseDFu4k2Cky3QgmKSndaYR13P7877P9ZLzR8KvXtNdZ8AXcpMdzyk+QOWunDdVY214cF2HzpnRQK2kYH4A0bNdFKVevVtdSkrb3JKOukbb3gt5tFxow+J8ljAuPh0xjZ/QRguGFPA5aMv/GvoxGJqycU+qRyVQmt24NjU21xhWvW/EF6c0PLuOrc0MNcnAttW6ZQmV4zA6CWVYWrcDB4CX6OfMYFNmgNzgkVB04+UyI12wFPr4XS6HR2dIambZWUlGKvXYikZBL/GikJ4esqrwzsBRzC5U2xC7n8BVBLAwQUAAAICAAAQCHsXV6mSm0AAAB4AAAACQAkAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAatWKkstKs7Mz1OyUjDRM9IzNNdRUEovSizIKAaKGII4pZkpIHa0kllyoqWBgbFBqpmRiVlaYrKuQWqqUVKyiWGygZlFirmpqVIsUH1JZUGqX2JuKkRPQGJJRlpmXkpmXrqee1FmijvIaKXYWgBQSwECLQAUAAAICAAAQCHshCeUvFECAAARBQAACwAkAAAAAAAAAAAAAAAAAAAAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwECLQAUAAAICAAAQCHsXV6mSm0AAAB4AAAACQAkAAAAAAAAAAAAAACeAgAAbWV0YS5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0BUEsFBgAAAAACAAIAuAAAAFYDAAAAAA==
+    dataString: UEsDBBQAAAgIAABAIexBCfLcVgIAABcFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VEuT2jAM/iuMz6UTKEtLby2v7YFdZtnOXnIxtkI8OHbGj+U1/PfKTkKytD3Flj5J3yfJuRChbAnMabM0gq80B/K9R8KZfOq1zkc40p1WG3GGBvMmuMsDiEbMC3VCo30QwqwuwBnBfqidDOAEjV6JTJtizncw1dZZNGdUWkCX0S5EKzRdeuSIn/4khJzq0HP49q54YqAcmBY3+DyYDJPJcDLvJ+N/RnjFJC1K4IF7JzBpCuApAhXqqjFBA9NSCluTIu5URtEv9BQkc0FRYCQSsDmIXe7wMuwGPmeZBVcTMvQ0Ewb7VGUkP3XVvILafcXqnUofaoxHkU6Vc/WXuz+I7szo4rEpW4lxuWB7JMiodZ3mds2zj7y9OlC5p1sJbzmoJ7002iuOTmd8CPUWhrP2elM2zYHtW3tF9c7oy7bZ97MMGq5R/HEqRbGtXXjdSB0bHccPBkfyC+nG5bA1Cq2Bw28Lr3TX3aLasRDGOnTVGlUgt9XeBChZ4CG0nXk31UaB6SYoQVHpTmtM4+7nd+f7f9SChvdSF699zTO4C4nmFp8kd661PtxGZXN9WIHNn72TQkHb5+B4wj5NtVLVenUlNWEbbzLKuhx2XvCPm0XGjE6S5EsC4+FojPB+AjDcstGAJeNv/OvDA4mrJxQKpXJdMa37g2NTLSmFa9b8R3pLQ8u469zQw1KcC21bpFCZ3jADoJ6rDDfmYLAIvkc+5wI7tAHnhIoDJ5eUSM32wNNbojRKnR+doWmbJSWleNcuWFIyjf+OlATzbZXXBt4FHELxJtmVXP8AUEsDBBQAAAgIAABAIexdXqZKbQAAAHgAAAAJACQAbWV0YS5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0Bq1YqSy0qzszPU7JSMNEz0jM011FQSi9KLMgoBooYgjilmSkgdrSSWXKipYGBsUGqmZGJWVpisq5BaqpRUrKJYbKBmUWKuampUixQfUllQapfYm4qRE9AYklGWmZeSmZeup57UWaKO8hopdhaAFBLAQItABQAAAgIAABAIexBCfLcVgIAABcFAAALACQAAAAAAAAAAAAAAAAAAABncmFwaDAuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLAQItABQAAAgIAABAIexdXqZKbQAAAHgAAAAJACQAAAAAAAAAAAAAAKMCAABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwUGAAAAAAIAAgC4AAAAWwMAAAAA
     upgradeData: 
     file_cachedStartup: {fileID: 0}
     data_cachedStartup: 
     cacheStartup: 0
   showNavGraphs: 1
   showUnwalkableNodes: 0
-  debugMode: 0
+  debugMode: 4
   debugFloor: 0
   debugRoof: 1
   manualDebugFloorRoof: 0
   showSearchTree: 0
   unwalkableNodeDebugSize: 0.5
-  logPathResults: 0
+  logPathResults: 3
   maxNearestNodeDistance: 100
   scanOnStartup: 1
   fullGetNearestSearch: 0
@@ -428,16 +502,16 @@ MonoBehaviour:
   - 31
   heuristic: 1
   heuristicScale: 1
-  threadCount: 0
-  maxFrameTime: 1
-  batchGraphUpdates: 0
+  threadCount: 1
+  maxFrameTime: 10
+  batchGraphUpdates: 1
   graphUpdateBatchingInterval: 0.2
   euclideanEmbedding:
     mode: 0
     seed: 0
     pivotPointRoot: {fileID: 0}
     spreadOutCount: 1
-  showGraphs: 1
+  showGraphs: 0
 --- !u!114 &1976977817011761695
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -452,3 +526,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Pathfinder: {fileID: 1944405980370659897}
   Init: 1
+  enableKeyControl: 1
+  penaltyStep: 100
+  minPenalty: 0
+  maxPenalty: 10000
+  mainCamera: {fileID: 0}

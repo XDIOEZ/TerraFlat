@@ -29,3 +29,14 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 709338c098ec35f4eb975f5c96f669d1, type: 2}
     - {fileID: 11400000, guid: 1638d048051cdd04c8c0a37711f8ca27, type: 2}
     - {fileID: 11400000, guid: ec765d76a5ea585469eb795f5cedc122, type: 2}
+    ItemSpawn_NoSO:
+    - itemPrefab: {fileID: 2383149550844687321, guid: 58df281e8bb89684ca779ca6009f0c54, type: 3}
+      itemName: Mine_Coal
+      itemCount: 1
+      SpawnChance: 0.001
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}

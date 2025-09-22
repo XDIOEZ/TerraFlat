@@ -1,4 +1,4 @@
-using FastCloner.Code;
+ï»¿using FastCloner.Code;
 using Force.DeepCloner;
 using MemoryPack;
 using System;
@@ -6,25 +6,26 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 using Sirenix.OdinInspector;
-using Random = UnityEngine.Random; // Ìí¼ÓOdinÒıÓÃ
+using Random = UnityEngine.Random;
+using System.Linq; // æ·»åŠ Odinå¼•ç”¨
 
 [Serializable]
 [MemoryPackable]
 public partial class Inventory_Data
 {
-    //TODO ÉèÖÃEvent - ÒÑÍê³É£ºEvent_RefreshUI¾ÍÊÇÓÃÓÚUIË¢ĞÂµÄÊÂ¼ş
-    public string Name = string.Empty;                      // ±³°üÃû³Æ
-    public List<ItemSlot> itemSlots = new List<ItemSlot>(); // ÎïÆ·²ÛÁĞ±í
-    public int Index = 0;                      // µ±Ç°Ñ¡ÖĞ²ÛÎ»Ë÷Òı
+    //TODO è®¾ç½®Event - å·²å®Œæˆï¼šEvent_RefreshUIå°±æ˜¯ç”¨äºUIåˆ·æ–°çš„äº‹ä»¶
+    public string Name = string.Empty;                      // èƒŒåŒ…åç§°
+    public List<ItemSlot> itemSlots = new List<ItemSlot>(); // ç‰©å“æ§½åˆ—è¡¨
+    public int Index = 0;                      // å½“å‰é€‰ä¸­æ§½ä½ç´¢å¼•
 
     [MemoryPackIgnore]
     [FastClonerIgnore]
-    public UltEvent<int> Event_RefreshUI = new UltEvent<int>(); // UIË¢ĞÂÊÂ¼ş
+    public UltEvent<int> Event_RefreshUI = new UltEvent<int>(); // UIåˆ·æ–°äº‹ä»¶
 
     [FastClonerIgnore]
     public bool IsFull => itemSlots.TrueForAll(slot => slot.itemData != null);
 
-    // ¹¹Ôìº¯Êı
+    // æ„é€ å‡½æ•°
     [MemoryPackConstructor]
     public Inventory_Data(List<ItemSlot> itemSlots, string Name)
     {
@@ -32,7 +33,7 @@ public partial class Inventory_Data
         this.Name = Name;
     }
 
-    #region ²å²Û²Ù×÷Âß¼­
+    #region æ’æ§½æ“ä½œé€»è¾‘
 
     public void RemoveItemAll(ItemSlot itemSlot, int index = 0)
     {
@@ -61,7 +62,7 @@ public partial class Inventory_Data
 
     #endregion
 
-    #region »ù´¡½»»¥Âß¼­
+    #region åŸºç¡€äº¤äº’é€»è¾‘
 
     public void ChangeItemData_Default(int index, ItemSlot inputSlotHand)
     {
@@ -80,10 +81,10 @@ public partial class Inventory_Data
 
 
 
-        // Çé¿ö1£ºÁ½¸ö¶¼Îª¿Õ
+        // æƒ…å†µ1ï¼šä¸¤ä¸ªéƒ½ä¸ºç©º
         if (localData == null && inputData == null) return;
 
-        // Çé¿ö2£ºÊÖÓĞÎïÌå£¬±¾µØ¿Õ
+        // æƒ…å†µ2ï¼šæ‰‹æœ‰ç‰©ä½“ï¼Œæœ¬åœ°ç©º
         if (inputData != null && localData == null)
         {
             int changeAmount = Mathf.CeilToInt(inputData.Stack.Amount * rate);
@@ -92,7 +93,7 @@ public partial class Inventory_Data
             return;
         }
 
-        // Çé¿ö3£ºÊÖ¿Õ£¬±¾µØÓĞ
+        // æƒ…å†µ3ï¼šæ‰‹ç©ºï¼Œæœ¬åœ°æœ‰
         if (inputData == null && localData != null)
         {
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
@@ -101,7 +102,7 @@ public partial class Inventory_Data
             return;
         }
 
-        // Çé¿ö4£ºÌØÊâ½»»»£¨ÌØÊâÊı¾İ²»Ò»ÖÂ£©
+        // æƒ…å†µ4ï¼šç‰¹æ®Šäº¤æ¢ï¼ˆç‰¹æ®Šæ•°æ®ä¸ä¸€è‡´ï¼‰
         if (inputData.Stack.Volume >= 2 || localData.Stack.Volume >= 2)
         {
             localSlot.Change(inputSlotHand);
@@ -109,16 +110,16 @@ public partial class Inventory_Data
             return;
         }
 
-        // Çé¿ö4£ºÌØÊâ½»»»£¨ÌØÊâÊı¾İ²»Ò»ÖÂ£©
+        // æƒ…å†µ4ï¼šç‰¹æ®Šäº¤æ¢ï¼ˆç‰¹æ®Šæ•°æ®ä¸ä¸€è‡´ï¼‰
         if (inputData.ItemSpecialData != localData.ItemSpecialData)
         {
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
-            Debug.Log("ÌØÊâ½»»»");
+            Debug.Log("ç‰¹æ®Šäº¤æ¢");
             return;
         }
 
-        // Çé¿ö5£ºÎïÆ·ÏàÍ¬£¬¶Ñµş½»»»
+        // æƒ…å†µ5ï¼šç‰©å“ç›¸åŒï¼Œå †å äº¤æ¢
         if (inputData.IDName == localData.IDName)
         {
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
@@ -127,10 +128,10 @@ public partial class Inventory_Data
             return;
         }
 
-        // Çé¿ö6£ºÎïÆ·²»Í¬£¬Ö±½Ó½»»»
+        // æƒ…å†µ6ï¼šç‰©å“ä¸åŒï¼Œç›´æ¥äº¤æ¢
         localSlot.Change(inputSlotHand);
         Event_RefreshUI.Invoke(index);
-        Debug.Log($"(ÎïÆ·²»Í¬)½»»»ÎïÆ·²ÛÎ»:{index} ÎïÆ·:{inputSlotHand.itemData.IDName}");
+        Debug.Log($"(ç‰©å“ä¸åŒ)äº¤æ¢ç‰©å“æ§½ä½:{index} ç‰©å“:{inputSlotHand.itemData.IDName}");
     }
 
     public bool ChangeItemAmount(ItemSlot localSlot, ItemSlot inputSlotHand, int count)
@@ -164,7 +165,7 @@ public partial class Inventory_Data
 
     #endregion
 
-    #region Ìí¼ÓÓë×ªÒÆÂß¼­
+    #region æ·»åŠ ä¸è½¬ç§»é€»è¾‘
 
     public bool TryAddItem(ItemData inputItemData, bool doAdd = true)
     {
@@ -174,7 +175,7 @@ public partial class Inventory_Data
         float remainingAmount = inputItemData.Stack.Amount;
         bool addedAny = false;
 
-        // ·Ç¶ÑµşÎïÆ·£¨Ìå»ı´óÓÚ1£©
+        // éå †å ç‰©å“ï¼ˆä½“ç§¯å¤§äº1ï¼‰
         if (unitVolume > 1)
         {
             for (int i = 0; i < itemSlots.Count; i++)
@@ -193,7 +194,7 @@ public partial class Inventory_Data
             return false;
         }
 
-        // ¶ÑµşÎïÆ·£¨Ìå»ıÎª1£©
+        // å †å ç‰©å“ï¼ˆä½“ç§¯ä¸º1ï¼‰
         for (int i = 0; i < itemSlots.Count && remainingAmount > 0; i++)
         {
             var slot = itemSlots[i];
@@ -231,20 +232,20 @@ public partial class Inventory_Data
         {
             inputItemData.Stack.CanBePickedUp = false;
             if (remainingAmount > 0)
-                Debug.LogWarning($"ÎïÆ·Ìí¼ÓÎ´ÍêÈ«Íê³É£¬Ê£Óà {remainingAmount} ¸öÎ´Ìí¼Ó¡£");
+                Debug.LogWarning($"ç‰©å“æ·»åŠ æœªå®Œå…¨å®Œæˆï¼Œå‰©ä½™ {remainingAmount} ä¸ªæœªæ·»åŠ ã€‚");
         }
 
         return addedAny;
     }
 
     /// <summary>
-    /// ÔÚÁ½¸öÎïÆ·²ÛÖ®¼ä×ªÒÆÖ¸¶¨ÊıÁ¿£¨upToCount£©µÄÎïÆ·¡£
-    /// ×ªÒÆÂß¼­°üÀ¨ÒÔÏÂ¼ì²é£º
-    /// - Á½¸ö²ÛÎ»ÓĞĞ§£¬ÇÒ²»ÏàÍ¬
-    /// - À´Ô´²ÛÎ»ÓĞÎïÆ·£¬ÇÒÊıÁ¿³ä×ã
-    /// - Èç¹ûÄ¿±ê²ÛÎ»ÒÑÓĞÎïÆ·£¬ÔòÆäÀàĞÍÓëÀ´Ô´ÎïÆ·Ò»ÖÂ£¨°üÀ¨ÌØÊâÊı¾İ£©
-    /// - ÈôÎïÆ·²»¿É¶Ñµş£¨Volume > 1£©£¬Ôò²»ÄÜºÏ²¢£¬±ØĞë¿Õ²Û²ÅÔÊĞí×ªÒÆ
-    /// - ×ªÒÆºó×Ô¶¯¸üĞÂ UI ºÍÊı¾İ
+    /// åœ¨ä¸¤ä¸ªç‰©å“æ§½ä¹‹é—´è½¬ç§»æŒ‡å®šæ•°é‡ï¼ˆupToCountï¼‰çš„ç‰©å“ã€‚
+    /// è½¬ç§»é€»è¾‘åŒ…æ‹¬ä»¥ä¸‹æ£€æŸ¥ï¼š
+    /// - ä¸¤ä¸ªæ§½ä½æœ‰æ•ˆï¼Œä¸”ä¸ç›¸åŒ
+    /// - æ¥æºæ§½ä½æœ‰ç‰©å“ï¼Œä¸”æ•°é‡å……è¶³
+    /// - å¦‚æœç›®æ ‡æ§½ä½å·²æœ‰ç‰©å“ï¼Œåˆ™å…¶ç±»å‹ä¸æ¥æºç‰©å“ä¸€è‡´ï¼ˆåŒ…æ‹¬ç‰¹æ®Šæ•°æ®ï¼‰
+    /// - è‹¥ç‰©å“ä¸å¯å †å ï¼ˆVolume > 1ï¼‰ï¼Œåˆ™ä¸èƒ½åˆå¹¶ï¼Œå¿…é¡»ç©ºæ§½æ‰å…è®¸è½¬ç§»
+    /// - è½¬ç§»åè‡ªåŠ¨æ›´æ–° UI å’Œæ•°æ®
     /// </summary>
     public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCount)
     {
@@ -257,29 +258,29 @@ public partial class Inventory_Data
 
         var dataTo = slotTo.itemData;
 
-        // ÈôÄ¿±ê²ÛÎ»ÒÑÓĞÎïÆ·£¬ĞèÈ·±£IDÓëÌØÊâÊı¾İÒ»ÖÂ
+        // è‹¥ç›®æ ‡æ§½ä½å·²æœ‰ç‰©å“ï¼Œéœ€ç¡®ä¿IDä¸ç‰¹æ®Šæ•°æ®ä¸€è‡´
         if (dataTo != null &&
             (dataTo.IDName != dataFrom.IDName || dataTo.ItemSpecialData != dataFrom.ItemSpecialData))
             return false;
 
-        // ÈôÎïÆ·²»¿É¶Ñµş£¨Volume > 1£©£¬Ôò²»ÄÜ½øĞĞ¶ÑµşÊ½×ªÒÆ£¬Ö»ÄÜÖ±½ÓÒÆ¶¯µ¥¼şµ½¿Õ²Û
+        // è‹¥ç‰©å“ä¸å¯å †å ï¼ˆVolume > 1ï¼‰ï¼Œåˆ™ä¸èƒ½è¿›è¡Œå †å å¼è½¬ç§»ï¼Œåªèƒ½ç›´æ¥ç§»åŠ¨å•ä»¶åˆ°ç©ºæ§½
         if (dataFrom.Stack.Volume > 1)
         {
-            // ·Ç¿Õ²ÛÎ»²»ÄÜ½ÓÊÕ²»¿É¶ÑµşÎïÆ·
+            // éç©ºæ§½ä½ä¸èƒ½æ¥æ”¶ä¸å¯å †å ç‰©å“
             if (dataTo != null)
                 return false;
 
-            // Ö»ÔÊĞí×ªÒÆÒ»¸ö
+            // åªå…è®¸è½¬ç§»ä¸€ä¸ª
             var singleData = dataFrom;
             if (dataFrom.Stack.Amount == 1)
             {
-                // Ö±½Ó°áÇ¨ÒıÓÃ£¬²»ÓÃ Clone£¨¼õÉÙ GC£©
+                // ç›´æ¥æ¬è¿å¼•ç”¨ï¼Œä¸ç”¨ Cloneï¼ˆå‡å°‘ GCï¼‰
                 slotTo.itemData = dataFrom;
                 slotFrom.ClearData();
             }
             else
             {
-                // ´ÓÔ­Êı¾İÖĞ¸´ÖÆ³öÒ»¸öĞÂ¶ÔÏó
+                // ä»åŸæ•°æ®ä¸­å¤åˆ¶å‡ºä¸€ä¸ªæ–°å¯¹è±¡
                 var newData = dataFrom.DeepClone();
                 newData.Stack.Amount = 1;
                 dataFrom.Stack.Amount -= 1;
@@ -291,19 +292,19 @@ public partial class Inventory_Data
             return true;
         }
 
-        // ¶ÑµşÂß¼­´¦Àí
+        // å †å é€»è¾‘å¤„ç†
         int transferCount = Mathf.Min(upToCount, (int)dataFrom.Stack.Amount);
 
-        // ¿ËÂ¡Ò»¸ö×ªÒÆ¶ÔÏó£¬ÉèÖÃ×ªÒÆÊıÁ¿
+        // å…‹éš†ä¸€ä¸ªè½¬ç§»å¯¹è±¡ï¼Œè®¾ç½®è½¬ç§»æ•°é‡
         var transferData = dataFrom.DeepClone();
         transferData.Stack.Amount = transferCount;
 
-        // ¿Û³ıÀ´Ô´ÎïÆ·ÊıÁ¿
+        // æ‰£é™¤æ¥æºç‰©å“æ•°é‡
         dataFrom.Stack.Amount -= transferCount;
         if (dataFrom.Stack.Amount <= 0)
             slotFrom.ClearData();
 
-        // Èç¹ûÄ¿±êÎª¿Õ£¬Ö±½Ó¸³Öµ£¬·ñÔòµş¼ÓÊıÁ¿
+        // å¦‚æœç›®æ ‡ä¸ºç©ºï¼Œç›´æ¥èµ‹å€¼ï¼Œå¦åˆ™å åŠ æ•°é‡
         if (dataTo == null)
             slotTo.itemData = transferData;
         else
@@ -358,14 +359,14 @@ public partial class Inventory_Data
         }
         return null;
     }
-    //TODO Ôö¼Ó¸ù¾İID»ñÈ¡ÎïÆ·µÄ·½·¨ - ÒÑÍê³É
+    //TODO å¢åŠ æ ¹æ®IDè·å–ç‰©å“çš„æ–¹æ³• - å·²å®Œæˆ
     public ItemSlot GetItemSlotByModuleID(string moduleID)
     {
         foreach (var slot in itemSlots)
         {
             if (slot.itemData != null)
             {
-                var module = slot.itemData.GetModuleData_Frist(moduleID); // ÄãÒÑÓĞµÄ·½·¨
+                var module = slot.itemData.GetModuleData_Frist(moduleID); // ä½ å·²æœ‰çš„æ–¹æ³•
                 if (module != null)
                 {
                     return slot;
@@ -376,279 +377,152 @@ public partial class Inventory_Data
     }
 
     /// <summary>
-    /// ¸ù¾İPrefab×¢ÈëItemDataµ½Ö¸¶¨µÄSlotÖĞ
+    /// æ ¹æ®Prefabæ³¨å…¥ItemDataåˆ°æŒ‡å®šçš„Slotä¸­
     /// </summary>
-    /// <param name="prefab">ÎïÆ·Ô¤ÖÆÌå£¬±ØĞë°üº¬Item×é¼ş</param>
-    /// <param name="count">ÎïÆ·ÊıÁ¿</param>
-    /// <param name="index">Òª×¢ÈëµÄ²ÛÎ»Ë÷Òı</param>
-    [Button("×¢ÈëÎïÆ·µ½²ÛÎ»")] // OdinÌØĞÔ£ºÔÚInspectorÖĞÏÔÊ¾Îª°´Å¥
-    [LabelText("×¢ÈëÎïÆ·")] // OdinÌØĞÔ£º×Ô¶¨Òå±êÇ©ÎÄ±¾
+    /// <param name="prefab">ç‰©å“é¢„åˆ¶ä½“ï¼Œå¿…é¡»åŒ…å«Itemç»„ä»¶</param>
+    /// <param name="count">ç‰©å“æ•°é‡</param>
+    /// <param name="index">è¦æ³¨å…¥çš„æ§½ä½ç´¢å¼•</param>
+    [Button("æ³¨å…¥ç‰©å“åˆ°æ§½ä½")] // Odinç‰¹æ€§ï¼šåœ¨Inspectorä¸­æ˜¾ç¤ºä¸ºæŒ‰é’®
+    [LabelText("æ³¨å…¥ç‰©å“")] // Odinç‰¹æ€§ï¼šè‡ªå®šä¹‰æ ‡ç­¾æ–‡æœ¬
     public void InjectItemData(
-        [LabelText("ÎïÆ·Ô¤ÖÆÌå")] GameObject prefab, 
-        [LabelText("ÊıÁ¿")] [MinValue(1)] int count, 
-        [LabelText("²ÛÎ»Ë÷Òı")] [MinValue(0)] int index)
+        [LabelText("ç‰©å“é¢„åˆ¶ä½“")] GameObject prefab, 
+        [LabelText("æ•°é‡")] [MinValue(1)] int count, 
+        [LabelText("æ§½ä½ç´¢å¼•")] [MinValue(0)] int index)
     {
-        // ²ÎÊıÑéÖ¤
+        // å‚æ•°éªŒè¯
         if (prefab == null)
         {
-            Debug.LogError("×¢ÈëÊ§°Ü£ºPrefab²»ÄÜÎª¿Õ");
+            Debug.LogError("æ³¨å…¥å¤±è´¥ï¼šPrefabä¸èƒ½ä¸ºç©º");
             return;
         }
 
         if (index < 0 || index >= itemSlots.Count)
         {
-            Debug.LogError($"×¢ÈëÊ§°Ü£ºË÷Òı {index} ³¬³ö·¶Î§ [0, {itemSlots.Count - 1}]");
+            Debug.LogError($"æ³¨å…¥å¤±è´¥ï¼šç´¢å¼• {index} è¶…å‡ºèŒƒå›´ [0, {itemSlots.Count - 1}]");
             return;
         }
 
-        // »ñÈ¡PrefabÉÏµÄItem×é¼ş
+        // è·å–Prefabä¸Šçš„Itemç»„ä»¶
         Item itemComponent = prefab.GetComponent<Item>();
         if (itemComponent == null)
         {
-            Debug.LogError($"×¢ÈëÊ§°Ü£ºPrefab {prefab.name} ÉÏÕÒ²»µ½Item×é¼ş");
+            Debug.LogError($"æ³¨å…¥å¤±è´¥ï¼šPrefab {prefab.name} ä¸Šæ‰¾ä¸åˆ°Itemç»„ä»¶");
             return;
         }
-         // È·±£ItemDataÒÑ¾­³õÊ¼»¯Íê±Ï
-        // ¿ËÂ¡ItemData
+         // ç¡®ä¿ItemDataå·²ç»åˆå§‹åŒ–å®Œæ¯•
+        // å…‹éš†ItemData
         ItemData clonedItemData = itemComponent.IsPrefabInit();
         if (clonedItemData == null)
         {
-            Debug.LogError($"×¢ÈëÊ§°Ü£ºÎŞ·¨¿ËÂ¡ {prefab.name} µÄItemData");
+            Debug.LogError($"æ³¨å…¥å¤±è´¥ï¼šæ— æ³•å…‹éš† {prefab.name} çš„ItemData");
             return;
         }
 
-        // ÉèÖÃÊıÁ¿
+        // è®¾ç½®æ•°é‡
         clonedItemData.Stack.Amount = count;
         
-        // ×¢Èëµ½Ö¸¶¨²ÛÎ»
+        // æ³¨å…¥åˆ°æŒ‡å®šæ§½ä½
         SetOne_ItemData(index, clonedItemData);
         
-        // ´¥·¢UIË¢ĞÂ
+        // è§¦å‘UIåˆ·æ–°
         Event_RefreshUI.Invoke(index);
         
-        Debug.Log($"³É¹¦×¢ÈëÎïÆ· {prefab.name} x{count} µ½²ÛÎ» {index}");
+        Debug.Log($"æˆåŠŸæ³¨å…¥ç‰©å“ {prefab.name} x{count} åˆ°æ§½ä½ {index}");
     }
+    public void RandomOrderAutoInjectItemDataList(List<GameObject> prefabList, List<int> countList)
+    {
+        if (prefabList == null || countList == null) return;
+        if (prefabList.Count != countList.Count) return;
+
+        // --- Step1: æ‰“ä¹±ç‰©å“é¡ºåº ---
+        List<int> itemIndices = Enumerable.Range(0, prefabList.Count).ToList();
+        for (int i = itemIndices.Count - 1; i > 0; i--)
+        {
+            int r = Random.Range(0, i + 1);
+            (itemIndices[i], itemIndices[r]) = (itemIndices[r], itemIndices[i]);
+        }
+
+        // --- Step2: æ”¶é›†æ‰€æœ‰ç©ºæ§½ä½å¹¶æ‰“ä¹± ---
+        List<int> emptySlots = new List<int>();
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            if (itemSlots[i].itemData == null)
+                emptySlots.Add(i);
+        }
+        for (int i = emptySlots.Count - 1; i > 0; i--)
+        {
+            int r = Random.Range(0, i + 1);
+            (emptySlots[i], emptySlots[r]) = (emptySlots[r], emptySlots[i]);
+        }
+
+        // --- Step3: æŒ‰éšæœºé¡ºåºæŠŠç‰©å“å¡è¿›éšæœºæ§½ä½ ---
+        int successCount = 0;
+        int failCount = 0;
+
+        for (int i = 0; i < itemIndices.Count && i < emptySlots.Count; i++)
+        {
+            int randomItemIndex = itemIndices[i];
+            int slotIndex = emptySlots[i];
+
+            GameObject prefab = prefabList[randomItemIndex];
+            int count = countList[randomItemIndex];
+
+            if (prefab == null || count <= 0) { failCount++; continue; }
+
+            var itemComp = prefab.GetComponent<Item>();
+            if (itemComp == null) { failCount++; continue; }
+
+            var itemData = itemComp.IsPrefabInit();
+            if (itemData == null) { failCount++; continue; }
+
+            itemData.Stack.Amount = count;
+            itemData.Stack.CanBePickedUp = false;
+
+            SetOne_ItemData(slotIndex, itemData);
+            Event_RefreshUI.Invoke(slotIndex);
+
+            Debug.Log($"æ”¾ç½® {prefab.name} x{count} åˆ°éšæœºæ§½ä½ {slotIndex}");
+            successCount++;
+        }
+
+        Debug.Log($"éšæœºæ³¨å…¥å®Œæˆï¼šæˆåŠŸ {successCount}ï¼Œå¤±è´¥ {failCount}");
+    }
+
+
     /// <summary>
-    /// ×Ô¶¯×¢ÈëÎïÆ·µ½ÈİÆ÷ÖĞ£¬ÖÇÄÜ²éÕÒ¿Õ²ÛÎ»»ò¿É¶Ñµş²ÛÎ»£¬±ÜÃâ¸²¸ÇÒÑÓĞÎïÆ·
+    /// è‡ªåŠ¨æ³¨å…¥ç‰©å“åˆ—è¡¨åˆ°å®¹å™¨ä¸­ï¼Œæ™ºèƒ½æŸ¥æ‰¾ç©ºæ§½ä½æˆ–å¯å †å æ§½ä½ï¼Œé¿å…è¦†ç›–å·²æœ‰ç‰©å“
     /// </summary>
-    /// <param name="prefab">ÎïÆ·Ô¤ÖÆÌå£¬±ØĞë°üº¬Item×é¼ş</param>
-    /// <param name="count">ÎïÆ·ÊıÁ¿</param>
-    [Button("×Ô¶¯×¢ÈëÎïÆ·")] // OdinÌØĞÔ£ºÔÚInspectorÖĞÏÔÊ¾Îª°´Å¥
-    [LabelText("×Ô¶¯×¢ÈëÎïÆ·")] // OdinÌØĞÔ£º×Ô¶¨Òå±êÇ©ÎÄ±¾
-    public void AutoInjectItemData(
-        [LabelText("ÎïÆ·Ô¤ÖÆÌå")] GameObject prefab,
-        [LabelText("ÊıÁ¿")][MinValue(1)] int count)
-    {
-        // ²ÎÊıÑéÖ¤
-        if (prefab == null)
-        {
-            Debug.LogError("×Ô¶¯×¢ÈëÊ§°Ü£ºPrefab²»ÄÜÎª¿Õ");
-            return;
-        }
-
-        if (count <= 0)
-        {
-            Debug.LogError("×Ô¶¯×¢ÈëÊ§°Ü£ºÊıÁ¿±ØĞë´óÓÚ0");
-            return;
-        }
-
-        // »ñÈ¡PrefabÉÏµÄItem×é¼ş
-        Item itemComponent = prefab.GetComponent<Item>();
-        if (itemComponent == null)
-        {
-            Debug.LogError($"×Ô¶¯×¢ÈëÊ§°Ü£ºPrefab {prefab.name} ÉÏÕÒ²»µ½Item×é¼ş");
-            return;
-        }
-
-        // È·±£ItemDataÒÑ¾­³õÊ¼»¯Íê±Ï
-        
-
-        // ¿ËÂ¡ItemData
-        ItemData itemData = itemComponent.IsPrefabInit();
-        if (itemData == null)
-        {
-            Debug.LogError($"×Ô¶¯×¢ÈëÊ§°Ü£ºÎŞ·¨¿ËÂ¡ {prefab.name} µÄItemData");
-            return;
-        }
-
-        // ÉèÖÃÊıÁ¿
-        itemData.Stack.Amount = count;
-        itemData.Stack.CanBePickedUp = false;
-
-        // ³¢ÊÔÌí¼ÓÎïÆ·£¨»á×Ô¶¯´¦Àí¶ÑµşºÍ¿Õ²ÛÎ»£©
-        if (TryAddItem(itemData, true))
-        {
-            Debug.Log($"³É¹¦×Ô¶¯×¢ÈëÎïÆ· {prefab.name} x{count}");
-        }
-        else
-        {
-            Debug.LogError($"×Ô¶¯×¢ÈëÊ§°Ü£ºÈİÆ÷¿Õ¼ä²»×ã£¬ÎŞ·¨×¢ÈëÎïÆ· {prefab.name} x{count}");
-        }
-    }
-    /// <summary>
-/// Ëæ»ú×¢ÈëÎïÆ·µ½ÈİÆ÷ÖĞ£¬Ö»ÔÚ¿Õ²ÛÎ»×¢Èë£¬²»»á¸²¸ÇÒÑÓĞÎïÆ·
-/// </summary>
-/// <param name="prefabList">ÎïÆ·Ô¤ÖÆÌåÁĞ±í</param>
-/// <param name="minCount">Ã¿¸öÎïÆ·µÄ×îĞ¡ÊıÁ¿</param>
-/// <param name="maxCount">Ã¿¸öÎïÆ·µÄ×î´óÊıÁ¿</param>
-/// <param name="minItems">×îÉÙ×¢ÈëµÄÎïÆ·ÖÖÀàÊı</param>
-/// <param name="maxItems">×î¶à×¢ÈëµÄÎïÆ·ÖÖÀàÊı</param>
-[Button("Ëæ»ú×¢ÈëÎïÆ·")] // OdinÌØĞÔ£ºÔÚInspectorÖĞÏÔÊ¾Îª°´Å¥
-[LabelText("Ëæ»ú×¢ÈëÎïÆ·")] // OdinÌØĞÔ£º×Ô¶¨Òå±êÇ©ÎÄ±¾
-public void RandomInjectItems(
-    [LabelText("ÎïÆ·Ô¤ÖÆÌåÁĞ±í")] List<GameObject> prefabList,
-    [LabelText("×îĞ¡ÊıÁ¿")] [MinValue(1)] int minCount = 1,
-    [LabelText("×î´óÊıÁ¿")] [MinValue(1)] int maxCount = 5,
-    [LabelText("×îÉÙÎïÆ·ÖÖÀà")] [MinValue(1)] int minItems = 1,
-    [LabelText("×î¶àÎïÆ·ÖÖÀà")] [MinValue(1)] int maxItems = 3)
-{
-    // ²ÎÊıÑéÖ¤
-    if (prefabList == null || prefabList.Count == 0)
-    {
-        Debug.LogError("Ëæ»ú×¢ÈëÊ§°Ü£ºPrefabÁĞ±íÎª¿Õ»òÎ´ÉèÖÃ");
-        return;
-    }
-
-    if (minCount > maxCount)
-    {
-        Debug.LogWarning("×îĞ¡ÊıÁ¿´óÓÚ×î´óÊıÁ¿£¬×Ô¶¯½»»»Öµ");
-        int temp = minCount;
-        minCount = maxCount;
-        maxCount = temp;
-    }
-
-    if (minItems > maxItems)
-    {
-        Debug.LogWarning("×îÉÙÎïÆ·ÖÖÀà´óÓÚ×î¶àÎïÆ·ÖÖÀà£¬×Ô¶¯½»»»Öµ");
-        int temp = minItems;
-        minItems = maxItems;
-        maxItems = temp;
-    }
-
-    // ÏŞÖÆÎïÆ·ÖÖÀàÊıÁ¿²»³¬¹ıPrefabÁĞ±í³¤¶È
-    maxItems = Mathf.Min(maxItems, prefabList.Count);
-    minItems = Mathf.Min(minItems, maxItems);
-
-    // Ëæ»úÑ¡ÔñÒª×¢ÈëµÄÎïÆ·ÖÖÀàÊıÁ¿
-    int itemCount = Random.Range(minItems, maxItems + 1);
-
-    // Ëæ»úÑ¡Ôñ²»ÖØ¸´µÄÎïÆ·
-    List<GameObject> selectedPrefabs = new List<GameObject>();
-    List<GameObject> availablePrefabs = new List<GameObject>(prefabList);
-    
-    for (int i = 0; i < itemCount && availablePrefabs.Count > 0; i++)
-    {
-        int randomIndex = Random.Range(0, availablePrefabs.Count);
-        selectedPrefabs.Add(availablePrefabs[randomIndex]);
-        availablePrefabs.RemoveAt(randomIndex);
-    }
-
-    // ÎªÑ¡ÖĞµÄÃ¿¸öÎïÆ·Ëæ»úÉú³ÉÊıÁ¿²¢×¢Èë
-    List<GameObject> prefabsToInject = new List<GameObject>();
-    List<int> countsToInject = new List<int>();
-
-    foreach (var prefab in selectedPrefabs)
-    {
-        if (prefab != null)
-        {
-            int randomCount = Random.Range(minCount, maxCount + 1);
-            prefabsToInject.Add(prefab);
-            countsToInject.Add(randomCount);
-        }
-    }
-
-    // Ê¹ÓÃ×Ô¶¯×¢Èë·½·¨×¢ÈëÎïÆ·
-    if (prefabsToInject.Count > 0)
-    {
-        AutoInjectItemDataList(prefabsToInject, countsToInject);
-        Debug.Log($"Ëæ»ú×¢ÈëÍê³É£º³É¹¦×¢Èë {prefabsToInject.Count} ÖÖÎïÆ·");
-    }
-    else
-    {
-        Debug.LogWarning("Ëæ»ú×¢ÈëÊ§°Ü£ºÃ»ÓĞÓĞĞ§µÄÎïÆ·¿É×¢Èë");
-    }
-}
-
-/// <summary>
-/// Ëæ»ú×¢ÈëÎïÆ·µ½ÈİÆ÷ÖĞ£¨¼ò»¯°æ£©£¬Ö»ÔÚ¿Õ²ÛÎ»×¢Èë£¬²»»á¸²¸ÇÒÑÓĞÎïÆ·
-/// </summary>
-/// <param name="prefabList">ÎïÆ·Ô¤ÖÆÌåÁĞ±í</param>
-/// <param name="count">Ã¿¸öÎïÆ·µÄ¹Ì¶¨ÊıÁ¿</param>
-/// <param name="itemCount">×¢ÈëµÄÎïÆ·ÖÖÀàÊı</param>
-[Button("Ëæ»ú×¢ÈëÎïÆ·(¹Ì¶¨ÊıÁ¿)")] // OdinÌØĞÔ£ºÔÚInspectorÖĞÏÔÊ¾Îª°´Å¥
-[LabelText("Ëæ»ú×¢ÈëÎïÆ·(¹Ì¶¨ÊıÁ¿)")] // OdinÌØĞÔ£º×Ô¶¨Òå±êÇ©ÎÄ±¾
-public void RandomInjectItems(
-    [LabelText("ÎïÆ·Ô¤ÖÆÌåÁĞ±í")] List<GameObject> prefabList,
-    [LabelText("¹Ì¶¨ÊıÁ¿")] [MinValue(1)] int count = 1,
-    [LabelText("ÎïÆ·ÖÖÀàÊı")] [MinValue(1)] int itemCount = 3)
-{
-    // ²ÎÊıÑéÖ¤
-    if (prefabList == null || prefabList.Count == 0)
-    {
-        Debug.LogError("Ëæ»ú×¢ÈëÊ§°Ü£ºPrefabÁĞ±íÎª¿Õ»òÎ´ÉèÖÃ");
-        return;
-    }
-
-    // ÏŞÖÆÎïÆ·ÖÖÀàÊıÁ¿²»³¬¹ıPrefabÁĞ±í³¤¶È
-    itemCount = Mathf.Min(itemCount, prefabList.Count);
-
-    // Ëæ»úÑ¡Ôñ²»ÖØ¸´µÄÎïÆ·
-    List<GameObject> selectedPrefabs = new List<GameObject>();
-    List<GameObject> availablePrefabs = new List<GameObject>(prefabList);
-    
-    for (int i = 0; i < itemCount && availablePrefabs.Count > 0; i++)
-    {
-        int randomIndex = UnityEngine.Random.Range(0, availablePrefabs.Count);
-        selectedPrefabs.Add(availablePrefabs[randomIndex]);
-        availablePrefabs.RemoveAt(randomIndex);
-    }
-
-    // Ê¹ÓÃ×Ô¶¯×¢Èë·½·¨×¢ÈëÎïÆ·
-    if (selectedPrefabs.Count > 0)
-    {
-        AutoInjectItemDataList(selectedPrefabs, count);
-        Debug.Log($"Ëæ»ú×¢ÈëÍê³É£º³É¹¦×¢Èë {selectedPrefabs.Count} ÖÖÎïÆ·£¬Ã¿ÖÖ {count} ¸ö");
-    }
-    else
-    {
-        Debug.LogWarning("Ëæ»ú×¢ÈëÊ§°Ü£ºÃ»ÓĞÓĞĞ§µÄÎïÆ·¿É×¢Èë");
-    }
-    
-}
-    /// <summary>
-/// ×Ô¶¯×¢ÈëÎïÆ·ÁĞ±íµ½ÈİÆ÷ÖĞ£¬ÖÇÄÜ²éÕÒ¿Õ²ÛÎ»»ò¿É¶Ñµş²ÛÎ»£¬±ÜÃâ¸²¸ÇÒÑÓĞÎïÆ·
-/// </summary>
-/// <param name="prefabList">ÎïÆ·Ô¤ÖÆÌåÁĞ±í</param>
-/// <param name="countList">¶ÔÓ¦ÎïÆ·ÊıÁ¿ÁĞ±í</param>
-[Button("×Ô¶¯×¢ÈëÎïÆ·ÁĞ±í")] // OdinÌØĞÔ£ºÔÚInspectorÖĞÏÔÊ¾Îª°´Å¥
-[LabelText("×Ô¶¯×¢ÈëÎïÆ·ÁĞ±í")] // OdinÌØĞÔ£º×Ô¶¨Òå±êÇ©ÎÄ±¾
+    /// <param name="prefabList">ç‰©å“é¢„åˆ¶ä½“åˆ—è¡¨</param>
+    /// <param name="countList">å¯¹åº”ç‰©å“æ•°é‡åˆ—è¡¨</param>
+    [Button("è‡ªåŠ¨æ³¨å…¥ç‰©å“åˆ—è¡¨")] // Odinç‰¹æ€§ï¼šåœ¨Inspectorä¸­æ˜¾ç¤ºä¸ºæŒ‰é’®
+[LabelText("è‡ªåŠ¨æ³¨å…¥ç‰©å“åˆ—è¡¨")] // Odinç‰¹æ€§ï¼šè‡ªå®šä¹‰æ ‡ç­¾æ–‡æœ¬
 public void AutoInjectItemDataList(
-    [LabelText("ÎïÆ·Ô¤ÖÆÌåÁĞ±í")] List<GameObject> prefabList, 
-    [LabelText("ÊıÁ¿ÁĞ±í")] List<int> countList)
+    [LabelText("ç‰©å“é¢„åˆ¶ä½“åˆ—è¡¨")] List<GameObject> prefabList, 
+    [LabelText("æ•°é‡åˆ—è¡¨")] List<int> countList)
 {
-    // ²ÎÊıÑéÖ¤
+    // å‚æ•°éªŒè¯
     if (prefabList == null || countList == null)
     {
-        Debug.LogError("×Ô¶¯×¢ÈëÊ§°Ü£ºPrefabÁĞ±í»òÊıÁ¿ÁĞ±í²»ÄÜÎª¿Õ");
+        Debug.LogError("è‡ªåŠ¨æ³¨å…¥å¤±è´¥ï¼šPrefabåˆ—è¡¨æˆ–æ•°é‡åˆ—è¡¨ä¸èƒ½ä¸ºç©º");
         return;
     }
 
     if (prefabList.Count != countList.Count)
     {
-        Debug.LogError($"×Ô¶¯×¢ÈëÊ§°Ü£ºPrefabÁĞ±íÊıÁ¿({prefabList.Count})ÓëÊıÁ¿ÁĞ±íÊıÁ¿({countList.Count})²»Æ¥Åä");
+        Debug.LogError($"è‡ªåŠ¨æ³¨å…¥å¤±è´¥ï¼šPrefabåˆ—è¡¨æ•°é‡({prefabList.Count})ä¸æ•°é‡åˆ—è¡¨æ•°é‡({countList.Count})ä¸åŒ¹é…");
         return;
     }
 
     if (prefabList.Count == 0)
     {
-        Debug.LogWarning("×Ô¶¯×¢ÈëÊ§°Ü£ºPrefabÁĞ±íÎª¿Õ");
+        Debug.LogWarning("è‡ªåŠ¨æ³¨å…¥å¤±è´¥ï¼šPrefabåˆ—è¡¨ä¸ºç©º");
         return;
     }
 
     int successCount = 0;
     int failCount = 0;
 
-    // ±éÀú²¢×Ô¶¯×¢ÈëÃ¿¸öÎïÆ·
+    // éå†å¹¶è‡ªåŠ¨æ³¨å…¥æ¯ä¸ªç‰©å“
     for (int i = 0; i < prefabList.Count; i++)
     {
         GameObject prefab = prefabList[i];
@@ -656,70 +530,70 @@ public void AutoInjectItemDataList(
 
         if (prefab == null)
         {
-            Debug.LogWarning($"Ìø¹ı¿ÕµÄPrefab£¨Ë÷Òı {i}£©");
+            Debug.LogWarning($"è·³è¿‡ç©ºçš„Prefabï¼ˆç´¢å¼• {i}ï¼‰");
             failCount++;
             continue;
         }
 
         if (count <= 0)
         {
-            Debug.LogWarning($"Ìø¹ıÎŞĞ§ÊıÁ¿ {count} µÄÎïÆ· {prefab.name}£¨Ë÷Òı {i}£©");
+            Debug.LogWarning($"è·³è¿‡æ— æ•ˆæ•°é‡ {count} çš„ç‰©å“ {prefab.name}ï¼ˆç´¢å¼• {i}ï¼‰");
             failCount++;
             continue;
         }
 
-        // »ñÈ¡PrefabÉÏµÄItem×é¼ş
+        // è·å–Prefabä¸Šçš„Itemç»„ä»¶
         Item itemComponent = prefab.GetComponent<Item>();
         if (itemComponent == null)
         {
-            Debug.LogError($"×Ô¶¯×¢ÈëÊ§°Ü£ºPrefab {prefab.name} ÉÏÕÒ²»µ½Item×é¼ş£¨Ë÷Òı {i}£©");
+            Debug.LogError($"è‡ªåŠ¨æ³¨å…¥å¤±è´¥ï¼šPrefab {prefab.name} ä¸Šæ‰¾ä¸åˆ°Itemç»„ä»¶ï¼ˆç´¢å¼• {i}ï¼‰");
             failCount++;
             continue;
         }
 
-        // ¿ËÂ¡ItemData
+        // å…‹éš†ItemData
         ItemData itemData = itemComponent.IsPrefabInit();
         if (itemData == null)
         {
-            Debug.LogError($"×Ô¶¯×¢ÈëÊ§°Ü£ºÎŞ·¨¿ËÂ¡ {prefab.name} µÄItemData£¨Ë÷Òı {i}£©");
+            Debug.LogError($"è‡ªåŠ¨æ³¨å…¥å¤±è´¥ï¼šæ— æ³•å…‹éš† {prefab.name} çš„ItemDataï¼ˆç´¢å¼• {i}ï¼‰");
             failCount++;
             continue;
         }
 
-        // ÉèÖÃÊıÁ¿
+        // è®¾ç½®æ•°é‡
         itemData.Stack.Amount = count;
         itemData.Stack.CanBePickedUp = false;
 
-        // ³¢ÊÔÌí¼ÓÎïÆ·
+        // å°è¯•æ·»åŠ ç‰©å“
         if (TryAddItem(itemData, true))
         {
-            Debug.Log($"³É¹¦×Ô¶¯×¢ÈëÎïÆ· {prefab.name} x{count}");
+            Debug.Log($"æˆåŠŸè‡ªåŠ¨æ³¨å…¥ç‰©å“ {prefab.name} x{count}");
             successCount++;
         }
         else
         {
-            Debug.LogError($"×Ô¶¯×¢ÈëÊ§°Ü£ºÈİÆ÷¿Õ¼ä²»×ã£¬ÎŞ·¨×¢ÈëÎïÆ· {prefab.name} x{count}");
+            Debug.LogError($"è‡ªåŠ¨æ³¨å…¥å¤±è´¥ï¼šå®¹å™¨ç©ºé—´ä¸è¶³ï¼Œæ— æ³•æ³¨å…¥ç‰©å“ {prefab.name} x{count}");
             failCount++;
         }
     }
 
-    Debug.Log($"×Ô¶¯×¢ÈëÎïÆ·ÁĞ±íÍê³É£º³É¹¦ {successCount} ¸ö£¬Ê§°Ü {failCount} ¸ö");
+    Debug.Log($"è‡ªåŠ¨æ³¨å…¥ç‰©å“åˆ—è¡¨å®Œæˆï¼šæˆåŠŸ {successCount} ä¸ªï¼Œå¤±è´¥ {failCount} ä¸ª");
 }
 
-// ÖØÔØ·½·¨£ºÖ§³ÖÍ³Ò»ÊıÁ¿
-[Button("×Ô¶¯×¢ÈëÎïÆ·ÁĞ±í(Í³Ò»ÊıÁ¿)")]
-[LabelText("×Ô¶¯×¢ÈëÎïÆ·ÁĞ±í(Í³Ò»ÊıÁ¿)")]
+// é‡è½½æ–¹æ³•ï¼šæ”¯æŒç»Ÿä¸€æ•°é‡
+[Button("è‡ªåŠ¨æ³¨å…¥ç‰©å“åˆ—è¡¨(ç»Ÿä¸€æ•°é‡)")]
+[LabelText("è‡ªåŠ¨æ³¨å…¥ç‰©å“åˆ—è¡¨(ç»Ÿä¸€æ•°é‡)")]
 public void AutoInjectItemDataList(
-    [LabelText("ÎïÆ·Ô¤ÖÆÌåÁĞ±í")] List<GameObject> prefabList, 
-    [LabelText("Í³Ò»ÊıÁ¿")] [MinValue(1)] int uniformCount = 1)
+    [LabelText("ç‰©å“é¢„åˆ¶ä½“åˆ—è¡¨")] List<GameObject> prefabList, 
+    [LabelText("ç»Ÿä¸€æ•°é‡")] [MinValue(1)] int uniformCount = 1)
 {
     if (prefabList == null)
     {
-        Debug.LogError("×Ô¶¯×¢ÈëÊ§°Ü£ºPrefabÁĞ±í²»ÄÜÎª¿Õ");
+        Debug.LogError("è‡ªåŠ¨æ³¨å…¥å¤±è´¥ï¼šPrefabåˆ—è¡¨ä¸èƒ½ä¸ºç©º");
         return;
     }
 
-    // ´´½¨Í³Ò»ÊıÁ¿ÁĞ±í
+    // åˆ›å»ºç»Ÿä¸€æ•°é‡åˆ—è¡¨
     List<int> countList = new List<int>();
     for (int i = 0; i < prefabList.Count; i++)
     {

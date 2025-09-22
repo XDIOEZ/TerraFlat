@@ -987,12 +987,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  inventoryModuleData:
+  Data:
     Name: 
     ID: "\u88C5\u5907\u63D2\u69FD"
-    isRunning: 0
+    isRunning: 1
     Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
   inventory: {fileID: 4398308163979918934}
   basePanel: {fileID: 0}
 --- !u!114 &4398308163979918934

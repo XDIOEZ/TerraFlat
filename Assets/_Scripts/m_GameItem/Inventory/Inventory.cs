@@ -18,8 +18,6 @@ public class Inventory : MonoBehaviour
     public List<ItemSlot_UI> itemSlotUIs;
     //负责交互的Inventory
     public Inventory DefaultTarget_Inventory;
-    //初始化容器内的物品
-    public Inventoryinit inventoryinit;
 
 
     public virtual void Awake()
@@ -91,17 +89,15 @@ public virtual void Init()
     // 注册刷新UI事件
     Data.Event_RefreshUI += RefreshUI;
     
-    // 检查是否需要初始化注入物品
-    TryInitializeItems();
+
     
-    //初始化刷新UI
-    RefreshUI();
+
 }
 
 /// <summary>
 /// 尝试初始化容器内的物品
 /// </summary>
-private void TryInitializeItems()
+public void TryInitializeItems(Inventoryinit inventoryinit)
 {
     // 检查是否有初始化配置且容器为空
     if (inventoryinit != null && 

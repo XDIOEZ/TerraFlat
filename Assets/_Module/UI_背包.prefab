@@ -5749,7 +5749,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 5390378238369487303}
   Data:
@@ -5998,7 +5998,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 0}
   CanDrag: 0
-  Drager: {fileID: 0}
+  Dragger: {fileID: 0}
 --- !u!114 &8943846949572410620
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6012,12 +6012,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  inventoryModuleData:
+  Data:
     Name: 
-    ModID: "\u80CC\u5305"
-    isRunning: 0
+    ID: "\u80CC\u5305\u6A21\u5757"
+    isRunning: 1
     Type: 0
+    PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
   inventory: {fileID: 5027628569039665932}
+  basePanel: {fileID: 0}
 --- !u!1 &5811130090001193772
 GameObject:
   m_ObjectHideFlags: 0

@@ -10,6 +10,7 @@ public class Inventory_Equipment : Inventory
     public Dictionary<string, List<Module>> EquipmentModules_Dictionary = new();
 
     public GameObject ModulesParent;
+
     /// <summary>
     /// 初始化时激活所有已装备物品的模块
     /// </summary>

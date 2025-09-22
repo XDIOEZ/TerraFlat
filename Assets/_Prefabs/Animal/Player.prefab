@@ -3890,12 +3890,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  inventoryModuleData:
+  Data:
     Name: 
     ID: "UI_\u624B\u90E8\u63D2\u69FD"
-    isRunning: 0
+    isRunning: 1
     Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
   inventory: {fileID: 36055438466978614}
   basePanel: {fileID: 0}
 --- !u!114 &36055438466978614
@@ -4285,12 +4286,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  inventoryModuleData:
+  Data:
     Name: 
     ID: "UI_\u5FEB\u6377\u680F"
-    isRunning: 0
+    isRunning: 1
     Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
   inventory: {fileID: 2122125434698797065}
   basePanel: {fileID: 0}
 --- !u!1 &4897902697994667998
@@ -4508,7 +4510,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.00009186566, y: 0}
+  m_AnchoredPosition: {x: 0.0000705719, y: 0}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &7132638982571321051
