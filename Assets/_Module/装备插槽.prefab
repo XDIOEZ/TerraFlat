@@ -772,8 +772,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -441.685, y: 71.66986}
-  m_SizeDelta: {x: 174.2378, y: 510.2988}
+  m_AnchoredPosition: {x: -1229.6497, y: 319}
+  m_SizeDelta: {x: 201.3214, y: 510.2988}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &4313699502714632946
 MonoBehaviour:
@@ -939,7 +939,7 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1920, y: 1080}
+  m_ReferenceResolution: {x: 2560, y: 1440}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
@@ -973,7 +973,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 0}
   CanDrag: 0
-  Drager: {fileID: 0}
+  Dragger: {fileID: 0}
 --- !u!114 &5229845017189692322
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -992,7 +992,9 @@ MonoBehaviour:
     ID: "\u88C5\u5907\u63D2\u69FD"
     isRunning: 0
     Type: 0
+    PanleRectPosition: {x: 0, y: 0, z: 0}
   inventory: {fileID: 4398308163979918934}
+  basePanel: {fileID: 0}
 --- !u!114 &4398308163979918934
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1005,7 +1007,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b71044ae4bda4434ab52df36264fdead, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 0}
   ItemSlot_Parent: {fileID: 3309606047414509838}
   Data:
@@ -1052,6 +1054,7 @@ MonoBehaviour:
       _PersistentCalls: []
   itemSlotUIs: []
   DefaultTarget_Inventory: {fileID: 0}
+  ModulesParent: {fileID: 0}
 --- !u!1 &5427212366605696119
 GameObject:
   m_ObjectHideFlags: 0
@@ -1090,8 +1093,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 87.119, y: -255.15}
-  m_SizeDelta: {x: 174.24, y: 510.3}
+  m_AnchoredPosition: {x: 100.66, y: -255.15}
+  m_SizeDelta: {x: 201.32, y: 510.3}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6791710046045569269
 CanvasRenderer:

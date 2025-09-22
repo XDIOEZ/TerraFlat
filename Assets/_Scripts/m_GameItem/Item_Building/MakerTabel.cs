@@ -78,7 +78,7 @@ public class CraftingTable : Item,IBuilding
 
         Mods["交互模组"].OnAction_Start += Interact_Start;
         Mods["交互模组"].OnAction_Start += (Item) => { panel.Toggle(); };
-        Mods["交互模组"].OnAction_Cancel += (Item) => { panel.Close(); };
+        Mods["交互模组"].OnAction_Stop += (Item) => { panel.Close(); };
 
        /* Mods[ModText.Hp]*/
 

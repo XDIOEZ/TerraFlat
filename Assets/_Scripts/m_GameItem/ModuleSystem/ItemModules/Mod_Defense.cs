@@ -8,7 +8,7 @@ public partial class Mod_Defense : Module
     public Ex_ModData_MemoryPackable SaveData;
     public override ModuleData _Data { get { return SaveData; }  set { SaveData = (Ex_ModData_MemoryPackable)value; } }
 
-    public GameValue_float Defense = new GameValue_float(10);
+    public GameValue_float Defense = new GameValue_float(0);
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -25,7 +25,7 @@ public partial class Mod_Defense : Module
         if (item.itemMods.ContainsKey_ID(ModText.Hp))
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            Hp.Data.Defense.FinalAdditive += Defense.Value;
+            Hp.Data.Defense += Defense;
         }
     }
 
@@ -35,7 +35,7 @@ public partial class Mod_Defense : Module
         if (item.Mods.ContainsKey(ModText.Hp))
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            Hp.Data.Defense.FinalAdditive -= Defense.Value;
+            Hp.Data.Defense -= Defense;
         }
         SaveData.WriteData(Defense);
     }

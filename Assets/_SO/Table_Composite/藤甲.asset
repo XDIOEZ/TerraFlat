@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u85E4\u7532"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 0
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 0
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 0
+  outputs:
+    results:
+    - ItemName: Chestplate_Twine
+      ItemPrefab: {fileID: 2813538158472234765, guid: 98dec10f825f70a42813d13105431a62, type: 3}
+      amount: 1
+  recipeType: 0

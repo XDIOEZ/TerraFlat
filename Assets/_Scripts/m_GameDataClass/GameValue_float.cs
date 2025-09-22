@@ -25,9 +25,10 @@ public partial class GameValue_float
     {
         get
         {
-            return ((BaseValue + BaseAdditive) * (1 + AdditiveModifier) * MultiplicativeModifier )+ FinalAdditive;
+            return ((BaseValue + BaseAdditive) * (1 + AdditiveModifier) * MultiplicativeModifier) + FinalAdditive;
         }
     }
+    
     [MemoryPackConstructor]
     public GameValue_float(float BaseValue)
     {
@@ -36,5 +37,144 @@ public partial class GameValue_float
 
     public GameValue_float()
     {
+    }
+    
+    // 重载加法运算符 - 与float相加
+    public static GameValue_float operator +(GameValue_float gv, float value)
+    {
+        GameValue_float result = new GameValue_float
+        {
+            BaseValue = gv.BaseValue,
+            BaseAdditive = gv.BaseAdditive,
+            AdditiveModifier = gv.AdditiveModifier,
+            MultiplicativeModifier = gv.MultiplicativeModifier,
+            FinalAdditive = gv.FinalAdditive + value
+        };
+        return result;
+    }
+    
+    // 重载加法运算符 - 与另一个GameValue_float相加
+    public static GameValue_float operator +(GameValue_float gv1, GameValue_float gv2)
+    {
+        GameValue_float result = new GameValue_float
+        {
+            BaseValue = gv1.BaseValue + gv2.BaseValue,
+            BaseAdditive = gv1.BaseAdditive + gv2.BaseAdditive,
+            AdditiveModifier = gv1.AdditiveModifier + gv2.AdditiveModifier,
+            MultiplicativeModifier = gv1.MultiplicativeModifier * gv2.MultiplicativeModifier,
+            FinalAdditive = gv1.FinalAdditive + gv2.FinalAdditive
+        };
+        return result;
+    }
+    
+    // 重载减法运算符 - 与float相减
+    public static GameValue_float operator -(GameValue_float gv, float value)
+    {
+        GameValue_float result = new GameValue_float
+        {
+            BaseValue = gv.BaseValue,
+            BaseAdditive = gv.BaseAdditive,
+            AdditiveModifier = gv.AdditiveModifier,
+            MultiplicativeModifier = gv.MultiplicativeModifier,
+            FinalAdditive = gv.FinalAdditive - value
+        };
+        return result;
+    }
+    
+    // 重载减法运算符 - 与另一个GameValue_float相减
+    public static GameValue_float operator -(GameValue_float gv1, GameValue_float gv2)
+    {
+        GameValue_float result = new GameValue_float
+        {
+            BaseValue = gv1.BaseValue - gv2.BaseValue,
+            BaseAdditive = gv1.BaseAdditive - gv2.BaseAdditive,
+            AdditiveModifier = gv1.AdditiveModifier - gv2.AdditiveModifier,
+            MultiplicativeModifier = gv1.MultiplicativeModifier / gv2.MultiplicativeModifier,
+            FinalAdditive = gv1.FinalAdditive - gv2.FinalAdditive
+        };
+        return result;
+    }
+    
+    // 重载乘法运算符 - 与float相乘
+    public static GameValue_float operator *(GameValue_float gv, float value)
+    {
+        GameValue_float result = new GameValue_float
+        {
+            BaseValue = gv.BaseValue * value,
+            BaseAdditive = gv.BaseAdditive * value,
+            AdditiveModifier = gv.AdditiveModifier * value,
+            MultiplicativeModifier = gv.MultiplicativeModifier * value,
+            FinalAdditive = gv.FinalAdditive * value
+        };
+        return result;
+    }
+    
+    // 重载除法运算符 - 与float相除
+    public static GameValue_float operator /(GameValue_float gv, float value)
+    {
+        if (value == 0)
+        {
+            Debug.LogError("GameValue_float 除零错误");
+            return gv;
+        }
+        
+        GameValue_float result = new GameValue_float
+        {
+            BaseValue = gv.BaseValue / value,
+            BaseAdditive = gv.BaseAdditive / value,
+            AdditiveModifier = gv.AdditiveModifier / value,
+            MultiplicativeModifier = gv.MultiplicativeModifier / value,
+            FinalAdditive = gv.FinalAdditive / value
+        };
+        return result;
+    }
+    
+    // 重载相等运算符
+    public static bool operator ==(GameValue_float gv1, GameValue_float gv2)
+    {
+        if (ReferenceEquals(gv1, null) && ReferenceEquals(gv2, null)) return true;
+        if (ReferenceEquals(gv1, null) || ReferenceEquals(gv2, null)) return false;
+        
+        return Mathf.Approximately(gv1.Value, gv2.Value);
+    }
+    
+    // 重载不等运算符
+    public static bool operator !=(GameValue_float gv1, GameValue_float gv2)
+    {
+        return !(gv1 == gv2);
+    }
+    
+    // 重写Equals方法
+    public override bool Equals(object obj)
+    {
+        if (obj is GameValue_float other)
+        {
+            return this == other;
+        }
+        return false;
+    }
+    
+    // 重写GetHashCode方法
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+    
+    // 重载隐式转换为float
+    public static implicit operator float(GameValue_float gv)
+    {
+        return gv.Value;
+    }
+    
+    // 重载隐式转换为GameValue_float
+    public static implicit operator GameValue_float(float value)
+    {
+        return new GameValue_float(value);
+    }
+    
+    // 重写ToString方法
+    public override string ToString()
+    {
+        return Value.ToString();
     }
 }

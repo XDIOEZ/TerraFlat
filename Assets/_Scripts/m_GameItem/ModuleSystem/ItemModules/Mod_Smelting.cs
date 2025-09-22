@@ -367,7 +367,7 @@ public partial class Mod_Smelting : Module
         var interactMod = item.itemMods.GetMod_ByID(ModText.Interact);
         interactMod.OnAction_Start += Interact_Start;
         interactMod.OnAction_Start += _ => panel.Toggle();
-        interactMod.OnAction_Cancel += _ => panel.Close();
+        interactMod.OnAction_Stop += _ => panel.Close();
 
         panel.Close();
     }

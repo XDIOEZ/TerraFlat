@@ -23,6 +23,7 @@ public class TurnBody : Module, ITurnBody
     private float turnTimeElapsed;
     private float startY;
     private float targetY;
+    private Animator animator;
 
     public FaceMouse faceMouse;
 
@@ -44,7 +45,6 @@ public class TurnBody : Module, ITurnBody
     public override void Load()
     {
         faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
-
         controlledTransforms.Clear();
 
         
@@ -59,19 +59,10 @@ public class TurnBody : Module, ITurnBody
                     controlledTransforms.Add(animator.transform);
             }
         }
-  /*      if(item.itemMods.ContainsKey_ID(ModText.Attacker))
-        controlledTransforms.Add(item.itemMods.GetMod_ByID(ModText.Attacker).transform);
-
-        // 如果找不到 Animator，就退回使用父对象
-        if (controlledTransforms.Count == 0 && transform.parent != null)
-        {
-            controlledTransforms.Add(transform.parent);
-        }*/
 
         if (faceMouse == null)
             Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！"+item.name);
-    /*    if (controlledTransforms.Count == 0)
-            Debug.LogError("[TurnBody] 初始化失败：ControlledTransforms 为空！");*/
+
     }
 
     public override void ModUpdate(float deltaTime)

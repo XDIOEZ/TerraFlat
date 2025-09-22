@@ -25,3 +25,4 @@ MonoBehaviour:
     TileSpawns:
     - {fileID: 11400000, guid: 972b150ebbd791d4c85ebe3a2d0b2326, type: 2}
     ItemSpawn: []
+    ItemSpawn_NoSO: []

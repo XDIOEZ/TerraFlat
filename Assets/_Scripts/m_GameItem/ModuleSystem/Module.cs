@@ -43,7 +43,7 @@ public abstract class Module : MonoBehaviour
     public UltEvent<float> OnAction { get; set; } = new UltEvent<float>();
     public UltEvent<Item> OnAction_Start { get; set; } = new UltEvent<Item>();
     public UltEvent<Item> OnAction_Update { get; set; } = new UltEvent<Item>();
-    public UltEvent<Item> OnAction_Cancel { get; set; } = new UltEvent<Item>();
+    public UltEvent<Item> OnAction_Stop { get; set; } = new UltEvent<Item>();
     public UltEvent<Module> OnAct { get; set; } = new UltEvent<Module>();
 
     public virtual void Awake()

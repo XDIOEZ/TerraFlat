@@ -37,6 +37,19 @@ public class CraftingIngredient
     public void SyncItemName()
     {
         if (ItemPrefab != null)
+        {
             ItemName = ItemPrefab.name;
+/*            if (amount == 0)*/
+/*            {
+                amount = 1;
+            }*/
+        }
+        else
+        {
+            ItemName = "";
+            amount = 0;
+        }
+            
+        
     }
 }

@@ -30,15 +30,28 @@ public class ItemMods
         return Mods_List[modID][0];
     }
 
-    public void GetMod_ByID<T>(string modID,out T mod) where T : Module
+    public T GetMod_ByID<T>(string modID,out T mod) where T : Module
     {
         if (Mods_List.ContainsKey(modID) == false)
         {
             mod = null;
             Debug.LogWarning("ModID not found:" + modID);
-            return ;
+            return mod;
         }
         mod = Mods_List[modID][0] as T;
+        return mod;
+    }
+    public T GetMod_ByID<T>(string modID) where T : Module
+    {
+        T mod;
+        if (Mods_List.ContainsKey(modID) == false)
+        {
+            mod = null;
+            Debug.LogWarning("ModID not found:" + modID);
+            return mod;
+        }
+        mod = Mods_List[modID][0] as T;
+        return mod;
     }
 
     public Module GetMod_ByName(string name)

@@ -23,9 +23,9 @@ MonoBehaviour:
   octaves: 6
   lacunarity: 3
   gain: 0.25
-  threshold: 0.45
-  riverWidth: 0.05
+  threshold: 0.5
+  riverWidth: 0.075
   invertBand: 0
-  landNoise: {fileID: 11400000, guid: a10de3b0d05cf924a9d97497eb998f8d, type: 2}
+  landNoise: {fileID: 0}
   landInfluence: 0.1
   landNoiseOffset: {x: 0, y: 0}

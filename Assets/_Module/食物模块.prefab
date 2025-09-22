@@ -47,8 +47,8 @@ MonoBehaviour:
   item: {fileID: 0}
   ExData:
     Name: 
-    ModID: "\u98DF\u7269\u6A21\u5757"
-    isRunning: 0
+    ID: 
+    isRunning: 1
     Type: 0
     BitData: 
   Data:
@@ -89,7 +89,7 @@ MonoBehaviour:
         MultiplicativeModifier: 1
         FinalAdditive: 0
     Max_EatingProgress: 3
-    AbsorptionRate: 1
+    AbsorptionRate: 0.1
     ShowCanvas: 0
     nutritionConsumeSpeed:
       BaseValue: 1
@@ -99,10 +99,19 @@ MonoBehaviour:
       FinalAdditive: 0
     FeelGood: 0
     PanelPosition: {x: 0, y: 0}
+    HealSpeed: 1
+    ProteinThreshold: 50
+    WaterSelfHurt: 1
+    ProteinSelfHurt: 1
+    VitaminSelfHurt: 1
+    StaminaRecoverSpeed: 1
+    StaminaConsumeSpeedRate: 0.5
+    WaterConsumeSpeedRate: 0.1
   EatingProgress: 0
   DataUpdate:
     _PersistentCalls: []
   PanelPrefab: {fileID: 1316998372701819345, guid: 215a9df040199634fb89efb65997fb42, type: 3}
-  UIValues: {fileID: 0}
   PanleInstance: {fileID: 0}
+  UIValues: {fileID: 0}
   Stamina: {fileID: 0}
+  DamageReceiver: {fileID: 0}

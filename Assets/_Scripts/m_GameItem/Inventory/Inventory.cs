@@ -1,6 +1,5 @@
 
 using UnityEngine;
-using NaughtyAttributes;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -19,6 +18,9 @@ public class Inventory : MonoBehaviour
     public List<ItemSlot_UI> itemSlotUIs;
     //负责交互的Inventory
     public Inventory DefaultTarget_Inventory;
+    //初始化容器内的物品
+    public Inventoryinit inventoryinit;
+
 
     public virtual void Awake()
     {
@@ -47,50 +49,85 @@ public class Inventory : MonoBehaviour
         }
     }
 
-    [Tooltip("在Load函数的最后调用,用于初始化")]
-    public virtual void Init()
+[Tooltip("在Load函数的最后调用,用于初始化")]
+public virtual void Init()
+{
+    // 若未设置数据，则自动生成
+    for (int i = 0; i < Data.itemSlots.Count; i++)
     {
-        // 若未设置数据，则自动生成
-        for (int i = 0; i < Data.itemSlots.Count; i++)
-        {
-            Data.itemSlots[i].Index = i;
-            Data.itemSlots[i].SlotMaxVolume = 100;
-        }
-
-        // 同步子对象数量与 itemSlots 数量一致
-        int currentCount = ItemSlot_Parent.childCount;
-        int targetCount = Data.itemSlots.Count;
-        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
-
-        // 删除多余的子对象（从后往前删除更安全）
-        for (int i = currentCount - 1; i >= targetCount; i--)
-        {
-            DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject); // 或 Destroy() 视情况
-        }
-
-        // 添加缺少的子对象
-        for (int i = currentCount; i < targetCount; i++)
-        {
-            GameObject item = Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false); // false: 保持局部坐标
-                                                                                    //  item.name = $"Slot_{i}"; // 可选：命名方便调试
-        }
-
-        // 清空旧列表，重新填充 UI 槽位列表
-        itemSlotUIs.Clear();
-        for (int i = 0; i < ItemSlot_Parent.childCount; i++)
-        {
-            var ui = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
-            if (ui != null)
-                itemSlotUIs.Add(ui);
-        }
-
-        // 同步 UI 数据
-        SyncData();
-        // 注册刷新UI事件
-        Data.Event_RefreshUI += RefreshUI;
-        //初始化刷新UI
-        RefreshUI();
+        Data.itemSlots[i].Index = i;
+        Data.itemSlots[i].SlotMaxVolume = 100;
     }
+
+    // 同步子对象数量与 itemSlots 数量一致
+    int currentCount = ItemSlot_Parent.childCount;
+    int targetCount = Data.itemSlots.Count;
+    ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
+
+    // 删除多余的子对象（从后往前删除更安全）
+    for (int i = currentCount - 1; i >= targetCount; i--)
+    {
+        DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject); // 或 Destroy() 视情况
+    }
+
+    // 添加缺少的子对象
+    for (int i = currentCount; i < targetCount; i++)
+    {
+        GameObject item = Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false); // false: 保持局部坐标
+                                                                                //  item.name = $"Slot_{i}"; // 可选：命名方便调试
+    }
+
+    // 清空旧列表，重新填充 UI 槽位列表
+    itemSlotUIs.Clear();
+    for (int i = 0; i < ItemSlot_Parent.childCount; i++)
+    {
+        var ui = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
+        if (ui != null)
+            itemSlotUIs.Add(ui);
+    }
+
+    // 同步 UI 数据
+    SyncData();
+    // 注册刷新UI事件
+    Data.Event_RefreshUI += RefreshUI;
+    
+    // 检查是否需要初始化注入物品
+    TryInitializeItems();
+    
+    //初始化刷新UI
+    RefreshUI();
+}
+
+/// <summary>
+/// 尝试初始化容器内的物品
+/// </summary>
+private void TryInitializeItems()
+{
+    // 检查是否有初始化配置且容器为空
+    if (inventoryinit != null && 
+        inventoryinit.items != null && 
+        inventoryinit.items.Count > 0 &&
+        IsInventoryEmpty())
+    {
+        // 使用InventoryInit的注入函数将物品注入到inventory中
+        inventoryinit.InjectRandomItemsToInventory(this);
+        Debug.Log($"[{Data.Name}] 容器初始化完成，已注入 {inventoryinit.items.Count} 个物品");
+    }
+}
+
+/// <summary>
+/// 检查容器是否为空（没有任何物品）
+/// </summary>
+/// <returns>如果容器为空返回true，否则返回false</returns>
+private bool IsInventoryEmpty()
+{
+    foreach (var slot in Data.itemSlots)
+    {
+        if (slot.itemData != null)
+            return false;
+    }
+    return true;
+}
 
     public virtual void Save()
     {

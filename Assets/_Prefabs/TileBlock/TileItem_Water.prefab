@@ -215,3 +215,4 @@ MonoBehaviour:
       FinalAdditive: 0
   BuffInfo:
   - {fileID: 11400000, guid: 0aa80856752ea5447b1879e5c8321c5b, type: 2}
+  - {fileID: 11400000, guid: ad61b721e5a424c4ba65796d9207ca4e, type: 2}

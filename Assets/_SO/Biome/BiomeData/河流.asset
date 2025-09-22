@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef0d6fc82e9dffd4bb109cc0bc9963b4, type: 3}
   m_Name: "\u6CB3\u6D41"
   m_EditorClassIdentifier: 
-  BiomeName: "\u6D77\u6D0B"
+  BiomeName: "\u6CB3\u6D41"
   Description: 
   PreviewColor: {r: 0.19999997, g: 0.7494875, b: 0.84313726, a: 1}
   Condition:
@@ -25,3 +25,4 @@ MonoBehaviour:
     TileSpawns:
     - {fileID: 11400000, guid: 972b150ebbd791d4c85ebe3a2d0b2326, type: 2}
     ItemSpawn: []
+    ItemSpawn_NoSO: []

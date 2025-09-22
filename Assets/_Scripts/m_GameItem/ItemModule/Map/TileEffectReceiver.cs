@@ -3,14 +3,16 @@ using System.Linq;
 using UltEvents;
 using UnityEngine;
 
-public class TileEffectReceiver : MonoBehaviour
+public class TileEffectReceiver : Module
 {
     #region 公共变量
     public Vector2Int lastGridPos;
-    public Item item;
     public Map Cache_map;
     public UltEvent<TileData> OnTileEnterEvent = new UltEvent<TileData>();
     public UltEvent<TileData> OnTileExitEvent = new UltEvent<TileData>();
+    
+    [Tooltip("当前踩着的TileData缓存，供其他模块引用")]
+    public TileData currentTileData;
     #endregion
 
     #region 静态缓存相关
@@ -52,11 +54,44 @@ public class TileEffectReceiver : MonoBehaviour
         }
 
         lastGridPos = GetCurrentGridPos();
+        // 初始化当前TileData缓存
+        currentTileData = Cache_map?.GetTile(lastGridPos);
         enabled = true;
     }
     #endregion
 
     #region 更新逻辑
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
+
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.TileEffect;
+        }
+    }
+
+    public override void Load()
+    {
+        ModSaveData.ReadData(ref lastGridPos);
+        OnTileEnter(lastGridPos);
+    }
+
+    public override void Save()
+    {
+        OnTileExit(lastGridPos);
+        ModSaveData.WriteData(lastGridPos);
+    }
+    public override void ModUpdate(float deltaTime)
+    {
+
+    }
+    public override void Act()
+    {
+        base.Act();
+    }
+
     private void Update()
     {
 
@@ -150,6 +185,8 @@ public class TileEffectReceiver : MonoBehaviour
                 Debug.LogError("TileEffectReceiver: TileBlock为空！");
                 return;
             }
+            // 更新当前TileData缓存
+            currentTileData = tileData;
             tileBlock.Tile_Enter(item, tileData);
             OnTileEnterEvent.Invoke(tileData);
         }
@@ -180,6 +217,8 @@ public class TileEffectReceiver : MonoBehaviour
                 Debug.LogError("TileEffectReceiver: TileBlock为空！");
                 return;
             }
+            // 更新当前TileData缓存
+            currentTileData = tileData;
             tileBlock.Tile_Update(item, tileData);
         }
     }

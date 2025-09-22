@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u7194\u7089"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+  outputs:
+    results:
+    - ItemName: Chestplate_Twine
+      ItemPrefab: {fileID: 2813538158472234765, guid: 98dec10f825f70a42813d13105431a62, type: 3}
+      amount: 1
+  recipeType: 0

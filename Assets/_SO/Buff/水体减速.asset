@@ -17,7 +17,7 @@ MonoBehaviour:
   buff_Type: "\u51CF\u901F\u7C7Bbuff"
   buff_Description: "\u8FDB\u5165\u6C34\u540E\u5E26\u6765\u7684\u51CF\u901F"
   buff_Duration: 9999
-  buff_Interval: 0
+  buff_Interval: 1
   buff_MaxStack: 1
   buff_StackType: 3
   buff_Behavior_Start: {fileID: 11400000, guid: b019085909d95d6408d65cd3150927d5, type: 2}

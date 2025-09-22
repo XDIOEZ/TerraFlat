@@ -80,7 +80,7 @@ public class LootEntry
     public float DropChance = 1f;
     
     [Tooltip("最小掉落数量")]
-    public int MinAmount = 0;
+    public int MinAmount = 1;
     
     [Tooltip("最大掉落数量")]
     public int MaxAmount = 1;
@@ -231,7 +231,6 @@ public class LootEntry
 
 
 
-
     [Button("隐藏面板")]
     public void HidePanle()
     {
@@ -258,7 +257,7 @@ public class LootEntry
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
 
-    public virtual float TakeDamage(float damage, Item attacker)
+    public virtual float Hurt(float damage, Item attacker)
     {
         if (Hp <= 0) return -1;
 
@@ -308,6 +307,49 @@ public class LootEntry
 
         return Hp; // Ensure a return value for other paths
     }
+    public virtual float ForceHurt(float damage, Item attacker)
+    {
+        if (Hp <= 0) return -1;
+
+        Hp -= damage;
+
+        if (Data.ShowCanvas)
+            RefreshUI();
+
+        // UI & 特效处理
+        OnAction.Invoke(Hp);
+
+        if (item.Sprite != null && !isFlashing)
+        {
+            Hit_Flash(item.Sprite);
+            StartCoroutine(ShakeSprite(item.Sprite.transform));
+        }
+
+        if (Hp <= 0)
+        {
+            OnDead.Invoke();
+            
+            // TODO添加战利品掉落逻辑
+            DropLoot();
+            
+            if (Data.DestroyDelay >= 0)
+            {
+                Destroy(item.gameObject, Data.DestroyDelay);
+            }
+            return 0; // Ensure a return value for this path
+        }
+
+        return Hp; // Ensure a return value for other paths
+    }
+
+
+
+ public virtual float Heal(float healAmount, Item healer)
+{
+    Hp = Mathf.Min(Hp + healAmount, MaxHp.Value);
+    RefreshUI();
+    return Hp;
+}
     #endregion
 
     public Mod_Inventory Equipment_Inventory;
@@ -379,11 +421,8 @@ protected virtual void DropLoot()
         {
             // 使用ItemMgr的实例化方法确保一致性
             Item lootItem = ItemMgr.Instance.InstantiateItem(
-                lootEntry.LootPrefabName, 
-                item.transform.position + new Vector3(Random.Range(-0.5f, 0.5f), Random.Range(-0.5f, 0.5f), 0),
-                Quaternion.identity
-            );
-            
+                lootEntry.LootPrefabName);
+                lootItem.DropInRange();
             // 确保战利品可以被拾取
             if (lootItem != null && lootItem.itemData != null)
             {

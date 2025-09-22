@@ -31,6 +31,7 @@ namespace TheKiwiCoder {
         public DamageReceiver damageReciver;
         public Mod_ColdWeapon ColdWeapon;
         public Mod_Food Food;
+        public TileEffectReceiver tileEffectReceiver;
 
         // Add other game specific systems here
 
@@ -57,6 +58,7 @@ namespace TheKiwiCoder {
             context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover_AI;
             context.Food = context.item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
             context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID(ModText.TileEffect) as TileEffectReceiver;
 
             return context;
         }

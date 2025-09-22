@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEngine;
 using UltEvents;
 using static OfficeOpenXml.ExcelErrorValue;
+using static Mod_Stamina;
 
 public partial class Mod_Food : Module
 {
@@ -27,6 +28,7 @@ public partial class Mod_Food : Module
     public UI_FloatData_Slider UIValues;
 
     public Mod_Stamina Stamina;
+    public DamageReceiver DamageReceiver;
 
     public bool ShowCanvas
     {
@@ -63,6 +65,22 @@ public partial class Mod_Food : Module
         public bool FeelGood = false; // ← 加在这里
         //TODO 添加子对象的面板位置作为 持久化数据  在实例化面板时保存面板位置  在关闭面板时恢复面板位置 在Save函数中 如果面板存在 就保存面板的位置
         public Vector2 PanelPosition = new Vector2(0, 0);
+        [Tooltip("状态良好时恢复血量的速度")]
+        public float HealSpeed = 1f;
+        [Tooltip("感觉蛋白质状态良好的阈值")]
+        public float ProteinThreshold = 50f;
+        [Tooltip("水份归零时，自己对自己造成的伤害(单位/秒)")]
+        public float WaterSelfHurt = 1f;
+        [Tooltip("蛋白质归零时，自己对自己造成的伤害(单位/秒)")]
+        public float ProteinSelfHurt = 1f;
+        [Tooltip("维生素出现亏欠时，对自己造成的伤害(单位/秒)")]
+        public float VitaminSelfHurt = 1f;
+        [Tooltip("精力恢复速度")]
+        public float StaminaRecoverSpeed = 1f;
+        [Tooltip("恢复精力时 饥饿消耗速度的额外增量(单位/倍率)")]
+        public float StaminaConsumeSpeedRate = 0.5f;
+        [Tooltip("水份消耗速度倍率")]
+        public float WaterConsumeSpeedRate = 1f;
     }
 
     public override void Awake()
@@ -89,12 +107,12 @@ public partial class Mod_Food : Module
         }
 
 
+        //模块引用赋值
+        item.itemMods.GetMod_ByID(ModText.Stamina, out Stamina);
+        item.itemMods.GetMod_ByID(ModText.Hp, out DamageReceiver);
 
-        if (item.Mods.ContainsKey(ModText.Stamina))
-        Stamina = item.Mods[ModText.Stamina] as Mod_Stamina;
 
-
-            if (item != null)
+        if (item != null)
             {
             item.OnAct += Act;
             }
@@ -109,81 +127,109 @@ public partial class Mod_Food : Module
         var Player_FoodModule = item.Owner.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
         Player_FoodModule.Eat(BeEater: this);
     }
-    public override void ModUpdate(float timeDelta)
+public override void ModUpdate(float timeDelta)
+{
+    float Rate = 1f;
+    //精力补充-前提是存在精力模块
+    if (Stamina != null)
     {
-        // 营养消耗
-        float totalEnergy = ConsumeNutrition(timeDelta);
-        //精力补充-前提是存在精力模块
-        if (Stamina != null)
-            Stamina.AddStamina(totalEnergy);
-
-        DataUpdate?.Invoke();
+        //TODO 检测精力是否充足 如果精力不是满的 则补充精力
+        if (Stamina.Data.CurrentStamina < Stamina.Data.MaxStamina.Value)
+        {
+            Rate += Data.StaminaConsumeSpeedRate;
+            Stamina.AddStamina(Data.StaminaRecoverSpeed * timeDelta);
+        }
     }
+
+    // 营养消耗
+    ConsumeNutrition(timeDelta * Rate);
+
+    if (DamageReceiver != null)
+    {
+        //检测饥饿值是否出现亏欠情况
+        if (DamageReceiver != null)
+        {
+            if (Data.nutrition.Protein <= 0)
+            {
+                //表示饥饿值出现亏欠 , 自己对自己造成伤害
+                DamageReceiver.ForceHurt(Data.ProteinSelfHurt * timeDelta, item);
+            }
+            else if (Data.nutrition.Protein >= Data.ProteinThreshold)
+            {
+                //表示饥饿值充足，恢复血量
+                DamageReceiver.Heal(Data.HealSpeed * timeDelta, item);
+            }
+        }
+
+        //检测水份是否出现亏欠情况
+        if (Data.nutrition.Water <= 0)
+        {
+                //表示水份值出现亏欠 , 自己对自己造成伤害
+                DamageReceiver.ForceHurt(Data.WaterSelfHurt * timeDelta, item);
+        }
+
+        //检测维生素是否出现亏欠情况
+        if (Data.nutrition.Vitamins <= 0)
+        {
+            //表示饥饿值出现亏欠 , 自己对自己造成伤害
+            DamageReceiver.Hurt(Data.VitaminSelfHurt * timeDelta, item);
+        }
+    }
+    
+    DataUpdate?.Invoke();
+}
 
     private float ConsumeNutrition(float timeDelta)
     {
-        // 判断当前精力是否已满，决定是否减缓营养消耗速度
-        bool shouldSlow = Stamina != null && Stamina.IsStaminaFull;
+    // 移除对精力状态的检查，不再根据精力是否满来调整消耗速度
+    // 始终保持恒定的消耗速度
+    
+    // 计算本次消耗总量 = 时间增量 * 吸收率 * 消耗速度
+    float delta = timeDelta * Data.AbsorptionRate * Data.nutritionConsumeSpeed.Value;
+    float remainingDelta = delta;
+    float totalEnergy = 0f;
 
-        // 当精力满且之前未减速时，减慢消耗速度并标记状态
-        if (shouldSlow && !Data.FeelGood)
-        {
-            Data.nutritionConsumeSpeed.MultiplicativeModifier *= 0.5f;
-            Data.FeelGood = true;
-        }
-        // 当精力不满且之前处于减速状态时，恢复消耗速度并重置状态
-        else if (!shouldSlow && Data.FeelGood)
-        {
-            Data.nutritionConsumeSpeed.MultiplicativeModifier *= 2f;
-            Data.FeelGood = false;
-        }
+    // 优先消耗碳水化合物，不能超过当前碳水量
+    float usedCarb = Mathf.Min(Data.nutrition.Carbohydrates, remainingDelta);
+    remainingDelta -= usedCarb;
+    Data.nutrition.Carbohydrates -= usedCarb;
+    totalEnergy += usedCarb;
 
-        // 计算本次消耗总量 = 时间增量 * 吸收率 * 当前消耗速度修正值
-        float delta = timeDelta * Data.AbsorptionRate * Data.nutritionConsumeSpeed.Value;
-        float remainingDelta = delta;
-        float totalEnergy = 0f;
+    float usedFat = 0f;
+    float usedProtein = 0f;
+    float usedWater = 0f;
 
-        // 优先消耗碳水化合物，不能超过当前碳水量
-        float usedCarb = Mathf.Min(Data.nutrition.Carbohydrates, remainingDelta);
-        remainingDelta -= usedCarb;
-        Data.nutrition.Carbohydrates -= usedCarb;
-        totalEnergy += usedCarb;
+    // 消耗剩余量部分用于脂肪，不能超过当前脂肪量
+    if (remainingDelta > 0)
+    {
+        usedFat = Mathf.Min(Data.nutrition.Fat, remainingDelta);
+        remainingDelta -= usedFat;
+        Data.nutrition.Fat -= usedFat;
+        totalEnergy += usedFat;
+    }
 
-        float usedFat = 0f;
-        float usedProtein = 0f;
-        float usedWater = 0f;
+    // 消耗剩余量部分用于蛋白质，不能超过当前蛋白质量
+    if (remainingDelta > 0)
+    {
+        usedProtein = Mathf.Min(Data.nutrition.Protein, remainingDelta);
+        remainingDelta -= usedProtein;
+        Data.nutrition.Protein -= usedProtein;
+        totalEnergy += usedProtein;
+    }
 
-        // 消耗剩余量部分用于脂肪，不能超过当前脂肪量
-        if (remainingDelta > 0)
-        {
-            usedFat = Mathf.Min(Data.nutrition.Fat, remainingDelta);
-            remainingDelta -= usedFat;
-            Data.nutrition.Fat -= usedFat;
-            totalEnergy += usedFat;
-        }
+    // 水的消耗是持续性的，且消耗速度受当前消耗物质影响
+    // 消耗碳水时水消耗速率为1，脂肪为2，蛋白质为3
+    usedWater = usedCarb * 1f + usedFat * 2f + usedProtein * 3f;
+        usedWater *= Data.WaterConsumeSpeedRate;
+    // 扣除相应的水分，水分不会低于0
+    Data.nutrition.Water = Mathf.Max(0, Data.nutrition.Water - usedWater);
 
-        // 消耗剩余量部分用于蛋白质，不能超过当前蛋白质量
-        if (remainingDelta > 0)
-        {
-            usedProtein = Mathf.Min(Data.nutrition.Protein, remainingDelta);
-            remainingDelta -= usedProtein;
-            Data.nutrition.Protein -= usedProtein;
-            totalEnergy += usedProtein;
-        }
+    // 维生素自然消耗，速度为0.01倍时间增量
+    float naturalVitaminLoss = timeDelta * 0.01f;
+    Data.nutrition.Vitamins = Mathf.Max(0, Data.nutrition.Vitamins - naturalVitaminLoss);
 
-        // TODO：水的消耗是持续性的，且消耗速度受当前消耗物质影响
-        // 消耗碳水时水消耗速率为1，脂肪为2，蛋白质为3
-        usedWater = usedCarb * 1f + usedFat * 2f + usedProtein * 3f;
-
-        // 扣除相应的水分，水分不会低于0
-        Data.nutrition.Water = Mathf.Max(0, Data.nutrition.Water - usedWater);
-
-        // 维生素自然消耗，速度为0.01倍时间增量
-        float naturalVitaminLoss = timeDelta * 0.01f;
-        Data.nutrition.Vitamins = Mathf.Max(0, Data.nutrition.Vitamins - naturalVitaminLoss);
-
-        // 返回本次消耗的总能量值
-        return totalEnergy;
+    // 返回本次消耗的总能量值
+    return totalEnergy;
     }
 
 
@@ -291,8 +337,8 @@ public partial class Mod_Food : Module
             BeEater.item.OnUIRefresh?.Invoke();
 
             // 当前食物的营养值补满
-            Data.nutrition.Max();
-            EatingProgress = 0; // 吃进度归零
+            BeEater.Data.nutrition.Max();
+            BeEater.EatingProgress = 0; // 吃进度归零
 
             // 吃掉目标食物的营养值
             Data.nutrition = Data.nutrition + BeEater.Data.nutrition;

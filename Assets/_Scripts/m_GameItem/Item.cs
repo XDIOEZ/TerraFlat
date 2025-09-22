@@ -65,42 +65,23 @@ public abstract class Item : MonoBehaviour
         }
     }
 
-    public void IsPrefabInit()
+
+    public ItemData IsPrefabInit()
     {
-
-        // 自动生成Guid
-        Start();
-    
-/*
-
+        //TODO 获取所有子对象的Module并初始化
         var modules = GetComponentsInChildren<Module>(true).ToList();
-
-            foreach (var mod in modules)
-            {
-              *//*  if (string.IsNullOrWhiteSpace(mod._Data.Name))*//*
-                mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
-                itemMods.AddMod(mod);
-            }
-
-             foreach (var mod in Mods.Values)
-             {
-                 mod._Data = mod._Data.DeepClone();
-                 itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
-             }
-             // 所有模块加入Mods后统一初始化
-            foreach (var mod in Mods.Values)
-            {
-                mod.ModuleInit(this,null);
-            }
-            foreach (var mod in Mods.Values)
-            {
-                mod.Load();
-            }
-        foreach (var mod in Mods.Values)
+        foreach (var mod in modules)
         {
-            mod.Save();
-        }*/
+            mod.Awake();
+        }
+        itemData.Guid = Guid.NewGuid().GetHashCode();
+        Load();
+        ItemData _ =  itemData.DeepClone();
 
+        //清理残留数据
+        itemData.ModuleDataDic.Clear();
+        return _;
+        
     }
 
     [Button]
@@ -115,11 +96,11 @@ public abstract class Item : MonoBehaviour
     }
 
     [Tooltip("物品的更新频率，单位：秒")]
-    public float updateInterval = 0.1f; // 每0.1秒执行一次
+    public float updateInterval = 0f; // 每0.1秒执行一次
     float updateTimer = 0f;
     public void Update()
     {
-        if (updateInterval == 0f)
+        if (updateInterval <= 0.1f)
         {
             foreach (Module mod in Mods.Values.ToList()) // 创建快照
             {
@@ -284,7 +265,6 @@ public abstract class Item : MonoBehaviour
     public virtual void Load()
     {
         ModuleLoad();
-
     }
     public void LoadDataPosition()
     {
@@ -315,6 +295,7 @@ public abstract class Item : MonoBehaviour
             itemData.IDName = this.gameObject.name;
             Debug.LogWarning("物品数据IDName为空，已自动设置。");
         }
+        updateInterval = 0f;
         return itemData.SyncData();
     }
 
@@ -338,5 +319,10 @@ public abstract class Item : MonoBehaviour
     public void OnValidate()
     {
         itemData.Tags.EnsureTagStructure();
+    }
+
+    public void DropInRange()
+    {
+        Mod_ItemDroper.DropItemInARange(this, transform.position, UnityEngine.Random.Range(0.5f, 2f), 0.5f);
     }
 }

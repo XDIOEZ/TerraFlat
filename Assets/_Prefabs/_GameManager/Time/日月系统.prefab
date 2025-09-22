@@ -45,9 +45,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f914b0958fba1ba4daac26b71a5e7bc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Sun: {fileID: 8436068588726109976}
-  Current_DayThreshold: 0
-  Current_NightThreshold: 0
+  GlobalLight: {fileID: 8436068588726109976}
+  DefaultLightColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &8436068588726109976
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5175292470693907942}
   - component: {fileID: 3175238874894987672}
   - component: {fileID: 8233460568870623006}
+  - component: {fileID: 8016388638861598348}
   m_Layer: 8
   m_Name: MapCore
   m_TagString: MapCore
@@ -60,14 +61,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   map: {fileID: 8233460568870623006}
-  mapGrid: {fileID: 0}
-  targetTilemap: {fileID: 0}
+  mapGrid: {fileID: 5175292470693907942}
+  targetTilemap: {fileID: 6321057560787975102}
   Equator: 0
   biomes:
   - {fileID: 11400000, guid: e5e9fd78101f9d944b68fbd0b7bf50b6, type: 2}
+  - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
+  - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
+  - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
+  - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
   - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
   - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
-  tilesPerFrame: 100000
+  tilesPerFrame: 0
   seamlessBorders: 1
   Noises:
     _serializedList:
@@ -141,6 +146,25 @@ MonoBehaviour:
     _PersistentCalls: []
   navigationModiferTileMap: {fileID: 0}
   ParentObject: {fileID: 0}
+--- !u!114 &8016388638861598348
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111103676966031222}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1585ba75e2aebc147b2f0d6b69ac7884, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  toggleKey: 284
+  panelSize: {x: 300, y: 150}
+  offset: {x: 20, y: 20}
+  hoverIndicatorPrefab: {fileID: 6088689177552011557, guid: ad321cd0f97b7b74689d69601050c6d0, type: 3}
+  backgroundColor: {r: 0, g: 0, b: 0, a: 0.7}
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  fontSize: 12
 --- !u!1 &3401113203274231406
 GameObject:
   m_ObjectHideFlags: 0

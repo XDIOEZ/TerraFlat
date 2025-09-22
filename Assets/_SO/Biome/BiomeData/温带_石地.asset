@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef0d6fc82e9dffd4bb109cc0bc9963b4, type: 3}
   m_Name: "\u6E29\u5E26_\u77F3\u5730"
   m_EditorClassIdentifier: 
-  BiomeName: "\u6E29\u5E26\u8349\u539F"
+  BiomeName: "\u77F3\u5730"
   Description: "\u6563\u843D\u7684\u77F3\u5934,\u5C0F\u6C34\u5751,\u7A00\u5C11\u7684\u6811,\u5E7F\u9614\u7684\u8349\u5730"
   PreviewColor: {r: 0.690566, g: 0.690566, b: 0.690566, a: 1}
   Condition:
@@ -27,3 +27,5 @@ MonoBehaviour:
     ItemSpawn:
     - {fileID: 11400000, guid: 7bf8754bd2169bd49b2ba4edfbaeb1b8, type: 2}
     - {fileID: 11400000, guid: 709338c098ec35f4eb975f5c96f669d1, type: 2}
+    - {fileID: 11400000, guid: 1638d048051cdd04c8c0a37711f8ca27, type: 2}
+    - {fileID: 11400000, guid: ec765d76a5ea585469eb795f5cedc122, type: 2}

@@ -119,7 +119,7 @@ MonoBehaviour:
     - LootPrefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
       LootPrefabName: Chicken
       DropChance: 0.001
-      MinAmount: 0
+      MinAmount: 1
       MaxAmount: 1
   OnDead:
     _PersistentCalls: []

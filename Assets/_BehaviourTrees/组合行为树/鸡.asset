@@ -608,7 +608,7 @@ MonoBehaviour:
   m_Name: HungryChecker
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: 9fc7fc22d0dfd9a439fad19ce3f6bab3
   position: {x: -1678.4, y: 1212.8}
   blackboard:
@@ -1053,7 +1053,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 8bfc29857341ca44489de50130e74e3b
-  position: {x: -1062.4, y: 941.6}
+  position: {x: -1444.3828, y: 875.8374}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2116,7 +2116,7 @@ MonoBehaviour:
   state: 0
   started: 1
   guid: 58be8306e5fb5574dad3ec9e88cbe80c
-  position: {x: -1104.7999, y: 464.79996}
+  position: {x: -1486.783, y: 399.03738}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2329,9 +2329,9 @@ MonoBehaviour:
   m_Name: node_ItemDetector
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: b0a6aa22757cf2349afa508693db1472
-  position: {x: -1179.9999, y: 829.60004}
+  position: {x: -1561.9828, y: 763.8374}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2433,7 +2433,7 @@ MonoBehaviour:
   state: 0
   started: 1
   guid: fc4ec0d8115386e489b1cb1ad1ee8e49
-  position: {x: -1104.7999, y: 570.4}
+  position: {x: -1486.783, y: 504.6374}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2457,7 +2457,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: b8f3ef28a6e4c544386a57cd2dc437ed
-  position: {x: 671.2, y: 1695.2001}
+  position: {x: 671.2001, y: 1695.2003}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2533,7 +2533,7 @@ MonoBehaviour:
   state: 0
   started: 1
   guid: c85c9a772b7fa0c49b5d7ef022f86266
-  position: {x: -1103.9999, y: 688.80005}
+  position: {x: -1485.9828, y: 623.0374}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3644,7 +3644,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: a209c50eb4d515a4c96411bb7618efcc
-  position: {x: -1008, y: 804}
+  position: {x: -1389.9829, y: 738.23737}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3774,7 +3774,7 @@ MonoBehaviour:
   m_Name: Sequencer
   m_EditorClassIdentifier: 
   state: 1
-  started: 1
+  started: 0
   guid: 5526c82edba49b04d86264106046460c
   position: {x: -879.19995, y: 1356}
   blackboard:
@@ -4338,7 +4338,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 2c7eeeb3940f48c4d8505b7a28584616
-  position: {x: -911.99994, y: 941.6001}
+  position: {x: -1293.9829, y: 875.8374}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -4442,7 +4442,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e104977d116dadf4287ec84cab51f82f, type: 3}
   m_Name: GameLightDetector
   m_EditorClassIdentifier: 
-  state: 2
+  state: 1
   started: 0
   guid: e2d3fbd1238a7a6428acc5bbf786fe40
   position: {x: -1255.2, y: 1598.3909}

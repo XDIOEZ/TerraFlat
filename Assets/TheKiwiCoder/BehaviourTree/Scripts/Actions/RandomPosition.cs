@@ -21,6 +21,10 @@ public class RandomPosition : ActionNode
 
     // 重用列表减少GC分配
     private readonly List<Vector2> sameTypePositions = new List<Vector2>(8);
+    
+    // Gizmos显示相关
+    private Vector3 gizmoPosition = Vector3.zero;
+    private bool showGizmo = false;
 
     #endregion
 
@@ -62,8 +66,10 @@ public class RandomPosition : ActionNode
     {
         Vector3 chosenPosition = Vector3.zero;
         bool found = false;
+        int attempts = 0;
+        const int maxAttempts = 5;
 
-        for (int i = 0; i < maxTries; i++)
+        while (attempts < maxAttempts)
         {
             Vector2 randomOffset = new Vector2(
                 Random.Range(min.x, max.x),
@@ -83,15 +89,53 @@ public class RandomPosition : ActionNode
                 randomOffset += sameTypeDirection * sameTypeAttraction;
             }
 
-            // 检查地图可用性
+            // 生成测试位置
             Vector3 testPosition = context.transform.position + (Vector3)randomOffset;
             Vector2Int testPosInt = Vector2Int.FloorToInt(testPosition);
-            if (context.map.GetTileArea(testPosInt) <= 2)
+
+            // 检查是否落在危险区域（权重大于等于5000的tiledata）
+            // 伪代码：假设有一个方法可以获取tile的权重
+            // int tileWeight = context.map.GetTileWeight(testPosInt);
+            // if (tileWeight >= 5000) // 危险区域判断
+            if (IsDangerousTile(testPosInt)) // 使用伪代码方法
             {
-                chosenPosition = testPosition;
-                found = true;
-                break;
+                // A点落入危险地点，生成对称点B
+                Vector3 symmetricPosition = context.transform.position - (Vector3)randomOffset;
+                Vector2Int symmetricPosInt = Vector2Int.FloorToInt(symmetricPosition);
+                
+                // 检查对称点是否安全
+                // if (context.map.GetTileWeight(symmetricPosInt) < 5000) // 安全区域判断
+                if (!IsDangerousTile(symmetricPosInt)) // 使用伪代码方法
+                {
+                    chosenPosition = symmetricPosition;
+                    found = true;
+                    // 设置Gizmos显示
+                    gizmoPosition = chosenPosition;
+                    showGizmo = true;
+                    break;
+                }
+                else
+                {
+                    // 对称点B也危险，继续下一次随机尝试
+                    attempts++;
+                    continue;
+                }
             }
+            else
+            {
+                // 检查地图可用性（原有逻辑）
+                if (context.map.GetTileArea(testPosInt) <= 2)
+                {
+                    chosenPosition = testPosition;
+                    found = true;
+                    // 设置Gizmos显示
+                    gizmoPosition = chosenPosition;
+                    showGizmo = true;
+                    break;
+                }
+            }
+            
+            attempts++;
         }
 
         // 如果没有找到合适位置，使用最后一次随机偏移
@@ -105,10 +149,25 @@ public class RandomPosition : ActionNode
                 randomOffset += sameTypeDirection * sameTypeAttraction;
 
             chosenPosition = context.transform.position + (Vector3)randomOffset;
+            // 设置Gizmos显示
+            gizmoPosition = chosenPosition;
+            showGizmo = true;
         }
 
         SetTargetPosition(chosenPosition);
         return State.Success;
+    }
+
+    // 伪代码方法：判断是否为危险tile
+    private bool IsDangerousTile(Vector2Int tilePosition)
+    {
+        // 获取指定位置的TileData
+        TileData tileData = context.map?.GetTile(tilePosition);
+        if (tileData == null)
+            return true; // 空位置视为危险
+            
+        // 检查惩罚值是否大于等于5000
+        return tileData.Penalty >= 5000;
     }
 
     private State HandleFreeMovement(Vector2 sameTypeDirection)
@@ -121,7 +180,12 @@ public class RandomPosition : ActionNode
         if (sameTypeDirection.sqrMagnitude > 0.001f)
             randomOffset += sameTypeDirection * sameTypeAttraction;
 
-        SetTargetPosition(context.transform.position + (Vector3)randomOffset, randomOffset);
+        Vector3 targetPosition = context.transform.position + (Vector3)randomOffset;
+        // 设置Gizmos显示
+        gizmoPosition = targetPosition;
+        showGizmo = true;
+        
+        SetTargetPosition(targetPosition, randomOffset);
         return State.Success;
     }
 
@@ -179,6 +243,33 @@ public class RandomPosition : ActionNode
         {
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(context.transform.position, 5f); // 可替换为实际检测范围
+        }
+    }
+    
+    public override void OnDrawGizmos()
+    {
+        if (showGizmo)
+        {
+            // 保存原始Gizmos颜色
+            Color originalColor = Gizmos.color;
+            
+            // 设置Gizmos颜色
+            Gizmos.color = Color.yellow;
+            
+            // 绘制一个圆形标记
+            Gizmos.DrawWireSphere(gizmoPosition, 0.5f);
+            
+            // 绘制一个X标记
+            float size = 0.3f;
+            Gizmos.DrawLine(gizmoPosition + new Vector3(size, size, 0), gizmoPosition + new Vector3(-size, -size, 0));
+            Gizmos.DrawLine(gizmoPosition + new Vector3(-size, size, 0), gizmoPosition + new Vector3(size, -size, 0));
+            
+            // 绘制一个点（通过绘制小球实现）
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(gizmoPosition, 0.1f);
+            
+            // 恢复原始颜色
+            Gizmos.color = originalColor;
         }
     }
 

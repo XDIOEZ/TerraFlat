@@ -550,5 +550,11 @@ public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
     }
 }
 
+    public void AddActiveChunk(Chunk chunk)
+    {
+        Chunk_Dic.Add(chunk.name, chunk);
+        Chunk_Dic_Active.Add(chunk.name, chunk);
+    }
+
 
 }

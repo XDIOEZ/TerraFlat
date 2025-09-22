@@ -1,30 +1,44 @@
 using Force.DeepCloner;
-using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// 手工制作模块，提供合成物品的功能
+/// </summary>
 public class Mod_HandMade : Module
 {
-    public InventoryModuleData inventoryModuleData = new InventoryModuleData();
-    public override ModuleData _Data { get => inventoryModuleData; set => inventoryModuleData = (InventoryModuleData)value; }
-    public BasePanel basePanel; //TODO 这个是面板的引用 其里面有个字段    public UI_Drag Dragger; 他的位置便是要存档的位置
-    #region 工作变量
+    #region 字段和属性
 
+    [Header("模块数据")]
+    public InventoryModuleData inventoryModuleData = new InventoryModuleData();
+    public override ModuleData _Data 
+    { 
+        get => inventoryModuleData; 
+        set => inventoryModuleData = (InventoryModuleData)value; 
+    }
+
+    [Header("UI组件")]
+    [Tooltip("合成界面面板")]
+    public BasePanel basePanel;
+    
+    [Header("合成容器")]
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
     public Inventory inputInventory;
-
     [Tooltip("输出容器，用于存放合成后得到的物品")]
     public Inventory outputInventory;
 
+    [Header("交互组件")]
     [Tooltip("合成按钮")]
-    public Button WorkButton;
+    public Button workButton;
 
     #endregion
+
+    #region 生命周期
+
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -32,49 +46,25 @@ public class Mod_HandMade : Module
             _Data.ID = ModText.Composite;
         }
     }
+
     [Button]
     public override void Load()
     {
-        //同步数据
-        if(inventoryModuleData.Data.Count == 0)
-        {
-            inventoryModuleData.Data[inputInventory.Data.Name] = inputInventory.Data;
-            inventoryModuleData.Data[outputInventory.Data.Name] = outputInventory.Data;
-        }
-        else
-        {
-            inputInventory.Data = inventoryModuleData.Data[inputInventory.Data.Name];
-            outputInventory.Data = inventoryModuleData.Data[outputInventory.Data.Name];
-        }
-
-        WorkButton.onClick.AddListener(OnCraftButtonClick);
-
-        if (item.itemMods.ContainsKey_ID(ModText.Hand))
-        {
-        inputInventory.DefaultTarget_Inventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
-        outputInventory.DefaultTarget_Inventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
-        }
-
-
-        inputInventory.Init();
-        outputInventory.Init();
-
-        item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod);
-        if (interactMod != null)
-        {
-            interactMod.OnAction_Start += Interact_Start;
-            interactMod.OnAction_Cancel += Interact_Stop;
-        }
-
-        basePanel = GetComponentInChildren<BasePanel>();
-        
-        // TODO完成：从存档数据中恢复面板位置
-        if (basePanel != null && basePanel.Dragger != null)
-        {
-            basePanel.Dragger.transform.position = inventoryModuleData.PanleRectPosition;
-        }
-
+        InitializeInventories();
+        SetupEventListeners();
+        RestorePanelPosition();
     }
+
+    public override void Save()
+    {
+        SavePanelPosition();
+        CleanupEventListeners();
+        item.itemData.ModuleDataDic[_Data.Name] = _Data;
+    }
+
+    #endregion
+
+    #region 事件处理
 
     private void OnCraftButtonClick()
     {
@@ -86,178 +76,284 @@ public class Mod_HandMade : Module
         Craft(inputInventory, outputInventory, RecipeType.Crafting);
     }
 
-    //玩家与此发生交互
-    public void Interact_Start(Item item_)
+    /// <summary>
+    /// 玩家开始交互
+    /// </summary>
+    public void Interact_Start(Item playerItem)
     {
-        item_.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod);
-        if (handMod == null) return;
-        inputInventory.DefaultTarget_Inventory = handMod.inventory;
-        outputInventory.DefaultTarget_Inventory = handMod.inventory;
-        basePanel.Toggle();
+        if (playerItem.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod))
+        {
+            inputInventory.DefaultTarget_Inventory = handMod.inventory;
+            outputInventory.DefaultTarget_Inventory = handMod.inventory;
+        }
+        basePanel?.Toggle();
     }
-    //玩家结束交互
-    public void Interact_Stop(Item item_)
-    { 
-        if (inputInventory.DefaultTarget_Inventory == null&&outputInventory.DefaultTarget_Inventory == null) return;
+
+    /// <summary>
+    /// 玩家结束交互
+    /// </summary>
+    public void Interact_Stop(Item playerItem)
+    {
+        if (inputInventory.DefaultTarget_Inventory == null && 
+            outputInventory.DefaultTarget_Inventory == null) 
+            return;
+            
         inputInventory.DefaultTarget_Inventory = null;
         outputInventory.DefaultTarget_Inventory = null;
-        basePanel.Close();
+        basePanel?.Close();
     }
 
+    #endregion
 
-    #region 合成物品逻辑
+    #region 合成逻辑
 
-    public bool Craft(Inventory inputInventory_, Inventory outputInventory_, RecipeType recipeType)
+    /// <summary>
+    /// 执行合成操作
+    /// </summary>
+    public bool Craft(Inventory inputInv, Inventory outputInv, RecipeType recipeType)
     {
-        // 生成配方键
-        string recipeKey = string.Join(",",
-            inputInventory_.Data.itemSlots.Select(slot => slot.itemData?.IDName ?? ""));
+        try
+        {
+            // 生成配方键
+            string recipeKey = GenerateRecipeKey(inputInv);
+            
+            // 验证配方
+            if (!ValidateRecipe(recipeKey, recipeType, out var recipe))
+                return false;
 
-        // 检查配方存在性及类型
-        if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out var recipe) ||
+            // 验证输入槽位数量
+            if (!ValidateSlotCount(inputInv, recipe))
+                return false;
+
+            // 准备输出物品
+            var outputItems = PrepareOutputItems(recipe);
+            if (outputItems == null)
+                return false;
+
+            // 检查资源和空间
+            if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems))
+            {
+                Debug.LogError("合成失败：材料不足或输出空间不足");
+                return false;
+            }
+
+            // 执行合成
+            ExecuteCrafting(inputInv, outputInv, recipe, outputItems);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"合成过程中发生错误: {ex.Message}");
+            return false;
+        }
+    }
+
+    private string GenerateRecipeKey(Inventory inputInv)
+    {
+        return string.Join(",",
+            inputInv.Data.itemSlots.Select(slot => slot.itemData?.IDName ?? ""));
+    }
+
+    private bool ValidateRecipe(string recipeKey, RecipeType recipeType, out Recipe recipe)
+    {
+        recipe = null;
+        
+        if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe) ||
             recipe.recipeType != recipeType)
         {
             Debug.LogError($"配方匹配失败：键 {recipeKey} 不存在或类型 {recipeType} 不匹配");
             return false;
         }
+        
+        return true;
+    }
 
-        // 检查插槽数量
-        if (inputInventory_.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
+    private bool ValidateSlotCount(Inventory inputInv, Recipe recipe)
+    {
+        if (inputInv.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
         {
-            Debug.LogError($"插槽数量不匹配：配方要求 {recipe.inputs.RowItems_List.Count} 个插槽，当前有 {inputInventory_.Data.itemSlots.Count} 个");
+            Debug.LogError($"插槽数量不匹配：配方要求 {recipe.inputs.RowItems_List.Count} 个插槽，当前有 {inputInv.Data.itemSlots.Count} 个");
             return false;
         }
+        return true;
+    }
 
-        // 准备输出物品
+    private List<ItemData> PrepareOutputItems(Recipe recipe)
+    {
         var itemsToAdd = new List<ItemData>();
+        
         foreach (var output in recipe.outputs.results)
         {
-            var prefab = GameRes.Instance.AllPrefabs[output.ItemName];
-            if (prefab == null)
-            {
-                Debug.LogError($"预制体不存在：{output.ItemName}（配方：{recipe.name}）");
-                return false;
-            }
-            Item item = prefab.GetComponent<Item>();
-            var itemdata = item.itemData;
-            item.itemData = item.itemData.DeepClone();
-
-            item.IsPrefabInit();
-
-            ItemData newItem = item.itemData;
-            item.itemData = itemdata;
-
-
+            Item outputitem = output.ItemPrefab.GetComponent<Item>();
+            ItemData newItem = outputitem.IsPrefabInit();
             newItem.Stack.Amount = output.amount;
+
             itemsToAdd.Add(newItem);
         }
+        
+        return itemsToAdd;
+    }
 
-        // 检查资源和空间
-        if (!CheckEnough(inputInventory_, outputInventory_, recipe.inputs, itemsToAdd))
+    private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, 
+        Recipe recipe, List<ItemData> outputItems)
+    {
+        // 检查输入材料
+        for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
         {
-            Debug.LogError("合成失败：材料不足或输出空间不足");
-            return false;
-        }
-
-        // 显示合成开始信息
-        Debug.Log($"开始合成：{recipe.name}");
-        Debug.Log($"输入材料：{recipeKey}");
-        Debug.Log($"输出产物：{string.Join(", ", itemsToAdd.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
-
-        // 执行合成：添加输出物品
-        foreach (var item in itemsToAdd)
-        {
-            outputInventory_.Data.TryAddItem(item);
-            Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
-        }
-
-        // 扣除输入材料
-        for (int i = 0; i < inputInventory_.Data.itemSlots.Count; i++)
-        {
-            var slot = inputInventory_.Data.itemSlots[i];
+            var slot = inputInv.Data.itemSlots[i];
             var required = recipe.inputs.RowItems_List[i];
 
             if (required.amount == 0) continue;
 
-            // 显示详细扣减信息
+            if (slot.itemData == null || slot.itemData.IDName != required.ItemName)
+                return false;
+
+            if (slot.itemData.Stack.Amount < required.amount)
+                return false;
+        }
+
+        // 检查输出空间
+        foreach (var item in outputItems)
+        {
+            if (!outputInv.Data.TryAddItem(item, false))
+                return false;
+        }
+
+        return true;
+    }
+
+    private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, 
+        Recipe recipe, List<ItemData> outputItems)
+    {
+        Debug.Log($"开始合成：{recipe.name}");
+        Debug.Log($"输入材料：{GenerateRecipeKey(inputInv)}");
+        Debug.Log($"输出产物：{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
+
+        // 添加输出物品
+        foreach (var item in outputItems)
+        {
+            outputInv.Data.TryAddItem(item);
+            Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
+        }
+
+        // 扣除输入材料
+        for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
+        {
+            var slot = inputInv.Data.itemSlots[i];
+            var required = recipe.inputs.RowItems_List[i];
+
+            if (required.amount == 0) continue;
+
             Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot.itemData.Stack.Amount}");
 
             slot.itemData.Stack.Amount -= required.amount;
             if (slot.itemData.Stack.Amount <= 0)
             {
                 Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
-                inputInventory_.Data.RemoveItemAll(slot, i);
+                inputInv.Data.RemoveItemAll(slot, i);
             }
             else
             {
                 Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot.itemData.Stack.Amount}");
             }
-            inputInventory.RefreshUI(i);
+            inputInv.RefreshUI(i);
         }
 
+        outputInv.RefreshUI();
+        inputInv.RefreshUI();
         Debug.Log($"合成完成：{recipe.name}");
-        outputInventory.RefreshUI();
-        inputInventory.RefreshUI();
-        return true;
     }
 
-    private bool CheckEnough(Inventory inputInventory_,
-                                   Inventory outputInventory_,
-                                   Input_List inputList,
-                                   List<ItemData> itemsToAdd)
-    {
-        // 检查每个插槽的物品是否满足要求
-        for (int i = 0; i < inputInventory_.Data.itemSlots.Count; i++)
-        {
-            var slot = inputInventory_.Data.itemSlots[i];
-            var required = inputList.RowItems_List[i];
-
-            // 如果该插槽不需要物品则跳过
-            if (required.amount == 0) continue;
-
-            // 检查物品存在且名称匹配
-            if (slot.itemData == null ||
-                slot.itemData.IDName != required.ItemName)
-                return false;
-
-            // 检查数量足够
-            if (slot.itemData.Stack.Amount < required.amount)
-                return false;
-        }
-
-        // 检查输出空间
-        foreach (var item in itemsToAdd)
-            if (!outputInventory_.Data.TryAddItem(item, false))
-                return false;
-
-        return true;
-    }
     #endregion
 
-    public override void Save()
+    #region 初始化和设置
+
+    private void InitializeInventories()
     {
-        // TODO完成：保存面板位置到存档数据
-        if (basePanel != null && basePanel.Dragger != null)
+        // 同步数据
+        if (inventoryModuleData.Data.Count == 0)
+        {
+            inventoryModuleData.Data[inputInventory.Data.Name] = inputInventory.Data;
+            inventoryModuleData.Data[outputInventory.Data.Name] = outputInventory.Data;
+        }
+        else
+        {
+            inputInventory.Data = inventoryModuleData.Data[inputInventory.Data.Name];
+            outputInventory.Data = inventoryModuleData.Data[outputInventory.Data.Name];
+        }
+
+        inputInventory.Init();
+        outputInventory.Init();
+    }
+
+    private void SetupEventListeners()
+    {
+        workButton?.onClick.AddListener(OnCraftButtonClick);
+
+        // 设置默认目标背包
+        if (item.itemMods.ContainsKey_ID(ModText.Hand))
+        {
+            var handInventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+            inputInventory.DefaultTarget_Inventory = handInventory;
+            outputInventory.DefaultTarget_Inventory = handInventory;
+        }
+
+        // 设置交互事件
+        if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod))
+        {
+            interactMod.OnAction_Start += Interact_Start;
+            interactMod.OnAction_Stop += Interact_Stop;
+        }
+
+        basePanel = GetComponentInChildren<BasePanel>();
+    }
+
+    private void CleanupEventListeners()
+    {
+        workButton?.onClick.RemoveListener(OnCraftButtonClick);
+
+        if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod))
+        {
+            interactMod.OnAction_Start -= Interact_Start;
+            interactMod.OnAction_Stop -= Interact_Stop;
+        }
+    }
+
+    #endregion
+
+    #region 面板位置管理
+
+    private void RestorePanelPosition()
+    {
+        if (basePanel?.Dragger == null) return;
+        
+        var savedPosition = inventoryModuleData.PanleRectPosition;
+        if (savedPosition != null && 
+            IsValidVector3(savedPosition) && 
+            !IsZeroVector3(savedPosition))
+        {
+            basePanel.Dragger.transform.position = savedPosition;
+        }
+    }
+
+    private void SavePanelPosition()
+    {
+        if (basePanel?.Dragger != null)
         {
             inventoryModuleData.PanleRectPosition = basePanel.Dragger.transform.position;
         }
-
-        item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod);
-        if (interactMod != null)
-        {
-            interactMod.OnAction_Start -= Interact_Start;
-            interactMod.OnAction_Cancel -= Interact_Stop;
-        }
-
-        item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
-}
 
-[Serializable]
-[MemoryPackable]
-public partial class InventoryModuleData : ModuleData
-{
-    [ShowInInspector]
-    public Dictionary<string,Inventory_Data> Data = new Dictionary<string, Inventory_Data>();
-    public Vector3 PanleRectPosition = Vector3.zero;//TODO 我在这里添加了一个Vector3变量，用于保存面板的位置
+    private bool IsValidVector3(Vector3 vector)
+    {
+        return !float.IsNaN(vector.x) && !float.IsNaN(vector.y) && !float.IsNaN(vector.z) &&
+               !float.IsInfinity(vector.x) && !float.IsInfinity(vector.y) && !float.IsInfinity(vector.z);
+    }
+
+    private bool IsZeroVector3(Vector3 vector)
+    {
+        return vector.x == 0 && vector.y == 0 && vector.z == 0;
+    }
+
+    #endregion
 }

@@ -9,12 +9,16 @@ public class Inventory_Equipment : Inventory
     [ShowInInspector]
     public Dictionary<string, List<Module>> EquipmentModules_Dictionary = new();
 
+    public GameObject ModulesParent;
     /// <summary>
     /// 初始化时激活所有已装备物品的模块
     /// </summary>
     public override void Init()
     {
         base.Init();
+
+        ModulesParent = new GameObject("ModulesParent");
+        ModulesParent.transform.SetParent(transform, false);
 
         // 遍历所有装备槽
         for (int i = 0; i < Data.itemSlots.Count; i++)
@@ -28,6 +32,7 @@ public class Inventory_Equipment : Inventory
                 ActivateAllEquipmentModules(equippedItem);
             }
         }
+
     }
 
     /// <summary>
@@ -159,7 +164,9 @@ public Module ActivateEquipmentAttributes(Item player, ModuleData equipment, Ite
     {
         GameObject @object = GameRes.Instance.InstantiatePrefab(mod.ID);
 
-        @object.transform.SetParent(transform);
+        @object.transform.SetParent(ModulesParent.transform);
+
+        @object.transform.localPosition = Vector3.zero;
 
         Module module = @object.GetComponentInChildren<Module>();
 

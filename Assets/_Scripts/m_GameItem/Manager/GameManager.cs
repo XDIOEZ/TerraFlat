@@ -13,7 +13,11 @@ public class GameManager : SingletonAutoMono<GameManager>
     public GameObject PathFindingSystem;
     public GameObject SunAndMoonObj { get; private set; }
 
+    [Header("准备好的星球数据")]
     public PlanetData Ready_planetData = new PlanetData();
+    [Header("准备好的时间数据")]
+    public TimeData Ready_timeData = new TimeData();
+
     public UltEvent Event_GameStart { get; set; } = new UltEvent();
     public UltEvent Event_ExitGame_Start { get;  set; } = new UltEvent();
     public UltEvent Event_ExitGame_End { get;  set; } = new UltEvent();
@@ -23,42 +27,56 @@ public class GameManager : SingletonAutoMono<GameManager>
         DontDestroyOnLoad(gameObject);
         PathFindingSystem.SetActive(true);
     }
-    public void ExitGame()
-    {
-        Event_ExitGame_Start.Invoke();
+    
+    //public void ExitGame()
+    //{
+    //    Event_ExitGame_Start.Invoke();
 
-        ItemMgr.Instance.CleanupNullItems();
+    //    ItemMgr.Instance.CleanupNullItems();
 
-        ChunkMgr.Instance.CleanEmptyDicValues();
+    //    ChunkMgr.Instance.CleanEmptyDicValues();
 
-        ItemMgr.Instance.SavePlayer();//TODO 这里会销毁一些东西 但是因为销毁是延迟一帧的所以可能保存了 才销毁 导致额外保存了不该保存的东西
-        
-        if(ChunkMgr.Instance.Chunk_Dic.Count <= 0)
-        {
-            Debug.LogWarning("区块字典为 空 退出时未保存任何 请检查加载时是否向区块字典中填充对象");
-        }
+    //    // 保存玩家数据
+    //    ItemMgr.Instance.SavePlayer();
 
-        foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
-        {
-            go.SaveChunk(); //TODO 这里是保存的方法 
-            //覆盖当前激活的地图
-            SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[go.MapSave.Name] = go.MapSave;
-        }
+    //    // 保存区块数据
+    //    foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
+    //    {
+    //        go.SaveChunk(); //TODO 这里是保存的方法 
+    //        //覆盖当前激活的地图
+    //        SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[go.MapSave.Name] = go.MapSave;
+    //    }
 
-        SaveDataMgr.Instance.Save_And_WriteToDisk();
 
-        ChunkMgr.Instance.ClearAllChunk();
 
-        SceneManager.LoadScene("GameStartScene");
+    //    // 保存数据到磁盘
+    //    SaveDataMgr.Instance.Save_And_WriteToDisk();
 
-        Event_ExitGame_End.Invoke();
-    }
+    //    ChunkMgr.Instance.ClearAllChunk();
+
+    //    SceneManager.LoadScene("GameStartScene");
+
+    //    Event_ExitGame_End.Invoke();
+    //}
+    
     /// <summary>
     /// 使用协程处理退出游戏逻辑，解决保存与销毁的时序问题
     /// </summary>
     /// <returns></returns>
     public IEnumerator ExitGameCoroutine()
     {
+        // TODO完成：在退出游戏时删除实例化出来的SunAndMoonPrefab
+        // 保存时间数据
+        SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
+
+        // 销毁之前实例化的天体对象
+        if (SunAndMoonObj != null)
+        {
+            Destroy(SunAndMoonObj);
+            SunAndMoonObj = null;
+            Debug.Log("已销毁SunAndMoon对象");
+        }
+        
         // 安全检查：确保核心管理器已初始化
         if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
             SaveDataMgr.Instance == null)
@@ -133,17 +151,21 @@ public class GameManager : SingletonAutoMono<GameManager>
     // StartCoroutine(ExitGameCoroutine());
 
 
-    public void StartNewGame()
-    {
-        //创建随机数        // 初始化随机种子并创建系统随机实例
-        SaveDataMgr.Instance.SaveData.SaveSeed = UnityEngine.Random.Range(0, int.MaxValue).ToString();
-        SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
-        UnityEngine.Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
+public void StartNewGame()
+{
+    //创建随机数        // 初始化随机种子并创建系统随机实例
+    SaveDataMgr.Instance.SaveData.SaveSeed = UnityEngine.Random.Range(0, int.MaxValue).ToString();
+    SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
+    UnityEngine.Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
 
-        //创建初始星球的数据
-        SaveDataMgr.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
-        ContinueGame();
-    }
+    //创建初始星球的数据
+    SaveDataMgr.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
+    //创建初始时间数据 - 修复类型转换问题
+    SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict["地球"] = new SerializableTimeData(Ready_timeData);
+    SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict["地球"] = 1.0f;
+
+    ContinueGame();
+}
 
     public void ContinueGame()
     {
@@ -156,9 +178,25 @@ public class GameManager : SingletonAutoMono<GameManager>
         SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out Data_Player playerData);
         string planetName = playerData != null ? playerData.CurrentSceneName : "地球";
 
+        // TODO完成：实例化SunAndMoonPrefab
+        if (SunAndMoonPrefab != null)
+        {
+            SunAndMoonObj = Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
+            // 确保天体对象在场景切换时不会被销毁
+            DontDestroyOnLoad(SunAndMoonObj);
+            Debug.Log("已实例化SunAndMoon对象");
+        }
+        else
+        {
+            Debug.LogWarning("SunAndMoonPrefab为空，无法实例化天体对象");
+        }
+
+        DayTimeSystem.Instance.LoadFromSaveData(SaveDataMgr.Instance.SaveData.DayTimeData);
+
         // 2. 立刻创建并激活空场景
         Scene newScene = SceneManager.CreateScene(planetName);
         SceneManager.SetActiveScene(newScene);
+
 
         // 3. 准备卸载旧场景（如有）
         Scene startScene = SceneManager.GetSceneByName("GameStartScene");
@@ -234,21 +272,5 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         player.Load();
         player.LoadDataPosition();
-
-        /*
-        if (player.Data.CurrentSceneName)
-        {
-            // 创建天体
-            SunAndMoonObj = Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
-        }
-        else
-        {
-            // 进入房间
-            ChunkMgr.Instance.CreateChunK_ByMapSave(SaveDataMgr.Instance.SaveData.PlanetData_Dict[playerData.CurrentSceneName]);
-            ChunkMgr.Instance.Chunk_Dic[chunk.MapSave.MapName] = chunk;
-        }*/
     }
-
-
-
 }

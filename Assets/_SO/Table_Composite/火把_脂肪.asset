@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u706B\u628A_\u8102\u80AA"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - ItemName: Fat
+      ItemPrefab: {fileID: 3341342614344715908, guid: 4c16f5b620aca1741a1e0f0a149c9cf5, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+  outputs:
+    results:
+    - ItemName: Torch
+      ItemPrefab: {fileID: 6598347724538692461, guid: ab36d19445e99a54ca06f4650472e418, type: 3}
+      amount: 1
+  recipeType: 0

@@ -34,6 +34,7 @@ public class Chunk : MonoBehaviour
                AddToGroup(item);
             }
         });
+        ChunkMgr.Instance.AddActiveChunk(this);
         return this;
     }
 

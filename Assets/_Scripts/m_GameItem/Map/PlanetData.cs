@@ -27,8 +27,6 @@ public partial class PlanetData
     //星球地图数据
     public Dictionary<string, MapSave> MapData_Dict = new();
 
-    public PlanetTimeData TimeData = new PlanetTimeData();
-
     [Tooltip("星球是否自动生成地图")]
     public bool AutoGenerateMap = true;
 

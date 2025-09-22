@@ -14,6 +14,7 @@ public partial class SceneData
     public bool IsInit = false;
     public Vector2 PlayerPos;
     public bool Encapsulation;
+    public float LightEfficiency;//采光率
 }
 
 public class Mod_Scene : Module
@@ -62,6 +63,7 @@ public class Mod_Scene : Module
         if (mod_Building != null)
         {
             mod_Building.StartUnInstall += UnInstall;
+            mod_Building.StartInstall += Install;
         }
 
         //检查是否已经初始化过 如果没有就初始化
@@ -82,8 +84,26 @@ public class Mod_Scene : Module
             // 存储到(0,0)位置的地图数据
             planetData.MapData_Dict.Add(MapSave.Name, MapSave);
             planetData.AutoGenerateMap = false;
+
+
             Debug.Log(Data.SceneName + "初始化完成");
         }
+    }
+    public void Install()
+    {
+        TimeData timeData = new TimeData()
+        {
+            ReferenceScene = SceneManager.GetActiveScene().name,
+        };
+
+/*        SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[Data.SceneName]
+            = new SerializableTimeData(timeData);*/
+        DayTimeSystem.Instance.WorldTimeDict[Data.SceneName] = timeData;
+
+        //SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict[Data.SceneName]
+        //    = Data.LightEfficiency;
+        DayTimeSystem.Instance.SceneLightingRateDict[Data.SceneName]
+            = Data.LightEfficiency;
     }
 
     public void UnInstall()

@@ -162,7 +162,7 @@ public class Mod_Building : Module
     public virtual void UnInstall()
     {
         StartUnInstall.Invoke();
-        OnAction_Cancel.Invoke(item);
+        OnAction_Stop.Invoke(item);
         item.transform.localScale *= 0.5f;
 
         if (boxCollider2D != null)
@@ -415,4 +415,51 @@ public class Mod_Building : Module
         return damageReceiver.Hp > 0;
     }
     #endregion
+    // 添加到Mod_Building.cs文件中，放在合适的位置（比如在其他Button方法附近）
+
+[Button("设置为已安装状态(编辑器调试)")]
+#if UNITY_EDITOR
+public void SetAsInstalledEditor()
+{
+    // 检查必要的组件
+    if (item == null)
+    {
+
+            item = GetComponentInParent<Item>();
+    }
+
+    // 查找DamageReceiver组件（如果还没有引用的话）
+    if (damageReceiver == null)
+    {
+        damageReceiver = item.GetComponent<DamageReceiver>();
+        if (damageReceiver == null)
+        {
+            damageReceiver = item.GetComponentInChildren<DamageReceiver>();
+        }
+        if (damageReceiver == null)
+        {
+            Debug.LogError("[编辑器调试] 无法找到DamageReceiver组件");
+            return;
+        }
+    }
+
+    // 设置为最大血量（表示已安装）
+    damageReceiver.Hp = damageReceiver.MaxHp.Value;
+    
+    // 设置缩放为1
+    item.transform.localScale = Vector3.one;
+        item.itemData.Stack.CanBePickedUp = false;
+    // 确保碰撞器设置正确
+    BoxCollider2D collider = item.GetComponent<BoxCollider2D>();
+    if (collider != null)
+    {
+        collider.isTrigger = false;
+    }
+    
+    // 更新碰撞器状态
+    EnableChildColliders(true, item.transform);
+    
+    Debug.Log($"[编辑器调试] 成功将 {item.name} 设置为已安装状态");
+}
+#endif
 }

@@ -282,7 +282,7 @@ public partial class Mod_ColdWeapon : Module
             return;
 
         // 造成伤害
-        receiver.TakeDamage(Damage.Value, belongItem == null ? item : belongItem);
+        receiver.Hurt(Damage.Value, belongItem == null ? item : belongItem);
 
         // 生成攻击特效（在协程中做帧采样以估算方向）
         if (AttackEffect != null)

@@ -31,6 +31,8 @@ public partial class GameSaveData
     // ===== 星球数据 =====
     [ShowInInspector]
     public Dictionary<string, PlanetData> PlanetData_Dict = new();
+    [ShowInInspector]
+    public DayTimeSaveData DayTimeData = new();
 
     // ===== 构造函数 =====
     public GameSaveData()

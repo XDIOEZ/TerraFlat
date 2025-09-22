@@ -1458,7 +1458,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 2520175300522458014}
   Data:
@@ -1732,7 +1732,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 422, y: 89}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5462087943532055468
@@ -1889,6 +1889,7 @@ GameObject:
   - component: {fileID: 1306192948236226091}
   - component: {fileID: 269343520462078826}
   - component: {fileID: 1389049930998870942}
+  - component: {fileID: 3369646035781243922}
   m_Layer: 9
   m_Name: "\u624B\u5DE5\u5408\u6210"
   m_TagString: Untagged
@@ -1955,7 +1956,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 1911
+    m_Bits: 375
 --- !u!114 &1306192948236226091
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1971,12 +1972,14 @@ MonoBehaviour:
   item: {fileID: 0}
   inventoryModuleData:
     Name: 
-    ModID: "\u624B\u5DE5\u5408\u6210"
+    ID: 
     isRunning: 0
     Type: 0
+    PanleRectPosition: {x: 0, y: 0, z: 0}
+  basePanel: {fileID: 269343520462078826}
   inputInventory: {fileID: 2844700870444916106}
   outputInventory: {fileID: 1523449583456271906}
-  WorkButton: {fileID: 7931987179062465118}
+  workButton: {fileID: 7931987179062465118}
 --- !u!114 &269343520462078826
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1991,7 +1994,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1389049930998870942}
   CanDrag: 0
-  Drager: {fileID: 0}
+  Dragger: {fileID: 0}
 --- !u!225 &1389049930998870942
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -2004,6 +2007,29 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &3369646035781243922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5424870746229212190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_UiScaleMode: 1
+  m_ReferencePixelsPerUnit: 100
+  m_ScaleFactor: 1
+  m_ReferenceResolution: {x: 2560, y: 1440}
+  m_ScreenMatchMode: 0
+  m_MatchWidthOrHeight: 0
+  m_PhysicalUnit: 3
+  m_FallbackScreenDPI: 96
+  m_DefaultSpriteDPI: 96
+  m_DynamicPixelsPerUnit: 1
+  m_PresetInfoIsWorld: 0
 --- !u!1 &5568215933035704222
 GameObject:
   m_ObjectHideFlags: 0
@@ -2993,7 +3019,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 5129196381130097201}
   Data:

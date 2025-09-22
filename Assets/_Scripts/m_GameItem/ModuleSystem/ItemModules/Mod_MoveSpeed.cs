@@ -28,7 +28,7 @@ public partial class Mod_MoveSpeed : Module, IItemValueModifier
         var movement = GetMover();
         if (movement != null && moveSpeed.Value != 0)
         {
-            movement.Data.Speed.MultiplicativeModifier *= moveSpeed.Value;
+            movement.Data.Speed += moveSpeed;
         }
     }
 
@@ -39,7 +39,7 @@ public partial class Mod_MoveSpeed : Module, IItemValueModifier
         var movement = GetMover();
         if (movement != null && moveSpeed.Value != 0)
         {
-            movement.Data.Speed.MultiplicativeModifier /= moveSpeed.Value;
+            movement.Data.Speed -= moveSpeed;
         }
 
         // 保存当前数据

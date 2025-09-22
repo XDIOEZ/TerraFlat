@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: "Item_\u6728\u68CD\u751F\u6210_001"
   m_EditorClassIdentifier: 
   itemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
-  itemName: "\u6728\u68CD"
+  itemName: Stick_Wood
   itemCount: 1
-  SpawnChance: 0.01
+  SpawnChance: 0.001
   environmentConditionRange:
     TemperatureRange: {x: 0, y: 1}
     HumidityRange: {x: 0, y: 1}

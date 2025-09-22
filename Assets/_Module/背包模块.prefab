@@ -314,7 +314,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 2838896547333511364}
   Data:
@@ -367,7 +367,7 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1920, y: 1080}
+  m_ReferenceResolution: {x: 2560, y: 1440}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
@@ -401,7 +401,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 0}
   CanDrag: 0
-  Drager: {fileID: 0}
+  Dragger: {fileID: 0}
 --- !u!114 &1276027527904542207
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -417,10 +417,12 @@ MonoBehaviour:
   item: {fileID: 0}
   inventoryModuleData:
     Name: 
-    ModID: "\u80CC\u5305\u6A21\u5757"
+    ID: 
     isRunning: 0
     Type: 1
+    PanleRectPosition: {x: 0, y: 0, z: 0}
   inventory: {fileID: 2913275524167055887}
+  basePanel: {fileID: 0}
 --- !u!1 &3362093747206163499
 GameObject:
   m_ObjectHideFlags: 0
@@ -1748,7 +1750,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 28.4055, y: 179.80548}
+  m_AnchoredPosition: {x: -0.000017166, y: 0}
   m_SizeDelta: {x: 421.2408, y: 216.5579}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &8727278711885073531

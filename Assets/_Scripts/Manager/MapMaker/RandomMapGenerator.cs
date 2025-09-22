@@ -114,11 +114,6 @@ public class RandomMapGenerator : MonoBehaviour
 
     private void Update()
     {
-        // 仅通过指定按键触发（已移除鼠标左键触发）
-        if (Input.GetKeyDown(detectKey))
-        {
-            GetEnvFactorsAtMousePosition();
-        }
     }
 
     #endregion
@@ -201,8 +196,8 @@ public class RandomMapGenerator : MonoBehaviour
         if (Water > 0.5f)
         {
             // 生成河流时调整环境参数
-            solidity -= 1;
-            humid += 1;
+            solidity -= 0.8f;
+            humid += 0.8f;
         }
 
         // 构建环境因子对象并限制在0-1范围内
@@ -264,6 +259,25 @@ public class RandomMapGenerator : MonoBehaviour
             if (chance > spawn.SpawnChance) continue;
 
             Vector2 spawnPos = new Vector2(pos.x  + 0.5f, pos.y  + 0.5f);
+
+            // 实例化资源物品
+            ItemMgr.Instance.InstantiateItem(
+                spawn.itemName,
+                spawnPos,
+                default,
+                default,
+                map.ParentObject
+            ).Load();
+        }
+        foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
+        {
+            if (!spawn.environmentConditionRange.IsMatch(env)) continue;
+
+            // 随机判定是否生成资源
+            float chance = (Xorshift32(ref state) & 0xFFFFFF) / (float)0x1000000;
+            if (chance > spawn.SpawnChance) continue;
+
+            Vector2 spawnPos = new Vector2(pos.x + 0.5f, pos.y + 0.5f);
 
             // 实例化资源物品
             ItemMgr.Instance.InstantiateItem(
@@ -442,3 +456,4 @@ public enum NoiseType
 
 [Serializable]
 public class NoiseDictionary : SerializedDictionary<NoiseType, BaseNoise> { }
+

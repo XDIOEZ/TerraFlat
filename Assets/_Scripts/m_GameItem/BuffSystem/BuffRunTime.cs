@@ -39,6 +39,8 @@ public partial class BuffRunTime
 
     public void OnBuff_Start()
     {
+        if (buff.buff_Behavior_Start == null)
+            return;
         buff.buff_Behavior_Start.Apply(this);
     }
 
@@ -61,6 +63,8 @@ public partial class BuffRunTime
 
     public void OnBuff_Stop()
     {
+        if (buff.buff_Behavior_Stop == null)
+            return;
         buff.buff_Behavior_Stop.Apply(this);
     }
 }

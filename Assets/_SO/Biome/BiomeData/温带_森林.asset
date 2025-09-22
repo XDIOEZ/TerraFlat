@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef0d6fc82e9dffd4bb109cc0bc9963b4, type: 3}
   m_Name: "\u6E29\u5E26_\u68EE\u6797"
   m_EditorClassIdentifier: 
-  BiomeName: "\u5E73\u539F"
+  BiomeName: "\u68EE\u6797"
   Description: "\u6563\u843D\u7684\u77F3\u5934,\u5C0F\u6C34\u5751,\u7A00\u5C11\u7684\u6811,\u5E7F\u9614\u7684\u8349\u5730"
   PreviewColor: {r: 0.12053394, g: 0.645283, b: 0.15730312, a: 1}
   Condition:
@@ -26,4 +26,36 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 6b011c6baeb9d4140875090c5a56129e, type: 2}
     ItemSpawn:
     - {fileID: 11400000, guid: fd30a891d50d53043b59f28ea340f0e8, type: 2}
-    - {fileID: 11400000, guid: 36dbf6b0dcf1545418596c90a98a1b90, type: 2}
+    - {fileID: 11400000, guid: 60d8bd24243ae0f4cb4c13bf208365d4, type: 2}
+    - {fileID: 11400000, guid: d26d608288dd4b044a1af3613ffde2b1, type: 2}
+    ItemSpawn_NoSO:
+    - itemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      itemName: Twine
+      itemCount: 1
+      SpawnChance: 0.01125
+      environmentConditionRange:
+        TemperatureRange: {x: 0.5, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0.5, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}
+    - itemPrefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
+      itemName: Bush
+      itemCount: 1
+      SpawnChance: 0.00225
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}
+    - itemPrefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
+      itemName: "\u82F9\u679C\u6811"
+      itemCount: 1
+      SpawnChance: 0.015
+      environmentConditionRange:
+        TemperatureRange: {x: 0.4, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0.4, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}

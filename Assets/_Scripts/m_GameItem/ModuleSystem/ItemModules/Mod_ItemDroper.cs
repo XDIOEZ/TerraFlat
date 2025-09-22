@@ -8,11 +8,14 @@ public class Mod_ItemDroper : Module
     public Ex_ModData modData;
     public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
 
+    [Tooltip("当前正在进行的物品丢弃列表")]
     public List<Drop> drops = new List<Drop>();
 
     [Header("丢弃动画参数")]
     [Tooltip("二阶贝塞尔控制点相对于起点终点的偏移量")]
     public float bezierOffset = 1f;          // 控制点高度
+    
+    [Tooltip("垂直方向最大高度（与之前一致）")]
     public float arcHeight = 1f;             // 垂直方向最大高度（与之前一致）
 
     /* ----------------------------------------------------------
@@ -26,6 +29,7 @@ public class Mod_ItemDroper : Module
         }
     }
 
+    [Tooltip("丢弃物品（自动随机终点）")]
     public void DropItem_Range(Item item, Vector2 startPos, float radius, float time)
     {
         item.transform.position = startPos;
@@ -59,43 +63,60 @@ public class Mod_ItemDroper : Module
     /// <summary>
     /// 丢弃物品（指定起点与终点）
     /// </summary>
+    [Tooltip("丢弃物品（指定起点与终点）")]
     public void DropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time)
     {
         StaticDropItem_Pos(item, startPos, endPos, time);
     }
 
     /// <summary>
-    /// 【静态方法】供外部模块（如Mod_DeathLoot）调用，复用掉落动画逻辑
+    /// 丢弃物品（在指定半径范围内随机位置）
     /// </summary>
-    public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time,float bezierOffset = 1f, float arcHeight = 1f)
+    [Tooltip("丢弃物品（在指定半径范围内随机位置）")]
+    public static void DropItemInARange(Item item, Vector2 startPos,float radius, float time)
     {
-        item.transform.position = startPos;
-
-        // 计算二阶贝塞尔控制点：中点向上偏移（使用模块的bezierOffset）
-        Vector2 mid = (startPos + endPos) * 0.5f;
-        mid.y += bezierOffset;
-
-        Mod_ItemDroper.Drop drop = new Mod_ItemDroper.Drop
-        {
-            itemGuid = item.itemData.Guid,
-            startPos = startPos,
-            endPos = endPos,
-            controlPos = mid,
-            time = time,
-            progressTime = 0f,
-            item = item
-        };
-        Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
-        itemDrop.drop = drop;
-        item.itemData.Stack.CanBePickedUp = false;
-
-        itemDrop.drop = drop;
+        Vector2 randomDir = Random.insideUnitCircle.normalized;
+        float randomDist = Random.Range(0.5f * radius, radius);
+        Vector2 endPos = startPos + randomDir * randomDist;
+        StaticDropItem_Pos(item, startPos, endPos, time);
     }
 
+    /// <summary>
+    /// 【静态方法】供外部模块（如Mod_DeathLoot）调用，复用掉落动画逻辑
+    /// </summary>
+/// <summary>
+/// 【静态方法】供外部模块（如Mod_DeathLoot）调用，复用掉落动画逻辑
+/// </summary>
+[Tooltip("静态丢弃物品方法，供外部模块调用")]
+public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
+{
+    item.transform.position = startPos;
 
+    // 计算二阶贝塞尔控制点：中点向上偏移（使用模块的bezierOffset）
+    Vector2 mid = (startPos + endPos) * 0.5f;
+    mid.y += bezierOffset;
+
+    Mod_ItemDroper.Drop drop = new Mod_ItemDroper.Drop
+    {
+        itemGuid = item.itemData.Guid,
+        startPos = startPos,
+        endPos = endPos,
+        controlPos = mid,
+        time = time,
+        progressTime = 0f,
+        rotationSpeed = Random.Range(minRotationSpeed, maxRotationSpeed),
+        item = item
+    };
+    Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+    itemDrop.drop = drop;
+    item.itemData.Stack.CanBePickedUp = false;
+
+    itemDrop.drop = drop;
+}
     /* ----------------------------------------------------------
      * 每帧更新
      * ----------------------------------------------------------*/
+    [Tooltip("每帧更新丢弃动画")]
     public override void ModUpdate(float deltaTime)
     {
         if (!_Data.isRunning) return;
@@ -128,6 +149,7 @@ public class Mod_ItemDroper : Module
     /* ----------------------------------------------------------
      * 二阶贝塞尔曲线
      * ----------------------------------------------------------*/
+    [Tooltip("计算二阶贝塞尔曲线上的点")]
     private static Vector2 Bezier2(Vector2 p0, Vector2 p1, Vector2 p2, float t)
     {
         float mt = 1f - t;
@@ -137,6 +159,7 @@ public class Mod_ItemDroper : Module
     /* ----------------------------------------------------------
      * 序列化/反序列化
      * ----------------------------------------------------------*/
+    [Tooltip("加载丢弃数据")]
     public override void Load()
     {
         modData.ReadData(ref drops);
@@ -158,7 +181,7 @@ public class Mod_ItemDroper : Module
         }
     }
 
-
+    [Tooltip("保存丢弃数据")]
     public override void Save()
     {
         modData.WriteData(drops);
@@ -170,18 +193,33 @@ public class Mod_ItemDroper : Module
     [System.Serializable]
     public class Drop
     {
+        [Tooltip("物品的唯一标识符")]
         public int itemGuid;
 
         // 原来的 Vector2 改为 x 和 y 两个 float
+        [Tooltip("起点X坐标")]
         public float startX, startY;
+        
+        [Tooltip("终点X坐标")]
         public float endX, endY;
+        
+        [Tooltip("控制点X坐标")]
         public float controlX, controlY;
 
+        [Tooltip("总时间")]
         public float time;
+        
+        [Tooltip("已进行的时间")]
         public float progressTime;
+        
+        [Tooltip("每秒旋转角度（单位：度）")]
+        public float rotationSpeed = 360f;
+        
         [JsonIgnore]
         [ShowInInspector]
-        [System.NonSerialized] public Item item;
+        [System.NonSerialized] 
+        [Tooltip("物品引用")]
+        public Item item;
 
         // 属性封装，方便使用 Vector2 接口
         [JsonIgnore]
@@ -190,12 +228,14 @@ public class Mod_ItemDroper : Module
             get => new Vector2(startX, startY);
             set { startX = value.x; startY = value.y; }
         }
+        
         [JsonIgnore]
         public Vector2 endPos
         {
             get => new Vector2(endX, endY);
             set { endX = value.x; endY = value.y; }
         }
+        
         [JsonIgnore]
         public Vector2 controlPos
         {

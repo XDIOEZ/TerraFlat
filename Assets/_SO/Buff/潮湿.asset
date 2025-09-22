@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb8d8e46a05024d41a9c51244b099006, type: 3}
+  m_Name: "\u6F6E\u6E7F"
+  m_EditorClassIdentifier: 
+  buff_ID: "\u6F6E\u6E7F"
+  buff_Name: "\u6F6E\u6E7F"
+  buff_Type: "\u6570\u503C\u4FEE\u6539\u7C7B"
+  buff_Description: "\u8FDB\u5165\u6C34\u540E\u5E26\u6765\u7684\u6F6E\u6E7F\u6548\u679C"
+  buff_Duration: 9999
+  buff_Interval: 1
+  buff_MaxStack: 1
+  buff_StackType: 3
+  buff_Behavior_Start: {fileID: 0}
+  buff_Behavior_Update: {fileID: 11400000, guid: faf159bca4056d94aa7036ce943e10c1, type: 2}
+  buff_Behavior_Stop: {fileID: 0}

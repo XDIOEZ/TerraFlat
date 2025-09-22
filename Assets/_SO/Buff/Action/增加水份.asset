@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4efb9d173c9c6ef428bc409627291eee, type: 3}
+  m_Name: "\u589E\u52A0\u6C34\u4EFD"
+  m_EditorClassIdentifier: 
+  NutritionChangeValue:
+    Carbohydrates: 0
+    Max_Carbohydrates:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    Fat: 0
+    Max_Fat:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    Protein: 0
+    Max_Protein:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    Water: 10
+    Max_Water:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    Vitamins: 0
+    Max_Vitamins:
+      BaseValue: 100
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0

@@ -1,12 +1,12 @@
 using FastCloner.Code;
 using Force.DeepCloner;
 using MemoryPack;
-using Meryel.UnityCodeAssist.YamlDotNet.Core.Tokens;
 using System;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-using Sirenix.OdinInspector; // 添加Odin引用
+using Sirenix.OdinInspector;
+using Random = UnityEngine.Random; // 添加Odin引用
 
 [Serializable]
 [MemoryPackable]
@@ -375,7 +375,6 @@ public partial class Inventory_Data
         return null;
     }
 
-    // TODO完成：添加根据Prefab注入ItemData到Slot的方法
     /// <summary>
     /// 根据Prefab注入ItemData到指定的Slot中
     /// </summary>
@@ -409,9 +408,9 @@ public partial class Inventory_Data
             Debug.LogError($"注入失败：Prefab {prefab.name} 上找不到Item组件");
             return;
         }
-        itemComponent.IsPrefabInit(); // 确保ItemData已经初始化完毕
+         // 确保ItemData已经初始化完毕
         // 克隆ItemData
-        ItemData clonedItemData = itemComponent.itemData.DeepClone();
+        ItemData clonedItemData = itemComponent.IsPrefabInit();
         if (clonedItemData == null)
         {
             Debug.LogError($"注入失败：无法克隆 {prefab.name} 的ItemData");
@@ -429,13 +428,304 @@ public partial class Inventory_Data
         
         Debug.Log($"成功注入物品 {prefab.name} x{count} 到槽位 {index}");
     }
-
-    // 重载方法：使用默认索引0
-    [Button("注入物品到第一个槽位")]
-    public void InjectItemData(
-        [LabelText("物品预制体")] GameObject prefab, 
-        [LabelText("数量")] [MinValue(1)] int count)
+    /// <summary>
+    /// 自动注入物品到容器中，智能查找空槽位或可堆叠槽位，避免覆盖已有物品
+    /// </summary>
+    /// <param name="prefab">物品预制体，必须包含Item组件</param>
+    /// <param name="count">物品数量</param>
+    [Button("自动注入物品")] // Odin特性：在Inspector中显示为按钮
+    [LabelText("自动注入物品")] // Odin特性：自定义标签文本
+    public void AutoInjectItemData(
+        [LabelText("物品预制体")] GameObject prefab,
+        [LabelText("数量")][MinValue(1)] int count)
     {
-        InjectItemData(prefab, count, 0);
+        // 参数验证
+        if (prefab == null)
+        {
+            Debug.LogError("自动注入失败：Prefab不能为空");
+            return;
+        }
+
+        if (count <= 0)
+        {
+            Debug.LogError("自动注入失败：数量必须大于0");
+            return;
+        }
+
+        // 获取Prefab上的Item组件
+        Item itemComponent = prefab.GetComponent<Item>();
+        if (itemComponent == null)
+        {
+            Debug.LogError($"自动注入失败：Prefab {prefab.name} 上找不到Item组件");
+            return;
+        }
+
+        // 确保ItemData已经初始化完毕
+        
+
+        // 克隆ItemData
+        ItemData itemData = itemComponent.IsPrefabInit();
+        if (itemData == null)
+        {
+            Debug.LogError($"自动注入失败：无法克隆 {prefab.name} 的ItemData");
+            return;
+        }
+
+        // 设置数量
+        itemData.Stack.Amount = count;
+        itemData.Stack.CanBePickedUp = false;
+
+        // 尝试添加物品（会自动处理堆叠和空槽位）
+        if (TryAddItem(itemData, true))
+        {
+            Debug.Log($"成功自动注入物品 {prefab.name} x{count}");
+        }
+        else
+        {
+            Debug.LogError($"自动注入失败：容器空间不足，无法注入物品 {prefab.name} x{count}");
+        }
     }
+    /// <summary>
+/// 随机注入物品到容器中，只在空槽位注入，不会覆盖已有物品
+/// </summary>
+/// <param name="prefabList">物品预制体列表</param>
+/// <param name="minCount">每个物品的最小数量</param>
+/// <param name="maxCount">每个物品的最大数量</param>
+/// <param name="minItems">最少注入的物品种类数</param>
+/// <param name="maxItems">最多注入的物品种类数</param>
+[Button("随机注入物品")] // Odin特性：在Inspector中显示为按钮
+[LabelText("随机注入物品")] // Odin特性：自定义标签文本
+public void RandomInjectItems(
+    [LabelText("物品预制体列表")] List<GameObject> prefabList,
+    [LabelText("最小数量")] [MinValue(1)] int minCount = 1,
+    [LabelText("最大数量")] [MinValue(1)] int maxCount = 5,
+    [LabelText("最少物品种类")] [MinValue(1)] int minItems = 1,
+    [LabelText("最多物品种类")] [MinValue(1)] int maxItems = 3)
+{
+    // 参数验证
+    if (prefabList == null || prefabList.Count == 0)
+    {
+        Debug.LogError("随机注入失败：Prefab列表为空或未设置");
+        return;
+    }
+
+    if (minCount > maxCount)
+    {
+        Debug.LogWarning("最小数量大于最大数量，自动交换值");
+        int temp = minCount;
+        minCount = maxCount;
+        maxCount = temp;
+    }
+
+    if (minItems > maxItems)
+    {
+        Debug.LogWarning("最少物品种类大于最多物品种类，自动交换值");
+        int temp = minItems;
+        minItems = maxItems;
+        maxItems = temp;
+    }
+
+    // 限制物品种类数量不超过Prefab列表长度
+    maxItems = Mathf.Min(maxItems, prefabList.Count);
+    minItems = Mathf.Min(minItems, maxItems);
+
+    // 随机选择要注入的物品种类数量
+    int itemCount = Random.Range(minItems, maxItems + 1);
+
+    // 随机选择不重复的物品
+    List<GameObject> selectedPrefabs = new List<GameObject>();
+    List<GameObject> availablePrefabs = new List<GameObject>(prefabList);
+    
+    for (int i = 0; i < itemCount && availablePrefabs.Count > 0; i++)
+    {
+        int randomIndex = Random.Range(0, availablePrefabs.Count);
+        selectedPrefabs.Add(availablePrefabs[randomIndex]);
+        availablePrefabs.RemoveAt(randomIndex);
+    }
+
+    // 为选中的每个物品随机生成数量并注入
+    List<GameObject> prefabsToInject = new List<GameObject>();
+    List<int> countsToInject = new List<int>();
+
+    foreach (var prefab in selectedPrefabs)
+    {
+        if (prefab != null)
+        {
+            int randomCount = Random.Range(minCount, maxCount + 1);
+            prefabsToInject.Add(prefab);
+            countsToInject.Add(randomCount);
+        }
+    }
+
+    // 使用自动注入方法注入物品
+    if (prefabsToInject.Count > 0)
+    {
+        AutoInjectItemDataList(prefabsToInject, countsToInject);
+        Debug.Log($"随机注入完成：成功注入 {prefabsToInject.Count} 种物品");
+    }
+    else
+    {
+        Debug.LogWarning("随机注入失败：没有有效的物品可注入");
+    }
+}
+
+/// <summary>
+/// 随机注入物品到容器中（简化版），只在空槽位注入，不会覆盖已有物品
+/// </summary>
+/// <param name="prefabList">物品预制体列表</param>
+/// <param name="count">每个物品的固定数量</param>
+/// <param name="itemCount">注入的物品种类数</param>
+[Button("随机注入物品(固定数量)")] // Odin特性：在Inspector中显示为按钮
+[LabelText("随机注入物品(固定数量)")] // Odin特性：自定义标签文本
+public void RandomInjectItems(
+    [LabelText("物品预制体列表")] List<GameObject> prefabList,
+    [LabelText("固定数量")] [MinValue(1)] int count = 1,
+    [LabelText("物品种类数")] [MinValue(1)] int itemCount = 3)
+{
+    // 参数验证
+    if (prefabList == null || prefabList.Count == 0)
+    {
+        Debug.LogError("随机注入失败：Prefab列表为空或未设置");
+        return;
+    }
+
+    // 限制物品种类数量不超过Prefab列表长度
+    itemCount = Mathf.Min(itemCount, prefabList.Count);
+
+    // 随机选择不重复的物品
+    List<GameObject> selectedPrefabs = new List<GameObject>();
+    List<GameObject> availablePrefabs = new List<GameObject>(prefabList);
+    
+    for (int i = 0; i < itemCount && availablePrefabs.Count > 0; i++)
+    {
+        int randomIndex = UnityEngine.Random.Range(0, availablePrefabs.Count);
+        selectedPrefabs.Add(availablePrefabs[randomIndex]);
+        availablePrefabs.RemoveAt(randomIndex);
+    }
+
+    // 使用自动注入方法注入物品
+    if (selectedPrefabs.Count > 0)
+    {
+        AutoInjectItemDataList(selectedPrefabs, count);
+        Debug.Log($"随机注入完成：成功注入 {selectedPrefabs.Count} 种物品，每种 {count} 个");
+    }
+    else
+    {
+        Debug.LogWarning("随机注入失败：没有有效的物品可注入");
+    }
+    
+}
+    /// <summary>
+/// 自动注入物品列表到容器中，智能查找空槽位或可堆叠槽位，避免覆盖已有物品
+/// </summary>
+/// <param name="prefabList">物品预制体列表</param>
+/// <param name="countList">对应物品数量列表</param>
+[Button("自动注入物品列表")] // Odin特性：在Inspector中显示为按钮
+[LabelText("自动注入物品列表")] // Odin特性：自定义标签文本
+public void AutoInjectItemDataList(
+    [LabelText("物品预制体列表")] List<GameObject> prefabList, 
+    [LabelText("数量列表")] List<int> countList)
+{
+    // 参数验证
+    if (prefabList == null || countList == null)
+    {
+        Debug.LogError("自动注入失败：Prefab列表或数量列表不能为空");
+        return;
+    }
+
+    if (prefabList.Count != countList.Count)
+    {
+        Debug.LogError($"自动注入失败：Prefab列表数量({prefabList.Count})与数量列表数量({countList.Count})不匹配");
+        return;
+    }
+
+    if (prefabList.Count == 0)
+    {
+        Debug.LogWarning("自动注入失败：Prefab列表为空");
+        return;
+    }
+
+    int successCount = 0;
+    int failCount = 0;
+
+    // 遍历并自动注入每个物品
+    for (int i = 0; i < prefabList.Count; i++)
+    {
+        GameObject prefab = prefabList[i];
+        int count = countList[i];
+
+        if (prefab == null)
+        {
+            Debug.LogWarning($"跳过空的Prefab（索引 {i}）");
+            failCount++;
+            continue;
+        }
+
+        if (count <= 0)
+        {
+            Debug.LogWarning($"跳过无效数量 {count} 的物品 {prefab.name}（索引 {i}）");
+            failCount++;
+            continue;
+        }
+
+        // 获取Prefab上的Item组件
+        Item itemComponent = prefab.GetComponent<Item>();
+        if (itemComponent == null)
+        {
+            Debug.LogError($"自动注入失败：Prefab {prefab.name} 上找不到Item组件（索引 {i}）");
+            failCount++;
+            continue;
+        }
+
+        // 克隆ItemData
+        ItemData itemData = itemComponent.IsPrefabInit();
+        if (itemData == null)
+        {
+            Debug.LogError($"自动注入失败：无法克隆 {prefab.name} 的ItemData（索引 {i}）");
+            failCount++;
+            continue;
+        }
+
+        // 设置数量
+        itemData.Stack.Amount = count;
+        itemData.Stack.CanBePickedUp = false;
+
+        // 尝试添加物品
+        if (TryAddItem(itemData, true))
+        {
+            Debug.Log($"成功自动注入物品 {prefab.name} x{count}");
+            successCount++;
+        }
+        else
+        {
+            Debug.LogError($"自动注入失败：容器空间不足，无法注入物品 {prefab.name} x{count}");
+            failCount++;
+        }
+    }
+
+    Debug.Log($"自动注入物品列表完成：成功 {successCount} 个，失败 {failCount} 个");
+}
+
+// 重载方法：支持统一数量
+[Button("自动注入物品列表(统一数量)")]
+[LabelText("自动注入物品列表(统一数量)")]
+public void AutoInjectItemDataList(
+    [LabelText("物品预制体列表")] List<GameObject> prefabList, 
+    [LabelText("统一数量")] [MinValue(1)] int uniformCount = 1)
+{
+    if (prefabList == null)
+    {
+        Debug.LogError("自动注入失败：Prefab列表不能为空");
+        return;
+    }
+
+    // 创建统一数量列表
+    List<int> countList = new List<int>();
+    for (int i = 0; i < prefabList.Count; i++)
+    {
+        countList.Add(uniformCount);
+    }
+
+    AutoInjectItemDataList(prefabList, countList);
+}
 }

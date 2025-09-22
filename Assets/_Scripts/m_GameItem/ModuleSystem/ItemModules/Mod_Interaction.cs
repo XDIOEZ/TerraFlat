@@ -84,6 +84,6 @@ public class Mod_Interaction : Module, IInteract
         CurrentInteractItem = null;
 
         // 触发取消事件
-        OnAction_Cancel?.Invoke(interacter.Item);
+        OnAction_Stop?.Invoke(interacter.Item);
     }
 }

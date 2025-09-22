@@ -26,49 +26,48 @@ public class Mod_Droping : Module
         modData.ReadData(ref drop);
       
     }
-    public override void ModUpdate(float deltaTime)
+public override void ModUpdate(float deltaTime)
+{
+    //检测droping是否为空
+    //如果为空自动销毁模块本身
+    
+    if (drop.item == null)
     {
-        //检测droping是否为空
-        //如果为空自动销毁模块本身
-       
-        if (drop.item == null)
+        drop.item = ItemMgr.Instance.GetItemByGuid(drop.itemGuid);
+        if(drop.item == null)
         {
-            drop.item = ItemMgr.Instance.GetItemByGuid(drop.itemGuid);
-            if(drop.item == null)
-            {
-                Debug.LogError("丢弃物品丢失");
-                drop.item = item;
-                return;
-            }
-        }
-
-
-
-        drop.progressTime += deltaTime;
-        float t = Mathf.Clamp01(drop.progressTime / drop.time);
-
-        // 二阶贝塞尔插值
-        Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
-        // 垂直方向叠加正弦高度
-        pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
-
-        drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
-        drop.item.transform.Rotate(Vector3.forward * 360f * deltaTime);
-
-        //TODO 归纳到对应Chunk中
-        ChunkMgr.Instance.UpdateItem_ChunkOwner(drop.item);
-
-        if (t >= 1f)
-        {
-            drop.item.itemData.Stack.CanBePickedUp = true;
-            drop = null;//销毁droping
-        }
-        if (drop == null)
-        {
-            Module.REMOVEModFROMItem(item, _Data);
+            Debug.LogError("丢弃物品丢失");
+            drop.item = item;
             return;
         }
     }
+
+    drop.progressTime += deltaTime;
+    float t = Mathf.Clamp01(drop.progressTime / drop.time);
+
+    // 二阶贝塞尔插值
+    Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
+    // 垂直方向叠加正弦高度
+    pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
+
+    drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
+    // 使用Drop中的旋转速度代替固定的旋转速度
+    drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
+
+    //TODO 归纳到对应Chunk中
+    ChunkMgr.Instance.UpdateItem_ChunkOwner(drop.item);
+
+    if (t >= 1f)
+    {
+        drop.item.itemData.Stack.CanBePickedUp = true;
+        drop = null;//销毁droping
+    }
+    if (drop == null)
+    {
+        Module.REMOVEModFROMItem(item, _Data);
+        return;
+    }
+}
 
     public override void Save()
     {

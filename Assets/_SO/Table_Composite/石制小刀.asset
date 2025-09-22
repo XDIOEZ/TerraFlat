@@ -17,8 +17,8 @@ MonoBehaviour:
     - ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
       amount: 1
-    - ItemName: Log
-      ItemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
       amount: 1
     - ItemName: Stick_Wood
       ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
@@ -28,7 +28,7 @@ MonoBehaviour:
       amount: 1
   outputs:
     results:
-    - ItemName: "\u77F3\u5236\u5C0F\u5200"
+    - ItemName: Dagger_Stone
       ItemPrefab: {fileID: 4375072302657932727, guid: 977388fab754b0949989bdf1a54daaf1, type: 3}
       amount: 1
   recipeType: 0

@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u6728\u8D28\u76D4\u7532"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: Plank
+      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+      amount: 1
+    - ItemName: Plank
+      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+      amount: 1
+    - ItemName: Plank
+      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+      amount: 1
+    - ItemName: Plank
+      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+      amount: 1
+    - ItemName: Plank
+      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+      amount: 1
+    - ItemName: Plank
+      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+      amount: 0
+  outputs:
+    results:
+    - ItemName: Chestplate_Wood
+      ItemPrefab: {fileID: 2813538158472234765, guid: 557a871734f51524682e543106eb309f, type: 3}
+      amount: 1
+  recipeType: 0

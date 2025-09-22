@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u77F3\u9550"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      amount: 1
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+  outputs:
+    results:
+    - ItemName: Pickaxe_Stone
+      ItemPrefab: {fileID: 6784024402793062405, guid: f4e377159a1ac64409ad777f7c96c145, type: 3}
+      amount: 1
+  recipeType: 0
