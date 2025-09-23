@@ -48,7 +48,7 @@ public class RandomPosition : ActionNode
     {
         Vector2 sameTypeDirection = GetSameTypeAverageDirection();
 
-        if (!TrueRandom && context.map != null)
+        if (!TrueRandom && context.tileEffectReceiver.Cache_map != null)
         {
             return HandleMapConstrainedMovement(sameTypeDirection);
         }
@@ -62,107 +62,145 @@ public class RandomPosition : ActionNode
 
     #region 私有方法
 
-    private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
+private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
+{
+    Vector3 chosenPosition = Vector3.zero;
+    bool found = false;
+    int attempts = 0;
+    const int maxAttempts = 5; // 增加尝试次数
+
+    Vector3 originalPosition = context.transform.position;
+
+    while (attempts < maxAttempts)
     {
-        Vector3 chosenPosition = Vector3.zero;
-        bool found = false;
-        int attempts = 0;
-        const int maxAttempts = 5;
+        Vector2 randomOffset = new Vector2(
+            Random.Range(min.x, max.x),
+            Random.Range(min.y, max.y)
+        );
 
-        while (attempts < maxAttempts)
+        // 添加反向偏移
+        if (lastValidPosition != originalPosition)
         {
-            Vector2 randomOffset = new Vector2(
-                Random.Range(min.x, max.x),
-                Random.Range(min.y, max.y)
-            );
+            Vector2 direction = ((Vector2)originalPosition - (Vector2)lastValidPosition).normalized;
+            randomOffset += direction * 0.5f;
+        }
 
-            // 添加反向偏移
-            if (lastValidPosition != context.transform.position)
+        // 添加同类吸引
+        if (sameTypeDirection.sqrMagnitude > 0.001f)
+        {
+            randomOffset += sameTypeDirection * sameTypeAttraction;
+        }
+
+        // 生成测试位置A
+        Vector3 testPositionA = originalPosition + (Vector3)randomOffset;
+        Vector2Int testPosIntA = Vector2Int.FloorToInt(testPositionA);
+
+        // 检查位置A是否危险
+        if (IsDangerousTile(testPosIntA))
+        {
+            // 位置A危险，计算对称位置B
+            Vector3 positionB = originalPosition - (Vector3)randomOffset;
+            Vector2Int posIntB = Vector2Int.FloorToInt(positionB);
+
+            // 检查位置B是否安全
+            if (!IsDangerousTile(posIntB) && context.tileEffectReceiver.Cache_map.GetTileArea(posIntB) <= 2)
             {
-                Vector2 direction = ((Vector2)context.transform.position - (Vector2)lastValidPosition).normalized;
-                randomOffset += direction * 0.5f;
+                chosenPosition = positionB;
+                found = true;
+                gizmoPosition = chosenPosition;
+                showGizmo = true;
+                break;
             }
-
-            // 添加同类吸引
-            if (sameTypeDirection.sqrMagnitude > 0.001f)
+            else
             {
-                randomOffset += sameTypeDirection * sameTypeAttraction;
-            }
+                // 位置B也危险，计算位置D (B-C向量*2)
+                Vector3 vectorBC = positionB - originalPosition;
+                Vector3 positionD = positionB + vectorBC;
+                Vector2Int posIntD = Vector2Int.FloorToInt(positionD);
 
-            // 生成测试位置
-            Vector3 testPosition = context.transform.position + (Vector3)randomOffset;
-            Vector2Int testPosInt = Vector2Int.FloorToInt(testPosition);
-
-            // 检查是否落在危险区域（权重大于等于5000的tiledata）
-            // 伪代码：假设有一个方法可以获取tile的权重
-            // int tileWeight = context.map.GetTileWeight(testPosInt);
-            // if (tileWeight >= 5000) // 危险区域判断
-            if (IsDangerousTile(testPosInt)) // 使用伪代码方法
-            {
-                // A点落入危险地点，生成对称点B
-                Vector3 symmetricPosition = context.transform.position - (Vector3)randomOffset;
-                Vector2Int symmetricPosInt = Vector2Int.FloorToInt(symmetricPosition);
-                
-                // 检查对称点是否安全
-                // if (context.map.GetTileWeight(symmetricPosInt) < 5000) // 安全区域判断
-                if (!IsDangerousTile(symmetricPosInt)) // 使用伪代码方法
+                // 检查位置D是否安全
+                if (!IsDangerousTile(posIntD) && context.tileEffectReceiver.Cache_map.GetTileArea(posIntD) <= 2)
                 {
-                    chosenPosition = symmetricPosition;
+                    chosenPosition = positionD;
                     found = true;
-                    // 设置Gizmos显示
                     gizmoPosition = chosenPosition;
                     showGizmo = true;
                     break;
                 }
                 else
                 {
-                    // 对称点B也危险，继续下一次随机尝试
-                    attempts++;
-                    continue;
-                }
-            }
-            else
-            {
-                // 检查地图可用性（原有逻辑）
-                if (context.map.GetTileArea(testPosInt) <= 2)
-                {
-                    chosenPosition = testPosition;
-                    found = true;
-                    // 设置Gizmos显示
-                    gizmoPosition = chosenPosition;
-                    showGizmo = true;
-                    break;
-                }
-            }
-            
-            attempts++;
-        }
+                    // 位置D也危险，在圆内随机落点三次
+                    float radius = vectorBC.magnitude;
+                    bool circlePointFound = false;
+                    
+                    // 尝试三次圆内随机点
+                    for (int i = 0; i < 3; i++)
+                    {
+                        // 在以B为圆心，半径为radius的圆内随机生成点
+                        Vector2 randomInCircle = Random.insideUnitCircle * radius;
+                        Vector3 positionEFG = positionB + (Vector3)randomInCircle;
+                        Vector2Int posIntEFG = Vector2Int.FloorToInt(positionEFG);
 
-        // 如果没有找到合适位置，使用最后一次随机偏移
-        if (!found)
+                        if (!IsDangerousTile(posIntEFG) && context.tileEffectReceiver.Cache_map.GetTileArea(posIntEFG) <= 2)
+                        {
+                            chosenPosition = positionEFG;
+                            found = true;
+                            circlePointFound = true;
+                            gizmoPosition = chosenPosition;
+                            showGizmo = true;
+                            break;
+                        }
+                    }
+
+                    if (circlePointFound)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        else
         {
-            Vector2 randomOffset = new Vector2(
-                Random.Range(min.x, max.x),
-                Random.Range(min.y, max.y)
-            );
-            if (sameTypeDirection.sqrMagnitude > 0.001f)
-                randomOffset += sameTypeDirection * sameTypeAttraction;
-
-            chosenPosition = context.transform.position + (Vector3)randomOffset;
-            // 设置Gizmos显示
-            gizmoPosition = chosenPosition;
-            showGizmo = true;
+            // 位置A安全，检查地图可用性
+            if (context.tileEffectReceiver.Cache_map.GetTileArea(testPosIntA) <= 2)
+            {
+                chosenPosition = testPositionA;
+                found = true;
+                gizmoPosition = chosenPosition;
+                showGizmo = true;
+                break;
+            }
         }
 
-        SetTargetPosition(chosenPosition);
-        return State.Success;
+        attempts++;
     }
+
+    // 如果前面所有尝试都失败了，最后一次强制使用随机点（无论是否危险）
+    if (!found)
+    {
+        Vector2 finalOffset = new Vector2(
+            Random.Range(min.x * 2, max.x * 2),
+            Random.Range(min.y * 2, max.y * 2)
+        );
+        
+        if (sameTypeDirection.sqrMagnitude > 0.001f)
+            finalOffset += sameTypeDirection * sameTypeAttraction;
+
+        chosenPosition = originalPosition + (Vector3)finalOffset;
+        gizmoPosition = chosenPosition;
+        showGizmo = true;
+        Debug.Log("使用最终强制点位，可能危险");
+    }
+
+    SetTargetPosition(chosenPosition);
+    return State.Success;
+}
 
     // 伪代码方法：判断是否为危险tile
     private bool IsDangerousTile(Vector2Int tilePosition)
     {
         // 获取指定位置的TileData
-        TileData tileData = context.map?.GetTile(tilePosition);
+        TileData tileData = context.tileEffectReceiver.Cache_map?.GetTile(tilePosition);
         if (tileData == null)
             return true; // 空位置视为危险
             

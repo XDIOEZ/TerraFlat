@@ -26,14 +26,28 @@ public class LootEntry
     [Tooltip("最大掉落数量")]
     public int MaxAmount = 1;
 
-
-    // 公共方法用于更新预制体名称（供编辑器使用）
-    public void UpdatePrefabName()
+    // 编辑器验证方法，确保数值有效性
+    public void OnValidate()
     {
 #if UNITY_EDITOR
+        // 更新预制体名称
         if (LootPrefab != null)
         {
             LootPrefabName = LootPrefab.name;
+        }
+        else
+        {
+            LootPrefabName = "";
+        }
+        
+        // 确保掉落数量范围有效
+        MinAmount = Mathf.Max(0, MinAmount); // 确保最小数量不小于0
+        MaxAmount = Mathf.Max(0, MaxAmount); // 确保最大数量不小于0
+        
+        // 确保最小数量不会超过最大数量（调整最大值而不是最小值）
+        if (MinAmount > MaxAmount)
+        {
+            MaxAmount = MinAmount; // 调整最大数量为最小数量
         }
 #endif
     }

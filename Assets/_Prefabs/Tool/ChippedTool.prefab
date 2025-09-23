@@ -288,8 +288,12 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
+      propertyPath: weaponData.Damage.BaseValue
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.MaxAttackDistance
-      value: 1
+      value: 0.4
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

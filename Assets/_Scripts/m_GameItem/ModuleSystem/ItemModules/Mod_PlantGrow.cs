@@ -64,7 +64,7 @@ public class Mod_PlantGrow : Module
         {
             // 调用物品管理器实例化物品
             Item product = ItemMgr.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
-
+            product.Load();
             // new ItemMaker().DropItem_cric(product, transform.position, 2);
             var dropComp = GetComponent<Mod_ItemDroper>();
             if (dropComp != null)

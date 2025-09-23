@@ -13,29 +13,73 @@ MonoBehaviour:
   m_Name: "\u521B\u9020\u6A21\u5F0F"
   m_EditorClassIdentifier: 
   items:
-  - prefab: {fileID: 2813538158472234765, guid: 26b52ee9b6c7f0b4a84435c715363a8e, type: 3}
-    count: 99
-  - prefab: {fileID: 8289096317301822611, guid: e7e803eb2785d6f42af33f9762407e32, type: 3}
-    count: 99
-  - prefab: {fileID: 7089920087521160863, guid: 9b7fa0dd7f7673f4cbc1e737865ae62d, type: 3}
-    count: 99
-  - prefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
-    count: 99
-  - prefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
-    count: 99
-  - prefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
-    count: 99
-  - prefab: {fileID: 7534172511798132841, guid: dbe0fdf0241e35442b1a020284fc6eb3, type: 3}
-    count: 99
-  - prefab: {fileID: 3341342614344715908, guid: 4c16f5b620aca1741a1e0f0a149c9cf5, type: 3}
-    count: 99
-  - prefab: {fileID: 3926578369279844245, guid: 4ed054f92372bc644ae2a3773e84e923, type: 3}
-    count: 99
-  - prefab: {fileID: 288261360578882072, guid: e03b8d2961390684a93d01afc3105a12, type: 3}
-    count: 99
-  - prefab: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
-    count: 99
-  - prefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
-    count: 99
-  - prefab: {fileID: 2959260787352113104, guid: 4fb4302d70efd894f873e40d0497e09c, type: 3}
-    count: 99
+  - LootPrefab: {fileID: 3926578369279844245, guid: 4ed054f92372bc644ae2a3773e84e923, type: 3}
+    LootPrefabName: Apple
+    DropChance: 1
+    MinAmount: 101
+    MaxAmount: 101
+  - LootPrefab: {fileID: 3341342614344715908, guid: 92fc3da9917bffe4a95a5e4648efdcb6, type: 3}
+    LootPrefabName: CookedMeat
+    DropChance: 1
+    MinAmount: 102
+    MaxAmount: 102
+  - LootPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
+    LootPrefabName: Log
+    DropChance: 1
+    MinAmount: 92
+    MaxAmount: 95
+  - LootPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+    LootPrefabName: Ore_Stone
+    DropChance: 1
+    MinAmount: 133
+    MaxAmount: 134
+  - LootPrefab: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
+    LootPrefabName: RawMeat
+    DropChance: 1
+    MinAmount: 67
+    MaxAmount: 67
+  - LootPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+    LootPrefabName: Stick_Wood
+    DropChance: 1
+    MinAmount: 60
+    MaxAmount: 60
+  - LootPrefab: {fileID: 4043182749368973274, guid: aae825d40ce31dc4b8fd6925ec015ad2, type: 3}
+    LootPrefabName: Ore_Copper
+    DropChance: 1
+    MinAmount: 66
+    MaxAmount: 66
+  - LootPrefab: {fileID: 2048408006814487461, guid: d56429304b3eae547a41b59c65691efc, type: 3}
+    LootPrefabName: Ore_Iron
+    DropChance: 1
+    MinAmount: 81
+    MaxAmount: 81
+  - LootPrefab: {fileID: 2048408006814487461, guid: ba78fb599b6f2904eac1ea100b08cca8, type: 3}
+    LootPrefabName: Ore_Tin
+    DropChance: 1
+    MinAmount: 94
+    MaxAmount: 94
+  - LootPrefab: {fileID: 288261360578882072, guid: e03b8d2961390684a93d01afc3105a12, type: 3}
+    LootPrefabName: Ore_Coal
+    DropChance: 1
+    MinAmount: 56
+    MaxAmount: 56
+  - LootPrefab: {fileID: 7534172511798132841, guid: 1d3df9bf6e3ce2d4f876f75c28a50c38, type: 3}
+    LootPrefabName: "\u7194\u7089"
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1
+  - LootPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+    LootPrefabName: Plank
+    DropChance: 1
+    MinAmount: 84
+    MaxAmount: 84
+  - LootPrefab: {fileID: 6540100855143504370, guid: c81a87a3667f93340a56b3e016a55c95, type: 3}
+    LootPrefabName: SparkBorer
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1
+  - LootPrefab: {fileID: 6626571208127967517, guid: 2487c0cd520a95e458680b9768f4daa6, type: 3}
+    LootPrefabName: "\u5DE5\u4F5C\u53F0"
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1

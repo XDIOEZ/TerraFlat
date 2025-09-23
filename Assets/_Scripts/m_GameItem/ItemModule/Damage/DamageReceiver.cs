@@ -69,7 +69,7 @@ public class DamageReceiver_SaveData
             {
                 if (lootEntry != null)
                 {
-                    lootEntry.UpdatePrefabName();
+                    lootEntry.OnValidate();
                 }
             }
         }

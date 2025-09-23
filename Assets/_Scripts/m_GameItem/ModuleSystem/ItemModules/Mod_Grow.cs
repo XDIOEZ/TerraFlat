@@ -174,7 +174,7 @@ public void OnValidate()
                 {
                     if (loot != null)
                     {
-                        loot.UpdatePrefabName();
+                        loot.OnValidate();
                     }
                 }
             }

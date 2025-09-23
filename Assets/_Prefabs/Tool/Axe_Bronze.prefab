@@ -176,14 +176,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
+  Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
     _PersistentCalls: []
   OnAct:
-    _PersistentCalls: []
-  OnModuleLoadDone:
     _PersistentCalls: []
   Sprite: {fileID: 0}
   updateInterval: 0.1
@@ -198,6 +196,14 @@ MonoBehaviour:
       - None
       Item_Material:
       - Bronze
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
     Stack:
       Amount: 1
       Volume: 2
@@ -278,8 +284,20 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
+      propertyPath: weaponData.AttackSpeed
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
+      propertyPath: weaponData.ReturnSpeed
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: saveData.MaxAttackDistance
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
+      propertyPath: weaponData.Damage.BaseValue
+      value: 33
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.MaxAttackDistance

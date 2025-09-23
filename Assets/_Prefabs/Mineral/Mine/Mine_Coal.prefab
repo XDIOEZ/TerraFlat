@@ -226,7 +226,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 903940306571574032, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_InstanceId
-      value: -1621496
+      value: -837800
       objectReference: {fileID: 0}
     - target: {fileID: 1808889728832966955, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_Name
@@ -313,10 +313,10 @@ PrefabInstance:
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefab
       value: 
-      objectReference: {fileID: 2048408006814487461, guid: ba78fb599b6f2904eac1ea100b08cca8, type: 3}
+      objectReference: {fileID: 288261360578882072, guid: e03b8d2961390684a93d01afc3105a12, type: 3}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
-      value: Ore_Tin
+      value: Ore_Coal
       objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x

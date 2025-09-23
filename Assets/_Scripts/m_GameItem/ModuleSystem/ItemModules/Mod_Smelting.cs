@@ -198,38 +198,36 @@ public partial class Mod_Smelting : Module
         }
     }
 
-    private void OnButtonClick()
+private void OnButtonClick()
+{
+    //查找行为tag中为Ignition的物品
+    var ignitionItem = fuelInventory.Data.FindItemByTagTypeAndTag("FunctionTag", "Ignition");
+    if (ignitionItem == null)
     {
-        //查找行为tag中为Ignition的物品
-        var ignitionItem = fuelInventory.Data.FindItemByTagTypeAndTag("FunctionTag", "Ignition");
-        if (ignitionItem == null)
-        {
-            Debug.LogWarning("无法点燃：缺少点火装置！");
-            return;
-        }
-
-        // 切换熔炼状态
-        Data.IsSmelting = !Data.IsSmelting;
-        
-        if (Data.IsSmelting)
-        {
-            // 设置默认最大温度为熔炉限制温度（如果还没有燃料提供温度的话）
-            if (Data.MaxTemperature <= 0)
-            {
-                Data.MaxTemperature = Data.MaxTemperatureLimit;
-            }
-            
-            // 点燃燃料模块
-            mod_Fuel.SetIgnited(true);
-            Debug.Log("熔炉已点燃并开始熔炼！");
-        }
-        else
-        {
-            // 熄灭燃料模块
-            mod_Fuel.SetIgnited(false);
-            Debug.Log("熔炉已停止熔炼！");
-        }
+        Debug.LogWarning("无法点燃：缺少点火装置！");
+        return;
     }
+
+    // 如果已经在熔炼中，不允许主动停止
+    if (Data.IsSmelting)
+    {
+        Debug.Log("熔炼已经开始，无法主动停止。只有燃料耗尽时才会停止。");
+        return;
+    }
+    
+    // 开始熔炼
+    Data.IsSmelting = true;
+    
+    // 设置默认最大温度为熔炉限制温度（如果还没有燃料提供温度的话）
+    if (Data.MaxTemperature <= 0)
+    {
+        Data.MaxTemperature = Data.MaxTemperatureLimit;
+    }
+    
+    // 点燃燃料模块
+    mod_Fuel.SetIgnited(true);
+    Debug.Log("熔炉已点燃并开始熔炼！");
+}
 
     public void CompleteSmelting()
     {

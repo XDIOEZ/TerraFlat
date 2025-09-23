@@ -41,7 +41,7 @@ namespace TheKiwiCoder {
             context.item = gameObject.GetComponent<Item>();
             context.gameObject = gameObject;
             context.transform = gameObject.transform;
-            context.map = ItemMgr.Instance.Map;
+            
             context.animator = gameObject.GetComponentInChildren<Animator>();
             context.physics = gameObject.GetComponent<Rigidbody>();
             context.agent = gameObject.GetComponentInChildren<NavMeshAgent>();
@@ -59,7 +59,7 @@ namespace TheKiwiCoder {
             context.Food = context.item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
             context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
             context.tileEffectReceiver = context.item.itemMods.GetMod_ByID(ModText.TileEffect) as TileEffectReceiver;
-
+            context.map = context.tileEffectReceiver.Cache_map;
             return context;
         }
     }

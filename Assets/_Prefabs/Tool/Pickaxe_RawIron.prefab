@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1459243673227399974}
   - component: {fileID: 4064992327198011200}
   m_Layer: 9
-  m_Name: Pickaxe_Bronze
+  m_Name: Pickaxe_RawIron
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -102,16 +102,16 @@ MonoBehaviour:
   Sprite: {fileID: 0}
   updateInterval: 0.1
   Data:
-    IDName: Pickaxe_Bronze
-    GameName: Pickaxe_Bronze
-    Description: "\u7269\u54C1\u540D\u79F0\uFF1APickaxe_Bronze\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A2\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1ANone(None),\u7269\u54C1\u6750\u8D28\uFF1ANone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
+    IDName: Pickaxe_RawIron
+    GameName: Pickaxe_RawIron
+    Description: "\u7269\u54C1\u540D\u79F0\uFF1APickaxe_RawIron\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A2\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1APickaxe(None),\u7269\u54C1\u6750\u8D28\uFF1AStone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
     Durability: 1
     ItemTags:
       Item_TypeTag:
       - Pickaxe
       - None
       Item_Material:
-      - Bronze
+      - Stone
     Tags:
       keys:
       - tag: Type
@@ -204,7 +204,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: c7b85e6a507f33440a540cb2a66ea374, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 97e7d2adcd4bf2b479296591882482ba, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 1
   m_FlipY: 0
@@ -284,12 +284,20 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
+      propertyPath: weaponData.AttackSpeed
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
+      propertyPath: weaponData.ReturnSpeed
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: saveData.MaxAttackDistance
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.Damage.BaseValue
-      value: 25
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.MaxAttackDistance

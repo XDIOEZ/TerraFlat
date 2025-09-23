@@ -16,7 +16,7 @@ MonoBehaviour:
     RowItems_List:
     - ItemName: Ore_Iron
       ItemPrefab: {fileID: 2048408006814487461, guid: d56429304b3eae547a41b59c65691efc, type: 3}
-      amount: 2
+      amount: 1
   outputs:
     results:
     - ItemName: Ingot_RawIron

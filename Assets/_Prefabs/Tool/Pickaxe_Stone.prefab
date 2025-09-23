@@ -204,7 +204,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 9bc9096613e2d6d409c3d3931c54daff, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 97e7d2adcd4bf2b479296591882482ba, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 1
   m_FlipY: 0
@@ -286,6 +286,10 @@ PrefabInstance:
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: saveData.MaxAttackDistance
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
+      propertyPath: weaponData.Damage.BaseValue
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.MaxAttackDistance

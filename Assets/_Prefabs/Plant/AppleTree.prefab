@@ -596,6 +596,10 @@ PrefabInstance:
       propertyPath: ProductionList.Array.data[0].ThrowItem
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: ProductionList.Array.data[0].ProductionTime
+      value: 80
+      objectReference: {fileID: 0}
     - target: {fileID: 2944718889659544537, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: m_Name
       value: "\u751F\u4EA7\u6A21\u5757"
