@@ -46,15 +46,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   _data:
-    Name: 
+    Name: "\u573A\u666F\u6A21\u5757_9182"
     ID: "\u573A\u666F\u6A21\u5757"
     isRunning: 1
     Type: 0
     BitData: 
-  _sceneAsset: {fileID: 0}
+  _sceneAssetList:
+  - {fileID: 4900000, guid: eccdd75c4bab0724cb3d7bbd3ba13227, type: 3}
   Data:
     SceneName: 
     IsInit: 0
     PlayerPos: {x: 0, y: 0}
-    Encapsulation: 0
+    Encapsulation: 1
+    LightEfficiency: 0.2
   PlayerPosOffset: {x: 0, y: 1}

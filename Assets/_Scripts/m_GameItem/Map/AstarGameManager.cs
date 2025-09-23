@@ -111,35 +111,55 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         });
     }
 
-    /// <summary>
-    /// 高频调用优化版：修改单个节点权重
-    /// - 无Log（避免控制台刷屏卡顿）
-    /// - 避免重复赋值（Penalty相同则跳过）
-    /// - Gizmos记录数量有限制
-    /// </summary>
-    public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000)
+/// <summary>
+/// 高频调用优化版：修改单个节点权重
+/// - 无Log（避免控制台刷屏卡顿）
+/// - 避免重复赋值（Penalty相同则跳过）
+/// - Gizmos记录数量有限制
+/// - newPenalty为0时设置节点为不可通行
+/// </summary>
+public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000)
+{
+    if (Pathfinder == null || AstarPath.active == null)
     {
-        if (Pathfinder == null || AstarPath.active == null)
-        {
-            // 这里不报错，避免高频调用抛出大量日志
-            return;
-        }
-
-        // 1. 获取节点
-        NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
-        GraphNode targetNode = nnInfo.node;
-        if (targetNode == null || !targetNode.Walkable)
-        {
-            // 节点无效或不可通行，直接跳过
-            return;
-        }
-
-        // 2. 避免重复赋值
-        if (targetNode.Penalty == newPenalty) return;
-
-        // 3. 修改权重
-        targetNode.Penalty = newPenalty;
+        // 这里不报错，避免高频调用抛出大量日志
+        return;
     }
+
+    // 1. 获取节点
+    NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
+    GraphNode targetNode = nnInfo.node;
+    if (targetNode == null)
+    {
+        // 节点无效，直接跳过
+        return;
+    }
+
+    // 2. 处理newPenalty为0的情况（表示节点不可通行）
+    if (newPenalty == 0)
+    {
+        // 如果节点已经是不可通行且权重为0，则跳过
+        if (!targetNode.Walkable && targetNode.Penalty == 0) return;
+        
+        // 设置节点为不可通行
+        targetNode.Walkable = false;
+        targetNode.Penalty = 0;
+        return;
+    }
+
+    // 3. 对于可通行节点，检查是否需要更新
+    if (!targetNode.Walkable)
+    {
+        // 如果节点原来是不可通行的，现在要设为可通行
+        targetNode.Walkable = true;
+    }
+    
+    // 4. 避免重复赋值
+    if (targetNode.Penalty == newPenalty) return;
+
+    // 5. 修改权重
+    targetNode.Penalty = newPenalty;
+}
 
 
 

@@ -46,6 +46,7 @@ public  abstract partial class ItemData
     public float Durability = 1;
 
     [Tooltip("物品标签")]
+    [Obsolete("已过时，推荐使用TagDictionary，性能更优")]
     public ItemTag ItemTags;
 
     [Tooltip("新版Tag系统_适配新版合成表")]
@@ -151,7 +152,7 @@ public  abstract partial class ItemData
                 return item;
             }
         }
-        Debug.LogError("没有找到对应的模块数据!,检测ItemData中的Mods是否被初始化,检查mod是否被Save");
+        Debug.LogError($"没有找到对应的模块({moduleID})数据!,检测ItemData中的Mods是否被初始化,检查mod是否被Save");
         return null;
     }
 }

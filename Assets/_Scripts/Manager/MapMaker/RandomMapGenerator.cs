@@ -60,10 +60,7 @@ public class RandomMapGenerator : MonoBehaviour
     private int Seed => SaveDataMgr.Instance.SaveData.Seed;
     private Camera _mainCamera; // 缓存MainCamera引用
 
-    public float PlantRadius => plantData.Radius;
-    public float Temp => plantData.TemperatureOffset;
-    public float LandOceanRatio => plantData.OceanHeight;
-    public float NoiseScale => plantData.NoiseScale;
+public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
 
     public EnvironmentFactors[,] EnvFactorsGrid { get => map.Data.EnvironmentData; set => map.Data.EnvironmentData = value; }
 

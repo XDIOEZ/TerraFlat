@@ -781,7 +781,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 0}
   ItemSlot_Parent: {fileID: 2609133284222111843}
   Data:
@@ -1872,7 +1872,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Belong_Item: {fileID: 0}
+  Owner: {fileID: 0}
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 4747469238360680908}
   Data:
@@ -2085,7 +2085,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -585, y: -286}
+  m_AnchoredPosition: {x: -1, y: -0.5}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2905405844011685452
@@ -2168,7 +2168,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 1911
+    m_Bits: 375
 --- !u!114 &8159281846022184057
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2184,12 +2184,15 @@ MonoBehaviour:
   item: {fileID: 0}
   inventoryModuleData:
     Name: 
-    ModID: "\u5DE5\u4F5C\u53F0\u5408\u6210\u6A21\u5757"
+    ID: 
     isRunning: 0
     Type: 0
+    PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
+  basePanel: {fileID: 1241333389272167574}
   inputInventory: {fileID: 4927351775982424024}
   outputInventory: {fileID: 8520653643835190384}
-  WorkButton: {fileID: 940975637965242380}
+  workButton: {fileID: 940975637965242380}
 --- !u!225 &8319463271093590649
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -2216,7 +2219,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 8319463271093590649}
   CanDrag: 0
-  Drager: {fileID: 0}
+  Dragger: {fileID: 0}
 --- !u!1 &3340922055570554316
 GameObject:
   m_ObjectHideFlags: 0

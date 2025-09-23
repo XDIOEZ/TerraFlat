@@ -4510,7 +4510,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.0000705719, y: 0}
+  m_AnchoredPosition: {x: -0.000015258789, y: 0}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &7132638982571321051
@@ -6398,7 +6398,6 @@ Transform:
   - {fileID: 1010867241590869890}
   - {fileID: 7582169964956053820}
   - {fileID: 6221398799091539739}
-  - {fileID: 2519512854678400765}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &229632135095175083
@@ -8057,68 +8056,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 7322490992400179102, guid: d19144596f27c9d44a5d6a32166de413, type: 3}
   m_PrefabInstance: {fileID: 1369049163530479090}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &2850150314780400424
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 8558300597438332925}
-    m_Modifications:
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1325074094779029787, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-      propertyPath: m_Name
-      value: ItemTransformController
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
---- !u!4 &2519512854678400765 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 394873159625930197, guid: 96b781ca01a5169469e6113a54a33ae6, type: 3}
-  m_PrefabInstance: {fileID: 2850150314780400424}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &3544032078085023805
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9062,6 +8999,10 @@ PrefabInstance:
     - target: {fileID: 8360781908807158935, guid: 30335a1d847f20547aba60b7da974cf8, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8943846949572410620, guid: 30335a1d847f20547aba60b7da974cf8, type: 3}
+      propertyPath: Data.InventoryInitName
+      value: "\u521B\u9020\u6A21\u5F0F"
       objectReference: {fileID: 0}
     - target: {fileID: 8943846949572410620, guid: 30335a1d847f20547aba60b7da974cf8, type: 3}
       propertyPath: inventoryModuleData.ID

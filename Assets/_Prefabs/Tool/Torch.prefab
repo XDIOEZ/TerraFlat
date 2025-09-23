@@ -308,9 +308,13 @@ MonoBehaviour:
       - tag: Type
         values: []
       - tag: Material
-        values: []
+        values:
+        - Wood
       - tag: MakeTag
         values: []
+      - tag: FunctionTag
+        values:
+        - Ignition
     Stack:
       Amount: 1
       Volume: 1

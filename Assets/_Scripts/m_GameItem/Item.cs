@@ -66,23 +66,48 @@ public abstract class Item : MonoBehaviour
     }
 
 
-    public ItemData IsPrefabInit()
+public ItemData IsPrefabInit()
+{
+    // 创建一个临时的游戏对象实例来处理初始化
+    GameObject tempGO = Instantiate(gameObject);
+    tempGO.hideFlags = HideFlags.HideAndDontSave; // 隐藏临时对象
+    
+    try
     {
-        //TODO 获取所有子对象的Module并初始化
-        var modules = GetComponentsInChildren<Module>(true).ToList();
+        Item tempItem = tempGO.GetComponent<Item>();
+        
+        // 获取所有子对象的Module并初始化
+        var modules = tempGO.GetComponentsInChildren<Module>(true).ToList();
+        
+        // 为每个模块调用Awake方法
         foreach (var mod in modules)
         {
             mod.Awake();
         }
-        itemData.Guid = Guid.NewGuid().GetHashCode();
-        Load();
-        ItemData _ =  itemData.DeepClone();
-
-        //清理残留数据
-        itemData.ModuleDataDic.Clear();
-        return _;
         
+        // 生成新的Guid
+        tempItem.itemData.Guid = Guid.NewGuid().GetHashCode();
+        
+        // 加载模块
+        tempItem.Load();
+        
+        // 保存模块数据
+        tempItem.Save();
+        
+        // 克隆最终的itemData作为返回值
+        ItemData result = tempItem.itemData.DeepClone();
+        
+        return result;
     }
+    finally
+    {
+        // 销毁临时对象，确保不留下任何痕迹
+        if (tempGO != null)
+        {
+            DestroyImmediate(tempGO);
+        }
+    }
+}
 
     [Button]
     public void SetUpModeule(string modName)

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
+  m_Name: "\u94BB\u6728\u53D6\u706B\u5DE5\u5177"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+    - ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      amount: 1
+    - ItemName: Plank
+      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+      amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
+  outputs:
+    results:
+    - ItemName: SparkBorer
+      ItemPrefab: {fileID: 6540100855143504370, guid: c81a87a3667f93340a56b3e016a55c95, type: 3}
+      amount: 1
+  recipeType: 0

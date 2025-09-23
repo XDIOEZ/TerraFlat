@@ -54,9 +54,10 @@ MonoBehaviour:
     ProductionTime: 0
     MaxProductionCount: -1
     CurrentProductionCount: 0
+    ThrowItem: 1
   _ModDataMemoryPackable:
     Name: 
-    ID: 
+    ID: "\u751F\u4EA7\u6A21\u5757"
     isRunning: 1
     Type: 0
     BitData: 

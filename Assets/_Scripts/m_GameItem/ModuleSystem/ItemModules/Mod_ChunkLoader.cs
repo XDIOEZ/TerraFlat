@@ -37,8 +37,18 @@ public class Mod_ChunkLoader : Module
         // 初始化 lastChunkPos
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
 
-        if (ItemMgr.Instance.User_Player == null)
+        // 检查必要的管理器是否存在
+        if (ItemMgr.Instance == null || ItemMgr.Instance.User_Player == null)
+        {
+            Debug.LogWarning("ItemMgr 或 User_Player 未初始化，跳过区块加载");
             return;
+        }
+
+        if (ChunkMgr.Instance == null)
+        {
+            Debug.LogError("ChunkMgr 未初始化，无法加载区块");
+            return;
+        }
 
         // 初次加载时直接更新区块
         UpdateChunks(lastChunkPos);
@@ -57,6 +67,10 @@ public class Mod_ChunkLoader : Module
     public override void ModUpdate(float deltaTime)
     {
         if (_Data.isRunning == false)
+            return;
+
+        // 检查必要的管理器是否存在
+        if (ItemMgr.Instance == null || ChunkMgr.Instance == null)
             return;
 
         timer += deltaTime;
@@ -79,19 +93,45 @@ public class Mod_ChunkLoader : Module
     /// </summary>
     private void UpdateChunks(Vector2 chunkPos)
     {
-        ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
-        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
-        ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
+        // 添加空值检查
+        if (ChunkMgr.Instance == null)
+        {
+            Debug.LogError("ChunkMgr 未初始化，无法更新区块");
+            return;
+        }
 
-        AstarGameManager.Instance.UpdateMeshAsync(chunkPos, Data.LoadChunkDistance);
+        if (AstarGameManager.Instance == null)
+        {
+            Debug.LogWarning("AstarGameManager 未初始化，跳过寻路网格更新");
+        }
+
+        try
+        {
+            ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
+            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
+            ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
+
+            AstarGameManager.Instance?.UpdateMeshAsync(chunkPos, Data.LoadChunkDistance);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"更新区块时发生错误: {ex.Message}\n{ex.StackTrace}");
+        }
     }
 
     [Button("更新 Mesh")]
     public void UpdateMesh(Vector2 currentChunkPos)
     {
-        AstarGameManager.Instance.UpdateMeshAsync(
-            center: currentChunkPos,
-            radius: Data.LoadChunkDistance
-        );
+        if (AstarGameManager.Instance != null)
+        {
+            AstarGameManager.Instance.UpdateMeshAsync(
+                center: currentChunkPos,
+                radius: Data.LoadChunkDistance
+            );
+        }
+        else
+        {
+            Debug.LogWarning("AstarGameManager 未初始化，无法更新网格");
+        }
     }
 }

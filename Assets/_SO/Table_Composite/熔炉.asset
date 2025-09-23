@@ -43,7 +43,7 @@ MonoBehaviour:
       amount: 1
   outputs:
     results:
-    - ItemName: Chestplate_Twine
-      ItemPrefab: {fileID: 2813538158472234765, guid: 98dec10f825f70a42813d13105431a62, type: 3}
+    - ItemName: "\u7194\u7089"
+      ItemPrefab: {fileID: 7534172511798132841, guid: 1d3df9bf6e3ce2d4f876f75c28a50c38, type: 3}
       amount: 1
   recipeType: 0

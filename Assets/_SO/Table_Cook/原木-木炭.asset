@@ -23,4 +23,4 @@ MonoBehaviour:
       ItemPrefab: {fileID: 288261360578882072, guid: e03b8d2961390684a93d01afc3105a12, type: 3}
       amount: 1
   recipeType: 1
-  Temperature: 1000
+  Temperature: 500

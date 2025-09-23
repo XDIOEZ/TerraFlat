@@ -147,7 +147,6 @@ private void ProduceItem(ItemProductionData data)
     {
         if (data.itemPrefab == null)
         {
-            Debug.LogError("❌ ItemPrefab is null in ItemProductionData!");
             continue;
         }
 

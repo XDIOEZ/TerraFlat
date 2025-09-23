@@ -19,7 +19,7 @@ MonoBehaviour:
       amount: 1
   outputs:
     results:
-    - ItemName: CookedMeet
+    - ItemName: CookedMeat
       ItemPrefab: {fileID: 3341342614344715908, guid: 92fc3da9917bffe4a95a5e4648efdcb6, type: 3}
       amount: 1
   recipeType: 1

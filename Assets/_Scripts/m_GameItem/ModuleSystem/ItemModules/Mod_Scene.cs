@@ -14,7 +14,7 @@ public partial class SceneData
     public bool IsInit = false;
     public Vector2 PlayerPos;
     public bool Encapsulation;
-    public float LightEfficiency;//采光率
+    public float LightEfficiency;//光照效率
 }
 
 public class Mod_Scene : Module
@@ -22,7 +22,8 @@ public class Mod_Scene : Module
     public Ex_ModData_MemoryPackable _data;
     public override ModuleData _Data { get { return _data; } set { _data = (Ex_ModData_MemoryPackable)value; } }
 
-    public TextAsset _sceneAsset;
+    [Tooltip("场景预制体列表，初始化时会从中随机选择一个")]
+    public List<TextAsset> _sceneAssetList = new List<TextAsset>(); // 将单个字段改为列表
     public SceneData Data;
     public Vector2 PlayerPosOffset;
 
@@ -42,7 +43,6 @@ public class Mod_Scene : Module
         }
     }
 
-
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -51,44 +51,57 @@ public class Mod_Scene : Module
         }
     }
 
-    public override void Load()
+public override void Load()
+{
+    _data.ReadData(ref Data);
+
+    var mod_Building = item.itemMods.GetMod_ByID(ModText.Building) as Mod_Building;
+    var Interacter = item.itemMods.GetMod_ByID(ModText.Interact) as Mod_Interaction;
+
+    Interacter.OnAction_Start += Interact;
+
+    if (mod_Building != null)
     {
-        _data.ReadData(ref Data);
+        mod_Building.StartUnInstall += UnInstall;
+        mod_Building.StartInstall += Install;
+    }
 
-        var mod_Building = item.itemMods.GetMod_ByID(ModText.Building) as Mod_Building;
-        var Interacter = item.itemMods.GetMod_ByID(ModText.Interact) as Mod_Interaction;
-
-        Interacter.OnAction_Start += Interact;
-
-        if (mod_Building != null)
+    // 检查是否已经初始化，通过在PlanetData_Dict中查找SceneName来判断
+    if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
+        _sceneAssetList != null && _sceneAssetList.Count > 0)
+    {
+        // 从列表中随机选择一个场景预制体
+        TextAsset selectedSceneAsset = _sceneAssetList[Random.Range(0, _sceneAssetList.Count)];
+        
+        if (selectedSceneAsset != null)
         {
-            mod_Building.StartUnInstall += UnInstall;
-            mod_Building.StartInstall += Install;
-        }
+            MapSave MapSave = MemoryPackSerializer.Deserialize<MapSave>(selectedSceneAsset.bytes);
 
-        //检查是否已经初始化过 如果没有就初始化
-        if (Data.IsInit == false && _sceneAsset != null)
-        {
-
-            MapSave MapSave = MemoryPackSerializer.Deserialize<MapSave>(_sceneAsset.bytes);
-
-            Data.SceneName += _sceneAsset.name;
+            Data.SceneName += selectedSceneAsset.name;
             Data.SceneName += "_";
             Data.SceneName += Random.Range(1, 1000000).ToString();
 
-
-            Data.IsInit = true;
             planetData = new PlanetData();
-            planetData.ChunkSize = new Vector2Int(300, 300);
+            planetData.ChunkSize = new Vector2Int(200, 200);
             planetData.Name = Data.SceneName;
-            // 存储到(0,0)位置的地图数据
+            // 存储(0,0)位置的地图数据
             planetData.MapData_Dict.Add(MapSave.Name, MapSave);
             planetData.AutoGenerateMap = false;
-
-
-            Debug.Log(Data.SceneName + "初始化完成");
+            SaveDataMgr.Instance.SaveData.PlanetData_Dict[Data.SceneName] = planetData;
+            Debug.Log(Data.SceneName + "初始化完成，使用预制体: " + selectedSceneAsset.name);
+        }
+        else
+        {
+            Debug.LogError("场景预制体列表中包含空引用！");
         }
     }
+    else if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
+             (_sceneAssetList == null || _sceneAssetList.Count == 0))
+    {
+        Debug.LogWarning("场景预制体列表为空，无法初始化场景数据！");
+    }
+}
+    
     public void Install()
     {
         TimeData timeData = new TimeData()
@@ -118,10 +131,10 @@ public class Mod_Scene : Module
         {
             var mapSave = mapSaveKV.Value;
 
-            // 创建快照，防止遍历中修改字典
+            // 遍历所有物品列表，防止在迭代时修改字典值
             foreach (var itemListKV in mapSave.items.ToList())
             {
-                // 跳过不需要拆的物品类别
+                // 跳过不需要恢复的物品类型
                 if (itemListKV.Key == "MapEdge" || itemListKV.Key == "MapCore" ||
                     itemListKV.Key == "墙壁" || itemListKV.Key == "Door")
                     continue;
@@ -129,12 +142,12 @@ public class Mod_Scene : Module
                 var itemList = itemListKV.Value;
                 foreach (var mapItem in itemList)
                 {
-                    // 生成物品实例（内部应该恢复位置、旋转等）
+                    // 将物品实例化到当前位置，不应用用户恢复位置、旋转等
                     Item item = ItemMgr.Instance.InstantiateItem(mapItem, null);
                     item.transform.position = transform.position;
                 }
 
-                // 从保存数据中移除该类别
+                // 从保存中移除这些物品
                 mapSave.items.Remove(itemListKV.Key);
             }
 
@@ -143,19 +156,19 @@ public class Mod_Scene : Module
         }
 
         SaveDataMgr.Instance.SaveData.PlanetData_Dict.Remove(Data.SceneName);
-        Debug.Log("屋子内部物品已全部实例化并从所有MapSave移除");
+        Debug.Log("场景内物品已全部实例化，原始MapSave已移除");
     }
 
     [Button]
     public void AddScene()
     {
-        // 创建一个新的临时场景，名字可以随便起
+        // 创建一个新的临时场景名称，这样可以避免重复名称冲突
         Scene newScene = SceneManager.CreateScene("TempTentScene");
 
-        // 切换到这个新场景（可选）
+        // 切换到新创建的场景作为当前选中
         SceneManager.SetActiveScene(newScene);
 
-        Debug.Log("新场景已创建：" + newScene.name);
+        Debug.Log("新场景已创建" + newScene.name);
     }
 
     [Button]
@@ -164,7 +177,7 @@ public class Mod_Scene : Module
         Player player = interacter as Player;
         if (player == null)
         {
-            Debug.LogError("Interact 调用失败：传入对象不是 Player");
+            Debug.LogError("Interact 调用失败，交互对象不是 Player");
             return;
         }
 
@@ -185,30 +198,38 @@ public class Mod_Scene : Module
 
             // 设置初始进入房间的位置
             player.transform.position = this.Data.PlayerPos + PlayerPosOffset;
-            //////////下面的操作都是在新场景中进行的//////////////
+
+            //////////以下的操作将在新场景中进行//////////////
 
             // 切换场景
             GameManager.Instance.ChangeScene_ByPlayerData(lastSceneName, Data.SceneName, () =>
             {
                 playerData.CurrentSceneName = Data.SceneName;
 
-                // 重新加载玩家
+                // 重新加载玩家数据
                 Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
                 newPlayer.Load();
                 newPlayer.LoadDataPosition();
                 ItemMgr.Instance.Player_DIC[playerData.Name_User] = newPlayer;
 
-                // 生成 Chunk
+                // 清理 Chunk
                 ChunkMgr.Instance.CleanEmptyDicValues();
-
 
                 Chunk chunk = ChunkMgr.Instance.CreateChunK_ByMapSave(targetMapSave);
                 ChunkMgr.Instance.Chunk_Dic[targetMapSave.Name] = chunk;
                 ChunkMgr.Instance.Chunk_Dic_Active[targetMapSave.Name] = chunk;
 
-                if (_sceneAsset != null)
+                if (_sceneAssetList != null && _sceneAssetList.Count > 0)
                 {
-                    // 遍历所有门，设置返回点
+                    // 遍历所有物品，找到返回点
+                    if (chunk.RuntimeItemsGroup.TryGetValue("MapCore_Pit", out var MapCore_Pit))
+                    {
+                        foreach (var MapCore in MapCore_Pit)
+                        {
+                            MapCore.Act();
+                        }
+                    }
+                    // 遍历所有物品，找到返回点
                     if (chunk.RuntimeItemsGroup.TryGetValue("Door", out var doors))
                     {
                         foreach (var door in doors)
@@ -235,9 +256,9 @@ public class Mod_Scene : Module
 
             GameManager.Instance.ChangeScene_ByPlayerData(playerData.CurrentSceneName, this.Data.SceneName, () =>
             {
-                playerData.CurrentSceneName = this.Data.SceneName;//更新玩家所处的场景名称
+                playerData.CurrentSceneName = this.Data.SceneName;//设置当前所在的场景名称
 
-                // 重新加载玩家
+                // 重新加载玩家数据
                 Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
                 newPlayer.Load();
                 newPlayer.LoadDataPosition();
@@ -247,9 +268,42 @@ public class Mod_Scene : Module
         }
     }
 
-
     public override void Save()
     {
         _data.WriteData(Data);
+    }
+    
+    /// <summary>
+    /// 获取场景预制体列表中的随机一个
+    /// </summary>
+    /// <returns>随机选择的场景预制体，如果列表为空则返回null</returns>
+    public TextAsset GetRandomSceneAsset()
+    {
+        if (_sceneAssetList == null || _sceneAssetList.Count == 0)
+            return null;
+            
+        return _sceneAssetList[Random.Range(0, _sceneAssetList.Count)];
+    }
+    
+    /// <summary>
+    /// 添加场景预制体到列表
+    /// </summary>
+    /// <param name="sceneAsset">要添加的场景预制体</param>
+    public void AddSceneAsset(TextAsset sceneAsset)
+    {
+        if (sceneAsset != null && !_sceneAssetList.Contains(sceneAsset))
+        {
+            _sceneAssetList.Add(sceneAsset);
+        }
+    }
+    
+    /// <summary>
+    /// 从列表中移除场景预制体
+    /// </summary>
+    /// <param name="sceneAsset">要移除的场景预制体</param>
+    /// <returns>移除成功返回true，否则返回false</returns>
+    public bool RemoveSceneAsset(TextAsset sceneAsset)
+    {
+        return _sceneAssetList.Remove(sceneAsset);
     }
 }

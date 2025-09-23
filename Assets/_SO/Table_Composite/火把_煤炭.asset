@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
     - ItemName: Ore_Coal
       ItemPrefab: {fileID: 288261360578882072, guid: e03b8d2961390684a93d01afc3105a12, type: 3}
       amount: 1
-    - ItemName: 
-      ItemPrefab: {fileID: 0}
-      amount: 0
-    - ItemName: 
-      ItemPrefab: {fileID: 0}
-      amount: 0
     - ItemName: Stick_Wood
       ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
       amount: 1
+    - ItemName: 
+      ItemPrefab: {fileID: 0}
+      amount: 0
   outputs:
     results:
     - ItemName: Torch

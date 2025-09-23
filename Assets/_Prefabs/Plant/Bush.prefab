@@ -33,6 +33,7 @@ Transform:
   m_Children:
   - {fileID: 6851888491338413154}
   - {fileID: 7249456692142812239}
+  - {fileID: 1619374832995189237}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &6189354188415719772
@@ -215,6 +216,112 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 1
+--- !u!1001 &1102806428466007333
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1767282428486573433}
+    m_Modifications:
+    - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_Name
+      value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].MaxAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].MinAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].MaxAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].MinAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].DropChance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].LootPrefab
+      value: 
+      objectReference: {fileID: 7089920087521160863, guid: 9b7fa0dd7f7673f4cbc1e737865ae62d, type: 3}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].DropChance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].LootPrefab
+      value: 
+      objectReference: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].LootPrefabName
+      value: Leaf
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].LootPrefabName
+      value: Stick_Wood
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+--- !u!4 &1619374832995189237 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+  m_PrefabInstance: {fileID: 1102806428466007333}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1737633471464724068
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -223,6 +330,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1767282428486573433}
     m_Modifications:
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.ID
+      value: "\u751F\u4EA7\u6A21\u5757"
+      objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].itemName
       value: Chicken
@@ -235,6 +346,10 @@ PrefabInstance:
       propertyPath: ProductionList.Array.data[0].itemPrefab
       value: 
       objectReference: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: ProductionList.Array.data[0].ProductionTime
+      value: 800
+      objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].MaxProductionTime
       value: 1000

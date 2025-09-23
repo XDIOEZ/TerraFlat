@@ -24,7 +24,7 @@ public class Mod_Droping : Module
     public override void Load()
     {
         modData.ReadData(ref drop);
-      
+        item.itemData.Stack.CanBePickedUp = false;
     }
 public override void ModUpdate(float deltaTime)
 {

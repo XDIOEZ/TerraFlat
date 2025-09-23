@@ -319,6 +319,18 @@ public partial class Inventory_Data
 
     #endregion
 
+    public ItemData FindItemByTagTypeAndTag(string tagType,string tag)
+    {
+        foreach (var slot in itemSlots)
+        {
+            if (slot.itemData != null && slot.itemData.Tags.HasTypeTag(tagType,tag))
+            {
+                return slot.itemData;
+            }
+        }
+        return null;
+    }
+
 
     public ItemData FindItemByTag_First(string tag)
     {
@@ -344,6 +356,7 @@ public partial class Inventory_Data
 
         return result;
     }
+
     public ModuleData GetModuleByID(string ID)
     {
         foreach (var slot in itemSlots)

@@ -406,17 +406,29 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         return (newMapObj, Chunk);
     }
 
-    //创建区块 通过 MapSave
-    public Chunk CreateChunK_ByMapSave(MapSave mapSave)
+//创建区块 通过 MapSave
+public Chunk CreateChunK_ByMapSave(MapSave mapSave)
+{
+    (GameObject mapObj, Chunk chunk) = CreateMapBase(mapSave);
+
+    chunk.LoadChunk();
+
+    // 优先查找山洞类型的Map（MapCore_Pit），如果找不到再查找主世界类型的Map（MapCore）
+    if (chunk.RuntimeItemsGroup.TryGetValue("MapCore_Pit", out var pitMaps) && pitMaps.Count > 0)
     {
-        (GameObject mapObj, Chunk chunk) = CreateMapBase(mapSave);
-
-        chunk.LoadChunk();
-
-        chunk.Map = chunk.RuntimeItemsGroup["MapCore"][0] as Map;
-
-        return chunk;
+        chunk.Map = pitMaps[0] as Map;
     }
+    else if (chunk.RuntimeItemsGroup.TryGetValue("MapCore", out var coreMaps) && coreMaps.Count > 0)
+    {
+        chunk.Map = coreMaps[0] as Map;
+    }
+    else
+    {
+        Debug.LogWarning($"区块 {mapSave.Name} 中未找到 MapCore 或 MapCore_Pit");
+    }
+    
+    return chunk;
+}
     #endregion
 
  
@@ -552,8 +564,8 @@ public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
 
     public void AddActiveChunk(Chunk chunk)
     {
-        Chunk_Dic.Add(chunk.name, chunk);
-        Chunk_Dic_Active.Add(chunk.name, chunk);
+        Chunk_Dic[chunk.name] = chunk;
+        Chunk_Dic_Active[chunk.name] = chunk;
     }
 
 

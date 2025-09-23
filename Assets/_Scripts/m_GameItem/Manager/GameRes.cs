@@ -214,10 +214,24 @@ public void HotReloadAllResources()
         AllPrefabs.TryGetValue(prefabName, out go);
     }
 
-    public Item GetItem(string prefabName)
+  public Item GetItem(string prefabName)
+{
+    GameObject prefab = GetPrefab(prefabName);
+    if (prefab == null)
     {
-        return GetPrefab(prefabName).GetComponent<Item>();
+        Debug.LogError($"无法获取预制体: {prefabName}，返回null");
+        return null;
     }
+    
+    Item item = prefab.GetComponent<Item>();
+    if (item == null)
+    {
+        Debug.LogError($"预制体 {prefabName} 上没有找到 Item 组件");
+        return null;
+    }
+    
+    return item;
+}
 
     public TileBase GetTileBase(string tileBaseName)
     {

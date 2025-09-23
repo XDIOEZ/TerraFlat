@@ -57,6 +57,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     {
         // 获取必要的引用
         mapGenerator = GetComponent<RandomMapGenerator>();
+        map = GetComponent<Map>();
         if (mapGenerator != null)
         {
             map = mapGenerator.map;
@@ -150,92 +151,116 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 获取主相机（懒加载）
-    /// </summary>
-    private Camera GetMainCamera()
+/// <summary>
+/// 获取主摄像机
+/// </summary>
+private Camera GetMainCamera()
+{
+    if (mainCamera == null)
     {
+        mainCamera = Camera.main;
         if (mainCamera == null)
         {
-            mainCamera = Camera.main;
-            if (mainCamera == null)
+            mainCamera = GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
+        }
+        if (mainCamera == null)
+        {
+            // 如果还找不到，尝试从子对象获取
+            Camera[] childCameras = GetComponentsInChildren<Camera>(true);
+            if (childCameras != null && childCameras.Length > 0)
             {
-                mainCamera = GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
-            }
-            if (mainCamera == null)
-            {
-                // 如果还是找不到，遍历所有相机
-                Camera[] cameras = FindObjectsOfType<Camera>();
-                if (cameras.Length > 0)
-                {
-                    mainCamera = cameras[0];
-                }
+                mainCamera = childCameras[0];
             }
         }
-        return mainCamera;
+        if (mainCamera == null)
+        {
+            // 最后尝试查找场景中所有的摄像机
+            Camera[] cameras = FindObjectsOfType<Camera>();
+            if (cameras.Length > 0)
+            {
+                mainCamera = cameras[0];
+            }
+        }
     }
+    return mainCamera;
+}
 
-    /// <summary>
-    /// 更新鼠标位置的环境信息
-    /// </summary>
-    private void UpdateMouseInfo()
+/// <summary>
+/// 更新鼠标位置的环境信息
+/// </summary>
+private void UpdateMouseInfo()
+{
+    // 获取摄像机
+    Camera cam = GetMainCamera();
+    
+    // 如果还没有mapGrid和targetTilemap，尝试从子对象获取
+    if (mapGrid == null)
     {
-        // 获取主相机
-        Camera cam = GetMainCamera();
-        
-        // 前置检查
-        if (mapGrid == null || targetTilemap == null || cam == null)
-            return;
-
-        // 1. 鼠标屏幕坐标 → 世界坐标
-        Vector3 mouseScreenPos3D = new Vector3(mouseScreenPos.x, mouseScreenPos.y, 0);
-        mouseScreenPos3D.z = Mathf.Abs(cam.transform.position.z - targetTilemap.transform.position.z);
-        mouseWorldPos = cam.ScreenToWorldPoint(mouseScreenPos3D);
-        mouseWorldPos.z = 0;
-
-        // 2. 世界坐标 → Tilemap格子坐标
-        Vector3Int cellPos = mapGrid.WorldToCell(mouseWorldPos);
-        Vector2Int gridPos = new Vector2Int(cellPos.x, cellPos.y);
-
-        // 3. 检查该格子是否存在Tile
-        if (!targetTilemap.HasTile(cellPos))
+        mapGrid = GetComponentInChildren<Grid>(true);
+    }
+    
+    if (targetTilemap == null)
+    {
+        Tilemap[] childTilemaps = GetComponentsInChildren<Tilemap>(true);
+        if (childTilemaps != null && childTilemaps.Length > 0)
         {
-            isValidPosition = false;
-            return;
+            targetTilemap = childTilemaps[0];
         }
+    }
+    
+    // 前置检查
+    if (mapGrid == null || targetTilemap == null || cam == null)
+        return;
 
-        // 4. 计算本地坐标
-        Vector2Int localGridPos = gridPos - map.Data.position;
+    // 1. 鼠标屏幕坐标 → 世界坐标
+    Vector3 mouseScreenPos3D = new Vector3(mouseScreenPos.x, mouseScreenPos.y, 0);
+    mouseScreenPos3D.z = Mathf.Abs(cam.transform.position.z - targetTilemap.transform.position.z);
+    mouseWorldPos = cam.ScreenToWorldPoint(mouseScreenPos3D);
+    mouseWorldPos.z = 0;
 
-        // 5. 检测是否在有效范围内
-        if (mapGenerator == null || mapGenerator.EnvFactorsGrid == null ||
-            localGridPos.x < 0 || localGridPos.x >= mapGenerator.EnvFactorsGrid.GetLength(0) ||
-            localGridPos.y < 0 || localGridPos.y >= mapGenerator.EnvFactorsGrid.GetLength(1))
+    // 2. 世界坐标 → Tilemap格子坐标
+    Vector3Int cellPos = mapGrid.WorldToCell(mouseWorldPos);
+    Vector2Int gridPos = new Vector2Int(cellPos.x, cellPos.y);
+
+    // 3. 检查该格子是否存在Tile
+    if (!targetTilemap.HasTile(cellPos))
+    {
+        isValidPosition = false;
+        return;
+    }
+
+    // 4. 计算本地坐标
+    Vector2Int localGridPos = gridPos - map.Data.position;
+
+    // 5. 检测是否在有效范围内
+    if (mapGenerator == null || mapGenerator.EnvFactorsGrid == null ||
+        localGridPos.x < 0 || localGridPos.x >= mapGenerator.EnvFactorsGrid.GetLength(0) ||
+        localGridPos.y < 0 || localGridPos.y >= mapGenerator.EnvFactorsGrid.GetLength(1))
+    {
+        isValidPosition = false;
+        return;
+    }
+
+    // 6. 获取环境信息
+    isValidPosition = true;
+    hoveredGridPos = gridPos;
+    hoveredEnvFactors = mapGenerator.EnvFactorsGrid[localGridPos.x, localGridPos.y];
+    hoveredTileData = map.GetTile(gridPos);
+    
+    // 匹配生物群系
+    hoveredBiomeName = "未知";
+    if (biomes != null)
+    {
+        foreach (var biome in biomes)
         {
-            isValidPosition = false;
-            return;
-        }
-
-        // 6. 更新悬停信息
-        isValidPosition = true;
-        hoveredGridPos = gridPos;
-        hoveredEnvFactors = mapGenerator.EnvFactorsGrid[localGridPos.x, localGridPos.y];
-        hoveredTileData = map.GetTile(gridPos);
-        
-        // 查找生物群系
-        hoveredBiomeName = "未知";
-        if (biomes != null)
-        {
-            foreach (var biome in biomes)
+            if (biome != null && biome.IsEnvironmentValid(hoveredEnvFactors))
             {
-                if (biome != null && biome.IsEnvironmentValid(hoveredEnvFactors))
-                {
-                    hoveredBiomeName = biome.BiomeName;
-                    break;
-                }
+                hoveredBiomeName = biome.BiomeName;
+                break;
             }
         }
     }
+}
 
     /// <summary>
     /// 绘制信息面板

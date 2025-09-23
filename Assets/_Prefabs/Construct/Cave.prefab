@@ -144,7 +144,7 @@ MonoBehaviour:
   - {x: 1.8932247, y: 0.015413284, z: 0}
   m_ShapePathHash: -1704520319
   m_Mesh: {fileID: 0}
-  m_InstanceId: 270982
+  m_InstanceId: 130706
   m_LocalBounds:
     m_Center: {x: -0.011931419, y: 1.4067516, z: 0}
     m_Extent: {x: 1.9051561, y: 1.3913383, z: 0}
@@ -233,9 +233,9 @@ MonoBehaviour:
       Volume: 300
       CanBePickedUp: 0
     _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
+      Position: {x: -19, y: -2, z: 0}
+      Rotation: {x: 0, y: 0, z: 0, w: 1}
+      Scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     Guid: 0
     code: 
@@ -306,15 +306,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: modData.Name
-      value: 
+      value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757_3837"
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: modData.BitData
-      value: 
+      value: '{"Hp":600000.0,"MaxHp":{"BaseValue":600000.0,"BaseAdditive":0.0,"AdditiveModifier":0.0,"MultiplicativeModifier":1.0,"FinalAdditive":0.0,"Value":600000.0},"Defense":{"BaseValue":0.0,"BaseAdditive":0.0,"AdditiveModifier":0.0,"MultiplicativeModifier":1.0,"FinalAdditive":0.0,"Value":0.0},"AttackersUIDs":[],"ShowCanvas":true,"DamageInterval":0.1,"DestroyDelay":-1.0,"LootTable":[{"LootPrefabName":"Chicken","DropChance":0.001,"MinAmount":1,"MaxAmount":1}]}'
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.DestroyDelay
+      value: -1
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.MaxHp.BaseValue
       value: 600000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].LootPrefab
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x
@@ -402,16 +410,116 @@ PrefabInstance:
     m_TransformParent: {fileID: 8237563465324937855}
     m_Modifications:
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: item
+      value: 
+      objectReference: {fileID: 7430635592738298767}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.Name
+      value: "\u751F\u4EA7\u6A21\u5757_7752"
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].itemName
       value: Wolf
       objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].itemPrefab
       value: 
-      objectReference: {fileID: 4766519559426352308, guid: dd531bf9262d2dd4bad34506f71b2385, type: 3}
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.size
+      value: 42
+      objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].ProductionTime
       value: 900
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[0]
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[4]
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[5]
+      value: 251
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[6]
+      value: 255
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[7]
+      value: 255
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[8]
+      value: 255
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[9]
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[13]
+      value: 87
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[14]
+      value: 111
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[15]
+      value: 108
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[16]
+      value: 102
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[17]
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[21]
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[27]
+      value: 122
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[28]
+      value: 68
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[31]
+      value: 97
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[32]
+      value: 68
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[33]
+      value: 255
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[34]
+      value: 255
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[35]
+      value: 255
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[36]
+      value: 255
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: _ModDataMemoryPackable.BitData.Array.data[41]
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].MaxProductionTime
@@ -528,49 +636,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 7430635592738298767}
     - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _sceneAsset
+      propertyPath: Data.PlayerPos.x
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: Data.PlayerPos.y
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _sceneAssetList.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _sceneAssetList.Array.data[1]
       value: 
       objectReference: {fileID: 4900000, guid: f55994cc1c9d07f41bbd4fc391753268, type: 3}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: Data.Encapsulation
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: Data.LightEfficiency
-      value: 0.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.data[0]
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.data[1]
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.data[2]
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.data[3]
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.data[4]
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.data[5]
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
-      propertyPath: _data.BitData.Array.data[6]
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -607,7 +687,7 @@ PrefabInstance:
       objectReference: {fileID: 7430635592738298767}
     - target: {fileID: 5391927010126263884, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
       propertyPath: modData.Name
-      value: 
+      value: "\u4EA4\u4E92\u6A21\u7EC4_6041"
       objectReference: {fileID: 0}
     - target: {fileID: 5391927010126263884, guid: 1786879d924b75a48b0e065c2f7f8174, type: 3}
       propertyPath: FastTest._PersistentCalls.Array.data[0]._Target
@@ -693,11 +773,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: BuildingData.Name
-      value: 
+      value: "\u5EFA\u7B51\u6A21\u5757_1199"
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: BuildingData.BitData
-      value: 
+      value: '{"maxVisibleDistance":10.0,"minVisibleDistance":1.0}'
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

@@ -75,6 +75,7 @@ public class Map : Item, ISave_Load
             Debug.LogWarning("TileData is empty. Nothing to load.");
             return;
         }
+        AstarGameManager.Instance.Pathfinder.Scan();
 
         foreach (var kvp in Data.TileData)
         {
@@ -235,6 +236,33 @@ public class Map : Item, ISave_Load
 
         return list[i];
     }
+    // 重载方法：只获取最上层的 TileData
+public TileData GetTopTile(Vector2Int position)
+{
+    return GetTile(position);
+}
+
+// 重载方法：获取指定索引的 TileData
+public TileData GetTileAt(Vector2Int position, int index)
+{
+    return GetTile(position, index);
+}
+
+// 重载方法：获取所有 TileData
+public List<TileData> GetAllTiles(Vector2Int position)
+{
+    if (Data?.TileData == null)
+    {
+        return new List<TileData>();
+    }
+    
+    if (Data.TileData.TryGetValue(position, out var list))
+    {
+        return new List<TileData>(list);
+    }
+    
+    return new List<TileData>();
+}
 
     public int GetTileArea(Vector2Int position)
     {
@@ -328,5 +356,6 @@ public class Map : Item, ISave_Load
         tileMap.SetTile(position3D, tile);
         //Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_TileBase}");
     }
+
     #endregion
 }

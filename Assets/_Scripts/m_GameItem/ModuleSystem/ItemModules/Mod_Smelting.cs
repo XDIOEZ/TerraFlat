@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,8 +25,10 @@ public partial class Mod_Smelting : Module
         public float SmeltingSpeed = 10f;
         //当前熔炉内温度
         public float Temperature = 20f;
-        //可达最大温度值
+        //可达最大温度值（由燃料决定）
         public float MaxTemperature = 0f;
+        //熔炉本身的最大温度限制（熔炉的物理限制）
+        public float MaxTemperatureLimit = 1000f;
         //IsSmelting 是否正在熔炼
         public bool IsSmelting = false;
         //温度上升速度
@@ -51,8 +54,8 @@ public partial class Mod_Smelting : Module
     public Slider fuelSlider;
     [Tooltip("温度显示条")]
     public Slider temperatureSlider;
-
-
+    [Tooltip("温度数值文本")]
+    public TextMeshProUGUI TemperatureText;
 
     public override void Awake()
     {
@@ -61,12 +64,13 @@ public partial class Mod_Smelting : Module
             _Data.ID = ModText.Smelting;
         }
     }
+    
     public override void ModUpdate(float deltaTime)
     {
         if (Data.IsSmelting) // 已经处于熔炼状态
         {
-            // 如果燃料足够
-            if (mod_Fuel.HasFuel())
+            // 检查燃料模块是否处于点燃状态
+            if (mod_Fuel.GetIgnitedState())
             {
                 SmeltingProcess(deltaTime);
             }
@@ -86,6 +90,9 @@ public partial class Mod_Smelting : Module
 
                     mod_Fuel.AddFuel(fuel.Fuel.x);
 
+                    // 点燃燃料
+                    mod_Fuel.SetIgnited(true);
+                    
                     // 温度上限取决于燃料
                     Data.MaxTemperature = fuel.MaxTemperature;
 
@@ -104,6 +111,12 @@ public partial class Mod_Smelting : Module
             // 未启动或已停止 → 温度缓慢下降到 20℃
             Data.Temperature = Mathf.Max(Data.Temperature - Data.TemperatureDownSpeed * deltaTime, 20f);
             Data.SmeltingSpeed = 0f;
+            
+            // 如果燃料模块是点燃的，让它也熄灭
+            if (mod_Fuel.GetIgnitedState())
+            {
+                mod_Fuel.SetIgnited(false);
+            }
         }
 
         // 同步所有UI
@@ -120,12 +133,20 @@ public partial class Mod_Smelting : Module
         if (fuelSlider != null)
             fuelSlider.value = mod_Fuel.Data.Fuel.x / mod_Fuel.Data.Fuel.y;
 
-        // 温度条
+        // 温度条（使用熔炉限制温度作为最大值）
         if (temperatureSlider != null)
-            temperatureSlider.value = Data.Temperature / Data.MaxTemperature;
+        {
+            float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
+            temperatureSlider.value = Data.Temperature / actualMaxTemp;
+        }
+        
+        // 温度数值文本
+        if (TemperatureText != null)
+        {
+            float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
+            TemperatureText.text = $"{Mathf.RoundToInt(Data.Temperature)}°C / {Mathf.RoundToInt(actualMaxTemp)}°C";
+        }
     }
-
-
 
     private void SmeltingProcess(float deltaTime)
     {
@@ -140,14 +161,15 @@ public partial class Mod_Smelting : Module
             }
         }
 
-        float maxTemp = Data.MaxTemperature > 0 ? Data.MaxTemperature : 1000f;
+        // 计算实际的最大温度（受限于熔炉本身的最大温度限制）
+        float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
 
         // 如果没有物品 → 进度归零（表示干烧）
         if (!hasInputItem)
         {
             Data.SmeltingProgress = 0f;
-            // 温度仍然会上升到燃料允许的上限
-            Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * 2f * deltaTime, maxTemp);
+            // 温度仍然会上升到燃料允许的上限，但不超过熔炉限制
+            Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * 2f * deltaTime, actualMaxTemp);
             // 继续消耗燃料（可选，如果干烧不耗燃料就删掉这一行）
             mod_Fuel.ConsumeFuel(deltaTime);
             return; // 不进入熔炼逻辑
@@ -155,11 +177,11 @@ public partial class Mod_Smelting : Module
 
         // ===== 以下是正常熔炼逻辑 =====
 
-        // 温度随时间上升
-        Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * deltaTime, maxTemp);
+        // 温度随时间上升，但不超过熔炉限制
+        Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * deltaTime, actualMaxTemp);
 
         // 根据温度计算当前熔炼速度
-        float tempRatio = Data.Temperature / maxTemp;
+        float tempRatio = Data.Temperature / actualMaxTemp;
         Data.SmeltingSpeed = Mathf.Lerp(1f, Data.MaxSmeltingSpeed, tempRatio);
 
         // 按当前速度推进进度
@@ -176,21 +198,37 @@ public partial class Mod_Smelting : Module
         }
     }
 
-
-
-
     private void OnButtonClick()
     {
-        // 检查是否有点火装置
-        var ignitionItem = fuelInventory.Data.FindItemByTag_First("Ignition");
+        //查找行为tag中为Ignition的物品
+        var ignitionItem = fuelInventory.Data.FindItemByTagTypeAndTag("FunctionTag", "Ignition");
         if (ignitionItem == null)
         {
             Debug.LogWarning("无法点燃：缺少点火装置！");
             return;
         }
 
-        Data.IsSmelting = true;
-        Debug.Log("熔炉已点燃并开始熔炼！");
+        // 切换熔炼状态
+        Data.IsSmelting = !Data.IsSmelting;
+        
+        if (Data.IsSmelting)
+        {
+            // 设置默认最大温度为熔炉限制温度（如果还没有燃料提供温度的话）
+            if (Data.MaxTemperature <= 0)
+            {
+                Data.MaxTemperature = Data.MaxTemperatureLimit;
+            }
+            
+            // 点燃燃料模块
+            mod_Fuel.SetIgnited(true);
+            Debug.Log("熔炉已点燃并开始熔炼！");
+        }
+        else
+        {
+            // 熄灭燃料模块
+            mod_Fuel.SetIgnited(false);
+            Debug.Log("熔炉已停止熔炼！");
+        }
     }
 
     public void CompleteSmelting()
@@ -254,9 +292,7 @@ public partial class Mod_Smelting : Module
             }
 
             Item item = prefab.GetComponent<Item>();
-            item.IsPrefabInit();
-
-            ItemData newItem = item.itemData.DeepClone();
+            ItemData newItem = item.IsPrefabInit();
             newItem.Stack.Amount = output.amount;
             itemsToAdd.Add(newItem);
         }
@@ -370,6 +406,10 @@ public partial class Mod_Smelting : Module
         interactMod.OnAction_Stop += _ => panel.Close();
 
         panel.Close();
+
+        inputInventory.RefreshUI();
+        outputInventory.RefreshUI();
+        fuelInventory.RefreshUI();
     }
 
     public void Interact_Start(Item item_)
@@ -381,12 +421,47 @@ public partial class Mod_Smelting : Module
         fuelInventory.DefaultTarget_Inventory = handInventory;
     }
 
-
     public override void Save()
     {
         Data.InvData[inputInventory.Data.Name] = inputInventory.Data;
         Data.InvData[outputInventory.Data.Name] = outputInventory.Data;
         Data.InvData[fuelInventory.Data.Name] = fuelInventory.Data;
         SaveData.WriteData(Data);
+    }
+    
+    /// <summary>
+    /// 设置燃烧状态
+    /// </summary>
+    /// <param name="isBurning">是否燃烧</param>
+    public void SetBurningState(bool isBurning)
+    {
+        Data.IsSmelting = isBurning;
+        mod_Fuel.SetIgnited(isBurning);
+        
+        if (isBurning)
+        {
+            Debug.Log("熔炉开始燃烧！");
+        }
+        else
+        {
+            Debug.Log("熔炉停止燃烧！");
+        }
+    }
+    
+    /// <summary>
+    /// 获取燃烧状态
+    /// </summary>
+    /// <returns>是否正在燃烧</returns>
+    public bool GetBurningState()
+    {
+        return Data.IsSmelting && mod_Fuel.GetIgnitedState();
+    }
+    
+    /// <summary>
+    /// 切换燃烧状态
+    /// </summary>
+    public void ToggleBurningState()
+    {
+        SetBurningState(!GetBurningState());
     }
 }
