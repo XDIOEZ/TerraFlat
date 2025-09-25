@@ -6,6 +6,7 @@ using UnityEngine.Tilemaps;
 using Sirenix.OdinInspector;
 using Force.DeepCloner;
 using AYellowpaper.SerializedCollections;
+using Codice.Client.BaseCommands;
 
 /// <summary>
 /// 随机地图生成器：
@@ -347,6 +348,7 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
     {
         map.tileMap?.RefreshAllTiles();
         map.Data.TileLoaded = true;
+        map.LoadTileData_To_TileMap_Ansync();
         Debug.Log("[RandomMapGenerator] 地图生成完成");
     }
 

@@ -9194,7 +9194,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.x
@@ -9202,15 +9202,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 380
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 100
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9242,11 +9242,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -50
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -9343,6 +9343,26 @@ PrefabInstance:
     - target: {fileID: 891121404665747283, guid: 16f38f33714285247b623a2423e14c90, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: debugRoof
+      value: 5000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: showGraphs
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: threadCount
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: data.dataString
+      value: UEsDBBQAAAgIAABAIewrATGRtAIAAPgFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VE1z2jAQ/SuMzqVjaEJLby0Q0kMSpqSTQ52DIi1Yg5A8+giQDP+9u7KNDW1nPGP57dd7uyu/M2V8CSJYN3dK3lkJ7GuP0Zl96LXGW9jztTVL9QaNz5OSoSAnnnx+8qAs4gMK83YLwSnxzaw1OWcIRqNW1m1ncg0T64NHeMW1BzQ5GyjaIPTeY3t89ccUcqhD3+jdO+JJgAngWr/Bx8F4mI2H41k/G/0zIhqh+bYESdw7gVlTAE/J0aCu2oc0CKu18jUpFg5lEv2TH0iyVBwFJiLkW4BaFwE/ht3Ah9XKQ6gJOX6YKod9qjKy77Zq3pb7TcXqletINUZXiU6V8+4vc3+QzCtnt7dN2UpMKJTYIEHBfeg0twtPz3lHs+N6w180PBVg7u3c2WgkGoOLFBo9DKft50nZpACxafGK6gUYy7bZl7MkDcckfr8MUJ50ZC32y4Nfapu63ighUw2l9QCHI/uBctLy+DoBosQREzzydXfLasONcj6gqe5BjZLvAucDEoyAuu19cjDE7sVGR7nYDR5obiKGiXUGXLdCCYbrcFhgxnC5ABe2/0fdcLpwNbva1tyji5AEt/5ZdmFa2N1p1i5q8GmXm9PvZ5qBL+zuDnzxEINWBtoBkuEeGzyxxlR725XahC2jW3HR5RZgH6KDKQ88lUM+uGCyG4s9TCEmak27nBQkSqiAnmfqcMGxsE4wu7dIDcGzd+K/jkqe3xA2EnycZZ8yGA2vRpi8nwEMX8TVQGSjL/Lz9TVLV0gZ7DfXi6ph9ZhwvbqzMXhfmh9ib+54mS6tdHw3V29b69t2KbOyS+EAzMN5Cg8Oq+CPRc6kQp1LCEGZtJnsPWfaig3I/JQoT62d7YPjeZslZ6V6tYGQnE3STzBnBJ/uJC7vq4IdFT9LBhqHB/JRadjykkzZkR3/AFBLAwQUAAAICAAAQCHs4YZ9QmwAAAB3AAAACQAkAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAatWKkstKs7Mz1OyUjDVM9az0FFQSi9KLMgoBgoYgjilmSkgdrSSWXKipYGBsUGqmZGJWVpisq5BaqpRUrKJYbKBmUWKuampUixQfUllQapfYm4qRE9AYklGWmZeSmZeup57UWaKO8hopdhaAFBLAQItABQAAAgIAABAIewrATGRtAIAAPgFAAALACQAAAAAAAAAAAAAAAAAAABncmFwaDAuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLAQItABQAAAgIAABAIezhhn1CbAAAAHcAAAAJACQAAAAAAAAAAAAAAAEDAABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwUGAAAAAAIAAgC4AAAAuAMAAAAA
+      objectReference: {fileID: 0}
+    - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: manualDebugFloorRoof
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4565539948505994440, guid: 16f38f33714285247b623a2423e14c90, type: 3}
       propertyPath: m_Name

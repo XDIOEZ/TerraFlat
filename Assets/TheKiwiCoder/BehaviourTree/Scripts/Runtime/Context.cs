@@ -40,18 +40,18 @@ namespace TheKiwiCoder {
             Context context = new Context();
             context.item = gameObject.GetComponent<Item>();
             context.gameObject = gameObject;
-            context.transform = gameObject.transform;
+            context.transform = context.item.transform;
             
-            context.animator = gameObject.GetComponentInChildren<Animator>();
-            context.physics = gameObject.GetComponent<Rigidbody>();
-            context.agent = gameObject.GetComponentInChildren<NavMeshAgent>();
-            context.sphereCollider = gameObject.GetComponent<SphereCollider>();
-            context.boxCollider = gameObject.GetComponent<BoxCollider>();
-            context.capsuleCollider = gameObject.GetComponent<CapsuleCollider>();
-            context.characterController = gameObject.GetComponent<CharacterController>();
-            context.itemDetector = gameObject.GetComponentInChildren<IDetector>();
-            context.itemValues = gameObject.GetComponentInChildren<IItemValues>();
-            context.item = gameObject.GetComponentInChildren<Item>();
+            context.animator = context.item.GetComponentInChildren<Animator>();
+            context.physics = context.item.GetComponent<Rigidbody>();
+            context.agent = context.item.GetComponentInChildren<NavMeshAgent>();
+            context.sphereCollider = context.item.GetComponent<SphereCollider>();
+            context.boxCollider = context.item.GetComponent<BoxCollider>();
+            context.capsuleCollider = context.item.GetComponent<CapsuleCollider>();
+            context.characterController = context.item.GetComponent<CharacterController>();
+            context.itemDetector = context.item.GetComponentInChildren<IDetector>();
+            context.itemValues = context.item.GetComponentInChildren<IItemValues>();
+            context.item = context.item.GetComponentInChildren<Item>();
             context.ColdWeapon = context.item.GetComponentInChildren<Mod_ColdWeapon>();
             // Add whatever else you need here...
 

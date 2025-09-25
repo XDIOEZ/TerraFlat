@@ -1470,6 +1470,11 @@ namespace CSObjectWrapEditor
 
             BlackList = new List<List<string>>()
             {
+            new List<string>(){"UnityEngine.Light", "shadowRadius"},
+            new List<string>(){"UnityEngine.Light", "SetLightDirty"},
+            new List<string>(){"UnityEngine.Light", "shadowAngle"},
+            new List<string>(){"UnityEngine.Light", "shadowAngle"}
+
             };
 
             HotfixCfg = new Dictionary<Type, HotfixFlag>();
@@ -1646,8 +1651,10 @@ namespace CSObjectWrapEditor
                 method.Invoke(null, new object[] { });
             }
         }
+#if UNITY_EDITOR
 
         [MenuItem("XLua/Generate Code", false, 1)]
+#endif
         public static void GenAll()
         {
 #if UNITY_2018 && (UNITY_EDITOR_WIN || UNITY_EDITOR_OSX)
@@ -1731,7 +1738,9 @@ namespace CSObjectWrapEditor
         }
 #endif
 
+#if UNITY_EDITOR
         [MenuItem("XLua/Clear Generated Code", false, 2)]
+#endif
         public static void ClearAll()
         {
             clear(GeneratorConfig.common_path);

@@ -6,6 +6,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using Progress = Pathfinding.Progress;
+
 
 #if UNITY_EDITOR
 using UnityEditor; // 仅Editor模式用Handles.Label，打包不报错
@@ -43,25 +45,45 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 [Button("Update NavMesh")]
 public void UpdateMeshAsync(Vector2 center = default, int radius = 1)
 {
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        Vector2 Newcenter = center + chunkSize * 0.5f;
-        AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
+    Vector2 chunkSize = ChunkMgr.GetChunkSize();
+    Vector2 Newcenter = center + chunkSize * 0.5f;
+    AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
 
-        int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
-        int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
-        float nodeSize = 1f;
+    int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
+    int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
+    float nodeSize = 1f;
 
-        AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
+    AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
 
+    // 启动异步扫描（可指定要扫描的图，null表示扫描所有图）
+    IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
 
-        AstarPath.active.Scan();
+    // 通过协程处理异步进度，并在完成后更新权重
+    StartCoroutine(HandleScanProgress(scanProgress, center, radius));
+}
 
-        // 修正：扫描指定区域的所有区块并更新它们的权重
-        // radius是世界单位，需要转换为区块单位
-        UpdateChunksPenaltyInArea(center, radius);
+// 处理扫描进度的协程，在扫描完成后更新权重
+private IEnumerator HandleScanProgress(IEnumerable<Progress> progressEnumerable, Vector2 center, int radius)
+{
+    // 迭代进度枚举器，获取实时进度
+    foreach (var progress in progressEnumerable)
+    {
+        // 输出进度信息（0-1之间的浮点数，1表示完成）
+        Debug.Log($"扫描进度：{progress.progress:F2}");
 
-        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
-    
+        // 可以在这里更新UI进度条等
+        // UIManager.UpdateProgressBar(progress.progress);
+
+        // 等待一帧，避免阻塞主线程
+        yield return null;
+    }
+
+    Debug.Log("异步扫描完成！");
+
+    // 扫描完成后，更新指定区域的所有区块权重
+    UpdateChunksPenaltyInArea(center, radius);
+
+    Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
 }
 
 /// <summary>
@@ -105,7 +127,7 @@ private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
                 if (chunk != null && chunk.Map != null)
                 {
                     // 更新该区块的权重
-                    chunk.Map.BackTilePenalty();
+                    chunk.Map.BackTilePenalty_Sync();
                 }
             }
         }

@@ -411,7 +411,7 @@ public Chunk CreateChunK_ByMapSave(MapSave mapSave)
 {
     (GameObject mapObj, Chunk chunk) = CreateMapBase(mapSave);
 
-    chunk.LoadChunk();
+    chunk.LoadChunk_Async();
 
     // 优先查找山洞类型的Map（MapCore_Pit），如果找不到再查找主世界类型的Map（MapCore）
     if (chunk.RuntimeItemsGroup.TryGetValue("MapCore_Pit", out var pitMaps) && pitMaps.Count > 0)

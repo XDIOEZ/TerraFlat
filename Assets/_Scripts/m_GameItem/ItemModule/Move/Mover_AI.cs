@@ -6,6 +6,7 @@ using UnityEngine.AI;
 using UnityEngine.UI;
 using DG.Tweening;
 using Sirenix.OdinInspector;
+using Pathfinding;
 
 /// <summary>
 /// 使用 NavMesh + Rigidbody2D 控制的 AI 移动类

@@ -35,6 +35,52 @@ public Chunk LoadChunk()
     ChunkMgr.Instance.AddActiveChunk(this);
     return this;
 }
+
+    public Chunk LoadChunk_Async()
+{
+    StartCoroutine(LoadChunkCoroutine());
+    return this;
+}
+
+/// <summary>
+/// 使用协程优化的区块加载方法
+/// </summary>
+private System.Collections.IEnumerator LoadChunkCoroutine()
+{
+    // 使用标准的foreach循环替代ForEach扩展方法
+    int itemCount = 0;
+    const int batchSize = 20; // 每批处理的物品数量
+    
+    foreach (var items in MapSave.items)
+    {
+        foreach(var itemData in items.Value)
+        {
+            Item item = ItemMgr.Instance.InstantiateItem(itemData, this.gameObject, newGuid: false);
+            item.Load();
+            item.transform.position = itemData._transform.Position;
+            item.transform.rotation = itemData._transform.Rotation;
+            item.transform.localScale = itemData._transform.Scale;
+            RunTimeItems.Add(item.itemData.Guid, item);
+            AddToGroup(item);
+            
+            itemCount++;
+            
+            // 每加载一批物品就等待一帧，避免阻塞主线程
+            if (itemCount % batchSize == 0)
+            {
+                yield return null;
+            }
+        }
+    }
+    
+    // 确保所有物品都已加载完成
+    yield return null;
+    
+    ChunkMgr.Instance.AddActiveChunk(this);
+    
+    Debug.Log($"✅ 区块加载完成，共加载 {itemCount} 个物品");
+}
+
     public Chunk SaveChunk()
     {
         MapSave.items.Clear();
