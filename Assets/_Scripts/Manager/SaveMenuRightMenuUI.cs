@@ -6,9 +6,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-public class SaveMenuRightMenuUI : MonoBehaviour
+public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
 {
-    public static SaveMenuRightMenuUI Instance;
     public Transform MenuUI;
     public ButtonInfoData SelectInfo;
 
@@ -19,9 +18,9 @@ public class SaveMenuRightMenuUI : MonoBehaviour
     public ReNameSystem ReNameSystem = new();
     public TMP_InputField InpuFieldSystem;
 
-    private void Awake()
+    private new void Awake()
     {
-        Instance = this;
+        base.Awake();
         InpuFieldSystem = GetComponentInChildren<TMP_InputField>();
     }
 

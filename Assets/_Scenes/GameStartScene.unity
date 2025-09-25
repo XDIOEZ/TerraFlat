@@ -762,7 +762,7 @@ GameObject:
   - component: {fileID: 162513449}
   - component: {fileID: 162513448}
   m_Layer: 5
-  m_Name: "\u5220\u9664\u5B58\u6863\u6309\u94AE"
+  m_Name: "\u5220\u9664\u6309\u94AE"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6749,9 +6749,9 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1499669055}
   m_Enabled: 1
-  m_Alpha: 0
-  m_Interactable: 0
-  m_BlocksRaycasts: 0
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
 --- !u!1 &1549146482
 GameObject:
@@ -9354,7 +9354,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
       propertyPath: threadCount
-      value: 4
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 1944405980370659897, guid: 16f38f33714285247b623a2423e14c90, type: 3}
       propertyPath: data.dataString

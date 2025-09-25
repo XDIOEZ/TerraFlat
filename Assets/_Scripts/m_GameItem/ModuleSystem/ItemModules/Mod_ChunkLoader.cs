@@ -61,8 +61,7 @@ public class Mod_ChunkLoader : Module
             return;
         }
 
-        // 初次加载时直接更新区块
-        UpdateChunks(lastChunkPos);
+        UpdateChunks(transform.position);
     }
 
     public override void Save()

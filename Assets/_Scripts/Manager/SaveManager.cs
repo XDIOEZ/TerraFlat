@@ -18,6 +18,7 @@ public class SaveDataManager_UI : MonoBehaviour
 
     public PlanetData Ready_planetData = new PlanetData();
 
+
     [Header("存档信息")]
     public List<string> saves = new List<string>();
 
@@ -73,7 +74,7 @@ public class SaveDataManager_UI : MonoBehaviour
         uiManager.SetButtonOnClick("开始游戏按钮", OnClick_StartGame_Button);
         uiManager.SetButtonOnClick("开始新游戏", OnClick_StartNewGame_Button);
         uiManager.SetButtonOnClick("加载存档按钮", OnClick_LoadSaveData_Button);
-        uiManager.SetButtonOnClick("删除存档按钮", OnClick_DeletSave_Button);
+        uiManager.SetButtonOnClick("删除按钮", OnClick_DeletSave_Button);
 
         // 设置输入框值改变事件
         GetSelectedPlayerNameInput()?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
@@ -230,16 +231,26 @@ public class SaveDataManager_UI : MonoBehaviour
     /// </summary>
     public void OnClick_DeletSave_Button()
     {
-        if (saveAndLoad != null)
+        if(SaveMenuRightMenuUI.Instance.SelectInfo.Path == "")
         {
-            var selectedSaveText = GetSelectedSaveNameText();
-            if (selectedSaveText != null)
+            //删除玩家
+            saveAndLoad.SaveData.PlayerData_Dict.Remove(SaveMenuRightMenuUI.Instance.SelectInfo.Name);
+
+        } else if(SaveMenuRightMenuUI.Instance.SelectInfo.Path != "")
+        {
+            // 删除存档
+            if (saveAndLoad != null)
             {
-                string fullPath = Path.Combine(PathToSaveFolder, selectedSaveText.text + ".bytes");
-                saveAndLoad.DeletSave(fullPath);
-                Refresh();
+                var selectedSaveText = GetSelectedSaveNameText();
+                if (selectedSaveText != null)
+                {
+                    string fullPath = Path.Combine(PathToSaveFolder, selectedSaveText.text + ".bytes");
+                    saveAndLoad.DeletSave(fullPath);
+                   
+                }
             }
         }
+        Refresh();
     }
 
     #region 存档选择

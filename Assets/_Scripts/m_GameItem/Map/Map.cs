@@ -133,7 +133,7 @@ public class Map : Item, ISave_Load
         }
 
         // 分批处理Tile数据，避免长时间阻塞主线程
-        const int batchSize = 50;
+        const int batchSize = 500;
         int processedCount = 0;
         
         foreach (var kvp in Data.TileData)
@@ -254,7 +254,7 @@ public class Map : Item, ISave_Load
         }
 
         // 分批处理节点，避免长时间阻塞主线程
-        const int batchSize = 50;
+        const int batchSize = 500;
         for (int i = 0; i < nodesToProcess.Count; i += batchSize)
         {
             int endIndex = Mathf.Min(i + batchSize, nodesToProcess.Count);
