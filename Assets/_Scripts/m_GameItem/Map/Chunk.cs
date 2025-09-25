@@ -1,8 +1,5 @@
 ﻿using MemoryPack;
-using Meryel.UnityCodeAssist.YamlDotNet.Core;
 using Sirenix.OdinInspector;
-using Sirenix.Utilities;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -19,25 +16,25 @@ public class Chunk : MonoBehaviour
     public MapSave MapSave;
     public string ChunkOwner;
 
-    public Chunk LoadChunk()
+public Chunk LoadChunk()
+{
+    // 使用标准的foreach循环替代ForEach扩展方法
+    foreach (var items in MapSave.items)
     {
-        MapSave.items.ForEach(items =>
+        foreach(var itemData in items.Value)
         {
-            foreach(var itemData in items.Value)
-            {
-               Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject,newGuid:false);
-               item.Load();
-                item.transform.position = itemData._transform.Position;
-                item.transform.rotation = itemData._transform.Rotation;
-                item.transform.localScale = itemData._transform.Scale;
-                RunTimeItems.Add(item.itemData.Guid, item);
-               AddToGroup(item);
-            }
-        });
-        ChunkMgr.Instance.AddActiveChunk(this);
-        return this;
+           Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject,newGuid:false);
+           item.Load();
+            item.transform.position = itemData._transform.Position;
+            item.transform.rotation = itemData._transform.Rotation;
+            item.transform.localScale = itemData._transform.Scale;
+            RunTimeItems.Add(item.itemData.Guid, item);
+           AddToGroup(item);
+        }
     }
-
+    ChunkMgr.Instance.AddActiveChunk(this);
+    return this;
+}
     public Chunk SaveChunk()
     {
         MapSave.items.Clear();

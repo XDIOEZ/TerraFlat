@@ -120,17 +120,17 @@ public class ItemDetector : Module, IDebug, IDetector
         }
     }
 
+#endif
+
     public override void Load()
     {
-       // throw new System.NotImplementedException();
+        // throw new System.NotImplementedException();
     }
 
     public override void Save()
     {
         //throw new System.NotImplementedException();
     }
-#endif
-
 
 
 

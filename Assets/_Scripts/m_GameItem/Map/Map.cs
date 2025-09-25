@@ -1,12 +1,13 @@
-﻿using Codice.Client.BaseCommands;
+﻿
 using Force.DeepCloner;
-using MemoryPack;
+
 using NavMeshPlus.Components;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 public class Map : Item, ISave_Load
@@ -34,8 +35,10 @@ public class Map : Item, ISave_Load
     #region 基类方法实现
     public override void Act()
     {
-        if (Data.TileLoaded == false)
+        if (Data.TileLoaded == false 
+            && SaveDataMgr.Instance.SaveData.PlanetData_Dict.TryGetValue(SceneManager.GetActiveScene().name, out var planetData))
         {
+            if(planetData.AutoGenerateMap == true)
             OnMapGenerated_Start.Invoke();
         }
         LoadTileData_To_TileMap();
@@ -60,67 +63,95 @@ public class Map : Item, ISave_Load
         }
         base.Save();
     }
-
-    public new void Start()
-    {
-        base.Start();
-
-        LoadTileData_To_TileMap();
-    }
     
-    public void LoadTileData_To_TileMap()
+public void LoadTileData_To_TileMap()
+{
+    if (Data.TileData == null || Data.TileData.Count == 0)
     {
-        if (Data.TileData == null || Data.TileData.Count == 0)
-        {
-            Debug.LogWarning("TileData is empty. Nothing to load.");
-            return;
-        }
-        AstarGameManager.Instance.Pathfinder.Scan();
-
-        foreach (var kvp in Data.TileData)
-        {
-            Vector2Int position2D = kvp.Key;
-            List<TileData> tileDataList = kvp.Value;
-
-            // 获取最顶层 TileData（倒数第一个）
-            TileData topTile = tileDataList[^1];
-
-            TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
-            if (tile == null)
-            {
-                Debug.LogError($"无法加载 Tile: {topTile.Name_TileBase}");
-                continue;
-            }
-
-            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
-
-            // tileMap 是你的 Tilemap 组件
-            Vector3 worldPos = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
-
-            // 然后再传给 A* 节点修改
-            AstarGameManager.Instance.ModifyNodePenalty_Optimized(worldPos, topTile.Penalty);
-
-
-            tileMap.SetTile(position3D, tile);
-        }
-       // Debug.Log("多层 TileData 已加载到 Tilemap 中");
+        Debug.LogWarning("TileData is empty. Nothing to load.");
+        return;
     }
-    [Button("烘焙地块寻路权重")]
-    public void BackTilePenalty()
+
+    foreach (var kvp in Data.TileData)
     {
-        foreach (var kvp in Data.TileData)
+        Vector2Int position2D = kvp.Key;
+        List<TileData> tileDataList = kvp.Value;
+
+        // 获取最顶层 TileData（倒数第一个）
+        TileData topTile = tileDataList[^1];
+
+        TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
+        if (tile == null)
         {
-            Vector2Int position2D = kvp.Key;
-            List<TileData> tileDataList = kvp.Value;
-
-            // 获取最顶层 TileData（倒数第一个）
-            TileData topTile = tileDataList[^1];
-
-            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
-
-            AstarGameManager.Instance.ModifyNodePenalty_Optimized(position3D, topTile.Penalty);
+            Debug.LogError($"无法加载 Tile: {topTile.Name_TileBase}");
+            continue;
         }
+
+        Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+
+        tileMap.SetTile(position3D, tile);
     }
+}
+
+[Button("烘焙地块寻路权重")]
+public void BackTilePenalty()
+{
+    StartCoroutine(BackTilePenaltyCoroutine());
+}
+
+/// <summary>
+/// 使用协程优化的烘焙地块寻路权重方法
+/// </summary>
+private IEnumerator BackTilePenaltyCoroutine()
+{
+    // 获取GridGraph以获得节点尺寸信息
+    var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
+    float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
+
+    // 创建节点处理列表
+    List<(Vector3 worldPos, uint penalty)> nodesToProcess = new List<(Vector3, uint)>();
+
+    // 收集所有需要处理的节点数据
+    foreach (var kvp in Data.TileData)
+    {
+        Vector2Int position2D = kvp.Key;
+        List<TileData> tileDataList = kvp.Value;
+
+        // 获取最顶层 TileData（倒数第一个）
+        TileData topTile = tileDataList[^1];
+
+        Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+
+        // 使用更精确的世界坐标计算方法，解决偏移问题
+        Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
+        
+        // 进一步校正坐标以匹配A*网格节点中心
+        float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
+        float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
+        Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
+
+        nodesToProcess.Add((alignedWorldPos, topTile.Penalty));
+    }
+
+    // 分批处理节点，避免长时间阻塞主线程
+    const int batchSize = 50;
+    for (int i = 0; i < nodesToProcess.Count; i += batchSize)
+    {
+        int endIndex = Mathf.Min(i + batchSize, nodesToProcess.Count);
+        
+        // 处理当前批次
+        for (int j = i; j < endIndex; j++)
+        {
+            var (worldPos, penalty) = nodesToProcess[j];
+            AstarGameManager.Instance?.ModifyNodePenalty_Optimized(worldPos, penalty);
+        }
+
+        // 每处理一批就等待一帧，让出控制权给其他任务
+        yield return null;
+    }
+
+    Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");
+}
     #endregion
 
     #region 数据初始化

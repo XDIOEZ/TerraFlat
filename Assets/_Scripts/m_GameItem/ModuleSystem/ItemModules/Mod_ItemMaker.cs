@@ -30,6 +30,9 @@ public partial class ItemProductionData
     public int CurrentProductionCount = 0;
         [Tooltip("是否抛出物品")]
     public bool ThrowItem = true;
+
+        [Tooltip("是否自动销毁自身item/在达到生产上限时销毁")]
+    public bool DestroySelf = false;
 }
 
     public List<ItemProductionData> ProductionList = new List<ItemProductionData>();
@@ -64,8 +67,6 @@ public partial class ItemProductionData
 
         if (item.itemMods.ContainsKey_ID(ModText.Grow))
             growModule = item.itemMods.GetMod_ByID(ModText.Grow) as Mod_Grow;
-
-        Debug.Log($"[Load] 读取完成，当前生长状态 = {growModule?.Data.growState}");
     }
 
     public override void Save()
@@ -139,6 +140,22 @@ private void ProduceItem(ItemProductionData data)
     else
     {
         Debug.LogError($"无法生产物品: {data.itemName}");
+    }
+    
+    // 实现自动销毁功能
+    if (data.DestroySelf && data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
+    {
+        // 延迟一帧销毁，确保最后一次生产完成
+        StartCoroutine(DestroyAfterFrame());
+    }
+}
+
+private System.Collections.IEnumerator DestroyAfterFrame()
+{
+    yield return null; // 等待一帧
+    if (item != null)
+    {
+        item.DestroySelf();
     }
 }
     private void OnValidate()

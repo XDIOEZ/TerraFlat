@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using MemoryPack;
 using UnityEngine.SceneManagement;
-using Sirenix.Serialization;
 
 public class DayTimeSystem : SingletonMono<DayTimeSystem>
 {

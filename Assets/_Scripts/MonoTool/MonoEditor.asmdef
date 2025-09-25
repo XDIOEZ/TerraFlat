@@ -1,0 +1,16 @@
+{
+    "name": "MonoEditor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0994f0b99b69bfe47a086609b9a07e33"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

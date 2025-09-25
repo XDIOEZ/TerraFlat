@@ -18,80 +18,79 @@ MonoBehaviour:
   m_GUID: f9c901d93bba7f74d81e326fd1e13fa4
   m_SerializeEntries:
   - m_GUID: 04854a1d6e688804d8e7af02ee606d12
-    m_Address: Assets/_Prefabs/Item_Building
+    m_Address: Item_Building
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 68bd19d1854535d44b47543b665570ea
-    m_Address: Assets/_Prefabs/Item_Creature_Animals
+    m_Address: Item_Creature_Animals
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 705e29183a026be4cbe16abc073801dd
-    m_Address: Assets/_Prefabs/Module
+    m_Address: Module
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7ddf59fc00cf0f74c9774fc7e5905e85
-    m_Address: Assets/_Prefabs/Item_Map
+    m_Address: Item_Map
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 831f25d745a488a47b9743c641d12651
-    m_Address: Assets/_Prefabs
+    m_Address: _Prefabs
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 856e207614bf09b4abcde37328841a5d
-    m_Address: Assets/_Prefabs/Food
+    m_Address: Food
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8f194bf27c3e03e40b1988640cbc20df
-    m_Address: Assets/_Prefabs/Armor
+    m_Address: Armor
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b307f6a7380f7f147a3a66255674fce0
-    m_Address: Assets/_Prefabs/GameManager
+    m_Address: GameManager
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d1f59e5fa050cac4681a4987c2b7f679
-    m_Address: Assets/_Prefabs/UI
+    m_Address: UI
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e24898600f0cfc24fbc89a5de50c8598
-    m_Address: Assets/_Prefabs/Item_TileBlock
+    m_Address: Item_TileBlock
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
-    - TileItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: eee1bfc010e7ecd41b33e9c09b185d6b
-    m_Address: Assets/_Prefabs/Paticle
+    m_Address: Paticle
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f957fc05ed31858439852f8e5dc0b4c9
-    m_Address: Assets/_Prefabs/Item_Entity
+    m_Address: Item_Entity
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemPrefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fe49f63096daf164f9777514e917e13f
-    m_Address: Assets/_Prefabs/PassTime
+    m_Address: PassTime
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

@@ -1,17 +1,14 @@
-﻿using Newtonsoft.Json;
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
-using Unity.Collections;
 using UnityEngine;
-using static Mod_Building;
 using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
 
 /// <summary>
 /// 处理模块伤害接收与反馈动画
 /// </summary>
-public class DamageReceiver : Module
+public class DamageReceiver : Module, IModulePanel
 {
     #region 数据引用
 
@@ -116,11 +113,11 @@ public class DamageReceiver_SaveData
                 // 根据值调用对应的面板函数
                 if (Data.ShowCanvas)
                 {
-                    ShowPanle();
+                    ShowPanel();
                 }
                 else
                 {
-                    HidePanle();
+                    HidePanel();
                 }
             }
         }
@@ -149,16 +146,16 @@ public class DamageReceiver_SaveData
 
         if (Data.ShowCanvas)
         {
-            ShowPanle();
+            ShowPanel();
         }
         else
         {
-            HidePanle();
+            HidePanel();
         }
     }
 
     [Button("显示面板")]
-    public void ShowPanle()
+    public void ShowPanel()
     {
         if (PanleInstance != null) return;
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
@@ -189,7 +186,7 @@ public class DamageReceiver_SaveData
 
 
     [Button("隐藏面板")]
-    public void HidePanle()
+    public void HidePanel()
     {
         if (PanleInstance == null) return;
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
@@ -206,6 +203,11 @@ public class DamageReceiver_SaveData
         UIValues = null;
         Data.ShowCanvas = false;
     }
+    public bool IsPanelVisible()
+    {
+        return PanleInstance != null;
+    }// 添加检查面板是否可见的方法
+
 
     [Button]
     public override void Save()

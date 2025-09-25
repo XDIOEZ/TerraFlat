@@ -1,56 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &67723888808210397
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8720678235850708908}
-  - component: {fileID: 1826894797423364858}
-  m_Layer: 0
-  m_Name: "\u573A\u666F\u6253\u5305\u88C5\u7F6E"
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8720678235850708908
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 67723888808210397}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 891121404665747283}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1826894797423364858
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 67723888808210397}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68920c69cea6ab44e81f7f30af127eb3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  savePath: Assets/Saves/Map
-  fileName: 
-  mapSave:
-    Name: 
-    SunlightIntensity: 0
-    MapPosition: {x: 0, y: 0}
-  mapSaveAsset: {fileID: 0}
 --- !u!1 &2928034647530205554
 GameObject:
   m_ObjectHideFlags: 0
@@ -211,7 +160,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5897130074279119965}
-  - {fileID: 8720678235850708908}
   - {fileID: 1888604326910977525}
   - {fileID: 7895695706117877763}
   m_Father: {fileID: 0}
@@ -262,7 +210,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3493ffcd85f8de4489b3b5daa0bee378, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  UserSavePath: Assets/Saves/LoaclSaveData/
+  UserSavePath: 
   SaveData:
     saveName: defaultSaveName
     SaveSeed: 0
@@ -291,7 +239,7 @@ MonoBehaviour:
     RainOffset: 0
     OceanHeight: 0
     NoiseScale: 1
-    ChunkSize: {x: 200, y: 200}
+    ChunkSize: {x: 50, y: 50}
     AutoGenerateMap: 1
   Ready_timeData:
     CurrentTime: 500

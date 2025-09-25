@@ -40,37 +40,77 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     }
 
 
-    [Button("Update NavMesh")]
-    public void UpdateMeshAsync(Vector2 center = default, int radius = 1)
+[Button("Update NavMesh")]
+public void UpdateMeshAsync(Vector2 center = default, int radius = 1)
+{
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        Vector2 Newcenter = center + chunkSize * 0.5f;
+        AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
+
+        int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
+        int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
+        float nodeSize = 1f;
+
+        AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
+
+
+        AstarPath.active.Scan();
+
+        // 修正：扫描指定区域的所有区块并更新它们的权重
+        // radius是世界单位，需要转换为区块单位
+        UpdateChunksPenaltyInArea(center, radius);
+
+        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+    
+}
+
+/// <summary>
+/// 更新指定区域内的所有区块权重
+/// </summary>
+private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
+{
+    if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic == null)
     {
-        if (!Init)
-        {
-            AstarPath.active.Scan();
-            Init = true;
-        }
-        else
-        {
-            Vector2 chunkSize = ChunkMgr.GetChunkSize();
-            Vector2 Newcenter = center + chunkSize * 0.5f;
-            AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
-
-            int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
-            int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
-            float nodeSize = 1f;
-
-            AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
-            AstarPath.active.Scan();
-            Vector2Int centerInt = Vector2Int.RoundToInt(center);
-            Data_TileMap Data = ChunkMgr.Instance.Chunk_Dic[centerInt.ToString()].Map.Data;
-            foreach (var kvp in Data.TileData.Values)
-            {
-                AstarGameManager.Instance.ModifyNodePenalty_Optimized(kvp[^1].position, kvp[^1].Penalty);
-            }
-
-            Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
-        }
+        Debug.LogWarning("ChunkMgr 或 Chunk_Dic 未初始化，无法更新区块权重");
+        return;
     }
 
+    Vector2 chunkSize = ChunkMgr.GetChunkSize();
+    // 将世界坐标中心转换为区块索引中心
+    Vector2Int centerChunkPos = new Vector2Int(
+        Mathf.FloorToInt(center.x / chunkSize.x),
+        Mathf.FloorToInt(center.y / chunkSize.y)
+    );
+
+    // 根据你的说明：步长为1时遍历1个区块(1x1)，步长为2时遍历9个区块(3x3)
+    // 步长为n时，遍历 (2*n-1) x (2*n-1) 个区块
+    int halfRange = stepSize - 1;
+    
+    // 遍历指定步长内的所有区块索引
+    for (int x = -halfRange; x <= halfRange; x++)
+    {
+        for (int y = -halfRange; y <= halfRange; y++)
+        {
+            // 计算实际的区块世界坐标位置（区块索引乘以区块大小）
+            Vector2Int chunkWorldPos = new Vector2Int(
+                (centerChunkPos.x + x) * (int)chunkSize.x, 
+                (centerChunkPos.y + y) * (int)chunkSize.y
+            );
+            string chunkKey = chunkWorldPos.ToString();
+            
+            // 检查区块是否存在
+            if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(chunkKey, out Chunk chunk))
+            {
+                // 检查区块是否已加载且包含地图
+                if (chunk != null && chunk.Map != null)
+                {
+                    // 更新该区块的权重
+                    chunk.Map.BackTilePenalty();
+                }
+            }
+        }
+    }
+}
 
     #region 权重（Penalty）修改功能（适配 A* 3.5 及以下超旧版本）
     [Button("修改单个节点权重")]//TODO 这个是及高频调用的 1帧 4w+ 次，优化一下
@@ -120,42 +160,17 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 /// </summary>
 public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000)
 {
-    if (Pathfinder == null || AstarPath.active == null)
-    {
-        // 这里不报错，避免高频调用抛出大量日志
-        return;
-    }
-
     // 1. 获取节点
     NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
     GraphNode targetNode = nnInfo.node;
-    if (targetNode == null)
-    {
-        // 节点无效，直接跳过
-        return;
-    }
 
-    // 2. 处理newPenalty为0的情况（表示节点不可通行）
     if (newPenalty == 0)
     {
-        // 如果节点已经是不可通行且权重为0，则跳过
-        if (!targetNode.Walkable && targetNode.Penalty == 0) return;
-        
         // 设置节点为不可通行
         targetNode.Walkable = false;
         targetNode.Penalty = 0;
         return;
     }
-
-    // 3. 对于可通行节点，检查是否需要更新
-    if (!targetNode.Walkable)
-    {
-        // 如果节点原来是不可通行的，现在要设为可通行
-        targetNode.Walkable = true;
-    }
-    
-    // 4. 避免重复赋值
-    if (targetNode.Penalty == newPenalty) return;
 
     // 5. 修改权重
     targetNode.Penalty = newPenalty;

@@ -1,66 +1,144 @@
 ﻿using Sirenix.OdinInspector;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 面板基类
-/// 该类用于自动查找并管理所有子控件，
+/// 该类用于自动查找并管理自身子控件，
 /// 帮助我们在代码中方便地操作UI控件，
-/// 提供显示与隐藏面板的接口，
-/// 并处理按钮点击和控件值变化的逻辑
+/// 提供显示与隐藏面板的接口
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public class BasePanel : MonoBehaviour
 {
-    private Dictionary<string, List<UIBehaviour>> controlDic = new();
+    // 每种UI类型都有一个字典 用来存储UI组件 名字就用挂接的gameObject.name 作为Key
+    private Dictionary<string, Button> buttons = new Dictionary<string, Button>();
+    private Dictionary<string, TMP_InputField> inputFields = new Dictionary<string, TMP_InputField>();
+    private Dictionary<string, TextMeshProUGUI> textElements = new Dictionary<string, TextMeshProUGUI>();
+    private Dictionary<string, Toggle> toggles = new Dictionary<string, Toggle>();
+    private Dictionary<string, Slider> sliders = new Dictionary<string, Slider>();
+    private Dictionary<string, ScrollRect> scrollRects = new Dictionary<string, ScrollRect>();
+    private Dictionary<string, Image> images = new Dictionary<string, Image>();
+
     public CanvasGroup canvasGroup;
     public bool CanDrag = false;
     public UI_Drag Dragger;
 
     protected virtual void Awake()
     {
-        // 查找组件
-        FindChildrenControl<Button>();
-        FindChildrenControl<Image>();
-        FindChildrenControl<Text>();
-        FindChildrenControl<Toggle>();
-        FindChildrenControl<Slider>();
-        FindChildrenControl<ScrollRect>();
-        FindChildrenControl<InputField>();
-
+        // 自动获取所有子对象上的UI组件
+        CollectUIComponents();
+        
         Dragger = GetComponentInChildren<UI_Drag>();
         if (Dragger != null)
         {
             CanDrag = true;
         }
-        canvasGroup = GetComponentInChildren<CanvasGroup>();
+        canvasGroup = GetComponent<CanvasGroup>();
     }
 
-    public void Start()
+    /// <summary>
+    /// 自动收集所有子对象上的UI组件
+    /// </summary>
+    private void CollectUIComponents()
     {
-        // 遍历所有 Button，找到名字中包含"关闭"的按钮，注册关闭事件
-        foreach (var pair in controlDic)
+        // 清空现有字典
+        buttons.Clear();
+        inputFields.Clear();
+        textElements.Clear();
+        toggles.Clear();
+        sliders.Clear();
+        scrollRects.Clear();
+        images.Clear();
+
+        // 获取所有子对象上的Button组件
+        Button[] allButtons = GetComponentsInChildren<Button>(true);
+        foreach (Button btn in allButtons)
         {
-            string objName = pair.Key;
-            if (objName.Contains("关闭页面"))
+            if (!buttons.ContainsKey(btn.name))
             {
-                foreach (var control in pair.Value)
-                {
-                    if (control is Button btn)
-                    {
-                        btn.onClick.AddListener(() =>
-                        {
-                            Close(); // 调用封装的关闭方法
-                        });
-                    }
-                }
+                buttons[btn.name] = btn;
+                // 为按钮绑定点击事件
+                btn.onClick.AddListener(() => OnClick(btn.name));
+            }
+        }
+
+        // 获取所有子对象上的TMP_InputField组件
+        TMP_InputField[] allInputFields = GetComponentsInChildren<TMP_InputField>(true);
+        foreach (TMP_InputField inputField in allInputFields)
+        {
+            if (!inputFields.ContainsKey(inputField.name))
+            {
+                inputFields[inputField.name] = inputField;
+            }
+        }
+
+        // 获取所有子对象上的TextMeshProUGUI组件
+        TextMeshProUGUI[] allTexts = GetComponentsInChildren<TextMeshProUGUI>(true);
+        foreach (TextMeshProUGUI text in allTexts)
+        {
+            if (!textElements.ContainsKey(text.name))
+            {
+                textElements[text.name] = text;
+            }
+        }
+
+        // 获取所有子对象上的Toggle组件
+        Toggle[] allToggles = GetComponentsInChildren<Toggle>(true);
+        foreach (Toggle toggle in allToggles)
+        {
+            if (!toggles.ContainsKey(toggle.name))
+            {
+                toggles[toggle.name] = toggle;
+                // 为Toggle绑定值改变事件
+                toggle.onValueChanged.AddListener((value) => OnValueChanged(toggle.name, value));
+            }
+        }
+
+        // 获取所有子对象上的Slider组件
+        Slider[] allSliders = GetComponentsInChildren<Slider>(true);
+        foreach (Slider slider in allSliders)
+        {
+            if (!sliders.ContainsKey(slider.name))
+            {
+                sliders[slider.name] = slider;
+            }
+        }
+
+        // 获取所有子对象上的ScrollRect组件
+        ScrollRect[] allScrollRects = GetComponentsInChildren<ScrollRect>(true);
+        foreach (ScrollRect scrollRect in allScrollRects)
+        {
+            if (!scrollRects.ContainsKey(scrollRect.name))
+            {
+                scrollRects[scrollRect.name] = scrollRect;
+            }
+        }
+
+        // 获取所有子对象上的Image组件
+        Image[] allImages = GetComponentsInChildren<Image>(true);
+        foreach (Image image in allImages)
+        {
+            if (!images.ContainsKey(image.name))
+            {
+                images[image.name] = image;
+            }
+        }
+
+        // 为包含"关闭页面"的按钮注册关闭事件
+        foreach (var btnPair in buttons)
+        {
+            if (btnPair.Key.Contains("关闭页面"))
+            {
+                btnPair.Value.onClick.AddListener(() => Close());
             }
         }
     }
+
+    #region 面板显示控制
 
     [Button]
     public void Open()
@@ -93,7 +171,7 @@ public class BasePanel : MonoBehaviour
     }
 
     /// <summary>
-    /// 切换当前 CanvasGroup 的显示状态
+    /// 切换当前面板的显示状态
     /// 如果当前是打开状态则关闭，否则打开
     /// </summary>
     public void Toggle()
@@ -104,51 +182,396 @@ public class BasePanel : MonoBehaviour
             Open();
     }
 
+    #endregion
+
+    #region 按钮操作
+
     /// <summary>
-    /// 切换所有面板或指定面板的显示状态（基于 controlDic 中的控件）。
-    /// 如果 panelName 为空，则切换所有有 CanvasGroup 的面板。
+    /// 获取按钮组件
     /// </summary>
-    /// <param name="panelName">要切换的面板名称，若为空则全部切换</param>
-    public void TogglePanel(string panelName = null)
+    /// <param name="buttonName">按钮名称</param>
+    /// <returns>按钮组件，如果不存在返回null</returns>
+    public Button GetButton(string buttonName)
     {
-        foreach (var pair in controlDic)
+        if (buttons.TryGetValue(buttonName, out Button button))
         {
-            // 如果指定了名字，且当前不匹配则跳过
-            if (!string.IsNullOrEmpty(panelName) && pair.Key != panelName)
-                continue;
+            return button;
+        }
+        Debug.LogWarning($"未找到名为 {buttonName} 的按钮");
+        return null;
+    }
 
-            foreach (var uiElement in pair.Value)
-            {
-                var group = uiElement.GetComponent<CanvasGroup>();
-                if (group == null)
-                    continue;
-
-                // 切换状态
-                bool isOpen = group.alpha > 0 && group.interactable && group.blocksRaycasts;
-                group.alpha = isOpen ? 0 : 1;
-                group.interactable = !isOpen;
-                group.blocksRaycasts = !isOpen;
-            }
+    /// <summary>
+    /// 设置按钮点击事件
+    /// </summary>
+    /// <param name="buttonName">按钮名称</param>
+    /// <param name="onClick">点击回调</param>
+    public void SetButtonOnClick(string buttonName, UnityEngine.Events.UnityAction onClick)
+    {
+        Button button = GetButton(buttonName);
+        if (button != null)
+        {
+            button.onClick.AddListener(onClick);
         }
     }
 
     /// <summary>
-    /// 显示当前面板
-    /// 方便子类实现具体的显示逻辑
+    /// 移除按钮点击事件
     /// </summary>
-    public virtual void ShowMe()
+    /// <param name="buttonName">按钮名称</param>
+    /// <param name="onClick">点击回调</param>
+    public void RemoveButtonOnClick(string buttonName, UnityEngine.Events.UnityAction onClick)
     {
-
+        Button button = GetButton(buttonName);
+        if (button != null)
+        {
+            button.onClick.RemoveListener(onClick);
+        }
     }
 
     /// <summary>
-    /// 隐藏当前面板
-    /// 方便子类实现具体的隐藏逻辑
+    /// 显示/隐藏按钮
     /// </summary>
-    public virtual void HideMe()
+    /// <param name="buttonName">按钮名称</param>
+    /// <param name="isVisible">是否可见</param>
+    public void SetButtonVisible(string buttonName, bool isVisible)
     {
-
+        Button button = GetButton(buttonName);
+        if (button != null)
+        {
+            button.gameObject.SetActive(isVisible);
+        }
     }
+
+    /// <summary>
+    /// 启用/禁用按钮
+    /// </summary>
+    /// <param name="buttonName">按钮名称</param>
+    /// <param name="isEnabled">是否启用</param>
+    public void SetButtonEnabled(string buttonName, bool isEnabled)
+    {
+        Button button = GetButton(buttonName);
+        if (button != null)
+        {
+            button.enabled = isEnabled;
+        }
+    }
+
+    #endregion
+
+    #region 输入框操作
+
+    /// <summary>
+    /// 获取输入框组件
+    /// </summary>
+    /// <param name="inputFieldName">输入框名称</param>
+    /// <returns>输入框组件，如果不存在返回null</returns>
+    public TMP_InputField GetInputField(string inputFieldName)
+    {
+        if (inputFields.TryGetValue(inputFieldName, out TMP_InputField inputField))
+        {
+            return inputField;
+        }
+        Debug.LogWarning($"未找到名为 {inputFieldName} 的输入框");
+        return null;
+    }
+
+    /// <summary>
+    /// 设置输入框文本
+    /// </summary>
+    /// <param name="inputFieldName">输入框名称</param>
+    /// <param name="text">文本内容</param>
+    public void SetInputFieldText(string inputFieldName, string text)
+    {
+        TMP_InputField inputField = GetInputField(inputFieldName);
+        if (inputField != null)
+        {
+            inputField.text = text;
+        }
+    }
+
+    /// <summary>
+    /// 获取输入框文本
+    /// </summary>
+    /// <param name="inputFieldName">输入框名称</param>
+    /// <returns>输入框文本内容</returns>
+    public string GetInputFieldText(string inputFieldName)
+    {
+        TMP_InputField inputField = GetInputField(inputFieldName);
+        if (inputField != null)
+        {
+            return inputField.text;
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// 设置输入框是否可交互
+    /// </summary>
+    /// <param name="inputFieldName">输入框名称</param>
+    /// <param name="isInteractable">是否可交互</param>
+    public void SetInputFieldInteractable(string inputFieldName, bool isInteractable)
+    {
+        TMP_InputField inputField = GetInputField(inputFieldName);
+        if (inputField != null)
+        {
+            inputField.interactable = isInteractable;
+        }
+    }
+
+    /// <summary>
+    /// 显示/隐藏输入框
+    /// </summary>
+    /// <param name="inputFieldName">输入框名称</param>
+    /// <param name="isVisible">是否可见</param>
+    public void SetInputFieldVisible(string inputFieldName, bool isVisible)
+    {
+        TMP_InputField inputField = GetInputField(inputFieldName);
+        if (inputField != null)
+        {
+            inputField.gameObject.SetActive(isVisible);
+        }
+    }
+
+    #endregion
+
+    #region 文本操作
+
+    /// <summary>
+    /// 获取文本组件
+    /// </summary>
+    /// <param name="textName">文本名称</param>
+    /// <returns>文本组件，如果不存在返回null</returns>
+    public TextMeshProUGUI GetText(string textName)
+    {
+        if (textElements.TryGetValue(textName, out TextMeshProUGUI text))
+        {
+            return text;
+        }
+        Debug.LogWarning($"未找到名为 {textName} 的文本组件");
+        return null;
+    }
+
+    /// <summary>
+    /// 设置文本内容
+    /// </summary>
+    /// <param name="textName">文本名称</param>
+    /// <param name="text">文本内容</param>
+    public void SetText(string textName, string text)
+    {
+        TextMeshProUGUI textElement = GetText(textName);
+        if (textElement != null)
+        {
+            textElement.text = text;
+        }
+    }
+
+    /// <summary>
+    /// 获取文本内容
+    /// </summary>
+    /// <param name="textName">文本名称</param>
+    /// <returns>文本内容</returns>
+    public string GetTextContent(string textName)
+    {
+        TextMeshProUGUI textElement = GetText(textName);
+        if (textElement != null)
+        {
+            return textElement.text;
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// 设置文本颜色
+    /// </summary>
+    /// <param name="textName">文本名称</param>
+    /// <param name="color">颜色</param>
+    public void SetTextColor(string textName, Color color)
+    {
+        TextMeshProUGUI textElement = GetText(textName);
+        if (textElement != null)
+        {
+            textElement.color = color;
+        }
+    }
+
+    /// <summary>
+    /// 显示/隐藏文本
+    /// </summary>
+    /// <param name="textName">文本名称</param>
+    /// <param name="isVisible">是否可见</param>
+    public void SetTextVisible(string textName, bool isVisible)
+    {
+        TextMeshProUGUI textElement = GetText(textName);
+        if (textElement != null)
+        {
+            textElement.gameObject.SetActive(isVisible);
+        }
+    }
+
+    #endregion
+
+    #region Toggle操作
+
+    /// <summary>
+    /// 获取Toggle组件
+    /// </summary>
+    /// <param name="toggleName">Toggle名称</param>
+    /// <returns>Toggle组件，如果不存在返回null</returns>
+    public Toggle GetToggle(string toggleName)
+    {
+        if (toggles.TryGetValue(toggleName, out Toggle toggle))
+        {
+            return toggle;
+        }
+        Debug.LogWarning($"未找到名为 {toggleName} 的Toggle");
+        return null;
+    }
+
+    /// <summary>
+    /// 设置Toggle是否选中
+    /// </summary>
+    /// <param name="toggleName">Toggle名称</param>
+    /// <param name="isOn">是否选中</param>
+    public void SetToggleIsOn(string toggleName, bool isOn)
+    {
+        Toggle toggle = GetToggle(toggleName);
+        if (toggle != null)
+        {
+            toggle.isOn = isOn;
+        }
+    }
+
+    /// <summary>
+    /// 获取Toggle是否选中
+    /// </summary>
+    /// <param name="toggleName">Toggle名称</param>
+    /// <returns>Toggle是否选中</returns>
+    public bool GetToggleIsOn(string toggleName)
+    {
+        Toggle toggle = GetToggle(toggleName);
+        if (toggle != null)
+        {
+            return toggle.isOn;
+        }
+        return false;
+    }
+
+    #endregion
+
+    #region Slider操作
+
+    /// <summary>
+    /// 获取Slider组件
+    /// </summary>
+    /// <param name="sliderName">Slider名称</param>
+    /// <returns>Slider组件，如果不存在返回null</returns>
+    public Slider GetSlider(string sliderName)
+    {
+        if (sliders.TryGetValue(sliderName, out Slider slider))
+        {
+            return slider;
+        }
+        Debug.LogWarning($"未找到名为 {sliderName} 的Slider");
+        return null;
+    }
+
+    /// <summary>
+    /// 设置Slider值
+    /// </summary>
+    /// <param name="sliderName">Slider名称</param>
+    /// <param name="value">值</param>
+    public void SetSliderValue(string sliderName, float value)
+    {
+        Slider slider = GetSlider(sliderName);
+        if (slider != null)
+        {
+            slider.value = value;
+        }
+    }
+
+    /// <summary>
+    /// 获取Slider值
+    /// </summary>
+    /// <param name="sliderName">Slider名称</param>
+    /// <returns>Slider值</returns>
+    public float GetSliderValue(string sliderName)
+    {
+        Slider slider = GetSlider(sliderName);
+        if (slider != null)
+        {
+            return slider.value;
+        }
+        return 0f;
+    }
+
+    #endregion
+
+    #region 通用操作
+
+    /// <summary>
+    /// 显示/隐藏任意UI组件
+    /// </summary>
+    /// <param name="uiName">UI组件名称</param>
+    /// <param name="isVisible">是否可见</param>
+    public void SetUIVisible(string uiName, bool isVisible)
+    {
+        // 检查是否为按钮
+        if (buttons.ContainsKey(uiName))
+        {
+            SetButtonVisible(uiName, isVisible);
+            return;
+        }
+
+        // 检查是否为输入框
+        if (inputFields.ContainsKey(uiName))
+        {
+            SetInputFieldVisible(uiName, isVisible);
+            return;
+        }
+
+        // 检查是否为文本
+        if (textElements.ContainsKey(uiName))
+        {
+            SetTextVisible(uiName, isVisible);
+            return;
+        }
+
+        // 检查是否为Toggle
+        if (toggles.ContainsKey(uiName))
+        {
+            toggles[uiName].gameObject.SetActive(isVisible);
+            return;
+        }
+
+        // 检查是否为Slider
+        if (sliders.ContainsKey(uiName))
+        {
+            sliders[uiName].gameObject.SetActive(isVisible);
+            return;
+        }
+
+        // 检查是否为Image
+        if (images.ContainsKey(uiName))
+        {
+            images[uiName].gameObject.SetActive(isVisible);
+            return;
+        }
+
+        Debug.LogWarning($"未找到名为 {uiName} 的UI组件");
+    }
+
+    /// <summary>
+    /// 重新收集所有UI组件（当动态添加UI组件时调用）
+    /// </summary>
+    public void RefreshUIComponents()
+    {
+        CollectUIComponents();
+    }
+
+    #endregion
+
+    #region 事件处理
 
     /// <summary>
     /// 按钮点击事件响应
@@ -171,86 +594,5 @@ public class BasePanel : MonoBehaviour
 
     }
 
-    /// <summary>
-    /// 获取指定名称的控件
-    /// </summary>
-    /// <typeparam name="T">控件类型</typeparam>
-    /// <param name="controlName">控件名称</param>
-    /// <returns>指定类型的控件实例，如果未找到则返回null</returns>
-    protected T GetControl<T>(string controlName) where T : UIBehaviour
-    {
-        if (controlDic.ContainsKey(controlName))
-        {
-            // 遍历字典中的控件列表，查找并返回指定类型的控件
-            for (int i = 0; i < controlDic[controlName].Count; ++i)
-            {
-                if (controlDic[controlName][i] is T)
-                    return controlDic[controlName][i] as T;
-            }
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// 查找并存储子对象中的指定类型控件
-    /// </summary>
-    /// <typeparam name="T">控件类型</typeparam>
-    private void FindChildrenControl<T>() where T : UIBehaviour
-    {
-        // 获取所有指定类型的子控件
-        T[] controls = this.GetComponentsInChildren<T>();
-
-        // 遍历每一个控件，将其添加到字典中
-        for (int i = 0; i < controls.Length; ++i)
-        {
-            string objName = controls[i].gameObject.name;
-
-            // 如果字典中已存在相同名称的控件列表，则添加到列表中
-            if (controlDic.ContainsKey(objName))
-                controlDic[objName].Add(controls[i]);
-            else
-                controlDic.Add(objName, new List<UIBehaviour>() { controls[i] });
-
-            // 为按钮控件绑定点击事件
-            if (controls[i] is Button)
-            {
-                (controls[i] as Button).onClick.AddListener(() =>
-                {
-                    OnClick(objName);
-                });
-            }
-            // 为Toggle控件绑定值改变事件
-            else if (controls[i] is Toggle)
-            {
-                (controls[i] as Toggle).onValueChanged.AddListener((value) =>
-                {
-                    OnValueChanged(objName, value);
-                });
-            }
-        }
-    }
-
-    /// <summary>
-    /// 清理资源，移除事件监听器
-    /// </summary>
-    protected virtual void OnDestroy()
-    {
-        // 移除按钮点击事件监听器
-        foreach (var pair in controlDic)
-        {
-            foreach (var control in pair.Value)
-            {
-                if (control is Button btn)
-                {
-                    // 注意：这里无法直接移除匿名方法，实际项目中应使用更精确的引用
-                    // btn.onClick.RemoveAllListeners();
-                }
-                else if (control is Toggle toggle)
-                {
-                    // 同样，这里也无法直接移除匿名方法
-                    // toggle.onValueChanged.RemoveAllListeners();
-                }
-            }
-        }
-    }
+    #endregion
 }

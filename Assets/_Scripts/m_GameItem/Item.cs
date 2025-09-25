@@ -113,11 +113,6 @@ public ItemData IsPrefabInit()
     public void SetUpModeule(string modName)
     {
         Module.ADDModTOItem(this, modName).Load();
-
-     /*   foreach(var mod in Mods.Values)
-        {
-            mod.Load();
-        }*/
     }
 
     [Tooltip("物品的更新频率，单位：秒")]
@@ -201,7 +196,7 @@ public ItemData IsPrefabInit()
                 {
                 
                     Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {modData.Name} " +
-                        $" ID: {modData.ID}，已自动修复。");
+                        $" ID: {modData.ID}，下面开始尝试自动修复。");
 
                     GameObject @object = GameRes.Instance.InstantiatePrefab(modData.ID);
 
@@ -349,5 +344,10 @@ public ItemData IsPrefabInit()
     public void DropInRange()
     {
         Mod_ItemDroper.DropItemInARange(this, transform.position, UnityEngine.Random.Range(0.5f, 2f), 0.5f);
+    }
+
+    public void DestroySelf()
+    {
+        Destroy(gameObject);
     }
 }

@@ -144,7 +144,7 @@ MonoBehaviour:
   - {x: 1.8932247, y: 0.015413284, z: 0}
   m_ShapePathHash: -1704520319
   m_Mesh: {fileID: 0}
-  m_InstanceId: 130706
+  m_InstanceId: 82978
   m_LocalBounds:
     m_Center: {x: -0.011931419, y: 1.4067516, z: 0}
     m_Extent: {x: 1.9051561, y: 1.3913383, z: 0}
@@ -310,7 +310,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: modData.BitData
-      value: '{"Hp":600000.0,"MaxHp":{"BaseValue":600000.0,"BaseAdditive":0.0,"AdditiveModifier":0.0,"MultiplicativeModifier":1.0,"FinalAdditive":0.0,"Value":600000.0},"Defense":{"BaseValue":0.0,"BaseAdditive":0.0,"AdditiveModifier":0.0,"MultiplicativeModifier":1.0,"FinalAdditive":0.0,"Value":0.0},"AttackersUIDs":[],"ShowCanvas":true,"DamageInterval":0.1,"DestroyDelay":-1.0,"LootTable":[{"LootPrefabName":"Chicken","DropChance":0.001,"MinAmount":1,"MaxAmount":1}]}'
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.DestroyDelay
@@ -322,6 +322,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefab
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].LootPrefabName
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
@@ -422,12 +426,16 @@ PrefabInstance:
       value: Wolf
       objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: ProductionList.Array.data[0].ThrowItem
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].itemPrefab
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: _ModDataMemoryPackable.BitData.Array.size
-      value: 42
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].ProductionTime

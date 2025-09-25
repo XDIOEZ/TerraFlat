@@ -347,7 +347,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
             playerData.Guid = playerName.GetHashCode();
             playerData.Name_User = playerName;
         }
-        //更具传入数据创建玩家
+        //传入数据创建玩家
         Player player = CreatePlayer(playerData);
         ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
         return player;

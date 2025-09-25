@@ -153,6 +153,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
 public void StartNewGame()
 {
+    SaveDataMgr.Instance.SaveData = new GameSaveData();
     //创建随机数        // 初始化随机种子并创建系统随机实例
     SaveDataMgr.Instance.SaveData.SaveSeed = UnityEngine.Random.Range(0, int.MaxValue).ToString();
     SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
@@ -265,12 +266,15 @@ public void StartNewGame()
         ItemMgr.Instance.CleanupNullItems();
     
         Player player = ItemMgr.Instance.LoadPlayer(playerName);
-        if (playerData == null)                // 新玩家：随机放到新场景
-            ItemMgr.Instance.RandomDropInMap(player.gameObject,null,new Vector2Int(-1,-1));
-
+           
         ItemMgr.Instance.Player_DIC[playerName] = player;
 
         player.Load();
-        player.LoadDataPosition();
+
+        if (player.Data._transform.Position == Vector3.zero)
+        {
+            // 新玩家：随机放到新场景
+            ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));
+        }
     }
 }

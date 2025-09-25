@@ -70,7 +70,7 @@ public static class ModText
 
     #region T
     public static string TrunBody = "TrunBody";
-    public static string TileEffect = "TileEffect";
+    public static string TileEffect = "TileReciver";
     #endregion
 }
 public static class AnimationText

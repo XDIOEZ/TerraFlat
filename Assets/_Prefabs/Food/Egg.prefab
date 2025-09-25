@@ -301,6 +301,14 @@ PrefabInstance:
       propertyPath: ProductionList.Array.data[0].itemPrefab
       value: 
       objectReference: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: ProductionList.Array.data[0].DestroySelf
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
+      propertyPath: ProductionList.Array.data[0].MaxProductionCount
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2944718889659544537, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: m_Name
       value: "\u751F\u4EA7\u6A21\u5757"

@@ -18,8 +18,7 @@ public class Mod_ChunkLoader : Module
         = (UnActiveDistance: 2, DestroyChunkDistance: 3, LoadChunkDistance: 1);
 
     private Vector2 lastChunkPos;
-    private float timer = 0f;
-    private float updateInterval = 0.5f; // 每 0.5 秒更新一次
+    private TileEffectReceiver tileEffectReceiver;
 
     public override void Load()
     {
@@ -36,6 +35,18 @@ public class Mod_ChunkLoader : Module
 
         // 初始化 lastChunkPos
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
+
+        // 获取 TileEffectReceiver 组件
+        tileEffectReceiver = item.itemMods.GetMod_ByID<TileEffectReceiver>(ModText.TileEffect);
+        if (tileEffectReceiver != null)
+        {
+            // 订阅 Tile 离开事件（更可靠，因为离开的Tile肯定存在）
+            tileEffectReceiver.OnTileExitEvent +=(OnTileExited);
+        }
+        else
+        {
+            Debug.LogWarning("未找到 TileEffectReceiver 组件，将使用定时检测方式");
+        }
 
         // 检查必要的管理器是否存在
         if (ItemMgr.Instance == null || ItemMgr.Instance.User_Player == null)
@@ -73,18 +84,25 @@ public class Mod_ChunkLoader : Module
         if (ItemMgr.Instance == null || ChunkMgr.Instance == null)
             return;
 
-        timer += deltaTime;
-        if (timer >= updateInterval)
+        // 如果没有 TileEffectReceiver，则使用原有的定时检测方式作为备选
+        if (tileEffectReceiver == null)
         {
-            timer = 0f;
+            // 原有的定时检测逻辑保留在这里作为兼容
+            // 可以根据需要调整检测频率或者完全移除
+        }
+    }
 
-            // ✅ 检测是否跨区块
-            Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
-            if (currentChunkPos != lastChunkPos)
-            {
-                lastChunkPos = currentChunkPos;
-                UpdateChunks(lastChunkPos);
-            }
+    /// <summary>
+    /// Tile离开事件回调
+    /// </summary>
+    private void OnTileExited(TileData tileData)
+    {
+        // 检查是否跨区块
+        Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
+        if (currentChunkPos != lastChunkPos)
+        {
+            lastChunkPos = currentChunkPos;
+            UpdateChunks(currentChunkPos);
         }
     }
 
@@ -108,30 +126,25 @@ public class Mod_ChunkLoader : Module
         try
         {
             ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
-            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
             ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
+            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
 
             AstarGameManager.Instance?.UpdateMeshAsync(chunkPos, Data.LoadChunkDistance);
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"更新区块时发生错误: {ex.Message}\n{ex.StackTrace}");
+            Debug.LogWarning($"更新区块时发生错误: {ex.Message}\n{ex.StackTrace}");
         }
     }
 
-    [Button("更新 Mesh")]
-    public void UpdateMesh(Vector2 currentChunkPos)
+    /// <summary>
+    /// 清理事件监听
+    /// </summary>
+    public void OnDestroy()
     {
-        if (AstarGameManager.Instance != null)
+        if (tileEffectReceiver != null)
         {
-            AstarGameManager.Instance.UpdateMeshAsync(
-                center: currentChunkPos,
-                radius: Data.LoadChunkDistance
-            );
-        }
-        else
-        {
-            Debug.LogWarning("AstarGameManager 未初始化，无法更新网格");
+            tileEffectReceiver.OnTileExitEvent -=(OnTileExited);
         }
     }
 }

@@ -68,6 +68,8 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         
         // 创建悬停指示器实例
         CreateHoverIndicator();
+
+        isVisible = false;
     }
 
     private void Update()

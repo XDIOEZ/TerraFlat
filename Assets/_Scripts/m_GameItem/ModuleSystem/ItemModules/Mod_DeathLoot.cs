@@ -1,8 +1,6 @@
 using MemoryPack;
 using Newtonsoft.Json;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditorInternal.Profiling.Memory.Experimental;
 using UnityEngine;
 
 public class Mod_DeathLoot : Module

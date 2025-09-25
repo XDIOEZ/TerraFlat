@@ -3,11 +3,17 @@ using System.Linq;
 using UltEvents;
 using UnityEngine;
 
+/// <summary>
+/// Tile效果接收器模块，用于处理物品与地图Tile的交互
+/// </summary>
 public class TileEffectReceiver : Module
 {
     #region 公共变量
+    [Header("位置信息")]
     public Vector2Int lastGridPos;
     public Map Cache_map;
+    
+    [Header("Tile事件")]
     public UltEvent<TileData> OnTileEnterEvent = new UltEvent<TileData>();
     public UltEvent<TileData> OnTileExitEvent = new UltEvent<TileData>();
     
@@ -25,44 +31,28 @@ public class TileEffectReceiver : Module
     private const float cleanupInterval = 300f; // 5分钟清理一次过期缓存
     #endregion
 
-    #region 初始化
+    #region 模块数据
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data 
+    { 
+        get => ModSaveData; 
+        set => ModSaveData = (Ex_ModData_MemoryPackable)value; 
+    }
+    #endregion
+
+    #region 生命周期
     private void Start()
     {
-        // 初始化Map引用
-        if (Cache_map == null)
-        {
-                ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
-                Cache_map = chunk?.Map;
-        }
-
-        if (Cache_map == null)
-        {
-            Cache_map = FindFirstObjectByType<Map>();
-        }
-
-        if (Cache_map == null)
-        {
-            Debug.LogError("TileEffectReceiver: 未找到有效的 Map 组件！");
-            enabled = false;
-            return;
-        }
-
-        // 初始化Item引用
-        if (item == null)
-        {
-            item = GetComponentInParent<Item>();
-        }
-
+        InitializeMap();
+        InitializeItem();
+        UpdateMapReference();
         lastGridPos = GetCurrentGridPos();
         // 初始化当前TileData缓存
         currentTileData = Cache_map?.GetTile(lastGridPos);
         enabled = true;
-    }
-    #endregion
 
-    #region 更新逻辑
-    public Ex_ModData_MemoryPackable ModSaveData;
-    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
+        OnTileEnter(lastGridPos);
+    }
 
     public override void Awake()
     {
@@ -72,35 +62,10 @@ public class TileEffectReceiver : Module
         }
     }
 
-    public override void Load()
-    {
-        ModSaveData.ReadData(ref lastGridPos);
-        OnTileEnter(lastGridPos);
-    }
-
-    public override void Save()
-    {
-        OnTileExit(lastGridPos);
-        ModSaveData.WriteData(lastGridPos);
-    }
-    public override void ModUpdate(float deltaTime)
-    {
-
-    }
-    public override void Act()
-    {
-        base.Act();
-    }
-
     private void Update()
     {
-
-        if (Cache_map == null || !Cache_map.gameObject.activeInHierarchy)
-        {
-            ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
-            Cache_map = chunk?.Map;
-        }
-
+        UpdateMapReference();
+        
         Vector2Int currentGridPos = GetCurrentGridPos();
         if (currentGridPos != lastGridPos)
         {
@@ -119,6 +84,127 @@ public class TileEffectReceiver : Module
         }
 
         OnTileUpdate(currentGridPos);
+    }
+    #endregion
+
+    #region 模块接口实现
+    public override void Load()
+    {
+        ModSaveData.ReadData(ref lastGridPos);
+    }
+
+    public override void Save()
+    {
+        OnTileExit(lastGridPos);
+        ModSaveData.WriteData(lastGridPos);
+    }
+    
+    public override void ModUpdate(float deltaTime)
+    {
+        // 暂时没有需要每帧更新的逻辑
+    }
+    
+    public override void Act()
+    {
+        base.Act();
+    }
+    #endregion
+
+    #region 初始化方法
+    /// <summary>
+    /// 初始化地图引用
+    /// </summary>
+    private void InitializeMap()
+    {
+        if (Cache_map == null)
+        {
+            ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
+            Cache_map = chunk?.Map;
+        }
+
+        if (Cache_map == null)
+        {
+            Cache_map = FindFirstObjectByType<Map>();
+        }
+
+        if (Cache_map == null)
+        {
+            Debug.LogError("TileEffectReceiver: 未找到有效的 Map 组件！");
+            enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// 初始化物品引用
+    /// </summary>
+    private void InitializeItem()
+    {
+        if (item == null)
+        {
+            item = GetComponentInParent<Item>();
+        }
+    }
+    
+    /// <summary>
+    /// 更新地图引用
+    /// </summary>
+    private void UpdateMapReference()
+    {
+        if (Cache_map == null || !Cache_map.gameObject.activeInHierarchy)
+        {
+            ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
+            Cache_map = chunk?.Map;
+        }
+    }
+    #endregion
+
+    #region Tile事件处理
+    private void OnTileEnter(Vector2Int gridPos)
+    {
+        if (item == null) return;
+        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
+        {
+            if (tileBlock == null)
+            {
+                Debug.LogError("TileEffectReceiver: TileBlock为空！");
+                return;
+            }
+            // 更新当前TileData缓存
+            currentTileData = tileData;
+            tileBlock.Tile_Enter(item, tileData);
+            OnTileEnterEvent.Invoke(tileData);
+        }
+    }
+
+    private void OnTileExit(Vector2Int gridPos)
+    {
+        if (item == null) return;
+        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
+        {
+            if(tileBlock == null)
+            {
+                Debug.LogError("TileEffectReceiver: TileBlock为空！");
+                return;
+            }
+            tileBlock.Tile_Exit(item, tileData);
+            OnTileExitEvent.Invoke(tileData);
+        }
+    }
+
+    private void OnTileUpdate(Vector2Int gridPos)
+    {
+        if (Cache_map == null || item == null) return;
+        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
+        {
+            if (tileBlock == null)
+            {
+                Debug.LogError("TileEffectReceiver: TileBlock为空！");
+                return;
+            }
+            // 更新当前TileData缓存
+            currentTileData = tileData;
+            tileBlock.Tile_Update(item, tileData);
+        }
     }
     #endregion
 
@@ -174,63 +260,19 @@ public class TileEffectReceiver : Module
     }
     #endregion
 
-    #region Tile事件处理
-    private void OnTileEnter(Vector2Int gridPos)
-    {
-        if (item == null) return;
-        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
-        {
-            if (tileBlock == null)
-            {
-                Debug.LogError("TileEffectReceiver: TileBlock为空！");
-                return;
-            }
-            // 更新当前TileData缓存
-            currentTileData = tileData;
-            tileBlock.Tile_Enter(item, tileData);
-            OnTileEnterEvent.Invoke(tileData);
-        }
-    }
-
-    private void OnTileExit(Vector2Int gridPos)
-    {
-        if (item == null) return;
-        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
-        {
-            if(tileBlock== null)
-            {
-                Debug.LogError("TileEffectReceiver: TileBlock为空！");
-                return;
-            }
-            tileBlock.Tile_Exit(item, tileData);
-            OnTileExitEvent.Invoke(tileData);
-        }
-    }
-
-    private void OnTileUpdate(Vector2Int gridPos)
-    {
-        if (Cache_map == null || item == null) return;
-        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
-        {
-            if (tileBlock == null)
-            {
-                Debug.LogError("TileEffectReceiver: TileBlock为空！");
-                return;
-            }
-            // 更新当前TileData缓存
-            currentTileData = tileData;
-            tileBlock.Tile_Update(item, tileData);
-        }
-    }
-    #endregion
-
     #region 辅助方法
+    /// <summary>
+    /// 获取当前网格坐标
+    /// </summary>
     private Vector2Int GetCurrentGridPos()
     {
         Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
         return new Vector2Int(cell.x, cell.y);
     }
 
+    /// <summary>
+    /// 尝试获取指定位置的Tile块
+    /// </summary>
     private bool TryGetTileBlock(Vector2Int pos, out TileData tileData, out IBlockTile tileBlock)
     {
         tileData = Cache_map?.GetTile(pos);
@@ -277,6 +319,9 @@ public class TileEffectReceiver : Module
         }
     }
 
+    /// <summary>
+    /// 获取当前Tile数据
+    /// </summary>
     public TileData GetCurrentTileData()
     {
         var pos = GetCurrentGridPos();

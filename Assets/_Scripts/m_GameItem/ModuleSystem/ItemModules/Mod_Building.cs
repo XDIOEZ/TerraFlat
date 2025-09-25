@@ -44,8 +44,8 @@ public class Mod_Building : Module
         BuildingData.ReadData(ref Data);
         boxCollider2D = item.GetComponent<BoxCollider2D>();
 
-        if(damageReceiver == null)
-        damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID(ModText.Hp);
+        if (damageReceiver == null)
+            damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID(ModText.Hp);
 
         damageReceiver.Data.DestroyDelay = -1f;
 
@@ -65,7 +65,7 @@ public class Mod_Building : Module
 
     public override void Save()
     {
-        BuildingData.WriteData( Data);
+        BuildingData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = BuildingData;
     }
 
@@ -99,7 +99,7 @@ public class Mod_Building : Module
     public void OnDestroy()
     {
         CleanupGhost();
-      //  Debug.Log($"[BaseBuilding] 组件被销毁，清理GhostShadow");
+        //  Debug.Log($"[BaseBuilding] 组件被销毁，清理GhostShadow");
 
         if (item != null)
             item.OnAct -= Install;
@@ -113,7 +113,7 @@ public class Mod_Building : Module
         {
             UnInstall();
         }
-       // Debug.Log("伤害：" + hp);
+        // Debug.Log("伤害：" + hp);
     }
     #endregion
 
@@ -183,9 +183,9 @@ public class Mod_Building : Module
 
         CleanupGhost();
 
-     
+
         UpdateNavigation(transform.position, 1, 1);
-        
+
     }
     #endregion
 
@@ -397,7 +397,7 @@ public class Mod_Building : Module
         {
             col.enabled = enable;
         }
-   //     root.GetComponent<BoxCollider2D>().isTrigger = false;
+        //     root.GetComponent<BoxCollider2D>().isTrigger = false;
     }
 
     public void CleanupGhost()
@@ -417,8 +417,8 @@ public class Mod_Building : Module
     #endregion
     // 添加到Mod_Building.cs文件中，放在合适的位置（比如在其他Button方法附近）
 
-[Button("设置为已安装状态(编辑器调试)")]
 #if UNITY_EDITOR
+    [Button("设置为已安装状态(编辑器调试)")]
 public void SetAsInstalledEditor()
 {
     // 检查必要的组件

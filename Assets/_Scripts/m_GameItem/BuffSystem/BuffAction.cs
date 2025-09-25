@@ -1,5 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor.ProjectWindowCallback;
+#endif
 
 #if UNITY_EDITOR
 using UnityEditor;
