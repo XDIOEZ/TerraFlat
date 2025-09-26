@@ -218,12 +218,11 @@ public void StartNewGame()
     }
 
     [Tooltip("切换场景")]
-    public void ChangeScene_ByPlayerData(string LastSceneName, string NextSceneName,Action onSceneUnloaded = null)
+    public void ChangeScene_By_SceneNames(string LastSceneName, string NextSceneName,Action onSceneUnloaded = null)
     {
-        ChunkMgr.Instance.CleanEmptyDicValues();
-
         // 保存玩家和区块
         ItemMgr.Instance.SavePlayer();
+
         //保存场景数据
         foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
         {
@@ -231,6 +230,8 @@ public void StartNewGame()
 
             SaveDataMgr.Instance.SaveData.PlanetData_Dict[LastSceneName].MapData_Dict[go.MapSave.Name] = go.MapSave;
         }
+
+        ChunkMgr.Instance.CleanDic();
 
         ///////////////////////////上面都是对旧场景的处理////////////////////
         // 创建新场景

@@ -14,6 +14,8 @@ public class GameRes : SingletonAutoMono<GameRes>
     public List<string> ADBLabels_Prefab = new List<string>();
     [Header("配方 标签列表")]
     public List<string> ADBLabels_CraftingRecipe = new List<string>();
+    [Header("Tag配方 标签列表")]
+    public List<string> ADBLabels_CraftingRecipe_Tag = new List<string>();
     [Header("TileBase 标签列表")]
     public List<string> ADBLabels_TileBase = new List<string>();
     [Header("BuffData 标签列表")]
@@ -25,6 +27,8 @@ public class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>();
     [ShowInInspector]
     public Dictionary<string, Recipe> recipeDict = new Dictionary<string, Recipe>();
+    [ShowInInspector]
+    public Dictionary<string, Recipe_Tag> recipeTagDict = new Dictionary<string, Recipe_Tag>();
     [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
     [ShowInInspector]
@@ -74,6 +78,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             ADBLabels_Prefab.Add("ItemPrefab");
             ADBLabels_Prefab.Add("Prefab");
             ADBLabels_CraftingRecipe.Add("CraftingRecipe");
+            ADBLabels_CraftingRecipe_Tag.Add("CraftingRecipe_Tag");
             ADBLabels_TileBase.Add("TileBase");
             ADBLabels_BuffData.Add("Buff");
             ADBLabels_InventoryInit.Add("InventoryInit");
@@ -95,6 +100,12 @@ public class GameRes : SingletonAutoMono<GameRes>
             recipeDict,
             null,
             "加载配方"));
+            
+        yield return StartCoroutine(SyncLoadAssetsWithProgress<Recipe_Tag>(
+            ADBLabels_CraftingRecipe_Tag,
+            recipeTagDict,
+            null,
+            "加载Tag配方"));
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
             ADBLabels_TileBase,
@@ -137,6 +148,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         // 简单估算：假设每种类型大约有100个资源
         return (ADBLabels_Prefab.Count + 
                 ADBLabels_CraftingRecipe.Count + 
+                ADBLabels_CraftingRecipe_Tag.Count +
                 ADBLabels_TileBase.Count + 
                 ADBLabels_BuffData.Count + 
                 ADBLabels_InventoryInit.Count) * 100;
@@ -186,6 +198,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             {
                 GameObject go => go.name,
                 Recipe recipe => recipe.inputs.ToString(),
+                Recipe_Tag recipeTag => recipeTag.GetRecipeKey(),
                 TileBase tile => tile.name,
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
@@ -227,6 +240,7 @@ public void LoadResourcesSync()
         ADBLabels_Prefab.Add("ItemPrefab");
         ADBLabels_Prefab.Add("Prefab");
         ADBLabels_CraftingRecipe.Add("CraftingRecipe");
+        ADBLabels_CraftingRecipe_Tag.Add("CraftingRecipe_Tag");
         ADBLabels_TileBase.Add("TileBase");
         ADBLabels_BuffData.Add("Buff");
         ADBLabels_InventoryInit.Add("InventoryInit");
@@ -240,6 +254,10 @@ public void LoadResourcesSync()
     SyncLoadAssetsByLabels<Recipe>(
         ADBLabels_CraftingRecipe,
         recipeDict,
+        null);
+    SyncLoadAssetsByLabels<Recipe_Tag>(
+        ADBLabels_CraftingRecipe_Tag,
+        recipeTagDict,
         null);
     SyncLoadAssetsByLabels<TileBase>(
         ADBLabels_TileBase,
@@ -274,6 +292,7 @@ private void ClearAllDictionaries()
 {
     AllPrefabs.Clear();
     recipeDict.Clear();
+    recipeTagDict.Clear();
     tileBaseDict.Clear();
     BuffData_Dict.Clear();
     InventoryInitDict.Clear();
@@ -319,6 +338,7 @@ public void HotReloadAllResources()
             {
                 GameObject go => go.name,
                 Recipe recipe => recipe.inputs.ToString(),
+                Recipe_Tag recipeTag => recipeTag.GetRecipeKey(),
                 TileBase tile => tile.name,
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
@@ -383,11 +403,6 @@ public void HotReloadAllResources()
             return null;
         }
     }
-    
-    public void GetPrefab(string prefabName, out GameObject go)
-    {
-        AllPrefabs.TryGetValue(prefabName, out go);
-    }
 
     public Item GetItem(string prefabName)
     {
@@ -424,6 +439,12 @@ public void HotReloadAllResources()
     {
         recipeDict.TryGetValue(recipeName, out var recipe);
         return recipe;
+    }
+    
+    public Recipe_Tag GetRecipeTag(string recipeTagName)
+    {
+        recipeTagDict.TryGetValue(recipeTagName, out var recipeTag);
+        return recipeTag;
     }
     
     // 新增：获取InventoryInit资源

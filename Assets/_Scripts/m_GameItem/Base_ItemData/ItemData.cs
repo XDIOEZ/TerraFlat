@@ -75,7 +75,7 @@ public  abstract partial class ItemData
             $"物品体积：{Stack.Volume}\n" +
             $"物品耐久度：{Durability}\n" +
             $"是否可拾取：{Stack.CanBePickedUp}\n" +
-            $"物品标签：{ItemTags}\n" +
+            $"物品标签：{Tags}\n" +
             $"物品堆叠信息：{Stack}\n" +
             $"物品特殊数据：{ItemSpecialData}\n" +
             $"全局唯一标识：{Guid}";
@@ -128,7 +128,7 @@ public  abstract partial class ItemData
         else
             Stack.CanBePickedUp = Convert.ToBoolean(canBePickedUpValue);
 
-        // 类型标签列表
+    /*    // 类型标签列表
         itemL = excel.FindColumn(0, ExcelIdentifyRow.Item_TypeTag);
         string typeTagStr = excel.GetCellValue(itemRow, itemL).ToString();
         ItemTags.Item_TypeTag = excel.ParseStringList(typeTagStr);
@@ -136,7 +136,7 @@ public  abstract partial class ItemData
         // 材质标签列表
         itemL = excel.FindColumn(0, ExcelIdentifyRow.Item_Material);
         string materialStr = excel.GetCellValue(itemRow, itemL).ToString();
-        ItemTags.Item_Material = excel.ParseStringList(materialStr);
+        ItemTags.Item_Material = excel.ParseStringList(materialStr);*/
 
         Guid = 0;
         Debug.Log("基础数据同步成功！");

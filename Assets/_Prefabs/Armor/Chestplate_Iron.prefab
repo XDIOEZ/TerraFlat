@@ -155,7 +155,8 @@ MonoBehaviour:
     Tags:
       keys:
       - tag: Type
-        values: []
+        values:
+        - Armor
       - tag: Material
         values: []
       - tag: MakeTag

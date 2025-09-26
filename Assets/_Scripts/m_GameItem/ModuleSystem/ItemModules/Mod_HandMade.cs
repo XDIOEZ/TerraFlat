@@ -161,7 +161,7 @@ public class Mod_HandMade : Module
         if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe) ||
             recipe.recipeType != recipeType)
         {
-            Debug.LogError($"配方匹配失败：键 {recipeKey} 不存在或类型 {recipeType} 不匹配");
+            Debug.Log($"配方匹配失败：键 {recipeKey} 不存在或类型 {recipeType} 不匹配");
             return false;
         }
         

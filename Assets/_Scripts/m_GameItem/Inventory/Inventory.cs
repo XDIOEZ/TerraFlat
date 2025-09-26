@@ -88,9 +88,9 @@ public virtual void Init()
     SyncData();
     // 注册刷新UI事件
     Data.Event_RefreshUI += RefreshUI;
-    
 
-    
+        //初始化后自动同步UI数据
+        RefreshUI();
 
 }
 

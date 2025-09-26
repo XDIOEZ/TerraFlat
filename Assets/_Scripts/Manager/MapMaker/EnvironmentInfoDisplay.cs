@@ -362,18 +362,24 @@ private void UpdateMouseInfo()
 
     #region 清理
 
-    private void OnDestroy()
+private void OnDestroy()
+{
+    if (backgroundTexture != null)
     {
-        if (backgroundTexture != null)
-        {
-            Destroy(backgroundTexture);
-        }
-        
-        if (hoverIndicatorInstance != null)
-        {
-            Destroy(hoverIndicatorInstance);
-        }
+        Destroy(backgroundTexture);
     }
+    
+    if (hoverIndicatorInstance != null)
+    {
+        Destroy(hoverIndicatorInstance);
+    }
+    
+    // 销毁GUI样式
+    if (boxStyle != null && boxStyle.normal.background != null)
+    {
+        Destroy(boxStyle.normal.background);
+    }
+}
 
     #endregion
 }

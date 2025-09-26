@@ -1,38 +1,59 @@
 ﻿using NaughtyAttributes;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Serialization;
-
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
 
-public class ItemDetector : Module, IDebug, IDetector
+public class ItemDetector : Module
 {
+    #region 检测参数
     [SerializeField, BoxGroup("检测参数")]
     private float detectionRadius = 10f;
 
     [SerializeField, BoxGroup("检测参数")]
     public LayerMask itemLayer;
+    #endregion
 
+    #region 当前状态
     [SerializeField, BoxGroup("当前状态")]
     private List<Item> currentItemsInArea = new List<Item>();
 
     [ShowNativeProperty, Tooltip("当前状态")]
     public int CurrentItemCount => CurrentItemsInArea.Count;
 
-    [Tooltip("string为tag,Item为Value的字典")]
-    public Dictionary<string, Item> Tag_Item_Dict = new Dictionary<string, Item>();
+    [Tooltip("string为tag,Item列表为Value的字典")]
+    public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>();
+    #endregion
 
+    #region 属性和字段
     // IDebug接口实现
     [ShowNativeProperty]
     public bool DebugMode { get; set; }
-    public List<Item> CurrentItemsInArea { get => currentItemsInArea; set => currentItemsInArea = value; }
-    public float DetectionRadius { get => detectionRadius; set => detectionRadius = value; }
+    
+    public List<Item> CurrentItemsInArea 
+    { 
+        get => currentItemsInArea; 
+        set => currentItemsInArea = value; 
+    }
+    
+    public float DetectionRadius 
+    { 
+        get => detectionRadius; 
+        set => detectionRadius = value; 
+    }
+    
     public Ex_ModData_MemoryPackable ModData;
-    public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
+    
+    public override ModuleData _Data 
+    { 
+        get => ModData; 
+        set => ModData = (Ex_ModData_MemoryPackable)value; 
+    }
+    #endregion
+
+    #region 公共方法
     [Button("强制更新检测器")]
     public void Update_Detector()
     {
@@ -47,20 +68,28 @@ public class ItemDetector : Module, IDebug, IDetector
             .Distinct()
             .ToList();
 
-        Tag_Item_Dict.Clear();
+        Type_Tag_Item_Dict.Clear();
         CurrentItemsInArea.Clear();
 
         foreach (var item in currentItems)
         {
-            foreach (var tag in item.itemData.ItemTags.Item_TypeTag)
+            foreach (var tag in item.itemData.Tags.TypeTag.values)
             {
-                Tag_Item_Dict[tag] = item;
+                // 如果标签不存在，创建新的列表
+                if (!Type_Tag_Item_Dict.ContainsKey(tag))
+                {
+                    Type_Tag_Item_Dict[tag] = new List<Item>();
+                }
+                // 将物品添加到对应标签的列表中
+                Type_Tag_Item_Dict[tag].Add(item);
             }
         }
 
         CheckItemEntries(currentItems);
     }
+    #endregion
 
+    #region 私有方法
     private void CheckItemEntries(List<Item> currentItems)
     {
         if (DebugMode)
@@ -103,7 +132,9 @@ public class ItemDetector : Module, IDebug, IDetector
         if (DebugMode)
             Debug.Log($"<color=orange>处理离开事件：{item.name}</color>");
     }
+    #endregion
 
+    #region Unity回调方法
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
@@ -119,7 +150,6 @@ public class ItemDetector : Module, IDebug, IDetector
             Gizmos.DrawWireSphere(transform.position, DetectionRadius);
         }
     }
-
 #endif
 
     public override void Load()
@@ -131,21 +161,5 @@ public class ItemDetector : Module, IDebug, IDetector
     {
         //throw new System.NotImplementedException();
     }
-
-
-
-}
-
-public interface IDetector
-{
-    void Update_Detector();
-
-    public List<Item> CurrentItemsInArea { get; set; }
-
-    public float DetectionRadius { get; set; }
-}
-
-public interface IDebug
-{
-    public bool DebugMode { get; set; }
+    #endregion
 }

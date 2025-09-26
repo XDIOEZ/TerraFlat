@@ -2,12 +2,14 @@ using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using UnityEngine;
 
 [MemoryPackable]
 [System.Serializable]
 public partial class TagDictionary
 {
+    #region 数据结构
     [SerializeField] public List<TagData> keys = new List<TagData> { };
 
     [System.Serializable]
@@ -23,7 +25,9 @@ public partial class TagDictionary
             this.values = new List<string>();
         }
     }
+    #endregion
 
+    #region 属性
     [MemoryPackIgnore]
     public TagData TypeTag
     {
@@ -47,26 +51,17 @@ public partial class TagDictionary
             return null;
         }
     }
+    #endregion
 
+    #region 构造函数
     public TagDictionary()
     {
         keys.Add(new TagData("Type"));
         keys.Add(new TagData("Material"));
-        keys.Add(new TagData("MakeTag"));
     }
+    #endregion
 
-    [Button("检测并修复标签索引与值")]
-    public void ValidateAndUpdateIndices()
-    {
-        // 处理Type标签
-        HandleTag("Type", 0);
-
-        // 处理Material标签
-        HandleTag("Material", 1);
-
-        // 处理MakeTag标签
-        HandleTag("MakeTag", 2);
-    }
+    #region 标签结构验证与维护
 
     /// <summary>
     /// 仅确保标签结构存在，不验证值
@@ -188,395 +183,88 @@ public partial class TagDictionary
                 return null;
         }
     }
+    #endregion
 
     #region 增删改查功能
 
     /// <summary>
-    /// 添加标签（增）
+    /// 检查指定标签类型中是否包含指定的标签名称
     /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <param name="index">插入位置，-1表示添加到末尾</param>
-    /// <returns>添加成功返回true，否则返回false</returns>
-    [Button("添加标签")]
-    public bool AddTag(string tagName, int index = -1)
+    /// <param name="tagType">标签类型（如"Type"、"Material"等）</param>
+    /// <param name="tagName">标签名称（如"Animal"、"Wood"等）</param>
+    /// <returns>如果标签类型中包含该标签名称则返回true，否则返回false</returns>
+    public bool HasTag(string tagType, string tagName)
     {
-        if (string.IsNullOrEmpty(tagName))
-        {
-            Debug.LogError("标签名称不能为空");
+        // 参数验证
+        if (string.IsNullOrEmpty(tagType) || string.IsNullOrEmpty(tagName))
             return false;
-        }
 
-        // 检查标签是否已存在
-        if (keys.Any(data => data.tag == tagName))
-        {
-            Debug.LogWarning($"标签 {tagName} 已存在");
-            return false;
-        }
-
-        TagData newTag = new TagData(tagName);
+        // 先查找Tag的类型
+        TagData tagData = keys.FirstOrDefault(data => data.tag == tagType);
         
-        if (index == -1 || index >= keys.Count)
-        {
-            keys.Add(newTag);
-        }
-        else
-        {
-            keys.Insert(index, newTag);
-        }
-
-        Debug.Log($"成功添加标签 {tagName}");
-        return true;
-    }
-
-    /// <summary>
-    /// 删除标签（删）
-    /// </summary>
-    /// <param name="tagName">要删除的标签名称</param>
-    /// <returns>删除成功返回true，否则返回false</returns>
-    [Button("删除标签")]
-    public bool RemoveTag(string tagName)
-    {
-        if (string.IsNullOrEmpty(tagName))
-        {
-            Debug.LogError("标签名称不能为空");
-            return false;
-        }
-
-        // 不能删除核心标签
-        if (tagName == "Type" || tagName == "Material")
-        {
-            Debug.LogWarning($"不能删除核心标签 {tagName}");
-            return false;
-        }
-
-        int index = keys.FindIndex(data => data.tag == tagName);
-        if (index == -1)
-        {
-            Debug.LogWarning($"未找到标签 {tagName}");
-            return false;
-        }
-
-        keys.RemoveAt(index);
-        Debug.Log($"成功删除标签 {tagName}");
-        return true;
-    }
-
-    /// <summary>
-    /// 重命名标签（改）
-    /// </summary>
-    /// <param name="oldTagName">旧标签名称</param>
-    /// <param name="newTagName">新标签名称</param>
-    /// <returns>重命名成功返回true，否则返回false</returns>
-    [Button("重命名标签")]
-    public bool RenameTag(string oldTagName, string newTagName)
-    {
-        if (string.IsNullOrEmpty(oldTagName) || string.IsNullOrEmpty(newTagName))
-        {
-            Debug.LogError("标签名称不能为空");
-            return false;
-        }
-
-        if (oldTagName == newTagName)
-        {
-            Debug.LogWarning("新旧标签名称相同");
-            return false;
-        }
-
-        // 检查新名称是否已存在
-        if (keys.Any(data => data.tag == newTagName))
-        {
-            Debug.LogWarning($"标签 {newTagName} 已存在");
-            return false;
-        }
-
-        int index = keys.FindIndex(data => data.tag == oldTagName);
-        if (index == -1)
-        {
-            Debug.LogWarning($"未找到标签 {oldTagName}");
-            return false;
-        }
-
-        keys[index].tag = newTagName;
-        Debug.Log($"成功将标签 {oldTagName} 重命名为 {newTagName}");
-        return true;
-    }
-
-    /// <summary>
-    /// 获取所有标签名称（查）
-    /// </summary>
-    /// <returns>标签名称列表</returns>
-    public List<string> GetAllTagNames()
-    {
-        return keys.Where(data => !string.IsNullOrEmpty(data.tag)).Select(data => data.tag).ToList();
-    }
-
-    /// <summary>
-    /// 获取指定标签的所有值（查）
-    /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <returns>标签值列表，如果标签不存在则返回null</returns>
-    public List<string> GetTagValues(string tagName)
-    {
-        TagData tagData = keys.FirstOrDefault(data => data.tag == tagName);
-        return tagData?.values;
-    }
-
-    /// <summary>
-    /// 检查标签是否存在（查）
-    /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <returns>存在返回true，否则返回false</returns>
-    public bool HasTag(string tagName)
-    {
-        return keys.Any(data => data.tag == tagName);
-    }
-/// <summary>
-/// 检查指定标签类型中是否包含指定的标签名称
-/// </summary>
-/// <param name="tagType">标签类型（如"Type"、"Material"等）</param>
-/// <param name="tagName">标签名称（如"Animal"、"Wood"等）</param>
-/// <returns>如果标签类型中包含该标签名称则返回true，否则返回false</returns>
-public bool HasTag(string tagType, string tagName)
-{
-    // 参数验证
-    if (string.IsNullOrEmpty(tagType) || string.IsNullOrEmpty(tagName))
-        return false;
-
-    // 先查找Tag的类型
-    TagData tagData = keys.FirstOrDefault(data => data.tag == tagType);
-    
-    // 如果找不到对应的标签类型，返回false
-    if (tagData == null)
-        return false;
-
-    // 从类型中查找对应的Tag名字
-    return tagData.values.Contains(tagName);
-}
-
-/// <summary>
-/// 检查物品是否具有指定的标签类型和标签名称
-/// </summary>
-/// <param name="tagType">标签类型（如"Type"、"Material"等）</param>
-/// <param name="tagName">标签名称（如"Animal"、"Wood"等）</param>
-/// <returns>如果物品具有该标签则返回true，否则返回false</returns>
-public bool HasTypeTag(string tagType, string tagName)
-{
-    return HasTag(tagType, tagName);
-}
-
-    /// <summary>
-    /// 获取标签数据对象（查）
-    /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <returns>标签数据对象，如果不存在则返回null</returns>
-    public TagData GetTagData(string tagName)
-    {
-        return keys.FirstOrDefault(data => data.tag == tagName);
-    }
-
-    /// <summary>
-    /// 安全添加标签值（增）
-    /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <param name="value">要添加的值</param>
-    /// <returns>添加成功返回true，否则返回false</returns>
-    [Button("添加标签值")]
-    public bool AddTagValue(string tagName, string value)
-    {
-        if (string.IsNullOrEmpty(tagName) || string.IsNullOrEmpty(value))
-        {
-            Debug.LogError("标签名称和值不能为空");
-            return false;
-        }
-
-        TagData tagData = keys.FirstOrDefault(data => data.tag == tagName);
+        // 如果找不到对应的标签类型，返回false
         if (tagData == null)
-        {
-            Debug.LogWarning($"未找到标签 {tagName}");
             return false;
-        }
 
-        if (tagData.values.Contains(value))
-        {
-            Debug.LogWarning($"标签 {tagName} 中已存在值 {value}");
-            return false;
-        }
-
-        tagData.values.Add(value);
-        Debug.Log($"成功在标签 {tagName} 中添加值 {value}");
-        return true;
+        // 从类型中查找对应的Tag名字
+        return tagData.values.Contains(tagName);
     }
 
     /// <summary>
-    /// 删除标签值（删）
+    /// 检查物品是否具有指定的标签类型和标签名称
     /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <param name="value">要删除的值</param>
-    /// <returns>删除成功返回true，否则返回false</returns>
-    [Button("删除标签值")]
-    public bool RemoveTagValue(string tagName, string value)
+    /// <param name="tagType">标签类型（如"Type"、"Material"等）</param>
+    /// <param name="tagName">标签名称（如"Animal"、"Wood"等）</param>
+    /// <returns>如果物品具有该标签则返回true，否则返回false</returns>
+    public bool HasTypeTag(string tagType, string tagName)
     {
-        if (string.IsNullOrEmpty(tagName) || string.IsNullOrEmpty(value))
-        {
-            Debug.LogError("标签名称和值不能为空");
-            return false;
-        }
-
-        TagData tagData = keys.FirstOrDefault(data => data.tag == tagName);
-        if (tagData == null)
-        {
-            Debug.LogWarning($"未找到标签 {tagName}");
-            return false;
-        }
-
-        if (!tagData.values.Remove(value))
-        {
-            Debug.LogWarning($"标签 {tagName} 中未找到值 {value}");
-            return false;
-        }
-
-        Debug.Log($"成功从标签 {tagName} 中删除值 {value}");
-        return true;
+        return HasTag(tagType, tagName);
     }
-
     /// <summary>
-    /// 重命名标签值（改）
+    /// 检查物品是否具有指定的标签类型和标签名称
     /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <param name="oldValue">旧值</param>
-    /// <param name="newValue">新值</param>
-    /// <returns>重命名成功返回true，否则返回false</returns>
-    [Button("重命名标签值")]
-    public bool RenameTagValue(string tagName, string oldValue, string newValue)
+    /// <param name="tagType">标签类型（如"Type"、"Material"等）</param>
+    /// <param name="tagName">标签名称（如"Animal"、"Wood"等）</param>
+    /// <returns>如果物品具有该标签则返回true，否则返回false</returns>
+    public bool HasType(string tagName)
     {
-        if (string.IsNullOrEmpty(tagName) || string.IsNullOrEmpty(oldValue) || string.IsNullOrEmpty(newValue))
-        {
-            Debug.LogError("标签名称和值不能为空");
-            return false;
-        }
-
-        if (oldValue == newValue)
-        {
-            Debug.LogWarning("新旧值相同");
-            return false;
-        }
-
-        TagData tagData = keys.FirstOrDefault(data => data.tag == tagName);
-        if (tagData == null)
-        {
-            Debug.LogWarning($"未找到标签 {tagName}");
-            return false;
-        }
-
-        int index = tagData.values.IndexOf(oldValue);
-        if (index == -1)
-        {
-            Debug.LogWarning($"标签 {tagName} 中未找到值 {oldValue}");
-            return false;
-        }
-
-        // 检查新值是否已存在
-        if (tagData.values.Contains(newValue))
-        {
-            Debug.LogWarning($"标签 {tagName} 中已存在值 {newValue}");
-            return false;
-        }
-
-        tagData.values[index] = newValue;
-        Debug.Log($"成功将标签 {tagName} 中的值 {oldValue} 重命名为 {newValue}");
-        return true;
+        return HasTag("Type", tagName);
     }
 
-    /// <summary>
-    /// 检查标签值是否存在（查）
-    /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <param name="value">要检查的值</param>
-    /// <returns>存在返回true，否则返回false</returns>
-    public bool HasTagValue(string tagName, string value)
-    {
-        TagData tagData = keys.FirstOrDefault(data => data.tag == tagName);
-        return tagData != null && tagData.values.Contains(value);
-    }
-
-    /// <summary>
-    /// 获取标签值的数量
-    /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <returns>标签值的数量，如果标签不存在则返回-1</returns>
-    public int GetTagValueCount(string tagName)
-    {
-        TagData tagData = keys.FirstOrDefault(data => data.tag == tagName);
-        return tagData?.values.Count ?? -1;
-    }
 
     #endregion
 
+ 
+    #region 字符串表示
     /// <summary>
-    /// 安全添加标签值（不触发验证）
+    /// 返回标签字典的字符串表示形式
     /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <param name="value">要添加的值</param>
-    /// <returns>添加成功返回true，否则返回false</returns>
-    public bool TryAddValue(string tagName, string value)
+    /// <returns>包含所有标签和值的格式化字符串</returns>
+    public override string ToString()
     {
-        EnsureTagStructure(); // 只确保结构，不验证值
-
-        TagData tagData = null;
-        if (tagName == "Type")
-            tagData = TypeTag;
-        else if (tagName == "Material")
-            tagData = MaterialTag;
-
-        if (tagData == null)
-            return false;
-
-        if (!tagData.values.Contains(value))
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine("TagDictionary:");
+        
+        foreach (var tagData in keys)
         {
-            tagData.values.Add(value);
-            return true;
+            if (string.IsNullOrEmpty(tagData.tag))
+                continue;
+                
+            sb.AppendLine($"  {tagData.tag}:");
+            foreach (var value in tagData.values)
+            {
+                sb.AppendLine($"    - {value}");
+            }
         }
-
-        return false; // 已存在该值
+        
+        return sb.ToString();
     }
-
-    /// <summary>
-    /// 安全更新标签值（会触发验证）
-    /// </summary>
-    /// <param name="tagName">标签名称</param>
-    /// <param name="oldValue">旧值</param>
-    /// <param name="newValue">新值</param>
-    /// <returns>更新成功返回true，否则返回false</returns>
-    public bool TryUpdateValue(string tagName, string oldValue, string newValue)
-    {
-        EnsureTagStructure();
-
-        TagData tagData = null;
-        if (tagName == "Type")
-            tagData = TypeTag;
-        else if (tagName == "Material")
-            tagData = MaterialTag;
-
-        if (tagData == null)
-            return false;
-
-        int index = tagData.values.IndexOf(oldValue);
-        if (index == -1)
-            return false;
-
-        // 先更新值
-        tagData.values[index] = newValue;
-
-        // 只在修改时触发验证
-        ValidateAndUpdateIndices();
-        return true;
-    }
+    #endregion
 }
 
 public static class TagVerify
 {
     #region 类型Tag
-
     public static List<string> Type = new List<string>
     {
         //动物
@@ -593,12 +281,10 @@ public static class TagVerify
         "Tool",
         //武器
         "Weapon",
-
     };
     #endregion
 
-
-    #region 材质Tag
+    #region 材料Tag
     public static List<string> Material = new List<string>
     {
         //木材
@@ -611,7 +297,7 @@ public static class TagVerify
         "Metal",
         //陶瓷
         "Ceramic",
-        //血肉
+        //血液
         "Blood",
         //石头
         "Stone",
@@ -625,38 +311,34 @@ public static class TagVerify
     #endregion
 
     #region 生物Tag
-
     public static List<string> Creature = new List<string>
     {
         //食肉动物
         "MeatAnimal",
         //食草动物
         "VegetableAnimal",
-         //植物
+        //植物
         "Tree",
     };
-
-
     #endregion
-    #region 制作Tag
 
+    #region 制作Tag
     public static List<string> MakeTag = new List<string>
     {
-        //棍子
+        //木棍
         "Stick",
         //石头
         "Stone",
-        //绳子,
+        //绳子
         "Rope",
     };
     #endregion
-    #region 功能Tag
 
+    #region 功能Tag
     public static List<string> FunctionTag = new List<string>
     {
         //点火
         "Ignition",
     };
     #endregion
-
 }

@@ -103,7 +103,7 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
             Vector2Int posIntB = Vector2Int.FloorToInt(positionB);
 
             // 检查位置B是否安全
-            if (!IsDangerousTile(posIntB) && context.tileEffectReceiver.Cache_map.GetTileArea(posIntB) <= 2)
+            if (!IsDangerousTile(posIntB))
             {
                 chosenPosition = positionB;
                 found = true;
@@ -119,7 +119,7 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
                 Vector2Int posIntD = Vector2Int.FloorToInt(positionD);
 
                 // 检查位置D是否安全
-                if (!IsDangerousTile(posIntD) && context.tileEffectReceiver.Cache_map.GetTileArea(posIntD) <= 2)
+                if (!IsDangerousTile(posIntD))
                 {
                     chosenPosition = positionD;
                     found = true;
@@ -141,7 +141,7 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
                         Vector3 positionEFG = positionB + (Vector3)randomInCircle;
                         Vector2Int posIntEFG = Vector2Int.FloorToInt(positionEFG);
 
-                        if (!IsDangerousTile(posIntEFG) && context.tileEffectReceiver.Cache_map.GetTileArea(posIntEFG) <= 2)
+                        if (!IsDangerousTile(posIntEFG))
                         {
                             chosenPosition = positionEFG;
                             found = true;
@@ -161,21 +161,18 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
         }
         else
         {
-            // 位置A安全，检查地图可用性
-            if (context.tileEffectReceiver.Cache_map.GetTileArea(testPosIntA) <= 2)
-            {
-                chosenPosition = testPositionA;
-                found = true;
-                gizmoPosition = chosenPosition;
-                showGizmo = true;
-                break;
-            }
+            // 位置A安全
+            chosenPosition = testPositionA;
+            found = true;
+            gizmoPosition = chosenPosition;
+            showGizmo = true;
+            break;
         }
 
         attempts++;
     }
 
-    // 如果前面所有尝试都失败了，最后一次强制使用随机点（无论是否危险）
+    // 如果前面所有尝试都失败了，使用一个强制的随机点（不管是否危险）
     if (!found)
     {
         Vector2 finalOffset = new Vector2(
@@ -189,7 +186,7 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
         chosenPosition = originalPosition + (Vector3)finalOffset;
         gizmoPosition = chosenPosition;
         showGizmo = true;
-        Debug.Log("使用最终强制点位，可能危险");
+        Debug.Log("使用强制的随机位置，可能危险");
     }
 
     SetTargetPosition(chosenPosition);

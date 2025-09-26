@@ -23,7 +23,7 @@ namespace TheKiwiCoder {
         public float lastAttackTime;
 
         //添加自定义组件
-        public IDetector itemDetector;
+        public ItemDetector itemDetector;
         public Mover_AI mover;
         public IItemValues itemValues;
         public Item item;
@@ -49,7 +49,7 @@ namespace TheKiwiCoder {
             context.boxCollider = context.item.GetComponent<BoxCollider>();
             context.capsuleCollider = context.item.GetComponent<CapsuleCollider>();
             context.characterController = context.item.GetComponent<CharacterController>();
-            context.itemDetector = context.item.GetComponentInChildren<IDetector>();
+            context.itemDetector = context.item.GetComponentInChildren<ItemDetector>();
             context.itemValues = context.item.GetComponentInChildren<IItemValues>();
             context.item = context.item.GetComponentInChildren<Item>();
             context.ColdWeapon = context.item.GetComponentInChildren<Mod_ColdWeapon>();

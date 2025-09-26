@@ -20,14 +20,13 @@ public class Map : Item, ISave_Load
     public Tilemap tileMap;
 
     public UltEvent OnMapGenerated_Start;
-
-    public NavMeshModifierTilemap navigationModiferTileMap;
+    public Chunk chunk; 
 
     public GameObject ParentObject;
 
     // 协程引用管理，避免协程叠加
-    private Coroutine loadTileMapCoroutine;
-    private Coroutine backTilePenaltyCoroutine;
+    protected Coroutine loadTileMapCoroutine;
+    protected Coroutine backTilePenaltyCoroutine;
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData itemData { get => Data; set => Data = value as Data_TileMap; }
@@ -39,7 +38,6 @@ public class Map : Item, ISave_Load
         if (Data.TileLoaded == false 
             && SaveDataMgr.Instance.SaveData.PlanetData_Dict.TryGetValue(SceneManager.GetActiveScene().name, out var planetData))
         {
-            if(planetData.AutoGenerateMap == true)
             OnMapGenerated_Start.Invoke();
         }
     }
@@ -49,10 +47,12 @@ public class Map : Item, ISave_Load
     [Button("从数据加载地图")]
     public override void Load()
     {
+        chunk = GetComponentInParent<Chunk>();
+        chunk.Map = this;
+
         // 检查TileData的数量是否等于ChunkSize*ChunkSize的数量
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         int expectedTileCount = (int)(chunkSize.x * chunkSize.y);
-        
         // 如果TileData为空或数量不等于期望值，表示TileData还在生成中
         if (Data == null || Data.TileData == null || Data.TileData.Count != expectedTileCount)
         {
@@ -75,7 +75,9 @@ public class Map : Item, ISave_Load
         }
         base.Save();
     }
+    #endregion
 
+    #region TileMap加载方法
     public void LoadTileData_To_TileMap_Sync()
     {
         if (Data.TileData == null || Data.TileData.Count == 0)
@@ -105,7 +107,7 @@ public class Map : Item, ISave_Load
         }
         
         // 直接调用权重烘焙，不延迟
-        BackTilePenalty();
+        BackTilePenalty_Async();
     }
 
     public void LoadTileData_To_TileMap_Ansync()
@@ -168,16 +170,18 @@ public class Map : Item, ISave_Load
         yield return null;
         
         // 直接调用权重烘焙，不延迟
-        BackTilePenalty();
+        BackTilePenalty_Sync();
         
         Debug.Log($"✅ 完成加载 {Data.TileData.Count} 个Tile到Tilemap");
         
         // 清理协程引用
         loadTileMapCoroutine = null;
     }
+    #endregion
 
-    [Button("烘焙地块寻路权重")]
-    public void BackTilePenalty()
+    #region 寻路权重烘焙方法
+    [Button("异步烘焙地块寻路权重")]
+    public void BackTilePenalty_Async()
     {
         // 如果已有协程在运行，先停止它
         if (backTilePenaltyCoroutine != null)
@@ -189,36 +193,37 @@ public class Map : Item, ISave_Load
         backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
     }
 
- public void BackTilePenalty_Sync()
-{
-    // 获取GridGraph以获得节点尺寸信息
-    var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
-    float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
-
-    // 处理所有节点数据
-    foreach (var kvp in Data.TileData)
+    public void BackTilePenalty_Sync()
     {
-        Vector2Int position2D = kvp.Key;
-        List<TileData> tileDataList = kvp.Value;
+        // 获取GridGraph以获得节点尺寸信息
+        var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
+        float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
 
-        // 获取最顶层 TileData（倒数第一个）
-        TileData topTile = tileDataList[^1];
+        // 处理所有节点数据
+        foreach (var kvp in Data.TileData)
+        {
+            Vector2Int position2D = kvp.Key;
+            List<TileData> tileDataList = kvp.Value;
 
-        Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+            // 获取最顶层 TileData（倒数第一个）
+            TileData topTile = tileDataList[^1];
 
-        // 使用更精确的世界坐标计算方法，解决偏移问题
-        Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
-        
-        // 进一步校正坐标以匹配A*网格节点中心
-        float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
-        float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
-        Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
+            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
 
-        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty);
+            // 使用更精确的世界坐标计算方法，解决偏移问题
+            Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
+            
+            // 进一步校正坐标以匹配A*网格节点中心
+            float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
+            float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
+            Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
+
+            AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty);
+        }
+
+        Debug.Log($"✅ 完成同步烘焙 {Data.TileData.Count} 个地块的寻路权重");
     }
 
-    Debug.Log($"✅ 完成同步烘焙 {Data.TileData.Count} 个地块的寻路权重");
-}
     /// <summary>
     /// 使用协程优化的烘焙地块寻路权重方法
     /// </summary>
@@ -254,7 +259,7 @@ public class Map : Item, ISave_Load
         }
 
         // 分批处理节点，避免长时间阻塞主线程
-        const int batchSize = 500;
+        const int batchSize = 125;
         for (int i = 0; i < nodesToProcess.Count; i += batchSize)
         {
             int endIndex = Mathf.Min(i + batchSize, nodesToProcess.Count);
@@ -419,37 +424,6 @@ public class Map : Item, ISave_Load
         return new List<TileData>();
     }
 
-    public int GetTileArea(Vector2Int position)
-    {
-        if (navigationModiferTileMap == null)
-        {
-            Debug.LogWarning("navigationModiferTileMap is null");
-            return -1;
-        }
-
-        var modifierMap = navigationModiferTileMap.GetModifierMap();
-        if (modifierMap == null)
-        {
-            Debug.LogWarning("modifierMap is null");
-            return -1;
-        }
-
-        var tile = tileMap.GetTile((Vector3Int)position);
-        if (tile == null)
-        {
-           // Debug.LogWarning($"No tile found at position {position}");
-            return -1;
-        }
-
-        if (!modifierMap.TryGetValue(tile, out var navModifier))
-        {
-            Debug.LogWarning($"No navigation modifier found for tile at {position}");
-            return -1;
-        }
-
-        return navModifier.area;
-    }
-
     public void DELTile(Vector2Int position, int? index = null)
     {
         if (!Data.TileData.ContainsKey(position) || Data.TileData[position].Count == 0)
@@ -510,6 +484,5 @@ public class Map : Item, ISave_Load
         tileMap.SetTile(position3D, tile);
         //Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_TileBase}");
     }
-
     #endregion
 }

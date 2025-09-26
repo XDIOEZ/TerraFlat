@@ -100,7 +100,7 @@ public class DamageReceiver_SaveData
 
     public UltEvent DataUpdate = new UltEvent();
 
-    public UI_FloatData_Text UIValues;
+    public BasePanel UIValues;
     public bool ShowCanvas
     {
         get => Data.ShowCanvas;
@@ -160,7 +160,7 @@ public class DamageReceiver_SaveData
         if (PanleInstance != null) return;
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
         GameObject panel = Instantiate(PanelPrefab,transform);
-        UIValues = panel.GetComponentInChildren<UI_FloatData_Text>();
+        UIValues = panel.GetComponentInChildren<BasePanel>();
         panel.transform.position = transform.position + Vector3.up * 1f;
         PanleInstance = panel;
         DataUpdate += RefreshUI;
@@ -180,7 +180,7 @@ public class DamageReceiver_SaveData
     [Button("刷新面板")]
     public void RefreshUI()
     {
-        UIValues.UpdateText("血量", Hp, MaxHp.Value);
+        UIValues.GetText("血量").text = $"{Hp}";
     }
 
 
@@ -328,7 +328,7 @@ public class DamageReceiver_SaveData
         {
             if (mod.itemData == null) continue;
 
-            if (mod.itemData.ItemTags.HasTypeTag(Tag.Armor))
+            if (mod.itemData.Tags.HasType(Tag.Armor))
             {
                 mod.itemData.Durability -= amount;
 

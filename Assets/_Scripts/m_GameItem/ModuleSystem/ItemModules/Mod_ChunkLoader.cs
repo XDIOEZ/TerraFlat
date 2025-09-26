@@ -48,20 +48,20 @@ public class Mod_ChunkLoader : Module
             Debug.LogWarning("未找到 TileEffectReceiver 组件，将使用定时检测方式");
         }
 
-        // 检查必要的管理器是否存在
-        if (ItemMgr.Instance == null || ItemMgr.Instance.User_Player == null)
+            //销毁过远的失活的区块
+            ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
+            //将较远的区块设置为非激活状态
+            ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
+            //同步绘制寻路网格
+            AstarGameManager.Instance.UpdateMeshSync(transform.position, Data.LoadChunkDistance);
+        if (SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap == false)
         {
-            Debug.LogWarning("ItemMgr 或 User_Player 未初始化，跳过区块加载");
-            return;
+            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: 1);
         }
-
-        if (ChunkMgr.Instance == null)
+        else
         {
-            Debug.LogError("ChunkMgr 未初始化，无法加载区块");
-            return;
+            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
         }
-
-        UpdateChunks(transform.position);
     }
 
     public override void Save()
@@ -76,19 +76,7 @@ public class Mod_ChunkLoader : Module
 
     public override void ModUpdate(float deltaTime)
     {
-        if (_Data.isRunning == false)
-            return;
 
-        // 检查必要的管理器是否存在
-        if (ItemMgr.Instance == null || ChunkMgr.Instance == null)
-            return;
-
-        // 如果没有 TileEffectReceiver，则使用原有的定时检测方式作为备选
-        if (tileEffectReceiver == null)
-        {
-            // 原有的定时检测逻辑保留在这里作为兼容
-            // 可以根据需要调整检测频率或者完全移除
-        }
     }
 
     /// <summary>
@@ -105,36 +93,44 @@ public class Mod_ChunkLoader : Module
         }
     }
 
-    /// <summary>
-    /// 封装区块更新逻辑，避免重复代码
-    /// </summary>
-    private void UpdateChunks(Vector2 chunkPos)
-    {
-        // 添加空值检查
-        if (ChunkMgr.Instance == null)
+/// <summary>
+/// 封装区块更新逻辑，避免重复代码
+/// </summary>
+private void UpdateChunks(Vector2 chunkPos)
+{
+        //销毁过远的失活的区块
+        ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
+        //将较远的区块设置为非激活状态
+        ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
+        //异步绘制寻路网格
+        AstarGameManager.Instance.UpdateMeshAsync(chunkPos, Data.LoadChunkDistance, () =>
         {
-            Debug.LogError("ChunkMgr 未初始化，无法更新区块");
-            return;
-        }
+            // 在回调中再次检查组件和游戏对象是否仍然存在
+            if (this == null || gameObject == null)
+            {
+                Debug.Log("Shit:Mod_ChunkLoader 或 GameObject 已被销毁，取消后续操作");
+                return;
+            }
+            
+            // 检查是否仍在运行
+            if (_Data != null && _Data.isRunning == false)
+            {
+                return;
+            }
 
-        if (AstarGameManager.Instance == null)
-        {
-            Debug.LogWarning("AstarGameManager 未初始化，跳过寻路网格更新");
-        }
-
-        try
-        {
-            ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
-            ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
-            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
-
-            AstarGameManager.Instance?.UpdateMeshAsync(chunkPos, Data.LoadChunkDistance);
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogWarning($"更新区块时发生错误: {ex.Message}\n{ex.StackTrace}");
-        }
-    }
+            if (SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap == false)
+            {
+                ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: 1);
+            }
+            else
+            {
+                //异步加载较近的区块 同时 赋值权重
+                ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
+            }
+ 
+        });
+    
+}
 
     /// <summary>
     /// 清理事件监听

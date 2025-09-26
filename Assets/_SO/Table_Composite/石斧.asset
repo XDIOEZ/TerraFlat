@@ -14,6 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
+    - ItemName: Twine
+      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+      amount: 1
     - ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
       amount: 1
@@ -22,15 +25,12 @@ MonoBehaviour:
       amount: 1
     - ItemName: Twine
       ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
-      amount: 1
-    - ItemName: Ore_Stone
-      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
       amount: 1
     - ItemName: Stick_Wood
       ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
       amount: 1
-    - ItemName: Twine
-      ItemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+    - ItemName: Ore_Stone
+      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
       amount: 1
     - ItemName: 
       ItemPrefab: {fileID: 0}

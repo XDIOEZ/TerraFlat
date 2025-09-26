@@ -2,6 +2,7 @@ using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [MemoryPackable]
 [System.Serializable]
@@ -33,6 +34,9 @@ public partial class GameSaveData
     public Dictionary<string, PlanetData> PlanetData_Dict = new();
     [ShowInInspector]
     public DayTimeSaveData DayTimeData = new();
+
+    [MemoryPackIgnore]
+    public PlanetData CurrentPlanetData => PlanetData_Dict[SceneManager.GetActiveScene().name];
 
     // ===== ¹¹Ôìº¯Êý =====
     public GameSaveData()

@@ -143,11 +143,11 @@ public class WorldEdge : Item, ISave_Load, IInteract
         data.Boundary_Position = direction; // 记录边界的方向
         var saveData = SaveDataMgr.Instance.SaveData; // 获取保存数据
         Vector2 mapSize = ChunkMgr.GetChunkSize(); // 当前地图的大小
-        float worldRadius = ChunkMgr.GetRadius(); // 当前星球的半径，用于世界环绕逻辑
+        //float worldRadius = ChunkMgr.GetRadius(); // 当前星球的半径，用于世界环绕逻辑
 
         Vector2 mapCenter = mapPos + mapSize * 0.5f; // 计算当前地图的中心点
                                                      // Fix for CS1503: Convert Vector2 to Vector2Int using Vector2Int.RoundToInt
-        Vector2Int targetPos = WrapAroundWorld(Vector2Int.RoundToInt(mapPos + direction * Vector2Int.RoundToInt(mapSize)), worldRadius);
+        Vector2Int targetPos = Vector2Int.RoundToInt(mapCenter);
         TPTOSceneName = targetPos.ToString(); // 将目标地图位置转换为场景名称
 
         const float thickness = 1f; // 边界的厚度

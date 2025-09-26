@@ -118,8 +118,9 @@ public class TileEffectReceiver : Module
     {
         if (Cache_map == null)
         {
+            //因为离开矿洞是Data中保存的位置是上一次的所以需要重新获取
             ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
-            Cache_map = chunk?.Map;
+            Cache_map = chunk.Map;
         }
 
         if (Cache_map == null)

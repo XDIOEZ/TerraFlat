@@ -15,6 +15,7 @@ using UnityEditor; // 仅Editor模式用Handles.Label，打包不报错
 
 public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 {
+    #region 属性和字段
     public AstarPath Pathfinder;
     public bool Init = false;
     // 权重修改区域的Gizmos可视化数据
@@ -26,7 +27,9 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     public int minPenalty = 0; // 权重最小值（避免负权重）
     public int maxPenalty = 10000; // 权重最大值（避免寻路异常）
     public Camera mainCamera; // 转换鼠标坐标（未指定则自动获取）
+    #endregion
 
+    #region 生命周期方法
     public void Start()
     {
         Pathfinder = GetComponent<AstarPath>();
@@ -40,99 +43,117 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             }
         }
     }
+    #endregion
 
-
-[Button("Update NavMesh")]
-public void UpdateMeshAsync(Vector2 center = default, int radius = 1)
-{
-    Vector2 chunkSize = ChunkMgr.GetChunkSize();
-    Vector2 Newcenter = center + chunkSize * 0.5f;
-    AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
-
-    int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
-    int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
-    float nodeSize = 1f;
-
-    AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
-
-    // 启动异步扫描（可指定要扫描的图，null表示扫描所有图）
-    IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
-
-    // 通过协程处理异步进度，并在完成后更新权重
-    StartCoroutine(HandleScanProgress(scanProgress, center, radius));
-}
-
-// 处理扫描进度的协程，在扫描完成后更新权重
-private IEnumerator HandleScanProgress(IEnumerable<Progress> progressEnumerable, Vector2 center, int radius)
-{
-    // 迭代进度枚举器，获取实时进度
-    foreach (var progress in progressEnumerable)
+    #region 导航网格更新方法
+    [Button("Update NavMesh")]
+    public void UpdateMeshAsync(Vector2 center = default, int radius = 1, System.Action onComplete = null)
     {
-        // 输出进度信息（0-1之间的浮点数，1表示完成）
-        Debug.Log($"扫描进度：{progress.progress:F2}");
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        Vector2 Newcenter = center + chunkSize * 0.5f;
+        AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
 
-        // 可以在这里更新UI进度条等
-        // UIManager.UpdateProgressBar(progress.progress);
+        int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
+        int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
+        float nodeSize = 1f;
 
-        // 等待一帧，避免阻塞主线程
-        yield return null;
+        AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
+
+        // 启动异步扫描（可指定要扫描的图，null表示扫描所有图）
+        IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
+
+        // 通过协程处理异步进度，并在完成后更新权重
+        StartCoroutine(HandleScanProgress(scanProgress, center, radius, onComplete));
     }
 
-    Debug.Log("异步扫描完成！");
-
-    // 扫描完成后，更新指定区域的所有区块权重
-    UpdateChunksPenaltyInArea(center, radius);
-
-    Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
-}
-
-/// <summary>
-/// 更新指定区域内的所有区块权重
-/// </summary>
-private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
-{
-    if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic == null)
+    // 处理扫描进度的协程，在扫描完成后更新权重
+    private IEnumerator HandleScanProgress(IEnumerable<Progress> progressEnumerable, Vector2 center, int radius, System.Action onComplete = null)
     {
-        Debug.LogWarning("ChunkMgr 或 Chunk_Dic 未初始化，无法更新区块权重");
-        return;
-    }
-
-    Vector2 chunkSize = ChunkMgr.GetChunkSize();
-    // 将世界坐标中心转换为区块索引中心
-    Vector2Int centerChunkPos = new Vector2Int(
-        Mathf.FloorToInt(center.x / chunkSize.x),
-        Mathf.FloorToInt(center.y / chunkSize.y)
-    );
-
-    // 根据你的说明：步长为1时遍历1个区块(1x1)，步长为2时遍历9个区块(3x3)
-    // 步长为n时，遍历 (2*n-1) x (2*n-1) 个区块
-    int halfRange = stepSize - 1;
-    
-    // 遍历指定步长内的所有区块索引
-    for (int x = -halfRange; x <= halfRange; x++)
-    {
-        for (int y = -halfRange; y <= halfRange; y++)
+        // 迭代进度枚举器，获取实时进度
+        foreach (var progress in progressEnumerable)
         {
-            // 计算实际的区块世界坐标位置（区块索引乘以区块大小）
-            Vector2Int chunkWorldPos = new Vector2Int(
-                (centerChunkPos.x + x) * (int)chunkSize.x, 
-                (centerChunkPos.y + y) * (int)chunkSize.y
-            );
-            string chunkKey = chunkWorldPos.ToString();
-            
-            // 检查区块是否存在
-            if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(chunkKey, out Chunk chunk))
+            // 输出进度信息（0-1之间的浮点数，1表示完成）
+            Debug.Log($"扫描进度：{progress.progress:F2}");
+
+            // 等待一帧，避免阻塞主线程
+            yield return null;
+        }
+
+        Debug.Log("异步扫描完成！");
+
+        // 扫描完成后，更新指定区域的所有区块权重
+        //UpdateChunksPenaltyInArea(center, radius);
+
+        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+        
+        // 调用回调函数
+        onComplete?.Invoke();
+    }
+
+    [Button("Update NavMesh")]
+    public void UpdateMeshSync(Vector2 center = default, int radius = 1)
+    {
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        Vector2 Newcenter = center + chunkSize * 0.5f;
+        AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
+
+        int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
+        int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
+        float nodeSize = 1f;
+
+        AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
+
+        AstarPath.active.Scan();
+    }
+    
+    /// <summary>
+    /// 更新指定区域内的所有区块权重
+    /// </summary>
+    private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
+    {
+        if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic == null)
+        {
+            Debug.LogWarning("ChunkMgr 或 Chunk_Dic 未初始化，无法更新区块权重");
+            return;
+        }
+
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        // 将世界坐标中心转换为区块索引中心
+        Vector2Int centerChunkPos = new Vector2Int(
+            Mathf.FloorToInt(center.x / chunkSize.x),
+            Mathf.FloorToInt(center.y / chunkSize.y)
+        );
+
+        // 根据你的说明：步长为1时遍历1个区块(1x1)，步长为2时遍历9个区块(3x3)
+        // 步长为n时，遍历 (2*n-1) x (2*n-1) 个区块
+        int halfRange = stepSize - 1;
+        
+        // 遍历指定步长内的所有区块索引
+        for (int x = -halfRange; x <= halfRange; x++)
+        {
+            for (int y = -halfRange; y <= halfRange; y++)
             {
-                // 检查区块是否已加载且包含地图
-                if (chunk != null && chunk.Map != null)
+                // 计算实际的区块世界坐标位置（区块索引乘以区块大小）
+                Vector2Int chunkWorldPos = new Vector2Int(
+                    (centerChunkPos.x + x) * (int)chunkSize.x, 
+                    (centerChunkPos.y + y) * (int)chunkSize.y
+                );
+                string chunkKey = chunkWorldPos.ToString();
+                
+                // 检查区块是否存在
+                if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(chunkKey, out Chunk chunk))
                 {
-                    // 更新该区块的权重
-                    chunk.Map.BackTilePenalty_Sync();
+                    // 检查区块是否已加载且包含地图
+                    if (chunk != null && chunk.Map != null)
+                    {
+                        // 更新该区块的权重
+                        chunk.Map.BackTilePenalty_Sync();
+                    }
                 }
             }
         }
     }
-}
+    #endregion
 
     #region 权重（Penalty）修改功能（适配 A* 3.5 及以下超旧版本）
     [Button("修改单个节点权重")]//TODO 这个是及高频调用的 1帧 4w+ 次，优化一下
@@ -163,7 +184,7 @@ private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
         // 修改权重
         targetNode.Penalty = newPenalty;
 
-        // Gizmos可视化（标记为“按键调整”，黄色线框）
+        // Gizmos可视化（标记为"按键调整"，黄色线框）
         Bounds nodeBounds = new Bounds(worldPos, Vector3.one * 0.8f);
         penaltyModifiedBounds.Add(new DebugBounds
         {
@@ -173,32 +194,34 @@ private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
         });
     }
 
-/// <summary>
-/// 高频调用优化版：修改单个节点权重
-/// - 无Log（避免控制台刷屏卡顿）
-/// - 避免重复赋值（Penalty相同则跳过）
-/// - Gizmos记录数量有限制
-/// - newPenalty为0时设置节点为不可通行
-/// </summary>
-public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000)
-{
-    // 1. 获取节点
-    NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
-    GraphNode targetNode = nnInfo.node;
-
-    if (newPenalty == 0)
+    /// <summary>
+    /// 高频调用优化版：修改单个节点权重
+    /// - 无Log（避免控制台刷屏卡顿）
+    /// - 避免重复赋值（Penalty相同则跳过）
+    /// - Gizmos记录数量有限制
+    /// - newPenalty为0时设置节点为不可通行
+    /// </summary>
+    public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000)
     {
-        // 设置节点为不可通行
-        targetNode.Walkable = false;
-        targetNode.Penalty = 0;
-        return;
+        // 1. 获取节点
+        NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
+        GraphNode targetNode = nnInfo.node;
+
+        if (newPenalty == 0)
+        {
+            // 设置节点为不可通行
+            targetNode.Walkable = false;
+            targetNode.Penalty = 0;
+            return;
+        }
+        if (targetNode.Walkable == false)
+        {
+            targetNode.Penalty = 0;
+        }
+
+        // 5. 修改权重
+        targetNode.Penalty = newPenalty;
     }
-
-    // 5. 修改权重
-    targetNode.Penalty = newPenalty;
-}
-
-
 
     [Button("修改区域权重")]
     public void ModifyRegionPenalty(Vector2 center, int sizeX, int sizeY, int penaltyDelta = 500)
@@ -215,14 +238,14 @@ public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000
 
         // 2. 超旧版本核心配置：无updatePenalty！仅需addPenalty+禁用modifyWalkability（避免删节点）
         GraphUpdateObject guo = new GraphUpdateObject(targetRegion);
-        guo.modifyWalkability = false; // 绝对禁用“可通行性修改”，彻底防止误删节点
+        guo.modifyWalkability = false; // 绝对禁用"可通行性修改"，彻底防止误删节点
         guo.addPenalty = penaltyDelta; // 直接设置权重增量（正数加，负数减）
 
         // 3. 应用区域权重修改
         AstarPath.active.UpdateGraphs(guo);
         Debug.Log($"✅ 区域权重修改成功！\n区域：{targetRegion}\n权重增量：{penaltyDelta}\n提示：权重建议控制在 {minPenalty}-{maxPenalty} 内");
 
-        // 4. Gizmos可视化（标记为“区域调整”，绿色线框）
+        // 4. Gizmos可视化（标记为"区域调整"，绿色线框）
         penaltyModifiedBounds.Add(new DebugBounds
         {
             bounds = targetRegion,
@@ -232,23 +255,22 @@ public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000
     }
     #endregion
 
-
     #region 按键调整鼠标节点权重（策划友好功能）
     private void Update()
     {
-        // 仅在“功能启用+相机有效+寻路组件就绪”时生效
+        // 仅在"功能启用+相机有效+寻路组件就绪"时生效
         if (!enableKeyControl || mainCamera == null || Pathfinder == null || AstarPath.active == null)
         {
             return;
         }
 
-        // 1. 按“+”（主键盘/小键盘）：增加鼠标位置节点权重
+        // 1. 按"+"（主键盘/小键盘）：增加鼠标位置节点权重
         if (Input.GetKeyDown(KeyCode.Plus) || Input.GetKeyDown(KeyCode.KeypadPlus))
         {
             AdjustPenaltyAtMousePos(penaltyStep);
         }
 
-        // 2. 按“-”（主键盘/小键盘）：减少鼠标位置节点权重
+        // 2. 按"-"（主键盘/小键盘）：减少鼠标位置节点权重
         if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
         {
             AdjustPenaltyAtMousePos(-penaltyStep);
@@ -285,7 +307,7 @@ public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000
         targetNode.Penalty = (uint)newPenalty;
         Debug.Log($"🔧 鼠标节点权重调整成功！\n位置：{mouseWorldPos}\n原权重：{currentPenalty} → 新权重：{newPenalty}\n步长：{penaltyDelta}");
 
-        // 6. Gizmos可视化（标记为“按键调整”）
+        // 6. Gizmos可视化（标记为"按键调整"）
         Bounds nodeBounds = new Bounds(mouseWorldPos, Vector3.one * 0.8f);
         penaltyModifiedBounds.Add(new DebugBounds
         {
@@ -295,7 +317,6 @@ public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000
         });
     }
     #endregion
-
 
     #region Gizmos 可视化与辅助类
     // 修复核心：补充 isKeyAdjust 字段，用于区分权重修改类型
@@ -414,7 +435,7 @@ public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000
         updatedBounds.Add(new DebugBounds { bounds = bounds, time = Time.time });
     }
 
-    // 优化Gizmos：区分“原有更新区（红）”“按键调整（黄）”“区域调整（绿）”
+    // 优化Gizmos：区分"原有更新区（红）""按键调整（黄）""区域调整（绿）"
     private void OnDrawGizmos()
     {
         // 1. 绘制原有NavMesh更新区域（红色线框，保留10秒）

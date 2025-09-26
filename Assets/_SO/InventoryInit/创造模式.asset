@@ -83,3 +83,8 @@ MonoBehaviour:
     DropChance: 1
     MinAmount: 1
     MaxAmount: 1
+  - LootPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
+    LootPrefabName: Twine
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1

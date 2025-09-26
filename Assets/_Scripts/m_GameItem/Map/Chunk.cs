@@ -3,6 +3,7 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+
 /// <summary>
 /// 管理自己附属的Item
 /// </summary>
@@ -16,87 +17,94 @@ public class Chunk : MonoBehaviour
     public MapSave MapSave;
     public string ChunkOwner;
 
-public Chunk LoadChunk()
-{
-    // 使用标准的foreach循环替代ForEach扩展方法
-    foreach (var items in MapSave.items)
+    #region 区块加载
+    public Chunk LoadChunk_By_MapSaveData_Sync()
     {
-        foreach(var itemData in items.Value)
+        // 使用标准的foreach循环替代ForEach扩展方法
+        foreach (var items in MapSave.items)
         {
-           Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject,newGuid:false);
-           item.Load();
-            item.transform.position = itemData._transform.Position;
-            item.transform.rotation = itemData._transform.Rotation;
-            item.transform.localScale = itemData._transform.Scale;
-            RunTimeItems.Add(item.itemData.Guid, item);
-           AddToGroup(item);
-        }
-    }
-    ChunkMgr.Instance.AddActiveChunk(this);
-    return this;
-}
-
-    public Chunk LoadChunk_Async()
-{
-    StartCoroutine(LoadChunkCoroutine());
-    return this;
-}
-
-/// <summary>
-/// 使用协程优化的区块加载方法
-/// </summary>
-private System.Collections.IEnumerator LoadChunkCoroutine()
-{
-    // 使用标准的foreach循环替代ForEach扩展方法
-    int itemCount = 0;
-    const int batchSize = 20; // 每批处理的物品数量
-    
-    foreach (var items in MapSave.items)
-    {
-        foreach(var itemData in items.Value)
-        {
-            Item item = ItemMgr.Instance.InstantiateItem(itemData, this.gameObject, newGuid: false);
-            item.Load();
-            item.transform.position = itemData._transform.Position;
-            item.transform.rotation = itemData._transform.Rotation;
-            item.transform.localScale = itemData._transform.Scale;
-            RunTimeItems.Add(item.itemData.Guid, item);
-            AddToGroup(item);
-            
-            itemCount++;
-            
-            // 每加载一批物品就等待一帧，避免阻塞主线程
-            if (itemCount % batchSize == 0)
+            foreach(var itemData in items.Value)
             {
-                yield return null;
+                Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject,newGuid:false);
+                item.Load();
+                item.transform.position = itemData._transform.Position;
+                item.transform.rotation = itemData._transform.Rotation;
+                item.transform.localScale = itemData._transform.Scale;
+                RunTimeItems.Add(item.itemData.Guid, item);
+                AddToGroup(item);
             }
         }
+        ChunkMgr.Instance.AddActiveChunk(this);
+        Map.BackTilePenalty_Sync();
+        return this;
     }
-    
-    // 确保所有物品都已加载完成
-    yield return null;
-    
-    ChunkMgr.Instance.AddActiveChunk(this);
-    
-    Debug.Log($"✅ 区块加载完成，共加载 {itemCount} 个物品");
-}
 
+    public Chunk LoadChunk_Async()
+    {
+        StartCoroutine(LoadChunkCoroutine());
+        return this;
+    }
+
+    /// <summary>
+    /// 使用协程优化的区块加载方法
+    /// </summary>
+    private System.Collections.IEnumerator LoadChunkCoroutine()
+    {
+        // 使用标准的foreach循环替代ForEach扩展方法
+        int itemCount = 0;
+        const int batchSize = 20; // 每批处理的物品数量
+        ChunkMgr.Instance.AddActiveChunk(this);
+
+        foreach (var items in MapSave.items)
+        {
+            foreach(var itemData in items.Value)
+            {
+                Item item = ItemMgr.Instance.InstantiateItem(itemData, this.gameObject, newGuid: false);
+                item.Load();
+                item.transform.position = itemData._transform.Position;
+                item.transform.rotation = itemData._transform.Rotation;
+                item.transform.localScale = itemData._transform.Scale;
+                RunTimeItems.Add(item.itemData.Guid, item);
+                AddToGroup(item);
+                
+                itemCount++;
+                
+                // 每加载一批物品就等待一帧，避免阻塞主线程
+                if (itemCount % batchSize == 0)
+                {
+                    yield return null;
+                }
+            }
+        }
+        
+        // 确保所有物品都已加载完成
+        yield return null;
+        //TODO 异步加载完毕后自动烘焙权重
+        Map.BackTilePenalty_Sync();
+        
+        Debug.Log($"✅ 区块加载完成，共加载 {itemCount} 个物品");
+    }
+    #endregion
+
+    #region 区块保存
     public Chunk SaveChunk()
     {
         MapSave.items.Clear();
-      //调用所有item的Save方法
+        //调用所有item的Save方法
         foreach (var item in RunTimeItems.Values)
         {
             if (item == null) 
             { 
                 continue;
             }
-                item.Save();
+            item.Save();
             MapSave.AddItemData(item.itemData);
         }
         return this;
     }
+    #endregion
 
+    #region 区块管理
     public void FitChunkItems()
     {
         var items = GetComponentsInChildren<Item>();
@@ -110,9 +118,11 @@ private System.Collections.IEnumerator LoadChunkCoroutine()
 
     public void DestroyChunk()
     {
-          Destroy(this.gameObject);
+        Destroy(this.gameObject);
     }
+    #endregion
 
+    #region 物品分组管理
     // ✅ 添加到分组s
     public void AddToGroup(Item item)
     {
@@ -124,23 +134,28 @@ private System.Collections.IEnumerator LoadChunkCoroutine()
         }
         list.Add(item);
     }
+    #endregion
 
+    #region 区块位置计算
     /// <summary>
     /// 获取指定玩家或物体所在的区块坐标
     /// </summary>
     [Button]
     public static Vector2Int GetChunkPosition(Vector2 objPos, Vector2 chunkSize = default)
-    {//TODO 因为Transformpos 是在左下角 相对于绘制的中心来说 所以需要微调玩家的位置 来输出确切的区块坐标
+    {
+        //TODO 因为Transformpos 是在左下角 相对于绘制的中心来说 所以需要微调玩家的位置 来输出确切的区块坐标
         if (chunkSize == default)
-         chunkSize = ChunkMgr.GetChunkSize();
+            chunkSize = ChunkMgr.GetChunkSize();
 
-       Vector2Int chunkPos = new Vector2Int(
+        Vector2Int chunkPos = new Vector2Int(
             Mathf.FloorToInt(objPos.x / chunkSize.x) * (int)chunkSize.x,
             Mathf.FloorToInt(objPos.y / chunkSize.y) * (int)chunkSize.y
         );
         return chunkPos;
     }
+    #endregion
 
+    #region 物品操作
     public void AddItem(Item item)
     {
         RunTimeItems[item.itemData.Guid] = item;
@@ -159,7 +174,7 @@ private System.Collections.IEnumerator LoadChunkCoroutine()
         }
     }
 
-   public void DestroyItem(Item item)
+    public void DestroyItem(Item item)
     {
         RunTimeItems.TryGetValue(item.itemData.Guid, out var itemData);
         if (itemData!= null)
@@ -173,6 +188,7 @@ private System.Collections.IEnumerator LoadChunkCoroutine()
             RunTimeItems.Remove(item.itemData.Guid);
         }
     }
+
     public void ClearNullItems()
     {
         var keysToRemove = RunTimeItems
@@ -185,12 +201,15 @@ private System.Collections.IEnumerator LoadChunkCoroutine()
             RunTimeItems.Remove(key);
         }
     }
+    #endregion
+
+    #region 工具方法
     [ContextMenu("Sync MapSave Name")]
     public void SyncMapSaveName()
     {
         MapSave.Name = MapSave.MapPosition.ToString();
     }
-
+    #endregion
 }
 
 [System.Serializable]

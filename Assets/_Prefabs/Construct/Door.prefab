@@ -300,6 +300,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: "\u573A\u666F\u6A21\u5757"
       objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _data.Name
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
+      propertyPath: _sceneAssetList.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

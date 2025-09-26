@@ -26,7 +26,7 @@ public class NavMeshRuntimeBake : MonoBehaviour
     }
     public void Start()
     {
-        ChunkMgr.Instance.OnChunkLoadFinish += UpdateNavMeshAsync; // 监听地图块加载完成事件，更新 NavMesh
+       // ChunkMgr.Instance.OnChunkLoadFinish += UpdateNavMeshAsync; // 监听地图块加载完成事件，更新 NavMesh
         GameManager.Instance.Event_ExitGame_End += ClearMeshData;
     }
 

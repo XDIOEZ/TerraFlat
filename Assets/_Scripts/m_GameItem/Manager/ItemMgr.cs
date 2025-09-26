@@ -349,7 +349,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
         }
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
+
         ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
+
         return player;
     }
     private Player CreatePlayer(Data_Player data)

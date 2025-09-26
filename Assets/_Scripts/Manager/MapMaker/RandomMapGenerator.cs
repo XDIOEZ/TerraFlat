@@ -53,21 +53,18 @@ public class RandomMapGenerator : MonoBehaviour
     [Header("鼠标检测设置")]
     [Tooltip("触发环境参数检测的按键（默认F3）")]
     public KeyCode detectKey = KeyCode.F3;
-
     #endregion
 
     #region 内部变量
     private int Seed => SaveDataMgr.Instance.SaveData.Seed;
-    private Camera _mainCamera; // 缓存MainCamera引用
 
-public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
+    public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
 
     public EnvironmentFactors[,] EnvFactorsGrid { get => map.Data.EnvironmentData; set => map.Data.EnvironmentData = value; }
 
     public static System.Random rng; // 系统级随机实例
 
     private Dictionary<string, TileData> tileDataCache = new(); // TileData 缓存
-
     #endregion
 
     #region Unity 生命周期
@@ -82,14 +79,14 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
             mapGrid = GetComponent<Grid>();
             if (mapGrid == null)
             {
-                mapGrid = GetComponentInChildren<Grid>(includeInactive: false);
+                mapGrid = map.GetComponentInChildren<Grid>(includeInactive: false);
             }
         }
 
         // 2. 自动获取当前对象的子对象Tilemap
         if (targetTilemap == null)
         {
-            Tilemap[] childTilemaps = GetComponentsInChildren<Tilemap>(includeInactive: false);
+            Tilemap[] childTilemaps = map.GetComponentsInChildren<Tilemap>(includeInactive: false);
             if (childTilemaps != null && childTilemaps.Length > 0)
             {
                 targetTilemap = childTilemaps[0];
@@ -100,19 +97,16 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
                 Debug.LogError($"[RandomMapGenerator] 当前对象下未找到任何Tilemap子对象！");
             }
         }
-
-        // 3. 通过"MainCamera"标签获取相机
-        _mainCamera = GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
-        if (_mainCamera == null)
-        {
-            Debug.LogError($"[RandomMapGenerator] 场景中未找到Tag为'MainCamera'的相机！");
-        }
     }
 
     private void Update()
     {
+        // 检测按键触发环境参数检测
+        if (Input.GetKeyDown(detectKey))
+        {
+            GetEnvFactorsAtMousePosition();
+        }
     }
-
     #endregion
 
     #region 主逻辑
@@ -139,7 +133,9 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
         EnvFactorsGrid = new EnvironmentFactors[(int)size.x, (int)size.y];
 
         if (tilesPerFrame > 0)
+        {
             ChunkMgr.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size));
+        }
         else
         {
             GenerateAllTiles(startPos, size);
@@ -217,6 +213,7 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
 
         // 匹配生物群系并生成地块
         BiomeData biome = MatchAndGenerateBiomeTile(position, env);
+
         if (biome != null)
         {
             GenerateResourcesForBiome(position, biome, env);
@@ -347,7 +344,7 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
     {
         map.tileMap?.RefreshAllTiles();
         map.Data.TileLoaded = true;
-        map.LoadTileData_To_TileMap_Ansync();
+        map.BackTilePenalty_Sync(); //地图生成完毕后直接烘焙 因为生成的时候自动调用的SetTile的绘制层
         Debug.Log("[RandomMapGenerator] 地图生成完成");
     }
 
@@ -380,16 +377,18 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
             Debug.LogError("[RandomMapGenerator] 缺少Tilemap组件，无法检测Tile");
             return;
         }
-        if (_mainCamera == null)
-        {
-            Debug.LogError("[RandomMapGenerator] 缺少MainCamera，无法获取鼠标世界坐标");
-            return;
-        }
 
         // 1. 鼠标屏幕坐标 → 世界坐标
         Vector3 mouseScreenPos = Input.mousePosition;
-        mouseScreenPos.z = Mathf.Abs(_mainCamera.transform.position.z - targetTilemap.transform.position.z);
-        Vector3 mouseWorldPos = _mainCamera.ScreenToWorldPoint(mouseScreenPos);
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            Debug.LogError("[RandomMapGenerator] 未找到MainCamera");
+            return;
+        }
+        
+        mouseScreenPos.z = Mathf.Abs(mainCamera.transform.position.z - targetTilemap.transform.position.z);
+        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
         mouseWorldPos.z = 0; // 强制在Tilemap平面
 
         // 2. 世界坐标 → Tilemap格子坐标
@@ -433,10 +432,8 @@ public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
                   $"生物群系：{biomeName}\n" +
                   $"温度：{env.Temperature:F2} | 湿度：{env.Humidity:F2}\n" +
                   $"降水量：{env.Precipitation:F2} | 坚固度：{env.Solidity:F2}\n" +
-                  $"高度：{env.Hight:F2}\n" +  // 修正换行符和拼接位置
-                  $"瓦片数据：{map.GetTile(gridPos)}");  // 修正重复的"温度"标签，改为更准确的"瓦片数据"
-
-
+                  $"高度：{env.Hight:F2}\n" +
+                  $"瓦片数据：{map.GetTile(gridPos)}");
     }
     #endregion
 }
@@ -454,4 +451,3 @@ public enum NoiseType
 
 [Serializable]
 public class NoiseDictionary : SerializedDictionary<NoiseType, BaseNoise> { }
-

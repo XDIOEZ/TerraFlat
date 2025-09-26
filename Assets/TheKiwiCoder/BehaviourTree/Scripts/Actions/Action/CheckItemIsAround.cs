@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-public class CheckItemIsAround : ActionNode, IDebug
+public class CheckItemIsAround : ActionNode
 {
-    private IDetector itemDetector;
+    private ItemDetector itemDetector;
 
     public string itemName;
 
@@ -15,11 +15,9 @@ public class CheckItemIsAround : ActionNode, IDebug
     {
         if(itemDetector == null)
         {
-            itemDetector = context.gameObject.GetComponent<IDetector>();
+            itemDetector = context.gameObject.GetComponent<ItemDetector>();
            // Debug.LogWarning("未指定物品检测器，将使用默认的物品检测器");
         }
-       
-
     }
 
     protected override void OnStop()

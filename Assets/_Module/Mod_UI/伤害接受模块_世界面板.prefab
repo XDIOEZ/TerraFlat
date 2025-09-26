@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 3002565124721399207}
   - component: {fileID: 5540395305826726258}
   - component: {fileID: 6078530534133719953}
-  - component: {fileID: 7805458096291885713}
   m_Layer: 9
   m_Name: "\u8840\u91CF\u6A21\u5757_\u4E16\u754C\u9762\u677F"
   m_TagString: Untagged
@@ -105,7 +104,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 1911
+    m_Bits: 375
 --- !u!225 &5540395305826726258
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -130,21 +129,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00d27a205b8cb774f8c82a40aa10cc91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  canvasGroup: {fileID: 0}
+  canvasGroup: {fileID: 5540395305826726258}
   CanDrag: 0
-  Drager: {fileID: 0}
---- !u!114 &7805458096291885713
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1388234509078913698}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7fc4d36d4820ec24c8a69b88ee2cba19, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  Dragger: {fileID: 0}
 --- !u!1 &2072507207479199025
 GameObject:
   m_ObjectHideFlags: 0

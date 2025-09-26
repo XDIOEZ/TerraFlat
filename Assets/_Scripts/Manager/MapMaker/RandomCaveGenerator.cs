@@ -80,19 +80,16 @@ public class RandomCaveGenerator : MonoBehaviour
 
     [Header("边界连接")]
     public bool generateEdges = true;
-
     #endregion
 
     #region 内部变量
     private int Seed => SaveDataMgr.Instance.SaveData.Seed;
-    private Camera _mainCamera; // 缓存MainCamera引用
     private Vector2Int currentCaveSize; // 当前矿洞尺寸
 
     public static System.Random rng; // 系统级随机实例
 
     private Dictionary<string, TileData> tileDataCache = new(); // TileData 缓存
     private List<CaveRoom> generatedRooms = new List<CaveRoom>(); // 已生成的房间列表
-
     #endregion
 
     #region 数据结构
@@ -113,12 +110,21 @@ public class RandomCaveGenerator : MonoBehaviour
         }
     }
 
+    [Serializable]
+    public class LootEntry
+    {
+        public string LootPrefabName;
+        public float DropChance;
+        public int MinAmount;
+        public int MaxAmount;
+    }
     #endregion
 
     #region Unity 生命周期
     public void Awake()
     {
         rng = new System.Random(Seed);
+
         map.OnMapGenerated_Start += GenerateRandomCave;
 
         // 1. 自动获取Grid组件（优先级：手动指定 > 当前对象 > 子对象）
@@ -145,15 +151,7 @@ public class RandomCaveGenerator : MonoBehaviour
                 Debug.LogError($"[RandomCaveGenerator] 当前对象下未找到任何Tilemap子对象！");
             }
         }
-
-        // 3. 通过"MainCamera"标签获取相机
-        _mainCamera = GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
-        if (_mainCamera == null)
-        {
-            Debug.LogError($"[RandomCaveGenerator] 场景中未找到Tag为'MainCamera'的相机！");
-        }
     }
-
     #endregion
 
     #region 主逻辑
@@ -381,7 +379,9 @@ public class RandomCaveGenerator : MonoBehaviour
             }
         }
     }
+    #endregion
 
+    #region 资源和装饰物生成
     private void GenerateResourcesAndDecorations()
     {
         // 在地板上随机生成矿石和装饰物
@@ -404,7 +404,9 @@ public class RandomCaveGenerator : MonoBehaviour
             }
         }
     }
+    #endregion
 
+    #region 入口出口生成
     private void GenerateEntranceAndExit()
     {
         if (generatedRooms.Count == 0) return;
@@ -417,7 +419,9 @@ public class RandomCaveGenerator : MonoBehaviour
         Vector2Int exitPos = generatedRooms[generatedRooms.Count - 1].center + map.Data.position;
         SpawnEntranceOrExit(exitPrefabName, exitPos);
     }
+    #endregion
 
+    #region 边界生成
     private void GenerateCaveEdges()
     {
         // 计算边界墙壁的缩放和位置参数
@@ -553,6 +557,7 @@ public class RandomCaveGenerator : MonoBehaviour
     {
         map.tileMap?.RefreshAllTiles();
         map.Data.TileLoaded = true;
+        map.BackTilePenalty_Async();
         Debug.Log($"[RandomCaveGenerator] 矿洞生成完成，尺寸: {currentCaveSize.x}x{currentCaveSize.y}");
     }
     #endregion

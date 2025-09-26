@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 4969519381451034378}
   - component: {fileID: 5175292470693907942}
-  - component: {fileID: 8233460568870623006}
   - component: {fileID: 8016388638861598348}
   - component: {fileID: 8247631769361211115}
+  - component: {fileID: 2750506950369039693}
   m_Layer: 0
   m_Name: MapCore_Pit
   m_TagString: MapCore
@@ -48,63 +48,6 @@ Grid:
   m_CellGap: {x: 0, y: 0, z: 0}
   m_CellLayout: 0
   m_CellSwizzle: 0
---- !u!114 &8233460568870623006
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2111103676966031222}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f78e9372a97755943957bb88587019ec, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Owner: {fileID: 0}
-  OnUIRefresh:
-    _PersistentCalls: []
-  OnItemDestroy:
-    _PersistentCalls: []
-  OnAct:
-    _PersistentCalls: []
-  Sprite: {fileID: 0}
-  updateInterval: 0.1
-  Data:
-    IDName: MapCore_Pit
-    GameName: MapCore_Pit
-    Description: "\u7269\u54C1\u540D\u79F0\uFF1AMapCore_Pit\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1ANone(None),\u7269\u54C1\u6750\u8D28\uFF1ANone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
-    Durability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
-    Stack:
-      Amount: 1
-      Volume: 1
-      CanBePickedUp: 1
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: 
-    Guid: 0
-    position: {x: 0, y: 0}
-    TileLoaded: 0
-  tileMap: {fileID: 6321057560787975102}
-  OnMapGenerated_Start:
-    _PersistentCalls: []
-  navigationModiferTileMap: {fileID: 0}
-  ParentObject: {fileID: 0}
 --- !u!114 &8016388638861598348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -136,7 +79,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c97d84d0c767b7c4195ebdff5b8122eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  map: {fileID: 8233460568870623006}
+  map: {fileID: 2750506950369039693}
   mapGrid: {fileID: 5175292470693907942}
   targetTilemap: {fileID: 6321057560787975102}
   minCaveSize: {x: 100, y: 100}
@@ -152,29 +95,83 @@ MonoBehaviour:
   entrancePrefabName: Door
   exitPrefabName: Door
   oreLoots:
-  - LootPrefab: {fileID: 0}
-    LootPrefabName: Mine_Copper
+  - LootPrefabName: Mine_Copper
     DropChance: 0.003
     MinAmount: 1
     MaxAmount: 3
-  - LootPrefab: {fileID: 0}
-    LootPrefabName: Mine_Iron
+  - LootPrefabName: Mine_Iron
     DropChance: 0.005
     MinAmount: 1
     MaxAmount: 5
-  - LootPrefab: {fileID: 0}
-    LootPrefabName: Mine_Stone
+  - LootPrefabName: Mine_Stone
     DropChance: 0.01
     MinAmount: 1
     MaxAmount: 2
   decorationLoots:
-  - LootPrefab: {fileID: 0}
-    LootPrefabName: Twine
+  - LootPrefabName: Twine
     DropChance: 0.02
     MinAmount: 1
     MaxAmount: 1
   tilesPerFrame: 10
   generateEdges: 1
+--- !u!114 &2750506950369039693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111103676966031222}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c4e097ea97255041a7681f57984ce51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  OnUIRefresh:
+    _PersistentCalls: []
+  OnItemDestroy:
+    _PersistentCalls: []
+  OnAct:
+    _PersistentCalls: []
+  Sprite: {fileID: 0}
+  updateInterval: 0
+  Data:
+    IDName: MapCore_Pit
+    GameName: MapCore_Pit
+    Description: "\u7269\u54C1\u540D\u79F0\uFF1AMapCore_Pit\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1ATagDictionary:\r\n 
+      Type:\r\n  Material:\r\n  MakeTag:\r\n\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
+    Durability: 1
+    ItemTags:
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
+    Stack:
+      Amount: 1
+      Volume: 1
+      CanBePickedUp: 1
+    _transform:
+      Position: {x: 0, y: 0, z: 0}
+      Rotation: {x: 0, y: 0, z: 0, w: 0}
+      Scale: {x: 1, y: 1, z: 1}
+    ItemSpecialData: 
+    Guid: 0
+    position: {x: 0, y: 0}
+    TileLoaded: 0
+  tileMap: {fileID: 6321057560787975102}
+  OnMapGenerated_Start:
+    _PersistentCalls: []
+  chunk: {fileID: 0}
+  ParentObject: {fileID: 0}
 --- !u!1 &3401113203274231406
 GameObject:
   m_ObjectHideFlags: 0
