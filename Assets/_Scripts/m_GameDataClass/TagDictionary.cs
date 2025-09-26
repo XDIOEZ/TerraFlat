@@ -51,6 +51,17 @@ public partial class TagDictionary
             return null;
         }
     }
+    [MemoryPackIgnore]
+    public TagData MakeTag
+    {
+        get
+        {
+            EnsureTagStructure(); // 只确保结构存在，不验证值
+            if (keys.Count > 2)
+                return keys[2];
+            return null;
+        }
+    }
     #endregion
 
     #region 构造函数
@@ -58,6 +69,7 @@ public partial class TagDictionary
     {
         keys.Add(new TagData("Type"));
         keys.Add(new TagData("Material"));
+        keys.Add(new TagData("MakeTag"));
     }
     #endregion
 

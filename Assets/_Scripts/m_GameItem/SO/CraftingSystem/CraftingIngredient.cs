@@ -72,7 +72,6 @@ public class CraftingIngredient
         else
         {
             ItemName = "";
-            amount = 0;
         }
         
     }

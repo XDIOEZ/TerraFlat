@@ -23,12 +23,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - InventoryInit
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3818f826327154840a0866b9be64ffd1
-    m_Address: Assets/_SO/Composite_Tag
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - CraftingRecipe_Tag
-    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

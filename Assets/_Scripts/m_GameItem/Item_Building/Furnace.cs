@@ -1,4 +1,4 @@
-using Force.DeepCloner;
+/*using Force.DeepCloner;
 using MemoryPack;
 using NaughtyAttributes;
 using System.Collections;
@@ -201,11 +201,11 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
         // 尝试将所有待添加的物品添加到输出容器
         foreach (var item in itemsToAdd)
         {
-            /*if (!outputInventory_.CanAddTheItem(item))
+            *//*if (!outputInventory_.CanAddTheItem(item))
             {
                 // 如果添加失败，直接返回
                 return false;
-            }*/
+            }*//*
         }
         return true;//成功通过检测
         #endregion
@@ -583,3 +583,4 @@ public class Furnace : Item, IWork, IInteract,IInventoryData
     }
 
 }
+*/

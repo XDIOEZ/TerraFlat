@@ -45,6 +45,9 @@ public  abstract partial class ItemData
     [Tooltip("物品耐久度")]
     public float Durability = 1;
 
+    [Tooltip("物品耐久度")]
+    public float MaxDurability = 1;
+
     [Tooltip("物品标签")]
     [Obsolete("已过时，推荐使用TagDictionary，性能更优")]
     public ItemTag ItemTags;

@@ -328,8 +328,6 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             }
             ItemMgr.Instance.CleanupNullItems();
 
-            CleanEmptyDicValues();
-
             var chunk = CreateChunk_ByMapSave(mapSave); 
 
             chunk.LoadChunk_Async();

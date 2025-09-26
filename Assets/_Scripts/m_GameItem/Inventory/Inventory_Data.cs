@@ -238,83 +238,107 @@ public partial class Inventory_Data
         return addedAny;
     }
 
-    /// <summary>
-    /// 在两个物品槽之间转移指定数量（upToCount）的物品。
-    /// 转移逻辑包括以下检查：
-    /// - 两个槽位有效，且不相同
-    /// - 来源槽位有物品，且数量充足
-    /// - 如果目标槽位已有物品，则其类型与来源物品一致（包括特殊数据）
-    /// - 若物品不可堆叠（Volume > 1），则不能合并，必须空槽才允许转移
-    /// - 转移后自动更新 UI 和数据
-    /// </summary>
-    public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCount)
+/// <summary>
+/// 在两个物品槽之间转移指定数量（upToCount）的物品。
+/// 转移逻辑包括以下检查：
+/// - 两个槽位有效，且不相同
+/// - 来源槽位有物品，且数量充足
+/// - 如果目标槽位已有物品，则其类型与来源物品一致（包括特殊数据）
+/// - 若物品不可堆叠（Volume > 1），则不能合并，必须空槽才允许转移
+/// - 转移后自动更新 UI 和数据
+/// </summary>
+public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCount)
+{
+    if (slotFrom == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
+        return false;
+
+    var dataFrom = slotFrom.itemData;
+    if (dataFrom == null || dataFrom.Stack.Amount <= 0)
+        return false;
+
+    var dataTo = slotTo.itemData;
+
+    // 若目标槽位已有物品，需确保ID与特殊数据一致
+    if (dataTo != null &&
+        (dataTo.IDName != dataFrom.IDName || dataTo.ItemSpecialData != dataFrom.ItemSpecialData))
+        return false;
+
+    // 若物品不可堆叠（Volume > 1），则不能进行堆叠式转移，只能直接移动单件到空槽
+    if (dataFrom.Stack.Volume > 1)
     {
-        if (slotFrom == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
+        // 非空槽位不能接收不可堆叠物品
+        if (dataTo != null)
             return false;
 
-        var dataFrom = slotFrom.itemData;
-        if (dataFrom == null || dataFrom.Stack.Amount <= 0)
-            return false;
-
-        var dataTo = slotTo.itemData;
-
-        // 若目标槽位已有物品，需确保ID与特殊数据一致
-        if (dataTo != null &&
-            (dataTo.IDName != dataFrom.IDName || dataTo.ItemSpecialData != dataFrom.ItemSpecialData))
-            return false;
-
-        // 若物品不可堆叠（Volume > 1），则不能进行堆叠式转移，只能直接移动单件到空槽
-        if (dataFrom.Stack.Volume > 1)
+        // 只允许转移一个
+        var singleData = dataFrom;
+        if (dataFrom.Stack.Amount == 1)
         {
-            // 非空槽位不能接收不可堆叠物品
-            if (dataTo != null)
-                return false;
-
-            // 只允许转移一个
-            var singleData = dataFrom;
-            if (dataFrom.Stack.Amount == 1)
-            {
-                // 直接搬迁引用，不用 Clone（减少 GC）
-                slotTo.itemData = dataFrom;
-                slotFrom.ClearData();
-            }
-            else
-            {
-                // 从原数据中复制出一个新对象
-                var newData = dataFrom.DeepClone();
-                newData.Stack.Amount = 1;
-                dataFrom.Stack.Amount -= 1;
-                slotTo.itemData = newData;
-            }
-
-            slotFrom.RefreshUI();
-            slotTo.RefreshUI();
-            return true;
-        }
-
-        // 堆叠逻辑处理
-        int transferCount = Mathf.Min(upToCount, (int)dataFrom.Stack.Amount);
-
-        // 克隆一个转移对象，设置转移数量
-        var transferData = dataFrom.DeepClone();
-        transferData.Stack.Amount = transferCount;
-
-        // 扣除来源物品数量
-        dataFrom.Stack.Amount -= transferCount;
-        if (dataFrom.Stack.Amount <= 0)
+            // 直接搬迁引用，不用 Clone（减少 GC）
+            slotTo.itemData = dataFrom;
             slotFrom.ClearData();
-
-        // 如果目标为空，直接赋值，否则叠加数量
-        if (dataTo == null)
-            slotTo.itemData = transferData;
+        }
         else
-            dataTo.Stack.Amount += transferCount;
+        {
+            // 从原数据中复制出一个新对象
+            var newData = dataFrom.DeepClone();
+            newData.Stack.Amount = 1;
+            dataFrom.Stack.Amount -= 1;
+            slotTo.itemData = newData;
+        }
 
         slotFrom.RefreshUI();
         slotTo.RefreshUI();
-
         return true;
     }
+
+    // 堆叠逻辑处理
+    int transferCount = Mathf.Min(upToCount, (int)dataFrom.Stack.Amount);
+
+    // 检查目标槽位是否能容纳转移的物品数量
+    if (dataTo != null)
+    {
+        // 计算转移后目标槽位的总数量
+        float targetTotalAmount = dataTo.Stack.Amount + transferCount;
+        if (targetTotalAmount > slotTo.SlotMaxVolume)
+        {
+            // 如果会超出上限，则计算实际可转移的数量
+            transferCount = Mathf.FloorToInt(slotTo.SlotMaxVolume - dataTo.Stack.Amount);
+            if (transferCount <= 0)
+                return false; // 目标槽位已满，无法转移
+        }
+    }
+    else
+    {
+        // 目标槽位为空，检查要转移的数量是否超出槽位上限
+        if (transferCount > slotTo.SlotMaxVolume)
+        {
+            transferCount = Mathf.FloorToInt(slotTo.SlotMaxVolume);
+            if (transferCount <= 0)
+                return false; // 槽位上限为0或负数
+        }
+    }
+
+    // 克隆一个转移对象，设置转移数量
+    var transferData = dataFrom.DeepClone();
+    transferData.Stack.Amount = transferCount;
+
+    // 扣除来源物品数量
+    dataFrom.Stack.Amount -= transferCount;
+    if (dataFrom.Stack.Amount <= 0)
+        slotFrom.ClearData();
+
+    // 如果目标为空，直接赋值，否则叠加数量
+    if (dataTo == null)
+        slotTo.itemData = transferData;
+    else
+        dataTo.Stack.Amount += transferCount;
+
+    slotFrom.RefreshUI();
+    slotTo.RefreshUI();
+
+    return true;
+}
 
 
     #endregion
