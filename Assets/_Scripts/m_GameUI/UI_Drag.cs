@@ -22,6 +22,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     public void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
+        if(canvas == null)
         canvas = gameObject.transform.parent.GetComponentInParent<Canvas>();
     }
 

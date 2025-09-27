@@ -91,7 +91,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  AttackEffect: {fileID: 2755864728937266141, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
+  AttackEffects:
+  - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
+  - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
   Data:
     Name: 
     ID: 
@@ -115,4 +117,3 @@ MonoBehaviour:
   MoveTargetTransform: {fileID: 0}
   damageCollider: {fileID: 0}
   maxTrajectoryPoints: 50
-  sampleFrames: 2

@@ -263,7 +263,7 @@ private string GenerateRecipeKey(Inventory inputInv)
         foreach (var output in recipe.outputs.results)
         {
             Item outputitem = output.ItemPrefab.GetComponent<Item>();
-            ItemData newItem = outputitem.IsPrefabInit();
+            ItemData newItem = outputitem.Get_NewItemData();
             newItem.Stack.Amount = output.amount;
 
             itemsToAdd.Add(newItem);

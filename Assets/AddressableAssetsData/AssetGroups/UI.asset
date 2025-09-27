@@ -17,12 +17,6 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: c3e044c01e83ef648831da829a6cb222
   m_SerializeEntries:
-  - m_GUID: 541e52aaac751114695281ff755dd515
-    m_Address: "Assets/_Prefabs/UI/\u53F3\u952E\u83DC\u5355.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e93fb2825dd39564687eb4afe114ce36
     m_Address: "Assets/_Prefabs/UI/\u7269\u54C1\u4FE1\u606F\u9762\u677F.prefab"
     m_ReadOnly: 0

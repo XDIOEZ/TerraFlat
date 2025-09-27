@@ -218,7 +218,7 @@ public class DamageReceiver_SaveData
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
 
-    public virtual float Hurt(float damage, Item attacker)
+public virtual float Hurt(float damage, Item attacker)
 {
     if (Hp <= 0) return -1;
 
@@ -277,11 +277,13 @@ public class DamageReceiver_SaveData
         {
             Destroy(item.gameObject, Data.DestroyDelay);
         }
-        return 0; // Ensure a return value for this path
+        return actualDamage; // 返回实际伤害
     }
 
-    return Hp; // Ensure a return value for other paths
+    return actualDamage; // 返回实际伤害
 }
+
+
     public virtual float ForceHurt(float damage, Item attacker)
     {
         if (Hp <= 0) return -1;

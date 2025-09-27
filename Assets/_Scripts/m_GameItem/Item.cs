@@ -66,7 +66,7 @@ public abstract class Item : MonoBehaviour
     }
 
 
-public ItemData IsPrefabInit()
+public ItemData Get_NewItemData()
 {
     // 创建一个临时的游戏对象实例来处理初始化
     GameObject tempGO = Instantiate(gameObject);

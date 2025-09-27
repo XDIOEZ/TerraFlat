@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2490650655162201320}
   - component: {fileID: 8648338021055993557}
   - component: {fileID: 6680558015646211412}
+  - component: {fileID: 7635046391721750622}
   m_Layer: 0
   m_Name: AttackEffect_01
   m_TagString: Untagged
@@ -106,3 +107,17 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7635046391721750622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2755864728937266141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 981232c870044394fb0989491e09caeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sampleFrames: 3
+  lifetime: 0.5

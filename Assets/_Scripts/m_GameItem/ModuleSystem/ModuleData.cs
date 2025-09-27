@@ -20,6 +20,11 @@ public abstract partial class ModuleData
     {
 
     }
+    
+    public override string ToString()
+    {
+        return $"Ä£¿éÊý¾Ý:(Name: {Name}, ID: {ID}, Type: {Type}, isRunning: {isRunning})";
+    }
 }
 
 public enum ModuleType

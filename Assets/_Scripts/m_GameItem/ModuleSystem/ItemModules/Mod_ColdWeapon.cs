@@ -11,8 +11,8 @@ public partial class Mod_ColdWeapon : Module
 {
     #region 序列化字段与数据
     [Header("攻击特效")]
-    public GameObject AttackEffect;
-    
+    public List<GameEffect> AttackEffects = new List<GameEffect>();
+
     public Ex_ModData_MemoryPackable Data;
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
 
@@ -27,7 +27,7 @@ public partial class Mod_ColdWeapon : Module
         public float AttackSpeed = 10f;
         public float MaxAttackDistance = 10f;
         public float ReturnSpeed = 10f;
-        
+
         [Header("安全距离设置")]
         [Tooltip("x: 造成伤害的最近距离, y: 造成伤害的最大距离")]
         public Vector2 SafetyDistance = new Vector2(0.5f, 100f);
@@ -56,8 +56,6 @@ public partial class Mod_ColdWeapon : Module
     // 用于轨迹显示与调试
     private List<Vector2> trajectoryPoints = new List<Vector2>();
     public int maxTrajectoryPoints = 50;
-
-    [SerializeField] private int sampleFrames = 2; // 采样帧数，可以在 Inspector 里手动调整
     #endregion
 
     #region Unity 生命周期
@@ -363,37 +361,32 @@ public partial class Mod_ColdWeapon : Module
         if (beAttackTeam != null && belongTeam != null && belongTeam.CheckRelation(beAttackTeam.TeamID) == RelationType.Ally)
             return;
 
+        float acDamage =
         // 造成伤害
         receiver.Hurt(Damage.Value, belongItem == null ? item : belongItem);
 
-        // 生成攻击特效（在协程中做帧采样以估算方向）
-        if (AttackEffect != null)
+        // 生成攻击特效
+        if (AttackEffects != null && AttackEffects.Count > 0)
         {
             Vector2 hitPoint = other.ClosestPoint(transform.position);
-            StartCoroutine(SpawnEffectWithDirection(hitPoint));
+            SpawnEffect(hitPoint, acDamage);
         }
     }
 
-    private IEnumerator SpawnEffectWithDirection(Vector2 hitPoint)
+private void SpawnEffect(Vector2 hitPoint, float damage)
+{
+    // 同时生成所有特效
+    foreach (GameEffect effectPrefab in AttackEffects)
     {
-        Vector2 startPos = transform.position;
-
-        for (int i = 0; i < sampleFrames; i++)
-            yield return null;
-
-        Vector2 endPos = transform.position;
-        Vector2 dir = (endPos - startPos).normalized;
-
-        if (dir.sqrMagnitude < 0.0001f)
-            dir = Vector2.right;
-
-        Quaternion baseRotation = AttackEffect.transform.rotation;
-        Quaternion dirRotation = Quaternion.FromToRotation(Vector2.right, dir);
-        Quaternion finalRotation = dirRotation * baseRotation;
-
-        var effect = Instantiate(AttackEffect, hitPoint, finalRotation);
-        Destroy(effect, 0.3f);
+        if (effectPrefab != null)
+        {
+            var effect = Instantiate(effectPrefab);
+            effect.transform.position = new Vector3(hitPoint.x, hitPoint.y, 0f);
+            // 传递武器transform和伤害值
+            effect.Effect(transform, damage);
+        }
     }
+}
     #endregion
 
     #region Gizmos 与调试绘制

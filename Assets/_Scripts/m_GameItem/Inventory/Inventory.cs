@@ -43,10 +43,18 @@ public class Inventory : MonoBehaviour
             itemSlotUI.Data = Data.itemSlots[i];
             itemSlotUI.OnLeftClick += OnClick;
             itemSlotUI._OnScroll += OnScroll;
+            itemSlotUI.OnRightClick += OnRightClick;
             itemSlotUI.Data.Belong_Inventory = this;
         }
     }
 
+    void OnRightClick(int index)
+    {
+        RightClickMenu_UI currentMenuInstance;
+        currentMenuInstance = Instantiate(GameRes.Instance.GetPrefab("右键菜单").GetComponent<RightClickMenu_UI>());
+        currentMenuInstance.Init(itemSlotUIs[index], Owner);
+        currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlotUIs[index].transform.position;
+    }
 [Tooltip("在Load函数的最后调用,用于初始化")]
 public virtual void Init()
 {

@@ -22,10 +22,10 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
 
     public UltEvent<int,float> _OnScroll = new UltEvent<int, float>();
 
-    [Tooltip("右键菜单预制体")]
-    public GameObject rightClickMenuPrefab;
+    public UltEvent<int> OnRightClick = new UltEvent<int>();
 
     private GameObject currentMenuInstance;
+
     private bool isPointerOver = false;
     #endregion
 
@@ -106,21 +106,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     #region 创建右键菜单方法
     void CreateRightClickUI()
     {
-        if (Data == null || Data.itemData == null || rightClickMenuPrefab == null)
-            return;
-
-        if (currentMenuInstance != null)
-            Destroy(currentMenuInstance);
-
-        Vector2 mousePos = Input.mousePosition;
-        currentMenuInstance = Instantiate(rightClickMenuPrefab, transform.root);
-        currentMenuInstance.transform.position = mousePos;
-
-       /* var menuUI = currentMenuInstance.GetComponent<RightClickMenuUI>();
-        if (menuUI != null)
-        {
-            menuUI.SetTargetSlot(ItemSlot);
-        }*/
+        OnRightClick.Invoke(Data.Index);
     }
     #endregion
 

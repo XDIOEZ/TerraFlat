@@ -290,7 +290,7 @@ private void OnButtonClick()
             }
 
             Item item = prefab.GetComponent<Item>();
-            ItemData newItem = item.IsPrefabInit();
+            ItemData newItem = item.Get_NewItemData();
             newItem.Stack.Amount = output.amount;
             itemsToAdd.Add(newItem);
         }

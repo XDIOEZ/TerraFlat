@@ -448,7 +448,7 @@ public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCou
         }
          // 确保ItemData已经初始化完毕
         // 克隆ItemData
-        ItemData clonedItemData = itemComponent.IsPrefabInit();
+        ItemData clonedItemData = itemComponent.Get_NewItemData();
         if (clonedItemData == null)
         {
             Debug.LogError($"注入失败：无法克隆 {prefab.name} 的ItemData");
@@ -509,7 +509,7 @@ public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCou
             var itemComp = prefab.GetComponent<Item>();
             if (itemComp == null) { failCount++; continue; }
 
-            var itemData = itemComp.IsPrefabInit();
+            var itemData = itemComp.Get_NewItemData();
             if (itemData == null) { failCount++; continue; }
 
             itemData.Stack.Amount = count;
@@ -589,7 +589,7 @@ public void AutoInjectItemDataList(
         }
 
         // 克隆ItemData
-        ItemData itemData = itemComponent.IsPrefabInit();
+        ItemData itemData = itemComponent.Get_NewItemData();
         if (itemData == null)
         {
             Debug.LogError($"自动注入失败：无法克隆 {prefab.name} 的ItemData（索引 {i}）");
