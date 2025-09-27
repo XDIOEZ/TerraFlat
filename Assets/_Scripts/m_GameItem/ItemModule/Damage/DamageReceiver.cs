@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
+using static OfficeOpenXml.ExcelErrorValue;
 using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
 
 /// <summary>
@@ -161,6 +162,7 @@ public class DamageReceiver_SaveData
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
         GameObject panel = Instantiate(PanelPrefab,transform);
         UIValues = panel.GetComponentInChildren<BasePanel>();
+        UIValues.CollectUIComponents();
         panel.transform.position = transform.position + Vector3.up * 1f;
         PanleInstance = panel;
         DataUpdate += RefreshUI;
@@ -176,11 +178,11 @@ public class DamageReceiver_SaveData
            // s.rectTransform.anchoredPosition = Data.PanelPosition;
         }
     }
-
     [Button("刷新面板")]
     public void RefreshUI()
     {
-        UIValues.GetText("血量").text = $"{Hp}";
+        if (UIValues == null) return;
+        UIValues.GetText("血量").text = $"{Hp:F1}";  // F1 表示保留 1 位小数
     }
 
 
@@ -217,31 +219,41 @@ public class DamageReceiver_SaveData
     }
 
     public virtual float Hurt(float damage, Item attacker)
+{
+    if (Hp <= 0) return -1;
+
+    // ⏱️ 受伤间隔判断
+    if (Time.time - lastDamageTime < Data.DamageInterval)
     {
-        if (Hp <= 0) return -1;
+        return -1;
+    }
+    lastDamageTime = Time.time;
 
-        // ⏱️ 受伤间隔判断
-        if (Time.time - lastDamageTime < Data.DamageInterval)
+    // 计算实际伤害（防御力减免）
+    float actualDamage = Mathf.Max(0, damage - Data.Defense.Value);
+    
+    // 记录攻击者（根据是否造成实际伤害决定概率）
+    if (attacker != null)
+    {
+        bool shouldRecord = actualDamage > 0 || Random.value <= 0.1f; // 造成实际伤害100%记录，否则10%概率记录
+        if (shouldRecord)
         {
-            return -1;
+            Data.AttackersUIDs.Add(attacker.itemData.Guid);
+            
+            if (Data.AttackersUIDs.Count > 3)
+                Data.AttackersUIDs.RemoveAt(0);
         }
-        lastDamageTime = Time.time;
+    }
 
-        Hp -= damage * (1 - (Data.Defense.Value) * 0.01f);
-
-        // 攻击者记录
-        if(attacker!= null)
-        Data.AttackersUIDs.Add(attacker.itemData.Guid);
-
-        if (Data.AttackersUIDs.Count > 3)
-            Data.AttackersUIDs.RemoveAt(0);
-
+    // 只有造成实际伤害时才减少血量
+    if (actualDamage > 0)
+    {
+        Hp -= actualDamage;
+        
         if (Data.ShowCanvas)
             RefreshUI();
 
-        ApplyDurabilityDamageToEquipments(1);
-
-        // UI & 特效处理
+        // UI & 特效处理（只有在造成实际伤害时才触发）
         OnAction.Invoke(Hp);
 
         if (item.Sprite != null && !isFlashing)
@@ -249,23 +261,27 @@ public class DamageReceiver_SaveData
             Hit_Flash(item.Sprite);
             StartCoroutine(ShakeSprite(item.Sprite.transform));
         }
-
-        if (Hp <= 0)
-        {
-            OnDead.Invoke();
-            
-            // TODO添加战利品掉落逻辑
-            DropLoot();
-            
-            if (Data.DestroyDelay >= 0)
-            {
-                Destroy(item.gameObject, Data.DestroyDelay);
-            }
-            return 0; // Ensure a return value for this path
-        }
-
-        return Hp; // Ensure a return value for other paths
     }
+
+    // 装备耐久度减少（即使没有造成实际伤害也会减少，但只减少一半）
+    ApplyDurabilityDamageToEquipments(actualDamage > 0 ? 1 : 0.5f);
+
+    if (Hp <= 0)
+    {
+        OnDead.Invoke();
+        
+        // TODO添加战利品掉落逻辑
+        DropLoot();
+        
+        if (Data.DestroyDelay >= 0)
+        {
+            Destroy(item.gameObject, Data.DestroyDelay);
+        }
+        return 0; // Ensure a return value for this path
+    }
+
+    return Hp; // Ensure a return value for other paths
+}
     public virtual float ForceHurt(float damage, Item attacker)
     {
         if (Hp <= 0) return -1;
@@ -303,49 +319,56 @@ public class DamageReceiver_SaveData
 
 
 
- public virtual float Heal(float healAmount, Item healer)
+public virtual float Heal(float healAmount, Item healer)
 {
+    float oldHp = Hp;
     Hp = Mathf.Min(Hp + healAmount, MaxHp.Value);
-    RefreshUI();
+    
+    // 只有在血量发生变化时才刷新UI
+    if (Mathf.Abs(Hp - oldHp) > 0.001f && Data.ShowCanvas)
+    {
+        RefreshUI();
+    }
+    
     return Hp;
 }
     #endregion
 
     public Mod_Inventory Equipment_Inventory;
 
-    /// <summary>
-    /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
-    /// </summary>
-    /// <param name="amount">耐久下降的数值</param>
-    protected virtual void ApplyDurabilityDamageToEquipments(int amount = 1)
+   /// <summary>
+/// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
+/// </summary>
+/// <param name="amount">耐久下降的数值</param>
+protected virtual void ApplyDurabilityDamageToEquipments(float amount = 1f)
+{
+    if (Equipment_Inventory == null)
     {
-        if (Equipment_Inventory == null)
-        {
-            return;
-        }
+        return;
+    }
 
-        foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
-        {
-            if (mod.itemData == null) continue;
+    foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
+    {
+        if (mod.itemData == null) continue;
 
-            if (mod.itemData.Tags.HasType(Tag.Armor))
+        if (mod.itemData.Tags.HasType(Tag.Armor))
+        {
+            mod.itemData.Durability -= amount;
+
+            if (mod.itemData.Durability <= 0)
             {
-                mod.itemData.Durability -= amount;
-
-                if (mod.itemData.Durability <= 0)
-                {
-                    // 耐久为0，清空该格子
-                    mod.ClearData();
-                    mod.RefreshUI();
-                }
-                else
-                {
-                    // 否则确保耐久不为负
-                    mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability);
-                }
+                // 耐久为0，清空该格子
+                mod.ClearData();
+                mod.RefreshUI();
+            }
+            else
+            {
+                // 否则确保耐久不为负
+                mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability);
             }
         }
     }
+}
 
    // TODO实现战利品掉落方法
 /// <summary>

@@ -255,13 +255,20 @@ public class RandomMapGenerator : MonoBehaviour
             Vector2 spawnPos = new Vector2(pos.x  + 0.5f, pos.y  + 0.5f);
 
             // 实例化资源物品
-            ItemMgr.Instance.InstantiateItem(
+          Item _item  = ItemMgr.Instance.InstantiateItem(
                 spawn.itemName,
                 spawnPos,
                 default,
                 default,
                 map.ParentObject
-            ).Load();
+            );
+            if (_item == null)
+            {
+                Debug.LogWarning($"[RandomMapGenerator] 无法实例化资源物品: {spawn.itemName}");
+                continue;
+            }
+            _item.Load();
+            map.chunk.AddItem(_item);
         }
         foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
         {
@@ -344,7 +351,7 @@ public class RandomMapGenerator : MonoBehaviour
     {
         map.tileMap?.RefreshAllTiles();
         map.Data.TileLoaded = true;
-        map.BackTilePenalty_Sync(); //地图生成完毕后直接烘焙 因为生成的时候自动调用的SetTile的绘制层
+        map.BackTilePenalty_Async(); //地图生成完毕后直接烘焙 因为生成的时候自动调用的SetTile的绘制层 已经绘制完毕
         Debug.Log("[RandomMapGenerator] 地图生成完成");
     }
 

@@ -214,6 +214,10 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             targetNode.Penalty = 0;
             return;
         }
+        if(targetNode == null)
+        {
+            Debug.LogWarning($"⚠️ 节点获取失败！位置：{worldPos}（不在寻路图内");
+        }
         if (targetNode.Walkable == false)
         {
             targetNode.Penalty = 0;

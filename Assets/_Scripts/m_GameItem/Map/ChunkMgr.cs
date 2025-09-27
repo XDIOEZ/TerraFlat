@@ -81,18 +81,36 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     }
     #endregion
     #region 清理区块
-    public void DestroyChunk(Chunk chunk)
+public void DestroyChunk(Chunk chunk)
+{
+    string key = chunk.name;
+
+    // 从三个字典中移除
+    Chunk_Dic.Remove(key);
+    Chunk_Dic_Active.Remove(key);
+    Chunk_Dic_UnActive.Remove(key);
+
+    // 如果正在进行地图加载或权重烘焙，先停止协程
+    if (chunk.Map != null)
     {
-        string key = chunk.name;
-
-        // 从三个字典中移除
-        Chunk_Dic.Remove(key);
-        Chunk_Dic_Active.Remove(key);
-        Chunk_Dic_UnActive.Remove(key);
-
-        // 销毁对象
-        Destroy(chunk.gameObject);
+        // 停止地图加载协程
+        if (chunk.Map.loadTileMapCoroutine != null)
+        {
+            chunk.Map.StopCoroutine(chunk.Map.loadTileMapCoroutine);
+            chunk.Map.loadTileMapCoroutine = null;
+        }
+        
+        // 停止权重烘焙协程
+        if (chunk.Map.backTilePenaltyCoroutine != null)
+        {
+            chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
+            chunk.Map.backTilePenaltyCoroutine = null;
+        }
     }
+
+    // 销毁对象
+    Destroy(chunk.gameObject);
+}
 
     [Button("清理距离玩家过远的Chunk (正方形范围)")]
     public void DestroyChunk_In_Distance(GameObject player, int Distance = 3)
@@ -135,113 +153,99 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     #endregion
     #region 更新区块激活状态
     [Button("使距离玩家过远的Chunk失去活性 (正方形范围)")]
-    public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
+public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
+{
+    Vector2 playerPos = player.transform.position;
+    Vector2 chunkSize = ChunkMgr.GetChunkSize();
+
+    // ✅ 玩家所在 Chunk 的中心点
+    Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos);
+
+    List<string> toRemove = new List<string>();
+
+    foreach (Chunk chunk in Chunk_Dic_Active.Values)
     {
-        if (player == null)
+        // ✅ 区块中心点
+        Vector2 chunkCenter = chunk.MapSave.MapPosition;
+
+        // 方形检测：只要在 X 或 Y 上超过范围就移除
+        if (
+            Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x
+            ||
+            Mathf.Abs(chunkCenter.y - playerChunkCenter.y) >= Distance * chunkSize.y
+           )
         {
-            Debug.LogError("❌ SwitchActiveChunks_TO_UnActive 调用失败：player 为 null");
-            return;
+            toRemove.Add(chunk.name);
         }
+    }
 
-        if (SaveDataMgr.Instance == null || SaveDataMgr.Instance.SaveData == null)
-        {
-            Debug.LogError("❌ SwitchActiveChunks_TO_UnActive 调用失败：SaveDataManager 或 SaveData 为 null");
-            return;
-        }
-
-        Vector2 playerPos = player.transform.position;
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-
-        // ✅ 玩家所在 Chunk 的中心点
-        Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos);
-
-        List<string> toRemove = new List<string>();
-
-        foreach (Chunk chunk in Chunk_Dic_Active.Values)
+    foreach (string key in toRemove)
+    {
+        if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk))
         {
             if (chunk == null)
             {
-                Debug.LogWarning("⚠️ Chunk_Dic_Active 里有 null 的 Chunk");
+                Debug.LogWarning($"⚠️ toRemove 中的 Chunk {key} 是 null");
                 continue;
             }
 
-            if (chunk.MapSave == null)
+            if (chunk.gameObject == null)
             {
-                Debug.LogError($"❌ Chunk {chunk.name} 的 MapSave 为 null");
+                Debug.LogError($"❌ Chunk {key} 的 GameObject 丢失了");
                 continue;
             }
 
-            // ✅ 区块中心点
-            Vector2 chunkCenter = chunk.MapSave.MapPosition;
-
-            // 方形检测：只要在 X 或 Y 上超过范围就移除
-            if (
-                Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x
-                ||
-                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) >= Distance * chunkSize.y
-               )
+            // 如果正在进行权重烘焙，停止协程
+            if (chunk.Map != null && chunk.Map.backTilePenaltyCoroutine != null)
             {
-                toRemove.Add(chunk.name);
+                chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
+                chunk.Map.backTilePenaltyCoroutine = null;
             }
+
+            SetChunkActive(chunk, false);
         }
-
-        foreach (string key in toRemove)
-        {
-            if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk))
-            {
-                if (chunk == null)
-                {
-                    Debug.LogWarning($"⚠️ toRemove 中的 Chunk {key} 是 null");
-                    continue;
-                }
-
-                if (chunk.gameObject == null)
-                {
-                    Debug.LogError($"❌ Chunk {key} 的 GameObject 丢失了");
-                    continue;
-                }
-
-                SetChunkActive(chunk, false);
-            }
-        }
-
-        if (toRemove.Count > 0)
-            Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
     }
 
-    public void SetChunkActive(Chunk chunk, bool isActive)
+    if (toRemove.Count > 0)
+        Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
+}
+
+public void SetChunkActive(Chunk chunk, bool isActive)
+{
+    if (chunk == null)
     {
-        if (chunk == null)
-        {
-            Debug.LogError("❌ SetChunkActive 失败：chunk 为 null");
-            return;
-        }
+        Debug.LogError("❌ SetChunkActive 失败：chunk 为 null");
+        return;
+    }
 
-        if (string.IsNullOrEmpty(chunk.name))
-        {
-            Debug.LogWarning("⚠️ SetChunkActive：chunk 没有名字，可能未初始化完全");
-        }
+    if (string.IsNullOrEmpty(chunk.name))
+    {
+        Debug.LogWarning("⚠️ SetChunkActive：chunk 没有名字，可能未初始化完全");
+    }
 
-        // ✅ 维护字典
-        if (isActive)
-        {
-            if (!Chunk_Dic_Active.ContainsKey(chunk.name))
-                Chunk_Dic_Active[chunk.name] = chunk;
-            Chunk_Dic_UnActive.Remove(chunk.name);
-        }
-        else
-        {
-            if (!Chunk_Dic_UnActive.ContainsKey(chunk.name))
-                Chunk_Dic_UnActive[chunk.name] = chunk;
-            Chunk_Dic_Active.Remove(chunk.name);
-        }
+    // ✅ 维护字典
+    if (isActive)
+    {
+        if (!Chunk_Dic_Active.ContainsKey(chunk.name))
+            Chunk_Dic_Active[chunk.name] = chunk;
+        Chunk_Dic_UnActive.Remove(chunk.name);
+    }
+    else
+    {
+        if (!Chunk_Dic_UnActive.ContainsKey(chunk.name))
+            Chunk_Dic_UnActive[chunk.name] = chunk;
+        Chunk_Dic_Active.Remove(chunk.name);
+    }
 
-        // ✅ tileMap 判空
-        if (chunk.Map == null)
-        {
-            Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 Map 为 null");
-        }
-        else if (chunk.Map.tileMap == null)
+    // ✅ tileMap 判空
+    if (chunk.Map == null)
+    {
+        Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 Map 为 null");
+    }
+    else
+    {
+        // 等待权重烘焙协程完成后再切换激活状态
+        if (chunk.Map.tileMap == null)
         {
             Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 Map.tileMap 为 null");
         }
@@ -249,17 +253,18 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         {
             chunk.Map.tileMap.gameObject.SetActive(isActive);
         }
-
-        // ✅ gameObject 判空
-        if (chunk.gameObject == null)
-        {
-            Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 GameObject 为 null");
-        }
-        else
-        {
-            chunk.gameObject.SetActive(isActive);
-        }
     }
+
+    // ✅ gameObject 判空
+    if (chunk.gameObject == null)
+    {
+        Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 GameObject 为 null");
+    }
+    else
+    {
+        chunk.gameObject.SetActive(isActive);
+    }
+}
 
     public void AddActiveChunk(Chunk chunk)
     {
@@ -359,7 +364,10 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         chunk.Map = map;
 
+        chunk.AddItem(map);
+        map.chunk = chunk;
         //mapAct会在创建Map后自动烘焙权重
+        //在初始化时会自动将实例化的Item存入对应的chunk缓存中
         map.Act();
 
         return chunk;

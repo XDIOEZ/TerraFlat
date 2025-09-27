@@ -43,7 +43,7 @@ public class BasePanel : MonoBehaviour
     /// <summary>
     /// 自动收集所有子对象上的UI组件
     /// </summary>
-    private void CollectUIComponents()
+    public void CollectUIComponents()
     {
         // 清空现有字典
         buttons.Clear();
@@ -349,6 +349,15 @@ public class BasePanel : MonoBehaviour
             return text;
         }
         Debug.LogWarning($"未找到名为 {textName} 的文本组件");
+
+        Transform parent = transform;
+        Debug.Log($"子对象数量: {transform.childCount}");
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Debug.Log($"子对象 {i}: {parent.GetChild(i).name}");
+        }
+
         return null;
     }
 

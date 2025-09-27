@@ -120,6 +120,11 @@ public class TileEffectReceiver : Module
         {
             //因为离开矿洞是Data中保存的位置是上一次的所以需要重新获取
             ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
+            if (chunk == null)
+            {
+                Debug.LogError($"TileEffectReceiver: 未找到有效的 Chunk 组件！, 对象为{item.itemData.IDName}");
+           return;
+            }
             Cache_map = chunk.Map;
         }
 
@@ -267,6 +272,8 @@ public class TileEffectReceiver : Module
     /// </summary>
     private Vector2Int GetCurrentGridPos()
     {
+        // 若地图为空，则返回上一次的坐标
+        if (Cache_map == null) return lastGridPos;
         Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
         return new Vector2Int(cell.x, cell.y);
     }

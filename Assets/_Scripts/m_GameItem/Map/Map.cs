@@ -25,8 +25,8 @@ public class Map : Item, ISave_Load
     public GameObject ParentObject;
 
     // 协程引用管理，避免协程叠加
-    protected Coroutine loadTileMapCoroutine;
-    protected Coroutine backTilePenaltyCoroutine;
+    public Coroutine loadTileMapCoroutine;
+    public Coroutine backTilePenaltyCoroutine;
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData itemData { get => Data; set => Data = value as Data_TileMap; }
@@ -180,18 +180,25 @@ public class Map : Item, ISave_Load
     #endregion
 
     #region 寻路权重烘焙方法
-    [Button("异步烘焙地块寻路权重")]
-    public void BackTilePenalty_Async()
+[Button("异步烘焙地块寻路权重")]
+public void BackTilePenalty_Async()
+{
+    // 检查自身是否处于激活状态
+    if (!gameObject.activeInHierarchy || !enabled)
     {
-        // 如果已有协程在运行，先停止它
-        if (backTilePenaltyCoroutine != null)
-        {
-            StopCoroutine(backTilePenaltyCoroutine);
-        }
-        
-        // 启动新的协程
-        backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
+        Debug.Log("地图未激活，跳过权重烘焙");
+        return;
     }
+    
+    // 如果已有协程在运行，先停止它
+    if (backTilePenaltyCoroutine != null)
+    {
+        StopCoroutine(backTilePenaltyCoroutine);
+    }
+    
+    // 启动新的协程
+    backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
+}
 
     public void BackTilePenalty_Sync()
     {

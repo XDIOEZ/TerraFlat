@@ -518,7 +518,7 @@ public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCou
             SetOne_ItemData(slotIndex, itemData);
             Event_RefreshUI.Invoke(slotIndex);
 
-            Debug.Log($"放置 {prefab.name} x{count} 到随机槽位 {slotIndex}");
+            //Debug.Log($"放置 {prefab.name} x{count} 到随机槽位 {slotIndex}");
             successCount++;
         }
 

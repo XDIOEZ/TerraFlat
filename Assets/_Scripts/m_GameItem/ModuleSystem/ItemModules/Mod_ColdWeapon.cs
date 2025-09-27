@@ -10,7 +10,9 @@ using static AttackTrigger;
 public partial class Mod_ColdWeapon : Module
 {
     #region 序列化字段与数据
-    public GameObject AttackEffect; // 攻击特效
+    [Header("攻击特效")]
+    public GameObject AttackEffect;
+    
     public Ex_ModData_MemoryPackable Data;
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
 
@@ -25,6 +27,10 @@ public partial class Mod_ColdWeapon : Module
         public float AttackSpeed = 10f;
         public float MaxAttackDistance = 10f;
         public float ReturnSpeed = 10f;
+        
+        [Header("安全距离设置")]
+        [Tooltip("x: 造成伤害的最近距离, y: 造成伤害的最大距离")]
+        public Vector2 SafetyDistance = new Vector2(0.5f, 100f);
     }
     #endregion
 
@@ -33,6 +39,7 @@ public partial class Mod_ColdWeapon : Module
     public float AttackSpeed { get => weaponData.AttackSpeed; set => weaponData.AttackSpeed = value; }
     public float MaxAttackDistance { get => weaponData.MaxAttackDistance; set => weaponData.MaxAttackDistance = value; }
     public float ReturnSpeed { get => weaponData.ReturnSpeed; set => weaponData.ReturnSpeed = value; }
+    public Vector2 SafetyDistance { get => weaponData.SafetyDistance; set => weaponData.SafetyDistance = value; }
     #endregion
 
     #region 运行时字段
@@ -56,7 +63,8 @@ public partial class Mod_ColdWeapon : Module
     #region Unity 生命周期
     public override void Awake()
     {
-        if (_Data.ID == "") _Data.ID = ModText.ColdWeapon;
+        if (_Data.ID == "") 
+            _Data.ID = ModText.ColdWeapon;
     }
 
     public override void Load()
@@ -117,6 +125,9 @@ public partial class Mod_ColdWeapon : Module
                 UpdateReturning(deltaTime);
                 break;
         }
+
+        // 总是检查安全距离，因为玩家可能在移动
+        CheckSafetyDistance();
     }
     #endregion
 
@@ -138,28 +149,37 @@ public partial class Mod_ColdWeapon : Module
 
     private void OnInputActionCanceled(InputAction.CallbackContext context) => StopAttack();
 
-    [Button]
+    [Button("开始攻击")]
     public virtual void StartAttack()
     {
         if (CurrentState != AttackState.Idle) return;
         CurrentState = AttackState.Attacking;
-        StartPosition = MoveTargetTransform != null ? (Vector2)MoveTargetTransform.localPosition : Vector2.zero;
-        if (damageCollider != null) damageCollider.enabled = true;
+        
+        // 初始禁用伤害碰撞器，只有在有效距离范围内才启用
+        if (damageCollider != null) 
+            damageCollider.enabled = false;
     }
 
     public virtual void StopAttack()
     {
         if (CurrentState != AttackState.Attacking) return;
         StartReturningToStartPosition(StartPosition, ReturnSpeed);
-        if (damageCollider != null) damageCollider.enabled = false;
+        
+        // 停止攻击时禁用伤害碰撞器
+        if (damageCollider != null) 
+            damageCollider.enabled = false;
     }
 
-    [Button]
+    [Button("取消攻击")]
     public virtual void CancelAttack()
     {
         if (CurrentState != AttackState.Attacking) return;
         StartReturningToStartPosition(StartPosition, ReturnSpeed);
-        if (damageCollider != null) damageCollider.enabled = false;
+        
+        // 取消攻击时禁用伤害碰撞器
+        if (damageCollider != null) 
+            damageCollider.enabled = false;
+        
         CurrentState = AttackState.Idle;
     }
     #endregion
@@ -167,7 +187,6 @@ public partial class Mod_ColdWeapon : Module
     #region 攻击实现（移动与轨迹）
     /// <summary>
     /// 执行刺击动作，根据是否达到最大距离选择圆弧或线性移动。
-    /// 不对外暴露内部状态以保持原逻辑。
     /// </summary>
     public void PerformStab(float speed, float maxDistance, float deltaTime)
     {
@@ -225,6 +244,46 @@ public partial class Mod_ColdWeapon : Module
         }
     }
 
+    /// <summary>
+    /// 检查是否在有效伤害距离范围内，如果在范围内则启用伤害碰撞器
+    /// </summary>
+    private void CheckSafetyDistance()
+    {
+        // 如果没有伤害碰撞器，直接返回
+        if (damageCollider == null) return;
+
+        Vector2 currentPosition = item.transform.position;
+        
+        // 获取父对象（玩家）的位置作为起始位置
+        Vector2 startPosition = Vector2.zero;
+        if (item.transform.parent != null)
+        {
+            startPosition = item.transform.parent.position;
+        }
+        else
+        {
+            startPosition = transform.parent.position;
+        }
+
+        float distanceFromStart = Vector2.Distance(currentPosition, startPosition);
+
+        // 只有在攻击状态且在有效伤害距离范围内时才启用伤害碰撞器
+        if (CurrentState == AttackState.Attacking && 
+            distanceFromStart >= SafetyDistance.x && 
+            distanceFromStart <= SafetyDistance.y)
+        {
+            if (!damageCollider.enabled)
+            {
+                damageCollider.enabled = true;
+            }
+        }
+        // 如果不在攻击状态或不在有效伤害距离范围内，则禁用伤害碰撞器
+        else if (damageCollider.enabled)
+        {
+            damageCollider.enabled = false;
+        }
+    }
+
     private void RecordTrajectoryPoint()
     {
         if (item == null) return;
@@ -240,7 +299,11 @@ public partial class Mod_ColdWeapon : Module
     #region 返回与移动辅助
     private void UpdateReturning(float deltaTime)
     {
-        if (MoveTargetTransform == null) { CurrentState = AttackState.Idle; return; }
+        if (MoveTargetTransform == null) 
+        { 
+            CurrentState = AttackState.Idle; 
+            return; 
+        }
 
         Vector2 currentPos = (Vector2)MoveTargetTransform.localPosition;
         Vector2 toTarget = returnTarget - currentPos;
@@ -253,10 +316,20 @@ public partial class Mod_ColdWeapon : Module
         {
             MoveTargetTransform.localPosition = returnTarget;
             CurrentState = AttackState.Idle;
+            
+            // 确保返回到位后禁用伤害碰撞器
+            if (damageCollider != null) 
+                damageCollider.enabled = false;
         }
         else
         {
             MoveTargetTransform.localPosition = currentPos + move;
+            
+            // 在返回过程中始终禁用伤害碰撞器
+            if (damageCollider != null && damageCollider.enabled)
+            {
+                damageCollider.enabled = false;
+            }
         }
     }
 
@@ -265,12 +338,21 @@ public partial class Mod_ColdWeapon : Module
         CurrentState = AttackState.Returning;
         returnTarget = startTarget;
         ReturnSpeed = backSpeed;
+        
+        // 开始返回时立即禁用伤害碰撞器
+        if (damageCollider != null && damageCollider.enabled)
+        {
+            damageCollider.enabled = false;
+        }
     }
     #endregion
 
     #region 伤害处理
     public void OnTriggerEnter2D(Collider2D other)
     {
+        // 只有在伤害碰撞器启用时才处理碰撞
+        if (damageCollider == null || !damageCollider.enabled) return;
+        
         if (!other.TryGetComponent(out DamageReceiver receiver)) return;
 
         var beAttackTeam = other.GetComponentInParent<ITeam>();
@@ -339,7 +421,7 @@ public partial class Mod_ColdWeapon : Module
     private void DrawHelperGizmos()
     {
         Vector2 startPosition = (item != null && item.transform.parent != null) ? (Vector2)item.transform.parent.position : (Vector2)transform.parent.position;
-        Vector2 focusPoint = faceMouse.Data.FocusPoint;
+        Vector2 focusPoint = faceMouse != null ? faceMouse.Data.FocusPoint : startPosition;
 
         // 起点 -> 焦点
         Gizmos.color = Color.yellow;
@@ -350,6 +432,18 @@ public partial class Mod_ColdWeapon : Module
         // 最大范围
         Gizmos.color = new Color(0f, 1f, 0f, 0.2f);
         Gizmos.DrawWireSphere(startPosition, drawMax);
+
+        // 安全距离范围
+        if (weaponData != null)
+        {
+            // 内圈（最近伤害距离）
+            Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
+            Gizmos.DrawWireSphere(startPosition, weaponData.SafetyDistance.x);
+            
+            // 外圈（最大伤害距离）
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
+            Gizmos.DrawWireSphere(startPosition, weaponData.SafetyDistance.y);
+        }
 
         Vector2 targetPoint = CalculateTargetPoint(startPosition, focusPoint, drawMax);
         Gizmos.color = Color.cyan;

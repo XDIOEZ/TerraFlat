@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5854501383382979422}
   - component: {fileID: 1132132357919869270}
   - component: {fileID: 8741024448855339655}
-  m_Layer: 7
+  m_Layer: 8
   m_Name: DamageSender
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -108,8 +108,11 @@ MonoBehaviour:
     AttackSpeed: 10
     MaxAttackDistance: 10
     ReturnSpeed: 10
+    SafetyDistance: {x: 0.5, y: 100}
   faceMouse: {fileID: 0}
   CurrentState: 0
   StartPosition: {x: 0, y: 0}
   MoveTargetTransform: {fileID: 0}
   damageCollider: {fileID: 0}
+  maxTrajectoryPoints: 50
+  sampleFrames: 2
