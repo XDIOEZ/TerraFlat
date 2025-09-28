@@ -1,5 +1,6 @@
 
 using MemoryPack;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 [MemoryPackable]
@@ -55,6 +56,17 @@ public partial class Nutrition
         return result;
     }
 
+    //新增一个方法 更新最大值 到当前值[]
+    [Button("更新最大值的基础数值到当前值")]
+public void UpdateMaxToCurrent()
+{
+    Max_Carbohydrates.BaseValue = Carbohydrates;
+    Max_Protein.BaseValue = Protein;
+    Max_Water.BaseValue = Water;
+    Max_Fat.BaseValue = Fat;
+    Max_Vitamins.BaseValue = Vitamins;
+}
+
     //新增一个方法 更新当前值 到最大值
     public void Max()
     {
@@ -64,6 +76,7 @@ public partial class Nutrition
         Fat = Max_Fat.Value;
         Vitamins = Max_Vitamins.Value;
     }
+    //TODO 新增一个方法 更新最大值 到当前值
 
     [MemoryPackConstructor]
     public Nutrition(float Carbohydrates, float Protein, float Water, float Fat, float Vitamins)

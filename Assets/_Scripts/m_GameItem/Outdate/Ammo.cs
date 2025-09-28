@@ -44,7 +44,7 @@ public class Ammo : Item
             if (_hit.collider != null)
             {
                 // �ڴ˴�����������ײ�����߼�
-                damageSender.OnTriggerEnter2D(_hit.collider);
+               // damageSender.OnTriggerEnter2D(_hit.collider);
                 Debug.Log("Ammo hit " + _hit.collider.name);
             }
             //�ٶ�С��0.5ʱ����
@@ -114,7 +114,7 @@ public class Ammo : Item
 
     public override void Act()
     {
-        DamageSender.IsDamageModeEnabled = true;
+    //    DamageSender.IsDamageModeEnabled = true;
     }
 }
 /*

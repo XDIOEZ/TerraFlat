@@ -6,8 +6,9 @@ using UnityEngine.EventSystems;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using static AttackTrigger;
+using AYellowpaper.SerializedCollections;
 
-public partial class Mod_ColdWeapon : Module
+public partial class Mod_ColdWeapon : Module ,IDamageSender
 {
     #region 序列化字段与数据
     [Header("攻击特效")]
@@ -15,7 +16,7 @@ public partial class Mod_ColdWeapon : Module
 
     public Ex_ModData_MemoryPackable Data;
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
-
+    public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
     [SerializeField] public ColdWeapon_SaveData weaponData = new ColdWeapon_SaveData();
 
     [System.Serializable]
@@ -40,6 +41,8 @@ public partial class Mod_ColdWeapon : Module
     public float MaxAttackDistance { get => weaponData.MaxAttackDistance; set => weaponData.MaxAttackDistance = value; }
     public float ReturnSpeed { get => weaponData.ReturnSpeed; set => weaponData.ReturnSpeed = value; }
     public Vector2 SafetyDistance { get => weaponData.SafetyDistance; set => weaponData.SafetyDistance = value; }
+    Item IDamageSender.attacker { get => item; set => item = value; }
+    SerializedDictionary<DamageTag, float> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
     #endregion
 
     #region 运行时字段
@@ -96,6 +99,7 @@ public partial class Mod_ColdWeapon : Module
             if (damageCollider == null)
                 Debug.LogWarning("[Mod_ColdWeapon] 没有找到Collider2D，请在编辑器里赋值！");
         }
+        damageCollider.enabled = false;
     }
 
     public override void Save()
@@ -361,9 +365,8 @@ public partial class Mod_ColdWeapon : Module
         if (beAttackTeam != null && belongTeam != null && belongTeam.CheckRelation(beAttackTeam.TeamID) == RelationType.Ally)
             return;
 
-        float acDamage =
+        float acDamage =receiver.Hurt(this);
         // 造成伤害
-        receiver.Hurt(Damage.Value, belongItem == null ? item : belongItem);
 
         // 生成攻击特效
         if (AttackEffects != null && AttackEffects.Count > 0)

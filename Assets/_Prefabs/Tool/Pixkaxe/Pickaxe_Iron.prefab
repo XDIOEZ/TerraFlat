@@ -27,7 +27,7 @@ Transform:
   m_GameObject: {fileID: 6784024402793062405}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.748, y: 0.129, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -64,10 +64,10 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: -0.05243349, y: -0.005667731}
+  m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -78,7 +78,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1.1458683, y: 0.19971997}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &4064992327198011200
 MonoBehaviour:
@@ -126,10 +126,10 @@ MonoBehaviour:
       Amount: 1
       Volume: 100
       CanBePickedUp: 1
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     Guid: 0
     code: 
@@ -216,7 +216,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
-  m_SpriteSortPoint: 0
+  m_SpriteSortPoint: 1
 --- !u!1001 &3511443549830791014
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -227,23 +227,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1523247678439396471, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: m_Size.x
-      value: 0.34679747
-      objectReference: {fileID: 0}
-    - target: {fileID: 1523247678439396471, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
-      propertyPath: m_Size.y
-      value: 0.90651184
+      value: 0.4987358
       objectReference: {fileID: 0}
     - target: {fileID: 1523247678439396471, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: m_Offset.x
-      value: -0.4662974
-      objectReference: {fileID: 0}
-    - target: {fileID: 1523247678439396471, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
-      propertyPath: m_Offset.y
-      value: -0.004898101
+      value: -0.22256345
       objectReference: {fileID: 0}
     - target: {fileID: 5452399193518296703, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.642
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5452399193518296703, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: m_LocalPosition.y
@@ -287,11 +279,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: weaponData.AttackSpeed
-      value: 2.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: weaponData.ReturnSpeed
-      value: 2.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: saveData.MaxAttackDistance
@@ -299,7 +291,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: weaponData.Damage.BaseValue
-      value: 35
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: weaponData.SafetyDistance.x
@@ -312,6 +304,18 @@ PrefabInstance:
     - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
       propertyPath: weaponData.MaxAttackDistance
       value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
+      propertyPath: Weakness._serializedList.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
+      propertyPath: Weakness._serializedList.Array.data[0].Value
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195580934439923622, guid: d468c0a9bce573849aeb6a18be930f9c, type: 3}
+      propertyPath: weaponData.Weakness._serializedList.Array.data[0].Value
+      value: 4
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

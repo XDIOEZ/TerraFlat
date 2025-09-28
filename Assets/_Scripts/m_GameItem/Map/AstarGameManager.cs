@@ -201,7 +201,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     /// - Gizmos记录数量有限制
     /// - newPenalty为0时设置节点为不可通行
     /// </summary>
-    public void ModifyNodePenalty_Optimized(Vector3 worldPos, uint newPenalty = 1000)
+    public void ModifyNodePenalty_Optimized(Vector2 worldPos, uint newPenalty = 1000)
     {
         // 1. 获取节点
         NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
@@ -217,6 +217,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         if(targetNode == null)
         {
             Debug.LogWarning($"⚠️ 节点获取失败！位置：{worldPos}（不在寻路图内");
+            return;
         }
         if (targetNode.Walkable == false)
         {

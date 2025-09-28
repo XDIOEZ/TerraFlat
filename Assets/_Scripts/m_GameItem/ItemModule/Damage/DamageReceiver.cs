@@ -1,4 +1,5 @@
-﻿using Sirenix.OdinInspector;
+﻿using AYellowpaper.SerializedCollections;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -40,6 +41,7 @@ public class DamageReceiver_SaveData
     public float Hp = 100;
     public GameValue_float MaxHp = new GameValue_float(100);
     public GameValue_float Defense = new GameValue_float(0);
+    public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
     [Header("伤害者的UID列表")]
     public List<int> AttackersUIDs = new List<int>();
 
@@ -218,7 +220,7 @@ public class DamageReceiver_SaveData
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
 
-public virtual float Hurt(float damage, Item attacker)
+public virtual float Hurt(IDamageSender damageSender)
 {
     if (Hp <= 0) return -1;
 
@@ -229,16 +231,39 @@ public virtual float Hurt(float damage, Item attacker)
     }
     lastDamageTime = Time.time;
 
-    // 计算实际伤害（防御力减免）
-    float actualDamage = Mathf.Max(0, damage - Data.Defense.Value);
-    
+    // 检查弱点属性
+    float defenseBreak = -1;
+    foreach(var thisWeak in Data.Weakness)
+    {
+        if(damageSender.Weakness.ContainsKey(thisWeak.Key))
+        {
+            // 攻击者的Tag等级 是否大于等于 受击者的Tag等级
+            defenseBreak = damageSender.Weakness[thisWeak.Key] - thisWeak.Value;
+            break;
+        }
+    }
+
+    // 计算实际伤害
+    float actualDamage;
+    if (defenseBreak >= 0)
+    {
+        // 破防伤害，无视防御
+        actualDamage = damageSender.Damage.Value;
+    }
+    else
+    {
+        // 计算实际伤害（防御力减免，每点防御减少1%伤害）
+        float defenseRate = Mathf.Clamp01(Data.Defense.Value * 0.01f); // 每点防御减少1%伤害，最大100%
+        actualDamage = damageSender.Damage.Value * (1 - defenseRate);
+    }
+
     // 记录攻击者（根据是否造成实际伤害决定概率）
-    if (attacker != null)
+    if (damageSender.attacker != null)
     {
         bool shouldRecord = actualDamage > 0 || Random.value <= 0.1f; // 造成实际伤害100%记录，否则10%概率记录
         if (shouldRecord)
         {
-            Data.AttackersUIDs.Add(attacker.itemData.Guid);
+            Data.AttackersUIDs.Add(damageSender.attacker.itemData.Guid);
             
             if (Data.AttackersUIDs.Count > 3)
                 Data.AttackersUIDs.RemoveAt(0);
@@ -284,7 +309,7 @@ public virtual float Hurt(float damage, Item attacker)
 }
 
 
-    public virtual float ForceHurt(float damage, Item attacker)
+    public virtual float ForceHurt(float damage)
     {
         if (Hp <= 0) return -1;
 

@@ -85,8 +85,8 @@ public class AttackTrigger : Module
         Weapon = _weapon;
         Attacker = _weapon.GetComponent<IAttackState>();
         WeaponData = _weapon.GetComponent<IColdWeapon>();
-        if (_weapon.GetComponentInChildren<IDamageSender>()!= null)
-        _weapon.GetComponentInChildren<IDamageSender>().OnDamage += AttackStop;
+     //   if (_weapon.GetComponentInChildren<IDamageSender>()!= null)
+       // _weapon.GetComponentInChildren<IDamageSender>().OnDamage += AttackStop;
     }
 
     void AttackStop(float damage)

@@ -96,17 +96,17 @@ public class WorldEdge : Item, ISave_Load, IInteract
     {
         base.Load();
         // 检查数据是否有效，防止空引用错误
-        if (data == null || data._transform == null)
+        if (data == null || data.transform == null)
         {
             Debug.LogWarning("[WorldEdge] 加载失败：边界数据或变换数据为空");
             return;
         }
-        if (data._transform.Scale != Vector3.zero)
+        if (data.transform.scale != Vector3.zero)
         {
-            var t = data._transform; // 获取保存的变换数据
-            transform.position = t.Position; // 恢复位置
-            transform.rotation = t.Rotation; // 恢复旋转
-            transform.localScale = t.Scale; // 恢复缩放
+            var t = data.transform; // 获取保存的变换数据
+            transform.position = t.position; // 恢复位置
+            transform.rotation = t.rotation; // 恢复旋转
+            transform.localScale = t.scale; // 恢复缩放
         }
     
 

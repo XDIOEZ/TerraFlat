@@ -118,7 +118,7 @@ public partial class Mod_Food : Module , IModulePanel
                 if (Data.nutrition.Protein <= 0)
                 {
                     //表示饥饿值出现亏欠 , 自己对自己造成伤害
-                    DamageReceiver.ForceHurt(Data.ProteinSelfHurt * timeDelta, item);
+                    DamageReceiver.ForceHurt(Data.ProteinSelfHurt * timeDelta);
                 }
                 else if (Data.nutrition.Protein >= Data.ProteinThreshold)
                 {
@@ -131,14 +131,14 @@ public partial class Mod_Food : Module , IModulePanel
             if (Data.nutrition.Water <= 0)
             {
                     //表示水份值出现亏欠 , 自己对自己造成伤害
-                    DamageReceiver.ForceHurt(Data.WaterSelfHurt * timeDelta, item);
+                    DamageReceiver.ForceHurt(Data.WaterSelfHurt * timeDelta);
             }
 
             //检测维生素是否出现亏欠情况
             if (Data.nutrition.Vitamins <= 0)
             {
                 //表示饥饿值出现亏欠 , 自己对自己造成伤害
-                DamageReceiver.Hurt(Data.VitaminSelfHurt * timeDelta, item);
+                DamageReceiver.ForceHurt(Data.VitaminSelfHurt * timeDelta);
             }
         }
         
@@ -373,6 +373,10 @@ public partial class Mod_Food : Module , IModulePanel
             if (BeEater.item.itemData.Stack.Amount <= 0)
             {
                 Destroy(BeEater.item.gameObject);  // 销毁被吃的食物
+            }
+            else
+            {
+
             }
         }
     }

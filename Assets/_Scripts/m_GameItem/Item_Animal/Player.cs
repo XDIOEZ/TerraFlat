@@ -90,9 +90,9 @@ public class Player : Item
             }
         }
         
-        transform.position = itemData._transform.Position;
-        transform.rotation = itemData._transform.Rotation;
-        transform.localScale = itemData._transform.Scale;
+        transform.position = itemData.transform.position;
+        transform.rotation = itemData.transform.rotation;
+        transform.localScale = itemData.transform.scale;
         base.Load();
     }
     

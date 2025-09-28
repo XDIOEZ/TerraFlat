@@ -192,15 +192,8 @@ public class Mod_Scene : Module
         Data_Player playerData = player.Data;
         Vector2 playerPos = player.transform.position;
 
-        // 获取(0,0)位置的地图数据
-        MapSave targetMapSave = null;
-        if (planetData != null && planetData.MapData_Dict.TryGetValue(Vector2Int.zero.ToString(), out var mapSave))
-        {
-            targetMapSave = mapSave;
-        }
-
         // ===== 进入房间 =====
-        if (targetMapSave != null)
+        if (_sceneAssetList.Count > 0)
         {
             string lastSceneName = playerData.CurrentSceneName;
 
@@ -217,44 +210,48 @@ public class Mod_Scene : Module
                 // 清理 Chunk
                 ChunkMgr.Instance.CleanEmptyDicValues();
 
-                //创建新 Chunk
-                Chunk chunk = ChunkMgr.Instance.CreateChunk_ByMapSave(targetMapSave);
-                ChunkMgr.Instance.AddActiveChunk(chunk);//添加到激活 Chunk 列表中
-                chunk.LoadChunk_By_MapSaveData_Sync();
                 // 重新加载玩家
                 Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
                 ItemMgr.Instance.Player_DIC[playerData.Name_User] = newPlayer;
-                newPlayer.Load();
-                newPlayer.LoadDataPosition();
 
-                //设置玩家返回点和返回场景
-                if (_sceneAssetList != null && _sceneAssetList.Count > 0)
+                //创建新 Chunk
+                foreach (var targetMapSave in planetData.MapData_Dict.Values)
                 {
-                    // 遍历所有物品，找到返回点
-                    if (chunk.RuntimeItemsGroup.TryGetValue("MapCore_Pit", out var MapCore_Pit))
-                    {
-                        foreach (var MapCore in MapCore_Pit)
-                        {
-                            MapCore.Act();
-                        }
-                    }
-                    // 遍历所有物品，找到返回点
-                    if (chunk.RuntimeItemsGroup.TryGetValue("Door", out var doors))
-                    {
-                        foreach (var door in doors)
-                        {
-                            if (door.itemMods.GetMod_ByID(ModText.Scene) is Mod_Scene sceneMod)
-                            {
-                                sceneMod.Data.SceneName = lastSceneName;
-                                sceneMod.Data.PlayerPos = playerPos;
+                    Chunk chunk = ChunkMgr.Instance.CreateChunk_ByMapSave(targetMapSave);
+                    ChunkMgr.Instance.AddActiveChunk(chunk);//添加到激活 Chunk 列表中
+                    chunk.LoadChunk_By_MapSaveData_Sync();
 
-                                newPlayer.transform.position = (Vector2)door.transform.position + PlayerPosOffset;
-                                this.Data.PlayerPos = door.transform.position;
+                    //设置玩家返回点和返回场景
+                    if (_sceneAssetList != null && _sceneAssetList.Count > 0)
+                    {
+                        // 遍历所有物品，找到返回点
+                        if (chunk.RuntimeItemsGroup.TryGetValue("MapCore_Pit", out var MapCore_Pit))
+                        {
+                            foreach (var MapCore in MapCore_Pit)
+                            {
+                                MapCore.Act();
+                            }
+                        }
+                        // 遍历所有物品，找到返回点
+                        if (chunk.RuntimeItemsGroup.TryGetValue("Door", out var doors))
+                        {
+                            foreach (var door in doors)
+                            {
+                                if (door.itemMods.GetMod_ByID(ModText.Scene) is Mod_Scene sceneMod)
+                                {
+                                    sceneMod.Data.SceneName = lastSceneName;
+                                    sceneMod.Data.PlayerPos = playerPos;
+
+                                    newPlayer.Data.transform.position = (Vector2)door.transform.position + PlayerPosOffset;
+                                    this.Data.PlayerPos = door.transform.position;
+                                }
                             }
                         }
                     }
                 }
-
+                
+                newPlayer.Load();
+                newPlayer.LoadDataPosition();
             });
         }
         // ===== 离开房间 =====

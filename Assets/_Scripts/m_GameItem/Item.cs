@@ -288,16 +288,16 @@ public ItemData Get_NewItemData()
     }
     public void LoadDataPosition()
     {
-        transform.position = itemData._transform.Position;
-        transform.rotation = itemData._transform.Rotation;
-        transform.localScale = itemData._transform.Scale;
+        transform.position = itemData.transform.position;
+        transform.rotation = itemData.transform.rotation;
+        transform.localScale = itemData.transform.scale;
     }
     [Button("保存模块")]
     public virtual void Save()
     {
-        itemData._transform.Position = transform.position;
-        itemData._transform.Rotation = transform.rotation;
-        itemData._transform.Scale = transform.localScale;
+        itemData.transform.position = transform.position;
+        itemData.transform.rotation = transform.rotation;
+        itemData.transform.scale = transform.localScale;
         ModuleSave();
     }
 

@@ -59,7 +59,7 @@ public  abstract partial class ItemData
     public ItemStack Stack;
 
     [Tooltip("物品缩放")]
-    public ItemTransform _transform = new();
+    public ItemTransform transform = new();
 
     [Tooltip("物品特殊数据")]
     public string ItemSpecialData;
@@ -197,13 +197,13 @@ public partial class ItemTag
 public partial class ItemTransform
 {
     [Tooltip("物品位置")]
-    public Vector3 Position;
+    public Vector3 position;
 
     [Tooltip("物品旋转")]
-    public Quaternion Rotation;
+    public Quaternion rotation;
 
     [Tooltip("物品缩放")]
-    public Vector3 Scale = Vector3.one;
+    public Vector3 scale = Vector3.one;
 }
 
 

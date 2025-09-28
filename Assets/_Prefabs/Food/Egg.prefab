@@ -62,6 +62,7 @@ MonoBehaviour:
     GameName: "\u86CB"
     Description: "\u53EF\u4EE5\u662F\u4EFB\u4F55\u52A8\u7269\u7684\u86CB"
     Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
       - Food
@@ -223,6 +224,46 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3570442893651331518}
     m_Modifications:
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Fat
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Water
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Protein
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Vitamins
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Carbohydrates
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Fat.BaseValue
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Water.BaseValue
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Protein.BaseValue
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Vitamins.BaseValue
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Carbohydrates.BaseValue
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: m_Name
       value: "\u98DF\u7269\u6A21\u5757"

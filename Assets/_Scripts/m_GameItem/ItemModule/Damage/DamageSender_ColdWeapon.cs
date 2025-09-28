@@ -2,7 +2,7 @@
 using UltEvents;
 using UnityEngine;
 [RequireComponent(typeof(Collider2D))]
-public class DamageSender_ColdWeapon : MonoBehaviour, IDamageSender
+public class DamageSender_ColdWeapon : MonoBehaviour
 {
     #region 配置字段
     [SerializeField] private float minDamageInterval = 0.5f;

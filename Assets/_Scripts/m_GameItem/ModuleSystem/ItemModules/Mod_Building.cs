@@ -265,7 +265,7 @@ private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
         0f
     );
     
-    newitemData._transform.Position = gridPosition;
+    newitemData.transform.position = gridPosition;
     
     Item newItem = ItemMgr.Instance.InstantiateItem(
             newitemData,

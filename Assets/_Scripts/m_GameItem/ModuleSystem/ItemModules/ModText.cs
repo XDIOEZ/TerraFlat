@@ -80,3 +80,9 @@ public static class AnimationText
     public static string Run = "Run";
     public static string Attack = "Attack";
 }
+
+public enum DamageTag
+{
+    ¿ó¸ä,
+    ¸«Í·
+}

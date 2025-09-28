@@ -32,8 +32,8 @@ public class StoneAxe : Item, IColdWeapon, IAttackState
         {
             if (_sender == null)
             {
-                _sender = GetComponentInChildren<IDamageSender>();
-                _sender.DamageValue = WeaponDamage;
+               // _sender = GetComponentInChildren<IDamageSender>();
+             //   _sender.DamageValue = WeaponDamage;
             }
             return _sender;
         }

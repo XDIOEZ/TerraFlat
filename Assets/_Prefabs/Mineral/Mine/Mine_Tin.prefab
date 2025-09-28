@@ -227,7 +227,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 903940306571574032, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_InstanceId
-      value: -452214
+      value: -279928
       objectReference: {fileID: 0}
     - target: {fileID: 1808889728832966955, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_Name
@@ -296,8 +296,16 @@ PrefabInstance:
       value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757 \u77FF\u7269"
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.Hp
+      value: 400
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.MaxHp.BaseValue
+      value: 400
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.Defense.BaseValue
-      value: 23
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.size
@@ -322,6 +330,10 @@ PrefabInstance:
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
       value: Ore_Tin
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.Weakness._serializedList.Array.data[0].Value
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 3418258393810232365, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: m_LocalPosition.x

@@ -146,6 +146,7 @@ MonoBehaviour:
     GameName: Apple
     Description: "\u4E00\u5929\u4E00\u82F9\u679C,\u533B\u751F\u8FDC\u79BB\u6211"
     Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
       - None

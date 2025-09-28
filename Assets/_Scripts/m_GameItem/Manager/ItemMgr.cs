@@ -169,7 +169,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
     }
     public Item InstantiateItem(ItemData itemData, GameObject parent = null,bool newGuid = false)
     {
-        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData._transform.Position, itemData._transform.Rotation, itemData._transform.Scale);
+        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData.transform.position, itemData.transform.rotation, itemData.transform.scale);
 
         Item item = itemObj.GetComponent<Item>();
 
@@ -179,11 +179,11 @@ public class ItemMgr : SingletonMono<ItemMgr>
         }
         else
         {
-            if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var chunk))
+            if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var chunk))
             {
                 itemObj.transform.SetParent(chunk.transform, true);
             }
-            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var UnActivechunk))
+            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var UnActivechunk))
             {
                 itemObj.transform.SetParent(UnActivechunk.transform, true);
             }
@@ -205,7 +205,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
     {
         itemData.Guid = System.Guid.NewGuid().GetHashCode();
 
-        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData._transform.Position, itemData._transform.Rotation, itemData._transform.Scale);
+        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData.transform.position, itemData.transform.rotation, itemData.transform.scale);
 
         Item item = itemObj.GetComponent<Item>();
 
@@ -215,11 +215,11 @@ public class ItemMgr : SingletonMono<ItemMgr>
         }
         else
         {
-            if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var chunk))
+            if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var chunk))
             {
                 itemObj.transform.SetParent(chunk.transform, true);
             }
-            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData._transform.Position).ToString(), out var UnActivechunk))
+            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var UnActivechunk))
             {
                 itemObj.transform.SetParent(UnActivechunk.transform, true);
             }

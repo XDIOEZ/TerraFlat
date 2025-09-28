@@ -5,21 +5,30 @@ using UnityEngine;
 
 public class Mod_ChunkLoader : Module
 {
+    #region 序列化字段与数据
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
 
     // 三个距离配置 (Inspector 可调)
+    [Header("区块加载距离设置")]
+    [Tooltip("区块失活距离")]
     public int UnActiveDistance = 2;
+    [Tooltip("区块销毁距离")]
     public int DestroyChunkDistance = 3;
+    [Tooltip("区块加载距离")]
     public int LoadChunkDistance = 1;
 
     [ShowInInspector]
     (int UnActiveDistance, int DestroyChunkDistance, int LoadChunkDistance) Data
         = (UnActiveDistance: 2, DestroyChunkDistance: 3, LoadChunkDistance: 1);
+    #endregion
 
+    #region 运行时字段
     private Vector2 lastChunkPos;
     private TileEffectReceiver tileEffectReceiver;
+    #endregion
 
+    #region 生命周期
     public override void Load()
     {
         Data.UnActiveDistance = UnActiveDistance;
@@ -41,29 +50,16 @@ public class Mod_ChunkLoader : Module
         if (tileEffectReceiver != null)
         {
             // 订阅 Tile 离开事件（更可靠，因为离开的Tile肯定存在）
-            tileEffectReceiver.OnTileExitEvent +=(OnTileExited);
+            tileEffectReceiver.OnTileExitEvent += (OnTileExited);
         }
         else
         {
             Debug.LogWarning("未找到 TileEffectReceiver 组件，将使用定时检测方式");
         }
 
-            //销毁过远的失活的区块
-            ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
-            //将较远的区块设置为非激活状态
-            ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
-            //同步绘制寻路网格
-            AstarGameManager.Instance.UpdateMeshSync(transform.position, Data.LoadChunkDistance);
-        if (SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap == false)
-        {
-            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: 1);
-        }
-        else
-        {
-            ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
-        }
+        // 初始化区块加载
+        InitializeChunkLoading();
     }
-
     public override void Save()
     {
         // 确保保存的是最新的值
@@ -80,6 +76,45 @@ public class Mod_ChunkLoader : Module
     }
 
     /// <summary>
+    /// 清理事件监听
+    /// </summary>
+    public void OnDestroy()
+    {
+        if (tileEffectReceiver != null)
+        {
+            tileEffectReceiver.OnTileExitEvent -= (OnTileExited);
+        }
+    }
+    #endregion
+
+    #region 区块加载初始化
+    /// <summary>
+    /// 初始化区块加载逻辑
+    /// </summary>
+    private void InitializeChunkLoading()
+    {
+        //销毁过远的失活的区块
+        ChunkMgr.Instance.DestroyChunk_In_Distance(item.gameObject, Distance: Data.DestroyChunkDistance);
+        //将较远的区块设置为非激活状态
+        ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(item.gameObject, Distance: Data.UnActiveDistance);
+        //获取所在区块坐标
+        Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
+        //同步绘制寻路网格
+        AstarGameManager.Instance.UpdateMeshSync(currentChunkPos, Data.LoadChunkDistance);
+        
+        if (SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap == false)
+        {
+            ChunkMgr.Instance.LoadChunkCloseToPlayer(item.gameObject, Distance: 1);
+        }
+        else
+        {
+            ChunkMgr.Instance.LoadChunkCloseToPlayer(item.gameObject, Distance: Data.LoadChunkDistance);
+        }
+    }
+    #endregion
+
+    #region 事件处理
+    /// <summary>
     /// Tile离开事件回调
     /// </summary>
     private void OnTileExited(TileData tileData)
@@ -92,12 +127,14 @@ public class Mod_ChunkLoader : Module
             UpdateChunks(currentChunkPos);
         }
     }
+    #endregion
 
-/// <summary>
-/// 封装区块更新逻辑，避免重复代码
-/// </summary>
-private void UpdateChunks(Vector2 chunkPos)
-{
+    #region 区块更新逻辑
+    /// <summary>
+    /// 封装区块更新逻辑，避免重复代码
+    /// </summary>
+    private void UpdateChunks(Vector2 chunkPos)
+    {
         //销毁过远的失活的区块
         ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: Data.DestroyChunkDistance);
         //将较远的区块设置为非激活状态
@@ -127,19 +164,7 @@ private void UpdateChunks(Vector2 chunkPos)
                 //异步加载较近的区块 同时 赋值权重
                 ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: Data.LoadChunkDistance);
             }
- 
         });
-    
-}
-
-    /// <summary>
-    /// 清理事件监听
-    /// </summary>
-    public void OnDestroy()
-    {
-        if (tileEffectReceiver != null)
-        {
-            tileEffectReceiver.OnTileExitEvent -=(OnTileExited);
-        }
     }
+    #endregion
 }

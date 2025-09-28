@@ -265,6 +265,7 @@ public void StartNewGame()
     private void LoadPlayerAndCreateWorld(string playerName, Data_Player playerData)
     {
         ItemMgr.Instance.CleanupNullItems();
+        ChunkMgr.Instance.ClearAllChunk();
     
         Player player = ItemMgr.Instance.LoadPlayer(playerName);
            
@@ -272,7 +273,7 @@ public void StartNewGame()
 
         player.Load();
 
-        if (player.Data._transform.Position == Vector3.zero)
+        if (player.Data.transform.position == Vector3.zero)
         {
             // 新玩家：随机放到新场景
             ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));

@@ -27,9 +27,9 @@ public class Chunk : MonoBehaviour
             {
                 Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject,newGuid:false);
                 item.Load();
-                item.transform.position = itemData._transform.Position;
-                item.transform.rotation = itemData._transform.Rotation;
-                item.transform.localScale = itemData._transform.Scale;
+                item.transform.position = itemData.transform.position;
+                item.transform.rotation = itemData.transform.rotation;
+                item.transform.localScale = itemData.transform.scale;
                 RunTimeItems.Add(item.itemData.Guid, item);
                 AddToGroup(item);
             }
@@ -61,9 +61,9 @@ public class Chunk : MonoBehaviour
             {
                 Item item = ItemMgr.Instance.InstantiateItem(itemData, this.gameObject, newGuid: false);
                 item.Load();
-                item.transform.position = itemData._transform.Position;
-                item.transform.rotation = itemData._transform.Rotation;
-                item.transform.localScale = itemData._transform.Scale;
+                item.transform.position = itemData.transform.position;
+                item.transform.rotation = itemData.transform.rotation;
+                item.transform.localScale = itemData.transform.scale;
                 RunTimeItems.Add(item.itemData.Guid, item);
                 AddToGroup(item);
                 
