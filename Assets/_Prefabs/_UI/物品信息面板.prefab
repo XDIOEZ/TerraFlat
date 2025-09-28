@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 230464729375566246}
+  - component: {fileID: 8302397474987125070}
   - component: {fileID: 649268051711042248}
   - component: {fileID: 8587082056451834936}
   m_Layer: 0
@@ -25,18 +26,34 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1962086346238569710}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.99, y: 0.99, z: 0.99}
+  m_LocalScale: {x: 0.9900001, y: 0.9900001, z: 0.9900001}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 7283520019214760743}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -11.025, y: -10.291}
+  m_AnchoredPosition: {x: -11.02499, y: -10.290989}
   m_SizeDelta: {x: 405.28, y: 214.06}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &8302397474987125070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1962086346238569710}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94327042dff62cf4b95b02eee89b94ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textComponent: {fileID: 8587082056451834936}
+  pageAreaRect: {fileID: 230464729375566246}
+  enabledPaging: 1
+  showDebugLabel: 0
 --- !u!222 &649268051711042248
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -66,8 +83,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "Assets\\_Scripts\\m_GameItem\\Inventory\\Inventory_Data.cs(375,41): warning
-    CS0618: \u201CItemData.ItemTags\u201D\u5DF2\u8FC7\u65F6:\u201C\u5DF2\u8FC7\u65F6\uFF0C\u63A8\u8350\u4F7F\u7528TagDictionary\uFF0C\u6027\u80FD\u66F4\u4F18\u201D\n\r\nAssets\\TheKiwiCoder\\BehaviourTree\\Scripts\\Actions\\Action\\CheckItemIsAround.cs(40,18):
-    warning CS0618: \u201CItemData.ItemTags\u201D\u5DF2\u8FC7\u65F6:\u201C\u5DF2\u8FC7\u65F6\uFF0C\u63A8\u8350\u4F7F\u7528TagDictionary\uFF0C\u6027\u80FD\u66F4\u4F18\u201D\n\r\nAssets\\TheKiwiCoder\\BehaviourTree\\Scripts\\Actions\\Action\\EatFood.cs(41,36):
+    CS0618: \u201CItemData.ItemTags\u201D\u5DF2\u8FC7\u65F6:\u201C\u5DF2\u8FC7\u65F6\uFF0C\u63A8\u8350\u4F7F\u7528TagDictionary\uFF0C\u6027\u80FD\u66F4\u4F18\u201D\n\r\nAssets\\TheKiwiCoder\\BehaviourTree\\Scripts\\Actions\\Action\\EatFood.cs(41,36):
     warning CS0618: \u201CItemData.ItemTags\u201D\u5DF2\u8FC7\u65F6:\u201C\u5DF2\u8FC7\u65F6\uFF0C\u63A8\u8350\u4F7F\u7528TagDictionary\uFF0C\u6027\u80FD\u66F4\u4F18\u201D\n\r\nAssets\\TheKiwiCoder\\BehaviourTree\\Scripts\\Actions\\Action\\FoodChecker.cs(20,36):
     warning CS0618: \u201CItemData.ItemTags\u201D\u5DF2\u8FC7\u65F6:\u201C\u5DF2\u8FC7\u65F6\uFF0C\u63A8\u8350\u4F7F\u7528TagDictionary\uFF0C\u6027\u80FD\u66F4\u4F18\u201D\n\r\nAssets\\TheKiwiCoder\\BehaviourTree\\Scripts\\Actions\\Action\\Hunting.cs(43,32):
     warning CS0618: \u201CItemData.ItemTags\u201D\u5DF2\u8FC7\u65F6:\u201C\u5DF2\u8FC7\u65F6\uFF0C\u63A8\u8350\u4F7F\u7528TagDictionary\uFF0C\u6027\u80FD\u66F4\u4F18\u201D\n\r\nAssets\\TheKiwiCoder\\BehaviourTree\\Scripts\\Actions\\Action\\Hunting.cs(47,41):
@@ -343,6 +359,7 @@ MonoBehaviour:
   canvasGroup: {fileID: 1120069277635692033}
   CanDrag: 1
   Dragger: {fileID: 2385968400509966937}
+  rectTransform: {fileID: 0}
 --- !u!1 &5439675311458319909
 GameObject:
   m_ObjectHideFlags: 0
@@ -377,7 +394,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -11.025, y: -10.289}
+  m_AnchoredPosition: {x: -11.02499, y: -10.288982}
   m_SizeDelta: {x: 1483.3, y: 783.45}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8045504746347956855
@@ -452,7 +469,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.00024509, y: -0.001339}
+  m_AnchoredPosition: {x: 0.00022174319, y: -0.0013269926}
   m_SizeDelta: {x: 427.33, y: 234.64}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7506730374939355677
@@ -520,7 +537,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6242871785743149748}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -26.666668}
+  m_LocalPosition: {x: 0, y: 0, z: -26.66667}
   m_LocalScale: {x: 0.6666667, y: 0.6666667, z: 0.6666667}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -529,7 +546,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -22.050003, y: -20.579971}
+  m_AnchoredPosition: {x: -22.049927, y: -20.579956}
   m_SizeDelta: {x: 30, y: 30}
   m_Pivot: {x: -0.000000022351742, y: 0.000000007450581}
 --- !u!222 &7115400401235013342

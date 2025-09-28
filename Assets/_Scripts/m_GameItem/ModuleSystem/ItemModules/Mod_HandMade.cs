@@ -414,7 +414,7 @@ private string GenerateRecipeKey(Inventory inputInv)
             IsValidVector3(savedPosition) && 
             !IsZeroVector3(savedPosition))
         {
-            basePanel.Dragger.transform.position = savedPosition;
+            basePanel.Dragger.rectTransform.anchoredPosition = savedPosition;
         }
     }
 
@@ -422,7 +422,7 @@ private string GenerateRecipeKey(Inventory inputInv)
     {
         if (basePanel?.Dragger != null)
         {
-            inventoryModuleData.PanleRectPosition = basePanel.Dragger.transform.position;
+            inventoryModuleData.PanleRectPosition = basePanel.Dragger.rectTransform.anchoredPosition;
         }
     }
 

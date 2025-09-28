@@ -66,13 +66,11 @@ public class Mod_Fuel : Module
     /// </summary>
     public bool ConsumeFuel(float amount)
     {
-        if (Data.Fuel.x <= 0f) return false;
-        
         // 根据燃烧速度系数调整消耗量
         float actualAmount = amount * burnSpeedMultiplier;
         Data.Fuel.x = Mathf.Max(Data.Fuel.x - actualAmount, 0f);
         
-        if (Data.Fuel.x <= 0f) 
+        if (Data.Fuel.x <= 0.01f) 
         {
             SetIgnited(false); // 燃料耗尽自动熄灭
         }

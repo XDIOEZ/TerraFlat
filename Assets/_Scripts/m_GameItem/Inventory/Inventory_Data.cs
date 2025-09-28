@@ -17,6 +17,7 @@ public partial class Inventory_Data
     public string Name = string.Empty;                      // 背包名称
     public List<ItemSlot> itemSlots = new List<ItemSlot>(); // 物品槽列表
     public int Index = 0;                      // 当前选中槽位索引
+    public bool IsInjected = false;            // 是否注入
 
     [MemoryPackIgnore]
     [FastClonerIgnore]

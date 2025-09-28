@@ -29,13 +29,13 @@ public class Player : Item
     public float timeScale = 1.0f; // 默认值改为1.0（正常速度）
     
     [Tooltip("每次调整时间速度的增量")]
-    public float timeScaleStep = 0.1f;
+    public float timeScaleStep = 0.5f;
     
     [Tooltip("最小时间速度")]
     public float minTimeScale = 0.1f;
     
     [Tooltip("最大时间速度")]
-    public float maxTimeScale = 3.0f;
+    public float maxTimeScale = 10.0f;
 
     [Header("时间提示GUI")]
     [Tooltip("时间提示显示时长（秒）")]
