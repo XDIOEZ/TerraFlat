@@ -35,10 +35,6 @@ public class LootEntry
         {
             LootPrefabName = LootPrefab.name;
         }
-        else
-        {
-            LootPrefabName = "";
-        }
         
         // 确保掉落数量范围有效
         MinAmount = Mathf.Max(0, MinAmount); // 确保最小数量不小于0

@@ -348,6 +348,7 @@ MonoBehaviour:
       Index: 0
       Belong_Inventory: {fileID: 0}
     Index: 0
+    IsInjected: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs: []
@@ -402,6 +403,8 @@ MonoBehaviour:
   canvasGroup: {fileID: 0}
   CanDrag: 0
   Dragger: {fileID: 0}
+  rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!114 &1276027527904542207
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -415,13 +418,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  inventoryModuleData:
+  Data:
     Name: 
     ID: 
-    isRunning: 0
-    Type: 1
+    isRunning: 1
+    Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
-  inventory: {fileID: 2913275524167055887}
+    InventoryInitName: 
+    BasePanelIsOpen: 1
+  inventoryRefDic:
+    _serializedList:
+    - Key: "\u80CC\u5305"
+      Value: {fileID: 2913275524167055887}
   basePanel: {fileID: 0}
 --- !u!1 &3362093747206163499
 GameObject:
@@ -736,7 +744,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &3009969059322020626
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1458,7 +1467,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &4956767760768979053
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1639,7 +1649,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &7539318856799440728
 MonoBehaviour:
   m_ObjectHideFlags: 0

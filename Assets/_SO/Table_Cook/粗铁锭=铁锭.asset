@@ -10,17 +10,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e17da8e390065e6499b50ea2e5604151, type: 3}
-  m_Name: "\u94C1\u77FF-\u7C97\u94C1"
+  m_Name: "\u7C97\u94C1\u952D=\u94C1\u952D"
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
-    - ItemName: Ore_Iron
-      ItemPrefab: {fileID: 2048408006814487461, guid: d56429304b3eae547a41b59c65691efc, type: 3}
+    - matchMode: 0
+      ItemName: Ingot_RawIron
+      ItemPrefab: {fileID: 8289096317301822611, guid: a14da04562049224b8dff536bb59fc92, type: 3}
+      Tag: 
       amount: 1
+    - matchMode: 0
+      ItemName: Ingot_RawIron
+      ItemPrefab: {fileID: 8289096317301822611, guid: a14da04562049224b8dff536bb59fc92, type: 3}
+      Tag: 
+      amount: 1
+    recipeType: 1
   outputs:
     results:
-    - ItemName: Ingot_RawIron
-      ItemPrefab: {fileID: 8289096317301822611, guid: a14da04562049224b8dff536bb59fc92, type: 3}
-      amount: 1
-  recipeType: 1
-  Temperature: 1000
+    - ItemName: Ingot_WroughtIron
+      ItemPrefab: {fileID: 8289096317301822611, guid: e7e803eb2785d6f42af33f9762407e32, type: 3}
+      amount: 2
+  action: []
+  Temperature: 1489

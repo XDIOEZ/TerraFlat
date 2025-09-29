@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e17da8e390065e6499b50ea2e5604151, type: 3}
+  m_Name: "\u94C1\u77FF=\u7C97\u94C1\u952D"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - matchMode: 0
+      ItemName: Ore_Iron
+      ItemPrefab: {fileID: 2048408006814487461, guid: d56429304b3eae547a41b59c65691efc, type: 3}
+      Tag: 
+      amount: 1
+    recipeType: 1
+  outputs:
+    results:
+    - ItemName: Ingot_RawIron
+      ItemPrefab: {fileID: 8289096317301822611, guid: a14da04562049224b8dff536bb59fc92, type: 3}
+      amount: 1
+  action: []
+  Temperature: 1000

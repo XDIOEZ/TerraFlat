@@ -69,12 +69,18 @@ public abstract class Item : MonoBehaviour
 public ItemData Get_NewItemData()
 {
     // 创建一个临时的游戏对象实例来处理初始化
-    GameObject tempGO = Instantiate(gameObject);
-    tempGO.hideFlags = HideFlags.HideAndDontSave; // 隐藏临时对象
-    
+    GameObject tempGO = null;
     try
     {
+        tempGO = Instantiate(gameObject);
+        tempGO.hideFlags = HideFlags.HideAndDontSave; // 隐藏临时对象
+        
         Item tempItem = tempGO.GetComponent<Item>();
+        if (tempItem == null)
+        {
+            Debug.LogError($"[Item] 无法创建 {gameObject.name} 的ItemData: 临时对象缺少Item组件");
+            return null;
+        }
         
         // 获取所有子对象的Module并初始化
         var modules = tempGO.GetComponentsInChildren<Module>(true).ToList();
@@ -82,22 +88,54 @@ public ItemData Get_NewItemData()
         // 为每个模块调用Awake方法
         foreach (var mod in modules)
         {
-            mod.Awake();
+            if (mod != null)
+            {
+                try
+                {
+                    mod.Awake();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[Item] 在初始化模块 {mod?.GetType()?.Name} 时发生错误: {ex.Message}");
+                }
+            }
         }
         
         // 生成新的Guid
         tempItem.itemData.Guid = Guid.NewGuid().GetHashCode();
         
         // 加载模块
-        tempItem.Load();
+        try
+        {
+            tempItem.Load();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Item] 在加载物品 {gameObject.name} 时发生错误: {ex.Message}");
+            return null;
+        }
         
         // 保存模块数据
-        tempItem.Save();
+        try
+        {
+            tempItem.Save();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Item] 在保存物品 {gameObject.name} 时发生错误: {ex.Message}");
+            return null;
+        }
         
         // 克隆最终的itemData作为返回值
-        ItemData result = tempItem.itemData.DeepClone();
-        
+
+        ItemData result = FastCloner.FastCloner.DeepClone(tempItem.itemData);
         return result;
+    }
+    catch (Exception ex)
+    {
+        Debug.LogError($"[Item] 创建物品 {gameObject.name} 的ItemData时发生未知错误: {ex.Message}");
+        Debug.LogException(ex);
+        return null;
     }
     finally
     {

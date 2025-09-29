@@ -73,7 +73,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 795886554, guid: 9de1db5190b67f540b562921ffb5cd5d, type: 3}
+  m_Sprite: {fileID: -345686119, guid: cc5364d105c82f74db3f9d7ee1c58e61, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -194,6 +194,7 @@ MonoBehaviour:
     GameName: "\u7194\u7089"
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
       - Station
@@ -212,10 +213,10 @@ MonoBehaviour:
       Amount: 1
       Volume: 1
       CanBePickedUp: 1
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     Guid: 2133285210
     code: 
@@ -472,6 +473,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1291243682795433093}
     m_Modifications:
+    - target: {fileID: 1069700781444471335, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1315209302471648582, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1328954412335112010, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1687754518853174923, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
       propertyPath: item
       value: 
@@ -483,6 +496,14 @@ PrefabInstance:
     - target: {fileID: 2300790332389762476, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
       propertyPath: m_Name
       value: "\u7194\u70BC\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 5065706597940678918, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6041948114663503738, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7735295088566591370, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
       propertyPath: m_Pivot.x
@@ -562,6 +583,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7735295088566591370, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8737870606017321874, guid: 8282ac646f27954489b33bd62385edb8, type: 3}
+      propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

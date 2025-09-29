@@ -10,17 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e17da8e390065e6499b50ea2e5604151, type: 3}
-  m_Name: "\u94DC\u77FF-\u94DC"
+  m_Name: "\u9521\u77FF=\u9521"
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
-    - ItemName: Ore_Copper
-      ItemPrefab: {fileID: 4043182749368973274, guid: aae825d40ce31dc4b8fd6925ec015ad2, type: 3}
+    - matchMode: 0
+      ItemName: Ore_Tin
+      ItemPrefab: {fileID: 2048408006814487461, guid: ba78fb599b6f2904eac1ea100b08cca8, type: 3}
+      Tag: 
       amount: 2
+    recipeType: 1
   outputs:
     results:
-    - ItemName: Ingot_Copper
-      ItemPrefab: {fileID: 1000322309187556339, guid: d246c7889b8f8db41b968556cb61b856, type: 3}
+    - ItemName: Ingot_Tin
+      ItemPrefab: {fileID: 8289096317301822611, guid: 41fcc05f5fcd1bc4498cd5b20f71e2a6, type: 3}
       amount: 1
-  recipeType: 1
+  action: []
   Temperature: 1000

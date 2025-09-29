@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb95f04e5604b6e48a4297db55cf22d0, type: 3}
+  m_Name: "\u5B9D\u7BB1\u6CE8\u5165\u6D4B\u8BD5 1"
+  m_EditorClassIdentifier: 
+  items:
+  - LootPrefab: {fileID: 6626571208127967517, guid: 4c2d602b69d751141870951cc6fcf398, type: 3}
+    LootPrefabName: Chest_Wood
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1
+  - LootPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
+    LootPrefabName: Log
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1
+  - LootPrefab: {fileID: 8289096317301822611, guid: e7e803eb2785d6f42af33f9762407e32, type: 3}
+    LootPrefabName: Ingot_WroughtIron
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1

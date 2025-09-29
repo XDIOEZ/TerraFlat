@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e17da8e390065e6499b50ea2e5604151, type: 3}
+  m_Name: "\u94DC+\u9521=\u9752\u94DC"
+  m_EditorClassIdentifier: 
+  inputs:
+    RowItems_List:
+    - matchMode: 0
+      ItemName: Ingot_Copper
+      ItemPrefab: {fileID: 1000322309187556339, guid: d246c7889b8f8db41b968556cb61b856, type: 3}
+      Tag: 
+      amount: 9
+    - matchMode: 0
+      ItemName: Ingot_Tin
+      ItemPrefab: {fileID: 8289096317301822611, guid: 41fcc05f5fcd1bc4498cd5b20f71e2a6, type: 3}
+      Tag: 
+      amount: 1
+    recipeType: 1
+  outputs:
+    results:
+    - ItemName: Ingot_Bronze
+      ItemPrefab: {fileID: 5308208406943642222, guid: 1c89ee69343bc4845961f3b35ccc1a44, type: 3}
+      amount: 1
+  action: []
+  Temperature: 1000

@@ -27,6 +27,10 @@ public class BasePanel : MonoBehaviour
     public bool CanDrag = false;
     public UI_Drag Dragger;
     public RectTransform rectTransform;
+    
+    // 记录面板的开关状态
+    [SerializeField]
+    private bool isOpen = false;
 
     protected virtual void Awake()
     {
@@ -40,6 +44,12 @@ public class BasePanel : MonoBehaviour
             CanDrag = true;
         }
         canvasGroup = GetComponent<CanvasGroup>();
+        
+        // 初始化面板状态
+        if (canvasGroup != null)
+        {
+            isOpen = canvasGroup.alpha > 0 && canvasGroup.interactable && canvasGroup.blocksRaycasts;
+        }
     }
 
     /// <summary>
@@ -154,6 +164,7 @@ if (buttons.ContainsKey("销毁"))
             canvasGroup.alpha = 1;
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
+            isOpen = true;
         }
     }
 
@@ -165,15 +176,14 @@ if (buttons.ContainsKey("销毁"))
             canvasGroup.alpha = 0;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
+            isOpen = false;
         }
     }
 
     public bool IsOpen()
     {
-        return canvasGroup != null &&
-               canvasGroup.alpha > 0 &&
-               canvasGroup.interactable &&
-               canvasGroup.blocksRaycasts;
+        // 使用记录的状态而不是每次都检查CanvasGroup属性
+        return isOpen;
     }
 
     /// <summary>

@@ -107,16 +107,11 @@ public virtual void Init()
 /// </summary>
 public void TryInitializeItems(Inventoryinit inventoryinit)
 {
-    // 检查是否有初始化配置且容器为空
-    if (inventoryinit != null && 
-        inventoryinit.items != null && 
-        inventoryinit.items.Count > 0 &&
-        IsInventoryEmpty())
-    {
+
         // 使用InventoryInit的注入函数将物品注入到inventory中
         inventoryinit.InjectRandomItemsToInventory(this);
         Debug.Log($"[{Data.Name}] 容器初始化完成，已注入 {inventoryinit.items.Count} 个物品");
-    }
+    
 }
 
 /// <summary>

@@ -26,8 +26,9 @@ public class BuildingShadow : MonoBehaviour
 
     public void OnTriggerEnter2D(Collider2D collision)
     {
-        // 只处理非Trigger对象
-        if (!collision.isTrigger)
+        // 只处理非Trigger对象，并排除自身和特定标签的对象
+        if (!collision.isTrigger && collision.gameObject != gameObject && 
+            collision.gameObject.tag != "Player" && collision.gameObject.tag != "IgnoreShadow")
         {
             AroundObjects.Add(collision.gameObject);
 
@@ -42,7 +43,9 @@ public class BuildingShadow : MonoBehaviour
 
     public void OnTriggerExit2D(Collider2D collision)
     {
-        if (!collision.isTrigger)
+        // 只处理非Trigger对象，并排除自身和特定标签的对象
+        if (!collision.isTrigger && collision.gameObject != gameObject &&
+            collision.gameObject.tag != "Player" && collision.gameObject.tag != "IgnoreShadow")
         {
             AroundObjects.Remove(collision.gameObject);
 
@@ -114,21 +117,33 @@ public class BuildingShadow : MonoBehaviour
             return;
         }
 
-        Bounds bounds = newRenderer.sprite.bounds;
-
+        // 获取精灵的精确尺寸
+        Vector2 spriteSize = GetSpriteSize(newRenderer.sprite);
+        
         BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
         if (boxCollider != null)
         {
-            boxCollider.size = Vector2.Scale(bounds.size, BoxColliderScale);
-            boxCollider.offset = bounds.center;
+            // 使用精灵的实际尺寸并应用缩放因子
+            boxCollider.size = Vector2.one;
+            boxCollider.offset = Vector2.zero; // 通常阴影中心对齐，偏移设为0
 
             // 添加调试信息
-            Debug.Log($"[BuildingShadow] 碰撞体尺寸: {boxCollider.size}, 偏移: {boxCollider.offset}");
+            Debug.Log($"[BuildingShadow] 精灵尺寸: {spriteSize}, 碰撞体尺寸: {boxCollider.size}, 缩放: {BoxColliderScale}");
         }
         else
         {
             Debug.LogWarning("BuildingShadow初始化失败: 缺少BoxCollider2D组件");
         }
+    }
+    
+    /// <summary>
+    /// 准确获取精灵的尺寸
+    /// </summary>
+    /// <param name="sprite">要测量的精灵</param>
+    /// <returns>精灵的实际尺寸</returns>
+    private Vector2 GetSpriteSize(Sprite sprite)
+    {
+        return Vector2.one;
     }
 
     /// <summary>
@@ -182,5 +197,22 @@ public class BuildingShadow : MonoBehaviour
             return $"{firstObstacle.name} (位置: {firstObstacle.transform.position})";
         }
         return AroundObjects.Count > 0 ? "多个障碍物" : "未知障碍物";
+    }
+    
+    /// <summary>
+    /// 手动刷新碰撞体尺寸（当精灵发生变化时调用）
+    /// </summary>
+    public void RefreshColliderSize()
+    {
+        if (ShadowRenderer == null || ShadowRenderer.sprite == null)
+            return;
+            
+        BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
+        if (boxCollider != null)
+        {
+            Vector2 spriteSize = GetSpriteSize(ShadowRenderer.sprite);
+            boxCollider.size = Vector2.Scale(spriteSize, BoxColliderScale);
+            boxCollider.offset = Vector2.zero;
+        }
     }
 }

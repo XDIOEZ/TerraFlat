@@ -97,6 +97,8 @@ MonoBehaviour:
   ShadowColor: {r: 1, g: 1, b: 1, a: 0.654902}
   WarringColor: {r: 1, g: 0, b: 0, a: 0.6666667}
   BoxColliderScale: {x: 0.8, y: 0.4}
+  obstacleCollider: {fileID: 0}
+  firstObstacle: {fileID: 0}
 --- !u!50 &8600359038236967329
 Rigidbody2D:
   serializedVersion: 4
@@ -207,4 +209,4 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
-  m_SpriteSortPoint: 0
+  m_SpriteSortPoint: 1

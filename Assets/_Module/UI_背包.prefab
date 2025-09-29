@@ -107,7 +107,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &363309026647772763
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -516,7 +517,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &4849799682678290366
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -697,7 +699,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &2982028540731036014
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1146,7 +1149,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &4450986954415603607
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1403,7 +1407,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &873861184769737145
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1584,7 +1589,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &2752052456381414710
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2282,7 +2288,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &6747753099155441206
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3075,7 +3082,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &5589349822668143367
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4311,7 +4319,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &122848386233566176
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4894,7 +4903,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &8343228246185910442
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5075,7 +5085,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &1310162500916302649
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5256,7 +5267,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &3047630097841887452
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5437,7 +5449,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &8090996387385174804
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5945,6 +5958,7 @@ MonoBehaviour:
       Index: 0
       Belong_Inventory: {fileID: 0}
     Index: 0
+    IsInjected: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs: []
@@ -5999,6 +6013,8 @@ MonoBehaviour:
   canvasGroup: {fileID: 0}
   CanDrag: 0
   Dragger: {fileID: 0}
+  rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!114 &8943846949572410620
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6014,12 +6030,16 @@ MonoBehaviour:
   item: {fileID: 0}
   Data:
     Name: 
-    ID: "\u80CC\u5305\u6A21\u5757"
+    ID: 
     isRunning: 1
     Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
     InventoryInitName: 
-  inventory: {fileID: 5027628569039665932}
+    BasePanelIsOpen: 1
+  inventoryRefDic:
+    _serializedList:
+    - Key: "\u80CC\u5305"
+      Value: {fileID: 5027628569039665932}
   basePanel: {fileID: 0}
 --- !u!1 &5811130090001193772
 GameObject:
@@ -6128,7 +6148,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &4930948760901091857
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6653,7 +6674,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &8135635692586495321
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6834,7 +6856,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &7101543597205345435
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7181,7 +7204,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &4027823411675456632
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7362,7 +7386,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &5187757865001197411
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7829,7 +7854,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &3254797068658981935
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8010,7 +8036,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &6958102491703757257
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8821,7 +8848,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &2964167745521791852
 MonoBehaviour:
   m_ObjectHideFlags: 0

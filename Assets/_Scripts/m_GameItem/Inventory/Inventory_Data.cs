@@ -414,59 +414,7 @@ public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCou
         return null;
     }
 
-    /// <summary>
-    /// 根据Prefab注入ItemData到指定的Slot中
-    /// </summary>
-    /// <param name="prefab">物品预制体，必须包含Item组件</param>
-    /// <param name="count">物品数量</param>
-    /// <param name="index">要注入的槽位索引</param>
-    [Button("注入物品到槽位")] // Odin特性：在Inspector中显示为按钮
-    [LabelText("注入物品")] // Odin特性：自定义标签文本
-    public void InjectItemData(
-        [LabelText("物品预制体")] GameObject prefab, 
-        [LabelText("数量")] [MinValue(1)] int count, 
-        [LabelText("槽位索引")] [MinValue(0)] int index)
-    {
-        // 参数验证
-        if (prefab == null)
-        {
-            Debug.LogError("注入失败：Prefab不能为空");
-            return;
-        }
 
-        if (index < 0 || index >= itemSlots.Count)
-        {
-            Debug.LogError($"注入失败：索引 {index} 超出范围 [0, {itemSlots.Count - 1}]");
-            return;
-        }
-
-        // 获取Prefab上的Item组件
-        Item itemComponent = prefab.GetComponent<Item>();
-        if (itemComponent == null)
-        {
-            Debug.LogError($"注入失败：Prefab {prefab.name} 上找不到Item组件");
-            return;
-        }
-         // 确保ItemData已经初始化完毕
-        // 克隆ItemData
-        ItemData clonedItemData = itemComponent.Get_NewItemData();
-        if (clonedItemData == null)
-        {
-            Debug.LogError($"注入失败：无法克隆 {prefab.name} 的ItemData");
-            return;
-        }
-
-        // 设置数量
-        clonedItemData.Stack.Amount = count;
-        
-        // 注入到指定槽位
-        SetOne_ItemData(index, clonedItemData);
-        
-        // 触发UI刷新
-        Event_RefreshUI.Invoke(index);
-        
-        Debug.Log($"成功注入物品 {prefab.name} x{count} 到槽位 {index}");
-    }
     public void RandomOrderAutoInjectItemDataList(List<GameObject> prefabList, List<int> countList)
     {
         if (prefabList == null || countList == null) return;

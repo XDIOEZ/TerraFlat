@@ -471,4 +471,63 @@ public void SetAsInstalledEditor()
     Debug.Log($"[编辑器调试] 成功将 {item.name} 设置为已安装状态");
 }
 #endif
+
+    /// <summary>
+    /// 将当前建筑设置为已安装状态（游戏运行时调用）
+    /// </summary>
+    public void SetAsInstalled()
+    {
+        // 检查必要的组件
+        if (item == null)
+        {
+            Debug.LogError("[设置安装状态] item引用为空");
+            return;
+        }
+
+        // 查找DamageReceiver组件（如果还没有引用的话）
+        if (damageReceiver == null)
+        {
+            damageReceiver = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+            if (damageReceiver == null)
+            {
+                Debug.LogError("[设置安装状态] 无法找到DamageReceiver组件");
+                return;
+            }
+        }
+
+        // 设置为最大血量（表示已安装）
+        if (damageReceiver.MaxHp != null)
+        {
+            damageReceiver.Hp = damageReceiver.MaxHp.Value;
+        }
+        else
+        {
+            damageReceiver.Hp = 100f; // 默认血量
+            Debug.LogWarning("[设置安装状态] DamageReceiver的最大血量未设置，使用默认值100");
+        }
+
+        // 设置缩放为1
+        item.transform.localScale = Vector3.one;
+
+        // 设置物品不可被拾取
+        if (item.itemData != null)
+        {
+            item.itemData.Stack.CanBePickedUp = false;
+        }
+
+        // 确保碰撞器设置正确
+        BoxCollider2D collider = item.GetComponent<BoxCollider2D>();
+        if (collider != null)
+        {
+            collider.isTrigger = false;
+        }
+
+        // 更新子对象碰撞器状态
+        EnableChildColliders(true, item.transform);
+
+        // 清理幽灵阴影（如果存在）
+        CleanupGhost();
+
+        Debug.Log($"[设置安装状态] 成功将 {item.name} 设置为已安装状态");
+    }
 }

@@ -1858,7 +1858,7 @@ RectTransform:
   m_GameObject: {fileID: 5023918578805355182}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 5441207996031700570}
@@ -1870,8 +1870,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -333.66046, y: 153.00696}
-  m_SizeDelta: {x: 782.0038, y: 406.014}
+  m_AnchoredPosition: {x: -524.5, y: 51.000015}
+  m_SizeDelta: {x: 700.7872, y: 325.8305}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5462087943532055468
 MonoBehaviour:
@@ -2110,14 +2110,19 @@ MonoBehaviour:
   item: {fileID: 0}
   inventoryModuleData:
     Name: 
-    ID: 
+    ID: "\u624B\u5DE5\u5408\u6210\u6A21\u5757"
     isRunning: 0
     Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
     InventoryInitName: 
+    BasePanelIsOpen: 1
   basePanel: {fileID: 269343520462078826}
-  inputInventory: {fileID: 2844700870444916106}
-  outputInventory: {fileID: 1523449583456271906}
+  inventoryRefDic:
+    _serializedList:
+    - Key: "\u8F93\u5165\u63D2\u69FD"
+      Value: {fileID: 2844700870444916106}
+    - Key: "\u8F93\u51FA\u63D2\u69FD"
+      Value: {fileID: 1523449583456271906}
   workButton: {fileID: 7931987179062465118}
 --- !u!114 &269343520462078826
 MonoBehaviour:
@@ -2131,10 +2136,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00d27a205b8cb774f8c82a40aa10cc91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  canvasGroup: {fileID: 1389049930998870942}
+  canvasGroup: {fileID: 0}
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!225 &1389049930998870942
 CanvasGroup:
   m_ObjectHideFlags: 0

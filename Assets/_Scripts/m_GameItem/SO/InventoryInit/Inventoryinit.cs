@@ -8,7 +8,6 @@ public class Inventoryinit : ScriptableObject
     public List<LootEntry> items;
     
 
-    // 新增：单个物体随机注入方法
 public void InjectRandomItemsToInventory(Inventory targetInventory)
 {
     // 检查是否已经注入过，如果已经注入则取消行为

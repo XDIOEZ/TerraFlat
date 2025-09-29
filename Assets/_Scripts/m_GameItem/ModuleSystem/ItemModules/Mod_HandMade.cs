@@ -1,3 +1,4 @@
+using AYellowpaper.SerializedCollections;
 using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System;
@@ -9,7 +10,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 手工制作模块，提供合成物品的功能
 /// </summary>
-public class Mod_HandMade : Module
+public class Mod_HandMade : Module,IInventory
 {
     #region 字段和属性
 
@@ -24,12 +25,16 @@ public class Mod_HandMade : Module
     [Header("UI组件")]
     [Tooltip("合成界面面板")]
     public BasePanel basePanel;
-    
-    [Header("合成容器")]
+
+    [Tooltip("Inventory引用字典-配置字段")]
+    public SerializedDictionary<string, Inventory> inventoryRefDic = new();
+    [Tooltip("Inventory引用字典-接口实现")]
+    public SerializedDictionary<string, Inventory> InventoryRefDic { get => inventoryRefDic; set => inventoryRefDic = value; }
+
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
-    public Inventory inputInventory;
+    public Inventory inputInventory => inventoryRefDic["输入插槽"];
     [Tooltip("输出容器，用于存放合成后得到的物品")]
-    public Inventory outputInventory;
+    public Inventory outputInventory => inventoryRefDic["输出插槽"];
 
     [Header("交互组件")]
     [Tooltip("合成按钮")]
@@ -338,7 +343,7 @@ private string GenerateRecipeKey(Inventory inputInv)
         }
         foreach(var action in recipe.action)
         {
-            action.Apply(inputInv.Data.itemSlots[action.slotIndex]);
+            action.Apply(this);
         }
 
         outputInv.RefreshUI();
@@ -375,7 +380,7 @@ private string GenerateRecipeKey(Inventory inputInv)
         // 设置默认目标背包
         if (item.itemMods.ContainsKey_ID(ModText.Hand))
         {
-            var handInventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+            var handInventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
             inputInventory.DefaultTarget_Inventory = handInventory;
             outputInventory.DefaultTarget_Inventory = handInventory;
         }

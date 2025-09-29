@@ -107,7 +107,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &6520021239246447506
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -288,7 +289,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &3295068415778478851
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -554,7 +556,7 @@ MonoBehaviour:
   ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
   ItemSlot_Parent: {fileID: 7529384187333267485}
   Data:
-    Name: "\u8F93\u5165\u7269\u54C1\u69FD"
+    Name: "\u8F93\u5165\u63D2\u69FD"
     itemSlots:
     - CanAcceptItemType:
         Item_TypeTag:
@@ -566,6 +568,7 @@ MonoBehaviour:
       Index: 0
       Belong_Inventory: {fileID: 417443731030568358}
     Index: 0
+    IsInjected: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs:
@@ -1171,7 +1174,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &4206157332041456003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1749,6 +1753,7 @@ MonoBehaviour:
       Index: 1
       Belong_Inventory: {fileID: 3407343054362107960}
     Index: 0
+    IsInjected: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs:
@@ -1867,7 +1872,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 1911
+    m_Bits: 375
 --- !u!225 &2082635886903340813
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1895,6 +1900,8 @@ MonoBehaviour:
   canvasGroup: {fileID: 2082635886903340813}
   CanDrag: 0
   Dragger: {fileID: 0}
+  rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!114 &1687754518853174923
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1920,18 +1927,25 @@ MonoBehaviour:
     SmeltingSpeed: 10
     Temperature: 20
     MaxTemperature: 0
+    MaxTemperatureLimit: 1000
     IsSmelting: 0
     TemperatureUpSpeed: 10
     TemperatureDownSpeed: 30
-  inputInventory: {fileID: 417443731030568358}
-  outputInventory: {fileID: 2866640379407839159}
-  fuelInventory: {fileID: 3407343054362107960}
+  inventoryRefDic:
+    _serializedList:
+    - Key: "\u8F93\u5165\u63D2\u69FD"
+      Value: {fileID: 417443731030568358}
+    - Key: "\u8F93\u51FA\u63D2\u69FD"
+      Value: {fileID: 2866640379407839159}
+    - Key: "\u71C3\u6599\u63D2\u69FD"
+      Value: {fileID: 3407343054362107960}
   mod_Fuel: {fileID: 0}
   panel: {fileID: 750098585702081645}
   WorkButton: {fileID: 6247564567675785617}
   progressSlider: {fileID: 5757210540661435917}
   fuelSlider: {fileID: 2987201447735754857}
   temperatureSlider: {fileID: 8150112514720898559}
+  TemperatureText: {fileID: 0}
 --- !u!1 &2516571785933885413
 GameObject:
   m_ObjectHideFlags: 0
@@ -2129,7 +2143,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &8880310265139936098
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2381,6 +2396,7 @@ MonoBehaviour:
       Index: 2
       Belong_Inventory: {fileID: 2866640379407839159}
     Index: 0
+    IsInjected: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs:
@@ -3539,7 +3555,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &6938165617215046381
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4001,7 +4018,8 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  rightClickMenuPrefab: {fileID: 0}
+  OnRightClick:
+    _PersistentCalls: []
 --- !u!114 &9152428181365334688
 MonoBehaviour:
   m_ObjectHideFlags: 0

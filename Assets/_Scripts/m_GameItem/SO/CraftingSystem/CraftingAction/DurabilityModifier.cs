@@ -7,8 +7,9 @@ public class DurabilityModifier : CraftingAction
     [Header("耐久度设置")]
     public float durabilityCost = 1f; // 消耗的耐久度
     
-    public override void Apply(ItemSlot itemSlot)
+    public override void Apply(IInventory inventory)
     {
+        ItemSlot itemSlot = inventory.InventoryRefDic[InventoryName].Data.itemSlots[slotIndex];
         if (itemSlot.itemData == null)
         {
             Debug.LogWarning("DurabilityModifier: 传入的ItemData为空");

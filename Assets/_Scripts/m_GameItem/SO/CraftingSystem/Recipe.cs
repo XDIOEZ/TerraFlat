@@ -34,7 +34,7 @@ public class Recipe : ScriptableObject
     [Button]
     public void Test()
     {
-        Debug.Log(ToStringList(inputs.RowItems_List));
+        Debug.Log(inputs);
     }
 
     public void OnValidate()

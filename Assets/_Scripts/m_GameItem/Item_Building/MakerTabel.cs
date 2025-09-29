@@ -1,286 +1,286 @@
-using Force.DeepCloner;
-using System.Collections.Generic;
-using System.Linq;
-using UltEvents;
-using UnityEngine;
-using UnityEngine.UI;
-using Sirenix.OdinInspector;
-using ButtonAttribute = Sirenix.OdinInspector.ButtonAttribute;
+//using Force.DeepCloner;
+//using System.Collections.Generic;
+//using System.Linq;
+//using UltEvents;
+//using UnityEngine;
+//using UnityEngine.UI;
+//using Sirenix.OdinInspector;
+//using ButtonAttribute = Sirenix.OdinInspector.ButtonAttribute;
 
-public class CraftingTable : Item,IBuilding
-{
-    #region 字段
-    //合成按钮
-    public Button button;
-    //关闭按钮
-    public Button closeButton;
+//public class CraftingTable : Item,IBuilding
+//{
+//    #region 字段
+//    //合成按钮
+//    public Button button;
+//    //关闭按钮
+//    public Button closeButton;
 
-    public BasePanel panel;
-    // 4.workerData 工作数据
-    public Data_Worker Data;
+//    public BasePanel panel;
+//    // 4.workerData 工作数据
+//    public Data_Worker Data;
 
-    public UltEvent _onInventoryData_Dict_Changed;
-    public UltEvent OnInventoryData_Dict_Changed { get => _onInventoryData_Dict_Changed; set => _onInventoryData_Dict_Changed = value; }
-    public override ItemData itemData
-    {
-        get => Data;
-        set => Data = (Data_Worker)value;
-    }
-    public Dictionary<string, Inventory_Data> InventoryData_Dict
-    {
-        get
-        {
-            return Data.Inventory_Data_Dict;
-        }
-        set
-        {
-            Data.Inventory_Data_Dict = value;
-        }
-    }
-    public UltEvent OnDeath { get; set; }
-    [ShowInInspector]
-    public Dictionary<string, Inventory> children_Inventory_GameObject = new Dictionary<string, Inventory>();
-    public Dictionary<string, Inventory> Children_Inventory_GameObject
-    {
-        get
-        {
-            return children_Inventory_GameObject;
-        }
-        set
-        {
-            children_Inventory_GameObject = value;
-        }
-    }
+//    public UltEvent _onInventoryData_Dict_Changed;
+//    public UltEvent OnInventoryData_Dict_Changed { get => _onInventoryData_Dict_Changed; set => _onInventoryData_Dict_Changed = value; }
+//    public override ItemData itemData
+//    {
+//        get => Data;
+//        set => Data = (Data_Worker)value;
+//    }
+//    public Dictionary<string, Inventory_Data> InventoryData_Dict
+//    {
+//        get
+//        {
+//            return Data.Inventory_Data_Dict;
+//        }
+//        set
+//        {
+//            Data.Inventory_Data_Dict = value;
+//        }
+//    }
+//    public UltEvent OnDeath { get; set; }
+//    [ShowInInspector]
+//    public Dictionary<string, Inventory> children_Inventory_GameObject = new Dictionary<string, Inventory>();
+//    public Dictionary<string, Inventory> Children_Inventory_GameObject
+//    {
+//        get
+//        {
+//            return children_Inventory_GameObject;
+//        }
+//        set
+//        {
+//            children_Inventory_GameObject = value;
+//        }
+//    }
 
-    public SelectSlot SelectSlot { get; set; }
-    public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
-    public UltEvent onLoad { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
-
-
-    public bool CanInteract { get => !Data.Stack.CanBePickedUp; set => Data.Stack.CanBePickedUp = !value; }
-    public Hp Hp { get=> Data.Hp; set => Data.Hp = value; }
-    public Defense Defense { get => Data.Defense; set => Data.Defense = value; }
-    public UltEvent OnHpChanged { get; set; }
-    public UltEvent OnDefenseChanged { get; set; }
-    public bool IsInstalled { get =>Data.IsInstalled; set => Data.IsInstalled = value; }
-    public bool BePlayerTaken { get => bePlayerTake; set => bePlayerTake = value; }
-
-    public BaseBuilding _InstallAndUninstall;
-    private bool bePlayerTake = false;
-    #endregion
-
-    new void  Start()
-    {
-        base.Start();
+//    public SelectSlot SelectSlot { get; set; }
+//    public UltEvent onSave { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+//    public UltEvent onLoad { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
 
 
-        panel = GetComponentInChildren<BasePanel>();
+//    public bool CanInteract { get => !Data.Stack.CanBePickedUp; set => Data.Stack.CanBePickedUp = !value; }
+//    public Hp Hp { get=> Data.Hp; set => Data.Hp = value; }
+//    public Defense Defense { get => Data.Defense; set => Data.Defense = value; }
+//    public UltEvent OnHpChanged { get; set; }
+//    public UltEvent OnDefenseChanged { get; set; }
+//    public bool IsInstalled { get =>Data.IsInstalled; set => Data.IsInstalled = value; }
+//    public bool BePlayerTaken { get => bePlayerTake; set => bePlayerTake = value; }
 
-        Mods["交互模组"].OnAction_Start += Interact_Start;
-        Mods["交互模组"].OnAction_Start += (Item) => { panel.Toggle(); };
-        Mods["交互模组"].OnAction_Stop += (Item) => { panel.Close(); };
+//    public BaseBuilding _InstallAndUninstall;
+//    private bool bePlayerTake = false;
+//    #endregion
 
-       /* Mods[ModText.Hp]*/
+//    new void  Start()
+//    {
+//        base.Start();
 
-        if (Owner != null)
-        {
-            BePlayerTaken = true;
-        }
-    }
-    #region 安装和拆除
 
-    [Sirenix.OdinInspector.Button]
-    public void UnInstall()
-    {
-        _InstallAndUninstall.UnInstall();
-    }
-    [Button]
-    public void Install()
-    {
-        Mods["建筑模块"].OnAction.Invoke(1);
-    }
-    #endregion
+//        panel = GetComponentInChildren<BasePanel>();
 
-    #region 合成方法
-/*    public bool Craft(Inventory inputInventory_, Inventory outputInventory_, RecipeType recipeType)
-    {
-        // 生成配方键
-        string recipeKey = string.Join(",",
-            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.IDName ?? ""));
+//        Mods["交互模组"].OnAction_Start += Interact_Start;
+//        Mods["交互模组"].OnAction_Start += (Item) => { panel.Toggle(); };
+//        Mods["交互模组"].OnAction_Stop += (Item) => { panel.Close(); };
 
-        // 检查配方存在性及类型
-        if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out var recipe) ||
-            recipe.recipeType != recipeType)
-        {
-            Debug.LogError($"配方匹配失败：键 {recipeKey} 不存在或类型 {recipeType} 不匹配");
-            return false;
-        }
+//       /* Mods[ModText.Hp]*/
 
-        // 检查插槽数量
-        if (inputInventory_.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
-        {
-            Debug.LogError($"插槽数量不匹配：配方要求 {recipe.inputs.RowItems_List.Count} 个插槽，当前有 {inputInventory_.Data.itemSlots.Count} 个");
-            return false;
-        }
+//        if (Owner != null)
+//        {
+//            BePlayerTaken = true;
+//        }
+//    }
+//    #region 安装和拆除
 
-        // 准备输出物品
-        var itemsToAdd = new List<ItemData>();
-        foreach (var output in recipe.outputs.results)
-        {
-            var prefab = GameRes.Instance.AllPrefabs[output.resultItem];
-            if (prefab == null)
-            {
-                Debug.LogError($"预制体不存在：{output.resultItem}（配方：{recipe.name}）");
-                return false;
-            }
-            ItemData newItem = prefab.GetComponent<Item>().DeepClone().Item_Data;
-            newItem.Stack.Amount = output.resultAmount;
-            itemsToAdd.Add(newItem);
-        }
+//    [Sirenix.OdinInspector.Button]
+//    public void UnInstall()
+//    {
+//        _InstallAndUninstall.UnInstall();
+//    }
+//    [Button]
+//    public void Install()
+//    {
+//        Mods["建筑模块"].OnAction.Invoke(1);
+//    }
+//    #endregion
 
-        // 检查资源和空间
-        if (!CheckEnough(inputInventory_, outputInventory_, recipe.inputs, itemsToAdd))
-        {
-            Debug.LogError("合成失败：材料不足或输出空间不足");
-            return false;
-        }
+//    #region 合成方法
+///*    public bool Craft(Inventory inputInventory_, Inventory outputInventory_, RecipeType recipeType)
+//    {
+//        // 生成配方键
+//        string recipeKey = string.Join(",",
+//            inputInventory_.Data.itemSlots.Select(slot => slot._ItemData?.IDName ?? ""));
 
-        // 显示合成开始信息
-        Debug.Log($"开始合成：{recipe.name}");
-        Debug.Log($"输入材料：{recipeKey}");
-        Debug.Log($"输出产物：{string.Join(", ", itemsToAdd.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
+//        // 检查配方存在性及类型
+//        if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out var recipe) ||
+//            recipe.recipeType != recipeType)
+//        {
+//            Debug.LogError($"配方匹配失败：键 {recipeKey} 不存在或类型 {recipeType} 不匹配");
+//            return false;
+//        }
 
-        // 执行合成：添加输出物品
-        foreach (var item in itemsToAdd)
-        {
-            outputInventory_.Data.TryAddItem(item);
-            Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
-        }
+//        // 检查插槽数量
+//        if (inputInventory_.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
+//        {
+//            Debug.LogError($"插槽数量不匹配：配方要求 {recipe.inputs.RowItems_List.Count} 个插槽，当前有 {inputInventory_.Data.itemSlots.Count} 个");
+//            return false;
+//        }
 
-        // 扣除输入材料
-        for (int i = 0; i < inputInventory_.Data.itemSlots.Count; i++)
-        {
-            var slot = inputInventory_.Data.itemSlots[i];
-            var required = recipe.inputs.RowItems_List[i];
+//        // 准备输出物品
+//        var itemsToAdd = new List<ItemData>();
+//        foreach (var output in recipe.outputs.results)
+//        {
+//            var prefab = GameRes.Instance.AllPrefabs[output.resultItem];
+//            if (prefab == null)
+//            {
+//                Debug.LogError($"预制体不存在：{output.resultItem}（配方：{recipe.name}）");
+//                return false;
+//            }
+//            ItemData newItem = prefab.GetComponent<Item>().DeepClone().Item_Data;
+//            newItem.Stack.Amount = output.resultAmount;
+//            itemsToAdd.Add(newItem);
+//        }
 
-            if (required.amount == 0) continue;
+//        // 检查资源和空间
+//        if (!CheckEnough(inputInventory_, outputInventory_, recipe.inputs, itemsToAdd))
+//        {
+//            Debug.LogError("合成失败：材料不足或输出空间不足");
+//            return false;
+//        }
 
-            // 显示详细扣减信息
-            Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot._ItemData.Stack.Amount}");
+//        // 显示合成开始信息
+//        Debug.Log($"开始合成：{recipe.name}");
+//        Debug.Log($"输入材料：{recipeKey}");
+//        Debug.Log($"输出产物：{string.Join(", ", itemsToAdd.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
 
-            slot._ItemData.Stack.Amount -= required.amount;
-            if (slot._ItemData.Stack.Amount <= 0)
-            {
-                Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
-                inputInventory_.Data.RemoveItemAll(slot, i);
-            }
-            else
-            {
-                Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot._ItemData.Stack.Amount}");
-            }
-            inputInventory.RefreshUI( i);
-        }
+//        // 执行合成：添加输出物品
+//        foreach (var item in itemsToAdd)
+//        {
+//            outputInventory_.Data.TryAddItem(item);
+//            Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
+//        }
 
-        Debug.Log($"合成完成：{recipe.name}");
-        return true;
-    }
-    private bool CheckEnough(Inventory inputInventory_,
-                         Inventory outputInventory_,
-                         Input_List inputList,
-                         List<ItemData> itemsToAdd)
-    {
-        for (int i = 0; i < inputInventory_.Data.itemSlots.Count; i++)
-        {
-            var slot = inputInventory_.Data.itemSlots[i];
-            var required = inputList.RowItems_List[i];
+//        // 扣除输入材料
+//        for (int i = 0; i < inputInventory_.Data.itemSlots.Count; i++)
+//        {
+//            var slot = inputInventory_.Data.itemSlots[i];
+//            var required = recipe.inputs.RowItems_List[i];
 
-            // 插槽不需要物品则跳过
-            if (required.amount == 0)
-            {
-                Debug.Log($"槽位{i} 不需要材料，跳过");
-                continue;
-            }
+//            if (required.amount == 0) continue;
 
-            // 检查物品是否存在
-            if (slot._ItemData == null)
-            {
-                Debug.LogWarning($"槽位{i} 需要 {required.ItemName} x{required.amount}，但物品为空");
-                return false;
-            }
+//            // 显示详细扣减信息
+//            Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot._ItemData.Stack.Amount}");
 
-            // 检查名称是否匹配
-            if (slot._ItemData.IDName != required.ItemName)
-            {
-                Debug.LogWarning($"槽位{i} 物品不匹配，期望 {required.ItemName}，实际是 {slot._ItemData.IDName}");
-                return false;
-            }
+//            slot._ItemData.Stack.Amount -= required.amount;
+//            if (slot._ItemData.Stack.Amount <= 0)
+//            {
+//                Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
+//                inputInventory_.Data.RemoveItemAll(slot, i);
+//            }
+//            else
+//            {
+//                Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot._ItemData.Stack.Amount}");
+//            }
+//            inputInventory.RefreshUI( i);
+//        }
 
-            // 检查数量是否足够
-            if (slot._ItemData.Stack.Amount < required.amount)
-            {
-                Debug.LogWarning($"槽位{i} 材料数量不足，当前 {slot._ItemData.Stack.Amount}，需要 {required.amount}");
-                return false;
-            }
-            else
-            {
-                Debug.Log($"槽位{i} 材料检查通过：{slot._ItemData.IDName} x{slot._ItemData.Stack.Amount}/{required.amount}");
-            }
-        }
+//        Debug.Log($"合成完成：{recipe.name}");
+//        return true;
+//    }
+//    private bool CheckEnough(Inventory inputInventory_,
+//                         Inventory outputInventory_,
+//                         Input_List inputList,
+//                         List<ItemData> itemsToAdd)
+//    {
+//        for (int i = 0; i < inputInventory_.Data.itemSlots.Count; i++)
+//        {
+//            var slot = inputInventory_.Data.itemSlots[i];
+//            var required = inputList.RowItems_List[i];
 
-        // 检查输出空间
-        foreach (var item in itemsToAdd)
-        {
-            if (!outputInventory_.Data.TryAddItem(item,false))
-            {
-                Debug.LogWarning($"输出物品 {item.IDName} 无法加入输出背包，可能空间不足");
-                return false;
-            }
-            else
-            {
-                Debug.Log($"输出检查通过：可以添加 {item.IDName} x{item.Stack.Amount}");
-            }
-        }
+//            // 插槽不需要物品则跳过
+//            if (required.amount == 0)
+//            {
+//                Debug.Log($"槽位{i} 不需要材料，跳过");
+//                continue;
+//            }
 
-        Debug.Log("所有输入输出检查通过，可以进行合成");
-        return true;
-    }*/
+//            // 检查物品是否存在
+//            if (slot._ItemData == null)
+//            {
+//                Debug.LogWarning($"槽位{i} 需要 {required.ItemName} x{required.amount}，但物品为空");
+//                return false;
+//            }
 
-    #endregion
+//            // 检查名称是否匹配
+//            if (slot._ItemData.IDName != required.ItemName)
+//            {
+//                Debug.LogWarning($"槽位{i} 物品不匹配，期望 {required.ItemName}，实际是 {slot._ItemData.IDName}");
+//                return false;
+//            }
 
-    #region 世界交互接口实现
-/*
-    public void Work_Start()
-    {
-        Craft(inputInventory, outputInventory, RecipeType.Crafting);
-    }
-*/
-    public void Interact_Start(Item item)
-    {
-        if (CanInteract)
-        {
-            itemMods.GetMod_ByID(ModText.Composite).GetComponent<Mod_HandMade>().inputInventory.DefaultTarget_Inventory
-                = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
-            itemMods.GetMod_ByID(ModText.Composite).GetComponent<Mod_HandMade>().outputInventory.DefaultTarget_Inventory
-                = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
-        }
-    }
+//            // 检查数量是否足够
+//            if (slot._ItemData.Stack.Amount < required.amount)
+//            {
+//                Debug.LogWarning($"槽位{i} 材料数量不足，当前 {slot._ItemData.Stack.Amount}，需要 {required.amount}");
+//                return false;
+//            }
+//            else
+//            {
+//                Debug.Log($"槽位{i} 材料检查通过：{slot._ItemData.IDName} x{slot._ItemData.Stack.Amount}/{required.amount}");
+//            }
+//        }
 
-    public override void Act()
-    {
-        Debug.Log("Act");
-        OnAct.Invoke();
-    }
+//        // 检查输出空间
+//        foreach (var item in itemsToAdd)
+//        {
+//            if (!outputInventory_.Data.TryAddItem(item,false))
+//            {
+//                Debug.LogWarning($"输出物品 {item.IDName} 无法加入输出背包，可能空间不足");
+//                return false;
+//            }
+//            else
+//            {
+//                Debug.Log($"输出检查通过：可以添加 {item.IDName} x{item.Stack.Amount}");
+//            }
+//        }
 
-    public void Work_Update()
-    {
-        throw new System.NotImplementedException();
-    }
+//        Debug.Log("所有输入输出检查通过，可以进行合成");
+//        return true;
+//    }*/
 
-    public void Work_Stop()
-    {
-        throw new System.NotImplementedException();
-    }
-    #endregion
+//    #endregion
 
-}
+//    #region 世界交互接口实现
+///*
+//    public void Work_Start()
+//    {
+//        Craft(inputInventory, outputInventory, RecipeType.Crafting);
+//    }
+//*/
+//    public void Interact_Start(Item item)
+//    {
+//        if (CanInteract)
+//        {
+//            itemMods.GetMod_ByID(ModText.Composite).GetComponent<Mod_HandMade>().inputInventory.DefaultTarget_Inventory
+//                = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+//            itemMods.GetMod_ByID(ModText.Composite).GetComponent<Mod_HandMade>().outputInventory.DefaultTarget_Inventory
+//                = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+//        }
+//    }
+
+//    public override void Act()
+//    {
+//        Debug.Log("Act");
+//        OnAct.Invoke();
+//    }
+
+//    public void Work_Update()
+//    {
+//        throw new System.NotImplementedException();
+//    }
+
+//    public void Work_Stop()
+//    {
+//        throw new System.NotImplementedException();
+//    }
+//    #endregion
+
+//}
 

@@ -1160,6 +1160,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!225 &207864056
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -6876,6 +6877,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!225 &1499669063
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -8032,6 +8034,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!225 &1756453922
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -9428,6 +9431,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!225 &2137552814
 CanvasGroup:
   m_ObjectHideFlags: 0

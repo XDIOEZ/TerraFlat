@@ -1,3 +1,4 @@
+using AYellowpaper.SerializedCollections;
 using Force.DeepCloner;
 using MemoryPack;
 using Sirenix.OdinInspector;
@@ -9,7 +10,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public partial class Mod_Smelting : Module
+public partial class Mod_Smelting : Module,IInventory
 {
     #region 数据定义
     [MemoryPackable]
@@ -54,9 +55,16 @@ public partial class Mod_Smelting : Module
     public ModSmeltingData Data = new ModSmeltingData();
 
     // 临时引用
-    public Inventory inputInventory;
-    public Inventory outputInventory;
-    public Inventory fuelInventory;
+    public Inventory inputInventory => inventoryRefDic["输入插槽"];
+    public Inventory outputInventory => inventoryRefDic["输出插槽"];
+    public Inventory fuelInventory => inventoryRefDic["燃料插槽"];
+
+    [Tooltip("Inventory引用字典-配置字段")]
+    public SerializedDictionary<string, Inventory> inventoryRefDic = new();
+    [Tooltip("Inventory引用字典-接口实现")]
+    public SerializedDictionary<string, Inventory> InventoryRefDic { get => inventoryRefDic; set => inventoryRefDic = value; }
+
+
     public Mod_Fuel mod_Fuel; // 燃料模块
     public BasePanel panel;
     public Button WorkButton;
@@ -182,7 +190,7 @@ public partial class Mod_Smelting : Module
         // 如果有手持模块，设置默认目标
         if (item != null && item.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Hand))
         {
-            var handInv = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()?._Inventory;
+            var handInv = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
             if (inputInventory != null)
                 inputInventory.DefaultTarget_Inventory = handInv;
             if (outputInventory != null)
@@ -310,7 +318,7 @@ public partial class Mod_Smelting : Module
             
             Recipe recipe = null;
             string matchedKey = null;
-            
+
             // 尝试匹配每个配方键
             foreach (string recipeKey in recipeKeys)
             {
@@ -411,6 +419,7 @@ public partial class Mod_Smelting : Module
         
         // 生成基于物品名称的配方键
         Input_List inputList = new Input_List();
+        inputList.recipeType = RecipeType.Smelting;
         foreach (ItemSlot slot in inputInv.Data.itemSlots)
         {
             if (slot == null || slot.itemData == null)
@@ -615,7 +624,7 @@ public partial class Mod_Smelting : Module
                 if (action != null && inputInv.Data.itemSlots != null && 
                     action.slotIndex >= 0 && action.slotIndex < inputInv.Data.itemSlots.Count)
                 {
-                    action.Apply(inputInv.Data.itemSlots[action.slotIndex]);
+                    action.Apply(this);
                 }
             }
         }
@@ -738,7 +747,7 @@ private void UpdateUI()
         if (item_ == null || item_.itemMods == null)
             return;
             
-        var handInventory = item_.itemMods.GetMod_ByID(ModText.Hand)?.GetComponent<IInventory>()?._Inventory;
+        var handInventory = item_.itemMods.GetMod_ByID(ModText.Hand)?.GetComponent<IInventory>().GetDefaultTargetInventory();
 
         if (inputInventory != null)
             inputInventory.DefaultTarget_Inventory = handInventory;

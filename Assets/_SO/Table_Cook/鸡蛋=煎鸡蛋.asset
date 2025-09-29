@@ -10,17 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e17da8e390065e6499b50ea2e5604151, type: 3}
-  m_Name: "\u751F\u8089-\u719F\u8089"
+  m_Name: "\u9E21\u86CB=\u714E\u9E21\u86CB"
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
-    - ItemName: RawMeat
-      ItemPrefab: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
+    - matchMode: 0
+      ItemName: Egg
+      ItemPrefab: {fileID: 2641514758235206763, guid: 4bcfc510d090cd94994daf92083d6f6b, type: 3}
+      Tag: 
       amount: 1
+    recipeType: 1
   outputs:
     results:
-    - ItemName: CookedMeat
-      ItemPrefab: {fileID: 3341342614344715908, guid: 92fc3da9917bffe4a95a5e4648efdcb6, type: 3}
+    - ItemName: CookedEgg
+      ItemPrefab: {fileID: 3926578369279844245, guid: ecd66c5c9e4e368479430b1a6544fa40, type: 3}
       amount: 1
-  recipeType: 1
-  Temperature: 100
+  action: []
+  Temperature: 150

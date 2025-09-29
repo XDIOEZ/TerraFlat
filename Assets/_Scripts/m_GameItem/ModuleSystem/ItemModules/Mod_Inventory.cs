@@ -1,17 +1,22 @@
+using AYellowpaper.SerializedCollections;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class Mod_Inventory : Module,IInventory
 {
-    public InventoryModuleData Data = new InventoryModuleData();
+    public InventoryModuleData  Data = new InventoryModuleData();
     public override ModuleData _Data { get => Data; set => Data = (InventoryModuleData)value; }
-    public Inventory _Inventory { get => inventory; set => inventory = value; }
-    [Tooltip("容器，用于存放物品")]
-    public Inventory inventory;
+    public Inventory inventory { get => InventoryRefDic["背包"]; set => InventoryRefDic["背包"] = value; }
+    [Tooltip("Inventory引用字典")]
+    public SerializedDictionary<string, Inventory> inventoryRefDic = new();
+    [Tooltip("Inventory引用字典")]
+    public SerializedDictionary<string, Inventory> InventoryRefDic { get=> inventoryRefDic; set => inventoryRefDic = value; }
+    [Tooltip("模块面板")]
     public BasePanel basePanel;
     public override void Awake()
     {
@@ -21,12 +26,20 @@ public class Mod_Inventory : Module,IInventory
         }
     }
 
-public override void Load()
+    public void OnValidate()
+    {
+        if(inventoryRefDic.Count == 0)
+        {
+            inventoryRefDic.Add("背包", GetComponentInChildren<Inventory>());
+        }
+    }
+
+    public override void Load()
 {
     basePanel = GetComponent<BasePanel>();
-    if (_Inventory == null)
+    if (inventory == null)
     {
-        _Inventory = GetComponent<Inventory>();
+        inventory = GetComponent<Inventory>();
     }
     if (Data.Data.Count == 0)
     {
@@ -45,31 +58,44 @@ public override void Load()
     if (item.itemMods.GetMod_ByID(ModText.Hand))
     {
         inventory.DefaultTarget_Inventory =
-                      item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>()._Inventory;
+                      item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
     }
     else
     {
         inventory.DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
-    //   Debug.Log("Mod_Inventory: " + item.name + " 没有找到Mod_Hand");
     }
 
     // 检查物品是否处于可拾取状态，如果可拾取则关闭面板
     CheckAndHidePanelIfPickable();
 
-    // 恢复面板位置 - 增强版本，增加更多检查
-    if (basePanel != null && basePanel.Dragger != null)
+    // 恢复面板位置和开关状态
+    if (basePanel != null)
     {
-        var draggerRectTransform = basePanel.Dragger.GetComponent<RectTransform>();
-        if (draggerRectTransform != null)
+        // 恢复面板位置 - 增强版本，增加更多检查
+        if (basePanel.Dragger != null)
         {
-            // 只有当保存的位置数据有效且不为零时才应用位置
-            if (Data.PanleRectPosition != null && 
-                IsValidVector2(Data.PanleRectPosition) &&
-                (Data.PanleRectPosition.x != 0 || Data.PanleRectPosition.y != 0))
+            var draggerRectTransform = basePanel.Dragger.GetComponent<RectTransform>();
+            if (draggerRectTransform != null)
             {
-                draggerRectTransform.anchoredPosition = Data.PanleRectPosition;
+                // 只有当保存的位置数据有效且不为零时才应用位置
+                if (Data.PanleRectPosition != null && 
+                    IsValidVector2(Data.PanleRectPosition) &&
+                    (Data.PanleRectPosition.x != 0 || Data.PanleRectPosition.y != 0))
+                {
+                    draggerRectTransform.anchoredPosition = Data.PanleRectPosition;
+                }
+                // 如果是初次加载且位置数据为空，则使用Prefab自带的位置，不需要调整
             }
-            // 如果是初次加载且位置数据为空，则使用Prefab自带的位置，不需要调整
+        }
+        
+        // 恢复面板开关状态
+        if (Data.BasePanelIsOpen)
+        {
+            basePanel.Open();
+        }
+        else
+        {
+            basePanel.Close();
         }
     }
 
@@ -81,17 +107,21 @@ public override void Load()
     }
 
 
-        _Inventory.Init();
+        inventory.Init();
 
+
+      
+    }
+    public void Start()
+    {
         GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inventoryInit);
         if (inventoryInit != null)
         {
-            _Inventory.TryInitializeItems(inventoryInit);
+            inventory.TryInitializeItems(inventoryInit);
 
         }
-
         //初始化刷新UI
-        _Inventory.RefreshUI();
+        inventory.RefreshUI();
     }
     //玩家与此发生交互
     public void Interact_Start(Item item_)
@@ -111,6 +141,12 @@ public override void Load()
     [Button]
     public override void Save()
     {
+        // 保存面板开关状态
+        if (basePanel != null)
+        {
+            Data.BasePanelIsOpen = basePanel.IsOpen();
+        }
+        
         // 保存面板位置 - 增强版本，添加更多检查
         if (basePanel != null && basePanel.Dragger != null)
         {
@@ -177,7 +213,30 @@ public override void Load()
 
 public interface IInventory
 {
-    Inventory _Inventory { get; set; }
+    [Tooltip("Inventory引用字典")]
+    public SerializedDictionary<string, Inventory> InventoryRefDic { get; set; }
+    
+    [Tooltip("默认返回的目标Inventory")]
+    public Inventory GetDefaultTargetInventory()
+    {
+        if (InventoryRefDic == null || InventoryRefDic.Count == 0)
+            return null;
+            
+        // 返回第一个Inventory
+        return InventoryRefDic.Values.First();
+    }
+    
+    [Tooltip("随机返回一个Inventory")]
+    public Inventory GetRandomTargetInventory()
+    {
+        if (InventoryRefDic == null || InventoryRefDic.Count == 0)
+            return null;
+            
+        // 将值转换为数组并随机选择一个
+        var inventories = InventoryRefDic.Values.ToArray();
+        int randomIndex = UnityEngine.Random.Range(0, inventories.Length);
+        return inventories[randomIndex];
+    }
 }
 [Serializable]
 [MemoryPackable]
@@ -187,4 +246,5 @@ public partial class InventoryModuleData : ModuleData
     public Dictionary<string, Inventory_Data> Data = new Dictionary<string, Inventory_Data>();
     public Vector3 PanleRectPosition = Vector3.zero;//TODO 我在这里添加了一个Vector3变量，用于保存面板的位置
     public string InventoryInitName = "";
+    public bool BasePanelIsOpen = true;
 }
