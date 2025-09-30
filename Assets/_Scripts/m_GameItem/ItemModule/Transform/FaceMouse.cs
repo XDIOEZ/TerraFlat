@@ -10,6 +10,7 @@ public partial class FaceMouse : Module
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
 
     public PlayerController PlayerController;
+    public TurnBody turnBody; // 添加TurnBody引用
 
     // 需要跟随鼠标旋转的对象列表
     [Tooltip("需要跟随鼠标旋转的对象列表，列表为空时脚本不执行任何操作")]
@@ -31,6 +32,11 @@ public partial class FaceMouse : Module
         PlayerController = item.Owner != null
             ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>()
             : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+
+        // 获取TurnBody组件
+        turnBody = item.Owner != null
+            ? item.Owner.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody
+            : item.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody;
 
         // 如果列表为空 → 自动装填父对象
         if (targetRotationTransforms.Count == 0 )
@@ -76,6 +82,13 @@ public partial class FaceMouse : Module
         List<Transform> validTargets = GetValidRotationTargets();
         if (validTargets.Count == 0) return;
 
+        // 获取玩家当前朝向
+        float playerFacingDirection = 1f; // 1表示朝右，-1表示朝左
+        if (turnBody != null)
+        {
+            playerFacingDirection = turnBody.currentDirection.x;
+        }
+
         // 遍历所有有效目标执行旋转
         foreach (var targetTrans in validTargets)
         {
@@ -88,14 +101,23 @@ public partial class FaceMouse : Module
 
             // 计算目标对象到鼠标位置的方向
             Vector2 direction = targetPosition - targetTrans.position;
+            
+            // 根据玩家朝向调整方向
+            if (playerFacingDirection < 0) // 玩家朝左
+            {
+                // 镜像X轴方向
+                direction.x = -direction.x;
+            }
+            
             float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
             // 平滑旋转到目标角度
             float currentAngle = targetTrans.localEulerAngles.z;
             float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, Data.RotationSpeed * deltaTime);
 
-            // 应用旋转（仅Z轴）
-            targetTrans.localRotation = Quaternion.Euler(0, 0, smoothedAngle);
+            // 应用旋转（仅Z轴，保持X和Y轴不变）
+            Vector3 currentLocalEulerAngles = targetTrans.localEulerAngles;
+            targetTrans.localRotation = Quaternion.Euler(currentLocalEulerAngles.x, currentLocalEulerAngles.y, smoothedAngle);
         }
     }
 

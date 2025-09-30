@@ -10,20 +10,19 @@ public class TurnBody : Module, ITurnBody
     private float rotationDuration = 0.3f;
 
     [SerializeField, Tooltip("需要控制旋转的目标对象列表，默认自动获取子对象中含Animator的物体")]
-    private List<Transform> controlledTransforms = new();
+    public List<Transform> controlledTransforms = new();
 
     [SerializeField, Tooltip("当前面向方向，默认右方")]
-    private Vector2 currentDirection = Vector2.right;
+    public Vector2 currentDirection = Vector2.right;
 
     [SerializeField, ReadOnly, Tooltip("是否正在转身（由脚本自动控制）")]
-    private bool isTurning = false;
+    public bool isTurning = false;
 
     public UltEvent<Vector2> OnTrun = new UltEvent<Vector2>();//TODO 转身事件 输入转身的方向
 
     private float turnTimeElapsed;
     private float startY;
     private float targetY;
-    private Animator animator;
 
     public FaceMouse faceMouse;
 
@@ -47,8 +46,6 @@ public class TurnBody : Module, ITurnBody
         faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
         controlledTransforms.Clear();
 
-        
-
         // 获取所有子物体上的 Animator 组件
         Animator[] animators = item.GetComponentsInChildren<Animator>();
         if (animators.Length > 0)
@@ -62,7 +59,6 @@ public class TurnBody : Module, ITurnBody
 
         if (faceMouse == null)
             Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！"+item.name);
-
     }
 
     public override void ModUpdate(float deltaTime)
@@ -118,7 +114,11 @@ public class TurnBody : Module, ITurnBody
         foreach (var tform in controlledTransforms)
         {
             if (tform != null)
-                tform.rotation = Quaternion.Euler(0f, newY, 0f);
+            {
+                // 只修改Y轴旋转，保持X和Z轴不变
+                Vector3 currentEulerAngles = tform.eulerAngles;
+                tform.rotation = Quaternion.Euler(currentEulerAngles.x, newY, currentEulerAngles.z);
+            }
         }
 
         if (Mathf.Abs(Mathf.DeltaAngle(newY, targetY)) < 0.5f || t >= 1f)
@@ -126,7 +126,11 @@ public class TurnBody : Module, ITurnBody
             foreach (var tform in controlledTransforms)
             {
                 if (tform != null)
-                    tform.rotation = Quaternion.Euler(0f, targetY, 0f);
+                {
+                    // 只修改Y轴旋转，保持X和Z轴不变
+                    Vector3 currentEulerAngles = tform.eulerAngles;
+                    tform.rotation = Quaternion.Euler(currentEulerAngles.x, targetY, currentEulerAngles.z);
+                }
             }
 
             isTurning = false;

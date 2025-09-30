@@ -186,6 +186,11 @@ if (buttons.ContainsKey("销毁"))
         return isOpen;
     }
 
+    public bool IsVisible()
+    {
+        // 使用记录的状态而不是每次都检查CanvasGroup属性
+        return isOpen;
+    }
     /// <summary>
     /// 切换当前面板的显示状态
     /// 如果当前是打开状态则关闭，否则打开

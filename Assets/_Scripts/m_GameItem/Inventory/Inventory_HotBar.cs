@@ -28,6 +28,7 @@ public class Inventory_HotBar : Inventory
     public ItemSlot CurrentSelectItemSlot;
 
     public FaceMouse faceMouse; // 用于控制物品旋转的组件
+    public TurnBody turnBody;   // 用于控制转身的组件
 
     // 当前选择的物品
     public ItemData currentItemData;
@@ -50,9 +51,16 @@ public class Inventory_HotBar : Inventory
 
         // 获取FaceMouse组件（用于控制物品旋转）
         Owner.itemMods.GetMod_ByID(ModText.FaceMouse, out faceMouse);
-        if ( faceMouse == null )
+        if (faceMouse == null)
         {
             Debug.LogWarning("[Inventory_HotBar] 未找到FaceMouse组件，物品将无法跟随鼠标旋转");
+        }
+
+        // 获取TurnBody组件（用于控制转身）
+        Owner.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
+        if (turnBody == null)
+        {
+            Debug.LogWarning("[Inventory_HotBar] 未找到TurnBody组件，物品将无法实现转身镜像");
         }
 
         Controller_Init();
@@ -209,6 +217,13 @@ public class Inventory_HotBar : Inventory
             {
                 faceMouse.targetRotationTransforms.Remove(obj.transform);
             }
+            
+            // 从TurnBody的控制列表中移除当前物品
+            if (turnBody != null)
+            {
+                turnBody.controlledTransforms.Remove(obj.transform);
+            }
+            
             Destroy(obj.gameObject);
         }
     }
@@ -225,9 +240,6 @@ public class Inventory_HotBar : Inventory
         var slot = Data.itemSlots[index];
         if (slot.itemData == null)
         {
-            // 清空旋转列表（无物品选中时）
-            if (faceMouse != null)
-                //faceMouse.targetRotationTransforms.Clear();
             return;
         }
 
@@ -269,10 +281,13 @@ public class Inventory_HotBar : Inventory
         // 核心：将新物品添加到FaceMouse的旋转列表，使其跟随鼠标旋转
         if (faceMouse != null)
         {
-            // 清空列表确保只有当前物品被旋转
-           // faceMouse.targetRotationTransforms.Clear();
-            // 添加当前物品的transform到旋转列表
             faceMouse.targetRotationTransforms.Add(itemInstance.transform);
+        }
+        
+        // 核心：将新物品添加到TurnBody的控制列表，实现转身后镜像
+        if (turnBody != null)
+        {
+            turnBody.controlledTransforms.Add(itemInstance.transform);
         }
     }
 

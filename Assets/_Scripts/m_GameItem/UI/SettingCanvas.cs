@@ -4,22 +4,96 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
+using InputSystem;
 
-public class SettingCanvas : MonoBehaviour
+public class SettingCanvas : Module
 {
     [Tooltip("退出并保存按钮")]
     public Button Button_ExitGame;
-    
+    public BasePanel basePanel;
+    public Ex_ModData_MemoryPackable ModSaveData;
+    PlayerController playerController;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
+
+    public override void Awake()
+    {
+        if (_Data.ID == "")
+        {
+            _Data.ID = ModText.Grow;
+        }
+    }
+
+    public override void Load()
+    {
+        basePanel = GetComponentInChildren<BasePanel>();
+    }
+
+    public override void Save()
+    {
+    }
+    public override void Act()
+    {
+        base.Act();
+    }
+
+    // 添加InputAction引用
+    private PlayerInputActions playerInputActions;
 
     public void Start()
     {
         Button_ExitGame.onClick.AddListener(ExitGame);
+
+        // 优先从物品所有者获取Controller
+        playerController = item.Owner != null
+            ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>()
+            : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+
+        // 初始化输入系统
+        playerInputActions = playerController._inputActions;
+
+        // 绑定ESC按键事件
+        playerInputActions.Win10.ESC.performed += OnEscapePressed;
     }
-    //方法:回到主场景
+
+    
+    // ESC按键处理方法
+    private void OnEscapePressed(InputAction.CallbackContext context)
+    {
+        TogglePanel();
+    }
+    
+    // 切换面板显示/隐藏状态
+    private void TogglePanel()
+    {
+        if (basePanel != null)
+        {
+            // 如果面板正在显示则隐藏，否则显示
+            if (basePanel.IsVisible())
+            {
+                basePanel.Close();
+            }
+            else
+            {
+                basePanel.Open();
+            }
+        }
+    }
+    
+    // 方法:回到主场景
     public void ExitGame()
     {
         // 必须通过StartCoroutine启动协程
         // 注意：调用者（此处是SettingCanvas）必须是MonoBehaviour实例
         GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine());
+    }
+    
+    // 在对象销毁时取消事件绑定
+    private void OnDestroy()
+    {
+        if (playerInputActions != null)
+        {
+            playerInputActions.Win10.ESC.performed -= OnEscapePressed;
+        }
     }
 }
