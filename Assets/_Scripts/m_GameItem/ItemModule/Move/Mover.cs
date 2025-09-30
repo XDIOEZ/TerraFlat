@@ -134,7 +134,7 @@ public partial class Mover : Module
 
         // 加载体力模块
         stamina = LoadMod<Mod_Stamina>(item, ModText.Stamina);
-        animationController = LoadMod<Mod_AnimationController>(item, ModText.Animation, controller =>
+        animationController = LoadMod<Mod_AnimationController>(item, ModText.Animator, controller =>
         {
             OnMoveStart += () => controller.SetBool(AnimationText.Move, true);
             OnMoveEnd += () => controller.SetBool(AnimationText.Move, false);

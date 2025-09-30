@@ -98,9 +98,6 @@ public class GetItemPosition : ActionNode
     {
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
-            if (item?.itemData?.ItemTags?.Item_TypeTag == null)
-                continue;
-
             // 检查物品类型是否匹配
             if (ItemType.Exists(type => item.itemData.ItemTags.Item_TypeTag.Contains(type)))
             {

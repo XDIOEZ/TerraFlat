@@ -1,4 +1,4 @@
-using AYellowpaper.SerializedCollections;
+ï»¿using AYellowpaper.SerializedCollections;
 using Force.DeepCloner;
 using MemoryPack;
 using Sirenix.OdinInspector;
@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 public partial class Mod_Smelting : Module,IInventory
 {
-    #region Êı¾İ¶¨Òå
+    #region æ•°æ®å®šä¹‰
     [MemoryPackable]
     [System.Serializable]
     public partial class ModSmeltingData
@@ -20,67 +20,67 @@ public partial class Mod_Smelting : Module,IInventory
         [ShowInInspector]
         public Dictionary<string, Inventory_Data> InvData = new Dictionary<string, Inventory_Data>();
         
-        [Tooltip("µ±Ç°µÄÈÛÁ¶½ø¶È")]
+        [Tooltip("å½“å‰çš„ç†”ç‚¼è¿›åº¦")]
         public float SmeltingProgress = 10f;
         
-        [Tooltip("ÈÛÂ¯µÄ×î´óÈÛÁ¶ËÙ¶È")]
+        [Tooltip("ç†”ç‚‰çš„æœ€å¤§ç†”ç‚¼é€Ÿåº¦")]
         public float MaxSmeltingSpeed = 10f;
         
-        [Tooltip("ÈÛÂ¯µÄµ±Ç°ÈÛÁ¶ËÙ¶È")]
+        [Tooltip("ç†”ç‚‰çš„å½“å‰ç†”ç‚¼é€Ÿåº¦")]
         public float SmeltingSpeed = 10f;
         
-        [Tooltip("µ±Ç°ÈÛÂ¯ÄÚÎÂ¶È")]
+        [Tooltip("å½“å‰ç†”ç‚‰å†…æ¸©åº¦")]
         public float Temperature = 20f;
         
-        [Tooltip("¿É´ï×î´óÎÂ¶ÈÖµ£¨ÓÉÈ¼ÁÏ¾ö¶¨£©")]
+        [Tooltip("å¯è¾¾æœ€å¤§æ¸©åº¦å€¼ï¼ˆç”±ç‡ƒæ–™å†³å®šï¼‰")]
         public float MaxTemperature = 0f;
         
-        [Tooltip("ÈÛÂ¯±¾ÉíµÄ×î´óÎÂ¶ÈÏŞÖÆ£¨ÈÛÂ¯µÄÎïÀíÏŞÖÆ£©")]
+        [Tooltip("ç†”ç‚‰æœ¬èº«çš„æœ€å¤§æ¸©åº¦é™åˆ¶ï¼ˆç†”ç‚‰çš„ç‰©ç†é™åˆ¶ï¼‰")]
         public float MaxTemperatureLimit = 1000f;
         
-        [Tooltip("ÊÇ·ñÕıÔÚÈÛÁ¶")]
+        [Tooltip("æ˜¯å¦æ­£åœ¨ç†”ç‚¼")]
         public bool IsSmelting = false;
         
-        [Tooltip("ÎÂ¶ÈÉÏÉıËÙ¶È")]
+        [Tooltip("æ¸©åº¦ä¸Šå‡é€Ÿåº¦")]
         public float TemperatureUpSpeed = 10f;
         
-        [Tooltip("ÎÂ¶ÈÏÂ½µËÙ¶È")]
+        [Tooltip("æ¸©åº¦ä¸‹é™é€Ÿåº¦")]
         public float TemperatureDownSpeed = 30f;
     }
     #endregion
 
-    #region ĞòÁĞ»¯×Ö¶ÎÓëÒıÓÃ
+    #region åºåˆ—åŒ–å­—æ®µä¸å¼•ç”¨
     public Ex_ModData_MemoryPackable SaveData;
     public override ModuleData _Data { get { return SaveData; } set { SaveData = (Ex_ModData_MemoryPackable)value; } }
     public ModSmeltingData Data = new ModSmeltingData();
 
-    // ÁÙÊ±ÒıÓÃ
-    public Inventory inputInventory => inventoryRefDic["ÊäÈë²å²Û"];
-    public Inventory outputInventory => inventoryRefDic["Êä³ö²å²Û"];
-    public Inventory fuelInventory => inventoryRefDic["È¼ÁÏ²å²Û"];
+    // ä¸´æ—¶å¼•ç”¨
+    public Inventory inputInventory => inventoryRefDic["è¾“å…¥æ’æ§½"];
+    public Inventory outputInventory => inventoryRefDic["è¾“å‡ºæ’æ§½"];
+    public Inventory fuelInventory => inventoryRefDic["ç‡ƒæ–™æ’æ§½"];
 
-    [Tooltip("InventoryÒıÓÃ×Öµä-ÅäÖÃ×Ö¶Î")]
+    [Tooltip("Inventoryå¼•ç”¨å­—å…¸-é…ç½®å­—æ®µ")]
     public SerializedDictionary<string, Inventory> inventoryRefDic = new();
-    [Tooltip("InventoryÒıÓÃ×Öµä-½Ó¿ÚÊµÏÖ")]
+    [Tooltip("Inventoryå¼•ç”¨å­—å…¸-æ¥å£å®ç°")]
     public SerializedDictionary<string, Inventory> InventoryRefDic { get => inventoryRefDic; set => inventoryRefDic = value; }
 
 
-    public Mod_Fuel mod_Fuel; // È¼ÁÏÄ£¿é
+    public Mod_Fuel mod_Fuel; // ç‡ƒæ–™æ¨¡å—
     public BasePanel panel;
     public Button WorkButton;
     
-    [Header("UI×é¼ş")]
-    [Tooltip("ÈÛÁ¶½ø¶ÈÌõ")]
+    [Header("UIç»„ä»¶")]
+    [Tooltip("ç†”ç‚¼è¿›åº¦æ¡")]
     public Slider progressSlider;
-    [Tooltip("È¼ÁÏÈİÁ¿Ìõ")]
+    [Tooltip("ç‡ƒæ–™å®¹é‡æ¡")]
     public Slider fuelSlider;
-    [Tooltip("ÎÂ¶ÈÏÔÊ¾Ìõ")]
+    [Tooltip("æ¸©åº¦æ˜¾ç¤ºæ¡")]
     public Slider temperatureSlider;
-    [Tooltip("ÎÂ¶ÈÊıÖµÎÄ±¾")]
+    [Tooltip("æ¸©åº¦æ•°å€¼æ–‡æœ¬")]
     public TextMeshProUGUI TemperatureText;
     #endregion
 
-    #region UnityÉúÃüÖÜÆÚ
+    #region Unityç”Ÿå‘½å‘¨æœŸ
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -91,24 +91,24 @@ public partial class Mod_Smelting : Module,IInventory
     
     public override void ModUpdate(float deltaTime)
     {
-        if (Data.IsSmelting) // ÒÑ¾­´¦ÓÚÈÛÁ¶×´Ì¬
+        if (Data.IsSmelting) // å·²ç»å¤„äºç†”ç‚¼çŠ¶æ€
         {
-            // ¼ì²éÈ¼ÁÏÄ£¿éÊÇ·ñ´¦ÓÚµãÈ¼×´Ì¬
+            // æ£€æŸ¥ç‡ƒæ–™æ¨¡å—æ˜¯å¦å¤„äºç‚¹ç‡ƒçŠ¶æ€
             if (mod_Fuel.GetIgnitedState())
             {
                 SmeltingProcess(deltaTime);
             }
             else
             {
-                // ¼ì²éÈ¼ÁÏ²å²ÛÊÇ·ñ»¹ÓĞÈ¼ÁÏÎïÆ·
+                // æ£€æŸ¥ç‡ƒæ–™æ’æ§½æ˜¯å¦è¿˜æœ‰ç‡ƒæ–™ç‰©å“
                 var fuelItem = fuelInventory.Data.GetModuleByID(ModText.Fuel);
                 if (fuelItem != null)
                 {
-                    // ´ÓÎïÆ·×ª»¯ÎªÈ¼ÁÏÖµ
+                    // ä»ç‰©å“è½¬åŒ–ä¸ºç‡ƒæ–™å€¼
                     ItemSlot slot = fuelInventory.Data.GetItemSlotByModuleID(fuelItem.ID);
                     if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
                     {
-                        slot.itemData.Stack.Amount -= 1; // ¿Û 1 ¸öÈ¼ÁÏÎïÆ·
+                        slot.itemData.Stack.Amount -= 1; // æ‰£ 1 ä¸ªç‡ƒæ–™ç‰©å“
                         slot.RefreshUI();
 
                         Ex_ModData_MemoryPackable fuelData = fuelItem as Ex_ModData_MemoryPackable;
@@ -117,53 +117,53 @@ public partial class Mod_Smelting : Module,IInventory
                             fuelData.OutData(out FuelData fuel);
                             mod_Fuel.AddFuel(fuel.Fuel.x);
 
-                            // µãÈ¼È¼ÁÏ
+                            // ç‚¹ç‡ƒç‡ƒæ–™
                             mod_Fuel.SetIgnited(true);
                             
-                            // ÎÂ¶ÈÉÏÏŞÈ¡¾öÓÚÈ¼ÁÏ
+                            // æ¸©åº¦ä¸Šé™å–å†³äºç‡ƒæ–™
                             Data.MaxTemperature = fuel.MaxTemperature;
                         }
 
-                        SmeltingProcess(deltaTime); // ¼ÌĞøÈÛÁ¶
+                        SmeltingProcess(deltaTime); // ç»§ç»­ç†”ç‚¼
                     }
                     else
                     {
-                        // ÕæÕıÈ¼ÁÏºÄ¾¡ ¡ú Í£Ö¹ÈÛÁ¶
+                        // çœŸæ­£ç‡ƒæ–™è€—å°½ â†’ åœæ­¢ç†”ç‚¼
                         Data.IsSmelting = false;
-                        Debug.Log("È¼ÁÏºÄ¾¡£¬ÈÛÁ¶Í£Ö¹£¡");
+                        Debug.Log("ç‡ƒæ–™è€—å°½ï¼Œç†”ç‚¼åœæ­¢ï¼");
                     }
                 }
                 else
                 {
-                    // ÕæÕıÈ¼ÁÏºÄ¾¡ ¡ú Í£Ö¹ÈÛÁ¶
+                    // çœŸæ­£ç‡ƒæ–™è€—å°½ â†’ åœæ­¢ç†”ç‚¼
                     Data.IsSmelting = false;
-                    Debug.Log("È¼ÁÏºÄ¾¡£¬ÈÛÁ¶Í£Ö¹£¡");
+                    Debug.Log("ç‡ƒæ–™è€—å°½ï¼Œç†”ç‚¼åœæ­¢ï¼");
                 }
             }
         }
         else
         {
-            // Î´Æô¶¯»òÒÑÍ£Ö¹ ¡ú ÎÂ¶È»ºÂıÏÂ½µµ½ 20¡æ
+            // æœªå¯åŠ¨æˆ–å·²åœæ­¢ â†’ æ¸©åº¦ç¼“æ…¢ä¸‹é™åˆ° 20â„ƒ
             Data.Temperature = Mathf.Max(Data.Temperature - Data.TemperatureDownSpeed * deltaTime, 20f);
             Data.SmeltingSpeed = 0f;
             
-            // Èç¹ûÈ¼ÁÏÄ£¿éÊÇµãÈ¼µÄ£¬ÈÃËüÒ²Ï¨Ãğ
+            // å¦‚æœç‡ƒæ–™æ¨¡å—æ˜¯ç‚¹ç‡ƒçš„ï¼Œè®©å®ƒä¹Ÿç†„ç­
             if (mod_Fuel.GetIgnitedState())
             {
                 mod_Fuel.SetIgnited(false);
             }
         }
 
-        // Í¬²½ËùÓĞUI
+        // åŒæ­¥æ‰€æœ‰UI
         UpdateUI();
     }
 
     public override void Load()
     {
-        // ´Ó SaveData ¶ÁÈ¡
+        // ä» SaveData è¯»å–
         SaveData.ReadData(ref Data);
         
-        // Í¬²½Êı¾İ
+        // åŒæ­¥æ•°æ®
         if (Data.InvData.Count == 0)
         {
             if (inputInventory != null && inputInventory.Data != null)
@@ -183,11 +183,11 @@ public partial class Mod_Smelting : Module,IInventory
                 fuelInventory.Data = Data.InvData[fuelInventory.Data.Name];
         }
 
-        // °´Å¥ÊÂ¼ş
+        // æŒ‰é’®äº‹ä»¶
         if (WorkButton != null)
             WorkButton.onClick.AddListener(OnButtonClick);
 
-        // Èç¹ûÓĞÊÖ³ÖÄ£¿é£¬ÉèÖÃÄ¬ÈÏÄ¿±ê
+        // å¦‚æœæœ‰æ‰‹æŒæ¨¡å—ï¼Œè®¾ç½®é»˜è®¤ç›®æ ‡
         if (item != null && item.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Hand))
         {
             var handInv = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
@@ -197,12 +197,12 @@ public partial class Mod_Smelting : Module,IInventory
                 outputInventory.DefaultTarget_Inventory = handInv;
         }
 
-        // ³õÊ¼»¯¿â´æ
+        // åˆå§‹åŒ–åº“å­˜
         inputInventory?.Init();
         outputInventory?.Init();
         fuelInventory?.Init();
 
-        // »ñÈ¡½»»¥Ä£¿éÒıÓÃ
+        // è·å–äº¤äº’æ¨¡å—å¼•ç”¨
         if (item != null && item.itemMods != null)
         {
             var interactMod = item.itemMods.GetMod_ByID(ModText.Interact);
@@ -215,7 +215,7 @@ public partial class Mod_Smelting : Module,IInventory
         }
 
         panel?.Close();
-
+        UpdateUI();
         inputInventory?.RefreshUI();
         outputInventory?.RefreshUI();
         fuelInventory?.RefreshUI();
@@ -223,14 +223,14 @@ public partial class Mod_Smelting : Module,IInventory
 
     public override void Save()
     {
-        // °²È«¼ì²é
+        // å®‰å…¨æ£€æŸ¥
         if (Data == null)
             Data = new ModSmeltingData();
             
         if (Data.InvData == null)
             Data.InvData = new Dictionary<string, Inventory_Data>();
             
-        // ±£´æ¿â´æÊı¾İ
+        // ä¿å­˜åº“å­˜æ•°æ®
         if (inputInventory != null && inputInventory.Data != null)
             Data.InvData[inputInventory.Data.Name] = inputInventory.Data;
         if (outputInventory != null && outputInventory.Data != null)
@@ -242,10 +242,10 @@ public partial class Mod_Smelting : Module,IInventory
     }
     #endregion
 
-    #region ÈÛÁ¶ºËĞÄÂß¼­
+    #region ç†”ç‚¼æ ¸å¿ƒé€»è¾‘
     private void SmeltingProcess(float deltaTime)
     {
-        // ¼ì²éÊäÈë²ÛÊÇ·ñÓĞÎïÆ·
+        // æ£€æŸ¥è¾“å…¥æ§½æ˜¯å¦æœ‰ç‰©å“
         bool hasInputItem = false;
         if (inputInventory != null && inputInventory.Data != null && inputInventory.Data.itemSlots != null)
         {
@@ -259,36 +259,36 @@ public partial class Mod_Smelting : Module,IInventory
             }
         }
 
-        // ¼ÆËãÊµ¼ÊµÄ×î´óÎÂ¶È£¨ÊÜÏŞÓÚÈÛÂ¯±¾ÉíµÄ×î´óÎÂ¶ÈÏŞÖÆ£©
+        // è®¡ç®—å®é™…çš„æœ€å¤§æ¸©åº¦ï¼ˆå—é™äºç†”ç‚‰æœ¬èº«çš„æœ€å¤§æ¸©åº¦é™åˆ¶ï¼‰
         float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
 
-        // Èç¹ûÃ»ÓĞÎïÆ· ¡ú ½ø¶È¹éÁã£¨±íÊ¾¸ÉÉÕ£©
+        // å¦‚æœæ²¡æœ‰ç‰©å“ â†’ è¿›åº¦å½’é›¶ï¼ˆè¡¨ç¤ºå¹²çƒ§ï¼‰
         if (!hasInputItem)
         {
             Data.SmeltingProgress = 0f;
-            // ÎÂ¶ÈÈÔÈ»»áÉÏÉıµ½È¼ÁÏÔÊĞíµÄÉÏÏŞ£¬µ«²»³¬¹ıÈÛÂ¯ÏŞÖÆ
+            // æ¸©åº¦ä»ç„¶ä¼šä¸Šå‡åˆ°ç‡ƒæ–™å…è®¸çš„ä¸Šé™ï¼Œä½†ä¸è¶…è¿‡ç†”ç‚‰é™åˆ¶
             Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * 2f * deltaTime, actualMaxTemp);
-            // ¼ÌĞøÏûºÄÈ¼ÁÏ
+            // ç»§ç»­æ¶ˆè€—ç‡ƒæ–™
             mod_Fuel?.ConsumeFuel(deltaTime);
-            return; // ²»½øÈëÈÛÁ¶Âß¼­
+            return; // ä¸è¿›å…¥ç†”ç‚¼é€»è¾‘
         }
 
-        // ===== ÒÔÏÂÊÇÕı³£ÈÛÁ¶Âß¼­ =====
+        // ===== ä»¥ä¸‹æ˜¯æ­£å¸¸ç†”ç‚¼é€»è¾‘ =====
 
-        // ÎÂ¶ÈËæÊ±¼äÉÏÉı£¬µ«²»³¬¹ıÈÛÂ¯ÏŞÖÆ
+        // æ¸©åº¦éšæ—¶é—´ä¸Šå‡ï¼Œä½†ä¸è¶…è¿‡ç†”ç‚‰é™åˆ¶
         Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * deltaTime, actualMaxTemp);
 
-        // ¸ù¾İÎÂ¶È¼ÆËãµ±Ç°ÈÛÁ¶ËÙ¶È
+        // æ ¹æ®æ¸©åº¦è®¡ç®—å½“å‰ç†”ç‚¼é€Ÿåº¦
         float tempRatio = Data.Temperature / actualMaxTemp;
         Data.SmeltingSpeed = Mathf.Lerp(1f, Data.MaxSmeltingSpeed, tempRatio);
 
-        // °´µ±Ç°ËÙ¶ÈÍÆ½ø½ø¶È
+        // æŒ‰å½“å‰é€Ÿåº¦æ¨è¿›è¿›åº¦
         Data.SmeltingProgress += Data.SmeltingSpeed * deltaTime;
 
-        // ÏûºÄÈ¼ÁÏ
+        // æ¶ˆè€—ç‡ƒæ–™
         mod_Fuel?.ConsumeFuel(deltaTime);
 
-        // ÈÛÁ¶Íê³É
+        // ç†”ç‚¼å®Œæˆ
         if (Data.SmeltingProgress >= 100f)
         {
             Data.SmeltingProgress = 0f;
@@ -296,128 +296,186 @@ public partial class Mod_Smelting : Module,IInventory
         }
     }
 
-    public void CompleteSmelting()
+public void CompleteSmelting()
+{
+    try
     {
-        try
+        // å®‰å…¨æ£€æŸ¥
+        if (inputInventory == null || inputInventory.Data == null)
         {
-            // °²È«¼ì²é
-            if (inputInventory == null || inputInventory.Data == null)
-            {
-                Debug.LogError("ÊäÈë¿â´æÎª¿Õ£¬ÎŞ·¨Íê³ÉÈÛÁ¶");
-                return;
-            }
-            
-            if (outputInventory == null || outputInventory.Data == null)
-            {
-                Debug.LogError("Êä³ö¿â´æÎª¿Õ£¬ÎŞ·¨Íê³ÉÈÛÁ¶");
-                return;
-            }
+            Debug.LogError("è¾“å…¥åº“å­˜ä¸ºç©ºï¼Œæ— æ³•å®Œæˆç†”ç‚¼");
+            return;
+        }
+        
+        if (outputInventory == null || outputInventory.Data == null)
+        {
+            Debug.LogError("è¾“å‡ºåº“å­˜ä¸ºç©ºï¼Œæ— æ³•å®Œæˆç†”ç‚¼");
+            return;
+        }
 
-            // Éú³ÉÅä·½¼üÁĞ±í
-            List<string> recipeKeys = GenerateRecipeKey_List(inputInventory);
-            
-            Recipe recipe = null;
-            string matchedKey = null;
+        // ç”Ÿæˆé…æ–¹é”®åˆ—è¡¨
+        List<string> recipeKeys = GenerateRecipeKey_List(inputInventory);
+        
+        Recipe recipe = null;
+        string matchedKey = null;
 
-            // ³¢ÊÔÆ¥ÅäÃ¿¸öÅä·½¼ü
-            foreach (string recipeKey in recipeKeys)
+        // å°è¯•åŒ¹é…æ¯ä¸ªé…æ–¹é”®
+        foreach (string recipeKey in recipeKeys)
+        {
+            if (GameRes.Instance != null && 
+                GameRes.Instance.recipeDict != null && 
+                GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
             {
-                if (GameRes.Instance != null && 
-                    GameRes.Instance.recipeDict != null && 
-                    GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+                matchedKey = recipeKey;
+                break;
+            }
+        }
+        
+        // éªŒè¯é…æ–¹
+        if (recipe == null)
+        {
+            Debug.LogError($"ç†”ç‚¼å¤±è´¥ï¼šæ‰¾ä¸åˆ°é…æ–¹ {string.Join(" æˆ– ", recipeKeys)}");
+            return;
+        }
+
+        CookRecipe cookRecipe = recipe as CookRecipe;
+        if (cookRecipe == null)
+        {
+            Debug.LogError($"é…æ–¹ç±»å‹é”™è¯¯ï¼š{matchedKey} ä¸æ˜¯ CookRecipe");
+            return;
+        }
+
+        // æ¸©åº¦æ£€æŸ¥ - è¿‡é«˜æ¸©åº¦å¤„ç†
+// Â¶È¼ - Â¶È´
+if (Data.Temperature > cookRecipe.Temperature * 3)
+{
+    Debug.LogWarning($"Â¶È¹ß£Â¶ {cookRecipe.Temperature} Ç°Â¶ {Data.Temperature}  Õ½ï£¡");
+
+    // Ö»Òª
+    if (inputInventory.Data.itemSlots != null && recipe.inputs != null && recipe.inputs.RowItems_List != null)
+    {
+        for (int i = 0; i < inputInventory.Data.itemSlots.Count; i++)
+        {
+            if (i >= recipe.inputs.RowItems_List.Count) break;
+            
+            var slot = inputInventory.Data.itemSlots[i];
+            var required = recipe.inputs.RowItems_List[i];
+
+            if (required.amount == 0) continue;
+
+            if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
+            {
+                // Ö»Û³Òª
+                float lossAmount = Mathf.Min(required.amount, slot.itemData.Stack.Amount);
+                slot.itemData.Stack.Amount -= lossAmount;
+                
+                if (slot.itemData.Stack.Amount <= 0)
                 {
-                    matchedKey = recipeKey;
-                    break;
+                    // Æ·
+                    inputInventory.Data.RemoveItemAll(slot, i);
                 }
             }
-            
-            // ÑéÖ¤Åä·½
-            if (recipe == null)
+        }
+    }
+
+    // Õ½
+    string charredMatterId = "CharredMatter";
+    if (GameRes.Instance != null && 
+        GameRes.Instance.AllPrefabs != null && 
+        GameRes.Instance.AllPrefabs.TryGetValue(charredMatterId, out var prefab) && 
+        prefab != null)
+    {
+        Item outputItem = prefab.GetComponent<Item>();
+        if (outputItem != null)
+        {
+            ItemData newItem = outputItem.Get_NewItemData();
+            if (newItem != null)
             {
-                Debug.LogError($"ÈÛÁ¶Ê§°Ü£ºÕÒ²»µ½Åä·½ {string.Join(" »ò ", recipeKeys)}");
-                return;
+                // 1Õ½
+                newItem.Stack.Amount = 1;
+                outputInventory.Data.TryAddItem(newItem);
             }
+        }
+    }
 
-            CookRecipe cookRecipe = recipe as CookRecipe;
-            if (cookRecipe == null)
+    // Ë¢ UI
+    inputInventory.RefreshUI();
+    outputInventory.RefreshUI();
+    return;
+}
+        // æ¸©åº¦ä¸è¶³æ£€æŸ¥
+        else if (cookRecipe.Temperature > Data.Temperature)
+        {
+            Debug.LogWarning($"ç†”ç‚¼å¤±è´¥ï¼šæ‰€éœ€æ¸©åº¦ {cookRecipe.Temperature} å½“å‰æ¸©åº¦ {Data.Temperature} â†’ ææ–™æœ‰æŸå¤±ï¼");
+
+            // æƒ©ç½šï¼šéšæœºæ‰£é™¤ 1~2 ä¸ªè¾“å…¥ææ–™
+            System.Random rand = new System.Random();
+            if (inputInventory.Data.itemSlots != null)
             {
-                Debug.LogError($"Åä·½ÀàĞÍ´íÎó£º{matchedKey} ²»ÊÇ CookRecipe");
-                return;
-            }
-
-            // ÎÂ¶È¼ì²é
-            if (cookRecipe.Temperature > Data.Temperature)
-            {
-                Debug.LogWarning($"ÈÛÁ¶Ê§°Ü£ºËùĞèÎÂ¶È {cookRecipe.Temperature} µ±Ç°ÎÂ¶È {Data.Temperature} ¡ú ²ÄÁÏÓĞËğÊ§£¡");
-
-                // ³Í·££ºËæ»ú¿Û³ı 1~2 ¸öÊäÈë²ÄÁÏ
-                System.Random rand = new System.Random();
-                if (inputInventory.Data.itemSlots != null)
+                foreach (var slot in inputInventory.Data.itemSlots)
                 {
-                    foreach (var slot in inputInventory.Data.itemSlots)
+                    if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
                     {
-                        if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
+                        // æ‰£é™¤æ•°é‡ = 1 æˆ– 2ï¼Œä½†ä¸è¶…è¿‡å½“å‰æ•°é‡
+                        float lossAmount = rand.Next(1, 3); // 1~2
+                        lossAmount = Mathf.Min(lossAmount, slot.itemData.Stack.Amount); // ä¸è¶…è¿‡ç°æœ‰æ•°é‡
+
+                        slot.itemData.Stack.Amount -= lossAmount;
+                        Debug.LogWarning($"æƒ©ç½šæ‰£é™¤ï¼š{slot.itemData.IDName} x{lossAmount}");
+
+                        if (slot.itemData.Stack.Amount <= 0)
                         {
-                            // ¿Û³ıÊıÁ¿ = 1 »ò 2£¬µ«²»³¬¹ıµ±Ç°ÊıÁ¿
-                            float lossAmount = rand.Next(1, 3); // 1~2
-                            lossAmount = Mathf.Min(lossAmount, slot.itemData.Stack.Amount); // ²»³¬¹ıÏÖÓĞÊıÁ¿
-
-                            slot.itemData.Stack.Amount -= lossAmount;
-                            Debug.LogWarning($"³Í·£¿Û³ı£º{slot.itemData.IDName} x{lossAmount}");
-
-                            if (slot.itemData.Stack.Amount <= 0)
-                            {
-                                // Çå¿ÕÎïÆ·
-                                inputInventory.Data.RemoveItemAll(slot, inputInventory.Data.itemSlots.IndexOf(slot));
-                            }
+                            // æ¸…ç©ºç‰©å“
+                            inputInventory.Data.RemoveItemAll(slot, inputInventory.Data.itemSlots.IndexOf(slot));
                         }
                     }
                 }
-
-                // Ë¢ĞÂ UI
-                inputInventory.RefreshUI();
-                return;
             }
 
-            // ÑéÖ¤ÊäÈë²ÛÎ»ÊıÁ¿
-            if (!ValidateSlotCount(inputInventory, recipe))
-                return;
-
-            // ×¼±¸Êä³öÎïÆ·
-            var outputItems = PrepareOutputItems(recipe);
-            if (outputItems == null)
-                return;
-
-            // ¼ì²é×ÊÔ´ºÍ¿Õ¼ä
-            if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems))
-            {
-                Debug.LogError("ÈÛÁ¶Ê§°Ü£º²ÄÁÏ²»×ã»òÊä³ö¿Õ¼ä²»×ã");
-                return;
-            }
-
-            // Ö´ĞĞÈÛÁ¶
-            ExecuteSmelting(inputInventory, outputInventory, recipe, outputItems);
+            // åˆ·æ–° UI
+            inputInventory.RefreshUI();
+            return;
         }
-        catch (Exception ex)
+
+        // éªŒè¯è¾“å…¥æ§½ä½æ•°é‡
+        if (!ValidateSlotCount(inputInventory, recipe))
+            return;
+
+        // å‡†å¤‡è¾“å‡ºç‰©å“
+        var outputItems = PrepareOutputItems(recipe);
+        if (outputItems == null)
+            return;
+
+        // æ£€æŸ¥èµ„æºå’Œç©ºé—´
+        if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems))
         {
-            Debug.LogError($"ÈÛÁ¶¹ı³ÌÖĞ·¢Éú´íÎó: {ex.Message}");
+            Debug.LogError("ç†”ç‚¼å¤±è´¥ï¼šææ–™ä¸è¶³æˆ–è¾“å‡ºç©ºé—´ä¸è¶³");
+            return;
         }
+
+        // æ‰§è¡Œç†”ç‚¼
+        ExecuteSmelting(inputInventory, outputInventory, recipe, outputItems);
     }
+    catch (Exception ex)
+    {
+        Debug.LogError($"ç†”ç‚¼è¿‡ç¨‹ä¸­å‘ç”Ÿé”™è¯¯: {ex.Message}");
+    }
+}
     #endregion
 
-    #region Åä·½´¦ÀíÂß¼­
+    #region é…æ–¹å¤„ç†é€»è¾‘
     /// <summary>
-    /// Éú³ÉÅä·½¼üÁĞ±í£¨Ö§³ÖTagÄ£Ê½ºÍitemNameÄ£Ê½£©
+    /// ç”Ÿæˆé…æ–¹é”®åˆ—è¡¨ï¼ˆæ”¯æŒTagæ¨¡å¼å’ŒitemNameæ¨¡å¼ï¼‰
     /// </summary>
     private List<string> GenerateRecipeKey_List(Inventory inputInv)
     {
         List<string> recipeKeys = new List<string>();
         
-        // °²È«¼ì²é
+        // å®‰å…¨æ£€æŸ¥
         if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null)
             return recipeKeys;
         
-        // Éú³É»ùÓÚÎïÆ·Ãû³ÆµÄÅä·½¼ü
+        // ç”ŸæˆåŸºäºç‰©å“åç§°çš„é…æ–¹é”®
         Input_List inputList = new Input_List();
         inputList.recipeType = RecipeType.Smelting;
         foreach (ItemSlot slot in inputInv.Data.itemSlots)
@@ -433,19 +491,19 @@ public partial class Mod_Smelting : Module,IInventory
         }
         recipeKeys.Add(inputList.ToString());
         
-        // Éú³É»ùÓÚTagµÄÅä·½¼ü£¨ÎªÃ¿¸öÓĞTagµÄÎïÆ·Éú³ÉÒ»¸ö°æ±¾£©
+        // ç”ŸæˆåŸºäºTagçš„é…æ–¹é”®ï¼ˆä¸ºæ¯ä¸ªæœ‰Tagçš„ç‰©å“ç”Ÿæˆä¸€ä¸ªç‰ˆæœ¬ï¼‰
         for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
         {
             var slot = inputInv.Data.itemSlots[i];
             if (slot != null && slot.itemData != null && slot.itemData.Tags != null)
             {
-                // ÎªÃ¿¸ö°üº¬TagµÄÎïÆ·Éú³ÉÒ»¸ö»ùÓÚTagµÄÅä·½¼ü°æ±¾
+                // ä¸ºæ¯ä¸ªåŒ…å«Tagçš„ç‰©å“ç”Ÿæˆä¸€ä¸ªåŸºäºTagçš„é…æ–¹é”®ç‰ˆæœ¬
                 Input_List tagInputList = new Input_List();
                 for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
                 {
                     if (j == i && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values != null && slot.itemData.Tags.MakeTag.values.Count > 0)
                     {
-                        // Ê¹ÓÃµÚÒ»¸öType±êÇ©
+                        // ä½¿ç”¨ç¬¬ä¸€ä¸ªTypeæ ‡ç­¾
                         if (slot.itemData.Tags.MakeTag.values.Count > 0)
                         {
                             tagInputList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
@@ -478,7 +536,7 @@ public partial class Mod_Smelting : Module,IInventory
 
         if (inputInv.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
         {
-            Debug.LogError($"ÊäÈë²ÛÎ»ÊıÁ¿²»Æ¥Åä£ºÅä·½ĞèÒª {recipe.inputs.RowItems_List.Count} ¸öÊäÈë²Û£¬µ±Ç°ÓĞ {inputInv.Data.itemSlots.Count} ¸ö");
+            Debug.LogError($"è¾“å…¥æ§½ä½æ•°é‡ä¸åŒ¹é…ï¼šé…æ–¹éœ€è¦ {recipe.inputs.RowItems_List.Count} ä¸ªè¾“å…¥æ§½ï¼Œå½“å‰æœ‰ {inputInv.Data.itemSlots.Count} ä¸ª");
             return false;
         }
         return true;
@@ -495,33 +553,33 @@ public partial class Mod_Smelting : Module,IInventory
         {
             if (string.IsNullOrEmpty(output.ItemName))
             {
-                Debug.LogError($"Åä·½Êä³öÏîÃû³ÆÎª¿Õ£¨Åä·½£º{recipe.name}£©");
+                Debug.LogError($"é…æ–¹è¾“å‡ºé¡¹åç§°ä¸ºç©ºï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
                 return null;
             }
             
             if (GameRes.Instance == null || GameRes.Instance.AllPrefabs == null)
             {
-                Debug.LogError($"GameResÊµÀı»òÔ¤ÖÆÌå×ÖµäÎª¿Õ£º{output.ItemName}£¨Åä·½£º{recipe.name}£©");
+                Debug.LogError($"GameReså®ä¾‹æˆ–é¢„åˆ¶ä½“å­—å…¸ä¸ºç©ºï¼š{output.ItemName}ï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
                 return null;
             }
             
             if (!GameRes.Instance.AllPrefabs.TryGetValue(output.ItemName, out var prefab) || prefab == null)
             {
-                Debug.LogError($"Ô¤ÖÆÌå²»´æÔÚ£º{output.ItemName}£¨Åä·½£º{recipe.name}£©");
+                Debug.LogError($"é¢„åˆ¶ä½“ä¸å­˜åœ¨ï¼š{output.ItemName}ï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
                 return null;
             }
             
             Item outputitem = prefab.GetComponent<Item>();
             if (outputitem == null)
             {
-                Debug.LogError($"Ô¤ÖÆÌå {output.ItemName} ÉÏÕÒ²»µ½Item×é¼ş£¨Åä·½£º{recipe.name}£©");
+                Debug.LogError($"é¢„åˆ¶ä½“ {output.ItemName} ä¸Šæ‰¾ä¸åˆ°Itemç»„ä»¶ï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
                 return null;
             }
             
             ItemData newItem = outputitem.Get_NewItemData();
             if (newItem == null)
             {
-                Debug.LogError($"ÎŞ·¨´´½¨ {output.ItemName} µÄItemData£¨Åä·½£º{recipe.name}£©");
+                Debug.LogError($"æ— æ³•åˆ›å»º {output.ItemName} çš„ItemDataï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
                 return null;
             }
             
@@ -535,7 +593,7 @@ public partial class Mod_Smelting : Module,IInventory
     private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, 
         Recipe recipe, List<ItemData> outputItems)
     {
-        // ¼ì²éÊäÈë²ÄÁÏ
+        // æ£€æŸ¥è¾“å…¥ææ–™
         if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null ||
             recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null)
             return false;
@@ -554,7 +612,7 @@ public partial class Mod_Smelting : Module,IInventory
                 return false;
         }
 
-        // ¼ì²éÊä³ö¿Õ¼ä
+        // æ£€æŸ¥è¾“å‡ºç©ºé—´
         if (outputInv == null || outputInv.Data == null || outputItems == null)
             return false;
             
@@ -575,25 +633,25 @@ public partial class Mod_Smelting : Module,IInventory
             recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null ||
             outputItems == null)
         {
-            Debug.LogError("Ö´ĞĞÈÛÁ¶Ê±²ÎÊıÎª¿Õ");
+            Debug.LogError("æ‰§è¡Œç†”ç‚¼æ—¶å‚æ•°ä¸ºç©º");
             return;
         }
 
-        Debug.Log($"¿ªÊ¼ÈÛÁ¶£º{recipe.name}");
-        Debug.Log($"ÊäÈë²ÄÁÏ£º{string.Join(",", recipe.inputs.RowItems_List.Select(r => $"{r.ItemName}x{r.amount}"))}");
-        Debug.Log($"²ú³öÎïÆ·£º{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
+        Debug.Log($"å¼€å§‹ç†”ç‚¼ï¼š{recipe.name}");
+        Debug.Log($"è¾“å…¥ææ–™ï¼š{string.Join(",", recipe.inputs.RowItems_List.Select(r => $"{r.ItemName}x{r.amount}"))}");
+        Debug.Log($"äº§å‡ºç‰©å“ï¼š{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
 
-        // Ìí¼Ó²úÎï
+        // æ·»åŠ äº§ç‰©
         foreach (var item in outputItems)
         {
             if (item != null)
             {
                 outputInv.Data.TryAddItem(item);
-                Debug.Log($"Ìí¼Ó²úÎï£º{item.Stack.Amount}x{item.IDName}");
+                Debug.Log($"æ·»åŠ äº§ç‰©ï¼š{item.Stack.Amount}x{item.IDName}");
             }
         }
 
-        // ¿Û³ıÊäÈë²ÄÁÏ
+        // æ‰£é™¤è¾“å…¥ææ–™
         for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
         {
             var slot = inputInv.Data.itemSlots[i];
@@ -601,22 +659,22 @@ public partial class Mod_Smelting : Module,IInventory
 
             if (required.amount == 0 || slot == null || slot.itemData == null) continue;
 
-            Debug.Log($"¿Û³ı²ÄÁÏ£º{required.ItemName} x{required.amount}£¬µ±Ç°ÓĞ {slot.itemData.Stack.Amount}");
+            Debug.Log($"æ‰£é™¤ææ–™ï¼š{required.ItemName} x{required.amount}ï¼Œå½“å‰æœ‰ {slot.itemData.Stack.Amount}");
 
             slot.itemData.Stack.Amount -= required.amount;
             if (slot.itemData.Stack.Amount <= 0)
             {
-                Debug.Log($"ÊäÈë²Û {i} µÄ {required.ItemName} ÒÑÓÃ¾¡²¢ÒÆ³ı");
+                Debug.Log($"è¾“å…¥æ§½ {i} çš„ {required.ItemName} å·²ç”¨å°½å¹¶ç§»é™¤");
                 inputInv.Data.RemoveItemAll(slot, i);
             }
             else
             {
-                Debug.Log($"ÊäÈë²Û {i} Ê£Óà {required.ItemName} x{slot.itemData.Stack.Amount}");
+                Debug.Log($"è¾“å…¥æ§½ {i} å‰©ä½™ {required.ItemName} x{slot.itemData.Stack.Amount}");
             }
             inputInv.RefreshUI(i);
         }
         
-        // Ö´ĞĞÅä·½¶¯×÷
+        // æ‰§è¡Œé…æ–¹åŠ¨ä½œ
         if (recipe.action != null)
         {
             foreach(var action in recipe.action)
@@ -631,16 +689,16 @@ public partial class Mod_Smelting : Module,IInventory
 
         outputInv.RefreshUI();
         inputInv.RefreshUI();
-        Debug.Log($"ÈÛÁ¶Íê³É£º{recipe.name}");
+        Debug.Log($"ç†”ç‚¼å®Œæˆï¼š{recipe.name}");
     }
 
-    // ±£Áô¾É°æ±¾µÄ¼ì²é·½·¨ÒÔ±£³Ö¼æÈİĞÔ
+    // ä¿ç•™æ—§ç‰ˆæœ¬çš„æ£€æŸ¥æ–¹æ³•ä»¥ä¿æŒå…¼å®¹æ€§
     private bool CheckEnough(Inventory inputInventory_,
                                Inventory outputInventory_,
                                Input_List inputList,
                                List<ItemData> itemsToAdd)
     {
-        // ¼ì²éÃ¿¸ö²å²ÛµÄÎïÆ·ÊÇ·ñÂú×ãÒªÇó
+        // æ£€æŸ¥æ¯ä¸ªæ’æ§½çš„ç‰©å“æ˜¯å¦æ»¡è¶³è¦æ±‚
         if (inputInventory_ == null || inputInventory_.Data == null || inputInventory_.Data.itemSlots == null ||
             inputList == null || inputList.RowItems_List == null ||
             outputInventory_ == null || outputInventory_.Data == null ||
@@ -652,20 +710,20 @@ public partial class Mod_Smelting : Module,IInventory
             var slot = inputInventory_.Data.itemSlots[i];
             var required = inputList.RowItems_List[i];
 
-            // Èç¹û¸Ã²å²Û²»ĞèÒªÎïÆ·ÔòÌø¹ı
+            // å¦‚æœè¯¥æ’æ§½ä¸éœ€è¦ç‰©å“åˆ™è·³è¿‡
             if (required.amount == 0) continue;
 
-            // ¼ì²éÎïÆ·´æÔÚÇÒÃû³ÆÆ¥Åä
+            // æ£€æŸ¥ç‰©å“å­˜åœ¨ä¸”åç§°åŒ¹é…
             if (slot == null || slot.itemData == null ||
                 slot.itemData.IDName != required.ItemName)
                 return false;
 
-            // ¼ì²éÊıÁ¿×ã¹»
+            // æ£€æŸ¥æ•°é‡è¶³å¤Ÿ
             if (slot.itemData.Stack.Amount < required.amount)
                 return false;
         }
 
-        // ¼ì²éÊä³ö¿Õ¼ä
+        // æ£€æŸ¥è¾“å‡ºç©ºé—´
         foreach (var item in itemsToAdd)
         {
             if (item == null || !outputInventory_.Data.TryAddItem(item, false))
@@ -676,70 +734,70 @@ public partial class Mod_Smelting : Module,IInventory
     }
     #endregion
 
-    #region UIÓë½»»¥´¦Àí
+    #region UIä¸äº¤äº’å¤„ç†
 private void UpdateUI()
 {
-    // ÈÛÁ¶½ø¶ÈÌõ
+    // ç†”ç‚¼è¿›åº¦æ¡
     if (progressSlider != null)
         progressSlider.value = Data.SmeltingProgress / 100f;
 
-    // È¼ÁÏÌõ
+    // ç‡ƒæ–™æ¡
     if (fuelSlider != null && mod_Fuel != null && mod_Fuel.Data != null)
         fuelSlider.value = mod_Fuel.Data.Fuel.y > 0 ? mod_Fuel.Data.Fuel.x / mod_Fuel.Data.Fuel.y : 0;
 
-    // ÎÂ¶ÈÌõ£¨Ê¹ÓÃÈÛÂ¯ÏŞÖÆÎÂ¶È×÷Îª×î´óÖµ£©
+    // æ¸©åº¦æ¡ï¼ˆä½¿ç”¨ç†”ç‚‰é™åˆ¶æ¸©åº¦ä½œä¸ºæœ€å¤§å€¼ï¼‰
     if (temperatureSlider != null)
     {
-        // Ê¼ÖÕÊ¹ÓÃMaxTemperatureLimit×÷Îª×î´óÖµÏÔÊ¾¸øÍæ¼Ò²Î¿¼
+        // å§‹ç»ˆä½¿ç”¨MaxTemperatureLimitä½œä¸ºæœ€å¤§å€¼æ˜¾ç¤ºç»™ç©å®¶å‚è€ƒ
         float maxTempForDisplay = Data.MaxTemperatureLimit;
         temperatureSlider.value = maxTempForDisplay > 0 ? Data.Temperature / maxTempForDisplay : 0;
     }
     
-    // ÎÂ¶ÈÊıÖµÎÄ±¾
+    // æ¸©åº¦æ•°å€¼æ–‡æœ¬
     if (TemperatureText != null)
     {
-        // ÏÔÊ¾Êµ¼ÊµÄÎÂ¶ÈÏŞÖÆ£¨È¼ÁÏÏŞÖÆºÍÂ¯×ÓÎïÀíÏŞÖÆÖĞµÄ½ÏĞ¡Öµ£©
+        // æ˜¾ç¤ºå®é™…çš„æ¸©åº¦é™åˆ¶ï¼ˆç‡ƒæ–™é™åˆ¶å’Œç‚‰å­ç‰©ç†é™åˆ¶ä¸­çš„è¾ƒå°å€¼ï¼‰
         float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
-        TemperatureText.text = $"{Mathf.RoundToInt(Data.Temperature)}¡ãC / {Mathf.RoundToInt(actualMaxTemp)}¡ãC (Â¯×ÓÉÏÏŞ: {Mathf.RoundToInt(Data.MaxTemperatureLimit)}¡ãC)";
+        TemperatureText.text = $"{Mathf.RoundToInt(Data.Temperature)}Â°C / {Mathf.RoundToInt(actualMaxTemp)}Â°C (ç‚‰å­ä¸Šé™: {Mathf.RoundToInt(Data.MaxTemperatureLimit)}Â°C)";
     }
 }
 
     private void OnButtonClick()
     {
-        // °²È«¼ì²é
+        // å®‰å…¨æ£€æŸ¥
         if (fuelInventory == null || fuelInventory.Data == null)
         {
-            Debug.LogWarning("È¼ÁÏ¿â´æÎ´³õÊ¼»¯£¡");
+            Debug.LogWarning("ç‡ƒæ–™åº“å­˜æœªåˆå§‹åŒ–ï¼");
             return;
         }
 
-        // ²éÕÒĞĞÎªtagÖĞÎªIgnitionµÄÎïÆ·
+        // æŸ¥æ‰¾è¡Œä¸ºtagä¸­ä¸ºIgnitionçš„ç‰©å“
         var ignitionItem = fuelInventory.Data.FindItemByTagTypeAndTag("FunctionTag", "Ignition");
         if (ignitionItem == null)
         {
-            Debug.LogWarning("ÎŞ·¨µãÈ¼£ºÈ±ÉÙµã»ğ×°ÖÃ£¡");
+            Debug.LogWarning("æ— æ³•ç‚¹ç‡ƒï¼šç¼ºå°‘ç‚¹ç«è£…ç½®ï¼");
             return;
         }
 
-        // Èç¹ûÒÑ¾­ÔÚÈÛÁ¶ÖĞ£¬²»ÔÊĞíÖ÷¶¯Í£Ö¹
+        // å¦‚æœå·²ç»åœ¨ç†”ç‚¼ä¸­ï¼Œä¸å…è®¸ä¸»åŠ¨åœæ­¢
         if (Data.IsSmelting)
         {
-            Debug.Log("ÈÛÁ¶ÒÑ¾­¿ªÊ¼£¬ÎŞ·¨Ö÷¶¯Í£Ö¹¡£Ö»ÓĞÈ¼ÁÏºÄ¾¡Ê±²Å»áÍ£Ö¹¡£");
+            Debug.Log("ç†”ç‚¼å·²ç»å¼€å§‹ï¼Œæ— æ³•ä¸»åŠ¨åœæ­¢ã€‚åªæœ‰ç‡ƒæ–™è€—å°½æ—¶æ‰ä¼šåœæ­¢ã€‚");
             return;
         }
         
-        // ¿ªÊ¼ÈÛÁ¶
+        // å¼€å§‹ç†”ç‚¼
         Data.IsSmelting = true;
         
-        // ÉèÖÃÄ¬ÈÏ×î´óÎÂ¶ÈÎªÈÛÂ¯ÏŞÖÆÎÂ¶È£¨Èç¹û»¹Ã»ÓĞÈ¼ÁÏÌá¹©ÎÂ¶ÈµÄ»°£©
+        // è®¾ç½®é»˜è®¤æœ€å¤§æ¸©åº¦ä¸ºç†”ç‚‰é™åˆ¶æ¸©åº¦ï¼ˆå¦‚æœè¿˜æ²¡æœ‰ç‡ƒæ–™æä¾›æ¸©åº¦çš„è¯ï¼‰
         if (Data.MaxTemperature <= 0)
         {
             Data.MaxTemperature = Data.MaxTemperatureLimit;
         }
         
-        // µãÈ¼È¼ÁÏÄ£¿é
+        // ç‚¹ç‡ƒç‡ƒæ–™æ¨¡å—
         mod_Fuel?.SetIgnited(true);
-        Debug.Log("ÈÛÂ¯ÒÑµãÈ¼²¢¿ªÊ¼ÈÛÁ¶£¡");
+        Debug.Log("ç†”ç‚‰å·²ç‚¹ç‡ƒå¹¶å¼€å§‹ç†”ç‚¼ï¼");
     }
 
     public void Interact_Start(Item item_)
@@ -758,11 +816,11 @@ private void UpdateUI()
     }
     #endregion
 
-    #region È¼ÉÕ×´Ì¬¿ØÖÆ
+    #region ç‡ƒçƒ§çŠ¶æ€æ§åˆ¶
     /// <summary>
-    /// ÉèÖÃÈ¼ÉÕ×´Ì¬
+    /// è®¾ç½®ç‡ƒçƒ§çŠ¶æ€
     /// </summary>
-    /// <param name="isBurning">ÊÇ·ñÈ¼ÉÕ</param>
+    /// <param name="isBurning">æ˜¯å¦ç‡ƒçƒ§</param>
     public void SetBurningState(bool isBurning)
     {
         Data.IsSmelting = isBurning;
@@ -770,25 +828,25 @@ private void UpdateUI()
         
         if (isBurning)
         {
-            Debug.Log("ÈÛÂ¯¿ªÊ¼È¼ÉÕ£¡");
+            Debug.Log("ç†”ç‚‰å¼€å§‹ç‡ƒçƒ§ï¼");
         }
         else
         {
-            Debug.Log("ÈÛÂ¯Í£Ö¹È¼ÉÕ£¡");
+            Debug.Log("ç†”ç‚‰åœæ­¢ç‡ƒçƒ§ï¼");
         }
     }
     
     /// <summary>
-    /// »ñÈ¡È¼ÉÕ×´Ì¬
+    /// è·å–ç‡ƒçƒ§çŠ¶æ€
     /// </summary>
-    /// <returns>ÊÇ·ñÕıÔÚÈ¼ÉÕ</returns>
+    /// <returns>æ˜¯å¦æ­£åœ¨ç‡ƒçƒ§</returns>
     public bool GetBurningState()
     {
         return Data.IsSmelting && (mod_Fuel?.GetIgnitedState() ?? false);
     }
     
     /// <summary>
-    /// ÇĞ»»È¼ÉÕ×´Ì¬
+    /// åˆ‡æ¢ç‡ƒçƒ§çŠ¶æ€
     /// </summary>
     public void ToggleBurningState()
     {

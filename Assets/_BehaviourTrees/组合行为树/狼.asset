@@ -171,7 +171,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 85f30115649007942a4b336eaaadf031
-  position: {x: -427.2, y: 2844.7998}
+  position: {x: -427.19998, y: 2844.7998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -181,7 +181,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Idle
-  time: 1
+  time: 0
   playType: 0
   Setbool: 1
 --- !u!114 &-8421689486327027795
@@ -516,7 +516,7 @@ MonoBehaviour:
   m_Name: Failure
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: 8a8167d310e842a4ab41af97503ef5e4
   position: {x: -1870.7998, y: 1053.6}
   blackboard:
@@ -1007,7 +1007,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
-  time: 1
+  time: 0
   playType: 0
   Setbool: 1
 --- !u!114 &-4806776583782100047
@@ -1035,7 +1035,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Idle
-  time: 1
+  time: 0
   playType: 0
   Setbool: 1
 --- !u!114 &-4802761802709212652
@@ -1676,7 +1676,7 @@ MonoBehaviour:
   state: 0
   started: 1
   guid: 5fb2faa69c42a7f4e98d4efaae0040c5
-  position: {x: -1253.444, y: 955.58203}
+  position: {x: -1252.7999, y: 955.2}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1830,7 +1830,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: ad1f08e6123cb5843a81ffdcbc1ad251
-  position: {x: -1762.4003, y: 1966.4001}
+  position: {x: -1762.3998, y: 1966.3999}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2963,7 +2963,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Idle
-  time: 1
+  time: 0
   playType: 0
   Setbool: 1
 --- !u!114 &2516835987763106837
@@ -3171,7 +3171,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: ab6a5d79f36dfc4469fd75c730732270
-  position: {x: -1747.9999, y: 1499.2001}
+  position: {x: -1747.9999, y: 1498.4}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3388,7 +3388,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: dd768765e85c6f34d8dc199dbbcd896a
-  position: {x: -507.99994, y: 2192}
+  position: {x: -507.2, y: 2192}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3398,7 +3398,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Attack
-  time: 1
+  time: 0
   playType: 0
   Setbool: 1
 --- !u!114 &3774833969970170297
@@ -3536,7 +3536,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Move
-  time: 1
+  time: 0
   playType: 0
   Setbool: 1
 --- !u!114 &4037455240391746796
@@ -3966,7 +3966,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   animationName: Idle
-  time: 1
+  time: 0
   playType: 0
   Setbool: 1
 --- !u!114 &5529793143648280316
@@ -4342,14 +4342,14 @@ MonoBehaviour:
   m_Name: Sequencer
   m_EditorClassIdentifier: 
   state: 0
-  started: 0
+  started: 1
   guid: 5be4272c9470c26439fd89bc82ac47f6
   position: {x: -1872.8, y: 1159.9999}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
-  isCollapsed: 1
+  isCollapsed: 0
   description: 
   drawGizmos: 0
   children:
@@ -4400,7 +4400,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: f5301359e3699bd4187ae347f795ba81
-  position: {x: -1302.5676, y: 1499.4148}
+  position: {x: -1302.4003, y: 1498.4}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}

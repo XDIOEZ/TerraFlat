@@ -1256,7 +1256,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4290454359896b4da5e23265c1ee9d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   Button_ExitGame: {fileID: 5365549113293530443}
+  basePanel: {fileID: 0}
+  ModSaveData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
 --- !u!225 &532442895678918737
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -4300,6 +4308,7 @@ MonoBehaviour:
     Index: 0
     Belong_Inventory: {fileID: 0}
   faceMouse: {fileID: 0}
+  turnBody: {fileID: 0}
   CurentSelectItem: {fileID: 0}
   currentObject: {fileID: 0}
 --- !u!225 &2129086608695895907
@@ -6316,9 +6325,17 @@ MonoBehaviour:
   parabolaHeight: 2
   baseDropDuration: 0.5
   distanceSensitivity: 0.1
+  dropRepeatDelay: 0.3
+  dropRepeatInterval: 0.1
   Hotbar: {fileID: 0}
   hand: {fileID: 0}
   playerController: {fileID: 0}
+  isDropButtonPressed: 0
+  dropButtonPressTime: 0
+  isDropRepeatActive: 0
+  lastDropTime: 0
+  hoveredSlot: {fileID: 0}
+  isCtrlPressed: 0
 --- !u!1 &8009608111595827793
 GameObject:
   m_ObjectHideFlags: 0
@@ -6423,9 +6440,9 @@ GameObject:
   - component: {fileID: 5012334210541262317}
   - component: {fileID: 748004643454399979}
   - component: {fileID: 8026008506953890389}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: Player
-  m_TagString: Entity
+  m_TagString: Untagged
   m_Icon: {fileID: 2800000, guid: 0ccc508108fa6ed4fa11b4a467d7f609, type: 3}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

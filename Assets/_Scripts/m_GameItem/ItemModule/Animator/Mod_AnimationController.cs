@@ -13,7 +13,7 @@ public class Mod_AnimationController : Module
     {
         if (_Data.ID == "")
         {
-            _Data.ID = ModText.Animation;
+            _Data.ID = ModText.Animator;
         }
     }
 

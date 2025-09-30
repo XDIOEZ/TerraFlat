@@ -8,6 +8,18 @@ using static AttackTrigger;
 public class Mod_AI_ColdWeapon : Mod_ColdWeapon
 {
     public TurnBody TrunBody;
+    public Mod_Animator animator;
+
+    public override void Load()
+    {
+        base.Load();
+        TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody;
+        animator = item.itemMods.GetMod_ByID(ModText.Animator) as Mod_Animator;
+        TrunBody.controlledTransforms.Add(transform);
+        animator.OnAttackStart += StartAttack;
+        animator.OnAttackStop += StopAttack;
+        TrunBody.OnTrun += ToOtherDirection;
+    }
 
     public override void StartAttack()
     {
@@ -25,12 +37,7 @@ public class Mod_AI_ColdWeapon : Mod_ColdWeapon
         damageCollider.enabled = false;
     }
 
-    public override void Load()
-    {
-        base.Load();
-        TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody;
-        TrunBody.OnTrun += ToOtherDirection;
-    }
+
 
     public override void Save()
     {

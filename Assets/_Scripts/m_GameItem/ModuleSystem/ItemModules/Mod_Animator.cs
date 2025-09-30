@@ -1,35 +1,54 @@
-using System.Collections;
-using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-public class Mod_Animator : MonoBehaviour
+public class Mod_Animator : Module
 {
-    public bool IsAttacking = false;
-    public UltEvent AttackEvent = new UltEvent();
-    public UltEvent StopAttackEvent = new UltEvent();
+    public Animator animator;
+    public bool IsAttacking;
+    private bool lastIsAttacking;
 
+    public UltEvent OnAttackStart = new UltEvent();
+    public UltEvent OnAttackStop = new UltEvent();
 
-    public void Attack()
+    public override void Awake()
     {
-        AttackEvent.Invoke();
+          _Data.ID = ModText.Animator;
     }
- public void StopAttack()
+    void Update()
     {
-        StopAttackEvent.Invoke();
-    }
-
-    public void Update()
-    {
-        if (IsAttacking)
+        // 检测攻击状态变化
+        if (IsAttacking != lastIsAttacking)
         {
-            Attack();
-        }
+            if (IsAttacking)
+            {
+                // 攻击开始
+                OnAttackStart.Invoke();
+            }
+            else
+            {
+                // 攻击结束
+                OnAttackStop.Invoke();
+            }
 
-        if (!IsAttacking)
-        {
-            StopAttack();
+            // 更新上一次攻击状态
+            lastIsAttacking = IsAttacking;
         }
     }
 
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
+
+
+
+    public override void Load()
+    {
+    }
+
+    public override void Save()
+    {
+    }
+    public override void Act()
+    {
+        base.Act();
+    }
 }

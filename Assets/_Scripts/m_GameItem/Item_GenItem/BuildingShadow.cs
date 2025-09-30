@@ -124,7 +124,7 @@ public class BuildingShadow : MonoBehaviour
         if (boxCollider != null)
         {
             // 使用精灵的实际尺寸并应用缩放因子
-            boxCollider.size = Vector2.one;
+            boxCollider.size = Vector2.one*0.5f;
             boxCollider.offset = Vector2.zero; // 通常阴影中心对齐，偏移设为0
 
             // 添加调试信息
