@@ -8,7 +8,7 @@ using UnityEngine;
 /// - 负责处理与物品的交互逻辑
 /// - 遵循 IInteract 接口
 /// </summary>
-public class Mod_Interaction : Module, IInteract
+public class Mod_Interaction : Module
 {
     [Header("模块数据")]
     public Ex_ModData modData;
@@ -43,16 +43,6 @@ public class Mod_Interaction : Module, IInteract
         // TODO: 根据需求保存交互数据
     }
 
-    private void FixedUpdate()
-    {
-        // 当前有交互对象时，阻止重复检测
-        if (CurrentInteractItem != null)
-        {
-            return;
-        }
-    }
-
-    // ─────────────────────────────── IInteract接口实现 ───────────────────────────────
     public void Interact_Start(IInteracter interacter = null)
     {
         if (item == null) return;
@@ -79,8 +69,6 @@ public class Mod_Interaction : Module, IInteract
 
     public void Interact_Cancel(IInteracter interacter = null)
     {
-        if (interacter?.Item == null) return;
-
         CurrentInteractItem = null;
 
         // 触发取消事件

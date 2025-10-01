@@ -10,35 +10,34 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
-  m_Name: "\u6253\u5236\u77F3\u5668"
+  m_Name: "\u9AA8\u5934+\u6728\u68CD=\u9AA8\u5200"
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
     - matchMode: 0
-      ItemName: Ore_Stone
-      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      ItemName: Bone
+      ItemPrefab: {fileID: 4346459173911706397, guid: 7fa1725ad46407f47a171f54026e684b, type: 3}
+      Tag: 
+      amount: 1
+    - matchMode: 1
+      ItemName: 
+      ItemPrefab: {fileID: 0}
+      Tag: Rope
+      amount: 1
+    - matchMode: 0
+      ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
       Tag: 
       amount: 1
     - matchMode: 0
-      ItemName: 
-      ItemPrefab: {fileID: 0}
-      Tag: 
-      amount: 0
-    - matchMode: 0
-      ItemName: 
-      ItemPrefab: {fileID: 0}
-      Tag: 
-      amount: 0
-    - matchMode: 0
-      ItemName: Ore_Stone
-      ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      ItemName: Stick_Wood
+      ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
       Tag: 
       amount: 1
     recipeType: 0
-    inputOrder: 1
   outputs:
     results:
-    - ItemName: ChippedTool
-      ItemPrefab: {fileID: 1913413943585218338, guid: 00d0a43f590023545b163cd6c2a8bbf0, type: 3}
+    - ItemName: Dagger_Bone
+      ItemPrefab: {fileID: 4375072302657932727, guid: 91bb2904897058c4ba5c07baf96073a0, type: 3}
       amount: 1
   action: []

@@ -227,8 +227,24 @@ PrefabInstance:
     m_TransformParent: {fileID: 4740360045433318849}
     m_Modifications:
     - target: {fileID: 3449635703488712235, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
+      propertyPath: m_Size.x
+      value: 0.36393976
+      objectReference: {fileID: 0}
+    - target: {fileID: 3449635703488712235, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
+      propertyPath: m_Size.y
+      value: 0.48119056
+      objectReference: {fileID: 0}
+    - target: {fileID: 3449635703488712235, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
       propertyPath: m_Enabled
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3449635703488712235, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
+      propertyPath: m_Offset.x
+      value: 0.5724838
+      objectReference: {fileID: 0}
+    - target: {fileID: 3449635703488712235, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
+      propertyPath: m_Offset.y
+      value: -0.066185124
       objectReference: {fileID: 0}
     - target: {fileID: 6424365524741780986, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
       propertyPath: weaponData.AttackSpeed
@@ -269,6 +285,18 @@ PrefabInstance:
     - target: {fileID: 7823543758861431081, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
       propertyPath: m_Name
       value: DamageSender Axe
+      objectReference: {fileID: 0}
+    - target: {fileID: 8166971134519694371, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8166971134519694371, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8166971134519694371, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8166971134519694371, guid: 459532248325a9d41aa69c33047a58ee, type: 3}
       propertyPath: m_LocalPosition.x

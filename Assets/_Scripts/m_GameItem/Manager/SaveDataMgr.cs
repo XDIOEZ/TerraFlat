@@ -59,6 +59,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     protected override void Awake()
     {
         base.Awake();
+        DontDestroyOnLoad(gameObject); // 🔥 保证手动挂的对象也不会丢
         // 使用Application.persistentDataPath作为基础存档路径
         UserSavePath = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData") + Path.DirectorySeparatorChar;
         

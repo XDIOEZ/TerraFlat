@@ -5,5 +5,4 @@ public interface IInteracter
     SelectSlot SelectSlot { get; set; }
     GameObject User { get; }
     Item Item { get; set; }
-    IInventoryData InventoryData { get; set; }
 }

@@ -4,10 +4,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HandForInteract : MonoBehaviour ,IInteracter
+public class HandForInteract : MonoBehaviour, IInteracter
 {
-    [Tooltip(" 当前交互对象"),ShowInInspector]
-    public IInteract Intractable_go;
+    [Tooltip(" 当前交互对象"), ShowInInspector]
+    public Mod_Interaction Intractable_go;
 
     public GameObject User { get => user; set => user = value; }
 
@@ -17,35 +17,47 @@ public class HandForInteract : MonoBehaviour ,IInteracter
 
     public SelectSlot SelectSlot { get => _selectSlot; set => _selectSlot = value; }
     public Item Item { get; set; }
-    public IInventoryData InventoryData { get; set; }
+
     public void Start()
     {
         Item = GetComponentInParent<Item>();
-        InventoryData = GetComponentInParent<IInventoryData>();
-        Item.GetComponent<PlayerController>()._inputActions.Win10.E.performed+=_ => Interact_Start();
+        Item.GetComponent<PlayerController>()._inputActions.Win10.E.performed += _ => Interact_Start();
     }
+
     public void OnTriggerEnter2D(Collider2D collision)
     {
-         var collider    = collision.GetComponent<IInteract>();
-         if (collider != null)
+        // 添加空值检查以避免 NullReferenceException
+        var item = collision.GetComponent<Item>();
+        if (item != null && item.itemMods != null)
         {
-            Intractable_go = collider;
+            item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact, out Intractable_go);
         }
     }
+
     public void OnTriggerExit2D(Collider2D collision)
     {
-      
-        if(collision.GetComponent<IInteract>() != Intractable_go)
-        {    
-            return;
+        // 添加空值检查以避免 NullReferenceException
+        // 同时检查gameObject是否已销毁
+        if (this == null || gameObject == null) return;
+
+        var item = collision.GetComponent<Item>();
+        if (item != null && item.itemMods != null)
+        {
+            item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact, out var leave);
+            if (leave == Intractable_go)
+            {
+                if (Intractable_go != null)
+                {
+                    Intractable_go.Interact_Cancel(this);
+                }
+                Intractable_go = null;
+            }
         }
-        Interact_Cancel();
-        Intractable_go = null;
     }
 
     public void Interact_Start()
     {
-        if (Intractable_go!= null)
+        if (Intractable_go != null)
         {
             Intractable_go.Interact_Start(this);
         }
@@ -53,7 +65,7 @@ public class HandForInteract : MonoBehaviour ,IInteracter
 
     public void Interact_Cancel()
     {
-        if (Intractable_go!= null)
+        if (Intractable_go != null)
         {
             Intractable_go.Interact_Cancel(this);
         }
@@ -64,4 +76,3 @@ public class HandForInteract : MonoBehaviour ,IInteracter
         throw new System.NotImplementedException();
     }
 }
-

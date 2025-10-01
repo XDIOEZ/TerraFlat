@@ -35,6 +35,7 @@ MonoBehaviour:
       Tag: 
       amount: 0
     recipeType: 0
+    inputOrder: 0
   outputs:
     results:
     - ItemName: Plank

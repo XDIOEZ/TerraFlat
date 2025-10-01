@@ -45,8 +45,8 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
         }
         else if (instance != this)
         {
-            // 场景里如果出现重复对象，自动销毁
             Destroy(gameObject);
         }
     }
+
 }

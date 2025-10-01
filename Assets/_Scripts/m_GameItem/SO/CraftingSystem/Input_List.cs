@@ -12,26 +12,40 @@ public class Input_List
     public List<CraftingIngredient> RowItems_List = new List<CraftingIngredient>();
     [Header("配方类型")]
     public RecipeType recipeType = RecipeType.Crafting;
+    [Header("合成顺序")]
+    public RecipeInputRule inputOrder = RecipeInputRule.规则合成;
+    
 
     public override string ToString()
     {
-        string ingredients = string.Join(",", RowItems_List.Select(ingredient => ingredient.ToString()));
-        return $"{ingredients}[{recipeType}]";
-    }
-
-    public string ToString(bool Ranking)
-    {
         if (RowItems_List == null || RowItems_List.Count == 0)
-            return "无原材料";
-
-        List<string> ingredientStrings = RowItems_List.Select(ingredient => ingredient.ToString()).ToList();
-
-        if (Ranking)
         {
-            ingredientStrings.Sort();
+            return $"[][{recipeType}]";
         }
 
-        string ingredients = string.Join(",", ingredientStrings);
+        // 创建一个副本用于处理
+        List<CraftingIngredient> itemsToProcess = new List<CraftingIngredient>(RowItems_List);
+
+        // 如果是无规则合成，则对物品进行排序以消除摆放顺序的影响
+        if (inputOrder == RecipeInputRule.无规则合成)
+        {
+            itemsToProcess.Sort((a, b) => 
+            {
+                // 首先按匹配模式排序
+                int modeComparison = a.matchMode.CompareTo(b.matchMode);
+                if (modeComparison != 0)
+                    return modeComparison;
+                
+                // 然后按物品名或标签排序
+                string aKey = a.matchMode == MatchMode.ExactItem ? a.ItemName : a.Tag;
+                string bKey = b.matchMode == MatchMode.ExactItem ? b.ItemName : b.Tag;
+                
+                return string.Compare(aKey, bKey, StringComparison.Ordinal);
+            });
+        }
+        
+        // 构建比较键
+        string ingredients = string.Join(",", itemsToProcess.Select(ingredient => ingredient.ToString()));
         return $"{ingredients}[{recipeType}]";
     }
 
@@ -42,6 +56,7 @@ public class Input_List
         ingredient.matchMode = MatchMode.ExactItem;
         RowItems_List.Add(ingredient);
     }
+    
     public void AddTagItem(string Tag)
     {
         CraftingIngredient ingredient = new CraftingIngredient();
@@ -49,5 +64,10 @@ public class Input_List
         ingredient.matchMode = MatchMode.ByTag;
         RowItems_List.Add(ingredient);
     }
+}
 
+public enum RecipeInputRule
+{
+    无规则合成,
+    规则合成,
 }
