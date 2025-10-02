@@ -6,10 +6,11 @@ using UnityEngine;
 public abstract class Module : MonoBehaviour
 {
     /*  ²Î¿¼´úÂë
-     
+   
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
+    public float Data;
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -20,21 +21,21 @@ public abstract class Module : MonoBehaviour
 
     public override void Load()
     {
-        ModSaveData.ReadData(ref );
+        ModSaveData.ReadData(ref Data);
     }
+    public override void ModUpdate(float deltaTime)
+    {
 
+    }
     public override void Save()
     {
-        ModSaveData.WriteData(ref );
+        ModSaveData.WriteData(Data);
     }
-    public override void Action(float deltaTime)
+    public override void Act()
     {
+        base.Act();
+    }
 
-    }
-        public override void Act()
-    {
-    base.Act();
-    }
     */
     public abstract ModuleData _Data { get; set; }
     public Item item;

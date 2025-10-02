@@ -5,6 +5,15 @@ using UnityEngine;
 
 public class Mod_ItemDroper : Module
 {
+    /// <summary>
+    /// 物品移动模式
+    /// </summary>
+    public enum MoveMode
+    {
+        BezierCurve,    // 贝塞尔曲线（抛物线）
+        StraightLine    // 直线运动
+    }
+    
     public Ex_ModData modData;
     public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
 
@@ -12,6 +21,9 @@ public class Mod_ItemDroper : Module
     public List<Drop> drops = new List<Drop>();
 
     [Header("丢弃动画参数")]
+    [Tooltip("默认移动模式")]
+    public MoveMode defaultMoveMode = MoveMode.BezierCurve;
+    
     [Tooltip("二阶贝塞尔控制点相对于起点终点的偏移量")]
     public float bezierOffset = 1f;          // 控制点高度
     
@@ -39,16 +51,15 @@ public class Mod_ItemDroper : Module
         float randomDist = Random.Range(0.5f * radius, radius);
         Vector2 endPos = startPos + randomDir * randomDist;
 
-        // 计算二阶贝塞尔控制点：起点-终点的中点向上偏移
-        Vector2 mid = (startPos + endPos) * 0.5f;
-        mid.y += bezierOffset;
+        // 根据移动模式计算控制点
+        Vector2 controlPos = CalculateControlPoint(startPos, endPos, defaultMoveMode);
 
         Drop drop = new Drop
         {
             itemGuid = item.itemData.Guid,
             startPos = startPos,
             endPos = endPos,
-            controlPos = mid,
+            controlPos = controlPos,
             time = time,
             progressTime = 0f,
             item = item
@@ -57,6 +68,7 @@ public class Mod_ItemDroper : Module
         item.itemData.Stack.CanBePickedUp = false;
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
         itemDrop.drop = drop;
+        itemDrop.arcHeight = arcHeight; // 传递弧高参数
         drops.Add(drop);
     }
 
@@ -66,13 +78,13 @@ public class Mod_ItemDroper : Module
     [Tooltip("丢弃物品（指定起点与终点）")]
     public void DropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time)
     {
-        StaticDropItem_Pos(item, startPos, endPos, time);
+        StaticDropItem_Pos(item, startPos, endPos, time, defaultMoveMode);
     }
 
     /// <summary>
     /// 丢弃物品（在指定半径范围内随机位置）
     /// </summary>
-    [Tooltip("丢弃物品（在指定半径范围内随机位置）")]
+    [Tooltip("丢弃物品（在指定半径范围内随机位置")]
     public static void DropItemInARange(Item item, Vector2 startPos,float radius, float time)
     {
         Vector2 randomDir = Random.insideUnitCircle.normalized;
@@ -84,35 +96,57 @@ public class Mod_ItemDroper : Module
     /// <summary>
     /// 【静态方法】供外部模块（如Mod_DeathLoot）调用，复用掉落动画逻辑
     /// </summary>
-/// <summary>
-/// 【静态方法】供外部模块（如Mod_DeathLoot）调用，复用掉落动画逻辑
-/// </summary>
-[Tooltip("静态丢弃物品方法，供外部模块调用")]
-public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
-{
-    item.transform.position = startPos;
-
-    // 计算二阶贝塞尔控制点：中点向上偏移（使用模块的bezierOffset）
-    Vector2 mid = (startPos + endPos) * 0.5f;
-    mid.y += bezierOffset;
-
-    Mod_ItemDroper.Drop drop = new Mod_ItemDroper.Drop
+    [Tooltip("静态丢弃物品方法，供外部模块调用")]
+    public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, MoveMode mode = MoveMode.BezierCurve, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
     {
-        itemGuid = item.itemData.Guid,
-        startPos = startPos,
-        endPos = endPos,
-        controlPos = mid,
-        time = time,
-        progressTime = 0f,
-        rotationSpeed = Random.Range(minRotationSpeed, maxRotationSpeed),
-        item = item
-    };
-    Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
-    itemDrop.drop = drop;
-    item.itemData.Stack.CanBePickedUp = false;
+        item.transform.position = startPos;
 
-    itemDrop.drop = drop;
-}
+        // 根据移动模式计算控制点
+        Vector2 controlPos = CalculateControlPoint(startPos, endPos, mode, bezierOffset);
+
+        Mod_ItemDroper.Drop drop = new Mod_ItemDroper.Drop
+        {
+            itemGuid = item.itemData.Guid,
+            startPos = startPos,
+            endPos = endPos,
+            controlPos = controlPos,
+            time = time,
+            progressTime = 0f,
+            rotationSpeed = Random.Range(minRotationSpeed, maxRotationSpeed),
+            item = item
+        };
+        
+        Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+        itemDrop.drop = drop;
+        itemDrop.arcHeight = arcHeight; // 传递弧高参数
+        item.itemData.Stack.CanBePickedUp = false;
+    }
+    
+    /// <summary>
+    /// 根据移动模式计算控制点
+    /// </summary>
+    /// <param name="startPos">起点</param>
+    /// <param name="endPos">终点</param>
+    /// <param name="mode">移动模式</param>
+    /// <param name="bezierOffset">贝塞尔偏移量</param>
+    /// <returns>控制点位置</returns>
+    private static Vector2 CalculateControlPoint(Vector2 startPos, Vector2 endPos, MoveMode mode, float bezierOffset = 1f)
+    {
+        Vector2 mid = (startPos + endPos) * 0.5f;
+        
+        switch (mode)
+        {
+            case MoveMode.StraightLine:
+                // 直线模式，控制点就在中点上，形成直线
+                return mid;
+            case MoveMode.BezierCurve:
+            default:
+                // 贝塞尔曲线模式，控制点向上偏移
+                mid.y += bezierOffset;
+                return mid;
+        }
+    }
+    
     /* ----------------------------------------------------------
      * 每帧更新
      * ----------------------------------------------------------*/
@@ -130,7 +164,7 @@ public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPo
             drop.progressTime += deltaTime;
             float t = Mathf.Clamp01(drop.progressTime / drop.time);
 
-            // 二阶贝塞尔插值
+            // 使用存储在drop中的控制点进行贝塞尔插值
             Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
             // 垂直方向叠加正弦高度
             pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
