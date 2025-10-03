@@ -27,8 +27,8 @@ public class Inventory_HotBar : Inventory
 
     public ItemSlot CurrentSelectItemSlot;
 
-    public FaceMouse faceMouse; // 用于控制物品旋转的组件
-    public TurnBody turnBody;   // 用于控制转身的组件
+    public Mod_FocusPoint faceMouse; // 用于控制物品旋转的组件
+    public Mod_TurnBody turnBody;   // 用于控制转身的组件
 
     // 当前选择的物品
     public ItemData currentItemData;
@@ -50,7 +50,7 @@ public class Inventory_HotBar : Inventory
         SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
 
         // 获取FaceMouse组件（用于控制物品旋转）
-        Owner.itemMods.GetMod_ByID(ModText.FaceMouse, out faceMouse);
+        Owner.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
         if (faceMouse == null)
         {
             Debug.LogWarning("[Inventory_HotBar] 未找到FaceMouse组件，物品将无法跟随鼠标旋转");

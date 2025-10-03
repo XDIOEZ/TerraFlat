@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-public class TurnBody : Module, ITurnBody
+public class Mod_TurnBody : Module, ITurnBody
 {
     [Header("转向控制")]
     [SerializeField, Range(0.05f, 5f), Tooltip("转向所需时间（秒）")]
@@ -24,7 +24,7 @@ public class TurnBody : Module, ITurnBody
     private float startY;
     private float targetY;
 
-    public FaceMouse faceMouse;
+    public Mod_FocusPoint faceMouse;
 
     public Ex_ModData modData;
     public override ModuleData _Data
@@ -43,7 +43,7 @@ public class TurnBody : Module, ITurnBody
 
     public override void Load()
     {
-        faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
+        faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
         controlledTransforms.Clear();
 
         // 获取所有子物体上的 Animator 组件
@@ -53,7 +53,7 @@ public class TurnBody : Module, ITurnBody
             foreach (var animator in animators)
             {
                 if (animator != null)
-                    controlledTransforms.Add(animator.transform);
+                    AddControlledTransform(animator.transform);
             }
         }
 
@@ -72,7 +72,7 @@ public class TurnBody : Module, ITurnBody
         if (faceMouse == null) return;
 
         Vector2 characterPos = transform.position;
-        Vector2 mousePos = faceMouse.Data.FocusPoint;
+        Vector2 mousePos = faceMouse.Data.See_Point;
 
         Vector2 directionToTarget = mousePos - characterPos;
         if (directionToTarget.sqrMagnitude < 0.001f) return;
@@ -151,5 +151,45 @@ public class TurnBody : Module, ITurnBody
         isTurning = false;
         turnTimeElapsed = 0f;
         Debug.Log("[TurnBody] 状态重置");
+    }
+
+    /// <summary>
+    /// 添加受控制的变换对象到列表中，并更新其朝向
+    /// </summary>
+    /// <param name="transform">要添加的变换对象</param>
+    public void AddControlledTransform(Transform transform)
+    {
+        if (transform == null) return;
+        
+        // 添加到控制列表
+        controlledTransforms.Add(transform);
+        
+        // 立即更新该对象的朝向以匹配当前方向
+        UpdateTransformDirection(transform);
+    }
+    
+    /// <summary>
+    /// 更新指定变换对象的朝向以匹配当前方向
+    /// </summary>
+    /// <param name="transform">要更新的变换对象</param>
+    private void UpdateTransformDirection(Transform transform)
+    {
+        if (transform == null) return;
+        
+        // 根据当前方向设置Y轴旋转
+        float targetYRotation = (currentDirection == Vector2.right) ? 0f : 180f;
+        Vector3 currentEulerAngles = transform.eulerAngles;
+        transform.rotation = Quaternion.Euler(currentEulerAngles.x, targetYRotation, currentEulerAngles.z);
+    }
+    
+    /// <summary>
+    /// 批量更新所有受控制对象的朝向
+    /// </summary>
+    public void UpdateAllTransformDirections()
+    {
+        foreach (var transform in controlledTransforms)
+        {
+            UpdateTransformDirection(transform);
+        }
     }
 }

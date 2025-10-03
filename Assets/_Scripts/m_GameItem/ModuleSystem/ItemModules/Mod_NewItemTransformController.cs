@@ -304,11 +304,6 @@ end
                 return;
             }
         }
-        _spawnedItem.itemMods.GetMod_ByID(ModText.ColdWeapon,out Mod_ColdWeapon mod_ColdWeapon);
-        if (mod_ColdWeapon != null)
-        {
-            mod_ColdWeapon.damageCollider.enabled = true;
-        }
 
 
         _spawnedItem.itemData.Stack.CanBePickedUp = false;

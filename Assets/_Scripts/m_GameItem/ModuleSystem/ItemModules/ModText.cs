@@ -32,7 +32,7 @@ public static class ModText
     #endregion
 
     #region F
-    public static string FaceMouse = "FaceMouse模块";
+    public static string FocusPoint = "FaceMouse模块";
     public static string Food = "食物模块";
     public static string Fuel = "燃料模块";
     #endregion

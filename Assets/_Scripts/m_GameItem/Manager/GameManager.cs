@@ -26,97 +26,73 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         DontDestroyOnLoad(gameObject);
         PathFindingSystem.SetActive(true);
+        Time.timeScale = 1;
     }
     
-    //public void ExitGame()
-    //{
-    //    Event_ExitGame_Start.Invoke();
-
-    //    ItemMgr.Instance.CleanupNullItems();
-
-    //    ChunkMgr.Instance.CleanEmptyDicValues();
-
-    //    // 保存玩家数据
-    //    ItemMgr.Instance.SavePlayer();
-
-    //    // 保存区块数据
-    //    foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
-    //    {
-    //        go.SaveChunk(); //TODO 这里是保存的方法 
-    //        //覆盖当前激活的地图
-    //        SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[go.MapSave.Name] = go.MapSave;
-    //    }
-
-
-
-    //    // 保存数据到磁盘
-    //    SaveDataMgr.Instance.Save_And_WriteToDisk();
-
-    //    ChunkMgr.Instance.ClearAllChunk();
-
-    //    SceneManager.LoadScene("GameStartScene");
-
-    //    Event_ExitGame_End.Invoke();
-    //}
     
-    /// <summary>
-    /// 使用协程处理退出游戏逻辑，解决保存与销毁的时序问题
-    /// </summary>
-    /// <returns></returns>
-    public IEnumerator ExitGameCoroutine()
+/// <summary>
+/// 使用协程处理退出游戏逻辑，解决保存与销毁的时序问题
+/// </summary>
+/// <param name="onComplete">退出完成后的回调函数</param>
+/// <returns></returns>
+public IEnumerator ExitGameCoroutine(System.Action onComplete = null)
+{
+    // TODO完成：在退出游戏时删除实例化出来的SunAndMoonPrefab
+    // 保存时间数据
+    SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
+
+    // 销毁之前实例化的天体对象
+    if (SunAndMoonObj != null)
     {
-        // TODO完成：在退出游戏时删除实例化出来的SunAndMoonPrefab
-        // 保存时间数据
-        SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
-
-        // 销毁之前实例化的天体对象
-        if (SunAndMoonObj != null)
-        {
-            Destroy(SunAndMoonObj);
-            SunAndMoonObj = null;
-            Debug.Log("已销毁SunAndMoon对象");
-        }
-        
-        // 安全检查：确保核心管理器已初始化
-        if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
-            SaveDataMgr.Instance == null)
-        {
-            Debug.LogError("核心管理器未初始化，退出失败！");
-            yield break;
-        }
-
-        // 触发退出开始事件
-        Event_ExitGame_Start?.Invoke();
-
-        // 先执行基础清理
-        ItemMgr.Instance.CleanupNullItems();
-        ChunkMgr.Instance.CleanEmptyDicValues();
-
-        // 提前保存玩家数据（在销毁逻辑执行前）
-        ItemMgr.Instance.SavePlayer();
-
-        // 延迟一帧，等待所有标记为销毁的对象实际销毁
-        yield return null;
-
-        // 延迟一帧后再保存区块数据（此时已完成销毁，不会保存脏数据）
-        SaveAllChunks();
-
-        // 保存数据到磁盘（使用同步方法）
-        SaveDataMgr.Instance.Save_And_WriteToDisk();
-
-        // 清理所有区块
-        ChunkMgr.Instance.ClearAllChunk();
-
-        // 异步加载开始场景
-        var loadOp = SceneManager.LoadSceneAsync("GameStartScene");
-        while (!loadOp.isDone)
-        {
-            yield return null; // 等待场景加载完成
-        }
-
-        // 所有操作完成后触发结束事件
-        Event_ExitGame_End?.Invoke();
+        Destroy(SunAndMoonObj);
+        SunAndMoonObj = null;
+        Debug.Log("已销毁SunAndMoon对象");
     }
+    
+    // 安全检查：确保核心管理器已初始化
+    if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
+        SaveDataMgr.Instance == null)
+    {
+        Debug.LogError("核心管理器未初始化，退出失败！");
+        onComplete?.Invoke(); // 即使失败也调用回调
+        yield break;
+    }
+
+    // 触发退出开始事件
+    Event_ExitGame_Start?.Invoke();
+
+    // 先执行基础清理
+    ItemMgr.Instance.CleanupNullItems();
+    ChunkMgr.Instance.CleanEmptyDicValues();
+
+    // 提前保存玩家数据（在销毁逻辑执行前）
+    ItemMgr.Instance.SavePlayer();
+
+    // 延迟一帧，等待所有标记为销毁的对象实际销毁
+    yield return null;
+
+    // 延迟一帧后再保存区块数据（此时已完成销毁，不会保存脏数据）
+    SaveAllChunks();
+
+    // 保存数据到磁盘（使用同步方法）
+    SaveDataMgr.Instance.Save_And_WriteToDisk();
+
+    // 清理所有区块
+    ChunkMgr.Instance.ClearAllChunk();
+
+    // 异步加载开始场景
+    var loadOp = SceneManager.LoadSceneAsync("GameStartScene");
+    while (!loadOp.isDone)
+    {
+        yield return null; // 等待场景加载完成
+    }
+
+    // 所有操作完成后触发结束事件
+    Event_ExitGame_End?.Invoke();
+    
+    // 调用回调函数
+    onComplete?.Invoke();
+}
 
     /// <summary>
     /// 保存所有区块数据（提取为独立方法，提高可读性）
@@ -168,6 +144,23 @@ public void StartNewGame()
     ContinueGame();
 }
 
+    /// <summary>
+/// 保存游戏数据专用方法，仅执行保存操作不进行其他逻辑处理
+/// </summary>
+public void SaveGame()
+{
+    // 保存时间数据
+    SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
+
+    // 先保存玩家数据
+    ItemMgr.Instance.SavePlayer();
+
+    // 保存所有区块数据
+    SaveAllChunks();
+
+    // 将数据保存到磁盘
+    SaveDataMgr.Instance.Save_And_WriteToDisk();
+}
     public void ContinueGame()
     {
         StartGame_By_LoadPlayer(SaveDataMgr.Instance.CurrentContrrolPlayerName);

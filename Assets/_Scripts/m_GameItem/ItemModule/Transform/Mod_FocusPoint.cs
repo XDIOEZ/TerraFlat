@@ -3,14 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public partial class FaceMouse : Module
+public partial class Mod_FocusPoint : Module
 {
-    public FaceMouseData Data = new FaceMouseData();
+    public FocusPoint_Data Data = new FocusPoint_Data();
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
-
     public PlayerController PlayerController;
-    public TurnBody turnBody; // 添加TurnBody引用
+    public Mod_TurnBody turnBody; // 添加TurnBody引用
 
     // 需要跟随鼠标旋转的对象列表
     [Tooltip("需要跟随鼠标旋转的对象列表，列表为空时脚本不执行任何操作")]
@@ -20,8 +19,9 @@ public partial class FaceMouse : Module
     {
         if (_Data.ID == "")
         {
-            _Data.ID = ModText.FaceMouse;
+            _Data.ID = ModText.FocusPoint;
         }
+
     }
 
     public override void Load()
@@ -35,8 +35,8 @@ public partial class FaceMouse : Module
 
         // 获取TurnBody组件
         turnBody = item.Owner != null
-            ? item.Owner.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody
-            : item.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody;
+            ? item.Owner.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody
+            : item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
 
         // 如果列表为空 → 自动装填父对象
         if (targetRotationTransforms.Count == 0 )
@@ -64,12 +64,12 @@ public partial class FaceMouse : Module
         }
 
         // 更新鼠标世界位置（供外部脚本调用）
-        Data.FocusPoint = PlayerController.GetMouseWorldPosition();
-
+        Data.See_Point = PlayerController.GetMouseWorldPosition();
+        Data.DefaultSkill_Point = PlayerController.GetMouseWorldPosition();
         // 仅在启用旋转且列表有对象时执行逻辑
         if (Data.ActivateRotation)
         {
-            FaceToMouse(Data.FocusPoint, deltaTime);
+            FaceToMouse(Data.See_Point, deltaTime);
         }
     }
 
@@ -150,13 +150,17 @@ public partial class FaceMouse : Module
 
     [System.Serializable]
     [MemoryPackable]
-    public partial class FaceMouseData
+    public partial class FocusPoint_Data
     {
         /// <summary>旋转速度（度/秒）</summary>
         public float RotationSpeed = 180f;
 
-        /// <summary>鼠标在世界空间中的位置</summary>
-        public Vector2 FocusPoint = Vector2.zero;
+        public Dictionary<string, Vector2> FocusPoints = new Dictionary<string, Vector2>()
+        {
+              { "See", Vector2.zero },
+              { "Move", Vector2.zero },
+              { "Skill_0", Vector2.zero }
+        };
 
         /// <summary>是否启用旋转功能</summary>
         public bool ActivateRotation = true;
@@ -164,5 +168,10 @@ public partial class FaceMouse : Module
         /// <summary>停止旋转的距离阈值，鼠标接近到此距离内时不再旋转</summary>
         [Tooltip("鼠标与物体的距离小于此值时，停止旋转并保留当前角度")]
         public float StopRotationDistance = 0.1f; // 默认1.5单位距离
+
+        [MemoryPackIgnore]
+        public Vector2 See_Point { get=> FocusPoints["See"]; set => FocusPoints["See"] = value; }
+        public Vector2 Move_Point { get=> FocusPoints["Move"]; set => FocusPoints["Move"] = value; }
+        public Vector2 DefaultSkill_Point { get=> FocusPoints["Skill_0"]; set => FocusPoints["Skill_0"] = value; }
     }
 }

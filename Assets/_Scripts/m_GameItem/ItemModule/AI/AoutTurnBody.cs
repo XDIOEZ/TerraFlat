@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AoutTurnBody : TurnBody
+public class AoutTurnBody : Mod_TurnBody
 {
     public Mover mover;
     public override void Load()

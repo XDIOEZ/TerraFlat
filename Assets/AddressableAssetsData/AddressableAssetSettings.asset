@@ -15,7 +15,7 @@ MonoBehaviour:
   m_DefaultGroup: 47b73bec22f621a498a1748af8eb38da
   m_currentHash:
     serializedVersion: 2
-    Hash: 7f35708987fefffb3afbb49d35c50fc5
+    Hash: 671f4fa5a4c7f4ddaab1f3c900449c35
   m_OptimizeCatalogSize: 0
   m_BuildRemoteCatalog: 0
   m_BundleLocalCatalog: 0
@@ -106,6 +106,7 @@ MonoBehaviour:
     - TileItemPrefab
     - InventoryInit
     - CraftingRecipe_Tag
+    - Skill
   m_SchemaTemplates: []
   m_GroupTemplateObjects:
   - {fileID: 11400000, guid: 81df820a3474c3645bf38f01f1aa6217, type: 2}

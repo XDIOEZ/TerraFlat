@@ -1,22 +1,18 @@
-﻿using System.Collections;
+﻿using MemoryPack;
+using Sirenix.OdinInspector;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
-using MemoryPack;
-using Sirenix.OdinInspector;
+using UnityEngine.InputSystem;
 using static AttackTrigger;
-using AYellowpaper.SerializedCollections;
 
-public partial class Mod_ColdWeapon : Module ,IDamageSender
+public partial class Mod_ColdWeapon : Module
 {
     #region 序列化字段与数据
-    [Header("攻击特效")]
-    public List<GameEffect> AttackEffects = new List<GameEffect>();
-
     public Ex_ModData_MemoryPackable Data;
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
-    public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
+
     [SerializeField] public ColdWeapon_SaveData weaponData = new ColdWeapon_SaveData();
 
     [System.Serializable]
@@ -24,7 +20,6 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
     public partial class ColdWeapon_SaveData
     {
         [Header("武器属性设置")]
-        public GameValue_float Damage = new GameValue_float(10f);
         public float AttackSpeed = 10f;
         public float MaxAttackDistance = 10f;
         public float ReturnSpeed = 10f;
@@ -36,22 +31,17 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
     #endregion
 
     #region 属性
-    public GameValue_float Damage { get => weaponData.Damage; set => weaponData.Damage = value; }
     public float AttackSpeed { get => weaponData.AttackSpeed; set => weaponData.AttackSpeed = value; }
     public float MaxAttackDistance { get => weaponData.MaxAttackDistance; set => weaponData.MaxAttackDistance = value; }
     public float ReturnSpeed { get => weaponData.ReturnSpeed; set => weaponData.ReturnSpeed = value; }
     public Vector2 SafetyDistance { get => weaponData.SafetyDistance; set => weaponData.SafetyDistance = value; }
-    Item IDamageSender.attacker { get => item; set => item = value; }
-    SerializedDictionary<DamageTag, float> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
     #endregion
 
     #region 运行时字段
-    public FaceMouse faceMouse;
+    public Mod_FocusPoint faceMouse;
     public AttackState CurrentState = AttackState.Idle;
     public Vector2 StartPosition = Vector2.zero;
     public Transform MoveTargetTransform;
-
-    [SerializeField] public Collider2D damageCollider;
 
     private InputAction InputAction;
     private Vector2 returnTarget;
@@ -59,6 +49,10 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
     // 用于轨迹显示与调试
     private List<Vector2> trajectoryPoints = new List<Vector2>();
     public int maxTrajectoryPoints = 50;
+    
+    // 缓存伤害模块引用
+    private Mod_Damage cachedDamageModule;
+    private bool isDamageModuleCached = false;
     #endregion
 
     #region Unity 生命周期
@@ -74,7 +68,7 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
 
         if (item.Owner != null)
         {
-            faceMouse = item.Owner.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
+            faceMouse = item.Owner.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
             var controller = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
             if (controller != null)
             {
@@ -85,21 +79,16 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         }
         else
         {
-            faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse) as FaceMouse;
+            faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
         }
 
         // 保持原始逻辑：若 MoveTargetTransform 为空并且有 Owner，则使用 item.transform；否则使用 transform.parent
         MoveTargetTransform = (MoveTargetTransform == null && item.Owner != null)
             ? item.transform
             : transform.parent;
-
-        if (damageCollider == null)
-        {
-            damageCollider = GetComponent<Collider2D>();
-            if (damageCollider == null)
-                Debug.LogWarning("[Mod_ColdWeapon] 没有找到Collider2D，请在编辑器里赋值！");
-        }
-        damageCollider.enabled = false;
+        
+        // 初始化时缓存伤害模块引用
+        CacheDamageModule();
     }
 
     public override void Save()
@@ -127,9 +116,6 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
                 UpdateReturning(deltaTime);
                 break;
         }
-
-        // 总是检查安全距离，因为玩家可能在移动
-        CheckSafetyDistance();
     }
     #endregion
 
@@ -157,9 +143,8 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         if (CurrentState != AttackState.Idle) return;
         CurrentState = AttackState.Attacking;
         
-        // 初始禁用伤害碰撞器，只有在有效距离范围内才启用
-        if (damageCollider != null) 
-            damageCollider.enabled = false;
+        // 通知伤害模块启用伤害检测
+        NotifyDamageModule(true);
     }
 
     public virtual void StopAttack()
@@ -167,9 +152,8 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         if (CurrentState != AttackState.Attacking) return;
         StartReturningToStartPosition(StartPosition, ReturnSpeed);
         
-        // 停止攻击时禁用伤害碰撞器
-        if (damageCollider != null) 
-            damageCollider.enabled = false;
+        // 通知伤害模块禁用伤害检测
+        NotifyDamageModule(false);
     }
 
     [Button("取消攻击")]
@@ -178,11 +162,49 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         if (CurrentState != AttackState.Attacking) return;
         StartReturningToStartPosition(StartPosition, ReturnSpeed);
         
-        // 取消攻击时禁用伤害碰撞器
-        if (damageCollider != null) 
-            damageCollider.enabled = false;
+        // 通知伤害模块禁用伤害检测
+        NotifyDamageModule(false);
         
         CurrentState = AttackState.Idle;
+    }
+    
+    // 缓存伤害模块引用
+    private void CacheDamageModule()
+    {
+        if (!isDamageModuleCached)
+        {
+            cachedDamageModule = item.itemMods.GetMod_ByID("Mod_Damage") as Mod_Damage;
+            isDamageModuleCached = true;
+        }
+    }
+    
+    // 通知伤害模块启用或禁用伤害检测
+    private void NotifyDamageModule(bool enable)
+    {
+        // 如果尚未缓存，先缓存引用
+        if (!isDamageModuleCached)
+        {
+            CacheDamageModule();
+        }
+        
+        // 使用缓存的引用
+        if (cachedDamageModule != null)
+        {
+            cachedDamageModule.SetDamageEnabled(enable);
+        }
+        else
+        {
+            // 如果缓存中没有找到，尝试重新获取一次（防止运行时添加模块）
+            cachedDamageModule = item.itemMods.GetMod_ByID("Mod_Damage") as Mod_Damage;
+            if (cachedDamageModule != null)
+            {
+                cachedDamageModule.SetDamageEnabled(enable);
+            }
+            else
+            {
+                Debug.LogWarning("[Mod_ColdWeapon] 未找到 Mod_Damage 模块");
+            }
+        }
     }
     #endregion
 
@@ -198,7 +220,7 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         Vector2 startPosition = (item.transform.parent != null) ? (Vector2)item.transform.parent.position : (Vector2)transform.parent.position;
 
         // 焦点（如鼠标）及当前武器位置
-        Vector2 focusPoint = faceMouse != null ? faceMouse.Data.FocusPoint : startPosition;
+        Vector2 focusPoint = faceMouse != null ? faceMouse.Data.See_Point : startPosition;
         Vector2 swordPos = item.transform.position;
         Vector2 swordRel = swordPos - startPosition;
         float swordDist = swordRel.magnitude;
@@ -246,46 +268,6 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         }
     }
 
-    /// <summary>
-    /// 检查是否在有效伤害距离范围内，如果在范围内则启用伤害碰撞器
-    /// </summary>
-    private void CheckSafetyDistance()
-    {
-        // 如果没有伤害碰撞器，直接返回
-        if (damageCollider == null) return;
-
-        Vector2 currentPosition = item.transform.position;
-        
-        // 获取父对象（玩家）的位置作为起始位置
-        Vector2 startPosition = Vector2.zero;
-        if (item.transform.parent != null)
-        {
-            startPosition = item.transform.parent.position;
-        }
-        else
-        {
-            startPosition = transform.parent.position;
-        }
-
-        float distanceFromStart = Vector2.Distance(currentPosition, startPosition);
-
-        // 只有在攻击状态且在有效伤害距离范围内时才启用伤害碰撞器
-        if (CurrentState == AttackState.Attacking && 
-            distanceFromStart >= SafetyDistance.x && 
-            distanceFromStart <= SafetyDistance.y)
-        {
-            if (!damageCollider.enabled)
-            {
-                damageCollider.enabled = true;
-            }
-        }
-        // 如果不在攻击状态或不在有效伤害距离范围内，则禁用伤害碰撞器
-        else if (damageCollider.enabled)
-        {
-            damageCollider.enabled = false;
-        }
-    }
-
     private void RecordTrajectoryPoint()
     {
         if (item == null) return;
@@ -318,20 +300,10 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         {
             MoveTargetTransform.localPosition = returnTarget;
             CurrentState = AttackState.Idle;
-            
-            // 确保返回到位后禁用伤害碰撞器
-            if (damageCollider != null) 
-                damageCollider.enabled = false;
         }
         else
         {
             MoveTargetTransform.localPosition = currentPos + move;
-            
-            // 在返回过程中始终禁用伤害碰撞器
-            if (damageCollider != null && damageCollider.enabled)
-            {
-                damageCollider.enabled = false;
-            }
         }
     }
 
@@ -340,56 +312,7 @@ public partial class Mod_ColdWeapon : Module ,IDamageSender
         CurrentState = AttackState.Returning;
         returnTarget = startTarget;
         ReturnSpeed = backSpeed;
-        
-        // 开始返回时立即禁用伤害碰撞器
-        if (damageCollider != null && damageCollider.enabled)
-        {
-            damageCollider.enabled = false;
-        }
     }
-    #endregion
-
-    #region 伤害处理
-    public void OnTriggerEnter2D(Collider2D other)
-    {
-        // 只有在伤害碰撞器启用时才处理碰撞
-        if (damageCollider == null || !damageCollider.enabled) return;
-        
-        if (!other.TryGetComponent(out DamageReceiver receiver)) return;
-
-        var beAttackTeam = other.GetComponentInParent<ITeam>();
-        var belongItem = item?.Owner;
-        var belongTeam = belongItem?.GetComponent<ITeam>();
-
-        // 避免打到友军
-        if (beAttackTeam != null && belongTeam != null && belongTeam.CheckRelation(beAttackTeam.TeamID) == RelationType.Ally)
-            return;
-
-        float acDamage =receiver.Hurt(this);
-        // 造成伤害
-
-        // 生成攻击特效
-        if (AttackEffects != null && AttackEffects.Count > 0)
-        {
-            Vector2 hitPoint = other.ClosestPoint(transform.position);
-            SpawnEffect(hitPoint, acDamage);
-        }
-    }
-
-private void SpawnEffect(Vector2 hitPoint, float damage)
-{
-    // 同时生成所有特效
-    foreach (GameEffect effectPrefab in AttackEffects)
-    {
-        if (effectPrefab != null)
-        {
-            var effect = Instantiate(effectPrefab);
-            effect.transform.position = new Vector3(hitPoint.x, hitPoint.y, 0f);
-            // 传递武器transform和伤害值
-            effect.Effect(transform, damage);
-        }
-    }
-}
     #endregion
 
     #region Gizmos 与调试绘制
@@ -417,7 +340,7 @@ private void SpawnEffect(Vector2 hitPoint, float damage)
     private void DrawHelperGizmos()
     {
         Vector2 startPosition = (item != null && item.transform.parent != null) ? (Vector2)item.transform.parent.position : (Vector2)transform.parent.position;
-        Vector2 focusPoint = faceMouse != null ? faceMouse.Data.FocusPoint : startPosition;
+        Vector2 focusPoint = faceMouse != null ? faceMouse.Data.See_Point : startPosition;
 
         // 起点 -> 焦点
         Gizmos.color = Color.yellow;

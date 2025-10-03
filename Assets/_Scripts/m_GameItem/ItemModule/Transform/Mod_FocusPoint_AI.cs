@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class FaceMouse_AI_Mover : FaceMouse
+public class Mod_FocusPoint_AI : Mod_FocusPoint
 {
     public Mover mover;
     public override void Load()
@@ -14,6 +14,7 @@ public class FaceMouse_AI_Mover : FaceMouse
 
     public override void ModUpdate(float deltaTime)
     {
-        Data.FocusPoint = mover.TargetPosition;
+        Data.Move_Point = mover.TargetPosition;
+        Data.See_Point = mover.TargetPosition;
     }
 }

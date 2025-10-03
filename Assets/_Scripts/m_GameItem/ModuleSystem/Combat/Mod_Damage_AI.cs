@@ -5,48 +5,26 @@ using System.Collections.Generic;
 using UnityEngine;
 using static AttackTrigger;
 
-public class Mod_AI_ColdWeapon : Mod_ColdWeapon
+public class Mod_Damage_AI : Mod_Damage
 {
-    public TurnBody TrunBody;
+    public Mod_TurnBody TrunBody;
     public Mod_Animator animator;
 
     public override void Load()
     {
         base.Load();
-        TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody;
+        TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
         animator = item.itemMods.GetMod_ByID(ModText.Animator) as Mod_Animator;
-        TrunBody.controlledTransforms.Add(transform);
+        TrunBody.AddControlledTransform(transform);
         animator.OnAttackStart += StartAttack;
         animator.OnAttackStop += StopAttack;
         TrunBody.OnTrun += ToOtherDirection;
     }
 
-    public override void StartAttack()
-    {
-        CurrentState = AttackState.Attacking;
-        damageCollider.enabled = true;
-    }
-    public override void StopAttack()
-    {
-        CurrentState = AttackState.Idle;
-        damageCollider.enabled = false;
-    }
-    public override void CancelAttack()
-    {
-        CurrentState = AttackState.Idle;
-        damageCollider.enabled = false;
-    }
-
-
-
     public override void Save()
     {
         base.Save();
         DOTween.Clear(transform);
-    }
-
-    public override void ModUpdate(float deltaTime)
-    {
     }
 
     [SerializeField] private float xOffset = 0.5f;

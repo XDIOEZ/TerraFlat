@@ -23,6 +23,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - InventoryInit
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9fbe5f349e29e714697e4680674c1bb1
+    m_Address: Assets/_SO/SkillSO
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Skill
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

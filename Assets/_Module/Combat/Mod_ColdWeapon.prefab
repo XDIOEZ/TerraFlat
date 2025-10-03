@@ -9,10 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5854501383382979422}
-  - component: {fileID: 1132132357919869270}
   - component: {fileID: 8741024448855339655}
   m_Layer: 8
-  m_Name: DamageSender
+  m_Name: Mod_ColdWeapon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -33,51 +32,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!61 &1132132357919869270
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5547162183614461524}
-  m_Enabled: 0
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 1
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0.025871426, y: -0.10815033}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 0.5601855, y: 0.3007657}
-  m_EdgeRadius: 0
 --- !u!114 &8741024448855339655
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -91,9 +45,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  AttackEffects:
-  - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
-  - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
   Data:
     Name: 
     ID: 
@@ -101,12 +52,6 @@ MonoBehaviour:
     Type: 0
     BitData: 
   weaponData:
-    Damage:
-      BaseValue: 10
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
     AttackSpeed: 10
     MaxAttackDistance: 10
     ReturnSpeed: 10
@@ -115,5 +60,4 @@ MonoBehaviour:
   CurrentState: 0
   StartPosition: {x: 0, y: 0}
   MoveTargetTransform: {fileID: 0}
-  damageCollider: {fileID: 0}
   maxTrajectoryPoints: 50

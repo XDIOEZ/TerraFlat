@@ -116,6 +116,17 @@ public class Player : Item
             HandleTimeScaleControl();
         }
     }
+
+    public new void OnDestroy()
+    {
+        base.OnDestroy();
+        Time.timeScale = 1.0f;
+    }
+    [Button]
+    public void FixTimeScale()
+    {
+        Time.timeScale = 1.0f;
+    }
     #endregion
 
     #region 公共方法

@@ -211,7 +211,7 @@ MonoBehaviour:
         values: []
     Stack:
       Amount: 1
-      Volume: 1
+      Volume: 200
       CanBePickedUp: 1
     transform:
       position: {x: 0, y: 0, z: 0}

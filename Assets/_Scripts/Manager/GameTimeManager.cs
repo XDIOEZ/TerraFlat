@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class GameTimeManager : SingletonMono<GameTimeManager>
-{
+{/*
     protected override void Awake()
     {
         DontDestroyOnLoad(gameObject); // 跨场景保持存在
@@ -60,5 +60,5 @@ public class GameTimeManager : SingletonMono<GameTimeManager>
     {
         TimeScale = scale;
     }
-    #endregion
+    #endregion*/
 }

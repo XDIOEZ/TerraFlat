@@ -72,11 +72,11 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     {
         if (Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out Chunk chunk))
         {
-            chunk.AddItem(item);
+            chunk.UpdateItem(item);
         }
         else if (Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out chunk))
         {
-            chunk.AddItem(item);
+            chunk.UpdateItem(item);
         }
     }
     #endregion

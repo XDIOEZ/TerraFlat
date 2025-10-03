@@ -99,6 +99,7 @@ GameObject:
   - component: {fileID: 4010289484235736277}
   - component: {fileID: 7050136230430806877}
   - component: {fileID: 4850197992055457325}
+  - component: {fileID: 3841007123886012277}
   m_Layer: 0
   m_Name: Chicken
   m_TagString: Untagged
@@ -145,7 +146,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 373b52eb9bf8c40f785bb6947a1aee66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 1
+  version: 1073741824
   drawGizmos: 1
   detailedGizmos: 0
   startEndModifier:
@@ -173,12 +174,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 847a14d4dc9cc43679ab34fc78e0182f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 4
+  version: 1073741824
   autoRepath:
     mode: 1
-    interval: 1
+    period: 1
     sensitivity: 10
-    maximumInterval: 2
+    maximumPeriod: 2
     visualizeSensitivity: 0
   canMove: 1
   speed: 3
@@ -187,7 +188,6 @@ MonoBehaviour:
   rotationSpeed: 10
   interpolatePathSwitches: 1
   switchPathInterpolationSpeed: 5
-  targetCompatibility: {fileID: 0}
   repathRateCompatibility: NaN
   canSearchCompability: 0
 --- !u!114 &7050136230430806877
@@ -216,6 +216,7 @@ MonoBehaviour:
     GameName: Chicken
     Description: "\u7269\u54C1\u540D\u79F0\uFF1AChicken\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1ANone(None),\u7269\u54C1\u6750\u8D28\uFF1ANone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
     Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
       - None
@@ -239,10 +240,10 @@ MonoBehaviour:
       Amount: 1
       Volume: 1
       CanBePickedUp: 0
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     Guid: 0
     code: 
@@ -291,6 +292,33 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.2, y: 0.1}
   m_EdgeRadius: 0
+--- !u!50 &3841007123886012277
+Rigidbody2D:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5065571277225119290}
+  m_BodyType: 1
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDrag: 0
+  m_AngularDrag: 0.05
+  m_GravityScale: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 0
 --- !u!1 &6729442097554026636
 GameObject:
   m_ObjectHideFlags: 0
@@ -501,7 +529,6 @@ MonoBehaviour:
   item: {fileID: 0}
   Data:
     RotationSpeed: 180
-    FocusPoint: {x: 0, y: 0}
     ActivateRotation: 1
     StopRotationDistance: 0.1
   ModData:
@@ -511,6 +538,7 @@ MonoBehaviour:
     Type: 0
     BitData: 
   PlayerController: {fileID: 0}
+  turnBody: {fileID: 0}
   targetRotationTransforms: []
   mover: {fileID: 0}
 --- !u!1 &8912185394749784350

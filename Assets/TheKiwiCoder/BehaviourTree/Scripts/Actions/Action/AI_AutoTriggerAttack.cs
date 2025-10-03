@@ -26,7 +26,7 @@ public class AI_AutoTriggerAttack : ActionNode
     {
         if (isAttacking)
         {
-            context.ColdWeapon.CancelAttack();
+            context.Damage.StopAttack();
             isAttacking = false;
         }
         isPreparingAttack = false;
@@ -34,7 +34,7 @@ public class AI_AutoTriggerAttack : ActionNode
 
     protected override State OnUpdate()
     {
-        float dist = Vector2.Distance(context.mover.TargetPosition, context.ColdWeapon.transform.position);
+        float dist = Vector2.Distance(context.mover.TargetPosition, context.Damage.transform.position);
 
         // 距离足够近
         if (dist <= TriggerDistance)
@@ -45,7 +45,7 @@ public class AI_AutoTriggerAttack : ActionNode
             {
                 if (Time.time >= lastAttackTime + AttackDuration)
                 {
-                    context.ColdWeapon.StopAttack();
+                    context.Damage.StopAttack();
                     isAttacking = false;
                     return State.Success;
                 }
@@ -57,7 +57,7 @@ public class AI_AutoTriggerAttack : ActionNode
             {
                 if (Time.time >= attackPrepareStartTime + AttackWaitForAniation)
                 {
-                    context.ColdWeapon.StartAttack();
+                    context.Damage.StartAttack();
                     lastAttackTime = Time.time;
                     isAttacking = true;
                     isPreparingAttack = false;
@@ -80,7 +80,7 @@ public class AI_AutoTriggerAttack : ActionNode
         // 敌人远离：取消所有攻击状态
         if (isAttacking)
         {
-            context.ColdWeapon.CancelAttack();
+            context.Damage.StopAttack();
             isAttacking = false;
         }
 

@@ -29,7 +29,7 @@ namespace TheKiwiCoder {
         public Item item;
         public Map map;
         public DamageReceiver damageReciver;
-        public Mod_ColdWeapon ColdWeapon;
+        public Mod_Damage Damage;
         public Mod_Food Food;
         public TileEffectReceiver tileEffectReceiver;
 
@@ -52,7 +52,7 @@ namespace TheKiwiCoder {
             context.itemDetector = context.item.GetComponentInChildren<ItemDetector>();
             context.itemValues = context.item.GetComponentInChildren<IItemValues>();
             context.item = context.item.GetComponentInChildren<Item>();
-            context.ColdWeapon = context.item.GetComponentInChildren<Mod_ColdWeapon>();
+            context.Damage = context.item.GetComponentInChildren<Mod_Damage>();
             // Add whatever else you need here...
 
             context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover_AI;

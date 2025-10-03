@@ -43,7 +43,7 @@ public class AI_ExecuteAttack : ActionNode
 
     protected override void OnStop()
     {
-        context.ColdWeapon.CancelAttack();
+        context.Damage.StopAttack();
     }
 
     protected override State OnUpdate()
@@ -55,7 +55,7 @@ public class AI_ExecuteAttack : ActionNode
             case Phase.Preparing:
                 if (now >= attackStartTime)
                 {
-                    context.ColdWeapon.StartAttack();
+                    context.Damage.StartAttack();
                     currentPhase = Phase.Attacking;
                 }
                 break;
@@ -63,7 +63,7 @@ public class AI_ExecuteAttack : ActionNode
             case Phase.Attacking:
                 if (now >= attackEndTime)
                 {
-                    context.ColdWeapon.StopAttack();
+                    context.Damage.StopAttack();
                     currentPhase = Phase.Ending;
                 }
                 break;

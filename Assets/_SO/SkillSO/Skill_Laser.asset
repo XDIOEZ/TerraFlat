@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6120190c415db814eb794d5bac0dc45a, type: 3}
+  m_Name: Skill_Laser
+  m_EditorClassIdentifier: 
+  LaserPrefab: {fileID: 7187358966865186485, guid: f4cc48e2af981584b99bbfbe41c565cd, type: 3}
+  LaserEffectPrefab: {fileID: 2120960324422205105, guid: 38ee20713ed57f548af3746e835a0984, type: 3}

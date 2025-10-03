@@ -126,10 +126,10 @@ MonoBehaviour:
       Amount: 1
       Volume: 100
       CanBePickedUp: 0
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 1, y: 1, z: 1}
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     Guid: 0
     code: 

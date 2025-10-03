@@ -10,16 +10,9 @@ public class GameRes : SingletonAutoMono<GameRes>
 {
     #region 字段
     public int LoadedCount = 0;
-    [Header("Prefab 标签列表")]
-    public List<string> ADBLabels_Prefab = new List<string>();
-    [Header("配方 标签列表")]
-    public List<string> ADBLabels_CraftingRecipe = new List<string>();
-    [Header("TileBase 标签列表")]
-    public List<string> ADBLabels_TileBase = new List<string>();
-    [Header("BuffData 标签列表")]
-    public List<string> ADBLabels_BuffData = new List<string>();
-    [Header("InventoryInit 标签列表")]
-    public List<string> ADBLabels_InventoryInit = new List<string>();
+    
+    [Header("资源标签列表")]
+    public List<string> ADBLabels = new List<string>();
 
     [ShowInInspector]
     public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>();
@@ -31,6 +24,8 @@ public class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, Buff_Data> BuffData_Dict = new Dictionary<string, Buff_Data>();
     [ShowInInspector]
     public Dictionary<string, Inventoryinit> InventoryInitDict = new Dictionary<string, Inventoryinit>();
+    [ShowInInspector]
+    public Dictionary<string, BaseSkill> SkillDict = new Dictionary<string, BaseSkill>();
 
     public bool isLoadFinish = false;
     
@@ -69,14 +64,15 @@ public class GameRes : SingletonAutoMono<GameRes>
         loadedAssetsCount = 0;
 
         // 默认标签
-        if (ADBLabels_Prefab.Count == 0)
+        if (ADBLabels.Count == 0)
         {
-            ADBLabels_Prefab.Add("ItemPrefab");
-            ADBLabels_Prefab.Add("Prefab");
-            ADBLabels_CraftingRecipe.Add("CraftingRecipe");
-            ADBLabels_TileBase.Add("TileBase");
-            ADBLabels_BuffData.Add("Buff");
-            ADBLabels_InventoryInit.Add("InventoryInit");
+            ADBLabels.Add("ItemPrefab");
+            ADBLabels.Add("Prefab");
+            ADBLabels.Add("CraftingRecipe");
+            ADBLabels.Add("TileBase");
+            ADBLabels.Add("Buff");
+            ADBLabels.Add("InventoryInit");
+            ADBLabels.Add("Skill");
         }
 
         // 估算总资源数量（用于进度条）
@@ -85,36 +81,43 @@ public class GameRes : SingletonAutoMono<GameRes>
 
         // 分别同步加载
         yield return StartCoroutine(SyncLoadAssetsWithProgress<GameObject>(
-            ADBLabels_Prefab,
+            new List<string> { "ItemPrefab", "Prefab" },
             AllPrefabs,
             HandlePrefab,
             "加载预制体"));
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<Recipe>(
-            ADBLabels_CraftingRecipe,
+            new List<string> { "CraftingRecipe" },
             recipeDict,
             null,
             "加载配方"));
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
-            ADBLabels_TileBase,
+            new List<string> { "TileBase" },
             tileBaseDict,
             null,
             "加载TileBase"));
             
         // 额外处理：BuffData
         yield return StartCoroutine(SyncLoadAssetsWithProgress<Buff_Data>(
-            ADBLabels_BuffData,
+            new List<string> { "Buff" },
             BuffData_Dict,
             null,
             "加载Buff数据"));
             
         // 新增：加载InventoryInit资源
         yield return StartCoroutine(SyncLoadAssetsWithProgress<Inventoryinit>(
-            ADBLabels_InventoryInit,
+            new List<string> { "InventoryInit" },
             InventoryInitDict,
             null,
             "加载初始库存"));
+
+        // 新增：加载Skill资源
+        yield return StartCoroutine(SyncLoadAssetsWithProgress<BaseSkill>(
+            new List<string> { "Skill" },
+            SkillDict,
+            null,
+            "加载技能"));
 
         isLoadFinish = true;
         showLoadingGUI = false; // 隐藏加载界面
@@ -135,11 +138,7 @@ public class GameRes : SingletonAutoMono<GameRes>
     {
         // 这里可以根据经验数据估算，或者先进行一次异步预加载来获取数量
         // 简单估算：假设每种类型大约有100个资源
-        return (ADBLabels_Prefab.Count + 
-                ADBLabels_CraftingRecipe.Count + 
-                ADBLabels_TileBase.Count + 
-                ADBLabels_BuffData.Count + 
-                ADBLabels_InventoryInit.Count) * 100;
+        return ADBLabels.Count * 100;
     }
 
     // 带进度的同步加载
@@ -189,6 +188,7 @@ public class GameRes : SingletonAutoMono<GameRes>
                 TileBase tile => tile.name,
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
+                BaseSkill skill => skill.name,
                 _ => asset.ToString()
             };
 
@@ -222,38 +222,44 @@ public void LoadResourcesSync()
     LoadedCount = 0;
 
     // 默认标签
-    if (ADBLabels_Prefab.Count == 0)
+    if (ADBLabels.Count == 0)
     {
-        ADBLabels_Prefab.Add("ItemPrefab");
-        ADBLabels_Prefab.Add("Prefab");
-        ADBLabels_CraftingRecipe.Add("CraftingRecipe");
-        ADBLabels_TileBase.Add("TileBase");
-        ADBLabels_BuffData.Add("Buff");
-        ADBLabels_InventoryInit.Add("InventoryInit");
+        ADBLabels.Add("ItemPrefab");
+        ADBLabels.Add("Prefab");
+        ADBLabels.Add("CraftingRecipe");
+        ADBLabels.Add("TileBase");
+        ADBLabels.Add("Buff");
+        ADBLabels.Add("InventoryInit");
+        ADBLabels.Add("Skill");
     }
 
     // 分别同步加载
     SyncLoadAssetsByLabels<GameObject>(
-        ADBLabels_Prefab,
+        new List<string> { "ItemPrefab", "Prefab" },
         AllPrefabs,
         HandlePrefab);
     SyncLoadAssetsByLabels<Recipe>(
-        ADBLabels_CraftingRecipe,
+        new List<string> { "CraftingRecipe" },
         recipeDict,
         null);
     SyncLoadAssetsByLabels<TileBase>(
-        ADBLabels_TileBase,
+        new List<string> { "TileBase" },
         tileBaseDict,
         null);
     // 额外处理：BuffData
     SyncLoadAssetsByLabels<Buff_Data>(
-        ADBLabels_BuffData,
+        new List<string> { "Buff" },
         BuffData_Dict,
         null);
     // 新增：加载InventoryInit资源
     SyncLoadAssetsByLabels<Inventoryinit>(
-        ADBLabels_InventoryInit,
+        new List<string> { "InventoryInit" },
         InventoryInitDict,
+        null);
+    // 新增：加载Skill资源
+    SyncLoadAssetsByLabels<BaseSkill>(
+        new List<string> { "Skill" },
+        SkillDict,
         null);
 
     isLoadFinish = true;
@@ -277,6 +283,7 @@ private void ClearAllDictionaries()
     tileBaseDict.Clear();
     BuffData_Dict.Clear();
     InventoryInitDict.Clear();
+    SkillDict.Clear();
 }
 
 [Button("热更新所有资源")]
@@ -322,6 +329,7 @@ public void HotReloadAllResources()
                 TileBase tile => tile.name,
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
+                BaseSkill skill => skill.name,
                 _ => asset.ToString()
             };
 
@@ -383,30 +391,6 @@ public void HotReloadAllResources()
             return null;
         }
     }
-    
-    public void GetPrefab(string prefabName, out GameObject go)
-    {
-        AllPrefabs.TryGetValue(prefabName, out go);
-    }
-
-    public Item GetItem(string prefabName)
-    {
-        GameObject prefab = GetPrefab(prefabName);
-        if (prefab == null)
-        {
-            Debug.LogError($"无法获取预制体: {prefabName}，返回null");
-            return null;
-        }
-        
-        Item item = prefab.GetComponent<Item>();
-        if (item == null)
-        {
-            Debug.LogError($"预制体 {prefabName} 上没有找到 Item 组件");
-            return null;
-        }
-        
-        return item;
-    }
 
     public TileBase GetTileBase(string tileBaseName)
     {
@@ -431,6 +415,13 @@ public void HotReloadAllResources()
     {
         InventoryInitDict.TryGetValue(inventoryInitName, out inventoryInit);
         return inventoryInit;
+    }
+    
+    // 新增：获取BaseSkill资源
+    public BaseSkill GetSkill(string skillName)
+    {
+        SkillDict.TryGetValue(skillName, out var skill);
+        return skill;
     }
 
     #endregion

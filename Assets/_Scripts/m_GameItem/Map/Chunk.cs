@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Sirenix.OdinInspector;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -25,7 +26,7 @@ public class Chunk : MonoBehaviour
         {
             foreach(var itemData in items.Value)
             {
-                Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject,newGuid:false);
+                Item item = ItemMgr.Instance.InstantiateItem(itemData,this.gameObject);
                 item.Load();
                 item.transform.position = itemData.transform.position;
                 item.transform.rotation = itemData.transform.rotation;
@@ -59,7 +60,7 @@ public class Chunk : MonoBehaviour
         {
             foreach(var itemData in items.Value)
             {
-                Item item = ItemMgr.Instance.InstantiateItem(itemData, this.gameObject, newGuid: false);
+                Item item = ItemMgr.Instance.InstantiateItem(itemData, this.gameObject);
                 item.Load();
                 item.transform.position = itemData.transform.position;
                 item.transform.rotation = itemData.transform.rotation;
@@ -115,11 +116,6 @@ public class Chunk : MonoBehaviour
             AddToGroup(item);
         }
     }
-
-    public void DestroyChunk()
-    {
-        Destroy(this.gameObject);
-    }
     #endregion
 
     #region 物品分组管理
@@ -155,13 +151,24 @@ public class Chunk : MonoBehaviour
     }
     #endregion
 
-    #region 物品操作
-    public void AddItem(Item item)
+public void AddItem(Item item)
+{
+     // 检查是否已存在相同的Guid
+     if (RunTimeItems.ContainsKey(item.itemData.Guid))
+     {
+            return;
+     }
+
+    // 添加到字典中
+    RunTimeItems[item.itemData.Guid] = item;
+    AddToGroup(item);
+    item.transform.SetParent(this.transform);
+}
+    public void UpdateItem(Item item)
     {
+        // 添加到字典中
         RunTimeItems[item.itemData.Guid] = item;
-        //TODO 设置为子对象
         item.transform.SetParent(this.transform);
-        AddToGroup(item);
     }
 
     public void RemoveItem(Item item)
@@ -173,43 +180,6 @@ public class Chunk : MonoBehaviour
             list.Remove(item);
         }
     }
-
-    public void DestroyItem(Item item)
-    {
-        RunTimeItems.TryGetValue(item.itemData.Guid, out var itemData);
-        if (itemData!= null)
-        {
-            RemoveItem(item);
-            Destroy(item.gameObject);
-        }
-        else
-        {
-            Debug.Log("Item not found in chunk");
-            RunTimeItems.Remove(item.itemData.Guid);
-        }
-    }
-
-    public void ClearNullItems()
-    {
-        var keysToRemove = RunTimeItems
-            .Where(kvp => kvp.Value == null)
-            .Select(kvp => kvp.Key)
-            .ToList();
-
-        foreach (var key in keysToRemove)
-        {
-            RunTimeItems.Remove(key);
-        }
-    }
-    #endregion
-
-    #region 工具方法
-    [ContextMenu("Sync MapSave Name")]
-    public void SyncMapSaveName()
-    {
-        MapSave.Name = MapSave.MapPosition.ToString();
-    }
-    #endregion
 }
 
 [System.Serializable]

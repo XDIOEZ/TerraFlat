@@ -24,7 +24,7 @@ public class ItemDroper : Mod_ItemDroper
 
     public override ModuleData _Data { get => modData; set => modData = value as Ex_ModData; }
 
-    private FaceMouse faceMouse;
+    private Mod_FocusPoint faceMouse;
     public PlayerController playerController;
     public Vector2 DropPos => playerController.GetMouseWorldPosition();
 
@@ -48,7 +48,7 @@ public class ItemDroper : Mod_ItemDroper
     {
         base.Load();
 
-        faceMouse = item.itemMods.GetMod_ByID(ModText.FaceMouse).GetComponent<FaceMouse>();
+        faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint).GetComponent<Mod_FocusPoint>();
 
         Hotbar = item.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Inventory_HotBar>();
 
@@ -322,69 +322,68 @@ private void HandleRepeatDrop()
         DropItemByCount(slot, slot.Amount);
     }
 
-    public void DropItemByCount(ItemSlot slot, int count)
+public void DropItemByCount(ItemSlot slot, int count)
+{
+    if (count <= 0 || slot == null || slot.Amount <= 0)
     {
-        if (count <= 0 || slot == null || slot.Amount <= 0)
+        Debug.LogWarning("丢弃数量非法或物品槽为空！");
+        return;
+    }
+
+    if (count <= slot.Amount)
+    {
+        // 克隆数据
+        ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
+        newItemData.Stack.Amount = count;
+        newItemData.Stack.CanBePickedUp = false;
+
+        // 减少原物品数量
+        slot.Amount -= count;
+
+        Item newObject = null;
+        // 实例化新物体
+        ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
+        if (chunk != null)
         {
-            Debug.LogWarning("丢弃数量非法或物品槽为空！");
+            newObject = ItemMgr.Instance.InstantiateItem(newItemData, chunk.gameObject);
+        }
+
+        if (newObject == null)
+        {
+            Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);
             return;
         }
 
-        if (count <= slot.Amount)
+        Item newItem = newObject.GetComponent<Item>();
+        if (newItem == null)
         {
-            // 克隆数据
-            ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
-            newItemData.Stack.Amount = count;
-            newItemData.Stack.CanBePickedUp = false;
-
-            // 减少原物品数量
-            slot.Amount -= count;
-
-            Item newObject = null;
-            // 实例化新物体
-            ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
-            if (chunk != null)
-            {
-                newObject = ItemMgr.Instance.InstantiateItem(newItemData.IDName, default, default, default, chunk.gameObject);
-            }
-
-            if (newObject == null)
-            {
-                Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);
-                return;
-            }
-
-            Item newItem = newObject.GetComponent<Item>();
-            if (newItem == null)
-            {
-                Debug.LogError("新物体中缺少 Item 组件！");
-                return;
-            }
-
-            newItem.itemData = newItemData;
-
-            // 计算位置
-            Vector2 startPos = transform.position;
-            Vector2 endPos = DropPos;
-
-            float distance = Vector2.Distance(startPos, endPos);
-            float animTime = baseDropDuration + distance * distanceSensitivity;
-
-            // 调用父类 DropItem 实现动画控制
-            newItem.Load();
-            DropItem_Pos(newItem, startPos, endPos, animTime);
-            
-            // 只有当物品完全丢弃完后才清除数据
-            if (slot.Amount <= 0)
-            {
-                slot.ClearData();
-            }
+            Debug.LogError("新物体中缺少 Item 组件！");
+            return;
         }
 
-        slot.RefreshUI();
+        // 使用 InstantiateItem 中新生成的 GUID 和数据
+        // 不再手动设置 newItem.itemData = newItemData，因为 InstantiateItem 已经处理了这一步
+
+        // 计算位置
+        Vector2 startPos = transform.position;
+        Vector2 endPos = DropPos;
+
+        float distance = Vector2.Distance(startPos, endPos);
+        float animTime = baseDropDuration + distance * distanceSensitivity;
+
+        // 调用父类 DropItem 实现动画控制
+        newItem.Load();
+        DropItem_Pos(newItem, startPos, endPos, animTime);
+        
+        // 只有当物品完全丢弃完后才清除数据
+        if (slot.Amount <= 0)
+        {
+            slot.ClearData();
+        }
     }
 
-    [Button("快速丢弃")]
+    slot.RefreshUI();
+}    [Button("快速丢弃")]
     public void FastDropItem(int count = 1)
     {
         Vector2 mousePosition = Mouse.current.position.ReadValue();

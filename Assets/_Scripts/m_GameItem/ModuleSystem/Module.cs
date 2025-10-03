@@ -7,10 +7,22 @@ public abstract class Module : MonoBehaviour
 {
     /*  参考代码
    
+ 
+    #region 基础参数
+
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
     public float Data;
+    #endregion
+    #region 模组参数
+
+    public BaseSkillData skillData;
+
+    #endregion
+
+    #region 生命周期
+
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -35,6 +47,8 @@ public abstract class Module : MonoBehaviour
     {
         base.Act();
     }
+    #endregion
+
 
     */
     public abstract ModuleData _Data { get; set; }

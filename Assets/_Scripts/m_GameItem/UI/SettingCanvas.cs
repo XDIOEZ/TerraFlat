@@ -1,16 +1,8 @@
-using DG.Tweening.Core.Easing;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using InputSystem;
 
 public class SettingCanvas : Module
 {
-    [Tooltip("退出并保存按钮")]
-    public Button Button_ExitGame;
     public BasePanel basePanel;
     public Ex_ModData_MemoryPackable ModSaveData;
     PlayerController playerController;
@@ -42,7 +34,10 @@ public class SettingCanvas : Module
 
     public void Start()
     {
-        Button_ExitGame.onClick.AddListener(ExitGame);
+        basePanel.GetButton("保存回并到主界面按钮").onClick.AddListener(ExitGame);
+        basePanel.GetButton("保存游戏").onClick.AddListener(SaveGame);
+        basePanel.GetButton("保存并退出游戏按钮").onClick.AddListener(ClossApp);
+
 
         // 优先从物品所有者获取Controller
         playerController = item.Owner != null
@@ -87,6 +82,24 @@ public class SettingCanvas : Module
         // 注意：调用者（此处是SettingCanvas）必须是MonoBehaviour实例
         GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine());
     }
+    public void SaveGame()
+    {
+        GameManager.Instance.SaveGame();
+        ItemMgr.Instance.User_Player.Load();
+    }
+public void ClossApp()
+{
+        // 注意：调用者（此处是SettingCanvas）必须是MonoBehaviour实例
+        GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine(() => {
+#if UNITY_EDITOR
+        // 在编辑器模式下停止播放
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        // 在构建版本中退出应用
+        Application.Quit();
+#endif
+    }));
+}
     
     // 在对象销毁时取消事件绑定
     private void OnDestroy()

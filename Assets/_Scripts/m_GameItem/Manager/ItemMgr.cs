@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 public class ItemMgr : SingletonMono<ItemMgr>
 {
     [ShowInInspector]
-    public Dictionary<int, Item> RunTimeItems = new();
+    public Dictionary<int, Item> WorldRunTimeItems = new();
 
     [ShowInInspector]
     public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
@@ -84,158 +84,88 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
 
     #region 实例化物品
-    [Button("实例化对象")]
-    // 实例化（通过名称）
-    public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
-    {
-        ItemData templateData = GameRes.Instance.GetItem(itemName).itemData.DeepClone();
-        // 调用通过 ItemData 的实例化方法
-        templateData.Guid = 0;
-        return InstantiateItem(templateData, position, rotation, scale, parent);
-    }
-    public Item InstantiateItem(string itemName, GameObject parent = null, Vector3 position = default)
-    {
-        ItemData templateData = GameRes.Instance.GetItem(itemName).itemData.DeepClone();
-        // 调用通过 ItemData 的实例化方法
-        templateData.Guid = 0;
-        return InstantiateItem(templateData, position, default, default, parent);
-    }
-    // 实例化（通过名称）
-    public Item InstantiateItem(string itemName, GameObject parent = null, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
-    {
-        ItemData templateData = GameRes.Instance.GetItem(itemName).itemData.DeepClone();
-        // 调用通过 ItemData 的实例化方法
-        templateData.Guid = 0;
-        return InstantiateItem(templateData, position, rotation, scale, parent);
-    }
-    [Button("实例化对象")]
-    // 实例化（通过名称）
-    public Item InstantiateItem(string itemName)
-    {
-        ItemData templateData = GameRes.Instance.GetItem(itemName).itemData.DeepClone();
-        // 调用通过 ItemData 的实例化方法
-        templateData.Guid = 0;
-        return InstantiateItem(templateData, default, default, default, null);
-    }
+    // 主要的实例化方法 - 其他方法都应该调用这个
+public Item InstantiateItem(ItemData itemData_, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
+{
+    if (position == default) position = Vector3.zero;
+    if (rotation == default) rotation = Quaternion.identity;
+    if (scale == default || scale == Vector3.zero) scale = Vector3.one;
 
-    // 实例化（通过 ItemData）
-    public Item InstantiateItem(ItemData itemData, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
-    {
-        if (position == default) position = Vector3.zero;
-        if (rotation == default) rotation = Quaternion.identity;
-        if (scale == default || scale == Vector3.zero) scale = Vector3.one;
+    GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData_.IDName, position, rotation, scale);
+    Item item = itemObj.GetComponent<Item>();
 
-        
+    item.itemData = itemData_;
 
-
-        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, position, rotation, scale);
-        itemData.Guid = System.Guid.NewGuid().GetHashCode();
-        Item item = itemObj.GetComponent<Item>();
-        item.itemData = itemData;
-
-
-        if (parent != null)
+        if (WorldRunTimeItems.ContainsKey(item.itemData.Guid))
         {
-            itemObj.transform.SetParent(parent.transform, true);
+            // 实例化时刷新Guid
+            item.itemData.Guid = GenerateGuid();
         }
-        else
-        { 
-            if(ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(position).ToString(), out var chunk))
-            {
-                if (chunk == null)
-                {
-                    ChunkMgr.Instance.GetClosestChunk(itemObj.transform.position, out chunk);
-                }
-                itemObj.transform.SetParent(chunk.transform, true);
-                chunk.AddItem(item);
-            }
-            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(position).ToString(), out var UnActivechunk))
-            {
-                itemObj.transform.SetParent(UnActivechunk.transform, true);
-                chunk.AddItem(item);
-            }
+        // 添加到世界运行物体管理字典中
+        WorldRunTimeItems[item.itemData.Guid] = item;
+        // 分组逻辑
+        AddToGroup(item);
 
-           // ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
-        }
-
-
-       
-
-        RunTimeItems[item.itemData.Guid] = item;
-
-        AddToGroup(item); // 分组逻辑
-
-        return item;
-    }
-    public Item InstantiateItem(ItemData itemData, GameObject parent = null,bool newGuid = false)
+    if (parent != null)
     {
-        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData.transform.position, itemData.transform.rotation, itemData.transform.scale);
-
-        Item item = itemObj.GetComponent<Item>();
-
-        if (parent != null)
+        itemObj.transform.SetParent(parent.transform, true);
+    }
+    else
+    { 
+        if(ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(position).ToString(), out var chunk))
         {
-            itemObj.transform.SetParent(parent.transform, true);
+            if (chunk == null)
+            {
+                ChunkMgr.Instance.GetClosestChunk(itemObj.transform.position, out chunk);
+            }
+            itemObj.transform.SetParent(chunk.transform, true);
+            chunk.AddItem(item);
         }
-        else
+        else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(position).ToString(), out var UnActivechunk))
         {
-            if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var chunk))
-            {
-                itemObj.transform.SetParent(chunk.transform, true);
-            }
-            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var UnActivechunk))
-            {
-                itemObj.transform.SetParent(UnActivechunk.transform, true);
-            }
-
-            ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
+            itemObj.transform.SetParent(UnActivechunk.transform, true);
+            // 注意：这里可能有问题，应该传入UnActivechunk而不是chunk
+            // UnActivechunk.AddItem(item);
         }
-
-
-        item.itemData = itemData;
-
-        RunTimeItems[item.itemData.Guid] = item;
-
-        AddToGroup(item); // 分组逻辑
-
-        return item;
     }
 
-    public Item InstantiateItem(ItemData itemData, GameObject parent = null)
-    {
-        itemData.Guid = System.Guid.NewGuid().GetHashCode();
+    return item;
+}
 
-        GameObject itemObj = GameRes.Instance.InstantiatePrefab(itemData.IDName, itemData.transform.position, itemData.transform.rotation, itemData.transform.scale);
+// 通过名称实例化的重载方法
+public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
+{
+    ItemData templateData = GameRes.Instance.GetPrefab(itemName).GetComponent<Item>().itemData;
+    return InstantiateItem(templateData, position, rotation, scale, parent);
+}
 
-        Item item = itemObj.GetComponent<Item>();
+public Item InstantiateItem(string itemName, GameObject parent = null, Vector3 position = default)
+{
+    return InstantiateItem(itemName, position, default, default, parent);
+}
 
-        if (parent != null)
-        {
-            itemObj.transform.SetParent(parent.transform, true);
-        }
-        else
-        {
-            if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var chunk))
-            {
-                itemObj.transform.SetParent(chunk.transform, true);
-            }
-            else if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(itemData.transform.position).ToString(), out var UnActivechunk))
-            {
-                itemObj.transform.SetParent(UnActivechunk.transform, true);
-            }
+public Item InstantiateItem(string itemName, GameObject parent = null, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
+{
+    return InstantiateItem(itemName, position, rotation, scale, parent);
+}
 
-            ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
-        }
+public Item InstantiateItem(string itemName)
+{
+    return InstantiateItem(itemName, default, default, default, null);
+}
 
+// 通过ItemData和父对象实例化（简化版）
+public Item InstantiateItem(ItemData itemData, GameObject parent = null)
+{
+    // 使用主方法，从itemData中提取transform信息
+    return InstantiateItem(itemData, itemData.transform.position, itemData.transform.rotation, itemData.transform.scale, parent);
+}
 
-        item.itemData = itemData;
-
-        RunTimeItems[item.itemData.Guid] = item;
-
-        AddToGroup(item); // 分组逻辑
-
-        return item;
-    }
+// 生成GUID的辅助方法
+public int GenerateGuid()
+{
+    return System.Guid.NewGuid().GetHashCode();
+}
 
     #endregion
 
@@ -265,7 +195,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
     [Button]
     public Item GetItemByGuid(int guid)
     {
-        if (RunTimeItems.TryGetValue(guid, out var item))
+        if (WorldRunTimeItems.TryGetValue(guid, out var item))
             return item;
         return null;
     }
@@ -286,8 +216,6 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
             SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
 
-            player.gameObject.SetActive(false);
-
             playerCount++;
         }
 
@@ -300,7 +228,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
     {
         // 清理 RunTimeItems 中为 null 的条目
         var keysToRemove = new List<int>();
-        foreach (var pair in RunTimeItems)
+        foreach (var pair in WorldRunTimeItems)
         {
             if (pair.Value == null)
             {
@@ -309,7 +237,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
         }
         foreach (int key in keysToRemove)
         {
-            RunTimeItems.Remove(key);
+            WorldRunTimeItems.Remove(key);
         }
 
         // 清理 RuntimeItemsGroup 中为 null 的列表元素

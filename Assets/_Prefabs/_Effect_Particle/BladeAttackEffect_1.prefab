@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 6680558015646211412}
   - component: {fileID: 7635046391721750622}
   m_Layer: 0
-  m_Name: AttackEffect_01
+  m_Name: BladeAttackEffect_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

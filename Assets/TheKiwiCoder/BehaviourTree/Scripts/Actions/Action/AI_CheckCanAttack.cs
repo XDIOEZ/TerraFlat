@@ -14,7 +14,7 @@ public class AI_CheckCanAttack : ActionNode
 
     protected override State OnUpdate()
     {
-        float dist = Vector2.Distance(context.mover.TargetPosition, context.ColdWeapon.transform.position);
+        float dist = Vector2.Distance(context.mover.TargetPosition, context.Damage.transform.position);
 
         return dist <= TriggerDistance ? State.Success : State.Failure;
     }

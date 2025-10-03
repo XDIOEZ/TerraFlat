@@ -9,8 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4631601396337587673}
-  - component: {fileID: 2818287267629872604}
   - component: {fileID: 8080113317661081312}
+  - component: {fileID: 3264581480783965184}
   m_Layer: 6
   m_Name: TrunBody
   m_TagString: Untagged
@@ -33,21 +33,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2818287267629872604
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8003214857151942769}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7ed45437cf9be340924e1e57191c5b9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  OrganName: TrunBody
-  rotationSpeed: 99999
-  Direction: {x: 0, y: 0}
 --- !u!212 &8080113317661081312
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -100,3 +85,29 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &3264581480783965184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8003214857151942769}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43bd98647b9a46e4bb3baaa02a665c3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  rotationDuration: 0.3
+  controlledTransforms: []
+  currentDirection: {x: 1, y: 0}
+  isTurning: 0
+  OnTrun:
+    _PersistentCalls: []
+  faceMouse: {fileID: 0}
+  modData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 

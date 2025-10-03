@@ -122,8 +122,10 @@ public class TileEffectReceiver : Module
             ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
             if (chunk == null)
             {
-                Debug.LogError($"TileEffectReceiver: 未找到有效的 Chunk 组件！, 对象为{item.itemData.IDName}");
-           return;
+               Debug.LogWarning("TileEffectReceiver: 未找到有效的 Chunk 组件！");
+               if (item != null)
+               Debug.LogWarning($"TileEffectReceiver: 未找到有效的 Chunk 组件！, 对象为{item.itemData.IDName}");
+               return;
             }
             Cache_map = chunk.Map;
         }

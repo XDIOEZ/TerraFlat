@@ -2,18 +2,20 @@ using UnityEngine;
 
 public class Mod_Droping : Module
 {
-    public override ModuleData _Data 
-    { 
-        get => modData; 
-        set => modData = (Ex_ModData)value; 
+
+    public override ModuleData _Data
+    {
+        get => modData;
+        set => modData = (Ex_ModData)value;
     }
-    
+
     public Mod_ItemDroper.Drop drop;
     public Ex_ModData modData;
+    public Chunk LastChunk; // 上一帧 item 所处的 chunk
 
     [Header("丢弃动画参数")]
     [Tooltip("垂直方向最大高度（与之前一致）")]
-    public float arcHeight = 1f;             // 垂直方向最大高度（与之前一致）
+    public float arcHeight = 1f;
 
     public override void Awake()
     {
@@ -56,7 +58,7 @@ public class Mod_Droping : Module
 
         // 使用存储在drop中的控制点进行贝塞尔插值计算位置
         Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
-        
+
         // 垂直方向叠加正弦高度，形成抛物线效果
         pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
 
@@ -64,8 +66,8 @@ public class Mod_Droping : Module
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
-        // TODO: 归纳到对应Chunk中
-        ChunkMgr.Instance.UpdateItem_ChunkOwner(drop.item);
+        // 更新 Chunk 归属
+        UpdateChunkOwner(drop.item);
 
         // 检查动画是否完成
         if (t >= 1f)
@@ -74,6 +76,42 @@ public class Mod_Droping : Module
             drop = null; // 销毁droping
         }
     }
+
+/// <summary>
+/// 更新物品所属的 Chunk
+/// </summary>
+/// <param name="item">需要更新归属的物品</param>
+private void UpdateChunkOwner(Item item)
+{
+    // 获取当前物品所在的 Chunk 坐标
+    Vector2Int currentChunkPos = Chunk.GetChunkPosition(item.transform.position);
+    string currentChunkKey = currentChunkPos.ToString();
+
+    // 如果 LastChunk 为空或者需要切换 Chunk
+    if (LastChunk == null || LastChunk.MapSave.MapPosition != currentChunkPos)
+    {
+        // 如果有旧的 Chunk，则从旧 Chunk 中移除物品
+        if (LastChunk != null)
+        {
+            LastChunk.RemoveItem(item);
+        }
+
+        // 添加到新的 Chunk
+        if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(currentChunkKey, out Chunk newChunk))
+        {
+            newChunk.AddItem(item);
+            LastChunk = newChunk;
+        }
+        else
+        {
+            // 如果目标 Chunk 不存在，尝试获取最近的 Chunk
+
+                Debug.LogError("无法找到合适的 Chunk 来放置物品");
+                LastChunk = null;
+            
+        }
+    }
+}
 
     public override void Save()
     {

@@ -23,7 +23,7 @@ public class AttackTrigger : Module
     bool HitStop = false;
     public bool ChangeHand = false;
 
-    TurnBody TrunBody;
+    Mod_TurnBody TrunBody;
 
 
     #region 攻击行为的状态参数
@@ -51,7 +51,7 @@ public class AttackTrigger : Module
 
     public override void Load()
     {
-         TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as TurnBody;
+         TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
         TrunBody.OnTrun += ToOtherDirection;
     }
 
