@@ -81,8 +81,16 @@ namespace TheKiwiCoder
         {
             InitTree();
         }
+        public void Start()
+        {
+            
+        }
 
         public override void Save()
+        {
+           
+        }
+        public void OnDestroy()
         {
             StopTree();
         }

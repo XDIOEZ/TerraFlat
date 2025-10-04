@@ -3,9 +3,9 @@ using UnityEngine;
 
 public class SlicingEffect : GameEffect
 {
-    [Header("特效设置")]
+    [Header("特效参数")]
     public int sampleFrames = 2; // 采样帧数
-    public float lifetime = 0.3f; // 特效生命周期
+    public float lifetime = 0.3f; // 特效持续时间
     
     private Transform weaponTransform; // 武器变换组件
     private Vector2 startWeaponPosition; // 武器初始位置
@@ -18,17 +18,32 @@ public class SlicingEffect : GameEffect
         startWeaponPosition = Sender.position;
         hasStarted = true;
         
-        // 启动特效方向计算协程
+        // 启动特效持续时间协程
         StartCoroutine(CalculateDirectionAndRotate());
     }
 
     private IEnumerator CalculateDirectionAndRotate()
     {
-        // 等待指定帧数以获得更准确的方向
+        // 等待指定帧数以获取准确的方向
         for (int i = 0; i < sampleFrames; i++)
+        {
+            // 检查weaponTransform是否存在，如果不存在则销毁特效
+            if (weaponTransform == null)
+            {
+                Destroy(gameObject);
+                yield break;
+            }
             yield return null;
+        }
 
-        // 计算武器方向向量
+        // 检查weaponTransform是否存在，如果不存在则销毁特效
+        if (weaponTransform == null)
+        {
+            Destroy(gameObject);
+            yield break;
+        }
+
+        // 计算武器移动方向
         Vector2 endWeaponPosition = weaponTransform.position;
         Vector2 dir = (endWeaponPosition - startWeaponPosition).normalized;
 
@@ -50,7 +65,7 @@ public class SlicingEffect : GameEffect
     // Start is called before the first frame update
     void Start()
     {
-        // 如果没有通过Effect方法初始化，则使用默认设置
+        // 如果没有通过Effect方法初始化，则使用默认参数
         if (!hasStarted)
         {
             startWeaponPosition = transform.position;
@@ -63,6 +78,10 @@ public class SlicingEffect : GameEffect
     // Update is called once per frame
     void Update()
     {
-        
+        // 检查weaponTransform是否存在，如果不存在则销毁特效
+        if (weaponTransform == null)
+        {
+            Destroy(gameObject);
+        }
     }
 }

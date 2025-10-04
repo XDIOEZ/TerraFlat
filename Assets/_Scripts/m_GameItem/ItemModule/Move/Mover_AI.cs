@@ -1,9 +1,4 @@
-using NaughtyAttributes;
-using TMPro;
-using UltEvents;
 using UnityEngine;
-using UnityEngine.AI;
-using UnityEngine.UI;
 using DG.Tweening;
 using Sirenix.OdinInspector;
 using Pathfinding;
@@ -22,7 +17,7 @@ public class Mover_AI : Mover
     public Transform target; // 可选目标物体
 
     [Header("停止距离")]
-    public float stopDistance = 0.1f;
+    public float stopDistance = 0.5f;
 
     [Header("动画控制")]
     private Tweener moveTween;
@@ -63,32 +58,42 @@ public class Mover_AI : Mover
             return;
         }
 
-        if (target == null)
+        // 检查是否已经到达目标，如果未到达则执行移动
+        if (!HasReachedTarget)
         {
-            // 调用 Move 实现移动
-            Move(TargetPosition, deltaTime);
-        }
-       
-        if(target != null)
-        {
-            Move(target.position, deltaTime);
-        }
-
-        if (aiPath.remainingDistance <= stopDistance)
-        {
-            HasReachedTarget = true;
-        }
-        else
-        {
-            HasReachedTarget = false;
+            if (target == null)
+            {
+                // 调用 Move 实现移动
+                Move(TargetPosition, deltaTime);
+            }
+           
+            if(target != null)
+            {
+                Move(target.position, deltaTime);
+            }
         }
 
+        // 更新是否到达目标的状态
+        if (aiPath != null)
+        {
+            if (aiPath.remainingDistance <= stopDistance)
+            {
+                HasReachedTarget = true;
+            }
+            else
+            {
+                HasReachedTarget = false;
+            }
+        }
     }
 
     public override void Move(Vector2 targetPosition, float deltaTime = 0.0f)
     {
-        aiPath.maxSpeed = SpeedValue;
-        aiPath.destination = targetPosition;
+        if (aiPath != null)
+        {
+            aiPath.maxSpeed = SpeedValue;
+            aiPath.destination = targetPosition;
+        }
     }
 
     #endregion

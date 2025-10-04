@@ -156,7 +156,9 @@ public ItemData Get_NewItemData()
     [Tooltip("物品的更新频率，单位：秒")]
     public float updateInterval = 0f; // 每0.1秒执行一次
     float updateTimer = 0f;
-    public void Update()
+public void Update()
+{
+    try
     {
         if (updateInterval <= 0.1f)
         {
@@ -178,6 +180,12 @@ public ItemData Get_NewItemData()
             }
         }
     }
+    catch (Exception ex)
+    {
+        Debug.LogError($"[Item] 物品 {gameObject.name} 在Update中发生错误: {ex.Message}", this);
+        Debug.LogException(ex);
+    }
+}
 
     /// <summary>
     /// 加载并初始化模块（包括缺失补齐、初始化字典等）

@@ -6,7 +6,7 @@ public static class ModText
 {
     #region A
     public static string Attacker = "攻击模块";
-    public static string Animator = "动画模块";
+    public static string AnimatorReceiver = "动画模块";
     #endregion
 
     #region B

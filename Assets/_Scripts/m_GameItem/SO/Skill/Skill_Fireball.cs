@@ -23,7 +23,8 @@ public class Skill_Fireball : BaseSkillAction
         
         // 实例化位置向外(目标位置)移动1个单位避免对自己造成伤害
         Vector2 direction = (runtimeSkill.targetPoint - (Vector2)runtimeSkill.skillSender.transform.position).normalized;
-        Vector2 spawnPosition = (Vector2)runtimeSkill.skillSender.transform.position + direction*2;
+        Vector2 spawnPosition = (Vector2)runtimeSkill.skillManager.transform.position + direction*2;
+        spawnPosition += runtimeSkill.skillManager.castingPointOffset["Fireball"];
         runtimeSkill.skillInstanceDict["Fireball"].transform.position = new Vector3(spawnPosition.x, spawnPosition.y, runtimeSkill.skillSender.transform.position.z);
     }
 

@@ -8,13 +8,13 @@ using static AttackTrigger;
 public class Mod_Damage_AI : Mod_Damage
 {
     public Mod_TurnBody TrunBody;
-    public Mod_Animator animator;
+    public Mod_AnimatorReceiver animator;
 
     public override void Load()
     {
         base.Load();
         TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
-        animator = item.itemMods.GetMod_ByID(ModText.Animator) as Mod_Animator;
+        animator = item.itemMods.GetMod_ByID(ModText.AnimatorReceiver) as Mod_AnimatorReceiver;
         TrunBody.AddControlledTransform(transform);
         animator.OnAttackStart += StartAttack;
         animator.OnAttackStop += StopAttack;

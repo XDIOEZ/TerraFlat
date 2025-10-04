@@ -67,6 +67,7 @@ public class Mod_ItemDroper : Module
 
         item.itemData.Stack.CanBePickedUp = false;
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+        itemDrop.Load();
         itemDrop.drop = drop;
         itemDrop.arcHeight = arcHeight; // 传递弧高参数
         drops.Add(drop);
@@ -117,6 +118,7 @@ public class Mod_ItemDroper : Module
         };
         
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+        itemDrop.Load();
         itemDrop.drop = drop;
         itemDrop.arcHeight = arcHeight; // 传递弧高参数
         item.itemData.Stack.CanBePickedUp = false;

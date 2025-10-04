@@ -89,6 +89,9 @@ public partial class Mod_ColdWeapon : Module
         
         // 初始化时缓存伤害模块引用
         CacheDamageModule();
+        
+        // 初始化时将伤害模块设置为失活状态
+        SetInitialDamageState();
     }
 
     public override void Save()
@@ -175,6 +178,35 @@ public partial class Mod_ColdWeapon : Module
         {
             cachedDamageModule = item.itemMods.GetMod_ByID("Mod_Damage") as Mod_Damage;
             isDamageModuleCached = true;
+        }
+    }
+    
+    // 初始化时将伤害模块设置为失活状态
+    private void SetInitialDamageState()
+    {
+        // 如果尚未缓存，先缓存引用
+        if (!isDamageModuleCached)
+        {
+            CacheDamageModule();
+        }
+        
+        // 使用缓存的引用将伤害模块设置为失活状态
+        if (cachedDamageModule != null)
+        {
+            cachedDamageModule.SetDamageEnabled(false);
+        }
+        else
+        {
+            // 如果缓存中没有找到，尝试重新获取一次（防止运行时添加模块）
+            cachedDamageModule = item.itemMods.GetMod_ByID("Mod_Damage") as Mod_Damage;
+            if (cachedDamageModule != null)
+            {
+                cachedDamageModule.SetDamageEnabled(false);
+            }
+            else
+            {
+                Debug.LogWarning("[Mod_ColdWeapon] 未找到 Mod_Damage 模块，无法初始化伤害状态");
+            }
         }
     }
     

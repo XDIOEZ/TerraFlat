@@ -16,5 +16,6 @@ public class Mod_FocusPoint_AI : Mod_FocusPoint
     {
         Data.Move_Point = mover.TargetPosition;
         Data.See_Point = mover.TargetPosition;
+        Data.DefaultSkill_Point = mover.TargetPosition;
     }
 }

@@ -18,6 +18,14 @@ public class AnimationPlayer : ActionNode
     [Header("切换模式下的布尔值")]
     public bool Setbool = true;
 
+    [Header("动画层级")]
+    [Tooltip("动画播放的层级（0为基础层，数值越大层级越高）")]
+    public int layerIndex = 0;
+    
+    [Header("播放时权重设置")]
+    [Tooltip("在播放动画时将权重设置为1，然后在动画播放完毕后将权重设置为0")]
+    public float PlayWeight = 1f;
+
     [Header("控制选项")]
     [Tooltip("是否自动获取动画长度（仅在Start时获取一次）")]
     public bool autoGetAnimationLength = false;
@@ -28,6 +36,7 @@ public class AnimationPlayer : ActionNode
     private float startTime;
     private float animationLength = 0f;
     private int animationHash = 0;
+    private bool hasSetWeight = false;
 
     protected override void OnStart()
     {
@@ -38,7 +47,10 @@ public class AnimationPlayer : ActionNode
         switch (playType)
         {
             case PlayType.动画名:
-                context.animator.Play(animationHash, 0);
+                context.animator.Play(animationHash, layerIndex);
+                // 在播放动画时将权重设置为指定值
+                context.animator.SetLayerWeight(layerIndex, PlayWeight);
+                hasSetWeight = true;
                 if (autoGetAnimationLength)
                 {
                     animationLength = GetAnimationLength(animationName);
@@ -50,6 +62,9 @@ public class AnimationPlayer : ActionNode
                 break;
             case PlayType.触发器:
                 context.animator.SetTrigger(animationName);
+                // 在触发器模式下也设置权重
+                context.animator.SetLayerWeight(layerIndex, PlayWeight);
+                hasSetWeight = true;
                 if (autoGetAnimationLength)
                 {
                     animationLength = GetAnimationLength(animationName);
@@ -60,6 +75,12 @@ public class AnimationPlayer : ActionNode
 
     protected override void OnStop()
     {
+        // 动画结束时将权重设置为0
+        if (hasSetWeight && context.animator != null)
+        {
+            context.animator.SetLayerWeight(layerIndex, 0f);
+        }
+        
         // 可选：你可以在动画结束后重置Bool状态
         // if (playType == PlayType.切换) {
         //     context.animator.SetBool(animationName, false);

@@ -19,10 +19,7 @@ public class Mod_Droping : Module
 
     public override void Awake()
     {
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.Drop;
-        }
+         _Data.ID = ModText.Drop;
     }
 
     public override void Load()
@@ -190,6 +187,7 @@ private void UpdateChunkOwner(Item item)
         };
         
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
+        itemDrop.Load();
         itemDrop.drop = drop;
         itemDrop.arcHeight = arcHeight; // 传递弧高参数
         item.itemData.Stack.CanBePickedUp = false;

@@ -11,6 +11,7 @@ public class Laser_Skill : MonoBehaviour
     public LineRenderer lineRenderer;
     public Transform laserEffect;
     public BoxCollider2D laserCollider; // 2D激光碰撞器
+    public List<Module> mods = new List<Module>();
     
     [Header("预制体引用")]
     public GameObject laserEffectPrefab;
@@ -23,7 +24,7 @@ public class Laser_Skill : MonoBehaviour
             // 初始化激光线
             if (lineRenderer != null)
             {
-                lineRenderer.SetPosition(0, runtimeSkill.skillSender.transform.position);
+                lineRenderer.SetPosition(0, runtimeSkill.skillManager.transform.position+ (Vector3)runtimeSkill.skillManager.castingPointOffset["Laser"]);
                 lineRenderer.SetPosition(1, new Vector3(runtimeSkill.targetPoint.x, runtimeSkill.targetPoint.y, runtimeSkill.skillSender.transform.position.z));
             }
             
@@ -36,12 +37,34 @@ public class Laser_Skill : MonoBehaviour
             
             // 获取子对象上的BoxCollider2D组件
             laserCollider = GetComponentInChildren<BoxCollider2D>();
+            
+            // 获取所有子对象上的Module组件
+            mods = new List<Module>(GetComponentsInChildren<Module>());
+            
+            // 加载所有模块
+            foreach (var mod in mods)
+            {
+                mod.Load();
+            }
         }
     }
 
     // Update is called once per frame
     void Update()
     {
+        // 检查skillSender是否存在，如果不存在则销毁技能
+        if (runtimeSkill == null || runtimeSkill.skillSender == null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        
+        // 更新所有模块
+        foreach (var mod in mods)
+        {
+            mod.ModUpdate(Time.deltaTime);
+        }
+        
         // 将targetPoint的引用改为 runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point
         if (runtimeSkill != null)
         {
@@ -103,9 +126,26 @@ public class Laser_Skill : MonoBehaviour
     // 销毁时清理
     private void OnDestroy()
     {
-        if (laserEffect != null)
+        // 检查skillSender是否存在，如果存在则保存模块
+        if (runtimeSkill != null && runtimeSkill.skillSender != null)
         {
-            Destroy(laserEffect.gameObject);
+            if (laserEffect != null)
+            {
+                // 保存所有模块
+                foreach (var mod in mods)
+                {
+                    mod.Save();
+                }
+                Destroy(laserEffect.gameObject);
+            }
+        }
+        else
+        {
+            // 如果skillSender不存在，直接清理特效
+            if (laserEffect != null)
+            {
+                Destroy(laserEffect.gameObject);
+            }
         }
     }
 }

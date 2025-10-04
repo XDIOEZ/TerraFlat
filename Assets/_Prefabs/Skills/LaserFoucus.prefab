@@ -4907,6 +4907,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: DamageInterval
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: damageInterval
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_Name
       value: Mod_Damage_1

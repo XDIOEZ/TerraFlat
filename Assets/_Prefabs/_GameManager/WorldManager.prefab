@@ -125,6 +125,55 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   OnChunkLoadFinish:
     _PersistentCalls: []
+--- !u!1 &3563432657672857351
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2158920630664488977}
+  - component: {fileID: 2774324081146142469}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2158920630664488977
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3563432657672857351}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 891121404665747283}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2774324081146142469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3563432657672857351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: ec205a5e3ef5d6b49ba00791799edcc5, type: 2}
 --- !u!1 &4565539948505994440
 GameObject:
   m_ObjectHideFlags: 0
@@ -162,6 +211,7 @@ Transform:
   - {fileID: 5897130074279119965}
   - {fileID: 1888604326910977525}
   - {fileID: 7895695706117877763}
+  - {fileID: 2158920630664488977}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &9058411785591302946
@@ -177,11 +227,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LoadedCount: 0
-  ADBLabels_Prefab: []
-  ADBLabels_CraftingRecipe: []
-  ADBLabels_TileBase: []
-  ADBLabels_BuffData: []
-  ADBLabels_InventoryInit: []
+  ADBLabels: []
   isLoadFinish: 0
 --- !u!114 &7400242115634630897
 MonoBehaviour:
@@ -386,19 +432,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78396926cbbfc4ac3b48fc5fc34a87d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 1
+  version: 1073741824
   data:
-    dataString: UEsDBBQAAAgIAABAIexBCfLcVgIAABcFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VEuT2jAM/iuMz6UTKEtLby2v7YFdZtnOXnIxtkI8OHbGj+U1/PfKTkKytD3Flj5J3yfJuRChbAnMabM0gq80B/K9R8KZfOq1zkc40p1WG3GGBvMmuMsDiEbMC3VCo30QwqwuwBnBfqidDOAEjV6JTJtizncw1dZZNGdUWkCX0S5EKzRdeuSIn/4khJzq0HP49q54YqAcmBY3+DyYDJPJcDLvJ+N/RnjFJC1K4IF7JzBpCuApAhXqqjFBA9NSCluTIu5URtEv9BQkc0FRYCQSsDmIXe7wMuwGPmeZBVcTMvQ0Ewb7VGUkP3XVvILafcXqnUofaoxHkU6Vc/WXuz+I7szo4rEpW4lxuWB7JMiodZ3mds2zj7y9OlC5p1sJbzmoJ7002iuOTmd8CPUWhrP2elM2zYHtW3tF9c7oy7bZ97MMGq5R/HEqRbGtXXjdSB0bHccPBkfyC+nG5bA1Cq2Bw28Lr3TX3aLasRDGOnTVGlUgt9XeBChZ4CG0nXk31UaB6SYoQVHpTmtM4+7nd+f7f9SChvdSF699zTO4C4nmFp8kd661PtxGZXN9WIHNn72TQkHb5+B4wj5NtVLVenUlNWEbbzLKuhx2XvCPm0XGjE6S5EsC4+FojPB+AjDcstGAJeNv/OvDA4mrJxQKpXJdMa37g2NTLSmFa9b8R3pLQ8u469zQw1KcC21bpFCZ3jADoJ6rDDfmYLAIvkc+5wI7tAHnhIoDJ5eUSM32wNNbojRKnR+doWmbJSWleNcuWFIyjf+OlATzbZXXBt4FHELxJtmVXP8AUEsDBBQAAAgIAABAIexdXqZKbQAAAHgAAAAJACQAbWV0YS5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0Bq1YqSy0qzszPU7JSMNEz0jM011FQSi9KLMgoBooYgjilmSkgdrSSWXKipYGBsUGqmZGJWVpisq5BaqpRUrKJYbKBmUWKuampUixQfUllQapfYm4qRE9AYklGWmZeSmZeup57UWaKO8hopdhaAFBLAQItABQAAAgIAABAIexBCfLcVgIAABcFAAALACQAAAAAAAAAAAAAAAAAAABncmFwaDAuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLAQItABQAAAgIAABAIexdXqZKbQAAAHgAAAAJACQAAAAAAAAAAAAAAKMCAABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwUGAAAAAAIAAgC4AAAAWwMAAAAA
-    upgradeData: 
+    dataString: UEsDBBQAAAgIAABAIewrATGRtAIAAPgFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VE1z2jAQ/SuMzqVjaEJLby0Q0kMSpqSTQ52DIi1Yg5A8+giQDP+9u7KNDW1nPGP57dd7uyu/M2V8CSJYN3dK3lkJ7GuP0Zl96LXGW9jztTVL9QaNz5OSoSAnnnx+8qAs4gMK83YLwSnxzaw1OWcIRqNW1m1ncg0T64NHeMW1BzQ5GyjaIPTeY3t89ccUcqhD3+jdO+JJgAngWr/Bx8F4mI2H41k/G/0zIhqh+bYESdw7gVlTAE/J0aCu2oc0CKu18jUpFg5lEv2TH0iyVBwFJiLkW4BaFwE/ht3Ah9XKQ6gJOX6YKod9qjKy77Zq3pb7TcXqletINUZXiU6V8+4vc3+QzCtnt7dN2UpMKJTYIEHBfeg0twtPz3lHs+N6w180PBVg7u3c2WgkGoOLFBo9DKft50nZpACxafGK6gUYy7bZl7MkDcckfr8MUJ50ZC32y4Nfapu63ighUw2l9QCHI/uBctLy+DoBosQREzzydXfLasONcj6gqe5BjZLvAucDEoyAuu19cjDE7sVGR7nYDR5obiKGiXUGXLdCCYbrcFhgxnC5ABe2/0fdcLpwNbva1tyji5AEt/5ZdmFa2N1p1i5q8GmXm9PvZ5qBL+zuDnzxEINWBtoBkuEeGzyxxlR725XahC2jW3HR5RZgH6KDKQ88lUM+uGCyG4s9TCEmak27nBQkSqiAnmfqcMGxsE4wu7dIDcGzd+K/jkqe3xA2EnycZZ8yGA2vRpi8nwEMX8TVQGSjL/Lz9TVLV0gZ7DfXi6ph9ZhwvbqzMXhfmh9ib+54mS6tdHw3V29b69t2KbOyS+EAzMN5Cg8Oq+CPRc6kQp1LCEGZtJnsPWfaig3I/JQoT62d7YPjeZslZ6V6tYGQnE3STzBnBJ/uJC7vq4IdFT9LBhqHB/JRadjykkzZkR3/AFBLAwQUAAAICAAAQCHs4YZ9QmwAAAB3AAAACQAkAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAatWKkstKs7Mz1OyUjDVM9az0FFQSi9KLMgoBgoYgjilmSkgdrSSWXKipYGBsUGqmZGJWVpisq5BaqpRUrKJYbKBmUWKuampUixQfUllQapfYm4qRE9AYklGWmZeSmZeup57UWaKO8hopdhaAFBLAQItABQAAAgIAABAIewrATGRtAIAAPgFAAALACQAAAAAAAAAAAAAAAAAAABncmFwaDAuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLAQItABQAAAgIAABAIezhhn1CbAAAAHcAAAAJACQAAAAAAAAAAAAAAAEDAABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwUGAAAAAAIAAgC4AAAAuAMAAAAA
     file_cachedStartup: {fileID: 0}
-    data_cachedStartup: 
     cacheStartup: 0
   showNavGraphs: 1
   showUnwalkableNodes: 0
   debugMode: 4
   debugFloor: 0
-  debugRoof: 1
-  manualDebugFloorRoof: 0
+  debugRoof: 5000
+  manualDebugFloorRoof: 1
   showSearchTree: 0
   unwalkableNodeDebugSize: 0.5
   logPathResults: 3
@@ -450,16 +494,18 @@ MonoBehaviour:
   - 31
   heuristic: 1
   heuristicScale: 1
-  threadCount: 1
+  threadCount: 8
   maxFrameTime: 10
   batchGraphUpdates: 1
   graphUpdateBatchingInterval: 0.2
+  navmeshUpdates:
+    updateInterval: 0
   euclideanEmbedding:
     mode: 0
     seed: 0
     pivotPointRoot: {fileID: 0}
     spreadOutCount: 1
-  showGraphs: 0
+  showGraphs: 1
 --- !u!114 &1976977817011761695
 MonoBehaviour:
   m_ObjectHideFlags: 0

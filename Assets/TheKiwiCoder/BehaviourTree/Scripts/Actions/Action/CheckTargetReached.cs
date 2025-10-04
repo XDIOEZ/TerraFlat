@@ -11,6 +11,7 @@ public class CheckTargetReached : ActionNode
     protected override void OnStart()
     {
         // 不需要初始化操作
+        context.mover.stopDistance = distanceThreshold;
     }
 
     protected override void OnStop()
@@ -37,13 +38,11 @@ public class CheckTargetReached : ActionNode
         if (distanceToTarget <= distanceThreshold)
         {
             // 已经到达目标点
-            context.mover.HasReachedTarget = true;
             return State.Success;
         }
         else
         {
             // 还未到达目标点
-            context.mover.HasReachedTarget = false;
             return State.Failure;
         }
     }

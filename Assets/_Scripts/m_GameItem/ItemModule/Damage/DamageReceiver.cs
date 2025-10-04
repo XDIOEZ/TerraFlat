@@ -221,7 +221,7 @@ public class DamageReceiver_SaveData
 
 public virtual float Hurt(IDamageSender damageSender)
 {
-    if (Hp <= 0) return -1;
+    if (Hp <= 0||item==null) return -1;
 
     // ⏱️ 受伤间隔判断
     if (Time.time - lastDamageTime < Data.DamageInterval)

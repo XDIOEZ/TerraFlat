@@ -24,7 +24,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  TriggerDistance: 1
+  maxAttackDistance: 0.5
+  minAttackDistance: 0
 --- !u!114 &-8784302927620717348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,6 +185,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-8419945662487547705
@@ -759,6 +762,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-5883202885506671592
@@ -1059,6 +1064,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-4806776583782100047
@@ -1089,6 +1096,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-4802761802709212652
@@ -1201,6 +1210,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-4492235781421070150
@@ -1500,6 +1511,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-3324944576322441398
@@ -1718,6 +1731,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-2467991973311567967
@@ -2026,6 +2041,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-1268942347569492764
@@ -2297,6 +2314,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-610888882866647540
@@ -2404,6 +2423,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-251365871851888401
@@ -2999,6 +3020,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &1884513089265405469
@@ -3056,6 +3079,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &1962888412019463015
@@ -3266,6 +3291,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &2516835987763106837
@@ -3428,6 +3455,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &3155156957907860175
@@ -3701,6 +3730,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &3699032121658888701
@@ -3759,6 +3790,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &3774833969970170297
@@ -3899,6 +3932,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4037455240391746796
@@ -3981,6 +4016,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4252713523024202875
@@ -4065,6 +4102,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4444936695376520582
@@ -4149,6 +4188,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4661644968950011588
@@ -4335,6 +4376,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &5529793143648280316
@@ -4365,6 +4408,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &5546224442217254369
@@ -4759,6 +4804,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 0
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &6661792466673039309
@@ -4865,7 +4912,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  TriggerDistance: 1
+  maxAttackDistance: 0.5
+  minAttackDistance: 0
 --- !u!114 &7083718520886790247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4918,6 +4966,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &7146830462319604123
@@ -5148,6 +5198,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &8172152478226543665
@@ -5226,6 +5278,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 0
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &8385413759885899945
@@ -5339,6 +5393,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &8837598550418380743
@@ -5395,6 +5451,8 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &8976793292346625333
@@ -5513,6 +5571,8 @@ MonoBehaviour:
   time: 0
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &9205953963857923398
@@ -5543,5 +5603,7 @@ MonoBehaviour:
   time: 1
   playType: 0
   Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1

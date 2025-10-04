@@ -24,7 +24,6 @@ public class Move : ActionNode
     {
         context.mover.IsRunning = true;
         context.mover.HasReachedTarget = false;
-        context.mover.Move(context.mover.TargetPosition);
     }
 
     protected override void OnStop()

@@ -50,7 +50,11 @@ public class CameraFollowManager : Module
     {
         // 获取PlayerController并绑定鼠标滚轮事件
         PlayerController = GetComponentInParent<PlayerController>();
-        PlayerController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
+        if (PlayerController != null && PlayerController._inputActions != null)
+        {
+            // 注意：Win10Actions是结构体，不能与null比较，直接绑定事件
+            PlayerController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
+        }
 
         // 获取跟随物体
         CameraFollowItem = GetComponentInParent<Item>();
@@ -60,17 +64,32 @@ public class CameraFollowManager : Module
         ControllerCamera = GetComponentInChildren<Camera>();
 
         // 初始化虚拟摄像机跟随目标
-        Vcam.Follow = CameraFollowItem.transform;
+        if (Vcam != null && CameraFollowItem != null)
+        {
+            Vcam.Follow = CameraFollowItem.transform;
+        }
 
-        // 重命名摄像机物体
-        transform.name = $"{CameraFollowItem.name} 的 Camera";
+        // 重命名摄像机物体（添加空值检查）
+        if (CameraFollowItem != null)
+        {
+            transform.name = $"{CameraFollowItem.name} 的 Camera";
+        }
 
-        // 将摄像机脱离父对象
-        ControllerCamera.transform.SetParent(null);
-        vcam.transform.SetParent(null);
+        // 将摄像机脱离父对象（添加空值检查）
+        if (ControllerCamera != null)
+        {
+            ControllerCamera.transform.SetParent(null);
+        }
+        if (vcam != null)
+        {
+            vcam.transform.SetParent(null);
+        }
 
-        // 初始化摄像机视野
-        Vcam.m_Lens.OrthographicSize = Player.PovValue;
+        // 初始化摄像机视野（添加空值检查）
+        if (Vcam != null && Player != null)
+        {
+            Vcam.m_Lens.OrthographicSize = Player.PovValue;
+        }
 
         // 重置旋转
         transform.rotation = Quaternion.identity;
@@ -79,6 +98,16 @@ public class CameraFollowManager : Module
     public override void Save()
     {
         // TODO: 实现保存逻辑
+    }
+    
+    // 销毁时调用，解除事件绑定
+    private void OnDestroy()
+    {
+        // 解除事件绑定
+        if (PlayerController != null && PlayerController._inputActions != null)
+        {
+            PlayerController._inputActions.Win10.CtrlMouse.performed -= PovValueChanged;
+        }
     }
     #endregion
 
@@ -102,7 +131,7 @@ public class CameraFollowManager : Module
     /// <param name="delta">视野变化值</param>
     public void ChangeCameraView(float delta)
     {
-        if (Player == null) return;
+        if (Player == null || Vcam == null) return;
 
         Player.PovValue += delta;
         Vcam.m_Lens.OrthographicSize += delta;

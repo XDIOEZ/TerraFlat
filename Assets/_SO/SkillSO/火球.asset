@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8676df5df64c2e944b438c948abcea0a, type: 3}
+  m_Name: "\u706B\u7403"
+  m_EditorClassIdentifier: 
+  skillName: "\u65B0\u6280\u80FD"
+  description: "\u6280\u80FD\u63CF\u8FF0"
+  icon: {fileID: 0}
+  duration: 2
+  initialPrograss: 0
+  speed: 20
+  Actions:
+  - {fileID: 11400000, guid: 9f430ffddb1847844ba26f043bb6c177, type: 2}

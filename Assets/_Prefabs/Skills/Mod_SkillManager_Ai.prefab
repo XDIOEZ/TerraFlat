@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &6051495016992970404
+--- !u!1 &2097719820303548403
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,59 +8,55 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6320687241328722709}
-  - component: {fileID: 7067053332060328374}
+  - component: {fileID: 8201574297183980812}
+  - component: {fileID: 8002098528376656515}
   m_Layer: 0
-  m_Name: "\u4E22\u5F03\u6A21\u5757"
+  m_Name: Mod_SkillManager_Ai
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6320687241328722709
+--- !u!4 &8201574297183980812
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6051495016992970404}
+  m_GameObject: {fileID: 2097719820303548403}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -4.5, y: 10, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7067053332060328374
+--- !u!114 &8002098528376656515
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6051495016992970404}
+  m_GameObject: {fileID: 2097719820303548403}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b39a73c536f62e74d8f93a26a14b5a28, type: 3}
+  m_Script: {fileID: 11500000, guid: 3f4580e040094c24e8e474e92f1b75be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  drop:
-    itemGuid: 0
-    startX: 0
-    startY: 0
-    endX: 0
-    endY: 0
-    controlX: 0
-    controlY: 0
-    time: 0
-    progressTime: 0
-    rotationSpeed: 360
-  modData:
+  ModSaveData:
     Name: 
     ID: 
     isRunning: 1
     Type: 0
     BitData: 
-  LastChunk: {fileID: 0}
-  arcHeight: 1
+  Data: 0
+  CurrentSelectSkilIndex: 0
+  SkillNameList:
+  - "\u6FC0\u5149"
+  skillDataList:
+  - {fileID: 11400000, guid: 3604d48e3504a7d4ba89c1ee40a320bf, type: 2}
+  focusPoint: {fileID: 0}
+  controller: {fileID: 0}
+  animatorReceiver: {fileID: 0}
