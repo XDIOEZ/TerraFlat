@@ -347,6 +347,7 @@ public void Update()
         ModuleSave();
     }
 
+    [Button("激活")]
     public virtual void Act()
     {
         Debug.Log("Item Act");

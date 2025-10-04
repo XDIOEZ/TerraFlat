@@ -14,7 +14,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     public GameObject SunAndMoonObj { get; private set; }
 
     [Header("准备好的星球数据")]
-    public PlanetData Ready_planetData = new PlanetData();
+    public PlanetData Ready_planetData = new ();
     [Header("准备好的时间数据")]
     public TimeData Ready_timeData = new TimeData();
 
@@ -92,6 +92,8 @@ public IEnumerator ExitGameCoroutine(System.Action onComplete = null)
     
     // 调用回调函数
     onComplete?.Invoke();
+
+        SaveDataMgr.Instance.SaveData = new GameSaveData();
 }
 
     /// <summary>

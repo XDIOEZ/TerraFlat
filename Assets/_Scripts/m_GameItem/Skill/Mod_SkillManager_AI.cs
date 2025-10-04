@@ -10,6 +10,7 @@ public class Mod_SkillManager_AI : Mod_SkillManager
     {
         base.Load();
         animatorReceiver = item.itemMods.GetMod_ByID<Mod_AnimatorReceiver> (ModText.AnimatorReceiver);
+        item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
         if (animatorReceiver != null)
         {
             animatorReceiver.OnSkillStart += UseSkill;

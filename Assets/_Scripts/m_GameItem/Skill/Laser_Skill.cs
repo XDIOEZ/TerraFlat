@@ -15,16 +15,18 @@ public class Laser_Skill : MonoBehaviour
     
     [Header("预制体引用")]
     public GameObject laserEffectPrefab;
+    public Vector3 startPoint;
     
     // Start is called before the first frame update
     void Start()
     {
+     
         if (runtimeSkill != null)
         {
-            // 初始化激光线
+            startPoint = runtimeSkill.skillManager.transform.position + (Vector3)runtimeSkill.skillManager.castingPointOffset["Laser"];      // 初始化激光线
             if (lineRenderer != null)
             {
-                lineRenderer.SetPosition(0, runtimeSkill.skillManager.transform.position+ (Vector3)runtimeSkill.skillManager.castingPointOffset["Laser"]);
+                lineRenderer.SetPosition(0, startPoint);
                 lineRenderer.SetPosition(1, new Vector3(runtimeSkill.targetPoint.x, runtimeSkill.targetPoint.y, runtimeSkill.skillSender.transform.position.z));
             }
             
@@ -70,11 +72,12 @@ public class Laser_Skill : MonoBehaviour
         {
             // 获取实时的目标点
             Vector2 currentTargetPoint = runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point;
-            
+        startPoint = runtimeSkill.skillManager.transform.position + (Vector3)runtimeSkill.skillManager.castingPointOffset["Laser"];      // 初始化激光线
+
             // 更新激光线起点和终点
             if (lineRenderer != null)
             {
-                lineRenderer.SetPosition(0, runtimeSkill.skillSender.transform.position);
+                lineRenderer.SetPosition(0, startPoint);
                 lineRenderer.SetPosition(1, new Vector3(currentTargetPoint.x, currentTargetPoint.y, runtimeSkill.skillSender.transform.position.z));
             }
             

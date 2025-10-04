@@ -115,6 +115,7 @@ MonoBehaviour:
     GameName: 
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
       - None
@@ -133,18 +134,18 @@ MonoBehaviour:
       Amount: 1
       Volume: 1
       CanBePickedUp: 1
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
-    position: {x: 0, y: 0}
+    Guid: -1070873522
+    position: {x: 50, y: 50}
     TileLoaded: 0
   tileMap: {fileID: 6321057560787975102}
   OnMapGenerated_Start:
     _PersistentCalls: []
-  navigationModiferTileMap: {fileID: 0}
+  chunk: {fileID: 0}
   ParentObject: {fileID: 0}
 --- !u!114 &8016388638861598348
 MonoBehaviour:

@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: "Skill_\u706B\u7403"
   m_EditorClassIdentifier: 
   StartDebugTest: "\u6280\u80FD\u5F00\u59CB\u6267\u884C"
-  Fireball: {fileID: 9092067032435507713, guid: 8d957a5691b916f48b40231a4b297ea4, type: 3}
+  Fireball: {fileID: 9092067032435507713, guid: 6f27a587bf720974ca9a865de93b5e99, type: 3}
   StopDebugTest: "\u6280\u80FD\u505C\u6B62\u6267\u884C"

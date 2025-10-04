@@ -19,7 +19,7 @@ public class Map : Item, ISave_Load
     [SerializeField]
     public Tilemap tileMap;
 
-    public UltEvent OnMapGenerated_Start;
+    public UltEvent OnMapGenerated_Start = new UltEvent();
     public Chunk chunk; 
 
     public GameObject ParentObject;

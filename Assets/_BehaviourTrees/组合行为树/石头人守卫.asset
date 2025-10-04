@@ -1401,7 +1401,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 1665c586e07e6714c93c975ebccc7514
-  position: {x: 2078.3933, y: 2132}
+  position: {x: 2078.3994, y: 2132}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1410,7 +1410,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  cooldownTime: 5
+  cooldownTime: 0
   cooldownStartTime: 0
   isCoolingDown: 0
 --- !u!114 &-6910022613098981587
@@ -3129,7 +3129,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  cooldownTime: 1.5
+  cooldownTime: 0
   cooldownStartTime: 0
   isCoolingDown: 0
 --- !u!114 &-4620189421412555206
@@ -3465,7 +3465,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  cooldownTime: 5
+  cooldownTime: 10
   cooldownStartTime: 0
   isCoolingDown: 0
 --- !u!114 &-3942702527490510560
@@ -4371,7 +4371,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   maxAttackDistance: 10
-  minAttackDistance: 2
+  minAttackDistance: 3
 --- !u!114 &-2681122352445361135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8307,7 +8307,7 @@ MonoBehaviour:
   state: 0
   started: 1
   guid: 1e72f7fff39a713419f4f2f7e605b09c
-  position: {x: -1363.264, y: 1007.19995}
+  position: {x: -1363.6001, y: 1007.2001}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -8531,7 +8531,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  distanceThreshold: 1.5
+  distanceThreshold: 3
 --- !u!114 &2826658177101807406
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9384,7 +9384,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 7a15160ec77d0a04eb3a734f8c5b1446
-  position: {x: 2234.3933, y: 2132}
+  position: {x: 2234.4, y: 2131.9995}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -9394,7 +9394,7 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   maxAttackDistance: 10
-  minAttackDistance: 5
+  minAttackDistance: 3
 --- !u!114 &4101905954023560178
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11091,7 +11091,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  maxAttackDistance: 1.5
+  maxAttackDistance: 3
   minAttackDistance: 0
 --- !u!114 &6512395847900241681
 MonoBehaviour:

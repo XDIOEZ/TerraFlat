@@ -73,8 +73,8 @@ public class ItemMgr : SingletonMono<ItemMgr>
             //RunTimeItems[item.itemData.Guid] = item;
             AddToGroup(item); // 新增分组逻辑
         }
-       // Debug.Log("物品加载完毕");
-
+        // Debug.Log("物品加载完毕");
+        GameManager.Instance.Event_ExitGame_Start+= CleanupNullItems;
     }
 
     private void OnDestroy()
@@ -135,7 +135,7 @@ public Item InstantiateItem(ItemData itemData_, Vector3 position = default, Quat
 // 通过名称实例化的重载方法
 public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
 {
-    ItemData templateData = GameRes.Instance.GetPrefab(itemName).GetComponent<Item>().itemData;
+    ItemData templateData = GameRes.Instance.GetPrefab(itemName).GetComponent<Item>().itemData.DeepClone();
     return InstantiateItem(templateData, position, rotation, scale, parent);
 }
 

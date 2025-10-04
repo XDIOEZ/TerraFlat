@@ -96,15 +96,6 @@ public class SaveDataManager_UI : MonoBehaviour
     private Button GetLoadSaveDataButton() => uiManager.GetButton("LoadSaveDataButton");
     private Button GetDeleteSaveButton() => uiManager.GetButton("DeleteSaveButton");
 
-    public void StartNewGame()
-    {
-        SaveDataMgr.Instance.SaveData.SaveSeed = Random.Range(0, int.MaxValue).ToString();
-        // 初始化随机种子并创建系统随机实例
-        SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
-        Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
-        RandomMapGenerator.rng = new System.Random(SaveDataMgr.Instance.SaveData.Seed);
-        SaveDataMgr.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
-    }
     #endregion
 
     #region 存档加载

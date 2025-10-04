@@ -62,7 +62,6 @@ public class RandomMapGenerator : MonoBehaviour
 
     public EnvironmentFactors[,] EnvFactorsGrid { get => map.Data.EnvironmentData; set => map.Data.EnvironmentData = value; }
 
-    public static System.Random rng; // 系统级随机实例
 
     private Dictionary<string, TileData> tileDataCache = new(); // TileData 缓存
     #endregion
@@ -70,7 +69,6 @@ public class RandomMapGenerator : MonoBehaviour
     #region Unity 生命周期
     public void Awake()
     {
-        rng = new System.Random(Seed);
         map.OnMapGenerated_Start += GenerateRandomMap_TileData;
 
         // 1. 自动获取Grid组件（优先级：手动指定 > 当前对象 > 子对象）
