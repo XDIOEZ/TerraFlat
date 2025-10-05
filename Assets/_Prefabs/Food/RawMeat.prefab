@@ -117,7 +117,8 @@ MonoBehaviour:
       keys:
       - tag: Type
         values:
-        - Material
+        - Food
+        - 
       - tag: Material
         values:
         - Wood

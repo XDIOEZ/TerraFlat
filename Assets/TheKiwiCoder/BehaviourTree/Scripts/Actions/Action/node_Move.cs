@@ -10,9 +10,6 @@ public class Move : ActionNode
 
     private Vector2 lastPosition;     // 上一次位置
 
-    private float lastMoveTime = 0f;  // 上一次移动时间戳
-    private const float STUCK_THRESHOLD = 0.5f;   // 判定卡住的时间阈值
-    private const float MIN_MOVE_DISTANCE = 0.1f; // 认为移动的最小距离
 
 
 
@@ -91,13 +88,6 @@ public class Move : ActionNode
             vector.x * cos - vector.y * sin,
             vector.x * sin + vector.y * cos
         );
-    }
-
-    /// <summary>重置移动状态</summary>
-    private void ResetMoveState()
-    {
-        lastPosition = Vector3.zero;
-        lastMoveTime = 0f;
     }
 
     #endregion

@@ -4974,7 +4974,7 @@ MonoBehaviour:
   skillDataList: []
   focusPoint: {fileID: 0}
   controller: {fileID: 0}
-  castingPointOffset:
+  SerializedcastingPointOffset:
     _serializedList: []
 --- !u!4 &826608150
 Transform:

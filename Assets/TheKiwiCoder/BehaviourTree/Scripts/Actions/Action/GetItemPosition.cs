@@ -69,7 +69,7 @@ public class GetItemPosition : ActionNode
     protected override State OnUpdate()
     {
         // 查找目标物品
-        Item targetItem = FindTargetItem();
+        Item targetItem = context.itemDetector.GetFirstItemByIdNamesFast(itemIds:ItemType);
         if (targetItem == null)
         {
             return State.Failure;
@@ -89,25 +89,6 @@ public class GetItemPosition : ActionNode
     #endregion
 
     #region 私有方法
-
-
-    /// <summary>
-    /// 查找符合条件的目标物品
-    /// </summary>
-    private Item FindTargetItem()
-    {
-        foreach (Item item in context.itemDetector.CurrentItemsInArea)
-        {
-            // 检查物品类型是否匹配
-            if (ItemType.Exists(type => item.itemData.ItemTags.Item_TypeTag.Contains(type)))
-            {
-                return item;
-            }
-        }
-
-        return null;
-    }
-
     /// <summary>
     /// 根据行为类型处理移动逻辑
     /// </summary>

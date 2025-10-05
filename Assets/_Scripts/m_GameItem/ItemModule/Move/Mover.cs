@@ -243,7 +243,9 @@ public partial class Mover : Module
     {
         ModDataMemoryPack.WriteData(Data);
         Item_Data.ModuleDataDic[_Data.Name] = _Data;
-
+    }
+    public void OnDestroy()
+    {
         OnMoveStart.Clear();
         OnMoveEnd.Clear();
     }

@@ -15,21 +15,16 @@ public class FoodChecker : ActionNode
 
     protected override State OnUpdate() {
 
-        foreach (Item item in context.itemDetector.CurrentItemsInArea)
-        {
-            foreach (string tag in item.itemData.ItemTags.Item_TypeTag)
+        context.itemDetector.Type_Tag_Item_Dict.TryGetValue("Food", out List<Item> items);
+       
+            foreach (var item in items)
             {
-                if (tag == "Food")
-                {
                     if (setMoveTarget)
                     {
                         context.mover.TargetPosition = item.transform.position;
                     }
                     return State.Success;
-                }
             }
-          
-        }
         return State.Failure;
     }
 }

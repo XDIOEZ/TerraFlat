@@ -59,3 +59,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a1efba705b88bd44aa95b25afb544666, type: 2}
   focusPoint: {fileID: 0}
   controller: {fileID: 0}
+  SerializedcastingPointOffset:
+    _serializedList:
+    - Key: Laser
+      Value: {x: 1, y: 2}
+    - Key: Fireball
+      Value: {x: 1, y: 1}

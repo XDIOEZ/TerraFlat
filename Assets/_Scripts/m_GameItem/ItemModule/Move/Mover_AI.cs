@@ -19,9 +19,6 @@ public class Mover_AI : Mover
     [Header("停止距离")]
     public float stopDistance = 0.5f;
 
-    [Header("动画控制")]
-    private Tweener moveTween;
-
     [Header("状态控制")]
     public bool CanMove = true; // 是否可以移动
     public bool HasReachedTarget = false; // 是否到达目标
@@ -52,7 +49,7 @@ public class Mover_AI : Mover
 
     public override void ModUpdate(float deltaTime)
     {
-      
+      //TODO 通过监听HasReachedTarget参数执行Move行动
         if(CanMove == false)
         {
             return;
@@ -61,6 +58,7 @@ public class Mover_AI : Mover
         // 检查是否已经到达目标，如果未到达则执行移动
         if (!HasReachedTarget)
         {
+            aiPath.isStopped = false;
             if (target == null)
             {
                 // 调用 Move 实现移动
@@ -71,6 +69,10 @@ public class Mover_AI : Mover
             {
                 Move(target.position, deltaTime);
             }
+        }
+        else
+        {
+            aiPath.isStopped = true;
         }
 
         // 更新是否到达目标的状态

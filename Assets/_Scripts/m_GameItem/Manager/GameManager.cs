@@ -137,8 +137,8 @@ public void StartNewGame()
     SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
     UnityEngine.Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
 
-    //创建初始星球的数据
-    SaveDataMgr.Instance.SaveData.PlanetData_Dict["地球"] = Ready_planetData;
+        //创建初始星球的数据
+    SaveDataMgr.Instance.SaveData.PlanetData_Dict["地球"] = FastCloner.FastCloner.DeepClone(Ready_planetData);
     //创建初始时间数据 - 修复类型转换问题
     SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict["地球"] = new SerializableTimeData(Ready_timeData);
     SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict["地球"] = 1.0f;

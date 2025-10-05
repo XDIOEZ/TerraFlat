@@ -10,7 +10,6 @@ public class Mod_SkillManager_AI : Mod_SkillManager
     {
         base.Load();
         animatorReceiver = item.itemMods.GetMod_ByID<Mod_AnimatorReceiver> (ModText.AnimatorReceiver);
-        item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
         if (animatorReceiver != null)
         {
             animatorReceiver.OnSkillStart += UseSkill;
@@ -20,13 +19,6 @@ public class Mod_SkillManager_AI : Mod_SkillManager
     
     public override void Save()
     {
-        // 清除事件挂接
-        if (animatorReceiver != null)
-        {
-            animatorReceiver.OnSkillStart -= UseSkill;
-            animatorReceiver.OnSkillStop -= StopSkill;
-        }
-        
         base.Save();
     }
 
@@ -44,6 +36,7 @@ public class Mod_SkillManager_AI : Mod_SkillManager
     // 确保在对象销毁时清除事件挂接
     private void OnDestroy()
     {
+        // 清除事件挂接
         if (animatorReceiver != null)
         {
             animatorReceiver.OnSkillStart -= UseSkill;

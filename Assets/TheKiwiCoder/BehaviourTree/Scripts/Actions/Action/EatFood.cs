@@ -1,6 +1,6 @@
-
 using UnityEngine;
 using TheKiwiCoder;
+using System.Collections.Generic;
 
 public class EatFood : ActionNode
 {
@@ -12,8 +12,8 @@ public class EatFood : ActionNode
     public float LastEatingTime;
     [Header("进食间隔时间")]
     public float EatingTime = 1f;
-    [Header("食物Tag")]
-    public string FoodTag = "Food";
+    [Header("食物Tags")]
+    public List<string> FoodTags = new List<string> { "Food" }; // 改为列表形式
     protected override void OnStart() {
         Self = context.gameObject.GetComponentInChildren<Mod_Food>();
         LastEatingTime = Time.time;
@@ -30,39 +30,44 @@ public class EatFood : ActionNode
             return State.Running;
         }
 
-        foreach (Item item in context.itemDetector.CurrentItemsInArea)
+        List<Item> allFoodItems = new List<Item>();
+        
+        // 从多个tag中收集食物
+        foreach (string tag in FoodTags)
+        {
+            if (context.itemDetector.Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> items))
+            {
+                allFoodItems.AddRange(items);
+            }
+        }
+
+        foreach (var item in allFoodItems)
         {
             //判断物体是否在进食范围内
             if (Vector2.Distance(context.transform.position, item.transform.position) > EatingRange)
-            { 
+            {
                 continue;
             }
-            //判断物体是否是食物
-            foreach (string tag in item.itemData.ItemTags.Item_TypeTag)
+
+            Food = item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+
+            Food.BeEat(Self);
+
+            LastEatingTime = Time.time;
+
+
+            //判断是否已经吃饱了
+            if (Food.Data.nutrition.GetHungerRate() > 0.9f)
             {
-
-                if (tag == FoodTag)
-                {
-                        Food = item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
-
-                        Food.BeEat(Self);
-
-                        LastEatingTime = Time.time;
-                        
-
-                        //判断是否已经吃饱了
-                        if(Food.Data.nutrition.GetHungerRate() > 0.9f)
-                        {
-                            return State.Success;
-                        }
-
-                        return State.Running;
-                }
+                return State.Success;
             }
 
+            return State.Running;
         }
-
 
         return State.Failure;
     }
 }
+
+//TODO 获取感知范围内的食物  遍历食物检查是否在进食范围内  在嘴巴边上  吃掉  吃完后判断是否已经吃饱了
+//TODO 吃饱了返回true 没有吃的了返回Failure

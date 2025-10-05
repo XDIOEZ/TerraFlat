@@ -31,7 +31,7 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.33333334
+        time: 0.35
         value: 1
         inSlope: Infinity
         outSlope: Infinity
@@ -54,7 +54,7 @@ AnimationClip:
     attribute: IsAttacking
     path: 
     classID: 114
-    script: {fileID: 11500000, guid: 1f6067b654acd224b98fb91ce825c245, type: 3}
+    script: {fileID: 11500000, guid: db3ca069b21603b48b6443b063578d62, type: 3}
     flags: 0
   m_PPtrCurves:
   - serializedVersion: 2
@@ -84,7 +84,7 @@ AnimationClip:
     - serializedVersion: 2
       path: 0
       attribute: 3164288790
-      script: {fileID: 11500000, guid: 1f6067b654acd224b98fb91ce825c245, type: 3}
+      script: {fileID: 11500000, guid: db3ca069b21603b48b6443b063578d62, type: 3}
       typeID: 114
       customType: 0
       isPPtrCurve: 0
@@ -140,7 +140,7 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.33333334
+        time: 0.35
         value: 1
         inSlope: Infinity
         outSlope: Infinity
@@ -163,7 +163,7 @@ AnimationClip:
     attribute: IsAttacking
     path: 
     classID: 114
-    script: {fileID: 11500000, guid: 1f6067b654acd224b98fb91ce825c245, type: 3}
+    script: {fileID: 11500000, guid: db3ca069b21603b48b6443b063578d62, type: 3}
     flags: 0
   m_EulerEditorCurves: []
   m_HasGenericRootTransform: 0

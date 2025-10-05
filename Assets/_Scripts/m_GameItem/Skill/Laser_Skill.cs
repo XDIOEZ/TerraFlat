@@ -23,7 +23,7 @@ public class Laser_Skill : MonoBehaviour
      
         if (runtimeSkill != null)
         {
-            startPoint = runtimeSkill.skillManager.transform.position + (Vector3)runtimeSkill.skillManager.castingPointOffset["Laser"];      // 初始化激光线
+            startPoint = runtimeSkill.skillManager.castingPoint["Laser"].position;      // 初始化激光线
             if (lineRenderer != null)
             {
                 lineRenderer.SetPosition(0, startPoint);
@@ -72,7 +72,7 @@ public class Laser_Skill : MonoBehaviour
         {
             // 获取实时的目标点
             Vector2 currentTargetPoint = runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point;
-        startPoint = runtimeSkill.skillManager.transform.position + (Vector3)runtimeSkill.skillManager.castingPointOffset["Laser"];      // 初始化激光线
+        startPoint = runtimeSkill.skillManager.castingPoint["Laser"].position;      // 初始化激光线
 
             // 更新激光线起点和终点
             if (lineRenderer != null)

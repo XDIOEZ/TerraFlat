@@ -9,8 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3195985983397092375}
-  - component: {fileID: 5574872076108882757}
   - component: {fileID: 5620234295959196672}
+  - component: {fileID: 6930029544636346563}
   m_Layer: 9
   m_Name: Weed
   m_TagString: Untagged
@@ -35,58 +35,6 @@ Transform:
   - {fileID: 3797471915599160788}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5574872076108882757
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 463977462678543879}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 32ad825dd7358a345a542c0c574d235f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Owner: {fileID: 0}
-  OnUIRefresh:
-    _PersistentCalls: []
-  OnItemDestroy:
-    _PersistentCalls: []
-  OnAct:
-    _PersistentCalls: []
-  Sprite: {fileID: 0}
-  updateInterval: 0.1
-  Data:
-    IDName: Weed
-    GameName: "\u8349"
-    Description: "\u8349"
-    Durability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Plant
-      - Food
-      Item_Material:
-      - Food
-    Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
-    Stack:
-      Amount: 1
-      Volume: 1
-      CanBePickedUp: 0
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: "\u65E0"
-    Guid: 0
-  EatingValue: 0
-  MaxEatingValue: 10
 --- !u!61 &5620234295959196672
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -132,6 +80,60 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.5, y: 0.5}
   m_EdgeRadius: 0
+--- !u!114 &6930029544636346563
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 463977462678543879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  OnUIRefresh:
+    _PersistentCalls: []
+  OnItemDestroy:
+    _PersistentCalls: []
+  OnAct:
+    _PersistentCalls: []
+  Sprite: {fileID: 0}
+  updateInterval: 0
+  Data:
+    IDName: Weed
+    GameName: Weed
+    Description: "\u7269\u54C1\u540D\u79F0\uFF1AWeed\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1ATagDictionary:\r\n 
+      Type:\r\n  Material:\r\n  MakeTag:\r\n\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
+    Durability: 1
+    MaxDurability: 1
+    ItemTags:
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
+    Tags:
+      keys:
+      - tag: Type
+        values:
+        - Food
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
+    Stack:
+      Amount: 1
+      Volume: 1
+      CanBePickedUp: 1
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
+    ItemSpecialData: 
+    Guid: 0
+    code: 
 --- !u!1 &7731475903502350186
 GameObject:
   m_ObjectHideFlags: 0

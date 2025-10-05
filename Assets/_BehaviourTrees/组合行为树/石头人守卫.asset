@@ -1200,33 +1200,6 @@ MonoBehaviour:
   children:
   - {fileID: -6822574853418185625}
   - {fileID: 78256700448836145}
---- !u!114 &-7263081765304800340
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0c052dafa927ed842acb61d2aa218c52, type: 3}
-  m_Name: ChangeDicRange
-  m_EditorClassIdentifier: 
-  state: 0
-  started: 0
-  guid: 5070aba793faba047b6f90b59ffc60e2
-  position: {x: 122.33594, y: 2228}
-  blackboard:
-    TargetPosition: {x: 0, y: 0, z: 0}
-    BTUser: {fileID: 0}
-    target: {fileID: 0}
-  isCollapsed: 0
-  description: 
-  drawGizmos: 0
-  DebugMODE: 0
-  BaseValue: 10
-  Offset: {x: 0, y: 0}
-  Duration: 1
 --- !u!114 &-7126764850721570964
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2807,7 +2780,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &-5145354881068462888
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6404,7 +6378,6 @@ MonoBehaviour:
   - {fileID: 5822772767756571365}
   - {fileID: -8793659109396554979}
   - {fileID: 3185269058331043970}
-  - {fileID: -7263081765304800340}
   - {fileID: -6729065224495236420}
   - {fileID: -7985153507826747393}
   - {fileID: 2451381209404828020}
@@ -6931,7 +6904,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &547970613422285342
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8447,7 +8421,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &2648999233052300583
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8766,7 +8741,6 @@ MonoBehaviour:
   description: "\u56DB\u5904\u95F2\u901B"
   drawGizmos: 0
   children:
-  - {fileID: -7263081765304800340}
   - {fileID: -6729065224495236420}
   - {fileID: -7985153507826747393}
   - {fileID: 2451381209404828020}
@@ -9570,7 +9544,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &4382788781523543211
 MonoBehaviour:
   m_ObjectHideFlags: 0

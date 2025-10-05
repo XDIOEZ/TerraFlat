@@ -25,9 +25,7 @@ public class Skill_Fireball : BaseSkillAction
             Instantiate(Fireball).transform;
 
         // 实例化位置向外(目标位置)移动1个单位避免对自己造成伤害
-        Vector2 spawnPosition = (Vector2)runtimeSkill.skillManager.transform.position + fireballDirection * 2;
-
-        spawnPosition += runtimeSkill.skillManager.castingPointOffset["Fireball"];
+        Vector2 spawnPosition = (Vector2)runtimeSkill.skillManager.castingPoint["Fireball"].position;
 
        // 计算并存储火球的初始飞行方向
         fireballDirection = (runtimeSkill.targetPoint - spawnPosition).normalized;
@@ -44,8 +42,6 @@ public class Skill_Fireball : BaseSkillAction
 
     public override void StayExecuteSkill(RuntimeSkill Data,float deltaTime)
     {
-       // Debug.Log($"<color=yellow>当前进度:{Data.progress}/{Data.duration}</color>");
-       // Debug.Log($"<color=yellow>名字:{Data.skillInstanceDict["Fireball"].name}</color>");
         
         // 直接控制2D火球移动，按照初始方向直线飞行
         Vector3 currentPosition = Data.skillInstanceDict["Fireball"].position;

@@ -95,8 +95,13 @@ public class TileEffectReceiver : Module
 
     public override void Save()
     {
-        OnTileExit(lastGridPos);
+        
         ModSaveData.WriteData(lastGridPos);
+    }
+
+      void OnDestroy()
+    {
+        OnTileExit(lastGridPos);
     }
     
     public override void ModUpdate(float deltaTime)

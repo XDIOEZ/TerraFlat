@@ -1,5 +1,6 @@
 using AYellowpaper.SerializedCollections;
 using Org.BouncyCastle.Ocsp;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -27,9 +28,11 @@ public class Mod_SkillManager : Module
     public Mod_FocusPoint focusPoint;
     [Tooltip("控制器")]
     public PlayerController controller;
+    [Tooltip("序列化参数施法起点")]
+    public SerializedDictionary<string, Vector2> SerializedcastingPointOffset = new();
     [Tooltip("施法起点")]
-    public SerializedDictionary<string, Vector2> castingPointOffset = new();
-
+    [ShowInInspector]
+    public Dictionary<string, Transform> castingPoint = new();
 
     #endregion
 
@@ -46,7 +49,8 @@ public class Mod_SkillManager : Module
 public override void Load()
 {
     focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
-
+        //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
+    item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
     controller = item.itemMods.GetMod_ByID<PlayerController>(ModText.Controller);
     if (controller != null)
         controller.RightClick += Act;
@@ -80,8 +84,29 @@ public override void Load()
     }
     
     ModSaveData.ReadData(ref Data);
-}
-    
+
+        // 实例化施法点位并设置本地坐标
+        foreach (var offsetPair in SerializedcastingPointOffset)
+        {
+            string skillName = offsetPair.Key;
+            Vector2 localPositionOffset = offsetPair.Value;
+
+            // 创建新的 GameObject 作为施法点位
+            GameObject castingPointObject = new GameObject(skillName + "_CastingPoint");
+
+            // 设置为当前 GameObject 的子对象
+            castingPointObject.transform.SetParent(transform, false);
+
+            // 设置本地坐标（相对于父对象的位置）
+            castingPointObject.transform.localPosition = new Vector3(localPositionOffset.x, localPositionOffset.y, 0);
+
+            // 存储到 castingPoint 字典中
+            castingPoint[skillName] = castingPointObject.transform;
+        }
+    }
+
+
+
     public override void ModUpdate(float deltaTime)
     {
         // 从后往前遍历，避免在迭代时删除元素导致的问题

@@ -35,18 +35,6 @@ public class CheckItemIsAround : ActionNode
             Debug.Log($"<color=green>正在检测周围物品...</color>");
         }
 
-        foreach (var item in itemDetector.CurrentItemsInArea)
-        {
-            if ( item.itemData.ItemTags.Item_TypeTag.Contains(itemName))
-            {
-                if (DebugMode)
-                {
-                    Debug.Log($"<color=lime>检测到符合条件的物品：{item.name}（ID：{item.GetInstanceID()}）</color>");
-                }
-                return State.Success;
-            }
-        }
-
         if (DebugMode)
         {
             Debug.Log($"<color=gray>未检测到符合条件的物品，继续检测...</color>");

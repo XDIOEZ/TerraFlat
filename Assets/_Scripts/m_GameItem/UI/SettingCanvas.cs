@@ -85,7 +85,6 @@ public class SettingCanvas : Module
     public void SaveGame()
     {
         GameManager.Instance.SaveGame();
-        ItemMgr.Instance.User_Player.Load();
     }
 public void ClossApp()
 {

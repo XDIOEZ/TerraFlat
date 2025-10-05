@@ -356,32 +356,6 @@ public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCou
         return null;
     }
 
-
-    public ItemData FindItemByTag_First(string tag)
-    {
-        foreach (var slot in itemSlots)
-        {
-            if(slot.itemData!= null && slot.itemData.ItemTags.HasTypeTag(tag))
-            {
-                return slot.itemData;
-            }
-        }
-        return null;
-    }
-    public List<ItemData> FindItemByTag_All(string tag)
-    {
-        List<ItemData> result = new List<ItemData>();
-        foreach (var slot in itemSlots)
-        {
-            if (slot.itemData!= null && slot.itemData.ItemTags.HasTypeTag(tag))
-            {
-                result.Add(slot.itemData);
-            }
-        }
-
-        return result;
-    }
-
     public ModuleData GetModuleByID(string ID)
     {
         foreach (var slot in itemSlots)
