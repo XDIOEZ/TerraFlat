@@ -22,24 +22,27 @@ public class RuntimeSkill
     public Vector2 targetPoint;
     [Tooltip("技能生成模块")]
     public Mod_SkillManager skillManager;
-
-    [Tooltip("技能实例化出来的gameObject字典")]
-    public Dictionary<string, Transform> skillInstanceDict = new();
+    [Tooltip("技能实例引用")]
+    public Skill skillInstance;
 
     public void Start()
     {
         skillData.StartAction(this);
+        skillInstance.Load();
+        skillInstance.runtimeSkill = this;
     }
 
     public void Stay(float deltaTime)
     {
-            progress += deltaTime;
-            skillData.StayAction(this,deltaTime);
+        progress += deltaTime;
+        skillData.StayAction(this,deltaTime);
+        skillInstance.SkillUpdate(deltaTime);
     }
 
     public void Stop()
     {
         skillData.StopAction(this);
+        skillInstance.Save();
     }
 
     public bool IsFinished()

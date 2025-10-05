@@ -26,6 +26,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 10
   minAttackDistance: 2
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &-9185671906556885823
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -572,6 +573,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 1.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &-8291998467610929569
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1374,7 +1376,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 1665c586e07e6714c93c975ebccc7514
-  position: {x: 2078.3994, y: 2132}
+  position: {x: 1651.2002, y: 2001.6002}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1386,6 +1388,10 @@ MonoBehaviour:
   cooldownTime: 0
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &-6910022613098981587
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1736,6 +1742,37 @@ MonoBehaviour:
   description: "\u65E5\u5E38\u751F\u6D3B"
   drawGizmos: 0
   children: []
+--- !u!114 &-6543177398228202015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c717e7e982f09d044bfd43688cac30c0, type: 3}
+  m_Name: AISkillCooldownTime(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 27594cfaa90c943489a4d5a4dbeb9fa5
+  position: {x: 1651.2002, y: 2001.6002}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  DebugMODE: 0
+  cooldownTime: 0
+  cooldownStartTime: 0
+  isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &-6539613036880745888
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2644,6 +2681,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 1.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &-5340098668605873577
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3094,7 +3132,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: c3a085305cc7b2641a8f2732212b22fe
-  position: {x: 1373.5356, y: 1820.8}
+  position: {x: 2093.5999, y: 2093.5999}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3106,6 +3144,10 @@ MonoBehaviour:
   cooldownTime: 0
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &-4620189421412555206
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3212,6 +3254,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 10
   minAttackDistance: 2
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &-4354330603327087555
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3260,6 +3303,33 @@ MonoBehaviour:
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
   DebugMODE: 0
+--- !u!114 &-4243616190322569085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39232de88d7c97148b4818ff779d1920, type: 3}
+  m_Name: AI_CheckCanAttack(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 98901633bf9b3ce4d88f7ba114458b6a
+  position: {x: 1807.4928, y: 2002.0868}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 1
+  DebugMODE: 0
+  maxAttackDistance: 15
+  minAttackDistance: 5
+  debugColor: {r: 1, g: 0.48991108, b: 0, a: 1}
 --- !u!114 &-4224320985147496372
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3412,9 +3482,9 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   children:
-  - {fileID: 6752672622997499327}
   - {fileID: 2965924831880033782}
   - {fileID: 7536079751377415486}
+  - {fileID: 6752672622997499327}
 --- !u!114 &-3951356860905928330
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3430,7 +3500,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: a6a0f25a11f79284d89d8e9e088823d1
-  position: {x: 1753.6003, y: 1968.0001}
+  position: {x: 1310.3997, y: 1855.9998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3442,6 +3512,10 @@ MonoBehaviour:
   cooldownTime: 10
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &-3942702527490510560
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3799,7 +3873,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 41008c049ae3c124381ec03367446b09
-  position: {x: 2060, y: 1968.0002}
+  position: {x: 1612.2831, y: 1856.7046}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -4335,17 +4409,18 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: f55e982f5221760439cad824a6ffb535
-  position: {x: 1909.5997, y: 1968.0004}
+  position: {x: 1466.683, y: 1856.7046}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
   isCollapsed: 0
   description: 
-  drawGizmos: 0
+  drawGizmos: 1
   DebugMODE: 0
-  maxAttackDistance: 10
-  minAttackDistance: 3
+  maxAttackDistance: 15
+  minAttackDistance: 1
+  debugColor: {r: 0, g: 0.1516676, b: 1, a: 1}
 --- !u!114 &-2681122352445361135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4493,6 +4568,10 @@ MonoBehaviour:
   cooldownTime: 1.5
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &-2470678164535203713
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5687,6 +5766,38 @@ MonoBehaviour:
   startImmediately: 0
   restartOnSuccess: 1
   restartOnFailure: 1
+--- !u!114 &-900809276367774809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 325f34eb8c0088745ad8345fe6346099
+  position: {x: 1957.8927, y: 2002.0868}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 1
+  DebugMODE: 0
+  animationName: Skill_1
+  time: 0
+  playType: 0
+  Setbool: 0
+  layerIndex: 1
+  PlayWeight: 1
+  autoGetAnimationLength: 1
+  waitForAnimationComplete: 1
 --- !u!114 &-884554827275927614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5820,6 +5931,10 @@ MonoBehaviour:
   cooldownTime: 5
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &-704550525980506365
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6875,6 +6990,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 0.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &509885879249481469
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7063,6 +7179,10 @@ MonoBehaviour:
   cooldownTime: 5
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &861681640561630034
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7620,7 +7740,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: f6d0ae991a41e484c86f6b4257bcb857
-  position: {x: 1047.936, y: 1624.8}
+  position: {x: 1047.2001, y: 1624.8003}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -7688,6 +7808,10 @@ MonoBehaviour:
   cooldownTime: 5
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &1736738557540159598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7806,14 +7930,14 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 00b5b6b839f4aa041b4007f1675d12b5
-  position: {x: 2384.7935, y: 2132}
+  position: {x: 1957.8927, y: 2002.0868}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
   isCollapsed: 0
   description: 
-  drawGizmos: 0
+  drawGizmos: 1
   DebugMODE: 0
   animationName: Skill_1
   time: 0
@@ -7957,6 +8081,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 1.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &2066469645270238046
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8506,7 +8631,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  distanceThreshold: 3
+  distanceThreshold: 1.5
 --- !u!114 &2826658177101807406
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8578,7 +8703,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 7a20e5548f7ad6146bbb4997b12fac0c
-  position: {x: 1828.8003, y: 1820.8002}
+  position: {x: 1428.2831, y: 1709.5045}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -8772,6 +8897,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 0.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &3265144514135463765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9358,17 +9484,18 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 7a15160ec77d0a04eb3a734f8c5b1446
-  position: {x: 2234.4, y: 2131.9995}
+  position: {x: 1807.4928, y: 2002.0868}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
   isCollapsed: 0
   description: 
-  drawGizmos: 0
+  drawGizmos: 1
   DebugMODE: 0
-  maxAttackDistance: 10
-  minAttackDistance: 3
+  maxAttackDistance: 15
+  minAttackDistance: 5
+  debugColor: {r: 1, g: 0.48991108, b: 0, a: 1}
 --- !u!114 &4101905954023560178
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10149,6 +10276,10 @@ MonoBehaviour:
   cooldownTime: 1
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &5042929687376762581
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10670,6 +10801,30 @@ MonoBehaviour:
   - {fileID: 1287357133802819664}
   - {fileID: -4620189421412555206}
   - {fileID: 3776999320292635999}
+--- !u!114 &6105140133392112697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61431bba79d7d7843b82bf1de71703f5, type: 3}
+  m_Name: Sequencer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 6eceaaa7be61cee4da28886482b7e230
+  position: {x: 1803.4928, y: 1838.0868}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: "\u624B\u91CC\u5251~~~"
+  drawGizmos: 0
+  children: []
 --- !u!114 &6121750337796126188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11057,17 +11212,18 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: f808c505c37fdbe40bf2d1bef9332066
-  position: {x: 1529.5356, y: 1820.8}
+  position: {x: 2249.6, y: 2093.5999}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
   isCollapsed: 0
   description: 
-  drawGizmos: 0
+  drawGizmos: 1
   DebugMODE: 0
-  maxAttackDistance: 3
+  maxAttackDistance: 2.5
   minAttackDistance: 0
+  debugColor: {r: 1, g: 0, b: 0.033709526, a: 1}
 --- !u!114 &6512395847900241681
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11172,7 +11328,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 6f8501074c94b674e9e5fb0a451caeb8
-  position: {x: 1567.1357, y: 1655.2}
+  position: {x: 2249.965, y: 1928.598}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -11199,7 +11355,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 16c02773e60207d449f9673a71b7eb4c
-  position: {x: 1679.1357, y: 1820.8}
+  position: {x: 2400, y: 2093.5999}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -11294,6 +11450,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 0.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &6947994444653106703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11700,7 +11857,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 6f08ba95d58832d4883c04ddbfafc437
-  position: {x: 2230.3933, y: 1968.0001}
+  position: {x: 1803.4928, y: 1838.0868}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -11874,6 +12031,10 @@ MonoBehaviour:
   cooldownTime: 1.5
   cooldownStartTime: 0
   isCoolingDown: 0
+  lastRecordTime: 0
+  currentTime: 0
+  timeDifference: 0
+  isInCooldown: 0
 --- !u!114 &8092180511045419938
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12634,6 +12795,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 10
   minAttackDistance: 2
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &9203938451536678343
 MonoBehaviour:
   m_ObjectHideFlags: 0

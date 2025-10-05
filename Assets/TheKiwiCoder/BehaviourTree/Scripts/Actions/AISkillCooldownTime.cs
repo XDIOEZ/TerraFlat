@@ -12,9 +12,19 @@ public class AISkillCooldownTime : ActionNode
     [Header("调试信息（仅查看）")]
     [SerializeField] private float cooldownStartTime = 0f;
     [SerializeField] private bool isCoolingDown = false;
+    
+    // 新增字段
+    [Header("时间记录信息")]
+    [SerializeField] private float lastRecordTime = 0f;  // 上一次记录时间
+    [SerializeField] private float currentTime = 0f;    // 当前时间
+    [SerializeField] private float timeDifference = 0f; // 时间差
+    [SerializeField] private bool isInCooldown = false; // 是否处于冷却中
 
     protected override void OnStart() 
     {
+        // 更新时间信息
+        UpdateTimeInfo();
+        
         // 如果还没有开始冷却，则开始冷却计时
         if (!isCoolingDown)
         {
@@ -28,6 +38,12 @@ public class AISkillCooldownTime : ActionNode
 
     protected override State OnUpdate() 
     {
+        // 更新时间信息
+        UpdateTimeInfo();
+        
+        // 更新冷却状态
+        isInCooldown = isCoolingDown;
+        
         // 如果没有在冷却中，返回Success
         if (!isCoolingDown)
         {
@@ -39,6 +55,7 @@ public class AISkillCooldownTime : ActionNode
         {
             // 冷却完成，重置状态
             isCoolingDown = false;
+            isInCooldown = false;
             return State.Success;
         }
         
@@ -51,6 +68,8 @@ public class AISkillCooldownTime : ActionNode
     {
         cooldownStartTime = Time.time;
         isCoolingDown = true;
+        isInCooldown = true;
+        UpdateTimeInfo();
     }
     
     // 检查是否正在冷却中
@@ -59,6 +78,7 @@ public class AISkillCooldownTime : ActionNode
         if (isCoolingDown && Time.time - cooldownStartTime >= cooldownTime)
         {
             isCoolingDown = false; // 自动重置已完成的冷却
+            isInCooldown = false;
         }
         return isCoolingDown;
     }
@@ -77,5 +97,14 @@ public class AISkillCooldownTime : ActionNode
     public void ResetCooldown()
     {
         isCoolingDown = false;
+        isInCooldown = false;
+    }
+    
+    // 更新时间信息
+    private void UpdateTimeInfo()
+    {
+        lastRecordTime = currentTime;
+        currentTime = Time.time;
+        timeDifference = currentTime - lastRecordTime;
     }
 }

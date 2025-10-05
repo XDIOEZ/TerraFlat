@@ -93,6 +93,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5846834651902534512}
+  - component: {fileID: 2152439307247645993}
   - component: {fileID: 8250423564893825132}
   m_Layer: 0
   m_Name: Stone_KnifeThrowing
@@ -118,6 +119,21 @@ Transform:
   - {fileID: 7211723086390591790}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2152439307247645993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9092067032435507713}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f80b20d90321ca64aa5df4102d19afad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mods: []
+  StartDebugTest: "\u6280\u80FD\u5F00\u59CB\u6267\u884C"
+  StopDebugTest: "\u6280\u80FD\u6267\u884C\u505C\u6B62"
 --- !u!50 &8250423564893825132
 Rigidbody2D:
   serializedVersion: 4

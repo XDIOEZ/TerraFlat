@@ -10,7 +10,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6120190c415db814eb794d5bac0dc45a, type: 3}
-  m_Name: Skill_Laser
+  m_Name: SkillAction_FireBall
   m_EditorClassIdentifier: 
-  LaserPrefab: {fileID: 7187358966865186485, guid: f4cc48e2af981584b99bbfbe41c565cd, type: 3}
-  LaserEffectPrefab: {fileID: 2120960324422205105, guid: 38ee20713ed57f548af3746e835a0984, type: 3}
+  SkillPrefab: {fileID: 9092067032435507713, guid: 8d957a5691b916f48b40231a4b297ea4, type: 3}

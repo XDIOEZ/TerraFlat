@@ -19,8 +19,6 @@ public class BaseSkill : ScriptableObject
     public float initialPrograss = 0f;
     [Tooltip("技能速度(各种意义上的吧)")]
     public float speed = 1;
-
-
     [Tooltip("技能行为")]
     [InlineEditor]
     public List<BaseSkillAction> Actions;
