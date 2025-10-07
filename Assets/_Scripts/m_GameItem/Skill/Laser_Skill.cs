@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Laser_Skill : Skill
 {
+    #region 字段和属性
+
     [Header("组件引用")]
     public LineRenderer lineRenderer;
     public Transform laserEffect;
@@ -12,32 +14,44 @@ public class Laser_Skill : Skill
     
     [Header("预制体引用")]
     public GameObject laserEffectPrefab;
+    
+    [Tooltip("激光起点位置")]
     public Vector3 startPoint;
+    
+    [Tooltip("缓存的激光施法点Transform")]
+    private Transform laserCastingPoint;
+    
+    [Tooltip("移动组件引用")]
     Mover mover;
+
+    #endregion
+
+    #region 生命周期方法
 
     // Start is called before the first frame update
     void Start()
     {
         if (runtimeSkill == null)
         {
-            Debug.LogError("Laser_Skill: runtimeSkill is null!");
+            Debug.LogError("激光技能：runtimeSkill为空！");
             return;
         }
 
         if (runtimeSkill.skillManager == null)
         {
-            Debug.LogError("Laser_Skill: skillManager is null!");
+            Debug.LogError("激光技能：skillManager为空！");
             return;
         }
 
         // 获取施法点
         if (runtimeSkill.skillManager.castingPoint == null || !runtimeSkill.skillManager.castingPoint.ContainsKey("Laser"))
         {
-            Debug.LogError("Laser_Skill: castingPoint dictionary is null or doesn't contain 'Laser' key!");
+            Debug.LogError("激光技能：castingPoint字典为空或不包含'Laser'键！");
             return;
         }
 
-        startPoint = runtimeSkill.skillManager.castingPoint["Laser"].position; // 初始化激光线
+        laserCastingPoint = runtimeSkill.skillManager.castingPoint["Laser"]; // 缓存施法点Transform
+        startPoint = laserCastingPoint.position; // 初始化激光线
 
         // 获取移动组件
         if (runtimeSkill.skillSender != null)
@@ -49,12 +63,12 @@ public class Laser_Skill : Skill
             }
             else
             {
-                Debug.LogWarning("Laser_Skill: Could not find Mover component!");
+                Debug.LogWarning("激光技能：找不到Mover组件！");
             }
         }
         else
         {
-            Debug.LogWarning("Laser_Skill: skillSender is null!");
+            Debug.LogWarning("激光技能：skillSender为空！");
         }
 
         // 获取LineRenderer组件
@@ -66,7 +80,7 @@ public class Laser_Skill : Skill
         }
         else
         {
-            Debug.LogWarning("Laser_Skill: LineRenderer component not found!");
+            Debug.LogWarning("激光技能：找不到LineRenderer组件！");
         }
 
         // 实例化并设置特效位置
@@ -77,19 +91,19 @@ public class Laser_Skill : Skill
         }
         else
         {
-            Debug.LogWarning("Laser_Skill: laserEffectPrefab is not assigned!");
+            Debug.LogWarning("激光技能：laserEffectPrefab未分配！");
         }
 
         // 获取子对象上的BoxCollider2D组件
         laserCollider = GetComponentInChildren<BoxCollider2D>();
         if (laserCollider == null)
         {
-            Debug.LogWarning("Laser_Skill: BoxCollider2D not found in children!");
+            Debug.LogWarning("激光技能：在子对象中找不到BoxCollider2D！");
         }
 
         // 获取所有子对象上的Module组件
         mods = new List<Module>(GetComponentsInChildren<Module>());
-        Debug.Log($"Laser_Skill: Found {mods.Count} modules");
+        Debug.Log($"激光技能：找到 {mods.Count} 个模块");
 
         // 加载所有模块
         foreach (var mod in mods)
@@ -100,7 +114,7 @@ public class Laser_Skill : Skill
             }
             else
             {
-                Debug.LogWarning("Laser_Skill: Found null module in mods list!");
+                Debug.LogWarning("激光技能：在模块列表中发现空模块！");
             }
         }
     }
@@ -111,7 +125,7 @@ public class Laser_Skill : Skill
         // 检查runtimeSkill是否存在
         if (runtimeSkill == null)
         {
-            Debug.LogError("Laser_Skill: runtimeSkill is null in Update!");
+            Debug.LogError("激光技能：Update中runtimeSkill为空！");
             return;
         }
 
@@ -124,7 +138,7 @@ public class Laser_Skill : Skill
             }
             else
             {
-                Debug.LogWarning("Laser_Skill: Found null module in mods list during Update!");
+                Debug.LogWarning("激光技能：在Update中发现模块列表中的空模块！");
             }
         }
 
@@ -132,39 +146,44 @@ public class Laser_Skill : Skill
         UpdateLaser();
     }
 
+    #endregion
+
+    #region 激光更新方法
+
+    [Tooltip("更新激光线的显示")]
     private void UpdateLaser()
     {
         // 检查runtimeSkill是否存在
         if (runtimeSkill == null)
         {
-            Debug.LogError("Laser_Skill: runtimeSkill is null in UpdateLaser!");
+            Debug.LogError("激光技能：UpdateLaser中runtimeSkill为空！");
             return;
         }
 
         // 检查skillManager是否存在
         if (runtimeSkill.skillManager == null)
         {
-            Debug.LogError("Laser_Skill: skillManager is null in UpdateLaser!");
+            Debug.LogError("激光技能：UpdateLaser中skillManager为空！");
             return;
         }
 
         // 检查聚焦点数据是否存在
         if (runtimeSkill.skillManager.focusPoint == null || runtimeSkill.skillManager.focusPoint.Data == null)
         {
-            Debug.LogError("Laser_Skill: focusPoint or its data is null!");
+            Debug.LogError("激光技能：focusPoint或其数据为空！");
             return;
         }
 
-        // 获取施法点
-        if (runtimeSkill.skillManager.castingPoint == null || !runtimeSkill.skillManager.castingPoint.ContainsKey("Laser"))
+        // 检查施法点是否已缓存
+        if (laserCastingPoint == null)
         {
-            Debug.LogError("Laser_Skill: castingPoint dictionary is null or doesn't contain 'Laser' key in UpdateLaser!");
+            Debug.LogError("激光技能：UpdateLaser中laserCastingPoint为空！");
             return;
         }
 
         // 获取实时的目标点
         Vector2 currentTargetPoint = runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point;
-        startPoint = runtimeSkill.skillManager.castingPoint["Laser"].position; // 初始化激光线
+        startPoint = laserCastingPoint.position; // 使用缓存的施法点Transform
 
         // 更新激光线起点和终点
         if (lineRenderer != null)
@@ -189,17 +208,17 @@ public class Laser_Skill : Skill
         runtimeSkill.progress += Time.deltaTime;
     }
 
-    // 更新激光碰撞器的大小和旋转
+    [Tooltip("更新激光碰撞器的大小和旋转")]
     private void UpdateLaserCollider(Vector2 targetPoint)
     {
-        // 检查runtimeSkill和skillSender是否存在
-        if (runtimeSkill == null || runtimeSkill.skillSender == null)
+        // 检查缓存的施法点是否存在
+        if (laserCastingPoint == null)
         {
-            Debug.LogError("Laser_Skill: runtimeSkill or skillSender is null in UpdateLaserCollider!");
+            Debug.LogError("激光技能：UpdateLaserCollider中laserCastingPoint为空！");
             return;
         }
 
-        Vector2 startPoint = runtimeSkill.skillSender.transform.position;
+        Vector2 startPoint = laserCastingPoint.position; // 使用缓存的施法点Transform
         Vector2 endPoint = targetPoint;
 
         // 计算激光线的中心点
@@ -224,19 +243,17 @@ public class Laser_Skill : Skill
         }
     }
 
-    // 销毁时清理
+    #endregion
+
+    #region 销毁清理方法
+
+    [Tooltip("销毁时清理资源")]
     private void OnDestroy()
     {
-        // 恢复移动速度
-        if (mover != null)
-        {
-            mover.Data.Speed.MultiplicativeModifier /= 0.25f;
-        }
-
         // 检查runtimeSkill是否存在
         if (runtimeSkill == null)
         {
-            Debug.LogWarning("Laser_Skill: runtimeSkill is null in OnDestroy!");
+            Debug.LogWarning("激光技能：OnDestroy中runtimeSkill为空！");
             return;
         }
 
@@ -267,4 +284,23 @@ public class Laser_Skill : Skill
             }
         }
     }
+
+    public override void Save()
+    {
+        // 保存所有模块
+        foreach (var mod in mods)
+        {
+            mod.Save();
+        }
+
+        // 恢复移动速度
+        if (mover != null)
+        {
+            mover.Data.Speed.MultiplicativeModifier /= 0.25f;
+            mover.Save();
+        }
+       
+    }
+
+    #endregion
 }

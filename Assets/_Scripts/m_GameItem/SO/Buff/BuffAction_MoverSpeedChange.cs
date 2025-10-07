@@ -4,15 +4,23 @@ using UnityEngine;
 public class BuffAction_MoverSpeedChange : BuffAction
 {
     public float SpeedChangeValue;
+    public Mover SpeedMod;
 
     public override void Apply(BuffRunTime data)
     {
-        data.buff_Receiver.itemMods.GetMod_ByID(ModText.Mover, out Mover mod);
-        if (mod == null)
+        if (SpeedMod == null)
         {
-            // Buff接受者没有速度接口，取消apply
-            return;
+            data.buff_Receiver.itemMods.GetMod_ByID(ModText.Mover, out SpeedMod);
+
+            if (SpeedMod == null)
+            {
+                Debug.LogError("BuffAction_MoverSpeedChange: SpeedMod is null.");
+                return;
+            }
         }
-        mod.Speed.MultiplicativeModifier *= SpeedChangeValue;
+
+        
+
+        SpeedMod.Speed.MultiplicativeModifier *= SpeedChangeValue;
     }
 }

@@ -4768,7 +4768,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.000045776367, y: 0}
+  m_AnchoredPosition: {x: 0.000118255615, y: 0}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &7132638982571321051
@@ -6940,14 +6940,15 @@ MonoBehaviour:
     Tags:
       keys:
       - tag: Type
-        values: []
+        values:
+        - Player
       - tag: Material
         values: []
       - tag: MakeTag
         values: []
     Stack:
       Amount: 1
-      Volume: 1
+      Volume: 500
       CanBePickedUp: 0
     transform:
       position: {x: 0, y: 0, z: 0}
@@ -9186,6 +9187,22 @@ PrefabInstance:
     - target: {fileID: 1192072630347856819, guid: 65b76ad232c002141b31fb204da0ba2b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1303189021472741964, guid: 65b76ad232c002141b31fb204da0ba2b, type: 3}
+      propertyPath: SerializedcastingPointOffset._serializedList.Array.data[0].Value.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1303189021472741964, guid: 65b76ad232c002141b31fb204da0ba2b, type: 3}
+      propertyPath: SerializedcastingPointOffset._serializedList.Array.data[0].Value.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1303189021472741964, guid: 65b76ad232c002141b31fb204da0ba2b, type: 3}
+      propertyPath: SerializedcastingPointOffset._serializedList.Array.data[1].Value.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1303189021472741964, guid: 65b76ad232c002141b31fb204da0ba2b, type: 3}
+      propertyPath: SerializedcastingPointOffset._serializedList.Array.data[1].Value.y
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2963001128325515958, guid: 65b76ad232c002141b31fb204da0ba2b, type: 3}
       propertyPath: m_Name

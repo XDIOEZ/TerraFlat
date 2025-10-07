@@ -13,7 +13,7 @@ public class Chunk : MonoBehaviour
     [ShowInInspector]
     public Dictionary<int, Item> RunTimeItems = new();
     [ShowInInspector]
-    public Dictionary<string, List<Item>> RuntimeItemsGroup = new();
+    public Dictionary<string, HashSet<Item>> RuntimeItemsGroup = new();
     public Map Map;
     public MapSave MapSave;
     public string ChunkOwner;
@@ -119,16 +119,16 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region 物品分组管理
-    // ✅ 添加到分组s
+    // ✅ 添加到分组
     public void AddToGroup(Item item)
     {
         string key = item.itemData.IDName;
-        if (!RuntimeItemsGroup.TryGetValue(key, out var list))
+        if (!RuntimeItemsGroup.TryGetValue(key, out var set))
         {
-            list = new List<Item>();
-            RuntimeItemsGroup[key] = list;
+            set = new HashSet<Item>();
+            RuntimeItemsGroup[key] = set;
         }
-        list.Add(item);
+        set.Add(item);
     }
     #endregion
 
@@ -175,10 +175,11 @@ public void AddItem(Item item)
     {
         RunTimeItems.Remove(item.itemData.Guid);
         string key = item.itemData.IDName;
-        if (RuntimeItemsGroup.TryGetValue(key, out var list))
+        if (RuntimeItemsGroup.TryGetValue(key, out var set))
         {
-            list.Remove(item);
+            set.Remove(item);
         }
+        MapSave.RemoveItemData(item.itemData);
     }
 }
 

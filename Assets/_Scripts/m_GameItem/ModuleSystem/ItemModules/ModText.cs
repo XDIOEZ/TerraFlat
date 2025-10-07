@@ -12,6 +12,7 @@ public static class ModText
     #region B
     public static string Bag = "背包模块";
     public static string Building = "建筑模块";
+    public static string BuffManager = "BuffManager";
     #endregion
 
     #region C

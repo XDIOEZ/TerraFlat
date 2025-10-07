@@ -199,28 +199,7 @@ public int GenerateGuid()
             return item;
         return null;
     }
-    /// <summary>
-    /// 保存场景中的所有玩家
-    /// </summary>
-    /// <returns>保存的玩家数量</returns>
-    [Button("保存玩家")]
-    public int SavePlayer()
-    {
-        int playerCount = 0;
-        Player[] players = ItemMgr.Instance.Player_DIC.Values.ToArray();
 
-        foreach (Player player in players)
-        {
-            if (player == null) continue;
-            player.Save();
-
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
-
-            playerCount++;
-        }
-
-        return playerCount;
-    }
 
     //TODO 添加一个清理两个字典的中Item空引用的方法
     [Button("清理空引用")]
@@ -257,40 +236,82 @@ public int GenerateGuid()
       //  Debug.Log("已清理无效的 Item 引用。");
     }
 
+    #region 加载玩家
+    /// <summary>
+    /// 保存场景中的所有玩家
+    /// </summary>
+    /// <returns>保存的玩家数量</returns>
+    [Button("保存玩家")]
+    public int SavePlayer()
+    {
+        int playerCount = 0;
+        Player[] players = ItemMgr.Instance.Player_DIC.Values.ToArray();
 
+        foreach (Player player in players)
+        {
+            if (player == null) continue;
+            player.Save();
+
+            SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
+
+            playerCount++;
+        }
+
+        return playerCount;
+    }
     [Button("加载玩家")]
+    [Tooltip("根据传入的玩家名称,加载玩家数据\n" +
+        "优先加载当前存档中的同名玩家数据\n" +
+        "如果加载不到就自动创建新的玩家数据")]
     public Player LoadPlayer(string playerName)
     {
-        Data_Player playerData;
-        //检测存档中是否存在玩家数据
-        if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out var LoadedPlayerData))
-        {
-            playerData = LoadedPlayerData;
-        }
-        else //如果不存在，则创建默认玩家数据
-        {
-            var prefab = GameRes.Instance.GetPrefab("Player");
-            var defaultPlayer = prefab.GetComponent<Player>();
-            playerData = defaultPlayer.Data.DeepClone();
-            playerData.Guid = playerName.GetHashCode();
-            playerData.Name_User = playerName;
-        }
+        // 加载或者创建玩家数据
+        Data_Player playerData = LoadOrCreatePlayerData(playerName);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
-
+        //设置玩家数据到玩家引用字典
         ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
+
+        player.Load();
 
         return player;
     }
+    private Data_Player LoadOrCreatePlayerData(string playerName)
+    {
+        Data_Player playerData;
+        //检测存档中是否存在玩家数据
+        if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out var loadedPlayerData))
+        {
+            playerData = loadedPlayerData;
+        }
+        else //如果不存在，则创建默认玩家数据
+        {
+            playerData = CreateDefaultPlayerData(playerName);
+        }
+        return playerData;
+    }
+
+    private Data_Player CreateDefaultPlayerData(string playerName)
+    {
+        var prefab = GameRes.Instance.GetPrefab("Player");
+        var defaultPlayer = prefab.GetComponent<Player>();
+        var playerData = defaultPlayer.Data.DeepClone();
+        playerData.Guid = playerName.GetHashCode();
+        playerData.Name_User = playerName;
+        return playerData;
+    }
+
     private Player CreatePlayer(Data_Player data)
     {
-        Player newPlayer = (Player)ItemMgr.Instance.InstantiateItem(data, Vector3.zero, Quaternion.identity, Vector3.one,new GameObject("Players"));
+        Player newPlayer = (Player)ItemMgr.Instance.InstantiateItem(data, Vector3.zero, Quaternion.identity, Vector3.one, new GameObject("Players"));
 
         // ✅ 将父对象设置为空（放到场景根节点下）
         newPlayer.transform.SetParent(null, true);
 
         return newPlayer;
     }
+    #endregion
+
     [Tooltip("随机空投")]
     public void RandomDropInMap(GameObject dropObject, Chunk map = null, Vector2Int quadrant = default)
     {

@@ -192,6 +192,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-8419945662487547705
@@ -720,6 +721,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-5883202885506671592
@@ -997,6 +999,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-4806776583782100047
@@ -1028,6 +1031,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-4802761802709212652
@@ -1141,6 +1145,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-4492235781421070150
@@ -1529,6 +1534,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-2467991973311567967
@@ -1731,7 +1737,9 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  TriggerDistance: 1
+  maxAttackDistance: 0.5
+  minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &-1483847133319941561
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1836,6 +1844,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-1268942347569492764
@@ -2079,6 +2088,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-610888882866647540
@@ -2187,6 +2197,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &-251365871851888401
@@ -2709,6 +2720,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &1420533246251634697
@@ -2863,6 +2875,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &1884513089265405469
@@ -2921,6 +2934,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &1962888412019463015
@@ -3079,6 +3093,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &2516835987763106837
@@ -3218,6 +3233,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &3194243587635636793
@@ -3411,6 +3427,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &3699032121658888701
@@ -3470,6 +3487,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &3774833969970170297
@@ -3611,6 +3629,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4039514587044868026
@@ -3670,6 +3689,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4252713523024202875
@@ -3725,7 +3745,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &4382788781523543211
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3755,6 +3776,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4590384320906632918
@@ -3814,6 +3836,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &4661644968950011588
@@ -4025,6 +4048,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &5529793143648280316
@@ -4056,6 +4080,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &5546224442217254369
@@ -4420,6 +4445,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 0
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &6661792466673039309
@@ -4477,7 +4503,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &6774004432028909902
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4555,6 +4582,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &7146830462319604123
@@ -4786,6 +4814,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &8172152478226543665
@@ -4948,6 +4977,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &8837598550418380743
@@ -5005,6 +5035,7 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
 --- !u!114 &8976793292346625333
@@ -5151,5 +5182,6 @@ MonoBehaviour:
   playType: 0
   Setbool: 1
   layerIndex: 0
+  PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1

@@ -159,7 +159,12 @@ public class Mod_TurnBody : Module, ITurnBody
     /// <param name="transform">要添加的变换对象</param>
     public void AddControlledTransform(Transform transform)
     {
-        if (transform == null) return;
+        if (transform == null)
+        {
+            Debug.LogError("[TurnBody] 受控制的变换对象为空！");
+            return;
+        }
+       
         
         // 添加到控制列表
         controlledTransforms.Add(transform);

@@ -345,7 +345,7 @@ public virtual float Hurt(IDamageSender damageSender)
 
 
 
-public virtual float Heal(float healAmount, Item healer)
+public virtual float Heal(float healAmount, Item healer=null)
 {
     float oldHp = Hp;
     Hp = Mathf.Min(Hp + healAmount, MaxHp.Value);

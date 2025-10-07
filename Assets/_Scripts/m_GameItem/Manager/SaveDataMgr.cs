@@ -105,9 +105,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// 获取当前活动场景中所有物品的数据
     /// </summary>
     /// <returns>物品数据字典</returns>
-    public Dictionary<string, List<ItemData>> GetActiveSceneAllItemData(Chunk MapParent)
+    public Dictionary<string, HashSet<ItemData>> GetActiveSceneAllItemData(Chunk MapParent)
     {
-        Dictionary<string, List<ItemData>> itemDataDict = new Dictionary<string, List<ItemData>>();
+        Dictionary<string, HashSet<ItemData>> itemDataDict = new Dictionary<string, HashSet<ItemData>>();
 
         // 先处理可保存物品
         foreach (Item item in MapParent.RunTimeItems.Values)
@@ -121,13 +121,13 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 continue;
             ItemData itemData = item.itemData;
 
-            if (!itemDataDict.TryGetValue(itemData.IDName, out List<ItemData> list))
+            if (!itemDataDict.TryGetValue(itemData.IDName, out HashSet<ItemData> set))
             {
-                list = new List<ItemData>();
-                itemDataDict[itemData.IDName] = list;
+                set = new HashSet<ItemData>();
+                itemDataDict[itemData.IDName] = set;
             }
 
-            list.Add(itemData);
+            set.Add(itemData);
         }
 
         return itemDataDict;
@@ -177,9 +177,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// 获取当前活动场景中所有物品的数据
     /// </summary>
     /// <returns>物品数据字典</returns>
-    public static Dictionary<string, List<ItemData>> GetActiveSceneAllItemData_Static()
+    public static Dictionary<string, HashSet<ItemData>> GetActiveSceneAllItemData_Static()
     {
-        Dictionary<string, List<ItemData>> itemDataDict = new Dictionary<string, List<ItemData>>();
+        Dictionary<string, HashSet<ItemData>> itemDataDict = new Dictionary<string, HashSet<ItemData>>();
         Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
 
         // 先处理可保存物品
@@ -217,13 +217,13 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if (itemData == null)
                 continue;
 
-            if (!itemDataDict.TryGetValue(itemData.IDName, out List<ItemData> list))
+            if (!itemDataDict.TryGetValue(itemData.IDName, out HashSet<ItemData> set))
             {
-                list = new List<ItemData>();
-                itemDataDict[itemData.IDName] = list;
+                set = new HashSet<ItemData>();
+                itemDataDict[itemData.IDName] = set;
             }
 
-            list.Add(itemData);
+            set.Add(itemData);
         }
 
         return itemDataDict;

@@ -1,10 +1,7 @@
 using AYellowpaper.SerializedCollections;
-using Org.BouncyCastle.Ocsp;
 using Sirenix.OdinInspector;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem.XR;
 
 public class Mod_SkillManager : Module
 {
@@ -49,8 +46,6 @@ public class Mod_SkillManager : Module
 public override void Load()
 {
     focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
-        //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
-    item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
     controller = item.itemMods.GetMod_ByID<PlayerController>(ModText.Controller);
     if (controller != null)
         controller.RightClick += Act;
@@ -105,6 +100,12 @@ public override void Load()
         }
     }
 
+    public void Start()
+    {
+        //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
+        item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
+    }
+
 
 
     public override void ModUpdate(float deltaTime)
@@ -126,6 +127,7 @@ public override void Load()
     
     public override void Save()
     {
+        StopAllSkills();
         ModSaveData.WriteData(Data);
     }
     

@@ -14,6 +14,11 @@ public class BuffManager : Module
     {
         ModData.ReadData(ref BuffRunTimeData_Dic);
     }
+    public new void Awake()
+    {
+        base.Awake();
+        _Data.ID = ModText.BuffManager;
+    }
 
 
     public void Start()
@@ -24,31 +29,45 @@ public class BuffManager : Module
     {
         ModData.WriteData(BuffRunTimeData_Dic);
     }
-    
-    public void AddBuffRuntime(Buff_Data buffData, Item Receiver)
+
+    public void AddBuff(Buff_Data buffData_SO)
     {
-       // Debug.Log($"尝试添加 Buff: {buffData?.name}, Sender: {Sender?.name}, Receiver: {Receiver?.name}");
-
-        if (buffData == null || Receiver == null)
-        {
-            Debug.LogWarning("buffData 或 Receiver 为空，不能添加 Buff");
-            return;
-        }
-
-        BuffRunTime newBuff = new BuffRunTime
-        {
-            buff_IDName = buffData.buff_ID,
-            buff = buffData,
-            buff_Receiver = Receiver,
-        };
-        if(newBuff.buff.buff_ID == "")
-        {
-            Debug.LogError("Buff ID 为空，不能添加 Buff");
-            return;
-        }
-
-        AddBuffByData(newBuff);
+        AddBuffRuntime(buffData_SO, item);
     }
+    public void ClearAllBuff()
+    {
+
+    }
+
+
+public void AddBuffRuntime(Buff_Data buffData_SO, Item Receiver)
+{
+    // Debug.Log($"尝试添加 Buff: {buffData?.name}, Sender: {Sender?.name}, Receiver: {Receiver?.name}");
+
+    if (buffData_SO == null || Receiver == null)
+    {
+        Debug.LogWarning("buffData 或 Receiver 为空，不能添加 Buff");
+        return;
+    }
+
+        // 克隆 Buff_Data 以避免修改原始 ScriptableObject
+        Buff_Data clonedBuffData = buffData_SO.Clone();
+
+    BuffRunTime newBuff = new BuffRunTime
+    {
+        buff_IDName = clonedBuffData.buff_ID,
+        buff = clonedBuffData, // 使用克隆的副本
+        buff_Receiver = Receiver,
+    };
+    
+    if(newBuff.buff.buff_ID == "")
+    {
+        Debug.LogError("Buff ID 为空，不能添加 Buff");
+        return;
+    }
+
+    AddBuffByData(newBuff);
+}
 
     public bool HasBuff(string buffId)
     {

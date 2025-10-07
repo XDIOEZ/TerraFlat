@@ -309,7 +309,7 @@ public class SaveDataManager_UI : MonoBehaviour
             Debug.LogWarning("请先选择存档或创建新游戏");
             return;
         }
-        GameManager.Instance.ContinueGame();
+        GameManager.Instance.ContinueGame(GetSelectedPlayerNameInput().text);
     }
 
     /// <summary>
@@ -319,7 +319,7 @@ public class SaveDataManager_UI : MonoBehaviour
     {
         if (saveAndLoad != null)
         {
-            GameManager.Instance.StartNewGame();
+            GameManager.Instance.StartNewGame(GetNewPlayerNameInput().text);
         }
         else
         {

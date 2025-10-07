@@ -80,7 +80,7 @@ public class SettingCanvas : Module
     {
         // 必须通过StartCoroutine启动协程
         // 注意：调用者（此处是SettingCanvas）必须是MonoBehaviour实例
-        GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine());
+        GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine(item));
     }
     public void SaveGame()
     {
@@ -89,7 +89,7 @@ public class SettingCanvas : Module
 public void ClossApp()
 {
         // 注意：调用者（此处是SettingCanvas）必须是MonoBehaviour实例
-        GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine(() => {
+        GameManager.Instance.StartCoroutine(GameManager.Instance.ExitGameCoroutine(item,() => {
 #if UNITY_EDITOR
         // 在编辑器模式下停止播放
         UnityEditor.EditorApplication.isPlaying = false;

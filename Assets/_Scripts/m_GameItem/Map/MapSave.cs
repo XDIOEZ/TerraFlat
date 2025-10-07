@@ -9,8 +9,8 @@ public partial class MapSave
     public string Name;
 
     [ShowInInspector]
-    // 将原先存储单个 ItemData 的字典改为存储 List<ItemData>，key 为物品名称
-    public Dictionary<string, List<ItemData>> items = new Dictionary<string, List<ItemData>>();
+    // 将原先存储单个 ItemData 的字典改为存储 HashSet<ItemData>，key 为物品名称
+    public Dictionary<string, HashSet<ItemData>> items = new Dictionary<string, HashSet<ItemData>>();
 
     public float SunlightIntensity;
 
@@ -19,11 +19,25 @@ public partial class MapSave
     public void AddItemData(ItemData itemData)
     {
         string key = itemData.IDName;
-        if (!items.TryGetValue(key, out var list))
+        if (!items.TryGetValue(key, out var set))
         {
-            list = new List<ItemData>();
-            items[key] = list;
+            set = new HashSet<ItemData>();
+            items[key] = set;
         }
-        list.Add(itemData);
+        set.Add(itemData);
+    }
+    
+    public void RemoveItemData(ItemData itemData)
+    {
+        string key = itemData.IDName;
+        if (items.TryGetValue(key, out var set))
+        {
+            set.Remove(itemData);
+            // 如果集合为空，可以选择移除整个键值对
+            if (set.Count == 0)
+            {
+                items.Remove(key);
+            }
+        }
     }
 }

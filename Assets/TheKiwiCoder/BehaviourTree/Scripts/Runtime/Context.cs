@@ -32,6 +32,7 @@ namespace TheKiwiCoder {
         public Mod_Damage Damage;
         public Mod_Food Food;
         public TileEffectReceiver tileEffectReceiver;
+        public BuffManager buffManager;
 
         // Add other game specific systems here
 
@@ -60,6 +61,7 @@ namespace TheKiwiCoder {
             context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
             context.tileEffectReceiver = context.item.itemMods.GetMod_ByID(ModText.TileEffect) as TileEffectReceiver;
             context.map = context.tileEffectReceiver.Cache_map;
+            context.buffManager = context.item.itemMods.GetMod_ByID(ModText.BuffManager) as BuffManager;
             return context;
         }
     }

@@ -21,6 +21,7 @@ public class Mod_ItemChunkAssigner : Module
     {
         ModData.WriteData(lastChunkPos);
     }
+    
     public override void ModUpdate(float deltaTime)
     {
         if (_Data.isRunning == false)
@@ -29,6 +30,13 @@ public class Mod_ItemChunkAssigner : Module
         Vector2Int currentChunkPos = Chunk.GetChunkPosition(transform.position);
         if (currentChunkPos != lastChunkPos)
         {
+            // 从旧区块中移除物品引用
+            if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(lastChunkPos.ToString(), out Chunk oldChunk))
+            {
+                oldChunk.RemoveItem(item);
+            }
+            
+            // 更新物品的区块归属
             lastChunkPos = currentChunkPos;
             ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
         }
