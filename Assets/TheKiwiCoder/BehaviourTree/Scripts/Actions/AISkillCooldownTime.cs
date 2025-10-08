@@ -8,103 +8,84 @@ public class AISkillCooldownTime : ActionNode
 {
     [Header("冷却时间（秒）")]
     public float cooldownTime = 1.0f;
-    
-    [Header("调试信息（仅查看）")]
-    [SerializeField] private float cooldownStartTime = 0f;
+
+    [Header("冷却进度倍率（调节冷却速度）")]
+    public float cooldownRateMultiplier = 1.0f;
+
+    [Header("调试信息")]
     [SerializeField] private bool isCoolingDown = false;
-    
-    // 新增字段
-    [Header("时间记录信息")]
-    [SerializeField] private float lastRecordTime = 0f;  // 上一次记录时间
-    [SerializeField] private float currentTime = 0f;    // 当前时间
-    [SerializeField] private float timeDifference = 0f; // 时间差
-    [SerializeField] private bool isInCooldown = false; // 是否处于冷却中
+    [SerializeField] private float accumulatedCooldownProgress = 0f;
 
-    protected override void OnStart() 
+    private float lastAccessTime = 0f; // 上次节点被访问的时间
+
+    protected override void OnStart()
     {
-        // 更新时间信息
-        UpdateTimeInfo();
-        
-        // 如果还没有开始冷却，则开始冷却计时
+        float now = Time.time;
+
+        // 第一次访问或AI刚创建
+        if (lastAccessTime == 0f)
+        {
+            lastAccessTime = now;
+            return;
+        }
+
+        // 计算时间间隔
+        float delta = now - lastAccessTime;
+        lastAccessTime = now;
+
+        // 如果在冷却中，则根据间隔增加进度
+        if (isCoolingDown)
+        {
+            accumulatedCooldownProgress += delta * cooldownRateMultiplier;
+            if (accumulatedCooldownProgress >= cooldownTime)
+            {
+                isCoolingDown = false;
+                accumulatedCooldownProgress = cooldownTime; // 保证最大值
+            }
+        }
+    }
+
+    protected override void OnStop() { }
+
+    protected override State OnUpdate()
+    {
+        // 如果没在冷却，说明技能可用
         if (!isCoolingDown)
         {
+            // 开始新的冷却
             StartCooldown();
-        }
-    }
-
-    protected override void OnStop() 
-    {
-    }
-
-    protected override State OnUpdate() 
-    {
-        // 更新时间信息
-        UpdateTimeInfo();
-        
-        // 更新冷却状态
-        isInCooldown = isCoolingDown;
-        
-        // 如果没有在冷却中，返回Success
-        if (!isCoolingDown)
-        {
             return State.Success;
         }
-        
-        // 检查冷却是否完成
-        if (Time.time - cooldownStartTime >= cooldownTime)
-        {
-            // 冷却完成，重置状态
-            isCoolingDown = false;
-            isInCooldown = false;
-            return State.Success;
-        }
-        
-        // 仍在冷却中，返回Failure
+
+        // 还在冷却中
         return State.Failure;
     }
-    
-    // 开始冷却计时
+
+    // 手动开始冷却
     public void StartCooldown()
     {
-        cooldownStartTime = Time.time;
         isCoolingDown = true;
-        isInCooldown = true;
-        UpdateTimeInfo();
+        accumulatedCooldownProgress = 0f;
     }
-    
-    // 检查是否正在冷却中
-    public bool IsCoolingDown()
-    {
-        if (isCoolingDown && Time.time - cooldownStartTime >= cooldownTime)
-        {
-            isCoolingDown = false; // 自动重置已完成的冷却
-            isInCooldown = false;
-        }
-        return isCoolingDown;
-    }
-    
+
     // 获取剩余冷却时间
     public float GetRemainingCooldownTime()
     {
-        if (!isCoolingDown)
-            return 0f;
-            
-        float remaining = cooldownTime - (Time.time - cooldownStartTime);
-        return Mathf.Max(0f, remaining);
+        if (!isCoolingDown) return 0f;
+        return Mathf.Max(0f, cooldownTime - accumulatedCooldownProgress);
     }
-    
-    // 重置冷却
+
+    // 检查是否冷却完毕
+    public bool IsCooledDown()
+    {
+        return !isCoolingDown;
+    }
+
+    // 强制重置
     public void ResetCooldown()
     {
         isCoolingDown = false;
-        isInCooldown = false;
-    }
-    
-    // 更新时间信息
-    private void UpdateTimeInfo()
-    {
-        lastRecordTime = currentTime;
-        currentTime = Time.time;
-        timeDifference = currentTime - lastRecordTime;
+        accumulatedCooldownProgress = 0f;
+        lastAccessTime = Time.time;
     }
 }

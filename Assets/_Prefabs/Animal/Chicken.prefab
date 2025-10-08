@@ -473,7 +473,7 @@ MonoBehaviour:
   detectionRadius: 5
   itemLayer:
     serializedVersion: 2
-    m_Bits: 512
+    m_Bits: 1
   currentItemsInArea: []
   ModData:
     Name: 

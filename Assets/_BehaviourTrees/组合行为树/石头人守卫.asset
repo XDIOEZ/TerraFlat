@@ -139,12 +139,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 0
-  cooldownStartTime: 0
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 0
-  currentTime: 0
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &-8691946898186108408
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -436,9 +433,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-8070869170342608551
@@ -595,9 +591,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &-7590825483089921519
@@ -651,9 +646,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &-7525269628301401366
@@ -1101,9 +1095,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &-6377180375401427290
@@ -1210,9 +1203,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 0
 --- !u!114 &-6182545462384560545
@@ -1300,12 +1292,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 10
-  cooldownStartTime: 36.54545
+  cooldownRateMultiplier: 1
   isCoolingDown: 1
-  lastRecordTime: 36.54545
-  currentTime: 36.54545
-  timeDifference: 0
-  isInCooldown: 1
+  accumulatedCooldownProgress: 0
 --- !u!114 &-5941559741439074914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1679,9 +1668,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-4696693633446670315
@@ -1841,8 +1829,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
   TrueRandom: 0
   sameTypeAttraction: 3
 --- !u!114 &-4330542569278785032
@@ -1870,12 +1857,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 180
-  cooldownStartTime: 0
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 0
-  currentTime: 0
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &-4314348351979516340
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2012,12 +1996,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 10
-  cooldownStartTime: 36.54545
+  cooldownRateMultiplier: 1
   isCoolingDown: 1
-  lastRecordTime: 36.54545
-  currentTime: 36.54545
-  timeDifference: 0
-  isInCooldown: 1
+  accumulatedCooldownProgress: 0
 --- !u!114 &-3862453747592572099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2288,9 +2269,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 0
 --- !u!114 &-3209310247317692713
@@ -2476,9 +2456,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-2661178903781546704
@@ -2535,9 +2514,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 0
 --- !u!114 &-2504138791366816942
@@ -2904,9 +2882,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &-1592942419169054842
@@ -2976,7 +2953,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 901637ea32db4e84abbc2028e4adb6c7
-  position: {x: 1422.3643, y: 2218.956}
+  position: {x: 1422.3999, y: 2216.4}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2986,12 +2963,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 60
-  cooldownStartTime: 0
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 0
-  currentTime: 0
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &-1506399596402485120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3349,9 +3323,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &-845645558663020498
@@ -3601,8 +3574,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
   TrueRandom: 0
   sameTypeAttraction: 3
 --- !u!114 &-265306113068990833
@@ -3632,9 +3604,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 0
 --- !u!114 &-220341737973779352
@@ -3662,12 +3633,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 0
-  cooldownStartTime: 36.54545
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 36.54545
-  currentTime: 36.54545
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &-116140925913973965
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3949,12 +3917,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 0
-  cooldownStartTime: 0
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 0
-  currentTime: 0
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &393229500783566941
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3980,12 +3945,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 180
-  cooldownStartTime: 0
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 0
-  currentTime: 0
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &397732673534990251
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4094,12 +4056,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 0
-  cooldownStartTime: 0
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 0
-  currentTime: 0
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &531712191822871218
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4487,12 +4446,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 0
-  cooldownStartTime: 36.54545
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 36.54545
-  currentTime: 36.54545
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &1480907702997871872
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4590,8 +4546,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
   TrueRandom: 0
   sameTypeAttraction: 3
 --- !u!114 &1881991111310191495
@@ -4910,8 +4865,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
   TrueRandom: 0
   sameTypeAttraction: 3
 --- !u!114 &2746680692813288426
@@ -5201,9 +5155,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &4039514587044868026
@@ -5737,21 +5690,20 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 8eaf47b49f475ab46a2d6e2079b20b7d
-  position: {x: 1675.4425, y: 2785.214}
+  position: {x: 1675.1998, y: 2784.7993}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
   isCollapsed: 0
   description: "\u6210\u529F\u83B7\u53D6\u5230\u4E86\u5C31\u8C03\u7528Awake\u52A8\u753B~~"
-  drawGizmos: 0
+  drawGizmos: 1
   DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &5131344554574143595
@@ -5994,9 +5946,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &5596178049562793366
@@ -6074,9 +6025,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &5738857062717067160
@@ -6106,9 +6056,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &5953325483978098028
@@ -6382,9 +6331,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &6503942870227633387
@@ -6496,12 +6444,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 10
-  cooldownStartTime: 36.54545
+  cooldownRateMultiplier: 1
   isCoolingDown: 1
-  lastRecordTime: 36.54545
-  currentTime: 36.54545
-  timeDifference: 0
-  isInCooldown: 1
+  accumulatedCooldownProgress: 0
 --- !u!114 &7146587704780539297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6728,9 +6673,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &7586145576650321790
@@ -6808,9 +6752,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &7594151450016852983
@@ -6890,9 +6833,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &7682945168691380451
@@ -7128,12 +7070,9 @@ MonoBehaviour:
   drawGizmos: 0
   DebugMODE: 0
   cooldownTime: 0
-  cooldownStartTime: 36.54545
+  cooldownRateMultiplier: 1
   isCoolingDown: 0
-  lastRecordTime: 36.54545
-  currentTime: 36.54545
-  timeDifference: 0
-  isInCooldown: 0
+  accumulatedCooldownProgress: 0
 --- !u!114 &8364453821819760358
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7258,8 +7197,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
   TrueRandom: 0
   sameTypeAttraction: 3
 --- !u!114 &8831964031793579491
@@ -7349,9 +7287,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 3, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &9205953963857923398

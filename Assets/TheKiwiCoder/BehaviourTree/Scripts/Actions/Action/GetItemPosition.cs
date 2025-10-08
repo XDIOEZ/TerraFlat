@@ -8,8 +8,8 @@ public class GetItemPosition : ActionNode
     #region 枚举定义
     public enum MovementBehaviorType
     {
-        追击,  // 追击
-        逃离    // 逃离
+        追击,
+        逃离
     }
     #endregion
 
@@ -19,57 +19,32 @@ public class GetItemPosition : ActionNode
     public List<string> ItemType = new List<string>();
 
     [Header("行为设置")]
-    [Tooltip("选择行为类型：追击或逃离")]
     public MovementBehaviorType BehaviorType = MovementBehaviorType.追击;
 
     [Header("逃离行为参数")]
-    [Tooltip("逃跑的最小距离")]
-    [Range(1f, 10f)]
-    public float minRunDistance = 3.0f;
+    [Tooltip("逃离距离范围：x=最小，y=最大")]
+    public Vector2 fleeDistanceRange = new Vector2(7f, 7f);
 
-    [Tooltip("逃跑的最大距离")]
-    [Range(1f, 20f)]
-    public float maxRunDistance = 7.0f;
-
-    [Tooltip("逃跑方向的角度波动范围（度）")]
+    [Tooltip("逃离角度范围（度）")]
     [Range(0f, 180f)]
-    public float angleVariance = 30f;
+    public float fleeAngleRange = 45f;
 
     [Header("黑板设置")]
-    [Tooltip("是否设置黑板目标对象")]
     public bool setBlackboardTarget = true;
-
-    [Tooltip("找到目标后不执行任何移动操作")]
     public bool doNothing = false;
 
-    public Mover mover =>context.mover;
+    public Mover mover => context.mover;
     #endregion
 
     #region 重写方法
-    protected override void OnStart()
-    {
-    }
+    protected override void OnStart() { }
 
-    protected override void OnStop()
-    {
-        // 节点停止时的清理逻辑
-    }
-
-    public override void OnDrawGizmos()
-    {
-        base.OnDrawGizmos();
-
-        // 在Scene视图中绘制调试信息
-        if (Application.isPlaying && context != null)
-        {
-            DrawDebugInfo();
-        }
-    }
+    protected override void OnStop() { }
 
     protected override State OnUpdate()
     {
         // 查找目标物品
-        Item targetItem = context.itemDetector.GetFirstItemByIdNamesFast(itemIds:ItemType);
+        Item targetItem = context.itemDetector.GetFirstItemByIdNamesFast(itemIds: ItemType);
         if (targetItem == null)
         {
             return State.Failure;
@@ -77,136 +52,81 @@ public class GetItemPosition : ActionNode
 
         // 如果设置为不执行任何操作，直接返回成功
         if (doNothing)
-        {
             return State.Success;
-        }
 
-        // 根据行为类型处理移动
+        // 根据行为类型处理
         ProcessMovementBehavior(targetItem);
-
         return State.Success;
+    }
+
+    public override void OnDrawGizmos()
+    {
+        base.OnDrawGizmos();
+        if (!Application.isPlaying || context == null) return;
+
+        Vector2 currentPosition = context.transform.position;
+
+        if (BehaviorType == MovementBehaviorType.逃离)
+        {
+            DrawFleeConeGizmo(currentPosition);
+        }
     }
     #endregion
 
-    #region 私有方法
-    /// <summary>
-    /// 根据行为类型处理移动逻辑
-    /// </summary>
+    #region 移动逻辑
     private void ProcessMovementBehavior(Item targetItem)
     {
-        Vector2 targetPosition = targetItem.transform.position;
-
+        Vector2 targetPos = targetItem.transform.position;
         switch (BehaviorType)
         {
             case MovementBehaviorType.追击:
-                ProcessChaseMovement(targetPosition);
+                ProcessChaseMovement(targetPos);
                 break;
 
             case MovementBehaviorType.逃离:
-                ProcessFleeMovement(targetPosition);
-                break;
-
-            default:
-                Debug.LogError($"[{GetType().Name}] 未知的行为类型: {BehaviorType}");
+                ProcessFleeMovement(targetPos);
                 break;
         }
     }
 
-    /// <summary>
-    /// 处理追击移动
-    /// </summary>
     private void ProcessChaseMovement(Vector2 targetPosition)
     {
-        
-        blackboard.TargetPosition = targetPosition;
-        mover.TargetPosition = targetPosition;
-        context.mover.TargetPosition = targetPosition;
-        //  Debug.Log($"[{GetType().Name}] 设置追击目标位置: {targetPosition}");
+        SetTarget(targetPosition);
     }
 
-    /// <summary>
-    /// 处理逃离移动
-    /// </summary>
     private void ProcessFleeMovement(Vector2 targetPosition)
     {
         Vector2 currentPosition = context.transform.position;
-        Vector2 directionAway = (currentPosition - targetPosition).normalized;
+        Vector2 awayDir = (currentPosition - targetPosition).normalized;
 
-        // 添加随机角度偏移
-        float angleOffset = Random.Range(-angleVariance, angleVariance);
-        Vector2 rotatedDirection = RotateVector2(directionAway, angleOffset);
+        // 随机角度
+        float angleOffset = Random.Range(-fleeAngleRange * 0.5f, fleeAngleRange * 0.5f);
+        Vector2 finalDir = RotateVector2(awayDir, angleOffset);
 
-        // 计算逃离点
-        float runDistance = Random.Range(minRunDistance, maxRunDistance);
-        Vector2 escapePoint = currentPosition + rotatedDirection * runDistance;
+        // 随机距离
+        float fleeDistance = Random.Range(fleeDistanceRange.x, fleeDistanceRange.y);
+        Vector2 escapePoint = currentPosition + finalDir * fleeDistance;
 
+        // 经过解锁点处理（避开危险点）
         escapePoint = GetUnlockedTargetPosition(escapePoint);
 
-        //TODO MemoryPath_Forbidden是一个存储了禁止移动点位 的列表
-        //TODO 在创建escapePoint处理位置时 根据禁止移动点位添加偏移 避免走向禁止点位
-        //TODO 通过向escapePoint添加向量 实现方向的偏移
-        blackboard.TargetPosition = escapePoint;
-        mover.TargetPosition = escapePoint;
-       // Debug.Log($"[{GetType().Name}] 设置逃离目标位置: {escapePoint}");
+        SetTarget(escapePoint);
     }
 
-    public Vector2 GetUnlockedTargetPosition(Vector2 targetPosition)
+    private void SetTarget(Vector2 pos)
     {
-        Vector2 currentPosition = context.transform.position;
-
-        // 情况 1：当前方向被锁定，强制偏转
-        if (context.mover.IsLock)
-        {
-            Vector2 originalDir = (targetPosition - currentPosition).normalized;
-
-            // ±90~180度偏转
-            float angleOffset = Random.Range(90f, 180f);
-            angleOffset = Random.value < 0.5f ? angleOffset : -angleOffset;
-
-            Vector2 newDir = RotateVector2(originalDir, angleOffset);
-            float runDistance = (targetPosition - currentPosition).magnitude;
-
-            return currentPosition + newDir * runDistance;
-        }
-
-        // 情况 2：正常逃离，但避开危险区域（朝安全方向逃）
-        Vector2 escapeDir = (targetPosition - currentPosition).normalized;
-
-        Vector2 dangerDir = Vector2.zero;
-        foreach (var danger in context.mover.MemoryPath_Forbidden)
-        {
-            dangerDir += (danger - currentPosition).normalized;
-        }
-
-        if (context.mover.MemoryPath_Forbidden.Count > 0)
-        {
-            dangerDir /= context.mover.MemoryPath_Forbidden.Count;
-            context.mover.MemoryPath_Forbidden.RemoveAt(0); // 淘汰最早的
-            // 调整逃离方向：避开危险方向
-            escapeDir = (escapeDir - dangerDir).normalized;
-        }
-
-        float finalDistance = (targetPosition - currentPosition).magnitude;
-
-        // 可选：添加一定角度扰动
-        float angleNoise = Random.Range(-angleVariance, angleVariance);
-        escapeDir = RotateVector2(escapeDir, angleNoise);
-
-        return currentPosition + escapeDir * finalDistance;
+        if (setBlackboardTarget)
+            blackboard.TargetPosition = pos;
+        mover.TargetPosition = pos;
     }
+    #endregion
 
-
-
-
-    /// <summary>
-    /// 旋转2D向量
-    /// </summary>
+    #region 辅助逻辑
     private Vector2 RotateVector2(Vector2 vector, float angleDegrees)
     {
-        float angleRadians = angleDegrees * Mathf.Deg2Rad;
-        float cos = Mathf.Cos(angleRadians);
-        float sin = Mathf.Sin(angleRadians);
-
+        float rad = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad);
+        float sin = Mathf.Sin(rad);
         return new Vector2(
             vector.x * cos - vector.y * sin,
             vector.x * sin + vector.y * cos
@@ -214,36 +134,89 @@ public class GetItemPosition : ActionNode
     }
 
     /// <summary>
-    /// 绘制调试信息
+    /// 避开危险点逻辑（可简单改为寻路检测）
     /// </summary>
-    private void DrawDebugInfo()
+    private Vector2 GetUnlockedTargetPosition(Vector2 targetPosition)
     {
-        if (context?.itemDetector?.CurrentItemsInArea == null)
-            return;
+        Vector2 currentPos = context.transform.position;
 
-        // 绘制检测到的物品位置
-        Gizmos.color = Color.yellow;
-        foreach (Item item in context.itemDetector.CurrentItemsInArea)
+        if (context.mover.IsLock)
         {
-            if (item != null)
-            {
-                Gizmos.DrawWireSphere(item.transform.position, 0.5f);
-            }
+            Vector2 dir = (targetPosition - currentPos).normalized;
+            float angleOffset = Random.Range(90f, 180f) * (Random.value < 0.5f ? 1 : -1);
+            Vector2 rotated = RotateVector2(dir, angleOffset);
+            float dist = (targetPosition - currentPos).magnitude;
+            return currentPos + rotated * dist;
+        }
+
+        // 避开危险点
+        if (context.mover.MemoryPath_Forbidden.Count > 0)
+        {
+            Vector2 avgDangerDir = Vector2.zero;
+            foreach (var danger in context.mover.MemoryPath_Forbidden)
+                avgDangerDir += (danger - currentPos).normalized;
+            avgDangerDir /= context.mover.MemoryPath_Forbidden.Count;
+
+            Vector2 fleeDir = (targetPosition - currentPos).normalized;
+            fleeDir = (fleeDir - avgDangerDir).normalized;
+
+            float dist = Random.Range(fleeDistanceRange.x, fleeDistanceRange.y);
+            return currentPos + fleeDir * dist;
+        }
+
+        return targetPosition;
+    }
+    #endregion
+
+    #region Gizmos 可视化逻辑
+    private void DrawFleeConeGizmo(Vector2 currentPosition)
+    {
+        Gizmos.color = new Color(1f, 0.6f, 0.1f, 0.3f);
+
+        // 从当前位置绘制一个扇形
+        float minDist = fleeDistanceRange.x;
+        float maxDist = fleeDistanceRange.y;
+        float halfAngle = fleeAngleRange * 0.5f;
+
+        Vector2 forward = -context.transform.right; // 假设“逃离”是朝背面方向
+
+        // 绘制边缘线
+        Vector2 leftEdge = RotateVector2(forward, -halfAngle);
+        Vector2 rightEdge = RotateVector2(forward, halfAngle);
+
+        Gizmos.DrawLine(currentPosition, currentPosition + leftEdge * maxDist);
+        Gizmos.DrawLine(currentPosition, currentPosition + rightEdge * maxDist);
+
+        // 绘制扇形弧线
+        int segments = 16;
+        Vector2 prev = currentPosition + RotateVector2(forward, -halfAngle) * maxDist;
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = -halfAngle + (fleeAngleRange / segments) * i;
+            Vector2 next = currentPosition + RotateVector2(forward, angle) * maxDist;
+            Gizmos.DrawLine(prev, next);
+            prev = next;
+        }
+
+        // 绘制内圈（最小距离）
+        Gizmos.color = new Color(1f, 0.6f, 0.1f, 0.15f);
+        prev = currentPosition + RotateVector2(forward, -halfAngle) * minDist;
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = -halfAngle + (fleeAngleRange / segments) * i;
+            Vector2 next = currentPosition + RotateVector2(forward, angle) * minDist;
+            Gizmos.DrawLine(prev, next);
+            prev = next;
         }
     }
     #endregion
 
-    #region 验证方法
+    #region 验证
     private void OnValidate()
     {
-        // 确保距离参数的合理性
-        if (minRunDistance > maxRunDistance)
-        {
-            maxRunDistance = minRunDistance;
-        }
-
-        // 确保角度范围合理
-        angleVariance = Mathf.Clamp(angleVariance, 0f, 180f);
+        fleeDistanceRange.x = Mathf.Max(0f, fleeDistanceRange.x);
+        fleeDistanceRange.y = Mathf.Max(fleeDistanceRange.x, fleeDistanceRange.y);
+        fleeAngleRange = Mathf.Clamp(fleeAngleRange, 0f, 180f);
     }
     #endregion
 }

@@ -9,8 +9,9 @@ public class RandomPosition : ActionNode
 {
     #region 字段
 
-    public Vector2 min = Vector2.one * -10;
-    public Vector2 max = Vector2.one * 10;
+    [Header("游荡范围半径")]
+    public float wanderRadius = 10f;
+    
     public bool TrueRandom;
 
     [Header("同类吸引参数")]
@@ -24,7 +25,6 @@ public class RandomPosition : ActionNode
     
     // Gizmos显示相关
     private Vector3 gizmoPosition = Vector3.zero;
-    private bool showGizmo = false;
 
     #endregion
 
@@ -73,10 +73,8 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
 
     while (attempts < maxAttempts)
     {
-        Vector2 randomOffset = new Vector2(
-            Random.Range(min.x, max.x),
-            Random.Range(min.y, max.y)
-        );
+        // 在圆形范围内生成随机偏移
+        Vector2 randomOffset = Random.insideUnitCircle * wanderRadius;
 
         // 添加反向偏移
         if (lastValidPosition != originalPosition)
@@ -108,7 +106,6 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
                 chosenPosition = positionB;
                 found = true;
                 gizmoPosition = chosenPosition;
-                showGizmo = true;
                 break;
             }
             else
@@ -124,7 +121,6 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
                     chosenPosition = positionD;
                     found = true;
                     gizmoPosition = chosenPosition;
-                    showGizmo = true;
                     break;
                 }
                 else
@@ -147,7 +143,6 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
                             found = true;
                             circlePointFound = true;
                             gizmoPosition = chosenPosition;
-                            showGizmo = true;
                             break;
                         }
                     }
@@ -165,7 +160,6 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
             chosenPosition = testPositionA;
             found = true;
             gizmoPosition = chosenPosition;
-            showGizmo = true;
             break;
         }
 
@@ -175,17 +169,14 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
     // 如果前面所有尝试都失败了，使用一个强制的随机点（不管是否危险）
     if (!found)
     {
-        Vector2 finalOffset = new Vector2(
-            Random.Range(min.x * 2, max.x * 2),
-            Random.Range(min.y * 2, max.y * 2)
-        );
+        // 生成更大的随机偏移
+        Vector2 finalOffset = Random.insideUnitCircle * wanderRadius * 2;
         
         if (sameTypeDirection.sqrMagnitude > 0.001f)
             finalOffset += sameTypeDirection * sameTypeAttraction;
 
         chosenPosition = originalPosition + (Vector3)finalOffset;
         gizmoPosition = chosenPosition;
-        showGizmo = true;
         Debug.Log("使用强制的随机位置，可能危险");
     }
 
@@ -207,18 +198,15 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
 
     private State HandleFreeMovement(Vector2 sameTypeDirection)
     {
-        Vector2 randomOffset = new Vector2(
-            Random.Range(min.x, max.x),
-            Random.Range(min.y, max.y)
-        );
+        // 在圆形范围内生成随机偏移
+        Vector2 randomOffset = Random.insideUnitCircle * wanderRadius;
 
         if (sameTypeDirection.sqrMagnitude > 0.001f)
             randomOffset += sameTypeDirection * sameTypeAttraction;
 
         Vector3 targetPosition = context.transform.position + (Vector3)randomOffset;
-        // 设置Gizmos显示
+        // 设置Gizmos显示位置
         gizmoPosition = targetPosition;
-        showGizmo = true;
         
         SetTargetPosition(targetPosition, randomOffset);
         return State.Success;
@@ -274,37 +262,107 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
 
     private void OnDrawGizmosSelected()
     {
-        if (Application.isPlaying && context != null)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(context.transform.position, 5f); // 可替换为实际检测范围
-        }
+        // 无需操作，所有Gizmos绘制都在OnDrawGizmos中完成
     }
     
     public override void OnDrawGizmos()
     {
-        if (showGizmo)
+        // 保存原始Gizmos颜色
+        Color originalColor = Gizmos.color;
+        
+        // 绘制检测范围（仅在运行时）
+        if (Application.isPlaying && context != null)
         {
-            // 保存原始Gizmos颜色
-            Color originalColor = Gizmos.color;
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(context.transform.position, 5f);
+        }
+        
+        // 绘制随机游荡范围
+        DrawWanderRange();
+        
+        // 绘制目标位置标记
+        DrawTargetPositionMarker();
+        
+        // 恢复原始颜色
+        Gizmos.color = originalColor;
+    }
+    
+    /// <summary>
+    /// 绘制随机游荡范围
+    /// </summary>
+    private void DrawWanderRange()
+    {
+        if (context == null) return;
+        
+        // 保存原始Gizmos颜色
+        Color originalColor = Gizmos.color;
+        
+        // 设置Gizmos颜色为淡绿色半透明
+        Gizmos.color = new Color(0.0f, 1.0f, 0.0f, 0.3f);
+        
+        Vector3 centerPosition = context != null ? context.transform.position : Vector3.zero;
+        
+        // 绘制圆形范围（实心）
+        DrawSolidDisc(centerPosition, wanderRadius);
+        
+        // 绘制边框
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(centerPosition, wanderRadius);
+        
+        // 恢复原始颜色
+        Gizmos.color = originalColor;
+    }
+    
+    /// <summary>
+    /// 绘制目标位置标记
+    /// </summary>
+    private void DrawTargetPositionMarker()
+    {
+        // 保存原始Gizmos颜色
+        Color originalColor = Gizmos.color;
+        
+        // 设置Gizmos颜色
+        Gizmos.color = Color.yellow;
+        
+        // 绘制一个圆形标记
+        Gizmos.DrawWireSphere(gizmoPosition, 0.5f);
+        
+        // 绘制一个X标记
+        float size = 0.3f;
+        Gizmos.DrawLine(gizmoPosition + new Vector3(size, size, 0), gizmoPosition + new Vector3(-size, -size, 0));
+        Gizmos.DrawLine(gizmoPosition + new Vector3(-size, size, 0), gizmoPosition + new Vector3(size, -size, 0));
+        
+        // 绘制一个点（通过绘制小球实现）
+        Gizmos.color = Color.red;
+        Gizmos.DrawSphere(gizmoPosition, 0.1f);
+        
+        // 恢复原始颜色
+        Gizmos.color = originalColor;
+    }
+    
+    /// <summary>
+    /// 绘制实心圆盘
+    /// </summary>
+    private void DrawSolidDisc(Vector3 center, float radius)
+    {
+        // 通过绘制多个线段来模拟实心圆盘效果
+        int segments = 32;
+        float angleStep = (2f * Mathf.PI) / segments;
+        
+        for (int i = 0; i < segments; i++)
+        {
+            float angle1 = i * angleStep;
+            float angle2 = (i + 1) * angleStep;
             
-            // 设置Gizmos颜色
-            Gizmos.color = Color.yellow;
+            Vector3 point1 = center + new Vector3(Mathf.Cos(angle1) * radius, Mathf.Sin(angle1) * radius, 0);
+            Vector3 point2 = center + new Vector3(Mathf.Cos(angle2) * radius, Mathf.Sin(angle2) * radius, 0);
             
-            // 绘制一个圆形标记
-            Gizmos.DrawWireSphere(gizmoPosition, 0.5f);
+            // 绘制从圆心到边缘的线段
+            Gizmos.DrawLine(center, point1);
+            Gizmos.DrawLine(center, point2);
             
-            // 绘制一个X标记
-            float size = 0.3f;
-            Gizmos.DrawLine(gizmoPosition + new Vector3(size, size, 0), gizmoPosition + new Vector3(-size, -size, 0));
-            Gizmos.DrawLine(gizmoPosition + new Vector3(-size, size, 0), gizmoPosition + new Vector3(size, -size, 0));
-            
-            // 绘制一个点（通过绘制小球实现）
-            Gizmos.color = Color.red;
-            Gizmos.DrawSphere(gizmoPosition, 0.1f);
-            
-            // 恢复原始颜色
-            Gizmos.color = originalColor;
+            // 绘制边缘线段
+            Gizmos.DrawLine(point1, point2);
         }
     }
 
