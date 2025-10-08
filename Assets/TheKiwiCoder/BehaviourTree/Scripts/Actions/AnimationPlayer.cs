@@ -44,29 +44,60 @@ public class AnimationPlayer : ActionNode
         animationLength = time; // 默认使用设置的时间
         animationHash = Animator.StringToHash(animationName);
 
+        // 错误检查：检查上下文和动画组件
+        if (context == null)
+        {
+            Debug.LogError($"[{GetType().Name}] 上下文为空！", this);
+            return;
+        }
+
+        if (context.animator == null)
+        {
+            Debug.LogError($"[{GetType().Name}] 动画组件为空！请检查游戏对象是否包含动画组件。", this);
+            return;
+        }
+
+        // 错误检查：检查动画名
+        if (string.IsNullOrEmpty(animationName))
+        {
+            Debug.LogWarning($"[{GetType().Name}] 动画名称为空或未设置！", this);
+        }
+
         switch (playType)
         {
             case PlayType.动画名:
+                // 错误检查：检查动画控制器
+                if (context.animator.runtimeAnimatorController == null)
+                {
+                    Debug.LogWarning($"[{GetType().Name}] 动画控制器未分配！", this);
+                }
+                
                 context.animator.Play(animationHash, layerIndex);
                 // 在播放动画时将权重设置为指定值
                 context.animator.SetLayerWeight(layerIndex, PlayWeight);
                 hasSetWeight = true;
+                
                 if (autoGetAnimationLength)
                 {
+                    float originalLength = animationLength;
                     animationLength = GetAnimationLength(animationName);
                 }
                 break;
+                
             case PlayType.切换:
                 context.animator.SetBool(animationName, Setbool);
                 // 对于布尔值切换，我们无法自动获取长度，需要手动设置
                 break;
+                
             case PlayType.触发器:
                 context.animator.SetTrigger(animationName);
                 // 在触发器模式下也设置权重
                 context.animator.SetLayerWeight(layerIndex, PlayWeight);
                 hasSetWeight = true;
+                
                 if (autoGetAnimationLength)
                 {
+                    float originalLength = animationLength;
                     animationLength = GetAnimationLength(animationName);
                 }
                 break;
@@ -75,20 +106,23 @@ public class AnimationPlayer : ActionNode
 
     protected override void OnStop()
     {
-        // 动画结束时将权重设置为0
-        if (hasSetWeight && context.animator != null)
+        // 错误检查：确保组件仍然存在
+        if (hasSetWeight && context != null && context.animator != null)
         {
+            // 动画结束时将权重设置为0
             context.animator.SetLayerWeight(layerIndex, 0f);
         }
-        
-        // 可选：你可以在动画结束后重置Bool状态
-        // if (playType == PlayType.切换) {
-        //     context.animator.SetBool(animationName, false);
-        // }
     }
 
     protected override State OnUpdate()
     {
+        // 错误检查：检查上下文和动画组件
+        if (context == null || context.animator == null)
+        {
+            Debug.LogError($"[{GetType().Name}] 更新时上下文或动画组件为空！", this);
+            return State.Failure;
+        }
+
         // 如果不等待动画完成，立即返回Success
         if (!waitForAnimationComplete)
         {
@@ -96,7 +130,8 @@ public class AnimationPlayer : ActionNode
         }
 
         // 使用基于时间的检测（性能更好）
-        if (Time.time - startTime < animationLength)
+        float elapsed = Time.time - startTime;
+        if (elapsed < animationLength)
         {
             return State.Running;
         }
@@ -109,12 +144,17 @@ public class AnimationPlayer : ActionNode
     {
         // 如果没有启用自动获取或没有设置animator，返回默认时间
         if (!autoGetAnimationLength || context.animator == null)
+        {
             return time;
+        }
 
         // 获取AnimatorController
         RuntimeAnimatorController runtimeController = context.animator.runtimeAnimatorController;
         if (runtimeController == null)
+        {
+            Debug.LogWarning($"[{GetType().Name}] 运行时动画控制器为空，使用默认时间: {time}秒", this);
             return time;
+        }
 
         // 遍历所有动画剪辑（只在初始化时执行一次）
         foreach (AnimationClip clip in runtimeController.animationClips)
@@ -126,6 +166,7 @@ public class AnimationPlayer : ActionNode
         }
 
         // 如果找不到对应的动画剪辑，返回默认时间
+        Debug.LogWarning($"[{GetType().Name}] 在控制器中未找到动画剪辑 '{animName}'，使用默认时间: {time}秒", this);
         return time;
     }
 }

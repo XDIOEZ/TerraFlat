@@ -12,7 +12,7 @@ namespace TheKiwiCoder
         [ShowInInspector]
         Context context;
 
-        private bool isRunning = true; // 控制行为树运行
+        private bool isRunning = false; // 默认为停止状态
         public Ex_ModData_MemoryPackable ModData;
         public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
 
@@ -20,8 +20,9 @@ namespace TheKiwiCoder
         {
             if (_Data.ID == "")
             {
-                _Data.ID = gameObject.name;
+                _Data.ID = ModText.AI;
             }
+            isRunning = false;
         }
 
         void InitTree()
@@ -81,15 +82,25 @@ namespace TheKiwiCoder
         {
             InitTree();
         }
+        
         public void Start()
         {
-            
+            // 延迟一帧调用StartTree
+            StartCoroutine(StartTreeNextFrame());
+        }
+
+        private IEnumerator StartTreeNextFrame()
+        {
+            // 等待一帧
+            yield return null;
+            StartTree();
         }
 
         public override void Save()
         {
            
         }
+        
         public void OnDestroy()
         {
             StopTree();

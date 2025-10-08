@@ -7,6 +7,7 @@ public static class ModText
     #region A
     public static string Attacker = "¹¥»÷Ä£¿é";
     public static string AnimatorReceiver = "¶¯»­Ä£¿é";
+    public static string AI = "AI";
     #endregion
 
     #region B

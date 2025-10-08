@@ -26,6 +26,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 0.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &-8784302927620717348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -270,9 +271,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-8017438083186967590
@@ -793,9 +793,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-5824239273646446989
@@ -1151,9 +1150,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-4759543596589296739
@@ -1242,9 +1240,8 @@ MonoBehaviour:
   - Player
   - Herbivore
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &-4452455812782558468
@@ -1429,9 +1426,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-3851115029737807101
@@ -1698,9 +1694,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-2504138791366816942
@@ -2100,9 +2095,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-1162863423685788776
@@ -3614,9 +3608,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 1
-  minRunDistance: 5
-  maxRunDistance: 10
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &3448244271094832586
@@ -3822,9 +3815,8 @@ MonoBehaviour:
   - Player
   - Herbivore
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &3821066805892639680
@@ -4073,7 +4065,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &4382788781523543211
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4465,9 +4458,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &5738857062717067160
@@ -4497,9 +4489,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &5799826483201942404
@@ -4635,9 +4626,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &6270402925131606599
@@ -4722,9 +4712,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &6512395847900241681
@@ -4863,7 +4852,8 @@ MonoBehaviour:
   EatingRange: 1
   LastEatingTime: 0
   EatingTime: 1
-  FoodTag: Food
+  FoodTags:
+  - Food
 --- !u!114 &6774004432028909902
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4914,6 +4904,7 @@ MonoBehaviour:
   DebugMODE: 0
   maxAttackDistance: 0.5
   minAttackDistance: 0
+  debugColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!114 &7083718520886790247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4997,9 +4988,8 @@ MonoBehaviour:
   ItemType:
   - Plant
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &7299942373259813576
@@ -5081,9 +5071,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &7674720074419458895
@@ -5113,9 +5102,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &7682945168691380451
@@ -5309,9 +5297,8 @@ MonoBehaviour:
   ItemType:
   - Player
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 0
   doNothing: 1
 --- !u!114 &8431382896277150033
@@ -5482,9 +5469,8 @@ MonoBehaviour:
   ItemType:
   - Food
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &9067163938799155017
@@ -5511,8 +5497,7 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   DebugMODE: 0
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
   TrueRandom: 0
   sameTypeAttraction: 3
 --- !u!114 &9101329794631181168

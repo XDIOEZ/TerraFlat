@@ -5,6 +5,5 @@ using UnityEngine;
 
 namespace TheKiwiCoder {
     public abstract class ActionNode : Node {
-        public bool DebugMODE = false;
     }
 }

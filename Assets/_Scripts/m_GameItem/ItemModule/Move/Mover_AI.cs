@@ -24,6 +24,7 @@ public class Mover_AI : Mover
     public bool HasReachedTarget = false; // 是否到达目标
 
     [Header("对象引用")]
+    [ShowInInspector]
    public IAstarAI aiPath; // AI 路径组件
 
 
@@ -40,7 +41,13 @@ public class Mover_AI : Mover
     public override void Load()
     {
         base.Load();
-        aiPath = GetComponentInParent<IAstarAI>();
+        aiPath = item.GetComponent<IAstarAI>();
+        
+    }
+
+    public void Start()
+    {
+        TargetPosition = transform.position;
     }
 
     #endregion

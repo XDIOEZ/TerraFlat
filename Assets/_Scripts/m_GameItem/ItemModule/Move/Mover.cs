@@ -111,10 +111,7 @@ public partial class Mover : Module
     #region Unity 生命周期
     public override void Awake()
     {
-        if (_Data.ID == "")
-        {
             _Data.ID = ModText.Mover;
-        }
     }
 
     public override void Load()

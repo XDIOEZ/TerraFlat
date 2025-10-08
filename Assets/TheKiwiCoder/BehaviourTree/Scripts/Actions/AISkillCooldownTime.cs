@@ -20,46 +20,36 @@ public class AISkillCooldownTime : ActionNode
 
     protected override void OnStart()
     {
-        float now = Time.time;
-
-        // 第一次访问或AI刚创建
-        if (lastAccessTime == 0f)
-        {
-            lastAccessTime = now;
-            return;
-        }
-
-        // 计算时间间隔
-        float delta = now - lastAccessTime;
-        lastAccessTime = now;
-
-        // 如果在冷却中，则根据间隔增加进度
-        if (isCoolingDown)
-        {
-            accumulatedCooldownProgress += delta * cooldownRateMultiplier;
-            if (accumulatedCooldownProgress >= cooldownTime)
-            {
-                isCoolingDown = false;
-                accumulatedCooldownProgress = cooldownTime; // 保证最大值
-            }
-        }
     }
 
     protected override void OnStop() { }
 
     protected override State OnUpdate()
     {
-        // 如果没在冷却，说明技能可用
+        float now = Time.time;
+        float delta = now - lastAccessTime;
+        lastAccessTime = now;
+
+        if (isCoolingDown)
+        {
+            accumulatedCooldownProgress += delta * cooldownRateMultiplier;
+            if (accumulatedCooldownProgress >= cooldownTime)
+            {
+                isCoolingDown = false;
+                accumulatedCooldownProgress = cooldownTime;
+            }
+        }
+
         if (!isCoolingDown)
         {
-            // 开始新的冷却
+            // 冷却结束 => 技能可用
             StartCooldown();
             return State.Success;
         }
 
-        // 还在冷却中
         return State.Failure;
     }
+
 
     // 手动开始冷却
     public void StartCooldown()

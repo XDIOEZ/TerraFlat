@@ -18,7 +18,7 @@ public class CustomRepeat : DecoratorNode
     [Tooltip("子节点失败后是否重启")]
     public bool restartOnFailure = false;
 
-    private float lastExecutionTime;
+    public float lastExecutionTime;
 
     protected override void OnStart()
     {

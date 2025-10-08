@@ -17,11 +17,11 @@ public partial class Mod_FocusPoint : Module
 
     public override void Awake()
     {
-        if (_Data.ID == "")
-        {
             _Data.ID = ModText.FocusPoint;
-        }
-
+    }
+    public void OnValidate()
+    {
+        _Data.ID = ModText.FocusPoint;
     }
 
     public override void Load()

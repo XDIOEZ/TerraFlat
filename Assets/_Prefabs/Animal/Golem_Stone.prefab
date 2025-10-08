@@ -51,8 +51,8 @@ MonoBehaviour:
     ActivateRotation: 1
     StopRotationDistance: 0.1
   ModData:
-    Name: _5183
-    ID: 
+    Name: 
+    ID: "FaceMouse\u6A21\u5757"
     isRunning: 0
     Type: 0
     BitData: 
@@ -337,7 +337,7 @@ MonoBehaviour:
     MultiplicativeModifier: 1
     FinalAdditive: 0
   ModDataMemoryPack:
-    Name: _3711
+    Name: 
     ID: 
     isRunning: 0
     Type: 0
@@ -433,8 +433,8 @@ MonoBehaviour:
     m_Bits: 503
   currentItemsInArea: []
   ModData:
-    Name: _8229
-    ID: 
+    Name: 
+    ID: AI_Searcher
     isRunning: 0
     Type: 0
     BitData: 

@@ -40,3 +40,13 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         SolidityRange: {x: 0, y: 1}
         HightRange: {x: 0, y: 1}
+    - itemPrefab: {fileID: 1928828623759498003, guid: 65f16806af06edb43a1919bd9b8518a6, type: 3}
+      itemName: Golem_Stone
+      itemCount: 1
+      SpawnChance: 0.001
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}

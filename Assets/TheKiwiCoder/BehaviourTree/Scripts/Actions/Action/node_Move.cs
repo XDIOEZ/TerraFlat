@@ -27,6 +27,7 @@ public class Move : ActionNode
     {
         // 停止时无需额外处理，留空
         context.mover.IsRunning = false;
+        context.mover.aiPath.isStopped = true;
     }
 
     #endregion

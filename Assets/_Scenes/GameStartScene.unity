@@ -12569,7 +12569,7 @@ MonoBehaviour:
     StopRotationDistance: 0.1
   ModData:
     Name: _5183
-    ID: 
+    ID: "FaceMouse\u6A21\u5757"
     isRunning: 0
     Type: 0
     BitData: 

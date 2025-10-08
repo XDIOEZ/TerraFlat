@@ -60,6 +60,11 @@ public abstract class Item : MonoBehaviour
         {
             // 自动生成Guid
             itemData.Guid = Guid.NewGuid().GetHashCode();
+            var mods = GetComponentsInChildren<Module>(true).ToList();
+            foreach (var mod in mods)
+            {
+                mod.Awake();
+            }
             Load();
             ChunkMgr.Instance.UpdateItem_ChunkOwner(this);
         }
