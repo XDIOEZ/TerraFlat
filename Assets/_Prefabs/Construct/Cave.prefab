@@ -144,7 +144,7 @@ MonoBehaviour:
   - {x: 1.8932247, y: 0.015413284, z: 0}
   m_ShapePathHash: -1704520319
   m_Mesh: {fileID: 0}
-  m_InstanceId: 82978
+  m_InstanceId: 282896
   m_LocalBounds:
     m_Center: {x: -0.011931419, y: 1.4067516, z: 0}
     m_Extent: {x: 1.9051561, y: 1.3913383, z: 0}
@@ -214,6 +214,7 @@ MonoBehaviour:
     GameName: Cave
     Description: "\u795E\u79D8\u7684\u5C71\u6D1E"
     Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
       - None
@@ -232,10 +233,10 @@ MonoBehaviour:
       Amount: 1
       Volume: 300
       CanBePickedUp: 0
-    _transform:
-      Position: {x: -19, y: -2, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 1}
-      Scale: {x: 1, y: 1, z: 1}
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     Guid: 0
     code: 
@@ -653,7 +654,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
       propertyPath: _sceneAssetList.Array.size
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7086800942792195477, guid: 1ecac73adf2060b4cbeefe7b7c51b018, type: 3}
       propertyPath: _sceneAssetList.Array.data[1]

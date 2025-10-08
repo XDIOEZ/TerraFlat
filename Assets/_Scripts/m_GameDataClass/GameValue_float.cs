@@ -25,7 +25,7 @@ public partial class GameValue_float
     {
         get
         {             //  ( 100 + 0 ) + (100*0)  ) * 1 + 0
-            return ((BaseValue + BaseAdditive) + ((BaseValue + BaseAdditive) * AdditiveModifier) * MultiplicativeModifier) + FinalAdditive;
+            return (((BaseValue + BaseAdditive) + ((BaseValue + BaseAdditive) * AdditiveModifier)) * MultiplicativeModifier) + FinalAdditive;
         }
     }
     
