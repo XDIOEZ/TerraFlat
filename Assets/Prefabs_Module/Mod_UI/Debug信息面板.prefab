@@ -227,6 +227,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 5979844928364893368}
+  CanDrag: 0
+  Dragger: {fileID: 0}
+  rectTransform: {fileID: 0}
+  isOpen: 0
 --- !u!225 &5979844928364893368
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -740,9 +744,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a8ff168c2c6c154084904952d71549b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
   DebugData:
     Name: "Debug\u4FE1\u606F\u9762\u677F"
+    ID: 
     isRunning: 0
+    Type: 0
     BitData: 
   DebugPanel: {fileID: 2041855331523580412}
   Content: {fileID: 3221904731754983973}
