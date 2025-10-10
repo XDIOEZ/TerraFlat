@@ -21,6 +21,21 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     public UltEvent<Chunk> OnChunkLoadFinish = new();
 
+    public HashSet<Coroutine> RandomMapCoroutines = new ();
+
+    public void OnSceneChange()
+    {
+        //TODO 停止所有正在运行的协程
+        foreach (Coroutine coroutine in RandomMapCoroutines)
+        {
+            StopCoroutine(coroutine);
+        }
+        RandomMapCoroutines.Clear();
+
+        //清理区块字典引用
+        CleanDic();
+    }
+
     public void ClearAllChunk()
     {
         // 清空字典

@@ -25,6 +25,7 @@ MonoBehaviour:
       Tag: 
       amount: 1
     recipeType: 1
+    inputOrder: 1
   outputs:
     results:
     - ItemName: Ingot_WroughtIron
@@ -32,3 +33,4 @@ MonoBehaviour:
       amount: 2
   action: []
   Temperature: 1489
+  Temperature_Max: 2000

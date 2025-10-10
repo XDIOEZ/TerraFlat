@@ -27,10 +27,10 @@ public class HandForInteract : MonoBehaviour, IInteracter
     public void OnTriggerEnter2D(Collider2D collision)
     {
         // 添加空值检查以避免 NullReferenceException
-        var item = collision.GetComponent<Item>();
-        if (item != null && item.itemMods != null)
+        var Mod_Interaction = collision.GetComponent<Mod_Interaction>();
+        if (Mod_Interaction != null)
         {
-            item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact, out Intractable_go);
+            Intractable_go = Mod_Interaction;
         }
     }
 

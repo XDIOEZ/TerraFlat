@@ -63,15 +63,16 @@ public abstract class CaveGeneratorBase : ScriptableObject
     protected virtual Item SpawnItem(string itemName, Vector2Int position, GameObject parentObject)
     {
         Vector2 spawnPos = new Vector2(position.x + 0.5f, position.y + 0.5f);
-        
-        // 实例化资源物品
-       return ItemMgr.Instance.InstantiateItem(
+        Item item = ItemMgr.Instance.InstantiateItem(
             itemName,
             spawnPos,
             default,
             default,
             parentObject
         );
+
+        // 实例化资源物品
+        return item;
     }
     
     protected void SpawnLootItems(Map map, System.Random rng, List<LootEntry> lootEntries, Vector2Int position)

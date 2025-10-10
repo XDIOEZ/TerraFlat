@@ -1,7 +1,7 @@
 using UltEvents;
 using UnityEngine;
 
-public class Mod_AnimatorReceiver : Module
+public class Mod_AnimatorReceiver : Mod_AnimatorController
 {
     public bool IsAttacking;
     private bool lastIsAttacking;
@@ -18,11 +18,6 @@ public class Mod_AnimatorReceiver : Module
     public UltEvent OnAttackStop = new UltEvent();
     public UltEvent<int> OnSkillStart = new ();
     public UltEvent<int> OnSkillStop = new ();
-
-    public override void Awake()
-    {
-          _Data.ID = ModText.AnimatorReceiver;
-    }
     
     void Update()
     {

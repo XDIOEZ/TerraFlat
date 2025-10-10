@@ -276,6 +276,19 @@ public int GenerateGuid()
 
         return player;
     }
+
+    [Tooltip("实例化玩家 但是不初始化")]
+    public Player CreatePlayer(string playerName)
+    {
+        // 加载或者创建玩家数据
+        Data_Player playerData = LoadOrCreatePlayerData(playerName);
+        //传入数据创建玩家
+        Player player = CreatePlayer(playerData);
+        //设置玩家数据到玩家引用字典
+        ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
+
+        return player;
+    }
     private Data_Player LoadOrCreatePlayerData(string playerName)
     {
         Data_Player playerData;

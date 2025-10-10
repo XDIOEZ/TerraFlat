@@ -5,7 +5,6 @@ using UnityEngine.Tilemaps;
 
 public class Map_Pit : Map
 {
-
     public override void Load()
     {
         chunk = GetComponentInParent<Chunk>();

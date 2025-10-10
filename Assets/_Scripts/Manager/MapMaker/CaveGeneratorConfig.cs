@@ -515,13 +515,13 @@ private void GenerateResourcesAndDecorations(Map map, System.Random rng)
         Vector2Int entrancePos = generatedRooms[0].center + map.Data.position;
         // 确保入口位置不被其他物品占用
         occupiedPositions.Add(entrancePos);
-        SpawnItem(entrancePrefabName, entrancePos, map.ParentObject);
+        SpawnItem(entrancePrefabName, entrancePos, map.ParentObject).Load();
         
         // 出口放在最后一个房间的中心
         Vector2Int exitPos = generatedRooms[generatedRooms.Count - 1].center + map.Data.position;
         // 确保出口位置不被其他物品占用
         occupiedPositions.Add(exitPos);
-        SpawnItem(exitPrefabName, exitPos, map.ParentObject);
+        SpawnItem(exitPrefabName, exitPos, map.ParentObject).Load();
     }
 
     // 重写SpawnItem方法以返回生成的物品实例

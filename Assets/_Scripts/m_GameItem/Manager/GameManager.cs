@@ -240,8 +240,7 @@ public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null
 
             SaveDataMgr.Instance.SaveData.PlanetData_Dict[LastSceneName].MapData_Dict[go.MapSave.Name] = go.MapSave;
         }
-        //清理区块字典引用
-        ChunkMgr.Instance.CleanDic();
+        ChunkMgr.Instance.OnSceneChange();
 
         ///////////////////////////上面都是对旧场景的处理////////////////////
         // 创建新场景

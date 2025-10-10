@@ -8,4 +8,6 @@ public class CookRecipe : Recipe
 {
     [Header("ÈÛÁ¶ÎÂ¶È")]
     public float Temperature  = 0;
+    [Header("ÉÕ½¹ÎÂ¶È")]
+    public float Temperature_Max = 2000;
 }

@@ -65,7 +65,7 @@ public class Inventory_Equipment : Inventory
         }
     }
 
-    public override void OnClick(int index)
+    public override void OnLeftClick(int index)
 {
     // 获取当前装备槽中的物品（即需要被卸下或被替换的物品）。
     var currentEquippedItem = Data.itemSlots[index].itemData;
@@ -139,7 +139,7 @@ public class Inventory_Equipment : Inventory
     // 在处理完属性后，执行实际的物品槽位数据交换。
     if (currentEquippedItem != null || newIncomingItem != null)
     {
-        base.OnClick(index);
+        base.OnLeftClick(index);
     }
 }
 

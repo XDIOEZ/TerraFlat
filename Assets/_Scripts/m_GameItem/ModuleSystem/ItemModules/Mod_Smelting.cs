@@ -347,7 +347,7 @@ public void CompleteSmelting()
 
         // 温度检查 - 过高温度处理
 // ¶ȼ - ¶ȴ
-if (Data.Temperature > cookRecipe.Temperature * 3)
+if (Data.Temperature > cookRecipe.Temperature_Max)
 {
     Debug.LogWarning($"¶ȹߣ¶ {cookRecipe.Temperature} ǰ¶ {Data.Temperature}  ս");
 

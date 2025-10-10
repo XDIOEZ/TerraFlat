@@ -105,12 +105,7 @@ public class Mod_Inventory : Module,IInventory
         interactable.OnAction_Start += Interact_Start;
         interactable.OnAction_Stop += Interact_Stop;
     }
-
-
         inventory.Init();
-
-
-      
     }
     public void Start()
     {

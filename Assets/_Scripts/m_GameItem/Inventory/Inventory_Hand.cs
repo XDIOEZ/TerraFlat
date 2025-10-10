@@ -52,7 +52,7 @@ public class Inventory_Hand : Inventory
         PlayerHand = this;
     }
 
-    public override void OnClick(int index)
+    public override void OnLeftClick(int index)
     {
 
     }

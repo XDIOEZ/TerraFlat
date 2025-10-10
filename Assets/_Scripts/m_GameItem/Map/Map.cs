@@ -205,8 +205,8 @@ public void BackTilePenalty_Async()
         // 获取GridGraph以获得节点尺寸信息
         var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
         float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
-
-        // 处理所有节点数据
+         
+        // 处理所有节点数据 这个是根据地块数据进行烘焙的
         foreach (var kvp in Data.TileData)
         {
             Vector2Int position2D = kvp.Key;
@@ -381,6 +381,19 @@ public void BackTilePenalty_Async()
         Data.TileData[position].Add(tileData);
 
         UpdateTileBaseAtPosition(position);
+    }
+
+    public void ADDTileData(Vector2Int position, TileData tileData)
+    {
+        tileData.position = (Vector3Int)position;
+
+        // 如果该位置没有初始化 List，就创建一个
+        if (!Data.TileData.ContainsKey(position))
+        {
+            Data.TileData[position] = new List<TileData>();
+        }
+
+        Data.TileData[position].Add(tileData);
     }
 
     [Button("获取 TileData")]

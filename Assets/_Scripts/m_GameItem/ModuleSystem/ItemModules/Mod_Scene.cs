@@ -85,7 +85,7 @@ public class Mod_Scene : Module
                 Data.SceneName += Random.Range(1, 1000000).ToString();
 
                 planetData = new PlanetData();
-                planetData.ChunkSize = new Vector2Int(200, 200);
+                planetData.ChunkSize = new Vector2Int(100, 100);
                 planetData.Name = Data.SceneName;
                 // 存储(0,0)位置的地图数据
                 planetData.MapData_Dict.Add(MapSave.Name, MapSave);
@@ -211,14 +211,16 @@ public class Mod_Scene : Module
                 ChunkMgr.Instance.CleanEmptyDicValues();
 
                 // 重新加载玩家
-                Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
+                Player newPlayer = ItemMgr.Instance.CreatePlayer(playerData.Name_User);
                 ItemMgr.Instance.Player_DIC[playerData.Name_User] = newPlayer;
 
                 //创建新 Chunk
                 foreach (var targetMapSave in planetData.MapData_Dict.Values)
                 {
                     Chunk chunk = ChunkMgr.Instance.CreateChunk_ByMapSave(targetMapSave);
+
                     ChunkMgr.Instance.AddActiveChunk(chunk);//添加到激活 Chunk 列表中
+
                     chunk.LoadChunk_By_MapSaveData_Sync();
 
                     //设置玩家返回点和返回场景
@@ -249,7 +251,7 @@ public class Mod_Scene : Module
                         }
                     }
                 }
-                
+                //等待Chunk数据处理完毕后再初始化玩家 因为玩家身上有加载引用CHunk数据的组件
                 newPlayer.Load();
                 newPlayer.LoadDataPosition();
             });

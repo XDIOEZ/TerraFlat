@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Mod_AnimationController : Module
+public class Mod_AnimatorController : Module
 {
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
@@ -11,10 +11,7 @@ public class Mod_AnimationController : Module
     public Animator animator;
     public override void Awake()
     {
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.AnimatorReceiver;
-        }
+        _Data.ID = ModText.AnimatorReceiver;
     }
 
     public override void Load()

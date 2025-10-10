@@ -108,7 +108,11 @@ public class RandomMapGenerator : MonoBehaviour
     #endregion
 
     #region 主逻辑
+    /// <summary>
+    /// 生成随机地图的主要入口方法
+    /// </summary>
     [Button("生成随机地图")]
+    [Tooltip("根据当前配置生成随机地图")]
     public void GenerateRandomMap_TileData()
     {
         if (map == null)
@@ -132,7 +136,7 @@ public class RandomMapGenerator : MonoBehaviour
 
         if (tilesPerFrame > 0)
         {
-            ChunkMgr.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size));
+            ChunkMgr.Instance.RandomMapCoroutines.Add(ChunkMgr.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size)));
         }
         else
         {
@@ -143,6 +147,12 @@ public class RandomMapGenerator : MonoBehaviour
     #endregion
 
     #region 地图生成流程
+    /// <summary>
+    /// 协程方式生成地图，分帧处理以避免卡顿
+    /// </summary>
+    /// <param name="startPos">起始位置</param>
+    /// <param name="size">地图尺寸</param>
+    /// <returns>IEnumerator协程</returns>
     private IEnumerator GenerateMapCoroutine(Vector2Int startPos, Vector2 size)
     {
         int processed = 0;
@@ -161,6 +171,11 @@ public class RandomMapGenerator : MonoBehaviour
         OnGenerationComplete();
     }
 
+    /// <summary>
+    /// 立即生成所有地图瓦片
+    /// </summary>
+    /// <param name="startPos">起始位置</param>
+    /// <param name="size">地图尺寸</param>
     private void GenerateAllTiles(Vector2Int startPos, Vector2 size)
     {
         for (int x = 0; x < size.x; x++)
@@ -170,6 +185,10 @@ public class RandomMapGenerator : MonoBehaviour
     #endregion
 
     #region 地块生成逻辑
+    /// <summary>
+    /// 在指定位置生成单个地图瓦片
+    /// </summary>
+    /// <param name="position">世界坐标位置</param>
     private void GenerateTileAtPosition(Vector2Int position)
     {
         float gx = position.x * NoiseScale;
@@ -211,13 +230,16 @@ public class RandomMapGenerator : MonoBehaviour
 
         // 匹配生物群系并生成地块
         BiomeData biome = MatchAndGenerateBiomeTile(position, env);
-
-        if (biome != null)
-        {
-            GenerateResourcesForBiome(position, biome, env);
-        }
+        //生成Item资源(也包含生物 毕竟所有都是继承自Item)
+        GenerateResourcesForBiome(position, biome, env);
     }
 
+    /// <summary>
+    /// 匹配生物群系并生成对应的地形瓦片
+    /// </summary>
+    /// <param name="position">世界坐标位置</param>
+    /// <param name="env">环境因子</param>
+    /// <returns>匹配到的生物群系数据</returns>
     private BiomeData MatchAndGenerateBiomeTile(Vector2Int position, EnvironmentFactors env)
     {
         BiomeData biome = null;
@@ -233,11 +255,18 @@ public class RandomMapGenerator : MonoBehaviour
 
         // 记录调试颜色并生成地形Tile
         ColorDicitionary[position] = biome.PreviewColor;
+        //生成对应的TileData 并添加到地图
         GenerateTerrainTile(position, biome, env);
 
         return biome;
     }
 
+    /// <summary>
+    /// 为指定生物群系生成资源物品
+    /// </summary>
+    /// <param name="pos">世界坐标位置</param>
+    /// <param name="biome">生物群系数据</param>
+    /// <param name="env">环境因子</param>
     private void GenerateResourcesForBiome(Vector2Int pos, BiomeData biome, EnvironmentFactors env)
     {
         uint state = (uint)(pos.x * 114514 ^ pos.y * 1919810);
@@ -289,6 +318,12 @@ public class RandomMapGenerator : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 生成地形瓦片
+    /// </summary>
+    /// <param name="position">世界坐标位置</param>
+    /// <param name="biome">生物群系数据</param>
+    /// <param name="env">环境因子</param>
     private void GenerateTerrainTile(Vector2Int position, BiomeData biome, EnvironmentFactors env)
     {
         string key = biome.TerrainConfig.GetTilePrefab(env);
@@ -315,29 +350,21 @@ public class RandomMapGenerator : MonoBehaviour
 
         // 克隆并添加Tile到地图
         var tile = tileDataCache[key].DeepClone();
+        //tile将会根据环境因子进行初始化
         tile.Initialize(env);
+        //设置tiledata 的 位置
         tile.position = new Vector3Int(position.x, position.y, 0);
-        map.ADDTile(position, tile);
-    }
-    #endregion
-
-    #region 边界处理
-    public void GenerateMapEdges()
-    {
-        Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-        foreach (var d in dirs)
-        {
-            Item edge = ItemMgr.Instance.InstantiateItem("MapEdge", default, default, default, map.ParentObject);
-            if (edge is WorldEdge we)
-                we.SetupMapEdge(d, map.Data.position);
-            else
-                Debug.LogError("[RandomMapGenerator] 边界对象类型错误，应为WorldEdge");
-        }
-        Debug.Log("[RandomMapGenerator] 边界生成完成");
+        //只是添加Data参数
+        map.ADDTileData(position, tile);
+        //刷新Tile
+        map.UpdateTileBaseAtPosition(position);
     }
     #endregion
 
     #region 工具方法
+    /// <summary>
+    /// 清除当前地图的所有瓦片和数据
+    /// </summary>
     private void ClearMap()
     {
         map.tileMap?.ClearAllTiles();
@@ -345,9 +372,12 @@ public class RandomMapGenerator : MonoBehaviour
         Debug.Log("[RandomMapGenerator] 地图已清除");
     }
 
+    /// <summary>
+    /// 地图生成完成后的回调方法
+    /// </summary>
     private void OnGenerationComplete()
     {
-        map.tileMap?.RefreshAllTiles();
+        map?.tileMap?.RefreshAllTiles();
         map.Data.TileLoaded = true;
         map.BackTilePenalty_Async(); //地图生成完毕后直接烘焙 因为生成的时候自动调用的SetTile的绘制层 已经绘制完毕
         Debug.Log("[RandomMapGenerator] 地图生成完成");
@@ -356,6 +386,8 @@ public class RandomMapGenerator : MonoBehaviour
     /// <summary>
     /// Xorshift32随机数生成器
     /// </summary>
+    /// <param name="state">随机数状态</param>
+    /// <returns>生成的随机数</returns>
     private static uint Xorshift32(ref uint state)
     {
         state ^= state << 13;
@@ -369,6 +401,7 @@ public class RandomMapGenerator : MonoBehaviour
     /// <summary>
     /// 获取鼠标位置下的环境参数并打印到Debug窗口
     /// </summary>
+    [Tooltip("获取鼠标位置下的环境参数并打印到控制台")]
     private void GetEnvFactorsAtMousePosition()
     {
         // 前置检查：必要组件是否齐全

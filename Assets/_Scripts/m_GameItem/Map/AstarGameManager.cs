@@ -207,6 +207,12 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
         GraphNode targetNode = nnInfo.node;
 
+        if (targetNode == null)
+        {
+            Debug.LogWarning($"⚠️ 节点获取失败！位置：{worldPos}（不在寻路图内");
+            return;
+        }
+
         if (newPenalty == 0)
         {
             // 设置节点为不可通行
@@ -214,11 +220,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             targetNode.Penalty = 0;
             return;
         }
-        if(targetNode == null)
-        {
-            Debug.LogWarning($"⚠️ 节点获取失败！位置：{worldPos}（不在寻路图内");
-            return;
-        }
+     
         if (targetNode.Walkable == false)
         {
             targetNode.Penalty = 0;

@@ -28,6 +28,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-8691946898186108408
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -75,7 +76,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -185,7 +185,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Idle
   time: 0
   playType: 0
@@ -271,7 +270,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Food
   BehaviorType: 0
@@ -307,6 +305,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &-8017438083186967590
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -330,7 +329,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-7525269628301401366
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -354,7 +352,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   hungryThreshold: 0.5
 --- !u!114 &-7518346076362089469
 MonoBehaviour:
@@ -379,7 +376,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 0.2
   startTime: 2.2530017
   intervalTime: 0.22096205
@@ -437,6 +433,7 @@ MonoBehaviour:
   startImmediately: 0
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &-7069426669677535655
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -465,6 +462,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-6935303821233676836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -560,7 +558,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   hungryThreshold: 0.5
 --- !u!114 &-6762384900159468390
 MonoBehaviour:
@@ -585,7 +582,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &-6726973407306352912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -609,7 +605,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   healthValue: {x: 0.5, y: 1}
   usePercent: 1
 --- !u!114 &-6445039456714114630
@@ -686,7 +681,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u4FEE\u6539\u68C0\u6D4B\u8303\u56F4"
   drawGizmos: 0
-  DebugMODE: 0
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
@@ -713,7 +707,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Sit
   time: 1
   playType: 0
@@ -745,7 +738,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Food
   BehaviorType: 0
@@ -776,7 +768,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 1
@@ -803,7 +794,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 0.2
   startTime: 0
   intervalTime: 0
@@ -835,6 +825,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-5279305264262208262
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -863,6 +854,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-5157017778420001946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -886,7 +878,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &-5065981060647705125
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -910,7 +901,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   TriggerDistance: 1
   AttackInterval: 0.5
   AttackDuration: 0.2
@@ -938,7 +928,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   hungryThreshold: 0.5
 --- !u!114 &-5007674512078113539
 MonoBehaviour:
@@ -990,7 +979,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 0
   playType: 0
@@ -1022,7 +1010,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Idle
   time: 0
   playType: 0
@@ -1054,7 +1041,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &-4772646789509777121
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1078,7 +1064,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Food
   BehaviorType: 0
@@ -1135,7 +1120,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 0
   playType: 0
@@ -1167,7 +1151,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   - Herbivore
@@ -1204,6 +1187,7 @@ MonoBehaviour:
   startImmediately: 0
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &-4446461465598397359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1232,6 +1216,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &-4436915268319182112
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1280,7 +1265,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   healthValue: {x: 0.5, y: 1}
   usePercent: 1
 --- !u!114 &-3864356194802708109
@@ -1306,7 +1290,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -1337,7 +1320,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &-3820205080280822284
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1361,7 +1343,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   hungryThreshold: 0.5
 --- !u!114 &-3479277107058805073
 MonoBehaviour:
@@ -1386,7 +1367,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-3435533727622676713
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1410,7 +1390,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &-3324944576322441398
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1439,6 +1418,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-3319636970820181372
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1462,7 +1442,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   TriggerDistance: 1
   AttackInterval: 0.5
   AttackDuration: 0.2
@@ -1490,7 +1469,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-3165251601619736495
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1514,7 +1492,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-2681122352445361135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1538,7 +1515,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -1569,7 +1545,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 1
   playType: 0
@@ -1601,7 +1576,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u4FEE\u6539\u68C0\u6D4B\u8303\u56F4"
   drawGizmos: 0
-  DebugMODE: 0
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
@@ -1628,7 +1602,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   hungryThreshold: 0.5
 --- !u!114 &-2181437184429049744
 MonoBehaviour:
@@ -1653,7 +1626,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-2137171286262337958
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1701,7 +1673,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-2080328270758231185
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1754,6 +1725,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &-1595963650696061443
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1777,7 +1749,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   maxAttackDistance: 0.5
   minAttackDistance: 0
   debugColor: {r: 0, g: 0, b: 0, a: 0}
@@ -1804,7 +1775,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u4FEE\u6539\u68C0\u6D4B\u8303\u56F4"
   drawGizmos: 0
-  DebugMODE: 0
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
@@ -1855,7 +1825,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-1322441548735179743
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1879,7 +1848,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 0
   playType: 0
@@ -1916,6 +1884,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &-1232745049629864304
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1966,7 +1935,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-1154472104878237729
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1995,6 +1963,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-891039206748073433
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2023,6 +1992,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-711134629382027779
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2046,7 +2016,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   SunlightIntensityThreshold: {x: 0, y: 0.5}
   CurrentSunLightIntensity: 0
 --- !u!114 &-676494419218323916
@@ -2096,7 +2065,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 3
   startTime: 0
   intervalTime: 0
@@ -2123,7 +2091,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Sit
   time: 1
   playType: 0
@@ -2181,7 +2148,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u4FEE\u6539\u68C0\u6D4B\u8303\u56F4"
   drawGizmos: 0
-  DebugMODE: 0
   BaseValue: 10
   Offset: {x: 0, y: 0}
   Duration: 0.5
@@ -2208,7 +2174,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &-301303423287694550
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2232,7 +2197,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 1
   playType: 0
@@ -2346,7 +2310,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &-76026123956726513
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2397,7 +2360,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2624,7 +2586,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
   animationName: Move
   time: 0
   playType: 0
@@ -2686,7 +2647,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   SunlightIntensityThreshold: {x: 0, y: 0}
   CurrentSunLightIntensity: 0
 --- !u!114 &959688212889010570
@@ -2712,7 +2672,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &1144498797410976735
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2736,7 +2695,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &1148032382616318376
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2811,7 +2769,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 0
   playType: 0
@@ -2867,7 +2824,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &1551473592980769742
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2891,7 +2847,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 3
 --- !u!114 &1570195645250819435
 MonoBehaviour:
@@ -2916,7 +2871,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   SunlightIntensityThreshold: {x: 0, y: 0.5}
   CurrentSunLightIntensity: 0
 --- !u!114 &1592639700352733933
@@ -2942,7 +2896,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &1804699568619120834
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2966,7 +2919,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Idle
   time: 0
   playType: 0
@@ -2998,7 +2950,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 1
   startTime: 0
   intervalTime: 0
@@ -3025,7 +2976,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Attack
   time: 1
   playType: 0
@@ -3057,7 +3007,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &1977503041970251840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3081,7 +3030,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &2227441451284083480
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3134,6 +3082,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &2241432322358613203
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3184,7 +3133,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Idle
   time: 0
   playType: 0
@@ -3216,7 +3164,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   hungryThreshold: 0.5
 --- !u!114 &2677567102468692355
 MonoBehaviour:
@@ -3324,7 +3271,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 0
   playType: 0
@@ -3387,6 +3333,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &3299762269239573453
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3410,7 +3357,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &3305866029500357162
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3458,7 +3404,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 1
@@ -3494,6 +3439,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &3698330423877328906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3517,7 +3463,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Attack
   time: 1
   playType: 0
@@ -3554,6 +3499,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &3758149706096734707
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3577,7 +3523,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Attack
   time: 0
   playType: 0
@@ -3609,7 +3554,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   - Herbivore
@@ -3668,7 +3612,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &3996273364467935987
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3692,7 +3635,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   healthValue: {x: 0.5, y: 1}
   usePercent: 1
 --- !u!114 &4025509594776204267
@@ -3718,7 +3660,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 0
   playType: 0
@@ -3750,7 +3691,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   TriggerDistance: 1
   AttackInterval: 0.5
   AttackDuration: 0.2
@@ -3778,7 +3718,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 1
   playType: 0
@@ -3810,7 +3749,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &4336592601800266604
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3834,7 +3772,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   Food: {fileID: 0}
   Self: {fileID: 0}
   EatingRange: 1
@@ -3865,7 +3802,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 1
   playType: 0
@@ -3902,6 +3838,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &4617261201976395494
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3925,7 +3862,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Sit
   time: 1
   playType: 0
@@ -3984,7 +3920,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6CA1\u627E\u5230\u653B\u51FB\u8005\u8FD4\u56DEfalse \u8DF3\u51FA\u5FAA\u73AF"
   drawGizmos: 0
-  DebugMODE: 0
   RunAwayDirection: {x: 0, y: 0}
   RunAwayDistance: 10
   RandomAngle: 180
@@ -4011,7 +3946,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &4963689981245947810
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4061,7 +3995,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &5131344554574143595
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4114,6 +4047,7 @@ MonoBehaviour:
   startImmediately: 0
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &5481944496216610773
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4137,7 +4071,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Idle
   time: 0
   playType: 0
@@ -4169,7 +4102,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 1
   playType: 0
@@ -4201,7 +4133,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   healthValue: {x: 0.5, y: 1}
   usePercent: 1
 --- !u!114 &5699742292440824280
@@ -4227,7 +4158,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -4258,7 +4188,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -4289,7 +4218,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   TriggerDistance: 1
   AttackInterval: 0.5
   AttackDuration: 0.2
@@ -4317,7 +4245,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   distanceThreshold: 0.5
 --- !u!114 &6074543801768352470
 MonoBehaviour:
@@ -4334,7 +4261,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: f950ef0243dc9f141a2f8f1fea984474
-  position: {x: 1556.0844, y: 888.80005}
+  position: {x: 1547.9546, y: 888.7998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -4342,7 +4269,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   healthValue: {x: 0, y: 0.5}
   usePercent: 1
 --- !u!114 &6148477460391219772
@@ -4373,6 +4299,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &6270402925131606599
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4396,7 +4323,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   healthValue: {x: 0, y: 0.5}
   usePercent: 1
 --- !u!114 &6389454776190898702
@@ -4451,7 +4377,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Food
   BehaviorType: 0
@@ -4506,7 +4431,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   hungryThreshold: 0.5
 --- !u!114 &6607329960551557217
 MonoBehaviour:
@@ -4531,7 +4455,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Attack
   time: 1
   playType: 0
@@ -4589,7 +4512,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   Food: {fileID: 0}
   Self: {fileID: 0}
   EatingRange: 1
@@ -4620,7 +4542,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &7083718520886790247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4644,7 +4565,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &7146587704780539297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4668,7 +4588,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
   animationName: Move
   time: 1
   playType: 0
@@ -4700,7 +4619,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Plant
   BehaviorType: 0
@@ -4736,6 +4654,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &7396725151898892634
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4759,7 +4678,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &7434816737478528894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4783,7 +4701,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -4814,7 +4731,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -4869,7 +4785,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -4905,6 +4820,7 @@ MonoBehaviour:
   startImmediately: 0
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &8130212899279876202
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4928,7 +4844,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Idle
   time: 1
   playType: 0
@@ -4960,7 +4875,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u7269\u54C1\u641C\u67E5\u5668"
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &8364453821819760358
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5008,7 +4922,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Player
   BehaviorType: 0
@@ -5039,7 +4952,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
 --- !u!114 &8647051759375622727
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5063,7 +4975,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 0.2
   startTime: 0
   intervalTime: 0
@@ -5090,7 +5001,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 1
   animationName: Move
   time: 0
   playType: 0
@@ -5148,7 +5058,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Attack
   time: 1
   playType: 0
@@ -5180,7 +5089,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6839\u636Etag\u83B7\u53D6\u7269\u54C1\u4F4D\u7F6E"
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Food
   BehaviorType: 0
@@ -5238,7 +5146,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   wanderRadius: 10
   TrueRandom: 0
   sameTypeAttraction: 3
@@ -5270,6 +5177,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &9205953963857923398
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5293,7 +5201,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   animationName: Move
   time: 1
   playType: 0

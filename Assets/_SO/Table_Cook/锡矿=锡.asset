@@ -20,6 +20,7 @@ MonoBehaviour:
       Tag: 
       amount: 2
     recipeType: 1
+    inputOrder: 1
   outputs:
     results:
     - ItemName: Ingot_Tin
@@ -27,3 +28,4 @@ MonoBehaviour:
       amount: 1
   action: []
   Temperature: 1000
+  Temperature_Max: 2000

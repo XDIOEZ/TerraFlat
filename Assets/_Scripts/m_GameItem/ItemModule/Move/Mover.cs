@@ -50,7 +50,7 @@ public partial class Mover : Module
     public GameValue_float staminaConsumeSpeed = new(1); // 每秒精力消耗速度
 
     public Ex_ModData_MemoryPackable ModDataMemoryPack = new();
-    public Mod_AnimationController animationController;
+    public Mod_AnimatorController animationController;
 
     [Header("移动事件")]
     public UltEvent OnMoveStart;
@@ -131,11 +131,13 @@ public partial class Mover : Module
 
         // 加载体力模块
         stamina = LoadMod<Mod_Stamina>(item, ModText.Stamina);
-        animationController = LoadMod<Mod_AnimationController>(item, ModText.AnimatorReceiver, controller =>
+        animationController = item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+
+        if (animationController != null)
         {
-            OnMoveStart += () => controller.SetBool(AnimationText.Move, true);
-            OnMoveEnd += () => controller.SetBool(AnimationText.Move, false);
-        });
+            OnMoveStart += () => animationController.SetBool(AnimationText.Move, true);
+            OnMoveEnd += () => animationController.SetBool(AnimationText.Move, false);
+        }
     }
 
 

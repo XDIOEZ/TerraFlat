@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
@@ -6,6 +5,8 @@ using System.Runtime.CompilerServices;
 
 public class Inventory : MonoBehaviour
 {
+    #region 字段和属性
+
     //容器所属对象
     public Item Owner;
     //插槽接口预制体
@@ -15,10 +16,13 @@ public class Inventory : MonoBehaviour
     //数据
     public Inventory_Data Data;
     //UI列表
-    public List<ItemSlot_UI> itemSlotUIs;
+    public List<ItemSlot_UI> itemSlotUIs = new List<ItemSlot_UI>();
     //负责交互的Inventory
     public Inventory DefaultTarget_Inventory;
 
+    #endregion
+
+    #region 生命周期
 
     public virtual void Awake()
     {
@@ -34,19 +38,132 @@ public class Inventory : MonoBehaviour
             ItemSlot_Parent = transform.GetChild(0);
     }
 
+    public void OnDestroy()
+    {
+        Data.Event_RefreshUI -= RefreshUI;
+    }
+
+    #endregion
+
+    #region 初始化和同步
+
+    [Tooltip("在Load函数的最后调用,用于初始化")]
+    public virtual void Init()
+    {
+        // 若未设置数据，则自动生成
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            Data.itemSlots[i].Index = i;
+            Data.itemSlots[i].SlotMaxVolume = 100;
+        }
+
+        // 同步子对象数量与 itemSlots 数量一致
+        int currentCount = ItemSlot_Parent.childCount;
+        int targetCount = Data.itemSlots.Count;
+        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
+
+        // 删除多余的子对象（从后往前删除更安全）
+        for (int i = currentCount - 1; i >= targetCount; i--)
+        {
+            DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject);
+        }
+
+        // 添加缺少的子对象
+        for (int i = currentCount; i < targetCount; i++)
+        {
+            GameObject item = Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false);
+        }
+
+        // 清空旧列表，重新填充 UI 槽位列表
+        itemSlotUIs.Clear();
+        for (int i = 0; i < ItemSlot_Parent.childCount; i++)
+        {
+            var ui = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
+            if (ui != null)
+                itemSlotUIs.Add(ui);
+        }
+
+        // 同步 UI 数据
+        SyncData();
+
+        Data.Event_RefreshUI = new();
+        Data.Event_RefreshUI.Clear();
+        // 注册刷新UI事件
+        Data.Event_RefreshUI += RefreshUI;
+
+        //初始化后自动同步UI数据
+        RefreshUI();
+    }
+
     //同步UI的Data
     public void SyncData()
     {
+        
         for (int i = 0; i < itemSlotUIs.Count; i++)
         {
-           ItemSlot_UI itemSlotUI = itemSlotUIs[i];
+            ItemSlot_UI itemSlotUI = itemSlotUIs[i];
             itemSlotUI.Data = Data.itemSlots[i];
-            itemSlotUI.OnLeftClick += OnClick;
+
+            itemSlotUI.OnLeftClick.Clear();
+            itemSlotUI._OnScroll.Clear();
+            itemSlotUI.OnRightClick.Clear();
+
+            itemSlotUI.OnLeftClick += OnLeftClick;
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnRightClick += OnRightClick;
+
             itemSlotUI.Data.Belong_Inventory = this;
         }
     }
+
+    #endregion
+
+    #region 物品初始化
+
+    /// <summary>
+    /// 尝试初始化容器内的物品
+    /// </summary>
+    public void TryInitializeItems(Inventoryinit inventoryinit)
+    {
+        // 使用InventoryInit的注入函数将物品注入到inventory中
+        inventoryinit.InjectRandomItemsToInventory(this);
+        Debug.Log($"[{Data.Name}] 容器初始化完成，已注入 {inventoryinit.items.Count} 个物品");
+    }
+
+    /// <summary>
+    /// 检查容器是否为空（没有任何物品）
+    /// </summary>
+    /// <returns>如果容器为空返回true，否则返回false</returns>
+    private bool IsInventoryEmpty()
+    {
+        foreach (var slot in Data.itemSlots)
+        {
+            if (slot.itemData != null)
+                return false;
+        }
+        return true;
+    }
+
+    #endregion
+
+    #region UI刷新
+
+    public void RefreshUI(int index)
+    {
+        itemSlotUIs[index].RefreshUI();
+    }
+
+    public void RefreshUI()
+    {
+        for (int i = 0; i < itemSlotUIs.Count; i++)
+        {
+            itemSlotUIs[i].RefreshUI();
+        }
+    }
+
+    #endregion
+
+    #region 输入事件处理
 
     void OnRightClick(int index)
     {
@@ -55,133 +172,43 @@ public class Inventory : MonoBehaviour
         currentMenuInstance.Init(itemSlotUIs[index], Owner);
         currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlotUIs[index].transform.position;
     }
-[Tooltip("在Load函数的最后调用,用于初始化")]
-public virtual void Init()
-{
-    // 若未设置数据，则自动生成
-    for (int i = 0; i < Data.itemSlots.Count; i++)
-    {
-        Data.itemSlots[i].Index = i;
-        Data.itemSlots[i].SlotMaxVolume = 100;
-    }
 
-    // 同步子对象数量与 itemSlots 数量一致
-    int currentCount = ItemSlot_Parent.childCount;
-    int targetCount = Data.itemSlots.Count;
-    ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
-
-    // 删除多余的子对象（从后往前删除更安全）
-    for (int i = currentCount - 1; i >= targetCount; i--)
-    {
-        DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject); // 或 Destroy() 视情况
-    }
-
-    // 添加缺少的子对象
-    for (int i = currentCount; i < targetCount; i++)
-    {
-        GameObject item = Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false); // false: 保持局部坐标
-                                                                                //  item.name = $"Slot_{i}"; // 可选：命名方便调试
-    }
-
-    // 清空旧列表，重新填充 UI 槽位列表
-    itemSlotUIs.Clear();
-    for (int i = 0; i < ItemSlot_Parent.childCount; i++)
-    {
-        var ui = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
-        if (ui != null)
-            itemSlotUIs.Add(ui);
-    }
-
-    // 同步 UI 数据
-    SyncData();
-    // 注册刷新UI事件
-    Data.Event_RefreshUI += RefreshUI;
-
-        //初始化后自动同步UI数据
-        RefreshUI();
-
-}
-
-/// <summary>
-/// 尝试初始化容器内的物品
-/// </summary>
-public void TryInitializeItems(Inventoryinit inventoryinit)
-{
-
-        // 使用InventoryInit的注入函数将物品注入到inventory中
-        inventoryinit.InjectRandomItemsToInventory(this);
-        Debug.Log($"[{Data.Name}] 容器初始化完成，已注入 {inventoryinit.items.Count} 个物品");
-    
-}
-
-/// <summary>
-/// 检查容器是否为空（没有任何物品）
-/// </summary>
-/// <returns>如果容器为空返回true，否则返回false</returns>
-private bool IsInventoryEmpty()
-{
-    foreach (var slot in Data.itemSlots)
-    {
-        if (slot.itemData != null)
-            return false;
-    }
-    return true;
-}
-
-    public virtual void Save()
-    {
-
-    }
-
-    public void RefreshUI(int index)
-    {
-       // print("同步UI数据"+ index);
-        itemSlotUIs[index].RefreshUI();
-    }
-    public void RefreshUI()
-    {
-        for (int i = 0; i < itemSlotUIs.Count; i++)
-        {
-            itemSlotUIs[i].RefreshUI();
-        }
-    }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnScroll(int index, float direction)
     {
-        if(direction > 0)
+        if (direction > 0)
         {
             Data.TransferItemQuantity(DefaultTarget_Inventory.Data.itemSlots[0], Data.itemSlots[index], 1);
-        } else if(direction < 0)
+        }
+        else if (direction < 0)
         {
             Data.TransferItemQuantity(Data.itemSlots[index], DefaultTarget_Inventory.Data.itemSlots[0], 1);
         }
-       
     }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public virtual void OnClick(int index)
+    public virtual void OnLeftClick(int index)
     {
         ItemSlot slot = Data.GetItemSlot(index);
 
         //默认为交换
-        if(DefaultTarget_Inventory.Data.itemSlots.Count > index)
+        if (DefaultTarget_Inventory.Data.itemSlots.Count > index)
         {
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
-
-
             DefaultTarget_Inventory.RefreshUI(index);
         }
         else
         {
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
-
-
             DefaultTarget_Inventory.RefreshUI(0);
-
         }
 
         RefreshUI(index);
-        
     }
+
+    #endregion
+
+    #region 编辑器工具
 
     [Sirenix.OdinInspector.Button]
     public void SyncSlotCount()
@@ -194,8 +221,14 @@ private bool IsInventoryEmpty()
         }
     }
 
-    public void OnDestroy()
+    #endregion
+
+    #region 保存
+
+    public virtual void Save()
     {
-       Data. Event_RefreshUI -= RefreshUI;
+
     }
+
+    #endregion
 }

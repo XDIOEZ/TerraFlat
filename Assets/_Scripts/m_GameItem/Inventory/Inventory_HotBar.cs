@@ -116,10 +116,10 @@ public class Inventory_HotBar : Inventory
             CurentSelectItem.Act();
     }
 
-    public override void OnClick(int index)
+    public override void OnLeftClick(int index)
     {
         //完成基础的物品交换逻辑
-        base.OnClick(index);
+        base.OnLeftClick(index);
         //修改选择框位置
         ChangeSelectBoxPosition(index);
         // 同步 UI
