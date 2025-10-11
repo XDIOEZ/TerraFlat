@@ -1,5 +1,6 @@
 using UnityEngine.InputSystem;
 using InputSystem;
+using UnityEngine;
 
 public class SettingCanvas : Module
 {
@@ -93,11 +94,12 @@ public void ClossApp()
 #if UNITY_EDITOR
         // 在编辑器模式下停止播放
         UnityEditor.EditorApplication.isPlaying = false;
+
 #else
         // 在构建版本中退出应用
         Application.Quit();
 #endif
-    }));
+        }));
 }
     
     // 在对象销毁时取消事件绑定

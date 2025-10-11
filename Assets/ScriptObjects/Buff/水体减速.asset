@@ -22,4 +22,4 @@ MonoBehaviour:
   buff_StackType: 3
   buff_Behavior_Start: {fileID: 11400000, guid: b019085909d95d6408d65cd3150927d5, type: 2}
   buff_Behavior_Update: {fileID: 0}
-  buff_Behavior_Stop: {fileID: 11400000, guid: 966a1a7240257db4ab55b4f34e0427ca, type: 2}
+  buff_Behavior_Stop: {fileID: 11400000, guid: 590732fab1afa06479d729d9f14d3b8e, type: 2}

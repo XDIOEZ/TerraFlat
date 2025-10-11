@@ -17,4 +17,10 @@ public class BuffAction_StaminaChange : BuffAction
         }
         mod.Data.CurrentStamina += SpeedRate;
     }
+
+    public override BuffAction Clone()
+    {
+        var newBuff = Instantiate(this);
+        return newBuff;
+    }
 }

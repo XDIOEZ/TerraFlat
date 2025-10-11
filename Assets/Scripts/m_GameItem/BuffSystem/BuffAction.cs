@@ -82,4 +82,8 @@ public class {className} : BuffAction
 public abstract class BuffAction : ScriptableObject
 {
     public abstract void Apply(BuffRunTime data);
+    public virtual BuffAction Clone() 
+    {
+        return null;
+    }
 }

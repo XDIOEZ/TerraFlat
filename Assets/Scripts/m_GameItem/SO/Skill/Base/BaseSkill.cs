@@ -19,29 +19,11 @@ public class BaseSkill : ScriptableObject
     public float initialPrograss = 0f;
     [Tooltip("技能速度(各种意义上的吧)")]
     public float speed = 1;
+    [Tooltip("通用string参数")]
+    public string stringParam;
+
     [Tooltip("技能行为")]
     [InlineEditor]
-    public List<BaseSkillAction> Actions;
+    public List<Skill> Actions;
 
-    public void StartAction(RuntimeSkill runtimeSkill)
-    {
-        foreach (var action in Actions)
-        {
-            action.StartExecuteSkill(runtimeSkill);
-        }
-    }
-    public void StayAction(RuntimeSkill runtimeSkill, float deltaTime)
-    {
-        foreach(var action in Actions)
-        {
-            action.StayExecuteSkill(runtimeSkill,deltaTime);
-        }
-    }
-    public void StopAction(RuntimeSkill runtimeSkill)
-    {
-        foreach (var action in Actions)
-        {
-            action.StopExecuteSkill(runtimeSkill);
-        }
-    }
 }

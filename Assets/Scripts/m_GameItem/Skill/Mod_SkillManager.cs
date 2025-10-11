@@ -42,7 +42,6 @@ public class Mod_SkillManager : Module
             _Data.ID = ModText.Grow;
         }
     }
-
 public override void Load()
 {
     focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
@@ -80,28 +79,74 @@ public override void Load()
     
     ModSaveData.ReadData(ref Data);
 
-        // 实例化施法点位并设置本地坐标
-        foreach (var offsetPair in SerializedcastingPointOffset)
+    // 提前清理子对象，避免重复创建
+    ClearCastingPoints();
+
+    // 根据SkillNameList中技能的数量生成施法点位，默认位置为(0,0)
+    for (int i = 0; i < SkillNameList.Count; i++)
+    {
+        string skillName = SkillNameList[i];
+        
+        // 如果SerializedcastingPointOffset中没有对应的偏移量，则使用默认值(0,0)
+        Vector2 localPositionOffset = Vector2.zero;
+        if (SerializedcastingPointOffset != null && SerializedcastingPointOffset.ContainsKey(skillName))
         {
-            string skillName = offsetPair.Key;
-            Vector2 localPositionOffset = offsetPair.Value;
+            localPositionOffset = SerializedcastingPointOffset[skillName];
 
-            // 创建新的 GameObject 作为施法点位
-            GameObject castingPointObject = new GameObject(skillName + "_CastingPoint");
+        }else
+        {
+                SerializedcastingPointOffset[skillName] = localPositionOffset;
+                Debug.LogWarning($"未找到技能 {skillName} 的偏移量，使用默认值(0,0)");
+        }
 
-            // 设置为当前 GameObject 的子对象
-            castingPointObject.transform.SetParent(transform, false);
+        // 创建新的 GameObject 作为施法点位
+        GameObject castingPointObject = new GameObject(skillName + "_CastingPoint");
 
-            // 设置本地坐标（相对于父对象的位置）
-            castingPointObject.transform.localPosition = new Vector3(localPositionOffset.x, localPositionOffset.y, 0);
+        // 设置为当前 GameObject 的子对象
+        castingPointObject.transform.SetParent(transform, false);
 
-            // 存储到 castingPoint 字典中
-            castingPoint[skillName] = castingPointObject.transform;
+        // 设置本地坐标（相对于父对象的位置）
+        castingPointObject.transform.localPosition = new Vector3(localPositionOffset.x, localPositionOffset.y, 0);
+
+        // 存储到 castingPoint 字典中
+        castingPoint[skillName] = castingPointObject.transform;
+    }
+}
+
+/// <summary>
+/// 清理现有的施法点位子对象
+/// </summary>
+private void ClearCastingPoints()
+{
+    // 清空字典
+    castingPoint.Clear();
+    
+    // 删除所有以"_CastingPoint"结尾的子对象
+    List<Transform> childrenToRemove = new List<Transform>();
+    foreach (Transform child in transform)
+    {
+        if (child.name.EndsWith("_CastingPoint"))
+        {
+            childrenToRemove.Add(child);
         }
     }
-
+    
+    // 删除子对象
+    foreach (Transform child in childrenToRemove)
+    {
+        if (Application.isPlaying)
+        {
+            Destroy(child.gameObject);
+        }
+        else
+        {
+            DestroyImmediate(child.gameObject);
+        }
+    }
+}
     public void Start()
     {
+        transform.localPosition = Vector3.zero;
         //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
         item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
     }
@@ -129,6 +174,7 @@ public override void Load()
     {
         StopAllSkills();
         ModSaveData.WriteData(Data);
+        item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
     
     public override void Act()

@@ -11,7 +11,6 @@ public class UniSkillAction : BaseSkillAction
     {
         // 实例化镭射线预制体并传递RuntimeSkill数据
         GameObject laserObject = Instantiate(SkillPrefab);
-        Data.skillInstance = laserObject.GetComponent<Skill>();
     }
 
     public override void StayExecuteSkill(RuntimeSkill Data, float deltaTime)
@@ -22,7 +21,5 @@ public class UniSkillAction : BaseSkillAction
 
     public override void StopExecuteSkill(RuntimeSkill Data)
     {
-        if(Data.skillInstance != null)
-           Destroy(Data.skillInstance.gameObject);
     }
 }

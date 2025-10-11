@@ -10,13 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8676df5df64c2e944b438c948abcea0a, type: 3}
-  m_Name: "\u77F3\u5934\u4EBA_\u624B\u91CC\u5251"
+  m_Name: "\u53EC\u5524\u77F3\u5934\u4EBA"
   m_EditorClassIdentifier: 
-  skillName: "\u65B0\u6280\u80FD"
+  skillName: "\u53EC\u5524\u77F3\u5934\u4EBA"
   description: "\u6280\u80FD\u63CF\u8FF0"
   icon: {fileID: 0}
-  duration: 10
+  duration: 2
   initialPrograss: 0
   speed: 20
+  stringParam: Golem_Stone
   Actions:
-  - {fileID: 2152439307247645993, guid: 6f27a587bf720974ca9a865de93b5e99, type: 3}
+  - {fileID: -5702675018105304851, guid: d6b00dfad111de046a0fb9da3fb4ff53, type: 3}

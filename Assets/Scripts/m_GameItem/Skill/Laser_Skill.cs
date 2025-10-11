@@ -15,9 +15,6 @@ public class Laser_Skill : Skill
     [Header("预制体引用")]
     public GameObject laserEffectPrefab;
     
-    [Tooltip("激光起点位置")]
-    public Vector3 startPoint;
-    
     [Tooltip("缓存的激光施法点Transform")]
     private Transform laserCastingPoint;
     
@@ -44,14 +41,13 @@ public class Laser_Skill : Skill
         }
 
         // 获取施法点
-        if (runtimeSkill.skillManager.castingPoint == null || !runtimeSkill.skillManager.castingPoint.ContainsKey("Laser"))
+        if (runtimeSkill.skillManager.castingPoint == null || !runtimeSkill.skillManager.castingPoint.ContainsKey(runtimeSkill.skillData.name))
         {
             Debug.LogError("激光技能：castingPoint字典为空或不包含'Laser'键！");
             return;
         }
 
-        laserCastingPoint = runtimeSkill.skillManager.castingPoint["Laser"]; // 缓存施法点Transform
-        startPoint = laserCastingPoint.position; // 初始化激光线
+        laserCastingPoint = runtimeSkill.skillManager.castingPoint[runtimeSkill.skillData.name]; // 缓存施法点Transform
 
         // 获取移动组件
         if (runtimeSkill.skillSender != null)
@@ -75,7 +71,7 @@ public class Laser_Skill : Skill
         lineRenderer = GetComponent<LineRenderer>();
         if (lineRenderer != null)
         {
-            lineRenderer.SetPosition(0, startPoint);
+            lineRenderer.SetPosition(0, laserCastingPoint.position);
             lineRenderer.SetPosition(1, new Vector3(runtimeSkill.targetPoint.x, runtimeSkill.targetPoint.y, 0));
         }
         else
@@ -183,12 +179,11 @@ public class Laser_Skill : Skill
 
         // 获取实时的目标点
         Vector2 currentTargetPoint = runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point;
-        startPoint = laserCastingPoint.position; // 使用缓存的施法点Transform
 
         // 更新激光线起点和终点
         if (lineRenderer != null)
         {
-            lineRenderer.SetPosition(0, startPoint);
+            lineRenderer.SetPosition(0, laserCastingPoint.position);
             lineRenderer.SetPosition(1, new Vector3(currentTargetPoint.x, currentTargetPoint.y));
         }
 

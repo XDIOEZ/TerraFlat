@@ -25,4 +25,13 @@ public class BuffAction_FoodValueChange : BuffAction
         }
         mod.Data.nutrition += NutritionChangeValue;
     }
+
+    public override BuffAction Clone()
+    {
+        var newBuff = Instantiate(this);
+        Mod_Food newMod = null;
+        newBuff.mod = newMod; // ∑¿÷π“˝”√Œ€»æ
+        return newBuff;
+    }
+
 }

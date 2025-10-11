@@ -352,7 +352,7 @@ public void Update()
         ModuleSave();
     }
 
-    [Button("激活")]
+    [Button("激活(Act)")]
     public virtual void Act()
     {
         Debug.Log("Item Act");

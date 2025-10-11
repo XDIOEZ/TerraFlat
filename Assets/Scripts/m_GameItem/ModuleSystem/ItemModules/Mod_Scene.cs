@@ -69,40 +69,7 @@ public class Mod_Scene : Module
             mod_Building.StartInstall += Install;
         }
 
-        // 检查是否已经初始化，通过在PlanetData_Dict中查找SceneName来判断
-        if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
-            _sceneAssetList != null && _sceneAssetList.Count > 0)
-        {
-            // 从列表中随机选择一个场景预制体
-            TextAsset selectedSceneAsset = _sceneAssetList[Random.Range(0, _sceneAssetList.Count)];
-            
-            if (selectedSceneAsset != null)
-            {
-                MapSave MapSave = MemoryPackSerializer.Deserialize<MapSave>(selectedSceneAsset.bytes);
-
-                Data.SceneName += selectedSceneAsset.name;
-                Data.SceneName += "_";
-                Data.SceneName += Random.Range(1, 1000000).ToString();
-
-                planetData = new PlanetData();
-                planetData.ChunkSize = new Vector2Int(100, 100);
-                planetData.Name = Data.SceneName;
-                // 存储(0,0)位置的地图数据
-                planetData.MapData_Dict.Add(MapSave.Name, MapSave);
-                planetData.AutoGenerateMap = false;
-                SaveDataMgr.Instance.SaveData.PlanetData_Dict[Data.SceneName] = planetData;
-                Debug.Log(Data.SceneName + "初始化完成，使用预制体: " + selectedSceneAsset.name);
-            }
-            else
-            {
-                Debug.LogError("场景预制体列表中包含空引用！");
-            }
-        }
-        else if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
-                 (_sceneAssetList == null || _sceneAssetList.Count == 0))
-        {
-            Debug.LogWarning("场景预制体列表为空，无法初始化场景数据！");
-        }
+        // 注意：资源初始化逻辑已移至Interact方法中执行
     }
 
     public override void Save()
@@ -180,13 +147,49 @@ public class Mod_Scene : Module
     }
 
     [Button]
-    public void Interact(Item interacter)
+    public virtual void Interact(Item interacter)
     {
         Player player = interacter as Player;
         if (player == null)
         {
             Debug.LogError("Interact 调用失败，交互对象不是 Player");
             return;
+        }
+
+        // ===== 资源初始化逻辑移到此处 =====
+        // 检查是否已经初始化，通过在PlanetData_Dict中查找SceneName来判断
+        if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
+            _sceneAssetList != null && _sceneAssetList.Count > 0)
+        {
+            // 从列表中随机选择一个场景预制体
+            TextAsset selectedSceneAsset = _sceneAssetList[Random.Range(0, _sceneAssetList.Count)];
+            
+            if (selectedSceneAsset != null)
+            {
+                MapSave MapSave = MemoryPackSerializer.Deserialize<MapSave>(selectedSceneAsset.bytes);
+
+                Data.SceneName += selectedSceneAsset.name;
+                Data.SceneName += "_";
+                Data.SceneName += Random.Range(1, 1000000).ToString();
+
+                planetData = new PlanetData();
+                planetData.ChunkSize = new Vector2Int(100, 100);
+                planetData.Name = Data.SceneName;
+                // 存储(0,0)位置的地图数据
+                planetData.MapData_Dict.Add(MapSave.Name, MapSave);
+                planetData.AutoGenerateMap = false;
+                SaveDataMgr.Instance.SaveData.PlanetData_Dict[Data.SceneName] = planetData;
+                Debug.Log(Data.SceneName + "初始化完成，使用预制体: " + selectedSceneAsset.name);
+            }
+            else
+            {
+                Debug.LogError("场景预制体列表中包含空引用！");
+            }
+        }
+        else if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
+                 (_sceneAssetList == null || _sceneAssetList.Count == 0))
+        {
+            Debug.LogWarning("场景预制体列表为空，无法初始化场景数据！");
         }
 
         Data_Player playerData = player.Data;

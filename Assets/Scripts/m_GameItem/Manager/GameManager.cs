@@ -240,6 +240,7 @@ public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null
 
             SaveDataMgr.Instance.SaveData.PlanetData_Dict[LastSceneName].MapData_Dict[go.MapSave.Name] = go.MapSave;
         }
+
         ChunkMgr.Instance.OnSceneChange();
 
         ///////////////////////////上面都是对旧场景的处理////////////////////

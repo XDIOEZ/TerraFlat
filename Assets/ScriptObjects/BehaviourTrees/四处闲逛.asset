@@ -50,10 +50,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  SpeedRate: 1
-  max_StopTime: 1
-  minDistance: 0.01
-  MoveToBlackboard: 1
 --- !u!114 &-8361336612239135307
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -233,9 +229,9 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
+  TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &-5328594033326201093
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -286,10 +282,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  SpeedRate: 1
-  max_StopTime: 1
-  minDistance: 0.01
-  MoveToBlackboard: 1
 --- !u!114 &-5081572556515755235
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -366,10 +358,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  SpeedRate: 1
-  max_StopTime: 1
-  minDistance: 0.01
-  MoveToBlackboard: 1
 --- !u!114 &-4355396484059798923
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -491,9 +479,9 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
+  TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &-3409368674447667003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -517,9 +505,9 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
+  TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &-2880445910990056836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -648,9 +636,9 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  worldType: 1
-  min: {x: -10, y: -10}
-  max: {x: 10, y: 10}
+  wanderRadius: 10
+  TrueRandom: 0
+  sameTypeAttraction: 3
 --- !u!114 &873629595657468999
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -733,6 +721,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &6731603698442499505
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -781,6 +770,8 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   duration: 1
+  startTime: 0
+  intervalTime: 0
 --- !u!114 &7343832027491626763
 MonoBehaviour:
   m_ObjectHideFlags: 0

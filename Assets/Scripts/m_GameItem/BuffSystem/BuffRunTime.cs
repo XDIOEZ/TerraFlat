@@ -20,7 +20,7 @@ public partial class BuffRunTime
 
     public void SetBuffData(Item sender, Item receiver)
     {
-        buff = GameRes.Instance.GetBuffData(buff_IDName);
+        buff = GameRes.Instance.GetBuffData(buff_IDName).Clone();
         buff_Sender = sender;
         buff_Receiver = receiver;
     }

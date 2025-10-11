@@ -19,4 +19,4 @@ MonoBehaviour:
   initialPrograss: 0
   speed: 20
   Actions:
-  - {fileID: 11400000, guid: 774782ab3fb033d46908cbbcbb08b916, type: 2}
+  - {fileID: -7167189006124832101, guid: 8d957a5691b916f48b40231a4b297ea4, type: 3}

@@ -113,6 +113,7 @@ private void UpdateChunkOwner(Item item)
     public override void Save()
     {
         modData.WriteData(drop);
+        item.itemData.ModuleDataDic[modData.Name] = modData;
     }
 
     /// <summary>

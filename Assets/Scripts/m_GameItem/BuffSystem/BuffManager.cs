@@ -34,10 +34,6 @@ public class BuffManager : Module
     {
         AddBuffRuntime(buffData_SO, item);
     }
-    public void ClearAllBuff()
-    {
-
-    }
 
 
 public void AddBuffRuntime(Buff_Data buffData_SO, Item Receiver)
@@ -50,8 +46,8 @@ public void AddBuffRuntime(Buff_Data buffData_SO, Item Receiver)
         return;
     }
 
-        // 克隆 Buff_Data 以避免修改原始 ScriptableObject
-        Buff_Data clonedBuffData = buffData_SO.Clone();
+     // 克隆 Buff_Data 以避免修改原始 ScriptableObject
+     Buff_Data clonedBuffData = buffData_SO.Clone();
 
     BuffRunTime newBuff = new BuffRunTime
     {

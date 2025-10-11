@@ -47,8 +47,8 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &-8565168898267972586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -120,7 +120,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 0
@@ -196,7 +195,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 0
   animationName: Sit
   boolSwitch: 0
@@ -224,7 +222,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -252,13 +249,11 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Plant
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &-5624661038826665682
@@ -284,7 +279,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-5185932334641226260
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -308,7 +302,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 3
 --- !u!114 &-5033145186171574244
 MonoBehaviour:
@@ -333,8 +326,8 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &-4515568794036963982
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -358,7 +351,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 3
   startTime: 0
   intervalTime: 0
@@ -390,6 +382,7 @@ MonoBehaviour:
   startImmediately: 0
   restartOnSuccess: 1
   restartOnFailure: 0
+  lastExecutionTime: 0
 --- !u!114 &-3686086333303259313
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -464,7 +457,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -564,7 +556,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -592,7 +583,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -649,7 +639,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 0
   animationName: Sleep_Trigger
   boolSwitch: 0
@@ -677,8 +666,8 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
-  SunlightIntensityThreshold: 0.5
+  SunlightIntensityThreshold: {x: 0, y: 0}
+  CurrentSunLightIntensity: 0
 --- !u!114 &-819445162972058878
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -702,9 +691,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
-  lastPosition: {x: 0, y: 0, z: 0}
-  lastMoveTime: 0
 --- !u!114 &-611774956589113630
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -728,7 +714,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
 --- !u!114 &-467659461265711155
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -752,7 +737,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 1
@@ -822,7 +806,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 0
@@ -850,7 +833,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   BaseValue: 3
   Offset: {x: 0, y: 0}
   Duration: 0.5
@@ -877,13 +859,11 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   ItemType:
   - Plant
   BehaviorType: 0
-  minRunDistance: 3
-  maxRunDistance: 7
-  angleVariance: 30
+  fleeDistanceRange: {x: 7, y: 7}
+  fleeAngleRange: 45
   setBlackboardTarget: 1
   doNothing: 0
 --- !u!114 &2000308914337533017
@@ -909,9 +889,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
-  lastPosition: {x: 0, y: 0, z: 0}
-  lastMoveTime: 0
 --- !u!114 &2635100914587341887
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -984,7 +961,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 1
   animationName: Move
   boolSwitch: 0
@@ -1012,7 +988,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 0
   animationName: Sleep_Trigger
   boolSwitch: 0
@@ -1064,7 +1039,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   duration: 1
 --- !u!114 &4741011580904693371
 MonoBehaviour:
@@ -1140,7 +1114,6 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  DebugMODE: 0
   parameterType: 0
   animationName: Sleep_Trigger
   boolSwitch: 0
@@ -1269,6 +1242,7 @@ MonoBehaviour:
   startImmediately: 1
   restartOnSuccess: 1
   restartOnFailure: 1
+  lastExecutionTime: 0
 --- !u!114 &7927690276797875170
 MonoBehaviour:
   m_ObjectHideFlags: 0
