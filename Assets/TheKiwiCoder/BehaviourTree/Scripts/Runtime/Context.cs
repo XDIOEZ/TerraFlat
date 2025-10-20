@@ -25,7 +25,6 @@ namespace TheKiwiCoder {
         //添加自定义组件
         public ItemDetector itemDetector;
         public Mover_AI mover;
-        public IItemValues itemValues;
         public Item item;
         public Map map;
         public DamageReceiver damageReciver;
@@ -51,7 +50,6 @@ namespace TheKiwiCoder {
             context.capsuleCollider = context.item.GetComponent<CapsuleCollider>();
             context.characterController = context.item.GetComponent<CharacterController>();
             context.itemDetector = context.item.GetComponentInChildren<ItemDetector>();
-            context.itemValues = context.item.GetComponentInChildren<IItemValues>();
             context.item = context.item.GetComponentInChildren<Item>();
             context.Damage = context.item.GetComponentInChildren<Mod_Damage>();
             // Add whatever else you need here...

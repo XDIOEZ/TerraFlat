@@ -1,8 +1,8 @@
 {
-    "name": "Tool",
+    "name": "PlayerInput",
     "rootNamespace": "",
     "references": [
-        "GUID:0994f0b99b69bfe47a086609b9a07e33"
+        "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
