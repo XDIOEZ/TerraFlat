@@ -268,7 +268,7 @@ public class Inventory_HotBar : Inventory
         // 初始化 Item 属性
         itemInstance.itemData = itemData;
         itemInstance.itemData.ModuleDataDic = itemData.ModuleDataDic;
-        itemInstance.Owner = slot.Belong_Inventory.Owner;
+        itemInstance.Owner = Owner;
 
         // 事件绑定
         itemInstance.OnUIRefresh += () => RefreshUI(index);

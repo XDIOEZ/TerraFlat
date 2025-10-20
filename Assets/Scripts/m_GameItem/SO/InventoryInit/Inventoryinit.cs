@@ -44,7 +44,7 @@ public void InjectRandomItemsToInventory(Inventory targetInventory)
     if (validPrefabs.Count > 0)
     {
         // 使用随机注入方法将所有物品注入
-        targetInventory.Data.RandomOrderAutoInjectItemDataList(validPrefabs, validCounts);
+        targetInventory.RandomOrderAutoInjectItemDataList(validPrefabs, validCounts);
         // 标记为已注入
         targetInventory.Data.IsInjected = true;
     }

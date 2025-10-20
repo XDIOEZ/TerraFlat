@@ -7,17 +7,17 @@ public class Inventory : MonoBehaviour
 {
     #region 字段和属性
 
-    //容器所属对象
+    //物品所有者
     public Item Owner;
-    //插槽接口预制体
+    //物品槽预制体
     public GameObject ItemSlot_Prefab;
-    //生成接口的父对象
+    //物品槽的父物体
     public Transform ItemSlot_Parent;
     //数据
     public Inventory_Data Data;
     //UI列表
     public List<ItemSlot_UI> itemSlotUIs = new List<ItemSlot_UI>();
-    //负责交互的Inventory
+    //默认交互Inventory
     public Inventory DefaultTarget_Inventory;
 
     #endregion
@@ -26,14 +26,14 @@ public class Inventory : MonoBehaviour
 
     public virtual void Awake()
     {
-        // 若未命名，则赋默认名
+        // 如果未设置数据则使用默认值
         if (string.IsNullOrEmpty(Data.Name))
             Data.Name = gameObject.name;
 
-        // 未设置Prefab 自动调用
+        // 未设置Prefab 自动加载
         ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
 
-        // 若未设置父对象，则默认为第一个子对象
+        // 如果未设置父物体则默认为第一个子物体
         if (ItemSlot_Parent == null)
             ItemSlot_Parent = transform.GetChild(0);
     }
@@ -47,34 +47,34 @@ public class Inventory : MonoBehaviour
 
     #region 初始化和同步
 
-    [Tooltip("在Load函数的最后调用,用于初始化")]
+    [Tooltip("在Load时调用此函数进行初始化")]
     public virtual void Init()
     {
-        // 若未设置数据，则自动生成
+        // 如果未设置数据则自动创建
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
             Data.itemSlots[i].Index = i;
             Data.itemSlots[i].SlotMaxVolume = 100;
         }
 
-        // 同步子对象数量与 itemSlots 数量一致
+        // 同步槽位数量与 itemSlots 保持一致
         int currentCount = ItemSlot_Parent.childCount;
         int targetCount = Data.itemSlots.Count;
         ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
 
-        // 删除多余的子对象（从后往前删除更安全）
+        // 删除多余槽位（从后往前删保证安全）
         for (int i = currentCount - 1; i >= targetCount; i--)
         {
             DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject);
         }
 
-        // 添加缺少的子对象
+        // 创建缺少的槽位
         for (int i = currentCount; i < targetCount; i++)
         {
             GameObject item = Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false);
         }
 
-        // 清空旧列表，重新填充 UI 槽位列表
+        // 重建UI列表并绑定数据
         itemSlotUIs.Clear();
         for (int i = 0; i < ItemSlot_Parent.childCount; i++)
         {
@@ -91,14 +91,13 @@ public class Inventory : MonoBehaviour
         // 注册刷新UI事件
         Data.Event_RefreshUI += RefreshUI;
 
-        //初始化后自动同步UI数据
+        //初始化时自动同步UI显示
         RefreshUI();
     }
 
-    //同步UI的Data
+    //同步UI与Data
     public void SyncData()
     {
-        
         for (int i = 0; i < itemSlotUIs.Count; i++)
         {
             ItemSlot_UI itemSlotUI = itemSlotUIs[i];
@@ -112,7 +111,23 @@ public class Inventory : MonoBehaviour
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnRightClick += OnRightClick;
 
-            itemSlotUI.Data.Belong_Inventory = this;
+            // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
+            itemSlotUI.Data.onSlotDataChanged.Clear();
+            itemSlotUI.Data.onSlotDataChanged +=(OnItemSlotChanged);
+        }
+    }
+
+    // 当物品槽数据发生变化时的回调
+    private void OnItemSlotChanged(ItemSlot slot)
+    {
+        // 找到对应的UI并刷新
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            if (Data.itemSlots[i] == slot)
+            {
+                RefreshUI(i);
+                break;
+            }
         }
     }
 
@@ -121,17 +136,17 @@ public class Inventory : MonoBehaviour
     #region 物品初始化
 
     /// <summary>
-    /// 尝试初始化容器内的物品
+    /// 自动初始化容器内的物品
     /// </summary>
     public void TryInitializeItems(Inventoryinit inventoryinit)
     {
-        // 使用InventoryInit的注入函数将物品注入到inventory中
+        // 使用InventoryInit的注册函数将物品注册到inventory中
         inventoryinit.InjectRandomItemsToInventory(this);
-        Debug.Log($"[{Data.Name}] 容器初始化完成，已注入 {inventoryinit.items.Count} 个物品");
+        Debug.Log($"[{Data.Name}] 容器初始化完成，注册 {inventoryinit.items.Count} 个物品");
     }
 
     /// <summary>
-    /// 检查容器是否为空（没有任何物品）
+    /// 检查容器是否为空，没有任何物品
     /// </summary>
     /// <returns>如果容器为空返回true，否则返回false</returns>
     private bool IsInventoryEmpty()
@@ -150,7 +165,10 @@ public class Inventory : MonoBehaviour
 
     public void RefreshUI(int index)
     {
-        itemSlotUIs[index].RefreshUI();
+        if (index >= 0 && index < itemSlotUIs.Count)
+        {
+            itemSlotUIs[index].RefreshUI();
+        }
     }
 
     public void RefreshUI()
@@ -163,7 +181,7 @@ public class Inventory : MonoBehaviour
 
     #endregion
 
-    #region 输入事件处理
+    #region 鼠标事件处理
 
     void OnRightClick(int index)
     {
@@ -191,7 +209,7 @@ public class Inventory : MonoBehaviour
     {
         ItemSlot slot = Data.GetItemSlot(index);
 
-        //默认为交换
+        //默认为手部
         if (DefaultTarget_Inventory.Data.itemSlots.Count > index)
         {
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
@@ -208,7 +226,7 @@ public class Inventory : MonoBehaviour
 
     #endregion
 
-    #region 编辑器工具
+    #region 编辑器功能
 
     [Sirenix.OdinInspector.Button]
     public void SyncSlotCount()
@@ -219,6 +237,195 @@ public class Inventory : MonoBehaviour
         {
             Data.itemSlots.Add(new ItemSlot());
         }
+    }
+
+    #endregion
+
+    #region 注入物品逻辑（从Inventory_Data移动过来）
+
+    /// <summary>
+    /// 随机顺序自动注入物品列表到容器中
+    /// </summary>
+    public void RandomOrderAutoInjectItemDataList(List<GameObject> prefabList, List<int> countList)
+    {
+        if (prefabList == null || countList == null) return;
+        if (prefabList.Count != countList.Count) return;
+
+        // --- Step1: 打乱物品顺序 ---
+        List<int> itemIndices = new List<int>();
+        for (int i = 0; i < prefabList.Count; i++)
+        {
+            itemIndices.Add(i);
+        }
+        
+        for (int i = itemIndices.Count - 1; i > 0; i--)
+        {
+            int r = Random.Range(0, i + 1);
+            int temp = itemIndices[i];
+            itemIndices[i] = itemIndices[r];
+            itemIndices[r] = temp;
+        }
+
+        // --- Step2: 收集所有空槽位并打乱 ---
+        List<int> emptySlots = new List<int>();
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            if (Data.itemSlots[i].itemData == null)
+                emptySlots.Add(i);
+        }
+        
+        for (int i = emptySlots.Count - 1; i > 0; i--)
+        {
+            int r = Random.Range(0, i + 1);
+            int temp = emptySlots[i];
+            emptySlots[i] = emptySlots[r];
+            emptySlots[r] = temp;
+        }
+
+        // --- Step3: 按随机顺序把物品塞进随机槽位 ---
+        int successCount = 0;
+        int failCount = 0;
+
+        for (int i = 0; i < itemIndices.Count && i < emptySlots.Count; i++)
+        {
+            int randomItemIndex = itemIndices[i];
+            int slotIndex = emptySlots[i];
+
+            GameObject prefab = prefabList[randomItemIndex];
+            int count = countList[randomItemIndex];
+
+            if (prefab == null || count <= 0) { failCount++; continue; }
+
+            var itemComp = prefab.GetComponent<Item>();
+            if (itemComp == null) { failCount++; continue; }
+
+            var itemData = itemComp.Get_NewItemData();
+            if (itemData == null) { failCount++; continue; }
+
+            itemData.Stack.Amount = count;
+            itemData.Stack.CanBePickedUp = false;
+
+            Data.SetOne_ItemData(slotIndex, itemData);
+            Data.Event_RefreshUI.Invoke(slotIndex);
+
+            successCount++;
+        }
+
+        Debug.Log($"随机注入完成：成功 {successCount}，失败 {failCount}");
+    }
+
+    /// <summary>
+    /// 自动注入物品列表到容器中，智能查找空槽位或可堆叠槽位，避免覆盖已有物品
+    /// </summary>
+    /// <param name="prefabList">物品预制体列表</param>
+    /// <param name="countList">对应物品数量列表</param>
+    [Button("自动注入物品列表")]
+    [LabelText("自动注入物品列表")]
+    public void AutoInjectItemDataList(
+        [LabelText("物品预制体列表")] List<GameObject> prefabList,
+        [LabelText("数量列表")] List<int> countList)
+    {
+        // 参数验证
+        if (prefabList == null || countList == null)
+        {
+            Debug.LogError("自动注入失败：Prefab列表或数量列表不能为空");
+            return;
+        }
+
+        if (prefabList.Count != countList.Count)
+        {
+            Debug.LogError($"自动注入失败：Prefab列表数量({prefabList.Count})与数量列表数量({countList.Count})不匹配");
+            return;
+        }
+
+        if (prefabList.Count == 0)
+        {
+            Debug.LogWarning("自动注入失败：Prefab列表为空");
+            return;
+        }
+
+        int successCount = 0;
+        int failCount = 0;
+
+        // 遍历并自动注入每个物品
+        for (int i = 0; i < prefabList.Count; i++)
+        {
+            GameObject prefab = prefabList[i];
+            int count = countList[i];
+
+            if (prefab == null)
+            {
+                Debug.LogWarning($"跳过空的Prefab（索引 {i}）");
+                failCount++;
+                continue;
+            }
+
+            if (count <= 0)
+            {
+                Debug.LogWarning($"跳过无效数量 {count} 的物品 {prefab.name}（索引 {i}）");
+                failCount++;
+                continue;
+            }
+
+            // 获取Prefab上的Item组件
+            Item itemComponent = prefab.GetComponent<Item>();
+            if (itemComponent == null)
+            {
+                Debug.LogError($"自动注入失败：Prefab {prefab.name} 上找不到Item组件（索引 {i}）");
+                failCount++;
+                continue;
+            }
+
+            // 克隆ItemData
+            ItemData itemData = itemComponent.Get_NewItemData();
+            if (itemData == null)
+            {
+                Debug.LogError($"自动注入失败：无法克隆 {prefab.name} 的ItemData（索引 {i}）");
+                failCount++;
+                continue;
+            }
+
+            // 设置数量
+            itemData.Stack.Amount = count;
+            itemData.Stack.CanBePickedUp = false;
+
+            // 尝试添加物品
+            if (Data.TryAddItem(itemData, true))
+            {
+                Debug.Log($"成功自动注入物品 {prefab.name} x{count}");
+                successCount++;
+            }
+            else
+            {
+                Debug.LogError($"自动注入失败：容器空间不足，无法注入物品 {prefab.name} x{count}");
+                failCount++;
+            }
+        }
+
+        Debug.Log($"自动注入物品列表完成：成功 {successCount} 个，失败 {failCount} 个");
+    }
+
+    // 重载方法：支持统一数量
+    [Button("自动注入物品列表(统一数量)")]
+    [LabelText("自动注入物品列表(统一数量)")]
+    public void AutoInjectItemDataList(
+        [LabelText("物品预制体列表")] List<GameObject> prefabList,
+        [LabelText("统一数量")] [MinValue(1)] int uniformCount = 1)
+    {
+        if (prefabList == null)
+        {
+            Debug.LogError("自动注入失败：Prefab列表不能为空");
+            return;
+        }
+
+        // 创建统一数量列表
+        List<int> countList = new List<int>();
+        for (int i = 0; i < prefabList.Count; i++)
+        {
+            countList.Add(uniformCount);
+        }
+
+        AutoInjectItemDataList(prefabList, countList);
     }
 
     #endregion
