@@ -115,7 +115,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1752159837602905489}
   - {fileID: 6799370837357158401}
   - {fileID: 8370802642925288472}
   m_Father: {fileID: 0}
@@ -218,81 +217,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!1 &9063328539452382332
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1752159837602905489}
-  - component: {fileID: 57782880397098656}
-  m_Layer: 0
-  m_Name: "\u751F\u957F\u6A21\u5757"
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1752159837602905489
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9063328539452382332}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 957358242643349336}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &57782880397098656
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9063328539452382332}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7ae284c79570da34e92a2104913460f5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  _data:
-    isLoop: 1
-    progress: 0
-    progress_Max:
-      BaseValue: 11
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-    productionSpeed:
-      BaseValue: 1
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-    specialProductionPoints:
-    - NodeName: "\u53D1\u80B2\u4E3A\u82F9\u679C\u6811"
-      InvokeValue: 10
-      loot:
-        lootName: 
-        lootAmountRange: {x: 1, y: 1}
-        lootPrefab: {fileID: 0}
-      DestroySelf: 0
-    nodeIndex: 0
-  _memoryPackable:
-    Name: 
-    ID: 
-    isRunning: 1
-    Type: 0
-    BitData: 
 --- !u!1001 &633942475704849830
 PrefabInstance:
   m_ObjectHideFlags: 0

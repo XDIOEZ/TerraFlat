@@ -378,6 +378,10 @@ public void HotReloadAllResources()
         return null;
     }
     
+   void OnTriggerEnter2D()
+    {
+        
+    }
     public GameObject GetPrefab(string prefabName)
     {
         if (AllPrefabs.TryGetValue(prefabName, out var go))
