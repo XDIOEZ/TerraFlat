@@ -1,13 +1,13 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/ĞĞ¶¯/á÷ÁÔ")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/ç‹©çŒ")]
 public class Hunting : ActionNode
 {
-    [Header("ÎïÆ·ËÑË÷ÉèÖÃ")]
-    [Tooltip("ÒªËÑË÷µÄÎïÆ·ÀàĞÍÁĞ±í£¨²¿·ÖÆ¥Åä£©")]
+    [Header("ç‰©å“æœç´¢è®¾ç½®")]
+    [Tooltip("è¦æœç´¢çš„ç‰©å“ç±»å‹åˆ—è¡¨ï¼ˆéƒ¨åˆ†åŒ¹é…ï¼‰")]
     public List<string> ItemType = new List<string>();
 
     protected override void OnStart() {
@@ -34,17 +34,17 @@ public class Hunting : ActionNode
     }
 
     /// <summary>
-    /// ²éÕÒ·ûºÏÌõ¼şµÄÄ¿±êÎïÆ·
+    /// æŸ¥æ‰¾ç¬¦åˆæ¡ä»¶çš„ç›®æ ‡ç‰©å“
     /// </summary>
     private Item FindTargetItem()
     {
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
-            if (item?.itemData?.ItemTags?.Item_TypeTag == null)
+            if (item?.itemData.Tags.TypeTag == null)
                 continue;
 
-            // ¼ì²éÎïÆ·ÀàĞÍÊÇ·ñÆ¥Åä
-            if (ItemType.Exists(type => item.itemData.ItemTags.Item_TypeTag.Contains(type)))
+            // æ£€æŸ¥ç‰©å“ç±»å‹æ˜¯å¦åŒ¹é…
+            if (ItemType.Exists(type => item.itemData.Tags.HasType(type)))
             {
                 return item;
             }

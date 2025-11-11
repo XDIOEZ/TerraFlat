@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7510893652875425431}
-  - component: {fileID: 2084636620300901792}
   m_Layer: 6
   m_Name: AttackTrigger
   m_TagString: Untagged
@@ -34,39 +33,6 @@ Transform:
   - {fileID: 7165935010275407504}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2084636620300901792
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 446111424874772898}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d8659b90edb38c419ff01a7823ff25c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  OrganName: 
-  rotationSpeedDegrees: 360
-  ItemInHand: {fileID: 0}
-  _faceMouse: {fileID: 2293656354809475645}
-  DefaultSpeed: 1
-  MaxSpeed: 5
-  DefaultDistance: 1
-  maxDistance: 1
-  Distance: 0
-  DefaultAttackTime: 0.5
-  MaxAttackTime: 1
-  AttackTime: 0
-  DefaultItemBackSpeed: 5
-  MaxItemBackSpeed: 5
-  ItemBackSpeed: 10
-  DefaultItemBackTime: 5
-  MaxItemBackTime: 1
-  ItemBackTime: 0
-  startPos: {x: 0, y: 0}
-  IsAttack: 0
-  isReturn: 0
 --- !u!1 &4485379716555002833
 GameObject:
   m_ObjectHideFlags: 0
@@ -111,9 +77,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2edcd9081c029db40910400e33156627, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  OrganName: 
-  rotationSpeed: 0
-  Direction: {x: 0, y: 0}
+  item: {fileID: 0}
+  Data:
+    RotationSpeed: 180
+    ActivateRotation: 1
+    StopRotationDistance: 0.1
+  ModData:
+    Name: 
+    ID: "FaceMouse\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    BitData: 
+  PlayerController: {fileID: 0}
+  turnBody: {fileID: 0}
+  targetRotationTransforms: []
 --- !u!1 &4844177681479918155
 GameObject:
   m_ObjectHideFlags: 0

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6693445215778643434}
   - component: {fileID: 6801433692735126678}
   - component: {fileID: 1811419775044245006}
-  - component: {fileID: -8957655033720996959}
+  - component: {fileID: 5595652153613646993}
   m_Layer: 0
   m_Name: Ore_Coal
   m_TagString: Untagged
@@ -132,7 +132,7 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!114 &-8957655033720996959
+--- !u!114 &5595652153613646993
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -141,7 +141,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 288261360578882072}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 12c43ce07ad24ea4e9d03bf49d0c57a2, type: 3}
+  m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
@@ -152,17 +152,19 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
-  updateInterval: 0.1
-  _coalData:
-    IDName: Ore_Coal
-    GameName: "\u7164\u70AD"
-    Description: "\u4E00\u79CD\u53E4\u8001\u7684\u71C3\u6599\uFF0C\u7531\u6570\u767E\u4E07\u5E74\u524D\u7684\u690D\u7269\u6C89\u79EF\u538B\u7F29\u800C\u6210\u3002\u9ED1\u8272\u3001\u575A\u786C\uFF0C\u6563\u53D1\u7740\u5FAE\u5F31\u7684\u6CB9\u5149\u3002"
-    Durability: 50
+  updateInterval: 0
+  Data:
+    IDName: 
+    GameName: 
+    Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
+    Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
-      - Material
+      - None
+      - None
       Item_Material:
-      - Ore
+      - None
     Tags:
       keys:
       - tag: Type
@@ -175,15 +177,13 @@ MonoBehaviour:
       Amount: 1
       Volume: 1
       CanBePickedUp: 1
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: "\u65E0"
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
+    ItemSpecialData: 
     Guid: 0
-    code: 600
-  maxBurnTime: 600
-  maxTemptrue: 1000
+    code: 
 --- !u!1001 &6004186272691019415
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -391,7 +391,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 4387705592517210955}
   text: {fileID: 8653636247318924357}
   OnLeftClick:
@@ -1807,7 +1808,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3411641726888165367}
   m_HandleRect: {fileID: 5761251176041530085}
   m_Direction: 0
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -2514,7 +2515,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 8354525080099130128}
   text: {fileID: 8675963490346939709}
   OnLeftClick:
@@ -3076,7 +3078,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 6580886480837502652}
   text: {fileID: 5372663649550937843}
   OnLeftClick:
@@ -3491,7 +3494,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 8995189257172278207}
   text: {fileID: 1929706400167571747}
   OnLeftClick:
@@ -3785,7 +3789,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 2363552064476790567}
   text: {fileID: 3064217816881332882}
   OnLeftClick:
@@ -4173,7 +4178,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     Index: 0
     IsInjected: 0
     Event_RefreshUI:
@@ -4399,7 +4405,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4408,7 +4415,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4417,7 +4425,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4426,7 +4435,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4435,7 +4445,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4444,7 +4455,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4453,7 +4465,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4462,7 +4475,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -4471,7 +4485,8 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      Belong_Inventory: {fileID: 0}
+      onSlotDataChanged:
+        _PersistentCalls: []
     Index: 0
     IsInjected: 0
     Event_RefreshUI:
@@ -4492,7 +4507,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   faceMouse: {fileID: 0}
   turnBody: {fileID: 0}
   CurentSelectItem: {fileID: 0}
@@ -4652,7 +4668,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 979702041417425823}
   text: {fileID: 3914029893271905404}
   OnLeftClick:
@@ -5290,7 +5307,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 1693981137125868645}
   text: {fileID: 7400936325274523483}
   OnLeftClick:
@@ -5719,7 +5737,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 6715034060084895776}
   text: {fileID: 6564735728621668888}
   OnLeftClick:
@@ -6298,7 +6317,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 8734837140074893396}
   text: {fileID: 6307668042354858801}
   OnLeftClick:
@@ -6508,7 +6528,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   parabolaHeight: 2
   baseDropDuration: 0.5
   distanceSensitivity: 0.1
@@ -7244,7 +7265,8 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
+    onSlotDataChanged:
+      _PersistentCalls: []
   image: {fileID: 4839799872198008468}
   text: {fileID: 8220541895133562630}
   OnLeftClick:
@@ -7499,7 +7521,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6273122876822724285}
-  - component: {fileID: 3649930500046300265}
   - component: {fileID: 4454883684667596010}
   m_Layer: 9
   m_Name: "\u653B\u51FB\u89E6\u53D1\u5668"
@@ -7524,44 +7545,6 @@ Transform:
   - {fileID: 7991948826538055335}
   m_Father: {fileID: 8558300597438332925}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3649930500046300265
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8650688661528383040}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d8659b90edb38c419ff01a7823ff25c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  OnStartAttack:
-    _PersistentCalls: []
-  OnStayAttack:
-    _PersistentCalls: []
-  OnEndAttack:
-    _PersistentCalls: []
-  Weapon: {fileID: 0}
-  RotationSpeed:
-    BaseValue: 1
-    BaseAdditive: 0
-    AdditiveModifier: 0
-    MultiplicativeModifier: 1
-    FinalAdditive: 0
-  ChangeHand: 1
-  StartPosition: {x: 0, y: 0}
-  MouseTarget: {x: 0, y: 0, z: 0}
-  CanAttack: 0
-  CurrentState: 0
-  ModData:
-    Name: 
-    ID: 
-    isRunning: 0
-    Type: 0
-    BitData: 
-  xOffset: 0.5
 --- !u!61 &4454883684667596010
 BoxCollider2D:
   m_ObjectHideFlags: 0

@@ -12,8 +12,8 @@ GameObject:
   - component: {fileID: 6267562379705424517}
   - component: {fileID: 1326326382393605835}
   - component: {fileID: 5647647210990008268}
-  - component: {fileID: 5478288633440367013}
   - component: {fileID: 7587861195923453438}
+  - component: {fileID: 207474407376907762}
   m_Layer: 0
   m_Name: MapEdge
   m_TagString: Untagged
@@ -160,53 +160,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
---- !u!114 &5478288633440367013
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2273771290473549451}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 22ead5427bc06bc47b99b929d0dad640, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  BelongItem: {fileID: 0}
-  OnUIRefresh:
-    _PersistentCalls: []
-  OnItemDestroy:
-    _PersistentCalls: []
-  OnAct:
-    _PersistentCalls: []
-  OnModuleLoadDone:
-    _PersistentCalls: []
-  Sprite: {fileID: 0}
-  updateInterval: 0.1
-  data:
-    IDName: MapEdge
-    GameName: 
-    Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
-    Durability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    Stack:
-      Amount: 1
-      Volume: 1
-      CanBePickedUp: 0
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
-    ItemSpecialData: 
-    Guid: 0
-    TP_SceneName: 
-    TP_Position: {x: 0, y: 0}
-    Boundary_Position: {x: 0, y: 0}
 --- !u!114 &7587861195923453438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -223,3 +176,55 @@ MonoBehaviour:
   m_Area: 1
   m_IgnoreFromBuild: 0
   m_AffectedAgents: ffffffff
+--- !u!114 &207474407376907762
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2273771290473549451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5343d6849befa9c4992d5d2e5e2df40e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  OnUIRefresh:
+    _PersistentCalls: []
+  OnItemDestroy:
+    _PersistentCalls: []
+  OnAct:
+    _PersistentCalls: []
+  Sprite: {fileID: 0}
+  updateInterval: 0
+  Data:
+    IDName: 
+    GameName: 
+    Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
+    Durability: 1
+    MaxDurability: 1
+    ItemTags:
+      Item_TypeTag:
+      - None
+      - None
+      Item_Material:
+      - None
+    Tags:
+      keys:
+      - tag: Type
+        values: []
+      - tag: Material
+        values: []
+      - tag: MakeTag
+        values: []
+    Stack:
+      Amount: 1
+      Volume: 1
+      CanBePickedUp: 1
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
+    ItemSpecialData: 
+    Guid: 0
+    code: 

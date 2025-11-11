@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,9 +7,9 @@ using Sirenix.OdinInspector;
 
 public class BaseUIManager : MonoBehaviour
 {
-    // ×Ô¶¯»ñÈ¡×Ó¶ÔÏóÉÏµÄËùÓĞUI×é¼ş 1.°´Å¥  2.TMP_InputField 3.TextMeshProUGUI
+    // è‡ªåŠ¨è·å–å­å¯¹è±¡ä¸Šçš„æ‰€æœ‰UIç»„ä»¶ 1.æŒ‰é’®  2.TMP_InputField 3.TextMeshProUGUI
 
-    // Ã¿ÖÖUIÀàĞÍ¶¼ÓĞÒ»¸ö×Öµä ÓÃÀ´´æ´¢UI×é¼ş Ãû×Ö¾ÍÓÃ¹Ò½ÓµÄgameObject.name ×÷ÎªKey
+    // æ¯ç§UIç±»å‹éƒ½æœ‰ä¸€ä¸ªå­—å…¸ ç”¨æ¥å­˜å‚¨UIç»„ä»¶ åå­—å°±ç”¨æŒ‚æ¥çš„gameObject.name ä½œä¸ºKey
     [ShowInInspector]
     private Dictionary<string, Button> buttons = new Dictionary<string, Button>();
     [ShowInInspector]
@@ -17,32 +17,32 @@ public class BaseUIManager : MonoBehaviour
     [ShowInInspector]
     private Dictionary<string, TextMeshProUGUI> textElements = new Dictionary<string, TextMeshProUGUI>();
 
-    // ¶îÍâÎ¬»¤µÄGameObjectÁĞ±í£¬ÕâĞ©¶ÔÏóÒ²»á±»É¨Ãè»ñÈ¡UI×é¼ş
-    [Tooltip("¶îÍâµÄGameObjectÁĞ±í£¬»á´ÓÕâĞ©¶ÔÏó¼°Æä×Ó¶ÔÏóÖĞÊÕ¼¯UI×é¼ş")]
+    // é¢å¤–ç»´æŠ¤çš„GameObjectåˆ—è¡¨ï¼Œè¿™äº›å¯¹è±¡ä¹Ÿä¼šè¢«æ‰«æè·å–UIç»„ä»¶
+    [Tooltip("é¢å¤–çš„GameObjectåˆ—è¡¨ï¼Œä¼šä»è¿™äº›å¯¹è±¡åŠå…¶å­å¯¹è±¡ä¸­æ”¶é›†UIç»„ä»¶")]
     public List<GameObject> additionalUIObjects = new List<GameObject>();
 
-    // È»ºóÊÇ¼òµ¥µÄÔöÉ¾¸Ä²éÏÔÊ¾Òş²Ø²Ù×÷ ±ÜÃâÖ±½Ó²Ù×÷×Öµä
+    // ç„¶åæ˜¯ç®€å•çš„å¢åˆ æ”¹æŸ¥æ˜¾ç¤ºéšè—æ“ä½œ é¿å…ç›´æ¥æ“ä½œå­—å…¸
 
     private void Awake()
     {
-        // ×Ô¶¯»ñÈ¡ËùÓĞ×Ó¶ÔÏóÉÏµÄUI×é¼ş
+        // è‡ªåŠ¨è·å–æ‰€æœ‰å­å¯¹è±¡ä¸Šçš„UIç»„ä»¶
         CollectUIComponents();
     }
 
     /// <summary>
-    /// ×Ô¶¯ÊÕ¼¯ËùÓĞ×Ó¶ÔÏóÉÏµÄUI×é¼ş
+    /// è‡ªåŠ¨æ”¶é›†æ‰€æœ‰å­å¯¹è±¡ä¸Šçš„UIç»„ä»¶
     /// </summary>
     private void CollectUIComponents()
     {
-        // Çå¿ÕÏÖÓĞ×Öµä
+        // æ¸…ç©ºç°æœ‰å­—å…¸
         buttons.Clear();
         inputFields.Clear();
         textElements.Clear();
 
-        // ÊÕ¼¯Ö÷¶ÔÏó£¨×ÔÉí£©ÉÏµÄUI×é¼ş
+        // æ”¶é›†ä¸»å¯¹è±¡ï¼ˆè‡ªèº«ï¼‰ä¸Šçš„UIç»„ä»¶
         CollectUIComponentsFromGameObject(gameObject);
 
-        // ÊÕ¼¯¶îÍâÁĞ±íÖĞµÄGameObjectÉÏµÄUI×é¼ş
+        // æ”¶é›†é¢å¤–åˆ—è¡¨ä¸­çš„GameObjectä¸Šçš„UIç»„ä»¶
         foreach (GameObject uiObject in additionalUIObjects)
         {
             if (uiObject != null)
@@ -51,18 +51,18 @@ public class BaseUIManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"ÊÕ¼¯µ½ {buttons.Count} ¸ö°´Å¥, {inputFields.Count} ¸öÊäÈë¿ò, {textElements.Count} ¸öÎÄ±¾×é¼ş");
+        //Debug.Log($"æ”¶é›†åˆ° {buttons.Count} ä¸ªæŒ‰é’®, {inputFields.Count} ä¸ªè¾“å…¥æ¡†, {textElements.Count} ä¸ªæ–‡æœ¬ç»„ä»¶");
     }
 
     /// <summary>
-    /// ´ÓÖ¸¶¨GameObject¼°Æä×Ó¶ÔÏóÊÕ¼¯UI×é¼ş
+    /// ä»æŒ‡å®šGameObjectåŠå…¶å­å¯¹è±¡æ”¶é›†UIç»„ä»¶
     /// </summary>
-    /// <param name="targetObject">Ä¿±êGameObject</param>
+    /// <param name="targetObject">ç›®æ ‡GameObject</param>
     private void CollectUIComponentsFromGameObject(GameObject targetObject)
     {
         if (targetObject == null) return;
 
-        // »ñÈ¡ËùÓĞ×Ó¶ÔÏóÉÏµÄButton×é¼ş
+        // è·å–æ‰€æœ‰å­å¯¹è±¡ä¸Šçš„Buttonç»„ä»¶
         Button[] allButtons = targetObject.GetComponentsInChildren<Button>(true);
         foreach (Button btn in allButtons)
         {
@@ -72,7 +72,7 @@ public class BaseUIManager : MonoBehaviour
             }
         }
 
-        // »ñÈ¡ËùÓĞ×Ó¶ÔÏóÉÏµÄTMP_InputField×é¼ş
+        // è·å–æ‰€æœ‰å­å¯¹è±¡ä¸Šçš„TMP_InputFieldç»„ä»¶
         TMP_InputField[] allInputFields = targetObject.GetComponentsInChildren<TMP_InputField>(true);
         foreach (TMP_InputField inputField in allInputFields)
         {
@@ -82,7 +82,7 @@ public class BaseUIManager : MonoBehaviour
             }
         }
 
-        // »ñÈ¡ËùÓĞ×Ó¶ÔÏóÉÏµÄTextMeshProUGUI×é¼ş
+        // è·å–æ‰€æœ‰å­å¯¹è±¡ä¸Šçš„TextMeshProUGUIç»„ä»¶
         TextMeshProUGUI[] allTexts = targetObject.GetComponentsInChildren<TextMeshProUGUI>(true);
         foreach (TextMeshProUGUI text in allTexts)
         {
@@ -93,28 +93,28 @@ public class BaseUIManager : MonoBehaviour
         }
     }
 
-    #region °´Å¥²Ù×÷
+    #region æŒ‰é’®æ“ä½œ
 
     /// <summary>
-    /// »ñÈ¡°´Å¥×é¼ş
+    /// è·å–æŒ‰é’®ç»„ä»¶
     /// </summary>
-    /// <param name="buttonName">°´Å¥Ãû³Æ</param>
-    /// <returns>°´Å¥×é¼ş£¬Èç¹û²»´æÔÚ·µ»Ønull</returns>
+    /// <param name="buttonName">æŒ‰é’®åç§°</param>
+    /// <returns>æŒ‰é’®ç»„ä»¶ï¼Œå¦‚æœä¸å­˜åœ¨è¿”å›null</returns>
     public Button GetButton(string buttonName)
     {
         if (buttons.TryGetValue(buttonName, out Button button))
         {
             return button;
         }
-        Debug.LogError($"Î´ÕÒµ½ÃûÎª {buttonName} µÄ°´Å¥");
+        Debug.LogError($"æœªæ‰¾åˆ°åä¸º {buttonName} çš„æŒ‰é’®");
         return null;
     }
 
     /// <summary>
-    /// ÉèÖÃ°´Å¥µã»÷ÊÂ¼ş
+    /// è®¾ç½®æŒ‰é’®ç‚¹å‡»äº‹ä»¶
     /// </summary>
-    /// <param name="buttonName">°´Å¥Ãû³Æ</param>
-    /// <param name="onClick">µã»÷»Øµ÷</param>
+    /// <param name="buttonName">æŒ‰é’®åç§°</param>
+    /// <param name="onClick">ç‚¹å‡»å›è°ƒ</param>
     public void SetButtonOnClick(string buttonName, UnityEngine.Events.UnityAction onClick)
     {
         Button button = GetButton(buttonName);
@@ -125,10 +125,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ÒÆ³ı°´Å¥µã»÷ÊÂ¼ş
+    /// ç§»é™¤æŒ‰é’®ç‚¹å‡»äº‹ä»¶
     /// </summary>
-    /// <param name="buttonName">°´Å¥Ãû³Æ</param>
-    /// <param name="onClick">µã»÷»Øµ÷</param>
+    /// <param name="buttonName">æŒ‰é’®åç§°</param>
+    /// <param name="onClick">ç‚¹å‡»å›è°ƒ</param>
     public void RemoveButtonOnClick(string buttonName, UnityEngine.Events.UnityAction onClick)
     {
         Button button = GetButton(buttonName);
@@ -139,10 +139,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾/Òş²Ø°´Å¥
+    /// æ˜¾ç¤º/éšè—æŒ‰é’®
     /// </summary>
-    /// <param name="buttonName">°´Å¥Ãû³Æ</param>
-    /// <param name="isVisible">ÊÇ·ñ¿É¼û</param>
+    /// <param name="buttonName">æŒ‰é’®åç§°</param>
+    /// <param name="isVisible">æ˜¯å¦å¯è§</param>
     public void SetButtonVisible(string buttonName, bool isVisible)
     {
         Button button = GetButton(buttonName);
@@ -153,10 +153,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ÆôÓÃ/½ûÓÃ°´Å¥
+    /// å¯ç”¨/ç¦ç”¨æŒ‰é’®
     /// </summary>
-    /// <param name="buttonName">°´Å¥Ãû³Æ</param>
-    /// <param name="isEnabled">ÊÇ·ñÆôÓÃ</param>
+    /// <param name="buttonName">æŒ‰é’®åç§°</param>
+    /// <param name="isEnabled">æ˜¯å¦å¯ç”¨</param>
     public void SetButtonEnabled(string buttonName, bool isEnabled)
     {
         Button button = GetButton(buttonName);
@@ -168,28 +168,28 @@ public class BaseUIManager : MonoBehaviour
 
     #endregion
 
-    #region ÊäÈë¿ò²Ù×÷
+    #region è¾“å…¥æ¡†æ“ä½œ
 
     /// <summary>
-    /// »ñÈ¡ÊäÈë¿ò×é¼ş
+    /// è·å–è¾“å…¥æ¡†ç»„ä»¶
     /// </summary>
-    /// <param name="inputFieldName">ÊäÈë¿òÃû³Æ</param>
-    /// <returns>ÊäÈë¿ò×é¼ş£¬Èç¹û²»´æÔÚ·µ»Ønull</returns>
+    /// <param name="inputFieldName">è¾“å…¥æ¡†åç§°</param>
+    /// <returns>è¾“å…¥æ¡†ç»„ä»¶ï¼Œå¦‚æœä¸å­˜åœ¨è¿”å›null</returns>
     public TMP_InputField GetInputField(string inputFieldName)
     {
         if (inputFields.TryGetValue(inputFieldName, out TMP_InputField inputField))
         {
             return inputField;
         }
-        Debug.LogError($"Î´ÕÒµ½ÃûÎª {inputFieldName} µÄÊäÈë¿ò");
+        Debug.LogError($"æœªæ‰¾åˆ°åä¸º {inputFieldName} çš„è¾“å…¥æ¡†");
         return null;
     }
 
     /// <summary>
-    /// ÉèÖÃÊäÈë¿òÎÄ±¾
+    /// è®¾ç½®è¾“å…¥æ¡†æ–‡æœ¬
     /// </summary>
-    /// <param name="inputFieldName">ÊäÈë¿òÃû³Æ</param>
-    /// <param name="text">ÎÄ±¾ÄÚÈİ</param>
+    /// <param name="inputFieldName">è¾“å…¥æ¡†åç§°</param>
+    /// <param name="text">æ–‡æœ¬å†…å®¹</param>
     public void SetInputFieldText(string inputFieldName, string text)
     {
         TMP_InputField inputField = GetInputField(inputFieldName);
@@ -200,10 +200,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// »ñÈ¡ÊäÈë¿òÎÄ±¾
+    /// è·å–è¾“å…¥æ¡†æ–‡æœ¬
     /// </summary>
-    /// <param name="inputFieldName">ÊäÈë¿òÃû³Æ</param>
-    /// <returns>ÊäÈë¿òÎÄ±¾ÄÚÈİ</returns>
+    /// <param name="inputFieldName">è¾“å…¥æ¡†åç§°</param>
+    /// <returns>è¾“å…¥æ¡†æ–‡æœ¬å†…å®¹</returns>
     public string GetInputFieldText(string inputFieldName)
     {
         TMP_InputField inputField = GetInputField(inputFieldName);
@@ -215,10 +215,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ÉèÖÃÊäÈë¿òÊÇ·ñ¿É½»»¥
+    /// è®¾ç½®è¾“å…¥æ¡†æ˜¯å¦å¯äº¤äº’
     /// </summary>
-    /// <param name="inputFieldName">ÊäÈë¿òÃû³Æ</param>
-    /// <param name="isInteractable">ÊÇ·ñ¿É½»»¥</param>
+    /// <param name="inputFieldName">è¾“å…¥æ¡†åç§°</param>
+    /// <param name="isInteractable">æ˜¯å¦å¯äº¤äº’</param>
     public void SetInputFieldInteractable(string inputFieldName, bool isInteractable)
     {
         TMP_InputField inputField = GetInputField(inputFieldName);
@@ -229,10 +229,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾/Òş²ØÊäÈë¿ò
+    /// æ˜¾ç¤º/éšè—è¾“å…¥æ¡†
     /// </summary>
-    /// <param name="inputFieldName">ÊäÈë¿òÃû³Æ</param>
-    /// <param name="isVisible">ÊÇ·ñ¿É¼û</param>
+    /// <param name="inputFieldName">è¾“å…¥æ¡†åç§°</param>
+    /// <param name="isVisible">æ˜¯å¦å¯è§</param>
     public void SetInputFieldVisible(string inputFieldName, bool isVisible)
     {
         TMP_InputField inputField = GetInputField(inputFieldName);
@@ -244,28 +244,28 @@ public class BaseUIManager : MonoBehaviour
 
     #endregion
 
-    #region ÎÄ±¾²Ù×÷
+    #region æ–‡æœ¬æ“ä½œ
 
     /// <summary>
-    /// »ñÈ¡ÎÄ±¾×é¼ş
+    /// è·å–æ–‡æœ¬ç»„ä»¶
     /// </summary>
-    /// <param name="textName">ÎÄ±¾Ãû³Æ</param>
-    /// <returns>ÎÄ±¾×é¼ş£¬Èç¹û²»´æÔÚ·µ»Ønull</returns>
+    /// <param name="textName">æ–‡æœ¬åç§°</param>
+    /// <returns>æ–‡æœ¬ç»„ä»¶ï¼Œå¦‚æœä¸å­˜åœ¨è¿”å›null</returns>
     public TextMeshProUGUI GetText(string textName)
     {
         if (textElements.TryGetValue(textName, out TextMeshProUGUI text))
         {
             return text;
         }
-        Debug.LogError($"Î´ÕÒµ½ÃûÎª {textName} µÄÎÄ±¾×é¼ş");
+        Debug.LogError($"æœªæ‰¾åˆ°åä¸º {textName} çš„æ–‡æœ¬ç»„ä»¶");
         return null;
     }
 
     /// <summary>
-    /// ÉèÖÃÎÄ±¾ÄÚÈİ
+    /// è®¾ç½®æ–‡æœ¬å†…å®¹
     /// </summary>
-    /// <param name="textName">ÎÄ±¾Ãû³Æ</param>
-    /// <param name="text">ÎÄ±¾ÄÚÈİ</param>
+    /// <param name="textName">æ–‡æœ¬åç§°</param>
+    /// <param name="text">æ–‡æœ¬å†…å®¹</param>
     public void SetText(string textName, string text)
     {
         TextMeshProUGUI textElement = GetText(textName);
@@ -276,10 +276,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// »ñÈ¡ÎÄ±¾ÄÚÈİ
+    /// è·å–æ–‡æœ¬å†…å®¹
     /// </summary>
-    /// <param name="textName">ÎÄ±¾Ãû³Æ</param>
-    /// <returns>ÎÄ±¾ÄÚÈİ</returns>
+    /// <param name="textName">æ–‡æœ¬åç§°</param>
+    /// <returns>æ–‡æœ¬å†…å®¹</returns>
     public string GetTextContent(string textName)
     {
         TextMeshProUGUI textElement = GetText(textName);
@@ -291,10 +291,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ÉèÖÃÎÄ±¾ÑÕÉ«
+    /// è®¾ç½®æ–‡æœ¬é¢œè‰²
     /// </summary>
-    /// <param name="textName">ÎÄ±¾Ãû³Æ</param>
-    /// <param name="color">ÑÕÉ«</param>
+    /// <param name="textName">æ–‡æœ¬åç§°</param>
+    /// <param name="color">é¢œè‰²</param>
     public void SetTextColor(string textName, Color color)
     {
         TextMeshProUGUI textElement = GetText(textName);
@@ -305,10 +305,10 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾/Òş²ØÎÄ±¾
+    /// æ˜¾ç¤º/éšè—æ–‡æœ¬
     /// </summary>
-    /// <param name="textName">ÎÄ±¾Ãû³Æ</param>
-    /// <param name="isVisible">ÊÇ·ñ¿É¼û</param>
+    /// <param name="textName">æ–‡æœ¬åç§°</param>
+    /// <param name="isVisible">æ˜¯å¦å¯è§</param>
     public void SetTextVisible(string textName, bool isVisible)
     {
         TextMeshProUGUI textElement = GetText(textName);
@@ -320,41 +320,41 @@ public class BaseUIManager : MonoBehaviour
 
     #endregion
 
-    #region Í¨ÓÃ²Ù×÷
+    #region é€šç”¨æ“ä½œ
 
     /// <summary>
-    /// ÏÔÊ¾/Òş²ØÈÎÒâUI×é¼ş
+    /// æ˜¾ç¤º/éšè—ä»»æ„UIç»„ä»¶
     /// </summary>
-    /// <param name="uiName">UI×é¼şÃû³Æ</param>
-    /// <param name="isVisible">ÊÇ·ñ¿É¼û</param>
+    /// <param name="uiName">UIç»„ä»¶åç§°</param>
+    /// <param name="isVisible">æ˜¯å¦å¯è§</param>
     public void SetUIVisible(string uiName, bool isVisible)
     {
-        // ¼ì²éÊÇ·ñÎª°´Å¥
+        // æ£€æŸ¥æ˜¯å¦ä¸ºæŒ‰é’®
         if (buttons.ContainsKey(uiName))
         {
             SetButtonVisible(uiName, isVisible);
             return;
         }
 
-        // ¼ì²éÊÇ·ñÎªÊäÈë¿ò
+        // æ£€æŸ¥æ˜¯å¦ä¸ºè¾“å…¥æ¡†
         if (inputFields.ContainsKey(uiName))
         {
             SetInputFieldVisible(uiName, isVisible);
             return;
         }
 
-        // ¼ì²éÊÇ·ñÎªÎÄ±¾
+        // æ£€æŸ¥æ˜¯å¦ä¸ºæ–‡æœ¬
         if (textElements.ContainsKey(uiName))
         {
             SetTextVisible(uiName, isVisible);
             return;
         }
 
-        Debug.LogWarning($"Î´ÕÒµ½ÃûÎª {uiName} µÄUI×é¼ş");
+        Debug.LogWarning($"æœªæ‰¾åˆ°åä¸º {uiName} çš„UIç»„ä»¶");
     }
 
     /// <summary>
-    /// ÖØĞÂÊÕ¼¯ËùÓĞUI×é¼ş£¨µ±¶¯Ì¬Ìí¼ÓUI×é¼şÊ±µ÷ÓÃ£©
+    /// é‡æ–°æ”¶é›†æ‰€æœ‰UIç»„ä»¶ï¼ˆå½“åŠ¨æ€æ·»åŠ UIç»„ä»¶æ—¶è°ƒç”¨ï¼‰
     /// </summary>
     public void RefreshUIComponents()
     {
@@ -362,9 +362,9 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ìí¼Ó¶îÍâµÄUI¶ÔÏóµ½ÁĞ±íÖĞ
+    /// æ·»åŠ é¢å¤–çš„UIå¯¹è±¡åˆ°åˆ—è¡¨ä¸­
     /// </summary>
-    /// <param name="uiObject">ÒªÌí¼ÓµÄUI¶ÔÏó</param>
+    /// <param name="uiObject">è¦æ·»åŠ çš„UIå¯¹è±¡</param>
     public void AddAdditionalUIObject(GameObject uiObject)
     {
         if (uiObject != null && !additionalUIObjects.Contains(uiObject))
@@ -374,17 +374,17 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ´ÓÁĞ±íÖĞÒÆ³ı¶îÍâµÄUI¶ÔÏó
+    /// ä»åˆ—è¡¨ä¸­ç§»é™¤é¢å¤–çš„UIå¯¹è±¡
     /// </summary>
-    /// <param name="uiObject">ÒªÒÆ³ıµÄUI¶ÔÏó</param>
-    /// <returns>ÊÇ·ñ³É¹¦ÒÆ³ı</returns>
+    /// <param name="uiObject">è¦ç§»é™¤çš„UIå¯¹è±¡</param>
+    /// <returns>æ˜¯å¦æˆåŠŸç§»é™¤</returns>
     public bool RemoveAdditionalUIObject(GameObject uiObject)
     {
         return additionalUIObjects.Remove(uiObject);
     }
 
     /// <summary>
-    /// Çå¿Õ¶îÍâUI¶ÔÏóÁĞ±í
+    /// æ¸…ç©ºé¢å¤–UIå¯¹è±¡åˆ—è¡¨
     /// </summary>
     public void ClearAdditionalUIObjects()
     {
@@ -392,27 +392,27 @@ public class BaseUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// »ñÈ¡ËùÓĞ°´Å¥Ãû³Æ
+    /// è·å–æ‰€æœ‰æŒ‰é’®åç§°
     /// </summary>
-    /// <returns>°´Å¥Ãû³ÆÁĞ±í</returns>
+    /// <returns>æŒ‰é’®åç§°åˆ—è¡¨</returns>
     public List<string> GetAllButtonNames()
     {
         return new List<string>(buttons.Keys);
     }
 
     /// <summary>
-    /// »ñÈ¡ËùÓĞÊäÈë¿òÃû³Æ
+    /// è·å–æ‰€æœ‰è¾“å…¥æ¡†åç§°
     /// </summary>
-    /// <returns>ÊäÈë¿òÃû³ÆÁĞ±í</returns>
+    /// <returns>è¾“å…¥æ¡†åç§°åˆ—è¡¨</returns>
     public List<string> GetAllInputFieldNames()
     {
         return new List<string>(inputFields.Keys);
     }
 
     /// <summary>
-    /// »ñÈ¡ËùÓĞÎÄ±¾Ãû³Æ
+    /// è·å–æ‰€æœ‰æ–‡æœ¬åç§°
     /// </summary>
-    /// <returns>ÎÄ±¾Ãû³ÆÁĞ±í</returns>
+    /// <returns>æ–‡æœ¬åç§°åˆ—è¡¨</returns>
     public List<string> GetAllTextNames()
     {
         return new List<string>(textElements.Keys);

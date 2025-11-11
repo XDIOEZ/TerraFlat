@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 8586096800501635332}
   - component: {fileID: 132766360570118017}
-  - component: {fileID: 7459087296405793069}
   - component: {fileID: 8537703367482352003}
   - component: {fileID: 2824226379560391463}
   m_Layer: 0
@@ -87,21 +86,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 1
---- !u!114 &7459087296405793069
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3618463718605674473}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6385779351add6f46a5682f5092cf92c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  OnPickUp:
-    _PersistentCalls: []
 --- !u!61 &8537703367482352003
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -173,6 +157,7 @@ MonoBehaviour:
     GameName: "\u8349\u5757"
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
+    MaxDurability: 1
     ItemTags:
       Item_TypeTag:
       - None
@@ -191,10 +176,10 @@ MonoBehaviour:
       Amount: 1
       Volume: 1
       CanBePickedUp: 1
-    _transform:
-      Position: {x: 0, y: 0, z: 0}
-      Rotation: {x: 0, y: 0, z: 0, w: 0}
-      Scale: {x: 0, y: 0, z: 0}
+    transform:
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     Guid: 0
   _tileData:

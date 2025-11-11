@@ -1,39 +1,39 @@
-using AYellowpaper.SerializedCollections;
+ï»¿using AYellowpaper.SerializedCollections;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Mod_SkillManager : Module
 {
-    #region »ù´¡²ÎÊı
+    #region åŸºç¡€å‚æ•°
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
     public float Data;
     #endregion
-    #region Ä£×é²ÎÊı
+    #region æ¨¡ç»„å‚æ•°
 
     public int CurrentSelectSkilIndex;
-    [Tooltip("¼¼ÄÜÃû³ÆÁĞ±í(ÓÃÓÚ´æµµÍæ¼ÒÓµÓĞµÄ·¨Êõ)")]
+    [Tooltip("æŠ€èƒ½åç§°åˆ—è¡¨(ç”¨äºå­˜æ¡£ç©å®¶æ‹¥æœ‰çš„æ³•æœ¯)")]
     public List<string> SkillNameList = new List<string>();
-    [Tooltip("¼¼ÄÜÊı¾İÁĞ±í(»º´æ,·½±ãµ÷ÓÃ)")]
+    [Tooltip("æŠ€èƒ½æ•°æ®åˆ—è¡¨(ç¼“å­˜,æ–¹ä¾¿è°ƒç”¨)")]
     public List<BaseSkill> skillDataList = new List<BaseSkill>();
-    [Tooltip("¼¼ÄÜÁĞ±í(ÓÃÓÚÏÔÊ¾¼¼ÄÜ¶¯»­,ºÍÖ´ĞĞ¼¼ÄÜĞĞÎª)")]
+    [Tooltip("æŠ€èƒ½åˆ—è¡¨(ç”¨äºæ˜¾ç¤ºæŠ€èƒ½åŠ¨ç”»,å’Œæ‰§è¡ŒæŠ€èƒ½è¡Œä¸º)")]
     public List<RuntimeSkill> UpdateSkillList = new List<RuntimeSkill>();
-    [Tooltip("¾Û½¹µãÎ»")]
+    [Tooltip("èšç„¦ç‚¹ä½")]
     public Mod_FocusPoint focusPoint;
-    [Tooltip("¿ØÖÆÆ÷")]
+    [Tooltip("æ§åˆ¶å™¨")]
     public PlayerController controller;
-    [Tooltip("ĞòÁĞ»¯²ÎÊıÊ©·¨Æğµã")]
+    [Tooltip("åºåˆ—åŒ–å‚æ•°æ–½æ³•èµ·ç‚¹")]
     public SerializedDictionary<string, Vector2> SerializedcastingPointOffset = new();
-    [Tooltip("Ê©·¨Æğµã")]
+    [Tooltip("æ–½æ³•èµ·ç‚¹")]
     [ShowInInspector]
     public Dictionary<string, Transform> castingPoint = new();
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
 
     public override void Awake()
     {
@@ -49,14 +49,14 @@ public override void Load()
     if (controller != null)
         controller.RightClick += Act;
     
-    // Í¨¹ıSkillNameList´ÓGameRes»ñÈ¡¼¼ÄÜ Ìæ»»skillDataListÖĞµÄ¼¼ÄÜ
-    // È·±£skillDataListµÄ´óĞ¡ÓëSkillNameListÒ»ÖÂ
+    // é€šè¿‡SkillNameListä»GameResè·å–æŠ€èƒ½ æ›¿æ¢skillDataListä¸­çš„æŠ€èƒ½
+    // ç¡®ä¿skillDataListçš„å¤§å°ä¸SkillNameListä¸€è‡´
     while (skillDataList.Count < SkillNameList.Count)
     {
         skillDataList.Add(null);
     }
     
-    // Ìæ»»¶ÔÓ¦Î»ÖÃµÄ¼¼ÄÜ
+    // æ›¿æ¢å¯¹åº”ä½ç½®çš„æŠ€èƒ½
     for (int i = 0; i < SkillNameList.Count; i++)
     {
         BaseSkill skill = GameRes.Instance.GetSkill(SkillNameList[i]);
@@ -66,12 +66,12 @@ public override void Load()
         }
         else
         {
-            Debug.LogError($"ÎŞ·¨ÕÒµ½¼¼ÄÜ: {SkillNameList[i]}");
+            Debug.LogError($"æ— æ³•æ‰¾åˆ°æŠ€èƒ½: {SkillNameList[i]}");
             skillDataList[i] = null;
         }
     }
     
-    // Èç¹ûSkillNameList±ä¶ÌÁË£¬ÒÆ³ı¶àÓàµÄ¼¼ÄÜ
+    // å¦‚æœSkillNameListå˜çŸ­äº†ï¼Œç§»é™¤å¤šä½™çš„æŠ€èƒ½
     while (skillDataList.Count > SkillNameList.Count)
     {
         skillDataList.RemoveAt(skillDataList.Count - 1);
@@ -79,15 +79,15 @@ public override void Load()
     
     ModSaveData.ReadData(ref Data);
 
-    // ÌáÇ°ÇåÀí×Ó¶ÔÏó£¬±ÜÃâÖØ¸´´´½¨
+    // æå‰æ¸…ç†å­å¯¹è±¡ï¼Œé¿å…é‡å¤åˆ›å»º
     ClearCastingPoints();
 
-    // ¸ù¾İSkillNameListÖĞ¼¼ÄÜµÄÊıÁ¿Éú³ÉÊ©·¨µãÎ»£¬Ä¬ÈÏÎ»ÖÃÎª(0,0)
+    // æ ¹æ®SkillNameListä¸­æŠ€èƒ½çš„æ•°é‡ç”Ÿæˆæ–½æ³•ç‚¹ä½ï¼Œé»˜è®¤ä½ç½®ä¸º(0,0)
     for (int i = 0; i < SkillNameList.Count; i++)
     {
         string skillName = SkillNameList[i];
         
-        // Èç¹ûSerializedcastingPointOffsetÖĞÃ»ÓĞ¶ÔÓ¦µÄÆ«ÒÆÁ¿£¬ÔòÊ¹ÓÃÄ¬ÈÏÖµ(0,0)
+        // å¦‚æœSerializedcastingPointOffsetä¸­æ²¡æœ‰å¯¹åº”çš„åç§»é‡ï¼Œåˆ™ä½¿ç”¨é»˜è®¤å€¼(0,0)
         Vector2 localPositionOffset = Vector2.zero;
         if (SerializedcastingPointOffset != null && SerializedcastingPointOffset.ContainsKey(skillName))
         {
@@ -96,32 +96,32 @@ public override void Load()
         }else
         {
                 SerializedcastingPointOffset[skillName] = localPositionOffset;
-                Debug.LogWarning($"Î´ÕÒµ½¼¼ÄÜ {skillName} µÄÆ«ÒÆÁ¿£¬Ê¹ÓÃÄ¬ÈÏÖµ(0,0)");
+                Debug.LogWarning($"æœªæ‰¾åˆ°æŠ€èƒ½ {skillName} çš„åç§»é‡ï¼Œä½¿ç”¨é»˜è®¤å€¼(0,0)");
         }
 
-        // ´´½¨ĞÂµÄ GameObject ×÷ÎªÊ©·¨µãÎ»
+        // åˆ›å»ºæ–°çš„ GameObject ä½œä¸ºæ–½æ³•ç‚¹ä½
         GameObject castingPointObject = new GameObject(skillName + "_CastingPoint");
 
-        // ÉèÖÃÎªµ±Ç° GameObject µÄ×Ó¶ÔÏó
+        // è®¾ç½®ä¸ºå½“å‰ GameObject çš„å­å¯¹è±¡
         castingPointObject.transform.SetParent(transform, false);
 
-        // ÉèÖÃ±¾µØ×ø±ê£¨Ïà¶ÔÓÚ¸¸¶ÔÏóµÄÎ»ÖÃ£©
+        // è®¾ç½®æœ¬åœ°åæ ‡ï¼ˆç›¸å¯¹äºçˆ¶å¯¹è±¡çš„ä½ç½®ï¼‰
         castingPointObject.transform.localPosition = new Vector3(localPositionOffset.x, localPositionOffset.y, 0);
 
-        // ´æ´¢µ½ castingPoint ×ÖµäÖĞ
+        // å­˜å‚¨åˆ° castingPoint å­—å…¸ä¸­
         castingPoint[skillName] = castingPointObject.transform;
     }
 }
 
 /// <summary>
-/// ÇåÀíÏÖÓĞµÄÊ©·¨µãÎ»×Ó¶ÔÏó
+/// æ¸…ç†ç°æœ‰çš„æ–½æ³•ç‚¹ä½å­å¯¹è±¡
 /// </summary>
 private void ClearCastingPoints()
 {
-    // Çå¿Õ×Öµä
+    // æ¸…ç©ºå­—å…¸
     castingPoint.Clear();
     
-    // É¾³ıËùÓĞÒÔ"_CastingPoint"½áÎ²µÄ×Ó¶ÔÏó
+    // åˆ é™¤æ‰€æœ‰ä»¥"_CastingPoint"ç»“å°¾çš„å­å¯¹è±¡
     List<Transform> childrenToRemove = new List<Transform>();
     foreach (Transform child in transform)
     {
@@ -131,7 +131,7 @@ private void ClearCastingPoints()
         }
     }
     
-    // É¾³ı×Ó¶ÔÏó
+    // åˆ é™¤å­å¯¹è±¡
     foreach (Transform child in childrenToRemove)
     {
         if (Application.isPlaying)
@@ -147,21 +147,25 @@ private void ClearCastingPoints()
     public void Start()
     {
         transform.localPosition = Vector3.zero;
-        //Ìí¼ÓµãÎ»µ½Ğı×ªÌå¿ØÖÆ×é¼ş ×Ó¶ÔÏóÊ©·¨µã»áËæ×ÅÒ»ÆğĞı×ª
+        //æ·»åŠ ç‚¹ä½åˆ°æ—‹è½¬ä½“æ§åˆ¶ç»„ä»¶ å­å¯¹è±¡æ–½æ³•ç‚¹ä¼šéšç€ä¸€èµ·æ—‹è½¬
+        if(item.itemMods!= null)
         item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
+        else
+        Debug.LogWarning("æ²¡æœ‰æ‰¾åˆ°æ—‹è½¬ä½“æ§åˆ¶ç»„ä»¶");
+    
     }
 
 
 
     public override void ModUpdate(float deltaTime)
     {
-        // ´ÓºóÍùÇ°±éÀú£¬±ÜÃâÔÚµü´úÊ±É¾³ıÔªËØµ¼ÖÂµÄÎÊÌâ
+        // ä»åå¾€å‰éå†ï¼Œé¿å…åœ¨è¿­ä»£æ—¶åˆ é™¤å…ƒç´ å¯¼è‡´çš„é—®é¢˜
         for (int i = UpdateSkillList.Count - 1; i >= 0; i--)
         {
             RuntimeSkill skill = UpdateSkillList[i];
             skill.Stay(deltaTime);
             
-            // Èç¹û¼¼ÄÜÒÑÍê³É£¬ÒÆ³ıËü
+            // å¦‚æœæŠ€èƒ½å·²å®Œæˆï¼Œç§»é™¤å®ƒ
             if (skill.IsFinished())
             {
                 skill.Stop();
@@ -182,12 +186,12 @@ private void ClearCastingPoints()
         if (CurrentSelectSkilIndex >= 0 && CurrentSelectSkilIndex < skillDataList.Count)
         {
             BaseSkill selectedSkill = skillDataList[CurrentSelectSkilIndex];
-            // ´´½¨ÔËĞĞÊ±¼¼ÄÜÊµÀı
+            // åˆ›å»ºè¿è¡Œæ—¶æŠ€èƒ½å®ä¾‹
             RuntimeSkill runtimeSkill = new RuntimeSkill();
             runtimeSkill.skillManager = this;
             runtimeSkill.skillData = selectedSkill;
-            runtimeSkill.duration = selectedSkill.duration; // ¼ÙÉèBaseSkillÓĞDurationÊôĞÔ
-            runtimeSkill.progress = selectedSkill.initialPrograss; // ¼ÙÉèBaseSkillÓĞDurationÊôĞÔ
+            runtimeSkill.duration = selectedSkill.duration; // å‡è®¾BaseSkillæœ‰Durationå±æ€§
+            runtimeSkill.progress = selectedSkill.initialPrograss; // å‡è®¾BaseSkillæœ‰Durationå±æ€§
             runtimeSkill.skillSender = item;
             runtimeSkill.targetPoint = focusPoint.Data.DefaultSkill_Point;
             UpdateSkillList.Add(runtimeSkill);
@@ -195,82 +199,82 @@ private void ClearCastingPoints()
         }
         else
         {
-            Debug.LogWarning($"ÎŞĞ§µÄ¼¼ÄÜË÷Òı: {CurrentSelectSkilIndex}");
+            Debug.LogWarning($"æ— æ•ˆçš„æŠ€èƒ½ç´¢å¼•: {CurrentSelectSkilIndex}");
         }
     }
     
     #endregion
     
-    #region ¼¼ÄÜ¿ØÖÆ·½·¨
+    #region æŠ€èƒ½æ§åˆ¶æ–¹æ³•
     
     /// <summary>
-    /// Ç¿ĞĞÍ£Ö¹ËùÓĞÕıÔÚÖ´ĞĞµÄ¼¼ÄÜ
+    /// å¼ºè¡Œåœæ­¢æ‰€æœ‰æ­£åœ¨æ‰§è¡Œçš„æŠ€èƒ½
     /// </summary>
     public void StopAllSkills()
     {
-        // ´ÓºóÍùÇ°±éÀú£¬±ÜÃâÔÚµü´úÊ±É¾³ıÔªËØµ¼ÖÂµÄÎÊÌâ
+        // ä»åå¾€å‰éå†ï¼Œé¿å…åœ¨è¿­ä»£æ—¶åˆ é™¤å…ƒç´ å¯¼è‡´çš„é—®é¢˜
         for (int i = UpdateSkillList.Count - 1; i >= 0; i--)
         {
             RuntimeSkill skill = UpdateSkillList[i];
-            // Í£Ö¹¼¼ÄÜ
+            // åœæ­¢æŠ€èƒ½
             skill.Stop();
-            // ´ÓÁĞ±íÖĞÒÆ³ı
+            // ä»åˆ—è¡¨ä¸­ç§»é™¤
             UpdateSkillList.RemoveAt(i);
         }
         
-        Debug.Log("ÒÑÇ¿ĞĞÍ£Ö¹ËùÓĞ¼¼ÄÜ");
+        Debug.Log("å·²å¼ºè¡Œåœæ­¢æ‰€æœ‰æŠ€èƒ½");
     }
     
     /// <summary>
-    /// Ç¿ĞĞÍ£Ö¹Ö¸¶¨Ë÷ÒıµÄ¼¼ÄÜ
+    /// å¼ºè¡Œåœæ­¢æŒ‡å®šç´¢å¼•çš„æŠ€èƒ½
     /// </summary>
-    /// <param name="index">¼¼ÄÜÔÚUpdateSkillListÖĞµÄË÷Òı</param>
+    /// <param name="index">æŠ€èƒ½åœ¨UpdateSkillListä¸­çš„ç´¢å¼•</param>
     public void StopSkillByIndex(int index)
     {
         if (index >= 0 && index < UpdateSkillList.Count)
         {
             RuntimeSkill skill = UpdateSkillList[index];
-            // Í£Ö¹¼¼ÄÜ
+            // åœæ­¢æŠ€èƒ½
             skill.Stop();
-            // ´ÓÁĞ±íÖĞÒÆ³ı
+            // ä»åˆ—è¡¨ä¸­ç§»é™¤
             UpdateSkillList.RemoveAt(index);
             
-            Debug.Log($"ÒÑÇ¿ĞĞÍ£Ö¹Ë÷ÒıÎª {index} µÄ¼¼ÄÜ");
+            Debug.Log($"å·²å¼ºè¡Œåœæ­¢ç´¢å¼•ä¸º {index} çš„æŠ€èƒ½");
         }
         else
         {
-            Debug.LogWarning($"ÎŞĞ§µÄ¼¼ÄÜË÷Òı: {index}");
+            Debug.LogWarning($"æ— æ•ˆçš„æŠ€èƒ½ç´¢å¼•: {index}");
         }
     }
     
     /// <summary>
-    /// Ç¿ĞĞÍ£Ö¹Ö¸¶¨Ãû³ÆµÄ¼¼ÄÜ
+    /// å¼ºè¡Œåœæ­¢æŒ‡å®šåç§°çš„æŠ€èƒ½
     /// </summary>
-    /// <param name="skillName">¼¼ÄÜÃû³Æ</param>
+    /// <param name="skillName">æŠ€èƒ½åç§°</param>
     public void StopSkillByName(string skillName)
     {
-        // ´ÓºóÍùÇ°±éÀú£¬±ÜÃâÔÚµü´úÊ±É¾³ıÔªËØµ¼ÖÂµÄÎÊÌâ
+        // ä»åå¾€å‰éå†ï¼Œé¿å…åœ¨è¿­ä»£æ—¶åˆ é™¤å…ƒç´ å¯¼è‡´çš„é—®é¢˜
         for (int i = UpdateSkillList.Count - 1; i >= 0; i--)
         {
             RuntimeSkill skill = UpdateSkillList[i];
-            // ¼ì²é¼¼ÄÜÃû³ÆÊÇ·ñÆ¥Åä
+            // æ£€æŸ¥æŠ€èƒ½åç§°æ˜¯å¦åŒ¹é…
             if (skill.skillData != null && skill.skillData.name == skillName)
             {
-                // Í£Ö¹¼¼ÄÜ
+                // åœæ­¢æŠ€èƒ½
                 skill.Stop();
-                // ´ÓÁĞ±íÖĞÒÆ³ı
+                // ä»åˆ—è¡¨ä¸­ç§»é™¤
                 UpdateSkillList.RemoveAt(i);
                 
-                Debug.Log($"ÒÑÇ¿ĞĞÍ£Ö¹Ãû³ÆÎª {skillName} µÄ¼¼ÄÜ");
-                return; // ÕÒµ½²¢Í£Ö¹µÚÒ»¸öÆ¥ÅäµÄ¼¼ÄÜºó·µ»Ø
+                Debug.Log($"å·²å¼ºè¡Œåœæ­¢åç§°ä¸º {skillName} çš„æŠ€èƒ½");
+                return; // æ‰¾åˆ°å¹¶åœæ­¢ç¬¬ä¸€ä¸ªåŒ¹é…çš„æŠ€èƒ½åè¿”å›
             }
         }
         
-        Debug.LogWarning($"Î´ÕÒµ½Ãû³ÆÎª {skillName} µÄ¼¼ÄÜ");
+        Debug.LogWarning($"æœªæ‰¾åˆ°åç§°ä¸º {skillName} çš„æŠ€èƒ½");
     }
     
     /// <summary>
-    /// Ç¿ĞĞÍ£Ö¹µ±Ç°Ñ¡ÔñµÄ¼¼ÄÜ
+    /// å¼ºè¡Œåœæ­¢å½“å‰é€‰æ‹©çš„æŠ€èƒ½
     /// </summary>
     public void StopCurrentSelectedSkill()
     {
@@ -279,28 +283,28 @@ private void ClearCastingPoints()
             BaseSkill selectedSkill = skillDataList[CurrentSelectSkilIndex];
             if (selectedSkill != null)
             {
-                // ²éÕÒ²¢Í£Ö¹¶ÔÓ¦µÄÔËĞĞÊ±¼¼ÄÜ
+                // æŸ¥æ‰¾å¹¶åœæ­¢å¯¹åº”çš„è¿è¡Œæ—¶æŠ€èƒ½
                 for (int i = UpdateSkillList.Count - 1; i >= 0; i--)
                 {
                     RuntimeSkill runtimeSkill = UpdateSkillList[i];
                     if (runtimeSkill.skillData == selectedSkill)
                     {
-                        // Í£Ö¹¼¼ÄÜ
+                        // åœæ­¢æŠ€èƒ½
                         runtimeSkill.Stop();
-                        // ´ÓÁĞ±íÖĞÒÆ³ı
+                        // ä»åˆ—è¡¨ä¸­ç§»é™¤
                         UpdateSkillList.RemoveAt(i);
                         
-                        Debug.Log($"ÒÑÇ¿ĞĞÍ£Ö¹µ±Ç°Ñ¡ÔñµÄ¼¼ÄÜ: {selectedSkill.name}");
+                        Debug.Log($"å·²å¼ºè¡Œåœæ­¢å½“å‰é€‰æ‹©çš„æŠ€èƒ½: {selectedSkill.name}");
                         return;
                     }
                 }
                 
-                Debug.LogWarning($"µ±Ç°Ñ¡ÔñµÄ¼¼ÄÜ {selectedSkill.name} Î´ÔÚÔËĞĞÖĞ");
+                Debug.LogWarning($"å½“å‰é€‰æ‹©çš„æŠ€èƒ½ {selectedSkill.name} æœªåœ¨è¿è¡Œä¸­");
             }
         }
         else
         {
-            Debug.LogWarning($"ÎŞĞ§µÄ¼¼ÄÜË÷Òı: {CurrentSelectSkilIndex}");
+            Debug.LogWarning($"æ— æ•ˆçš„æŠ€èƒ½ç´¢å¼•: {CurrentSelectSkilIndex}");
         }
     }
     
