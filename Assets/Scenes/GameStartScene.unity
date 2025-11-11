@@ -1160,6 +1160,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  PanleName: 
   isOpen: 0
 --- !u!225 &207864056
 CanvasGroup:
@@ -6620,7 +6621,6 @@ GameObject:
   - component: {fileID: 1499669057}
   - component: {fileID: 1499669056}
   - component: {fileID: 1499669060}
-  - component: {fileID: 1499669061}
   - component: {fileID: 1499669063}
   - component: {fileID: 1499669062}
   m_Layer: 5
@@ -6729,7 +6729,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   saveAndLoad: {fileID: 493394820}
-  uiManager: {fileID: 0}
   Ready_planetData:
     Name: 
     Radius: 100
@@ -6743,22 +6742,8 @@ MonoBehaviour:
   Save_Player_SelectButton_Prefab: {fileID: 7670434242629240641, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
   SaveSelectButton_Parent_Content: {fileID: 962964545}
   Player_SelectButton_Parent_Content: {fileID: 195246781}
---- !u!114 &1499669061
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1499669055}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 14939e8d5d0ea0440b38838b96d68dd8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  additionalUIObjects:
-  - {fileID: 2137552808}
-  - {fileID: 207864049}
-  - {fileID: 1756453916}
+  BasePanelName: "\u5F00\u59CB\u65B0\u6E38\u620F\u9762\u677F"
+  SaveSelectName: "\u5B58\u6863\u9009\u62E9\u9762\u677F"
 --- !u!114 &1499669062
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6775,6 +6760,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  PanleName: 
   isOpen: 0
 --- !u!225 &1499669063
 CanvasGroup:
@@ -7932,6 +7918,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  PanleName: 
   isOpen: 0
 --- !u!225 &1756453922
 CanvasGroup:
@@ -9134,6 +9121,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
+  PanleName: 
   isOpen: 0
 --- !u!225 &2137552814
 CanvasGroup:
@@ -9233,7 +9221,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.x
@@ -9241,15 +9229,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 380
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 100
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9281,11 +9269,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -50
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

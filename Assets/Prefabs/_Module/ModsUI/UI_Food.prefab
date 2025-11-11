@@ -541,9 +541,8 @@ GameObject:
   - component: {fileID: 8187022769639644747}
   - component: {fileID: 8566490944627594278}
   - component: {fileID: 4488120583313796587}
-  - component: {fileID: 8855769629800731662}
   m_Layer: 9
-  m_Name: "\u98DF\u7269\u6A21\u5757_\u9762\u677F"
+  m_Name: UI_Food
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -631,7 +630,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 1911
+    m_Bits: 375
 --- !u!225 &8566490944627594278
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -656,21 +655,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00d27a205b8cb774f8c82a40aa10cc91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  canvasGroup: {fileID: 0}
-  CanDrag: 0
-  Drager: {fileID: 0}
---- !u!114 &8855769629800731662
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1316998372701819345}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7402193ba15f1c4692ed426691254ca, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  canvasGroup: {fileID: 8566490944627594278}
+  CanDrag: 1
+  Dragger: {fileID: 3781011382510666561}
+  rectTransform: {fileID: 6753530200542432147}
+  isOpen: 1
 --- !u!1 &1418279018136814396
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,4 +1,4 @@
-using MemoryPack;
+ï»¿using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
@@ -35,27 +35,27 @@ public class Item_Tile_Grass : Item,IBlockTile
 
     public void Set_TileBase_ToWorld(TileData tileData)
     {
-        // »ñÈ¡Êó±êÔÚÆÁÄ»ÉÏµÄÎ»ÖÃ
+        // è·å–é¼ æ ‡åœ¨å±å¹•ä¸Šçš„ä½ç½®
         Vector3 mouseScreenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
-        // »ñÈ¡ MapCore ¶ÔÏóºÍ Map ½Å±¾
+        // è·å– MapCore å¯¹è±¡å’Œ Map è„šæœ¬
         GameObject mapCore = GameObject.FindGameObjectWithTag("MapCore");
         Map mapCoreScript = mapCore.GetComponent<Map>();
 
-        // Ê¹ÓÃ Map ½Å±¾ÖĞµÄ tileMap
+        // ä½¿ç”¨ Map è„šæœ¬ä¸­çš„ tileMap
         Tilemap tileMap = mapCoreScript.tileMap;
 
-        // °ÑÊÀ½ç×ø±ê×ª»»Îª¸ñ×Ó×ø±ê
+        // æŠŠä¸–ç•Œåæ ‡è½¬æ¢ä¸ºæ ¼å­åæ ‡
         Vector3Int cellPos3D = tileMap.WorldToCell(worldPos);
         Vector2Int cellPos2D = new Vector2Int(cellPos3D.x, cellPos3D.y);
 
-        // ÉèÖÃ TileData µÄ×ø±ê
+        // è®¾ç½® TileData çš„åæ ‡
         tileData.position = cellPos3D;
 
-        // Ìí¼Ó²¢Ë¢ĞÂ Tile
+        // æ·»åŠ å¹¶åˆ·æ–° Tile
         mapCoreScript.ADDTile(cellPos2D, tileData);
-        mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // È·±£ÄãÓĞÕâ¸ö·½·¨
+        mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // ç¡®ä¿ä½ æœ‰è¿™ä¸ªæ–¹æ³•
     }
 
     public void Tile_Exit(Item item, TileData tileData)
@@ -63,7 +63,7 @@ public class Item_Tile_Grass : Item,IBlockTile
 
     }
 
-    //Õâ¿ÉÈçºÎÊÇºÃ Ë®·½¿éÖ»»áÓ°ÏìÒÆ¶¯Ğ§¹û ÎÒ²»Ï£ÍûÆäÓ°ÏìÆäËûµÄ µ«ÊÇ²İ·½¿éÓÖ²»ÊÇµ¥¶ÀÖ»Ó°ÏìÒÆ¶¯Ğ§¹û
+    //è¿™å¯å¦‚ä½•æ˜¯å¥½ æ°´æ–¹å—åªä¼šå½±å“ç§»åŠ¨æ•ˆæœ æˆ‘ä¸å¸Œæœ›å…¶å½±å“å…¶ä»–çš„ ä½†æ˜¯è‰æ–¹å—åˆä¸æ˜¯å•ç‹¬åªå½±å“ç§»åŠ¨æ•ˆæœ
     public void Tile_Enter(Item item, TileData tileData)
     {
         
@@ -78,7 +78,6 @@ public class Item_Tile_Grass : Item,IBlockTile
 public interface IBlockTile
 {
     public TileData TileData { get; set; }
-    public void Set_TileBase_ToWorld(TileData tileData);
     public void Tile_Enter(Item item, TileData tileData);
     public void Tile_Update(Item item, TileData tileData);
     public void Tile_Exit(Item item, TileData tileData);

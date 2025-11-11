@@ -710,7 +710,7 @@ GameObject:
   - component: {fileID: 1216624896725226833}
   - component: {fileID: 7236834920810737830}
   m_Layer: 0
-  m_Name: "Debug\u4FE1\u606F\u9762\u677F"
+  m_Name: UI_Debug
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

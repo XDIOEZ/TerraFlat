@@ -1,4 +1,4 @@
-using MemoryPack;
+ï»¿using MemoryPack;
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using System;
@@ -6,29 +6,17 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-// ¶¨ÒåÄ£¿éÃæ°å½Ó¿Ú
-public interface IModulePanel
-{
-    void ShowPanel();
-    void HidePanel();
-    void RefreshUI();
-    bool IsPanelVisible(); // Ìí¼Ó¼ì²éÃæ°åÊÇ·ñ¿É¼ûµÄ·½·¨
-}
-
 public partial class Mod_UI_CanvasManager : Module
 {
-    #region Êı¾İ½á¹¹¶¨Òå
+    #region æ•°æ®ç»“æ„å®šä¹‰
     [ShowInInspector]
     public Dictionary<string, BasePanel> panelRegistry = new();
     public Dictionary<string, UI_Drag> dragRegistry = new();
     private Dictionary<string, TextMeshProUGUI> panelButtonTexts = new();
-    
-    // Ìí¼ÓÄ£¿éÃæ°å×¢²á±í
-    private Dictionary<string, IModulePanel> modulePanelRegistry = new();
 
-    [Header("UI°´Å¥ÉèÖÃ")]
-    public GameObject UIOpen_Parent; // ÓÃÓÚ¶¯Ì¬Éú³ÉµÄ°´Å¥
-    public GameObject PanelOpenButtonPrefab; // Ö¸¶¨°´Å¥Ô¤ÖÆÌå£¨¿ÉÔÚInspectorÖĞÉèÖÃ£©
+    [Header("UIæŒ‰é’®è®¾ç½®")]
+    public GameObject UIOpen_Parent; // ç”¨äºåŠ¨æ€ç”Ÿæˆçš„æŒ‰é’®
+    public GameObject PanelOpenButtonPrefab; // æŒ‡å®šæŒ‰é’®é¢„åˆ¶ä½“ï¼ˆå¯åœ¨Inspectorä¸­è®¾ç½®ï¼‰
 
     CanvasSaveData canvasPanelState = new CanvasSaveData();
 
@@ -38,138 +26,107 @@ public partial class Mod_UI_CanvasManager : Module
     {
         [ShowInInspector]
         public Dictionary<string, bool> canvasPanelboolStates = new();
-        public Dictionary<string, Vector2> DraggerPos = new(); // ÍÏ×§Î»ÖÃÊı¾İ
+        public Dictionary<string, Vector2> DraggerPos = new(); // æ‹–æ‹½ä½ç½®æ•°æ®
     }
     #endregion
 
-    #region »ù´¡×Ö¶ÎÓëÊôĞÔ
+    #region åŸºç¡€å­—æ®µä¸å±æ€§
     public override ModuleData _Data { get => exData; set => exData = (Ex_ModData_MemoryPackable)value; }
     public Ex_ModData_MemoryPackable exData = new();
     #endregion
 
-    #region UnityÉúÃüÖÜÆÚ
+    #region Unityç”Ÿå‘½å‘¨æœŸ
     public override void Load()
     {
         exData.ReadData(ref canvasPanelState);
 
-        // ×¢²áËùÓĞ UI_Drag
+        // æ³¨å†Œæ‰€æœ‰ UI_Drag
         var allDraggers = item.GetComponentsInChildren<UI_Drag>(true);
         foreach (var dragger in allDraggers)
         {
             string draggerName = dragger.gameObject.name;
             dragRegistry[draggerName] = dragger;
 
-            // ×¢Òâ£º²»ÔÚ´Ë´¦»Ö¸´UI_DragµÄÎ»ÖÃ£¬ÈÃ¸÷¸öÄ£¿é×Ô¼º¹ÜÀí×Ô¼ºµÄÎ»ÖÃ
-            // Ö»ÓĞµ±Î»ÖÃÊı¾İ´æÔÚÇÒÃæ°å²»ÊÇÄ£¿éÃæ°åÊ±²Å»Ö¸´Î»ÖÃ
             if (canvasPanelState.DraggerPos.TryGetValue(draggerName, out var pos))
             {
-                // ¼ì²éÕâ¸ödraggerÊÇ·ñÊôÓÚÄ£¿éÃæ°å
-                bool isModulePanelDragger = IsPartOfModulePanel(dragger.transform);
-                
-                // Ö»ÓĞ·ÇÄ£¿éÃæ°åµÄdragger²ÅÓÉCanvasManager¹ÜÀíÎ»ÖÃ
-                if (!isModulePanelDragger)
-                {
-                    Debug.Log($"[CanvasManager] »Ö¸´ÍÏ×§×é¼şÎ»ÖÃ: {draggerName} ´Ó {dragger.rectTransform.anchoredPosition} µ½ {pos}");
-                    dragger.rectTransform.anchoredPosition = pos;
-                    Debug.Log($"[CanvasManager] »Ö¸´ºóÎ»ÖÃ: {draggerName} = {dragger.rectTransform.anchoredPosition}");
-                }
+                dragger.rectTransform.anchoredPosition = pos;
             }
         }
 
-        // ×¢²áËùÓĞÃæ°å£¨ÅÅ³ı×ÔÉí£©
+        // æ³¨å†Œæ‰€æœ‰é¢æ¿ï¼ˆæ’é™¤è‡ªèº«ï¼‰
         var allPanels = item.GetComponentsInChildren<BasePanel>(true);
         foreach (var panel in allPanels)
         {
-            // Ìø¹ı×ÔÉíÃæ°å£¬±ÜÃâ×Ô¼º¿ØÖÆ×Ô¼ºµ¼ÖÂµÄÎÊÌâ
+            // è·³è¿‡è‡ªèº«é¢æ¿ï¼Œé¿å…è‡ªå·±æ§åˆ¶è‡ªå·±å¯¼è‡´çš„é—®é¢˜
             if (panel.gameObject == gameObject)
                 continue;
 
             string panelName = panel.gameObject.name;
 
-            // ×¢²á¿ÉÍÏ×§Ãæ°åµÄÍÏ×§×é¼ş
+            // æ³¨å†Œå¯æ‹–æ‹½é¢æ¿çš„æ‹–æ‹½ç»„ä»¶
             if (panel.CanDrag && panel.Dragger != null)
                 dragRegistry[panelName] = panel.Dragger;
 
-            // Ìí¼Óµ½Ãæ°å×¢²á±í
+            // æ·»åŠ åˆ°é¢æ¿æ³¨å†Œè¡¨
             if (!panelRegistry.ContainsKey(panelName))
                 panelRegistry.Add(panelName, panel);
 
-            // ¼ì²éÕâ¸öÃæ°åÊÇ·ñÊôÓÚÄ£¿éÃæ°å
-            bool isModulePanel = IsPartOfModulePanel(panel.transform);
-            
-            // Ö»ÓĞ·ÇÄ£¿éÃæ°å²ÅÓÉCanvasManager¹ÜÀí×´Ì¬
-            if (!isModulePanel)
+            if (canvasPanelState.canvasPanelboolStates.TryGetValue(panelName, out var isOpen))
             {
-                if (canvasPanelState.canvasPanelboolStates.TryGetValue(panelName, out var isOpen))
-                {
-                    if (isOpen) panel.Open();
-                    else panel.Close();
-                }
+                if (isOpen) panel.Open();
+                else panel.Close();
+            }
 
-                // »Ö¸´Î»ÖÃ
-                if (canvasPanelState.DraggerPos.TryGetValue(panelName, out var pos))
+            // æ¢å¤ä½ç½®
+            if (canvasPanelState.DraggerPos.TryGetValue(panelName, out var pos))
+            {
+                if (panel.CanDrag && panel.Dragger != null)
                 {
-                    if (panel.CanDrag && panel.Dragger != null)
+                    var dragRT = panel.Dragger.GetComponent<RectTransform>();
+                    if (dragRT != null)
                     {
-                        var dragRT = panel.Dragger.GetComponent<RectTransform>();
-                        if (dragRT != null)
-                        {
-                            Debug.Log($"[CanvasManager] »Ö¸´Ãæ°åÍÏ×§Î»ÖÃ: {panelName} ´Ó {dragRT.anchoredPosition} µ½ {pos}");
-                            dragRT.anchoredPosition = pos;
-                            Debug.Log($"[CanvasManager] »Ö¸´ºóÎ»ÖÃ: {panelName} = {dragRT.anchoredPosition}");
-                        }
+                        dragRT.anchoredPosition = pos;
                     }
-                    else
+                }
+                else
+                {
+                    var selfRT = panel.GetComponent<RectTransform>();
+                    if (selfRT != null)
                     {
-                        var selfRT = panel.GetComponent<RectTransform>();
-                        if (selfRT != null)
-                        {
-                            Debug.Log($"[CanvasManager] »Ö¸´Ãæ°åÎ»ÖÃ: {panelName} ´Ó {selfRT.anchoredPosition} µ½ {pos}");
-                            selfRT.anchoredPosition = pos;
-                            Debug.Log($"[CanvasManager] »Ö¸´ºóÎ»ÖÃ: {panelName} = {selfRT.anchoredPosition}");
-                        }
+                        selfRT.anchoredPosition = pos;
                     }
                 }
             }
         }
 
-        // ×¢²áËùÓĞÄ£¿éÃæ°å
-        RegisterModulePanels();
-
-        // Éú³É¿ØÖÆ°´Å¥£¨²Ëµ¥£©
+        // ç”Ÿæˆæ§åˆ¶æŒ‰é’®ï¼ˆèœå•ï¼‰
         GenerateControlButtons();
 
-        // ÔÚ°´Å¥Éú³ÉÍê³Éºó£¬Í¬²½¼ì²éËùÓĞÃæ°åµÄÊµ¼Ê×´Ì¬²¢¸üĞÂ°´Å¥ÑÕÉ«
+        // åœ¨æŒ‰é’®ç”Ÿæˆå®Œæˆåï¼ŒåŒæ­¥æ£€æŸ¥æ‰€æœ‰é¢æ¿çš„å®é™…çŠ¶æ€å¹¶æ›´æ–°æŒ‰é’®é¢œè‰²
         SyncAllButtonVisuals();
     }
 
-    [Button("±£´æ")]
+    [Button("ä¿å­˜")]
     public override void Save()
     {
-        // ÇåÀíÖ®Ç°×´Ì¬£¬·ÀÖ¹ÖØ¸´/³åÍ»
+        // æ¸…ç†ä¹‹å‰çŠ¶æ€ï¼Œé˜²æ­¢é‡å¤/å†²çª
         canvasPanelState.canvasPanelboolStates.Clear();
         canvasPanelState.DraggerPos.Clear();
 
-        // ±£´æËùÓĞ×¢²áÃæ°åµÄ×´Ì¬£¨µ«²»±£´æÄ£¿éÃæ°åµÄ×´Ì¬£©
+        // ä¿å­˜æ‰€æœ‰æ³¨å†Œé¢æ¿çš„çŠ¶æ€
         foreach (var pair in panelRegistry)
         {
             string panelName = pair.Key;
             BasePanel panel = pair.Value;
 
-            // ¼ì²éÃæ°åÊÇ·ñÎªnull±ÜÃâ¿ÕÒıÓÃ
+            // æ£€æŸ¥é¢æ¿æ˜¯å¦ä¸ºnullé¿å…ç©ºå¼•ç”¨
             if (panel == null)
                 continue;
 
-            // ¼ì²éÕâ¸öÃæ°åÊÇ·ñÊôÓÚÄ£¿éÃæ°å£¬Èç¹ûÊÇÔòÌø¹ı
-            bool isModulePanel = IsPartOfModulePanel(panel.transform);
-            
-            if (isModulePanel)
-                continue;
-
-            // ±£´æ¿ª¹Ø×´Ì¬
+            // ä¿å­˜å¼€å…³çŠ¶æ€
             canvasPanelState.canvasPanelboolStates[panelName] = panel.IsOpen();
 
-            // ±£´æÎ»ÖÃ£¬ÅĞ¶ÏÊÇ·ñ¿ÉÒÔÍÏ×§
+            // ä¿å­˜ä½ç½®ï¼Œåˆ¤æ–­æ˜¯å¦å¯ä»¥æ‹–æ‹½
             if (panel.CanDrag && panel.Dragger != null)
             {
                 var dragRT = panel.Dragger.GetComponent<RectTransform>();
@@ -184,131 +141,53 @@ public partial class Mod_UI_CanvasManager : Module
             }
         }
 
-        // ±£´æËùÓĞÄ£¿éÃæ°åµÄ×´Ì¬
-        foreach (var pair in modulePanelRegistry)
-        {
-            string moduleName = pair.Key;
-            IModulePanel modulePanel = pair.Value;
-
-            // ±£´æ¿ª¹Ø×´Ì¬
-            canvasPanelState.canvasPanelboolStates[moduleName] = modulePanel.IsPanelVisible();
-            // ×¢Òâ£º²»±£´æÄ£¿éÃæ°åµÄÎ»ÖÃ£¬ÈÃÄ£¿é×Ô¼º¹ÜÀí×Ô¼ºµÄÎ»ÖÃ
-        }
-
         exData.WriteData(canvasPanelState);
     }
     #endregion
 
-    #region Ãæ°å×¢²áÓë¹ÜÀí
+    #region æ§åˆ¶æŒ‰é’®ç”Ÿæˆä¸ç®¡ç†
     /// <summary>
-    /// ¼ì²éÖ¸¶¨µÄTransformÊÇ·ñÊôÓÚÄ£¿éÃæ°å
-    /// </summary>
-    /// <param name="transform">Òª¼ì²éµÄTransform</param>
-    /// <returns>ÊÇ·ñÊôÓÚÄ£¿éÃæ°å</returns>
-    private bool IsPartOfModulePanel(Transform transform)
-    {
-        // ±éÀúËùÓĞÄ£¿é£¬¼ì²éÕâ¸ötransformÊÇ·ñÔÚÄ£¿éµÄ×Ó¶ÔÏóÖĞ
-        foreach (var modulePair in item.itemMods.Mods)
-        {
-            if (modulePair.Value is IModulePanel)
-            {
-                // »ñÈ¡Ä£¿éµÄGameObject
-                GameObject moduleGO = modulePair.Value.GetType().GetField("PanleInstance")?.GetValue(modulePair.Value) as GameObject;
-                if (moduleGO != null && (transform == moduleGO.transform || transform.IsChildOf(moduleGO.transform)))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// ×¢²áËùÓĞÊµÏÖÁËIModulePanel½Ó¿ÚµÄÄ£¿é
-    /// </summary>
-    private void RegisterModulePanels()
-    {
-        modulePanelRegistry.Clear();
-        
-        // ±éÀúËùÓĞÄ£¿é£¬²éÕÒÊµÏÖÁËIModulePanel½Ó¿ÚµÄÄ£¿é
-        foreach (var modulePair in item.itemMods.Mods)
-        {
-            if (modulePair.Value is IModulePanel modulePanel)
-            {
-                string moduleName = modulePair.Key;
-                modulePanelRegistry[moduleName] = modulePanel;
-                
-                // ×¢Òâ£º²»ÔÚ´Ë´¦»Ö¸´Ä£¿éÃæ°åµÄ×´Ì¬£¬ÈÃÄ£¿é×Ô¼º¹ÜÀí×Ô¼ºµÄ×´Ì¬
-                // Ä£¿éÃæ°åµÄ×´Ì¬»Ö¸´Ó¦¸ÃÔÚÄ£¿é×Ô¼ºµÄLoad·½·¨ÖĞ´¦Àí
-            }
-        }
-    }
-    #endregion
-
-    #region ¿ØÖÆ°´Å¥Éú³ÉÓë¹ÜÀí
-    /// <summary>
-    /// Éú³É¿ØÖÆ°´Å¥
+    /// ç”Ÿæˆæ§åˆ¶æŒ‰é’®
     /// </summary>
     private void GenerateControlButtons()
     {
-        // ¼ì²é±ØÒª×é¼ş
+        // æ£€æŸ¥å¿…è¦ç»„ä»¶
         if (UIOpen_Parent == null || PanelOpenButtonPrefab == null)
         {
-            Debug.LogWarning("[CanvasManager] È±ÉÙ±ØÒªµÄUI×é¼ş£¬ÎŞ·¨Éú³É¿ØÖÆ°´Å¥");
+            Debug.LogWarning("[CanvasManager] ç¼ºå°‘å¿…è¦çš„UIç»„ä»¶ï¼Œæ— æ³•ç”Ÿæˆæ§åˆ¶æŒ‰é’®");
             return;
         }
 
-        // ÇåÀíÏÖÓĞ°´Å¥
+        // æ¸…ç†ç°æœ‰æŒ‰é’®
         foreach (Transform child in UIOpen_Parent.transform)
             Destroy(child.gameObject);
 
         panelButtonTexts.Clear();
 
-        // ÎªÃ¿¸ö×¢²áµÄÃæ°åÉú³É¿ØÖÆ°´Å¥
+        // ä¸ºæ¯ä¸ªæ³¨å†Œçš„é¢æ¿ç”Ÿæˆæ§åˆ¶æŒ‰é’®
         foreach (var panelName in panelRegistry.Keys)
         {
-            // ¼ì²éÕâ¸öÃæ°åÊÇ·ñÊôÓÚÄ£¿éÃæ°å£¬Èç¹ûÊÇÔòÌø¹ı£¨±ÜÃâÖØ¸´¿ØÖÆ£©
-            bool isModulePanel = false;
-            foreach (var kv in panelRegistry)
-            {
-                if (kv.Key == panelName && IsPartOfModulePanel(kv.Value.transform))
-                {
-                    isModulePanel = true;
-                    break;
-                }
-            }
-            
-            if (!isModulePanel)
-            {
-                GenerateButtonForPanel(panelName, false); // false±íÊ¾Õâ²»ÊÇÄ£¿éÃæ°å
-            }
-        }
-
-        // ÎªÃ¿¸ö×¢²áµÄÄ£¿éÃæ°åÉú³É¿ØÖÆ°´Å¥
-        foreach (var moduleName in modulePanelRegistry.Keys)
-        {
-            GenerateButtonForPanel(moduleName, true); // true±íÊ¾ÕâÊÇÄ£¿éÃæ°å
+            GenerateButtonForPanel(panelName);
         }
     }
 
     /// <summary>
-    /// ÎªÃæ°åÉú³É°´Å¥
+    /// ä¸ºé¢æ¿ç”ŸæˆæŒ‰é’®
     /// </summary>
-    /// <param name="panelName">Ãæ°åÃû³Æ</param>
-    /// <param name="isModulePanel">ÊÇ·ñÎªÄ£¿éÃæ°å</param>
-    private void GenerateButtonForPanel(string panelName, bool isModulePanel)
+    /// <param name="panelName">é¢æ¿åç§°</param>
+    private void GenerateButtonForPanel(string panelName)
     {
-        // ¼ì²éÔ¤ÖÆÌåÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥é¢„åˆ¶ä½“æ˜¯å¦å­˜åœ¨
         if (PanelOpenButtonPrefab == null)
         {
-            Debug.LogError($"[CanvasManager] PanelOpenButtonPrefab Î´ÉèÖÃ£¬ÎŞ·¨Îª {panelName} Éú³É°´Å¥");
+            Debug.LogError($"[CanvasManager] PanelOpenButtonPrefab æœªè®¾ç½®ï¼Œæ— æ³•ä¸º {panelName} ç”ŸæˆæŒ‰é’®");
             return;
         }
 
         var btnGO = Instantiate(PanelOpenButtonPrefab, UIOpen_Parent.transform);
         btnGO.name = $"Btn_{panelName}";
 
-        // ÉèÖÃ°´Å¥ÎÄ±¾
+        // è®¾ç½®æŒ‰é’®æ–‡æœ¬
         var tmpText = btnGO.GetComponentInChildren<TextMeshProUGUI>();
         if (tmpText != null)
         {
@@ -316,55 +195,37 @@ public partial class Mod_UI_CanvasManager : Module
             panelButtonTexts[panelName] = tmpText;
         }
 
-        // ÉèÖÃ°´Å¥µã»÷ÊÂ¼ş
+        // è®¾ç½®æŒ‰é’®ç‚¹å‡»äº‹ä»¶
         var button = btnGO.GetComponent<UnityEngine.UI.Button>();
         if (button != null)
         {
             string capturedName = panelName;
-            bool capturedIsModulePanel = isModulePanel;
-            button.onClick.AddListener(() => TogglePanel(capturedName, capturedIsModulePanel));
+            button.onClick.AddListener(() => TogglePanel(capturedName));
         }
     }
 
     /// <summary>
-    /// Í¬²½ËùÓĞ°´Å¥µÄÊÓ¾õ×´Ì¬
+    /// åŒæ­¥æ‰€æœ‰æŒ‰é’®çš„è§†è§‰çŠ¶æ€
     /// </summary>
     private void SyncAllButtonVisuals()
     {
-        // Í¬²½BasePanel°´Å¥×´Ì¬
+        // åŒæ­¥BasePanelæŒ‰é’®çŠ¶æ€
         foreach (var kv in panelRegistry)
         {
             string panelName = kv.Key;
             BasePanel panel = kv.Value;
             
-            // ¼ì²éÕâ¸öÃæ°åÊÇ·ñÊôÓÚÄ£¿éÃæ°å£¬Èç¹ûÊÇÔòÌø¹ı
-            bool isModulePanel = IsPartOfModulePanel(panel.transform);
-            
-            if (!isModulePanel)
-            {
-                // ¸ù¾İÃæ°åÊµ¼Ê×´Ì¬¸üĞÂ°´Å¥ÑÕÉ«
-                bool isPanelOpen = panel.IsOpen();
-                UpdateButtonVisual(panelName, isPanelOpen);
-            }
-        }
-
-        // Í¬²½Ä£¿éÃæ°å°´Å¥×´Ì¬
-        foreach (var kv in modulePanelRegistry)
-        {
-            string moduleName = kv.Key;
-            IModulePanel modulePanel = kv.Value;
-            
-            // ¸ù¾İÄ£¿éÃæ°åÊµ¼Ê×´Ì¬¸üĞÂ°´Å¥ÑÕÉ«
-            bool isPanelVisible = modulePanel.IsPanelVisible();
-            UpdateButtonVisual(moduleName, isPanelVisible);
+            // æ ¹æ®é¢æ¿å®é™…çŠ¶æ€æ›´æ–°æŒ‰é’®é¢œè‰²
+            bool isPanelOpen = panel.IsOpen();
+            UpdateButtonVisual(panelName, isPanelOpen);
         }
     }
 
     /// <summary>
-    /// ¸üĞÂ°´Å¥ÊÓ¾õ×´Ì¬
+    /// æ›´æ–°æŒ‰é’®è§†è§‰çŠ¶æ€
     /// </summary>
-    /// <param name="panelName">Ãæ°åÃû³Æ</param>
-    /// <param name="isOpen">ÊÇ·ñ¿ªÆô</param>
+    /// <param name="panelName">é¢æ¿åç§°</param>
+    /// <param name="isOpen">æ˜¯å¦å¼€å¯</param>
     private void UpdateButtonVisual(string panelName, bool isOpen)
     {
         if (panelButtonTexts.TryGetValue(panelName, out var tmpText))
@@ -375,9 +236,9 @@ public partial class Mod_UI_CanvasManager : Module
     }
 
     /// <summary>
-    /// Ë¢ĞÂ°´Å¥
+    /// åˆ·æ–°æŒ‰é’®
     /// </summary>
-    [Button("Ë¢ĞÂ°´Å¥")]
+    [Button("åˆ·æ–°æŒ‰é’®")]
     public void RefreshButtons()
     {
         GenerateControlButtons();
@@ -385,188 +246,108 @@ public partial class Mod_UI_CanvasManager : Module
     }
     #endregion
 
-    #region Ãæ°å¿ØÖÆ·½·¨
+    #region é¢æ¿æ§åˆ¶æ–¹æ³•
     /// <summary>
-    /// ÇĞ»»Ãæ°å¿ª¹Ø×´Ì¬
+    /// åˆ‡æ¢é¢æ¿å¼€å…³çŠ¶æ€
     /// </summary>
-    /// <param name="name">Ãæ°åÃû³Æ</param>
-    /// <param name="isModulePanel">ÊÇ·ñÎªÄ£¿éÃæ°å</param>
-    public void TogglePanel(string name, bool isModulePanel = false)
+    /// <param name="name">é¢æ¿åç§°</param>
+    public void TogglePanel(string name)
     {
-        if (isModulePanel)
+        if (panelRegistry.TryGetValue(name, out var panel))
         {
-            // ´¦ÀíÄ£¿éÃæ°å
-            if (modulePanelRegistry.TryGetValue(name, out var modulePanel))
-            {
-                bool isVisible = !modulePanel.IsPanelVisible();
+            bool isOpen = !panel.IsOpen();
 
-                if (isVisible)
-                    modulePanel.ShowPanel();
-                else
-                    modulePanel.HidePanel();
-
-                // ¸üĞÂ×´Ì¬Êı¾İ
-                canvasPanelState.canvasPanelboolStates[name] = isVisible;
-
-                // ¸üĞÂ°´Å¥ÊÓ¾õ
-                UpdateButtonVisual(name, isVisible);
-            }
-            else
-            {
-                Debug.LogWarning($"[CanvasManager] Î´ÕÒµ½Ä£¿éÃæ°å: {name}");
-            }
-        }
-        else
-        {
-            // ´¦ÀíBasePanel
-            if (panelRegistry.TryGetValue(name, out var panel))
-            {
-                bool isOpen = !panel.IsOpen();
-
-                if (isOpen)
-                    panel.Open();
-                else
-                    panel.Close();
-
-                // ¸üĞÂ×´Ì¬Êı¾İ
-                canvasPanelState.canvasPanelboolStates[name] = isOpen;
-
-                // ±£´æÎ»ÖÃÊı¾İ
-                RectTransform rt = panel.CanDrag && panel.Dragger != null
-                    ? panel.Dragger.GetComponent<RectTransform>()
-                    : panel.GetComponent<RectTransform>();
-
-                if (rt != null)
-                    canvasPanelState.DraggerPos[name] = rt.anchoredPosition;
-
-                // ¸üĞÂ°´Å¥ÊÓ¾õ
-                UpdateButtonVisual(name, isOpen);
-            }
-            else
-            {
-                Debug.LogWarning($"[CanvasManager] Î´ÕÒµ½Ãæ°å: {name}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// ´ò¿ªÖ¸¶¨Ãæ°å
-    /// </summary>
-    /// <param name="name">Ãæ°åÃû³Æ</param>
-    /// <param name="isModulePanel">ÊÇ·ñÎªÄ£¿éÃæ°å</param>
-    [Button("´ò¿ªÃæ°å")]
-    public void OpenPanel(string name, bool isModulePanel = false)
-    {
-        if (isModulePanel)
-        {
-            // ´¦ÀíÄ£¿éÃæ°å
-            if (modulePanelRegistry.TryGetValue(name, out var modulePanel))
-            {
-                modulePanel.ShowPanel();
-                canvasPanelState.canvasPanelboolStates[name] = true;
-                UpdateButtonVisual(name, true);
-            }
-            else
-            {
-                Debug.LogWarning($"[CanvasManager] Î´ÕÒµ½Ä£¿éÃæ°å: {name}");
-            }
-        }
-        else
-        {
-            // ´¦ÀíBasePanel
-            if (panelRegistry.TryGetValue(name, out var panel))
-            {
+            if (isOpen)
                 panel.Open();
-                canvasPanelState.canvasPanelboolStates[name] = true;
-                UpdateButtonVisual(name, true);
-                
-                // ±£´æÎ»ÖÃÊı¾İ
-                RectTransform rt = panel.CanDrag && panel.Dragger != null
-                    ? panel.Dragger.GetComponent<RectTransform>()
-                    : panel.GetComponent<RectTransform>();
-
-                if (rt != null)
-                    canvasPanelState.DraggerPos[name] = rt.anchoredPosition;
-            }
             else
-            {
-                Debug.LogWarning($"[CanvasManager] Î´ÕÒµ½Ãæ°å: {name}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// ¹Ø±ÕÖ¸¶¨Ãæ°å
-    /// </summary>
-    /// <param name="name">Ãæ°åÃû³Æ</param>
-    /// <param name="isModulePanel">ÊÇ·ñÎªÄ£¿éÃæ°å</param>
-    [Button("¹Ø±ÕÃæ°å")]
-    public void ClosePanel(string name, bool isModulePanel = false)
-    {
-        if (isModulePanel)
-        {
-            // ´¦ÀíÄ£¿éÃæ°å
-            if (modulePanelRegistry.TryGetValue(name, out var modulePanel))
-            {
-                modulePanel.HidePanel();
-                canvasPanelState.canvasPanelboolStates[name] = false;
-                UpdateButtonVisual(name, false);
-            }
-            else
-            {
-                Debug.LogWarning($"[CanvasManager] Î´ÕÒµ½Ä£¿éÃæ°å: {name}");
-            }
-        }
-        else
-        {
-            // ´¦ÀíBasePanel
-            if (panelRegistry.TryGetValue(name, out var panel))
-            {
                 panel.Close();
-                canvasPanelState.canvasPanelboolStates[name] = false;
-                UpdateButtonVisual(name, false);
-                
-                // ±£´æÎ»ÖÃÊı¾İ
-                RectTransform rt = panel.CanDrag && panel.Dragger != null
-                    ? panel.Dragger.GetComponent<RectTransform>()
-                    : panel.GetComponent<RectTransform>();
 
-                if (rt != null)
-                    canvasPanelState.DraggerPos[name] = rt.anchoredPosition;
-            }
-            else
-            {
-                Debug.LogWarning($"[CanvasManager] Î´ÕÒµ½Ãæ°å: {name}");
-            }
+            // æ›´æ–°çŠ¶æ€æ•°æ®
+            canvasPanelState.canvasPanelboolStates[name] = isOpen;
+
+            // ä¿å­˜ä½ç½®æ•°æ®
+            RectTransform rt = panel.CanDrag && panel.Dragger != null
+                ? panel.Dragger.GetComponent<RectTransform>()
+                : panel.GetComponent<RectTransform>();
+
+            if (rt != null)
+                canvasPanelState.DraggerPos[name] = rt.anchoredPosition;
+
+            // æ›´æ–°æŒ‰é’®è§†è§‰
+            UpdateButtonVisual(name, isOpen);
+        }
+        else
+        {
+            Debug.LogWarning($"[CanvasManager] æœªæ‰¾åˆ°é¢æ¿: {name}");
         }
     }
 
     /// <summary>
-    /// »ñÈ¡Ãæ°å×´Ì¬
+    /// æ‰“å¼€æŒ‡å®šé¢æ¿
     /// </summary>
-    /// <param name="name">Ãæ°åÃû³Æ</param>
-    /// <param name="isModulePanel">ÊÇ·ñÎªÄ£¿éÃæ°å</param>
-    /// <returns>Ãæ°åÊÇ·ñ¿ªÆô</returns>
-    public bool IsPanelOpen(string name, bool isModulePanel = false)
+    /// <param name="name">é¢æ¿åç§°</param>
+    [Button("æ‰“å¼€é¢æ¿")]
+    public void OpenPanel(string name)
     {
-        if (isModulePanel)
+        if (panelRegistry.TryGetValue(name, out var panel))
         {
-            // ´¦ÀíÄ£¿éÃæ°å
-            if (modulePanelRegistry.TryGetValue(name, out var modulePanel))
-            {
-                return modulePanel.IsPanelVisible();
-            }
-            return false;
+            panel.Open();
+            canvasPanelState.canvasPanelboolStates[name] = true;
+            UpdateButtonVisual(name, true);
+            
+            // ä¿å­˜ä½ç½®æ•°æ®
+            RectTransform rt = panel.CanDrag && panel.Dragger != null
+                ? panel.Dragger.GetComponent<RectTransform>()
+                : panel.GetComponent<RectTransform>();
+
+            if (rt != null)
+                canvasPanelState.DraggerPos[name] = rt.anchoredPosition;
         }
         else
         {
-            // ´¦ÀíBasePanel
-            if (panelRegistry.TryGetValue(name, out var panel))
-            {
-                return panel.IsOpen();
-            }
-            return false;
+            Debug.LogWarning($"[CanvasManager] æœªæ‰¾åˆ°é¢æ¿: {name}");
         }
+    }
+
+    /// <summary>
+    /// å…³é—­æŒ‡å®šé¢æ¿
+    /// </summary>
+    /// <param name="name">é¢æ¿åç§°</param>
+    [Button("å…³é—­é¢æ¿")]
+    public void ClosePanel(string name)
+    {
+        if (panelRegistry.TryGetValue(name, out var panel))
+        {
+            panel.Close();
+            canvasPanelState.canvasPanelboolStates[name] = false;
+            UpdateButtonVisual(name, false);
+            
+            // ä¿å­˜ä½ç½®æ•°æ®
+            RectTransform rt = panel.CanDrag && panel.Dragger != null
+                ? panel.Dragger.GetComponent<RectTransform>()
+                : panel.GetComponent<RectTransform>();
+
+            if (rt != null)
+                canvasPanelState.DraggerPos[name] = rt.anchoredPosition;
+        }
+        else
+        {
+            Debug.LogWarning($"[CanvasManager] æœªæ‰¾åˆ°é¢æ¿: {name}");
+        }
+    }
+
+    /// <summary>
+    /// è·å–é¢æ¿çŠ¶æ€
+    /// </summary>
+    /// <param name="name">é¢æ¿åç§°</param>
+    /// <returns>é¢æ¿æ˜¯å¦å¼€å¯</returns>
+    public bool IsPanelOpen(string name)
+    {
+        if (panelRegistry.TryGetValue(name, out var panel))
+        {
+            return panel.IsOpen();
+        }
+        return false;
     }
     #endregion
 }

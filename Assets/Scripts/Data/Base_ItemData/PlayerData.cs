@@ -1,4 +1,4 @@
-
+ï»¿
 using MemoryPack;
 using NaughtyAttributes;
 using Sirenix.OdinInspector;
@@ -10,45 +10,43 @@ using UnityEngine;
 [System.Serializable, MemoryPackable]
 public partial class Data_Player : ItemData
 {
-    [Tooltip("µ±Ç°ËùÔÚĞÇÇòµÄÃû³Æ,ÓÃÓÚ¿ªÊ¼ÓÎÏ·Ê±¼ÓÔØÍæ¼ÒÔÚÄÄ¸öµØÍ¼´æµµ")]
-    public string CurrentSceneName = "µØÇò";
-    #region ÉúÃü
-    [Tooltip("ÑªÁ¿")]
+    [Tooltip("å½“å‰æ‰€åœ¨æ˜Ÿçƒçš„åç§°,ç”¨äºå¼€å§‹æ¸¸æˆæ—¶åŠ è½½ç©å®¶åœ¨å“ªä¸ªåœ°å›¾å­˜æ¡£")]
+    public string CurrentSceneName = "åœ°çƒ";
+    #region ç”Ÿå‘½
+    [Tooltip("è¡€é‡")]
     public Hp hp = new Hp(30);
 
-    [Tooltip("·ÀÓùÁ¦")]
+    [Tooltip("é˜²å¾¡åŠ›")]
     public Defense defense = new(5, 5);
     #endregion
 
-    #region ËÙ¶È
+    #region é€Ÿåº¦
     public GameValue_float Speed = new ();
     #endregion
 
-    #region ¾«Á¦
-    [Tooltip("¾«Á¦Öµ")]
+    #region ç²¾åŠ›
+    [Tooltip("ç²¾åŠ›å€¼")]
     public float stamina = 100;
-    [Tooltip("¾«Á¦ÉÏÏŞ")]
+    [Tooltip("ç²¾åŠ›ä¸Šé™")]
     public float staminaMax = 100;
-    [Tooltip("¾«Á¦»Ö¸´ËÙ¶È")]
+    [Tooltip("ç²¾åŠ›æ¢å¤é€Ÿåº¦")]
     public float staminaRecoverySpeed = 1;
     #endregion
 
-    #region Ê³Îï
-    /*[Tooltip("¼¢¶öÖµ")]
+    #region é£Ÿç‰©
+    /*[Tooltip("é¥¥é¥¿å€¼")]
     public Nutrition hunger = new Nutrition(100, 100);*/
     #endregion
 
-    #region ¿â´æ
+    #region åº“å­˜
 
     [ShowInInspector]
-    [Tooltip("¿â´æÊı¾İ")]
+    [Tooltip("åº“å­˜æ•°æ®")]
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
     #endregion
-    [ShowInInspector]
-    public Dictionary<string, UIData> UIDataDictionary = new Dictionary<string, UIData>();
 
    [ShowNonSerializedField]
-    [Tooltip("Íæ¼ÒÓÃ»§Ãû")]
+    [Tooltip("ç©å®¶ç”¨æˆ·å")]
     public string Name_User = "Ikun";
 
     public float PlayerPov = 10;

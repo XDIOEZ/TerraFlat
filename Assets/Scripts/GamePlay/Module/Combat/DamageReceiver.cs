@@ -9,7 +9,7 @@ using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
 /// <summary>
 /// 处理模块伤害接收与反馈动画
 /// </summary>
-public class DamageReceiver : Module, IModulePanel
+public class DamageReceiver : Module
 {
     #region 数据引用
 

@@ -1,23 +1,23 @@
-
+ï»¿
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 public class Item_Tile_Water : Item, IBlockTile
 {
-    //ItemµÄÓÎÏ·Êı¾İ ÓÃÓÚ´æµµ
+    //Itemçš„æ¸¸æˆæ•°æ® ç”¨äºå­˜æ¡£
     [SerializeField]
     private BlockData data;
 
-    //ItemµÄ»ù´¡Êı¾İ
+    //Itemçš„åŸºç¡€æ•°æ®
     public override ItemData itemData { get => data; set => data = value as BlockData; }
 
-    //TileData ·½±ã²ß»®ÉèÖÃ TileDataµÄÏà¹Ø²ÎÊı ºÍÍæ¼ÒĞŞ¸ÄTileDataµÄÊı¾İ
+    //TileData æ–¹ä¾¿ç­–åˆ’è®¾ç½® TileDataçš„ç›¸å…³å‚æ•° å’Œç©å®¶ä¿®æ”¹TileDataçš„æ•°æ®
     [SerializeField]
     TileData_Water _tileData;
-    //ÊµÏÖ½Ó¿Ú
+    //å®ç°æ¥å£
     public TileData TileData { get => _tileData; set => _tileData = (TileData_Water)value; }
-    //¹Ò½ÓµÄBuff
+    //æŒ‚æ¥çš„Buff
     public List<Buff_Data> BuffInfo;
 
     public void Awake()
@@ -33,49 +33,49 @@ public class Item_Tile_Water : Item, IBlockTile
     }
     public override void Act()
     {
-        Set_TileBase_ToWorld(TileData);
+
     }
 
     public void Set_TileBase_ToWorld(TileData tileData)
     {
-        // »ñÈ¡Êó±êÔÚÆÁÄ»ÉÏµÄÎ»ÖÃ
+        // è·å–é¼ æ ‡åœ¨å±å¹•ä¸Šçš„ä½ç½®
         Vector3 mouseScreenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
         Map mapCoreScript = (Map)ItemMgr.Instance.GetItemsByNameID("MapCore")[0];
 
-        // Ê¹ÓÃ Map ½Å±¾ÖĞµÄ tileMap
+        // ä½¿ç”¨ Map è„šæœ¬ä¸­çš„ tileMap
         Tilemap tileMap = mapCoreScript.tileMap;
 
-        // °ÑÊÀ½ç×ø±ê×ª»»Îª¸ñ×Ó×ø±ê
+        // æŠŠä¸–ç•Œåæ ‡è½¬æ¢ä¸ºæ ¼å­åæ ‡
         Vector3Int cellPos3D = tileMap.WorldToCell(worldPos);
         Vector2Int cellPos2D = new Vector2Int(cellPos3D.x, cellPos3D.y);
 
-        // ÉèÖÃ TileData µÄ×ø±ê
+        // è®¾ç½® TileData çš„åæ ‡
         tileData.position = cellPos3D;
 
-        // Ìí¼Ó²¢Ë¢ĞÂ Tile
+        // æ·»åŠ å¹¶åˆ·æ–° Tile
         mapCoreScript.ADDTile(cellPos2D, tileData);
-        mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // È·±£ÄãÓĞÕâ¸ö·½·¨
+        mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // ç¡®ä¿ä½ æœ‰è¿™ä¸ªæ–¹æ³•
     }
-    //tiledata.Ë®µÄÉî¶È =10m 
+    //tiledata.æ°´çš„æ·±åº¦ =10m 
     public void Tile_Enter(Item item, TileData tileData)
     {
         bool validItem = item != null;
         BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
 
-        // Buff Ìí¼ÓÂß¼­
+        // Buff æ·»åŠ é€»è¾‘
         if (!validItem)
         {
-            Debug.LogError("[Tile_Enter] item ÊÇ null£¬ÎŞ·¨Ö´ĞĞ Buff Ìí¼Ó");
+            Debug.LogError("[Tile_Enter] item æ˜¯ nullï¼Œæ— æ³•æ‰§è¡Œ Buff æ·»åŠ ");
         }
         else if (buffManager == null)
         {
-            Debug.LogError($"[Tile_Enter] item {item.name} Ã»ÓĞÕÒµ½ BuffManager ×é¼ş");
+            Debug.LogError($"[Tile_Enter] item {item.name} æ²¡æœ‰æ‰¾åˆ° BuffManager ç»„ä»¶");
         }
         else if (BuffInfo == null || BuffInfo.Count == 0)
         {
-            Debug.LogWarning("[Tile_Enter] BuffInfo ÁĞ±íÎª¿Õ£¬ÎŞ Buff ±»Ìí¼Ó");
+            Debug.LogWarning("[Tile_Enter] BuffInfo åˆ—è¡¨ä¸ºç©ºï¼Œæ—  Buff è¢«æ·»åŠ ");
         }
         else
         {
@@ -83,7 +83,7 @@ public class Item_Tile_Water : Item, IBlockTile
             {
                 if (buffData == null)
                 {
-                    Debug.LogWarning("[Tile_Enter] ¼ì²âµ½¿ÕµÄ Buff_Info£¬Ìø¹ı");
+                    Debug.LogWarning("[Tile_Enter] æ£€æµ‹åˆ°ç©ºçš„ Buff_Infoï¼Œè·³è¿‡");
                     continue;
                 }
 
@@ -91,16 +91,16 @@ public class Item_Tile_Water : Item, IBlockTile
             }
         }
 
-        // Ä£¿éÌí¼ÓÂß¼­£¨ÈëË®ÌØĞ§£©
-        if (validItem && item.itemMods.GetMod_ByID("ÈëË®ÌØĞ§")==null)
+        // æ¨¡å—æ·»åŠ é€»è¾‘ï¼ˆå…¥æ°´ç‰¹æ•ˆï¼‰
+        if (validItem && item.itemMods.GetMod_ByID("å…¥æ°´ç‰¹æ•ˆ")==null)
         {
-            Module.ADDModTOItem(item, "ÈëË®ÌØĞ§");
+            Module.ADDModTOItem(item, "å…¥æ°´ç‰¹æ•ˆ");
 
-            // »ñÈ¡Ä£¿éµÄ Transform ²¢ĞŞ¸ÄÎ»ÖÃ
-            Transform modTransform = item.itemMods.GetMod_ByID("ÈëË®ÌØĞ§").transform;
+            // è·å–æ¨¡å—çš„ Transform å¹¶ä¿®æ”¹ä½ç½®
+            Transform modTransform = item.itemMods.GetMod_ByID("å…¥æ°´ç‰¹æ•ˆ").transform;
             Vector3 pos = modTransform.localPosition;
-            //tileµÄÎ»ÖÃ
-            //Í¨¹ıTile»ñÈ¡envµÄ²ÎÊı
+            //tileçš„ä½ç½®
+            //é€šè¿‡Tileè·å–envçš„å‚æ•°
             TileData_Water water  = tileData as TileData_Water;
 
             pos.y = Mathf.Lerp(-0.7f, 0,water.DeepValue.Value );
@@ -118,14 +118,14 @@ public class Item_Tile_Water : Item, IBlockTile
 
         foreach (Buff_Data buffData in BuffInfo)
         {
-            if (buffManager.HasBuff(buffData.buff_ID))  // ¼ÙÉèÓĞÕâ¸ö·½·¨
+            if (buffManager.HasBuff(buffData.buff_ID))  // å‡è®¾æœ‰è¿™ä¸ªæ–¹æ³•
             {
                 buffManager.RemoveBuff(buffData.buff_ID);
             }
         }
 
-        if (item.itemMods.GetMod_ByID("ÈëË®ÌØĞ§") != null)
-        Module.REMOVEModFROMItem(item, "ÈëË®ÌØĞ§");
+        if (item.itemMods.GetMod_ByID("å…¥æ°´ç‰¹æ•ˆ") != null)
+        Module.REMOVEModFROMItem(item, "å…¥æ°´ç‰¹æ•ˆ");
     }
 
 

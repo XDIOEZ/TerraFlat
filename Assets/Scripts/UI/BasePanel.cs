@@ -27,6 +27,7 @@ public class BasePanel : MonoBehaviour
     public bool CanDrag = false;
     public UI_Drag Dragger;
     public RectTransform rectTransform;
+    public string PanleName;
     
     // 记录面板的开关状态
     [SerializeField]
@@ -34,6 +35,8 @@ public class BasePanel : MonoBehaviour
 
     protected virtual void Awake()
     {
+        PanleName = gameObject.name + Random.Range(1, 1000);
+        UIManager.Instance.RegisterPanel(this);
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
         
@@ -50,6 +53,7 @@ public class BasePanel : MonoBehaviour
         {
             isOpen = canvasGroup.alpha > 0 && canvasGroup.interactable && canvasGroup.blocksRaycasts;
         }
+
     }
 
     /// <summary>
@@ -218,7 +222,7 @@ public Button GetButton(string buttonName)
     {
         return button;
     }
-    Debug.LogWarning($"未找到名为 {buttonName} 的按钮");
+    Debug.LogWarning($"未找到名为 {buttonName} 的按钮,按钮的数量为:{buttons.Count}");
     return null;
 }
 

@@ -1,14 +1,13 @@
-using MemoryPack;
+ï»¿using MemoryPack;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
 
 [MemoryPackable]
 [System.Serializable]
 public partial class BlockData : ItemData
 {
     [HideInInspector]
-    public TileData tileData; // ÒÆ³ýÁË new TileData()
+    public TileData tileData; // ç§»é™¤äº† new TileData()
 }
 

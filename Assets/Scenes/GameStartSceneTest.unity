@@ -5025,6 +5025,8 @@ MonoBehaviour:
   skillDataList: []
   focusPoint: {fileID: 0}
   controller: {fileID: 0}
+  SerializedcastingPointOffset:
+    _serializedList: []
 --- !u!4 &826608150
 Transform:
   m_ObjectHideFlags: 0
@@ -8047,7 +8049,6 @@ GameObject:
   - component: {fileID: 1499669057}
   - component: {fileID: 1499669056}
   - component: {fileID: 1499669060}
-  - component: {fileID: 1499669061}
   - component: {fileID: 1499669063}
   - component: {fileID: 1499669062}
   m_Layer: 5
@@ -8170,22 +8171,6 @@ MonoBehaviour:
   Save_Player_SelectButton_Prefab: {fileID: 7670434242629240641, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
   SaveSelectButton_Parent_Content: {fileID: 962964545}
   Player_SelectButton_Parent_Content: {fileID: 195246781}
---- !u!114 &1499669061
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1499669055}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 14939e8d5d0ea0440b38838b96d68dd8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  additionalUIObjects:
-  - {fileID: 2137552808}
-  - {fileID: 207864049}
-  - {fileID: 1756453916}
 --- !u!114 &1499669062
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11328,7 +11313,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.x
@@ -11336,15 +11321,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 380
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 100
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalPosition.x
@@ -11376,11 +11361,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -50
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 19048962402325034, guid: 4211cef457a224643b17e0433f6d9e72, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -12063,13 +12048,16 @@ MonoBehaviour:
     AdditiveModifier: 0
     MultiplicativeModifier: 1
     FinalAdditive: 0
+  DamageInterval: -1
+  EnableOnTriggerEnterDamage: 1
+  showDebugWarnings: 1
+  damageCollider: {fileID: 7760505830872800227}
   MemoryPackableData:
     Name: _4482
     ID: 
     isRunning: 1
     Type: 0
     BitData: 
-  damageCollider: {fileID: 7760505830872800227}
   TrunBody: {fileID: 0}
   animator: {fileID: 0}
   xOffset: 0.5
@@ -12665,7 +12653,7 @@ MonoBehaviour:
     StopRotationDistance: 0.1
   ModData:
     Name: _5183
-    ID: 
+    ID: "FaceMouse\u6A21\u5757"
     isRunning: 0
     Type: 0
     BitData: 

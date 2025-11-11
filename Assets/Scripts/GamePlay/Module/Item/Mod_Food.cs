@@ -4,7 +4,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UltEvents;
 
-public partial class Mod_Food : Module , IModulePanel
+public partial class Mod_Food : Module
 {
     public Ex_ModData_MemoryPackable ExData;
     public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }

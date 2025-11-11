@@ -1,16 +1,16 @@
-using Sirenix.OdinInspector;
+ï»¿using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
-    [Header("ÒıÓÃ")]
+    [Header("å¼•ç”¨")]
     public RectTransform rectTransform;
     public Canvas canvas;
     public Image draggableImage;
 
-    [Header("ÊôĞÔ")]
+    [Header("å±æ€§")]
     public Vector2 originalPosition;
     public Vector2 offset;
     public int DefaultOrder = 0;
@@ -36,7 +36,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
         if (canvas == null)
         {
-            Debug.LogError($"DraggableUI ĞèÒªÔÚ Canvas {gameObject.name}µÄ×ÓÎïÌåÉÏÊ¹ÓÃ£¡");
+            Debug.LogError($"DraggableUI éœ€è¦åœ¨ Canvas {gameObject.name}çš„å­ç‰©ä½“ä¸Šä½¿ç”¨ï¼");
         }
 
         if (draggableImage == null)
@@ -47,8 +47,8 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
 
     public void OnDisable()
     {
-        // ÕâÀï¿ÉÒÔÑ¡Ôñ±£´æ×´Ì¬»ò²»±£´æ£¬ÕâÀï±£Áô½Ó¿Úµ÷ÓÃµ«²»ÔÙÒÀÀµÍâ²¿Êı¾İ×Öµä
-        // ¿É×ÔĞĞÌæ»»ÎªÆäËû±£´æ·½Ê½£¬Èç PlayerPrefs »ò ScriptableObject
+        // è¿™é‡Œå¯ä»¥é€‰æ‹©ä¿å­˜çŠ¶æ€æˆ–ä¸ä¿å­˜ï¼Œè¿™é‡Œä¿ç•™æ¥å£è°ƒç”¨ä½†ä¸å†ä¾èµ–å¤–éƒ¨æ•°æ®å­—å…¸
+        // å¯è‡ªè¡Œæ›¿æ¢ä¸ºå…¶ä»–ä¿å­˜æ–¹å¼ï¼Œå¦‚ PlayerPrefs æˆ– ScriptableObject
     }
 
     public void OnPointerDown(PointerEventData eventData)
@@ -114,20 +114,5 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
         Ray ray = Camera.main.ScreenPointToRay(screenPoint);
         RaycastHit2D hit = Physics2D.Raycast(ray.origin, ray.direction, Mathf.Infinity);
         return hit.collider != null && hit.collider.gameObject != draggableImage.gameObject;
-    }
-
-    [Button("»ñÈ¡UI×´Ì¬")]
-    public UIData GetUIState()
-    {
-        return new UIData(rectTransform.anchoredPosition, rectTransform.localScale);
-    }
-
-    [Button("ÉèÖÃUI×´Ì¬")]
-    public void SetUIState(UIData data)
-    {
-        if (data == null)
-            return;
-        rectTransform.anchoredPosition = data.Position;
-        rectTransform.localScale = data.Scale;
     }
 }

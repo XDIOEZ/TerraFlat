@@ -1,4 +1,4 @@
-using System.IO;
+ï»¿using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
@@ -7,29 +7,30 @@ using Sirenix.OdinInspector;
 
 public class SaveDataManager_UI : MonoBehaviour
 {
-    #region ×Ö¶Î¶¨Òå
+    #region å­—æ®µå®šä¹‰
 
-    [Header("±£´æÓë¼ÓÔØ")]
+    [Header("ä¿å­˜ä¸åŠ è½½")]
     public SaveDataMgr saveAndLoad;
     public static SaveDataManager_UI Ins;
 
-    [Header("UI¹ÜÀíÆ÷")]
-    public BaseUIManager uiManager; // BaseUIManager×Ö¶Î
+    public UIManager uiManager => UIManager.Instance; // BaseUIManagerå­—æ®µ
 
     public PlanetData Ready_planetData = new PlanetData();
 
 
-    [Header("´æµµĞÅÏ¢")]
+    [Header("å­˜æ¡£ä¿¡æ¯")]
     public List<string> saves = new List<string>();
 
-    [Header("°´Å¥Óë¸¸ÎïÌå")]
-    public GameObject Save_Player_SelectButton_Prefab; // ´æµµ/Íæ¼Ò°´Å¥Ô¤ÖÆÌå
-    public Transform SaveSelectButton_Parent_Content; // ´æµµ°´Å¥¸¸ÎïÌå
-    public Transform Player_SelectButton_Parent_Content; // Íæ¼Ò°´Å¥¸¸ÎïÌå
+    [Header("æŒ‰é’®ä¸çˆ¶ç‰©ä½“")]
+    public GameObject Save_Player_SelectButton_Prefab; // å­˜æ¡£/ç©å®¶æŒ‰é’®é¢„åˆ¶ä½“
+    public Transform SaveSelectButton_Parent_Content; // å­˜æ¡£æŒ‰é’®çˆ¶ç‰©ä½“
+    public Transform Player_SelectButton_Parent_Content; // ç©å®¶æŒ‰é’®çˆ¶ç‰©ä½“
+    public string BasePanelName = "å­˜æ¡£é€‰æ‹©é¢æ¿";
+    public string SaveSelectName = "å¼€å§‹æ–°æ¸¸æˆé¢æ¿";
 
-    // ÒÆ³ıÁËÔ­À´µÄËùÓĞUI¿Ø¼ş×Ö¶Î£¬Í¨¹ıBaseUIManager»ñÈ¡ÒıÓÃ
+    // ç§»é™¤äº†åŸæ¥çš„æ‰€æœ‰UIæ§ä»¶å­—æ®µï¼Œé€šè¿‡BaseUIManagerè·å–å¼•ç”¨
 
-    // Ê¹ÓÃApplication.persistentDataPath×÷Îª»ù´¡Â·¾¶
+    // ä½¿ç”¨Application.persistentDataPathä½œä¸ºåŸºç¡€è·¯å¾„
     private string PathToSaveFolder 
     { 
         get 
@@ -43,40 +44,32 @@ public class SaveDataManager_UI : MonoBehaviour
     public void Awake()
     {
         Ins = this;
-        // È·±£´æµµÄ¿Â¼´æÔÚ
+        // ç¡®ä¿å­˜æ¡£ç›®å½•å­˜åœ¨
         EnsureSaveDirectoryExists();
     }
 
-    #region ³õÊ¼»¯
+    #region åˆå§‹åŒ–
     private void Start()
     {
         saveAndLoad = SaveDataMgr.Instance;
-        
-        // ³õÊ¼»¯BaseUIManager
-        if (uiManager == null)
-        {
-            uiManager = GetComponent<BaseUIManager>() ?? gameObject.AddComponent<BaseUIManager>();
-        }
 
         LoadSaveFileNames();
         GenerateSaveButtons();
-
-        // Ê¹ÓÃBaseUIManagerÉèÖÃ°´Å¥ÊÂ¼ş
         SetupUIEvents();
     }
 
     /// <summary>
-    /// ÉèÖÃUIÊÂ¼ş
+    /// è®¾ç½®UIäº‹ä»¶
     /// </summary>
     private void SetupUIEvents()
     {
-        // ÉèÖÃ°´Å¥µã»÷ÊÂ¼ş
-        uiManager.SetButtonOnClick("¿ªÊ¼ÓÎÏ·°´Å¥", OnClick_StartGame_Button);
-        uiManager.SetButtonOnClick("¿ªÊ¼ĞÂÓÎÏ·", OnClick_StartNewGame_Button);
-        uiManager.SetButtonOnClick("¼ÓÔØ´æµµ°´Å¥", OnClick_LoadSaveData_Button);
-        uiManager.SetButtonOnClick("É¾³ı°´Å¥", OnClick_DeletSave_Button);
+        // è®¾ç½®æŒ‰é’®ç‚¹å‡»äº‹ä»¶
+        uiManager.GetPanel("å­˜æ¡£é€‰æ‹©é¢æ¿").SetButtonOnClick("å¼€å§‹æ¸¸æˆæŒ‰é’®", OnClick_StartGame_Button);
+        uiManager.GetPanel("å¼€å§‹æ–°æ¸¸æˆé¢æ¿").SetButtonOnClick("å¼€å§‹æ–°æ¸¸æˆ", OnClick_StartNewGame_Button);
+        uiManager.GetPanel("å­˜æ¡£é€‰æ‹©é¢æ¿").SetButtonOnClick("åŠ è½½å­˜æ¡£æŒ‰é’®", OnClick_LoadSaveData_Button);
+        uiManager.GetPanel("å³é”®èœå•").SetButtonOnClick("åˆ é™¤æŒ‰é’®", OnClick_DeletSave_Button);
 
-        // ÉèÖÃÊäÈë¿òÖµ¸Ä±äÊÂ¼ş
+        // è®¾ç½®è¾“å…¥æ¡†å€¼æ”¹å˜äº‹ä»¶
         GetSelectedPlayerNameInput()?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
         GetNewPlayerNameInput()?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
         GetNewSaveNameInput()?.onValueChanged.AddListener(OnPlayerSaveNameChanged);
@@ -84,23 +77,23 @@ public class SaveDataManager_UI : MonoBehaviour
         GetPlanetNoiseInput()?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
     }
 
-    // Í¨¹ıBaseUIManager»ñÈ¡UI¿Ø¼şµÄ±ã½İ·½·¨
-    private TMP_InputField GetSelectedPlayerNameInput() => uiManager.GetInputField("Ñ¡Ôñ»òĞÂÔöÍæ¼ÒÃû³ÆÊäÈë¿ò");
-    private TMP_InputField GetNewPlayerNameInput() => uiManager.GetInputField("ĞÂÔöÍæ¼ÒÃû³ÆÊäÈë¿ò");
-    private TMP_InputField GetNewSaveNameInput() => uiManager.GetInputField("ĞÂÔö´æµµÃû³ÆÊäÈë¿ò");
-    private TMP_InputField GetPlanetRadiusInput() => uiManager.GetInputField("ĞÇÇò°ë¾¶ÊäÈë¿ò");
-    private TMP_InputField GetPlanetNoiseInput() => uiManager.GetInputField("ÔëÉùËõ·ÅÊäÈë¿ò");
-    private TextMeshProUGUI GetSelectedSaveNameText() => uiManager.GetText("Ñ¡ÖĞµÄ´æµµÃû³Æ");
-    private Button GetStartGameButton() => uiManager.GetButton("StartGameButton");
-    private Button GetStartNewGameButton() => uiManager.GetButton("StartNewGameButton");
-    private Button GetLoadSaveDataButton() => uiManager.GetButton("LoadSaveDataButton");
-    private Button GetDeleteSaveButton() => uiManager.GetButton("DeleteSaveButton");
+    // é€šè¿‡BaseUIManagerè·å–UIæ§ä»¶çš„ä¾¿æ·æ–¹æ³•
+    private TMP_InputField GetSelectedPlayerNameInput() => uiManager.GetPanel("å­˜æ¡£é€‰æ‹©é¢æ¿").GetInputField("é€‰æ‹©æˆ–æ–°å¢ç©å®¶åç§°è¾“å…¥æ¡†");
+    private TMP_InputField GetNewPlayerNameInput() => uiManager.GetPanel(BasePanelName).GetInputField("æ–°å¢ç©å®¶åç§°è¾“å…¥æ¡†");
+    private TMP_InputField GetNewSaveNameInput() => uiManager.GetPanel(BasePanelName).GetInputField("æ–°å¢å­˜æ¡£åç§°è¾“å…¥æ¡†");
+    private TMP_InputField GetPlanetRadiusInput() => uiManager.GetPanel(BasePanelName).GetInputField("æ˜ŸçƒåŠå¾„è¾“å…¥æ¡†");
+    private TMP_InputField GetPlanetNoiseInput() => uiManager.GetPanel(BasePanelName).GetInputField("å™ªå£°ç¼©æ”¾è¾“å…¥æ¡†");
+    private TextMeshProUGUI GetSelectedSaveNameText() => uiManager.GetPanel("å­˜æ¡£é€‰æ‹©é¢æ¿").GetText("é€‰ä¸­çš„å­˜æ¡£åç§°");
+    private Button GetStartGameButton() => uiManager.GetPanel(name).GetButton("StartGameButton");
+    private Button GetStartNewGameButton() => uiManager.GetPanel(name).GetButton("StartNewGameButton");
+    private Button GetLoadSaveDataButton() => uiManager.GetPanel(name).GetButton("LoadSaveDataButton");
+    private Button GetDeleteSaveButton() => uiManager.GetPanel(name).GetButton("DeleteSaveButton");
 
     #endregion
 
-    #region ´æµµ¼ÓÔØ
+    #region å­˜æ¡£åŠ è½½
     /// <summary>
-    /// È·±£´æµµÄ¿Â¼´æÔÚ
+    /// ç¡®ä¿å­˜æ¡£ç›®å½•å­˜åœ¨
     /// </summary>
     private void EnsureSaveDirectoryExists()
     {
@@ -112,7 +105,7 @@ public class SaveDataManager_UI : MonoBehaviour
     }
 
     /// <summary>
-    /// ¼ÓÔØ´æµµÎÄ¼şÃû
+    /// åŠ è½½å­˜æ¡£æ–‡ä»¶å
     /// </summary>
     public void LoadSaveFileNames()
     {
@@ -120,7 +113,7 @@ public class SaveDataManager_UI : MonoBehaviour
 
         if (!Directory.Exists(PathToSaveFolder))
         {
-            Debug.LogWarning("±£´æÂ·¾¶²»´æÔÚ: " + PathToSaveFolder);
+            Debug.LogWarning("ä¿å­˜è·¯å¾„ä¸å­˜åœ¨: " + PathToSaveFolder);
             return;
         }
 
@@ -133,20 +126,20 @@ public class SaveDataManager_UI : MonoBehaviour
     }
     #endregion
 
-    #region °´Å¥Éú³É
+    #region æŒ‰é’®ç”Ÿæˆ
     /// <summary>
-    /// Éú³É´æµµÑ¡Ôñ°´Å¥
+    /// ç”Ÿæˆå­˜æ¡£é€‰æ‹©æŒ‰é’®
     /// </summary>
     public void GenerateSaveButtons()
     {
-        // ÇåÀíÏÖÓĞ°´Å¥
+        // æ¸…ç†ç°æœ‰æŒ‰é’®
         foreach (Transform child in SaveSelectButton_Parent_Content)
             Destroy(child.gameObject);
 
         foreach (Transform child in Player_SelectButton_Parent_Content)
             Destroy(child.gameObject);
 
-        // Éú³É´æµµ°´Å¥
+        // ç”Ÿæˆå­˜æ¡£æŒ‰é’®
         foreach (string saveName in saves)
         {
             GameObject buttonObj = Instantiate(Save_Player_SelectButton_Prefab, SaveSelectButton_Parent_Content);
@@ -160,12 +153,12 @@ public class SaveDataManager_UI : MonoBehaviour
                 btn.onClick.AddListener(() => OnClick_List_Save_Button(saveName, buttonObj));
         }
         
-        // Éú³ÉÍæ¼Ò°´Å¥
+        // ç”Ÿæˆç©å®¶æŒ‰é’®
         GeneratePlayerButtons();
     }
 
     /// <summary>
-    /// Éú³ÉÍæ¼ÒÑ¡Ôñ°´Å¥
+    /// ç”Ÿæˆç©å®¶é€‰æ‹©æŒ‰é’®
     /// </summary>
     public void GeneratePlayerButtons()
     {
@@ -194,8 +187,8 @@ public class SaveDataManager_UI : MonoBehaviour
     }
     #endregion
 
-    #region UIÊÂ¼ş
-    #region ´æµµ¶ÁÈ¡
+    #region UIäº‹ä»¶
+    #region å­˜æ¡£è¯»å–
 
     public void OnClick_LoadSaveData_Button()
     {
@@ -210,26 +203,26 @@ public class SaveDataManager_UI : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("SaveAndLoad×é¼şÎ´°ó¶¨£¡");
+            Debug.LogWarning("SaveAndLoadç»„ä»¶æœªç»‘å®šï¼");
         }
-        // Éú³ÉÍæ¼Ò°´Å¥
+        // ç”Ÿæˆç©å®¶æŒ‰é’®
         GeneratePlayerButtons();
     }
     #endregion
 
     /// <summary>
-    /// É¾³ı´æµµ
+    /// åˆ é™¤å­˜æ¡£
     /// </summary>
     public void OnClick_DeletSave_Button()
     {
         if(SaveMenuRightMenuUI.Instance.SelectInfo.Path == "")
         {
-            //É¾³ıÍæ¼Ò
+            //åˆ é™¤ç©å®¶
             saveAndLoad.SaveData.PlayerData_Dict.Remove(SaveMenuRightMenuUI.Instance.SelectInfo.Name);
 
         } else if(SaveMenuRightMenuUI.Instance.SelectInfo.Path != "")
         {
-            // É¾³ı´æµµ
+            // åˆ é™¤å­˜æ¡£
             if (saveAndLoad != null)
             {
                 var selectedSaveText = GetSelectedSaveNameText();
@@ -244,14 +237,14 @@ public class SaveDataManager_UI : MonoBehaviour
         Refresh();
     }
 
-    #region ´æµµÑ¡Ôñ
+    #region å­˜æ¡£é€‰æ‹©
 
     /// <summary>
-    /// µã»÷´æµµ°´Å¥
+    /// ç‚¹å‡»å­˜æ¡£æŒ‰é’®
     /// </summary>
     public void OnClick_List_Save_Button(string saveName, GameObject buttonObj)
     {
-        // ½ûÓÃËùÓĞ´æµµ°´Å¥µÄÑ¡ÔñÍ¼Ïñ & »¹Ô­ÑÕÉ«
+        // ç¦ç”¨æ‰€æœ‰å­˜æ¡£æŒ‰é’®çš„é€‰æ‹©å›¾åƒ & è¿˜åŸé¢œè‰²
         foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<ButtonInfoData>())
         {
             if (saveInfo.SelectImage != null)
@@ -259,10 +252,10 @@ public class SaveDataManager_UI : MonoBehaviour
 
             var img = saveInfo.GetComponent<UnityEngine.UI.Image>();
             if (img != null)
-                img.color = Color.white; // »¹Ô­ÎªÄ¬ÈÏ°×É«
+                img.color = Color.white; // è¿˜åŸä¸ºé»˜è®¤ç™½è‰²
         }
 
-        // ÆôÓÃµ±Ç°°´Å¥µÄÑ¡ÔñÍ¼Ïñ & ¸ßÁÁÑÕÉ«
+        // å¯ç”¨å½“å‰æŒ‰é’®çš„é€‰æ‹©å›¾åƒ & é«˜äº®é¢œè‰²
         var currentInfo = buttonObj.GetComponent<ButtonInfoData>();
         if (currentInfo != null && currentInfo.SelectImage != null)
         {
@@ -272,17 +265,17 @@ public class SaveDataManager_UI : MonoBehaviour
         var currentImg = buttonObj.GetComponent<UnityEngine.UI.Image>();
         if (currentImg != null)
         {
-            currentImg.color = Color.green; // Ñ¡ÖĞÊ±±äÂÌ
+            currentImg.color = Color.green; // é€‰ä¸­æ—¶å˜ç»¿
         }
 
-        // Ê¹ÓÃBaseUIManager¸üĞÂÎÄ±¾
-        uiManager.SetText("Ñ¡ÖĞµÄ´æµµÃû³Æ", saveName);
+        // ä½¿ç”¨BaseUIManageræ›´æ–°æ–‡æœ¬
+        uiManager.GetPanel(name).SetText("é€‰ä¸­çš„å­˜æ¡£åç§°", saveName);
     }
 
     #endregion
 
     /// <summary>
-    /// µã»÷Íæ¼Ò°´Å¥
+    /// ç‚¹å‡»ç©å®¶æŒ‰é’®
     /// </summary>
     public void OnClick_List_PlayerName_Button(string playerName)
     {
@@ -292,28 +285,28 @@ public class SaveDataManager_UI : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("SaveAndLoad×é¼şÎ´°ó¶¨£¡");
+            Debug.LogWarning("SaveAndLoadç»„ä»¶æœªç»‘å®šï¼");
         }
 
-        // Ê¹ÓÃBaseUIManager¸üĞÂÊäÈë¿ò
-        uiManager.SetInputFieldText("Ñ¡Ôñ»òĞÂÔöÍæ¼ÒÃû³ÆÊäÈë¿ò", playerName);
+        // ä½¿ç”¨BaseUIManageræ›´æ–°è¾“å…¥æ¡†
+        uiManager.GetPanel(name).SetInputFieldText("é€‰æ‹©æˆ–æ–°å¢ç©å®¶åç§°è¾“å…¥æ¡†", playerName);
     }
 
     /// <summary>
-    /// µã»÷¿ªÊ¼ÓÎÏ·°´Å¥
+    /// ç‚¹å‡»å¼€å§‹æ¸¸æˆæŒ‰é’®
     /// </summary>
     public void OnClick_StartGame_Button()
     {
         if (saveAndLoad?.SaveData == null || saveAndLoad.SaveData.Seed == 0)
         {
-            Debug.LogWarning("ÇëÏÈÑ¡Ôñ´æµµ»ò´´½¨ĞÂÓÎÏ·");
+            Debug.LogWarning("è¯·å…ˆé€‰æ‹©å­˜æ¡£æˆ–åˆ›å»ºæ–°æ¸¸æˆ");
             return;
         }
         GameManager.Instance.ContinueGame(GetSelectedPlayerNameInput().text);
     }
 
     /// <summary>
-    /// µã»÷¿ªÊ¼ĞÂÓÎÏ·°´Å¥
+    /// ç‚¹å‡»å¼€å§‹æ–°æ¸¸æˆæŒ‰é’®
     /// </summary>
     private void OnClick_StartNewGame_Button()
     {
@@ -323,12 +316,12 @@ public class SaveDataManager_UI : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("SaveAndLoad×é¼şÎ´°ó¶¨£¡");
+            Debug.LogWarning("SaveAndLoadç»„ä»¶æœªç»‘å®šï¼");
         }
     }
 
     /// <summary>
-    /// Íæ¼ÒÃû×ÖÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// ç©å®¶åå­—è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnUpdate_PlayerNameChanged_Text(string newName)
     {
@@ -339,7 +332,7 @@ public class SaveDataManager_UI : MonoBehaviour
     }
 
     /// <summary>
-    /// ´æµµÃû×ÖÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// å­˜æ¡£åå­—è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnPlayerSaveNameChanged(string newName)
     {
@@ -350,53 +343,53 @@ public class SaveDataManager_UI : MonoBehaviour
     }
 
     /// <summary>
-    /// ĞÇÇò°ë¾¶ÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// æ˜ŸçƒåŠå¾„è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnPlanetReadiusChanged(string newValue)
     {
-        // ¼ì²â´«ÈëµÄ×Ö·û´®ÊÇ·ñÎªÓĞĞ§µÄÕûÊı
+        // æ£€æµ‹ä¼ å…¥çš„å­—ç¬¦ä¸²æ˜¯å¦ä¸ºæœ‰æ•ˆçš„æ•´æ•°
         if (int.TryParse(newValue, out int radius))
         {
             Ready_planetData.Radius = radius;
         }
         else
         {
-            // ·Ç·¨ÊäÈë£¬²»×ö´¦Àí£¬±ØÒªÊ±¿ÉÌáÊ¾ÓÃ»§
-            Debug.LogWarning($"ÊäÈëµÄ°ë¾¶ÖµÎŞĞ§£º{newValue}");
+            // éæ³•è¾“å…¥ï¼Œä¸åšå¤„ç†ï¼Œå¿…è¦æ—¶å¯æç¤ºç”¨æˆ·
+            Debug.LogWarning($"è¾“å…¥çš„åŠå¾„å€¼æ— æ•ˆï¼š{newValue}");
         }
     }
 
     /// <summary>
-    /// ĞÇÇòÔëÉùËõ·ÅÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// æ˜Ÿçƒå™ªå£°ç¼©æ”¾è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnPlanetNoiseScaleChanged(string newValue)
     {
-        // ¼ì²â´«ÈëµÄ×Ö·û´®ÊÇ·ñÎªÓĞĞ§µÄ¸¡µãÊı
+        // æ£€æµ‹ä¼ å…¥çš„å­—ç¬¦ä¸²æ˜¯å¦ä¸ºæœ‰æ•ˆçš„æµ®ç‚¹æ•°
         if (float.TryParse(newValue, out float noiseScale))
         {
             Ready_planetData.NoiseScale = noiseScale;
         }
         else
         {
-            // ·Ç·¨ÊäÈë£¬²»×ö´¦Àí£¬±ØÒªÊ±¿ÉÌáÊ¾ÓÃ»§
-            Debug.LogWarning($"ÊäÈëµÄÔëÉùËõ·ÅÖµÎŞĞ§£º{newValue}");
+            // éæ³•è¾“å…¥ï¼Œä¸åšå¤„ç†ï¼Œå¿…è¦æ—¶å¯æç¤ºç”¨æˆ·
+            Debug.LogWarning($"è¾“å…¥çš„å™ªå£°ç¼©æ”¾å€¼æ— æ•ˆï¼š{newValue}");
         }
     }
 
     #endregion
 
-    #region ¹«¹²·½·¨
-    [Button("Ë¢ĞÂ´æµµ°´Å¥")]
+    #region å…¬å…±æ–¹æ³•
+    [Button("åˆ·æ–°å­˜æ¡£æŒ‰é’®")]
     /// <summary>
-    /// Ë¢ĞÂ´æµµ°´Å¥
+    /// åˆ·æ–°å­˜æ¡£æŒ‰é’®
     /// </summary>
     public void Refresh()
     {
         LoadSaveFileNames();
         GenerateSaveButtons();
         
-        // Ë¢ĞÂBaseUIManagerÖĞµÄ×é¼ş
-        uiManager.RefreshUIComponents();
+        // åˆ·æ–°BaseUIManagerä¸­çš„ç»„ä»¶
+        uiManager.GetPanel(name).RefreshUIComponents();
     }
     #endregion
 }
