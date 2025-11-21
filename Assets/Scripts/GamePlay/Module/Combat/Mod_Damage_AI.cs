@@ -12,12 +12,39 @@ public class Mod_Damage_AI : Mod_Damage
     public override void Load()
     {
         base.Load();
-        TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
-        animator = item.itemMods.GetMod_ByID(ModText.AnimatorReceiver) as Mod_AnimatorReceiver;
-        TrunBody.AddControlledTransform(transform);
-        animator.OnAttackStart += StartAttack;
-        animator.OnAttackStop += StopAttack;
-        TrunBody.OnTrun += ToOtherDirection;
+        
+        // 添加空检查以防止程序崩溃
+        if (item != null && item.itemMods != null)
+        {
+            // 使用修复后的ModText类获取正确的模块ID
+            TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
+            animator = item.itemMods.GetMod_ByID(ModText.AnimatorReceiver) as Mod_AnimatorReceiver;
+            
+            // 只有在模块存在时才添加事件监听器
+            if (TrunBody != null)
+            {
+                TrunBody.AddControlledTransform(transform);
+                TrunBody.OnTrun += ToOtherDirection;
+            }
+            else
+            {
+                Debug.LogWarning("TrunBody模块未找到!");
+            }
+            
+            if (animator != null)
+            {
+                animator.OnAttackStart += StartAttack;
+                animator.OnAttackStop += StopAttack;
+            }
+            else
+            {
+                Debug.LogWarning("AnimatorReceiver模块未找到!");
+            }
+        }
+        else
+        {
+            Debug.LogError("Item或ItemMods为空!");
+        }
     }
 
     public override void Save()
@@ -31,14 +58,14 @@ public class Mod_Damage_AI : Mod_Damage
     {
         float sign = Mathf.Sign(direction.x);
 
-        // Ŀ�� x λ�ã��������ҷ������ƫ��ֵ
+        // 目标 x 位置，根据方向添加水平偏移值
         float targetX = xOffset * sign;
 
-        // ƽ���ƶ������ı��� x ����
+        // 水平移动修改器的 x 位置
         Vector3 currentLocalPos = transform.localPosition;
         Vector3 targetLocalPos = new Vector3(targetX, currentLocalPos.y, currentLocalPos.z);
 
-        // �����ƶ���0.15�룬������
+        // 平滑移动，0.15秒，使用缓动
         transform.DOLocalMoveX(targetLocalPos.x, 0.15f).SetEase(Ease.OutSine);
     }
 }

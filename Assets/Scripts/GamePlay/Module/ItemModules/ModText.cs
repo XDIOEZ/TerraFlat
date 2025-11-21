@@ -5,69 +5,69 @@ using UnityEngine;
 public static class ModText
 {
     #region A
-    public static string Attacker = "¹¥»÷Ä£¿é";
-    public static string AnimatorReceiver = "¶¯»­Ä£¿é";
+    public static string Attacker = "æ”»å‡»æ¨¡å—";
+    public static string AnimatorReceiver = "åŠ¨ç”»æ¥æ”¶æ¨¡å—";
     public static string AI = "AI";
     #endregion
 
     #region B
-    public static string Bag = "±³°üÄ£¿é";
-    public static string Building = "½¨ÖşÄ£¿é";
+    public static string Bag = "èƒŒåŒ…æ¨¡å—";
+    public static string Building = "å»ºç­‘æ¨¡å—";
     public static string BuffManager = "BuffManager";
     #endregion
 
     #region C
-    public static string Camera = "Ïà»úÄ£¿é";
-    public static string Composite = "ºÏ³ÉÄ£¿é";
-    public static string Controller = "ControllerÄ£¿é";
-    public static string ColdWeapon = "Àä±øÆ÷ÎäÆ÷Ä£¿é";
+    public static string Camera = "ç›¸æœºæ¨¡å—";
+    public static string Composite = "ç»„åˆæ¨¡å—";
+    public static string Controller = "Controlleræ¨¡å—";
+    public static string ColdWeapon = "å†·å…µå™¨æ”»å‡»æ¨¡å—";
     #endregion
 
     #region D
-    public static string Defense = "·ÀÓùÄ£¿é";
-    public static string Drop = "¶ªÆúÄ£¿é";
-    public static string DeathLoot = "ËÀÍöµôÂäÄ£¿é";
+    public static string Defense = "é˜²å¾¡æ¨¡å—";
+    public static string Drop = "æ‰è½æ¨¡å—";
+    public static string DeathLoot = "æ­»äº¡æ‰è½æ¨¡å—";
     #endregion
 
     #region E
-    public static string Equipment = "×°±¸²å²Û";
+    public static string Equipment = "è£…å¤‡ç³»ç»Ÿ";
     #endregion
 
     #region F
-    public static string FocusPoint = "FaceMouseÄ£¿é";
-    public static string Food = "Ê³ÎïÄ£¿é";
-    public static string Fuel = "È¼ÁÏÄ£¿é";
+    public static string FocusPoint = "FaceMouseæ¨¡å—";
+    public static string Food = "é£Ÿç‰©æ¨¡å—";
+    public static string Fuel = "ç‡ƒæ–™æ¨¡å—";
     #endregion
     #region G
-    public static string Grow = "Éú³¤Ä£¿é";
+    public static string Grow = "ç”Ÿé•¿æ¨¡å—";
     #endregion
 
 
     #region H
-    public static string Hand = "UI_ÊÖ²¿²å²Û";
-    public static string Hotbar = "UI_¿ì½İÀ¸";
-    public static string Hp = "ÉËº¦½ÓÊÜÄ£¿é";
+    public static string Hand = "UI_æ‰‹éƒ¨æ’æ§½";
+    public static string Hotbar = "UI_å¿«æ·æ ";
+    public static string Hp = "ç”Ÿå‘½å€¼ç³»ç»Ÿæ¨¡å—";
     #endregion
 
     #region I
-    public static string Interact = "½»»¥Ä£×é";
-    public static string ItemDorper = "ÎïÆ·¶ªÆúÄ£¿é";
+    public static string Interact = "äº¤äº’æ¨¡å—";
+    public static string ItemDorper = "ç‰©å“æ”¾ç½®æ¨¡å—";
     #endregion
 
     #region M
-    public static string MoveSpeed = "ÒÆËÙÄ£¿é";
-    public static string Mover = "ÒÆ¶¯Ä£¿é";
+    public static string MoveSpeed = "ç§»åŠ¨æ¨¡å—";
+    public static string Mover = "ç§»åŠ¨æ¨¡å—";
 
     #endregion
 
     #region R
-    public static string Run = "ÅÜ²½Ä£¿é";
+    public static string Run = "å¥”è·‘æ¨¡å—";
     #endregion
 
     #region S
-    public static string Smelting = "ÈÛÁ¶Ä£¿é";
-    public static string Stamina = "¾«Á¦Ä£¿é";
-    public static string Scene = "³¡¾°Ä£¿é";
+    public static string Smelting = "ç†”ç‚¼æ¨¡å—";
+    public static string Stamina = "è€åŠ›æ¨¡å—";
+    public static string Scene = "åœºæ™¯æ¨¡å—";
     #endregion
 
     #region T
@@ -85,6 +85,6 @@ public static class AnimationText
 
 public enum DamageTag
 {
-    ¿ó¸ä,
-    ¸«Í·
+    ç‰©ç†,
+    é­”æ³•
 }

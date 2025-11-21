@@ -56,6 +56,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "OCosmos.sln",
+    "dotnet.defaultSolution": "FlatWorld.sln",
     "dotnet.preferCSharpExtension": true
 }

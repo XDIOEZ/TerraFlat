@@ -14,17 +14,17 @@ public partial class SceneData
     public bool IsInit = false;
     public Vector2 PlayerPos;
     public bool Encapsulation;
-    public float LightEfficiency;//¹âÕÕÐ§ÂÊ
+    public float LightEfficiency;//ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
 }
 
 public class Mod_Scene : Module
 {
-    #region ×Ö¶ÎºÍÊôÐÔ
+    #region ï¿½Ö¶Îºï¿½ï¿½ï¿½ï¿½ï¿½
     public Ex_ModData_MemoryPackable _data;
     public override ModuleData _Data { get { return _data; } set { _data = (Ex_ModData_MemoryPackable)value; } }
 
-    [Tooltip("³¡¾°Ô¤ÖÆÌåÁÐ±í£¬³õÊ¼»¯Ê±»á´ÓÖÐËæ»úÑ¡ÔñÒ»¸ö")]
-    public List<TextAsset> _sceneAssetList = new List<TextAsset>(); // ½«µ¥¸ö×Ö¶Î¸ÄÎªÁÐ±í
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ò»ï¿½ï¿½")]
+    public List<TextAsset> _sceneAssetList = new List<TextAsset>(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î¸ï¿½Îªï¿½Ð±ï¿½
     public SceneData Data;
     public Vector2 PlayerPosOffset;
 
@@ -45,7 +45,7 @@ public class Mod_Scene : Module
     }
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -69,7 +69,7 @@ public class Mod_Scene : Module
             mod_Building.StartInstall += Install;
         }
 
-        // ×¢Òâ£º×ÊÔ´³õÊ¼»¯Âß¼­ÒÑÒÆÖÁInteract·½·¨ÖÐÖ´ÐÐ
+        // ×¢ï¿½â£ºï¿½ï¿½Ô´ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Interactï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½
     }
 
     public override void Save()
@@ -78,7 +78,7 @@ public class Mod_Scene : Module
     }
     #endregion
 
-    #region ³¡¾°°²×°ÓëÐ¶ÔØ
+    #region ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½Ð¶ï¿½ï¿½
     public void Install()
     {
         TimeData timeData = new TimeData()
@@ -99,51 +99,51 @@ public class Mod_Scene : Module
             return;
         }
 
-        // ±éÀúplanetDataÖÐËùÓÐµÄµØÍ¼Êý¾Ý
+        // ï¿½ï¿½ï¿½ï¿½planetDataï¿½ï¿½ï¿½ï¿½ï¿½ÐµÄµï¿½Í¼ï¿½ï¿½ï¿½ï¿½
         foreach (var mapSaveKV in planetData.MapData_Dict.ToList())
         {
             var mapSave = mapSaveKV.Value;
 
-            // ±éÀúËùÓÐÎïÆ·ÁÐ±í£¬·ÀÖ¹ÔÚµü´úÊ±ÐÞ¸Ä×ÖµäÖµ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ·ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½Úµï¿½ï¿½ï¿½Ê±ï¿½Þ¸ï¿½ï¿½Öµï¿½Öµ
             foreach (var itemListKV in mapSave.items.ToList())
             {
-                // Ìø¹ý²»ÐèÒª»Ö¸´µÄÎïÆ·ÀàÐÍ
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Æ·ï¿½ï¿½ï¿½ï¿½
                 if (itemListKV.Key == "MapEdge" || itemListKV.Key == "MapCore" ||
-                    itemListKV.Key == "Ç½±Ú" || itemListKV.Key == "Door")
+                    itemListKV.Key == "Ç½ï¿½ï¿½" || itemListKV.Key == "Door")
                     continue;
 
                 var itemList = itemListKV.Value;
                 foreach (var mapItem in itemList)
                 {
-                    // ½«ÎïÆ·ÊµÀý»¯µ½µ±Ç°Î»ÖÃ£¬²»Ó¦ÓÃÓÃ»§»Ö¸´Î»ÖÃ¡¢Ðý×ªµÈ
+                    // ï¿½ï¿½ï¿½ï¿½Æ·Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Î»ï¿½Ã£ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ö¸ï¿½Î»ï¿½Ã¡ï¿½ï¿½ï¿½×ªï¿½ï¿½
                     Item item = ItemMgr.Instance.InstantiateItem(mapItem, null);
                     item.transform.position = transform.position;
                 }
 
-                // ´Ó±£´æÖÐÒÆ³ýÕâÐ©ÎïÆ·
+                // ï¿½Ó±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½Ð©ï¿½ï¿½Æ·
                 mapSave.items.Remove(itemListKV.Key);
             }
 
-            // ´ÓµØÍ¼Êý¾Ý×ÖµäÖÐÒÆ³ýµ±Ç°µØÍ¼
+            // ï¿½Óµï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Í¼
             planetData.MapData_Dict.Remove(mapSaveKV.Key);
         }
 
         SaveDataMgr.Instance.SaveData.PlanetData_Dict.Remove(Data.SceneName);
-        Debug.Log("³¡¾°ÄÚÎïÆ·ÒÑÈ«²¿ÊµÀý»¯£¬Ô­Ê¼MapSaveÒÑÒÆ³ý");
+        Debug.Log("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ·ï¿½ï¿½È«ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô­Ê¼MapSaveï¿½ï¿½ï¿½Æ³ï¿½");
     }
     #endregion
 
-    #region ³¡¾°¹ÜÀí
+    #region ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     [Button]
     public void AddScene()
     {
-        // ´´½¨Ò»¸öÐÂµÄÁÙÊ±³¡¾°Ãû³Æ£¬ÕâÑù¿ÉÒÔ±ÜÃâÖØ¸´Ãû³Æ³åÍ»
+        // ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Âµï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½Æ³ï¿½Í»
         Scene newScene = SceneManager.CreateScene("TempTentScene");
 
-        // ÇÐ»»µ½ÐÂ´´½¨µÄ³¡¾°×÷Îªµ±Ç°Ñ¡ÖÐ
+        // ï¿½Ð»ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ç°Ñ¡ï¿½ï¿½
         SceneManager.SetActiveScene(newScene);
 
-        Debug.Log("ÐÂ³¡¾°ÒÑ´´½¨" + newScene.name);
+        Debug.Log("ï¿½Â³ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½" + newScene.name);
     }
 
     [Button]
@@ -152,16 +152,16 @@ public class Mod_Scene : Module
         Player player = interacter as Player;
         if (player == null)
         {
-            Debug.LogError("Interact µ÷ÓÃÊ§°Ü£¬½»»¥¶ÔÏó²»ÊÇ Player");
+            Debug.LogError("Interact ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Player");
             return;
         }
 
-        // ===== ×ÊÔ´³õÊ¼»¯Âß¼­ÒÆµ½´Ë´¦ =====
-        // ¼ì²éÊÇ·ñÒÑ¾­³õÊ¼»¯£¬Í¨¹ýÔÚPlanetData_DictÖÐ²éÕÒSceneNameÀ´ÅÐ¶Ï
+        // ===== ï¿½ï¿½Ô´ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ß¼ï¿½ï¿½Æµï¿½ï¿½Ë´ï¿½ =====
+        // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½PlanetData_Dictï¿½Ð²ï¿½ï¿½ï¿½SceneNameï¿½ï¿½ï¿½Ð¶ï¿½
         if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
             _sceneAssetList != null && _sceneAssetList.Count > 0)
         {
-            // ´ÓÁÐ±íÖÐËæ»úÑ¡ÔñÒ»¸ö³¡¾°Ô¤ÖÆÌå
+            // ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½
             TextAsset selectedSceneAsset = _sceneAssetList[Random.Range(0, _sceneAssetList.Count)];
             
             if (selectedSceneAsset != null)
@@ -175,61 +175,61 @@ public class Mod_Scene : Module
                 planetData = new PlanetData();
                 planetData.ChunkSize = new Vector2Int(100, 100);
                 planetData.Name = Data.SceneName;
-                // ´æ´¢(0,0)Î»ÖÃµÄµØÍ¼Êý¾Ý
+                // ï¿½æ´¢(0,0)Î»ï¿½ÃµÄµï¿½Í¼ï¿½ï¿½ï¿½ï¿½
                 planetData.MapData_Dict.Add(MapSave.Name, MapSave);
                 planetData.AutoGenerateMap = false;
                 SaveDataMgr.Instance.SaveData.PlanetData_Dict[Data.SceneName] = planetData;
-                Debug.Log(Data.SceneName + "³õÊ¼»¯Íê³É£¬Ê¹ÓÃÔ¤ÖÆÌå: " + selectedSceneAsset.name);
+                Debug.Log(Data.SceneName + "ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½É£ï¿½Ê¹ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½: " + selectedSceneAsset.name);
             }
             else
             {
-                Debug.LogError("³¡¾°Ô¤ÖÆÌåÁÐ±íÖÐ°üº¬¿ÕÒýÓÃ£¡");
+                Debug.LogError("ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½Ð°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½");
             }
         }
         else if (!SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(Data.SceneName) && 
                  (_sceneAssetList == null || _sceneAssetList.Count == 0))
         {
-            Debug.LogWarning("³¡¾°Ô¤ÖÆÌåÁÐ±íÎª¿Õ£¬ÎÞ·¨³õÊ¼»¯³¡¾°Êý¾Ý£¡");
+            Debug.LogWarning("ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½Îªï¿½Õ£ï¿½ï¿½Þ·ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½");
         }
 
         Data_Player playerData = player.Data;
         Vector2 playerPos = player.transform.position;
 
-        // ===== ½øÈë·¿¼ä =====
+        // ===== ï¿½ï¿½ï¿½ë·¿ï¿½ï¿½ =====
         if (_sceneAssetList.Count > 0)
         {
             string lastSceneName = playerData.CurrentSceneName;
 
-            // ÉèÖÃ³õÊ¼½øÈë·¿¼äµÄÎ»ÖÃ
+            // ï¿½ï¿½ï¿½Ã³ï¿½Ê¼ï¿½ï¿½ï¿½ë·¿ï¿½ï¿½ï¿½Î»ï¿½ï¿½
             player.transform.position = this.Data.PlayerPos + PlayerPosOffset;
 
-            //////////ÒÔÏÂµÄ²Ù×÷½«ÔÚÐÂ³¡¾°ÖÐ½øÐÐ//////////////
+            //////////ï¿½ï¿½ï¿½ÂµÄ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â³ï¿½ï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½//////////////
 
-            // ÇÐ»»³¡¾°
+            // ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½
             GameManager.Instance.ChangeScene_By_SceneNames(lastSceneName, Data.SceneName, () =>
             {
                 playerData.CurrentSceneName = Data.SceneName;
 
-                // ÇåÀí Chunk
+                // ï¿½ï¿½ï¿½ï¿½ Chunk
                 ChunkMgr.Instance.CleanEmptyDicValues();
 
-                // ÖØÐÂ¼ÓÔØÍæ¼Ò
+                // ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 Player newPlayer = ItemMgr.Instance.CreatePlayer(playerData.Name_User);
                 ItemMgr.Instance.Player_DIC[playerData.Name_User] = newPlayer;
 
-                //´´½¨ÐÂ Chunk
+                //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Chunk
                 foreach (var targetMapSave in planetData.MapData_Dict.Values)
                 {
                     Chunk chunk = ChunkMgr.Instance.CreateChunk_ByMapSave(targetMapSave);
 
-                    ChunkMgr.Instance.AddActiveChunk(chunk);//Ìí¼Óµ½¼¤»î Chunk ÁÐ±íÖÐ
+                    ChunkMgr.Instance.AddActiveChunk(chunk);//ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½ Chunk ï¿½Ð±ï¿½ï¿½ï¿½
 
                     chunk.LoadChunk_By_MapSaveData_Sync();
 
-                    //ÉèÖÃÍæ¼Ò·µ»ØµãºÍ·µ»Ø³¡¾°
+                    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò·ï¿½ï¿½Øµï¿½Í·ï¿½ï¿½Ø³ï¿½ï¿½ï¿½
                     if (_sceneAssetList != null && _sceneAssetList.Count > 0)
                     {
-                        // ±éÀúËùÓÐÎïÆ·£¬ÕÒµ½·µ»Øµã
+                        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ·ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½Øµï¿½
                         if (chunk.RuntimeItemsGroup.TryGetValue("MapCore_Pit", out var MapCore_Pit))
                         {
                             foreach (var MapCore in MapCore_Pit)
@@ -237,7 +237,7 @@ public class Mod_Scene : Module
                                 MapCore.Act();
                             }
                         }
-                        // ±éÀúËùÓÐÎïÆ·£¬ÕÒµ½·µ»Øµã
+                        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ·ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½Øµï¿½
                         if (chunk.RuntimeItemsGroup.TryGetValue("Door", out var doors))
                         {
                             foreach (var door in doors)
@@ -254,22 +254,22 @@ public class Mod_Scene : Module
                         }
                     }
                 }
-                //µÈ´ýChunkÊý¾Ý´¦ÀíÍê±ÏºóÔÙ³õÊ¼»¯Íæ¼Ò ÒòÎªÍæ¼ÒÉíÉÏÓÐ¼ÓÔØÒýÓÃCHunkÊý¾ÝµÄ×é¼þ
+                //ï¿½È´ï¿½Chunkï¿½ï¿½ï¿½Ý´ï¿½ï¿½ï¿½ï¿½ï¿½Ïºï¿½ï¿½Ù³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CHunkï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½
                 newPlayer.Load();
                 newPlayer.LoadDataPosition();
             });
         }
-        // ===== Àë¿ª·¿¼ä =====
+        // ===== ï¿½ë¿ªï¿½ï¿½ï¿½ï¿½ =====
         else
         {
             player.transform.position = this.Data.PlayerPos + PlayerPosOffset;
 
             GameManager.Instance.ChangeScene_By_SceneNames(playerData.CurrentSceneName, this.Data.SceneName, () =>
             {
-                playerData.CurrentSceneName = this.Data.SceneName;//ÉèÖÃµ±Ç°ËùÔÚµÄ³¡¾°Ãû³Æ
+                playerData.CurrentSceneName = this.Data.SceneName;//ï¿½ï¿½ï¿½Ãµï¿½Ç°ï¿½ï¿½ï¿½ÚµÄ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
-                // ÖØÐÂ¼ÓÔØÍæ¼ÒÊý¾Ý
+                // ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 Player newPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
                 newPlayer.Load();
                 newPlayer.LoadDataPosition();
@@ -279,11 +279,11 @@ public class Mod_Scene : Module
     }
     #endregion
 
-    #region ³¡¾°Ô¤ÖÆÌå¹ÜÀí
+    #region ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// <summary>
-    /// »ñÈ¡³¡¾°Ô¤ÖÆÌåÁÐ±íÖÐµÄËæ»úÒ»¸ö
+    /// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
     /// </summary>
-    /// <returns>Ëæ»úÑ¡ÔñµÄ³¡¾°Ô¤ÖÆÌå£¬Èç¹ûÁÐ±íÎª¿ÕÔò·µ»Ønull</returns>
+    /// <returns>ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½å£¬ï¿½ï¿½ï¿½ï¿½Ð±ï¿½Îªï¿½ï¿½ï¿½ò·µ»ï¿½null</returns>
     public TextAsset GetRandomSceneAsset()
     {
         if (_sceneAssetList == null || _sceneAssetList.Count == 0)
@@ -293,9 +293,9 @@ public class Mod_Scene : Module
     }
     
     /// <summary>
-    /// Ìí¼Ó³¡¾°Ô¤ÖÆÌåµ½ÁÐ±í
+    /// ï¿½ï¿½ï¿½Ó³ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½åµ½ï¿½Ð±ï¿½
     /// </summary>
-    /// <param name="sceneAsset">ÒªÌí¼ÓµÄ³¡¾°Ô¤ÖÆÌå</param>
+    /// <param name="sceneAsset">Òªï¿½ï¿½ï¿½ÓµÄ³ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½</param>
     public void AddSceneAsset(TextAsset sceneAsset)
     {
         if (sceneAsset != null && !_sceneAssetList.Contains(sceneAsset))
@@ -305,10 +305,10 @@ public class Mod_Scene : Module
     }
     
     /// <summary>
-    /// ´ÓÁÐ±íÖÐÒÆ³ý³¡¾°Ô¤ÖÆÌå
+    /// ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½
     /// </summary>
-    /// <param name="sceneAsset">ÒªÒÆ³ýµÄ³¡¾°Ô¤ÖÆÌå</param>
-    /// <returns>ÒÆ³ý³É¹¦·µ»Øtrue£¬·ñÔò·µ»Øfalse</returns>
+    /// <param name="sceneAsset">Òªï¿½Æ³ï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½</param>
+    /// <returns>ï¿½Æ³ï¿½ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½trueï¿½ï¿½ï¿½ï¿½ï¿½ò·µ»ï¿½false</returns>
     public bool RemoveSceneAsset(TextAsset sceneAsset)
     {
         return _sceneAssetList.Remove(sceneAsset);

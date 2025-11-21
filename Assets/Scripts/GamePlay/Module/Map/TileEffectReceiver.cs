@@ -99,7 +99,7 @@ public class TileEffectReceiver : Module
         ModSaveData.WriteData(lastGridPos);
     }
 
-      void OnDestroy()
+    void OnDestroy()
     {
         OnTileExit(lastGridPos);
     }
