@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class CameraFollowManager : Module
 {
+    #region 字段与属性
     [Header("模块数据")]
     public Ex_ModData ModData;
     public override ModuleData _Data
@@ -37,13 +38,12 @@ public class CameraFollowManager : Module
         }
         set => vcam = value;
     }
+    #endregion
 
     #region 生命周期方法
     public new void Awake()
     {
-        // 如果ID为空，则使用默认名称
-        if (string.IsNullOrEmpty(_Data.ID))
-            _Data.ID = ModText.Camera;
+         _Data.ID = ModText.Camera;
     }
 
     public override void Load()
@@ -67,12 +67,6 @@ public class CameraFollowManager : Module
         if (Vcam != null && CameraFollowItem != null)
         {
             Vcam.Follow = CameraFollowItem.transform;
-        }
-
-        // 重命名摄像机物体（添加空值检查）
-        if (CameraFollowItem != null)
-        {
-            transform.name = $"{CameraFollowItem.name} 的 Camera";
         }
 
         // 将摄像机脱离父对象（添加空值检查）

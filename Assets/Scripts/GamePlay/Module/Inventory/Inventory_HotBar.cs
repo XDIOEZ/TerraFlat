@@ -111,6 +111,10 @@ public class Inventory_HotBar : Inventory
         ChangeSelectBoxPosition(Data.Index);
         RefreshUI(CurrentIndex);
     }
+        public override void BindController()
+    {
+        Debug.Log("BindController Null " + Data.Name);
+    }
 
     /// <summary>
     /// 初始化输入控制器
@@ -337,7 +341,7 @@ public class Inventory_HotBar : Inventory
             Debug.LogError("[Inventory_HotBar] 物品IDName为空，无法实例化物品");
             return;
         }
-        
+        spawnLocation = this.transform;
         // 实例化物品
         Item itemInstance = ItemMgr.Instance.InstantiateItem(itemData.IDName, spawnLocation.gameObject, position: default);
 

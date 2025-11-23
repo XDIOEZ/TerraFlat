@@ -50,7 +50,8 @@ public class Mod_Inventory : Module,IInventory
             inventory.Data = Data.Data[_Data.Name];
         }
 
-       basePanel = Instantiate(Prefab_BasePanel,UIManager.Instance.gameObject.transform).GetComponentInChildren<BasePanel>();
+       basePanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_BasePanel).GetComponentInChildren<BasePanel>();
+
         inventory.basePanel = basePanel;
         if(Item_Data.ModuleDataDic.ContainsKey(_Data.Name))
         _Data = Item_Data.ModuleDataDic[_Data.Name];

@@ -16,7 +16,7 @@ public class Inventory_Hand : Inventory
 
     public override void BindController()
     {
-        
+        Debug.Log("BindController Null " + Data.Name);
     }
 
     public override void OnValidate()

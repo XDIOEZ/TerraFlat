@@ -26,7 +26,12 @@ public class GameManager : SingletonAutoMono<GameManager>
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
-        PathFindingSystem.SetActive(true);
+        // 初始化寻路系统
+        if(PathFindingSystem != null)
+            PathFindingSystem.SetActive(true);
+        else
+            Debug.LogError("寻路系统未赋值");
+
         Time.timeScale = 1;
     }
     #endregion

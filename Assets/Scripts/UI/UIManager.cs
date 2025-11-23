@@ -333,4 +333,37 @@ public class UIManager : MonoBehaviour
             panels[panel.PanleName] = panel;
         }
     }
+    
+    /// <summary>
+    /// 通过GameObject实例化面板对象
+    /// </summary>
+    /// <param name="panelPrefab">面板预制体</param>
+    /// <returns>实例化的面板组件</returns>
+    public BasePanel CreatePanelFromGameObject(GameObject panelPrefab)
+    {
+        if (panelPrefab == null)
+        {
+            Debug.LogWarning("Panel prefab cannot be null!");
+            return null;
+        }
+        
+        // 实例化面板对象并设置父对象
+        Transform parentTransform = panelRoot != null ? panelRoot : transform;
+        GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
+        
+        // 获取BasePanel组件
+        BasePanel panel = panelInstance.GetComponent<BasePanel>();
+        if (panel != null)
+        {
+            // 自动注册面板
+            RegisterPanel(panel);
+            return panel;
+        }
+        else
+        {
+            Debug.LogWarning($"Panel prefab '{panelPrefab.name}' does not have a BasePanel component!");
+            Destroy(panelInstance);
+            return null;
+        }
+    }
 }

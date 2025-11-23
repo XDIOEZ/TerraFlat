@@ -51,6 +51,7 @@ public class Inventory : MonoBehaviour
 
     public virtual void BindController()
     {
+        Debug.Log("BindController " + Data.Name);
           PlayerController playerController = Owner.itemMods.GetMod_ByID<PlayerController>(ModText.Controller);
 
         if(playerController == null)
