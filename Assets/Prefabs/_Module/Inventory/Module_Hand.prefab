@@ -1,0 +1,100 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8767320128831433282
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2921982359085929768}
+  - component: {fileID: 5653052531165560293}
+  - component: {fileID: 4559608427112961633}
+  m_Layer: 9
+  m_Name: Module_Hand
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2921982359085929768
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767320128831433282}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5653052531165560293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767320128831433282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75dc15573f8e77649b5c431365706aff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  Data:
+    Name: 
+    ID: "\u80CC\u5305\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
+    BasePanelIsOpen: 1
+  inventoryRefDic:
+    _serializedList:
+    - Key: "\u9ED8\u8BA4"
+      Value: {fileID: 4559608427112961633}
+  basePanel: {fileID: 0}
+  Prefab_BasePanel: {fileID: 6460790424826419754, guid: 382257fc2209ca64ab7c0de33d6a8a4f, type: 3}
+--- !u!114 &4559608427112961633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767320128831433282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecd7e0437b90ca94eb5a40ad94732514, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
+  ItemSlot_Parent: {fileID: 0}
+  Data:
+    Name: "\u80CC\u5305\u6A21\u5757"
+    itemSlots:
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    Index: 0
+    IsInjected: 0
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs:
+  - {fileID: 0}
+  DefaultTarget_Inventory: {fileID: 0}
+  Prefab_BasePanel: {fileID: 0}
+  basePanel: {fileID: 0}
+  GetItemAmountRate: 1

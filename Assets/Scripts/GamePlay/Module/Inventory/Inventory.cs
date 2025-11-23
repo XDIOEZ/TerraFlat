@@ -2,6 +2,7 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 public class Inventory : MonoBehaviour
 {
@@ -19,22 +20,23 @@ public class Inventory : MonoBehaviour
     //默认交互Inventory
     public Inventory DefaultTarget_Inventory;
 
+    [Tooltip("模块面板的预制体")]
+    public GameObject Prefab_BasePanel;
+    
+    public BasePanel basePanel;
     #endregion
 
     #region 生命周期
 
+    public virtual void OnValidate()
+    {
+        Data.Name = ModText.Bag;
+      
+    }
+
     public virtual void Awake()
     {
-        // 如果未设置数据则使用默认值
-        if (string.IsNullOrEmpty(Data.Name))
-            Data.Name = gameObject.name;
-
-        // 未设置Prefab 自动加载
-        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
-
-        // 如果未设置父物体则默认为第一个子物体
-        if (ItemSlot_Parent == null)
-            ItemSlot_Parent = transform.GetChild(0);
+        
     }
 
     public void OnDestroy()
@@ -45,16 +47,55 @@ public class Inventory : MonoBehaviour
     #endregion
 
     #region 初始化和同步
+    
+
+    public virtual void BindController()
+    {
+          PlayerController playerController = Owner.itemMods.GetMod_ByID<PlayerController>(ModText.Controller);
+
+        if(playerController == null)
+        {
+            Debug.LogError("Owner 未设置为 PlayerController");
+            return;
+        }
+
+        playerController._inputActions.Win10.B.performed += ctx =>
+        {
+            if (ctx.performed)
+            {
+                basePanel.Toggle();
+            }
+        };
+    }
 
     [Tooltip("在Load时调用此函数进行初始化")]
     public virtual void Init()
     {
+                // 未设置Prefab 自动加载
+        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
+
+        if(basePanel == null)
+        {
+            Debug.LogError("Prefab_BasePanel 未设置");
+            return;
+        }
+        
+        //TODO 获取BasePanel上的UI_Content组件作为Slot的父物体
+        ItemSlot_Parent = basePanel.transform.GetComponentInChildren<UI_Content>().transform;
+
+        if(ItemSlot_Parent == null)
+        {
+            Debug.LogError("ItemSlot_Parent 未设置");
+            return;
+        }
+
         // 如果未设置数据则自动创建
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
             Data.itemSlots[i].Index = i;
             Data.itemSlots[i].SlotMaxVolume = 100;
         }
+
 
         // 同步槽位数量与 itemSlots 保持一致
         int currentCount = ItemSlot_Parent.childCount;
@@ -160,7 +201,12 @@ public class Inventory : MonoBehaviour
 
     #endregion
 
-    #region UI刷新
+    #region UI
+
+    //TODO 基于新输入系统实现按下B键打开和关闭背包UI
+
+
+
 
     public void RefreshUI(int index)
     {
@@ -207,19 +253,50 @@ public class Inventory : MonoBehaviour
     public virtual void OnLeftClick(int index)
     {
         ItemSlot slot = Data.GetItemSlot(index);
-
+    
+        //防御性检查：确保DefaultTarget_Inventory不为null
+        if (DefaultTarget_Inventory == null)
+        {
+            Debug.LogWarning($"[{Data.Name}] 手部为空：DefaultTarget_Inventory未设置 ,点击了 [{index}]");
+            return;
+        }
+    
+        //防御性检查：确保DefaultTarget_Inventory的Data不为null
+        if (DefaultTarget_Inventory.Data == null)
+        {
+            Debug.LogWarning($"[{Data.Name}] 手部为空：DefaultTarget_Inventory.Data未设置");
+            return;
+        }
+    
         //默认为手部
         if (DefaultTarget_Inventory.Data.itemSlots.Count > index)
         {
+            //额外检查：确保目标槽位存在且不为null
+            if (DefaultTarget_Inventory.Data.itemSlots[index] == null)
+            {
+                Debug.LogWarning($"[{Data.Name}] 手部槽位 [{index}] 为空");
+            }
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
             DefaultTarget_Inventory.RefreshUI(index);
         }
         else
         {
+            //额外检查：确保默认槽位存在且不为null
+            if (DefaultTarget_Inventory.Data.itemSlots.Count == 0)
+            {
+                Debug.LogWarning($"[{Data.Name}] 手部物品槽列表为空");
+                return;
+            }
+            
+            if (DefaultTarget_Inventory.Data.itemSlots[0] == null)
+            {
+                Debug.LogWarning($"[{Data.Name}] 默认手部槽位 [0] 为空");
+            }
+            
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
             DefaultTarget_Inventory.RefreshUI(0);
         }
-
+    
         RefreshUI(index);
     }
 

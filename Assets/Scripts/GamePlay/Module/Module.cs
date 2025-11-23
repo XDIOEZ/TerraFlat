@@ -13,7 +13,7 @@ public abstract class Module : MonoBehaviour
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
-    public float Data;
+    public string[] Data;
     #endregion
     #region 模组参数
 
@@ -235,7 +235,7 @@ public abstract class Module : MonoBehaviour
         var mod = item.itemMods.GetMod_ByID(modID);
         if (mod == null)
         {
-            Debug.LogWarning($"没有找到模块- {modID} -在 {item.itemData.GameName}");
+            Debug.LogWarning($"没有找到模块:{modID} ,此查找来自: {item.itemData.GameName}");
             return null;
         }
 

@@ -31,8 +31,8 @@ public class BasePanel : MonoBehaviour
     
     // 记录面板的开关状态
     [SerializeField]
-    private bool isOpen = false;
-
+    private  bool isOpen = false;
+#region  Unity生命周期
     protected virtual void Awake()
     {
         PanleName = gameObject.name + Random.Range(1, 1000);
@@ -55,6 +55,24 @@ public class BasePanel : MonoBehaviour
         }
 
     }
+
+    void OnValidate()
+    {
+        if (canvasGroup == null)
+        {
+            canvasGroup = GetComponent<CanvasGroup>();
+        }
+        //TODO 自动设置CanvasScaler的UI Scale Mode为Scale With Screen Size
+        CanvasScaler canvasScaler = GetComponent<CanvasScaler>();
+        if (canvasScaler != null)
+        {
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            //TODO 设置为1920 * 1080
+            canvasScaler.referenceResolution = new Vector2(1920, 1080);
+        }
+        Dragger = GetComponent<UI_Drag>();
+    }
+    #endregion
 
     /// <summary>
     /// 自动收集所有子对象上的UI组件

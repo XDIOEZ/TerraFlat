@@ -5,12 +5,16 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// 快捷栏系统，继承自基础库存类，管理玩家的快捷物品栏
+/// 负责物品选择、显示和交互功能
+/// </summary>
 public class Inventory_HotBar : Inventory
 {
-    #region 字段
+    #region 字段与属性
 
     [Header("快捷栏设置")]
-    [Tooltip("生成位置")]
+    [Tooltip("物品生成位置")]
     public Transform spawnLocation;
 
     [Tooltip("快捷栏最大容量")]
@@ -23,30 +27,69 @@ public class Inventory_HotBar : Inventory
     [Range(0.01f, 0.5f)]
     public float SelectBoxChangeDuration = 0.1f;
 
+    /// <summary>
+    /// 当前选择框游戏对象
+    /// </summary>
     public GameObject SelectBox;
 
+    /// <summary>
+    /// 当前选中的物品槽
+    /// </summary>
     public ItemSlot CurrentSelectItemSlot;
 
-    public Mod_FocusPoint faceMouse; // 用于控制物品旋转的组件
-    public Mod_TurnBody turnBody;   // 用于控制转身的组件
+    /// <summary>
+    /// 用于控制物品旋转的组件
+    /// </summary>
+    public Mod_FocusPoint faceMouse; 
+    
+    /// <summary>
+    /// 用于控制转身的组件
+    /// </summary>
+    public Mod_TurnBody turnBody;   
 
-    // 当前选择的物品
+    /// <summary>
+    /// 当前选择的物品数据
+    /// </summary>
     public ItemData currentItemData;
+    
+    /// <summary>
+    /// 当前选择的物品实例
+    /// </summary>
     public Item CurentSelectItem;
+    
+    /// <summary>
+    /// 当前选择物品的游戏对象
+    /// </summary>
     public GameObject currentObject;
 
-    // 当前索引与最大索引
+    /// <summary>
+    /// 当前索引属性
+    /// </summary>
     public int CurrentIndex { get => Data.Index; set => Data.Index = value; }
+    
+    /// <summary>
+    /// 最大索引属性
+    /// </summary>
     public int MaxIndex { get => Data.itemSlots.Count; }
 
     #endregion
 
-    #region 公有方法
+    public override void OnValidate()
+    {
+        Data.Name = ModText.Hotbar;
+    }
 
+
+    #region 初始化与设置
+
+    /// <summary>
+    /// 初始化快捷栏系统
+    /// </summary>
     public override void Init()
     {
         base.Init();
 
+        // 实例化选择框
         SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
 
         // 获取FaceMouse组件（用于控制物品旋转）
@@ -63,13 +106,15 @@ public class Inventory_HotBar : Inventory
             Debug.LogWarning("[Inventory_HotBar] 未找到TurnBody组件，物品将无法实现转身镜像");
         }
 
+        // 初始化控制器和UI
         Controller_Init();
-        //修改选择框位置
         ChangeSelectBoxPosition(Data.Index);
-        // 同步 UI
         RefreshUI(CurrentIndex);
     }
 
+    /// <summary>
+    /// 初始化输入控制器
+    /// </summary>
     public void Controller_Init()
     {
         // 先确保 Owner 存在
@@ -78,20 +123,16 @@ public class Inventory_HotBar : Inventory
             Debug.LogWarning($"[{name}] Controller_Init: Owner 为空，无法初始化输入");
             return;
         }
-
-        // 获取 PlayerController
+    
+        // 获取 PlayerController（仅从Owner获取，不再进行全局查找）
         var playerController = Owner.GetComponent<PlayerController>();
         if (playerController == null)
         {
-            // 兜底：全局查找
-            playerController = FindObjectOfType<PlayerController>();
-            if (playerController == null)
-            {
-                Debug.LogWarning($"[{name}] Controller_Init: 未找到 PlayerController");
-                return;
-            }
+            // 直接返回，不再进行全局查找
+            Debug.LogWarning($"[{name}] Controller_Init: Owner上未找到 PlayerController，可能是非玩家对象使用快捷栏");
+            return;
         }
-
+    
         // 确保 inputActions 已初始化
         var inputActions = playerController._inputActions;
         if (inputActions == null)
@@ -99,23 +140,32 @@ public class Inventory_HotBar : Inventory
             Debug.LogWarning($"[{name}] Controller_Init: PlayerController._inputActions 为空");
             return;
         }
-
+    
         // 绑定输入事件
         var input = inputActions.Win10;
         input.RightClick.performed += _ => Controller_ItemAct();
         input.MouseScroll.started += SwitchHotbarByScroll;
-
+    
         Debug.Log($"[{name}] 成功绑定输入事件", this);
     }
 
+    #endregion
 
-    //激活手持物品行为
+    #region 物品交互
+
+    /// <summary>
+    /// 激活手持物品行为
+    /// </summary>
     public void Controller_ItemAct()
     {
         if (CurentSelectItem != null)
             CurentSelectItem.Act();
     }
 
+    /// <summary>
+    /// 处理左键点击事件
+    /// </summary>
+    /// <param name="index">点击的槽位索引</param>
     public override void OnLeftClick(int index)
     {
         //完成基础的物品交换逻辑
@@ -126,7 +176,14 @@ public class Inventory_HotBar : Inventory
         RefreshUI(CurrentIndex);
     }
 
+    #endregion
 
+    #region 快捷栏切换
+
+    /// <summary>
+    /// 通过鼠标滚轮切换快捷栏
+    /// </summary>
+    /// <param name="context">输入事件上下文</param>
     private void SwitchHotbarByScroll(InputAction.CallbackContext context)
     {
         if (IsPointerOverUI())
@@ -144,6 +201,10 @@ public class Inventory_HotBar : Inventory
         }
     }
 
+    /// <summary>
+    /// 检查指针是否在UI上
+    /// </summary>
+    /// <returns>如果指针在UI上返回true，否则返回false</returns>
     private bool IsPointerOverUI()
     {
         PointerEventData eventData = new PointerEventData(EventSystem.current)
@@ -156,16 +217,22 @@ public class Inventory_HotBar : Inventory
         return results.Count > 0;
     }
 
+    /// <summary>
+    /// 改变选择框位置
+    /// </summary>
+    /// <param name="newIndex">新的索引位置</param>
     public void ChangeSelectBoxPosition(int newIndex)
     {
         // 销毁之前的物品并从旋转列表中移除
         DestroyCurrentObject(CurentSelectItem);
 
-        newIndex = (newIndex + MaxIndex) % MaxIndex; // 确保索引合法
+        // 确保索引合法（循环索引）
+        newIndex = (newIndex + MaxIndex) % MaxIndex;
         CurrentIndex = newIndex;
 
         if (SelectBox != null)
         {
+            // 移动选择框到目标位置
             GameObject targetSlot = itemSlotUIs[newIndex].gameObject;
             SelectBox.transform.DOKill();
             SelectBox.transform.SetParent(targetSlot.transform, worldPositionStays: true);
@@ -182,8 +249,12 @@ public class Inventory_HotBar : Inventory
 
     #endregion
 
-    #region 私有方法
+    #region 物品管理
 
+    /// <summary>
+    /// 设置选择框的层级顺序
+    /// </summary>
+    /// <param name="order">层级顺序值</param>
     private void SetSelectBoxSortingOrder(int order)
     {
         if (SelectBox != null)
@@ -208,6 +279,10 @@ public class Inventory_HotBar : Inventory
         }
     }
 
+    /// <summary>
+    /// 销毁当前物品
+    /// </summary>
+    /// <param name="obj">要销毁的物品</param>
     public void DestroyCurrentObject(Item obj)
     {
         if (obj != null)
@@ -228,9 +303,14 @@ public class Inventory_HotBar : Inventory
         }
     }
 
-    // 完成：将新增对象添加到FaceMouse的旋转列表中，实现旋转控制
+    /// <summary>
+    /// 切换到新物品
+    /// 将新增对象添加到FaceMouse的旋转列表中，实现旋转控制
+    /// </summary>
+    /// <param name="index">物品索引</param>
     private void ChangeNewObject(int index)
     {
+        // 参数验证
         if (index < 0 || index >= MaxIndex)
         {
             Debug.LogError($"[ChangeNewObject] 索引 {index} 超出范围！");
@@ -244,6 +324,21 @@ public class Inventory_HotBar : Inventory
         }
 
         ItemData itemData = slot.itemData;
+        
+        // 添加防御性检查 - 检查ItemData.name是否为空
+        if (string.IsNullOrEmpty(itemData.IDName))
+        {
+            Debug.LogWarning($"[Inventory_HotBar] 物品ID为空或未设置名称，Prefab ID: {itemData.IDName}");
+        }
+        
+        // 添加防御性检查 - 检查IDName是否为空
+        if (string.IsNullOrEmpty(itemData.IDName))
+        {
+            Debug.LogError("[Inventory_HotBar] 物品IDName为空，无法实例化物品");
+            return;
+        }
+        
+        // 实例化物品
         Item itemInstance = ItemMgr.Instance.InstantiateItem(itemData.IDName, spawnLocation.gameObject, position: default);
 
         if (itemInstance == null)

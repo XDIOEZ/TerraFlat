@@ -1,0 +1,298 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5660485539541164538
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6072322925231242487}
+  - component: {fileID: 8943846949572410620}
+  - component: {fileID: 5027628569039665932}
+  m_Layer: 9
+  m_Name: Module_Bag
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6072322925231242487
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5660485539541164538}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8943846949572410620
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5660485539541164538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75dc15573f8e77649b5c431365706aff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  Data:
+    Name: 
+    ID: "\u80CC\u5305\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
+    BasePanelIsOpen: 1
+  inventoryRefDic:
+    _serializedList:
+    - Key: "\u9ED8\u8BA4"
+      Value: {fileID: 5027628569039665932}
+  basePanel: {fileID: 0}
+  Prefab_BasePanel: {fileID: 5019330763773049737, guid: 6dad61aac020ddd4a802165922117e55, type: 3}
+--- !u!114 &5027628569039665932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5660485539541164538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  ItemSlot_Prefab: {fileID: 1383055589276552779, guid: 00321e829cd3f504ebf5c22b9aeff708, type: 3}
+  ItemSlot_Parent: {fileID: 0}
+  Data:
+    Name: "\u80CC\u5305\u6A21\u5757"
+    itemSlots:
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    Index: 0
+    IsInjected: 0
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs: []
+  DefaultTarget_Inventory: {fileID: 0}
+  Prefab_BasePanel: {fileID: 0}
+  basePanel: {fileID: 0}

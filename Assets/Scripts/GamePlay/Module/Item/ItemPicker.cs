@@ -2,17 +2,79 @@ using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ItemPicker : MonoBehaviour
+/// <summary>
+/// 物品拾取器组件，用于自动收集可拾取物品
+/// </summary>
+public class ItemPicker : Module
 {
+
+     #region 基础参数
+
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
+
+    public string[] Data;
+    #endregion
+
+    #region 生命周期
+
+    public override void Awake()
+    {
+            _Data.ID = ModText.Picker;
+    }
+
+    public override void Load()
+    {
+        ModSaveData.ReadData(ref Data);
+        if(AddTargetInventories.Count == 0)
+        AddTargetInventories.Add(item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).inventory);
+        
+         if(AddTargetInventories.Count == 0)
+        AddTargetInventories.Add(item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Hotbar).inventory);
+
+                 if(AddTargetInventories.Count == 0)
+        AddTargetInventories.Add(item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Hand).inventory);
+    }
+    
+    /// <summary>
+    /// 初始化时尝试获取自身的Inventory组件
+    /// </summary>
+    private void Start()
+    {
+    }
+    public override void Save()
+    {
+        ModSaveData.WriteData(Data);
+    }
+    public override void Act()
+    {
+        base.Act();
+    }
+    #endregion
+
+
+    #region 字段与属性
+
     [Header("目标物品栏（按优先级排列）")]
-    public List<Inventory> AddTargetInventories = new List<Inventory>(); // 改为列表
+    /// <summary>
+    /// 物品添加目标物品栏列表，按优先级排序
+    /// </summary>
+    public List<Inventory> AddTargetInventories = new List<Inventory>();
 
-    public bool canPickUp = true;
+    /// <summary>
+    /// 基础拾取权限控制变量
+    /// </summary>
+    private bool canPickUp = true;
 
+    /// <summary>
+    /// 综合判断是否可以拾取物品
+    /// 1. 检查基础权限
+    /// 2. 检查是否有可用的物品栏
+    /// </summary>
     public bool CanPickUp
     {
         get
-        {
+        {            
             // 所有目标背包都满了，才不能拾取
             foreach (var inventory in AddTargetInventories)
             {
@@ -23,56 +85,65 @@ public class ItemPicker : MonoBehaviour
             }
             return false;
         }
-
         set => canPickUp = value;
     }
 
-    private void Start()
-    {
-        // 若列表为空则尝试自动获取当前对象上的 Inventory
-        if (AddTargetInventories.Count == 0)
-        {
-            Inventory inv = GetComponent<Inventory>();
-            if (inv != null)
-            {
-                AddTargetInventories.Add(inv);
-            }
-        }
-    }
+    #endregion
 
+
+
+    #region 物品交互
+
+    /// <summary>
+    /// 当有物体进入触发器时尝试拾取物品
+    /// </summary>
+    /// <param name="other">进入触发器的碰撞体</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
+        // 检查物品栏列表是否为空
         if (AddTargetInventories.Count == 0)
         {
-            Debug.LogWarning("ItemPicker: AddTargetInventories is empty");
+            Debug.LogWarning($"[{nameof(ItemPicker)}] AddTargetInventories is empty on {gameObject.name}");
             return;
         }
 
+        // 检查是否具有拾取权限
+        if (!CanPickUp)
+        {
+            return;
+        }
+
+        // 获取物品组件
         var pickAble = other.GetComponent<Item>();
- 
-        if (pickAble != null && pickAble.itemData.Stack.CanBePickedUp ==true)
+        
+        if (pickAble != null && pickAble.itemData.Stack.CanBePickedUp)
         {
             ItemData itemData = pickAble.itemData;
 
             // 遍历所有背包，找到第一个可以添加的
             foreach (var inventory in AddTargetInventories)
             {
-                if (inventory != null && inventory.Data.TryAddItem(itemData,false))
+                if (inventory != null && inventory.Data != null)
                 {
-                    
-                    itemData.Stack.CanBePickedUp = false; // 物品堆栈的 CanBePickedUp 置为 false
-
-                    pickAble.ModuleSave(); // 保存物品堆栈数据
-
-                    inventory.Data.TryAddItem(itemData);
-
-                    Destroy(pickAble.gameObject); // 物品拾取后销毁
-
-                    return; // 添加成功后立即返回
+                    if (inventory.Data.TryAddItem(itemData))
+                    {
+                        // 标记物品为已被拾取
+                        itemData.Stack.CanBePickedUp = false;
+                        
+                        // 保存物品数据
+                        pickAble.ModuleSave();
+                        
+                        // 销毁物品对象
+                        Destroy(pickAble.gameObject);
+                        
+                        return; // 添加成功后立即返回
+                    }
                 }
             }
 
-            Debug.Log("所有目标背包都满了，无法拾取物品。");
+            Debug.Log($"[{nameof(ItemPicker)}] All target inventories are full, cannot pick up item: {itemData.IDName}");
         }
     }
+
+    #endregion
 }

@@ -64,12 +64,7 @@ public class Player : Item
     #region 生命周期
     public override void Start()
     {
-        ItemMgr.Instance.Player_DIC[Data.Name_User] = this;
         base.Start();
-        
-        // 确保游戏开始时时间流逝速度为正常速度
-        timeScale = 1.0f;
-        Time.timeScale = timeScale;
     }
 
     public override void Act()
