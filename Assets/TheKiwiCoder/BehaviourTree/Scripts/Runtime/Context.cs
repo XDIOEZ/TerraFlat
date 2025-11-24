@@ -26,7 +26,6 @@ namespace TheKiwiCoder {
         public ItemDetector itemDetector;
         public Mover_AI mover;
         public Item item;
-        public Map map;
         public DamageReceiver damageReciver;
         public Mod_Damage Damage;
         public Mod_Food Food;
@@ -57,8 +56,32 @@ namespace TheKiwiCoder {
             context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover_AI;
             context.Food = context.item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
             context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID(ModText.TileEffect) as TileEffectReceiver;
-            context.map = context.tileEffectReceiver.Cache_map;
+            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID(ModText.TileEffectReceiver) as TileEffectReceiver;
+            context.buffManager = context.item.itemMods.GetMod_ByID(ModText.BuffManager) as BuffManager;
+            return context;
+        }
+                public static Context CreateFromItem(Item item) {
+            // Fetch all commonly used components
+            Context context = new Context();
+            context.item = item;
+            context.gameObject = item.gameObject;
+            context.transform = context.item.transform;
+            
+            context.animator = context.item.GetComponentInChildren<Animator>();
+            context.physics = context.item.GetComponent<Rigidbody>();
+            context.agent = context.item.GetComponentInChildren<NavMeshAgent>();
+            context.sphereCollider = context.item.GetComponent<SphereCollider>();
+            context.boxCollider = context.item.GetComponent<BoxCollider>();
+            context.capsuleCollider = context.item.GetComponent<CapsuleCollider>();
+            context.characterController = context.item.GetComponent<CharacterController>();
+            context.itemDetector = context.item.GetComponentInChildren<ItemDetector>();
+            context.Damage = context.item.GetComponentInChildren<Mod_Damage>();
+            // Add whatever else you need here...
+
+            context.mover = context.item.itemMods.GetMod_ByID(ModText.Mover) as Mover_AI;
+            context.Food = context.item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+            context.damageReciver = context.item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+            context.tileEffectReceiver = context.item.itemMods.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver);
             context.buffManager = context.item.itemMods.GetMod_ByID(ModText.BuffManager) as BuffManager;
             return context;
         }

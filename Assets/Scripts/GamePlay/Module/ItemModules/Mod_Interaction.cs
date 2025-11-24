@@ -25,12 +25,9 @@ public class Mod_Interaction : Module
     public UltEvent<Item> FastTest;    // 快速测试事件
 
     // ─────────────────────────────── 生命周期 ───────────────────────────────
-    public override void Awake()
+    public void OnValidate()
     {
-        if (string.IsNullOrEmpty(_Data.ID))
-        {
             _Data.ID = ModText.Interact;
-        }
     }
 
     public override void Load()

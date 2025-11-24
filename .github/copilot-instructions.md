@@ -8,7 +8,7 @@
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: Player
+  - Name: AI模块
   - Tag: Untagged
-  - Layer: Default
+  - Layer: 9
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
@@ -34,6 +35,9 @@ public class UIManager : MonoBehaviour
     // 面板的父对象
     public Transform panelRoot;
     
+    // panelRoot的预制体，可在Inspector中挂接
+    public GameObject panelRootPrefab;
+    
     // 预制体引用（可选）
     public GameObject[] panelPrefabs;
 
@@ -53,13 +57,68 @@ public class UIManager : MonoBehaviour
         
         // 初始化面板字典
         InitializePanels();
+        
+        // 确保panelRoot存在
+        EnsurePanelRootExists();
     }
-
+    
+    /// <summary>
+    /// 确保panelRoot存在，如果不存在则在当前激活场景中创建
+    /// </summary>
+    private void EnsurePanelRootExists()
+    {
+        // 如果panelRoot已经存在，直接返回
+        if (panelRoot != null)
+            return;
+        
+        // 尝试在场景中查找现有的PanelRoot
+        GameObject existingPanelRoot = GameObject.Find("PanelRoot");
+        if (existingPanelRoot != null)
+        {
+            panelRoot = existingPanelRoot.transform;
+            return;
+        }
+        
+        // 创建新的panelRoot
+        GameObject canvasObj;
+        
+        // 如果提供了panelRootPrefab，优先使用预制体实例化
+        if (panelRootPrefab != null)
+        {
+            canvasObj = Instantiate(panelRootPrefab);
+            canvasObj.name = "PanelRoot";
+        }
+        else
+        {
+            // 否则创建默认的Canvas对象
+            canvasObj = new GameObject("PanelRoot");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            
+            // 添加CanvasScaler组件
+            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            
+            // 添加GraphicRaycaster组件
+            canvasObj.AddComponent<GraphicRaycaster>();
+        }
+        
+        // 确保panelRoot不会被销毁（除非场景切换）
+        // 注意：我们不使用DontDestroyOnLoad，这样它会随着场景切换而销毁
+        panelRoot = canvasObj.transform;
+        
+        Debug.Log("PanelRoot created in current active scene.");
+    }
+    
     /// <summary>
     /// 初始化所有面板
     /// </summary>
     private void InitializePanels()
     {
+        // 确保panelRoot存在
+        EnsurePanelRootExists();
+        
         panels.Clear();
         
         // 查找场景中所有的BasePanel组件
@@ -77,7 +136,7 @@ public class UIManager : MonoBehaviour
             }
         }*/
     }
-
+    
     /// <summary>
     /// 获取指定名称的面板
     /// </summary>
@@ -195,8 +254,11 @@ public class UIManager : MonoBehaviour
             return null;
         }
         
+        // 确保panelRoot存在
+        EnsurePanelRootExists();
+        
         // 创建面板实例
-        Transform parentTransform = parent != null ? parent : (panelRoot != null ? panelRoot : transform);
+        Transform parentTransform = parent != null ? parent : panelRoot;
         GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
         
         // 获取BasePanel组件
@@ -347,8 +409,11 @@ public class UIManager : MonoBehaviour
             return null;
         }
         
+        // 确保panelRoot存在
+        EnsurePanelRootExists();
+        
         // 实例化面板对象并设置父对象
-        Transform parentTransform = panelRoot != null ? panelRoot : transform;
+        Transform parentTransform = panelRoot;
         GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
         
         // 获取BasePanel组件

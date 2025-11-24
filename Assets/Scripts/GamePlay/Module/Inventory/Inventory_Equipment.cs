@@ -11,6 +11,11 @@ public class Inventory_Equipment : Inventory
 
     public GameObject ModulesParent;
 
+    public override void OnValidate()
+    {
+        Data.Name = ModText.Equipment;
+    }
+
     /// <summary>
     /// 初始化时激活所有已装备物品的模块
     /// </summary>
@@ -35,6 +40,7 @@ public class Inventory_Equipment : Inventory
         }
 
     }
+
 
     /// <summary>
     /// 保存时移除所有装备模块

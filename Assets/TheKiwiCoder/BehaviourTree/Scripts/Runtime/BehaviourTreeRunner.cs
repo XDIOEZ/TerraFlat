@@ -12,7 +12,7 @@ namespace TheKiwiCoder
         [ShowInInspector]
         Context context;
 
-        private bool isRunning = false; // Ĭ��Ϊֹͣ״̬
+        public bool isRunning = false; // Ĭ��Ϊֹͣ״̬
         public Ex_ModData_MemoryPackable ModData;
         public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
 
@@ -22,7 +22,7 @@ namespace TheKiwiCoder
             {
                 _Data.ID = ModText.AI;
             }
-            isRunning = false;
+            StopTree();
         }
 
         void InitTree()
@@ -50,7 +50,7 @@ namespace TheKiwiCoder
 
         Context CreateBehaviourTreeContext()
         {
-            return Context.CreateFromGameObject(item.gameObject);
+            return Context.CreateFromItem(item);
         }
 
         public void StopTree()

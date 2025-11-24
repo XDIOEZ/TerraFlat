@@ -21,6 +21,8 @@ public static class ModText
     public static string Composite = "组合模块";
     public static string Controller = "Controller模块";
     public static string ColdWeapon = "冷兵器攻击模块";
+    
+    public static string ChunkLoader = "区块加载模块";
     #endregion
 
     #region D
@@ -73,7 +75,7 @@ public static class ModText
 
     #region T
     public static string TrunBody = "TrunBody";
-    public static string TileEffect = "TileReciver";
+    public static string TileEffectReceiver = "TileReciver";
     #endregion
 }
 public static class AnimationText

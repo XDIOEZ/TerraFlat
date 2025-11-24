@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7710152809729702809}
   - component: {fileID: 1349947316172305539}
   m_Layer: 0
-  m_Name: "\u533A\u5757\u52A0\u8F7D\u5668"
+  m_Name: Module_ChunkLoder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -47,10 +47,11 @@ MonoBehaviour:
   item: {fileID: 0}
   ModData:
     Name: 
-    ID: Loader
+    ID: "\u533A\u5757\u52A0\u8F7D\u6A21\u5757"
     isRunning: 1
     Type: 0
     BitData: 
-  UnActiveDistance: 1
+  UnActiveDistance: 2
   DestroyChunkDistance: 3
-  LoadChunkDistance: 1
+  LoadChunkDistance: 2
+  lastChunkPos: {x: 0, y: 0}

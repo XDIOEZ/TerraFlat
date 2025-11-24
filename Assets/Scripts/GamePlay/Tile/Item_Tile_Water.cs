@@ -64,6 +64,22 @@ public class Item_Tile_Water : Item, IBlockTile
         bool validItem = item != null;
         BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
 
+          // 模块添加逻辑（入水特效）
+        if (validItem && item.itemMods.GetMod_ByID("入水特效")==null)
+        {
+            Module.ADDModTOItem(item, "入水特效");
+
+            // 获取模块的 Transform 并修改位置
+            Transform modTransform = item.itemMods.GetMod_ByID("入水特效").transform;
+            Vector3 pos = modTransform.localPosition;
+            //tile的位置
+            //通过Tile获取env的参数
+            TileData_Water water  = tileData as TileData_Water;
+
+            pos.y = Mathf.Lerp(-0.7f, 0,water.DeepValue.Value );
+            pos.x = 0f;
+            modTransform.localPosition = pos;
+        }
         // Buff 添加逻辑
         if (!validItem)
         {
@@ -90,29 +106,16 @@ public class Item_Tile_Water : Item, IBlockTile
                 buffManager.AddBuffRuntime(buffData,item);
             }
         }
-
-        // 模块添加逻辑（入水特效）
-        if (validItem && item.itemMods.GetMod_ByID("入水特效")==null)
-        {
-            Module.ADDModTOItem(item, "入水特效");
-
-            // 获取模块的 Transform 并修改位置
-            Transform modTransform = item.itemMods.GetMod_ByID("入水特效").transform;
-            Vector3 pos = modTransform.localPosition;
-            //tile的位置
-            //通过Tile获取env的参数
-            TileData_Water water  = tileData as TileData_Water;
-
-            pos.y = Mathf.Lerp(-0.7f, 0,water.DeepValue.Value );
-            pos.x = 0f;
-            modTransform.localPosition = pos;
-        }
     }
 
 
 
     public void Tile_Exit(Item item, TileData tileData)
     {
+          if (item.itemMods.GetMod_ByID("入水特效") != null)
+        Module.REMOVEModFROMItem(item, "入水特效");
+
+
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
         if (buffManager == null) return;
 
@@ -124,8 +127,6 @@ public class Item_Tile_Water : Item, IBlockTile
             }
         }
 
-        if (item.itemMods.GetMod_ByID("入水特效") != null)
-        Module.REMOVEModFROMItem(item, "入水特效");
     }
 
 

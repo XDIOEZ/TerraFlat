@@ -5,12 +5,14 @@ using UnityEngine;
 
 /// <summary>
 /// Tile效果接收器模块，用于处理物品与地图Tile的交互
+/// 负责检测物品所在的Tile变化，并触发相应的进入、退出和更新事件
 /// </summary>
 public class TileEffectReceiver : Module
 {
     #region 公共变量
     [Header("位置信息")]
     public Vector2Int lastGridPos;
+    [Header("当前所处地图缓存")]
     public Map Cache_map;
     
     [Header("Tile事件")]
@@ -22,6 +24,7 @@ public class TileEffectReceiver : Module
     #endregion
 
     #region 静态缓存相关
+    
     // 所有实例共享的预制体缓存
     private static readonly Dictionary<string, IBlockTile> prefabCache = new Dictionary<string, IBlockTile>();
     // 缓存操作的线程安全锁
@@ -43,8 +46,6 @@ public class TileEffectReceiver : Module
     #region 生命周期
     private void Start()
     {
-        InitializeMap();
-        InitializeItem();
         UpdateMapReference();
         lastGridPos = GetCurrentGridPos();
         // 初始化当前TileData缓存
@@ -54,35 +55,42 @@ public class TileEffectReceiver : Module
         OnTileEnter(lastGridPos);
     }
 
-    public override void Awake()
+    private void OnValidate()
     {
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.TileEffect;
-        }
+        // 设置模块ID
+        _Data.ID = ModText.TileEffectReceiver;
     }
 
     private void Update()
     {
+        // 定期清理缓存
+        CleanupCacheIfNeeded();
+        
         UpdateMapReference();
         
         Vector2Int currentGridPos = GetCurrentGridPos();
         if (currentGridPos != lastGridPos)
-        {
+        {            
+            // 先退出旧的Tile
             OnTileExit(lastGridPos);
 
-            ChunkMgr.Instance.GetChunkByItemPosition(currentGridPos, out Chunk chunk);
+            // 获取新位置所在的Chunk
+            Chunk chunk;
+            ChunkMgr.Instance.GetChunkByItemPosition(currentGridPos, out chunk);
+            
             if (chunk == null)
-            {
-                // 踏上空白地图，不触发事件
+            {                // 踏上空白地图，不触发事件
                 return;
             }
+            
             Cache_map = chunk.Map;
-
             lastGridPos = currentGridPos;
+            
+            // 进入新的Tile
             OnTileEnter(currentGridPos);
         }
 
+        // 每帧更新当前Tile状态
         OnTileUpdate(currentGridPos);
     }
     #endregion
@@ -91,16 +99,17 @@ public class TileEffectReceiver : Module
     public override void Load()
     {
         ModSaveData.ReadData(ref lastGridPos);
+        InitializeMap();
     }
 
     public override void Save()
     {
-        
         ModSaveData.WriteData(lastGridPos);
     }
 
-    void OnDestroy()
+    private void OnDestroy()
     {
+        // 确保在销毁时退出当前Tile
         OnTileExit(lastGridPos);
     }
     
@@ -121,20 +130,19 @@ public class TileEffectReceiver : Module
     /// </summary>
     private void InitializeMap()
     {
-        if (Cache_map == null)
-        {
-            //因为离开矿洞是Data中保存的位置是上一次的所以需要重新获取
-            ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
-            if (chunk == null)
-            {
-               Debug.LogWarning("TileEffectReceiver: 未找到有效的 Chunk 组件！");
-               if (item != null)
-               Debug.LogWarning($"TileEffectReceiver: 未找到有效的 Chunk 组件！, 对象为{item.itemData.IDName}");
-               return;
-            }
-            Cache_map = chunk.Map;
+        if (Cache_map != null) return;
+        
+        // 从当前位置获取Chunk和Map引用
+        Chunk chunk;
+        ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out chunk);
+        
+        if (chunk == null)
+        {            Debug.LogWarning($"TileEffectReceiver: 未找到有效的 Chunk 组件！{(item != null ? $"对象: {item.itemData.IDName}" : "")}");
+            return;
         }
-
+        
+        Cache_map = chunk.Map;
+        // 如果仍未找到Map，尝试在场景中查找
         if (Cache_map == null)
         {
             Cache_map = FindFirstObjectByType<Map>();
@@ -146,75 +154,60 @@ public class TileEffectReceiver : Module
             enabled = false;
         }
     }
-
-    /// <summary>
-    /// 初始化物品引用
-    /// </summary>
-    private void InitializeItem()
-    {
-        if (item == null)
-        {
-            item = GetComponentInParent<Item>();
-        }
-    }
     
     /// <summary>
     /// 更新地图引用
+    /// 当当前Map为空或未激活时重新获取Map引用
     /// </summary>
     private void UpdateMapReference()
     {
         if (Cache_map == null || !Cache_map.gameObject.activeInHierarchy)
         {
-            ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out Chunk chunk);
+            Chunk chunk;
+            ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out chunk);
             Cache_map = chunk?.Map;
         }
     }
     #endregion
 
     #region Tile事件处理
+    /// <summary>
+    /// 处理进入Tile的逻辑
+    /// </summary>
     private void OnTileEnter(Vector2Int gridPos)
     {
         if (item == null) return;
-        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
-        {
-            if (tileBlock == null)
-            {
-                Debug.LogError("TileEffectReceiver: TileBlock为空！");
-                return;
-            }
-            // 更新当前TileData缓存
+        
+        if (TryGetTileBlock(gridPos, out TileData tileData, out IBlockTile tileBlock))
+        {            // 更新当前TileData缓存
             currentTileData = tileData;
             tileBlock.Tile_Enter(item, tileData);
             OnTileEnterEvent.Invoke(tileData);
         }
     }
 
+    /// <summary>
+    /// 处理离开Tile的逻辑
+    /// </summary>
     private void OnTileExit(Vector2Int gridPos)
     {
         if (item == null) return;
-        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
-        {
-            if(tileBlock == null)
-            {
-                Debug.LogError("TileEffectReceiver: TileBlock为空！");
-                return;
-            }
-            tileBlock.Tile_Exit(item, tileData);
+        
+        if (TryGetTileBlock(gridPos, out TileData tileData, out IBlockTile tileBlock))
+        {            tileBlock.Tile_Exit(item, tileData);
             OnTileExitEvent.Invoke(tileData);
         }
     }
 
+    /// <summary>
+    /// 处理Tile更新的逻辑
+    /// </summary>
     private void OnTileUpdate(Vector2Int gridPos)
     {
         if (Cache_map == null || item == null) return;
-        if (TryGetTileBlock(gridPos, out var tileData, out var tileBlock))
-        {
-            if (tileBlock == null)
-            {
-                Debug.LogError("TileEffectReceiver: TileBlock为空！");
-                return;
-            }
-            // 更新当前TileData缓存
+        
+        if (TryGetTileBlock(gridPos, out TileData tileData, out IBlockTile tileBlock))
+        {            // 更新当前TileData缓存
             currentTileData = tileData;
             tileBlock.Tile_Update(item, tileData);
         }
@@ -230,11 +223,11 @@ public class TileEffectReceiver : Module
         if (Time.time - lastCleanupTime < cleanupInterval) return;
 
         lock (cacheLock)
-        {
-            // 清除null值缓存（可能是加载失败的预制体）
-            var invalidKeys = prefabCache.Where(kv => kv.Value == null)
-                                         .Select(kv => kv.Key)
-                                         .ToList();
+        {            // 清除null值缓存（可能是加载失败的预制体）
+            var invalidKeys = prefabCache
+                .Where(kv => kv.Value == null)
+                .Select(kv => kv.Key)
+                .ToList();
 
             foreach (var key in invalidKeys)
             {
@@ -252,8 +245,7 @@ public class TileEffectReceiver : Module
     public static void ClearCache()
     {
         lock (cacheLock)
-        {
-            prefabCache.Clear();
+        {            prefabCache.Clear();
             Debug.Log("TileEffectReceiver: 已手动清空所有缓存");
         }
     }
@@ -263,9 +255,10 @@ public class TileEffectReceiver : Module
     /// </summary>
     public static void RemoveFromCache(string itemName)
     {
+        if (string.IsNullOrEmpty(itemName)) return;
+        
         lock (cacheLock)
-        {
-            if (prefabCache.ContainsKey(itemName))
+        {            if (prefabCache.ContainsKey(itemName))
             {
                 prefabCache.Remove(itemName);
             }
@@ -281,26 +274,26 @@ public class TileEffectReceiver : Module
     {
         // 若地图为空，则返回上一次的坐标
         if (Cache_map == null) return lastGridPos;
+        
         Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
         return new Vector2Int(cell.x, cell.y);
     }
 
     /// <summary>
-    /// 尝试获取指定位置的Tile块
+    /// 尝试获取指定位置的Tile块和Tile数据
     /// </summary>
     private bool TryGetTileBlock(Vector2Int pos, out TileData tileData, out IBlockTile tileBlock)
     {
+        tileData = null;
+        tileBlock = null;
+        
+        // 获取Tile数据
         tileData = Cache_map?.GetTile(pos);
-        if (tileData == null)
-        {
-            tileBlock = null;
-            return false;
-        }
+        if (tileData == null) return false;
 
-        // 从缓存获取
+        // 从缓存获取IBlockTile
         lock (cacheLock)
-        {
-            if (prefabCache.TryGetValue(tileData.Name_ItemName, out tileBlock))
+        {            if (prefabCache.TryGetValue(tileData.Name_ItemName, out tileBlock))
             {
                 return tileBlock != null;
             }
@@ -309,27 +302,21 @@ public class TileEffectReceiver : Module
         // 缓存未命中，加载预制体
         var prefab = GameRes.Instance?.GetPrefab(tileData.Name_ItemName);
         if (prefab == null)
-        {
-            Debug.LogError($"找不到 Prefab: {tileData.Name_ItemName}");
-            tileBlock = null;
+        {            Debug.LogError($"TileEffectReceiver: 找不到 Prefab: {tileData.Name_ItemName}");
             return false;
         }
 
         var itemComp = prefab.GetComponent<Item>();
         if (itemComp is IBlockTile block)
-        {
-            tileBlock = block;
+        {            tileBlock = block;
             // 存入缓存
             lock (cacheLock)
-            {
-                prefabCache[tileData.Name_ItemName] = tileBlock;
+            {                prefabCache[tileData.Name_ItemName] = tileBlock;
             }
             return true;
         }
         else
-        {
-            Debug.LogWarning($"Prefab 未实现 IBlockTile: {tileData.Name_ItemName}");
-            tileBlock = null;
+        {            Debug.LogWarning($"TileEffectReceiver: Prefab 未实现 IBlockTile 接口: {tileData.Name_ItemName}");
             return false;
         }
     }

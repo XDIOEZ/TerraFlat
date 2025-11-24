@@ -162,8 +162,8 @@ public void DestroyChunk(Chunk chunk)
             }
         }
 
-        if (toRemove.Count > 0)
-            Debug.Log($"销毁了 {toRemove.Count} 个远离玩家的区块");
+        // if (toRemove.Count > 0)
+        //     Debug.Log($"销毁了 {toRemove.Count} 个远离玩家的区块");
     }
     #endregion
     #region 更新区块激活状态
@@ -221,8 +221,8 @@ public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
         }
     }
 
-    if (toRemove.Count > 0)
-        Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
+    // if (toRemove.Count > 0)
+    //     Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
 }
 
 public void SetChunkActive(Chunk chunk, bool isActive)
@@ -484,6 +484,7 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     {
         ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(pos).ToString(), out chunk);
     }
+    
     public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
     {
         closestChunk = null;

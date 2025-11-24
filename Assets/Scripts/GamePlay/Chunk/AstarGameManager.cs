@@ -73,18 +73,18 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         foreach (var progress in progressEnumerable)
         {
             // 输出进度信息（0-1之间的浮点数，1表示完成）
-            Debug.Log($"扫描进度：{progress.progress:F2}");
+          //  Debug.Log($"扫描进度：{progress.progress:F2}");
 
             // 等待一帧，避免阻塞主线程
             yield return null;
         }
 
-        Debug.Log("异步扫描完成！");
+//        Debug.Log("异步扫描完成！");
 
         // 扫描完成后，更新指定区域的所有区块权重
         //UpdateChunksPenaltyInArea(center, radius);
 
-        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+  //      Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
         
         // 调用回调函数
         onComplete?.Invoke();

@@ -10,19 +10,15 @@ public class Inventory : MonoBehaviour
     //物品所有者
     public Item Owner;
     //物品槽预制体
-    public GameObject ItemSlot_Prefab;
+ GameObject ItemSlot_Prefab;
     //物品槽的父物体
-    public Transform ItemSlot_Parent;
+     Transform ItemSlot_Parent;
     //数据
     public Inventory_Data Data;
     //UI列表
     public List<ItemSlot_UI> itemSlotUIs = new List<ItemSlot_UI>();
     //默认交互Inventory
     public Inventory DefaultTarget_Inventory;
-
-    [Tooltip("模块面板的预制体")]
-    public GameObject Prefab_BasePanel;
-    
     public BasePanel basePanel;
     #endregion
 

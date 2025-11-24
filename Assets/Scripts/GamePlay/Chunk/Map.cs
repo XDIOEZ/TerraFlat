@@ -282,7 +282,7 @@ public void BackTilePenalty_Async()
             yield return null;
         }
 
-        Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");
+//        Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");
         
         // 清理协程引用
         backTilePenaltyCoroutine = null;

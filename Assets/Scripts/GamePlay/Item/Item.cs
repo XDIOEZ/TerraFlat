@@ -262,7 +262,7 @@ public abstract class Item : MonoBehaviour
     {
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
-        var modules = GetComponentsInChildren<Module>(true).ToList();
+        var modules = GetComponentsInChildren<Module>().ToList();
 
         if (firstStart)//第一次启动
         {

@@ -19,19 +19,4 @@ public class Skill : MonoBehaviour
     {
 
     }
-/*
-    public override void Load()
-    {
-
-    }
-
-    public override void SkillUpdate(float deltaTime)
-    {
-
-    }
-    public override void Save()
-    {
-
-    }
-*/
 }
