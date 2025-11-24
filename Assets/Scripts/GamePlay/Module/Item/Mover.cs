@@ -121,7 +121,7 @@ public partial class Mover : Module
         rb = GetComponentInParent<Rigidbody2D>();
 
         // 加载控制器模块
-        LoadMod<PlayerController>(item, ModText.Controller, controller =>
+        LoadMod<GameController>(item, ModText.Controller, controller =>
         {
             // 回调里才赋值 moveAction
             moveAction = controller._inputActions.Win10.Move_Player;

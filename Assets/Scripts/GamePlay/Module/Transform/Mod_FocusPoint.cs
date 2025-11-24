@@ -8,7 +8,7 @@ public partial class Mod_FocusPoint : Module
     public FocusPoint_Data Data = new FocusPoint_Data();
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
-    public PlayerController PlayerController;
+    public GameController GameController;
     public Mod_TurnBody turnBody; // 添加TurnBody引用
 
     // 需要跟随鼠标旋转的对象列表
@@ -29,9 +29,9 @@ public partial class Mod_FocusPoint : Module
         ModData.ReadData(ref Data);
 
         // 优先从物品所有者获取Controller
-        PlayerController = item.Owner != null
-            ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>()
-            : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+        GameController = item.Owner != null
+            ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>()
+            : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
 
         // 获取TurnBody组件
         turnBody = item.Owner != null
@@ -57,15 +57,15 @@ public partial class Mod_FocusPoint : Module
 
     public void PlayerTakeItem_FaceMouse(float deltaTime)
     {
-        if (PlayerController == null)
+        if (GameController == null)
         {
-            Debug.LogWarning("PlayerController 获取失败：FaceMouse 无法运行");
+            Debug.LogWarning("GameController 获取失败：FaceMouse 无法运行");
             return;
         }
 
         // 更新鼠标世界位置（供外部脚本调用）
-        Data.See_Point = PlayerController.GetMouseWorldPosition();
-        Data.DefaultSkill_Point = PlayerController.GetMouseWorldPosition();
+        Data.See_Point = GameController.GetMouseWorldPosition();
+        Data.DefaultSkill_Point = GameController.GetMouseWorldPosition();
         // 仅在启用旋转且列表有对象时执行逻辑
         if (Data.ActivateRotation)
         {

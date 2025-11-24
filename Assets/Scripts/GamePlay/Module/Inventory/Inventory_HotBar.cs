@@ -128,20 +128,20 @@ public class Inventory_HotBar : Inventory
             return;
         }
     
-        // 获取 PlayerController（仅从Owner获取，不再进行全局查找）
-        var playerController = Owner.GetComponent<PlayerController>();
-        if (playerController == null)
+        // 获取GameControllerr（仅从Owner获取，不再进行全局查找）
+        var GameController = Owner.GetComponent<GameController>();
+        if (GameController == null)
         {
             // 直接返回，不再进行全局查找
-            Debug.LogWarning($"[{name}] Controller_Init: Owner上未找到 PlayerController，可能是非玩家对象使用快捷栏");
+            Debug.LogWarning($"[{name}] Controller_Init: Owner上未找到GameControllerr，可能是非玩家对象使用快捷栏");
             return;
         }
     
         // 确保 inputActions 已初始化
-        var inputActions = playerController._inputActions;
+        var inputActions = GameController._inputActions;
         if (inputActions == null)
         {
-            Debug.LogWarning($"[{name}] Controller_Init: PlayerController._inputActions 为空");
+            Debug.LogWarning($"[{name}] Controller_Init: GameController._inputActions 为空");
             return;
         }
     

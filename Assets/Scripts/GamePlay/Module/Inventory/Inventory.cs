@@ -52,15 +52,15 @@ public class Inventory : MonoBehaviour
     public virtual void BindController()
     {
         Debug.Log("BindController " + Data.Name);
-          PlayerController playerController = Owner.itemMods.GetMod_ByID<PlayerController>(ModText.Controller);
+          GameController GameController = Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
 
-        if(playerController == null)
+        if(GameController == null)
         {
-            Debug.LogError("Owner 未设置为 PlayerController");
+            Debug.LogError("Owner 未设置为 GameController");
             return;
         }
 
-        playerController._inputActions.Win10.B.performed += ctx =>
+        GameController._inputActions.Win10.B.performed += ctx =>
         {
             if (ctx.performed)
             {

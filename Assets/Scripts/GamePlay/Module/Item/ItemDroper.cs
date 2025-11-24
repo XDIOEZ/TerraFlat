@@ -25,8 +25,8 @@ public class ItemDroper : Mod_ItemDroper
     public override ModuleData _Data { get => modData; set => modData = value as Ex_ModData; }
 
     private Mod_FocusPoint faceMouse;
-    public PlayerController playerController;
-    public Vector2 DropPos => playerController.GetMouseWorldPosition();
+    public GameController GameController;
+    public Vector2 DropPos => GameController.GetMouseWorldPosition();
 
     // 长按相关变量
     [SerializeField]
@@ -54,10 +54,10 @@ public class ItemDroper : Mod_ItemDroper
 
         hand = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<Mod_Inventory>();
 
-        playerController = item.GetComponent<PlayerController>();
+        GameController = item.GetComponent<GameController>();
 
         // 绑定按键事件
-        var inputActions = playerController._inputActions.Win10;
+        var inputActions = GameController._inputActions.Win10;
         inputActions.F.started += OnDropButtonPressed;
         inputActions.F.canceled += OnDropButtonReleased;
         inputActions.Ctrl.started += OnCtrlPressed;
@@ -285,9 +285,9 @@ private void HandleRepeatDrop()
 
     public void OnDestroy()
     {
-        if (playerController != null && playerController._inputActions != null)
+        if (GameController != null && GameController._inputActions != null)
         {
-            var inputActions = playerController._inputActions.Win10;
+            var inputActions = GameController._inputActions.Win10;
             inputActions.F.performed -= OnDropButtonPressed;
             inputActions.F.canceled -= OnDropButtonReleased;
             inputActions.Ctrl.performed -= OnCtrlPressed;

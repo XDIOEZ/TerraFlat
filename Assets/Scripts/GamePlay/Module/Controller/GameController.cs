@@ -4,7 +4,7 @@ using UltEvents;
 using InputSystem;
 
 [RequireComponent(typeof(Item))]
-public class PlayerController : Module
+public class GameController : Module
 {
     #region 输入系统
     public PlayerInputActions _inputActions;
@@ -78,7 +78,7 @@ public class PlayerController : Module
     #region 数据存取
     public override void Load()
     {
-        // TODO: 实现加载逻辑
+        // TODO: 实现加载逻辑 可以是玩家修改的键位
     }
 
     public override void Save()

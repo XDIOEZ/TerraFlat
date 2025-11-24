@@ -23,7 +23,7 @@ public class CameraFollowManager : Module
     [Header("跟随目标")]
     public Item CameraFollowItem;
     public Player Player;
-    public PlayerController PlayerController;
+    public GameController GameController;
 
     /// <summary>
     /// 获取或设置虚拟摄像机
@@ -48,12 +48,12 @@ public class CameraFollowManager : Module
 
     public override void Load()
     {
-        // 获取PlayerController并绑定鼠标滚轮事件
-        PlayerController = GetComponentInParent<PlayerController>();
-        if (PlayerController != null && PlayerController._inputActions != null)
+        // 获取GameController并绑定鼠标滚轮事件
+        GameController = GetComponentInParent<GameController>();
+        if (GameController != null && GameController._inputActions != null)
         {
             // 注意：Win10Actions是结构体，不能与null比较，直接绑定事件
-            PlayerController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
+            GameController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
         }
 
         // 获取跟随物体
@@ -98,9 +98,9 @@ public class CameraFollowManager : Module
     private void OnDestroy()
     {
         // 解除事件绑定
-        if (PlayerController != null && PlayerController._inputActions != null)
+        if (GameController != null && GameController._inputActions != null)
         {
-            PlayerController._inputActions.Win10.CtrlMouse.performed -= PovValueChanged;
+            GameController._inputActions.Win10.CtrlMouse.performed -= PovValueChanged;
         }
     }
     #endregion

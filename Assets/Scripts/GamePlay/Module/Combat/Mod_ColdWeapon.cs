@@ -68,7 +68,7 @@ public partial class Mod_ColdWeapon : Module
         if (item.Owner != null)
         {
             faceMouse = item.Owner.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
-            var controller = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+            var controller = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
             if (controller != null)
             {
                 InputAction = controller._inputActions.Win10.LeftClick;

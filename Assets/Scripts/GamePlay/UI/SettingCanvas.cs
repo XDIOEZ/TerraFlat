@@ -6,7 +6,7 @@ public class SettingCanvas : Module
 {
     public BasePanel basePanel;
     public Ex_ModData_MemoryPackable ModSaveData;
-    PlayerController playerController;
+    GameController GameController;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
     public override void Awake()
@@ -41,12 +41,12 @@ public class SettingCanvas : Module
 
 
         // 优先从物品所有者获取Controller
-        playerController = item.Owner != null
-            ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>()
-            : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<PlayerController>();
+        GameController = item.Owner != null
+            ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>()
+            : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
 
         // 初始化输入系统
-        playerInputActions = playerController._inputActions;
+        playerInputActions = GameController._inputActions;
 
         // 绑定ESC按键事件
         playerInputActions.Win10.ESC.performed += OnEscapePressed;

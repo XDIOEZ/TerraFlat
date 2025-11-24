@@ -24,7 +24,7 @@ public class Mod_SkillManager : Module
     [Tooltip("聚焦点位")]
     public Mod_FocusPoint focusPoint;
     [Tooltip("控制器")]
-    public PlayerController controller;
+    public GameController controller;
     [Tooltip("序列化参数施法起点")]
     public SerializedDictionary<string, Vector2> SerializedcastingPointOffset = new();
     [Tooltip("施法起点")]
@@ -45,7 +45,7 @@ public class Mod_SkillManager : Module
 public override void Load()
 {
     focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
-    controller = item.itemMods.GetMod_ByID<PlayerController>(ModText.Controller);
+    controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
     if (controller != null)
         controller.RightClick += Act;
     

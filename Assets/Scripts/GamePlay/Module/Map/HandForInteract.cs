@@ -21,7 +21,7 @@ public class HandForInteract : MonoBehaviour, IInteracter
     public void Start()
     {
         Item = GetComponentInParent<Item>();
-        Item.GetComponent<PlayerController>()._inputActions.Win10.E.performed += _ => Interact_Start();
+        Item.GetComponent<GameController>()._inputActions.Win10.E.performed += _ => Interact_Start();
     }
 
     public void OnTriggerEnter2D(Collider2D collision)
