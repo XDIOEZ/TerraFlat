@@ -6,9 +6,9 @@
   - Tags:
     - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore
   - Layers:
-    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
+    - Default, TransparentFX, Ignore Raycast, Water, UI
 - Active game object:
-  - Name: AI模块
+  - Name: Player
   - Tag: Untagged
-  - Layer: 9
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

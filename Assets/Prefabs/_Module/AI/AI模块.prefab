@@ -50,7 +50,7 @@ MonoBehaviour:
   ModData:
     Name: 
     ID: 
-    isRunning: 1
+    isRunning: 0
     Type: 0
     BitData: 
 --- !u!114 &3509988851932129553

@@ -20,6 +20,12 @@ public class HungryChecker : ActionNode
 
     protected override State OnUpdate() 
     {
+        // 添加空检查，如果找不到FOOD组件直接返回Failure
+        if (context.Food == null || context.Food.Data == null || context.Food.Data.nutrition == null)
+        {
+            return State.Failure;
+        }
+        
         if(context.Food.Data.nutrition.GetHungerRate() <= hungryThreshold)
         {
             return State.Success;

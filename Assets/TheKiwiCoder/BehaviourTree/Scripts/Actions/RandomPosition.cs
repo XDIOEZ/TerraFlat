@@ -48,7 +48,7 @@ public class RandomPosition : ActionNode
     {
         Vector2 sameTypeDirection = GetSameTypeAverageDirection();
 
-        if (!TrueRandom && context.tileEffectReceiver.Cache_map != null)
+        if (!TrueRandom && context.tileEffectReceiver != null && context.tileEffectReceiver.Cache_map != null)
         {
             return HandleMapConstrainedMovement(sameTypeDirection);
         }
