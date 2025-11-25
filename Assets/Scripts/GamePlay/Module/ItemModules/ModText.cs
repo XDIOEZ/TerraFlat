@@ -60,6 +60,7 @@ public static class ModText
     #region M
     public static string MoveSpeed = "移动模块";
     public static string Mover = "移动模块";
+    public static string Mover_AI = "移动模块_AI";
 
     #endregion
 
@@ -76,6 +77,9 @@ public static class ModText
     #region T
     public static string TrunBody = "TrunBody";
     public static string TileEffectReceiver = "TileReciver";
+    #endregion
+    #region W
+    public static string WorkBench = "工作台模块";
     #endregion
 }
 public static class AnimationText

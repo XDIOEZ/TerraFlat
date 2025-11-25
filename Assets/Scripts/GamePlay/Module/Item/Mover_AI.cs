@@ -44,6 +44,10 @@ public class Mover_AI : Mover
         aiPath = item.GetComponent<IAstarAI>();
         
     }
+        public override void OnValidate()
+    {
+         _Data.ID = ModText.Mover_AI;
+    }
 
     public void Start()
     {

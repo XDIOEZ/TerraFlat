@@ -5,93 +5,121 @@ using UnityEngine;
 
 public class Mod_Inventory : Module,IInventory
 {
-    #region ×Ö¶ÎºÍÊôĞÔ
+    #region å­—æ®µå’Œå±æ€§
     public InventoryModuleData  Data = new InventoryModuleData();
     public override ModuleData _Data { get => Data; set => Data = (InventoryModuleData)value; }
-    public Inventory inventory { get => InventoryRefDic["Ä¬ÈÏ"]; set => InventoryRefDic["Ä¬ÈÏ"] = value; }
-    [Tooltip("InventoryÒıÓÃ×Öµä")]
+    public Inventory inventory { get => InventoryRefDic.First().Value;}
+    [Tooltip("Inventoryå¼•ç”¨å­—å…¸")]
     public SerializedDictionary<string, Inventory> inventoryRefDic = new();
-    [Tooltip("InventoryÒıÓÃ×Öµä")]
+    [Tooltip("Inventoryå¼•ç”¨å­—å…¸")]
     public SerializedDictionary<string, Inventory> InventoryRefDic { get=> inventoryRefDic; set => inventoryRefDic = value; }
-    [Tooltip("Ä£¿éÃæ°å")]
+    [Tooltip("æ¨¡å—é¢æ¿")]
     public BasePanel basePanel;
 
-    [Tooltip("Ä£¿éÃæ°åµÄÔ¤ÖÆÌå")]
+    // ä¿®æ”¹ï¼šå°†å•ä¸ªé¢„åˆ¶ä½“å­—æ®µæ”¹ä¸ºä¸inventoryRefDicå¯¹åº”çš„åºåˆ—åŒ–å­—å…¸
+    [Tooltip("Inventoryé¢æ¿é¢„åˆ¶ä½“å­—å…¸")]
+    public SerializedDictionary<string, GameObject> inventoryPanelPrefabs = new();
+    [Tooltip("æ¨¡å—é¢æ¿çš„é¢„åˆ¶ä½“")]
     public GameObject Prefab_BasePanel;
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ·½·¨
+    #region ç”Ÿå‘½å‘¨æœŸæ–¹æ³•
 
     public void OnValidate()
     {
         _Data.ID = inventory.Data.Name;
-        if(inventoryRefDic.Count == 0)
-        {
-            inventoryRefDic.Add("Ä¬ÈÏ", GetComponentInChildren<Inventory>());
-        }
     }
 
     public override void Load()
     {
+        // ç§»é™¤åŸæ¥çš„å•ä¸ªbasePanelåˆå§‹åŒ–
+        // basePanel = GetComponent<BasePanel>();
         
+        // ä¿®æ”¹ä¸ºéå†inventoryRefDicä¸­çš„æ‰€æœ‰inventory
+        foreach (var kvp in inventoryRefDic)
+        {        
+            string inventoryId = kvp.Key;
+            Inventory currentInventory = kvp.Value;
+            
+            // åŠ è½½åº“å­˜æ•°æ®
+            if (Data.Data.Count == 0)
+            {
+                Data.Data[inventoryId] = currentInventory.Data;
+            }
+            else if (Data.Data.ContainsKey(inventoryId))
+            {
+                currentInventory.Data = Data.Data[inventoryId];
+            }
+            
+            // ä¸ºæ¯ä¸ªinventoryåˆ›å»ºå¯¹åº”çš„é¢æ¿
+            BasePanel inventoryPanel = null;
+            if (inventoryPanelPrefabs.ContainsKey(inventoryId) && inventoryPanelPrefabs[inventoryId] != null)
+            {
+                inventoryPanel = UIManager.Instance.CreatePanelFromGameObject(inventoryPanelPrefabs[inventoryId]).GetComponentInChildren<BasePanel>();
+            }
+            
+            // è®¾ç½®é¢æ¿å¼•ç”¨
+            currentInventory.basePanel = inventoryPanel;
+            
+            // ä¸ºç¬¬ä¸€ä¸ªinventoryè®¾ç½®é»˜è®¤çš„basePanelå¼•ç”¨ï¼Œä¿æŒå‘åå…¼å®¹
+            if (inventoryId == inventoryRefDic.First().Key)
+            {
+                basePanel = inventoryPanel;
+            }
+            
+            // æŸ¥æ‰¾æ¨¡å—æ•°æ®
+            if (Item_Data.ModuleDataDic.ContainsKey(_Data.Name))
+                _Data = Item_Data.ModuleDataDic[_Data.Name];
+            
+            // è®¾ç½®æ‰€æœ‰è€…
+            currentInventory.Owner = item;
+            
+            // è®¾ç½®é»˜è®¤ç›®æ ‡åº“å­˜
+            if (item.itemMods.GetMod_ByID(ModText.Hand))
+            {
+                currentInventory.DefaultTarget_Inventory = 
+                            item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
+            }
+            else
+            {
+                currentInventory.DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
+            }
+            
+            // åˆå§‹åŒ–åº“å­˜
+            currentInventory.Init();
+            currentInventory.BindController();
+            
+            // å°è¯•åˆå§‹åŒ–ç‰©å“
+            GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inventoryInit);
+            if (inventoryInit != null)
+            {
+                currentInventory.TryInitializeItems(inventoryInit);
+            }
+            
+            // åˆ·æ–°UI
+            currentInventory.RefreshUI();
+        }
         
-        basePanel = GetComponent<BasePanel>();
-        if (inventory == null)
-        {
-            inventory = GetComponent<Inventory>();
-        }
-        if (Data.Data.Count == 0)
-        {
-            Data.Data[_Data.Name] = inventory.Data;
-        }
-        else
-        {
-            inventory.Data = Data.Data[_Data.Name];
-        }
-
-       basePanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_BasePanel).GetComponentInChildren<BasePanel>();
-
-        inventory.basePanel = basePanel;
-        if(Item_Data.ModuleDataDic.ContainsKey(_Data.Name))
-        _Data = Item_Data.ModuleDataDic[_Data.Name];
-
-        inventory.Owner = item;
-
-        if (item.itemMods.GetMod_ByID(ModText.Hand))
-        {
-            inventory.DefaultTarget_Inventory =
-                        item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
-        }
-        else
-        {
-            inventory.DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
-        }
-
-        // ¼ì²éÎïÆ·ÊÇ·ñ´¦ÓÚ¿ÉÊ°È¡×´Ì¬£¬Èç¹û¿ÉÊ°È¡Ôò¹Ø±ÕÃæ°å
-        CheckAndHidePanelIfPickable();
-
-        // »Ö¸´Ãæ°åÎ»ÖÃºÍ¿ª¹Ø×´Ì¬
+        // æ¢å¤é¢æ¿çŠ¶æ€å’Œä½ç½® - ä»…é’ˆå¯¹é»˜è®¤é¢æ¿
         if (basePanel != null)
         {
-            // »Ö¸´Ãæ°åÎ»ÖÃ - ÔöÇ¿°æ±¾£¬Ôö¼Ó¸ü¶à¼ì²é
+            // æ¢å¤é¢æ¿ä½ç½®
             if (basePanel.Dragger != null)
             {
                 var draggerRectTransform = basePanel.Dragger.GetComponent<RectTransform>();
                 if (draggerRectTransform != null)
                 {
-                    // Ö»ÓĞµ±±£´æµÄÎ»ÖÃÊı¾İÓĞĞ§ÇÒ²»ÎªÁãÊ±²ÅÓ¦ÓÃÎ»ÖÃ
                     if (Data.PanleRectPosition != null && 
                         IsValidVector2(Data.PanleRectPosition) &&
                         (Data.PanleRectPosition.x != 0 || Data.PanleRectPosition.y != 0))
                     {
                         draggerRectTransform.anchoredPosition = Data.PanleRectPosition;
                     }
-                    // Èç¹ûÊÇ³õ´Î¼ÓÔØÇÒÎ»ÖÃÊı¾İÎª¿Õ£¬ÔòÊ¹ÓÃPrefab×Ô´øµÄÎ»ÖÃ£¬²»ĞèÒªµ÷Õû
                 }
             }
             
-            // »Ö¸´Ãæ°å¿ª¹Ø×´Ì¬
+            // æ¢å¤é¢æ¿å¼€å…³çŠ¶æ€
             if (Data.BasePanelIsOpen)
             {
                 basePanel.Open();
@@ -101,31 +129,12 @@ public class Mod_Inventory : Module,IInventory
                 basePanel.Close();
             }
         }
-
-        item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactable);
-        if(interactable!= null)
-        {
-            interactable.OnAction_Start += Interact_Start;
-            interactable.OnAction_Stop += Interact_Stop;
-        }
-
-        inventory.Init();
-        inventory.BindController();
-
-GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inventoryInit);
-        if (inventoryInit != null)
-        {
-            inventory.TryInitializeItems(inventoryInit);
-        }
-        //³õÊ¼»¯Ë¢ĞÂUI
-        inventory.RefreshUI();
-
     }
 
     #endregion
 
-    #region ½»»¥·½·¨
-    //Íæ¼ÒÓë´Ë·¢Éú½»»¥
+    #region äº¤äº’æ–¹æ³•
+    //ç©å®¶ä¸æ­¤å‘ç”Ÿäº¤äº’
     public void Interact_Start(Item item_)
     {
         item_.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod);
@@ -134,7 +143,7 @@ GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inve
         basePanel.Toggle();
     }
 
-    //Íæ¼Ò½áÊø½»»¥
+    //ç©å®¶ç»“æŸäº¤äº’
     public void Interact_Stop(Item item_)
     {
         inventory.DefaultTarget_Inventory = null;
@@ -142,23 +151,23 @@ GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inve
     }
     #endregion
 
-    #region ±£´æ·½·¨
+    #region ä¿å­˜æ–¹æ³•
     [Button]
     public override void Save()
     {
-        // ±£´æÃæ°å¿ª¹Ø×´Ì¬
+        // ä¿å­˜é¢æ¿å¼€å…³çŠ¶æ€
         if (basePanel != null)
         {
             Data.BasePanelIsOpen = basePanel.IsOpen();
         }
         
-        // ±£´æÃæ°åÎ»ÖÃ - ÔöÇ¿°æ±¾£¬Ìí¼Ó¸ü¶à¼ì²é
+        // ä¿å­˜é¢æ¿ä½ç½® - å¢å¼ºç‰ˆæœ¬ï¼Œæ·»åŠ æ›´å¤šæ£€æŸ¥
         if (basePanel != null && basePanel.Dragger != null)
         {
             var draggerRectTransform = basePanel.Dragger.GetComponent<RectTransform>();
             if (draggerRectTransform != null)
             {
-                // Ö»ÓĞÔÚÃæ°å´¦ÓÚÓĞĞ§×´Ì¬Ê±²Å±£´æÎ»ÖÃ
+                // åªæœ‰åœ¨é¢æ¿å¤„äºæœ‰æ•ˆçŠ¶æ€æ—¶æ‰ä¿å­˜ä½ç½®
                 if (draggerRectTransform.anchoredPosition != null &&
                     IsValidVector2(draggerRectTransform.anchoredPosition))
                 {
@@ -172,40 +181,40 @@ GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inve
     }
     #endregion
 
-    #region ¸¨Öú·½·¨
-    // ¸¨Öú·½·¨£º¼ì²éVector2ÊÇ·ñÓĞĞ§
+    #region è¾…åŠ©æ–¹æ³•
+    // è¾…åŠ©æ–¹æ³•ï¼šæ£€æŸ¥Vector2æ˜¯å¦æœ‰æ•ˆ
     private bool IsValidVector2(Vector2 vector)
     {
-        // ¼ì²éÊÇ·ñ°üº¬ÎŞĞ§Öµ
+        // æ£€æŸ¥æ˜¯å¦åŒ…å«æ— æ•ˆå€¼
         return !float.IsNaN(vector.x) && !float.IsNaN(vector.y) &&
                !float.IsInfinity(vector.x) && !float.IsInfinity(vector.y);
     }
     
-    // ¼ì²âÎïÆ·ÊÇ·ñ¿ÉÊ°È¡£¬Èç¹û¿ÉÊ°È¡ÔòÒş²ØÃæ°å
+    // æ£€æµ‹ç‰©å“æ˜¯å¦å¯æ‹¾å–ï¼Œå¦‚æœå¯æ‹¾å–åˆ™éšè—é¢æ¿
     private void CheckAndHidePanelIfPickable()
     {
-        // ¼ì²ébasePanelÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥basePanelæ˜¯å¦å­˜åœ¨
         if (basePanel == null)
         {
             basePanel = GetComponent<BasePanel>();
             if (basePanel == null)
             {
-                Debug.LogWarning("ÎŞ·¨ÕÒµ½BasePanel×é¼ş£¬Ìø¹ıÃæ°åÒş²ØÂß¼­");
+                Debug.LogWarning("æ— æ³•æ‰¾åˆ°BasePanelç»„ä»¶ï¼Œè·³è¿‡é¢æ¿éšè—é€»è¾‘");
                 return;
             }
         }
         
-        // ¼ì²éÎïÆ·Êı¾İÊÇ·ñ´æÔÚÇÒÎïÆ·¿ÉÊ°È¡
+        // æ£€æŸ¥ç‰©å“æ•°æ®æ˜¯å¦å­˜åœ¨ä¸”ç‰©å“å¯æ‹¾å–
         if (item != null && item.itemData != null && item.itemData.Stack.CanBePickedUp)
         {
-            // Ê¹ÓÃBasePanelµÄClose·½·¨Òş²ØÃæ°å
+            // ä½¿ç”¨BasePanelçš„Closeæ–¹æ³•éšè—é¢æ¿
             basePanel.Close();
-            Debug.Log($"ÎïÆ· {item.name} ¿ÉÊ°È¡£¬×Ô¶¯Òş²ØÄ¬ÈÏÃæ°å");
+            Debug.Log($"ç‰©å“ {item.name} å¯æ‹¾å–ï¼Œè‡ªåŠ¨éšè—é»˜è®¤é¢æ¿");
         }
-        // Èç¹ûÎïÆ·²»¿ÉÊ°È¡£¬Ôò±£³ÖÃæ°åµ±Ç°×´Ì¬£¨²»Ç¿ÖÆÏÔÊ¾£©
+        // å¦‚æœç‰©å“ä¸å¯æ‹¾å–ï¼Œåˆ™ä¿æŒé¢æ¿å½“å‰çŠ¶æ€ï¼ˆä¸å¼ºåˆ¶æ˜¾ç¤ºï¼‰
     }
 
-    // ¹«¹²·½·¨£º¸ù¾İÎïÆ·¿ÉÊ°È¡×´Ì¬¸üĞÂÃæ°åÏÔÊ¾
+    // å…¬å…±æ–¹æ³•ï¼šæ ¹æ®ç‰©å“å¯æ‹¾å–çŠ¶æ€æ›´æ–°é¢æ¿æ˜¾ç¤º
     public void UpdatePanelVisibilityBasedOnPickableState()
     {
         CheckAndHidePanelIfPickable();
@@ -215,27 +224,27 @@ GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inve
 
 public interface IInventory
 {
-    #region ½Ó¿ÚÊôĞÔºÍ·½·¨
-    [Tooltip("InventoryÒıÓÃ×Öµä")]
+    #region æ¥å£å±æ€§å’Œæ–¹æ³•
+    [Tooltip("Inventoryå¼•ç”¨å­—å…¸")]
     public SerializedDictionary<string, Inventory> InventoryRefDic { get; set; }
     
-    [Tooltip("Ä¬ÈÏ·µ»ØµÄÄ¿±êInventory")]
+    [Tooltip("é»˜è®¤è¿”å›çš„ç›®æ ‡Inventory")]
     public Inventory GetDefaultTargetInventory()
     {
         if (InventoryRefDic == null || InventoryRefDic.Count == 0)
             return null;
             
-        // ·µ»ØµÚÒ»¸öInventory
+        // è¿”å›ç¬¬ä¸€ä¸ªInventory
         return InventoryRefDic.Values.First();
     }
     
-    [Tooltip("Ëæ»ú·µ»ØÒ»¸öInventory")]
+    [Tooltip("éšæœºè¿”å›ä¸€ä¸ªInventory")]
     public Inventory GetRandomTargetInventory()
     {
         if (InventoryRefDic == null || InventoryRefDic.Count == 0)
             return null;
             
-        // ½«Öµ×ª»»ÎªÊı×é²¢Ëæ»úÑ¡ÔñÒ»¸ö
+        // å°†å€¼è½¬æ¢ä¸ºæ•°ç»„å¹¶éšæœºé€‰æ‹©ä¸€ä¸ª
         var inventories = InventoryRefDic.Values.ToArray();
         int randomIndex = UnityEngine.Random.Range(0, inventories.Length);
         return inventories[randomIndex];

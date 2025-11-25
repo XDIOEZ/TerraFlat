@@ -130,6 +130,10 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// <param name="eventData">事件数据</param>
     public void OnPointerDown(PointerEventData eventData)
     {        
+        // 只允许左键拖拽
+        if (eventData.button != PointerEventData.InputButton.Left)
+            return;
+            
         // 检查是否点击在可拖拽区域
         if (!IsPointerOverDraggableImage(eventData))
             return;
@@ -161,6 +165,13 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// <param name="eventData">事件数据</param>
     public void OnBeginDrag(PointerEventData eventData)
     {        
+        // 只允许左键拖拽
+        if (eventData.button != PointerEventData.InputButton.Left)
+        {
+            IsDragging = false;
+            return;
+        }
+        
         // 开始拖拽时的额外处理可以在此添加
     }
 
@@ -170,6 +181,13 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// <param name="eventData">事件数据</param>
     public void OnDrag(PointerEventData eventData)
     {        
+        // 只允许左键拖拽
+        if (eventData.button != PointerEventData.InputButton.Left)
+        {
+            IsDragging = false;
+            return;
+        }
+        
         if (!IsDragging || canvas == null)
             return;
 
@@ -192,8 +210,12 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// <param name="eventData">事件数据</param>
     public void OnEndDrag(PointerEventData eventData)
     {        
-        IsDragging = false;
-        // 拖拽结束后的额外处理可以在此添加
+        // 只处理左键拖拽结束
+        if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            IsDragging = false;
+            // 拖拽结束后的额外处理可以在此添加
+        }
     }
 
     #endregion

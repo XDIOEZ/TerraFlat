@@ -10,7 +10,7 @@ public class Inventory : MonoBehaviour
     //物品所有者
     public Item Owner;
     //物品槽预制体
- GameObject ItemSlot_Prefab;
+    GameObject ItemSlot_Prefab;
     //物品槽的父物体
      Transform ItemSlot_Parent;
     //数据
@@ -26,8 +26,8 @@ public class Inventory : MonoBehaviour
 
     public virtual void OnValidate()
     {
+        if(string.IsNullOrEmpty(Data.Name))
         Data.Name = ModText.Bag;
-      
     }
 
     public virtual void Awake()
@@ -504,7 +504,6 @@ public class Inventory : MonoBehaviour
     #endregion
 
     #region 保存
-
     public virtual void Save()
     {
 

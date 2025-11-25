@@ -54,6 +54,7 @@ public class RandomPosition : ActionNode
         }
         else
         {
+            // 无地图约束，直接随机
             return HandleFreeMovement(sameTypeDirection);
         }
     }
@@ -214,9 +215,41 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
 
     private void SetTargetPosition(Vector3 worldPosition, Vector2? relativeOffset = null)
     {
-        context.mover.TargetPosition = worldPosition;
-        blackboard.TargetPosition = relativeOffset ?? (worldPosition - context.transform.position);
-        lastValidPosition = context.transform.position;
+        // 添加null检查以避免空引用异常
+        if (context != null && context.mover != null)
+        {
+            context.mover.TargetPosition = worldPosition;
+        }
+        else
+        {
+            // 添加Debug日志
+            if (context == null)
+            {
+                Debug.LogWarning("RandomPosition: context is null, cannot set target position!");
+            }
+            else if (context.mover == null)
+            {
+                Debug.LogWarning($"RandomPosition: context.mover is null for {context.gameObject.name}, cannot set target position!");
+            }
+        }
+        
+        if (blackboard != null)
+        {
+            blackboard.TargetPosition = relativeOffset ?? (worldPosition - context.transform.position);
+        }
+        else
+        {
+            Debug.LogWarning($"RandomPosition: blackboard is null for {context?.gameObject.name ?? "unknown object"}, cannot set target position offset!");
+        }
+        
+        if (context != null)
+        {
+            lastValidPosition = context.transform.position;
+        }
+        else
+        {
+            Debug.LogWarning("RandomPosition: context is null, cannot update lastValidPosition!");
+        }
     }
 
     /// <summary>
@@ -259,11 +292,6 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
     #endregion
 
     #region Gizmos
-
-    private void OnDrawGizmosSelected()
-    {
-        // 无需操作，所有Gizmos绘制都在OnDrawGizmos中完成
-    }
     
     public override void OnDrawGizmos()
     {

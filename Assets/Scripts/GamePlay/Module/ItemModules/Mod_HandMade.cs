@@ -55,8 +55,11 @@ public class Mod_HandMade : Module,IInventory
     [Button]
     public override void Load()
     {
+        //初始化库存
         InitializeInventories();
+        //初始化事件监听
         SetupEventListeners();
+        //还原面板位置
         RestorePanelPosition();
     }
 
@@ -478,6 +481,9 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
 
         inputInventory.Init();
         outputInventory.Init();
+
+        //TODO 初始化完毕后 从输出插槽上遍历获取
+         workButton = outputInventory.basePanel.GetButton("合成按钮");
     }
 
     private void SetupEventListeners()

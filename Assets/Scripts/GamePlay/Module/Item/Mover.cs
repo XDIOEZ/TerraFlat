@@ -109,9 +109,9 @@ public partial class Mover : Module
     #endregion
 
     #region Unity 生命周期
-    public override void Awake()
+    public virtual void OnValidate()
     {
-            _Data.ID = ModText.Mover;
+         _Data.ID = ModText.Mover;
     }
 
     public override void Load()
