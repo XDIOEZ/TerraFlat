@@ -1,0 +1,27 @@
+private void AdjustSizeToFitSlots()
+{
+    if (rectTransform == null)
+        return;
+
+    // 如果没有找到Slot的父对象，尝试再次查找
+    if (slotParentTransform == null)
+    {
+        FindSlotParentTransform();
+        if (slotParentTransform == null)
+            return;
+    }
+
+    // 统计Slot父对象中所有子物体数量（不再检查名称前缀）
+    int slotCount = slotParentTransform.childCount;
+
+    // 计算网格大小
+    int gridSize = Mathf.CeilToInt(Mathf.Sqrt(slotCount));
+    
+    // 计算UI大小
+    float size = gridSize * SLOT_SIZE + BORDER_SIZE;
+    
+    // 应用新的大小到当前脚本挂载的对象
+    rectTransform.sizeDelta = new Vector2(size, size);
+    
+    Debug.Log($"WorkBenchAutoAdapt: 检测到 {slotCount} 个子对象，调整当前对象大小为 {size}x{size}");
+}
