@@ -134,6 +134,7 @@ MonoBehaviour:
   mods: []
   StartDebugTest: "\u6280\u80FD\u5F00\u59CB\u6267\u884C"
   StopDebugTest: "\u6280\u80FD\u6267\u884C\u505C\u6B62"
+  castingPointName: "\u77F3\u5934\u4EBA_\u624B\u91CC\u5251"
 --- !u!50 &8250423564893825132
 Rigidbody2D:
   serializedVersion: 4

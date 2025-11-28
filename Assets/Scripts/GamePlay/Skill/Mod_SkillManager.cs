@@ -111,6 +111,58 @@ public override void Load()
         // 存储到 castingPoint 字典中
         castingPoint[skillName] = castingPointObject.transform;
     }
+    
+    // 检查施法点配置
+    CheckCastingPointConfiguration();
+
+
+            transform.localPosition = Vector3.zero;
+        //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
+        if(item.itemMods!= null)
+        item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
+        else
+        Debug.LogWarning("没有找到旋转体控制组件");
+}
+
+/// <summary>
+/// 检查施法点配置是否完整，并自动添加缺失的配置
+/// </summary>
+[Button("检查施法点配置")]
+private void CheckCastingPointConfiguration()
+{
+    // 检查SerializedcastingPointOffset是否包含skillDataList中所有技能的施法点
+    List<string> missingCastingPoints = new List<string>();
+    
+    foreach (BaseSkill skill in skillDataList)
+    {
+        if (skill != null && !SerializedcastingPointOffset.ContainsKey(skill.skillName))
+        {
+            missingCastingPoints.Add(skill.skillName);
+        }
+    }
+    
+    // 自动添加缺失的施法点配置
+    foreach (string skillName in missingCastingPoints)
+    {
+        // 添加缺失的施法点配置，默认偏移量为(0,0)
+        SerializedcastingPointOffset[skillName] = Vector2.zero;
+        Debug.Log($"已自动添加技能 '{skillName}' 的施法点配置，默认偏移量为 (0,0)");
+    }
+    
+    // 输出结果信息
+    if (missingCastingPoints.Count > 0)
+    {
+        string infoMessage = "检测到并自动添加了以下技能的施法点配置:\n";
+        foreach (string skillName in missingCastingPoints)
+        {
+            infoMessage += $"- {skillName}\n";
+        }
+        Debug.Log(infoMessage);
+    }
+    else
+    {
+        Debug.Log("所有技能的施法点配置检查通过。");
+    }
 }
 
 /// <summary>
@@ -144,16 +196,6 @@ private void ClearCastingPoints()
         }
     }
 }
-    public void Start()
-    {
-        transform.localPosition = Vector3.zero;
-        //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
-        if(item.itemMods!= null)
-        item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
-        else
-        Debug.LogWarning("没有找到旋转体控制组件");
-    
-    }
 
 
 

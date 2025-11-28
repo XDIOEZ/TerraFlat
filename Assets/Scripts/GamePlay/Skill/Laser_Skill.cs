@@ -41,13 +41,13 @@ public class Laser_Skill : Skill
         }
 
         // 获取施法点
-        if (runtimeSkill.skillManager.castingPoint == null || !runtimeSkill.skillManager.castingPoint.ContainsKey(runtimeSkill.skillData.name))
+        if (runtimeSkill.skillManager.castingPoint == null || !runtimeSkill.skillManager.castingPoint.ContainsKey(runtimeSkill.skillData.skillName))
         {
             Debug.LogError("激光技能：castingPoint字典为空或不包含'Laser'键！");
             return;
         }
 
-        laserCastingPoint = runtimeSkill.skillManager.castingPoint[runtimeSkill.skillData.name]; // 缓存施法点Transform
+        laserCastingPoint = runtimeSkill.skillManager.castingPoint[runtimeSkill.skillData.skillName]; // 缓存施法点Transform
 
         // 获取移动组件
         if (runtimeSkill.skillSender != null)

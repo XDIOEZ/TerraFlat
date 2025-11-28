@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2056771168732097089
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8254107502328564508}
+  - component: {fileID: 5373608423806965717}
+  m_Layer: 0
+  m_Name: Module_Mover_AI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8254107502328564508
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056771168732097089}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 4.5, y: -10, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5373608423806965717
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056771168732097089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0afa4625e38945140b2421639e9d6c5a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  Data:
+    Speed:
+      BaseValue: 3.75
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    slowDownSpeed: 5
+    endSpeed: 0.1
+    runStaminaRate: 2
+    runSpeedRate: 2
+    isRunning: 0
+    RunStaminaThreshold: 2
+  MemoryPath_Forbidden: []
+  IsLock: 0
+  hightReaction: 0
+  TargetPosition: {x: 0, y: 0}
+  IsMoving: 0
+  rb: {fileID: 0}
+  stamina: {fileID: 0}
+  staminaConsumeSpeed:
+    BaseValue: 1
+    BaseAdditive: 0
+    AdditiveModifier: 0
+    MultiplicativeModifier: 1
+    FinalAdditive: 0
+  ModDataMemoryPack:
+    Name: 
+    ID: "\u79FB\u52A8\u6A21\u5757"
+    isRunning: 0
+    Type: 0
+    BitData: 
+  animationController: {fileID: 0}
+  OnMoveStart:
+    _PersistentCalls: []
+  OnMoveEnd:
+    _PersistentCalls: []
+  target: {fileID: 0}
+  stopDistance: 0.1
+  CanMove: 1
+  HasReachedTarget: 0

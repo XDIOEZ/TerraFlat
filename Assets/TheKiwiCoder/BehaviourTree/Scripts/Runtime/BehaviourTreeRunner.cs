@@ -18,11 +18,7 @@ namespace TheKiwiCoder
 
         public override void Awake()
         {
-            if (_Data.ID == "")
-            {
-                _Data.ID = ModText.AI;
-            }
-            StopTree();
+            _Data.ID = ModText.AI;
         }
 
         void InitTree()
@@ -81,18 +77,6 @@ namespace TheKiwiCoder
         public override void Load()
         {
             InitTree();
-        }
-        
-        public void Start()
-        {
-            // 延迟一帧调用StartTree
-            StartCoroutine(StartTreeNextFrame());
-        }
-
-        private IEnumerator StartTreeNextFrame()
-        {
-            // 等待一帧
-            yield return null;
             StartTree();
         }
 

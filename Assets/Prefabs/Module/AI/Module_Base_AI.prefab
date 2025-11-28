@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6656083125569062478}
   - component: {fileID: 3509988851932129553}
   m_Layer: 9
-  m_Name: Module_AI_Base
+  m_Name: Module_Base_AI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -47,6 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   tree: {fileID: 11400000, guid: 093ed6d4382742440a985845665ca88c, type: 2}
+  isRunning: 0
   ModData:
     Name: 
     ID: 
@@ -69,7 +70,7 @@ MonoBehaviour:
   detectionRadius: 10
   itemLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 503
   currentItemsInArea: []
   ModData:
     Name: 

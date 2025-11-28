@@ -8,7 +8,7 @@ public class BaseSkill : ScriptableObject
 {
     [Header("基础信息")]
     [Tooltip("技能名称")]
-    public string skillName = "新技能";
+    public string skillName = "";
     [Tooltip("技能描述")]
     public string description = "技能描述";
     [Tooltip("技能图标")]
@@ -25,5 +25,13 @@ public class BaseSkill : ScriptableObject
     [Tooltip("技能行为")]
     [InlineEditor]
     public List<Skill> Actions;
-
+    
+    private void OnValidate()
+    {
+        // 如果skillName为空，则使用资源名称（即文件名，不包括扩展名）
+        if (string.IsNullOrEmpty(skillName))
+        {
+            skillName = name;
+        }
+    }
 }

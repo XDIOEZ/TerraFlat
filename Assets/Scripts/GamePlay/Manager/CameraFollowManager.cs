@@ -33,7 +33,15 @@ public class CameraFollowManager : Module
         get
         {
             if (vcam == null)
-                vcam = GetComponentInChildren<CinemachineVirtualCamera>();
+            {
+                // 使用true参数查找包括失活对象在内的所有子对象
+                vcam = GetComponentInChildren<CinemachineVirtualCamera>(true);
+                // 如果找到虚拟摄像机且未激活，则激活它
+                if (vcam != null && !vcam.gameObject.activeSelf)
+                {
+                    vcam.gameObject.SetActive(true);
+                }
+            }
             return vcam;
         }
         set => vcam = value;
@@ -60,8 +68,13 @@ public class CameraFollowManager : Module
         CameraFollowItem = GetComponentInParent<Item>();
         Player = CameraFollowItem as Player;
 
-        // 获取主摄像机
-        ControllerCamera = GetComponentInChildren<Camera>();
+        // 获取主摄像机，使用true参数查找包括失活对象在内的所有子对象
+        ControllerCamera = GetComponentInChildren<Camera>(true);
+        // 如果找到主摄像机且未激活，则激活它
+        if (ControllerCamera != null && !ControllerCamera.gameObject.activeSelf)
+        {
+            ControllerCamera.gameObject.SetActive(true);
+        }
 
         // 初始化虚拟摄像机跟随目标
         if (Vcam != null && CameraFollowItem != null)

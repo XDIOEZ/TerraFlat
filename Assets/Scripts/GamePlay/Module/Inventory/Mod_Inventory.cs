@@ -33,12 +33,11 @@ public class Mod_Inventory : Module,IInventory
 
     public override void Load()
     {
-        // 移除原来的单个basePanel初始化
-        // basePanel = GetComponent<BasePanel>();
-        
-        // 修改为遍历inventoryRefDic中的所有inventory
-        foreach (var kvp in inventoryRefDic)
-        {        
+        // 修改为使用for循环遍历inventoryRefDic中的所有inventory
+        var inventoryPairs = inventoryRefDic.ToArray();
+        for (int i = 0; i < inventoryPairs.Length; i++)
+        {
+            var kvp = inventoryPairs[i];
             string inventoryId = kvp.Key;
             Inventory currentInventory = kvp.Value;
             
@@ -63,7 +62,7 @@ public class Mod_Inventory : Module,IInventory
             currentInventory.basePanel = inventoryPanel;
             
             // 为第一个inventory设置默认的basePanel引用，保持向后兼容
-            if (inventoryId == inventoryRefDic.First().Key)
+            if (i == 0) // 使用索引判断是否为第一个元素
             {
                 basePanel = inventoryPanel;
             }

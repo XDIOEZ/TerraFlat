@@ -92,6 +92,13 @@ public class Inventory_WorkBench : Inventory
         // 监听合成按钮点击事件
         workButton.onClick.AddListener(OnCraftButtonClick);
         Debug.Log("合成按钮事件绑定成功！");
+
+        if (!InventoryRefDic.ContainsKey("输出"))
+        {
+            // 如果找不到输出位置 从背包中获取第一个位置
+            InventoryRefDic["输出"] = Owner.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).InventoryRefDic.FirstOrDefault().Value;
+        }
+        
     }
     
 /// <summary>
@@ -174,8 +181,6 @@ private List<string> CalculateMinimalBoundingGrid(Inventory inputInv)
                     Input_List tagGridList = new Input_List();
                     tagGridList.recipeType = RecipeType.Crafting;
                     
-                    // 填充网格，替换当前物品为Tag
-                    int localIndex = 0;
                     for (int r = minRow; r <= maxRow; r++)
                     {
                         for (int c = minCol; c <= maxCol; c++)

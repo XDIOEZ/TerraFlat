@@ -12,6 +12,10 @@ public class FireBall_Skill : Skill
     public string StartDebugTest = "技能开始执行";
     public string StopDebugTest = "技能执行停止";
     
+    [Header("技能设置")]
+    [Tooltip("施法点名称，用于从skillManager.castingPoint中获取位置")]
+     string castingPointName = "Fireball";
+    
     // 存储火球的初始飞行方向
     private Vector2 fireballDirection = Vector2.zero;
     private Vector3 startPoint;
@@ -21,10 +25,13 @@ public class FireBall_Skill : Skill
         // 使用绿色显示开始调试信息
         Debug.Log($"<color=green>{StartDebugTest}</color>");
         
+        
+
         if (runtimeSkill != null)
         {
+            castingPointName = runtimeSkill.skillData.skillName;
             // 实例化火球位置
-            startPoint = runtimeSkill.skillManager.castingPoint["Fireball"].position;
+            startPoint = runtimeSkill.skillManager.castingPoint[castingPointName].position;
             Vector2 spawnPosition = (Vector2)startPoint;
 
             // 计算并存储火球的初始飞行方向

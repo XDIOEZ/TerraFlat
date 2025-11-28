@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4890933514158232767}
   - component: {fileID: 1794842364952349929}
   m_Layer: 7
-  m_Name: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757"
+  m_Name: Module_DamageReciver
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -93,7 +93,7 @@ MonoBehaviour:
   item: {fileID: 0}
   modData:
     Name: 
-    ID: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757"
+    ID: 
     isRunning: 1
     Type: 0
     BitData: 
@@ -111,6 +111,8 @@ MonoBehaviour:
       AdditiveModifier: 0
       MultiplicativeModifier: 1
       FinalAdditive: 0
+    Weakness:
+      _serializedList: []
     AttackersUIDs: 
     ShowCanvas: 1
     DamageInterval: 0.1

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1252656688152752650}
   - component: {fileID: 1835563831416809626}
   m_Layer: 0
-  m_Name: "AI\u52A8\u753B\u6A21\u5757"
+  m_Name: Module_Animator_AI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

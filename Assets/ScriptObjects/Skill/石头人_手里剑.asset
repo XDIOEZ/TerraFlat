@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8676df5df64c2e944b438c948abcea0a, type: 3}
   m_Name: "\u77F3\u5934\u4EBA_\u624B\u91CC\u5251"
   m_EditorClassIdentifier: 
-  skillName: "\u65B0\u6280\u80FD"
+  skillName: "\u77F3\u5934\u4EBA_\u624B\u91CC\u5251"
   description: "\u6280\u80FD\u63CF\u8FF0"
   icon: {fileID: 0}
   duration: 10
   initialPrograss: 0
   speed: 20
+  stringParam: 
   Actions:
   - {fileID: 2152439307247645993, guid: 6f27a587bf720974ca9a865de93b5e99, type: 3}

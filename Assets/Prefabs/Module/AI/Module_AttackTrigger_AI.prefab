@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5641593694245906890}
   - component: {fileID: 7498584744279995524}
   m_Layer: 9
-  m_Name: AttackTrigger_AI
+  m_Name: Module_AttackTrigger_AI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
