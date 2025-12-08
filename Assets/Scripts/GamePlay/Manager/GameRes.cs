@@ -14,16 +14,27 @@ public class GameRes : SingletonAutoMono<GameRes>
     [Header("资源标签列表")]
     public List<string> ADBLabels = new List<string>();
 
+    [Header("所有预制体字典")]
     [ShowInInspector]
     public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>();
+
+    [Header("配方字典")]
     [ShowInInspector]
     public Dictionary<string, Recipe> recipeDict = new Dictionary<string, Recipe>();
+
+    [Header("TileBase字典")]
     [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
+
+    [Header("Buff数据字典")]
     [ShowInInspector]
     public Dictionary<string, Buff_Data> BuffData_Dict = new Dictionary<string, Buff_Data>();
+
+    [Header("初始库存字典")]
     [ShowInInspector]
     public Dictionary<string, Inventoryinit> InventoryInitDict = new Dictionary<string, Inventoryinit>();
+
+    [Header("技能字典")]
     [ShowInInspector]
     public Dictionary<string, BaseSkill> SkillDict = new Dictionary<string, BaseSkill>();
 
@@ -426,6 +437,35 @@ public void HotReloadAllResources()
     {
         SkillDict.TryGetValue(skillName, out var skill);
         return skill;
+    }
+
+    public VFX GetVFX(string vfxName)
+    {
+        AllPrefabs.TryGetValue(vfxName, out var vfx);
+        if (vfx == null)
+        {
+            Debug.LogError($"VisualEffectMManager: 特效对象为空");
+            return null;
+        }
+        VFX vfxComponent = vfx.GetComponent<VFX>();
+        if (vfxComponent == null)
+        {
+            Debug.LogError($"VisualEffectMManager: 特效对象 {vfxName} 没有VFX组件");
+            return null;
+        }
+        return vfxComponent;
+    }
+
+    public void InstantiateVFX(string vfxName, Vector3 position, Quaternion rotation)
+    {
+        VFX vfx = GetVFX(vfxName);
+        if (vfx == null)
+        {
+            Debug.LogError($"VisualEffectMManager: 特效对象 {vfxName} 为空");
+            return;
+        }
+        GameObject vfxObj = Instantiate(vfx.gameObject, position, rotation);
+        vfxObj.transform.SetParent(transform);
     }
 
     #endregion

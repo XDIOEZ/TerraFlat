@@ -7,6 +7,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using Progress = Pathfinding.Progress;
+using Pathfinding.Graphs.Grid;
+
+
 
 
 #if UNITY_EDITOR
@@ -260,6 +263,12 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             isKeyAdjust = false // 标记为区域调整
         });
     }
+
+    // public GridGraphNodeData GetAllNodesData()
+    // {
+    //    GridGraph gridGraph = AstarPath.active.data.gridGraph;
+    //    return nodeData;
+    // }
     #endregion
 
     #region 按键调整鼠标节点权重（策划友好功能）

@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-[CreateAssetMenu(fileName = "Skill_Laser", menuName = "Skill/Skill_Laser", order = 0)]
+[CreateAssetMenu(fileName = "SkillAction_InstantiatePrefab", menuName = "Skill/SkillAction_InstantiatePrefab", order = 0)]
 public class UniSkillAction : BaseSkillAction
 {
     [Tooltip("Ô¤ÖÆÌå")]

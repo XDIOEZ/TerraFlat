@@ -45,6 +45,7 @@ Transform:
   - {fileID: 9189982982520835697}
   - {fileID: 921397683581109388}
   - {fileID: 3072480615578147765}
+  - {fileID: 6329713974184997745}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &8862278864143937418
@@ -228,6 +229,68 @@ MonoBehaviour:
   minTimeScale: 0
   maxTimeScale: 10
   timeScaleHintDuration: 1
+--- !u!1001 &271846547968557703
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 7343432311901774332}
+    m_Modifications:
+    - target: {fileID: 2993756592371071756, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_Name
+      value: Module_BuffManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+--- !u!4 &6329713974184997745 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
+  m_PrefabInstance: {fileID: 271846547968557703}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1389240428522791216
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -404,6 +467,10 @@ PrefabInstance:
       propertyPath: ItemSlot_Parent
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 5653052531165560293, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
+      propertyPath: ToggleActionName
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 8767320128831433282, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
       propertyPath: m_Name
       value: Module_Hand
@@ -474,6 +541,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2690356196676944319, guid: 5615491ee5491d545ac4c633133d01cc, type: 3}
+      propertyPath: CamPrefab
+      value: 
+      objectReference: {fileID: 5819911811838294429, guid: 42acff50be302dc4d99613be14b0844e, type: 3}
     - target: {fileID: 5306952090881228637, guid: 5615491ee5491d545ac4c633133d01cc, type: 3}
       propertyPath: m_Name
       value: Module_Cam
@@ -628,6 +699,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7343432311901774332}
     m_Modifications:
+    - target: {fileID: 41973073570735291, guid: caae0063482ab824ca16a7bcf2cf8dfe, type: 3}
+      propertyPath: Data.itemSlots.Array.size
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 1232630807682577054, guid: caae0063482ab824ca16a7bcf2cf8dfe, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1920
@@ -669,6 +744,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4200879185744419619, guid: caae0063482ab824ca16a7bcf2cf8dfe, type: 3}
+      propertyPath: ToggleActionName
+      value: OpenWorkBench
+      objectReference: {fileID: 0}
+    - target: {fileID: 4200879185744419619, guid: caae0063482ab824ca16a7bcf2cf8dfe, type: 3}
       propertyPath: inventoryRefDic._serializedList.Array.size
       value: 1
       objectReference: {fileID: 0}
@@ -678,7 +757,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5126595431219871123, guid: caae0063482ab824ca16a7bcf2cf8dfe, type: 3}
       propertyPath: m_Name
-      value: Module_WorkBench_1
+      value: Module_WorkBench
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8217382569762424501, guid: caae0063482ab824ca16a7bcf2cf8dfe, type: 3}
@@ -1575,6 +1654,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5064163680730882984, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
+      propertyPath: ToggleActionName
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 5624854569209714937, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
       propertyPath: m_Name
       value: Module_Hotbar
@@ -1707,6 +1790,10 @@ PrefabInstance:
     - target: {fileID: 2735290679265173132, guid: 0a4826ce897a8f948a5511963204d0f4, type: 3}
       propertyPath: m_Name
       value: Module_Equipment
+      objectReference: {fileID: 0}
+    - target: {fileID: 6911390125594523708, guid: 0a4826ce897a8f948a5511963204d0f4, type: 3}
+      propertyPath: ToggleActionName
+      value: OpenEquipmentPack
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -45,26 +45,6 @@ public class Inventory : MonoBehaviour
     #region 初始化和同步
     
 
-    public virtual void BindController()
-    {
-        Debug.Log("BindController " + Data.Name);
-          GameController GameController = Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-
-        if(GameController == null)
-        {
-            Debug.LogError("Owner 未设置为 GameController");
-            return;
-        }
-
-        GameController._inputActions.Win10.B.performed += ctx =>
-        {
-            if (ctx.performed)
-            {
-                basePanel.Toggle();
-            }
-        };
-    }
-
     [Tooltip("在Load时调用此函数进行初始化")]
     public virtual void Init()
     {

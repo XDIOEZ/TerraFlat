@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Laser_Skill : Skill
+public class Skill_Laser : Skill
 {
     #region ◊÷∂Œ∫Õ Ù–‘
 

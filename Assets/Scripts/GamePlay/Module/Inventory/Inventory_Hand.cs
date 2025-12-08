@@ -14,11 +14,6 @@ public class Inventory_Hand : Inventory
         PlayerHand = this;
     }
 
-    public override void BindController()
-    {
-        Debug.Log("BindController Null " + Data.Name);
-    }
-
     public override void OnValidate()
     {
         Data.Name = ModText.Hand;

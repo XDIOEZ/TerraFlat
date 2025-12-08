@@ -15,13 +15,17 @@ public class Mod_Inventory : Module,IInventory
     public SerializedDictionary<string, Inventory> InventoryRefDic { get=> inventoryRefDic; set => inventoryRefDic = value; }
     [Tooltip("模块面板")]
     public BasePanel basePanel;
-
+    
     // 修改：将单个预制体字段改为与inventoryRefDic对应的序列化字典
     [Tooltip("Inventory面板预制体字典")]
     public SerializedDictionary<string, GameObject> inventoryPanelPrefabs = new();
     [Tooltip("模块面板的预制体")]
     public GameObject Prefab_BasePanel;
-
+    
+    // 新增：UI开关按键绑定字段，让策划可以在编辑器中设置
+    [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
+    public string ToggleActionName = "";
+    
     #endregion
 
     #region 生命周期方法
@@ -87,7 +91,7 @@ public class Mod_Inventory : Module,IInventory
             
             // 初始化库存
             currentInventory.Init();
-            currentInventory.BindController();
+            BindController();
             
             // 尝试初始化物品
             GameRes.Instance.InventoryInitGet(Data.InventoryInitName, out Inventoryinit inventoryInit);
@@ -127,6 +131,84 @@ public class Mod_Inventory : Module,IInventory
             {
                 basePanel.Close();
             }
+        }
+    }
+
+    public virtual void BindController()
+    {
+        GameController GameController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+    
+        if(GameController == null)
+        {
+            Debug.LogError("Owner 未设置为 GameController");
+            return;
+        }
+    
+        // 如果ToggleActionName为空，则不绑定任何按键
+        if (string.IsNullOrEmpty(ToggleActionName))
+        {
+            Debug.Log("ToggleActionName为空，不绑定任何按键");
+            return;
+        }
+    
+        try
+        {
+            // 方法一：通过GetAction方法获取Action (推荐方式)
+            UnityEngine.InputSystem.InputAction toggleAction = GameController._inputActions.FindAction(ToggleActionName);
+            
+            if (toggleAction != null)
+            {
+                // 确保没有重复绑定
+                toggleAction.performed -= OnToggleActionPerformed;
+                toggleAction.performed += OnToggleActionPerformed;
+                Debug.Log($"成功绑定UI开关Action: {ToggleActionName}");
+            }
+            else
+            {
+                // 方法二：尝试通过Win10Actions类的属性获取（兼容原代码）
+                var win10Actions = GameController._inputActions.Win10;
+                var actionProperty = win10Actions.GetType().GetProperty(ToggleActionName);
+                
+                if (actionProperty != null)
+                {
+                    toggleAction = actionProperty.GetValue(win10Actions) as UnityEngine.InputSystem.InputAction;
+                    if (toggleAction != null)
+                    {
+                        toggleAction.performed -= OnToggleActionPerformed;
+                        toggleAction.performed += OnToggleActionPerformed;
+                        Debug.Log($"成功通过属性绑定UI开关Action: {ToggleActionName}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"无法获取Action属性值: {ToggleActionName}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"无法找到Action: {ToggleActionName}");
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Action绑定过程中出现错误: {e.Message}");
+        }
+    }
+
+    // 辅助方法：绑定默认的切换Action
+    private void BindDefaultToggleAction(GameController gameController)
+    {
+        // 回退到默认B键
+        gameController._inputActions.Win10.B.performed -= OnToggleActionPerformed;
+        gameController._inputActions.Win10.B.performed += OnToggleActionPerformed;
+    }
+
+    // 处理切换事件的方法
+    private void OnToggleActionPerformed(UnityEngine.InputSystem.InputAction.CallbackContext ctx)
+    {
+        if (ctx.performed && basePanel != null)
+        {
+            basePanel.Toggle();
         }
     }
 

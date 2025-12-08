@@ -48,6 +48,8 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     [Button("加载距离玩家规定范围的全部Chunk")]
     public void LoadChunkCloseToPlayer(GameObject player, int Distance = 1)
     {
+          //TODO 在此处缓存处于激活状态的Chunk的权重表
+
         // 最小为 1
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3

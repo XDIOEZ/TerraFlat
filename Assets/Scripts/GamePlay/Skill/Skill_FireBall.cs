@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class FireBall_Skill : Skill
+public class Skill_FireBall : Skill
 {
     [Header("组件引用")]
     public List<Module> mods = new List<Module>();

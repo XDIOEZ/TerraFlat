@@ -111,11 +111,6 @@ public class Inventory_HotBar : Inventory
         ChangeSelectBoxPosition(Data.Index);
         RefreshUI(CurrentIndex);
     }
-        public override void BindController()
-    {
-        Debug.Log("BindController Null " + Data.Name);
-    }
-
     /// <summary>
     /// 初始化输入控制器
     /// </summary>
