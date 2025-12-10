@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5391927010126263884}
   - component: {fileID: 4760340190715897003}
   m_Layer: 0
-  m_Name: "\u4EA4\u4E92\u6A21\u7EC4"
+  m_Name: Module_Interaction
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

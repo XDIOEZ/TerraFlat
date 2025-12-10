@@ -70,10 +70,22 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public SpriteRenderer Sprite;
     
+       private bool isInitialized = false;
     #endregion
 
     #region 生命周期方法
 
+    /// <summary>
+    /// 加载物品数据和模块
+    /// </summary>
+    [Button("加载模块")]
+    public virtual void Load()
+    {
+        isInitialized = true;
+        ModuleLoad();
+    }
+    
+    
     /// <summary>
     /// 初始化物品组件和模块
     /// </summary>
@@ -103,8 +115,9 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void Update()
     {
-        try
-        {
+        if (!isInitialized)
+                return;
+
             // 高频更新逻辑（无间隔）
             if (updateInterval <= 0.1f)
             {
@@ -126,12 +139,6 @@ public abstract class Item : MonoBehaviour
                     mod.ModUpdate(updateInterval);
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[Item] 物品 {gameObject.name} 在Update中发生错误: {ex.Message}", this);
-            Debug.LogException(ex);
-        }
     }
 
     /// <summary>
@@ -393,15 +400,7 @@ public abstract class Item : MonoBehaviour
 
     #region 公共方法
 
-    /// <summary>
-    /// 加载物品数据和模块
-    /// </summary>
-    [Button("加载模块")]
-    public virtual void Load()
-    {
-        ModuleLoad();
-    }
-    
+
     /// <summary>
     /// 加载物品位置数据
     /// </summary>

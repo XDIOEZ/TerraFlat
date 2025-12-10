@@ -35,6 +35,11 @@ public class Inventory : MonoBehaviour
         
     }
 
+    public virtual void ModUpdate(float deltaTime)
+    {
+      
+    }
+
     public void OnDestroy()
     {
         Data.Event_RefreshUI -= RefreshUI;

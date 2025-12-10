@@ -28,18 +28,18 @@ public class BasePanel : MonoBehaviour
     public UI_Drag Dragger;
     public RectTransform rectTransform;
     public string PanleName;
-    
+
     // 记录面板的开关状态
     [SerializeField]
-    private  bool isOpen = false;
-#region  Unity生命周期
+    private bool isOpen = false;
+    #region  Unity生命周期
     protected virtual void Awake()
     {
         PanleName = gameObject.name + Random.Range(1, 1000);
         UIManager.Instance.RegisterPanel(this);
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
-        
+
         Dragger = GetComponentInChildren<UI_Drag>();
         rectTransform = GetComponent<RectTransform>();
         if (Dragger != null)
@@ -47,7 +47,7 @@ public class BasePanel : MonoBehaviour
             CanDrag = true;
         }
         canvasGroup = GetComponent<CanvasGroup>();
-        
+
         // 初始化面板状态
         if (canvasGroup != null)
         {
@@ -163,17 +163,17 @@ public class BasePanel : MonoBehaviour
         }
 
 
- // 为"关闭"按钮注册关闭事件（如果存在）
-if (buttons.ContainsKey("关闭"))
-{
-    buttons["关闭"].onClick.AddListener(() => Close());
-}
+        // 为"关闭"按钮注册关闭事件（如果存在）
+        if (buttons.ContainsKey("关闭"))
+        {
+            buttons["关闭"].onClick.AddListener(() => Close());
+        }
 
-// 为"销毁"按钮注册销毁事件（如果存在）
-if (buttons.ContainsKey("销毁"))
-{
-    buttons["销毁"].onClick.AddListener(() => Destroy(gameObject));
-}
+        // 为"销毁"按钮注册销毁事件（如果存在）
+        if (buttons.ContainsKey("销毁"))
+        {
+            buttons["销毁"].onClick.AddListener(() => Destroy(gameObject));
+        }
     }
 
     #region 面板显示控制
@@ -229,80 +229,80 @@ if (buttons.ContainsKey("销毁"))
 
     #region 按钮操作
 
-/// <summary>
-/// 获取按钮组件
-/// </summary>
-/// <param name="buttonName">按钮名称</param>
-/// <returns>按钮组件，如果不存在返回null</returns>
-public Button GetButton(string buttonName)
-{
-    if (buttons.TryGetValue(buttonName, out Button button))
+    /// <summary>
+    /// 获取按钮组件
+    /// </summary>
+    /// <param name="buttonName">按钮名称</param>
+    /// <returns>按钮组件，如果不存在返回null</returns>
+    public Button GetButton(string buttonName)
     {
-        return button;
-    }
-    Debug.LogWarning($"未找到名为 {buttonName} 的按钮,按钮的数量为:{buttons.Count}");
-    return null;
-}
-
-/// <summary>
-/// 设置按钮点击事件
-/// </summary>
-/// <param name="buttonName">按钮名称</param>
-/// <param name="onClick">点击回调</param>
-public void SetButtonOnClick(string buttonName, UnityEngine.Events.UnityAction onClick)
-{
-    Button button = GetButton(buttonName);
-    if (button != null)
-    {
-        button.onClick.AddListener(onClick);
-    }
-}
-
-/// <summary>
-/// 设置按钮按下事件
-/// </summary>
-/// <param name="buttonName">按钮名称</param>
-/// <param name="onPress">按下回调</param>
-public void SetButtonOnPress(string buttonName, UnityEngine.Events.UnityAction onPress)
-{
-    Button button = GetButton(buttonName);
-    if (button != null)
-    {
-        EventTrigger trigger = button.GetComponent<EventTrigger>();
-        if (trigger == null)
+        if (buttons.TryGetValue(buttonName, out Button button))
         {
-            trigger = button.gameObject.AddComponent<EventTrigger>();
+            return button;
         }
-
-        EventTrigger.Entry entry = new EventTrigger.Entry();
-        entry.eventID = EventTriggerType.PointerDown;
-        entry.callback.AddListener((data) => { onPress?.Invoke(); });
-        trigger.triggers.Add(entry);
+        Debug.LogWarning($"未找到名为 {buttonName} 的按钮,按钮的数量为:{buttons.Count}");
+        return null;
     }
-}
 
-/// <summary>
-/// 设置按钮松开事件
-/// </summary>
-/// <param name="buttonName">按钮名称</param>
-/// <param name="onRelease">松开回调</param>
-public void SetButtonOnRelease(string buttonName, UnityEngine.Events.UnityAction onRelease)
-{
-    Button button = GetButton(buttonName);
-    if (button != null)
+    /// <summary>
+    /// 设置按钮点击事件
+    /// </summary>
+    /// <param name="buttonName">按钮名称</param>
+    /// <param name="onClick">点击回调</param>
+    public void SetButtonOnClick(string buttonName, UnityEngine.Events.UnityAction onClick)
     {
-        EventTrigger trigger = button.GetComponent<EventTrigger>();
-        if (trigger == null)
+        Button button = GetButton(buttonName);
+        if (button != null)
         {
-            trigger = button.gameObject.AddComponent<EventTrigger>();
+            button.onClick.AddListener(onClick);
         }
-
-        EventTrigger.Entry entry = new EventTrigger.Entry();
-        entry.eventID = EventTriggerType.PointerUp;
-        entry.callback.AddListener((data) => { onRelease?.Invoke(); });
-        trigger.triggers.Add(entry);
     }
-}
+
+    /// <summary>
+    /// 设置按钮按下事件
+    /// </summary>
+    /// <param name="buttonName">按钮名称</param>
+    /// <param name="onPress">按下回调</param>
+    public void SetButtonOnPress(string buttonName, UnityEngine.Events.UnityAction onPress)
+    {
+        Button button = GetButton(buttonName);
+        if (button != null)
+        {
+            EventTrigger trigger = button.GetComponent<EventTrigger>();
+            if (trigger == null)
+            {
+                trigger = button.gameObject.AddComponent<EventTrigger>();
+            }
+
+            EventTrigger.Entry entry = new EventTrigger.Entry();
+            entry.eventID = EventTriggerType.PointerDown;
+            entry.callback.AddListener((data) => { onPress?.Invoke(); });
+            trigger.triggers.Add(entry);
+        }
+    }
+
+    /// <summary>
+    /// 设置按钮松开事件
+    /// </summary>
+    /// <param name="buttonName">按钮名称</param>
+    /// <param name="onRelease">松开回调</param>
+    public void SetButtonOnRelease(string buttonName, UnityEngine.Events.UnityAction onRelease)
+    {
+        Button button = GetButton(buttonName);
+        if (button != null)
+        {
+            EventTrigger trigger = button.GetComponent<EventTrigger>();
+            if (trigger == null)
+            {
+                trigger = button.gameObject.AddComponent<EventTrigger>();
+            }
+
+            EventTrigger.Entry entry = new EventTrigger.Entry();
+            entry.eventID = EventTriggerType.PointerUp;
+            entry.callback.AddListener((data) => { onRelease?.Invoke(); });
+            trigger.triggers.Add(entry);
+        }
+    }
 
     /// <summary>
     /// 显示/隐藏按钮

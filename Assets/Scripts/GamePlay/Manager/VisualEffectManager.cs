@@ -380,7 +380,7 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
     /// <summary>
     /// 清空对象池（在场景切换时调用）
     /// </summary>
-    public void ClearPool()
+    public void ClearPool(bool recreateParent = true)
     {
         foreach (var queue in effectPool.Values)
         {
@@ -407,19 +407,28 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
         // 清空所有Owner的特效
         ownerEffects.Clear();
 
-        // 重新创建特效池父对象
+        // 重新创建特效池父对象（仅在非销毁时调用）
         if (effectPoolParent != null)
         {
             Destroy(effectPoolParent.gameObject);
         }
-        effectPoolParent = new GameObject("EffectPool").transform;
-        effectPoolParent.SetParent(transform);
+        
+        // 只有在recreateParent为true且对象未被销毁时才创建新的父对象
+        if (recreateParent && gameObject != null) // 检查gameObject是否仍然有效
+        {
+            effectPoolParent = new GameObject("EffectPool").transform;
+            effectPoolParent.SetParent(transform);
+        }
+        else
+        {
+            effectPoolParent = null;
+        }
     }
 
     private void OnDestroy()
     {
-             // 确保在对象销毁时清理所有资源
-        ClearPool();
+        // 确保在对象销毁时清理所有资源，但不重新创建父对象
+        ClearPool(false);
     }
     
     #endregion

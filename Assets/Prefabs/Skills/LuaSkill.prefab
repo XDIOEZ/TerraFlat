@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &9092067032435507713
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5846834651902534512}
+  - component: {fileID: -76652597939392778}
+  m_Layer: 0
+  m_Name: LuaSkill
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5846834651902534512
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9092067032435507713}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &-76652597939392778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9092067032435507713}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37024a2c1a91e8e4584c9b3f2e1da17a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  luaScriptCode: "-- \u6280\u80FD\u52A0\u8F7D\u51FD\u6570\r\nfunction Load(skillLua,
+    runtimeSkill)\r\n    CS.UnityEngine.Debug.Log(\"Lua\u6280\u80FD\u52A0\u8F7D\u6210\u529F:
+    \" .. runtimeSkill.skillData.name)\r\n    \r\n    -- \u521D\u59CB\u5316\u6280\u80FD\u72B6\u6001\r\n   
+    runtimeSkill.targetPoint = skillLua.transform.position\r\nend\r\n\r\n-- \u6280\u80FD\u66F4\u65B0\u51FD\u6570\r\nfunction
+    SkillUpdate(skillLua, runtimeSkill, deltaTime)\r\n    -- \u5B9E\u73B0\u6280\u80FD\u903B\u8F91\r\n   
+    runtimeSkill.progress = runtimeSkill.progress + deltaTime\r\n    \r\n    if runtimeSkill.progress
+    >= runtimeSkill.duration then\r\n        CS.UnityEngine.Debug.Log(\"Lua\u6280\u80FD\u6267\u884C\u5B8C\u6BD5\")\r\n   
+    end\r\nend\r\n\r\n-- \u6280\u80FD\u4FDD\u5B58\u51FD\u6570\r\nfunction Save(skillLua,
+    runtimeSkill)\r\n    CS.UnityEngine.Debug.Log(\"Lua\u6280\u80FD\u4FDD\u5B58\u6570\u636E\")\r\nend"

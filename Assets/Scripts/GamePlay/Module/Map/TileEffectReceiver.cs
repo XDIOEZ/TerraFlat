@@ -46,7 +46,6 @@ public class TileEffectReceiver : Module
     #region 生命周期
     private void Start()
     {
-        UpdateMapReference();
         lastGridPos = GetCurrentGridPos();
         // 初始化当前TileData缓存
         currentTileData = Cache_map?.GetTile(lastGridPos);
@@ -61,7 +60,7 @@ public class TileEffectReceiver : Module
         _Data.ID = ModText.TileEffectReceiver;
     }
 
-    private void Update()
+   public override void ModUpdate(float deltaTime)
     {
         // 定期清理缓存
         CleanupCacheIfNeeded();
@@ -113,11 +112,6 @@ public class TileEffectReceiver : Module
         OnTileExit(lastGridPos);
     }
     
-    public override void ModUpdate(float deltaTime)
-    {
-        // 暂时没有需要每帧更新的逻辑
-    }
-    
     public override void Act()
     {
         base.Act();
@@ -161,6 +155,8 @@ public class TileEffectReceiver : Module
     /// </summary>
     private void UpdateMapReference()
     {
+        if(ChunkMgr.Instance == null) return;
+        
         if (Cache_map == null || !Cache_map.gameObject.activeInHierarchy)
         {
             Chunk chunk;

@@ -93,6 +93,7 @@ public class CameraFollowManager : Module
         {
             Vcam.m_Lens.OrthographicSize = Player.PovValue;
         }
+        GameController._mainCamera = ControllerCamera;
     
         // ÖØÖÃÐý×ª
         transform.rotation = Quaternion.identity;

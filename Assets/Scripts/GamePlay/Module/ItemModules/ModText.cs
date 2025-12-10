@@ -39,6 +39,7 @@ public static class ModText
     public static string FocusPoint = "FaceMouse模块";
     public static string Food = "食物模块";
     public static string Fuel = "燃料模块";
+    public static string Furnace = "熔炉模块";
     #endregion
     #region G
     public static string Grow = "生长模块";
@@ -72,6 +73,8 @@ public static class ModText
     public static string Smelting = "熔炼模块";
     public static string Stamina = "耐力模块";
     public static string Scene = "场景模块";
+
+    public static string SkillManager_Item = "技能管理器_物品";
     #endregion
 
     #region T

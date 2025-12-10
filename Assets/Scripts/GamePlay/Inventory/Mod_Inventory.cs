@@ -19,7 +19,7 @@ public class Mod_Inventory : Module,IInventory
     // 修改：将单个预制体字段改为与inventoryRefDic对应的序列化字典
     [Tooltip("Inventory面板预制体字典")]
     public SerializedDictionary<string, GameObject> inventoryPanelPrefabs = new();
-    [Tooltip("模块面板的预制体")]
+    [Tooltip("模块面板的预制体/已经弃用")]
     public GameObject Prefab_BasePanel;
     
     // 新增：UI开关按键绑定字段，让策划可以在编辑器中设置
@@ -209,6 +209,14 @@ public class Mod_Inventory : Module,IInventory
         if (ctx.performed && basePanel != null)
         {
             basePanel.Toggle();
+        }
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        foreach (var inventory in inventoryRefDic.Values)
+        {
+            inventory.ModUpdate(deltaTime);
         }
     }
 

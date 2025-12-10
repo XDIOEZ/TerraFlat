@@ -471,13 +471,27 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     public static Vector2 GetChunkSize()
     {
         var sceneName = SceneManager.GetActiveScene().name;
+        
+        // 添加null检查，防止出现NullReferenceException
+        if (SaveDataMgr.Instance == null)
+        {
+            Debug.LogWarning("SaveDataMgr.Instance is null, returning default chunk size.");
+            return new Vector2(100, 100);
+        }
+        
+        if (SaveDataMgr.Instance.SaveData == null)
+        {
+//            Debug.LogWarning("SaveDataMgr.Instance.SaveData is null, returning default chunk size.");
+            return new Vector2(100, 100);
+        }
+        
         var dict = SaveDataMgr.Instance.SaveData.PlanetData_Dict;
-
+    
         if (dict != null && dict.TryGetValue(sceneName, out var planetData))
         {
             return planetData.ChunkSize;
         }
-
+    
         // 找不到就返回 Vector2(100,100)
         return new Vector2(100, 100);
     }

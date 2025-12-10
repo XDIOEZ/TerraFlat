@@ -72,27 +72,27 @@ public class ItemMods
     public void AddMod(Module mod)
     {
 
-        // Ìí¼Óµ½ Mods
+        // æ·»åŠ åˆ° Mods
         Mods[mod._Data.Name] = mod;
 
         if (Mods_List.ContainsKey(mod._Data.ID) == false)
         {
             Mods_List[mod._Data.ID] = new List<Module>();
         }
-        // Ìí¼Óµ½ Mods_List
+        // æ·»åŠ åˆ° Mods_List
         Mods_List[mod._Data.ID].Add(mod);
     }
 
     public void RemoveMod(Module mod)
     {
-        // ´Ó Mods ÖĞÒÆ³ı
+        // ä» Mods ä¸­ç§»é™¤
         Mods.Remove(mod._Data.Name);
 
-        // ´Ó Mods_List ÖĞÒÆ³ı
+        // ä» Mods_List ä¸­ç§»é™¤
         if (Mods_List.TryGetValue(mod._Data.ID, out var modList))
         {
             modList.Remove(mod);
-            // ¿ÉÑ¡£ºÈôÁĞ±íÎª¿Õ¿ÉÒÆ³ı key
+            // å¯é€‰ï¼šè‹¥åˆ—è¡¨ä¸ºç©ºå¯ç§»é™¤ key
             if (modList.Count == 0)
                 Mods_List.Remove(mod._Data.ID);
         }

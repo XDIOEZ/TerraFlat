@@ -6,13 +6,13 @@ using UnityEngine;
 public class Mod_SkillManager : Module
 {
     #region 基础参数
-
+    public new virtual Item item => base.item;
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
     public float Data;
     #endregion
-    #region 模组参数
+    #region 模组参数a
 
     public int CurrentSelectSkilIndex;
     [Tooltip("技能名称列表(用于存档玩家拥有的法术)")]
@@ -39,12 +39,22 @@ public class Mod_SkillManager : Module
     {
         if (_Data.ID == "")
         {
-            _Data.ID = ModText.Grow;
+            _Data.ID = ModText.SkillManager_Item;
         }
     }
-public override void Load()
-{
+    public override void Load()
+    {
+            if(item == null)
+    {
+        Debug.LogError("Mod_SkillManager_Item: item is null!");
+        return;
+    }
+
     focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
+    if (focusPoint == null)
+    {
+//        Debug.LogError("FocusPoint 为空，请检查技能配置！");
+    }
     controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
     if (controller != null)
         controller.RightClick += Act;
@@ -96,7 +106,7 @@ public override void Load()
         }else
         {
                 SerializedcastingPointOffset[skillName] = localPositionOffset;
-                Debug.LogWarning($"未找到技能 {skillName} 的偏移量，使用默认值(0,0)");
+//                Debug.LogWarning($"未找到技能 {skillName} 的偏移量，使用默认值(0,0)");
         }
 
         // 创建新的 GameObject 作为施法点位
@@ -118,17 +128,30 @@ public override void Load()
 
             transform.localPosition = Vector3.zero;
         //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
-        if(item.itemMods!= null)
-        item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody).AddControlledTransform(transform);
+        if(item.itemMods != null)
+        {
+            Mod_TurnBody turnBodyMod = item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody);
+            if(turnBodyMod != null)
+            {
+                turnBodyMod.AddControlledTransform(transform);
+            }
+            else
+            {
+//                Debug.LogWarning("没有找到旋转体控制组件");
+            }
+        }
         else
-        Debug.LogWarning("没有找到旋转体控制组件");
+        {
+            Debug.LogWarning("itemMods为空，无法查找旋转体控制组件");
+        }
+
 }
 
 /// <summary>
 /// 检查施法点配置是否完整，并自动添加缺失的配置
 /// </summary>
 [Button("检查施法点配置")]
-private void CheckCastingPointConfiguration()
+public void CheckCastingPointConfiguration()
 {
     // 检查SerializedcastingPointOffset是否包含skillDataList中所有技能的施法点
     List<string> missingCastingPoints = new List<string>();
@@ -165,10 +188,11 @@ private void CheckCastingPointConfiguration()
     }
 }
 
+
 /// <summary>
 /// 清理现有的施法点位子对象
 /// </summary>
-private void ClearCastingPoints()
+public void ClearCastingPoints()
 {
     // 清空字典
     castingPoint.Clear();
@@ -218,7 +242,13 @@ private void ClearCastingPoints()
     
     public override void Save()
     {
+        if(item == null)
+        {
+            Debug.LogError("Mod_SkillManager_Item: item is null!");
+            return;
+        }
         StopAllSkills();
+        castingPoint.Clear();
         ModSaveData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
@@ -235,7 +265,17 @@ private void ClearCastingPoints()
             runtimeSkill.duration = selectedSkill.duration; // 假设BaseSkill有Duration属性
             runtimeSkill.progress = selectedSkill.initialPrograss; // 假设BaseSkill有Duration属性
             runtimeSkill.skillSender = item;
-            runtimeSkill.targetPoint = focusPoint.Data.DefaultSkill_Point;
+
+            if(focusPoint != null)
+            {
+                runtimeSkill.targetPoint = focusPoint.Data.DefaultSkill_Point;
+            }
+            else
+            {
+                //为空默认指向自己
+                runtimeSkill.targetPoint = item.transform.position;
+            }
+
             UpdateSkillList.Add(runtimeSkill);
             runtimeSkill.Start();
         }

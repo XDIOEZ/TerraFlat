@@ -52,19 +52,36 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     [Button("Update NavMesh")]
     public void UpdateMeshAsync(Vector2 center = default, int radius = 1, System.Action onComplete = null)
     {
+        // 添加null检查，确保AstarPath.active不为null
+        if (AstarPath.active == null)
+        {
+            Debug.LogError("AstarPath.active is null, cannot update mesh.");
+            onComplete?.Invoke();
+            return;
+        }
+        
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Vector2 Newcenter = center + chunkSize * 0.5f;
+        
+        // 检查gridGraph是否为null
+        if (AstarPath.active.data.gridGraph == null)
+        {
+            Debug.LogError("AstarPath.active.data.gridGraph is null, cannot update mesh.");
+            onComplete?.Invoke();
+            return;
+        }
+        
         AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
-
+    
         int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
         int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
         float nodeSize = 1f;
-
+    
         AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
-
+    
         // 启动异步扫描（可指定要扫描的图，null表示扫描所有图）
         IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
-
+    
         // 通过协程处理异步进度，并在完成后更新权重
         StartCoroutine(HandleScanProgress(scanProgress, center, radius, onComplete));
     }
