@@ -3,7 +3,7 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
-
+[System.Serializable]
 public class Inventory : MonoBehaviour
 {
     #region 字段和属性
@@ -12,13 +12,15 @@ public class Inventory : MonoBehaviour
     //物品槽预制体
     GameObject ItemSlot_Prefab;
     //物品槽的父物体
-     Transform ItemSlot_Parent;
+    Transform ItemSlot_Parent;
     //数据
     public Inventory_Data Data;
     //UI列表
     public List<ItemSlot_UI> itemSlotUIs = new List<ItemSlot_UI>();
-    //默认交互Inventory
+
+    [Header("默认交互Inventory")] //默认交互Inventory
     public Inventory DefaultTarget_Inventory;
+    [Tooltip("外部自动注入")]
     public BasePanel basePanel;
     #endregion
 
@@ -26,18 +28,18 @@ public class Inventory : MonoBehaviour
 
     public virtual void OnValidate()
     {
-        if(string.IsNullOrEmpty(Data.Name))
-        Data.Name = ModText.Bag;
+        if (string.IsNullOrEmpty(Data.Name))
+            Data.Name = ModText.Bag;
     }
 
     public virtual void Awake()
     {
-        
+
     }
 
     public virtual void ModUpdate(float deltaTime)
     {
-      
+
     }
 
     public void OnDestroy()
@@ -48,41 +50,51 @@ public class Inventory : MonoBehaviour
     #endregion
 
     #region 初始化和同步
-    
 
-    [Tooltip("在Load时调用此函数进行初始化")]
-    public virtual void Init()
+
+    [Tooltip("在Load时调用此函数进行数据初始化（仅初始化数据和逻辑，不涉及UI）")]
+    public virtual void InitData()
     {
-                // 未设置Prefab 自动加载
-        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
-
-        if(basePanel == null)
-        {
-            Debug.LogError("Prefab_BasePanel 未设置");
-            return;
-        }
-        
-        //TODO 获取BasePanel上的UI_Content组件作为Slot的父物体
-        ItemSlot_Parent = basePanel.transform.GetComponentInChildren<UI_Content>().transform;
-
-        if(ItemSlot_Parent == null)
-        {
-            Debug.LogError("ItemSlot_Parent 未设置");
-            return;
-        }
-
-        // 如果未设置数据则自动创建
+        // 初始化物品槽位数据
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
             Data.itemSlots[i].Index = i;
             Data.itemSlots[i].SlotMaxVolume = 100;
         }
 
+        // 初始化事件系统
+        Data.Event_RefreshUI = new();
+        Data.Event_RefreshUI.Clear();
+        Data.Event_RefreshUI += RefreshUI;
+    }
+
+    /// <summary>
+    /// 在UI面板创建后调用此函数进行UI初始化
+    /// 该方法应在EnsurePanelCreated中调用，确保basePanel已存在
+    /// </summary>
+    public virtual void InitUI()
+    {
+        if (basePanel == null)
+        {
+            Debug.LogError("Prefab_BasePanel 未设置,请在Inspector中的Mod_Inventory中设置对应Inventory的面板预制体");
+            return;
+        }
+
+        //TODO 获取BasePanel上的UI_Content组件作为Slot的父物体
+        ItemSlot_Parent = basePanel.transform.GetComponentInChildren<UI_Content>().transform;
+
+        if (ItemSlot_Parent == null)
+        {
+            Debug.LogError("ItemSlot_Parent 未设置");
+            return;
+        }
+
+        // 加载Slot UI预制体
+        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
 
         // 同步槽位数量与 itemSlots 保持一致
         int currentCount = ItemSlot_Parent.childCount;
         int targetCount = Data.itemSlots.Count;
-        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
 
         // 删除多余槽位（从后往前删保证安全）
         for (int i = currentCount - 1; i >= targetCount; i--)
@@ -108,15 +120,9 @@ public class Inventory : MonoBehaviour
         // 同步 UI 数据
         SyncData();
 
-        Data.Event_RefreshUI = new();
-        Data.Event_RefreshUI.Clear();
-        // 注册刷新UI事件
-        Data.Event_RefreshUI += RefreshUI;
-
         //初始化时自动同步UI显示
         RefreshUI();
     }
-
     //同步UI与Data
     public void SyncData()
     {
@@ -135,7 +141,7 @@ public class Inventory : MonoBehaviour
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
             itemSlotUI.Data.onSlotDataChanged.Clear();
-            itemSlotUI.Data.onSlotDataChanged +=(OnItemSlotChanged);
+            itemSlotUI.Data.onSlotDataChanged += (OnItemSlotChanged);
         }
     }
 
@@ -235,21 +241,21 @@ public class Inventory : MonoBehaviour
     public virtual void OnLeftClick(int index)
     {
         ItemSlot slot = Data.GetItemSlot(index);
-    
+
         //防御性检查：确保DefaultTarget_Inventory不为null
         if (DefaultTarget_Inventory == null)
         {
             Debug.LogWarning($"[{Data.Name}] 手部为空：DefaultTarget_Inventory未设置 ,点击了 [{index}]");
             return;
         }
-    
+
         //防御性检查：确保DefaultTarget_Inventory的Data不为null
         if (DefaultTarget_Inventory.Data == null)
         {
             Debug.LogWarning($"[{Data.Name}] 手部为空：DefaultTarget_Inventory.Data未设置");
             return;
         }
-    
+
         //默认为手部
         if (DefaultTarget_Inventory.Data.itemSlots.Count > index)
         {
@@ -269,16 +275,16 @@ public class Inventory : MonoBehaviour
                 Debug.LogWarning($"[{Data.Name}] 手部物品槽列表为空");
                 return;
             }
-            
+
             if (DefaultTarget_Inventory.Data.itemSlots[0] == null)
             {
                 Debug.LogWarning($"[{Data.Name}] 默认手部槽位 [0] 为空");
             }
-            
+
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
             DefaultTarget_Inventory.RefreshUI(0);
         }
-    
+
         RefreshUI(index);
     }
 
@@ -315,7 +321,7 @@ public class Inventory : MonoBehaviour
         {
             itemIndices.Add(i);
         }
-        
+
         for (int i = itemIndices.Count - 1; i > 0; i--)
         {
             int r = Random.Range(0, i + 1);
@@ -331,7 +337,7 @@ public class Inventory : MonoBehaviour
             if (Data.itemSlots[i].itemData == null)
                 emptySlots.Add(i);
         }
-        
+
         for (int i = emptySlots.Count - 1; i > 0; i--)
         {
             int r = Random.Range(0, i + 1);
@@ -468,7 +474,7 @@ public class Inventory : MonoBehaviour
     [LabelText("自动注入物品列表(统一数量)")]
     public void AutoInjectItemDataList(
         [LabelText("物品预制体列表")] List<GameObject> prefabList,
-        [LabelText("统一数量")] [MinValue(1)] int uniformCount = 1)
+        [LabelText("统一数量")][MinValue(1)] int uniformCount = 1)
     {
         if (prefabList == null)
         {

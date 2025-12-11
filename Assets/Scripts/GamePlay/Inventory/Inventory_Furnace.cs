@@ -9,43 +9,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-#region 数据定义
-[MemoryPackable]
-[System.Serializable]
-public partial class ModSmeltingData
-{
-    [ShowInInspector]
-    public Dictionary<string, Inventory_Data> InvData = new Dictionary<string, Inventory_Data>();
-
-    [Tooltip("当前的熔炼进度")]
-    public float SmeltingProgress = 10f;
-
-    [Tooltip("熔炉的最大熔炼速度")]
-    public float MaxSmeltingSpeed = 10f;
-
-    [Tooltip("熔炉的当前熔炼速度")]
-    public float SmeltingSpeed = 10f;
-
-    [Tooltip("当前熔炉内温度")]
-    public float Temperature = 20f;
-
-    [Tooltip("可达最大温度值（由燃料决定）")]
-    public float MaxTemperature = 0f;
-
-    [Tooltip("熔炉本身的最大温度限制（熔炉的物理限制）")]
-    public float MaxTemperatureLimit = 1000f;
-
-    [Tooltip("是否正在熔炼")]
-    public bool IsSmelting = false;
-
-    [Tooltip("温度上升速度")]
-    public float TemperatureUpSpeed = 10f;
-
-    [Tooltip("温度下降速度")]
-    public float TemperatureDownSpeed = 30f;
-}
-#endregion
-
 public class Inventory_Furnace : Inventory
 {
 
@@ -66,7 +29,6 @@ public class Inventory_Furnace : Inventory
     public ModSmeltingData _Data = new ModSmeltingData();
 
     public Mod_Fuel mod_Fuel; // 燃料模块
-    public BasePanel panel;
     public Button WorkButton;
 
 
@@ -80,7 +42,6 @@ public class Inventory_Furnace : Inventory
     [Tooltip("温度数值文本")]
     public TextMeshProUGUI TemperatureText;
     #endregion      
-
     #region Unity生命周期
 
     public override void OnValidate()
@@ -158,11 +119,14 @@ public class Inventory_Furnace : Inventory
         UpdateUI();
     }
 
-    public override void Init()
+    public override void InitData()
     {
-        //获取物品模块
+        base.InitData();
+        
+        // 获取物品模块
         mod_Inventory = GetComponent<Mod_Inventory>();
-        panel = mod_Inventory.basePanel;
+        mod_Fuel = Owner.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
+
         // 从 SaveData 读取
         SaveData.ReadData(ref _Data);
 
@@ -186,10 +150,6 @@ public class Inventory_Furnace : Inventory
                 FuelInventory.Data = _Data.InvData[FuelInventory.Data.Name];
         }
 
-        // 按钮事件
-        if (WorkButton != null)
-            WorkButton.onClick.AddListener(OnButtonClick);
-
         // 如果有手持模块，设置默认目标
         if (Owner != null && Owner.itemMods != null && Owner.itemMods.ContainsKey_ID(ModText.Hand))
         {
@@ -200,36 +160,31 @@ public class Inventory_Furnace : Inventory
                 OutputInventory.DefaultTarget_Inventory = handInv;
         }
 
-        // 初始化库存
-        InputInventory?.Init();
-        OutputInventory?.Init();
-        FuelInventory?.Init();
+    }
 
-        // 获取交互模块引用
-        if (Owner != null && Owner.itemMods != null)
-        {
-            var interactMod = Owner.itemMods.GetMod_ByID(ModText.Interact);
-            if (interactMod != null)
-            {
-                interactMod.OnAction_Start += Interact_Start;
-                interactMod.OnAction_Start += _ => panel?.Toggle();
-                interactMod.OnAction_Stop += _ => panel?.Close();
-            }
-        }
+    /// <summary>
+    /// UI初始化（在面板创建后调用）
+    /// </summary>
+    public override void InitUI()
+    {
+        base.InitUI();
 
-        panel?.Close();
+        // 初始化UI引用
+        progressSlider = base.basePanel.GetSlider("熔炼进度条");
+        temperatureSlider = base.basePanel.GetSlider("温度显示条");
+        TemperatureText = base.basePanel.GetText("温度数值文本");
+        fuelSlider = base.basePanel.GetSlider("燃料显示条");
+        WorkButton = base.basePanel.GetButton("合成按钮");
+
+        // 按钮事件
+        WorkButton.onClick.AddListener(OnButtonClick);
+
+        // 初始化UI显示
+        basePanel?.Close();
         UpdateUI();
         InputInventory?.RefreshUI();
         OutputInventory?.RefreshUI();
         FuelInventory?.RefreshUI();
-
-        //TODO 通过BasePanle初始化UI的引用
-        progressSlider = basePanel.GetSlider("熔炼进度条");
-        temperatureSlider = basePanel.GetSlider("温度显示条");
-        TemperatureText = basePanel.GetText("温度数值文本");
-        fuelSlider = basePanel.GetSlider("燃料显示条");
-
-
     }
 
     public override void Save()
@@ -252,6 +207,7 @@ public class Inventory_Furnace : Inventory
         SaveData?.WriteData(_Data);
     }
     #endregion
+
 
     #region 熔炼核心逻辑
     private void SmeltingProcess(float deltaTime)
@@ -309,8 +265,6 @@ public class Inventory_Furnace : Inventory
 
     public void CompleteSmelting()
     {
-        try
-        {
             // 安全检查
             if (InputInventory == null || InputInventory.Data == null)
             {
@@ -326,6 +280,10 @@ public class Inventory_Furnace : Inventory
 
             // 生成配方键列表
             List<string> recipeKeys = GenerateRecipeKey_List(InputInventory);
+            // 额外生成基于最小包围网格的配方键，作为优化后的匹配候选
+            var optimizedRecipeKeys = CalculateMinimalBoundingGrid(InputInventory);
+            if (optimizedRecipeKeys != null && optimizedRecipeKeys.Count > 0)
+                recipeKeys.AddRange(optimizedRecipeKeys);
 
             Recipe recipe = null;
             string matchedKey = null;
@@ -365,10 +323,9 @@ public class Inventory_Furnace : Inventory
                 // ֻҪ
                 if (InputInventory.Data.itemSlots != null && recipe.inputs != null && recipe.inputs.RowItems_List != null)
                 {
-                    for (int i = 0; i < InputInventory.Data.itemSlots.Count; i++)
+                    int loopCount = Mathf.Min(InputInventory.Data.itemSlots.Count, recipe.inputs.RowItems_List.Count);
+                    for (int i = 0; i < loopCount; i++)
                     {
-                        if (i >= recipe.inputs.RowItems_List.Count) break;
-
                         var slot = InputInventory.Data.itemSlots[i];
                         var required = recipe.inputs.RowItems_List[i];
 
@@ -466,11 +423,6 @@ public class Inventory_Furnace : Inventory
 
             // 执行熔炼
             ExecuteSmelting(InputInventory, OutputInventory, recipe, outputItems);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"熔炼过程中发生错误: {ex.Message}");
-        }
     }
     #endregion
 
@@ -510,6 +462,7 @@ public class Inventory_Furnace : Inventory
             {
                 // 为每个包含Tag的物品生成一个基于Tag的配方键版本
                 Input_List tagInputList = new Input_List();
+                tagInputList.recipeType = RecipeType.Smelting;
                 for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
                 {
                     if (j == i && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values != null && slot.itemData.Tags.MakeTag.values.Count > 0)
@@ -537,6 +490,118 @@ public class Inventory_Furnace : Inventory
         return recipeKeys;
     }
 
+    /// <summary>
+    /// 计算最小包围网格并生成对应的配方键（用于在更小网格中匹配配方）
+    /// </summary>
+    private List<string> CalculateMinimalBoundingGrid(Inventory inputInv)
+    {
+        var result = new List<string>();
+        if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null)
+            return result;
+
+        // 为避免非完全平方数量导致的索引越界，使用列数/行数的上取整计算
+        int count = inputInv.Data.itemSlots.Count;
+        int cols = Mathf.CeilToInt(Mathf.Sqrt(count));
+        int rows = Mathf.CeilToInt((float)count / cols);
+
+        int minRow = rows;
+        int maxRow = -1;
+        int minCol = cols;
+        int maxCol = -1;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (inputInv.Data.itemSlots[i].itemData != null)
+            {
+                int row = i / cols;
+                int col = i % cols;
+                minRow = Mathf.Min(minRow, row);
+                maxRow = Mathf.Max(maxRow, row);
+                minCol = Mathf.Min(minCol, col);
+                maxCol = Mathf.Max(maxCol, col);
+            }
+        }
+
+        if (maxRow >= 0 && maxCol >= 0)
+        {
+            Input_List minimalGridList = new Input_List();
+            minimalGridList.recipeType = RecipeType.Smelting;
+
+            for (int row = minRow; row <= maxRow; row++)
+            {
+                for (int col = minCol; col <= maxCol; col++)
+                {
+                    int slotIndex = row * cols + col;
+                    if (slotIndex >= 0 && slotIndex < count && inputInv.Data.itemSlots[slotIndex].itemData != null)
+                    {
+                        minimalGridList.AddNameItem(inputInv.Data.itemSlots[slotIndex].itemData.IDName);
+                    }
+                    else
+                    {
+                        minimalGridList.AddNameItem("");
+                    }
+                }
+            }
+
+            // 有序
+            minimalGridList.inputOrder = RecipeInputRule.规则合成;
+            result.Add(minimalGridList.ToString());
+
+            // 无序
+            minimalGridList.inputOrder = RecipeInputRule.无规则合成;
+            result.Add(minimalGridList.ToString());
+
+            // 生成 tag 版本（遍历最小包围网格内每个有Tag的物品）
+            for (int row = minRow; row <= maxRow; row++)
+            {
+                for (int col = minCol; col <= maxCol; col++)
+                {
+                    int slotIndex = row * cols + col;
+                    if (slotIndex < 0 || slotIndex >= count) continue;
+
+                    var slot = inputInv.Data.itemSlots[slotIndex];
+                    if (slot != null && slot.itemData != null && slot.itemData.Tags != null && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values.Count > 0)
+                    {
+                        Input_List tagGridList = new Input_List();
+                        tagGridList.recipeType = RecipeType.Smelting;
+
+                        for (int r = minRow; r <= maxRow; r++)
+                        {
+                            for (int c = minCol; c <= maxCol; c++)
+                            {
+                                int currentSlotIndex = r * cols + c;
+                                if (currentSlotIndex == slotIndex)
+                                {
+                                    tagGridList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
+                                }
+                                else
+                                {
+                                    if (currentSlotIndex >= 0 && currentSlotIndex < count)
+                                    {
+                                        var other = inputInv.Data.itemSlots[currentSlotIndex];
+                                        tagGridList.AddNameItem(other?.itemData?.IDName ?? "");
+                                    }
+                                    else
+                                    {
+                                        tagGridList.AddNameItem("");
+                                    }
+                                }
+                            }
+                        }
+
+                        tagGridList.inputOrder = RecipeInputRule.规则合成;
+                        result.Add(tagGridList.ToString());
+
+                        tagGridList.inputOrder = RecipeInputRule.无规则合成;
+                        result.Add(tagGridList.ToString());
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     private bool ValidateSlotCount(Inventory inputInv, Recipe recipe)
     {
         if (inputInv == null || inputInv.Data == null || recipe == null || recipe.inputs == null)
@@ -545,11 +610,11 @@ public class Inventory_Furnace : Inventory
         if (inputInv.Data.itemSlots == null || recipe.inputs.RowItems_List == null)
             return false;
 
-        if (inputInv.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
-        {
-            Debug.LogError($"输入槽位数量不匹配：配方需要 {recipe.inputs.RowItems_List.Count} 个输入槽，当前有 {inputInv.Data.itemSlots.Count} 个");
-            return false;
-        }
+        // if (inputInv.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
+        // {
+        //     Debug.LogError($"输入槽位数量不匹配：配方需要 {recipe.inputs.RowItems_List.Count} 个输入槽，当前有 {inputInv.Data.itemSlots.Count} 个");
+        //     return false;
+        // }
         return true;
     }
 
@@ -604,23 +669,156 @@ public class Inventory_Furnace : Inventory
     private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv,
         Recipe recipe, List<ItemData> outputItems)
     {
-        // 检查输入材料
-        if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null ||
-            recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null)
+        // 检查recipe.inputs是有规则合成还是无规则合成（参考工作台的高级检查逻辑）
+        if (recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null)
             return false;
 
-        for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
+        if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
         {
-            var slot = inputInv.Data.itemSlots[i];
-            var required = recipe.inputs.RowItems_List[i];
-
-            if (required.amount == 0) continue;
-
-            if (slot == null || slot.itemData == null)
+            // 计算输入槽位的网格大小
+            if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null)
                 return false;
 
-            if (slot.itemData.Stack.Amount < required.amount)
-                return false;
+            // 对于非完全平方数，使用向上取整确保覆盖所有槽位
+            int inputCount = inputInv.Data.itemSlots.Count;
+            int recipeCount = recipe.inputs.RowItems_List.Count;
+            
+            int inputGridSize = Mathf.CeilToInt(Mathf.Sqrt(inputCount));
+            int recipeGridSize = Mathf.CeilToInt(Mathf.Sqrt(recipeCount));
+
+            // 如果配方网格大小小于输入网格大小，尝试使用最小包围网格匹配
+            if (recipeGridSize < inputGridSize)
+            {
+                // 找出包含物品的最小矩形边界
+                int minRow = inputGridSize;
+                int maxRow = -1;
+                int minCol = inputGridSize;
+                int maxCol = -1;
+
+                for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
+                {
+                    if (inputInv.Data.itemSlots[i] != null && inputInv.Data.itemSlots[i].itemData != null)
+                    {
+                        int row = i / inputGridSize;
+                        int col = i % inputGridSize;
+
+                        minRow = Mathf.Min(minRow, row);
+                        maxRow = Mathf.Max(maxRow, row);
+                        minCol = Mathf.Min(minCol, col);
+                        maxCol = Mathf.Max(maxCol, col);
+                    }
+                }
+
+                // 如果找到物品并且边界大小与配方匹配
+                int boundedHeight = maxRow - minRow + 1;
+                int boundedWidth = maxCol - minCol + 1;
+
+                if (maxRow >= 0 && maxCol >= 0 && boundedHeight == recipeGridSize && boundedWidth == recipeGridSize)
+                {
+                    // 在最小包围网格内检查资源
+                    for (int r = 0; r < recipeGridSize; r++)
+                    {
+                        for (int c = 0; c < recipeGridSize; c++)
+                        {
+                            int recipeIndex = r * recipeGridSize + c;
+                            int inputIndex = (minRow + r) * inputGridSize + (minCol + c);
+
+                            var required = recipe.inputs.RowItems_List[recipeIndex];
+                            if (required.amount == 0) continue;
+
+                            // 检查输入槽位是否有效且包含物品
+                            if (inputIndex >= inputInv.Data.itemSlots.Count || inputInv.Data.itemSlots[inputIndex].itemData == null)
+                                return false;
+
+                            var slot = inputInv.Data.itemSlots[inputIndex];
+                            if (slot.itemData.Stack.Amount < required.amount)
+                                return false;
+                        }
+                    }
+                    // 最小包围网格匹配成功，继续检查输出空间
+                }
+                else
+                {
+                    // 如果边界与配方不匹配，尝试传统的位置匹配作为后备方案
+                    // 但只在输入和配方网格大小相同时执行
+                    if (inputGridSize == recipeGridSize)
+                    {
+                        if (inputInv == null || inputInv.Data == null) return false;
+                        int loopCount = Mathf.Min(inputInv.Data.itemSlots.Count, recipe.inputs.RowItems_List.Count);
+                        for (int i = 0; i < loopCount; i++)
+                        {
+                            var slot = inputInv.Data.itemSlots[i];
+                            var required = recipe.inputs.RowItems_List[i];
+
+                            if (required.amount == 0) continue;
+
+                            if (slot == null || slot.itemData == null || slot.itemData.Stack.Amount < required.amount)
+                                return false;
+                        }
+                    }
+                    else
+                    {
+                        // 如果网格大小不匹配且找不到合适的最小包围网格，返回失败
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                // 原始逻辑：当配方网格大小大于等于输入网格大小时
+                if (inputInv == null || inputInv.Data == null) return false;
+                int loopCount = Mathf.Min(inputInv.Data.itemSlots.Count, recipe.inputs.RowItems_List.Count);
+                for (int i = 0; i < loopCount; i++)
+                {
+                    if (i >= inputInv.Data.itemSlots.Count) break;
+                    
+                    var slot = inputInv.Data.itemSlots[i];
+                    var required = recipe.inputs.RowItems_List[i];
+
+                    if (required.amount == 0) continue;
+
+                    if (slot == null || slot.itemData == null)
+                        return false;
+
+                    if (slot.itemData.Stack.Amount < required.amount)
+                        return false;
+                }
+            }
+        }
+        else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
+        {
+            // 无规则合成逻辑保持不变
+            if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null) return false;
+            foreach (var required in recipe.inputs.RowItems_List)
+            {
+                if (required.amount == 0) continue;
+
+                float foundAmount = 0;
+                foreach (var slot in inputInv.Data.itemSlots)
+                {
+                    if (slot.itemData == null) continue;
+
+                    bool isMatch = false;
+                    if (required.matchMode == MatchMode.ExactItem)
+                    {
+                        isMatch = slot.itemData.IDName == required.ItemName;
+                    }
+                    else if (required.matchMode == MatchMode.ByTag)
+                    {
+                        isMatch = slot.itemData.Tags != null &&
+                                 slot.itemData.Tags.MakeTag != null &&
+                                 slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                    }
+
+                    if (isMatch)
+                    {
+                        foundAmount += slot.itemData.Stack.Amount;
+                    }
+                }
+
+                if (foundAmount < required.amount)
+                    return false;
+            }
         }
 
         // 检查输出空间
@@ -663,26 +861,133 @@ public class Inventory_Furnace : Inventory
         }
 
         // 扣除输入材料
-        for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
+        if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
         {
-            var slot = inputInv.Data.itemSlots[i];
-            var required = recipe.inputs.RowItems_List[i];
-
-            if (required.amount == 0 || slot == null || slot.itemData == null) continue;
-
-            Debug.Log($"扣除材料：{required.ItemName} x{required.amount}，当前有 {slot.itemData.Stack.Amount}");
-
-            slot.itemData.Stack.Amount -= required.amount;
-            if (slot.itemData.Stack.Amount <= 0)
+            // 计算输入槽位和配方的网格大小
+            int inputGridSize = Mathf.CeilToInt(Mathf.Sqrt(inputInv.Data.itemSlots.Count));
+            int recipeGridSize = Mathf.CeilToInt(Mathf.Sqrt(recipe.inputs.RowItems_List.Count));
+            
+            // 如果配方网格大小小于输入网格大小，尝试使用最小包围网格匹配扣除
+            if (recipeGridSize < inputGridSize)
             {
-                Debug.Log($"输入槽 {i} 的 {required.ItemName} 已用尽并移除");
-                inputInv.Data.RemoveItemAll(slot, i);
+                // 找出包含物品的最小矩形边界
+                int minRow = inputGridSize;
+                int maxRow = -1;
+                int minCol = inputGridSize;
+                int maxCol = -1;
+                
+                for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
+                {
+                    if (inputInv.Data.itemSlots[i] != null && inputInv.Data.itemSlots[i].itemData != null)
+                    {
+                        int row = i / inputGridSize;
+                        int col = i % inputGridSize;
+                        
+                        minRow = Mathf.Min(minRow, row);
+                        maxRow = Mathf.Max(maxRow, row);
+                        minCol = Mathf.Min(minCol, col);
+                        maxCol = Mathf.Max(maxCol, col);
+                    }
+                }
+                
+                // 如果找到物品并且边界大小与配方匹配
+                int boundedHeight = maxRow - minRow + 1;
+                int boundedWidth = maxCol - minCol + 1;
+                
+                if (maxRow >= 0 && maxCol >= 0 && boundedHeight == recipeGridSize && boundedWidth == recipeGridSize)
+                {
+                    // 在最小包围网格内扣除材料
+                    for (int r = 0; r < recipeGridSize; r++)
+                    {
+                        for (int c = 0; c < recipeGridSize; c++)
+                        {
+                            int recipeIndex = r * recipeGridSize + c;
+                            int inputIndex = (minRow + r) * inputGridSize + (minCol + c);
+                            
+                            var required = recipe.inputs.RowItems_List[recipeIndex];
+                            if (required.amount == 0) continue;
+                            
+                            // 检查输入槽位是否有效且包含物品
+                            if (inputIndex < inputInv.Data.itemSlots.Count && inputInv.Data.itemSlots[inputIndex] != null && inputInv.Data.itemSlots[inputIndex].itemData != null)
+                            {
+                                var slot = inputInv.Data.itemSlots[inputIndex];
+                                Debug.Log($"插槽 {inputIndex}：需要 {required.ItemName} x{required.amount}，当前有 {slot.itemData.Stack.Amount}");
+                                
+                                slot.itemData.Stack.Amount -= required.amount;
+                                if (slot.itemData.Stack.Amount <= 0)
+                                {
+                                    Debug.Log($"插槽 {inputIndex}：{required.ItemName} 已耗尽，移除物品");
+                                    inputInv.Data.RemoveItemAll(slot, inputIndex);
+                                }
+                                else
+                                {
+                                    Debug.Log($"插槽 {inputIndex}：剩余 {required.ItemName} x{slot.itemData.Stack.Amount}");
+                                }
+                                inputInv.RefreshUI(inputIndex);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // 如果边界与配方不匹配，使用传统的位置扣除作为后备方案
+                    ExecuteTraditionalDeduction(inputInv, recipe);
+                }
             }
             else
             {
-                Debug.Log($"输入槽 {i} 剩余 {required.ItemName} x{slot.itemData.Stack.Amount}");
+                // 原始逻辑：当配方网格大小大于等于输入网格大小时
+                ExecuteTraditionalDeduction(inputInv, recipe);
             }
-            inputInv.RefreshUI(i);
+        }
+        else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
+        {
+            // 无序合成逻辑
+            foreach (var required in recipe.inputs.RowItems_List)
+            {
+                if (required.amount == 0) continue;
+
+                float remainingAmountToConsume = required.amount;
+
+                // 遍历所有槽位查找匹配的物品
+                for (int i = 0; i < inputInv.Data.itemSlots.Count && remainingAmountToConsume > 0; i++)
+                {
+                    var slot = inputInv.Data.itemSlots[i];
+                    if (slot == null || slot.itemData == null) continue;
+
+                    // 检查物品是否匹配需求
+                    bool isMatch = false;
+                    if (required.matchMode == MatchMode.ExactItem)
+                    {
+                        isMatch = slot.itemData.IDName == required.ItemName;
+                    }
+                    else if (required.matchMode == MatchMode.ByTag)
+                    {
+                        isMatch = slot.itemData.Tags != null &&
+                                 slot.itemData.Tags.MakeTag != null &&
+                                 slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                    }
+
+                    if (isMatch && slot.itemData.Stack.Amount > 0)
+                    {
+                        // 计算本次可以消耗的数量
+                        float consumeAmount = Mathf.Min(remainingAmountToConsume, slot.itemData.Stack.Amount);
+                        slot.itemData.Stack.Amount -= consumeAmount;
+                        remainingAmountToConsume -= consumeAmount;
+
+                        Debug.Log($"插槽 {i}：消耗 {slot.itemData.IDName} x{consumeAmount}，剩余 {slot.itemData.Stack.Amount}");
+
+                        // 如果物品用完，移除物品
+                        if (slot.itemData.Stack.Amount <= 0)
+                        {
+                            Debug.Log($"插槽 {i}：{slot.itemData.IDName} 已耗尽，移除物品");
+                            inputInv.Data.RemoveItemAll(slot, i);
+                        }
+
+                        inputInv.RefreshUI(i);
+                    }
+                }
+            }
         }
 
         // 执行配方动作
@@ -701,6 +1006,33 @@ public class Inventory_Furnace : Inventory
         outputInv.RefreshUI();
         inputInv.RefreshUI();
         Debug.Log($"熔炼完成：{recipe.name}");
+    }
+
+    // 提取传统的位置扣除逻辑为单独方法，方便复用
+    private void ExecuteTraditionalDeduction(Inventory inputInv, Recipe recipe)
+    {
+        int loopCount = Mathf.Min(inputInv.Data.itemSlots.Count, recipe.inputs.RowItems_List.Count);
+        for (int i = 0; i < loopCount; i++)
+        {
+            var slot = inputInv.Data.itemSlots[i];
+            var required = recipe.inputs.RowItems_List[i];
+
+            if (required.amount == 0 || slot == null || slot.itemData == null) continue;
+
+            Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot.itemData.Stack.Amount}");
+
+            slot.itemData.Stack.Amount -= required.amount;
+            if (slot.itemData.Stack.Amount <= 0)
+            {
+                Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
+                inputInv.Data.RemoveItemAll(slot, i);
+            }
+            else
+            {
+                Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot.itemData.Stack.Amount}");
+            }
+            inputInv.RefreshUI(i);
+        }
     }
 
     // 保留旧版本的检查方法以保持兼容性
@@ -864,4 +1196,41 @@ public class Inventory_Furnace : Inventory
         SetBurningState(!GetBurningState());
     }
     #endregion
+
 }
+#region 数据定义
+[MemoryPackable]
+[System.Serializable]
+public partial class ModSmeltingData
+{
+    [ShowInInspector]
+    public Dictionary<string, Inventory_Data> InvData = new Dictionary<string, Inventory_Data>();
+
+    [Tooltip("当前的熔炼进度")]
+    public float SmeltingProgress = 10f;
+
+    [Tooltip("熔炉的最大熔炼速度")]
+    public float MaxSmeltingSpeed = 10f;
+
+    [Tooltip("熔炉的当前熔炼速度")]
+    public float SmeltingSpeed = 10f;
+
+    [Tooltip("当前熔炉内温度")]
+    public float Temperature = 20f;
+
+    [Tooltip("可达最大温度值（由燃料决定）")]
+    public float MaxTemperature = 0f;
+
+    [Tooltip("熔炉本身的最大温度限制（熔炉的物理限制）")]
+    public float MaxTemperatureLimit = 1000f;
+
+    [Tooltip("是否正在熔炼")]
+    public bool IsSmelting = false;
+
+    [Tooltip("温度上升速度")]
+    public float TemperatureUpSpeed = 10f;
+
+    [Tooltip("温度下降速度")]
+    public float TemperatureDownSpeed = 30f;
+}
+#endregion

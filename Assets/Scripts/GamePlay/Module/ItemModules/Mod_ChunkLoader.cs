@@ -134,13 +134,25 @@ public class Mod_ChunkLoader : Module
         ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: Data.UnActiveDistance);
         //异步绘制寻路网格
         AstarGameManager.Instance.UpdateMeshAsync(chunkPos, Data.LoadChunkDistance, () =>
-        {            // 在回调中再次检查组件和游戏对象是否仍然存在
+        {
+            // 在回调中再次检查组件和游戏对象是否仍然存在
             if (this == null || gameObject == null) return;
             
             // 检查是否仍在运行
             if (_Data != null && _Data.isRunning == false) return;
-
-            if (SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap == false)
+        
+            // 完整的null检查
+            bool autoGenerateMap = true; // 默认值
+            if (SaveDataMgr.Instance != null && SaveDataMgr.Instance.SaveData != null)
+            {
+                PlanetData currentPlanetData = SaveDataMgr.Instance.SaveData.CurrentPlanetData;
+                if (currentPlanetData != null)
+                {
+                    autoGenerateMap = currentPlanetData.AutoGenerateMap;
+                }
+            }
+        
+            if (autoGenerateMap == false)
             {
                 ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: 1);
             }

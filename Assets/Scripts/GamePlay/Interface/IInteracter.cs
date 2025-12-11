@@ -1,8 +1,7 @@
 using UnityEngine;
 
-public interface IInteracter
+public interface IInteractor
 {
-    SelectSlot SelectSlot { get; set; }
     GameObject User { get; }
     Item Item { get; set; }
 }

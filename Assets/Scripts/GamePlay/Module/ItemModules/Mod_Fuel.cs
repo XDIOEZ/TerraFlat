@@ -23,12 +23,9 @@ public class Mod_Fuel : Module
     [Tooltip("燃烧消耗速度系数")]
     public float burnSpeedMultiplier = 1f;
 
-    public override void Awake()
+    private void OnValidate()
     {
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.Fuel;
-        }
+        _Data.ID = ModText.Fuel;
     }
 
     public override void Load()

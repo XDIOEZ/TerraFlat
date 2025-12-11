@@ -83,14 +83,11 @@ public class Inventory_HotBar : Inventory
     #region 初始化与设置
 
     /// <summary>
-    /// 初始化快捷栏系统
+    /// 初始化快捷栏数据（仅数据初始化，不涉及UI）
     /// </summary>
-    public override void Init()
+    public override void InitData()
     {
-        base.Init();
-
-        // 实例化选择框
-        SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
+        base.InitData();
 
         // 获取FaceMouse组件（用于控制物品旋转）
         Owner.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
@@ -106,11 +103,26 @@ public class Inventory_HotBar : Inventory
             Debug.LogWarning("[Inventory_HotBar] 未找到TurnBody组件，物品将无法实现转身镜像");
         }
 
-        // 初始化控制器和UI
+        // 初始化输入控制器
         Controller_Init();
-        ChangeSelectBoxPosition(Data.Index);
-        RefreshUI(CurrentIndex);
     }
+
+    /// <summary>
+    /// 初始化快捷栏UI（在面板创建后调用）
+    /// </summary>
+    public override void InitUI()
+    {
+        base.InitUI();
+
+        // 实例化选择框
+        if (itemSlotUIs.Count > 0)
+        {
+            SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
+            ChangeSelectBoxPosition(Data.Index);
+            RefreshUI(CurrentIndex);
+        }
+    }
+
     /// <summary>
     /// 初始化输入控制器
     /// </summary>

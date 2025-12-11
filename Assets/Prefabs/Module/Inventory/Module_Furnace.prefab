@@ -1,0 +1,301 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2300790332389762476
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7735295088566591370}
+  - component: {fileID: 992633876041823991}
+  - component: {fileID: 6105958832456089537}
+  - component: {fileID: 2082635886903340813}
+  - component: {fileID: 5762202667874131968}
+  - component: {fileID: 327164729010000265}
+  - component: {fileID: 1948046137452501221}
+  - component: {fileID: 6495709143406970392}
+  m_Layer: 9
+  m_Name: Module_Furnace
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7735295088566591370
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0, y: 0}
+--- !u!223 &992633876041823991
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 0
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 1
+  m_AdditionalShaderChannelsFlag: 25
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
+--- !u!114 &6105958832456089537
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 375
+--- !u!225 &2082635886903340813
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &5762202667874131968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75dc15573f8e77649b5c431365706aff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  Data:
+    Name: 
+    ID: "\u7194\u7089\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    PanleRectPosition: {x: 0, y: 0, z: 0}
+    InventoryInitName: 
+    BasePanelIsOpen: 1
+  inventoryRefDic:
+    _serializedList:
+    - Key: "\u8F93\u5165"
+      Value: {fileID: 327164729010000265}
+    - Key: "\u8F93\u51FA"
+      Value: {fileID: 1948046137452501221}
+    - Key: "\u71C3\u6599"
+      Value: {fileID: 6495709143406970392}
+  inventoryBasePanelCache:
+    _serializedList: []
+  inventoryPanelPrefabs:
+    _serializedList:
+    - Key: "\u8F93\u5165"
+      Value: {fileID: 2639614329428065687, guid: e92ff9f445bbe42498036ec3756abe05, type: 3}
+    - Key: "\u8F93\u51FA"
+      Value: {fileID: 2113904753755807566, guid: 5abbf2535b3d88845872ce79eb08d3c9, type: 3}
+    - Key: "\u71C3\u6599"
+      Value: {fileID: 2113904753755807566, guid: 5abbf2535b3d88845872ce79eb08d3c9, type: 3}
+  Prefab_BasePanel: {fileID: 4185627714149174232, guid: 6afd653fc5050c441a633e547e62c6f0, type: 3}
+  ToggleActionName: 
+--- !u!114 &327164729010000265
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aca5286d61e038b47b33825791000486, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  Data:
+    Name: "\u7194\u7089\u6A21\u5757"
+    itemSlots:
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    Index: 0
+    IsInjected: 0
+    PanelPosition: {x: -147, y: 130, z: 0}
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs: []
+  DefaultTarget_Inventory: {fileID: 0}
+  basePanel: {fileID: 0}
+  SaveData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  _Data:
+    SmeltingProgress: 10
+    MaxSmeltingSpeed: 10
+    SmeltingSpeed: 10
+    Temperature: 20
+    MaxTemperature: 0
+    MaxTemperatureLimit: 1000
+    IsSmelting: 0
+    TemperatureUpSpeed: 10
+    TemperatureDownSpeed: 30
+  mod_Fuel: {fileID: 0}
+  WorkButton: {fileID: 0}
+  progressSlider: {fileID: 0}
+  fuelSlider: {fileID: 0}
+  temperatureSlider: {fileID: 0}
+  TemperatureText: {fileID: 0}
+--- !u!114 &1948046137452501221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  Data:
+    Name: "\u8F93\u51FA"
+    itemSlots:
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    Index: 0
+    IsInjected: 0
+    PanelPosition: {x: 203, y: 130, z: 0}
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs: []
+  DefaultTarget_Inventory: {fileID: 0}
+  basePanel: {fileID: 0}
+--- !u!114 &6495709143406970392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300790332389762476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Owner: {fileID: 0}
+  Data:
+    Name: "\u71C3\u6599"
+    itemSlots:
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    - CanAcceptItemType:
+        Item_TypeTag:
+        - None
+        - None
+        Item_Material:
+        - None
+      SlotMaxVolume: 0
+      Index: 0
+      onSlotDataChanged:
+        _PersistentCalls: []
+    Index: 0
+    IsInjected: 0
+    PanelPosition: {x: 203, y: -70, z: 0}
+    Event_RefreshUI:
+      _PersistentCalls: []
+  itemSlotUIs: []
+  DefaultTarget_Inventory: {fileID: 0}
+  basePanel: {fileID: 0}

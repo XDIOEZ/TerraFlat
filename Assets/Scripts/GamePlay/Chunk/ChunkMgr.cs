@@ -323,14 +323,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
             chunk = LoadChunk_By_SaveData(ChunkName);
         }
 
-        // 如果缓存区块不存在，则创建新区块
-        if (chunk == null)
-        {
-            //方法3：自动创建新的区块
-            if (SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap==true)
-            chunk = CreatChunk_By_Name(ChunkName);
-        }
-
         if (chunk != null)
         {
             Chunk_Dic[chunk.MapSave.Name] = chunk;
@@ -339,26 +331,35 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         }
     }
 
-    public Chunk LoadChunk_By_SaveData(string mapName)
+public Chunk LoadChunk_By_SaveData(string mapName)
+{
+    // 添加对Active_PlanetData的null检查
+    PlanetData activePlanetData = SaveDataMgr.Instance.Active_PlanetData;
+    if (activePlanetData == null)
     {
-        if (SaveDataMgr.Instance.Active_PlanetData.MapData_Dict.TryGetValue(mapName, out MapSave mapSave))
-        {
-            if (mapSave.items.Count == 0)
-            {
-                Debug.LogWarning($"X 缓存区块 {mapName} 存在但没有保存的物品,可能是存档发生错误");
-                return null;
-            }
-            ItemMgr.Instance.CleanupNullItems();
-
-            var chunk = CreateChunk_ByMapSave(mapSave); 
-
-            chunk.LoadChunk_Async();
-
-            return chunk;
-        }
-
+        Debug.LogWarning($"⚠️ 无法加载区块 {mapName}: Active_PlanetData 为 null");
         return null;
     }
+
+    if (activePlanetData.MapData_Dict.TryGetValue(mapName, out MapSave mapSave))
+    {
+        if (mapSave.items.Count == 0)
+        {
+            Debug.LogWarning($"X 缓存区块 {mapName} 存在但没有保存的物品,可能是存档发生错误");
+            return null;
+        }
+        ItemMgr.Instance.CleanupNullItems();
+
+        var chunk = CreateChunk_ByMapSave(mapSave); 
+
+        chunk.LoadChunk_Async();
+
+        return chunk;
+    }
+
+    return null;
+}
+
     #endregion
 
     #region 创建新区块

@@ -27,8 +27,13 @@ public class Mod_Interaction : Module
     // ─────────────────────────────── 生命周期 ───────────────────────────────
     public void OnValidate()
     {
-            _Data.ID = ModText.Interact;
+        _Data.ID = ModText.Interact;
     }
+        public override void Awake()
+    {
+         _Data.ID = ModText.Interact;
+    }
+
 
     public override void Load()
     {
@@ -40,7 +45,7 @@ public class Mod_Interaction : Module
         // TODO: 根据需求保存交互数据
     }
 
-    public void Interact_Start(IInteracter interacter = null)
+    public void Interact_Start(IInteractor interacter = null)
     {
         if (item == null) return;
 
@@ -59,12 +64,12 @@ public class Mod_Interaction : Module
         CurrentInteractItem = interacter.Item;
     }
 
-    public void Interact_Update(IInteracter interacter = null)
+    public void Interact_Update(IInteractor interacter = null)
     {
         // TODO: 实现交互过程中的更新逻辑
     }
 
-    public void Interact_Cancel(IInteracter interacter = null)
+    public void Interact_Cancel(IInteractor interacter = null)
     {
         CurrentInteractItem = null;
 

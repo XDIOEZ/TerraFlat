@@ -207,7 +207,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4923310608060424154, guid: 7ef3d949fb4a7374fb43fc85b09d4cc2, type: 3}
       propertyPath: Data.MaxTemperature
-      value: 1000
+      value: 1800
       objectReference: {fileID: 0}
     - target: {fileID: 6459594266268472000, guid: 7ef3d949fb4a7374fb43fc85b09d4cc2, type: 3}
       propertyPath: m_Name

@@ -16,7 +16,7 @@ public class SceneChange : MonoBehaviour, IInteract
     [Tooltip("是否允许传送")]
     public bool _canTeleport = false;
 
-    public void Interact_Start(IInteracter interacter = null)
+    public void Interact_Start(IInteractor interacter = null)
     {
         OnTp.Invoke();
 
@@ -34,12 +34,12 @@ public class SceneChange : MonoBehaviour, IInteract
     }
 
 
-    public void Interact_Update(IInteracter interacter = null)
+    public void Interact_Update(IInteractor interacter = null)
     {
         throw new System.NotImplementedException();
     }
 
-    public void Interact_Cancel(IInteracter interacter = null)
+    public void Interact_Cancel(IInteractor interacter = null)
     {
         //throw new System.NotImplementedException();
     }

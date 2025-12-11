@@ -479,8 +479,8 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
             outputInventory.Data = inventoryModuleData.Data[outputInventory.Data.Name];
         }
 
-        inputInventory.Init();
-        outputInventory.Init();
+        inputInventory.InitData();
+        outputInventory.InitData();
 
         //TODO 初始化完毕后 从输出插槽上遍历获取
          workButton = outputInventory.basePanel.GetButton("合成按钮");

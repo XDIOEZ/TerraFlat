@@ -50,10 +50,11 @@ public class Inventory_WorkBench : Inventory
     }
 
 
-    public override void Init()
+    public override void InitData()
     {
-        base.Init();
-                //获取物品模块
+        base.InitData();
+        
+        // 获取物品模块
         mod_Inventory = GetComponent<Mod_Inventory>();
     
         // 添加空值检查
@@ -62,21 +63,21 @@ public class Inventory_WorkBench : Inventory
             Debug.LogError("无法获取Mod_Inventory组件！");
             return;
         }
-        
-        // 确保basePanel已经设置
-        if (basePanel == null)
+
+        // 设置输出库存（如果不存在则使用背包的第一个库存）
+        if (!InventoryRefDic.ContainsKey("输出"))
         {
-            Debug.LogWarning("basePanel为null，尝试从mod_Inventory获取...");
-            basePanel = mod_Inventory.basePanel;
+            InventoryRefDic["输出"] = Owner.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).InventoryRefDic.FirstOrDefault().Value;
         }
-        
-        // 再次检查basePanel
-        if (basePanel == null)
-        {
-            Debug.LogError("无法获取basePanel！事件绑定失败。");
-            return;
-        }
-        
+    }
+
+    /// <summary>
+    /// UI初始化（在面板创建后调用）
+    /// </summary>
+    public override void InitUI()
+    {
+        base.InitUI();
+
         // 尝试获取按钮
         workButton = basePanel.GetButton("合成按钮");
         
@@ -92,13 +93,6 @@ public class Inventory_WorkBench : Inventory
         // 监听合成按钮点击事件
         workButton.onClick.AddListener(OnCraftButtonClick);
         Debug.Log("合成按钮事件绑定成功！");
-
-        if (!InventoryRefDic.ContainsKey("输出"))
-        {
-            // 如果找不到输出位置 从背包中获取第一个位置
-            InventoryRefDic["输出"] = Owner.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).InventoryRefDic.FirstOrDefault().Value;
-        }
-        
     }
     
 /// <summary>

@@ -19,9 +19,9 @@ public class Inventory_Equipment : Inventory
     /// <summary>
     /// 初始化时激活所有已装备物品的模块
     /// </summary>
-    public override void Init()
+    public override void InitData()
     {
-        base.Init();
+        base.InitData();
 
         ModulesParent = new GameObject("ModulesParent");
         ModulesParent.transform.SetParent(transform, false);

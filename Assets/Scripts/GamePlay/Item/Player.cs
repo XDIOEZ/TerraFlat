@@ -74,17 +74,6 @@ public class Player : Item
 
     public override void Load()
     {
-        // 检测玩家名称是否为管理员 
-        if (Data.Name_User == "管理员")
-        {
-            // 遍历子对象获取Mod_Inventory
-            Mod_Inventory[] mod_Inventory = GetComponentsInChildren<Mod_Inventory>();
-            foreach (var inventory in mod_Inventory)
-            {
-                inventory.Data.InventoryInitName = "创造模式";
-            }
-        }
-        
         transform.position = itemData.transform.position;
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
@@ -102,13 +91,23 @@ public class Player : Item
         // 只有管理员可以控制时间
         if (Data.Name_User == "管理员")
         {
-            if (Input.GetKeyDown(KeyCode.T))
+            if (Input.GetKeyDown(KeyCode.F2))
             {
                 TeleportToMousePosition();
             }
             
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                GameRes.Instance.InventoryInitGet("创造模式", out Inventoryinit inventoryInit);
+                if (inventoryInit != null)
+                {
+                   base.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).inventory.TryInitializeItems(inventoryInit);
+                }
+            }
+            
             // 控制时间流逝速度
             HandleTimeScaleControl();
+
         }
     }
 

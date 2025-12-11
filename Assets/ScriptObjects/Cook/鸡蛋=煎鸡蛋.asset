@@ -20,7 +20,7 @@ MonoBehaviour:
       Tag: 
       amount: 1
     recipeType: 1
-    inputOrder: 1
+    inputOrder: 0
   outputs:
     results:
     - ItemName: CookedEgg

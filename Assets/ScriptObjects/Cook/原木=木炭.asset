@@ -20,7 +20,7 @@ MonoBehaviour:
       Tag: 
       amount: 3
     recipeType: 1
-    inputOrder: 1
+    inputOrder: 0
   outputs:
     results:
     - ItemName: Ore_Coal

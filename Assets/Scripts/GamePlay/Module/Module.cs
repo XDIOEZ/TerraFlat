@@ -53,7 +53,7 @@ public abstract class Module : MonoBehaviour
     */
     public abstract ModuleData _Data { get; set; }
     public Item item;
-    [ShowInInspector]
+    [HideInInspector]
     public ItemData Item_Data;
     public UltEvent<float> OnAction { get; set; } = new UltEvent<float>();
     public UltEvent<Item> OnAction_Start { get; set; } = new UltEvent<Item>();

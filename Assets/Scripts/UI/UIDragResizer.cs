@@ -17,6 +17,10 @@ public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     public Texture2D verticalResizeCursor;
     public Texture2D diagonalNE;
     public Texture2D diagonalNW;
+    
+    // 添加鼠标样式控制开关，默认关闭
+    [Header("鼠标样式控制")]
+    public bool useCustomCursor = false;
 
     private RectTransform rt;
     private ResizeDir currentHover = ResizeDir.None;
@@ -181,6 +185,10 @@ public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     private void UpdateCursor()
     {
+        // 如果不使用自定义光标，直接返回
+        if (!useCustomCursor)
+            return;
+            
         ResizeDir d = isDragging ? lockedDir : currentHover;
 
         if (d == ResizeDir.Left || d == ResizeDir.Right)

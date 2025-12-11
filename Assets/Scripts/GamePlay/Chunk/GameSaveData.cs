@@ -36,7 +36,20 @@ public partial class GameSaveData
     public DayTimeSaveData DayTimeData = new();
 
     [MemoryPackIgnore]
-    public PlanetData CurrentPlanetData => PlanetData_Dict[SceneManager.GetActiveScene().name];
+    public PlanetData CurrentPlanetData
+    {
+        get
+        {
+            if (PlanetData_Dict == null)
+                return null;
+            
+            string sceneName = SceneManager.GetActiveScene().name;
+            PlanetData planetData;
+            if (PlanetData_Dict.TryGetValue(sceneName, out planetData))
+                return planetData;
+            return null;
+        }
+    }
 
     // ===== ¹¹Ôìº¯Êý =====
     public GameSaveData()
