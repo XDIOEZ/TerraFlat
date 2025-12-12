@@ -122,9 +122,23 @@ public class Mod_Inventory : Module, IInventory
     {
         Inventory currentInventory = targetInventory ?? inventory;
 
+        // 空检查：确保当前Inventory存在
+        if (currentInventory == null)
+        {
+            Debug.LogError("[Mod_Inventory.EnsurePanelCreated] currentInventory 为空！");
+            return;
+        }
+
         // 如果面板已创建，直接返回
         if (currentInventory.basePanel != null)
             return;
+
+        // 空检查：确保inventoryRefDic存在
+        if (inventoryRefDic == null || inventoryRefDic.Count == 0)
+        {
+            Debug.LogError("[Mod_Inventory.EnsurePanelCreated] inventoryRefDic 为空或未初始化！");
+            return;
+        }
 
         // 查找对应的inventory id
         string inventoryId = null;
@@ -362,15 +376,41 @@ public class Mod_Inventory : Module, IInventory
     //玩家与此发生交互
     public void Interact_Start(Item item_)
     {
+        // 空检查：确保item_存在
+        if (item_ == null)
+        {
+            Debug.LogError("[Mod_Inventory.Interact_Start] item_ 为空！");
+            return;
+        }
+
+        // 空检查：确保InventoryRefDic存在
+        if (InventoryRefDic == null || InventoryRefDic.Count == 0)
+        {
+            Debug.LogError("[Mod_Inventory.Interact_Start] InventoryRefDic 为空或未初始化！");
+            return;
+        }
+
         // 确保所有inventory的面板都已创建
         bool anyPanelCreated = false;
         foreach (var kvp in InventoryRefDic)
         {
+            if (kvp.Value == null)
+            {
+                Debug.LogWarning("[Mod_Inventory.Interact_Start] InventoryRefDic 中存在空的 Inventory！");
+                continue;
+            }
+
             if (kvp.Value.basePanel == null)
             {
                 EnsurePanelCreated(kvp.Value);
                 anyPanelCreated = true;
             }
+        }
+
+        if (item_.itemMods == null)
+        {
+            Debug.LogError("[Mod_Inventory.Interact_Start] item_.itemMods 为空！");
+            return;
         }
 
         item_.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod);

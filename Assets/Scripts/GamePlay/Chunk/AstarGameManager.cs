@@ -463,6 +463,20 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     private IEnumerator DelayedUpdate(Bounds bounds)
     {
         yield return null;
+
+        // 添加空检查，避免 NullReferenceException
+        if (AstarPath.active == null)
+        {
+            Debug.LogError("❌ AstarPath.active 为 null，无法更新导航网格！");
+            yield break;
+        }
+
+        if (updatedBounds == null)
+        {
+            Debug.LogError("❌ updatedBounds 为 null，无法记录更新区域！");
+            yield break;
+        }
+
         var guo = new GraphUpdateObject(bounds);
         AstarPath.active.UpdateGraphs(guo);
         updatedBounds.Add(new DebugBounds { bounds = bounds, time = Time.time });

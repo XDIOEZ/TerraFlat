@@ -131,8 +131,6 @@ public class Building_Data
         if (!CanInstall())
             return;
 
-        ExecuteInstallation();
-
         // === 触发开始事件 ===
         StartInstall?.Invoke();
         OnAction_Start?.Invoke(item);
@@ -230,13 +228,6 @@ public class Building_Data
         return true;
     }
 
-    /// <summary>
-    /// 执行建筑物安装流程
-    /// </summary>
-    private void ExecuteInstallation()
-    {
-    }
-
     #region 私有辅助方法
 
     /// <summary>
@@ -273,12 +264,14 @@ private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
         );
         
     damageReceiver.Hp = 0;
+
     newItem.Load();
+
     newItem.transform.localScale = Vector3.one;
     newItem.itemData.Stack.Amount = 1;
     newItem.itemData.Stack.CanBePickedUp = false;
 
-    EnableChildColliders(true, newItem.transform);
+    //EnableChildColliders(true, newItem.transform);
     return newItem;
 }
 

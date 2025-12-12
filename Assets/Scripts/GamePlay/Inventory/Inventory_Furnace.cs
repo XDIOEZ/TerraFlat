@@ -24,8 +24,6 @@ public class Inventory_Furnace : Inventory
     public Inventory FuelInventory => InventoryRefDic["燃料"];
 
     #region 序列化字段与引用
-    public Ex_ModData_MemoryPackable SaveData;
-
     public ModSmeltingData _Data = new ModSmeltingData();
 
     public Mod_Fuel mod_Fuel; // 燃料模块
@@ -127,29 +125,6 @@ public class Inventory_Furnace : Inventory
         mod_Inventory = GetComponent<Mod_Inventory>();
         mod_Fuel = Owner.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
 
-        // 从 SaveData 读取
-        SaveData.ReadData(ref _Data);
-
-        // 同步数据
-        if (_Data.InvData.Count == 0)
-        {
-            if (InputInventory != null && InputInventory.Data != null)
-                _Data.InvData[InputInventory.Data.Name] = InputInventory.Data;
-            if (OutputInventory != null && OutputInventory.Data != null)
-                _Data.InvData[OutputInventory.Data.Name] = OutputInventory.Data;
-            if (FuelInventory != null && FuelInventory.Data != null)
-                _Data.InvData[FuelInventory.Data.Name] = FuelInventory.Data;
-        }
-        else
-        {
-            if (InputInventory != null && _Data.InvData.ContainsKey(InputInventory.Data.Name))
-                InputInventory.Data = _Data.InvData[InputInventory.Data.Name];
-            if (OutputInventory != null && _Data.InvData.ContainsKey(OutputInventory.Data.Name))
-                OutputInventory.Data = _Data.InvData[OutputInventory.Data.Name];
-            if (FuelInventory != null && _Data.InvData.ContainsKey(FuelInventory.Data.Name))
-                FuelInventory.Data = _Data.InvData[FuelInventory.Data.Name];
-        }
-
         // 如果有手持模块，设置默认目标
         if (Owner != null && Owner.itemMods != null && Owner.itemMods.ContainsKey_ID(ModText.Hand))
         {
@@ -189,22 +164,7 @@ public class Inventory_Furnace : Inventory
 
     public override void Save()
     {
-        // 安全检查
-        if (_Data == null)
-            _Data = new ModSmeltingData();
-
-        if (_Data.InvData == null)
-            _Data.InvData = new Dictionary<string, Inventory_Data>();
-
-        // 保存库存数据
-        if (InputInventory != null && InputInventory.Data != null)
-            _Data.InvData[InputInventory.Data.Name] = InputInventory.Data;
-        if (OutputInventory != null && OutputInventory.Data != null)
-            _Data.InvData[OutputInventory.Data.Name] = OutputInventory.Data;
-        if (FuelInventory != null && FuelInventory.Data != null)
-            _Data.InvData[FuelInventory.Data.Name] = FuelInventory.Data;
-
-        SaveData?.WriteData(_Data);
+      
     }
     #endregion
 

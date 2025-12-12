@@ -129,7 +129,6 @@ public class Inventory : MonoBehaviour
         for (int i = 0; i < itemSlotUIs.Count; i++)
         {
             ItemSlot_UI itemSlotUI = itemSlotUIs[i];
-            itemSlotUI.Data = Data.itemSlots[i];
 
             itemSlotUI.OnLeftClick.Clear();
             itemSlotUI._OnScroll.Clear();
@@ -140,8 +139,8 @@ public class Inventory : MonoBehaviour
             itemSlotUI.OnRightClick += OnRightClick;
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
-            itemSlotUI.Data.onSlotDataChanged.Clear();
-            itemSlotUI.Data.onSlotDataChanged += (OnItemSlotChanged);
+            Data.itemSlots[i].onSlotDataChanged.Clear();
+            Data.itemSlots[i].onSlotDataChanged += OnItemSlotChanged;
         }
     }
 
