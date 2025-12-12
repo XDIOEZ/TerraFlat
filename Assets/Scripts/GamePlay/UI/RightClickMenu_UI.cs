@@ -14,7 +14,6 @@ public class RightClickMenu_UI : MonoBehaviour
     public void Init(ItemSlot_UI _itemSlotUI,Item _SlotOwner)
     {
         itemSlotUI = _itemSlotUI;
-        itemSlot = _itemSlotUI.Data;
         basePanel = GetComponent<BasePanel>();
         basePanel.CollectUIComponents();
         SlotOwner = _SlotOwner;

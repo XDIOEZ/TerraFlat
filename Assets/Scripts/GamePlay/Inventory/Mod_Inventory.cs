@@ -519,6 +519,7 @@ public class Mod_Inventory : Module, IInventory
         foreach (var kvp in InventoryRefDic)
         {
             kvp.Value.Save();
+            Data.Data[kvp.Key] = kvp.Value.Data;
         }
 
         Item_Data.ModuleDataDic[_Data.Name] = Data;

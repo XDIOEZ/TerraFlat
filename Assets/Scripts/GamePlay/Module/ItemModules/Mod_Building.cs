@@ -159,6 +159,13 @@ public class Building_Data
     [Button]
     public virtual void UnInstall()
     {
+        // === 重置血量为0（标记为卸载状态）===
+        if (damageReceiver != null)
+        {
+            damageReceiver.Hp = 0;
+            Debug.Log($"[建筑卸载] ✅ 血量已重置为0");
+        }
+
         StartUnInstall.Invoke();
         OnAction_Stop.Invoke(item);
         item.transform.localScale *= 0.5f;
@@ -181,9 +188,9 @@ public class Building_Data
 
         CleanupGhost();
 
-
         UpdateNavigation(transform.position, 1, 1);
-
+        
+        Debug.Log($"[建筑卸载] ✅ 建筑卸载完成");
     }
     #endregion
 
@@ -292,6 +299,13 @@ private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
     #region 辅助方法
 private void HandleGhostShadow()
 {
+    // === 检查Camera.main ===
+    if (Camera.main == null)
+    {
+        Debug.LogWarning("[Ghost管理] ❌ Camera.main 为空，无法获取鼠标世界坐标");
+        return;
+    }
+
     Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
     mouseWorldPos.z = 0f;
 
@@ -302,15 +316,27 @@ private void HandleGhostShadow()
     // 创建 Shadow 实例（如果不存在）
     if (GhostShadow == null)
     {
+        Debug.Log("[Ghost管理] 📝 GhostShadow为空，开始创建...");
         CreateGhostShadow();
+        
         // 新创建的幽灵阴影直接设置到鼠标位置，避免从(0,0)移动
         if (GhostShadow != null)
         {
+            Debug.Log($"[Ghost管理] ✅ 成功创建GhostShadow，位置: {mouseWorldPos}");
             GhostShadow.transform.position = mouseWorldPos;
+        }
+        else
+        {
+            Debug.LogError("[Ghost管理] ❌ 创建GhostShadow失败，将在下一帧重试");
+            return;
         }
     }
 
-    if (GhostShadow == null) return;
+    if (GhostShadow == null)
+    {
+        Debug.LogError("[Ghost管理] ❌ GhostShadow仍然为空，无法继续处理");
+        return;
+    }
 
     // 计算距离
     float distance = Vector2.Distance(item.transform.position, mouseWorldPos);
@@ -340,16 +366,22 @@ private void HandleGhostShadow()
     // 只有当阴影可见时才执行移动和颜色更新
     if (alpha > 0f)
     {
-        if (GhostShadow.ShadowRenderer != null && GhostShadow.ShadowRenderer.enabled)
+        // === 检查ShadowRenderer ===
+        if (GhostShadow.ShadowRenderer == null)
         {
-            // 直接设置位置而不是平滑移动，确保总是对齐到格子中心
-            GhostShadow.transform.position = mouseWorldPos;
-        }
-        else
-        {
-            Debug.LogWarning("[Shadow生成] ShadowRenderer 未启用");
+            Debug.LogError("[Ghost管理] ❌ GhostShadow.ShadowRenderer 为空");
+            Debug.LogWarning("[Ghost管理] 🔍 BuildingShadow组件的初始化可能失败");
+            return;
         }
 
+        if (!GhostShadow.ShadowRenderer.enabled)
+        {
+            Debug.LogWarning("[Ghost管理] ⚠️ ShadowRenderer 已禁用，无法显示");
+            return;
+        }
+
+        // 直接设置位置而不是平滑移动，确保总是对齐到格子中心
+        GhostShadow.transform.position = mouseWorldPos;
         GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
     }
 }
@@ -358,38 +390,122 @@ private void HandleGhostShadow()
 
     private void CreateGhostShadow()
     {
+        // === 第一步：检查GameRes实例 ===
+        if (GameRes.Instance == null)
+        {
+            Debug.LogError("[Shadow生成] ❌ GameRes.Instance 为空！无法获取资源管理器");
+            return;
+        }
+
+        // === 第二步：尝试实例化预制体 ===
         GameObject shadowPrefab = null;
         try
         {
+            Debug.Log("[Shadow生成] 📝 开始从GameRes加载BuildingShadow预制体...");
             shadowPrefab = GameRes.Instance.InstantiatePrefab("BuildingShadow");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[Shadow生成] 实例化预制体失败: {ex.Message}");
+            Debug.LogError($"[Shadow生成] ❌ 实例化预制体异常: {ex.GetType().Name}");
+            Debug.LogError($"[Shadow生成] 📌 错误信息: {ex.Message}");
+            Debug.LogError($"[Shadow生成] 📌 堆栈跟踪:\n{ex.StackTrace}");
             return;
         }
 
+        // === 第三步：检查实例化结果 ===
         if (shadowPrefab == null)
         {
-            Debug.LogError("[Shadow生成] 无法实例化BuildingShadow预制体");
+            Debug.LogError("[Shadow生成] ❌ GameRes.InstantiatePrefab 返回 null");
+            Debug.LogWarning("[Shadow生成] 🔍 可能原因：");
+            Debug.LogWarning("   1. 预制体名称 'BuildingShadow' 不存在或拼写错误");
+            Debug.LogWarning("   2. GameRes资源库未正确初始化");
+            Debug.LogWarning("   3. 预制体文件已被删除或移动");
             return;
         }
 
+        Debug.Log($"[Shadow生成] ✅ 成功实例化预制体: {shadowPrefab.name}");
+
+        // === 第四步：检查BuildingShadow组件 ===
         GhostShadow = shadowPrefab.GetComponent<BuildingShadow>();
         if (GhostShadow == null)
         {
-            Debug.LogError("[Shadow生成] BuildingShadow预制体缺少BuildingShadow组件");
+            Debug.LogError($"[Shadow生成] ❌ 预制体 '{shadowPrefab.name}' 缺少BuildingShadow组件");
+            Debug.LogWarning("[Shadow生成] 🔍 检测到的组件：");
+            
+            // 列出预制体上的所有组件
+            Component[] components = shadowPrefab.GetComponents<Component>();
+            if (components.Length > 0)
+            {
+                foreach (var comp in components)
+                {
+                    Debug.LogWarning($"   - {comp.GetType().Name}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("   - (无任何组件)");
+            }
+
+            // 检查子对象中是否有BuildingShadow
+            BuildingShadow childShadow = shadowPrefab.GetComponentInChildren<BuildingShadow>();
+            if (childShadow != null)
+            {
+                Debug.LogWarning($"[Shadow生成] ⚠️ 在子对象中找到BuildingShadow: {childShadow.gameObject.name}");
+                GhostShadow = childShadow;
+            }
+            else
+            {
+                Debug.LogError("[Shadow生成] 📌 在子对象中也未找到BuildingShadow组件");
+                Destroy(shadowPrefab);
+                return;
+            }
+        }
+
+        Debug.Log($"[Shadow生成] ✅ 成功获取BuildingShadow组件");
+
+        // === 第五步：检查item.Sprite ===
+        if (item == null)
+        {
+            Debug.LogError("[Shadow生成] ❌ item 为空，无法初始化阴影");
             Destroy(shadowPrefab);
             return;
         }
 
-        if (item.Sprite != null)
+        if (item.Sprite == null)
         {
-            GhostShadow.InitShadow(item.Sprite);
+            Debug.LogError($"[Shadow生成] ❌ item.Sprite 为空 (item: {item.name})");
+            Debug.LogWarning("[Shadow生成] 🔍 可能原因：");
+            Debug.LogWarning("   1. Item组件未正确初始化");
+            Debug.LogWarning("   2. Item.itemData 为空");
+            Debug.LogWarning("   3. 物品没有对应的Sprite资源");
+            
+            // 额外诊断信息
+            if (item.itemData == null)
+            {
+                Debug.LogWarning("   📌 item.itemData 为空");
+            }
+            else
+            {
+                Debug.LogWarning($"   📌 item.itemData: {item.itemData.IDName}");
+            }
+            
+            return;
         }
-        else
+
+        // === 第六步：初始化阴影 ===
+        try
         {
-            Debug.LogError("[Shadow生成] hostRenderer为空，无法初始化阴影");
+            Debug.Log($"[Shadow生成] 📝 初始化阴影，使用Sprite: {item.Sprite.name}");
+            GhostShadow.InitShadow(item.Sprite);
+            Debug.Log("[Shadow生成] ✅ 阴影初始化成功");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Shadow生成] ❌ 初始化阴影失败: {ex.GetType().Name}");
+            Debug.LogError($"[Shadow生成] 📌 错误信息: {ex.Message}");
+            Debug.LogError($"[Shadow生成] 📌 堆栈跟踪:\n{ex.StackTrace}");
+            Destroy(shadowPrefab);
+            GhostShadow = null;
         }
     }
 

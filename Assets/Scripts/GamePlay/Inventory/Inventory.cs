@@ -126,9 +126,60 @@ public class Inventory : MonoBehaviour
     //同步UI与Data
     public void SyncData()
     {
+        // 空检查：确保数据和UI列表都初始化
+        if (itemSlotUIs == null || itemSlotUIs.Count == 0)
+        {
+            Debug.LogWarning($"[Inventory.SyncData] itemSlotUIs 为空或未初始化！InventoryName: {Data?.Name}");
+            return;
+        }
+
+        if (Data == null || Data.itemSlots == null)
+        {
+            Debug.LogError($"[Inventory.SyncData] Data 或 Data.itemSlots 为空！");
+            return;
+        }
+
+        // 检查数量匹配
+        if (itemSlotUIs.Count != Data.itemSlots.Count)
+        {
+            Debug.LogWarning($"[Inventory.SyncData] UI槽位数({itemSlotUIs.Count}) 与 Data槽位数({Data.itemSlots.Count}) 不匹配！");
+        }
+
         for (int i = 0; i < itemSlotUIs.Count; i++)
         {
             ItemSlot_UI itemSlotUI = itemSlotUIs[i];
+            
+            // 检查UI是否存在
+            if (itemSlotUI == null)
+            {
+                Debug.LogError($"[Inventory.SyncData] itemSlotUIs[{i}] 为空！");
+                continue;
+            }
+
+            if (i >= Data.itemSlots.Count)
+            {
+                Debug.LogError($"[Inventory.SyncData] Data.itemSlots[{i}] 超出范围！Data槽位总数: {Data.itemSlots.Count}");
+                continue;
+            }
+
+            // 检查 Data.itemSlots[i] 是否为 null
+            if (Data.itemSlots[i] == null)
+            {
+                Debug.LogError($"[Inventory.SyncData] Data.itemSlots[{i}] 为空！");
+                continue;
+            }
+
+            // 初始化UI槽位（替代 itemSlotUI.Data = Data.itemSlots[i]）
+            itemSlotUI.InitializeSlot(i, 
+                index => Data.itemSlots[index],  // GetSlotDataFunc
+                index => 
+                {
+                    if (Data.itemSlots[index] != null)
+                    {
+                        Data.itemSlots[index].ClearData();
+                    }
+                }  // ClearSlotDataAction
+            );
 
             itemSlotUI.OnLeftClick.Clear();
             itemSlotUI._OnScroll.Clear();
@@ -139,18 +190,32 @@ public class Inventory : MonoBehaviour
             itemSlotUI.OnRightClick += OnRightClick;
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
-            Data.itemSlots[i].onSlotDataChanged.Clear();
-            Data.itemSlots[i].onSlotDataChanged += OnItemSlotChanged;
+            if (Data.itemSlots[i].onSlotDataChanged != null)
+            {
+                Data.itemSlots[i].onSlotDataChanged.Clear();
+                Data.itemSlots[i].onSlotDataChanged += OnItemSlotChanged;
+            }
+            else
+            {
+                Debug.LogWarning($"[Inventory.SyncData] Data.itemSlots[{i}].onSlotDataChanged 为空！");
+            }
         }
     }
 
     // 当物品槽数据发生变化时的回调
     private void OnItemSlotChanged(ItemSlot slot)
     {
+        // 防守性编程：检查slot和Data是否为空
+        if (slot == null || Data == null || Data.itemSlots == null)
+        {
+            Debug.LogWarning($"[Inventory.OnItemSlotChanged] slot、Data 或 Data.itemSlots 为空！");
+            return;
+        }
+
         // 找到对应的UI并刷新
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
-            if (Data.itemSlots[i] == slot)
+            if (Data.itemSlots[i] != null && Data.itemSlots[i] == slot)
             {
                 RefreshUI(i);
                 break;
@@ -496,7 +561,7 @@ public class Inventory : MonoBehaviour
     #region 保存
     public virtual void Save()
     {
-
+        
     }
 
     #endregion

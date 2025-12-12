@@ -178,24 +178,28 @@ private void HandleRepeatDrop()
     }
     
     // 只有当手上和快捷栏都没有物品时，才处理UI悬停的物品
-    if (hoveredSlot != null && hoveredSlot.Data != null && hoveredSlot.Data.Amount > 0)
+    if (hoveredSlot != null && hoveredSlot.GetSlotDataFunc != null)
     {
-        if (isCtrlPressed)
+        ItemSlot hoveredSlotData = hoveredSlot.GetSlotDataFunc?.Invoke(-1);
+        if (hoveredSlotData != null && hoveredSlotData.Amount > 0)
         {
-            DropItemByCount(hoveredSlot.Data, hoveredSlot.Data.Amount);
+            if (isCtrlPressed)
+            {
+                DropItemByCount(hoveredSlotData, hoveredSlotData.Amount);
+            }
+            else
+            {
+                DropItemByCount(hoveredSlotData, 1);
+            }
+            
+            // 如果物品已经耗尽，且是当前快捷栏选中的物品，则销毁手上物体
+            if (hoveredSlotData.Amount <= 0 && hoveredSlotData == Hotbar?.CurrentSelectItemSlot)
+            {
+                Hotbar?.DestroyCurrentObject(Hotbar.CurentSelectItem);
+            }
+            
+            hoveredSlot.RefreshUI();
         }
-        else
-        {
-            DropItemByCount(hoveredSlot.Data, 1);
-        }
-        
-        // 如果物品已经耗尽，且是当前快捷栏选中的物品，则销毁手上物体
-        if (hoveredSlot.Data.Amount <= 0 && hoveredSlot.Data == Hotbar?.CurrentSelectItemSlot)
-        {
-            Hotbar?.DestroyCurrentObject(Hotbar.CurentSelectItem);
-        }
-        
-        hoveredSlot.Data.RefreshUI();
     }
 }
 
@@ -400,9 +404,13 @@ public void DropItemByCount(ItemSlot slot, int count)
         {
             var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
 
-            if (uiItemSlot != null && uiItemSlot.Data != null)
+            if (uiItemSlot != null && uiItemSlot.GetSlotDataFunc != null)
             {
-                DropItemByCount(uiItemSlot.Data, count);
+                ItemSlot slotData = uiItemSlot.GetSlotDataFunc?.Invoke(-1);
+                if (slotData != null)
+                {
+                    DropItemByCount(slotData, count);
+                }
             }
         }
     }
@@ -424,9 +432,13 @@ public void DropItemByCount(ItemSlot slot, int count)
         {
             var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
 
-            if (uiItemSlot != null && uiItemSlot.Data != null)
+            if (uiItemSlot != null && uiItemSlot.GetSlotDataFunc != null)
             {
-                DropItemByCount(uiItemSlot.Data, uiItemSlot.Data.Amount);
+                ItemSlot slotData = uiItemSlot.GetSlotDataFunc?.Invoke(-1);
+                if (slotData != null)
+                {
+                    DropItemByCount(slotData, slotData.Amount);
+                }
             }
         }
     }

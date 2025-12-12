@@ -8,7 +8,7 @@
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: Furnace
+  - Name: Player
   - Tag: Untagged
-  - Layer: Collider
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

@@ -22,7 +22,27 @@ public partial class ItemSlot
     [MemoryPackIgnore]
     [FastClonerIgnore]
     [JsonIgnore]
-    public UltEvent<ItemSlot> onSlotDataChanged = new();
+    public UltEvent<ItemSlot> onSlotDataChanged
+    {
+        get
+        {
+            // 确保事件不为空（防止反序列化后事件丢失）
+            if (_onSlotDataChanged == null)
+            {
+                _onSlotDataChanged = new();
+            }
+            return _onSlotDataChanged;
+        }
+        set
+        {
+            _onSlotDataChanged = value;
+        }
+    }
+    
+    [MemoryPackIgnore]
+    [FastClonerIgnore]
+    [JsonIgnore]
+    private UltEvent<ItemSlot> _onSlotDataChanged = new();
 
 
     #region  临时变量
