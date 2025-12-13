@@ -45,6 +45,8 @@ public abstract class Item : MonoBehaviour
 
     [Tooltip("此物品属于谁?")]
     public Item Owner;
+    [Tooltip("此物品是否在手上?")]
+    public bool InHand = false;
     
     [HideInInspector]
     /// <summary>

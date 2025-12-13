@@ -298,6 +298,9 @@ public class Inventory_HotBar : Inventory
     {
         if (obj != null)
         {
+            // 标记物品已离开手中
+            obj.InHand = false;
+            
             // 从FaceMouse的旋转列表中移除当前物品
             if (faceMouse != null)
             {
@@ -383,6 +386,9 @@ public class Inventory_HotBar : Inventory
         // 设置为当前武器
         spawnLocation.GetComponent<ITriggerAttack>()?.SetWeapon(currentObject);
         itemInstance.Load();
+
+        // 标记物品已拿在手中
+        itemInstance.InHand = true;
 
         // 核心：将新物品添加到FaceMouse的旋转列表，使其跟随鼠标旋转
         if (faceMouse != null)
