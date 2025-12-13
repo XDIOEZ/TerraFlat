@@ -9717,6 +9717,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2341746562113399121, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: Ready_planetData.ChunkSize.x
+      value: 16
+      objectReference: {fileID: 0}
+    - target: {fileID: 2341746562113399121, guid: 16f38f33714285247b623a2423e14c90, type: 3}
+      propertyPath: Ready_planetData.ChunkSize.y
+      value: 16
+      objectReference: {fileID: 0}
     - target: {fileID: 4565539948505994440, guid: 16f38f33714285247b623a2423e14c90, type: 3}
       propertyPath: m_Name
       value: WorldManager
