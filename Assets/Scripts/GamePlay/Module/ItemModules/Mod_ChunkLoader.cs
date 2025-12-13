@@ -91,14 +91,11 @@ public class Mod_ChunkLoader : Module
         
         // 初始化上一次区块位置
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
-        
-        Debug.Log($"[区块加载器] ✅ 初始化完成 - 加载距离: {LoadChunkDistance}, 失活距离: {UnActiveDistance}, 销毁距离: {DestroyChunkDistance}");
     }
 
     public override void Save()
     {
         ModData.WriteData(distanceConfig);
-        Debug.Log("[区块加载器] 💾 配置已保存");
     }
 
     public override void ModUpdate(float deltaTime)
@@ -129,7 +126,6 @@ public class Mod_ChunkLoader : Module
         {
             lastChunkPos = currentChunkPos;
             needsChunkUpdate = true;
-            Debug.Log($"[区块加载器] 📍 玩家跨入新区块: {lastChunkPos}");
         }
     }
 
@@ -147,15 +143,12 @@ public class Mod_ChunkLoader : Module
 
         // 销毁过远的失活区块
         ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: DestroyChunkDistance);
-        Debug.Log($"[区块加载器] 🗑️ 清理距离 > {DestroyChunkDistance} 的区块");
 
         // 将较远的区块设置为非激活状态
         ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: UnActiveDistance);
-        Debug.Log($"[区块加载器] 😴 将距离 > {UnActiveDistance} 的区块设为非激活");
 
         // 异步更新寻路网格和加载区块
         AstarGameManager.Instance.UpdateMeshAsync(chunkPos, LoadChunkDistance, OnMeshUpdateComplete);
-        Debug.Log($"[区块加载器] 🔄 开始异步更新寻路网格，加载范围: {LoadChunkDistance}");
     }
 
     /// <summary>
@@ -182,8 +175,6 @@ public class Mod_ChunkLoader : Module
         // 根据配置加载区块
         int loadDistance = shouldAutoGenerate ? LoadChunkDistance : 1;
         ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: loadDistance);
-        
-        Debug.Log($"[区块加载器] ✅ 异步区块加载完成 (自动生成: {shouldAutoGenerate}, 距离: {loadDistance})");
     }
 
     #endregion

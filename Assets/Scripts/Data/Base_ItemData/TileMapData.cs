@@ -45,7 +45,7 @@ public  abstract partial class TileData
 
 
     // 虚函数：根据环境初始化
-    public virtual void Initialize(EnvironmentFactors env) { }
+    public virtual void Initialize_Env(EnvironmentFactors env) { }
     /// <summary>
     /// 重写ToString方法，返回对象的详细信息
     /// </summary>
@@ -74,7 +74,7 @@ public partial class TileData_Water : TileData
 {
     public GameValue_float DeepValue = new GameValue_float();
 
-    public override void Initialize(EnvironmentFactors env)
+    public override void Initialize_Env(EnvironmentFactors env)
     {
         // 高度 0.5 → 深度 0
         // 高度 0   → 深度 1

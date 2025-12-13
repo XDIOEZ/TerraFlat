@@ -40,6 +40,7 @@ public class Mod_Building : Module
 
     public override void Load()
     {
+
         BuildingData.ReadData(ref Data);
         boxCollider2D = item.GetComponent<BoxCollider2D>();
 
@@ -51,10 +52,6 @@ public class Mod_Building : Module
         damageReceiver.OnAction += OnHit;
         item.OnAct += Install;
 
-
-    }
-    public void Start()
-    {
         //根据DamageRecver 设置碰撞是否为触发器
         if (damageReceiver.Hp == 0)
             boxCollider2D.isTrigger = true;

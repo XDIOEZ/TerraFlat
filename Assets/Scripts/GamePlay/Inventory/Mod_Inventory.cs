@@ -63,7 +63,7 @@ public class Mod_Inventory : Module, IInventory
                 _Data = Item_Data.ModuleDataDic[_Data.Name];
 
             // 设置所有者
-            currentInventory.Owner = item;
+            currentInventory.item = item;
 
             // 设置默认目标库存
             if (item.itemMods.GetMod_ByID(ModText.Hand))
@@ -118,7 +118,7 @@ public class Mod_Inventory : Module, IInventory
     /// <summary>
     /// 确保指定Inventory的面板已创建，如果未创建则在此时创建
     /// </summary>
-    public void EnsurePanelCreated(Inventory targetInventory = null)
+    public void EnsurePanelCreated(Inventory targetInventory = null, bool Open=true)
     {
         Inventory currentInventory = targetInventory ?? inventory;
 
@@ -233,8 +233,8 @@ public class Mod_Inventory : Module, IInventory
                 // 调用UI初始化方法（此时basePanel已存在）
                 currentInventory.InitUI();
 
-                // 恢复面板开关状态
-                if (Data.BasePanelIsOpen)
+                // 根据参数决定是否打开面板
+                if (Open)
                 {
                     currentInventory.basePanel.Open();
                 }
@@ -390,8 +390,6 @@ public class Mod_Inventory : Module, IInventory
             return;
         }
 
-        // 确保所有inventory的面板都已创建
-        bool anyPanelCreated = false;
         foreach (var kvp in InventoryRefDic)
         {
             if (kvp.Value == null)
@@ -402,8 +400,7 @@ public class Mod_Inventory : Module, IInventory
 
             if (kvp.Value.basePanel == null)
             {
-                EnsurePanelCreated(kvp.Value);
-                anyPanelCreated = true;
+                EnsurePanelCreated(kvp.Value);;
             }
         }
 
@@ -421,31 +418,6 @@ public class Mod_Inventory : Module, IInventory
         {
             var currentInventory = kvp.Value;
             currentInventory.DefaultTarget_Inventory = handMod.inventory;
-        }
-
-        // 如果本次创建了新面板，直接打开；否则切换面板状态
-        if (anyPanelCreated)
-        {
-            foreach (var kvp in inventoryBasePanelCache)
-            {
-                var currentPanel = kvp.Value;
-                if (currentPanel != null && !currentPanel.IsOpen())
-                {
-                    currentPanel.Open();
-                }
-            }
-        }
-        else
-        {
-            // 面板已存在，进行切换操作
-            foreach (var kvp in inventoryBasePanelCache)
-            {
-                var currentPanel = kvp.Value;
-                if (currentPanel != null)
-                {
-                    currentPanel.Toggle();
-                }
-            }
         }
     }
 

@@ -76,5 +76,10 @@ MonoBehaviour:
   - LootPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
     LootPrefabName: Twine
     DropChance: 1
+    MinAmount: 99
+    MaxAmount: 99
+  - LootPrefab: {fileID: 6616435716361065375, guid: cca6f0741d956684bbb9a6c9ea0fe5c7, type: 3}
+    LootPrefabName: WorkBench
+    DropChance: 1
     MinAmount: 1
     MaxAmount: 1

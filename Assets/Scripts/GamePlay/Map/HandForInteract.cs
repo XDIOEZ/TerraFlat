@@ -50,7 +50,7 @@ public class HandForInteract : MonoBehaviour, IInteractor
             return;
 
         interactionPool.Push(mod_Interaction);
-        Debug.Log($"[HandForInteract] 对象进入池子: {mod_Interaction.gameObject.name}, 当前池内对象数: {interactionPool.Count}");
+//        Debug.Log($"[HandForInteract] 对象进入池子: {mod_Interaction.gameObject.name}, 当前池内对象数: {interactionPool.Count}");
 
         // 更新当前交互对象
         UpdateCurrentInteraction();
@@ -95,7 +95,7 @@ public class HandForInteract : MonoBehaviour, IInteractor
 
         if (found)
         {
-            Debug.Log($"[HandForInteract] 对象离开池子: {mod_Interaction.gameObject.name}, 当前池内对象数: {interactionPool.Count}");
+//            Debug.Log($"[HandForInteract] 对象离开池子: {mod_Interaction.gameObject.name}, 当前池内对象数: {interactionPool.Count}");
         }
 
         // 更新当前交互对象

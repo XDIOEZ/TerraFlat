@@ -3,6 +3,15 @@ using System;
 using UltEvents;
 using UnityEngine;
 
+/// <summary>
+/// 环境调整接口：让各模块可选地实现环境初始化逻辑
+/// 符合单一职责原则：Item负责调度，模块负责具体实现
+/// </summary>
+public interface IEnvironmentAdjustable
+{
+    void AdjustByEnvironment(EnvironmentFactors env);
+}
+
 public abstract class Module : MonoBehaviour
 {
     /*  参考代码

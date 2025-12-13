@@ -36,6 +36,33 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     public void Start()
     {
         Pathfinder = GetComponent<AstarPath>();
+        
+        // 如果没有找到AstarPath组件，尝试通过GameRes实例化AStar预制体
+        if (Pathfinder == null)
+        {
+            if (GameRes.Instance != null)
+            {
+                GameObject astarPrefab = GameRes.Instance.InstantiatePrefab("AStar");
+                if (astarPrefab != null)
+                {
+                    Pathfinder = GetComponent<AstarPath>();
+                    
+                    if (Pathfinder != null)
+                    {
+                        Debug.Log("✅ AStar预制体已自动实例化");
+                    }
+                }
+                else
+                {
+                    Debug.LogError("❌ 无法从GameRes找到AStar预制体！");
+                }
+            }
+            else
+            {
+                Debug.LogError("❌ GameRes未初始化，无法实例化AStar预制体！");
+            }
+        }
+        
         // 自动获取MainCamera（避免策划忘记赋值）
         if (mainCamera == null)
         {

@@ -15,7 +15,7 @@ public class Chunk : MonoBehaviour
     [ShowInInspector]
     public Dictionary<string, HashSet<Item>> RuntimeItemsGroup = new();
     [ShowInInspector]
-    public Dictionary<Vector2, Item> RunTimeItems_ByPosition = new();
+    public Dictionary<Vector2, List<Item>> RunTimeItems_ByPosition = new();
     public Map Map;
     public MapSave MapSave;
     public string ChunkOwner;
@@ -125,7 +125,6 @@ public class Chunk : MonoBehaviour
     private void FinalizeChunkLoading(int itemCount)
     {
         Map?.BackTilePenalty_Sync();
-        Debug.Log($"✅ 区块加载完成，共加载 {itemCount} 个物品");
     }
     #endregion
 
@@ -165,7 +164,12 @@ public class Chunk : MonoBehaviour
         {
             if (item != null)
             {
-                RunTimeItems_ByPosition[item.transform.position] = item;
+                Vector2 pos = item.transform.position;
+                if (!RunTimeItems_ByPosition.ContainsKey(pos))
+                {
+                    RunTimeItems_ByPosition[pos] = new List<Item>();
+                }
+                RunTimeItems_ByPosition[pos].Add(item);
             }
         }
     }
@@ -234,7 +238,12 @@ public class Chunk : MonoBehaviour
 
         RunTimeItems[item.itemData.Guid] = item;
         AddToGroup(item);
-        RunTimeItems_ByPosition[item.transform.position] = item;
+        Vector2 pos = item.transform.position;
+        if (!RunTimeItems_ByPosition.ContainsKey(pos))
+        {
+            RunTimeItems_ByPosition[pos] = new List<Item>();
+        }
+        RunTimeItems_ByPosition[pos].Add(item);
     }
 
     /// <summary>
@@ -247,15 +256,10 @@ public class Chunk : MonoBehaviour
         // 检查是否已存在
         if (RunTimeItems.ContainsKey(item.itemData.Guid))
         {
-            Debug.LogWarning($"⚠️ 物品 {item.itemData.IDName} 已存在，执行更新操作");
             // 如果是更新，先从旧位置移除
             foreach (var kvp in RunTimeItems_ByPosition)
             {
-                if (kvp.Value.itemData.Guid == item.itemData.Guid)
-                {
-                    RunTimeItems_ByPosition.Remove(kvp.Key);
-                    break;
-                }
+                kvp.Value.RemoveAll(i => i.itemData.Guid == item.itemData.Guid);
             }
         }
 
@@ -281,18 +285,40 @@ public class Chunk : MonoBehaviour
 
         RunTimeItems.Remove(item.itemData.Guid);
         RemoveFromGroup(item);
-        RunTimeItems_ByPosition.Remove(item.transform.position);
+        Vector2 pos = item.transform.position;
+        if (RunTimeItems_ByPosition.TryGetValue(pos, out var items))
+        {
+            items.Remove(item);
+            if (items.Count == 0)
+            {
+                RunTimeItems_ByPosition.Remove(pos);
+            }
+        }
         MapSave?.RemoveItemData(item.itemData);
     }
     #endregion
 
     #region 区块位置计算
     /// <summary>
-    /// 通过位置快速获取物品
+    /// 通过位置快速获取物品列表
+    /// </summary>
+    public bool TryGetItemsByPosition(Vector2 position, out List<Item> items)
+    {
+        return RunTimeItems_ByPosition.TryGetValue(position, out items);
+    }
+
+    /// <summary>
+    /// 通过位置获取第一个物品（向后兼容）
     /// </summary>
     public bool TryGetItemByPosition(Vector2 position, out Item item)
     {
-        return RunTimeItems_ByPosition.TryGetValue(position, out item);
+        item = null;
+        if (RunTimeItems_ByPosition.TryGetValue(position, out var items) && items.Count > 0)
+        {
+            item = items[0];
+            return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -310,6 +336,66 @@ public class Chunk : MonoBehaviour
             Mathf.FloorToInt(objPos.y / chunkSize.y) * (int)chunkSize.y
         );
         return chunkPos;
+    }
+
+    /// <summary>
+    /// 对位置进行取整（用于位置查询前的预处理）
+    /// 将浮点坐标取整为整数坐标，便于查询字典中的Item
+    /// 处理游戏中坐标向右上0.5偏移的问题
+    /// </summary>
+    public static Vector2 RoundPositionForQuery(Vector2 position)
+    {
+        // 先取整到最近的整数
+        Vector2 roundedPos = new Vector2(Mathf.Round(position.x), Mathf.Round(position.y));
+        // 然后加上0.5的偏移（向右上）
+        return roundedPos + new Vector2(0.5f, 0.5f);
+    }
+
+    /// <summary>
+    /// 获取指定位置及其周围范围内的所有物品
+    /// </summary>
+    /// <param name="position">要查询的位置</param>
+    /// <param name="radius">搜索范围（半径），默认为1</param>
+    /// <param name="allItems">输出：找到的所有物品列表</param>
+    /// <returns>是否找到物品</returns>
+    public bool TryGetItemsInRange(Vector2 position, float radius, out List<Item> allItems)
+    {
+        allItems = new List<Item>();
+        
+        // 先对位置进行取整
+        Vector2 roundedPos = RoundPositionForQuery(position);
+        
+        // 遍历所有物品位置，查找范围内的物品
+        foreach (var kvp in RunTimeItems_ByPosition)
+        {
+            float distance = Vector2.Distance(kvp.Key, roundedPos);
+            if (distance <= radius && kvp.Value != null)
+            {
+                allItems.AddRange(kvp.Value);
+            }
+        }
+        
+        return allItems.Count > 0;
+    }
+
+    /// <summary>
+    /// 获取指定位置及其周围范围内的第一个物品
+    /// </summary>
+    /// <param name="position">要查询的位置</param>
+    /// <param name="radius">搜索范围（半径），默认为1</param>
+    /// <param name="item">输出：找到的物品，未找到时为null</param>
+    /// <returns>是否找到物品</returns>
+    public bool TryGetItemInRange(Vector2 position, float radius, out Item item)
+    {
+        item = null;
+        
+        if (TryGetItemsInRange(position, radius, out var items) && items.Count > 0)
+        {
+            item = items[0];
+            return true;
+        }
+        
+        return false;
     }
     #endregion
 }

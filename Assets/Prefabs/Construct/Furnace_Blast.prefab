@@ -97,6 +97,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
+  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -104,6 +105,8 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  OnInit_Env:
+    _PersistentCalls: []
   updateInterval: 0
   Data:
     IDName: Furnace_Blast
@@ -405,7 +408,7 @@ PrefabInstance:
     - target: {fileID: 1086107019792522300, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: -345686119, guid: cc5364d105c82f74db3f9d7ee1c58e61, type: 3}
+      objectReference: {fileID: 795886554, guid: 9de1db5190b67f540b562921ffb5cd5d, type: 3}
     - target: {fileID: 2411235646888064391, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
       propertyPath: m_Name
       value: Module_Animator

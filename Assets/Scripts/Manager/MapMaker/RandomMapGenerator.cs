@@ -88,7 +88,6 @@ public class RandomMapGenerator : MonoBehaviour
             if (childTilemaps != null && childTilemaps.Length > 0)
             {
                 targetTilemap = childTilemaps[0];
-                Debug.Log($"[RandomMapGenerator] 自动获取子对象Tilemap：{targetTilemap.name}");
             }
             else
             {
@@ -181,8 +180,6 @@ public class RandomMapGenerator : MonoBehaviour
 
         // 清空调试颜色字典
         ColorDicitionary.Clear();
-
-        Debug.Log($"[地图生成] ✅ 初始化完成 - 位置: {map.Data.position}, 尺寸: {size}");
     }
 
     /// <summary>
@@ -198,12 +195,10 @@ public class RandomMapGenerator : MonoBehaviour
             // 分帧生成（避免卡顿）
             Coroutine coroutine = ChunkMgr.Instance.StartCoroutine(GenerateMapCoroutine(startPos, size));
             ChunkMgr.Instance.RandomMapCoroutines.Add(coroutine);
-            Debug.Log($"[地图生成] 🔄 已启动分帧生成协程 (每帧 {tilesPerFrame} 块)");
         }
         else
         {
             // 立即生成
-            Debug.Log($"[地图生成] ⚡ 开始立即生成地图...");
             GenerateAllTiles(startPos, size);
             OnGenerationComplete();
         }
@@ -425,7 +420,7 @@ public class RandomMapGenerator : MonoBehaviour
             var tile = tileData.DeepClone();
 
             // 4. 初始化瓦片（根据环境因子调整）
-            tile.Initialize(env);
+            tile.Initialize_Env(env);
 
             // 5. 设置瓦片位置
             tile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
@@ -476,7 +471,6 @@ public class RandomMapGenerator : MonoBehaviour
             }
 
             tileDataCache[prefabKey] = cachedTileData;
-            Debug.Log($"[缓存] ✅ 已缓存 TileData: {prefabKey}");
 
             return cachedTileData;
         }
@@ -566,6 +560,8 @@ public class RandomMapGenerator : MonoBehaviour
             {
                 Debug.LogWarning($"[资源生成] ⚠️ 无法添加物品到区块: 区块为 null");
             }
+
+            spawnedItem.Initialize_Env(env);
         }
         catch (System.Exception ex)
         {
@@ -589,8 +585,6 @@ public class RandomMapGenerator : MonoBehaviour
 
         if (map.Data != null && map.Data.TileData != null)
             map.Data.TileData.Clear();
-
-        Debug.Log("[地图清除] ✅ 地图已清除");
     }
 
     /// <summary>
@@ -610,8 +604,6 @@ public class RandomMapGenerator : MonoBehaviour
 
             // 3. 异步烘焙权重（导航网格）
             map?.BackTilePenalty_Async();
-
-            Debug.Log("[地图生成] ✅ 地图生成完成 (地形绘制完毕，正在烘焙权重...)");
         }
         catch (System.Exception ex)
         {
@@ -644,7 +636,7 @@ public class RandomMapGenerator : MonoBehaviour
 
         // === 获取鼠标坐标 ===
         Vector2Int gridPos = GetMouseGridPosition();
-        
+
         // === 检查瓦片有效性 ===
         if (!targetTilemap.HasTile(new Vector3Int(gridPos.x, gridPos.y, 0)))
         {

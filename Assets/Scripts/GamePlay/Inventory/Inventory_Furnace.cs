@@ -123,12 +123,12 @@ public class Inventory_Furnace : Inventory
         
         // 获取物品模块
         mod_Inventory = GetComponent<Mod_Inventory>();
-        mod_Fuel = Owner.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
+        mod_Fuel = item.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
 
         // 如果有手持模块，设置默认目标
-        if (Owner != null && Owner.itemMods != null && Owner.itemMods.ContainsKey_ID(ModText.Hand))
+        if (item != null && item.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Hand))
         {
-            var handInv = Owner.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
+            var handInv = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
             if (InputInventory != null)
                 InputInventory.DefaultTarget_Inventory = handInv;
             if (OutputInventory != null)

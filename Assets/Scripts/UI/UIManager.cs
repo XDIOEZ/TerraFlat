@@ -108,7 +108,7 @@ public class UIManager : MonoBehaviour
         // 注意：我们不使用DontDestroyOnLoad，这样它会随着场景切换而销毁
         panelRoot = canvasObj.transform;
         
-        Debug.Log("PanelRoot created in current active scene.");
+//        Debug.Log("PanelRoot created in current active scene.");
     }
     
     /// <summary>

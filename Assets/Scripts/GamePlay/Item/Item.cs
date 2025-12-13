@@ -8,6 +8,8 @@ using Sirenix.OdinInspector;
 using System.Linq;
 using Force.DeepCloner;
 using FastCloner.Code;
+using NUnit;
+
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
@@ -73,6 +75,8 @@ public abstract class Item : MonoBehaviour
     public SpriteRenderer Sprite;
     
        private bool isInitialized = false;
+[Tooltip("物品初始化时触发的事件，用于根据环境因素初始化物品")]
+       public  UltEvent<EnvironmentFactors> OnInit_Env = new();
     #endregion
 
     #region 生命周期方法
@@ -160,6 +164,31 @@ public abstract class Item : MonoBehaviour
         itemData.Tags.EnsureTagStructure();
     }
 
+    public virtual void Initialize_Env(EnvironmentFactors env)
+    {
+        // 职责：由Item负责根据环境因素调整各模块的初始参数
+        // 这符合单一职责原则：各模块只关心自己的功能实现，参数由Item统一管理
+        // RandomMapGenerator → Item.Initialize_Env(env) → Modules.AdjustByEnvironment(env)
+        
+        if (itemData == null || Mods == null || Mods.Count == 0)
+            return;
+
+        // 遍历所有模块，调用其环境初始化方法（如果实现了的话）
+        foreach (var mod in Mods.Values.ToList())
+        {
+            if (mod != null)
+            {
+                // 如果模块实现了IEnvironmentAdjustable接口，调用其环境调整方法
+                if (mod is IEnvironmentAdjustable adjustable)
+                {
+                    adjustable.AdjustByEnvironment(env);
+                }
+            }
+        }
+
+        OnInit_Env.Invoke(env);
+    }
+
     #endregion
 
     #region 数据管理
@@ -183,80 +212,47 @@ public abstract class Item : MonoBehaviour
     {
         // 创建一个临时的游戏对象实例来处理初始化
         GameObject tempGO = null;
-        try
+        tempGO = Instantiate(gameObject);
+        tempGO.hideFlags = HideFlags.HideAndDontSave; // 隐藏临时对象
+        
+        Item tempItem = tempGO.GetComponent<Item>();
+        if (tempItem == null)
         {
-            tempGO = Instantiate(gameObject);
-            tempGO.hideFlags = HideFlags.HideAndDontSave; // 隐藏临时对象
-            
-            Item tempItem = tempGO.GetComponent<Item>();
-            if (tempItem == null)
-            {
-                Debug.LogError($"[Item] 无法创建 {gameObject.name} 的ItemData: 临时对象缺少Item组件");
-                return null;
-            }
-            
-            // 获取所有子对象的Module并初始化
-            var modules = tempGO.GetComponentsInChildren<Module>(true).ToList();
-            
-            // 为每个模块调用Awake方法
-            foreach (var mod in modules)
-            {
-                if (mod != null)
-                {
-                    try
-                    {
-                        mod.Awake();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError($"[Item] 在初始化模块 {mod?.GetType()?.Name} 时发生错误: {ex.Message}");
-                    }
-                }
-            }
-            
-            // 生成新的Guid
-            tempItem.itemData.Guid = Guid.NewGuid().GetHashCode();
-            
-            // 加载模块
-            try
-            {
-                tempItem.Load();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[Item] 在加载物品 {gameObject.name} 时发生错误: {ex.Message}");
-                return null;
-            }
-            
-            // 保存模块数据
-            try
-            {
-                tempItem.Save();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[Item] 在保存物品 {gameObject.name} 时发生错误: {ex.Message}");
-                return null;
-            }
-            
-            // 克隆最终的itemData作为返回值
-            ItemData result = FastCloner.FastCloner.DeepClone(tempItem.itemData);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[Item] 创建物品 {gameObject.name} 的ItemData时发生未知错误: {ex.Message}");
-            Debug.LogException(ex);
+            Debug.LogError($"[Item] 无法创建 {gameObject.name} 的ItemData: 临时对象缺少Item组件");
             return null;
         }
-        finally
+        
+        // 获取所有子对象的Module并初始化
+        var modules = tempGO.GetComponentsInChildren<Module>(true).ToList();
+        
+        // 为每个模块调用Awake方法
+        foreach (var mod in modules)
         {
-            // 销毁临时对象，确保不留下任何痕迹
-            if (tempGO != null)
+            if (mod != null)
             {
-                DestroyImmediate(tempGO);
+                mod.Awake();
             }
         }
+        
+        // 生成新的Guid
+        tempItem.itemData.Guid = Guid.NewGuid().GetHashCode();
+        
+        // 加载模块
+        tempItem.Load();
+        
+        // 保存模块数据
+        tempItem.Save();
+        
+        // 克隆最终的itemData作为返回值
+        ItemData result = FastCloner.FastCloner.DeepClone(tempItem.itemData);
+        
+        // 销毁临时对象，确保不留下任何痕迹
+        if (tempGO != null)
+        {
+            DestroyImmediate(tempGO);
+        }
+
+        return result;
     }
 
     #endregion
