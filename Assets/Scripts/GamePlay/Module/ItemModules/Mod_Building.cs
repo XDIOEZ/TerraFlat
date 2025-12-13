@@ -4,17 +4,16 @@ using Sirenix.OdinInspector;
 using System;
 using UltEvents;
 using UnityEngine;
-using static Mod_Building;
 
 public class Mod_Building : Module
 {
     #region 数据定义
     [Serializable]
-public class Building_Data
-{
-    public float maxVisibleDistance = 10f;
-    public float minVisibleDistance = 1f;
-}
+    public class Building_Data
+    {
+        public float maxVisibleDistance = 10f;
+        public float minVisibleDistance = 1f;
+    }
     #endregion
 
     #region 公共字段
@@ -34,7 +33,7 @@ public class Building_Data
         set => BuildingData = (Ex_ModData)value;
     }
 
-    public bool IsItemInInventory => item.Owner != null;
+    public bool IsItemInInventory => item.InHand && item.Owner != null;
     #endregion
 
     #region 生命周期
@@ -189,7 +188,7 @@ public class Building_Data
         CleanupGhost();
 
         UpdateNavigation(transform.position, 1, 1);
-        
+
         Debug.Log($"[建筑卸载] ✅ 建筑卸载完成");
     }
     #endregion
@@ -246,41 +245,41 @@ public class Building_Data
         sourceItem.itemData.Stack.CanBePickedUp = false;
         sourceItem.OnUIRefresh?.Invoke();
     }
-/// <summary>
-/// 实例化建筑（根据是否在房间内，选择父对象规则）
-/// </summary>
-private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
-{
-    damageReceiver.Hp = damageReceiver.MaxHp.Value;
-    sourceItem.ModuleSave();
+    /// <summary>
+    /// 实例化建筑（根据是否在房间内，选择父对象规则）
+    /// </summary>
+    private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
+    {
+        damageReceiver.Hp = damageReceiver.MaxHp.Value;
+        sourceItem.ModuleSave();
 
-    ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
-    
-    // 将位置取整然后向右上角偏移0.5个单位，确保安装时总是落在格子中心
-    Vector3 gridPosition = new Vector3(
-        Mathf.Floor(position.x) + 0.5f,
-        Mathf.Floor(position.y) + 0.5f,
-        0f
-    );
-    
-    newitemData.transform.position = gridPosition;
-    
-    Item newItem = ItemMgr.Instance.InstantiateItem(
-            newitemData,
-            position: gridPosition  // 确保实例化位置也在格子中心
+        ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
+
+        // 将位置取整然后向右上角偏移0.5个单位，确保安装时总是落在格子中心
+        Vector3 gridPosition = new Vector3(
+            Mathf.Floor(position.x) + 0.5f,
+            Mathf.Floor(position.y) + 0.5f,
+            0f
         );
-        
-    damageReceiver.Hp = 0;
 
-    newItem.Load();
+        newitemData.transform.position = gridPosition;
 
-    newItem.transform.localScale = Vector3.one;
-    newItem.itemData.Stack.Amount = 1;
-    newItem.itemData.Stack.CanBePickedUp = false;
+        Item newItem = ItemMgr.Instance.InstantiateItem(
+                newitemData,
+                position: gridPosition  // 确保实例化位置也在格子中心
+            );
 
-    //EnableChildColliders(true, newItem.transform);
-    return newItem;
-}
+        damageReceiver.Hp = 0;
+
+        newItem.Load();
+
+        newItem.transform.localScale = Vector3.one;
+        newItem.itemData.Stack.Amount = 1;
+        newItem.itemData.Stack.CanBePickedUp = false;
+
+        //EnableChildColliders(true, newItem.transform);
+        return newItem;
+    }
 
     /// <summary>
     /// 更新导航区域
@@ -297,94 +296,94 @@ private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
     #endregion
 
     #region 辅助方法
-private void HandleGhostShadow()
-{
-    // === 检查Camera.main ===
-    if (Camera.main == null)
+    private void HandleGhostShadow()
     {
-        Debug.LogWarning("[Ghost管理] ❌ Camera.main 为空，无法获取鼠标世界坐标");
-        return;
-    }
-
-    Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-    mouseWorldPos.z = 0f;
-
-    // 取整到格子并偏移 0.5，让位置落在格子中心
-    mouseWorldPos.x = Mathf.Floor(mouseWorldPos.x) + 0.5f;
-    mouseWorldPos.y = Mathf.Floor(mouseWorldPos.y) + 0.5f;
-
-    // 创建 Shadow 实例（如果不存在）
-    if (GhostShadow == null)
-    {
-        Debug.Log("[Ghost管理] 📝 GhostShadow为空，开始创建...");
-        CreateGhostShadow();
-        
-        // 新创建的幽灵阴影直接设置到鼠标位置，避免从(0,0)移动
-        if (GhostShadow != null)
+        // === 检查Camera.main ===
+        if (Camera.main == null)
         {
-            Debug.Log($"[Ghost管理] ✅ 成功创建GhostShadow，位置: {mouseWorldPos}");
+            Debug.LogWarning("[Ghost管理] ❌ Camera.main 为空，无法获取鼠标世界坐标");
+            return;
+        }
+
+        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mouseWorldPos.z = 0f;
+
+        // 取整到格子并偏移 0.5，让位置落在格子中心
+        mouseWorldPos.x = Mathf.Floor(mouseWorldPos.x) + 0.5f;
+        mouseWorldPos.y = Mathf.Floor(mouseWorldPos.y) + 0.5f;
+
+        // 创建 Shadow 实例（如果不存在）
+        if (GhostShadow == null)
+        {
+            Debug.Log("[Ghost管理] 📝 GhostShadow为空，开始创建...");
+            CreateGhostShadow();
+
+            // 新创建的幽灵阴影直接设置到鼠标位置，避免从(0,0)移动
+            if (GhostShadow != null)
+            {
+                Debug.Log($"[Ghost管理] ✅ 成功创建GhostShadow，位置: {mouseWorldPos}");
+                GhostShadow.transform.position = mouseWorldPos;
+            }
+            else
+            {
+                Debug.LogError("[Ghost管理] ❌ 创建GhostShadow失败，将在下一帧重试");
+                return;
+            }
+        }
+
+        if (GhostShadow == null)
+        {
+            Debug.LogError("[Ghost管理] ❌ GhostShadow仍然为空，无法继续处理");
+            return;
+        }
+
+        // 计算距离
+        float distance = Vector2.Distance(item.transform.position, mouseWorldPos);
+
+        // 定义过渡区间（距离超过最大可见距离后，在这个范围内逐渐消失）
+        float transitionRange = 1.5f; // 可根据需要调整这个值
+
+        // 计算基础透明度（在有效范围内的正常渐变）
+        float baseAlpha = Mathf.InverseLerp(Data.maxVisibleDistance, Data.minVisibleDistance, distance);
+
+        // 计算超出范围后的衰减因子
+        float overDistance = distance - Data.maxVisibleDistance;
+        float fadeFactor = 1f;
+
+        // 如果超出最大距离，在过渡区间内逐渐降低透明度
+        if (overDistance > 0)
+        {
+            // 超出越多，透明度衰减越多，超过过渡范围后完全透明
+            fadeFactor = 1 - Mathf.InverseLerp(0, transitionRange, overDistance);
+        }
+
+        // 最终透明度 = 基础透明度 × 衰减因子（确保在0-1范围内）
+        float alpha = Mathf.Clamp01(baseAlpha * fadeFactor);
+
+        GhostShadow.UpdateAlpha(alpha);
+
+        // 只有当阴影可见时才执行移动和颜色更新
+        if (alpha > 0f)
+        {
+            // === 检查ShadowRenderer ===
+            if (GhostShadow.ShadowRenderer == null)
+            {
+                Debug.LogError("[Ghost管理] ❌ GhostShadow.ShadowRenderer 为空");
+                Debug.LogWarning("[Ghost管理] 🔍 BuildingShadow组件的初始化可能失败");
+                return;
+            }
+
+            if (!GhostShadow.ShadowRenderer.enabled)
+            {
+                Debug.LogWarning("[Ghost管理] ⚠️ ShadowRenderer 已禁用，无法显示");
+                return;
+            }
+
+            // 直接设置位置而不是平滑移动，确保总是对齐到格子中心
             GhostShadow.transform.position = mouseWorldPos;
-        }
-        else
-        {
-            Debug.LogError("[Ghost管理] ❌ 创建GhostShadow失败，将在下一帧重试");
-            return;
+            GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
         }
     }
-
-    if (GhostShadow == null)
-    {
-        Debug.LogError("[Ghost管理] ❌ GhostShadow仍然为空，无法继续处理");
-        return;
-    }
-
-    // 计算距离
-    float distance = Vector2.Distance(item.transform.position, mouseWorldPos);
-
-    // 定义过渡区间（距离超过最大可见距离后，在这个范围内逐渐消失）
-    float transitionRange = 1.5f; // 可根据需要调整这个值
-
-    // 计算基础透明度（在有效范围内的正常渐变）
-    float baseAlpha = Mathf.InverseLerp(Data.maxVisibleDistance, Data.minVisibleDistance, distance);
-
-    // 计算超出范围后的衰减因子
-    float overDistance = distance - Data.maxVisibleDistance;
-    float fadeFactor = 1f;
-
-    // 如果超出最大距离，在过渡区间内逐渐降低透明度
-    if (overDistance > 0)
-    {
-        // 超出越多，透明度衰减越多，超过过渡范围后完全透明
-        fadeFactor = 1 - Mathf.InverseLerp(0, transitionRange, overDistance);
-    }
-
-    // 最终透明度 = 基础透明度 × 衰减因子（确保在0-1范围内）
-    float alpha = Mathf.Clamp01(baseAlpha * fadeFactor);
-
-    GhostShadow.UpdateAlpha(alpha);
-
-    // 只有当阴影可见时才执行移动和颜色更新
-    if (alpha > 0f)
-    {
-        // === 检查ShadowRenderer ===
-        if (GhostShadow.ShadowRenderer == null)
-        {
-            Debug.LogError("[Ghost管理] ❌ GhostShadow.ShadowRenderer 为空");
-            Debug.LogWarning("[Ghost管理] 🔍 BuildingShadow组件的初始化可能失败");
-            return;
-        }
-
-        if (!GhostShadow.ShadowRenderer.enabled)
-        {
-            Debug.LogWarning("[Ghost管理] ⚠️ ShadowRenderer 已禁用，无法显示");
-            return;
-        }
-
-        // 直接设置位置而不是平滑移动，确保总是对齐到格子中心
-        GhostShadow.transform.position = mouseWorldPos;
-        GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
-    }
-}
 
 
 
@@ -431,7 +430,7 @@ private void HandleGhostShadow()
         {
             Debug.LogError($"[Shadow生成] ❌ 预制体 '{shadowPrefab.name}' 缺少BuildingShadow组件");
             Debug.LogWarning("[Shadow生成] 🔍 检测到的组件：");
-            
+
             // 列出预制体上的所有组件
             Component[] components = shadowPrefab.GetComponents<Component>();
             if (components.Length > 0)
@@ -478,7 +477,7 @@ private void HandleGhostShadow()
             Debug.LogWarning("   1. Item组件未正确初始化");
             Debug.LogWarning("   2. Item.itemData 为空");
             Debug.LogWarning("   3. 物品没有对应的Sprite资源");
-            
+
             // 额外诊断信息
             if (item.itemData == null)
             {
@@ -488,7 +487,7 @@ private void HandleGhostShadow()
             {
                 Debug.LogWarning($"   📌 item.itemData: {item.itemData.IDName}");
             }
-            
+
             return;
         }
 
@@ -537,48 +536,48 @@ private void HandleGhostShadow()
 
 #if UNITY_EDITOR
     [Button("设置为已安装状态(编辑器调试)")]
-public void SetAsInstalledEditor()
-{
-    // 检查必要的组件
-    if (item == null)
+    public void SetAsInstalledEditor()
     {
+        // 检查必要的组件
+        if (item == null)
+        {
 
             item = GetComponentInParent<Item>();
-    }
+        }
 
-    // 查找DamageReceiver组件（如果还没有引用的话）
-    if (damageReceiver == null)
-    {
-        damageReceiver = item.GetComponent<DamageReceiver>();
+        // 查找DamageReceiver组件（如果还没有引用的话）
         if (damageReceiver == null)
         {
-            damageReceiver = item.GetComponentInChildren<DamageReceiver>();
+            damageReceiver = item.GetComponent<DamageReceiver>();
+            if (damageReceiver == null)
+            {
+                damageReceiver = item.GetComponentInChildren<DamageReceiver>();
+            }
+            if (damageReceiver == null)
+            {
+                Debug.LogError("[编辑器调试] 无法找到DamageReceiver组件");
+                return;
+            }
         }
-        if (damageReceiver == null)
-        {
-            Debug.LogError("[编辑器调试] 无法找到DamageReceiver组件");
-            return;
-        }
-    }
 
-    // 设置为最大血量（表示已安装）
-    damageReceiver.Hp = damageReceiver.MaxHp.Value;
-    
-    // 设置缩放为1
-    item.transform.localScale = Vector3.one;
+        // 设置为最大血量（表示已安装）
+        damageReceiver.Hp = damageReceiver.MaxHp.Value;
+
+        // 设置缩放为1
+        item.transform.localScale = Vector3.one;
         item.itemData.Stack.CanBePickedUp = false;
-    // 确保碰撞器设置正确
-    BoxCollider2D collider = item.GetComponent<BoxCollider2D>();
-    if (collider != null)
-    {
-        collider.isTrigger = false;
+        // 确保碰撞器设置正确
+        BoxCollider2D collider = item.GetComponent<BoxCollider2D>();
+        if (collider != null)
+        {
+            collider.isTrigger = false;
+        }
+
+        // 更新碰撞器状态
+        EnableChildColliders(true, item.transform);
+
+        Debug.Log($"[编辑器调试] 成功将 {item.name} 设置为已安装状态");
     }
-    
-    // 更新碰撞器状态
-    EnableChildColliders(true, item.transform);
-    
-    Debug.Log($"[编辑器调试] 成功将 {item.name} 设置为已安装状态");
-}
 #endif
 
     /// <summary>
