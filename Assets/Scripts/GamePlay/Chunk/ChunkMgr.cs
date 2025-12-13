@@ -247,13 +247,11 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         {
             Chunk_Dic_Active[chunkKey] = chunk;
             Chunk_Dic_UnActive.Remove(chunkKey);
-            Debug.Log($"[区块激活] ✅ 区块已激活: {chunkKey}");
         }
         else
         {
             Chunk_Dic_UnActive[chunkKey] = chunk;
             Chunk_Dic_Active.Remove(chunkKey);
-            Debug.Log($"[区块激活] 😴 区块已失活: {chunkKey}");
         }
 
         // ✅ 设置地图TileMap的激活状态
@@ -282,8 +280,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         Chunk_Dic[key] = chunk;
         Chunk_Dic_Active[key] = chunk;
         Chunk_Dic_UnActive.Remove(key);
-
-        Debug.Log($"[区块管理] ✅ 区块已添加到激活状态: {key}");
     }
 
 
@@ -328,8 +324,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         if (chunkGameObject.gameObject.activeSelf)
             return null;
 
-        Debug.Log($"[区块加载] 📍 方式1/3: 激活已存在的区块 {ChunkName}");
-        
         // 激活区块
         SetChunkActive(chunkGameObject, true);
 
@@ -343,7 +337,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
             Debug.LogWarning($"[区块加载] ⚠️ 区块 {ChunkName} 的 Map 为空");
         }
 
-        Debug.Log($"[区块加载] ✅ 成功激活区块 {ChunkName}");
         return chunkGameObject;
     }
 
@@ -371,8 +364,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
             return null;
         }
 
-        Debug.Log($"[区块加载] 📝 方式2/3: 从存档加载区块 {mapName}");
-
         // 清理过期物品引用
         ItemMgr.Instance.CleanupNullItems();
 
@@ -389,8 +380,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
 
         // 注册到字典
         RegisterChunk(chunk);
-
-        Debug.Log($"[区块加载] ✅ 成功从存档加载区块 {mapName}");
         return chunk;
     }
 
@@ -399,8 +388,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     /// </summary>
     private Chunk TryCreateNewChunk(string mapName)
     {
-        Debug.Log($"[区块加载] 🆕 方式3/3: 创建新区块 {mapName}");
-
         // 解析区块位置
         if (!TryParseVector2Int(mapName, out Vector2Int pos))
         {
@@ -433,8 +420,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
 
         // 注册到字典
         RegisterChunk(chunk);
-
-        Debug.Log($"[区块加载] ✅ 成功创建新区块 {mapName}");
         return chunk;
     }
 
@@ -494,8 +479,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         Chunk_Dic_UnActive.Remove(chunkKey); // 确保不在失活字典中
 
         OnChunkLoadFinish.Invoke(chunk);
-        
-        Debug.Log($"[区块注册] ✅ 区块已注册 {chunkKey}");
     }
 
     #endregion
@@ -528,8 +511,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
                 mapSave.MapPosition.y,
                 0f
             );
-
-            Debug.Log($"[区块创建] ✅ 创建区块对象成功: {mapSave.Name} at {mapSave.MapPosition}");
             return chunk;
         }
         catch (System.Exception ex)
@@ -705,7 +686,6 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         }
         else
         {
-            Debug.Log($"GetClosestChunk: 最近的 Chunk 是 {closestChunk.name}，距离平方：{minSqrDist}");
         }
     }
 }

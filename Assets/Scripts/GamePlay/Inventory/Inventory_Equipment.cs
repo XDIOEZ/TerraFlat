@@ -93,7 +93,7 @@ public class Inventory_Equipment : Inventory
                 // 如果模块实现了IItemValueModifier接口，则调用Unequip方法
                 if (mod is IItemValueModifier itemValueModifier)
                 {
-                    itemValueModifier.Unequip(Owner, currentEquippedItem);
+                    itemValueModifier.Unequip(item, currentEquippedItem);
                 }
 
                 // 从EquipmentModules_Dictionary中获取模块，而不是通过Owner.itemMods
@@ -124,12 +124,12 @@ public class Inventory_Equipment : Inventory
             {
                 if (modData.Type == ModuleType.Equipment)
                 {
-                    Module module = ActivateEquipmentAttributes(Owner, modData, newIncomingItem);
+                    Module module = ActivateEquipmentAttributes(item, modData, newIncomingItem);
                     
                     // 如果模块实现了IItemValueModifier接口，则调用Equip方法
                     if (module is IItemValueModifier itemValueModifier)
                     {
-                        itemValueModifier.Equip(Owner, newIncomingItem);
+                        itemValueModifier.Equip(item, newIncomingItem);
                     }
                 }
             }
@@ -218,7 +218,7 @@ public Module ActivateEquipmentAttributes(Item player, ModuleData equipment, Ite
             // 只激活Equipment类型的模块
             if (modData.Type == ModuleType.Equipment)
             {
-                ActivateEquipmentAttributes(Owner, modData, itemData);
+                ActivateEquipmentAttributes(item, modData, itemData);
             }
         }
     }

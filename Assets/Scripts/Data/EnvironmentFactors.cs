@@ -13,4 +13,6 @@ public partial class EnvironmentFactors
     [Tooltip("固体化程度，单位：°C")]
     public float Solidity;        // 固体程度（0=水，1=陆）
     public float Hight;
+    [Tooltip("污染程度，单位：%")]
+    public float Pollution;       // 污染程度，单位：%
 }

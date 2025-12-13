@@ -160,6 +160,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
+  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -170,6 +171,8 @@ MonoBehaviour:
       _MemberName: Act
       _PersistentArguments: []
   Sprite: {fileID: 0}
+  OnInit_Env:
+    _PersistentCalls: []
   updateInterval: 0
   Data:
     IDName: Golem_Stone
@@ -690,6 +693,30 @@ PrefabInstance:
     - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_Name
       value: Module_DamageReciver
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].MaxAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].MinAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].DropChance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].LootPrefab
+      value: 
+      objectReference: {fileID: 1972541801892577952, guid: 405209e91ee825740a4b42ec94f9f441, type: 3}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[1].LootPrefabName
+      value: Ore_MagicalStone
       objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x

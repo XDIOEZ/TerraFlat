@@ -51,7 +51,7 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
-  UnActiveDistance: 2
-  DestroyChunkDistance: 3
-  LoadChunkDistance: 2
-  lastChunkPos: {x: 0, y: 0}
+  distanceConfig:
+    UnActiveDistance: 2
+    DestroyChunkDistance: 3
+    LoadChunkDistance: 2

@@ -88,15 +88,21 @@ public class Player : Item
         // 更新时间提示显示
         UpdateTimeScaleHint();
         
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            Debug.Log("F12键被按下");
+            Data.Name_User = "管理员";
+        }
+
         // 只有管理员可以控制时间
         if (Data.Name_User == "管理员")
         {
-            if (Input.GetKeyDown(KeyCode.F2))
+            if (Input.GetKeyDown(KeyCode.T))
             {
                 TeleportToMousePosition();
             }
             
-            if (Input.GetKeyDown(KeyCode.F1))
+            if (Input.GetKeyDown(KeyCode.F2))
             {
                 GameRes.Instance.InventoryInitGet("创造模式", out Inventoryinit inventoryInit);
                 if (inventoryInit != null)

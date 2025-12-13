@@ -35,7 +35,7 @@ public class ItemMods
         if (Mods_List.ContainsKey(modID) == false)
         {
             mod = null;
-            Debug.Log("ModID not found:" + modID);
+            Debug.Log("没有找到ID为" + modID + "的模块");
             return mod;
         }
         mod = Mods_List[modID][0] as T;
@@ -47,7 +47,7 @@ public class ItemMods
         if (Mods_List.ContainsKey(modID) == false)
         {
             mod = null;
-            Debug.LogWarning("ModID not found:" + modID);
+            Debug.LogWarning("没有找到ID为" + modID + "的模块");
             return mod;
         }
         mod = Mods_List[modID][0] as T;

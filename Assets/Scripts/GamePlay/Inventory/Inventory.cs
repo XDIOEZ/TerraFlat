@@ -8,7 +8,7 @@ public class Inventory : MonoBehaviour
 {
     #region 字段和属性
     //物品所有者
-    public Item Owner;
+    public Item item;
     //物品槽预制体
     GameObject ItemSlot_Prefab;
     //物品槽的父物体
@@ -284,7 +284,7 @@ public class Inventory : MonoBehaviour
     {
         RightClickMenu_UI currentMenuInstance;
         currentMenuInstance = Instantiate(GameRes.Instance.GetPrefab("右键菜单").GetComponent<RightClickMenu_UI>());
-        currentMenuInstance.Init(itemSlotUIs[index], Owner);
+        currentMenuInstance.Init(itemSlotUIs[index], item);
         currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlotUIs[index].transform.position;
     }
 

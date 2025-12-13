@@ -90,14 +90,14 @@ public class Inventory_HotBar : Inventory
         base.InitData();
 
         // 获取FaceMouse组件（用于控制物品旋转）
-        Owner.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
+        item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
         if (faceMouse == null)
         {
             Debug.LogWarning("[Inventory_HotBar] 未找到FaceMouse组件，物品将无法跟随鼠标旋转");
         }
 
         // 获取TurnBody组件（用于控制转身）
-        Owner.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
+        item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
         if (turnBody == null)
         {
             Debug.LogWarning("[Inventory_HotBar] 未找到TurnBody组件，物品将无法实现转身镜像");
@@ -129,14 +129,14 @@ public class Inventory_HotBar : Inventory
     public void Controller_Init()
     {
         // 先确保 Owner 存在
-        if (Owner == null)
+        if (item == null)
         {
             Debug.LogWarning($"[{name}] Controller_Init: Owner 为空，无法初始化输入");
             return;
         }
     
         // 获取GameControllerr（仅从Owner获取，不再进行全局查找）
-        var GameController = Owner.GetComponent<GameController>();
+        var GameController = item.GetComponent<GameController>();
         if (GameController == null)
         {
             // 直接返回，不再进行全局查找
@@ -377,7 +377,7 @@ public class Inventory_HotBar : Inventory
         // 初始化 Item 属性
         itemInstance.itemData = itemData;
         itemInstance.itemData.ModuleDataDic = itemData.ModuleDataDic;
-        itemInstance.Owner = Owner;
+        itemInstance.Owner = item;
 
         // 事件绑定
         itemInstance.OnUIRefresh += () => RefreshUI(index);
