@@ -89,11 +89,11 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     {
         if (Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out Chunk chunk))
         {
-            chunk.UpdateItem(item);
+            chunk.AddItem(item);
         }
         else if (Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out chunk))
         {
-            chunk.UpdateItem(item);
+            chunk.AddItem(item);
         }
     }
     #endregion
@@ -228,192 +228,360 @@ public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
 }
 
 public void SetChunkActive(Chunk chunk, bool isActive)
-{
-    if (chunk == null)
     {
-        Debug.LogError("❌ SetChunkActive 失败：chunk 为 null");
-        return;
-    }
-
-    if (string.IsNullOrEmpty(chunk.name))
-    {
-        Debug.LogWarning("⚠️ SetChunkActive：chunk 没有名字，可能未初始化完全");
-    }
-
-    // ✅ 维护字典
-    if (isActive)
-    {
-        if (!Chunk_Dic_Active.ContainsKey(chunk.name))
-            Chunk_Dic_Active[chunk.name] = chunk;
-        Chunk_Dic_UnActive.Remove(chunk.name);
-    }
-    else
-    {
-        if (!Chunk_Dic_UnActive.ContainsKey(chunk.name))
-            Chunk_Dic_UnActive[chunk.name] = chunk;
-        Chunk_Dic_Active.Remove(chunk.name);
-    }
-
-    // ✅ tileMap 判空
-    if (chunk.Map == null)
-    {
-        Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 Map 为 null");
-    }
-    else
-    {
-        // 等待权重烘焙协程完成后再切换激活状态
-        if (chunk.Map.tileMap == null)
+        if (chunk == null)
         {
-            Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 Map.tileMap 为 null");
+            Debug.LogError("❌ SetChunkActive 失败：chunk 为 null");
+            return;
+        }
+
+        string chunkKey = chunk.name;
+        if (string.IsNullOrEmpty(chunkKey))
+        {
+            Debug.LogWarning("⚠️ SetChunkActive：chunk 没有名字，可能未初始化完全");
+            return;
+        }
+
+        // ✅ 维护字典状态
+        if (isActive)
+        {
+            Chunk_Dic_Active[chunkKey] = chunk;
+            Chunk_Dic_UnActive.Remove(chunkKey);
+            Debug.Log($"[区块激活] ✅ 区块已激活: {chunkKey}");
         }
         else
         {
+            Chunk_Dic_UnActive[chunkKey] = chunk;
+            Chunk_Dic_Active.Remove(chunkKey);
+            Debug.Log($"[区块激活] 😴 区块已失活: {chunkKey}");
+        }
+
+        // ✅ 设置地图TileMap的激活状态
+        if (chunk.Map != null && chunk.Map.tileMap != null)
+        {
             chunk.Map.tileMap.gameObject.SetActive(isActive);
         }
-    }
+        else if (chunk.Map == null)
+        {
+            Debug.LogWarning($"⚠️ SetChunkActive: chunk {chunkKey} 的 Map 为 null");
+        }
 
-    // ✅ gameObject 判空
-    if (chunk.gameObject == null)
-    {
-        Debug.LogError($"❌ SetChunkActive 失败：chunk {chunk.name} 的 GameObject 为 null");
-    }
-    else
-    {
+        // ✅ 设置区块GameObject的激活状态
         chunk.gameObject.SetActive(isActive);
     }
-}
 
     public void AddActiveChunk(Chunk chunk)
     {
-        Chunk_Dic[chunk.name] = chunk;
-        Chunk_Dic_Active[chunk.name] = chunk;
-    }
-
-
-    #endregion
-
-    #region 通过名字从存档中加载区块 或者 如果不存在则创建新区块
-    public void LoadChunk_By_Name(string ChunkName)
-    {
-        ///Load存在三种加载方式
-        ///1.直接将失效的区块激活
-        ///2.从内存中实例化区块加载
-        ///3.自动创建新的区块
-
-
-        Chunk chunk = null;
-
-        // 检查 GameManager 中是否已经存在对应的地图对象
-        if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(ChunkName, out Chunk chunkGameObject))
-        {
-            // 如果对象存在但处于未激活状态，则激活它
-            if (chunkGameObject != null && !chunkGameObject.gameObject.activeSelf)
-            {
-                //方法1：直接将失效的区块激活
-                ChunkMgr.Instance.SetChunkActive(chunkGameObject, true);
-                chunk = chunkGameObject;//激活地图后同步烘焙权重
-                chunk.Map.BackTilePenalty_Async();
-            }
-        }
-
- 
         if (chunk == null)
         {
-            //方法2：从内存中实例化区块加载  因为加载读取设置数据消耗性能较大 烘焙操作嵌入到异步加载中
-            chunk = LoadChunk_By_SaveData(ChunkName);
+            Debug.LogError("[区块管理] ❌ 添加激活区块失败: chunk 为 null");
+            return;
         }
 
+        string key = chunk.name;
+        Chunk_Dic[key] = chunk;
+        Chunk_Dic_Active[key] = chunk;
+        Chunk_Dic_UnActive.Remove(key);
+
+        Debug.Log($"[区块管理] ✅ 区块已添加到激活状态: {key}");
+    }
+
+
+    #endregion
+
+    #region 区块加载流程（重构版）
+    /// <summary>
+    /// 按名字加载或创建区块的主入口
+    /// 流程：激活已有区块 → 从存档加载 → 创建新区块
+    /// </summary>
+    public void LoadChunk_By_Name(string ChunkName)
+    {
+        Chunk chunk = null;
+
+        // === 第一优先级：激活已存在但未激活的区块 ===
+        chunk = TryActivateExistingChunk(ChunkName);
         if (chunk != null)
-        {
-            Chunk_Dic[chunk.MapSave.Name] = chunk;
-            Chunk_Dic_Active[chunk.MapSave.Name] = chunk;
+            return;
 
+        // === 第二优先级：从存档加载区块 ===
+        chunk = TryLoadChunkFromSaveData(ChunkName);
+        if (chunk != null)
+            return;
+
+        // === 第三优先级：创建全新区块 ===
+        chunk = TryCreateNewChunk(ChunkName);
+        if (chunk != null)
+            return;
+
+        Debug.LogError($"[区块加载] ❌ 所有加载方式均失败，无法加载区块 {ChunkName}");
+    }
+
+    /// <summary>
+    /// 尝试激活已存在的区块
+    /// </summary>
+    private Chunk TryActivateExistingChunk(string ChunkName)
+    {
+        if (!Chunk_Dic.TryGetValue(ChunkName, out Chunk chunkGameObject) || chunkGameObject == null)
+            return null;
+
+        // 如果区块已激活，无需重复处理
+        if (chunkGameObject.gameObject.activeSelf)
+            return null;
+
+        Debug.Log($"[区块加载] 📍 方式1/3: 激活已存在的区块 {ChunkName}");
+        
+        // 激活区块
+        SetChunkActive(chunkGameObject, true);
+
+        // 激活地图后异步烘焙权重
+        if (chunkGameObject.Map != null)
+        {
+            chunkGameObject.Map.BackTilePenalty_Async();
         }
-    }
-
-public Chunk LoadChunk_By_SaveData(string mapName)
-{
-    // 添加对Active_PlanetData的null检查
-    PlanetData activePlanetData = SaveDataMgr.Instance.Active_PlanetData;
-    if (activePlanetData == null)
-    {
-        Debug.LogWarning($"⚠️ 无法加载区块 {mapName}: Active_PlanetData 为 null");
-        return null;
-    }
-
-    if (activePlanetData.MapData_Dict.TryGetValue(mapName, out MapSave mapSave))
-    {
-        if (mapSave.items.Count == 0)
+        else
         {
-            Debug.LogWarning($"X 缓存区块 {mapName} 存在但没有保存的物品,可能是存档发生错误");
+            Debug.LogWarning($"[区块加载] ⚠️ 区块 {ChunkName} 的 Map 为空");
+        }
+
+        Debug.Log($"[区块加载] ✅ 成功激活区块 {ChunkName}");
+        return chunkGameObject;
+    }
+
+    /// <summary>
+    /// 从存档数据加载区块
+    /// </summary>
+    private Chunk TryLoadChunkFromSaveData(string mapName)
+    {
+        // 验证存档管理器
+        PlanetData activePlanetData = SaveDataMgr.Instance?.Active_PlanetData;
+        if (activePlanetData == null)
+        {
+            Debug.LogWarning($"[区块加载] ⚠️ 无法加载区块 {mapName}: Active_PlanetData 为 null");
             return null;
         }
+
+        // 查找存档数据
+        if (!activePlanetData.MapData_Dict.TryGetValue(mapName, out MapSave mapSave))
+            return null;
+
+        // 验证存档数据的完整性
+        if (mapSave == null || mapSave.items.Count == 0)
+        {
+            Debug.LogWarning($"[区块加载] ⚠️ 方式2/3: 存档区块 {mapName} 无效或为空");
+            return null;
+        }
+
+        Debug.Log($"[区块加载] 📝 方式2/3: 从存档加载区块 {mapName}");
+
+        // 清理过期物品引用
         ItemMgr.Instance.CleanupNullItems();
 
-        var chunk = CreateChunk_ByMapSave(mapSave); 
+        // 创建并初始化区块
+        Chunk chunk = CreateChunk_ByMapSave(mapSave);
+        if (chunk == null)
+        {
+            Debug.LogError($"[区块加载] ❌ 方式2/3: 创建区块对象失败 {mapName}");
+            return null;
+        }
 
+        // 异步加载区块内容
         chunk.LoadChunk_Async();
 
+        // 注册到字典
+        RegisterChunk(chunk);
+
+        Debug.Log($"[区块加载] ✅ 成功从存档加载区块 {mapName}");
         return chunk;
     }
 
-    return null;
-}
+    /// <summary>
+    /// 创建全新区块
+    /// </summary>
+    private Chunk TryCreateNewChunk(string mapName)
+    {
+        Debug.Log($"[区块加载] 🆕 方式3/3: 创建新区块 {mapName}");
+
+        // 解析区块位置
+        if (!TryParseVector2Int(mapName, out Vector2Int pos))
+        {
+            Debug.LogError($"[区块加载] ❌ 方式3/3: 无法解析区块名称 {mapName}");
+            return null;
+        }
+
+        // 创建 MapSave 数据结构
+        MapSave mapSave = new MapSave
+        {
+            Name = mapName,
+            MapPosition = pos
+        };
+
+        // 创建区块GameObject
+        Chunk chunk = CreateChunk_ByMapSave(mapSave);
+        if (chunk == null)
+        {
+            Debug.LogError($"[区块加载] ❌ 方式3/3: 创建区块对象失败 {mapName}");
+            return null;
+        }
+
+        // 创建地图核心物体（Map组件）
+        if (!TryCreateMapCore(chunk))
+        {
+            Debug.LogError($"[区块加载] ❌ 方式3/3: 创建地图核心失败 {mapName}");
+            Destroy(chunk.gameObject);
+            return null;
+        }
+
+        // 注册到字典
+        RegisterChunk(chunk);
+
+        Debug.Log($"[区块加载] ✅ 成功创建新区块 {mapName}");
+        return chunk;
+    }
+
+    /// <summary>
+    /// 尝试创建地图核心对象（MapCore）
+    /// </summary>
+    private bool TryCreateMapCore(Chunk chunk)
+    {
+        try
+        {
+            // 实例化地图核心物体
+            Map map = ItemMgr.Instance.InstantiateItem(
+                "MapCore", 
+                default, default, default, 
+                chunk.gameObject
+            ) as Map;
+
+            if (map == null)
+            {
+                Debug.LogError($"[区块创建] ❌ 无法实例化MapCore或转换失败");
+                return false;
+            }
+
+            // 配置地图属性
+            map.ParentObject = chunk.gameObject;
+            chunk.Map = map;
+            chunk.AddItem(map);
+            map.chunk = chunk;
+
+            // 调用Act方法进行初始化（会自动烘焙权重）
+            map.Act();
+
+            return true;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[区块创建] ❌ 创建MapCore异常: {ex.Message}\n{ex.StackTrace}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 将区块注册到管理字典
+    /// </summary>
+    private void RegisterChunk(Chunk chunk)
+    {
+        if (chunk == null)
+        {
+            Debug.LogError("[区块注册] ❌ 区块为 null，无法注册");
+            return;
+        }
+
+        string chunkKey = chunk.MapSave.Name;
+        
+        Chunk_Dic[chunkKey] = chunk;
+        Chunk_Dic_Active[chunkKey] = chunk;
+        Chunk_Dic_UnActive.Remove(chunkKey); // 确保不在失活字典中
+
+        OnChunkLoadFinish.Invoke(chunk);
+        
+        Debug.Log($"[区块注册] ✅ 区块已注册 {chunkKey}");
+    }
 
     #endregion
 
-    #region 创建新区块
-    public Chunk CreatChunk_By_Name(string mapName)
-    {
-        TryParseVector2Int(mapName, out Vector2Int pos);
-
-        MapSave mapSave = new MapSave();
-
-        mapSave.Name = mapName;
-
-        mapSave.MapPosition = pos;
-
-        var chunk = CreateChunk_ByMapSave(mapSave);
-
-        // 实例化地图核心物体
-        Map map = ItemMgr.Instance.InstantiateItem("MapCore", default, default, default, chunk.gameObject) as Map;
-
-        map.ParentObject = chunk.gameObject;
-
-        chunk.Map = map;
-
-        chunk.AddItem(map);
-        map.chunk = chunk;
-        //mapAct会在创建Map后自动烘焙权重
-        //在初始化时会自动将实例化的Item存入对应的chunk缓存中
-        map.Act();
-
-        return chunk;
-    }
+    #region 区块创建与初始化
+    /// <summary>
+    /// 从 MapSave 数据创建区块对象（仅创建GameObject和Chunk组件）
+    /// 不包含地图核心创建逻辑
+    /// </summary>
     public Chunk CreateChunk_ByMapSave(MapSave mapSave)
     {
-        // 1. 创建地图根物体
-        GameObject newMapObj = new GameObject(mapSave.Name);
+        if (mapSave == null)
+        {
+            Debug.LogError("[区块创建] ❌ MapSave 为 null");
+            return null;
+        }
 
-        // 2. 添加区块管理器
-        Chunk Chunk = newMapObj.AddComponent<Chunk>();
+        try
+        {
+            // 1. 创建根GameObject
+            GameObject newMapObj = new GameObject(mapSave.Name);
 
-        Chunk.MapSave = mapSave;
-        // 3. 设置位置
-        newMapObj.transform.position = new Vector3(mapSave.MapPosition.x, mapSave.MapPosition.y, 0);
+            // 2. 添加Chunk组件
+            Chunk chunk = newMapObj.AddComponent<Chunk>();
+            chunk.MapSave = mapSave;
 
-        return Chunk;
+            // 3. 设置位置
+            newMapObj.transform.position = new Vector3(
+                mapSave.MapPosition.x,
+                mapSave.MapPosition.y,
+                0f
+            );
+
+            Debug.Log($"[区块创建] ✅ 创建区块对象成功: {mapSave.Name} at {mapSave.MapPosition}");
+            return chunk;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[区块创建] ❌ 创建区块对象异常: {ex.Message}\n{ex.StackTrace}");
+            return null;
+        }
     }
 
+    /// <summary>
+    /// 创建一个全新的区块（包含地图核心）
+    /// </summary>
+    private Chunk CreatChunk_By_Name(string mapName)
+    {
+        // 解析位置
+        if (!TryParseVector2Int(mapName, out Vector2Int pos))
+        {
+            Debug.LogError($"[区块创建] ❌ 无法解析区块名称: {mapName}");
+            return null;
+        }
+
+        // 创建MapSave
+        MapSave mapSave = new MapSave
+        {
+            Name = mapName,
+            MapPosition = pos
+        };
+
+        // 创建区块
+        Chunk chunk = CreateChunk_ByMapSave(mapSave);
+        if (chunk == null)
+            return null;
+
+        // 创建地图核心
+        if (!TryCreateMapCore(chunk))
+        {
+            Destroy(chunk.gameObject);
+            return null;
+        }
+
+        return chunk;
+    }
     #endregion
 
-    #region 清理空字典值
+    #region 清理与辅助
     public void CleanEmptyDicValues()
     {
         CleanEmptyValues(Chunk_Dic);
         CleanEmptyValues(Chunk_Dic_Active);
         CleanEmptyValues(Chunk_Dic_UnActive);
     }
+
     public void CleanDic()
     {
         Chunk_Dic.Clear();
@@ -425,40 +593,29 @@ public Chunk LoadChunk_By_SaveData(string mapName)
     {
         if (dic == null || dic.Count == 0) return;
 
-        // 找出所有 null 的 key
         var keysToRemove = new List<string>();
         foreach (var kvp in dic)
         {
             if (kvp.Value == null)
                 keysToRemove.Add(kvp.Key);
-
-            //   kvp.Value.ClearNullItems();
         }
 
-        // 统一删除
         foreach (var key in keysToRemove)
         {
             dic.Remove(key);
         }
     }
-    #endregion
-    #region 工具方法
 
     /// <summary>
     /// 尝试将 "(x,y)" 格式的字符串解析为 Vector2Int
     /// </summary>
-    /// <param name="str">输入字符串</param>
-    /// <param name="result">输出的 Vector2Int 结构</param>
-    /// <returns>解析成功返回 true，否则返回 false</returns>
     private bool TryParseVector2Int(string str, out Vector2Int result)
     {
         result = Vector2Int.zero;
 
-        // 移除括号和空格，例如 "(10, 20)" -> "10,20"
         string cleaned = str.Replace(" ", "").Replace("(", "").Replace(")", "");
         string[] parts = cleaned.Split(',');
 
-        // 尝试转换为整数
         if (parts.Length == 2 &&
             int.TryParse(parts[0], out int x) &&
             int.TryParse(parts[1], out int y))
@@ -469,6 +626,7 @@ public Chunk LoadChunk_By_SaveData(string mapName)
 
         return false;
     }
+    #endregion
     public static Vector2 GetChunkSize()
     {
         var sceneName = SceneManager.GetActiveScene().name;
@@ -550,5 +708,4 @@ public Chunk LoadChunk_By_SaveData(string mapName)
             Debug.Log($"GetClosestChunk: 最近的 Chunk 是 {closestChunk.name}，距离平方：{minSqrDist}");
         }
     }
-    #endregion
 }

@@ -21,53 +21,52 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     [Tooltip("当前控制的玩家名称")]
     public string CurrentContrrolPlayerName;
     
+    /// <summary>
+    /// 获取当前活跃星球数据（快捷属性）
+    /// </summary>
     public PlanetData Active_PlanetData
     {
-        get
+        get => GetActivePlanetData();
+    }
+
+    /// <summary>
+    /// 获取当前活跃星球数据的内部方法
+    /// </summary>
+    private PlanetData GetActivePlanetData()
+    {
+        if (SaveData?.PlanetData_Dict == null)
         {
-            if (SaveDataMgr.Instance == null)
-            {
-                Debug.LogError("SaveDataManager.Instance is null.");
-                return null;
-            }
-
-            if (SaveDataMgr.Instance.SaveData == null)
-            {
-                Debug.LogError("SaveDataManager.Instance.SaveData is null.");
-                return null;
-            }
-
-            if (SaveDataMgr.Instance.SaveData.PlanetData_Dict == null)
-            {
-                Debug.LogError("SaveDataManager.Instance.SaveData.PlanetData_Dict is null.");
-                return null;
-            }
-
-            string activeSceneName = SceneManager.GetActiveScene().name;
-            if (SaveDataMgr.Instance.SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out PlanetData planetData))
-            {
-                return planetData;
-            }
-            else
-            {
-               // Debug.LogError($"No PlanetData found for scene: {activeSceneName}");
-                return null;
-            }
+            Debug.LogWarning("⚠️ SaveData或PlanetData_Dict为null");
+            return null;
         }
+
+        string activeSceneName = SceneManager.GetActiveScene().name;
+        if (SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out PlanetData planetData))
+        {
+            return planetData;
+        }
+
+        Debug.LogWarning($"⚠️ 未找到场景 {activeSceneName} 的星球数据");
+        return null;
     }
 
     protected override void Awake()
     {
         base.Awake();
         DontDestroyOnLoad(gameObject); // 🔥 保证手动挂的对象也不会丢
-        // 使用Application.persistentDataPath作为基础存档路径
-        UserSavePath = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData") + Path.DirectorySeparatorChar;
+        InitializeUserSavePath();
+    }
+
+    /// <summary>
+    /// 初始化用户存档路径
+    /// </summary>
+    private void InitializeUserSavePath()
+    {
+        UserSavePath = GetDefaultSavePath();
         
-        // 确保存档目录存在
-        string directory = Path.GetDirectoryName(UserSavePath);
-        if (!Directory.Exists(directory))
+        if (!Directory.Exists(UserSavePath))
         {
-            Directory.CreateDirectory(directory);
+            Directory.CreateDirectory(UserSavePath);
         }
     }
 
@@ -81,56 +80,50 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     [Button("保存存档到磁盘上")]
     public void Save_And_WriteToDisk()
     {
+        if (SaveData == null)
+        {
+            Debug.LogError("❌ SaveData为null，无法保存");
+            return;
+        }
+
         SaveToDisk(SaveData, UserSavePath, SaveData.saveName);
     }
 
     /// <summary>
-    /// 保存当前活动场景为地图保存数据
+    /// 通过区块父对象获取地图保存数据
     /// </summary>
+    /// <param name="MapParent">区块对象</param>
     /// <returns>地图保存数据</returns>
     public MapSave GetMapSave_By_Parent(Chunk MapParent)
     {
-        MapSave worldSave = new MapSave();
-      
-        worldSave.items = GetActiveSceneAllItemData(MapParent);
+        if (MapParent == null)
+        {
+            Debug.LogError("❌ MapParent为null");
+            return null;
+        }
 
-        worldSave.Name = MapParent.name;
-
-        worldSave.MapPosition = new Vector2Int((int)MapParent.transform.position.x, (int)MapParent.transform.position.y);
-
-        return worldSave;
+        return new MapSave
+        {
+            Name = MapParent.name,
+            MapPosition = new Vector2Int((int)MapParent.transform.position.x, (int)MapParent.transform.position.y),
+            items = GetActiveSceneAllItemData(MapParent)
+        };
     }
     
     /// <summary>
-    /// 获取当前活动场景中所有物品的数据
+    /// 获取指定区块中所有物品的数据
     /// </summary>
+    /// <param name="MapParent">区块对象</param>
     /// <returns>物品数据字典</returns>
     public Dictionary<string, HashSet<ItemData>> GetActiveSceneAllItemData(Chunk MapParent)
     {
-        Dictionary<string, HashSet<ItemData>> itemDataDict = new Dictionary<string, HashSet<ItemData>>();
-
-        // 先处理可保存物品
-        foreach (Item item in MapParent.RunTimeItems.Values)
+        if (MapParent?.RunTimeItems == null)
         {
-            item.ModuleSave();
+            Debug.LogWarning("⚠️ MapParent或RunTimeItems为null");
+            return new Dictionary<string, HashSet<ItemData>>();
         }
 
-        foreach (Item item in MapParent.RunTimeItems.Values)
-        {
-            if (item == null)
-                continue;
-            ItemData itemData = item.itemData;
-
-            if (!itemDataDict.TryGetValue(itemData.IDName, out HashSet<ItemData> set))
-            {
-                set = new HashSet<ItemData>();
-                itemDataDict[itemData.IDName] = set;
-            }
-
-            set.Add(itemData);
-        }
-
-        return itemDataDict;
+        return CollectItemDataByType(MapParent.RunTimeItems.Values);
     }
     #endregion
     
@@ -138,74 +131,94 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>
     /// 将游戏存档数据保存到磁盘
     /// </summary>
-    /// <param name="SaveData">存档数据</param>
-    /// <param name="SavePath">保存路径</param>
-    /// <param name="SaveName">保存名称</param>
-    public void SaveToDisk(GameSaveData SaveData, string SavePath, string SaveName)
+    /// <param name="saveData">存档数据</param>
+    /// <param name="savePath">保存路径</param>
+    /// <param name="saveName">保存名称</param>
+    public void SaveToDisk(GameSaveData saveData, string savePath, string saveName)
     {
-        SaveData.saveName = SaveName;
-
-        // 确保保存路径存在
-        string directory = Path.GetDirectoryName(SavePath);
-        if (!Directory.Exists(directory))
+        if (saveData == null)
         {
-            Directory.CreateDirectory(directory);
+            Debug.LogError("❌ saveData为null，无法保存");
+            return;
         }
 
-        byte[] dataBytes = MemoryPackSerializer.Serialize(SaveData);
+        try
+        {
+            saveData.saveName = saveName;
 
-        string fullPath = Path.Combine(SavePath, SaveName + ".bytes");
-        File.WriteAllBytes(fullPath, dataBytes);
+            // 确保保存路径存在
+            EnsureDirectoryExists(savePath);
 
-        Debug.Log("存档成功！路径: " + fullPath);
+            string fullPath = GetSaveFilePath(savePath, saveName);
+            byte[] dataBytes = MemoryPackSerializer.Serialize(saveData);
+            File.WriteAllBytes(fullPath, dataBytes);
+
+            Debug.Log($"✅ 存档成功！路径: {fullPath}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"❌ 保存存档失败: {ex.Message}");
+            Debug.LogException(ex);
+        }
     }
 
     /// <summary>
-    /// 保存当前活动场景为地图保存数据
+    /// 获取当前活动场景的地图保存数据（静态版本）
     /// </summary>
     /// <returns>地图保存数据</returns>
     public static MapSave GetCurrentMapStatic()
     {
-        MapSave worldSave = new MapSave();
-        worldSave.Name = SceneManager.GetActiveScene().name;
-        worldSave.items = GetActiveSceneAllItemData_Static();
-
-        return worldSave;
+        return new MapSave
+        {
+            Name = SceneManager.GetActiveScene().name,
+            items = GetActiveSceneAllItemData_Static()
+        };
     }
     
     /// <summary>
-    /// 获取当前活动场景中所有物品的数据
+    /// 获取当前活动场景中所有物品的数据（静态版本）
     /// </summary>
     /// <returns>物品数据字典</returns>
     public static Dictionary<string, HashSet<ItemData>> GetActiveSceneAllItemData_Static()
     {
-        Dictionary<string, HashSet<ItemData>> itemDataDict = new Dictionary<string, HashSet<ItemData>>();
         Item[] allItems = FindObjectsOfType<Item>(includeInactive: false);
+        
+        // 先处理所有物品保存
+        SaveAllItems(allItems);
+        
+        // 再收集所有活动物品数据
+        return CollectActiveItemData(allItems);
+    }
 
-        // 先处理可保存物品
-        foreach (Item item in allItems)
+    /// <summary>
+    /// 保存所有物品数据
+    /// </summary>
+    private static void SaveAllItems(Item[] items)
+    {
+        foreach (Item item in items)
         {
-            if (item == null)
-                continue;
+            if (item == null) continue;
 
-            item.ModuleSave();
-
-            if (true)
+            try
             {
-                try
-                {
-           //         saveableItem.Save();
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"保存物品失败: {item.name}", item);
-                    Debug.LogException(ex);
-                }
+                item.ModuleSave();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"❌ 保存物品失败: {item.name}", item);
+                Debug.LogException(ex);
             }
         }
+    }
 
-        // 再收集所有活动物品数据
-        foreach (Item item in allItems)
+    /// <summary>
+    /// 收集活跃物品数据
+    /// </summary>
+    private static Dictionary<string, HashSet<ItemData>> CollectActiveItemData(Item[] items)
+    {
+        Dictionary<string, HashSet<ItemData>> itemDataDict = new Dictionary<string, HashSet<ItemData>>();
+
+        foreach (Item item in items)
         {
             if (item == null || item.transform == null || item.gameObject == null)
                 continue;
@@ -232,25 +245,33 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>
     /// 从磁盘加载存档
     /// </summary>
-    /// <param name="LoadSavePath">存档路径</param>
-    public void LoadSaveByDisk(string LoadSavePath)
+    /// <param name="loadSavePath">存档路径</param>
+    public void LoadSaveByDisk(string loadSavePath)
     {
-        string fullPath = LoadSavePath;
-        if (!LoadSavePath.EndsWith(".bytes"))
+        if (string.IsNullOrEmpty(loadSavePath))
         {
-            fullPath = LoadSavePath + ".bytes";
+            Debug.LogError("❌ 存档路径为空");
+            return;
         }
-        
-        Debug.Log("开始从磁盘加载存档：" + fullPath);
-        
-        if (File.Exists(fullPath))
+
+        try
         {
-            SaveData = null;
+            string fullPath = NormalizeSavePath(loadSavePath);
+            
+            if (!File.Exists(fullPath))
+            {
+                Debug.LogWarning($"⚠️ 存档文件不存在：{fullPath}");
+                return;
+            }
+
+            Debug.Log($"📖 开始加载存档：{fullPath}");
             SaveData = MemoryPackSerializer.Deserialize<GameSaveData>(File.ReadAllBytes(fullPath));
+            Debug.Log($"✅ 存档加载成功");
         }
-        else
+        catch (Exception ex)
         {
-            Debug.LogWarning("存档文件不存在：" + fullPath);
+            Debug.LogError($"❌ 加载存档失败: {ex.Message}");
+            Debug.LogException(ex);
         }
     }
 
@@ -259,49 +280,48 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// </summary>
     /// <param name="savePath">存档路径</param>
     /// <param name="saveName">存档名称</param>
-    public void DeletSave(string savePath, string saveName)
+    public void DeleteSave(string savePath, string saveName)
     {
-        string filePath = Path.Combine(savePath, saveName + ".bytes");
-        try
-        {
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-                Debug.Log($"存档已删除：{filePath}");
-            }
-            else
-            {
-                Debug.LogWarning($"未找到要删除的存档文件：{filePath}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"删除存档时发生错误：{filePath}");
-            Debug.LogException(ex);
-        }
+        string fullPath = GetSaveFilePath(savePath, saveName);
+        DeleteSaveFile(fullPath);
     }
     
     /// <summary>
-    /// 删除指定存档文件
+    /// 删除指定存档文件（已废弃，使用DeleteSave）
     /// </summary>
     /// <param name="fullPath">完整的存档文件路径</param>
+    [System.Obsolete("使用 DeleteSave(path, name) 代替", false)]
     public void DeletSave(string fullPath)
     {
+        DeleteSaveFile(fullPath);
+    }
+
+    /// <summary>
+    /// 删除存档文件的内部方法
+    /// </summary>
+    private void DeleteSaveFile(string fullPath)
+    {
+        if (string.IsNullOrEmpty(fullPath))
+        {
+            Debug.LogError("❌ 存档路径为空");
+            return;
+        }
+
         try
         {
             if (File.Exists(fullPath))
             {
                 File.Delete(fullPath);
-                Debug.Log($"存档已删除：{fullPath}");
+                Debug.Log($"✅ 存档已删除：{fullPath}");
             }
             else
             {
-                Debug.LogWarning($"未找到要删除的存档文件：{fullPath}");
+                Debug.LogWarning($"⚠️ 未找到要删除的存档文件：{fullPath}");
             }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"删除存档时发生错误：{fullPath}");
+            Debug.LogError($"❌ 删除存档失败：{fullPath}");
             Debug.LogException(ex);
         }
     }
@@ -322,7 +342,78 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <returns>完整路径</returns>
     public string GetFullSavePath(string saveName)
     {
-        return Path.Combine(UserSavePath, saveName + ".bytes");
+        return GetSaveFilePath(UserSavePath, saveName);
+    }
+
+    /// <summary>
+    /// 构建存档文件路径
+    /// </summary>
+    private string GetSaveFilePath(string basePath, string saveName)
+    {
+        return Path.Combine(basePath, saveName + ".bytes");
+    }
+
+    /// <summary>
+    /// 规范化存档路径（添加.bytes扩展名）
+    /// </summary>
+    private string NormalizeSavePath(string path)
+    {
+        return path.EndsWith(".bytes") ? path : path + ".bytes";
+    }
+
+    /// <summary>
+    /// 确保目录存在
+    /// </summary>
+    private void EnsureDirectoryExists(string path)
+    {
+        string directory = Path.GetDirectoryName(path);
+        if (!Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+    }
+
+    /// <summary>
+    /// 通用的物品数据收集方法
+    /// </summary>
+    private Dictionary<string, HashSet<ItemData>> CollectItemDataByType(IEnumerable<Item> items)
+    {
+        Dictionary<string, HashSet<ItemData>> itemDataDict = new Dictionary<string, HashSet<ItemData>>();
+
+        // 先保存所有物品
+        foreach (Item item in items)
+        {
+            if (item == null) continue;
+
+            try
+            {
+                item.ModuleSave();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"❌ 保存物品失败: {item.name}", item);
+                Debug.LogException(ex);
+            }
+        }
+
+        // 再收集物品数据
+        foreach (Item item in items)
+        {
+            if (item == null) continue;
+
+            ItemData itemData = item.itemData;
+            if (itemData == null) continue;
+
+            if (!itemDataDict.TryGetValue(itemData.IDName, out HashSet<ItemData> set))
+            {
+                set = new HashSet<ItemData>();
+                itemDataDict[itemData.IDName] = set;
+            }
+
+            set.Add(itemData);
+        }
+
+        return itemDataDict;
     }
     
     #endregion
