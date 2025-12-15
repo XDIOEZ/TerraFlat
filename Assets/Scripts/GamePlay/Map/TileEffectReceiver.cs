@@ -75,7 +75,7 @@ public class TileEffectReceiver : Module
 
             // 获取新位置所在的Chunk
             Chunk chunk;
-            ChunkMgr.Instance.GetChunkByItemPosition(currentGridPos, out chunk);
+            ChunkMgr.Instance.GetChunkBy_ItemPosition(currentGridPos, out chunk);
             
             if (chunk == null)
             {                // 踏上空白地图，不触发事件
@@ -128,7 +128,7 @@ public class TileEffectReceiver : Module
         
         // 从当前位置获取Chunk和Map引用
         Chunk chunk;
-        ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out chunk);
+        ChunkMgr.Instance.GetChunkBy_ItemPosition(transform.position, out chunk);
         
         if (chunk == null)
         {            Debug.LogWarning($"TileEffectReceiver: 未找到有效的 Chunk 组件！{(item != null ? $"对象: {item.itemData.IDName}" : "")}");
@@ -160,7 +160,7 @@ public class TileEffectReceiver : Module
         if (Cache_map == null || !Cache_map.gameObject.activeInHierarchy)
         {
             Chunk chunk;
-            ChunkMgr.Instance.GetChunkByItemPosition(transform.position, out chunk);
+            ChunkMgr.Instance.GetChunkBy_ItemPosition(transform.position, out chunk);
             Cache_map = chunk?.Map;
         }
     }

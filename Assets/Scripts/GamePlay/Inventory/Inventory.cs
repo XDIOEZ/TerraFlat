@@ -42,7 +42,7 @@ public class Inventory : MonoBehaviour
 
     }
 
-    public void OnDestroy()
+    public virtual void OnDestroy()
     {
         Data.Event_RefreshUI -= RefreshUI;
     }

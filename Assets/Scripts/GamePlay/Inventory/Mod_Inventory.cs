@@ -1,5 +1,6 @@
 using AYellowpaper.SerializedCollections;
 using Sirenix.OdinInspector;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -237,6 +238,8 @@ public class Mod_Inventory : Module, IInventory
                 if (Open)
                 {
                     currentInventory.basePanel.Open();
+                    // 延迟1帧调用，确保面板在层级系统正确排列
+                    StartCoroutine(DelayedBringToFront(currentInventory.basePanel.GetComponent<RectTransform>()));
                 }
                 else
                 {
@@ -532,6 +535,15 @@ public class Mod_Inventory : Module, IInventory
     public void UpdatePanelVisibilityBasedOnPickableState()
     {
         CheckAndHidePanelIfPickable();
+    }
+
+    // 延迟一帧将面板置于最前方的协程方法
+    private IEnumerator DelayedBringToFront(RectTransform rectTransform)
+    {
+        yield return null; // 等待一帧
+
+            BasePanel.BringToFront(rectTransform);
+        
     }
     #endregion
 }

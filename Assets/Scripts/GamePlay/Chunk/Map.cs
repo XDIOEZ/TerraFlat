@@ -20,7 +20,7 @@ public class Map : Item
     public Tilemap tileMap;
 
     public UltEvent OnMapGenerated_Start = new UltEvent();
-    public Chunk chunk; 
+    public Chunk chunk;
 
     public GameObject ParentObject;
 
@@ -35,7 +35,7 @@ public class Map : Item
     #region 基类方法实现
     public override void Act()
     {
-        if (Data.TileLoaded == false 
+        if (Data.TileLoaded == false
             && SaveDataMgr.Instance.SaveData.PlanetData_Dict.TryGetValue(SceneManager.GetActiveScene().name, out var planetData))
         {
             OnMapGenerated_Start.Invoke();
@@ -59,7 +59,7 @@ public class Map : Item
             Debug.Log($"TileData还在生成中，当前数量: {Data?.TileData?.Count ?? 0}，期望数量: {expectedTileCount}");
             return;
         }
-        
+
         // TileData已生成完成，开始加载
         LoadTileData_To_TileMap_Ansync();
     }
@@ -105,7 +105,7 @@ public class Map : Item
 
             tileMap.SetTile(position3D, tile);
         }
-        
+
         // 直接调用权重烘焙，不延迟
         BackTilePenalty_Async();
     }
@@ -117,7 +117,7 @@ public class Map : Item
         {
             StopCoroutine(loadTileMapCoroutine);
         }
-        
+
         // 启动新的协程
         loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
     }
@@ -137,7 +137,7 @@ public class Map : Item
         // 分批处理Tile数据，避免长时间阻塞主线程
         const int batchSize = 500;
         int processedCount = 0;
-        
+
         foreach (var kvp in Data.TileData)
         {
             Vector2Int position2D = kvp.Key;
@@ -156,56 +156,56 @@ public class Map : Item
             Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
 
             tileMap.SetTile(position3D, tile);
-            
+
             processedCount++;
-            
+
             // 每处理一批就等待一帧，让出控制权给其他任务
             if (processedCount % batchSize == 0)
             {
                 yield return null;
             }
         }
-        
+
         // 等待一帧确保所有Tile设置完成
         yield return null;
-        
+
         // 直接调用权重烘焙，不延迟
         BackTilePenalty_Sync();
-        
+
         Debug.Log($"✅ 完成加载 {Data.TileData.Count} 个Tile到Tilemap");
-        
+
         // 清理协程引用
         loadTileMapCoroutine = null;
     }
     #endregion
 
     #region 寻路权重烘焙方法
-[Button("异步烘焙地块寻路权重")]
-public void BackTilePenalty_Async()
-{
-    // 检查自身是否处于激活状态
-    if (!gameObject.activeInHierarchy || !enabled)
+    [Button("异步烘焙地块寻路权重")]
+    public void BackTilePenalty_Async()
     {
-        Debug.Log("地图未激活，跳过权重烘焙");
-        return;
+        // 检查自身是否处于激活状态
+        if (!gameObject.activeInHierarchy || !enabled)
+        {
+            Debug.Log("地图未激活，跳过权重烘焙");
+            return;
+        }
+
+        // 如果已有协程在运行，先停止它
+        if (backTilePenaltyCoroutine != null)
+        {
+            StopCoroutine(backTilePenaltyCoroutine);
+        }
+
+        // 启动新的协程
+        backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
     }
-    
-    // 如果已有协程在运行，先停止它
-    if (backTilePenaltyCoroutine != null)
-    {
-        StopCoroutine(backTilePenaltyCoroutine);
-    }
-    
-    // 启动新的协程
-    backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
-}
 
     public void BackTilePenalty_Sync()
     {
         // 获取GridGraph以获得节点尺寸信息
         var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
         float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
-         
+
         // 处理所有节点数据 这个是根据地块数据进行烘焙的
         foreach (var kvp in Data.TileData)
         {
@@ -219,7 +219,7 @@ public void BackTilePenalty_Async()
 
             // 使用更精确的世界坐标计算方法，解决偏移问题
             Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
-            
+
             // 进一步校正坐标以匹配A*网格节点中心
             float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
             float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
@@ -256,7 +256,7 @@ public void BackTilePenalty_Async()
 
             // 使用更精确的世界坐标计算方法，解决偏移问题
             Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
-            
+
             // 进一步校正坐标以匹配A*网格节点中心
             float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
             float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
@@ -270,7 +270,7 @@ public void BackTilePenalty_Async()
         for (int i = 0; i < nodesToProcess.Count; i += batchSize)
         {
             int endIndex = Mathf.Min(i + batchSize, nodesToProcess.Count);
-            
+
             // 处理当前批次
             for (int j = i; j < endIndex; j++)
             {
@@ -282,10 +282,204 @@ public void BackTilePenalty_Async()
             yield return null;
         }
 
-//        Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");
-        
+        //        Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");
+
         // 清理协程引用
         backTilePenaltyCoroutine = null;
+    }
+    #endregion
+
+    #region 地块数据烘焙
+    /// <summary>
+    /// 烘焙单个地块的寻路权重
+    /// </summary>
+    /// <param name="position2D">地块的2D坐标</param>
+    public void BackTilePenalty_Cell(Vector2 position2D)
+    {
+        uint penalty = GetTile(position: new Vector2Int(x: (int)position2D.x, y: (int)position2D.y)).Penalty;
+        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, penalty);
+    }
+
+        /// <summary>
+    /// 烘焙单个地块的寻路权重
+    /// </summary>
+    /// <param name="position2D">地块的2D坐标</param>
+    public void BackTilePenalty_Cell_NotMove(Vector2 position2D)
+    {
+        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, 0);
+    }
+
+    /// <summary>
+    /// 烘焙指定区域（Bounds）内所有地块的寻路权重
+    /// </summary>
+    /// <param name="bounds">要烘焙的区域</param>
+    public void BackTilePenalty_Bounds(Bounds bounds, bool useTilepenalty = false)
+    {
+        Debug.Log($"[BackTilePenalty_Bounds] 开始烘焙Bounds区域，中心: {bounds.center}, 大小: {bounds.size}");
+
+        // 检查必要组件
+        if (Data == null)
+        {
+            Debug.LogError("[BackTilePenalty_Bounds] Data为空，无法执行烘焙");
+            return;
+        }
+
+        if (Data.TileData == null)
+        {
+            Debug.LogError("[BackTilePenalty_Bounds] Data.TileData为空，无法执行烘焙");
+            return;
+        }
+
+        if (tileMap == null)
+        {
+            Debug.LogError("[BackTilePenalty_Bounds] tileMap为空，无法执行烘焙");
+            return;
+        }
+
+        if (AstarGameManager.Instance == null)
+        {
+            Debug.LogError("[BackTilePenalty_Bounds] AstarGameManager.Instance为空，无法执行烘焙");
+            return;
+        }
+
+        // 获取GridGraph以获得节点尺寸信息
+        var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
+        float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
+        Debug.Log($"[BackTilePenalty_Bounds] 节点尺寸: {nodeSize}");
+
+        // 计算Bounds覆盖的整数坐标范围，带有0.5的右上角偏移
+        Vector2Int min = new Vector2Int(
+            Mathf.FloorToInt(bounds.min.x),
+            Mathf.FloorToInt(bounds.min.y)
+        );
+        Vector2Int max = new Vector2Int(
+            Mathf.FloorToInt(bounds.max.x),
+            Mathf.FloorToInt(bounds.max.y)
+        );
+
+        // 添加0.5的右上角偏移，确保与建筑放置时的网格对齐方式一致
+        max.x += 1; // 右上角偏移0.5相当于增加一个单位
+        max.y += 1; // 右上角偏移0.5相当于增加一个单位
+
+        Debug.Log($"[BackTilePenalty_Bounds] 计算出的坐标范围(带0.5偏移): min({min.x}, {min.y}) - max({max.x}, {max.y})");
+
+        int processedTiles = 0;
+        int skippedTiles = 0;
+
+        // 遍历Bounds内的所有地块
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                Vector2Int position2D = new Vector2Int(x, y);
+
+                // 只有当地图数据中存在该位置的地块时才处理
+                if (Data.TileData.ContainsKey(position2D))
+                {
+                    // 获取最顶层 TileData（倒数第一个）
+                    TileData topTile = Data.TileData[position2D][^1];
+                    Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+
+                    // 使用更精确的世界坐标计算方法，解决偏移问题
+                    Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
+
+                    // 进一步校正坐标以匹配A*网格节点中心
+                    float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
+                    float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
+                    Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
+                    if (useTilepenalty == false)
+                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, 0);
+                    else
+                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty);
+                    processedTiles++;
+                }
+                else
+                {
+                    skippedTiles++;
+                }
+            }
+        }
+
+        Debug.Log($"[BackTilePenalty_Bounds] 烘焙完成: 处理了{processedTiles}个地块，跳过了{skippedTiles}个不存在的地块");
+    }
+
+    /// <summary>
+    /// 异步烘焙指定区域（Bounds）内所有地块的寻路权重
+    /// </summary>
+    /// <param name="bounds">要烘焙的区域</param>
+    public void BackTilePenalty_BoundsAsync(Bounds bounds)
+    {
+        StartCoroutine(BackTilePenalty_BoundsCoroutine(bounds));
+    }
+
+    /// <summary>
+    /// 协程：异步烘焙指定区域（Bounds）内所有地块的寻路权重
+    /// </summary>
+    /// <param name="bounds">要烘焙的区域</param>
+    /// <returns></returns>
+    private IEnumerator BackTilePenalty_BoundsCoroutine(Bounds bounds)
+    {
+        // 获取GridGraph以获得节点尺寸信息
+        var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
+        float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
+
+        // 计算Bounds覆盖的整数坐标范围，带有0.5的右上角偏移
+        Vector2Int min = new Vector2Int(
+            Mathf.FloorToInt(bounds.min.x),
+            Mathf.FloorToInt(bounds.min.y)
+        );
+        Vector2Int max = new Vector2Int(
+            Mathf.FloorToInt(bounds.max.x),
+            Mathf.FloorToInt(bounds.max.y)
+        );
+
+        // 添加0.5的右上角偏移，确保与建筑放置时的网格对齐方式一致
+        max.x += 1; // 右上角偏移0.5相当于增加一个单位
+        max.y += 1; // 右上角偏移0.5相当于增加一个单位
+
+        // 计算总共需要处理的地块数量
+        int totalTiles = (max.x - min.x + 1) * (max.y - min.y + 1);
+
+        // 分批处理地块，避免长时间阻塞主线程
+        const int batchSize = 100;
+        int processedCount = 0;
+
+        // 遍历Bounds内的所有地块
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                Vector2Int position2D = new Vector2Int(x, y);
+
+                // 只有当地图数据中存在该位置的地块时才处理
+                if (Data.TileData.ContainsKey(position2D))
+                {
+                    // 获取最顶层 TileData（倒数第一个）
+                    TileData topTile = Data.TileData[position2D][^1];
+                    Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+
+                    // 使用更精确的世界坐标计算方法，解决偏移问题
+                    Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
+
+                    // 进一步校正坐标以匹配A*网格节点中心
+                    float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
+                    float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
+                    Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
+
+                    AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty);
+                }
+
+                processedCount++;
+
+                // 每处理一批就等待一帧，让出控制权给其他任务
+                if (processedCount % batchSize == 0)
+                {
+                    yield return null;
+                }
+            }
+        }
+
+        Debug.Log($"✅ 完成烘焙 Bounds 区域内 {processedCount} 个地块的寻路权重");
     }
     #endregion
 
@@ -415,7 +609,7 @@ public void BackTilePenalty_Async()
 
         return list[i];
     }
-    
+
     // 重载方法：只获取最上层的 TileData
     public TileData GetTopTile(Vector2Int position)
     {
@@ -435,12 +629,12 @@ public void BackTilePenalty_Async()
         {
             return new List<TileData>();
         }
-        
+
         if (Data.TileData.TryGetValue(position, out var list))
         {
             return new List<TileData>(list);
         }
-        
+
         return new List<TileData>();
     }
 

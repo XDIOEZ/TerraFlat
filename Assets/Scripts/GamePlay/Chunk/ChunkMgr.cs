@@ -428,37 +428,29 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     /// </summary>
     private bool TryCreateMapCore(Chunk chunk)
     {
-        try
+        // 实例化地图核心物体
+        Map map = ItemMgr.Instance.InstantiateItem(
+            "MapCore", 
+            default, default, default, 
+            chunk.gameObject
+        ) as Map;
+
+        if (map == null)
         {
-            // 实例化地图核心物体
-            Map map = ItemMgr.Instance.InstantiateItem(
-                "MapCore", 
-                default, default, default, 
-                chunk.gameObject
-            ) as Map;
-
-            if (map == null)
-            {
-                Debug.LogError($"[区块创建] ❌ 无法实例化MapCore或转换失败");
-                return false;
-            }
-
-            // 配置地图属性
-            map.ParentObject = chunk.gameObject;
-            chunk.Map = map;
-            chunk.AddItem(map);
-            map.chunk = chunk;
-
-            // 调用Act方法进行初始化（会自动烘焙权重）
-            map.Act();
-
-            return true;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"[区块创建] ❌ 创建MapCore异常: {ex.Message}\n{ex.StackTrace}");
+            Debug.LogError($"[区块创建] ❌ 无法实例化MapCore或转换失败");
             return false;
         }
+
+        // 配置地图属性
+        map.ParentObject = chunk.gameObject;
+        chunk.Map = map;
+        chunk.AddItem(map);
+        map.chunk = chunk;
+
+        // 调用Act方法进行初始化（会自动烘焙权重）
+        map.Act();
+
+        return true;
     }
 
     /// <summary>
@@ -496,28 +488,20 @@ public void SetChunkActive(Chunk chunk, bool isActive)
             return null;
         }
 
-        try
-        {
-            // 1. 创建根GameObject
-            GameObject newMapObj = new GameObject(mapSave.Name);
+        // 1. 创建根GameObject
+        GameObject newMapObj = new GameObject(mapSave.Name);
 
-            // 2. 添加Chunk组件
-            Chunk chunk = newMapObj.AddComponent<Chunk>();
-            chunk.MapSave = mapSave;
+        // 2. 添加Chunk组件
+        Chunk chunk = newMapObj.AddComponent<Chunk>();
+        chunk.MapSave = mapSave;
 
-            // 3. 设置位置
-            newMapObj.transform.position = new Vector3(
-                mapSave.MapPosition.x,
-                mapSave.MapPosition.y,
-                0f
-            );
-            return chunk;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"[区块创建] ❌ 创建区块对象异常: {ex.Message}\n{ex.StackTrace}");
-            return null;
-        }
+        // 3. 设置位置
+        newMapObj.transform.position = new Vector3(
+            mapSave.MapPosition.x,
+            mapSave.MapPosition.y,
+            0f
+        );
+        return chunk;
     }
 
     /// <summary>
@@ -636,7 +620,7 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         return new Vector2(100, 100);
     }
 
-    public void GetChunkByItemPosition(Vector2 pos, out Chunk chunk)
+    public void GetChunkBy_ItemPosition(Vector2 pos, out Chunk chunk)
     {
         ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(pos).ToString(), out chunk);
     }

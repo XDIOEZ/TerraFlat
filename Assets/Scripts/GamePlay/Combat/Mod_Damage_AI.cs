@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class Mod_Damage_AI : Mod_Damage
 {
-    public Mod_TurnBody TrunBody;
+    public Mod_TurnBack TrunBody;
     public Mod_AnimatorReceiver animator;
 
     public override void Load()
@@ -17,7 +17,7 @@ public class Mod_Damage_AI : Mod_Damage
         if (item != null && item.itemMods != null)
         {
             // 使用修复后的ModText类获取正确的模块ID
-            TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
+            TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack;
             animator = item.itemMods.GetMod_ByID(ModText.AnimatorReceiver) as Mod_AnimatorReceiver;
             
             // 只有在模块存在时才添加事件监听器

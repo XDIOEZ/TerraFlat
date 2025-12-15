@@ -10,40 +10,60 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 02fda68a52459964ea5af4dd6b1f7f06, type: 3}
-  m_Name: "\u7194\u7089"
+  m_Name: "\u77F3\u5934 = \u7194\u7089"
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: 
+    - matchMode: 0
+      ItemName: 
       ItemPrefab: {fileID: 0}
+      Tag: 
       amount: 0
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: Ore_Stone
+    - matchMode: 0
+      ItemName: Ore_Stone
       ItemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      Tag: 
       amount: 1
+    recipeType: 0
+    inputOrder: 1
   outputs:
     results:
-    - ItemName: "\u7194\u7089"
-      ItemPrefab: {fileID: 7534172511798132841, guid: 1d3df9bf6e3ce2d4f876f75c28a50c38, type: 3}
+    - ItemName: Furnace
+      ItemPrefab: {fileID: 2376094074034262023, guid: 77617d0827dcc964498af31af1381030, type: 3}
       amount: 1
-  recipeType: 0
+  action: []

@@ -23,6 +23,28 @@ public class BasePanel : MonoBehaviour
     private Dictionary<string, ScrollRect> scrollRects = new Dictionary<string, ScrollRect>();
     private Dictionary<string, Image> images = new Dictionary<string, Image>();
 
+    /// <summary>
+    /// 当前全局层级顺序，确保拖拽物体始终显示在最上层
+    /// </summary>
+    [ShowInInspector]
+    public static int CurrentOrder = 0;
+
+        /// <summary>
+    /// 提升UI元素到最上层显示
+    /// </summary>
+    public static void BringToFront(RectTransform rectTransform,Canvas canvas=null)
+    { 
+        // 增加全局层级计数器
+        BasePanel.CurrentOrder++;
+        // 设置当前元素的兄弟索引
+        rectTransform.SetSiblingIndex(BasePanel.CurrentOrder);
+      
+        if (canvas != null)
+        {
+            canvas.sortingOrder = BasePanel.CurrentOrder;
+        }
+    }
+
     public CanvasGroup canvasGroup;
     public bool CanDrag = false;
     public UI_Drag Dragger;
@@ -188,6 +210,8 @@ public class BasePanel : MonoBehaviour
             canvasGroup.blocksRaycasts = true;
             isOpen = true;
         }
+                // 提升层级以显示在最上层
+        BasePanel.BringToFront(rectTransform);
     }
 
     [Button]

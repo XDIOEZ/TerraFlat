@@ -83,3 +83,8 @@ MonoBehaviour:
     DropChance: 1
     MinAmount: 1
     MaxAmount: 1
+  - LootPrefab: {fileID: 2376094074034262023, guid: 77617d0827dcc964498af31af1381030, type: 3}
+    LootPrefabName: Furnace
+    DropChance: 1
+    MinAmount: 1
+    MaxAmount: 1

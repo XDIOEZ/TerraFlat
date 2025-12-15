@@ -49,34 +49,37 @@ public abstract class Item : MonoBehaviour
     public Item Owner;
     [Tooltip("此物品是否在手上?")]
     public bool InHand = false;
-    
+
     [HideInInspector]
     /// <summary>
     /// 物品UI更新事件
     /// </summary>
     public UltEvent OnUIRefresh = new();
-    
+
     [HideInInspector]
     /// <summary>
     /// 物品被销毁时触发的事件
     /// </summary>
     public UltEvent<Item> OnItemDestroy = new();
-    
+
     [HideInInspector]
     /// <summary>
     /// 物品被激活时触发的事件
     /// </summary>
     public UltEvent OnAct = new();
-    
+
     [HideInInspector]
     /// <summary>
     /// 游戏的贴图对象
     /// </summary>
     public SpriteRenderer Sprite;
-    
-       private bool isInitialized = false;
-[Tooltip("物品初始化时触发的事件，用于根据环境因素初始化物品")]
-       public  UltEvent<EnvironmentFactors> OnInit_Env = new();
+
+    private bool isInitialized = false;
+    [Tooltip("物品初始化时触发的事件，用于根据环境因素初始化物品")]
+    public UltEvent<EnvironmentFactors> OnInit_Env = new();
+
+    [Tooltip("物品耐久度改变时触发的事件，参数为当前耐久度")]
+    public UltEvent<float> OnDurabilityModified = new();
     #endregion
 
     #region 生命周期方法
@@ -90,8 +93,8 @@ public abstract class Item : MonoBehaviour
         isInitialized = true;
         ModuleLoad();
     }
-    
-    
+
+
     /// <summary>
     /// 初始化物品组件和模块
     /// </summary>
@@ -122,29 +125,29 @@ public abstract class Item : MonoBehaviour
     public void Update()
     {
         if (!isInitialized)
-                return;
+            return;
 
-            // 高频更新逻辑（无间隔）
-            if (updateInterval <= 0.1f)
+        // 高频更新逻辑（无间隔）
+        if (updateInterval <= 0.1f)
+        {
+            foreach (Module mod in Mods.Values.ToList()) // 创建快照，避免在更新过程中修改集合导致的异常
             {
-                foreach (Module mod in Mods.Values.ToList()) // 创建快照，避免在更新过程中修改集合导致的异常
-                {
-                    mod.ModUpdate(Time.deltaTime);
-                }
-                return;
+                mod.ModUpdate(Time.deltaTime);
             }
+            return;
+        }
 
-            // 低频更新逻辑（有间隔）
-            updateTimer += Time.deltaTime;
-            if (updateTimer >= updateInterval)
+        // 低频更新逻辑（有间隔）
+        updateTimer += Time.deltaTime;
+        if (updateTimer >= updateInterval)
+        {
+            updateTimer = 0f;
+
+            foreach (Module mod in Mods.Values.ToList()) // 创建快照
             {
-                updateTimer = 0f;
-
-                foreach (Module mod in Mods.Values.ToList()) // 创建快照
-                {
-                    mod.ModUpdate(updateInterval);
-                }
+                mod.ModUpdate(updateInterval);
             }
+        }
     }
 
     /// <summary>
@@ -169,7 +172,7 @@ public abstract class Item : MonoBehaviour
         // 职责：由Item负责根据环境因素调整各模块的初始参数
         // 这符合单一职责原则：各模块只关心自己的功能实现，参数由Item统一管理
         // RandomMapGenerator → Item.Initialize_Env(env) → Modules.AdjustByEnvironment(env)
-        
+
         if (itemData == null || Mods == null || Mods.Count == 0)
             return;
 
@@ -197,7 +200,7 @@ public abstract class Item : MonoBehaviour
     /// 物品的更新频率，单位：秒
     /// </summary>
     public float updateInterval = 0f; // 每0.1秒执行一次
-    
+
     /// <summary>
     /// 更新计时器
     /// </summary>
@@ -214,17 +217,17 @@ public abstract class Item : MonoBehaviour
         GameObject tempGO = null;
         tempGO = Instantiate(gameObject);
         tempGO.hideFlags = HideFlags.HideAndDontSave; // 隐藏临时对象
-        
+
         Item tempItem = tempGO.GetComponent<Item>();
         if (tempItem == null)
         {
             Debug.LogError($"[Item] 无法创建 {gameObject.name} 的ItemData: 临时对象缺少Item组件");
             return null;
         }
-        
+
         // 获取所有子对象的Module并初始化
         var modules = tempGO.GetComponentsInChildren<Module>(true).ToList();
-        
+
         // 为每个模块调用Awake方法
         foreach (var mod in modules)
         {
@@ -233,19 +236,19 @@ public abstract class Item : MonoBehaviour
                 mod.Awake();
             }
         }
-        
+
         // 生成新的Guid
         tempItem.itemData.Guid = Guid.NewGuid().GetHashCode();
-        
+
         // 加载模块
         tempItem.Load();
-        
+
         // 保存模块数据
         tempItem.Save();
-        
+
         // 克隆最终的itemData作为返回值
         ItemData result = FastCloner.FastCloner.DeepClone(tempItem.itemData);
-        
+
         // 销毁临时对象，确保不留下任何痕迹
         if (tempGO != null)
         {
@@ -290,8 +293,8 @@ public abstract class Item : MonoBehaviour
                 mod.Load();
             }
         }
-        
-        if(!firstStart)//非第一次启动
+
+        if (!firstStart)//非第一次启动
         {
             ItemMods tempMods = new ItemMods();
             List<Module> modsToInit = new();
@@ -300,8 +303,8 @@ public abstract class Item : MonoBehaviour
             {
                 tempMods.AddMod(mod);
             }
-                
-            
+
+
             //通过数据进行匹配修复
             foreach (ModuleData modData in itemData.ModuleDataDic.Values)
             {
@@ -311,7 +314,7 @@ public abstract class Item : MonoBehaviour
                 //不存在模块
                 if (modList == null || modList.Count == 0)
                 {
-                    
+
                     Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {modData.Name} " +
                         $" ID: {modData.ID}，下面开始尝试自动修复。");
 
@@ -319,7 +322,7 @@ public abstract class Item : MonoBehaviour
 
                     @object.transform.SetParent(transform);
 
-                     mod = @object.GetComponentInChildren<Module>();
+                    mod = @object.GetComponentInChildren<Module>();
 
                     mod._Data = modData;
 
@@ -347,7 +350,7 @@ public abstract class Item : MonoBehaviour
             {
                 foreach (var LostMod in tempMods.Mods_List.Values)
                 {
-                    foreach(var mod in LostMod)
+                    foreach (var mod in LostMod)
                     {
                         if (string.IsNullOrWhiteSpace(mod._Data.Name))
                         {
@@ -359,16 +362,16 @@ public abstract class Item : MonoBehaviour
                             modsToInit.Add(mod);
                         }
                     }
-                   
+
                 }
             }
-           
+
 
             // 全部加入Mods后再统一初始化（防止初始化中找不到其他模块）
             foreach (var mod in modsToInit)
             {
                 mod.ModuleInit(this, mod._Data);
-              
+
             }
             foreach (var mod in modsToInit)
             {
@@ -408,7 +411,7 @@ public abstract class Item : MonoBehaviour
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
     }
-    
+
     /// <summary>
     /// 保存物品数据和模块
     /// </summary>
@@ -468,8 +471,33 @@ public abstract class Item : MonoBehaviour
     /// <param name="modName">模块名称</param>
     [Button]
     public void SetUpModeule(string modName)
-    {        
+    {
         Module.ADDModTOItem(this, modName).Load();
+    }
+
+    /// <summary>
+    /// 减少耐久度
+    /// </summary>
+    /// <param name="amount">减少量</param>
+    public void DecreaseDurability(int amount)
+    {
+        if (itemData.Durability > 0)
+        {
+            itemData.Durability -= amount;
+            // 物品耐久为0时触发事件
+            if (itemData.Durability <= 0)
+            {
+                itemData.Durability = 0;
+                // 物品耐久为0时触发事件
+                OnDurabilityModified?.Invoke(itemData.Durability);
+                
+            }
+            else
+            {
+                // 物品耐久改变时触发事件
+                OnDurabilityModified?.Invoke(itemData.Durability);
+            }
+        }
     }
 
     #endregion
@@ -494,7 +522,7 @@ public abstract class Item : MonoBehaviour
     /// 构造函数（仅编辑器使用）
     /// </summary>
     public Item()
-    {    
+    {
         // 注意：Unity中不要在构造函数中初始化数据，使用Awake或Start代替
     }
 #endif

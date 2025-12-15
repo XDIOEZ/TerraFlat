@@ -78,7 +78,7 @@ public static class ModText
     #endregion
 
     #region T
-    public static string TrunBody = "TrunBody";
+    public static string TrunBody = "Module_TurnBack";
     public static string TileEffectReceiver = "TileReciver";
     #endregion
     #region W
