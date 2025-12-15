@@ -12,7 +12,7 @@ public class Mod_SkillManager : Module
 
     public float Data;
     #endregion
-    #region 模组参数a
+    #region 模组参数
 
     public int CurrentSelectSkilIndex;
     [Tooltip("技能名称列表(用于存档玩家拥有的法术)")]
@@ -44,100 +44,101 @@ public class Mod_SkillManager : Module
     }
     public override void Load()
     {
-            if(item == null)
-    {
-        Debug.LogError("Mod_SkillManager_Item: item is null!");
-        return;
-    }
-
-    focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
-    if (focusPoint == null)
-    {
-//        Debug.LogError("FocusPoint 为空，请检查技能配置！");
-    }
-    controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-    if (controller != null)
-        controller.RightClick += Act;
-    
-    // 通过SkillNameList从GameRes获取技能 替换skillDataList中的技能
-    // 确保skillDataList的大小与SkillNameList一致
-    while (skillDataList.Count < SkillNameList.Count)
-    {
-        skillDataList.Add(null);
-    }
-    
-    // 替换对应位置的技能
-    for (int i = 0; i < SkillNameList.Count; i++)
-    {
-        BaseSkill skill = GameRes.Instance.GetSkill(SkillNameList[i]);
-        if (skill != null)
+        if (item == null)
         {
-            skillDataList[i] = skill;
+            Debug.Log("[Mod_SkillManager]item为空,如果此石头不是在玩家手上的话这是正常现象");
+            return;
         }
-        else
+
+        focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
+        if (focusPoint == null)
         {
-            Debug.LogError($"无法找到技能: {SkillNameList[i]}");
-            skillDataList[i] = null;
+            //        Debug.LogError("FocusPoint 为空，请检查技能配置！");
         }
-    }
-    
-    // 如果SkillNameList变短了，移除多余的技能
-    while (skillDataList.Count > SkillNameList.Count)
-    {
-        skillDataList.RemoveAt(skillDataList.Count - 1);
-    }
-    
-    ModSaveData.ReadData(ref Data);
+        controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        if (controller != null)
+            controller.RightClick += Act;
 
-    // 提前清理子对象，避免重复创建
-    ClearCastingPoints();
-
-    // 根据SkillNameList中技能的数量生成施法点位，默认位置为(0,0)
-    for (int i = 0; i < SkillNameList.Count; i++)
-    {
-        string skillName = SkillNameList[i];
-        
-        // 如果SerializedcastingPointOffset中没有对应的偏移量，则使用默认值(0,0)
-        Vector2 localPositionOffset = Vector2.zero;
-        if (SerializedcastingPointOffset != null && SerializedcastingPointOffset.ContainsKey(skillName))
+        // 通过SkillNameList从GameRes获取技能 替换skillDataList中的技能
+        // 确保skillDataList的大小与SkillNameList一致
+        while (skillDataList.Count < SkillNameList.Count)
         {
-            localPositionOffset = SerializedcastingPointOffset[skillName];
+            skillDataList.Add(null);
+        }
 
-        }else
+        // 替换对应位置的技能
+        for (int i = 0; i < SkillNameList.Count; i++)
         {
+            BaseSkill skill = GameRes.Instance.GetSkill(SkillNameList[i]);
+            if (skill != null)
+            {
+                skillDataList[i] = skill;
+            }
+            else
+            {
+                Debug.LogError($"无法找到技能: {SkillNameList[i]}");
+                skillDataList[i] = null;
+            }
+        }
+
+        // 如果SkillNameList变短了，移除多余的技能
+        while (skillDataList.Count > SkillNameList.Count)
+        {
+            skillDataList.RemoveAt(skillDataList.Count - 1);
+        }
+
+        ModSaveData.ReadData(ref Data);
+
+        // 提前清理子对象，避免重复创建
+        ClearCastingPoints();
+
+        // 根据SkillNameList中技能的数量生成施法点位，默认位置为(0,0)
+        for (int i = 0; i < SkillNameList.Count; i++)
+        {
+            string skillName = SkillNameList[i];
+
+            // 如果SerializedcastingPointOffset中没有对应的偏移量，则使用默认值(0,0)
+            Vector2 localPositionOffset = Vector2.zero;
+            if (SerializedcastingPointOffset != null && SerializedcastingPointOffset.ContainsKey(skillName))
+            {
+                localPositionOffset = SerializedcastingPointOffset[skillName];
+
+            }
+            else
+            {
                 SerializedcastingPointOffset[skillName] = localPositionOffset;
-//                Debug.LogWarning($"未找到技能 {skillName} 的偏移量，使用默认值(0,0)");
+                //                Debug.LogWarning($"未找到技能 {skillName} 的偏移量，使用默认值(0,0)");
+            }
+
+            // 创建新的 GameObject 作为施法点位
+            GameObject castingPointObject = new GameObject(skillName + "_CastingPoint");
+
+            // 设置为当前 GameObject 的子对象
+            castingPointObject.transform.SetParent(transform, false);
+
+            // 设置本地坐标（相对于父对象的位置）
+            castingPointObject.transform.localPosition = new Vector3(localPositionOffset.x, localPositionOffset.y, 0);
+
+            // 存储到 castingPoint 字典中
+            castingPoint[skillName] = castingPointObject.transform;
         }
 
-        // 创建新的 GameObject 作为施法点位
-        GameObject castingPointObject = new GameObject(skillName + "_CastingPoint");
-
-        // 设置为当前 GameObject 的子对象
-        castingPointObject.transform.SetParent(transform, false);
-
-        // 设置本地坐标（相对于父对象的位置）
-        castingPointObject.transform.localPosition = new Vector3(localPositionOffset.x, localPositionOffset.y, 0);
-
-        // 存储到 castingPoint 字典中
-        castingPoint[skillName] = castingPointObject.transform;
-    }
-    
-    // 检查施法点配置
-    CheckCastingPointConfiguration();
+        // 检查施法点配置
+        CheckCastingPointConfiguration();
 
 
-            transform.localPosition = Vector3.zero;
+        transform.localPosition = Vector3.zero;
         //添加点位到旋转体控制组件 子对象施法点会随着一起旋转
-        if(item.itemMods != null)
+        if (item.itemMods != null)
         {
-            Mod_TurnBody turnBodyMod = item.itemMods.GetMod_ByID<Mod_TurnBody>(ModText.TrunBody);
-            if(turnBodyMod != null)
+            Mod_TurnBack turnBodyMod = item.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
+            if (turnBodyMod != null)
             {
                 turnBodyMod.AddControlledTransform(transform);
             }
             else
             {
-//                Debug.LogWarning("没有找到旋转体控制组件");
+                //                Debug.LogWarning("没有找到旋转体控制组件");
             }
         }
         else
@@ -145,81 +146,81 @@ public class Mod_SkillManager : Module
             Debug.LogWarning("itemMods为空，无法查找旋转体控制组件");
         }
 
-}
+    }
 
-/// <summary>
-/// 检查施法点配置是否完整，并自动添加缺失的配置
-/// </summary>
-[Button("检查施法点配置")]
-public void CheckCastingPointConfiguration()
-{
-    // 检查SerializedcastingPointOffset是否包含skillDataList中所有技能的施法点
-    List<string> missingCastingPoints = new List<string>();
-    
-    foreach (BaseSkill skill in skillDataList)
+    /// <summary>
+    /// 检查施法点配置是否完整，并自动添加缺失的配置
+    /// </summary>
+    [Button("检查施法点配置")]
+    public void CheckCastingPointConfiguration()
     {
-        if (skill != null && !SerializedcastingPointOffset.ContainsKey(skill.skillName))
+        // 检查SerializedcastingPointOffset是否包含skillDataList中所有技能的施法点
+        List<string> missingCastingPoints = new List<string>();
+
+        foreach (BaseSkill skill in skillDataList)
         {
-            missingCastingPoints.Add(skill.skillName);
+            if (skill != null && !SerializedcastingPointOffset.ContainsKey(skill.skillName))
+            {
+                missingCastingPoints.Add(skill.skillName);
+            }
         }
-    }
-    
-    // 自动添加缺失的施法点配置
-    foreach (string skillName in missingCastingPoints)
-    {
-        // 添加缺失的施法点配置，默认偏移量为(0,0)
-        SerializedcastingPointOffset[skillName] = Vector2.zero;
-        Debug.Log($"已自动添加技能 '{skillName}' 的施法点配置，默认偏移量为 (0,0)");
-    }
-    
-    // 输出结果信息
-    if (missingCastingPoints.Count > 0)
-    {
-        string infoMessage = "检测到并自动添加了以下技能的施法点配置:\n";
+
+        // 自动添加缺失的施法点配置
         foreach (string skillName in missingCastingPoints)
         {
-            infoMessage += $"- {skillName}\n";
+            // 添加缺失的施法点配置，默认偏移量为(0,0)
+            SerializedcastingPointOffset[skillName] = Vector2.zero;
+            Debug.Log($"已自动添加技能 '{skillName}' 的施法点配置，默认偏移量为 (0,0)");
         }
-        Debug.Log(infoMessage);
-    }
-    else
-    {
-        Debug.Log("所有技能的施法点配置检查通过。");
-    }
-}
 
-
-/// <summary>
-/// 清理现有的施法点位子对象
-/// </summary>
-public void ClearCastingPoints()
-{
-    // 清空字典
-    castingPoint.Clear();
-    
-    // 删除所有以"_CastingPoint"结尾的子对象
-    List<Transform> childrenToRemove = new List<Transform>();
-    foreach (Transform child in transform)
-    {
-        if (child.name.EndsWith("_CastingPoint"))
+        // 输出结果信息
+        if (missingCastingPoints.Count > 0)
         {
-            childrenToRemove.Add(child);
-        }
-    }
-    
-    // 删除子对象
-    foreach (Transform child in childrenToRemove)
-    {
-        if (Application.isPlaying)
-        {
-            Destroy(child.gameObject);
+            string infoMessage = "检测到并自动添加了以下技能的施法点配置:\n";
+            foreach (string skillName in missingCastingPoints)
+            {
+                infoMessage += $"- {skillName}\n";
+            }
+            Debug.Log(infoMessage);
         }
         else
         {
-            DestroyImmediate(child.gameObject);
+            Debug.Log("所有技能的施法点配置检查通过。");
         }
     }
-}
+
+
+    /// <summary>
+    /// 清理现有的施法点位子对象
+    /// </summary>
+    public void ClearCastingPoints()
+    {
+        // 清空字典
+        castingPoint.Clear();
+
+        // 删除所有以"_CastingPoint"结尾的子对象
+        List<Transform> childrenToRemove = new List<Transform>();
+        foreach (Transform child in transform)
+        {
+            if (child.name.EndsWith("_CastingPoint"))
+            {
+                childrenToRemove.Add(child);
+            }
+        }
+
+        // 删除子对象
+        foreach (Transform child in childrenToRemove)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(child.gameObject);
+            }
+            else
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
+    }
 
 
 
@@ -230,7 +231,7 @@ public void ClearCastingPoints()
         {
             RuntimeSkill skill = UpdateSkillList[i];
             skill.Stay(deltaTime);
-            
+
             // 如果技能已完成，移除它
             if (skill.IsFinished())
             {
@@ -239,10 +240,10 @@ public void ClearCastingPoints()
             }
         }
     }
-    
+
     public override void Save()
     {
-        if(item == null)
+        if (item == null)
         {
             Debug.LogError("Mod_SkillManager_Item: item is null!");
             return;
@@ -252,7 +253,7 @@ public void ClearCastingPoints()
         ModSaveData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
-    
+
     public override void Act()
     {
         if (CurrentSelectSkilIndex >= 0 && CurrentSelectSkilIndex < skillDataList.Count)
@@ -266,7 +267,7 @@ public void ClearCastingPoints()
             runtimeSkill.progress = selectedSkill.initialPrograss; // 假设BaseSkill有Duration属性
             runtimeSkill.skillSender = item;
 
-            if(focusPoint != null)
+            if (focusPoint != null)
             {
                 runtimeSkill.targetPoint = focusPoint.Data.DefaultSkill_Point;
             }
@@ -284,11 +285,11 @@ public void ClearCastingPoints()
             Debug.LogWarning($"无效的技能索引: {CurrentSelectSkilIndex}");
         }
     }
-    
+
     #endregion
-    
+
     #region 技能控制方法
-    
+
     /// <summary>
     /// 强行停止所有正在执行的技能
     /// </summary>
@@ -303,10 +304,10 @@ public void ClearCastingPoints()
             // 从列表中移除
             UpdateSkillList.RemoveAt(i);
         }
-        
+
         Debug.Log("已强行停止所有技能");
     }
-    
+
     /// <summary>
     /// 强行停止指定索引的技能
     /// </summary>
@@ -320,7 +321,7 @@ public void ClearCastingPoints()
             skill.Stop();
             // 从列表中移除
             UpdateSkillList.RemoveAt(index);
-            
+
             Debug.Log($"已强行停止索引为 {index} 的技能");
         }
         else
@@ -328,7 +329,7 @@ public void ClearCastingPoints()
             Debug.LogWarning($"无效的技能索引: {index}");
         }
     }
-    
+
     /// <summary>
     /// 强行停止指定名称的技能
     /// </summary>
@@ -346,15 +347,15 @@ public void ClearCastingPoints()
                 skill.Stop();
                 // 从列表中移除
                 UpdateSkillList.RemoveAt(i);
-                
+
                 Debug.Log($"已强行停止名称为 {skillName} 的技能");
                 return; // 找到并停止第一个匹配的技能后返回
             }
         }
-        
+
         Debug.LogWarning($"未找到名称为 {skillName} 的技能");
     }
-    
+
     /// <summary>
     /// 强行停止当前选择的技能
     /// </summary>
@@ -375,12 +376,12 @@ public void ClearCastingPoints()
                         runtimeSkill.Stop();
                         // 从列表中移除
                         UpdateSkillList.RemoveAt(i);
-                        
+
                         Debug.Log($"已强行停止当前选择的技能: {selectedSkill.name}");
                         return;
                     }
                 }
-                
+
                 Debug.LogWarning($"当前选择的技能 {selectedSkill.name} 未在运行中");
             }
         }
@@ -389,6 +390,6 @@ public void ClearCastingPoints()
             Debug.LogWarning($"无效的技能索引: {CurrentSelectSkilIndex}");
         }
     }
-    
+
     #endregion
 }

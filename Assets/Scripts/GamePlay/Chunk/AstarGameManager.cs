@@ -36,7 +36,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     public void Start()
     {
         Pathfinder = GetComponent<AstarPath>();
-        
+
         // 如果没有找到AstarPath组件，尝试通过GameRes实例化AStar预制体
         if (Pathfinder == null)
         {
@@ -45,8 +45,8 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
                 GameObject astarPrefab = GameRes.Instance.InstantiatePrefab("AStar");
                 if (astarPrefab != null)
                 {
-                    Pathfinder = GetComponent<AstarPath>();
-                    
+                    Pathfinder = astarPrefab.GetComponent<AstarPath>();
+
                     if (Pathfinder != null)
                     {
                         Debug.Log("✅ AStar预制体已自动实例化");
@@ -62,7 +62,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
                 Debug.LogError("❌ GameRes未初始化，无法实例化AStar预制体！");
             }
         }
-        
+
         // 自动获取MainCamera（避免策划忘记赋值）
         if (mainCamera == null)
         {
@@ -86,10 +86,10 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             onComplete?.Invoke();
             return;
         }
-        
+
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Vector2 Newcenter = center + chunkSize * 0.5f;
-        
+
         // 检查gridGraph是否为null
         if (AstarPath.active.data.gridGraph == null)
         {
@@ -97,18 +97,18 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             onComplete?.Invoke();
             return;
         }
-        
+
         AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
-    
+
         int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
         int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
         float nodeSize = 1f;
-    
+
         AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
-    
+
         // 启动异步扫描（可指定要扫描的图，null表示扫描所有图）
         IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
-    
+
         // 通过协程处理异步进度，并在完成后更新权重
         StartCoroutine(HandleScanProgress(scanProgress, center, radius, onComplete));
     }
@@ -120,19 +120,19 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         foreach (var progress in progressEnumerable)
         {
             // 输出进度信息（0-1之间的浮点数，1表示完成）
-          //  Debug.Log($"扫描进度：{progress.progress:F2}");
+            //  Debug.Log($"扫描进度：{progress.progress:F2}");
 
             // 等待一帧，避免阻塞主线程
             yield return null;
         }
 
-//        Debug.Log("异步扫描完成！");
+        //        Debug.Log("异步扫描完成！");
 
         // 扫描完成后，更新指定区域的所有区块权重
         //UpdateChunksPenaltyInArea(center, radius);
 
-  //      Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
-        
+        //      Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+
         // 调用回调函数
         onComplete?.Invoke();
     }
@@ -152,7 +152,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
         AstarPath.active.Scan();
     }
-    
+
     /// <summary>
     /// 更新指定区域内的所有区块权重
     /// </summary>
@@ -174,7 +174,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         // 根据你的说明：步长为1时遍历1个区块(1x1)，步长为2时遍历9个区块(3x3)
         // 步长为n时，遍历 (2*n-1) x (2*n-1) 个区块
         int halfRange = stepSize - 1;
-        
+
         // 遍历指定步长内的所有区块索引
         for (int x = -halfRange; x <= halfRange; x++)
         {
@@ -182,11 +182,11 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             {
                 // 计算实际的区块世界坐标位置（区块索引乘以区块大小）
                 Vector2Int chunkWorldPos = new Vector2Int(
-                    (centerChunkPos.x + x) * (int)chunkSize.x, 
+                    (centerChunkPos.x + x) * (int)chunkSize.x,
                     (centerChunkPos.y + y) * (int)chunkSize.y
                 );
                 string chunkKey = chunkWorldPos.ToString();
-                
+
                 // 检查区块是否存在
                 if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(chunkKey, out Chunk chunk))
                 {
@@ -267,14 +267,13 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             targetNode.Penalty = 0;
             return;
         }
-     
-        if (targetNode.Walkable == false)
+        else
         {
-            targetNode.Penalty = 0;
+            targetNode.Walkable = true;
+            targetNode.Penalty = newPenalty;
         }
 
-        // 5. 修改权重
-        targetNode.Penalty = newPenalty;
+
     }
 
     [Button("修改区域权重")]

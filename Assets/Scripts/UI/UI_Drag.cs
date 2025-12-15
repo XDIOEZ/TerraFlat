@@ -42,12 +42,6 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// 默认层级顺序
     /// </summary>
     public int DefaultOrder = 0;
-    
-    /// <summary>
-    /// 当前全局层级顺序，确保拖拽物体始终显示在最上层
-    /// </summary>
-    [ShowInInspector]
-    public static int CurrentOrder = 0;
 
     /// <summary>
     /// 是否正在拖拽状态
@@ -78,7 +72,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     {        
         // 设置初始层级
         rectTransform.SetSiblingIndex(DefaultOrder);
-        CurrentOrder = Mathf.Max(CurrentOrder, DefaultOrder);
+        BasePanel.CurrentOrder = Mathf.Max(BasePanel.CurrentOrder, DefaultOrder);
 
         // 验证引用是否正确
         if (canvas == null)
@@ -150,9 +144,7 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
         }
 
         // 提升层级以显示在最上层
-        CurrentOrder++;
-        rectTransform.SetSiblingIndex(CurrentOrder);
-        canvas.sortingOrder = CurrentOrder;
+        BasePanel.BringToFront(rectTransform);
 
         // 记录拖拽开始状态
         IsDragging = true;
@@ -200,7 +192,6 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
             out localPointerPosition))
         {
             rectTransform.anchoredPosition = localPointerPosition + offset;
-            rectTransform.SetSiblingIndex(CurrentOrder);
         }
     }
 
@@ -221,6 +212,8 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     #endregion
 
     #region 辅助方法
+
+
 
     /// <summary>
     /// 检查鼠标点击是否在可拖拽图片上

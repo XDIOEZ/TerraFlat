@@ -171,7 +171,7 @@ private void HandleRepeatDrop()
             // 只有当物品完全丢弃完后才销毁对象
             if (hotbarSlot.Amount <= 0)
             {
-                Hotbar.DestroyCurrentObject(Hotbar.CurentSelectItem);
+                Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
             }
             return;
         }
@@ -195,7 +195,7 @@ private void HandleRepeatDrop()
             // 如果物品已经耗尽，且是当前快捷栏选中的物品，则销毁手上物体
             if (hoveredSlotData.Amount <= 0 && hoveredSlotData == Hotbar?.CurrentSelectItemSlot)
             {
-                Hotbar?.DestroyCurrentObject(Hotbar.CurentSelectItem);
+                Hotbar?.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
             }
             
             hoveredSlot.RefreshUI();
@@ -258,7 +258,7 @@ private void HandleRepeatDrop()
             // 只有当物品完全丢弃完后才销毁对象
             if (hotbarSlot.Amount <= 0)
             {
-                Hotbar.DestroyCurrentObject(Hotbar.CurentSelectItem);
+                Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
             }
         }
         else
@@ -368,6 +368,9 @@ public void DropItemByCount(ItemSlot slot, int count)
         // 使用 InstantiateItem 中新生成的 GUID 和数据
         // 不再手动设置 newItem.itemData = newItemData，因为 InstantiateItem 已经处理了这一步
 
+        // 设置掉落物状态：缩放为0.5倍
+        newItem.transform.localScale = Vector3.one * 0.5f;
+        
         // 计算位置
         Vector2 startPos = transform.position;
         Vector2 endPos = DropPos;

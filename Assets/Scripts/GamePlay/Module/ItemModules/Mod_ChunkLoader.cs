@@ -16,10 +16,10 @@ public class Mod_ChunkLoader : Module
     {
         [Tooltip("区块失活距离（超过此距离的区块将被设为非激活）")]
         public int UnActiveDistance;
-        
+
         [Tooltip("区块销毁距离（超过此距离的区块将被销毁）")]
         public int DestroyChunkDistance;
-        
+
         [Tooltip("区块加载距离（此距离内的区块将被加载）")]
         public int LoadChunkDistance;
 
@@ -34,10 +34,10 @@ public class Mod_ChunkLoader : Module
 
     #region 序列化字段
     public Ex_ModData_MemoryPackable ModData;
-    public override ModuleData _Data 
-    { 
-        get => ModData; 
-        set => ModData = (Ex_ModData_MemoryPackable)value; 
+    public override ModuleData _Data
+    {
+        get => ModData;
+        set => ModData = (Ex_ModData_MemoryPackable)value;
     }
 
     [Header("区块加载距离设置")]
@@ -57,22 +57,22 @@ public class Mod_ChunkLoader : Module
     #endregion
 
     #region 属性访问器
-    private int UnActiveDistance 
-    { 
-        get => distanceConfig.UnActiveDistance; 
-        set => distanceConfig.UnActiveDistance = value; 
+    private int UnActiveDistance
+    {
+        get => distanceConfig.UnActiveDistance;
+        set => distanceConfig.UnActiveDistance = value;
     }
 
-    private int DestroyChunkDistance 
-    { 
-        get => distanceConfig.DestroyChunkDistance; 
-        set => distanceConfig.DestroyChunkDistance = value; 
+    private int DestroyChunkDistance
+    {
+        get => distanceConfig.DestroyChunkDistance;
+        set => distanceConfig.DestroyChunkDistance = value;
     }
 
-    private int LoadChunkDistance 
-    { 
-        get => distanceConfig.LoadChunkDistance; 
-        set => distanceConfig.LoadChunkDistance = value; 
+    private int LoadChunkDistance
+    {
+        get => distanceConfig.LoadChunkDistance;
+        set => distanceConfig.LoadChunkDistance = value;
     }
     #endregion
 
@@ -88,7 +88,7 @@ public class Mod_ChunkLoader : Module
     {
         // 从存档读取配置
         ModData.ReadData(ref distanceConfig);
-        
+
         // 初始化上一次区块位置
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
     }
@@ -102,7 +102,7 @@ public class Mod_ChunkLoader : Module
     {
         // 检测位置是否跨区块
         DetectChunkChange();
-        
+
         // 延迟执行区块更新（避免频繁调用）
         if (needsChunkUpdate)
         {
@@ -121,7 +121,7 @@ public class Mod_ChunkLoader : Module
     private void DetectChunkChange()
     {
         Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
-        
+
         if (currentChunkPos != lastChunkPos)
         {
             lastChunkPos = currentChunkPos;
@@ -134,12 +134,6 @@ public class Mod_ChunkLoader : Module
     /// </summary>
     private void UpdateChunks(Vector2 chunkPos)
     {
-        // 安全检查
-        if (!IsComponentValid())
-        {
-            Debug.LogWarning("[区块加载器] ⚠️ 组件无效，跳过区块更新");
-            return;
-        }
 
         // 销毁过远的失活区块
         ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: DestroyChunkDistance);
@@ -156,12 +150,6 @@ public class Mod_ChunkLoader : Module
     /// </summary>
     private void OnMeshUpdateComplete()
     {
-        // 多层防护的安全检查
-        if (!IsComponentValid())
-        {
-            Debug.LogWarning("[区块加载器] ⚠️ 寻路网格更新完成时，组件已无效");
-            return;
-        }
 
         if (_Data != null && !_Data.isRunning)
         {
@@ -182,12 +170,21 @@ public class Mod_ChunkLoader : Module
     #region 工具方法
 
     /// <summary>
-    /// 检查组件和游戏对象是否有效
+    /// 统一调整所有加载距离参数
     /// </summary>
-    private bool IsComponentValid()
+    /// <param name="adjustment">调整值（正数增加范围，负数减少范围）</param>
+    [Button("调整加载距离")]
+    public void AdjustLoadDistance(int adjustment)
     {
-        return this != null && gameObject != null;
+        distanceConfig.UnActiveDistance = Mathf.Max(1, distanceConfig.UnActiveDistance + adjustment);
+        distanceConfig.DestroyChunkDistance = Mathf.Max(1, distanceConfig.DestroyChunkDistance + adjustment);
+        distanceConfig.LoadChunkDistance = Mathf.Max(1, distanceConfig.LoadChunkDistance + adjustment);
+
+        // 调整完毕后立即更新区块
+
+        UpdateChunks(lastChunkPos);
     }
+
 
     /// <summary>
     /// 获取是否自动生成地图的设置

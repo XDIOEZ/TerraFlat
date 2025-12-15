@@ -3,14 +3,21 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-public class Mod_TurnBody : Module
+public class Mod_TurnBack : Module
 {
+    #region 数据和属性
+
     [Header("转向控制")]
     [SerializeField, Range(0.05f, 5f), Tooltip("转向所需时间（秒）")]
-    private float rotationDuration = 0.3f;
+    private float Duration = 0.3f;
 
     [SerializeField, Tooltip("需要控制旋转的目标对象列表，默认自动获取子对象中含Animator的物体")]
-    public List<Transform> controlledTransforms = new();
+    public List<Transform> controlledTransforms_Direction = new();
+    [SerializeField, Tooltip("需要控制位置的目标对象列表")]
+    public List<Transform> controlledTransforms_Position = new();
+
+    [SerializeField, Tooltip("默认位置，用于计算目标位置(默认角色初始状态朝向右边)")]
+    public Vector2 DefaultPosition = new Vector2(0.5f, 0f);
 
     [SerializeField, Tooltip("当前面向方向，默认右方")]
     public Vector2 currentDirection = Vector2.right;
@@ -23,6 +30,13 @@ public class Mod_TurnBody : Module
     private float turnTimeElapsed;
     private float startY;
     private float targetY;
+    
+    // 位置变换记录
+    private Dictionary<Transform, Vector3> positionStartValues = new Dictionary<Transform, Vector3>();
+    private Dictionary<Transform, Vector3> positionTargetValues = new Dictionary<Transform, Vector3>();
+    
+    // 位置转换完成标志
+    private bool isPositionTransforming = false;
 
     public Mod_FocusPoint faceMouse;
 
@@ -32,6 +46,10 @@ public class Mod_TurnBody : Module
         get => modData;
         set => modData = (Ex_ModData)value;
     }
+
+    #endregion
+
+    #region 生命周期方法
 
     public override void Awake()
     {
@@ -43,8 +61,10 @@ public class Mod_TurnBody : Module
 
     public override void Load()
     {
+
         faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
-        controlledTransforms.Clear();
+
+        controlledTransforms_Direction.Clear();
 
         // 获取所有子物体上的 Animator 组件
         Animator[] animators = item.GetComponentsInChildren<Animator>();
@@ -58,14 +78,21 @@ public class Mod_TurnBody : Module
         }
 
         if (faceMouse == null)
-            Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！"+item.name);
+            Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！" + item.name);
     }
 
     public override void ModUpdate(float deltaTime)
     {
         UpdateWork();
         UpdateTurn(deltaTime);
+        UpdateTransform_Positions();
     }
+
+    public override void Save() { }
+
+    #endregion
+
+    #region 转向逻辑
 
     private void UpdateWork()
     {
@@ -85,6 +112,7 @@ public class Mod_TurnBody : Module
         if (isTurning) return;
 
         OnTrun.Invoke(targetDirection);
+
         if (Mathf.Abs(targetDirection.x) < 0.01f) return;
 
         float targetSign = Mathf.Sign(targetDirection.x);
@@ -96,11 +124,14 @@ public class Mod_TurnBody : Module
         isTurning = true;
         turnTimeElapsed = 0f;
 
-        if (controlledTransforms.Count == 0) return;
+        if (controlledTransforms_Direction.Count == 0) return;
 
-        startY = NormalizeAngle(controlledTransforms[0].eulerAngles.y);
-
+        startY = NormalizeAngle(controlledTransforms_Direction[0].eulerAngles.y);
         targetY = (currentDirection == Vector2.right) ? 0f : 180f;
+
+        // 记录位置的起始值和目标值
+        RecordPositionTransformValues();
+        isPositionTransforming = true;  // 开始位置转换
     }
 
     public void UpdateTurn(float deltaTime)
@@ -108,10 +139,10 @@ public class Mod_TurnBody : Module
         if (!isTurning) return;
 
         turnTimeElapsed += deltaTime;
-        float t = Mathf.Clamp01(turnTimeElapsed / rotationDuration);
+        float t = Mathf.Clamp01(turnTimeElapsed / Duration);
         float newY = Mathf.LerpAngle(startY, targetY, t);
 
-        foreach (var tform in controlledTransforms)
+        foreach (var tform in controlledTransforms_Direction)
         {
             if (tform != null)
             {
@@ -123,7 +154,7 @@ public class Mod_TurnBody : Module
 
         if (Mathf.Abs(Mathf.DeltaAngle(newY, targetY)) < 0.5f || t >= 1f)
         {
-            foreach (var tform in controlledTransforms)
+            foreach (var tform in controlledTransforms_Direction)
             {
                 if (tform != null)
                 {
@@ -137,21 +168,9 @@ public class Mod_TurnBody : Module
         }
     }
 
-    private float NormalizeAngle(float angle)
-    {
-        angle %= 360f;
-        if (angle < 0) angle += 360f;
-        return angle;
-    }
+    #endregion
 
-    public override void Save() { }
-
-    public void ResetTurnState()
-    {
-        isTurning = false;
-        turnTimeElapsed = 0f;
-        Debug.Log("[TurnBody] 状态重置");
-    }
+    #region 受控对象管理
 
     /// <summary>
     /// 添加受控制的变换对象到列表中，并更新其朝向
@@ -164,15 +183,15 @@ public class Mod_TurnBody : Module
             Debug.LogError("[TurnBody] 受控制的变换对象为空！");
             return;
         }
-       
-        
+
+
         // 添加到控制列表
-        controlledTransforms.Add(transform);
-        
+        controlledTransforms_Direction.Add(transform);
+
         // 立即更新该对象的朝向以匹配当前方向
         UpdateTransformDirection(transform);
     }
-    
+
     /// <summary>
     /// 更新指定变换对象的朝向以匹配当前方向
     /// </summary>
@@ -180,21 +199,106 @@ public class Mod_TurnBody : Module
     private void UpdateTransformDirection(Transform transform)
     {
         if (transform == null) return;
-        
+
         // 根据当前方向设置Y轴旋转
         float targetYRotation = (currentDirection == Vector2.right) ? 0f : 180f;
         Vector3 currentEulerAngles = transform.eulerAngles;
         transform.rotation = Quaternion.Euler(currentEulerAngles.x, targetYRotation, currentEulerAngles.z);
     }
-    
     /// <summary>
     /// 批量更新所有受控制对象的朝向
     /// </summary>
     public void UpdateAllTransformDirections()
     {
-        foreach (var transform in controlledTransforms)
+        foreach (var transform in controlledTransforms_Direction)
         {
             UpdateTransformDirection(transform);
         }
     }
+
+
+    void UpdateTransform_Positions()
+    {
+        if (!isPositionTransforming)
+        {
+            // 位置转换完成后，直接设置最终位置
+            foreach (var transform in controlledTransforms_Position)
+            {
+                if (transform == null) continue;
+
+                Vector3 localPos = transform.localPosition;
+                localPos.x = Mathf.Abs(localPos.x) * currentDirection.x;
+                transform.localPosition = localPos;
+            }
+            return;
+        }
+
+        // 位置转换中，使用插值更新位置
+        float t = Mathf.Clamp01(turnTimeElapsed / Duration);
+
+        foreach (var transform in controlledTransforms_Position)
+        {
+            if (transform == null) continue;
+
+            // 获取起始值和目标值
+            if (positionStartValues.TryGetValue(transform, out Vector3 startPos) &&
+                positionTargetValues.TryGetValue(transform, out Vector3 targetPos))
+            {
+                // 使用 Vector3.Lerp 平滑插值
+                Vector3 lerpedPos = Vector3.Lerp(startPos, targetPos, t);
+                transform.localPosition = lerpedPos;
+            }
+        }
+
+        // 检查位置转换是否完成
+        if (t >= 1f)
+        {
+            isPositionTransforming = false;
+        }
+    }
+
+    /// <summary>
+    /// 记录位置变换的起始值和目标值
+    /// </summary>
+    private void RecordPositionTransformValues()
+    {
+        positionStartValues.Clear();
+        positionTargetValues.Clear();
+
+        foreach (var transform in controlledTransforms_Position)
+        {
+            if (transform == null) continue;
+
+            // 记录当前位置作为起始值
+            Vector3 currentPos = transform.localPosition;
+            positionStartValues[transform] = currentPos;
+
+            // 计算目标位置：根据当前朝向和DefaultPosition镜像
+            Vector3 targetPos = new Vector3(
+                DefaultPosition.x * currentDirection.x,
+                DefaultPosition.y,
+                currentPos.z  // 保持Z轴不变
+            );
+            positionTargetValues[transform] = targetPos;
+        }
+    }
+
+    #endregion
+
+    #region 工具和辅助方法
+
+    private float NormalizeAngle(float angle)
+    {
+        angle %= 360f;
+        if (angle < 0) angle += 360f;
+        return angle;
+    }
+
+    public void ResetTurnState()
+    {
+        isTurning = false;
+        turnTimeElapsed = 0f;
+    }
+
+    #endregion
 }

@@ -133,6 +133,11 @@ public class Mod_Damage : Module, IDamageSender
             Vector2 hitPoint = receiver.GetComponent<Collider2D>().ClosestPoint(transform.position);
             SpawnEffect(hitPoint, acDamage);
         }
+        //ÎäÆ÷ÄÍ¾ÃÏÂ½µ
+        if (item != null)
+        {
+            item.DecreaseDurability(1);
+        }
     }
 
     private void SpawnEffect(Vector2 hitPoint, float damage)

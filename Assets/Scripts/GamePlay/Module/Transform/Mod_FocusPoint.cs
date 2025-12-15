@@ -5,25 +5,34 @@ using UnityEngine;
 
 public partial class Mod_FocusPoint : Module
 {
+    #region Fields
     public FocusPoint_Data Data = new FocusPoint_Data();
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
     public GameController GameController;
-    public Mod_TurnBody turnBody; // 添加TurnBody引用
+    public Mod_TurnBack turnBody; // 添加TurnBody引用
 
-    // 需要跟随鼠标旋转的对象列表
     [Tooltip("需要跟随鼠标旋转的对象列表，列表为空时脚本不执行任何操作")]
     public List<Transform> targetRotationTransforms = new List<Transform>();
+    
+    private List<Transform> _cachedValidTargets;
+    private int _lastTargetCount = -1;
+    private bool _needsRefresh = true;
+    #endregion
 
+    #region Unity Methods
     public override void Awake()
-    {
-            _Data.ID = ModText.FocusPoint;
-    }
-    public void OnValidate()
     {
         _Data.ID = ModText.FocusPoint;
     }
 
+    public void OnValidate()
+    {
+        _Data.ID = ModText.FocusPoint;
+    }
+    #endregion
+
+    #region Module Methods
     public override void Load()
     {
         ModData.ReadData(ref Data);
@@ -35,26 +44,26 @@ public partial class Mod_FocusPoint : Module
 
         // 获取TurnBody组件
         turnBody = item.Owner != null
-            ? item.Owner.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody
-            : item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBody;
-
-        // 如果列表为空 → 自动装填父对象
-        if (targetRotationTransforms.Count == 0 )
-        {
-            targetRotationTransforms.Add(transform);
-            Debug.Log($"[FaceMouse] 自动添加对象 {transform.name} 到旋转列表", this);
-        }
+            ? item.Owner.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack
+            : item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack;
     }
-
 
     public override void ModUpdate(float deltaTime)
     {
-        // 列表为空时直接返回，不执行任何操作
-        if (targetRotationTransforms.Count == 0) return;
+        // 优化：提前检查列表状态和旋转激活状态
+        if (targetRotationTransforms == null || targetRotationTransforms.Count == 0 || !Data.ActivateRotation) 
+            return;
 
         PlayerTakeItem_FaceMouse(deltaTime);
     }
 
+    public override void Save()
+    {
+        ModData.WriteData(Data);
+    }
+    #endregion
+
+    #region Public Methods
     public void PlayerTakeItem_FaceMouse(float deltaTime)
     {
         if (GameController == null)
@@ -73,15 +82,27 @@ public partial class Mod_FocusPoint : Module
         }
     }
 
-    /// <summary>
-    /// 让旋转列表中的所有有效对象同步朝向鼠标，近距离时停止旋转
-    /// </summary>
-    public void FaceToMouse(Vector3 targetPosition, float deltaTime)
+    [ContextMenu("清理空对象")]
+    public void ClearNullObjects()
     {
-        // 获取有效旋转目标（过滤空对象）
-        List<Transform> validTargets = GetValidRotationTargets();
-        if (validTargets.Count == 0) return;
+        if (targetRotationTransforms == null) return;
+        
+        int originalCount = targetRotationTransforms.Count;
+        targetRotationTransforms.RemoveAll(trans => trans == null);
+        
+        int removedCount = originalCount - targetRotationTransforms.Count;
+        if (removedCount > 0)
+        {
+            // 标记缓存需要刷新
+            _needsRefresh = true;
+            Debug.Log($"[FaceMouse] 已清理 {removedCount} 个空对象，当前列表大小：{targetRotationTransforms.Count}", this);
+        }
+    }
+    #endregion
 
+    #region Private Methods
+    private void FaceToMouse(Vector3 targetPosition, float deltaTime)
+    {
         // 获取玩家当前朝向
         float playerFacingDirection = 1f; // 1表示朝右，-1表示朝左
         if (turnBody != null)
@@ -90,7 +111,7 @@ public partial class Mod_FocusPoint : Module
         }
 
         // 遍历所有有效目标执行旋转
-        foreach (var targetTrans in validTargets)
+        foreach (var targetTrans in targetRotationTransforms)
         {
             // 计算目标对象到鼠标位置的距离
             float distanceToMouse = Vector2.Distance(targetTrans.position, targetPosition);
@@ -121,33 +142,43 @@ public partial class Mod_FocusPoint : Module
         }
     }
 
-    /// <summary>
-    /// 获取列表中的有效对象（过滤空引用）
-    /// </summary>
     private List<Transform> GetValidRotationTargets()
     {
-        List<Transform> validTargets = new List<Transform>();
-
-        foreach (var trans in targetRotationTransforms)
+        // 检查是否需要刷新缓存
+        bool needsRefresh = _needsRefresh || 
+                           _cachedValidTargets == null || 
+                           _lastTargetCount != targetRotationTransforms.Count;
+        
+        if (needsRefresh)
         {
-            if (trans != null)
+            _cachedValidTargets = new List<Transform>(targetRotationTransforms.Count);
+            
+            for (int i = 0; i < targetRotationTransforms.Count; i++)
             {
-                validTargets.Add(trans);
+                var trans = targetRotationTransforms[i];
+                if (trans != null)
+                {
+                    _cachedValidTargets.Add(trans);
+                }
             }
-            else
+            
+            _lastTargetCount = targetRotationTransforms.Count;
+            _needsRefresh = false;
+            
+            // 仅在调试模式下输出警告
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (_cachedValidTargets.Count < targetRotationTransforms.Count)
             {
-                Debug.LogWarning($"[FaceMouse] 旋转列表中存在空对象，请移除无效项", this);
+                Debug.LogWarning($"[FaceMouse] 旋转列表中存在 {(targetRotationTransforms.Count - _cachedValidTargets.Count)} 个空对象，建议使用ContextMenu清理", this);
             }
+            #endif
         }
-
-        return validTargets;
+        
+        return _cachedValidTargets;
     }
+    #endregion
 
-    public override void Save()
-    {
-        ModData.WriteData(Data);
-    }
-
+    #region Data Class
     [System.Serializable]
     [MemoryPackable]
     public partial class FocusPoint_Data
@@ -174,4 +205,5 @@ public partial class Mod_FocusPoint : Module
         public Vector2 Move_Point { get=> FocusPoints["Move"]; set => FocusPoints["Move"] = value; }
         public Vector2 DefaultSkill_Point { get=> FocusPoints["Skill_0"]; set => FocusPoints["Skill_0"] = value; }
     }
+    #endregion
 }

@@ -46,17 +46,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   Data:
-    Hp: -1
-    MaxHp:
-      BaseValue: 100
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
     maxVisibleDistance: 10
     minVisibleDistance: 1
   BuildingData:
-    Name: "\u5EFA\u7B51\u6A21\u5757"
+    Name: 
     ID: 
     isRunning: 0
     Type: 0
@@ -64,3 +57,10 @@ MonoBehaviour:
   GhostShadow: {fileID: 0}
   boxCollider2D: {fileID: 0}
   damageReceiver: {fileID: 0}
+  StartInstall:
+    _PersistentCalls: []
+  StartUnInstall:
+    _PersistentCalls: []
+  _currentState: 0
+  OnStateChanged:
+    _PersistentCalls: []

@@ -5,6 +5,30 @@ using System;
 using UltEvents;
 using UnityEngine;
 
+/// <summary>
+/// 建筑物状态枚举
+/// </summary>
+public enum BuildingState
+{
+    /// <summary>未安装 - 建筑在背包中或未放置</summary>
+    NotInstalled,
+
+    /// <summary>安装中 - 建筑正在安装过程中</summary>
+    Installing,
+
+    /// <summary>已安装 - 建筑已成功放置</summary>
+    Installed,
+
+    /// <summary>损坏中 - 建筑血量低于50%</summary>
+    Damaged,
+
+    /// <summary>卸载中 - 建筑正在被卸载</summary>
+    Uninstalling,
+
+    /// <summary>已卸载 - 建筑已被卸载并可重新拾取</summary>
+    Uninstalled
+}
+
 public class Mod_Building : Module
 {
     #region 数据定义
@@ -24,6 +48,12 @@ public class Mod_Building : Module
     public DamageReceiver damageReceiver;
     public UltEvent StartInstall = new UltEvent();
     public UltEvent StartUnInstall = new UltEvent();
+
+    // 建筑状态字段
+    [SerializeField] private BuildingState _currentState = BuildingState.NotInstalled;
+
+    // 状态变化事件
+    public UltEvent<BuildingState, BuildingState> OnStateChanged = new UltEvent<BuildingState, BuildingState>();
     #endregion
 
     #region 属性
@@ -34,6 +64,26 @@ public class Mod_Building : Module
     }
 
     public bool IsItemInInventory => item.InHand && item.Owner != null;
+
+    /// <summary>
+    /// 当前建筑状态
+    /// </summary>
+    public BuildingState CurrentState
+    {
+        get => _currentState;
+        private set
+        {
+            if (_currentState != value)
+            {
+                BuildingState previousState = _currentState;
+                _currentState = value;
+                OnStateChanged?.Invoke(previousState, value);
+
+                // 调试日志
+                Debug.Log($"[建筑状态] {item?.name} 状态变更: {previousState} -> {value}");
+            }
+        }
+    }
     #endregion
 
     #region 生命周期
@@ -57,6 +107,9 @@ public class Mod_Building : Module
             boxCollider2D.isTrigger = true;
         else
             boxCollider2D.isTrigger = false;
+
+        // 初始化建筑状态
+        InitializeState();
     }
 
     public override void Save()
@@ -84,11 +137,23 @@ public class Mod_Building : Module
 
             // 如果还未安装，继续显示幽灵投影
             HandleGhostShadow();
+
+            // 确保状态是未安装
+            if (CurrentState == BuildingState.Uninstalled)
+            {
+                CurrentState = BuildingState.NotInstalled;
+            }
         }
         else
         {
             // 不在玩家手上时清理幽灵投影
             CleanupGhost();
+
+            // 如果状态是未安装且不在玩家手中，更新为已卸载状态
+            if (CurrentState == BuildingState.NotInstalled && item != null && damageReceiver.Hp <= 0)
+            {
+                CurrentState = BuildingState.Uninstalled;
+            }
         }
     }
 
@@ -105,6 +170,9 @@ public class Mod_Building : Module
     #region 伤害处理
     private void OnHit(float hp)
     {
+        // 更新建筑状态（根据血量）
+        UpdateBuildingState();
+
         if (hp <= 0)
         {
             UnInstall();
@@ -127,6 +195,9 @@ public class Mod_Building : Module
         if (!CanInstall())
             return;
 
+        // 设置状态为安装中
+        CurrentState = BuildingState.Installing;
+
         // === 触发开始事件 ===
         StartInstall?.Invoke();
         OnAction_Start?.Invoke(item);
@@ -145,16 +216,79 @@ public class Mod_Building : Module
             Destroy(item.gameObject);
         }
 
+        MeshUpdate(newBuilding);
+    }
+
+    private void MeshUpdate(Item newBuilding)
+    {
+        Debug.Log($"[MeshUpdate] 开始更新新建筑的网格和导航，建筑: {newBuilding?.name}");
+
         // === 更新寻路区域 ===
         if (newBuilding != null)
         {
-            UpdateNavigation(newBuilding.transform.position, 1, 1);
+            // 获取建筑物的2D碰撞体范围
+            Bounds buildingBounds;
+            var collider2D = newBuilding.GetComponent<BoxCollider2D>(); // 使用新建筑的碰撞体而不是本地的
+            if (collider2D != null)
+            {
+                Debug.Log("[MeshUpdate] 使用新建筑的BoxCollider2D的bounds");
+                // 对于2D游戏，使用BoxCollider2D的bounds，但确保Z轴为0
+                Vector3 center = collider2D.bounds.center;
+                center.z = 0f; // 确保2D游戏中Z坐标为0
+                Vector3 size = collider2D.bounds.size;
+                buildingBounds = new Bounds(center, size);
+            }
+            else
+            {
+                Debug.LogWarning("[MeshUpdate] 新建筑上没有找到BoxCollider2D，尝试使用本地组件或默认大小（1x1）");
+
+                // 尝试使用本地的碰撞体
+                if (boxCollider2D != null)
+                {
+                    Debug.Log("[MeshUpdate] 使用本地的BoxCollider2D的bounds");
+                    Vector3 center = boxCollider2D.bounds.center;
+                    center.z = 0f; // 确保2D游戏中Z坐标为0
+                    Vector3 size = boxCollider2D.bounds.size;
+                    buildingBounds = new Bounds(center, size);
+                }
+                else
+                {
+                    Debug.Log("[MeshUpdate] 使用默认大小（1x1）");
+                    // 如果没有碰撞体，使用默认大小（1x1）
+                    Vector3 pos = newBuilding.transform.position;
+                    pos.z = 0f; // 确保2D游戏中Z坐标为0
+                    buildingBounds = new Bounds(pos, Vector3.one);
+                }
+            }
+
+            Debug.Log($"[MeshUpdate] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
+            Vector3 cpos = newBuilding.transform.position;
+
+            UpdateNavigation(position: cpos, UseTilePenalty: false);
+            
+            // 设置新建筑为已安装状态
+            var newBuildingMod = newBuilding.GetComponent<Mod_Building>();
+            if (newBuildingMod != null)
+            {
+                newBuildingMod.CurrentState = BuildingState.Installed;
+                Debug.Log($"[MeshUpdate] 新建筑 {newBuilding.name} 状态设置为已安装");
+            }
+            
+            // 设置当前对象为已安装状态
+            CurrentState = BuildingState.Installed;
+        }
+        else
+        {
+            Debug.LogError("[MeshUpdate] newBuilding为空，无法更新网格");
         }
     }
 
     [Button]
     public virtual void UnInstall()
     {
+        // 设置状态为卸载中
+        CurrentState = BuildingState.Uninstalling;
+
         // === 重置血量为0（标记为卸载状态）===
         if (damageReceiver != null)
         {
@@ -184,7 +318,33 @@ public class Mod_Building : Module
 
         CleanupGhost();
 
-        UpdateNavigation(transform.position, 1, 1);
+        Debug.Log("[UnInstall] 开始卸载建筑，准备更新导航区域");
+
+        // 获取建筑物的2D碰撞体范围
+        Bounds buildingBounds;
+        if (boxCollider2D != null)
+        {
+            Debug.Log("[UnInstall] 使用BoxCollider2D的bounds");
+            // 对于2D游戏，使用BoxCollider2D的bounds，但确保Z轴为0
+            Vector3 center = boxCollider2D.bounds.center;
+            center.z = 0f; // 确保2D游戏中Z坐标为0
+            Vector3 size = boxCollider2D.bounds.size;
+            buildingBounds = new Bounds(center, size);
+        }
+        else
+        {
+            Debug.Log("[UnInstall] 没有找到BoxCollider2D，使用默认大小（1x1）");
+            // 如果没有碰撞体，使用默认大小（1x1）
+            Vector3 npos = transform.position;
+            npos.z = 0f; // 确保2D游戏中Z坐标为0
+            buildingBounds = new Bounds(npos, Vector3.one);
+        }
+
+        Debug.Log($"[UnInstall] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
+        UpdateNavigation(position: transform.position, true);
+
+        // 设置为已卸载状态
+        CurrentState = BuildingState.Uninstalled;
 
         Debug.Log($"[建筑卸载] ✅ 建筑卸载完成");
     }
@@ -221,13 +381,120 @@ public class Mod_Building : Module
             return false;
         }
 
-        // 4. 检查物品数量
+        // 4. 检查地块权重
+        if (!CheckTilePenalties())
+        {
+            return false;
+        }
+
+        // 5. 检查物品数量
         if (item.itemData.Stack.Amount <= 0)
         {
             Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.itemData.Stack.Amount})");
             return false;
         }
 
+        return true;
+    }
+
+    /// <summary>
+    /// 检查建筑占用的所有地块是否有权重大于1000的地块
+    /// </summary>
+    /// <returns>如果存在权重大于1000的地块返回false，否则返回true</returns>
+    private bool CheckTilePenalties()
+    {
+        Debug.Log("[CheckTilePenalties] 开始检查地块权重");
+
+        // 获取建筑将要占用的地块范围
+        Vector3 buildingPos = GhostShadow.transform.position;
+
+        // 使用幽灵投影的碰撞体大小来确定占用的地块范围
+        Bounds buildingBounds;
+        if (GhostShadow.GetComponent<BoxCollider2D>() != null)
+        {
+            var collider = GhostShadow.GetComponent<BoxCollider2D>();
+            Vector3 center = collider.bounds.center;
+            center.z = 0f; // 确保2D游戏中Z坐标为0
+            Vector3 size = collider.bounds.size;
+            buildingBounds = new Bounds(center, size);
+        }
+        else
+        {
+            // 如果没有碰撞体，使用默认大小（1x1）
+            Vector3 pos = buildingPos;
+            pos.z = 0f; // 确保2D游戏中Z坐标为0
+            buildingBounds = new Bounds(pos, Vector3.one);
+        }
+
+        Debug.Log($"[CheckTilePenalties] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
+
+        // 计算建筑占用的地块坐标范围，带有0.5的右上角偏移
+        int minX = Mathf.FloorToInt(buildingBounds.min.x);
+        int maxX = Mathf.FloorToInt(buildingBounds.max.x);
+        int minY = Mathf.FloorToInt(buildingBounds.min.y);
+        int maxY = Mathf.FloorToInt(buildingBounds.max.y);
+
+        // 添加较小的偏移，避免范围过大
+        // 确保包含格子中心坐标（使用0.5偏移）
+        maxX += 0; // 减小偏移量，避免范围过大
+        maxY += 0; // 减小偏移量，避免范围过大
+
+        Debug.Log($"[CheckTilePenalties] 检查地块范围(减小偏移): X[{minX}, {maxX}], Y[{minY}, {maxY}]");
+
+        // 获取Chunk和Map
+        if (ChunkMgr.Instance == null)
+        {
+            Debug.LogError("[CheckTilePenalties] ChunkMgr.Instance为空，无法检查地块权重");
+            return false;
+        }
+
+        ChunkMgr.Instance.GetChunkBy_ItemPosition(buildingPos, out Chunk chunk);
+        if (chunk == null)
+        {
+            Debug.LogError($"[CheckTilePenalties] 无法找到位置({buildingPos.x:F2}, {buildingPos.y:F2})对应的Chunk");
+            return false;
+        }
+
+        if (chunk.Map == null || chunk.Map.Data == null || chunk.Map.Data.TileData == null)
+        {
+            Debug.LogError("[CheckTilePenalties] 地图数据不完整，无法检查地块权重");
+            return false;
+        }
+
+        // 检查每个地块的权重
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                Vector2Int tilePos = new Vector2Int(x, y);
+
+                if (chunk.Map.Data.TileData.ContainsKey(tilePos))
+                {
+                    // 获取最顶层的TileData
+                    var tileList = chunk.Map.Data.TileData[tilePos];
+                    if (tileList != null && tileList.Count > 0)
+                    {
+                        TileData topTile = tileList[tileList.Count - 1];
+                        uint penalty = topTile.Penalty;
+
+                        Debug.Log($"[CheckTilePenalties] 地块({x}, {y})的权重: {penalty}");
+
+                        // 如果权重大于1000，禁止安装
+                        if (penalty > 1000)
+                        {
+                            Debug.LogWarning($"[建筑安装] 安装失败: 地块({x}, {y})的权重({penalty})大于1000，禁止在此处安装建筑");
+                            return false;
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.Log($"[CheckTilePenalties] 地块({x}, {y})不存在数据，权重视为0");
+                }
+            }
+        }
+
+        Debug.Log("[CheckTilePenalties] 所有地块权重检查通过，没有发现权重大于1000的地块");
         return true;
     }
 
@@ -273,6 +540,14 @@ public class Mod_Building : Module
         newItem.transform.localScale = Vector3.one;
         newItem.itemData.Stack.Amount = 1;
         newItem.itemData.Stack.CanBePickedUp = false;
+        
+        // 确保新建筑的建筑模块设置为已安装状态
+        var newBuildingMod = newItem.GetComponent<Mod_Building>();
+        if (newBuildingMod != null)
+        {
+            newBuildingMod.CurrentState = BuildingState.Installed;
+            Debug.Log($"[CreateBuildingInstance] 新建筑 {newItem.name} 初始化时设置为已安装状态");
+        }
 
         //EnableChildColliders(true, newItem.transform);
         return newItem;
@@ -281,14 +556,96 @@ public class Mod_Building : Module
     /// <summary>
     /// 更新导航区域
     /// </summary>
-    private void UpdateNavigation(Vector3 center, int length, int width)
+    private void UpdateNavigation(Vector2 position, bool UseTilePenalty)
     {
-        AstarGameManager.Instance.UpdateArea_Rectangle(center, length, width);
+        Debug.Log($"[UpdateNavigation] 开始更新导航区域，位置: ({position.x:F2}, {position.y:F2})");
+
+        if (ChunkMgr.Instance != null)
+        {
+            Debug.Log($"[UpdateNavigation] 尝试获取Chunk，位置: ({position.x:F2}, {position.y:F2})");
+
+            ChunkMgr.Instance.GetChunkBy_ItemPosition(position, out Chunk chunk);
+            if (chunk != null)
+            {
+                Debug.Log($"[UpdateNavigation] 成功获取Chunk: {chunk.name}");
+
+                // 使用BackTilePenalty_Cell方法处理单个地块的烘焙
+                if (chunk.Map != null)
+                {
+                    if (UseTilePenalty)
+                        chunk.Map.BackTilePenalty_Cell(position);
+                    else
+                        chunk.Map.BackTilePenalty_Cell_NotMove(position);
+                    Debug.Log("[UpdateNavigation] BackTilePenalty_Cell方法调用完成");
+                }
+                else
+                {
+                    Debug.LogError("[UpdateNavigation] chunk.Map为空，无法更新导航区域");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[UpdateNavigation] 无法找到位置({position.x:F2}, {position.y:F2})对应的Chunk");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[UpdateNavigation] ChunkMgr.Instance 为空，无法更新导航区域");
+        }
     }
 
 
 
     #endregion
+
+    #endregion
+
+    #region 建筑状态管理
+
+    /// <summary>
+    /// 初始化建筑状态
+    /// </summary>
+    private void InitializeState()
+    {
+        if (damageReceiver.Hp > 0)
+        {
+            CurrentState = BuildingState.Installed;
+            Debug.Log($"[InitializeState] {item?.name} 血量>0，设置为已安装状态");
+        }
+        else
+        {
+            CurrentState = BuildingState.NotInstalled;
+            Debug.Log($"[InitializeState] {item?.name} 血量<=0，设置为未安装状态");
+        }
+    }
+
+    /// <summary>
+    /// 更新建筑状态（根据血量等条件）
+    /// </summary>
+    private void UpdateBuildingState()
+    {
+        if (damageReceiver == null) return;
+
+        // 根据血量确定状态
+        if (damageReceiver.Hp <= 0)
+        {
+            if (CurrentState != BuildingState.Uninstalled)
+            {
+                CurrentState = BuildingState.Uninstalled;
+            }
+        }
+        else if (damageReceiver.Hp < damageReceiver.MaxHp.Value * 0.5f)
+        {
+            if (CurrentState != BuildingState.Damaged)
+            {
+                CurrentState = BuildingState.Damaged;
+            }
+        }
+        else if (CurrentState != BuildingState.Installed)
+        {
+            CurrentState = BuildingState.Installed;
+        }
+    }
 
     #endregion
 
@@ -525,8 +882,25 @@ public class Mod_Building : Module
 
     public bool IsInstalled()
     {
-        // 当血量大于0时，表示建筑已经成功安装
-        return damageReceiver.Hp > 0;
+        // 检查建筑状态是否为已安装或损坏中
+        return CurrentState == BuildingState.Installed || CurrentState == BuildingState.Damaged;
+    }
+
+    /// <summary>
+    /// 获取当前建筑状态的中文描述
+    /// </summary>
+    public string GetStateDescription()
+    {
+        return CurrentState switch
+        {
+            BuildingState.NotInstalled => "未安装",
+            BuildingState.Installing => "安装中",
+            BuildingState.Installed => "已安装",
+            BuildingState.Damaged => "损坏中",
+            BuildingState.Uninstalling => "卸载中",
+            BuildingState.Uninstalled => "已卸载",
+            _ => "未知状态"
+        };
     }
     #endregion
     // 添加到Mod_Building.cs文件中，放在合适的位置（比如在其他Button方法附近）
@@ -572,6 +946,9 @@ public class Mod_Building : Module
 
         // 更新碰撞器状态
         EnableChildColliders(true, item.transform);
+
+        // 更新建筑状态
+        CurrentState = BuildingState.Installed;
 
         Debug.Log($"[编辑器调试] 成功将 {item.name} 设置为已安装状态");
     }
@@ -632,6 +1009,9 @@ public class Mod_Building : Module
 
         // 清理幽灵阴影（如果存在）
         CleanupGhost();
+
+        // 更新建筑状态
+        CurrentState = BuildingState.Installed;
 
         Debug.Log($"[设置安装状态] 成功将 {item.name} 设置为已安装状态");
     }

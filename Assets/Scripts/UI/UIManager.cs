@@ -430,5 +430,6 @@ public class UIManager : MonoBehaviour
             Destroy(panelInstance);
             return null;
         }
+
     }
 }

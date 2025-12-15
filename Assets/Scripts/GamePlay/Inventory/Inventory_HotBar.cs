@@ -1,221 +1,225 @@
 using DG.Tweening;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// ¿ì½İÀ¸ÏµÍ³£¬¼Ì³Ğ×Ô»ù´¡¿â´æÀà£¬¹ÜÀíÍæ¼ÒµÄ¿ì½İÎïÆ·À¸
-/// ¸ºÔğÎïÆ·Ñ¡Ôñ¡¢ÏÔÊ¾ºÍ½»»¥¹¦ÄÜ
+/// å¿«æ·æ ç³»ç»Ÿ
+/// è´Ÿè´£å¿«æ·æ ç´¢å¼•ã€UIã€è¾“å…¥ã€æ‰‹æŒç‰©å“ç”Ÿå‘½å‘¨æœŸç®¡ç†
 /// </summary>
 public class Inventory_HotBar : Inventory
 {
-    #region ×Ö¶ÎÓëÊôĞÔ
+    #region å­—æ®µä¸å±æ€§
 
-    [Header("¿ì½İÀ¸ÉèÖÃ")]
-    [Tooltip("ÎïÆ·Éú³ÉÎ»ÖÃ")]
+    [Header("å¿«æ·æ è®¾ç½®")]
     public Transform spawnLocation;
-
-    [Tooltip("¿ì½İÀ¸×î´óÈİÁ¿")]
     public int HotBarMaxVolume = 9;
 
-    [Tooltip("Ñ¡Ôñ¿òÔ¤ÖÆÌå")]
+    [Header("UI")]
     public GameObject SelectBoxPrefab;
-
-    [Tooltip("Ñ¡Ôñ¿ò±ä»¯Ê±¼ä")]
     [Range(0.01f, 0.5f)]
     public float SelectBoxChangeDuration = 0.1f;
 
-    /// <summary>
-    /// µ±Ç°Ñ¡Ôñ¿òÓÎÏ·¶ÔÏó
-    /// </summary>
     public GameObject SelectBox;
 
-    /// <summary>
-    /// µ±Ç°Ñ¡ÖĞµÄÎïÆ·²Û
-    /// </summary>
     public ItemSlot CurrentSelectItemSlot;
-
-    /// <summary>
-    /// ÓÃÓÚ¿ØÖÆÎïÆ·Ğı×ªµÄ×é¼ş
-    /// </summary>
-    public Mod_FocusPoint faceMouse; 
-    
-    /// <summary>
-    /// ÓÃÓÚ¿ØÖÆ×ªÉíµÄ×é¼ş
-    /// </summary>
-    public Mod_TurnBody turnBody;   
-
-    /// <summary>
-    /// µ±Ç°Ñ¡ÔñµÄÎïÆ·Êı¾İ
-    /// </summary>
-    public ItemData currentItemData;
-    
-    /// <summary>
-    /// µ±Ç°Ñ¡ÔñµÄÎïÆ·ÊµÀı
-    /// </summary>
     public Item CurentSelectItem;
-    
-    /// <summary>
-    /// µ±Ç°Ñ¡ÔñÎïÆ·µÄÓÎÏ·¶ÔÏó
-    /// </summary>
     public GameObject currentObject;
 
-    /// <summary>
-    /// µ±Ç°Ë÷ÒıÊôĞÔ
-    /// </summary>
-    public int CurrentIndex { get => Data.Index; set => Data.Index = value; }
-    
-    /// <summary>
-    /// ×î´óË÷ÒıÊôĞÔ
-    /// </summary>
-    public int MaxIndex { get => Data.itemSlots.Count; }
+    private Mod_FocusPoint faceMouse;
+    private Mod_TurnBack turnBody;
+
+    public int CurrentIndex
+    {
+        get => Data.Index;
+        private set => Data.Index = value;
+    }
+
+    public int MaxIndex => Data.itemSlots.Count;
 
     #endregion
+
+    #region åˆå§‹åŒ–
 
     public override void OnValidate()
     {
         Data.Name = ModText.Hotbar;
     }
 
-
-    #region ³õÊ¼»¯ÓëÉèÖÃ
-
-    /// <summary>
-    /// ³õÊ¼»¯¿ì½İÀ¸Êı¾İ£¨½öÊı¾İ³õÊ¼»¯£¬²»Éæ¼°UI£©
-    /// </summary>
     public override void InitData()
     {
         base.InitData();
-
-        // »ñÈ¡FaceMouse×é¼ş£¨ÓÃÓÚ¿ØÖÆÎïÆ·Ğı×ª£©
-        item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
-        if (faceMouse == null)
-        {
-            Debug.LogWarning("[Inventory_HotBar] Î´ÕÒµ½FaceMouse×é¼ş£¬ÎïÆ·½«ÎŞ·¨¸úËæÊó±êĞı×ª");
-        }
-
-        // »ñÈ¡TurnBody×é¼ş£¨ÓÃÓÚ¿ØÖÆ×ªÉí£©
-        item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
-        if (turnBody == null)
-        {
-            Debug.LogWarning("[Inventory_HotBar] Î´ÕÒµ½TurnBody×é¼ş£¬ÎïÆ·½«ÎŞ·¨ÊµÏÖ×ªÉí¾µÏñ");
-        }
-
-        // ³õÊ¼»¯ÊäÈë¿ØÖÆÆ÷
-        Controller_Init();
+        spawnLocation = this.transform;
+        GetRequiredComponents();
+        InitInput();
     }
 
-    /// <summary>
-    /// ³õÊ¼»¯¿ì½İÀ¸UI£¨ÔÚÃæ°å´´½¨ºóµ÷ÓÃ£©
-    /// </summary>
     public override void InitUI()
     {
         base.InitUI();
 
-        // ÊµÀı»¯Ñ¡Ôñ¿ò
-        if (itemSlotUIs.Count > 0)
-        {
-            SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
-            ChangeSelectBoxPosition(Data.Index);
-            RefreshUI(CurrentIndex);
-        }
-    }
+        if (itemSlotUIs.Count == 0) return;
 
-    /// <summary>
-    /// ³õÊ¼»¯ÊäÈë¿ØÖÆÆ÷
-    /// </summary>
-    public void Controller_Init()
-    {
-        // ÏÈÈ·±£ Owner ´æÔÚ
-        if (item == null)
-        {
-            Debug.LogWarning($"[{name}] Controller_Init: Owner Îª¿Õ£¬ÎŞ·¨³õÊ¼»¯ÊäÈë");
-            return;
-        }
-    
-        // »ñÈ¡GameControllerr£¨½ö´ÓOwner»ñÈ¡£¬²»ÔÙ½øĞĞÈ«¾Ö²éÕÒ£©
-        var GameController = item.GetComponent<GameController>();
-        if (GameController == null)
-        {
-            // Ö±½Ó·µ»Ø£¬²»ÔÙ½øĞĞÈ«¾Ö²éÕÒ
-            Debug.LogWarning($"[{name}] Controller_Init: OwnerÉÏÎ´ÕÒµ½GameControllerr£¬¿ÉÄÜÊÇ·ÇÍæ¼Ò¶ÔÏóÊ¹ÓÃ¿ì½İÀ¸");
-            return;
-        }
-    
-        // È·±£ inputActions ÒÑ³õÊ¼»¯
-        var inputActions = GameController._inputActions;
-        if (inputActions == null)
-        {
-            Debug.LogWarning($"[{name}] Controller_Init: GameController._inputActions Îª¿Õ");
-            return;
-        }
-    
-        // °ó¶¨ÊäÈëÊÂ¼ş
-        var input = inputActions.Win10;
-        input.RightClick.performed += _ => Controller_ItemAct();
-        input.MouseScroll.started += SwitchHotbarByScroll;
-    
-        Debug.Log($"[{name}] ³É¹¦°ó¶¨ÊäÈëÊÂ¼ş", this);
+        SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
+        SwitchItem(Data.Index);
     }
 
     #endregion
 
-    #region ÎïÆ·½»»¥
+    #region è¾“å…¥
 
-    /// <summary>
-    /// ¼¤»îÊÖ³ÖÎïÆ·ĞĞÎª
-    /// </summary>
-    public void Controller_ItemAct()
+    private void InitInput()
     {
-        if (CurentSelectItem != null)
-            CurentSelectItem.Act();
+        if (item == null) return;
+
+        var controller = item.GetComponent<GameController>();
+        if (controller == null) return;
+
+        var input = controller._inputActions.Win10;
+        input.RightClick.performed += _ => CurentSelectItem.Act();
+        input.MouseScroll.started += OnScrollSwitch;
     }
 
-    /// <summary>
-    /// ´¦Àí×ó¼üµã»÷ÊÂ¼ş
-    /// </summary>
-    /// <param name="index">µã»÷µÄ²ÛÎ»Ë÷Òı</param>
+    private void OnScrollSwitch(InputAction.CallbackContext ctx)
+    {
+        if (IsPointerOverUI()) return;
+
+        float value = ctx.ReadValue<Vector2>().y;
+
+        if (value > 0)
+            SwitchItem(CurrentIndex - 1);
+        else if (value < 0)
+            SwitchItem(CurrentIndex + 1);
+    }
+
+    #endregion
+
+    #region å…¬å…±æ¥å£
+
     public override void OnLeftClick(int index)
     {
-        //Íê³É»ù´¡µÄÎïÆ·½»»»Âß¼­
         base.OnLeftClick(index);
-        //ĞŞ¸ÄÑ¡Ôñ¿òÎ»ÖÃ
-        ChangeSelectBoxPosition(index);
-        // Í¬²½ UI
+        SwitchItem(index);
+    }
+
+    public float GetCurrentItemDurabilityPercentage()
+    {
+        if (CurentSelectItem?.itemData == null) return 1f;
+
+        var data = CurentSelectItem.itemData;
+        return data.MaxDurability > 0 ? data.Durability / data.MaxDurability : 0f;
+    }
+
+    #endregion
+
+    #region æ ¸å¿ƒé€»è¾‘ - ç‰©å“åˆ‡æ¢
+
+    private void SwitchItem(int targetIndex)
+    {
+        targetIndex = NormalizeIndex(targetIndex);
+        UnloadCurrentItem();
+        CurrentIndex = targetIndex;
+        MoveSelectBox(targetIndex);
+        LoadItemFromSlot(targetIndex);
         RefreshUI(CurrentIndex);
     }
 
+    private void LoadItemFromSlot(int index)
+    {
+        var slot = Data.itemSlots[index];
+        if (slot?.itemData == null) return;
+
+        ItemData data = slot.itemData;
+
+        Item itemInstance = ItemMgr.Instance.InstantiateItem(
+            data.IDName,
+            spawnLocation.gameObject,
+            default
+        );
+
+        ConfigureItemInstance(itemInstance, data, slot);
+    }
+
+    private void UnloadCurrentItem()
+    {
+        if (CurentSelectItem == null) return;
+
+        CurentSelectItem.InHand = false;
+
+        faceMouse.targetRotationTransforms.Remove(CurentSelectItem.transform);
+        turnBody.controlledTransforms_Direction.Remove(CurentSelectItem.transform);
+        turnBody.controlledTransforms_Position.Remove(CurentSelectItem.transform);
+
+        CurentSelectItem.OnUIRefresh -= RefreshUI;
+        CurentSelectItem.OnItemDestroy -= OnDestroyCurrentObject;
+
+        Destroy(CurentSelectItem.gameObject);
+
+        CurentSelectItem = null;
+        currentObject = null;
+    }
+
     #endregion
 
-    #region ¿ì½İÀ¸ÇĞ»»
+    #region Itemé…ç½®
 
-    /// <summary>
-    /// Í¨¹ıÊó±ê¹öÂÖÇĞ»»¿ì½İÀ¸
-    /// </summary>
-    /// <param name="context">ÊäÈëÊÂ¼şÉÏÏÂÎÄ</param>
-    private void SwitchHotbarByScroll(InputAction.CallbackContext context)
+    private void ConfigureItemInstance(Item item, ItemData data, ItemSlot slot)
     {
-        if (IsPointerOverUI())
-            return;
+        Transform tf = item.transform;
+        tf.SetParent(spawnLocation, false);
+        tf.localPosition = Vector3.zero;
 
-        Vector2 scrollValue = context.ReadValue<Vector2>();
+        Vector3 rot = tf.localEulerAngles;
+        rot.z = 0;
+        tf.localEulerAngles = rot;
 
-        if (scrollValue.y > 0)
+        item.itemData = data;
+        item.Owner = this.item;
+
+        item.OnUIRefresh += RefreshUI;
+        item.OnItemDestroy += OnDestroyCurrentObject;
+
+        item.Load();
+        item.InHand = true;
+
+        CurentSelectItem = item;
+        CurrentSelectItemSlot = slot;
+        currentObject = item.gameObject;
+
+        faceMouse?.targetRotationTransforms.Add(tf);
+
+        if (turnBody != null)
         {
-            ChangeSelectBoxPosition(CurrentIndex - 1);
-        }
-        else if (scrollValue.y < 0)
-        {
-            ChangeSelectBoxPosition(CurrentIndex + 1);
+            turnBody.controlledTransforms_Direction.Add(tf);
+            turnBody.controlledTransforms_Position.Add(transform);
         }
     }
 
-    /// <summary>
-    /// ¼ì²éÖ¸ÕëÊÇ·ñÔÚUIÉÏ
-    /// </summary>
-    /// <returns>Èç¹ûÖ¸ÕëÔÚUIÉÏ·µ»Øtrue£¬·ñÔò·µ»Øfalse</returns>
+    #endregion
+
+    #region UI
+
+    private void MoveSelectBox(int index)
+    {
+        if (SelectBox == null) return;
+
+        SelectBox.transform.DOKill();
+        SelectBox.transform.SetParent(itemSlotUIs[index].transform, true);
+        SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration)
+            .SetEase(Ease.OutQuad);
+    }
+
+    #endregion
+
+    #region å·¥å…·
+
+    private int NormalizeIndex(int index)
+    {
+        if (MaxIndex <= 0) return 0;
+        return (index + MaxIndex) % MaxIndex;
+    }
+
     private bool IsPointerOverUI()
     {
         PointerEventData eventData = new PointerEventData(EventSystem.current)
@@ -228,179 +232,18 @@ public class Inventory_HotBar : Inventory
         return results.Count > 0;
     }
 
-    /// <summary>
-    /// ¸Ä±äÑ¡Ôñ¿òÎ»ÖÃ
-    /// </summary>
-    /// <param name="newIndex">ĞÂµÄË÷ÒıÎ»ÖÃ</param>
-    public void ChangeSelectBoxPosition(int newIndex)
+    private void GetRequiredComponents()
     {
-        // Ïú»ÙÖ®Ç°µÄÎïÆ·²¢´ÓĞı×ªÁĞ±íÖĞÒÆ³ı
-        DestroyCurrentObject(CurentSelectItem);
-
-        // È·±£Ë÷ÒıºÏ·¨£¨Ñ­»·Ë÷Òı£©
-        newIndex = (newIndex + MaxIndex) % MaxIndex;
-        CurrentIndex = newIndex;
-
-        if (SelectBox != null)
-        {
-            // ÒÆ¶¯Ñ¡Ôñ¿òµ½Ä¿±êÎ»ÖÃ
-            GameObject targetSlot = itemSlotUIs[newIndex].gameObject;
-            SelectBox.transform.DOKill();
-            SelectBox.transform.SetParent(targetSlot.transform, worldPositionStays: true);
-            SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration).SetEase(Ease.OutQuad);
-        }
-        else
-        {
-            Debug.LogError("[ChangeIndex] SelectBox Îª¿Õ£¡");
-        }
-
-        // ÇĞ»»µ½ĞÂÎïÆ·²¢Ìí¼Óµ½Ğı×ªÁĞ±í
-        ChangeNewObject(newIndex);
+        item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
+        item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
     }
 
-    #endregion
-
-    #region ÎïÆ·¹ÜÀí
-
-    /// <summary>
-    /// ÉèÖÃÑ¡Ôñ¿òµÄ²ã¼¶Ë³Ğò
-    /// </summary>
-    /// <param name="order">²ã¼¶Ë³ĞòÖµ</param>
-    private void SetSelectBoxSortingOrder(int order)
+    public void OnDestroyCurrentObject(Item obj)
     {
-        if (SelectBox != null)
-        {
-            Canvas selectBoxCanvas = SelectBox.GetComponent<Canvas>();
-            if (selectBoxCanvas != null)
-            {
-                selectBoxCanvas.sortingOrder = order;
-                return;
-            }
-
-            Canvas parentCanvas = SelectBox.GetComponentInParent<Canvas>();
-            if (parentCanvas != null)
-            {
-                parentCanvas.sortingOrder = order;
-                Debug.LogWarning("ÒÑÉèÖÃ¸¸ Canvas µÄ sortingOrder£¬¿ÉÄÜÓ°ÏìÆäËû UI ÔªËØ£¡");
-            }
-            else
-            {
-                Debug.LogError("Î´ÕÒµ½ Canvas ×é¼ş£¬ÎŞ·¨ÉèÖÃ sortingOrder£¡");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Ïú»Ùµ±Ç°ÎïÆ·
-    /// </summary>
-    /// <param name="obj">ÒªÏú»ÙµÄÎïÆ·</param>
-    public void DestroyCurrentObject(Item obj)
-    {
-        if (obj != null)
-        {
-            // ±ê¼ÇÎïÆ·ÒÑÀë¿ªÊÖÖĞ
-            obj.InHand = false;
-            
-            // ´ÓFaceMouseµÄĞı×ªÁĞ±íÖĞÒÆ³ıµ±Ç°ÎïÆ·
-            if (faceMouse != null)
-            {
-                faceMouse.targetRotationTransforms.Remove(obj.transform);
-            }
-            
-            // ´ÓTurnBodyµÄ¿ØÖÆÁĞ±íÖĞÒÆ³ıµ±Ç°ÎïÆ·
-            if (turnBody != null)
-            {
-                turnBody.controlledTransforms.Remove(obj.transform);
-            }
-            
-            Destroy(obj.gameObject);
-        }
-    }
-
-    /// <summary>
-    /// ÇĞ»»µ½ĞÂÎïÆ·
-    /// ½«ĞÂÔö¶ÔÏóÌí¼Óµ½FaceMouseµÄĞı×ªÁĞ±íÖĞ£¬ÊµÏÖĞı×ª¿ØÖÆ
-    /// </summary>
-    /// <param name="index">ÎïÆ·Ë÷Òı</param>
-    private void ChangeNewObject(int index)
-    {
-        // ²ÎÊıÑéÖ¤
-        if (index < 0 || index >= MaxIndex)
-        {
-            Debug.LogError($"[ChangeNewObject] Ë÷Òı {index} ³¬³ö·¶Î§£¡");
-            return;
-        }
-
-        var slot = Data.itemSlots[index];
-        if (slot.itemData == null)
-        {
-            return;
-        }
-
-        ItemData itemData = slot.itemData;
+        if (obj == null) return;
         
-        // Ìí¼Ó·ÀÓùĞÔ¼ì²é - ¼ì²éItemData.nameÊÇ·ñÎª¿Õ
-        if (string.IsNullOrEmpty(itemData.IDName))
-        {
-            Debug.LogWarning($"[Inventory_HotBar] ÎïÆ·IDÎª¿Õ»òÎ´ÉèÖÃÃû³Æ£¬Prefab ID: {itemData.IDName}");
-        }
-        
-        // Ìí¼Ó·ÀÓùĞÔ¼ì²é - ¼ì²éIDNameÊÇ·ñÎª¿Õ
-        if (string.IsNullOrEmpty(itemData.IDName))
-        {
-            Debug.LogError("[Inventory_HotBar] ÎïÆ·IDNameÎª¿Õ£¬ÎŞ·¨ÊµÀı»¯ÎïÆ·");
-            return;
-        }
-        spawnLocation = this.transform;
-        // ÊµÀı»¯ÎïÆ·
-        Item itemInstance = ItemMgr.Instance.InstantiateItem(itemData.IDName, spawnLocation.gameObject, position: default);
-
-        if (itemInstance == null)
-        {
-            Debug.LogError("[ChangeNewObject] ÊµÀı»¯µÄÎïÌåÎª¿Õ£¡");
-            return;
-        }
-
-        // ÉèÖÃµ±Ç°Ñ¡Ôñ²ÛÓëµ±Ç°ÎïÌåÒıÓÃ
-        CurrentSelectItemSlot = slot;
-        currentObject = itemInstance.gameObject;
-        CurentSelectItem = itemInstance;
-
-        // ÎïÌå±ä»»ÉèÖÃ
-        Transform tf = itemInstance.transform;
-        tf.SetParent(spawnLocation, false);
-        tf.localPosition = Vector3.zero;
-        Vector3 rotation = tf.localEulerAngles;
-        rotation.z = 0;
-        tf.localEulerAngles = rotation;
-
-        // ³õÊ¼»¯ Item ÊôĞÔ
-        itemInstance.itemData = itemData;
-        itemInstance.itemData.ModuleDataDic = itemData.ModuleDataDic;
-        itemInstance.Owner = item;
-
-        // ÊÂ¼ş°ó¶¨
-        itemInstance.OnUIRefresh += () => RefreshUI(index);
-        itemInstance.OnItemDestroy += DestroyCurrentObject;
-
-        // ÉèÖÃÎªµ±Ç°ÎäÆ÷
-        spawnLocation.GetComponent<ITriggerAttack>()?.SetWeapon(currentObject);
-        itemInstance.Load();
-
-        // ±ê¼ÇÎïÆ·ÒÑÄÃÔÚÊÖÖĞ
-        itemInstance.InHand = true;
-
-        // ºËĞÄ£º½«ĞÂÎïÆ·Ìí¼Óµ½FaceMouseµÄĞı×ªÁĞ±í£¬Ê¹Æä¸úËæÊó±êĞı×ª
-        if (faceMouse != null)
-        {
-            faceMouse.targetRotationTransforms.Add(itemInstance.transform);
-        }
-        
-        // ºËĞÄ£º½«ĞÂÎïÆ·Ìí¼Óµ½TurnBodyµÄ¿ØÖÆÁĞ±í£¬ÊµÏÖ×ªÉíºó¾µÏñ
-        if (turnBody != null)
-        {
-            turnBody.controlledTransforms.Add(itemInstance.transform);
-        }
+        obj.InHand = false;
+        UnloadCurrentItem();
     }
 
     #endregion
