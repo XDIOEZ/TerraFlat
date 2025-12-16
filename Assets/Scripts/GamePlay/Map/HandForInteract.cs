@@ -6,6 +6,7 @@ using UnityEngine;
 
 public class HandForInteract : MonoBehaviour, IInteractor
 {
+    #region 字段和属性
     /// <summary>
     /// 交互对象池 - 使用Stack实现LIFO（后进先出）
     /// 进入池子时Push，离开池子时Remove，Peek获取当前交互对象
@@ -22,13 +23,61 @@ public class HandForInteract : MonoBehaviour, IInteractor
     private GameObject user;
 
     public Item Item { get; set; }
+    #endregion
 
+    #region Unity生命周期方法
     public void Start()
     {
         Item = GetComponentInParent<Item>();
         Item.GetComponent<GameController>()._inputActions.Win10.E.performed += _ => Interact_Start();
     }
 
+    public void OnTriggerEnter2D(Collider2D collision)
+    {
+        // 添加空值检查以避免 NullReferenceException
+        var mod_Interaction = collision.GetComponent<Mod_Interaction>();
+        
+        if (mod_Interaction == null)
+        {
+            // 尝试从Item获取
+            var item = collision.GetComponent<Item>();
+            if (item != null && item.itemMods != null)
+            {
+                item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact, out mod_Interaction);
+            }
+        }
+
+        if (mod_Interaction != null)
+        {
+            // 添加到池子
+            AddToInteractionPool(mod_Interaction);
+        }
+    }
+
+    public void OnTriggerExit2D(Collider2D collision)
+    {
+        // 方案1：直接从碰撞体获取Mod_Interaction组件
+        var mod_Interaction = collision.GetComponent<Mod_Interaction>();
+        
+        // 方案2：从Item获取（备选方案）
+        if (mod_Interaction == null)
+        {
+            var item = collision.GetComponent<Item>();
+            if (item != null && item.itemMods != null)
+            {
+                item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact, out mod_Interaction);
+            }
+        }
+
+        if (mod_Interaction != null)
+        {
+            // 从池子移除
+            RemoveFromInteractionPool(mod_Interaction);
+        }
+    }
+    #endregion
+
+    #region 交互池管理
     /// <summary>
     /// 尝试从交互池中获取对象（返回池顶对象但不移除）
     /// </summary>
@@ -109,55 +158,14 @@ public class HandForInteract : MonoBehaviour, IInteractor
     {
         Intractable_go = PeekInteractionFromPool();
     }
+    #endregion
 
-    public void OnTriggerEnter2D(Collider2D collision)
-    {
-        // 添加空值检查以避免 NullReferenceException
-        var mod_Interaction = collision.GetComponent<Mod_Interaction>();
-        
-        if (mod_Interaction == null)
-        {
-            // 尝试从Item获取
-            var item = collision.GetComponent<Item>();
-            if (item != null && item.itemMods != null)
-            {
-                item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact, out mod_Interaction);
-            }
-        }
-
-        if (mod_Interaction != null)
-        {
-            // 添加到池子
-            AddToInteractionPool(mod_Interaction);
-        }
-    }
-
-    public void OnTriggerExit2D(Collider2D collision)
-    {
-        // 方案1：直接从碰撞体获取Mod_Interaction组件
-        var mod_Interaction = collision.GetComponent<Mod_Interaction>();
-        
-        // 方案2：从Item获取（备选方案）
-        if (mod_Interaction == null)
-        {
-            var item = collision.GetComponent<Item>();
-            if (item != null && item.itemMods != null)
-            {
-                item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact, out mod_Interaction);
-            }
-        }
-
-        if (mod_Interaction != null)
-        {
-            // 从池子移除
-            RemoveFromInteractionPool(mod_Interaction);
-        }
-    }
-
+    #region IInteractor接口实现
     public void Interact_Start()
     {
         if (Intractable_go != null)
         {
+            // 只触发事件，不直接调用交互方法
             Intractable_go.Interact_Start(this);
         }
     }
@@ -174,4 +182,5 @@ public class HandForInteract : MonoBehaviour, IInteractor
     {
         throw new System.NotImplementedException();
     }
+    #endregion
 }

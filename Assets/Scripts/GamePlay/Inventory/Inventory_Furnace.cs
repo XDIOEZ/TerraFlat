@@ -166,6 +166,24 @@ public class Inventory_Furnace : Inventory
     {
       
     }
+        /// <summary>
+    /// 玩家开始交互
+    /// </summary>
+    public override void Interact_Start(Item playerItem)
+    {
+        if (playerItem.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod))
+        {
+            InputInventory.DefaultTarget_Inventory = handMod.inventory;
+            OutputInventory.DefaultTarget_Inventory = handMod.inventory;
+            FuelInventory.DefaultTarget_Inventory = handMod.inventory;
+        }
+        // 打开工作台UI
+        foreach (BasePanel panel in mod_Inventory.inventoryBasePanelCache.Values)
+        {
+            panel.Toggle();
+        }
+        Debug.Log($"玩家 {playerItem.name} 开始交互工作台");
+    }
     #endregion
 
 
@@ -1101,21 +1119,6 @@ public class Inventory_Furnace : Inventory
         // 点燃燃料模块
         mod_Fuel?.SetIgnited(true);
         Debug.Log("熔炉已点燃并开始熔炼！");
-    }
-
-    public void Interact_Start(Item item_)
-    {
-        if (item_ == null || item_.itemMods == null)
-            return;
-
-        var handInventory = item_.itemMods.GetMod_ByID(ModText.Hand)?.GetComponent<IInventory>().GetDefaultTargetInventory();
-
-        if (InputInventory != null)
-            InputInventory.DefaultTarget_Inventory = handInventory;
-        if (OutputInventory != null)
-            OutputInventory.DefaultTarget_Inventory = handInventory;
-        if (FuelInventory != null)
-            FuelInventory.DefaultTarget_Inventory = handInventory;
     }
     #endregion
 

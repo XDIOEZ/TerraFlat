@@ -213,7 +213,6 @@ public class Mod_Building : Module
 
         // === 触发开始事件 ===
         StartInstall?.Invoke();
-        OnAction_Start?.Invoke(item);
 
         // === 消耗物品 ===
         ConsumeItem(item);
@@ -310,7 +309,6 @@ public class Mod_Building : Module
         }
 
         StartUnInstall.Invoke();
-        OnAction_Stop.Invoke(item);
         item.transform.localScale *= 0.5f;
 
         if (boxCollider2D != null)
