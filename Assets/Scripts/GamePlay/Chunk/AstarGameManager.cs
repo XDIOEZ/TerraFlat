@@ -486,6 +486,33 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         StartCoroutine(DelayedUpdate(bounds));
     }
 
+    /// <summary>
+    /// 同步更新矩形区域的导航网格
+    /// </summary>
+    public void UpdateArea_Rectangle_Sync(Vector2 center, int length, int width)
+    {
+        Vector3 boundsCenter = new Vector3(center.x, center.y, 0f);
+        Vector3 boundsSize = new Vector3(length, width, 1);
+        Bounds bounds = new Bounds(boundsCenter, boundsSize);
+
+        // 添加空检查，避免 NullReferenceException
+        if (AstarPath.active == null)
+        {
+            Debug.LogError("❌ AstarPath.active 为 null，无法更新导航网格！");
+            return;
+        }
+
+        if (updatedBounds == null)
+        {
+            Debug.LogError("❌ updatedBounds 为 null，无法记录更新区域！");
+            return;
+        }
+
+        var guo = new GraphUpdateObject(bounds);
+        AstarPath.active.UpdateGraphs(guo);
+        updatedBounds.Add(new DebugBounds { bounds = bounds, time = Time.time });
+    }
+
     private IEnumerator DelayedUpdate(Bounds bounds)
     {
         yield return null;
