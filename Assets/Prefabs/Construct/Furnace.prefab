@@ -31,12 +31,12 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 4309593464012680692}
   - {fileID: 1758105635301799085}
   - {fileID: 2232589357139020087}
   - {fileID: 796529723780708787}
   - {fileID: 6806342125609778788}
   - {fileID: 4323102368126854689}
-  - {fileID: 4309593464012680692}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!61 &8315205231201195097
@@ -225,8 +225,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: modData.ID
+      value: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: modData.Name
-      value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757_8148"
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.DestroyDelay

@@ -359,17 +359,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 3000742501926070241}
   text: {fileID: 5814995670155687318}
   OnLeftClick:
@@ -542,17 +531,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 1997625049145933420}
   text: {fileID: 3192612287251433424}
   OnLeftClick:
@@ -725,17 +703,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 2530090156641906019}
   text: {fileID: 1503089655068853135}
   OnLeftClick:
@@ -1041,12 +1008,11 @@ GameObject:
   - component: {fileID: 4843059922661564872}
   - component: {fileID: 3951088328919659842}
   - component: {fileID: 3656123012881591612}
-  - component: {fileID: 4833621622698548420}
   - component: {fileID: 5528959699480711915}
   - component: {fileID: 8088798927402857268}
   - component: {fileID: 4806202536982753114}
   m_Layer: 9
-  m_Name: "UI_\u5FEB\u6377\u680F"
+  m_Name: UI_HotBar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1182,25 +1148,6 @@ MonoBehaviour:
   m_Spacing: {x: 10, y: 10}
   m_Constraint: 0
   m_ConstraintCount: 2
---- !u!114 &4833621622698548420
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3157743334102886615}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e35963cbd2d44304c83e206e1ebb4fc3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rectTransform: {fileID: 8703750263991372234}
-  canvas: {fileID: 1544882477443259844}
-  draggableImage: {fileID: 3951088328919659842}
-  originalPosition: {x: 0, y: 0}
-  offset: {x: 0, y: 0}
-  DefaultOrder: 0
-  IsDragging: 0
 --- !u!225 &5528959699480711915
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1227,7 +1174,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 5528959699480711915}
   CanDrag: 0
-  Dragger: {fileID: 4833621622698548420}
+  Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
   PanleName: 
   isOpen: 0
@@ -1410,17 +1357,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 1123156927941148272}
   text: {fileID: 1805487657096091547}
   OnLeftClick:
@@ -1593,17 +1529,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 1746567580345291105}
   text: {fileID: 2764283417727162105}
   OnLeftClick:
@@ -1776,17 +1701,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 4986976713081012985}
   text: {fileID: 8249638740707584782}
   OnLeftClick:
@@ -2607,17 +2521,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 4989666967747810473}
   text: {fileID: 4056764522220058032}
   OnLeftClick:
@@ -2866,17 +2769,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 3506122796055526718}
   text: {fileID: 1563698371532000345}
   OnLeftClick:
@@ -3393,17 +3285,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Data:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
   image: {fileID: 8352786445748501051}
   text: {fileID: 919592561831074942}
   OnLeftClick:

@@ -86,6 +86,18 @@ public class Mod_Building : Module
     }
     #endregion
 
+    public override void Awake()
+    {
+        _Data.ID = ModText.Building;
+    }
+    //TODO OnValidate实现
+    protected void OnValidate()
+    {
+        _Data.ID = ModText.Building;
+    }
+
+
+
     #region 生命周期
 
     public override void Load()
@@ -265,7 +277,7 @@ public class Mod_Building : Module
             Vector3 cpos = newBuilding.transform.position;
 
             UpdateNavigation(position: cpos, UseTilePenalty: false);
-            
+
             // 设置新建筑为已安装状态
             var newBuildingMod = newBuilding.GetComponent<Mod_Building>();
             if (newBuildingMod != null)
@@ -273,7 +285,7 @@ public class Mod_Building : Module
                 newBuildingMod.CurrentState = BuildingState.Installed;
                 Debug.Log($"[MeshUpdate] 新建筑 {newBuilding.name} 状态设置为已安装");
             }
-            
+
             // 设置当前对象为已安装状态
             CurrentState = BuildingState.Installed;
         }
@@ -341,7 +353,7 @@ public class Mod_Building : Module
         }
 
         Debug.Log($"[UnInstall] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
-        UpdateNavigation(position: transform.position, true);
+        UpdateNavigation(position: transform.position, UseTilePenalty: true);
 
         // 设置为已卸载状态
         CurrentState = BuildingState.Uninstalled;
@@ -514,9 +526,9 @@ public class Mod_Building : Module
     /// </summary>
     private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
     {
-        damageReceiver.Hp = damageReceiver.MaxHp.Value;
-        sourceItem.ModuleSave();
-
+        //将血量拉满 然后保存
+        damageReceiver.Data.Hp = damageReceiver.Data.MaxHp;
+        sourceItem.Save();
         ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
 
         // 将位置取整然后向右上角偏移0.5个单位，确保安装时总是落在格子中心
@@ -533,23 +545,24 @@ public class Mod_Building : Module
                 position: gridPosition  // 确保实例化位置也在格子中心
             );
 
-        damageReceiver.Hp = 0;
-
         newItem.Load();
 
         newItem.transform.localScale = Vector3.one;
         newItem.itemData.Stack.Amount = 1;
         newItem.itemData.Stack.CanBePickedUp = false;
-        
+
         // 确保新建筑的建筑模块设置为已安装状态
-        var newBuildingMod = newItem.GetComponent<Mod_Building>();
+        var newBuildingMod = newItem.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
+        var newBuildingMod_HP = newItem.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
         if (newBuildingMod != null)
         {
             newBuildingMod.CurrentState = BuildingState.Installed;
             Debug.Log($"[CreateBuildingInstance] 新建筑 {newItem.name} 初始化时设置为已安装状态");
         }
 
-        //EnableChildColliders(true, newItem.transform);
+        //TODO  在创建完毕后 将血量恢复为0
+        damageReceiver.Data.Hp = 0;
+
         return newItem;
     }
 
@@ -573,7 +586,10 @@ public class Mod_Building : Module
                 if (chunk.Map != null)
                 {
                     if (UseTilePenalty)
+                    {
+                         AstarGameManager.Instance.UpdateArea_Rectangle_Sync(position, 1, 1);
                         chunk.Map.BackTilePenalty_Cell(position);
+                    }
                     else
                         chunk.Map.BackTilePenalty_Cell_NotMove(position);
                     Debug.Log("[UpdateNavigation] BackTilePenalty_Cell方法调用完成");

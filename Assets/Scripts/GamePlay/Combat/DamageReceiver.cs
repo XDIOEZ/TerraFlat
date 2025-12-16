@@ -131,7 +131,7 @@ public class DamageReceiver_SaveData
 
     public override void Awake()
     {
-            _Data.ID = ModText.Hp;
+         _Data.ID = ModText.Hp;
     }
 
     public override void Load()

@@ -57,4 +57,5 @@ MonoBehaviour:
     BitData: 
   GameController: {fileID: 0}
   turnBody: {fileID: 0}
-  targetRotationTransforms: []
+  targetRotationTransforms:
+  - {fileID: 2532051417522213741}
