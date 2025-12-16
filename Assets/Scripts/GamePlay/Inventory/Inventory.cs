@@ -148,7 +148,7 @@ public class Inventory : MonoBehaviour
         for (int i = 0; i < itemSlotUIs.Count; i++)
         {
             ItemSlot_UI itemSlotUI = itemSlotUIs[i];
-            
+
             // 检查UI是否存在
             if (itemSlotUI == null)
             {
@@ -170,9 +170,9 @@ public class Inventory : MonoBehaviour
             }
 
             // 初始化UI槽位（替代 itemSlotUI.Data = Data.itemSlots[i]）
-            itemSlotUI.InitializeSlot(i, 
+            itemSlotUI.InitializeSlot(i,
                 index => Data.itemSlots[index],  // GetSlotDataFunc
-                index => 
+                index =>
                 {
                     if (Data.itemSlots[index] != null)
                     {
@@ -274,6 +274,11 @@ public class Inventory : MonoBehaviour
         {
             itemSlotUIs[i].RefreshUI();
         }
+    }
+
+    public virtual void Interact_Start(Item item_)
+    {
+
     }
 
     #endregion
@@ -561,7 +566,7 @@ public class Inventory : MonoBehaviour
     #region 保存
     public virtual void Save()
     {
-        
+
     }
 
     #endregion

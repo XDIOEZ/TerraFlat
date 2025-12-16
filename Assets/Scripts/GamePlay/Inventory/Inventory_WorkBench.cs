@@ -70,14 +70,6 @@ public class Inventory_WorkBench : Inventory
         {
             InventoryRefDic["输出"] = item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).InventoryRefDic.FirstOrDefault().Value;
         }
-
-        // 订阅交互事件
-        if (item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact) != null)
-        {
-            item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact).OnAction_Start += Interact_Start;
-            item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact).OnAction_Stop += Interact_Stop;
-        }
-
     }
 
     /// <summary>
@@ -276,7 +268,7 @@ public class Inventory_WorkBench : Inventory
     /// <summary>
     /// 玩家开始交互
     /// </summary>
-    public void Interact_Start(Item playerItem)
+    public override void Interact_Start(Item playerItem)
     {
         if (playerItem.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod))
         {
@@ -288,6 +280,7 @@ public class Inventory_WorkBench : Inventory
         {
             inventory.Toggle();
         }
+        Debug.Log($"玩家 {playerItem.name} 开始交互工作台");
     }
 
     /// <summary>

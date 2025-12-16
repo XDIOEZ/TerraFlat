@@ -31,34 +31,34 @@ public class DamageReceiver : Module
         set => Data.Hp = value;
     }
 
-    public UltEvent OnDead = new ();
+    public UltEvent OnDead = new();
 
-[System.Serializable]
-public class DamageReceiver_SaveData
-{
-    [Header("生命值设置")]
-    public float Hp = 100;
-    public GameValue_float MaxHp = new GameValue_float(100);
-    public GameValue_float Defense = new GameValue_float(0);
-    public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
-    [Header("伤害者的UID列表")]
-    public List<int> AttackersUIDs = new List<int>();
+    [System.Serializable]
+    public class DamageReceiver_SaveData
+    {
+        [Header("生命值设置")]
+        public float Hp = 100;
+        public GameValue_float MaxHp = new GameValue_float(100);
+        public GameValue_float Defense = new GameValue_float(0);
+        public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
+        [Header("伤害者的UID列表")]
+        public List<int> AttackersUIDs = new List<int>();
 
-    [Header("是否显示面板")]
-    public bool ShowCanvas = false;
+        [Header("是否显示面板")]
+        public bool ShowCanvas = false;
 
-    [Header("伤害接收间隔时间 (秒)")]
-    [Min(0f)]
-    public float DamageInterval = 0.1f;
+        [Header("伤害接收间隔时间 (秒)")]
+        [Min(0f)]
+        public float DamageInterval = 0.1f;
 
-    [Header("血量归零后多久才销毁物体 (秒)")]//-1表示永久存活 0表示不延迟销毁物体 
-    public float DestroyDelay = 0f;
-    
-    // 修复循环引用问题：使用字符串存储预制体名称而不是直接引用GameObject
-    [Header("战利品设置")]
-    [ListDrawerSettings()]
-    public List<LootEntry> LootTable = new List<LootEntry>();
-}
+        [Header("血量归零后多久才销毁物体 (秒)")]//-1表示永久存活 0表示不延迟销毁物体 
+        public float DestroyDelay = 0f;
+
+        // 修复循环引用问题：使用字符串存储预制体名称而不是直接引用GameObject
+        [Header("战利品设置")]
+        [ListDrawerSettings()]
+        public List<LootEntry> LootTable = new List<LootEntry>();
+    }
     private void OnValidate()
     {
         // 自动更新所有战利品条目的预制体名称
@@ -72,6 +72,9 @@ public class DamageReceiver_SaveData
                 }
             }
         }
+
+        _Data.ID = ModText.Hp;
+
     }
 
 
@@ -131,16 +134,18 @@ public class DamageReceiver_SaveData
 
     public override void Awake()
     {
-         _Data.ID = ModText.Hp;
+        _Data.ID = ModText.Hp;
     }
+
+
 
     public override void Load()
     {
         modData.ReadData(ref Data);
 
-        if(item.itemMods.ContainsKey_ID(ModText.Equipment))
+        if (item.itemMods.ContainsKey_ID(ModText.Equipment))
 
-        Equipment_Inventory = item.itemMods.GetMod_ByID(ModText.Equipment) as Mod_Inventory;
+            Equipment_Inventory = item.itemMods.GetMod_ByID(ModText.Equipment) as Mod_Inventory;
 
         if (Data.ShowCanvas)
         {
@@ -157,7 +162,7 @@ public class DamageReceiver_SaveData
     {
         if (PanleInstance != null) return;
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
-        GameObject panel = Instantiate(PanelPrefab,transform);
+        GameObject panel = Instantiate(PanelPrefab, transform);
         UIValues = panel.GetComponentInChildren<BasePanel>();
         UIValues.CollectUIComponents();
         panel.transform.position = transform.position + Vector3.up * 1f;
@@ -172,7 +177,7 @@ public class DamageReceiver_SaveData
         var s = panel.GetComponentInChildren<UI_Drag>();
         if (s != null)
         {
-           // s.rectTransform.anchoredPosition = Data.PanelPosition;
+            // s.rectTransform.anchoredPosition = Data.PanelPosition;
         }
     }
     [Button("刷新面板")]
@@ -194,7 +199,7 @@ public class DamageReceiver_SaveData
         var s = PanleInstance.GetComponentInChildren<UI_Drag>();
         if (s != null)
         {
-        //    Data.PanelPosition = s.rectTransform.anchoredPosition;
+            //    Data.PanelPosition = s.rectTransform.anchoredPosition;
         }
 
         Destroy(PanleInstance);
@@ -215,93 +220,93 @@ public class DamageReceiver_SaveData
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
 
-public virtual float Hurt(IDamageSender damageSender)
-{
-    if (Hp <= 0||item==null) return -1;
-
-    // ⏱️ 受伤间隔判断
-    if (Time.time - lastDamageTime < Data.DamageInterval)
+    public virtual float Hurt(IDamageSender damageSender)
     {
-        return -1;
-    }
-    lastDamageTime = Time.time;
+        if (Hp <= 0 || item == null) return -1;
 
-    // 检查弱点属性
-    float defenseBreak = -1;
-    foreach(var thisWeak in Data.Weakness)
-    {
-        if(damageSender.Weakness.ContainsKey(thisWeak.Key))
+        // ⏱️ 受伤间隔判断
+        if (Time.time - lastDamageTime < Data.DamageInterval)
         {
-            // 攻击者的Tag等级 是否大于等于 受击者的Tag等级
-            defenseBreak = damageSender.Weakness[thisWeak.Key] - thisWeak.Value;
-            break;
+            return -1;
         }
-    }
+        lastDamageTime = Time.time;
 
-    // 计算实际伤害
-    float actualDamage;
-    if (defenseBreak >= 0)
-    {
-        // 破防伤害，无视防御
-        actualDamage = damageSender.Damage.Value;
-    }
-    else
-    {
-        // 计算实际伤害（防御力减免，每点防御减少1%伤害）
-        float defenseRate = Mathf.Clamp01(Data.Defense.Value * 0.01f); // 每点防御减少1%伤害，最大100%
-        actualDamage = damageSender.Damage.Value * (1 - defenseRate);
-    }
-
-    // 记录攻击者（根据是否造成实际伤害决定概率）
-    if (damageSender.attacker != null)
-    {
-        bool shouldRecord = actualDamage > 0 || Random.value <= 0.1f; // 造成实际伤害100%记录，否则10%概率记录
-        if (shouldRecord)
+        // 检查弱点属性
+        float defenseBreak = -1;
+        foreach (var thisWeak in Data.Weakness)
         {
-            Data.AttackersUIDs.Add(damageSender.attacker.itemData.Guid);
-            
-            if (Data.AttackersUIDs.Count > 3)
-                Data.AttackersUIDs.RemoveAt(0);
+            if (damageSender.Weakness.ContainsKey(thisWeak.Key))
+            {
+                // 攻击者的Tag等级 是否大于等于 受击者的Tag等级
+                defenseBreak = damageSender.Weakness[thisWeak.Key] - thisWeak.Value;
+                break;
+            }
         }
-    }
 
-    // 只有造成实际伤害时才减少血量
-    if (actualDamage > 0)
-    {
-        Hp -= actualDamage;
-        
-        if (Data.ShowCanvas)
-            RefreshUI();
-
-        // UI & 特效处理（只有在造成实际伤害时才触发）
-        OnAction.Invoke(Hp);
-
-        if (item.Sprite != null && !isFlashing)
+        // 计算实际伤害
+        float actualDamage;
+        if (defenseBreak >= 0)
         {
-            Hit_Flash(item.Sprite);
-            StartCoroutine(ShakeSprite(item.Sprite.transform));
+            // 破防伤害，无视防御
+            actualDamage = damageSender.Damage.Value;
         }
-    }
-
-    // 装备耐久度减少（即使没有造成实际伤害也会减少，但只减少一半）
-    ApplyDurabilityDamageToEquipments(actualDamage > 0 ? 1 : 0.5f);
-
-    if (Hp <= 0)
-    {
-        OnDead.Invoke();
-        
-        // TODO添加战利品掉落逻辑
-        DropLoot();
-        
-        if (Data.DestroyDelay >= 0)
+        else
         {
-            Destroy(item.gameObject, Data.DestroyDelay);
+            // 计算实际伤害（防御力减免，每点防御减少1%伤害）
+            float defenseRate = Mathf.Clamp01(Data.Defense.Value * 0.01f); // 每点防御减少1%伤害，最大100%
+            actualDamage = damageSender.Damage.Value * (1 - defenseRate);
         }
+
+        // 记录攻击者（根据是否造成实际伤害决定概率）
+        if (damageSender.attacker != null)
+        {
+            bool shouldRecord = actualDamage > 0 || Random.value <= 0.1f; // 造成实际伤害100%记录，否则10%概率记录
+            if (shouldRecord)
+            {
+                Data.AttackersUIDs.Add(damageSender.attacker.itemData.Guid);
+
+                if (Data.AttackersUIDs.Count > 3)
+                    Data.AttackersUIDs.RemoveAt(0);
+            }
+        }
+
+        // 只有造成实际伤害时才减少血量
+        if (actualDamage > 0)
+        {
+            Hp -= actualDamage;
+
+            if (Data.ShowCanvas)
+                RefreshUI();
+
+            // UI & 特效处理（只有在造成实际伤害时才触发）
+            OnAction.Invoke(Hp);
+
+            if (item.Sprite != null && !isFlashing)
+            {
+                Hit_Flash(item.Sprite);
+                StartCoroutine(ShakeSprite(item.Sprite.transform));
+            }
+        }
+
+        // 装备耐久度减少（即使没有造成实际伤害也会减少，但只减少一半）
+        ApplyDurabilityDamageToEquipments(actualDamage > 0 ? 1 : 0.5f);
+
+        if (Hp <= 0)
+        {
+            OnDead.Invoke();
+
+            // TODO添加战利品掉落逻辑
+            DropLoot();
+
+            if (Data.DestroyDelay >= 0)
+            {
+                Destroy(item.gameObject, Data.DestroyDelay);
+            }
+            return actualDamage; // 返回实际伤害
+        }
+
         return actualDamage; // 返回实际伤害
     }
-
-    return actualDamage; // 返回实际伤害
-}
 
 
     public virtual float ForceHurt(float damage)
@@ -325,10 +330,10 @@ public virtual float Hurt(IDamageSender damageSender)
         if (Hp <= 0)
         {
             OnDead.Invoke();
-            
+
             // TODO添加战利品掉落逻辑
             DropLoot();
-            
+
             if (Data.DestroyDelay >= 0)
             {
                 Destroy(item.gameObject, Data.DestroyDelay);
@@ -341,101 +346,101 @@ public virtual float Hurt(IDamageSender damageSender)
 
 
 
-public virtual float Heal(float healAmount, Item healer=null)
-{
-    float oldHp = Hp;
-    Hp = Mathf.Min(Hp + healAmount, MaxHp.Value);
-    
-    // 只有在血量发生变化时才刷新UI
-    if (Mathf.Abs(Hp - oldHp) > 0.001f && Data.ShowCanvas)
+    public virtual float Heal(float healAmount, Item healer = null)
     {
-        RefreshUI();
+        float oldHp = Hp;
+        Hp = Mathf.Min(Hp + healAmount, MaxHp.Value);
+
+        // 只有在血量发生变化时才刷新UI
+        if (Mathf.Abs(Hp - oldHp) > 0.001f && Data.ShowCanvas)
+        {
+            RefreshUI();
+        }
+
+        return Hp;
     }
-    
-    return Hp;
-}
     #endregion
 
     public Mod_Inventory Equipment_Inventory;
 
-   /// <summary>
-/// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
-/// </summary>
-/// <param name="amount">耐久下降的数值</param>
-protected virtual void ApplyDurabilityDamageToEquipments(float amount = 1f)
-{
-    if (Equipment_Inventory == null)
+    /// <summary>
+    /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
+    /// </summary>
+    /// <param name="amount">耐久下降的数值</param>
+    protected virtual void ApplyDurabilityDamageToEquipments(float amount = 1f)
     {
-        return;
-    }
-
-    foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
-    {
-        if (mod.itemData == null) continue;
-
-        if (mod.itemData.Tags.HasType(Tag.Armor))
+        if (Equipment_Inventory == null)
         {
-            mod.itemData.Durability -= amount;
+            return;
+        }
 
-            if (mod.itemData.Durability <= 0)
+        foreach (var mod in Equipment_Inventory.inventory.Data.itemSlots)
+        {
+            if (mod.itemData == null) continue;
+
+            if (mod.itemData.Tags.HasType(Tag.Armor))
             {
-                // 耐久为0，清空该格子
-                mod.ClearData();
-                mod.RefreshUI();
-            }
-            else
-            {
-                // 否则确保耐久不为负
-                mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability);
+                mod.itemData.Durability -= amount;
+
+                if (mod.itemData.Durability <= 0)
+                {
+                    // 耐久为0，清空该格子
+                    mod.ClearData();
+                    mod.RefreshUI();
+                }
+                else
+                {
+                    // 否则确保耐久不为负
+                    mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability);
+                }
             }
         }
     }
-}
 
-   // TODO实现战利品掉落方法
-/// <summary>
-/// 根据战利品表掉落物品
-/// </summary>
-protected virtual void DropLoot()
-{
-    // 检查是否有战利品表
-    if (Data.LootTable == null || Data.LootTable.Count == 0)
-        return;
-
-    // 遍历战利品表
-    foreach (var lootEntry in Data.LootTable)
+    // TODO实现战利品掉落方法
+    /// <summary>
+    /// 根据战利品表掉落物品
+    /// </summary>
+    protected virtual void DropLoot()
     {
-        // 检查预制体名称是否存在
-        if (string.IsNullOrEmpty(lootEntry.LootPrefabName))
-            continue;
+        // 检查是否有战利品表
+        if (Data.LootTable == null || Data.LootTable.Count == 0)
+            return;
 
-        // 根据掉落概率决定是否掉落
-        if (Random.value > lootEntry.DropChance)
-            continue;
-
-        // 确定掉落数量（在MinAmount和MaxAmount之间）
-        int dropAmount = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
-        
-        // 如果数量为0，跳过
-        if (dropAmount <= 0)
-            continue;
-
-        // 使用自带的实例化方法创建战利品
-        for (int i = 0; i < dropAmount; i++)
+        // 遍历战利品表
+        foreach (var lootEntry in Data.LootTable)
         {
-            // 使用ItemMgr的实例化方法确保一致性
-            Item lootItem = ItemMgr.Instance.InstantiateItem(
-                lootEntry.LootPrefabName,this.transform.position);
+            // 检查预制体名称是否存在
+            if (string.IsNullOrEmpty(lootEntry.LootPrefabName))
+                continue;
+
+            // 根据掉落概率决定是否掉落
+            if (Random.value > lootEntry.DropChance)
+                continue;
+
+            // 确定掉落数量（在MinAmount和MaxAmount之间）
+            int dropAmount = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
+
+            // 如果数量为0，跳过
+            if (dropAmount <= 0)
+                continue;
+
+            // 使用自带的实例化方法创建战利品
+            for (int i = 0; i < dropAmount; i++)
+            {
+                // 使用ItemMgr的实例化方法确保一致性
+                Item lootItem = ItemMgr.Instance.InstantiateItem(
+                    lootEntry.LootPrefabName, this.transform.position);
                 lootItem.DropInRange();
-            // 确保战利品可以被拾取
-            if (lootItem != null && lootItem.itemData != null)
-            {
-                lootItem.itemData.Stack.CanBePickedUp = true;
-                lootItem.Load(); // 确保物品正确加载
+                // 确保战利品可以被拾取
+                if (lootItem != null && lootItem.itemData != null)
+                {
+                    lootItem.itemData.Stack.CanBePickedUp = true;
+                    lootItem.Load(); // 确保物品正确加载
+                }
             }
         }
     }
-}
 
     #region 动画效果实现
 

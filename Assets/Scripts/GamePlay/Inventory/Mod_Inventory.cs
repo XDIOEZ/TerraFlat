@@ -94,32 +94,44 @@ public class Mod_Inventory : Module, IInventory
             if (currentInventory.Data != null && currentInventory.Data.PanelIsOpen)
             {
                 EnsurePanelCreated(currentInventory);
+                NewMethod(currentInventory);
             }
-
-            // 获取交互模块引用
-            if (item != null && item.itemMods != null)
+        }
+        // 获取交互模块引用
+        if (item != null && item.itemMods != null)
+        {
+            var interactMod = item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact);
+            if (interactMod != null)
             {
-                var interactMod = item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact);
-                if (interactMod != null)
-                {
-                    interactMod.OnAction_Start += Interact_Start;
-                    interactMod.OnAction_Stop += Interact_Stop;
-                }
+                interactMod.OnAction_Start += Interact_Start;
+                interactMod.OnAction_Stop += Interact_Stop;
             }
-            else
-            {
-                Debug.LogWarning("Item或Item的itemMods为空，无法绑定交互事件");
-            }
+        }
+        else
+        {
+            Debug.LogWarning("Item或Item的itemMods为空，无法绑定交互事件");
+        }
+    }
 
-
-
+    private void NewMethod(Inventory currentInventory)
+    {
+        // 根据参数决定是否打开面板
+        if (currentInventory.Data.PanelIsOpen)
+        {
+            currentInventory.basePanel.Open();
+            // 延迟1帧调用，确保面板在层级系统正确排列
+            StartCoroutine(DelayedBringToFront(currentInventory.basePanel.GetComponent<RectTransform>()));
+        }
+        else
+        {
+            currentInventory.basePanel.Close();
         }
     }
 
     /// <summary>
     /// 确保指定Inventory的面板已创建，如果未创建则在此时创建
     /// </summary>
-    public void EnsurePanelCreated(Inventory targetInventory = null, bool Open=true)
+    public void EnsurePanelCreated(Inventory targetInventory = null, bool Open = true)
     {
         Inventory currentInventory = targetInventory ?? inventory;
 
@@ -234,17 +246,6 @@ public class Mod_Inventory : Module, IInventory
                 // 调用UI初始化方法（此时basePanel已存在）
                 currentInventory.InitUI();
 
-                // 根据参数决定是否打开面板
-                if (Open)
-                {
-                    currentInventory.basePanel.Open();
-                    // 延迟1帧调用，确保面板在层级系统正确排列
-                    StartCoroutine(DelayedBringToFront(currentInventory.basePanel.GetComponent<RectTransform>()));
-                }
-                else
-                {
-                    currentInventory.basePanel.Close();
-                }
             }
         }
         else
@@ -259,7 +260,7 @@ public class Mod_Inventory : Module, IInventory
 
         if (GameController == null)
         {
-            Debug.LogError("Owner 未设置为 GameController");
+            Debug.Log("Owner 未设置为 GameController");
             return;
         }
 
@@ -334,6 +335,17 @@ public class Mod_Inventory : Module, IInventory
                 if (kvp.Value.basePanel == null)
                 {
                     EnsurePanelCreated(kvp.Value);
+                    // 根据参数决定是否打开面板
+                    if (kvp.Value.Data.PanelIsOpen)
+                    {
+                        kvp.Value.basePanel.Open();
+                        // 延迟1帧调用，确保面板在层级系统正确排列
+                        StartCoroutine(DelayedBringToFront(kvp.Value.basePanel.GetComponent<RectTransform>()));
+                    }
+                    else
+                    {
+                        kvp.Value.basePanel.Close();
+                    }
                     anyPanelCreated = true;
                 }
             }
@@ -393,18 +405,17 @@ public class Mod_Inventory : Module, IInventory
             return;
         }
 
+
+
         foreach (var kvp in InventoryRefDic)
         {
-            if (kvp.Value == null)
-            {
-                Debug.LogWarning("[Mod_Inventory.Interact_Start] InventoryRefDic 中存在空的 Inventory！");
-                continue;
-            }
-
+            EnsurePanelCreated(kvp.Value);
             if (kvp.Value.basePanel == null)
             {
-                EnsurePanelCreated(kvp.Value);;
+                Debug.LogWarning($"[Mod_Inventory.Interact_Start] InventoryRefDic 中存在空的 basePanel");
+                continue;
             }
+            kvp.Value.Interact_Start(item_);
         }
 
         if (item_.itemMods == null)
@@ -542,8 +553,8 @@ public class Mod_Inventory : Module, IInventory
     {
         yield return null; // 等待一帧
 
-            BasePanel.BringToFront(rectTransform);
-        
+        BasePanel.BringToFront(rectTransform);
+
     }
     #endregion
 }
