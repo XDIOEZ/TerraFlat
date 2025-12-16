@@ -1,4 +1,4 @@
-﻿// （完整类代码 — 基本保留你原来的所有方法，仅在 #region 后面新增了 UpdateAreaPenalty_Rectangle 与协程实现）
+// （完整类代码 — 基本保留你原来的所有方法，仅在 #region 后面新增了 UpdateAreaPenalty_Rectangle 与协程实现）
 using NavMeshPlus.Components;
 using Pathfinding;
 using Sirenix.OdinInspector;
@@ -76,6 +76,16 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     #endregion
 
     #region 导航网格更新方法
+    internal void ModifyNodePenalty_Internal(Vector2Int nodePos, uint penalty)
+    {
+        var graph = AstarPath.active.data.gridGraph;
+        var node = graph.GetNode(nodePos.x, nodePos.y);
+        if (node == null)
+            return;
+
+        node.Penalty = penalty;
+    }
+
     [Button("Update NavMesh")]
     public void UpdateMeshAsync(Vector2 center = default, int radius = 1, System.Action onComplete = null)
     {
@@ -479,9 +489,23 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
     public void UpdateArea_Rectangle(Vector2 center, int length, int width)
     {
-        Vector3 boundsCenter = new Vector3(center.x, center.y, 0f);
-        Vector3 boundsSize = new Vector3(length, width, 1);
-        Bounds bounds = new Bounds(boundsCenter, boundsSize);
+        // 获取网格的节点大小，确保精确对齐
+        float nodeSize = 1f;
+        if (AstarPath.active != null)
+        {
+            var gridGraph = AstarPath.active.data.gridGraph as GridGraph;
+            if (gridGraph != null) nodeSize = gridGraph.nodeSize;
+        }
+
+        // 计算精确的区域边界，确保只更新指定的节点数量
+        float halfLength = (length * nodeSize) * 0.5f;
+        float halfWidth = (width * nodeSize) * 0.5f;
+
+        Vector3 min = new Vector3(center.x - halfLength, center.y - halfWidth, 0f);
+        Vector3 max = new Vector3(center.x + halfLength, center.y + halfWidth, 0f);
+
+        Bounds bounds = new Bounds();
+        bounds.SetMinMax(min, max);
 
         StartCoroutine(DelayedUpdate(bounds));
     }
@@ -491,10 +515,6 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     /// </summary>
     public void UpdateArea_Rectangle_Sync(Vector2 center, int length, int width)
     {
-        Vector3 boundsCenter = new Vector3(center.x, center.y, 0f);
-        Vector3 boundsSize = new Vector3(length, width, 1);
-        Bounds bounds = new Bounds(boundsCenter, boundsSize);
-
         // 添加空检查，避免 NullReferenceException
         if (AstarPath.active == null)
         {
@@ -508,12 +528,29 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             return;
         }
 
-        var guo = new GraphUpdateObject(bounds);
-        AstarPath.active.UpdateGraphs(guo);
+        // 获取网格的节点大小，确保精确对齐
+        float nodeSize = 1f;
+        var gridGraph = AstarPath.active.data.gridGraph as GridGraph;
+        if (gridGraph != null) nodeSize = gridGraph.nodeSize;
+
+        // 计算起始节点坐标（基于网格对齐）
+        int startX = Mathf.FloorToInt((center.x - (length * nodeSize * 0.5f)) / nodeSize);
+        int startY = Mathf.FloorToInt((center.y - (width * nodeSize * 0.5f)) / nodeSize);
+
+        // 创建精确的Bounds，确保只包含指定的节点
+        Bounds bounds = new Bounds();
+        bounds.center = new Vector3(center.x, center.y, 0f);
+
+        // 对于2D游戏，我们需要特别设置bounds的大小
+        // 使用nodeSize-0.01f确保不会包含额外的节点
+        bounds.size = new Vector3(length * nodeSize - 0.01f, width * nodeSize - 0.01f, 1f);
+        AstarPath.active.UpdateGraphs(bounds);
         updatedBounds.Add(new DebugBounds { bounds = bounds, time = Time.time });
+
+        Debug.Log($"✅ 更新区域导航网格完成！中心：{center}，节点数：{length}x{width}，边界中心：{bounds.center}，边界大小：{bounds.size}");
     }
 
-    private IEnumerator DelayedUpdate(Bounds bounds)
+    private IEnumerator DelayedUpdate(Bounds originalBounds)
     {
         yield return null;
 
@@ -530,9 +567,28 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             yield break;
         }
 
-        var guo = new GraphUpdateObject(bounds);
+        // 获取网格的节点大小，确保精确对齐
+        float nodeSize = 1f;
+        var gridGraph = AstarPath.active.data.gridGraph as GridGraph;
+        if (gridGraph != null) nodeSize = gridGraph.nodeSize;
+
+        // 计算节点数量
+        int length = Mathf.RoundToInt(originalBounds.size.x / nodeSize);
+        int width = Mathf.RoundToInt(originalBounds.size.y / nodeSize);
+        Vector2 center = new Vector2(originalBounds.center.x, originalBounds.center.y);
+
+        // 创建精确的Bounds，确保只包含指定的节点
+        Bounds preciseBounds = new Bounds();
+        preciseBounds.center = new Vector3(center.x, center.y, 0f);
+        // 对于2D游戏，我们需要特别设置bounds的大小
+        // 使用nodeSize-0.01f确保不会包含额外的节点
+        preciseBounds.size = new Vector3(length * nodeSize - 0.01f, width * nodeSize - 0.01f, 1f);
+
+        var guo = new GraphUpdateObject(preciseBounds);
         AstarPath.active.UpdateGraphs(guo);
-        updatedBounds.Add(new DebugBounds { bounds = bounds, time = Time.time });
+        updatedBounds.Add(new DebugBounds { bounds = preciseBounds, time = Time.time });
+
+        Debug.Log($"✅ 异步更新区域导航网格完成！中心：{center}，节点数：{length}x{width}，边界中心：{preciseBounds.center}，边界大小：{preciseBounds.size}");
     }
 
     // 优化Gizmos：区分"原有更新区（红）""按键调整（黄）""区域调整（绿）"
