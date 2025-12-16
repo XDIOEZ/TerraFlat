@@ -1,5 +1,6 @@
 ﻿using Force.DeepCloner;
 using NUnit.Framework.Interfaces;
+using Pathfinding;
 using Sirenix.OdinInspector;
 using System;
 using UltEvents;
@@ -587,8 +588,17 @@ public class Mod_Building : Module
                 {
                     if (UseTilePenalty)
                     {
-                         AstarGameManager.Instance.UpdateArea_Rectangle_Sync(position, 1, 1);
-                        chunk.Map.BackTilePenalty_Cell(position);
+                        AstarGameManager.Instance.UpdateArea_Rectangle_Sync(position, 1, 1);
+
+                        AstarPath.active.AddWorkItem(new AstarWorkItem(() =>
+                        {
+                        },
+    force =>
+    {
+        chunk.Map.BackTilePenalty_Cell_3x3(position);
+
+        return true;
+    }));
                     }
                     else
                         chunk.Map.BackTilePenalty_Cell_NotMove(position);

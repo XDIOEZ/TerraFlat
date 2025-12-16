@@ -299,8 +299,42 @@ public class Map : Item
         uint penalty = GetTile(position: new Vector2Int(x: (int)position2D.x, y: (int)position2D.y)).Penalty;
         AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, penalty);
     }
+    /// <summary>
+    /// 烘焙指定位置为中心的 3×3 地块寻路权重
+    /// </summary>
+    public void BackTilePenalty_Cell_3x3(Vector2 centerPosition2D)
+    {
+        Vector2Int center = new Vector2Int(
+            Mathf.FloorToInt(centerPosition2D.x),
+            Mathf.FloorToInt(centerPosition2D.y)
+        );
 
-        /// <summary>
+        for (int offsetX = -1; offsetX <= 1; offsetX++)
+        {
+            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            {
+                Vector2Int tilePos = new Vector2Int(
+                    center.x + offsetX,
+                    center.y + offsetY
+                );
+
+                var tile = GetTile(tilePos);
+                if (tile == null)
+                    continue;
+
+                uint penalty = tile.Penalty;
+
+                AstarGameManager.Instance?.ModifyNodePenalty_Optimized(
+                    new Vector2(tilePos.x, tilePos.y),
+                    penalty
+                );
+            }
+        }
+    }
+
+
+
+    /// <summary>
     /// 烘焙单个地块的寻路权重
     /// </summary>
     /// <param name="position2D">地块的2D坐标</param>
