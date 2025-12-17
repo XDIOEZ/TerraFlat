@@ -29,6 +29,7 @@ public static class ModText
     public static string Defense = "防御模块";
     public static string Drop = "掉落模块";
     public static string DeathLoot = "死亡掉落模块";
+    public static string Detector = "物品检测模块";
     #endregion
 
     #region E

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7016649821517637849}
   - component: {fileID: 210215792037311174}
   m_Layer: 0
-  m_Name: Module_AI_Mover
+  m_Name: Module_Mover_AI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

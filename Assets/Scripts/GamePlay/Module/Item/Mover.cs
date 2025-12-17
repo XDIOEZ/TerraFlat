@@ -111,7 +111,7 @@ public partial class Mover : Module
     #region Unity 生命周期
     public virtual void OnValidate()
     {
-         _Data.ID = ModText.Mover;
+        _Data.ID = ModText.Mover;
     }
 
     public override void Load()
@@ -191,7 +191,7 @@ public partial class Mover : Module
     public void SetRunState(bool isRun)
     {
         if (IsRunning == isRun) return;
-
+        IsRunning = isRun;
         // 体力不足时禁止跑步
         if (isRun && stamina != null && stamina.CurrentValue < RunStaminaThreshold)
         {
@@ -213,7 +213,7 @@ public partial class Mover : Module
             animationController.SetBool(AnimationText.Run, false);
         }
 
-        IsRunning = isRun;
+
     }
 
     public virtual void Move(Vector2 targetPosition, float deltaTime)

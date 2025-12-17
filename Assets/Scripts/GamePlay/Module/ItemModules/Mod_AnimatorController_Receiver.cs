@@ -1,7 +1,7 @@
 using UltEvents;
 using UnityEngine;
 
-public class Mod_AnimatorReceiver : Mod_AnimatorController
+public class Mod_AnimatorController_Receiver : Mod_AnimatorController
 {
     public bool IsAttacking;
     private bool lastIsAttacking;
@@ -65,6 +65,7 @@ public class Mod_AnimatorReceiver : Mod_AnimatorController
 
     public override void Load()
     {
+        base.Load();
         // ³õÊ¼»¯lastCanUseSkill×´Ì¬
         lastCanUseSkill = CanUseSkill;
         lastIsAttacking = IsAttacking;

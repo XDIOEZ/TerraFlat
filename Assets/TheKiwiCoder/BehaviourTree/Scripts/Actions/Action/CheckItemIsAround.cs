@@ -5,7 +5,7 @@ using TheKiwiCoder;
 
 public class CheckItemIsAround : ActionNode
 {
-    private ItemDetector itemDetector;
+    private Mod_ItemDetector itemDetector;
 
     public string itemName;
 
@@ -15,7 +15,7 @@ public class CheckItemIsAround : ActionNode
     {
         if(itemDetector == null)
         {
-            itemDetector = context.gameObject.GetComponent<ItemDetector>();
+            itemDetector = context.gameObject.GetComponent<Mod_ItemDetector>();
            // Debug.LogWarning("未指定物品检测器，将使用默认的物品检测器");
         }
     }

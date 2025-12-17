@@ -6,17 +6,17 @@ using UnityEditor;
 #endif
 using UnityEngine;
 
-public class ItemDetector : Module
+public class Mod_ItemDetector : Module
 {
-#region 检测参数
+    #region 检测参数
     [SerializeField, BoxGroup("检测参数")]
     public float detectionRadius = 10f; // 检测半径
 
     [SerializeField, BoxGroup("检测参数")]
     public LayerMask itemLayer; // 物品所在的层级
-#endregion
+    #endregion
 
-#region 当前状态
+    #region 当前状态
     [SerializeField, BoxGroup("当前状态")]
     private List<Item> currentItemsInArea = new List<Item>(); // 当前区域内的物品列表
 
@@ -26,39 +26,39 @@ public class ItemDetector : Module
     [Tooltip("string为tag,Item列表为Value的字典")]
     [ShowInInspector]
     public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>(); // 标签与物品列表的映射字典
-#endregion
+    #endregion
 
-#region 属性和字段
+    #region 属性和字段
     public bool DebugMode { get; set; } = false; // 是否启用调试模式
-    
-    public List<Item> CurrentItemsInArea // 当前区域内的物品列表属性
-    { 
-        get => currentItemsInArea; 
-        set => currentItemsInArea = value; 
-    }
-    
-    public float DetectionRadius // 检测半径属性
-    { 
-        get => detectionRadius; 
-        set => detectionRadius = value; 
-    }
-    
-    public Ex_ModData_MemoryPackable ModData; // 模块数据
-    
-    public override ModuleData _Data // 重写的模块数据属性
-    { 
-        get => ModData; 
-        set => ModData = (Ex_ModData_MemoryPackable)value; 
-    }
-#endregion
 
-#region 公共方法
+    public List<Item> CurrentItemsInArea // 当前区域内的物品列表属性
+    {
+        get => currentItemsInArea;
+        set => currentItemsInArea = value;
+    }
+
+    public float DetectionRadius // 检测半径属性
+    {
+        get => detectionRadius;
+        set => detectionRadius = value;
+    }
+
+    public Ex_ModData_MemoryPackable ModData; // 模块数据
+
+    public override ModuleData _Data // 重写的模块数据属性
+    {
+        get => ModData;
+        set => ModData = (Ex_ModData_MemoryPackable)value;
+    }
+    #endregion
+
+    #region 公共方法
     [Button("强制更新检测器")]
     /// <summary>
     /// 强制更新检测器，重新扫描当前区域内的物品
     /// </summary>
     public void Update_Detector()
-    {        
+    {
         if (DebugMode)
             Debug.Log($"<color=yellow>=== 开始检测（位置：{transform.position}，半径：{DetectionRadius}）===</color>");
 
@@ -94,7 +94,7 @@ public class ItemDetector : Module
         // 检查物品变化
         CheckItemEntries(currentItems);
     }
-    
+
     /// <summary>
     /// 根据标签获取物品列表
     /// </summary>
@@ -108,7 +108,7 @@ public class ItemDetector : Module
         }
         return new List<Item>();
     }
-    
+
     /// <summary>
     /// 根据多个标签获取物品列表（并集）
     /// </summary>
@@ -117,7 +117,7 @@ public class ItemDetector : Module
     public List<Item> GetItemsByTags(List<string> tags)
     {
         HashSet<Item> result = new HashSet<Item>();
-        
+
         foreach (string tag in tags)
         {
             if (Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> items))
@@ -128,7 +128,7 @@ public class ItemDetector : Module
                 }
             }
         }
-        
+
         return new List<Item>(result);
     }
 
@@ -153,7 +153,7 @@ public class ItemDetector : Module
         List<Item> items = GetItemsByIdNamesFast(itemIds);
         return items.Count > 0 ? items[0] : null;
     }
-    
+
     /// <summary>
     /// 根据多个标签获取物品列表（交集）
     /// </summary>
@@ -163,17 +163,17 @@ public class ItemDetector : Module
     {
         if (tags == null || tags.Count == 0)
             return new List<Item>();
-            
+
         // 获取第一个标签的物品列表作为基础
         List<Item> result = GetItemsByTag(tags[0]);
-        
+
         // 对于后续标签，只保留同时存在于所有标签中的物品
         for (int i = 1; i < tags.Count; i++)
         {
             List<Item> currentTagItems = GetItemsByTag(tags[i]);
             result = result.Intersect(currentTagItems).ToList();
         }
-        
+
         return result;
     }
 
@@ -190,7 +190,7 @@ public class ItemDetector : Module
         // 创建ID名称的HashSet以提高查找效率
         HashSet<string> idSet = new HashSet<string>(itemIds);
         List<Item> result = new List<Item>();
-        
+
         // 遍历所有当前检测到的物品
         foreach (Item item in CurrentItemsInArea)
         {
@@ -200,12 +200,12 @@ public class ItemDetector : Module
                 result.Add(item);
             }
         }
-        
+
         return result;
     }
-#endregion
+    #endregion
 
-#region 私有方法
+    #region 私有方法
     /// <summary>
     /// 检查物品进入和离开的变化
     /// </summary>
@@ -263,15 +263,15 @@ public class ItemDetector : Module
         if (DebugMode)
             Debug.Log($"<color=orange>处理离开事件：{item.name}（物品ID：{item.itemData.IDName}）</color>");
     }
-#endregion
+    #endregion
 
-#region Unity回调方法
+    #region Unity回调方法
 #if UNITY_EDITOR
     /// <summary>
     /// 绘制场景中的检测范围 gizmo
     /// </summary>
     private void OnDrawGizmos()
-    {        
+    {
         Color transparentYellow = new Color(1f, 0.92f, 0.016f, 0.4f); // 更淡的黄
         Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // 淡红
 
@@ -301,5 +301,10 @@ public class ItemDetector : Module
     {
         // 可以在需要时实现
     }
-#endregion
+
+    private void OnValidate()
+    {
+        _Data.ID = ModText.Detector;
+    }
+    #endregion
 }

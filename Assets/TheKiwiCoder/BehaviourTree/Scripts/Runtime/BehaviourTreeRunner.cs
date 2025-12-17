@@ -16,7 +16,7 @@ namespace TheKiwiCoder
         public Ex_ModData_MemoryPackable ModData;
         public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
 
-        public override void Awake()
+        public void OnValidate()
         {
             _Data.ID = ModText.AI;
         }
@@ -26,6 +26,7 @@ namespace TheKiwiCoder
             context = CreateBehaviourTreeContext();
             tree = tree.Clone();
             tree.Bind(context);
+            tree.Init();
         }
 
         void Update()
@@ -82,7 +83,7 @@ namespace TheKiwiCoder
 
         public override void Save()
         {
-           
+   
         }
         
         public void OnDestroy()
