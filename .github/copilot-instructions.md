@@ -8,7 +8,7 @@
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: Module_Picker
+  - Name: Player
   - Tag: Untagged
-  - Layer: 9
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

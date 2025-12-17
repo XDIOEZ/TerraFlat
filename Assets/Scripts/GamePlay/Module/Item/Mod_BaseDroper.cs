@@ -3,7 +3,7 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Mod_ItemDroper : Module
+public class Mod_BaseDroper : Module
 {
     /// <summary>
     /// 物品移动模式
@@ -105,7 +105,7 @@ public class Mod_ItemDroper : Module
         // 根据移动模式计算控制点
         Vector2 controlPos = CalculateControlPoint(startPos, endPos, mode, bezierOffset);
 
-        Mod_ItemDroper.Drop drop = new Mod_ItemDroper.Drop
+        Mod_BaseDroper.Drop drop = new Mod_BaseDroper.Drop
         {
             itemGuid = item.itemData.Guid,
             startPos = startPos,

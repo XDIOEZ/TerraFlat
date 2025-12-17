@@ -454,7 +454,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void DropInRange()
     {
-        Mod_ItemDroper.DropItemInARange(this, transform.position, UnityEngine.Random.Range(0.5f, 2f), 0.5f);
+        Mod_BaseDroper.DropItemInARange(this, transform.position, UnityEngine.Random.Range(0.5f, 2f), 0.5f);
     }
 
     /// <summary>

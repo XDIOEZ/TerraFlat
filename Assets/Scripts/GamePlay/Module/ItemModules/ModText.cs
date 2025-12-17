@@ -55,7 +55,7 @@ public static class ModText
     #region I
     public static string Picker = "物品拾取模块";
     public static string Interact = "Module_Interaction";//交互模块
-    public static string ItemDorper = "物品放置模块";
+    public static string ItemDorper = "Module_DiscardItem";
     #endregion
 
     #region M
