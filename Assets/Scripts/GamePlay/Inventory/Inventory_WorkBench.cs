@@ -275,11 +275,7 @@ public class Inventory_WorkBench : Inventory
             inputInventory.DefaultTarget_Inventory = handMod.inventory;
             outputInventory.DefaultTarget_Inventory = handMod.inventory;
         }
-        // 打开工作台UI
-        foreach (var inventory in mod_Inventory.inventoryBasePanelCache.Values)
-        {
-            inventory.Toggle();
-        }
+        basePanel.Toggle();
         Debug.Log($"玩家 {playerItem.name} 开始交互工作台");
     }
 

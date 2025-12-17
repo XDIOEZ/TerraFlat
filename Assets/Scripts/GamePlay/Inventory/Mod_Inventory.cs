@@ -131,7 +131,8 @@ public class Mod_Inventory : Module, IInventory
     /// <summary>
     /// 确保指定Inventory的面板已创建，如果未创建则在此时创建
     /// </summary>
-    public void EnsurePanelCreated(Inventory targetInventory = null, bool Open = true)
+    /// <returns>成功创建了面板返回true，没有创建返回false</returns>
+    public bool EnsurePanelCreated(Inventory targetInventory = null, bool Open = true)
     {
         Inventory currentInventory = targetInventory ?? inventory;
 
@@ -139,18 +140,18 @@ public class Mod_Inventory : Module, IInventory
         if (currentInventory == null)
         {
             Debug.LogError("[Mod_Inventory.EnsurePanelCreated] currentInventory 为空！");
-            return;
+            return false;
         }
 
-        // 如果面板已创建，直接返回
+        // 如果面板已创建，直接返回false（表示没有创建新面板）
         if (currentInventory.basePanel != null)
-            return;
+            return false;
 
         // 空检查：确保inventoryRefDic存在
         if (inventoryRefDic == null || inventoryRefDic.Count == 0)
         {
             Debug.LogError("[Mod_Inventory.EnsurePanelCreated] inventoryRefDic 为空或未初始化！");
-            return;
+            return false;
         }
 
         // 查找对应的inventory id
@@ -167,7 +168,7 @@ public class Mod_Inventory : Module, IInventory
         if (string.IsNullOrEmpty(inventoryId))
         {
             Debug.LogError($"无法找到Inventory对应的ID");
-            return;
+            return false;
         }
 
         // 如果预制体存在，创建面板
@@ -246,11 +247,17 @@ public class Mod_Inventory : Module, IInventory
                 // 调用UI初始化方法（此时basePanel已存在）
                 currentInventory.InitUI();
 
+                return true; // 成功创建了面板
+            }
+            else
+            {
+                return false; // 创建面板失败
             }
         }
         else
         {
             Debug.LogWarning($"找不到Inventory '{inventoryId}' 对应的面板预制体");
+            return false;
         }
     }
 
@@ -409,7 +416,11 @@ public class Mod_Inventory : Module, IInventory
 
         foreach (var kvp in InventoryRefDic)
         {
-            EnsurePanelCreated(kvp.Value);
+            if (EnsurePanelCreated(kvp.Value))
+            {
+                NewMethod(kvp.Value);
+            }
+
             if (kvp.Value.basePanel == null)
             {
                 Debug.LogWarning($"[Mod_Inventory.Interact_Start] InventoryRefDic 中存在空的 basePanel");

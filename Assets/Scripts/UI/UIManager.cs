@@ -8,15 +8,15 @@ public class UIManager : MonoBehaviour
 {
     // 单例实例
     private static UIManager _instance;
-    public static UIManager Instance 
-    { 
+    public static UIManager Instance
+    {
         get
         {
             // 如果实例不存在，尝试查找
             if (_instance == null)
             {
                 _instance = FindObjectOfType<UIManager>();
-                
+
                 // 如果还是找不到，创建一个新的
                 if (_instance == null)
                 {
@@ -31,13 +31,13 @@ public class UIManager : MonoBehaviour
     // 存储所有面板的字典
     [ShowInInspector]
     public Dictionary<string, BasePanel> panels = new Dictionary<string, BasePanel>();
-    
+
     // 面板的父对象
     public Transform panelRoot;
-    
+
     // panelRoot的预制体，可在Inspector中挂接
     public GameObject panelRootPrefab;
-    
+
     // 预制体引用（可选）
     public GameObject[] panelPrefabs;
 
@@ -54,14 +54,14 @@ public class UIManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-        
+
         // 初始化面板字典
         InitializePanels();
-        
+
         // 确保panelRoot存在
         EnsurePanelRootExists();
     }
-    
+
     /// <summary>
     /// 确保panelRoot存在，如果不存在则在当前激活场景中创建
     /// </summary>
@@ -70,7 +70,7 @@ public class UIManager : MonoBehaviour
         // 如果panelRoot已经存在，直接返回
         if (panelRoot != null)
             return;
-        
+
         // 尝试在场景中查找现有的PanelRoot
         GameObject existingPanelRoot = GameObject.Find("PanelRoot");
         if (existingPanelRoot != null)
@@ -78,10 +78,10 @@ public class UIManager : MonoBehaviour
             panelRoot = existingPanelRoot.transform;
             return;
         }
-        
+
         // 创建新的panelRoot
         GameObject canvasObj;
-        
+
         // 如果提供了panelRootPrefab，优先使用预制体实例化
         if (panelRootPrefab != null)
         {
@@ -94,23 +94,23 @@ public class UIManager : MonoBehaviour
             canvasObj = new GameObject("PanelRoot");
             Canvas canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            
+
             // 添加CanvasScaler组件
             CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
-            
+
             // 添加GraphicRaycaster组件
             canvasObj.AddComponent<GraphicRaycaster>();
         }
-        
+
         // 确保panelRoot不会被销毁（除非场景切换）
         // 注意：我们不使用DontDestroyOnLoad，这样它会随着场景切换而销毁
         panelRoot = canvasObj.transform;
-        
-//        Debug.Log("PanelRoot created in current active scene.");
+
+        //        Debug.Log("PanelRoot created in current active scene.");
     }
-    
+
     /// <summary>
     /// 初始化所有面板
     /// </summary>
@@ -118,25 +118,25 @@ public class UIManager : MonoBehaviour
     {
         // 确保panelRoot存在
         EnsurePanelRootExists();
-        
+
         panels.Clear();
-        
+
         // 查找场景中所有的BasePanel组件
-       /* BasePanel[] allPanels = FindObjectsOfType<BasePanel>(true);
-        foreach (BasePanel panel in allPanels)
-        {
-            if (!panels.ContainsKey(panel.name))
-            {
-                panels[panel.name] = panel;
-            }
-            else
-            {
-                // 如果存在同名面板，添加警告
-                Debug.LogWarning($"Duplicate panel name found: {panel.name}");
-            }
-        }*/
+        /* BasePanel[] allPanels = FindObjectsOfType<BasePanel>(true);
+         foreach (BasePanel panel in allPanels)
+         {
+             if (!panels.ContainsKey(panel.name))
+             {
+                 panels[panel.name] = panel;
+             }
+             else
+             {
+                 // 如果存在同名面板，添加警告
+                 Debug.LogWarning($"Duplicate panel name found: {panel.name}");
+             }
+         }*/
     }
-    
+
     /// <summary>
     /// 获取指定名称的面板
     /// </summary>
@@ -148,7 +148,7 @@ public class UIManager : MonoBehaviour
         {
             return panel;
         }
-        
+
         Debug.LogWarning($"Panel '{panelName}' not found!");
         return null;
     }
@@ -247,20 +247,20 @@ public class UIManager : MonoBehaviour
                 break;
             }
         }
-        
+
         if (panelPrefab == null)
         {
             Debug.LogWarning($"Panel prefab '{panelPrefabName}' not found!");
             return null;
         }
-        
+
         // 确保panelRoot存在
         EnsurePanelRootExists();
-        
+
         // 创建面板实例
         Transform parentTransform = parent != null ? parent : panelRoot;
         GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
-        
+
         // 获取BasePanel组件
         BasePanel panel = panelInstance.GetComponent<BasePanel>();
         if (panel != null)
@@ -333,7 +333,7 @@ public class UIManager : MonoBehaviour
             }
         }
     }
-    
+
     /// <summary>
     /// 获取指定标签的面板列表
     /// </summary>
@@ -342,7 +342,7 @@ public class UIManager : MonoBehaviour
     public List<BasePanel> GetPanelsByTag(string tag)
     {
         List<BasePanel> taggedPanels = new List<BasePanel>();
-        
+
         foreach (var panel in panels.Values)
         {
             if (panel != null && panel.gameObject.CompareTag(tag))
@@ -350,10 +350,10 @@ public class UIManager : MonoBehaviour
                 taggedPanels.Add(panel);
             }
         }
-        
+
         return taggedPanels;
     }
-    
+
     /// <summary>
     /// 显示指定标签的所有面板
     /// </summary>
@@ -366,7 +366,7 @@ public class UIManager : MonoBehaviour
             panel.Open();
         }
     }
-    
+
     /// <summary>
     /// 隐藏指定标签的所有面板
     /// </summary>
@@ -379,7 +379,7 @@ public class UIManager : MonoBehaviour
             panel.Close();
         }
     }
-    
+
     /// <summary>
     /// 注册面板到UIManager
     /// </summary>
@@ -395,7 +395,7 @@ public class UIManager : MonoBehaviour
             panels[panel.PanleName] = panel;
         }
     }
-    
+
     /// <summary>
     /// 通过GameObject实例化面板对象
     /// </summary>
@@ -408,14 +408,14 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("Panel prefab cannot be null!");
             return null;
         }
-        
+
         // 确保panelRoot存在
         EnsurePanelRootExists();
-        
+
         // 实例化面板对象并设置父对象
         Transform parentTransform = panelRoot;
         GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
-        
+
         // 获取BasePanel组件
         BasePanel panel = panelInstance.GetComponent<BasePanel>();
         if (panel != null)
