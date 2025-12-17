@@ -177,11 +177,7 @@ public class Inventory_Furnace : Inventory
             OutputInventory.DefaultTarget_Inventory = handMod.inventory;
             FuelInventory.DefaultTarget_Inventory = handMod.inventory;
         }
-        // 打开工作台UI
-        foreach (BasePanel panel in mod_Inventory.inventoryBasePanelCache.Values)
-        {
-            panel.Toggle();
-        }
+        basePanel.Toggle();
         Debug.Log($"玩家 {playerItem.name} 开始交互工作台");
     }
     #endregion
