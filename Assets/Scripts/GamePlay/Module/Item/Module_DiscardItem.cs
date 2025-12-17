@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-public class Module_DiscardItem : Mod_ItemDroper
+public class Module_DiscardItem : Mod_BaseDroper
 {
     [Header("基础配置")]
     public Inventory DroperInventory;
@@ -44,6 +44,10 @@ public class Module_DiscardItem : Mod_ItemDroper
 
     #region 生命周期
 
+    private void OnValidate()
+    {
+        _Data.ID = ModText.ItemDorper;
+    }
     public override void Load()
     {
         base.Load();
@@ -64,46 +68,46 @@ public class Module_DiscardItem : Mod_ItemDroper
         inputActions.Ctrl.canceled += OnCtrlReleased;
     }
 
-public override void ModUpdate(float deltaTime)
-{
-    base.ModUpdate(deltaTime);
-
-    // 处理长按逻辑
-    if (isDropButtonPressed)
+    public override void ModUpdate(float deltaTime)
     {
-        dropButtonPressTime += deltaTime;
+        base.ModUpdate(deltaTime);
 
-        // 检查是否达到重复丢弃的条件
-        if (!isDropRepeatActive && dropButtonPressTime >= dropRepeatDelay)
+        // 处理长按逻辑
+        if (isDropButtonPressed)
         {
-            isDropRepeatActive = true;
-            lastDropTime = 0f;
-            Debug.Log("[ItemDroper] 长按激活，进入持续丢弃模式");
-        }
+            dropButtonPressTime += deltaTime;
 
-        // 长按激活后执行重复丢弃（不再依赖hoveredSlot）
-        if (isDropRepeatActive)
-        {
-            lastDropTime += deltaTime;
-            // 检查是否到了重复间隔时间
-            if (lastDropTime >= dropRepeatInterval)
+            // 检查是否达到重复丢弃的条件
+            if (!isDropRepeatActive && dropButtonPressTime >= dropRepeatDelay)
             {
-                HandleRepeatDrop();
-                lastDropTime = 0f; // 重置计时器
+                isDropRepeatActive = true;
+                lastDropTime = 0f;
+                Debug.Log("[ItemDroper] 长按激活，进入持续丢弃模式");
+            }
+
+            // 长按激活后执行重复丢弃（不再依赖hoveredSlot）
+            if (isDropRepeatActive)
+            {
+                lastDropTime += deltaTime;
+                // 检查是否到了重复间隔时间
+                if (lastDropTime >= dropRepeatInterval)
+                {
+                    HandleRepeatDrop();
+                    lastDropTime = 0f; // 重置计时器
+                }
             }
         }
-    }
-    else
-    {
-        // 按键未按下时重置状态
-        isDropRepeatActive = false;
-        dropButtonPressTime = 0f;
-        lastDropTime = 0f;
-    }
+        else
+        {
+            // 按键未按下时重置状态
+            isDropRepeatActive = false;
+            dropButtonPressTime = 0f;
+            lastDropTime = 0f;
+        }
 
-    // 更新当前鼠标悬停的槽位
-    UpdateHoveredSlot();
-}
+        // 更新当前鼠标悬停的槽位
+        UpdateHoveredSlot();
+    }
 
     private void UpdateHoveredSlot()
     {
@@ -132,76 +136,76 @@ public override void ModUpdate(float deltaTime)
         }
     }
 
-private void HandleRepeatDrop()
-{
-    // 检查手上是否有物品
-    ItemSlot handSlot = hand?.inventory?.Data?.itemSlots?[hand.inventory.Data.Index];
-    if (handSlot != null && handSlot.itemData != null && handSlot.Amount > 0)
+    private void HandleRepeatDrop()
     {
-        if (isCtrlPressed)
-        {
-            DropItemByCount(handSlot, handSlot.Amount);
-        }
-        else
-        {
-            DropItemByCount(handSlot, 1);
-        }
-        // 只有当物品完全丢弃完后才刷新UI
-        if (handSlot.Amount <= 0)
-        {
-            handSlot.RefreshUI();
-        }
-        return;
-    }
-    
-    // 检查快捷栏是否有选中物品
-    else if (Hotbar?.currentObject != null)
-    {
-        ItemSlot hotbarSlot = Hotbar.CurrentSelectItemSlot;
-        if (hotbarSlot != null && hotbarSlot.Amount > 0)
+        // 检查手上是否有物品
+        ItemSlot handSlot = hand?.inventory?.Data?.itemSlots?[hand.inventory.Data.Index];
+        if (handSlot != null && handSlot.itemData != null && handSlot.Amount > 0)
         {
             if (isCtrlPressed)
             {
-                DropItemByCount(hotbarSlot, hotbarSlot.Amount);
+                DropItemByCount(handSlot, handSlot.Amount);
             }
             else
             {
-                DropItemByCount(hotbarSlot, 1);
+                DropItemByCount(handSlot, 1);
             }
-            // 只有当物品完全丢弃完后才销毁对象
-            if (hotbarSlot.Amount <= 0)
+            // 只有当物品完全丢弃完后才刷新UI
+            if (handSlot.Amount <= 0)
             {
-                Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+                handSlot.RefreshUI();
             }
             return;
         }
-    }
-    
-    // 只有当手上和快捷栏都没有物品时，才处理UI悬停的物品
-    if (hoveredSlot != null && hoveredSlot.GetSlotDataFunc != null)
-    {
-        ItemSlot hoveredSlotData = hoveredSlot.GetSlotDataFunc?.Invoke(-1);
-        if (hoveredSlotData != null && hoveredSlotData.Amount > 0)
+
+        // 检查快捷栏是否有选中物品
+        else if (Hotbar?.currentObject != null)
         {
-            if (isCtrlPressed)
+            ItemSlot hotbarSlot = Hotbar.CurrentSelectItemSlot;
+            if (hotbarSlot != null && hotbarSlot.Amount > 0)
             {
-                DropItemByCount(hoveredSlotData, hoveredSlotData.Amount);
+                if (isCtrlPressed)
+                {
+                    DropItemByCount(hotbarSlot, hotbarSlot.Amount);
+                }
+                else
+                {
+                    DropItemByCount(hotbarSlot, 1);
+                }
+                // 只有当物品完全丢弃完后才销毁对象
+                if (hotbarSlot.Amount <= 0)
+                {
+                    Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+                }
+                return;
             }
-            else
+        }
+
+        // 只有当手上和快捷栏都没有物品时，才处理UI悬停的物品
+        if (hoveredSlot != null && hoveredSlot.GetSlotDataFunc != null)
+        {
+            ItemSlot hoveredSlotData = hoveredSlot.GetSlotDataFunc?.Invoke(-1);
+            if (hoveredSlotData != null && hoveredSlotData.Amount > 0)
             {
-                DropItemByCount(hoveredSlotData, 1);
+                if (isCtrlPressed)
+                {
+                    DropItemByCount(hoveredSlotData, hoveredSlotData.Amount);
+                }
+                else
+                {
+                    DropItemByCount(hoveredSlotData, 1);
+                }
+
+                // 如果物品已经耗尽，且是当前快捷栏选中的物品，则销毁手上物体
+                if (hoveredSlotData.Amount <= 0 && hoveredSlotData == Hotbar?.CurrentSelectItemSlot)
+                {
+                    Hotbar?.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+                }
+
+                hoveredSlot.RefreshUI();
             }
-            
-            // 如果物品已经耗尽，且是当前快捷栏选中的物品，则销毁手上物体
-            if (hoveredSlotData.Amount <= 0 && hoveredSlotData == Hotbar?.CurrentSelectItemSlot)
-            {
-                Hotbar?.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
-            }
-            
-            hoveredSlot.RefreshUI();
         }
     }
-}
 
     private void OnDropButtonPressed(InputAction.CallbackContext context)
     {
@@ -254,7 +258,7 @@ private void HandleRepeatDrop()
                 // F 丢弃单个
                 DropItemByCount(hotbarSlot, 1);
             }
-            
+
             // 只有当物品完全丢弃完后才销毁对象
             if (hotbarSlot.Amount <= 0)
             {
@@ -276,12 +280,12 @@ private void HandleRepeatDrop()
             Hotbar.RefreshUI(Hotbar.CurrentIndex);
         }
     }
-    
+
     private void OnCtrlPressed(InputAction.CallbackContext context)
     {
         isCtrlPressed = true;
     }
-    
+
     private void OnCtrlReleased(InputAction.CallbackContext context)
     {
         isCtrlPressed = false;
@@ -313,7 +317,7 @@ private void HandleRepeatDrop()
 
         DropItemByCount(slot, slot.Amount);
     }
-    
+
     [Button("DropItemStack")]
     public void DropItemStack(ItemSlot slot)
     {
@@ -322,75 +326,76 @@ private void HandleRepeatDrop()
             Debug.LogError("传入的 ItemSlot 为空！");
             return;
         }
-        
+
         DropItemByCount(slot, slot.Amount);
     }
 
-public void DropItemByCount(ItemSlot slot, int count)
-{
-    if (count <= 0 || slot == null || slot.Amount <= 0)
+    public void DropItemByCount(ItemSlot slot, int count)
     {
-        Debug.LogWarning("丢弃数量非法或物品槽为空！");
-        return;
-    }
-
-    if (count <= slot.Amount)
-    {
-        // 克隆数据
-        ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
-        newItemData.Stack.Amount = count;
-        newItemData.Stack.CanBePickedUp = false;
-
-        // 减少原物品数量
-        slot.Amount -= count;
-
-        Item newObject = null;
-        // 实例化新物体
-        ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
-        if (chunk != null)
+        if (count <= 0 || slot == null || slot.Amount <= 0)
         {
-            newObject = ItemMgr.Instance.InstantiateItem(newItemData, chunk.gameObject);
-        }
-
-        if (newObject == null)
-        {
-            Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);
+            Debug.LogWarning("丢弃数量非法或物品槽为空！");
             return;
         }
 
-        Item newItem = newObject.GetComponent<Item>();
-        if (newItem == null)
+        if (count <= slot.Amount)
         {
-            Debug.LogError("新物体中缺少 Item 组件！");
-            return;
+            // 克隆数据
+            ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
+            newItemData.Stack.Amount = count;
+            newItemData.Stack.CanBePickedUp = false;
+
+            // 减少原物品数量
+            slot.Amount -= count;
+
+            Item newObject = null;
+            // 实例化新物体
+            ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
+            if (chunk != null)
+            {
+                newObject = ItemMgr.Instance.InstantiateItem(newItemData, chunk.gameObject);
+            }
+
+            if (newObject == null)
+            {
+                Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);
+                return;
+            }
+
+            Item newItem = newObject.GetComponent<Item>();
+            if (newItem == null)
+            {
+                Debug.LogError("新物体中缺少 Item 组件！");
+                return;
+            }
+
+            // 使用 InstantiateItem 中新生成的 GUID 和数据
+            // 不再手动设置 newItem.itemData = newItemData，因为 InstantiateItem 已经处理了这一步
+
+            // 设置掉落物状态：缩放为0.5倍
+            newItem.transform.localScale = Vector3.one * 0.5f;
+
+            // 计算位置
+            Vector2 startPos = transform.position;
+            Vector2 endPos = DropPos;
+
+            float distance = Vector2.Distance(startPos, endPos);
+            float animTime = baseDropDuration + distance * distanceSensitivity;
+
+            // 调用父类 DropItem 实现动画控制
+            newItem.Load();
+            DropItem_Pos(newItem, startPos, endPos, animTime);
+
+            // 只有当物品完全丢弃完后才清除数据
+            if (slot.Amount <= 0)
+            {
+                slot.ClearData();
+            }
         }
 
-        // 使用 InstantiateItem 中新生成的 GUID 和数据
-        // 不再手动设置 newItem.itemData = newItemData，因为 InstantiateItem 已经处理了这一步
-
-        // 设置掉落物状态：缩放为0.5倍
-        newItem.transform.localScale = Vector3.one * 0.5f;
-        
-        // 计算位置
-        Vector2 startPos = transform.position;
-        Vector2 endPos = DropPos;
-
-        float distance = Vector2.Distance(startPos, endPos);
-        float animTime = baseDropDuration + distance * distanceSensitivity;
-
-        // 调用父类 DropItem 实现动画控制
-        newItem.Load();
-        DropItem_Pos(newItem, startPos, endPos, animTime);
-        
-        // 只有当物品完全丢弃完后才清除数据
-        if (slot.Amount <= 0)
-        {
-            slot.ClearData();
-        }
+        slot.RefreshUI();
     }
-
-    slot.RefreshUI();
-}    [Button("快速丢弃")]
+    [Button("快速丢弃")]
     public void FastDropItem(int count = 1)
     {
         Vector2 mousePosition = Mouse.current.position.ReadValue();
@@ -417,7 +422,7 @@ public void DropItemByCount(ItemSlot slot, int count)
             }
         }
     }
-    
+
     [Button("快速丢弃整组")]
     public void FastDropStack()
     {

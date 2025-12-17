@@ -9,7 +9,7 @@ public class Mod_Droping : Module
         set => modData = (Ex_ModData)value;
     }
 
-    public Mod_ItemDroper.Drop drop;
+    public Mod_BaseDroper.Drop drop;
     public Ex_ModData modData;
     public Chunk LastChunk; // 上一帧 item 所处的 chunk
 
@@ -175,7 +175,7 @@ private void UpdateChunkOwner(Item item)
             controlPos = CreateParabolicControlPoint(startPos, endPos, bezierOffset);
         }
 
-        Mod_ItemDroper.Drop drop = new Mod_ItemDroper.Drop
+        Mod_BaseDroper.Drop drop = new Mod_BaseDroper.Drop
         {
             itemGuid = item.itemData.Guid,
             startPos = startPos,
