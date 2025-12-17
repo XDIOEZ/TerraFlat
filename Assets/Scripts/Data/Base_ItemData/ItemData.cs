@@ -11,6 +11,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using Sirenix.OdinInspector;
+using Newtonsoft.Json;
+using FastCloner.Code;
 
 
 [MemoryPackUnion(4, typeof(Data_GeneralItem))]//通用物品数据
@@ -31,6 +33,9 @@ public  abstract partial class ItemData
 
     [Tooltip("物品描述")]
     [TextArea]
+    [MemoryPackIgnore]
+    [JsonIgnore]
+    [FastClonerIgnore]
     public string Description = "什么都没有描述";
 
     [Tooltip("物品耐久度")]
