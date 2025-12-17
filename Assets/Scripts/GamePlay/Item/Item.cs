@@ -490,7 +490,7 @@ public abstract class Item : MonoBehaviour
                 itemData.Durability = 0;
                 // 物品耐久为0时触发事件
                 OnDurabilityModified?.Invoke(itemData.Durability);
-                
+
             }
             else
             {
@@ -509,13 +509,17 @@ public abstract class Item : MonoBehaviour
     /// 初始化ItemData（编辑器上下文菜单）
     /// </summary>
     [ContextMenu("初始化ItemData")]
-    private void SyncName()
+    private void InitItemData()
     {
         itemData.IDName = this.gameObject.name;
         itemData.GameName = this.gameObject.name;
 
-        itemData.Description = "";
-        itemData.Description = itemData.ToString();
+        if (itemData.Description == "")
+        {
+            itemData.Description = "";
+            itemData.Description = itemData.ToString();
+        }
+
     }
 
     /// <summary>
