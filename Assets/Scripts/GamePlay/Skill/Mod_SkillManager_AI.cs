@@ -1,12 +1,12 @@
 
 public class Mod_SkillManager_AI : Mod_SkillManager
 {
-    public Mod_AnimatorReceiver animatorReceiver;
+    public Mod_AnimatorController_Receiver animatorReceiver;
 
     public override void Load()
     {
         base.Load();
-        animatorReceiver = item.itemMods.GetMod_ByID<Mod_AnimatorReceiver> (ModText.AnimatorReceiver);
+        animatorReceiver = item.itemMods.GetMod_ByID<Mod_AnimatorController_Receiver> (ModText.AnimatorReceiver);
         if (animatorReceiver != null)
         {
             animatorReceiver.OnSkillStart += UseSkill;

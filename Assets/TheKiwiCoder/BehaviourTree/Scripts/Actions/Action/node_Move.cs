@@ -9,6 +9,7 @@ public class Move : ActionNode
     #region 字段
 
     private Vector2 lastPosition;     // 上一次位置
+    public bool IsRunState = false;
 
 
 
@@ -16,18 +17,31 @@ public class Move : ActionNode
     #endregion
 
     #region 生命周期
+    protected override void OnInit()
+    {
+        context.OnTreeStop += () => context.mover.SetRunState(false);
+    }
 
     protected override void OnStart()
     {
-        context.mover.IsRunning = true;
+        context.mover.IsMoving = true;
         context.mover.HasReachedTarget = false;
+        if (IsRunState)
+        {
+            context.mover.SetRunState(true);
+        }
     }
 
     protected override void OnStop()
     {
         // 停止时无需额外处理，留空
-        context.mover.IsRunning = false;
+        context.mover.IsMoving = false;
         context.mover.aiPath.isStopped = true;
+        
+                if (IsRunState)
+        {
+            context.mover.SetRunState(false);
+        }
     }
 
     #endregion

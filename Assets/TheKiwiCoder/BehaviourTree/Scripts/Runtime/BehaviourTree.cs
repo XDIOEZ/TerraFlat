@@ -14,6 +14,11 @@ namespace TheKiwiCoder {
         public List<Node> nodes = new List<Node>();
         public Blackboard blackboard = new Blackboard();
 
+        public void Init() {
+            Traverse(rootNode, node => {
+                node.Init();
+            });
+        }
 
         public Node.State Update() {
             if (rootNode.state == Node.State.Running) {

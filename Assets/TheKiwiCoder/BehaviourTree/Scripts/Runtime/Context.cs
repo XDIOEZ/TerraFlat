@@ -1,15 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace TheKiwiCoder {
+namespace TheKiwiCoder
+{
 
     // The context is a shared object every node has access to.
     // Commonly used components and subsytems should be stored here
     // It will be somewhat specfic to your game exactly what to add here.
     // Feel free to extend this class 
-    public class Context {
+    public class Context
+    {
         public GameObject gameObject;
         public Transform transform;
         public Animator animator;
@@ -23,7 +26,7 @@ namespace TheKiwiCoder {
         public float lastAttackTime;
 
         //添加自定义组件
-        public ItemDetector itemDetector;
+        public Mod_ItemDetector itemDetector;
         public Mover_AI mover;
         public Item item;
         public DamageReceiver damageReciver;
@@ -31,16 +34,19 @@ namespace TheKiwiCoder {
         public Mod_Food Food;
         public TileEffectReceiver tileEffectReceiver;
         public BuffManager buffManager;
+        public UltEvent OnTreeStart = new UltEvent();
+        public UltEvent OnTreeStop = new UltEvent();
 
         // Add other game specific systems here
 
-        public static Context CreateFromGameObject(GameObject gameObject) {
+        public static Context CreateFromGameObject(GameObject gameObject)
+        {
             // Fetch all commonly used components
             Context context = new Context();
             context.item = gameObject.GetComponent<Item>();
             context.gameObject = gameObject;
             context.transform = context.item.transform;
-            
+
             context.animator = context.item.GetComponentInChildren<Animator>();
             context.physics = context.item.GetComponent<Rigidbody>();
             context.agent = context.item.GetComponentInChildren<NavMeshAgent>();
@@ -48,7 +54,7 @@ namespace TheKiwiCoder {
             context.boxCollider = context.item.GetComponent<BoxCollider>();
             context.capsuleCollider = context.item.GetComponent<CapsuleCollider>();
             context.characterController = context.item.GetComponent<CharacterController>();
-            context.itemDetector = context.item.GetComponentInChildren<ItemDetector>();
+            context.itemDetector = context.item.GetComponentInChildren<Mod_ItemDetector>();
             context.item = context.item.GetComponentInChildren<Item>();
             context.Damage = context.item.GetComponentInChildren<Mod_Damage>();
             // Add whatever else you need here...
@@ -60,13 +66,14 @@ namespace TheKiwiCoder {
             context.buffManager = context.item.itemMods.GetMod_ByID(ModText.BuffManager) as BuffManager;
             return context;
         }
-                public static Context CreateFromItem(Item item) {
+        public static Context CreateFromItem(Item item)
+        {
             // Fetch all commonly used components
             Context context = new Context();
             context.item = item;
             context.gameObject = item.gameObject;
             context.transform = context.item.transform;
-            
+
             context.animator = context.item.GetComponentInChildren<Animator>();
             context.physics = context.item.GetComponent<Rigidbody>();
             context.agent = context.item.GetComponentInChildren<NavMeshAgent>();
@@ -74,7 +81,7 @@ namespace TheKiwiCoder {
             context.boxCollider = context.item.GetComponent<BoxCollider>();
             context.capsuleCollider = context.item.GetComponent<CapsuleCollider>();
             context.characterController = context.item.GetComponent<CharacterController>();
-            context.itemDetector = context.item.GetComponentInChildren<ItemDetector>();
+            context.itemDetector = context.item.itemMods.GetMod_ByID<Mod_ItemDetector>(ModText.Detector);
             context.Damage = context.item.GetComponentInChildren<Mod_Damage>();
             // Add whatever else you need here...
 

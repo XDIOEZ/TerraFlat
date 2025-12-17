@@ -54,6 +54,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-8642021152146277943
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -77,6 +78,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-8562340629634356543
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -531,6 +533,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-6866535831732665770
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -554,6 +557,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-6622164275379785806
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -843,6 +847,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-5385112494180246701
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1018,7 +1023,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 585f271e01e9d7c4ca4231bee5be834c
-  position: {x: 1170.3999, y: 1413.6}
+  position: {x: 1168.8, y: 1414.4}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1026,6 +1031,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 1
 --- !u!114 &-5203047082166904026
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1567,6 +1573,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-4186601412486484190
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2559,6 +2566,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-728138998944700886
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2709,6 +2717,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-367227824504809476
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2758,6 +2767,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-55305958284989786
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3118,9 +3128,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  RunAwayDirection: {x: 0, y: 0}
-  RunAwayDistance: 5
-  RandomAngle: 180
+  isRunning: 0
 --- !u!114 &988659906145703297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4184,6 +4192,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &3881884955210086910
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4350,6 +4359,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &4309859631961361093
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4645,6 +4655,30 @@ MonoBehaviour:
   PlayWeight: 1
   autoGetAnimationLength: 0
   waitForAnimationComplete: 1
+--- !u!114 &4913435525552412614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041807f91584669468190d519e0488d2, type: 3}
+  m_Name: RunAway(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 0e4ff959550e78849add4d27253a2f14
+  position: {x: 1171.2, y: 1413.6}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  isRunning: 0
 --- !u!114 &4969604468847366299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4879,6 +4913,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &5477399652980665433
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4982,6 +5017,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &5840130286690282610
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5206,6 +5242,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &6285257267111690994
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5229,6 +5266,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &6402656955234407136
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5252,6 +5290,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &6503405088610219470
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5327,9 +5366,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  RunAwayDirection: {x: 0, y: 0}
-  RunAwayDistance: 10
-  RandomAngle: 180
+  isRunning: 0
 --- !u!114 &6737057450296379580
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5408,9 +5445,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  RunAwayDirection: {x: 0, y: 0}
-  RunAwayDistance: 10
-  RandomAngle: 180
+  isRunning: 0
 --- !u!114 &7115956540510543020
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5816,6 +5851,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &8009384673478999251
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5862,6 +5898,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &8118348360121584919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5945,9 +5982,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
-  RunAwayDirection: {x: 0, y: 0}
-  RunAwayDistance: 5
-  RandomAngle: 180
+  isRunning: 0
 --- !u!114 &8264724959482460158
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6136,6 +6171,30 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   children: []
+--- !u!114 &8912590110282149592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041807f91584669468190d519e0488d2, type: 3}
+  m_Name: RunAway(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 70aac6c9fd2ce654c9e6bc1bcebfb16e
+  position: {x: 1168.7999, y: 1413.6}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  isRunning: 0
 --- !u!114 &8946948294558656572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6190,6 +6249,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &9040626265655719005
 MonoBehaviour:
   m_ObjectHideFlags: 0

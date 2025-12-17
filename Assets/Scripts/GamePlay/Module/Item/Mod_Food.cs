@@ -6,6 +6,7 @@ using UltEvents;
 
 public partial class Mod_Food : Module
 {
+    #region 数据定义
     public Ex_ModData_MemoryPackable ExData;
     public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }
 
@@ -24,6 +25,7 @@ public partial class Mod_Food : Module
     public Mod_Stamina Stamina;
     public DamageReceiver DamageReceiver;
 
+    #region 数据结构
     [MemoryPackable]
     [System.Serializable]
     public partial class Mod_Food_Data
@@ -54,7 +56,9 @@ public partial class Mod_Food : Module
         [Tooltip("水份消耗速度倍率")]
         public float WaterConsumeSpeedRate = 1f;
     }
+    #endregion
 
+    #region 生命周期方法
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -83,7 +87,9 @@ public partial class Mod_Food : Module
             item.OnAct += Act;
         }
     }
+    #endregion
 
+    #region 核心逻辑
     /// <summary>
     /// 调用吃的行为
     /// </summary>
@@ -95,54 +101,59 @@ public partial class Mod_Food : Module
     
     public override void ModUpdate(float timeDelta)
     {
-        float Rate = 1f;
-        //精力补充-前提是存在精力模块
-        if (Stamina != null)
+        float rate = 1f;
+        
+        // 精力补充 - 前提是存在精力模块
+        if (Stamina != null && Stamina.Data.CurrentStamina < Stamina.Data.MaxStamina.Value)
         {
-            //TODO 检测精力是否充足 如果精力不是满的 则补充精力
-            if (Stamina.Data.CurrentStamina < Stamina.Data.MaxStamina.Value)
-            {
-                Rate += Data.StaminaConsumeSpeedRate;
-                Stamina.AddStamina(Data.StaminaRecoverSpeed * timeDelta);
-            }
+            rate += Data.StaminaConsumeSpeedRate;
+            Stamina.AddStamina(Data.StaminaRecoverSpeed * timeDelta);
         }
 
         // 营养消耗
-        ConsumeNutrition(timeDelta * Rate);
+        ConsumeNutrition(timeDelta * rate);
 
+        // 健康状态检测与处理
         if (DamageReceiver != null)
         {
-            //检测饥饿值是否出现亏欠情况
-            if (DamageReceiver != null)
-            {
-                if (Data.nutrition.Protein <= 0)
-                {
-                    //表示饥饿值出现亏欠 , 自己对自己造成伤害
-                    DamageReceiver.ForceHurt(Data.ProteinSelfHurt * timeDelta);
-                }
-                else if (Data.nutrition.Protein >= Data.ProteinThreshold)
-                {
-                    //表示饥饿值充足，恢复血量
-                    DamageReceiver.Heal(Data.HealSpeed * timeDelta, item);
-                }
-            }
-
-            //检测水份是否出现亏欠情况
-            if (Data.nutrition.Water <= 0)
-            {
-                    //表示水份值出现亏欠 , 自己对自己造成伤害
-                    DamageReceiver.ForceHurt(Data.WaterSelfHurt * timeDelta);
-            }
-
-            //检测维生素是否出现亏欠情况
-            if (Data.nutrition.Vitamins <= 0)
-            {
-                //表示饥饿值出现亏欠 , 自己对自己造成伤害
-                DamageReceiver.ForceHurt(Data.VitaminSelfHurt * timeDelta);
-            }
+            CheckNutritionStatus(timeDelta);
         }
         
         DataUpdate?.Invoke();
+    }
+    #endregion
+
+    #region 营养管理
+    /// <summary>
+    /// 检测营养状态并处理相应的健康效果
+    /// </summary>
+    private void CheckNutritionStatus(float timeDelta)
+    {
+        // 检测蛋白质状态
+        if (Data.nutrition.Protein <= 0)
+        {
+            // 蛋白质不足，造成伤害
+            DamageReceiver.ForceHurt(Data.ProteinSelfHurt * timeDelta);
+        }
+        else if (Data.nutrition.Protein >= Data.ProteinThreshold)
+        {
+            // 蛋白质充足，恢复血量
+            DamageReceiver.Heal(Data.HealSpeed * timeDelta, item);
+        }
+
+        // 检测水份状态
+        if (Data.nutrition.Water <= 0)
+        {
+            // 水份不足，造成伤害
+            DamageReceiver.ForceHurt(Data.WaterSelfHurt * timeDelta);
+        }
+
+        // 检测维生素状态
+        if (Data.nutrition.Vitamins <= 0)
+        {
+            // 维生素不足，造成伤害
+            DamageReceiver.ForceHurt(Data.VitaminSelfHurt * timeDelta);
+        }
     }
 
     private float ConsumeNutrition(float timeDelta)
@@ -197,14 +208,16 @@ public partial class Mod_Food : Module
         // 返回本次消耗的总能量值
         return totalEnergy;
     }
+    #endregion
 
+    #region 面板管理
     [Button("显示面板")]
     public void ShowPanel()
     {
         if (PanleInstance != null) return;
 
         GameObject panel = Instantiate(PanelPrefab, transform);
-        panelUI = panel.GetComponent<BasePanel>(); // 获取BasePanel组件
+        panelUI = panel.GetComponent<BasePanel>();
         PanleInstance = panel;
         DataUpdate += RefreshUI;
 
@@ -214,26 +227,33 @@ public partial class Mod_Food : Module
         if (panelUI != null)
         {
             panelUI.Open();
-            
-            // 恢复面板位置到拖拽组件
-            var dragComponent = panel.GetComponentInChildren<UI_Drag>();
-            if (dragComponent != null)
-            {
-                dragComponent.rectTransform.anchoredPosition = Data.PanelPosition;
-            }
-            // 如果没有拖拽组件，直接设置面板位置
-            else
-            {
-                var panelRectTransform = panel.GetComponent<RectTransform>();
-                if (panelRectTransform != null)
-                {
-                    panelRectTransform.anchoredPosition = Data.PanelPosition;
-                }
-            }
+            RestorePanelPosition(panel);
         }
         
         // 更新数据状态
         Data.ShowCanvas = true;
+    }
+
+    /// <summary>
+    /// 恢复面板位置
+    /// </summary>
+    private void RestorePanelPosition(GameObject panel)
+    {
+        // 优先从拖拽组件获取位置
+        var dragComponent = panel.GetComponentInChildren<UI_Drag>();
+        if (dragComponent != null)
+        {
+            dragComponent.rectTransform.anchoredPosition = Data.PanelPosition;
+        }
+        else
+        {
+            // 如果没有拖拽组件，直接设置面板位置
+            var panelRectTransform = panel.GetComponent<RectTransform>();
+            if (panelRectTransform != null)
+            {
+                panelRectTransform.anchoredPosition = Data.PanelPosition;
+            }
+        }
     }
 
     [Button("隐藏面板")]
@@ -241,84 +261,72 @@ public partial class Mod_Food : Module
     {
         if (PanleInstance == null) return;
 
-        // 保存面板位置 - 优先从拖拽组件获取位置
+        SavePanelPosition();
+        Destroy(PanleInstance);
+        DataUpdate -= RefreshUI;
+        panelUI = null;
+        PanleInstance = null;
+        
+        // 更新数据状态
+        Data.ShowCanvas = false;
+    }
+
+    /// <summary>
+    /// 保存面板位置
+    /// </summary>
+    private void SavePanelPosition()
+    {
+        // 优先从拖拽组件获取位置
         var dragComponent = PanleInstance.GetComponentInChildren<UI_Drag>();
         if (dragComponent != null)
         {
             Data.PanelPosition = dragComponent.rectTransform.anchoredPosition;
         }
-        // 如果没有拖拽组件，从面板本身获取位置
         else
         {
+            // 如果没有拖拽组件，从面板本身获取位置
             var panelRectTransform = PanleInstance.GetComponent<RectTransform>();
             if (panelRectTransform != null)
             {
                 Data.PanelPosition = panelRectTransform.anchoredPosition;
             }
         }
-
-        Destroy(PanleInstance);
-        DataUpdate -= RefreshUI;
-        panelUI = null; // 清空BasePanel引用
-        PanleInstance = null; // 清空实例引用
-        
-        // 更新数据状态
-        Data.ShowCanvas = false;
     }
 
     public bool IsPanelVisible()
     {
         return PanleInstance != null && panelUI != null && panelUI.IsOpen();
     }
+    #endregion
 
+    #region UI更新
     [Button("刷新面板")]
     public void RefreshUI()
     {
-        // 通过BasePanel获取并更新各个营养值的显示
-        if (panelUI != null)
-        {
-            // 更新碳水化合物显示
-            var carbSlider = panelUI.GetSlider("碳水");
-            if (carbSlider != null)
-            {
-                carbSlider.maxValue = Data.nutrition.Max_Carbohydrates.Value;
-                carbSlider.value = Data.nutrition.Carbohydrates;
-            }
+        if (panelUI == null) return;
 
-            // 更新脂肪显示
-            var fatSlider = panelUI.GetSlider("脂肪");
-            if (fatSlider != null)
-            {
-                fatSlider.maxValue = Data.nutrition.Max_Fat.Value;
-                fatSlider.value = Data.nutrition.Fat;
-            }
-
-            // 更新蛋白质显示
-            var proteinSlider = panelUI.GetSlider("蛋白质");
-            if (proteinSlider != null)
-            {
-                proteinSlider.maxValue = Data.nutrition.Max_Protein.Value;
-                proteinSlider.value = Data.nutrition.Protein;
-            }
-
-            // 更新水份显示
-            var waterSlider = panelUI.GetSlider("水");
-            if (waterSlider != null)
-            {
-                waterSlider.maxValue = Data.nutrition.Max_Water.Value;
-                waterSlider.value = Data.nutrition.Water;
-            }
-
-            // 更新维生素显示
-            var vitaminSlider = panelUI.GetSlider("维生素");
-            if (vitaminSlider != null)
-            {
-                vitaminSlider.maxValue = Data.nutrition.Max_Vitamins.Value;
-                vitaminSlider.value = Data.nutrition.Vitamins;
-            }
-        }
+        UpdateNutritionSlider("碳水", Data.nutrition.Carbohydrates, Data.nutrition.Max_Carbohydrates.Value);
+        UpdateNutritionSlider("脂肪", Data.nutrition.Fat, Data.nutrition.Max_Fat.Value);
+        UpdateNutritionSlider("蛋白质", Data.nutrition.Protein, Data.nutrition.Max_Protein.Value);
+        UpdateNutritionSlider("水", Data.nutrition.Water, Data.nutrition.Max_Water.Value);
+        UpdateNutritionSlider("维生素", Data.nutrition.Vitamins, Data.nutrition.Max_Vitamins.Value);
     }
 
+    /// <summary>
+    /// 更新营养值滑块显示
+    /// </summary>
+    private void UpdateNutritionSlider(string sliderName, float currentValue, float maxValue)
+    {
+        var slider = panelUI.GetSlider(sliderName);
+        if (slider != null)
+        {
+            slider.maxValue = maxValue;
+            slider.value = currentValue;
+        }
+    }
+    #endregion
+
+    #region 进食行为
     public void BeEat(Mod_Food Eater)
     {
         ShakeItem(item.transform);
@@ -380,6 +388,7 @@ public partial class Mod_Food : Module
             }
         }
     }
+    #endregion
 
     #region 代码动画
     [Button("抖动")]
@@ -440,29 +449,17 @@ private GameObject CreateMainColorParticle(UnityEngine.Transform targetTransform
             item.OnAct -= Act;
         }
         
-        // 保存面板位置 - 优先从拖拽组件获取位置
+        // 保存面板位置
         if (PanleInstance != null)
         {
-            var dragComponent = PanleInstance.GetComponentInChildren<UI_Drag>();
-            if (dragComponent != null)
-            {
-                Data.PanelPosition = dragComponent.rectTransform.anchoredPosition;
-            }
-            // 如果没有拖拽组件，从面板本身获取位置
-            else
-            {
-                var panelRectTransform = PanleInstance.GetComponent<RectTransform>();
-                if (panelRectTransform != null)
-                {
-                    Data.PanelPosition = panelRectTransform.anchoredPosition;
-                }
-            }
+            SavePanelPosition();
         }
         
-        //TODO 将Transform从Dotween中恢复
-        DOTween.Kill(item.transform); // 终止所有与该对象相关的 tween（如果存在）
+        // 终止所有与该对象相关的 tween
+        DOTween.Kill(item?.transform);
 
         ExData.WriteData(Data);
-        
     }
+    
+#endregion
 }

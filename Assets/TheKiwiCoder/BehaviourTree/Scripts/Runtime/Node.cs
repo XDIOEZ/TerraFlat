@@ -2,9 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace TheKiwiCoder {
-    public abstract class Node : ScriptableObject {
-        public enum State {
+namespace TheKiwiCoder
+{
+    public abstract class Node : ScriptableObject
+    {
+        public enum State
+        {
             Running,
             Failure,
             Success
@@ -22,18 +25,21 @@ namespace TheKiwiCoder {
 
         // 新增字段：用于保存节点是否折叠
 
- 
 
-        public State Update() {
 
-            if (!started) {
+        public State Update()
+        {
+
+            if (!started)
+            {
                 OnStart();
                 started = true;
             }
 
             state = OnUpdate();
 
-            if (state != State.Running) {
+            if (state != State.Running)
+            {
                 OnStop();
                 started = false;
             }
@@ -44,15 +50,27 @@ namespace TheKiwiCoder {
         {
             OnFixedUpdate();
         }
+        public virtual void Init()
+        {
+            OnInit();
+        }
+
+        protected virtual void OnInit()
+        {
+
+        }
 
         protected virtual void OnFixedUpdate() { }
 
-        public virtual Node Clone() {
+        public virtual Node Clone()
+        {
             return Instantiate(this);
         }
 
-        public void Abort() {
-            BehaviourTree.Traverse(this, (node) => {
+        public void Abort()
+        {
+            BehaviourTree.Traverse(this, (node) =>
+            {
                 node.started = false;
                 node.state = State.Running;
                 node.OnStop();
