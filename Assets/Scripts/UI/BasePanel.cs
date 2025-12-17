@@ -29,27 +29,32 @@ public class BasePanel : MonoBehaviour
     [ShowInInspector]
     public static int CurrentOrder = 0;
 
-        /// <summary>
+    /// <summary>
     /// 提升UI元素到最上层显示
     /// </summary>
-    public static void BringToFront(RectTransform rectTransform,Canvas canvas=null)
-    { 
+    public static void BringToFront(RectTransform rectTransform, Canvas canvas = null)
+    {
         // 增加全局层级计数器
         BasePanel.CurrentOrder++;
         // 设置当前元素的兄弟索引
         rectTransform.SetSiblingIndex(BasePanel.CurrentOrder);
-      
+
         if (canvas != null)
         {
             canvas.sortingOrder = BasePanel.CurrentOrder;
         }
+    }
+    public static void BringToBack(RectTransform rectTransform)
+    {
+        // 设置当前元素的兄弟索引
+        rectTransform.SetSiblingIndex(BasePanel.CurrentOrder - 1);
     }
 
     public CanvasGroup canvasGroup;
     public bool CanDrag = false;
     public UI_Drag Dragger;
     public RectTransform rectTransform;
-    public string PanleName;
+    public string PanelName;
 
     // 记录面板的开关状态
     [SerializeField]
@@ -57,7 +62,7 @@ public class BasePanel : MonoBehaviour
     #region  Unity生命周期
     protected virtual void Awake()
     {
-        PanleName = gameObject.name + Random.Range(1, 1000);
+        PanelName = gameObject.name + Random.Range(1, 1000);
         UIManager.Instance.RegisterPanel(this);
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
@@ -76,6 +81,12 @@ public class BasePanel : MonoBehaviour
             isOpen = canvasGroup.alpha > 0 && canvasGroup.interactable && canvasGroup.blocksRaycasts;
         }
 
+    }
+
+    public void SetPanelName(string name)
+    {
+        PanelName = name;
+        GetText("信息").text = PanelName;
     }
 
     void OnValidate()
@@ -210,7 +221,7 @@ public class BasePanel : MonoBehaviour
             canvasGroup.blocksRaycasts = true;
             isOpen = true;
         }
-                // 提升层级以显示在最上层
+        // 提升层级以显示在最上层
         BasePanel.BringToFront(rectTransform);
     }
 
@@ -223,6 +234,8 @@ public class BasePanel : MonoBehaviour
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
             isOpen = false;
+            // 层级以显示在最上层
+            BasePanel.BringToBack(rectTransform);
         }
     }
 

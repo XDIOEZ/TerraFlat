@@ -75,6 +75,7 @@ public static class ModText
     public static string Scene = "场景模块";
 
     public static string SkillManager_Item = "技能管理器_物品";
+    public static string Setting = "Module_Setting";
     #endregion
 
     #region T

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-public class ItemDroper : Mod_ItemDroper
+public class Module_DiscardItem : Mod_ItemDroper
 {
     [Header("ª˘¥°≈‰÷√")]
     public Inventory DroperInventory;

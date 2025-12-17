@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -14,132 +15,141 @@ public class GameManager : SingletonAutoMono<GameManager>
     public GameObject SunAndMoonObj { get; private set; }
 
     [Header("准备好的星球数据")]
-    public PlanetData Ready_planetData = new ();
+    public PlanetData Ready_planetData = new();
     [Header("准备好的时间数据")]
     public TimeData Ready_timeData = new TimeData();
 
     public UltEvent Event_GameStart { get; set; } = new UltEvent();
-    public UltEvent Event_ExitGame_Start { get;  set; } = new UltEvent();
-    public UltEvent Event_ExitGame_End { get;  set; } = new UltEvent();
+    public UltEvent Event_ExitGame_Start { get; set; } = new UltEvent();
+    public UltEvent BackToHelloScene_Event_End { get; set; } = new UltEvent();
+
+    [Header("UI 预制体")]
+    public GameObject UIPrefab_HelloCanvas;
+    public GameObject UIPrefab_SaveManager;
+    public GameObject UIPrefab_NewGame;
+    public GameObject UIPrefab_ContextMenu;
 
     #region 生命周期方法
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
         // 初始化寻路系统
-        if(PathFindingSystem != null)
+        if (PathFindingSystem != null)
             PathFindingSystem.SetActive(true);
         else
             Debug.LogError("寻路系统未赋值");
 
         Time.timeScale = 1;
+
+        OpenHellowCanvas();
+        BackToHelloScene_Event_End += OpenHellowCanvas;
     }
     #endregion
 
     #region 退出游戏相关
-/// <summary>
-/// 使用协程处理退出游戏逻辑，解决保存与销毁的时序问题
-/// </summary>
-/// <param name="onComplete">退出完成后的回调函数</param>
-/// <returns></returns>
-public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null)
-{
-    Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
-
-    ////////////////////////////////////////////////////////////////////////////////////
-    // 阶段 1：准备阶段
-    ////////////////////////////////////////////////////////////////////////////////////
-
-    // 保存当前时间数据，包括日夜状态等
-    SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
-
-
-    // 安全检查：确保核心管理器已初始化
-    if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
-        SaveDataMgr.Instance == null)
+    /// <summary>
+    /// 使用协程处理退出游戏逻辑，解决保存与销毁的时序问题
+    /// </summary>
+    /// <param name="onComplete">退出完成后的回调函数</param>
+    /// <returns></returns>
+    public IEnumerator BackToHelloScene_Coroutine(Item Player, System.Action onComplete = null)
     {
-        Debug.LogError("[ExitGame] 核心管理器未初始化，退出失败！");
-        onComplete?.Invoke(); // 即使失败也调用回调
-        yield break;
-    }
+        Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
 
-    // 触发退出开始事件
-    Event_ExitGame_Start?.Invoke();
+        ////////////////////////////////////////////////////////////////////////////////////
+        // 阶段 1：准备阶段
+        ////////////////////////////////////////////////////////////////////////////////////
 
-    ////////////////////////////////////////////////////////////////////////////////////
-    // 阶段 2：数据保存阶段
-    ////////////////////////////////////////////////////////////////////////////////////
+        // 保存当前时间数据，包括日夜状态等
+        SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
 
-    // 先执行基础清理
-    ItemMgr.Instance.CleanupNullItems();
-    ChunkMgr.Instance.CleanEmptyDicValues();
 
-    // 保存所有区块数据
-    Debug.Log("[ExitGame] 开始保存区块数据...");
-    SaveAllChunks();
+        // 安全检查：确保核心管理器已初始化
+        if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
+            SaveDataMgr.Instance == null)
+        {
+            Debug.LogError("[ExitGame] 核心管理器未初始化，退出失败！");
+            onComplete?.Invoke(); // 即使失败也调用回调
+            yield break;
+        }
 
-    // 提前保存玩家数据（在销毁逻辑执行前）
-    Debug.Log("[ExitGame] 开始保存玩家数据...");
-    ItemMgr.Instance.SavePlayer();
+        // 触发退出开始事件
+        Event_ExitGame_Start?.Invoke();
 
-    // 保存数据到磁盘
-    Debug.Log("[ExitGame] 写入存档文件...");
-    SaveDataMgr.Instance.Save_And_WriteToDisk();
+        ////////////////////////////////////////////////////////////////////////////////////
+        // 阶段 2：数据保存阶段
+        ////////////////////////////////////////////////////////////////////////////////////
 
-    ////////////////////////////////////////////////////////////////////////////////////
-    // 阶段 3：清理阶段
-    ////////////////////////////////////////////////////////////////////////////////////
+        // 先执行基础清理
+        ItemMgr.Instance.CleanupNullItems();
+        ChunkMgr.Instance.CleanEmptyDicValues();
 
-    // 销毁玩家对象
-    if (Player != null)
-    {
-        Destroy(Player.gameObject);
-        Debug.Log("[ExitGame] 已销毁玩家对象");
-    }
+        // 保存所有区块数据
+        Debug.Log("[ExitGame] 开始保存区块数据...");
+        SaveAllChunks();
 
-    // 延迟一帧，等待所有标记为销毁的对象实际销毁
-    yield return null;
+        // 提前保存玩家数据（在销毁逻辑执行前）
+        Debug.Log("[ExitGame] 开始保存玩家数据...");
+        ItemMgr.Instance.SavePlayer();
 
-    // 销毁之前实例化的天体对象
-    if (SunAndMoonObj != null)
-    {
-        Destroy(SunAndMoonObj);
-        SunAndMoonObj = null;
-        Debug.Log("[ExitGame] 已销毁 SunAndMoon 对象");
-    }
+        // 保存数据到磁盘
+        Debug.Log("[ExitGame] 写入存档文件...");
+        SaveDataMgr.Instance.Save_And_WriteToDisk();
+
+        ////////////////////////////////////////////////////////////////////////////////////
+        // 阶段 3：清理阶段
+        ////////////////////////////////////////////////////////////////////////////////////
+
+        // 销毁玩家对象
+        if (Player != null)
+        {
+            Destroy(Player.gameObject);
+            Debug.Log("[ExitGame] 已销毁玩家对象");
+        }
+
+        // 延迟一帧，等待所有标记为销毁的对象实际销毁
+        yield return null;
+
+        // 销毁之前实例化的天体对象
+        if (SunAndMoonObj != null)
+        {
+            Destroy(SunAndMoonObj);
+            SunAndMoonObj = null;
+            Debug.Log("[ExitGame] 已销毁 SunAndMoon 对象");
+        }
 
         // 清理所有区块
         Debug.Log("[ExitGame] 开始清理区块...");
-    ChunkMgr.Instance.ClearAllChunk();
+        ChunkMgr.Instance.ClearAllChunk();
 
-    // 释放未使用的资源
-    Resources.UnloadUnusedAssets();
-    System.GC.Collect();
+        // 释放未使用的资源
+        Resources.UnloadUnusedAssets();
+        System.GC.Collect();
 
-    ////////////////////////////////////////////////////////////////////////////////////
-    // 阶段 4：场景切换阶段
-    ////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////
+        // 阶段 4：场景切换阶段
+        ////////////////////////////////////////////////////////////////////////////////////
 
-    Debug.Log("[ExitGame] 准备加载 GameStartScene...");
-    AsyncOperation loadOp = SceneManager.LoadSceneAsync("GameStartScene");
-    while (!loadOp.isDone)
-        yield return null;
+        Debug.Log("[ExitGame] 准备加载 GameStartScene...");
+        AsyncOperation loadOp = SceneManager.LoadSceneAsync("GameStartScene");
+        while (!loadOp.isDone)
+            yield return null;
 
-    ////////////////////////////////////////////////////////////////////////////////////
-    // 阶段 5：收尾阶段
-    ////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////
+        // 阶段 5：收尾阶段
+        ////////////////////////////////////////////////////////////////////////////////////
 
-    // 重置存档数据，准备下次游戏
-    SaveDataMgr.Instance.SaveData = new GameSaveData();
+        // 重置存档数据，准备下次游戏
+        SaveDataMgr.Instance.SaveData = new GameSaveData();
 
-    // 触发退出结束事件
-    Event_ExitGame_End?.Invoke();
+        // 触发退出结束事件
+        BackToHelloScene_Event_End?.Invoke();
 
-    Debug.Log("<color=green>[ExitGame]</color> 游戏退出流程完成");
+        Debug.Log("<color=green>[ExitGame]</color> 游戏退出流程完成");
 
-    // 最终调用回调函数
-    onComplete?.Invoke();
-}
+        // 最终调用回调函数
+        onComplete?.Invoke();
+    }
 
     /// <summary>
     /// 保存所有区块数据（提取为独立方法，提高可读性）
@@ -204,7 +214,7 @@ public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null
         });
     }
 
-    public void LoadGameScene(string NewScenename,Action onSceneUnloaded = null)
+    public void LoadGameScene(string NewScenename, Action onSceneUnloaded = null)
     {
         //2. 实例化日月系统
         if (SunAndMoonPrefab != null)
@@ -227,13 +237,13 @@ public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null
         {
             onSceneUnloaded.Invoke();
         };
-    
+
     }
     #endregion
 
     #region 场景切换相关
     [Tooltip("切换场景")]
-    public void ChangeScene_By_SceneNames(string LastSceneName, string NextSceneName,Action onSceneUnloaded = null)
+    public void ChangeScene_By_SceneNames(string LastSceneName, string NextSceneName, Action onSceneUnloaded = null)
     {
         // 保存玩家和区块
         ItemMgr.Instance.SavePlayer();
@@ -263,8 +273,8 @@ public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null
                 SceneManager.SetActiveScene(newScene);
                 Debug.Log($"旧场景已卸载：{startScene.name}");
 
-               // 触发回调
-               onSceneUnloaded?.Invoke();
+                // 触发回调
+                onSceneUnloaded?.Invoke();
             };
         }
         else
@@ -282,9 +292,9 @@ public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null
     {
         ItemMgr.Instance.CleanupNullItems();
         ChunkMgr.Instance.ClearAllChunk();
-    
+
         Player player = ItemMgr.Instance.LoadPlayer(playerName);
-    
+
         if (player.Data.transform.position == Vector3.zero)
         {
             // 新玩家：随机放到新场景
@@ -309,6 +319,240 @@ public IEnumerator ExitGameCoroutine(Item Player,System.Action onComplete = null
         // 将数据保存到磁盘
         SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
+
+    #endregion
+
+    #region UI相关
+
+    public void OpenHellowCanvas()
+    {
+        if (UIManager.Instance.GetPanel("HelloCanvas") != null)
+        {
+            UIManager.Instance.GetPanel("HelloCanvas").Open();
+            return;
+        }
+        if (UIPrefab_HelloCanvas != null)
+        {
+            BasePanel helloCanvas = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_HelloCanvas, "HelloCanvas");
+            helloCanvas.Open();
+
+            helloCanvas.GetButton("选择存档").onClick.AddListener(OpenGameSaveManager);
+            helloCanvas.GetButton("新游戏").onClick.AddListener(OpenNewGame);
+        }
+    }
+
+    public void OpenContextMenu()
+    {
+        if (UIManager.Instance.GetPanel("ContextMenu") != null)
+        {
+            UIManager.Instance.GetPanel("ContextMenu").Open();
+            return;
+        }
+        if (UIPrefab_ContextMenu != null)
+        {
+            BasePanel contextMenu = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_ContextMenu, "ContextMenu");
+            contextMenu.Open();
+        }
+    }
+
+    public void OpenNewGame()
+    {
+        if (UIManager.Instance.GetPanel("NewGame") != null)
+        {
+            UIManager.Instance.GetPanel("NewGame").Open();
+            return;
+        }
+        if (UIPrefab_NewGame != null)
+        {
+            BasePanel newGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
+            newGame.Open();
+            newGame.GetButton("开始新游戏").onClick.AddListener(() => StartNewGame(newGame.GetInputField("新增玩家名称输入框").text));
+            newGame.GetButton("返回上一个界面").onClick.AddListener(newGame.Close);
+            // 设置输入框值改变事件
+            newGame.GetInputField("新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
+            newGame.GetInputField("新增存档名称输入框")?.onValueChanged.AddListener(OnPlayerSaveNameChanged);
+            newGame.GetInputField("星球半径输入框")?.onValueChanged.AddListener(OnPlanetReadiusChanged);
+            newGame.GetInputField("噪声缩放输入框")?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+
+        }
+    }
+
+    public void OpenGameSaveManager()
+    {
+        if (UIManager.Instance.GetPanel("存档选择面板") != null)
+        {
+            UIManager.Instance.GetPanel("存档选择面板").Open();
+            return;
+        }
+        if (UIPrefab_SaveManager != null)
+        {
+            BasePanel saveManager = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_SaveManager, "存档选择面板");
+
+            // 设置UI事件绑定
+            // 设置按钮点击事件
+            saveManager.SetButtonOnClick("开始游戏按钮", OnClick_StartGame_Button);
+            saveManager.SetButtonOnClick("开始新游戏", OnClick_StartNewGame_Button);
+            saveManager.SetButtonOnClick("加载存档按钮", OnClick_LoadSaveData_Button);
+            saveManager.GetInputField("选择或新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
+
+            saveManager.Open();
+        }
+    }
+
+
+
+    #region UI事件处理方法
+
+    /// <summary>
+    /// 点击开始游戏按钮
+    /// </summary>
+    public void OnClick_StartGame_Button()
+    {
+        if (SaveDataMgr.Instance?.SaveData == null || SaveDataMgr.Instance.SaveData.Seed == 0)
+        {
+            Debug.LogWarning("请先选择存档或创建新游戏");
+            return;
+        }
+
+        BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+        if (saveManager != null)
+        {
+            ContinueGame(saveManager.GetInputField("选择或新增玩家名称输入框").text);
+        }
+    }
+
+    /// <summary>
+    /// 点击开始新游戏按钮
+    /// </summary>
+    private void OnClick_StartNewGame_Button()
+    {
+        if (SaveDataMgr.Instance != null)
+        {
+            BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+            if (saveManager != null)
+            {
+                StartNewGame(saveManager.GetInputField("新增玩家名称输入框").text);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
+        }
+    }
+
+    /// <summary>
+    /// 点击加载存档按钮
+    /// </summary>
+    public void OnClick_LoadSaveData_Button()
+    {
+        if (SaveDataMgr.Instance != null)
+        {
+            BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+            if (saveManager != null)
+            {
+                var selectedSaveText = saveManager.GetText("选中的存档名称");
+                if (selectedSaveText != null)
+                {
+                    string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveText.text + ".bytes");
+                    SaveDataMgr.Instance.LoadSaveByDisk(path);
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
+        }
+        // 生成玩家按钮
+        SaveDataManager_UI.Instance.GeneratePlayerButtons();
+    }
+
+    /// <summary>
+    /// 点击删除存档按钮
+    /// </summary>
+    public void OnClick_DeletSave_Button()
+    {
+        if (SaveMenuRightMenuUI.Instance.SelectInfo.Path == "")
+        {
+            //删除玩家
+            SaveDataMgr.Instance.SaveData.PlayerData_Dict.Remove(SaveMenuRightMenuUI.Instance.SelectInfo.Name);
+        }
+        else if (SaveMenuRightMenuUI.Instance.SelectInfo.Path != "")
+        {
+            // 删除存档
+            if (SaveDataMgr.Instance != null)
+            {
+                BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+                if (saveManager != null)
+                {
+                    var selectedSaveText = saveManager.GetText("选中的存档名称");
+                    if (selectedSaveText != null)
+                    {
+                        string fullPath = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveText.text + ".bytes");
+                        SaveDataMgr.Instance.DeletSave(fullPath);
+                    }
+                }
+            }
+        }
+        SaveDataManager_UI.Instance.Refresh();
+    }
+
+    /// <summary>
+    /// 玩家名字输入框实时更新事件
+    /// </summary>
+    private void OnUpdate_PlayerNameChanged_Text(string newName)
+    {
+        if (SaveDataMgr.Instance != null)
+        {
+            SaveDataMgr.Instance.CurrentContrrolPlayerName = newName;
+        }
+    }
+
+    /// <summary>
+    /// 存档名字输入框实时更新事件
+    /// </summary>
+    private void OnPlayerSaveNameChanged(string newName)
+    {
+        if (SaveDataMgr.Instance != null && SaveDataMgr.Instance.SaveData != null)
+        {
+            SaveDataMgr.Instance.SaveData.saveName = newName;
+        }
+    }
+
+    /// <summary>
+    /// 星球半径输入框实时更新事件
+    /// </summary>
+    private void OnPlanetReadiusChanged(string newValue)
+    {
+        // 检测传入的字符串是否为有效的整数
+        if (int.TryParse(newValue, out int radius))
+        {
+            SaveDataManager_UI.Instance.Ready_planetData.Radius = radius;
+        }
+        else
+        {
+            // 非法输入，不做处理，必要时可提示用户
+            Debug.LogWarning($"输入的半径值无效：{newValue}");
+        }
+    }
+
+    /// <summary>
+    /// 星球噪声缩放输入框实时更新事件
+    /// </summary>
+    private void OnPlanetNoiseScaleChanged(string newValue)
+    {
+        // 检测传入的字符串是否为有效的浮点数
+        if (float.TryParse(newValue, out float noiseScale))
+        {
+            SaveDataManager_UI.Instance.Ready_planetData.NoiseScale = noiseScale;
+        }
+        else
+        {
+            // 非法输入，不做处理，必要时可提示用户
+            Debug.LogWarning($"输入的噪声缩放值无效：{newValue}");
+        }
+    }
+
+    #endregion
 
     #endregion
 }
