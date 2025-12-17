@@ -61,6 +61,7 @@ public abstract class Module : MonoBehaviour
 
     */
     public abstract ModuleData _Data { get; set; }
+    [ReadOnly]
     public Item item;
     [HideInInspector]
     public ItemData Item_Data;

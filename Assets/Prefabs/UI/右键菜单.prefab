@@ -566,8 +566,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e35963cbd2d44304c83e206e1ebb4fc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rectTransform: {fileID: 0}
-  canvas: {fileID: 0}
+  rectTransform: {fileID: 9142484731809830329}
+  canvas: {fileID: 4978298519864925769}
   draggableImage: {fileID: 3210683492888027989}
   originalPosition: {x: 0, y: 0}
   offset: {x: 0, y: 0}
@@ -816,10 +816,10 @@ RectTransform:
   - {fileID: 4458176857326644710}
   m_Father: {fileID: 1274487763139270287}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 104.37468, y: -20}
-  m_SizeDelta: {x: 200, y: 40}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4417460633115053316
 CanvasRenderer:
@@ -937,10 +937,10 @@ RectTransform:
   - {fileID: 6136717940269585205}
   m_Father: {fileID: 1274487763139270287}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 104.37468, y: -65}
-  m_SizeDelta: {x: 200, y: 40}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2590958351758247006
 CanvasRenderer:
@@ -1454,7 +1454,7 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 2560, y: 1440}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
@@ -1503,9 +1503,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00d27a205b8cb774f8c82a40aa10cc91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  canvasGroup: {fileID: 0}
+  canvasGroup: {fileID: 8385574691517275536}
   CanDrag: 1
-  Dragger: {fileID: 8606467288345001109}
+  Dragger: {fileID: 0}
+  rectTransform: {fileID: 0}
+  PanleName: 
+  isOpen: 0
 --- !u!114 &3158902765954493172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1527,6 +1530,5 @@ MonoBehaviour:
       - None
     SlotMaxVolume: 0
     Index: 0
-    Belong_Inventory: {fileID: 0}
   itemSlotUI: {fileID: 0}
   basePanel: {fileID: 1133843230571572653}

@@ -392,7 +392,7 @@ public class UIManager : MonoBehaviour
         }
         else if (panel != null && panels.ContainsKey(panel.name))
         {
-            panels[panel.PanleName] = panel;
+            panels[panel.PanelName] = panel;
         }
     }
 
@@ -401,13 +401,15 @@ public class UIManager : MonoBehaviour
     /// </summary>
     /// <param name="panelPrefab">面板预制体</param>
     /// <returns>实例化的面板组件</returns>
-    public BasePanel CreatePanelFromGameObject(GameObject panelPrefab)
+    public BasePanel CreatePanelFromGameObject(GameObject panelPrefab, string panelName = "")
     {
         if (panelPrefab == null)
         {
             Debug.LogWarning("Panel prefab cannot be null!");
             return null;
         }
+
+
 
         // 确保panelRoot存在
         EnsurePanelRootExists();
@@ -416,8 +418,17 @@ public class UIManager : MonoBehaviour
         Transform parentTransform = panelRoot;
         GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
 
+
         // 获取BasePanel组件
         BasePanel panel = panelInstance.GetComponent<BasePanel>();
+
+        if (!string.IsNullOrEmpty(panelName))
+        {
+            panelInstance.name = panelName;
+            panel.PanelName = panelName;
+        }
+
+
         if (panel != null)
         {
             // 自动注册面板

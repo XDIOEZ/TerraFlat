@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using TMPro;
 using Sirenix.OdinInspector;
 
-public class SaveDataManager_UI : MonoBehaviour
+public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 {
     #region 字段定义
 
@@ -26,7 +26,6 @@ public class SaveDataManager_UI : MonoBehaviour
     public Transform SaveSelectButton_Parent_Content; // 存档按钮父物体
     public Transform Player_SelectButton_Parent_Content; // 玩家按钮父物体
     public string BasePanelName = "存档选择面板";
-    public string SaveSelectName = "开始新游戏面板";
 
     // 移除了原来的所有UI控件字段，通过BaseUIManager获取引用
 
@@ -52,10 +51,8 @@ public class SaveDataManager_UI : MonoBehaviour
     private void Start()
     {
         saveAndLoad = SaveDataMgr.Instance;
-
         LoadSaveFileNames();
         GenerateSaveButtons();
-        SetupUIEvents();
     }
 
     /// <summary>
@@ -65,7 +62,7 @@ public class SaveDataManager_UI : MonoBehaviour
     {
         // 设置按钮点击事件
         uiManager.GetPanel("存档选择面板").SetButtonOnClick("开始游戏按钮", OnClick_StartGame_Button);
-        uiManager.GetPanel("开始新游戏面板").SetButtonOnClick("开始新游戏", OnClick_StartNewGame_Button);
+        uiManager.GetPanel("开始新游戏").SetButtonOnClick("开始新游戏", OnClick_StartNewGame_Button);
         uiManager.GetPanel("存档选择面板").SetButtonOnClick("加载存档按钮", OnClick_LoadSaveData_Button);
         uiManager.GetPanel("右键菜单").SetButtonOnClick("删除按钮", OnClick_DeletSave_Button);
 
@@ -230,7 +227,6 @@ public class SaveDataManager_UI : MonoBehaviour
                 {
                     string fullPath = Path.Combine(PathToSaveFolder, selectedSaveText.text + ".bytes");
                     saveAndLoad.DeletSave(fullPath);
-                   
                 }
             }
         }
