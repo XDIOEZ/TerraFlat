@@ -212,7 +212,7 @@ public class GameRes : SingletonAutoMono<GameRes>
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
                 BaseSkill skill => skill.name,
-                Tile_Block tileBlock => string.IsNullOrEmpty(tileBlock.tileItemName) ? tileBlock.name : tileBlock.tileItemName,
+                Tile_Block tileBlock => tileBlock.name,
                 _ => asset.ToString()
             };
 

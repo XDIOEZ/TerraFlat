@@ -17,19 +17,15 @@ MonoBehaviour:
   tileDataTemplate:
     rid: 4513346302687051778
   TileBase: {fileID: 11400000, guid: 2ccdd18f6c4787c43a001bbaa64407ab, type: 2}
-  GrassTemplate:
-    rid: -2
   BuffInfo: []
   references:
     version: 2
     RefIds:
-    - rid: -2
-      type: {class: , ns: , asm: }
     - rid: 4513346302687051778
       type: {class: TileData_Grass, ns: , asm: Data}
       data:
-        ID: 
-        Name: 
+        ID: Tile_Grass
+        Name: Tile_Grass
         TileTag: 
         position: {x: 0, y: 0, z: 0}
         DemolitionTime: 0

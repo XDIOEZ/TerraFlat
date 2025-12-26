@@ -26,8 +26,8 @@ MonoBehaviour:
     - rid: 4513346302687051780
       type: {class: TileData_Universal, ns: , asm: Data}
       data:
-        ID: 
-        Name: 
+        ID: Tile_Ice
+        Name: Tile_Ice
         TileTag: 
         position: {x: 0, y: 0, z: 0}
         DemolitionTime: 0
