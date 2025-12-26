@@ -7,7 +7,6 @@ using UnityEngine;
 [System.Serializable]
 public partial class BlockData : ItemData
 {
-    [HideInInspector]
-    public TileData tileData; // 移除了 new TileData()
+
 }
 

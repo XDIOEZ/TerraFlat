@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
-public class Item_Tile_Grass : Item,IBlockTile
+public class Item_Tile_Grass : Item
 {
     [SerializeField]
     private BlockData data = new BlockData();
@@ -15,19 +15,6 @@ public class Item_Tile_Grass : Item,IBlockTile
     [SerializeField]
     TileData_Grass _tileData;
     public TileData TileData { get => _tileData; set => _tileData = (TileData_Grass)value; }
-
-
-    public void Awake()
-    {
-        if (data.tileData.Name_TileBase == "")
-        {
-            data.tileData = _tileData;
-        }
-        else
-        {
-            _tileData = data.tileData as TileData_Grass;
-        }
-    }
 
     public override void Act()
     {
@@ -58,28 +45,5 @@ public class Item_Tile_Grass : Item,IBlockTile
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
 
-    public void Tile_Exit(Item item, TileData tileData)
-    {
-
-    }
-
-    //这可如何是好 水方块只会影响移动效果 我不希望其影响其他的 但是草方块又不是单独只影响移动效果
-    public void Tile_Enter(Item item, TileData tileData)
-    {
-        
-    }
-
-    public void Tile_Update(Item item, TileData tileData)
-    {
-
-    }
-}
-
-public interface IBlockTile
-{
-    public TileData TileData { get; set; }
-    public void Tile_Enter(Item item, TileData tileData);
-    public void Tile_Update(Item item, TileData tileData);
-    public void Tile_Exit(Item item, TileData tileData);
 }
 

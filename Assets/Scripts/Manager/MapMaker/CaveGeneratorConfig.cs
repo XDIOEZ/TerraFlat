@@ -387,7 +387,7 @@ private void GenerateResourcesAndDecorations(Map map, System.Random rng)
             Vector2Int worldPos = localPos + map.Data.position;
             
             // 只在地板上生成资源
-            if (map.GetTile(worldPos)?.Name_ItemName == floorTileName)
+            if (map.GetTile(worldPos)?.Name == floorTileName)
             {
                 floorPositions.Add(worldPos);
             }

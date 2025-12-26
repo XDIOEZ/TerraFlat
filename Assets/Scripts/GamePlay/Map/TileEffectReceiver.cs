@@ -289,16 +289,16 @@ public class TileEffectReceiver : Module
 
         // 从缓存获取IBlockTile
         lock (cacheLock)
-        {            if (prefabCache.TryGetValue(tileData.Name_ItemName, out tileBlock))
+        {            if (prefabCache.TryGetValue(tileData.Name, out tileBlock))
             {
                 return tileBlock != null;
             }
         }
 
         // 缓存未命中，加载预制体
-        var prefab = GameRes.Instance?.GetPrefab(tileData.Name_ItemName);
+        var prefab = GameRes.Instance?.GetPrefab(tileData.Name);
         if (prefab == null)
-        {            Debug.LogError($"TileEffectReceiver: 找不到 Prefab: {tileData.Name_ItemName}");
+        {            Debug.LogError($"TileEffectReceiver: 找不到 Prefab: {tileData.Name}");
             return false;
         }
 
@@ -307,12 +307,12 @@ public class TileEffectReceiver : Module
         {            tileBlock = block;
             // 存入缓存
             lock (cacheLock)
-            {                prefabCache[tileData.Name_ItemName] = tileBlock;
+            {                prefabCache[tileData.Name] = tileBlock;
             }
             return true;
         }
         else
-        {            Debug.LogWarning($"TileEffectReceiver: Prefab 未实现 IBlockTile 接口: {tileData.Name_ItemName}");
+        {            Debug.LogWarning($"TileEffectReceiver: Prefab 未实现 IBlockTile 接口: {tileData.Name}");
             return false;
         }
     }

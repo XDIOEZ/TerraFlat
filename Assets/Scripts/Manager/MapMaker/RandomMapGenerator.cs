@@ -61,9 +61,6 @@ public class RandomMapGenerator : MonoBehaviour
     public float NoiseScale => (plantData != null) ? plantData.NoiseScale : 0.01f;
 
     public EnvironmentFactors[,] EnvFactorsGrid { get => map.Data.EnvironmentData; set => map.Data.EnvironmentData = value; }
-
-
-    private Dictionary<string, TileData> tileDataCache = new(); // TileData 缓存
     #endregion
 
     #region Unity 生命周期
@@ -400,86 +397,49 @@ public class RandomMapGenerator : MonoBehaviour
             Debug.LogError($"[地形生成] ❌ 生物群系或其配置为空");
             return;
         }
-
-        try
+        // 1. 获取 Tile_Block SO
+        Tile_Block tileBlock = biome.TerrainConfig.GetTilePrefab(env);
+        if (tileBlock == null)
         {
-            // 1. 获取预制体键值
-            string tilePrefabKey = biome.TerrainConfig.GetTilePrefab(env);
-            if (string.IsNullOrEmpty(tilePrefabKey))
-            {
-                Debug.LogWarning($"[地形生成] ⚠️ 无法获取预制体键值: {biome.BiomeName}");
-                return;
-            }
-
-            // 2. 从缓存获取 TileData
-            TileData tileData = GetOrCacheTileData(tilePrefabKey, biome);
-            if (tileData == null)
-                return;
-
-            // 3. 克隆 TileData
-            var tile = tileData.DeepClone();
-
-            // 4. 初始化瓦片（根据环境因子调整）
-            tile.Initialize_Env(env);
-
-            // 5. 设置瓦片位置
-            tile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
-
-            // 6. 添加到地图
-            map.ADDTileData(worldPos, tile);
-            map.UpdateTileBaseAtPosition(worldPos);
+            Debug.LogWarning($"[地形生成] ⚠️ 无法获取 Tile_Block: {biome.BiomeName}");
+            return;
         }
-        catch (System.Exception ex)
+
+        // 2. 直接从 Tile_Block 的模板生成 TileData（无需额外缓存）
+        TileData template = tileBlock.tileDataTemplate;
+        if (template == null)
         {
-            Debug.LogError($"[地形生成] ❌ 生成地形瓦片失败: {ex.Message}\n{ex.StackTrace}");
+            Debug.LogError($"[地形生成] ❌ Tile_Block 的 tileDataTemplate 为 null: {tileBlock.name}");
+            return;
         }
+
+        // 3. 克隆 TileData（使用手写 Clone，避免通用深拷贝开销）
+        var tile = template.Clone();
+
+        // 3.1 若 Tile_Block 提供了对应的 TileBase，则同步写入 TileData 的 ID，
+        // 让后续 Map.UpdateTileBaseAtPosition 可以正确渲染 Tilemap
+        var unityTileBase = tileBlock.GetTileBaseAsset();
+        if (unityTileBase != null)
+        {
+            tile.ID = unityTileBase.name;
+        }
+        else if (string.IsNullOrEmpty(tile.ID))
+        {
+            Debug.LogError($"[地形生成] ❌ Tile_Block {tileBlock.name} 未提供 TileBase，且模板 ID 为空，无法渲染瓦片");
+            return;
+        }
+
+        // 4. 初始化瓦片（根据环境因子调整）
+        tile.Initialize_Env(env);
+
+        // 5. 设置瓦片位置
+        tile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
+
+        // 6. 添加到地图
+        map.ADDTileData(worldPos, tile);
+        map.UpdateTileBaseAtPosition(worldPos);
     }
 
-    /// <summary>
-    /// 获取或缓存 TileData
-    /// </summary>
-    private TileData GetOrCacheTileData(string prefabKey, BiomeData biome)
-    {
-        // 检查缓存
-        if (tileDataCache.ContainsKey(prefabKey))
-            return tileDataCache[prefabKey];
-
-        try
-        {
-            // 加载预制体
-            var prefab = GameRes.Instance.GetPrefab(prefabKey);
-            if (prefab == null)
-            {
-                Debug.LogError($"[缓存] ❌ 无法获取预制体: {prefabKey}");
-                return null;
-            }
-
-            // 获取 IBlockTile 组件
-            var blockTile = prefab.GetComponent<IBlockTile>();
-            if (blockTile == null)
-            {
-                Debug.LogError($"[缓存] ❌ 预制体 {prefabKey} 缺少 IBlockTile 组件");
-                return null;
-            }
-
-            // 缓存 TileData
-            TileData cachedTileData = blockTile.TileData;
-            if (cachedTileData == null)
-            {
-                Debug.LogError($"[缓存] ❌ IBlockTile 的 TileData 为 null");
-                return null;
-            }
-
-            tileDataCache[prefabKey] = cachedTileData;
-
-            return cachedTileData;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"[缓存] ❌ 缓存 TileData 失败: {ex.Message}");
-            return null;
-        }
-    }
     #endregion
 
     #region 资源生成逻辑

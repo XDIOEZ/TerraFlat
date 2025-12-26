@@ -288,7 +288,7 @@ private void UpdateMouseInfo()
         GUILayout.Label($"∏ﬂ∂»: {hoveredEnvFactors.Hight:F2}", labelStyle);
         if (hoveredTileData != null)
         {
-            GUILayout.Label($"Õﬂ∆¨: {hoveredTileData.Name_ItemName}", labelStyle);
+            GUILayout.Label($"Õﬂ∆¨: {hoveredTileData.Name}", labelStyle);
         }
         
         GUILayout.Label($"∞¥ {toggleKey} º¸«–ªªœ‘ æ", labelStyle);

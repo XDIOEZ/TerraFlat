@@ -26,6 +26,10 @@ public class GameRes : SingletonAutoMono<GameRes>
     [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
 
+    [Header("Tile地块逻辑SO字典")]
+    [ShowInInspector]
+    public Dictionary<string, Tile_Block> TileBlockDict = new Dictionary<string, Tile_Block>();
+
     [Header("Buff数据字典")]
     [ShowInInspector]
     public Dictionary<string, Buff_Data> BuffData_Dict = new Dictionary<string, Buff_Data>();
@@ -81,6 +85,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             ADBLabels.Add("Prefab");
             ADBLabels.Add("CraftingRecipe");
             ADBLabels.Add("TileBase");
+            ADBLabels.Add("TileBlock");
             ADBLabels.Add("Buff");
             ADBLabels.Add("InventoryInit");
             ADBLabels.Add("Skill");
@@ -108,6 +113,13 @@ public class GameRes : SingletonAutoMono<GameRes>
             tileBaseDict,
             null,
             "加载TileBase"));
+
+        // 新增：加载 Tile_Block 资源（地块逻辑 ScriptableObject）
+        yield return StartCoroutine(SyncLoadAssetsWithProgress<Tile_Block>(
+            new List<string> { "TileBlock" },
+            TileBlockDict,
+            null,
+            "加载TileBlock SO"));
             
         // 额外处理：BuffData
         yield return StartCoroutine(SyncLoadAssetsWithProgress<Buff_Data>(
@@ -200,6 +212,7 @@ public class GameRes : SingletonAutoMono<GameRes>
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
                 BaseSkill skill => skill.name,
+                Tile_Block tileBlock => string.IsNullOrEmpty(tileBlock.tileItemName) ? tileBlock.name : tileBlock.tileItemName,
                 _ => asset.ToString()
             };
 
@@ -239,6 +252,7 @@ public void LoadResourcesSync()
         ADBLabels.Add("Prefab");
         ADBLabels.Add("CraftingRecipe");
         ADBLabels.Add("TileBase");
+        ADBLabels.Add("TileBlock");
         ADBLabels.Add("Buff");
         ADBLabels.Add("InventoryInit");
         ADBLabels.Add("Skill");
@@ -292,6 +306,7 @@ private void ClearAllDictionaries()
     AllPrefabs.Clear();
     recipeDict.Clear();
     tileBaseDict.Clear();
+    TileBlockDict.Clear();
     BuffData_Dict.Clear();
     InventoryInitDict.Clear();
     SkillDict.Clear();
@@ -341,6 +356,7 @@ public void HotReloadAllResources()
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
                 BaseSkill skill => skill.name,
+                Tile_Block tileBlock => string.IsNullOrEmpty(tileBlock.tileItemName) ? tileBlock.name : tileBlock.tileItemName,
                 _ => asset.ToString()
             };
 
@@ -411,6 +427,15 @@ public void HotReloadAllResources()
     {
         tileBaseDict.TryGetValue(tileBaseName, out var tile);
         return tile;
+    }
+    
+    /// <summary>
+    /// 获取 Tile_Block 逻辑 ScriptableObject（通过 tileItemName 或资源名）
+    /// </summary>
+    public Tile_Block GetTileBlock(string key)
+    {
+        TileBlockDict.TryGetValue(key, out var block);
+        return block;
     }
     
     public Buff_Data GetBuffData(string buffName)
