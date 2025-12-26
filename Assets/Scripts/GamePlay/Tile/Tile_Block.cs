@@ -60,4 +60,27 @@ public abstract class Tile_Block : ScriptableObject
     public virtual void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
     {
     }
+
+    /// <summary>
+    /// 在编辑器中自动校正 TileData 模板的 ID 和 Name，避免手动填写
+    /// </summary>
+    private void OnValidate()
+    {
+        if (tileDataTemplate == null)
+            return;
+
+        // 优先使用 tileItemName，未填写则退回到 SO 资源名
+        string keyName = !string.IsNullOrEmpty(tileItemName) ? tileItemName : name;
+        if (string.IsNullOrEmpty(keyName))
+            return;
+
+        // 始终同步 Name，供 TileEffectReceiver 通过 GameRes.GetTileBlock 查找
+        tileDataTemplate.Name = keyName;
+
+        // 仅在 ID 为空时填充，避免覆盖那些有特殊含义（如 TileBase 名称）的配置
+        if (string.IsNullOrEmpty(tileDataTemplate.ID))
+        {
+            tileDataTemplate.ID = keyName;
+        }
+    }
 }
