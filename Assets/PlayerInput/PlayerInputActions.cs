@@ -236,6 +236,15 @@ namespace InputSystem
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Tab"",
+                    ""type"": ""Button"",
+                    ""id"": ""68cd0693-34a0-460f-885d-8a51b06161a7"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -568,6 +577,17 @@ namespace InputSystem
                     ""action"": ""OpenWorkBench"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7bbbd030-a567-491a-beb2-f01cc6043b1b"",
+                    ""path"": ""<Keyboard>/tab"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Tab"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -592,6 +612,7 @@ namespace InputSystem
             m_Win10_LeftClick = m_Win10.FindAction("LeftClick", throwIfNotFound: true);
             m_Win10_OpenEquipmentPack = m_Win10.FindAction("OpenEquipmentPack", throwIfNotFound: true);
             m_Win10_OpenWorkBench = m_Win10.FindAction("OpenWorkBench", throwIfNotFound: true);
+            m_Win10_Tab = m_Win10.FindAction("Tab", throwIfNotFound: true);
         }
 
         ~@PlayerInputActions()
@@ -688,6 +709,7 @@ namespace InputSystem
         private readonly InputAction m_Win10_LeftClick;
         private readonly InputAction m_Win10_OpenEquipmentPack;
         private readonly InputAction m_Win10_OpenWorkBench;
+        private readonly InputAction m_Win10_Tab;
         /// <summary>
         /// Provides access to input actions defined in input action map "Win10".
         /// </summary>
@@ -764,6 +786,10 @@ namespace InputSystem
             /// </summary>
             public InputAction @OpenWorkBench => m_Wrapper.m_Win10_OpenWorkBench;
             /// <summary>
+            /// Provides access to the underlying input action "Win10/Tab".
+            /// </summary>
+            public InputAction @Tab => m_Wrapper.m_Win10_Tab;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Win10; }
@@ -837,6 +863,9 @@ namespace InputSystem
                 @OpenWorkBench.started += instance.OnOpenWorkBench;
                 @OpenWorkBench.performed += instance.OnOpenWorkBench;
                 @OpenWorkBench.canceled += instance.OnOpenWorkBench;
+                @Tab.started += instance.OnTab;
+                @Tab.performed += instance.OnTab;
+                @Tab.canceled += instance.OnTab;
             }
 
             /// <summary>
@@ -896,6 +925,9 @@ namespace InputSystem
                 @OpenWorkBench.started -= instance.OnOpenWorkBench;
                 @OpenWorkBench.performed -= instance.OnOpenWorkBench;
                 @OpenWorkBench.canceled -= instance.OnOpenWorkBench;
+                @Tab.started -= instance.OnTab;
+                @Tab.performed -= instance.OnTab;
+                @Tab.canceled -= instance.OnTab;
             }
 
             /// <summary>
@@ -1048,6 +1080,13 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnOpenWorkBench(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Tab" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnTab(InputAction.CallbackContext context);
         }
     }
 }

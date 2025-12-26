@@ -27,6 +27,7 @@ public class BasePanel : MonoBehaviour
     /// 当前全局层级顺序，确保拖拽物体始终显示在最上层
     /// </summary>
     [ShowInInspector]
+    [ReadOnly]
     public static int CurrentOrder = 0;
 
     /// <summary>
