@@ -24,13 +24,24 @@ public partial class BuffRunTime
 
     public void SetBuffData(Item sender, Item receiver)
     {
-        buff = GameRes.Instance.GetBuffData(buff_IDName).Clone();
-        buff_Sender = sender;
-        buff_Receiver = receiver;
+        // 确保 Buff 配置已就绪（只在为空时重新获取）
+        if (buff == null)
+        {
+            buff = GameRes.Instance.GetBuffData(buff_IDName).Clone();
+        }
 
-        // 同步 Guid，便于存档后通过 Guid 重新绑定 Item 引用
-        senderGuid = sender != null ? sender.itemData.Guid : 0;
-        receiverGuid = receiver != null ? receiver.itemData.Guid : 0;
+        // 只有在传入非空引用时才更新对应的引用和 Guid，避免把反序列化得到的 Guid 清零
+        if (sender != null)
+        {
+            buff_Sender = sender;
+            senderGuid = sender.itemData.Guid;
+        }
+
+        if (receiver != null)
+        {
+            buff_Receiver = receiver;
+            receiverGuid = receiver.itemData.Guid;
+        }
     }
 
     public void Run()

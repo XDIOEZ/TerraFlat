@@ -87,18 +87,35 @@ public class BuffManager : Module
         foreach (var buff in BuffRunTimeData_Dic.Values)
         {
             if (buff == null) continue;
-            Item receiver = buffReceiver;
 
-            if (buff.receiverGuid != 0 && ItemMgr.Instance != null)
+            Item receiver = buffReceiver;
+            Item sender = null;
+
+            if (ItemMgr.Instance != null)
             {
-                var guidItem = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
-                if (guidItem != null)
+                // 根据持久化的 Guid 重新绑定接收者
+                if (buff.receiverGuid != 0)
                 {
-                    receiver = guidItem;
+                    var guidReceiver = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
+                    if (guidReceiver != null)
+                    {
+                        receiver = guidReceiver;
+                    }
+                }
+
+                // 根据持久化的 Guid 重新绑定发送者（如果有）
+                if (buff.senderGuid != 0)
+                {
+                    var guidSender = ItemMgr.Instance.GetItemByGuid(buff.senderGuid);
+                    if (guidSender != null)
+                    {
+                        sender = guidSender;
+                    }
                 }
             }
 
-            buff.SetBuffData(sender: null, receiver: receiver);
+            // 这里传入的 sender/receiver 可能为 null，SetBuffData 会只更新非空的引用和 Guid
+            buff.SetBuffData(sender: sender, receiver: receiver);
         }
 
         Debug.Log($"? 已初始化 {BuffRunTimeData_Dic.Count} 个 Buff");
