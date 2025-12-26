@@ -17,9 +17,9 @@ public partial class Mod_Food : Module
     public UltEvent DataUpdate = new UltEvent();
 
     public GameObject PanelPrefab;
-
+    [ReadOnly]
     public GameObject PanleInstance;
-
+    [ReadOnly]
     public BasePanel panelUI; // 替换UI_FloatData_Slider为BasePanel
 
     public Mod_Stamina Stamina;
@@ -65,7 +65,7 @@ public partial class Mod_Food : Module
         {
             _Data.ID = ModText.Food;
         }
- 
+
     }
 
     public override void Load()
@@ -75,6 +75,11 @@ public partial class Mod_Food : Module
         //模块引用赋值
         item.itemMods.GetMod_ByID(ModText.Stamina, out Stamina);
         item.itemMods.GetMod_ByID(ModText.Hp, out DamageReceiver);
+        item.itemMods.GetMod_ByID(ModText.Controller, out GameController Controller);
+        if (Controller != null)
+        {
+            Controller._inputActions.Win10.Tab.performed += _ => TogglePanel();
+        }
 
         // 根据保存的状态决定是否显示面板
         if (Data.ShowCanvas)
@@ -86,6 +91,7 @@ public partial class Mod_Food : Module
         {
             item.OnAct += Act;
         }
+
     }
     #endregion
 
@@ -98,11 +104,11 @@ public partial class Mod_Food : Module
         var Player_FoodModule = item.Owner.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
         Player_FoodModule.Eat(BeEater: this);
     }
-    
+
     public override void ModUpdate(float timeDelta)
     {
         float rate = 1f;
-        
+
         // 精力补充 - 前提是存在精力模块
         if (Stamina != null && Stamina.Data.CurrentStamina < Stamina.Data.MaxStamina.Value)
         {
@@ -118,7 +124,7 @@ public partial class Mod_Food : Module
         {
             CheckNutritionStatus(timeDelta);
         }
-        
+
         DataUpdate?.Invoke();
     }
     #endregion
@@ -160,7 +166,7 @@ public partial class Mod_Food : Module
     {
         // 移除对精力状态的检查，不再根据精力是否满来调整消耗速度
         // 始终保持恒定的消耗速度
-        
+
         // 计算本次消耗总量 = 时间增量 * 吸收率 * 消耗速度
         float delta = timeDelta * Data.AbsorptionRate * Data.nutritionConsumeSpeed.Value;
         float remainingDelta = delta;
@@ -216,59 +222,17 @@ public partial class Mod_Food : Module
     {
         if (PanleInstance != null) return;
 
-        GameObject panel = Instantiate(PanelPrefab, transform);
-        panelUI = panel.GetComponent<BasePanel>();
-        PanleInstance = panel;
-        DataUpdate += RefreshUI;
-
-        RefreshUI();
-
-        // 设置面板为打开状态
-        if (panelUI != null)
-        {
-            panelUI.Open();
-            RestorePanelPosition(panel);
-        }
-        
-        // 更新数据状态
-        Data.ShowCanvas = true;
+        // 实例化操作已移动到TogglePanel方法中
+        TogglePanel();
     }
 
-    /// <summary>
-    /// 恢复面板位置
-    /// </summary>
-    private void RestorePanelPosition(GameObject panel)
-    {
-        // 优先从拖拽组件获取位置
-        var dragComponent = panel.GetComponentInChildren<UI_Drag>();
-        if (dragComponent != null)
-        {
-            dragComponent.rectTransform.anchoredPosition = Data.PanelPosition;
-        }
-        else
-        {
-            // 如果没有拖拽组件，直接设置面板位置
-            var panelRectTransform = panel.GetComponent<RectTransform>();
-            if (panelRectTransform != null)
-            {
-                panelRectTransform.anchoredPosition = Data.PanelPosition;
-            }
-        }
-    }
+
 
     [Button("隐藏面板")]
     public void HidePanel()
     {
         if (PanleInstance == null) return;
-
-        SavePanelPosition();
-        Destroy(PanleInstance);
-        DataUpdate -= RefreshUI;
-        panelUI = null;
-        PanleInstance = null;
-        
-        // 更新数据状态
-        Data.ShowCanvas = false;
+        panelUI.Close();
     }
 
     /// <summary>
@@ -293,10 +257,38 @@ public partial class Mod_Food : Module
         }
     }
 
-    public bool IsPanelVisible()
+    /// <summary>
+    /// 切换面板显示状态
+    /// </summary>
+    [Button("切换面板")]
+    public void TogglePanel()
     {
-        return PanleInstance != null && panelUI != null && panelUI.IsOpen();
+        // 检测面板是否已经实例化，如果未实例化则先实例化
+        if (PanleInstance == null)
+        {
+            panelUI = UIManager.Instance.CreatePanelFromGameObject(PanelPrefab);
+            PanleInstance = panelUI.gameObject;
+            DataUpdate += RefreshUI;
+            RefreshUI();
+            panelUI.Open();
+            return;
+        }
+
+        // 根据当前面板状态进行切换
+        if (panelUI.IsOpen())
+        {
+            HidePanel();
+        }
+        else
+        {
+            // 设置面板为打开状态
+            panelUI.Open();
+            Data.ShowCanvas = true;
+        }
     }
+
+
+
     #endregion
 
     #region UI更新
@@ -354,7 +346,7 @@ public partial class Mod_Food : Module
             }
         }
     }
-    
+
     public void Eat(Mod_Food BeEater)
     {
         ShakeItem(BeEater.item.transform);  // 播放摇晃动画或者其他视觉效果
@@ -405,40 +397,40 @@ public partial class Mod_Food : Module
         // 调用封装后的粒子创建方法
         CreateMainColorParticle(transform, "Particle_BeEat");
     }
-private GameObject CreateMainColorParticle(UnityEngine.Transform targetTransform, string prefabName)
-{
-    SpriteRenderer sr = targetTransform.GetComponentInChildren<SpriteRenderer>();
-
-    if (sr != null && sr.sprite != null)
+    private GameObject CreateMainColorParticle(UnityEngine.Transform targetTransform, string prefabName)
     {
-        GameObject particle = GameRes.Instance.InstantiatePrefab(prefabName, targetTransform.position);
-        ParticleSystem ps = particle.GetComponent<ParticleSystem>();
-        
-        if (ps != null)
+        SpriteRenderer sr = targetTransform.GetComponentInChildren<SpriteRenderer>();
+
+        if (sr != null && sr.sprite != null)
         {
-            // 检查纹理是否可读写
-            Texture2D texture = sr.sprite.texture;
-            if (texture != null && texture.isReadable)
+            GameObject particle = GameRes.Instance.InstantiatePrefab(prefabName, targetTransform.position);
+            ParticleSystem ps = particle.GetComponent<ParticleSystem>();
+
+            if (ps != null)
             {
-                // 如果纹理可读取，则获取主色调
-                var dominant = new ColorThief.ColorThief();
-                UnityEngine.Color mainColor = dominant.GetColor(texture).UnityColor;
-                var main = ps.main;
-                main.startColor = mainColor;
+                // 检查纹理是否可读写
+                Texture2D texture = sr.sprite.texture;
+                if (texture != null && texture.isReadable)
+                {
+                    // 如果纹理可读取，则获取主色调
+                    var dominant = new ColorThief.ColorThief();
+                    UnityEngine.Color mainColor = dominant.GetColor(texture).UnityColor;
+                    var main = ps.main;
+                    main.startColor = mainColor;
+                }
+                else
+                {
+                    // 如果纹理不可读取，则使用默认白色
+                    var main = ps.main;
+                    main.startColor = Color.white;
+                }
             }
-            else
-            {
-                // 如果纹理不可读取，则使用默认白色
-                var main = ps.main;
-                main.startColor = Color.white;
-            }
+
+            return particle;
         }
 
-        return particle;
+        return null;
     }
-
-    return null;
-}
 
     #endregion
 
@@ -448,18 +440,18 @@ private GameObject CreateMainColorParticle(UnityEngine.Transform targetTransform
         {
             item.OnAct -= Act;
         }
-        
+
         // 保存面板位置
         if (PanleInstance != null)
         {
             SavePanelPosition();
         }
-        
+
         // 终止所有与该对象相关的 tween
         DOTween.Kill(item?.transform);
 
         ExData.WriteData(Data);
     }
-    
-#endregion
+
+    #endregion
 }

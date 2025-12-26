@@ -289,38 +289,67 @@ public class Inventory_Furnace : Inventory
             }
 
             // 温度检查 - 过高温度处理
-            // ¶ȼ - ¶ȴ
             if (_Data.Temperature > cookRecipe.Temperature_Max)
             {
-                Debug.LogWarning($"¶ȹߣ¶ {cookRecipe.Temperature} ǰ¶ {_Data.Temperature}  ս");
+                Debug.LogWarning($"温度过高：所需温度 {cookRecipe.Temperature} 当前温度 {_Data.Temperature} → 产出烧焦物！");
 
-                // ֻҪ
-                if (InputInventory.Data.itemSlots != null && recipe.inputs != null && recipe.inputs.RowItems_List != null)
+                // 使用与正常合成相同的材料扣除逻辑，确保完整扣除所有材料
+                if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
                 {
-                    int loopCount = Mathf.Min(InputInventory.Data.itemSlots.Count, recipe.inputs.RowItems_List.Count);
-                    for (int i = 0; i < loopCount; i++)
+                    // 规则合成：使用传统的位置扣除逻辑
+                    ExecuteTraditionalDeduction(InputInventory, recipe);
+                }
+                else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
+                {
+                    // 无规则合成：遍历所有槽位扣除材料
+                    foreach (var required in recipe.inputs.RowItems_List)
                     {
-                        var slot = InputInventory.Data.itemSlots[i];
-                        var required = recipe.inputs.RowItems_List[i];
-
                         if (required.amount == 0) continue;
 
-                        if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
-                        {
-                            // ֻ۳Ҫ
-                            float lossAmount = Mathf.Min(required.amount, slot.itemData.Stack.Amount);
-                            slot.itemData.Stack.Amount -= lossAmount;
+                        float remainingAmountToConsume = required.amount;
 
-                            if (slot.itemData.Stack.Amount <= 0)
+                        // 遍历所有槽位查找匹配的物品
+                        for (int i = 0; i < InputInventory.Data.itemSlots.Count && remainingAmountToConsume > 0; i++)
+                        {
+                            var slot = InputInventory.Data.itemSlots[i];
+                            if (slot == null || slot.itemData == null) continue;
+
+                            // 检查物品是否匹配需求
+                            bool isMatch = false;
+                            if (required.matchMode == MatchMode.ExactItem)
                             {
-                                // Ʒ
-                                InputInventory.Data.RemoveItemAll(slot, i);
+                                isMatch = slot.itemData.IDName == required.ItemName;
+                            }
+                            else if (required.matchMode == MatchMode.ByTag)
+                            {
+                                isMatch = slot.itemData.Tags != null &&
+                                         slot.itemData.Tags.MakeTag != null &&
+                                         slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                            }
+
+                            if (isMatch && slot.itemData.Stack.Amount > 0)
+                            {
+                                // 计算本次可以消耗的数量
+                                float consumeAmount = Mathf.Min(remainingAmountToConsume, slot.itemData.Stack.Amount);
+                                slot.itemData.Stack.Amount -= consumeAmount;
+                                remainingAmountToConsume -= consumeAmount;
+
+                                Debug.LogWarning($"烧焦物扣除：插槽 {i}：消耗 {slot.itemData.IDName} x{consumeAmount}，剩余 {slot.itemData.Stack.Amount}");
+
+                                // 如果物品用完，移除物品
+                                if (slot.itemData.Stack.Amount <= 0)
+                                {
+                                    Debug.Log($"插槽 {i}：{slot.itemData.IDName} 已耗尽，移除物品");
+                                    InputInventory.Data.RemoveItemAll(slot, i);
+                                }
+
+                                InputInventory.RefreshUI(i);
                             }
                         }
                     }
                 }
 
-                // ս
+                // 产出烧焦物
                 string charredMatterId = "CharredMatter";
                 if (GameRes.Instance != null &&
                     GameRes.Instance.AllPrefabs != null &&
@@ -333,18 +362,20 @@ public class Inventory_Furnace : Inventory
                         ItemData newItem = outputItem.Get_NewItemData();
                         if (newItem != null)
                         {
-                            // 1ս
+                            // 产出1个烧焦物
                             newItem.Stack.Amount = 1;
                             OutputInventory.Data.TryAddItem(newItem);
+                            Debug.LogWarning($"产出烧焦物：{newItem.IDName} x{newItem.Stack.Amount}");
                         }
                     }
                 }
 
-                // ˢ UI
+                // 刷新 UI
                 InputInventory.RefreshUI();
                 OutputInventory.RefreshUI();
                 return;
             }
+
             // 温度不足检查
             else if (cookRecipe.Temperature > _Data.Temperature)
             {

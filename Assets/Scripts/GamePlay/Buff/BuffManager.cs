@@ -51,6 +51,8 @@ public class BuffManager : Module
         }
 
         ModData.ReadData(ref BuffRunTimeData_Dic);
+
+  
     }
 
     public override void Save()
@@ -71,14 +73,32 @@ public class BuffManager : Module
     /// </summary>
     private void InitializeBuffs()
     {
-        if (BuffRunTimeData_Dic.Count == 0)
+        if (BuffRunTimeData_Dic == null || BuffRunTimeData_Dic.Count == 0)
             return;
 
-        // 同步 Data 后，初始化 Buff 的接收者信息
+        // 确保接收者引用有效
+        if (buffReceiver == null)
+        {
+            buffReceiver = GetComponent<Item>();
+        }
+
+        // 同步 Data 后，初始化 Buff 的接收者信息：
+        // 优先通过持久化的 Guid 从 ItemMgr 中查找对应 Item，找不到则退回到本地 buffReceiver
         foreach (var buff in BuffRunTimeData_Dic.Values)
         {
             if (buff == null) continue;
-            buff.SetBuffData(sender: null, receiver: buffReceiver);
+            Item receiver = buffReceiver;
+
+            if (buff.receiverGuid != 0 && ItemMgr.Instance != null)
+            {
+                var guidItem = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
+                if (guidItem != null)
+                {
+                    receiver = guidItem;
+                }
+            }
+
+            buff.SetBuffData(sender: null, receiver: receiver);
         }
 
         Debug.Log($"? 已初始化 {BuffRunTimeData_Dic.Count} 个 Buff");

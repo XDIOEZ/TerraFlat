@@ -9,6 +9,10 @@ public partial class BuffRunTime
     public float buff_CurrentDuration = 0;
     public float buff_CurrentStack = 1;
 
+    // 持久化存储 Buff 发送者和接收者对应 Item 的唯一 Guid（ItemData.Guid）
+    public int senderGuid;
+    public int receiverGuid;
+
     [MemoryPackIgnore]
     public Buff_Data buff;
     [MemoryPackIgnore]
@@ -23,6 +27,10 @@ public partial class BuffRunTime
         buff = GameRes.Instance.GetBuffData(buff_IDName).Clone();
         buff_Sender = sender;
         buff_Receiver = receiver;
+
+        // 同步 Guid，便于存档后通过 Guid 重新绑定 Item 引用
+        senderGuid = sender != null ? sender.itemData.Guid : 0;
+        receiverGuid = receiver != null ? receiver.itemData.Guid : 0;
     }
 
     public void Run()

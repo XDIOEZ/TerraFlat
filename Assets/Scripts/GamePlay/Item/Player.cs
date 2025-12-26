@@ -1,10 +1,6 @@
 using Force.DeepCloner;
-using JetBrains.Annotations;
-using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
-using System.Collections.Generic;
-using UltEvents;
 using UnityEngine;
 
 /// <summary>
@@ -12,8 +8,10 @@ using UnityEngine;
 /// </summary>
 public class Player : Item
 {
+    private const string AdminName = "管理员";
+
     #region 字段与属性
-    
+
     [Tooltip("玩家数据")]
     public Data_Player Data;
 
@@ -26,7 +24,7 @@ public class Player : Item
 
     [Header("时间控制")]
     [Tooltip("时间流逝速度")]
-    public float timeScale = 1.0f; // 默认值改为1.0（正常速度）
+    public float timeScale = 1.0f;
     
     [Tooltip("每次调整时间速度的增量")]
     public float timeScaleStep = 0.5f;
@@ -45,9 +43,8 @@ public class Player : Item
     private string timeScaleHintText = "";
     private float timeScaleHintTimer = 0f;
     private bool showTimeScaleHint = false;
+    private float initialUnityTimeScale = 1.0f;
 
-    #endregion
-    
     public override ItemData itemData
     {
         get => Data;
@@ -57,6 +54,8 @@ public class Player : Item
         }
     }
 
+    #endregion
+
     #region 事件系统
 
     #endregion
@@ -65,6 +64,7 @@ public class Player : Item
     public override void Start()
     {
         base.Start();
+        initialUnityTimeScale = Time.timeScale;
     }
 
     public override void Act()
@@ -74,28 +74,32 @@ public class Player : Item
 
     public override void Load()
     {
+        if (itemData == null)
+        {
+            Debug.LogWarning("Player.Load() called but itemData is null");
+            return;
+        }
+
         transform.position = itemData.transform.position;
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         base.Load();
     }
-    
-    // 在Update方法中添加按键检测示例
+
     new void Update()
     {
         base.Update();
-        
-        // 更新时间提示显示
+
         UpdateTimeScaleHint();
-        
+
         if (Input.GetKeyDown(KeyCode.F1))
         {
-            Debug.Log("F12键被按下");
-            Data.Name_User = "管理员";
+            Debug.Log("F1键被按下，切换管理员");
+            Data.Name_User = AdminName;
         }
 
         // 只有管理员可以控制时间
-        if (Data.Name_User == "管理员")
+        if (IsAdmin())
         {
             if (Input.GetKeyDown(KeyCode.T))
             {
@@ -120,12 +124,7 @@ public class Player : Item
     public new void OnDestroy()
     {
         base.OnDestroy();
-        Time.timeScale = 1.0f;
-    }
-    [Button]
-    public void FixTimeScale()
-    {
-        Time.timeScale = 1.0f;
+        Time.timeScale = initialUnityTimeScale;
     }
     #endregion
 
@@ -145,12 +144,25 @@ public class Player : Item
         Application.Quit();
         Application.OpenURL("https://space.bilibili.com/353520649");
     }
+
+    [Button]
+    public void FixTimeScale()
+    {
+        timeScale = 1.0f;
+        Time.timeScale = timeScale;
+    }
     
     /// <summary>
     /// 将玩家传送到鼠标世界坐标位置
     /// </summary>
     public void TeleportToMousePosition()
     {
+        if (Camera.main == null)
+        {
+            Debug.LogWarning("TeleportToMousePosition() failed: main camera not found");
+            return;
+        }
+
         // 获取鼠标在屏幕上的位置
         Vector3 mouseScreenPosition = Input.mousePosition;
         
@@ -167,35 +179,24 @@ public class Player : Item
         
         Debug.Log($"玩家已传送到位置: {mouseWorldPosition}");
     }
-    
-    /// <summary>
-    /// 处理时间流逝速度控制
-    /// </summary>
+
+    #endregion
+
+    #region 时间控制
     private void HandleTimeScaleControl()
     {
         bool timeScaleChanged = false;
-        
-        // 加速时间流逝 (按下+号)
+
         if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus))
         {
-            timeScale = Mathf.Clamp(timeScale + timeScaleStep, minTimeScale, maxTimeScale);
-            Time.timeScale = timeScale;
-            timeScaleChanged = true;
-            timeScaleHintText = $"时间速度: {timeScale}x";
-            Debug.Log($"时间速度增加到: {timeScale}x");
+            timeScaleChanged = TryUpdateTimeScale(timeScaleStep);
         }
-        
-        // 减缓时间流逝 (按下-号)
+
         if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
         {
-            timeScale = Mathf.Clamp(timeScale - timeScaleStep, minTimeScale, maxTimeScale);
-            Time.timeScale = timeScale;
-            timeScaleChanged = true;
-            timeScaleHintText = $"时间速度: {timeScale}x";
-            Debug.Log($"时间速度减少到: {timeScale}x");
+            timeScaleChanged = TryUpdateTimeScale(-timeScaleStep);
         }
-        
-        // 重置时间速度 (按下0键)
+
         if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0))
         {
             timeScale = 1.0f;
@@ -204,26 +205,34 @@ public class Player : Item
             timeScaleHintText = "时间速度已重置为正常速度";
             Debug.Log("时间速度已重置为正常速度");
         }
-        
-        // 如果时间速度有变化，显示提示
+
         if (timeScaleChanged)
         {
             ShowTimeScaleHint();
         }
     }
-    
-    /// <summary>
-    /// 显示时间速度提示
-    /// </summary>
+
     private void ShowTimeScaleHint()
     {
         showTimeScaleHint = true;
         timeScaleHintTimer = timeScaleHintDuration;
     }
-    
-    /// <summary>
-    /// 更新时间提示显示
-    /// </summary>
+
+    private bool TryUpdateTimeScale(float delta)
+    {
+        float newScale = Mathf.Clamp(timeScale + delta, minTimeScale, maxTimeScale);
+        if (Mathf.Approximately(newScale, timeScale))
+        {
+            return false;
+        }
+
+        timeScale = newScale;
+        Time.timeScale = timeScale;
+        timeScaleHintText = $"时间速度: {timeScale}x";
+        Debug.Log($"时间速度调整为: {timeScale}x");
+        return true;
+    }
+
     private void UpdateTimeScaleHint()
     {
         if (showTimeScaleHint)
@@ -236,30 +245,30 @@ public class Player : Item
             }
         }
     }
-    
-    /// <summary>
-    /// 绘制时间提示GUI
-    /// </summary>
+
     private void OnGUI()
     {
         if (showTimeScaleHint && !string.IsNullOrEmpty(timeScaleHintText))
         {
-            // 计算透明度（逐渐消失效果）
             float alpha = Mathf.Clamp01(timeScaleHintTimer / timeScaleHintDuration);
-            
-            // 设置GUI样式
+
             GUIStyle style = new GUIStyle(GUI.skin.label);
             style.fontSize = 24;
             style.fontStyle = FontStyle.Bold;
-            style.normal.textColor = new Color(1, 1, 1, alpha); // 白色文字，带透明度
+            style.normal.textColor = new Color(1, 1, 1, alpha);
             style.alignment = TextAnchor.MiddleCenter;
-            
-            // 设置GUI位置（屏幕中央偏上）
+
             Rect position = new Rect(0, Screen.height * 0.25f, Screen.width, 50);
-            
-            // 绘制提示文字
+
             GUI.Label(position, timeScaleHintText, style);
         }
+    }
+    #endregion
+
+    #region 工具方法
+    private bool IsAdmin()
+    {
+        return Data != null && Data.Name_User == AdminName;
     }
     #endregion
 }

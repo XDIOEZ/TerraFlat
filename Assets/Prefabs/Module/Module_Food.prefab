@@ -110,8 +110,8 @@ MonoBehaviour:
   EatingProgress: 0
   DataUpdate:
     _PersistentCalls: []
-  PanelPrefab: {fileID: 1316998372701819345, guid: 215a9df040199634fb89efb65997fb42, type: 3}
+  PanelPrefab: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
   PanleInstance: {fileID: 0}
-  UIValues: {fileID: 0}
+  panelUI: {fileID: 0}
   Stamina: {fileID: 0}
   DamageReceiver: {fileID: 0}
