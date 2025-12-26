@@ -23,6 +23,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - InventoryInit
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 65854954f78fed540ac15cdb352b19e6
+    m_Address: Assets/ScriptObjects/TileBlock
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9fbe5f349e29e714697e4680674c1bb1
     m_Address: Assets/_SO/SkillSO
     m_ReadOnly: 0

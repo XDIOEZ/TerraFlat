@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b5eb06f4cdab3214a81dc69dfa89a4f8, type: 3}
   m_Name: "Tile_\u6C99\u5730\u751F\u6210"
   m_EditorClassIdentifier: 
-  TileDataName: TileItem_Sand
+  TileBlock: {fileID: 11400000, guid: bf736d65367b9254dbd69cd783e538f8, type: 2}
   environmentConditionRange:
     TemperatureRange: {x: 0, y: 1}
     HumidityRange: {x: 0, y: 1}
     PrecipitationRange: {x: 0, y: 1}
     SolidityRange: {x: 0, y: 1}
+    HightRange: {x: 0, y: 1}

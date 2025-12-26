@@ -49,10 +49,10 @@ public class Map_Pit : Map
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
-            TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
+            TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
             if (tile == null)
             {
-                Debug.LogError($"无法加载 Tile: {topTile.Name_TileBase}");
+                Debug.LogError($"无法加载 Tile: {topTile.ID}");
                 continue;
             }
 

@@ -1,9 +1,8 @@
 ﻿   
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class Item_Tile_Water : Item, IBlockTile
+public class Item_Tile_Water : Item
 {
     //Item的游戏数据 用于存档
     [SerializeField]
@@ -12,25 +11,6 @@ public class Item_Tile_Water : Item, IBlockTile
     //Item的基础数据
     public override ItemData itemData { get => data; set => data = value as BlockData; }
 
-    //TileData 方便策划设置 TileData的相关参数 和玩家修改TileData的数据
-    [SerializeField]
-    TileData_Water _tileData;
-    //实现接口
-    public TileData TileData { get => _tileData; set => _tileData = (TileData_Water)value; }
-    //挂接的Buff
-    public List<Buff_Data> BuffInfo;
-
-    public void Awake()
-    {
-        if (data.tileData.Name_TileBase == "")
-        {
-            data.tileData = _tileData;
-        }
-        else
-        {
-            _tileData = data.tileData as TileData_Water;
-        }
-    }
     public override void Act()
     {
 
@@ -57,80 +37,5 @@ public class Item_Tile_Water : Item, IBlockTile
         // 添加并刷新 Tile
         mapCoreScript.ADDTile(cellPos2D, tileData);
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
-    }
-    //tiledata.水的深度 =10m 
-    public void Tile_Enter(Item item, TileData tileData)
-    {
-        bool validItem = item != null;
-        BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
-
-          // 模块添加逻辑（入水特效）
-        if (validItem)
-        {
-            GameObject _gameObject =  VisualEffectManager.Instance.PlayEffect(owner:item.transform,effectName:"入水特效",parent:item.transform);
-            if (_gameObject == null) return;
-
-            Transform FVXTransform = _gameObject.transform;
-            Vector3 pos = FVXTransform.localPosition;
-            //tile的位置
-            //通过Tile获取env的参数
-            TileData_Water water  = tileData as TileData_Water;
-
-            pos.y = Mathf.Lerp(-0.7f, 0,water.DeepValue.Value );
-            pos.x = 0f;
-            FVXTransform.localPosition = pos;
-        }
-
-        // Buff 添加逻辑
-        if (!validItem)
-        {
-            Debug.LogError("[Tile_Enter] item 是 null，无法执行 Buff 添加");
-        }
-        else if (buffManager == null)
-        {
-            Debug.LogError($"[Tile_Enter] item {item.name} 没有找到 BuffManager 组件");
-        }
-        else if (BuffInfo == null || BuffInfo.Count == 0)
-        {
-            Debug.LogWarning("[Tile_Enter] BuffInfo 列表为空，无 Buff 被添加");
-        }
-        else
-        {
-            foreach (Buff_Data buffData in BuffInfo)
-            {
-                if (buffData == null)
-                {
-                    Debug.LogWarning("[Tile_Enter] 检测到空的 Buff_Info，跳过");
-                    continue;
-                }
-
-                buffManager.AddBuffRuntime(buffData,item);
-            }
-        }
-    }
-
-
-
-    public void Tile_Exit(Item item, TileData tileData)
-    {
-        VisualEffectManager.Instance.StopOwnerEffect(owner:item.transform,effectName:"入水特效");
-
-        BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
-        if (buffManager == null) return;
-
-        foreach (Buff_Data buffData in BuffInfo)
-        {
-            if (buffManager.HasBuff(buffData.buff_ID))  // 假设有这个方法
-            {
-                buffManager.RemoveBuff(buffData.buff_ID);
-            }
-        }
-
-    }
-
-
-    public void Tile_Update(Item item, TileData tileData)
-    {
-        //throw new System.NotImplementedException();
     }
 }

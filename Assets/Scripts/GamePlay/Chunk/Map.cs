@@ -94,10 +94,10 @@ public class Map : Item
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
-            TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
+            TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
             if (tile == null)
             {
-                Debug.LogError($"无法加载 Tile: {topTile.Name_TileBase}");
+                Debug.LogError($"无法加载 Tile: {topTile.ID}");
                 continue;
             }
 
@@ -146,10 +146,10 @@ public class Map : Item
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
-            TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
+            TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
             if (tile == null)
             {
-                Debug.LogError($"无法加载 Tile: {topTile.Name_TileBase}");
+                Debug.LogError($"无法加载 Tile: {topTile.ID}");
                 continue;
             }
 
@@ -721,11 +721,11 @@ public class Map : Item
 
         // 获取该位置最顶层的 TileData（最后一个）
         TileData topTile = Data.TileData[position][^1];
-        TileBase tile = GameRes.Instance.GetTileBase(topTile.Name_TileBase);
+        TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
 
         if (tile == null)
         {
-            Debug.LogError($"无法加载 TileBase：{topTile.Name_TileBase}，更新失败。");
+            Debug.LogError($"无法加载 TileBase：{topTile.ID}，更新失败。");
             return;
         }
 
