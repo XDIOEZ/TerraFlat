@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 public class Inventory_WorkBench : Inventory
 {
-    Mod_Inventory mod_Inventory;
+    protected Mod_Inventory mod_Inventory;
     public SerializedDictionary<string, Inventory> InventoryRefDic
     { get => mod_Inventory.InventoryRefDic; set => mod_Inventory.InventoryRefDic = value; }
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
@@ -63,12 +63,6 @@ public class Inventory_WorkBench : Inventory
         {
             Debug.LogError("无法获取Mod_Inventory组件！");
             return;
-        }
-
-        // 设置输出库存（如果不存在则使用背包的第一个库存）
-        if (!InventoryRefDic.ContainsKey("输出"))
-        {
-            InventoryRefDic["输出"] = item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).InventoryRefDic.FirstOrDefault().Value;
         }
     }
 
