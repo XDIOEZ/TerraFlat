@@ -36,12 +36,6 @@ public class BuffManager : Module
             Debug.LogWarning($"?? BuffManager 找不到 Item 组件");
         }
     }
-
-    public void Start()
-    {
-        InitializeBuffs();
-    }
-
     public override void Load()
     {
         if (ModData == null)
@@ -52,7 +46,7 @@ public class BuffManager : Module
 
         ModData.ReadData(ref BuffRunTimeData_Dic);
 
-  
+  InitializeBuffs();
     }
 
     public override void Save()
@@ -102,6 +96,15 @@ public class BuffManager : Module
                         receiver = guidReceiver;
                     }
                 }
+                else
+                {
+                     var guidReceiver = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
+                    if (guidReceiver != null)
+                    {
+                        receiver = guidReceiver;
+                    }
+                    Debug.LogWarning($"?? Buff {buff.buff_IDName} 的 receiverGuid 为 0，无法从 ItemMgr 还原接收者");
+                }
 
                 // 根据持久化的 Guid 重新绑定发送者（如果有）
                 if (buff.senderGuid != 0)
@@ -111,6 +114,10 @@ public class BuffManager : Module
                     {
                         sender = guidSender;
                     }
+                }
+                else if (sender == null)
+                {
+                    Debug.LogWarning($"?? Buff {buff.buff_IDName} 的 senderGuid 为 0，无法从 ItemMgr 还原发送者");
                 }
             }
 
@@ -272,7 +279,7 @@ public class BuffManager : Module
             // 第一次添加该 Buff
             BuffRunTimeData_Dic[buffID] = newBuff;
             newBuff.OnBuff_Start();
-            Debug.Log($"? 添加新 Buff: {buffID}");
+//            Debug.Log($"? 添加新 Buff: {buffID}");
         }
     }
 
@@ -378,7 +385,7 @@ public class BuffManager : Module
 
         buff?.OnBuff_Stop();
         BuffRunTimeData_Dic.Remove(buffId);
-        Debug.Log($"? 移除 Buff: {buffId}");
+      //  Debug.Log($"? 移除 Buff: {buffId}");
     }
 
     /// <summary>
@@ -392,7 +399,7 @@ public class BuffManager : Module
         }
 
         BuffRunTimeData_Dic.Clear();
-        Debug.Log($"? 已清除所有 Buff");
+       // Debug.Log($"? 已清除所有 Buff");
     }
     #endregion
 

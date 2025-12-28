@@ -6,26 +6,53 @@ using UnityEngine.SceneManagement;
 using XLua.TemplateEngine;
 
 /// <summary>
-/// 负责管理场景中的Chunk
+/// 负责管理当前场景中的所有 Chunk：
+/// - 维护激活 / 失活的区块字典
+/// - 负责区块的加载、销毁与激活切换
+/// - 提供按玩家位置加载 / 回收附近区块的接口
 /// </summary>
 public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 {
+    #region 字段
+
+    /// <summary>
+    /// 所有已创建的区块（无论是否激活）。Key 为 Chunk 的名称（通常是其位置 ToString）。
+    /// </summary>
     [ShowInInspector]
     public Dictionary<string, Chunk> Chunk_Dic = new();
 
-    [ShowInInspector]//激活的Chunk
+    /// <summary>
+    /// 当前激活中的区块字典。
+    /// </summary>
+    [ShowInInspector]
     public Dictionary<string, Chunk> Chunk_Dic_Active = new();
 
-    [ShowInInspector]//失去激活的Chunk
+    /// <summary>
+    /// 当前处于失活状态的区块字典。
+    /// </summary>
+    [ShowInInspector]
     public Dictionary<string, Chunk> Chunk_Dic_UnActive = new();
 
+    /// <summary>
+    /// 单个区块完成加载时触发的事件。
+    /// </summary>
     public UltEvent<Chunk> OnChunkLoadFinish = new();
 
-    public HashSet<Coroutine> RandomMapCoroutines = new ();
+    /// <summary>
+    /// 与随机地图生成相关的协程集合，用于场景切换时统一停止。
+    /// </summary>
+    public HashSet<Coroutine> RandomMapCoroutines = new();
 
+    #endregion
+
+    /// <summary>
+    /// 场景切换时调用：
+    /// - 停止所有仍在运行的随机地图协程
+    /// - 清空区块字典引用
+    /// </summary>
     public void OnSceneChange()
     {
-        //TODO 停止所有正在运行的协程
+        // 停止所有正在运行的协程
         foreach (Coroutine coroutine in RandomMapCoroutines)
         {
             StopCoroutine(coroutine);
@@ -36,6 +63,9 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         CleanDic();
     }
 
+    /// <summary>
+    /// 清空所有区块相关的字典引用，不销毁实际的区块 GameObject。
+    /// </summary>
     public void ClearAllChunk()
     {
         // 清空字典
@@ -45,21 +75,41 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     }
 
     #region 加载距离Item规定范围内的全部Chunk
+
+    /// <summary>
+    /// 以玩家为中心，加载指定范围内的所有区块。
+    /// Distance = 1 时只加载玩家所在的 1x1 区块，Distance = 2 时加载 3x3，以此类推。
+    /// </summary>
     [Button("加载距离玩家规定范围的全部Chunk")]
-    public void LoadChunkCloseToPlayer(GameObject player, int Distance = 1)
+    public void LoadChunkCloseToPlayer(GameObject player, int Distance = 1, System.Action onAllChunksLoaded = null)
     {
-          //TODO 在此处缓存处于激活状态的Chunk的权重表
 
         // 最小为 1
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
 
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        if (chunkSize.x <= 0f || chunkSize.y <= 0f) return; // 保护
+        if (chunkSize.x <= 0f || chunkSize.y <= 0f)
+        {
+            onAllChunksLoaded?.Invoke();
+            return; // 保护
+        }
 
         // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
         int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / chunkSize.x);
         int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / chunkSize.y);
+
+        int pending = 0;
+        bool callbackInvoked = false;
+
+        void TryInvokeComplete()
+        {
+            if (callbackInvoked)
+                return;
+
+            callbackInvoked = true;
+            onAllChunksLoaded?.Invoke();
+        }
 
         for (int ix = playerChunkIndexX - radius; ix <= playerChunkIndexX + radius; ix++)
         {
@@ -73,7 +123,23 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 string key = chunkPos.ToString(); // 你原代码用的 key 风格
                 if (!Chunk_Dic_Active.ContainsKey(key))
                 {
-                    LoadChunk_By_Name(key);
+                    if (onAllChunksLoaded != null)
+                    {
+                        pending++;
+                        LoadChunk_By_Name(key, (loadedChunk) =>
+                        {
+                            // 无论成功与否都视为本次加载流程结束
+                            pending--;
+                            if (pending <= 0)
+                            {
+                                TryInvokeComplete();
+                            }
+                        });
+                    }
+                    else
+                    {
+                        LoadChunk_By_Name(key);
+                    }
                 }
                 else
                 {
@@ -81,10 +147,83 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 }
             }
         }
+
+        // 如果没有需要异步等待的区块，直接触发完成回调
+        if (pending == 0)
+        {
+            TryInvokeComplete();
+        }
+    }
+
+    /// <summary>
+    /// 以玩家为中心，重新烘焙指定范围内所有已激活区块的寻路权重。
+    /// Distance 含义与 LoadChunkCloseToPlayer 一致：
+    /// Distance = 1 表示只更新玩家所在 Chunk，2 表示 3x3，依此类推。
+    /// 仅对已激活且拥有 Map 的区块调用 Map.BackTilePenalty_Async。
+    /// </summary>
+    [Button("更新玩家附近区块权重")]
+    public void RefreshChunkPenaltyCloseToPlayer(GameObject player, int Distance = 1)
+    {
+        if (player == null)
+        {
+            Debug.LogWarning("[ChunkMgr] RefreshChunkPenaltyCloseToPlayer 失败：player 为空");
+            return;
+        }
+
+        // 最小为 1
+        Distance = Mathf.Max(1, Distance);
+        int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
+
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        if (chunkSize.x <= 0f || chunkSize.y <= 0f)
+        {
+            Debug.LogWarning("[ChunkMgr] ChunkSize 非法，跳过权重更新");
+            return;
+        }
+
+        // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
+        int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / chunkSize.x);
+        int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / chunkSize.y);
+
+        int updatedCount = 0;
+
+        for (int ix = playerChunkIndexX - radius; ix <= playerChunkIndexX + radius; ix++)
+        {
+            for (int iy = playerChunkIndexY - radius; iy <= playerChunkIndexY + radius; iy++)
+            {
+                // 计算该 chunk 的左下角世界坐标
+                int originX = Mathf.RoundToInt(ix * chunkSize.x);
+                int originY = Mathf.RoundToInt(iy * chunkSize.y);
+                Vector2Int chunkPos = new Vector2Int(originX, originY);
+
+                string key = chunkPos.ToString();
+
+                // 仅对已激活区块进行权重烘焙
+                if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk) && chunk != null && chunk.Map != null)
+                {
+                    chunk.Map.BackTilePenalty_Async();
+                    updatedCount++;
+                }
+            }
+        }
+
+        // 可选日志，帮助确认更新范围与数量
+        if (updatedCount > 0)
+        {
+            Debug.Log($"[ChunkMgr] 已触发玩家附近 {updatedCount} 个激活区块的权重重烘焙 (Distance={Distance})");
+        }
+        else
+        {
+            Debug.Log("[ChunkMgr] 玩家附近未找到需要更新权重的激活区块");
+        }
     }
     #endregion
 
     #region 更新Item到对应的Chunk
+
+    /// <summary>
+    /// 根据物品当前位置，更新其所属 Chunk（激活 / 失活字典都会尝试）。
+    /// </summary>
     public void UpdateItem_ChunkOwner(Item item)
     {
         if (Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out Chunk chunk))
@@ -97,38 +236,50 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         }
     }
     #endregion
+
     #region 清理区块
-public void DestroyChunk(Chunk chunk)
-{
-    string key = chunk.name;
 
-    // 从三个字典中移除
-    Chunk_Dic.Remove(key);
-    Chunk_Dic_Active.Remove(key);
-    Chunk_Dic_UnActive.Remove(key);
-
-    // 如果正在进行地图加载或权重烘焙，先停止协程
-    if (chunk.Map != null)
+    /// <summary>
+    /// 完整销毁一个 Chunk：
+    /// - 从所有管理字典中移除
+    /// - 停止该 Chunk 上所有地图加载与权重烘焙协程
+    /// - 销毁实际 GameObject
+    /// </summary>
+    public void DestroyChunk(Chunk chunk)
     {
-        // 停止地图加载协程
-        if (chunk.Map.loadTileMapCoroutine != null)
+        string key = chunk.name;
+
+        // 从三个字典中移除
+        Chunk_Dic.Remove(key);
+        Chunk_Dic_Active.Remove(key);
+        Chunk_Dic_UnActive.Remove(key);
+
+        // 如果正在进行地图加载或权重烘焙，先停止协程
+        if (chunk.Map != null)
         {
-            chunk.Map.StopCoroutine(chunk.Map.loadTileMapCoroutine);
-            chunk.Map.loadTileMapCoroutine = null;
+            // 停止地图加载协程
+            if (chunk.Map.loadTileMapCoroutine != null)
+            {
+                chunk.Map.StopCoroutine(chunk.Map.loadTileMapCoroutine);
+                chunk.Map.loadTileMapCoroutine = null;
+            }
+
+            // 停止权重烘焙协程
+            if (chunk.Map.backTilePenaltyCoroutine != null)
+            {
+                chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
+                chunk.Map.backTilePenaltyCoroutine = null;
+            }
         }
-        
-        // 停止权重烘焙协程
-        if (chunk.Map.backTilePenaltyCoroutine != null)
-        {
-            chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
-            chunk.Map.backTilePenaltyCoroutine = null;
-        }
+
+        // 销毁对象
+        Destroy(chunk.gameObject);
     }
 
-    // 销毁对象
-    Destroy(chunk.gameObject);
-}
-
+    /// <summary>
+    /// 清理距离玩家过远的 Chunk（失活字典中），并保存其数据后销毁。
+    /// 检测范围为以玩家所在 Chunk 为中心的正方形区域。
+    /// </summary>
     [Button("清理距离玩家过远的Chunk (正方形范围)")]
     public void DestroyChunk_In_Distance(GameObject player, int Distance = 3)
     {
@@ -168,66 +319,75 @@ public void DestroyChunk(Chunk chunk)
         //     Debug.Log($"销毁了 {toRemove.Count} 个远离玩家的区块");
     }
     #endregion
+
     #region 更新区块激活状态
+
+    /// <summary>
+    /// 将距离玩家过远的 Chunk 从激活列表移动到失活列表，仅切换状态不销毁。
+    /// 检测范围为以玩家所在 Chunk 为中心的正方形区域。
+    /// </summary>
     [Button("使距离玩家过远的Chunk失去活性 (正方形范围)")]
-public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
-{
-    Vector2 playerPos = player.transform.position;
-    Vector2 chunkSize = ChunkMgr.GetChunkSize();
-
-    // ✅ 玩家所在 Chunk 的中心点
-    Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos);
-
-    List<string> toRemove = new List<string>();
-
-    foreach (Chunk chunk in Chunk_Dic_Active.Values)
+    public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
     {
-        // ✅ 区块中心点
-        Vector2 chunkCenter = chunk.MapSave.MapPosition;
+        Vector2 playerPos = player.transform.position;
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
 
-        // 方形检测：只要在 X 或 Y 上超过范围就移除
-        if (
-            Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x
-            ||
-            Mathf.Abs(chunkCenter.y - playerChunkCenter.y) >= Distance * chunkSize.y
-           )
+        // ✅ 玩家所在 Chunk 的中心点
+        Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos);
+
+        List<string> toRemove = new List<string>();
+
+        foreach (Chunk chunk in Chunk_Dic_Active.Values)
         {
-            toRemove.Add(chunk.name);
+            // ✅ 区块中心点
+            Vector2 chunkCenter = chunk.MapSave.MapPosition;
+
+            // 方形检测：只要在 X 或 Y 上超过范围就移除
+            if (
+                Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x
+                ||
+                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) >= Distance * chunkSize.y
+               )
+            {
+                toRemove.Add(chunk.name);
+            }
         }
+
+        foreach (string key in toRemove)
+        {
+            if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk))
+            {
+                if (chunk == null)
+                {
+                    Debug.LogWarning($"⚠️ toRemove 中的 Chunk {key} 是 null");
+                    continue;
+                }
+
+                if (chunk.gameObject == null)
+                {
+                    Debug.LogError($"❌ Chunk {key} 的 GameObject 丢失了");
+                    continue;
+                }
+
+                // 如果正在进行权重烘焙，停止协程
+                if (chunk.Map != null && chunk.Map.backTilePenaltyCoroutine != null)
+                {
+                    chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
+                    chunk.Map.backTilePenaltyCoroutine = null;
+                }
+
+                SetChunkActive(chunk, false);
+            }
+        }
+
+        // if (toRemove.Count > 0)
+        //     Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
     }
 
-    foreach (string key in toRemove)
-    {
-        if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk))
-        {
-            if (chunk == null)
-            {
-                Debug.LogWarning($"⚠️ toRemove 中的 Chunk {key} 是 null");
-                continue;
-            }
-
-            if (chunk.gameObject == null)
-            {
-                Debug.LogError($"❌ Chunk {key} 的 GameObject 丢失了");
-                continue;
-            }
-
-            // 如果正在进行权重烘焙，停止协程
-            if (chunk.Map != null && chunk.Map.backTilePenaltyCoroutine != null)
-            {
-                chunk.Map.StopCoroutine(chunk.Map.backTilePenaltyCoroutine);
-                chunk.Map.backTilePenaltyCoroutine = null;
-            }
-
-            SetChunkActive(chunk, false);
-        }
-    }
-
-    // if (toRemove.Count > 0)
-    //     Debug.Log($"清理了 {toRemove.Count} 个远离玩家的区块（失活）");
-}
-
-public void SetChunkActive(Chunk chunk, bool isActive)
+    /// <summary>
+    /// 设置单个 Chunk 的激活状态，并同步维护三张字典及 TileMap / GameObject 的显隐。
+    /// </summary>
+    public void SetChunkActive(Chunk chunk, bool isActive)
     {
         if (chunk == null)
         {
@@ -268,6 +428,11 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         chunk.gameObject.SetActive(isActive);
     }
 
+    /// <summary>
+    /// 将区块注册为激活状态：
+    /// - 加入总字典和激活字典
+    /// - 从失活字典中移除
+    /// </summary>
     public void AddActiveChunk(Chunk chunk)
     {
         if (chunk == null)
@@ -286,34 +451,49 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     #endregion
 
     #region 区块加载流程（重构版）
+
     /// <summary>
-    /// 按名字加载或创建区块的主入口
-    /// 流程：激活已有区块 → 从存档加载 → 创建新区块
+    /// 按名字加载或创建区块的主入口。
+    /// 调用顺序：
+    /// 1. 激活已有但未激活的区块
+    /// 2. 从存档加载区块
+    /// 3. 创建全新区块
     /// </summary>
-    public void LoadChunk_By_Name(string ChunkName)
+    public Chunk LoadChunk_By_Name(string ChunkName, System.Action<Chunk> onChunkLoaded = null)
     {
         Chunk chunk = null;
 
         // === 第一优先级：激活已存在但未激活的区块 ===
         chunk = TryActivateExistingChunk(ChunkName);
+
         if (chunk != null)
-            return;
+        {
+            onChunkLoaded?.Invoke(chunk);
+            return chunk;
+        }
 
         // === 第二优先级：从存档加载区块 ===
-        chunk = TryLoadChunkFromSaveData(ChunkName);
+        chunk = TryLoadChunkFromSaveData(ChunkName, onChunkLoaded);
         if (chunk != null)
-            return;
+            return chunk;
 
         // === 第三优先级：创建全新区块 ===
         chunk = TryCreateNewChunk(ChunkName);
         if (chunk != null)
-            return;
+        {
+            onChunkLoaded?.Invoke(chunk);
+            return chunk;
+        }
 
         Debug.LogError($"[区块加载] ❌ 所有加载方式均失败，无法加载区块 {ChunkName}");
+        // 注册到字典
+        RegisterChunk(chunk);
+        onChunkLoaded?.Invoke(null);
+        return null;
     }
 
     /// <summary>
-    /// 尝试激活已存在的区块
+    /// 尝试激活已存在但当前未激活的区块。
     /// </summary>
     private Chunk TryActivateExistingChunk(string ChunkName)
     {
@@ -327,12 +507,8 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         // 激活区块
         SetChunkActive(chunkGameObject, true);
 
-        // 激活地图后异步烘焙权重
-        if (chunkGameObject.Map != null)
-        {
-            chunkGameObject.Map.BackTilePenalty_Async();
-        }
-        else
+        // 仅负责恢复区块与其物体；权重烘焙由其他系统显式触发
+        if (chunkGameObject.Map == null)
         {
             Debug.LogWarning($"[区块加载] ⚠️ 区块 {ChunkName} 的 Map 为空");
         }
@@ -341,9 +517,9 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     }
 
     /// <summary>
-    /// 从存档数据加载区块
+    /// 尝试从存档数据创建并加载区块。
     /// </summary>
-    private Chunk TryLoadChunkFromSaveData(string mapName)
+    private Chunk TryLoadChunkFromSaveData(string mapName, System.Action<Chunk> onChunkLoaded = null)
     {
         // 验证存档管理器
         PlanetData activePlanetData = SaveDataMgr.Instance?.Active_PlanetData;
@@ -375,16 +551,26 @@ public void SetChunkActive(Chunk chunk, bool isActive)
             return null;
         }
 
-        // 异步加载区块内容
-        chunk.LoadChunk_Async();
+        // 如果需要回调，则监听区块完成加载事件
+        if (onChunkLoaded != null)
+        {
+            void OnLoaded(Chunk c)
+            {
+                chunk.OnChunkLoaded -= OnLoaded;
+                onChunkLoaded(c);
+            }
 
+            chunk.OnChunkLoaded += OnLoaded;
+        }
+
+        chunk.StartCoroutine(chunk.BatchLoadItemsCoroutine());
         // 注册到字典
         RegisterChunk(chunk);
         return chunk;
     }
 
     /// <summary>
-    /// 创建全新区块
+    /// 创建一个全新的区块（无存档数据时调用）。
     /// </summary>
     private Chunk TryCreateNewChunk(string mapName)
     {
@@ -424,14 +610,14 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     }
 
     /// <summary>
-    /// 尝试创建地图核心对象（MapCore）
+    /// 尝试在给定 Chunk 下创建地图核心对象（MapCore）。
     /// </summary>
     private bool TryCreateMapCore(Chunk chunk)
     {
         // 实例化地图核心物体
         Map map = ItemMgr.Instance.InstantiateItem(
-            "MapCore", 
-            default, default, default, 
+            "MapCore",
+            default, default, default,
             chunk.gameObject
         ) as Map;
 
@@ -454,7 +640,7 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     }
 
     /// <summary>
-    /// 将区块注册到管理字典
+    /// 将区块注册到管理字典，并触发 OnChunkLoadFinish 事件。
     /// </summary>
     private void RegisterChunk(Chunk chunk)
     {
@@ -465,7 +651,7 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         }
 
         string chunkKey = chunk.MapSave.Name;
-        
+
         Chunk_Dic[chunkKey] = chunk;
         Chunk_Dic_Active[chunkKey] = chunk;
         Chunk_Dic_UnActive.Remove(chunkKey); // 确保不在失活字典中
@@ -476,9 +662,10 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     #endregion
 
     #region 区块创建与初始化
+
     /// <summary>
-    /// 从 MapSave 数据创建区块对象（仅创建GameObject和Chunk组件）
-    /// 不包含地图核心创建逻辑
+    /// 从 MapSave 数据创建区块对象（仅创建 GameObject 和 Chunk 组件），
+    /// 不包含地图核心创建逻辑。
     /// </summary>
     public Chunk CreateChunk_ByMapSave(MapSave mapSave)
     {
@@ -505,7 +692,7 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     }
 
     /// <summary>
-    /// 创建一个全新的区块（包含地图核心）
+    /// 创建一个全新的区块（包含地图核心）。
     /// </summary>
     private Chunk CreatChunk_By_Name(string mapName)
     {
@@ -540,6 +727,9 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     #endregion
 
     #region 清理与辅助
+    /// <summary>
+    /// 清理三个区块字典中 Value 为 null 的条目。
+    /// </summary>
     public void CleanEmptyDicValues()
     {
         CleanEmptyValues(Chunk_Dic);
@@ -547,6 +737,9 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         CleanEmptyValues(Chunk_Dic_UnActive);
     }
 
+    /// <summary>
+    /// 完全清空三个区块字典。
+    /// </summary>
     public void CleanDic()
     {
         Chunk_Dic.Clear();
@@ -554,6 +747,9 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         Chunk_Dic_UnActive.Clear();
     }
 
+    /// <summary>
+    /// 清理给定字典中 Value 为 null 的条目。
+    /// </summary>
     private void CleanEmptyValues(Dictionary<string, Chunk> dic)
     {
         if (dic == null || dic.Count == 0) return;
@@ -572,7 +768,7 @@ public void SetChunkActive(Chunk chunk, bool isActive)
     }
 
     /// <summary>
-    /// 尝试将 "(x,y)" 格式的字符串解析为 Vector2Int
+    /// 尝试将 "(x,y)" 格式的字符串解析为 Vector2Int。
     /// </summary>
     private bool TryParseVector2Int(string str, out Vector2Int result)
     {
@@ -592,39 +788,51 @@ public void SetChunkActive(Chunk chunk, bool isActive)
         return false;
     }
     #endregion
+
+    /// <summary>
+    /// 获取当前场景对应星球配置中的 Chunk 尺寸。
+    /// 若存档或配置不可用，则返回默认大小 (100, 100)。
+    /// </summary>
     public static Vector2 GetChunkSize()
     {
         var sceneName = SceneManager.GetActiveScene().name;
-        
+
         // 添加null检查，防止出现NullReferenceException
         if (SaveDataMgr.Instance == null)
         {
             Debug.LogWarning("SaveDataMgr.Instance is null, returning default chunk size.");
             return new Vector2(100, 100);
         }
-        
+
         if (SaveDataMgr.Instance.SaveData == null)
         {
-//            Debug.LogWarning("SaveDataMgr.Instance.SaveData is null, returning default chunk size.");
+            //            Debug.LogWarning("SaveDataMgr.Instance.SaveData is null, returning default chunk size.");
             return new Vector2(100, 100);
         }
-        
+
         var dict = SaveDataMgr.Instance.SaveData.PlanetData_Dict;
-    
+
         if (dict != null && dict.TryGetValue(sceneName, out var planetData))
         {
             return planetData.ChunkSize;
         }
-    
+
         // 找不到就返回 Vector2(100,100)
         return new Vector2(100, 100);
     }
 
+    /// <summary>
+    /// 根据物品位置获取其所在的激活 Chunk。
+    /// </summary>
     public void GetChunkBy_ItemPosition(Vector2 pos, out Chunk chunk)
     {
         ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(pos).ToString(), out chunk);
     }
-    
+
+    /// <summary>
+    /// 在当前激活的 Chunk 中，找到与给定位置最近的 Chunk。
+    /// 若激活列表为空，则尝试根据位置推导 Chunk 名称并加载。
+    /// </summary>
     public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
     {
         closestChunk = null;

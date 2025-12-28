@@ -144,28 +144,21 @@ public class Mod_ChunkLoader : Module
         // 将较远的区块设置为非激活状态
         ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: UnActiveDistance);
 
-        // 异步更新寻路网格和加载区块
-        AstarGameManager.Instance.UpdateMeshAsync(chunkPos, LoadChunkDistance, OnMeshUpdateComplete);
+
+        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: LoadChunkDistance);
+
+        //调整Apath寻路网格覆盖范围(不需要扫描,只需要调整范围就可以了,网格的具体参数在加载区块后其会自动更新)
+        AstarGameManager.Instance.RefreshNavMeshAsync(center: chunkPos,radius:LoadChunkDistance, onComplete: OnMeshUpdateComplete);
+
     }
 
     /// <summary>
-    /// 寻路网格更新完成后的回调
+    /// 寻路网格更新完成后的回调 , 开始加载区块更新权重
     /// </summary>
     private void OnMeshUpdateComplete()
     {
-
-        if (_Data != null && !_Data.isRunning)
-        {
-            Debug.LogWarning("[区块加载器] ⚠️ 模块已停止运行");
-            return;
-        }
-
-        // 获取自动生成地图配置
-        bool shouldAutoGenerate = GetAutoGenerateMapSetting();
-
-        // 根据配置加载区块
-        int loadDistance = shouldAutoGenerate ? LoadChunkDistance : 1;
-        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: loadDistance);
+        // 寻路网格范围调整/扫描完成后，再根据玩家位置重烘焙附近区块的权重
+        ChunkMgr.Instance.RefreshChunkPenaltyCloseToPlayer(gameObject, LoadChunkDistance);
     }
 
     #endregion

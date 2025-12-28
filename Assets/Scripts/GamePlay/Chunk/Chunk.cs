@@ -20,10 +20,15 @@ public class Chunk : MonoBehaviour
     public MapSave MapSave;
     public string ChunkOwner;
 
+    /// <summary>
+    /// 区块完成加载（所有物品加载完并烘焙完权重）时的回调
+    /// </summary>
+    public event System.Action<Chunk> OnChunkLoaded;
+    public int ItemBatchSize = 1; // 每批处理的物品数量
+
     #region 区块加载
-    private const int ItemBatchSize = 20; // 每批处理的物品数量
-
-    public Chunk LoadChunk_By_MapSaveData_Sync()
+    #region 同步加载区块的所有数据
+    public Chunk LoadChunkFromMapSave()
     {
         if (MapSave?.items == null)
         {
@@ -31,54 +36,80 @@ public class Chunk : MonoBehaviour
             return this;
         }
 
-        LoadItemsSync();
-        CompleteChunkLoading();
-        return this;
-    }
-
-    public Chunk LoadChunk_Async()
-    {
-        if (MapSave?.items == null)
-        {
-            Debug.LogWarning($"⚠️ 区块 {name} 的MapSave或items为空");
-            return this;
-        }
-
-        StartCoroutine(LoadChunkCoroutine());
+        InitializeItems();
+        ChunkMgr.Instance.AddActiveChunk(this);
+        Map?.BackTilePenalty_Sync();
+        // 通知监听者：区块已完全加载
+        OnChunkLoaded?.Invoke(this);
         return this;
     }
 
     /// <summary>
     /// 同步加载物品
     /// </summary>
-    private void LoadItemsSync()
+    private void InitializeItems()
     {
+        // 第一步：实例化所有物品，但暂不调用它们的 Load
+        List<Item> createdItems = new List<Item>();
+
         foreach (var items in MapSave.items)
         {
             if (items.Value == null) continue;
-            
+
             foreach (var itemData in items.Value)
             {
-                LoadSingleItem(itemData);
+                if (itemData == null) continue;
+
+                Item item = ItemMgr.Instance.InstantiateItem(itemData, gameObject);
+                if (item == null) continue;
+
+                // 先恢复位置信息和加入运行时字典
+                item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
+                item.transform.localScale = itemData.transform.scale;
+                AddItemInternal(item);
+
+                createdItems.Add(item);
             }
         }
-    }
 
+        // 第二步：统一调用所有刚实例化物品的 Load 方法
+        foreach (var item in createdItems)
+        {
+            if (item == null) continue;
+            item.Load();
+        }
+    }
+    #endregion
+
+    #region 异步加载区块的所有数据
     /// <summary>
     /// 异步加载物品（按批处理）
     /// </summary>
-    private System.Collections.IEnumerator LoadChunkCoroutine()
+    public System.Collections.IEnumerator BatchLoadItemsCoroutine()
     {
         int itemCount = 0;
         ChunkMgr.Instance.AddActiveChunk(this);
 
+        // 第一步：按批实例化所有物品，但先不调用它们的 Load
+        List<Item> createdItems = new List<Item>();
+
         foreach (var items in MapSave.items)
         {
             if (items.Value == null) continue;
 
             foreach (var itemData in items.Value)
             {
-                LoadSingleItem(itemData);
+                if (itemData == null) continue;
+
+                Item item = ItemMgr.Instance.InstantiateItem(itemData, gameObject);
+                if (item == null) continue;
+
+                // 先恢复位置信息和加入运行时字典
+                item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
+                item.transform.localScale = itemData.transform.scale;
+                AddItemInternal(item);
+
+                createdItems.Add(item);
                 itemCount++;
 
                 // 每加载一批物品就等待一帧，避免阻塞主线程
@@ -89,11 +120,27 @@ public class Chunk : MonoBehaviour
             }
         }
 
+        // 第二步：分批调用所有刚实例化物品的 Load 方法
+        int processedCount = 0;
+        foreach (var item in createdItems)
+        {
+            if (item == null) continue;
+            item.Load();
+            processedCount++;
+
+            if (processedCount % ItemBatchSize == 0)
+            {
+                yield return null;
+            }
+        }
+
         // 确保所有物品都已加载完成
         yield return null;
-        FinalizeChunkLoading(itemCount);
+        OnChunkLoaded?.Invoke(this);
     }
+    #endregion
 
+    #region  工具方法
     /// <summary>
     /// 加载单个物品
     /// </summary>
@@ -110,22 +157,8 @@ public class Chunk : MonoBehaviour
         AddItemInternal(item);
     }
 
-    /// <summary>
-    /// 完成区块加载（同步）
-    /// </summary>
-    private void CompleteChunkLoading()
-    {
-        ChunkMgr.Instance.AddActiveChunk(this);
-        Map?.BackTilePenalty_Sync();
-    }
+    #endregion
 
-    /// <summary>
-    /// 完成区块加载（异步）
-    /// </summary>
-    private void FinalizeChunkLoading(int itemCount)
-    {
-        Map?.BackTilePenalty_Sync();
-    }
     #endregion
 
     #region 区块保存
@@ -138,19 +171,19 @@ public class Chunk : MonoBehaviour
         }
 
         MapSave.items.Clear();
-        
+
         // 调用所有item的Save方法
         foreach (var item in RunTimeItems.Values)
         {
             if (item == null) continue;
-            
+
             item.Save();
             MapSave.AddItemData(item.itemData);
         }
 
         // 同时更新位置字典（确保位置字典数据一致）
         RefreshPositionDictionary();
-        
+
         return this;
     }
 
@@ -182,7 +215,7 @@ public class Chunk : MonoBehaviour
         foreach (var item in items)
         {
             if (item == null) continue;
-            
+
             // 避免重复添加
             if (RunTimeItems.ContainsKey(item.itemData.Guid))
             {
@@ -361,10 +394,10 @@ public class Chunk : MonoBehaviour
     public bool TryGetItemsInRange(Vector2 position, float radius, out List<Item> allItems)
     {
         allItems = new List<Item>();
-        
+
         // 先对位置进行取整
         Vector2 roundedPos = RoundPositionForQuery(position);
-        
+
         // 遍历所有物品位置，查找范围内的物品
         foreach (var kvp in RunTimeItems_ByPosition)
         {
@@ -374,7 +407,7 @@ public class Chunk : MonoBehaviour
                 allItems.AddRange(kvp.Value);
             }
         }
-        
+
         return allItems.Count > 0;
     }
 
@@ -388,13 +421,13 @@ public class Chunk : MonoBehaviour
     public bool TryGetItemInRange(Vector2 position, float radius, out Item item)
     {
         item = null;
-        
+
         if (TryGetItemsInRange(position, radius, out var items) && items.Count > 0)
         {
             item = items[0];
             return true;
         }
-        
+
         return false;
     }
     #endregion

@@ -42,6 +42,9 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private string hoveredBiomeName = "未知";
     private TileData hoveredTileData = null;
     private bool isValidPosition = false;
+
+    // 翻页控制
+    private int currentPage = 0; // 0: 环境信息页, 1: 瓦片信息页
     
     // GUI样式
     private GUIStyle boxStyle;
@@ -88,6 +91,31 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         
         // 更新悬停指示器位置
         UpdateHoverIndicator();
+
+        // 翻页：仅在面板可见且当前有有效位置时处理
+        if (isVisible && isValidPosition)
+        {
+            int maxPage = (hoveredTileData != null) ? 1 : 0; // 0 或 1
+
+            if (Input.GetKeyDown(KeyCode.UpArrow))
+            {
+                currentPage--;
+                if (currentPage < 0) currentPage = maxPage;
+            }
+            else if (Input.GetKeyDown(KeyCode.DownArrow))
+            {
+                currentPage++;
+                if (currentPage > maxPage) currentPage = 0;
+            }
+
+            // 防御性约束，避免 hoveredTileData 变为 null 时页码越界
+            if (currentPage > maxPage) currentPage = maxPage;
+        }
+        else
+        {
+            // 无效位置或不可见时重置到第一页
+            currentPage = 0;
+        }
     }
 
     private void OnGUI()
@@ -270,28 +298,68 @@ private void UpdateMouseInfo()
     private void DrawInfoPanel()
     {
         if (!isValidPosition) return;
+
+        // 当前总页数：有瓦片数据时为 2 页，否则为 1 页
+        int totalPages = (hoveredTileData != null) ? 2 : 1;
+        currentPage = Mathf.Clamp(currentPage, 0, totalPages - 1);
+
+        // 预估需要的行数（用于动态计算高度），不同页内容不同
+        int lineCount = 0;
+        if (currentPage == 0)
+        {
+            // 标题、坐标、生物群系、温湿、降水坚固、高度
+            lineCount += 6;
+        }
+        else
+        {
+            // 标题、坐标、瓦片名、移动权重
+            lineCount += (hoveredTileData != null) ? 4 : 2;
+        }
+
+        // 底部统一添加：切换显示提示 + 页码提示
+        lineCount += 2;
+
+        float lineHeight = fontSize + 4;
+        float panelHeight = Mathf.Max(panelSize.y, lineCount * lineHeight + 10);
         
         // 计算GUI位置（跟随鼠标，但保持在屏幕内）
         // 注意：GUI的Y轴是从上到下的，而鼠标坐标的Y轴是从下到上的
         float guiX = Mathf.Clamp(mouseScreenPos.x + offset.x, 0, Screen.width - panelSize.x);
         // 转换Y坐标：Screen.height - mouseScreenPos.y 将鼠标Y坐标转换为GUI坐标系
-        float guiY = Mathf.Clamp(Screen.height - mouseScreenPos.y - panelSize.y - offset.y, 0, Screen.height - panelSize.y);
+        float guiY = Mathf.Clamp(Screen.height - mouseScreenPos.y - panelHeight - offset.y, 0, Screen.height - panelHeight);
         
         // 绘制信息面板
-        GUILayout.BeginArea(new Rect(guiX, guiY, panelSize.x, panelSize.y), boxStyle);
-        
-        GUILayout.Label($"<b>环境信息</b>", labelStyle);
-        GUILayout.Label($"坐标: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
-        GUILayout.Label($"生物群系: {hoveredBiomeName}", labelStyle);
-        GUILayout.Label($"温度: {hoveredEnvFactors.Temperature:F2} | 湿度: {hoveredEnvFactors.Humidity:F2}", labelStyle);
-        GUILayout.Label($"降水量: {hoveredEnvFactors.Precipitation:F2} | 坚固度: {hoveredEnvFactors.Solidity:F2}", labelStyle);
-        GUILayout.Label($"高度: {hoveredEnvFactors.Hight:F2}", labelStyle);
-        if (hoveredTileData != null)
+        GUILayout.BeginArea(new Rect(guiX, guiY, panelSize.x, panelHeight), boxStyle);
+
+        if (currentPage == 0)
         {
-            GUILayout.Label($"瓦片: {hoveredTileData.Name}", labelStyle);
+            // 第 1 页：环境因素
+            GUILayout.Label($"<b>环境信息</b>", labelStyle);
+            GUILayout.Label($"坐标: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
+            GUILayout.Label($"生物群系: {hoveredBiomeName}", labelStyle);
+            GUILayout.Label($"温度: {hoveredEnvFactors.Temperature:F2} | 湿度: {hoveredEnvFactors.Humidity:F2}", labelStyle);
+            GUILayout.Label($"降水量: {hoveredEnvFactors.Precipitation:F2} | 坚固度: {hoveredEnvFactors.Solidity:F2}", labelStyle);
+            GUILayout.Label($"高度: {hoveredEnvFactors.Hight:F2}", labelStyle);
         }
-        
+        else
+        {
+            // 第 2 页：瓦片信息
+            GUILayout.Label($"<b>瓦片信息</b>", labelStyle);
+            GUILayout.Label($"坐标: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
+
+            if (hoveredTileData != null)
+            {
+                GUILayout.Label($"瓦片: {hoveredTileData.Name}", labelStyle);
+                GUILayout.Label($"移动权重: {hoveredTileData.Penalty}", labelStyle);
+            }
+        }
+
+        // 底部通用提示
         GUILayout.Label($"按 {toggleKey} 键切换显示", labelStyle);
+        if (totalPages > 1)
+        {
+            GUILayout.Label($"第 {currentPage + 1}/{totalPages} 页（↑↓ 翻页）", labelStyle);
+        }
         
         GUILayout.EndArea();
     }

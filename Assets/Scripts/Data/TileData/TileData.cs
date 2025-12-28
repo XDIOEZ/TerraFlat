@@ -23,6 +23,7 @@ public abstract partial class TileData
     public float workTime;
     //地块移动权重
     public uint Penalty = 1000;
+    public bool IsWalkable = true;
 
 
     // 虚函数：根据环境初始化
