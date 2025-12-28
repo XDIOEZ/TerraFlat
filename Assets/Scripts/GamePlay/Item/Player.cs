@@ -8,7 +8,6 @@ using UnityEngine;
 /// </summary>
 public class Player : Item
 {
-    private const string AdminName = "管理员";
 
     #region 字段与属性
 
@@ -22,28 +21,7 @@ public class Player : Item
         set => Data.PlayerPov = value;
     }
 
-    [Header("时间控制")]
-    [Tooltip("时间流逝速度")]
-    public float timeScale = 1.0f;
-    
-    [Tooltip("每次调整时间速度的增量")]
-    public float timeScaleStep = 0.5f;
-    
-    [Tooltip("最小时间速度")]
-    public float minTimeScale = 0.1f;
-    
-    [Tooltip("最大时间速度")]
-    public float maxTimeScale = 10.0f;
-
-    [Header("时间提示GUI")]
-    [Tooltip("时间提示显示时长（秒）")]
-    public float timeScaleHintDuration = 1.0f;
-    
-    // 时间提示相关变量
-    private string timeScaleHintText = "";
-    private float timeScaleHintTimer = 0f;
-    private bool showTimeScaleHint = false;
-    private float initialUnityTimeScale = 1.0f;
+    // （时间控制和管理员逻辑已提取到 PlayerAdminController 脚本）
 
     public override ItemData itemData
     {
@@ -64,7 +42,6 @@ public class Player : Item
     public override void Start()
     {
         base.Start();
-        initialUnityTimeScale = Time.timeScale;
     }
 
     public override void Act()
@@ -89,42 +66,12 @@ public class Player : Item
     new void Update()
     {
         base.Update();
-
-        UpdateTimeScaleHint();
-
-        if (Input.GetKeyDown(KeyCode.F1))
-        {
-            Debug.Log("F1键被按下，切换管理员");
-            Data.Name_User = AdminName;
-        }
-
-        // 只有管理员可以控制时间
-        if (IsAdmin())
-        {
-            if (Input.GetKeyDown(KeyCode.T))
-            {
-                TeleportToMousePosition();
-            }
-            
-            if (Input.GetKeyDown(KeyCode.F2))
-            {
-                GameRes.Instance.InventoryInitGet("创造模式", out Inventoryinit inventoryInit);
-                if (inventoryInit != null)
-                {
-                   base.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).inventory.TryInitializeItems(inventoryInit);
-                }
-            }
-            
-            // 控制时间流逝速度
-            HandleTimeScaleControl();
-
-        }
+        // 管理员相关输入与时间控制已移至 PlayerAdminController 组件
     }
 
     public new void OnDestroy()
     {
         base.OnDestroy();
-        Time.timeScale = initialUnityTimeScale;
     }
     #endregion
 
@@ -144,14 +91,19 @@ public class Player : Item
         Application.Quit();
         Application.OpenURL("https://space.bilibili.com/353520649");
     }
-
-    [Button]
-    public void FixTimeScale()
-    {
-        timeScale = 1.0f;
-        Time.timeScale = timeScale;
-    }
     
+    /// <summary>
+    /// 管理员初始化创造模式背包（供 PlayerAdminController 调用）
+    /// </summary>
+    public void InitializeCreativeInventoryForAdmin()
+    {
+        GameRes.Instance.InventoryInitGet("创造模式", out Inventoryinit inventoryInit);
+        if (inventoryInit != null)
+        {
+            base.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).inventory.TryInitializeItems(inventoryInit);
+        }
+    }
+
     /// <summary>
     /// 将玩家传送到鼠标世界坐标位置
     /// </summary>
@@ -180,95 +132,5 @@ public class Player : Item
         Debug.Log($"玩家已传送到位置: {mouseWorldPosition}");
     }
 
-    #endregion
-
-    #region 时间控制
-    private void HandleTimeScaleControl()
-    {
-        bool timeScaleChanged = false;
-
-        if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus))
-        {
-            timeScaleChanged = TryUpdateTimeScale(timeScaleStep);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
-        {
-            timeScaleChanged = TryUpdateTimeScale(-timeScaleStep);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0))
-        {
-            timeScale = 1.0f;
-            Time.timeScale = timeScale;
-            timeScaleChanged = true;
-            timeScaleHintText = "时间速度已重置为正常速度";
-            Debug.Log("时间速度已重置为正常速度");
-        }
-
-        if (timeScaleChanged)
-        {
-            ShowTimeScaleHint();
-        }
-    }
-
-    private void ShowTimeScaleHint()
-    {
-        showTimeScaleHint = true;
-        timeScaleHintTimer = timeScaleHintDuration;
-    }
-
-    private bool TryUpdateTimeScale(float delta)
-    {
-        float newScale = Mathf.Clamp(timeScale + delta, minTimeScale, maxTimeScale);
-        if (Mathf.Approximately(newScale, timeScale))
-        {
-            return false;
-        }
-
-        timeScale = newScale;
-        Time.timeScale = timeScale;
-        timeScaleHintText = $"时间速度: {timeScale}x";
-        Debug.Log($"时间速度调整为: {timeScale}x");
-        return true;
-    }
-
-    private void UpdateTimeScaleHint()
-    {
-        if (showTimeScaleHint)
-        {
-            timeScaleHintTimer -= Time.unscaledDeltaTime;
-            if (timeScaleHintTimer <= 0)
-            {
-                showTimeScaleHint = false;
-                timeScaleHintTimer = 0;
-            }
-        }
-    }
-
-    private void OnGUI()
-    {
-        if (showTimeScaleHint && !string.IsNullOrEmpty(timeScaleHintText))
-        {
-            float alpha = Mathf.Clamp01(timeScaleHintTimer / timeScaleHintDuration);
-
-            GUIStyle style = new GUIStyle(GUI.skin.label);
-            style.fontSize = 24;
-            style.fontStyle = FontStyle.Bold;
-            style.normal.textColor = new Color(1, 1, 1, alpha);
-            style.alignment = TextAnchor.MiddleCenter;
-
-            Rect position = new Rect(0, Screen.height * 0.25f, Screen.width, 50);
-
-            GUI.Label(position, timeScaleHintText, style);
-        }
-    }
-    #endregion
-
-    #region 工具方法
-    private bool IsAdmin()
-    {
-        return Data != null && Data.Name_User == AdminName;
-    }
     #endregion
 }

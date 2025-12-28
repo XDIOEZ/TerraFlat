@@ -187,13 +187,26 @@ public class Inventory_HotBar : Inventory
         CurrentSelectItemSlot = slot;
         currentObject = item.gameObject;
 
-        faceMouse?.targetRotationTransforms.Add(tf);
+        // 注册到面向鼠标与转身系统（避免重复添加）
+        if (faceMouse != null && !faceMouse.targetRotationTransforms.Contains(tf))
+        {
+            faceMouse.targetRotationTransforms.Add(tf);
+        }
 
         if (turnBody != null)
         {
-            turnBody.controlledTransforms_Direction.Add(tf);
-            turnBody.controlledTransforms_Position.Add(transform);
+            if (!turnBody.controlledTransforms_Direction.Contains(tf))
+            {
+                turnBody.controlledTransforms_Direction.Add(tf);
+            }
+
+            // 物品实例本身的位置不需要加入 Position 列表，
+            // 只在 GetRequiredComponents 中对快捷栏 Transform 做一次性注册
         }
+
+        // 切换新物品时，强制让朝向系统刷新一次，
+        // 解决“鼠标在左边滚轮切换时物品朝向出错”的问题
+        turnBody?.UpdateAllTransformDirections();
     }
 
     #endregion
@@ -236,6 +249,12 @@ public class Inventory_HotBar : Inventory
     {
         item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
         item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
+
+        // 初始化时只注册一次快捷栏 Transform，用于位置镜像
+        if (turnBody != null && !turnBody.controlledTransforms_Position.Contains(transform))
+        {
+            turnBody.controlledTransforms_Position.Add(transform);
+        }
     }
 
     public void OnDestroyCurrentObject(Item obj)

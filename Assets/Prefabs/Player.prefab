@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 27656915510777888}
   - component: {fileID: 7199555808017476116}
   - component: {fileID: 6883143605326503467}
+  - component: {fileID: 4377666045775335801}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -234,9 +235,23 @@ MonoBehaviour:
     staminaRecoverySpeed: 10
     Name_User: "\u7BA1\u7406\u5458"
     PlayerPov: 10
+--- !u!114 &4377666045775335801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7edb27ca9ef94748848deea627fc92b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 6883143605326503467}
+  hotbar: {fileID: 0}
   timeScale: 1
   timeScaleStep: 0.5
-  minTimeScale: 0
+  minTimeScale: 0.1
   maxTimeScale: 10
   timeScaleHintDuration: 1
 --- !u!1001 &182505877538168709
@@ -1285,6 +1300,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6997421775323471935, guid: df3c57f10524b144a9fe355ef83589ba, type: 3}
+      propertyPath: runHungerBuff
+      value: 
+      objectReference: {fileID: 11400000, guid: 75ace42eca9a9af4fa49abb5406a96dc, type: 2}
+    - target: {fileID: 6997421775323471935, guid: df3c57f10524b144a9fe355ef83589ba, type: 3}
+      propertyPath: moveHungerBuff
+      value: 
+      objectReference: {fileID: 11400000, guid: 202d06f90127eee4ea2c4bc310e3c58c, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

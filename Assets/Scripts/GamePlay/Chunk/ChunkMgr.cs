@@ -143,7 +143,11 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 }
                 else
                 {
-                    Chunk_Dic_Active[key].Map.BackTilePenalty_Async();
+                    // 防止在高速移动或区块刚销毁/未完全初始化时出现空引用
+                    if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk) && chunk != null && chunk.Map != null)
+                    {
+                        chunk.Map.BackTilePenalty_Async();
+                    }
                 }
             }
         }
