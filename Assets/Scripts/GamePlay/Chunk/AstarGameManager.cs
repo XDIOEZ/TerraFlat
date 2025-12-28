@@ -30,6 +30,13 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     public int minPenalty = 0; // 权重最小值（避免负权重）
     public int maxPenalty = 10000; // 权重最大值（避免寻路异常）
     public Camera mainCamera; // 转换鼠标坐标（未指定则自动获取）
+
+    // 导航网格异步扫描状态
+    private bool isScanningNavmesh = false;
+    private bool hasPendingScanRequest = false;
+    private Vector2 pendingScanCenter;
+    private int pendingScanRadius;
+    private System.Action pendingScanOnComplete;
     #endregion
 
     #region 生命周期方法
@@ -87,7 +94,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     }
 
     [Button("Update NavMesh")]
-    public void UpdateMeshAsync(Vector2 center = default, int radius = 1, System.Action onComplete = null)
+    public void RefreshNavMeshAsync(Vector2 center = default, int radius = 1, System.Action onComplete = null)
     {
         // 添加null检查，确保AstarPath.active不为null
         if (AstarPath.active == null)
@@ -100,26 +107,36 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Vector2 Newcenter = center + chunkSize * 0.5f;
 
+        var gridGraph = AstarPath.active.data.gridGraph;
+
         // 检查gridGraph是否为null
-        if (AstarPath.active.data.gridGraph == null)
+        if (gridGraph == null)
         {
             Debug.LogError("AstarPath.active.data.gridGraph is null, cannot update mesh.");
             onComplete?.Invoke();
             return;
         }
 
-        AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
+        // 仅在中心或尺寸变化时才更新配置，避免每次都重建网格数据
+        Vector3 targetCenter = new Vector3(Newcenter.x, Newcenter.y, 0f);
+        if (gridGraph.center != targetCenter)
+        {
+            gridGraph.center = targetCenter;
+        }
 
         int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
         int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
         float nodeSize = 1f;
 
-        AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
+        // 只有在尺寸或节点大小变化时才调用 SetDimensions（这一步可能比较重）
+        if (gridGraph.width != width || gridGraph.depth != depth || !Mathf.Approximately(gridGraph.nodeSize, nodeSize))
+        {
+            gridGraph.SetDimensions(width, depth, nodeSize);
+        }
 
-        // 启动异步扫描（可指定要扫描的图，null表示扫描所有图）
         IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
 
-        // 通过协程处理异步进度，并在完成后更新权重
+        isScanningNavmesh = true;
         StartCoroutine(HandleScanProgress(scanProgress, center, radius, onComplete));
     }
 
@@ -129,19 +146,10 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         // 迭代进度枚举器，获取实时进度
         foreach (var progress in progressEnumerable)
         {
-            // 输出进度信息（0-1之间的浮点数，1表示完成）
-            //  Debug.Log($"扫描进度：{progress.progress:F2}");
-
-            // 等待一帧，避免阻塞主线程
             yield return null;
         }
 
-        //        Debug.Log("异步扫描完成！");
-
-        // 扫描完成后，更新指定区域的所有区块权重
-        //UpdateChunksPenaltyInArea(center, radius);
-
-        //      Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
 
         // 调用回调函数
         onComplete?.Invoke();
@@ -252,13 +260,12 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     }
 
     /// <summary>
-    /// 高频调用优化版：修改单个节点权重
-    /// - 无Log（避免控制台刷屏卡顿）
-    /// - 避免重复赋值（Penalty相同则跳过）
-    /// - Gizmos记录数量有限制
-    /// - newPenalty为0时设置节点为不可通行
+    /// 高频调用优化版：修改单个节点的可通行性与权重。
+    /// - 无 Log（避免控制台刷屏卡顿）
+    /// - 避免重复赋值（Walkable / Penalty 都相同则直接返回）
+    /// - newPenalty == 0 或 isWalkable == false 时，将节点标记为不可通行
     /// </summary>
-    public void ModifyNodePenalty_Optimized(Vector2 worldPos, uint newPenalty = 1000)
+    public void ModifyNodePenalty_Optimized(Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
     {
         // 1. 获取节点
         NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
@@ -270,20 +277,22 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             return;
         }
 
-        if (newPenalty == 0)
+        // 2. 计算目标 Walkable 状态：
+        //    - 如果显示标记为不可通行
+        //    - 或者 权重为 0，则一律视为不可通行
+        bool targetWalkable = isWalkable && newPenalty > 0;
+
+        // 3. 如果当前状态与目标状态完全一致，则无需修改
+        if (targetNode.Walkable == targetWalkable && targetNode.Penalty == newPenalty)
         {
-            // 设置节点为不可通行
-            targetNode.Walkable = false;
-            targetNode.Penalty = 0;
             return;
         }
-        else
-        {
-            targetNode.Walkable = true;
-            targetNode.Penalty = newPenalty;
-        }
 
+        // 4. 应用修改
+        targetNode.Walkable = targetWalkable;
 
+        // 对于不可通行节点，统一将 Penalty 置为 0，避免无意义的高权重
+        targetNode.Penalty = targetWalkable ? newPenalty : 0u;
     }
 
     [Button("修改区域权重")]

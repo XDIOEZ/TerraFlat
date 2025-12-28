@@ -60,7 +60,7 @@ public class Mod_Scene_Prefab : Mod_Scene
 
                     ChunkMgr.Instance.AddActiveChunk(chunk);//添加到激活 Chunk 列表中
 
-                    chunk.LoadChunk_By_MapSaveData_Sync();
+                    chunk.LoadChunkFromMapSave();
 
                     //设置玩家返回点和返回场景
                     if (_sceneAssetList != null && _sceneAssetList.Count > 0)

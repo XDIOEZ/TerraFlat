@@ -224,7 +224,7 @@ public class Mod_Scene : Module
 
                     ChunkMgr.Instance.AddActiveChunk(chunk);//���ӵ����� Chunk �б���
 
-                    chunk.LoadChunk_By_MapSaveData_Sync();
+                    chunk.LoadChunkFromMapSave();
 
                     //������ҷ��ص�ͷ��س���
                     if (_sceneAssetList != null && _sceneAssetList.Count > 0)

@@ -225,7 +225,7 @@ public class Map : Item
             float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
             Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
 
-            AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty);
+            AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty,topTile.IsWalkable);
         }
 
         Debug.Log($"✅ 完成同步烘焙 {Data.TileData.Count} 个地块的寻路权重");
@@ -240,8 +240,8 @@ public class Map : Item
         var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
         float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
 
-        // 创建节点处理列表
-        List<(Vector3 worldPos, uint penalty)> nodesToProcess = new List<(Vector3, uint)>();
+        // 创建节点处理列表（包含坐标、权重与可通行性）
+        List<(Vector3 worldPos, uint penalty, bool isWalkable)> nodesToProcess = new List<(Vector3, uint, bool)>();
 
         // 收集所有需要处理的节点数据
         foreach (var kvp in Data.TileData)
@@ -262,7 +262,7 @@ public class Map : Item
             float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
             Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
 
-            nodesToProcess.Add((alignedWorldPos, topTile.Penalty));
+            nodesToProcess.Add((alignedWorldPos, topTile.Penalty, topTile.IsWalkable));
         }
 
         // 分批处理节点，避免长时间阻塞主线程
@@ -274,8 +274,8 @@ public class Map : Item
             // 处理当前批次
             for (int j = i; j < endIndex; j++)
             {
-                var (worldPos, penalty) = nodesToProcess[j];
-                AstarGameManager.Instance?.ModifyNodePenalty_Optimized(worldPos, penalty);
+                var (worldPos, penalty, isWalkable) = nodesToProcess[j];
+                AstarGameManager.Instance?.ModifyNodePenalty_Optimized(worldPos, penalty, isWalkable);
             }
 
             // 每处理一批就等待一帧，让出控制权给其他任务
@@ -296,8 +296,11 @@ public class Map : Item
     /// <param name="position2D">地块的2D坐标</param>
     public void BackTilePenalty_Cell(Vector2 position2D)
     {
-        uint penalty = GetTile(position: new Vector2Int(x: (int)position2D.x, y: (int)position2D.y)).Penalty;
-        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, penalty);
+        var tile = GetTile(new Vector2Int(x: (int)position2D.x, y: (int)position2D.y));
+        if (tile == null) return;
+
+        uint penalty = tile.Penalty;
+        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, penalty, tile.IsWalkable);
     }
     /// <summary>
     /// 烘焙指定位置为中心的 3×3 地块寻路权重
@@ -322,11 +325,15 @@ public class Map : Item
                 if (tile == null)
                     continue;
 
+                // 卸载建筑或恢复区域时，默认把地块恢复为可通行
+                tile.IsWalkable = true;
+
                 uint penalty = tile.Penalty;
 
                 AstarGameManager.Instance?.ModifyNodePenalty_Optimized(
                     new Vector2(tilePos.x, tilePos.y),
-                    penalty
+                    penalty,
+                    tile.IsWalkable
                 );
             }
         }
@@ -335,12 +342,25 @@ public class Map : Item
 
 
     /// <summary>
-    /// 烘焙单个地块的寻路权重
+    /// 烘焙单个地块的寻路权重（强制设为不可通行）
     /// </summary>
     /// <param name="position2D">地块的2D坐标</param>
     public void BackTilePenalty_Cell_NotMove(Vector2 position2D)
     {
-        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, 0);
+        // 先更新 TileData：将该格子的最顶层 Tile 标记为不可通行
+        Vector2Int gridPos = new Vector2Int(
+            Mathf.FloorToInt(position2D.x),
+            Mathf.FloorToInt(position2D.y)
+        );
+
+        var tile = GetTile(gridPos);
+        if (tile != null)
+        {
+            tile.IsWalkable = false;
+        }
+
+        // 再更新寻路节点：Penalty=0 + Walkable=false
+        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, 0, false);
     }
 
     /// <summary>
@@ -422,9 +442,11 @@ public class Map : Item
                     float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
                     Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
                     if (useTilepenalty == false)
-                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, 0);
+                        // 区域强制不可通行
+                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, 0, false);
                     else
-                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty);
+                        // 使用地块自身的可通行性与权重
+                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty, topTile.IsWalkable);
                     processedTiles++;
                 }
                 else
@@ -435,15 +457,6 @@ public class Map : Item
         }
 
         Debug.Log($"[BackTilePenalty_Bounds] 烘焙完成: 处理了{processedTiles}个地块，跳过了{skippedTiles}个不存在的地块");
-    }
-
-    /// <summary>
-    /// 异步烘焙指定区域（Bounds）内所有地块的寻路权重
-    /// </summary>
-    /// <param name="bounds">要烘焙的区域</param>
-    public void BackTilePenalty_BoundsAsync(Bounds bounds)
-    {
-        StartCoroutine(BackTilePenalty_BoundsCoroutine(bounds));
     }
 
     /// <summary>
@@ -500,7 +513,7 @@ public class Map : Item
                     float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
                     Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
 
-                    AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty);
+                    AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty, topTile.IsWalkable);
                 }
 
                 processedCount++;

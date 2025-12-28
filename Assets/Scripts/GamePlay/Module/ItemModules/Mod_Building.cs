@@ -286,8 +286,19 @@ public class Mod_Building : Module
                 Debug.Log($"[MeshUpdate] 新建筑 {newBuilding.name} 状态设置为已安装");
             }
 
-            // 设置当前对象为已安装状态
-            CurrentState = BuildingState.Installed;
+            // 安装完毕后：
+            // - 场景中的新建筑保持为 Installed
+            // - 手上的物品如果还有剩余数量，则恢复为 NotInstalled，方便继续预览/放置
+            if (item != null && item.itemData != null && item.itemData.Stack.Amount > 0)
+            {
+                CurrentState = BuildingState.NotInstalled;
+                Debug.Log("[MeshUpdate] 原物品仍有剩余数量，状态重置为未安装");
+            }
+            else
+            {
+                // 没有剩余堆叠（或即将被销毁），保持已安装状态
+                CurrentState = BuildingState.Installed;
+            }
         }
         else
         {
@@ -398,12 +409,12 @@ public class Mod_Building : Module
             return false;
         }
 
-        // 5. 检查物品数量
-        if (item.itemData.Stack.Amount <= 0)
-        {
-            Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.itemData.Stack.Amount})");
-            return false;
-        }
+        // // 5. 检查物品数量
+        // if (item.itemData.Stack.Amount <= 0)
+        // {
+        //     Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.itemData.Stack.Amount})");
+        //     return false;
+        // }
 
         return true;
     }
