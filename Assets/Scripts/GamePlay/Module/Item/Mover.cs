@@ -52,6 +52,18 @@ public partial class Mover : Module
     public Ex_ModData_MemoryPackable ModDataMemoryPack = new();
     public Mod_AnimatorController animationController;
 
+    // 饥饿相关：移动/奔跑时通过 Buff 加快 Food 模块的消耗
+    [Header("饥饿消耗设置")]
+    [Tooltip("移动时附加的饥饿 Buff 数据（直接挂接 Buff_Data SO）")]
+    public Buff_Data moveHungerBuff;
+
+    [Tooltip("奔跑时附加的饥饿 Buff 数据（直接挂接 Buff_Data SO）")]
+    public Buff_Data runHungerBuff;
+
+    private BuffManager buffManager;
+    private bool moveHungerBuffActive = false;
+    private bool runHungerBuffActive = false;
+
     [Header("移动事件")]
     public UltEvent OnMoveStart;
     public UltEvent OnMoveEnd;
@@ -120,6 +132,9 @@ public partial class Mover : Module
 
         rb = GetComponentInParent<Rigidbody2D>();
 
+        // 加载 Buff 管理器（可能不存在，需容错）
+        item.itemMods.GetMod_ByID(ModText.BuffManager, out buffManager);
+
         // 加载控制器模块
         LoadMod<GameController>(item, ModText.Controller, controller =>
         {
@@ -161,6 +176,9 @@ public partial class Mover : Module
             OnMoveEnd?.Invoke();
         }
         _wasMoving = isCurrentlyMoving;
+
+        // 基于移动/奔跑状态，给拥有 Food+BuffManager 的对象挂/卸饥饿 Buff
+        HandleHungerBuffs(isCurrentlyMoving, IsRunning);
 
         if (isCurrentlyMoving)
         {
@@ -247,6 +265,82 @@ public partial class Mover : Module
     {
         OnMoveStart.Clear();
         OnMoveEnd.Clear();
+
+        // 模块被销毁时，确保清除与移动/奔跑相关的饥饿状态 Buff
+        ClearHungerBuffs();
     }
     #endregion
+
+    #region 饥饿 Buff 逻辑
+
+    /// <summary>
+    /// 根据当前移动/奔跑状态，动态添加或移除饥饿相关 Buff。
+    /// </summary>
+    private void HandleHungerBuffs(bool isMoving, bool isRunning)
+    {
+        if (buffManager == null)
+        {
+            // 该物体没有 BuffManager，直接退出（例如纯移动物体）
+            return;
+        }
+
+        // 1. 处理移动饥饿 Buff
+        if (isMoving)
+        {
+            TryAddHungerBuff(moveHungerBuff, ref moveHungerBuffActive);
+        }
+        else
+        {
+            TryRemoveHungerBuff(moveHungerBuff, ref moveHungerBuffActive);
+        }
+
+        // 2. 处理奔跑附加饥饿 Buff（只在移动且奔跑时生效）
+        if (isMoving && isRunning)
+        {
+            TryAddHungerBuff(runHungerBuff, ref runHungerBuffActive);
+        }
+        else
+        {
+            TryRemoveHungerBuff(runHungerBuff, ref runHungerBuffActive);
+        }
+    }
+
+    private void TryAddHungerBuff(Buff_Data buffData, ref bool stateFlag)
+    {
+        if (stateFlag) return;
+        if (buffManager == null) return;
+        if (buffData == null) return;
+
+        buffManager.AddBuff(buffData);
+        stateFlag = true;
+    }
+
+    private void TryRemoveHungerBuff(Buff_Data buffData, ref bool stateFlag)
+    {
+        if (!stateFlag) return;
+        if (buffManager == null) return;
+        if (buffData == null) return;
+
+        // 使用 Buff 的 ID 进行移除
+        if (!string.IsNullOrEmpty(buffData.buff_ID))
+        {
+            buffManager.RemoveBuff(buffData.buff_ID);
+        }
+        stateFlag = false;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// 强制清理当前可能仍然挂在身上的移动/奔跑饥饿 Buff。
+    /// 在模块销毁或需要重置状态时调用。
+    /// </summary>
+    private void ClearHungerBuffs()
+    {
+        if (buffManager == null) return;
+
+        // 不直接操作字典，而是复用已有的移除逻辑和状态位
+        TryRemoveHungerBuff(moveHungerBuff, ref moveHungerBuffActive);
+        TryRemoveHungerBuff(runHungerBuff, ref runHungerBuffActive);
+    }
 }

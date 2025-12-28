@@ -12,10 +12,10 @@ public class BuffManager : Module
     public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
 
     public Ex_ModData_MemoryPackable ModData;
-    public override ModuleData _Data 
-    { 
-        get { return ModData; } 
-        set { ModData = (Ex_ModData_MemoryPackable)value; } 
+    public override ModuleData _Data
+    {
+        get { return ModData; }
+        set { ModData = (Ex_ModData_MemoryPackable)value; }
     }
 
     /// <summary>
@@ -29,8 +29,8 @@ public class BuffManager : Module
     {
         base.Awake();
         _Data.ID = ModText.BuffManager;
-        buffReceiver = GetComponent<Item>();
-        
+        buffReceiver = GetComponentInParent<Item>();
+
         if (buffReceiver == null)
         {
             Debug.LogWarning($"?? BuffManager 找不到 Item 组件");
@@ -46,7 +46,7 @@ public class BuffManager : Module
 
         ModData.ReadData(ref BuffRunTimeData_Dic);
 
-  InitializeBuffs();
+        InitializeBuffs();
     }
 
     public override void Save()
@@ -73,7 +73,7 @@ public class BuffManager : Module
         // 确保接收者引用有效
         if (buffReceiver == null)
         {
-            buffReceiver = GetComponent<Item>();
+            buffReceiver = item;
         }
 
         // 同步 Data 后，初始化 Buff 的接收者信息：
@@ -98,7 +98,7 @@ public class BuffManager : Module
                 }
                 else
                 {
-                     var guidReceiver = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
+                    var guidReceiver = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
                     if (guidReceiver != null)
                     {
                         receiver = guidReceiver;
@@ -279,7 +279,7 @@ public class BuffManager : Module
             // 第一次添加该 Buff
             BuffRunTimeData_Dic[buffID] = newBuff;
             newBuff.OnBuff_Start();
-//            Debug.Log($"? 添加新 Buff: {buffID}");
+            //            Debug.Log($"? 添加新 Buff: {buffID}");
         }
     }
 
@@ -385,7 +385,7 @@ public class BuffManager : Module
 
         buff?.OnBuff_Stop();
         BuffRunTimeData_Dic.Remove(buffId);
-      //  Debug.Log($"? 移除 Buff: {buffId}");
+        //  Debug.Log($"? 移除 Buff: {buffId}");
     }
 
     /// <summary>
@@ -399,7 +399,7 @@ public class BuffManager : Module
         }
 
         BuffRunTimeData_Dic.Clear();
-       // Debug.Log($"? 已清除所有 Buff");
+        // Debug.Log($"? 已清除所有 Buff");
     }
     #endregion
 

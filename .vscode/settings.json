@@ -57,5 +57,7 @@
         "Temp/": true
     },
     "dotnet.defaultSolution": "FlatWorld.sln",
-    "dotnet.preferCSharpExtension": true
+    "dotnet.preferCSharpExtension": true,
+    "outline-map.follow": "manual",
+    "outline-map.expand": "expanded"
 }

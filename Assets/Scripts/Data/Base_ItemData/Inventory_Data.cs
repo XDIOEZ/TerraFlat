@@ -195,6 +195,9 @@ public partial class Inventory_Data
         }
 
         // 堆叠物品（体积为1）
+        // 优先填充已有的同类堆叠槽位，其次才占用新的空槽位
+
+        // 第一轮：只尝试向已有的同类物品堆叠
         for (int i = 0; i < itemSlots.Count && remainingAmount > 0; i++)
         {
             var slot = itemSlots[i];
@@ -203,24 +206,45 @@ public partial class Inventory_Data
                             slot.itemData.IDName == inputItemData.IDName &&
                             slot.itemData.ItemSpecialData == inputItemData.ItemSpecialData;
 
-            if ((!hasItem && slot.IsFull) || (hasItem && (!sameItem || slot.IsFull)))
+            // 仅处理已有、同类、且未满的堆叠
+            if (!hasItem || !sameItem || slot.IsFull)
                 continue;
 
-            float currentVol = hasItem ? slot.itemData.Stack.CurrentVolume : 0f;
+            float currentVol = slot.itemData.Stack.CurrentVolume;
             float canAdd = slot.SlotMaxVolume - currentVol;
             float toAdd = Mathf.Min(remainingAmount, canAdd);
             if (toAdd <= 0f) continue;
 
             if (doAdd)
             {
-                if (hasItem)
-                    ChangeItemDataAmount(i, toAdd);
-                else
-                {
-                    var newItem = FastCloner.FastCloner.DeepClone(inputItemData);
-                    newItem.Stack.Amount = toAdd;
-                    SetOne_ItemData(i, newItem);
-                }
+                ChangeItemDataAmount(i, toAdd);
+                Event_RefreshUI.Invoke(i);
+            }
+
+            remainingAmount -= toAdd;
+            addedAny = true;
+        }
+
+        // 第二轮：若还有剩余数量，再找空槽位放入（创建新堆叠）
+        for (int i = 0; i < itemSlots.Count && remainingAmount > 0; i++)
+        {
+            var slot = itemSlots[i];
+            bool hasItem = slot.itemData != null;
+
+            // 只处理空槽位，且槽位本身未被标记为满
+            if (hasItem || slot.IsFull)
+                continue;
+
+            float currentVol = 0f;
+            float canAdd = slot.SlotMaxVolume - currentVol;
+            float toAdd = Mathf.Min(remainingAmount, canAdd);
+            if (toAdd <= 0f) continue;
+
+            if (doAdd)
+            {
+                var newItem = FastCloner.FastCloner.DeepClone(inputItemData);
+                newItem.Stack.Amount = toAdd;
+                SetOne_ItemData(i, newItem);
                 Event_RefreshUI.Invoke(i);
             }
 

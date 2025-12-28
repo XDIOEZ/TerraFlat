@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4efb9d173c9c6ef428bc409627291eee, type: 3}
-  m_Name: "\u589E\u52A0\u6C34\u4EFD"
+  m_Name: "\u98DF\u7269\u6C34\u4EFD+10"
   m_EditorClassIdentifier: 
   NutritionChangeValue:
     Carbohydrates: 0
