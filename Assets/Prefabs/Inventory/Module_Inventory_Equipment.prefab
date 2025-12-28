@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 585359286062076056}
   - component: {fileID: 6911390125594523708}
-  - component: {fileID: 591665161915807194}
+  - component: {fileID: 8644230987881074247}
   m_Layer: 9
-  m_Name: Module_Equipment
+  m_Name: Module_Inventory_Equipment
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48,7 +48,7 @@ MonoBehaviour:
   item: {fileID: 0}
   Data:
     Name: 
-    ID: "\u88C5\u5907\u7CFB\u7EDF"
+    ID: "\u88C5\u5907\u63D2\u69FD"
     isRunning: 1
     Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
@@ -57,14 +57,16 @@ MonoBehaviour:
   inventoryRefDic:
     _serializedList:
     - Key: "\u9ED8\u8BA4"
-      Value: {fileID: 591665161915807194}
-  basePanel: {fileID: 0}
+      Value: {fileID: 8644230987881074247}
+  inventoryBasePanelCache:
+    _serializedList: []
   inventoryPanelPrefabs:
     _serializedList:
     - Key: "\u9ED8\u8BA4"
       Value: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
   Prefab_BasePanel: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
---- !u!114 &591665161915807194
+  ToggleActionName: 
+--- !u!114 &8644230987881074247
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -73,12 +75,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 2735290679265173132}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b71044ae4bda4434ab52df36264fdead, type: 3}
+  m_Script: {fileID: 11500000, guid: 44122eb3ed738fa44a60b43558628d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Owner: {fileID: 0}
+  item: {fileID: 0}
   Data:
-    Name: "\u88C5\u5907\u7CFB\u7EDF"
+    Name: "\u88C5\u5907\u63D2\u69FD"
     itemSlots:
     - CanAcceptItemType:
         Item_TypeTag:
@@ -88,8 +90,6 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -98,8 +98,6 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -108,8 +106,6 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
     - CanAcceptItemType:
         Item_TypeTag:
         - None
@@ -118,13 +114,12 @@ MonoBehaviour:
         - None
       SlotMaxVolume: 0
       Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
     Index: 0
     IsInjected: 0
+    PanelPosition: {x: 0, y: 0, z: 0}
+    PanelIsOpen: 0
     Event_RefreshUI:
       _PersistentCalls: []
   itemSlotUIs: []
   DefaultTarget_Inventory: {fileID: 0}
   basePanel: {fileID: 0}
-  ModulesParent: {fileID: 0}

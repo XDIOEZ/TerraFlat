@@ -33,7 +33,7 @@ public static class ModText
     #endregion
 
     #region E
-    public static string Equipment = "装备系统";
+    public static string Equipment = "装备插槽";
     #endregion
 
     #region F

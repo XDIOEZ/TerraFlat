@@ -1,12 +1,14 @@
 
 using MemoryPack;
 using Newtonsoft.Json;
+using Sirenix.OdinInspector;
 using System;
 
 [System.Serializable]
 [MemoryPackable]
 public partial class Ex_ModData : ModuleData
 {
+    [ReadOnly]
     public string BitData;
 
     public T GetData<T>()
@@ -32,6 +34,7 @@ public partial class Ex_ModData : ModuleData
 [MemoryPackable]
 public partial class Ex_ModData_MemoryPackable : ModuleData
 {
+    [ReadOnly]
     public byte[] BitData;
 
     public T GetData<T>()

@@ -1,11 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
+using MemoryPack;
 using UnityEngine;
 
-public abstract class EquipmentInstance
+
+[System.Serializable]
+[MemoryPackable]
+[MemoryPackUnion(0, typeof(EquipmentInstance_Bag))]
+public abstract partial class EquipmentInstance
 {
     public string Name;
-    public abstract void Load();
+    public abstract void Equip();
     public abstract void Update();
-    public abstract void Save();
+    public abstract void UnEquip();
 }

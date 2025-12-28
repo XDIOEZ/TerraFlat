@@ -25,6 +25,10 @@ public partial class Inventory_Data
     [FastClonerIgnore]
     public UltEvent<int> Event_RefreshUI = new UltEvent<int>(); // UI刷新事件
 
+    [MemoryPackIgnore]
+    [FastClonerIgnore]
+    public UltEvent OnDataChanged = new UltEvent(); // 数据变更事件
+
     [FastClonerIgnore]
     public bool IsFull => itemSlots.TrueForAll(slot => slot.itemData != null);
 
@@ -43,11 +47,13 @@ public partial class Inventory_Data
     {
         itemSlot.itemData = null;
         Event_RefreshUI.Invoke(index);
+        OnDataChanged.Invoke();
     }
 
     public void SetOne_ItemData(int index, ItemData inputItemData)
     {
         itemSlots[index].itemData = inputItemData;
+        OnDataChanged.Invoke();
     }
 
     public ItemSlot GetItemSlot(int index)
@@ -57,11 +63,10 @@ public partial class Inventory_Data
         return itemSlots[index];
     }
 
-    public ItemData GetItemData(int index) => GetItemSlot(index).itemData;
-
     public void ChangeItemDataAmount(int index, float amount)
     {
         itemSlots[index].itemData.Stack.Amount += amount;
+        OnDataChanged.Invoke();
     }
 
     #endregion
@@ -87,6 +92,7 @@ public partial class Inventory_Data
             int changeAmount = Mathf.CeilToInt(inputData.Stack.Amount * rate);
             ChangeItemAmount(inputSlotHand, localSlot, changeAmount);
             Event_RefreshUI.Invoke(index);
+            OnDataChanged.Invoke();
             return;
         }
 
@@ -96,6 +102,7 @@ public partial class Inventory_Data
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
             Event_RefreshUI.Invoke(index);
+            OnDataChanged.Invoke();
             return;
         }
 
@@ -104,6 +111,7 @@ public partial class Inventory_Data
         {
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
+            OnDataChanged.Invoke();
             return;
         }
 
@@ -112,6 +120,7 @@ public partial class Inventory_Data
         {
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
+            OnDataChanged.Invoke();
             Debug.Log("特殊交换");
             return;
         }
@@ -122,12 +131,14 @@ public partial class Inventory_Data
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
             Event_RefreshUI.Invoke(index);
+            OnDataChanged.Invoke();
             return;
         }
 
         // 情况6：物品不同，直接交换
         localSlot.Change(inputSlotHand);
         Event_RefreshUI.Invoke(index);
+        OnDataChanged.Invoke();
         Debug.Log($"(物品不同)交换物品槽位:{index} 物品:{inputSlotHand.itemData.IDName}");
     }
 
@@ -160,6 +171,9 @@ public partial class Inventory_Data
         if (localSlot.itemData != null && localSlot.itemData.Stack.Amount <= 0)
             localSlot.ClearData();
 
+        if (changed > 0)
+            OnDataChanged.Invoke();
+
         return changed > 0;
     }
 
@@ -186,6 +200,7 @@ public partial class Inventory_Data
                     {
                         SetOne_ItemData(i, inputItemData);
                         Event_RefreshUI.Invoke(i);
+                        OnDataChanged.Invoke();
                         inputItemData.Stack.CanBePickedUp = false;
                     }
                     return true;
@@ -219,6 +234,7 @@ public partial class Inventory_Data
             {
                 ChangeItemDataAmount(i, toAdd);
                 Event_RefreshUI.Invoke(i);
+                OnDataChanged.Invoke();
             }
 
             remainingAmount -= toAdd;
@@ -246,6 +262,7 @@ public partial class Inventory_Data
                 newItem.Stack.Amount = toAdd;
                 SetOne_ItemData(i, newItem);
                 Event_RefreshUI.Invoke(i);
+                OnDataChanged.Invoke();
             }
 
             remainingAmount -= toAdd;
@@ -313,6 +330,7 @@ public partial class Inventory_Data
 
             slotFrom.RefreshUI();
             slotTo.RefreshUI();
+            OnDataChanged.Invoke();
             return true;
         }
 
@@ -360,6 +378,8 @@ public partial class Inventory_Data
 
         slotFrom.RefreshUI();
         slotTo.RefreshUI();
+
+        OnDataChanged.Invoke();
 
         return true;
     }
