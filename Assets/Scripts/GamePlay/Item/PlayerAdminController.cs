@@ -4,7 +4,7 @@ using UnityEngine;
 /// 管理员相关输入与时间控制逻辑的独立 Mono 脚本。
 /// 挂在与 Player 相同的 GameObject 上，通过引用 Player 来操作玩家数据。
 /// </summary>
-public class PlayerAdminController : MonoBehaviour
+public class PlayerAdminController : Module
 {
     private const string AdminName = "管理员";
 
@@ -37,22 +37,11 @@ public class PlayerAdminController : MonoBehaviour
     private bool showTimeScaleHint = false;
     private float initialUnityTimeScale = 1.0f;
 
-    private void Awake()
-    {
-        if (player == null)
-        {
-            player = GetComponent<Player>();
-        }
-
-        if (hotbar == null && player != null)
-        {
-            hotbar = player.GetComponentInChildren<Inventory_HotBar>();
-        }
-    }
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
     private void Start()
     {
-        initialUnityTimeScale = Time.timeScale;
     }
 
     private void Update()
@@ -226,6 +215,25 @@ public class PlayerAdminController : MonoBehaviour
         hotbar.RefreshUI(hotbar.CurrentIndex);
 
         Debug.Log($"管理员为手持物品 {slot.itemData.IDName} 增加 {amount} 数量，当前数量：{slot.itemData.Stack.Amount}");
+    }
+
+    public override void Load()
+    {
+        if (player == null)
+        {
+            player = GetComponent<Player>();
+        }
+
+        if (hotbar == null && player != null)
+        {
+            hotbar = player.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Mod_Inventory>().inventory as Inventory_HotBar;
+        }
+        initialUnityTimeScale = Time.timeScale;
+    }
+
+    public override void Save()
+    {
+        throw new System.NotImplementedException();
     }
 
     #endregion

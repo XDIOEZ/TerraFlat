@@ -220,7 +220,7 @@ namespace InputSystem
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""OpenEquipmentPack"",
+                    ""name"": ""P"",
                     ""type"": ""Button"",
                     ""id"": ""b4d32ccf-4552-493a-8e96-3623c6e4df3d"",
                     ""expectedControlType"": """",
@@ -563,7 +563,7 @@ namespace InputSystem
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""OpenEquipmentPack"",
+                    ""action"": ""P"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -610,7 +610,7 @@ namespace InputSystem
             m_Win10_E = m_Win10.FindAction("E", throwIfNotFound: true);
             m_Win10_RightClick = m_Win10.FindAction("RightClick", throwIfNotFound: true);
             m_Win10_LeftClick = m_Win10.FindAction("LeftClick", throwIfNotFound: true);
-            m_Win10_OpenEquipmentPack = m_Win10.FindAction("OpenEquipmentPack", throwIfNotFound: true);
+            m_Win10_P = m_Win10.FindAction("P", throwIfNotFound: true);
             m_Win10_OpenWorkBench = m_Win10.FindAction("OpenWorkBench", throwIfNotFound: true);
             m_Win10_Tab = m_Win10.FindAction("Tab", throwIfNotFound: true);
         }
@@ -707,7 +707,7 @@ namespace InputSystem
         private readonly InputAction m_Win10_E;
         private readonly InputAction m_Win10_RightClick;
         private readonly InputAction m_Win10_LeftClick;
-        private readonly InputAction m_Win10_OpenEquipmentPack;
+        private readonly InputAction m_Win10_P;
         private readonly InputAction m_Win10_OpenWorkBench;
         private readonly InputAction m_Win10_Tab;
         /// <summary>
@@ -778,9 +778,9 @@ namespace InputSystem
             /// </summary>
             public InputAction @LeftClick => m_Wrapper.m_Win10_LeftClick;
             /// <summary>
-            /// Provides access to the underlying input action "Win10/OpenEquipmentPack".
+            /// Provides access to the underlying input action "Win10/P".
             /// </summary>
-            public InputAction @OpenEquipmentPack => m_Wrapper.m_Win10_OpenEquipmentPack;
+            public InputAction @P => m_Wrapper.m_Win10_P;
             /// <summary>
             /// Provides access to the underlying input action "Win10/OpenWorkBench".
             /// </summary>
@@ -857,9 +857,9 @@ namespace InputSystem
                 @LeftClick.started += instance.OnLeftClick;
                 @LeftClick.performed += instance.OnLeftClick;
                 @LeftClick.canceled += instance.OnLeftClick;
-                @OpenEquipmentPack.started += instance.OnOpenEquipmentPack;
-                @OpenEquipmentPack.performed += instance.OnOpenEquipmentPack;
-                @OpenEquipmentPack.canceled += instance.OnOpenEquipmentPack;
+                @P.started += instance.OnP;
+                @P.performed += instance.OnP;
+                @P.canceled += instance.OnP;
                 @OpenWorkBench.started += instance.OnOpenWorkBench;
                 @OpenWorkBench.performed += instance.OnOpenWorkBench;
                 @OpenWorkBench.canceled += instance.OnOpenWorkBench;
@@ -919,9 +919,9 @@ namespace InputSystem
                 @LeftClick.started -= instance.OnLeftClick;
                 @LeftClick.performed -= instance.OnLeftClick;
                 @LeftClick.canceled -= instance.OnLeftClick;
-                @OpenEquipmentPack.started -= instance.OnOpenEquipmentPack;
-                @OpenEquipmentPack.performed -= instance.OnOpenEquipmentPack;
-                @OpenEquipmentPack.canceled -= instance.OnOpenEquipmentPack;
+                @P.started -= instance.OnP;
+                @P.performed -= instance.OnP;
+                @P.canceled -= instance.OnP;
                 @OpenWorkBench.started -= instance.OnOpenWorkBench;
                 @OpenWorkBench.performed -= instance.OnOpenWorkBench;
                 @OpenWorkBench.canceled -= instance.OnOpenWorkBench;
@@ -1067,12 +1067,12 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnLeftClick(InputAction.CallbackContext context);
             /// <summary>
-            /// Method invoked when associated input action "OpenEquipmentPack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// Method invoked when associated input action "P" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>
             /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-            void OnOpenEquipmentPack(InputAction.CallbackContext context);
+            void OnP(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "OpenWorkBench" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

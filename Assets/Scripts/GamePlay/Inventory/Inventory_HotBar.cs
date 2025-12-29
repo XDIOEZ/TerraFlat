@@ -1,4 +1,5 @@
 using DG.Tweening;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -12,7 +13,8 @@ public class Inventory_HotBar : Inventory
 {
     #region 字段与属性
 
-    [Header("快捷栏设置")]
+    [Header("快捷栏设置相关设置")]
+    [SerializeReference]
     public Transform spawnLocation;
     public int HotBarMaxVolume = 9;
 
@@ -20,11 +22,12 @@ public class Inventory_HotBar : Inventory
     public GameObject SelectBoxPrefab;
     [Range(0.01f, 0.5f)]
     public float SelectBoxChangeDuration = 0.1f;
-
-    public GameObject SelectBox;
-
+    [ReadOnly] public GameObject SelectBox;
+    [ReadOnly]
     public ItemSlot CurrentSelectItemSlot;
+    [ReadOnly]
     public Item CurentSelectItem;
+    [ReadOnly]
     public GameObject currentObject;
 
     private Mod_FocusPoint faceMouse;
@@ -50,7 +53,18 @@ public class Inventory_HotBar : Inventory
     public override void InitData()
     {
         base.InitData();
-        spawnLocation = this.transform;
+        if (spawnLocation == null)
+        {
+            if (item != null)
+            {
+                // 默认使用所属 Item 的 Transform 作为生成位置
+                spawnLocation = item.transform;
+            }
+            else
+            {
+                Debug.LogWarning("Inventory_HotBar: spawnLocation 未配置且 item 为空，无法确定生成位置。");
+            }
+        }
         GetRequiredComponents();
         InitInput();
     }
@@ -59,9 +73,9 @@ public class Inventory_HotBar : Inventory
     {
         base.InitUI();
 
-        if (itemSlotUIs.Count == 0) return;
+        if (itemSlot_UI.Count == 0) return;
 
-        SelectBox = Instantiate(SelectBoxPrefab, itemSlotUIs[0].transform);
+        SelectBox = GameObject.Instantiate(SelectBoxPrefab, itemSlot_UI[0].transform);
         SwitchItem(Data.Index);
     }
 
@@ -154,7 +168,7 @@ public class Inventory_HotBar : Inventory
         CurentSelectItem.OnUIRefresh -= RefreshUI;
         CurentSelectItem.OnItemDestroy -= OnDestroyCurrentObject;
 
-        Destroy(CurentSelectItem.gameObject);
+        GameObject.Destroy(CurentSelectItem.gameObject);
 
         CurentSelectItem = null;
         currentObject = null;
@@ -218,7 +232,7 @@ public class Inventory_HotBar : Inventory
         if (SelectBox == null) return;
 
         SelectBox.transform.DOKill();
-        SelectBox.transform.SetParent(itemSlotUIs[index].transform, true);
+        SelectBox.transform.SetParent(itemSlot_UI[index].transform, true);
         SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration)
             .SetEase(Ease.OutQuad);
     }
@@ -247,20 +261,25 @@ public class Inventory_HotBar : Inventory
 
     private void GetRequiredComponents()
     {
+        if (item == null) return;
+
         item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
         item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
 
-        // 初始化时只注册一次快捷栏 Transform，用于位置镜像
-        if (turnBody != null && !turnBody.controlledTransforms_Position.Contains(transform))
+        // 初始化时只注册一次用于位置镜像的 Transform
+        Transform positionTransform = spawnLocation != null ? spawnLocation : item.transform;
+
+        if (turnBody != null && positionTransform != null &&
+            !turnBody.controlledTransforms_Position.Contains(positionTransform))
         {
-            turnBody.controlledTransforms_Position.Add(transform);
+            turnBody.controlledTransforms_Position.Add(positionTransform);
         }
     }
 
     public void OnDestroyCurrentObject(Item obj)
     {
         if (obj == null) return;
-        
+
         obj.InHand = false;
         UnloadCurrentItem();
     }

@@ -1,6 +1,7 @@
 using AYellowpaper.SerializedCollections;
 using Sirenix.OdinInspector;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,19 +11,36 @@ public class Mod_Inventory : Module, IInventory
     #region 字段和属性
     public InventoryModuleData Data = new InventoryModuleData();
     public override ModuleData _Data { get => Data; set => Data = (InventoryModuleData)value; }
-    public Inventory inventory { get => InventoryRefDic.First().Value; }
-    [Tooltip("Inventory引用字典")]
+    public Inventory inventory
+    {
+        get
+        {
+            // 优先从序列化的列表中取第一个
+            if (InventoryInstances != null && InventoryInstances.Count > 0)
+                return InventoryInstances[0];
+
+            // 回退：从运行时字典中取第一个
+            if (InventoryRefDic != null && InventoryRefDic.Count > 0)
+                return InventoryRefDic.First().Value;
+
+            return null;
+        }
+    }
+
+    [Tooltip("Inventory序列化列表（用于在Inspector中配置）")]
+    [SerializeReference]
+    public List<Inventory> InventoryInstances = new();
+
+    [System.NonSerialized]
+    [Tooltip("运行时构建的Inventory引用字典")]
     public SerializedDictionary<string, Inventory> inventoryRefDic = new();
+
     [Tooltip("Inventory引用字典")]
     public SerializedDictionary<string, Inventory> InventoryRefDic { get => inventoryRefDic; set => inventoryRefDic = value; }
-    [Tooltip("Inventory对应的BasePanel缓存字典")]
-    public SerializedDictionary<Inventory, BasePanel> inventoryBasePanelCache = new();
 
-    // 修改：将单个预制体字段改为与inventoryRefDic对应的序列化字典
-    [Tooltip("Inventory面板预制体字典")]
-    public SerializedDictionary<string, GameObject> inventoryPanelPrefabs = new();
-    [Tooltip("模块面板的预制体/已经弃用")]
-    public GameObject Prefab_BasePanel;
+    [Tooltip("Inventory对应的BasePanel缓存字典")]
+    [ReadOnly]
+    public SerializedDictionary<Inventory, BasePanel> inventoryBasePanelCache = new();
 
     // 新增：UI开关按键绑定字段，让策划可以在编辑器中设置
     [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
@@ -34,11 +52,38 @@ public class Mod_Inventory : Module, IInventory
 
     public void OnValidate()
     {
-        _Data.ID = inventory.Data.Name;
+        if (inventory != null && inventory.Data != null)
+        {
+            inventory.OnValidate();
+            _Data.ID = inventory.Data.Name;
+        }
     }
 
     public override void Load()
     {
+        // 先根据序列化列表构建运行时字典
+        inventoryRefDic.Clear();
+        if (InventoryInstances != null)
+        {
+            for (int i = 0; i < InventoryInstances.Count; i++)
+            {
+                var inv = InventoryInstances[i];
+                if (inv == null)
+                    continue;
+
+                // 优先使用 Inventory_Data.Name 作为key，若为空则使用物体名
+                string key = inv.Data != null && !string.IsNullOrEmpty(inv.Data.Name)
+                    ? inv.Data.Name
+                    : inv.Data.Name;
+
+                if (string.IsNullOrEmpty(key))
+                    continue;
+
+                if (!inventoryRefDic.ContainsKey(key))
+                    inventoryRefDic.Add(key, inv);
+            }
+        }
+
         // 修改为使用for循环遍历inventoryRefDic中的所有inventory
         var inventoryPairs = inventoryRefDic.ToArray();
 
@@ -70,7 +115,7 @@ public class Mod_Inventory : Module, IInventory
             if (item.itemMods.GetMod_ByID(ModText.Hand))
             {
                 currentInventory.DefaultTarget_Inventory =
-                            item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
+                            item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<Mod_Inventory>().inventory;
             }
             else
             {
@@ -171,10 +216,11 @@ public class Mod_Inventory : Module, IInventory
             return false;
         }
 
-        // 如果预制体存在，创建面板
-        if (inventoryPanelPrefabs.ContainsKey(inventoryId) && inventoryPanelPrefabs[inventoryId] != null)
+        // 如果预制体存在，创建面板（从 Inventory 内部字段获取预制体）
+        GameObject panelPrefab = currentInventory.InventoryPanel_Prefab;
+        if (panelPrefab != null)
         {
-            currentInventory.basePanel = UIManager.Instance.CreatePanelFromGameObject(inventoryPanelPrefabs[inventoryId]).GetComponentInChildren<BasePanel>();
+            currentInventory.basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
 
             if (currentInventory.basePanel != null)
             {
@@ -256,7 +302,7 @@ public class Mod_Inventory : Module, IInventory
         }
         else
         {
-            Debug.LogWarning($"找不到Inventory '{inventoryId}' 对应的面板预制体");
+            Debug.LogWarning($"Inventory '{inventoryId}' 的 InventoryPanel_Prefab 未设置，无法创建面板");
             return false;
         }
     }

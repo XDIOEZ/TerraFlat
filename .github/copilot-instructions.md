@@ -8,7 +8,7 @@
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: Chestplate_Iron
+  - Name: Module_Hand
   - Tag: Untagged
-  - Layer: Default
+  - Layer: 9
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

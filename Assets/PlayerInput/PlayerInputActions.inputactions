@@ -132,7 +132,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "OpenEquipmentPack",
+                    "name": "P",
                     "type": "Button",
                     "id": "b4d32ccf-4552-493a-8e96-3623c6e4df3d",
                     "expectedControlType": "",
@@ -475,7 +475,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "OpenEquipmentPack",
+                    "action": "P",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

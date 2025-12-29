@@ -120,9 +120,6 @@ public class Inventory_Furnace : Inventory
     public override void InitData()
     {
         base.InitData();
-        
-        // 获取物品模块
-        mod_Inventory = GetComponent<Mod_Inventory>();
         mod_Fuel = item.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
 
         // 如果有手持模块，设置默认目标

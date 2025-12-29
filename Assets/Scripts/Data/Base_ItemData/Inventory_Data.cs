@@ -1,38 +1,36 @@
 ﻿using FastCloner.Code;
 using Force.DeepCloner;
 using MemoryPack;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-using Sirenix.OdinInspector;
-using Random = UnityEngine.Random;
-using System.Linq; // 添加Odin引用
 
 [Serializable]
 [MemoryPackable]
 public partial class Inventory_Data
 {
-    //TODO 设置Event - 已完成：Event_RefreshUI就是用于UI刷新的事件
     public string Name = string.Empty;                      // 背包名称
     public List<ItemSlot> itemSlots = new List<ItemSlot>(); // 物品槽列表
-    public int Index = 0;                      // 当前选中槽位索引
-    public bool IsInjected = false;            // 是否注入
+    [ReadOnly]
+    public int Index = 0;                                   // 当前选中槽位索引
+    public bool IsInjected = false;                         // 是否注入
+    [ReadOnly]
     public Vector3 PanelPosition = Vector3.zero;            // 面板位置（用于持久化）
-    public bool PanelIsOpen = true;              // 面板是否打开（用于持久化）
+    public bool PanelIsOpen = true;                         // 面板是否打开（用于持久化）
 
     [MemoryPackIgnore]
     [FastClonerIgnore]
-    public UltEvent<int> Event_RefreshUI = new UltEvent<int>(); // UI刷新事件
+    public UltEvent<int> Event_RefreshUI = new(); // UI刷新事件
 
     [MemoryPackIgnore]
     [FastClonerIgnore]
-    public UltEvent OnDataChanged = new UltEvent(); // 数据变更事件
+    public UltEvent<ItemSlot> Event_OnDataChanged = new(); // 数据变更事件，传入发生变化的槽位
 
     [FastClonerIgnore]
     public bool IsFull => itemSlots.TrueForAll(slot => slot.itemData != null);
 
-    // 构造函数
     [MemoryPackConstructor]
     public Inventory_Data(List<ItemSlot> itemSlots, string Name)
     {
@@ -47,13 +45,13 @@ public partial class Inventory_Data
     {
         itemSlot.itemData = null;
         Event_RefreshUI.Invoke(index);
-        OnDataChanged.Invoke();
+        Event_OnDataChanged.Invoke(itemSlot);
     }
 
     public void SetOne_ItemData(int index, ItemData inputItemData)
     {
         itemSlots[index].itemData = inputItemData;
-        OnDataChanged.Invoke();
+        Event_OnDataChanged.Invoke(itemSlots[index]);
     }
 
     public ItemSlot GetItemSlot(int index)
@@ -66,7 +64,7 @@ public partial class Inventory_Data
     public void ChangeItemDataAmount(int index, float amount)
     {
         itemSlots[index].itemData.Stack.Amount += amount;
-        OnDataChanged.Invoke();
+        Event_OnDataChanged.Invoke(itemSlots[index]);
     }
 
     #endregion
@@ -91,8 +89,10 @@ public partial class Inventory_Data
         {
             int changeAmount = Mathf.CeilToInt(inputData.Stack.Amount * rate);
             ChangeItemAmount(inputSlotHand, localSlot, changeAmount);
+
+            // 统一在交换完成后再触发事件
             Event_RefreshUI.Invoke(index);
-            OnDataChanged.Invoke();
+            Event_OnDataChanged.Invoke(localSlot);
             return;
         }
 
@@ -101,44 +101,46 @@ public partial class Inventory_Data
         {
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
+
             Event_RefreshUI.Invoke(index);
-            OnDataChanged.Invoke();
+            Event_OnDataChanged.Invoke(localSlot);
             return;
         }
 
-        // 情况4：特殊交换（特殊数据不一致）
+        // 情况4：特殊交换（体积较大）
         if (inputData.Stack.Volume >= 2 || localData.Stack.Volume >= 2)
         {
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
-            OnDataChanged.Invoke();
+            Event_OnDataChanged.Invoke(localSlot);
             return;
         }
 
-        // 情况4：特殊交换（特殊数据不一致）
+        // 情况5：特殊交换（特殊数据不一致）
         if (inputData.ItemSpecialData != localData.ItemSpecialData)
         {
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
-            OnDataChanged.Invoke();
+            Event_OnDataChanged.Invoke(localSlot);
             Debug.Log("特殊交换");
             return;
         }
 
-        // 情况5：物品相同，堆叠交换
+        // 情况6：物品相同，堆叠交换
         if (inputData.IDName == localData.IDName)
         {
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
+
             Event_RefreshUI.Invoke(index);
-            OnDataChanged.Invoke();
+            Event_OnDataChanged.Invoke(localSlot);
             return;
         }
 
-        // 情况6：物品不同，直接交换
+        // 情况7：物品不同，直接交换
         localSlot.Change(inputSlotHand);
         Event_RefreshUI.Invoke(index);
-        OnDataChanged.Invoke();
+        Event_OnDataChanged.Invoke(localSlot);
         Debug.Log($"(物品不同)交换物品槽位:{index} 物品:{inputSlotHand.itemData.IDName}");
     }
 
@@ -171,9 +173,6 @@ public partial class Inventory_Data
         if (localSlot.itemData != null && localSlot.itemData.Stack.Amount <= 0)
             localSlot.ClearData();
 
-        if (changed > 0)
-            OnDataChanged.Invoke();
-
         return changed > 0;
     }
 
@@ -200,7 +199,6 @@ public partial class Inventory_Data
                     {
                         SetOne_ItemData(i, inputItemData);
                         Event_RefreshUI.Invoke(i);
-                        OnDataChanged.Invoke();
                         inputItemData.Stack.CanBePickedUp = false;
                     }
                     return true;
@@ -234,7 +232,6 @@ public partial class Inventory_Data
             {
                 ChangeItemDataAmount(i, toAdd);
                 Event_RefreshUI.Invoke(i);
-                OnDataChanged.Invoke();
             }
 
             remainingAmount -= toAdd;
@@ -262,7 +259,6 @@ public partial class Inventory_Data
                 newItem.Stack.Amount = toAdd;
                 SetOne_ItemData(i, newItem);
                 Event_RefreshUI.Invoke(i);
-                OnDataChanged.Invoke();
             }
 
             remainingAmount -= toAdd;
@@ -330,7 +326,8 @@ public partial class Inventory_Data
 
             slotFrom.RefreshUI();
             slotTo.RefreshUI();
-            OnDataChanged.Invoke();
+            Event_OnDataChanged.Invoke(slotFrom);
+            Event_OnDataChanged.Invoke(slotTo);
             return true;
         }
 
@@ -379,7 +376,8 @@ public partial class Inventory_Data
         slotFrom.RefreshUI();
         slotTo.RefreshUI();
 
-        OnDataChanged.Invoke();
+        Event_OnDataChanged.Invoke(slotFrom);
+        Event_OnDataChanged.Invoke(slotTo);
 
         return true;
     }
@@ -429,6 +427,19 @@ public partial class Inventory_Data
             }
         }
         return null;
+    }
+
+    public int GetItemCount()
+    {
+        int count = 0;
+        foreach (var slot in itemSlots)
+        {
+            if (slot.itemData != null)
+            {
+                count++;
+            }
+        }
+        return count;
     }
 
 

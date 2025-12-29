@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,9 +10,13 @@ public class Module_Equipment : Module
     #endregion
     #region 模组参数
     [SerializeReference]
-    public List<EquipmentInstance> equipmentInstances = new List<EquipmentInstance>();
+    List<List<EquipmentInstance>> equipment_Instances = new();
 
-    public Mod_Inventory Equipment_inventory;
+    // 缓存每个槽位对应的装备模块存档数据（Ex_ModData_MemoryPackable）
+    [SerializeReference]
+    List<Ex_ModData_MemoryPackable> equipment_ModuleData = new();
+    [SerializeReference]
+    public Inventory Equipment_inventory;
 
     #endregion
 
@@ -29,58 +32,113 @@ public class Module_Equipment : Module
 
     public override void Load()
     {
-        if (item == null)
-        {
-            Debug.LogError($"Module_Equipment.Load: 挂载在 {name} 上的 Module_Equipment 的 item 为空");
-            return;
-        }
 
-        Equipment_inventory = (Mod_Inventory)item.FindInventoryModuleByName(ModText.Equipment);
-        if (Equipment_inventory == null)
-        {
-            Debug.LogError($"Module_Equipment.Load: 在物品 {item.name} 上未找到 Mod_Inventory 模块(ID={ModText.Equipment})");
-            return;
-        }
 
-        if (Equipment_inventory.inventory == null)
-        {
-            Debug.LogError($"Module_Equipment.Load: Mod_Inventory.inventory 为空 (物品 {item.name})");
-            return;
-        }
+        // 当背包数据变化时，根据发生变化的槽位刷新装备
+        Equipment_inventory.Data.Event_OnDataChanged += UpdateEquipment;
 
-        if (Equipment_inventory.inventory.Data == null)
-        {
-            Debug.LogError($"Module_Equipment.Load: Mod_Inventory.inventory.Data 为空 (物品 {item.name})");
-            return;
-        }
+        ModSaveData.ReadData(ref equipment_Instances);
+        // 确保与背包槽位数量一致
+        EnsureEquipmentListSize();
 
-        Equipment_inventory.inventory.Data.OnDataChanged += UpdateEquipment;
-        UpdateEquipment();
-
-        if (ModSaveData == null)
-        {
-            Debug.LogError($"Module_Equipment.Load: ModSaveData 为空，无法读取装备数据 (物品 {item.name})");
-            return;
-        }
-
-        ModSaveData.ReadData(ref equipmentInstances);
         Init();
     }
 
-    void UpdateEquipment()
+    // 确保 equipmentInstances 的长度至少与背包槽位数量一致
+    void EnsureEquipmentListSize()
     {
+        if (Equipment_inventory == null || Equipment_inventory == null || Equipment_inventory.Data == null)
+            return;
 
+        int slotCount = Equipment_inventory.Data.itemSlots.Count;
+        while (equipment_Instances.Count < slotCount)
+        {
+            equipment_Instances.Add(new List<EquipmentInstance>());
+        }
+
+        while (equipment_ModuleData.Count < slotCount)
+        {
+            equipment_ModuleData.Add(null);
+        }
+    }
+
+    // 将指定槽位当前的装备实例列表写回对应的装备模块数据
+    void SaveSlotEquipmentData(int index)
+    {
+        var modData = equipment_ModuleData[index];//获取对应的模块数据引用
+        var list = equipment_Instances[index];//获取当前槽位的装备实例列表
+        modData.WriteData(list);//写回数据
+    }
+
+    // 将所有槽位当前装备实例写回各自的模块数据
+    void SaveAllEquipmentModuleData()
+    {
+        EnsureEquipmentListSize();
+        for (int i = 0; i < equipment_Instances.Count; i++)
+        {
+            if (equipment_ModuleData[i] == null)
+                continue;
+            SaveSlotEquipmentData(i);
+        }
+    }
+
+    // 单个槽位刷新：由 OnDataChanged 调用
+    void UpdateEquipment(ItemSlot changedSlot)
+    {
+        EnsureEquipmentListSize();
+
+        // 计算槽位索引
+        int index = changedSlot.Index;
+  
+        var equipmentStoreData = equipment_ModuleData[index];
+
+        // 槽位为空或数量为 0：装备已经被卸下
+        if (changedSlot.itemData == null && equipment_ModuleData[index] != null && equipment_Instances[index].Count > 0)
+        {
+            if (equipment_Instances[index].Count == 0)
+            {
+                // 本来就没有装备，直接返回
+                return;
+            }
+
+            //存在装备，卸下
+            // 卸下所有装备实例
+            foreach (var equip in equipment_Instances[index])
+            {
+                equip.UnEquip(item);
+            }
+            // 本次刷新结束后，将最新数据写回对应模块
+            SaveSlotEquipmentData(index);
+            equipment_Instances[index].Clear();
+
+            // 槽位没有物品了，对应模块数据引用也可以清空
+            equipment_ModuleData[index] = null;
+
+            return;
+        }
+
+        if (equipment_ModuleData[index] == null)
+        {
+            equipment_ModuleData[index] = new Ex_ModData_MemoryPackable();
+        }
+        equipment_ModuleData[index] = changedSlot.itemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+
+        //槽位不为空 安装装备 
+        if (equipment_ModuleData[index] != null && equipment_Instances[index].Count == 0)
+        {
+            List<EquipmentInstance> EquipmentData = new();
+            equipment_ModuleData[index].ReadData(ref EquipmentData);
+            foreach (var equipment in EquipmentData)
+            {
+                equipment.Equip(item);
+                equipment_Instances[index].Add(equipment);
+            }
+        }
     }
 
     public void Init()
     {
-        if (item == null)
-        {
-            Debug.LogError($"Module_Equipment.Init: item 为空，无法初始化装备实例 (模块 {name})");
-            return;
-        }
-        if (item.itemData.Stack.CanBePickedUp != true)
-            EquipAll();
+
     }
 
     public void EquipAll()
@@ -91,9 +149,13 @@ public class Module_Equipment : Module
             return;
         }
 
-        foreach (var equipment in equipmentInstances)
+        foreach (var list in equipment_Instances)
         {
-            equipment.Equip(item);
+            if (list == null) continue;
+            foreach (var equip in list)
+            {
+                equip.Equip(item);
+            }
         }
     }
 
@@ -105,23 +167,36 @@ public class Module_Equipment : Module
             return;
         }
 
-        foreach (var equipment in equipmentInstances)
+        foreach (var list in equipment_Instances)
         {
-            equipment.UnEquip(item);
+            if (list == null) continue;
+            foreach (var equip in list)
+            {
+                equip.UnEquip(item);
+            }
         }
     }
     public override void ModUpdate(float deltaTime)
     {
-        foreach (var item in equipmentInstances)
+        foreach (var list in equipment_Instances)
         {
-            item.Update();
+            if (list == null) continue;
+            foreach (var equip in list)
+            {
+                equip.Update();
+            }
         }
     }
     public override void Save()
     {
-        ModSaveData.WriteData(equipmentInstances);
+        // 先把每个槽位当前的装备实例列表写回到各自的装备模块数据
+        SaveAllEquipmentModuleData();
 
         UnEquipAll();
+
+        // 仍然写入自身 ModSaveData，作为整体备份
+        ModSaveData.WriteData(equipment_Instances);
+
     }
     public override void Act()
     {
