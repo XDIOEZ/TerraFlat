@@ -1,3 +1,6 @@
+using MemoryPack;
+using UnityEngine;
+
 [System.Serializable]
 [MemoryPackable]
 public partial class ItemTransform

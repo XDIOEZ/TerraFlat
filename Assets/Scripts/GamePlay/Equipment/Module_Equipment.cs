@@ -10,10 +10,10 @@ public class Module_Equipment : Module
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
     #endregion
     #region 模组参数
-    [SerializeReference] 
+    [SerializeReference]
     public List<EquipmentInstance> equipmentInstances = new List<EquipmentInstance>();
 
-    public Mod_Inventory inventory;
+    public Mod_Inventory Equipment_inventory;
 
     #endregion
 
@@ -23,37 +23,91 @@ public class Module_Equipment : Module
     {
         if (_Data.ID == "")
         {
-            _Data.ID = ModText.Grow;
+            _Data.ID = ModText.Equipment_Module;
         }
     }
 
     public override void Load()
     {
-        inventory = item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Equipment);
-        inventory.inventory.Data.OnDataChanged += UpdateEquipment;
+        if (item == null)
+        {
+            Debug.LogError($"Module_Equipment.Load: 挂载在 {name} 上的 Module_Equipment 的 item 为空");
+            return;
+        }
+
+        Equipment_inventory = (Mod_Inventory)item.FindInventoryModuleByName(ModText.Equipment);
+        if (Equipment_inventory == null)
+        {
+            Debug.LogError($"Module_Equipment.Load: 在物品 {item.name} 上未找到 Mod_Inventory 模块(ID={ModText.Equipment})");
+            return;
+        }
+
+        if (Equipment_inventory.inventory == null)
+        {
+            Debug.LogError($"Module_Equipment.Load: Mod_Inventory.inventory 为空 (物品 {item.name})");
+            return;
+        }
+
+        if (Equipment_inventory.inventory.Data == null)
+        {
+            Debug.LogError($"Module_Equipment.Load: Mod_Inventory.inventory.Data 为空 (物品 {item.name})");
+            return;
+        }
+
+        Equipment_inventory.inventory.Data.OnDataChanged += UpdateEquipment;
         UpdateEquipment();
+
+        if (ModSaveData == null)
+        {
+            Debug.LogError($"Module_Equipment.Load: ModSaveData 为空，无法读取装备数据 (物品 {item.name})");
+            return;
+        }
+
         ModSaveData.ReadData(ref equipmentInstances);
         Init();
     }
 
     void UpdateEquipment()
     {
-        
+
     }
 
-    public  void Init()
+    public void Init()
     {
-        foreach (var item in equipmentInstances)
+        if (item == null)
         {
-            item.Equip();
+            Debug.LogError($"Module_Equipment.Init: item 为空，无法初始化装备实例 (模块 {name})");
+            return;
+        }
+        if (item.itemData.Stack.CanBePickedUp != true)
+            EquipAll();
+    }
+
+    public void EquipAll()
+    {
+        if (item == null)
+        {
+            Debug.LogError($"Module_Equipment.EquipAll: item 为空，无法装备 (模块 {name})");
+            return;
+        }
+
+        foreach (var equipment in equipmentInstances)
+        {
+            equipment.Equip(item);
         }
     }
 
     public void UnEquipAll()
     {
-        foreach (var item in equipmentInstances)
+        if (item == null)
         {
-            item.UnEquip();
+            Debug.LogError($"Module_Equipment.UnEquipAll: item 为空，无法卸下装备 (模块 {name})");
+            return;
+        }
+
+        foreach (var equipment in equipmentInstances)
+        {
+            equipment.UnEquip(item);
         }
     }
     public override void ModUpdate(float deltaTime)
@@ -67,7 +121,7 @@ public class Module_Equipment : Module
     {
         ModSaveData.WriteData(equipmentInstances);
 
-         UnEquipAll();
+        UnEquipAll();
     }
     public override void Act()
     {

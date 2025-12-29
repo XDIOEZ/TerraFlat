@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using MemoryPack;
+
 [MemoryPackable]
 [System.Serializable]
 public partial class ItemTag
