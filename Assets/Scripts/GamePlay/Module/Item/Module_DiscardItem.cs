@@ -54,7 +54,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
         faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint).GetComponent<Mod_FocusPoint>();
 
-        Hotbar = item.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Inventory_HotBar>();
+        Hotbar = item.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Mod_Inventory>().inventory as Inventory_HotBar;
 
         hand = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<Mod_Inventory>();
 

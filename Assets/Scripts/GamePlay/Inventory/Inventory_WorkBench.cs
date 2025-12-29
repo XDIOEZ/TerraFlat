@@ -8,13 +8,12 @@ using UnityEngine.UI;
 
 public class Inventory_WorkBench : Inventory
 {
-    protected Mod_Inventory mod_Inventory;
-    public SerializedDictionary<string, Inventory> InventoryRefDic
-    { get => mod_Inventory.InventoryRefDic; set => mod_Inventory.InventoryRefDic = value; }
+    public Mod_Inventory mod_Inventory;
+
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
-    public Inventory inputInventory => InventoryRefDic["输入"];
+    public Inventory inputInventory => mod_Inventory.InventoryInstances[0];
     [Tooltip("输出容器，用于存放合成后得到的物品")]
-    public Inventory outputInventory => InventoryRefDic["输出"];
+    public Inventory outputInventory => mod_Inventory.InventoryInstances[1];
 
 
     [Header("交互组件")]
@@ -54,9 +53,6 @@ public class Inventory_WorkBench : Inventory
     public override void InitData()
     {
         base.InitData();
-
-        // 获取物品模块
-        mod_Inventory = GetComponent<Mod_Inventory>();
 
         // 添加空值检查
         if (mod_Inventory == null)

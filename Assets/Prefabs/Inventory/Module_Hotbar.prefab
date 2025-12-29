@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 3392967532339424003}
   - component: {fileID: 5064163680730882984}
-  - component: {fileID: 4900229581524412711}
   m_Layer: 0
   m_Name: Module_Hotbar
   m_TagString: Untagged
@@ -54,146 +53,117 @@ MonoBehaviour:
     PanleRectPosition: {x: 0, y: 0, z: 0}
     InventoryInitName: 
     BasePanelIsOpen: 1
-  inventoryRefDic:
-    _serializedList:
-    - Key: "\u9ED8\u8BA4"
-      Value: {fileID: 4900229581524412711}
-  basePanel: {fileID: 0}
-  inventoryPanelPrefabs:
-    _serializedList:
-    - Key: "\u9ED8\u8BA4"
-      Value: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
-  Prefab_BasePanel: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
---- !u!114 &4900229581524412711
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5624854569209714937}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 78c11b47d3d359d4d9b8161a394391c5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Owner: {fileID: 0}
-  Data:
-    Name: "UI_\u5FEB\u6377\u680F"
-    itemSlots:
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    - CanAcceptItemType:
-        Item_TypeTag:
-        - None
-        - None
-        Item_Material:
-        - None
-      SlotMaxVolume: 0
-      Index: 0
-      onSlotDataChanged:
-        _PersistentCalls: []
-    Index: 0
-    IsInjected: 0
-    Event_RefreshUI:
-      _PersistentCalls: []
-  itemSlotUIs: []
-  DefaultTarget_Inventory: {fileID: 0}
-  basePanel: {fileID: 0}
-  spawnLocation: {fileID: 0}
-  HotBarMaxVolume: 9
-  SelectBoxPrefab: {fileID: 3351078594653121284, guid: 5fd8b428d015c7044aee5e5491698e72, type: 3}
-  SelectBoxChangeDuration: 0.1
-  SelectBox: {fileID: 0}
-  CurrentSelectItemSlot:
-    CanAcceptItemType:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
-    SlotMaxVolume: 0
-    Index: 0
-    onSlotDataChanged:
-      _PersistentCalls: []
-  faceMouse: {fileID: 0}
-  turnBody: {fileID: 0}
-  CurentSelectItem: {fileID: 0}
-  currentObject: {fileID: 0}
+  InventoryInstances:
+  - rid: 4513346371909844998
+  inventoryBasePanelCache:
+    _serializedList: []
+  ToggleActionName: 
+  references:
+    version: 2
+    RefIds:
+    - rid: 4513346371909844998
+      type: {class: Inventory_HotBar, ns: , asm: GamePlay}
+      data:
+        item: {fileID: 0}
+        InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
+        Data:
+          Name: "UI_\u5FEB\u6377\u680F"
+          itemSlots:
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          Index: 0
+          IsInjected: 0
+          PanelPosition: {x: 0, y: 0, z: 0}
+          PanelIsOpen: 0
+          Event_RefreshUI:
+            _PersistentCalls: []
+          Event_OnDataChanged:
+            _PersistentCalls: []
+        itemSlot_UI: []
+        basePanel: {fileID: 0}
+        spawnLocation: {fileID: 3392967532339424003}
+        HotBarMaxVolume: 9
+        SelectBoxPrefab: {fileID: 3351078594653121284, guid: 5fd8b428d015c7044aee5e5491698e72, type: 3}
+        SelectBoxChangeDuration: 0.1
+        SelectBox: {fileID: 0}
+        CurrentSelectItemSlot:
+          CanAcceptItemType:
+            Item_TypeTag:
+            - None
+            - None
+            Item_Material:
+            - None
+          SlotMaxVolume: 0
+          Index: 0
+        CurentSelectItem: {fileID: 0}
+        currentObject: {fileID: 0}

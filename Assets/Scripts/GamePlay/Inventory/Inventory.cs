@@ -2,25 +2,31 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 [System.Serializable]
-public class Inventory : MonoBehaviour
+public class Inventory
 {
     #region 字段和属性
+    [ReadOnly]
     //物品所有者
     public Item item;
     //物品槽预制体
     GameObject ItemSlot_Prefab;
+    //Inventory面板Prefab
+    [Tooltip("在Inspector中设置对应Inventory的面板预制体")]
+    public GameObject InventoryPanel_Prefab;
     //物品槽的父物体
     Transform ItemSlot_Parent;
     //数据
     public Inventory_Data Data;
     //UI列表
-    public List<ItemSlot_UI> itemSlotUIs = new List<ItemSlot_UI>();
+    [ReadOnly]
+    public List<ItemSlot_UI> itemSlot_UI = new List<ItemSlot_UI>();
 
     [Header("默认交互Inventory")] //默认交互Inventory
     public Inventory DefaultTarget_Inventory;
+
     [Tooltip("外部自动注入")]
+    [ReadOnly]
     public BasePanel basePanel;
     #endregion
 
@@ -99,22 +105,22 @@ public class Inventory : MonoBehaviour
         // 删除多余槽位（从后往前删保证安全）
         for (int i = currentCount - 1; i >= targetCount; i--)
         {
-            DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject);
+            GameObject.DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject);
         }
 
         // 创建缺少的槽位
         for (int i = currentCount; i < targetCount; i++)
         {
-            GameObject item = Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false);
+            GameObject item = GameObject.Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false);
         }
 
         // 重建UI列表并绑定数据
-        itemSlotUIs.Clear();
+        itemSlot_UI.Clear();
         for (int i = 0; i < ItemSlot_Parent.childCount; i++)
         {
             var ui = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
             if (ui != null)
-                itemSlotUIs.Add(ui);
+                itemSlot_UI.Add(ui);
         }
 
         // 同步 UI 数据
@@ -127,7 +133,7 @@ public class Inventory : MonoBehaviour
     public void SyncData()
     {
         // 空检查：确保数据和UI列表都初始化
-        if (itemSlotUIs == null || itemSlotUIs.Count == 0)
+        if (itemSlot_UI == null || itemSlot_UI.Count == 0)
         {
             Debug.LogWarning($"[Inventory.SyncData] itemSlotUIs 为空或未初始化！InventoryName: {Data?.Name}");
             return;
@@ -140,14 +146,14 @@ public class Inventory : MonoBehaviour
         }
 
         // 检查数量匹配
-        if (itemSlotUIs.Count != Data.itemSlots.Count)
+        if (itemSlot_UI.Count != Data.itemSlots.Count)
         {
-            Debug.LogWarning($"[Inventory.SyncData] UI槽位数({itemSlotUIs.Count}) 与 Data槽位数({Data.itemSlots.Count}) 不匹配！");
+            Debug.LogWarning($"[Inventory.SyncData] UI槽位数({itemSlot_UI.Count}) 与 Data槽位数({Data.itemSlots.Count}) 不匹配！");
         }
 
-        for (int i = 0; i < itemSlotUIs.Count; i++)
+        for (int i = 0; i < itemSlot_UI.Count; i++)
         {
-            ItemSlot_UI itemSlotUI = itemSlotUIs[i];
+            ItemSlot_UI itemSlotUI = itemSlot_UI[i];
 
             // 检查UI是否存在
             if (itemSlotUI == null)
@@ -262,17 +268,17 @@ public class Inventory : MonoBehaviour
 
     public void RefreshUI(int index)
     {
-        if (index >= 0 && index < itemSlotUIs.Count)
+        if (index >= 0 && index < itemSlot_UI.Count)
         {
-            itemSlotUIs[index].RefreshUI();
+            itemSlot_UI[index].RefreshUI();
         }
     }
 
     public void RefreshUI()
     {
-        for (int i = 0; i < itemSlotUIs.Count; i++)
+        for (int i = 0; i < itemSlot_UI.Count; i++)
         {
-            itemSlotUIs[i].RefreshUI();
+            itemSlot_UI[i].RefreshUI();
         }
     }
 
@@ -288,9 +294,9 @@ public class Inventory : MonoBehaviour
     void OnRightClick(int index)
     {
         RightClickMenu_UI currentMenuInstance;
-        currentMenuInstance = Instantiate(GameRes.Instance.GetPrefab("右键菜单").GetComponent<RightClickMenu_UI>());
-        currentMenuInstance.Init(itemSlotUIs[index], item);
-        currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlotUIs[index].transform.position;
+        currentMenuInstance = GameObject.Instantiate(GameRes.Instance.GetPrefab("右键菜单").GetComponent<RightClickMenu_UI>());
+        currentMenuInstance.Init(itemSlot_UI[index], item);
+        currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlot_UI[index].transform.position;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
