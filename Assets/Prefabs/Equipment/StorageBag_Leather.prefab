@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: 1269726057294482851}
   - component: {fileID: 8667576724681055711}
   m_Layer: 0
-  m_Name: "\u76AE\u9769\u6536\u7EB3\u888B"
+  m_Name: StorageBag_Leather
   m_TagString: Untagged
   m_Icon: {fileID: 6519382022992737161, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
@@ -145,8 +145,8 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0.1
   Data:
-    IDName: Bag_
-    GameName: "\u76AE\u9769\u6536\u7EB3\u888B"
+    IDName: StorageBag_Leather
+    GameName: StorageBag_Leather
     Description: "\u7B80\u5355\u7684\u7269\u54C1\u6536\u7EB3\u88C5\u7F6E,\u53EF\u4EE5\u5BB9\u7EB33\u4E2A\u7269\u54C1"
     Durability: 1
     MaxDurability: 1

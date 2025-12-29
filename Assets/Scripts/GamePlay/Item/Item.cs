@@ -403,6 +403,40 @@ public abstract class Item : MonoBehaviour
 
 
     /// <summary>
+    /// 在物品自身及其子物体中，通过名称查找 Mod_Inventory 模块
+    /// </summary>
+    /// <param name="targetName">目标模块名称</param>
+    /// <returns>匹配名称的 Mod_Inventory，如果未找到则返回 null</returns>
+    public Module FindInventoryModuleByName(string targetName)
+    {
+        if (string.IsNullOrEmpty(targetName))
+        {
+            Debug.LogError("[Item.FindInventoryModuleByName] targetName 为空");
+            return null;
+        }
+
+        // 在物品及其子物体上查找所有 Mod_Inventory
+        var inventories = GetComponentsInChildren<Module>(true);
+        if (inventories == null || inventories.Length == 0)
+        {
+            Debug.LogWarning($"[Item.FindInventoryModuleByName] 在物品 {name} 及子物体上未找到任何 Mod_Inventory 组件");
+            return null;
+        }
+
+        foreach (var inv in inventories)
+        {
+            if (inv != null && inv._Data.ID == targetName)
+            {
+                return inv;
+            }
+        }
+
+        Debug.LogWarning($"[Item.FindInventoryModuleByName] 在物品 {name} 的 Mod_Inventory 列表中未找到名称为 {targetName} 的组件");
+        return null;
+    }
+
+
+    /// <summary>
     /// 加载物品位置数据
     /// </summary>
     public void LoadDataPosition()

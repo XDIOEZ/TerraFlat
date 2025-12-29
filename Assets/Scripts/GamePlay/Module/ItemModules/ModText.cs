@@ -21,7 +21,7 @@ public static class ModText
     public static string Composite = "组合模块";
     public static string Controller = "Controller模块";
     public static string ColdWeapon = "冷兵器攻击模块";
-    
+
     public static string ChunkLoader = "区块加载模块";
     #endregion
 
@@ -34,6 +34,9 @@ public static class ModText
 
     #region E
     public static string Equipment = "装备插槽";
+    public static string Equipment_Module = "装备模块";
+
+    public static string Equipment_Store = "装备存储模块";
     #endregion
 
     #region F

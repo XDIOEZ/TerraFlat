@@ -16,47 +16,42 @@ public abstract class Module : MonoBehaviour
 {
     /*  参考代码
    
- 
+ using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Module_Equipment_Store : Module
+{
     #region 基础参数
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
-
-    public string[] Data;
     #endregion
+
+
     #region 模组参数
 
-    public BaseSkillData skillData;
-
-    #endregion
-
-    #region 生命周期
-
-    public override void Awake()
-    {
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.Grow;
-        }
-    }
+    [SerializeReference]
+    public List<EquipmentInstance> equipmentInstances = new List<EquipmentInstance>();
 
     public override void Load()
     {
-        ModSaveData.ReadData(ref Data);
+        ModSaveData.ReadData(ref equipmentInstances);
     }
-    public override void ModUpdate(float deltaTime)
-    {
 
-    }
     public override void Save()
     {
-        ModSaveData.WriteData(Data);
-    }
-    public override void Act()
-    {
-        base.Act();
+        ModSaveData.WriteData(equipmentInstances);
     }
     #endregion
+
+    public override void Awake()
+    {
+        _Data.ID = ModText.Equipment_Store;
+    }
+
+    
+}
 
 
     */

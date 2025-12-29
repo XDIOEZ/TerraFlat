@@ -1,3 +1,6 @@
+using MemoryPack;
+using UnityEngine;
+
 [MemoryPackable]
 [System.Serializable]
 public partial class ItemStack
