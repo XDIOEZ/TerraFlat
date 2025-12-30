@@ -1176,7 +1176,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 0}
   rectTransform: {fileID: 0}
-  PanleName: 
+  PanelName: 
   isOpen: 0
 --- !u!114 &4806202536982753114
 MonoBehaviour:

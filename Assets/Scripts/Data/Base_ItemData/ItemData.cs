@@ -98,6 +98,11 @@ public  abstract partial class ItemData
         Debug.LogError($"没有找到对应的模块({moduleID})数据!,检测ItemData中的Mods是否被初始化,检查mod是否被Save");
         return null;
     }
+
+    public void AddAmount(float amount)
+    {
+        Stack.Amount += amount;
+    }
 }
 
 

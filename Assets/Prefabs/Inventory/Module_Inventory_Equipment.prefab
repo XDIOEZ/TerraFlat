@@ -47,21 +47,35 @@ MonoBehaviour:
   item: {fileID: 0}
   Data:
     Name: 
-    ID: "\u88C5\u5907\u63D2\u69FD"
+    ID: "\u88C5\u5907\u6A21\u5757"
     isRunning: 1
     Type: 0
     PanleRectPosition: {x: 0, y: 0, z: 0}
     InventoryInitName: 
     BasePanelIsOpen: 1
-  inventoryRefDic:
-    _serializedList:
-    - Key: "\u9ED8\u8BA4"
-      Value: {fileID: 0}
+  InventoryInstances:
+  - rid: 4513346386347687939
   inventoryBasePanelCache:
     _serializedList: []
-  inventoryPanelPrefabs:
-    _serializedList:
-    - Key: "\u9ED8\u8BA4"
-      Value: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
-  Prefab_BasePanel: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
-  ToggleActionName: 
+  ToggleActionName: P
+  references:
+    version: 2
+    RefIds:
+    - rid: 4513346386347687939
+      type: {class: Inventory_Equipment, ns: , asm: GamePlay}
+      data:
+        item: {fileID: 0}
+        InventoryPanel_Prefab: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
+        Data:
+          Name: "\u88C5\u5907\u6A21\u5757"
+          itemSlots: []
+          Index: 0
+          IsInjected: 0
+          PanelPosition: {x: 0, y: 0, z: 0}
+          PanelIsOpen: 0
+          Event_RefreshUI:
+            _PersistentCalls: []
+          Event_OnDataChanged:
+            _PersistentCalls: []
+        itemSlot_UI: []
+        basePanel: {fileID: 0}

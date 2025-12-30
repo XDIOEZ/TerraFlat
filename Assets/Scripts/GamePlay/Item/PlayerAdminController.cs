@@ -72,10 +72,15 @@ public class PlayerAdminController : Module
             player.InitializeCreativeInventoryForAdmin();
         }
 
-        // F3：当前手持物品数量 +9999
         if (Input.GetKeyDown(KeyCode.F4))
         {
             AddAmountToCurrentHandItem(9999f);
+        }
+
+        // F5：为整个背包中的所有物品增加数量
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            AddAmountToAllBagItems(999f);
         }
 
         // 控制时间流逝速度
@@ -217,6 +222,40 @@ public class PlayerAdminController : Module
         Debug.Log($"管理员为手持物品 {slot.itemData.IDName} 增加 {amount} 数量，当前数量：{slot.itemData.Stack.Amount}");
     }
 
+    /// <summary>
+    /// 为玩家背包中的所有物品增加指定数量（管理员用）
+    /// </summary>
+    private void AddAmountToAllBagItems(float amount)
+    {
+        if (player == null || player.itemMods == null)
+        {
+            Debug.LogWarning("PlayerAdminController: 玩家或 itemMods 为空，无法为背包物品增加数量");
+            return;
+        }
+
+        var bagMod = player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        if (bagMod == null || bagMod.inventory == null || bagMod.inventory.Data == null || bagMod.inventory.Data.itemSlots == null)
+        {
+            Debug.LogWarning("PlayerAdminController: 未找到玩家背包 Inventory，无法为背包物品增加数量");
+            return;
+        }
+
+        int changedCount = 0;
+        foreach (var slot in bagMod.inventory.Data.itemSlots)
+        {
+            if (slot != null && slot.itemData != null)
+            {
+                slot.itemData.AddAmount(amount);
+                changedCount++;
+            }
+        }
+
+        // 刷新整个背包 UI
+        bagMod.inventory.RefreshUI();
+
+        Debug.Log($"管理员为背包中 {changedCount} 个物品各增加 {amount} 数量");
+    }
+
     public override void Load()
     {
         if (player == null)
@@ -233,7 +272,6 @@ public class PlayerAdminController : Module
 
     public override void Save()
     {
-        throw new System.NotImplementedException();
     }
 
     #endregion

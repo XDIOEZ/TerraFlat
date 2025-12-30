@@ -1,7 +1,10 @@
 ﻿using UnityEngine;
 using Sirenix.OdinInspector;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using UnityEngine.InputSystem;
 [System.Serializable]
 public class Inventory
 {
@@ -24,6 +27,10 @@ public class Inventory
 
     [Header("默认交互Inventory")] //默认交互Inventory
     public Inventory DefaultTarget_Inventory;
+
+    // UI 开关按键绑定字段，让策划可以在编辑器中设置
+    [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
+    public string ToggleActionName = "";
 
     [Tooltip("外部自动注入")]
     [ReadOnly]
@@ -51,6 +58,139 @@ public class Inventory
     public virtual void OnDestroy()
     {
         Data.Event_RefreshUI -= RefreshUI;
+    }
+
+    #endregion
+
+    #region 输入绑定
+
+
+    public void BindController(GameController gameController)
+    {
+        // 基本防守：控制器或输入资产为空则不绑定
+        if (gameController == null || gameController._inputActions == null)
+        {
+            Debug.LogWarning("[Inventory.BindController] GameController 或 _inputActions 为空，取消绑定");
+            return;
+        }
+
+        // 未配置 ToggleActionName 时不绑定
+        if (string.IsNullOrEmpty(ToggleActionName))
+        {
+            Debug.LogWarning("[Inventory.BindController] ToggleActionName 为空，取消绑定");
+            return;
+        }
+
+        var action = gameController._inputActions.FindAction(ToggleActionName);
+        if (action == null)
+        {
+            // 找不到对应 Action：只给出提示，不做绑定
+            Debug.LogWarning($"[Inventory.BindController] 找不到 Action '{ToggleActionName}'，取消绑定");
+            return;
+        }
+
+        action.performed += ctx =>
+        {
+            InventoryAction();
+        };
+    }
+
+    #endregion
+
+    #region 面板开关
+    public virtual void InventoryAction()
+    {
+        // 确保面板已创建
+        if (basePanel == null)
+        {
+            if (!EnsurePanelCreated())
+            {
+                Debug.LogError("[Inventory.InventoryAction] EnsurePanelCreated 失败，取消切换");
+                return;
+            }
+            basePanel.Open();
+             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
+            GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
+            return;
+        }
+
+        basePanel.Toggle();
+        if (basePanel.IsOpen())
+        {
+            // 延迟一帧将面板置顶，确保不会被其他UI遮挡
+            GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
+        }
+    }
+
+    private static IEnumerator DelayedBringToFront(RectTransform rectTransform)
+    {
+        yield return null;
+        BasePanel.BringToFront(rectTransform);
+    }
+
+    #endregion
+
+    #region 面板创建
+
+    /// <summary>
+    /// 确保当前 Inventory 的面板已创建，如果未创建则在此时创建
+    /// </summary>
+    /// <param name="inventoryId">当前 Inventory 在字典中的 ID（用于日志和预制体缺失提示）</param>
+    /// <param name="inventoryIndex">当前 Inventory 在同组 Inventory 中的索引（用于控制关闭按钮显隐）</param>
+    /// <param name="inventoryBasePanelCache">Inventory 到 BasePanel 的缓存字典，用于统一管理关闭逻辑</param>
+    /// <returns>成功创建了面板返回 true，没有创建或失败返回 false</returns>
+    public bool EnsurePanelCreated()
+    {
+        // 如果面板已创建，直接返回 false（表示没有创建新面板）
+        if (basePanel != null)
+            return false;
+        // 如果预制体存在，创建面板
+        GameObject panelPrefab = InventoryPanel_Prefab;
+
+        if (panelPrefab == null)
+        {
+            Debug.LogWarning("[Inventory.EnsurePanelCreated] InventoryPanel_Prefab 未设置，无法创建面板");
+            return false;
+        }
+
+
+        basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
+
+        // 如果此 inventory 中保存了面板位置，则尝试在创建时恢复位置
+        if (Data != null)
+        {
+            RectTransform rt = null;
+            if (basePanel.Dragger != null)
+                rt = basePanel.Dragger.GetComponent<RectTransform>();
+            if (rt == null)
+                rt = basePanel.GetComponent<RectTransform>();
+
+            if (rt != null)
+            {
+                var savedPos = Data.PanelPosition;
+                var savedPos2 = new Vector2(savedPos.x, savedPos.y);
+                if (IsValidVector2(savedPos2) && (savedPos2.x != 0 || savedPos2.y != 0))
+                {
+                    rt.anchoredPosition = savedPos2;
+                }
+            }
+        }
+
+        // 设置窗口信息
+        if (basePanel.GetText("窗口信息") != null)
+            basePanel.GetText("窗口信息").text = Data.Name;
+
+        // 调用UI初始化方法（此时basePanel已存在）
+        InitUI();
+
+        return true; // 成功创建了面板
+    }
+
+    // 辅助方法：检查 Vector2 是否有效
+    private bool IsValidVector2(Vector2 vector)
+    {
+        return !float.IsNaN(vector.x) && !float.IsNaN(vector.y) &&
+               !float.IsInfinity(vector.x) && !float.IsInfinity(vector.y);
     }
 
     #endregion
@@ -365,6 +505,51 @@ public class Inventory
 
     #endregion
 
+    #region 运行时容量调整
+
+    /// <summary>
+    /// 在游戏运行时为背包动态添加额外槽位
+    /// 例如传入 3 则在当前基础上再增加 3 个空槽位
+    /// </summary>
+    /// <param name="extraSlotCount">需要增加的槽位数量（必须 > 0）</param>
+    public void AddSlotsAtRuntime(int extraSlotCount)
+    {
+        if (extraSlotCount <= 0)
+        {
+            Debug.LogWarning($"[Inventory.AddSlotsAtRuntime] 额外槽位数量({extraSlotCount}) <= 0，已忽略。");
+            return;
+        }
+
+        if (Data == null)
+        {
+            Debug.LogError("[Inventory.AddSlotsAtRuntime] Data 为空，无法添加槽位。");
+            return;
+        }
+
+        if (Data.itemSlots == null)
+        {
+            Debug.LogError("[Inventory.AddSlotsAtRuntime] Data.itemSlots 为空，无法添加槽位。");
+            return;
+        }
+
+        // 在数据层面增加空槽位
+        for (int i = 0; i < extraSlotCount; i++)
+        {
+            Data.itemSlots.Add(new ItemSlot());
+        }
+
+        // 重新初始化数据（索引、容量、事件等）
+        InitData();
+
+        // 如果 UI 已创建，则重新初始化 UI，同步槽位数量和所有监听
+        if (basePanel != null)
+        {
+            InitUI();
+        }
+    }
+
+    #endregion
+
     #region 编辑器功能
 
     [Sirenix.OdinInspector.Button]
@@ -399,7 +584,7 @@ public class Inventory
 
         for (int i = itemIndices.Count - 1; i > 0; i--)
         {
-            int r = Random.Range(0, i + 1);
+            int r = UnityEngine.Random.Range(0, i + 1);
             int temp = itemIndices[i];
             itemIndices[i] = itemIndices[r];
             itemIndices[r] = temp;
@@ -415,7 +600,7 @@ public class Inventory
 
         for (int i = emptySlots.Count - 1; i > 0; i--)
         {
-            int r = Random.Range(0, i + 1);
+            int r = UnityEngine.Random.Range(0, i + 1);
             int temp = emptySlots[i];
             emptySlots[i] = emptySlots[r];
             emptySlots[r] = temp;
