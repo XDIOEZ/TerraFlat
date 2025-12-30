@@ -33,6 +33,9 @@ public class Module_Equipment : Module
     public override void Load()
     {
 
+        Equipment_inventory.InitData();
+        GameController GameController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        Equipment_inventory.BindController(GameController);
 
         // 当背包数据变化时，根据发生变化的槽位刷新装备
         Equipment_inventory.Data.Event_OnDataChanged += UpdateEquipment;
@@ -89,7 +92,7 @@ public class Module_Equipment : Module
 
         // 计算槽位索引
         int index = changedSlot.Index;
-  
+
         var equipmentStoreData = equipment_ModuleData[index];
 
         // 槽位为空或数量为 0：装备已经被卸下

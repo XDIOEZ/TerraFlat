@@ -130,7 +130,7 @@ private void UpdateVisualAndBehavior()
                             cachedDamageReceiver.Data.LootTable.Add(lootEntry);
                         }
                     }
-                    Debug.Log($"植物进入{Data.growState}阶段，添加{stageLoots[i].lootEntries.Count}个战利品");
+//                    Debug.Log($"植物进入{Data.growState}阶段，添加{stageLoots[i].lootEntries.Count}个战利品");
                 }
             }
             break;

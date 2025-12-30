@@ -141,7 +141,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "OpenWorkBench",
+                    "name": "H",
                     "type": "Button",
                     "id": "e4844ab9-da53-41bf-b8e7-d1e643211272",
                     "expectedControlType": "",
@@ -486,7 +486,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "OpenWorkBench",
+                    "action": "H",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

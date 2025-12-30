@@ -229,7 +229,7 @@ namespace InputSystem
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""OpenWorkBench"",
+                    ""name"": ""H"",
                     ""type"": ""Button"",
                     ""id"": ""e4844ab9-da53-41bf-b8e7-d1e643211272"",
                     ""expectedControlType"": """",
@@ -574,7 +574,7 @@ namespace InputSystem
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""OpenWorkBench"",
+                    ""action"": ""H"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -611,7 +611,7 @@ namespace InputSystem
             m_Win10_RightClick = m_Win10.FindAction("RightClick", throwIfNotFound: true);
             m_Win10_LeftClick = m_Win10.FindAction("LeftClick", throwIfNotFound: true);
             m_Win10_P = m_Win10.FindAction("P", throwIfNotFound: true);
-            m_Win10_OpenWorkBench = m_Win10.FindAction("OpenWorkBench", throwIfNotFound: true);
+            m_Win10_H = m_Win10.FindAction("H", throwIfNotFound: true);
             m_Win10_Tab = m_Win10.FindAction("Tab", throwIfNotFound: true);
         }
 
@@ -708,7 +708,7 @@ namespace InputSystem
         private readonly InputAction m_Win10_RightClick;
         private readonly InputAction m_Win10_LeftClick;
         private readonly InputAction m_Win10_P;
-        private readonly InputAction m_Win10_OpenWorkBench;
+        private readonly InputAction m_Win10_H;
         private readonly InputAction m_Win10_Tab;
         /// <summary>
         /// Provides access to input actions defined in input action map "Win10".
@@ -782,9 +782,9 @@ namespace InputSystem
             /// </summary>
             public InputAction @P => m_Wrapper.m_Win10_P;
             /// <summary>
-            /// Provides access to the underlying input action "Win10/OpenWorkBench".
+            /// Provides access to the underlying input action "Win10/H".
             /// </summary>
-            public InputAction @OpenWorkBench => m_Wrapper.m_Win10_OpenWorkBench;
+            public InputAction @H => m_Wrapper.m_Win10_H;
             /// <summary>
             /// Provides access to the underlying input action "Win10/Tab".
             /// </summary>
@@ -860,9 +860,9 @@ namespace InputSystem
                 @P.started += instance.OnP;
                 @P.performed += instance.OnP;
                 @P.canceled += instance.OnP;
-                @OpenWorkBench.started += instance.OnOpenWorkBench;
-                @OpenWorkBench.performed += instance.OnOpenWorkBench;
-                @OpenWorkBench.canceled += instance.OnOpenWorkBench;
+                @H.started += instance.OnH;
+                @H.performed += instance.OnH;
+                @H.canceled += instance.OnH;
                 @Tab.started += instance.OnTab;
                 @Tab.performed += instance.OnTab;
                 @Tab.canceled += instance.OnTab;
@@ -922,9 +922,9 @@ namespace InputSystem
                 @P.started -= instance.OnP;
                 @P.performed -= instance.OnP;
                 @P.canceled -= instance.OnP;
-                @OpenWorkBench.started -= instance.OnOpenWorkBench;
-                @OpenWorkBench.performed -= instance.OnOpenWorkBench;
-                @OpenWorkBench.canceled -= instance.OnOpenWorkBench;
+                @H.started -= instance.OnH;
+                @H.performed -= instance.OnH;
+                @H.canceled -= instance.OnH;
                 @Tab.started -= instance.OnTab;
                 @Tab.performed -= instance.OnTab;
                 @Tab.canceled -= instance.OnTab;
@@ -1074,12 +1074,12 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnP(InputAction.CallbackContext context);
             /// <summary>
-            /// Method invoked when associated input action "OpenWorkBench" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// Method invoked when associated input action "H" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>
             /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-            void OnOpenWorkBench(InputAction.CallbackContext context);
+            void OnH(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "Tab" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

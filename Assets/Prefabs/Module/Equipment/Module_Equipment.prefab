@@ -51,15 +51,60 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
-  equipmentInstances:
-  - rid: 4513346348998459392
+  equipment_ModuleData: []
+  Equipment_inventory:
+    rid: 4513346386347687940
   references:
     version: 2
     RefIds:
-    - rid: 4513346348998459392
-      type: {class: EquipmentInstance_Bag, ns: , asm: GamePlay}
+    - rid: 4513346386347687940
+      type: {class: Inventory_Equipment, ns: , asm: GamePlay}
       data:
-        Name: Debug
-        DebugInfo_Load: This is a Bag Equipment Instance
-        DebugInfo_Save: Saving Bag Equipment Instance
-        DebugInfo_Update: Bag Equipment Instance
+        item: {fileID: 0}
+        InventoryPanel_Prefab: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
+        Data:
+          Name: 
+          itemSlots:
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          Index: 0
+          IsInjected: 0
+          PanelPosition: {x: 0, y: 0, z: 0}
+          PanelIsOpen: 0
+          Event_RefreshUI:
+            _PersistentCalls: []
+          Event_OnDataChanged:
+            _PersistentCalls: []
+        itemSlot_UI: []
+        ToggleActionName: P
+        basePanel: {fileID: 0}
