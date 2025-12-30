@@ -32,6 +32,7 @@ public class UIManager : MonoBehaviour
     [ShowInInspector]
     public Dictionary<string, BasePanel> panels = new Dictionary<string, BasePanel>();
 
+
     // 面板的父对象
     public Transform panelRoot;
 
@@ -297,6 +298,22 @@ public class UIManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 销毁指定面板
+    /// </summary>
+    /// <param name="panelName">面板名称</param>
+    public void DestroyPanel(BasePanel panel)
+    {
+        if (panels.TryGetValue(panel.PanelName, out BasePanel existingPanel))
+        {
+            panels.Remove(panel.PanelName);
+            if (existingPanel != null && existingPanel.gameObject != null)
+            {
+                Destroy(existingPanel.gameObject);
+            }
+        }
+    }
+
+    /// <summary>
     /// 刷新面板列表（当动态添加面板时调用）
     /// </summary>
     public void RefreshPanels()
@@ -386,14 +403,7 @@ public class UIManager : MonoBehaviour
     /// <param name="panel">要注册的面板</param>
     public void RegisterPanel(BasePanel panel)
     {
-        if (panel != null && !panels.ContainsKey(panel.name))
-        {
-            panels[panel.name] = panel;
-        }
-        else if (panel != null && panels.ContainsKey(panel.name))
-        {
-            panels[panel.PanelName] = panel;
-        }
+        panels[panel.PanelName] = panel;
     }
 
     /// <summary>

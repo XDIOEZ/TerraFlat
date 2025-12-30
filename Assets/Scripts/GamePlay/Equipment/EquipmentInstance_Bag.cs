@@ -8,39 +8,21 @@ using UnityEngine;
 [MemoryPackable]
 public partial class EquipmentInstance_Bag : EquipmentInstance
 {
-    public string ID_BagPrefab = "Equipment_Bag";
+    public Inventory_Data BagData;
+
 
     [Header("对象缓存")]
     [MemoryPackIgnore]
-    public GameObject Cached_BagObject = null;
+    Inventory BagInventory = new Inventory();
 
     [Button]
     public override void Equip(Item item = null)
     {
-        if (item == null)
-        {
-            Debug.LogError("EquipmentInstance_Bag.Equip 调用时传入的 Item 为 null");
-            return;
-        }
-
-        // 获取当前物品上的装备模块
+        BagInventory.Data = BagData;
         var equipModule = item.itemMods.GetMod_ByID<Module_Equipment>(ModText.Equipment_Module);
-        if (equipModule == null)
-        {
-            Debug.LogError($"EquipmentInstance_Bag.Equip: 物品 {item.name} 上没有找到 Module_Equipment 模块");
-            return;
-        }
-
-        // 实例化背包预制体
-        Cached_BagObject = GameRes.Instance.InstantiatePrefab(ID_BagPrefab);
-        if (Cached_BagObject == null)
-        {
-            Debug.LogError($"EquipmentInstance_Bag.Equip: 预制体 '{ID_BagPrefab}' 实例化失败");
-            return;
-        }
-
-        // 设置为模块物体的子物体（保持本地 Transform 不变）
-        Cached_BagObject.transform.SetParent(equipModule.transform, false);
+        var controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        BagInventory.InitData();
+        BagInventory.BindController(controller);
     }
 
     public override void Update()
@@ -51,12 +33,11 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
     [Button]
     public override void UnEquip(Item item = null)
     {
-        //销毁
-        if (Cached_BagObject != null)
-        {
-            GameObject.Destroy(Cached_BagObject);
-            Cached_BagObject = null;
-        }
+        BagData = BagInventory.Data;
+        BagInventory.UnbindController();
+        if (BagInventory.basePanel != null)
+            BagInventory.basePanel.Destroy();
+
     }
 
 }

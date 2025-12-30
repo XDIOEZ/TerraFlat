@@ -8,12 +8,12 @@ public class Inventory_Hand : Inventory
 
     public static Inventory PlayerHand;
 
-    public override void Awake()
+    [Tooltip("在Load时调用此函数进行数据初始化（仅初始化数据和逻辑，不涉及UI）")]
+    public override void InitData()
     {
-        base.Awake();
         PlayerHand = this;
+        base.InitData();
     }
-
     public override void OnValidate()
     {
         Data.Name = ModText.Hand;

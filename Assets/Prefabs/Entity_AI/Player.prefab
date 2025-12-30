@@ -34,6 +34,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 8789379722561364081}
   - {fileID: 6959447698631983779}
   - {fileID: 2471087830036471314}
   - {fileID: 38948266820254393}
@@ -45,7 +46,6 @@ Transform:
   - {fileID: 3655081339386380888}
   - {fileID: 7086098086926392403}
   - {fileID: 6639265349670268636}
-  - {fileID: 8789379722561364081}
   - {fileID: 5879530105130983250}
   - {fileID: 4051591574267527675}
   - {fileID: 3910460100367442520}
@@ -1370,6 +1370,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}
+      propertyPath: managedReferences[4513346371909844999].Data.ToggleActionName
+      value: P
+      objectReference: {fileID: 0}
+    - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}
       propertyPath: managedReferences[4513346371909844999].InventoryPanel_Prefab
       value: 
       objectReference: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
@@ -1570,6 +1574,10 @@ PrefabInstance:
     - target: {fileID: 5064163680730882984, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
       propertyPath: managedReferences[4513346371909844998].Data.PanelIsOpen
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5064163680730882984, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
+      propertyPath: managedReferences[4513346371909844998].Data.ToggleActionName
+      value: U
       objectReference: {fileID: 0}
     - target: {fileID: 5624854569209714937, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
       propertyPath: m_Name
@@ -2355,6 +2363,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8943846949572410620, guid: 30335a1d847f20547aba60b7da974cf8, type: 3}
       propertyPath: managedReferences[4513346371909844994].ToggleActionName
+      value: B
+      objectReference: {fileID: 0}
+    - target: {fileID: 8943846949572410620, guid: 30335a1d847f20547aba60b7da974cf8, type: 3}
+      propertyPath: managedReferences[4513346371909844994].Data.ToggleActionName
       value: B
       objectReference: {fileID: 0}
     m_RemovedComponents: []
