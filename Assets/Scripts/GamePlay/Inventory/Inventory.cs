@@ -30,11 +30,16 @@ public class Inventory
 
     // UI 开关按键绑定字段，让策划可以在编辑器中设置
     [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
-    public string ToggleActionName = "";
+    public string ToggleActionName => Data.ToggleActionName;
 
     [Tooltip("外部自动注入")]
     [ReadOnly]
     public BasePanel basePanel;
+
+    // 输入绑定缓存，便于之后解除绑定
+    private GameController _boundController;
+    private InputAction _boundToggleAction;
+    private Action<InputAction.CallbackContext> _toggleCallback;
     #endregion
 
     #region 生命周期
@@ -55,11 +60,6 @@ public class Inventory
 
     }
 
-    public virtual void OnDestroy()
-    {
-        Data.Event_RefreshUI -= RefreshUI;
-    }
-
     #endregion
 
     #region 输入绑定
@@ -67,6 +67,9 @@ public class Inventory
 
     public void BindController(GameController gameController)
     {
+        // 先解除之前的绑定，避免重复订阅
+        UnbindController();
+
         // 基本防守：控制器或输入资产为空则不绑定
         if (gameController == null || gameController._inputActions == null)
         {
@@ -74,11 +77,22 @@ public class Inventory
             return;
         }
 
+
         // 未配置 ToggleActionName 时不绑定
         if (string.IsNullOrEmpty(ToggleActionName))
         {
             Debug.LogWarning("[Inventory.BindController] ToggleActionName 为空，取消绑定");
             return;
+        }
+        // 未配置 ToggleActionName 时不绑定
+        if (InventoryPanel_Prefab == null)
+        {
+            InventoryPanel_Prefab = GameRes.Instance.GetPrefab(Data.UIPrefabName);
+            if (InventoryPanel_Prefab == null)
+            {
+                Debug.LogError("[Inventory.BindController] InventoryPanel_Prefab 未设置，取消绑定");
+                return;
+            }
         }
 
         var action = gameController._inputActions.FindAction(ToggleActionName);
@@ -89,10 +103,33 @@ public class Inventory
             return;
         }
 
-        action.performed += ctx =>
+        // 记录回调与 Action，便于之后解绑
+        _toggleCallback = ctx =>
         {
             InventoryAction();
         };
+
+        action.performed += _toggleCallback;
+
+        _boundController = gameController;
+        _boundToggleAction = action;
+    }
+
+    /// <summary>
+    /// 解除通过 BindController 建立的输入绑定
+    /// </summary>
+    public void UnbindController()
+    {
+        Data.Event_RefreshUI -= RefreshUI;
+
+        if (_boundToggleAction != null && _toggleCallback != null)
+        {
+            _boundToggleAction.performed -= _toggleCallback;
+        }
+
+        _boundController = null;
+        _boundToggleAction = null;
+        _toggleCallback = null;
     }
 
     #endregion
@@ -109,7 +146,7 @@ public class Inventory
                 return;
             }
             basePanel.Open();
-             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
+            // 延迟一帧将面板置顶，确保不会被其他UI遮挡
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
             return;
         }
@@ -201,6 +238,9 @@ public class Inventory
     [Tooltip("在Load时调用此函数进行数据初始化（仅初始化数据和逻辑，不涉及UI）")]
     public virtual void InitData()
     {
+        if (DefaultTarget_Inventory == null)
+            DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
+
         // 初始化物品槽位数据
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {

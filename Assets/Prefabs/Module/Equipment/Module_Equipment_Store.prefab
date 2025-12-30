@@ -25,7 +25,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7086988442357602367}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -44,3 +44,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 282dccb16cb961f43a3036508166ee44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  equipmentInstances:
+  - rid: 4513346386347687946
+  references:
+    version: 2
+    RefIds:
+    - rid: 4513346386347687946
+      type: {class: EquipmentInstance_Bag, ns: , asm: GamePlay}
+      data:
+        Name: "[\u76AE\u9769\u6536\u7EB3\u888B]Inventory"
+        BagInventory:
+          item: {fileID: 0}
+          InventoryPanel_Prefab: {fileID: 5019330763773049737, guid: 6dad61aac020ddd4a802165922117e55, type: 3}
+          Data:
+            Name: Inventory
+            itemSlots: []
+            Index: 0
+            IsInjected: 0
+            PanelPosition: {x: 0, y: 0, z: 0}
+            PanelIsOpen: 0
+            Event_RefreshUI:
+              _PersistentCalls: []
+            Event_OnDataChanged:
+              _PersistentCalls: []
+          itemSlot_UI: []
+          ToggleActionName: B
+          basePanel: {fileID: 0}

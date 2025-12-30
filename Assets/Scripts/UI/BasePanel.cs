@@ -263,6 +263,12 @@ public class BasePanel : MonoBehaviour
             Open();
     }
 
+    public void Destroy()
+    {
+        Close();
+        UIManager.Instance.DestroyPanel(this);
+    }
+
     #endregion
 
     #region 按钮操作

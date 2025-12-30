@@ -18,7 +18,13 @@ public partial class Inventory_Data
     public bool IsInjected = false;                         // 是否注入
     [ReadOnly]
     public Vector3 PanelPosition = Vector3.zero;            // 面板位置（用于持久化）
-    public bool PanelIsOpen = true;                         // 面板是否打开（用于持久化）
+    public bool PanelIsOpen = true;       
+        // UI 开关按键绑定字段，让策划可以在编辑器中设置
+    [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
+    public string ToggleActionName = "";
+
+        [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
+    public string UIPrefabName = "";
 
     [MemoryPackIgnore]
     [FastClonerIgnore]
@@ -26,7 +32,16 @@ public partial class Inventory_Data
 
     [MemoryPackIgnore]
     [FastClonerIgnore]
+    public UltEvent<ItemSlot> Event_OnBeforeDataChanged = new(); // 数据变更前事件
+
+    [MemoryPackIgnore]
+    [FastClonerIgnore]
     public UltEvent<ItemSlot> Event_OnDataChanged = new(); // 数据变更事件，传入发生变化的槽位
+
+    // 数据变更事件（双槽位版本），用于需要同时知道本地槽位和输入槽位的场景
+    [MemoryPackIgnore]
+    [FastClonerIgnore]
+    public UltEvent<ItemSlot, ItemSlot> Event_OnDataChanged_TwoSlots = new();
 
     [FastClonerIgnore]
     public bool IsFull => itemSlots.TrueForAll(slot => slot.itemData != null);
@@ -43,6 +58,7 @@ public partial class Inventory_Data
 
     public void RemoveItemAll(ItemSlot itemSlot, int index = 0)
     {
+        Event_OnBeforeDataChanged.Invoke(itemSlot);
         itemSlot.itemData = null;
         Event_RefreshUI.Invoke(index);
         Event_OnDataChanged.Invoke(itemSlot);
@@ -50,6 +66,7 @@ public partial class Inventory_Data
 
     public void SetOne_ItemData(int index, ItemData inputItemData)
     {
+        Event_OnBeforeDataChanged.Invoke(itemSlots[index]);
         itemSlots[index].itemData = inputItemData;
         Event_OnDataChanged.Invoke(itemSlots[index]);
     }
@@ -63,6 +80,7 @@ public partial class Inventory_Data
 
     public void ChangeItemDataAmount(int index, float amount)
     {
+        Event_OnBeforeDataChanged.Invoke(itemSlots[index]);
         itemSlots[index].itemData.Stack.Amount += amount;
         Event_OnDataChanged.Invoke(itemSlots[index]);
     }
@@ -90,9 +108,11 @@ public partial class Inventory_Data
             int changeAmount = Mathf.CeilToInt(inputData.Stack.Amount * rate);
             ChangeItemAmount(inputSlotHand, localSlot, changeAmount);
 
+            Event_OnBeforeDataChanged.Invoke(localSlot);
             // 统一在交换完成后再触发事件
             Event_RefreshUI.Invoke(index);
             Event_OnDataChanged.Invoke(localSlot);
+            Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
 
@@ -102,26 +122,32 @@ public partial class Inventory_Data
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
 
+            Event_OnBeforeDataChanged.Invoke(localSlot);
             Event_RefreshUI.Invoke(index);
             Event_OnDataChanged.Invoke(localSlot);
+            Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
 
         // 情况4：特殊交换（体积较大）
         if (inputData.Stack.Volume >= 2 || localData.Stack.Volume >= 2)
         {
+            Event_OnBeforeDataChanged.Invoke(localSlot);
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
             Event_OnDataChanged.Invoke(localSlot);
+            Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
 
         // 情况5：特殊交换（特殊数据不一致）
         if (inputData.ItemSpecialData != localData.ItemSpecialData)
         {
+            Event_OnBeforeDataChanged.Invoke(localSlot);
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
             Event_OnDataChanged.Invoke(localSlot);
+            Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             Debug.Log("特殊交换");
             return;
         }
@@ -132,15 +158,19 @@ public partial class Inventory_Data
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
 
+            Event_OnBeforeDataChanged.Invoke(localSlot);
             Event_RefreshUI.Invoke(index);
             Event_OnDataChanged.Invoke(localSlot);
+            Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
 
         // 情况7：物品不同，直接交换
         localSlot.Change(inputSlotHand);
         Event_RefreshUI.Invoke(index);
+        Event_OnBeforeDataChanged.Invoke(localSlot);
         Event_OnDataChanged.Invoke(localSlot);
+        Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
         Debug.Log($"(物品不同)交换物品槽位:{index} 物品:{inputSlotHand.itemData.IDName}");
     }
 
