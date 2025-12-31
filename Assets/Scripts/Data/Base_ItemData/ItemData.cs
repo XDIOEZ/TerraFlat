@@ -103,6 +103,15 @@ public  abstract partial class ItemData
     {
         Stack.Amount += amount;
     }
+
+    public void AddDurability(float amount)
+    {
+        Durability += amount;
+        if (Durability > MaxDurability)
+        {
+            Durability = MaxDurability;
+        }
+    }
 }
 
 

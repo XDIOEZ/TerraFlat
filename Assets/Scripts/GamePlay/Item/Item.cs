@@ -515,22 +515,22 @@ public abstract class Item : MonoBehaviour
     /// <param name="amount">减少量</param>
     public void DecreaseDurability(int amount)
     {
-        if (itemData.Durability > 0)
-        {
-            itemData.Durability -= amount;
-            // 物品耐久为0时触发事件
-            if (itemData.Durability <= 0)
-            {
-                itemData.Durability = 0;
-                // 物品耐久为0时触发事件
-                OnDurabilityModified?.Invoke(itemData.Durability);
+        if (itemData == null || itemData.Durability <= 0)
+            return;
 
-            }
-            else
-            {
-                // 物品耐久改变时触发事件
-                OnDurabilityModified?.Invoke(itemData.Durability);
-            }
+        // 使用 ItemData 内置方法变更耐久（传入负值表示减少）
+        itemData.AddDurability(-amount);
+
+        // 物品耐久为0时触发事件
+        if (itemData.Durability <= 0)
+        {
+            itemData.Durability = 0;
+            OnDurabilityModified?.Invoke(itemData.Durability);
+        }
+        else
+        {
+            // 物品耐久改变时触发事件
+            OnDurabilityModified?.Invoke(itemData.Durability);
         }
     }
 
