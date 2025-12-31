@@ -8,7 +8,7 @@ using UnityEngine;
 public class ItemPicker : Module
 {
 
-     #region 基础参数
+    #region 基础参数
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -20,22 +20,22 @@ public class ItemPicker : Module
 
     public override void Awake()
     {
-            _Data.ID = ModText.Picker;
+        _Data.ID = ModText.Picker;
     }
 
     public override void Load()
     {
         ModSaveData.ReadData(ref Data);
-        if(AddTargetInventories.Count == 0)
-        AddTargetInventories.Add(item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag).inventory);
-        
-         if(AddTargetInventories.Count == 0)
-        AddTargetInventories.Add(item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Hotbar).inventory);
 
-                 if(AddTargetInventories.Count == 0)
-        AddTargetInventories.Add(item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Hand).inventory);
+        // 当列表为空时，按优先级依次填充默认目标物品栏：Hotbar -> Bag -> Hand
+        if (AddTargetInventories.Count == 0)
+        {
+            TryAddInventoryById(ModText.Hotbar);
+            TryAddInventoryById(ModText.Bag);
+            TryAddInventoryById(ModText.Hand);
+        }
     }
-    
+
     /// <summary>
     /// 初始化时尝试获取自身的Inventory组件
     /// </summary>
@@ -51,6 +51,21 @@ public class ItemPicker : Module
         base.Act();
     }
     #endregion
+
+
+    /// <summary>
+    /// 尝试根据模块 ID 获取对应的 Mod_Inventory，并将其 inventory 加入目标列表
+    /// </summary>
+    /// <param name="modId">ModText 中定义的背包模块 ID</param>
+    private void TryAddInventoryById(string modId)
+    {
+        var modInventory = item.itemMods.GetMod_ByID<Mod_Inventory>(modId);
+        if (modInventory == null || modInventory.inventory == null)
+            return;
+
+        if (!AddTargetInventories.Contains(modInventory.inventory))
+            AddTargetInventories.Add(modInventory.inventory);
+    }
 
 
     #region 字段与属性
@@ -74,7 +89,7 @@ public class ItemPicker : Module
     public bool CanPickUp
     {
         get
-        {            
+        {
             // 所有目标背包都满了，才不能拾取
             foreach (var inventory in AddTargetInventories)
             {
@@ -115,7 +130,7 @@ public class ItemPicker : Module
 
         // 获取物品组件
         var pickAble = other.GetComponent<Item>();
-        
+
         if (pickAble != null && pickAble.itemData.Stack.CanBePickedUp)
         {
             ItemData itemData = pickAble.itemData;
@@ -129,13 +144,13 @@ public class ItemPicker : Module
                     {
                         // 标记物品为已被拾取
                         itemData.Stack.CanBePickedUp = false;
-                        
+
                         // 保存物品数据
                         pickAble.ModuleSave();
-                        
+
                         // 销毁物品对象
                         Destroy(pickAble.gameObject);
-                        
+
                         return; // 添加成功后立即返回
                     }
                 }

@@ -55,12 +55,16 @@ public class Inventory_Equipment : Inventory
             return;
         }
 
-        // 在真正交换前，通过模块数据检查 输入 DefaultTarget_Inventory 当前槽位 是否拥有 Equipment_Store 模块
-        var modData = inputSlot.itemData?.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
-        if (modData == null)
+        // 在真正交换前，通过模块数据检查：
+        // 仅当“手上有物品要放入装备栏”时，才要求该物品包含 Equipment_Store 模块
+        if (inputSlot.itemData != null)
         {
-            Debug.LogWarning($"[{Data.Name}] 输入槽位 [{inputIndex}] 物品不包含 [{ModText.Equipment_Store}] 模块，无法与装备栏交换");
-            return;
+            var modData = inputSlot.itemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+            if (modData == null)
+            {
+                Debug.LogWarning($"[{Data.Name}] 输入槽位 [{inputIndex}] 物品不包含 [{ModText.Equipment_Store}] 模块，无法与装备栏交换");
+                return;
+            }
         }
 
         // 通过检查后再执行默认交换逻辑

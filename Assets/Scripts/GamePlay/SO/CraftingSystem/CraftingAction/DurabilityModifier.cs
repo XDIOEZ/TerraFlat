@@ -33,8 +33,8 @@ public class DurabilityModifier : CraftingAction
                 // 检查是否有耐久度数据
                 if (itemSlot.itemData.Durability > 0 && itemSlot.itemData.MaxDurability > 0)
                 {
-                    // 减少耐久度
-                    itemSlot.itemData.Durability -= durabilityCost;
+                    // 使用物品自身的耐久接口减少耐久度（传入负值）
+                    itemSlot.itemData.AddDurability(-durabilityCost);
                     
                     Debug.Log($"物品 {itemSlot.itemData.IDName} 消耗耐久度: {durabilityCost}, 剩余耐久度: {itemSlot.itemData.Durability}/{itemSlot.itemData.MaxDurability}");
                     
