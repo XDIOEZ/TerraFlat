@@ -91,8 +91,16 @@ public List<LootEntryCollection> stageLoots = new List<LootEntryCollection>();
 
             item.transform.localScale = new Vector3(scale, scale, 1f);
         }
+
+        item.OnInit_Env += AdjustByEnvironment;
     }
 
+    void AdjustByEnvironment(EnvironmentFactors env)
+    {
+        Data.GrowProgress = UnityEngine.Random.Range(0f, Data.MaxGrowProgress);
+        //TODO 更具env.Precipitation的值调整生长速度 范围在0.8~1.2f之间 
+        Data.GrowSpeed *= Mathf.Lerp(0.8f, 1.2f, Mathf.Clamp01(env.Precipitation));
+    }
 
 
 

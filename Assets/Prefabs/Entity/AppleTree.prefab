@@ -95,6 +95,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
+  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -102,6 +103,10 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
   updateInterval: 0.1
   Data:
     IDName: "\u82F9\u679C\u6811"
@@ -234,8 +239,28 @@ PrefabInstance:
       value: "\u751F\u957F\u6A21\u5757"
       objectReference: {fileID: 0}
     - target: {fileID: 4293778021337337962, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
+      propertyPath: Data.GrowSpeed
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4293778021337337962, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
       propertyPath: stageLoots.Array.size
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4293778021337337962, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
+      propertyPath: Data.growState_Scale.Array.data[0]
+      value: 0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 4293778021337337962, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
+      propertyPath: Data.growState_Scale.Array.data[1]
+      value: 0.24
+      objectReference: {fileID: 0}
+    - target: {fileID: 4293778021337337962, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
+      propertyPath: Data.growState_Scale.Array.data[2]
+      value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4293778021337337962, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
+      propertyPath: Data.growState_Scale.Array.data[3]
+      value: 1.2
       objectReference: {fileID: 0}
     - target: {fileID: 4293778021337337962, guid: 8be4b8027fc3f8940a68d8a195ab4781, type: 3}
       propertyPath: stageLoots.Array.data[0].MaxAmount

@@ -8,7 +8,7 @@ public class Mod_Damage : Module, IDamageSender
     #region 伤害相关数据
     [Header("攻击特效")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
-    
+
     public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
     public GameValue_float Damage = new GameValue_float(10f);
 
@@ -21,18 +21,24 @@ public class Mod_Damage : Module, IDamageSender
     [Header("调试信息")]
     [SerializeField] private bool showDebugWarnings = true;
     [SerializeField] private Collider2D damageCollider;
-    
+
     // 定时伤害相关
+    [SerializeField]
     private float lastDamageTime = 0f;
     private List<DamageReceiver> insideReceivers = new List<DamageReceiver>();
-    
+
     // 实现ModuleData属性
-    public override ModuleData _Data 
-    { 
-        get => MemoryPackableData; 
-        set => MemoryPackableData = (Ex_ModData_MemoryPackable)value; 
+    public override ModuleData _Data
+    {
+        get => MemoryPackableData;
+        set => MemoryPackableData = (Ex_ModData_MemoryPackable)value;
     }
     public Ex_ModData_MemoryPackable MemoryPackableData;
+
+    /// <summary>
+    /// 造成伤害后回调事件，参数为本次造成的伤害值（可能小于等于 0）
+    /// </summary>
+    public event System.Action<float> OnDamageApplied;
     #endregion
 
     #region IDamageSender 实现
@@ -49,8 +55,8 @@ public class Mod_Damage : Module, IDamageSender
         {
             damageCollider = GetComponent<Collider2D>();
         }
-        
-        
+
+
         // 初始化定时伤害相关数据
         lastDamageTime = 0f;
         insideReceivers.Clear();
@@ -60,7 +66,7 @@ public class Mod_Damage : Module, IDamageSender
     {
         // 保存逻辑可以后续实现
     }
-    
+
     public override void ModUpdate(float deltaTime)
     {
         // 处理定时伤害逻辑
@@ -69,8 +75,8 @@ public class Mod_Damage : Module, IDamageSender
             // 检查是否到了造成伤害的时间
             if (DamageInterval == 0 || Time.time - lastDamageTime >= DamageInterval)
             {
+                // 实际更新时间由 ApplyDamageToReceiver 在真正造成伤害时负责
                 ApplyDamageToInsideReceivers();
-                lastDamageTime = Time.time;
             }
         }
     }
@@ -82,20 +88,34 @@ public class Mod_Damage : Module, IDamageSender
         // 碰撞检测和伤害处理逻辑
         if (damageCollider == null || !damageCollider.enabled) return;
         if (!other.TryGetComponent(out DamageReceiver receiver)) return;
-        
+
         // 添加到内部接收器列表
         if (!insideReceivers.Contains(receiver))
         {
             insideReceivers.Add(receiver);
         }
-        
-        // 如果启用了进入时伤害，则立即造成伤害
+
+        // 如果启用了进入时伤害，则在尊重伤害间隔的前提下尝试立即造成一次伤害
         if (EnableOnTriggerEnterDamage)
         {
-            ApplyDamageToReceiver(receiver);
+            // DamageInterval < 0：仅做一次进入伤害，不参与冷却（保持旧行为）
+            if (DamageInterval < 0f)
+            {
+                ApplyDamageToReceiver(receiver);
+            }
+            else
+            {
+                // DamageInterval == 0：视为“每帧都可伤害”，进入时也允许立刻打一击
+                // DamageInterval  > 0：需要满足冷却时间
+                if (DamageInterval == 0f || Time.time - lastDamageTime >= DamageInterval)
+                {
+                    // 实际更新时间由 ApplyDamageToReceiver 在真正造成伤害时负责
+                    ApplyDamageToReceiver(receiver);
+                }
+            }
         }
     }
-    
+
     public void OnTriggerExit2D(Collider2D other)
     {
         // 从内部接收器列表中移除
@@ -121,23 +141,25 @@ public class Mod_Damage : Module, IDamageSender
             }
         }
     }
-    
+
     private void ApplyDamageToReceiver(DamageReceiver receiver)
     {
         // 造成伤害
         float acDamage = receiver.Hurt(this);
-        
+
         // 生成攻击特效
         if (AttackEffects != null && AttackEffects.Count > 0)
         {
             Vector2 hitPoint = receiver.GetComponent<Collider2D>().ClosestPoint(transform.position);
             SpawnEffect(hitPoint, acDamage);
         }
-        //武器耐久下降
-        if (item != null)
-        {
-            item.DecreaseDurability(1);
-        }
+
+        // 触发伤害完成事件（无论伤害是否大于 0 都会触发）
+        OnDamageApplied?.Invoke(acDamage);
+
+
+        lastDamageTime = Time.time;
+
     }
 
     private void SpawnEffect(Vector2 hitPoint, float damage)
@@ -192,7 +214,7 @@ public class Mod_Damage : Module, IDamageSender
             }
         }
     }
-    
+
     /// <summary>
     /// 获取当前伤害检测状态
     /// </summary>

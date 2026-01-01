@@ -169,25 +169,10 @@ public abstract class Item : MonoBehaviour
 
     public virtual void Initialize_Env(EnvironmentFactors env)
     {
-        // 职责：由Item负责根据环境因素调整各模块的初始参数
-        // 这符合单一职责原则：各模块只关心自己的功能实现，参数由Item统一管理
-        // RandomMapGenerator → Item.Initialize_Env(env) → Modules.AdjustByEnvironment(env)
-
-        if (itemData == null || Mods == null || Mods.Count == 0)
+        // 环境初始化改为事件驱动：
+        // Item 只负责把环境参数通过事件抛出去，由各个模块自行选择是否订阅并处理
+        if (itemData == null)
             return;
-
-        // 遍历所有模块，调用其环境初始化方法（如果实现了的话）
-        foreach (var mod in Mods.Values.ToList())
-        {
-            if (mod != null)
-            {
-                // 如果模块实现了IEnvironmentAdjustable接口，调用其环境调整方法
-                if (mod is IEnvironmentAdjustable adjustable)
-                {
-                    adjustable.AdjustByEnvironment(env);
-                }
-            }
-        }
 
         OnInit_Env.Invoke(env);
     }
