@@ -25,3 +25,14 @@ MonoBehaviour:
     TileSpawns:
     - {fileID: 11400000, guid: d74547dd7960b9f40b6906f23d027810, type: 2}
     ItemSpawn: []
+    ItemSpawn_NoSO:
+    - itemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      itemName: Ore_Stone
+      itemCount: 1
+      SpawnChance: 0.0001
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}
