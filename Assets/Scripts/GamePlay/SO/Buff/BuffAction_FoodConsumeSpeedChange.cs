@@ -1,10 +1,6 @@
 using UnityEngine;
 
-/// <summary>
-/// 修改食物模块中饥饿消耗速度（nutritionConsumeSpeed）的 Buff 行为。
-/// 通过乘算修正来放大或缩小饥饿消耗系数。
-/// </summary>
-[CreateAssetMenu(fileName = "新建Buff行为_修改饥饿消耗速度", menuName = "Buff/FoodConsumeSpeedChange")]
+[System.Serializable]
 public class BuffAction_FoodConsumeSpeedChange : BuffAction
 {
     [Header("饥饿消耗乘算倍率（>1加快，<1减慢）")]
@@ -39,12 +35,5 @@ public class BuffAction_FoodConsumeSpeedChange : BuffAction
 
         // 使用乘算修正来调整饥饿消耗速度，方便与其他 Buff 叠加
         mod.Data.nutritionConsumeSpeed.MultiplicativeModifier *= ConsumeSpeedMultiplier;
-    }
-
-    public override BuffAction Clone()
-    {
-        var newBuff = Instantiate(this);
-        newBuff.mod = null; // 防止在克隆后沿用旧的 Food 引用
-        return newBuff;
     }
 }

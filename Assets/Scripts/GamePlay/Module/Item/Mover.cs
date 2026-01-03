@@ -215,6 +215,7 @@ public partial class Mover : Module
         {
             Debug.Log("体力太低，无法奔跑");
             animationController.SetBool(AnimationText.Run, false);
+            IsRunning = false;
             return;
         }
 

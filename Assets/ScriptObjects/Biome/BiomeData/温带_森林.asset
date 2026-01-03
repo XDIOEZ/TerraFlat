@@ -24,10 +24,15 @@ MonoBehaviour:
   TerrainConfig:
     TileSpawns:
     - {fileID: 11400000, guid: 6b011c6baeb9d4140875090c5a56129e, type: 2}
-    ItemSpawn:
-    - {fileID: 11400000, guid: fd30a891d50d53043b59f28ea340f0e8, type: 2}
-    - {fileID: 11400000, guid: 60d8bd24243ae0f4cb4c13bf208365d4, type: 2}
-    - {fileID: 11400000, guid: d26d608288dd4b044a1af3613ffde2b1, type: 2}
+    TileSpawns_NoSO:
+    - TileBlock: {fileID: 11400000, guid: 843e8341b637e024399c21bb22e77547, type: 2}
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}
+    ItemSpawn: []
     ItemSpawn_NoSO:
     - itemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
       itemName: Twine

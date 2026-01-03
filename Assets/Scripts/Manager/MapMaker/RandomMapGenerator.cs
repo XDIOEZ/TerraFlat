@@ -456,9 +456,9 @@ public class RandomMapGenerator : MonoBehaviour
         Vector2 spawnCenterPos = new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f);
 
         // === 生成配置中的 SO 物品 ===
-        if (biome.TerrainConfig.ItemSpawn != null)
+        if (biome.TerrainConfig.ItemSpawn_NoSO != null)
         {
-            foreach (Biome_ItemSpawn spawn in biome.TerrainConfig.ItemSpawn)
+            foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
                 TrySpawnItem(spawn.itemName, spawn.SpawnChance, spawn.environmentConditionRange,
                             spawnCenterPos, ref randomState, env, biome.BiomeName);

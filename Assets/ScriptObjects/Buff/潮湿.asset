@@ -20,6 +20,53 @@ MonoBehaviour:
   buff_Interval: 1
   buff_MaxStack: 1
   buff_StackType: 3
-  buff_Behavior_Start: {fileID: 0}
-  buff_Behavior_Update: {fileID: 11400000, guid: faf159bca4056d94aa7036ce943e10c1, type: 2}
-  buff_Behavior_Stop: {fileID: 0}
+  buff_Behavior_Start:
+    rid: -2
+  buff_Behavior_Update:
+    rid: 6445419665800036369
+  buff_Behavior_Stop:
+    rid: -2
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 6445419665800036369
+      type: {class: BuffAction_FoodValueChange, ns: , asm: GamePlay}
+      data:
+        NutritionChangeValue:
+          Carbohydrates: 0
+          Max_Carbohydrates:
+            BaseValue: 0
+            BaseAdditive: 0
+            AdditiveModifier: 0
+            MultiplicativeModifier: 1
+            FinalAdditive: 0
+          Fat: 0
+          Max_Fat:
+            BaseValue: 0
+            BaseAdditive: 0
+            AdditiveModifier: 0
+            MultiplicativeModifier: 1
+            FinalAdditive: 0
+          Protein: 0
+          Max_Protein:
+            BaseValue: 0
+            BaseAdditive: 0
+            AdditiveModifier: 0
+            MultiplicativeModifier: 1
+            FinalAdditive: 0
+          Water: 1
+          Max_Water:
+            BaseValue: 1
+            BaseAdditive: 0
+            AdditiveModifier: 0
+            MultiplicativeModifier: 1
+            FinalAdditive: 0
+          Vitamins: 0
+          Max_Vitamins:
+            BaseValue: 0
+            BaseAdditive: 0
+            AdditiveModifier: 0
+            MultiplicativeModifier: 1
+            FinalAdditive: 0

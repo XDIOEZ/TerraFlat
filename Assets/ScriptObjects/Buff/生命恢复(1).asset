@@ -20,6 +20,19 @@ MonoBehaviour:
   buff_Interval: 1
   buff_MaxStack: 1
   buff_StackType: 3
-  buff_Behavior_Start: {fileID: 0}
-  buff_Behavior_Update: {fileID: 11400000, guid: a381882047a12524eb78b684c5674c68, type: 2}
-  buff_Behavior_Stop: {fileID: 0}
+  buff_Behavior_Start:
+    rid: -2
+  buff_Behavior_Update:
+    rid: 6445419665800036367
+  buff_Behavior_Stop:
+    rid: -2
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 6445419665800036367
+      type: {class: BuffAction_HpValueChange, ns: , asm: GamePlay}
+      data:
+        value: 1
+        mod: {fileID: 0}

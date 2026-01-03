@@ -5998,7 +5998,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: b15e7ae3ac8c67747b38231ecdd51ee2
-  position: {x: -379.2002, y: 1581.6}
+  position: {x: -674.4001, y: 1582.4001}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -6241,7 +6241,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 914e03252480c0c458f33a9bc2fac9d8
-  position: {x: -680, y: 1582.4}
+  position: {x: -824.8, y: 1582.4001}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}

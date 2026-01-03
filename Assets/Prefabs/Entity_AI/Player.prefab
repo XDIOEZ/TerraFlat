@@ -48,6 +48,7 @@ Transform:
   - {fileID: 6639265349670268636}
   - {fileID: 5879530105130983250}
   - {fileID: 4051591574267527675}
+  - {fileID: 4567471649886055770}
   - {fileID: 3910460100367442520}
   - {fileID: 2016599476573315782}
   - {fileID: 1211274164537197697}
@@ -268,6 +269,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7343432311901774332}
     m_Modifications:
+    - target: {fileID: 648523157391139600, guid: be2baeaf723df76448f5ab8b658d9d3b, type: 3}
+      propertyPath: AddTargetInventories.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4070535793419500236, guid: be2baeaf723df76448f5ab8b658d9d3b, type: 3}
       propertyPath: m_Name
       value: Module_Picker
@@ -652,6 +657,84 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 149349575426666685, guid: 3c46ab8e0ed4f064685fd412d78b98ee, type: 3}
   m_PrefabInstance: {fileID: 2992461929440017744}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &3137036875101303881
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 7343432311901774332}
+    m_Modifications:
+    - target: {fileID: 589215326001438877, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_Name
+      value: Module_Stamina
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3771913252704867776, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: Prefab_UI
+      value: 
+      objectReference: {fileID: 4930435994399523088, guid: ae7d61a702120fe43a5c3fdcfea8279e, type: 3}
+    - target: {fileID: 3771913252704867776, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: Data.MaxStamina
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 3771913252704867776, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: Data.CurrentStamina
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 3771913252704867776, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+      propertyPath: Data.MaxStamina.BaseValue
+      value: 100
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+--- !u!4 &4567471649886055770 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1507040316221741331, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
+  m_PrefabInstance: {fileID: 3137036875101303881}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &3568580685091991659
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -726,6 +809,106 @@ PrefabInstance:
       propertyPath: PanelPrefab
       value: 
       objectReference: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Fat
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Water
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: observers.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Protein
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Vitamins
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: observers.Array.data[0]
+      value: 6445419665800036352
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: observers.Array.data[1]
+      value: 6445419665800036354
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Carbohydrates
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.ObserverState.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Fat.BaseValue
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Water.BaseValue
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Protein.BaseValue
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Vitamins.BaseValue
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036352]
+      value: GamePlay FoodHealthObserver
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036353]
+      value: GamePlay FoodStaminaObserver
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036354]
+      value: GamePlay FoodStaminaObserver
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.nutrition.Max_Carbohydrates.BaseValue
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036352].state.Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036352].state.HealSpeed
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036352].state.HealNeedRatio
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036352].state.WaterSelfHurt
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036352].state.ProteinSelfHurt
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036352].state.VitaminSelfHurt
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036354].state.StaminaConsumeSpeed
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: managedReferences[6445419665800036354].state.StaminaRecoverSpeed
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: m_Name
       value: Module_Food
@@ -1358,6 +1541,10 @@ PrefabInstance:
       value: P
       objectReference: {fileID: 0}
     - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}
+      propertyPath: managedReferences[4513346371909844999].Data.UIPrefabName
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}
       propertyPath: managedReferences[4513346371909844999].Data.PanelPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -1423,6 +1610,14 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}
       propertyPath: managedReferences[4513346371909844999].Data.Event_OnDataChanged._PersistentCalls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}
+      propertyPath: managedReferences[4513346371909844999].Data.Event_OnBeforeDataChanged._PersistentCalls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}
+      propertyPath: managedReferences[4513346371909844999].Data.Event_OnDataChanged_TwoSlots._PersistentCalls.Array.size
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9101378343389085559, guid: 0b0b63be0af1a1349acffa15df66bfe8, type: 3}

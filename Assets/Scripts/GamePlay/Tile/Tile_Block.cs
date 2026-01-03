@@ -6,6 +6,7 @@ using UnityEngine.Tilemaps;
 /// 负责描述「踩在某个 Tile 上时」的进入 / 退出 / 持续效果接口。
 /// 后续具体地块（如水、草）可以继承本类实现自己的逻辑。
 /// </summary>
+[System.Serializable]
 public abstract class Tile_Block : ScriptableObject
 {
     [Header("标识配置")]

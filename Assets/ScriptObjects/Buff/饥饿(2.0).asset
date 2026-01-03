@@ -20,6 +20,22 @@ MonoBehaviour:
   buff_Interval: 0
   buff_MaxStack: 1
   buff_StackType: 3
-  buff_Behavior_Start: {fileID: 11400000, guid: 9a9b6315bb4394d4a8295d02e9644064, type: 2}
-  buff_Behavior_Update: {fileID: 0}
-  buff_Behavior_Stop: {fileID: 11400000, guid: e625fa670ec47c64bbeebe9610621476, type: 2}
+  buff_Behavior_Start:
+    rid: 6445419665800036359
+  buff_Behavior_Update:
+    rid: -2
+  buff_Behavior_Stop:
+    rid: 6445419665800036360
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 6445419665800036359
+      type: {class: BuffAction_FoodConsumeSpeedChange, ns: , asm: GamePlay}
+      data:
+        ConsumeSpeedMultiplier: 2
+    - rid: 6445419665800036360
+      type: {class: BuffAction_FoodConsumeSpeedChange, ns: , asm: GamePlay}
+      data:
+        ConsumeSpeedMultiplier: 0.5

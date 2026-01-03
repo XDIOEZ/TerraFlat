@@ -1,8 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
-[CreateAssetMenu(fileName = "新建Buff行为_修改移动速度", menuName = "Buff/食物数值")]
+[System.Serializable]
 public class BuffAction_FoodValueChange : BuffAction
 {
     [Header("食物数值变化")]
@@ -24,14 +23,6 @@ public class BuffAction_FoodValueChange : BuffAction
             }
         }
         mod.Data.nutrition += NutritionChangeValue;
-    }
-
-    public override BuffAction Clone()
-    {
-        var newBuff = Instantiate(this);
-        Mod_Food newMod = null;
-        newBuff.mod = newMod; // 防止引用污染
-        return newBuff;
     }
 
 }

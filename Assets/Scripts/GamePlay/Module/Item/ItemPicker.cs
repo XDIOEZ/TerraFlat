@@ -142,6 +142,7 @@ public class ItemPicker : Module
                 {
                     if (inventory.Data.TryAddItem(itemData))
                     {
+                        inventory.RefreshUI();
                         // 标记物品为已被拾取
                         itemData.Stack.CanBePickedUp = false;
 

@@ -2,6 +2,7 @@
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
+using UltEvents;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -26,6 +27,65 @@ public partial class Mod_ColdWeapon : Module
         [Header("安全距离设置")]
         [Tooltip("x: 造成伤害的最近距离, y: 造成伤害的最大距离")]
         public Vector2 SafetyDistance = new Vector2(0.5f, 100f);
+
+        public List<ObserverSnapshot> ObserverState;
+    }
+    #endregion
+
+    #region 观察者模式
+    [MemoryPackable]
+    public partial class ObserverSnapshot
+    {
+        public string TypeName;
+        public byte[] Payload;
+    }
+
+    [SerializeReference]
+    public List<ModuleObserverBase> observers = new List<ModuleObserverBase>();
+
+    public List<ObserverSnapshot> BuildObserverState()
+    {
+        var state = new List<ObserverSnapshot>();
+        foreach (var observer in observers)
+        {
+            var payload = observer.OnSave(this);
+            if (payload != null)
+            {
+                state.Add(new ObserverSnapshot
+                {
+                    TypeName = observer.GetType().AssemblyQualifiedName,
+                    Payload = payload
+                });
+            }
+        }
+        return state;
+    }
+
+    public void ApplyObserverState()
+    {
+        if (weaponData.ObserverState == null) return;
+
+        foreach (var snapshot in weaponData.ObserverState)
+        {
+            var observer = observers.Find(o => o.GetType().AssemblyQualifiedName == snapshot.TypeName);
+            if (observer != null)
+            {
+                observer.OnLoad(snapshot.Payload);
+            }
+        }
+    }
+
+    public void EnsureObservers()
+    {
+        if (observers == null)
+        {
+            observers = new List<ModuleObserverBase>();
+        }
+
+        foreach (var observer in observers)
+        {
+            observer.OnInit(this);
+        }
     }
     #endregion
 
@@ -48,16 +108,21 @@ public partial class Mod_ColdWeapon : Module
     // 用于轨迹显示与调试
     private List<Vector2> trajectoryPoints = new List<Vector2>();
     public int maxTrajectoryPoints = 50;
-    
+
     // 缓存伤害模块引用
     private Mod_Damage cachedDamageModule;
     private bool isDamageModuleCached = false;
+
+    public UltEvent OnAttackStart;
+    public UltEvent OnAttackStop;
+
+    public bool CanAttack;
     #endregion
 
     #region Unity 生命周期
     public override void Awake()
     {
-        if (_Data.ID == "") 
+        if (_Data.ID == "")
             _Data.ID = ModText.ColdWeapon;
     }
 
@@ -85,19 +150,23 @@ public partial class Mod_ColdWeapon : Module
         MoveTargetTransform = (MoveTargetTransform == null && item.Owner != null)
             ? item.transform
             : transform.parent;
-        
+
         // 初始化时缓存伤害模块引用
         CacheDamageModule();
-        
+
         // 初始化时将伤害模块设置为失活状态
         SetInitialDamageState();
 
         // 订阅伤害事件，用于在造成伤害后扣减武器耐久
         SubscribeDamageEvents();
+
+        EnsureObservers();
+        ApplyObserverState();
     }
 
     public override void Save()
     {
+        weaponData.ObserverState = BuildObserverState();
         Data.WriteData(weaponData);
 
         if (item.Owner != null && InputAction != null)
@@ -114,6 +183,14 @@ public partial class Mod_ColdWeapon : Module
     #region 主更新/动作
     public override void ModUpdate(float deltaTime)
     {
+        // 每帧默认允许攻击，由各观察者通过 CanAttack &= 条件 共同收紧
+        CanAttack = true;
+
+        foreach (var observer in observers)
+        {
+            observer.OnUpdate(deltaTime);
+        }
+
         switch (CurrentState)
         {
             case AttackState.Attacking:
@@ -148,20 +225,24 @@ public partial class Mod_ColdWeapon : Module
     [Button("开始攻击")]
     public virtual void StartAttack()
     {
+        if (CanAttack == false) return;
         if (CurrentState != AttackState.Idle) return;
         CurrentState = AttackState.Attacking;
-        
+
+
         // 通知伤害模块启用伤害检测
         NotifyDamageModule(true);
+        OnAttackStart.Invoke();
     }
 
     public virtual void StopAttack()
     {
         if (CurrentState != AttackState.Attacking) return;
         StartReturningToStartPosition(StartPosition, ReturnSpeed);
-        
+
         // 通知伤害模块禁用伤害检测
         NotifyDamageModule(false);
+        OnAttackStop.Invoke();
     }
 
     [Button("取消攻击")]
@@ -169,13 +250,14 @@ public partial class Mod_ColdWeapon : Module
     {
         if (CurrentState != AttackState.Attacking) return;
         StartReturningToStartPosition(StartPosition, ReturnSpeed);
-        
+
         // 通知伤害模块禁用伤害检测
         NotifyDamageModule(false);
-        
+        OnAttackStop.Invoke();
+
         CurrentState = AttackState.Idle;
     }
-    
+
     // 缓存伤害模块引用
     private void CacheDamageModule()
     {
@@ -185,7 +267,7 @@ public partial class Mod_ColdWeapon : Module
             isDamageModuleCached = true;
         }
     }
-    
+
     // 初始化时将伤害模块设置为失活状态
     private void SetInitialDamageState()
     {
@@ -194,7 +276,7 @@ public partial class Mod_ColdWeapon : Module
         {
             CacheDamageModule();
         }
-        
+
         // 使用缓存的引用将伤害模块设置为失活状态
         if (cachedDamageModule != null)
         {
@@ -214,7 +296,7 @@ public partial class Mod_ColdWeapon : Module
             }
         }
     }
-    
+
     // 通知伤害模块启用或禁用伤害检测
     private void NotifyDamageModule(bool enable)
     {
@@ -223,7 +305,7 @@ public partial class Mod_ColdWeapon : Module
         {
             CacheDamageModule();
         }
-        
+
         // 使用缓存的引用
         if (cachedDamageModule != null)
         {
@@ -359,10 +441,10 @@ public partial class Mod_ColdWeapon : Module
     #region 返回与移动辅助
     private void UpdateReturning(float deltaTime)
     {
-        if (MoveTargetTransform == null) 
-        { 
-            CurrentState = AttackState.Idle; 
-            return; 
+        if (MoveTargetTransform == null)
+        {
+            CurrentState = AttackState.Idle;
+            return;
         }
 
         Vector2 currentPos = (Vector2)MoveTargetTransform.localPosition;
@@ -434,7 +516,7 @@ public partial class Mod_ColdWeapon : Module
             // 内圈（最近伤害距离）
             Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
             Gizmos.DrawWireSphere(startPosition, weaponData.SafetyDistance.x);
-            
+
             // 外圈（最大伤害距离）
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
             Gizmos.DrawWireSphere(startPosition, weaponData.SafetyDistance.y);
