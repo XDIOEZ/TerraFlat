@@ -52,12 +52,27 @@ MonoBehaviour:
     Type: 0
     BitData: 
   weaponData:
-    AttackSpeed: 10
-    MaxAttackDistance: 10
-    ReturnSpeed: 10
-    SafetyDistance: {x: 0.5, y: 100}
+    AttackSpeed: 15
+    MaxAttackDistance: 1.5
+    ReturnSpeed: 5
+    SafetyDistance: {x: 0.6, y: 100}
+  observers:
+  - rid: 6445419665800036372
   faceMouse: {fileID: 0}
   CurrentState: 0
   StartPosition: {x: 0, y: 0}
   MoveTargetTransform: {fileID: 0}
   maxTrajectoryPoints: 50
+  OnAttackStart:
+    _PersistentCalls: []
+  OnAttackStop:
+    _PersistentCalls: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 6445419665800036372
+      type: {class: ColdWeaponStaminaObserver, ns: , asm: GamePlay}
+      data:
+        state:
+          StaminaConsumeSpeed: 1
+          StaminaConsumeSpeedRate: 1

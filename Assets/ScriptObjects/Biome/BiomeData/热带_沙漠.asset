@@ -24,4 +24,13 @@ MonoBehaviour:
   TerrainConfig:
     TileSpawns:
     - {fileID: 11400000, guid: d74547dd7960b9f40b6906f23d027810, type: 2}
+    TileSpawns_NoSO:
+    - TileBlock: {fileID: 11400000, guid: bf736d65367b9254dbd69cd783e538f8, type: 2}
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}
     ItemSpawn: []
+    ItemSpawn_NoSO: []

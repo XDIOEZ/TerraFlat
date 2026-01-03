@@ -12,7 +12,7 @@ public partial class Mod_Stamina : Module
     public partial class StaminaData
     {
         public float CurrentStamina;
-        public GameValue_float MaxStamina;
+        public float MaxStamina;
     }
     // 是否为满精力 - 实时判断
     public bool IsStaminaFull => Mathf.Approximately(Data.CurrentStamina, MaxValue);
@@ -29,6 +29,8 @@ public partial class Mod_Stamina : Module
 
     public Ex_ModData_MemoryPackable modData;
 
+    public GameObject Prefab_UI;//TODO 这个是UI的预制体
+
     public Slider slider;
     public override void Awake()
     {
@@ -40,9 +42,25 @@ public partial class Mod_Stamina : Module
     public override void Load()
     {
         modData.ReadData(ref Data);
+
+        // 实例化体力 UI 预制体并获取 Slider 组件
+        if (Prefab_UI != null)
+        {
+            BasePanel staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
+            if (staminaPanel != null)
+            {
+                slider = staminaPanel.GetComponentInChildren<Slider>();
+            }
+        }
+
+        // 兜底：如果预制体上没找到，就在当前物体的子节点中找 Slider
+        if (slider == null)
+        {
+            slider = GetComponentInChildren<Slider>();
+        }
+
+        // 用当前体力值刷新一次 UI
         UpdateSlider();
-    
-        if (slider == null)    slider = GetComponentInChildren<Slider>();
     }
 
     public override void Save()
@@ -52,8 +70,6 @@ public partial class Mod_Stamina : Module
 
     public void AddStamina(float value)
     {
-        if (value <= 0) return; // 负值不处理（也可以扩展成允许扣除体力）
-
         CurrentValue += value; // 会自动触发事件和更新Slider
     }
 
@@ -87,7 +103,7 @@ public partial class Mod_Stamina : Module
     // 最大体力值 - 只读属性，不受事件影响
     public float MaxValue
     {
-        get => Data.MaxStamina.Value;
+        get => Data.MaxStamina;
         // 移除了 setter，使其成为只读属性
     }
 }

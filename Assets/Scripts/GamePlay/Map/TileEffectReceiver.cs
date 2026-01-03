@@ -95,10 +95,9 @@ public class TileEffectReceiver : Module
 
     public override void Save()
     {
-        ModSaveData.WriteData(lastGridPos);
-
         // 确保在销毁时退出当前Tile
         OnTileExit(lastGridPos);
+        ModSaveData.WriteData(lastGridPos);
     }
 
 

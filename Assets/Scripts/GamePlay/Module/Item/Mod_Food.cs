@@ -1,11 +1,19 @@
 ﻿using DG.Tweening;
 using MemoryPack;
 using Sirenix.OdinInspector;
+using System.Collections.Generic;
 using UnityEngine;
 using UltEvents;
 
 public partial class Mod_Food : Module
 {
+    [MemoryPackable]
+    public partial class ObserverSnapshot
+    {
+        public string TypeName;
+        public byte[] Payload;
+    }
+
     #region 数据定义
     public Ex_ModData_MemoryPackable ExData;
     public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }
@@ -22,40 +30,9 @@ public partial class Mod_Food : Module
     [ReadOnly]
     public BasePanel panelUI; // 替换UI_FloatData_Slider为BasePanel
 
-    public Mod_Stamina Stamina;
-    public DamageReceiver DamageReceiver;
+    [SerializeReference]
+    public List<ModuleObserverBase> observers = new List<ModuleObserverBase>();
 
-    #region 数据结构
-    [MemoryPackable]
-    [System.Serializable]
-    public partial class Mod_Food_Data
-    {
-        public Nutrition nutrition = new();//营养值
-        public float Max_EatingProgress = 3;//最大进度
-        public float AbsorptionRate = 1f;//吸收率
-        public bool ShowCanvas = false;//面板显示状态
-        public GameValue_float nutritionConsumeSpeed = new(1f);
-
-        public bool FeelGood = false; // ← 加在这里
-        // 添加子对象的面板位置作为持久化数据 在实例化面板时保存面板位置 在关闭面板时恢复面板位置 在Save函数中 如果面板存在 就保存面板的位置
-        public Vector2 PanelPosition = new Vector2(0, 0);
-        [Tooltip("状态良好时恢复血量的速度")]
-        public float HealSpeed = 1f;
-        [Tooltip("感觉蛋白质状态良好的阈值")]
-        public float ProteinThreshold = 50f;
-        [Tooltip("水份归零时，自己对自己造成的伤害(单位/秒)")]
-        public float WaterSelfHurt = 1f;
-        [Tooltip("蛋白质归零时，自己对自己造成的伤害(单位/秒)")]
-        public float ProteinSelfHurt = 1f;
-        [Tooltip("维生素出现亏欠时，对自己造成的伤害(单位/秒)")]
-        public float VitaminSelfHurt = 1f;
-        [Tooltip("精力恢复速度")]
-        public float StaminaRecoverSpeed = 1f;
-        [Tooltip("恢复精力时 饥饿消耗速度的额外增量(单位/倍率)")]
-        public float StaminaConsumeSpeedRate = 0.5f;
-        [Tooltip("水份消耗速度倍率")]
-        public float WaterConsumeSpeedRate = 1f;
-    }
     #endregion
 
     #region 生命周期方法
@@ -65,21 +42,20 @@ public partial class Mod_Food : Module
         {
             _Data.ID = ModText.Food;
         }
-
     }
 
     public override void Load()
     {
         ExData.ReadData(ref Data);
 
-        //模块引用赋值
-        item.itemMods.GetMod_ByID(ModText.Stamina, out Stamina);
-        item.itemMods.GetMod_ByID(ModText.Hp, out DamageReceiver);
         item.itemMods.GetMod_ByID(ModText.Controller, out GameController Controller);
         if (Controller != null)
         {
             Controller._inputActions.Win10.Tab.performed += _ => TogglePanel();
         }
+
+        EnsureObservers();
+        ApplyObserverState();
 
         // 根据保存的状态决定是否显示面板
         if (Data.ShowCanvas)
@@ -93,9 +69,26 @@ public partial class Mod_Food : Module
         }
 
     }
-    #endregion
+    public override void Save()
+    {
+        Data.ObserverState = BuildObserverState();
 
-    #region 核心逻辑
+        if (item != null)
+        {
+            item.OnAct -= Act;
+        }
+
+        // 保存面板位置
+        if (PanleInstance != null)
+        {
+            SavePanelPosition();
+        }
+
+        // 终止所有与该对象相关的 tween
+        DOTween.Kill(item?.transform);
+
+        ExData.WriteData(Data);
+    }
     /// <summary>
     /// 调用吃的行为
     /// </summary>
@@ -107,68 +100,28 @@ public partial class Mod_Food : Module
 
     public override void ModUpdate(float timeDelta)
     {
-        float rate = 1f;
 
-        // 精力补充 - 前提是存在精力模块
-        if (Stamina != null && Stamina.Data.CurrentStamina < Stamina.Data.MaxStamina.Value)
+        // 驱动所有逻辑插件观察者
+        foreach (var observer in observers)
         {
-            rate += Data.StaminaConsumeSpeedRate;
-            Stamina.AddStamina(Data.StaminaRecoverSpeed * timeDelta);
+            observer.OnUpdate(timeDelta);
         }
 
         // 营养消耗
-        ConsumeNutrition(timeDelta * rate);
-
-        // 健康状态检测与处理
-        if (DamageReceiver != null)
-        {
-            CheckNutritionStatus(timeDelta);
-        }
+        ConsumeNutrition(timeDelta * Data.nutritionConsumeRate);
 
         DataUpdate?.Invoke();
     }
     #endregion
 
     #region 营养管理
-    /// <summary>
-    /// 检测营养状态并处理相应的健康效果
-    /// </summary>
-    private void CheckNutritionStatus(float timeDelta)
-    {
-        // 检测蛋白质状态
-        if (Data.nutrition.Protein <= 0)
-        {
-            // 蛋白质不足，造成伤害
-            DamageReceiver.ForceHurt(Data.ProteinSelfHurt * timeDelta);
-        }
-        else if (Data.nutrition.Protein >= Data.ProteinThreshold)
-        {
-            // 蛋白质充足，恢复血量
-            DamageReceiver.Heal(Data.HealSpeed * timeDelta, item);
-        }
-
-        // 检测水份状态
-        if (Data.nutrition.Water <= 0)
-        {
-            // 水份不足，造成伤害
-            DamageReceiver.ForceHurt(Data.WaterSelfHurt * timeDelta);
-        }
-
-        // 检测维生素状态
-        if (Data.nutrition.Vitamins <= 0)
-        {
-            // 维生素不足，造成伤害
-            DamageReceiver.ForceHurt(Data.VitaminSelfHurt * timeDelta);
-        }
-    }
-
-    private float ConsumeNutrition(float timeDelta)
+    public float ConsumeNutrition(float timeDelta)
     {
         // 移除对精力状态的检查，不再根据精力是否满来调整消耗速度
         // 始终保持恒定的消耗速度
 
         // 计算本次消耗总量 = 时间增量 * 吸收率 * 消耗速度
-        float delta = timeDelta * Data.AbsorptionRate * Data.nutritionConsumeSpeed.Value;
+        float delta = timeDelta * Data.nutritionConsumeSpeed.Value;
         float remainingDelta = delta;
         float totalEnergy = 0f;
 
@@ -434,24 +387,95 @@ public partial class Mod_Food : Module
 
     #endregion
 
-    public override void Save()
+
+
+    #region 工具方法
+
+    private void EnsureObservers()
     {
-        if (item != null)
+        foreach (var observer in observers)
         {
-            item.OnAct -= Act;
+            observer.OnInit(this);
+        }
+    }
+
+    private void ApplyObserverState()
+    {
+        if (Data.ObserverState == null || Data.ObserverState.Length == 0)
+        {
+            return;
         }
 
-        // 保存面板位置
-        if (PanleInstance != null)
+        var snapshots = MemoryPack.MemoryPackSerializer.Deserialize<List<ObserverSnapshot>>(Data.ObserverState);
+        if (snapshots == null || snapshots.Count == 0)
         {
-            SavePanelPosition();
+            return;
         }
 
-        // 终止所有与该对象相关的 tween
-        DOTween.Kill(item?.transform);
+        var map = new Dictionary<string, byte[]>();
+        foreach (var snapshot in snapshots)
+        {
+            if (snapshot?.TypeName != null)
+            {
+                map[snapshot.TypeName] = snapshot.Payload;
+            }
+        }
 
-        ExData.WriteData(Data);
+        foreach (var observer in observers)
+        {
+            var key = observer.GetType().FullName;
+            if (key != null && map.TryGetValue(key, out var payload))
+            {
+                observer.OnLoad(payload);
+            }
+        }
+    }
+
+    private byte[] BuildObserverState()
+    {
+        var snapshots = new List<ObserverSnapshot>(observers.Count);
+        foreach (var observer in observers)
+        {
+            var payload = observer.OnSave(this);
+            snapshots.Add(new ObserverSnapshot
+            {
+                TypeName = observer.GetType().FullName,
+                Payload = payload
+            });
+        }
+
+        return MemoryPack.MemoryPackSerializer.Serialize(snapshots);
+    }
+
+    private void AddObserver(ModuleObserverBase observer)
+    {
+        if (observer == null)
+        {
+            return;
+        }
+
+        if (!observers.Contains(observer))
+        {
+            observers.Add(observer);
+        }
+    }
+
+    private bool TryGetObserver<T>(out T observer) where T : ModuleObserverBase
+    {
+        observer = null;
+
+        foreach (var o in observers)
+        {
+            if (o is T typed)
+            {
+                observer = typed;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     #endregion
+
 }

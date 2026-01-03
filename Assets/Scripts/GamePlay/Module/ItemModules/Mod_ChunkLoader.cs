@@ -91,9 +91,6 @@ public class Mod_ChunkLoader : Module
 
         // 初始化上一次区块位置
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
-
-        // 初次加载时立刻根据当前位置更新一次区块
-        UpdateChunks(lastChunkPos);
     }
 
     public override void Save()

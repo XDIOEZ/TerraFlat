@@ -214,7 +214,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         // 可选日志，帮助确认更新范围与数量
         if (updatedCount > 0)
         {
-            Debug.Log($"[ChunkMgr] 已触发玩家附近 {updatedCount} 个激活区块的权重重烘焙 (Distance={Distance})");
+//            Debug.Log($"[ChunkMgr] 已触发玩家附近 {updatedCount} 个激活区块的权重重烘焙 (Distance={Distance})");
         }
         else
         {

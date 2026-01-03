@@ -1,7 +1,6 @@
 using UnityEngine;
 
 [System.Serializable]
-[CreateAssetMenu(fileName = "New Buff_Stamina_Change", menuName = "Buff/Buff_Stamina_Change")]
 public class BuffAction_StaminaChange : BuffAction
 {
     [Header("精力恢复速度")]
@@ -16,11 +15,5 @@ public class BuffAction_StaminaChange : BuffAction
             return;
         }
         mod.Data.CurrentStamina += SpeedRate;
-    }
-
-    public override BuffAction Clone()
-    {
-        var newBuff = Instantiate(this);
-        return newBuff;
     }
 }

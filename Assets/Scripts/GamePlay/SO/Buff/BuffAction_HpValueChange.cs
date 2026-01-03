@@ -2,12 +2,11 @@ using UnityEngine;
 using static Cinemachine.AxisState;
 
 [System.Serializable]
-[CreateAssetMenu(fileName = "New BuffAction_HpValueChange", menuName = "Buff/BuffAction_HpValueChange")]
 public class BuffAction_HpValueChange : BuffAction
 {
-    [Tooltip("血量修改值")]
+    [Tooltip("????????")]
     public float value;
-    [Tooltip("模块缓存")]
+    [Tooltip("?????")]
     public DamageReceiver mod;
 
     public override void Apply(BuffRunTime data)
@@ -23,13 +22,5 @@ public class BuffAction_HpValueChange : BuffAction
 
         }
         mod.Heal(value);
-    }
-
-    public override BuffAction Clone()
-    {
-        var newBuff = Instantiate(this);
-        DamageReceiver newMod = null;
-        newBuff.mod = newMod; // 防止引用污染
-        return newBuff;
     }
 }

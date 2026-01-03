@@ -58,8 +58,7 @@ public class BuffActionScriptAssetCreator : EndNameEditAction
         string scriptContent =
 $@"using UnityEngine;
 
-[System.Serializable]
-[CreateAssetMenu(fileName = ""New {className}"", menuName = ""Buff/{className}"")]
+ [System.Serializable]
 public class {className} : BuffAction
 {{
     public override void Apply(BuffRunTime data)
@@ -79,11 +78,8 @@ public class {className} : BuffAction
 #endif
 
 
-public abstract class BuffAction : ScriptableObject
+[System.Serializable]
+public abstract class BuffAction
 {
     public abstract void Apply(BuffRunTime data);
-    public virtual BuffAction Clone() 
-    {
-        return null;
-    }
 }

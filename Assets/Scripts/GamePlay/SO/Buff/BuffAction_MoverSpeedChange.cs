@@ -1,8 +1,9 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "新建Buff行为_修改移动速度", menuName = "Buff/MoverSpeedChange")]
+[System.Serializable]
 public class BuffAction_MoverSpeedChange : BuffAction
 {
+    [Header("移动速度改变倍率（>1加快，<1减慢）(乘算倍率)")]
     public float SpeedChangeValue;
     [SerializeField]
     Mover mod;
@@ -21,13 +22,5 @@ public class BuffAction_MoverSpeedChange : BuffAction
         }
 
         mod.Speed.MultiplicativeModifier *= SpeedChangeValue;
-    }
-
-    public override BuffAction Clone()
-    {
-        var newBuff = Instantiate(this);
-        Mover newMod = null;
-        newBuff.mod = newMod; // 防止引用污染
-        return newBuff;
     }
 }

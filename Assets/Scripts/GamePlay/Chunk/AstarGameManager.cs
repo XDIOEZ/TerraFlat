@@ -149,7 +149,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             yield return null;
         }
 
-        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+//        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
 
         // 调用回调函数
         onComplete?.Invoke();

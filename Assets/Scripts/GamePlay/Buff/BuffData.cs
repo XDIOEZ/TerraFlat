@@ -7,31 +7,34 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "新Buff数据", menuName = "Buff/新建BuffData")]
 public class Buff_Data : ScriptableObject
 {
-    //Buff的ID
+    [Tooltip("Buff的唯一标识")]
     public string buff_ID;
-    //Buff的名称
-    public string buff_Name; 
-    //Buff的类型
-    public string buff_Type; 
-    //Buff的描述
+    [Tooltip("显示名称")]
+    public string buff_Name;
+    [Tooltip("分类或标签")]
+    public string buff_Type;
+    [Tooltip("描述文案")]
     public string buff_Description;
 
-    //Buff的持续时间
+    [Tooltip("持续时间(秒)")]
     public float buff_Duration = 5f;
-    //buff的执行间隔
+    [Tooltip("执行间隔(秒)，0为仅开始/结束")]
     public float buff_Interval = 0f;
-    //buff的最大叠加数
+    [Tooltip("最大叠加层数")]
     public int buff_MaxStack = 1;
-    //buff的叠加类型
+    [Tooltip("叠加方式")]
     public BuffStackType buff_StackType;
 
-    [InlineEditor]
+    [SerializeReference]
+    [Tooltip("开始时执行的行为")]
     public BuffAction buff_Behavior_Start;
-    [InlineEditor]
+    [SerializeReference]
+    [Tooltip("间隔执行的行为")]
     public BuffAction buff_Behavior_Update;
-    [InlineEditor]
+    [SerializeReference]
+    [Tooltip("结束时执行的行为")]
     public BuffAction buff_Behavior_Stop;
-    
+
     /// <summary>
     /// 创建当前Buff_Data的深拷贝副本
     /// </summary>
@@ -40,23 +43,6 @@ public class Buff_Data : ScriptableObject
     {
         // 创建新的Buff_Data实例
         Buff_Data clonedData = Instantiate(this);
-        
-        // 深拷贝BuffAction字段
-        if (this.buff_Behavior_Start != null)
-        {
-            clonedData.buff_Behavior_Start = Instantiate(buff_Behavior_Start);
-        }
-        
-        if (this.buff_Behavior_Update != null)
-        {
-            clonedData.buff_Behavior_Update = Instantiate(buff_Behavior_Update);
-        }
-        
-        if (this.buff_Behavior_Stop != null)
-        {
-            clonedData.buff_Behavior_Stop = Instantiate(buff_Behavior_Stop);
-        }
-        
         return clonedData;
     }
 }

@@ -229,8 +229,56 @@ PrefabInstance:
     m_TransformParent: {fileID: 7070529130677377428}
     m_Modifications:
     - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: equipmentInstances.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: equipmentInstances.Array.data[1]
+      value: 6445419665218338819
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338818]
+      value: GamePlay EquipmentInstance_Debug
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338819]
+      value: GamePlay EquipmentInstance_Debug
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338818].Name
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338819].Name
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
       propertyPath: managedReferences[4513346386347687946].BagData.Name
       value: "[\u76AE\u9769\u6536\u7EB3\u888B]Inventory"
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338818].DebugInfo_Load
+      value: This is a Bag Equipment Instance
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338818].DebugInfo_Save
+      value: Saving Bag Equipment Instance
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338819].DebugInfo_Load
+      value: This is a Bag Equipment Instance
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338819].DebugInfo_Save
+      value: Saving Bag Equipment Instance
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338818].DebugInfo_Update
+      value: Bag Equipment Instance
+      objectReference: {fileID: 0}
+    - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
+      propertyPath: managedReferences[6445419665218338819].DebugInfo_Update
+      value: Bag Equipment Instance
       objectReference: {fileID: 0}
     - target: {fileID: 4366434249835042775, guid: eae5f08c6c704a24a8bbbcb19d3dcf13, type: 3}
       propertyPath: managedReferences[4513346386347687946].BagData.UIPrefabName
