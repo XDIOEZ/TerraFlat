@@ -22,17 +22,14 @@ MonoBehaviour:
     SolidityRange: {x: 0, y: 1}
     HightRange: {x: 0.5, y: 1}
   TerrainConfig:
-    TileSpawns:
-    - {fileID: 11400000, guid: 62460746569683f428401561801c3b12, type: 2}
     TileSpawns_NoSO:
-    - TileBlock: {fileID: 11400000, guid: 90f57edf379c87e4bb67a4c294c786c7, type: 2}
+    - TileBlock: {fileID: 11400000, guid: 4812ad3ae4f2aad44b77c4f5e6d53e77, type: 2}
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
         SolidityRange: {x: 0, y: 1}
         HightRange: {x: 0, y: 1}
-    ItemSpawn: []
     ItemSpawn_NoSO:
     - itemPrefab: {fileID: 2383149550844687321, guid: 58df281e8bb89684ca779ca6009f0c54, type: 3}
       itemName: Mine_Coal

@@ -609,6 +609,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 4169598233292508827, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
+      propertyPath: m_MaskInteraction
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169598233292508827, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 06dc2608a1031034698c137f9f6cfbc8, type: 2}
     - target: {fileID: 4678875130974218576, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
       propertyPath: m_Name
       value: Player

@@ -1,5 +1,6 @@
 ﻿using Force.DeepCloner;
 using NavMeshPlus.Components;
+using NPOI.SS.Formula.Functions;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
@@ -27,6 +28,33 @@ public class Map : Item
     // 协程引用管理，避免协程叠加
     public Coroutine loadTileMapCoroutine;
     public Coroutine backTilePenaltyCoroutine;
+
+    [SerializeReference]
+    public RandomMapGenerator mapGenerator;//TODO 我在这里添加了一个类 以后就直接从这里配置了 修改一下这个脚本以适配我的需求
+
+    private void Awake()
+    {
+        InitMapGenerator();
+    }
+
+    /// <summary>
+    /// 初始化随机地图生成器：
+    /// - 确保有实例（可在 Inspector 中直接配置字段）
+    /// - 绑定当前 Map / Item 引用
+    /// - 订阅 OnMapGenerated_Start 事件
+    /// </summary>
+    private void InitMapGenerator()
+    {
+        // 保留在 Inspector 中已经配置好的引用
+        if (mapGenerator == null)
+        {
+            mapGenerator = new RandomMapGenerator();
+        }
+
+        // 让生成器知道当前地图和物品是谁
+        mapGenerator.map = this;
+        mapGenerator.Init(this);
+    }
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
     public override ItemData itemData { get => Data; set => Data = value as Data_TileMap; }
@@ -225,7 +253,7 @@ public class Map : Item
             float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
             Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
 
-            AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty,topTile.IsWalkable);
+            AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty, topTile.IsWalkable);
         }
 
         Debug.Log($"✅ 完成同步烘焙 {Data.TileData.Count} 个地块的寻路权重");

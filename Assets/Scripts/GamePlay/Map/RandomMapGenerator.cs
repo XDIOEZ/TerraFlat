@@ -15,9 +15,11 @@ using AYellowpaper.SerializedCollections;
 /// - 支持 Gizmos 可视化调试
 /// - 支持按键获取Tile环境参数（默认F3）
 /// </summary>
-public class RandomMapGenerator : MonoBehaviour
+public class RandomMapGenerator
 {
     #region 配置参数
+
+    public Item item;
     [Header("地图配置")]
     [Required] public Map map; // 地图管理对象
     [Tooltip("（可选）手动指定Grid组件，未指定则自动从当前对象/子对象获取")]
@@ -64,14 +66,14 @@ public class RandomMapGenerator : MonoBehaviour
     #endregion
 
     #region Unity 生命周期
-    public void Awake()
+    public void Init(Item item)
     {
         map.OnMapGenerated_Start += GenerateRandomMap_TileData;
-
+        this.item = item;
         // 1. 自动获取Grid组件（优先级：手动指定 > 当前对象 > 子对象）
         if (mapGrid == null)
         {
-            mapGrid = GetComponent<Grid>();
+            mapGrid = item.GetComponent<Grid>();
             if (mapGrid == null)
             {
                 mapGrid = map.GetComponentInChildren<Grid>(includeInactive: false);
@@ -167,8 +169,8 @@ public class RandomMapGenerator : MonoBehaviour
 
         // 设置地图位置（从父对象位置获取）
         map.Data.position = new Vector2Int(
-            Mathf.RoundToInt(transform.parent.position.x),
-            Mathf.RoundToInt(transform.parent.position.y)
+            Mathf.RoundToInt(item.transform.parent.position.x),
+            Mathf.RoundToInt(item.transform.parent.position.y)
         );
 
         // 初始化环境因子网格
@@ -668,7 +670,7 @@ public class RandomMapGenerator : MonoBehaviour
     private bool TryGetEnvironmentFactorsAt(Vector2Int gridPos, out EnvironmentFactors env)
     {
         env = default;
-        
+
         Vector2Int localGridPos = gridPos - map.Data.position;
 
         // 检查是否在有效范围内

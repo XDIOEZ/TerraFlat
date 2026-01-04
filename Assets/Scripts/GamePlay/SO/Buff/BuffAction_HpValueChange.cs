@@ -16,7 +16,7 @@ public class BuffAction_HpValueChange : BuffAction
             data.buff_Receiver.itemMods.GetMod_ByID(ModText.Hp, out mod);
             if (mod == null)
             {
-                Debug.LogError("BuffAction_HpValueChange: damageReceiver is null");
+                Debug.LogError($"{data.buff_Receiver}BuffAction_HpValueChange: damageReceiver is null");
                 return;
             }
 

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1086107019792522300}
   - component: {fileID: 6380976053858111116}
   - component: {fileID: 8150678009543317076}
+  - component: {fileID: 3570054203172874195}
   m_Layer: 9
   m_Name: Module_Animator
   m_TagString: Untagged
@@ -54,7 +55,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 06dc2608a1031034698c137f9f6cfbc8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -127,3 +128,17 @@ MonoBehaviour:
     Type: 0
     BitData: 
   animator: {fileID: 6380976053858111116}
+--- !u!114 &3570054203172874195
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2411235646888064391}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b67aa8cbbb77cc46b3d33b67e456f2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bodyMinProp: _BodyMinV
+  bodyMaxProp: _BodyMaxV

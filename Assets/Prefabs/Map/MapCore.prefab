@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4969519381451034378}
   - component: {fileID: 5175292470693907942}
-  - component: {fileID: 3175238874894987672}
   - component: {fileID: 8233460568870623006}
   - component: {fileID: 8016388638861598348}
   m_Layer: 8
@@ -48,47 +47,6 @@ Grid:
   m_CellGap: {x: 0, y: 0, z: 0}
   m_CellLayout: 0
   m_CellSwizzle: 0
---- !u!114 &3175238874894987672
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2111103676966031222}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 000d1751e4c68b948acc4b05eba47054, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  map: {fileID: 8233460568870623006}
-  mapGrid: {fileID: 5175292470693907942}
-  targetTilemap: {fileID: 6321057560787975102}
-  Equator: 0
-  biomes:
-  - {fileID: 11400000, guid: e5e9fd78101f9d944b68fbd0b7bf50b6, type: 2}
-  - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
-  - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
-  - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
-  - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
-  - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
-  - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
-  tilesPerFrame: 50
-  seamlessBorders: 1
-  Noises:
-    _serializedList:
-    - Key: 0
-      Value: {fileID: 11400000, guid: a10de3b0d05cf924a9d97497eb998f8d, type: 2}
-    - Key: 1
-      Value: {fileID: 11400000, guid: f19a0c1862aa7f04ebd029b990d644a5, type: 2}
-    - Key: 2
-      Value: {fileID: 11400000, guid: b344071298f5ba94d928cde370657f36, type: 2}
-    - Key: 3
-      Value: {fileID: 11400000, guid: 7e337b6287b4acf4a9476b87a9a99e4a, type: 2}
-    - Key: 4
-      Value: {fileID: 11400000, guid: 3db59eb60d7f87842bce46d0e9fafc0a, type: 2}
-    - Key: 5
-      Value: {fileID: 11400000, guid: dd1e1804a2ebcf841ac46e6ef1a9303b, type: 2}
-  detectKey: 284
 --- !u!114 &8233460568870623006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -102,6 +60,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
+  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -109,6 +68,10 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
   updateInterval: 0.1
   Data:
     IDName: MapCore

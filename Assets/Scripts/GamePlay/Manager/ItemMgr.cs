@@ -74,12 +74,12 @@ public class ItemMgr : SingletonMono<ItemMgr>
             AddToGroup(item); // 新增分组逻辑
         }
         // Debug.Log("物品加载完毕");
-        GameManager.Instance.Event_ExitGame_Start+= CleanupNullItems;
+        GameManager.Instance.Event_ExitGame_Start += CleanupNullItems;
     }
 
     private void OnDestroy()
     {
-       
+        
     }
 
 
