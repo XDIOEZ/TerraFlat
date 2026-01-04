@@ -9,19 +9,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8943e7e20a600c342881e0e130e00d5d, type: 3}
+  m_Script: {fileID: 11500000, guid: 75b116e5f0ea93c45a60dada7fdafd73, type: 3}
   m_Name: Tile_Grass
   m_EditorClassIdentifier: 
-  tileItemName: 
-  displayName: 
+  tileItemName: Tile_Grass
+  displayName: Tile_Grass
   tileDataTemplate:
-    rid: 4513346302687051778
-  TileBase: {fileID: 11400000, guid: 2ccdd18f6c4787c43a001bbaa64407ab, type: 2}
-  BuffInfo: []
+    rid: 6445419709040689156
+  TileBase: {fileID: 11400000, guid: 6d0eadd27bd6e5745af12546e6ae687d, type: 2}
+  behaviours:
+  - rid: 6445419709040689157
   references:
     version: 2
     RefIds:
-    - rid: 4513346302687051778
+    - rid: 6445419709040689156
       type: {class: TileData_Grass, ns: , asm: Data}
       data:
         ID: Tile_Grass
@@ -31,9 +32,14 @@ MonoBehaviour:
         DemolitionTime: 0
         workTime: 0
         Penalty: 1000
+        IsWalkable: 1
         FertileValue:
           BaseValue: 1
           BaseAdditive: 0
           AdditiveModifier: 0
           MultiplicativeModifier: 1
           FinalAdditive: 0
+    - rid: 6445419709040689157
+      type: {class: Tile_Grass, ns: , asm: GamePlay}
+      data:
+        BuffInfo: []

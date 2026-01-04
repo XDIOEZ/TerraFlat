@@ -3,11 +3,12 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>
-/// 水体地块逻辑 ScriptableObject
+/// 水体地块逻辑行为
 /// 负责处理进入 / 离开水地块时的特效与 Buff 效果。
+/// 作为 TileBlockBehaviour 的具体实现，通过组合到 Tile_Block 中使用。
 /// </summary>
-[CreateAssetMenu(menuName = "TileBlock/Water", fileName = "Tile_Water")]
-public class Tile_Water : Tile_Block
+[System.Serializable]
+public class Tile_Water : TileBlockBehaviour
 {
     [Header("进入水体时附加的 Buff 列表")]
     public List<Buff_Data> BuffInfo = new List<Buff_Data>();
@@ -19,28 +20,29 @@ public class Tile_Water : Tile_Block
 
         bool validItem = item != null;
         BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
-
-        // 入水特效
+        // 入水效果改为：根据水深修改 Shader 的 _BodyClip，实现下半身剔除插值
         if (validItem)
         {
-            GameObject effectObj = VisualEffectManager.Instance.PlayEffect(
-                owner: item.transform,
-                effectName: "入水特效",
-                parent: item.transform
-            );
+            // 通过 TileData_Water 的深度(0-1)，直接作为身体剔除比例使用：
+            // 0 = 完全不剔除，1 = 完全从脚到底部剔除
+            TileData_Water water = tileData as TileData_Water;
 
-            if (effectObj != null)
+            float depthValue = water != null ? Mathf.Clamp01(water.DeepValue.Value) : 0f;
+
+            // 对物体及子物体的 Renderer 应用 PropertyBlock，避免改动共享材质
+            var renderers = item.GetComponentsInChildren<Renderer>();
+            for (int i = 0; i < renderers.Length; i++)
             {
-                Transform fxTransform = effectObj.transform;
-                Vector3 pos = fxTransform.localPosition;
+                var r = renderers[i];
+                if (r == null) continue;
 
-                // 通过 TileData_Water 的深度调整特效位置
-                TileData_Water water = tileData as TileData_Water;
-                float depthValue = water != null ? water.DeepValue.Value : 0f;
+                var block = new MaterialPropertyBlock();
+                r.GetPropertyBlock(block);
 
-                pos.y = Mathf.Lerp(-0.7f, 0f, depthValue);
-                pos.x = 0f;
-                fxTransform.localPosition = pos;
+                // 使用 Sprite-Lit-Master.shader 中的 _BodyClip 控制下半身剔除
+                block.SetFloat("_BodyClip", depthValue);
+
+                r.SetPropertyBlock(block);
             }
         }
 
@@ -61,12 +63,21 @@ public class Tile_Water : Tile_Block
     {
         if (item == null)
             return;
+        // 退出水面时，重置 Shader 中的身体剔除参数
+        var renderers = item.GetComponentsInChildren<Renderer>();
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            var r = renderers[i];
+            if (r == null) continue;
 
-        // 停止入水特效
-        VisualEffectManager.Instance.StopOwnerEffect(
-            owner: item.transform,
-            effectName: "入水特效"
-        );
+            var block = new MaterialPropertyBlock();
+            r.GetPropertyBlock(block);
+
+            // 恢复为 0，显示整个人物
+            block.SetFloat("_BodyClip", 0f);
+
+            r.SetPropertyBlock(block);
+        }
 
         // 移除 Buff
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();

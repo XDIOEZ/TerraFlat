@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 通用地块逻辑 ScriptableObject
-/// - 主要用于快速创建「没有特殊逻辑」或「只需要简单 Buff/特效」的通用地块 SO。
+/// 通用地块逻辑行为
+/// - 主要用于快速创建「没有特殊逻辑」或「只需要简单 Buff/特效」的通用地块行为类。
 /// - 参考 Tile_Water 的结构，但不绑定水深等特殊含义。
+/// 作为 TileBlockBehaviour 的具体实现，通过组合到 Tile_Block 中使用。
 /// </summary>
-[CreateAssetMenu(menuName = "TileBlock/Universal", fileName = "Tile_Universal")]
-public class Tile_Universal : Tile_Block
+[System.Serializable]
+public class Tile_Universal : TileBlockBehaviour
 {
     [Header("进入该地块时播放的特效名称(可选)")]
     [Tooltip("留空则不播放特效，例如：\"入水特效\"、\"踩到草特效\" 等")]

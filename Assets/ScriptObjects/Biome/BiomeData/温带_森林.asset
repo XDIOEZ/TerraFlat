@@ -22,8 +22,6 @@ MonoBehaviour:
     SolidityRange: {x: 0, y: 1}
     HightRange: {x: 0.5, y: 1}
   TerrainConfig:
-    TileSpawns:
-    - {fileID: 11400000, guid: 6b011c6baeb9d4140875090c5a56129e, type: 2}
     TileSpawns_NoSO:
     - TileBlock: {fileID: 11400000, guid: 843e8341b637e024399c21bb22e77547, type: 2}
       environmentConditionRange:
@@ -32,7 +30,6 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         SolidityRange: {x: 0, y: 1}
         HightRange: {x: 0, y: 1}
-    ItemSpawn: []
     ItemSpawn_NoSO:
     - itemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
       itemName: Twine

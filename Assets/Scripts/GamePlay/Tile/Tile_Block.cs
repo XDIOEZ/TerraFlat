@@ -1,13 +1,15 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 抽象地块逻辑 ScriptableObject
+/// 地块逻辑 ScriptableObject
 /// 负责描述「踩在某个 Tile 上时」的进入 / 退出 / 持续效果接口。
-/// 后续具体地块（如水、草）可以继承本类实现自己的逻辑。
+/// 通过组合 TileBlockBehaviour，而不是继承本类，来实现具体逻辑。
 /// </summary>
 [System.Serializable]
-public abstract class Tile_Block : ScriptableObject
+[CreateAssetMenu(menuName = "TileBlock/Block", fileName = "Tile_Block")]
+public class Tile_Block : ScriptableObject
 {
     [Header("标识配置")]
     [Tooltip("用于和 TileData.Name_ItemName 对应，例如：TileItem_Water")]
@@ -21,8 +23,13 @@ public abstract class Tile_Block : ScriptableObject
     [SerializeReference]
     public TileData tileDataTemplate;
 
-        [Header("对应的 Unity TileBase 资源")]
+    [Header("对应的 Unity TileBase 资源")]
     public TileBase TileBase;
+
+    [Header("逻辑行为列表（组合方式")]
+    [Tooltip("按顺序执行的地块逻辑行为列表，通过 SerializeReference 支持多态，多种逻辑可以叠加生效")]
+    [SerializeReference]
+    public List<TileBlockBehaviour> behaviours = new List<TileBlockBehaviour>();
 
     /// <summary>
     /// 创建一份运行时使用的 TileData 拷贝
@@ -44,22 +51,49 @@ public abstract class Tile_Block : ScriptableObject
     /// <summary>
     /// 进入该地块时调用
     /// </summary>
-    public virtual void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {
+        if (behaviours == null || behaviours.Count == 0)
+            return;
+
+        for (int i = 0; i < behaviours.Count; i++)
+        {
+            var b = behaviours[i];
+            if (b == null) continue;
+            b.OnEnter(item, tileData, map, receiver);
+        }
     }
 
     /// <summary>
     /// 离开该地块时调用
     /// </summary>
-    public virtual void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {
+        if (behaviours == null || behaviours.Count == 0)
+            return;
+
+        for (int i = 0; i < behaviours.Count; i++)
+        {
+            var b = behaviours[i];
+            if (b == null) continue;
+            b.OnExit(item, tileData, map, receiver);
+        }
     }
 
     /// <summary>
     /// 每帧在该地块上时调用（可选）
     /// </summary>
-    public virtual void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
     {
+        if (behaviours == null || behaviours.Count == 0)
+            return;
+
+        for (int i = 0; i < behaviours.Count; i++)
+        {
+            var b = behaviours[i];
+            if (b == null) continue;
+            b.OnUpdate(item, tileData, map, receiver, deltaTime);
+        }
     }
 
     /// <summary>
