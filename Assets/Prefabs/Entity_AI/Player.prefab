@@ -541,6 +541,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7343432311901774332}
     m_Modifications:
+    - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
+      propertyPath: distanceConfig.UnActiveDistance
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
+      propertyPath: distanceConfig.LoadChunkDistance
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
+      propertyPath: distanceConfig.DestroyChunkDistance
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 2683999769122623227, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
       propertyPath: m_Name
       value: Module_ChunkLoder

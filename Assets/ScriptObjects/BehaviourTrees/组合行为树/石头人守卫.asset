@@ -367,6 +367,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-8571988059021435420
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2205,6 +2206,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-5436676876454460499
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2384,6 +2386,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-5172618750361501641
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3257,6 +3260,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-3849326016617186678
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3331,6 +3335,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-3823689825311628214
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3354,6 +3359,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-3820310855109188327
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4871,6 +4877,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-1541519431786659250
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5300,6 +5307,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-1003314579463103315
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5323,6 +5331,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-963948672720739106
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5372,6 +5381,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-939357697327158667
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5694,6 +5704,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-402081206131832861
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5909,6 +5920,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-71668978776239371
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6887,6 +6899,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &1152130958848470763
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7095,6 +7108,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &1604972994741613843
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8260,6 +8274,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &3494793655782391953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8775,6 +8790,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &3948120901536236950
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9388,9 +9404,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6CA1\u627E\u5230\u653B\u51FB\u8005\u8FD4\u56DEfalse \u8DF3\u51FA\u5FAA\u73AF"
   drawGizmos: 0
-  RunAwayDirection: {x: 0, y: 0}
-  RunAwayDistance: 10
-  RandomAngle: 180
+  isRunning: 0
 --- !u!114 &4972450979963491389
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10061,6 +10075,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &5850111789529976200
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11367,6 +11382,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &7954900591728151186
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11774,6 +11790,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &8451774759691100012
 MonoBehaviour:
   m_ObjectHideFlags: 0

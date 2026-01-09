@@ -1,7 +1,6 @@
 using UnityEngine;
 
-// 可在Unity编辑器中创建该噪声资产
-[CreateAssetMenu(fileName = "PerlinNoise", menuName = "Noise/Perlin Noise")]
+[System.Serializable]
 public class PerlinNoise : BaseNoise
 {
     [Tooltip("噪声 octave 数量，影响细节丰富度")]
@@ -29,8 +28,8 @@ public class PerlinNoise : BaseNoise
         for (int i = 0; i < octaves; i++)
         {
             // 结合种子偏移和随机种子，实现不同种子的噪声变化
-            float sampleX = x * frequency + (seed + seedOffset) * 0.1f;
-            float sampleY = y * frequency + (seed + seedOffset) * 0.1f;
+            float sampleX = x * frequency + (seed) * 0.1f;
+            float sampleY = y * frequency + (seed) * 0.1f;
 
             // Perlin噪声原生返回值范围是[0,1]
             float noiseValue = Mathf.PerlinNoise(sampleX, sampleY);

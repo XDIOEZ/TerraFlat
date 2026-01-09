@@ -26,12 +26,12 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     public int fontSize = 12;
     
     // 引用
-    private RandomMapGenerator mapGenerator;
     private Camera mainCamera;
     private Grid mapGrid;
     private Tilemap targetTilemap;
     private Map map;
     private List<BiomeData> biomes;
+    private bool showBiomeOverlay;
     
     // 显示控制
     private bool isVisible = true;
@@ -59,14 +59,23 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private void Awake()
     {
         // 获取必要的引用
-        mapGenerator = GetComponent<RandomMapGenerator>();
         map = GetComponent<Map>();
-        if (mapGenerator != null)
+        if (map != null)
         {
-            map = mapGenerator.map;
-            mapGrid = mapGenerator.mapGrid;
-            targetTilemap = mapGenerator.targetTilemap;
-            biomes = mapGenerator.biomes;
+            // Tilemap / Grid 优先从 Map 本体取，避免依赖生成器
+            targetTilemap = map.tileMap;
+            if (targetTilemap == null)
+            {
+                targetTilemap = map.GetComponentInChildren<Tilemap>(includeInactive: true);
+            }
+
+            mapGrid = map.GetComponentInChildren<Grid>(includeInactive: true);
+
+            // 生物群系与调试开关：仅作为“配置来源”在 Awake 缓存一次
+            // 如果未来你想完全移除生成器依赖，可把这些配置移动到 Map 或独立 ScriptableObject。
+            var landGen = map.LandGenerator;
+            biomes = landGen != null ? landGen.biomes : null;
+            showBiomeOverlay = landGen != null && landGen.showBiomeOverlay;
         }
         
         // 创建悬停指示器实例
@@ -120,7 +129,12 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!Application.isPlaying || !isVisible) return;
+        if (!Application.isPlaying) return;
+
+        // 先绘制生物群系覆盖调试（独立于信息面板显示开关）
+        DrawBiomeOverlay();
+
+        if (!isVisible) return;
         
         // 确保GUI样式已创建
         if (!stylesCreated)
@@ -154,6 +168,88 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     }
 
     /// <summary>
+    /// 绘制生物群系颜色覆盖层（基于 EnvFactorsGrid + Biomes 现算颜色）
+    /// </summary>
+    private void DrawBiomeOverlay()
+    {
+        if (!showBiomeOverlay)
+            return;
+
+        if (map == null || map.Data == null || map.Data.EnvironmentData == null || biomes == null || biomes.Count == 0)
+            return;
+
+        // 需要摄像机和Tilemap来进行坐标转换
+        Camera cam = GetMainCamera();
+        if (cam == null)
+            return;
+
+        Texture2D tex = GetOverlayPixelTexture();
+        if (tex == null)
+            return;
+
+        const float size = 6f; // 颜色块尺寸（像素）
+
+        var envGrid = map.Data.EnvironmentData;
+        int width = envGrid.GetLength(0);
+        int height = envGrid.GetLength(1);
+        Vector2Int mapOrigin = map.Data.position;
+
+        for (int xIndex = 0; xIndex < width; xIndex++)
+        {
+            for (int yIndex = 0; yIndex < height; yIndex++)
+            {
+                EnvironmentFactors env = envGrid[xIndex, yIndex];
+
+                // 根据环境匹配生物群系，获取预览颜色
+                Color color = Color.clear;
+                bool found = false;
+                foreach (var biome in biomes)
+                {
+                    if (biome != null && biome.IsEnvironmentValid(env))
+                    {
+                        color = biome.PreviewColor;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    continue;
+
+                int worldX = mapOrigin.x + xIndex;
+                int worldY = mapOrigin.y + yIndex;
+
+                // 如果有 Tilemap，则可选地检查是否有实际 Tile
+                if (targetTilemap != null)
+                {
+                    Vector3Int cellPos = new Vector3Int(worldX, worldY, 0);
+                    if (!targetTilemap.HasTile(cellPos))
+                        continue;
+                }
+
+                // 将格子中心转换为屏幕坐标
+                Vector3 worldPos = new Vector3(worldX + 0.5f, worldY + 0.5f,
+                    targetTilemap != null ? targetTilemap.transform.position.z : 0f);
+                Vector3 screenPos = cam.WorldToScreenPoint(worldPos);
+
+                // 在相机视锥外则跳过
+                if (screenPos.z < 0f)
+                    continue;
+
+                float guiX = screenPos.x - size * 0.5f;
+                float guiY = Screen.height - screenPos.y - size * 0.5f; // OnGUI 的 Y 轴与屏幕坐标相反
+
+                Rect rect = new Rect(guiX, guiY, size, size);
+
+                Color oldColor = GUI.color;
+                GUI.color = color;
+                GUI.DrawTexture(rect, tex);
+                GUI.color = oldColor;
+            }
+        }
+    }
+
+    /// <summary>
     /// 更新悬停指示器位置
     /// </summary>
     private void UpdateHoverIndicator()
@@ -179,6 +275,20 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         {
             hoverIndicatorInstance.SetActive(false);
         }
+    }
+
+    private static Texture2D overlayPixelTexture;
+
+    private static Texture2D GetOverlayPixelTexture()
+    {
+        if (overlayPixelTexture == null)
+        {
+            overlayPixelTexture = new Texture2D(1, 1);
+            overlayPixelTexture.hideFlags = HideFlags.HideAndDontSave;
+            overlayPixelTexture.SetPixel(0, 0, Color.white);
+            overlayPixelTexture.Apply();
+        }
+        return overlayPixelTexture;
     }
 
 /// <summary>
@@ -263,9 +373,9 @@ private void UpdateMouseInfo()
     Vector2Int localGridPos = gridPos - map.Data.position;
 
     // 5. 检测是否在有效范围内
-    if (mapGenerator == null || mapGenerator.EnvFactorsGrid == null ||
-        localGridPos.x < 0 || localGridPos.x >= mapGenerator.EnvFactorsGrid.GetLength(0) ||
-        localGridPos.y < 0 || localGridPos.y >= mapGenerator.EnvFactorsGrid.GetLength(1))
+    if (map == null || map.Data == null || map.Data.EnvironmentData == null ||
+        localGridPos.x < 0 || localGridPos.x >= map.Data.EnvironmentData.GetLength(0) ||
+        localGridPos.y < 0 || localGridPos.y >= map.Data.EnvironmentData.GetLength(1))
     {
         isValidPosition = false;
         return;
@@ -274,7 +384,7 @@ private void UpdateMouseInfo()
     // 6. 获取环境信息
     isValidPosition = true;
     hoveredGridPos = gridPos;
-    hoveredEnvFactors = mapGenerator.EnvFactorsGrid[localGridPos.x, localGridPos.y];
+    hoveredEnvFactors = map.Data.EnvironmentData[localGridPos.x, localGridPos.y];
     hoveredTileData = map.GetTile(gridPos);
     
     // 匹配生物群系
