@@ -39,7 +39,7 @@ MonoBehaviour:
         TemperatureRange: {x: 0.5, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.5, y: 1}
-        SolidityRange: {x: 0, y: 1}
+        SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
       itemName: Bush
@@ -49,7 +49,7 @@ MonoBehaviour:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
+        SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
       itemName: Log
@@ -59,7 +59,7 @@ MonoBehaviour:
         TemperatureRange: {x: 0.4, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
-        SolidityRange: {x: 0, y: 1}
+        SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
       itemName: Stick_Wood
@@ -69,7 +69,7 @@ MonoBehaviour:
         TemperatureRange: {x: 0.4, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
-        SolidityRange: {x: 0, y: 1}
+        SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
       itemName: "\u82F9\u679C\u6811"
@@ -79,5 +79,5 @@ MonoBehaviour:
         TemperatureRange: {x: 0.4, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
-        SolidityRange: {x: 0, y: 1}
+        SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}

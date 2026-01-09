@@ -1,7 +1,7 @@
 using UltEvents;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "TriFractalRiverNoise", menuName = "Noise/TriFractalRiverNoise")]
+[System.Serializable]
 public class TriFractalRiverNoise : BaseNoise
 {
     [Header("分形参数")]
@@ -29,7 +29,8 @@ public class TriFractalRiverNoise : BaseNoise
     public bool invertBand = false;
 
     [Header("与陆地噪声交互（可选）")]
-    [Tooltip("可选：传入你的陆地噪声 ScriptableObject，用于根据陆地噪声调节河流生成（不填则忽略）")]
+    [Tooltip("可选：传入你的陆地噪声设置实例，用于根据陆地噪声调节河流生成（不填则忽略）")]
+    [SerializeReference]
     public BaseNoise landNoise = null;
 
     [Tooltip("陆地噪声影响强度（>0 增加阈值，<0 减少阈值）")]
@@ -52,8 +53,8 @@ public class TriFractalRiverNoise : BaseNoise
         seed = seed % 10000; // 保证 seed 在 0~9999
 
         // 把 seed 转成偏移，避免直接把 seed 加到频率上导致重复模式（更自然）
-        float seedX = seed * 100.13f + seedOffset * 10.7f;
-        float seedY = seed * 73.21f - seedOffset * 7.33f;
+        float seedX = seed * 100.13f  * 10.7f;
+        float seedY = seed * 73.21f * 7.33f;
 
         // 1) tri / ridged fBm
         float amplitude = 1f;

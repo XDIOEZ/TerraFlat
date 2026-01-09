@@ -273,7 +273,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
         if (targetNode == null)
         {
-            Debug.LogWarning($"⚠️ 节点获取失败！位置：{worldPos}（不在寻路图内");
+//            Debug.LogWarning($"⚠️ 节点获取失败！位置：{worldPos}（不在寻路图内");
             return;
         }
 

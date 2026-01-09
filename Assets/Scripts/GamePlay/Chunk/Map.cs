@@ -4,6 +4,7 @@ using NPOI.SS.Formula.Functions;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -28,13 +29,21 @@ public class Map : Item
     // 协程引用管理，避免协程叠加
     public Coroutine loadTileMapCoroutine;
     public Coroutine backTilePenaltyCoroutine;
+    public Coroutine loadOrGenerateCoroutine;
 
     [SerializeReference]
-    public RandomMapGenerator mapGenerator;//TODO 我在这里添加了一个类 以后就直接从这里配置了 修改一下这个脚本以适配我的需求
+    public List<ChunkGeneratorBase> mapGenerators = new List<ChunkGeneratorBase>();
+
+    /// <summary>
+    /// 兼容调试/显示：通常 0 号位放 ChunkGenerator_Land。
+    /// </summary>
+    public ChunkGenerator_Land LandGenerator => GetGenerator<ChunkGenerator_Land>();
+
+    private bool isMapGeneratorHooked;
 
     private void Awake()
     {
-        InitMapGenerator();
+        InitMapGenerators();
     }
 
     /// <summary>
@@ -43,17 +52,108 @@ public class Map : Item
     /// - 绑定当前 Map / Item 引用
     /// - 订阅 OnMapGenerated_Start 事件
     /// </summary>
-    private void InitMapGenerator()
+    private void InitMapGenerators()
     {
-        // 保留在 Inspector 中已经配置好的引用
-        if (mapGenerator == null)
+        for (int i = 0; i < mapGenerators.Count; i++)
         {
-            mapGenerator = new RandomMapGenerator();
+            var gen = mapGenerators[i];
+            if (gen == null)
+            {
+                Debug.LogError($"[Map.InitMapGenerators] ❌ mapGenerators[{i}] 为空（SerializeReference 丢失/未实例化？）", this);
+                continue;
+            }
+
+            gen.Init(this);
         }
 
-        // 让生成器知道当前地图和物品是谁
-        mapGenerator.map = this;
-        mapGenerator.Init(this);
+        // 由 Map 负责把事件桥接到生成器（生成器不再持有 Map 引用）
+        if (!isMapGeneratorHooked)
+        {
+            OnMapGenerated_Start += HandleMapGeneratedStart;
+            isMapGeneratorHooked = true;
+        }
+    }
+
+    /// <summary>
+    /// 获取第一个指定类型的生成器（常用于调试/显示脚本取 LandGenerator）。
+    /// </summary>
+    public T GetGenerator<T>() where T : ChunkGeneratorBase
+    {
+        if (mapGenerators == null)
+            return null;
+
+        for (int i = 0; i < mapGenerators.Count; i++)
+        {
+            if (mapGenerators[i] is T typed)
+                return typed;
+        }
+
+        return null;
+    }
+
+    private void HandleMapGeneratedStart()
+    {
+        var planetData = SaveDataMgr.Instance != null ? SaveDataMgr.Instance.GetCurrentPlanetData() : null;
+        GenerateByPipeline(planetData);
+    }
+
+    /// <summary>
+    /// 按列表顺序执行所有生成器：0号位（大陆）→ 1号位（河流）→ ...
+    /// </summary>
+    private void GenerateByPipeline(PlanetData planetData)
+    {
+        InitMapGenerators();
+
+        if (mapGenerators == null || mapGenerators.Count == 0)
+        {
+            Debug.LogError("[Map.GenerateByPipeline] ❌ mapGenerators 为空，无法生成", this);
+            return;
+        }
+
+        if (Data == null)
+        {
+            Debug.LogWarning("[Map.GenerateByPipeline] ⚠️ Data 为空，已自动创建 Data_TileMap", this);
+            Data = new Data_TileMap();
+        }
+
+        // 开始生成：先标记为未完成
+        Data.TileLoaded = false;
+
+        var context = new MapGenerationContext(this, planetData);
+
+        for (int i = 0; i < mapGenerators.Count; i++)
+        {
+            var gen = mapGenerators[i];
+            if (gen == null)
+            {
+                Debug.LogError($"[Map.GenerateByPipeline] ❌ mapGenerators[{i}] 为空，已跳过", this);
+                continue;
+            }
+
+            try
+            {
+                gen.Init(this);
+                gen.Generate(context);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Map.GenerateByPipeline] ❌ 执行生成器[{i}]({gen.GetType().Name})异常：{ex}", this);
+            }
+        }
+
+        // 统一收尾：保证“迭代式生成”全部完成后再标记 TileLoaded
+        if (tileMap != null)
+        {
+            tileMap.RefreshAllTiles();
+        }
+
+        Data.TileLoaded = true;
+        BackTilePenalty_Async();
+    }
+
+    private void OnGUI()
+    {
+        // Map 自身不再负责调试 GUI，相关调试由 EnvironmentInfoDisplay 处理
     }
 
     // 强制类型转换属性（保持与基类 Item 的兼容）
@@ -72,25 +172,88 @@ public class Map : Item
     #endregion
 
     #region 保存和加载
+
+
     [Button("从数据加载地图")]
     public override void Load()
     {
-        chunk = GetComponentInParent<Chunk>();
-        chunk.Map = this;
+        base.Load();
 
-        // 检查TileData的数量是否等于ChunkSize*ChunkSize的数量
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        int expectedTileCount = (int)(chunkSize.x * chunkSize.y);
-        // 如果TileData为空或数量不等于期望值，表示TileData还在生成中
-        if (Data == null || Data.TileData == null || Data.TileData.Count != expectedTileCount)
+        chunk = GetComponentInParent<Chunk>();
+        if (chunk != null)
         {
-            Debug.Log($"TileData还在生成中，当前数量: {Data?.TileData?.Count ?? 0}，期望数量: {expectedTileCount}");
+            chunk.Map = this;
+        }
+
+        // 确保生成器列表已初始化并绑定当前 Map
+        InitMapGenerators();
+
+        // 确保 tileMap 引用有效（支持不在 Inspector 里手动拖拽）
+        if (tileMap == null)
+        {
+            // 优先从“大陆生成器”拿 targetTilemap（兼容旧逻辑）
+            tileMap = LandGenerator != null ? LandGenerator.targetTilemap : null;
+            if (tileMap == null)
+            {
+                tileMap = GetComponentInChildren<Tilemap>(includeInactive: false);
+            }
+        }
+
+        if (tileMap == null)
+        {
+            Debug.LogError("[Map.Load] tileMap 为空，无法加载/生成地图", this);
             return;
         }
 
-        // TileData已生成完成，开始加载
+        // TODO 1：检查 Data，如果不存在或为空，则按种子 + 噪声生成 TileData
+        if (Data == null)
+        {
+            Data = new Data_TileMap();
+        }
+
+        bool hasTileData = Data.TileData != null && Data.TileData.Count > 0;
+
+        // 先停止上一轮加载/生成流程（避免多次点击按钮叠加协程）
+        if (loadOrGenerateCoroutine != null)
+        {
+            StopCoroutine(loadOrGenerateCoroutine);
+            loadOrGenerateCoroutine = null;
+        }
+
+        if (!hasTileData)
+        {
+            // 生成数据（可能是分帧生成），生成完成后再把数据刷到 Tilemap
+            Data.TileLoaded = false;
+            loadOrGenerateCoroutine = StartCoroutine(GenerateThenLoadTilemapCoroutine());
+            return;
+        }
+
+        // TODO 2：直接加载 Data 到 TileMap 上
+        tileMap.ClearAllTiles();
         LoadTileData_To_TileMap_Ansync();
+        Data.TileLoaded = true;
     }
+
+
+    private IEnumerator GenerateThenLoadTilemapCoroutine()
+    {
+        // 触发生成器（生成器内部会根据 tilesPerFrame 选择立即/分帧生成）
+        OnMapGenerated_Start.Invoke();
+
+        // 等待生成完成：既要有 TileData，也要等 TileLoaded 被标记为 true
+        // （TileLoaded 在 Map.GenerateByPipeline() 统一收尾中设置）
+        while (Data == null || Data.TileData == null || Data.TileData.Count == 0 || Data.TileLoaded == false)
+        {
+            yield return null;
+        }
+
+        // 将生成的数据渲染到 Tilemap
+        tileMap.ClearAllTiles();
+        LoadTileData_To_TileMap_Ansync();
+
+        loadOrGenerateCoroutine = null;
+    }
+
 
     //不需要保存数据 因为游戏中的所有对地图的行为 直接影响背后数据
     [Button("保存地图到数据")]

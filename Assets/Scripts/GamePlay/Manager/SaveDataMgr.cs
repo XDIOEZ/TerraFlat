@@ -174,6 +174,16 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             items = GetActiveSceneAllItemData_Static()
         };
     }
+
+    public PlanetData GetCurrentPlanetData()
+    {
+        string activeSceneName = SceneManager.GetActiveScene().name;
+        if (SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out PlanetData planetData))
+        {
+            return planetData;
+        }
+        return null;
+    }
     
     /// <summary>
     /// 获取当前活动场景中所有物品的数据（静态版本）

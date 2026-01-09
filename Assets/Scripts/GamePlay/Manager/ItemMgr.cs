@@ -73,7 +73,12 @@ public class ItemMgr : SingletonMono<ItemMgr>
             //RunTimeItems[item.itemData.Guid] = item;
             AddToGroup(item); // 新增分组逻辑
         }
-        // Debug.Log("物品加载完毕");
+
+    }
+
+    public void Start()
+    {
+                // Debug.Log("物品加载完毕");
         GameManager.Instance.Event_ExitGame_Start += CleanupNullItems;
     }
 

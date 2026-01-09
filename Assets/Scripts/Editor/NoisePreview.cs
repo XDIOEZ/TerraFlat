@@ -6,7 +6,8 @@ using System.Linq;
 [RequireComponent(typeof(SpriteRenderer))]
 public class NoisePreview : MonoBehaviour
 {
-    [Tooltip("噪声设置资产")]
+    [Tooltip("噪声设置（可通过 SerializeReference 内联配置不同噪声类型)")]
+    [SerializeReference]
     public BaseNoise settings;
 
     [Header("预览设置")]
@@ -45,7 +46,6 @@ public class NoisePreview : MonoBehaviour
     private void OnEnable()
     {
         InitializeComponents();
-        SubscribeToNoiseEvents();
 
         if (!Application.isPlaying)
         {
@@ -60,50 +60,13 @@ public class NoisePreview : MonoBehaviour
 
     private void OnDisable()
     {
-        UnsubscribeFromNoiseEvents();
+        CleanupResources();
+        isInitialized = false;
     }
 
     private void Update()
     {
         transform.localScale = Vector3.one * previewScale;
-    }
-
-    // 订阅噪声设置的更新事件
-    private void SubscribeToNoiseEvents()
-    {
-        UnsubscribeFromNoiseEvents(); // 先取消旧订阅
-
-        if (settings != null)
-        {
-           settings.UpdateEvent.Clear();
-           settings.UpdateEvent +=(OnNoiseSettingsUpdated);
-        }
-    }
-
-    // 取消订阅噪声设置的更新事件
-    private void UnsubscribeFromNoiseEvents()
-    {
-        if (settings != null)
-        {
-            settings.UpdateEvent += (OnNoiseSettingsUpdated);
-        }
-    }
-
-    // 当噪声设置更新时触发
-    private void OnNoiseSettingsUpdated()
-    {
-        if (CanUpdate())
-        {
-            GenerateNoiseTexture();
-        }
-    }
-
-    // 检查是否可以更新预览
-    private bool CanUpdate()
-    {
-        return isInitialized &&
-               (Application.isPlaying ||
-                (editModeRealtimeUpdate && !Application.isPlaying));
     }
 
     private void InitializeComponents()
@@ -354,10 +317,9 @@ public class NoisePreview : MonoBehaviour
     }
 
 
-    // 当噪声设置资产更换时重新订阅事件
+    // 当属性变更时刷新预览
     private void OnDidApplyAnimationProperties()
     {
-        SubscribeToNoiseEvents();
         if (isInitialized)
         {
             GenerateNoiseTexture();
@@ -366,7 +328,6 @@ public class NoisePreview : MonoBehaviour
 
     private void OnDestroy()
     {
-        UnsubscribeFromNoiseEvents();
         CleanupResources();
         isInitialized = false;
     }

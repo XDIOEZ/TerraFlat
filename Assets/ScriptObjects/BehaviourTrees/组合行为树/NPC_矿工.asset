@@ -604,6 +604,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-6726973407306352912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -900,6 +901,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-5065981060647705125
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1063,6 +1065,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-4772646789509777121
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1342,6 +1345,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-3820205080280822284
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1476,6 +1480,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-3165251601619736495
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2156,6 +2161,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-301303423287694550
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2292,6 +2298,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &-76026123956726513
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2619,6 +2626,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &1157356255011276743
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2669,6 +2677,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &1551473592980769742
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3488,6 +3497,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &3996273364467935987
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3567,6 +3577,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &4039514587044868026
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3847,9 +3858,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: "\u6CA1\u627E\u5230\u653B\u51FB\u8005\u8FD4\u56DEfalse \u8DF3\u51FA\u5FAA\u73AF"
   drawGizmos: 0
-  RunAwayDirection: {x: 0, y: 0}
-  RunAwayDistance: 10
-  RandomAngle: 180
+  isRunning: 0
 --- !u!114 &4963689981245947810
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4414,6 +4423,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &7083718520886790247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4550,6 +4560,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &7434816737478528894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4825,6 +4836,7 @@ MonoBehaviour:
   isCollapsed: 0
   description: 
   drawGizmos: 0
+  IsRunState: 0
 --- !u!114 &8647051759375622727
 MonoBehaviour:
   m_ObjectHideFlags: 0

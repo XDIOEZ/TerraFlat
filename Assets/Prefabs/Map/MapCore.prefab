@@ -72,7 +72,7 @@ MonoBehaviour:
     _PersistentCalls: []
   OnDurabilityModified:
     _PersistentCalls: []
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
     IDName: MapCore
     GameName: 
@@ -110,6 +110,83 @@ MonoBehaviour:
     _PersistentCalls: []
   chunk: {fileID: 0}
   ParentObject: {fileID: 0}
+  mapGenerators:
+  - rid: 6445419845959286799
+  - rid: 6445419845959286807
+  - rid: 6445419845959286808
+  references:
+    version: 2
+    RefIds:
+    - rid: 6445419845959286799
+      type: {class: ChunkGenerator_Land, ns: , asm: GamePlay}
+      data:
+        plantData:
+          Name: 
+          Radius: 1000
+          NoiseScale: 0.01
+          ChunkSize: {x: 100, y: 100}
+          AutoGenerateMap: 1
+        mapGrid: {fileID: 0}
+        targetTilemap: {fileID: 0}
+        Equator: 0
+        biomes:
+        - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
+        - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
+        NoiseConfigs:
+        - rid: 6445419845959286800
+        - rid: 6445419845959286804
+        showBiomeOverlay: 0
+    - rid: 6445419845959286800
+      type: {class: LandNoise, ns: , asm: Manager}
+      data:
+        noiseType: 0
+        coordScale: 5
+        frequency: 0.1
+        octaves: 4
+        lacunarity: 2
+        persistence: 0.5
+        outputScale: 1
+        coordOffset: {x: 0, y: 0}
+    - rid: 6445419845959286804
+      type: {class: LandNoise, ns: , asm: Manager}
+      data:
+        noiseType: 2
+        coordScale: 10
+        frequency: 0.1
+        octaves: 4
+        lacunarity: 2
+        persistence: 0.5
+        outputScale: 1
+        coordOffset: {x: 1000, y: 1000}
+    - rid: 6445419845959286807
+      type: {class: ChunkGenerator_River, ns: , asm: GamePlay}
+      data:
+        targetTilemap: {fileID: 0}
+        riverTileBlock: {fileID: 11400000, guid: 7161f78828c23bc43a28d345ef6f8bc1, type: 2}
+        seed: 12345
+        cellSize: 100
+        edgeWidth: 1
+        edgeWidthRange: {x: 0.5, y: 0.5}
+        useMultiSample: 1
+        sampleInset: 0.1
+        warpAmplitude: 0.5
+        warpFrequency: 0.5
+        trigWaveAmplitude: 10
+        trigWaveFrequency: 0.1
+        trigWaveNoiseFrequency: 0.035
+        connectPasses: 0
+        connectNeighborThreshold: 2
+        removeIsolated: 1
+        bridgeGaps: 1
+        bridgePasses: 2
+        minHeight: 0.2
+        maxHeight: 0.95
+        writeMode: 0
+    - rid: 6445419845959286808
+      type: {class: ChunkGenerator_SpawnItems, ns: , asm: GamePlay}
+      data:
+        biomes: []
+        logSummary: 1
 --- !u!114 &8016388638861598348
 MonoBehaviour:
   m_ObjectHideFlags: 0

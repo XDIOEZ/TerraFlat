@@ -235,10 +235,7 @@ MonoBehaviour:
   Ready_planetData:
     Name: "\u5730\u7403"
     Radius: 1000
-    TemperatureOffset: 0
-    RainOffset: 0
-    OceanHeight: 0
-    NoiseScale: 1
+    NoiseScale: 0.01
     ChunkSize: {x: 20, y: 20}
     AutoGenerateMap: 1
   Ready_timeData:

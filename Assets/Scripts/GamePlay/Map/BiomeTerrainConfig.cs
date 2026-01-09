@@ -13,16 +13,9 @@ public class BiomeTerrainConfig
     public List<Biome_ItemSpawn_NoSO> ItemSpawn_NoSO = new();
 
     [Tooltip("该生态群系的地形类型（返回 Tile_Block SO）")]
-    public Tile_Block GetTilePrefab(EnvironmentFactors env)
+    public Tile_Block Get_Tile_Block(EnvironmentFactors env)
     {
-        if (TileSpawns_NoSO == null ||  TileSpawns_NoSO.Count == 0)
-        {
-            Debug.LogError("TileSpawns 列表为空！");
-            return null;
-        }
-
-        // TODO: 后续可以根据 env 和 environmentConditionRange 做权重选择
-        return TileSpawns_NoSO[0] != null ? TileSpawns_NoSO[0].TileBlock : null;
+        return TileSpawns_NoSO[0].TileBlock;
     }
 
     public void OnValidate()
