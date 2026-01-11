@@ -22,15 +22,12 @@ MonoBehaviour:
     SolidityRange: {x: 0, y: 1}
     HightRange: {x: 0, y: 0.5}
   TerrainConfig:
-    TileSpawns:
-    - {fileID: 11400000, guid: 972b150ebbd791d4c85ebe3a2d0b2326, type: 2}
     TileSpawns_NoSO:
-    - TileBlock: {fileID: 11400000, guid: 7161f78828c23bc43a28d345ef6f8bc1, type: 2}
+    - TileBlock: {fileID: 11400000, guid: e60befebaca7a394ba5a9a6d86852db0, type: 2}
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
         SolidityRange: {x: 0, y: 1}
         HightRange: {x: 0, y: 1}
-    ItemSpawn: []
     ItemSpawn_NoSO: []
