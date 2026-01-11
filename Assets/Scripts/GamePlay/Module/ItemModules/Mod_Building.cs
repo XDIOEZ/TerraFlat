@@ -477,7 +477,7 @@ public class Mod_Building : Module
             return false;
         }
 
-        if (chunk.Map == null || chunk.Map.Data == null || chunk.Map.Data.TileData == null)
+        if (chunk.Map == null || chunk.Map.Data == null)
         {
             Debug.LogError("[CheckTilePenalties] 地图数据不完整，无法检查地块权重");
             return false;
@@ -490,23 +490,19 @@ public class Mod_Building : Module
             {
                 Vector2Int tilePos = new Vector2Int(x, y);
 
-                if (chunk.Map.Data.TileData.ContainsKey(tilePos))
+                var tileList = chunk.Map.Data.GetTileListAt(tilePos);
+                if (tileList != null && tileList.Count > 0)
                 {
-                    // 获取最顶层的TileData
-                    var tileList = chunk.Map.Data.TileData[tilePos];
-                    if (tileList != null && tileList.Count > 0)
+                    TileData topTile = tileList[^1];
+                    uint penalty = topTile.Penalty;
+
+                    Debug.Log($"[CheckTilePenalties] 地块({x}, {y})的权重: {penalty}");
+
+                    // 如果权重大于1000，禁止安装
+                    if (penalty > 1000)
                     {
-                        TileData topTile = tileList[tileList.Count - 1];
-                        uint penalty = topTile.Penalty;
-
-                        Debug.Log($"[CheckTilePenalties] 地块({x}, {y})的权重: {penalty}");
-
-                        // 如果权重大于1000，禁止安装
-                        if (penalty > 1000)
-                        {
-                            Debug.LogWarning($"[建筑安装] 安装失败: 地块({x}, {y})的权重({penalty})大于1000，禁止在此处安装建筑");
-                            return false;
-                        }
+                        Debug.LogWarning($"[建筑安装] 安装失败: 地块({x}, {y})的权重({penalty})大于1000，禁止在此处安装建筑");
+                        return false;
                     }
                 }
                 else

@@ -16,6 +16,8 @@ using UnityEngine.Tilemaps;
 [Serializable]
 public class ChunkGenerator_River : ChunkGeneratorBase
 {
+    private const float SeaSalt = 80f;
+
     #region 配置参数
     [Header("Tilemap")]
     [Tooltip("不填则使用 Map.tileMap")]
@@ -90,6 +92,51 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     [Tooltip("ReplaceTop：替换最顶层 TileData\nAddLayer：在顶部增加一层河流 TileData")]
     public RiverWriteMode writeMode = RiverWriteMode.ReplaceTop;
 
+    #region 石头生成（河床/河岸）
+    [Header("河床/河岸石头")]
+    [Tooltip("是否在生成河流后，额外在河内与河两侧生成石头")]
+    public bool spawnRiverStones = true;
+
+    [Tooltip("石头预制体（必填）")]
+    public GameObject Prefab_Stone;
+
+    [Tooltip("石头父物体（不填则挂到 Map.transform 下）")]
+    public Transform stoneParent;
+
+    [Tooltip("每个 Chunk 生成石头数量上限（防止过量实例）")]
+    public int maxStonesPerChunk = 120;
+
+    [Header("河床石头")]
+    [Range(0f, 1f)]
+    [Tooltip("河流格子生成石头的概率")]
+    public float riverStoneChance = 0.18f;
+
+    [Header("河岸石头")]
+    [Range(0f, 1f)]
+    [Tooltip("河岸（紧邻河流的非河格子）生成石头的概率")]
+    public float bankStoneChance = 0.10f;
+
+    [Min(1)]
+    [Tooltip("河岸判定半径（格子）。1=紧邻一圈")]
+    public int bankRadius = 1;
+
+    [Header("外观随机")]
+    [Tooltip("位置随机偏移（世界单位）")]
+    public Vector2 stoneOffsetRange = new Vector2(0.25f, 0.25f);
+
+    [Tooltip("随机旋转范围（Z 轴角度）")]
+    public Vector2 stoneRotationZRange = new Vector2(0f, 360f);
+
+    [Tooltip("随机缩放范围（统一缩放）")]
+    public Vector2 stoneUniformScaleRange = new Vector2(0.75f, 1.25f);
+
+    [Tooltip("每次 Generate 是否清理旧的河流石头（推荐开启，避免重复堆叠）")]
+    public bool clearPreviousStones = true;
+
+    [Tooltip("父物体命名前缀（用于清理与组织层级）")]
+    public string stoneRootNamePrefix = "RiverStones";
+    #endregion
+
     public enum RiverWriteMode
     {
         ReplaceTop,
@@ -101,6 +148,8 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     [NonSerialized] private bool _hasLoggedMissingTilemap;
     [NonSerialized] private bool _hasLoggedMissingRiverTileBlock;
     [NonSerialized] private bool _hasLoggedEnvMissing;
+    [NonSerialized] private bool _hasLoggedMissingStonePrefab;
+    [NonSerialized] private bool _hasLoggedRiverTileNotWater;
     #endregion
 
     #region 管线入口
@@ -148,21 +197,27 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             return;
         }
 
+        if (riverTileBlock.tileDataTemplate is not TileData_Water)
+        {
+            if (!_hasLoggedRiverTileNotWater)
+            {
+                _hasLoggedRiverTileNotWater = true;
+                Debug.LogError($"[ChunkGenerator_River] ❌ riverTileBlock({riverTileBlock.name}) 的 tileDataTemplate 不是 TileData_Water：无法按 salt=0 河流逻辑生成/判定", Map);
+            }
+            return;
+        }
+
         if (Map.Data == null)
         {
             Debug.LogError("[ChunkGenerator_River] ❌ Map.Data 为空，无法写入河流 TileData", Map);
             return;
         }
 
-        if (Map.Data.TileData == null)
-        {
-            Debug.LogWarning("[ChunkGenerator_River] ⚠️ Map.Data.TileData 为空，已自动创建字典", Map);
-            Map.Data.TileData = new Dictionary<Vector2Int, List<TileData>>();
-        }
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        Map.Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        Map.Data.BuildArrayFromLegacyDictionaryIfNeeded((int)chunkSize.x, (int)chunkSize.y);
 
         Vector2Int startPos = Map.Data.position;
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-
         int width = (int)chunkSize.x;
         int height = (int)chunkSize.y;
 
@@ -215,6 +270,12 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                 ApplyRiverAt(worldPos);
                 appliedCount++;
             }
+        }
+
+        // 4) 生成河床/河岸石头
+        if (spawnRiverStones)
+        {
+            SpawnStones_ForRiver(width, height, startPos, river);
         }
 
         Debug.Log($"[ChunkGenerator_River] ✅ 河流遮罩生成完成（网络噪声/Voronoi边界），覆盖格子数: {appliedCount}", Map);
@@ -511,9 +572,203 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     private static int Index(int x, int y, int width) => y * width + x;
     #endregion
 
+    #region 石头生成
+    private void SpawnStones_ForRiver(int width, int height, Vector2Int startPos, bool[] river)
+    {
+        if (Prefab_Stone == null)
+        {
+            if (!_hasLoggedMissingStonePrefab)
+            {
+                _hasLoggedMissingStonePrefab = true;
+                Debug.LogError("[ChunkGenerator_River] ❌ Prefab_Stone 为空：已开启 spawnRiverStones 但无法生成石头", Map);
+            }
+            return;
+        }
+
+        if (maxStonesPerChunk <= 0)
+        {
+            Debug.LogWarning($"[ChunkGenerator_River] ⚠️ maxStonesPerChunk({maxStonesPerChunk}) <= 0，已跳过石头生成", Map);
+            return;
+        }
+
+        // 组织父物体
+        Transform parent = stoneParent != null ? stoneParent : (Map != null ? Map.transform : null);
+        if (parent == null)
+        {
+            Debug.LogError("[ChunkGenerator_River] ❌ 无法确定石头父物体（stoneParent 与 Map.transform 均为空）", Map);
+            return;
+        }
+
+        string rootName = $"{stoneRootNamePrefix}_{startPos.x}_{startPos.y}";
+
+        Transform root = parent.Find(rootName);
+        if (root != null && clearPreviousStones)
+        {
+            // Generate 可能在编辑器按钮触发：DestroyImmediate 更安全
+            if (Application.isPlaying)
+                GameObject.Destroy(root.gameObject);
+            else
+                GameObject.DestroyImmediate(root.gameObject);
+
+            root = null;
+        }
+
+        if (root == null)
+        {
+            var go = new GameObject(rootName);
+            go.transform.SetParent(parent, false);
+            root = go.transform;
+        }
+
+        int placed = 0;
+        int saltRiver = unchecked((int)0x6D2B79F5);
+        int saltBank = unchecked((int)0x1B873593);
+
+        float riverChance = Mathf.Clamp01(riverStoneChance);
+        float bankChance = Mathf.Clamp01(bankStoneChance);
+        int radius = Mathf.Max(1, bankRadius);
+
+        // 以 TileData 为准：salt==0 代表河流水；salt==80 代表海水
+        bool[] riverWater = new bool[width * height];
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
+                TileData top = Map.GetTopTile(worldPos);
+                if (top is not TileData_Water water)
+                    continue;
+
+                if (IsSeaWater(water))
+                    continue;
+
+                if (Mathf.Approximately(water.salt, 0f))
+                {
+                    riverWater[Index(x, y, width)] = true;
+                }
+            }
+        }
+
+        // 先放河床石头（更符合“河底”）
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (placed >= maxStonesPerChunk)
+                    break;
+
+                if (!riverWater[Index(x, y, width)])
+                    continue;
+
+                Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
+                float r01 = Hash01(worldPos.x, worldPos.y, seed ^ saltRiver);
+                if (r01 > riverChance)
+                    continue;
+
+                PlaceOneStone(worldPos, root, seed ^ saltRiver);
+                placed++;
+            }
+        }
+
+        // 再放河岸石头（河两侧）
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (placed >= maxStonesPerChunk)
+                    break;
+
+                int idx = Index(x, y, width);
+                if (riverWater[idx])
+                    continue;
+
+                Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
+                if (IsSeaWaterAt(worldPos))
+                    continue;
+
+                if (!IsBankCell(x, y, width, height, riverWater, radius))
+                    continue;
+
+                float r01 = Hash01(worldPos.x, worldPos.y, seed ^ saltBank);
+                if (r01 > bankChance)
+                    continue;
+
+                PlaceOneStone(worldPos, root, seed ^ saltBank);
+                placed++;
+            }
+        }
+
+        Debug.Log($"[ChunkGenerator_River] ✅ 河床/河岸石头生成完成，数量: {placed}（上限 {maxStonesPerChunk}）", Map);
+    }
+
+    private bool IsBankCell(int x, int y, int width, int height, bool[] riverWater, int radius)
+    {
+        // 以 (x,y) 为中心检查周围 radius 圈，只要邻居存在河流就认为是河岸
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            int nx = x + dx;
+            if (nx < 0 || nx >= width)
+                continue;
+
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                int ny = y + dy;
+                if (ny < 0 || ny >= height)
+                    continue;
+
+                if (dx == 0 && dy == 0)
+                    continue;
+
+                if (riverWater[Index(nx, ny, width)])
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool IsSeaWater(TileData_Water water)
+    {
+        return Mathf.Abs(water.salt - SeaSalt) <= 0.01f;
+    }
+
+    private bool IsSeaWaterAt(Vector2Int worldPos)
+    {
+        TileData top = Map.GetTopTile(worldPos);
+        return top is TileData_Water water && IsSeaWater(water);
+    }
+
+    private void PlaceOneStone(Vector2Int worldPos, Transform parent, int seedSalt)
+    {
+        Vector3Int cell = new Vector3Int(worldPos.x, worldPos.y, 0);
+        Vector3 centerWorld;
+        if (targetTilemap != null)
+            centerWorld = targetTilemap.GetCellCenterWorld(cell);
+        else
+            centerWorld = new Vector3(worldPos.x + 0.5f, worldPos.y + 0.5f, 0f);
+
+        float ox = (Hash01(worldPos.x, worldPos.y, seedSalt ^ 101) - 0.5f) * 2f * Mathf.Abs(stoneOffsetRange.x);
+        float oy = (Hash01(worldPos.x, worldPos.y, seedSalt ^ 202) - 0.5f) * 2f * Mathf.Abs(stoneOffsetRange.y);
+        Vector3 pos = centerWorld + new Vector3(ox, oy, 0f);
+
+        float rz01 = Hash01(worldPos.x, worldPos.y, seedSalt ^ 303);
+        float rz = Mathf.Lerp(stoneRotationZRange.x, stoneRotationZRange.y, rz01);
+        Quaternion rot = Quaternion.Euler(0f, 0f, rz);
+
+        float s01 = Hash01(worldPos.x, worldPos.y, seedSalt ^ 404);
+        float s = Mathf.Lerp(stoneUniformScaleRange.x, stoneUniformScaleRange.y, s01);
+
+        GameObject go = GameObject.Instantiate(Prefab_Stone, pos, rot, parent);
+        go.transform.localScale = go.transform.localScale * s;
+    }
+    #endregion
+
     #region 写入
     private void ApplyRiverAt(Vector2Int worldPos)
     {
+        // 海水（salt=80）不覆盖：避免河流/石头刷进海里
+        if (IsSeaWaterAt(worldPos))
+            return;
+
         // 1) 克隆 TileData
         TileData riverTile = riverTileBlock.CreateRuntimeTileData();
         if (riverTile == null)
@@ -521,6 +776,14 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             Debug.LogError("[ChunkGenerator_River] ❌ riverTileBlock.tileDataTemplate 为空，无法创建河流 TileData", Map);
             return;
         }
+
+        if (riverTile is not TileData_Water waterTile)
+        {
+            Debug.LogError($"[ChunkGenerator_River] ❌ riverTileBlock({riverTileBlock.name}) 生成的 TileData 不是 TileData_Water，无法写入 salt=0 的河流", Map);
+            return;
+        }
+
+        waterTile.salt = 0f;
 
         // 2) 设置位置
         riverTile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
@@ -557,10 +820,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         }
 
         // 4) 写入数据层：替换顶层 or 加层
-        if (!Map.Data.TileData.TryGetValue(worldPos, out var list) || list == null)
+        var list = Map.Data.GetTileListAt(worldPos);
+        if (list == null)
         {
-            list = new List<TileData>();
-            Map.Data.TileData[worldPos] = list;
+            Debug.LogError($"[ChunkGenerator_River] ❌ TileData_Array 未初始化或越界：worldPos={worldPos} mapPos={Map.Data.position}", Map);
+            return;
         }
 
         if (writeMode == RiverWriteMode.AddLayer)
@@ -574,6 +838,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             else
                 list[list.Count - 1] = riverTile;
         }
+
 
         // 5) 写入视觉层
         TileBase unityTileBase = riverTileBlock.GetTileBaseAsset();

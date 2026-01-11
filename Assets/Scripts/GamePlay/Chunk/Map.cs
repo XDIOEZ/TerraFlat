@@ -116,6 +116,11 @@ public class Map : Item
             Data = new Data_TileMap();
         }
 
+        // 确保数组已初始化（数组为主存储）
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        Data.BuildArrayFromLegacyDictionaryIfNeeded((int)chunkSize.x, (int)chunkSize.y);
+
         // 开始生成：先标记为未完成
         Data.TileLoaded = false;
 
@@ -211,7 +216,11 @@ public class Map : Item
             Data = new Data_TileMap();
         }
 
-        bool hasTileData = Data.TileData != null && Data.TileData.Count > 0;
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        Data.BuildArrayFromLegacyDictionaryIfNeeded((int)chunkSize.x, (int)chunkSize.y);
+
+        bool hasTileData = Data.CountNonEmptyCells() > 0;
 
         // 先停止上一轮加载/生成流程（避免多次点击按钮叠加协程）
         if (loadOrGenerateCoroutine != null)
@@ -242,7 +251,7 @@ public class Map : Item
 
         // 等待生成完成：既要有 TileData，也要等 TileLoaded 被标记为 true
         // （TileLoaded 在 Map.GenerateByPipeline() 统一收尾中设置）
-        while (Data == null || Data.TileData == null || Data.TileData.Count == 0 || Data.TileLoaded == false)
+        while (Data == null || Data.CountNonEmptyCells() == 0 || Data.TileLoaded == false)
         {
             yield return null;
         }
@@ -260,7 +269,7 @@ public class Map : Item
     public override void Save()
     {
         // 只有 tileMapData 为空或其 TileData 为空时才初始化数据
-        if (Data == null || Data.TileData == null || Data.TileData.Count == 0)
+        if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             SaveTileMap_TO_TileData();
         }
@@ -271,17 +280,14 @@ public class Map : Item
     #region TileMap加载方法
     public void LoadTileData_To_TileMap_Sync()
     {
-        if (Data.TileData == null || Data.TileData.Count == 0)
+        if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
             return;
         }
 
-        foreach (var kvp in Data.TileData)
+        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            Vector2Int position2D = kvp.Key;
-            List<TileData> tileDataList = kvp.Value;
-
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
@@ -292,7 +298,7 @@ public class Map : Item
                 continue;
             }
 
-            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
 
             tileMap.SetTile(position3D, tile);
         }
@@ -318,7 +324,7 @@ public class Map : Item
     /// </summary>
     private IEnumerator LoadTileData_To_TileMapCoroutine()
     {
-        if (Data.TileData == null || Data.TileData.Count == 0)
+        if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
             loadTileMapCoroutine = null;
@@ -329,11 +335,8 @@ public class Map : Item
         const int batchSize = 500;
         int processedCount = 0;
 
-        foreach (var kvp in Data.TileData)
+        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            Vector2Int position2D = kvp.Key;
-            List<TileData> tileDataList = kvp.Value;
-
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
@@ -344,7 +347,7 @@ public class Map : Item
                 continue;
             }
 
-            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
 
             tileMap.SetTile(position3D, tile);
 
@@ -363,7 +366,7 @@ public class Map : Item
         // 直接调用权重烘焙，不延迟
         BackTilePenalty_Sync();
 
-        Debug.Log($"✅ 完成加载 {Data.TileData.Count} 个Tile到Tilemap");
+        Debug.Log($"✅ 完成加载 {Data.CountNonEmptyCells()} 个Tile到Tilemap");
 
         // 清理协程引用
         loadTileMapCoroutine = null;
@@ -398,15 +401,12 @@ public class Map : Item
         float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
 
         // 处理所有节点数据 这个是根据地块数据进行烘焙的
-        foreach (var kvp in Data.TileData)
+        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            Vector2Int position2D = kvp.Key;
-            List<TileData> tileDataList = kvp.Value;
-
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
-            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
 
             // 使用更精确的世界坐标计算方法，解决偏移问题
             Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
@@ -419,7 +419,7 @@ public class Map : Item
             AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty, topTile.IsWalkable);
         }
 
-        Debug.Log($"✅ 完成同步烘焙 {Data.TileData.Count} 个地块的寻路权重");
+        Debug.Log($"✅ 完成同步烘焙 {Data.CountNonEmptyCells()} 个地块的寻路权重");
     }
 
     /// <summary>
@@ -435,15 +435,12 @@ public class Map : Item
         List<(Vector3 worldPos, uint penalty, bool isWalkable)> nodesToProcess = new List<(Vector3, uint, bool)>();
 
         // 收集所有需要处理的节点数据
-        foreach (var kvp in Data.TileData)
+        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            Vector2Int position2D = kvp.Key;
-            List<TileData> tileDataList = kvp.Value;
-
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
-            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
 
             // 使用更精确的世界坐标计算方法，解决偏移问题
             Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
@@ -569,11 +566,7 @@ public class Map : Item
             return;
         }
 
-        if (Data.TileData == null)
-        {
-            Debug.LogError("[BackTilePenalty_Bounds] Data.TileData为空，无法执行烘焙");
-            return;
-        }
+        // TileData_Array 在 Data 内部维护
 
         if (tileMap == null)
         {
@@ -619,10 +612,10 @@ public class Map : Item
                 Vector2Int position2D = new Vector2Int(x, y);
 
                 // 只有当地图数据中存在该位置的地块时才处理
-                if (Data.TileData.ContainsKey(position2D))
+                var list = Data.GetTileListAt(position2D);
+                if (list != null && list.Count > 0)
                 {
-                    // 获取最顶层 TileData（倒数第一个）
-                    TileData topTile = Data.TileData[position2D][^1];
+                    TileData topTile = list[^1];
                     Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
 
                     // 使用更精确的世界坐标计算方法，解决偏移问题
@@ -690,10 +683,10 @@ public class Map : Item
                 Vector2Int position2D = new Vector2Int(x, y);
 
                 // 只有当地图数据中存在该位置的地块时才处理
-                if (Data.TileData.ContainsKey(position2D))
+                var list = Data.GetTileListAt(position2D);
+                if (list != null && list.Count > 0)
                 {
-                    // 获取最顶层 TileData（倒数第一个）
-                    TileData topTile = Data.TileData[position2D][^1];
+                    TileData topTile = list[^1];
                     Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
 
                     // 使用更精确的世界坐标计算方法，解决偏移问题
@@ -732,8 +725,13 @@ public class Map : Item
 
         BoundsInt bounds = tileMap.cellBounds;
 
-        // 临时 TileData 字典
-        Dictionary<Vector2Int, List<TileData>> tempTileData = new();
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        Data.position = new Vector2Int(
+            Mathf.RoundToInt(transform.parent.position.x),
+            Mathf.RoundToInt(transform.parent.position.y)
+        );
+        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        Data.ClearAllTiles(clearLegacyDictionary: true);
 
         // 遍历 Tilemap 上的所有 Tile
         foreach (Vector3Int pos3D in bounds.allPositionsWithin)
@@ -750,17 +748,12 @@ public class Map : Item
             tileData = GameRes.Instance.GetPrefab(Name_ItemName).
                 GetComponent<IBlockTile>().TileData.DeepClone();
 
-
-            // 如果该坐标已有列表，添加，否则新建
-            if (!tempTileData.ContainsKey(pos2D))
-                tempTileData[pos2D] = new List<TileData>();
-
-            tempTileData[pos2D].Add(tileData);
+            Data.AddTileData(pos2D, tileData);
         }
 
-        Data.TileData = tempTileData;
-
-        Debug.Log("多层 TileData 已保存到 Data_TileMap 中" + tempTileData.Count);
+        // 兼容旧流程：如果有地方还依赖字典，这里同步一次（仅保存时）
+        Data.SyncLegacyDictionaryFromArray();
+        Debug.Log("多层 TileData 已保存到 Data_TileMap 中" + Data.CountNonEmptyCells());
     }
     #endregion
 
@@ -804,13 +797,7 @@ public class Map : Item
     {
         tileData.position = (Vector3Int)position;
 
-        // 如果该位置没有初始化 List，就创建一个
-        if (!Data.TileData.ContainsKey(position))
-        {
-            Data.TileData[position] = new List<TileData>();
-        }
-
-        Data.TileData[position].Add(tileData);
+        Data.AddTileData(position, tileData);
 
         UpdateTileBaseAtPosition(position);
     }
@@ -819,33 +806,13 @@ public class Map : Item
     {
         tileData.position = (Vector3Int)position;
 
-        // 如果该位置没有初始化 List，就创建一个
-        if (!Data.TileData.ContainsKey(position))
-        {
-            Data.TileData[position] = new List<TileData>();
-        }
-
-        Data.TileData[position].Add(tileData);
+        Data.AddTileData(position, tileData);
     }
 
     [Button("获取 TileData")]
     public TileData GetTile(Vector2Int position, int? index = null)
     {
-        if (!Data.TileData.TryGetValue(position, out var list) || list.Count == 0)
-        {
-            //  Debug.LogWarning($"位置 {position} 上没有任何 TileData。");
-            return null;
-        }
-
-        int i = index ?? (list.Count - 1); // 默认返回最上层（最后一个）
-
-        if (i < 0 || i >= list.Count)
-        {
-            Debug.LogWarning($"位置 {position} 的索引 {i} 不合法。");
-            return null;
-        }
-
-        return list[i];
+        return Data.GetTileDataAt(position, index);
     }
 
     // 重载方法：只获取最上层的 TileData
@@ -863,44 +830,14 @@ public class Map : Item
     // 重载方法：获取所有 TileData
     public List<TileData> GetAllTiles(Vector2Int position)
     {
-        if (Data?.TileData == null)
-        {
-            return new List<TileData>();
-        }
-
-        if (Data.TileData.TryGetValue(position, out var list))
-        {
-            return new List<TileData>(list);
-        }
-
-        return new List<TileData>();
+        var list = Data.GetTileListAt(position);
+        return list != null ? new List<TileData>(list) : new List<TileData>();
     }
 
     public void DELTile(Vector2Int position, int? index = null)
     {
-        if (!Data.TileData.ContainsKey(position) || Data.TileData[position].Count == 0)
-        {
-            Debug.LogWarning($"位置 {position} 上没有 TileData 可删除。");
+        if (!Data.RemoveTileData(position, index))
             return;
-        }
-
-        List<TileData> list = Data.TileData[position];
-
-        int removeIndex = index ?? (list.Count - 1); // 若 index 为 null，就删除最后一个
-
-        if (removeIndex < 0 || removeIndex >= list.Count)
-        {
-            Debug.LogWarning($"位置 {position} 的删除索引 {removeIndex} 非法。");
-            return;
-        }
-
-        list.RemoveAt(removeIndex);
-
-        // 如果该位置已经没有层了，可以考虑移除字典项（可选）
-        if (list.Count == 0)
-        {
-            Data.TileData.Remove(position);
-        }
 
         UpdateTileBaseAtPosition(position);
     }
@@ -908,7 +845,7 @@ public class Map : Item
     public void UPDTile(Vector2Int position, int index, TileData tileData)
     {
         tileData.position = (Vector3Int)position;
-        Data.TileData[position][index] = tileData;
+        Data.UpdateTileData(position, index, tileData);
         UpdateTileBaseAtPosition(position);
     }
 
@@ -916,7 +853,8 @@ public class Map : Item
     {
         Vector3Int position3D = new Vector3Int(position.x, position.y, 0);
 
-        if (!Data.TileData.ContainsKey(position) || Data.TileData[position].Count == 0)
+        var list = Data.GetTileListAt(position);
+        if (list == null || list.Count == 0)
         {
             tileMap.SetTile(position3D, null); // 清除该 Tile
             Debug.Log($"清除了位置 {position} 上的 TileBase（无数据）");
@@ -924,7 +862,7 @@ public class Map : Item
         }
 
         // 获取该位置最顶层的 TileData（最后一个）
-        TileData topTile = Data.TileData[position][^1];
+        TileData topTile = list[^1];
         TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
 
         if (tile == null)

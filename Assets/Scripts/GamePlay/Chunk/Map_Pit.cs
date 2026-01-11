@@ -30,7 +30,7 @@ public class Map_Pit : Map
     /// </summary>
     private  IEnumerator LoadTileData_To_TileMapCoroutine()
     {
-        if (Data.TileData == null || Data.TileData.Count == 0)
+        if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
             loadTileMapCoroutine = null;
@@ -41,11 +41,8 @@ public class Map_Pit : Map
         const int batchSize = 500;
         int processedCount = 0;
 
-        foreach (var kvp in Data.TileData)
+        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            Vector2Int position2D = kvp.Key;
-            List<TileData> tileDataList = kvp.Value;
-
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
@@ -56,7 +53,7 @@ public class Map_Pit : Map
                 continue;
             }
 
-            Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
+            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
 
             tileMap.SetTile(position3D, tile);
 
@@ -72,7 +69,7 @@ public class Map_Pit : Map
         // 等待一帧确保所有Tile设置完成
         yield return null;
 
-        Debug.Log($"✅ 完成加载 {Data.TileData.Count} 个Tile到Tilemap");
+        Debug.Log($"✅ 完成加载 {Data.CountNonEmptyCells()} 个Tile到Tilemap");
 
         // 清理协程引用
         loadTileMapCoroutine = null;

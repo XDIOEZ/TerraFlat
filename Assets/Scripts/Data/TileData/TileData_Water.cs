@@ -6,7 +6,7 @@ using MemoryPack;
 public partial class TileData_Water : TileData
 {
     public GameValue_float DeepValue = new GameValue_float();
-
+    public float salt = 0;
     public override void Initialize_Env(EnvironmentFactors env)
     {
         // 高度 0.5 → 深度 0

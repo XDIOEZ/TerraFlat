@@ -28,7 +28,7 @@ public abstract class CaveGeneratorBase : ScriptableObject
     public virtual void ClearMap(Map map)
     {
         map.tileMap?.ClearAllTiles();
-        map.Data.TileData?.Clear();
+        map.Data?.ClearAllTiles(clearLegacyDictionary: true);
     }
     
     // 工具方法，可在子类中使用
