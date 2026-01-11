@@ -27,7 +27,7 @@ public class Tile_Water : TileBlockBehaviour
             // 0 = 完全不剔除，1 = 完全从脚到底部剔除
             TileData_Water water = tileData as TileData_Water;
 
-            float depthValue = water != null ? Mathf.Clamp01(water.DeepValue.Value) : 0f;
+            float depthValue = water != null ? Mathf.Clamp01(water.deepValue.Value) : 0f;
 
             // 对物体及子物体的 Renderer 应用 PropertyBlock，避免改动共享材质
             var renderers = item.GetComponentsInChildren<Renderer>();

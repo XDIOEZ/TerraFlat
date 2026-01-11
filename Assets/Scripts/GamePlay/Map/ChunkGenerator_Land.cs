@@ -417,7 +417,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             map.tileMap.ClearAllTiles();
 
         if (map.Data != null)
-            map.Data.ClearAllTiles(clearLegacyDictionary: true);
+            map.Data.ClearAllTiles();
     }
 
     /// <summary>
