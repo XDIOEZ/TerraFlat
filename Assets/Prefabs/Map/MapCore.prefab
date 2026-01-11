@@ -164,9 +164,9 @@ MonoBehaviour:
         targetTilemap: {fileID: 0}
         riverTileBlock: {fileID: 11400000, guid: 7161f78828c23bc43a28d345ef6f8bc1, type: 2}
         seed: 12345
-        cellSize: 100
+        cellSize: 200
         edgeWidth: 1
-        edgeWidthRange: {x: 0.5, y: 0.5}
+        edgeWidthRange: {x: 0, y: 0.2}
         useMultiSample: 1
         sampleInset: 0.1
         warpAmplitude: 0.5
