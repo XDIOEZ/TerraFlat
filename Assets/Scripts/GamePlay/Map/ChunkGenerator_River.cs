@@ -215,7 +215,6 @@ public class ChunkGenerator_River : ChunkGeneratorBase
 
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Map.Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
-        Map.Data.BuildArrayFromLegacyDictionaryIfNeeded((int)chunkSize.x, (int)chunkSize.y);
 
         Vector2Int startPos = Map.Data.position;
         int width = (int)chunkSize.x;

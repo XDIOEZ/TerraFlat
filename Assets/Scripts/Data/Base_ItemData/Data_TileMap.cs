@@ -2,7 +2,6 @@ using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -10,16 +9,10 @@ using UnityEngine.Tilemaps;
 [MemoryPackable]
 public partial class Data_TileMap : ItemData
 {
-    [HideInInspector]
-    [SerializeField]
-    [Obsolete("?????????????")]
-    public Dictionary<Vector2Int, List<TileData>> TileData = new();
-
+    [NonSerialized] private bool _hasLoggedArrayNotInit;
     [Tooltip("µØÍ¼µÄÎ»ÖÃ")]
     public Vector2Int position = new Vector2Int(0, 0);
-
     public bool TileLoaded = false;
-
     public EnvironmentFactors[,] EnvironmentData = new EnvironmentFactors[0, 0];
     public List<TileData>[,] TileData_Array = new List<TileData>[20, 20];//00??????? ????position??
 
@@ -52,7 +45,7 @@ public partial class Data_TileMap : ItemData
         }
     }
 
-    public void ClearAllTiles(bool clearLegacyDictionary = false)
+    public void ClearAllTiles()
     {
         if (TileData_Array != null && TileData_Array.Length > 0)
         {
@@ -64,74 +57,6 @@ public partial class Data_TileMap : ItemData
                 {
                     TileData_Array[x, y]?.Clear();
                 }
-            }
-        }
-
-        if (clearLegacyDictionary)
-        {
-#pragma warning disable 0618
-            TileData?.Clear();
-#pragma warning restore 0618
-        }
-    }
-
-    /// <summary>
-    /// ? TileData_Array ????????????????????????
-    /// </summary>
-    public void BuildArrayFromLegacyDictionaryIfNeeded(int width, int height)
-    {
-        if (TileData_Array != null && TileData_Array.Length > 0)
-            return;
-
-        EnsureTileDataArray(width, height, initCells: true);
-
-#pragma warning disable 0618
-        if (TileData == null || TileData.Count == 0)
-            return;
-
-        foreach (var kvp in TileData)
-        {
-            Vector2Int worldPos = kvp.Key;
-            Vector2Int localPos = worldPos - position;
-            if ((uint)localPos.x >= (uint)width || (uint)localPos.y >= (uint)height)
-                continue;
-
-            var src = kvp.Value;
-            if (src == null || src.Count == 0)
-                continue;
-
-            var dst = TileData_Array[localPos.x, localPos.y] ??= new List<TileData>(capacity: src.Count);
-            dst.Clear();
-            dst.AddRange(src);
-        }
-#pragma warning restore 0618
-    }
-
-    public void SyncLegacyDictionaryFromArray()
-    {
-#pragma warning disable 0618
-        TileData ??= new Dictionary<Vector2Int, List<TileData>>();
-        TileData.Clear();
-#pragma warning restore 0618
-
-        if (TileData_Array == null || TileData_Array.Length == 0)
-            return;
-
-        int w = TileData_Array.GetLength(0);
-        int h = TileData_Array.GetLength(1);
-        for (int x = 0; x < w; x++)
-        {
-            for (int y = 0; y < h; y++)
-            {
-                var list = TileData_Array[x, y];
-                if (list == null || list.Count == 0)
-                    continue;
-
-                Vector2Int worldPos = new Vector2Int(position.x + x, position.y + y);
-                var copy = new List<TileData>(list);
-#pragma warning disable 0618
-                TileData[worldPos] = copy;
-#pragma warning restore 0618
             }
         }
     }
@@ -162,28 +87,23 @@ public partial class Data_TileMap : ItemData
 
     public List<TileData> GetTileListAt(Vector2Int worldPos)
     {
-        // ?????????O(1)
-        if (TileData_Array != null && TileData_Array.Length > 0)
+        if (TileData_Array == null || TileData_Array.Length == 0)
         {
-            Vector2Int localPos = worldPos - position;
-            int w = TileData_Array.GetLength(0);
-            int h = TileData_Array.GetLength(1);
-
-            if ((uint)localPos.x < (uint)w && (uint)localPos.y < (uint)h)
+            if (!_hasLoggedArrayNotInit)
             {
-                return TileData_Array[localPos.x, localPos.y];
+                _hasLoggedArrayNotInit = true;
+                Debug.LogError("[Data_TileMap] ? TileData_Array ???????????? EnsureTileDataArray()", null);
             }
+            return null;
         }
 
-        // ???????
-#pragma warning disable 0618
-        if (TileData != null && TileData.TryGetValue(worldPos, out var dictList))
-        {
-            return dictList;
-        }
-#pragma warning restore 0618
+        Vector2Int localPos = worldPos - position;
+        int w = TileData_Array.GetLength(0);
+        int h = TileData_Array.GetLength(1);
+        if ((uint)localPos.x >= (uint)w || (uint)localPos.y >= (uint)h)
+            return null;
 
-        return null;
+        return TileData_Array[localPos.x, localPos.y];
     }
     #endregion
 

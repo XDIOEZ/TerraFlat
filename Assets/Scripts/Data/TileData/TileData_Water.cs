@@ -5,13 +5,13 @@ using MemoryPack;
 [MemoryPackable]
 public partial class TileData_Water : TileData
 {
-    public GameValue_float DeepValue = new GameValue_float();
+    public float deepValue = new float();
     public float salt = 0;
     public override void Initialize_Env(EnvironmentFactors env)
     {
         // 高度 0.5 → 深度 0
         // 高度 0   → 深度 1
-        DeepValue.BaseValue = (0.5f - env.Hight) / 0.5f;
+        deepValue = (0.5f - env.Hight) / 0.5f;
     }
     /// <summary>
     /// 重写ToString方法，返回水地块的详细信息（中文格式）
@@ -27,24 +27,13 @@ public partial class TileData_Water : TileData
 
         return $"TileData_Water {{\n" +
                $"  {parentInfo},\n" +  // 继承父类的中文信息
-               $"  水深基础值: {DeepValue.BaseValue:F2}\n" +  // 水深值保留2位小数
+               $"  水深基础值: {deepValue:F2}\n" +  // 水深值保留2位小数
                "}";
     }
 
     public override TileData Clone()
     {
         var copy = (TileData_Water)MemberwiseClone();
-        if (DeepValue != null)
-        {
-            copy.DeepValue = new GameValue_float
-            {
-                BaseValue = DeepValue.BaseValue,
-                BaseAdditive = DeepValue.BaseAdditive,
-                AdditiveModifier = DeepValue.AdditiveModifier,
-                MultiplicativeModifier = DeepValue.MultiplicativeModifier,
-                FinalAdditive = DeepValue.FinalAdditive
-            };
-        }
         return copy;
     }
 

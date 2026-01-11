@@ -119,7 +119,6 @@ public class Map : Item
         // 确保数组已初始化（数组为主存储）
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
-        Data.BuildArrayFromLegacyDictionaryIfNeeded((int)chunkSize.x, (int)chunkSize.y);
 
         // 开始生成：先标记为未完成
         Data.TileLoaded = false;
@@ -218,7 +217,6 @@ public class Map : Item
 
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
-        Data.BuildArrayFromLegacyDictionaryIfNeeded((int)chunkSize.x, (int)chunkSize.y);
 
         bool hasTileData = Data.CountNonEmptyCells() > 0;
 
@@ -731,7 +729,7 @@ public class Map : Item
             Mathf.RoundToInt(transform.parent.position.y)
         );
         Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
-        Data.ClearAllTiles(clearLegacyDictionary: true);
+        Data.ClearAllTiles();
 
         // 遍历 Tilemap 上的所有 Tile
         foreach (Vector3Int pos3D in bounds.allPositionsWithin)
@@ -751,8 +749,6 @@ public class Map : Item
             Data.AddTileData(pos2D, tileData);
         }
 
-        // 兼容旧流程：如果有地方还依赖字典，这里同步一次（仅保存时）
-        Data.SyncLegacyDictionaryFromArray();
         Debug.Log("多层 TileData 已保存到 Data_TileMap 中" + Data.CountNonEmptyCells());
     }
     #endregion

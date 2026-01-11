@@ -8,9 +8,9 @@
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: MapCore
-  - Tag: MapCore
-  - Layer: DamageSender
+  - Name: Player
+  - Tag: Untagged
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
 ---下面是用户的提示---
 ~代码尽量简洁,减少报空检查的使用,避免出现静默失败
