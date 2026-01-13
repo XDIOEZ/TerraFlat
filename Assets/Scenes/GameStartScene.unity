@@ -307,14 +307,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8233460568870623006, guid: 277576181c69cb04bae7907eee0e7bb0, type: 3}
-      propertyPath: managedReferences[6445419845959286807].bankStoneChance
-      value: 0.016666668
-      objectReference: {fileID: 0}
-    - target: {fileID: 8233460568870623006, guid: 277576181c69cb04bae7907eee0e7bb0, type: 3}
-      propertyPath: managedReferences[6445419845959286807].riverStoneChance
-      value: 0.03
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

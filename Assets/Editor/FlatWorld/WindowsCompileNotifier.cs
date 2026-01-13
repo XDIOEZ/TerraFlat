@@ -1,5 +1,6 @@
 #if UNITY_EDITOR_WIN
 using System;
+using System.IO;
 using System.Text;
 using Process = System.Diagnostics.Process;
 using ProcessStartInfo = System.Diagnostics.ProcessStartInfo;
@@ -136,28 +137,35 @@ namespace FlatWorld.EditorTools
 		{
 			var safeTitle = title ?? "Unity";
 			var safeMessage = message ?? "";
+			var projectName = Path.GetFileName(Directory.GetCurrentDirectory());
 
 			var psScript =
 				"Add-Type -AssemblyName System.Windows.Forms;" +
 				"Add-Type -AssemblyName System.Drawing;" +
-				"$sig=@'\nusing System;\nusing System.Runtime.InteropServices;\npublic static class FWWin32{\n  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern bool BringWindowToTop(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);\n  [DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);\n  [DllImport(\"user32.dll\")] public static extern bool IsIconic(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern IntPtr GetForegroundWindow();\n  [DllImport(\"user32.dll\")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);\n  [DllImport(\"user32.dll\")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);\n  [DllImport(\"user32.dll\")] public static extern IntPtr SetFocus(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern IntPtr SetActiveWindow(IntPtr hWnd);\n}\n'@;" +
+				$"$proj='{EscapePowerShellSingleQuoted(projectName)}';" +
+				"$sig=@'\nusing System;\nusing System.Runtime.InteropServices;\npublic static class FWWin32{\n  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern bool BringWindowToTop(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);\n  [DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);\n  [DllImport(\"user32.dll\")] public static extern bool IsIconic(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern IntPtr GetForegroundWindow();\n  [DllImport(\"user32.dll\")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);\n  [DllImport(\"user32.dll\")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);\n  [DllImport(\"kernel32.dll\")] public static extern uint GetCurrentThreadId();\n  [DllImport(\"user32.dll\")] public static extern IntPtr SetFocus(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern IntPtr SetActiveWindow(IntPtr hWnd);\n  [DllImport(\"user32.dll\")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);\n  [DllImport(\"user32.dll\")] public static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);\n}\n'@;" +
 				"Add-Type -TypeDefinition $sig;" +
 				"function FW_ActivateUnity{\n" +
 				"  try{\n" +
-				"    $p = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and ($_.ProcessName -eq 'Unity' -or $_.MainWindowTitle -like '*Unity*') } | Select-Object -First 1;\n" +
+				"    $c = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and ($_.ProcessName -eq 'Unity' -or $_.MainWindowTitle -like '*Unity*') };\n" +
+				"    $p = $c | Where-Object { $_.MainWindowTitle -like ('*' + $proj + '*') } | Sort-Object -Property MainWindowTitle -Descending | Select-Object -First 1;\n" +
+				"    if($p -eq $null){ $p = $c | Sort-Object -Property MainWindowTitle -Descending | Select-Object -First 1 }\n" +
 				"    if($p -eq $null){ return }\n" +
 				"    $h = $p.MainWindowHandle;\n" +
+				"    try{ $ws = New-Object -ComObject WScript.Shell; $ws.SendKeys('%'); $ws.AppActivate($p.MainWindowTitle) | Out-Null; $ws.AppActivate($p.Id) | Out-Null }catch{}\n" +
 				"    if([FWWin32]::IsIconic($h)){ [FWWin32]::ShowWindow($h, 9) | Out-Null } else { [FWWin32]::ShowWindow($h, 5) | Out-Null }\n" +
 				"    [FWWin32]::ShowWindowAsync($h, 9) | Out-Null;\n" +
 				"    $fg = [FWWin32]::GetForegroundWindow();\n" +
 				"    $pid = 0; $tid = [FWWin32]::GetWindowThreadProcessId($fg, [ref]$pid);\n" +
-				"    $cur = [FWWin32]::GetWindowThreadProcessId([IntPtr]::Zero, [ref]$pid);\n" +
-				"    [FWWin32]::AttachThreadInput($tid, $cur, $true) | Out-Null;\n" +
+				"    $cur = [FWWin32]::GetCurrentThreadId();\n" +
+				"    [FWWin32]::AttachThreadInput($cur, $tid, $true) | Out-Null;\n" +
 				"    [FWWin32]::BringWindowToTop($h) | Out-Null;\n" +
+				"    try{ [FWWin32]::SwitchToThisWindow($h, $true) }catch{}\n" +
+				"    try{ [FWWin32]::SetWindowPos($h, [IntPtr](-1), 0,0,0,0, 0x0003) | Out-Null; Start-Sleep -Milliseconds 10; [FWWin32]::SetWindowPos($h, [IntPtr](-2), 0,0,0,0, 0x0003) | Out-Null }catch{}\n" +
 				"    [FWWin32]::SetActiveWindow($h) | Out-Null;\n" +
 				"    [FWWin32]::SetFocus($h) | Out-Null;\n" +
 				"    [FWWin32]::SetForegroundWindow($h) | Out-Null;\n" +
-				"    [FWWin32]::AttachThreadInput($tid, $cur, $false) | Out-Null;\n" +
+				"    [FWWin32]::AttachThreadInput($cur, $tid, $false) | Out-Null;\n" +
 				"  }catch{}\n" +
 				"}\n" +
 				"$n = New-Object System.Windows.Forms.NotifyIcon;" +

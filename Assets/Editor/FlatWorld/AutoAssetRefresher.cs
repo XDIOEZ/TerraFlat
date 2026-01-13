@@ -177,19 +177,70 @@ namespace FlatWorld.EditorTools
 				if (enumType == null || !enumType.IsEnum)
 					return;
 
-				var enabledValue = Enum.Parse(enumType, "Enabled");
+				var enabledValue = TryPickAutoRefreshEnumValue(enumType);
+				if (enabledValue == null)
+				{
+					if (forceLog)
+						Debug.LogWarning($"[AutoAssetRefresher] 无法识别 {enumType.FullName} 的 Enabled 值，names=[{string.Join(",", Enum.GetNames(enumType))}]");
+					return;
+				}
+
 				var currentValue = prop.GetValue(null);
 				if (!Equals(currentValue, enabledValue))
 				{
 					prop.SetValue(null, enabledValue);
 					if (forceLog)
-						Debug.Log($"[AutoAssetRefresher] 已设置 EditorSettings.refreshImportMode = Enabled");
+						Debug.Log($"[AutoAssetRefresher] 已设置 EditorSettings.refreshImportMode = {enabledValue}");
 				}
 			}
 			catch (Exception ex)
 			{
 				Debug.LogError($"[AutoAssetRefresher] 应用Unity自动刷新设置失败：{ex}");
 			}
+		}
+
+		private static object TryPickAutoRefreshEnumValue(Type enumType)
+		{
+			// Unity 不同版本枚举名字可能不同：优先选“完全开启”的那一个
+			var preferredNames = new[]
+			{
+				"Enabled",
+				"EnabledOutsidePlaymode",
+				"EnabledOutsidePlayMode",
+				"Enable",
+			};
+
+			foreach (var name in preferredNames)
+			{
+				try
+				{
+					return Enum.Parse(enumType, name, ignoreCase: true);
+				}
+				catch
+				{
+					// ignore
+				}
+			}
+
+			// 兜底：找包含 Enable/Enabled 的值
+			var names = Enum.GetNames(enumType);
+			for (int i = 0; i < names.Length; i++)
+			{
+				var n = names[i];
+				if (n.IndexOf("enable", StringComparison.OrdinalIgnoreCase) >= 0)
+				{
+					try
+					{
+						return Enum.Parse(enumType, n, ignoreCase: true);
+					}
+					catch
+					{
+						// ignore
+					}
+				}
+			}
+
+			return null;
 		}
 
 		private static void TryStartWatchers()

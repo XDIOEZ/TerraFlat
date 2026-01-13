@@ -31,6 +31,16 @@ public class Map : Item
     public Coroutine backTilePenaltyCoroutine;
     public Coroutine loadOrGenerateCoroutine;
 
+    [Header("寻路权重烘焙配置")]
+    [SerializeField, Min(1)]
+    private int backTilePenaltyTilesPerYield = 200;
+
+    [SerializeField, Min(0f)]
+    private float backTilePenaltyYieldSeconds = 0f;
+
+    private float backTilePenaltyWaitSeconds = -1f;
+    private WaitForSeconds backTilePenaltyWait;
+
     [SerializeReference]
     public List<ChunkGeneratorBase> mapGenerators = new List<ChunkGeneratorBase>();
 
@@ -44,6 +54,21 @@ public class Map : Item
     private void Awake()
     {
         InitMapGenerators();
+    }
+
+    private object GetBackTilePenaltyYieldToken()
+    {
+        float seconds = backTilePenaltyYieldSeconds;
+        if (seconds <= 0f)
+            return null;
+
+        if (backTilePenaltyWait == null || !Mathf.Approximately(backTilePenaltyWaitSeconds, seconds))
+        {
+            backTilePenaltyWaitSeconds = seconds;
+            backTilePenaltyWait = new WaitForSeconds(seconds);
+        }
+
+        return backTilePenaltyWait;
     }
 
     /// <summary>
@@ -314,7 +339,7 @@ public class Map : Item
         }
 
         // 启动新的协程
-        loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
+            loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
     }
 
     /// <summary>
@@ -425,47 +450,51 @@ public class Map : Item
     /// </summary>
     private IEnumerator BackTilePenaltyCoroutine()
     {
-        // 获取GridGraph以获得节点尺寸信息
-        var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
-        float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
+        var astar = AstarGameManager.Instance;
+        if (astar == null)
+        {
+            backTilePenaltyCoroutine = null;
+            yield break;
+        }
 
-        // 创建节点处理列表（包含坐标、权重与可通行性）
-        List<(Vector3 worldPos, uint penalty, bool isWalkable)> nodesToProcess = new List<(Vector3, uint, bool)>();
+        if (tileMap == null)
+        {
+            Debug.LogError("[Map.BackTilePenaltyCoroutine] tileMap 为空，无法执行烘焙", this);
+            backTilePenaltyCoroutine = null;
+            yield break;
+        }
 
-        // 收集所有需要处理的节点数据
+        if (Data == null)
+        {
+            Debug.LogError("[Map.BackTilePenaltyCoroutine] Data 为空，无法执行烘焙", this);
+            backTilePenaltyCoroutine = null;
+            yield break;
+        }
+
+        while (!astar.IsGridGraphReady)
+            yield return null;
+
+        int batchSize = Mathf.Max(1, backTilePenaltyTilesPerYield);
+        object yieldToken = GetBackTilePenaltyYieldToken();
+        int processed = 0;
+
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
             Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
+            Vector3 cellCenterWorld = tileMap.GetCellCenterWorld(position3D);
 
-            // 使用更精确的世界坐标计算方法，解决偏移问题
-            Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
+            astar.ModifyNodePenalty_GridGraphFast(
+                new Vector2(cellCenterWorld.x, cellCenterWorld.y),
+                topTile.Penalty,
+                topTile.IsWalkable);
 
-            // 进一步校正坐标以匹配A*网格节点中心
-            float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
-            float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
-            Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
-
-            nodesToProcess.Add((alignedWorldPos, topTile.Penalty, topTile.IsWalkable));
-        }
-
-        // 分批处理节点，避免长时间阻塞主线程
-        const int batchSize = 125;
-        for (int i = 0; i < nodesToProcess.Count; i += batchSize)
-        {
-            int endIndex = Mathf.Min(i + batchSize, nodesToProcess.Count);
-
-            // 处理当前批次
-            for (int j = i; j < endIndex; j++)
+            processed++;
+            if (processed % batchSize == 0)
             {
-                var (worldPos, penalty, isWalkable) = nodesToProcess[j];
-                AstarGameManager.Instance?.ModifyNodePenalty_Optimized(worldPos, penalty, isWalkable);
+                yield return yieldToken;
             }
-
-            // 每处理一批就等待一帧，让出控制权给其他任务
-            yield return null;
         }
 
         //        Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");

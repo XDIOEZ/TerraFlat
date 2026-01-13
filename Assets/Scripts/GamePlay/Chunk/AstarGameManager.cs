@@ -37,7 +37,21 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     private Vector2 pendingScanCenter;
     private int pendingScanRadius;
     private System.Action pendingScanOnComplete;
+
+    private bool hasLoggedGridGraphNotReady;
     #endregion
+
+    public bool IsGridGraphReady
+    {
+        get
+        {
+            var active = AstarPath.active;
+            if (active == null || active.data == null)
+                return false;
+            var gg = active.data.gridGraph;
+            return gg != null && gg.nodes != null && gg.nodes.Length == gg.width * gg.depth;
+        }
+    }
 
     #region 生命周期方法
     public void Start()
@@ -293,6 +307,59 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
         // 对于不可通行节点，统一将 Penalty 置为 0，避免无意义的高权重
         targetNode.Penalty = targetWalkable ? newPenalty : 0u;
+    }
+
+    /// <summary>
+    /// 超高频调用专用：直接按 GridGraph 坐标映射到节点，避免 GetNearest 的高开销。
+    /// 前提：使用的是 AstarPath.active.data.gridGraph 且 graph 未旋转（本项目 center.z=0 的2D用法）。
+    /// </summary>
+    public void ModifyNodePenalty_GridGraphFast(Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
+    {
+        var active = AstarPath.active;
+        var gg = active != null && active.data != null ? active.data.gridGraph : null;
+        if (gg == null)
+            return;
+
+        if (gg.nodes == null || gg.nodes.Length != gg.width * gg.depth)
+        {
+            if (!hasLoggedGridGraphNotReady)
+            {
+                hasLoggedGridGraphNotReady = true;
+                Debug.LogWarning("[AstarGameManager.ModifyNodePenalty_GridGraphFast] GridGraph 未就绪（可能尚未 Scan），已跳过本次 fast 更新。", this);
+            }
+
+            ModifyNodePenalty_Optimized(worldPos, newPenalty, isWalkable);
+            return;
+        }
+
+        float nodeSize = gg.nodeSize;
+        if (nodeSize <= 0f)
+            return;
+
+        float halfWidth = gg.width * nodeSize * 0.5f;
+        float halfDepth = gg.depth * nodeSize * 0.5f;
+        float left = gg.center.x - halfWidth;
+        float bottom = gg.center.y - halfDepth;
+        float inv = 1f / nodeSize;
+
+        int x = Mathf.FloorToInt((worldPos.x - left) * inv);
+        int y = Mathf.FloorToInt((worldPos.y - bottom) * inv);
+
+        if ((uint)x >= (uint)gg.width || (uint)y >= (uint)gg.depth)
+            return;
+
+        var node = gg.GetNode(x, y);
+        if (node == null)
+            return;
+
+        bool targetWalkable = isWalkable && newPenalty > 0;
+        uint targetPenalty = targetWalkable ? newPenalty : 0u;
+
+        if (node.Walkable == targetWalkable && node.Penalty == targetPenalty)
+            return;
+
+        node.Walkable = targetWalkable;
+        node.Penalty = targetPenalty;
     }
 
     [Button("修改区域权重")]

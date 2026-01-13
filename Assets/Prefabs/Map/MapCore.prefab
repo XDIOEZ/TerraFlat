@@ -110,6 +110,8 @@ MonoBehaviour:
     _PersistentCalls: []
   chunk: {fileID: 0}
   ParentObject: {fileID: 0}
+  backTilePenaltyTilesPerYield: 25
+  backTilePenaltyYieldSeconds: 0
   mapGenerators:
   - rid: 6445419845959286799
   - rid: 6445419845959286807
@@ -186,8 +188,8 @@ MonoBehaviour:
         Prefab_Stone: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
         stoneParent: {fileID: 0}
         maxStonesPerChunk: 120
-        riverStoneChance: 0.09
-        bankStoneChance: 0.05
+        riverStoneChance: 0.03
+        bankStoneChance: 0.016666668
         bankRadius: 1
         stoneOffsetRange: {x: 0.25, y: 0.25}
         stoneRotationZRange: {x: 0, y: 360}

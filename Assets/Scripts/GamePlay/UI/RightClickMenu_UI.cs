@@ -25,12 +25,11 @@ public class RightClickMenu_UI : MonoBehaviour
 
     public void UseItem()
     {
-        Item item = GameRes.Instance.InstantiatePrefab(itemSlot.itemData.IDName).GetComponent<Item>();
-        item.itemData = itemSlot.itemData;
+        Item item = ItemMgr.Instance.InstantiateItem(itemSlot.itemData);
         item.Load();
         item.Owner = SlotOwner;
         item.Act();
-        item.DestroySelf();
+        ItemMgr.Instance.DespawnItem(item);
     }
         public void DestroyPanel() 
         {
