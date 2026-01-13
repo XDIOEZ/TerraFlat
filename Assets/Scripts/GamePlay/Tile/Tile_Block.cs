@@ -32,15 +32,6 @@ public class Tile_Block : ScriptableObject
     public List<TileBlockBehaviour> behaviours = new List<TileBlockBehaviour>();
 
     /// <summary>
-    /// 创建一份运行时使用的 TileData 拷贝
-    /// </summary>
-    public virtual TileData CreateRuntimeTileData()
-    {
-        // 使用 TileData 自带的 Clone 手写拷贝，避免通用深拷贝插件的额外开销
-        return tileDataTemplate != null ? tileDataTemplate.Clone() : null;
-    }
-
-    /// <summary>
     /// 获取用于渲染到 Tilemap 上的 Unity TileBase（默认无，子类可重写）
     /// </summary>
     public virtual UnityEngine.Tilemaps.TileBase GetTileBaseAsset()

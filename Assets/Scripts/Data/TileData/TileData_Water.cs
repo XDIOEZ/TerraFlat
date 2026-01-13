@@ -5,7 +5,7 @@ using MemoryPack;
 [MemoryPackable]
 public partial class TileData_Water : TileData
 {
-    public float deepValue = new float();
+    public float deepValue = 0f;
     public float salt = 0;
     public override void Initialize_Env(EnvironmentFactors env)
     {
@@ -33,7 +33,19 @@ public partial class TileData_Water : TileData
 
     public override TileData Clone()
     {
-        var copy = (TileData_Water)MemberwiseClone();
+        var copy = new TileData_Water
+        {
+            ID = this.ID,
+            Name = this.Name,
+            TileTag = this.TileTag,
+            position = this.position,
+            DemolitionTime = this.DemolitionTime,
+            workTime = this.workTime,
+            Penalty = this.Penalty,
+            IsWalkable = this.IsWalkable,
+            deepValue = this.deepValue,
+            salt = this.salt
+        };
         return copy;
     }
 

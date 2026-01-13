@@ -769,13 +769,8 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             return;
 
         // 1) 克隆 TileData
-        TileData riverTile = riverTileBlock.CreateRuntimeTileData();
-        if (riverTile == null)
-        {
-            Debug.LogError("[ChunkGenerator_River] ❌ riverTileBlock.tileDataTemplate 为空，无法创建河流 TileData", Map);
-            return;
-        }
-
+        TileData riverTile = riverTileBlock.tileDataTemplate.Clone();
+       
         if (riverTile is not TileData_Water waterTile)
         {
             Debug.LogError($"[ChunkGenerator_River] ❌ riverTileBlock({riverTileBlock.name}) 生成的 TileData 不是 TileData_Water，无法写入 salt=0 的河流", Map);
@@ -806,6 +801,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
 
                     // 用更新后的 env 初始化 TileData
                     riverTile.Initialize_Env(env);
+                    waterTile.deepValue += 0.5f; // 河流更深一些
                 }
             }
             else
