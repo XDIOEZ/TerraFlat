@@ -189,12 +189,15 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         {
             try
             {
-                Item spawnedItem = ItemMgr.Instance.InstantiateItem(
+                if (map == null || map.chunk == null)
+                {
+                    Debug.LogWarning("[资源生成] ⚠️ 无法生成物品：map或chunk为 null", map);
+                    continue;
+                }
+
+                Item spawnedItem = map.chunk.InstantiateItemInChunk(
                     spawn.itemName,
-                    spawnPos,
-                    default,
-                    default,
-                    map != null ? map.ParentObject : null
+                    new Vector3(spawnPos.x, spawnPos.y, 0f)
                 );
 
                 if (spawnedItem == null)
@@ -204,15 +207,6 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
                 }
 
                 spawnedItem.Load();
-
-                if (map != null && map.chunk != null)
-                {
-                    map.chunk.AddItem(spawnedItem);
-                }
-                else
-                {
-                    Debug.LogWarning("[资源生成] ⚠️ 无法添加物品到区块: 区块为 null", map);
-                }
 
                 spawnedItem.Initialize_Env(env);
                 anySpawned = true;

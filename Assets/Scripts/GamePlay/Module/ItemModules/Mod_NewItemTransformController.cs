@@ -291,7 +291,7 @@ end
             return;
         }
 
-        _spawnedItem = ItemMgr.Instance.InstantiateItem(_currentItemName, transform.gameObject,default);
+        _spawnedItem = ItemMgr.Instance.InstantiateItem(_currentItemName, position: default, parent: transform.gameObject);
 
         _spawnedItem.Load();
         if (_spawnedItem == null)

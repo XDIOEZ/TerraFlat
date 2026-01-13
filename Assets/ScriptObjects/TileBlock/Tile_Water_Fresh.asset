@@ -33,12 +33,7 @@ MonoBehaviour:
         workTime: 0
         Penalty: 1000
         IsWalkable: 1
-        DeepValue:
-          BaseValue: 1
-          BaseAdditive: 0
-          AdditiveModifier: 0
-          MultiplicativeModifier: 1
-          FinalAdditive: 0
+        deepValue: 0.5
         salt: 0
     - rid: 6445419709040689155
       type: {class: Tile_Water, ns: , asm: GamePlay}

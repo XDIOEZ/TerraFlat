@@ -186,8 +186,8 @@ MonoBehaviour:
         Prefab_Stone: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
         stoneParent: {fileID: 0}
         maxStonesPerChunk: 120
-        riverStoneChance: 0.018
-        bankStoneChance: 0.01
+        riverStoneChance: 0.09
+        bankStoneChance: 0.05
         bankRadius: 1
         stoneOffsetRange: {x: 0.25, y: 0.25}
         stoneRotationZRange: {x: 0, y: 360}
@@ -198,7 +198,7 @@ MonoBehaviour:
       type: {class: ChunkGenerator_SpawnItems, ns: , asm: GamePlay}
       data:
         biomes: []
-        logSummary: 1
+        logSummary: 0
 --- !u!114 &8016388638861598348
 MonoBehaviour:
   m_ObjectHideFlags: 0

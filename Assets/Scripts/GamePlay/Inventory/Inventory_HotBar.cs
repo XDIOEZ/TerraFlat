@@ -148,8 +148,8 @@ public class Inventory_HotBar : Inventory
 
         Item itemInstance = ItemMgr.Instance.InstantiateItem(
             data.IDName,
-            spawnLocation.gameObject,
-            default
+            position: default,
+            parent: spawnLocation.gameObject
         );
 
         ConfigureItemInstance(itemInstance, data, slot);

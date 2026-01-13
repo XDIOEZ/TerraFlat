@@ -14,8 +14,140 @@ public class Chunk : MonoBehaviour
     public Dictionary<int, Item> RunTimeItems = new();
     [ShowInInspector]
     public Dictionary<string, HashSet<Item>> RuntimeItemsGroup = new();
+
+    #region Position Index（数组索引）
     [ShowInInspector]
-    public Dictionary<Vector2, List<Item>> RunTimeItems_ByPosition = new();
+    public List<Item>[,] RunTimeItems_ByPosition_Array = new List<Item>[0, 0];
+
+    private readonly Dictionary<int, Vector2Int> _itemGuidToLocalPos = new();
+    private Vector2Int _chunkOrigin;
+    private int _posWidth;
+    private int _posHeight;
+    private bool _hasLoggedArrayNotInit;
+
+    private void EnsurePositionArray(bool initCells = false)
+    {
+        Vector2 size = ChunkMgr.GetChunkSize();
+        int w = (int)size.x;
+        int h = (int)size.y;
+
+        if (w <= 0 || h <= 0)
+        {
+            Debug.LogError($"[Chunk] ChunkSize非法: {w}x{h}", this);
+            return;
+        }
+
+        _posWidth = w;
+        _posHeight = h;
+        _chunkOrigin = GetChunkPosition((Vector2)transform.position, size);
+
+        if (RunTimeItems_ByPosition_Array == null
+            || RunTimeItems_ByPosition_Array.Length == 0
+            || RunTimeItems_ByPosition_Array.GetLength(0) != w
+            || RunTimeItems_ByPosition_Array.GetLength(1) != h)
+        {
+            RunTimeItems_ByPosition_Array = new List<Item>[w, h];
+        }
+
+        if (!initCells)
+            return;
+
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                RunTimeItems_ByPosition_Array[x, y] ??= new List<Item>(capacity: 2);
+            }
+        }
+    }
+
+    private bool TryWorldToLocal(Vector2 worldPos, out Vector2Int localPos)
+    {
+        EnsurePositionArray();
+
+        if (RunTimeItems_ByPosition_Array == null || RunTimeItems_ByPosition_Array.Length == 0)
+        {
+            if (!_hasLoggedArrayNotInit)
+            {
+                _hasLoggedArrayNotInit = true;
+                Debug.LogError("[Chunk] RunTimeItems_ByPosition_Array未初始化", this);
+            }
+
+            localPos = default;
+            return false;
+        }
+
+        // 物体普遍在格子中心点（+0.5）附近：用 Floor 可以避免 59.5 被 Round 到 60 造成越界
+        Vector2Int worldInt = new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y));
+        localPos = worldInt - _chunkOrigin;
+
+        if ((uint)localPos.x >= (uint)_posWidth || (uint)localPos.y >= (uint)_posHeight)
+            return false;
+
+        return true;
+    }
+
+    private void AddToPositionArray(Item item)
+    {
+        if (item == null || item.itemData == null)
+        {
+            Debug.LogError("[Chunk] AddToPositionArray失败: item或itemData为空", this);
+            return;
+        }
+
+        if (!TryWorldToLocal(item.transform.position, out var localPos))
+        {
+            Debug.LogError($"[Chunk] 物品不在本Chunk范围内，无法索引: {item.name} pos={item.transform.position} origin={_chunkOrigin}", item);
+            return;
+        }
+
+        var list = RunTimeItems_ByPosition_Array[localPos.x, localPos.y] ??= new List<Item>(capacity: 2);
+        if (!list.Contains(item))
+        {
+            list.Add(item);
+        }
+
+        _itemGuidToLocalPos[item.itemData.Guid] = localPos;
+    }
+
+    private void RemoveFromPositionArray(Item item)
+    {
+        if (item == null || item.itemData == null)
+            return;
+
+        if (!_itemGuidToLocalPos.TryGetValue(item.itemData.Guid, out var localPos))
+            return;
+
+        var list = RunTimeItems_ByPosition_Array[localPos.x, localPos.y];
+        if (list != null)
+        {
+            list.Remove(item);
+        }
+
+        _itemGuidToLocalPos.Remove(item.itemData.Guid);
+    }
+
+    private void RemoveFromPositionArrayByGuid(int guid)
+    {
+        if (!_itemGuidToLocalPos.TryGetValue(guid, out var localPos))
+            return;
+
+        var list = RunTimeItems_ByPosition_Array[localPos.x, localPos.y];
+        if (list != null)
+        {
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                var it = list[i];
+                if (it == null || it.itemData == null || it.itemData.Guid == guid)
+                {
+                    list.RemoveAt(i);
+                }
+            }
+        }
+
+        _itemGuidToLocalPos.Remove(guid);
+    }
+    #endregion
     public Map Map;
     public MapSave MapSave;
     public string ChunkOwner;
@@ -35,6 +167,8 @@ public class Chunk : MonoBehaviour
             Debug.LogWarning($"⚠️ 区块 {name} 的MapSave或items为空");
             return this;
         }
+
+        EnsurePositionArray();
 
         InitializeItems();
         ChunkMgr.Instance.AddActiveChunk(this);
@@ -89,6 +223,8 @@ public class Chunk : MonoBehaviour
     {
         int itemCount = 0;
         ChunkMgr.Instance.AddActiveChunk(this);
+
+        EnsurePositionArray();
 
         // 第一步：按批实例化所有物品，但先不调用它们的 Load
         List<Item> createdItems = new List<Item>();
@@ -192,18 +328,30 @@ public class Chunk : MonoBehaviour
     /// </summary>
     private void RefreshPositionDictionary()
     {
-        RunTimeItems_ByPosition.Clear();
+        EnsurePositionArray();
+
+        _itemGuidToLocalPos.Clear();
+
+        if (RunTimeItems_ByPosition_Array != null && RunTimeItems_ByPosition_Array.Length > 0)
+        {
+            for (int x = 0; x < _posWidth; x++)
+            {
+                for (int y = 0; y < _posHeight; y++)
+                {
+                    RunTimeItems_ByPosition_Array[x, y]?.Clear();
+                }
+            }
+        }
+
         foreach (var item in RunTimeItems.Values)
         {
-            if (item != null)
-            {
-                Vector2 pos = item.transform.position;
-                if (!RunTimeItems_ByPosition.ContainsKey(pos))
-                {
-                    RunTimeItems_ByPosition[pos] = new List<Item>();
-                }
-                RunTimeItems_ByPosition[pos].Add(item);
-            }
+            if (item == null)
+                continue;
+
+            if (item is Map)
+                continue;
+
+            AddToPositionArray(item);
         }
     }
     #endregion
@@ -211,6 +359,7 @@ public class Chunk : MonoBehaviour
     #region 区块管理
     public void FitChunkItems()
     {
+        EnsurePositionArray();
         var items = GetComponentsInChildren<Item>();
         foreach (var item in items)
         {
@@ -269,14 +418,19 @@ public class Chunk : MonoBehaviour
     {
         if (item == null) return;
 
+        if (item.itemData == null)
+        {
+            Debug.LogError($"[Chunk] AddItemInternal失败: itemData为空, item={item.name}", item);
+            return;
+        }
+
         RunTimeItems[item.itemData.Guid] = item;
         AddToGroup(item);
-        Vector2 pos = item.transform.position;
-        if (!RunTimeItems_ByPosition.ContainsKey(pos))
+
+        if (!(item is Map))
         {
-            RunTimeItems_ByPosition[pos] = new List<Item>();
+            AddToPositionArray(item);
         }
-        RunTimeItems_ByPosition[pos].Add(item);
     }
 
     /// <summary>
@@ -286,15 +440,14 @@ public class Chunk : MonoBehaviour
     {
         if (item == null) return;
 
-        // 检查是否已存在
-        if (RunTimeItems.ContainsKey(item.itemData.Guid))
+        if (item.itemData == null)
         {
-            // 如果是更新，先从旧位置移除
-            foreach (var kvp in RunTimeItems_ByPosition)
-            {
-                kvp.Value.RemoveAll(i => i.itemData.Guid == item.itemData.Guid);
-            }
+            Debug.LogError($"[Chunk] AddItem失败: itemData为空, item={item.name}", item);
+            return;
         }
+
+        // 检查是否已存在
+        RemoveFromPositionArrayByGuid(item.itemData.Guid);
 
         AddItemInternal(item);
         item.transform.SetParent(transform);
@@ -316,17 +469,12 @@ public class Chunk : MonoBehaviour
     {
         if (item == null) return;
 
+        if (item.itemData == null)
+            return;
+
         RunTimeItems.Remove(item.itemData.Guid);
         RemoveFromGroup(item);
-        Vector2 pos = item.transform.position;
-        if (RunTimeItems_ByPosition.TryGetValue(pos, out var items))
-        {
-            items.Remove(item);
-            if (items.Count == 0)
-            {
-                RunTimeItems_ByPosition.Remove(pos);
-            }
-        }
+        RemoveFromPositionArray(item);
         MapSave?.RemoveItemData(item.itemData);
     }
     #endregion
@@ -337,7 +485,12 @@ public class Chunk : MonoBehaviour
     /// </summary>
     public bool TryGetItemsByPosition(Vector2 position, out List<Item> items)
     {
-        return RunTimeItems_ByPosition.TryGetValue(position, out items);
+        items = null;
+        if (!TryWorldToLocal(position, out var localPos))
+            return false;
+
+        items = RunTimeItems_ByPosition_Array[localPos.x, localPos.y];
+        return items != null && items.Count > 0;
     }
 
     /// <summary>
@@ -346,12 +499,11 @@ public class Chunk : MonoBehaviour
     public bool TryGetItemByPosition(Vector2 position, out Item item)
     {
         item = null;
-        if (RunTimeItems_ByPosition.TryGetValue(position, out var items) && items.Count > 0)
-        {
-            item = items[0];
-            return true;
-        }
-        return false;
+        if (!TryGetItemsByPosition(position, out var items) || items == null || items.Count == 0)
+            return false;
+
+        item = items[0];
+        return item != null;
     }
 
     /// <summary>
@@ -378,10 +530,8 @@ public class Chunk : MonoBehaviour
     /// </summary>
     public static Vector2 RoundPositionForQuery(Vector2 position)
     {
-        // 先取整到最近的整数
-        Vector2 roundedPos = new Vector2(Mathf.Round(position.x), Mathf.Round(position.y));
-        // 然后加上0.5的偏移（向右上）
-        return roundedPos + new Vector2(0.5f, 0.5f);
+        // 与索引规则保持一致：物体通常在格子中心(整数+0.5)，查询也应落在对应整数格
+        return new Vector2(Mathf.Floor(position.x), Mathf.Floor(position.y));
     }
 
     /// <summary>
@@ -394,17 +544,43 @@ public class Chunk : MonoBehaviour
     public bool TryGetItemsInRange(Vector2 position, float radius, out List<Item> allItems)
     {
         allItems = new List<Item>();
+        if (radius < 0)
+            return false;
 
-        // 先对位置进行取整
+        EnsurePositionArray();
+
         Vector2 roundedPos = RoundPositionForQuery(position);
+        if (!TryWorldToLocal(roundedPos, out var centerLocal))
+            return false;
 
-        // 遍历所有物品位置，查找范围内的物品
-        foreach (var kvp in RunTimeItems_ByPosition)
+        int r = Mathf.CeilToInt(radius);
+        int minX = Mathf.Max(0, centerLocal.x - r);
+        int maxX = Mathf.Min(_posWidth - 1, centerLocal.x + r);
+        int minY = Mathf.Max(0, centerLocal.y - r);
+        int maxY = Mathf.Min(_posHeight - 1, centerLocal.y + r);
+
+        float sqrRadius = radius * radius;
+        for (int x = minX; x <= maxX; x++)
         {
-            float distance = Vector2.Distance(kvp.Key, roundedPos);
-            if (distance <= radius && kvp.Value != null)
+            for (int y = minY; y <= maxY; y++)
             {
-                allItems.AddRange(kvp.Value);
+                var list = RunTimeItems_ByPosition_Array[x, y];
+                if (list == null || list.Count == 0)
+                    continue;
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var it = list[i];
+                    if (it == null)
+                        continue;
+
+                    Vector2 p = RoundPositionForQuery(it.transform.position);
+                    Vector2 d = p - roundedPos;
+                    if (d.sqrMagnitude <= sqrRadius)
+                    {
+                        allItems.Add(it);
+                    }
+                }
             }
         }
 
@@ -430,6 +606,34 @@ public class Chunk : MonoBehaviour
 
         return false;
     }
+
+    #region Chunk内实例化（跳过ItemMgr按位置找Chunk）
+    public Item InstantiateItemInChunk(ItemData itemData, Vector3 position, Quaternion rotation = default, Vector3 scale = default)
+    {
+        if (ItemMgr.Instance == null)
+        {
+            Debug.LogError("[Chunk] ItemMgr.Instance为空，无法实例化物品", this);
+            return null;
+        }
+
+        Item item = ItemMgr.Instance.InstantiateItem(itemData, position, rotation, scale, parent: gameObject);
+        AddItem(item);
+        return item;
+    }
+
+    public Item InstantiateItemInChunk(string itemName, Vector3 position, Quaternion rotation = default, Vector3 scale = default)
+    {
+        if (ItemMgr.Instance == null)
+        {
+            Debug.LogError("[Chunk] ItemMgr.Instance为空，无法实例化物品", this);
+            return null;
+        }
+
+        Item item = ItemMgr.Instance.InstantiateItem(itemName, position, rotation, scale, parent: gameObject);
+        AddItem(item);
+        return item;
+    }
+    #endregion
     #endregion
 }
 
