@@ -24,7 +24,7 @@ MonoBehaviour:
     - rid: 6445419709040689160
       type: {class: TileData_Universal, ns: , asm: Data}
       data:
-        ID: Tile_Sand
+        ID: Tile_Stone
         Name: Tile_Stone
         TileTag: 
         position: {x: 0, y: 0, z: 0}

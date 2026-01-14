@@ -138,7 +138,6 @@ GameObject:
   m_Component:
   - component: {fileID: 891121404665747283}
   - component: {fileID: 9058411785591302946}
-  - component: {fileID: 7400242115634630897}
   - component: {fileID: 6502567715825756977}
   - component: {fileID: 2341746562113399121}
   - component: {fileID: 6280812242651090066}
@@ -183,21 +182,6 @@ MonoBehaviour:
   LoadedCount: 0
   ADBLabels: []
   isLoadFinish: 0
---- !u!114 &7400242115634630897
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4565539948505994440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 639340d568c580b4a8644879200f717b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  path: "Assets/_Data/\u5E73\u5766\u4E16\u754C- \u751F\u7269\u53CA\u7269\u54C1\u6570\u636E.xlsx"
-  OpenSheetName: Sheet1
-  SheetNames: []
 --- !u!114 &6502567715825756977
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -341,7 +325,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212defbe379f6e04e832893eda7ea808, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cachedMap: {fileID: 0}
+  EnableItemPool: 0
+  PoolAllItems: 0
+  PoolItemIDs: []
+  DefaultPoolMaxSize: 64
+  DefaultPrewarmCount: 0
 --- !u!114 &3180596057592253439
 MonoBehaviour:
   m_ObjectHideFlags: 0

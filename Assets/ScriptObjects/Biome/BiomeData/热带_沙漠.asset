@@ -16,14 +16,12 @@ MonoBehaviour:
   Description: "\u6563\u843D\u7684\u77F3\u5934,\u5C0F\u6C34\u5751,\u7A00\u5C11\u7684\u6811,\u5E7F\u9614\u7684\u8349\u5730"
   PreviewColor: {r: 0.84313726, g: 0.7347578, b: 0.19999997, a: 1}
   Condition:
-    TemperatureRange: {x: 0.75, y: 1}
-    HumidityRange: {x: 0, y: 1}
-    PrecipitationRange: {x: 0, y: 0.25}
+    TemperatureRange: {x: 0.7, y: 1}
+    HumidityRange: {x: 0, y: 0.5}
+    PrecipitationRange: {x: 0, y: 0.5}
     SolidityRange: {x: 0, y: 1}
     HightRange: {x: 0.5, y: 1}
   TerrainConfig:
-    TileSpawns:
-    - {fileID: 11400000, guid: d74547dd7960b9f40b6906f23d027810, type: 2}
     TileSpawns_NoSO:
     - TileBlock: {fileID: 11400000, guid: bf736d65367b9254dbd69cd783e538f8, type: 2}
       environmentConditionRange:
@@ -32,5 +30,4 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         SolidityRange: {x: 0, y: 1}
         HightRange: {x: 0, y: 1}
-    ItemSpawn: []
     ItemSpawn_NoSO: []

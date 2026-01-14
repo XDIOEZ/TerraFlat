@@ -132,17 +132,21 @@ MonoBehaviour:
         targetTilemap: {fileID: 0}
         Equator: 0
         biomes:
+        - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
+        - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
         - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
         - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
         NoiseConfigs:
         - rid: 6445419845959286800
         - rid: 6445419845959286804
+        - rid: 6445419952964370435
+        - rid: 6445419952964370436
         showBiomeOverlay: 0
     - rid: 6445419845959286800
       type: {class: LandNoise, ns: , asm: Manager}
       data:
         noiseType: 0
-        coordScale: 5
+        coordScale: 2
         frequency: 0.1
         octaves: 4
         lacunarity: 2
@@ -153,13 +157,13 @@ MonoBehaviour:
       type: {class: LandNoise, ns: , asm: Manager}
       data:
         noiseType: 2
-        coordScale: 10
+        coordScale: 1
         frequency: 0.1
         octaves: 4
         lacunarity: 2
         persistence: 0.5
         outputScale: 1
-        coordOffset: {x: 1000, y: 1000}
+        coordOffset: {x: 100000, y: 100000}
     - rid: 6445419845959286807
       type: {class: ChunkGenerator_River, ns: , asm: GamePlay}
       data:
@@ -201,6 +205,28 @@ MonoBehaviour:
       data:
         biomes: []
         logSummary: 0
+    - rid: 6445419952964370435
+      type: {class: LandNoise, ns: , asm: Manager}
+      data:
+        noiseType: 1
+        coordScale: 1
+        frequency: 0.1
+        octaves: 4
+        lacunarity: 2
+        persistence: 0.5
+        outputScale: 1
+        coordOffset: {x: 200000, y: 200000}
+    - rid: 6445419952964370436
+      type: {class: LandNoise, ns: , asm: Manager}
+      data:
+        noiseType: 3
+        coordScale: 1
+        frequency: 0.1
+        octaves: 4
+        lacunarity: 2
+        persistence: 0.5
+        outputScale: 1
+        coordOffset: {x: 400000, y: 400000}
 --- !u!114 &8016388638861598348
 MonoBehaviour:
   m_ObjectHideFlags: 0
