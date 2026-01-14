@@ -1,4 +1,5 @@
-﻿using Sirenix.OdinInspector;
+﻿using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
@@ -78,6 +79,24 @@ public class Mod_ChunkLoader : Module
 
     #region 生命周期方法
 
+    private void OnEnable()
+    {
+        GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld;
+    }
+
+    private void OnDisable()
+    {
+        GameManager.Event_PlayerEnterWorld -= OnPlayerEnterWorld;
+    }
+
+    private void OnPlayerEnterWorld(Player player)
+    {
+        var owner = GetComponentInParent<Player>();
+        if (player != owner) return;
+
+        RefreshChunksAroundPlayer();
+    }
+
     private void OnValidate()
     {
         if (_Data != null)
@@ -113,6 +132,25 @@ public class Mod_ChunkLoader : Module
 
     #endregion
 
+    #region 外部接口
+
+    [Button("刷新周围区块")]
+    public void RefreshChunksAroundPlayer()
+    {
+        lastChunkPos = Chunk.GetChunkPosition(transform.position);
+        needsChunkUpdate = false;
+
+        if (ChunkMgr.Instance == null)
+        {
+            Debug.LogError("[区块加载器] ChunkMgr 未初始化，无法刷新区块", this);
+            return;
+        }
+
+        UpdateChunks(lastChunkPos);
+    }
+
+    #endregion
+
     #region 区块检测与更新
 
     /// <summary>
@@ -134,7 +172,6 @@ public class Mod_ChunkLoader : Module
     /// </summary>
     private void UpdateChunks(Vector2 chunkPos)
     {
-
         // 销毁过远的失活区块
         ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: DestroyChunkDistance);
 
@@ -145,7 +182,13 @@ public class Mod_ChunkLoader : Module
         ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: LoadChunkDistance);
 
         //调整Apath寻路网格覆盖范围(不需要扫描,只需要调整范围就可以了,网格的具体参数在加载区块后其会自动更新)
-        AstarGameManager.Instance.RefreshNavMeshAsync(center: chunkPos,radius:LoadChunkDistance, onComplete: OnMeshUpdateComplete);
+        if (AstarGameManager.Instance == null)
+        {
+            Debug.LogError("[区块加载器] AstarGameManager 未初始化，无法刷新寻路网格", this);
+            return;
+        }
+
+        AstarGameManager.Instance.RefreshNavMeshAsync(center: chunkPos, radius: LoadChunkDistance, onComplete: OnMeshUpdateComplete);
 
     }
 

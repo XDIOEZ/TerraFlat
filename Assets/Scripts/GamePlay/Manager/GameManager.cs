@@ -8,6 +8,10 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : SingletonAutoMono<GameManager>
 {
+    #region Events
+    public static event Action<Player> Event_PlayerEnterWorld;
+    #endregion
+
     [SerializeField]
     private GameObject SunAndMoonPrefab;
     [Header("寻路系统")]
@@ -300,6 +304,8 @@ public class GameManager : SingletonAutoMono<GameManager>
             // 新玩家：随机放到新场景
             ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));
         }
+
+        Event_PlayerEnterWorld?.Invoke(player);
     }
 
     /// <summary>
@@ -487,8 +493,8 @@ public class GameManager : SingletonAutoMono<GameManager>
                     var selectedSaveText = saveManager.GetText("选中的存档名称");
                     if (selectedSaveText != null)
                     {
-                        string fullPath = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveText.text + ".bytes");
-                        SaveDataMgr.Instance.DeletSave(fullPath);
+                        string saveDir = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData");
+                        SaveDataMgr.Instance.DeleteSave(saveDir, selectedSaveText.text);
                     }
                 }
             }
