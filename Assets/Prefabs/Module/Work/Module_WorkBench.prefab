@@ -53,10 +53,149 @@ MonoBehaviour:
     PanleRectPosition: {x: 0, y: 0, z: 0}
     InventoryInitName: 
     BasePanelIsOpen: 1
-  InventoryInstances: []
+  InventoryInstances:
+  - rid: 6445419952964370438
+  - rid: 6445419952964370440
   inventoryBasePanelCache:
     _serializedList: []
-  ToggleActionName: 
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 6445419952964370438
+      type: {class: Inventory_WorkBench, ns: , asm: GamePlay}
+      data:
+        item: {fileID: 0}
+        InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: 1a0739458f9b88b48a21f91e3b9165f5, type: 3}
+        Data:
+          Name: "\u5DE5\u4F5C\u53F0\u6A21\u5757"
+          itemSlots:
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          Index: 0
+          IsInjected: 0
+          PanelPosition: {x: 0, y: 0, z: 0}
+          PanelIsOpen: 0
+          ToggleActionName: 
+          UIPrefabName: 
+          Event_RefreshUI:
+            _PersistentCalls: []
+          Event_OnBeforeDataChanged:
+            _PersistentCalls: []
+          Event_OnDataChanged:
+            _PersistentCalls: []
+          Event_OnDataChanged_TwoSlots:
+            _PersistentCalls: []
+        itemSlot_UI: []
+        basePanel: {fileID: 0}
+        mod_Inventory: {fileID: 4200879185744419619}
+        workButton: {fileID: 0}
+    - rid: 6445419952964370440
+      type: {class: Inventory, ns: , asm: GamePlay}
+      data:
+        item: {fileID: 0}
+        InventoryPanel_Prefab: {fileID: 5019330763773049737, guid: 6dad61aac020ddd4a802165922117e55, type: 3}
+        Data:
+          Name: 
+          itemSlots:
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          Index: 0
+          IsInjected: 0
+          PanelPosition: {x: 0, y: 0, z: 0}
+          PanelIsOpen: 0
+          ToggleActionName: 
+          UIPrefabName: 
+          Event_RefreshUI:
+            _PersistentCalls: []
+          Event_OnBeforeDataChanged:
+            _PersistentCalls: []
+          Event_OnDataChanged:
+            _PersistentCalls: []
+          Event_OnDataChanged_TwoSlots:
+            _PersistentCalls: []
+        itemSlot_UI: []
+        basePanel: {fileID: 0}

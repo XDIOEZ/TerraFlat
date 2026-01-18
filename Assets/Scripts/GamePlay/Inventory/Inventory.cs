@@ -464,7 +464,7 @@ public class Inventory
 
     public virtual void Interact_Start(Item item_)
     {
-        basePanel.Toggle();
+        InventoryAction();
     }
 
     #endregion
