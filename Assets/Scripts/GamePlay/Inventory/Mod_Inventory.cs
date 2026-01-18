@@ -218,19 +218,9 @@ public class Mod_Inventory : Module, IInventory
 
 
 
-        foreach (var kvp in InventoryRefDic)
+        foreach (var kvp in InventoryInstances)
         {
-            if (EnsurePanelCreated(kvp.Value))
-            {
-                NewMethod(kvp.Value);
-            }
-
-            if (kvp.Value.basePanel == null)
-            {
-                Debug.LogWarning($"[Mod_Inventory.Interact_Start] InventoryRefDic 中存在空的 basePanel");
-                continue;
-            }
-            kvp.Value.Interact_Start(item_);
+            kvp.Interact_Start(item_);
         }
 
         if (item_.itemMods == null)

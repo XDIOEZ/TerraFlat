@@ -8,10 +8,13 @@ using UnityEngine.UI;
 
 public class Inventory_WorkBench : Inventory
 {
+    [Header("策划必配")]
+    [InfoBox("策划：需要手动拖拽挂接 Mod_Inventory（工作台的容器模块）。\n否则输出容器/合成会无法正常工作。", InfoMessageType.Warning, VisibleIf = "@mod_Inventory == null")]
+    [Required("策划：请手动挂接 Mod_Inventory（工作台容器模块）")]
     public Mod_Inventory mod_Inventory;
 
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
-    public Inventory inputInventory => mod_Inventory.InventoryInstances[0];
+    public Inventory inputInventory => this;
     [Tooltip("输出容器，用于存放合成后得到的物品")]
     public Inventory outputInventory => mod_Inventory.InventoryInstances[1];
 
@@ -260,12 +263,12 @@ public class Inventory_WorkBench : Inventory
     /// </summary>
     public override void Interact_Start(Item playerItem)
     {
+        base.Interact_Start(playerItem);
         if (playerItem.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod))
         {
             inputInventory.DefaultTarget_Inventory = handMod.inventory;
             outputInventory.DefaultTarget_Inventory = handMod.inventory;
         }
-        basePanel.Toggle();
         Debug.Log($"玩家 {playerItem.name} 开始交互工作台");
     }
 

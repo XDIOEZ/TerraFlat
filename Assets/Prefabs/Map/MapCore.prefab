@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5175292470693907942}
   - component: {fileID: 8233460568870623006}
   - component: {fileID: 8016388638861598348}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: MapCore
   m_TagString: MapCore
   m_Icon: {fileID: 0}
@@ -147,7 +147,7 @@ MonoBehaviour:
       data:
         noiseType: 0
         coordScale: 2
-        frequency: 0.1
+        frequency: 0.05
         octaves: 4
         lacunarity: 2
         persistence: 0.5
@@ -257,7 +257,7 @@ GameObject:
   - component: {fileID: 9096885064613800217}
   - component: {fileID: 6321057560787975102}
   - component: {fileID: 5742503804346772835}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: "\u5730\u9762"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
