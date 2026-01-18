@@ -15,7 +15,7 @@ MonoBehaviour:
   m_DefaultGroup: 47b73bec22f621a498a1748af8eb38da
   m_currentHash:
     serializedVersion: 2
-    Hash: ad9c11ca58c7e4904c5f37a55a96de7f
+    Hash: 00000000000000000000000000000000
   m_OptimizeCatalogSize: 0
   m_BuildRemoteCatalog: 0
   m_BundleLocalCatalog: 0
@@ -44,17 +44,7 @@ MonoBehaviour:
   m_BuildAddressablesWithPlayerBuild: 0
   m_overridePlayerVersion: '[UnityEditor.PlayerSettings.bundleVersion]'
   m_GroupAssets:
-  - {fileID: 11400000, guid: 9cf109290c9bb35448bb404690d9f7f9, type: 2}
-  - {fileID: 11400000, guid: 6809be085262b75499b4e965a561c686, type: 2}
   - {fileID: 11400000, guid: d9f32c43b34535f429e061e66db019b1, type: 2}
-  - {fileID: 11400000, guid: 52bd36a95e55734438639b196b67a8d6, type: 2}
-  - {fileID: 11400000, guid: d2a912a843971c844afdb4754a70edcf, type: 2}
-  - {fileID: 11400000, guid: 57ed80be7c1b2cc4cba8338be4e6becd, type: 2}
-  - {fileID: 11400000, guid: 17c5a68cdddc4f8449f1e6023d2008ba, type: 2}
-  - {fileID: 11400000, guid: 604fb78a7b30c014fa74a0dfa9382e24, type: 2}
-  - {fileID: 11400000, guid: b71313ffc7c22db40ac7db7f522a9399, type: 2}
-  - {fileID: 11400000, guid: 1a835da1b122c834399efc4eb0382c2b, type: 2}
-  - {fileID: 11400000, guid: 7f4259c1f82edad45a5ca0e1695a9ce7, type: 2}
   m_BuildSettings:
     m_CompileScriptsInVirtualMode: 0
     m_CleanupStreamingAssetsAfterBuilds: 1
@@ -95,19 +85,13 @@ MonoBehaviour:
     m_ProfileVersion: 1
   m_LabelTable:
     m_LabelNames:
-    - Block
     - Prefab
     - CraftingRecipe
-    - TileBase
-    - GameMap
-    - Template_SaveData
-    - ItemPrefab
-    - Buff
-    - TileItemPrefab
-    - InventoryInit
-    - CraftingRecipe_Tag
-    - Skill
     - TileBlock
+    - TileBase
+    - Buff
+    - InventoryInit
+    - Skill
   m_SchemaTemplates: []
   m_GroupTemplateObjects:
   - {fileID: 11400000, guid: 81df820a3474c3645bf38f01f1aa6217, type: 2}
