@@ -1426,14 +1426,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 6997421775323471935, guid: df3c57f10524b144a9fe355ef83589ba, type: 3}
-      propertyPath: runHungerBuff
-      value: 
-      objectReference: {fileID: 11400000, guid: 75ace42eca9a9af4fa49abb5406a96dc, type: 2}
-    - target: {fileID: 6997421775323471935, guid: df3c57f10524b144a9fe355ef83589ba, type: 3}
-      propertyPath: moveHungerBuff
-      value: 
-      objectReference: {fileID: 11400000, guid: 202d06f90127eee4ea2c4bc310e3c58c, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
