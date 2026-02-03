@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UltEvents;
-using UnityEngine.InputSystem.XR;
 
 /// <summary>
 /// Mover —— 处理游戏对象的移动逻辑
@@ -19,8 +18,14 @@ public partial class Mover : Module
         public float slowDownSpeed = 5f;
         public float endSpeed = 0.1f;
 
+        [Header("精力消耗设置")]
+        [Tooltip("移动时每秒精力消耗")]
+        public float moveStaminaConsume = 1f;
+
+        [Tooltip("奔跑时每秒精力消耗（独立值，不再参考移动消耗）")]
+        public float runStaminaConsume = 2f;
+
         [Header("跑步设置")]
-        public float runStaminaRate = 2f;
         public float runSpeedRate = 2f;
         public bool isRunning = false;
         public float RunStaminaThreshold = 2f; // 体力低于该值时，不能奔跑
@@ -47,7 +52,6 @@ public partial class Mover : Module
     public Rigidbody2D rb;
 
     public Mod_Stamina stamina;                         // 体力模块
-    public GameValue_float staminaConsumeSpeed = new(1); // 每秒精力消耗速度
 
     public Ex_ModData_MemoryPackable ModDataMemoryPack = new();
     public Mod_AnimatorController animationController;
@@ -103,8 +107,20 @@ public partial class Mover : Module
 
     public float RunStaminaRate
     {
-        get => Data.runStaminaRate;
-        set => Data.runStaminaRate = value;
+        get => Data.runStaminaConsume;
+        set => Data.runStaminaConsume = value;
+    }
+
+    public float MoveStaminaConsume
+    {
+        get => Data.moveStaminaConsume;
+        set => Data.moveStaminaConsume = value;
+    }
+
+    public float RunStaminaConsume
+    {
+        get => Data.runStaminaConsume;
+        set => Data.runStaminaConsume = value;
     }
 
     public float RunSpeedRate
@@ -187,7 +203,8 @@ public partial class Mover : Module
 
             if (stamina != null)
             {
-                stamina.CurrentValue -= deltaTime * staminaConsumeSpeed.Value;
+                float consumePerSecond = IsRunning ? RunStaminaConsume : MoveStaminaConsume;
+                stamina.CurrentValue -= deltaTime * consumePerSecond;
 
                 // 自动中断奔跑
                 if (IsRunning && stamina.CurrentValue < RunStaminaThreshold)
@@ -214,22 +231,20 @@ public partial class Mover : Module
         if (isRun && stamina != null && stamina.CurrentValue < RunStaminaThreshold)
         {
             Debug.Log("体力太低，无法奔跑");
-            animationController.SetBool(AnimationText.Run, false);
+            if (animationController != null) animationController.SetBool(AnimationText.Run, false);
             IsRunning = false;
             return;
         }
 
         if (isRun)
         {
-            staminaConsumeSpeed.MultiplicativeModifier *= RunStaminaRate;
             Speed.MultiplicativeModifier *= RunSpeedRate;
-            animationController.SetBool(AnimationText.Run, true);
+            if (animationController != null) animationController.SetBool(AnimationText.Run, true);
         }
         else
         {
-            staminaConsumeSpeed.MultiplicativeModifier /= RunStaminaRate;
             Speed.MultiplicativeModifier /= RunSpeedRate;
-            animationController.SetBool(AnimationText.Run, false);
+            if (animationController != null) animationController.SetBool(AnimationText.Run, false);
         }
 
 
