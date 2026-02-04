@@ -1,9 +1,56 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0" version="29.3.7">
   <diagram name="第 1 页" id="C-IsJeU5A2ytGCQIUwKx">
-    <mxGraphModel dx="1380" dy="796" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1150" dy="663" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <UserObject label="&lt;span style=&quot;text-align: left;&quot;&gt;游戏程序 实例化初始界面UI处&lt;/span&gt;" link="vscode://lirentech.file-ref-tags?filePath=GameManager.cs&amp;snippet=++++private+void+Start%28%29" id="tCPvovjiRZm_WEtIL-ZE-2">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
+            <mxGeometry height="60" width="120" x="150" y="310" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="退回游戏开始界面协程函数" link="vscode://lirentech.file-ref-tags?filePath=GameManager.cs&amp;snippet=++++public+IEnumerator+BackToHelloScene_Coroutine%28Item+Player%2C+System.Action+onComplete+%3D+null%29" id="tCPvovjiRZm_WEtIL-ZE-4">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
+            <mxGeometry height="60" width="120" x="330" y="310" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="tCPvovjiRZm_WEtIL-ZE-15" edge="1" parent="1" source="tCPvovjiRZm_WEtIL-ZE-5" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="tCPvovjiRZm_WEtIL-ZE-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tCPvovjiRZm_WEtIL-ZE-16" connectable="0" parent="tCPvovjiRZm_WEtIL-ZE-15" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="引用" vertex="1">
+          <mxGeometry relative="1" x="0.0979" as="geometry">
+            <mxPoint y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="UI面板管理器" link="vscode://lirentech.file-ref-tags?filePath=UIManager.cs&amp;snippet=public+class+UIManager+%3A+MonoBehaviour" id="tCPvovjiRZm_WEtIL-ZE-5">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
+            <mxGeometry height="60" width="120" x="250" y="450" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="tCPvovjiRZm_WEtIL-ZE-12" edge="1" parent="1" source="tCPvovjiRZm_WEtIL-ZE-8" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="tCPvovjiRZm_WEtIL-ZE-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tCPvovjiRZm_WEtIL-ZE-13" edge="1" parent="1" source="tCPvovjiRZm_WEtIL-ZE-8" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="tCPvovjiRZm_WEtIL-ZE-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <UserObject label="游戏管理器-管理游戏整体的生命周期" link="vscode://lirentech.file-ref-tags?filePath=GameManager.cs&amp;snippet=public+class+GameManager+%3A+SingletonAutoMono%3CGameManager%3E" id="tCPvovjiRZm_WEtIL-ZE-8">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
+            <mxGeometry height="60" width="120" x="230" y="180" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="BasePanel-游戏UI面板管理的最小单位,通常是UI元素的父对象" link="vscode://lirentech.file-ref-tags?filePath=BasePanel.cs&amp;snippet=public+class+BasePanel+%3A+MonoBehaviour" id="tCPvovjiRZm_WEtIL-ZE-14">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
+            <mxGeometry height="60" width="120" x="140" y="590" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="创建新世界函数" link="vscode://lirentech.file-ref-tags?filePath=GameManager.cs&amp;snippet=++++public+void+CreateNewWorld%28%29" id="tCPvovjiRZm_WEtIL-ZE-17">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
+            <mxGeometry height="60" width="120" x="530" y="310" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="tCPvovjiRZm_WEtIL-ZE-18" edge="1" parent="1" source="tCPvovjiRZm_WEtIL-ZE-8" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.563;entryY=-0.022;entryDx=0;entryDy=0;entryPerimeter=0;" target="tCPvovjiRZm_WEtIL-ZE-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
