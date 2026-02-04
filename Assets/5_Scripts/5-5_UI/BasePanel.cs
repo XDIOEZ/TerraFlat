@@ -60,11 +60,10 @@ public class BasePanel : MonoBehaviour
     // 记录面板的开关状态
     [SerializeField]
     private bool isOpen = false;
+
     #region  Unity生命周期
-    protected virtual void Awake()
+    public virtual void Init()
     {
-        PanelName = gameObject.name + Random.Range(1, 1000);
-        UIManager.Instance.RegisterPanel(this);
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
 
@@ -88,6 +87,7 @@ public class BasePanel : MonoBehaviour
     {
         PanelName = name;
         GetText("信息").text = PanelName;
+        UIManager.Instance.RegisterPanel(this, PanelName);
     }
 
     void OnValidate()

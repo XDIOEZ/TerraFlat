@@ -53,7 +53,6 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     protected override void Awake()
     {
         base.Awake();
-        DontDestroyOnLoad(gameObject); // 🔥 保证手动挂的对象也不会丢
         InitializeUserSavePath();
     }
 

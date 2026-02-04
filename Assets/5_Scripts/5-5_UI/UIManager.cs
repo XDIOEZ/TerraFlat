@@ -6,18 +6,16 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    // 单例实例
+    #region 单例模式
     private static UIManager _instance;
     public static UIManager Instance
     {
         get
         {
-            // 如果实例不存在，尝试查找
             if (_instance == null)
             {
                 _instance = FindObjectOfType<UIManager>();
 
-                // 如果还是找不到，创建一个新的
                 if (_instance == null)
                 {
                     GameObject singletonObject = new GameObject("UIManager");
@@ -27,24 +25,20 @@ public class UIManager : MonoBehaviour
             return _instance;
         }
     }
+    #endregion
 
-    // 存储所有面板的字典
+    #region 字段声明
     [ShowInInspector]
-    public Dictionary<string, BasePanel> panels = new Dictionary<string, BasePanel>();
+    public Dictionary<string, List<BasePanel>> panels = new Dictionary<string, List<BasePanel>>();
 
-
-    // 面板的父对象
     public Transform panelRoot;
-
-    // panelRoot的预制体，可在Inspector中挂接
     public GameObject panelRootPrefab;
-
-    // 预制体引用（可选）
     public GameObject[] panelPrefabs;
+    #endregion
 
+    #region 初始化
     private void Awake()
     {
-        // 确保只有一个UIManager实例
         if (_instance == null)
         {
             _instance = this;
@@ -56,23 +50,15 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        // 初始化面板字典
         InitializePanels();
-
-        // 确保panelRoot存在
         EnsurePanelRootExists();
     }
 
-    /// <summary>
-    /// 确保panelRoot存在，如果不存在则在当前激活场景中创建
-    /// </summary>
     private void EnsurePanelRootExists()
     {
-        // 如果panelRoot已经存在，直接返回
         if (panelRoot != null)
             return;
 
-        // 尝试在场景中查找现有的PanelRoot
         GameObject existingPanelRoot = GameObject.Find("PanelRoot");
         if (existingPanelRoot != null)
         {
@@ -80,10 +66,8 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        // 创建新的panelRoot
         GameObject canvasObj;
 
-        // 如果提供了panelRootPrefab，优先使用预制体实例化
         if (panelRootPrefab != null)
         {
             canvasObj = Instantiate(panelRootPrefab);
@@ -91,73 +75,50 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            // 否则创建默认的Canvas对象
             canvasObj = new GameObject("PanelRoot");
             Canvas canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
-            // 添加CanvasScaler组件
             CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
 
-            // 添加GraphicRaycaster组件
             canvasObj.AddComponent<GraphicRaycaster>();
         }
 
-        // 确保panelRoot不会被销毁（除非场景切换）
-        // 注意：我们不使用DontDestroyOnLoad，这样它会随着场景切换而销毁
         panelRoot = canvasObj.transform;
-
-        //        Debug.Log("PanelRoot created in current active scene.");
     }
 
-    /// <summary>
-    /// 初始化所有面板
-    /// </summary>
     private void InitializePanels()
     {
-        // 确保panelRoot存在
         EnsurePanelRootExists();
-
         panels.Clear();
-
-        // 查找场景中所有的BasePanel组件
-        /* BasePanel[] allPanels = FindObjectsOfType<BasePanel>(true);
-         foreach (BasePanel panel in allPanels)
-         {
-             if (!panels.ContainsKey(panel.name))
-             {
-                 panels[panel.name] = panel;
-             }
-             else
-             {
-                 // 如果存在同名面板，添加警告
-                 Debug.LogWarning($"Duplicate panel name found: {panel.name}");
-             }
-         }*/
     }
+    #endregion
 
-    /// <summary>
-    /// 获取指定名称的面板
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
-    /// <returns>BasePanel组件，如果不存在返回null</returns>
+    #region 面板获取
     public BasePanel GetPanel(string panelName)
     {
-        if (panels.TryGetValue(panelName, out BasePanel panel))
+        if (panels.TryGetValue(panelName, out List<BasePanel> panelList) && panelList.Count > 0)
         {
-            return panel;
+            return panelList[0];
         }
 
-        Debug.LogWarning($"Panel '{panelName}' not found!");
+        Debug.Log($"Panel '{panelName}' not found!");
         return null;
     }
 
-    /// <summary>
-    /// 显示指定面板
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
+    public List<BasePanel> GetAllPanelsOfType(string panelName)
+    {
+        if (panels.TryGetValue(panelName, out List<BasePanel> panelList))
+        {
+            return panelList;
+        }
+        return new List<BasePanel>();
+    }
+    #endregion
+
+    #region 面板显示/隐藏
     public void ShowPanel(string panelName)
     {
         BasePanel panel = GetPanel(panelName);
@@ -167,10 +128,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 隐藏指定面板
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
     public void HidePanel(string panelName)
     {
         BasePanel panel = GetPanel(panelName);
@@ -180,10 +137,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 切换面板显示状态
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
     public void TogglePanel(string panelName)
     {
         BasePanel panel = GetPanel(panelName);
@@ -193,148 +146,28 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 检查面板是否打开
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
-    /// <returns>面板是否打开</returns>
-    public bool IsPanelOpen(string panelName)
-    {
-        BasePanel panel = GetPanel(panelName);
-        if (panel != null)
-        {
-            return panel.IsOpen();
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// 隐藏所有面板
-    /// </summary>
     public void HideAllPanels()
     {
-        foreach (var panel in panels.Values)
+        foreach (var panelList in panels.Values)
         {
-            panel.Close();
+            foreach (var panel in panelList)
+            {
+                panel.Close();
+            }
         }
     }
 
-    /// <summary>
-    /// 显示所有面板
-    /// </summary>
     public void ShowAllPanels()
     {
-        foreach (var panel in panels.Values)
+        foreach (var panelList in panels.Values)
         {
-            panel.Open();
-        }
-    }
-
-    /// <summary>
-    /// 通过预制体创建新面板
-    /// </summary>
-    /// <param name="panelPrefabName">面板预制体名称</param>
-    /// <param name="parent">父对象</param>
-    /// <returns>创建的面板</returns>
-    public BasePanel CreatePanel(string panelPrefabName, Transform parent = null)
-    {
-        // 查找预制体
-        GameObject panelPrefab = null;
-        foreach (GameObject prefab in panelPrefabs)
-        {
-            if (prefab != null && prefab.name == panelPrefabName)
+            foreach (var panel in panelList)
             {
-                panelPrefab = prefab;
-                break;
-            }
-        }
-
-        if (panelPrefab == null)
-        {
-            Debug.LogWarning($"Panel prefab '{panelPrefabName}' not found!");
-            return null;
-        }
-
-        // 确保panelRoot存在
-        EnsurePanelRootExists();
-
-        // 创建面板实例
-        Transform parentTransform = parent != null ? parent : panelRoot;
-        GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
-
-        // 获取BasePanel组件
-        BasePanel panel = panelInstance.GetComponent<BasePanel>();
-        if (panel != null)
-        {
-            // 添加到字典中
-            if (!panels.ContainsKey(panelInstance.name))
-            {
-                panels[panelInstance.name] = panel;
-            }
-            return panel;
-        }
-        else
-        {
-            Debug.LogWarning($"Panel prefab '{panelPrefabName}' does not have a BasePanel component!");
-            Destroy(panelInstance);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// 销毁指定面板
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
-    public void DestroyPanel(string panelName)
-    {
-        if (panels.TryGetValue(panelName, out BasePanel panel))
-        {
-            panels.Remove(panelName);
-            if (panel != null && panel.gameObject != null)
-            {
-                Destroy(panel.gameObject);
+                panel.Open();
             }
         }
     }
 
-    /// <summary>
-    /// 销毁指定面板
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
-    public void DestroyPanel(BasePanel panel)
-    {
-        if (panels.TryGetValue(panel.PanelName, out BasePanel existingPanel))
-        {
-            panels.Remove(panel.PanelName);
-            if (existingPanel != null && existingPanel.gameObject != null)
-            {
-                Destroy(existingPanel.gameObject);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 刷新面板列表（当动态添加面板时调用）
-    /// </summary>
-    public void RefreshPanels()
-    {
-        InitializePanels();
-    }
-
-    /// <summary>
-    /// 获取所有面板名称
-    /// </summary>
-    /// <returns>面板名称列表</returns>
-    public List<string> GetAllPanelNames()
-    {
-        return new List<string>(panels.Keys);
-    }
-
-    /// <summary>
-    /// 设置面板的可见性
-    /// </summary>
-    /// <param name="panelName">面板名称</param>
-    /// <param name="isVisible">是否可见</param>
     public void SetPanelVisible(string panelName, bool isVisible)
     {
         BasePanel panel = GetPanel(panelName);
@@ -350,31 +183,134 @@ public class UIManager : MonoBehaviour
             }
         }
     }
+    #endregion
 
-    /// <summary>
-    /// 获取指定标签的面板列表
-    /// </summary>
-    /// <param name="tag">标签名称</param>
-    /// <returns>匹配标签的面板列表</returns>
+    #region 面板创建和销毁
+
+    public BasePanel CreatePanelFromGameObject(GameObject panelPrefab, string panelName = "")
+    {
+        EnsurePanelRootExists();
+
+        GameObject panelInstance = Instantiate(panelPrefab, panelRoot);
+
+        BasePanel _basePanel = panelInstance.GetComponent<BasePanel>();
+
+        string baseName = string.IsNullOrEmpty(panelName) ? panelPrefab.name : panelName;
+        
+        // 检测字典中是否已经存在相同类型的面板
+        int count = 0;
+        if (panels.TryGetValue(baseName, out List<BasePanel> existingPanels))
+        {
+            count = existingPanels.Count;
+        }
+
+        // 根据已存在的数量添加后缀
+        string finalName = count > 0 ? $"{baseName}_{count}" : baseName;
+        
+        panelInstance.name = finalName;
+        _basePanel.PanelName = finalName;
+
+        //初始化面板
+        _basePanel.Init();
+
+        //注册面板
+        RegisterPanel(_basePanel, baseName);
+        return _basePanel;
+    }
+
+    public void DestroyPanel(string panelName)
+    {
+        foreach (var kvp in panels)
+        {
+            var panelList = kvp.Value;
+            for (int i = panelList.Count - 1; i >= 0; i--)
+            {
+                if (panelList[i] != null && panelList[i].PanelName == panelName)
+                {
+                    Destroy(panelList[i].gameObject);
+                    panelList.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    public void DestroyPanel(BasePanel panel)
+    {
+        string baseName = panel.PanelName;
+        // 移除后缀以获取基础名称
+        int underscoreIndex = baseName.LastIndexOf('_');
+        if (underscoreIndex > 0 && int.TryParse(baseName.Substring(underscoreIndex + 1), out _))
+        {
+            baseName = baseName.Substring(0, underscoreIndex);
+        }
+
+        if (panels.TryGetValue(baseName, out List<BasePanel> panelList))
+        {
+            panelList.Remove(panel);
+            if (panel != null && panel.gameObject != null)
+            {
+                Destroy(panel.gameObject);
+            }
+        }
+    }
+
+    public void DestroyAllPanelsOfType(string baseName)
+    {
+        if (panels.TryGetValue(baseName, out List<BasePanel> panelList))
+        {
+            for (int i = panelList.Count - 1; i >= 0; i--)
+            {
+                if (panelList[i] != null && panelList[i].gameObject != null)
+                {
+                    Destroy(panelList[i].gameObject);
+                }
+            }
+            panelList.Clear();
+        }
+    }
+    #endregion
+
+    #region 面板管理
+    public void RegisterPanel(BasePanel panel, string baseName)
+    {
+        if (!panels.ContainsKey(baseName))
+        {
+            panels[baseName] = new List<BasePanel>();
+        }
+        panels[baseName].Add(panel);
+    }
+
+    public void RefreshPanels()
+    {
+        InitializePanels();
+    }
+
+    public List<string> GetAllPanelNames()
+    {
+        return new List<string>(panels.Keys);
+    }
+    #endregion
+
+    #region 标签操作
     public List<BasePanel> GetPanelsByTag(string tag)
     {
         List<BasePanel> taggedPanels = new List<BasePanel>();
 
-        foreach (var panel in panels.Values)
+        foreach (var panelList in panels.Values)
         {
-            if (panel != null && panel.gameObject.CompareTag(tag))
+            foreach (var panel in panelList)
             {
-                taggedPanels.Add(panel);
+                if (panel != null && panel.gameObject.CompareTag(tag))
+                {
+                    taggedPanels.Add(panel);
+                }
             }
         }
 
         return taggedPanels;
     }
 
-    /// <summary>
-    /// 显示指定标签的所有面板
-    /// </summary>
-    /// <param name="tag">标签名称</param>
     public void ShowPanelsByTag(string tag)
     {
         List<BasePanel> taggedPanels = GetPanelsByTag(tag);
@@ -384,10 +320,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 隐藏指定标签的所有面板
-    /// </summary>
-    /// <param name="tag">标签名称</param>
     public void HidePanelsByTag(string tag)
     {
         List<BasePanel> taggedPanels = GetPanelsByTag(tag);
@@ -396,61 +328,5 @@ public class UIManager : MonoBehaviour
             panel.Close();
         }
     }
-
-    /// <summary>
-    /// 注册面板到UIManager
-    /// </summary>
-    /// <param name="panel">要注册的面板</param>
-    public void RegisterPanel(BasePanel panel)
-    {
-        panels[panel.PanelName] = panel;
-    }
-
-    /// <summary>
-    /// 通过GameObject实例化面板对象
-    /// </summary>
-    /// <param name="panelPrefab">面板预制体</param>
-    /// <returns>实例化的面板组件</returns>
-    public BasePanel CreatePanelFromGameObject(GameObject panelPrefab, string panelName = "")
-    {
-        if (panelPrefab == null)
-        {
-            Debug.LogWarning("Panel prefab cannot be null!");
-            return null;
-        }
-
-
-
-        // 确保panelRoot存在
-        EnsurePanelRootExists();
-
-        // 实例化面板对象并设置父对象
-        Transform parentTransform = panelRoot;
-        GameObject panelInstance = Instantiate(panelPrefab, parentTransform);
-
-
-        // 获取BasePanel组件
-        BasePanel panel = panelInstance.GetComponent<BasePanel>();
-
-        if (!string.IsNullOrEmpty(panelName))
-        {
-            panelInstance.name = panelName;
-            panel.PanelName = panelName;
-        }
-
-
-        if (panel != null)
-        {
-            // 自动注册面板
-            RegisterPanel(panel);
-            return panel;
-        }
-        else
-        {
-            Debug.LogWarning($"Panel prefab '{panelPrefab.name}' does not have a BasePanel component!");
-            Destroy(panelInstance);
-            return null;
-        }
-
-    }
+    #endregion
 }

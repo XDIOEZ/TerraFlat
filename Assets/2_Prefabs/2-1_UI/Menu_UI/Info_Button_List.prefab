@@ -756,10 +756,10 @@ RectTransform:
   - {fileID: 2997294295363868996}
   m_Father: {fileID: 1063712361033148363}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 89.45, y: -58.050003}
-  m_SizeDelta: {x: 178.9, y: 34.7}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5726911384104648789
 CanvasRenderer:
@@ -1145,10 +1145,10 @@ RectTransform:
   - {fileID: 3861354873809193557}
   m_Father: {fileID: 1063712361033148363}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 89.45, y: -23.35}
-  m_SizeDelta: {x: 178.9, y: 34.7}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4129418421127166028
 CanvasRenderer:
@@ -1545,7 +1545,7 @@ MonoBehaviour:
   CanDrag: 0
   Dragger: {fileID: 5545954549678109179}
   rectTransform: {fileID: 0}
-  PanleName: 
+  PanelName: 
   isOpen: 0
 --- !u!225 &6809818047216898319
 CanvasGroup:
@@ -1746,10 +1746,10 @@ RectTransform:
   - {fileID: 4755546885902454864}
   m_Father: {fileID: 1063712361033148363}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 89.45, y: -92.75}
-  m_SizeDelta: {x: 178.9, y: 34.7}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3545290639062262864
 CanvasRenderer:

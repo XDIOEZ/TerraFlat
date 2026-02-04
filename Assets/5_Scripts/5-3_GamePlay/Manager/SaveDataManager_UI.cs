@@ -306,14 +306,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     private void OnClick_StartNewGame_Button()
     {
-        if (saveAndLoad != null)
-        {
-            GameManager.Instance.StartNewGame(GetNewPlayerNameInput().text);
-        }
-        else
-        {
-            Debug.LogWarning("SaveAndLoad组件未绑定！");
-        }
+
     }
 
     /// <summary>

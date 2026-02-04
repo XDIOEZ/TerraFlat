@@ -19,9 +19,11 @@ public class GameManager : SingletonAutoMono<GameManager>
     public GameObject SunAndMoonObj { get; private set; }
 
     [Header("准备好的星球数据")]
-    public PlanetData Ready_planetData = new();
+    public PlanetData ReadyPlanetData = new();
     [Header("准备好的时间数据")]
-    public TimeData Ready_timeData = new TimeData();
+    public TimeData ReadyTimeData = new TimeData();
+    [Header("存档数据")]
+    public GameSaveData ReadyGameSaveData = new GameSaveData();
 
     public UltEvent Event_GameStart { get; set; } = new UltEvent();
     public UltEvent Event_ExitGame_Start { get; set; } = new UltEvent();
@@ -186,39 +188,55 @@ public class GameManager : SingletonAutoMono<GameManager>
     #endregion
 
     #region 游戏开始相关
-    [Tooltip("开始新游戏,加载传入的玩家")]
-    public void StartNewGame(string LaodPlayerName)
+    [Tooltip("开始新游戏,创建一个新世界")]
+    public void CreateNewWorld()
     {
         SaveDataMgr.Instance.SaveData = new GameSaveData();
-        //创建随机数        // 初始化随机种子并创建系统随机实例
-        SaveDataMgr.Instance.SaveData.SaveSeed = UnityEngine.Random.Range(0, int.MaxValue).ToString();
-        SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
+
+        if (ReadyGameSaveData.SaveSeed != "")
+        {
+            SaveDataMgr.Instance.SaveData.SaveSeed = ReadyGameSaveData.SaveSeed;
+            SaveDataMgr.Instance.SaveData.Seed = ReadyGameSaveData.Seed;
+        }
+        else
+        {
+            SaveDataMgr.Instance.SaveData.SaveSeed = UnityEngine.Random.Range(0, int.MaxValue).ToString();
+            SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
+        }
         UnityEngine.Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
 
-        //创建初始星球的数据
-        SaveDataMgr.Instance.SaveData.PlanetData_Dict[Ready_planetData.Name] = FastCloner.FastCloner.DeepClone(Ready_planetData);
-        //创建初始时间数据 - 修复类型转换问题
-        SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[Ready_planetData.Name] = new SerializableTimeData(Ready_timeData);
-        SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict[Ready_planetData.Name] = 1.0f;
+        SetNewPlanetData(ReadyPlanetData, ReadyTimeData);
+        BasePanel UI_NewGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
+        string PlayerName = UI_NewGame.GetInputField("新增玩家名称输入框").text;
+        ContinueGame(PlayerName);
+    }
 
-        ContinueGame(LaodPlayerName);
+    [Tooltip("创建一个新星球")]
+    public void SetNewPlanetData(PlanetData ReadyPlanetData_, TimeData ReadyTimeData_)
+    {
+        //根据准备好的星球数据创建新星球存档
+        SaveDataMgr.Instance.SaveData.PlanetData_Dict[ReadyPlanetData_.Name] = FastCloner.FastCloner.DeepClone(ReadyPlanetData_);
+        SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[ReadyPlanetData_.Name] = new SerializableTimeData(ReadyTimeData_);
+        SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict[ReadyPlanetData_.Name] = 1.0f;
     }
 
     [Tooltip("继续游戏,加载传入的玩家名称,通过名称获取玩家数据, ")]
     public void ContinueGame(string PlayerName)
     {
-        // 1. 根据存档立即确定星球名
+        // 1. 根据存档立即确定玩家所在的星球名
         SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out Data_Player playerData);
-        string planetName = playerData != null ? playerData.CurrentSceneName : Ready_planetData.Name;
+        string planetName = playerData != null ? playerData.CurrentSceneName : ReadyPlanetData.Name;
+
+
         //根据用户当前控制的玩家名称加载玩家 
-        LoadGameScene(NewScenename: planetName, () =>
+        RunWorld(NewScenename: planetName, () =>
         {
             //旧场景被卸载完毕 新场景以及被加载完毕
-            LoadPlayerAndCreateWorld(playerName: PlayerName, playerData);
+            LoadPlayer(playerName: PlayerName);
         });
     }
 
-    public void LoadGameScene(string NewScenename, Action onSceneUnloaded = null)
+    public void RunWorld(string NewScenename, Action onOldSceneUnloaded = null)
     {
         //2. 实例化日月系统
         if (SunAndMoonPrefab != null)
@@ -239,7 +257,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         Scene startScene = SceneManager.GetSceneByName(OldSceneName);
         SceneManager.UnloadSceneAsync(startScene).completed += _ =>
         {
-            onSceneUnloaded.Invoke();
+            onOldSceneUnloaded.Invoke();
         };
 
     }
@@ -292,11 +310,8 @@ public class GameManager : SingletonAutoMono<GameManager>
     #region 工具方法
 
     [Tooltip("在当前场景中实例化并加载玩家")]
-    private void LoadPlayerAndCreateWorld(string playerName, Data_Player playerData)
+    private void LoadPlayer(string playerName)
     {
-        ItemMgr.Instance.CleanupNullItems();
-        ChunkMgr.Instance.ClearAllChunk();
-
         Player player = ItemMgr.Instance.LoadPlayer(playerName);
 
         if (player.Data.transform.position == Vector3.zero)
@@ -337,11 +352,12 @@ public class GameManager : SingletonAutoMono<GameManager>
             UIManager.Instance.GetPanel("HelloCanvas").Open();
             return;
         }
+
         if (UIPrefab_HelloCanvas != null)
         {
-            BasePanel helloCanvas = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_HelloCanvas, "HelloCanvas");
-            helloCanvas.Open();
+            BasePanel helloCanvas = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_HelloCanvas);
 
+            helloCanvas.Open();
             helloCanvas.GetButton("选择存档").onClick.AddListener(OpenGameSaveManager);
             helloCanvas.GetButton("新游戏").onClick.AddListener(OpenNewGame);
         }
@@ -356,7 +372,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         }
         if (UIPrefab_ContextMenu != null)
         {
-            BasePanel contextMenu = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_ContextMenu, "ContextMenu");
+            BasePanel contextMenu = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_ContextMenu);
             contextMenu.Open();
         }
     }
@@ -370,34 +386,34 @@ public class GameManager : SingletonAutoMono<GameManager>
         }
         if (UIPrefab_NewGame != null)
         {
-            BasePanel newGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
-            newGame.Open();
-            newGame.GetButton("开始新游戏").onClick.AddListener(() => StartNewGame(newGame.GetInputField("新增玩家名称输入框").text));
-            newGame.GetButton("返回上一个界面").onClick.AddListener(newGame.Close);
+            BasePanel UI_NewGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
+            UI_NewGame.Open();
+            UI_NewGame.GetButton("开始新游戏").onClick.AddListener(CreateNewWorld);
+            UI_NewGame.GetButton("返回上一个界面").onClick.AddListener(UI_NewGame.Close);
             // 设置输入框值改变事件
-            newGame.GetInputField("新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
-            newGame.GetInputField("新增存档名称输入框")?.onValueChanged.AddListener(OnPlayerSaveNameChanged);
-            newGame.GetInputField("星球半径输入框")?.onValueChanged.AddListener(OnPlanetReadiusChanged);
-            newGame.GetInputField("噪声缩放输入框")?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+            UI_NewGame.GetInputField("新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
+            UI_NewGame.GetInputField("新增存档名称输入框")?.onValueChanged.AddListener(OnPlayerSaveNameChanged);
+            UI_NewGame.GetInputField("星球半径输入框")?.onValueChanged.AddListener(OnPlanetReadiusChanged);
+            UI_NewGame.GetInputField("噪声缩放输入框")?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+
 
         }
     }
 
     public void OpenGameSaveManager()
     {
-        if (UIManager.Instance.GetPanel("存档选择面板") != null)
+        if (UIManager.Instance.GetPanel("UI_GameSaveManager") != null)
         {
-            UIManager.Instance.GetPanel("存档选择面板").Open();
+            UIManager.Instance.GetPanel("UI_GameSaveManager").Open();
             return;
         }
         if (UIPrefab_SaveManager != null)
         {
-            BasePanel saveManager = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_SaveManager, "存档选择面板");
+            BasePanel saveManager = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_SaveManager, "UI_GameSaveManager");
 
             // 设置UI事件绑定
             // 设置按钮点击事件
             saveManager.SetButtonOnClick("开始游戏按钮", OnClick_StartGame_Button);
-            saveManager.SetButtonOnClick("开始新游戏", OnClick_StartNewGame_Button);
             saveManager.SetButtonOnClick("加载存档按钮", OnClick_LoadSaveData_Button);
             saveManager.GetInputField("选择或新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
 
@@ -423,7 +439,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
         if (saveManager != null)
         {
-            ContinueGame(saveManager.GetInputField("选择或新增玩家名称输入框").text);
+            ContinueGame(saveManager.GetInputField("选择或新增玩家名称输入框")?.text);
         }
     }
 
@@ -437,7 +453,7 @@ public class GameManager : SingletonAutoMono<GameManager>
             BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
             if (saveManager != null)
             {
-                StartNewGame(saveManager.GetInputField("新增玩家名称输入框").text);
+                CreateNewWorld();
             }
         }
         else

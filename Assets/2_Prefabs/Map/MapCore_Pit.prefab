@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 4969519381451034378}
   - component: {fileID: 5175292470693907942}
   - component: {fileID: 8016388638861598348}
-  - component: {fileID: 8247631769361211115}
   - component: {fileID: 2750506950369039693}
   m_Layer: 0
   m_Name: MapCore_Pit
@@ -68,22 +67,6 @@ MonoBehaviour:
   backgroundColor: {r: 0, g: 0, b: 0, a: 0.7}
   textColor: {r: 1, g: 1, b: 1, a: 1}
   fontSize: 12
---- !u!114 &8247631769361211115
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2111103676966031222}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c97d84d0c767b7c4195ebdff5b8122eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  map: {fileID: 2750506950369039693}
-  mapGrid: {fileID: 5175292470693907942}
-  targetTilemap: {fileID: 6321057560787975102}
-  caveGenerator: {fileID: 11400000, guid: 4cafcb24cac56c9408d03ac598b9749c, type: 2}
 --- !u!114 &2750506950369039693
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -97,6 +80,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
+  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -104,6 +88,10 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
   updateInterval: 0
   Data:
     IDName: MapCore_Pit
@@ -143,6 +131,12 @@ MonoBehaviour:
     _PersistentCalls: []
   chunk: {fileID: 0}
   ParentObject: {fileID: 0}
+  backTilePenaltyTilesPerYield: 200
+  backTilePenaltyYieldSeconds: 0
+  mapGenerators: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &3401113203274231406
 GameObject:
   m_ObjectHideFlags: 0
@@ -345,7 +339,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1031583286481422210, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_InstanceId
-      value: -4724
+      value: -17282
       objectReference: {fileID: 0}
     - target: {fileID: 4964664005705103658, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_LocalScale.y
@@ -415,7 +409,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1031583286481422210, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_InstanceId
-      value: -4826
+      value: -17300
       objectReference: {fileID: 0}
     - target: {fileID: 4964664005705103658, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_LocalScale.y
@@ -485,7 +479,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1031583286481422210, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_InstanceId
-      value: -4742
+      value: -17246
       objectReference: {fileID: 0}
     - target: {fileID: 4964664005705103658, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_LocalScale.x
@@ -559,7 +553,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1031583286481422210, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_InstanceId
-      value: -4844
+      value: -17264
       objectReference: {fileID: 0}
     - target: {fileID: 4964664005705103658, guid: 75bd13932e279f448a78ad0dc45fda5d, type: 3}
       propertyPath: m_LocalScale.x
