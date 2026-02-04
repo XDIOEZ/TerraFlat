@@ -44,6 +44,12 @@ public class Mod_ChunkLoader : Module
     [Header("区块加载距离设置")]
     [SerializeField]
     private ChunkDistanceConfig distanceConfig = new ChunkDistanceConfig(2, 3, 1);
+
+    [Header("动态视距同步")]
+    [Tooltip("是否跟随相机视口自动调整加载范围")]
+    [SerializeField] private bool syncWithCamera = true;
+    [Tooltip("在视口范围外额外加载的Chunk圈数以防止穿帮")]
+    [SerializeField] private int chunkBuffer = 1;
     #endregion
 
     #region 运行时字段
@@ -55,6 +61,10 @@ public class Mod_ChunkLoader : Module
     /// 是否需要更新区块
     /// </summary>
     private bool needsChunkUpdate = false;
+    
+    // 动态视距引用
+    private Camera _boundCamera;
+    private CameraFollowManager _cameraFollowManager;
     #endregion
 
     #region 属性访问器
@@ -110,6 +120,9 @@ public class Mod_ChunkLoader : Module
 
         // 初始化上一次区块位置
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
+
+        // 尝试获取相机管理器引用
+        _cameraFollowManager = GetComponentInParent<CameraFollowManager>();
     }
 
     public override void Save()
@@ -119,6 +132,9 @@ public class Mod_ChunkLoader : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        // 动态同步视距
+        AutoAdjustDistance();
+
         // 检测位置是否跨区块
         DetectChunkChange();
 
@@ -147,6 +163,70 @@ public class Mod_ChunkLoader : Module
         }
 
         UpdateChunks(lastChunkPos);
+    }
+
+    #endregion
+
+    #region 动态视距逻辑
+
+    /// <summary>
+    /// 根据相机视野自动调整加载距离
+    /// </summary>
+    private void AutoAdjustDistance()
+    {
+        if (!syncWithCamera) return;
+
+        // 1. 获取有效相机引用
+        if (_boundCamera == null)
+        {
+            if (_cameraFollowManager == null)
+                _cameraFollowManager = transform.parent.GetComponentInChildren<CameraFollowManager>();
+
+            if (_cameraFollowManager != null)
+                _boundCamera = _cameraFollowManager.ControllerCamera;
+
+            // 备用方案：主相机
+            if (_boundCamera == null)
+                _boundCamera = Camera.main;
+        }
+
+        // 相机可能被销毁或未初始化，或非正交相机
+        if (_boundCamera == null || !_boundCamera.orthographic) return;
+
+        // 2. 计算视野半径 (OrthographicSize是半高)
+        float camSize = _boundCamera.orthographicSize;
+        float height = camSize * 2f;
+        float width = height * _boundCamera.aspect;
+        float radius = Mathf.Max(width, height) / 2f;
+
+        // 3. 计算所需Chunk距离
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        // 取较小边以确保覆盖最坏情况，或取ChunkSize
+        float minChunkDim = Mathf.Min(chunkSize.x, chunkSize.y);
+        
+        // 防止除零
+        if (minChunkDim <= 0.1f) return;
+
+        // 向上取整并增加缓冲区
+        int neededDist = Mathf.CeilToInt(radius / minChunkDim) + chunkBuffer;
+        neededDist = Mathf.Max(1, neededDist);
+
+        // 4. 应用变更 (仅当需要改变时)
+        if (neededDist != LoadChunkDistance)
+        {
+            int diff = neededDist - LoadChunkDistance;
+
+            LoadChunkDistance = neededDist;
+            
+            // 保持 UnActive 和 Destroy 的相对间隔不小于1，防止频繁加载卸载
+            UnActiveDistance = Mathf.Max(LoadChunkDistance + 1, UnActiveDistance + diff);
+            DestroyChunkDistance = Mathf.Max(UnActiveDistance + 1, DestroyChunkDistance + diff);
+
+            // 标记需要更新
+            needsChunkUpdate = true;
+            
+            // Debug.Log($"[ChunkLoader] 动态调整加载距离: {LoadChunkDistance}");
+        }
     }
 
     #endregion
