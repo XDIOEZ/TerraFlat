@@ -302,10 +302,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: WorldManager
       objectReference: {fileID: 0}
-    - target: {fileID: 9058411785591302946, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-      propertyPath: isLoadFinish
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

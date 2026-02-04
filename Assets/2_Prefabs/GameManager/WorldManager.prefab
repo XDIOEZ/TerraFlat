@@ -281,7 +281,7 @@ MonoBehaviour:
   SunAndMoonPrefab: {fileID: 8214005867498760089, guid: 5de7be0374cdef34fb44ea8b4db43440, type: 3}
   PathFindingSystem: {fileID: 8923630362666243623}
   ReadyPlanetData:
-    Name: 
+    Name: "\u5730\u7403"
     Radius: 1000
     NoiseScale: 0.01
     ChunkSize: {x: 100, y: 100}
@@ -373,7 +373,7 @@ MonoBehaviour:
     TimeScaleModifier: 1
     ReferenceScene: 
     TotalDays: 0
-  GameSaveData:
+  ReadyGameSaveData:
     saveName: defaultSaveName
     SaveSeed: 0
     Seed: 0
