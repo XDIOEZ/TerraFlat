@@ -1,18 +1,12 @@
 ﻿using UnityEngine;
-using System;
 using UltEvents;
-using System.Reflection;
-using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using System.Linq;
-using Force.DeepCloner;
+using System;
 using FastCloner.Code;
-using NUnit;
 
 #if UNITY_EDITOR
-using UnityEditor;
-using UnityEditor.AddressableAssets.Settings;
 #endif
 
 /// <summary>
@@ -80,6 +74,8 @@ public abstract class Item : MonoBehaviour
 
     [Tooltip("物品耐久度改变时触发的事件，参数为当前耐久度")]
     public UltEvent<float> OnDurabilityModified = new();
+
+    private readonly List<Module> modsSnapshot = new List<Module>(16);
     #endregion
 
     #region 生命周期方法
@@ -120,33 +116,34 @@ public abstract class Item : MonoBehaviour
     }
 
     /// <summary>
-    /// 物品的更新逻辑，处理模块更新
+    /// 物品的更新逻辑，由 ItemMgr 统一驱动
     /// </summary>
-    public void Update()
+    public void Tick(float deltaTime)
     {
         if (!isInitialized)
             return;
 
-        // 高频更新逻辑（无间隔）
-        if (updateInterval <= 0.1f)
+        var mods = GetModsSnapshot();
+
+        // 低频更新逻辑（有间隔）
+        if (updateInterval > 0.1f)
         {
-            foreach (Module mod in Mods.Values.ToList()) // 创建快照，避免在更新过程中修改集合导致的异常
+            updateTimer += deltaTime;
+            if (updateTimer < updateInterval)
+                return;
+
+            updateTimer = 0f;
+            foreach (Module mod in mods)
             {
-                mod.ModUpdate(Time.deltaTime);
+                mod.ModUpdate(updateInterval);
             }
             return;
         }
 
-        // 低频更新逻辑（有间隔）
-        updateTimer += Time.deltaTime;
-        if (updateTimer >= updateInterval)
+        // 高频更新逻辑（无间隔）
+        foreach (Module mod in mods)
         {
-            updateTimer = 0f;
-
-            foreach (Module mod in Mods.Values.ToList()) // 创建快照
-            {
-                mod.ModUpdate(updateInterval);
-            }
+            mod.ModUpdate(deltaTime);
         }
     }
 
@@ -371,13 +368,9 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void ModuleSave()
     {
-        // 创建Mods.Values的副本，使用ToList()生成新的列表
-        var modsCopy = Mods.Values.ToList();
-
-        // 遍历副本而非原始集合
-        foreach (Module mod in modsCopy)
+        var mods = GetModsSnapshot();
+        foreach (Module mod in mods)
         {
-            // 即使Save()过程中修改了原始Mods集合，也不会影响当前遍历
             mod.Save();
         }
     }
@@ -520,6 +513,16 @@ public abstract class Item : MonoBehaviour
     }
 
     #endregion
+
+    private List<Module> GetModsSnapshot()
+    {
+        modsSnapshot.Clear();
+        foreach (var mod in Mods.Values)
+        {
+            modsSnapshot.Add(mod);
+        }
+        return modsSnapshot;
+    }
 
     #region 编辑器方法
 

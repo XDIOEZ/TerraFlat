@@ -6,15 +6,15 @@ using UnityEngine;
 
 public class HandForInteract : MonoBehaviour, IInteractor
 {
-    #region ×Ö¶ÎºÍÊôÐÔ
+    #region ï¿½Ö¶Îºï¿½ï¿½ï¿½ï¿½ï¿½
     /// <summary>
-    /// ½»»¥¶ÔÏó³Ø - Ê¹ÓÃStackÊµÏÖLIFO£¨ºó½øÏÈ³ö£©
-    /// ½øÈë³Ø×ÓÊ±Push£¬Àë¿ª³Ø×ÓÊ±Remove£¬Peek»ñÈ¡µ±Ç°½»»¥¶ÔÏó
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ - Ê¹ï¿½ï¿½StackÊµï¿½ï¿½LIFOï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È³ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±Pushï¿½ï¿½ï¿½ë¿ªï¿½ï¿½ï¿½ï¿½Ê±Removeï¿½ï¿½Peekï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     [ShowInInspector]
     private Stack<Mod_Interaction> interactionPool = new Stack<Mod_Interaction>();
 
-    [Tooltip("µ±Ç°½»»¥¶ÔÏó"), ShowInInspector]
+    [Tooltip("ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"), ShowInInspector]
     public Mod_Interaction Intractable_go { get; private set; }
 
     public GameObject User { get => user; set => user = value; }
@@ -25,7 +25,7 @@ public class HandForInteract : MonoBehaviour, IInteractor
     public Item Item { get; set; }
     #endregion
 
-    #region UnityÉúÃüÖÜÆÚ·½·¨
+    #region Unityï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú·ï¿½ï¿½ï¿½
     public void Start()
     {
         Item = GetComponentInParent<Item>();
@@ -34,12 +34,12 @@ public class HandForInteract : MonoBehaviour, IInteractor
 
     public void OnTriggerEnter2D(Collider2D collision)
     {
-        // Ìí¼Ó¿ÕÖµ¼ì²éÒÔ±ÜÃâ NullReferenceException
+        // ï¿½ï¿½ï¿½Ó¿ï¿½Öµï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ NullReferenceException
         var mod_Interaction = collision.GetComponent<Mod_Interaction>();
         
         if (mod_Interaction == null)
         {
-            // ³¢ÊÔ´ÓItem»ñÈ¡
+            // ï¿½ï¿½ï¿½Ô´ï¿½Itemï¿½ï¿½È¡
             var item = collision.GetComponent<Item>();
             if (item != null && item.itemMods != null)
             {
@@ -49,17 +49,17 @@ public class HandForInteract : MonoBehaviour, IInteractor
 
         if (mod_Interaction != null)
         {
-            // Ìí¼Óµ½³Ø×Ó
+            // ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½
             AddToInteractionPool(mod_Interaction);
         }
     }
 
     public void OnTriggerExit2D(Collider2D collision)
     {
-        // ·½°¸1£ºÖ±½Ó´ÓÅö×²Ìå»ñÈ¡Mod_Interaction×é¼þ
+        // ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½Ö±ï¿½Ó´ï¿½ï¿½ï¿½×²ï¿½ï¿½ï¿½È¡Mod_Interactionï¿½ï¿½ï¿½
         var mod_Interaction = collision.GetComponent<Mod_Interaction>();
         
-        // ·½°¸2£º´ÓItem»ñÈ¡£¨±¸Ñ¡·½°¸£©
+        // ï¿½ï¿½ï¿½ï¿½2ï¿½ï¿½ï¿½ï¿½Itemï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (mod_Interaction == null)
         {
             var item = collision.GetComponent<Item>();
@@ -71,15 +71,15 @@ public class HandForInteract : MonoBehaviour, IInteractor
 
         if (mod_Interaction != null)
         {
-            // ´Ó³Ø×ÓÒÆ³ý
+            // ï¿½Ó³ï¿½ï¿½ï¿½ï¿½Æ³ï¿½
             RemoveFromInteractionPool(mod_Interaction);
         }
     }
     #endregion
 
-    #region ½»»¥³Ø¹ÜÀí
+    #region ï¿½ï¿½ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½ï¿½
     /// <summary>
-    /// ³¢ÊÔ´Ó½»»¥³ØÖÐ»ñÈ¡¶ÔÏó£¨·µ»Ø³Ø¶¥¶ÔÏóµ«²»ÒÆ³ý£©
+    /// ï¿½ï¿½ï¿½Ô´Ó½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½È¡ï¿½ï¿½ï¿½ó£¨·ï¿½ï¿½Ø³Ø¶ï¿½ï¿½ï¿½ï¿½óµ«²ï¿½ï¿½Æ³ï¿½ï¿½ï¿½
     /// </summary>
     private Mod_Interaction PeekInteractionFromPool()
     {
@@ -91,7 +91,7 @@ public class HandForInteract : MonoBehaviour, IInteractor
     }
 
     /// <summary>
-    /// Ìí¼Ó¶ÔÏó½øÈë½»»¥³Ø
+    /// ï¿½ï¿½ï¿½Ó¶ï¿½ï¿½ï¿½ï¿½ï¿½ë½»ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     private void AddToInteractionPool(Mod_Interaction mod_Interaction)
     {
@@ -99,27 +99,27 @@ public class HandForInteract : MonoBehaviour, IInteractor
             return;
 
         interactionPool.Push(mod_Interaction);
-//        Debug.Log($"[HandForInteract] ¶ÔÏó½øÈë³Ø×Ó: {mod_Interaction.gameObject.name}, µ±Ç°³ØÄÚ¶ÔÏóÊý: {interactionPool.Count}");
+//        Debug.Log($"[HandForInteract] ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {mod_Interaction.gameObject.name}, ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½: {interactionPool.Count}");
 
-        // ¸üÐÂµ±Ç°½»»¥¶ÔÏó
+        // ï¿½ï¿½ï¿½Âµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         UpdateCurrentInteraction();
     }
 
     /// <summary>
-    /// ´Ó½»»¥³ØÖÐÒÆ³ý¶ÔÏó
+    /// ï¿½Ó½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     private void RemoveFromInteractionPool(Mod_Interaction mod_Interaction)
     {
         if (mod_Interaction == null || interactionPool.Count == 0)
             return;
 
-        // Èç¹ûÒÆ³ýµÄÊÇµ±Ç°½»»¥¶ÔÏó£¬ÐèÒªµ÷ÓÃCancel
+        // ï¿½ï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½ï¿½Çµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Cancel
         if (Intractable_go == mod_Interaction)
         {
             Intractable_go.Interact_Cancel(this);
         }
 
-        // Ê¹ÓÃÁÙÊ±StackÀ´ÒÆ³ýÖ¸¶¨¶ÔÏó
+        // Ê¹ï¿½ï¿½ï¿½ï¿½Ê±Stackï¿½ï¿½ï¿½Æ³ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         var tempStack = new Stack<Mod_Interaction>(interactionPool.Count);
         bool found = false;
 
@@ -136,7 +136,7 @@ public class HandForInteract : MonoBehaviour, IInteractor
             }
         }
 
-        // »Ö¸´Stack
+        // ï¿½Ö¸ï¿½Stack
         while (tempStack.Count > 0)
         {
             interactionPool.Push(tempStack.Pop());
@@ -144,15 +144,15 @@ public class HandForInteract : MonoBehaviour, IInteractor
 
         if (found)
         {
-//            Debug.Log($"[HandForInteract] ¶ÔÏóÀë¿ª³Ø×Ó: {mod_Interaction.gameObject.name}, µ±Ç°³ØÄÚ¶ÔÏóÊý: {interactionPool.Count}");
+//            Debug.Log($"[HandForInteract] ï¿½ï¿½ï¿½ï¿½ï¿½ë¿ªï¿½ï¿½ï¿½ï¿½: {mod_Interaction.gameObject.name}, ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½: {interactionPool.Count}");
         }
 
-        // ¸üÐÂµ±Ç°½»»¥¶ÔÏó
+        // ï¿½ï¿½ï¿½Âµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         UpdateCurrentInteraction();
     }
 
     /// <summary>
-    /// ¸üÐÂµ±Ç°½»»¥¶ÔÏó£¨´Ó³Ø¶¥»ñÈ¡£©
+    /// ï¿½ï¿½ï¿½Âµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó£¨´Ó³Ø¶ï¿½ï¿½ï¿½È¡ï¿½ï¿½
     /// </summary>
     private void UpdateCurrentInteraction()
     {
@@ -160,12 +160,12 @@ public class HandForInteract : MonoBehaviour, IInteractor
     }
     #endregion
 
-    #region IInteractor½Ó¿ÚÊµÏÖ
+    #region IInteractorï¿½Ó¿ï¿½Êµï¿½ï¿½
     public void Interact_Start()
     {
         if (Intractable_go != null)
         {
-            // Ö»´¥·¢ÊÂ¼þ£¬²»Ö±½Óµ÷ÓÃ½»»¥·½·¨
+            // Ö»ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½Óµï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             Intractable_go.Interact_Start(this);
         }
     }

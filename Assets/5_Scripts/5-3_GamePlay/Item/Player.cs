@@ -1,50 +1,28 @@
-using Force.DeepCloner;
-using Sirenix.OdinInspector;
-using Sirenix.Utilities;
+ï»¿using Sirenix.OdinInspector;
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Íæ¼ÒÀà£¬¼Ì³Ğ×ÔItem²¢ÊµÏÖ¶àÖÖ½Ó¿Ú
+/// ç©å®¶ç±»ï¼Œç»§æ‰¿è‡ª Itemï¼Œå°è£…ç©å®¶ç›¸å…³è¡Œä¸º
 /// </summary>
 public class Player : Item
 {
+    #region å­—æ®µä¸å±æ€§
 
-    #region ×Ö¶ÎÓëÊôĞÔ
-
-    [Tooltip("Íæ¼ÒÊı¾İ")]
+    [Tooltip("ç©å®¶æ•°æ®")]
     public Data_Player Data;
 
-    [Tooltip("ÊÓ½ÇÖµ")]
-    public float PovValue
-    {
-        get => Data.PlayerPov;
-        set => Data.PlayerPov = value;
-    }
-
-    // £¨Ê±¼ä¿ØÖÆºÍ¹ÜÀíÔ±Âß¼­ÒÑÌáÈ¡µ½ PlayerAdminController ½Å±¾£©
+    // æ—¶é—´æ§åˆ¶ä¸ç®¡ç†å‘˜é€»è¾‘å·²è¿ç§»åˆ° PlayerAdminController
 
     public override ItemData itemData
     {
         get => Data;
-        set
-        {
-            Data = value as Data_Player;
-        }
+        set => Data = value as Data_Player;
     }
 
     #endregion
 
-    #region ÊÂ¼şÏµÍ³
-
-    #endregion
-
-    #region ÉúÃüÖÜÆÚ
-    public override void Start()
-    {
-        base.Start();
-    }
+    #region ç”Ÿå‘½å‘¨æœŸ
 
     public override void Act()
     {
@@ -63,120 +41,6 @@ public class Player : Item
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         base.Load();
-    }
-
-    new void Update()
-    {
-        base.Update();
-        // ¹ÜÀíÔ±Ïà¹ØÊäÈëÓëÊ±¼ä¿ØÖÆÒÑÒÆÖÁ PlayerAdminController ×é¼ş
-    }
-
-    public new void OnDestroy()
-    {
-        base.OnDestroy();
-    }
-    #endregion
-
-    #region ¹«¹²·½·¨
-    [Button("¿ËÂ¡²âÊÔ")]
-    public void CloneTest()
-    {
-        this.itemData = this.itemData.DeepClone();
-        Debug.Log("¿ËÂ¡³É¹¦");
-    }
-
-    /// <summary>
-    /// Íæ¼ÒËÀÍö´¦Àí
-    /// </summary>
-    public void Death()
-    {
-        Application.Quit();
-        Application.OpenURL("https://space.bilibili.com/353520649");
-    }
-
-    /// <summary>
-    /// ¹ÜÀíÔ±³õÊ¼»¯´´ÔìÄ£Ê½±³°ü£¨¹© PlayerAdminController µ÷ÓÃ£©
-    /// </summary>
-    public void InitializeCreativeInventoryForAdmin()
-    {
-        // »ñÈ¡Íæ¼Ò±³°üÄ£¿é
-        var bagMod = base.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
-        if (bagMod == null || bagMod.inventory == null)
-        {
-            Debug.LogError("[Player.InitializeCreativeInventoryForAdmin] ÕÒ²»µ½±³°ü Mod_Inventory »ò inventory Îª¿Õ");
-            return;
-        }
-
-        // ÊÕ¼¯ËùÓĞ prefab ÖĞµÄ Item£¬²¢ÎªÃ¿¸öÉú³É¶ÀÁ¢µÄ ItemData
-        List<ItemData> creativeItems = new List<ItemData>();
-
-        if (GameRes.Instance == null || GameRes.Instance.AllPrefabs == null)
-        {
-            Debug.LogError("[Player.InitializeCreativeInventoryForAdmin] GameRes.Instance »ò AllPrefabs Îª¿Õ");
-            return;
-        }
-
-        foreach (var prefab in GameRes.Instance.AllPrefabs.Values)
-        {
-            if (prefab == null)
-                continue;
-
-            var item = prefab.GetComponent<Item>();
-            // Ìø¹ı·Ç Item »ò Player ×Ô¼º£¨±ÜÃâ°ÑÍæ¼Ò±¾ÉíÈû½ø´´Ôì±³°ü£©
-            if (item == null || item is Player|| item is Map)
-                continue;
-
-            // »ñÈ¡ĞÂµÄ ItemData£¬±ÜÃâÎÛÈ¾ prefab ±¾Éí
-            var data = item.Get_NewItemData();
-            if (data == null)
-                continue;
-
-            creativeItems.Add(data);
-        }
-
-        int extraCount = creativeItems.Count;
-        if (extraCount <= 0)
-        {
-            Debug.LogWarning("[Player.InitializeCreativeInventoryForAdmin] ÔÚ AllPrefabs ÖĞÎ´ÕÒµ½ÈÎºÎ¿ÉÓÃµÄ Item Ô¤ÖÆÌå");
-            return;
-        }
-
-        // °´ÎïÆ·ÊıÁ¿À©Õ¹±³°üÈİÁ¿
-        bagMod.inventory.AddSlotsAtRuntime(extraCount);
-
-        // ½«ËùÓĞÉú³ÉµÄ ItemData ×¢Èëµ½±³°üÖĞ
-        foreach (var data in creativeItems)
-        {
-            bagMod.inventory.Data.TryAddItem(data, true);
-        }
-    }
-
-    /// <summary>
-    /// ½«Íæ¼Ò´«ËÍµ½Êó±êÊÀ½ç×ø±êÎ»ÖÃ
-    /// </summary>
-    public void TeleportToMousePosition()
-    {
-        if (Camera.main == null)
-        {
-            Debug.LogWarning("TeleportToMousePosition() failed: main camera not found");
-            return;
-        }
-
-        // »ñÈ¡Êó±êÔÚÆÁÄ»ÉÏµÄÎ»ÖÃ
-        Vector3 mouseScreenPosition = Input.mousePosition;
-
-        // ½«ÆÁÄ»×ø±ê×ª»»ÎªÊÀ½ç×ø±ê
-        // zÖáÉèÖÃÎª0£¬ÒòÎªÕâÊÇ2DÓÎÏ·
-        Vector3 mouseWorldPosition = Camera.main.ScreenToWorldPoint(
-            new Vector3(mouseScreenPosition.x, mouseScreenPosition.y, 0));
-
-        // ±£³ÖzÖáÎª0£¨2DÓÎÏ·£©
-        mouseWorldPosition.z = 0;
-
-        // ÉèÖÃÍæ¼ÒÎ»ÖÃµ½Êó±êÊÀ½ç×ø±ê
-        transform.position = mouseWorldPosition;
-
-        Debug.Log($"Íæ¼ÒÒÑ´«ËÍµ½Î»ÖÃ: {mouseWorldPosition}");
     }
 
     #endregion
