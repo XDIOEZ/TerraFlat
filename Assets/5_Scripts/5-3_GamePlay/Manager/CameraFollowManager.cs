@@ -1,14 +1,14 @@
-using Cinemachine;
+ï»¿using Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// ¹ÜÀíÉãÏñ»ú¸úËæÂß¼­
+/// ç›¸æœºè·Ÿéšç®¡ç†å™¨
 /// </summary>
 public class CameraFollowManager : Module
 {
-    #region ×Ö¶ÎÓëÊôĞÔ
-    [Header("Ä£¿éÊı¾İ")]
+    #region å­—æ®µå£°æ˜
+    [Header("æ¨¡å—æ•°æ®")]
     public Ex_ModData ModData;
     public override ModuleData _Data
     {
@@ -16,11 +16,11 @@ public class CameraFollowManager : Module
         set => ModData = (Ex_ModData)value;
     }
 
-    [Header("ÉãÏñ»úÅäÖÃ")]
+    [Header("ç›¸æœºç»„ä»¶")]
     public CinemachineVirtualCamera vcam;
     public Camera ControllerCamera;
 
-    [Header("¸úËæÄ¿±ê")]
+    [Header("è·Ÿéšç›®æ ‡")]
     public Item CameraFollowItem;
     public Player Player;
     public GameController GameController;
@@ -29,7 +29,7 @@ public class CameraFollowManager : Module
     private GameObject instantiatedCamera;
 
     /// <summary>
-    /// »ñÈ¡»òÉèÖÃĞéÄâÉãÏñ»ú
+    /// è·å–è™šæ‹Ÿç›¸æœºç»„ä»¶
     /// </summary>
     public CinemachineVirtualCamera Vcam
     {
@@ -41,79 +41,77 @@ public class CameraFollowManager : Module
     }
     #endregion
 
-    #region ÉúÃüÖÜÆÚ·½·¨
+    #region ç”Ÿå‘½å‘¨æœŸæ–¹æ³•
     public new void Awake()
     {
          _Data.ID = ModText.Camera;
     }
 
-    // ÔÚLoad·½·¨ÖĞĞŞ¸ÄÊµÀı»¯Âß¼­£¬Ö±½ÓÔÚÊÀ½ç¿Õ¼äÖĞ´´½¨
+    // åœ¨Loadæ–¹æ³•ä¸­å®ä¾‹åŒ–ç›¸æœºé€»è¾‘
     public override void Load()
     {
-        // »ñÈ¡GameController²¢°ó¶¨Êó±ê¹öÂÖÊÂ¼ş
+        // è·å–GameControllerå¹¶ç»‘å®šè¾“å…¥äº‹ä»¶
         GameController = GetComponentInParent<GameController>();
         if (GameController != null && GameController._inputActions != null)
         {
-            // ×¢Òâ£ºWin10ActionsÊÇ½á¹¹Ìå£¬²»ÄÜÓënull±È½Ï£¬Ö±½Ó°ó¶¨ÊÂ¼ş
+            // æ³¨æ„ï¼šWin10Actionsæ˜¯ç»“æ„ä½“ï¼Œä¸èƒ½ä¸nullæ¯”è¾ƒï¼Œç›´æ¥ç»‘å®šäº‹ä»¶
             GameController._inputActions.Win10.CtrlMouse.performed += PovValueChanged;
         }
     
-        // »ñÈ¡¸úËæÎïÌå
+        // è·å–è·Ÿéšå¯¹è±¡
         CameraFollowItem = GetComponentInParent<Item>();
         Player = CameraFollowItem as Player;
     
-        // Ö±½ÓÔÚÊÀ½ç¿Õ¼äÖĞÊµÀı»¯ÉãÏñ»úÔ¤ÖÆÌå
+        // ç›´æ¥åœ¨å½“å‰ä½ç½®å®ä¾‹åŒ–ç›¸æœºé¢„åˆ¶ä½“
         if (CamPrefab != null)
         {
             instantiatedCamera = Instantiate(CamPrefab);
-            Debug.Log("ÉãÏñ»úÔ¤ÖÆÌåÒÑÔÚÊÀ½ç¿Õ¼äÖĞÊµÀı»¯");
+            Debug.Log("ç›¸æœºé¢„åˆ¶ä½“å·²å®ä¾‹åŒ–");
         }
         else
         {
-            Debug.LogError("CamPrefabÎ´ÉèÖÃ£¬ÇëÔÚInspectorÖĞÖ¸¶¨ÉãÏñ»úÔ¤ÖÆÌå");
+            Debug.LogError("CamPrefabæœªè®¾ç½®ï¼Œè¯·åœ¨Inspectorä¸­æŒ‡å®šç›¸æœºé¢„åˆ¶ä½“");
         }
     
-        // ´ÓÊµÀı»¯µÄÔ¤ÖÆÌåÖĞ»ñÈ¡ÉãÏñ»ú×é¼ş
+        // ä»å®ä¾‹åŒ–çš„é¢„åˆ¶ä½“ä¸­è·å–ç›¸æœºç»„ä»¶
         if (instantiatedCamera != null)
         {
             ControllerCamera = instantiatedCamera.GetComponentInChildren<Camera>();
             vcam = instantiatedCamera.GetComponentInChildren<CinemachineVirtualCamera>();
         }
     
-        // ³õÊ¼»¯ĞéÄâÉãÏñ»ú¸úËæÄ¿±ê
+        // åˆå§‹åŒ–è™šæ‹Ÿç›¸æœºè·Ÿéšç›®æ ‡
         if (Vcam != null && CameraFollowItem != null)
         {
             Vcam.Follow = CameraFollowItem.transform;
         }
     
-        // ÒÆ³ıÉèÖÃ¸¸¶ÔÏóÎªnullµÄ´úÂë£¬ÒòÎªÒÑ¾­ÔÚÊÀ½ç¿Õ¼äÖĞÊµÀı»¯ÁË
-        
-        // ³õÊ¼»¯ÉãÏñ»úÊÓÒ°£¨Ìí¼Ó¿ÕÖµ¼ì²é£©
+        // åˆå§‹åŒ–ç›¸æœºè§†é‡ï¼ˆæ­£äº¤å¤§å°ï¼‰
         if (Vcam != null && Player != null)
         {
             Vcam.m_Lens.OrthographicSize = Player.PovValue;
         }
         GameController._mainCamera = ControllerCamera;
     
-        // ÖØÖÃĞı×ª
+        // é‡ç½®æ—‹è½¬
         transform.rotation = Quaternion.identity;
     }
 
     public override void Save()
     {
-        // TODO: ÊµÏÖ±£´æÂß¼­
+        // TODO: å®ç°ä¿å­˜é€»è¾‘
     }
     
-    // Ïú»ÙÊ±µ÷ÓÃ£¬½â³ıÊÂ¼ş°ó¶¨
+    // é”€æ¯æ—¶è°ƒç”¨ï¼Œæ³¨é”€äº‹ä»¶
     private void OnDestroy()
     {
-        // ½â³ıÊÂ¼ş°ó¶¨
+        // æ³¨é”€äº‹ä»¶
         if (GameController != null && GameController._inputActions != null)
         {
             GameController._inputActions.Win10.CtrlMouse.performed -= PovValueChanged;
         }
         
-        // Ïú»ÙÊµÀı»¯µÄÉãÏñ»úÔ¤ÖÆÌå
+        // é”€æ¯å®ä¾‹åŒ–çš„ç›¸æœºé¢„åˆ¶ä½“
         if (instantiatedCamera != null)
         {
             Destroy(instantiatedCamera);
@@ -121,24 +119,24 @@ public class CameraFollowManager : Module
     }
     #endregion
 
-    #region ÉãÏñ»ú²Ù×÷·½·¨
+    #region ç›¸æœºæ§åˆ¶
     /// <summary>
-    /// Êó±ê¹öÂÖµ÷ÕûÊÓÒ°
+    /// å“åº”æ»šè½®å€¼æ”¹å˜è§†é‡
     /// </summary>
     /// <param name="context"></param>
     public void PovValueChanged(InputAction.CallbackContext context)
     {
         Vector2 scrollValue = context.ReadValue<Vector2>();
         if (scrollValue.y > 0)
-            ChangeCameraView(-1); // ËõĞ¡ÊÓÒ°
+            ChangeCameraView(-1); // ç¼©å°è§†é‡
         else if (scrollValue.y < 0)
-            ChangeCameraView(1);  // ·Å´óÊÓÒ°
+            ChangeCameraView(1);  // æ”¾å¤§è§†é‡
     }
 
     /// <summary>
-    /// ĞŞ¸ÄÉãÏñ»úÊÓÒ°·¶Î§
+    /// ä¿®æ”¹ç›¸æœºè§†é‡èŒƒå›´
     /// </summary>
-    /// <param name="delta">ÊÓÒ°±ä»¯Öµ</param>
+    /// <param name="delta">è§†é‡å˜åŒ–å€¼</param>
     public void ChangeCameraView(float delta)
     {
         if (Player == null || Vcam == null) return;
@@ -146,7 +144,7 @@ public class CameraFollowManager : Module
         Player.PovValue += delta;
         Vcam.m_Lens.OrthographicSize += delta;
 
-        // Debug.Log($"ÊÓÒ°·¶Î§ĞŞ¸ÄÎª£º{Vcam.m_Lens.OrthographicSize}");
+        // Debug.Log($"è§†é‡èŒƒå›´ä¿®æ”¹ä¸ºï¼š{Vcam.m_Lens.OrthographicSize}");
     }
     #endregion
 }

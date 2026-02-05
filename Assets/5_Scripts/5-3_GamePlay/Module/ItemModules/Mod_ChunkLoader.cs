@@ -216,16 +216,8 @@ public class Mod_ChunkLoader : Module
         {
             int diff = neededDist - LoadChunkDistance;
 
-            LoadChunkDistance = neededDist;
-            
-            // 保持 UnActive 和 Destroy 的相对间隔不小于1，防止频繁加载卸载
-            UnActiveDistance = Mathf.Max(LoadChunkDistance + 1, UnActiveDistance + diff);
-            DestroyChunkDistance = Mathf.Max(UnActiveDistance + 1, DestroyChunkDistance + diff);
-
-            // 标记需要更新
-            needsChunkUpdate = true;
-            
-            // Debug.Log($"[ChunkLoader] 动态调整加载距离: {LoadChunkDistance}");
+            // 使用统一的方法进行调整
+            AdjustLoadDistance(diff);
         }
     }
 
