@@ -6,10 +6,16 @@ using UnityEngine;
 /// </summary>
 public class PlayerAdminController : Module
 {
+    #region 常量与字段
+
     private const string AdminName = "管理员";
 
+    [Header("核心引用")]
     [Tooltip("要控制的玩家组件")]
     public Player player;
+
+    [Tooltip("玩家特质模块")]
+    public Mod_PlayerTraits playerTraits;
 
     [Tooltip("玩家快捷栏，用于操作手持物品")]
     public Inventory_HotBar hotbar;
@@ -31,7 +37,7 @@ public class PlayerAdminController : Module
     [Tooltip("时间提示显示时长（秒）")]
     public float timeScaleHintDuration = 1.0f;
 
-    // 时间提示相关变量
+    // 时间提示内部变量
     private string timeScaleHintText = string.Empty;
     private float timeScaleHintTimer = 0f;
     private bool showTimeScaleHint = false;
@@ -40,51 +46,43 @@ public class PlayerAdminController : Module
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
+    #endregion
+
+    #region 生命周期
+
     private void Start()
     {
+        // 记录初始时间缩放，以便还原
+        initialUnityTimeScale = Time.timeScale;
     }
 
-    private void Update()
+    public override void Load()
     {
-        if (player == null || player.Data == null)
+        // 尝试自动获取 Player 引用
+        if (player == null) player = GetComponentInParent<Player>();
+        if (player == null)
+        {
+            Debug.LogError($"[PlayerAdminController] 初始化失败：未找到 Player 组件！GameObject: {name}");
             return;
-
-        UpdateTimeScaleHint();
-
-        if (Input.GetKeyDown(KeyCode.F1))
-        {
-            Debug.Log("F1键被按下，切换管理员");
-            player.Data.Name_User = AdminName;
         }
 
-        if (!IsAdmin())
-            return;
-
-        // T：传送到鼠标位置
-        if (Input.GetKeyDown(KeyCode.T))
+        // 尝试获取模块引用
+        if (player.itemMods != null)
         {
-            player.TeleportToMousePosition();
-        }
+            if (playerTraits == null)
+                playerTraits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
 
-        // F2：初始化创造模式背包
-        if (Input.GetKeyDown(KeyCode.F2))
-        {
-            player.InitializeCreativeInventoryForAdmin();
+            if (hotbar == null)
+            {
+                var hotbarMod = player.itemMods.GetMod_ByID(ModText.Hotbar);
+                // 简洁获取：先判空再取组件
+                var modInv = hotbarMod?.GetComponent<Mod_Inventory>();
+                if (modInv != null)
+                {
+                    hotbar = modInv.inventory as Inventory_HotBar;
+                }
+            }
         }
-
-        if (Input.GetKeyDown(KeyCode.F4))
-        {
-            AddAmountToCurrentHandItem(9999f);
-        }
-
-        // F5：为整个背包中的所有物品增加数量
-        if (Input.GetKeyDown(KeyCode.F5))
-        {
-            AddAmountToAllBagItems(999f);
-        }
-
-        // 控制时间流逝速度
-        HandleTimeScaleControl();
     }
 
     private void OnDestroy()
@@ -92,38 +90,160 @@ public class PlayerAdminController : Module
         Time.timeScale = initialUnityTimeScale;
     }
 
-    #region 管理员判断
+    private void Update()
+    {
+        // 基础检查：确保 Player 数据存在
+        if (player?.Data == null) return;
+
+        UpdateTimeScaleHint();
+
+        // F1：切换管理员权限
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            Debug.Log("F1键被按下，切换管理员身份");
+            player.Data.Name_User = AdminName;
+        }
+
+        // 非管理员不执行后续逻辑
+        if (!IsAdmin()) return;
+
+        HandleAdminInput();
+        HandleTimeScaleControl();
+    }
+
+    private void OnGUI()
+    {
+        if (showTimeScaleHint && !string.IsNullOrEmpty(timeScaleHintText))
+        {
+            DrawTimeScaleHint();
+        }
+    }
+
+    public override void Save() { }
+
+    #endregion
+
+    #region 管理员核心逻辑
 
     private bool IsAdmin()
     {
-        return player != null && player.Data != null && player.Data.Name_User == AdminName;
+        return player?.Data?.Name_User == AdminName;
+    }
+
+    private void HandleAdminInput()
+    {
+        // T：传送到鼠标位置
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            playerTraits?.TeleportToMousePosition();
+        }
+
+        // F2：初始化创造模式背包
+        if (Input.GetKeyDown(KeyCode.F2))
+        {
+            playerTraits?.InitializeCreativeInventoryForAdmin();
+        }
+
+        // F4：给予手持物品 (9999)
+        if (Input.GetKeyDown(KeyCode.F4))
+        {
+            AddAmountToCurrentHandItem(9999f);
+        }
+
+        // F5：给予背包全部物品 (999)
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            AddAmountToAllBagItems(999f);
+        }
     }
 
     #endregion
 
-    #region 时间控制 & 提示
+    #region 物品操作逻辑
+
+    /// <summary>
+    /// 给玩家当前手持物品增加指定数量
+    /// </summary>
+    private void AddAmountToCurrentHandItem(float amount)
+    {
+        // 懒加载/容错获取
+        if (hotbar == null)
+            hotbar = player?.GetComponentInChildren<Inventory_HotBar>();
+
+        if (hotbar == null)
+        {
+            Debug.LogError("[Admin] 操作失败：找不到 Inventory_HotBar 组件");
+            return;
+        }
+
+        var slot = hotbar.CurrentSelectItemSlot;
+        if (slot?.itemData == null)
+        {
+            Debug.LogWarning("[Admin] 操作无效：当前手中没有物品");
+            return;
+        }
+
+        slot.itemData.Stack.Amount += amount;
+        hotbar.RefreshUI(hotbar.CurrentIndex);
+
+        Debug.Log($"[Admin] 手持物品 {slot.itemData.IDName} 增加 {amount}，当前: {slot.itemData.Stack.Amount}");
+    }
+
+    /// <summary>
+    /// 为玩家背包中的所有物品增加指定数量
+    /// </summary>
+    private void AddAmountToAllBagItems(float amount)
+    {
+        // 链式获取，减少嵌套
+        var bagMod = player?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        
+        // 检查关键路径
+        if (bagMod?.inventory?.Data?.itemSlots == null)
+        {
+            // 如果 player 存在但没找到背包，这通常是配置错误
+            if (player != null) Debug.LogError("[Admin] 操作失败：找不到背包数据 (Inventory/Data/Slots)");
+            return;
+        }
+
+        int changedCount = 0;
+        foreach (var slot in bagMod.inventory.Data.itemSlots)
+        {
+            if (slot?.itemData != null)
+            {
+                slot.itemData.AddAmount(amount);
+                changedCount++;
+            }
+        }
+
+        bagMod.inventory.RefreshUI();
+        Debug.Log($"[Admin] 背包中 {changedCount} 个物品各增加数量 {amount}");
+    }
+
+    #endregion
+
+    #region 时间控制系统
 
     private void HandleTimeScaleControl()
     {
         bool timeScaleChanged = false;
 
+        // 加速
         if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus))
         {
             timeScaleChanged = TryUpdateTimeScale(timeScaleStep);
         }
 
+        // 减速
         if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
         {
             timeScaleChanged = TryUpdateTimeScale(-timeScaleStep);
         }
 
+        // 重置
         if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0))
         {
-            timeScale = 1.0f;
-            Time.timeScale = timeScale;
+            ResetTimeScale();
             timeScaleChanged = true;
-            timeScaleHintText = "时间速度已重置为正常速度";
-            Debug.Log("时间速度已重置为正常速度");
         }
 
         if (timeScaleChanged)
@@ -132,146 +252,60 @@ public class PlayerAdminController : Module
         }
     }
 
+    private void ResetTimeScale()
+    {
+        timeScale = 1.0f;
+        Time.timeScale = timeScale;
+        timeScaleHintText = "时间速度已重置为正常速度";
+        Debug.Log(timeScaleHintText);
+    }
+
+    private bool TryUpdateTimeScale(float delta)
+    {
+        float newScale = Mathf.Clamp(timeScale + delta, minTimeScale, maxTimeScale);
+        
+        // 如果变化极小，忽略
+        if (Mathf.Approximately(newScale, timeScale)) return false;
+
+        timeScale = newScale;
+        Time.timeScale = timeScale;
+        timeScaleHintText = $"时间速度: {timeScale:F1}x";
+        Debug.Log($"时间速度调整为: {timeScale:F1}x");
+        return true;
+    }
+
     private void ShowTimeScaleHint()
     {
         showTimeScaleHint = true;
         timeScaleHintTimer = timeScaleHintDuration;
     }
 
-    private bool TryUpdateTimeScale(float delta)
-    {
-        float newScale = Mathf.Clamp(timeScale + delta, minTimeScale, maxTimeScale);
-        if (Mathf.Approximately(newScale, timeScale))
-        {
-            return false;
-        }
-
-        timeScale = newScale;
-        Time.timeScale = timeScale;
-        timeScaleHintText = $"时间速度: {timeScale}x";
-        Debug.Log($"时间速度调整为: {timeScale}x");
-        return true;
-    }
-
     private void UpdateTimeScaleHint()
     {
-        if (showTimeScaleHint)
+        if (!showTimeScaleHint) return;
+
+        timeScaleHintTimer -= Time.unscaledDeltaTime;
+        if (timeScaleHintTimer <= 0)
         {
-            timeScaleHintTimer -= Time.unscaledDeltaTime;
-            if (timeScaleHintTimer <= 0)
-            {
-                showTimeScaleHint = false;
-                timeScaleHintTimer = 0;
-            }
+            showTimeScaleHint = false;
         }
     }
 
-    private void OnGUI()
+    private void DrawTimeScaleHint()
     {
-        if (showTimeScaleHint && !string.IsNullOrEmpty(timeScaleHintText))
+        float alpha = Mathf.Clamp01(timeScaleHintTimer / timeScaleHintDuration);
+        
+        GUIStyle style = new GUIStyle(GUI.skin.label)
         {
-            float alpha = Mathf.Clamp01(timeScaleHintTimer / timeScaleHintDuration);
-
-            GUIStyle style = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 24,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter
-            };
-            style.normal.textColor = new Color(1, 1, 1, alpha);
-
-            Rect position = new Rect(0, Screen.height * 0.25f, Screen.width, 50);
-
-            GUI.Label(position, timeScaleHintText, style);
-        }
-    }
-
-    #endregion
-
-    #region 给予物品数量
-
-    /// <summary>
-    /// 给玩家当前手持物品增加指定数量（管理员用）
-    /// </summary>
-    private void AddAmountToCurrentHandItem(float amount)
-    {
-        if (hotbar == null)
-        {
-            if (player != null)
-            {
-                hotbar = player.GetComponentInChildren<Inventory_HotBar>();
-            }
-
-            if (hotbar == null)
-            {
-                Debug.LogWarning("PlayerAdminController: 未找到 Inventory_HotBar，无法为手持物品增加数量");
-                return;
-            }
-        }
-
-        var slot = hotbar.CurrentSelectItemSlot;
-        if (slot == null || slot.itemData == null)
-        {
-            Debug.LogWarning("PlayerAdminController: 当前没有手持物品，无法增加数量");
-            return;
-        }
-
-        slot.itemData.Stack.Amount += amount;
-        hotbar.RefreshUI(hotbar.CurrentIndex);
-
-        Debug.Log($"管理员为手持物品 {slot.itemData.IDName} 增加 {amount} 数量，当前数量：{slot.itemData.Stack.Amount}");
-    }
-
-    /// <summary>
-    /// 为玩家背包中的所有物品增加指定数量（管理员用）
-    /// </summary>
-    private void AddAmountToAllBagItems(float amount)
-    {
-        if (player == null || player.itemMods == null)
-        {
-            Debug.LogWarning("PlayerAdminController: 玩家或 itemMods 为空，无法为背包物品增加数量");
-            return;
-        }
-
-        var bagMod = player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag);
-        if (bagMod == null || bagMod.inventory == null || bagMod.inventory.Data == null || bagMod.inventory.Data.itemSlots == null)
-        {
-            Debug.LogWarning("PlayerAdminController: 未找到玩家背包 Inventory，无法为背包物品增加数量");
-            return;
-        }
-
-        int changedCount = 0;
-        foreach (var slot in bagMod.inventory.Data.itemSlots)
-        {
-            if (slot != null && slot.itemData != null)
-            {
-                slot.itemData.AddAmount(amount);
-                changedCount++;
-            }
-        }
-
-        // 刷新整个背包 UI
-        bagMod.inventory.RefreshUI();
-
-        Debug.Log($"管理员为背包中 {changedCount} 个物品各增加 {amount} 数量");
-    }
-
-    public override void Load()
-    {
-        if (player == null)
-        {
-            player = GetComponent<Player>();
-        }
-
-        if (hotbar == null && player != null)
-        {
-            hotbar = player.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Mod_Inventory>().inventory as Inventory_HotBar;
-        }
-        initialUnityTimeScale = Time.timeScale;
-    }
-
-    public override void Save()
-    {
+            fontSize = 24,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter
+        };
+        style.normal.textColor = new Color(1, 1, 1, alpha);
+        
+        // 显示在屏幕上方 1/4 处
+        Rect position = new Rect(0, Screen.height * 0.25f, Screen.width, 50);
+        GUI.Label(position, timeScaleHintText, style);
     }
 
     #endregion

@@ -7,6 +7,12 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class CameraFollowManager : Module
 {
+    [System.Serializable]
+    private class CameraFollowSaveData
+    {
+        public float PovValue = 10f;
+    }
+
     #region 字段声明
     [Header("模块数据")]
     public Ex_ModData ModData;
@@ -27,6 +33,8 @@ public class CameraFollowManager : Module
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
+    [SerializeField]
+    private float povValue = 10f;
 
     /// <summary>
     /// 获取虚拟相机组件
@@ -87,9 +95,10 @@ public class CameraFollowManager : Module
         }
     
         // 初始化相机视野（正交大小）
-        if (Vcam != null && Player != null)
+        if (Vcam != null)
         {
-            Vcam.m_Lens.OrthographicSize = Player.PovValue;
+            LoadPovValue();
+            Vcam.m_Lens.OrthographicSize = povValue;
         }
         GameController._mainCamera = ControllerCamera;
     
@@ -99,7 +108,7 @@ public class CameraFollowManager : Module
 
     public override void Save()
     {
-        // TODO: 实现保存逻辑
+        SavePovValue();
     }
     
     // 销毁时调用，注销事件
@@ -139,12 +148,36 @@ public class CameraFollowManager : Module
     /// <param name="delta">视野变化值</param>
     public void ChangeCameraView(float delta)
     {
-        if (Player == null || Vcam == null) return;
+        if (Vcam == null) return;
 
-        Player.PovValue += delta;
-        Vcam.m_Lens.OrthographicSize += delta;
+        povValue += delta;
+        Vcam.m_Lens.OrthographicSize = povValue;
 
         // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
     }
     #endregion
+
+    private void LoadPovValue()
+    {
+        if (ModData != null)
+        {
+            var saved = ModData.GetData<CameraFollowSaveData>();
+            if (saved != null)
+            {
+                povValue = saved.PovValue;
+                return;
+            }
+        }
+
+        if (Player != null && Player.Data != null)
+        {
+            povValue = Player.Data.PlayerPov;
+        }
+    }
+
+    private void SavePovValue()
+    {
+        if (ModData == null) return;
+        ModData.WriteData(new CameraFollowSaveData { PovValue = povValue });
+    }
 }

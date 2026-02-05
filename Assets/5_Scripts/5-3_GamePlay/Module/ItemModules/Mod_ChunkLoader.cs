@@ -122,7 +122,7 @@ public class Mod_ChunkLoader : Module
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
 
         // 尝试获取相机管理器引用
-        _cameraFollowManager = GetComponentInParent<CameraFollowManager>();
+        _cameraFollowManager = item.GetComponentInChildren<CameraFollowManager>();
     }
 
     public override void Save()
@@ -180,7 +180,7 @@ public class Mod_ChunkLoader : Module
         if (_boundCamera == null)
         {
             if (_cameraFollowManager == null)
-                _cameraFollowManager = transform.parent.GetComponentInChildren<CameraFollowManager>();
+                _cameraFollowManager = item.GetComponentInChildren<CameraFollowManager>();
 
             if (_cameraFollowManager != null)
                 _boundCamera = _cameraFollowManager.ControllerCamera;
