@@ -287,7 +287,7 @@ MonoBehaviour:
     ChunkSize: {x: 16, y: 16}
     AutoGenerateMap: 1
   ReadyTimeData:
-    CurrentTime: 0
+    CurrentTime: 600
     DayLength: 1440
     LightParams:
       serializedVersion: 2
@@ -427,11 +427,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212defbe379f6e04e832893eda7ea808, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  EnableItemPool: 0
-  PoolAllItems: 0
-  PoolItemIDs: []
-  DefaultPoolMaxSize: 64
-  DefaultPrewarmCount: 0
 --- !u!1 &8923630362666243623
 GameObject:
   m_ObjectHideFlags: 0
