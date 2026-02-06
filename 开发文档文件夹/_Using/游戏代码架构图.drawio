@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0" version="29.3.7" pages="3">
   <diagram name="管理器" id="C-IsJeU5A2ytGCQIUwKx">
-    <mxGraphModel dx="2123" dy="1225" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1624" dy="936" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -53,12 +53,12 @@
         </mxCell>
         <UserObject label="Item逻辑执行基类,管理对象的生命周期" link="vscode://lirentech.file-ref-tags?filePath=Item.cs&amp;snippet=public+abstract+class+Item+%3A+MonoBehaviour" id="UMRCmFI9wmj0vz6IsIpG-1">
           <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
-            <mxGeometry height="60" width="120" x="827" y="540" as="geometry" />
+            <mxGeometry height="60" width="120" x="330" y="640" as="geometry" />
           </mxCell>
         </UserObject>
         <UserObject label="区块加载器" link="vscode://lirentech.file-ref-tags?filePath=Mod_ChunkLoader.cs&amp;snippet=public+class+Mod_ChunkLoader+%3A+Module" id="HIcD_kWKDcjsUbimhCc2-1">
           <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
-            <mxGeometry height="60" width="120" x="1070" y="800" as="geometry" />
+            <mxGeometry height="60" width="120" x="115" y="810" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="HIcD_kWKDcjsUbimhCc2-2" edge="1" parent="1" source="HIcD_kWKDcjsUbimhCc2-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="HIcD_kWKDcjsUbimhCc2-5">
@@ -66,7 +66,7 @@
         </mxCell>
         <UserObject label="玩家视野调整模块" link="vscode://lirentech.file-ref-tags?filePath=CameraFollowManager.cs&amp;snippet=public+class+CameraFollowManager+%3A+Module" id="HIcD_kWKDcjsUbimhCc2-3">
           <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
-            <mxGeometry height="60" width="120" x="1380" y="800" as="geometry" />
+            <mxGeometry height="60" width="120" x="425" y="810" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="HIcD_kWKDcjsUbimhCc2-4" edge="1" parent="1" source="HIcD_kWKDcjsUbimhCc2-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="HIcD_kWKDcjsUbimhCc2-1">
@@ -74,7 +74,7 @@
         </mxCell>
         <UserObject label="动态调整区块加载和视野范围同步的函数" link="vscode://lirentech.file-ref-tags?filePath=Mod_ChunkLoader.cs&amp;snippet=++++private+void+AutoAdjustDistance%28%29" id="HIcD_kWKDcjsUbimhCc2-5">
           <mxCell parent="1" style="rhombus;whiteSpace=wrap;html=1;" vertex="1">
-            <mxGeometry height="80" width="80" x="1260" y="790" as="geometry" />
+            <mxGeometry height="80" width="80" x="305" y="800" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="HIcD_kWKDcjsUbimhCc2-7" edge="1" parent="1" source="HIcD_kWKDcjsUbimhCc2-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="HIcD_kWKDcjsUbimhCc2-11">
@@ -82,17 +82,19 @@
         </mxCell>
         <UserObject label="ItemMgr-管理游戏中所有Item生命周期的管理器" link="vscode://lirentech.file-ref-tags?filePath=ItemMgr.cs&amp;snippet=public+class+ItemMgr+%3A+SingletonMono%3CItemMgr%3E" id="HIcD_kWKDcjsUbimhCc2-6">
           <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
-            <mxGeometry height="60" width="120" x="827" y="260" as="geometry" />
+            <mxGeometry height="60" width="120" x="460" y="400" as="geometry" />
           </mxCell>
         </UserObject>
-        <mxCell id="HIcD_kWKDcjsUbimhCc2-12" edge="1" parent="1" source="HIcD_kWKDcjsUbimhCc2-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="UMRCmFI9wmj0vz6IsIpG-1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
         <UserObject label="管理Item的生命周期" link="vscode://lirentech.file-ref-tags?filePath=ItemMgr.cs&amp;snippet=++++++++++++item.Tick%28deltaTime%29%3B" id="HIcD_kWKDcjsUbimhCc2-11">
           <mxCell parent="1" style="rhombus;whiteSpace=wrap;html=1;" vertex="1">
-            <mxGeometry height="80" width="80" x="847" y="390" as="geometry" />
+            <mxGeometry height="80" width="80" x="480" y="530" as="geometry" />
           </mxCell>
         </UserObject>
+        <mxCell id="HRk3u_hrWM7h3wkUk_cB-1" edge="1" parent="1" source="tCPvovjiRZm_WEtIL-ZE-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="UMRCmFI9wmj0vz6IsIpG-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="400" y="630" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
