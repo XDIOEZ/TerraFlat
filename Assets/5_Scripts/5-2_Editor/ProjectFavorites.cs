@@ -22,6 +22,8 @@ public class ProjectFavorites : EditorWindow
     
     private Type projectBrowserType;
     private EditorWindow mainProjectWindow;
+    private MethodInfo showFolderContentsMethod;
+    private MethodInfo frameObjectMethod;
     
     private string ProjectIdentifier => Application.dataPath.GetHashCode().ToString();
     private string FavoritesPrefKey => "ProjectFavorites_Paths_" + ProjectIdentifier;
@@ -55,9 +57,22 @@ public class ProjectFavorites : EditorWindow
                 projectBrowserType = typeof(Editor).Assembly.GetType("UnityEditor.ProjectBrowser");
                 var allWindows = Resources.FindObjectsOfTypeAll<EditorWindow>();
                 mainProjectWindow = allWindows.FirstOrDefault(w => w.GetType().Name == "ProjectBrowser");
+                if (mainProjectWindow != null)
+                {
+                    CacheProjectBrowserMethods();
+                }
             }
             catch { }
         }
+    }
+
+    private void CacheProjectBrowserMethods()
+    {
+        if (projectBrowserType == null) return;
+
+        var methods = projectBrowserType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        showFolderContentsMethod = methods.FirstOrDefault(m => m.Name == "ShowFolderContents" && m.GetParameters().Length >= 1);
+        frameObjectMethod = methods.FirstOrDefault(m => m.Name == "FrameObject" && m.GetParameters().Length >= 1);
     }
 
     private void OnGUI()
@@ -304,19 +319,39 @@ public class ProjectFavorites : EditorWindow
 
             try
             {
-                // 设置选中并让 Project 窗口获得焦点
-                Selection.activeObject = folderAsset;
                 mainProjectWindow.Focus();
-                
-                // 使用 Unity 自带的 Reveal 定位（根据列表/两栏模式）
-                EditorApplication.delayCall += () =>
+
+                int instanceId = folderAsset.GetInstanceID();
+                bool revealed = false;
+
+                if (showFolderContentsMethod != null)
                 {
-                    if (folderAsset != null)
+                    var parameters = showFolderContentsMethod.GetParameters();
+                    if (parameters.Length >= 2)
                     {
-                        // 使用内置的 Reveal in Project 功能
-                        EditorGUIUtility.PingObject(folderAsset);
+                        showFolderContentsMethod.Invoke(mainProjectWindow, new object[] { instanceId, true });
                     }
-                };
+                    else
+                    {
+                        showFolderContentsMethod.Invoke(mainProjectWindow, new object[] { instanceId });
+                    }
+
+                    revealed = true;
+                }
+
+                if (frameObjectMethod != null)
+                {
+                    frameObjectMethod.Invoke(mainProjectWindow, new object[] { instanceId });
+                    revealed = true;
+                }
+
+                // 使用内置的 Ping 进行高亮，不改变 Selection
+                EditorGUIUtility.PingObject(folderAsset);
+
+                if (!revealed)
+                {
+//                    Debug.LogWarning("ProjectFavorites: 未找到 ProjectBrowser 定位方法，已使用 Ping 作为替代。");
+                }
             }
             catch (Exception ex)
             {
