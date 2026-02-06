@@ -133,7 +133,7 @@ GameObject:
   - component: {fileID: 1201240997}
   - component: {fileID: 1201240998}
   m_Layer: 0
-  m_Name: Module_AnimationAction
+  m_Name: Module_Weapon_AnimationAction
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
