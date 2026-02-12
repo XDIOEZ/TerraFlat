@@ -1,33 +1,34 @@
-// ÉËº¦Ä£¿éÓ¦¸Ã¹ÜÀíµÄÄÚÈİ
+// ä¼¤å®³æ¨¡å—åº”è¯¥ç®¡ç†çš„å†…å®¹
 using AYellowpaper.SerializedCollections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Mod_Damage : Module, IDamageSender
 {
-    #region ÉËº¦Ïà¹ØÊı¾İ
-    [Header("¹¥»÷ÌØĞ§")]
+    #region ä¼¤å®³ç›¸å…³æ•°æ®
+    [Header("æ”»å‡»ç‰¹æ•ˆ")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
 
     public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
     public GameValue_float Damage = new GameValue_float(10f);
 
-    [Header("¶¨Ê±ÉËº¦ÉèÖÃ")]
-    [Tooltip("ÉËº¦¼ä¸ôÊ±¼ä£¨Ãë£©\n-1: ÓÀÔ¶²»ÆôÓÃ\n0: Ã¿Ö¡Ôì³ÉÉËº¦\n>0: Ã¿¼ä¸ôÃëÊıÔì³ÉÉËº¦")]
+    [Header("å®šæ—¶ä¼¤å®³è®¾ç½®")]
+    [Tooltip("ä¼¤å®³é—´éš”æ—¶é—´ï¼ˆç§’ï¼‰\n-1: æ°¸è¿œä¸å¯ç”¨\n0: æ¯å¸§é€ æˆä¼¤å®³\n>0: æ¯é—´éš”ç§’æ•°é€ æˆä¼¤å®³")]
     public float DamageInterval = -1f;
-    [Tooltip("ÊÇ·ñÆôÓÃ´¥·¢Æ÷½øÈëÊ±µÄÉËº¦Âß¼­£¨Ä¬ÈÏÎªtrue£©")]
+    [Tooltip("æ˜¯å¦å¯ç”¨è§¦å‘å™¨è¿›å…¥æ—¶çš„ä¼¤å®³é€»è¾‘ï¼ˆé»˜è®¤ä¸ºtrueï¼‰")]
     public bool EnableOnTriggerEnterDamage = true;
 
-    [Header("µ÷ÊÔĞÅÏ¢")]
+    [Header("è°ƒè¯•ä¿¡æ¯")]
     [SerializeField] private bool showDebugWarnings = true;
     [SerializeField] private Collider2D damageCollider;
 
-    // ¶¨Ê±ÉËº¦Ïà¹Ø
+    // å®šæ—¶ä¼¤å®³ç›¸å…³
     [SerializeField]
     private float lastDamageTime = 0f;
     private List<DamageReceiver> insideReceivers = new List<DamageReceiver>();
+    private bool lastColliderEnabled = false;
 
-    // ÊµÏÖModuleDataÊôĞÔ
+    // å®ç°ModuleDataå±æ€§
     public override ModuleData _Data
     {
         get => MemoryPackableData;
@@ -36,80 +37,94 @@ public class Mod_Damage : Module, IDamageSender
     public Ex_ModData_MemoryPackable MemoryPackableData;
 
     /// <summary>
-    /// Ôì³ÉÉËº¦ºó»Øµ÷ÊÂ¼ş£¬²ÎÊıÎª±¾´ÎÔì³ÉµÄÉËº¦Öµ£¨¿ÉÄÜĞ¡ÓÚµÈÓÚ 0£©
+    /// é€ æˆä¼¤å®³åå›è°ƒäº‹ä»¶ï¼Œå‚æ•°ä¸ºæœ¬æ¬¡é€ æˆçš„ä¼¤å®³å€¼ï¼ˆå¯èƒ½å°äºç­‰äº 0ï¼‰
     /// </summary>
     public event System.Action<float> OnDamageApplied;
     #endregion
 
-    #region IDamageSender ÊµÏÖ
+    #region IDamageSender å®ç°
     Item IDamageSender.attacker { get => item; set => item = value; }
     SerializedDictionary<DamageTag, float> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
     GameValue_float IDamageSender.Damage { get => Damage; set => Damage = value; }
     #endregion
 
-    #region Unity ÉúÃüÖÜÆÚ
+    #region Unity ç”Ÿå‘½å‘¨æœŸ
     public override void Load()
     {
-        // ³õÊ¼»¯Ê±³¢ÊÔ»ñÈ¡Åö×²Ìå×é¼ş
+        // åˆå§‹åŒ–æ—¶å°è¯•è·å–ç¢°æ’ä½“ç»„ä»¶
         if (damageCollider == null)
         {
             damageCollider = GetComponent<Collider2D>();
         }
 
 
-        // ³õÊ¼»¯¶¨Ê±ÉËº¦Ïà¹ØÊı¾İ
+        // åˆå§‹åŒ–å®šæ—¶ä¼¤å®³ç›¸å…³æ•°æ®
         lastDamageTime = 0f;
         insideReceivers.Clear();
+        lastColliderEnabled = damageCollider != null && damageCollider.enabled;
     }
 
     public override void Save()
     {
-        // ±£´æÂß¼­¿ÉÒÔºóĞøÊµÏÖ
+        // ä¿å­˜é€»è¾‘å¯ä»¥åç»­å®ç°
     }
 
     public override void ModUpdate(float deltaTime)
     {
-        // ´¦Àí¶¨Ê±ÉËº¦Âß¼­
+        if (damageCollider != null)
+        {
+            bool colliderEnabled = damageCollider.enabled;
+            if (colliderEnabled != lastColliderEnabled)
+            {
+                lastColliderEnabled = colliderEnabled;
+                if (!colliderEnabled)
+                {
+                    insideReceivers.Clear();
+                }
+            }
+        }
+
+        // å¤„ç†å®šæ—¶ä¼¤å®³é€»è¾‘
         if (DamageInterval >= 0 && damageCollider != null && damageCollider.enabled)
         {
-            // ¼ì²éÊÇ·ñµ½ÁËÔì³ÉÉËº¦µÄÊ±¼ä
+            // æ£€æŸ¥æ˜¯å¦åˆ°äº†é€ æˆä¼¤å®³çš„æ—¶é—´
             if (DamageInterval == 0 || Time.time - lastDamageTime >= DamageInterval)
             {
-                // Êµ¼Ê¸üĞÂÊ±¼äÓÉ ApplyDamageToReceiver ÔÚÕæÕıÔì³ÉÉËº¦Ê±¸ºÔğ
+                // å®é™…æ›´æ–°æ—¶é—´ç”± ApplyDamageToReceiver åœ¨çœŸæ­£é€ æˆä¼¤å®³æ—¶è´Ÿè´£
                 ApplyDamageToInsideReceivers();
             }
         }
     }
     #endregion
 
-    #region ÉËº¦´¦Àí
+    #region ä¼¤å®³å¤„ç†
     public void OnTriggerEnter2D(Collider2D other)
     {
-        // Åö×²¼ì²âºÍÉËº¦´¦ÀíÂß¼­
+        // ç¢°æ’æ£€æµ‹å’Œä¼¤å®³å¤„ç†é€»è¾‘
         if (damageCollider == null || !damageCollider.enabled) return;
         if (!other.TryGetComponent(out DamageReceiver receiver)) return;
 
-        // Ìí¼Óµ½ÄÚ²¿½ÓÊÕÆ÷ÁĞ±í
+        // æ·»åŠ åˆ°å†…éƒ¨æ¥æ”¶å™¨åˆ—è¡¨
         if (!insideReceivers.Contains(receiver))
         {
             insideReceivers.Add(receiver);
         }
 
-        // Èç¹ûÆôÓÃÁË½øÈëÊ±ÉËº¦£¬ÔòÔÚ×ğÖØÉËº¦¼ä¸ôµÄÇ°ÌáÏÂ³¢ÊÔÁ¢¼´Ôì³ÉÒ»´ÎÉËº¦
+        // å¦‚æœå¯ç”¨äº†è¿›å…¥æ—¶ä¼¤å®³ï¼Œåˆ™åœ¨å°Šé‡ä¼¤å®³é—´éš”çš„å‰æä¸‹å°è¯•ç«‹å³é€ æˆä¸€æ¬¡ä¼¤å®³
         if (EnableOnTriggerEnterDamage)
         {
-            // DamageInterval < 0£º½ö×öÒ»´Î½øÈëÉËº¦£¬²»²ÎÓëÀäÈ´£¨±£³Ö¾ÉĞĞÎª£©
+            // DamageInterval < 0ï¼šä»…åšä¸€æ¬¡è¿›å…¥ä¼¤å®³ï¼Œä¸å‚ä¸å†·å´ï¼ˆä¿æŒæ—§è¡Œä¸ºï¼‰
             if (DamageInterval < 0f)
             {
                 ApplyDamageToReceiver(receiver);
             }
             else
             {
-                // DamageInterval == 0£ºÊÓÎª¡°Ã¿Ö¡¶¼¿ÉÉËº¦¡±£¬½øÈëÊ±Ò²ÔÊĞíÁ¢¿Ì´òÒ»»÷
-                // DamageInterval  > 0£ºĞèÒªÂú×ãÀäÈ´Ê±¼ä
+                // DamageInterval == 0ï¼šè§†ä¸ºâ€œæ¯å¸§éƒ½å¯ä¼¤å®³â€ï¼Œè¿›å…¥æ—¶ä¹Ÿå…è®¸ç«‹åˆ»æ‰“ä¸€å‡»
+                // DamageInterval  > 0ï¼šéœ€è¦æ»¡è¶³å†·å´æ—¶é—´
                 if (DamageInterval == 0f || Time.time - lastDamageTime >= DamageInterval)
                 {
-                    // Êµ¼Ê¸üĞÂÊ±¼äÓÉ ApplyDamageToReceiver ÔÚÕæÕıÔì³ÉÉËº¦Ê±¸ºÔğ
+                    // å®é™…æ›´æ–°æ—¶é—´ç”± ApplyDamageToReceiver åœ¨çœŸæ­£é€ æˆä¼¤å®³æ—¶è´Ÿè´£
                     ApplyDamageToReceiver(receiver);
                 }
             }
@@ -118,7 +133,7 @@ public class Mod_Damage : Module, IDamageSender
 
     public void OnTriggerExit2D(Collider2D other)
     {
-        // ´ÓÄÚ²¿½ÓÊÕÆ÷ÁĞ±íÖĞÒÆ³ı
+        // ä»å†…éƒ¨æ¥æ”¶å™¨åˆ—è¡¨ä¸­ç§»é™¤
         if (other.TryGetComponent(out DamageReceiver receiver))
         {
             insideReceivers.Remove(receiver);
@@ -127,7 +142,7 @@ public class Mod_Damage : Module, IDamageSender
 
     private void ApplyDamageToInsideReceivers()
     {
-        // ¶ÔËùÓĞÔÚÅö×²ÌåÄÚµÄ½ÓÊÕÆ÷Ôì³ÉÉËº¦
+        // å¯¹æ‰€æœ‰åœ¨ç¢°æ’ä½“å†…çš„æ¥æ”¶å™¨é€ æˆä¼¤å®³
         for (int i = insideReceivers.Count - 1; i >= 0; i--)
         {
             if (insideReceivers[i] != null)
@@ -136,7 +151,7 @@ public class Mod_Damage : Module, IDamageSender
             }
             else
             {
-                // ÒÆ³ıÒÑÏú»ÙµÄ½ÓÊÕÆ÷
+                // ç§»é™¤å·²é”€æ¯çš„æ¥æ”¶å™¨
                 insideReceivers.RemoveAt(i);
             }
         }
@@ -144,17 +159,17 @@ public class Mod_Damage : Module, IDamageSender
 
     private void ApplyDamageToReceiver(DamageReceiver receiver)
     {
-        // Ôì³ÉÉËº¦
+        // é€ æˆä¼¤å®³
         float acDamage = receiver.Hurt(this);
 
-        // Éú³É¹¥»÷ÌØĞ§
+        // ç”Ÿæˆæ”»å‡»ç‰¹æ•ˆ
         if (AttackEffects != null && AttackEffects.Count > 0)
         {
             Vector2 hitPoint = receiver.GetComponent<Collider2D>().ClosestPoint(transform.position);
             SpawnEffect(hitPoint, acDamage);
         }
 
-        // ´¥·¢ÉËº¦Íê³ÉÊÂ¼ş£¨ÎŞÂÛÉËº¦ÊÇ·ñ´óÓÚ 0 ¶¼»á´¥·¢£©
+        // è§¦å‘ä¼¤å®³å®Œæˆäº‹ä»¶ï¼ˆæ— è®ºä¼¤å®³æ˜¯å¦å¤§äº 0 éƒ½ä¼šè§¦å‘ï¼‰
         OnDamageApplied?.Invoke(acDamage);
 
 
@@ -164,7 +179,7 @@ public class Mod_Damage : Module, IDamageSender
 
     private void SpawnEffect(Vector2 hitPoint, float damage)
     {
-        // ÌØĞ§Éú³ÉÂß¼­
+        // ç‰¹æ•ˆç”Ÿæˆé€»è¾‘
         foreach (GameEffect effectPrefab in AttackEffects)
         {
             if (effectPrefab != null)
@@ -177,48 +192,33 @@ public class Mod_Damage : Module, IDamageSender
     }
     #endregion
 
-    #region ĞÂÔö·½·¨£º¿ØÖÆÉËº¦ÆôÓÃ/½ûÓÃ
+    #region æ–°å¢æ–¹æ³•ï¼šæ§åˆ¶ä¼¤å®³å¯ç”¨/ç¦ç”¨
     /// <summary>
-    /// ÉèÖÃÉËº¦¼ì²âµÄÆôÓÃ×´Ì¬
+    /// è®¾ç½®ä¼¤å®³é€»è¾‘å¯ç”¨çŠ¶æ€ï¼ˆä¸è´Ÿè´£å¼€å…³Colliderï¼‰
     /// </summary>
-    /// <param name="enabled">ÊÇ·ñÆôÓÃÉËº¦¼ì²â</param>
+    /// <param name="enabled">æ˜¯å¦å¯ç”¨ä¼¤å®³æ£€æµ‹</param>
     public void SetDamageEnabled(bool enabled)
     {
-        if (damageCollider != null)
+        if (damageCollider == null)
         {
-            damageCollider.enabled = enabled;
-            damageCollider.isTrigger = true; // È·±£ÊÇ´¥·¢Æ÷
-            if (!enabled)
-            {
-                // ½ûÓÃÊ±Çå¿ÕÄÚ²¿½ÓÊÕÆ÷ÁĞ±í
-                insideReceivers.Clear();
-            }
-        }
-        else
-        {
-            // Èç¹û»¹Ã»ÓĞ»ñÈ¡µ½Åö×²Ìå£¬³¢ÊÔ»ñÈ¡
             damageCollider = GetComponent<Collider2D>();
-            if (damageCollider != null)
-            {
-                damageCollider.enabled = enabled;
-                damageCollider.isTrigger = true; // È·±£ÊÇ´¥·¢Æ÷
-                if (!enabled)
-                {
-                    // ½ûÓÃÊ±Çå¿ÕÄÚ²¿½ÓÊÕÆ÷ÁĞ±í
-                    insideReceivers.Clear();
-                }
-            }
-            else if (showDebugWarnings)
-            {
-                Debug.LogWarning($"[{name}] Î´ÕÒµ½Collider2D×é¼ş£¬ÎŞ·¨ÉèÖÃÉËº¦¼ì²â×´Ì¬", this);
-            }
+        }
+
+        if (damageCollider != null && damageCollider.enabled != enabled && showDebugWarnings)
+        {
+            Debug.LogWarning($"[{name}] ä¼¤å®³çŠ¶æ€ç”± Collider.enabled æ§åˆ¶ï¼Œè¯·åœ¨å¤–éƒ¨å¼€å…³ Collider", this);
+        }
+
+        if (!enabled)
+        {
+            insideReceivers.Clear();
         }
     }
 
     /// <summary>
-    /// »ñÈ¡µ±Ç°ÉËº¦¼ì²â×´Ì¬
+    /// è·å–å½“å‰ä¼¤å®³æ£€æµ‹çŠ¶æ€
     /// </summary>
-    /// <returns>ÉËº¦¼ì²âÊÇ·ñÆôÓÃ</returns>
+    /// <returns>ä¼¤å®³æ£€æµ‹æ˜¯å¦å¯ç”¨</returns>
     public bool IsDamageEnabled()
     {
         return damageCollider != null && damageCollider.enabled;
@@ -227,7 +227,7 @@ public class Mod_Damage : Module, IDamageSender
     public void StartAttack()
     {
         SetDamageEnabled(true);
-        lastDamageTime = Time.time; // ÖØÖÃÉËº¦¼ÆÊ±
+        lastDamageTime = Time.time; // é‡ç½®ä¼¤å®³è®¡æ—¶
     }
     public void StopAttack()
     {

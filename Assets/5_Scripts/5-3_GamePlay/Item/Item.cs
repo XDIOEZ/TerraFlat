@@ -512,6 +512,18 @@ public abstract class Item : MonoBehaviour
         }
     }
 
+    [Button("注入到ItemMgr")]
+    public void InjectToItemMgr()
+    {
+        if (ItemMgr.Instance == null)
+        {
+            Debug.LogError("[Item] ItemMgr.Instance为空，无法注入物品", this);
+            return;
+        }
+
+        ItemMgr.Instance.InjectRuntimeItem(this, context: gameObject.name);
+    }
+
     #endregion
 
     private List<Module> GetModsSnapshot()
