@@ -19,15 +19,18 @@ public class ProjectFavorites : EditorWindow
     private string newFavoritePath = "Assets";
     private string newFavoriteName = "";
     private bool showAddUI = false;
+    private bool enableDebugLog = false;
+    private bool showHeaderControls = true;
+    private bool reorderMode = false;
+    private bool showManageButtons = true;
     
     private Type projectBrowserType;
     private EditorWindow mainProjectWindow;
-    private MethodInfo showFolderContentsMethod;
-    private MethodInfo frameObjectMethod;
     
     private string ProjectIdentifier => Application.dataPath.GetHashCode().ToString();
     private string FavoritesPrefKey => "ProjectFavorites_Paths_" + ProjectIdentifier;
     private string NamesPrefKey => "ProjectFavorites_Names_" + ProjectIdentifier;
+    private string DebugPrefKey => "ProjectFavorites_Debug_" + ProjectIdentifier;
 
     [MenuItem("Tools/Project Favorites")]
     private static void ShowWindow()
@@ -39,6 +42,7 @@ public class ProjectFavorites : EditorWindow
     private void OnEnable()
     {
         LoadFavorites();
+        enableDebugLog = EditorPrefs.GetBool(DebugPrefKey, false);
         EditorApplication.update += OnEditorUpdate;
     }
 
@@ -57,41 +61,32 @@ public class ProjectFavorites : EditorWindow
                 projectBrowserType = typeof(Editor).Assembly.GetType("UnityEditor.ProjectBrowser");
                 var allWindows = Resources.FindObjectsOfTypeAll<EditorWindow>();
                 mainProjectWindow = allWindows.FirstOrDefault(w => w.GetType().Name == "ProjectBrowser");
-                if (mainProjectWindow != null)
-                {
-                    CacheProjectBrowserMethods();
-                }
             }
             catch { }
         }
     }
 
-    private void CacheProjectBrowserMethods()
-    {
-        if (projectBrowserType == null) return;
-
-        var methods = projectBrowserType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        showFolderContentsMethod = methods.FirstOrDefault(m => m.Name == "ShowFolderContents" && m.GetParameters().Length >= 1);
-        frameObjectMethod = methods.FirstOrDefault(m => m.Name == "FrameObject" && m.GetParameters().Length >= 1);
-    }
-
     private void OnGUI()
     {
-        // 头部样式
-        GUILayout.Space(10);
-        
-        EditorGUILayout.LabelField("项目收藏夹", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField("快速访问常用文件夹", EditorStyles.miniLabel);
-        
-        GUILayout.Space(8);
+        GUILayout.Space(2);
+        showHeaderControls = EditorGUILayout.Foldout(showHeaderControls, "显示操作区", true);
+        if (showHeaderControls)
+        {
+            bool newDebugValue = EditorGUILayout.ToggleLeft("启用调试日志", enableDebugLog);
+            if (newDebugValue != enableDebugLog)
+            {
+                enableDebugLog = newDebugValue;
+                EditorPrefs.SetBool(DebugPrefKey, enableDebugLog);
+            }
+        }
 
         // 添加收藏 UI
-        if (showAddUI)
+        if (showHeaderControls && showAddUI)
         {
             DrawAddFavoriteUI();
             GUILayout.Space(10);
         }
-        else
+        else if (showHeaderControls)
         {
             EditorGUILayout.BeginHorizontal();
             
@@ -116,12 +111,20 @@ public class ProjectFavorites : EditorWindow
                 newFavoriteName = "新收藏";
                 showAddUI = true;
             }
+
+            if (GUILayout.Button(reorderMode ? "完成排序" : "调整排序", GUILayout.Height(28)))
+            {
+                reorderMode = !reorderMode;
+            }
+
+            if (GUILayout.Button(showManageButtons ? "隐藏管理" : "显示管理", GUILayout.Height(28)))
+            {
+                showManageButtons = !showManageButtons;
+            }
             
             EditorGUILayout.EndHorizontal();
         }
 
-        GUILayout.Space(8);
-        
         // 统计信息
         var style = new GUIStyle(EditorStyles.miniLabel);
         style.alignment = TextAnchor.MiddleRight;
@@ -240,33 +243,50 @@ public class ProjectFavorites : EditorWindow
         EditorGUILayout.BeginHorizontal();
         
         // 跳转按钮占据大部分空间
-        if (GUILayout.Button(name, GUILayout.Height(28)))
+        if (GUILayout.Button(name, GUILayout.Height(18)))
         {
             JumpToFolder(path);
         }
 
-        // 重命名按钮
-        if (GUILayout.Button("重命名", GUILayout.Width(50), GUILayout.Height(28)))
+        if (reorderMode)
         {
-            ShowRenameFavorite(index);
+            GUI.enabled = index > 0;
+            if (GUILayout.Button("上移", GUILayout.Width(25), GUILayout.Height(18)))
+            {
+                MoveFavorite(index, -1);
+            }
+
+            GUI.enabled = index < favorites.Count - 1;
+            if (GUILayout.Button("下移", GUILayout.Width(25), GUILayout.Height(18)))
+            {
+                MoveFavorite(index, 1);
+            }
+            GUI.enabled = true;
         }
 
-        // 删除按钮
-        if (GUILayout.Button("删除", GUILayout.Width(50), GUILayout.Height(28)))
+        if (showManageButtons)
         {
-            if (EditorUtility.DisplayDialog("删除收藏", $"确认删除 \"{name}\" 吗", "删除", "取消"))
+            // 重命名按钮
+            if (GUILayout.Button("重命名", GUILayout.Width(25), GUILayout.Height(18)))
             {
-                favorites.RemoveAt(index);
-                favoriteNames.RemoveAt(index);
-                SaveFavorites();
+                ShowRenameFavorite(index);
+            }
+
+            // 删除按钮
+            if (GUILayout.Button("删除", GUILayout.Width(25), GUILayout.Height(18)))
+            {
+                if (EditorUtility.DisplayDialog("删除收藏", $"确认删除 \"{name}\" 吗", "删除", "取消"))
+                {
+                    favorites.RemoveAt(index);
+                    favoriteNames.RemoveAt(index);
+                    SaveFavorites();
+                }
             }
         }
 
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.EndVertical();
-        
-        GUILayout.Space(4);
     }
 
     private void ShowRenameFavorite(int index)
@@ -287,6 +307,26 @@ public class ProjectFavorites : EditorWindow
                 SaveFavorites();
             }
         }
+    }
+
+    private void MoveFavorite(int index, int direction)
+    {
+        int newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= favorites.Count)
+        {
+            return;
+        }
+
+        string path = favorites[index];
+        string name = favoriteNames[index];
+
+        favorites.RemoveAt(index);
+        favoriteNames.RemoveAt(index);
+
+        favorites.Insert(newIndex, path);
+        favoriteNames.Insert(newIndex, name);
+
+        SaveFavorites();
     }
 
     private void JumpToFolder(string path)
@@ -321,43 +361,94 @@ public class ProjectFavorites : EditorWindow
             {
                 mainProjectWindow.Focus();
 
-                int instanceId = folderAsset.GetInstanceID();
-                bool revealed = false;
+                // 不修改 Selection，直接让 Project 窗口定位到文件夹
+                var showFolderContents = mainProjectWindow.GetType().GetMethod(
+                    "ShowFolderContents",
+                    BindingFlags.Instance | BindingFlags.NonPublic,
+                    null,
+                    new[] { typeof(int), typeof(bool) },
+                    null);
 
-                if (showFolderContentsMethod != null)
+                bool jumped = false;
+                if (showFolderContents != null && IsProjectBrowserTwoColumn(mainProjectWindow))
                 {
-                    var parameters = showFolderContentsMethod.GetParameters();
-                    if (parameters.Length >= 2)
+                    try
                     {
-                        showFolderContentsMethod.Invoke(mainProjectWindow, new object[] { instanceId, true });
+                        showFolderContents.Invoke(mainProjectWindow, new object[] { folderAsset.GetInstanceID(), true });
+                        jumped = true;
                     }
-                    else
+                    catch (TargetInvocationException tie)
                     {
-                        showFolderContentsMethod.Invoke(mainProjectWindow, new object[] { instanceId });
+                        Debug.LogWarning($"跳转文件夹失败: {tie.InnerException?.Message ?? tie.Message}");
                     }
-
-                    revealed = true;
                 }
 
-                if (frameObjectMethod != null)
+                if (!jumped)
                 {
-                    frameObjectMethod.Invoke(mainProjectWindow, new object[] { instanceId });
-                    revealed = true;
+                    DebugLog("跳转文件夹失败: 未找到可用的 Project 窗口定位方法或非双栏模式");
                 }
 
-                // 使用内置的 Ping 进行高亮，不改变 Selection
+                // 仅用于高亮提示，不改变 Inspector 选中
                 EditorGUIUtility.PingObject(folderAsset);
-
-                if (!revealed)
-                {
-//                    Debug.LogWarning("ProjectFavorites: 未找到 ProjectBrowser 定位方法，已使用 Ping 作为替代。");
-                }
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"跳转文件夹失败: {ex.Message}");
+                DebugLog($"跳转文件夹失败: {ex.Message}");
             }
         };
+    }
+
+    private bool IsProjectBrowserTwoColumn(EditorWindow window)
+    {
+        if (window == null) return false;
+
+        try
+        {
+            var isTwoColumnProp = window.GetType().GetProperty(
+                "isTwoColumn",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (isTwoColumnProp != null && isTwoColumnProp.PropertyType == typeof(bool))
+            {
+                return (bool)isTwoColumnProp.GetValue(window, null);
+            }
+
+            var isTwoColumnMethod = window.GetType().GetMethod(
+                "IsTwoColumn",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
+                null,
+                Type.EmptyTypes,
+                null);
+            if (isTwoColumnMethod != null && isTwoColumnMethod.ReturnType == typeof(bool))
+            {
+                return (bool)isTwoColumnMethod.Invoke(window, null);
+            }
+
+            var viewModeField = window.GetType().GetField(
+                "m_ViewMode",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (viewModeField != null)
+            {
+                var viewMode = viewModeField.GetValue(window);
+                if (viewMode != null)
+                {
+                    return viewMode.ToString().IndexOf("Two", StringComparison.OrdinalIgnoreCase) >= 0;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"检测 Project 窗口模式失败: {ex.Message}");
+        }
+
+        return false;
+    }
+
+    private void DebugLog(string message)
+    {
+        if (enableDebugLog)
+        {
+            Debug.LogWarning(message);
+        }
     }
 
     private string GetSelectedFolderPath()

@@ -4,8 +4,8 @@ using UltEvents;
 using UnityEngine;
 
 /// <summary>
-/// »·¾³µ÷Õû½Ó¿Ú£ºÈÃ¸÷Ä£¿é¿ÉÑ¡µØÊµÏÖ»·¾³³õÊ¼»¯Âß¼­
-/// ·ûºÏµ¥Ò»Ö°ÔğÔ­Ôò£ºItem¸ºÔğµ÷¶È£¬Ä£¿é¸ºÔğ¾ßÌåÊµÏÖ
+/// ç¯å¢ƒè°ƒæ•´æ¥å£ï¼šè®©å„æ¨¡å—å¯é€‰åœ°å®ç°ç¯å¢ƒåˆå§‹åŒ–é€»è¾‘
+/// ç¬¦åˆå•ä¸€èŒè´£åŸåˆ™ï¼šItemè´Ÿè´£è°ƒåº¦ï¼Œæ¨¡å—è´Ÿè´£å…·ä½“å®ç°
 /// </summary>
 public interface IEnvironmentAdjustable
 {
@@ -14,7 +14,7 @@ public interface IEnvironmentAdjustable
 
 public abstract class Module : MonoBehaviour
 {
-    /*  ²Î¿¼´úÂë
+    /*  å‚è€ƒä»£ç 
    
  using System.Collections;
 using System.Collections.Generic;
@@ -22,33 +22,28 @@ using UnityEngine;
 
 public class Module_Equipment_Store : Module
 {
-    #region »ù´¡²ÎÊı
+           #region åŸºç¡€å‚æ•°
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
     #endregion
 
 
-    #region Ä£×é²ÎÊı
+    #region æ¨¡ç»„å‚æ•°
 
     [SerializeReference]
-    public List<EquipmentInstance> equipmentInstances = new List<EquipmentInstance>();
+    public List<string> RawData = new List<string>();
 
     public override void Load()
     {
-        ModSaveData.ReadData(ref equipmentInstances);
+        ModSaveData.ReadData(ref RawData);
     }
 
     public override void Save()
     {
-        ModSaveData.WriteData(equipmentInstances);
+        ModSaveData.WriteData(RawData);
     }
     #endregion
-
-    public override void Awake()
-    {
-        _Data.ID = ModText.Equipment_Store;
-    }
 
     
 }
@@ -70,10 +65,10 @@ public class Module_Equipment_Store : Module
             _Data.ID = gameObject.name;
         }
     }
-    public void ModuleInit(Item item_,ModuleData data,ItemData itemData_ = null)
+    public void ModuleInit(Item item_, ModuleData data, ItemData itemData_ = null)
     {
         this.item = item_;
-        if (itemData_== null)
+        if (itemData_ == null)
         {
             Item_Data = item_.itemData;
         }
@@ -105,34 +100,34 @@ public class Module_Equipment_Store : Module
 
 
     /// <summary>
-    /// Éú³ÉÄ£¿éÎ¨Ò»Ãû³Æ
+    /// ç”Ÿæˆæ¨¡å—å”¯ä¸€åç§°
     /// </summary>
     public static string GenerateUniqueModName(string id)
     {
         return id + "_" + UnityEngine.Random.Range(1000, 9999);
     }
 
-    #region Ìí¼ÓÄ£¿é
+    #region æ·»åŠ æ¨¡å—
     public static Module ADDModTOItem(Item item, string modName)
     {
         if (HasMod(item, modName))
         {
             return null;
         }
-        // ÊµÀı»¯Ä£¿éÔ¤ÖÆÌå
+        // å®ä¾‹åŒ–æ¨¡å—é¢„åˆ¶ä½“
         GameObject @object = GameRes.Instance.InstantiatePrefab(modName);
 
 
-        // ÉèÖÃÎª item µÄ×ÓÎïÌå£¨Ê¹ÓÃ worldPositionStays = false ÒÔ±ãÎÒÃÇÊÖ¶¯ÉèÖÃÎ»ÖÃ£©
+        // è®¾ç½®ä¸º item çš„å­ç‰©ä½“ï¼ˆä½¿ç”¨ worldPositionStays = false ä»¥ä¾¿æˆ‘ä»¬æ‰‹åŠ¨è®¾ç½®ä½ç½®ï¼‰
         @object.transform.SetParent(item.transform, worldPositionStays: false);
 
-        // ÉèÖÃÎ»ÖÃ¡¢Ğı×ª¡¢Ëõ·ÅÓë item Ò»ÖÂ
+        // è®¾ç½®ä½ç½®ã€æ—‹è½¬ã€ç¼©æ”¾ä¸ item ä¸€è‡´
         @object.transform.localPosition = Vector3.zero;
         @object.transform.localRotation = Quaternion.identity;
         @object.transform.localScale = Vector3.one;
 
 
-        // »ñÈ¡Ä£¿é²¢³õÊ¼»¯
+        // è·å–æ¨¡å—å¹¶åˆå§‹åŒ–
         Module module = @object.GetComponentInChildren<Module>();
         module._Data.ID = modName;
         module._Data.Name = GenerateUniqueModName(module._Data.ID);
@@ -151,7 +146,7 @@ public class Module_Equipment_Store : Module
 
         Module module = @object.GetComponentInChildren<Module>();
 
-        item.itemMods.AddMod(module); // Ìí¼Óµ½×Öµä
+        item.itemMods.AddMod(module); // æ·»åŠ åˆ°å­—å…¸
 
         module.ModuleInit(item, null);
         module.Load();
@@ -160,7 +155,7 @@ public class Module_Equipment_Store : Module
     }
     public static Module ADDModTOItem(Item item, ModuleData mod, ItemData itemData)
     {
-        //TODO ÊµÀı»¯Ä£¿é µ«ÊÇÈç¹û´æÔÚ¶à¸öÃû×ÖÏàÍ¬µÄÄ£¿é»áµ¼ÖÂ¸²¸ÇµÄÎÊÌâ
+        //TODO å®ä¾‹åŒ–æ¨¡å— ä½†æ˜¯å¦‚æœå­˜åœ¨å¤šä¸ªåå­—ç›¸åŒçš„æ¨¡å—ä¼šå¯¼è‡´è¦†ç›–çš„é—®é¢˜
         GameObject @object = GameRes.Instance.InstantiatePrefab(mod.ID);
 
         @object.transform.SetParent(item.transform);
@@ -169,7 +164,7 @@ public class Module_Equipment_Store : Module
 
         module._Data = mod;
 
-        item.itemMods.AddMod(module); // Ìí¼Óµ½×Öµä
+        item.itemMods.AddMod(module); // æ·»åŠ åˆ°å­—å…¸
 
         module.ModuleInit(item, mod, itemData);
 
@@ -177,7 +172,7 @@ public class Module_Equipment_Store : Module
         return module;
     }
     #endregion
-    #region ÒÆ³ıÄ£¿é
+    #region ç§»é™¤æ¨¡å—
     public static Module REMOVEModFROMItem(Item item, ModuleData mod)
     {
         Module module;
@@ -188,7 +183,7 @@ public class Module_Equipment_Store : Module
 
         module = item.Mods[mod.Name];
 
-        item.itemMods.RemoveMod(module); // Ìí¼Óµ½×Öµä
+        item.itemMods.RemoveMod(module); // æ·»åŠ åˆ°å­—å…¸
 
         item.itemData.ModuleDataDic.Remove(mod.Name);
 
@@ -197,7 +192,7 @@ public class Module_Equipment_Store : Module
 
     public static Module REMOVEModFROMItem(Item item, string name)
     {
-        Module module = item.itemMods.GetMod_ByID("ÈëË®ÌØĞ§");
+        Module module = item.itemMods.GetMod_ByID("å…¥æ°´ç‰¹æ•ˆ");
 
         Destroy(module.gameObject);
 
@@ -208,7 +203,7 @@ public class Module_Equipment_Store : Module
         return module;
     }
     #endregion
-    #region ¼ì²âÄ£¿é
+    #region æ£€æµ‹æ¨¡å—
 
     public static bool HasMod(Item item, string name)
     {
@@ -225,26 +220,26 @@ public class Module_Equipment_Store : Module
     #endregion
 
     /// <summary>
-    /// Í¨ÓÃ¼ÓÔØÄ£¿é·½·¨
+    /// é€šç”¨åŠ è½½æ¨¡å—æ–¹æ³•
     /// </summary>
-    /// <typeparam name="T">Òª»ñÈ¡µÄ×é¼şÀàĞÍ</typeparam>
-    /// <param name="item">Item ¶ÔÏó</param>
-    /// <param name="modID">Ä£¿é ID</param>
-    /// <param name="onLoaded">Ä£¿é¼ÓÔØ³É¹¦ºóµÄ»Øµ÷</param>
-    /// <returns>ÕÒµ½µÄ×é¼ş£¬Ã»ÕÒµ½·µ»Ø null</returns>
+    /// <typeparam name="T">è¦è·å–çš„ç»„ä»¶ç±»å‹</typeparam>
+    /// <param name="item">Item å¯¹è±¡</param>
+    /// <param name="modID">æ¨¡å— ID</param>
+    /// <param name="onLoaded">æ¨¡å—åŠ è½½æˆåŠŸåçš„å›è°ƒ</param>
+    /// <returns>æ‰¾åˆ°çš„ç»„ä»¶ï¼Œæ²¡æ‰¾åˆ°è¿”å› null</returns>
     public static T LoadMod<T>(Item item, string modID, Action<T> onLoaded = null) where T : Component
     {
         var mod = item.itemMods.GetMod_ByID(modID);
         if (mod == null)
         {
-            Debug.LogWarning($"Ã»ÓĞÕÒµ½Ä£¿é:{modID} ,´Ë²éÕÒÀ´×Ô: {item.itemData.GameName}");
+            Debug.LogWarning($"æ²¡æœ‰æ‰¾åˆ°æ¨¡å—:{modID} ,æ­¤æŸ¥æ‰¾æ¥è‡ª: {item.itemData.GameName}");
             return null;
         }
 
         T component = mod.GetComponent<T>();
         if (component == null)
         {
-            Debug.LogWarning($"Ä£¿é {modID} ÖĞÃ»ÓĞÕÒµ½×é¼ş {typeof(T).Name}");
+            Debug.LogWarning($"æ¨¡å— {modID} ä¸­æ²¡æœ‰æ‰¾åˆ°ç»„ä»¶ {typeof(T).Name}");
             return null;
         }
 

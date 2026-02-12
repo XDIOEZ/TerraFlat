@@ -3,28 +3,88 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class Mod_Weapon_AnimationAction : MonoBehaviour
+public class Mod_Weapon_AnimationAction : Module
 {
     #region Config
+    [Tooltip("武器动画树 Animator")]
     public Animator animator;//武器的动画树
 
+    [Tooltip("是否使用本地输入触发攻击")]
     [SerializeField] private bool useLocalInput = true;
+    [Tooltip("待机动画状态名")]
     [SerializeField] private string idleAnimationName = "Idle_0";
+    [Tooltip("攻击连击动画状态名列表")]
     [SerializeField] private List<string> attackAnimationNames = new List<string> { "Attack_1", "Attack_2" };
+    [Tooltip("连击窗口覆盖时长，<=0 则使用当前攻击动画时长")]
     [SerializeField] private float comboWindowOverride = -1f;//<=0 使用当前攻击动画时长
+    [Tooltip("连击窗口宽限时间，允许一帧误差")]
     [SerializeField] private float comboWindowGrace = 0.05f;//允许一帧误差
+    [Tooltip("按住输入时是否循环连击")]
     [SerializeField] private bool loopComboOnHold = true;
     #endregion
 
     #region Runtime
+    [Tooltip("当前连击索引")]
+    [ShowInInspector, ReadOnly]
     private int currentIndex = -1;
+    [Tooltip("当前连击截止时间")]
+    [ShowInInspector, ReadOnly]
     private float comboDeadline;
+    [Tooltip("下一段动画最早可触发时间")]
+    [ShowInInspector, ReadOnly]
     private float nextReadyTime;
+    [Tooltip("是否处于攻击中")]
+    [ShowInInspector, ReadOnly]
     private bool isAttacking;
+    [Tooltip("是否已排队下一段攻击")]
+    [ShowInInspector, ReadOnly]
     private bool queuedNext;
+    [Tooltip("当前动画状态哈希")]
+    [ShowInInspector, ReadOnly]
     private int currentStateHash;
+    private GameController cachedController;
+    private bool isHoldingInput;
+    #endregion
+    #region 基础参数
+
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
     #endregion
 
+
+    #region 模组参数
+
+    [SerializeReference]
+    public List<string> RawData = new List<string>();
+
+    public override void Load()
+    {
+        ModSaveData.ReadData(ref RawData);
+
+        if (item.Owner != null)
+        {
+            cachedController = item.Owner.GetComponentInChildren<GameController>();
+            if (cachedController != null)
+            {
+                //绑定Controller 也就是新输入系统
+                cachedController.LeftClick += OnControllerLeftClick;
+                cachedController.LeftClickUp += OnControllerLeftClickUp;
+            }
+        }
+    }
+
+    public override void Save()
+    {
+        if (cachedController != null)
+        {
+            cachedController.LeftClick -= OnControllerLeftClick;
+            cachedController.LeftClickUp -= OnControllerLeftClickUp;
+            cachedController = null;
+        }
+        ModSaveData.WriteData(RawData);
+    }
+    #endregion
+    [InfoBox("驱动本地输入与连击状态机")]
     private void Update()
     {
         if (useLocalInput && Input.GetMouseButtonDown(0))
@@ -45,6 +105,7 @@ public class Mod_Weapon_AnimationAction : MonoBehaviour
         }
     }
 
+    [InfoBox("外部请求触发一次攻击/连击")]
     [Button]
     public void RequestAttack()
     {
@@ -86,6 +147,7 @@ public class Mod_Weapon_AnimationAction : MonoBehaviour
         }
     }
 
+    [InfoBox("直接播放指定攻击动画")]
     public void PlayAttackAnimation(string animationName)
     {
         if (animator == null)
@@ -97,6 +159,7 @@ public class Mod_Weapon_AnimationAction : MonoBehaviour
         animator.Play(animationName);
     }
 
+    [InfoBox("开始播放指定索引的攻击动画")]
     private void StartAttack(int index)
     {
         currentIndex = index;
@@ -129,6 +192,7 @@ public class Mod_Weapon_AnimationAction : MonoBehaviour
         nextReadyTime = Time.time + currentLength;
     }
 
+    [InfoBox("检查并尝试衔接下一段连击")]
     private void TryStartNext()
     {
         if (!isAttacking)
@@ -136,7 +200,7 @@ public class Mod_Weapon_AnimationAction : MonoBehaviour
             return;
         }
 
-        bool isHolding = useLocalInput && Input.GetMouseButton(0);
+        bool isHolding = (useLocalInput && Input.GetMouseButton(0)) || isHoldingInput;
         if (!queuedNext && !isHolding)
         {
             return;
@@ -170,6 +234,7 @@ public class Mod_Weapon_AnimationAction : MonoBehaviour
         StartAttack(nextIndex);
     }
 
+    [InfoBox("退出攻击并回到待机")]
     private void ResetToIdle()
     {
         isAttacking = false;
@@ -179,5 +244,16 @@ public class Mod_Weapon_AnimationAction : MonoBehaviour
         queuedNext = false;
         currentStateHash = 0;
         animator.Play(idleAnimationName, 0, 0f);
+    }
+
+    private void OnControllerLeftClick()
+    {
+        isHoldingInput = true;
+        RequestAttack();
+    }
+
+    private void OnControllerLeftClickUp()
+    {
+        isHoldingInput = false;
     }
 }

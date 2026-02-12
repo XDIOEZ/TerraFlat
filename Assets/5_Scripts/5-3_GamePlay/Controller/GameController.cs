@@ -6,14 +6,16 @@ using InputSystem;
 [RequireComponent(typeof(Item))]
 public class GameController : Module
 {
-    #region 输入系统
+    #region 杈撳叆绯荤粺
     public PlayerInputActions _inputActions;
     public Camera _mainCamera;
     public bool CtrlIsDown;
     #endregion
 
     public UltEvent LeftClick = new UltEvent();
+    public UltEvent LeftClickUp = new UltEvent();
     public UltEvent RightClick = new UltEvent();
+    public UltEvent RightClickUp = new UltEvent();
 
     public Ex_ModData _modData;
     public override ModuleData _Data { get => _modData; set => _modData = value as Ex_ModData; }
@@ -27,13 +29,20 @@ public class GameController : Module
         _inputActions = new PlayerInputActions();
     }
 
-    #region Unity生命周期
+    #region Unity鐢熷懡鍛ㄦ湡
     public void OnDisable()
     {
-        // 取消右键监听
+        // 鍙栨秷宸﹂敭/鍙抽敭鐩戝惉
+        if (_inputActions != null && _inputActions.Win10.LeftClick != null)
+        {
+            _inputActions.Win10.LeftClick.performed -= LeftClickAction;
+            _inputActions.Win10.LeftClick.canceled -= LeftClickUpAction;
+        }
+
         if (_inputActions != null && _inputActions.Win10.RightClick != null)
         {
             _inputActions.Win10.RightClick.performed -= RightClickAction;
+            _inputActions.Win10.RightClick.canceled -= RightClickUpAction;
         }
         _inputActions.Disable();
     }
@@ -42,30 +51,46 @@ public class GameController : Module
     {
         _inputActions.Enable();
         _inputActions.Win10.LeftClick.performed += LeftClickAction;
-        // 添加右键点击监听
+        _inputActions.Win10.LeftClick.canceled += LeftClickUpAction;
+        // 娣诲姞鍙抽敭鐐瑰嚮鐩戝惉
         _inputActions.Win10.RightClick.performed += RightClickAction;
+        _inputActions.Win10.RightClick.canceled += RightClickUpAction;
     }
     
     public void LeftClickAction(InputAction.CallbackContext obj)
     {
         LeftClick.Invoke();
     }
+
+    // 宸﹂敭鎶捣澶勭悊鏂规硶
+    public void LeftClickUpAction(InputAction.CallbackContext obj)
+    {
+        LeftClickUp.Invoke();
+    }
     
-    // 右键点击处理方法
+    // 鍙抽敭鐐瑰嚮澶勭悊鏂规硶
     public void RightClickAction(InputAction.CallbackContext obj)
     {
         RightClick.Invoke();
+    }
+
+    // 鍙抽敭鎶捣澶勭悊鏂规硶
+    public void RightClickUpAction(InputAction.CallbackContext obj)
+    {
+        RightClickUp.Invoke();
     }
     
     
     public void OnDestroy()
     {
-        // 清理事件
+        // 娓呯悊浜嬩欢
         LeftClick.Clear();
+        LeftClickUp.Clear();
         RightClick.Clear();
+        RightClickUp.Clear();
     }
 
-    #region 获取鼠标世界坐标
+    #region 鑾峰彇榧犳爣涓栫晫鍧愭爣
     public Vector3 GetMouseWorldPosition()
     {
         return _mainCamera.ScreenToWorldPoint(Input.mousePosition);
@@ -75,15 +100,15 @@ public class GameController : Module
     #endregion
 
 
-    #region 数据存取
+    #region 鏁版嵁瀛樺彇
     public override void Load()
     {
-        // TODO: 实现加载逻辑 可以是玩家修改的键位
+        // TODO: 瀹炵幇鍔犺浇閫昏緫 鍙互鏄帺瀹朵慨鏀圭殑閿綅
     }
 
     public override void Save()
     {
-        // TODO: 实现保存逻辑
+        // TODO: 瀹炵幇淇濆瓨閫昏緫
     }
     #endregion
 }

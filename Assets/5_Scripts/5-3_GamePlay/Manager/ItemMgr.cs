@@ -241,6 +241,15 @@ public class ItemMgr : SingletonMono<ItemMgr>
         }
     }
 
+    public void InjectRuntimeItem(Item item, string context = null)
+    {
+        if (string.IsNullOrEmpty(context))
+        {
+            context = item?.itemData != null ? item.itemData.IDName : item?.name;
+        }
+        RegisterRuntimeItem(item, context);
+    }
+
     private void UnregisterRuntimeItem(Item item)
     {
         if (item == null || item.itemData == null) return;
