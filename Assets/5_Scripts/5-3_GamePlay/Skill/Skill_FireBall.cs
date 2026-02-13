@@ -5,43 +5,44 @@ using UnityEngine;
 
 public class Skill_FireBall : Skill
 {
-    [Header("×é¼şÒıÓÃ")]
+    [Header("ç»„ä»¶å¼•ç”¨")]
     public List<Module> mods = new List<Module>();
     
-    [Header("µ÷ÊÔĞÅÏ¢")]
-    public string StartDebugTest = "¼¼ÄÜ¿ªÊ¼Ö´ĞĞ";
-    public string StopDebugTest = "¼¼ÄÜÖ´ĞĞÍ£Ö¹";
+    [Header("è°ƒè¯•ä¿¡æ¯")]
+    public string StartDebugTest = "æŠ€èƒ½å¼€å§‹æ‰§è¡Œ";
+    public string StopDebugTest = "æŠ€èƒ½æ‰§è¡Œåœæ­¢";
     
-    [Header("¼¼ÄÜÉèÖÃ")]
-    [Tooltip("Ê©·¨µãÃû³Æ£¬ÓÃÓÚ´ÓskillManager.castingPointÖĞ»ñÈ¡Î»ÖÃ")]
-     string castingPointName = "Fireball";
-    
-    // ´æ´¢»ğÇòµÄ³õÊ¼·ÉĞĞ·½Ïò
+    // å­˜å‚¨ç«çƒçš„åˆå§‹é£è¡Œæ–¹å‘
     private Vector2 fireballDirection = Vector2.zero;
     private Vector3 startPoint;
 
     public void Start()
     {
-        // Ê¹ÓÃÂÌÉ«ÏÔÊ¾¿ªÊ¼µ÷ÊÔĞÅÏ¢
+        // ä½¿ç”¨ç»¿è‰²æ˜¾ç¤ºå¼€å§‹è°ƒè¯•ä¿¡æ¯
         Debug.Log($"<color=green>{StartDebugTest}</color>");
         
         
 
         if (runtimeSkill != null)
         {
-            castingPointName = runtimeSkill.skillData.skillName;
-            // ÊµÀı»¯»ğÇòÎ»ÖÃ
-            startPoint = runtimeSkill.skillManager.castingPoint[castingPointName].position;
+            Transform castingPoint = GetCastingPointTransform();
+            if (castingPoint == null)
+            {
+                Debug.LogWarning("ç«çƒæŠ€èƒ½ï¼šæ–½æ³•ç‚¹ä¸ºç©º");
+                return;
+            }
+            // å®ä¾‹åŒ–ç«çƒä½ç½®
+            startPoint = castingPoint.position;
             Vector2 spawnPosition = (Vector2)startPoint;
 
-            // ¼ÆËã²¢´æ´¢»ğÇòµÄ³õÊ¼·ÉĞĞ·½Ïò
+            // è®¡ç®—å¹¶å­˜å‚¨ç«çƒçš„åˆå§‹é£è¡Œæ–¹å‘
             fireballDirection = (runtimeSkill.targetPoint - spawnPosition).normalized;
 
-            // ÊµÀı»¯»ğÇò
+            // å®ä¾‹åŒ–ç«çƒ
      
                 transform.position = new Vector3(spawnPosition.x, spawnPosition.y, runtimeSkill.skillSender.transform.position.z);
                 
-                // ÉèÖÃ»ğÇò³õÊ¼³¯Ïò
+                // è®¾ç½®ç«çƒåˆå§‹æœå‘
                 if (fireballDirection != Vector2.zero)
                 {
                     float angle = Mathf.Atan2(fireballDirection.y, fireballDirection.x) * Mathf.Rad2Deg;
@@ -49,10 +50,10 @@ public class Skill_FireBall : Skill
                 }
             
             
-            // »ñÈ¡ËùÓĞ×Ó¶ÔÏóÉÏµÄModule×é¼ş
+            // è·å–æ‰€æœ‰å­å¯¹è±¡ä¸Šçš„Moduleç»„ä»¶
             mods = new List<Module>(GetComponentsInChildren<Module>());
             
-            // ¼ÓÔØËùÓĞÄ£¿é
+            // åŠ è½½æ‰€æœ‰æ¨¡å—
             foreach (var mod in mods)
             {
                 mod.Load();
@@ -62,30 +63,30 @@ public class Skill_FireBall : Skill
 
     public override void SkillUpdate(float deltaTime)
     {
-        // ¼ì²éruntimeSkillºÍ»ğÇòÊµÀıÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥runtimeSkillå’Œç«çƒå®ä¾‹æ˜¯å¦å­˜åœ¨
         if (runtimeSkill == null || transform == null)
             return;
             
-        // ¸üĞÂËùÓĞÄ£¿é
+        // æ›´æ–°æ‰€æœ‰æ¨¡å—
         foreach (var mod in mods)
         {
             mod.ModUpdate(deltaTime);
         }
         
-        // Ö±½Ó¿ØÖÆ2D»ğÇòÒÆ¶¯£¬°´ÕÕ³õÊ¼·½ÏòÖ±Ïß·ÉĞĞ
+        // ç›´æ¥æ§åˆ¶2Dç«çƒç§»åŠ¨ï¼ŒæŒ‰ç…§åˆå§‹æ–¹å‘ç›´çº¿é£è¡Œ
         Vector3 currentPosition = transform.position;
         
-        // ¸ù¾İËÙ¶ÈºÍÊ±¼ä¼ÆËãÒÆ¶¯¾àÀë
+        // æ ¹æ®é€Ÿåº¦å’Œæ—¶é—´è®¡ç®—ç§»åŠ¨è·ç¦»
         float moveDistance = runtimeSkill.skillData.speed * deltaTime;
         
-        // °´³õÊ¼·½ÏòºÍËÙ¶ÈÒÆ¶¯»ğÇò
+        // æŒ‰åˆå§‹æ–¹å‘å’Œé€Ÿåº¦ç§»åŠ¨ç«çƒ
         Vector2 newPosition = currentPosition + (Vector3)(fireballDirection * moveDistance);
         transform.position = new Vector3(newPosition.x, newPosition.y, currentPosition.z);
     }
 
     public override void Save()
     {
-        // ±£´æËùÓĞÄ£¿é
+        // ä¿å­˜æ‰€æœ‰æ¨¡å—
         foreach (var mod in mods)
         {
             mod.Save();

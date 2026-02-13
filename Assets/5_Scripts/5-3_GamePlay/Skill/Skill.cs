@@ -1,10 +1,36 @@
 using UnityEngine;
-using System.Collections;
 
 public class Skill : MonoBehaviour
 {
-    [Header("ÔËĞĞÊ±Êı¾İ")]
+    [Header("è¿è¡Œæ—¶æ•°æ®")]
     public RuntimeSkill runtimeSkill;
+
+    public enum CastingPointSlot
+    {
+        A = 0,
+        B = 1,
+        C = 2
+    }
+
+    [Header("æ–½æ³•ç‚¹è®¾ç½®")]
+    [SerializeField]
+    private CastingPointSlot castingPointSlot = CastingPointSlot.A;
+
+    public int GetCastingPointIndex()
+    {
+        return (int)castingPointSlot;
+    }
+
+    protected Transform GetCastingPointTransform()
+    {
+        if (runtimeSkill == null || runtimeSkill.skillManager == null)
+        {
+            Debug.LogWarning("Skill: runtimeSkillæˆ–skillManagerä¸ºç©º");
+            return null;
+        }
+
+        return runtimeSkill.skillManager.GetCastingPoint(GetCastingPointIndex());
+    }
 
     public virtual void Load()
     {

@@ -74,7 +74,6 @@ public class DamageReceiver : Module
         }
 
         _Data.ID = ModText.Hp;
-
     }
 
 

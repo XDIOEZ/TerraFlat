@@ -10,7 +10,7 @@ using UnityEngine.Tilemaps;
 public partial class Data_TileMap : ItemData
 {
     [NonSerialized] private bool _hasLoggedArrayNotInit;
-    [Tooltip("µØÍ¼µÄÎ»ÖÃ")]
+    [Tooltip("åœ°å›¾çš„ä½ç½®")]
     public Vector2Int position = new Vector2Int(0, 0);
     public bool TileLoaded = false;
     public EnvironmentFactors[,] EnvironmentData = new EnvironmentFactors[0, 0];

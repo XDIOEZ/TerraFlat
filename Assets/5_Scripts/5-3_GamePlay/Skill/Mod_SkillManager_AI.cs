@@ -30,10 +30,10 @@ public class Mod_SkillManager_AI : Mod_SkillManager
         StopSkillByIndex(skillIndex);
     }
 
-    // 确保在对象销毁时清除事件挂接
+    // 纭繚鍦ㄥ璞￠攢姣佹椂娓呴櫎浜嬩欢鎸傛帴
     private void OnDestroy()
     {
-        // 清除事件挂接
+        // 娓呴櫎浜嬩欢鎸傛帴
         if (animatorReceiver != null)
         {
             animatorReceiver.OnSkillStart -= UseSkill;

@@ -3,42 +3,47 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class RuntimeSkill
-{//ÔËÐÐÊ±µÄ²ÎÊý  Êý¾Ý´ó²¿·ÖÀ´×Ô¼¼ÄÜ±¾Éí µ«»áÔÚÔËÐÐÊ±·¢Éú±ä»¯
-    [Tooltip("¼¼ÄÜÊý¾Ý")]
+{//ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ä²ï¿½ï¿½ï¿½  ï¿½ï¿½ï¿½Ý´ó²¿·ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ä»¯
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public BaseSkill skillData;
-    [Tooltip("¼¼ÄÜ³ÖÐøÊ±¼ä")]
+    [Tooltip("ï¿½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½Ê±ï¿½ï¿½")]
     public float duration = 1;
-    [Tooltip("¼¼ÄÜ½ø¶È")]
+    [Tooltip("ï¿½ï¿½ï¿½Ü½ï¿½ï¿½ï¿½")]
     public float progress = 0;
-    [Tooltip("¼¼ÄÜ·¢ËÍÕß")]
+    [Tooltip("ï¿½ï¿½ï¿½Ü·ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public Item skillSender;
-    [Tooltip("¼¼ÄÜ½ÓÊÕÕß")]
+    [Tooltip("ï¿½ï¿½ï¿½Ü½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public Item skillReceiver;
-    [Tooltip("¼¼ÄÜÆðÊ¼µã")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½")]
     public Vector2 startPoint;
-    [Tooltip("¼¼ÄÜÖÕµã")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½")]
     public Vector2 targetPoint;
-    [Tooltip("¼¼ÄÜ¹ÜÀíÄ£¿é")]
+    [Tooltip("ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½Ä£ï¿½ï¿½")]
     public Mod_SkillManager skillManager;
-    [Tooltip("¼¼ÄÜÊµÀý×Öµä")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½Öµï¿½")]
     public Dictionary<string, Skill> skillInstanceDict = new Dictionary<string, Skill>();
 
     public void Start()
     {
         foreach (var action in skillData.Actions)
         {
-            // È·±£castingPoint×Öµä°üº¬¶ÔÓ¦µÄ¼ü
-            if (skillManager.castingPoint.ContainsKey(skillData.name))
+            if (action == null)
             {
-                Skill actionInstance = GameObject.Instantiate(action, skillManager.castingPoint[skillData.name].transform.position, Quaternion.identity);
-                actionInstance.runtimeSkill = this;
-                skillInstanceDict.Add(action.name, actionInstance);
-                actionInstance.Load();
+                Debug.LogWarning("RuntimeSkill: æŠ€èƒ½è¡Œä¸ºä¸ºç©º,å·²è·³è¿‡");
+                continue;
             }
-            else
+
+            Transform castingPoint = skillManager.GetCastingPoint(action.GetCastingPointIndex());
+            if (castingPoint == null)
             {
-                Debug.LogWarning($"Casting point for action '{skillData.name}' not found.");
+                Debug.LogWarning($"RuntimeSkill: æ–½æ³•ç‚¹ä¸ºç©º,å·²è·³è¿‡æŠ€èƒ½è¡Œä¸º '{action.name}'");
+                continue;
             }
+
+            Skill actionInstance = GameObject.Instantiate(action, castingPoint.position, Quaternion.identity);
+            actionInstance.runtimeSkill = this;
+            skillInstanceDict.Add(action.name, actionInstance);
+            actionInstance.Load();
         }
     }
 
@@ -65,7 +70,7 @@ public class RuntimeSkill
                     GameObject.Destroy(skill.gameObject);
                 }
             }
-        // ÇåÀíÊµÀý×Öµä
+        // ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½Öµï¿½
         skillInstanceDict.Clear();
     }
 

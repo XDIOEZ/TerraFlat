@@ -8,46 +8,46 @@ using Random = UnityEngine.Random;
 [Serializable]
 public class ItemMaker
 {
-    [BoxGroup("µôÂäÅäÖÃ")]
-    [Tooltip("µôÂä±í")]
+    [BoxGroup("æ‰è½é…ç½®")]
+    [Tooltip("æ‰è½è¡¨")]
     public Loot_List loots;
 
-    [BoxGroup("µôÂäÅäÖÃ")]
-    [Tooltip("µôÂä·¶Î§£¨µ¥Î»£ºÃ×£©")]
+    [BoxGroup("æ‰è½é…ç½®")]
+    [Tooltip("æ‰è½èŒƒå›´ï¼ˆå•ä½ï¼šç±³ï¼‰")]
     public float DropRange = 2f;
 
-    [BoxGroup("Å×ÎïÏß¶¯»­²ÎÊı")]
-    [Tooltip("»ù´¡¶¯»­³ÖĞøÊ±¼ä£¨µ¥Î»£ºÃë£©")]
+    [BoxGroup("æŠ›ç‰©çº¿åŠ¨ç”»å‚æ•°")]
+    [Tooltip("åŸºç¡€åŠ¨ç”»æŒç»­æ—¶é—´ï¼ˆå•ä½ï¼šç§’ï¼‰")]
     public float baseDuration = 0.5f;
 
-    [BoxGroup("Å×ÎïÏß¶¯»­²ÎÊı")]
-    [Tooltip("¶¯»­Ê±¼ä¶Ô¾àÀëµÄÃô¸Ğ¶È")]
+    [BoxGroup("æŠ›ç‰©çº¿åŠ¨ç”»å‚æ•°")]
+    [Tooltip("åŠ¨ç”»æ—¶é—´å¯¹è·ç¦»çš„æ•æ„Ÿåº¦")]
     public float distanceSensitivity = 0.1f;
 
-    [BoxGroup("Å×ÎïÏß¶¯»­²ÎÊı")]
-    [Tooltip("»ù´¡Ğı×ªËÙ¶È")]
+    [BoxGroup("æŠ›ç‰©çº¿åŠ¨ç”»å‚æ•°")]
+    [Tooltip("åŸºç¡€æ—‹è½¬é€Ÿåº¦")]
     public float baseRotationSpeed = 360f;
 
-    [BoxGroup("Å×ÎïÏß¶¯»­²ÎÊı")]
-    [Tooltip("Ğı×ªËÙ¶ÈÏµÊı")]
+    [BoxGroup("æŠ›ç‰©çº¿åŠ¨ç”»å‚æ•°")]
+    [Tooltip("æ—‹è½¬é€Ÿåº¦ç³»æ•°")]
     public float rotationSpeedFactor = 0.8f;
 
-    [BoxGroup("Å×ÎïÏß¶¯»­²ÎÊı")]
-    [Tooltip("×î´óÅ×Îï¸ß¶È")]
+    [BoxGroup("æŠ›ç‰©çº¿åŠ¨ç”»å‚æ•°")]
+    [Tooltip("æœ€å¤§æŠ›ç‰©é«˜åº¦")]
     public float maxHeight = 5f;
 
-    [BoxGroup("ÂäµØ¶¯»­²ÎÊı")]
-    [Tooltip("ÂäµØµ¯¶¯¸ß¶È×îĞ¡Öµ")]
+    [BoxGroup("è½åœ°åŠ¨ç”»å‚æ•°")]
+    [Tooltip("è½åœ°å¼¹åŠ¨é«˜åº¦æœ€å°å€¼")]
     public float bounceHeightMin = 0.05f;
 
-    [BoxGroup("ÂäµØ¶¯»­²ÎÊı")]
-    [Tooltip("ÂäµØµ¯¶¯¸ß¶È×î´óÖµ")]
+    [BoxGroup("è½åœ°åŠ¨ç”»å‚æ•°")]
+    [Tooltip("è½åœ°å¼¹åŠ¨é«˜åº¦æœ€å¤§å€¼")]
     public float bounceHeightMax = 0.5f;
 
-    #region µôÂä½Ó¿Ú
+    #region æ‰è½æ¥å£
 
     [Button("Drop Item")]
-    [Tooltip("¸ù¾İLootNameµôÂäÎïÆ·")]
+    [Tooltip("æ ¹æ®LootNameæ‰è½ç‰©å“")]
     public void DropItemByLootName(string LootName, float DropRange, Transform transform)
     {
         foreach (var item in loots.GetLoot(LootName).lootList)
@@ -56,7 +56,7 @@ public class ItemMaker
         }
     }
 
-    [Tooltip("¸ù¾İItemNameºÍAmountµôÂäÎïÆ·")]
+    [Tooltip("æ ¹æ®ItemNameå’ŒAmountæ‰è½ç‰©å“")]
     public void DropItemByNameAndAmount(string ItemName, float Amount, float DropRange,Transform transform)
     {
         Item item = ItemMgr.Instance.InstantiateItem(ItemName).GetComponent<Item>();
@@ -68,7 +68,7 @@ public class ItemMaker
         DropItem_cric(item, transform.position, 1);
     }
 
-    [Tooltip("¸ù¾İLootµôÂäÎïÆ·")]
+    [Tooltip("æ ¹æ®Lootæ‰è½ç‰©å“")]
     public void DropItemByLoot(Loot loot, float DropRange, Transform transform)
     {
         foreach (var item in loot.lootList)
@@ -79,24 +79,24 @@ public class ItemMaker
 
     #endregion
 
-    #region ¶¯»­ºËĞÄ
+    #region åŠ¨ç”»æ ¸å¿ƒ
 
     /// <summary>
-    /// ¸ù¾İItemµôÂäÎïÆ·£¨¸½´øÅ×ÎïÏß¶¯»­£©
+    /// æ ¹æ®Itemæ‰è½ç‰©å“ï¼ˆé™„å¸¦æŠ›ç‰©çº¿åŠ¨ç”»ï¼‰
     /// </summary>
-    /// <param name="item">µôÂäµÄÎïÆ·</param>
-    /// <param name="startPos">ÆğÊ¼Î»ÖÃ</param>
-    /// <param name="radius">Ëæ»úÉ¢Âä°ë¾¶</param>
-    [Tooltip("¸ù¾İItemµôÂäÎïÆ· ¸½´ø¶¯»­")]
+    /// <param name="item">æ‰è½çš„ç‰©å“</param>
+    /// <param name="startPos">èµ·å§‹ä½ç½®</param>
+    /// <param name="radius">éšæœºæ•£è½åŠå¾„</param>
+    [Tooltip("æ ¹æ®Itemæ‰è½ç‰©å“ é™„å¸¦åŠ¨ç”»")]
     public void DropItem_cric(Item item, Vector3 startPos, float radius)
     {
-        // ÉèÖÃÎïÆ·ÔİÊ±²»¿É±»Ê°È¡
+        // è®¾ç½®ç‰©å“æš‚æ—¶ä¸å¯è¢«æ‹¾å–
         item.itemData.Stack.CanBePickedUp = false;
 
-        // ¼ÆËãËæ»úÄ¿±êÎ»ÖÃ
+        // è®¡ç®—éšæœºç›®æ ‡ä½ç½®
         Vector2 endPos = startPos + new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), 0f);
 
-        // Æô¶¯Å×ÎïÏß¶¯»­Ğ­³Ì
+        // å¯åŠ¨æŠ›ç‰©çº¿åŠ¨ç”»åç¨‹
         item.GetComponent<MonoBehaviour>().StartCoroutine(
             ParabolaAnimation(
                 item.transform,
@@ -113,7 +113,7 @@ public class ItemMaker
     }
 
 
-    [Tooltip("¸ù¾İItemµôÂäÎïÆ· ¸½´ø¶¯»­£¨¼ò»¯²ÎÊı£©")]
+    [Tooltip("æ ¹æ®Itemæ‰è½ç‰©å“ é™„å¸¦åŠ¨ç”»ï¼ˆç®€åŒ–å‚æ•°ï¼‰")]
     public void DropItemWithAnimation(Transform itemTransform, Vector3 startPos, Vector3 endPos, Item item)
     {
         itemTransform.GetComponent<MonoBehaviour>().StartCoroutine(
@@ -131,7 +131,7 @@ public class ItemMaker
         );
     }
 
-    [Tooltip("Å×ÎïÏß¶¯»­")]
+    [Tooltip("æŠ›ç‰©çº¿åŠ¨ç”»")]
     public IEnumerator ParabolaAnimation(
         Transform itemTransform,
         Vector3 startPos,
@@ -171,7 +171,7 @@ public class ItemMaker
         item.itemData.Stack.CanBePickedUp = true;
     }
 
-    [Tooltip("ÂäµØ¶¯»­")]
+    [Tooltip("è½åœ°åŠ¨ç”»")]
     private static IEnumerator LandingSettleEffect(Transform itemTransform, Item item, float bounceHeight = 0.08f)
     {
         float duration = 0.2f;
@@ -193,7 +193,7 @@ public class ItemMaker
         itemTransform.rotation = Quaternion.identity;
     }
 
-    [Tooltip("±´Èû¶ûÇúÏß¼ÆËã")]
+    [Tooltip("è´å¡å°”æ›²çº¿è®¡ç®—")]
     private static Vector3 CalculateBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
     {
         float u = 1 - t;

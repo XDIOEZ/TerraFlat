@@ -6,29 +6,29 @@ using Sirenix.OdinInspector;
 [CreateAssetMenu(fileName = "BaseSkill", menuName = "Skill/BaseSkill")]
 public class BaseSkill : ScriptableObject
 {
-    [Header("»ù´¡ĞÅÏ¢")]
-    [Tooltip("¼¼ÄÜÃû³Æ")]
+    [Header("åŸºç¡€ä¿¡æ¯")]
+    [Tooltip("æŠ€èƒ½åç§°")]
     public string skillName = "";
-    [Tooltip("¼¼ÄÜÃèÊö")]
-    public string description = "¼¼ÄÜÃèÊö";
-    [Tooltip("¼¼ÄÜÍ¼±ê")]
+    [Tooltip("æŠ€èƒ½æè¿°")]
+    public string description = "æŠ€èƒ½æè¿°";
+    [Tooltip("æŠ€èƒ½å›¾æ ‡")]
     public Sprite icon;
-    [Tooltip("¼¼ÄÜ³ÖĞøÊ±¼ä")]
+    [Tooltip("æŠ€èƒ½æŒç»­æ—¶é—´")]
     public float duration = 2f;
-    [Tooltip("¼¼ÄÜ³õÊ¼³ÖĞøÊ±¼ä")]
+    [Tooltip("æŠ€èƒ½åˆå§‹æŒç»­æ—¶é—´")]
     public float initialPrograss = 0f;
-    [Tooltip("¼¼ÄÜËÙ¶È(¸÷ÖÖÒâÒåÉÏµÄ°É)")]
+    [Tooltip("æŠ€èƒ½é€Ÿåº¦(å„ç§æ„ä¹‰ä¸Šçš„å§)")]
     public float speed = 1;
-    [Tooltip("Í¨ÓÃstring²ÎÊı")]
+    [Tooltip("é€šç”¨stringå‚æ•°")]
     public string stringParam;
 
-    [Tooltip("¼¼ÄÜĞĞÎª")]
+    [Tooltip("æŠ€èƒ½è¡Œä¸º")]
     [InlineEditor]
     public List<Skill> Actions;
     
     private void OnValidate()
     {
-        // Èç¹ûskillNameÎª¿Õ£¬ÔòÊ¹ÓÃ×ÊÔ´Ãû³Æ£¨¼´ÎÄ¼şÃû£¬²»°üÀ¨À©Õ¹Ãû£©
+        // å¦‚æœskillNameä¸ºç©ºï¼Œåˆ™ä½¿ç”¨èµ„æºåç§°ï¼ˆå³æ–‡ä»¶åï¼Œä¸åŒ…æ‹¬æ‰©å±•åï¼‰
         if (string.IsNullOrEmpty(skillName))
         {
             skillName = name;
