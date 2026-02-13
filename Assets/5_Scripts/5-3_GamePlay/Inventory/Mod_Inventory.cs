@@ -9,8 +9,8 @@ using UnityEngine.UI;
 public class Mod_Inventory : Module, IInventory
 {
     #region 字段和属性
-    public InventoryModuleData Data = new InventoryModuleData();
-    public override ModuleData _Data { get => Data; set => Data = (InventoryModuleData)value; }
+    public Inventory_ModuleData Data = new Inventory_ModuleData();
+    public override ModuleData _Data { get => Data; set => Data = (Inventory_ModuleData)value; }
     public Inventory inventory
     {
         get

@@ -18,7 +18,7 @@ public partial class Mod_Food : Module
     public Ex_ModData_MemoryPackable ExData;
     public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }
 
-    public Mod_Food_Data Data = new Mod_Food_Data();
+    public Food Data = new Food();
 
     public float EatingProgress = 0;
 

@@ -6,7 +6,7 @@ using UnityEngine;
 
 [Serializable]
 [MemoryPackable]
-public partial class InventoryModuleData : ModuleData
+public partial class Inventory_ModuleData : ModuleData
 {
     [ShowInInspector]
     [ReadOnly]

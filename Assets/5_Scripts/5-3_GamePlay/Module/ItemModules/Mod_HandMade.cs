@@ -15,11 +15,11 @@ public class Mod_HandMade : Module,IInventory
     #region 字段和属性
 
     [Header("模块数据")]
-    public InventoryModuleData inventoryModuleData = new InventoryModuleData();
+    public Inventory_ModuleData inventoryModuleData = new Inventory_ModuleData();
     public override ModuleData _Data 
     { 
         get => inventoryModuleData; 
-        set => inventoryModuleData = (InventoryModuleData)value; 
+        set => inventoryModuleData = (Inventory_ModuleData)value; 
     }
 
     [Header("UI组件")]
