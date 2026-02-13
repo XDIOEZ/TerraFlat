@@ -1,16 +1,22 @@
-﻿using AYellowpaper.SerializedCollections;
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Mod_SkillManager : Module
 {
+    [System.Serializable]
+    public class SkillManagerSaveData
+    {
+        public List<string> SkillNames = new List<string>();
+        public int CurrentSelectIndex = 0;
+    }
+
     #region 基础参数
     public new virtual Item item => base.item;
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
-    public float Data;
+    public SkillManagerSaveData Data = new SkillManagerSaveData();
     #endregion
     #region 模组参数
 
@@ -25,11 +31,15 @@ public class Mod_SkillManager : Module
     public Mod_FocusPoint focusPoint;
     [Tooltip("控制器")]
     public GameController controller;
-    [Tooltip("序列化参数施法起点")]
-    public SerializedDictionary<string, Vector2> SerializedcastingPointOffset = new();
-    [Tooltip("施法起点")]
-    [ShowInInspector]
-    public Dictionary<string, Transform> castingPoint = new();
+    [Tooltip("施法点列表(手动挂接,顺序A/B/C)")]
+    public List<Transform> castingPoints = new List<Transform>(3);
+
+    #endregion
+
+    #region 常量
+
+    private const int CastingPointCount = 3;
+    private static readonly string[] CastingPointLabels = { "A", "B", "C" };
 
     #endregion
 
@@ -44,21 +54,42 @@ public class Mod_SkillManager : Module
     }
     public override void Load()
     {
+        item.itemData.ModuleDataDic[_Data.Name] = _Data;
+        ModSaveData.ReadData(ref Data);
+        if (Data == null)
+        {
+            Debug.LogWarning("SkillManager存档为空,已重置为默认");
+            Data = new SkillManagerSaveData();
+        }
         if (item == null)
         {
             Debug.Log("[Mod_SkillManager]item为空,如果此石头不是在玩家手上的话这是正常现象");
             return;
         }
 
-        focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
-        if (focusPoint == null)
+        if (item.Owner != null && item.Owner.itemMods != null)
         {
-            //        Debug.LogError("FocusPoint 为空，请检查技能配置！");
+            focusPoint = item.Owner.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
+            controller = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
         }
-        controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-        if (controller != null)
-            controller.RightClick += Act;
 
+        if (focusPoint == null && item.itemMods != null)
+        {
+            focusPoint = item.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
+        }
+
+        if (controller == null && item.itemMods != null)
+        {
+            controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        }
+
+        if (controller != null)
+        {
+            controller.RightClick += Act;
+        }
+
+        SkillNameList = new List<string>(Data.SkillNames);
+        CurrentSelectSkilIndex = Data.CurrentSelectIndex;
         // 通过SkillNameList从GameRes获取技能 替换skillDataList中的技能
         // 确保skillDataList的大小与SkillNameList一致
         while (skillDataList.Count < SkillNameList.Count)
@@ -87,41 +118,7 @@ public class Mod_SkillManager : Module
             skillDataList.RemoveAt(skillDataList.Count - 1);
         }
 
-        ModSaveData.ReadData(ref Data);
 
-        // 提前清理子对象，避免重复创建
-        ClearCastingPoints();
-
-        // 根据SkillNameList中技能的数量生成施法点位，默认位置为(0,0)
-        for (int i = 0; i < SkillNameList.Count; i++)
-        {
-            string skillName = SkillNameList[i];
-
-            // 如果SerializedcastingPointOffset中没有对应的偏移量，则使用默认值(0,0)
-            Vector2 localPositionOffset = Vector2.zero;
-            if (SerializedcastingPointOffset != null && SerializedcastingPointOffset.ContainsKey(skillName))
-            {
-                localPositionOffset = SerializedcastingPointOffset[skillName];
-
-            }
-            else
-            {
-                SerializedcastingPointOffset[skillName] = localPositionOffset;
-                //                Debug.LogWarning($"未找到技能 {skillName} 的偏移量，使用默认值(0,0)");
-            }
-
-            // 创建新的 GameObject 作为施法点位
-            GameObject castingPointObject = new GameObject(skillName + "_CastingPoint");
-
-            // 设置为当前 GameObject 的子对象
-            castingPointObject.transform.SetParent(transform, false);
-
-            // 设置本地坐标（相对于父对象的位置）
-            castingPointObject.transform.localPosition = new Vector3(localPositionOffset.x, localPositionOffset.y, 0);
-
-            // 存储到 castingPoint 字典中
-            castingPoint[skillName] = castingPointObject.transform;
-        }
 
         // 检查施法点配置
         CheckCastingPointConfiguration();
@@ -154,72 +151,40 @@ public class Mod_SkillManager : Module
     [Button("检查施法点配置")]
     public void CheckCastingPointConfiguration()
     {
-        // 检查SerializedcastingPointOffset是否包含skillDataList中所有技能的施法点
-        List<string> missingCastingPoints = new List<string>();
-
-        foreach (BaseSkill skill in skillDataList)
+        if (castingPoints.Count < CastingPointCount)
         {
-            if (skill != null && !SerializedcastingPointOffset.ContainsKey(skill.skillName))
+            Debug.LogWarning($"施法点数量不足,需要{CastingPointCount}个(A/B/C),当前{castingPoints.Count}个");
+            while (castingPoints.Count < CastingPointCount)
             {
-                missingCastingPoints.Add(skill.skillName);
+                castingPoints.Add(null);
             }
         }
 
-        // 自动添加缺失的施法点配置
-        foreach (string skillName in missingCastingPoints)
+        for (int i = 0; i < CastingPointCount; i++)
         {
-            // 添加缺失的施法点配置，默认偏移量为(0,0)
-            SerializedcastingPointOffset[skillName] = Vector2.zero;
-            Debug.Log($"已自动添加技能 '{skillName}' 的施法点配置，默认偏移量为 (0,0)");
-        }
-
-        // 输出结果信息
-        if (missingCastingPoints.Count > 0)
-        {
-            string infoMessage = "检测到并自动添加了以下技能的施法点配置:\n";
-            foreach (string skillName in missingCastingPoints)
+            if (castingPoints[i] == null)
             {
-                infoMessage += $"- {skillName}\n";
+                Debug.LogWarning($"施法点未挂接: {CastingPointLabels[i]}");
             }
-            Debug.Log(infoMessage);
-        }
-        else
-        {
-            Debug.Log("所有技能的施法点配置检查通过。");
         }
     }
 
-
-    /// <summary>
-    /// 清理现有的施法点位子对象
-    /// </summary>
-    public void ClearCastingPoints()
+    public Transform GetCastingPoint(int index)
     {
-        // 清空字典
-        castingPoint.Clear();
-
-        // 删除所有以"_CastingPoint"结尾的子对象
-        List<Transform> childrenToRemove = new List<Transform>();
-        foreach (Transform child in transform)
+        if (index < 0 || index >= castingPoints.Count)
         {
-            if (child.name.EndsWith("_CastingPoint"))
-            {
-                childrenToRemove.Add(child);
-            }
+            Debug.LogWarning($"施法点索引无效: {index}");
+            return null;
         }
 
-        // 删除子对象
-        foreach (Transform child in childrenToRemove)
+        Transform point = castingPoints[index];
+        if (point == null)
         {
-            if (Application.isPlaying)
-            {
-                Destroy(child.gameObject);
-            }
-            else
-            {
-                DestroyImmediate(child.gameObject);
-            }
+            string label = index >= 0 && index < CastingPointLabels.Length ? CastingPointLabels[index] : index.ToString();
+            Debug.LogWarning($"施法点未挂接: {label}");
         }
+
+        return point;
     }
 
 
@@ -249,7 +214,9 @@ public class Mod_SkillManager : Module
             return;
         }
         StopAllSkills();
-        castingPoint.Clear();
+        Data.SkillNames.Clear();
+        Data.SkillNames.AddRange(SkillNameList);
+        Data.CurrentSelectIndex = CurrentSelectSkilIndex;
         ModSaveData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
     }
@@ -259,6 +226,12 @@ public class Mod_SkillManager : Module
         if (CurrentSelectSkilIndex >= 0 && CurrentSelectSkilIndex < skillDataList.Count)
         {
             BaseSkill selectedSkill = skillDataList[CurrentSelectSkilIndex];
+            if (selectedSkill == null)
+            {
+                Debug.LogWarning("当前选择的技能为空");
+                return;
+            }
+
             // 创建运行时技能实例
             RuntimeSkill runtimeSkill = new RuntimeSkill();
             runtimeSkill.skillManager = this;

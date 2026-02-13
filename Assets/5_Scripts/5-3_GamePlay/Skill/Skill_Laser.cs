@@ -4,70 +4,68 @@ using UnityEngine;
 
 public class Skill_Laser : Skill
 {
-    #region ×Ö¶ÎºÍÊôĞÔ
+    #region å­—æ®µå’Œå±æ€§
 
-    [Header("×é¼şÒıÓÃ")]
+    [Header("ç»„ä»¶å¼•ç”¨")]
     public LineRenderer lineRenderer;
     public Transform laserEffect;
-    public BoxCollider2D laserCollider; // 2D¼¤¹âÅö×²Æ÷
+    public BoxCollider2D laserCollider; // 2Dæ¿€å…‰ç¢°æ’å™¨
     public List<Module> mods = new List<Module>();
     
-    [Header("Ô¤ÖÆÌåÒıÓÃ")]
+    [Header("é¢„åˆ¶ä½“å¼•ç”¨")]
     public GameObject laserEffectPrefab;
     
-    [Tooltip("»º´æµÄ¼¤¹âÊ©·¨µãTransform")]
+    [Tooltip("ç¼“å­˜çš„æ¿€å…‰æ–½æ³•ç‚¹Transform")]
     private Transform laserCastingPoint;
     
-    [Tooltip("ÒÆ¶¯×é¼şÒıÓÃ")]
+    [Tooltip("ç§»åŠ¨ç»„ä»¶å¼•ç”¨")]
     Mover mover;
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ·½·¨
+    #region ç”Ÿå‘½å‘¨æœŸæ–¹æ³•
 
     // Start is called before the first frame update
     void Start()
     {
         if (runtimeSkill == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºruntimeSkillÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šruntimeSkillä¸ºç©ºï¼");
             return;
         }
 
         if (runtimeSkill.skillManager == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºskillManagerÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šskillManagerä¸ºç©ºï¼");
             return;
         }
 
-        // »ñÈ¡Ê©·¨µã
-        if (runtimeSkill.skillManager.castingPoint == null || !runtimeSkill.skillManager.castingPoint.ContainsKey(runtimeSkill.skillData.skillName))
+        laserCastingPoint = GetCastingPointTransform();
+        if (laserCastingPoint == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºcastingPoint×ÖµäÎª¿Õ»ò²»°üº¬'Laser'¼ü£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šæ–½æ³•ç‚¹ä¸ºç©ºï¼");
             return;
         }
 
-        laserCastingPoint = runtimeSkill.skillManager.castingPoint[runtimeSkill.skillData.skillName]; // »º´æÊ©·¨µãTransform
-
-        // »ñÈ¡ÒÆ¶¯×é¼ş
+        // è·å–ç§»åŠ¨ç»„ä»¶
         if (runtimeSkill.skillSender != null)
         {
-            runtimeSkill.skillSender.itemMods.GetMod_ByID(ModText.Mover, out mover); // »ñÈ¡¼¼ÄÜÊı¾İ
+            runtimeSkill.skillSender.itemMods.GetMod_ByID(ModText.Mover, out mover); // è·å–æŠ€èƒ½æ•°æ®
             if (mover != null)
             {
                 mover.Data.Speed.MultiplicativeModifier *= 0.25f;
             }
             else
             {
-                Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºÕÒ²»µ½Mover×é¼ş£¡");
+                Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šæ‰¾ä¸åˆ°Moverç»„ä»¶ï¼");
             }
         }
         else
         {
-            Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºskillSenderÎª¿Õ£¡");
+            Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šskillSenderä¸ºç©ºï¼");
         }
 
-        // »ñÈ¡LineRenderer×é¼ş
+        // è·å–LineRendererç»„ä»¶
         lineRenderer = GetComponent<LineRenderer>();
         if (lineRenderer != null)
         {
@@ -76,10 +74,10 @@ public class Skill_Laser : Skill
         }
         else
         {
-            Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºÕÒ²»µ½LineRenderer×é¼ş£¡");
+            Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šæ‰¾ä¸åˆ°LineRendererç»„ä»¶ï¼");
         }
 
-        // ÊµÀı»¯²¢ÉèÖÃÌØĞ§Î»ÖÃ
+        // å®ä¾‹åŒ–å¹¶è®¾ç½®ç‰¹æ•ˆä½ç½®
         if (laserEffectPrefab != null)
         {
             laserEffect = Instantiate(laserEffectPrefab).transform;
@@ -87,21 +85,21 @@ public class Skill_Laser : Skill
         }
         else
         {
-            Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºlaserEffectPrefabÎ´·ÖÅä£¡");
+            Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šlaserEffectPrefabæœªåˆ†é…ï¼");
         }
 
-        // »ñÈ¡×Ó¶ÔÏóÉÏµÄBoxCollider2D×é¼ş
+        // è·å–å­å¯¹è±¡ä¸Šçš„BoxCollider2Dç»„ä»¶
         laserCollider = GetComponentInChildren<BoxCollider2D>();
         if (laserCollider == null)
         {
-            Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºÔÚ×Ó¶ÔÏóÖĞÕÒ²»µ½BoxCollider2D£¡");
+            Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šåœ¨å­å¯¹è±¡ä¸­æ‰¾ä¸åˆ°BoxCollider2Dï¼");
         }
 
-        // »ñÈ¡ËùÓĞ×Ó¶ÔÏóÉÏµÄModule×é¼ş
+        // è·å–æ‰€æœ‰å­å¯¹è±¡ä¸Šçš„Moduleç»„ä»¶
         mods = new List<Module>(GetComponentsInChildren<Module>());
-        Debug.Log($"¼¤¹â¼¼ÄÜ£ºÕÒµ½ {mods.Count} ¸öÄ£¿é");
+        Debug.Log($"æ¿€å…‰æŠ€èƒ½ï¼šæ‰¾åˆ° {mods.Count} ä¸ªæ¨¡å—");
 
-        // ¼ÓÔØËùÓĞÄ£¿é
+        // åŠ è½½æ‰€æœ‰æ¨¡å—
         foreach (var mod in mods)
         {
             if (mod != null)
@@ -110,7 +108,7 @@ public class Skill_Laser : Skill
             }
             else
             {
-                Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºÔÚÄ£¿éÁĞ±íÖĞ·¢ÏÖ¿ÕÄ£¿é£¡");
+                Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šåœ¨æ¨¡å—åˆ—è¡¨ä¸­å‘ç°ç©ºæ¨¡å—ï¼");
             }
         }
     }
@@ -118,14 +116,14 @@ public class Skill_Laser : Skill
     // Update is called once per frame
     void Update()
     {
-        // ¼ì²éruntimeSkillÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥runtimeSkillæ˜¯å¦å­˜åœ¨
         if (runtimeSkill == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºUpdateÖĞruntimeSkillÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šUpdateä¸­runtimeSkillä¸ºç©ºï¼");
             return;
         }
 
-        // ¸üĞÂËùÓĞÄ£¿é
+        // æ›´æ–°æ‰€æœ‰æ¨¡å—
         foreach (var mod in mods)
         {
             if (mod != null)
@@ -134,102 +132,102 @@ public class Skill_Laser : Skill
             }
             else
             {
-                Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºÔÚUpdateÖĞ·¢ÏÖÄ£¿éÁĞ±íÖĞµÄ¿ÕÄ£¿é£¡");
+                Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šåœ¨Updateä¸­å‘ç°æ¨¡å—åˆ—è¡¨ä¸­çš„ç©ºæ¨¡å—ï¼");
             }
         }
 
-        // ¸üĞÂ¼¤¹âÏß
+        // æ›´æ–°æ¿€å…‰çº¿
         UpdateLaser();
     }
 
     #endregion
 
-    #region ¼¤¹â¸üĞÂ·½·¨
+    #region æ¿€å…‰æ›´æ–°æ–¹æ³•
 
-    [Tooltip("¸üĞÂ¼¤¹âÏßµÄÏÔÊ¾")]
+    [Tooltip("æ›´æ–°æ¿€å…‰çº¿çš„æ˜¾ç¤º")]
     private void UpdateLaser()
     {
-        // ¼ì²éruntimeSkillÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥runtimeSkillæ˜¯å¦å­˜åœ¨
         if (runtimeSkill == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºUpdateLaserÖĞruntimeSkillÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šUpdateLaserä¸­runtimeSkillä¸ºç©ºï¼");
             return;
         }
 
-        // ¼ì²éskillManagerÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥skillManageræ˜¯å¦å­˜åœ¨
         if (runtimeSkill.skillManager == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºUpdateLaserÖĞskillManagerÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šUpdateLaserä¸­skillManagerä¸ºç©ºï¼");
             return;
         }
 
-        // ¼ì²é¾Û½¹µãÊı¾İÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥èšç„¦ç‚¹æ•°æ®æ˜¯å¦å­˜åœ¨
         if (runtimeSkill.skillManager.focusPoint == null || runtimeSkill.skillManager.focusPoint.Data == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºfocusPoint»òÆäÊı¾İÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šfocusPointæˆ–å…¶æ•°æ®ä¸ºç©ºï¼");
             return;
         }
 
-        // ¼ì²éÊ©·¨µãÊÇ·ñÒÑ»º´æ
+        // æ£€æŸ¥æ–½æ³•ç‚¹æ˜¯å¦å·²ç¼“å­˜
         if (laserCastingPoint == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºUpdateLaserÖĞlaserCastingPointÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šUpdateLaserä¸­laserCastingPointä¸ºç©ºï¼");
             return;
         }
 
-        // »ñÈ¡ÊµÊ±µÄÄ¿±êµã
+        // è·å–å®æ—¶çš„ç›®æ ‡ç‚¹
         Vector2 currentTargetPoint = runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point;
 
-        // ¸üĞÂ¼¤¹âÏßÆğµãºÍÖÕµã
+        // æ›´æ–°æ¿€å…‰çº¿èµ·ç‚¹å’Œç»ˆç‚¹
         if (lineRenderer != null)
         {
             lineRenderer.SetPosition(0, laserCastingPoint.position);
             lineRenderer.SetPosition(1, new Vector3(currentTargetPoint.x, currentTargetPoint.y));
         }
 
-        // ¸üĞÂÌØĞ§Î»ÖÃ
+        // æ›´æ–°ç‰¹æ•ˆä½ç½®
         if (laserEffect != null)
         {
             laserEffect.position = new Vector3(currentTargetPoint.x, currentTargetPoint.y, 0);
         }
 
-        // ¸üĞÂÅö×²Æ÷µÄ´óĞ¡ºÍĞı×ªÒÔÆ¥Åä¼¤¹âÏß
+        // æ›´æ–°ç¢°æ’å™¨çš„å¤§å°å’Œæ—‹è½¬ä»¥åŒ¹é…æ¿€å…‰çº¿
         if (laserCollider != null)
         {
             UpdateLaserCollider(currentTargetPoint);
         }
 
-        // ¸üĞÂ½ø¶È
+        // æ›´æ–°è¿›åº¦
         runtimeSkill.progress += Time.deltaTime;
     }
 
-    [Tooltip("¸üĞÂ¼¤¹âÅö×²Æ÷µÄ´óĞ¡ºÍĞı×ª")]
+    [Tooltip("æ›´æ–°æ¿€å…‰ç¢°æ’å™¨çš„å¤§å°å’Œæ—‹è½¬")]
     private void UpdateLaserCollider(Vector2 targetPoint)
     {
-        // ¼ì²é»º´æµÄÊ©·¨µãÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥ç¼“å­˜çš„æ–½æ³•ç‚¹æ˜¯å¦å­˜åœ¨
         if (laserCastingPoint == null)
         {
-            Debug.LogError("¼¤¹â¼¼ÄÜ£ºUpdateLaserColliderÖĞlaserCastingPointÎª¿Õ£¡");
+            Debug.LogError("æ¿€å…‰æŠ€èƒ½ï¼šUpdateLaserColliderä¸­laserCastingPointä¸ºç©ºï¼");
             return;
         }
 
-        Vector2 startPoint = laserCastingPoint.position; // Ê¹ÓÃ»º´æµÄÊ©·¨µãTransform
+        Vector2 startPoint = laserCastingPoint.position; // ä½¿ç”¨ç¼“å­˜çš„æ–½æ³•ç‚¹Transform
         Vector2 endPoint = targetPoint;
 
-        // ¼ÆËã¼¤¹âÏßµÄÖĞĞÄµã
+        // è®¡ç®—æ¿€å…‰çº¿çš„ä¸­å¿ƒç‚¹
         Vector2 center = (startPoint + endPoint) * 0.5f;
 
-        // ¼ÆËã¼¤¹âÏßµÄ³¤¶È
+        // è®¡ç®—æ¿€å…‰çº¿çš„é•¿åº¦
         float length = Vector2.Distance(startPoint, endPoint);
 
-        // ÉèÖÃÅö×²Æ÷µÄÎ»ÖÃµ½ÖĞĞÄµã
+        // è®¾ç½®ç¢°æ’å™¨çš„ä½ç½®åˆ°ä¸­å¿ƒç‚¹
         laserCollider.transform.position = new Vector3(center.x, center.y, laserCollider.transform.position.z);
 
-        // ÉèÖÃÅö×²Æ÷µÄ´óĞ¡£¨¼ÙÉè¼¤¹âÏßÓĞÒ»¶¨¿í¶È£©
+        // è®¾ç½®ç¢°æ’å™¨çš„å¤§å°ï¼ˆå‡è®¾æ¿€å…‰çº¿æœ‰ä¸€å®šå®½åº¦ï¼‰
         float lineWidth = lineRenderer != null ? lineRenderer.startWidth : 0.1f;
         laserCollider.size = new Vector2(length, lineWidth);
 
-        // ¼ÆËã²¢ÉèÖÃÅö×²Æ÷µÄĞı×ª
+        // è®¡ç®—å¹¶è®¾ç½®ç¢°æ’å™¨çš„æ—‹è½¬
         Vector2 direction = endPoint - startPoint;
         if (direction != Vector2.zero)
         {
@@ -240,22 +238,22 @@ public class Skill_Laser : Skill
 
     #endregion
 
-    #region Ïú»ÙÇåÀí·½·¨
+    #region é”€æ¯æ¸…ç†æ–¹æ³•
 
-    [Tooltip("Ïú»ÙÊ±ÇåÀí×ÊÔ´")]
+    [Tooltip("é”€æ¯æ—¶æ¸…ç†èµ„æº")]
     private void OnDestroy()
     {
-        // ¼ì²éruntimeSkillÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥runtimeSkillæ˜¯å¦å­˜åœ¨
         if (runtimeSkill == null)
         {
-            Debug.LogWarning("¼¤¹â¼¼ÄÜ£ºOnDestroyÖĞruntimeSkillÎª¿Õ£¡");
+            Debug.LogWarning("æ¿€å…‰æŠ€èƒ½ï¼šOnDestroyä¸­runtimeSkillä¸ºç©ºï¼");
             return;
         }
 
-        // ¼ì²éskillSenderÊÇ·ñ´æÔÚ£¬Èç¹û´æÔÚÔò±£´æÄ£¿é
+        // æ£€æŸ¥skillSenderæ˜¯å¦å­˜åœ¨ï¼Œå¦‚æœå­˜åœ¨åˆ™ä¿å­˜æ¨¡å—
         if (runtimeSkill.skillSender != null)
         {
-            // ±£´æËùÓĞÄ£¿é
+            // ä¿å­˜æ‰€æœ‰æ¨¡å—
             foreach (var mod in mods)
             {
                 if (mod != null)
@@ -264,7 +262,7 @@ public class Skill_Laser : Skill
                 }
             }
 
-            // Ïú»ÙÌØĞ§
+            // é”€æ¯ç‰¹æ•ˆ
             if (laserEffect != null)
             {
                 Destroy(laserEffect.gameObject);
@@ -272,7 +270,7 @@ public class Skill_Laser : Skill
         }
         else
         {
-            // Èç¹ûskillSender²»´æÔÚ£¬Ö±½ÓÇåÀíÌØĞ§
+            // å¦‚æœskillSenderä¸å­˜åœ¨ï¼Œç›´æ¥æ¸…ç†ç‰¹æ•ˆ
             if (laserEffect != null)
             {
                 Destroy(laserEffect.gameObject);
@@ -282,13 +280,13 @@ public class Skill_Laser : Skill
 
     public override void Save()
     {
-        // ±£´æËùÓĞÄ£¿é
+        // ä¿å­˜æ‰€æœ‰æ¨¡å—
         foreach (var mod in mods)
         {
             mod.Save();
         }
 
-        // »Ö¸´ÒÆ¶¯ËÙ¶È
+        // æ¢å¤ç§»åŠ¨é€Ÿåº¦
         if (mover != null)
         {
             mover.Data.Speed.MultiplicativeModifier /= 0.25f;

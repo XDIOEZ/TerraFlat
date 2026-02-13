@@ -5,106 +5,106 @@ using NaughtyAttributes;
 
 public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
 {
-    #region ±äÁ¿ÉùÃ÷
-    // Ê±¼äÏà¹Ø×Ö¶Î
-    #region Ê±¼äÉèÖÃ
-    [Header("Ê±¼äÉèÖÃ")]
-    [Tooltip("µ±Ç°Ò»ÌìÒÑ¹ıÈ¥µÄÊ±¼ä£¨Ãë£©")]
+    #region å˜é‡å£°æ˜
+    // æ—¶é—´ç›¸å…³å­—æ®µ
+    #region æ—¶é—´è®¾ç½®
+    [Header("æ—¶é—´è®¾ç½®")]
+    [Tooltip("å½“å‰ä¸€å¤©å·²è¿‡å»çš„æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float currentDayTime = 0f;
     #endregion
 
-    #region Ê±¼äÁ÷ÊÅ¿ØÖÆ
-    [Header("Ê±¼äÁ÷ÊÅ¿ØÖÆ")]
-    [Tooltip("Ê±¼äÁ÷ÊÅËÙ¶È±¶Êı£¬Ä¬ÈÏÎª1£¬¿ÉÍ¨¹ı´Ë²ÎÊı¼ÓËÙ»ò¼õ»ºÊ±¼ä")]
+    #region æ—¶é—´æµé€æ§åˆ¶
+    [Header("æ—¶é—´æµé€æ§åˆ¶")]
+    [Tooltip("æ—¶é—´æµé€é€Ÿåº¦å€æ•°ï¼Œé»˜è®¤ä¸º1ï¼Œå¯é€šè¿‡æ­¤å‚æ•°åŠ é€Ÿæˆ–å‡ç¼“æ—¶é—´")]
     public float timeScale = 1f;
     #endregion
 
-    // ¹âÕÕÏà¹Ø×Ö¶Î
-    #region ¹âÕÕÉèÖÃ
-    [Header("È«¾Ö¹âÕÕÉèÖÃ")]
-    [Tooltip("³¡¾°ÖĞ¿ØÖÆ¹âÕÕµÄLight2D×é¼ş")]
+    // å…‰ç…§ç›¸å…³å­—æ®µ
+    #region å…‰ç…§è®¾ç½®
+    [Header("å…¨å±€å…‰ç…§è®¾ç½®")]
+    [Tooltip("åœºæ™¯ä¸­æ§åˆ¶å…‰ç…§çš„Light2Dç»„ä»¶")]
     public Light2D globalLight;
-    [Tooltip("È«¾Ö¹âÕÕµÄ×î´óÇ¿¶ÈÖµ")]
+    [Tooltip("å…¨å±€å…‰ç…§çš„æœ€å¤§å¼ºåº¦å€¼")]
     public float maxLightIntensity = 1f;
-    [Tooltip("È«¾Ö¹âÕÕµÄ×îĞ¡Ç¿¶ÈÖµ")]
+    [Tooltip("å…¨å±€å…‰ç…§çš„æœ€å°å¼ºåº¦å€¼")]
     public float minLightIntensity = 0f;
     #endregion
 
-    // ÈÕÆÚºÍ¼¾½ÚÏà¹Ø×Ö¶Î
-    #region ÈÕÆÚÉèÖÃ
-    [Header("ÈÕÆÚÉèÖÃ")]
-    [Tooltip("µ±Ç°Äê·İ£¬Ä¬ÈÏÖµÎª2025Äê")]
+    // æ—¥æœŸå’Œå­£èŠ‚ç›¸å…³å­—æ®µ
+    #region æ—¥æœŸè®¾ç½®
+    [Header("æ—¥æœŸè®¾ç½®")]
+    [Tooltip("å½“å‰å¹´ä»½ï¼Œé»˜è®¤å€¼ä¸º2025å¹´")]
     public int year = 2025;
-    [Tooltip("µ±Ç°ÌìÊı£¬´Ó1¿ªÊ¼¼ÆÊı")]
+    [Tooltip("å½“å‰å¤©æ•°ï¼Œä»1å¼€å§‹è®¡æ•°")]
     public int day = 1;
     #endregion
 
-    #region ¼¾½ÚÉèÖÃ
-    [Header("¼¾½ÚÉèÖÃ")]
+    #region å­£èŠ‚è®¾ç½®
+    [Header("å­£èŠ‚è®¾ç½®")]
     [SerializeField]
-    [Tooltip("ËùÓĞ¼¾½ÚÅäÖÃµÄÁĞ±í")]
+    [Tooltip("æ‰€æœ‰å­£èŠ‚é…ç½®çš„åˆ—è¡¨")]
     private List<SeasonConfig> seasonConfigs;
 
-    [Tooltip("µ±Ç°Ëù´¦µÄ¼¾½ÚÀàĞÍ")]
+    [Tooltip("å½“å‰æ‰€å¤„çš„å­£èŠ‚ç±»å‹")]
     public SeasonType currentSeason;
 
-    [Tooltip("µ±Ç°¼¾½ÚÒÑ¹ıÈ¥µÄÌìÊı¼ÆÊıÆ÷")]
+    [Tooltip("å½“å‰å­£èŠ‚å·²è¿‡å»çš„å¤©æ•°è®¡æ•°å™¨")]
     public float seasonDayCounter = 0f;
-    [Tooltip("µ±Ç°¼¾½ÚÒ»ÌìµÄ³ÖĞøÊ±¼ä£¨Ãë£©")]
+    [Tooltip("å½“å‰å­£èŠ‚ä¸€å¤©çš„æŒç»­æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float currentDayDuration;
 
-    [SerializeField, Tooltip("µ±Ç°ÉúĞ§µÄ¼¾½ÚÅäÖÃ")]
+    [SerializeField, Tooltip("å½“å‰ç”Ÿæ•ˆçš„å­£èŠ‚é…ç½®")]
     public SeasonConfig currentSeasonConfig;
-    [Tooltip("µ±Ç°¼¾½ÚÔÚdaysÁĞ±íÖĞµÄË÷Òı")]
+    [Tooltip("å½“å‰å­£èŠ‚åœ¨daysåˆ—è¡¨ä¸­çš„ç´¢å¼•")]
     public int currentSeasonDayIndex;
     #endregion
 
-    #region ¼¾½ÚÍ³¼ÆĞÅÏ¢
-    [ReadOnly, Tooltip("µ±Ç°¼¾½ÚµÄ×ÜÌìÊı")]
+    #region å­£èŠ‚ç»Ÿè®¡ä¿¡æ¯
+    [ReadOnly, Tooltip("å½“å‰å­£èŠ‚çš„æ€»å¤©æ•°")]
     public int currentSeasonTotalDays;
-    [ReadOnly, Tooltip("µ±Ç°¼¾½ÚÊ£ÓàÌìÊı")]
+    [ReadOnly, Tooltip("å½“å‰å­£èŠ‚å‰©ä½™å¤©æ•°")]
     public int currentSeasonRemainingDays;
     #endregion
 
-    #region ÈÕ³öÈÕÂäÊ±¼äµã
-    [Tooltip("ÈÕ³ö¿ªÊ¼Ê±¼ä£¨Ãë£©")]
+    #region æ—¥å‡ºæ—¥è½æ—¶é—´ç‚¹
+    [Tooltip("æ—¥å‡ºå¼€å§‹æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunriseStartTime;
-    [Tooltip("ÈÕ³ö½áÊøÊ±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥å‡ºç»“æŸæ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunriseEndTime;
-    [Tooltip("ÈÕÂä¿ªÊ¼Ê±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥è½å¼€å§‹æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunsetStartTime;
-    [Tooltip("ÈÕÂä½áÊøÊ±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥è½ç»“æŸæ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunsetEndTime;
     #endregion
 
-    // ÌØÊâÈÕ×ÓÏà¹Ø×Ö¶Î
-    #region ÌØÊâÈÕ×ÓÉèÖÃ
-    [Header("ÌØÊâÈÕ×ÓÉèÖÃ")]
+    // ç‰¹æ®Šæ—¥å­ç›¸å…³å­—æ®µ
+    #region ç‰¹æ®Šæ—¥å­è®¾ç½®
+    [Header("ç‰¹æ®Šæ—¥å­è®¾ç½®")]
     [SerializeField]
-    [Tooltip("ÌØÊâÈÕ×ÓµÄÅäÖÃÁĞ±í")]
+    [Tooltip("ç‰¹æ®Šæ—¥å­çš„é…ç½®åˆ—è¡¨")]
     private List<DayConfig> specialDayConfigs;
 
     public bool isSpecialDayActive = false;
-    [Tooltip("µ±Ç°ÉúĞ§µÄÌØÊâÈÕ×ÓÅäÖÃ")]
+    [Tooltip("å½“å‰ç”Ÿæ•ˆçš„ç‰¹æ®Šæ—¥å­é…ç½®")]
     public DayConfig currentSpecialDayConfig;
-    [ Tooltip("ÊÇ·ñ´¦ÓÚÌØÊâÈÕ×Ó×´Ì¬")]
+    [ Tooltip("æ˜¯å¦å¤„äºç‰¹æ®Šæ—¥å­çŠ¶æ€")]
     public bool IsSpecialDayActive => isSpecialDayActive;
     #endregion
 
-    #region ¼¾½ÚÇĞ»»¼ÇÂ¼
-    [Tooltip("ÇĞ»»¼¾½ÚÇ°µÄÉÏÒ»¸ö¼¾½ÚÅäÖÃ")]
+    #region å­£èŠ‚åˆ‡æ¢è®°å½•
+    [Tooltip("åˆ‡æ¢å­£èŠ‚å‰çš„ä¸Šä¸€ä¸ªå­£èŠ‚é…ç½®")]
     public SeasonConfig previousSeasonConfig;
-    [Tooltip("ÇĞ»»¼¾½ÚÇ°µÄÉÏÒ»¸ö¼¾½ÚÌìÊıË÷Òı")]
+    [Tooltip("åˆ‡æ¢å­£èŠ‚å‰çš„ä¸Šä¸€ä¸ªå­£èŠ‚å¤©æ•°ç´¢å¼•")]
     public int previousSeasonDayIndex;
     #endregion
     #endregion
 
-    #region ³õÊ¼»¯·½·¨
+    #region åˆå§‹åŒ–æ–¹æ³•
     void Start()
     {
         if (seasonConfigs == null || seasonConfigs.Count == 0)
         {
-            Debug.LogError("Î´ÉèÖÃ SeasonConfig ×Ê²ú£¬ÇëÏÈ´´½¨²¢·ÖÅäµ½ÁĞ±íÖĞ£¡");
+            Debug.LogError("æœªè®¾ç½® SeasonConfig èµ„äº§ï¼Œè¯·å…ˆåˆ›å»ºå¹¶åˆ†é…åˆ°åˆ—è¡¨ä¸­ï¼");
             return;
         }
 
@@ -123,7 +123,7 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
     }
     #endregion
 
-    #region ¸üĞÂÂß¼­
+    #region æ›´æ–°é€»è¾‘
     void Update()
     {
         currentDayTime += Time.deltaTime * timeScale;
@@ -137,8 +137,8 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
     }
     #endregion
 
-    #region ºËĞÄ¹¦ÄÜ·½·¨
-    // ¸üĞÂµ±Ç°ÌìÅäÖÃ
+    #region æ ¸å¿ƒåŠŸèƒ½æ–¹æ³•
+    // æ›´æ–°å½“å‰å¤©é…ç½®
     private void UpdateCurrentDayConfig()
     {
         if (currentSeasonConfig != null && currentSeasonDayIndex < currentSeasonConfig.days.Count)
@@ -152,7 +152,7 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
         }
     }
 
-    // ¸üĞÂ¹âÕÕÇ¿¶È
+    // æ›´æ–°å…‰ç…§å¼ºåº¦
     private void UpdateLightIntensity()
     {
         SeasonConfig config = GetCurrentSeasonConfig();
@@ -178,8 +178,8 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
         }
     }
 
-    // ÇĞ»»µ½ÏÂÒ»Ìì
-    [Button("ÏÂÒ»Ìì")]
+    // åˆ‡æ¢åˆ°ä¸‹ä¸€å¤©
+    [Button("ä¸‹ä¸€å¤©")]
     private void NextDay()
     {
         if (isSpecialDayActive)
@@ -236,8 +236,8 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
     }
     #endregion
 
-    #region ÅäÖÃÓ¦ÓÃ·½·¨
-    // Ó¦ÓÃÌØÊâÈÕ×ÓÅäÖÃ
+    #region é…ç½®åº”ç”¨æ–¹æ³•
+    // åº”ç”¨ç‰¹æ®Šæ—¥å­é…ç½®
     private void ApplySpecialDayConfig(DayConfig config)
     {
         currentDayDuration = config.gameDayDuration;
@@ -247,7 +247,7 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
         sunsetEndTime = config.sunsetEndTime;
     }
 
-    // Ó¦ÓÃ¼¾½ÚÅäÖÃ
+    // åº”ç”¨å­£èŠ‚é…ç½®
     private void ApplySeasonConfig(SeasonConfig config)
     {
         currentSeasonConfig = config;
@@ -258,17 +258,17 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
     }
     #endregion
 
-    #region ¹¤¾ß·½·¨
-    // »ñÈ¡µ±Ç°¼¾½ÚÅäÖÃ
+    #region å·¥å…·æ–¹æ³•
+    // è·å–å½“å‰å­£èŠ‚é…ç½®
     private SeasonConfig GetCurrentSeasonConfig()
     {
         return seasonConfigs.Find(s => s.season == currentSeason);
     }
 
-    // µ÷ÊÔ×Ö·û´®
+    // è°ƒè¯•å­—ç¬¦ä¸²
     public override string ToString()
     {
-        return $"Year {year}, Day {day} | {currentSeason}Ê£Óà{currentSeasonRemainingDays}/{currentSeasonTotalDays}Ìì";
+        return $"Year {year}, Day {day} | {currentSeason}å‰©ä½™{currentSeasonRemainingDays}/{currentSeasonTotalDays}å¤©";
     }
     #endregion
 }
