@@ -64,7 +64,7 @@ public class Mod_ChunkLoader : Module
     
     // 动态视距引用
     private Camera _boundCamera;
-    private CameraFollowManager _cameraFollowManager;
+    private Mod_Cam _cameraFollowManager;
     #endregion
 
     #region 属性访问器
@@ -122,7 +122,7 @@ public class Mod_ChunkLoader : Module
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
 
         // 尝试获取相机管理器引用
-        _cameraFollowManager = item.GetComponentInChildren<CameraFollowManager>();
+        _cameraFollowManager = item.GetComponentInChildren<Mod_Cam>();
     }
 
     public override void Save()
@@ -180,7 +180,7 @@ public class Mod_ChunkLoader : Module
         if (_boundCamera == null)
         {
             if (_cameraFollowManager == null)
-                _cameraFollowManager = item.GetComponentInChildren<CameraFollowManager>();
+                _cameraFollowManager = item.GetComponentInChildren<Mod_Cam>();
 
             if (_cameraFollowManager != null)
                 _boundCamera = _cameraFollowManager.ControllerCamera;

@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// 相机跟随管理器
 /// </summary>
-public class CameraFollowManager : Module
+public class Mod_Cam : Module
 {
     [System.Serializable]
     private class CameraFollowSaveData
