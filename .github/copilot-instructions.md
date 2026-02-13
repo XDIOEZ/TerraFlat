@@ -2,13 +2,13 @@
 - Project name: TerraFlat
 - Unity version: Unity 2022.3.62f2c1
 - Active scene:
-  - Name: GameStartScene
+  - Name: Ingot_Bronze
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController
   - Layers:
-    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
+    - Default, TransparentFX, Ignore Raycast, Water, UI
 - Active game object:
-  - Name: 测试
+  - Name: Ingot_Bronze
   - Tag: Untagged
   - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
