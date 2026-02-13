@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 [InitializeOnLoad]
-public static class AutoAssetRefreshOnSave
+public static class AutomaticAssetRefresher
 {
     // 最小刷新间隔，防止频繁刷新
     private const double MinRefreshIntervalSeconds = 0.5d;
@@ -13,7 +13,7 @@ public static class AutoAssetRefreshOnSave
     private static double lastChangeTime;
     private static FileSystemWatcher watcher;
 
-    static AutoAssetRefreshOnSave()
+    static AutomaticAssetRefresher()
     {
         StartWatcher();
         EditorApplication.update += OnEditorUpdate;
@@ -131,7 +131,7 @@ public class AutoAssetRefreshOnSaveProcessor : AssetModificationProcessor
     {
         if (paths != null && paths.Length > 0)
         {
-            AutoAssetRefreshOnSave.RequestRefresh();
+            AutomaticAssetRefresher.RequestRefresh();
         }
 
         return paths;

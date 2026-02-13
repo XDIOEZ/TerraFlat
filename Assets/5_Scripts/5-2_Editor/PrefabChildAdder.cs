@@ -2,7 +2,7 @@
 using UnityEditor;
 using System.Collections.Generic;
 
-public class AddChildToPrefabs : EditorWindow
+public class PrefabChildAdder : EditorWindow
 {
     private GameObject childPrefab;
     private List<GameObject> targetPrefabs = new List<GameObject>();
@@ -10,7 +10,7 @@ public class AddChildToPrefabs : EditorWindow
     [MenuItem("Tools/批量挂接Prefab (Undo版)")]
     public static void ShowWindow()
     {
-        GetWindow<AddChildToPrefabs>("批量挂接Prefab");
+        GetWindow<PrefabChildAdder>("批量挂接Prefab");
     }
 
     void OnGUI()

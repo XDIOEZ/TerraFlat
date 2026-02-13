@@ -6,7 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class AssetBatchRenamerEditor : EditorWindow
+public class AssetRenamingTool : EditorWindow
 {
     private List<Object> objectsToRename = new List<Object>();
     private string namePrefix = "Item_";
@@ -22,7 +22,7 @@ public class AssetBatchRenamerEditor : EditorWindow
     [MenuItem("Tools/批量素材重命名工具")]
     public static void ShowWindow()
     {
-        GetWindow<AssetBatchRenamerEditor>("批量素材重命名");
+        GetWindow<AssetRenamingTool>("批量素材重命名");
     }
 
     private void OnGUI()
