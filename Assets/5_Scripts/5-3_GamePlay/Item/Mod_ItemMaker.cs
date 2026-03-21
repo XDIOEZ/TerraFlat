@@ -36,6 +36,10 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         [Tooltip("是否自动销毁自身item/在达到生产上限时销毁")]
         public bool DestroySelf = false;
 
+        [Tooltip("实例化概率，取值范围 0~1")]
+        [Range(0f, 1f)]
+        public float SpawnProbability = 1f;
+
         [Header("随机初始化相关参数")]
         [Tooltip("生产时间随机范围")]
         public Vector2 Random_ProductionTime = new Vector2(0f, 1000f);
@@ -122,6 +126,19 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
     private void ProduceItem(ItemProductionData data)
     {
+        float spawnProbability = Mathf.Clamp01(data.SpawnProbability);
+        if (Random.value > spawnProbability)
+        {
+            data.CurrentProductionCount++;
+
+            if (data.DestroySelf && data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
+            {
+                StartCoroutine(DestroyAfterFrame());
+            }
+
+            return;
+        }
+
         if (string.IsNullOrEmpty(data.itemName) && data.itemPrefab != null)
             data.itemName = data.itemPrefab.name;
 
@@ -216,6 +233,8 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
     {
         foreach (var data in ProductionList)
         {
+            data.SpawnProbability = Mathf.Clamp01(data.SpawnProbability);
+
             if (data.itemPrefab == null)
             {
                 continue;

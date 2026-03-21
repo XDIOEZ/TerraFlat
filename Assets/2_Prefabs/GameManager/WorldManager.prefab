@@ -375,8 +375,8 @@ MonoBehaviour:
     TotalDays: 0
   ReadyGameSaveData:
     saveName: defaultSaveName
-    SaveSeed: 0
-    Seed: 0
+    SaveSeed: 999
+    Seed: 999
     Time: 600
     TimeSpeed: 1
   UIPrefab_HelloCanvas: {fileID: 1507728778053711830, guid: 8c8eb8cf412e3ca4d8845cecbc358d4d, type: 3}
@@ -611,3 +611,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   OnChunkLoadFinish:
     _PersistentCalls: []
+  maxChunkLoadPerFrame: 2

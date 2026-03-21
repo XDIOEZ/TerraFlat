@@ -1,15 +1,17 @@
 ﻿using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
-
+using MemoryPack;
+[System.Serializable]
+[MemoryPackable]
+public partial class SkillManagerSaveData
+{
+    public List<string> SkillNames = new List<string>();
+    public int CurrentSelectIndex = 0;
+}
 public class Mod_SkillManager : Module
 {
-    [System.Serializable]
-    public class SkillManagerSaveData
-    {
-        public List<string> SkillNames = new List<string>();
-        public int CurrentSelectIndex = 0;
-    }
+
 
     #region 基础参数
     public new virtual Item item => base.item;

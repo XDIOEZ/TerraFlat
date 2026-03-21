@@ -91,8 +91,19 @@ public class Inventory_HotBar : Inventory
         if (controller == null) return;
 
         var input = controller._inputActions.Win10;
-        input.RightClick.performed += _ => CurentSelectItem.Act();
+        input.RightClick.performed += OnRightClickPerformed;
         input.MouseScroll.started += OnScrollSwitch;
+    }
+
+    private void OnRightClickPerformed(InputAction.CallbackContext ctx)
+    {
+        if (CurentSelectItem == null)
+        {
+            Debug.LogWarning("[Inventory_HotBar] 右键使用失败：当前未持有物品");
+            return;
+        }
+
+        CurentSelectItem.Act();
     }
 
     private void OnScrollSwitch(InputAction.CallbackContext ctx)
