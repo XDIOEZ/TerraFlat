@@ -1,4 +1,5 @@
 using NaughtyAttributes;
+using NPOI.SS.Formula.Functions;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,7 +21,7 @@ public class Module_DiscardItem : Mod_BaseDroper
     public float dropRepeatInterval = 0.1f; // 长按重复丢弃的间隔
 
     public Inventory_HotBar Hotbar;
-    public Mod_Inventory hand;
+    public Mod_Hand hand;
 
     public override ModuleData _Data { get => modData; set => modData = value as Ex_ModData; }
 
@@ -56,7 +57,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
         Hotbar = item.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Mod_Inventory>().inventory as Inventory_HotBar;
 
-        hand = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<Mod_Inventory>();
+        hand = item.GetComponentInChildren<Mod_Hand>();
 
         GameController = item.GetComponent<GameController>();
 
@@ -139,7 +140,7 @@ public class Module_DiscardItem : Mod_BaseDroper
     private void HandleRepeatDrop()
     {
         // 检查手上是否有物品
-        ItemSlot handSlot = hand?.inventory?.Data?.itemSlots?[hand.inventory.Data.Index];
+        ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots?[hand.HandInventory.Data.Index];
         if (handSlot != null && handSlot.itemData != null && handSlot.Amount > 0)
         {
             if (isCtrlPressed)
@@ -225,9 +226,9 @@ public class Module_DiscardItem : Mod_BaseDroper
 
         // 松开按键时执行一次丢弃操作
         // 松开按键时执行一次丢弃操作
-        if (hand.inventory.Data.itemSlots[hand.inventory.Data.Index].itemData != null)
+        if (hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index].itemData != null)
         {
-            ItemSlot handSlot = hand.inventory.Data.itemSlots[hand.inventory.Data.Index];
+            ItemSlot handSlot = hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index];
             if (isCtrlPressed)
             {
                 // Ctrl+F 丢弃整组

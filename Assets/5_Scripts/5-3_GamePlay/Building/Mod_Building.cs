@@ -105,7 +105,7 @@ public class Mod_Building : Module
     {
 
         BuildingData.ReadData(ref Data);
-        boxCollider2D = item.GetComponent<BoxCollider2D>();
+        boxCollider2D = GetComponent<BoxCollider2D>();
 
         if (damageReceiver == null)
             damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID(ModText.Hp);
@@ -559,14 +559,12 @@ public class Mod_Building : Module
 
         // 确保新建筑的建筑模块设置为已安装状态
         var newBuildingMod = newItem.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
-        var newBuildingMod_HP = newItem.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
         if (newBuildingMod != null)
         {
-            newBuildingMod.CurrentState = BuildingState.Installed;
+            newBuildingMod.SetAsInstalled();
             Debug.Log($"[CreateBuildingInstance] 新建筑 {newItem.name} 初始化时设置为已安装状态");
         }
 
-        //TODO  在创建完毕后 将血量恢复为0
         damageReceiver.Data.Hp = 0;
 
         return newItem;
@@ -965,6 +963,8 @@ public class Mod_Building : Module
         // 设置为最大血量（表示已安装）
         damageReceiver.Hp = damageReceiver.MaxHp.Value;
 
+        item.InHand = false;
+
         // 设置缩放为1
         item.transform.localScale = Vector3.one;
         item.itemData.Stack.CanBePickedUp = false;
@@ -1019,6 +1019,8 @@ public class Mod_Building : Module
             Debug.LogWarning("[设置安装状态] DamageReceiver的最大血量未设置，使用默认值100");
         }
 
+        item.InHand = false;
+
         // 设置缩放为1
         item.transform.localScale = Vector3.one;
 
@@ -1029,7 +1031,7 @@ public class Mod_Building : Module
         }
 
         // 确保碰撞器设置正确
-        BoxCollider2D collider = item.GetComponent<BoxCollider2D>();
+        BoxCollider2D collider = GetComponent<BoxCollider2D>();
         if (collider != null)
         {
             collider.isTrigger = false;

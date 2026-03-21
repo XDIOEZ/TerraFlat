@@ -145,7 +145,11 @@ MonoBehaviour:
   CtrlIsDown: 0
   LeftClick:
     _PersistentCalls: []
+  LeftClickUp:
+    _PersistentCalls: []
   RightClick:
+    _PersistentCalls: []
+  RightClickUp:
     _PersistentCalls: []
   _modData:
     Name: 
@@ -459,6 +463,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5958215070207355882, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}
+      propertyPath: GameController
+      value: 
+      objectReference: {fileID: 7199555808017476116}
     - target: {fileID: 7704802002852346167, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}
       propertyPath: m_Name
       value: Module_FocusPoint
@@ -1215,18 +1223,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4559608427112961633, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
-      propertyPath: ItemSlot_Parent
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 4559608427112961633, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
-      propertyPath: Data.PanelIsOpen
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5653052531165560293, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
-      propertyPath: ToggleActionName
-      value: 
-      objectReference: {fileID: 0}
     - target: {fileID: 8767320128831433282, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
       propertyPath: m_Name
       value: Module_Hand
@@ -1234,77 +1230,8 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8767320128831433282, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 3545183688949688080}
-    - targetCorrespondingSourceObject: {fileID: 8767320128831433282, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6589475421458208086}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
---- !u!1 &2944533953931763483 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8767320128831433282, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
-  m_PrefabInstance: {fileID: 5870109183278118233}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &3545183688949688080
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2944533953931763483}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f5892a2addb48747995bfdbf73f24ed, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  user: {fileID: 0}
---- !u!61 &6589475421458208086
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2944533953931763483}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 1
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0.5, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
 --- !u!4 &8789379722561364081 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2921982359085929768, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}

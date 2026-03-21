@@ -33,7 +33,7 @@ MonoBehaviour:
         workTime: 0
         Penalty: 1000
         IsWalkable: 1
-        deepValue: 0.5
+        deepValue: 0
         salt: 0
     - rid: 6445419709040689155
       type: {class: Tile_Water, ns: , asm: GamePlay}
@@ -41,3 +41,4 @@ MonoBehaviour:
         BuffInfo:
         - {fileID: 11400000, guid: 0aa80856752ea5447b1879e5c8321c5b, type: 2}
         - {fileID: 11400000, guid: ad61b721e5a424c4ba65796d9207ca4e, type: 2}
+        - {fileID: 11400000, guid: 67d18ccd48d55974c85c2f03b5c384ff, type: 2}

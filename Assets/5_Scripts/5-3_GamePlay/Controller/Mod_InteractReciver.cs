@@ -9,7 +9,7 @@ using UnityEngine;
 /// - 负责处理与物品的交互逻辑
 /// - 遵循 IInteract 接口
 /// </summary>
-public class Mod_Interaction : Module
+public class Mod_InteractReciver : Module
 {
     #region 属性和字段
 
@@ -68,7 +68,7 @@ public class Mod_Interaction : Module
     /// 开始交互
     /// </summary>
     /// <param name="interacter">交互者</param>
-    public void Interact_Start(IInteractor interacter = null)
+    public void Interact_Start(Item interacter)
     {
         // 检查物品是否可拾取 → 可拾取则禁止交互
         if (item.itemData.Stack.CanBePickedUp == true)
@@ -77,29 +77,30 @@ public class Mod_Interaction : Module
             return;
         }
         // 标记交互物品
-        CurrentInteractItem = interacter.Item;
-        OnAction_Start.Invoke(interacter.Item);
+        CurrentInteractItem = interacter;
+        OnAction_Start.Invoke(interacter);
     }
 
     /// <summary>
     /// 更新交互过程
     /// </summary>
     /// <param name="interacter">交互者</param>
-    public void Interact_Update(IInteractor interacter = null)
+    public void Interact_Update(Item interacter = null)
     {
+        OnAction_Update?.Invoke(interacter);
     }
 
     /// <summary>
     /// 取消交互
     /// </summary>
     /// <param name="interacter">交互者</param>
-    public void Interact_Cancel(IInteractor interacter = null)
+    public void Interact_Cancel(Item interacter = null)
     {
         // 清除交互物品
         CurrentInteractItem = null;
 
         // 触发取消事件
-        OnAction_Stop?.Invoke(interacter?.Item);
+        OnAction_Stop?.Invoke(interacter);
     }
 
     #endregion

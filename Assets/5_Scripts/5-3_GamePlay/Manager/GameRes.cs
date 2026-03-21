@@ -64,6 +64,17 @@ public class GameRes : SingletonAutoMono<GameRes>
         StartCoroutine(LoadResourcesWithProgress());
     }
 
+    public void Update()
+    {
+            // 这里可以添加一些调试输入，例如按下某个键可以重新加载资源
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                Debug.Log("F5键被按下，开始热更新资源...");
+                showLoadingGUI = true;
+                StartCoroutine(LoadResourcesWithProgress());
+            }
+    }
+
     #endregion
 
     #region 协程加载资源（带进度）

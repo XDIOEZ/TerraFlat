@@ -42,6 +42,9 @@ public partial class Mod_FocusPoint : Module
             ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>()
             : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
 
+        GameController = item.GetComponentInChildren<GameController>();
+
+
         // 获取TurnBody组件
         turnBody = item.Owner != null
             ? item.Owner.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack

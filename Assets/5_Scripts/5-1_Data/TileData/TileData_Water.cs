@@ -1,5 +1,6 @@
 
 using MemoryPack;
+using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
@@ -9,8 +10,6 @@ public partial class TileData_Water : TileData
     public float salt = 0;
     public override void Initialize_Env(EnvironmentFactors env)
     {
-        // 高度 0.5 → 深度 0
-        // 高度 0   → 深度 1
         deepValue = (0.5f - env.Hight) / 0.5f;
     }
     /// <summary>

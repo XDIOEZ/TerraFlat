@@ -1,30 +1,69 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using AYellowpaper.SerializedCollections;
-using MemoryPack;
-using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Inventory_Furnace : Inventory
+public class Mod_Furnace : Module
 {
+    #region 基础参数
 
-   public Mod_Inventory mod_Inventory;
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
+    public ModSmeltingData Data = new ModSmeltingData();
+    [SerializeReference]
+    public List<string> RawData = new List<string>();
 
     [Tooltip("输入容器，用于存放合成所需的原材料物品")]
-    public Inventory InputInventory => mod_Inventory.InventoryInstances[0];
+    public Inventory InputInventory;
     [Tooltip("输出容器，用于存放合成后得到的物品")]
-    public Inventory OutputInventory => mod_Inventory.InventoryInstances[1];
+    public Inventory OutputInventory;
     [Tooltip("燃料容器，用于存放熔炉所需的燃料物品")]
-    public Inventory FuelInventory => mod_Inventory.InventoryInstances[2];
-
-    #region 序列化字段与引用
-    public ModSmeltingData _Data = new ModSmeltingData();
-
+    public Inventory FuelInventory;
     public Mod_Fuel mod_Fuel; // 燃料模块
+    public BasePanel basePanel; // 熔炉面板
+    public Mod_InteractReciver mod_InteractReciver; // 交互接收模块
+    public GameObject UI_Prefab; // 熔炉UI预制体
+    #endregion
+
+    #region 生命周期
+
+    public override void Load()
+    {
+        mod_InteractReciver = item.GetComponentInChildren<Mod_InteractReciver>();
+        mod_Fuel = item.GetComponentInChildren<Mod_Fuel>();
+        ModSaveData.ReadData(ref RawData);
+        mod_InteractReciver.OnAction_Start += OnPlayerInteract;
+        InputInventory.InitData();
+        OutputInventory.InitData();
+        FuelInventory.InitData();
+    }
+
+    void OnPlayerInteract(Item playerItem)
+    {
+        if (basePanel == null)
+        {
+            OpenUI();
+        }
+        basePanel.Toggle();
+        
+        var handInv = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+        if (handInv == null)
+        {
+            Debug.LogError("玩家手部容器为空！");
+            return;
+        }
+        
+        InputInventory.DefaultTarget_Inventory = handInv;
+        OutputInventory.DefaultTarget_Inventory = handInv;
+        FuelInventory.DefaultTarget_Inventory = handInv;
+    }
+    public override void Save()
+    {
+        ModSaveData.WriteData(RawData);
+    }
+    #endregion
     public Button WorkButton;
 
     [Header("UI组件")]
@@ -36,18 +75,17 @@ public class Inventory_Furnace : Inventory
     public Slider temperatureSlider;
     [Tooltip("温度数值文本")]
     public TextMeshProUGUI TemperatureText;
-    #endregion      
+
     #region Unity生命周期
 
-    public override void OnValidate()
+    public void OnValidate()
     {
-        if (string.IsNullOrEmpty(Data.Name))
-            Data.Name = ModText.Furnace;
+        _Data.Name = ModText.Furnace;
     }
 
     public override void ModUpdate(float deltaTime)
     {
-        if (_Data.IsSmelting) // 已经处于熔炼状态
+        if (Data.IsSmelting) // 已经处于熔炼状态
         {
             // 检查燃料模块是否处于点燃状态
             if (mod_Fuel.GetIgnitedState())
@@ -77,7 +115,7 @@ public class Inventory_Furnace : Inventory
                             mod_Fuel.SetIgnited(true);
 
                             // 温度上限取决于燃料
-                            _Data.MaxTemperature = fuel.MaxTemperature;
+                            Data.MaxTemperature = fuel.MaxTemperature;
                         }
 
                         SmeltingProcess(deltaTime); // 继续熔炼
@@ -85,14 +123,14 @@ public class Inventory_Furnace : Inventory
                     else
                     {
                         // 真正燃料耗尽 → 停止熔炼
-                        _Data.IsSmelting = false;
+                        Data.IsSmelting = false;
                         Debug.Log("燃料耗尽，熔炼停止！");
                     }
                 }
                 else
                 {
                     // 真正燃料耗尽 → 停止熔炼
-                    _Data.IsSmelting = false;
+                    Data.IsSmelting = false;
                     Debug.Log("燃料耗尽，熔炼停止！");
                 }
             }
@@ -100,8 +138,8 @@ public class Inventory_Furnace : Inventory
         else
         {
             // 未启动或已停止 → 温度缓慢下降到 20℃
-            _Data.Temperature = Mathf.Max(_Data.Temperature - _Data.TemperatureDownSpeed * deltaTime, 20f);
-            _Data.SmeltingSpeed = 0f;
+            Data.Temperature = Mathf.Max(Data.Temperature - Data.TemperatureDownSpeed * deltaTime, 20f);
+            Data.SmeltingSpeed = 0f;
 
             // 如果燃料模块是点燃的，让它也熄灭
             if (mod_Fuel.GetIgnitedState())
@@ -114,50 +152,28 @@ public class Inventory_Furnace : Inventory
         UpdateUI();
     }
 
-    public override void InitData()
-    {
-        base.InitData();
-        mod_Fuel = item.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
-
-        // 如果有手持模块，设置默认目标
-        if (item != null && item.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Hand))
-        {
-            var handInv = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
-            if (InputInventory != null)
-                InputInventory.DefaultTarget_Inventory = handInv;
-            if (OutputInventory != null)
-                OutputInventory.DefaultTarget_Inventory = handInv;
-        }
-
-    }
-
     /// <summary>
     /// UI初始化（在面板创建后调用）
     /// </summary>
-    public override void InitUI()
+    public void OpenUI()
     {
-        InputInventory.itemSlot_UI.Add(basePanel.GetButton("输入_1").GetComponent<ItemSlot_UI>());
-        InputInventory.itemSlot_UI.Add(basePanel.GetButton("输入_2").GetComponent<ItemSlot_UI>());
-        InputInventory.itemSlot_UI.Add(basePanel.GetButton("输入_3").GetComponent<ItemSlot_UI>());
+        basePanel = UIManager.Instance.CreatePanelFromGameObject(UI_Prefab);
+        BindSlotsByPrefix(InputInventory, "输入");
+        BindSlotsByPrefix(OutputInventory, "输出");
+        BindSlotsByPrefix(FuelInventory, "燃料");
+       
 
-        OutputInventory.itemSlot_UI.Add(basePanel.GetButton("输出_1").GetComponent<ItemSlot_UI>());
-        OutputInventory.itemSlot_UI.Add(basePanel.GetButton("输出_2").GetComponent<ItemSlot_UI>());
-        OutputInventory.itemSlot_UI.Add(basePanel.GetButton("输出_3").GetComponent<ItemSlot_UI>());
-
-        FuelInventory.itemSlot_UI.Add(basePanel.GetButton("燃料_1").GetComponent<ItemSlot_UI>());
-        FuelInventory.itemSlot_UI.Add(basePanel.GetButton("燃料_2").GetComponent<ItemSlot_UI>());
-        FuelInventory.itemSlot_UI.Add(basePanel.GetButton("燃料_3").GetComponent<ItemSlot_UI>());
         // 同步 UI 数据
         InputInventory.SyncData();
         OutputInventory.SyncData();
         FuelInventory.SyncData();
 
         // 初始化UI引用
-        progressSlider = base.basePanel.GetSlider("熔炼进度条");
-        temperatureSlider = base.basePanel.GetSlider("温度显示条");
-        TemperatureText = base.basePanel.GetText("温度数值文本");
-        fuelSlider = base.basePanel.GetSlider("燃料显示条");
-        WorkButton = base.basePanel.GetButton("合成按钮");
+        progressSlider = basePanel.GetSlider("熔炼进度条");
+        temperatureSlider = basePanel.GetSlider("温度显示条");
+        TemperatureText = basePanel.GetText("温度数值文本");
+        fuelSlider = basePanel.GetSlider("燃料显示条");
+        WorkButton = basePanel.GetButton("合成按钮");
 
         // 按钮事件
         WorkButton.onClick.AddListener(OnButtonClick);
@@ -170,23 +186,34 @@ public class Inventory_Furnace : Inventory
         FuelInventory?.RefreshUI();
     }
 
-    public override void Save()
+    private void BindSlotsByPrefix(Inventory inventory, string prefix)
     {
-
-    }
-    /// <summary>
-    /// 玩家开始交互
-    /// </summary>
-    public override void Interact_Start(Item playerItem)
-    {
-        if (playerItem.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod))
+        if (inventory == null || inventory.Data == null || inventory.Data.itemSlots == null)
         {
-            InputInventory.DefaultTarget_Inventory = handMod.inventory;
-            OutputInventory.DefaultTarget_Inventory = handMod.inventory;
-            FuelInventory.DefaultTarget_Inventory = handMod.inventory;
+            Debug.LogWarning($"[Mod_Furnace] 跳过绑定，{prefix} Inventory 无效");
+            return;
         }
-        SwitchUI();
-        Debug.Log($"玩家 {playerItem.name} 开始交互工作台");
+
+        inventory.itemSlot_UI.Clear();
+
+        int boundIndex = 0;
+        int maxTry = Mathf.Max(inventory.Data.itemSlots.Count, 12);
+        for (int i = 1; i <= maxTry; i++)
+        {
+            if (boundIndex >= inventory.Data.itemSlots.Count)
+                break;
+
+            var button = basePanel.GetButton($"{prefix}_{i}");
+            if (button == null)
+                continue;
+
+            var slotUI = button.GetComponent<ItemSlot_UI>();
+            if (slotUI == null)
+                continue;
+
+            inventory.BindSlotUI(slotUI, boundIndex);
+            boundIndex++;
+        }
     }
     #endregion
 
@@ -209,14 +236,14 @@ public class Inventory_Furnace : Inventory
         }
 
         // 计算实际的最大温度（受限于熔炉本身的最大温度限制）
-        float actualMaxTemp = _Data.MaxTemperature > 0 ? Mathf.Min(_Data.MaxTemperature, _Data.MaxTemperatureLimit) : _Data.MaxTemperatureLimit;
+        float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
 
         // 如果没有物品 → 进度归零（表示干烧）
         if (!hasInputItem)
         {
-            _Data.SmeltingProgress = 0f;
+            Data.SmeltingProgress = 0f;
             // 温度仍然会上升到燃料允许的上限，但不超过熔炉限制
-            _Data.Temperature = Mathf.Min(_Data.Temperature + _Data.TemperatureUpSpeed * 2f * deltaTime, actualMaxTemp);
+            Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * 2f * deltaTime, actualMaxTemp);
             // 继续消耗燃料
             mod_Fuel?.ConsumeFuel(deltaTime);
             return; // 不进入熔炼逻辑
@@ -225,22 +252,22 @@ public class Inventory_Furnace : Inventory
         // ===== 以下是正常熔炼逻辑 =====
 
         // 温度随时间上升，但不超过熔炉限制
-        _Data.Temperature = Mathf.Min(_Data.Temperature + _Data.TemperatureUpSpeed * deltaTime, actualMaxTemp);
+        Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * deltaTime, actualMaxTemp);
 
         // 根据温度计算当前熔炼速度
-        float tempRatio = _Data.Temperature / actualMaxTemp;
-        _Data.SmeltingSpeed = Mathf.Lerp(1f, _Data.MaxSmeltingSpeed, tempRatio);
+        float tempRatio = Data.Temperature / actualMaxTemp;
+        Data.SmeltingSpeed = Mathf.Lerp(1f, Data.MaxSmeltingSpeed, tempRatio);
 
         // 按当前速度推进进度
-        _Data.SmeltingProgress += _Data.SmeltingSpeed * deltaTime;
+        Data.SmeltingProgress += Data.SmeltingSpeed * deltaTime;
 
         // 消耗燃料
         mod_Fuel?.ConsumeFuel(deltaTime);
 
         // 熔炼完成
-        if (_Data.SmeltingProgress >= 100f)
+        if (Data.SmeltingProgress >= 100f)
         {
-            _Data.SmeltingProgress = 0f;
+            Data.SmeltingProgress = 0f;
             CompleteSmelting();
         }
     }
@@ -297,9 +324,9 @@ public class Inventory_Furnace : Inventory
         }
 
         // 温度检查 - 过高温度处理
-        if (_Data.Temperature > cookRecipe.Temperature_Max)
+        if (Data.Temperature > cookRecipe.Temperature_Max)
         {
-            Debug.LogWarning($"温度过高：所需温度 {cookRecipe.Temperature} 当前温度 {_Data.Temperature} → 产出烧焦物！");
+            Debug.LogWarning($"温度过高：所需温度 {cookRecipe.Temperature} 当前温度 {Data.Temperature} → 产出烧焦物！");
 
             // 使用与正常合成相同的材料扣除逻辑，确保完整扣除所有材料
             if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
@@ -385,9 +412,9 @@ public class Inventory_Furnace : Inventory
         }
 
         // 温度不足检查
-        else if (cookRecipe.Temperature > _Data.Temperature)
+        else if (cookRecipe.Temperature > Data.Temperature)
         {
-            Debug.LogWarning($"熔炼失败：所需温度 {cookRecipe.Temperature} 当前温度 {_Data.Temperature} → 材料有损失！");
+            Debug.LogWarning($"熔炼失败：所需温度 {cookRecipe.Temperature} 当前温度 {Data.Temperature} → 材料有损失！");
 
             // 惩罚：随机扣除 1~2 个输入材料
             System.Random rand = new System.Random();
@@ -1011,7 +1038,7 @@ public class Inventory_Furnace : Inventory
                 if (action != null && inputInv.Data.itemSlots != null &&
                     action.slotIndex >= 0 && action.slotIndex < inputInv.Data.itemSlots.Count)
                 {
-                    action.Apply(mod_Inventory);
+
                 }
             }
         }
@@ -1095,7 +1122,7 @@ public class Inventory_Furnace : Inventory
     {
         // 熔炼进度条
         if (progressSlider != null)
-            progressSlider.value = _Data.SmeltingProgress / 100f;
+            progressSlider.value = Data.SmeltingProgress / 100f;
 
         // 燃料条
         if (fuelSlider != null && mod_Fuel != null && mod_Fuel.Data != null)
@@ -1105,16 +1132,16 @@ public class Inventory_Furnace : Inventory
         if (temperatureSlider != null)
         {
             // 始终使用MaxTemperatureLimit作为最大值显示给玩家参考
-            float maxTempForDisplay = _Data.MaxTemperatureLimit;
-            temperatureSlider.value = maxTempForDisplay > 0 ? _Data.Temperature / maxTempForDisplay : 0;
+            float maxTempForDisplay = Data.MaxTemperatureLimit;
+            temperatureSlider.value = maxTempForDisplay > 0 ? Data.Temperature / maxTempForDisplay : 0;
         }
 
         // 温度数值文本
         if (TemperatureText != null)
         {
             // 显示实际的温度限制（燃料限制和炉子物理限制中的较小值）
-            float actualMaxTemp = _Data.MaxTemperature > 0 ? Mathf.Min(_Data.MaxTemperature, _Data.MaxTemperatureLimit) : _Data.MaxTemperatureLimit;
-            TemperatureText.text = $"{Mathf.RoundToInt(_Data.Temperature)}°C / {Mathf.RoundToInt(actualMaxTemp)}°C (炉子上限: {Mathf.RoundToInt(_Data.MaxTemperatureLimit)}°C)";
+            float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
+            TemperatureText.text = $"{Mathf.RoundToInt(Data.Temperature)}°C / {Mathf.RoundToInt(actualMaxTemp)}°C (炉子上限: {Mathf.RoundToInt(Data.MaxTemperatureLimit)}°C)";
         }
     }
 
@@ -1136,19 +1163,19 @@ public class Inventory_Furnace : Inventory
         }
 
         // 如果已经在熔炼中，不允许主动停止
-        if (_Data.IsSmelting)
+        if (Data.IsSmelting)
         {
             Debug.Log("熔炼已经开始，无法主动停止。只有燃料耗尽时才会停止。");
             return;
         }
 
         // 开始熔炼
-        _Data.IsSmelting = true;
+        Data.IsSmelting = true;
 
         // 设置默认最大温度为熔炉限制温度（如果还没有燃料提供温度的话）
-        if (_Data.MaxTemperature <= 0)
+        if (Data.MaxTemperature <= 0)
         {
-            _Data.MaxTemperature = _Data.MaxTemperatureLimit;
+            Data.MaxTemperature = Data.MaxTemperatureLimit;
         }
 
         // 点燃燃料模块
@@ -1164,7 +1191,7 @@ public class Inventory_Furnace : Inventory
     /// <param name="isBurning">是否燃烧</param>
     public void SetBurningState(bool isBurning)
     {
-        _Data.IsSmelting = isBurning;
+        Data.IsSmelting = isBurning;
         mod_Fuel?.SetIgnited(isBurning);
 
         if (isBurning)
@@ -1183,7 +1210,7 @@ public class Inventory_Furnace : Inventory
     /// <returns>是否正在燃烧</returns>
     public bool GetBurningState()
     {
-        return _Data.IsSmelting && (mod_Fuel?.GetIgnitedState() ?? false);
+        return Data.IsSmelting && (mod_Fuel?.GetIgnitedState() ?? false);
     }
 
     /// <summary>
@@ -1196,39 +1223,3 @@ public class Inventory_Furnace : Inventory
     #endregion
 
 }
-#region 数据定义
-[MemoryPackable]
-[System.Serializable]
-public partial class ModSmeltingData
-{
-    [ShowInInspector]
-    public Dictionary<string, Inventory_Data> InvData = new Dictionary<string, Inventory_Data>();
-
-    [Tooltip("当前的熔炼进度")]
-    public float SmeltingProgress = 10f;
-
-    [Tooltip("熔炉的最大熔炼速度")]
-    public float MaxSmeltingSpeed = 10f;
-
-    [Tooltip("熔炉的当前熔炼速度")]
-    public float SmeltingSpeed = 10f;
-
-    [Tooltip("当前熔炉内温度")]
-    public float Temperature = 20f;
-
-    [Tooltip("可达最大温度值（由燃料决定）")]
-    public float MaxTemperature = 0f;
-
-    [Tooltip("熔炉本身的最大温度限制（熔炉的物理限制）")]
-    public float MaxTemperatureLimit = 1000f;
-
-    [Tooltip("是否正在熔炼")]
-    public bool IsSmelting = false;
-
-    [Tooltip("温度上升速度")]
-    public float TemperatureUpSpeed = 10f;
-
-    [Tooltip("温度下降速度")]
-    public float TemperatureDownSpeed = 30f;
-}
-#endregion
