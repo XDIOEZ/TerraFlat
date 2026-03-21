@@ -697,7 +697,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             }
         }
 
-        Debug.Log($"[ChunkGenerator_River] ✅ 河床/河岸石头生成完成，数量: {placed}（上限 {maxStonesPerChunk}）", Map);
+//        Debug.Log($"[ChunkGenerator_River] ✅ 河床/河岸石头生成完成，数量: {placed}（上限 {maxStonesPerChunk}）", Map);
     }
 
     private bool IsBankCell(int x, int y, int width, int height, bool[] riverWater, int radius)
