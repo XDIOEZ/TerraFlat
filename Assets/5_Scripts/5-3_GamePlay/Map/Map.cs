@@ -30,6 +30,7 @@ public class Map : Item
     public Coroutine loadTileMapCoroutine;
     public Coroutine backTilePenaltyCoroutine;
     public Coroutine loadOrGenerateCoroutine;
+    public Coroutine generateByPipelineCoroutine;
 
     [Header("寻路权重烘焙配置")]
     [SerializeField, Min(1)]
@@ -128,20 +129,28 @@ public class Map : Item
     private void HandleMapGeneratedStart()
     {
         var planetData = SaveDataMgr.Instance != null ? SaveDataMgr.Instance.GetCurrentPlanetData() : null;
-        GenerateByPipeline(planetData);
+
+        if (generateByPipelineCoroutine != null)
+        {
+            StopCoroutine(generateByPipelineCoroutine);
+            generateByPipelineCoroutine = null;
+        }
+
+        generateByPipelineCoroutine = StartCoroutine(GenerateByPipelineCoroutine(planetData));
     }
 
     /// <summary>
     /// 按列表顺序执行所有生成器：0号位（大陆）→ 1号位（河流）→ ...
     /// </summary>
-    private void GenerateByPipeline(PlanetData planetData)
+    private IEnumerator GenerateByPipelineCoroutine(PlanetData planetData)
     {
         InitMapGenerators();
 
         if (mapGenerators == null || mapGenerators.Count == 0)
         {
             Debug.LogError("[Map.GenerateByPipeline] ❌ mapGenerators 为空，无法生成", this);
-            return;
+            generateByPipelineCoroutine = null;
+            yield break;
         }
 
         if (Data == null)
@@ -168,6 +177,12 @@ public class Map : Item
                 continue;
             }
 
+            if (gen is ChunkGenerator_Land landGen && landGen.EnableBackgroundGeneration)
+            {
+                yield return StartCoroutine(landGen.GenerateAsyncCoroutine(context));
+                continue;
+            }
+
             try
             {
                 gen.Init(this);
@@ -187,6 +202,7 @@ public class Map : Item
 
         Data.TileLoaded = true;
         BackTilePenalty_Async();
+        generateByPipelineCoroutine = null;
     }
 
     private void OnGUI()

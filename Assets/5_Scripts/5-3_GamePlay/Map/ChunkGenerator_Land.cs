@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using Sirenix.OdinInspector;
@@ -38,6 +40,14 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     [Header("调试设置")]
     [Tooltip("是否在屏幕上用颜色块可视化各个格子的生物群系分布")]
     public bool showBiomeOverlay = false;
+
+    [Header("性能设置")]
+    [Tooltip("是否将地形采样与群系匹配放到后台线程计算")]
+    public bool enableBackgroundGeneration = true;
+
+    [Tooltip("主线程每帧提交到地图的数据量（越大越快但越容易卡顿）")]
+    [Min(64)]
+    public int applyTilesPerFrame = 512;
     #endregion
 
     #region 只读属性
@@ -57,6 +67,30 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
     [NonSerialized]
     private bool _hasLoggedMissingLandNoise;
+
+    private struct BiomeConditionSnapshot
+    {
+        public int biomeIndex;
+        public float tMin;
+        public float tMax;
+        public float hMin;
+        public float hMax;
+        public float pMin;
+        public float pMax;
+        public float sMin;
+        public float sMax;
+        public float htMin;
+        public float htMax;
+    }
+
+    private sealed class LandComputeResult
+    {
+        public int width;
+        public int height;
+        public Vector2Int startPos;
+        public EnvironmentFactors[] envArray;
+        public int[] biomeIndexArray;
+    }
 
     #endregion
 
@@ -110,6 +144,31 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
         GenerateRandomMap_TileData(context.Map, context.PlanetData);
     }
+
+    public bool EnableBackgroundGeneration => enableBackgroundGeneration;
+
+    public IEnumerator GenerateAsyncCoroutine(MapGenerationContext context)
+    {
+        if (context == null)
+        {
+            LogNullContext(nameof(ChunkGenerator_Land));
+            yield break;
+        }
+
+        if (context.Map == null)
+        {
+            LogNullMap(nameof(ChunkGenerator_Land));
+            yield break;
+        }
+
+        if (!enableBackgroundGeneration)
+        {
+            GenerateRandomMap_TileData(context.Map, context.PlanetData);
+            yield break;
+        }
+
+        yield return GenerateRandomMap_TileData_Async(context.Map, context.PlanetData);
+    }
     #endregion
 
     #region 主逻辑
@@ -131,6 +190,17 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
         // === 启动地图生成 ===
         StartMapGeneration(map);
+    }
+
+    private IEnumerator GenerateRandomMap_TileData_Async(Map map, PlanetData planetData)
+    {
+        Map = map;
+
+        plantData = planetData ?? SaveDataMgr.Instance.GetCurrentPlanetData() ?? plantData;
+
+        InitializeGenerationEnvironment(map);
+
+        yield return StartMapGenerationAsync(map);
     }
 
     /// <summary>
@@ -162,6 +232,75 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
         // 先按同步方式生成（协程分帧后续再做优化）
         GenerateAllTiles(map, startPos, size);
+    }
+
+    private IEnumerator StartMapGenerationAsync(Map map)
+    {
+        Vector2Int startPos = map.Data.position;
+        Vector2 size = ChunkSize;
+
+        int width = (int)size.x;
+        int height = (int)size.y;
+        if (width <= 0 || height <= 0)
+        {
+            Debug.LogError($"[ChunkGenerator_Land] ❌ ChunkSize 非法: {width}x{height}");
+            yield break;
+        }
+
+        var biomeSnapshots = BuildBiomeSnapshots();
+        int seed = Seed;
+        float noiseScale = NoiseScale;
+        var localNoiseConfigs = NoiseConfigs != null ? new List<BaseNoise>(NoiseConfigs) : null;
+
+        Task<LandComputeResult> computeTask = Task.Run(() =>
+            ComputeLandData(startPos, width, height, noiseScale, seed, localNoiseConfigs, biomeSnapshots));
+
+        while (!computeTask.IsCompleted)
+        {
+            yield return null;
+        }
+
+        if (computeTask.IsFaulted)
+        {
+            Debug.LogError($"[ChunkGenerator_Land] ❌ 后台地形计算失败，回退主线程生成: {computeTask.Exception}");
+            GenerateAllTiles(map, startPos, size);
+            yield break;
+        }
+
+        LandComputeResult result = computeTask.Result;
+        if (result == null || result.envArray == null || result.biomeIndexArray == null)
+        {
+            Debug.LogError("[ChunkGenerator_Land] ❌ 后台地形计算结果无效");
+            yield break;
+        }
+
+        int total = width * height;
+        int batchSize = Mathf.Max(64, applyTilesPerFrame);
+
+        for (int i = 0; i < total; i++)
+        {
+            int x = i % width;
+            int y = i / width;
+            Vector2Int worldPos = new Vector2Int(result.startPos.x + x, result.startPos.y + y);
+
+            EnvironmentFactors env = result.envArray[i];
+            map.Data.EnvironmentData[x, y] = env;
+
+            int biomeIndex = result.biomeIndexArray[i];
+            if ((uint)biomeIndex < (uint)biomes.Count)
+            {
+                BiomeData biome = biomes[biomeIndex];
+                if (biome != null)
+                {
+                    GenerateTerrainTile(map, worldPos, biome, env);
+                }
+            }
+
+            if ((i + 1) % batchSize == 0)
+            {
+                yield return null;
+            }
+        }
     }
     #endregion
 
@@ -371,6 +510,174 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 return biome;
         }
         return null;
+    }
+
+    private BiomeConditionSnapshot[] BuildBiomeSnapshots()
+    {
+        if (biomes == null || biomes.Count == 0)
+            return Array.Empty<BiomeConditionSnapshot>();
+
+        var snapshots = new List<BiomeConditionSnapshot>(biomes.Count);
+        for (int i = 0; i < biomes.Count; i++)
+        {
+            var biome = biomes[i];
+            if (biome == null || biome.Condition == null)
+                continue;
+
+            var cond = biome.Condition;
+            snapshots.Add(new BiomeConditionSnapshot
+            {
+                biomeIndex = i,
+                tMin = cond.TemperatureRange.x,
+                tMax = cond.TemperatureRange.y,
+                hMin = cond.HumidityRange.x,
+                hMax = cond.HumidityRange.y,
+                pMin = cond.PrecipitationRange.x,
+                pMax = cond.PrecipitationRange.y,
+                sMin = cond.SolidityRange.x,
+                sMax = cond.SolidityRange.y,
+                htMin = cond.HightRange.x,
+                htMax = cond.HightRange.y
+            });
+        }
+
+        return snapshots.ToArray();
+    }
+
+    private static LandComputeResult ComputeLandData(
+        Vector2Int startPos,
+        int width,
+        int height,
+        float noiseScale,
+        int seed,
+        List<BaseNoise> noiseConfigs,
+        BiomeConditionSnapshot[] biomeSnapshots)
+    {
+        var result = new LandComputeResult
+        {
+            width = width,
+            height = height,
+            startPos = startPos,
+            envArray = new EnvironmentFactors[width * height],
+            biomeIndexArray = new int[width * height]
+        };
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                int idx = y * width + x;
+                int worldX = startPos.x + x;
+                int worldY = startPos.y + y;
+
+                float gx = worldX * noiseScale;
+                float gy = worldY * noiseScale;
+
+                EnvironmentFactors env = SampleEnvironmentFactorsStatic(gx, gy, seed, noiseConfigs);
+                int biomeIndex = FindMatchingBiomeIndexStatic(env, biomeSnapshots);
+
+                result.envArray[idx] = env;
+                result.biomeIndexArray[idx] = biomeIndex;
+            }
+        }
+
+        return result;
+    }
+
+    private static EnvironmentFactors SampleEnvironmentFactorsStatic(float x, float y, int seed, List<BaseNoise> noiseConfigs)
+    {
+        const float defaultValue = 0.5f;
+        if (noiseConfigs == null || noiseConfigs.Count == 0)
+        {
+            return new EnvironmentFactors
+            {
+                Temperature = defaultValue,
+                Humidity = defaultValue,
+                Precipitation = defaultValue,
+                Solidity = defaultValue,
+                Hight = defaultValue
+            };
+        }
+
+        float sumTemperature = 0f;
+        float sumHumidity = 0f;
+        float sumPrecipitation = 0f;
+        float sumSolidity = 0f;
+        float sumHeight = 0f;
+
+        int countTemperature = 0;
+        int countHumidity = 0;
+        int countPrecipitation = 0;
+        int countSolidity = 0;
+        int countHeight = 0;
+
+        for (int i = 0; i < noiseConfigs.Count; i++)
+        {
+            var noise = noiseConfigs[i];
+            if (noise == null)
+                continue;
+
+            float v = noise.Sample(x, y, seed);
+            switch (noise.noiseType)
+            {
+                case NoiseType.Temperature:
+                    sumTemperature += v;
+                    countTemperature++;
+                    break;
+                case NoiseType.Humidity:
+                    sumHumidity += v;
+                    countHumidity++;
+                    break;
+                case NoiseType.Precipitation:
+                    sumPrecipitation += v;
+                    countPrecipitation++;
+                    break;
+                case NoiseType.Solidity:
+                    sumSolidity += v;
+                    countSolidity++;
+                    break;
+                case NoiseType.Land:
+                    sumHeight += v;
+                    countHeight++;
+                    break;
+            }
+        }
+
+        float temperature = countTemperature > 0 ? (sumTemperature / countTemperature) : defaultValue;
+        float humidity = countHumidity > 0 ? (sumHumidity / countHumidity) : defaultValue;
+        float precipitation = countPrecipitation > 0 ? (sumPrecipitation / countPrecipitation) : defaultValue;
+        float solidity = countSolidity > 0 ? (sumSolidity / countSolidity) : defaultValue;
+        float height = countHeight > 0 ? (sumHeight / countHeight) : defaultValue;
+
+        return new EnvironmentFactors
+        {
+            Temperature = Mathf.Clamp01(temperature),
+            Humidity = Mathf.Clamp01(humidity),
+            Precipitation = Mathf.Clamp01(precipitation),
+            Solidity = Mathf.Clamp01(solidity),
+            Hight = Mathf.Clamp01(height)
+        };
+    }
+
+    private static int FindMatchingBiomeIndexStatic(EnvironmentFactors env, BiomeConditionSnapshot[] snapshots)
+    {
+        if (snapshots == null || snapshots.Length == 0)
+            return -1;
+
+        for (int i = 0; i < snapshots.Length; i++)
+        {
+            var b = snapshots[i];
+            if (b.tMin <= env.Temperature && env.Temperature <= b.tMax
+                && b.hMin <= env.Humidity && env.Humidity <= b.hMax
+                && b.pMin <= env.Precipitation && env.Precipitation <= b.pMax
+                && b.htMin <= env.Hight && env.Hight <= b.htMax
+                && b.sMin <= env.Solidity && env.Solidity <= b.sMax)
+            {
+                return b.biomeIndex;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>
