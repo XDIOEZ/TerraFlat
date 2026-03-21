@@ -499,7 +499,7 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
         }
 
         // 设置交互事件
-        if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod))
+        if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_InteractReciver interactMod))
         {
             interactMod.OnAction_Start += Interact_Start;
             interactMod.OnAction_Stop += Interact_Stop;
@@ -512,7 +512,7 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
     {
         workButton?.onClick.RemoveListener(OnCraftButtonClick);
 
-        if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_Interaction interactMod))
+        if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_InteractReciver interactMod))
         {
             interactMod.OnAction_Start -= Interact_Start;
             interactMod.OnAction_Stop -= Interact_Stop;
@@ -553,6 +553,11 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
     private bool IsZeroVector3(Vector3 vector)
     {
         return vector.x == 0 && vector.y == 0 && vector.z == 0;
+    }
+
+    public Inventory GetDefaultTargetInventory()
+    {
+        throw new NotImplementedException();
     }
 
     #endregion

@@ -51,7 +51,6 @@ public class Mod_Inventory : Module, IInventory
         if (inventory != null && inventory.Data != null)
         {
             inventory.OnValidate();
-            _Data.ID = inventory.Data.Name;
         }
     }
 
@@ -141,7 +140,7 @@ public class Mod_Inventory : Module, IInventory
         // 获取交互模块引用
         if (item != null && item.itemMods != null)
         {
-            var interactMod = item.itemMods.GetMod_ByID<Mod_Interaction>(ModText.Interact);
+            var interactMod = item.itemMods.GetMod_ByID<Mod_InteractReciver>(ModText.Interact);
             if (interactMod != null)
             {
                 interactMod.OnAction_Start += Interact_Start;
@@ -361,35 +360,18 @@ public class Mod_Inventory : Module, IInventory
         BasePanel.BringToFront(rectTransform);
 
     }
+
+    public Inventory GetDefaultTargetInventory()
+    {
+        throw new System.NotImplementedException();
+    }
     #endregion
 }
 
 public interface IInventory
 {
     #region 接口属性和方法
-    [Tooltip("Inventory引用字典")]
-    public SerializedDictionary<string, Inventory> InventoryRefDic { get; set; }
-
     [Tooltip("默认返回的目标Inventory")]
-    public Inventory GetDefaultTargetInventory()
-    {
-        if (InventoryRefDic == null || InventoryRefDic.Count == 0)
-            return null;
-
-        // 返回第一个Inventory
-        return InventoryRefDic.Values.First();
-    }
-
-    [Tooltip("随机返回一个Inventory")]
-    public Inventory GetRandomTargetInventory()
-    {
-        if (InventoryRefDic == null || InventoryRefDic.Count == 0)
-            return null;
-
-        // 将值转换为数组并随机选择一个
-        var inventories = InventoryRefDic.Values.ToArray();
-        int randomIndex = UnityEngine.Random.Range(0, inventories.Length);
-        return inventories[randomIndex];
-    }
+    public Inventory GetDefaultTargetInventory();
     #endregion
 }

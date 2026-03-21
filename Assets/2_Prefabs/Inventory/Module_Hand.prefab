@@ -9,7 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2921982359085929768}
-  - component: {fileID: 5653052531165560293}
+  - component: {fileID: 3998171314868163814}
+  - component: {fileID: 7659495346723623852}
+  - component: {fileID: 8164179294854393787}
   m_Layer: 9
   m_Name: Module_Hand
   m_TagString: Untagged
@@ -32,7 +34,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5653052531165560293
+--- !u!61 &3998171314868163814
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767320128831433282}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0.5, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
+--- !u!114 &7659495346723623852
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -41,50 +88,67 @@ MonoBehaviour:
   m_GameObject: {fileID: 8767320128831433282}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 75dc15573f8e77649b5c431365706aff, type: 3}
+  m_Script: {fileID: 11500000, guid: ed5bf07d4fd271d4f9263e88b8b6b579, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  Data:
+  ModSaveData:
     Name: 
-    ID: "UI_\u624B\u90E8\u63D2\u69FD"
+    ID: 
     isRunning: 1
     Type: 0
-    PanleRectPosition: {x: 0, y: 0, z: 0}
-    InventoryInitName: 
-    BasePanelIsOpen: 1
-  InventoryInstances:
-  - rid: 4513346371909845002
-  inventoryBasePanelCache:
-    _serializedList: []
-  ToggleActionName: 
-  references:
-    version: 2
-    RefIds:
-    - rid: 4513346371909845002
-      type: {class: Inventory_Hand, ns: , asm: GamePlay}
-      data:
-        item: {fileID: 0}
-        InventoryPanel_Prefab: {fileID: 6460790424826419754, guid: 382257fc2209ca64ab7c0de33d6a8a4f, type: 3}
-        Data:
-          Name: "UI_\u624B\u90E8\u63D2\u69FD"
-          itemSlots:
-          - CanAcceptItemType:
-              Item_TypeTag:
-              - None
-              - None
-              Item_Material:
-              - None
-            SlotMaxVolume: 0
-            Index: 0
-          Index: 0
-          IsInjected: 0
-          PanelPosition: {x: 0, y: 0, z: 0}
-          PanelIsOpen: 1
-          Event_RefreshUI:
-            _PersistentCalls: []
-          Event_OnDataChanged:
-            _PersistentCalls: []
-        itemSlot_UI: []
-        basePanel: {fileID: 0}
-        GetItemAmountRate: 1
+    BitData: 
+  RawData: []
+  interactCollider: {fileID: 3998171314868163814}
+  gameController: {fileID: 0}
+--- !u!114 &8164179294854393787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767320128831433282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80ed384baf01684498cc0b7316c30308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  RawData: []
+  HandInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 6460790424826419754, guid: 382257fc2209ca64ab7c0de33d6a8a4f, type: 3}
+    basePanel: {fileID: 0}
+    Data:
+      Name: "\u624B"
+      itemSlots:
+      - CanAcceptItemType:
+          Item_TypeTag:
+          - None
+          - None
+          Item_Material:
+          - None
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+    GetItemAmountRate: 1

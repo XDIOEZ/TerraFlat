@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cb8d8e46a05024d41a9c51244b099006, type: 3}
-  m_Name: "\u6F6E\u6E7F"
+  m_Name: "\u8865\u6C34"
   m_EditorClassIdentifier: 
   buff_ID: "\u6F6E\u6E7F"
   buff_Name: "\u6F6E\u6E7F"
@@ -56,7 +56,7 @@ MonoBehaviour:
             AdditiveModifier: 0
             MultiplicativeModifier: 1
             FinalAdditive: 0
-          Water: 0
+          Water: 1
           Max_Water:
             BaseValue: 1
             BaseAdditive: 0

@@ -92,6 +92,27 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     [Tooltip("ReplaceTop：替换最顶层 TileData\nAddLayer：在顶部增加一层河流 TileData")]
     public RiverWriteMode writeMode = RiverWriteMode.ReplaceTop;
 
+    [Header("河流深度")]
+    [Tooltip("河流边缘最浅深度（0~1）")]
+    [Range(0f, 1f)]
+    public float riverDepthMin = 0.15f;
+
+    [Tooltip("主河道最深深度（0~1）")]
+    [Range(0f, 1f)]
+    public float riverDepthMax = 0.95f;
+
+    [Tooltip("深度曲线指数：>1 更强调中心深度，<1 整体更深")]
+    [Range(0.2f, 4f)]
+    public float riverDepthPower = 1.35f;
+
+    [Header("河流宽度曲线")]
+    [Tooltip("是否复用深度曲线指数控制河流宽度分布")]
+    public bool useDepthPowerForWidth = true;
+
+    [Tooltip("宽度曲线指数：>1 细支流更多，<1 整体更宽（仅在不复用深度指数时生效）")]
+    [Range(0.2f, 4f)]
+    public float riverWidthPower = 1.35f;
+
     #region 石头生成（河床/河岸）
     [Header("河床/河岸石头")]
     [Tooltip("是否在生成河流后，额外在河内与河两侧生成石头")]
@@ -266,7 +287,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                     continue;
 
                 Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
-                ApplyRiverAt(worldPos);
+                ApplyRiverAt(worldPos, x, y, width, height, river);
                 appliedCount++;
             }
         }
@@ -382,7 +403,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                 {
                     // 宽度随机变化：用噪声在 [ewMin, ewMax] 插值
                     float w = Mathf.PerlinNoise(world.x * twNF + seedX + 211.7f, world.y * twNF + seedY + 97.3f);
-                    ewLocal = Mathf.Lerp(ewMin, ewMax, w);
+
+                    float widthPower = Mathf.Max(0.2f, useDepthPowerForWidth ? riverDepthPower : riverWidthPower);
+                    float wShaped = Mathf.Pow(Mathf.Clamp01(w), widthPower);
+
+                    ewLocal = Mathf.Lerp(ewMin, ewMax, wShaped);
                 }
 
                 river[idx] = minEdge <= ewLocal;
@@ -762,7 +787,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     #endregion
 
     #region 写入
-    private void ApplyRiverAt(Vector2Int worldPos)
+    private void ApplyRiverAt(Vector2Int worldPos, int localX, int localY, int width, int height, bool[] riverMask)
     {
         // 海水（salt=80）不覆盖：避免河流/石头刷进海里
         if (IsSeaWaterAt(worldPos))
@@ -778,6 +803,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         }
 
         waterTile.salt = 0f;
+        waterTile.deepValue = ComputeRiverDepth(localX, localY, width, height, riverMask);
 
         // 2) 设置位置
         riverTile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
@@ -801,7 +827,9 @@ public class ChunkGenerator_River : ChunkGeneratorBase
 
                     // 用更新后的 env 初始化 TileData
                     riverTile.Initialize_Env(env);
-                    waterTile.deepValue += 0.5f; // 河流更深一些
+
+                    // 河流深度由河道强度决定：主河道更深，边缘更浅
+                    waterTile.deepValue = ComputeRiverDepth(localX, localY, width, height, riverMask);
                 }
             }
             else
@@ -844,6 +872,44 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         }
 
         targetTilemap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), unityTileBase);
+    }
+
+    private float ComputeRiverDepth(int x, int y, int width, int height, bool[] riverMask)
+    {
+        int riverCells = 0;
+        int sampled = 0;
+
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int nx = x + dx;
+            if (nx < 0 || nx >= width)
+                continue;
+
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                int ny = y + dy;
+                if (ny < 0 || ny >= height)
+                    continue;
+
+                sampled++;
+                if (riverMask[Index(nx, ny, width)])
+                    riverCells++;
+            }
+        }
+
+        float strength = sampled > 0 ? (float)riverCells / sampled : 0f;
+        float t = Mathf.Pow(Mathf.Clamp01(strength), Mathf.Max(0.2f, riverDepthPower));
+
+        float minDepth = Mathf.Clamp01(riverDepthMin);
+        float maxDepth = Mathf.Clamp01(riverDepthMax);
+        if (minDepth > maxDepth)
+        {
+            float tmp = minDepth;
+            minDepth = maxDepth;
+            maxDepth = tmp;
+        }
+
+        return Mathf.Lerp(minDepth, maxDepth, t);
     }
     #endregion
 }

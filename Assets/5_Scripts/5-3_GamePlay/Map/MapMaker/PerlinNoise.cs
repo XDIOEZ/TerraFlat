@@ -23,13 +23,15 @@ public class PerlinNoise : BaseNoise
         float amplitude = 1;
         float frequency = this.frequency;
         float maxValue = 0; // 用于归一化结果到[0,1]
+        float scaledX = x * coordScale;
+        float scaledY = y * coordScale;
 
         // 叠加多个octave增强细节
         for (int i = 0; i < octaves; i++)
         {
             // 结合种子偏移和随机种子，实现不同种子的噪声变化
-            float sampleX = x * frequency + (seed) * 0.1f;
-            float sampleY = y * frequency + (seed) * 0.1f;
+            float sampleX = scaledX * frequency + (seed) * 0.1f;
+            float sampleY = scaledY * frequency + (seed) * 0.1f;
 
             // Perlin噪声原生返回值范围是[0,1]
             float noiseValue = Mathf.PerlinNoise(sampleX, sampleY);

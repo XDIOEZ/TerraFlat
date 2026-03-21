@@ -16,6 +16,11 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
     [Tooltip("不填则自动使用 Map 上的 ChunkGenerator_Land.biomes")]
     public System.Collections.Generic.List<BiomeData> biomes;
 
+    [Header("生成控制")]
+    [Tooltip("全局实例化倍率（0.1 约等于原生成量的10%）")]
+    [Range(0f, 1f)]
+    public float globalSpawnMultiplier = 1f;
+
     [Header("调试")]
     public bool logSummary = true;
     #endregion
@@ -75,7 +80,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
                 if (biome == null)
                     continue;
 
-                spawnedCount += GenerateResourcesForBiome(Map, worldPos, biome, env);
+                spawnedCount += GenerateResourcesForBiome(Map, worldPos, biome, env, globalSpawnMultiplier);
             }
         }
 
@@ -120,10 +125,12 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
     #endregion
 
     #region 资源生成逻辑（从 ChunkGenerator_Land 提取）
-    private static int GenerateResourcesForBiome(Map map, Vector2Int worldPos, BiomeData biome, EnvironmentFactors env)
+    private static int GenerateResourcesForBiome(Map map, Vector2Int worldPos, BiomeData biome, EnvironmentFactors env, float globalSpawnMultiplier)
     {
         if (biome == null || biome.TerrainConfig == null)
             return 0;
+
+        float spawnMultiplier = Mathf.Clamp01(globalSpawnMultiplier);
 
         // 初始化伪随机数生成器（使用坐标作为种子，确保同一位置生成结果一致）
         uint randomState = (uint)(worldPos.x * 114514 ^ worldPos.y * 1919810);
@@ -137,7 +144,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         {
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
-                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, env, biome.BiomeName))
+                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, env, biome.BiomeName, spawnMultiplier))
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
             }
         }
@@ -148,7 +155,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         {
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
-                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, env, biome.BiomeName))
+                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, env, biome.BiomeName, spawnMultiplier))
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
             }
         }
@@ -162,7 +169,8 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         Vector2 spawnPos,
         ref uint randomState,
         EnvironmentFactors env,
-        string biomeName)
+        string biomeName,
+        float globalSpawnMultiplier)
     {
         if (spawn == null)
             return false;
@@ -178,8 +186,12 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             return false;
 
         // 2. 概率检查
+        float effectiveChance = Mathf.Clamp01(spawn.SpawnChance * globalSpawnMultiplier);
+        if (effectiveChance <= 0f)
+            return false;
+
         float randomValue = (Xorshift32(ref randomState) & 0xFFFFFF) / (float)0x1000000;
-        if (randomValue > spawn.SpawnChance)
+        if (randomValue > effectiveChance)
             return false;
 
         int count = Mathf.Max(1, spawn.itemCount);

@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+[System.Serializable]
 public class Inventory_Hand : Inventory
 {
     public float GetItemAmountRate = 1;

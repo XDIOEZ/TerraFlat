@@ -59,7 +59,7 @@ public class Mod_Scene : Module
         _data.ReadData(ref Data);
 
         var mod_Building = item.itemMods.GetMod_ByID(ModText.Building) as Mod_Building;
-        var Interacter = item.itemMods.GetMod_ByID(ModText.Interact) as Mod_Interaction;
+        var Interacter = item.itemMods.GetMod_ByID(ModText.Interact) as Mod_InteractReciver;
 
         Interacter.OnAction_Start += Interact;
 

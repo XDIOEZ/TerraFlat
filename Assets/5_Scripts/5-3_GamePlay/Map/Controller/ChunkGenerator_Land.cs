@@ -38,6 +38,13 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     [Header("调试设置")]
     [Tooltip("是否在屏幕上用颜色块可视化各个格子的生物群系分布")]
     public bool showBiomeOverlay = false;
+
+    [Header("高度二次强化")]
+    [Tooltip("开启后二次强化地形高度：高的更高，低的更低")]
+    public bool enableHeightSecondaryBoost = false;
+    [Tooltip("二次强化强度，0=关闭效果，1=明显强化")]
+    [Range(0f, 2f)]
+    public float heightSecondaryBoostStrength = 1f;
     #endregion
 
     #region 只读属性
@@ -303,6 +310,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         float precipitation = countPrecipitation > 0 ? (sumPrecipitation / countPrecipitation) : defaultValue;
         float solidity = countSolidity > 0 ? (sumSolidity / countSolidity) : defaultValue;
         float height = countHeight > 0 ? (sumHeight / countHeight) : defaultValue;
+        height = ApplyHeightSecondaryBoost(height);
 
         if (countHeight == 0 && !_hasLoggedMissingLandNoise)
         {
@@ -318,6 +326,19 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             Solidity = Mathf.Clamp01(solidity),
             Hight = Mathf.Clamp01(height)
         };
+    }
+
+    private float ApplyHeightSecondaryBoost(float height)
+    {
+        if (!enableHeightSecondaryBoost)
+            return Mathf.Clamp01(height);
+
+        float h = Mathf.Clamp01(height);
+        float d = h - 0.5f;
+
+        // 二次项强化：中心附近变化小，两端变化更明显
+        float boosted = h + Mathf.Sign(d) * d * d * 4f * Mathf.Max(0f, heightSecondaryBoostStrength);
+        return Mathf.Clamp01(boosted);
     }
 
 

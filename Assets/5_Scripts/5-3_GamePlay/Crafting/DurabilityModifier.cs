@@ -10,7 +10,7 @@ public class DurabilityModifier : CraftingAction
     public override void Apply(IInventory inventory)
     {
         // 修改为遍历获取inventory.InventoryRefDic[InventoryName].Data.itemSlots 中Tag为lostDurabilityItemTag的ItemData 并消耗其耐久
-        Inventory targetInventory = inventory.InventoryRefDic[InventoryName];
+        Inventory targetInventory = inventory.GetDefaultTargetInventory();
         if (targetInventory == null || targetInventory.Data == null || targetInventory.Data.itemSlots == null)
         {
             Debug.LogWarning("DurabilityModifier: 目标库存为空或未初始化");

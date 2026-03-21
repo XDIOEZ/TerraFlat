@@ -11,7 +11,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     /// <summary>
     /// 槽位索引（替代对Data的直接引用）
     /// </summary>
-    private int slotIndex = -1;
+    public int slotIndex = -1;
 
     [Tooltip("显示当前物体的图标")]
     public Image image;
@@ -22,11 +22,12 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     [Tooltip("物体被点击的事件（左键）")]
     public UltEvent<int> OnLeftClick = new UltEvent<int>();
 
-    public UltEvent<int,float> _OnScroll = new UltEvent<int, float>();
+    public UltEvent<int, float> _OnScroll = new UltEvent<int, float>();
 
     public UltEvent<int> OnRightClick = new UltEvent<int>();
 
     private GameObject currentMenuInstance;
+
 
     private bool isPointerOver = false;
 
@@ -128,14 +129,13 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     private void HandleScrollUp()
     {
         Debug.Log("滚轮向上：执行你定义的行为（如增加选择数量）");
-        // TODO: 自定义行为
         _OnScroll.Invoke(slotIndex, 1);
     }
 
     private void HandleScrollDown()
     {
         Debug.Log("滚轮向下：执行你定义的行为（如减少选择数量）");
-        // TODO: 自定义行为
+
         _OnScroll.Invoke(slotIndex, -1);
     }
     #endregion
@@ -168,7 +168,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     private void UpdateItemAmount()
     {
         ItemSlot slotData = GetSlotData();
-        
+
         if (slotData == null || IsItemSlotEmpty(slotData))
         {
             text.enabled = false;
@@ -198,7 +198,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     private void UpdateItemIcon()
     {
         ItemSlot slotData = GetSlotData();
-        
+
         if (slotData == null || slotData.itemData == null || string.IsNullOrEmpty(slotData.itemData.IDName))
         {
             image.gameObject.SetActive(false);

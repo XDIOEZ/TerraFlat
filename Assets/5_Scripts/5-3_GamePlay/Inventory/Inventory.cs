@@ -9,37 +9,37 @@ using UnityEngine.InputSystem;
 public class Inventory
 {
     #region 字段和属性
-    [ReadOnly]
-    //物品所有者
-    public Item item;
-    //物品槽预制体
-    GameObject ItemSlot_Prefab;
-    //Inventory面板Prefab
-    [Tooltip("在Inspector中设置对应Inventory的面板预制体")]
-    public GameObject InventoryPanel_Prefab;
-    //物品槽的父物体
-    Transform ItemSlot_Parent;
-    //数据
-    public Inventory_Data Data;
-    //UI列表
-    [ReadOnly]
-    public List<ItemSlot_UI> itemSlot_UI = new List<ItemSlot_UI>();
 
-    [Header("默认交互Inventory")] //默认交互Inventory
+    [FoldoutGroup("基础引用"), ReadOnly, LabelText("所属物品")]
+    public Item item;
+
+    [FoldoutGroup("基础引用"), LabelText("UI面板预制体"), Tooltip("在Inspector中设置对应Inventory的面板预制体")]
+    public GameObject InventoryPanel_Prefab;
+
+    [FoldoutGroup("基础引用"), ReadOnly, LabelText("当前面板"), Tooltip("外部自动注入")]
+    public BasePanel basePanel;
+
+    [FoldoutGroup("数据"), LabelText("库存数据")]
+    public Inventory_Data Data;
+
+    [FoldoutGroup("数据"), LabelText("默认交互库存")]
     public Inventory DefaultTarget_Inventory;
 
-    // UI 开关按键绑定字段，让策划可以在编辑器中设置
-    [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
-    public string ToggleActionName => Data.ToggleActionName;
+    [FoldoutGroup("数据"), ShowInInspector, ReadOnly, LabelText("UI开关按键"), Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
+    public string ToggleActionName => Data?.ToggleActionName;
 
-    [Tooltip("外部自动注入")]
-    [ReadOnly]
-    public BasePanel basePanel;
+    [FoldoutGroup("UI"), ReadOnly, LabelText("物品槽UI")]
+    public List<ItemSlot_UI> itemSlot_UI = new List<ItemSlot_UI>();
+
+    // 运行时赋值，不序列化
+    GameObject ItemSlot_Prefab;
+    Transform ItemSlot_Parent;
 
     // 输入绑定缓存，便于之后解除绑定
     private GameController _boundController;
     private InputAction _boundToggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
+
     #endregion
 
     #region 生命周期
@@ -106,7 +106,7 @@ public class Inventory
         // 记录回调与 Action，便于之后解绑
         _toggleCallback = ctx =>
         {
-            InventoryAction();
+            SwitchUI();
         };
 
         action.performed += _toggleCallback;
@@ -135,14 +135,14 @@ public class Inventory
     #endregion
 
     #region 面板开关
-    public virtual void InventoryAction()
+    public virtual void SwitchUI()
     {
         // 确保面板已创建
         if (basePanel == null)
         {
             if (!EnsurePanelCreated())
             {
-                Debug.LogError("[Inventory.InventoryAction] EnsurePanelCreated 失败，取消切换");
+                Debug.LogError("[Inventory.SwitchUI] EnsurePanelCreated 失败，取消切换");
                 return;
             }
             basePanel.Open();
@@ -265,8 +265,6 @@ public class Inventory
             Debug.LogError("Prefab_BasePanel 未设置,请在Inspector中的Mod_Inventory中设置对应Inventory的面板预制体");
             return;
         }
-
-        //TODO 获取BasePanel上的UI_Content组件作为Slot的父物体
         ItemSlot_Parent = basePanel.transform.GetComponentInChildren<UI_Content>().transform;
 
         if (ItemSlot_Parent == null)
@@ -388,6 +386,64 @@ public class Inventory
         }
     }
 
+    public void BindSlotUI(ItemSlot_UI slotUI, int bindIndex = -1)
+    {
+        if (slotUI == null)
+        {
+            Debug.LogError("[Inventory.BindSlotUI] slotUI 为空");
+            return;
+        }
+
+        if (Data == null || Data.itemSlots == null || Data.itemSlots.Count == 0)
+        {
+            Debug.LogError("[Inventory.BindSlotUI] Data 无效或没有可绑定的槽位");
+            return;
+        }
+
+        if (bindIndex == -1)
+            bindIndex = 0;
+
+        int fixedIndex = Mathf.Clamp(bindIndex, 0, Data.itemSlots.Count - 1);
+
+        RegisterSlotUI(slotUI, fixedIndex);
+
+        slotUI.InitializeSlot(
+            fixedIndex,
+            index => index < 0 ? Data.itemSlots[fixedIndex] : Data.GetItemSlot(index),
+            index =>
+            {
+                int targetIndex = index < 0 ? fixedIndex : index;
+                ItemSlot targetSlot = Data.GetItemSlot(targetIndex);
+                Data.RemoveItemAll(targetSlot, targetIndex);
+            });
+
+        slotUI.OnLeftClick.Clear();
+        slotUI._OnScroll.Clear();
+        slotUI.OnRightClick.Clear();
+
+        slotUI.OnLeftClick += OnLeftClick;
+        slotUI._OnScroll += OnScroll;
+
+        slotUI.RefreshUI();
+    }
+
+    private void RegisterSlotUI(ItemSlot_UI slotUI, int bindIndex)
+    {
+        if (bindIndex < itemSlot_UI.Count)
+        {
+            itemSlot_UI[bindIndex] = slotUI;
+            return;
+        }
+
+        if (bindIndex == itemSlot_UI.Count)
+        {
+            itemSlot_UI.Add(slotUI);
+            return;
+        }
+
+        Debug.LogError($"[Inventory.BindSlotUI] UI注册顺序错误，当前列表长度: {itemSlot_UI.Count}，尝试注册索引: {bindIndex}");
+    }
+
     // 当物品槽数据发生变化时的回调
     private void OnItemSlotChanged(ItemSlot slot)
     {
@@ -448,10 +504,7 @@ public class Inventory
 
     public void RefreshUI(int index)
     {
-        if (index >= 0 && index < itemSlot_UI.Count)
-        {
-            itemSlot_UI[index].RefreshUI();
-        }
+        itemSlot_UI[index].RefreshUI();
     }
 
     public void RefreshUI()
@@ -464,7 +517,7 @@ public class Inventory
 
     public virtual void Interact_Start(Item item_)
     {
-        InventoryAction();
+        SwitchUI();
     }
 
     #endregion
@@ -497,45 +550,14 @@ public class Inventory
     {
         ItemSlot slot = Data.GetItemSlot(index);
 
-        //防御性检查：确保DefaultTarget_Inventory不为null
-        if (DefaultTarget_Inventory == null)
-        {
-            Debug.LogWarning($"[{Data.Name}] 手部为空：DefaultTarget_Inventory未设置 ,点击了 [{index}]");
-            return;
-        }
-
-        //防御性检查：确保DefaultTarget_Inventory的Data不为null
-        if (DefaultTarget_Inventory.Data == null)
-        {
-            Debug.LogWarning($"[{Data.Name}] 手部为空：DefaultTarget_Inventory.Data未设置");
-            return;
-        }
-
         //默认为手部
         if (DefaultTarget_Inventory.Data.itemSlots.Count > index)
         {
-            //额外检查：确保目标槽位存在且不为null
-            if (DefaultTarget_Inventory.Data.itemSlots[index] == null)
-            {
-                Debug.LogWarning($"[{Data.Name}] 手部槽位 [{index}] 为空");
-            }
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
             DefaultTarget_Inventory.RefreshUI(index);
         }
         else
         {
-            //额外检查：确保默认槽位存在且不为null
-            if (DefaultTarget_Inventory.Data.itemSlots.Count == 0)
-            {
-                Debug.LogWarning($"[{Data.Name}] 手部物品槽列表为空");
-                return;
-            }
-
-            if (DefaultTarget_Inventory.Data.itemSlots[0] == null)
-            {
-                Debug.LogWarning($"[{Data.Name}] 默认手部槽位 [0] 为空");
-            }
-
             Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
             DefaultTarget_Inventory.RefreshUI(0);
         }
@@ -592,7 +614,7 @@ public class Inventory
 
     #region 编辑器功能
 
-    [Sirenix.OdinInspector.Button]
+    [Button("同步槽位数量")]
     public void SyncSlotCount()
     {
         Data.itemSlots.Clear();
@@ -684,7 +706,6 @@ public class Inventory
     /// <param name="prefabList">物品预制体列表</param>
     /// <param name="countList">对应物品数量列表</param>
     [Button("自动注入物品列表")]
-    [LabelText("自动注入物品列表")]
     public void AutoInjectItemDataList(
         [LabelText("物品预制体列表")] List<GameObject> prefabList,
         [LabelText("数量列表")] List<int> countList)
@@ -771,10 +792,9 @@ public class Inventory
 
     // 重载方法：支持统一数量
     [Button("自动注入物品列表(统一数量)")]
-    [LabelText("自动注入物品列表(统一数量)")]
     public void AutoInjectItemDataList(
         [LabelText("物品预制体列表")] List<GameObject> prefabList,
-        [LabelText("统一数量")][MinValue(1)] int uniformCount = 1)
+        [LabelText("统一数量"), MinValue(1)] int uniformCount = 1)
     {
         if (prefabList == null)
         {
