@@ -277,7 +277,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             SpawnStones_ForRiver(width, height, startPos, river);
         }
 
-        Debug.Log($"[ChunkGenerator_River] ✅ 河流遮罩生成完成（网络噪声/Voronoi边界），覆盖格子数: {appliedCount}", Map);
+//        Debug.Log($"[ChunkGenerator_River] ✅ 河流遮罩生成完成（网络噪声/Voronoi边界），覆盖格子数: {appliedCount}", Map);
     }
     #endregion
 
