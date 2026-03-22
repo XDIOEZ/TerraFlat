@@ -18,6 +18,8 @@ public class Mod_InteractSender : Module
     public List<string> RawData = new List<string>();
     public Collider2D interactCollider;
     public GameController gameController;
+    public List<Mod_InteractReciver> receiversInRange = new List<Mod_InteractReciver>();
+    public Mod_InteractReciver currentReceiver;
     public override void Load()
     {
         ModSaveData.ReadData(ref RawData);
@@ -72,21 +74,66 @@ public class Mod_InteractSender : Module
         if (interactCollider == null)
             return;
 
-        interactCollider.enabled = false;
+        TryDisableCollider();
     }
 
     private void OnDisable()
     {
         UnbindInput();
-
-        if (interactCollider != null)
-            interactCollider.enabled = false;
+        StopCurrentInteraction();
+        receiversInRange.Clear();
+        TryDisableCollider(force: true);
     }
 
     private void OnDestroy()
     {
         UnbindInput();
+        StopCurrentInteraction();
+        receiversInRange.Clear();
     }
+    #endregion
+
+
+    #region 交互流程
+
+    private void StartInteraction(Mod_InteractReciver receiver)
+    {
+        if (receiver == null)
+            return;
+
+        if (currentReceiver != null && currentReceiver != receiver)
+            currentReceiver.Interact_Cancel(item);
+
+        currentReceiver = receiver;
+        currentReceiver.Interact_Start(item);
+    }
+
+    private void StopCurrentInteraction()
+    {
+        if (currentReceiver == null)
+            return;
+
+        currentReceiver.Interact_Cancel(item);
+        currentReceiver = null;
+    }
+
+    private void TryDisableCollider(bool force = false)
+    {
+        if (interactCollider == null)
+            return;
+
+        if (force)
+        {
+            interactCollider.enabled = false;
+            return;
+        }
+
+        if (currentReceiver != null || receiversInRange.Count > 0)
+            return;
+
+        interactCollider.enabled = false;
+    }
+
     #endregion
 
 
@@ -98,9 +145,42 @@ public class Mod_InteractSender : Module
             return;
 
         var receiver = other.GetComponent<Mod_InteractReciver>();
-        if (receiver != null)
-        {
-            receiver.Interact_Start(item);
-        }
+        if (receiver == null)
+            return;
+
+        if (!receiversInRange.Contains(receiver))
+            receiversInRange.Add(receiver);
+
+        StartInteraction(receiver);
+    }
+
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        if (interactCollider == null || !interactCollider.enabled)
+            return;
+
+        var receiver = other.GetComponent<Mod_InteractReciver>();
+        if (receiver == null)
+            return;
+
+        if (!receiversInRange.Contains(receiver))
+            receiversInRange.Add(receiver);
+
+        if (currentReceiver != receiver)
+            StartInteraction(receiver);
+    }
+
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        var receiver = other.GetComponent<Mod_InteractReciver>();
+        if (receiver == null)
+            return;
+
+        receiversInRange.Remove(receiver);
+
+        if (currentReceiver == receiver)
+            StopCurrentInteraction();
+
+        TryDisableCollider();
     }
 }

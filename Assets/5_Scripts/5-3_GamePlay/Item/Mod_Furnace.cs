@@ -25,6 +25,8 @@ public class Mod_Furnace : Module
     public BasePanel basePanel; // 熔炉面板
     public Mod_InteractReciver mod_InteractReciver; // 交互接收模块
     public GameObject UI_Prefab; // 熔炉UI预制体
+    private const float PanelDestroyDelay = 30f;
+    private Coroutine panelDestroyCoroutine;
     #endregion
 
     #region 生命周期
@@ -35,6 +37,7 @@ public class Mod_Furnace : Module
         mod_Fuel = item.GetComponentInChildren<Mod_Fuel>();
         ModSaveData.ReadData(ref RawData);
         mod_InteractReciver.OnAction_Start += OnPlayerInteract;
+        mod_InteractReciver.OnAction_Stop += OnPlayerInteractCancel;
         InputInventory.InitData();
         OutputInventory.InitData();
         FuelInventory.InitData();
@@ -46,6 +49,8 @@ public class Mod_Furnace : Module
         {
             OpenUI();
         }
+
+        CancelPanelDestroyCountdown();
         basePanel.Toggle();
         
         var handInv = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
@@ -59,10 +64,68 @@ public class Mod_Furnace : Module
         OutputInventory.DefaultTarget_Inventory = handInv;
         FuelInventory.DefaultTarget_Inventory = handInv;
     }
+
+    void OnPlayerInteractCancel(Item playerItem)
+    {
+        if (basePanel == null)
+            return;
+
+        basePanel.Close();
+        StartPanelDestroyCountdown();
+    }
+
     public override void Save()
     {
         ModSaveData.WriteData(RawData);
     }
+
+    private void OnDestroy()
+    {
+        CancelPanelDestroyCountdown();
+
+        if (mod_InteractReciver != null)
+        {
+            mod_InteractReciver.OnAction_Start -= OnPlayerInteract;
+            mod_InteractReciver.OnAction_Stop -= OnPlayerInteractCancel;
+        }
+    }
+
+    #region 面板延迟销毁
+
+    private void StartPanelDestroyCountdown()
+    {
+        CancelPanelDestroyCountdown();
+        panelDestroyCoroutine = StartCoroutine(CoDestroyPanelAfterDelay());
+    }
+
+    private void CancelPanelDestroyCountdown()
+    {
+        if (panelDestroyCoroutine == null)
+            return;
+
+        StopCoroutine(panelDestroyCoroutine);
+        panelDestroyCoroutine = null;
+    }
+
+    private IEnumerator CoDestroyPanelAfterDelay()
+    {
+        yield return new WaitForSeconds(PanelDestroyDelay);
+
+        if (basePanel != null && !basePanel.IsOpen())
+        {
+            basePanel.Destroy();
+            basePanel = null;
+            WorkButton = null;
+            progressSlider = null;
+            fuelSlider = null;
+            temperatureSlider = null;
+            TemperatureText = null;
+        }
+
+        panelDestroyCoroutine = null;
+    }
+
+    #endregion
     #endregion
     public Button WorkButton;
 
