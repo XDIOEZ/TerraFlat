@@ -59,6 +59,7 @@ public class Mover_AI : Mover
       //TODO 通过监听HasReachedTarget参数执行Move行动
         if(CanMove == false)
         {
+            if (aiPath != null) aiPath.isStopped = true;
             return;
         }
 

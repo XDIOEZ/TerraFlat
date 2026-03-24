@@ -1,4 +1,4 @@
-ï»¿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.Linq;
 #if UNITY_EDITOR
@@ -8,98 +8,98 @@ using UnityEngine;
 
 public class Mod_ItemDetector : Module
 {
-    #region æ£€æµ‹å‚æ•°
-    [SerializeField, BoxGroup("æ£€æµ‹å‚æ•°")]
-    public float detectionRadius = 10f; // æ£€æµ‹åŠå¾„
+    #region ¼ì²â²ÎÊı
+    [SerializeField, BoxGroup("¼ì²â²ÎÊı")]
+    public float detectionRadius = 10f; // ¼ì²â°ë¾¶
 
-    [SerializeField, BoxGroup("æ£€æµ‹å‚æ•°")]
-    public LayerMask itemLayer; // ç‰©å“æ‰€åœ¨çš„å±‚çº§
+    [SerializeField, BoxGroup("¼ì²â²ÎÊı")]
+    public LayerMask itemLayer; // ÎïÆ·ËùÔÚµÄ²ã¼¶
     #endregion
 
-    #region å½“å‰çŠ¶æ€
-    [SerializeField, BoxGroup("å½“å‰çŠ¶æ€")]
-    private List<Item> currentItemsInArea = new List<Item>(); // å½“å‰åŒºåŸŸå†…çš„ç‰©å“åˆ—è¡¨
+    #region µ±Ç°×´Ì¬
+    [SerializeField, BoxGroup("µ±Ç°×´Ì¬")]
+    private List<Item> currentItemsInArea = new List<Item>(); // µ±Ç°ÇøÓòÄÚµÄÎïÆ·ÁĞ±í
 
-    [Tooltip("å½“å‰çŠ¶æ€")]
-    public int CurrentItemCount => CurrentItemsInArea.Count; // å½“å‰åŒºåŸŸå†…ç‰©å“æ•°é‡
+    [Tooltip("µ±Ç°×´Ì¬")]
+    public int CurrentItemCount => CurrentItemsInArea.Count; // µ±Ç°ÇøÓòÄÚÎïÆ·ÊıÁ¿
 
-    [Tooltip("stringä¸ºtag,Itemåˆ—è¡¨ä¸ºValueçš„å­—å…¸")]
+    [Tooltip("stringÎªtag,ItemÁĞ±íÎªValueµÄ×Öµä")]
     [ShowInInspector]
-    public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>(); // æ ‡ç­¾ä¸ç‰©å“åˆ—è¡¨çš„æ˜ å°„å­—å…¸
+    public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>(); // ±êÇ©ÓëÎïÆ·ÁĞ±íµÄÓ³Éä×Öµä
     #endregion
 
-    #region å±æ€§å’Œå­—æ®µ
-    public bool DebugMode { get; set; } = false; // æ˜¯å¦å¯ç”¨è°ƒè¯•æ¨¡å¼
+    #region ÊôĞÔºÍ×Ö¶Î
+    public bool DebugMode { get; set; } = false; // ÊÇ·ñÆôÓÃµ÷ÊÔÄ£Ê½
 
-    public List<Item> CurrentItemsInArea // å½“å‰åŒºåŸŸå†…çš„ç‰©å“åˆ—è¡¨å±æ€§
+    public List<Item> CurrentItemsInArea // µ±Ç°ÇøÓòÄÚµÄÎïÆ·ÁĞ±íÊôĞÔ
     {
         get => currentItemsInArea;
         set => currentItemsInArea = value;
     }
 
-    public float DetectionRadius // æ£€æµ‹åŠå¾„å±æ€§
+    public float DetectionRadius // ¼ì²â°ë¾¶ÊôĞÔ
     {
         get => detectionRadius;
         set => detectionRadius = value;
     }
 
-    public Ex_ModData_MemoryPackable ModData; // æ¨¡å—æ•°æ®
+    public Ex_ModData_MemoryPackable ModData; // Ä£¿éÊı¾İ
 
-    public override ModuleData _Data // é‡å†™çš„æ¨¡å—æ•°æ®å±æ€§
+    public override ModuleData _Data // ÖØĞ´µÄÄ£¿éÊı¾İÊôĞÔ
     {
         get => ModData;
         set => ModData = (Ex_ModData_MemoryPackable)value;
     }
     #endregion
 
-    #region å…¬å…±æ–¹æ³•
-    [Button("å¼ºåˆ¶æ›´æ–°æ£€æµ‹å™¨")]
+    #region ¹«¹²·½·¨
+    [Button("Ç¿ÖÆ¸üĞÂ¼ì²âÆ÷")]
     /// <summary>
-    /// å¼ºåˆ¶æ›´æ–°æ£€æµ‹å™¨ï¼Œé‡æ–°æ‰«æå½“å‰åŒºåŸŸå†…çš„ç‰©å“
+    /// Ç¿ÖÆ¸üĞÂ¼ì²âÆ÷£¬ÖØĞÂÉ¨Ãèµ±Ç°ÇøÓòÄÚµÄÎïÆ·
     /// </summary>
     public void Update_Detector()
     {
         if (DebugMode)
-            Debug.Log($"<color=yellow>=== å¼€å§‹æ£€æµ‹ï¼ˆä½ç½®ï¼š{transform.position}ï¼ŒåŠå¾„ï¼š{DetectionRadius}ï¼‰===</color>");
+            Debug.Log($"<color=yellow>=== ¿ªÊ¼¼ì²â£¨Î»ÖÃ£º{transform.position}£¬°ë¾¶£º{DetectionRadius}£©===</color>");
 
-        // è·å–æ£€æµ‹èŒƒå›´å†…çš„æ‰€æœ‰ç¢°æ’ä½“
+        // »ñÈ¡¼ì²â·¶Î§ÄÚµÄËùÓĞÅö×²Ìå
         Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position, DetectionRadius, itemLayer);
 
-        // è½¬æ¢ä¸ºç‰©å“åˆ—è¡¨å¹¶æ’é™¤è‡ªèº«
+        // ×ª»»ÎªÎïÆ·ÁĞ±í²¢ÅÅ³ı×ÔÉí
         List<Item> currentItems = hitColliders
             .Select(col => col.GetComponent<Item>())
-            .Where(item => item != null && item != this.item) // æ’é™¤è‡ªå·±
+            .Where(item => item != null && item != this.item) // ÅÅ³ı×Ô¼º
             .Distinct()
             .ToList();
 
-        // æ¸…ç©ºç°æœ‰æ•°æ®
+        // Çå¿ÕÏÖÓĞÊı¾İ
         Type_Tag_Item_Dict.Clear();
         CurrentItemsInArea.Clear();
 
-        // é‡å»ºæ ‡ç­¾æ˜ å°„å­—å…¸
+        // ÖØ½¨±êÇ©Ó³Éä×Öµä
         foreach (var item in currentItems)
         {
-            foreach (var tag in item.itemData.Tags.TypeTag.values)
+            foreach (var tag in item.itemData.Tags)
             {
-                // å¦‚æœæ ‡ç­¾ä¸å­˜åœ¨ï¼Œåˆ›å»ºæ–°çš„åˆ—è¡¨
+                // Èç¹û±êÇ©²»´æÔÚ£¬´´½¨ĞÂµÄÁĞ±í
                 if (!Type_Tag_Item_Dict.ContainsKey(tag))
                 {
                     Type_Tag_Item_Dict[tag] = new List<Item>();
                 }
-                // å°†ç‰©å“æ·»åŠ åˆ°å¯¹åº”æ ‡ç­¾çš„åˆ—è¡¨ä¸­
+                // ½«ÎïÆ·Ìí¼Óµ½¶ÔÓ¦±êÇ©µÄÁĞ±íÖĞ
                 Type_Tag_Item_Dict[tag].Add(item);
             }
         }
 
-        // æ£€æŸ¥ç‰©å“å˜åŒ–
+        // ¼ì²éÎïÆ·±ä»¯
         CheckItemEntries(currentItems);
     }
 
     /// <summary>
-    /// æ ¹æ®æ ‡ç­¾è·å–ç‰©å“åˆ—è¡¨
+    /// ¸ù¾İ±êÇ©»ñÈ¡ÎïÆ·ÁĞ±í
     /// </summary>
-    /// <param name="tag">è¦æŸ¥è¯¢çš„æ ‡ç­¾</param>
-    /// <returns>å…·æœ‰æŒ‡å®šæ ‡ç­¾çš„ç‰©å“åˆ—è¡¨ï¼Œå¦‚æœæ ‡ç­¾ä¸å­˜åœ¨åˆ™è¿”å›ç©ºåˆ—è¡¨</returns>
+    /// <param name="tag">Òª²éÑ¯µÄ±êÇ©</param>
+    /// <returns>¾ßÓĞÖ¸¶¨±êÇ©µÄÎïÆ·ÁĞ±í£¬Èç¹û±êÇ©²»´æÔÚÔò·µ»Ø¿ÕÁĞ±í</returns>
     public List<Item> GetItemsByTag(string tag)
     {
         if (Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> items))
@@ -110,10 +110,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// æ ¹æ®å¤šä¸ªæ ‡ç­¾è·å–ç‰©å“åˆ—è¡¨ï¼ˆå¹¶é›†ï¼‰
+    /// ¸ù¾İ¶à¸ö±êÇ©»ñÈ¡ÎïÆ·ÁĞ±í£¨²¢¼¯£©
     /// </summary>
-    /// <param name="tags">è¦æŸ¥è¯¢çš„æ ‡ç­¾åˆ—è¡¨</param>
-    /// <returns>å…·æœ‰ä»»ä¸€æŒ‡å®šæ ‡ç­¾çš„ç‰©å“åˆ—è¡¨</returns>
+    /// <param name="tags">Òª²éÑ¯µÄ±êÇ©ÁĞ±í</param>
+    /// <returns>¾ßÓĞÈÎÒ»Ö¸¶¨±êÇ©µÄÎïÆ·ÁĞ±í</returns>
     public List<Item> GetItemsByTags(List<string> tags)
     {
         HashSet<Item> result = new HashSet<Item>();
@@ -133,10 +133,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// æ ¹æ®æ ‡ç­¾è·å–ç¬¬ä¸€ä¸ªç‰©å“
+    /// ¸ù¾İ±êÇ©»ñÈ¡µÚÒ»¸öÎïÆ·
     /// </summary>
-    /// <param name="tag">è¦æŸ¥è¯¢çš„æ ‡ç­¾</param>
-    /// <returns>å…·æœ‰æŒ‡å®šæ ‡ç­¾çš„ç¬¬ä¸€ä¸ªç‰©å“ï¼Œå¦‚æœæ²¡æœ‰åˆ™è¿”å›null</returns>
+    /// <param name="tag">Òª²éÑ¯µÄ±êÇ©</param>
+    /// <returns>¾ßÓĞÖ¸¶¨±êÇ©µÄµÚÒ»¸öÎïÆ·£¬Èç¹ûÃ»ÓĞÔò·µ»Ønull</returns>
     public Item GetFirstItemByTag(string tag)
     {
         List<Item> items = GetItemsByTag(tag);
@@ -144,10 +144,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// æ ¹æ®ç‰©å“IDåç§°åˆ—è¡¨è·å–ç¬¬ä¸€ä¸ªç‰©å“
+    /// ¸ù¾İÎïÆ·IDÃû³ÆÁĞ±í»ñÈ¡µÚÒ»¸öÎïÆ·
     /// </summary>
-    /// <param name="itemIds">è¦æŸ¥è¯¢çš„ç‰©å“IDåç§°åˆ—è¡¨</param>
-    /// <returns>åŒ¹é…æŒ‡å®šIDåç§°çš„ç¬¬ä¸€ä¸ªç‰©å“ï¼Œå¦‚æœæ²¡æœ‰åˆ™è¿”å›null</returns>
+    /// <param name="itemIds">Òª²éÑ¯µÄÎïÆ·IDÃû³ÆÁĞ±í</param>
+    /// <returns>Æ¥ÅäÖ¸¶¨IDÃû³ÆµÄµÚÒ»¸öÎïÆ·£¬Èç¹ûÃ»ÓĞÔò·µ»Ønull</returns>
     public Item GetFirstItemByIdNamesFast(List<string> itemIds)
     {
         List<Item> items = GetItemsByIdNamesFast(itemIds);
@@ -155,19 +155,19 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// æ ¹æ®å¤šä¸ªæ ‡ç­¾è·å–ç‰©å“åˆ—è¡¨ï¼ˆäº¤é›†ï¼‰
+    /// ¸ù¾İ¶à¸ö±êÇ©»ñÈ¡ÎïÆ·ÁĞ±í£¨½»¼¯£©
     /// </summary>
-    /// <param name="tags">è¦æŸ¥è¯¢çš„æ ‡ç­¾åˆ—è¡¨</param>
-    /// <returns>åŒæ—¶å…·æœ‰æ‰€æœ‰æŒ‡å®šæ ‡ç­¾çš„ç‰©å“åˆ—è¡¨</returns>
+    /// <param name="tags">Òª²éÑ¯µÄ±êÇ©ÁĞ±í</param>
+    /// <returns>Í¬Ê±¾ßÓĞËùÓĞÖ¸¶¨±êÇ©µÄÎïÆ·ÁĞ±í</returns>
     public List<Item> GetItemsByTagsIntersection(List<string> tags)
     {
         if (tags == null || tags.Count == 0)
             return new List<Item>();
 
-        // è·å–ç¬¬ä¸€ä¸ªæ ‡ç­¾çš„ç‰©å“åˆ—è¡¨ä½œä¸ºåŸºç¡€
+        // »ñÈ¡µÚÒ»¸ö±êÇ©µÄÎïÆ·ÁĞ±í×÷Îª»ù´¡
         List<Item> result = GetItemsByTag(tags[0]);
 
-        // å¯¹äºåç»­æ ‡ç­¾ï¼Œåªä¿ç•™åŒæ—¶å­˜åœ¨äºæ‰€æœ‰æ ‡ç­¾ä¸­çš„ç‰©å“
+        // ¶ÔÓÚºóĞø±êÇ©£¬Ö»±£ÁôÍ¬Ê±´æÔÚÓÚËùÓĞ±êÇ©ÖĞµÄÎïÆ·
         for (int i = 1; i < tags.Count; i++)
         {
             List<Item> currentTagItems = GetItemsByTag(tags[i]);
@@ -178,23 +178,23 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// æ ¹æ®ç‰©å“IDåç§°åˆ—è¡¨è·å–ç‰©å“ï¼ˆé«˜æ€§èƒ½ç‰ˆæœ¬ï¼‰
+    /// ¸ù¾İÎïÆ·IDÃû³ÆÁĞ±í»ñÈ¡ÎïÆ·£¨¸ßĞÔÄÜ°æ±¾£©
     /// </summary>
-    /// <param name="itemIds">è¦æŸ¥è¯¢çš„ç‰©å“IDåç§°åˆ—è¡¨</param>
-    /// <returns>åŒ¹é…æŒ‡å®šIDåç§°çš„ç‰©å“åˆ—è¡¨</returns>
+    /// <param name="itemIds">Òª²éÑ¯µÄÎïÆ·IDÃû³ÆÁĞ±í</param>
+    /// <returns>Æ¥ÅäÖ¸¶¨IDÃû³ÆµÄÎïÆ·ÁĞ±í</returns>
     public List<Item> GetItemsByIdNamesFast(List<string> itemIds)
     {
         if (itemIds == null || itemIds.Count == 0)
             return new List<Item>();
 
-        // åˆ›å»ºIDåç§°çš„HashSetä»¥æé«˜æŸ¥æ‰¾æ•ˆç‡
+        // ´´½¨IDÃû³ÆµÄHashSetÒÔÌá¸ß²éÕÒĞ§ÂÊ
         HashSet<string> idSet = new HashSet<string>(itemIds);
         List<Item> result = new List<Item>();
 
-        // éå†æ‰€æœ‰å½“å‰æ£€æµ‹åˆ°çš„ç‰©å“
+        // ±éÀúËùÓĞµ±Ç°¼ì²âµ½µÄÎïÆ·
         foreach (Item item in CurrentItemsInArea)
         {
-            // ä½¿ç”¨HashSetå¿«é€Ÿæ£€æŸ¥æ˜¯å¦å­˜åœ¨
+            // Ê¹ÓÃHashSet¿ìËÙ¼ì²éÊÇ·ñ´æÔÚ
             if (idSet.Contains(item.itemData.IDName))
             {
                 result.Add(item);
@@ -205,75 +205,75 @@ public class Mod_ItemDetector : Module
     }
     #endregion
 
-    #region ç§æœ‰æ–¹æ³•
+    #region Ë½ÓĞ·½·¨
     /// <summary>
-    /// æ£€æŸ¥ç‰©å“è¿›å…¥å’Œç¦»å¼€çš„å˜åŒ–
+    /// ¼ì²éÎïÆ·½øÈëºÍÀë¿ªµÄ±ä»¯
     /// </summary>
-    /// <param name="currentItems">å½“å‰æ£€æµ‹åˆ°çš„ç‰©å“åˆ—è¡¨</param>
+    /// <param name="currentItems">µ±Ç°¼ì²âµ½µÄÎïÆ·ÁĞ±í</param>
     private void CheckItemEntries(List<Item> currentItems)
     {
         if (DebugMode)
-            Debug.Log($"<color=green>=== æ£€æµ‹ç‰©å“å˜åŒ–ï¼ˆå½“å‰åŒºåŸŸå†…ï¼š{currentItems.Count}ä¸ªï¼Œä¸Šæ¬¡æ£€æµ‹ï¼š{CurrentItemCount}ä¸ªï¼‰ ===</color>");
+            Debug.Log($"<color=green>=== ¼ì²âÎïÆ·±ä»¯£¨µ±Ç°ÇøÓòÄÚ£º{currentItems.Count}¸ö£¬ÉÏ´Î¼ì²â£º{CurrentItemCount}¸ö£© ===</color>");
 
-        // æ£€æŸ¥æ–°è¿›å…¥çš„ç‰©å“
+        // ¼ì²éĞÂ½øÈëµÄÎïÆ·
         foreach (var item in currentItems)
         {
             if (!CurrentItemsInArea.Contains(item))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=lime>è¿›å…¥åŒºåŸŸï¼š{item.name}ï¼ˆIDï¼š{item.GetInstanceID()}ï¼Œç‰©å“IDï¼š{item.itemData.IDName}ï¼‰</color>");
+                    Debug.Log($"<color=lime>½øÈëÇøÓò£º{item.name}£¨ID£º{item.GetInstanceID()}£¬ÎïÆ·ID£º{item.itemData.IDName}£©</color>");
                 OnItemEnter(item);
             }
         }
 
-        // æ£€æŸ¥ç¦»å¼€çš„ç‰©å“
+        // ¼ì²éÀë¿ªµÄÎïÆ·
         foreach (var item in CurrentItemsInArea.ToList())
         {
             if (!currentItems.Contains(item))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=orange>ç¦»å¼€åŒºåŸŸï¼š{item.name}ï¼ˆIDï¼š{item.GetInstanceID()}ï¼Œç‰©å“IDï¼š{item.itemData.IDName}ï¼‰</color>");
+                    Debug.Log($"<color=orange>Àë¿ªÇøÓò£º{item.name}£¨ID£º{item.GetInstanceID()}£¬ÎïÆ·ID£º{item.itemData.IDName}£©</color>");
                 OnItemExit(item);
             }
         }
 
-        // æ›´æ–°å½“å‰ç‰©å“åˆ—è¡¨
+        // ¸üĞÂµ±Ç°ÎïÆ·ÁĞ±í
         CurrentItemsInArea = currentItems;
 
         if (DebugMode)
-            Debug.Log($"<color=blue>å½“å‰åŒºåŸŸç‰©å“æ€»æ•°ï¼š{CurrentItemCount}</color>");
+            Debug.Log($"<color=blue>µ±Ç°ÇøÓòÎïÆ·×ÜÊı£º{CurrentItemCount}</color>");
     }
 
     /// <summary>
-    /// å¤„ç†ç‰©å“è¿›å…¥äº‹ä»¶
+    /// ´¦ÀíÎïÆ·½øÈëÊÂ¼ş
     /// </summary>
-    /// <param name="item">è¿›å…¥çš„ç‰©å“</param>
+    /// <param name="item">½øÈëµÄÎïÆ·</param>
     private void OnItemEnter(Item item)
     {
         if (DebugMode)
-            Debug.Log($"<color=green>å¤„ç†è¿›å…¥äº‹ä»¶ï¼š{item.name}ï¼ˆç‰©å“IDï¼š{item.itemData.IDName}ï¼‰</color>");
+            Debug.Log($"<color=green>´¦Àí½øÈëÊÂ¼ş£º{item.name}£¨ÎïÆ·ID£º{item.itemData.IDName}£©</color>");
     }
 
     /// <summary>
-    /// å¤„ç†ç‰©å“ç¦»å¼€äº‹ä»¶
+    /// ´¦ÀíÎïÆ·Àë¿ªÊÂ¼ş
     /// </summary>
-    /// <param name="item">ç¦»å¼€çš„ç‰©å“</param>
+    /// <param name="item">Àë¿ªµÄÎïÆ·</param>
     private void OnItemExit(Item item)
     {
         if (DebugMode)
-            Debug.Log($"<color=orange>å¤„ç†ç¦»å¼€äº‹ä»¶ï¼š{item.name}ï¼ˆç‰©å“IDï¼š{item.itemData.IDName}ï¼‰</color>");
+            Debug.Log($"<color=orange>´¦ÀíÀë¿ªÊÂ¼ş£º{item.name}£¨ÎïÆ·ID£º{item.itemData.IDName}£©</color>");
     }
     #endregion
 
-    #region Unityå›è°ƒæ–¹æ³•
+    #region Unity»Øµ÷·½·¨
 #if UNITY_EDITOR
     /// <summary>
-    /// ç»˜åˆ¶åœºæ™¯ä¸­çš„æ£€æµ‹èŒƒå›´ gizmo
+    /// »æÖÆ³¡¾°ÖĞµÄ¼ì²â·¶Î§ gizmo
     /// </summary>
     private void OnDrawGizmos()
     {
-        Color transparentYellow = new Color(1f, 0.92f, 0.016f, 0.4f); // æ›´æ·¡çš„é»„
-        Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // æ·¡çº¢
+        Color transparentYellow = new Color(1f, 0.92f, 0.016f, 0.4f); // ¸üµ­µÄ»Æ
+        Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // µ­ºì
 
         Gizmos.color = transparentYellow;
         Gizmos.DrawWireSphere(transform.position, DetectionRadius);
@@ -287,19 +287,19 @@ public class Mod_ItemDetector : Module
 #endif
 
     /// <summary>
-    /// åŠ è½½æ¨¡å—æ•°æ®
+    /// ¼ÓÔØÄ£¿éÊı¾İ
     /// </summary>
     public override void Load()
     {
-        // å¯ä»¥åœ¨éœ€è¦æ—¶å®ç°
+        // ¿ÉÒÔÔÚĞèÒªÊ±ÊµÏÖ
     }
 
     /// <summary>
-    /// ä¿å­˜æ¨¡å—æ•°æ®
+    /// ±£´æÄ£¿éÊı¾İ
     /// </summary>
     public override void Save()
     {
-        // å¯ä»¥åœ¨éœ€è¦æ—¶å®ç°
+        // ¿ÉÒÔÔÚĞèÒªÊ±ÊµÏÖ
     }
 
     private void OnValidate()

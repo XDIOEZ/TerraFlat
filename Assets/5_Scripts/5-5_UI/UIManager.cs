@@ -197,10 +197,11 @@ public class UIManager : MonoBehaviour
 
         string baseName = string.IsNullOrEmpty(panelName) ? panelPrefab.name : panelName;
         
-        // 检测字典中是否已经存在相同类型的面板
+        // 先清理空引用，再按有效面板数量计数，避免命名后缀冲突。
         int count = 0;
         if (panels.TryGetValue(baseName, out List<BasePanel> existingPanels))
         {
+            existingPanels.RemoveAll(panel => panel == null);
             count = existingPanels.Count;
         }
 

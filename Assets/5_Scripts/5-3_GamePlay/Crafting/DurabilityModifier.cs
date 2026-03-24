@@ -26,9 +26,9 @@ public class DurabilityModifier : CraftingAction
 
             // 检查物品是否包含指定的Tag
             if (itemSlot.itemData.Tags != null && 
-                itemSlot.itemData.Tags.MakeTag != null && 
-                itemSlot.itemData.Tags.MakeTag.values != null && 
-                itemSlot.itemData.Tags.MakeTag.values.Contains(lostDurabilityItemTag))
+                itemSlot.itemData.Tags != null && 
+                itemSlot.itemData.Tags != null && 
+                itemSlot.itemData.Tags.Contains(lostDurabilityItemTag))
             {
                 // 检查是否有耐久度数据
                 if (itemSlot.itemData.Durability > 0 && itemSlot.itemData.MaxDurability > 0)

@@ -26,7 +26,7 @@ public class HungryChecker : ActionNode
             return State.Failure;
         }
         
-        if(context.Food.Data.nutrition.GetHungerRate() <= hungryThreshold)
+        if(context.Food.Data.nutrition.GetFoodRate() <= hungryThreshold)
         {
             return State.Success;
         }

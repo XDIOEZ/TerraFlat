@@ -9,7 +9,7 @@ using UnityEngine;
 /// - 负责处理与物品的交互逻辑
 /// - 遵循 IInteract 接口
 /// </summary>
-public class Mod_InteractReciver : Module
+public class Mod_InteractReciver : Module, IInteractable
 {
     #region 属性和字段
 
@@ -68,6 +68,16 @@ public class Mod_InteractReciver : Module
     /// 开始交互
     /// </summary>
     /// <param name="interacter">交互者</param>
+    public void OnInteractStart(Item playerItem)
+    {
+        Interact_Start(playerItem);
+    }
+
+    public void OnInteractCancel(Item playerItem)
+    {
+        Interact_Cancel(playerItem);
+    }
+
     public void Interact_Start(Item interacter)
     {
         // 检查物品是否可拾取 → 可拾取则禁止交互

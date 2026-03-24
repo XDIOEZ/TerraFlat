@@ -170,7 +170,7 @@ public class Inventory_HotBar : Inventory
     {
         if (CurentSelectItem == null) return;
 
-        CurentSelectItem.InHand = false;
+        CurentSelectItem.SetInHand(false);
 
         faceMouse.targetRotationTransforms.Remove(CurentSelectItem.transform);
         turnBody.controlledTransforms_Direction.Remove(CurentSelectItem.transform);
@@ -206,7 +206,7 @@ public class Inventory_HotBar : Inventory
         item.OnItemDestroy += OnDestroyCurrentObject;
 
         item.Load();
-        item.InHand = true;
+        item.SetInHand(true);
 
         CurentSelectItem = item;
         CurrentSelectItemSlot = slot;
@@ -291,7 +291,7 @@ public class Inventory_HotBar : Inventory
     {
         if (obj == null) return;
 
-        obj.InHand = false;
+        obj.SetInHand(false);
         UnloadCurrentItem();
     }
 

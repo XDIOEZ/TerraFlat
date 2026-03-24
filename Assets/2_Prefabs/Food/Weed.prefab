@@ -93,7 +93,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -120,14 +119,7 @@ MonoBehaviour:
       Item_Material:
       - None
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Food
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - Plant
     Stack:
       Amount: 1
       Volume: 1
@@ -137,6 +129,7 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
+    inHand: 0
     Guid: 0
     code: 
 --- !u!1 &7731475903502350186

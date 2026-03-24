@@ -335,8 +335,8 @@ public class Inventory_Furnace : Inventory
                         else if (required.matchMode == MatchMode.ByTag)
                         {
                             isMatch = slot.itemData.Tags != null &&
-                                     slot.itemData.Tags.MakeTag != null &&
-                                     slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                                     slot.itemData.Tags != null &&
+                                     slot.itemData.Tags.Contains(required.Tag);
                         }
 
                         if (isMatch && slot.itemData.Stack.Amount > 0)
@@ -482,12 +482,12 @@ public class Inventory_Furnace : Inventory
                 tagInputList.recipeType = RecipeType.Smelting;
                 for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
                 {
-                    if (j == i && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values != null && slot.itemData.Tags.MakeTag.values.Count > 0)
+                    if (j == i && slot.itemData.Tags != null && slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
                     {
                         // 使用第一个Type标签
-                        if (slot.itemData.Tags.MakeTag.values.Count > 0)
+                        if (slot.itemData.Tags.Count > 0)
                         {
-                            tagInputList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
+                            tagInputList.AddTagItem(slot.itemData.Tags[0]);
                         }
                         else
                         {
@@ -577,7 +577,7 @@ public class Inventory_Furnace : Inventory
                     if (slotIndex < 0 || slotIndex >= count) continue;
 
                     var slot = inputInv.Data.itemSlots[slotIndex];
-                    if (slot != null && slot.itemData != null && slot.itemData.Tags != null && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values.Count > 0)
+                    if (slot != null && slot.itemData != null && slot.itemData.Tags != null && slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
                     {
                         Input_List tagGridList = new Input_List();
                         tagGridList.recipeType = RecipeType.Smelting;
@@ -589,7 +589,7 @@ public class Inventory_Furnace : Inventory
                                 int currentSlotIndex = r * cols + c;
                                 if (currentSlotIndex == slotIndex)
                                 {
-                                    tagGridList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
+                                    tagGridList.AddTagItem(slot.itemData.Tags[0]);
                                 }
                                 else
                                 {
@@ -823,8 +823,8 @@ public class Inventory_Furnace : Inventory
                     else if (required.matchMode == MatchMode.ByTag)
                     {
                         isMatch = slot.itemData.Tags != null &&
-                                 slot.itemData.Tags.MakeTag != null &&
-                                 slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                                 slot.itemData.Tags != null &&
+                                 slot.itemData.Tags.Contains(required.Tag);
                     }
 
                     if (isMatch)
@@ -981,8 +981,8 @@ public class Inventory_Furnace : Inventory
                     else if (required.matchMode == MatchMode.ByTag)
                     {
                         isMatch = slot.itemData.Tags != null &&
-                                 slot.itemData.Tags.MakeTag != null &&
-                                 slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                                 slot.itemData.Tags != null &&
+                                 slot.itemData.Tags.Contains(required.Tag);
                     }
 
                     if (isMatch && slot.itemData.Stack.Amount > 0)
@@ -1131,8 +1131,8 @@ public class Inventory_Furnace : Inventory
             return;
         }
 
-        // 查找行为tag中为Ignition的物品
-        var ignitionItem = FuelInventory.Data.FindItemByTagTypeAndTag("FunctionTag", "Ignition");
+        // 在燃料栏中查找包含 Ignition 标签的物品
+        var ignitionItem = FuelInventory.Data.FindFirstByTag("Ignition");
         if (ignitionItem == null)
         {
             Debug.LogWarning("无法点燃：缺少点火装置！");

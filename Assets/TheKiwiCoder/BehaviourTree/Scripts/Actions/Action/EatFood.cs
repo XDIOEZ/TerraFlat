@@ -57,7 +57,7 @@ public class EatFood : ActionNode
 
 
             //判断是否已经吃饱了
-            if (Food.Data.nutrition.GetHungerRate() > 0.9f)
+            if (Food.Data.nutrition.GetFoodRate() > 0.9f)
             {
                 return State.Success;
             }

@@ -377,7 +377,7 @@ public class DamageReceiver : Module
         {
             if (mod.itemData == null) continue;
 
-            if (mod.itemData.Tags.HasType(Tag.Armor))
+            if (mod.itemData.Tags.ContainsTag(Tag.Armor))
             {
                 // 使用物品自身提供的耐久变更方法，传入负值表示扣减
                 mod.itemData.AddDurability(-amount);

@@ -22,8 +22,8 @@ using FastCloner.Code;
 
 
 [MemoryPackable]
-[System.Serializable]   
-public  abstract partial class ItemData
+[System.Serializable]
+public abstract partial class ItemData
 {
     [Tooltip("物品名称")]
     public string IDName;
@@ -49,7 +49,7 @@ public  abstract partial class ItemData
     public ItemTag ItemTags;
 
     [Tooltip("新版Tag系统_适配新版合成表")]
-    public TagDictionary Tags = new ();
+    public List<string> Tags = new();
 
     [Tooltip("物品堆叠信息")]
     public ItemStack Stack;
@@ -60,10 +60,13 @@ public  abstract partial class ItemData
     [Tooltip("物品特殊数据")]
     public string ItemSpecialData;
 
+    [Tooltip("此物品是否在手上?")]
+    public bool inHand = false;
+
     [Tooltip("全局唯一标识")]
     public int Guid;
     [ShowInInspector]
-    public Dictionary<string,ModuleData> ModuleDataDic =new();
+    public Dictionary<string, ModuleData> ModuleDataDic = new();
 
     //重写ToString方法，用于在控制台输出物品信息
     public override string ToString()
@@ -74,7 +77,7 @@ public  abstract partial class ItemData
             $"物品体积：{Stack.Volume}\n" +
             $"物品耐久度：{Durability}\n" +
             $"是否可拾取：{Stack.CanBePickedUp}\n" +
-            $"物品标签：{Tags}\n" +
+            $"物品标签：{string.Join(", ", Tags)}\n" +
             $"物品堆叠信息：{Stack}\n" +
             $"物品特殊数据：{ItemSpecialData}\n" +
             $"全局唯一标识：{Guid}";

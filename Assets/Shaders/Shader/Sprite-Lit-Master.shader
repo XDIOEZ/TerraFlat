@@ -68,7 +68,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             {
                 float4  positionCS  : SV_POSITION;
                 half4   color       : COLOR;
-                float2  uv          : TEXCOORD0;
+                float3  uv          : TEXCOORD0; // xy is uv, z is localY
                 half2   lightingUV  : TEXCOORD1;
                 #if defined(DEBUG_DISPLAY)
                 float3  positionWS  : TEXCOORD2;
@@ -126,7 +126,8 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(DEBUG_DISPLAY)
                 o.positionWS = TransformObjectToWorld(v.positionOS);
                 #endif
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv.z = v.positionOS.y;
                 o.lightingUV = half2(ComputeScreenPos(o.positionCS / o.positionCS.w).xy);
 
                 o.color = v.color * _Color * _RendererColor;
@@ -140,18 +141,19 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             half4 CombinedShapeLightFragment(Varyings i) : SV_Target
             {
-                half4 main = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
-                const half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, i.uv);
+                half4 main = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv.xy);
+                const half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, i.uv.xy);
 
-                // === 下半身剔除：根据 _BodyMinV/_BodyMaxV 和 _BodyClip 控制 ===
+                // === 下半身剔除：根据 _BodyMinV/_BodyMaxV (实际传入 Local Y) 和 _BodyClip 控制 ===
+                // 因为改成了本地坐标 Y (i.uv.z) 替代 uv.y，这能完美免疫贴图旋转切片影响！
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
-                float bodyV = saturate((i.uv.y - _BodyMinV) / bodyRange);
+                float bodyV = saturate((i.uv.z - _BodyMinV) / bodyRange);
                 if (bodyV < _BodyClip)
                     discard;
 
                 // === 溶解效果（可选） ===
                 #ifdef DISSOLVE_ON
-                half noise = SAMPLE_TEXTURE2D(_DissolveTex, sampler_DissolveTex, i.uv).r;
+                half noise = SAMPLE_TEXTURE2D(_DissolveTex, sampler_DissolveTex, i.uv.xy).r;
                 if (noise < _Dissolve)
                     discard;
                 #endif
@@ -165,7 +167,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 InputData2D inputData;
 
                 InitializeSurfaceData(main.rgb, main.a, mask, surfaceData);
-                InitializeInputData(i.uv, i.lightingUV, inputData);
+                InitializeInputData(i.uv.xy, i.lightingUV, inputData);
 
                 return CombinedShapeLightShared(surfaceData, inputData);
             }

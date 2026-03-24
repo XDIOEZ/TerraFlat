@@ -1,4 +1,4 @@
-ï»¿// using AYellowpaper.SerializedCollections;
+// using AYellowpaper.SerializedCollections;
 // using Force.DeepCloner;
 // using MemoryPack;
 // using Sirenix.OdinInspector;
@@ -14,58 +14,58 @@
 // {
   
 
-//     #region åºåˆ—åŒ–å­—æ®µä¸å¼•ç”¨
+//     #region ĞòÁĞ»¯×Ö¶ÎÓëÒıÓÃ
 //     public Ex_ModData_MemoryPackable SaveData;
 //     public ModSmeltingData Data = new ModSmeltingData();
 
-//     // ä¸´æ—¶å¼•ç”¨
-//     public Inventory inputInventory => inventoryRefDic["è¾“å…¥æ’æ§½"];
-//     public Inventory outputInventory => inventoryRefDic["è¾“å‡ºæ’æ§½"];
-//     public Inventory fuelInventory => inventoryRefDic["ç‡ƒæ–™æ’æ§½"];
+//     // ÁÙÊ±ÒıÓÃ
+//     public Inventory inputInventory => inventoryRefDic["ÊäÈë²å²Û"];
+//     public Inventory outputInventory => inventoryRefDic["Êä³ö²å²Û"];
+//     public Inventory fuelInventory => inventoryRefDic["È¼ÁÏ²å²Û"];
 
-//     [Tooltip("Inventoryå¼•ç”¨å­—å…¸-é…ç½®å­—æ®µ")]
+//     [Tooltip("InventoryÒıÓÃ×Öµä-ÅäÖÃ×Ö¶Î")]
 //     public SerializedDictionary<string, Inventory> inventoryRefDic = new();
-//     [Tooltip("Inventoryå¼•ç”¨å­—å…¸-æ¥å£å®ç°")]
+//     [Tooltip("InventoryÒıÓÃ×Öµä-½Ó¿ÚÊµÏÖ")]
 //     public SerializedDictionary<string, Inventory> InventoryRefDic { get => inventoryRefDic; set => inventoryRefDic = value; }
 
 
-//     public Mod_Fuel mod_Fuel; // ç‡ƒæ–™æ¨¡å—
+//     public Mod_Fuel mod_Fuel; // È¼ÁÏÄ£¿é
 //     public BasePanel panel;
 //     public Button WorkButton;
     
-//     [Header("UIç»„ä»¶")]
-//     [Tooltip("ç†”ç‚¼è¿›åº¦æ¡")]
+//     [Header("UI×é¼ş")]
+//     [Tooltip("ÈÛÁ¶½ø¶ÈÌõ")]
 //     public Slider progressSlider;
-//     [Tooltip("ç‡ƒæ–™å®¹é‡æ¡")]
+//     [Tooltip("È¼ÁÏÈİÁ¿Ìõ")]
 //     public Slider fuelSlider;
-//     [Tooltip("æ¸©åº¦æ˜¾ç¤ºæ¡")]
+//     [Tooltip("ÎÂ¶ÈÏÔÊ¾Ìõ")]
 //     public Slider temperatureSlider;
-//     [Tooltip("æ¸©åº¦æ•°å€¼æ–‡æœ¬")]
+//     [Tooltip("ÎÂ¶ÈÊıÖµÎÄ±¾")]
 //     public TextMeshProUGUI TemperatureText;
 //     #endregion
 
-//     #region Unityç”Ÿå‘½å‘¨æœŸ
+//     #region UnityÉúÃüÖÜÆÚ
 
 //     public void Update()
 //     {
-//         if (Data.IsSmelting) // å·²ç»å¤„äºç†”ç‚¼çŠ¶æ€
+//         if (Data.IsSmelting) // ÒÑ¾­´¦ÓÚÈÛÁ¶×´Ì¬
 //         {
-//             // æ£€æŸ¥ç‡ƒæ–™æ¨¡å—æ˜¯å¦å¤„äºç‚¹ç‡ƒçŠ¶æ€
+//             // ¼ì²éÈ¼ÁÏÄ£¿éÊÇ·ñ´¦ÓÚµãÈ¼×´Ì¬
 //             if (mod_Fuel.GetIgnitedState())
 //             {
 //                 SmeltingProcess(Time.deltaTime);
 //             }
 //             else
 //             {
-//                 // æ£€æŸ¥ç‡ƒæ–™æ’æ§½æ˜¯å¦è¿˜æœ‰ç‡ƒæ–™ç‰©å“
+//                 // ¼ì²éÈ¼ÁÏ²å²ÛÊÇ·ñ»¹ÓĞÈ¼ÁÏÎïÆ·
 //                 var fuelItem = fuelInventory.Data.GetModuleByID(ModText.Fuel);
 //                 if (fuelItem != null)
 //                 {
-//                     // ä»ç‰©å“è½¬åŒ–ä¸ºç‡ƒæ–™å€¼
+//                     // ´ÓÎïÆ·×ª»¯ÎªÈ¼ÁÏÖµ
 //                     ItemSlot slot = fuelInventory.Data.GetItemSlotByModuleID(fuelItem.ID);
 //                     if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
 //                     {
-//                         slot.itemData.Stack.Amount -= 1; // æ‰£ 1 ä¸ªç‡ƒæ–™ç‰©å“
+//                         slot.itemData.Stack.Amount -= 1; // ¿Û 1 ¸öÈ¼ÁÏÎïÆ·
 //                         slot.RefreshUI();
 
 //                         Ex_ModData_MemoryPackable fuelData = fuelItem as Ex_ModData_MemoryPackable;
@@ -74,53 +74,53 @@
 //                             fuelData.OutData(out FuelData fuel);
 //                             mod_Fuel.AddFuel(fuel.Fuel.x);
 
-//                             // ç‚¹ç‡ƒç‡ƒæ–™
+//                             // µãÈ¼È¼ÁÏ
 //                             mod_Fuel.SetIgnited(true);
                             
-//                             // æ¸©åº¦ä¸Šé™å–å†³äºç‡ƒæ–™
+//                             // ÎÂ¶ÈÉÏÏŞÈ¡¾öÓÚÈ¼ÁÏ
 //                             Data.MaxTemperature = fuel.MaxTemperature;
 //                         }
 
-//                         SmeltingProcess(Time.deltaTime); // ç»§ç»­ç†”ç‚¼
+//                         SmeltingProcess(Time.deltaTime); // ¼ÌĞøÈÛÁ¶
 //                     }
 //                     else
 //                     {
-//                         // çœŸæ­£ç‡ƒæ–™è€—å°½ â†’ åœæ­¢ç†”ç‚¼
+//                         // ÕæÕıÈ¼ÁÏºÄ¾¡ ¡ú Í£Ö¹ÈÛÁ¶
 //                         Data.IsSmelting = false;
-//                         Debug.Log("ç‡ƒæ–™è€—å°½ï¼Œç†”ç‚¼åœæ­¢ï¼");
+//                         Debug.Log("È¼ÁÏºÄ¾¡£¬ÈÛÁ¶Í£Ö¹£¡");
 //                     }
 //                 }
 //                 else
 //                 {
-//                     // çœŸæ­£ç‡ƒæ–™è€—å°½ â†’ åœæ­¢ç†”ç‚¼
+//                     // ÕæÕıÈ¼ÁÏºÄ¾¡ ¡ú Í£Ö¹ÈÛÁ¶
 //                     Data.IsSmelting = false;
-//                     Debug.Log("ç‡ƒæ–™è€—å°½ï¼Œç†”ç‚¼åœæ­¢ï¼");
+//                     Debug.Log("È¼ÁÏºÄ¾¡£¬ÈÛÁ¶Í£Ö¹£¡");
 //                 }
 //             }
 //         }
 //         else
 //         {
-//             // æœªå¯åŠ¨æˆ–å·²åœæ­¢ â†’ æ¸©åº¦ç¼“æ…¢ä¸‹é™åˆ° 20â„ƒ
+//             // Î´Æô¶¯»òÒÑÍ£Ö¹ ¡ú ÎÂ¶È»ºÂıÏÂ½µµ½ 20¡æ
 //             Data.Temperature = Mathf.Max(Data.Temperature - Data.TemperatureDownSpeed * Time.deltaTime, 20f);
 //             Data.SmeltingSpeed = 0f;
             
-//             // å¦‚æœç‡ƒæ–™æ¨¡å—æ˜¯ç‚¹ç‡ƒçš„ï¼Œè®©å®ƒä¹Ÿç†„ç­
+//             // Èç¹ûÈ¼ÁÏÄ£¿éÊÇµãÈ¼µÄ£¬ÈÃËüÒ²Ï¨Ãğ
 //             if (mod_Fuel.GetIgnitedState())
 //             {
 //                 mod_Fuel.SetIgnited(false);
 //             }
 //         }
 
-//         // åŒæ­¥æ‰€æœ‰UI
+//         // Í¬²½ËùÓĞUI
 //         UpdateUI();
 //     }
 
 //     public override void Init()
 //     {
-//         // ä» SaveData è¯»å–
+//         // ´Ó SaveData ¶ÁÈ¡
 //         SaveData.ReadData(ref Data);
         
-//         // åŒæ­¥æ•°æ®
+//         // Í¬²½Êı¾İ
 //         if (Data.InvData.Count == 0)
 //         {
 //             if (inputInventory != null && inputInventory.Data != null)
@@ -140,11 +140,11 @@
 //                 fuelInventory.Data = Data.InvData[fuelInventory.Data.Name];
 //         }
 
-//         // æŒ‰é’®äº‹ä»¶
+//         // °´Å¥ÊÂ¼ş
 //         if (WorkButton != null)
 //             WorkButton.onClick.AddListener(OnButtonClick);
 
-//         // å¦‚æœæœ‰æ‰‹æŒæ¨¡å—ï¼Œè®¾ç½®é»˜è®¤ç›®æ ‡
+//         // Èç¹ûÓĞÊÖ³ÖÄ£¿é£¬ÉèÖÃÄ¬ÈÏÄ¿±ê
 //         if (Owner != null && Owner.itemMods != null && Owner.itemMods.ContainsKey_ID(ModText.Hand))
 //         {
 //             var handInv = Owner.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
@@ -154,12 +154,12 @@
 //                 outputInventory.DefaultTarget_Inventory = handInv;
 //         }
 
-//         // åˆå§‹åŒ–åº“å­˜
+//         // ³õÊ¼»¯¿â´æ
 //         inputInventory?.Init();
 //         outputInventory?.Init();
 //         fuelInventory?.Init();
 
-//         // è·å–äº¤äº’æ¨¡å—å¼•ç”¨
+//         // »ñÈ¡½»»¥Ä£¿éÒıÓÃ
 //         if (Owner != null && Owner.itemMods != null)
 //         {
 //             var interactMod = Owner.itemMods.GetMod_ByID(ModText.Interact);
@@ -180,14 +180,14 @@
 
 //     public override void Save()
 //     {
-//         // å®‰å…¨æ£€æŸ¥
+//         // °²È«¼ì²é
 //         if (Data == null)
 //             Data = new ModSmeltingData();
             
 //         if (Data.InvData == null)
 //             Data.InvData = new Dictionary<string, Inventory_Data>();
             
-//         // ä¿å­˜åº“å­˜æ•°æ®
+//         // ±£´æ¿â´æÊı¾İ
 //         if (inputInventory != null && inputInventory.Data != null)
 //             Data.InvData[inputInventory.Data.Name] = inputInventory.Data;
 //         if (outputInventory != null && outputInventory.Data != null)
@@ -199,10 +199,10 @@
 //     }
 //     #endregion
 
-//     #region ç†”ç‚¼æ ¸å¿ƒé€»è¾‘
+//     #region ÈÛÁ¶ºËĞÄÂß¼­
 //     private void SmeltingProcess(float deltaTime)
 //     {
-//         // æ£€æŸ¥è¾“å…¥æ§½æ˜¯å¦æœ‰ç‰©å“
+//         // ¼ì²éÊäÈë²ÛÊÇ·ñÓĞÎïÆ·
 //         bool hasInputItem = false;
 //         if (inputInventory != null && inputInventory.Data != null && inputInventory.Data.itemSlots != null)
 //         {
@@ -216,36 +216,36 @@
 //             }
 //         }
 
-//         // è®¡ç®—å®é™…çš„æœ€å¤§æ¸©åº¦ï¼ˆå—é™äºç†”ç‚‰æœ¬èº«çš„æœ€å¤§æ¸©åº¦é™åˆ¶ï¼‰
+//         // ¼ÆËãÊµ¼ÊµÄ×î´óÎÂ¶È£¨ÊÜÏŞÓÚÈÛÂ¯±¾ÉíµÄ×î´óÎÂ¶ÈÏŞÖÆ£©
 //         float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
 
-//         // å¦‚æœæ²¡æœ‰ç‰©å“ â†’ è¿›åº¦å½’é›¶ï¼ˆè¡¨ç¤ºå¹²çƒ§ï¼‰
+//         // Èç¹ûÃ»ÓĞÎïÆ· ¡ú ½ø¶È¹éÁã£¨±íÊ¾¸ÉÉÕ£©
 //         if (!hasInputItem)
 //         {
 //             Data.SmeltingProgress = 0f;
-//             // æ¸©åº¦ä»ç„¶ä¼šä¸Šå‡åˆ°ç‡ƒæ–™å…è®¸çš„ä¸Šé™ï¼Œä½†ä¸è¶…è¿‡ç†”ç‚‰é™åˆ¶
+//             // ÎÂ¶ÈÈÔÈ»»áÉÏÉıµ½È¼ÁÏÔÊĞíµÄÉÏÏŞ£¬µ«²»³¬¹ıÈÛÂ¯ÏŞÖÆ
 //             Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * 2f * deltaTime, actualMaxTemp);
-//             // ç»§ç»­æ¶ˆè€—ç‡ƒæ–™
+//             // ¼ÌĞøÏûºÄÈ¼ÁÏ
 //             mod_Fuel?.ConsumeFuel(deltaTime);
-//             return; // ä¸è¿›å…¥ç†”ç‚¼é€»è¾‘
+//             return; // ²»½øÈëÈÛÁ¶Âß¼­
 //         }
 
-//         // ===== ä»¥ä¸‹æ˜¯æ­£å¸¸ç†”ç‚¼é€»è¾‘ =====
+//         // ===== ÒÔÏÂÊÇÕı³£ÈÛÁ¶Âß¼­ =====
 
-//         // æ¸©åº¦éšæ—¶é—´ä¸Šå‡ï¼Œä½†ä¸è¶…è¿‡ç†”ç‚‰é™åˆ¶
+//         // ÎÂ¶ÈËæÊ±¼äÉÏÉı£¬µ«²»³¬¹ıÈÛÂ¯ÏŞÖÆ
 //         Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * deltaTime, actualMaxTemp);
 
-//         // æ ¹æ®æ¸©åº¦è®¡ç®—å½“å‰ç†”ç‚¼é€Ÿåº¦
+//         // ¸ù¾İÎÂ¶È¼ÆËãµ±Ç°ÈÛÁ¶ËÙ¶È
 //         float tempRatio = Data.Temperature / actualMaxTemp;
 //         Data.SmeltingSpeed = Mathf.Lerp(1f, Data.MaxSmeltingSpeed, tempRatio);
 
-//         // æŒ‰å½“å‰é€Ÿåº¦æ¨è¿›è¿›åº¦
+//         // °´µ±Ç°ËÙ¶ÈÍÆ½ø½ø¶È
 //         Data.SmeltingProgress += Data.SmeltingSpeed * deltaTime;
 
-//         // æ¶ˆè€—ç‡ƒæ–™
+//         // ÏûºÄÈ¼ÁÏ
 //         mod_Fuel?.ConsumeFuel(deltaTime);
 
-//         // ç†”ç‚¼å®Œæˆ
+//         // ÈÛÁ¶Íê³É
 //         if (Data.SmeltingProgress >= 100f)
 //         {
 //             Data.SmeltingProgress = 0f;
@@ -257,26 +257,26 @@
 // {
 //     try
 //     {
-//         // å®‰å…¨æ£€æŸ¥
+//         // °²È«¼ì²é
 //         if (inputInventory == null || inputInventory.Data == null)
 //         {
-//             Debug.LogError("è¾“å…¥åº“å­˜ä¸ºç©ºï¼Œæ— æ³•å®Œæˆç†”ç‚¼");
+//             Debug.LogError("ÊäÈë¿â´æÎª¿Õ£¬ÎŞ·¨Íê³ÉÈÛÁ¶");
 //             return;
 //         }
         
 //         if (outputInventory == null || outputInventory.Data == null)
 //         {
-//             Debug.LogError("è¾“å‡ºåº“å­˜ä¸ºç©ºï¼Œæ— æ³•å®Œæˆç†”ç‚¼");
+//             Debug.LogError("Êä³ö¿â´æÎª¿Õ£¬ÎŞ·¨Íê³ÉÈÛÁ¶");
 //             return;
 //         }
 
-//         // ç”Ÿæˆé…æ–¹é”®åˆ—è¡¨
+//         // Éú³ÉÅä·½¼üÁĞ±í
 //         List<string> recipeKeys = GenerateRecipeKey_List(inputInventory);
         
 //         Recipe recipe = null;
 //         string matchedKey = null;
 
-//         // å°è¯•åŒ¹é…æ¯ä¸ªé…æ–¹é”®
+//         // ³¢ÊÔÆ¥ÅäÃ¿¸öÅä·½¼ü
 //         foreach (string recipeKey in recipeKeys)
 //         {
 //             if (GameRes.Instance != null && 
@@ -288,27 +288,27 @@
 //             }
 //         }
         
-//         // éªŒè¯é…æ–¹
+//         // ÑéÖ¤Åä·½
 //         if (recipe == null)
 //         {
-//             Debug.LogError($"ç†”ç‚¼å¤±è´¥ï¼šæ‰¾ä¸åˆ°é…æ–¹ {string.Join(" æˆ– ", recipeKeys)}");
+//             Debug.LogError($"ÈÛÁ¶Ê§°Ü£ºÕÒ²»µ½Åä·½ {string.Join(" »ò ", recipeKeys)}");
 //             return;
 //         }
 
 //         CookRecipe cookRecipe = recipe as CookRecipe;
 //         if (cookRecipe == null)
 //         {
-//             Debug.LogError($"é…æ–¹ç±»å‹é”™è¯¯ï¼š{matchedKey} ä¸æ˜¯ CookRecipe");
+//             Debug.LogError($"Åä·½ÀàĞÍ´íÎó£º{matchedKey} ²»ÊÇ CookRecipe");
 //             return;
 //         }
 
-//         // æ¸©åº¦æ£€æŸ¥ - è¿‡é«˜æ¸©åº¦å¤„ç†
-// // Â¶È¼ - Â¶È´
+//         // ÎÂ¶È¼ì²é - ¹ı¸ßÎÂ¶È´¦Àí
+// // ?? - ??
 // if (Data.Temperature > cookRecipe.Temperature_Max)
 // {
-//     Debug.LogWarning($"Â¶È¹ß£Â¶ {cookRecipe.Temperature} Ç°Â¶ {Data.Temperature}  Õ½ï£¡");
+//     Debug.LogWarning($"???? {cookRecipe.Temperature} ?? {Data.Temperature}  ??");
 
-//     // Ö»Òª
+//     // ??
 //     if (inputInventory.Data.itemSlots != null && recipe.inputs != null && recipe.inputs.RowItems_List != null)
 //     {
 //         for (int i = 0; i < inputInventory.Data.itemSlots.Count; i++)
@@ -322,20 +322,20 @@
 
 //             if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
 //             {
-//                 // Ö»Û³Òª
+//                 // ???
 //                 float lossAmount = Mathf.Min(required.amount, slot.itemData.Stack.Amount);
 //                 slot.itemData.Stack.Amount -= lossAmount;
                 
 //                 if (slot.itemData.Stack.Amount <= 0)
 //                 {
-//                     // Æ·
+//                     // ?
 //                     inputInventory.Data.RemoveItemAll(slot, i);
 //                 }
 //             }
 //         }
 //     }
 
-//     // Õ½
+//     // ?
 //     string charredMatterId = "CharredMatter";
 //     if (GameRes.Instance != null && 
 //         GameRes.Instance.AllPrefabs != null && 
@@ -348,24 +348,24 @@
 //             ItemData newItem = outputItem.Get_NewItemData();
 //             if (newItem != null)
 //             {
-//                 // 1Õ½
+//                 // 1?
 //                 newItem.Stack.Amount = 1;
 //                 outputInventory.Data.TryAddItem(newItem);
 //             }
 //         }
 //     }
 
-//     // Ë¢ UI
+//     // ? UI
 //     inputInventory.RefreshUI();
 //     outputInventory.RefreshUI();
 //     return;
 // }
-//         // æ¸©åº¦ä¸è¶³æ£€æŸ¥
+//         // ÎÂ¶È²»×ã¼ì²é
 //         else if (cookRecipe.Temperature > Data.Temperature)
 //         {
-//             Debug.LogWarning($"ç†”ç‚¼å¤±è´¥ï¼šæ‰€éœ€æ¸©åº¦ {cookRecipe.Temperature} å½“å‰æ¸©åº¦ {Data.Temperature} â†’ ææ–™æœ‰æŸå¤±ï¼");
+//             Debug.LogWarning($"ÈÛÁ¶Ê§°Ü£ºËùĞèÎÂ¶È {cookRecipe.Temperature} µ±Ç°ÎÂ¶È {Data.Temperature} ¡ú ²ÄÁÏÓĞËğÊ§£¡");
 
-//             // æƒ©ç½šï¼šéšæœºæ‰£é™¤ 1~2 ä¸ªè¾“å…¥ææ–™
+//             // ³Í·££ºËæ»ú¿Û³ı 1~2 ¸öÊäÈë²ÄÁÏ
 //             System.Random rand = new System.Random();
 //             if (inputInventory.Data.itemSlots != null)
 //             {
@@ -373,66 +373,66 @@
 //                 {
 //                     if (slot != null && slot.itemData != null && slot.itemData.Stack.Amount > 0)
 //                     {
-//                         // æ‰£é™¤æ•°é‡ = 1 æˆ– 2ï¼Œä½†ä¸è¶…è¿‡å½“å‰æ•°é‡
+//                         // ¿Û³ıÊıÁ¿ = 1 »ò 2£¬µ«²»³¬¹ıµ±Ç°ÊıÁ¿
 //                         float lossAmount = rand.Next(1, 3); // 1~2
-//                         lossAmount = Mathf.Min(lossAmount, slot.itemData.Stack.Amount); // ä¸è¶…è¿‡ç°æœ‰æ•°é‡
+//                         lossAmount = Mathf.Min(lossAmount, slot.itemData.Stack.Amount); // ²»³¬¹ıÏÖÓĞÊıÁ¿
 
 //                         slot.itemData.Stack.Amount -= lossAmount;
-//                         Debug.LogWarning($"æƒ©ç½šæ‰£é™¤ï¼š{slot.itemData.IDName} x{lossAmount}");
+//                         Debug.LogWarning($"³Í·£¿Û³ı£º{slot.itemData.IDName} x{lossAmount}");
 
 //                         if (slot.itemData.Stack.Amount <= 0)
 //                         {
-//                             // æ¸…ç©ºç‰©å“
+//                             // Çå¿ÕÎïÆ·
 //                             inputInventory.Data.RemoveItemAll(slot, inputInventory.Data.itemSlots.IndexOf(slot));
 //                         }
 //                     }
 //                 }
 //             }
 
-//             // åˆ·æ–° UI
+//             // Ë¢ĞÂ UI
 //             inputInventory.RefreshUI();
 //             return;
 //         }
 
-//         // éªŒè¯è¾“å…¥æ§½ä½æ•°é‡
+//         // ÑéÖ¤ÊäÈë²ÛÎ»ÊıÁ¿
 //         if (!ValidateSlotCount(inputInventory, recipe))
 //             return;
 
-//         // å‡†å¤‡è¾“å‡ºç‰©å“
+//         // ×¼±¸Êä³öÎïÆ·
 //         var outputItems = PrepareOutputItems(recipe);
 //         if (outputItems == null)
 //             return;
 
-//         // æ£€æŸ¥èµ„æºå’Œç©ºé—´
+//         // ¼ì²é×ÊÔ´ºÍ¿Õ¼ä
 //         if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems))
 //         {
-//             Debug.LogError("ç†”ç‚¼å¤±è´¥ï¼šææ–™ä¸è¶³æˆ–è¾“å‡ºç©ºé—´ä¸è¶³");
+//             Debug.LogError("ÈÛÁ¶Ê§°Ü£º²ÄÁÏ²»×ã»òÊä³ö¿Õ¼ä²»×ã");
 //             return;
 //         }
 
-//         // æ‰§è¡Œç†”ç‚¼
+//         // Ö´ĞĞÈÛÁ¶
 //         ExecuteSmelting(inputInventory, outputInventory, recipe, outputItems);
 //     }
 //     catch (Exception ex)
 //     {
-//         Debug.LogError($"ç†”ç‚¼è¿‡ç¨‹ä¸­å‘ç”Ÿé”™è¯¯: {ex.Message}");
+//         Debug.LogError($"ÈÛÁ¶¹ı³ÌÖĞ·¢Éú´íÎó: {ex.Message}");
 //     }
 // }
 //     #endregion
 
-//     #region é…æ–¹å¤„ç†é€»è¾‘
+//     #region Åä·½´¦ÀíÂß¼­
 //     /// <summary>
-//     /// ç”Ÿæˆé…æ–¹é”®åˆ—è¡¨ï¼ˆæ”¯æŒTagæ¨¡å¼å’ŒitemNameæ¨¡å¼ï¼‰
+//     /// Éú³ÉÅä·½¼üÁĞ±í£¨Ö§³ÖTagÄ£Ê½ºÍitemNameÄ£Ê½£©
 //     /// </summary>
 //     private List<string> GenerateRecipeKey_List(Inventory inputInv)
 //     {
 //         List<string> recipeKeys = new List<string>();
         
-//         // å®‰å…¨æ£€æŸ¥
+//         // °²È«¼ì²é
 //         if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null)
 //             return recipeKeys;
         
-//         // ç”ŸæˆåŸºäºç‰©å“åç§°çš„é…æ–¹é”®
+//         // Éú³É»ùÓÚÎïÆ·Ãû³ÆµÄÅä·½¼ü
 //         Input_List inputList = new Input_List();
 //         inputList.recipeType = RecipeType.Smelting;
 //         foreach (ItemSlot slot in inputInv.Data.itemSlots)
@@ -448,22 +448,22 @@
 //         }
 //         recipeKeys.Add(inputList.ToString());
         
-//         // ç”ŸæˆåŸºäºTagçš„é…æ–¹é”®ï¼ˆä¸ºæ¯ä¸ªæœ‰Tagçš„ç‰©å“ç”Ÿæˆä¸€ä¸ªç‰ˆæœ¬ï¼‰
+//         // Éú³É»ùÓÚTagµÄÅä·½¼ü£¨ÎªÃ¿¸öÓĞTagµÄÎïÆ·Éú³ÉÒ»¸ö°æ±¾£©
 //         for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
 //         {
 //             var slot = inputInv.Data.itemSlots[i];
 //             if (slot != null && slot.itemData != null && slot.itemData.Tags != null)
 //             {
-//                 // ä¸ºæ¯ä¸ªåŒ…å«Tagçš„ç‰©å“ç”Ÿæˆä¸€ä¸ªåŸºäºTagçš„é…æ–¹é”®ç‰ˆæœ¬
+//                 // ÎªÃ¿¸ö°üº¬TagµÄÎïÆ·Éú³ÉÒ»¸ö»ùÓÚTagµÄÅä·½¼ü°æ±¾
 //                 Input_List tagInputList = new Input_List();
 //                 for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
 //                 {
-//                     if (j == i && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values != null && slot.itemData.Tags.MakeTag.values.Count > 0)
+//                     if (j == i && slot.itemData.Tags != null && slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
 //                     {
-//                         // ä½¿ç”¨ç¬¬ä¸€ä¸ªTypeæ ‡ç­¾
-//                         if (slot.itemData.Tags.MakeTag.values.Count > 0)
+//                         // Ê¹ÓÃµÚÒ»¸öType±êÇ©
+//                         if (slot.itemData.Tags.Count > 0)
 //                         {
-//                             tagInputList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
+//                             tagInputList.AddTagItem(slot.itemData.Tags[0]);
 //                         }
 //                         else
 //                         {
@@ -493,7 +493,7 @@
 
 //         if (inputInv.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
 //         {
-//             Debug.LogError($"è¾“å…¥æ§½ä½æ•°é‡ä¸åŒ¹é…ï¼šé…æ–¹éœ€è¦ {recipe.inputs.RowItems_List.Count} ä¸ªè¾“å…¥æ§½ï¼Œå½“å‰æœ‰ {inputInv.Data.itemSlots.Count} ä¸ª");
+//             Debug.LogError($"ÊäÈë²ÛÎ»ÊıÁ¿²»Æ¥Åä£ºÅä·½ĞèÒª {recipe.inputs.RowItems_List.Count} ¸öÊäÈë²Û£¬µ±Ç°ÓĞ {inputInv.Data.itemSlots.Count} ¸ö");
 //             return false;
 //         }
 //         return true;
@@ -510,33 +510,33 @@
 //         {
 //             if (string.IsNullOrEmpty(output.ItemName))
 //             {
-//                 Debug.LogError($"é…æ–¹è¾“å‡ºé¡¹åç§°ä¸ºç©ºï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
+//                 Debug.LogError($"Åä·½Êä³öÏîÃû³ÆÎª¿Õ£¨Åä·½£º{recipe.name}£©");
 //                 return null;
 //             }
             
 //             if (GameRes.Instance == null || GameRes.Instance.AllPrefabs == null)
 //             {
-//                 Debug.LogError($"GameReså®ä¾‹æˆ–é¢„åˆ¶ä½“å­—å…¸ä¸ºç©ºï¼š{output.ItemName}ï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
+//                 Debug.LogError($"GameResÊµÀı»òÔ¤ÖÆÌå×ÖµäÎª¿Õ£º{output.ItemName}£¨Åä·½£º{recipe.name}£©");
 //                 return null;
 //             }
             
 //             if (!GameRes.Instance.AllPrefabs.TryGetValue(output.ItemName, out var prefab) || prefab == null)
 //             {
-//                 Debug.LogError($"é¢„åˆ¶ä½“ä¸å­˜åœ¨ï¼š{output.ItemName}ï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
+//                 Debug.LogError($"Ô¤ÖÆÌå²»´æÔÚ£º{output.ItemName}£¨Åä·½£º{recipe.name}£©");
 //                 return null;
 //             }
             
 //             Item outputitem = prefab.GetComponent<Item>();
 //             if (outputitem == null)
 //             {
-//                 Debug.LogError($"é¢„åˆ¶ä½“ {output.ItemName} ä¸Šæ‰¾ä¸åˆ°Itemç»„ä»¶ï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
+//                 Debug.LogError($"Ô¤ÖÆÌå {output.ItemName} ÉÏÕÒ²»µ½Item×é¼ş£¨Åä·½£º{recipe.name}£©");
 //                 return null;
 //             }
             
 //             ItemData newItem = outputitem.Get_NewItemData();
 //             if (newItem == null)
 //             {
-//                 Debug.LogError($"æ— æ³•åˆ›å»º {output.ItemName} çš„ItemDataï¼ˆé…æ–¹ï¼š{recipe.name}ï¼‰");
+//                 Debug.LogError($"ÎŞ·¨´´½¨ {output.ItemName} µÄItemData£¨Åä·½£º{recipe.name}£©");
 //                 return null;
 //             }
             
@@ -550,7 +550,7 @@
 //     private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, 
 //         Recipe recipe, List<ItemData> outputItems)
 //     {
-//         // æ£€æŸ¥è¾“å…¥ææ–™
+//         // ¼ì²éÊäÈë²ÄÁÏ
 //         if (inputInv == null || inputInv.Data == null || inputInv.Data.itemSlots == null ||
 //             recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null)
 //             return false;
@@ -569,7 +569,7 @@
 //                 return false;
 //         }
 
-//         // æ£€æŸ¥è¾“å‡ºç©ºé—´
+//         // ¼ì²éÊä³ö¿Õ¼ä
 //         if (outputInv == null || outputInv.Data == null || outputItems == null)
 //             return false;
             
@@ -590,25 +590,25 @@
 //             recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null ||
 //             outputItems == null)
 //         {
-//             Debug.LogError("æ‰§è¡Œç†”ç‚¼æ—¶å‚æ•°ä¸ºç©º");
+//             Debug.LogError("Ö´ĞĞÈÛÁ¶Ê±²ÎÊıÎª¿Õ");
 //             return;
 //         }
 
-//         Debug.Log($"å¼€å§‹ç†”ç‚¼ï¼š{recipe.name}");
-//         Debug.Log($"è¾“å…¥ææ–™ï¼š{string.Join(",", recipe.inputs.RowItems_List.Select(r => $"{r.ItemName}x{r.amount}"))}");
-//         Debug.Log($"äº§å‡ºç‰©å“ï¼š{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
+//         Debug.Log($"¿ªÊ¼ÈÛÁ¶£º{recipe.name}");
+//         Debug.Log($"ÊäÈë²ÄÁÏ£º{string.Join(",", recipe.inputs.RowItems_List.Select(r => $"{r.ItemName}x{r.amount}"))}");
+//         Debug.Log($"²ú³öÎïÆ·£º{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
 
-//         // æ·»åŠ äº§ç‰©
+//         // Ìí¼Ó²úÎï
 //         foreach (var item in outputItems)
 //         {
 //             if (item != null)
 //             {
 //                 outputInv.Data.TryAddItem(item);
-//                 Debug.Log($"æ·»åŠ äº§ç‰©ï¼š{item.Stack.Amount}x{item.IDName}");
+//                 Debug.Log($"Ìí¼Ó²úÎï£º{item.Stack.Amount}x{item.IDName}");
 //             }
 //         }
 
-//         // æ‰£é™¤è¾“å…¥ææ–™
+//         // ¿Û³ıÊäÈë²ÄÁÏ
 //         for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
 //         {
 //             var slot = inputInv.Data.itemSlots[i];
@@ -616,22 +616,22 @@
 
 //             if (required.amount == 0 || slot == null || slot.itemData == null) continue;
 
-//             Debug.Log($"æ‰£é™¤ææ–™ï¼š{required.ItemName} x{required.amount}ï¼Œå½“å‰æœ‰ {slot.itemData.Stack.Amount}");
+//             Debug.Log($"¿Û³ı²ÄÁÏ£º{required.ItemName} x{required.amount}£¬µ±Ç°ÓĞ {slot.itemData.Stack.Amount}");
 
 //             slot.itemData.Stack.Amount -= required.amount;
 //             if (slot.itemData.Stack.Amount <= 0)
 //             {
-//                 Debug.Log($"è¾“å…¥æ§½ {i} çš„ {required.ItemName} å·²ç”¨å°½å¹¶ç§»é™¤");
+//                 Debug.Log($"ÊäÈë²Û {i} µÄ {required.ItemName} ÒÑÓÃ¾¡²¢ÒÆ³ı");
 //                 inputInv.Data.RemoveItemAll(slot, i);
 //             }
 //             else
 //             {
-//                 Debug.Log($"è¾“å…¥æ§½ {i} å‰©ä½™ {required.ItemName} x{slot.itemData.Stack.Amount}");
+//                 Debug.Log($"ÊäÈë²Û {i} Ê£Óà {required.ItemName} x{slot.itemData.Stack.Amount}");
 //             }
 //             inputInv.RefreshUI(i);
 //         }
         
-//         // æ‰§è¡Œé…æ–¹åŠ¨ä½œ
+//         // Ö´ĞĞÅä·½¶¯×÷
 //         if (recipe.action != null)
 //         {
 //             foreach(var action in recipe.action)
@@ -646,16 +646,16 @@
 
 //         outputInv.RefreshUI();
 //         inputInv.RefreshUI();
-//         Debug.Log($"ç†”ç‚¼å®Œæˆï¼š{recipe.name}");
+//         Debug.Log($"ÈÛÁ¶Íê³É£º{recipe.name}");
 //     }
 
-//     // ä¿ç•™æ—§ç‰ˆæœ¬çš„æ£€æŸ¥æ–¹æ³•ä»¥ä¿æŒå…¼å®¹æ€§
+//     // ±£Áô¾É°æ±¾µÄ¼ì²é·½·¨ÒÔ±£³Ö¼æÈİĞÔ
 //     private bool CheckEnough(Inventory inputInventory_,
 //                                Inventory outputInventory_,
 //                                Input_List inputList,
 //                                List<ItemData> itemsToAdd)
 //     {
-//         // æ£€æŸ¥æ¯ä¸ªæ’æ§½çš„ç‰©å“æ˜¯å¦æ»¡è¶³è¦æ±‚
+//         // ¼ì²éÃ¿¸ö²å²ÛµÄÎïÆ·ÊÇ·ñÂú×ãÒªÇó
 //         if (inputInventory_ == null || inputInventory_.Data == null || inputInventory_.Data.itemSlots == null ||
 //             inputList == null || inputList.RowItems_List == null ||
 //             outputInventory_ == null || outputInventory_.Data == null ||
@@ -667,20 +667,20 @@
 //             var slot = inputInventory_.Data.itemSlots[i];
 //             var required = inputList.RowItems_List[i];
 
-//             // å¦‚æœè¯¥æ’æ§½ä¸éœ€è¦ç‰©å“åˆ™è·³è¿‡
+//             // Èç¹û¸Ã²å²Û²»ĞèÒªÎïÆ·ÔòÌø¹ı
 //             if (required.amount == 0) continue;
 
-//             // æ£€æŸ¥ç‰©å“å­˜åœ¨ä¸”åç§°åŒ¹é…
+//             // ¼ì²éÎïÆ·´æÔÚÇÒÃû³ÆÆ¥Åä
 //             if (slot == null || slot.itemData == null ||
 //                 slot.itemData.IDName != required.ItemName)
 //                 return false;
 
-//             // æ£€æŸ¥æ•°é‡è¶³å¤Ÿ
+//             // ¼ì²éÊıÁ¿×ã¹»
 //             if (slot.itemData.Stack.Amount < required.amount)
 //                 return false;
 //         }
 
-//         // æ£€æŸ¥è¾“å‡ºç©ºé—´
+//         // ¼ì²éÊä³ö¿Õ¼ä
 //         foreach (var item in itemsToAdd)
 //         {
 //             if (item == null || !outputInventory_.Data.TryAddItem(item, false))
@@ -691,70 +691,70 @@
 //     }
 //     #endregion
 
-//     #region UIä¸äº¤äº’å¤„ç†
+//     #region UIÓë½»»¥´¦Àí
 // private void UpdateUI()
 // {
-//     // ç†”ç‚¼è¿›åº¦æ¡
+//     // ÈÛÁ¶½ø¶ÈÌõ
 //     if (progressSlider != null)
 //         progressSlider.value = Data.SmeltingProgress / 100f;
 
-//     // ç‡ƒæ–™æ¡
+//     // È¼ÁÏÌõ
 //     if (fuelSlider != null && mod_Fuel != null && mod_Fuel.Data != null)
 //         fuelSlider.value = mod_Fuel.Data.Fuel.y > 0 ? mod_Fuel.Data.Fuel.x / mod_Fuel.Data.Fuel.y : 0;
 
-//     // æ¸©åº¦æ¡ï¼ˆä½¿ç”¨ç†”ç‚‰é™åˆ¶æ¸©åº¦ä½œä¸ºæœ€å¤§å€¼ï¼‰
+//     // ÎÂ¶ÈÌõ£¨Ê¹ÓÃÈÛÂ¯ÏŞÖÆÎÂ¶È×÷Îª×î´óÖµ£©
 //     if (temperatureSlider != null)
 //     {
-//         // å§‹ç»ˆä½¿ç”¨MaxTemperatureLimitä½œä¸ºæœ€å¤§å€¼æ˜¾ç¤ºç»™ç©å®¶å‚è€ƒ
+//         // Ê¼ÖÕÊ¹ÓÃMaxTemperatureLimit×÷Îª×î´óÖµÏÔÊ¾¸øÍæ¼Ò²Î¿¼
 //         float maxTempForDisplay = Data.MaxTemperatureLimit;
 //         temperatureSlider.value = maxTempForDisplay > 0 ? Data.Temperature / maxTempForDisplay : 0;
 //     }
     
-//     // æ¸©åº¦æ•°å€¼æ–‡æœ¬
+//     // ÎÂ¶ÈÊıÖµÎÄ±¾
 //     if (TemperatureText != null)
 //     {
-//         // æ˜¾ç¤ºå®é™…çš„æ¸©åº¦é™åˆ¶ï¼ˆç‡ƒæ–™é™åˆ¶å’Œç‚‰å­ç‰©ç†é™åˆ¶ä¸­çš„è¾ƒå°å€¼ï¼‰
+//         // ÏÔÊ¾Êµ¼ÊµÄÎÂ¶ÈÏŞÖÆ£¨È¼ÁÏÏŞÖÆºÍÂ¯×ÓÎïÀíÏŞÖÆÖĞµÄ½ÏĞ¡Öµ£©
 //         float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
-//         TemperatureText.text = $"{Mathf.RoundToInt(Data.Temperature)}Â°C / {Mathf.RoundToInt(actualMaxTemp)}Â°C (ç‚‰å­ä¸Šé™: {Mathf.RoundToInt(Data.MaxTemperatureLimit)}Â°C)";
+//         TemperatureText.text = $"{Mathf.RoundToInt(Data.Temperature)}¡ãC / {Mathf.RoundToInt(actualMaxTemp)}¡ãC (Â¯×ÓÉÏÏŞ: {Mathf.RoundToInt(Data.MaxTemperatureLimit)}¡ãC)";
 //     }
 // }
 
 //     private void OnButtonClick()
 //     {
-//         // å®‰å…¨æ£€æŸ¥
+//         // °²È«¼ì²é
 //         if (fuelInventory == null || fuelInventory.Data == null)
 //         {
-//             Debug.LogWarning("ç‡ƒæ–™åº“å­˜æœªåˆå§‹åŒ–ï¼");
+//             Debug.LogWarning("È¼ÁÏ¿â´æÎ´³õÊ¼»¯£¡");
 //             return;
 //         }
 
-//         // æŸ¥æ‰¾è¡Œä¸ºtagä¸­ä¸ºIgnitionçš„ç‰©å“
+//         // ²éÕÒĞĞÎªtagÖĞÎªIgnitionµÄÎïÆ·
 //         var ignitionItem = fuelInventory.Data.FindItemByTagTypeAndTag("FunctionTag", "Ignition");
 //         if (ignitionItem == null)
 //         {
-//             Debug.LogWarning("æ— æ³•ç‚¹ç‡ƒï¼šç¼ºå°‘ç‚¹ç«è£…ç½®ï¼");
+//             Debug.LogWarning("ÎŞ·¨µãÈ¼£ºÈ±ÉÙµã»ğ×°ÖÃ£¡");
 //             return;
 //         }
 
-//         // å¦‚æœå·²ç»åœ¨ç†”ç‚¼ä¸­ï¼Œä¸å…è®¸ä¸»åŠ¨åœæ­¢
+//         // Èç¹ûÒÑ¾­ÔÚÈÛÁ¶ÖĞ£¬²»ÔÊĞíÖ÷¶¯Í£Ö¹
 //         if (Data.IsSmelting)
 //         {
-//             Debug.Log("ç†”ç‚¼å·²ç»å¼€å§‹ï¼Œæ— æ³•ä¸»åŠ¨åœæ­¢ã€‚åªæœ‰ç‡ƒæ–™è€—å°½æ—¶æ‰ä¼šåœæ­¢ã€‚");
+//             Debug.Log("ÈÛÁ¶ÒÑ¾­¿ªÊ¼£¬ÎŞ·¨Ö÷¶¯Í£Ö¹¡£Ö»ÓĞÈ¼ÁÏºÄ¾¡Ê±²Å»áÍ£Ö¹¡£");
 //             return;
 //         }
         
-//         // å¼€å§‹ç†”ç‚¼
+//         // ¿ªÊ¼ÈÛÁ¶
 //         Data.IsSmelting = true;
         
-//         // è®¾ç½®é»˜è®¤æœ€å¤§æ¸©åº¦ä¸ºç†”ç‚‰é™åˆ¶æ¸©åº¦ï¼ˆå¦‚æœè¿˜æ²¡æœ‰ç‡ƒæ–™æä¾›æ¸©åº¦çš„è¯ï¼‰
+//         // ÉèÖÃÄ¬ÈÏ×î´óÎÂ¶ÈÎªÈÛÂ¯ÏŞÖÆÎÂ¶È£¨Èç¹û»¹Ã»ÓĞÈ¼ÁÏÌá¹©ÎÂ¶ÈµÄ»°£©
 //         if (Data.MaxTemperature <= 0)
 //         {
 //             Data.MaxTemperature = Data.MaxTemperatureLimit;
 //         }
         
-//         // ç‚¹ç‡ƒç‡ƒæ–™æ¨¡å—
+//         // µãÈ¼È¼ÁÏÄ£¿é
 //         mod_Fuel?.SetIgnited(true);
-//         Debug.Log("ç†”ç‚‰å·²ç‚¹ç‡ƒå¹¶å¼€å§‹ç†”ç‚¼ï¼");
+//         Debug.Log("ÈÛÂ¯ÒÑµãÈ¼²¢¿ªÊ¼ÈÛÁ¶£¡");
 //     }
 
 //     public void Interact_Start(Item item_)
@@ -773,11 +773,11 @@
 //     }
 //     #endregion
 
-//     #region ç‡ƒçƒ§çŠ¶æ€æ§åˆ¶
+//     #region È¼ÉÕ×´Ì¬¿ØÖÆ
 //     /// <summary>
-//     /// è®¾ç½®ç‡ƒçƒ§çŠ¶æ€
+//     /// ÉèÖÃÈ¼ÉÕ×´Ì¬
 //     /// </summary>
-//     /// <param name="isBurning">æ˜¯å¦ç‡ƒçƒ§</param>
+//     /// <param name="isBurning">ÊÇ·ñÈ¼ÉÕ</param>
 //     public void SetBurningState(bool isBurning)
 //     {
 //         Data.IsSmelting = isBurning;
@@ -785,25 +785,25 @@
         
 //         if (isBurning)
 //         {
-//             Debug.Log("ç†”ç‚‰å¼€å§‹ç‡ƒçƒ§ï¼");
+//             Debug.Log("ÈÛÂ¯¿ªÊ¼È¼ÉÕ£¡");
 //         }
 //         else
 //         {
-//             Debug.Log("ç†”ç‚‰åœæ­¢ç‡ƒçƒ§ï¼");
+//             Debug.Log("ÈÛÂ¯Í£Ö¹È¼ÉÕ£¡");
 //         }
 //     }
     
 //     /// <summary>
-//     /// è·å–ç‡ƒçƒ§çŠ¶æ€
+//     /// »ñÈ¡È¼ÉÕ×´Ì¬
 //     /// </summary>
-//     /// <returns>æ˜¯å¦æ­£åœ¨ç‡ƒçƒ§</returns>
+//     /// <returns>ÊÇ·ñÕıÔÚÈ¼ÉÕ</returns>
 //     public bool GetBurningState()
 //     {
 //         return Data.IsSmelting && (mod_Fuel?.GetIgnitedState() ?? false);
 //     }
     
 //     /// <summary>
-//     /// åˆ‡æ¢ç‡ƒçƒ§çŠ¶æ€
+//     /// ÇĞ»»È¼ÉÕ×´Ì¬
 //     /// </summary>
 //     public void ToggleBurningState()
 //     {
