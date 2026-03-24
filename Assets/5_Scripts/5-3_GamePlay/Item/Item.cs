@@ -41,8 +41,9 @@ public abstract class Item : MonoBehaviour
 
     [Tooltip("此物品属于谁?")]
     public Item Owner;
+
     [Tooltip("此物品是否在手上?")]
-    public bool InHand = false;
+    public bool InHand => itemData.inHand;
 
     [HideInInspector]
     /// <summary>
@@ -525,6 +526,11 @@ public abstract class Item : MonoBehaviour
     }
 
     #endregion
+
+    public void SetInHand(bool inHand)
+    {
+        itemData.inHand = inHand;
+    }
 
     private List<Module> GetModsSnapshot()
     {

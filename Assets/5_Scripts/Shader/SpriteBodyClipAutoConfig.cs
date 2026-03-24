@@ -5,16 +5,25 @@ using Sirenix.OdinInspector;
 [RequireComponent(typeof(SpriteRenderer))]
 public class SpriteBodyClipAutoConfig : MonoBehaviour
 {
-    public string bodyMinProp = "_BodyMinV";
-    public string bodyMaxProp = "_BodyMaxV";
+    [Tooltip("淹没系数，越大越容易被水淹没（1=正常，2=双倍淹没深度）")]
+    [Min(0f)]
+    public float submergeScale = 1f;
 
     SpriteRenderer sr;
-    MaterialPropertyBlock mpb;
+    Sprite _lastSprite;
 
-    void Awake()
+    void Start()
     {
         sr = GetComponent<SpriteRenderer>();
         ApplyBodyUVRange();
+    }
+
+    void LateUpdate()
+    {
+        if (sr != null && sr.sprite != _lastSprite)
+        {
+            ApplyBodyUVRange();
+        }
     }
 
     // 如果你在编辑器里换了 sprite，也可以在 OnValidate 里自动更新
@@ -31,36 +40,37 @@ public class SpriteBodyClipAutoConfig : MonoBehaviour
             return;
 
         Sprite sprite = sr.sprite;
-        Texture tex = sprite.texture;
-        if (tex == null)
-            return;
-
-        // sprite 在贴图上的像素矩形
-        Rect r = sprite.textureRect;
-
-        // 转成 0~1 的 UV（以整张贴图为基准）
-        float bodyMinV = r.yMin / tex.height;
-        float bodyMaxV = r.yMax / tex.height;
+        _lastSprite = sprite;
+        
+        // 从 Pivot（即角色脚底，localY=0）开始算裁剪范围，
+        // 忽略脚底下方的透明填充区域，确保 _BodyClip 能裁剪到可见像素
+        float localMinY = 0f;
+        float localMaxY = sprite.bounds.max.y;
 
 #if UNITY_EDITOR
-        // 编辑器下：直接写入 sharedMaterial，方便在 Inspector 里看到参数变化
         if (!Application.isPlaying)
         {
             var mat = sr.sharedMaterial;
             if (mat != null)
             {
-                mat.SetFloat(bodyMinProp, bodyMinV);
-                mat.SetFloat(bodyMaxProp, bodyMaxV);
+                mat.SetFloat("_BodyMinV", localMinY);
+                mat.SetFloat("_BodyMaxV", localMaxY);
             }
             return;
         }
 #endif
 
-        // 运行时：使用 MaterialPropertyBlock 做每个 Renderer 的覆盖，不污染共享材质
-        if (mpb == null) mpb = new MaterialPropertyBlock();
-        sr.GetPropertyBlock(mpb);
-        mpb.SetFloat(bodyMinProp, bodyMinV);
-        mpb.SetFloat(bodyMaxProp, bodyMaxV);
-        sr.SetPropertyBlock(mpb);
+        // 运行模式下，统一使用 MaterialPropertyBlock 传递参数，避免打断合批和其它脚本（如入水逻辑）的 MPB 冲突
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        sr.GetPropertyBlock(block);
+        
+        block.SetFloat("_BodyMinV", localMinY);
+        block.SetFloat("_BodyMaxV", localMaxY);
+        
+        // 将 Tile_Water 写入的原始 _BodyClip 乘以淹没系数
+        float rawClip = block.GetFloat("_BodyClip");
+        block.SetFloat("_BodyClip", Mathf.Clamp01(rawClip * submergeScale));
+        
+        sr.SetPropertyBlock(block);
     }
 }

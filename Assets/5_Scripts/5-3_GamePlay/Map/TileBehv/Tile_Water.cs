@@ -31,6 +31,7 @@ public class Tile_Water : TileBlockBehaviour
 
             // 对物体及子物体的 Renderer 应用 PropertyBlock，避免改动共享材质
             var renderers = item.GetComponentsInChildren<Renderer>();
+            
             for (int i = 0; i < renderers.Length; i++)
             {
                 var r = renderers[i];

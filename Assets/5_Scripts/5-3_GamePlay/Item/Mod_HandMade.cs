@@ -200,12 +200,12 @@ private List<string> GenerateRecipeKey_List(Inventory inputInv)
             orderedTagInputList.inputOrder = RecipeInputRule.规则合成;
             for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
             {
-                if (j == i && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values.Count > 0)
+                if (j == i && slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
                 {
                     // 使用第一个Type标签
-                    if (slot.itemData.Tags.MakeTag.values.Count > 0)
+                    if (slot.itemData.Tags.Count > 0)
                     {
-                        orderedTagInputList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
+                        orderedTagInputList.AddTagItem(slot.itemData.Tags[0]);
                     }
                     else
                     {
@@ -328,8 +328,8 @@ private string GenerateRecipeKey(Inventory inputInv)
                 else if (required.matchMode == MatchMode.ByTag)
                 {
                     isMatch = slot.itemData.Tags != null && 
-                             slot.itemData.Tags.MakeTag != null && 
-                             slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                             slot.itemData.Tags != null && 
+                             slot.itemData.Tags.Contains(required.Tag);
                 }
 
                 if (isMatch)
@@ -418,8 +418,8 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
             else if (required.matchMode == MatchMode.ByTag)
             {
                 isMatch = slot.itemData.Tags != null && 
-                         slot.itemData.Tags.MakeTag != null && 
-                         slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                         slot.itemData.Tags != null && 
+                         slot.itemData.Tags.Contains(required.Tag);
             }
 
             if (isMatch && slot.itemData.Stack.Amount > 0)

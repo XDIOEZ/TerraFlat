@@ -30,7 +30,7 @@ public partial class Nutrition
     public float Vitamins = 500;
     public GameValue_float Max_Vitamins = new(500);
     //TODO 创建一个方法 用于粗略的检测 处于饥饿状态 的概率占比
-    public float GetHungerRate()
+    public float GetFoodRate()
     {
         float rate = 0;
 
@@ -103,4 +103,41 @@ public partial class Nutrition
     public Nutrition()
     {
     }
+
+    /// <summary>
+    /// 按「碳水 -> 脂肪 -> 蛋白质」顺序消耗能量。
+    /// 返回 true 表示成功满足本次能量需求；false 表示总量不足，不执行扣减。
+    /// </summary>
+    public bool TryConsumeEnergy(float energy)
+    {
+        if (energy <= 0f)
+            return true;
+
+        float totalEnergy = Carbohydrates + Fat + Protein;
+        if (totalEnergy < energy)
+            return false;
+
+        float remain = energy;
+
+        float consumeCarbohydrates = Mathf.Min(Carbohydrates, remain);
+        Carbohydrates -= consumeCarbohydrates;
+        remain -= consumeCarbohydrates;
+
+        if (remain <= 0f)
+            return true;
+
+        float consumeFat = Mathf.Min(Fat, remain);
+        Fat -= consumeFat;
+        remain -= consumeFat;
+
+        if (remain <= 0f)
+            return true;
+
+        float consumeProtein = Mathf.Min(Protein, remain);
+        Protein -= consumeProtein;
+        remain -= consumeProtein;
+
+        return remain <= 0f;
+    }
+
 }

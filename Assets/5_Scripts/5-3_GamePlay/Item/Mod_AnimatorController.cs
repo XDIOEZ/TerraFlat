@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Mod_AnimatorController : Module
+public class Mod_AnimatorController : Module, ITrunDirection
 {
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }

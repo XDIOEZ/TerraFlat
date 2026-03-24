@@ -35,6 +35,10 @@ public class GameManager : SingletonAutoMono<GameManager>
     public GameObject UIPrefab_NewGame;
     public GameObject UIPrefab_ContextMenu;
 
+    [Header("UI 面板名称配置")]
+    [SerializeField] private string saveManagerPanelName = "UI_GameSaveManager";
+    [SerializeField] private string saveManagerPanelNameLegacy = "存档选择面板";
+
     #region 生命周期方法
     private void Start()
     {
@@ -425,6 +429,23 @@ public class GameManager : SingletonAutoMono<GameManager>
 
     #region UI事件处理方法
 
+    private BasePanel GetSaveManagerPanel()
+    {
+        BasePanel panel = UIManager.Instance.GetPanel(saveManagerPanelName);
+        if (panel != null)
+            return panel;
+
+        if (!string.IsNullOrEmpty(saveManagerPanelNameLegacy))
+        {
+            panel = UIManager.Instance.GetPanel(saveManagerPanelNameLegacy);
+            if (panel != null)
+                return panel;
+        }
+
+        Debug.LogError($"未找到存档管理面板: {saveManagerPanelName}");
+        return null;
+    }
+
     /// <summary>
     /// 点击开始游戏按钮
     /// </summary>
@@ -436,7 +457,7 @@ public class GameManager : SingletonAutoMono<GameManager>
             return;
         }
 
-        BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+        BasePanel saveManager = GetSaveManagerPanel();
         if (saveManager != null)
         {
             ContinueGame(saveManager.GetInputField("选择或新增玩家名称输入框")?.text);
@@ -450,7 +471,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         if (SaveDataMgr.Instance != null)
         {
-            BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+            BasePanel saveManager = GetSaveManagerPanel();
             if (saveManager != null)
             {
                 CreateNewWorld();
@@ -469,7 +490,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         if (SaveDataMgr.Instance != null)
         {
-            BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+            BasePanel saveManager = GetSaveManagerPanel();
             if (saveManager != null)
             {
                 var selectedSaveText = saveManager.GetText("选中的存档名称");
@@ -503,7 +524,7 @@ public class GameManager : SingletonAutoMono<GameManager>
             // 删除存档
             if (SaveDataMgr.Instance != null)
             {
-                BasePanel saveManager = UIManager.Instance.GetPanel("存档选择面板");
+                BasePanel saveManager = GetSaveManagerPanel();
                 if (saveManager != null)
                 {
                     var selectedSaveText = saveManager.GetText("选中的存档名称");

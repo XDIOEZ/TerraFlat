@@ -251,6 +251,31 @@ public partial class Inventory_Data
 
     #region 添加与转移逻辑
 
+    public ItemSlot FindFirstByTag(string tagName)
+    {
+        if (string.IsNullOrWhiteSpace(tagName))
+        {
+            throw new ArgumentException("tagName 不能为空。", nameof(tagName));
+        }
+
+        foreach (var slot in itemSlots)
+        {
+            if (slot?.itemData?.Tags == null)
+                continue;
+
+            if (slot.itemData.Tags.ContainsTag(tagName))
+                return slot;
+        }
+
+        return null;
+    }
+
+    [Obsolete("请改用 FindFirstByTag(tagName)。")]
+    public ItemSlot FindItemByTagTypeAndTag(string tagType, string tagName)
+    {
+        return FindFirstByTag(tagName);
+    }
+
     public bool TryAddItem(ItemData inputItemData, bool doAdd = true)
     {
         if (inputItemData == null) return false;
@@ -456,11 +481,11 @@ public partial class Inventory_Data
 
     #endregion
 
-    public ItemData FindItemByTagTypeAndTag(string tagType, string tag)
+    public ItemData FindItemByTag(string tag)
     {
         foreach (var slot in itemSlots)
         {
-            if (slot.itemData != null && slot.itemData.Tags.HasTypeTag(tagType, tag))
+            if (slot.itemData != null && slot.itemData.Tags.Contains(tag))
             {
                 return slot.itemData;
             }

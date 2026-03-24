@@ -264,7 +264,7 @@ public class Mod_MakeTable : Module, IInventory
                     var slot = inputInv.Data.itemSlots[slotIndex];
 
                     if (slot.itemData != null && slot.itemData.Tags != null &&
-                        slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values.Count > 0)
+                        slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
                     {
                         // 创建基于Tag的Input_List
                         Input_List tagGridList = new Input_List();
@@ -279,8 +279,8 @@ public class Mod_MakeTable : Module, IInventory
 
                                 if (r == row && c == col)
                                 {
-                                    // 使用第一个MakeTag标签
-                                    tagGridList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
+                                    // 使用第一个标签
+                                    tagGridList.AddTagItem(slot.itemData.Tags[0]);
                                 }
                                 else
                                 {
@@ -432,12 +432,12 @@ public class Mod_MakeTable : Module, IInventory
                 orderedTagInputList.inputOrder = RecipeInputRule.规则合成;
                 for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
                 {
-                    if (j == i && slot.itemData.Tags.MakeTag != null && slot.itemData.Tags.MakeTag.values.Count > 0)
+                    if (j == i && slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
                     {
                         // 使用第一个Type标签
-                        if (slot.itemData.Tags.MakeTag.values.Count > 0)
+                        if (slot.itemData.Tags.Count > 0)
                         {
-                            orderedTagInputList.AddTagItem(slot.itemData.Tags.MakeTag.values[0]);
+                            orderedTagInputList.AddTagItem(slot.itemData.Tags[0]);
                         }
                         else
                         {
@@ -639,8 +639,8 @@ public class Mod_MakeTable : Module, IInventory
                     else if (required.matchMode == MatchMode.ByTag)
                     {
                         isMatch = slot.itemData.Tags != null &&
-                                 slot.itemData.Tags.MakeTag != null &&
-                                 slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                                 slot.itemData.Tags != null &&
+                                 slot.itemData.Tags.Contains(required.Tag);
                     }
 
                     if (isMatch)
@@ -781,8 +781,8 @@ public class Mod_MakeTable : Module, IInventory
                     else if (required.matchMode == MatchMode.ByTag)
                     {
                         isMatch = slot.itemData.Tags != null &&
-                                 slot.itemData.Tags.MakeTag != null &&
-                                 slot.itemData.Tags.MakeTag.values.Contains(required.Tag);
+                                 slot.itemData.Tags != null &&
+                                 slot.itemData.Tags.Contains(required.Tag);
                     }
 
                     if (isMatch && slot.itemData.Stack.Amount > 0)

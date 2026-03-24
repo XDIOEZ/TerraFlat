@@ -54,4 +54,17 @@ public partial class TimeData
     {
         return Mathf.FloorToInt(CurrentTime / DayLength) + TotalDays;
     }
+
+    /// <summary>
+    /// 获取总游戏时间（单位：秒）
+    /// = 总天数 * 一天时长 + 当前天内经过时间
+    /// </summary>
+    public float GetTotalGameTime()
+    {
+        float currentTimeInDay = CurrentTime % DayLength;
+        if (currentTimeInDay < 0f)
+            currentTimeInDay += DayLength;
+
+        return Mathf.Max(0, TotalDays) * DayLength + currentTimeInDay;
+    }
 }

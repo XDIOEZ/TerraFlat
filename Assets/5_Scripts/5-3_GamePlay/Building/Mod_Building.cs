@@ -103,7 +103,6 @@ public class Mod_Building : Module
 
     public override void Load()
     {
-
         BuildingData.ReadData(ref Data);
         boxCollider2D = GetComponent<BoxCollider2D>();
 
@@ -115,14 +114,19 @@ public class Mod_Building : Module
         damageReceiver.OnAction += OnHit;
         item.OnAct += Install;
 
-        //根据DamageRecver 设置碰撞是否为触发器
-        if (damageReceiver.Hp == 0)
+        // 物品在手上时，取消关联碰撞体，避免手持状态下产生场景碰撞
+        if (item.InHand)
+        {
+            EnableChildColliders(false, item.transform);
             boxCollider2D.isTrigger = true;
+            CurrentState = BuildingState.NotInstalled;
+        }
         else
-            boxCollider2D.isTrigger = false;
-
-        // 初始化建筑状态
-        InitializeState();
+        {
+            EnableChildColliders(true, item.transform);
+            boxCollider2D.isTrigger = damageReceiver.Hp == 0;
+            InitializeState();
+        }
     }
 
     public override void Save()
@@ -388,7 +392,7 @@ public class Mod_Building : Module
             string obstacleInfo = GhostShadow.obstacleCollider != null ?
                 $"{GhostShadow.obstacleCollider.gameObject.name} (位置: {GhostShadow.obstacleCollider.transform.position})" :
                 "未知碰撞体";
-
+//TODO Debug输出障碍物的名字 方便调试
             Debug.LogWarning($"[建筑安装] 安装失败: 检测到障碍物 - {obstacleInfo}");
             Debug.DrawLine(item.transform.position, GhostShadow.transform.position, Color.red, 5f);
             return false;
@@ -963,7 +967,7 @@ public class Mod_Building : Module
         // 设置为最大血量（表示已安装）
         damageReceiver.Hp = damageReceiver.MaxHp.Value;
 
-        item.InHand = false;
+        item.SetInHand(false);
 
         // 设置缩放为1
         item.transform.localScale = Vector3.one;
@@ -1019,7 +1023,8 @@ public class Mod_Building : Module
             Debug.LogWarning("[设置安装状态] DamageReceiver的最大血量未设置，使用默认值100");
         }
 
-        item.InHand = false;
+        item.
+        SetInHand(false);
 
         // 设置缩放为1
         item.transform.localScale = Vector3.one;

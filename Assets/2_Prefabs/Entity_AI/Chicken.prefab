@@ -117,7 +117,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -143,18 +142,7 @@ MonoBehaviour:
       Item_Material:
       - None
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Animal
-      - tag: Material
-        values:
-        - Blood
-        - Meat
-      - tag: Creature
-        values:
-        - VegetableAnimal
-        - MeatAnimal
+    - 
     Stack:
       Amount: 1
       Volume: 1
@@ -164,6 +152,7 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
+    inHand: 0
     Guid: 0
     code: 
 --- !u!61 &4850197992055457325
@@ -238,6 +227,118 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!1 &6797200048394459089
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4040572142908259681}
+  - component: {fileID: 1775883118074638832}
+  m_Layer: 0
+  m_Name: Module_Base_AI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4040572142908259681
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6797200048394459089}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4778519347457968648}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1775883118074638832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6797200048394459089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0ae97d52ceacf841a041892e6987d4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Data:
+    State: 0
+    EggTimer: 0
+    Fatigue01: 0
+  _currentState: 0
+  _stateElapsed: 0
+  _isReady: 0
+  _currentFoodTarget: {fileID: 0}
+  _mover: {fileID: 0}
+  _food: {fileID: 0}
+  _hp: {fileID: 0}
+  _detector: {fileID: 0}
+  _animator: {fileID: 0}
+  debugLog: 1
+  eatEnterHungerRate: 0.35
+  eatExitHungerRate: 0.85
+  sleepEnterHpRate: 0.5
+  sleepExitHpRate: 0.55
+  sleepRecoverHpPerSecond: 6
+  sleepDuration: 6
+  sleepCooldown: 3
+  dayStartRatio: 0.25
+  dayEndRatio: 0.75
+  detectorRefreshInterval: 0.8
+  eatDistance: 1.2
+  enableIdleWander: 1
+  idleMinDuration: 0.6
+  idleMaxDuration: 1.8
+  wanderRadius: 4
+  wanderStopDistance: 0.35
+  wanderPauseMin: 0.8
+  wanderPauseMax: 2.2
+  edibleTags:
+  - Meat
+  - Worm
+  - Corn
+  - Wheat
+  - Seed
+  - Food
+  - Weed
+  - Plant
+  eggItemId: Egg
+  layEggInterval: 2880
+  layEggDuration: 2
+  fleeTriggerDistance: 6
+  fleeSafeDistance: 10
+  fleeRunDistance: 8
+  threatTags:
+  - Predator
+  fleeFromPlayer: 1
+  defaultMateDuration: 8
+  animIdle: Stand
+  animMove: Move
+  animForage: Move
+  animEat: Sit
+  animSleep: Sleep
+  animMate: Sit
+  animLayEgg: Sit
+  animFlee: Move
+  OnStateChanged:
+    _PersistentCalls: []
 --- !u!1001 &2149651359683716600
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1011,7 +1112,11 @@ PrefabInstance:
     - target: {fileID: 5802457204138852704, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: -1286042895, guid: b2e2fe7100b6c064698a52e24c3bbf7f, type: 3}
+      objectReference: {fileID: -793836202, guid: b2e2fe7100b6c064698a52e24c3bbf7f, type: 3}
+    - target: {fileID: 5802457204138852704, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 06dc2608a1031034698c137f9f6cfbc8, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1021,76 +1126,6 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 45469955551787273, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
   m_PrefabInstance: {fileID: 8946669823775768404}
-  m_PrefabAsset: {fileID: 0}
---- !u!1001 &8947566302445355048
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 4778519347457968648}
-    m_Modifications:
-    - target: {fileID: 2483916936477612025, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_Name
-      value: Module_Base_AI
-      objectReference: {fileID: 0}
-    - target: {fileID: 2483916936477612025, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_Layer
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6656083125569062478, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: tree
-      value: 
-      objectReference: {fileID: 11400000, guid: 6978d3b64138a424b97b1bddad14f011, type: 2}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
---- !u!4 &4040572142908259681 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-  m_PrefabInstance: {fileID: 8947566302445355048}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &9049585173335452848
 PrefabInstance:

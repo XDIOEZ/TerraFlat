@@ -1,9 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class Mod_InteractSender : Module
+public class Mod_InteractSender : Module,ITrunDirection
 {
     #region 基础参数
 
@@ -18,8 +19,10 @@ public class Mod_InteractSender : Module
     public List<string> RawData = new List<string>();
     public Collider2D interactCollider;
     public GameController gameController;
-    public List<Mod_InteractReciver> receiversInRange = new List<Mod_InteractReciver>();
-    public Mod_InteractReciver currentReceiver;
+    [ShowInInspector]
+    public List<IInteractable> receiversInRange = new List<IInteractable>();
+    public IInteractable currentReceiver;
+    private Component currentReceiverComponent;
     public float maxInteractDistance = 2f;
     private bool shouldDisableColliderAfterInteract;
 
@@ -113,16 +116,25 @@ public class Mod_InteractSender : Module
 
     #region 交互流程
 
-    private void StartInteraction(Mod_InteractReciver receiver)
+    private void StartInteraction(IInteractable receiver)
     {
         if (receiver == null)
             return;
 
+        var receiverComponent = receiver as Component;
+        if (receiverComponent == null)
+        {
+            Debug.LogError("IInteractable 必须由 Component/MonoBehaviour 实现");
+            return;
+        }
+
         if (currentReceiver != null && currentReceiver != receiver)
-            currentReceiver.Interact_Cancel(item);
+    
+            currentReceiver.OnInteractCancel(item);
 
         currentReceiver = receiver;
-        currentReceiver.Interact_Start(item);
+        currentReceiverComponent = receiverComponent;
+        currentReceiver.OnInteractStart(item);
 
         // 交互建立后失活触发器，后续交互维持仅依赖距离检测。
         shouldDisableColliderAfterInteract = true;
@@ -133,8 +145,9 @@ public class Mod_InteractSender : Module
         if (currentReceiver == null)
             return;
 
-        currentReceiver.Interact_Cancel(item);
+        currentReceiver.OnInteractCancel(item);
         currentReceiver = null;
+        currentReceiverComponent = null;
     }
 
     private void ValidateCurrentInteractionDistance()
@@ -142,7 +155,7 @@ public class Mod_InteractSender : Module
         if (currentReceiver == null)
             return;
 
-        if (currentReceiver.item == null)
+        if (currentReceiverComponent == null)
         {
             receiversInRange.Remove(currentReceiver);
             StopCurrentInteraction();
@@ -150,7 +163,7 @@ public class Mod_InteractSender : Module
             return;
         }
 
-        float currentDistance = Vector2.Distance(item.transform.position, currentReceiver.item.transform.position);
+        float currentDistance = Vector2.Distance(item.transform.position, currentReceiverComponent.transform.position);
         if (currentDistance <= maxInteractDistance)
             return;
 
@@ -177,7 +190,7 @@ public class Mod_InteractSender : Module
         if (interactCollider == null || !interactCollider.enabled)
             return;
 
-        var receiver = other.GetComponent<Mod_InteractReciver>();
+        var receiver = other.GetComponent<IInteractable>();
         if (receiver == null)
             return;
 
@@ -192,7 +205,7 @@ public class Mod_InteractSender : Module
         if (interactCollider == null || !interactCollider.enabled)
             return;
 
-        var receiver = other.GetComponent<Mod_InteractReciver>();
+        var receiver = other.GetComponent<IInteractable>();
         if (receiver == null)
             return;
 
@@ -205,7 +218,7 @@ public class Mod_InteractSender : Module
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        var receiver = other.GetComponent<Mod_InteractReciver>();
+        var receiver = other.GetComponent<IInteractable>();
         if (receiver == null)
             return;
 

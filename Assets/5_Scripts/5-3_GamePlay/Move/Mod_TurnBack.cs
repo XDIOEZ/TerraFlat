@@ -25,7 +25,7 @@ public class Mod_TurnBack : Module
     [SerializeField, ReadOnly, Tooltip("是否正在转身（由脚本自动控制）")]
     public bool isTurning = false;
 
-    public UltEvent<Vector2> OnTrun = new UltEvent<Vector2>();//TODO 转身事件 输入转身的方向
+    public UltEvent<Vector2> OnTrun = new UltEvent<Vector2>();
 
     private float turnTimeElapsed;
     private float startY;
@@ -61,21 +61,10 @@ public class Mod_TurnBack : Module
 
     public override void Load()
     {
-
         faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
 
         controlledTransforms_Direction.Clear();
-
-        // 获取所有子物体上的 Animator 组件
-        Animator[] animators = item.GetComponentsInChildren<Animator>();
-        if (animators.Length > 0)
-        {
-            foreach (var animator in animators)
-            {
-                if (animator != null)
-                    AddControlledTransform(animator.transform);
-            }
-        }
+        CollectTurnDirectionTransforms();
 
         if (faceMouse == null)
             Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！" + item.name);
@@ -172,6 +161,23 @@ public class Mod_TurnBack : Module
 
     #region 受控对象管理
 
+    private void CollectTurnDirectionTransforms()
+    {
+        if (item == null)
+        {
+            Debug.LogError("[TurnBody] 初始化失败：item 为空，无法收集 ITrunDirection 模块");
+            return;
+        }
+
+        foreach (var mod in item.itemMods.Mods.Values)
+        {
+            if (!(mod is ITrunDirection))
+                continue;
+
+            AddControlledTransform(mod.transform);
+        }
+    }
+
     /// <summary>
     /// 添加受控制的变换对象到列表中，并更新其朝向
     /// </summary>
@@ -183,6 +189,9 @@ public class Mod_TurnBack : Module
             Debug.LogError("[TurnBody] 受控制的变换对象为空！");
             return;
         }
+
+        if (controlledTransforms_Direction.Contains(transform))
+            return;
 
 
         // 添加到控制列表
