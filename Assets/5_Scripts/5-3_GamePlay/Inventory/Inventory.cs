@@ -280,21 +280,22 @@ public class Inventory
         int currentCount = ItemSlot_Parent.childCount;
         int targetCount = Data.itemSlots.Count;
 
-        // 删除多余槽位（从后往前删保证安全）
-        for (int i = currentCount - 1; i >= targetCount; i--)
+        // 运行时不直接销毁多余槽位，避免在触发器/动画等回调链里触发 DestroyImmediate 报错。
+        for (int i = 0; i < currentCount; i++)
         {
-            GameObject.DestroyImmediate(ItemSlot_Parent.GetChild(i).gameObject);
+            ItemSlot_Parent.GetChild(i).gameObject.SetActive(i < targetCount);
         }
 
         // 创建缺少的槽位
         for (int i = currentCount; i < targetCount; i++)
         {
             GameObject item = GameObject.Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false);
+            item.SetActive(true);
         }
 
         // 重建UI列表并绑定数据
         itemSlot_UI.Clear();
-        for (int i = 0; i < ItemSlot_Parent.childCount; i++)
+        for (int i = 0; i < targetCount; i++)
         {
             var ui = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
             if (ui != null)
@@ -310,16 +311,16 @@ public class Inventory
     //同步UI与Data
     public void SyncData()
     {
+        if (Data == null || Data.itemSlots == null)
+        {
+            Debug.LogError($"[Inventory.SyncData] Data 或 Data.itemSlots 为空！");
+            return;
+        }
+
         // 空检查：确保数据和UI列表都初始化
         if (itemSlot_UI == null || itemSlot_UI.Count == 0)
         {
             Debug.LogWarning($"[Inventory.SyncData] itemSlotUIs 为空或未初始化！InventoryName: {Data?.Name}");
-            return;
-        }
-
-        if (Data == null || Data.itemSlots == null)
-        {
-            Debug.LogError($"[Inventory.SyncData] Data 或 Data.itemSlots 为空！");
             return;
         }
 
@@ -329,7 +330,8 @@ public class Inventory
             Debug.LogWarning($"[Inventory.SyncData] UI槽位数({itemSlot_UI.Count}) 与 Data槽位数({Data.itemSlots.Count}) 不匹配！");
         }
 
-        for (int i = 0; i < itemSlot_UI.Count; i++)
+        int bindCount = Mathf.Min(itemSlot_UI.Count, Data.itemSlots.Count);
+        for (int i = 0; i < bindCount; i++)
         {
             ItemSlot_UI itemSlotUI = itemSlot_UI[i];
 
@@ -337,12 +339,6 @@ public class Inventory
             if (itemSlotUI == null)
             {
                 Debug.LogError($"[Inventory.SyncData] itemSlotUIs[{i}] 为空！");
-                continue;
-            }
-
-            if (i >= Data.itemSlots.Count)
-            {
-                Debug.LogError($"[Inventory.SyncData] Data.itemSlots[{i}] 超出范围！Data槽位总数: {Data.itemSlots.Count}");
                 continue;
             }
 
@@ -383,6 +379,12 @@ public class Inventory
             {
                 Debug.LogWarning($"[Inventory.SyncData] Data.itemSlots[{i}].onSlotDataChanged 为空！");
             }
+        }
+
+        for (int i = bindCount; i < itemSlot_UI.Count; i++)
+        {
+            if (itemSlot_UI[i] != null)
+                itemSlot_UI[i].gameObject.SetActive(false);
         }
     }
 
@@ -504,6 +506,7 @@ public class Inventory
 
     public void RefreshUI(int index)
     {
+        if (index < 0 || index >= itemSlot_UI.Count) return;
         itemSlot_UI[index].RefreshUI();
     }
 

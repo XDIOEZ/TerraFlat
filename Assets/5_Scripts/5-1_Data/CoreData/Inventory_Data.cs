@@ -52,12 +52,22 @@ public partial class Inventory_Data
         this.itemSlots = itemSlots;
         this.Name = Name;
         this.PanelPosition = Vector3.zero; // 初始化面板位置
+        EnsureRuntimeEvents();
+    }
+
+    private void EnsureRuntimeEvents()
+    {
+        Event_RefreshUI ??= new UltEvent<int>();
+        Event_OnBeforeDataChanged ??= new UltEvent<ItemSlot>();
+        Event_OnDataChanged ??= new UltEvent<ItemSlot>();
+        Event_OnDataChanged_TwoSlots ??= new UltEvent<ItemSlot, ItemSlot>();
     }
 
     #region 插槽操作逻辑
 
     public void RemoveItemAll(ItemSlot itemSlot, int index = 0)
     {
+        EnsureRuntimeEvents();
         Event_OnBeforeDataChanged.Invoke(itemSlot);
         itemSlot.itemData = null;
         Event_RefreshUI.Invoke(index);
@@ -66,6 +76,7 @@ public partial class Inventory_Data
 
     public void SetOne_ItemData(int index, ItemData inputItemData)
     {
+        EnsureRuntimeEvents();
         Event_OnBeforeDataChanged.Invoke(itemSlots[index]);
         itemSlots[index].itemData = inputItemData;
         Event_OnDataChanged.Invoke(itemSlots[index]);
@@ -80,6 +91,7 @@ public partial class Inventory_Data
 
     public void ChangeItemDataAmount(int index, float amount)
     {
+        EnsureRuntimeEvents();
         Event_OnBeforeDataChanged.Invoke(itemSlots[index]);
         itemSlots[index].itemData.Stack.Amount += amount;
         Event_OnDataChanged.Invoke(itemSlots[index]);
@@ -89,13 +101,42 @@ public partial class Inventory_Data
 
     #region 基础交互逻辑
 
+    private ItemSlot GetOrCreateItemSlot(int index)
+    {
+        if (index < 0 || index >= itemSlots.Count)
+        {
+            Debug.LogError($"[Inventory_Data] 槽位索引超出范围: {index}, 槽位总数: {itemSlots.Count}");
+            return null;
+        }
+
+        if (itemSlots[index] != null)
+            return itemSlots[index];
+
+        itemSlots[index] = new ItemSlot(index)
+        {
+            SlotMaxVolume = 100
+        };
+        Debug.LogError($"[Inventory_Data] 检测到空槽位引用，已在索引 {index} 处自动补齐 ItemSlot 实例");
+        return itemSlots[index];
+    }
+
     public void ChangeItemData_Default(int index, ItemSlot inputSlotHand)
     {
+        EnsureRuntimeEvents();
         float rate = 1f;
         // 移除对 Belong_Inventory 的依赖，改为通过事件参数传递或其它方式获取
         // 如果需要获取来源背包信息，应该通过其他方式传入
 
-        var localSlot = itemSlots[index];
+        var localSlot = GetOrCreateItemSlot(index);
+        if (localSlot == null)
+            return;
+
+        if (inputSlotHand == null)
+        {
+            Debug.LogError($"[Inventory_Data.ChangeItemData_Default] 输入槽位为空，index: {index}");
+            return;
+        }
+
         var localData = localSlot.itemData;
         var inputData = inputSlotHand.itemData;
 
