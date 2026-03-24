@@ -136,6 +136,10 @@ public class Inventory_Furnace : Inventory
     /// </summary>
     public override void InitUI()
     {
+        InputInventory.itemSlot_UI.Clear();
+        OutputInventory.itemSlot_UI.Clear();
+        FuelInventory.itemSlot_UI.Clear();
+
         InputInventory.itemSlot_UI.Add(basePanel.GetButton("输入_1").GetComponent<ItemSlot_UI>());
         InputInventory.itemSlot_UI.Add(basePanel.GetButton("输入_2").GetComponent<ItemSlot_UI>());
         InputInventory.itemSlot_UI.Add(basePanel.GetButton("输入_3").GetComponent<ItemSlot_UI>());

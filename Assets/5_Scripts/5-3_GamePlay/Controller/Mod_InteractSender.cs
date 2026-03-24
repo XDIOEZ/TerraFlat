@@ -20,6 +20,9 @@ public class Mod_InteractSender : Module
     public GameController gameController;
     public List<Mod_InteractReciver> receiversInRange = new List<Mod_InteractReciver>();
     public Mod_InteractReciver currentReceiver;
+    public float maxInteractDistance = 2f;
+    private bool shouldDisableColliderAfterInteract;
+
     public override void Load()
     {
         ModSaveData.ReadData(ref RawData);
@@ -35,6 +38,17 @@ public class Mod_InteractSender : Module
     public override void Save()
     {
         ModSaveData.WriteData(RawData);
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        if (shouldDisableColliderAfterInteract)
+        {
+            DisableInteractCollider();
+            shouldDisableColliderAfterInteract = false;
+        }
+
+        ValidateCurrentInteractionDistance();
     }
     #endregion
 
@@ -66,6 +80,8 @@ public class Mod_InteractSender : Module
         if (interactCollider == null)
             return;
 
+        // 每次按下交互键时刷新范围缓存，避免使用过期触发器列表。
+        receiversInRange.Clear();
         interactCollider.enabled = true;
     }
 
@@ -74,7 +90,7 @@ public class Mod_InteractSender : Module
         if (interactCollider == null)
             return;
 
-        TryDisableCollider();
+        DisableInteractCollider();
     }
 
     private void OnDisable()
@@ -82,17 +98,18 @@ public class Mod_InteractSender : Module
         UnbindInput();
         StopCurrentInteraction();
         receiversInRange.Clear();
-        TryDisableCollider(force: true);
+
+        if (interactCollider != null)
+            interactCollider.enabled = false;
+
+        shouldDisableColliderAfterInteract = false;
     }
 
     private void OnDestroy()
     {
         UnbindInput();
-        StopCurrentInteraction();
-        receiversInRange.Clear();
     }
     #endregion
-
 
     #region 交互流程
 
@@ -106,6 +123,9 @@ public class Mod_InteractSender : Module
 
         currentReceiver = receiver;
         currentReceiver.Interact_Start(item);
+
+        // 交互建立后失活触发器，后续交互维持仅依赖距离检测。
+        shouldDisableColliderAfterInteract = true;
     }
 
     private void StopCurrentInteraction()
@@ -117,18 +137,31 @@ public class Mod_InteractSender : Module
         currentReceiver = null;
     }
 
-    private void TryDisableCollider(bool force = false)
+    private void ValidateCurrentInteractionDistance()
     {
-        if (interactCollider == null)
+        if (currentReceiver == null)
             return;
 
-        if (force)
+        if (currentReceiver.item == null)
         {
-            interactCollider.enabled = false;
+            receiversInRange.Remove(currentReceiver);
+            StopCurrentInteraction();
+            DisableInteractCollider();
             return;
         }
 
-        if (currentReceiver != null || receiversInRange.Count > 0)
+        float currentDistance = Vector2.Distance(item.transform.position, currentReceiver.item.transform.position);
+        if (currentDistance <= maxInteractDistance)
+            return;
+
+        receiversInRange.Remove(currentReceiver);
+        StopCurrentInteraction();
+        DisableInteractCollider();
+    }
+
+    private void DisableInteractCollider()
+    {
+        if (interactCollider == null)
             return;
 
         interactCollider.enabled = false;
@@ -177,10 +210,5 @@ public class Mod_InteractSender : Module
             return;
 
         receiversInRange.Remove(receiver);
-
-        if (currentReceiver == receiver)
-            StopCurrentInteraction();
-
-        TryDisableCollider();
     }
 }
