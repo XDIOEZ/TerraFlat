@@ -128,10 +128,6 @@ public class Mod_InteractSender : Module,ITrunDirection
             return;
         }
 
-        if (currentReceiver != null && currentReceiver != receiver)
-    
-            currentReceiver.OnInteractCancel(item);
-
         currentReceiver = receiver;
         currentReceiverComponent = receiverComponent;
         currentReceiver.OnInteractStart(item);

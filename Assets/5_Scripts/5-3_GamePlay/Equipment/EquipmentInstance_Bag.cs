@@ -19,7 +19,6 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
     public override void Equip(Item item = null)
     {
         BagInventory.Data = BagData;
-        var equipModule = item.itemMods.GetMod_ByID<Module_Equipment>(ModText.Equipment_Module);
         var controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
         BagInventory.InitData();
         BagInventory.BindController(controller);

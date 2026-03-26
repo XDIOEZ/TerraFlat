@@ -4,8 +4,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
-public class Mod_Furnace : Module
+public class Mod_Furnace : Module, IInteractable
 {
     #region 基础参数
 
@@ -23,7 +22,6 @@ public class Mod_Furnace : Module
     public Inventory FuelInventory;
     public Mod_Fuel mod_Fuel; // 燃料模块
     public BasePanel basePanel; // 熔炉面板
-    public Mod_InteractReciver mod_InteractReciver; // 交互接收模块
     public GameObject UI_Prefab; // 熔炉UI预制体
     private const float PanelDestroyDelay = 30f;
     private Coroutine panelDestroyCoroutine;
@@ -33,17 +31,14 @@ public class Mod_Furnace : Module
 
     public override void Load()
     {
-        mod_InteractReciver = item.GetComponentInChildren<Mod_InteractReciver>();
         mod_Fuel = item.GetComponentInChildren<Mod_Fuel>();
         ModSaveData.ReadData(ref RawData);
-        mod_InteractReciver.OnAction_Start += OnPlayerInteract;
-        mod_InteractReciver.OnAction_Stop += OnPlayerInteractCancel;
         InputInventory.InitData();
         OutputInventory.InitData();
         FuelInventory.InitData();
     }
 
-    void OnPlayerInteract(Item playerItem)
+    public void OnInteractStart(Item playerItem)
     {
         if (basePanel == null)
         {
@@ -65,7 +60,7 @@ public class Mod_Furnace : Module
         FuelInventory.DefaultTarget_Inventory = handInv;
     }
 
-    void OnPlayerInteractCancel(Item playerItem)
+    public void OnInteractCancel(Item playerItem)
     {
         if (basePanel == null)
             return;
@@ -82,12 +77,6 @@ public class Mod_Furnace : Module
     private void OnDestroy()
     {
         CancelPanelDestroyCountdown();
-
-        if (mod_InteractReciver != null)
-        {
-            mod_InteractReciver.OnAction_Start -= OnPlayerInteract;
-            mod_InteractReciver.OnAction_Stop -= OnPlayerInteractCancel;
-        }
     }
 
     #region 面板延迟销毁
