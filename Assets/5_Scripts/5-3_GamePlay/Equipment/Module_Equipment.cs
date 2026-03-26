@@ -1,6 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// [已废弃] 请改用 <see cref="Mod_Equipment"/>，它整合了面板管理与交互功能。
+/// 保留此文件仅用于平滑过渡。在 Inspector 中将组件替换为 Mod_Equipment 后可删除本文件。
+/// </summary>
+[System.Obsolete("请改用 Mod_Equipment，该类已将 Inventory UI 与装备逻辑整合为单一模块。")]
 public class Module_Equipment : Module
 {
     #region 基础参数
