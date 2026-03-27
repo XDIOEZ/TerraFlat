@@ -2,6 +2,8 @@ using Sirenix.OdinInspector;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using UnityEngine;
 
@@ -69,28 +71,22 @@ public class Recipe_Tag : ScriptableObject
     /// <param name="ingredient">配方材料</param>
     /// <returns>材料键值字符串</returns>
     private string GetIngredientKey(CraftingIngredient_Tag ingredient)
-    {        if (ingredient.Tag == null || ingredient.Tag.keys == null)
+    {
+        if (ingredient == null || ingredient.Tags == null)
             return string.Empty;
             
         StringBuilder ingredientKey = new StringBuilder();
-        
-        // 只处理Type和Material标签
-        foreach (var tagData in ingredient.Tag.keys)
+
+        List<string> sortedTags = ingredient.Tags
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .Distinct()
+            .OrderBy(tag => tag)
+            .ToList();
+
+        foreach (string tag in sortedTags)
         {
-            if (tagData == null || string.IsNullOrEmpty(tagData.tag) || tagData.values == null)
-                continue;
-                
-            // 只处理Type和Material标签类型
-            if (tagData.tag == "Type" || tagData.tag == "Material")
-            {
-                foreach (var value in tagData.values)
-                {
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        ingredientKey.Append($"{tagData.tag}:{value};");
-                    }
-                }
-            }
+            ingredientKey.Append($"Tag:{tag};");
         }
         
         // 添加数量
@@ -109,6 +105,29 @@ public class Recipe_Tag : ScriptableObject
 [Serializable]
 public class CraftingIngredient_Tag
 {
-    public TagDictionary Tag = new TagDictionary();
+    [Sirenix.OdinInspector.ListDrawerSettings(ShowFoldout = true, DefaultExpandedState = true)]
+    [Sirenix.OdinInspector.ValueDropdown(nameof(GetGameTagsDropdown), IsUniqueList = true, DrawDropdownForListElements = true)]
+    public List<string> Tags = new List<string>();
+
     public int amount = 1;
+
+    private static IEnumerable<Sirenix.OdinInspector.ValueDropdownItem<string>> GetGameTagsDropdown()
+    {
+        return typeof(GameTags)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => field.FieldType == typeof(string))
+            .Select(field =>
+            {
+                string value = field.GetValue(null) as string;
+                TooltipAttribute tooltip = field.GetCustomAttribute<TooltipAttribute>();
+                string cn = tooltip != null ? tooltip.tooltip : string.Empty;
+                string label = string.IsNullOrWhiteSpace(cn) ? value : $"{value} ({cn})";
+                return new Sirenix.OdinInspector.ValueDropdownItem<string>(label, value);
+            })
+            .Where(item => !string.IsNullOrWhiteSpace(item.Value))
+            .GroupBy(item => item.Value)
+            .Select(group => group.First())
+            .OrderBy(item => item.Value)
+            .ToList();
+    }
 }

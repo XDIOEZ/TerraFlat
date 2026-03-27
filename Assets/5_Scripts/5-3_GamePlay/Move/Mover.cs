@@ -274,7 +274,26 @@ public partial class Mover : Module
     #region 数据存取
     public override void Save()
     {
-        ModDataMemoryPack.WriteData(Data);
+        var saveData = new Mover_SaveData
+        {
+            Speed = new GameValue_float(Data.Speed.BaseValue)
+            {
+                BaseAdditive = Data.Speed.BaseAdditive,
+                // 运行时加成由装备/Buff重建，不写入持久化，避免读档后重复叠加或错减
+                AdditiveModifier = 0f,
+                MultiplicativeModifier = 1f,
+                FinalAdditive = Data.Speed.FinalAdditive
+            },
+            slowDownSpeed = Data.slowDownSpeed,
+            endSpeed = Data.endSpeed,
+            moveStaminaConsume = Data.moveStaminaConsume,
+            runStaminaConsume = Data.runStaminaConsume,
+            runSpeedRate = Data.runSpeedRate,
+            isRunning = false,
+            RunStaminaThreshold = Data.RunStaminaThreshold
+        };
+
+        ModDataMemoryPack.WriteData(saveData);
         Item_Data.ModuleDataDic[_Data.Name] = _Data;
     }
     public void OnDestroy()

@@ -141,8 +141,7 @@ MonoBehaviour:
       - None
       Item_Material:
       - None
-    Tags:
-    - 
+    Tags: []
     Stack:
       Amount: 1
       Volume: 1

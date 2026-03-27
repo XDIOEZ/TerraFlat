@@ -299,7 +299,7 @@ public class Mod_Tent : MonoBehaviour, IInteractable
         float maxHungerEnergy = nutrition.Max_Carbohydrates.Value + nutrition.Max_Fat.Value * 0.5f;
         float totalHungerConsume = maxHungerEnergy * sleepHungerConsumeRatioByMaxValue;
         float totalWaterConsume = nutrition.Max_Water.Value * sleepWaterConsumeRatioByMaxValue;
-        float totalHeal = hp.MaxHp.Value * sleepHealRatioByMaxHp * (1f + vitaminRatio * vitaminHealBonusRatio);
+        float totalHeal = hp.MaxHp * sleepHealRatioByMaxHp * (1f + vitaminRatio * vitaminHealBonusRatio);
 
         return new SleepPlan
         {

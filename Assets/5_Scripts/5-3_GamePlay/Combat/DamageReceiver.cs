@@ -19,16 +19,55 @@ public class DamageReceiver : Module
     [SerializeField]
     public DamageReceiver_SaveData Data = new DamageReceiver_SaveData();
 
-    public GameValue_float MaxHp
+    public float BaseHp
+    {
+        get => Data.BaseHp;
+        set => Data.BaseHp = Mathf.Max(0f, value);
+    }
+
+    public float MaxHp
     {
         get => Data.MaxHp;
-        set => Data.MaxHp = value;
+        set => Data.MaxHp = Mathf.Max(0f, value);
     }
 
     public float Hp
     {
         get => Data.Hp;
         set => Data.Hp = value;
+    }
+
+    public float BaseDefense
+    {
+        get => Data.BaseDefense;
+        set => Data.BaseDefense = Mathf.Max(0f, value);
+    }
+
+    public float MaxDefense
+    {
+        get => Data.MaxDefense;
+        set => Data.MaxDefense = Mathf.Max(0f, value);
+    }
+
+    public float DefenseBonus
+    {
+        get => Data.DefenseBonus;
+        set => Data.DefenseBonus = value;
+    }
+
+    public float DefenseMultiplier
+    {
+        get => Data.DefenseMultiplier;
+        set => Data.DefenseMultiplier = Mathf.Max(0f, value);
+    }
+
+    public float CurrentDefense
+    {
+        get
+        {
+            float defense = (BaseDefense + DefenseBonus) * DefenseMultiplier;
+            return Mathf.Clamp(defense, 0f, MaxDefense);
+        }
     }
 
     public UltEvent OnDead = new();
@@ -38,8 +77,14 @@ public class DamageReceiver : Module
     {
         [Header("生命值设置")]
         public float Hp = 100;
-        public GameValue_float MaxHp = new GameValue_float(100);
-        public GameValue_float Defense = new GameValue_float(0);
+        public float BaseHp = 100;
+        public float MaxHp = 100;
+
+        [Header("防御设置")]
+        public float BaseDefense = 0;
+        public float MaxDefense = 100;
+        public float DefenseBonus = 0;
+        public float DefenseMultiplier = 1;
         public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
@@ -134,6 +179,7 @@ public class DamageReceiver : Module
     public override void Awake()
     {
         _Data.ID = ModText.Hp;
+        NormalizeStatRanges();
     }
 
 
@@ -141,6 +187,7 @@ public class DamageReceiver : Module
     public override void Load()
     {
         modData.ReadData(ref Data);
+        NormalizeStatRanges();
 
         if (item.itemMods.ContainsKey_ID(ModText.Equipment))
 
@@ -252,7 +299,7 @@ public class DamageReceiver : Module
         else
         {
             // 计算实际伤害（防御力减免，每点防御减少1%伤害）
-            float defenseRate = Mathf.Clamp01(Data.Defense.Value * 0.01f); // 每点防御减少1%伤害，最大100%
+            float defenseRate = Mathf.Clamp01(CurrentDefense * 0.01f); // 每点防御减少1%伤害，最大100%
             actualDamage = damageSender.Damage.Value * (1 - defenseRate);
         }
 
@@ -348,7 +395,7 @@ public class DamageReceiver : Module
     public virtual float Heal(float healAmount, Item healer = null)
     {
         float oldHp = Hp;
-        Hp = Mathf.Min(Hp + healAmount, MaxHp.Value);
+        Hp = Mathf.Min(Hp + healAmount, MaxHp);
 
         // 只有在血量发生变化时才刷新UI
         if (Mathf.Abs(Hp - oldHp) > 0.001f && Data.ShowCanvas)
@@ -357,6 +404,27 @@ public class DamageReceiver : Module
         }
 
         return Hp;
+    }
+
+    public void AddDefenseBonus(float value)
+    {
+        DefenseBonus += value;
+    }
+
+    public void RemoveDefenseBonus(float value)
+    {
+        DefenseBonus -= value;
+    }
+
+    private void NormalizeStatRanges()
+    {
+        Data.BaseHp = Mathf.Max(0f, Data.BaseHp);
+        Data.MaxHp = Mathf.Max(Data.BaseHp, Data.MaxHp);
+        Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
+
+        Data.BaseDefense = Mathf.Max(0f, Data.BaseDefense);
+        Data.MaxDefense = Mathf.Max(0f, Data.MaxDefense);
+        Data.DefenseMultiplier = Mathf.Max(0f, Data.DefenseMultiplier);
     }
     #endregion
 

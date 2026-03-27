@@ -1,5 +1,14 @@
 using System.Collections.Generic;
+using MemoryPack;
 using UnityEngine;
+
+[System.Serializable]
+[MemoryPackable]
+public partial class Mod_EquipmentSaveData
+{
+    public Inventory_Data EquipmentInventoryData;
+    public List<List<EquipmentInstance>> EquipmentInstances;
+}
 
 /// <summary>
 /// 装备系统模块 —— 独立继承 Module，统一管理装备栏 Inventory UI、交互面板与装备效果实例。
@@ -41,6 +50,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable
 
     public override void Load()
     {
+        LoadSaveDataFromModule();
+
         // 设置所有者
         EquipmentInventory.item = item;
 
@@ -56,11 +67,11 @@ public class Mod_Equipment : Module, IInventory, IInteractable
         EquipmentInventory.BindController(ctrl);
 
         // 订阅槽位变化事件，驱动装备效果更新
+        EquipmentInventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
         EquipmentInventory.Data.Event_OnDataChanged_TwoSlots += UpdateEquipment;
 
-        // 还原装备实例存档
-        ModSaveData.ReadData(ref equipment_Instances);
         EnsureEquipmentListSize();
+        RebuildEquipmentRuntimeStateAfterLoad();
 
         BindOpenPanelTrigger();
 
@@ -74,6 +85,9 @@ public class Mod_Equipment : Module, IInventory, IInteractable
 
     private void OnDestroy()
     {
+        if (EquipmentInventory?.Data != null)
+            EquipmentInventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
+
         UnbindOpenPanelTrigger();
     }
 
@@ -96,10 +110,15 @@ public class Mod_Equipment : Module, IInventory, IInteractable
             }
         }
 
-        // 保存装备实例并卸下
+        // 保存装备实例（不在此处卸下，避免影响其它模块的保存时序）
         SaveAllEquipmentModuleData();
-        UnEquipAll();
-        ModSaveData.WriteData(equipment_Instances);
+
+        var saveData = new Mod_EquipmentSaveData
+        {
+            EquipmentInventoryData = EquipmentInventory.Data,
+            EquipmentInstances = equipment_Instances
+        };
+        ModSaveData.WriteData(saveData);
 
         EquipmentInventory.Save();
     }
@@ -161,6 +180,32 @@ public class Mod_Equipment : Module, IInventory, IInteractable
 
     #region 装备逻辑
 
+    void LoadSaveDataFromModule()
+    {
+        try
+        {
+            Mod_EquipmentSaveData saveData = null;
+            ModSaveData.ReadData(ref saveData);
+
+            if (saveData != null)
+            {
+                if (saveData.EquipmentInventoryData != null)
+                    EquipmentInventory.Data = saveData.EquipmentInventoryData;
+
+                if (saveData.EquipmentInstances != null)
+                    equipment_Instances = saveData.EquipmentInstances;
+
+                return;
+            }
+        }
+        catch
+        {
+            // 兼容旧版：旧版仅保存装备实例列表
+        }
+
+        ModSaveData.ReadData(ref equipment_Instances);
+    }
+
     void EnsureEquipmentListSize()
     {
         if (EquipmentInventory?.Data == null) return;
@@ -175,34 +220,97 @@ public class Mod_Equipment : Module, IInventory, IInteractable
         }
     }
 
+    void RebuildEquipmentRuntimeStateAfterLoad()
+    {
+        EnsureEquipmentListSize();
+
+        int slotCount = EquipmentInventory.Data.itemSlots.Count;
+        for (int i = 0; i < slotCount; i++)
+        {
+            var slot = EquipmentInventory.Data.itemSlots[i];
+            if (slot == null)
+            {
+                equipment_ModuleData[i] = null;
+                cached_ItemDatas[i] = null;
+                equipment_Instances[i] ??= new List<EquipmentInstance>();
+                continue;
+            }
+
+            var slotItemData = slot.itemData;
+            cached_ItemDatas[i] = slotItemData;
+
+            if (slotItemData == null)
+            {
+                equipment_ModuleData[i] = null;
+                equipment_Instances[i] ??= new List<EquipmentInstance>();
+                continue;
+            }
+
+            equipment_ModuleData[i] = slotItemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+            equipment_Instances[i] ??= new List<EquipmentInstance>();
+
+            if (equipment_Instances[i].Count == 0 && equipment_ModuleData[i] != null)
+            {
+                List<EquipmentInstance> loadedList = new();
+                equipment_ModuleData[i].ReadData(ref loadedList);
+                equipment_Instances[i] = loadedList ?? new List<EquipmentInstance>();
+            }
+
+            foreach (var equipment in equipment_Instances[i])
+                equipment.Equip(item);
+        }
+    }
+
     void SaveAllEquipmentModuleData()
     {
         EnsureEquipmentListSize();
-        // 各槽位数据已在 UpdateEquipment 时同步写回 ItemData，此处预留扩展点
+        for (int i = 0; i < equipment_Instances.Count; i++)
+        {
+            if (cached_ItemDatas[i] == null)
+                continue;
+
+            equipment_Instances[i] ??= new List<EquipmentInstance>();
+
+            SaveSlotEquipmentData(i, cached_ItemDatas[i]);
+        }
     }
 
     // 槽位数据变化时触发：卸下旧装备、加载新装备
-    void UpdateEquipment(ItemSlot LocalSlot, ItemSlot InputSlot)
+    void UpdateEquipment(ItemSlot LocalSlot, ItemSlot _)
     {
         EnsureEquipmentListSize();
         int index = LocalSlot.Index;
 
-        // 槽位变空：卸下当前装备
-        if (LocalSlot.itemData == null
-            && equipment_ModuleData[index] != null
-            && equipment_Instances[index].Count > 0)
+        if (index < 0 || index >= equipment_Instances.Count)
         {
-            foreach (var equip in equipment_Instances[index])
-                equip.UnEquip(item);
-
-            SaveSlotEquipmentData(index, InputSlot);
-            equipment_Instances[index].Clear();
-            equipment_ModuleData[index] = null;
+            Debug.LogError($"[Mod_Equipment] UpdateEquipment 槽位索引越界，index={index}, slots={equipment_Instances.Count}");
             return;
         }
 
-        if (equipment_ModuleData[index] == null)
-            equipment_ModuleData[index] = new Ex_ModData_MemoryPackable();
+        var previousItemData = cached_ItemDatas[index];
+        bool slotItemChanged = !ReferenceEquals(previousItemData, LocalSlot.itemData);
+
+        // 槽位物品发生变化：先把旧物品对应实例卸下并写回旧物品自身的存储模块
+        if (slotItemChanged)
+        {
+            if (equipment_Instances[index].Count > 0)
+            {
+                foreach (var equip in equipment_Instances[index])
+                    equip.UnEquip(item);
+
+                SaveSlotEquipmentData(index, previousItemData);
+                equipment_Instances[index].Clear();
+            }
+
+            equipment_ModuleData[index] = null;
+        }
+
+        // 槽位变空：卸下当前装备
+        if (LocalSlot.itemData == null)
+        {
+            cached_ItemDatas[index] = null;
+            return;
+        }
 
         equipment_ModuleData[index] =
             LocalSlot.itemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
@@ -221,9 +329,18 @@ public class Mod_Equipment : Module, IInventory, IInteractable
         }
     }
 
-    void SaveSlotEquipmentData(int index, ItemSlot Slot)
+    void SaveSlotEquipmentData(int index, ItemData itemData)
     {
-        var modData = Slot.itemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+        if (itemData == null)
+            return;
+
+        var modData = itemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+        if (modData == null)
+        {
+            Debug.LogError($"[Mod_Equipment] 写入装备数据失败：物品[{itemData.IDName}]缺少模块[{ModText.Equipment_Store}]");
+            return;
+        }
+
         modData.WriteData(equipment_Instances[index]);
     }
 
