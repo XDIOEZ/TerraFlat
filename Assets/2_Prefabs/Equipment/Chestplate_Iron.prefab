@@ -261,11 +261,17 @@ MonoBehaviour:
     BitData: 
   equipmentInstances:
   - rid: 4513346362560479232
+  - rid: 3622605562988462099
   references:
     version: 2
     RefIds:
+    - rid: 3622605562988462099
+      type: {class: EquipmentInstance_Defense, ns: , asm: GamePlay}
+      data:
+        Name: "[Chestplate_Iron]\u589E\u52A010\u70B9\u9632\u5FA1"
+        DefenseBonusIncrease: 10
     - rid: 4513346362560479232
       type: {class: EquipmentInstance_Speed, ns: , asm: GamePlay}
       data:
         Name: "[Chestplate_Iron]\u88C5\u5907\u8FC7\u91CD\u51CF\u5C11\u79FB\u901F*0.5"
-        SpeedIncrease: 0.5
+        SpeedIncrease: -0.1

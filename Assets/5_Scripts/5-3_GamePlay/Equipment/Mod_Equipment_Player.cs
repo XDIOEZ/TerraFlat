@@ -67,7 +67,7 @@ public class Mod_Equipment_Player : Mod_Equipment
             return;
         }
 
-        EquipmentInventory.EnsurePanelCreated();
+        bool createdNow = EquipmentInventory.EnsurePanelCreated();
         if (EquipmentInventory.basePanel == null)
         {
             Debug.LogError($"[Mod_Equipment_Player] 装备面板创建失败。物体: {name}");
@@ -78,6 +78,12 @@ public class Mod_Equipment_Player : Mod_Equipment
         var handInv = item.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (handInv != null)
             EquipmentInventory.DefaultTarget_Inventory = handInv;
+
+        if (createdNow)
+        {
+            EquipmentInventory.basePanel.Open();
+            return;
+        }
 
         EquipmentInventory.basePanel.Toggle();
     }

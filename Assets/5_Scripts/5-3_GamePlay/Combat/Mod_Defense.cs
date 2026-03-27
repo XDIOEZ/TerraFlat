@@ -25,7 +25,7 @@ public partial class Mod_Defense : Module
         if (item.itemMods.ContainsKey_ID(ModText.Hp))
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            Hp.AddDefenseBonus(Defense.Value);
+            Hp.AddDefense(Defense.Value);
         }
     }
 
@@ -35,7 +35,7 @@ public partial class Mod_Defense : Module
         if (item.Mods.ContainsKey(ModText.Hp))
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            Hp.RemoveDefenseBonus(Defense.Value);
+            Hp.RemoveDefense(Defense.Value);
         }
         SaveData.WriteData(Defense);
     }

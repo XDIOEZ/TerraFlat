@@ -1,5 +1,4 @@
 // 伤害模块应该管理的内容
-using AYellowpaper.SerializedCollections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,7 +8,7 @@ public class Mod_Damage : Module, IDamageSender
     [Header("攻击特效")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
 
-    public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
+    public List<DamageTag> Weakness = new List<DamageTag>();
     public GameValue_float Damage = new GameValue_float(10f);
 
     [Header("定时伤害设置")]
@@ -44,7 +43,7 @@ public class Mod_Damage : Module, IDamageSender
 
     #region IDamageSender 实现
     Item IDamageSender.attacker { get => item; set => item = value; }
-    SerializedDictionary<DamageTag, float> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
+    List<DamageTag> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
     GameValue_float IDamageSender.Damage { get => Damage; set => Damage = value; }
     #endregion
 
