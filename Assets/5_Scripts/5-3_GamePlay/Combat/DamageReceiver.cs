@@ -1,5 +1,4 @@
-﻿using AYellowpaper.SerializedCollections;
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -19,12 +18,6 @@ public class DamageReceiver : Module
     [SerializeField]
     public DamageReceiver_SaveData Data = new DamageReceiver_SaveData();
 
-    public float BaseHp
-    {
-        get => Data.BaseHp;
-        set => Data.BaseHp = Mathf.Max(0f, value);
-    }
-
     public float MaxHp
     {
         get => Data.MaxHp;
@@ -37,37 +30,10 @@ public class DamageReceiver : Module
         set => Data.Hp = value;
     }
 
-    public float BaseDefense
+    public float Defense
     {
-        get => Data.BaseDefense;
-        set => Data.BaseDefense = Mathf.Max(0f, value);
-    }
-
-    public float MaxDefense
-    {
-        get => Data.MaxDefense;
-        set => Data.MaxDefense = Mathf.Max(0f, value);
-    }
-
-    public float DefenseBonus
-    {
-        get => Data.DefenseBonus;
-        set => Data.DefenseBonus = value;
-    }
-
-    public float DefenseMultiplier
-    {
-        get => Data.DefenseMultiplier;
-        set => Data.DefenseMultiplier = Mathf.Max(0f, value);
-    }
-
-    public float CurrentDefense
-    {
-        get
-        {
-            float defense = (BaseDefense + DefenseBonus) * DefenseMultiplier;
-            return Mathf.Clamp(defense, 0f, MaxDefense);
-        }
+        get => Data.Defense;
+        set => Data.Defense = Mathf.Max(0f, value);
     }
 
     public UltEvent OnDead = new();
@@ -77,15 +43,11 @@ public class DamageReceiver : Module
     {
         [Header("生命值设置")]
         public float Hp = 100;
-        public float BaseHp = 100;
         public float MaxHp = 100;
 
         [Header("防御设置")]
-        public float BaseDefense = 0;
-        public float MaxDefense = 100;
-        public float DefenseBonus = 0;
-        public float DefenseMultiplier = 1;
-        public SerializedDictionary<DamageTag, float> Weakness = new SerializedDictionary<DamageTag, float>();
+        public float Defense = 0;
+        public List<DamageTag> Weakness = new List<DamageTag>();
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
 
@@ -277,30 +239,31 @@ public class DamageReceiver : Module
         }
         lastDamageTime = Time.time;
 
-        // 检查弱点属性
-        float defenseBreak = -1;
-        foreach (var thisWeak in Data.Weakness)
+        // 攻击者标签命中受击者破甲标签则视为破甲成功
+        bool isDefenseBreak = false;
+        if (Data.Weakness != null && damageSender.Weakness != null)
         {
-            if (damageSender.Weakness.ContainsKey(thisWeak.Key))
+            for (int i = 0; i < Data.Weakness.Count; i++)
             {
-                // 攻击者的Tag等级 是否大于等于 受击者的Tag等级
-                defenseBreak = damageSender.Weakness[thisWeak.Key] - thisWeak.Value;
-                break;
+                if (damageSender.Weakness.Contains(Data.Weakness[i]))
+                {
+                    isDefenseBreak = true;
+                    break;
+                }
             }
         }
 
         // 计算实际伤害
         float actualDamage;
-        if (defenseBreak >= 0)
+        if (isDefenseBreak)
         {
             // 破防伤害，无视防御
             actualDamage = damageSender.Damage.Value;
         }
         else
         {
-            // 计算实际伤害（防御力减免，每点防御减少1%伤害）
-            float defenseRate = Mathf.Clamp01(CurrentDefense * 0.01f); // 每点防御减少1%伤害，最大100%
-            actualDamage = damageSender.Damage.Value * (1 - defenseRate);
+            // 计算实际伤害（减法公式：攻击力 - 当前防御）
+            actualDamage = Mathf.Max(0f, damageSender.Damage.Value - Defense);
         }
 
         // 记录攻击者（根据是否造成实际伤害决定概率）
@@ -406,25 +369,27 @@ public class DamageReceiver : Module
         return Hp;
     }
 
-    public void AddDefenseBonus(float value)
+    public void AddDefense(float value)
     {
-        DefenseBonus += value;
+        Defense += value;
     }
 
-    public void RemoveDefenseBonus(float value)
+    public void RemoveDefense(float value)
     {
-        DefenseBonus -= value;
+        Defense -= value;
+    }
+
+    public void SetDefense(float value)
+    {
+        Defense = value;
     }
 
     private void NormalizeStatRanges()
     {
-        Data.BaseHp = Mathf.Max(0f, Data.BaseHp);
-        Data.MaxHp = Mathf.Max(Data.BaseHp, Data.MaxHp);
+        Data.MaxHp = Mathf.Max(0f, Data.MaxHp);
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
 
-        Data.BaseDefense = Mathf.Max(0f, Data.BaseDefense);
-        Data.MaxDefense = Mathf.Max(0f, Data.MaxDefense);
-        Data.DefenseMultiplier = Mathf.Max(0f, Data.DefenseMultiplier);
+        Data.Defense = Mathf.Max(0f, Data.Defense);
     }
     #endregion
 

@@ -276,7 +276,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable
     }
 
     // 槽位数据变化时触发：卸下旧装备、加载新装备
-    void UpdateEquipment(ItemSlot LocalSlot, ItemSlot _)
+    void UpdateEquipment(ItemSlot LocalSlot, ItemSlot pairSlot)
     {
         EnsureEquipmentListSize();
         int index = LocalSlot.Index;
@@ -299,6 +299,11 @@ public class Mod_Equipment : Module, IInventory, IInteractable
                     equip.UnEquip(item);
 
                 SaveSlotEquipmentData(index, previousItemData);
+
+                // 处理“卸下到手部时产生了新 ItemData 引用”的情况：
+                // 把同一件物品的装备实例数据同步写回当前配对槽位中的新引用，避免再次装备时丢数据。
+                SaveSlotEquipmentDataToPairedItem(index, previousItemData, pairSlot);
+
                 equipment_Instances[index].Clear();
             }
 
@@ -327,6 +332,32 @@ public class Mod_Equipment : Module, IInventory, IInteractable
 
             equipment_Instances[index] = loadedList;
         }
+    }
+
+    void SaveSlotEquipmentDataToPairedItem(int index, ItemData previousItemData, ItemSlot pairSlot)
+    {
+        if (pairSlot == null || pairSlot.itemData == null || previousItemData == null)
+            return;
+
+        var pairedItemData = pairSlot.itemData;
+        if (ReferenceEquals(pairedItemData, previousItemData))
+            return;
+
+        bool isSameLogicalItem = pairedItemData.Guid == previousItemData.Guid &&
+                                 pairedItemData.IDName == previousItemData.IDName &&
+                                 pairedItemData.ItemSpecialData == previousItemData.ItemSpecialData;
+
+        if (!isSameLogicalItem)
+            return;
+
+        var modData = pairedItemData.GetModuleData_Frist(ModText.Equipment_Store) as Ex_ModData_MemoryPackable;
+        if (modData == null)
+        {
+            Debug.LogError($"[Mod_Equipment] 同步配对槽位装备数据失败：物品[{pairedItemData.IDName}]缺少模块[{ModText.Equipment_Store}]");
+            return;
+        }
+
+        modData.WriteData(equipment_Instances[index]);
     }
 
     void SaveSlotEquipmentData(int index, ItemData itemData)

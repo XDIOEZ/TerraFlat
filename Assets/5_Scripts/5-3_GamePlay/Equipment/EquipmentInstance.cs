@@ -6,6 +6,7 @@ using MemoryPack;
 [MemoryPackUnion(0, typeof(EquipmentInstance_Debug))]
 [MemoryPackUnion(1, typeof(EquipmentInstance_Bag))]
 [MemoryPackUnion(2, typeof(EquipmentInstance_Speed))]
+[MemoryPackUnion(3, typeof(EquipmentInstance_Defense))]
 public abstract partial class EquipmentInstance
 {
     public string Name;

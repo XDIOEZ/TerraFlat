@@ -413,13 +413,13 @@ if (item.itemData.Tags.ContainsTag("Food")) { }
 - Project name: FlatWorld
 - Unity version: Unity 2022.3.62f2c1
 - Active scene:
-  - Name: GameStartScene
+  - Name: 地球
   - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Laser, Enemy
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: Module_DamageReciver
+  - Name: Module_Equipment
   - Tag: Untagged
-  - Layer: DamageReciver
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
