@@ -52,7 +52,7 @@ MonoBehaviour:
   currentItemsInArea: []
   ModData:
     Name: 
-    ID: 
+    ID: "\u7269\u54C1\u68C0\u6D4B\u6A21\u5757"
     isRunning: 0
     Type: 0
     BitData: 
@@ -108,11 +108,11 @@ MonoBehaviour:
     StopRotationDistance: 0.1
   ModData:
     Name: 
-    ID: 
+    ID: "FaceMouse\u6A21\u5757"
     isRunning: 0
     Type: 0
     BitData: 
-  PlayerController: {fileID: 0}
+  GameController: {fileID: 0}
   turnBody: {fileID: 0}
   targetRotationTransforms: []
   mover: {fileID: 0}
@@ -201,7 +201,8 @@ MonoBehaviour:
       FinalAdditive: 0
     slowDownSpeed: 5
     endSpeed: 0.1
-    runStaminaRate: 2
+    moveStaminaConsume: 1
+    runStaminaConsume: 2
     runSpeedRate: 2
     isRunning: 0
     RunStaminaThreshold: 2
@@ -212,19 +213,15 @@ MonoBehaviour:
   IsMoving: 0
   rb: {fileID: 0}
   stamina: {fileID: 0}
-  staminaConsumeSpeed:
-    BaseValue: 1
-    BaseAdditive: 0
-    AdditiveModifier: 0
-    MultiplicativeModifier: 1
-    FinalAdditive: 0
   ModDataMemoryPack:
     Name: 
-    ID: 
+    ID: "\u79FB\u52A8\u6A21\u5757"
     isRunning: 0
     Type: 0
     BitData: 
   animationController: {fileID: 0}
+  moveHungerBuff: {fileID: 0}
+  runHungerBuff: {fileID: 0}
   OnMoveStart:
     _PersistentCalls: []
   OnMoveEnd:
@@ -401,6 +398,10 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
   updateInterval: 0
   Data:
     IDName: WildBoar
@@ -416,13 +417,7 @@ MonoBehaviour:
       Item_Material:
       - None
     Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - WildBoar
     Stack:
       Amount: 1
       Volume: 1
@@ -432,8 +427,125 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
+    inHand: 0
     Guid: 0
     code: 
+--- !u!1 &5993558180366969558
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3849199934911512678}
+  - component: {fileID: 8358856076963370307}
+  m_Layer: 9
+  m_Name: Module_AI_WildBoar
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3849199934911512678
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5993558180366969558}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 478715881179084011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8358856076963370307
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5993558180366969558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85bc528481ca06044a69c60e34b562de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Data:
+    State: 0
+    Fatigue01: 0
+    RageLevel: 0
+  _currentState: 0
+  _stateElapsed: 0
+  _isReady: 0
+  _currentFoodTarget: {fileID: 0}
+  _currentThreat: {fileID: 0}
+  _mover: {fileID: 0}
+  _food: {fileID: 0}
+  _hp: {fileID: 0}
+  _detector: {fileID: 0}
+  _animator: {fileID: 0}
+  debugLog: 1
+  eatEnterHungerRate: 0.4
+  eatExitHungerRate: 0.8
+  sleepEnterHpRate: 0.45
+  sleepExitHpRate: 0.5
+  sleepRecoverHpPerSecond: 5
+  sleepDuration: 8
+  sleepCooldown: 4
+  dayStartRatio: 0.25
+  dayEndRatio: 0.75
+  duskStartRatio: 0.65
+  aggressiveDuringDusk: 1
+  detectorRefreshInterval: 1
+  eatDistance: 1.5
+  enableWander: 1
+  idleMinDuration: 1
+  idleMaxDuration: 3
+  wanderRadius: 6
+  wanderStopDistance: 0.5
+  wanderPauseMin: 1
+  wanderPauseMax: 3
+  edibleTags:
+  - Food
+  - Corpse
+  alertDetectDistance: 8
+  alertDuration: 3
+  alertToChaseDuration: 1
+  chaseTriggerDistance: 12
+  chaseLossDistance: 20
+  chaseThreatTags:
+  - Player
+  chasePlayer: 1
+  attackTriggerDistance: 1
+  attackDuration: 1.5
+  rageBuildupRate: 0.5
+  rageDecayRate: 0.2
+  attackCooldown: 2
+  fleeTriggerHpRate: 0.2
+  fleeSafeHpRate: 0.4
+  fleeRunDistance: 10
+  animIdle: Stand
+  animMove: Move
+  animSleep: Stand
+  animForage: Move
+  animEat: Stand
+  animAlert: Stand
+  animChase: Move
+  animAttack: Attack
+  animFlee: Move
+  OnStateChanged:
+    _PersistentCalls: []
 --- !u!1001 &1610503869733589615
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -534,7 +646,7 @@ PrefabInstance:
       objectReference: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
-      value: RawMeat
+      value: Meat
       objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x
@@ -646,18 +758,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1252656688152752650, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
-      propertyPath: m_Controller
-      value: 
-      objectReference: {fileID: 9100000, guid: d5796b80b58f98a4a9bf270003d954c8, type: 2}
     - target: {fileID: 2231892886818212503, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
       propertyPath: m_Name
-      value: "AI\u52A8\u753B\u6A21\u5757"
+      value: Module_Animator_AI
       objectReference: {fileID: 0}
-    - target: {fileID: 5802457204138852704, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: -640202840, guid: a738bbcdb3393c345a301d55c1387eb0, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -740,7 +844,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2993756592371071756, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
       propertyPath: m_Name
-      value: BuffManager
+      value: Module_BuffManager
       objectReference: {fileID: 0}
     - target: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
       propertyPath: m_LocalPosition.x
@@ -866,72 +970,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
   m_PrefabInstance: {fileID: 6949138265979205628}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &8166644759943445807
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 478715881179084011}
-    m_Modifications:
-    - target: {fileID: 2483916936477612025, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_Name
-      value: "AI\u6A21\u5757"
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6656083125569062478, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-      propertyPath: tree
-      value: 
-      objectReference: {fileID: 11400000, guid: 0fa53a434d9d6d549ba4a7a2756ec437, type: 2}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
---- !u!4 &3849199934911512678 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4917608436849474889, guid: 38a8e9aeab95ec449a3606e2283fa18d, type: 3}
-  m_PrefabInstance: {fileID: 8166644759943445807}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &8610956316120800619
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -942,7 +980,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 6487543560191845456, guid: 98884601a3d373a40ab86aff00f45a08, type: 3}
       propertyPath: m_Name
-      value: "\u533A\u5757\u81EA\u52A8\u66F4\u65B0"
+      value: Module_AutoChunkOwner
       objectReference: {fileID: 0}
     - target: {fileID: 7302776498946767464, guid: 98884601a3d373a40ab86aff00f45a08, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1044,7 +1082,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7548451389497180385, guid: 17b385e876a029e4095ccb77881ffd0a, type: 3}
       propertyPath: m_Name
-      value: "\u8F6C\u8EAB\u6A21\u5757"
+      value: Module_TurnBody
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

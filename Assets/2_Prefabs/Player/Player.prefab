@@ -197,14 +197,7 @@ MonoBehaviour:
       - Player
       Item_Material: []
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Player
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - Player
     Stack:
       Amount: 1
       Volume: 500

@@ -238,7 +238,7 @@ GameObject:
   - component: {fileID: 4040572142908259681}
   - component: {fileID: 1775883118074638832}
   m_Layer: 0
-  m_Name: Module_Base_AI
+  m_Name: Module_AI_Chicken
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

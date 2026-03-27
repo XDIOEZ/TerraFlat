@@ -82,6 +82,8 @@ public class Module_Equipment_Store : Module
             _Data = data;
         }
     }
+
+
     [Button("Load")]
     public abstract void Load();
     [Button("Save")]
