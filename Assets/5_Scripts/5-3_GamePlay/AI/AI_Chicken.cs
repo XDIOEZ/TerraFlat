@@ -892,13 +892,13 @@ public partial class AI_Chicken : Module
 
 	private float GetHpRate()
 	{
-		if (_hp.MaxHp.Value <= 0f)
+		if (_hp.MaxHp <= 0f)
 		{
 			Debug.LogError($"[{nameof(AI_Chicken)}] MaxHp 小于等于 0，无法计算血量百分比。目标物体: {name}", this);
 			return 0f;
 		}
 
-		return _hp.Hp / _hp.MaxHp.Value;
+		return _hp.Hp / _hp.MaxHp;
 	}
 
 	private string GetAnimationNameForState(ChickenState state)

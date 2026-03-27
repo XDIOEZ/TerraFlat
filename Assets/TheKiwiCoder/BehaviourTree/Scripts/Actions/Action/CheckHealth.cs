@@ -25,7 +25,7 @@ public class CheckHealth : ActionNode
     protected override State OnUpdate()
     {
         float currentHealth = health.Hp;
-        float maxHealth = health.MaxHp.Value;
+        float maxHealth = health.MaxHp;
 
         if (usePercent)
         {

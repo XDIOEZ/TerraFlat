@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FastCloner.Code;
 using MemoryPack;
 using Newtonsoft.Json;
@@ -13,7 +14,7 @@ public partial class ItemSlot
     [ShowInInspector]
     public ItemData itemData = null; // ¹Ø¼üÐÞ¸Ä
 
-    public ItemTag CanAcceptItemType = new ItemTag();
+    public List<string> CanAcceptTags = new List<string>();
 
     public float SlotMaxVolume = 100;
 

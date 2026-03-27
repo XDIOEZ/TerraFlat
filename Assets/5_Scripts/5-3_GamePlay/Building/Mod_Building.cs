@@ -537,7 +537,7 @@ public class Mod_Building : Module
     private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
     {
         //将血量拉满 然后保存
-        damageReceiver.Data.Hp = damageReceiver.Data.MaxHp;
+        damageReceiver.Data.Hp = damageReceiver.MaxHp;
         sourceItem.Save();
         ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
 
@@ -667,7 +667,7 @@ public class Mod_Building : Module
                 CurrentState = BuildingState.Uninstalled;
             }
         }
-        else if (damageReceiver.Hp < damageReceiver.MaxHp.Value * 0.5f)
+        else if (damageReceiver.Hp < damageReceiver.MaxHp * 0.5f)
         {
             if (CurrentState != BuildingState.Damaged)
             {
@@ -965,7 +965,7 @@ public class Mod_Building : Module
         }
 
         // 设置为最大血量（表示已安装）
-        damageReceiver.Hp = damageReceiver.MaxHp.Value;
+        damageReceiver.Hp = damageReceiver.MaxHp;
 
         item.SetInHand(false);
 
@@ -1013,9 +1013,9 @@ public class Mod_Building : Module
         }
 
         // 设置为最大血量（表示已安装）
-        if (damageReceiver.MaxHp != null)
+        if (damageReceiver.MaxHp > 0f)
         {
-            damageReceiver.Hp = damageReceiver.MaxHp.Value;
+            damageReceiver.Hp = damageReceiver.MaxHp;
         }
         else
         {
