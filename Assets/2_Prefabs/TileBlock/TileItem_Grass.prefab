@@ -151,27 +151,19 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
-  updateInterval: 0.1
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
+  updateInterval: 0
   data:
     IDName: TileItem_Grass
     GameName: "\u8349\u5757"
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
     Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 1
@@ -181,15 +173,17 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: -983015602
   _tileData:
-    Name_TileBase: TileBase_Grass
-    Name_ItemName: TileItem_Grass
+    ID: 
+    Name: 
     TileTag: none
     position: {x: 0, y: 0, z: 0}
     DemolitionTime: 0
     workTime: 0
     Penalty: 1000
+    IsWalkable: 1
     FertileValue:
       BaseValue: 1
       BaseAdditive: 0

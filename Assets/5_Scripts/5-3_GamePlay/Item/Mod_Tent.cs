@@ -248,12 +248,12 @@ public class Mod_Tent : MonoBehaviour, IInteractable
     private bool ShouldWakeEarly(Mod_Food food)
     {
         var nutrition = food.Data.nutrition;
-        float proteinRatio = nutrition.Max_Protein.Value <= 0f
+        float proteinRatio = nutrition.Max_Protein <= 0f
             ? 0f
-            : nutrition.Protein / nutrition.Max_Protein.Value;
-        float waterRatio = nutrition.Max_Water.Value <= 0f
+            : nutrition.Protein / nutrition.Max_Protein;
+        float waterRatio = nutrition.Max_Water <= 0f
             ? 0f
-            : nutrition.Water / nutrition.Max_Water.Value;
+            : nutrition.Water / nutrition.Max_Water;
 
         if (proteinRatio >= deficiencyThresholdRatio && waterRatio >= deficiencyThresholdRatio)
             return false;
@@ -292,13 +292,13 @@ public class Mod_Tent : MonoBehaviour, IInteractable
     private SleepPlan BuildSleepPlan(Mod_Food food, DamageReceiver hp, int totalTicks)
     {
         var nutrition = food.Data.nutrition;
-        float vitaminRatio = nutrition.Max_Vitamins.Value <= 0f
+        float vitaminRatio = nutrition.Max_Vitamins <= 0f
             ? 0f
-            : Mathf.Clamp01(nutrition.Vitamins / nutrition.Max_Vitamins.Value);
+            : Mathf.Clamp01(nutrition.Vitamins / nutrition.Max_Vitamins);
 
-        float maxHungerEnergy = nutrition.Max_Carbohydrates.Value + nutrition.Max_Fat.Value * 0.5f;
+        float maxHungerEnergy = nutrition.Max_Carbohydrates + nutrition.Max_Fat * 0.5f;
         float totalHungerConsume = maxHungerEnergy * sleepHungerConsumeRatioByMaxValue;
-        float totalWaterConsume = nutrition.Max_Water.Value * sleepWaterConsumeRatioByMaxValue;
+        float totalWaterConsume = nutrition.Max_Water * sleepWaterConsumeRatioByMaxValue;
         float totalHeal = hp.MaxHp * sleepHealRatioByMaxHp * (1f + vitaminRatio * vitaminHealBonusRatio);
 
         return new SleepPlan

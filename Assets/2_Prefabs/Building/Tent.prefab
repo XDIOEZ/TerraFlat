@@ -135,7 +135,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -147,27 +146,15 @@ MonoBehaviour:
     _PersistentCalls: []
   OnDurabilityModified:
     _PersistentCalls: []
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
     IDName: Tent
     GameName: Tent
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
     Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 2
@@ -177,7 +164,8 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: 138509677
     code: 
 --- !u!61 &7595501820574997015
 BoxCollider2D:
@@ -279,10 +267,10 @@ MonoBehaviour:
   zzzEdgePadding: 8
   sleepDuration: 5
   sleepTickInterval: 1
-  foodConsumePerTick: 8
-  waterConsumePerTick: 10
-  baseHealPerTick: 1
-  vitaminBonusHealPerTick: 2
+  sleepHungerConsumeRatioByMaxValue: 0.5
+  sleepWaterConsumeRatioByMaxValue: 0.5
+  sleepHealRatioByMaxHp: 0.5
+  vitaminHealBonusRatio: 0.5
   deficiencyThresholdRatio: 0.25
   earlyWakeBaseChancePerTick: 0.2
   sleepTimeScale: 96

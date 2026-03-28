@@ -425,6 +425,7 @@ public class Inventory
 
         slotUI.OnLeftClick += OnLeftClick;
         slotUI._OnScroll += OnScroll;
+        slotUI.OnRightClick += OnRightClick;
 
         slotUI.RefreshUI();
     }
@@ -529,9 +530,21 @@ public class Inventory
 
     void OnRightClick(int index)
     {
+        if (index < 0 || index >= Data.itemSlots.Count)
+        {
+            Debug.LogError($"[Inventory.OnRightClick] 索引越界: {index}");
+            return;
+        }
+
+        ItemSlot slot = Data.itemSlots[index];
+        if (slot == null || slot.itemData == null)
+        {
+            return;
+        }
+
         RightClickMenu_UI currentMenuInstance;
         currentMenuInstance = GameObject.Instantiate(GameRes.Instance.GetPrefab("右键菜单").GetComponent<RightClickMenu_UI>());
-        currentMenuInstance.Init(itemSlot_UI[index], item);
+        currentMenuInstance.Init(itemSlot_UI[index], slot, item);
         currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlot_UI[index].transform.position;
     }
 

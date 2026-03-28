@@ -128,19 +128,13 @@ MonoBehaviour:
     _PersistentCalls: []
   OnDurabilityModified:
     _PersistentCalls: []
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
     IDName: Chicken
     GameName: Chicken
     Description: "\u751F\u9E21\u8089\uFF1A\u4ECE\u91CE\u751F\u9E21\u7C7B\u8EAB\u4E0A\u5265\u53D6\u7684\u672A\u5904\u7406\u8089\u7C7B"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
     Tags: []
     Stack:
       Amount: 1
@@ -152,7 +146,7 @@ MonoBehaviour:
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     inHand: 0
-    Guid: 0
+    Guid: -1759436126
     code: 
 --- !u!61 &4850197992055457325
 BoxCollider2D:

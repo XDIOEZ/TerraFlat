@@ -848,11 +848,11 @@ public partial class AI_Chicken : Module
 	{
 		Nutrition nutrition = _food.Data.nutrition;
 
-		nutrition.Carbohydrates = Mathf.Min(nutrition.Max_Carbohydrates.Value, nutrition.Carbohydrates + deltaTime * 10f);
-		nutrition.Fat = Mathf.Min(nutrition.Max_Fat.Value, nutrition.Fat + deltaTime * 6f);
-		nutrition.Protein = Mathf.Min(nutrition.Max_Protein.Value, nutrition.Protein + deltaTime * 8f);
-		nutrition.Water = Mathf.Min(nutrition.Max_Water.Value, nutrition.Water + deltaTime * 10f);
-		nutrition.Vitamins = Mathf.Min(nutrition.Max_Vitamins.Value, nutrition.Vitamins + deltaTime * 2f);
+		nutrition.Carbohydrates = Mathf.Min(nutrition.Max_Carbohydrates, nutrition.Carbohydrates + deltaTime * 10f);
+		nutrition.Fat = Mathf.Min(nutrition.Max_Fat, nutrition.Fat + deltaTime * 6f);
+		nutrition.Protein = Mathf.Min(nutrition.Max_Protein, nutrition.Protein + deltaTime * 8f);
+		nutrition.Water = Mathf.Min(nutrition.Max_Water, nutrition.Water + deltaTime * 10f);
+		nutrition.Vitamins = Mathf.Min(nutrition.Max_Vitamins, nutrition.Vitamins + deltaTime * 2f);
 	}
 
 	private void SpawnEgg()

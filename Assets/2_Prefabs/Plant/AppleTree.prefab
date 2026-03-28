@@ -95,7 +95,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -107,30 +106,15 @@ MonoBehaviour:
     _PersistentCalls: []
   OnDurabilityModified:
     _PersistentCalls: []
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
-    IDName: "\u82F9\u679C\u6811"
+    IDName: AppleTree
     GameName: "\u82F9\u679C\u6811"
     Description: "\u4E00\u9897\u53EF\u4EE5\u751F\u4EA7\u82F9\u679C\u7684\u6811"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Tree
-      - None
-      Item_Material:
-      - Wood
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Plant
-      - tag: Material
-        values:
-        - Wood
-      - tag: Creature
-        values:
-        - Tree
+    - 
     Stack:
       Amount: 1
       Volume: 2
@@ -140,7 +124,8 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: 612206626
     code: 
 --- !u!1 &4099061837537365540
 GameObject:
