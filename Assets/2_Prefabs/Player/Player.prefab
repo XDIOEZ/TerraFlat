@@ -294,7 +294,7 @@ MonoBehaviour:
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     inHand: 0
-    Guid: 0
+    Guid: -112887599
     CurrentSceneName: "\u5730\u7403"
     hp:
       value: 30

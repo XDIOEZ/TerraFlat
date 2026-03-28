@@ -101,27 +101,19 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
-  updateInterval: 0.1
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
+  updateInterval: 0
   Data:
     IDName: Mine_Copper
     GameName: "\u94DC\u77FF"
     Description: "\u6DF1\u57CB\u5CA9\u58C1\u7684\u94DC\u8272\u77FF\u4F53\uFF0C\u95EA\u70C1\u7740\u91D1\u5C5E\u5149\u6CFD\u3002\u5F00\u91C7\u540E\u53EF\u63D0\u70BC\u94DC\uFF0C\u7528\u4E8E\u6253\u9020\u5DE5\u5177\u4E0E\u6B66\u5668\u3002"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Mine
-      Item_Material:
-      - Stone
-      - Cu
     Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 100
@@ -131,7 +123,8 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: -1587649982
     code: 
 --- !u!1 &1322186860191614734
 GameObject:

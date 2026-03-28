@@ -132,7 +132,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -144,26 +143,15 @@ MonoBehaviour:
     _PersistentCalls: []
   OnDurabilityModified:
     _PersistentCalls: []
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
     IDName: StorageBag_Leather
     GameName: StorageBag_Leather
     Description: "\u7B80\u5355\u7684\u7269\u54C1\u6536\u7EB3\u88C5\u7F6E,\u53EF\u4EE5\u5BB9\u7EB33\u4E2A\u7269\u54C1"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Equipment
-      - None
-      Item_Material:
-      - None
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Equipment
-      - tag: Material
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 2
@@ -173,7 +161,8 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: 285169324
     code: 
 --- !u!61 &8667576724681055711
 BoxCollider2D:

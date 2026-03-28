@@ -143,7 +143,7 @@ MonoBehaviour:
     _PersistentCalls: []
   OnDurabilityModified:
     _PersistentCalls: []
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
     IDName: Chestplate_Wood
     GameName: Chestplate_Wood
@@ -162,7 +162,7 @@ MonoBehaviour:
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     inHand: 0
-    Guid: 0
+    Guid: -12047027
     code: 
 --- !u!61 &8667576724681055711
 BoxCollider2D:

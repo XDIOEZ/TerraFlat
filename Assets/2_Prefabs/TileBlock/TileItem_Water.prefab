@@ -151,7 +151,11 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
-  updateInterval: 0.1
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
+  updateInterval: 0
   data:
     IDName: TileItem_Water
     GameName: TileItem_StoneWall
@@ -160,20 +164,8 @@ MonoBehaviour:
       0.00, 0.00)\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
     Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 1
@@ -183,21 +175,5 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
-  _tileData:
-    Name_TileBase: TileBase_Water
-    Name_ItemName: TileItem_Water
-    TileTag: 
-    position: {x: 0, y: 0, z: 0}
-    DemolitionTime: 0
-    workTime: 0
-    Penalty: 5000
-    DeepValue:
-      BaseValue: 1
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-  BuffInfo:
-  - {fileID: 11400000, guid: 0aa80856752ea5447b1879e5c8321c5b, type: 2}
-  - {fileID: 11400000, guid: ad61b721e5a424c4ba65796d9207ca4e, type: 2}
+    inHand: 0
+    Guid: -563660524

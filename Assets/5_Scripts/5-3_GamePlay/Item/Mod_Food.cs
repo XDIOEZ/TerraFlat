@@ -250,11 +250,11 @@ public partial class Mod_Food : Module
     {
         if (panelUI == null) return;
 
-        UpdateNutritionSlider("碳水", Data.nutrition.Carbohydrates, Data.nutrition.Max_Carbohydrates.Value);
-        UpdateNutritionSlider("脂肪", Data.nutrition.Fat, Data.nutrition.Max_Fat.Value);
-        UpdateNutritionSlider("蛋白质", Data.nutrition.Protein, Data.nutrition.Max_Protein.Value);
-        UpdateNutritionSlider("水", Data.nutrition.Water, Data.nutrition.Max_Water.Value);
-        UpdateNutritionSlider("维生素", Data.nutrition.Vitamins, Data.nutrition.Max_Vitamins.Value);
+        UpdateNutritionSlider("碳水", Data.nutrition.Carbohydrates, Data.nutrition.Max_Carbohydrates);
+        UpdateNutritionSlider("脂肪", Data.nutrition.Fat, Data.nutrition.Max_Fat);
+        UpdateNutritionSlider("蛋白质", Data.nutrition.Protein, Data.nutrition.Max_Protein);
+        UpdateNutritionSlider("水", Data.nutrition.Water, Data.nutrition.Max_Water);
+        UpdateNutritionSlider("维生素", Data.nutrition.Vitamins, Data.nutrition.Max_Vitamins);
     }
 
     /// <summary>

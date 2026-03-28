@@ -11,9 +11,10 @@ public class RightClickMenu_UI : MonoBehaviour
     public BasePanel basePanel;
     Item SlotOwner;
 
-    public void Init(ItemSlot_UI _itemSlotUI,Item _SlotOwner)
+    public void Init(ItemSlot_UI _itemSlotUI, ItemSlot _itemSlot, Item _SlotOwner)
     {
         itemSlotUI = _itemSlotUI;
+        itemSlot = _itemSlot;
         basePanel = GetComponent<BasePanel>();
         basePanel.CollectUIComponents();
         SlotOwner = _SlotOwner;
@@ -25,6 +26,12 @@ public class RightClickMenu_UI : MonoBehaviour
 
     public void UseItem()
     {
+        if (itemSlot == null || itemSlot.itemData == null)
+        {
+            Debug.LogError("[RightClickMenu_UI.UseItem] itemSlot 或 itemData 为空");
+            return;
+        }
+
         Item item = ItemMgr.Instance.InstantiateItem(itemSlot.itemData);
         item.Load();
         item.Owner = SlotOwner;
@@ -38,6 +45,12 @@ public class RightClickMenu_UI : MonoBehaviour
 
 public void ShowItemInfo()
 {
+    if (itemSlot == null || itemSlot.itemData == null)
+    {
+        Debug.LogError("[RightClickMenu_UI.ShowItemInfo] itemSlot 或 itemData 为空");
+        return;
+    }
+
     GameObject itemInfoPanel = GameRes.Instance.InstantiatePrefab("物品信息面板");
 
     BasePanel itemInfoPanelBasePanel = itemInfoPanel.GetComponent<BasePanel>();

@@ -70,20 +70,10 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
       Index: 0
@@ -108,20 +98,10 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
       Index: 0
@@ -146,20 +126,10 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
       Index: 0
@@ -365,7 +335,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -384,20 +353,8 @@ MonoBehaviour:
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Station
-      - None
-      Item_Material:
-      - Stone
     Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 200
@@ -407,6 +364,7 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
+    inHand: 0
     Guid: 2133285210
     code: 
 --- !u!1001 &897670719438326172

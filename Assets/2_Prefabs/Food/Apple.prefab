@@ -139,28 +139,19 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 0}
-  updateInterval: 0.1
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
+  updateInterval: 0
   Data:
     IDName: Apple
     GameName: Apple
     Description: "\u4E00\u5929\u4E00\u82F9\u679C,\u533B\u751F\u8FDC\u79BB\u6211"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Food
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 1
@@ -170,7 +161,8 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: -1202260312
     code: 
 --- !u!61 &1096267118403055913
 BoxCollider2D:

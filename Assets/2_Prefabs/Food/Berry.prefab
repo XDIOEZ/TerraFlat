@@ -132,7 +132,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 0
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -144,28 +143,15 @@ MonoBehaviour:
     _PersistentCalls: []
   OnDurabilityModified:
     _PersistentCalls: []
-  updateInterval: 0.1
+  updateInterval: 0
   Data:
     IDName: Berry
     GameName: Berry
     Description: "\u4E00\u79CD\u5728\u91CE\u5916\u704C\u6728\u4E1B\u4E2D\u5E38\u89C1\u7684\u5C0F\u578B\u679C\u5B9E\uFF0C\u98DF\u7528\u540E\u53EF\u6062\u590D\u5C11\u91CF\u9965\u997F\u503C"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Food
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 1
@@ -175,7 +161,8 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: 2097559652
     code: 
 --- !u!61 &1096267118403055913
 BoxCollider2D:

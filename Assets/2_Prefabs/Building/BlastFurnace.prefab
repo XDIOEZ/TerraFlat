@@ -70,28 +70,13 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
       Index: 0
@@ -116,20 +101,10 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
       Index: 0
@@ -154,20 +129,10 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
       Index: 0
@@ -372,7 +337,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Owner: {fileID: 0}
-  InHand: 1
   OnUIRefresh:
     _PersistentCalls: []
   OnItemDestroy:
@@ -391,20 +355,8 @@ MonoBehaviour:
     Description: "\u9AD8\u7089\uFF1A\u4E00\u79CD\u7089\u5B50\uFF0C\u5176\u4E2D\u71C3\u70E7\u662F\u901A\u8FC7\u538B\u529B\u4E0B\u7684\u7A7A\u6C14\u6D41\u52A8\u6765\u5F3A\u5236\u8FDB\u884C\u7684\uFF0C\u5C24\u5176\u662F\u7528\u4E8E\u8FD8\u539F\u94C1\u77FF\u77F3\u7684\u7089\u5B50\u3002"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Station
-      - None
-      Item_Material:
-      - Stone
     Tags:
-      keys:
-      - tag: Type
-        values: []
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 1
@@ -414,6 +366,7 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
+    inHand: 0
     Guid: 2133285210
     code: 
 --- !u!1001 &5409019516327043795

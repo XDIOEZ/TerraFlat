@@ -56,27 +56,19 @@ MonoBehaviour:
   OnAct:
     _PersistentCalls: []
   Sprite: {fileID: 826753647801889531}
-  updateInterval: 0.1
+  OnInit_Env:
+    _PersistentCalls: []
+  OnDurabilityModified:
+    _PersistentCalls: []
+  updateInterval: 0
   Data:
     IDName: Egg
     GameName: "\u86CB"
     Description: "\u53EF\u4EE5\u662F\u4EFB\u4F55\u52A8\u7269\u7684\u86CB"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - Food
-      Item_Material:
-      - Food
     Tags:
-      keys:
-      - tag: Type
-        values:
-        - Food
-      - tag: Material
-        values: []
-      - tag: MakeTag
-        values: []
+    - 
     Stack:
       Amount: 1
       Volume: 1
@@ -86,7 +78,8 @@ MonoBehaviour:
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
-    Guid: 0
+    inHand: 0
+    Guid: -117434169
     code: 
 --- !u!61 &2670190524871535364
 BoxCollider2D:

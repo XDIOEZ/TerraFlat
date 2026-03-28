@@ -59,36 +59,16 @@ MonoBehaviour:
     Data:
       Name: 
       itemSlots:
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptItemType:
-          Item_TypeTag:
-          - None
-          - None
-          Item_Material:
-          - None
+      - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
       Index: 0
@@ -307,12 +287,6 @@ MonoBehaviour:
       Type:\r\n  Material:\r\n  MakeTag:\r\n\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
     Durability: 1
     MaxDurability: 1
-    ItemTags:
-      Item_TypeTag:
-      - None
-      - None
-      Item_Material:
-      - None
     Tags:
     - 
     Stack:
@@ -325,7 +299,7 @@ MonoBehaviour:
       scale: {x: 1, y: 1, z: 1}
     ItemSpecialData: 
     inHand: 1
-    Guid: 0
+    Guid: 305206973
     code: 
 --- !u!1001 &4166982430277300306
 PrefabInstance:

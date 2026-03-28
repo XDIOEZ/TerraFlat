@@ -41,8 +41,8 @@ public partial class FoodHealthObserver : ModuleObserverBase
         }
 
         var nutrition = food.Data.nutrition;
-        float proteinHealNeed = nutrition.Max_Protein.Value * state.HealNeedRatio;
-        float waterHealNeed = nutrition.Max_Water.Value * state.HealNeedRatio;
+        float proteinHealNeed = nutrition.Max_Protein * state.HealNeedRatio;
+        float waterHealNeed = nutrition.Max_Water * state.HealNeedRatio;
 
         if (nutrition.Protein <= 0)
         {
