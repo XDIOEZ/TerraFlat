@@ -3,11 +3,16 @@ using MemoryPack;
 [System.Serializable]
 public partial class FoodHealthObserver : ModuleObserverBase
 {
+    private const float HungerDamageTickInterval = 1f;
+    private const float HungerDamagePerTick = 1f;
+
     [MemoryPackIgnore]
     private DamageReceiver damageReceiver;
     public State state = new State();
     [MemoryPackIgnore]
     private Mod_Food food;
+    [MemoryPackIgnore]
+    private float hungerDamageTickTimer;
 
     [MemoryPackable]
     [System.Serializable]
@@ -46,11 +51,21 @@ public partial class FoodHealthObserver : ModuleObserverBase
 
         if (nutrition.Protein <= 0)
         {
-            damageReceiver.ForceHurt(state.ProteinSelfHurt * timeDelta);
+            hungerDamageTickTimer += timeDelta;
+            while (hungerDamageTickTimer >= HungerDamageTickInterval)
+            {
+                damageReceiver.ForceHurt(HungerDamagePerTick);
+                hungerDamageTickTimer -= HungerDamageTickInterval;
+            }
         }
         else if (nutrition.Protein >= proteinHealNeed && nutrition.Water >= waterHealNeed)
         {
+            hungerDamageTickTimer = 0f;
             damageReceiver.Heal(state.HealSpeed * timeDelta, food.item);
+        }
+        else
+        {
+            hungerDamageTickTimer = 0f;
         }
 
         if (nutrition.Water <= 0)

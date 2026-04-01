@@ -71,6 +71,7 @@ public class Mod_Weapon_AnimationAction : Module
                 cachedController.LeftClickUp += OnControllerLeftClickUp;
             }
         }
+        animator = item.GetComponentInChildren<Animator>();
     }
 
     public override void Save()

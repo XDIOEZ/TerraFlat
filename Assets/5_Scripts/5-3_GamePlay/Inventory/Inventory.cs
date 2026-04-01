@@ -31,6 +31,8 @@ public class Inventory
     [FoldoutGroup("UI"), ReadOnly, LabelText("物品槽UI")]
     public List<ItemSlot_UI> itemSlot_UI = new List<ItemSlot_UI>();
 
+    public static Inventory LastOpenedContainer;
+
     // 运行时赋值，不序列化
     GameObject ItemSlot_Prefab;
     Transform ItemSlot_Parent;
@@ -146,6 +148,7 @@ public class Inventory
                 return;
             }
             basePanel.Open();
+            TryMarkAsLastOpenedContainer();
             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
             return;
@@ -154,6 +157,7 @@ public class Inventory
         basePanel.Toggle();
         if (basePanel.IsOpen())
         {
+            TryMarkAsLastOpenedContainer();
             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
         }
@@ -364,10 +368,12 @@ public class Inventory
             itemSlotUI.OnLeftClick.Clear();
             itemSlotUI._OnScroll.Clear();
             itemSlotUI.OnRightClick.Clear();
+            itemSlotUI.OnShiftQuickTransfer.Clear();
 
             itemSlotUI.OnLeftClick += OnLeftClick;
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnRightClick += OnRightClick;
+            itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
             if (Data.itemSlots[i].onSlotDataChanged != null)
@@ -422,10 +428,12 @@ public class Inventory
         slotUI.OnLeftClick.Clear();
         slotUI._OnScroll.Clear();
         slotUI.OnRightClick.Clear();
+        slotUI.OnShiftQuickTransfer.Clear();
 
         slotUI.OnLeftClick += OnLeftClick;
         slotUI._OnScroll += OnScroll;
         slotUI.OnRightClick += OnRightClick;
+        slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
 
         slotUI.RefreshUI();
     }
@@ -530,9 +538,27 @@ public class Inventory
 
     void OnRightClick(int index)
     {
+        if (Data == null || Data.itemSlots == null)
+        {
+            Debug.LogError("[Inventory.OnRightClick] Data 或 itemSlots 为空");
+            return;
+        }
+
+        if (itemSlot_UI == null)
+        {
+            Debug.LogError("[Inventory.OnRightClick] itemSlot_UI 为空");
+            return;
+        }
+
         if (index < 0 || index >= Data.itemSlots.Count)
         {
             Debug.LogError($"[Inventory.OnRightClick] 索引越界: {index}");
+            return;
+        }
+
+        if (index >= itemSlot_UI.Count || itemSlot_UI[index] == null)
+        {
+            Debug.LogError($"[Inventory.OnRightClick] itemSlot_UI 索引无效: {index}");
             return;
         }
 
@@ -542,15 +568,44 @@ public class Inventory
             return;
         }
 
+        GameObject menuPrefab = GameRes.Instance.GetPrefab("右键菜单");
+        if (menuPrefab == null)
+        {
+            Debug.LogError("[Inventory.OnRightClick] 未找到预制体: 右键菜单");
+            return;
+        }
+
+        RightClickMenu_UI menuPrefabUI = menuPrefab.GetComponent<RightClickMenu_UI>();
+        if (menuPrefabUI == null)
+        {
+            Debug.LogError("[Inventory.OnRightClick] 右键菜单预制体缺少 RightClickMenu_UI 组件");
+            return;
+        }
+
         RightClickMenu_UI currentMenuInstance;
-        currentMenuInstance = GameObject.Instantiate(GameRes.Instance.GetPrefab("右键菜单").GetComponent<RightClickMenu_UI>());
+        currentMenuInstance = GameObject.Instantiate(menuPrefabUI);
         currentMenuInstance.Init(itemSlot_UI[index], slot, item);
-        currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlot_UI[index].transform.position;
+
+        RectTransform menuRect = currentMenuInstance.GetComponent<RectTransform>();
+        if (currentMenuInstance.basePanel != null && currentMenuInstance.basePanel.Dragger != null && currentMenuInstance.basePanel.Dragger.rectTransform != null)
+        {
+            currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlot_UI[index].transform.position;
+        }
+        else if (menuRect != null)
+        {
+            menuRect.position = itemSlot_UI[index].transform.position;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnScroll(int index, float direction)
     {
+        if (!TryEnsureDefaultTargetInventory())
+            return;
+
+        if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
+            return;
+
         if (direction > 0)
         {
             Data.TransferItemQuantity(DefaultTarget_Inventory.Data.itemSlots[0], Data.itemSlots[index], 1);
@@ -564,7 +619,14 @@ public class Inventory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public virtual void OnLeftClick(int index)
     {
-        ItemSlot slot = Data.GetItemSlot(index);
+        if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
+            return;
+
+        if (!TryEnsureDefaultTargetInventory())
+        {
+            Debug.LogWarning($"[Inventory.OnLeftClick] DefaultTarget_Inventory 未设置，当前库存={Data.Name}, 索引={index}");
+            return;
+        }
 
         //默认为手部
         if (DefaultTarget_Inventory.Data.itemSlots.Count > index)
@@ -579,6 +641,185 @@ public class Inventory
         }
 
         RefreshUI(index);
+    }
+
+    private bool TryEnsureDefaultTargetInventory()
+    {
+        if (DefaultTarget_Inventory != null && DefaultTarget_Inventory.Data != null && DefaultTarget_Inventory.Data.itemSlots != null && DefaultTarget_Inventory.Data.itemSlots.Count > 0)
+            return true;
+
+        if (Inventory_Hand.PlayerHand != null && Inventory_Hand.PlayerHand.Data != null && Inventory_Hand.PlayerHand.Data.itemSlots != null && Inventory_Hand.PlayerHand.Data.itemSlots.Count > 0)
+        {
+            DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
+            return true;
+        }
+
+        if (item != null && item.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Hand))
+        {
+            var handInventoryProvider = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>();
+            var handInventory = handInventoryProvider?.GetDefaultTargetInventory();
+            if (handInventory != null && handInventory.Data != null && handInventory.Data.itemSlots != null && handInventory.Data.itemSlots.Count > 0)
+            {
+                DefaultTarget_Inventory = handInventory;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public virtual void OnShiftQuickTransfer(int index)
+    {
+        Inventory targetInventory = ResolveShiftQuickTransferTarget();
+        if (targetInventory == null || targetInventory == this)
+            return;
+
+        TryQuickMoveSlotToInventory(index, targetInventory);
+    }
+
+    private Inventory ResolveShiftQuickTransferTarget()
+    {
+        if (IsHotBarInventory())
+            return GetValidLastOpenedContainer();
+
+        return GetPlayerHotBarInventory();
+    }
+
+    private bool TryQuickMoveSlotToInventory(int sourceIndex, Inventory targetInventory)
+    {
+        if (Data == null || Data.itemSlots == null || targetInventory == null || targetInventory.Data == null || targetInventory.Data.itemSlots == null)
+            return false;
+
+        if (sourceIndex < 0 || sourceIndex >= Data.itemSlots.Count)
+            return false;
+
+        ItemSlot sourceSlot = Data.itemSlots[sourceIndex];
+        if (sourceSlot == null || sourceSlot.itemData == null)
+            return false;
+
+        bool moved = false;
+        moved |= TryTransferToMatchedSlots(sourceSlot, targetInventory);
+        moved |= TryTransferToEmptySlots(sourceSlot, targetInventory);
+
+        if (moved)
+        {
+            RefreshUI(sourceIndex);
+            targetInventory.RefreshUI();
+        }
+
+        return moved;
+    }
+
+    private bool TryTransferToMatchedSlots(ItemSlot sourceSlot, Inventory targetInventory)
+    {
+        bool moved = false;
+        List<ItemSlot> targetSlots = targetInventory.Data.itemSlots;
+
+        for (int i = 0; i < targetSlots.Count; i++)
+        {
+            if (sourceSlot.itemData == null)
+                break;
+
+            ItemSlot targetSlot = targetSlots[i];
+            if (targetSlot == null || targetSlot.itemData == null)
+                continue;
+
+            if (targetSlot.itemData.IDName != sourceSlot.itemData.IDName ||
+                targetSlot.itemData.ItemSpecialData != sourceSlot.itemData.ItemSpecialData)
+                continue;
+
+            int transferCount = Mathf.CeilToInt(sourceSlot.itemData.Stack.Amount);
+            if (transferCount <= 0)
+                break;
+
+            if (targetInventory.Data.TransferItemQuantity(sourceSlot, targetSlot, transferCount))
+                moved = true;
+        }
+
+        return moved;
+    }
+
+    private bool TryTransferToEmptySlots(ItemSlot sourceSlot, Inventory targetInventory)
+    {
+        bool moved = false;
+        List<ItemSlot> targetSlots = targetInventory.Data.itemSlots;
+
+        for (int i = 0; i < targetSlots.Count; i++)
+        {
+            if (sourceSlot.itemData == null)
+                break;
+
+            ItemSlot targetSlot = targetSlots[i];
+            if (targetSlot == null || targetSlot.itemData != null)
+                continue;
+
+            int transferCount = Mathf.CeilToInt(sourceSlot.itemData.Stack.Amount);
+            if (transferCount <= 0)
+                break;
+
+            if (targetInventory.Data.TransferItemQuantity(sourceSlot, targetSlot, transferCount))
+                moved = true;
+        }
+
+        return moved;
+    }
+
+    private Inventory GetPlayerHotBarInventory()
+    {
+        Inventory hotBar = TryGetHotBarFromItem(item);
+        if (hotBar != null)
+            return hotBar;
+
+        hotBar = TryGetHotBarFromItem(DefaultTarget_Inventory?.item);
+        if (hotBar != null)
+            return hotBar;
+
+        hotBar = TryGetHotBarFromItem(Inventory_Hand.PlayerHand?.item);
+        return hotBar;
+    }
+
+    private static Inventory TryGetHotBarFromItem(Item ownerItem)
+    {
+        if (ownerItem == null || ownerItem.itemMods == null)
+            return null;
+
+        Mod_Inventory modInventory = ownerItem.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Hotbar);
+        if (modInventory == null)
+            return null;
+
+        return modInventory.inventory;
+    }
+
+    private Inventory GetValidLastOpenedContainer()
+    {
+        if (LastOpenedContainer == null || LastOpenedContainer == this)
+            return null;
+
+        if (LastOpenedContainer.basePanel == null || !LastOpenedContainer.basePanel.IsOpen())
+            return null;
+
+        return LastOpenedContainer;
+    }
+
+    private void TryMarkAsLastOpenedContainer()
+    {
+        if (IsHotBarInventory() || IsHandInventory())
+            return;
+
+        if (basePanel == null || !basePanel.IsOpen())
+            return;
+
+        LastOpenedContainer = this;
+    }
+
+    private bool IsHotBarInventory()
+    {
+        return this is Inventory_HotBar || Data?.Name == ModText.Hotbar;
+    }
+
+    private bool IsHandInventory()
+    {
+        return this is Inventory_Hand || Data?.Name == ModText.Hand;
     }
 
     #endregion

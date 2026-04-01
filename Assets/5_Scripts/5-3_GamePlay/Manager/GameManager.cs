@@ -39,6 +39,11 @@ public class GameManager : SingletonAutoMono<GameManager>
     [SerializeField] private string saveManagerPanelName = "UI_GameSaveManager";
     [SerializeField] private string saveManagerPanelNameLegacy = "存档选择面板";
 
+    [Header("新玩家出生点搜索配置")]
+    [SerializeField, Min(1)] private int spawnLandMaxSearchRadius = 256;
+    [SerializeField, Min(0)] private int spawnSeedAnchorRange = 256;
+    [SerializeField, Min(1)] private int spawnSearchRetryFrames = 60;
+
     #region 生命周期方法
     private void Start()
     {
@@ -320,11 +325,168 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         if (player.Data.transform.position == Vector3.zero)
         {
-            // 新玩家：随机放到新场景
-            ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));
+            // 新玩家：区块地表是异步生成的，使用多帧重试避免同帧读取到空地表
+            StartCoroutine(PlaceNewPlayerOnLandThenEnterWorld(player));
+            return;
         }
 
         Event_PlayerEnterWorld?.Invoke(player);
+    }
+
+    private IEnumerator PlaceNewPlayerOnLandThenEnterWorld(Player player)
+    {
+        bool hasPlacedOnLand = false;
+        int retryFrames = Mathf.Max(1, spawnSearchRetryFrames);
+
+        for (int i = 0; i < retryFrames; i++)
+        {
+            if (TryPlaceNewPlayerOnNearestLand(player))
+            {
+                hasPlacedOnLand = true;
+                break;
+            }
+
+            yield return null;
+        }
+
+        if (!hasPlacedOnLand)
+        {
+            ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));
+            player.Data.transform.position = player.transform.position;
+            Debug.LogWarning($"[GameManager] 新玩家陆地出生点搜索失败（重试帧数={retryFrames}），回退随机投放：{player.transform.position}");
+        }
+
+        Event_PlayerEnterWorld?.Invoke(player);
+    }
+
+    /// <summary>
+    /// 为新玩家寻找最近陆地并设置出生位置
+    /// </summary>
+    private bool TryPlaceNewPlayerOnNearestLand(Player player)
+    {
+        if (player == null)
+        {
+            Debug.LogError("[GameManager] TryPlaceNewPlayerOnNearestLand 失败：player 为空");
+            return false;
+        }
+
+        Vector2Int seedAnchor = GetSeedAnchorPosition();
+        if (!TryFindNearestLand(seedAnchor, out Vector2Int landPos))
+        {
+            return false;
+        }
+
+        Vector3 spawnPos = new Vector3(landPos.x + 0.5f, landPos.y + 0.5f, 0f);
+        player.transform.position = spawnPos;
+        player.Data.transform.position = spawnPos;
+
+        Debug.Log($"[GameManager] 新玩家出生点已定位到陆地：seed={SaveDataMgr.Instance.SaveData.Seed}, anchor={seedAnchor}, spawn={spawnPos}");
+        return true;
+    }
+
+    /// <summary>
+    /// 使用存档种子计算确定性的出生锚点
+    /// </summary>
+    private Vector2Int GetSeedAnchorPosition()
+    {
+        int seed = SaveDataMgr.Instance.SaveData.Seed;
+        System.Random random = new System.Random(seed);
+        int anchorRange = Mathf.Max(0, spawnSeedAnchorRange);
+
+        // 将锚点限制在中心区域，降低首次搜索范围
+        int anchorX = random.Next(-anchorRange, anchorRange + 1);
+        int anchorY = random.Next(-anchorRange, anchorRange + 1);
+        return new Vector2Int(anchorX, anchorY);
+    }
+
+    /// <summary>
+    /// 以锚点为中心按螺旋环搜索最近陆地
+    /// </summary>
+    private bool TryFindNearestLand(Vector2Int anchor, out Vector2Int landPos)
+    {
+        landPos = anchor;
+        int maxSearchRadius = Mathf.Max(1, spawnLandMaxSearchRadius);
+        HashSet<string> loadedChunkCache = new HashSet<string>();
+
+        if (IsLandTile(anchor, loadedChunkCache))
+        {
+            landPos = anchor;
+            return true;
+        }
+
+        for (int radius = 1; radius <= maxSearchRadius; radius++)
+        {
+            int minX = anchor.x - radius;
+            int maxX = anchor.x + radius;
+            int minY = anchor.y - radius;
+            int maxY = anchor.y + radius;
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                Vector2Int top = new Vector2Int(x, maxY);
+                if (IsLandTile(top, loadedChunkCache))
+                {
+                    landPos = top;
+                    return true;
+                }
+
+                Vector2Int bottom = new Vector2Int(x, minY);
+                if (IsLandTile(bottom, loadedChunkCache))
+                {
+                    landPos = bottom;
+                    return true;
+                }
+            }
+
+            for (int y = minY + 1; y <= maxY - 1; y++)
+            {
+                Vector2Int left = new Vector2Int(minX, y);
+                if (IsLandTile(left, loadedChunkCache))
+                {
+                    landPos = left;
+                    return true;
+                }
+
+                Vector2Int right = new Vector2Int(maxX, y);
+                if (IsLandTile(right, loadedChunkCache))
+                {
+                    landPos = right;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 判断指定世界坐标是否为可出生陆地
+    /// </summary>
+    private bool IsLandTile(Vector2Int worldPos, HashSet<string> loadedChunkCache)
+    {
+        Vector2Int chunkPos = Chunk.GetChunkPosition(worldPos);
+        string chunkName = chunkPos.ToString();
+
+        if (!loadedChunkCache.Contains(chunkName))
+        {
+            ChunkMgr.Instance.LoadChunk_By_Name(chunkName);
+            loadedChunkCache.Add(chunkName);
+        }
+
+        if (!ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(chunkName, out Chunk chunk) || chunk == null)
+            return false;
+
+        if (chunk.Map == null)
+            return false;
+
+        TileData topTile = chunk.Map.GetTopTile(worldPos);
+        if (topTile == null)
+            return false;
+
+        if (topTile is TileData_Water)
+            return false;
+
+        return topTile.IsWalkable;
     }
 
     /// <summary>
