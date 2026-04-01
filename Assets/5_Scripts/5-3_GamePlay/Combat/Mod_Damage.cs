@@ -16,6 +16,8 @@ public class Mod_Damage : Module, IDamageSender
     public float DamageInterval = -1f;
     [Tooltip("是否启用触发器进入时的伤害逻辑（默认为true）")]
     public bool EnableOnTriggerEnterDamage = true;
+    [Tooltip("是否仅允许物品在手上时造成伤害")]
+    public bool OnlyDealDamageWhenInHand = false;
 
     [Header("调试信息")]
     [SerializeField] private bool showDebugWarnings = true;
@@ -84,7 +86,7 @@ public class Mod_Damage : Module, IDamageSender
         }
 
         // 处理定时伤害逻辑
-        if (DamageInterval >= 0 && damageCollider != null && damageCollider.enabled)
+        if (DamageInterval >= 0 && damageCollider != null && damageCollider.enabled && CanDealDamageNow())
         {
             // 检查是否到了造成伤害的时间
             if (DamageInterval == 0 || Time.time - lastDamageTime >= DamageInterval)
@@ -110,7 +112,7 @@ public class Mod_Damage : Module, IDamageSender
         }
 
         // 如果启用了进入时伤害，则在尊重伤害间隔的前提下尝试立即造成一次伤害
-        if (EnableOnTriggerEnterDamage)
+        if (EnableOnTriggerEnterDamage && CanDealDamageNow())
         {
             // DamageInterval < 0：仅做一次进入伤害，不参与冷却（保持旧行为）
             if (DamageInterval < 0f)
@@ -158,6 +160,8 @@ public class Mod_Damage : Module, IDamageSender
 
     private void ApplyDamageToReceiver(DamageReceiver receiver)
     {
+        if (!CanDealDamageNow()) return;
+
         // 造成伤害
         float acDamage = receiver.Hurt(this);
 
@@ -174,6 +178,12 @@ public class Mod_Damage : Module, IDamageSender
 
         lastDamageTime = Time.time;
 
+    }
+
+    private bool CanDealDamageNow()
+    {
+        if (!OnlyDealDamageWhenInHand) return true;
+        return item.InHand;
     }
 
     private void SpawnEffect(Vector2 hitPoint, float damage)

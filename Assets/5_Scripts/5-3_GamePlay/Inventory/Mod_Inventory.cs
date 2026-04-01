@@ -107,15 +107,8 @@ public class Mod_Inventory : Module, IInventory
             currentInventory.item = item;
 
             // 设置默认目标库存
-            if (item.itemMods.GetMod_ByID(ModText.Hand))
-            {
-                currentInventory.DefaultTarget_Inventory =
-                            item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<Mod_Inventory>().inventory;
-            }
-            else
-            {
-                currentInventory.DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
-            }
+            var handInventory = item.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+            currentInventory.DefaultTarget_Inventory = handInventory != null ? handInventory : Inventory_Hand.PlayerHand;
 
             // 初始化库存
             currentInventory.InitData();
@@ -222,20 +215,18 @@ public class Mod_Inventory : Module, IInventory
             kvp.Interact_Start(item_);
         }
 
-        if (item_.itemMods == null)
+        var handInventory = item_.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+        if (handInventory == null)
         {
-            Debug.LogError("[Mod_Inventory.Interact_Start] item_.itemMods 为空！");
+            Debug.LogError("[Mod_Inventory.Interact_Start] 未找到 Mod_Hand.HandInventory，无法设置默认交互库存");
             return;
         }
-
-        item_.itemMods.GetMod_ByID(ModText.Hand, out Mod_Inventory handMod);
-        if (handMod == null) return;
 
         // 设置所有Inventory的默认目标
         foreach (var kvp in InventoryRefDic)
         {
             var currentInventory = kvp.Value;
-            currentInventory.DefaultTarget_Inventory = handMod.inventory;
+            currentInventory.DefaultTarget_Inventory = handInventory;
         }
     }
 

@@ -3,9 +3,10 @@ using TMPro;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler, IScrollHandler
+public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler, IPointerUpHandler, IScrollHandler
 {
     #region 字段
     /// <summary>
@@ -26,10 +27,17 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
 
     public UltEvent<int> OnRightClick = new UltEvent<int>();
 
+    [Tooltip("Shift+左键快速转移事件")]
+    public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
+
     private GameObject currentMenuInstance;
 
 
     private bool isPointerOver = false;
+
+    private static bool _isShiftQuickTransferDragging;
+    private static int _shiftQuickTransferSessionId;
+    private int _lastHandledShiftQuickTransferSessionId = -1;
 
     /// <summary>
     /// 用于获取槽位数据的委托（解除对Data的直接依赖）
@@ -53,6 +61,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     {
         OnLeftClick.Clear();
         OnRightClick.Clear();
+        OnShiftQuickTransfer.Clear();
         _OnScroll.Clear();
     }
     #endregion
@@ -150,17 +159,73 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     #region 接口实现
     public void OnPointerDown(PointerEventData eventData)
     {
+        if (eventData.button == PointerEventData.InputButton.Left && IsShiftPressed())
+        {
+            _isShiftQuickTransferDragging = true;
+            _shiftQuickTransferSessionId++;
+            _lastHandledShiftQuickTransferSessionId = -1;
+            TryInvokeShiftQuickTransfer();
+            return;
+        }
+
         Click(eventData);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
         isPointerOver = true;
+
+        if (!_isShiftQuickTransferDragging)
+            return;
+
+        if (!IsShiftPressed() || !IsLeftMousePressed())
+        {
+            _isShiftQuickTransferDragging = false;
+            return;
+        }
+
+        TryInvokeShiftQuickTransfer();
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         isPointerOver = false;
+    }
+
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            _isShiftQuickTransferDragging = false;
+        }
+    }
+    #endregion
+
+    #region Shift快速转移
+    private bool TryInvokeShiftQuickTransfer()
+    {
+        if (_lastHandledShiftQuickTransferSessionId == _shiftQuickTransferSessionId)
+            return false;
+
+        _lastHandledShiftQuickTransferSessionId = _shiftQuickTransferSessionId;
+        OnShiftQuickTransfer.Invoke(slotIndex);
+        return true;
+    }
+
+    private bool IsShiftPressed()
+    {
+        if (Keyboard.current != null)
+            return Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+
+        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+    }
+
+    private bool IsLeftMousePressed()
+    {
+        if (Mouse.current != null)
+            return Mouse.current.leftButton.isPressed;
+
+        return Input.GetMouseButton(0);
     }
     #endregion
 

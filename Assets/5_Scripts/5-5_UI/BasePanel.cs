@@ -61,19 +61,18 @@ public class BasePanel : MonoBehaviour
     [SerializeField]
     private bool isOpen = false;
 
+    private void Awake()
+    {
+        EnsureRuntimeReferences();
+    }
+
     #region  Unity生命周期
     public virtual void Init()
     {
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
 
-        Dragger = GetComponentInChildren<UI_Drag>();
-        rectTransform = GetComponent<RectTransform>();
-        if (Dragger != null)
-        {
-            CanDrag = true;
-        }
-        canvasGroup = GetComponent<CanvasGroup>();
+        EnsureRuntimeReferences();
 
         // 初始化面板状态
         if (canvasGroup != null)
@@ -96,6 +95,12 @@ public class BasePanel : MonoBehaviour
         {
             canvasGroup = GetComponent<CanvasGroup>();
         }
+
+        if (rectTransform == null)
+        {
+            rectTransform = GetComponent<RectTransform>();
+        }
+
         //TODO 自动设置CanvasScaler的UI Scale Mode为Scale With Screen Size
         CanvasScaler canvasScaler = GetComponent<CanvasScaler>();
         if (canvasScaler != null)
@@ -106,6 +111,29 @@ public class BasePanel : MonoBehaviour
         }
         Dragger = GetComponent<UI_Drag>();
     }
+
+    private void EnsureRuntimeReferences()
+    {
+        if (rectTransform == null)
+        {
+            rectTransform = GetComponent<RectTransform>();
+        }
+
+        if (canvasGroup == null)
+        {
+            canvasGroup = GetComponent<CanvasGroup>();
+        }
+
+        if (Dragger == null)
+        {
+            Dragger = GetComponentInChildren<UI_Drag>(true);
+        }
+
+        if (Dragger != null)
+        {
+            CanDrag = true;
+        }
+    }
     #endregion
 
     /// <summary>
@@ -113,6 +141,8 @@ public class BasePanel : MonoBehaviour
     /// </summary>
     public void CollectUIComponents()
     {
+        EnsureRuntimeReferences();
+
         // 清空现有字典
         buttons.Clear();
         inputFields.Clear();

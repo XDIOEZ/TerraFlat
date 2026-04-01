@@ -128,6 +128,18 @@ public class Inventory_HotBar : Inventory
         SwitchItem(index);
     }
 
+    public override void OnShiftQuickTransfer(int index)
+    {
+        base.OnShiftQuickTransfer(index);
+        SyncCurrentHeldItemWithSlot();
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        base.ModUpdate(deltaTime);
+        SyncCurrentHeldItemWithSlot();
+    }
+
     public float GetCurrentItemDurabilityPercentage()
     {
         if (CurentSelectItem?.itemData == null) return 1f;
@@ -293,6 +305,41 @@ public class Inventory_HotBar : Inventory
 
         obj.SetInHand(false);
         UnloadCurrentItem();
+    }
+
+    private void SyncCurrentHeldItemWithSlot()
+    {
+        if (Data == null || Data.itemSlots == null || Data.itemSlots.Count == 0)
+            return;
+
+        int fixedIndex = NormalizeIndex(CurrentIndex);
+        if (fixedIndex != CurrentIndex)
+            CurrentIndex = fixedIndex;
+
+        ItemSlot currentSlot = Data.itemSlots[CurrentIndex];
+        CurrentSelectItemSlot = currentSlot;
+
+        ItemData slotData = currentSlot?.itemData;
+
+        if (slotData == null)
+        {
+            if (CurentSelectItem != null)
+                UnloadCurrentItem();
+
+            return;
+        }
+
+        if (CurentSelectItem == null)
+        {
+            LoadItemFromSlot(CurrentIndex);
+            return;
+        }
+
+        if (!ReferenceEquals(CurentSelectItem.itemData, slotData))
+        {
+            UnloadCurrentItem();
+            LoadItemFromSlot(CurrentIndex);
+        }
     }
 
     #endregion

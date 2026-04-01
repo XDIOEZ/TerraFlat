@@ -144,6 +144,7 @@ Transform:
   - {fileID: 1211274164537197697}
   - {fileID: 4878975408065021389}
   - {fileID: 4008861612708923450}
+  - {fileID: 2583823434517663508}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &8862278864143937418
@@ -346,6 +347,121 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
+--- !u!1 &7574631112993380532
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2583823434517663508}
+  - component: {fileID: 4806249304021223581}
+  m_Layer: 0
+  m_Name: Module_HandMaker
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2583823434517663508
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7574631112993380532}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343432311901774332}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4806249304021223581
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7574631112993380532}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a1287b990d35d3489f05c14737c3620, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: "\u5DE5\u4F5C\u53F0\u6A21\u5757_\u624B\u5DE5"
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  RawData: []
+  inputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  outputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  basePanel: {fileID: 0}
+  InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
+  workButton: {fileID: 0}
+  toggleKey: 104
 --- !u!1001 &182505877538168709
 PrefabInstance:
   m_ObjectHideFlags: 0

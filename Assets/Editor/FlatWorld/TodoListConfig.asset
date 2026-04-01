@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: TodoListConfig
   m_EditorClassIdentifier: Assembly-CSharp-Editor::TodoListConfig
   items:
-  - title: 'asddas '
-    description: 
+  - title: "\u5B8C\u5584\u62A4\u7532"
+    description: "\u5B8C\u5584\u3002\u6240\u6709\u9884\u5236\u4F53\u7684\u62A4\u7532\u548C\u8840\u91CF\u3002"
     isCompleted: 0
     priority: 1
     dueDate: 

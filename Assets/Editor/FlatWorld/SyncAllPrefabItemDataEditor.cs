@@ -392,6 +392,130 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
+    [MenuItem("FlatWorld/武器/配置攻击动画分组（挥动/戳击/混合）")]
+    [MenuItem("FlatWorld/Weapon/Configure Attack Profiles")]
+    public static void ConfigureWeaponAttackAnimationProfiles()
+    {
+        if (!AssetDatabase.IsValidFolder(WeaponRootFolder))
+        {
+            Debug.LogError($"[WeaponAttackProfile] 未找到目录: {WeaponRootFolder}");
+            return;
+        }
+
+        string[] prefabPaths = CollectNonLegacyPrefabPaths(WeaponRootFolder);
+        int configured = 0;
+        int skipped = 0;
+        int missingAction = 0;
+
+        try
+        {
+            for (int i = 0; i < prefabPaths.Length; i++)
+            {
+                string path = prefabPaths[i];
+                string fileName = Path.GetFileNameWithoutExtension(path);
+                EditorUtility.DisplayProgressBar("配置攻击动画分组", $"处理中 {fileName} ({i + 1}/{prefabPaths.Length})", (float)i / prefabPaths.Length);
+
+                if (!TryGetAttackProfile(fileName, out string[] attackNames))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                GameObject prefabRoot = PrefabUtility.LoadPrefabContents(path);
+                try
+                {
+                    Mod_Weapon_AnimationAction actionModule = prefabRoot.GetComponentInChildren<Mod_Weapon_AnimationAction>(true);
+                    if (actionModule == null)
+                    {
+                        missingAction++;
+                        continue;
+                    }
+
+                    if (SetAttackAnimationNames(actionModule, attackNames))
+                    {
+                        PrefabUtility.SaveAsPrefabAsset(prefabRoot, path);
+                        configured++;
+                    }
+                    else
+                    {
+                        skipped++;
+                    }
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(prefabRoot);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[WeaponAttackProfile] 完成。更新={configured}, 跳过={skipped}, 缺少动作模块={missingAction}, 总数={prefabPaths.Length}");
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+    }
+
+    [MenuItem("FlatWorld/武器/标准化Render结构（Render_1承载Sprite）")]
+    [MenuItem("FlatWorld/Weapon/Normalize Render Hierarchy")]
+    public static void NormalizeWeaponRenderHierarchy()
+    {
+        if (!AssetDatabase.IsValidFolder(WeaponRootFolder))
+        {
+            Debug.LogError($"[WeaponRenderNormalize] 未找到目录: {WeaponRootFolder}");
+            return;
+        }
+
+        string[] prefabPaths = CollectNonLegacyPrefabPaths(WeaponRootFolder);
+        int changed = 0;
+        int skipped = 0;
+        int missingRender = 0;
+
+        try
+        {
+            for (int i = 0; i < prefabPaths.Length; i++)
+            {
+                string path = prefabPaths[i];
+                string fileName = Path.GetFileNameWithoutExtension(path);
+                EditorUtility.DisplayProgressBar("标准化Render结构", $"处理中 {fileName} ({i + 1}/{prefabPaths.Length})", (float)i / prefabPaths.Length);
+
+                GameObject prefabRoot = PrefabUtility.LoadPrefabContents(path);
+                try
+                {
+                    Transform render = prefabRoot.transform.Find("Render");
+                    if (render == null)
+                    {
+                        missingRender++;
+                        continue;
+                    }
+
+                    if (TryNormalizeSingleRenderHierarchy(render))
+                    {
+                        PrefabUtility.SaveAsPrefabAsset(prefabRoot, path);
+                        changed++;
+                    }
+                    else
+                    {
+                        skipped++;
+                    }
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(prefabRoot);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[WeaponRenderNormalize] 完成。更新={changed}, 跳过={skipped}, 缺少Render={missingRender}, 总数={prefabPaths.Length}");
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+    }
+
     private static bool TryMigrateSingleWeaponPrefab(string path, RuntimeAnimatorController templateController)
     {
         GameObject prefabRoot = PrefabUtility.LoadPrefabContents(path);
@@ -706,5 +830,142 @@ public static class SyncAllPrefabItemDataEditor
         }
 
         return paths.ToArray();
+    }
+
+    private static bool TryGetAttackProfile(string fileName, out string[] attackNames)
+    {
+        string lowerName = fileName.ToLowerInvariant();
+
+        // 适合挥动：斧头、镐子、锄头
+        if (lowerName.Contains("axe") || lowerName.Contains("pickaxe") || lowerName.Contains("hoe"))
+        {
+            attackNames = new[] { "Attack_2" };
+            return true;
+        }
+
+        // 适合戳击：长矛、匕首、针类
+        if (lowerName.Contains("spear") || lowerName.Contains("dagger") || lowerName.Contains("needle"))
+        {
+            attackNames = new[] { "Attack_1" };
+            return true;
+        }
+
+        // 可挥动+刺击：刀剑
+        if (lowerName.Contains("knife") || lowerName.Contains("sword"))
+        {
+            attackNames = new[] { "Attack_1", "Attack_2" };
+            return true;
+        }
+
+        attackNames = null;
+        return false;
+    }
+
+    private static bool SetAttackAnimationNames(Mod_Weapon_AnimationAction actionModule, string[] attackNames)
+    {
+        SerializedObject actionSo = new SerializedObject(actionModule);
+        SerializedProperty attackNamesProperty = actionSo.FindProperty("attackAnimationNames");
+        if (attackNamesProperty == null || !attackNamesProperty.isArray)
+        {
+            return false;
+        }
+
+        bool same = attackNamesProperty.arraySize == attackNames.Length;
+        if (same)
+        {
+            for (int i = 0; i < attackNames.Length; i++)
+            {
+                if (attackNamesProperty.GetArrayElementAtIndex(i).stringValue != attackNames[i])
+                {
+                    same = false;
+                    break;
+                }
+            }
+        }
+
+        if (same)
+        {
+            return false;
+        }
+
+        attackNamesProperty.ClearArray();
+        for (int i = 0; i < attackNames.Length; i++)
+        {
+            attackNamesProperty.InsertArrayElementAtIndex(i);
+            attackNamesProperty.GetArrayElementAtIndex(i).stringValue = attackNames[i];
+        }
+
+        actionSo.ApplyModifiedPropertiesWithoutUndo();
+        return true;
+    }
+
+    private static bool TryNormalizeSingleRenderHierarchy(Transform render)
+    {
+        bool changed = false;
+
+        Vector3 oldLocalPos = render.localPosition;
+        Quaternion oldLocalRot = render.localRotation;
+        Vector3 oldLocalScale = render.localScale;
+
+        Transform render1 = render.Find("Render_1");
+        if (render1 == null)
+        {
+            GameObject render1Go = new GameObject("Render_1");
+            render1Go.transform.SetParent(render, false);
+            render1 = render1Go.transform;
+            changed = true;
+        }
+
+        if (render1.localPosition != oldLocalPos)
+        {
+            render1.localPosition = oldLocalPos;
+            changed = true;
+        }
+
+        if (render1.localRotation != oldLocalRot)
+        {
+            render1.localRotation = oldLocalRot;
+            changed = true;
+        }
+
+        if (render1.localScale != oldLocalScale)
+        {
+            render1.localScale = oldLocalScale;
+            changed = true;
+        }
+
+        SpriteRenderer renderSprite = render.GetComponent<SpriteRenderer>();
+        if (renderSprite != null)
+        {
+            SpriteRenderer render1Sprite = render1.GetComponent<SpriteRenderer>();
+            if (render1Sprite == null)
+            {
+                render1Sprite = render1.gameObject.AddComponent<SpriteRenderer>();
+            }
+
+            EditorUtility.CopySerialized(renderSprite, render1Sprite);
+            Object.DestroyImmediate(renderSprite, true);
+            changed = true;
+        }
+
+        if (render.localPosition != Vector3.zero)
+        {
+            render.localPosition = Vector3.zero;
+            changed = true;
+        }
+
+        if (render.localRotation != Quaternion.identity)
+        {
+            render.localRotation = Quaternion.identity;
+            changed = true;
+        }
+
+        if (render.localScale != Vector3.one)
+        {
+            render.localScale = Vector3.one;
+            changed = true;
+        }
+
+        return changed;
     }
 }
