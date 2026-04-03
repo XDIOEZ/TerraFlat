@@ -284,8 +284,6 @@ public partial class Mod_Food : Module
             item.itemData.Stack.Amount--;
             // UI 更新通知
             item.OnUIRefresh?.Invoke();
-            // 营养值补满
-            Data.nutrition.Max();
             // 进度归零
             EatingProgress = 0;
 
@@ -313,8 +311,6 @@ public partial class Mod_Food : Module
             // UI 更新通知
             BeEater.item.OnUIRefresh?.Invoke();
 
-            // 当前食物的营养值补满
-            BeEater.Data.nutrition.Max();
             BeEater.EatingProgress = 0; // 吃进度归零
 
             // 吃掉目标食物的营养值

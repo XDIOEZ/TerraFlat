@@ -93,29 +93,18 @@ MonoBehaviour:
   item: {fileID: 0}
   modData:
     Name: 
-    ID: 
+    ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
     isRunning: 1
     Type: 0
     BitData: 
   Data:
-    Hp: 100
-    MaxHp:
-      BaseValue: 100
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-    Defense:
-      BaseValue: 0
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-    Weakness:
-      _serializedList: []
+    Hp: 180
+    MaxHp: 180
+    Defense: 8
+    Weakness: 00000000
     AttackersUIDs: 
     ShowCanvas: 1
-    DamageInterval: 0.1
+    DamageInterval: 0.12
     DestroyDelay: 0
     LootTable:
     - LootPrefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}

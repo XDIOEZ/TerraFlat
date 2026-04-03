@@ -14,6 +14,9 @@ public class BuildingShadow : MonoBehaviour
     [Header("碰撞体设置")]
     public Vector2 BoxColliderScale = Vector2.one;
 
+    [Header("位置偏移")]
+    public Vector2 ShadowPositionOffset = new Vector2(0f, 0.5f);
+
     [Header("调试信息")]
     public Collider2D obstacleCollider; // 新增：记录障碍物碰撞体
     public GameObject firstObstacle;    // 新增：记录第一个障碍物
@@ -23,6 +26,13 @@ public class BuildingShadow : MonoBehaviour
     private Tween alphaTween;
 
     public bool AroundHaveGameObject => AroundObjects.Count > 0;
+
+    public Vector3 ApplyPlacementOffset(Vector3 worldPos)
+    {
+        worldPos += (Vector3)ShadowPositionOffset;
+        worldPos.z = 0f;
+        return worldPos;
+    }
 
     public void OnTriggerEnter2D(Collider2D collision)
     {

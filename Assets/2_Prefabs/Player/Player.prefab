@@ -347,6 +347,110 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
+--- !u!1 &7418924436426645882
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7086098086926392403}
+  - component: {fileID: 1889698761752487944}
+  m_Layer: 9
+  m_Name: Module_Food
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7086098086926392403
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7418924436426645882}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343432311901774332}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1889698761752487944
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7418924436426645882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ExData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Data:
+    nutrition:
+      Carbohydrates: 500
+      Max_Carbohydrates: 500
+      Fat: 500
+      Max_Fat: 500
+      Protein: 500
+      Max_Protein: 500
+      Water: 500
+      Max_Water: 500
+      Vitamins: 500
+      Max_Vitamins: 500
+    Max_EatingProgress: 3
+    ShowCanvas: 1
+    nutritionConsumeSpeed:
+      BaseValue: 1
+      BaseAdditive: 0
+      AdditiveModifier: 0
+      MultiplicativeModifier: 1
+      FinalAdditive: 0
+    FeelGood: 0
+    PanelPosition: {x: 0, y: 0}
+    WaterConsumeSpeedRate: 0.1
+    nutritionConsumeRate: 1
+    ObserverState: 
+  EatingProgress: 0
+  DataUpdate:
+    _PersistentCalls: []
+  PanelPrefab: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
+  PanleInstance: {fileID: 0}
+  panelUI: {fileID: 0}
+  observers:
+  - rid: 6445419665800036352
+  - rid: 6445419665800036354
+  references:
+    version: 2
+    RefIds:
+    - rid: 6445419665800036352
+      type: {class: FoodHealthObserver, ns: , asm: GamePlay}
+      data:
+        state:
+          Enabled: 1
+          HealSpeed: 1
+          WaterSelfHurt: 1
+          ProteinSelfHurt: 1
+          VitaminSelfHurt: 1
+          HealNeedRatio: 0.6
+    - rid: 6445419665800036354
+      type: {class: FoodStaminaObserver, ns: , asm: GamePlay}
+      data:
+        state:
+          StaminaRecoverSpeed: 1
+          StaminaConsumeSpeed: 1
 --- !u!1 &7574631112993380532
 GameObject:
   m_ObjectHideFlags: 0
@@ -1013,172 +1117,6 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 3060833336191505069, guid: 20fa46eba2a77114f8e5b6ae80b2af5a, type: 3}
   m_PrefabInstance: {fileID: 3568580685091991659}
-  m_PrefabAsset: {fileID: 0}
---- !u!1001 &3802973469611338228
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 7343432311901774332}
-    m_Modifications:
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: PanelPrefab
-      value: 
-      objectReference: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Fat
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Water
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: observers.Array.size
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Protein
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Vitamins
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: observers.Array.data[0]
-      value: 6445419665800036352
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: observers.Array.data[1]
-      value: 6445419665800036354
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Carbohydrates
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.ObserverState.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Max_Fat.BaseValue
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Max_Water.BaseValue
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Max_Protein.BaseValue
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Max_Vitamins.BaseValue
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036352]
-      value: GamePlay FoodHealthObserver
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036353]
-      value: GamePlay FoodStaminaObserver
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036354]
-      value: GamePlay FoodStaminaObserver
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Max_Carbohydrates.BaseValue
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036352].state.Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036352].state.HealSpeed
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036352].state.HealNeedRatio
-      value: 0.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036352].state.WaterSelfHurt
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036352].state.ProteinSelfHurt
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036352].state.VitaminSelfHurt
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036354].state.StaminaConsumeSpeed
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: managedReferences[6445419665800036354].state.StaminaRecoverSpeed
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_Name
-      value: Module_Food
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
---- !u!4 &7086098086926392403 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 6237486111656621479, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-  m_PrefabInstance: {fileID: 3802973469611338228}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &3949589889191088807
 PrefabInstance:

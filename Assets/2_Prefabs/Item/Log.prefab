@@ -377,6 +377,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Mod_Damage
       objectReference: {fileID: 0}
+    - target: {fileID: 3581692118764745406, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

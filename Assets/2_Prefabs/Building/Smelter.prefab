@@ -638,7 +638,7 @@ PrefabInstance:
       objectReference: {fileID: 5720747661594404640}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.Hp
-      value: 0
+      value: 180
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: modData.Name

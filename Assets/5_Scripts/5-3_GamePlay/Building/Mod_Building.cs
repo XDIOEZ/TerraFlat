@@ -91,6 +91,27 @@ public class Mod_Building : Module
     {
         _Data.ID = ModText.Building;
     }
+
+    private void Start()
+    {
+        if (item == null)
+        {
+            item = GetComponentInParent<Item>();
+            if (item == null)
+                throw new NullReferenceException("[Mod_Building] Start失败：未找到附属Item组件");
+        }
+
+        // 手持状态：建筑应为待放置
+        if (item.InHand)
+        {
+            CurrentState = BuildingState.NotInstalled;
+            return;
+        }
+
+        // 非手持状态：根据当前建筑数据初始化状态
+        InitializeState();
+    }
+
     //TODO OnValidate实现
     protected void OnValidate()
     {
@@ -699,6 +720,10 @@ public class Mod_Building : Module
         mouseWorldPos.x = Mathf.Floor(mouseWorldPos.x) + 0.5f;
         mouseWorldPos.y = Mathf.Floor(mouseWorldPos.y) + 0.5f;
 
+        Vector3 shadowWorldPos = mouseWorldPos + new Vector3(0f, 0.5f, 0f);
+        if (GhostShadow != null)
+            shadowWorldPos = GhostShadow.ApplyPlacementOffset(mouseWorldPos);
+
         // 创建 Shadow 实例（如果不存在）
         if (GhostShadow == null)
         {
@@ -709,7 +734,8 @@ public class Mod_Building : Module
             if (GhostShadow != null)
             {
                 Debug.Log($"[Ghost管理] ✅ 成功创建GhostShadow，位置: {mouseWorldPos}");
-                GhostShadow.transform.position = mouseWorldPos;
+                shadowWorldPos = GhostShadow.ApplyPlacementOffset(mouseWorldPos);
+                GhostShadow.transform.position = shadowWorldPos;
             }
             else
             {
@@ -725,7 +751,7 @@ public class Mod_Building : Module
         }
 
         // 计算距离
-        float distance = Vector2.Distance(item.transform.position, mouseWorldPos);
+        float distance = Vector2.Distance(item.transform.position, shadowWorldPos);
 
         // 定义过渡区间（距离超过最大可见距离后，在这个范围内逐渐消失）
         float transitionRange = 1.5f; // 可根据需要调整这个值
@@ -767,7 +793,7 @@ public class Mod_Building : Module
             }
 
             // 直接设置位置而不是平滑移动，确保总是对齐到格子中心
-            GhostShadow.transform.position = mouseWorldPos;
+            GhostShadow.transform.position = shadowWorldPos;
             GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
         }
     }
