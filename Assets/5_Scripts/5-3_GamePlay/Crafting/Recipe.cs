@@ -16,6 +16,8 @@ public class Recipe : ScriptableObject
     public Input_List inputs = new Input_List();
     [Header("输出产物")]
     public Output_List outputs = new Output_List();
+    [Header("合成规则")]
+    public bool enableMirrorCrafting = false;
     [Header("合成时行为")]
     [InlineEditor]
     public List<CraftingAction> action;

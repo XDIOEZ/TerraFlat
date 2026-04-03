@@ -137,6 +137,14 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     [Tooltip("河岸（紧邻河流的非河格子）生成石头的概率")]
     public float bankStoneChance = 0.10f;
 
+    [Header("河岸燧石")]
+    [Tooltip("燧石预制体（可选，不填则不生成燧石）")]
+    public GameObject Prefab_Flint;
+
+    [Range(0f, 1f)]
+    [Tooltip("河岸（紧邻河流的非河格子）生成燧石的概率（建议低于河岸石头）")]
+    public float bankFlintChance = 0.04f;
+
     [Min(1)]
     [Tooltip("河岸判定半径（格子）。1=紧邻一圈")]
     public int bankRadius = 1;
@@ -647,9 +655,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         int placed = 0;
         int saltRiver = unchecked((int)0x6D2B79F5);
         int saltBank = unchecked((int)0x1B873593);
+        int saltFlintBank = unchecked((int)0x3C6EF372);
 
         float riverChance = Mathf.Clamp01(riverStoneChance);
         float bankChance = Mathf.Clamp01(bankStoneChance);
+        float bankFlintChance01 = Mathf.Clamp01(bankFlintChance);
         int radius = Mathf.Max(1, bankRadius);
 
         // 以 TileData 为准：salt==0 代表河流水；salt==80 代表海水
@@ -689,7 +699,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                 if (r01 > riverChance)
                     continue;
 
-                PlaceOneStone(worldPos, root, seed ^ saltRiver);
+                PlaceOnePickup(Prefab_Stone, worldPos, root, seed ^ saltRiver);
                 placed++;
             }
         }
@@ -714,10 +724,21 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                     continue;
 
                 float r01 = Hash01(worldPos.x, worldPos.y, seed ^ saltBank);
-                if (r01 > bankChance)
+                if (r01 <= bankChance)
+                {
+                    PlaceOnePickup(Prefab_Stone, worldPos, root, seed ^ saltBank);
+                    placed++;
+                    continue;
+                }
+
+                if (Prefab_Flint == null)
                     continue;
 
-                PlaceOneStone(worldPos, root, seed ^ saltBank);
+                float flintR01 = Hash01(worldPos.x, worldPos.y, seed ^ saltFlintBank);
+                if (flintR01 > bankFlintChance01)
+                    continue;
+
+                PlaceOnePickup(Prefab_Flint, worldPos, root, seed ^ saltFlintBank);
                 placed++;
             }
         }
@@ -761,8 +782,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         return top is TileData_Water water && IsSeaWater(water);
     }
 
-    private void PlaceOneStone(Vector2Int worldPos, Transform parent, int seedSalt)
+    private void PlaceOnePickup(GameObject prefab, Vector2Int worldPos, Transform parent, int seedSalt)
     {
+        if (prefab == null)
+            throw new ArgumentNullException(nameof(prefab));
+
         Vector3Int cell = new Vector3Int(worldPos.x, worldPos.y, 0);
         Vector3 centerWorld;
         if (targetTilemap != null)
@@ -781,7 +805,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         float s01 = Hash01(worldPos.x, worldPos.y, seedSalt ^ 404);
         float s = Mathf.Lerp(stoneUniformScaleRange.x, stoneUniformScaleRange.y, s01);
 
-        GameObject go = GameObject.Instantiate(Prefab_Stone, pos, rot, parent);
+        GameObject go = GameObject.Instantiate(prefab, pos, rot, parent);
         go.transform.localScale = go.transform.localScale * s;
     }
     #endregion

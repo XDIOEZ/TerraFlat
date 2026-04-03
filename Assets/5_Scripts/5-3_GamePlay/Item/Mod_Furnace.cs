@@ -1206,14 +1206,6 @@ public class Mod_Furnace : Module, IInteractable
             return;
         }
 
-        // 在燃料栏中查找包含 Ignition 标签的物品
-        var ignitionItem = FuelInventory.Data.FindFirstByTag("Ignition");
-        if (ignitionItem == null)
-        {
-            Debug.LogWarning("无法点燃：缺少点火装置！");
-            return;
-        }
-
         // 如果已经在熔炼中，不允许主动停止
         if (Data.IsSmelting)
         {
@@ -1221,14 +1213,39 @@ public class Mod_Furnace : Module, IInteractable
             return;
         }
 
+        // 点火前必须先消耗1个燃料并注入燃料值，避免无燃料空点火
+        var fuelItem = FuelInventory.Data.GetModuleByID(ModText.Fuel);
+        if (fuelItem == null)
+        {
+            Debug.LogWarning("无法点火：燃料槽中没有燃料物品！");
+            return;
+        }
+
+        ItemSlot fuelSlot = FuelInventory.Data.GetItemSlotByModuleID(fuelItem.ID);
+        if (fuelSlot == null || fuelSlot.itemData == null || fuelSlot.itemData.Stack.Amount <= 0)
+        {
+            Debug.LogWarning("无法点火：燃料数量不足！");
+            return;
+        }
+
+        Ex_ModData_MemoryPackable fuelData = fuelItem as Ex_ModData_MemoryPackable;
+        if (fuelData == null)
+        {
+            Debug.LogError("无法点火：燃料模块数据异常！");
+            return;
+        }
+
+        fuelData.OutData(out FuelData fuel);
+        fuelSlot.itemData.Stack.Amount -= 1;
+        fuelSlot.RefreshUI();
+
+        mod_Fuel.AddFuel(fuel.Fuel.x);
+
+        // 温度上限取决于当前消耗的燃料
+        Data.MaxTemperature = fuel.MaxTemperature;
+
         // 开始熔炼
         Data.IsSmelting = true;
-
-        // 设置默认最大温度为熔炉限制温度（如果还没有燃料提供温度的话）
-        if (Data.MaxTemperature <= 0)
-        {
-            Data.MaxTemperature = Data.MaxTemperatureLimit;
-        }
 
         // 点燃燃料模块
         mod_Fuel?.SetIgnited(true);

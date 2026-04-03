@@ -39,6 +39,7 @@ MonoBehaviour:
   outputs:
     results:
     - ItemName: ChippedTool
-      ItemPrefab: {fileID: 1913413943585218338, guid: 00d0a43f590023545b163cd6c2a8bbf0, type: 3}
+      ItemPrefab: {fileID: 571565931952562247, guid: 314fc0b19c2478b459f9cf3665a4d841, type: 3}
       amount: 1
+  enableMirrorCrafting: 1
   action: []

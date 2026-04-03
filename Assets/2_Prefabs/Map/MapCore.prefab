@@ -197,6 +197,8 @@ MonoBehaviour:
         maxStonesPerChunk: 120
         riverStoneChance: 0.03
         bankStoneChance: 0.016666668
+        Prefab_Flint: {fileID: 3926578369279844245, guid: e768a5cbf9bac7745bf1d9b2dc0a09a7, type: 3}
+        bankFlintChance: 0.004
         bankRadius: 1
         stoneOffsetRange: {x: 0.25, y: 0.25}
         stoneRotationZRange: {x: 0, y: 360}

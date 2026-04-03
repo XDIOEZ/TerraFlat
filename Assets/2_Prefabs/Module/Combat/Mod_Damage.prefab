@@ -49,21 +49,25 @@ MonoBehaviour:
   AttackEffects:
   - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
   - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
-  Weakness:
-    _serializedList: []
+  Weakness: 00000000
   Damage:
-    BaseValue: 10
+    BaseValue: 5
     BaseAdditive: 0
     AdditiveModifier: 0
     MultiplicativeModifier: 1
     FinalAdditive: 0
+  DamageInterval: 0.2
+  EnableOnTriggerEnterDamage: 1
+  OnlyDealDamageWhenInHand: 0
+  showDebugWarnings: 1
+  damageCollider: {fileID: 3581692118764745406}
+  lastDamageTime: 0
   MemoryPackableData:
     Name: 
     ID: 
     isRunning: 1
     Type: 0
     BitData: 
-  damageCollider: {fileID: 3581692118764745406}
 --- !u!61 &3581692118764745406
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -71,7 +75,7 @@ BoxCollider2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2747812879517624506}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Density: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:

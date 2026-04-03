@@ -149,13 +149,14 @@ MonoBehaviour:
   - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
   Weakness: 
   Damage:
-    BaseValue: 10
+    BaseValue: 36
     BaseAdditive: 0
     AdditiveModifier: 0
     MultiplicativeModifier: 1
     FinalAdditive: 0
   DamageInterval: -1
   EnableOnTriggerEnterDamage: 1
+  OnlyDealDamageWhenInHand: 0
   showDebugWarnings: 1
   damageCollider: {fileID: 1096267118403055914}
   lastDamageTime: 0

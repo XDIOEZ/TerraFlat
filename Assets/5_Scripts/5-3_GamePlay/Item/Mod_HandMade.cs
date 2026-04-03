@@ -89,19 +89,29 @@ public class Mod_HandMade : Module,IInventory
 public bool Craft(Inventory inputInv, Inventory outputInv)
 {
     // 生成配方键列表
-    List<string> recipeKeys = GenerateRecipeKey_List(inputInv);
+    HashSet<string> mirroredKeys = new HashSet<string>();
+    List<string> recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
     
     Recipe recipe = null;
     string matchedKey = null;
+    bool isMirrorMatched = false;
     
     // 尝试匹配每个配方键
     foreach (string recipeKey in recipeKeys)
     {
-        if (GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+        if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+            continue;
+
+        bool isMirrorKey = mirroredKeys.Contains(recipeKey);
+        if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.规则合成 && !recipe.enableMirrorCrafting)
         {
-            matchedKey = recipeKey;
-            break;
+            recipe = null;
+            continue;
         }
+
+        matchedKey = recipeKey;
+        isMirrorMatched = isMirrorKey;
+        break;
     }
     
     // 验证配方
@@ -121,14 +131,14 @@ public bool Craft(Inventory inputInv, Inventory outputInv)
         return false;
 
     // 检查资源和空间
-    if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems))
+    if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems, isMirrorMatched))
     {
         Debug.LogError("合成失败：材料不足或输出空间不足");
         return false;
     }
 
     // 执行合成
-    ExecuteCrafting(inputInv, outputInv, recipe, outputItems);
+    ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
     return true;
 }
     /// <summary>
@@ -163,7 +173,7 @@ public bool Craft(Inventory inputInv, Inventory outputInv)
     #region 合成逻辑
 
 [Tooltip("输出一个字符串列表 包含所有Tag模式 和itemName模式的 集合 , 复杂度是O(n^2)")]
-private List<string> GenerateRecipeKey_List(Inventory inputInv)
+private List<string> GenerateRecipeKey_List(Inventory inputInv, HashSet<string> mirroredKeys)
 {
     List<string> recipeKeys = new List<string>();
     
@@ -182,7 +192,15 @@ private List<string> GenerateRecipeKey_List(Inventory inputInv)
             orderedInputList.AddNameItem(slot.itemData.IDName);
         }
     }
-    recipeKeys.Add(orderedInputList.ToString());
+    string orderedKey = orderedInputList.ToString();
+    recipeKeys.Add(orderedKey);
+
+    if (TryBuildMirroredInputList(orderedInputList, out Input_List mirroredOrderedInputList))
+    {
+        string mirroredOrderedKey = mirroredOrderedInputList.ToString();
+        recipeKeys.Add(mirroredOrderedKey);
+        mirroredKeys.Add(mirroredOrderedKey);
+    }
     
     // 2. 生成基于物品ID的配方键（无序合成）- 通过修改有序合成的规则
     orderedInputList.inputOrder = RecipeInputRule.无规则合成;
@@ -218,7 +236,15 @@ private List<string> GenerateRecipeKey_List(Inventory inputInv)
                     orderedTagInputList.AddNameItem(otherSlot.itemData?.IDName ?? "");
                 }
             }
-            recipeKeys.Add(orderedTagInputList.ToString());
+            string orderedTagKey = orderedTagInputList.ToString();
+            recipeKeys.Add(orderedTagKey);
+
+            if (TryBuildMirroredInputList(orderedTagInputList, out Input_List mirroredOrderedTagInputList))
+            {
+                string mirroredOrderedTagKey = mirroredOrderedTagInputList.ToString();
+                recipeKeys.Add(mirroredOrderedTagKey);
+                mirroredKeys.Add(mirroredOrderedTagKey);
+            }
             
             // 4. 生成基于Tag的配方键（无序合成）- 通过修改有序合成的规则
             orderedTagInputList.inputOrder = RecipeInputRule.无规则合成;
@@ -286,7 +312,7 @@ private string GenerateRecipeKey(Inventory inputInv)
     }
 
     private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, 
-    Recipe recipe, List<ItemData> outputItems)
+    Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
 {
     // 检查recipe.inputs是有规则合成还是无规则合成
     if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
@@ -295,7 +321,7 @@ private string GenerateRecipeKey(Inventory inputInv)
         for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
         {
             var slot = inputInv.Data.itemSlots[i];
-            var required = recipe.inputs.RowItems_List[i];
+            var required = GetOrderedRequired(recipe, i, isMirrorMatched, inputInv.Data.itemSlots.Count);
 
             if (required.amount == 0) continue;
 
@@ -355,7 +381,7 @@ private string GenerateRecipeKey(Inventory inputInv)
 }
 
 private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, 
-        Recipe recipe, List<ItemData> outputItems)
+    Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
     {
         Debug.Log($"开始合成：{recipe.name}");
         Debug.Log($"输入材料：{GenerateRecipeKey(inputInv)}");
@@ -375,7 +401,7 @@ if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
     for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
     {
         var slot = inputInv.Data.itemSlots[i];
-        var required = recipe.inputs.RowItems_List[i];
+        var required = GetOrderedRequired(recipe, i, isMirrorMatched, inputInv.Data.itemSlots.Count);
 
         if (required.amount == 0) continue;
 
@@ -459,6 +485,49 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
         outputInv.RefreshUI();
         inputInv.RefreshUI();
         Debug.Log($"合成完成：{recipe.name}");
+    }
+
+    private static bool TryBuildMirroredInputList(Input_List source, out Input_List mirrored)
+    {
+        mirrored = null;
+        int count = source.RowItems_List.Count;
+        int gridSize = Mathf.RoundToInt(Mathf.Sqrt(count));
+        if (gridSize * gridSize != count)
+            return false;
+
+        mirrored = new Input_List();
+        mirrored.recipeType = source.recipeType;
+        mirrored.inputOrder = source.inputOrder;
+
+        for (int row = 0; row < gridSize; row++)
+        {
+            for (int col = 0; col < gridSize; col++)
+            {
+                int sourceIndex = row * gridSize + (gridSize - 1 - col);
+                CraftingIngredient ingredient = source.RowItems_List[sourceIndex];
+                if (ingredient.matchMode == MatchMode.ByTag)
+                    mirrored.AddTagItem(ingredient.Tag);
+                else
+                    mirrored.AddNameItem(ingredient.ItemName);
+            }
+        }
+
+        return true;
+    }
+
+    private static CraftingIngredient GetOrderedRequired(Recipe recipe, int slotIndex, bool isMirrorMatched, int slotCount)
+    {
+        if (!isMirrorMatched)
+            return recipe.inputs.RowItems_List[slotIndex];
+
+        int gridSize = Mathf.RoundToInt(Mathf.Sqrt(slotCount));
+        if (gridSize * gridSize != slotCount)
+            return recipe.inputs.RowItems_List[slotIndex];
+
+        int row = slotIndex / gridSize;
+        int col = slotIndex % gridSize;
+        int mirroredIndex = row * gridSize + (gridSize - 1 - col);
+        return recipe.inputs.RowItems_List[mirroredIndex];
     }
 
     #endregion

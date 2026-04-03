@@ -34,6 +34,10 @@ public class Mod_HandCraftTable : Module, IInventory
     private const RecipeInputRule UnorderedRule = (RecipeInputRule)0;
     private const RecipeInputRule OrderedRule = (RecipeInputRule)1;
 
+    [Header("调试")]
+    [Tooltip("是否输出手工合成详细调试日志")]
+    public bool EnableCraftDebug = true;
+
 #endregion
 
 #region 生命周期
@@ -238,9 +242,10 @@ public class Mod_HandCraftTable : Module, IInventory
 #region 合成逻辑
 
     [Tooltip("输出用于匹配配方的键列表（2x2输入，支持物品名与Tag）")]
-    private List<string> GenerateRecipeKey_List(Inventory inputInv)
+    private List<string> GenerateRecipeKey_List(Inventory inputInv, HashSet<string> mirroredKeys)
     {
         List<string> recipeKeys = new List<string>();
+        HashSet<string> addedKeys = new HashSet<string>();
         List<ItemSlot> inputSlots = GetInputSlots(inputInv);
 
         Input_List orderedInputList = new Input_List();
@@ -250,10 +255,20 @@ public class Mod_HandCraftTable : Module, IInventory
         foreach (ItemSlot slot in inputSlots)
             orderedInputList.AddNameItem(slot.itemData?.IDName ?? "");
 
-        recipeKeys.Add(orderedInputList.ToString());
+        string orderedKey = orderedInputList.ToString();
+        AddKeyIfNotExists(recipeKeys, addedKeys, orderedKey);
+
+        if (TryBuildMirroredInputList(orderedInputList, out Input_List mirroredOrderedList))
+        {
+            string mirroredOrderedKey = mirroredOrderedList.ToString();
+            AddKeyIfNotExists(recipeKeys, addedKeys, mirroredOrderedKey);
+            // 只有镜像键与原始键不同时，才标记为“镜像命中”
+            if (mirroredOrderedKey != orderedKey)
+                mirroredKeys.Add(mirroredOrderedKey);
+        }
 
         orderedInputList.inputOrder = UnorderedRule;
-        recipeKeys.Add(orderedInputList.ToString());
+        AddKeyIfNotExists(recipeKeys, addedKeys, orderedInputList.ToString());
 
         for (int i = 0; i < inputSlots.Count; i++)
         {
@@ -273,12 +288,33 @@ public class Mod_HandCraftTable : Module, IInventory
                     orderedTagInputList.AddNameItem(inputSlots[j].itemData?.IDName ?? "");
             }
 
-            recipeKeys.Add(orderedTagInputList.ToString());
+            string orderedTagKey = orderedTagInputList.ToString();
+            AddKeyIfNotExists(recipeKeys, addedKeys, orderedTagKey);
+
+            if (TryBuildMirroredInputList(orderedTagInputList, out Input_List mirroredOrderedTagList))
+            {
+                string mirroredOrderedTagKey = mirroredOrderedTagList.ToString();
+                AddKeyIfNotExists(recipeKeys, addedKeys, mirroredOrderedTagKey);
+                if (mirroredOrderedTagKey != orderedTagKey)
+                    mirroredKeys.Add(mirroredOrderedTagKey);
+            }
+
             orderedTagInputList.inputOrder = UnorderedRule;
-            recipeKeys.Add(orderedTagInputList.ToString());
+            AddKeyIfNotExists(recipeKeys, addedKeys, orderedTagInputList.ToString());
         }
 
         return recipeKeys;
+    }
+
+    private void AddKeyIfNotExists(List<string> recipeKeys, HashSet<string> addedKeys, string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return;
+
+        if (!addedKeys.Add(key))
+            return;
+
+        recipeKeys.Add(key);
     }
 
     private string GenerateRecipeKey(Inventory inputInv)
@@ -294,12 +330,45 @@ public class Mod_HandCraftTable : Module, IInventory
 
     public bool Craft(Inventory inputInv, Inventory outputInv)
     {
-        List<string> recipeKeys = GenerateRecipeKey_List(inputInv);
+        HashSet<string> mirroredKeys = new HashSet<string>();
+        List<string> recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
+        List<ItemSlot> inputSlots = GetInputSlots(inputInv);
+
+        LogCraftDebug($"开始匹配，输入槽快照={BuildSlotSnapshot(inputSlots)}");
+        LogCraftDebug($"候选键数量={recipeKeys.Count}");
 
         Recipe recipe = null;
+        bool isMirrorMatched = false;
         foreach (string recipeKey in recipeKeys)
         {
-            if (GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+            LogCraftDebug($"尝试键：{recipeKey}，镜像键={mirroredKeys.Contains(recipeKey)}");
+
+            if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+            {
+                LogCraftDebug("字典未命中该键");
+                continue;
+            }
+
+            LogCraftDebug($"命中配方：{recipe.name}，规则={recipe.inputs.inputOrder}，允许镜像={recipe.enableMirrorCrafting}");
+
+            bool isMirrorKey = mirroredKeys.Contains(recipeKey);
+            if (isMirrorKey && recipe.inputs.inputOrder == OrderedRule && !recipe.enableMirrorCrafting)
+            {
+                LogCraftDebug("命中镜像键但配方未启用镜像，跳过");
+                recipe = null;
+                continue;
+            }
+
+            // 防止无序Key误命中有序配方：命中后再按槽位顺序做一次严格校验
+            if (recipe.inputs.inputOrder == OrderedRule && !IsOrderedRecipeActuallyMatched(inputInv, recipe, isMirrorKey))
+            {
+                LogCraftDebug("有序配方严格校验失败，跳过该命中");
+                recipe = null;
+                continue;
+            }
+
+            isMirrorMatched = isMirrorKey;
+            LogCraftDebug($"最终匹配成功：{recipe.name}，镜像匹配={isMirrorMatched}");
                 break;
         }
 
@@ -316,13 +385,13 @@ public class Mod_HandCraftTable : Module, IInventory
         if (outputItems == null || outputItems.Count == 0)
             return false;
 
-        if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems))
+        if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems, isMirrorMatched))
         {
             Debug.LogError("[Mod_HandCraftTable] 合成失败：材料不足或输出空间不足");
             return false;
         }
 
-        ExecuteCrafting(inputInv, outputInv, recipe, outputItems);
+        ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
         return true;
     }
 
@@ -358,7 +427,7 @@ public class Mod_HandCraftTable : Module, IInventory
         return itemsToAdd;
     }
 
-    private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, Recipe recipe, List<ItemData> outputItems)
+    private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
     {
         List<ItemSlot> inputSlots = GetInputSlots(inputInv);
 
@@ -367,13 +436,23 @@ public class Mod_HandCraftTable : Module, IInventory
             for (int i = 0; i < InputSlotCount; i++)
             {
                 var slot = inputSlots[i];
-                var required = recipe.inputs.RowItems_List[i];
+                var required = GetOrderedRequired(recipe, i, isMirrorMatched, InputSlotCount);
 
                 if (required.amount == 0)
                     continue;
 
-                if (slot.itemData == null || slot.itemData.Stack.Amount < required.amount)
+                if (slot.itemData == null)
+                {
+                    LogCraftDebug($"资源校验失败：槽位{i}为空，需求={DescribeIngredient(required)} x{required.amount}");
                     return false;
+                }
+
+                if (slot.itemData.Stack.Amount < required.amount)
+                {
+                    LogCraftDebug($"资源校验失败：槽位{i}数量不足，实际={slot.itemData.Stack.Amount}，需求={required.amount}，物品={slot.itemData.IDName}");
+                    return false;
+                }
+
             }
         }
         else
@@ -398,20 +477,26 @@ public class Mod_HandCraftTable : Module, IInventory
                 }
 
                 if (foundAmount < required.amount)
+                {
+                    LogCraftDebug($"无序资源校验失败：需求={DescribeIngredient(required)} x{required.amount}，找到={foundAmount}");
                     return false;
+                }
             }
         }
 
         foreach (var itemData in outputItems)
         {
             if (!outputInv.Data.TryAddItem(itemData, false))
+            {
+                LogCraftDebug($"输出空间不足：{itemData?.IDName} x{itemData?.Stack.Amount}");
                 return false;
+            }
         }
 
         return true;
     }
 
-    private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, Recipe recipe, List<ItemData> outputItems)
+    private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
     {
         Debug.Log($"[Mod_HandCraftTable] 开始合成：{recipe.name}，输入={GenerateRecipeKey(inputInv)}");
 
@@ -420,7 +505,7 @@ public class Mod_HandCraftTable : Module, IInventory
 
         if (recipe.inputs.inputOrder == OrderedRule)
         {
-            ExecuteOrderedDeduction(inputInv, recipe);
+            ExecuteOrderedDeduction(inputInv, recipe, isMirrorMatched);
         }
         else
         {
@@ -441,14 +526,14 @@ public class Mod_HandCraftTable : Module, IInventory
         Debug.Log($"[Mod_HandCraftTable] 合成完成：{recipe.name}");
     }
 
-    private void ExecuteOrderedDeduction(Inventory inputInv, Recipe recipe)
+    private void ExecuteOrderedDeduction(Inventory inputInv, Recipe recipe, bool isMirrorMatched)
     {
         List<ItemSlot> inputSlots = GetInputSlots(inputInv);
 
         for (int i = 0; i < InputSlotCount; i++)
         {
             var slot = inputSlots[i];
-            var required = recipe.inputs.RowItems_List[i];
+            var required = GetOrderedRequired(recipe, i, isMirrorMatched, InputSlotCount);
 
             if (required.amount == 0 || slot.itemData == null)
                 continue;
@@ -499,6 +584,119 @@ public class Mod_HandCraftTable : Module, IInventory
     private List<ItemSlot> GetInputSlots(Inventory inputInv)
     {
         return inputInv.Data.itemSlots.Take(InputSlotCount).ToList();
+    }
+
+    private static bool TryBuildMirroredInputList(Input_List source, out Input_List mirrored)
+    {
+        mirrored = null;
+        int count = source.RowItems_List.Count;
+        int gridSize = Mathf.RoundToInt(Mathf.Sqrt(count));
+        if (gridSize * gridSize != count)
+            return false;
+
+        mirrored = new Input_List();
+        mirrored.recipeType = source.recipeType;
+        mirrored.inputOrder = source.inputOrder;
+
+        for (int row = 0; row < gridSize; row++)
+        {
+            for (int col = 0; col < gridSize; col++)
+            {
+                int sourceIndex = row * gridSize + (gridSize - 1 - col);
+                CraftingIngredient ingredient = source.RowItems_List[sourceIndex];
+                if (ingredient.matchMode == MatchMode.ByTag)
+                    mirrored.AddTagItem(ingredient.Tag);
+                else
+                    mirrored.AddNameItem(ingredient.ItemName);
+            }
+        }
+
+        return true;
+    }
+
+    private static CraftingIngredient GetOrderedRequired(Recipe recipe, int slotIndex, bool isMirrorMatched, int slotCount)
+    {
+        if (!isMirrorMatched)
+            return recipe.inputs.RowItems_List[slotIndex];
+
+        int gridSize = Mathf.RoundToInt(Mathf.Sqrt(slotCount));
+        int row = slotIndex / gridSize;
+        int col = slotIndex % gridSize;
+        int mirroredIndex = row * gridSize + (gridSize - 1 - col);
+        return recipe.inputs.RowItems_List[mirroredIndex];
+    }
+
+    private bool IsOrderedRecipeActuallyMatched(Inventory inputInv, Recipe recipe, bool isMirrorMatched)
+    {
+        List<ItemSlot> inputSlots = GetInputSlots(inputInv);
+        LogCraftDebug($"开始有序严格校验：配方={recipe.name}，镜像匹配={isMirrorMatched}");
+
+        for (int i = 0; i < InputSlotCount; i++)
+        {
+            CraftingIngredient required = GetOrderedRequired(recipe, i, isMirrorMatched, InputSlotCount);
+            ItemSlot slot = inputSlots[i];
+
+            if (required.amount == 0)
+            {
+                LogCraftDebug($"严格校验槽位{i}：需求为空位，跳过");
+                continue;
+            }
+
+            if (slot.itemData == null)
+            {
+                LogCraftDebug($"严格校验失败：槽位{i}为空，需求={DescribeIngredient(required)} x{required.amount}");
+                return false;
+            }
+
+            bool isMatch = required.matchMode == MatchMode.ExactItem
+                ? slot.itemData.IDName == required.ItemName
+                : slot.itemData.Tags != null && slot.itemData.Tags.Contains(required.Tag);
+
+            if (!isMatch || slot.itemData.Stack.Amount < required.amount)
+            {
+                LogCraftDebug($"严格校验失败：槽位{i} 实际={slot.itemData.IDName} x{slot.itemData.Stack.Amount}，需求={DescribeIngredient(required)} x{required.amount}，名称匹配={isMatch}");
+                return false;
+            }
+
+            LogCraftDebug($"严格校验槽位{i}通过：实际={slot.itemData.IDName} x{slot.itemData.Stack.Amount}，需求={DescribeIngredient(required)} x{required.amount}");
+        }
+
+        LogCraftDebug("有序严格校验通过");
+        return true;
+    }
+
+    private void LogCraftDebug(string message)
+    {
+        if (!EnableCraftDebug)
+            return;
+
+        Debug.Log($"[Mod_HandCraftTable][Debug] {message}");
+    }
+
+    private string BuildSlotSnapshot(List<ItemSlot> slots)
+    {
+        List<string> texts = new List<string>();
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+            if (slot == null || slot.itemData == null)
+            {
+                texts.Add($"{i}:空");
+                continue;
+            }
+
+            texts.Add($"{i}:{slot.itemData.IDName}x{slot.itemData.Stack.Amount}");
+        }
+
+        return string.Join(" | ", texts);
+    }
+
+    private string DescribeIngredient(CraftingIngredient ingredient)
+    {
+        if (ingredient.matchMode == MatchMode.ByTag)
+            return $"Tag:{ingredient.Tag}";
+
+        return ingredient.ItemName;
     }
 
 #endregion

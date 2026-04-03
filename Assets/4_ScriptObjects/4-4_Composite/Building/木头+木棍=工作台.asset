@@ -41,4 +41,5 @@ MonoBehaviour:
     - ItemName: WorkBench
       ItemPrefab: {fileID: 6616435716361065375, guid: cca6f0741d956684bbb9a6c9ea0fe5c7, type: 3}
       amount: 1
+  enableMirrorCrafting: 1
   action: []
