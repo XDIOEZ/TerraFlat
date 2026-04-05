@@ -95,11 +95,14 @@ public List<LootEntryCollection> stageLoots = new List<LootEntryCollection>();
         item.OnInit_Env += AdjustByEnvironment;
     }
 
-    void AdjustByEnvironment(EnvironmentFactors env)
+    void AdjustByEnvironment(EnvironmentLayers layers, Vector2Int localPos)
     {
+        if (layers == null || !layers.Contains(localPos.x, localPos.y))
+            return;
+
         Data.GrowProgress = UnityEngine.Random.Range(0f, Data.MaxGrowProgress);
-        //TODO 更具env.Precipitation的值调整生长速度 范围在0.8~1.2f之间 
-        Data.GrowSpeed *= Mathf.Lerp(0.8f, 1.2f, Mathf.Clamp01(env.Precipitation));
+        //TODO 根据降水层调整生长速度，范围在0.8~1.2f之间
+        Data.GrowSpeed *= Mathf.Lerp(0.8f, 1.2f, Mathf.Clamp01(layers.Precipitation[localPos.x, localPos.y]));
     }
 
 

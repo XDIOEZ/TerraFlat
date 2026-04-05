@@ -282,9 +282,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
             return;
         }
 
-        string chunkKey = Chunk.GetChunkPosition(position).ToString();
+        Vector2Int chunkPos = Chunk.GetChunkPosition(position);
 
-        if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(chunkKey, out var chunk))
+        if (ChunkMgr.Instance.TryGetActiveChunkByPos(chunkPos, out var chunk))
         {
             if (chunk == null)
             {
@@ -299,7 +299,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
             }
         }
 
-        if (ChunkMgr.Instance.Chunk_Dic_UnActive.TryGetValue(chunkKey, out var unActiveChunk) && unActiveChunk != null)
+        if (ChunkMgr.Instance.TryGetUnActiveChunkByPos(chunkPos, out var unActiveChunk) && unActiveChunk != null)
         {
             itemObj.transform.SetParent(unActiveChunk.transform, true);
         }

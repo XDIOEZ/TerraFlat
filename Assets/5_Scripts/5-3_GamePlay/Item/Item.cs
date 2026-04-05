@@ -71,7 +71,7 @@ public abstract class Item : MonoBehaviour
 
     private bool isInitialized = false;
     [Tooltip("物品初始化时触发的事件，用于根据环境因素初始化物品")]
-    public UltEvent<EnvironmentFactors> OnInit_Env = new();
+    public UltEvent<EnvironmentLayers, Vector2Int> OnInit_Env = new();
 
     [Tooltip("物品耐久度改变时触发的事件，参数为当前耐久度")]
     public UltEvent<float> OnDurabilityModified = new();
@@ -165,14 +165,14 @@ public abstract class Item : MonoBehaviour
         itemData.Tags.EnsureTagStructure();
     }
 
-    public virtual void Initialize_Env(EnvironmentFactors env)
+    public virtual void Initialize_Env(EnvironmentLayers layers, Vector2Int localPos)
     {
         // 环境初始化改为事件驱动：
         // Item 只负责把环境参数通过事件抛出去，由各个模块自行选择是否订阅并处理
         if (itemData == null)
             return;
 
-        OnInit_Env.Invoke(env);
+        OnInit_Env.Invoke(layers, localPos);
     }
 
     #endregion

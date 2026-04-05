@@ -82,7 +82,6 @@ private void UpdateChunkOwner(Item item)
 {
     // 获取当前物品所在的 Chunk 坐标
     Vector2Int currentChunkPos = Chunk.GetChunkPosition(item.transform.position);
-    string currentChunkKey = currentChunkPos.ToString();
 
     // 如果 LastChunk 为空或者需要切换 Chunk
     if (LastChunk == null || LastChunk.MapSave.MapPosition != currentChunkPos)
@@ -94,7 +93,7 @@ private void UpdateChunkOwner(Item item)
         }
 
         // 添加到新的 Chunk
-        if (ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(currentChunkKey, out Chunk newChunk))
+        if (ChunkMgr.Instance.TryGetActiveChunkByPos(currentChunkPos, out Chunk newChunk))
         {
             newChunk.AddItem(item);
             LastChunk = newChunk;

@@ -31,7 +31,7 @@ public class Mod_ItemChunkAssigner : Module
         if (currentChunkPos != lastChunkPos)
         {
             // 从旧区块中移除物品引用
-            if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(lastChunkPos.ToString(), out Chunk oldChunk))
+            if (ChunkMgr.Instance.TryGetChunkByPos(lastChunkPos, out Chunk oldChunk))
             {
                 oldChunk.RemoveItem(item);
             }

@@ -13,7 +13,7 @@ public class BiomeTerrainConfig
     public List<Biome_ItemSpawn_NoSO> ItemSpawn_NoSO = new();
 
     [Tooltip("该生态群系的地形类型（返回 Tile_Block SO）")]
-    public Tile_Block Get_Tile_Block(EnvironmentFactors env)
+    public Tile_Block Get_Tile_Block()
     {
         return TileSpawns_NoSO[0].TileBlock;
     }

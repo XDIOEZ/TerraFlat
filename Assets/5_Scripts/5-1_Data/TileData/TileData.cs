@@ -26,8 +26,8 @@ public abstract partial class TileData
     public bool IsWalkable = true;
 
 
-    // 虚函数：根据环境初始化
-    public virtual void Initialize_Env(EnvironmentFactors env) { }
+    // 虚函数：根据环境层初始化
+    public virtual void Initialize_Env(EnvironmentLayers layers, int x, int y) { }
 
     /// <summary>
     /// 为运行时创建一份浅量的深拷贝（手写，避免通用深拷贝插件开销）

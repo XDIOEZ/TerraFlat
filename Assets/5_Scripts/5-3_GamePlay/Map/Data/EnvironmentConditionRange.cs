@@ -21,19 +21,22 @@ public class EnvironmentConditionRange
     public Vector2 HightRange = new Vector2(0, 1);
 
     // 判断当前值是否在范围内
-    public bool IsMatch(EnvironmentFactors factors)
+    public bool IsMatch(EnvironmentLayers layers, int x, int y)
     {
-        float temperature01 = factors.TemperatureNormalized;
+        if (layers == null || !layers.Contains(x, y))
+            return false;
 
-        // 兼容旧数据：历史版本把 Temperature 当作 0~1 使用。
-        if (temperature01 == 0f && factors.Temperature > 0f && factors.Temperature <= 1f)
-            temperature01 = factors.Temperature;
+        float temperature = layers.Temperature[x, y];
+        float humidity = layers.Humidity[x, y];
+        float precipitation = layers.Precipitation[x, y];
+        float hight = layers.Hight[x, y];
+        float solidity = layers.Solidity[x, y];
 
-        return TemperatureRange.x <= temperature01 && temperature01 <= TemperatureRange.y &&
-               HumidityRange.x <= factors.Humidity && factors.Humidity <= HumidityRange.y &&
-               PrecipitationRange.x <= factors.Precipitation && factors.Precipitation <= PrecipitationRange.y &&
-               HightRange.x <= factors.Hight && factors.Hight <= HightRange.y&&
-        SolidityRange.x <= factors.Solidity && factors.Solidity <= SolidityRange.y;
+        return TemperatureRange.x <= temperature && temperature <= TemperatureRange.y &&
+               HumidityRange.x <= humidity && humidity <= HumidityRange.y &&
+               PrecipitationRange.x <= precipitation && precipitation <= PrecipitationRange.y &&
+               HightRange.x <= hight && hight <= HightRange.y &&
+               SolidityRange.x <= solidity && solidity <= SolidityRange.y;
     }
     
     private void OnValidate()

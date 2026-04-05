@@ -171,7 +171,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     private void SaveAllChunks()
     {
-        var chunkDic = ChunkMgr.Instance.Chunk_Dic;
+        var chunkDic = ChunkMgr.Instance.Chunk_Dic_ByPos;
 
         if (chunkDic.Count <= 0)
         {
@@ -328,7 +328,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         ItemMgr.Instance.SavePlayer();
 
         //保存场景数据
-        foreach (var go in ChunkMgr.Instance.Chunk_Dic.Values)
+        foreach (var go in ChunkMgr.Instance.Chunk_Dic_ByPos.Values)
         {
             go.SaveChunk();
 
@@ -517,11 +517,11 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         if (!loadedChunkCache.Contains(chunkName))
         {
-            ChunkMgr.Instance.LoadChunk_By_Name(chunkName);
+            ChunkMgr.Instance.LoadChunk_By_Position(chunkPos);
             loadedChunkCache.Add(chunkName);
         }
 
-        if (!ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(chunkName, out Chunk chunk) || chunk == null)
+        if (!ChunkMgr.Instance.TryGetActiveChunkByPos(chunkPos, out Chunk chunk) || chunk == null)
             return false;
 
         if (chunk.Map == null)

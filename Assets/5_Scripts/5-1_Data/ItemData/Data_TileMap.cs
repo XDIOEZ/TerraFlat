@@ -13,7 +13,8 @@ public partial class Data_TileMap : ItemData
     [Tooltip("地图的位置")]
     public Vector2Int position = new Vector2Int(0, 0);
     public bool TileLoaded = false;
-    public EnvironmentFactors[,] EnvironmentData = new EnvironmentFactors[0, 0];
+    [Tooltip("环境多层网格（性能优先主存储）")]
+    public EnvironmentLayers EnvironmentLayers = new EnvironmentLayers();
     public List<TileData>[,] TileData_Array = new List<TileData>[20, 20];//00??????? ????position??
 
     #region TileData ?????
@@ -59,6 +60,72 @@ public partial class Data_TileMap : ItemData
                 }
             }
         }
+    }
+
+    #endregion
+
+    #region Environment Layers
+
+    public void EnsureEnvironmentStorage(int width, int height)
+    {
+        if (width <= 0 || height <= 0)
+        {
+            Debug.LogError($"[Data_TileMap] EnsureEnvironmentStorage 参数非法：{width}x{height}");
+            return;
+        }
+
+        EnvironmentLayers ??= new EnvironmentLayers();
+        EnvironmentLayers.EnsureSize(width, height);
+    }
+
+    public bool IsEnvironmentLocalValid(int x, int y)
+    {
+        return EnvironmentLayers != null && EnvironmentLayers.Contains(x, y);
+    }
+
+    public bool TryGetEnvironmentLocalPos(Vector2Int worldPos, out Vector2Int localPos)
+    {
+        localPos = worldPos - position;
+        return IsEnvironmentLocalValid(localPos.x, localPos.y);
+    }
+
+    public void SetEnvironmentAtLocal(
+        int x,
+        int y,
+        float temperature,
+        float temperatureCelsius,
+        float humidity,
+        float precipitation,
+        float solidity,
+        float hight,
+        float pollution = 0f)
+    {
+        if (!IsEnvironmentLocalValid(x, y))
+        {
+            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 环境坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
+        }
+
+        EnvironmentLayers.SetCell(x, y, temperature, temperatureCelsius, humidity, precipitation, solidity, hight, pollution);
+    }
+
+    public void SetHumidityAtLocal(int x, int y, float humidity)
+    {
+        if (!IsEnvironmentLocalValid(x, y))
+        {
+            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 环境坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
+        }
+
+        EnvironmentLayers.SetHumidity(x, y, humidity);
+    }
+
+    public void SetSolidityAtLocal(int x, int y, float solidity)
+    {
+        if (!IsEnvironmentLocalValid(x, y))
+        {
+            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 环境坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
+        }
+
+        EnvironmentLayers.SetSolidity(x, y, solidity);
     }
 
     #endregion

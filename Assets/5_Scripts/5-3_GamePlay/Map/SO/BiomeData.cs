@@ -23,9 +23,9 @@ public class BiomeData : ScriptableObject
     [Tooltip("此群系的摄氏温度区间（x=最低温，y=最高温）")]
     public Vector2 TemperatureRangeCelsius = new Vector2(20f, 30f);
 
-    public bool IsEnvironmentValid(EnvironmentFactors factors)
+    public bool IsEnvironmentValid(EnvironmentLayers layers, int x, int y)
     {
-        return Condition.IsMatch(factors);
+        return Condition.IsMatch(layers, x, y);
     }
     
     private void OnValidate()

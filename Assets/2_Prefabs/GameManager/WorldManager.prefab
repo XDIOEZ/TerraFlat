@@ -237,6 +237,8 @@ GameObject:
   m_Component:
   - component: {fileID: 891121404665747283}
   - component: {fileID: 2341746562113399121}
+  - component: {fileID: 5620251106547435517}
+  - component: {fileID: 2693940703275175513}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -375,14 +377,58 @@ MonoBehaviour:
     TotalDays: 0
   ReadyGameSaveData:
     saveName: defaultSaveName
-    SaveSeed: 999
-    Seed: 999
+    SaveSeed: 0
+    Seed: 0
     Time: 600
     TimeSpeed: 1
   UIPrefab_HelloCanvas: {fileID: 1507728778053711830, guid: 8c8eb8cf412e3ca4d8845cecbc358d4d, type: 3}
   UIPrefab_SaveManager: {fileID: 7361205072839321340, guid: 70d725d8194078249a195891ee61da07, type: 3}
   UIPrefab_NewGame: {fileID: 5239021891057322782, guid: 0426f7891b648414fb89071a6f0276f7, type: 3}
   UIPrefab_ContextMenu: {fileID: 4647034535848735732, guid: 26098265c1fc4be4cbf641f826c955aa, type: 3}
+  saveManagerPanelName: UI_GameSaveManager
+  saveManagerPanelNameLegacy: "\u5B58\u6863\u9009\u62E9\u9762\u677F"
+  spawnLandMaxSearchRadius: 512
+  spawnSeedAnchorRange: 512
+  spawnSearchRetryFrames: 60
+--- !u!114 &5620251106547435517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9656fbe884409e2479382a64fd47943c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  toggleEnvironmentInfoKey: 284
+  createOnFirstToggle: 1
+  cleanupDuplicateDisplaysOnToggle: 1
+--- !u!114 &2693940703275175513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44f95b1f2f0fe704e9649970feb13e0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  OnSceneLoadStart:
+    _PersistentCalls: []
+  OnSceneLoadProgress:
+    _PersistentCalls: []
+  OnSceneLoadComplete:
+    _PersistentCalls: []
+  OnSceneUnloadStart:
+    _PersistentCalls: []
+  OnSceneUnloadComplete:
+    _PersistentCalls: []
+  OnSceneSwitch:
+    _PersistentCalls: []
 --- !u!1 &5482967027949208378
 GameObject:
   m_ObjectHideFlags: 0
