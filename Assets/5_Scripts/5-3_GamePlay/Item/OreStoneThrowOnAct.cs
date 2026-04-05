@@ -181,8 +181,8 @@ public class OreStoneThrowOnAct : MonoBehaviour
         if (_item.Owner == null || _item.Owner.itemMods == null)
             return false;
 
-        Mod_Inventory hotbarMod = _item.Owner.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Hotbar);
-        _hotBar = hotbarMod != null ? hotbarMod.inventory as Inventory_HotBar : null;
+        Module hotbarMod = _item.Owner.itemMods.GetMod_ByID(ModText.Hotbar);
+        _hotBar = hotbarMod != null ? hotbarMod.GetComponent<Inventory_HotBar>() : null;
         _focusPoint = _item.Owner.itemMods.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
 
         return _hotBar != null && _hotBar.Data != null;

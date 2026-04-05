@@ -278,7 +278,7 @@ public class Inventory
         }
 
         // 加载Slot UI预制体
-        ItemSlot_Prefab = GameRes.Instance.GetPrefab("Slot_UI");
+        ItemSlot_Prefab = GameRes.Instance.GetPrefab("UI_Slot");
 
         // 同步槽位数量与 itemSlots 保持一致
         int currentCount = ItemSlot_Parent.childCount;
@@ -783,6 +783,10 @@ public class Inventory
         if (ownerItem == null || ownerItem.itemMods == null)
             return null;
 
+        Inventory_HotBar hotbarModule = ownerItem.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        if (hotbarModule != null)
+            return hotbarModule.GetDefaultTargetInventory();
+
         Mod_Inventory modInventory = ownerItem.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Hotbar);
         if (modInventory == null)
             return null;
@@ -814,7 +818,7 @@ public class Inventory
 
     private bool IsHotBarInventory()
     {
-        return this is Inventory_HotBar || Data?.Name == ModText.Hotbar;
+        return Data?.Name == ModText.Hotbar;
     }
 
     private bool IsHandInventory()

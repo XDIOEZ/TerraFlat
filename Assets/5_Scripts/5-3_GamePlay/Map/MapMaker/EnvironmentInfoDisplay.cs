@@ -468,7 +468,7 @@ private void UpdateMouseInfo()
             GUILayout.Label($"<b>环境信息</b>", labelStyle);
             GUILayout.Label($"坐标: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
             GUILayout.Label($"生物群系: {hoveredBiomeName}", labelStyle);
-            GUILayout.Label($"温度: {hoveredEnvFactors.Temperature:F2} | 湿度: {hoveredEnvFactors.Humidity:F2}", labelStyle);
+            GUILayout.Label($"温度: {hoveredEnvFactors.Temperature:F1}°C (N:{hoveredEnvFactors.TemperatureNormalized:F2}) | 湿度: {hoveredEnvFactors.Humidity:F2}", labelStyle);
             GUILayout.Label($"降水量: {hoveredEnvFactors.Precipitation:F2} | 坚固度: {hoveredEnvFactors.Solidity:F2}", labelStyle);
             GUILayout.Label($"高度: {hoveredEnvFactors.Hight:F2}", labelStyle);
         }

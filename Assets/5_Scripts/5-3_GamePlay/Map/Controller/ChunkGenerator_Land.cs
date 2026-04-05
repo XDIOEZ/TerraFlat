@@ -31,6 +31,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     [Tooltip("不同温度/湿度对应的生物群系配置")]
     public List<BiomeData> biomes;
 
+    [Header("温度映射")]
+    [Tooltip("温度范围（单位：℃），用于把 0~1 噪声映射到真实温度")]
+    public Vector2 TemperatureRange = new Vector2(-10f, 16f);
+    [Tooltip("温度曲线（输入 0~1，输出 0~1），用于控制冷热分布")]
+    public AnimationCurve TemperatureCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+
     [Tooltip("噪声配置列表：直接配置 BaseNoise（SerializeReference 多态）。\n通过 BaseNoise.noiseType 匹配采样类型。")]
     [SerializeReference]
     public List<BaseNoise> NoiseConfigs = new List<BaseNoise>();
@@ -185,11 +191,13 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
                 // 1. 计算环境参数
                 EnvironmentFactors env = CalculateEnvironmentFactors(worldPos);
-                // 2. 写入环境因子网格（数据层）
-                StoreEnvironmentFactors(map, worldPos, env);
-                // 3. 写入地形 TileData（数据层），不直接操作 Tilemap
+                // 2. 先匹配生物群系（基于归一化环境参数）
                 BiomeData biome = GenerateBiomeTile(map, worldPos, env);
-                // 2. 生成地形瓦片
+                // 3. 根据群系覆盖温度区间（只改摄氏温度，不影响群系判定）
+                ApplyBiomeTemperatureOverride(biome, ref env);
+                // 4. 写入环境因子网格（数据层）
+                StoreEnvironmentFactors(map, worldPos, env);
+                // 5. 生成地形瓦片
                 GenerateTerrainTile(map, worldPos, biome, env);
             }
         }
@@ -228,7 +236,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             }
             return new EnvironmentFactors
             {
-                Temperature = defaultValue,
+                TemperatureNormalized = defaultValue,
+                Temperature = MapTemperatureToCelsius(defaultValue),
                 Humidity = defaultValue,
                 Precipitation = defaultValue,
                 Solidity = defaultValue,
@@ -245,7 +254,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             }
             return new EnvironmentFactors
             {
-                Temperature = defaultValue,
+                TemperatureNormalized = defaultValue,
+                Temperature = MapTemperatureToCelsius(defaultValue),
                 Humidity = defaultValue,
                 Precipitation = defaultValue,
                 Solidity = defaultValue,
@@ -318,14 +328,69 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             Debug.LogWarning("[ChunkGenerator_Land] ⚠️ 未配置任何 NoiseType.Land 噪声，高度将使用默认值 0.5。");
         }
 
+        float temperatureNormalized = Mathf.Clamp01(temperature);
+        float temperatureCelsius = MapTemperatureToCelsius(temperatureNormalized);
+
         return new EnvironmentFactors
         {
-            Temperature = Mathf.Clamp01(temperature),
+            TemperatureNormalized = temperatureNormalized,
+            Temperature = temperatureCelsius,
             Humidity = Mathf.Clamp01(humidity),
             Precipitation = Mathf.Clamp01(precipitation),
             Solidity = Mathf.Clamp01(solidity),
             Hight = Mathf.Clamp01(height)
         };
+    }
+
+    private float MapTemperatureToCelsius(float temperatureNormalized)
+    {
+        float input = Mathf.Clamp01(temperatureNormalized);
+        float curve01 = TemperatureCurve == null ? input : Mathf.Clamp01(TemperatureCurve.Evaluate(input));
+        return Mathf.Lerp(TemperatureRange.x, TemperatureRange.y, curve01);
+    }
+
+    private void ApplyBiomeTemperatureOverride(BiomeData biome, ref EnvironmentFactors env)
+    {
+        if (!TryGetBiomeTemperatureRange(biome, out Vector2 range))
+            return;
+
+        float t01 = Mathf.Clamp01(env.TemperatureNormalized);
+        env.Temperature = Mathf.Lerp(range.x, range.y, t01);
+    }
+
+    private bool TryGetBiomeTemperatureRange(BiomeData biome, out Vector2 range)
+    {
+        if (biome == null)
+        {
+            range = default;
+            return false;
+        }
+
+        if (biome.UseCustomTemperatureRange)
+        {
+            range = biome.TemperatureRangeCelsius;
+            if (range.x > range.y)
+                range = new Vector2(range.y, range.x);
+            return true;
+        }
+
+        string biomeName = biome.BiomeName ?? string.Empty;
+        string lower = biomeName.ToLowerInvariant();
+
+        if (biomeName.Contains("沙漠") || lower.Contains("desert"))
+        {
+            range = new Vector2(40f, 50f);
+            return true;
+        }
+
+        if (biomeName.Contains("草原") || lower.Contains("grass"))
+        {
+            range = new Vector2(20f, 30f);
+            return true;
+        }
+
+        range = default;
+        return false;
     }
 
     private float ApplyHeightSecondaryBoost(float height)

@@ -244,7 +244,7 @@ public class Mod_Building : Module
 
 
         // === 实例化建筑 ===
-        Item newBuilding = CreateBuildingInstance(item, GhostShadow.transform.position);
+        Item newBuilding = CreateBuildingInstance(item, GetGhostPlacementPosition());
 
         // === 如果物品耗尽，清理原始对象 ===
         if (item.itemData.Stack.Amount <= 0)
@@ -415,16 +415,16 @@ public class Mod_Building : Module
                 "未知碰撞体";
 //TODO Debug输出障碍物的名字 方便调试
             Debug.LogWarning($"[建筑安装] 安装失败: 检测到障碍物 - {obstacleInfo}");
-            Debug.DrawLine(item.transform.position, GhostShadow.transform.position, Color.red, 5f);
+            Debug.DrawLine(item.transform.position, GetGhostPlacementPosition(), Color.red, 5f);
             return false;
         }
 
         // 3. 检查距离限制
-        float distance = Vector2.Distance(item.transform.position, GhostShadow.transform.position);
+        float distance = Vector2.Distance(item.transform.position, GetGhostPlacementPosition());
         if (distance > Data.maxVisibleDistance)
         {
             Debug.LogWarning($"[建筑安装] 安装失败: 距离超出限制 {distance:F2}m (最大允许: {Data.maxVisibleDistance:F2}m)");
-            Debug.DrawLine(item.transform.position, GhostShadow.transform.position, Color.yellow, 5f);
+            Debug.DrawLine(item.transform.position, GetGhostPlacementPosition(), Color.yellow, 5f);
             return false;
         }
 
@@ -453,7 +453,7 @@ public class Mod_Building : Module
         Debug.Log("[CheckTilePenalties] 开始检查地块权重");
 
         // 获取建筑将要占用的地块范围
-        Vector3 buildingPos = GhostShadow.transform.position;
+        Vector3 buildingPos = GetGhostPlacementPosition();
 
         // 使用幽灵投影的碰撞体大小来确定占用的地块范围
         Bounds buildingBounds;
@@ -543,6 +543,18 @@ public class Mod_Building : Module
 
     #region 私有辅助方法
 
+    private Vector3 GetGhostPlacementPosition()
+    {
+        if (GhostShadow == null)
+        {
+            throw new NullReferenceException("[Mod_Building] GhostShadow为空，无法获取放置坐标");
+        }
+
+        Vector3 placementPos = GhostShadow.transform.position - (Vector3)GhostShadow.ShadowPositionOffset;
+        placementPos.z = 0f;
+        return placementPos;
+    }
+
     /// <summary>
     /// 消耗指定物品（减少数量 + 更新UI）
     /// </summary>
@@ -562,18 +574,15 @@ public class Mod_Building : Module
         sourceItem.Save();
         ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
 
-        // 将位置取整然后向右上角偏移0.5个单位，确保安装时总是落在格子中心
-        Vector3 gridPosition = new Vector3(
-            Mathf.Floor(position.x) + 0.5f,
-            Mathf.Floor(position.y) + 0.5f,
-            0f
-        );
+        // 直接使用幽灵阴影位置，避免二次取整导致“阴影位置”和“实际安装位置”不一致
+        Vector3 finalPosition = position;
+        finalPosition.z = 0f;
 
-        newitemData.transform.position = gridPosition;
+        newitemData.transform.position = finalPosition;
 
         Item newItem = ItemMgr.Instance.InstantiateItem(
                 newitemData,
-                position: gridPosition  // 确保实例化位置也在格子中心
+                position: finalPosition
             );
 
         newItem.Load();
@@ -875,7 +884,7 @@ public class Mod_Building : Module
 
         Debug.Log($"[Shadow生成] ✅ 成功获取BuildingShadow组件");
 
-        // === 第五步：检查item.Sprite ===
+        // === 第五步：检查item.Sprite（为空时尝试子对象兜底）===
         if (item == null)
         {
             Debug.LogError("[Shadow生成] ❌ item 为空，无法初始化阴影");
@@ -883,32 +892,42 @@ public class Mod_Building : Module
             return;
         }
 
-        if (item.Sprite == null)
+        SpriteRenderer spriteRendererForShadow = item.Sprite;
+        if (spriteRendererForShadow == null)
         {
-            Debug.LogError($"[Shadow生成] ❌ item.Sprite 为空 (item: {item.name})");
-            Debug.LogWarning("[Shadow生成] 🔍 可能原因：");
-            Debug.LogWarning("   1. Item组件未正确初始化");
-            Debug.LogWarning("   2. Item.itemData 为空");
-            Debug.LogWarning("   3. 物品没有对应的Sprite资源");
-
-            // 额外诊断信息
-            if (item.itemData == null)
+            spriteRendererForShadow = item.GetComponentInChildren<SpriteRenderer>(true);
+            if (spriteRendererForShadow != null)
             {
-                Debug.LogWarning("   📌 item.itemData 为空");
+                Debug.LogWarning($"[Shadow生成] item.Sprite为空，已使用子对象SpriteRenderer兜底: {spriteRendererForShadow.name}");
             }
             else
             {
-                Debug.LogWarning($"   📌 item.itemData: {item.itemData.IDName}");
-            }
+                Debug.LogError($"[Shadow生成] ❌ item.Sprite为空且子对象也没有SpriteRenderer (item: {item.name})");
+                Debug.LogWarning("[Shadow生成] 🔍 可能原因：");
+                Debug.LogWarning("   1. Item组件未正确初始化");
+                Debug.LogWarning("   2. Item.itemData 为空");
+                Debug.LogWarning("   3. 物品及其子对象都没有SpriteRenderer");
 
-            return;
+                if (item.itemData == null)
+                {
+                    Debug.LogWarning("   📌 item.itemData 为空");
+                }
+                else
+                {
+                    Debug.LogWarning($"   📌 item.itemData: {item.itemData.IDName}");
+                }
+
+                Destroy(shadowPrefab);
+                GhostShadow = null;
+                return;
+            }
         }
 
         // === 第六步：初始化阴影 ===
         try
         {
-            Debug.Log($"[Shadow生成] 📝 初始化阴影，使用Sprite: {item.Sprite.name}");
-            GhostShadow.InitShadow(item.Sprite);
+            Debug.Log($"[Shadow生成] 📝 初始化阴影，使用Sprite: {spriteRendererForShadow.name}");
+            GhostShadow.InitShadow(spriteRendererForShadow);
             Debug.Log("[Shadow生成] ✅ 阴影初始化成功");
         }
         catch (Exception ex)

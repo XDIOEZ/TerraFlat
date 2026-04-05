@@ -112,6 +112,11 @@ public class DamageReceiver : Module
     public UltEvent DataUpdate = new UltEvent();
 
     public BasePanel UIValues;
+    [Header("受伤UI自动隐藏设置")]
+    public float HideUiDelayAfterLastDamage = 30f;
+    private Coroutine _hideUiCoroutine;
+    private float _lastDamageUiTime = -999f;
+
     public bool ShowCanvas
     {
         get => Data.ShowCanvas;
@@ -263,7 +268,9 @@ public class DamageReceiver : Module
         else
         {
             // 计算实际伤害（减法公式：攻击力 - 当前防御）
-            actualDamage = Mathf.Max(0f, damageSender.Damage.Value - Defense);
+            float normalDamage = damageSender.Damage.Value - Defense;
+            // 未破防时保底造成 1 点伤害
+            actualDamage = normalDamage < 1f ? 1f : normalDamage;
         }
 
         // 记录攻击者（根据是否造成实际伤害决定概率）
@@ -283,6 +290,7 @@ public class DamageReceiver : Module
         if (actualDamage > 0)
         {
             Hp -= actualDamage;
+            OnDamaged_ShowUiAndScheduleHide();
 
             if (Data.ShowCanvas)
                 RefreshUI();
@@ -323,6 +331,7 @@ public class DamageReceiver : Module
         if (Hp <= 0) return -1;
 
         Hp -= damage;
+        OnDamaged_ShowUiAndScheduleHide();
 
         if (Data.ShowCanvas)
             RefreshUI();
@@ -390,6 +399,39 @@ public class DamageReceiver : Module
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
 
         Data.Defense = Mathf.Max(0f, Data.Defense);
+    }
+
+    private void OnDamaged_ShowUiAndScheduleHide()
+    {
+        _lastDamageUiTime = Time.time;
+
+        if (!Data.ShowCanvas)
+        {
+            ShowPanel();
+        }
+
+        if (_hideUiCoroutine != null)
+        {
+            StopCoroutine(_hideUiCoroutine);
+        }
+
+        _hideUiCoroutine = StartCoroutine(HideUiAfterNoDamageCoroutine());
+    }
+
+    private IEnumerator HideUiAfterNoDamageCoroutine()
+    {
+        float delay = Mathf.Max(0f, HideUiDelayAfterLastDamage);
+        yield return new WaitForSeconds(delay);
+
+        // 若等待期间又受伤，则保留面板
+        if (Time.time - _lastDamageUiTime < delay)
+        {
+            _hideUiCoroutine = null;
+            yield break;
+        }
+
+        HidePanel();
+        _hideUiCoroutine = null;
     }
     #endregion
 

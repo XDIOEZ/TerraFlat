@@ -75,12 +75,7 @@ public class PlayerAdminController : Module
             if (hotbar == null)
             {
                 var hotbarMod = player.itemMods.GetMod_ByID(ModText.Hotbar);
-                // 简洁获取：先判空再取组件
-                var modInv = hotbarMod?.GetComponent<Mod_Inventory>();
-                if (modInv != null)
-                {
-                    hotbar = modInv.inventory as Inventory_HotBar;
-                }
+                hotbar = hotbarMod?.GetComponent<Inventory_HotBar>();
             }
         }
     }

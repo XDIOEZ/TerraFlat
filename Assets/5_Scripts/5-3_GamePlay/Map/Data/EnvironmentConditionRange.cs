@@ -23,7 +23,13 @@ public class EnvironmentConditionRange
     // 判断当前值是否在范围内
     public bool IsMatch(EnvironmentFactors factors)
     {
-        return TemperatureRange.x <= factors.Temperature && factors.Temperature <= TemperatureRange.y &&
+        float temperature01 = factors.TemperatureNormalized;
+
+        // 兼容旧数据：历史版本把 Temperature 当作 0~1 使用。
+        if (temperature01 == 0f && factors.Temperature > 0f && factors.Temperature <= 1f)
+            temperature01 = factors.Temperature;
+
+        return TemperatureRange.x <= temperature01 && temperature01 <= TemperatureRange.y &&
                HumidityRange.x <= factors.Humidity && factors.Humidity <= HumidityRange.y &&
                PrecipitationRange.x <= factors.Precipitation && factors.Precipitation <= PrecipitationRange.y &&
                HightRange.x <= factors.Hight && factors.Hight <= HightRange.y&&

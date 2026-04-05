@@ -27,13 +27,10 @@ public class ItemPicker : Module
     {
         ModSaveData.ReadData(ref Data);
 
-        // 当列表为空时，按优先级依次填充默认目标物品栏：Hotbar -> Bag -> Hand
-        if (AddTargetInventories.Count == 0)
-        {
-            TryAddInventoryById(ModText.Hotbar);
-            TryAddInventoryById(ModText.Bag);
-            TryAddInventoryById(ModText.Hand);
-        }
+        // 默认优先级：Hotbar -> Bag
+        // 无论列表是否已有配置，都补齐这两个核心容器（内部会去重）
+        TryAddInventoryById(ModText.Hotbar);
+        TryAddInventoryById(ModText.Bag);
     }
 
     /// <summary>
@@ -59,12 +56,15 @@ public class ItemPicker : Module
     /// <param name="modId">ModText 中定义的背包模块 ID</param>
     private void TryAddInventoryById(string modId)
     {
-        var modInventory = item.itemMods.GetMod_ByID<Mod_Inventory>(modId);
-        if (modInventory == null || modInventory.inventory == null)
+        var module = item.itemMods.GetMod_ByID(modId);
+        if (module == null)
             return;
 
-        if (!AddTargetInventories.Contains(modInventory.inventory))
-            AddTargetInventories.Add(modInventory.inventory);
+        if (module is not IInventory inventoryProvider)
+            return;
+
+        if (!AddTargetInventories.Contains(inventoryProvider))
+            AddTargetInventories.Add(inventoryProvider);
     }
 
 
@@ -72,9 +72,10 @@ public class ItemPicker : Module
 
     [Header("目标物品栏（按优先级排列）")]
     /// <summary>
-    /// 物品添加目标物品栏列表，按优先级排序
+    /// 物品添加目标容器列表（接口引用），按优先级排序
     /// </summary>
-    public List<Inventory> AddTargetInventories = new List<Inventory>();
+    [SerializeReference]
+    public List<IInventory> AddTargetInventories = new List<IInventory>();
 
     /// <summary>
     /// 基础拾取权限控制变量
@@ -90,12 +91,17 @@ public class ItemPicker : Module
     {
         get
         {
-            // 所有目标背包都满了，才不能拾取
+            if (!canPickUp)
+                return false;
+
+            // 只要存在有效背包就允许进入拾取流程。
+            // 是否能实际放入（包括满包堆叠）由 TryAddItem 决定。
             foreach (var inventory in AddTargetInventories)
             {
-                if (inventory != null && !inventory.Data.IsFull)
+                var targetInventory = inventory?.GetDefaultTargetInventory();
+                if (targetInventory != null && targetInventory.Data != null)
                 {
-                    return canPickUp;
+                    return true;
                 }
             }
             return false;
@@ -138,11 +144,12 @@ public class ItemPicker : Module
             // 遍历所有背包，找到第一个可以添加的
             foreach (var inventory in AddTargetInventories)
             {
-                if (inventory != null && inventory.Data != null)
+                var targetInventory = inventory?.GetDefaultTargetInventory();
+                if (targetInventory != null && targetInventory.Data != null)
                 {
-                    if (inventory.Data.TryAddItem(itemData))
+                    if (targetInventory.Data.TryAddItem(itemData))
                     {
-                        inventory.RefreshUI();
+                        targetInventory.RefreshUI();
                         // 标记物品为已被拾取
                         itemData.Stack.CanBePickedUp = false;
 
