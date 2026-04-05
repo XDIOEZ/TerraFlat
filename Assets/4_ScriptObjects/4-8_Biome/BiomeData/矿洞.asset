@@ -25,3 +25,5 @@ MonoBehaviour:
     TileSpawns: []
     ItemSpawn: []
     ItemSpawn_NoSO: []
+  UseCustomTemperatureRange: 0
+  TemperatureRangeCelsius: {x: 8, y: 18}

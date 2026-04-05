@@ -49,6 +49,9 @@ public class Map : Item
     private WaitForSeconds backTilePenaltyWait;
     private float lastBackTilePenaltyTime = -999f;
     private bool backTilePenaltyPending;
+    private bool backTilePenaltyForceFull = true;
+    private readonly HashSet<Vector2Int> backTilePenaltyDirtyCells = new HashSet<Vector2Int>();
+    private readonly List<Vector2Int> backTilePenaltyDirtySnapshot = new List<Vector2Int>(128);
 
     [SerializeReference]
     public List<ChunkGeneratorBase> mapGenerators = new List<ChunkGeneratorBase>();
@@ -186,6 +189,7 @@ public class Map : Item
         }
 
         Data.TileLoaded = true;
+        MarkPenaltyDirtyFull();
         BackTilePenalty_Async();
     }
 
@@ -251,6 +255,7 @@ public class Map : Item
 
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        Data.EnsureEnvironmentStorage((int)chunkSize.x, (int)chunkSize.y);
 
         bool hasTileData = Data.CountNonEmptyCells() > 0;
 
@@ -336,6 +341,7 @@ public class Map : Item
         }
 
         // 直接调用权重烘焙，不延迟
+        MarkPenaltyDirtyFull();
         BackTilePenalty_Async();
     }
 
@@ -396,6 +402,7 @@ public class Map : Item
         yield return null;
 
         // 使用异步权重烘焙，避免同帧尖峰
+        MarkPenaltyDirtyFull();
         BackTilePenalty_Async();
 
         Debug.Log($"✅ 完成加载 {processedCount} 个Tile到Tilemap");
@@ -423,6 +430,12 @@ public class Map : Item
             return;
         }
 
+        // 非全量且无脏区时，跳过空烘焙
+        if (!backTilePenaltyForceFull && backTilePenaltyDirtyCells.Count == 0)
+        {
+            return;
+        }
+
         // 已有协程在跑时，仅标记一次补跑，避免频繁Stop/Start
         if (backTilePenaltyCoroutine != null)
         {
@@ -436,6 +449,26 @@ public class Map : Item
     }
 
     public void BackTilePenalty_Sync()
+    {
+        if (backTilePenaltyForceFull)
+        {
+            BakePenaltyForAllTilesSync();
+            backTilePenaltyForceFull = false;
+            backTilePenaltyDirtyCells.Clear();
+            return;
+        }
+
+        if (backTilePenaltyDirtyCells.Count > 0)
+        {
+            BakePenaltyForDirtyCellsSync();
+            backTilePenaltyDirtyCells.Clear();
+            return;
+        }
+
+        // 无脏区时无需执行
+    }
+
+    private void BakePenaltyForAllTilesSync()
     {
         // 获取GridGraph以获得节点尺寸信息
         var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
@@ -461,6 +494,23 @@ public class Map : Item
         }
 
         Debug.Log($"✅ 完成同步烘焙 {Data.CountNonEmptyCells()} 个地块的寻路权重");
+    }
+
+    private void BakePenaltyForDirtyCellsSync()
+    {
+        foreach (var worldPos in backTilePenaltyDirtyCells)
+        {
+            TileData topTile = GetTopTile(worldPos);
+            if (topTile == null)
+            {
+                continue;
+            }
+
+            AstarGameManager.Instance?.ModifyNodePenalty_GridGraphFast(
+                new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f),
+                topTile.Penalty,
+                topTile.IsWalkable);
+        }
     }
 
     /// <summary>
@@ -496,22 +546,61 @@ public class Map : Item
         object yieldToken = GetBackTilePenaltyYieldToken();
         int processed = 0;
 
-        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
+        if (backTilePenaltyForceFull)
         {
-            TileData topTile = tileDataList[^1];
-
-            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
-            Vector3 cellCenterWorld = tileMap.GetCellCenterWorld(position3D);
-
-            astar.ModifyNodePenalty_GridGraphFast(
-                new Vector2(cellCenterWorld.x, cellCenterWorld.y),
-                topTile.Penalty,
-                topTile.IsWalkable);
-
-            processed++;
-            if (processed % batchSize == 0)
+            foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
             {
-                yield return yieldToken;
+                TileData topTile = tileDataList[^1];
+
+                Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
+                Vector3 cellCenterWorld = tileMap.GetCellCenterWorld(position3D);
+
+                astar.ModifyNodePenalty_GridGraphFast(
+                    new Vector2(cellCenterWorld.x, cellCenterWorld.y),
+                    topTile.Penalty,
+                    topTile.IsWalkable);
+
+                processed++;
+                if (processed % batchSize == 0)
+                {
+                    yield return yieldToken;
+                }
+            }
+
+            backTilePenaltyForceFull = false;
+            backTilePenaltyDirtyCells.Clear();
+        }
+        else if (backTilePenaltyDirtyCells.Count > 0)
+        {
+            backTilePenaltyDirtySnapshot.Clear();
+            foreach (var dirtyPos in backTilePenaltyDirtyCells)
+            {
+                backTilePenaltyDirtySnapshot.Add(dirtyPos);
+            }
+            backTilePenaltyDirtyCells.Clear();
+
+            for (int i = 0; i < backTilePenaltyDirtySnapshot.Count; i++)
+            {
+                Vector2Int worldPos = backTilePenaltyDirtySnapshot[i];
+                TileData topTile = GetTopTile(worldPos);
+                if (topTile == null)
+                {
+                    continue;
+                }
+
+                Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
+                Vector3 cellCenterWorld = tileMap.GetCellCenterWorld(position3D);
+
+                astar.ModifyNodePenalty_GridGraphFast(
+                    new Vector2(cellCenterWorld.x, cellCenterWorld.y),
+                    topTile.Penalty,
+                    topTile.IsWalkable);
+
+                processed++;
+                if (processed % batchSize == 0)
+                {
+                    yield return yieldToken;
+                }
             }
         }
 
@@ -524,6 +613,7 @@ public class Map : Item
         if (backTilePenaltyPending)
         {
             backTilePenaltyPending = false;
+            MarkPenaltyDirtyFull();
             BackTilePenalty_Async();
         }
     }
@@ -538,6 +628,8 @@ public class Map : Item
     {
         var tile = GetTile(new Vector2Int(x: (int)position2D.x, y: (int)position2D.y));
         if (tile == null) return;
+
+        MarkPenaltyDirty(new Vector2Int((int)position2D.x, (int)position2D.y));
 
         uint penalty = tile.Penalty;
         AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, penalty, tile.IsWalkable);
@@ -568,6 +660,8 @@ public class Map : Item
                 // 卸载建筑或恢复区域时，默认把地块恢复为可通行
                 tile.IsWalkable = true;
 
+                MarkPenaltyDirty(tilePos);
+
                 uint penalty = tile.Penalty;
 
                 AstarGameManager.Instance?.ModifyNodePenalty_Optimized(
@@ -597,6 +691,7 @@ public class Map : Item
         if (tile != null)
         {
             tile.IsWalkable = false;
+            MarkPenaltyDirty(gridPos);
         }
 
         // 再更新寻路节点：Penalty=0 + Walkable=false
@@ -693,6 +788,17 @@ public class Map : Item
         }
 
         Debug.Log($"[BackTilePenalty_Bounds] 烘焙完成: 处理了{processedTiles}个地块，跳过了{skippedTiles}个不存在的地块");
+    }
+
+    public void MarkPenaltyDirty(Vector2Int worldPos)
+    {
+        backTilePenaltyDirtyCells.Add(worldPos);
+    }
+
+    public void MarkPenaltyDirtyFull()
+    {
+        backTilePenaltyForceFull = true;
+        backTilePenaltyDirtyCells.Clear();
     }
 
     /// <summary>
@@ -840,6 +946,42 @@ public class Map : Item
             return "";
         }
     }
+    #endregion
+
+    #region 环境查询
+
+    public Vector2Int GetEnvironmentLocalPos(Vector2Int worldPos)
+    {
+        if (Data == null)
+        {
+            throw new InvalidOperationException("[Map.GetEnvironmentLocalPos] Data 为空，无法读取环境参数。");
+        }
+
+        if (Data.TryGetEnvironmentLocalPos(worldPos, out Vector2Int localPos))
+        {
+            return localPos;
+        }
+
+        int width = Data.EnvironmentLayers != null ? Data.EnvironmentLayers.Width : 0;
+        int height = Data.EnvironmentLayers != null ? Data.EnvironmentLayers.Height : 0;
+        localPos = worldPos - Data.position;
+
+        if ((uint)localPos.x >= (uint)width || (uint)localPos.y >= (uint)height)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldPos),
+                $"[Map.GetEnvironmentLocalPos] 坐标越界：world={worldPos}, local={localPos}, size={width}x{height}");
+        }
+
+        return localPos;
+    }
+
+    public float GetTemperatureCelsius(Vector2Int worldPos)
+    {
+        Vector2Int localPos = GetEnvironmentLocalPos(worldPos);
+        return Data.EnvironmentLayers.TemperatureCelsius[localPos.x, localPos.y];
+    }
+
     #endregion
 
     #region Tile操作方法

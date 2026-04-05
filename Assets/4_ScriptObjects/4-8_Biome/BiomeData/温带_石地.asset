@@ -91,3 +91,5 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         SolidityRange: {x: 0, y: 1}
         HightRange: {x: 0, y: 1}
+  UseCustomTemperatureRange: 0
+  TemperatureRangeCelsius: {x: 10, y: 22}

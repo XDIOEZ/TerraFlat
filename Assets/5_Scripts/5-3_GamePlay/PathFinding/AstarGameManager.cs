@@ -190,9 +190,9 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     /// </summary>
     private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
     {
-        if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic == null)
+        if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic_ByPos == null)
         {
-            Debug.LogWarning("ChunkMgr 或 Chunk_Dic 未初始化，无法更新区块权重");
+            Debug.LogWarning("ChunkMgr 或 Chunk_Dic_ByPos 未初始化，无法更新区块权重");
             return;
         }
 
@@ -217,10 +217,8 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
                     (centerChunkPos.x + x) * (int)chunkSize.x,
                     (centerChunkPos.y + y) * (int)chunkSize.y
                 );
-                string chunkKey = chunkWorldPos.ToString();
-
                 // 检查区块是否存在
-                if (ChunkMgr.Instance.Chunk_Dic.TryGetValue(chunkKey, out Chunk chunk))
+                if (ChunkMgr.Instance.TryGetChunkByPos(chunkWorldPos, out Chunk chunk))
                 {
                     // 检查区块是否已加载且包含地图
                     if (chunk != null && chunk.Map != null)

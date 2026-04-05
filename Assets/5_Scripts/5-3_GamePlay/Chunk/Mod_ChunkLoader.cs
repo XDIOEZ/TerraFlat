@@ -50,6 +50,8 @@ public class Mod_ChunkLoader : Module
     [SerializeField] private bool syncWithCamera = true;
     [Tooltip("在视口范围外额外加载的Chunk圈数以防止穿帮")]
     [SerializeField] private int chunkBuffer = 1;
+    [Tooltip("自动视距允许的最大Chunk圈数，防止相机缩放过大时瞬间加载过多区块")]
+    [SerializeField, Min(1)] private int maxAutoLoadDistance = 6;
 
     [Header("性能节流")]
     [Tooltip("区块更新最小间隔（秒），防止高速移动时连续触发重计算")]
@@ -179,6 +181,15 @@ public class Mod_ChunkLoader : Module
         UpdateChunks(lastChunkPos);
     }
 
+    /// <summary>
+    /// 相机视野变化后立即刷新区块
+    /// </summary>
+    public void RefreshChunksForCameraView()
+    {
+        AutoAdjustDistance();
+        RefreshChunksAroundPlayer();
+    }
+
     #endregion
 
     #region 动态视距逻辑
@@ -224,6 +235,7 @@ public class Mod_ChunkLoader : Module
         // 向上取整并增加缓冲区
         int neededDist = Mathf.CeilToInt(radius / minChunkDim) + chunkBuffer;
         neededDist = Mathf.Max(1, neededDist);
+        neededDist = Mathf.Min(maxAutoLoadDistance, neededDist);
 
         // 4. 应用变更 (仅当需要改变时)
         if (neededDist != LoadChunkDistance)
@@ -258,6 +270,9 @@ public class Mod_ChunkLoader : Module
     /// </summary>
     private void UpdateChunks(Vector2 chunkPos)
     {
+        // 先清空上一轮尚未处理完的加载请求，避免高速移动时旧位置的 Chunk 迟到加载并残留
+        ChunkMgr.Instance.ResetChunkLoadQueue();
+
         // 销毁过远的失活区块
         ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: DestroyChunkDistance);
 

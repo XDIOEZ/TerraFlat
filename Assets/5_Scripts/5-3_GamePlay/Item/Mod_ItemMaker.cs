@@ -188,26 +188,27 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
     #region 环境初始化
 
-    public void AdjustByEnvironment(EnvironmentFactors env)
+    public void AdjustByEnvironment(EnvironmentLayers layers, Vector2Int localPos)
     {
-        // foreach (var data in ProductionList)
-        // {
-        //     // 根据环境因素调整生产时间随机范围
-        //     float envFactor = env.Temperature + env.Pollution; // 示例计算
-        //     float adjustment = Mathf.Clamp(envFactor / 3f, 0.5f, 1.5f); // 限制在0.5到1.5之间
+        if (layers == null || !layers.Contains(localPos.x, localPos.y))
+            return;
 
-        //     // 调整Random_ProductionTime的范围
-        //     data.Random_ProductionTime = new Vector2(
-        //         data.Random_ProductionTime.x * adjustment,
-        //         data.Random_ProductionTime.y * adjustment
-        //     );
-        // }
+        float normalizedTemp = Mathf.Clamp01(layers.Temperature[localPos.x, localPos.y]);
+        float tempCelsius = layers.TemperatureCelsius[localPos.x, localPos.y];
+        float humidity = Mathf.Clamp01(layers.Humidity[localPos.x, localPos.y]);
+
+        float tempFactor = Mathf.Lerp(0.7f, 1.3f, normalizedTemp);
+        float humidityFactor = Mathf.Lerp(0.9f, 1.1f, humidity);
+
+        ProductionSpeed = Mathf.Clamp(tempFactor * humidityFactor, 0.5f, 1.6f);
 
         // 对每个生产数据执行随机初始化
         foreach (var data in ProductionList)
         {
             data.RandomInitialize();
         }
+
+        Debug.Log($"[Mod_Production] 环境初始化完成，温度01={normalizedTemp:F2}, 温度℃={tempCelsius:F1}, 湿度={humidity:F2}, 生产速度倍率={ProductionSpeed:F2}");
     }
 
     #endregion

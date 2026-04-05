@@ -5,7 +5,7 @@ using Sirenix.OdinInspector;
 /// <summary>
 /// 资源/物品生成器：
 /// - 作为 Map.mapGenerators 管线中的一个步骤执行
-/// - 基于 ChunkGenerator_Land 写入的 EnvironmentData（以及 biome 配置）生成 Item
+/// - 基于 ChunkGenerator_Land 写入的 EnvironmentLayers（以及 biome 配置）生成 Item
 /// - 建议放在“所有会修改地表的生成器”之后（例如 Land -> River -> SpawnItems），避免把物品刷在水上
 /// </summary>
 [Serializable]
@@ -23,6 +23,9 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
 
     [Header("调试")]
     public bool logSummary = true;
+
+    [NonSerialized]
+    private bool _hasLoggedEnvMissing;
     #endregion
 
     #region 管线入口
@@ -49,12 +52,6 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             return;
         }
 
-        if (Map.Data.EnvironmentData == null)
-        {
-            Debug.LogError("[ChunkGenerator_SpawnItems] ❌ Map.Data.EnvironmentData 为空：请确保 ChunkGenerator_Land 在本生成器之前执行", Map);
-            return;
-        }
-
         var usedBiomes = ResolveBiomes();
         if (usedBiomes == null || usedBiomes.Count == 0)
         {
@@ -66,6 +63,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         Vector2 size = ChunkMgr.GetChunkSize();
         int width = (int)size.x;
         int height = (int)size.y;
+        Map.Data.EnsureEnvironmentStorage(width, height);
 
         int spawnedCount = 0;
 
@@ -74,13 +72,21 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             for (int y = 0; y < height; y++)
             {
                 Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
-                EnvironmentFactors env = Map.Data.EnvironmentData[x, y];
+                if (!Map.Data.IsEnvironmentLocalValid(x, y))
+                {
+                    if (!_hasLoggedEnvMissing)
+                    {
+                        _hasLoggedEnvMissing = true;
+                        Debug.LogWarning("[ChunkGenerator_SpawnItems] ⚠️ 当前格子环境数据缺失，已跳过；请确认 Land 生成器先执行。", Map);
+                    }
+                    continue;
+                }
 
-                BiomeData biome = FindMatchingBiome(usedBiomes, env);
+                BiomeData biome = FindMatchingBiome(usedBiomes, Map.Data.EnvironmentLayers, x, y);
                 if (biome == null)
                     continue;
 
-                spawnedCount += GenerateResourcesForBiome(Map, worldPos, biome, env, globalSpawnMultiplier);
+                spawnedCount += GenerateResourcesForBiome(Map, worldPos, new Vector2Int(x, y), biome, globalSpawnMultiplier);
             }
         }
 
@@ -108,7 +114,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         return biomes;
     }
 
-    private static BiomeData FindMatchingBiome(System.Collections.Generic.List<BiomeData> biomeList, EnvironmentFactors env)
+    private static BiomeData FindMatchingBiome(System.Collections.Generic.List<BiomeData> biomeList, EnvironmentLayers layers, int x, int y)
     {
         for (int i = 0; i < biomeList.Count; i++)
         {
@@ -116,7 +122,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             if (biome == null)
                 continue;
 
-            if (biome.IsEnvironmentValid(env))
+            if (biome.IsEnvironmentValid(layers, x, y))
                 return biome;
         }
 
@@ -125,7 +131,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
     #endregion
 
     #region 资源生成逻辑（从 ChunkGenerator_Land 提取）
-    private static int GenerateResourcesForBiome(Map map, Vector2Int worldPos, BiomeData biome, EnvironmentFactors env, float globalSpawnMultiplier)
+    private static int GenerateResourcesForBiome(Map map, Vector2Int worldPos, Vector2Int localPos, BiomeData biome, float globalSpawnMultiplier)
     {
         if (biome == null || biome.TerrainConfig == null)
             return 0;
@@ -144,7 +150,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         {
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
-                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, env, biome.BiomeName, spawnMultiplier))
+                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, localPos, biome.BiomeName, spawnMultiplier))
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
             }
         }
@@ -155,7 +161,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         {
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
-                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, env, biome.BiomeName, spawnMultiplier))
+                if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, localPos, biome.BiomeName, spawnMultiplier))
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
             }
         }
@@ -168,7 +174,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         Map map,
         Vector2 spawnPos,
         ref uint randomState,
-        EnvironmentFactors env,
+        Vector2Int localPos,
         string biomeName,
         float globalSpawnMultiplier)
     {
@@ -182,7 +188,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         }
 
         // 1. 环境条件检查
-        if (!spawn.environmentConditionRange.IsMatch(env))
+        if (!spawn.environmentConditionRange.IsMatch(map.Data.EnvironmentLayers, localPos.x, localPos.y))
             return false;
 
         // 2. 概率检查
@@ -220,7 +226,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
 
                 spawnedItem.Load();
 
-                spawnedItem.Initialize_Env(env);
+                spawnedItem.Initialize_Env(map.Data.EnvironmentLayers, localPos);
                 anySpawned = true;
             }
             catch (Exception ex)

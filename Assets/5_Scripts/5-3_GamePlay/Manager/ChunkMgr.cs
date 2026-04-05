@@ -15,22 +15,16 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     #region 字段
 
     /// <summary>
-    /// 所有已创建的区块（无论是否激活）。Key 为 Chunk 的名称（通常是其位置 ToString）。
+    /// 高性能坐标索引（避免字符串 Key 带来的分配和哈希开销）。
     /// </summary>
     [ShowInInspector]
-    public Dictionary<string, Chunk> Chunk_Dic = new();
+    public Dictionary<Vector2Int, Chunk> Chunk_Dic_ByPos = new();
 
-    /// <summary>
-    /// 当前激活中的区块字典。
-    /// </summary>
     [ShowInInspector]
-    public Dictionary<string, Chunk> Chunk_Dic_Active = new();
+    public Dictionary<Vector2Int, Chunk> Chunk_Dic_Active_ByPos = new();
 
-    /// <summary>
-    /// 当前处于失活状态的区块字典。
-    /// </summary>
     [ShowInInspector]
-    public Dictionary<string, Chunk> Chunk_Dic_UnActive = new();
+    public Dictionary<Vector2Int, Chunk> Chunk_Dic_UnActive_ByPos = new();
 
     /// <summary>
     /// 单个区块完成加载时触发的事件。
@@ -47,11 +41,116 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     [SerializeField, Min(1)]
     private int maxChunkLoadPerFrame = 2;
 
-    private readonly Queue<string> _pendingChunkLoadQueue = new();
-    private readonly HashSet<string> _pendingChunkLoadSet = new();
-    private readonly Dictionary<string, List<System.Action<Chunk>>> _pendingChunkCallbacks = new();
+    private readonly List<Vector2Int> _pendingChunkLoadQueue = new();
+    private readonly HashSet<Vector2Int> _pendingChunkLoadSet = new();
+    private readonly Dictionary<Vector2Int, List<System.Action<Chunk>>> _pendingChunkCallbacks = new();
     private Coroutine _chunkLoadPumpCoroutine;
+    private Vector2Int _loadPriorityCenterChunk;
+    private bool _hasLoadPriorityCenter;
+
+    // 失活窗口差分缓存：仅处理离开窗口的区块，避免每次全量遍历激活字典
+    private bool _windowDiffInitialized;
+    private readonly HashSet<Vector2Int> _cachedKeepAliveWindow = new();
+    private readonly HashSet<Vector2Int> _targetKeepAliveWindow = new();
+    private readonly List<Vector2Int> _windowDiffRemoveBuffer = new();
+    private readonly List<Vector2Int> _destroyDistanceRemoveBuffer = new();
+
+    // ChunkSize 步长缓存：统一网格步长计算，避免多处重复换算
+    private Vector2 _cachedChunkSize = new Vector2(100f, 100f);
+    private int _cachedChunkStepX = 100;
+    private int _cachedChunkStepY = 100;
+    private int _chunkStepCacheFrame = -1;
+
     #endregion
+
+    #endregion
+
+    #region 坐标索引辅助
+
+    private static string ChunkNameFromPos(Vector2Int chunkPos)
+    {
+        return chunkPos.ToString();
+    }
+
+    private bool TryGetChunkPos(Chunk chunk, out Vector2Int chunkPos)
+    {
+        chunkPos = Vector2Int.zero;
+        if (chunk == null)
+        {
+            return false;
+        }
+
+        if (chunk.MapSave != null)
+        {
+            chunkPos = chunk.MapSave.MapPosition;
+            return true;
+        }
+
+        chunkPos = Chunk.GetChunkPosition(chunk.transform.position);
+        return true;
+    }
+
+    private void RefreshChunkStepCache()
+    {
+        if (_chunkStepCacheFrame == Time.frameCount)
+        {
+            return;
+        }
+
+        _cachedChunkSize = GetChunkSize();
+        _cachedChunkStepX = Mathf.Max(1, Mathf.RoundToInt(_cachedChunkSize.x));
+        _cachedChunkStepY = Mathf.Max(1, Mathf.RoundToInt(_cachedChunkSize.y));
+        _chunkStepCacheFrame = Time.frameCount;
+    }
+
+    private int GetChunkPriorityScore(Vector2Int chunkPos)
+    {
+        if (!_hasLoadPriorityCenter)
+        {
+            return 0;
+        }
+
+        int dx = Mathf.Abs(chunkPos.x - _loadPriorityCenterChunk.x) / _cachedChunkStepX;
+        int dy = Mathf.Abs(chunkPos.y - _loadPriorityCenterChunk.y) / _cachedChunkStepY;
+        return dx + dy;
+    }
+
+    private int GetBestPendingChunkIndex()
+    {
+        if (_pendingChunkLoadQueue.Count <= 1)
+        {
+            return 0;
+        }
+
+        int bestIndex = 0;
+        int bestScore = GetChunkPriorityScore(_pendingChunkLoadQueue[0]);
+        for (int i = 1; i < _pendingChunkLoadQueue.Count; i++)
+        {
+            int score = GetChunkPriorityScore(_pendingChunkLoadQueue[i]);
+            if (score < bestScore)
+            {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+
+        return bestIndex;
+    }
+
+    public bool TryGetChunkByPos(Vector2Int chunkPos, out Chunk chunk)
+    {
+        return Chunk_Dic_ByPos.TryGetValue(chunkPos, out chunk) && chunk != null;
+    }
+
+    public bool TryGetActiveChunkByPos(Vector2Int chunkPos, out Chunk chunk)
+    {
+        return Chunk_Dic_Active_ByPos.TryGetValue(chunkPos, out chunk) && chunk != null;
+    }
+
+    public bool TryGetUnActiveChunkByPos(Vector2Int chunkPos, out Chunk chunk)
+    {
+        return Chunk_Dic_UnActive_ByPos.TryGetValue(chunkPos, out chunk) && chunk != null;
+    }
 
     #endregion
 
@@ -87,18 +186,27 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             StopCoroutine(_chunkLoadPumpCoroutine);
             _chunkLoadPumpCoroutine = null;
         }
+
+        _windowDiffInitialized = false;
+        _cachedKeepAliveWindow.Clear();
+        _targetKeepAliveWindow.Clear();
+        _windowDiffRemoveBuffer.Clear();
+        _destroyDistanceRemoveBuffer.Clear();
+        _hasLoadPriorityCenter = false;
     }
 
-    public void RequestLoadChunk_By_Name(string chunkName, System.Action<Chunk> onChunkLoaded = null)
+    /// <summary>
+    /// 清空当前所有待处理的 Chunk 加载请求。
+    /// 用于玩家快速移动后丢弃已经过期的加载队列，避免旧位置的 Chunk 迟到加载。
+    /// </summary>
+    public void ResetChunkLoadQueue()
     {
-        if (string.IsNullOrEmpty(chunkName))
-        {
-            Debug.LogError("[ChunkMgr] RequestLoadChunk_By_Name 失败：chunkName 为空");
-            onChunkLoaded?.Invoke(null);
-            return;
-        }
+        ClearChunkLoadQueue();
+    }
 
-        if (Chunk_Dic_Active.TryGetValue(chunkName, out var activeChunk) && activeChunk != null)
+    public void RequestLoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
+    {
+        if (TryGetActiveChunkByPos(chunkPos, out var activeChunk))
         {
             onChunkLoaded?.Invoke(activeChunk);
             return;
@@ -106,17 +214,24 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         if (onChunkLoaded != null)
         {
-            if (!_pendingChunkCallbacks.TryGetValue(chunkName, out var callbackList))
+            if (!_pendingChunkCallbacks.TryGetValue(chunkPos, out var callbackList))
             {
                 callbackList = new List<System.Action<Chunk>>(capacity: 2);
-                _pendingChunkCallbacks[chunkName] = callbackList;
+                _pendingChunkCallbacks[chunkPos] = callbackList;
             }
             callbackList.Add(onChunkLoaded);
         }
 
-        if (_pendingChunkLoadSet.Add(chunkName))
+        if (_pendingChunkLoadSet.Add(chunkPos))
         {
-            _pendingChunkLoadQueue.Enqueue(chunkName);
+            if (!_hasLoadPriorityCenter)
+            {
+                RefreshChunkStepCache();
+                _loadPriorityCenterChunk = chunkPos;
+                _hasLoadPriorityCenter = true;
+            }
+
+            _pendingChunkLoadQueue.Add(chunkPos);
         }
 
         if (_chunkLoadPumpCoroutine == null)
@@ -133,18 +248,20 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
             while (budget > 0 && _pendingChunkLoadQueue.Count > 0)
             {
-                string chunkName = _pendingChunkLoadQueue.Dequeue();
-                _pendingChunkLoadSet.Remove(chunkName);
+                int bestIndex = GetBestPendingChunkIndex();
+                Vector2Int chunkPos = _pendingChunkLoadQueue[bestIndex];
+                _pendingChunkLoadQueue.RemoveAt(bestIndex);
+                _pendingChunkLoadSet.Remove(chunkPos);
 
-                Chunk loadedChunk = LoadChunk_By_Name(chunkName);
+                Chunk loadedChunk = LoadChunk_By_Position(chunkPos);
 
-                if (_pendingChunkCallbacks.TryGetValue(chunkName, out var callbacks))
+                if (_pendingChunkCallbacks.TryGetValue(chunkPos, out var callbacks))
                 {
                     for (int i = 0; i < callbacks.Count; i++)
                     {
                         callbacks[i]?.Invoke(loadedChunk);
                     }
-                    _pendingChunkCallbacks.Remove(chunkName);
+                    _pendingChunkCallbacks.Remove(chunkPos);
                 }
 
                 budget--;
@@ -163,9 +280,16 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public void ClearAllChunk()
     {
         // 清空字典
-        Chunk_Dic.Clear();
-        Chunk_Dic_Active.Clear();
-        Chunk_Dic_UnActive.Clear();
+        Chunk_Dic_ByPos.Clear();
+        Chunk_Dic_Active_ByPos.Clear();
+        Chunk_Dic_UnActive_ByPos.Clear();
+
+        _windowDiffInitialized = false;
+        _cachedKeepAliveWindow.Clear();
+        _targetKeepAliveWindow.Clear();
+        _windowDiffRemoveBuffer.Clear();
+        _destroyDistanceRemoveBuffer.Clear();
+        _hasLoadPriorityCenter = false;
     }
 
     #region 加载距离Item规定范围内的全部Chunk
@@ -182,16 +306,18 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
 
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        if (chunkSize.x <= 0f || chunkSize.y <= 0f)
+        RefreshChunkStepCache();
+        if (_cachedChunkSize.x <= 0f || _cachedChunkSize.y <= 0f)
         {
             onAllChunksLoaded?.Invoke();
             return; // 保护
         }
 
         // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
-        int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / chunkSize.x);
-        int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / chunkSize.y);
+        int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / _cachedChunkSize.x);
+        int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / _cachedChunkSize.y);
+        _loadPriorityCenterChunk = new Vector2Int(playerChunkIndexX * _cachedChunkStepX, playerChunkIndexY * _cachedChunkStepY);
+        _hasLoadPriorityCenter = true;
 
         int pending = 0;
         bool callbackInvoked = false;
@@ -210,17 +336,16 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             for (int iy = playerChunkIndexY - radius; iy <= playerChunkIndexY + radius; iy++)
             {
                 // 计算该 chunk 的左下角世界坐标（保持为整数，和你原来用 RoundToInt 的风格一致）
-                int originX = Mathf.RoundToInt(ix * chunkSize.x);
-                int originY = Mathf.RoundToInt(iy * chunkSize.y);
+                int originX = ix * _cachedChunkStepX;
+                int originY = iy * _cachedChunkStepY;
                 Vector2Int chunkPos = new Vector2Int(originX, originY);
 
-                string key = chunkPos.ToString(); // 你原代码用的 key 风格
-                if (!Chunk_Dic_Active.ContainsKey(key))
+                if (!TryGetActiveChunkByPos(chunkPos, out _))
                 {
                     if (onAllChunksLoaded != null)
                     {
                         pending++;
-                        RequestLoadChunk_By_Name(key, (loadedChunk) =>
+                        RequestLoadChunk_By_Position(chunkPos, (loadedChunk) =>
                         {
                             // 无论成功与否都视为本次加载流程结束
                             pending--;
@@ -232,7 +357,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
                     }
                     else
                     {
-                        RequestLoadChunk_By_Name(key);
+                        RequestLoadChunk_By_Position(chunkPos);
                     }
                 }
             }
@@ -264,16 +389,16 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
 
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        if (chunkSize.x <= 0f || chunkSize.y <= 0f)
+        RefreshChunkStepCache();
+        if (_cachedChunkSize.x <= 0f || _cachedChunkSize.y <= 0f)
         {
             Debug.LogWarning("[ChunkMgr] ChunkSize 非法，跳过权重更新");
             return;
         }
 
         // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
-        int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / chunkSize.x);
-        int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / chunkSize.y);
+        int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / _cachedChunkSize.x);
+        int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / _cachedChunkSize.y);
 
         int updatedCount = 0;
 
@@ -282,15 +407,14 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             for (int iy = playerChunkIndexY - radius; iy <= playerChunkIndexY + radius; iy++)
             {
                 // 计算该 chunk 的左下角世界坐标
-                int originX = Mathf.RoundToInt(ix * chunkSize.x);
-                int originY = Mathf.RoundToInt(iy * chunkSize.y);
+                int originX = ix * _cachedChunkStepX;
+                int originY = iy * _cachedChunkStepY;
                 Vector2Int chunkPos = new Vector2Int(originX, originY);
 
-                string key = chunkPos.ToString();
-
                 // 仅对已激活区块进行权重烘焙
-                if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk) && chunk != null && chunk.Map != null)
+                if (TryGetActiveChunkByPos(chunkPos, out Chunk chunk) && chunk.Map != null)
                 {
+                    chunk.Map.MarkPenaltyDirtyFull();
                     chunk.Map.BackTilePenalty_Async();
                     updatedCount++;
                 }
@@ -316,11 +440,12 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void UpdateItem_ChunkOwner(Item item)
     {
-        if (Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out Chunk chunk))
+        Vector2Int chunkPos = Chunk.GetChunkPosition(item.transform.position);
+        if (TryGetActiveChunkByPos(chunkPos, out Chunk chunk))
         {
             chunk.AddItem(item);
         }
-        else if (Chunk_Dic_UnActive.TryGetValue(Chunk.GetChunkPosition(item.transform.position).ToString(), out chunk))
+        else if (TryGetUnActiveChunkByPos(chunkPos, out chunk))
         {
             chunk.AddItem(item);
         }
@@ -337,12 +462,13 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void DestroyChunk(Chunk chunk)
     {
-        string key = chunk.name;
-
         // 从三个字典中移除
-        Chunk_Dic.Remove(key);
-        Chunk_Dic_Active.Remove(key);
-        Chunk_Dic_UnActive.Remove(key);
+        if (TryGetChunkPos(chunk, out Vector2Int chunkPos))
+        {
+            Chunk_Dic_ByPos.Remove(chunkPos);
+            Chunk_Dic_Active_ByPos.Remove(chunkPos);
+            Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
+        }
 
         // 如果正在进行地图加载或权重烘焙，先停止协程
         if (chunk.Map != null)
@@ -374,33 +500,37 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public void DestroyChunk_In_Distance(GameObject player, int Distance = 3)
     {
         Vector2 playerPos = player.transform.position;
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        RefreshChunkStepCache();
 
         // ✅ 玩家所在 Chunk 的中心点
-        Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos) + chunkSize * 0.5f;
+        Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos) + _cachedChunkSize * 0.5f;
 
-        List<string> toRemove = new List<string>();
+        _destroyDistanceRemoveBuffer.Clear();
 
-        foreach (Chunk chunk in Chunk_Dic_UnActive.Values)
+        foreach (Chunk chunk in Chunk_Dic_UnActive_ByPos.Values)
         {
             if (chunk == null) continue;
 
             // ✅ 区块中心点
-            Vector2 chunkCenter = (Vector2)chunk.transform.position + chunkSize * 0.5f;
+            Vector2 chunkCenter = (Vector2)chunk.transform.position + _cachedChunkSize * 0.5f;
 
-            if (Mathf.Abs(chunkCenter.x - playerChunkCenter.x) > Distance * chunkSize.x ||
-                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) > Distance * chunkSize.y)
+            if (Mathf.Abs(chunkCenter.x - playerChunkCenter.x) > Distance * _cachedChunkSize.x ||
+                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) > Distance * _cachedChunkSize.y)
             {
-                toRemove.Add(chunk.name);
+                if (TryGetChunkPos(chunk, out Vector2Int chunkPos))
+                {
+                    _destroyDistanceRemoveBuffer.Add(chunkPos);
+                }
             }
         }
 
-        foreach (string key in toRemove)
+        for (int i = 0; i < _destroyDistanceRemoveBuffer.Count; i++)
         {
-            if (Chunk_Dic.TryGetValue(key, out Chunk chunk) && chunk != null)
+            Vector2Int chunkPos = _destroyDistanceRemoveBuffer[i];
+            if (TryGetChunkByPos(chunkPos, out Chunk chunk))
             {
                 chunk.SaveChunk();
-                SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[key] = chunk.MapSave;
+                SaveDataMgr.Instance.Active_PlanetData.MapData_Dict[ChunkNameFromPos(chunkPos)] = chunk.MapSave;
                 DestroyChunk(chunk);
             }
         }
@@ -420,43 +550,85 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public void SwitchActiveChunks_TO_UnActive(GameObject player, int Distance = 2)
     {
         Vector2 playerPos = player.transform.position;
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
 
-        // ✅ 玩家所在 Chunk 的中心点
-        Vector2 playerChunkCenter = (Vector2)Chunk.GetChunkPosition(playerPos);
+        Distance = Mathf.Max(1, Distance);
+        int radius = Distance - 1;
+        Vector2Int playerChunkPos = Chunk.GetChunkPosition(playerPos);
+        RefreshChunkStepCache();
 
-        List<string> toRemove = new List<string>();
-
-        foreach (Chunk chunk in Chunk_Dic_Active.Values)
+        _targetKeepAliveWindow.Clear();
+        for (int ix = -radius; ix <= radius; ix++)
         {
-            // ✅ 区块中心点
-            Vector2 chunkCenter = chunk.MapSave.MapPosition;
-
-            // 方形检测：只要在 X 或 Y 上超过范围就移除
-            if (
-                Mathf.Abs(chunkCenter.x - playerChunkCenter.x) >= Distance * chunkSize.x
-                ||
-                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) >= Distance * chunkSize.y
-               )
+            for (int iy = -radius; iy <= radius; iy++)
             {
-                toRemove.Add(chunk.name);
+                Vector2Int windowPos = new Vector2Int(
+                    playerChunkPos.x + ix * _cachedChunkStepX,
+                    playerChunkPos.y + iy * _cachedChunkStepY
+                );
+                _targetKeepAliveWindow.Add(windowPos);
             }
         }
 
-        foreach (string key in toRemove)
+        if (!_windowDiffInitialized)
         {
-            if (Chunk_Dic_Active.TryGetValue(key, out Chunk chunk))
+            _windowDiffRemoveBuffer.Clear();
+            foreach (Vector2Int activePos in Chunk_Dic_Active_ByPos.Keys)
+            {
+                if (!_targetKeepAliveWindow.Contains(activePos))
+                {
+                    _windowDiffRemoveBuffer.Add(activePos);
+                }
+            }
+
+            for (int i = 0; i < _windowDiffRemoveBuffer.Count; i++)
+            {
+                DeactivateChunkAt(_windowDiffRemoveBuffer[i]);
+            }
+
+            _cachedKeepAliveWindow.Clear();
+            foreach (Vector2Int keepPos in _targetKeepAliveWindow)
+            {
+                _cachedKeepAliveWindow.Add(keepPos);
+            }
+            _windowDiffInitialized = true;
+            return;
+        }
+
+        _windowDiffRemoveBuffer.Clear();
+        foreach (Vector2Int previousPos in _cachedKeepAliveWindow)
+        {
+            if (!_targetKeepAliveWindow.Contains(previousPos))
+            {
+                _windowDiffRemoveBuffer.Add(previousPos);
+            }
+        }
+
+        for (int i = 0; i < _windowDiffRemoveBuffer.Count; i++)
+        {
+            Vector2Int chunkPos = _windowDiffRemoveBuffer[i];
+            DeactivateChunkAt(chunkPos);
+            _cachedKeepAliveWindow.Remove(chunkPos);
+        }
+
+        foreach (Vector2Int keepPos in _targetKeepAliveWindow)
+        {
+            _cachedKeepAliveWindow.Add(keepPos);
+        }
+
+        void DeactivateChunkAt(Vector2Int chunkPos)
+        {
+            if (TryGetActiveChunkByPos(chunkPos, out Chunk chunk))
             {
                 if (chunk == null)
                 {
-                    Debug.LogWarning($"⚠️ toRemove 中的 Chunk {key} 是 null");
-                    continue;
+                    Debug.LogWarning($"⚠️ toRemove 中的 Chunk {ChunkNameFromPos(chunkPos)} 是 null");
+                    return;
                 }
 
                 if (chunk.gameObject == null)
                 {
-                    Debug.LogError($"❌ Chunk {key} 的 GameObject 丢失了");
-                    continue;
+                    Debug.LogError($"❌ Chunk {ChunkNameFromPos(chunkPos)} 的 GameObject 丢失了");
+                    return;
                 }
 
                 // 如果正在进行权重烘焙，停止协程
@@ -485,23 +657,17 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        string chunkKey = chunk.name;
-        if (string.IsNullOrEmpty(chunkKey))
-        {
-            Debug.LogWarning("⚠️ SetChunkActive：chunk 没有名字，可能未初始化完全");
-            return;
-        }
-
         // ✅ 维护字典状态
+        Vector2Int chunkPos = chunk.MapSave.MapPosition;
         if (isActive)
         {
-            Chunk_Dic_Active[chunkKey] = chunk;
-            Chunk_Dic_UnActive.Remove(chunkKey);
+            Chunk_Dic_Active_ByPos[chunkPos] = chunk;
+            Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
         }
         else
         {
-            Chunk_Dic_UnActive[chunkKey] = chunk;
-            Chunk_Dic_Active.Remove(chunkKey);
+            Chunk_Dic_UnActive_ByPos[chunkPos] = chunk;
+            Chunk_Dic_Active_ByPos.Remove(chunkPos);
         }
 
         // ✅ 设置地图TileMap的激活状态
@@ -511,7 +677,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         }
         else if (chunk.Map == null)
         {
-            Debug.LogWarning($"⚠️ SetChunkActive: chunk {chunkKey} 的 Map 为 null");
+            Debug.LogWarning($"⚠️ SetChunkActive: chunk {ChunkNameFromPos(chunkPos)} 的 Map 为 null");
         }
 
         // ✅ 设置区块GameObject的激活状态
@@ -531,10 +697,10 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        string key = chunk.name;
-        Chunk_Dic[key] = chunk;
-        Chunk_Dic_Active[key] = chunk;
-        Chunk_Dic_UnActive.Remove(key);
+        Vector2Int chunkPos = chunk.MapSave.MapPosition;
+        Chunk_Dic_ByPos[chunkPos] = chunk;
+        Chunk_Dic_Active_ByPos[chunkPos] = chunk;
+        Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
     }
 
 
@@ -543,18 +709,14 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     #region 区块加载流程（重构版）
 
     /// <summary>
-    /// 按名字加载或创建区块的主入口。
-    /// 调用顺序：
-    /// 1. 激活已有但未激活的区块
-    /// 2. 从存档加载区块
-    /// 3. 创建全新区块
+    /// 按坐标加载或创建区块，避免热路径字符串转换。
     /// </summary>
-    public Chunk LoadChunk_By_Name(string ChunkName, System.Action<Chunk> onChunkLoaded = null)
+    public Chunk LoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
         Chunk chunk = null;
 
         // === 第一优先级：激活已存在但未激活的区块 ===
-        chunk = TryActivateExistingChunk(ChunkName);
+        chunk = TryActivateExistingChunk(chunkPos);
 
         if (chunk != null)
         {
@@ -563,21 +725,19 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         }
 
         // === 第二优先级：从存档加载区块 ===
-        chunk = TryLoadChunkFromSaveData(ChunkName, onChunkLoaded);
+        chunk = TryLoadChunkFromSaveData(chunkPos, onChunkLoaded);
         if (chunk != null)
             return chunk;
 
         // === 第三优先级：创建全新区块 ===
-        chunk = TryCreateNewChunk(ChunkName);
+        chunk = TryCreateNewChunk(chunkPos);
         if (chunk != null)
         {
             onChunkLoaded?.Invoke(chunk);
             return chunk;
         }
 
-        Debug.LogError($"[区块加载] ❌ 所有加载方式均失败，无法加载区块 {ChunkName}");
-        // 注册到字典
-        RegisterChunk(chunk);
+        Debug.LogError($"[区块加载] ❌ 所有加载方式均失败，无法加载区块 {ChunkNameFromPos(chunkPos)}");
         onChunkLoaded?.Invoke(null);
         return null;
     }
@@ -585,9 +745,9 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// <summary>
     /// 尝试激活已存在但当前未激活的区块。
     /// </summary>
-    private Chunk TryActivateExistingChunk(string ChunkName)
+    private Chunk TryActivateExistingChunk(Vector2Int chunkPos)
     {
-        if (!Chunk_Dic.TryGetValue(ChunkName, out Chunk chunkGameObject) || chunkGameObject == null)
+        if (!TryGetChunkByPos(chunkPos, out Chunk chunkGameObject))
             return null;
 
         // 如果区块已激活，无需重复处理
@@ -600,7 +760,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         // 仅负责恢复区块与其物体；权重烘焙由其他系统显式触发
         if (chunkGameObject.Map == null)
         {
-            Debug.LogWarning($"[区块加载] ⚠️ 区块 {ChunkName} 的 Map 为空");
+            Debug.LogWarning($"[区块加载] ⚠️ 区块 {ChunkNameFromPos(chunkPos)} 的 Map 为空");
         }
 
         return chunkGameObject;
@@ -609,8 +769,9 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// <summary>
     /// 尝试从存档数据创建并加载区块。
     /// </summary>
-    private Chunk TryLoadChunkFromSaveData(string mapName, System.Action<Chunk> onChunkLoaded = null)
+    private Chunk TryLoadChunkFromSaveData(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
+        string mapName = ChunkNameFromPos(chunkPos);
         // 验证存档管理器
         PlanetData activePlanetData = SaveDataMgr.Instance?.Active_PlanetData;
         if (activePlanetData == null)
@@ -662,20 +823,15 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// <summary>
     /// 创建一个全新的区块（无存档数据时调用）。
     /// </summary>
-    private Chunk TryCreateNewChunk(string mapName)
+    private Chunk TryCreateNewChunk(Vector2Int chunkPos)
     {
-        // 解析区块位置
-        if (!TryParseVector2Int(mapName, out Vector2Int pos))
-        {
-            Debug.LogError($"[区块加载] ❌ 方式3/3: 无法解析区块名称 {mapName}");
-            return null;
-        }
+        string mapName = ChunkNameFromPos(chunkPos);
 
         // 创建 MapSave 数据结构
         MapSave mapSave = new MapSave
         {
             Name = mapName,
-            MapPosition = pos
+            MapPosition = chunkPos
         };
 
         // 创建区块GameObject
@@ -741,10 +897,10 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         }
 
         string chunkKey = chunk.MapSave.Name;
-
-        Chunk_Dic[chunkKey] = chunk;
-        Chunk_Dic_Active[chunkKey] = chunk;
-        Chunk_Dic_UnActive.Remove(chunkKey); // 确保不在失活字典中
+        Vector2Int chunkPos = chunk.MapSave.MapPosition;
+        Chunk_Dic_ByPos[chunkPos] = chunk;
+        Chunk_Dic_Active_ByPos[chunkPos] = chunk;
+        Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
 
         OnChunkLoadFinish.Invoke(chunk);
     }
@@ -765,6 +921,11 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return null;
         }
 
+        if (string.IsNullOrEmpty(mapSave.Name))
+        {
+            mapSave.Name = ChunkNameFromPos(mapSave.MapPosition);
+        }
+
         // 1. 创建根GameObject
         GameObject newMapObj = new GameObject(mapSave.Name);
 
@@ -781,39 +942,6 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         return chunk;
     }
 
-    /// <summary>
-    /// 创建一个全新的区块（包含地图核心）。
-    /// </summary>
-    private Chunk CreatChunk_By_Name(string mapName)
-    {
-        // 解析位置
-        if (!TryParseVector2Int(mapName, out Vector2Int pos))
-        {
-            Debug.LogError($"[区块创建] ❌ 无法解析区块名称: {mapName}");
-            return null;
-        }
-
-        // 创建MapSave
-        MapSave mapSave = new MapSave
-        {
-            Name = mapName,
-            MapPosition = pos
-        };
-
-        // 创建区块
-        Chunk chunk = CreateChunk_ByMapSave(mapSave);
-        if (chunk == null)
-            return null;
-
-        // 创建地图核心
-        if (!TryCreateMapCore(chunk))
-        {
-            Destroy(chunk.gameObject);
-            return null;
-        }
-
-        return chunk;
-    }
     #endregion
 
     #region 清理与辅助
@@ -822,9 +950,9 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void CleanEmptyDicValues()
     {
-        CleanEmptyValues(Chunk_Dic);
-        CleanEmptyValues(Chunk_Dic_Active);
-        CleanEmptyValues(Chunk_Dic_UnActive);
+        CleanEmptyValues(Chunk_Dic_ByPos);
+        CleanEmptyValues(Chunk_Dic_Active_ByPos);
+        CleanEmptyValues(Chunk_Dic_UnActive_ByPos);
     }
 
     /// <summary>
@@ -832,19 +960,23 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void CleanDic()
     {
-        Chunk_Dic.Clear();
-        Chunk_Dic_Active.Clear();
-        Chunk_Dic_UnActive.Clear();
+        Chunk_Dic_ByPos.Clear();
+        Chunk_Dic_Active_ByPos.Clear();
+        Chunk_Dic_UnActive_ByPos.Clear();
+
+        _windowDiffInitialized = false;
+        _cachedKeepAliveWindow.Clear();
+        _targetKeepAliveWindow.Clear();
+        _windowDiffRemoveBuffer.Clear();
+        _destroyDistanceRemoveBuffer.Clear();
+        _hasLoadPriorityCenter = false;
     }
 
-    /// <summary>
-    /// 清理给定字典中 Value 为 null 的条目。
-    /// </summary>
-    private void CleanEmptyValues(Dictionary<string, Chunk> dic)
+    private void CleanEmptyValues(Dictionary<Vector2Int, Chunk> dic)
     {
         if (dic == null || dic.Count == 0) return;
 
-        var keysToRemove = new List<string>();
+        var keysToRemove = new List<Vector2Int>();
         foreach (var kvp in dic)
         {
             if (kvp.Value == null)
@@ -857,26 +989,6 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         }
     }
 
-    /// <summary>
-    /// 尝试将 "(x,y)" 格式的字符串解析为 Vector2Int。
-    /// </summary>
-    private bool TryParseVector2Int(string str, out Vector2Int result)
-    {
-        result = Vector2Int.zero;
-
-        string cleaned = str.Replace(" ", "").Replace("(", "").Replace(")", "");
-        string[] parts = cleaned.Split(',');
-
-        if (parts.Length == 2 &&
-            int.TryParse(parts[0], out int x) &&
-            int.TryParse(parts[1], out int y))
-        {
-            result = new Vector2Int(x, y);
-            return true;
-        }
-
-        return false;
-    }
     #endregion
 
     /// <summary>
@@ -916,7 +1028,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void GetChunkBy_ItemPosition(Vector2 pos, out Chunk chunk)
     {
-        ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(pos).ToString(), out chunk);
+        ChunkMgr.Instance.TryGetActiveChunkByPos(Chunk.GetChunkPosition(pos), out chunk);
     }
 
     /// <summary>
@@ -926,32 +1038,80 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
     {
         closestChunk = null;
-        float minSqrDist = float.MaxValue; // 用平方距离避免开方
+        Vector2Int centerChunkPos = Chunk.GetChunkPosition(pos);
+        RefreshChunkStepCache();
 
-        if (Chunk_Dic_Active == null || Chunk_Dic_Active.Count == 0)
+        if (Chunk_Dic_Active_ByPos == null || Chunk_Dic_Active_ByPos.Count == 0)
         {
-            Debug.LogError("GetClosestChunk: Chunk_Dic_Active 为空，无法找到最近的 Chunk！");
+            Debug.LogError("GetClosestChunk: Chunk_Dic_Active_ByPos 为空，无法找到最近的 Chunk！");
             // 将pos转换为Vector2Int然后通过LoadChunk加载
-            Vector2Int chunkPos = Chunk.GetChunkPosition(pos);
-            string chunkName = chunkPos.ToString();
-            LoadChunk_By_Name(chunkName);
+            LoadChunk_By_Position(centerChunkPos);
             // 重新获取加载的chunk
-            Chunk_Dic_Active.TryGetValue(chunkName, out closestChunk);
+            TryGetActiveChunkByPos(centerChunkPos, out closestChunk);
             return;
         }
 
-        foreach (var chunk in Chunk_Dic_Active.Values)
+        // 先命中当前Chunk，命中即O(1)
+        if (TryGetActiveChunkByPos(centerChunkPos, out closestChunk))
         {
+            return;
+        }
+
+        // 再查3x3邻域，通常可将复杂度压到常数级
+        bool foundInNeighborhood = false;
+        int minCoordDist = int.MaxValue;
+
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                {
+                    continue;
+                }
+
+                Vector2Int neighborPos = new Vector2Int(
+                    centerChunkPos.x + dx * _cachedChunkStepX,
+                    centerChunkPos.y + dy * _cachedChunkStepY
+                );
+
+                if (!TryGetActiveChunkByPos(neighborPos, out Chunk neighborChunk))
+                {
+                    continue;
+                }
+
+                int coordDist = Mathf.Abs(neighborPos.x - centerChunkPos.x) / _cachedChunkStepX
+                    + Mathf.Abs(neighborPos.y - centerChunkPos.y) / _cachedChunkStepY;
+                if (coordDist < minCoordDist)
+                {
+                    minCoordDist = coordDist;
+                    closestChunk = neighborChunk;
+                    foundInNeighborhood = true;
+                }
+            }
+        }
+
+        if (foundInNeighborhood)
+        {
+            return;
+        }
+
+        // 兜底：全量扫描（仅在邻域未命中时才触发）
+        foreach (var kvp in Chunk_Dic_Active_ByPos)
+        {
+            Vector2Int activePos = kvp.Key;
+            var chunk = kvp.Value;
             if (chunk == null)
             {
                 Debug.LogWarning("GetClosestChunk: 遍历到一个空的 Chunk 引用，已跳过。");
                 continue;
             }
 
-            float sqrDist = (pos - (Vector2)chunk.transform.position).sqrMagnitude;
-            if (sqrDist < minSqrDist)
+            int coordDist = Mathf.Abs(activePos.x - centerChunkPos.x) / _cachedChunkStepX
+                + Mathf.Abs(activePos.y - centerChunkPos.y) / _cachedChunkStepY;
+            if (coordDist < minCoordDist)
             {
-                minSqrDist = sqrDist;
+                minCoordDist = coordDist;
                 closestChunk = chunk;
             }
         }
@@ -960,11 +1120,9 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         {
             Debug.LogError($"GetClosestChunk: 没有找到合法的 Chunk！（输入位置：{pos}）");
             // 将pos转换为Vector2Int然后通过LoadChunk加载
-            Vector2Int chunkPos = Chunk.GetChunkPosition(pos);
-            string chunkName = chunkPos.ToString();
-            LoadChunk_By_Name(chunkName);
+            LoadChunk_By_Position(centerChunkPos);
             // 重新获取加载的chunk
-            Chunk_Dic_Active.TryGetValue(chunkName, out closestChunk);
+            TryGetActiveChunkByPos(centerChunkPos, out closestChunk);
         }
         else
         {

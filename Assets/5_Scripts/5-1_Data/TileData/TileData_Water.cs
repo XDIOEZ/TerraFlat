@@ -8,9 +8,12 @@ public partial class TileData_Water : TileData
 {
     public float deepValue = 0f;
     public float salt = 0;
-    public override void Initialize_Env(EnvironmentFactors env)
+    public override void Initialize_Env(EnvironmentLayers layers, int x, int y)
     {
-        deepValue = (0.5f - env.Hight) / 0.5f;
+        if (layers == null || !layers.Contains(x, y))
+            return;
+
+        deepValue = (0.5f - layers.Hight[x, y]) / 0.5f;
     }
     /// <summary>
     /// 重写ToString方法，返回水地块的详细信息（中文格式）

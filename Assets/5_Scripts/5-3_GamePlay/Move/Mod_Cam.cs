@@ -30,6 +30,7 @@ public class Mod_Cam : Module
     public Item CameraFollowItem;
     public Player Player;
     public GameController GameController;
+    private Mod_ChunkLoader _chunkLoader;
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
@@ -69,6 +70,7 @@ public class Mod_Cam : Module
         // 获取跟随对象
         CameraFollowItem = GetComponentInParent<Item>();
         Player = CameraFollowItem as Player;
+        _chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
     
         // 直接在当前位置实例化相机预制体
         if (CamPrefab != null)
@@ -152,6 +154,13 @@ public class Mod_Cam : Module
 
         povValue += delta;
         Vcam.m_Lens.OrthographicSize = povValue;
+
+        if (_chunkLoader == null)
+        {
+            _chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
+        }
+
+        _chunkLoader?.RefreshChunksForCameraView();
 
         // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
     }

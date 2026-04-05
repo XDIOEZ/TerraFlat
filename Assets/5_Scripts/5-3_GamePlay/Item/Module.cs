@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public interface IEnvironmentAdjustable
 {
-    void AdjustByEnvironment(EnvironmentFactors env);
+    void AdjustByEnvironment(EnvironmentLayers layers, Vector2Int localPos);
 }
 
 public abstract class Module : MonoBehaviour

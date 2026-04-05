@@ -32,10 +32,10 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     public List<BiomeData> biomes;
 
     [Header("温度映射")]
-    [Tooltip("温度范围（单位：℃），用于把 0~1 噪声映射到真实温度")]
-    public Vector2 TemperatureRange = new Vector2(-10f, 16f);
-    [Tooltip("温度曲线（输入 0~1，输出 0~1），用于控制冷热分布")]
-    public AnimationCurve TemperatureCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [Tooltip("温度映射配置（0~1 -> 摄氏温度），可由策划配表控制")]
+    public TemperatureMappingProfile temperatureMappingProfile;
+    [Tooltip("当 temperatureMappingProfile 为空时使用的默认摄氏区间")]
+    public Vector2 defaultTemperatureRangeCelsius = new Vector2(-10f, 16f);
 
     [Tooltip("噪声配置列表：直接配置 BaseNoise（SerializeReference 多态）。\n通过 BaseNoise.noiseType 匹配采样类型。")]
     [SerializeReference]
@@ -162,7 +162,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
         // 初始化环境因子网格
         Vector2 size = ChunkSize;
-        map.Data.EnvironmentData = new EnvironmentFactors[(int)size.x, (int)size.y];
+        map.Data.EnsureEnvironmentStorage((int)size.x, (int)size.y);
     }
 
     /// <summary>
@@ -189,16 +189,53 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             for (int y = 0; y < size.y; y++)
             {
                 Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
+                Vector2Int localPos = worldPos - map.Data.position;
+
                 // 1. 计算环境参数
-                EnvironmentFactors env = CalculateEnvironmentFactors(worldPos);
-                // 2. 先匹配生物群系（基于归一化环境参数）
-                BiomeData biome = GenerateBiomeTile(map, worldPos, env);
-                // 3. 根据群系覆盖温度区间（只改摄氏温度，不影响群系判定）
-                ApplyBiomeTemperatureOverride(biome, ref env);
-                // 4. 写入环境因子网格（数据层）
-                StoreEnvironmentFactors(map, worldPos, env);
-                // 5. 生成地形瓦片
-                GenerateTerrainTile(map, worldPos, biome, env);
+                CalculateEnvironmentFactors(
+                    worldPos,
+                    out float temperature,
+                    out float humidity,
+                    out float precipitation,
+                    out float solidity,
+                    out float hight,
+                    out float pollution);
+
+                // 先写入采样结果，再进行群系匹配，避免读到未初始化默认值导致全海洋。
+                float defaultTempCelsius = EvaluateTemperatureCelsius(temperature, null);
+                StoreEnvironmentFactors(
+                    map,
+                    localPos,
+                    temperature,
+                    defaultTempCelsius,
+                    humidity,
+                    precipitation,
+                    solidity,
+                    hight,
+                    pollution);
+
+                // 2. 匹配生物群系（归一化环境参数判定）
+                BiomeData biome = GenerateBiomeTile(map, localPos);
+                if (biome == null)
+                {
+                    continue;
+                }
+
+                // 3. 在不影响群系判定的前提下，根据群系重算摄氏温度并回写
+                float temperatureCelsius = EvaluateTemperatureCelsius(temperature, biome);
+                StoreEnvironmentFactors(
+                    map,
+                    localPos,
+                    temperature,
+                    temperatureCelsius,
+                    humidity,
+                    precipitation,
+                    solidity,
+                    hight,
+                    pollution);
+
+                // 4. 生成地形瓦片
+                GenerateTerrainTile(map, worldPos, localPos, biome);
             }
         }
         // 注意：收尾（TileLoaded/烘焙/刷新）由 Map.GenerateByPipeline() 统一处理，
@@ -211,21 +248,36 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     /// <summary>
     /// 计算指定位置的环境参数
     /// </summary>
-    private EnvironmentFactors CalculateEnvironmentFactors(Vector2Int worldPos)
+    private void CalculateEnvironmentFactors(
+        Vector2Int worldPos,
+        out float temperature,
+        out float humidity,
+        out float precipitation,
+        out float solidity,
+        out float hight,
+        out float pollution)
     {
         float gx = worldPos.x * NoiseScale;
         float gy = worldPos.y * NoiseScale;
-        EnvironmentFactors factors = SampleEnvironmentFactors(gx, gy);
-        return factors;
+        SampleEnvironmentFactors(gx, gy, out temperature, out humidity, out precipitation, out solidity, out hight, out pollution);
     }
 
     /// <summary>
     /// 采样环境因子（一次遍历 NoiseConfigs，每个 noise 执行一次 Sample）
     /// </summary>
-    private EnvironmentFactors SampleEnvironmentFactors(float x, float y)
+    private void SampleEnvironmentFactors(
+        float x,
+        float y,
+        out float temperature,
+        out float humidity,
+        out float precipitation,
+        out float solidity,
+        out float hight,
+        out float pollution)
     {
         // 默认值：当某个类型未配置噪声时使用
         const float defaultValue = 0.5f;
+        pollution = 0f;
 
         if (NoiseConfigs == null)
         {
@@ -234,15 +286,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 _hasLoggedNoiseConfigsNull = true;
                 Debug.LogError("[ChunkGenerator_Land] ❌ NoiseConfigs 为 null，无法采样环境因子（将使用默认值 Env=0.5）。");
             }
-            return new EnvironmentFactors
-            {
-                TemperatureNormalized = defaultValue,
-                Temperature = MapTemperatureToCelsius(defaultValue),
-                Humidity = defaultValue,
-                Precipitation = defaultValue,
-                Solidity = defaultValue,
-                Hight = defaultValue
-            };
+            temperature = defaultValue;
+            humidity = defaultValue;
+            precipitation = defaultValue;
+            solidity = defaultValue;
+            hight = defaultValue;
+            return;
         }
 
         if (NoiseConfigs.Count == 0)
@@ -252,15 +301,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 _hasLoggedNoiseConfigsEmpty = true;
                 Debug.LogWarning("[ChunkGenerator_Land] ⚠️ NoiseConfigs 为空，无法采样环境因子（将使用默认值 Env=0.5）。");
             }
-            return new EnvironmentFactors
-            {
-                TemperatureNormalized = defaultValue,
-                Temperature = MapTemperatureToCelsius(defaultValue),
-                Humidity = defaultValue,
-                Precipitation = defaultValue,
-                Solidity = defaultValue,
-                Hight = defaultValue
-            };
+            temperature = defaultValue;
+            humidity = defaultValue;
+            precipitation = defaultValue;
+            solidity = defaultValue;
+            hight = defaultValue;
+            return;
         }
 
         float sumTemperature = 0f;
@@ -315,12 +361,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             }
         }
 
-        float temperature = countTemperature > 0 ? (sumTemperature / countTemperature) : defaultValue;
-        float humidity = countHumidity > 0 ? (sumHumidity / countHumidity) : defaultValue;
-        float precipitation = countPrecipitation > 0 ? (sumPrecipitation / countPrecipitation) : defaultValue;
-        float solidity = countSolidity > 0 ? (sumSolidity / countSolidity) : defaultValue;
-        float height = countHeight > 0 ? (sumHeight / countHeight) : defaultValue;
-        height = ApplyHeightSecondaryBoost(height);
+        temperature = countTemperature > 0 ? (sumTemperature / countTemperature) : defaultValue;
+        humidity = countHumidity > 0 ? (sumHumidity / countHumidity) : defaultValue;
+        precipitation = countPrecipitation > 0 ? (sumPrecipitation / countPrecipitation) : defaultValue;
+        solidity = countSolidity > 0 ? (sumSolidity / countSolidity) : defaultValue;
+        hight = countHeight > 0 ? (sumHeight / countHeight) : defaultValue;
+        hight = ApplyHeightSecondaryBoost(hight);
 
         if (countHeight == 0 && !_hasLoggedMissingLandNoise)
         {
@@ -328,69 +374,11 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             Debug.LogWarning("[ChunkGenerator_Land] ⚠️ 未配置任何 NoiseType.Land 噪声，高度将使用默认值 0.5。");
         }
 
-        float temperatureNormalized = Mathf.Clamp01(temperature);
-        float temperatureCelsius = MapTemperatureToCelsius(temperatureNormalized);
-
-        return new EnvironmentFactors
-        {
-            TemperatureNormalized = temperatureNormalized,
-            Temperature = temperatureCelsius,
-            Humidity = Mathf.Clamp01(humidity),
-            Precipitation = Mathf.Clamp01(precipitation),
-            Solidity = Mathf.Clamp01(solidity),
-            Hight = Mathf.Clamp01(height)
-        };
-    }
-
-    private float MapTemperatureToCelsius(float temperatureNormalized)
-    {
-        float input = Mathf.Clamp01(temperatureNormalized);
-        float curve01 = TemperatureCurve == null ? input : Mathf.Clamp01(TemperatureCurve.Evaluate(input));
-        return Mathf.Lerp(TemperatureRange.x, TemperatureRange.y, curve01);
-    }
-
-    private void ApplyBiomeTemperatureOverride(BiomeData biome, ref EnvironmentFactors env)
-    {
-        if (!TryGetBiomeTemperatureRange(biome, out Vector2 range))
-            return;
-
-        float t01 = Mathf.Clamp01(env.TemperatureNormalized);
-        env.Temperature = Mathf.Lerp(range.x, range.y, t01);
-    }
-
-    private bool TryGetBiomeTemperatureRange(BiomeData biome, out Vector2 range)
-    {
-        if (biome == null)
-        {
-            range = default;
-            return false;
-        }
-
-        if (biome.UseCustomTemperatureRange)
-        {
-            range = biome.TemperatureRangeCelsius;
-            if (range.x > range.y)
-                range = new Vector2(range.y, range.x);
-            return true;
-        }
-
-        string biomeName = biome.BiomeName ?? string.Empty;
-        string lower = biomeName.ToLowerInvariant();
-
-        if (biomeName.Contains("沙漠") || lower.Contains("desert"))
-        {
-            range = new Vector2(40f, 50f);
-            return true;
-        }
-
-        if (biomeName.Contains("草原") || lower.Contains("grass"))
-        {
-            range = new Vector2(20f, 30f);
-            return true;
-        }
-
-        range = default;
-        return false;
+        temperature = Mathf.Clamp01(temperature);
+        humidity = Mathf.Clamp01(humidity);
+        precipitation = Mathf.Clamp01(precipitation);
+        solidity = Mathf.Clamp01(solidity);
+        hight = Mathf.Clamp01(hight);
     }
 
     private float ApplyHeightSecondaryBoost(float height)
@@ -406,39 +394,72 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         return Mathf.Clamp01(boosted);
     }
 
+    private float EvaluateTemperatureCelsius(float normalizedTemperature, BiomeData biome)
+    {
+        float t = Mathf.Clamp01(normalizedTemperature);
+
+        if (temperatureMappingProfile != null)
+        {
+            return temperatureMappingProfile.Evaluate(t);
+        }
+
+        return Mathf.Lerp(defaultTemperatureRangeCelsius.x, defaultTemperatureRangeCelsius.y, t);
+    }
+
 
 
     /// <summary>
     /// 存储环境参数到网格
     /// </summary>
-    private void StoreEnvironmentFactors(Map map, Vector2Int worldPos, EnvironmentFactors env)
+    private void StoreEnvironmentFactors(
+        Map map,
+        Vector2Int localPos,
+        float temperature,
+        float temperatureCelsius,
+        float humidity,
+        float precipitation,
+        float solidity,
+        float hight,
+        float pollution)
     {
-        if (map == null || map.Data == null || map.Data.EnvironmentData == null)
+        if (map == null || map.Data == null || map.Data.EnvironmentLayers == null)
         {
-            Debug.LogError("[环境存储] ❌ EnvFactorsGrid 未初始化");
+            Debug.LogError("[环境存储] ❌ EnvironmentLayers 未初始化");
             return;
         }
-        Vector2Int localPos = worldPos - map.Data.position;
+
+        int width = map.Data.EnvironmentLayers.Width;
+        int height = map.Data.EnvironmentLayers.Height;
 
         // 边界检查
-        if (localPos.x < 0 || localPos.x >= map.Data.EnvironmentData.GetLength(0) ||
-            localPos.y < 0 || localPos.y >= map.Data.EnvironmentData.GetLength(1))
+        if (localPos.x < 0 || localPos.x >= width ||
+            localPos.y < 0 || localPos.y >= height)
         {
             return; // 超出范围，直接跳过
         }
 
-        map.Data.EnvironmentData[localPos.x, localPos.y] = env;
+        map.Data.SetEnvironmentAtLocal(
+            localPos.x,
+            localPos.y,
+            temperature,
+            temperatureCelsius,
+            humidity,
+            precipitation,
+            solidity,
+            hight,
+            pollution);
     }
 
     /// <summary>
     /// 生成生物群系对应的地形瓦片
     /// </summary>
-    private BiomeData GenerateBiomeTile(Map map, Vector2Int worldPos, EnvironmentFactors env)
+    private BiomeData GenerateBiomeTile(Map map, Vector2Int localPos)
     {
         // 1. 匹配生物群系
-        BiomeData biome = FindMatchingBiome(env);
+        BiomeData biome = FindMatchingBiome(localPos);
         if (biome == null)
         {
+            Vector2Int worldPos = map.Data.position + localPos;
             Debug.LogWarning($"[生物群系] ⚠️ 位置 {worldPos} 无法匹配任何生物群系");
             return null;
         }
@@ -449,11 +470,13 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     /// <summary>
     /// 查找匹配的生物群系（带缓存优化）
     /// </summary>
-    private BiomeData FindMatchingBiome(EnvironmentFactors env)
+    private BiomeData FindMatchingBiome(Vector2Int localPos)
     {
+        EnvironmentLayers layers = Map != null && Map.Data != null ? Map.Data.EnvironmentLayers : null;
+
         foreach (var biome in biomes)
         {
-            if (biome.IsEnvironmentValid(env))
+            if (biome != null && biome.IsEnvironmentValid(layers, localPos.x, localPos.y))
                 return biome;
         }
         return null;
@@ -462,10 +485,10 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     /// <summary>
     /// 生成地形瓦片数据并添加到地图
     /// </summary>
-    private void GenerateTerrainTile(Map map, Vector2Int worldPos, BiomeData biome, EnvironmentFactors env)
+    private void GenerateTerrainTile(Map map, Vector2Int worldPos, Vector2Int localPos, BiomeData biome)
     {
         // 1. 获取 Tile_Block SO
-        Tile_Block tileBlock = biome.TerrainConfig.Get_Tile_Block(env);
+        Tile_Block tileBlock = biome.TerrainConfig.Get_Tile_Block();
 
         // 2. 直接从 Tile_Block 的模板生成 TileData（无需额外缓存）
         TileData template = tileBlock.tileDataTemplate;
@@ -476,7 +499,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         var unityTileBase = tileBlock.GetTileBaseAsset();
 
         // 4. 初始化瓦片（根据环境因子调整）
-        tile.Initialize_Env(env);
+        tile.Initialize_Env(map.Data.EnvironmentLayers, localPos.x, localPos.y);
 
         // 5. 设置瓦片位置
         tile.position = new Vector3Int(worldPos.x, worldPos.y, 0);

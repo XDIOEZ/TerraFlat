@@ -9,7 +9,7 @@ using UnityEngine.Tilemaps;
 /// - 作为 Map.mapGenerators 管线中的一个步骤执行（通常放在大陆生成器之后）
 /// - 遮罩（网络状噪声 / Voronoi 边界）：
 ///   1) 用 Worley/Voronoi 的“细胞边界”生成天然分叉的网络（更接近树状/蜘蛛网状河网）
-///   2) 可选：若存在 EnvironmentData，则用 Hight 做高度门控
+///   2) 可选：若存在 EnvironmentLayers，则用 Hight 层做高度门控
 ///   3) 轻量后处理（补洞/去孤点）提升连通性
 /// - 最后用 riverTileBlock 覆盖地表（TileData + Tilemap）
 /// </summary>
@@ -82,10 +82,10 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     public int bridgePasses = 1;
 
     [Header("高度限制(可选)")]
-    [Tooltip("仅在有 EnvironmentData 时生效：Hight 低于该值则不生成河流")]
+    [Tooltip("仅在有 EnvironmentLayers 时生效：Hight 低于该值则不生成河流")]
     public float minHeight = 0.20f;
 
-    [Tooltip("仅在有 EnvironmentData 时生效：Hight 高于该值则不生成河流")]
+    [Tooltip("仅在有 EnvironmentLayers 时生效：Hight 高于该值则不生成河流")]
     public float maxHeight = 0.95f;
 
     [Header("写入模式")]
@@ -325,11 +325,12 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             return;
         }
 
-        bool hasEnv = Map != null && Map.Data != null && Map.Data.EnvironmentData != null;
+        var layers = Map != null && Map.Data != null ? Map.Data.EnvironmentLayers : null;
+        bool hasEnv = layers != null && layers.Width == width && layers.Height == height;
         if (!hasEnv && !_hasLoggedEnvMissing)
         {
             _hasLoggedEnvMissing = true;
-            Debug.LogWarning("[ChunkGenerator_River] ⚠️ Map.Data.EnvironmentData 为空：将跳过 minHeight/maxHeight 高度门控（河网遮罩仍可生成）", Map);
+            Debug.LogWarning("[ChunkGenerator_River] ⚠️ EnvironmentLayers 未就绪：将跳过 minHeight/maxHeight 高度门控（河网遮罩仍可生成）", Map);
         }
 
         float cs = Mathf.Max(0.0001f, cellSize);
@@ -360,8 +361,6 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         float seedX = (seed % 100000) * 0.001f;
         float seedY = ((seed / 100000) % 100000) * 0.001f;
 
-        var envGrid = hasEnv ? Map.Data.EnvironmentData : null;
-
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -372,7 +371,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                 // 可选高度门控
                 if (hasEnv)
                 {
-                    float h = envGrid[x, y].Hight;
+                    float h = layers.Hight[x, y];
                     if (h < minHeight || h > maxHeight)
                     {
                         river[idx] = false;
@@ -835,22 +834,20 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         // 3) 环境初始化（如果有）
         if (Map != null && Map.Data != null)
         {
-            if (Map.Data.EnvironmentData != null)
+            if (Map.Data.EnvironmentLayers != null)
             {
                 Vector2Int localPos = worldPos - Map.Data.position;
+                var layers = Map.Data.EnvironmentLayers;
                 if (localPos.x >= 0 && localPos.y >= 0 &&
-                    localPos.x < Map.Data.EnvironmentData.GetLength(0) &&
-                    localPos.y < Map.Data.EnvironmentData.GetLength(1))
+                    localPos.x < layers.Width &&
+                    localPos.y < layers.Height)
                 {
-                    var env = Map.Data.EnvironmentData[localPos.x, localPos.y];
-
                     // 河流覆盖：同步修改该格环境参数
-                    env.Humidity = 1f;
-                    env.Solidity = 0f;
-                    Map.Data.EnvironmentData[localPos.x, localPos.y] = env;
+                    Map.Data.SetHumidityAtLocal(localPos.x, localPos.y, 1f);
+                    Map.Data.SetSolidityAtLocal(localPos.x, localPos.y, 0f);
 
-                    // 用更新后的 env 初始化 TileData
-                    riverTile.Initialize_Env(env);
+                    // 用更新后的环境层初始化 TileData
+                    riverTile.Initialize_Env(Map.Data.EnvironmentLayers, localPos.x, localPos.y);
 
                     // 河流深度由河道强度决定：主河道更深，边缘更浅
                     waterTile.deepValue = ComputeRiverDepth(localX, localY, width, height, riverMask);
@@ -861,7 +858,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                 if (!_hasLoggedEnvMissing)
                 {
                     _hasLoggedEnvMissing = true;
-                    Debug.LogWarning("[ChunkGenerator_River] ⚠️ Map.Data.EnvironmentData 为空：无法把河流格子的湿度设为1、固体设为0（仍会生成河流 Tile）", Map);
+                    Debug.LogWarning("[ChunkGenerator_River] ⚠️ EnvironmentLayers 为空：无法把河流格子的湿度设为1、固体设为0（仍会生成河流 Tile）", Map);
                 }
             }
         }

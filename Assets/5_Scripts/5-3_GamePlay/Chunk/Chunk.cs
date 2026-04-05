@@ -24,6 +24,7 @@ public class Chunk : MonoBehaviour
     private int _posWidth;
     private int _posHeight;
     private bool _hasLoggedArrayNotInit;
+    private readonly List<Item> _rangeQueryBuffer = new(16);
 
     private void EnsurePositionArray(bool initCells = false)
     {
@@ -543,7 +544,20 @@ public class Chunk : MonoBehaviour
     /// <returns>是否找到物品</returns>
     public bool TryGetItemsInRange(Vector2 position, float radius, out List<Item> allItems)
     {
-        allItems = new List<Item>();
+        _rangeQueryBuffer.Clear();
+        bool found = TryGetItemsInRangeNonAlloc(position, radius, _rangeQueryBuffer);
+        allItems = found ? new List<Item>(_rangeQueryBuffer) : new List<Item>();
+        return found;
+    }
+
+    public bool TryGetItemsInRangeNonAlloc(Vector2 position, float radius, List<Item> results)
+    {
+        if (results == null)
+        {
+            throw new ArgumentNullException(nameof(results));
+        }
+
+        results.Clear();
         if (radius < 0)
             return false;
 
@@ -578,13 +592,13 @@ public class Chunk : MonoBehaviour
                     Vector2 d = p - roundedPos;
                     if (d.sqrMagnitude <= sqrRadius)
                     {
-                        allItems.Add(it);
+                        results.Add(it);
                     }
                 }
             }
         }
 
-        return allItems.Count > 0;
+        return results.Count > 0;
     }
 
     /// <summary>
@@ -597,11 +611,45 @@ public class Chunk : MonoBehaviour
     public bool TryGetItemInRange(Vector2 position, float radius, out Item item)
     {
         item = null;
+        if (radius < 0)
+            return false;
 
-        if (TryGetItemsInRange(position, radius, out var items) && items.Count > 0)
+        EnsurePositionArray();
+
+        Vector2 roundedPos = RoundPositionForQuery(position);
+        if (!TryWorldToLocal(roundedPos, out var centerLocal))
+            return false;
+
+        int r = Mathf.CeilToInt(radius);
+        int minX = Mathf.Max(0, centerLocal.x - r);
+        int maxX = Mathf.Min(_posWidth - 1, centerLocal.x + r);
+        int minY = Mathf.Max(0, centerLocal.y - r);
+        int maxY = Mathf.Min(_posHeight - 1, centerLocal.y + r);
+
+        float sqrRadius = radius * radius;
+        for (int x = minX; x <= maxX; x++)
         {
-            item = items[0];
-            return true;
+            for (int y = minY; y <= maxY; y++)
+            {
+                var list = RunTimeItems_ByPosition_Array[x, y];
+                if (list == null || list.Count == 0)
+                    continue;
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var it = list[i];
+                    if (it == null)
+                        continue;
+
+                    Vector2 p = RoundPositionForQuery(it.transform.position);
+                    Vector2 d = p - roundedPos;
+                    if (d.sqrMagnitude <= sqrRadius)
+                    {
+                        item = it;
+                        return true;
+                    }
+                }
+            }
         }
 
         return false;

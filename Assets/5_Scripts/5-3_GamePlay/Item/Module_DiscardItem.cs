@@ -353,7 +353,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
             Item newObject = null;
             // 实例化新物体
-            ChunkMgr.Instance.Chunk_Dic_Active.TryGetValue(Chunk.GetChunkPosition(transform.position).ToString(), out Chunk chunk);
+            ChunkMgr.Instance.TryGetActiveChunkByPos(Chunk.GetChunkPosition(transform.position), out Chunk chunk);
             if (chunk != null)
             {
                 newObject = ItemMgr.Instance.InstantiateItem(newItemData, chunk.gameObject);
