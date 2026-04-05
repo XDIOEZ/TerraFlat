@@ -55,7 +55,8 @@ public class Module_DiscardItem : Mod_BaseDroper
 
         faceMouse = item.itemMods.GetMod_ByID(ModText.FocusPoint).GetComponent<Mod_FocusPoint>();
 
-        Hotbar = item.itemMods.GetMod_ByID(ModText.Hotbar).GetComponent<Mod_Inventory>().inventory as Inventory_HotBar;
+        var hotbarMod = item.itemMods.GetMod_ByID(ModText.Hotbar);
+        Hotbar = hotbarMod != null ? hotbarMod.GetComponent<Inventory_HotBar>() : null;
 
         hand = item.GetComponentInChildren<Mod_Hand>();
 
@@ -345,6 +346,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
             newItemData.Stack.Amount = count;
             newItemData.Stack.CanBePickedUp = false;
+            newItemData.inHand = false;
 
             // 减少原物品数量
             slot.Amount -= count;
@@ -385,6 +387,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
             // 调用父类 DropItem 实现动画控制
             newItem.Load();
+            newItem.SetInHand(false);
             DropItem_Pos(newItem, startPos, endPos, animTime);
 
             // 只有当物品完全丢弃完后才清除数据

@@ -354,7 +354,11 @@ public class Mod_Inventory : Module, IInventory
 
     public Inventory GetDefaultTargetInventory()
     {
-        throw new System.NotImplementedException();
+        var target = inventory;
+        if (target == null)
+            throw new System.InvalidOperationException("[Mod_Inventory] 默认目标 Inventory 为空，请检查 InventoryInstances/InventoryRefDic 配置");
+
+        return target;
     }
     #endregion
 }

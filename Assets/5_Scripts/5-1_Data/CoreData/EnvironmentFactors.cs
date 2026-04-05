@@ -6,7 +6,9 @@ using UnityEngine;
 [MemoryPackable]
 public partial class EnvironmentFactors
 {
-    [Tooltip("湿度，单位：°C")]
+    [Tooltip("温度归一化值，范围：0~1（用于生物群系匹配）")]
+    public float TemperatureNormalized; // 归一化温度（0~1）
+    [Tooltip("温度，单位：°C（用于显示和玩法计算）")]
     public float Temperature;     // 温度，单位：℃
     [Tooltip("湿度，单位：%")]
     public float Humidity;        // 湿度，单位：%

@@ -21,6 +21,8 @@ public class Mod_Weapon_AnimationAction : Module
     [SerializeField] private float comboWindowGrace = 0.05f;//允许一帧误差
     [Tooltip("按住输入时是否循环连击")]
     [SerializeField] private bool loopComboOnHold = true;
+    [Tooltip("攻击速度倍率，1.0 为原速")]
+    [SerializeField, ReadOnly] private float attackSpeedMultiplier = 1f;
     #endregion
 
     #region Runtime
@@ -72,6 +74,7 @@ public class Mod_Weapon_AnimationAction : Module
             }
         }
         animator = item.GetComponentInChildren<Animator>();
+        ApplyAttackSpeedToAnimator();
     }
 
     public override void Save()
@@ -148,6 +151,19 @@ public class Mod_Weapon_AnimationAction : Module
         }
     }
 
+    public float AttackSpeedMultiplier => attackSpeedMultiplier; /// 当前攻击速度倍率（只读）
+
+    public void SetAttackSpeedMultiplier(float multiplier) /// 设置攻击速度倍率（同时影响动画速度和攻击时序）
+    {
+        if (multiplier <= 0f)
+        {
+            throw new System.ArgumentOutOfRangeException(nameof(multiplier), multiplier, "攻击速度倍率必须大于0");
+        }
+
+        attackSpeedMultiplier = multiplier;
+        ApplyAttackSpeedToAnimator();
+    }
+
     [InfoBox("直接播放指定攻击动画")]
     public void PlayAttackAnimation(string animationName)
     {
@@ -167,30 +183,34 @@ public class Mod_Weapon_AnimationAction : Module
         isAttacking = true;
         queuedNext = false;
 
+        ApplyAttackSpeedToAnimator();
+
         string animationName = attackAnimationNames[index];
         currentStateHash = Animator.StringToHash(animationName);
         animator.Play(animationName, 0, 0f);
         animator.Update(0f);
 
         float currentLength = animator.GetCurrentAnimatorStateInfo(0).length;
+        float scaledLength = currentLength / attackSpeedMultiplier;
         float window = comboWindowOverride > 0f
             ? Mathf.Max(comboWindowOverride, currentLength)
             : currentLength;
+        float scaledWindow = window / attackSpeedMultiplier;
 
-        if (window <= 0f)
+        if (scaledWindow <= 0f)
         {
             Debug.LogWarning($"{name} 连击时间窗口无效，已使用 0.1s 兜底。", this);
-            window = 0.1f;
+            scaledWindow = 0.1f;
         }
 
-        if (currentLength <= 0f)
+        if (scaledLength <= 0f)
         {
             Debug.LogWarning($"{name} 当前攻击动画时长无效，已使用 0.1s 兜底。", this);
-            currentLength = 0.1f;
+            scaledLength = 0.1f;
         }
 
-        comboDeadline = Time.time + window;
-        nextReadyTime = Time.time + currentLength;
+        comboDeadline = Time.time + scaledWindow;
+        nextReadyTime = Time.time + scaledLength;
     }
 
     [InfoBox("检查并尝试衔接下一段连击")]
@@ -256,5 +276,15 @@ public class Mod_Weapon_AnimationAction : Module
     private void OnControllerLeftClickUp()
     {
         isHoldingInput = false;
+    }
+
+    private void ApplyAttackSpeedToAnimator() /// 将攻击速度倍率同步到动画器
+    {
+        if (animator == null)
+        {
+            return;
+        }
+
+        animator.speed = attackSpeedMultiplier;
     }
 }

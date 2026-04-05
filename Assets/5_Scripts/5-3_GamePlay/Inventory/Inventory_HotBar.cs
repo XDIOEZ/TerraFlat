@@ -6,14 +6,71 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 快捷栏系统
-/// 负责快捷栏索引、UI、输入、手持物品生命周期管理
+/// 快捷栏模块（Module形态）
+/// 内部通过 RuntimeInventory 复用原有 Inventory 逻辑。
 /// </summary>
-public class Inventory_HotBar : Inventory
+public class Inventory_HotBar : Module, IInventory
 {
-    #region 字段与属性
+#region 基础参数
 
-    [Header("快捷栏设置相关设置")]
+    public Ex_ModData_MemoryPackable ModSaveData;
+    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
+
+#endregion
+
+#region 模组参数
+
+    [SerializeReference]
+    public List<string> RawData = new List<string>();
+
+    [System.Serializable]
+    public class HotBarRuntimeInventory : Inventory
+    {
+        [System.NonSerialized]
+        public Inventory_HotBar Owner;
+
+        public override void OnValidate()
+        {
+            base.OnValidate();
+            Owner?.OnInventoryValidate();
+        }
+
+        public override void InitData()
+        {
+            base.InitData();
+            Owner?.OnInventoryInitData();
+        }
+
+        public override void InitUI()
+        {
+            base.InitUI();
+            Owner?.OnInventoryInitUI();
+        }
+
+        public override void OnLeftClick(int index)
+        {
+            base.OnLeftClick(index);
+            Owner?.OnInventoryLeftClick(index);
+        }
+
+        public override void OnShiftQuickTransfer(int index)
+        {
+            base.OnShiftQuickTransfer(index);
+            Owner?.OnInventoryShiftQuickTransfer(index);
+        }
+
+        public override void ModUpdate(float deltaTime)
+        {
+            base.ModUpdate(deltaTime);
+            Owner?.OnInventoryModUpdate(deltaTime);
+        }
+    }
+
+    [Header("快捷栏运行时库存")]
+    [SerializeReference]
+    public HotBarRuntimeInventory RuntimeInventory = new HotBarRuntimeInventory();
+
+    [Header("快捷栏设置")]
     [SerializeReference]
     public Transform spawnLocation;
     public int HotBarMaxVolume = 9;
@@ -23,76 +80,260 @@ public class Inventory_HotBar : Inventory
     [Range(0.01f, 0.5f)]
     public float SelectBoxChangeDuration = 0.1f;
     [ReadOnly] public GameObject SelectBox;
-    [ReadOnly]
-    public ItemSlot CurrentSelectItemSlot;
-    [ReadOnly]
-    public Item CurentSelectItem;
-    [ReadOnly]
-    public GameObject currentObject;
+    [ReadOnly] public ItemSlot CurrentSelectItemSlot;
+    [ReadOnly] public Item CurentSelectItem;
+    [ReadOnly] public GameObject currentObject;
 
     private Mod_FocusPoint faceMouse;
     private Mod_TurnBack turnBody;
 
+    private InputAction _rightClickAction;
+    private InputAction _mouseScrollAction;
+
+    public Inventory_Data Data => RuntimeInventory?.Data;
+    public List<ItemSlot_UI> itemSlot_UI => RuntimeInventory?.itemSlot_UI;
+
     public int CurrentIndex
     {
-        get => Data.Index;
-        private set => Data.Index = value;
+        get => Data != null ? Data.Index : 0;
+        private set
+        {
+            if (Data != null)
+            {
+                Data.Index = value;
+            }
+        }
     }
 
-    public int MaxIndex => Data.itemSlots.Count;
+    public int MaxIndex => Data?.itemSlots != null ? Data.itemSlots.Count : 0;
 
-    #endregion
+#endregion
 
-    #region 初始化
+#region 生命周期
 
-    public override void OnValidate()
+    public void OnValidate()
     {
-        Data.Name = ModText.Hotbar;
+        EnsureRuntimeInventoryBinding();
+        RuntimeInventory?.OnValidate();
     }
 
-    public override void InitData()
+    public override void Load()
     {
-        base.InitData();
+        ModSaveData.ReadData(ref RawData);
+
+        EnsureRuntimeInventoryBinding();
+
+        if (RuntimeInventory == null)
+        {
+            throw new System.InvalidOperationException("[Inventory_HotBar] RuntimeInventory 为空，无法加载");
+        }
+
+        EnsureHotBarSlots();
+
+        RuntimeInventory.item = item;
+        RuntimeInventory.InitData();
+        EnsureHotBarUIOnLoad();
+        BindInventoryController();
+    }
+
+    public override void Save()
+    {
+        UnbindHotbarInput();
+        RuntimeInventory?.UnbindController();
+        ModSaveData.WriteData(RawData);
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        RuntimeInventory?.ModUpdate(deltaTime);
+    }
+
+#endregion
+
+#region RuntimeInventory回调
+
+    private void EnsureRuntimeInventoryBinding()
+    {
+        if (RuntimeInventory == null)
+        {
+            RuntimeInventory = new HotBarRuntimeInventory();
+        }
+
+        RuntimeInventory.Owner = this;
+    }
+
+    private void OnInventoryValidate()
+    {
+        if (_Data != null)
+        {
+            _Data.ID = ModText.Hotbar;
+            _Data.Name = ModText.Hotbar;
+        }
+
+        if (Data != null)
+        {
+            Data.Name = ModText.Hotbar;
+        }
+    }
+
+    private void OnInventoryInitData()
+    {
         if (spawnLocation == null)
         {
             if (item != null)
             {
-                // 默认使用所属 Item 的 Transform 作为生成位置
                 spawnLocation = item.transform;
             }
             else
             {
-                Debug.LogWarning("Inventory_HotBar: spawnLocation 未配置且 item 为空，无法确定生成位置。");
+                Debug.LogWarning("[Inventory_HotBar] spawnLocation 未配置且 item 为空");
             }
         }
+
         GetRequiredComponents();
-        InitInput();
+        BindHotbarInput();
     }
 
-    public override void InitUI()
+    private void OnInventoryInitUI()
     {
-        base.InitUI();
+        if (itemSlot_UI == null || itemSlot_UI.Count == 0)
+        {
+            return;
+        }
 
-        if (itemSlot_UI.Count == 0) return;
+        if (SelectBox != null)
+        {
+            Destroy(SelectBox);
+        }
 
-        SelectBox = GameObject.Instantiate(SelectBoxPrefab, itemSlot_UI[0].transform);
-        SwitchItem(Data.Index);
+        SelectBox = Instantiate(SelectBoxPrefab, itemSlot_UI[0].transform);
+        SwitchItem(CurrentIndex);
     }
 
-    #endregion
-
-    #region 输入
-
-    private void InitInput()
+    private void OnInventoryLeftClick(int index)
     {
-        if (item == null) return;
+        SwitchItem(index);
+    }
 
-        var controller = item.GetComponent<GameController>();
-        if (controller == null) return;
+    private void OnInventoryShiftQuickTransfer(int index)
+    {
+        SyncCurrentHeldItemWithSlot();
+    }
 
-        var input = controller._inputActions.Win10;
-        input.RightClick.performed += OnRightClickPerformed;
-        input.MouseScroll.started += OnScrollSwitch;
+    private void OnInventoryModUpdate(float deltaTime)
+    {
+        SyncCurrentHeldItemWithSlot();
+    }
+
+    private void EnsureHotBarSlots()
+    {
+        if (Data == null)
+        {
+            throw new System.InvalidOperationException("[Inventory_HotBar] Data 为空，无法初始化快捷栏槽位");
+        }
+
+        if (Data.itemSlots == null)
+        {
+            Data.itemSlots = new List<ItemSlot>();
+        }
+
+        int targetCount = Mathf.Max(HotBarMaxVolume, 1);
+
+        for (int i = 0; i < targetCount; i++)
+        {
+            if (i >= Data.itemSlots.Count)
+            {
+                Data.itemSlots.Add(new ItemSlot(i));
+            }
+            else if (Data.itemSlots[i] == null)
+            {
+                Data.itemSlots[i] = new ItemSlot(i);
+            }
+
+            Data.itemSlots[i].Index = i;
+        }
+    }
+
+    private void EnsureHotBarUIOnLoad()
+    {
+        if (RuntimeInventory.basePanel == null)
+        {
+            RuntimeInventory.EnsurePanelCreated();
+        }
+
+        if (RuntimeInventory.basePanel != null && (itemSlot_UI == null || itemSlot_UI.Count == 0))
+        {
+            RuntimeInventory.InitUI();
+        }
+
+        if (RuntimeInventory.basePanel != null)
+        {
+            RuntimeInventory.basePanel.Open();
+        }
+    }
+
+#endregion
+
+#region 输入
+
+    private void BindInventoryController()
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        if (controller == null)
+        {
+            controller = item.GetComponent<GameController>();
+        }
+
+        RuntimeInventory.BindController(controller);
+    }
+
+    private void BindHotbarInput()
+    {
+        UnbindHotbarInput();
+
+        if (item == null)
+        {
+            return;
+        }
+
+        GameController controller = item.GetComponent<GameController>();
+        if (controller == null || controller._inputActions == null)
+        {
+            return;
+        }
+
+        _rightClickAction = controller._inputActions.Win10.RightClick;
+        _mouseScrollAction = controller._inputActions.Win10.MouseScroll;
+
+        if (_rightClickAction != null)
+        {
+            _rightClickAction.performed += OnRightClickPerformed;
+        }
+
+        if (_mouseScrollAction != null)
+        {
+            _mouseScrollAction.started += OnScrollSwitch;
+        }
+    }
+
+    private void UnbindHotbarInput()
+    {
+        if (_rightClickAction != null)
+        {
+            _rightClickAction.performed -= OnRightClickPerformed;
+            _rightClickAction = null;
+        }
+
+        if (_mouseScrollAction != null)
+        {
+            _mouseScrollAction.started -= OnScrollSwitch;
+            _mouseScrollAction = null;
+        }
     }
 
     private void OnRightClickPerformed(InputAction.CallbackContext ctx)
@@ -118,26 +359,18 @@ public class Inventory_HotBar : Inventory
             SwitchItem(CurrentIndex + 1);
     }
 
-    #endregion
+#endregion
 
-    #region 公共接口
+#region 对外兼容接口
 
-    public override void OnLeftClick(int index)
+    public void RefreshUI(int index)
     {
-        base.OnLeftClick(index);
-        SwitchItem(index);
+        RuntimeInventory?.RefreshUI(index);
     }
 
-    public override void OnShiftQuickTransfer(int index)
+    public void RefreshUI()
     {
-        base.OnShiftQuickTransfer(index);
-        SyncCurrentHeldItemWithSlot();
-    }
-
-    public override void ModUpdate(float deltaTime)
-    {
-        base.ModUpdate(deltaTime);
-        SyncCurrentHeldItemWithSlot();
+        RuntimeInventory?.RefreshUI();
     }
 
     public float GetCurrentItemDurabilityPercentage()
@@ -148,9 +381,14 @@ public class Inventory_HotBar : Inventory
         return data.MaxDurability > 0 ? data.Durability / data.MaxDurability : 0f;
     }
 
-    #endregion
+    public Inventory GetDefaultTargetInventory()
+    {
+        return RuntimeInventory;
+    }
 
-    #region 核心逻辑 - 物品切换
+#endregion
+
+#region 核心逻辑 - 物品切换
 
     private void SwitchItem(int targetIndex)
     {
@@ -164,8 +402,18 @@ public class Inventory_HotBar : Inventory
 
     private void LoadItemFromSlot(int index)
     {
+        if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
+        {
+            return;
+        }
+
         var slot = Data.itemSlots[index];
         if (slot?.itemData == null) return;
+
+        if (spawnLocation == null)
+        {
+            throw new System.InvalidOperationException("[Inventory_HotBar] spawnLocation 为空，无法实例化手持物品");
+        }
 
         ItemData data = slot.itemData;
 
@@ -184,26 +432,33 @@ public class Inventory_HotBar : Inventory
 
         CurentSelectItem.SetInHand(false);
 
-        faceMouse.targetRotationTransforms.Remove(CurentSelectItem.transform);
-        turnBody.controlledTransforms_Direction.Remove(CurentSelectItem.transform);
-        turnBody.controlledTransforms_Position.Remove(CurentSelectItem.transform);
+        if (faceMouse != null)
+        {
+            faceMouse.targetRotationTransforms.Remove(CurentSelectItem.transform);
+        }
+
+        if (turnBody != null)
+        {
+            turnBody.controlledTransforms_Direction.Remove(CurentSelectItem.transform);
+            turnBody.controlledTransforms_Position.Remove(CurentSelectItem.transform);
+        }
 
         CurentSelectItem.OnUIRefresh -= RefreshUI;
         CurentSelectItem.OnItemDestroy -= OnDestroyCurrentObject;
 
-        GameObject.Destroy(CurentSelectItem.gameObject);
+        Destroy(CurentSelectItem.gameObject);
 
         CurentSelectItem = null;
         currentObject = null;
     }
 
-    #endregion
+#endregion
 
-    #region Item配置
+#region Item配置
 
-    private void ConfigureItemInstance(Item item, ItemData data, ItemSlot slot)
+    private void ConfigureItemInstance(Item itemInstance, ItemData data, ItemSlot slot)
     {
-        Transform tf = item.transform;
+        Transform tf = itemInstance.transform;
         tf.SetParent(spawnLocation, false);
         tf.localPosition = Vector3.zero;
 
@@ -211,58 +466,48 @@ public class Inventory_HotBar : Inventory
         rot.z = 0;
         tf.localEulerAngles = rot;
 
-        item.itemData = data;
-        item.Owner = this.item;
+        itemInstance.itemData = data;
+        itemInstance.Owner = item;
 
-        item.OnUIRefresh += RefreshUI;
-        item.OnItemDestroy += OnDestroyCurrentObject;
+        itemInstance.OnUIRefresh += RefreshUI;
+        itemInstance.OnItemDestroy += OnDestroyCurrentObject;
 
-        item.Load();
-        item.SetInHand(true);
+        itemInstance.Load();
+        itemInstance.SetInHand(true);
 
-        CurentSelectItem = item;
+        CurentSelectItem = itemInstance;
         CurrentSelectItemSlot = slot;
-        currentObject = item.gameObject;
+        currentObject = itemInstance.gameObject;
 
-        // 注册到面向鼠标与转身系统（避免重复添加）
         if (faceMouse != null && !faceMouse.targetRotationTransforms.Contains(tf))
         {
             faceMouse.targetRotationTransforms.Add(tf);
         }
 
-        if (turnBody != null)
+        if (turnBody != null && !turnBody.controlledTransforms_Direction.Contains(tf))
         {
-            if (!turnBody.controlledTransforms_Direction.Contains(tf))
-            {
-                turnBody.controlledTransforms_Direction.Add(tf);
-            }
-
-            // 物品实例本身的位置不需要加入 Position 列表，
-            // 只在 GetRequiredComponents 中对快捷栏 Transform 做一次性注册
+            turnBody.controlledTransforms_Direction.Add(tf);
         }
 
-        // 切换新物品时，强制让朝向系统刷新一次，
-        // 解决“鼠标在左边滚轮切换时物品朝向出错”的问题
         turnBody?.UpdateAllTransformDirections();
     }
 
-    #endregion
+#endregion
 
-    #region UI
+#region UI
 
     private void MoveSelectBox(int index)
     {
-        if (SelectBox == null) return;
+        if (SelectBox == null || itemSlot_UI == null || index < 0 || index >= itemSlot_UI.Count) return;
 
         SelectBox.transform.DOKill();
         SelectBox.transform.SetParent(itemSlot_UI[index].transform, true);
-        SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration)
-            .SetEase(Ease.OutQuad);
+        SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration).SetEase(Ease.OutQuad);
     }
 
-    #endregion
+#endregion
 
-    #region 工具
+#region 工具
 
     private int NormalizeIndex(int index)
     {
@@ -289,7 +534,6 @@ public class Inventory_HotBar : Inventory
         item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
         item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
 
-        // 初始化时只注册一次用于位置镜像的 Transform
         Transform positionTransform = spawnLocation != null ? spawnLocation : item.transform;
 
         if (turnBody != null && positionTransform != null &&
@@ -342,5 +586,5 @@ public class Inventory_HotBar : Inventory
         }
     }
 
-    #endregion
+#endregion
 }

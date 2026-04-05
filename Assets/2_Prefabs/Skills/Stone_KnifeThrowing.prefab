@@ -131,10 +131,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f80b20d90321ca64aa5df4102d19afad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  castingPointSlot: 0
   mods: []
   StartDebugTest: "\u6280\u80FD\u5F00\u59CB\u6267\u884C"
   StopDebugTest: "\u6280\u80FD\u6267\u884C\u505C\u6B62"
-  castingPointName: "\u77F3\u5934\u4EBA_\u624B\u91CC\u5251"
 --- !u!50 &8250423564893825132
 Rigidbody2D:
   serializedVersion: 4
@@ -221,6 +221,10 @@ PrefabInstance:
     - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: Weakness.Array.data[0]
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_Name

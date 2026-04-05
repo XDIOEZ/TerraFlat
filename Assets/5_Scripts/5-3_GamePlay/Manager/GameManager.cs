@@ -202,22 +202,70 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         SaveDataMgr.Instance.SaveData = new GameSaveData();
 
-        if (ReadyGameSaveData.SaveSeed != "")
+        string inputSeed = ReadyGameSaveData.SaveSeed?.Trim();
+        bool isNoSeedInput = string.IsNullOrEmpty(inputSeed) || inputSeed == "0";
+
+        if (isNoSeedInput)
         {
-            SaveDataMgr.Instance.SaveData.SaveSeed = ReadyGameSaveData.SaveSeed;
-            SaveDataMgr.Instance.SaveData.Seed = ReadyGameSaveData.Seed;
+            string randomSeed = GenerateRandomSeedString();
+            SaveDataMgr.Instance.SaveData.SaveSeed = randomSeed;
+            SaveDataMgr.Instance.SaveData.Seed = ConvertSeedStringToStableInt(randomSeed);
+            Debug.Log($"[GameManager] 玩家未输入种子，自动生成随机种子={randomSeed}");
         }
         else
         {
-            SaveDataMgr.Instance.SaveData.SaveSeed = UnityEngine.Random.Range(0, int.MaxValue).ToString();
-            SaveDataMgr.Instance.SaveData.Seed = SaveDataMgr.Instance.SaveData.SaveSeed.GetHashCode();
+            SaveDataMgr.Instance.SaveData.SaveSeed = inputSeed;
+            SaveDataMgr.Instance.SaveData.Seed = ConvertSeedStringToStableInt(inputSeed);
+            Debug.Log($"[GameManager] 使用玩家输入种子={inputSeed}");
         }
+
+        if (SaveDataMgr.Instance.SaveData.Seed == 0)
+        {
+            SaveDataMgr.Instance.SaveData.Seed = 1;
+        }
+
         UnityEngine.Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
 
         SetNewPlanetData(ReadyPlanetData, ReadyTimeData);
         BasePanel UI_NewGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
         string PlayerName = UI_NewGame.GetInputField("新增玩家名称输入框").text;
         ContinueGame(PlayerName);
+    }
+
+    private static string GenerateRandomSeedString()
+    {
+        int seedValue = Environment.TickCount ^ Guid.NewGuid().GetHashCode();
+        if (seedValue == int.MinValue)
+        {
+            seedValue = int.MaxValue;
+        }
+
+        return Mathf.Abs(seedValue).ToString();
+    }
+
+    private static int ConvertSeedStringToStableInt(string seedText)
+    {
+        // FNV-1a 32-bit，确保同一字符串始终映射到同一整数种子
+        unchecked
+        {
+            const uint offset = 2166136261;
+            const uint prime = 16777619;
+
+            uint hash = offset;
+            for (int i = 0; i < seedText.Length; i++)
+            {
+                hash ^= seedText[i];
+                hash *= prime;
+            }
+
+            int result = (int)hash;
+            if (result == 0)
+            {
+                result = 1;
+            }
+
+            return result;
+        }
     }
 
     [Tooltip("创建一个新星球")]

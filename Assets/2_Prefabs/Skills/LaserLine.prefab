@@ -151,9 +151,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c237cb4a750aac944839261f70032698, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  castingPointSlot: 0
   lineRenderer: {fileID: 0}
   laserEffect: {fileID: 0}
   laserCollider: {fileID: 7716128895380936968}
+  mods: []
   laserEffectPrefab: {fileID: 2120960324422205105, guid: 38ee20713ed57f548af3746e835a0984, type: 3}
 --- !u!50 &2218141325424099714
 Rigidbody2D:
@@ -237,6 +239,10 @@ PrefabInstance:
     - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: damageInterval
       value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: Weakness.Array.data[0]
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_Name

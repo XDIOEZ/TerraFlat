@@ -90,6 +90,125 @@ MonoBehaviour:
   references:
     version: 2
     RefIds: []
+--- !u!1 &4411885219965820198
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6639265349670268636}
+  - component: {fileID: 2343211853481933686}
+  m_Layer: 0
+  m_Name: Module_Hotbar
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6639265349670268636
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4411885219965820198}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343432311901774332}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2343211853481933686
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4411885219965820198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78c11b47d3d359d4d9b8161a394391c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: "UI_\u5FEB\u6377\u680F"
+    ID: "UI_\u5FEB\u6377\u680F"
+    isRunning: 1
+    Type: 0
+    BitData: 
+  RawData: []
+  RuntimeInventory:
+    rid: 4916459727764848643
+  spawnLocation: {fileID: 6639265349670268636}
+  HotBarMaxVolume: 9
+  SelectBoxPrefab: {fileID: 3351078594653121284, guid: 5fd8b428d015c7044aee5e5491698e72, type: 3}
+  SelectBoxChangeDuration: 0.1
+  SelectBox: {fileID: 0}
+  CurrentSelectItemSlot:
+    CanAcceptTags: []
+    SlotMaxVolume: 0
+    Index: 0
+  CurentSelectItem: {fileID: 0}
+  currentObject: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 4916459727764848643
+      type: {class: Inventory_HotBar/HotBarRuntimeInventory, ns: , asm: GamePlay}
+      data:
+        item: {fileID: 0}
+        InventoryPanel_Prefab: {fileID: 3157743334102886615, guid: 834b874f2bd43a34e95f52adb0e4a211, type: 3}
+        basePanel: {fileID: 0}
+        Data:
+          Name: "UI_\u5FEB\u6377\u680F"
+          itemSlots:
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptTags: []
+            SlotMaxVolume: 0
+            Index: 0
+          Index: 0
+          IsInjected: 0
+          PanelPosition: {x: 0, y: 0, z: 0}
+          PanelIsOpen: 0
+          ToggleActionName: 
+          UIPrefabName: 
+          Event_RefreshUI:
+            _PersistentCalls: []
+          Event_OnBeforeDataChanged:
+            _PersistentCalls: []
+          Event_OnDataChanged:
+            _PersistentCalls: []
+          Event_OnDataChanged_TwoSlots:
+            _PersistentCalls: []
+        itemSlot_UI: []
 --- !u!1 &4678875130974218576
 GameObject:
   m_ObjectHideFlags: 0
@@ -336,6 +455,7 @@ MonoBehaviour:
   item: {fileID: 0}
   player: {fileID: 6883143605326503467}
   playerTraits: {fileID: 0}
+  hotbar: {fileID: 0}
   timeScale: 1
   timeScaleStep: 0.5
   minTimeScale: 0.1
@@ -566,6 +686,7 @@ MonoBehaviour:
   InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
   workButton: {fileID: 0}
   toggleKey: 104
+  EnableCraftDebug: 1
 --- !u!1001 &182505877538168709
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1580,84 +1701,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4137007646158446249, guid: df3c57f10524b144a9fe355ef83589ba, type: 3}
   m_PrefabInstance: {fileID: 7562058293398815227}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &8301635318988244447
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 7343432311901774332}
-    m_Modifications:
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4900229581524412711, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: Data.PanelIsOpen
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5064163680730882984, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: ToggleActionName
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 5064163680730882984, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: managedReferences[4513346371909844998].Data.PanelIsOpen
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5064163680730882984, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: managedReferences[4513346371909844998].Data.ToggleActionName
-      value: U
-      objectReference: {fileID: 0}
-    - target: {fileID: 5624854569209714937, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-      propertyPath: m_Name
-      value: Module_Hotbar
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
---- !u!4 &6639265349670268636 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 3392967532339424003, guid: 953b7b5b07a613949b9263e579a3f146, type: 3}
-  m_PrefabInstance: {fileID: 8301635318988244447}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &8506781615031263973
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2455,6 +2498,22 @@ PrefabInstance:
     - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_Name
       value: Module_DamageReciver
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.Hp
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.MaxHp
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.Defense
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.Weakness.Array.size
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x

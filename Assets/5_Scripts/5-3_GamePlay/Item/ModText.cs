@@ -100,6 +100,9 @@ public static class AnimationText
 
 public enum DamageTag
 {
-    物理,
-    魔法
+    切割,
+    钝击,
+    穿刺,
+    劈砍,
+    火焰,
 }
