@@ -75,7 +75,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: f69b47e3c1c7a5b439c32e928803befd, type: 3}
+  m_Sprite: {fileID: 21300000, guid: e85cc03b266d12743bd84901adde12af, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -147,7 +147,11 @@ MonoBehaviour:
   AttackEffects:
   - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
   - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
-  Weakness: 01000000
+  Weakness:
+  - Tag: 1
+    Level: 1
+  - Tag: 0
+    Level: 1
   Damage:
     BaseValue: 5
     BaseAdditive: 0

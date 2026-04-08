@@ -548,6 +548,11 @@ public abstract class Item : MonoBehaviour
         mod = Module;
         return Module;
     }
+    public T GetMod<T>() where T : Module
+    {
+        T Module = GetComponentInChildren<T>();
+        return Module;
+    }
     #region 编辑器方法
 
 #if UNITY_EDITOR

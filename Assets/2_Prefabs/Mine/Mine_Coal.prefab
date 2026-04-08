@@ -243,7 +243,19 @@ PrefabInstance:
       value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.Weakness.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.Weakness.Array.data[0]
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.Weakness.Array.data[0].Tag
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.Weakness.Array.data[0].Level
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
@@ -310,7 +322,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 903940306571574032, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_InstanceId
-      value: -487714
+      value: -62224
       objectReference: {fileID: 0}
     - target: {fileID: 1808889728832966955, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_Name

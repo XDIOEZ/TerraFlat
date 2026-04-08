@@ -44,6 +44,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     private readonly List<Vector2Int> _pendingChunkLoadQueue = new();
     private readonly HashSet<Vector2Int> _pendingChunkLoadSet = new();
     private readonly Dictionary<Vector2Int, List<System.Action<Chunk>>> _pendingChunkCallbacks = new();
+    private readonly HashSet<Chunk> _chunkReadyHookedSet = new();
     private Coroutine _chunkLoadPumpCoroutine;
     private Vector2Int _loadPriorityCenterChunk;
     private bool _hasLoadPriorityCenter;
@@ -70,6 +71,61 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     private static string ChunkNameFromPos(Vector2Int chunkPos)
     {
         return chunkPos.ToString();
+    }
+
+    private void HookChunkReadyEvent(Chunk chunk)
+    {
+        if (chunk == null)
+        {
+            return;
+        }
+
+        if (!_chunkReadyHookedSet.Add(chunk))
+        {
+            return;
+        }
+
+        chunk.OnChunkLoaded += HandleChunkReady;
+    }
+
+    private void UnhookChunkReadyEvent(Chunk chunk)
+    {
+        if (chunk == null)
+        {
+            return;
+        }
+
+        if (!_chunkReadyHookedSet.Remove(chunk))
+        {
+            return;
+        }
+
+        chunk.OnChunkLoaded -= HandleChunkReady;
+    }
+
+    private void HandleChunkReady(Chunk chunk)
+    {
+        OnChunkLoadFinish.Invoke(chunk);
+    }
+
+    private void ClearChunkReadyHooks()
+    {
+        if (_chunkReadyHookedSet.Count == 0)
+        {
+            return;
+        }
+
+        foreach (Chunk chunk in _chunkReadyHookedSet)
+        {
+            if (chunk == null)
+            {
+                continue;
+            }
+
+            chunk.OnChunkLoaded -= HandleChunkReady;
+        }
+
+        _chunkReadyHookedSet.Clear();
     }
 
     private bool TryGetChunkPos(Chunk chunk, out Vector2Int chunkPos)
@@ -169,6 +225,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         RandomMapCoroutines.Clear();
 
         ClearChunkLoadQueue();
+        ClearChunkReadyHooks();
 
         //清理区块字典引用
         CleanDic();
@@ -283,6 +340,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         Chunk_Dic_ByPos.Clear();
         Chunk_Dic_Active_ByPos.Clear();
         Chunk_Dic_UnActive_ByPos.Clear();
+        ClearChunkReadyHooks();
 
         _windowDiffInitialized = false;
         _cachedKeepAliveWindow.Clear();
@@ -469,6 +527,8 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             Chunk_Dic_Active_ByPos.Remove(chunkPos);
             Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
         }
+
+        UnhookChunkReadyEvent(chunk);
 
         // 如果正在进行地图加载或权重烘焙，先停止协程
         if (chunk.Map != null)
@@ -852,6 +912,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         // 注册到字典
         RegisterChunk(chunk);
+        chunk.MarkReady();
         return chunk;
     }
 
@@ -886,7 +947,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     }
 
     /// <summary>
-    /// 将区块注册到管理字典，并触发 OnChunkLoadFinish 事件。
+    /// 将区块注册到管理字典，并挂载“加载完成”事件。
     /// </summary>
     private void RegisterChunk(Chunk chunk)
     {
@@ -901,8 +962,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         Chunk_Dic_ByPos[chunkPos] = chunk;
         Chunk_Dic_Active_ByPos[chunkPos] = chunk;
         Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
-
-        OnChunkLoadFinish.Invoke(chunk);
+        HookChunkReadyEvent(chunk);
     }
 
     #endregion
@@ -963,6 +1023,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         Chunk_Dic_ByPos.Clear();
         Chunk_Dic_Active_ByPos.Clear();
         Chunk_Dic_UnActive_ByPos.Clear();
+        ClearChunkReadyHooks();
 
         _windowDiffInitialized = false;
         _cachedKeepAliveWindow.Clear();
@@ -991,10 +1052,6 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     #endregion
 
-    /// <summary>
-    /// 获取当前场景对应星球配置中的 Chunk 尺寸。
-    /// 若存档或配置不可用，则返回默认大小 (100, 100)。
-    /// </summary>
     public static Vector2 GetChunkSize()
     {
         var sceneName = SceneManager.GetActiveScene().name;
@@ -1003,13 +1060,13 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         if (SaveDataMgr.Instance == null)
         {
             Debug.LogWarning("SaveDataMgr.Instance is null, returning default chunk size.");
-            return new Vector2(100, 100);
+            return new Vector2(16, 16);
         }
 
         if (SaveDataMgr.Instance.SaveData == null)
         {
             //            Debug.LogWarning("SaveDataMgr.Instance.SaveData is null, returning default chunk size.");
-            return new Vector2(100, 100);
+            return new Vector2(16, 16);
         }
 
         var dict = SaveDataMgr.Instance.SaveData.PlanetData_Dict;
@@ -1020,7 +1077,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         }
 
         // 找不到就返回 Vector2(100,100)
-        return new Vector2(100, 100);
+        return new Vector2(16, 16);
     }
 
     /// <summary>

@@ -47,7 +47,7 @@ public class DamageReceiver : Module
 
         [Header("防御设置")]
         public float Defense = 0;
-        public List<DamageTag> Weakness = new List<DamageTag>();
+        public List<DamageType> Weakness = new List<DamageType>();
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
 
@@ -244,16 +244,33 @@ public class DamageReceiver : Module
         }
         lastDamageTime = Time.time;
 
-        // 攻击者标签命中受击者破甲标签则视为破甲成功
+        // 攻击者标签命中受击者弱点标签则计算破甲比例
         bool isDefenseBreak = false;
+        float defenseReductionRatio = 0f; // 0表示不削减防御(防御100%生效)，1表示完全削减防御(无视防御)
+
         if (Data.Weakness != null && damageSender.Weakness != null)
         {
             for (int i = 0; i < Data.Weakness.Count; i++)
             {
-                if (damageSender.Weakness.Contains(Data.Weakness[i]))
+                for (int j = 0; j < damageSender.Weakness.Count; j++)
                 {
-                    isDefenseBreak = true;
-                    break;
+                    if (damageSender.Weakness[j].Tag == Data.Weakness[i].Tag)
+                    {
+                        isDefenseBreak = true;
+                        
+                        int receiverLevel = Mathf.Max(1, Data.Weakness[i].Level);
+                        int attackerLevel = Mathf.Max(1, damageSender.Weakness[j].Level);
+                        
+                        // 当斧头(attacker)=1，树木(receiver)=2时，差值为1 => 削减50%防御（留50%发挥作用）
+                        // 当斧头(attacker)=1，树木(receiver)=3时，差值为2 => 削减0%防御（全部防御生效）
+                        // 当斧头(attacker)>=2，树木(receiver)=2时，差值<=0 => 削减100%防御（无视防御）
+                        float reduction = 1f - Mathf.Clamp01((receiverLevel - attackerLevel) * 0.5f);
+                        
+                        if (reduction > defenseReductionRatio)
+                        {
+                            defenseReductionRatio = reduction;
+                        }
+                    }
                 }
             }
         }
@@ -262,8 +279,10 @@ public class DamageReceiver : Module
         float actualDamage;
         if (isDefenseBreak)
         {
-            // 破防伤害，无视防御
-            actualDamage = damageSender.Damage.Value;
+            // 考虑破防比例，计算剩余的有效防御力
+            float effectiveDefense = Defense * (1f - defenseReductionRatio);
+            float normalDamage = damageSender.Damage.Value - effectiveDefense;
+            actualDamage = normalDamage < 1f ? 1f : normalDamage;
         }
         else
         {

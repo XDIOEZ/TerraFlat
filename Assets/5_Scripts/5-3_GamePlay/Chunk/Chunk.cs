@@ -10,6 +10,13 @@ using UnityEngine;
 /// </summary>
 public class Chunk : MonoBehaviour
 {
+    public enum ChunkLifecycleState
+    {
+        Created,
+        Loading,
+        Ready
+    }
+
     [ShowInInspector]
     public Dictionary<int, Item> RunTimeItems = new();
     [ShowInInspector]
@@ -152,6 +159,8 @@ public class Chunk : MonoBehaviour
     public Map Map;
     public MapSave MapSave;
     public string ChunkOwner;
+    public ChunkLifecycleState LifecycleState { get; private set; } = ChunkLifecycleState.Created;
+    public bool IsReady => LifecycleState == ChunkLifecycleState.Ready;
 
     /// <summary>
     /// 区块完成加载（所有物品加载完并烘焙完权重）时的回调
@@ -169,13 +178,12 @@ public class Chunk : MonoBehaviour
             return this;
         }
 
+        MarkLoading();
         EnsurePositionArray();
 
         InitializeItems();
-        ChunkMgr.Instance.AddActiveChunk(this);
         Map?.BackTilePenalty_Sync();
-        // 通知监听者：区块已完全加载
-        OnChunkLoaded?.Invoke(this);
+        MarkReady();
         return this;
     }
 
@@ -223,7 +231,7 @@ public class Chunk : MonoBehaviour
     public System.Collections.IEnumerator BatchLoadItemsCoroutine()
     {
         int itemCount = 0;
-        ChunkMgr.Instance.AddActiveChunk(this);
+        MarkLoading();
 
         EnsurePositionArray();
 
@@ -273,7 +281,7 @@ public class Chunk : MonoBehaviour
 
         // 确保所有物品都已加载完成
         yield return null;
-        OnChunkLoaded?.Invoke(this);
+        MarkReady();
     }
     #endregion
 
@@ -296,6 +304,24 @@ public class Chunk : MonoBehaviour
 
     #endregion
 
+    #endregion
+
+    #region 生命周期
+    public void MarkLoading()
+    {
+        LifecycleState = ChunkLifecycleState.Loading;
+    }
+
+    public void MarkReady()
+    {
+        if (LifecycleState == ChunkLifecycleState.Ready)
+        {
+            return;
+        }
+
+        LifecycleState = ChunkLifecycleState.Ready;
+        OnChunkLoaded?.Invoke(this);
+    }
     #endregion
 
     #region 区块保存
