@@ -65,7 +65,56 @@ public class Map : Item
 
     private void Awake()
     {
+        BindChunkOwner(GetComponentInParent<Chunk>());
         InitMapGenerators();
+    }
+
+    private void OnDisable()
+    {
+        StopMapCoroutines();
+    }
+
+    private void OnDestroy()
+    {
+        StopMapCoroutines();
+
+        if (isMapGeneratorHooked)
+        {
+            OnMapGenerated_Start -= HandleMapGeneratedStart;
+            isMapGeneratorHooked = false;
+        }
+    }
+
+    private void StopMapCoroutines()
+    {
+        if (loadTileMapCoroutine != null)
+        {
+            StopCoroutine(loadTileMapCoroutine);
+            loadTileMapCoroutine = null;
+        }
+
+        if (backTilePenaltyCoroutine != null)
+        {
+            StopCoroutine(backTilePenaltyCoroutine);
+            backTilePenaltyCoroutine = null;
+        }
+
+        if (loadOrGenerateCoroutine != null)
+        {
+            StopCoroutine(loadOrGenerateCoroutine);
+            loadOrGenerateCoroutine = null;
+        }
+
+        backTilePenaltyPending = false;
+    }
+
+    private void BindChunkOwner(Chunk ownerChunk)
+    {
+        chunk = ownerChunk;
+        if (chunk != null)
+        {
+            chunk.Map = this;
+        }
     }
 
     private object GetBackTilePenaltyYieldToken()
@@ -221,11 +270,7 @@ public class Map : Item
     {
         base.Load();
 
-        chunk = GetComponentInParent<Chunk>();
-        if (chunk != null)
-        {
-            chunk.Map = this;
-        }
+        BindChunkOwner(GetComponentInParent<Chunk>());
 
         // 确保生成器列表已初始化并绑定当前 Map
         InitMapGenerators();
@@ -354,7 +399,7 @@ public class Map : Item
         }
 
         // 启动新的协程
-            loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
+        loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
     }
 
     /// <summary>

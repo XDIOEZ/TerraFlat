@@ -231,7 +231,9 @@ MonoBehaviour:
   AttackEffects:
   - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
   - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
-  Weakness: 03000000
+  Weakness:
+  - Tag: 3
+    Level: 2
   Damage:
     BaseValue: 12
     BaseAdditive: 0
@@ -348,6 +350,7 @@ MonoBehaviour:
   comboWindowOverride: -1
   comboWindowGrace: 0.05
   loopComboOnHold: 1
+  attackSpeedMultiplier: 1
   ModSaveData:
     Name: 
     ID: 

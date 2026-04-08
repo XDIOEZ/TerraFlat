@@ -128,7 +128,7 @@ public class Mod_Building : Module
         boxCollider2D = GetComponent<BoxCollider2D>();
 
         if (damageReceiver == null)
-            damageReceiver = (DamageReceiver)item.itemMods.GetMod_ByID(ModText.Hp);
+            damageReceiver = item.GetMod<DamageReceiver>();
 
         damageReceiver.Data.DestroyDelay = -1f;
 

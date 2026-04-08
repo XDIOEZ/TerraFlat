@@ -8,7 +8,7 @@ public class Mod_Damage : Module, IDamageSender
     [Header("攻击特效")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
 
-    public List<DamageTag> Weakness = new List<DamageTag>();
+    public List<DamageType> Weakness = new List<DamageType>();
     public GameValue_float Damage = new GameValue_float(10f);
 
     [Header("定时伤害设置")]
@@ -45,7 +45,7 @@ public class Mod_Damage : Module, IDamageSender
 
     #region IDamageSender 实现
     Item IDamageSender.attacker { get => item; set => item = value; }
-    List<DamageTag> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
+    List<DamageType> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
     GameValue_float IDamageSender.Damage { get => Damage; set => Damage = value; }
     #endregion
 

@@ -55,8 +55,7 @@ public class GameManager : SingletonAutoMono<GameManager>
             Debug.LogError("寻路系统未赋值");
 
         Time.timeScale = 1;
-
-        OpenHellowCanvas();
+        
         BackToHelloScene_Event_End += OpenHellowCanvas;
     }
     #endregion
@@ -360,6 +359,111 @@ public class GameManager : SingletonAutoMono<GameManager>
         {
             // 如果没有旧场景，直接执行回调
             onSceneUnloaded?.Invoke();
+        }
+    }
+
+    public IEnumerator LoadSceneSingleAndInvokeWhenReady(string sceneName, Action onSceneReady = null, int extraWaitFrames = 1, int managerReadyTimeoutFrames = 300)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            throw new ArgumentException("sceneName 不能为空", nameof(sceneName));
+        }
+
+        AsyncOperation loadOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+        if (loadOp == null)
+        {
+            throw new InvalidOperationException($"[GameManager] 加载场景失败：{sceneName}");
+        }
+
+        while (!loadOp.isDone)
+        {
+            yield return null;
+        }
+
+        int waitFrames = Mathf.Max(0, extraWaitFrames);
+        for (int i = 0; i < waitFrames; i++)
+        {
+            yield return null;
+        }
+
+        int timeoutFrames = Mathf.Max(1, managerReadyTimeoutFrames);
+        while (timeoutFrames > 0)
+        {
+            bool isReady = SpaceMgr.Instance != null && ItemMgr.Instance != null;
+            if (isReady)
+            {
+                break;
+            }
+
+            timeoutFrames--;
+            yield return null;
+        }
+
+        if (timeoutFrames <= 0)
+        {
+            throw new TimeoutException($"[GameManager] 场景已加载但管理器未就绪，scene={sceneName}");
+        }
+
+        onSceneReady?.Invoke();
+    }
+
+    public void StartSpaceTransferWithSpawn(string targetSceneName, ItemData rocketItemData, ItemData playerItemData, string planetBodyId, Vector3 rocketOffset, Vector3 playerOffset)
+    {
+        StartCoroutine(SpaceTransferWithSpawnCoroutine(targetSceneName, rocketItemData, playerItemData, planetBodyId, rocketOffset, playerOffset));
+    }
+
+    private IEnumerator SpaceTransferWithSpawnCoroutine(string targetSceneName, ItemData rocketItemData, ItemData playerItemData, string planetBodyId, Vector3 rocketOffset, Vector3 playerOffset)
+    {
+        if (string.IsNullOrEmpty(targetSceneName))
+        {
+            throw new ArgumentException("targetSceneName 不能为空", nameof(targetSceneName));
+        }
+
+        if (rocketItemData == null)
+        {
+            throw new ArgumentNullException(nameof(rocketItemData), "rocketItemData 不能为空");
+        }
+
+        if (playerItemData == null)
+        {
+            throw new ArgumentNullException(nameof(playerItemData), "playerItemData 不能为空");
+        }
+
+        if (string.IsNullOrEmpty(planetBodyId))
+        {
+            throw new ArgumentException("planetBodyId 不能为空", nameof(planetBodyId));
+        }
+
+        Exception transferException = null;
+
+        yield return LoadSceneSingleAndInvokeWhenReady(targetSceneName, () =>
+        {
+            try
+            {
+                Item rocketItem = SpaceMgr.Instance.InstantiateItemNearPlanet(rocketItemData, planetBodyId, rocketOffset);
+                Item playerItem = SpaceMgr.Instance.InstantiateItemNearPlanet(playerItemData, planetBodyId, playerOffset);
+
+                Module_Fly spaceFly = rocketItem.GetMod<Module_Fly>();
+                if (spaceFly == null)
+                {
+                    throw new InvalidOperationException($"[GameManager] 太空火箭缺少 Module_Fly，rocket={rocketItemData.IDName}");
+                }
+
+                spaceFly.EnterControlFromTransfer(playerItem);
+                Debug.Log($"[GameManager] 太空接管调用完成，rocket={rocketItemData.IDName}, player={playerItemData.IDName}");
+
+                Debug.Log($"[GameManager] 太空迁移完成，planetBodyId={planetBodyId}, rocket={rocketItemData.IDName}, player={playerItemData.IDName}");
+            }
+            catch (Exception ex)
+            {
+                transferException = ex;
+            }
+        });
+
+        if (transferException != null)
+        {
+            Debug.LogException(transferException);
+            throw transferException;
         }
     }
     #endregion

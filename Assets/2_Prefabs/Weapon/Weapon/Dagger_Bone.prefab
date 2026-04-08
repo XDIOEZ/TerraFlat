@@ -320,6 +320,7 @@ MonoBehaviour:
   comboWindowOverride: -1
   comboWindowGrace: 0.05
   loopComboOnHold: 1
+  attackSpeedMultiplier: 1
   ModSaveData:
     Name: 
     ID: 
@@ -382,6 +383,14 @@ PrefabInstance:
     - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: Damage.BaseValue
       value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: Weakness.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: Weakness.Array.data[0].Level
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_Name
