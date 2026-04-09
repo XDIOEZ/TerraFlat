@@ -4,7 +4,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class Mod_InteractSender : Module,ITrunDirection
+public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 {
     #region 基础参数
 
@@ -220,4 +220,8 @@ public class Mod_InteractSender : Module,ITrunDirection
 
         receiversInRange.Remove(receiver);
     }
+}
+
+internal interface IFocusPoint
+{
 }

@@ -709,8 +709,13 @@ public class Map : Item
 
                 uint penalty = tile.Penalty;
 
-                AstarGameManager.Instance?.ModifyNodePenalty_Optimized(
-                    new Vector2(tilePos.x, tilePos.y),
+                Vector3Int tilePos3D = new Vector3Int(tilePos.x, tilePos.y, 0);
+                Vector3 cellCenterWorld = tileMap != null
+                    ? tileMap.GetCellCenterWorld(tilePos3D)
+                    : new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f);
+
+                AstarGameManager.Instance?.ModifyNodePenalty_GridGraphFast(
+                    new Vector2(cellCenterWorld.x, cellCenterWorld.y),
                     penalty,
                     tile.IsWalkable
                 );
@@ -739,8 +744,17 @@ public class Map : Item
             MarkPenaltyDirty(gridPos);
         }
 
+        Vector3Int gridPos3D = new Vector3Int(gridPos.x, gridPos.y, 0);
+        Vector3 cellCenterWorld = tileMap != null
+            ? tileMap.GetCellCenterWorld(gridPos3D)
+            : new Vector3(gridPos.x + 0.5f, gridPos.y + 0.5f, 0f);
+
         // 再更新寻路节点：Penalty=0 + Walkable=false
-        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, 0, false);
+        AstarGameManager.Instance?.ModifyNodePenalty_GridGraphFast(
+            new Vector2(cellCenterWorld.x, cellCenterWorld.y),
+            0,
+            false
+        );
     }
 
     /// <summary>

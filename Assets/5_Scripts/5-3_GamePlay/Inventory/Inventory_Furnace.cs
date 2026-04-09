@@ -47,6 +47,8 @@ public class Inventory_Furnace : Inventory
 
     public override void ModUpdate(float deltaTime)
     {
+        base.ModUpdate(deltaTime);
+
         if (_Data.IsSmelting) // 已经处于熔炼状态
         {
             // 检查燃料模块是否处于点燃状态
