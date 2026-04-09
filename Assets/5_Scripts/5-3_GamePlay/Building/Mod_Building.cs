@@ -52,6 +52,8 @@ public class Mod_Building : Module
 
     // 建筑状态字段
     [SerializeField] private BuildingState _currentState = BuildingState.NotInstalled;
+    private bool _eventsBound; // 运行时事件是否已绑定
+    private bool _isLoaded; // 模块是否已完成Load初始化
 
     // 状态变化事件
     public UltEvent<BuildingState, BuildingState> OnStateChanged = new UltEvent<BuildingState, BuildingState>();
@@ -101,15 +103,10 @@ public class Mod_Building : Module
                 throw new NullReferenceException("[Mod_Building] Start失败：未找到附属Item组件");
         }
 
-        // 手持状态：建筑应为待放置
-        if (item.InHand)
+        if (_isLoaded)
         {
-            CurrentState = BuildingState.NotInstalled;
-            return;
+            SyncRuntimeState();
         }
-
-        // 非手持状态：根据当前建筑数据初始化状态
-        InitializeState();
     }
 
     //TODO OnValidate实现
@@ -124,30 +121,17 @@ public class Mod_Building : Module
 
     public override void Load()
     {
-        BuildingData.ReadData(ref Data);
-        boxCollider2D = GetComponent<BoxCollider2D>();
+        EnsureRuntimeReferences();
 
-        if (damageReceiver == null)
-            damageReceiver = item.GetMod<DamageReceiver>();
+        BuildingData.ReadData(ref Data);
 
         damageReceiver.Data.DestroyDelay = -1f;
 
-        damageReceiver.OnAction += OnHit;
-        item.OnAct += Install;
+        UnbindRuntimeEvents();
+        BindRuntimeEvents();
 
-        // 物品在手上时，取消关联碰撞体，避免手持状态下产生场景碰撞
-        if (item.InHand)
-        {
-            EnableChildColliders(false, item.transform);
-            boxCollider2D.isTrigger = true;
-            CurrentState = BuildingState.NotInstalled;
-        }
-        else
-        {
-            EnableChildColliders(true, item.transform);
-            boxCollider2D.isTrigger = damageReceiver.Hp == 0;
-            InitializeState();
-        }
+        SyncRuntimeState();
+        _isLoaded = true;
     }
 
     public override void Save()
@@ -195,13 +179,25 @@ public class Mod_Building : Module
         }
     }
 
+    public void OnEnable()
+    {
+        if (!_isLoaded)
+            return;
+
+        EnsureRuntimeReferences();
+        BindRuntimeEvents();
+    }
+
+    public void OnDisable()
+    {
+        CleanupGhost();
+        UnbindRuntimeEvents();
+    }
+
     public void OnDestroy()
     {
         CleanupGhost();
-        //  Debug.Log($"[BaseBuilding] 组件被销毁，清理GhostShadow");
-
-        if (item != null)
-            item.OnAct -= Install;
+        UnbindRuntimeEvents();
     }
     #endregion
 
@@ -347,8 +343,20 @@ public class Mod_Building : Module
         StartUnInstall.Invoke();
         item.transform.localScale *= 0.5f;
 
-        if (boxCollider2D != null)
+        BoxCollider2D itemRootCollider = item.GetComponent<BoxCollider2D>();
+        if (itemRootCollider != null)
+        {
+            itemRootCollider.isTrigger = true;
+        }
+        else
+        {
+            Debug.LogError($"[建筑卸载] {item.name} 同对象未找到 BoxCollider2D，无法设置为触发器");
+        }
+
+        if (boxCollider2D != null && boxCollider2D != itemRootCollider)
+        {
             boxCollider2D.isTrigger = true;
+        }
 
         if (item.itemData != null)
         {
@@ -388,7 +396,7 @@ public class Mod_Building : Module
         }
 
         Debug.Log($"[UnInstall] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
-        UpdateNavigation(position: transform.position, UseTilePenalty: true);
+        UpdateNavigation(position: pos, UseTilePenalty: true);
 
         // 设置为已卸载状态
         CurrentState = BuildingState.Uninstalled;
@@ -543,6 +551,67 @@ public class Mod_Building : Module
 
     #region 私有辅助方法
 
+    private void EnsureRuntimeReferences()
+    {
+        if (item == null)
+        {
+            item = GetComponentInParent<Item>();
+        }
+
+        if (item == null)
+            throw new NullReferenceException("[Mod_Building] 初始化失败：未找到附属Item组件");
+
+        boxCollider2D = item.GetComponent<BoxCollider2D>();
+        if (boxCollider2D == null)
+            throw new MissingComponentException($"[Mod_Building] {item.name} 同对象缺少 BoxCollider2D");
+
+        if (damageReceiver == null)
+            damageReceiver = item.GetMod<DamageReceiver>();
+
+        if (damageReceiver == null)
+            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver 模块");
+    }
+
+    private void BindRuntimeEvents()
+    {
+        if (_eventsBound)
+            return;
+
+        damageReceiver.OnAction += OnHit;
+        item.OnAct += Install;
+        _eventsBound = true;
+    }
+
+    private void UnbindRuntimeEvents()
+    {
+        if (!_eventsBound)
+            return;
+
+        if (damageReceiver != null)
+            damageReceiver.OnAction -= OnHit;
+
+        if (item != null)
+            item.OnAct -= Install;
+
+        _eventsBound = false;
+    }
+
+    private void SyncRuntimeState()
+    {
+        // 物品在手上时，取消关联碰撞体，避免手持状态下产生场景碰撞
+        if (item.InHand)
+        {
+            EnableChildColliders(false, item.transform);
+            boxCollider2D.isTrigger = true;
+            CurrentState = BuildingState.NotInstalled;
+            return;
+        }
+
+        EnableChildColliders(true, item.transform);
+        boxCollider2D.isTrigger = damageReceiver.Hp == 0;
+        InitializeState();
+    }
+
     private Vector3 GetGhostPlacementPosition()
     {
         if (GhostShadow == null)
@@ -609,7 +678,12 @@ public class Mod_Building : Module
     /// </summary>
     private void UpdateNavigation(Vector2 position, bool UseTilePenalty)
     {
-        Debug.Log($"[UpdateNavigation] 开始更新导航区域，位置: ({position.x:F2}, {position.y:F2})");
+        Vector2 gridCenter = new Vector2(
+            Mathf.Floor(position.x) + 0.5f,
+            Mathf.Floor(position.y) + 0.5f
+        );
+
+        Debug.Log($"[UpdateNavigation] 开始更新导航区域，位置: ({position.x:F2}, {position.y:F2})，格子中心: ({gridCenter.x:F2}, {gridCenter.y:F2})");
 
         if (ChunkMgr.Instance != null)
         {
@@ -625,20 +699,19 @@ public class Mod_Building : Module
                 {
                     if (UseTilePenalty)
                     {
-                        AstarGameManager.Instance.UpdateArea_Rectangle_Sync(position, 1, 1);
-
+                        // 仅做九宫格精确回填；避免区域重扫引入额外外圈节点污染
                         AstarPath.active.AddWorkItem(new AstarWorkItem(() =>
                         {
                         },
     force =>
     {
-        chunk.Map.BackTilePenalty_Cell_3x3(position);
+        chunk.Map.BackTilePenalty_Cell_3x3(gridCenter);
 
         return true;
     }));
                     }
                     else
-                        chunk.Map.BackTilePenalty_Cell_NotMove(position);
+                        chunk.Map.BackTilePenalty_Cell_NotMove(gridCenter);
                     Debug.Log("[UpdateNavigation] BackTilePenalty_Cell方法调用完成");
                 }
                 else

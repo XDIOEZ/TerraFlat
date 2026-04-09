@@ -49,6 +49,23 @@ public partial class Mod_FocusPoint : Module
         turnBody = item.Owner != null
             ? item.Owner.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack
             : item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack;
+
+        var focusPointComponents = item.GetComponentsInChildren<MonoBehaviour>(true);
+        var targetSet = new HashSet<Transform>(targetRotationTransforms);
+
+        for (int i = 0; i < focusPointComponents.Length; i++)
+        {
+            var component = focusPointComponents[i];
+            if (component is not IFocusPoint)
+                continue;
+
+            if (targetSet.Add(component.transform))
+            {
+                targetRotationTransforms.Add(component.transform);
+            }
+        }
+
+        _needsRefresh = true;
     }
 
     public override void ModUpdate(float deltaTime)
