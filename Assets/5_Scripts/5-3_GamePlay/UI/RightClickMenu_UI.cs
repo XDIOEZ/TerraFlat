@@ -84,7 +84,18 @@ public class RightClickMenu_UI : MonoBehaviour
             return;
         }
 
+        if (GameRes.Instance == null)
+        {
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] GameRes.Instance 为空");
+            return;
+        }
+
         GameObject itemInfoPanel = GameRes.Instance.InstantiatePrefab("物品信息面板");
+        if (itemInfoPanel == null)
+        {
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] 物品信息面板预制体实例化失败");
+            return;
+        }
 
         BasePanel itemInfoPanelBasePanel = itemInfoPanel.GetComponent<BasePanel>();
         if (itemInfoPanelBasePanel == null)
@@ -132,9 +143,21 @@ public class RightClickMenu_UI : MonoBehaviour
         var sb = new StringBuilder();
         sb.Append(itemData.ToString());
 
-        foreach (var moduleData in itemData.ModuleDataDic.Values)
+        if (itemData.ModuleDataDic == null)
         {
-            sb.Append("\n").Append(moduleData.ToString());
+            Debug.LogError($"[RightClickMenu_UI.BuildItemInfoText] 模块字典为空，物品={itemData.IDName}");
+        }
+        else
+        {
+            foreach (var moduleData in itemData.ModuleDataDic.Values)
+            {
+                if (moduleData == null)
+                {
+                    continue;
+                }
+
+                sb.Append("\n").Append(moduleData.ToString());
+            }
         }
 
         string spoilageText = BuildFoodSpoilageText(itemData);
@@ -156,24 +179,19 @@ public class RightClickMenu_UI : MonoBehaviour
             return string.Empty;
         }
 
-        if (!TryGetFoodModuleData(itemData, out Ex_ModData_MemoryPackable foodModuleData))
+        if (!TryGetFoodModuleData(itemData, out ModData_FoodData foodModuleData))
         {
             return "\n\n[食物腐败]\n未找到食物模块数据";
         }
 
-        Food foodData = null;
-        foodModuleData.ReadData(ref foodData);
-        if (foodData == null)
-        {
-            return "\n\n[食物腐败]\n食物模块数据为空";
-        }
+        foodModuleData.ApplyToFoodData();
 
-        float intervalSeconds = Mathf.Max(1f, foodData.SpoilageIntervalSeconds);
-        float elapsedSeconds = Mathf.Max(0f, foodData.SpoilageElapsedSeconds);
+        float intervalSeconds = Mathf.Max(1f, foodModuleData.SpoilageIntervalSeconds);
+        float elapsedSeconds = Mathf.Max(0f, foodModuleData.SpoilageElapsedSeconds);
         float progress01 = Mathf.Clamp01(elapsedSeconds / intervalSeconds);
         float remainSeconds = Mathf.Max(0f, intervalSeconds - elapsedSeconds);
-        string enableText = foodData.EnableSpoilage ? "启用" : "关闭";
-        string targetItemID = string.IsNullOrWhiteSpace(foodData.SpoilageTargetItemID) ? "未配置" : foodData.SpoilageTargetItemID;
+        string enableText = foodModuleData.EnableSpoilage ? "启用" : "关闭";
+        string targetItemID = string.IsNullOrWhiteSpace(foodModuleData.SpoilageTargetItemID) ? "未配置" : foodModuleData.SpoilageTargetItemID;
 
         return $"\n\n[食物腐败]" +
                $"\n状态：{enableText}" +
@@ -186,7 +204,7 @@ public class RightClickMenu_UI : MonoBehaviour
     /// <summary>
     /// 从物品模块字典中提取 Food 的序列化模块数据。
     /// </summary>
-    private bool TryGetFoodModuleData(ItemData itemData, out Ex_ModData_MemoryPackable foodModuleData)
+    private bool TryGetFoodModuleData(ItemData itemData, out ModData_FoodData foodModuleData)
     {
         foodModuleData = null;
         if (itemData == null || itemData.ModuleDataDic == null)
@@ -194,18 +212,45 @@ public class RightClickMenu_UI : MonoBehaviour
             return false;
         }
 
-        foreach (var moduleData in itemData.ModuleDataDic.Values)
+        string moduleKey = null;
+        ModuleData rawModuleData = null;
+        foreach (var pair in itemData.ModuleDataDic)
         {
+            ModuleData moduleData = pair.Value;
             if (moduleData == null || moduleData.ID != ModText.Food)
             {
                 continue;
             }
 
-            foodModuleData = moduleData as Ex_ModData_MemoryPackable;
-            return foodModuleData != null;
+            moduleKey = pair.Key;
+            rawModuleData = moduleData;
+            break;
         }
 
-        return false;
+        if (rawModuleData == null)
+        {
+            return false;
+        }
+
+        if (rawModuleData is ModData_FoodData typedFoodData)
+        {
+            foodModuleData = typedFoodData;
+            foodModuleData.ApplyToFoodData();
+            return true;
+        }
+
+        foodModuleData = ModData_FoodData.FromModuleData(rawModuleData);
+        if (foodModuleData == null)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(moduleKey))
+        {
+            itemData.ModuleDataDic[moduleKey] = foodModuleData;
+        }
+
+        return true;
     }
 
 }

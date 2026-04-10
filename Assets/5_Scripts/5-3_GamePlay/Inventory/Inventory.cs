@@ -28,9 +28,6 @@ public class Inventory
     [FoldoutGroup("数据"), ShowInInspector, ReadOnly, LabelText("UI开关按键"), Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
     public string ToggleActionName => Data?.ToggleActionName;
 
-    [FoldoutGroup("食物腐败"), LabelText("食物腐败配置（逻辑由 Mod_Food 处理）")]
-    public Mod_Food.FoodSpoilageSettings FoodSpoilageSettings = new Mod_Food.FoodSpoilageSettings(); // 每个容器可独立配置腐败倍率与目标
-
     [FoldoutGroup("UI"), ReadOnly, LabelText("物品槽UI")]
     public List<ItemSlot_UI> itemSlot_UI = new List<ItemSlot_UI>();
 
@@ -53,8 +50,6 @@ public class Inventory
     {
         if (string.IsNullOrEmpty(Data.Name))
             Data.Name = ModText.Bag;
-
-        Mod_Food.EnsureInventorySpoilageConfig(this);
     }
 
     public virtual void Awake()
@@ -64,8 +59,45 @@ public class Inventory
 
     public virtual void ModUpdate(float deltaTime)
     {
-        // 通用容器入口：具体腐败机制全部委托给 Mod_Food。
-        Mod_Food.UpdateInventorySpoilage(this, deltaTime);
+        // 基类只负责统一调度模块数据更新。
+        UpdateModuleData(deltaTime);
+    }
+
+    #endregion
+
+    #region 模块数据驱动
+
+    private void UpdateModuleData(float deltaTime)
+    {
+        if (Data == null || Data.itemSlots == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            ItemSlot slot = Data.itemSlots[i];
+            ItemData itemData = slot?.itemData;
+            if (itemData == null || itemData.ModuleDataDic == null)
+            {
+                continue;
+            }
+
+            foreach (ModuleData moduleData in itemData.ModuleDataDic.Values)
+            {
+                if (moduleData == null)
+                {
+                    continue;
+                }
+
+                moduleData.RuntimeOwnerItemData = itemData;
+                moduleData.RuntimeOwnerInventoryData = Data;
+                moduleData.RuntimeOwnerSlot = slot;
+                moduleData.RuntimeOwnerSlotIndex = i;
+
+                moduleData.DataUpdate(deltaTime);
+            }
+        }
     }
 
     #endregion
@@ -248,9 +280,6 @@ public class Inventory
     [Tooltip("在Load时调用此函数进行数据初始化（仅初始化数据和逻辑，不涉及UI）")]
     public virtual void InitData()
     {
-        Mod_Food.EnsureInventorySpoilageConfig(this);
-        Mod_Food.ResetInventorySpoilageRuntime(this);
-
         if (DefaultTarget_Inventory == null)
             DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
 

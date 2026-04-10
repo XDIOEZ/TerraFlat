@@ -315,6 +315,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 205400909425925203, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
+      propertyPath: Data.SpoilageTargetItemID
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 205400909425925203, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
+      propertyPath: Data.nutritionConsumeRate
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2919889844998107830, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.099999994

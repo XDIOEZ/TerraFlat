@@ -4,7 +4,6 @@ using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using UnityEngine;
 using UltEvents;
 
@@ -17,137 +16,69 @@ public partial class Mod_Food : Module
         public byte[] Payload;
     }
 
-    [System.Serializable]
-    public class FoodSpoilageSettings
+    #region 数据定义
+    [ShowInInspector]
+    public ModData_FoodData FoodModData = new ModData_FoodData();
+    public override ModuleData _Data
     {
-        [Tooltip("是否启用食物腐败")]
-        public bool EnableSpoilage = true;
+        get => FoodModData;
+        set => FoodModData = ModData_FoodData.FromModuleData(value);
+    }
 
-        [Tooltip("腐败扫描间隔（秒）")]
-        [MinValue(0.1f)]
-        public float TickIntervalSeconds = 1f;
-
-        [Tooltip("容器默认腐败倍率")]
-        [MinValue(0f)]
-        public float DefaultContainerRate = 1f;
-
-        [Tooltip("默认腐败间隔（秒）")]
-        [MinValue(1f)]
-        public float DefaultSpoilageIntervalSeconds = 1800f;
-
-        [Tooltip("默认腐败目标物品ID")]
-        public string DefaultSpoilageTargetItemID = "RottenFood";
-
-        [Tooltip("按容器名配置腐败倍率")]
-        public SerializedDictionary<string, float> ContainerRateByInventoryName = new();
-
-        [Tooltip("按物品ID配置腐败间隔（秒）")]
-        public SerializedDictionary<string, float> SpoilageIntervalByItemID = new();
-
-        [Tooltip("按物品ID配置腐败目标物品ID")]
-        public SerializedDictionary<string, string> SpoilageTargetByItemID = new();
-
-        public void EnsureDefaults()
+    [FoldoutGroup("食物数据")]
+    [ShowInInspector]
+    [LabelText("食物模块数据")]
+    public Food Data
+    {
+        get
         {
-            if (TickIntervalSeconds <= 0f)
-            {
-                TickIntervalSeconds = 1f;
-            }
-
-            if (DefaultContainerRate < 0f)
-            {
-                DefaultContainerRate = 0f;
-            }
-
-            if (DefaultSpoilageIntervalSeconds <= 0f)
-            {
-                DefaultSpoilageIntervalSeconds = 1800f;
-            }
-
-            if (string.IsNullOrWhiteSpace(DefaultSpoilageTargetItemID))
-            {
-                DefaultSpoilageTargetItemID = "RottenFood";
-            }
-
-            ContainerRateByInventoryName ??= new SerializedDictionary<string, float>();
-            SpoilageIntervalByItemID ??= new SerializedDictionary<string, float>();
-            SpoilageTargetByItemID ??= new SerializedDictionary<string, string>();
+            FoodModData ??= new ModData_FoodData();
+            return FoodModData.EnsureFoodData();
         }
-
-        public float ResolveContainerRate(string inventoryName)
+        set
         {
-            if (!string.IsNullOrWhiteSpace(inventoryName) &&
-                ContainerRateByInventoryName != null &&
-                ContainerRateByInventoryName.TryGetValue(inventoryName, out float rate))
-            {
-                return Mathf.Max(0f, rate);
-            }
-
-            return Mathf.Max(0f, DefaultContainerRate);
-        }
-
-        public float ResolveSpoilageInterval(string itemID, float moduleInterval)
-        {
-            if (!string.IsNullOrWhiteSpace(itemID) &&
-                SpoilageIntervalByItemID != null &&
-                SpoilageIntervalByItemID.TryGetValue(itemID, out float interval))
-            {
-                return Mathf.Max(0f, interval);
-            }
-
-            if (moduleInterval > 0f)
-            {
-                return moduleInterval;
-            }
-
-            return Mathf.Max(0f, DefaultSpoilageIntervalSeconds);
-        }
-
-        public string ResolveSpoilageTarget(string itemID, string moduleTarget)
-        {
-            if (!string.IsNullOrWhiteSpace(itemID) &&
-                SpoilageTargetByItemID != null &&
-                SpoilageTargetByItemID.TryGetValue(itemID, out string targetID) &&
-                !string.IsNullOrWhiteSpace(targetID))
-            {
-                return targetID;
-            }
-
-            if (!string.IsNullOrWhiteSpace(moduleTarget))
-            {
-                return moduleTarget;
-            }
-
-            return DefaultSpoilageTargetItemID;
+            FoodModData ??= new ModData_FoodData();
+            FoodModData.SyncFromFood(value);
+            FoodModData.ApplyToFoodData();
         }
     }
 
-    #region 数据定义
-    public Ex_ModData_MemoryPackable ExData;
-    public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }
-
-    public Food Data = new Food();
-
+    [FoldoutGroup("运行时")]
+    [ReadOnly]
+    [LabelText("进食进度")]
     public float EatingProgress = 0;
 
+    [FoldoutGroup("运行时")]
+    [LabelText("数据更新事件")]
     public UltEvent DataUpdate = new UltEvent();
 
+    [FoldoutGroup("UI")]
+    [LabelText("面板预制体")]
     public GameObject PanelPrefab;
+
+    [FoldoutGroup("UI")]
     [ReadOnly]
+    [LabelText("面板实例")]
     public GameObject PanleInstance;
+
+    [FoldoutGroup("UI")]
     [ReadOnly]
+    [LabelText("面板控制器")]
     public BasePanel panelUI; // 替换UI_FloatData_Slider为BasePanel
 
+    [FoldoutGroup("观察者")]
+    [LabelText("逻辑观察者")]
+    [ListDrawerSettings(ShowFoldout = true, DefaultExpandedState = true, DraggableItems = true, ShowPaging = false)]
     [SerializeReference]
     public List<ModuleObserverBase> observers = new List<ModuleObserverBase>();
-
-    private static readonly Dictionary<int, float> _inventorySpoilageTickTimerById = new Dictionary<int, float>();
 
     #endregion
 
     #region 生命周期方法
     public override void Awake()
     {
+        ModData_FoodData.SharedCreateTargetItemData = CreateSpoilageTargetItemData;
+
         if (_Data.ID == "")
         {
             _Data.ID = ModText.Food;
@@ -156,7 +87,8 @@ public partial class Mod_Food : Module
 
     public override void Load()
     {
-        ExData.ReadData(ref Data);
+        FoodModData ??= new ModData_FoodData();
+        FoodModData.ApplyToFoodData();
 
         item.itemMods.GetMod_ByID(ModText.Controller, out GameController Controller);
         if (Controller != null)
@@ -197,7 +129,9 @@ public partial class Mod_Food : Module
         // 终止所有与该对象相关的 tween
         DOTween.Kill(item?.transform);
 
-        ExData.WriteData(Data);
+        FoodModData ??= new ModData_FoodData();
+        FoodModData.SyncFromFood(Data);
+        FoodModData.ApplyToFoodData();
     }
     /// <summary>
     /// 调用吃的行为
@@ -365,6 +299,12 @@ public partial class Mod_Food : Module
         UpdateNutritionSlider("蛋白质", Data.nutrition.Protein, Data.nutrition.Max_Protein);
         UpdateNutritionSlider("水", Data.nutrition.Water, Data.nutrition.Max_Water);
         UpdateNutritionSlider("维生素", Data.nutrition.Vitamins, Data.nutrition.Max_Vitamins);
+
+        UpdateNutritionDataText("碳水", Data.nutrition.Carbohydrates, Data.nutrition.Max_Carbohydrates);
+        UpdateNutritionDataText("脂肪", Data.nutrition.Fat, Data.nutrition.Max_Fat);
+        UpdateNutritionDataText("蛋白质", Data.nutrition.Protein, Data.nutrition.Max_Protein);
+        UpdateNutritionDataText("水", Data.nutrition.Water, Data.nutrition.Max_Water);
+        UpdateNutritionDataText("维生素", Data.nutrition.Vitamins, Data.nutrition.Max_Vitamins);
     }
 
     /// <summary>
@@ -377,6 +317,20 @@ public partial class Mod_Food : Module
         {
             slider.maxValue = maxValue;
             slider.value = currentValue;
+        }
+    }
+
+    /// <summary>
+    /// 更新营养值文本显示（当前值/最大值）
+    /// </summary>
+    private void UpdateNutritionDataText(string nutritionName, float currentValue, float maxValue)
+    {
+        var dataText = panelUI.GetText($"DataText_{nutritionName}");
+        if (dataText != null)
+        {
+                int currentInt = Mathf.RoundToInt(currentValue);
+                int maxInt = Mathf.RoundToInt(maxValue);
+                dataText.text = $"{currentInt}/{maxInt}";
         }
     }
     #endregion
@@ -582,251 +536,41 @@ public partial class Mod_Food : Module
         return false;
     }
 
-    #endregion
-
-    #region 食物腐败
-
-    public static void EnsureInventorySpoilageConfig(Inventory inventory)
+    public static ItemData CreateSpoilageTargetItemData(string targetItemID)
     {
-        if (inventory == null)
-        {
-            throw new ArgumentNullException(nameof(inventory));
-        }
-
-        if (inventory.FoodSpoilageSettings == null)
-        {
-            inventory.FoodSpoilageSettings = new FoodSpoilageSettings();
-        }
-
-        inventory.FoodSpoilageSettings.EnsureDefaults();
-        EnsureInventorySpoilageRate(inventory.FoodSpoilageSettings, ModText.Bag, 1f);
-        EnsureInventorySpoilageRate(inventory.FoodSpoilageSettings, ModText.Hand, 1f);
-        EnsureInventorySpoilageRate(inventory.FoodSpoilageSettings, ModText.Hotbar, 1f);
-    }
-
-    public static void ResetInventorySpoilageRuntime(Inventory inventory)
-    {
-        if (inventory == null)
-        {
-            return;
-        }
-
-        int inventoryId = RuntimeHelpers.GetHashCode(inventory);
-        _inventorySpoilageTickTimerById.Remove(inventoryId);
-    }
-
-    public static void UpdateInventorySpoilage(Inventory inventory, float deltaTime)
-    {
-        if (inventory == null || inventory.Data == null || inventory.Data.itemSlots == null || inventory.Data.itemSlots.Count == 0)
-        {
-            return;
-        }
-
-        EnsureInventorySpoilageConfig(inventory);
-        FoodSpoilageSettings settings = inventory.FoodSpoilageSettings;
-        if (!settings.EnableSpoilage)
-        {
-            return;
-        }
-
-        int inventoryId = RuntimeHelpers.GetHashCode(inventory);
-        _inventorySpoilageTickTimerById.TryGetValue(inventoryId, out float tickTimer);
-        tickTimer += deltaTime;
-        if (tickTimer < settings.TickIntervalSeconds)
-        {
-            _inventorySpoilageTickTimerById[inventoryId] = tickTimer;
-            return;
-        }
-
-        float spoilageDelta = tickTimer;
-        _inventorySpoilageTickTimerById[inventoryId] = 0f;
-
-        string inventoryName = string.IsNullOrWhiteSpace(inventory.Data.Name) ? ModText.Bag : inventory.Data.Name;
-        float spoilageRate = settings.ResolveContainerRate(inventoryName);
-        if (spoilageRate <= 0f)
-        {
-            return;
-        }
-
-        float scaledSpoilageDelta = spoilageDelta * spoilageRate;
-        for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
-        {
-            ItemSlot slot = inventory.Data.itemSlots[i];
-            if (TryProcessSpoilage(slot, scaledSpoilageDelta, settings, inventoryName, i))
-            {
-                slot.RefreshUI();
-                inventory.Data.Event_RefreshUI.Invoke(i);
-                inventory.Data.Event_OnDataChanged.Invoke(slot);
-            }
-        }
-    }
-
-    private static void EnsureInventorySpoilageRate(FoodSpoilageSettings settings, string inventoryName, float defaultRate)
-    {
-        if (settings == null || string.IsNullOrWhiteSpace(inventoryName))
-        {
-            return;
-        }
-
-        if (!settings.ContainerRateByInventoryName.ContainsKey(inventoryName))
-        {
-            settings.ContainerRateByInventoryName[inventoryName] = defaultRate;
-        }
-    }
-
-    public static bool TryProcessSpoilage(ItemSlot slot, float spoilageDeltaSeconds, FoodSpoilageSettings settings, string inventoryName, int slotIndex)
-    {
-        if (slot == null || slot.itemData == null)
-        {
-            return false;
-        }
-
-        if (settings == null)
-        {
-            throw new ArgumentNullException(nameof(settings));
-        }
-
-        settings.EnsureDefaults();
-        if (!settings.EnableSpoilage)
-        {
-            return false;
-        }
-
-        ItemData itemData = slot.itemData;
-        if (itemData.Stack == null)
-        {
-            Debug.LogError($"[Mod_Food] 腐败处理失败，Stack为空，容器={inventoryName}, 槽位={slotIndex}");
-            return false;
-        }
-
-        if (itemData.Tags == null || !itemData.Tags.ContainsTag("Food"))
-        {
-            return false;
-        }
-
-        if (!TryGetFoodModuleData(itemData, out Ex_ModData_MemoryPackable foodModuleData))
-        {
-            return false;
-        }
-
-        Food foodData = null;
-        foodModuleData.ReadData(ref foodData);
-        if (foodData == null)
-        {
-            foodData = new Food();
-        }
-
-        if (!foodData.EnableSpoilage)
-        {
-            return false;
-        }
-
-        float intervalSeconds = settings.ResolveSpoilageInterval(itemData.IDName, foodData.SpoilageIntervalSeconds);
-        if (intervalSeconds <= 0f)
-        {
-            return false;
-        }
-
-        string targetItemID = settings.ResolveSpoilageTarget(itemData.IDName, foodData.SpoilageTargetItemID);
         if (string.IsNullOrWhiteSpace(targetItemID))
         {
-            Debug.LogError($"[Mod_Food] 腐败处理失败，目标物品ID为空，物品={itemData.IDName}, 容器={inventoryName}, 槽位={slotIndex}");
-            foodData.SpoilageElapsedSeconds = 0f;
-            foodModuleData.WriteData(foodData);
-            return false;
+            return null;
         }
-
-        if (itemData.IDName == targetItemID)
-        {
-            foodData.SpoilageElapsedSeconds = 0f;
-            foodModuleData.WriteData(foodData);
-            return false;
-        }
-
-        foodData.SpoilageElapsedSeconds += Mathf.Max(0f, spoilageDeltaSeconds);
-        if (foodData.SpoilageElapsedSeconds < intervalSeconds)
-        {
-            foodModuleData.WriteData(foodData);
-            return false;
-        }
-
-        if (!TryBuildSpoiledItemData(itemData, targetItemID, out ItemData spoiledData))
-        {
-            foodData.SpoilageElapsedSeconds = 0f;
-            foodModuleData.WriteData(foodData);
-            return false;
-        }
-
-        slot.itemData = spoiledData;
-        Debug.Log($"[FoodSpoilage] 替换成功，容器={inventoryName}, 槽位={slotIndex}, 原物品={itemData.IDName}, 新物品={spoiledData.IDName}, 数量={itemData.Stack.Amount:F0}");
-        return true;
-    }
-
-    private static bool TryGetFoodModuleData(ItemData itemData, out Ex_ModData_MemoryPackable foodModuleData)
-    {
-        foodModuleData = null;
-        if (itemData == null || itemData.ModuleDataDic == null)
-        {
-            return false;
-        }
-
-        foreach (var moduleData in itemData.ModuleDataDic.Values)
-        {
-            if (moduleData == null || moduleData.ID != ModText.Food)
-            {
-                continue;
-            }
-
-            foodModuleData = moduleData as Ex_ModData_MemoryPackable;
-            if (foodModuleData == null)
-            {
-                Debug.LogError($"[Mod_Food] 食物模块数据类型错误，物品={itemData.IDName}, 模块ID={moduleData.ID}");
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryBuildSpoiledItemData(ItemData sourceItemData, string targetItemID, out ItemData spoiledData)
-    {
-        spoiledData = null;
 
         if (GameRes.Instance == null)
         {
-            Debug.LogError($"[Mod_Food] 食物腐败失败，GameRes.Instance为空，目标ID={targetItemID}");
-            return false;
+            Debug.LogError($"[Mod_Food] 构建腐败产物失败，GameRes.Instance为空，目标ID={targetItemID}");
+            return null;
         }
 
         GameObject targetPrefab = GameRes.Instance.GetPrefab(targetItemID);
         if (targetPrefab == null)
         {
-            Debug.LogError($"[Mod_Food] 食物腐败失败，目标预制体不存在，目标ID={targetItemID}");
-            return false;
+            Debug.LogError($"[Mod_Food] 构建腐败产物失败，目标预制体不存在，目标ID={targetItemID}");
+            return null;
         }
 
         Item targetItem = targetPrefab.GetComponent<Item>();
         if (targetItem == null || targetItem.itemData == null)
         {
-            Debug.LogError($"[Mod_Food] 食物腐败失败，目标预制体缺少Item或itemData，目标ID={targetItemID}");
-            return false;
+            Debug.LogError($"[Mod_Food] 构建腐败产物失败，目标预制体缺少Item或itemData，目标ID={targetItemID}");
+            return null;
         }
 
-        spoiledData = FastCloner.FastCloner.DeepClone(targetItem.itemData);
-        if (spoiledData == null || spoiledData.Stack == null)
+        ItemData clonedData = FastCloner.FastCloner.DeepClone(targetItem.itemData);
+        if (clonedData == null || clonedData.Stack == null)
         {
-            Debug.LogError($"[Mod_Food] 食物腐败失败，目标物品克隆失败，目标ID={targetItemID}");
-            return false;
+            Debug.LogError($"[Mod_Food] 构建腐败产物失败，目标物品克隆失败，目标ID={targetItemID}");
+            return null;
         }
 
-        spoiledData.Stack.Amount = sourceItemData.Stack.Amount;
-        spoiledData.Stack.CanBePickedUp = sourceItemData.Stack.CanBePickedUp;
-        spoiledData.Guid = sourceItemData.Guid;
-        spoiledData.transform = sourceItemData.transform;
-        spoiledData.inHand = sourceItemData.inHand;
-        return true;
+        return clonedData;
     }
 
     #endregion

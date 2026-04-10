@@ -1,6 +1,5 @@
 using DG.Tweening;
 using MemoryPack;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using UltEvents;
 
@@ -21,18 +20,6 @@ public partial class Food
     public float WaterConsumeSpeedRate = 1f;
      [Tooltip("营养消耗倍率")]
     public float nutritionConsumeRate = 1f;
-
-    [Tooltip("是否启用食物腐败")]
-    public bool EnableSpoilage = true;
-
-    [Tooltip("食物腐败累计时间（秒）")]
-    public float SpoilageElapsedSeconds = 0f;
-
-    [Tooltip("食物腐败触发间隔（秒）")]
-    public float SpoilageIntervalSeconds = 1800f;
-
-    [Tooltip("食物腐败后替换目标物品ID")]
-    public string SpoilageTargetItemID = "RottenFood";
 
     [Tooltip("模块观察者的持久化状态bit流")]
     public byte[] ObserverState;

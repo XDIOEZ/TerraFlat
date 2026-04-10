@@ -127,7 +127,7 @@ public void Eat(Item food)
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: 食物模块
+  - Name: Module_Cam
   - Tag: Untagged
   - Layer: 9
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

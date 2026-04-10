@@ -1,5 +1,4 @@
 ﻿using FastCloner.Code;
-using Force.DeepCloner;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
@@ -18,12 +17,12 @@ public partial class Inventory_Data
     public bool IsInjected = false;                         // 是否注入
     [ReadOnly]
     public Vector3 PanelPosition = Vector3.zero;            // 面板位置（用于持久化）
-    public bool PanelIsOpen = true;       
-        // UI 开关按键绑定字段，让策划可以在编辑器中设置
+    public bool PanelIsOpen = true;
+    // UI 开关按键绑定字段，让策划可以在编辑器中设置
     [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
     public string ToggleActionName = "";
 
-        [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
+    [Tooltip("UI面板开关Action名称，对应InputSystem中的Action Name")]
     public string UIPrefabName = "";
 
     [MemoryPackIgnore]
@@ -44,6 +43,7 @@ public partial class Inventory_Data
     public UltEvent<ItemSlot, ItemSlot> Event_OnDataChanged_TwoSlots = new();
 
     [FastClonerIgnore]
+    [MemoryPackIgnore]
     public bool IsFull => itemSlots.TrueForAll(slot => slot.itemData != null);
 
     [MemoryPackConstructor]
@@ -414,7 +414,7 @@ public partial class Inventory_Data
             else
             {
                 // 从原数据中复制出一个新对象
-                var newData = dataFrom.DeepClone();
+                var newData = FastCloner.FastCloner.DeepClone(dataFrom);
                 newData.Stack.Amount = 1;
                 dataFrom.Stack.Amount -= 1;
                 slotTo.itemData = newData;
@@ -455,7 +455,7 @@ public partial class Inventory_Data
         }
 
         // 克隆一个转移对象，设置转移数量
-        var transferData = dataFrom.DeepClone();
+        var transferData = FastCloner.FastCloner.DeepClone(dataFrom);
         transferData.Stack.Amount = transferCount;
 
         // 扣除来源物品数量
