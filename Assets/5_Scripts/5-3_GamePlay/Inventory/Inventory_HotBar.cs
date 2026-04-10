@@ -138,9 +138,13 @@ public class Inventory_HotBar : Module, IInventory
 
     public override void Save()
     {
+        ModSaveData.WriteData(RawData);
+    }
+
+    private void OnDestroy()
+    {
         UnbindHotbarInput();
         RuntimeInventory?.UnbindController();
-        ModSaveData.WriteData(RawData);
     }
 
     public override void ModUpdate(float deltaTime)

@@ -54,42 +54,16 @@ MonoBehaviour:
   Data:
     nutrition:
       Carbohydrates: 100
-      Max_Carbohydrates:
-        BaseValue: 100
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
+      Max_Carbohydrates: 100
       Fat: 100
-      Max_Fat:
-        BaseValue: 100
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
+      Max_Fat: 100
       Protein: 100
-      Max_Protein:
-        BaseValue: 100
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
+      Max_Protein: 100
       Water: 100
-      Max_Water:
-        BaseValue: 100
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
+      Max_Water: 100
       Vitamins: 100
-      Max_Vitamins:
-        BaseValue: 100
-        BaseAdditive: 0
-        AdditiveModifier: 0
-        MultiplicativeModifier: 1
-        FinalAdditive: 0
+      Max_Vitamins: 100
     Max_EatingProgress: 3
-    AbsorptionRate: 0.1
     ShowCanvas: 0
     nutritionConsumeSpeed:
       BaseValue: 1
@@ -99,19 +73,20 @@ MonoBehaviour:
       FinalAdditive: 0
     FeelGood: 0
     PanelPosition: {x: 0, y: 0}
-    HealSpeed: 1
-    ProteinThreshold: 50
-    WaterSelfHurt: 1
-    ProteinSelfHurt: 1
-    VitaminSelfHurt: 1
-    StaminaRecoverSpeed: 1
-    StaminaConsumeSpeedRate: 0.5
-    WaterConsumeSpeedRate: 0.1
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
+    EnableSpoilage: 1
+    SpoilageElapsedSeconds: 0
+    SpoilageIntervalSeconds: 1800
+    SpoilageTargetItemID: RottenFood
+    ObserverState: 
   EatingProgress: 0
   DataUpdate:
     _PersistentCalls: []
   PanelPrefab: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
   PanleInstance: {fileID: 0}
   panelUI: {fileID: 0}
-  Stamina: {fileID: 0}
-  DamageReceiver: {fileID: 0}
+  observers: []
+  references:
+    version: 2
+    RefIds: []

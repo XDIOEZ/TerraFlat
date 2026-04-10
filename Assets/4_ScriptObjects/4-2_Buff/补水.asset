@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8d8e46a05024d41a9c51244b099006, type: 3}
   m_Name: "\u8865\u6C34"
   m_EditorClassIdentifier: 
-  buff_ID: "\u6F6E\u6E7F"
-  buff_Name: "\u6F6E\u6E7F"
+  buff_ID: "\u8865\u6C34"
+  buff_Name: "\u8865\u6C34"
   buff_Type: "\u6570\u503C\u4FEE\u6539\u7C7B"
-  buff_Description: "\u8FDB\u5165\u6C34\u540E\u5E26\u6765\u7684\u6F6E\u6E7F\u6548\u679C"
+  buff_Description: "\u5165\u6C34\u540E\u559D\u51E0\u53E3"
   buff_Duration: 9999
   buff_Interval: 1
   buff_MaxStack: 1
@@ -36,37 +36,12 @@ MonoBehaviour:
       data:
         NutritionChangeValue:
           Carbohydrates: 0
-          Max_Carbohydrates:
-            BaseValue: 0
-            BaseAdditive: 0
-            AdditiveModifier: 0
-            MultiplicativeModifier: 1
-            FinalAdditive: 0
+          Max_Carbohydrates: 500
           Fat: 0
-          Max_Fat:
-            BaseValue: 0
-            BaseAdditive: 0
-            AdditiveModifier: 0
-            MultiplicativeModifier: 1
-            FinalAdditive: 0
+          Max_Fat: 500
           Protein: 0
-          Max_Protein:
-            BaseValue: 0
-            BaseAdditive: 0
-            AdditiveModifier: 0
-            MultiplicativeModifier: 1
-            FinalAdditive: 0
-          Water: 1
-          Max_Water:
-            BaseValue: 1
-            BaseAdditive: 0
-            AdditiveModifier: 0
-            MultiplicativeModifier: 1
-            FinalAdditive: 0
+          Max_Protein: 500
+          Water: 10
+          Max_Water: 500
           Vitamins: 0
-          Max_Vitamins:
-            BaseValue: 0
-            BaseAdditive: 0
-            AdditiveModifier: 0
-            MultiplicativeModifier: 1
-            FinalAdditive: 0
+          Max_Vitamins: 500
