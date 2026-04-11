@@ -55,6 +55,13 @@ public class Mod_PlayerTraits : Module
     /// </summary>
     public void Death()
     {
+        // 管理员模式下忽略死亡
+        if (player?.Data?.Name_User == "管理员")
+        {
+            Debug.Log("[Mod_PlayerTraits] 管理员模式生效，已忽略死亡。");
+            return;
+        }
+
         Application.Quit();
         Application.OpenURL("https://space.bilibili.com/353520649");
     }

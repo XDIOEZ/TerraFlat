@@ -46,7 +46,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _BodyClip: 0
-    - _BodyMaxV: 0.79999995
+    - _BodyMaxV: 0.8500004
     - _BodyMinV: 0
     - _Dissolve: 0
     - _EnableExternalAlpha: 0

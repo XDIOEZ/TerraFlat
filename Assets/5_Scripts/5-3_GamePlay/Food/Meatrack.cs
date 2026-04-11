@@ -12,50 +12,69 @@ using UnityEngine;
 /// </summary>
 public class MeatrackDryingRule
 {
+    [TableColumnWidth(100, Resizable = false)]
     [LabelText("规则名")]
     [Tooltip("规则名，便于在Inspector中区分")]
     public string RuleName = "完整肉块";
 
+    [PropertySpace(SpaceBefore = 3)]
+    [BoxGroup("输入条件")]
+    [TableColumnWidth(220)]
     [LabelText("输入物品ID（任意命中）")]
-    [ListDrawerSettings(DraggableItems = true, Expanded = true, ShowPaging = false)]
+    [ListDrawerSettings(DraggableItems = true, ShowFoldout = true, DefaultExpandedState = false, ShowPaging = true, NumberOfItemsPerPage = 4)]
     [Tooltip("输入物品ID列表，任意一个命中即可")]
     public List<string> InputItemIds = new List<string>();
 
+    [BoxGroup("输入条件")]
+    [TableColumnWidth(220)]
     [LabelText("输入Tag（任意命中）")]
-    [ListDrawerSettings(DraggableItems = true, Expanded = true, ShowPaging = false)]
+    [ListDrawerSettings(DraggableItems = true, ShowFoldout = true, DefaultExpandedState = false, ShowPaging = true, NumberOfItemsPerPage = 4)]
     [Tooltip("输入Tag列表，任意一个命中即可")]
     public List<string> InputTags = new List<string>();
 
+    [PropertySpace(SpaceBefore = 3)]
+    [BoxGroup("输出与耗时")]
+    [TableColumnWidth(120, Resizable = false)]
     [LabelText("输出物品ID")]
     [Required("输出物品ID不能为空")]
     [Tooltip("风干后输出物品ID（对应ItemData.IDName）")]
     public string OutputItemId = "Meat_Cooked";
 
+    [BoxGroup("输出与耗时")]
+    [TableColumnWidth(90, Resizable = false)]
     [Min(0.01f)]
     [LabelText("基础风干时长")]
     [SuffixLabel("秒", true)]
     [Tooltip("基础风干时长（秒）")]
     public float RequiredDryingSeconds = 120f;
 
+    [BoxGroup("输出与耗时")]
+    [TableColumnWidth(90, Resizable = false)]
     [Range(0f, 1f)]
     [LabelText("风干成功率")]
     [ProgressBar(0f, 1f)]
     [Tooltip("风干成功率，完整大肉块推荐0.5，肉条推荐1")]
     public float SuccessRate = 1f;
 
+    [BoxGroup("输出与耗时")]
+    [TableColumnWidth(90, Resizable = false)]
     [Min(0f)]
     [LabelText("食材风干倍率")]
     [SuffixLabel("x", true)]
     [Tooltip("该类型食材自身的风干速度倍率")]
     public float DrySpeedMultiplier = 1f;
 
+    [BoxGroup("显示")]
+    [TableColumnWidth(80, Resizable = false)]
     [LabelText("展示Sprite")]
-    [PreviewField(60, ObjectFieldAlignment.Left)]
+    [PreviewField(50, ObjectFieldAlignment.Left)]
     [Tooltip("槽位物品展示Sprite，留空则尝试自动读取对应Prefab的Sprite")]
     public Sprite DisplaySprite;
 
+    [BoxGroup("显示")]
+    [TableColumnWidth(80, Resizable = false)]
     [LabelText("熏制覆盖Sprite")]
-    [PreviewField(60, ObjectFieldAlignment.Left)]
+    [PreviewField(50, ObjectFieldAlignment.Left)]
     [Tooltip("熏制状态覆盖Sprite，留空则使用默认熏制Sprite或物品Sprite")]
     public Sprite SmokedStateSprite;
 }
@@ -106,9 +125,8 @@ public class Meatrack : Module, IInteractable, IInteract
 
     [TabGroup("检查器", "风干规则")]
     [InfoBox("规则从上到下依次匹配，命中第一条后停止匹配。")]
-    [ListDrawerSettings(DraggableItems = true, Expanded = true, ShowPaging = false)]
-    [LabelText("风干规则列表")]
-    [SerializeReference]
+    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 240, MaxScrollViewHeight = 520)]
+    [LabelText("风干规则表")]
     public List<MeatrackDryingRule> DryingRules = new List<MeatrackDryingRule>(); // 食材风干规则表
 
     [TabGroup("检查器", "热源加速")]
@@ -135,12 +153,12 @@ public class Meatrack : Module, IInteractable, IInteract
 
     [TabGroup("检查器", "热源加速")]
     [LabelText("热源物品ID")]
-    [ListDrawerSettings(DraggableItems = true, Expanded = true, ShowPaging = false)]
+    [ListDrawerSettings(DraggableItems = true, ShowFoldout = true, DefaultExpandedState = true, ShowPaging = false)]
     public List<string> HeatSourceItemIds = new List<string> { "Bonfire", "Smelter" }; // 直接视作热源的物品ID
 
     [TabGroup("检查器", "热源加速")]
     [LabelText("热源模块ID")]
-    [ListDrawerSettings(DraggableItems = true, Expanded = true, ShowPaging = false)]
+    [ListDrawerSettings(DraggableItems = true, ShowFoldout = true, DefaultExpandedState = true, ShowPaging = false)]
     public List<string> HeatSourceModuleIds = new List<string> { "熔炼模块", "熔炉模块" }; // 带这些模块ID的物品也视作热源
 
     [TabGroup("检查器", "挂架显示")]
@@ -192,7 +210,7 @@ public class Meatrack : Module, IInteractable, IInteract
     [TabGroup("检查器", "运行时")]
     [ReadOnly]
     [LabelText("槽位风干进度")]
-    [ListDrawerSettings(DraggableItems = false, Expanded = true, ShowPaging = false)]
+    [ListDrawerSettings(DraggableItems = false, ShowFoldout = true, DefaultExpandedState = true, ShowPaging = false)]
     public List<float> SlotProgress01 = new List<float>(); // 各槽位风干进度0~1
 
     [TabGroup("检查器", "运行时")]

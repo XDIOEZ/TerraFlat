@@ -28,7 +28,10 @@ Mod_Hand 位于 `Assets/5_Scripts/5-3_GamePlay/Entity/Player/`，是玩家默认
 
 **顶格要求**: `#region` 和 `#endregion` 必须**顶格**，不允许前导空格。
 
-**推荐的#region结构**（按此顺序）：
+**推荐的#region结构**：按功能进行区分，不再要求固定顺序。
+
+- 不同脚本应根据自身职责设计不同的 `#region` 结构。
+- 优先按“业务功能模块”分区，而不是强行套用统一模板。
 
 ```
 
@@ -127,7 +130,7 @@ public void Eat(Item food)
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: Module_Cam
+  - Name: AppleTree(Clone)
   - Tag: Untagged
-  - Layer: 9
+  - Layer: Collider
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

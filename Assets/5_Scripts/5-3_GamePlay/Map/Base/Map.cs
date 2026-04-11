@@ -1114,11 +1114,26 @@ public class Map : Item
 
         // 获取该位置最顶层的 TileData（最后一个）
         TileData topTile = list[^1];
-        TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
+
+        if (GameRes.Instance == null)
+        {
+            Debug.LogError("无法更新 TileBase：GameRes.Instance 为空");
+            return;
+        }
+
+        // 通过位置拿到顶层 TileData.ID -> 通过 ID 找 Tile_Block SO -> 通过 SO 获取 TileBase
+        Tile_Block tileBlock = GameRes.Instance.GetTileBlock(topTile.ID);
+        if (tileBlock == null)
+        {
+            Debug.LogError($"无法加载 Tile_Block：{topTile.ID}，更新失败。");
+            return;
+        }
+
+        TileBase tile = tileBlock.GetTileBaseAsset();
 
         if (tile == null)
         {
-            Debug.LogError($"无法加载 TileBase：{topTile.ID}，更新失败。");
+            Debug.LogError($"Tile_Block({tileBlock.name}) 的 TileBase 为空，更新失败。");
             return;
         }
 

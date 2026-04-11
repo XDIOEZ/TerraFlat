@@ -651,6 +651,25 @@ public class BasePanel : MonoBehaviour
 
     #endregion
 
+    #region Image操作
+
+    /// <summary>
+    /// 获取Image组件
+    /// </summary>
+    /// <param name="imageName">Image名称</param>
+    /// <returns>Image组件，如果不存在返回null</returns>
+    public Image GetImage(string imageName)
+    {
+        if (images.TryGetValue(imageName, out Image image))
+        {
+            return image;
+        }
+        Debug.LogWarning($"未找到名为 {imageName} 的Image");
+        return null;
+    }
+
+    #endregion
+
     #region 通用操作
 
     /// <summary>
