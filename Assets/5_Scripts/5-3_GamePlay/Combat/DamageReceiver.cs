@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
@@ -535,6 +535,23 @@ public class DamageReceiver : Module
             }
         }
     }
+
+    #region 调试方法
+
+    [Button("添加全部1级弱点")]
+    public void Debug_AddAllWeaknesses()
+    {
+        Data.Weakness.Clear();
+
+        foreach (DamageTag tag in System.Enum.GetValues(typeof(DamageTag)))
+        {
+            Data.Weakness.Add(new DamageType(tag, 1));
+        }
+
+        Debug.Log($"[{item.itemData.GameName}] 已添加全部弱点，共 {Data.Weakness.Count} 个");
+    }
+
+    #endregion
 
     #region 动画效果实现
 

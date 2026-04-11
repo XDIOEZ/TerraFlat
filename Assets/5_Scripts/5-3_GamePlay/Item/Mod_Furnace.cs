@@ -21,6 +21,10 @@ public class Mod_Furnace : Module, IInteractable
     [Tooltip("燃料容器，用于存放熔炉所需的燃料物品")]
     public Inventory FuelInventory;
     public Mod_Fuel mod_Fuel; // 燃料模块
+    public List<string> ignitionItemIds = new List<string> { "FireSeed" }; // 可用于点火的火种ID
+    public List<string> ignitionTags = new List<string> { "火种" }; // 可用于点火的火种标签
+    public float ignitionFuelValueOverride = 8f; // 火种有效燃料值（较小）
+    public float ignitionMaxTemperatureOverride = 180f; // 火种点火时提供的温度上限（较低）
     public BasePanel basePanel; // 熔炉面板
     public GameObject UI_Prefab; // 熔炉UI预制体
     private const float PanelDestroyDelay = 30f;
@@ -161,13 +165,14 @@ public class Mod_Furnace : Module, IInteractable
                         if (fuelData != null)
                         {
                             fuelData.OutData(out FuelData fuel);
-                            mod_Fuel.AddFuel(fuel.Fuel.x);
+                            ResolveFuelParams(slot.itemData, fuel, out float fuelValue, out float maxTemperature);
+                            mod_Fuel.AddFuel(fuelValue);
 
                             // 点燃燃料
                             mod_Fuel.SetIgnited(true);
 
                             // 温度上限取决于燃料
-                            Data.MaxTemperature = fuel.MaxTemperature;
+                            Data.MaxTemperature = maxTemperature;
                         }
 
                         SmeltingProcess(deltaTime); // 继续熔炼
@@ -1235,14 +1240,21 @@ public class Mod_Furnace : Module, IInteractable
             return;
         }
 
+        if (!IsIgnitionFuel(fuelSlot.itemData))
+        {
+            Debug.LogWarning($"无法点火：首个点火燃料必须为火种。当前={fuelSlot.itemData.IDName}");
+            return;
+        }
+
         fuelData.OutData(out FuelData fuel);
         fuelSlot.itemData.Stack.Amount -= 1;
         fuelSlot.RefreshUI();
 
-        mod_Fuel.AddFuel(fuel.Fuel.x);
+        ResolveFuelParams(fuelSlot.itemData, fuel, out float fuelValue, out float maxTemperature);
+        mod_Fuel.AddFuel(fuelValue);
 
         // 温度上限取决于当前消耗的燃料
-        Data.MaxTemperature = fuel.MaxTemperature;
+        Data.MaxTemperature = maxTemperature;
 
         // 开始熔炼
         Data.IsSmelting = true;
@@ -1250,6 +1262,32 @@ public class Mod_Furnace : Module, IInteractable
         // 点燃燃料模块
         mod_Fuel?.SetIgnited(true);
         Debug.Log("熔炉已点燃并开始熔炼！");
+    }
+
+    private bool IsIgnitionFuel(ItemData itemData)
+    {
+        if (itemData == null)
+            return false;
+
+        if (ignitionItemIds != null && ignitionItemIds.Contains(itemData.IDName))
+            return true;
+
+        if (itemData.Tags == null || ignitionTags == null)
+            return false;
+
+        return itemData.Tags.ContainsAnyTag(ignitionTags);
+    }
+
+    private void ResolveFuelParams(ItemData itemData, FuelData rawFuelData, out float fuelValue, out float maxTemperature)
+    {
+        fuelValue = rawFuelData.Fuel.x;
+        maxTemperature = rawFuelData.MaxTemperature;
+
+        if (!IsIgnitionFuel(itemData))
+            return;
+
+        fuelValue = Mathf.Min(fuelValue, ignitionFuelValueOverride);
+        maxTemperature = Mathf.Min(maxTemperature, ignitionMaxTemperatureOverride);
     }
     #endregion
 

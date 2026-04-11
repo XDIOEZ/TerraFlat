@@ -7,6 +7,7 @@ using UnityEngine;
 [MemoryPackUnion(54, typeof(TileData_Grass))]//草地数据
 [MemoryPackUnion(55, typeof(TileData_Water))]//水地数据
 [MemoryPackUnion(56, typeof(TileData_Universal))]//通用地块数据
+[MemoryPackUnion(57, typeof(TileData_Farmland))]//耕地数据
 public abstract partial class TileData
 {
     //物品的绘制物块 用于实现

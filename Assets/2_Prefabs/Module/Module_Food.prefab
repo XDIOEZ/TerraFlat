@@ -45,41 +45,69 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  ExData:
+  FoodModData:
     Name: 
     ID: 
     isRunning: 1
     Type: 0
-    BitData: 
-  Data:
-    nutrition:
-      Carbohydrates: 100
-      Max_Carbohydrates: 100
-      Fat: 100
-      Max_Fat: 100
-      Protein: 100
-      Max_Protein: 100
-      Water: 100
-      Max_Water: 100
-      Vitamins: 100
-      Max_Vitamins: 100
-    Max_EatingProgress: 3
-    ShowCanvas: 0
-    nutritionConsumeSpeed:
-      BaseValue: 1
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-    FeelGood: 0
-    PanelPosition: {x: 0, y: 0}
-    WaterConsumeSpeedRate: 0
-    nutritionConsumeRate: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    FoodData:
+      nutrition:
+        Carbohydrates: 500
+        Max_Carbohydrates: 500
+        Fat: 500
+        Max_Fat: 500
+        Protein: 500
+        Max_Protein: 500
+        Water: 500
+        Max_Water: 500
+        Vitamins: 500
+        Max_Vitamins: 500
+      Max_EatingProgress: 3
+      ShowCanvas: 0
+      nutritionConsumeSpeed:
+        BaseValue: 1
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      FeelGood: 0
+      PanelPosition: {x: 0, y: 0}
+      WaterConsumeSpeedRate: 1
+      nutritionConsumeRate: 1
+      ObserverState: 
     EnableSpoilage: 1
     SpoilageElapsedSeconds: 0
     SpoilageIntervalSeconds: 1800
-    SpoilageTargetItemID: RottenFood
-    ObserverState: 
+    SpoilageTargetItemID: Meat_Rotten
+    RuntimeSpoilageDeltaSeconds: 0
+    RuntimeResolvedIntervalSeconds: 0
+    RuntimeResolvedTargetItemID: 
+    RuntimeCurrentItemID: 
+    RuntimeTriggered: 0
+    RuntimeInvalid: 0
+    RuntimeInvalidReason: 
   EatingProgress: 0
   DataUpdate:
     _PersistentCalls: []

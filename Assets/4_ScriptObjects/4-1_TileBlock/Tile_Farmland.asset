@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75b116e5f0ea93c45a60dada7fdafd73, type: 3}
+  m_Name: Tile_Farmland
+  m_EditorClassIdentifier: 
+  tileItemName: Tile_Farmland
+  displayName: Tile_Farmland
+  tileDataTemplate:
+    rid: 4916459907662479361
+  TileBase: {fileID: 11400000, guid: 859d3cbb5d9d1744f81de89976978b08, type: 2}
+  behaviours: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 4916459907662479361
+      type: {class: TileData_Farmland, ns: , asm: Data}
+      data:
+        ID: Tile_Farmland
+        Name: Tile_Farmland
+        TileTag: 
+        position: {x: 0, y: 0, z: 0}
+        DemolitionTime: 0
+        workTime: 0
+        Penalty: 2000
+        IsWalkable: 1
+        fertilityValue:
+          BaseValue: 1
+          BaseAdditive: 0
+          AdditiveModifier: 0
+          MultiplicativeModifier: 1
+          FinalAdditive: 0
+        waterValue: 40
+        maxWater: 100

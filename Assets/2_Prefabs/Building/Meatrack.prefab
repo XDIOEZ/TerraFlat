@@ -332,6 +332,28 @@ MonoBehaviour:
     ID: "\u667E\u8089\u67B6\u6A21\u5757"
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   RackInventory:
     item: {fileID: 0}
@@ -367,7 +389,43 @@ MonoBehaviour:
   InventoryPanelPrefab: {fileID: 7912998792349077291, guid: d24e46f0dd4ed92499330994f5eeb75d, type: 3}
   SlotCount: 3
   DryingRules:
-  - rid: 4916459837826269188
+  - RuleName: "\u8089\u5757\u98CE\u5E72\u4E3A\u8089\u5E72"
+    InputItemIds:
+    - Meat
+    InputTags:
+    - "\u8089\u5757"
+    - "\u5B8C\u6574\u8089\u5757"
+    - "\u5927\u8089\u5757"
+    OutputItemId: Meat_Dehydrate
+    RequiredDryingSeconds: 120
+    SuccessRate: 1
+    DrySpeedMultiplier: 1
+    DisplaySprite: {fileID: 0}
+    SmokedStateSprite: {fileID: 0}
+  - RuleName: "\u53F6\u5B50\u98CE\u5E72\u4E3A\u8336\u53F6"
+    InputItemIds:
+    - Leaf
+    InputTags:
+    - "\u53F6\u5B50"
+    - "\u8336\u53F6\u539F\u6599"
+    OutputItemId: Tea
+    RequiredDryingSeconds: 120
+    SuccessRate: 1
+    DrySpeedMultiplier: 1
+    DisplaySprite: {fileID: 0}
+    SmokedStateSprite: {fileID: 0}
+  - RuleName: "\u751F\u76AE\u9769\u98CE\u5E72\u4E3A\u76AE\u9769"
+    InputItemIds:
+    - RawHide
+    InputTags:
+    - "\u751F\u76AE\u9769"
+    - "\u751F\u76AE"
+    OutputItemId: Leather
+    RequiredDryingSeconds: 120
+    SuccessRate: 1
+    DrySpeedMultiplier: 1
+    DisplaySprite: {fileID: 0}
+    SmokedStateSprite: {fileID: 0}
   HeatSourceRadius: 1
   HeatSourceScanInterval: 30
   HeatSourceSpeedBoostPerSource: 1
@@ -398,24 +456,6 @@ MonoBehaviour:
   SlotProgress01: []
   NearbyHeatSourceCount: 0
   CurrentDryingSpeedMultiplier: 1
-  references:
-    version: 2
-    RefIds:
-    - rid: 4916459837826269188
-      type: {class: MeatrackDryingRule, ns: , asm: GamePlay}
-      data:
-        RuleName: "\u5B8C\u6574\u5927\u8089\u5757"
-        InputItemIds:
-        - Meat
-        InputTags:
-        - "\u5B8C\u6574\u8089\u5757"
-        - "\u5927\u8089\u5757"
-        OutputItemId: Meat_Dehydrate
-        RequiredDryingSeconds: 120
-        SuccessRate: 1
-        DrySpeedMultiplier: 1
-        DisplaySprite: {fileID: 0}
-        SmokedStateSprite: {fileID: 0}
 --- !u!1 &4738450135515077352
 GameObject:
   m_ObjectHideFlags: 0

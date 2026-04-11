@@ -20,6 +20,12 @@ public class PlayerAdminController : Module
     [Tooltip("玩家快捷栏，用于操作手持物品")]
     public Inventory_HotBar hotbar;
 
+    [Tooltip("生命模块（管理员模式维持不死）")]
+    public DamageReceiver damageReceiver;
+
+    [Tooltip("理智模块（管理员模式维持不死）")]
+    public Mod_San sanMod;
+
     [Header("时间控制")]
     [Tooltip("时间流逝速度")]
     public float timeScale = 1.0f;
@@ -77,6 +83,12 @@ public class PlayerAdminController : Module
                 var hotbarMod = player.itemMods.GetMod_ByID(ModText.Hotbar);
                 hotbar = hotbarMod?.GetComponent<Inventory_HotBar>();
             }
+
+            if (damageReceiver == null)
+                damageReceiver = player.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+
+            if (sanMod == null)
+                sanMod = player.itemMods.GetMod_ByID<Mod_San>(Mod_San.ModuleId);
         }
     }
 
@@ -102,6 +114,7 @@ public class PlayerAdminController : Module
         // 非管理员不执行后续逻辑
         if (!IsAdmin()) return;
 
+        KeepAdminAlive();
         HandleAdminInput();
         HandleTimeScaleControl();
     }
@@ -149,6 +162,19 @@ public class PlayerAdminController : Module
         if (Input.GetKeyDown(KeyCode.F5))
         {
             AddAmountToAllBagItems(999f);
+        }
+    }
+
+    private void KeepAdminAlive()
+    {
+        if (damageReceiver != null && damageReceiver.MaxHp > 0f && damageReceiver.Hp < damageReceiver.MaxHp)
+        {
+            damageReceiver.Hp = damageReceiver.MaxHp;
+        }
+
+        if (sanMod != null && sanMod.MaxValue > 0f && sanMod.CurrentValue < sanMod.MaxValue)
+        {
+            sanMod.CurrentValue = sanMod.MaxValue;
         }
     }
 

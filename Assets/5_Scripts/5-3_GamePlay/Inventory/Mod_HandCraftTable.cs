@@ -26,8 +26,22 @@ public class Mod_HandCraftTable : Module, IInventory
     [Header("交互组件")]
     [Tooltip("合成按钮")]
     public Button workButton;
+    [Tooltip("合成进度条Image（可选，不填则自动查找名为Progress的Image）")]
+    public Image progressImage;
     [Tooltip("打开/关闭手工合成台的按键")]
     public KeyCode toggleKey = KeyCode.H;
+    [Tooltip("工作台等级，等级越高需要点击次数越少")]
+    public int workbenchLevel = 1;
+    [Tooltip("1级工作台每次合成需要的基础点击次数")]
+    public int baseClickCount = 6;
+    [Tooltip("每升1级减少的点击次数")]
+    public int clickReductionPerLevel = 1;
+    [Tooltip("每次合成最少需要点击次数")]
+    public int minClickCount = 1;
+
+    private int _currentClickProgress;
+
+    private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
 
     private const int InputSlotCount = 4;
     private const int OutputSlotCount = 1;
@@ -135,6 +149,8 @@ public class Mod_HandCraftTable : Module, IInventory
 
     public void InitUI()
     {
+        _currentClickProgress = 0;
+
         BindInputSlots();
         BindOutputSlot();
 
@@ -150,6 +166,8 @@ public class Mod_HandCraftTable : Module, IInventory
 
         workButton.onClick.RemoveListener(OnCraftButtonClick);
         workButton.onClick.AddListener(OnCraftButtonClick);
+        TryBindProgressImage();
+        UpdateCraftProgressUI();
 
         inputInventory.RefreshUI();
         outputInventory.RefreshUI();
@@ -157,7 +175,42 @@ public class Mod_HandCraftTable : Module, IInventory
 
     private void OnCraftButtonClick()
     {
-        Craft(inputInventory, outputInventory);
+        _currentClickProgress++;
+        int requiredClickCount = RequiredClickCount;
+        _currentClickProgress = Mathf.Min(_currentClickProgress, requiredClickCount);
+        UpdateCraftProgressUI();
+        LogCraftDebug($"点击进度：{_currentClickProgress}/{requiredClickCount}，等级={workbenchLevel}");
+
+        if (_currentClickProgress < requiredClickCount)
+            return;
+
+        bool craftResult = Craft(inputInventory, outputInventory);
+        _currentClickProgress = 0;
+        UpdateCraftProgressUI();
+        if (!craftResult)
+        {
+            LogCraftDebug("合成失败，已重置点击进度");
+        }
+    }
+
+    private void TryBindProgressImage()
+    {
+        if (progressImage != null)
+            return;
+
+        progressImage = basePanel.GetComponentsInChildren<Image>(true)
+            .FirstOrDefault(image => image.name == "Progress");
+    }
+
+    private void UpdateCraftProgressUI()
+    {
+        if (progressImage == null)
+            return;
+
+        int requiredClickCount = RequiredClickCount;
+        progressImage.fillAmount = requiredClickCount <= 0
+            ? 0f
+            : Mathf.Clamp01(_currentClickProgress / (float)requiredClickCount);
     }
 
     private void BindInputSlots()

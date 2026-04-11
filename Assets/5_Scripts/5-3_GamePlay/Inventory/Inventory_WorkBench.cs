@@ -22,6 +22,20 @@ public class Inventory_WorkBench : Inventory
     [Header("交互组件")]
     [Tooltip("合成按钮")]
     public Button workButton;
+    [Tooltip("合成进度条Image（可选，不填则自动查找名为Progress的Image）")]
+    public Image progressImage;
+    [Tooltip("工作台等级，等级越高需要点击次数越少")]
+    public int workbenchLevel = 1;
+    [Tooltip("1级工作台每次合成需要的基础点击次数")]
+    public int baseClickCount = 6;
+    [Tooltip("每升1级减少的点击次数")]
+    public int clickReductionPerLevel = 1;
+    [Tooltip("每次合成最少需要点击次数")]
+    public int minClickCount = 1;
+
+    private int _currentClickProgress;
+
+    private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
 
     public override void OnValidate()
     {
@@ -33,23 +47,37 @@ public class Inventory_WorkBench : Inventory
 
     private void OnCraftButtonClick()
     {
+        _currentClickProgress++;
+        int requiredClickCount = RequiredClickCount;
+        _currentClickProgress = Mathf.Min(_currentClickProgress, requiredClickCount);
+        UpdateCraftProgressUI();
+        Debug.Log($"工作台点击进度：{_currentClickProgress}/{requiredClickCount}，等级={workbenchLevel}");
+
+        if (_currentClickProgress < requiredClickCount)
+            return;
 
         // 检查inputInventory和outputInventory是否有效
         if (inputInventory == null)
         {
             Debug.LogError("inputInventory 为 null！");
+            _currentClickProgress = 0;
+            UpdateCraftProgressUI();
             return;
         }
 
         if (outputInventory == null)
         {
             Debug.LogError("outputInventory 为 null！");
+            _currentClickProgress = 0;
+            UpdateCraftProgressUI();
             return;
         }
 
         Debug.Log("开始执行合成操作...");
         bool craftResult = Craft(inputInventory, outputInventory);
         Debug.Log($"合成操作完成，结果: {craftResult}");
+        _currentClickProgress = 0;
+        UpdateCraftProgressUI();
     }
 
 
@@ -71,6 +99,7 @@ public class Inventory_WorkBench : Inventory
     public override void InitUI()
     {
         base.InitUI();
+        _currentClickProgress = 0;
 
         // 尝试获取按钮
         workButton = basePanel.GetButton("合成按钮");
@@ -86,7 +115,29 @@ public class Inventory_WorkBench : Inventory
         workButton.onClick.RemoveListener(OnCraftButtonClick);
         // 监听合成按钮点击事件
         workButton.onClick.AddListener(OnCraftButtonClick);
+        TryBindProgressImage();
+        UpdateCraftProgressUI();
         Debug.Log("合成按钮事件绑定成功！");
+    }
+
+    private void TryBindProgressImage()
+    {
+        if (progressImage != null)
+            return;
+
+        progressImage = basePanel.GetComponentsInChildren<Image>(true)
+            .FirstOrDefault(image => image.name == "Progress");
+    }
+
+    private void UpdateCraftProgressUI()
+    {
+        if (progressImage == null)
+            return;
+
+        int requiredClickCount = RequiredClickCount;
+        progressImage.fillAmount = requiredClickCount <= 0
+            ? 0f
+            : Mathf.Clamp01(_currentClickProgress / (float)requiredClickCount);
     }
 
     /// <summary>

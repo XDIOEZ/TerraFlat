@@ -49,6 +49,10 @@ public static class ModText
     public static string Grow = "生长模块";
     #endregion
 
+    #region P
+    public static string PlantSeed = "农作物模块";
+    #endregion
+
 
     #region H
     public static string Hand = "UI_手部插槽";
@@ -80,11 +84,14 @@ public static class ModText
 
     public static string SkillManager_Item = "技能管理器_物品";
     public static string Setting = "Module_Setting";
+    public static string San = "理智模块";
     #endregion
 
     #region T
     public static string TrunBody = "Module_TurnBack";
     public static string TileEffectReceiver = "TileReciver";
+    public static string Temperature = "体温模块";
+    public static string Tool = "工具模块";
     #endregion
     #region W
     public static string WorkBench = "工作台模块";
