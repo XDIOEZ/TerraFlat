@@ -60,7 +60,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     public override void Load()
     {
         modData.ReadData(ref Data);
-        NormalizeData();
+        TemperatureMgr.Instance.NormalizeData(Data);
 
         _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
         item.OnInit_Env += AdjustByEnvironment;
@@ -73,10 +73,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public override void ModUpdate(float deltaTime)
     {
-        float targetTemperature = Data.AmbientTemperature + Data.Insulation;
-        SetTemperatureInternal(Mathf.MoveTowards(Data.CurrentTemperature, targetTemperature, Data.ChangeSpeed * deltaTime));
-
-        ApplyTemperatureDamage(deltaTime);
+        TemperatureMgr.Instance.ProcessTemperature(Data, _damageReceiver, deltaTime, SetTemperatureInternal);
     }
 
     private void OnDestroy()
@@ -130,19 +127,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
 #region 私有方法
 
-    private void NormalizeData()
-    {
-        Data.ChangeSpeed = Mathf.Max(0f, Data.ChangeSpeed);
-
-        Data.ColdDamagePerSecond = Mathf.Max(0f, Data.ColdDamagePerSecond);
-        Data.HotDamagePerSecond = Mathf.Max(0f, Data.HotDamagePerSecond);
-
-        Data.ComfortableMax = Mathf.Max(Data.ComfortableMin, Data.ComfortableMax);
-        Data.HotDamageStart = Mathf.Max(Data.ColdDamageStart, Data.HotDamageStart);
-        Data.CriticalHigh = Mathf.Max(Data.HotDamageStart, Data.CriticalHigh);
-        Data.CriticalLow = Mathf.Min(Data.ColdDamageStart, Data.CriticalLow);
-    }
-
     private void SetTemperatureInternal(float value)
     {
         float oldValue = Data.CurrentTemperature;
@@ -155,26 +139,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         OnAction.Invoke(Data.CurrentTemperature);
         OnTemperatureChanged.Invoke(Data.CurrentTemperature);
-    }
-
-    private void ApplyTemperatureDamage(float deltaTime)
-    {
-        if (_damageReceiver == null)
-        {
-            return;
-        }
-
-        if (Data.CurrentTemperature < Data.ColdDamageStart)
-        {
-            float ratio = Mathf.Max(0f, Data.ColdDamageStart - Data.CurrentTemperature);
-            _damageReceiver.ForceHurt(ratio * Data.ColdDamagePerSecond * deltaTime);
-        }
-
-        if (Data.CurrentTemperature > Data.HotDamageStart)
-        {
-            float ratio = Mathf.Max(0f, Data.CurrentTemperature - Data.HotDamageStart);
-            _damageReceiver.ForceHurt(ratio * Data.HotDamagePerSecond * deltaTime);
-        }
     }
 
 #endregion
