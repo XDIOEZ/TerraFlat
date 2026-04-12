@@ -22,9 +22,6 @@ public partial class Mod_Seed : Module
         [Tooltip("生长完成所需进度")]
         public float growCompletionThreshold = 100f;
 
-        [Tooltip("生长阶段")]
-        public int growStage = 0; // 0=种子, 1=幼苗, 2=成熟
-
         public Mod_Seed_Data() { }
     }
 
@@ -45,7 +42,7 @@ public partial class Mod_Seed : Module
     [Tooltip("生长速度（每秒增长进度点数）")]
     public float baseGrowthSpeed = 5f;
 
-    [Tooltip("生长完成后生成的作物 Item 名称")]
+    [Tooltip("生长完成后生成的幼苗 Item 名称")]
     public string harvestedCropName = "Crop_Wheat"; // 默认小麦
 
     [Tooltip("生长过程中每秒消耗的肥力")]
@@ -106,14 +103,14 @@ public partial class Mod_Seed : Module
             return;
         }
 
-        // 消耗一个种子
-        item.itemData.Stack.Amount--;
-        Debug.Log($"[Mod_Seed] 种子已种植在 {cellPos}，剩余：{item.itemData.Stack.Amount}");
+        Item plantedSeed = CreatePlantedSeedInstance(cellPos);
+        ResetHandSeedPlantState();
+        ConsumeSeedInHand();
+
+        Debug.Log($"[Mod_Seed] 种子已种植在 {cellPos}，地块实例={plantedSeed.name}，手上剩余：{item.itemData.Stack.Amount}");
 
         if (item.itemData.Stack.Amount <= 0)
-        {
             Destroy(item.gameObject);
-        }
     }
 
 #endregion
@@ -195,11 +192,76 @@ public partial class Mod_Seed : Module
         Data.isPlanted = true;
         Data.plantedTilePos = tilePos;
         Data.growProgress = 0f;
-        Data.growStage = 0;
         _currentFarmlandData = farmlandData;
 
         Debug.Log($"[Mod_Seed] ✓ 种子已成功种植在 {tilePos}，水分={farmlandData.waterValue:F1}，肥力={farmlandData.fertilityValue.Value:F1}");
         return true;
+    }
+
+    private Item CreatePlantedSeedInstance(Vector2Int tilePos)
+    {
+        if (_cachedMap == null)
+            throw new System.NullReferenceException("[Mod_Seed] _cachedMap为空，无法创建已种植种子实例");
+
+        item.Save();
+      
+        ItemData plantedSeedData = FastCloner.FastCloner.DeepClone(item.itemData);
+        plantedSeedData.Stack.Amount = 1;
+        plantedSeedData.Stack.CanBePickedUp = false;
+        plantedSeedData.inHand = false;
+
+        Vector3 plantedWorldPos = _cachedMap.tileMap.GetCellCenterWorld(new Vector3Int(tilePos.x, tilePos.y, 0));
+        Item plantedSeed = ItemMgr.Instance.InstantiateItem(plantedSeedData, plantedWorldPos, Quaternion.identity);
+        if (plantedSeed == null)
+            throw new System.NullReferenceException($"[Mod_Seed] 创建地块种子失败，位置={tilePos}");
+
+        plantedSeed.Load();
+        plantedSeed.SetInHand(false);
+        plantedSeed.itemData.Stack.Amount = 1;
+        plantedSeed.itemData.Stack.CanBePickedUp = false;
+        ApplyPlantedSeedSpriteScale(plantedSeed, 1);
+
+        // 重新绑定手上物品的Act事件（item.Save()会解绑，需要恢复）
+        BindItemActEvent();
+
+        return plantedSeed;
+    }
+
+    private void ConsumeSeedInHand()
+    {
+        item.itemData.Stack.Amount--;
+        item.OnUIRefresh?.Invoke();
+    }
+
+    private void ResetHandSeedPlantState()
+    {
+        Data.isPlanted = false;
+        Data.plantedTilePos = Vector2Int.zero;
+        Data.growProgress = 0f;
+        _currentFarmlandData = null;
+        _cachedFarmlandBehaviour = null;
+    }
+
+    private void ApplyPlantedSeedSpriteScale(Item plantedSeed, float scale)
+    {
+        if (plantedSeed == null)
+            throw new System.ArgumentNullException(nameof(plantedSeed));
+
+        Transform spriteTransform = plantedSeed.transform.Find("SpriteRenderer");
+        if (spriteTransform == null)
+        {
+            SpriteRenderer spriteRenderer = plantedSeed.GetComponentInChildren<SpriteRenderer>(true);
+            if (spriteRenderer != null)
+                spriteTransform = spriteRenderer.transform;
+        }
+
+        if (spriteTransform == null)
+        {
+            Debug.LogWarning($"[Mod_Seed] 未找到落地种子的SpriteRenderer节点，无法设置缩放，实例={plantedSeed.name}");
+            return;
+        }
+
+        spriteTransform.localScale = new Vector3(scale, scale, scale);
     }
 
 #endregion
@@ -333,49 +395,48 @@ public partial class Mod_Seed : Module
 
     private void CompleteGrowth()
     {
-        Data.growStage = 2; // 标记为成熟
         Data.isPlanted = false;
 
         Vector3 plantedWorldCenter = new Vector3(Data.plantedTilePos.x + 0.5f, Data.plantedTilePos.y + 0.5f, 0f);
         if (!TryResolveMapByWorldPos(plantedWorldCenter, out Map targetMap))
         {
-            Debug.LogError($"[Mod_Seed] 无法为成熟作物定位 Map，种植位置={Data.plantedTilePos}");
+            Debug.LogError($"[Mod_Seed] 无法为幼苗定位 Map，种植位置={Data.plantedTilePos}");
             return;
         }
 
         _cachedMap = targetMap;
 
-        Debug.Log($"[Mod_Seed] ✓ 种子已成熟！生成作物：{harvestedCropName}");
+        Debug.Log($"[Mod_Seed] ✓ 种子发芽完成，准备交接给幼苗：{harvestedCropName}");
 
-        // 在地块位置生成作物 Item
-        if (!string.IsNullOrEmpty(harvestedCropName))
+        // 在地块位置生成幼苗 Item，后续由幼苗模块继续发育
+        if (string.IsNullOrEmpty(harvestedCropName))
         {
-            Vector3 spawnWorldPos = _cachedMap.tileMap.GetCellCenterWorld(
-                new Vector3Int(Data.plantedTilePos.x, Data.plantedTilePos.y, 0)
-            );
-
-            Item harvestedCrop = ItemMgr.Instance.InstantiateItem(
-                harvestedCropName,
-                spawnWorldPos,
-                Quaternion.identity
-            );
-
-            if (harvestedCrop != null)
-            {
-                harvestedCrop.Load();
-                Debug.Log($"[Mod_Seed] 作物已生成在 {Data.plantedTilePos}");
-            }
-            else
-            {
-                Debug.LogError($"[Mod_Seed] 无法生成作物：{harvestedCropName}");
-            }
+            Debug.LogError("[Mod_Seed] 幼苗Item名称为空，无法完成种子到幼苗交接");
+            return;
         }
 
-        // 销毁种子容器（如果已无堆叠）
-        if (item.itemData.Stack.Amount <= 0)
+        Vector3 spawnWorldPos = _cachedMap.tileMap.GetCellCenterWorld(
+            new Vector3Int(Data.plantedTilePos.x, Data.plantedTilePos.y, 0)
+        );
+
+        Item harvestedCrop = ItemMgr.Instance.InstantiateItem(
+            harvestedCropName,
+            spawnWorldPos,
+            Quaternion.identity
+        );
+
+        if (harvestedCrop == null)
         {
-            Destroy(item.gameObject);
+            Debug.LogError($"[Mod_Seed] 无法生成幼苗：{harvestedCropName}");
+            return;
         }
+
+        harvestedCrop.Load();
+        harvestedCrop.SetInHand(false);
+        harvestedCrop.itemData.Stack.CanBePickedUp = false;
+        Debug.Log($"[Mod_Seed] 幼苗已生成在 {Data.plantedTilePos}，Mod_Seed职责结束并销毁自身");
+
+        Destroy(item.gameObject);
     }
 
 #endregion

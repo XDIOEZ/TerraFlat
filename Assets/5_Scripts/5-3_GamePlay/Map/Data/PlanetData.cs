@@ -13,7 +13,6 @@ public partial class PlanetData
     public int Radius = 1000;
     //噪声缩放
     public float NoiseScale = 0.01f;
-
     //星球地图大小
     public Vector2Int ChunkSize = new Vector2Int(16, 16);
 

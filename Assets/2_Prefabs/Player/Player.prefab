@@ -50,6 +50,28 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   EquipmentInventory:
     item: {fileID: 0}
@@ -90,6 +112,94 @@ MonoBehaviour:
   references:
     version: 2
     RefIds: []
+--- !u!1 &4241699894471056908
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4464676328456984453}
+  - component: {fileID: 1482165185348938690}
+  m_Layer: 0
+  m_Name: Module_Temperature
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4464676328456984453
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4241699894471056908}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343432311901774332}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1482165185348938690
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4241699894471056908}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2341cfdc5c0e7b24b8ca7a6abbb013e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    BitData: 
+  Data:
+    CurrentTemperature: 36.5
+    AmbientTemperature: 20
+    ComfortableMin: 36
+    ComfortableMax: 37.2
+    ChangeSpeed: 0.5
+    Insulation: 0
+    ColdDamageStart: 34
+    HotDamageStart: 40
+    ColdDamagePerSecond: 0.6
+    HotDamagePerSecond: 1
+    CriticalLow: 30
+    CriticalHigh: 43
+  OnTemperatureChanged:
+    _PersistentCalls: []
 --- !u!1 &4411885219965820198
 GameObject:
   m_ObjectHideFlags: 0
@@ -140,6 +250,28 @@ MonoBehaviour:
     ID: "UI_\u5FEB\u6377\u680F"
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   RawData: []
   RuntimeInventory:
@@ -264,6 +396,7 @@ Transform:
   - {fileID: 4878975408065021389}
   - {fileID: 4008861612708923450}
   - {fileID: 2583823434517663508}
+  - {fileID: 4464676328456984453}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &8862278864143937418
@@ -353,6 +486,11 @@ MonoBehaviour:
   item: {fileID: 0}
   _mainCamera: {fileID: 0}
   CtrlIsDown: 0
+  EnableGamepadAdapter: 1
+  UseGamepadVirtualCursor: 1
+  GamepadCursorSpeed: 1300
+  GamepadCursorDeadZone: 0.18
+  CursorClampPadding: 6
   LeftClick:
     _PersistentCalls: []
   LeftClickUp:
@@ -366,6 +504,28 @@ MonoBehaviour:
     ID: 
     isRunning: 0
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
 --- !u!114 &6883143605326503467
 MonoBehaviour:
@@ -456,6 +616,9 @@ MonoBehaviour:
   player: {fileID: 6883143605326503467}
   playerTraits: {fileID: 0}
   hotbar: {fileID: 0}
+  damageReceiver: {fileID: 0}
+  sanMod: {fileID: 0}
+  foodMod: {fileID: 0}
   timeScale: 1
   timeScaleStep: 0.5
   minTimeScale: 0.1
@@ -466,6 +629,28 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
 --- !u!1 &7418924436426645882
 GameObject:
@@ -512,37 +697,69 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  ExData:
+  FoodModData:
     Name: 
     ID: 
     isRunning: 1
     Type: 0
-    BitData: 
-  Data:
-    nutrition:
-      Carbohydrates: 500
-      Max_Carbohydrates: 500
-      Fat: 500
-      Max_Fat: 500
-      Protein: 500
-      Max_Protein: 500
-      Water: 500
-      Max_Water: 500
-      Vitamins: 500
-      Max_Vitamins: 500
-    Max_EatingProgress: 3
-    ShowCanvas: 1
-    nutritionConsumeSpeed:
-      BaseValue: 1
-      BaseAdditive: 0
-      AdditiveModifier: 0
-      MultiplicativeModifier: 1
-      FinalAdditive: 0
-    FeelGood: 0
-    PanelPosition: {x: 0, y: 0}
-    WaterConsumeSpeedRate: 0.1
-    nutritionConsumeRate: 1
-    ObserverState: 
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    FoodData:
+      nutrition:
+        Carbohydrates: 500
+        Max_Carbohydrates: 500
+        Fat: 500
+        Max_Fat: 500
+        Protein: 500
+        Max_Protein: 500
+        Water: 500
+        Max_Water: 500
+        Vitamins: 500
+        Max_Vitamins: 500
+      Max_EatingProgress: 3
+      ShowCanvas: 0
+      nutritionConsumeSpeed:
+        BaseValue: 1
+        BaseAdditive: 0
+        AdditiveModifier: 0
+        MultiplicativeModifier: 1
+        FinalAdditive: 0
+      FeelGood: 0
+      PanelPosition: {x: 0, y: 0}
+      WaterConsumeSpeedRate: 1
+      nutritionConsumeRate: 1
+      ObserverState: 
+    EnableSpoilage: 1
+    SpoilageElapsedSeconds: 0
+    SpoilageIntervalSeconds: 1800
+    SpoilageTargetItemID: Meat_Rotten
+    RuntimeSpoilageDeltaSeconds: 0
+    RuntimeResolvedIntervalSeconds: 0
+    RuntimeResolvedTargetItemID: 
+    RuntimeCurrentItemID: 
+    RuntimeTriggered: 0
+    RuntimeInvalid: 0
+    RuntimeInvalidReason: 
   EatingProgress: 0
   DataUpdate:
     _PersistentCalls: []
@@ -621,6 +838,28 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   RawData: []
   inputInventory:
@@ -685,7 +924,12 @@ MonoBehaviour:
   basePanel: {fileID: 0}
   InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
   workButton: {fileID: 0}
+  progressImage: {fileID: 0}
   toggleKey: 104
+  workbenchLevel: 1
+  baseClickCount: 6
+  clickReductionPerLevel: 1
+  minClickCount: 1
   EnableCraftDebug: 1
 --- !u!1001 &182505877538168709
 PrefabInstance:

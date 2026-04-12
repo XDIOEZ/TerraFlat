@@ -26,6 +26,9 @@ public class PlayerAdminController : Module
     [Tooltip("理智模块（管理员模式维持不死）")]
     public Mod_San sanMod;
 
+    [Tooltip("食物模块（管理员模式维持不饿）")]
+    public Mod_Food foodMod;
+
     [Header("时间控制")]
     [Tooltip("时间流逝速度")]
     public float timeScale = 1.0f;
@@ -89,6 +92,9 @@ public class PlayerAdminController : Module
 
             if (sanMod == null)
                 sanMod = player.itemMods.GetMod_ByID<Mod_San>(Mod_San.ModuleId);
+
+            if (foodMod == null)
+                foodMod = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
         }
     }
 
@@ -176,6 +182,21 @@ public class PlayerAdminController : Module
         {
             sanMod.CurrentValue = sanMod.MaxValue;
         }
+
+        KeepAdminNotHungry();
+    }
+
+    private void KeepAdminNotHungry()
+    {
+        if (foodMod == null)
+            foodMod = player?.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
+
+        if (foodMod == null)
+            return;
+
+        foodMod.Data.nutrition.Carbohydrates = foodMod.Data.nutrition.Max_Carbohydrates;
+        foodMod.Data.nutrition.Fat = foodMod.Data.nutrition.Max_Fat;
+        foodMod.Data.nutrition.Protein = foodMod.Data.nutrition.Max_Protein;
     }
 
     #endregion
