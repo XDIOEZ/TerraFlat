@@ -23,4 +23,7 @@ public partial class PlanetData
     [Tooltip("星球是否自动生成地图")]
     public bool AutoGenerateMap = true;
 
+    [LabelText("全局温度"), SuffixLabel("℃", true), PropertyTooltip("该星球当前全局环境温度。")]
+    public float GlobalTemperature = 26f;
+
 }

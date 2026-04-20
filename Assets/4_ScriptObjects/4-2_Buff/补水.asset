@@ -41,7 +41,7 @@ MonoBehaviour:
           Max_Fat: 500
           Protein: 0
           Max_Protein: 500
-          Water: 10
+          Water: 100
           Max_Water: 500
           Vitamins: 0
           Max_Vitamins: 500
