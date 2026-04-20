@@ -1,11 +1,22 @@
 using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 {
 #region 字段
 
+    public const float DefaultAmbientTemperature = 20f; // 默认环境温度
+    public const float DamageTickIntervalSeconds = 5f; // 温度伤害结算间隔
+
     public bool EnableDebugLog = false; // 是否输出温度处理调试日志
+
+#endregion
+
+#region 属性
+
+    [ShowInInspector, ReadOnly, LabelText("当前全局温度(℃)")]
+    public float CurrentGlobalAmbientTemperature => GetGlobalAmbientTemperature(); // 检查器显示的全局环境温度
 
 #endregion
 
@@ -23,17 +34,15 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         data.ColdDamagePerSecond = Mathf.Max(0f, data.ColdDamagePerSecond);
         data.HotDamagePerSecond = Mathf.Max(0f, data.HotDamagePerSecond);
 
-        data.ComfortableMax = Mathf.Max(data.ComfortableMin, data.ComfortableMax);
         data.HotDamageStart = Mathf.Max(data.ColdDamageStart, data.HotDamageStart);
-        data.CriticalHigh = Mathf.Max(data.HotDamageStart, data.CriticalHigh);
-        data.CriticalLow = Mathf.Min(data.ColdDamageStart, data.CriticalLow);
     }
 
     public void ProcessTemperature(
         Mod_Temperature.TemperatureData data,
         DamageReceiver damageReceiver,
         float deltaTime,
-        Action<float> onTemperatureChanged)
+        Action<float> onTemperatureChanged,
+        ref float damageTickTimer)
     {
         if (data == null)
         {
@@ -53,7 +62,21 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             return;
         }
 
-        float damage = EvaluateTemperatureDamage(data, deltaTime);
+        damageTickTimer += deltaTime;
+        if (damageTickTimer < DamageTickIntervalSeconds)
+        {
+            return;
+        }
+
+        int tickCount = Mathf.FloorToInt(damageTickTimer / DamageTickIntervalSeconds);
+        damageTickTimer -= tickCount * DamageTickIntervalSeconds;
+
+        float damage = 0f;
+        for (int i = 0; i < tickCount; i++)
+        {
+            damage += EvaluateTemperatureDamage(data, DamageTickIntervalSeconds);
+        }
+
         if (damage <= 0f)
         {
             return;
@@ -63,7 +86,7 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 
         if (EnableDebugLog)
         {
-            Debug.Log($"[TemperatureMgr] 触发温度伤害，当前体温={data.CurrentTemperature:F2}℃，伤害={damage:F3}");
+            Debug.Log($"[TemperatureMgr] 触发温度伤害，当前体温={data.CurrentTemperature:F2}℃，结算次数={tickCount}，伤害={damage:F3}");
         }
     }
 
@@ -74,8 +97,35 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(data));
         }
 
-        float targetTemperature = data.AmbientTemperature + data.Insulation;
+        float targetTemperature = GetGlobalAmbientTemperature() + data.Insulation;
         return Mathf.MoveTowards(data.CurrentTemperature, targetTemperature, data.ChangeSpeed * deltaTime);
+    }
+
+    public float GetGlobalAmbientTemperature()
+    {
+        PlanetData planetData = SaveDataMgr.Instance != null ? SaveDataMgr.Instance.Active_PlanetData : null;
+        if (planetData == null)
+        {
+            return DefaultAmbientTemperature;
+        }
+
+        return planetData.GlobalTemperature;
+    }
+
+    public void SetGlobalAmbientTemperature(float value)
+    {
+        PlanetData planetData = SaveDataMgr.Instance != null ? SaveDataMgr.Instance.Active_PlanetData : null;
+        if (planetData == null)
+        {
+            if (EnableDebugLog)
+            {
+                Debug.LogWarning($"[TemperatureMgr] 设置全局温度失败，未找到当前星球数据，目标温度={value:F1}℃");
+            }
+
+            return;
+        }
+
+        planetData.GlobalTemperature = value;
     }
 
     public float EvaluateTemperatureDamage(Mod_Temperature.TemperatureData data, float deltaTime)

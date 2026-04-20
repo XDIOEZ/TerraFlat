@@ -71,7 +71,7 @@ public class Inventory_HotBar : Module, IInventory
     public HotBarRuntimeInventory RuntimeInventory = new HotBarRuntimeInventory();
 
     [Header("快捷栏设置")]
-    [SerializeReference]
+    [SerializeField]
     public Transform spawnLocation;
     public int HotBarMaxVolume = 9;
 

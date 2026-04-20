@@ -16,6 +16,26 @@ public partial class Mod_Food : Module
         public byte[] Payload;
     }
 
+    [MemoryPackable]
+    [System.Serializable]
+    public partial class FoodStaminaState
+    {
+        public float StaminaRecoverSpeed = 1f;
+        public float StaminaConsumeSpeed = 0.5f;
+    }
+
+    [MemoryPackable]
+    [System.Serializable]
+    public partial class FoodHealthState
+    {
+        public bool Enabled = true;
+        public float HealSpeed = 1f;
+        public float WaterSelfHurt = 1f;
+        public float ProteinSelfHurt = 1f;
+        public float VitaminSelfHurt = 1f;
+        public float HealNeedRatio = 0.6f;
+    }
+
     #region 数据定义
     [ShowInInspector]
     public ModData_FoodData FoodModData = new ModData_FoodData();
@@ -66,11 +86,22 @@ public partial class Mod_Food : Module
     [LabelText("面板控制器")]
     public BasePanel panelUI; // 替换UI_FloatData_Slider为BasePanel
 
-    [FoldoutGroup("观察者")]
-    [LabelText("逻辑观察者")]
-    [ListDrawerSettings(ShowFoldout = true, DefaultExpandedState = true, DraggableItems = true, ShowPaging = false)]
-    [SerializeReference]
-    public List<ModuleObserverBase> observers = new List<ModuleObserverBase>();
+    [FoldoutGroup("运行时")]
+    [LabelText("体力联动状态")]
+    public FoodStaminaState StaminaState = new FoodStaminaState();
+
+    [FoldoutGroup("运行时")]
+    [LabelText("生命联动状态")]
+    public FoodHealthState HealthState = new FoodHealthState();
+
+    [MemoryPackIgnore]
+    private Mod_Stamina _stamina;
+
+    [MemoryPackIgnore]
+    private DamageReceiver _damageReceiver;
+
+    [MemoryPackIgnore]
+    private float _hungerDamageTickTimer;
 
     #endregion
 
@@ -90,14 +121,14 @@ public partial class Mod_Food : Module
         FoodModData ??= new ModData_FoodData();
         FoodModData.ApplyToFoodData();
 
+        ResolveFoodRuntimeModules();
+        LoadRuntimeStateFromLegacyData();
+
         item.itemMods.GetMod_ByID(ModText.Controller, out GameController Controller);
         if (Controller != null)
         {
             Controller._inputActions.Win10.Tab.performed += _ => TogglePanel();
         }
-
-        EnsureObservers();
-        ApplyObserverState();
 
         // 根据保存的状态决定是否显示面板
         if (Data.ShowCanvas)
@@ -113,7 +144,7 @@ public partial class Mod_Food : Module
     }
     public override void Save()
     {
-        Data.ObserverState = BuildObserverState();
+        Data.ObserverState = BuildRuntimeStateSnapshot();
 
         if (item != null)
         {
@@ -144,12 +175,9 @@ public partial class Mod_Food : Module
 
     public override void ModUpdate(float timeDelta)
     {
-
-        // 驱动所有逻辑插件观察者
-        foreach (var observer in observers)
-        {
-            observer.OnUpdate(timeDelta);
-        }
+        // 驱动食物内聚逻辑
+        UpdateFoodStamina(timeDelta);
+        UpdateFoodHealth(timeDelta);
 
         // 营养消耗
         ConsumeNutrition(timeDelta * Data.nutritionConsumeRate);
@@ -161,12 +189,9 @@ public partial class Mod_Food : Module
     #region 营养管理
     public float ConsumeNutrition(float timeDelta)
     {
-        // 移除对精力状态的检查，不再根据精力是否满来调整消耗速度
-        // 始终保持恒定的消耗速度
-
-        // 计算本次消耗总量 = 时间增量 * 吸收率 * 消耗速度
-        float delta = timeDelta * Data.nutritionConsumeSpeed.Value;
-        float remainingDelta = delta;
+        // 食物消耗与水分消耗分别按各自倍率独立计算，避免互相耦合
+        float foodDelta = timeDelta * Data.nutritionConsumeSpeed.Value;
+        float remainingDelta = foodDelta;
         float totalEnergy = 0f;
 
         // 优先消耗碳水化合物，不能超过当前碳水量
@@ -177,7 +202,6 @@ public partial class Mod_Food : Module
 
         float usedFat = 0f;
         float usedProtein = 0f;
-        float usedWater = 0f;
 
         // 消耗剩余量部分用于脂肪，不能超过当前脂肪量
         if (remainingDelta > 0)
@@ -197,11 +221,8 @@ public partial class Mod_Food : Module
             totalEnergy += usedProtein;
         }
 
-        // 水的消耗是持续性的，且消耗速度受当前消耗物质影响
-        // 消耗碳水时水消耗速率为1，脂肪为2，蛋白质为3
-        usedWater = usedCarb * 1f + usedFat * 2f + usedProtein * 3f;
-        usedWater *= Data.WaterConsumeSpeedRate;
-        // 扣除相应的水分，水分不会低于0
+        // 水分单独按时间与倍率消耗，不受食物消耗类型影响
+        float usedWater = timeDelta * Data.WaterConsumeSpeedRate;
         Data.nutrition.Water = Mathf.Max(0, Data.nutrition.Water - usedWater);
 
         // 维生素自然消耗，速度为0.01倍时间增量
@@ -451,15 +472,18 @@ public partial class Mod_Food : Module
 
     #region 工具方法
 
-    private void EnsureObservers()
+    private void ResolveFoodRuntimeModules()
     {
-        foreach (var observer in observers)
+        if (item == null || item.itemMods == null)
         {
-            observer.OnInit(this);
+            return;
         }
+
+        item.itemMods.GetMod_ByID(ModText.Stamina, out _stamina);
+        item.itemMods.GetMod_ByID(ModText.Hp, out _damageReceiver);
     }
 
-    private void ApplyObserverState()
+    private void LoadRuntimeStateFromLegacyData()
     {
         if (Data.ObserverState == null || Data.ObserverState.Length == 0)
         {
@@ -472,68 +496,113 @@ public partial class Mod_Food : Module
             return;
         }
 
-        var map = new Dictionary<string, byte[]>();
         foreach (var snapshot in snapshots)
         {
-            if (snapshot?.TypeName != null)
+            if (snapshot?.TypeName == null || snapshot.Payload == null || snapshot.Payload.Length == 0)
             {
-                map[snapshot.TypeName] = snapshot.Payload;
+                continue;
             }
-        }
 
-        foreach (var observer in observers)
-        {
-            var key = observer.GetType().FullName;
-            if (key != null && map.TryGetValue(key, out var payload))
+            if (snapshot.TypeName == "FoodStaminaObserver" || snapshot.TypeName == typeof(FoodStaminaState).FullName)
             {
-                observer.OnLoad(payload);
+                var restored = MemoryPack.MemoryPackSerializer.Deserialize<FoodStaminaState>(snapshot.Payload);
+                if (restored != null)
+                {
+                    StaminaState = restored;
+                }
+
+                continue;
+            }
+
+            if (snapshot.TypeName == "FoodHealthObserver" || snapshot.TypeName == typeof(FoodHealthState).FullName)
+            {
+                var restored = MemoryPack.MemoryPackSerializer.Deserialize<FoodHealthState>(snapshot.Payload);
+                if (restored != null)
+                {
+                    HealthState = restored;
+                }
             }
         }
     }
 
-    private byte[] BuildObserverState()
+    private byte[] BuildRuntimeStateSnapshot()
     {
-        var snapshots = new List<ObserverSnapshot>(observers.Count);
-        foreach (var observer in observers)
+        var snapshots = new List<ObserverSnapshot>(2);
+
+        if (StaminaState != null)
         {
-            var payload = observer.OnSave(this);
             snapshots.Add(new ObserverSnapshot
             {
-                TypeName = observer.GetType().FullName,
-                Payload = payload
+                TypeName = "FoodStaminaObserver",
+                Payload = MemoryPack.MemoryPackSerializer.Serialize(StaminaState)
+            });
+        }
+
+        if (HealthState != null)
+        {
+            snapshots.Add(new ObserverSnapshot
+            {
+                TypeName = "FoodHealthObserver",
+                Payload = MemoryPack.MemoryPackSerializer.Serialize(HealthState)
             });
         }
 
         return MemoryPack.MemoryPackSerializer.Serialize(snapshots);
     }
 
-    private void AddObserver(ModuleObserverBase observer)
+    private void UpdateFoodStamina(float timeDelta)
     {
-        if (observer == null)
+        if (_stamina == null)
         {
             return;
         }
 
-        if (!observers.Contains(observer))
+        if (_stamina.Data.CurrentStamina < _stamina.Data.MaxStamina)
         {
-            observers.Add(observer);
+            ConsumeNutrition(timeDelta * StaminaState.StaminaConsumeSpeed);
+            _stamina.AddStamina(StaminaState.StaminaRecoverSpeed * timeDelta);
         }
     }
 
-    private bool TryGetObserver<T>(out T observer) where T : ModuleObserverBase
+    private void UpdateFoodHealth(float timeDelta)
     {
-        observer = null;
-
-        foreach (var o in observers)
+        if (!HealthState.Enabled || _damageReceiver == null)
         {
-            if (o is T typed)
-            {
-                observer = typed;
-                return true;
-            }
+            return;
         }
 
-        return false;
+        var nutrition = Data.nutrition;
+        float proteinHealNeed = nutrition.Max_Protein * HealthState.HealNeedRatio;
+        float waterHealNeed = nutrition.Max_Water * HealthState.HealNeedRatio;
+
+        if (nutrition.Protein <= 0)
+        {
+            _hungerDamageTickTimer += timeDelta;
+            while (_hungerDamageTickTimer >= 1f)
+            {
+                _damageReceiver.ForceHurt(1f);
+                _hungerDamageTickTimer -= 1f;
+            }
+        }
+        else if (nutrition.Protein >= proteinHealNeed && nutrition.Water >= waterHealNeed)
+        {
+            _hungerDamageTickTimer = 0f;
+            _damageReceiver.Heal(HealthState.HealSpeed * timeDelta, item);
+        }
+        else
+        {
+            _hungerDamageTickTimer = 0f;
+        }
+
+        if (nutrition.Water <= 0)
+        {
+            _damageReceiver.ForceHurt(HealthState.WaterSelfHurt * timeDelta);
+        }
+
+        if (nutrition.Vitamins <= 0)
+        {
+            _damageReceiver.ForceHurt(HealthState.VitaminSelfHurt * timeDelta);
+        }
     }
 
     public static ItemData CreateSpoilageTargetItemData(string targetItemID)

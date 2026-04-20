@@ -1,4 +1,3 @@
-using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,6 +25,7 @@ public class ItemPicker : Module
     public override void Load()
     {
         ModSaveData.ReadData(ref Data);
+        RebuildTargetInventories();
 
         // 默认优先级：Hotbar -> Bag
         // 无论列表是否已有配置，都补齐这两个核心容器（内部会去重）
@@ -71,11 +71,11 @@ public class ItemPicker : Module
     #region 字段与属性
 
     [Header("目标物品栏（按优先级排列）")]
-    /// <summary>
-    /// 物品添加目标容器列表（接口引用），按优先级排序
-    /// </summary>
-    [SerializeReference]
-    public List<IInventory> AddTargetInventories = new List<IInventory>();
+    [SerializeField]
+    public List<Module> AddTargetInventoryModules = new List<Module>(); // 检查器可拖拽的目标库存模块
+
+    [System.NonSerialized]
+    public List<IInventory> AddTargetInventories = new List<IInventory>(); // 运行时使用的目标库存接口列表
 
     /// <summary>
     /// 基础拾取权限控制变量
@@ -110,6 +110,30 @@ public class ItemPicker : Module
     }
 
     #endregion
+
+
+#region 私有方法
+
+    private void RebuildTargetInventories()
+    {
+        AddTargetInventories.Clear();
+
+        for (int i = 0; i < AddTargetInventoryModules.Count; i++)
+        {
+            Module module = AddTargetInventoryModules[i];
+            if (module is not IInventory inventoryProvider)
+            {
+                continue;
+            }
+
+            if (!AddTargetInventories.Contains(inventoryProvider))
+            {
+                AddTargetInventories.Add(inventoryProvider);
+            }
+        }
+    }
+
+#endregion
 
 
 

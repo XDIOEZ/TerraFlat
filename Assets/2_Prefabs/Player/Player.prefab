@@ -188,16 +188,12 @@ MonoBehaviour:
   Data:
     CurrentTemperature: 36.5
     AmbientTemperature: 20
-    ComfortableMin: 36
-    ComfortableMax: 37.2
-    ChangeSpeed: 0.5
+    ChangeSpeed: 0.013888889
     Insulation: 0
-    ColdDamageStart: 34
-    HotDamageStart: 40
-    ColdDamagePerSecond: 0.6
+    ColdDamageStart: 10
+    HotDamageStart: 60
+    ColdDamagePerSecond: 1
     HotDamagePerSecond: 1
-    CriticalLow: 30
-    CriticalHigh: 43
   OnTemperatureChanged:
     _PersistentCalls: []
 --- !u!1 &4411885219965820198
@@ -422,7 +418,7 @@ Rigidbody2D:
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
@@ -732,14 +728,14 @@ MonoBehaviour:
         Max_Fat: 500
         Protein: 500
         Max_Protein: 500
-        Water: 500
-        Max_Water: 500
+        Water: 1500
+        Max_Water: 1500
         Vitamins: 500
         Max_Vitamins: 500
       Max_EatingProgress: 3
       ShowCanvas: 0
       nutritionConsumeSpeed:
-        BaseValue: 1
+        BaseValue: 0.5
         BaseAdditive: 0
         AdditiveModifier: 0
         MultiplicativeModifier: 1
@@ -766,28 +762,16 @@ MonoBehaviour:
   PanelPrefab: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
   PanleInstance: {fileID: 0}
   panelUI: {fileID: 0}
-  observers:
-  - rid: 6445419665800036352
-  - rid: 6445419665800036354
-  references:
-    version: 2
-    RefIds:
-    - rid: 6445419665800036352
-      type: {class: FoodHealthObserver, ns: , asm: GamePlay}
-      data:
-        state:
-          Enabled: 1
-          HealSpeed: 1
-          WaterSelfHurt: 1
-          ProteinSelfHurt: 1
-          VitaminSelfHurt: 1
-          HealNeedRatio: 0.6
-    - rid: 6445419665800036354
-      type: {class: FoodStaminaObserver, ns: , asm: GamePlay}
-      data:
-        state:
-          StaminaRecoverSpeed: 1
-          StaminaConsumeSpeed: 1
+  StaminaState:
+    StaminaRecoverSpeed: 1
+    StaminaConsumeSpeed: 0.5
+  HealthState:
+    Enabled: 1
+    HealSpeed: 1
+    WaterSelfHurt: 1
+    ProteinSelfHurt: 1
+    VitaminSelfHurt: 1
+    HealNeedRatio: 0.6
 --- !u!1 &7574631112993380532
 GameObject:
   m_ObjectHideFlags: 0
