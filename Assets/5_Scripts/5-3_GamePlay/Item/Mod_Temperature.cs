@@ -106,8 +106,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         float ambientTemperature = layers.TemperatureCelsius[localPos.x, localPos.y];
         TemperatureMgr.Instance.SetGlobalAmbientTemperature(ambientTemperature);
-        Data.AmbientTemperature = ambientTemperature;
-        Debug.Log($"[Mod_Temperature] 环境初始化完成，环境温度={ambientTemperature:F1}℃，当前体温={Data.CurrentTemperature:F1}℃");
+    Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
+    Debug.Log($"[Mod_Temperature] 环境初始化完成，基础温度={ambientTemperature:F1}℃，有效环境温度={Data.AmbientTemperature:F1}℃，当前体温={Data.CurrentTemperature:F1}℃");
     }
 
 #endregion
@@ -127,7 +127,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     public void SetAmbientTemperature(float value)
     {
         TemperatureMgr.Instance.SetGlobalAmbientTemperature(value);
-        Data.AmbientTemperature = value;
+        Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
     }
 
     public bool IsComfortable()
