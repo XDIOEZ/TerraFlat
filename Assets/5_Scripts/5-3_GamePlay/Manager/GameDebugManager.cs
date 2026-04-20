@@ -6,6 +6,8 @@ public class GameDebugManager : MonoBehaviour
 
     [Header("调试快捷键")]
     [SerializeField] private KeyCode toggleEnvironmentInfoKey = KeyCode.F3;
+    [SerializeField] private KeyCode setClearWeatherKey = KeyCode.F4;
+    [SerializeField] private KeyCode setRainWeatherKey = KeyCode.F5;
 
     [Header("实例化策略")]
     [SerializeField] private bool createOnFirstToggle = true;
@@ -26,6 +28,16 @@ public class GameDebugManager : MonoBehaviour
         if (Input.GetKeyDown(toggleEnvironmentInfoKey))
         {
             ToggleEnvironmentInfo();
+        }
+
+        if (Input.GetKeyDown(setClearWeatherKey))
+        {
+            SetClearWeather();
+        }
+
+        if (Input.GetKeyDown(setRainWeatherKey))
+        {
+            SetRainWeather();
         }
     }
 
@@ -48,6 +60,26 @@ public class GameDebugManager : MonoBehaviour
         }
 
         display.Toggle();
+    }
+
+    public void SetClearWeather()
+    {
+        WeatherMgr.Instance.ClearWeather();
+
+        if (WeatherMgr.Instance.EnableDebugLog)
+        {
+            Debug.Log($"[GameDebugManager] 已切换天气为晴天，当前天气={WeatherMgr.Instance.CurrentWeather}，天气修正={WeatherMgr.Instance.CurrentWeatherTemperatureOffset:F2}℃");
+        }
+    }
+
+    public void SetRainWeather()
+    {
+        WeatherMgr.Instance.SetRain();
+
+        if (WeatherMgr.Instance.EnableDebugLog)
+        {
+            Debug.Log($"[GameDebugManager] 已切换天气为雨天，当前天气={WeatherMgr.Instance.CurrentWeather}，天气修正={WeatherMgr.Instance.CurrentWeatherTemperatureOffset:F2}℃");
+        }
     }
 
 #endregion

@@ -227,6 +227,62 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: ec205a5e3ef5d6b49ba00791799edcc5, type: 2}
+--- !u!1 &4147786669370695384
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2879612122123981820}
+  - component: {fileID: 1800725021984456196}
+  m_Layer: 0
+  m_Name: WeatherMgr
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2879612122123981820
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4147786669370695384}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 891121404665747283}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1800725021984456196
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4147786669370695384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56ba77687be176a4eb928751444bc0d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  EnableDebugLog: 0
+  _toggleDebugPanelKey: 293
+  _debugPanelVisible: 0
+  _debugWindowRect:
+    serializedVersion: 2
+    x: 20
+    y: 220
+    width: 380
+    height: 280
+  _debugWindowMinSize: {x: 320, y: 240}
+  _debugWindowMaxSize: {x: 760, y: 640}
+  _lockWindowInsideScreen: 1
 --- !u!1 &4565539948505994440
 GameObject:
   m_ObjectHideFlags: 0
@@ -266,6 +322,7 @@ Transform:
   - {fileID: 7895695706117877763}
   - {fileID: 2158920630664488977}
   - {fileID: 5897130074279119965}
+  - {fileID: 2879612122123981820}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2341746562113399121
@@ -288,6 +345,22 @@ MonoBehaviour:
     NoiseScale: 0.01
     ChunkSize: {x: 16, y: 16}
     AutoGenerateMap: 1
+    GlobalTemperature: 26
+    CurrentWeather: 0
+    WeatherIntensity: 0
+    RainTemperatureOffset: -4
+    CloudyTemperatureOffset: -1
+    StormTemperatureOffset: -6
+    name: 
+    BodyId: 
+    PrefabName: 
+    OrbitCenterBodyId: 
+    OrbitRadius: 20
+    OrbitHeight: 0
+    OrbitAngularSpeed: 8
+    OrbitStartAngle: 0
+    OrbitClockwise: 0
+    SelfRotateSpeed: 20
   ReadyTimeData:
     CurrentTime: 600
     DayLength: 1440
@@ -403,6 +476,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   toggleEnvironmentInfoKey: 284
+  setClearWeatherKey: 285
+  setRainWeatherKey: 286
   createOnFirstToggle: 1
   cleanupDuplicateDisplaysOnToggle: 1
 --- !u!114 &2693940703275175513

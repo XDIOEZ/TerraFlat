@@ -109,7 +109,7 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             return DefaultAmbientTemperature;
         }
 
-        return planetData.GlobalTemperature;
+        return planetData.GlobalTemperature + GetWeatherTemperatureOffset(planetData);
     }
 
     public void SetGlobalAmbientTemperature(float value)
@@ -126,6 +126,11 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         }
 
         planetData.GlobalTemperature = value;
+
+        if (EnableDebugLog)
+        {
+            Debug.Log($"[TemperatureMgr] 设置基础环境温度成功，基础温度={value:F1}℃，天气修正={GetWeatherTemperatureOffset(planetData):F1}℃，有效环境温度={GetGlobalAmbientTemperature():F1}℃");
+        }
     }
 
     public float EvaluateTemperatureDamage(Mod_Temperature.TemperatureData data, float deltaTime)
@@ -150,6 +155,23 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         }
 
         return coldDamage + hotDamage;
+    }
+
+    private float GetWeatherTemperatureOffset(PlanetData planetData)
+    {
+        if (planetData == null)
+        {
+            return 0f;
+        }
+
+        float intensity = Mathf.Clamp01(planetData.WeatherIntensity);
+        return planetData.CurrentWeather switch
+        {
+            WeatherType.Cloudy => planetData.CloudyTemperatureOffset * intensity,
+            WeatherType.Rain => planetData.RainTemperatureOffset * intensity,
+            WeatherType.Storm => planetData.StormTemperatureOffset * intensity,
+            _ => 0f
+        };
     }
 
 #endregion
