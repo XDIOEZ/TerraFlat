@@ -12,6 +12,29 @@ public class GameManager : SingletonAutoMono<GameManager>
     public static event Action<Player> Event_PlayerEnterWorld;
     #endregion
 
+    #region 游戏生命周期状态
+    /// <summary>
+    /// 玩家是否已进入游戏世界。
+    /// 管理器在 GameStartScene 中初始化时不应执行游戏逻辑，
+    /// 只有玩家通过 ContinueGame/CreateNewWorld 进入世界后才为 true。
+    /// 便捷查询属性，运行时控制请使用事件订阅。
+    /// </summary>
+    public bool IsInGameWorld { get; private set; } = false;
+
+    /// <summary>
+    /// 玩家进入游戏世界时触发（在 RunWorld 中触发）。
+    /// 各管理器应订阅此事件来激活自身（设置 enabled = true 等），
+    /// 而非在 Update 中轮询 IsInGameWorld。
+    /// </summary>
+    public static event Action Event_GameWorldEnter;
+
+    /// <summary>
+    /// 玩家退出游戏世界时触发（在 BackToHelloScene_Coroutine 阶段1触发）。
+    /// 各管理器应订阅此事件来停用自身（设置 enabled = false 等）。
+    /// </summary>
+    public static event Action Event_GameWorldExit;
+    #endregion
+
     [SerializeField]
     private GameObject SunAndMoonPrefab;
     [Header("寻路系统")]
@@ -25,10 +48,12 @@ public class GameManager : SingletonAutoMono<GameManager>
     [Header("存档数据")]
     public GameSaveData ReadyGameSaveData = new GameSaveData();
 
-    public UltEvent Event_GameStart { get; set; } = new UltEvent();
-    public UltEvent Event_ExitGame_Start { get; set; } = new UltEvent();
-    public UltEvent BackToHelloScene_Event_End { get; set; } = new UltEvent();
-
+#region  游戏核心循环的事件们
+    public UltEvent Event_GameStart_Start { get; set; } = new UltEvent(); //用户准备开始游戏的事件
+    public UltEvent Event_GameStart_End { get; set; } = new UltEvent(); //用户已经开始游戏完毕的事件
+    public UltEvent BackToHelloScene_Event_Start { get; set; } = new UltEvent();//用户准备退回到开始界面开始的事件
+    public UltEvent BackToHelloScene_Event_End { get; set; } = new UltEvent();//用户退回到开始界面结束的事件
+#endregion
     [Header("UI 预制体")]
     public GameObject UIPrefab_HelloCanvas;
     public GameObject UIPrefab_SaveManager;
@@ -48,11 +73,9 @@ public class GameManager : SingletonAutoMono<GameManager>
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
-        // 初始化寻路系统
-        if (PathFindingSystem != null)
-            PathFindingSystem.SetActive(true);
-        else
-            Debug.LogError("寻路系统未赋值");
+
+        // 寻路系统不在 StartScene 激活，等玩家进入游戏世界后再启用
+        // (PathFindingSystem 将在 RunWorld 时或由 AstarGameManager 自行延迟初始化)
 
         Time.timeScale = 1;
         
@@ -74,6 +97,12 @@ public class GameManager : SingletonAutoMono<GameManager>
         // 阶段 1：准备阶段
         ////////////////////////////////////////////////////////////////////////////////////
 
+        // 标记已退出游戏世界，各管理器应停止运行
+        IsInGameWorld = false;
+
+        // 通知所有订阅者：游戏世界已退出
+        Event_GameWorldExit?.Invoke();
+
         // 保存当前时间数据，包括日夜状态等
         SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
 
@@ -88,7 +117,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         }
 
         // 触发退出开始事件
-        Event_ExitGame_Start?.Invoke();
+        BackToHelloScene_Event_Start?.Invoke();
 
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 2：数据保存阶段
@@ -294,6 +323,12 @@ public class GameManager : SingletonAutoMono<GameManager>
 
     public void RunWorld(string NewScenename, Action onOldSceneUnloaded = null)
     {
+        // 标记玩家已进入游戏世界，各管理器可开始运行
+        IsInGameWorld = true;
+
+        // 通知所有订阅者：游戏世界已进入
+        Event_GameWorldEnter?.Invoke();
+
         //2. 实例化日月系统
         if (SunAndMoonPrefab != null)
         {

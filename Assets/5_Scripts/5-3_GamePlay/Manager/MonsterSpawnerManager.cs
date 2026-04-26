@@ -29,6 +29,9 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
     private void Start()
     {
+        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
+        enabled = false;
+
         if (_spawnerConfig == null)
         {
             Debug.LogError("[MonsterSpawnerManager] SpawnerConfig 未配置，请在检查器中指定配置资产");
@@ -45,6 +48,25 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
         {
             Debug.LogError("[MonsterSpawnerManager] DayTimeSystem 未找到！");
         }
+
+        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Event_GameWorldExit += OnGameWorldExit;
+    }
+
+    private void OnGameWorldEnter()
+    {
+        enabled = true;
+    }
+
+    private void OnGameWorldExit()
+    {
+        enabled = false;
+    }
+
+    private void OnDestroy()
+    {
+        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Event_GameWorldExit -= OnGameWorldExit;
     }
 
     private void Update()

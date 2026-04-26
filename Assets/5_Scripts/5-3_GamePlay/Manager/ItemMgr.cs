@@ -92,14 +92,14 @@ public class ItemMgr : SingletonMono<ItemMgr>
     public void Start()
     {
                 // Debug.Log("物品加载完毕");
-        GameManager.Instance.Event_ExitGame_Start += CleanupNullItems;
+        GameManager.Instance.BackToHelloScene_Event_Start += CleanupNullItems;
     }
 
     private void OnDestroy()
     {
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.Event_ExitGame_Start -= CleanupNullItems;
+            GameManager.Instance.BackToHelloScene_Event_Start -= CleanupNullItems;
         }
     }
 

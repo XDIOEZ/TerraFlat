@@ -245,6 +245,49 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
 #region 生命周期
 
+    private void Start()
+    {
+        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Event_GameWorldExit += OnGameWorldExit;
+
+        bool isInGameWorld = GameManager.Instance != null && GameManager.Instance.IsInGameWorld;
+        ApplyGameWorldLifecycleState(isInGameWorld);
+    }
+
+    protected override void OnDestroy()
+    {
+        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+    }
+
+    private void OnGameWorldEnter()
+    {
+        ApplyGameWorldLifecycleState(true);
+    }
+
+    private void OnGameWorldExit()
+    {
+        ApplyGameWorldLifecycleState(false);
+    }
+
+    private void ApplyGameWorldLifecycleState(bool isActive)
+    {
+        enabled = isActive;
+
+        if (!isActive)
+        {
+            _debugPanelVisible = false;
+            if (_rainEffectInstance != null)
+            {
+                _rainEffectInstance.SetActive(false);
+            }
+
+            return;
+        }
+
+        RefreshRainEffect();
+    }
+
     private void Update()
     {
         if (Input.GetKeyDown(_toggleDebugPanelKey))

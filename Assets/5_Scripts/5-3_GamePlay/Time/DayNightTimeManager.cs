@@ -102,6 +102,9 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
     #region 初始化方法
     void Start()
     {
+        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
+        enabled = false;
+
         if (seasonConfigs == null || seasonConfigs.Count == 0)
         {
             Debug.LogError("未设置 SeasonConfig 资产，请先创建并分配到列表中！");
@@ -120,6 +123,25 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
         currentSeasonTotalDays = currentSeasonConfig.days.Count;
         currentSeasonRemainingDays = currentSeasonTotalDays;
         UpdateCurrentDayConfig();
+
+        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Event_GameWorldExit += OnGameWorldExit;
+    }
+
+    private void OnGameWorldEnter()
+    {
+        enabled = true;
+    }
+
+    private void OnGameWorldExit()
+    {
+        enabled = false;
+    }
+
+    private void OnDestroy()
+    {
+        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Event_GameWorldExit -= OnGameWorldExit;
     }
     #endregion
 
