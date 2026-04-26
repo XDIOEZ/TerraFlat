@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Mod_Inventory : Module, IInventory
+public class Mod_Inventory : Module, IInventory, IInstanceUI
 {
     #region 字段和属性
     public Inventory_ModuleData Data = new Inventory_ModuleData();
@@ -186,6 +186,54 @@ public class Mod_Inventory : Module, IInventory
         {
             inventory.ModUpdate(deltaTime);
         }
+    }
+
+    #endregion
+
+    #region IInstanceUI接口
+
+    public void I_ShowPanel()
+    {
+        Inventory target = inventory;
+        if (target == null)
+            throw new System.InvalidOperationException("[Mod_Inventory] inventory 为空，无法打开面板");
+
+        EnsureInventoryPanelPrefabAssigned(target);
+        EnsurePanelCreated(target);
+        target.basePanel.Open();
+    }
+
+    public void I_ClosePanel()
+    {
+        Inventory target = inventory;
+        if (target == null)
+            throw new System.InvalidOperationException("[Mod_Inventory] inventory 为空，无法关闭面板");
+
+        if (target.basePanel != null)
+            target.basePanel.Close();
+    }
+
+    public void I_TogglePanel()
+    {
+        Inventory target = inventory;
+        if (target == null)
+            throw new System.InvalidOperationException("[Mod_Inventory] inventory 为空，无法切换面板");
+
+        EnsureInventoryPanelPrefabAssigned(target);
+        target.SwitchUI();
+    }
+
+    private static void EnsureInventoryPanelPrefabAssigned(Inventory target)
+    {
+        if (target.InventoryPanel_Prefab != null)
+            return;
+
+        if (target.Data == null || string.IsNullOrEmpty(target.Data.UIPrefabName))
+            throw new System.InvalidOperationException("[Mod_Inventory] InventoryPanel_Prefab 未设置，且 Data.UIPrefabName 为空，无法创建面板");
+
+        target.InventoryPanel_Prefab = GameRes.Instance.GetPrefab(target.Data.UIPrefabName);
+        if (target.InventoryPanel_Prefab == null)
+            throw new System.InvalidOperationException($"[Mod_Inventory] 无法通过 GameRes 获取库存UI预制体: {target.Data.UIPrefabName}");
     }
 
     #endregion

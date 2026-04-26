@@ -360,6 +360,69 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         node.Penalty = targetPenalty;
     }
 
+    /// <summary>
+    /// 按世界坐标读取当前节点权重与可通行性。
+    /// 优先走 GridGraph 快速映射；在网格未就绪时回退到 GetNearest。
+    /// </summary>
+    public bool TryGetNodePenalty_GridGraphFast(Vector2 worldPos, out uint penalty, out bool isWalkable)
+    {
+        penalty = 0u;
+        isWalkable = false;
+
+        var active = AstarPath.active;
+        var gg = active != null && active.data != null ? active.data.gridGraph : null;
+        if (gg == null)
+            return false;
+
+        if (gg.nodes == null || gg.nodes.Length != gg.width * gg.depth)
+        {
+            return TryGetNodePenalty_Optimized(worldPos, out penalty, out isWalkable);
+        }
+
+        float nodeSize = gg.nodeSize;
+        if (nodeSize <= 0f)
+            return false;
+
+        float halfWidth = gg.width * nodeSize * 0.5f;
+        float halfDepth = gg.depth * nodeSize * 0.5f;
+        float left = gg.center.x - halfWidth;
+        float bottom = gg.center.y - halfDepth;
+        float inv = 1f / nodeSize;
+
+        int x = Mathf.FloorToInt((worldPos.x - left) * inv);
+        int y = Mathf.FloorToInt((worldPos.y - bottom) * inv);
+
+        if ((uint)x >= (uint)gg.width || (uint)y >= (uint)gg.depth)
+            return false;
+
+        var node = gg.GetNode(x, y);
+        if (node == null)
+            return false;
+
+        penalty = node.Penalty;
+        isWalkable = node.Walkable;
+        return true;
+    }
+
+    private bool TryGetNodePenalty_Optimized(Vector2 worldPos, out uint penalty, out bool isWalkable)
+    {
+        penalty = 0u;
+        isWalkable = false;
+
+        var active = AstarPath.active;
+        if (active == null)
+            return false;
+
+        NNInfo nnInfo = active.GetNearest(worldPos);
+        GraphNode targetNode = nnInfo.node;
+        if (targetNode == null)
+            return false;
+
+        penalty = targetNode.Penalty;
+        isWalkable = targetNode.Walkable;
+        return true;
+    }
+
     [Button("修改区域权重")]
     public void ModifyRegionPenalty(Vector2 center, int sizeX, int sizeY, int penaltyDelta = 500)
     {

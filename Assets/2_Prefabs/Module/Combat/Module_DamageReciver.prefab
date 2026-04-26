@@ -96,16 +96,42 @@ MonoBehaviour:
     ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   Data:
     Hp: 180
     MaxHp: 180
     Defense: 8
-    Weakness: 00000000
+    Weakness: []
     AttackersUIDs: 
     ShowCanvas: 1
     DamageInterval: 0.12
     DestroyDelay: 0
+    HasSleepRespawnPoint: 0
+    SleepRespawnX: 0
+    SleepRespawnY: 0
+    SleepRespawnZ: 0
     LootTable:
     - LootPrefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
       LootPrefabName: Chicken
@@ -124,4 +150,9 @@ MonoBehaviour:
   DataUpdate:
     _PersistentCalls: []
   UIValues: {fileID: 0}
+  HideUiDelayAfterLastDamage: 30
+  EnablePlayerDyingState: 0
+  RespawnHpRate: 1
+  DyingPanelPrefab: {fileID: 0}
+  DyingPanelPrefabName: UI_Death
   Equipment_Inventory: {fileID: 0}

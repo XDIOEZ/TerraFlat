@@ -8,22 +8,22 @@ using Force.DeepCloner;
 using System.Linq;
 using Sirenix.OdinInspector;
 
-[CreateAssetMenu(fileName = "ĞÂºÏ³ÉÅä·½", menuName = "ºÏ³É/ºÏ³ÉÅä·½")]
+[CreateAssetMenu(fileName = "æ–°é…æ–¹æ ¼å¼", menuName = "é…æ–¹/æ–°é…æ–¹")]
 public class Recipe : ScriptableObject
 {
     #region Public Fields 
-    [Header("ÊäÈë²ÄÁÏ")]
+    [Header("è¾“å…¥ç‰©å“")]
     public Input_List inputs = new Input_List();
-    [Header("Êä³ö²úÎï")]
+    [Header("è¾“å‡ºç‰©å“")]
     public Output_List outputs = new Output_List();
-    [Header("ºÏ³É¹æÔò")]
-    public bool enableMirrorCrafting = false;
-    [Header("ºÏ³ÉÊ±ĞĞÎª")]
+    [Header("æ˜¯å¦å…è®¸é•œåƒ")]
+    public bool enableMirrorCrafting = true;
+    [Header("åˆæˆåŠ¨ä½œç»„")]
     [InlineEditor]
     public List<CraftingAction> action;
 
     #endregion
-    // ½«ºÏ³ÉÇåµ¥ÁĞ±í×ª»»Îª×Ö·û´®£¬ÓÃÓÚ×÷Îª×ÖµäµÄ¼ü
+    // å°†é…æ–¹ä¸­çš„åŸæ–™åˆ—è¡¨è½¬åŒ–ä¸ºå­—ç¬¦ä¸²æ ¼å¼ï¼Œä»¥é€—å·åˆ†éš”çš„æ–‡ä»¶å¤¹å
     public static string ToStringList(List<CraftingIngredient> list)
     {
         string[] ingredientStrings = new string[list.Count];
@@ -31,7 +31,7 @@ public class Recipe : ScriptableObject
         {
             ingredientStrings[list.IndexOf(ingredient)] = ingredient.ToString();
         }
-        return string.Join(",", ingredientStrings); // Ö±½Ó·µ»Ø¶ººÅ·Ö¸ôµÄ×Ö·û´®
+        return string.Join(",", ingredientStrings); // ç›´æ¥è¿”å›å¸¦é€—å·åˆ†éš”çš„å­—ç¬¦ä¸²
     }
     [Button]
     public void Test()

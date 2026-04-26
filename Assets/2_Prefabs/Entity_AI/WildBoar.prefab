@@ -55,6 +55,28 @@ MonoBehaviour:
     ID: "\u7269\u54C1\u68C0\u6D4B\u6A21\u5757"
     isRunning: 0
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
 --- !u!1 &1126451057775130547
 GameObject:
@@ -111,6 +133,28 @@ MonoBehaviour:
     ID: "FaceMouse\u6A21\u5757"
     isRunning: 0
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   GameController: {fileID: 0}
   turnBody: {fileID: 0}
@@ -218,6 +262,28 @@ MonoBehaviour:
     ID: "\u79FB\u52A8\u6A21\u5757"
     isRunning: 0
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   animationController: {fileID: 0}
   moveHungerBuff: {fileID: 0}
@@ -474,6 +540,28 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   Data:
     State: 0
@@ -489,6 +577,7 @@ MonoBehaviour:
   _hp: {fileID: 0}
   _detector: {fileID: 0}
   _animator: {fileID: 0}
+  _attackDamageMods: []
   debugLog: 1
   eatEnterHungerRate: 0.4
   eatExitHungerRate: 0.8
@@ -526,6 +615,7 @@ MonoBehaviour:
   rageBuildupRate: 0.5
   rageDecayRate: 0.2
   attackCooldown: 2
+  attackDamageWindow: 0.2
   fleeTriggerHpRate: 0.2
   fleeSafeHpRate: 0.4
   fleeRunDistance: 10
@@ -792,6 +882,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Module_Animator_AI
       objectReference: {fileID: 0}
+    - target: {fileID: 5802457204138852704, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: m_FlipX
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -816,7 +910,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5420821979545000394, guid: 88450745eac117c4295962551e0db2d7, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.527
+      value: -0.824
       objectReference: {fileID: 0}
     - target: {fileID: 5420821979545000394, guid: 88450745eac117c4295962551e0db2d7, type: 3}
       propertyPath: m_LocalPosition.y
@@ -853,6 +947,10 @@ PrefabInstance:
     - target: {fileID: 5420821979545000394, guid: 88450745eac117c4295962551e0db2d7, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5641593694245906890, guid: 88450745eac117c4295962551e0db2d7, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

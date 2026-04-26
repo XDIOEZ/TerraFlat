@@ -342,6 +342,11 @@ public class Inventory_HotBar : Module, IInventory
 
     private void OnRightClickPerformed(InputAction.CallbackContext ctx)
     {
+        if (IsGameplayInputLocked())
+        {
+            return;
+        }
+
         if (CurentSelectItem == null)
         {
             Debug.LogWarning("[Inventory_HotBar] 右键使用失败：当前未持有物品");
@@ -353,6 +358,11 @@ public class Inventory_HotBar : Module, IInventory
 
     private void OnScrollSwitch(InputAction.CallbackContext ctx)
     {
+        if (IsGameplayInputLocked())
+        {
+            return;
+        }
+
         if (IsPointerOverUI()) return;
 
         float value = ctx.ReadValue<Vector2>().y;
@@ -388,6 +398,17 @@ public class Inventory_HotBar : Module, IInventory
     public Inventory GetDefaultTargetInventory()
     {
         return RuntimeInventory;
+    }
+
+    private bool IsGameplayInputLocked()
+    {
+        if (item == null)
+        {
+            return false;
+        }
+
+        GameController controller = item.GetComponent<GameController>();
+        return controller != null && controller.IsGameplayInputLocked;
     }
 
 #endregion

@@ -151,6 +151,14 @@ public partial class AI_Wolf : Module
 	public float wanderPauseMin = 0.8f;
 	[HorizontalGroup("配置/行为/巡逻/Hr3"), LabelText("停顿最大"), SuffixLabel("秒", true), MinValue(0f)]
 	public float wanderPauseMax = 2.5f;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/巡逻"), HorizontalGroup("配置/行为/巡逻/H避险"), LabelText("避开高权重")]
+	public bool wanderAvoidHighPenalty = true;
+	[HorizontalGroup("配置/行为/巡逻/H避险"), LabelText("危险阈值"), MinValue(0)]
+	public int wanderDangerPenalty = 1200;
+	[HorizontalGroup("配置/行为/巡逻/H避险"), LabelText("采样点"), MinValue(1)]
+	public int wanderSampleCount = 8;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/巡逻"), LabelText("权重惩罚系数"), MinValue(0f)]
+	public float wanderPenaltyWeight = 1f;
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/状态"), HorizontalGroup("配置/动画/状态/Hr1"), LabelText("待机")]
 	public string animIdle = "Stand";
@@ -249,13 +257,12 @@ public partial class AI_Wolf : Module
 		RefreshPackStatus();
 		RefreshThreatTarget();
 
-		WolfState next = EvaluateNextState();
-		if (next != _currentState)
-		{
-			SwitchState(next);
-		}
-
-		TickCurrentState(deltaTime);
+		AI_StateMachineRunner.EvaluateAndTick(
+			_currentState,
+			EvaluateNextState,
+			SwitchState,
+			TickCurrentState,
+			deltaTime);
 	}
 
 	private void OnGUI()
@@ -1062,6 +1069,15 @@ public partial class AI_Wolf : Module
 				}
 			}
 		}
+
+		offset = AI_WanderUtility.PickSaferOffset(
+			transform.position,
+			offset,
+			wanderRadius,
+			wanderAvoidHighPenalty,
+			wanderSampleCount,
+			(uint)Mathf.Max(0, wanderDangerPenalty),
+			wanderPenaltyWeight);
 		_wanderTarget = new Vector3(transform.position.x + offset.x, transform.position.y + offset.y, transform.position.z);
 		_hasWanderTarget = true;
 		_mover.CanMove = true;

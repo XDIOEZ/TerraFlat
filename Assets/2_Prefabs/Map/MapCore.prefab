@@ -146,6 +146,22 @@ MonoBehaviour:
           NoiseScale: 0.1
           ChunkSize: {x: 100, y: 100}
           AutoGenerateMap: 1
+          GlobalTemperature: 26
+          CurrentWeather: 0
+          WeatherIntensity: 0
+          RainTemperatureOffset: -4
+          CloudyTemperatureOffset: -1
+          StormTemperatureOffset: -6
+          name: 
+          BodyId: 
+          PrefabName: 
+          OrbitCenterBodyId: 
+          OrbitRadius: 20
+          OrbitHeight: 0
+          OrbitAngularSpeed: 8
+          OrbitStartAngle: 0
+          OrbitClockwise: 0
+          SelfRotateSpeed: 20
         mapGrid: {fileID: 0}
         targetTilemap: {fileID: 0}
         Equator: 0

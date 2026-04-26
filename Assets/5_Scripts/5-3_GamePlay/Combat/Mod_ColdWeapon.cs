@@ -103,6 +103,7 @@ public partial class Mod_ColdWeapon : Module
     public Transform MoveTargetTransform;
 
     private InputAction InputAction;
+    private GameController cachedController;
     private Vector2 returnTarget;
 
     // 用于轨迹显示与调试
@@ -133,10 +134,10 @@ public partial class Mod_ColdWeapon : Module
         if (item.Owner != null)
         {
             faceMouse = item.Owner.itemMods.GetMod_ByID(ModText.FocusPoint) as Mod_FocusPoint;
-            var controller = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
-            if (controller != null)
+            cachedController = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
+            if (cachedController != null)
             {
-                InputAction = controller._inputActions.Win10.LeftClick;
+                InputAction = cachedController._inputActions.Win10.LeftClick;
                 InputAction.started += OnInputActionStarted;
                 InputAction.canceled += OnInputActionCanceled;
             }
@@ -186,6 +187,16 @@ public partial class Mod_ColdWeapon : Module
         // 每帧默认允许攻击，由各观察者通过 CanAttack &= 条件 共同收紧
         CanAttack = true;
 
+        if (cachedController != null && cachedController.IsGameplayInputLocked)
+        {
+            if (CurrentState != AttackState.Idle)
+            {
+                CancelAttack();
+            }
+
+            return;
+        }
+
         foreach (var observer in observers)
         {
             observer.OnUpdate(deltaTime);
@@ -207,6 +218,11 @@ public partial class Mod_ColdWeapon : Module
     #region 输入与攻击控制
     public void OnInputActionStarted(InputAction.CallbackContext context)
     {
+        if (cachedController != null && cachedController.IsGameplayInputLocked)
+        {
+            return;
+        }
+
         if (context.started)
             StartCoroutine(DelayedCheckUIThenAttack());
     }
@@ -215,6 +231,11 @@ public partial class Mod_ColdWeapon : Module
     {
         // 延迟到下一帧以确保 EventSystem 状态正确
         yield return null;
+
+        if (cachedController != null && cachedController.IsGameplayInputLocked)
+        {
+            yield break;
+        }
 
         if (!IsPointerOverUI())
             StartAttack();

@@ -213,6 +213,13 @@ public class Mod_Tent : MonoBehaviour, IInteractable
 
         ApplySleepDayNightTimeScale();
 
+        // 记录睡觉点作为玩家濒死后的重生优先点
+        var deathState = playerItem.itemMods.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
+        if (deathState != null)
+        {
+            deathState.SetSleepRespawnPoint(playerItem.transform.position);
+        }
+
         GameManager.Instance.SaveGame();
         StartZzzFloat();
 

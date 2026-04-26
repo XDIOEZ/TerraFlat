@@ -1,33 +1,34 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using TMPro;
 
-public class Mod_DebugInfo : Module
+public class Mod_DebugInfo : Module, IInstanceUI
 {
     public Ex_ModData DebugData;
     public override ModuleData _Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
 
-    [Header("µ÷ÊÔÃæ°å×é¼ş")]
-    public BasePanel DebugPanel;        // UIÃæ°å£¨¿ÉÑ¡£©
-    public GameObject Content;          // ÌõÄ¿µÄÈİÆ÷£¬Ò»°ãÊÇ VerticalLayoutGroup
-    public GameObject stringPrefab;     // µ¥Ìõµ÷ÊÔĞÅÏ¢µÄÔ¤ÖÆÌå£¬Ğè°üº¬ TextMeshProUGUI ×é¼ş
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
+    public BasePanel DebugPanel;        // UIï¿½ï¿½å£¨ï¿½ï¿½Ñ¡ï¿½ï¿½
+    public GameObject Content;          // ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ VerticalLayoutGroup
+    public GameObject stringPrefab;     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½å£¬ï¿½ï¿½ï¿½ï¿½ï¿½ TextMeshProUGUI ï¿½ï¿½ï¿½
 
-    [Header("µ÷ÊÔĞÅÏ¢")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢")]
     public List<string> DebugInfo = new List<string>();
 
     public override void Load()
     {
-        // Èç¹ûÄãĞèÒª¼ÓÔØDebugĞÅÏ¢£¬¿ÉÒÔÔÚÕâÀï´¦Àí
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Debugï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï´¦ï¿½ï¿½
        
     }
 
     public override void Save()
     {
-        // Èç¹ûÄãĞèÒª±£´æDebugĞÅÏ¢£¬¿ÉÒÔÔÚÕâÀï´¦Àí
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Debugï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï´¦ï¿½ï¿½
     }
 
     /// <summary>
-    /// ÉèÖÃµ÷ÊÔĞÅÏ¢ÁĞ±í£¬²¢Ë¢ĞÂUI
+    /// ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½Ğ±ï¿½ï¿½ï¿½ï¿½ï¿½Ë¢ï¿½ï¿½UI
     /// </summary>
     public void SetDebugInfo(List<string> newInfo)
     {
@@ -36,7 +37,7 @@ public class Mod_DebugInfo : Module
     }
 
     /// <summary>
-    /// Ìí¼ÓÒ»Ìõµ÷ÊÔĞÅÏ¢²¢Ë¢ĞÂUI
+    /// ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½Ë¢ï¿½ï¿½UI
     /// </summary>
     public void AddDebugLine(string line)
     {
@@ -44,20 +45,44 @@ public class Mod_DebugInfo : Module
         RefreshDebugPanel();
     }
 
+    public void I_ShowPanel()
+    {
+        if (DebugPanel == null)
+            throw new System.InvalidOperationException("[Mod_DebugInfo] DebugPanel ä¸ºç©ºï¼Œæ— æ³•æ‰“å¼€é¢æ¿");
+
+        DebugPanel.Open();
+    }
+
+    public void I_ClosePanel()
+    {
+        if (DebugPanel == null)
+            throw new System.InvalidOperationException("[Mod_DebugInfo] DebugPanel ä¸ºç©ºï¼Œæ— æ³•å…³é—­é¢æ¿");
+
+        DebugPanel.Close();
+    }
+
+    public void I_TogglePanel()
+    {
+        if (DebugPanel == null)
+            throw new System.InvalidOperationException("[Mod_DebugInfo] DebugPanel ä¸ºç©ºï¼Œæ— æ³•åˆ‡æ¢é¢æ¿");
+
+        DebugPanel.Toggle();
+    }
+
     /// <summary>
-    /// ¸ù¾İ DebugInfo Ë¢ĞÂ UI Ãæ°åÄÚÈİ
+    /// ï¿½ï¿½ï¿½ï¿½ DebugInfo Ë¢ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public void RefreshDebugPanel()
     {
         if (Content == null || stringPrefab == null) return;
 
-        // Çå¿Õ¾ÉµÄµ÷ÊÔÌõÄ¿
+        // ï¿½ï¿½Õ¾ÉµÄµï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
         foreach (Transform child in Content.transform)
         {
             Destroy(child.gameObject);
         }
 
-        // ´´½¨ĞÂµÄµ÷ÊÔÌõÄ¿
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ÂµÄµï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
         foreach (var info in DebugInfo)
         {
             GameObject entry = Instantiate(stringPrefab, Content.transform);

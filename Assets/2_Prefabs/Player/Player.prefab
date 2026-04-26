@@ -351,6 +351,8 @@ GameObject:
   - component: {fileID: 7199555808017476116}
   - component: {fileID: 6883143605326503467}
   - component: {fileID: 4377666045775335801}
+  - component: {fileID: 9206547286300101542}
+  - component: {fileID: 7130251929038421976}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -389,7 +391,6 @@ Transform:
   - {fileID: 3910460100367442520}
   - {fileID: 2016599476573315782}
   - {fileID: 1211274164537197697}
-  - {fileID: 4878975408065021389}
   - {fileID: 4008861612708923450}
   - {fileID: 2583823434517663508}
   - {fileID: 4464676328456984453}
@@ -648,6 +649,100 @@ MonoBehaviour:
       Index: 0
     RuntimeOwnerSlotIndex: -1
     BitData: 
+--- !u!114 &9206547286300101542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb6e67a20d4b0df469e14737cbef57fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    Name: 
+    ID: PlayerDeathState
+    isRunning: 1
+    Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    BitData: 
+  respawnHpRate: 1
+  dyingPanelPrefab: {fileID: 0}
+  dyingPanelPrefabName: UI_Death
+  Data:
+    HasSleepRespawnPoint: 0
+    SleepRespawnX: 0
+    SleepRespawnY: 0
+    SleepRespawnZ: 0
+--- !u!114 &7130251929038421976
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56faea2b516a34c47b6cee182e326bd9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    BitData: 
+  ButtonPrefab: {fileID: 3948103345439709801, guid: d52e8e0393ca8974095cb621f030f5c1, type: 3}
+  UIContainer: {fileID: 0}
+  UIButton_Instances: []
+  ButtonListPrefab: {fileID: 3157743334102886615, guid: eb2b2826902af0c48a89020b32f241c9, type: 3}
 --- !u!1 &7418924436426645882
 GameObject:
   m_ObjectHideFlags: 0
@@ -767,7 +862,7 @@ MonoBehaviour:
     StaminaConsumeSpeed: 0.5
   HealthState:
     Enabled: 1
-    HealSpeed: 1
+    HealSpeed: 0.01
     WaterSelfHurt: 1
     ProteinSelfHurt: 1
     VitaminSelfHurt: 1
@@ -907,6 +1002,7 @@ MonoBehaviour:
     itemSlot_UI: []
   basePanel: {fileID: 0}
   InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
+  InventoryPanelPrefabName: UI_WorkBench
   workButton: {fileID: 0}
   progressImage: {fileID: 0}
   toggleKey: 104
@@ -1734,76 +1830,6 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 2921982359085929768, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
   m_PrefabInstance: {fileID: 5870109183278118233}
-  m_PrefabAsset: {fileID: 0}
---- !u!1001 &5957898888194717523
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 7343432311901774332}
-    m_Modifications:
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 1920
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1080
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4200879185744419619, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: item
-      value: 
-      objectReference: {fileID: 6883143605326503467}
-    - target: {fileID: 4200879185744419619, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: managedReferences[4513346371909844997].ToggleActionName
-      value: H
-      objectReference: {fileID: 0}
-    - target: {fileID: 5126595431219871123, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-      propertyPath: m_Name
-      value: Module_WorkBench_Player
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
---- !u!4 &4878975408065021389 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1232630807682577054, guid: 59ea3cb6a2f6eec4ba71f287f1c5e03d, type: 3}
-  m_PrefabInstance: {fileID: 5957898888194717523}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &6095688695363029839
 PrefabInstance:

@@ -514,6 +514,22 @@ public class GameManager : SingletonAutoMono<GameManager>
     /// <summary>
     /// 为新玩家寻找最近陆地并设置出生位置
     /// </summary>
+    public bool TryGetDefaultPlayerSpawnPosition(out Vector3 spawnPos)
+    {
+        Vector2Int seedAnchor = GetSeedAnchorPosition();
+        if (!TryFindNearestLand(seedAnchor, out Vector2Int landPos))
+        {
+            spawnPos = Vector3.zero;
+            return false;
+        }
+
+        spawnPos = new Vector3(landPos.x + 0.5f, landPos.y + 0.5f, 0f);
+        return true;
+    }
+
+    /// <summary>
+    /// 为新玩家寻找最近陆地并设置出生位置
+    /// </summary>
     private bool TryPlaceNewPlayerOnNearestLand(Player player)
     {
         if (player == null)
@@ -522,16 +538,15 @@ public class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        Vector2Int seedAnchor = GetSeedAnchorPosition();
-        if (!TryFindNearestLand(seedAnchor, out Vector2Int landPos))
+        if (!TryGetDefaultPlayerSpawnPosition(out Vector3 spawnPos))
         {
             return false;
         }
 
-        Vector3 spawnPos = new Vector3(landPos.x + 0.5f, landPos.y + 0.5f, 0f);
         player.transform.position = spawnPos;
         player.Data.transform.position = spawnPos;
 
+        Vector2Int seedAnchor = GetSeedAnchorPosition();
         Debug.Log($"[GameManager] 新玩家出生点已定位到陆地：seed={SaveDataMgr.Instance.SaveData.Seed}, anchor={seedAnchor}, spawn={spawnPos}");
         return true;
     }

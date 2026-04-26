@@ -121,7 +121,7 @@ MonoBehaviour:
   canvasGroup: {fileID: 5979844928364893368}
   CanDrag: 0
   Dragger: {fileID: 0}
-  rectTransform: {fileID: 0}
+  rectTransform: {fileID: 6794506636438909286}
   PanelName: 
   isOpen: 0
 --- !u!225 &5979844928364893368
@@ -442,6 +442,28 @@ MonoBehaviour:
     ID: 
     isRunning: 0
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   DebugPanel: {fileID: 2041855331523580412}
   Content: {fileID: 3221904731754983973}
@@ -677,12 +699,36 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3669522787907678363, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3946560459644177307, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
+      propertyPath: m_Value
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4715933324710478507, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
       propertyPath: m_Name
       value: Scroll View
       objectReference: {fileID: 0}
     - target: {fileID: 5315922491420164089, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
       propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5315922491420164089, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -0.000002861023
+      objectReference: {fileID: 0}
+    - target: {fileID: 6124988103847399136, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6124988103847399136, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6124988103847399136, guid: 0fef65f5e875799469dd020d5fdaf4f6, type: 3}
+      propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

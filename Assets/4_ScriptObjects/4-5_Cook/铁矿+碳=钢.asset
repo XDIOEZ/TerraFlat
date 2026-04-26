@@ -41,6 +41,7 @@ MonoBehaviour:
     - ItemName: Ingot_Steel
       ItemPrefab: {fileID: 8289096317301822611, guid: 410df6b8ef498814d965cb7ea4c3a199, type: 3}
       amount: 1
+   enableMirrorCrafting: 1
   action: []
   Temperature: 1489
   Temperature_Max: 9999

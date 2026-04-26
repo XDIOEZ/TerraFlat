@@ -14,21 +14,32 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inputs:
     RowItems_List:
-    - ItemName: 
+    - matchMode: 0
+      ItemName: 
       ItemPrefab: {fileID: 0}
+      Tag: 
       amount: 0
-    - ItemName: Stick_Wood
+    - matchMode: 0
+      ItemName: Stick_Wood
       ItemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: Plank
-      ItemPrefab: {fileID: 8403136577216454063, guid: ef93394ee7f1a984795e39747ab1af3a, type: 3}
+    - matchMode: 0
+      ItemName: Log
+      ItemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
+      Tag: 
       amount: 1
-    - ItemName: 
+    - matchMode: 0
+      ItemName: 
       ItemPrefab: {fileID: 0}
+      Tag: 
       amount: 0
+    recipeType: 0
+    inputOrder: 1
   outputs:
     results:
     - ItemName: SparkBorer
       ItemPrefab: {fileID: 6540100855143504370, guid: c81a87a3667f93340a56b3e016a55c95, type: 3}
       amount: 1
-  recipeType: 0
+  enableMirrorCrafting: 1
+  action: []

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62d5779b6e29ae84fa4fc8d95d820661, type: 3}
+  m_Name: SpawnerConfig
+  m_EditorClassIdentifier: 
+  SpawnEntries:
+  - PrefabName: Chicken
+    Probability: 0.5
+  - PrefabName: WildBoar
+    Probability: 0.2
+  - PrefabName: Wolf
+    Probability: 0.5
+  SpawnTriggerTime: 720
+  SpawnTimeTolerance: 1
+  MinSpawnDistance: 15
+  MaxSpawnDistance: 50
+  SpawnSearchRetryCount: 5

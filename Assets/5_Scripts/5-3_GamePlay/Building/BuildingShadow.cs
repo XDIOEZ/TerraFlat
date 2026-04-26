@@ -119,41 +119,21 @@ public class BuildingShadow : MonoBehaviour
         ShadowRenderer.sprite = newRenderer.sprite;
         ShadowRenderer.sortingOrder = newRenderer.sortingOrder - 1;
         ShadowRenderer.color = ShadowColor;
-
-        // 检查精灵是否有效
-        if (newRenderer.sprite == null)
-        {
-            Debug.LogWarning("BuildingShadow初始化失败: 精灵为空");
-            return;
-        }
-
-        // 获取精灵的精确尺寸
-        Vector2 spriteSize = GetSpriteSize(newRenderer.sprite);
         
         BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
         if (boxCollider != null)
         {
-            // 使用精灵的实际尺寸并应用缩放因子
-            boxCollider.size = Vector2.one*0.5f;
+            // 不再通过Sprite尺寸计算，直接使用配置值
+            boxCollider.size = BoxColliderScale;
             boxCollider.offset = Vector2.zero; // 通常阴影中心对齐，偏移设为0
 
             // 添加调试信息
-            Debug.Log($"[BuildingShadow] 精灵尺寸: {spriteSize}, 碰撞体尺寸: {boxCollider.size}, 缩放: {BoxColliderScale}");
+            Debug.Log($"[BuildingShadow] 碰撞体尺寸: {boxCollider.size}, 缩放配置: {BoxColliderScale}");
         }
         else
         {
             Debug.LogWarning("BuildingShadow初始化失败: 缺少BoxCollider2D组件");
         }
-    }
-    
-    /// <summary>
-    /// 准确获取精灵的尺寸
-    /// </summary>
-    /// <param name="sprite">要测量的精灵</param>
-    /// <returns>精灵的实际尺寸</returns>
-    private Vector2 GetSpriteSize(Sprite sprite)
-    {
-        return Vector2.one;
     }
 
     /// <summary>
@@ -214,14 +194,10 @@ public class BuildingShadow : MonoBehaviour
     /// </summary>
     public void RefreshColliderSize()
     {
-        if (ShadowRenderer == null || ShadowRenderer.sprite == null)
-            return;
-            
         BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
         if (boxCollider != null)
         {
-            Vector2 spriteSize = GetSpriteSize(ShadowRenderer.sprite);
-            boxCollider.size = Vector2.Scale(spriteSize, BoxColliderScale);
+            boxCollider.size = BoxColliderScale;
             boxCollider.offset = Vector2.zero;
         }
     }

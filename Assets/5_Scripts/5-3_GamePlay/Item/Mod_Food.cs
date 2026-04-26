@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UltEvents;
 
-public partial class Mod_Food : Module
+public partial class Mod_Food : Module, IInstanceUI
 {
     [MemoryPackable]
     public partial class ObserverSnapshot
@@ -281,6 +281,15 @@ public partial class Mod_Food : Module
     [Button("切换面板")]
     public void TogglePanel()
     {
+        if (item != null)
+        {
+            GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            if (controller != null && controller.IsGameplayInputLocked)
+            {
+                return;
+            }
+        }
+
         // 检测面板是否已经实例化，如果未实例化则先实例化
         if (PanleInstance == null)
         {
@@ -303,6 +312,21 @@ public partial class Mod_Food : Module
             panelUI.Open();
             Data.ShowCanvas = true;
         }
+    }
+
+    public void I_ShowPanel()
+    {
+        ShowPanel();
+    }
+
+    public void I_ClosePanel()
+    {
+        HidePanel();
+    }
+
+    public void I_TogglePanel()
+    {
+        TogglePanel();
     }
 
 
@@ -602,6 +626,18 @@ public partial class Mod_Food : Module
         if (nutrition.Vitamins <= 0)
         {
             _damageReceiver.ForceHurt(HealthState.VitaminSelfHurt * timeDelta);
+        }
+    }
+
+    public void RestoreOnRespawn()
+    {
+        Data.nutrition.Max();
+        _hungerDamageTickTimer = 0f;
+        DataUpdate?.Invoke();
+
+        if (Data.ShowCanvas)
+        {
+            RefreshUI();
         }
     }
 

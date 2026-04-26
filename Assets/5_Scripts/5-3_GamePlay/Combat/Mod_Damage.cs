@@ -213,9 +213,9 @@ public class Mod_Damage : Module, IDamageSender
             damageCollider = GetComponent<Collider2D>();
         }
 
-        if (damageCollider != null && damageCollider.enabled != enabled && showDebugWarnings)
+        if (damageCollider != null && damageCollider.enabled != enabled)
         {
-            Debug.LogWarning($"[{name}] 伤害状态由 Collider.enabled 控制，请在外部开关 Collider", this);
+           damageCollider.enabled = enabled; // 先切换状态以确保触发器事件正确调用，从而维护内部接收器列表的准确性
         }
 
         if (!enabled)
