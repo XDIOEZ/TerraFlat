@@ -46,7 +46,27 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
 
     public void Start()
     {
-        Debug_CreateSolarSystem();
+        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
+        enabled = false;
+        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Event_GameWorldExit += OnGameWorldExit;
+    }
+
+    private void OnGameWorldEnter()
+    {
+        enabled = true;
+    }
+
+    private void OnGameWorldExit()
+    {
+        enabled = false;
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Event_GameWorldExit -= OnGameWorldExit;
     }
 
 #endregion

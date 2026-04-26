@@ -515,9 +515,11 @@ public class Map : Item
 
     private void BakePenaltyForAllTilesSync()
     {
-        // 获取GridGraph以获得节点尺寸信息
-        var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
-        float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
+        var astar = AstarGameManager.Instance;
+        if (astar == null)
+            return;
+
+        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
 
         // 处理所有节点数据 这个是根据地块数据进行烘焙的
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
@@ -525,17 +527,14 @@ public class Map : Item
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
 
-            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
-
-            // 使用更精确的世界坐标计算方法，解决偏移问题
-            Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
-
-            // 进一步校正坐标以匹配A*网格节点中心
-            float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
-            float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
-            Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
-
-            AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty, topTile.IsWalkable);
+            if (hasFastAccess)
+            {
+                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+            }
+            else
+            {
+                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+            }
         }
 
         Debug.Log($"✅ 完成同步烘焙 {Data.CountNonEmptyCells()} 个地块的寻路权重");
@@ -543,6 +542,12 @@ public class Map : Item
 
     private void BakePenaltyForDirtyCellsSync()
     {
+        var astar = AstarGameManager.Instance;
+        if (astar == null)
+            return;
+
+        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
+
         foreach (var worldPos in backTilePenaltyDirtyCells)
         {
             TileData topTile = GetTopTile(worldPos);
@@ -551,10 +556,14 @@ public class Map : Item
                 continue;
             }
 
-            AstarGameManager.Instance?.ModifyNodePenalty_GridGraphFast(
-                new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f),
-                topTile.Penalty,
-                topTile.IsWalkable);
+            if (hasFastAccess)
+            {
+                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+            }
+            else
+            {
+                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+            }
         }
     }
 
@@ -590,6 +599,7 @@ public class Map : Item
         int batchSize = Mathf.Max(1, backTilePenaltyTilesPerYield);
         object yieldToken = GetBackTilePenaltyYieldToken();
         int processed = 0;
+        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
 
         if (backTilePenaltyForceFull)
         {
@@ -597,13 +607,14 @@ public class Map : Item
             {
                 TileData topTile = tileDataList[^1];
 
-                Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
-                Vector3 cellCenterWorld = tileMap.GetCellCenterWorld(position3D);
-
-                astar.ModifyNodePenalty_GridGraphFast(
-                    new Vector2(cellCenterWorld.x, cellCenterWorld.y),
-                    topTile.Penalty,
-                    topTile.IsWalkable);
+                if (hasFastAccess)
+                {
+                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+                }
+                else
+                {
+                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+                }
 
                 processed++;
                 if (processed % batchSize == 0)
@@ -633,13 +644,14 @@ public class Map : Item
                     continue;
                 }
 
-                Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
-                Vector3 cellCenterWorld = tileMap.GetCellCenterWorld(position3D);
-
-                astar.ModifyNodePenalty_GridGraphFast(
-                    new Vector2(cellCenterWorld.x, cellCenterWorld.y),
-                    topTile.Penalty,
-                    topTile.IsWalkable);
+                if (hasFastAccess)
+                {
+                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+                }
+                else
+                {
+                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+                }
 
                 processed++;
                 if (processed % batchSize == 0)
@@ -689,6 +701,12 @@ public class Map : Item
             Mathf.FloorToInt(centerPosition2D.y)
         );
 
+        var astar = AstarGameManager.Instance;
+        if (astar == null)
+            return;
+
+        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
+
         for (int offsetX = -1; offsetX <= 1; offsetX++)
         {
             for (int offsetY = -1; offsetY <= 1; offsetY++)
@@ -709,16 +727,14 @@ public class Map : Item
 
                 uint penalty = tile.Penalty;
 
-                Vector3Int tilePos3D = new Vector3Int(tilePos.x, tilePos.y, 0);
-                Vector3 cellCenterWorld = tileMap != null
-                    ? tileMap.GetCellCenterWorld(tilePos3D)
-                    : new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f);
-
-                AstarGameManager.Instance?.ModifyNodePenalty_GridGraphFast(
-                    new Vector2(cellCenterWorld.x, cellCenterWorld.y),
-                    penalty,
-                    tile.IsWalkable
-                );
+                if (hasFastAccess)
+                {
+                    astar.ModifyNodePenalty_GridGraphFast(access, tilePos, penalty, tile.IsWalkable);
+                }
+                else
+                {
+                    astar?.ModifyNodePenalty_Optimized(new Vector2(tilePos.x + 0.5f, tilePos.y + 0.5f), penalty, tile.IsWalkable);
+                }
             }
         }
     }
@@ -744,17 +760,19 @@ public class Map : Item
             MarkPenaltyDirty(gridPos);
         }
 
-        Vector3Int gridPos3D = new Vector3Int(gridPos.x, gridPos.y, 0);
-        Vector3 cellCenterWorld = tileMap != null
-            ? tileMap.GetCellCenterWorld(gridPos3D)
-            : new Vector3(gridPos.x + 0.5f, gridPos.y + 0.5f, 0f);
+        var astar = AstarGameManager.Instance;
+        if (astar == null)
+            return;
 
         // 再更新寻路节点：Penalty=0 + Walkable=false
-        AstarGameManager.Instance?.ModifyNodePenalty_GridGraphFast(
-            new Vector2(cellCenterWorld.x, cellCenterWorld.y),
-            0,
-            false
-        );
+        if (astar.TryGetGridGraphPenaltyAccess(out var access))
+        {
+            astar.ModifyNodePenalty_GridGraphFast(access, gridPos, 0, false);
+        }
+        else
+        {
+            astar.ModifyNodePenalty_Optimized(new Vector2(gridPos.x + 0.5f, gridPos.y + 0.5f), 0, false);
+        }
     }
 
     /// <summary>

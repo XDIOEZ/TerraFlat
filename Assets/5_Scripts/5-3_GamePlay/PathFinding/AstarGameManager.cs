@@ -39,6 +39,50 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     private System.Action pendingScanOnComplete;
 
     private bool hasLoggedGridGraphNotReady;
+
+    public readonly struct GridGraphPenaltyAccess
+    {
+        public readonly GridNodeBase[] Nodes;
+        public readonly int Width;
+        public readonly int Depth;
+        public readonly float Left;
+        public readonly float Bottom;
+        public readonly float InvNodeSize;
+        public readonly int CellOriginX;
+        public readonly int CellOriginY;
+        public readonly bool UseDirectCellMapping;
+
+        public GridGraphPenaltyAccess(
+            GridNodeBase[] nodes,
+            int width,
+            int depth,
+            float left,
+            float bottom,
+            float invNodeSize,
+            int cellOriginX,
+            int cellOriginY,
+            bool useDirectCellMapping)
+        {
+            Nodes = nodes;
+            Width = width;
+            Depth = depth;
+            Left = left;
+            Bottom = bottom;
+            InvNodeSize = invNodeSize;
+            CellOriginX = cellOriginX;
+            CellOriginY = cellOriginY;
+            UseDirectCellMapping = useDirectCellMapping;
+        }
+    }
+
+    private GridGraphPenaltyAccess cachedGridGraphPenaltyAccess;
+    private GridGraph cachedGridGraphPenaltyGraph;
+    private GridNodeBase[] cachedGridGraphPenaltyNodes;
+    private int cachedGridGraphPenaltyWidth;
+    private int cachedGridGraphPenaltyDepth;
+    private Vector3 cachedGridGraphPenaltyCenter;
+    private float cachedGridGraphPenaltyNodeSize;
+    private bool hasCachedGridGraphPenaltyAccess;
     #endregion
 
     public bool IsGridGraphReady
@@ -54,7 +98,45 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     }
 
     #region 生命周期方法
+    private bool _astarInitialized = false;
+
     public void Start()
+    {
+        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
+        enabled = false;
+        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Event_GameWorldExit += OnGameWorldExit;
+    }
+
+    private void OnGameWorldEnter()
+    {
+        // 延迟初始化：首次进入游戏世界时初始化寻路系统
+        if (!_astarInitialized)
+        {
+            InitializeAstar();
+            _astarInitialized = true;
+        }
+        enabled = true;
+    }
+
+    private void OnGameWorldExit()
+    {
+        enabled = false;
+    }
+
+    private void OnDestroy()
+    {
+        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+    }
+
+    private void Update()
+    {
+        // 按键调试功能
+        UpdateKeyControl();
+    }
+
+    private void InitializeAstar()
     {
         Pathfinder = GetComponent<AstarPath>();
 
@@ -148,6 +230,8 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             gridGraph.SetDimensions(width, depth, nodeSize);
         }
 
+        InvalidateGridGraphPenaltyAccessCache();
+
         IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
 
         isScanningNavmesh = true;
@@ -164,6 +248,8 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         }
 
 //        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+
+        InvalidateGridGraphPenaltyAccessCache();
 
         // 调用回调函数
         onComplete?.Invoke();
@@ -182,7 +268,9 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
         AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
 
+        InvalidateGridGraphPenaltyAccessCache();
         AstarPath.active.Scan();
+        InvalidateGridGraphPenaltyAccessCache();
     }
 
     /// <summary>
@@ -307,18 +395,26 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         targetNode.Penalty = targetWalkable ? newPenalty : 0u;
     }
 
-    /// <summary>
-    /// 超高频调用专用：直接按 GridGraph 坐标映射到节点，避免 GetNearest 的高开销。
-    /// 前提：使用的是 AstarPath.active.data.gridGraph 且 graph 未旋转（本项目 center.z=0 的2D用法）。
-    /// </summary>
-    public void ModifyNodePenalty_GridGraphFast(Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
+    private void InvalidateGridGraphPenaltyAccessCache()
     {
+        hasCachedGridGraphPenaltyAccess = false;
+        cachedGridGraphPenaltyGraph = null;
+        cachedGridGraphPenaltyNodes = null;
+    }
+
+    public bool TryGetGridGraphPenaltyAccess(out GridGraphPenaltyAccess access)
+    {
+        access = default;
+
         var active = AstarPath.active;
         var gg = active != null && active.data != null ? active.data.gridGraph : null;
         if (gg == null)
-            return;
+            return false;
 
-        if (gg.nodes == null || gg.nodes.Length != gg.width * gg.depth)
+        var nodes = gg.nodes;
+        int width = gg.width;
+        int depth = gg.depth;
+        if (nodes == null || nodes.Length != width * depth)
         {
             if (!hasLoggedGridGraphNotReady)
             {
@@ -326,30 +422,93 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
                 Debug.LogWarning("[AstarGameManager.ModifyNodePenalty_GridGraphFast] GridGraph 未就绪（可能尚未 Scan），已跳过本次 fast 更新。", this);
             }
 
-            ModifyNodePenalty_Optimized(worldPos, newPenalty, isWalkable);
-            return;
+            return false;
         }
 
         float nodeSize = gg.nodeSize;
         if (nodeSize <= 0f)
-            return;
+            return false;
 
-        float halfWidth = gg.width * nodeSize * 0.5f;
-        float halfDepth = gg.depth * nodeSize * 0.5f;
-        float left = gg.center.x - halfWidth;
-        float bottom = gg.center.y - halfDepth;
-        float inv = 1f / nodeSize;
+        hasLoggedGridGraphNotReady = false;
 
-        int x = Mathf.FloorToInt((worldPos.x - left) * inv);
-        int y = Mathf.FloorToInt((worldPos.y - bottom) * inv);
+        Vector3 center = gg.center;
+        if (!hasCachedGridGraphPenaltyAccess ||
+            cachedGridGraphPenaltyGraph != gg ||
+            cachedGridGraphPenaltyNodes != nodes ||
+            cachedGridGraphPenaltyWidth != width ||
+            cachedGridGraphPenaltyDepth != depth ||
+            cachedGridGraphPenaltyCenter != center ||
+            !Mathf.Approximately(cachedGridGraphPenaltyNodeSize, nodeSize))
+        {
+            float halfWidth = width * nodeSize * 0.5f;
+            float halfDepth = depth * nodeSize * 0.5f;
+            float left = center.x - halfWidth;
+            float bottom = center.y - halfDepth;
+            int cellOriginX = Mathf.RoundToInt(left);
+            int cellOriginY = Mathf.RoundToInt(bottom);
+            bool useDirectCellMapping = Mathf.Approximately(nodeSize, 1f) &&
+                                        Mathf.Abs(left - cellOriginX) < 0.0001f &&
+                                        Mathf.Abs(bottom - cellOriginY) < 0.0001f;
 
-        if ((uint)x >= (uint)gg.width || (uint)y >= (uint)gg.depth)
-            return;
+            cachedGridGraphPenaltyAccess = new GridGraphPenaltyAccess(
+                nodes,
+                width,
+                depth,
+                left,
+                bottom,
+                1f / nodeSize,
+                cellOriginX,
+                cellOriginY,
+                useDirectCellMapping);
 
-        var node = gg.GetNode(x, y);
-        if (node == null)
-            return;
+            cachedGridGraphPenaltyGraph = gg;
+            cachedGridGraphPenaltyNodes = nodes;
+            cachedGridGraphPenaltyWidth = width;
+            cachedGridGraphPenaltyDepth = depth;
+            cachedGridGraphPenaltyCenter = center;
+            cachedGridGraphPenaltyNodeSize = nodeSize;
+            hasCachedGridGraphPenaltyAccess = true;
+        }
 
+        access = cachedGridGraphPenaltyAccess;
+        return true;
+    }
+
+    private static bool TryGetGridGraphNode(GridGraphPenaltyAccess access, float worldX, float worldY, out GridNodeBase node)
+    {
+        int x = Mathf.FloorToInt((worldX - access.Left) * access.InvNodeSize);
+        int y = Mathf.FloorToInt((worldY - access.Bottom) * access.InvNodeSize);
+
+        if ((uint)x >= (uint)access.Width || (uint)y >= (uint)access.Depth)
+        {
+            node = null;
+            return false;
+        }
+
+        node = access.Nodes[x + y * access.Width];
+        return node != null;
+    }
+
+    private static bool TryGetGridGraphNode(GridGraphPenaltyAccess access, Vector2Int cellPos, out GridNodeBase node)
+    {
+        if (!access.UseDirectCellMapping)
+            return TryGetGridGraphNode(access, cellPos.x + 0.5f, cellPos.y + 0.5f, out node);
+
+        int x = cellPos.x - access.CellOriginX;
+        int y = cellPos.y - access.CellOriginY;
+
+        if ((uint)x >= (uint)access.Width || (uint)y >= (uint)access.Depth)
+        {
+            node = null;
+            return false;
+        }
+
+        node = access.Nodes[x + y * access.Width];
+        return node != null;
+    }
+
+    private static void ApplyNodePenaltyFast(GridNodeBase node, uint newPenalty, bool isWalkable)
+    {
         bool targetWalkable = isWalkable && newPenalty > 0;
         uint targetPenalty = targetWalkable ? newPenalty : 0u;
 
@@ -358,6 +517,42 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
         node.Walkable = targetWalkable;
         node.Penalty = targetPenalty;
+    }
+
+    private static void ApplyNodePenaltyFast(GridGraphPenaltyAccess access, float worldX, float worldY, uint newPenalty, bool isWalkable)
+    {
+        if (!TryGetGridGraphNode(access, worldX, worldY, out var node))
+            return;
+
+        ApplyNodePenaltyFast(node, newPenalty, isWalkable);
+    }
+
+    /// <summary>
+    /// 超高频调用专用：直接按 GridGraph 坐标映射到节点，避免 GetNearest 的高开销。
+    /// 前提：使用的是 AstarPath.active.data.gridGraph 且 graph 未旋转（本项目 center.z=0 的2D用法）。
+    /// </summary>
+    public void ModifyNodePenalty_GridGraphFast(Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
+    {
+        if (!TryGetGridGraphPenaltyAccess(out var access))
+        {
+            ModifyNodePenalty_Optimized(worldPos, newPenalty, isWalkable);
+            return;
+        }
+
+        ApplyNodePenaltyFast(access, worldPos.x, worldPos.y, newPenalty, isWalkable);
+    }
+
+    public void ModifyNodePenalty_GridGraphFast(GridGraphPenaltyAccess access, Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
+    {
+        ApplyNodePenaltyFast(access, worldPos.x, worldPos.y, newPenalty, isWalkable);
+    }
+
+    public void ModifyNodePenalty_GridGraphFast(GridGraphPenaltyAccess access, Vector2Int cellPos, uint newPenalty = 1000, bool isWalkable = true)
+    {
+        if (!TryGetGridGraphNode(access, cellPos, out var node))
+            return;
+
+        ApplyNodePenaltyFast(node, newPenalty, isWalkable);
     }
 
     /// <summary>
@@ -369,34 +564,10 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         penalty = 0u;
         isWalkable = false;
 
-        var active = AstarPath.active;
-        var gg = active != null && active.data != null ? active.data.gridGraph : null;
-        if (gg == null)
-            return false;
-
-        if (gg.nodes == null || gg.nodes.Length != gg.width * gg.depth)
-        {
+        if (!TryGetGridGraphPenaltyAccess(out var access))
             return TryGetNodePenalty_Optimized(worldPos, out penalty, out isWalkable);
-        }
 
-        float nodeSize = gg.nodeSize;
-        if (nodeSize <= 0f)
-            return false;
-
-        float halfWidth = gg.width * nodeSize * 0.5f;
-        float halfDepth = gg.depth * nodeSize * 0.5f;
-        float left = gg.center.x - halfWidth;
-        float bottom = gg.center.y - halfDepth;
-        float inv = 1f / nodeSize;
-
-        int x = Mathf.FloorToInt((worldPos.x - left) * inv);
-        int y = Mathf.FloorToInt((worldPos.y - bottom) * inv);
-
-        if ((uint)x >= (uint)gg.width || (uint)y >= (uint)gg.depth)
-            return false;
-
-        var node = gg.GetNode(x, y);
-        if (node == null)
+        if (!TryGetGridGraphNode(access, worldPos.x, worldPos.y, out var node))
             return false;
 
         penalty = node.Penalty;
@@ -462,7 +633,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     #endregion
 
     #region 按键调整鼠标节点权重（策划友好功能）
-    private void Update()
+    private void UpdateKeyControl()
     {
         // 仅在"功能启用+相机有效+寻路组件就绪"时生效
         if (!enableKeyControl || mainCamera == null || Pathfinder == null || AstarPath.active == null)

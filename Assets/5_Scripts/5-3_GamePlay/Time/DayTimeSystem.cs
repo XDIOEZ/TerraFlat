@@ -22,6 +22,34 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     public Color DefaultLightColor = Color.white;
 
 
+    private void Awake()
+    {
+        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
+        enabled = false;
+    }
+
+    private void OnEnable()
+    {
+        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Event_GameWorldExit += OnGameWorldExit;
+    }
+
+    private void OnDisable()
+    {
+        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+    }
+
+    private void OnGameWorldEnter()
+    {
+        enabled = true;
+    }
+
+    private void OnGameWorldExit()
+    {
+        enabled = false;
+    }
+
     private void Update()
     {
         // 主循环推进所有独立场景的时间
