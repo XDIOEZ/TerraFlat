@@ -326,7 +326,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].itemName
-      value: Chicken
+      value: Chicken_State
       objectReference: {fileID: 0}
     - target: {fileID: 2365670626427715040, guid: f4e4284d9b97d0746a88b6db98a7e8e4, type: 3}
       propertyPath: ProductionList.Array.data[0].ThrowItem

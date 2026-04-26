@@ -722,6 +722,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1972541801892577952, guid: 405209e91ee825740a4b42ec94f9f441, type: 3}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].LootPrefabName
+      value: Chicken_State
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
       value: Ore_MagicalStone
       objectReference: {fileID: 0}
