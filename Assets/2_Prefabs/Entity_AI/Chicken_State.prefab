@@ -1,80 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1551211433820652664
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 718446117665166084}
-  - component: {fileID: 7634458484467776915}
-  m_Layer: 0
-  m_Name: AI
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &718446117665166084
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1551211433820652664}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4778519347457968648}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7634458484467776915
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1551211433820652664}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 58c6f9b140a52a14881ec09eaebb66eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  tree: {fileID: 11400000, guid: 6978d3b64138a424b97b1bddad14f011, type: 2}
-  isRunning: 0
-  ModData:
-    Name: 
-    ID: AI
-    isRunning: 1
-    Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
-    BitData: 
 --- !u!1 &5065571277225119290
 GameObject:
   m_ObjectHideFlags: 0
@@ -90,7 +15,7 @@ GameObject:
   - component: {fileID: 4850197992055457325}
   - component: {fileID: 3841007123886012277}
   m_Layer: 0
-  m_Name: Chicken
+  m_Name: Chicken_State
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -111,6 +36,7 @@ Transform:
   m_Children:
   - {fileID: 8973842694640076381}
   - {fileID: 395832595285550428}
+  - {fileID: 4040572142908259681}
   - {fileID: 2079924555658983478}
   - {fileID: 7491405792354885221}
   - {fileID: 351774226350025000}
@@ -120,7 +46,6 @@ Transform:
   - {fileID: 5897472319611590976}
   - {fileID: 1644461448390271104}
   - {fileID: 8348645441547684293}
-  - {fileID: 718446117665166084}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5430792662477495375
@@ -205,7 +130,7 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0
   Data:
-    IDName: Chicken
+    IDName: Chicken_State
     GameName: Chicken
     Description: "\u751F\u9E21\u8089\uFF1A\u4ECE\u91CE\u751F\u9E21\u7C7B\u8EAB\u4E0A\u5265\u53D6\u7684\u672A\u5904\u7406\u8089\u7C7B"
     Durability: 1
@@ -295,6 +220,144 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!1 &6797200048394459089
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4040572142908259681}
+  - component: {fileID: 1775883118074638832}
+  m_Layer: 0
+  m_Name: Module_AI_Chicken
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4040572142908259681
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6797200048394459089}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4778519347457968648}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1775883118074638832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6797200048394459089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0ae97d52ceacf841a041892e6987d4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    BitData: 
+  Data:
+    State: 0
+    EggTimer: 0
+    Fatigue01: 0
+  _currentState: 0
+  _stateElapsed: 0
+  _isReady: 0
+  _currentFoodTarget: {fileID: 0}
+  _mover: {fileID: 0}
+  _food: {fileID: 0}
+  _hp: {fileID: 0}
+  _detector: {fileID: 0}
+  _animator: {fileID: 0}
+  debugLog: 1
+  eatEnterHungerRate: 0.35
+  eatExitHungerRate: 0.85
+  sleepEnterHpRate: 0.5
+  sleepExitHpRate: 0.55
+  sleepRecoverHpPerSecond: 6
+  sleepDuration: 6
+  sleepCooldown: 3
+  dayStartRatio: 0.25
+  dayEndRatio: 0.75
+  detectorRefreshInterval: 0.8
+  eatDistance: 1.2
+  enableIdleWander: 1
+  idleMinDuration: 0.6
+  idleMaxDuration: 1.8
+  wanderRadius: 4
+  wanderStopDistance: 0.35
+  wanderPauseMin: 0.8
+  wanderPauseMax: 2.2
+  edibleTags:
+  - Meat
+  - Worm
+  - Corn
+  - Wheat
+  - Seed
+  - Food
+  - Weed
+  - Plant
+  wanderAvoidHighPenalty: 1
+  wanderDangerPenalty: 1200
+  wanderSampleCount: 8
+  wanderPenaltyWeight: 1
+  eggItemId: Egg
+  layEggInterval: 2880
+  layEggDuration: 2
+  fleeTriggerDistance: 6
+  fleeSafeDistance: 10
+  fleeRunDistance: 8
+  threatTags:
+  - Predator
+  fleeFromPlayer: 1
+  defaultMateDuration: 8
+  animIdle: Stand
+  animMove: Move
+  animForage: Move
+  animEat: Sit
+  animSleep: Sleep
+  animMate: Sit
+  animLayEgg: Sit
+  animFlee: Move
+  OnStateChanged:
+    _PersistentCalls: []
 --- !u!1001 &2149651359683716600
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -377,7 +440,7 @@ PrefabInstance:
       objectReference: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
-      value: Chicken_Tree
+      value: Chicken_State
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName

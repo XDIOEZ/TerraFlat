@@ -1299,7 +1299,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 687aad645527236438c6b0ab6fbcf3ca
-  position: {x: 661.5996, y: 1414.4}
+  position: {x: 661.60004, y: 1414.4}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3015,7 +3015,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: e50405e1ffb17e64d9018985a1100910
-  position: {x: 1601.5996, y: 2729.6}
+  position: {x: 1312.7999, y: 2729.5999}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -5258,7 +5258,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 6ebe49329716c1f429f274d859d62071
-  position: {x: 1303.2002, y: 2729.6}
+  position: {x: 1162.3999, y: 2729.5999}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
