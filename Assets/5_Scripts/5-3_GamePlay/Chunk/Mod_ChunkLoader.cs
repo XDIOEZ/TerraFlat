@@ -280,16 +280,18 @@ public class Mod_ChunkLoader : Module
         ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: UnActiveDistance);
 
 
-        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: LoadChunkDistance);
-
-        //调整Apath寻路网格覆盖范围(不需要扫描,只需要调整范围就可以了,网格的具体参数在加载区块后其会自动更新)
-        if (AstarGameManager.Instance == null)
+        // 先完成区块加载，再刷新寻路范围，避免“区块已出现但网格/权重仍是旧状态”
+        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: LoadChunkDistance, onAllChunksLoaded: () =>
         {
-            Debug.LogError("[区块加载器] AstarGameManager 未初始化，无法刷新寻路网格", this);
-            return;
-        }
+            // 调整Apath寻路网格覆盖范围（不需要扫描，只需调整范围）
+            if (AstarGameManager.Instance == null)
+            {
+                Debug.LogError("[区块加载器] AstarGameManager 未初始化，无法刷新寻路网格", this);
+                return;
+            }
 
-        RequestNavMeshRefresh(chunkPos);
+            RequestNavMeshRefresh(chunkPos);
+        });
 
     }
 

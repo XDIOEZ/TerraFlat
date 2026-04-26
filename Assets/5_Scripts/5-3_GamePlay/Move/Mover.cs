@@ -179,6 +179,20 @@ public partial class Mover : Module
     {
         if (moveAction == null) return;
 
+        if (item != null)
+        {
+            GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            if (controller != null && controller.IsGameplayInputLocked)
+            {
+                Move(rb.position, deltaTime);
+                if (IsRunning)
+                {
+                    SetRunState(false);
+                }
+                return;
+            }
+        }
+
         Vector2 input = moveAction.ReadValue<Vector2>();
         bool isCurrentlyMoving = input.sqrMagnitude > 0.001f;
 
@@ -225,6 +239,15 @@ public partial class Mover : Module
     #region 公共方法
     public void SetRunState(bool isRun)
     {
+        if (item != null)
+        {
+            GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+            if (controller != null && controller.IsGameplayInputLocked && isRun)
+            {
+                return;
+            }
+        }
+
         if (IsRunning == isRun) return;
         IsRunning = isRun;
         // 体力不足时禁止跑步

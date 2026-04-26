@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Mod_Damage_AI : Mod_Damage
+public class Mod_Damage_AI : Mod_Damage,ITrunDirection
 {
     public Mod_TurnBack TrunBody;
     public Mod_AnimatorController_Receiver animator;

@@ -222,6 +222,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: Data.EnableSpoilage
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Water
       value: 10
       objectReference: {fileID: 0}
@@ -230,24 +234,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.EnableSpoilage
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.EnableSpoilage
-      value: 1
+      propertyPath: Data.nutrition.Vitamins
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.SpoilageTargetItemID
       value: Humus
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.SpoilageTargetItemID
-      value: Humus
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: Data.nutrition.Vitamins
-      value: 10
+      propertyPath: FoodModData.EnableSpoilage
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Carbohydrates
@@ -256,6 +252,10 @@ PrefabInstance:
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Max_Fat.BaseValue
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.SpoilageTargetItemID
+      value: Humus
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Max_Water.BaseValue

@@ -29,6 +29,7 @@ public class GameController : Module
     private InputDeviceType _currentInputDevice = InputDeviceType.KeyboardMouse; // 当前输入源缓存
     private Vector2 _virtualCursorScreenPosition; // 手柄虚拟光标位置
     private bool _virtualCursorInitialized; // 虚拟光标是否初始化
+    private bool _isGameplayInputLocked; // 濒死/过场时是否锁定玩家输入
 
 #endregion
 
@@ -41,6 +42,8 @@ public class GameController : Module
 
     public Ex_ModData _modData; // 模组数据
     public override ModuleData _Data { get => _modData; set => _modData = value as Ex_ModData; }
+
+    public bool IsGameplayInputLocked => _isGameplayInputLocked; // 当前是否锁定玩家输入
 
 #endregion
 
@@ -99,26 +102,51 @@ public class GameController : Module
 
     public void LeftClickAction(InputAction.CallbackContext obj) /// 左键按下
     {
+        if (_isGameplayInputLocked)
+        {
+            return;
+        }
+
         UpdateCurrentInputDevice(obj);
         LeftClick.Invoke();
     }
 
     public void LeftClickUpAction(InputAction.CallbackContext obj) /// 左键抬起
     {
+        if (_isGameplayInputLocked)
+        {
+            return;
+        }
+
         UpdateCurrentInputDevice(obj);
         LeftClickUp.Invoke();
     }
 
     public void RightClickAction(InputAction.CallbackContext obj) /// 右键按下
     {
+        if (_isGameplayInputLocked)
+        {
+            return;
+        }
+
         UpdateCurrentInputDevice(obj);
         RightClick.Invoke();
     }
 
     public void RightClickUpAction(InputAction.CallbackContext obj) /// 右键抬起
     {
+        if (_isGameplayInputLocked)
+        {
+            return;
+        }
+
         UpdateCurrentInputDevice(obj);
         RightClickUp.Invoke();
+    }
+
+    public void SetGameplayInputLocked(bool isLocked) /// 锁定或解锁玩家快捷键输入
+    {
+        _isGameplayInputLocked = isLocked;
     }
 
 #endregion

@@ -51,6 +51,28 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   EquipmentInventory:
     item: {fileID: 0}
@@ -85,18 +107,6 @@ MonoBehaviour:
         _PersistentCalls: []
       Event_OnDataChanged_TwoSlots:
         _PersistentCalls: []
-    FoodSpoilageSettings:
-      EnableSpoilage: 1
-      TickIntervalSeconds: 1
-      DefaultContainerRate: 1
-      DefaultSpoilageIntervalSeconds: 1800
-      DefaultSpoilageTargetItemID: RottenFood
-      ContainerRateByInventoryName:
-        _serializedList: []
-      SpoilageIntervalByItemID:
-        _serializedList: []
-      SpoilageTargetByItemID:
-        _serializedList: []
     itemSlot_UI: []
   equipment_ModuleData: []
   references:

@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5420821979545000394}
   - component: {fileID: 5641593694245906890}
-  - component: {fileID: 7498584744279995524}
+  - component: {fileID: 8181546002205526525}
   m_Layer: 9
   m_Name: Module_AttackTrigger_AI
   m_TagString: Untagged
@@ -26,7 +26,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4851786055190149567}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.527, y: 0.291, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -78,7 +78,7 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 1.2, y: 1.2}
   m_EdgeRadius: 0
---- !u!114 &7498584744279995524
+--- !u!114 &8181546002205526525
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -92,8 +92,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   AttackEffects: []
-  Weakness:
-    _serializedList: []
+  Weakness: []
   Damage:
     BaseValue: 10
     BaseAdditive: 0
@@ -102,13 +101,37 @@ MonoBehaviour:
     FinalAdditive: 0
   DamageInterval: -1
   EnableOnTriggerEnterDamage: 1
+  OnlyDealDamageWhenInHand: 0
   showDebugWarnings: 1
   damageCollider: {fileID: 0}
+  lastDamageTime: 0
   MemoryPackableData:
     Name: 
     ID: 
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   TrunBody: {fileID: 0}
   animator: {fileID: 0}

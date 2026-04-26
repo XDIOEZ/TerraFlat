@@ -117,6 +117,8 @@ public class DamageReceiver : Module
     private Coroutine _hideUiCoroutine;
     private float _lastDamageUiTime = -999f;
 
+    private bool _deathConsumedByExternalHandler;
+
     public bool ShowCanvas
     {
         get => Data.ShowCanvas;
@@ -329,15 +331,7 @@ public class DamageReceiver : Module
 
         if (Hp <= 0)
         {
-            OnDead.Invoke();
-
-            // TODO添加战利品掉落逻辑
-            DropLoot();
-
-            if (Data.DestroyDelay >= 0)
-            {
-                Destroy(item.gameObject, Data.DestroyDelay);
-            }
+            HandleDeath();
             return actualDamage; // 返回实际伤害
         }
 
@@ -366,15 +360,7 @@ public class DamageReceiver : Module
 
         if (Hp <= 0)
         {
-            OnDead.Invoke();
-
-            // TODO添加战利品掉落逻辑
-            DropLoot();
-
-            if (Data.DestroyDelay >= 0)
-            {
-                Destroy(item.gameObject, Data.DestroyDelay);
-            }
+            HandleDeath();
             return 0; // Ensure a return value for this path
         }
 
@@ -451,6 +437,30 @@ public class DamageReceiver : Module
 
         HidePanel();
         _hideUiCoroutine = null;
+    }
+
+    private void HandleDeath()
+    {
+        _deathConsumedByExternalHandler = false;
+        OnDead.Invoke();
+
+        if (_deathConsumedByExternalHandler)
+        {
+            return;
+        }
+
+        // TODO添加战利品掉落逻辑
+        DropLoot();
+
+        if (Data.DestroyDelay >= 0)
+        {
+            Destroy(item.gameObject, Data.DestroyDelay);
+        }
+    }
+
+    public void ConsumeCurrentDeath()
+    {
+        _deathConsumedByExternalHandler = true;
     }
     #endregion
 

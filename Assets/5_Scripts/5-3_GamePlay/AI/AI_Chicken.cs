@@ -125,6 +125,14 @@ public partial class AI_Chicken : Module
 	[FormerlySerializedAs("edibleItemIds")]
 	[SerializeField]
 	public List<string> edibleTags = new List<string> { "Food" };
+	[FoldoutGroup("移动与觅食"), PropertyOrder(49), LabelText("闲逛避开高权重")]
+	public bool wanderAvoidHighPenalty = true;
+	[FoldoutGroup("移动与觅食"), PropertyOrder(50), LabelText("危险权重阈值"), MinValue(0)]
+	public int wanderDangerPenalty = 1200;
+	[FoldoutGroup("移动与觅食"), PropertyOrder(51), LabelText("闲逛采样点数"), MinValue(1)]
+	public int wanderSampleCount = 8;
+	[FoldoutGroup("移动与觅食"), PropertyOrder(52), LabelText("权重惩罚系数"), MinValue(0f)]
+	public float wanderPenaltyWeight = 1f;
 
 	[FoldoutGroup("下蛋参数"), PropertyOrder(50), LabelText("鸡蛋物品ID")]
 	public string eggItemId = "Egg";
@@ -229,13 +237,12 @@ public partial class AI_Chicken : Module
 			_wanderWaitTimer = Mathf.Max(0f, _wanderWaitTimer - deltaTime);
 		}
 
-		ChickenState next = EvaluateNextState();
-		if (next != _currentState)
-		{
-			SwitchState(next);
-		}
-
-		TickCurrentState(deltaTime);
+		AI_StateMachineRunner.EvaluateAndTick(
+			_currentState,
+			EvaluateNextState,
+			SwitchState,
+			TickCurrentState,
+			deltaTime);
 	}
 
 	private void OnGUI()
@@ -781,6 +788,14 @@ public partial class AI_Chicken : Module
 		}
 
 		Vector2 offset = UnityEngine.Random.insideUnitCircle * wanderRadius;
+		offset = AI_WanderUtility.PickSaferOffset(
+			transform.position,
+			offset,
+			wanderRadius,
+			wanderAvoidHighPenalty,
+			wanderSampleCount,
+			(uint)Mathf.Max(0, wanderDangerPenalty),
+			wanderPenaltyWeight);
 		_wanderTarget = new Vector3(transform.position.x + offset.x, transform.position.y + offset.y, transform.position.z);
 		_hasWanderTarget = true;
 		_mover.CanMove = true;

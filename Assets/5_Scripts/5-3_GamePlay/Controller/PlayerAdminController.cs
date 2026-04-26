@@ -197,6 +197,7 @@ public class PlayerAdminController : Module
         foodMod.Data.nutrition.Carbohydrates = foodMod.Data.nutrition.Max_Carbohydrates;
         foodMod.Data.nutrition.Fat = foodMod.Data.nutrition.Max_Fat;
         foodMod.Data.nutrition.Protein = foodMod.Data.nutrition.Max_Protein;
+        foodMod.Data.nutrition.Water = foodMod.Data.nutrition.Max_Water;
     }
 
     #endregion

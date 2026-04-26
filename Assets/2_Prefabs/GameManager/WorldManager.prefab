@@ -1,5 +1,53 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1015381115892987453
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3255829291475104428}
+  - component: {fileID: 4274200050966710789}
+  m_Layer: 0
+  m_Name: MonsterMgr
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3255829291475104428
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1015381115892987453}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 891121404665747283}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4274200050966710789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1015381115892987453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 818a288dde5ed484ebb221ca065c59f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _spawnerConfig: {fileID: 11400000, guid: 3728acca7d2bf834aa32d083b7c9a9c1, type: 2}
+  _lastCheckTime: -1
+  _hasSpawnedToday: 0
+  _lastCheckedDay: -1
 --- !u!1 &2048257428238950690
 GameObject:
   m_ObjectHideFlags: 0
@@ -323,6 +371,7 @@ Transform:
   - {fileID: 2158920630664488977}
   - {fileID: 5897130074279119965}
   - {fileID: 2879612122123981820}
+  - {fileID: 3255829291475104428}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2341746562113399121

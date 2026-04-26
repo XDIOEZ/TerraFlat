@@ -26,6 +26,7 @@ MonoBehaviour:
     - ItemName: Ingot_Copper
       ItemPrefab: {fileID: 1000322309187556339, guid: d246c7889b8f8db41b968556cb61b856, type: 3}
       amount: 1
+   enableMirrorCrafting: 1
   action: []
   Temperature: 1000
   Temperature_Max: 2000

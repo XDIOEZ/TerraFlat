@@ -14,7 +14,7 @@ public partial class Mod_EquipmentSaveData
 /// 装备系统模块 —— 独立继承 Module，统一管理装备栏 Inventory UI、交互面板与装备效果实例。
 /// 取代原先由 Mod_Inventory + Module_Equipment 分散实现的双模块方案。
 /// </summary>
-public class Mod_Equipment : Module, IInventory, IInteractable
+public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 {
     #region 基础参数
 
@@ -175,6 +175,35 @@ public class Mod_Equipment : Module, IInventory, IInteractable
     }
 
     public Inventory GetDefaultTargetInventory() => EquipmentInventory.DefaultTarget_Inventory;
+
+    public void I_ShowPanel()
+    {
+        if (EquipmentInventory == null)
+            throw new System.InvalidOperationException("[Mod_Equipment] EquipmentInventory 为空，无法打开面板");
+
+        EquipmentInventory.EnsurePanelCreated();
+        if (EquipmentInventory.basePanel == null)
+            throw new System.InvalidOperationException("[Mod_Equipment] basePanel 为空，无法打开面板");
+
+        EquipmentInventory.basePanel.Open();
+    }
+
+    public void I_ClosePanel()
+    {
+        if (EquipmentInventory == null)
+            throw new System.InvalidOperationException("[Mod_Equipment] EquipmentInventory 为空，无法关闭面板");
+
+        if (EquipmentInventory.basePanel != null)
+            EquipmentInventory.basePanel.Close();
+    }
+
+    public void I_TogglePanel()
+    {
+        if (EquipmentInventory == null)
+            throw new System.InvalidOperationException("[Mod_Equipment] EquipmentInventory 为空，无法切换面板");
+
+        EquipmentInventory.SwitchUI();
+    }
 
     #endregion
 

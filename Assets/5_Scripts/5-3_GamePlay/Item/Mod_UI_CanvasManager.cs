@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-public partial class Mod_UI_CanvasManager : Module
+public partial class Mod_UI_CanvasManager : Module, IInstanceUI
 {
     #region 数据结构定义
     [ShowInInspector]
@@ -348,6 +348,60 @@ public partial class Mod_UI_CanvasManager : Module
             return panel.IsOpen();
         }
         return false;
+    }
+
+    public void I_ShowPanel()
+    {
+        ShowAllPanels();
+    }
+
+    public void I_ClosePanel()
+    {
+        HideAllPanels();
+    }
+
+    public void I_TogglePanel()
+    {
+        bool hasOpenPanel = false;
+        foreach (var kv in panelRegistry)
+        {
+            if (kv.Value != null && kv.Value.IsOpen())
+            {
+                hasOpenPanel = true;
+                break;
+            }
+        }
+
+        if (hasOpenPanel)
+            HideAllPanels();
+        else
+            ShowAllPanels();
+    }
+
+    private void ShowAllPanels()
+    {
+        foreach (var kv in panelRegistry)
+        {
+            if (kv.Value != null)
+            {
+                kv.Value.Open();
+                canvasPanelState.canvasPanelboolStates[kv.Key] = true;
+                UpdateButtonVisual(kv.Key, true);
+            }
+        }
+    }
+
+    private void HideAllPanels()
+    {
+        foreach (var kv in panelRegistry)
+        {
+            if (kv.Value != null)
+            {
+                kv.Value.Close();
+                canvasPanelState.canvasPanelboolStates[kv.Key] = false;
+                UpdateButtonVisual(kv.Key, false);
+            }
+        }
     }
     #endregion
 }

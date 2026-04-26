@@ -91,6 +91,18 @@ public class Mod_Weapon_AnimationAction : Module
     [InfoBox("驱动本地输入与连击状态机")]
     private void Update()
     {
+        if (cachedController != null && cachedController.IsGameplayInputLocked)
+        {
+            isHoldingInput = false;
+
+            if (isAttacking)
+            {
+                ResetToIdle();
+            }
+
+            return;
+        }
+
         if (useLocalInput && Input.GetMouseButtonDown(0))
         {
             RequestAttack();
@@ -269,6 +281,11 @@ public class Mod_Weapon_AnimationAction : Module
 
     private void OnControllerLeftClick()
     {
+        if (cachedController != null && cachedController.IsGameplayInputLocked)
+        {
+            return;
+        }
+
         isHoldingInput = true;
         RequestAttack();
     }

@@ -1,17 +1,18 @@
 using UnityEngine.InputSystem;
 using InputSystem;
 using UnityEngine;
+using UnityEngine.UI;
 using Sirenix.OdinInspector;
 
-public class SettingCanvas : Module
+public class SettingCanvas : Module, IInstanceUI
 {
     [ReadOnly]
     public BasePanel basePanel;
     public GameObject SettingCanvasPrefab;
     public Ex_ModData_MemoryPackable ModSaveData;
-    public string PanelName = "ÉèÖÃÃæ°å";
+    public string PanelName = "è®¾ç½®é¢æ¿";
     
-    // Ìí¼ÓInputActionÒıÓÃ
+    // è¾“å…¥InputActionç»„ä»¶
     private PlayerInputActions playerInputActions;
     GameController gameController;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -29,10 +30,10 @@ public class SettingCanvas : Module
     public override void Load()
     {
         gameController = item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
-        // ³õÊ¼»¯ÊäÈëÏµÍ³
+        // åˆå§‹åŒ–è¾“å…¥ç³»ç»Ÿ
         playerInputActions = gameController._inputActions;
 
-        // °ó¶¨ESC°´¼üÊÂ¼ş
+        // ç»‘å®šESCæŒ‰é”®äº‹ä»¶
         playerInputActions.Win10.ESC.performed += OnEscapePressed;
     }
 
@@ -45,30 +46,54 @@ public class SettingCanvas : Module
     }
 
 
-    // ESC°´¼ü´¦Àí·½·¨
+    // ESCæŒ‰é”®å“åº”
     private void OnEscapePressed(InputAction.CallbackContext context)
     {
-        // ¼ì²âBasePanelÊÇ·ñ´æÔÚ ²»´æÔÚ ¾ÍÏÈÊµÀı»¯
-        if (basePanel == null || basePanel.gameObject == null)
+        if (gameController != null && gameController.IsGameplayInputLocked)
         {
-            basePanel = UIManager.Instance.CreatePanelFromGameObject(SettingCanvasPrefab);
-            basePanel.GetButton("±£´æ²¢»Øµ½Ö÷½çÃæ°´Å¥").onClick.AddListener(ExitGame);
-            basePanel.GetButton("±£´æÓÎÏ·").onClick.AddListener(SaveGame);
-            basePanel.GetButton("±£´æ²¢ÍË³öÓÎÏ·°´Å¥").onClick.AddListener(ClossApp);
-            basePanel.SetPanelName(PanelName);
-            basePanel.Open();
             return;
         }
 
-        TogglePanel();
+        I_TogglePanel();
     }
 
-    // ÇĞ»»Ãæ°åÏÔÊ¾/Òş²Ø×´Ì¬
+    private void EnsurePanelCreated()
+    {
+        if (basePanel != null && basePanel.gameObject != null)
+            return;
+
+        if (SettingCanvasPrefab == null)
+            throw new System.InvalidOperationException("[SettingCanvas] SettingCanvasPrefab ä¸ºç©ºï¼Œæ— æ³•åˆ›å»ºè®¾ç½®é¢æ¿");
+
+        basePanel = UIManager.Instance.CreatePanelFromGameObject(SettingCanvasPrefab);
+        BindButton(new[] { "è¿”å›ä¸»èœå•æŒ‰é’®", "è¿”å›ä¸»èœå•", "é€€å‡ºå¹¶è¿”å›ä¸»èœå•æŒ‰é’®" }, ExitGame);
+        BindButton(new[] { "ä¿å­˜æ¸¸æˆ", "ä¿å­˜", "å­˜æ¡£æŒ‰é’®" }, SaveGame);
+        BindButton(new[] { "é€€å‡ºå¹¶å…³é—­æ¸¸æˆæŒ‰é’®", "é€€å‡ºæ¸¸æˆ", "å…³é—­æ¸¸æˆæŒ‰é’®" }, ClossApp);
+        basePanel.SetPanelName(PanelName);
+    }
+
+    private void BindButton(string[] buttonNames, UnityEngine.Events.UnityAction action)
+    {
+        foreach (string buttonName in buttonNames)
+        {
+            Button button = basePanel.GetButton(buttonName);
+            if (button != null)
+            {
+                button.onClick.RemoveListener(action);
+                button.onClick.AddListener(action);
+                return;
+            }
+        }
+
+        throw new System.NullReferenceException($"[SettingCanvas] æœªæ‰¾åˆ°æŒ‰é’®ï¼š{string.Join(" / ", buttonNames)}");
+    }
+
+    // åˆ‡æ¢é¢æ¿æ˜¾ç¤º/éšè—çŠ¶æ€
     private void TogglePanel()
     {
         if (basePanel != null)
         {
-            // Èç¹ûÃæ°åÕıÔÚÏÔÊ¾ÔòÒş²Ø£¬·ñÔòÏÔÊ¾
+            // æ ¹æ®å½“å‰çŠ¶æ€åˆ‡æ¢æ˜¾ç¤ºä¸éšè—
             if (basePanel.IsVisible())
             {
                 basePanel.Close();
@@ -80,11 +105,31 @@ public class SettingCanvas : Module
         }
     }
 
-    // ·½·¨:»Øµ½Ö÷³¡¾°
+    public void I_ShowPanel()
+    {
+        EnsurePanelCreated();
+        basePanel.Open();
+    }
+
+    public void I_ClosePanel()
+    {
+        if (basePanel == null)
+            throw new System.InvalidOperationException("[SettingCanvas] basePanel ä¸ºç©ºï¼Œæ— æ³•å…³é—­è®¾ç½®é¢æ¿");
+
+        basePanel.Close();
+    }
+
+    public void I_TogglePanel()
+    {
+        EnsurePanelCreated();
+        TogglePanel();
+    }
+
+    // è¿”å›ä¸»èœå•
     public void ExitGame()
     {
-        // ±ØĞëÍ¨¹ıStartCoroutineÆô¶¯Ğ­³Ì
-        // ×¢Òâ£ºµ÷ÓÃÕß£¨´Ë´¦ÊÇSettingCanvas£©±ØĞëÊÇMonoBehaviourÊµÀı
+        // é€šè¿‡åç¨‹è¿”å›ä¸»èœå•åœºæ™¯
+        // æ³¨æ„ï¼šè¿™é‡Œçš„è°ƒç”¨è€…æ˜¯SettingCanvasæ‰€åœ¨çš„Moduleï¼Œä¸æ˜¯æ™®é€šMonoBehaviour
         GameManager.Instance.StartCoroutine(GameManager.Instance.BackToHelloScene_Coroutine(item));
     }
     public void SaveGame()
@@ -93,21 +138,21 @@ public class SettingCanvas : Module
     }
     public void ClossApp()
     {
-        // ×¢Òâ£ºµ÷ÓÃÕß£¨´Ë´¦ÊÇSettingCanvas£©±ØĞëÊÇMonoBehaviourÊµÀı
+        // æ³¨æ„ï¼šè¿™é‡Œçš„è°ƒç”¨è€…æ˜¯SettingCanvasæ‰€åœ¨çš„Moduleï¼Œä¸æ˜¯æ™®é€šMonoBehaviour
         GameManager.Instance.StartCoroutine(GameManager.Instance.BackToHelloScene_Coroutine(item, () =>
         {
 #if UNITY_EDITOR
-            // ÔÚ±à¼­Æ÷Ä£Ê½ÏÂÍ£Ö¹²¥·Å
+            // åœ¨ç¼–è¾‘å™¨æ¨¡å¼ä¸‹åœæ­¢æ’­æ”¾
             UnityEditor.EditorApplication.isPlaying = false;
 
 #else
-        // ÔÚ¹¹½¨°æ±¾ÖĞÍË³öÓ¦ÓÃ
+        // åœ¨æ„å»ºç‰ˆæœ¬ä¸­é€€å‡ºåº”ç”¨
         Application.Quit();
 #endif
         }));
     }
 
-    // ÔÚ¶ÔÏóÏú»ÙÊ±È¡ÏûÊÂ¼ş°ó¶¨
+    // å¯¹è±¡é”€æ¯æ—¶å–æ¶ˆäº‹ä»¶ç»‘å®š
     private void OnDestroy()
     {
         if (playerInputActions != null)

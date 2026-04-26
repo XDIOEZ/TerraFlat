@@ -36,6 +36,10 @@ public class Mod_Cam : Module
     private GameObject instantiatedCamera;
     [SerializeField]
     private float povValue = 10f;
+    
+    [Header("视野限制")]
+    public float MaxPovValue = 20f; // 视野最大拉伸值
+    public float MinPovValue = 5f;  // 视野最小缩放值
 
     /// <summary>
     /// 获取虚拟相机组件
@@ -137,6 +141,11 @@ public class Mod_Cam : Module
     /// <param name="context"></param>
     public void PovValueChanged(InputAction.CallbackContext context)
     {
+        if (GameController != null && GameController.IsGameplayInputLocked)
+        {
+            return;
+        }
+
         Vector2 scrollValue = context.ReadValue<Vector2>();
         if (scrollValue.y > 0)
             ChangeCameraView(-1); // 缩小视野
@@ -153,6 +162,7 @@ public class Mod_Cam : Module
         if (Vcam == null) return;
 
         povValue += delta;
+        povValue = Mathf.Clamp(povValue, MinPovValue, MaxPovValue); // 限制视野范围
         Vcam.m_Lens.OrthographicSize = povValue;
 
         if (_chunkLoader == null)

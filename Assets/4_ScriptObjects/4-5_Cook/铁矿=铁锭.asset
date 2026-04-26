@@ -31,6 +31,7 @@ MonoBehaviour:
     - ItemName: Ingot_WroughtIron
       ItemPrefab: {fileID: 8289096317301822611, guid: e7e803eb2785d6f42af33f9762407e32, type: 3}
       amount: 1
+   enableMirrorCrafting: 1
   action: []
   Temperature: 1489
   Temperature_Max: 2000

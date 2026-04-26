@@ -51,7 +51,7 @@ public class Mod_PlayerTraits : Module
     }
 
     /// <summary>
-    /// 玩家死亡处理（当前为退出并打开链接）
+    /// 玩家死亡处理（统一走 DamageReceiver 濒死流程）
     /// </summary>
     public void Death()
     {
@@ -62,8 +62,13 @@ public class Mod_PlayerTraits : Module
             return;
         }
 
-        Application.Quit();
-        Application.OpenURL("https://space.bilibili.com/353520649");
+        var damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        if (damageReceiver == null)
+        {
+            throw new MissingComponentException($"[Mod_PlayerTraits] 玩家缺少 {nameof(DamageReceiver)}，无法触发濒死状态");
+        }
+
+        damageReceiver.ForceHurt(damageReceiver.Hp + damageReceiver.MaxHp + 99999f);
     }
 
     /// <summary>

@@ -133,6 +133,7 @@ MonoBehaviour:
   - "\u706B\u7ED2"
   RequiredClickCount: 20
   ClickIncrement: 1
+  FirstClickBonus: 5
   DecayRatePerSecond: 5
 --- !u!61 &9049880755887795888
 BoxCollider2D:

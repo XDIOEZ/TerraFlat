@@ -346,6 +346,28 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
     BitData: 
   Data:
     SmeltingProgress: 10
@@ -446,6 +468,12 @@ MonoBehaviour:
         _PersistentCalls: []
     itemSlot_UI: []
   mod_Fuel: {fileID: 0}
+  ignitionItemIds:
+  - FireSeed
+  ignitionTags:
+  - "\u706B\u79CD"
+  ignitionFuelValueOverride: 8
+  ignitionMaxTemperatureOverride: 180
   basePanel: {fileID: 0}
   UI_Prefab: {fileID: 2639614329428065687, guid: ca4e9b1fb55d2354882fd54109ad9dfa, type: 3}
   WorkButton: {fileID: 0}

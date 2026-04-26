@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Mod_MakeTable : Module, IInventory
+public class Mod_MakeTable : Module, IInventory, IInstanceUI
 {
     #region 基础参数
 
@@ -451,6 +451,36 @@ public class Mod_MakeTable : Module, IInventory
         inputInventory.DefaultTarget_Inventory = null;
         outputInventory.DefaultTarget_Inventory = null;
         basePanel.Close();
+    }
+
+    #endregion
+
+    #region IInstanceUI接口
+
+    public void I_ShowPanel()
+    {
+        EnsurePanelCreated();
+        if (basePanel == null)
+            throw new System.InvalidOperationException("[Mod_MakeTable] basePanel 为空，无法打开面板");
+
+        basePanel.Open();
+    }
+
+    public void I_ClosePanel()
+    {
+        if (basePanel == null)
+            throw new System.InvalidOperationException("[Mod_MakeTable] basePanel 为空，无法关闭面板");
+
+        basePanel.Close();
+    }
+
+    public void I_TogglePanel()
+    {
+        EnsurePanelCreated();
+        if (basePanel == null)
+            throw new System.InvalidOperationException("[Mod_MakeTable] basePanel 为空，无法切换面板");
+
+        basePanel.Toggle();
     }
 
     #endregion

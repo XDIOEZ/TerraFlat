@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Mod_HandCraftTable : Module, IInventory
+public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 {
 #region 基础参数
 
@@ -22,6 +22,8 @@ public class Mod_HandCraftTable : Module, IInventory
     public Inventory outputInventory;
     public BasePanel basePanel;
     public GameObject InventoryPanel_Prefab;
+    [Tooltip("手工合成台UI预制体名，Inspector未手动拖拽时会按此名称从GameRes回填")]
+    public string InventoryPanelPrefabName = "UI_WorkBench";
 
     [Header("交互组件")]
     [Tooltip("合成按钮")]
@@ -119,9 +121,10 @@ public class Mod_HandCraftTable : Module, IInventory
         if (basePanel != null)
             return false;
 
+        EnsureInventoryPanelPrefabAssigned();
         if (InventoryPanel_Prefab == null)
         {
-            Debug.LogError("[Mod_HandCraftTable] InventoryPanel_Prefab 未设置");
+            Debug.LogError($"[Mod_HandCraftTable] InventoryPanel_Prefab 未设置，且无法通过 {InventoryPanelPrefabName} 回填面板预制体");
             return false;
         }
 
@@ -138,6 +141,36 @@ public class Mod_HandCraftTable : Module, IInventory
         InitUI();
         basePanel.Close();
         return true;
+    }
+
+    private void EnsureInventoryPanelPrefabAssigned()
+    {
+        if (InventoryPanel_Prefab != null)
+            return;
+
+        if (GameRes.Instance == null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(InventoryPanelPrefabName))
+        {
+            InventoryPanel_Prefab = GameRes.Instance.GetPrefab(InventoryPanelPrefabName);
+            if (InventoryPanel_Prefab != null)
+                return;
+        }
+
+        string[] fallbackPrefabNames = { "UI_WorkBench", "UI_HandCraftTable", "UI_MakeTable" };
+        foreach (string prefabName in fallbackPrefabNames)
+        {
+            if (string.Equals(prefabName, InventoryPanelPrefabName, System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            InventoryPanel_Prefab = GameRes.Instance.GetPrefab(prefabName);
+            if (InventoryPanel_Prefab != null)
+            {
+                InventoryPanelPrefabName = prefabName;
+                return;
+            }
+        }
     }
 
     public void InitData()
@@ -288,6 +321,28 @@ public class Mod_HandCraftTable : Module, IInventory
     public Inventory GetDefaultTargetInventory()
     {
         return inputInventory;
+    }
+
+    public void I_ShowPanel()
+    {
+        EnsurePanelCreated();
+        if (basePanel == null)
+            throw new System.InvalidOperationException("[Mod_HandCraftTable] basePanel 为空，无法打开面板");
+
+        basePanel.Open();
+    }
+
+    public void I_ClosePanel()
+    {
+        if (basePanel == null)
+            throw new System.InvalidOperationException("[Mod_HandCraftTable] basePanel 为空，无法关闭面板");
+
+        basePanel.Close();
+    }
+
+    public void I_TogglePanel()
+    {
+        TogglePanelByKey();
     }
 
 #endregion

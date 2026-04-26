@@ -45,6 +45,14 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     public override void ModUpdate(float deltaTime)
     {
+        if (IsGameplayInputLocked())
+        {
+            StopCurrentInteraction();
+            DisableInteractCollider();
+            shouldDisableColliderAfterInteract = false;
+            return;
+        }
+
         if (shouldDisableColliderAfterInteract)
         {
             DisableInteractCollider();
@@ -80,6 +88,11 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
+        if (IsGameplayInputLocked())
+        {
+            return;
+        }
+
         if (interactCollider == null)
             return;
 
@@ -90,6 +103,11 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
     {
+        if (IsGameplayInputLocked())
+        {
+            return;
+        }
+
         if (interactCollider == null)
             return;
 
@@ -174,6 +192,11 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
 
         interactCollider.enabled = false;
+    }
+
+    private bool IsGameplayInputLocked()
+    {
+        return gameController != null && gameController.IsGameplayInputLocked;
     }
 
     #endregion

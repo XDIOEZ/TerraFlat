@@ -195,3 +195,4 @@ MonoBehaviour:
   spawnOffset: 0.35
   pickupDelay: 0.8
   projectileLifeTime: 3
+  ignoreOwnerCollision: 1

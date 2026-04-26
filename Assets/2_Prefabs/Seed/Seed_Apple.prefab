@@ -134,7 +134,6 @@ MonoBehaviour:
     plantedTilePos: {x: 0, y: 0}
     growProgress: 0
     growCompletionThreshold: 100
-    growStage: 0
   ModData:
     Name: 
     ID: 

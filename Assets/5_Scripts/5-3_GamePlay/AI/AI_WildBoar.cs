@@ -69,6 +69,9 @@ public partial class AI_WildBoar : Module
 	private Vector3 _chaseTarget;
 	private float _alertCooldownTimer;
 	private float _rageBuildupTimer;
+	private float _attackCooldownTimer;
+	private float _attackWindowRemainTimer;
+	private bool _attackWindowTriggered;
 	private string _lastPlayedAnimation;
 	private static GUIStyle _debugStateStyle;
 	#endregion
@@ -79,6 +82,7 @@ public partial class AI_WildBoar : Module
 	[SerializeField, ReadOnly] private DamageReceiver _hp;
 	[SerializeField, ReadOnly] private Mod_ItemDetector _detector;
 	[SerializeField, ReadOnly] private Mod_AnimatorController _animator;
+	[SerializeField, ReadOnly] private List<Mod_Damage> _attackDamageMods = new List<Mod_Damage>();
 	#endregion
 
 	#region Config
@@ -139,6 +143,14 @@ public partial class AI_WildBoar : Module
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/移动觅食"), LabelText("可食物标签")]
 	public List<string> edibleTags = new List<string> { "Food", "Corpse" };
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/移动觅食"), HorizontalGroup("配置/行为/移动觅食/H避险"), LabelText("避开高权重")]
+	public bool wanderAvoidHighPenalty = true;
+	[HorizontalGroup("配置/行为/移动觅食/H避险"), LabelText("危险阈值"), MinValue(0)]
+	public int wanderDangerPenalty = 1200;
+	[HorizontalGroup("配置/行为/移动觅食/H避险"), LabelText("采样点"), MinValue(1)]
+	public int wanderSampleCount = 8;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/移动觅食"), LabelText("权重惩罚系数"), MinValue(0f)]
+	public float wanderPenaltyWeight = 1f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/警觉"), HorizontalGroup("配置/行为/警觉/Hr1"), LabelText("视范距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float alertDetectDistance = 8f;
@@ -171,6 +183,8 @@ public partial class AI_WildBoar : Module
 
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackCooldown = 2f;
+	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击窗口"), SuffixLabel("秒", true), MinValue(0.01f)]
+	public float attackDamageWindow = 0.2f;
 
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/逃跑"), HorizontalGroup("配置/战斗/逃跑/Hr1"), LabelText("触发血量"), Range(0f, 1f)]
 	public float fleeTriggerHpRate = 0.2f;
@@ -229,6 +243,9 @@ public partial class AI_WildBoar : Module
 		_hasWanderTarget = false;
 		_alertCooldownTimer = 0f;
 		_rageBuildupTimer = 0f;
+		_attackCooldownTimer = 0f;
+		_attackWindowRemainTimer = 0f;
+		_attackWindowTriggered = false;
 		_lastPlayedAnimation = null;
 
 		BindModules();
@@ -266,16 +283,22 @@ public partial class AI_WildBoar : Module
 			_alertCooldownTimer = Mathf.Max(0f, _alertCooldownTimer - deltaTime);
 		}
 
+		if (_attackCooldownTimer > 0f)
+		{
+			_attackCooldownTimer = Mathf.Max(0f, _attackCooldownTimer - deltaTime);
+		}
+
+		UpdateAttackDamageWindow(deltaTime);
+
 		// 更新愤怒值
 		UpdateRageLevel(deltaTime);
 
-		WildBoarState next = EvaluateNextState();
-		if (next != _currentState)
-		{
-			SwitchState(next);
-		}
-
-		TickCurrentState(deltaTime);
+		AI_StateMachineRunner.EvaluateAndTick(
+			_currentState,
+			EvaluateNextState,
+			SwitchState,
+			TickCurrentState,
+			deltaTime);
 	}
 
 	private void OnGUI()
@@ -354,6 +377,8 @@ public partial class AI_WildBoar : Module
 		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);
 		item.itemMods.GetMod_ByID(ModText.Hp, out _hp);
 		item.GetMod(out _animator);
+		_attackDamageMods = item.GetComponentsInChildren<Mod_Damage>(true).Where(x => x != null).ToList();
+		SetAttackDamageEnabled(false);
 
 		if (_mover == null)
 		{
@@ -382,6 +407,11 @@ public partial class AI_WildBoar : Module
 		if (_animator == null)
 		{
 			Debug.LogWarning($"[{nameof(AI_WildBoar)}] 未找到动画模块，将跳过状态动画同步。目标物体: {name}", this);
+		}
+
+		if (_attackDamageMods.Count == 0)
+		{
+			Debug.LogWarning($"[{nameof(AI_WildBoar)}] 未找到 Mod_Damage 组件，攻击不会造成伤害。目标物体: {name}", this);
 		}
 	}
 	#endregion
@@ -453,6 +483,17 @@ public partial class AI_WildBoar : Module
 		if (next == WildBoarState.Idle)
 		{
 			_idleRemainTimer = GetIdleDuration();
+		}
+
+		if (previous == WildBoarState.Attack && next != WildBoarState.Attack)
+		{
+			StopAttackDamageWindow();
+			_attackCooldownTimer = attackCooldown;
+		}
+
+		if (next == WildBoarState.Attack)
+		{
+			_attackWindowTriggered = false;
 		}
 
 		if (debugLog)
@@ -619,6 +660,8 @@ public partial class AI_WildBoar : Module
 	{
 		if (_currentThreat == null)
 		{
+			StopAttackDamageWindow();
+			_attackWindowTriggered = false;
 			_mover.CanMove = false;
 			_mover.HasReachedTarget = true;
 			return;
@@ -631,12 +674,17 @@ public partial class AI_WildBoar : Module
 		{
 			_mover.CanMove = false;
 			_mover.HasReachedTarget = true;
-			
-			// 这里可以添加实际的伤害逻辑
-			// 例如：_currentThreat.GetComponent<DamageReceiver>()?.TakeDamage(...)
+
+			if (!_attackWindowTriggered && _attackCooldownTimer <= 0f)
+			{
+				StartAttackDamageWindow();
+			}
 		}
 		else
 		{
+			StopAttackDamageWindow();
+			_attackWindowTriggered = false;
+
 			// 超出攻击范围继续靠近
 			_mover.CanMove = true;
 			_mover.HasReachedTarget = false;
@@ -952,6 +1000,14 @@ public partial class AI_WildBoar : Module
 		}
 
 		Vector2 offset = UnityEngine.Random.insideUnitCircle * wanderRadius;
+		offset = AI_WanderUtility.PickSaferOffset(
+			transform.position,
+			offset,
+			wanderRadius,
+			wanderAvoidHighPenalty,
+			wanderSampleCount,
+			(uint)Mathf.Max(0, wanderDangerPenalty),
+			wanderPenaltyWeight);
 		_wanderTarget = new Vector3(transform.position.x + offset.x, transform.position.y + offset.y, transform.position.z);
 		_hasWanderTarget = true;
 		_mover.CanMove = true;
@@ -1190,6 +1246,61 @@ public partial class AI_WildBoar : Module
 
 		_animator.PlayAnimation(animationName);
 		_lastPlayedAnimation = animationName;
+	}
+
+	private void StartAttackDamageWindow()
+	{
+		_attackWindowTriggered = true;
+		_attackWindowRemainTimer = Mathf.Max(0.01f, attackDamageWindow);
+		SetAttackDamageEnabled(true);
+	}
+
+	private void StopAttackDamageWindow()
+	{
+		_attackWindowRemainTimer = 0f;
+		SetAttackDamageEnabled(false);
+	}
+
+	private void UpdateAttackDamageWindow(float deltaTime)
+	{
+		if (_attackWindowRemainTimer <= 0f)
+		{
+			return;
+		}
+
+		_attackWindowRemainTimer = Mathf.Max(0f, _attackWindowRemainTimer - deltaTime);
+		if (_attackWindowRemainTimer > 0f)
+		{
+			return;
+		}
+
+		SetAttackDamageEnabled(false);
+		_attackWindowTriggered = false;
+		if (attackCooldown > 0f)
+		{
+			_attackCooldownTimer = Mathf.Max(_attackCooldownTimer, attackCooldown);
+		}
+	}
+
+	private void SetAttackDamageEnabled(bool enabled)
+	{
+		for (int i = 0; i < _attackDamageMods.Count; i++)
+		{
+			Mod_Damage damageMod = _attackDamageMods[i];
+			if (damageMod == null)
+			{
+				continue;
+			}
+
+			if (enabled)
+			{
+				damageMod.StartAttack();
+			}
+			else
+			{
+				damageMod.StopAttack();
+			}
+		}
 	}
 	#endregion
 }
