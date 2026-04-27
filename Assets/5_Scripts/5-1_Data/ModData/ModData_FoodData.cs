@@ -2,6 +2,7 @@ using FastCloner.Code;
 using MemoryPack;
 using System;
 using UnityEngine;
+using Sirenix.OdinInspector;
 
 [System.Serializable]
 [MemoryPackable]
@@ -9,60 +10,94 @@ public partial class ModData_FoodData : ModuleData
 {
     #region 持久化字段
 
+    [FoldoutGroup("持久化字段")]
     [Tooltip("食物模块完整数据")]
+    [InlineEditor(ObjectFieldMode = InlineEditorObjectFieldModes.Boxed)]
     public Food FoodData = new Food();
 
+    [FoldoutGroup("持久化字段")]
     [Tooltip("是否启用食物腐败")]
+    [LabelText("启用腐败")]
     public bool EnableSpoilage = true;
 
+    [FoldoutGroup("持久化字段")]
     [Tooltip("食物腐败累计时间（秒）")]
+    [ReadOnly]
     public float SpoilageElapsedSeconds = 0f;
 
+    [FoldoutGroup("持久化字段")]
     [Tooltip("食物腐败触发间隔（秒）")]
     public float SpoilageIntervalSeconds = 1800f;
 
+    [FoldoutGroup("持久化字段")]
     [Tooltip("食物腐败后替换目标物品ID")]
+    [LabelText("腐败目标ID")]
     public string SpoilageTargetItemID = "Meat_Rotten";
 
     #endregion
 
     #region 运行时上下文
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [FastClonerIgnore]
     [Tooltip("本次更新推进的腐败秒数")]
+    [ShowInInspector]
+    [ReadOnly]
     public float RuntimeSpoilageDeltaSeconds;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [FastClonerIgnore]
     [Tooltip("本次更新解析后的有效腐败间隔")]
+    [ShowInInspector]
+    [ReadOnly]
     public float RuntimeResolvedIntervalSeconds;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [Tooltip("本次更新解析后的目标物品ID")]
+    [ShowInInspector]
+    [ReadOnly]
     public string RuntimeResolvedTargetItemID;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [Tooltip("当前物品ID，用于避免自替换")]
+    [ShowInInspector]
+    [ReadOnly]
     public string RuntimeCurrentItemID;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [Tooltip("本次是否触发腐败替换")]
+    [ShowInInspector]
+    [ReadOnly]
     public bool RuntimeTriggered;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [Tooltip("本次是否出现无效配置")]
+    [ShowInInspector]
+    [ReadOnly]
     public bool RuntimeInvalid;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [Tooltip("无效配置的原因文本")]
+    [ShowInInspector]
+    [ReadOnly]
     public string RuntimeInvalidReason;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
     [Tooltip("运行时产物构建函数（由外部注入）")]
+    [HideInInspector]
     public Func<string, ItemData> RuntimeCreateTargetItemData;
 
+    [FoldoutGroup("运行时上下文")]
     [MemoryPackIgnore]
+    [HideInInspector]
     public static Func<string, ItemData> SharedCreateTargetItemData;
 
     #endregion

@@ -180,6 +180,11 @@ public class Mod_Cam : Module
 
         // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
     }
+
+    public void EnableUnlimitedView()
+    {
+        MaxPovValue = float.MaxValue;
+    }
     #endregion
 
     private void LoadPovValue()

@@ -12,10 +12,42 @@ public static class AutomaticAssetRefresher
     private static double nextAllowedRefreshTime;
     private static double lastChangeTime;
     private static FileSystemWatcher watcher;
+    // EditorPrefs key 控制是否启用自动刷新
+    private const string EditorPrefKey = "FlatWorld_AutoAssetRefresh_Enabled";
+    private static bool IsEnabled() => EditorPrefs.GetBool(EditorPrefKey, true);
+    private static void SetEnabled(bool enabled)
+    {
+        EditorPrefs.SetBool(EditorPrefKey, enabled);
+        if (enabled)
+        {
+            StartWatcher();
+        }
+        else
+        {
+            StopWatcher();
+        }
+    }
+    [MenuItem("Tools/Auto Asset Refresh/Enable Auto Refresh")]
+    public static void ToggleAutoRefreshMenu()
+    {
+        bool enabled = !IsEnabled();
+        SetEnabled(enabled);
+        UnityEngine.Debug.Log($"[AutoAssetRefresh] 自动刷新已{(enabled ? "启用" : "禁用")}");
+    }
+    [MenuItem("Tools/Auto Asset Refresh/Enable Auto Refresh", true)]
+    public static bool ToggleAutoRefreshMenuValidate()
+    {
+        Menu.SetChecked("Tools/Auto Asset Refresh/Enable Auto Refresh", IsEnabled());
+        return true;
+    }
 
     static AutomaticAssetRefresher()
     {
-        StartWatcher();
+        // 仅在启用时启动文件监听器
+        if (IsEnabled())
+        {
+            StartWatcher();
+        }
         EditorApplication.update += OnEditorUpdate;
         EditorApplication.quitting += StopWatcher;
     }
@@ -46,12 +78,20 @@ public static class AutomaticAssetRefresher
     //请求
     public static void RequestRefresh()
     {
+        if (!IsEnabled())
+        {
+            return;
+        }
         pendingRefresh = true;
         lastChangeTime = EditorApplication.timeSinceStartup;
     }
 
     private static void StartWatcher()
     {
+        if (!IsEnabled())
+        {
+            return;
+        }
         if (watcher != null)
         {
             return;

@@ -16,7 +16,7 @@ MonoBehaviour:
   Description: 
   PreviewColor: {r: 0.84313726, g: 0.6814431, b: 0.19999997, a: 1}
   Condition:
-    TemperatureRange: {x: 0.5, y: 1}
+    TemperatureRange: {x: 0, y: 1}
     HumidityRange: {x: 0, y: 1}
     PrecipitationRange: {x: 0, y: 1}
     SolidityRange: {x: 0, y: 1}
@@ -31,10 +31,10 @@ MonoBehaviour:
         SolidityRange: {x: 0, y: 1}
         HightRange: {x: 0, y: 1}
     ItemSpawn_NoSO:
-    - itemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
-      itemName: Ore_Stone
+    - itemPrefab: {fileID: 480202971505006560, guid: 2b439f796a647c74a8ac03a9b68b0259, type: 3}
+      itemName: Tree_Coconut
       itemCount: 1
-      SpawnChance: 0.0001
+      SpawnChance: 0.01
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}

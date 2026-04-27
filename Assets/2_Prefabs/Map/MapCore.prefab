@@ -168,6 +168,7 @@ MonoBehaviour:
         biomes:
         - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
         - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
+        - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
         - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
         - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
         temperatureMappingProfile: {fileID: 0}
