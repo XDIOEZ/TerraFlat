@@ -9,22 +9,22 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
         SingleSprite
     }
 
-    [Header("ÊÓ¾õÄ£Ê½")]
+    [Header("è§†è§‰æ¨¡å¼")]
     public VisualMode visualMode = VisualMode.Animator;
 
-    [Header("µ¥Í¼¶¯»­¶ÔÏó")]
+    [Header("å•å›¾åŠ¨ç”»å¯¹è±¡")]
     public SpriteRenderer targetSpriteRenderer;
     public Transform spriteVisualRoot;
     public Rigidbody2D targetRb;
 
-    [Header("µ¥Í¼ÒÆ¶¯Ò¡°Ú")]
+    [Header("å•å›¾ç§»åŠ¨æ‘‡æ‘†")]
     public float moveDetectSpeed = 0.05f;
     public float walkSwingAngle = 8f;
     public float walkSwingSpeed = 12f;
     public float walkBobAmount = 0.04f;
     public float walkReturnSpeed = 12f;
 
-    [Header("µ¥Í¼¹¥»÷×²»÷")]
+    [Header("å•å›¾æ”»å‡»æ’å‡»")]
     public float attackDashDistance = 0.22f;
     public float attackDashForwardTime = 0.06f;
     public float attackDashBackTime = 0.12f;
@@ -34,12 +34,12 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
     public bool IsAttacking;
     private bool lastIsAttacking;
 
-    [Tooltip("ÉÏÒ»´ÎµÄCanUseSkill×´Ì¬")]
+    [Tooltip("ä¸Šä¸€æ¬¡çš„CanUseSkillçŠ¶æ€")]
     private bool lastCanUseSkill;
 
-    [Tooltip("¼¼ÄÜID")]
+    [Tooltip("æŠ€èƒ½ID")]
     public int SkillId;
-    [Tooltip("ÊÇ·ñÄÜÊ¹ÓÃ¼¼ÄÜ")]
+    [Tooltip("æ˜¯å¦èƒ½ä½¿ç”¨æŠ€èƒ½")]
     public bool CanUseSkill;
 
     public UltEvent OnAttackStart = new UltEvent();
@@ -56,40 +56,40 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
 
     void Update()
     {
-        // ¼ì²âCanUseSkillµÄ±ä»¯ Èç¹ûÎªtrue¾ÍÖ´ĞĞ¶ÔÓ¦µÄSkillId
+        // æ£€æµ‹CanUseSkillçš„å˜åŒ– å¦‚æœä¸ºtrueå°±æ‰§è¡Œå¯¹åº”çš„SkillId
         if (CanUseSkill != lastCanUseSkill)
         {
             if (CanUseSkill)
             {
-                // ¿ÉÒÔÊ¹ÓÃ¼¼ÄÜ£¬´¥·¢¼¼ÄÜ¿ªÊ¼ÊÂ¼ş£¬²¢´«µİSkillId
+                // å¯ä»¥ä½¿ç”¨æŠ€èƒ½ï¼Œè§¦å‘æŠ€èƒ½å¼€å§‹äº‹ä»¶ï¼Œå¹¶ä¼ é€’SkillId
                 OnSkillStart.Invoke(SkillId);
             }
             else
             {
-                // ¼¼ÄÜÊ¹ÓÃ½áÊø£¬´¥·¢¼¼ÄÜÍ£Ö¹ÊÂ¼ş£¬²¢´«µİSkillId
+                // æŠ€èƒ½ä½¿ç”¨ç»“æŸï¼Œè§¦å‘æŠ€èƒ½åœæ­¢äº‹ä»¶ï¼Œå¹¶ä¼ é€’SkillId
                 OnSkillStop.Invoke(SkillId);
             }
             
-            // ¸üĞÂÉÏÒ»´ÎµÄCanUseSkill×´Ì¬
+            // æ›´æ–°ä¸Šä¸€æ¬¡çš„CanUseSkillçŠ¶æ€
             lastCanUseSkill = CanUseSkill;
         }
 
-        // ¼ì²â¹¥»÷×´Ì¬±ä»¯
+        // æ£€æµ‹æ”»å‡»çŠ¶æ€å˜åŒ–
         if (IsAttacking != lastIsAttacking)
         {
             if (IsAttacking)
             {
                 BeginSingleSpriteAttackDash();
-                // ¹¥»÷¿ªÊ¼
+                // æ”»å‡»å¼€å§‹
                 OnAttackStart.Invoke();
             }
             else
             {
-                // ¹¥»÷½áÊø
+                // æ”»å‡»ç»“æŸ
                 OnAttackStop.Invoke();
             }
 
-            // ¸üĞÂÉÏÒ»´Î¹¥»÷×´Ì¬
+            // æ›´æ–°ä¸Šä¸€æ¬¡æ”»å‡»çŠ¶æ€
             lastIsAttacking = IsAttacking;
         }
 
@@ -123,7 +123,7 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
         _mover = item.itemMods.GetMod_ByID<Mover>(ModText.Mover);
         CacheSpritePose();
 
-        // ³õÊ¼»¯lastCanUseSkill×´Ì¬
+        // åˆå§‹åŒ–lastCanUseSkillçŠ¶æ€
         lastCanUseSkill = CanUseSkill;
         lastIsAttacking = IsAttacking;
     }

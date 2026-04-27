@@ -78,81 +78,6 @@ MonoBehaviour:
       Index: 0
     RuntimeOwnerSlotIndex: -1
     BitData: 
---- !u!1 &1052146090792454106
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7425158425956329820}
-  - component: {fileID: 5598759606169217673}
-  m_Layer: 0
-  m_Name: AI
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7425158425956329820
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1052146090792454106}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 478715881179084011}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5598759606169217673
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1052146090792454106}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 58c6f9b140a52a14881ec09eaebb66eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  item: {fileID: 0}
-  tree: {fileID: 11400000, guid: 0fa53a434d9d6d549ba4a7a2756ec437, type: 2}
-  isRunning: 0
-  ModData:
-    Name: 
-    ID: AI
-    isRunning: 1
-    Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
-    BitData: 
 --- !u!1 &1126451057775130547
 GameObject:
   m_ObjectHideFlags: 0
@@ -404,13 +329,13 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 7425158425956329820}
   - {fileID: 3954245124061004379}
   - {fileID: 1758165699165948454}
   - {fileID: 5688810202076763493}
   - {fileID: 6345810043439928357}
   - {fileID: 1073946820089491471}
   - {fileID: 7981097217136654052}
+  - {fileID: 3849199934911512678}
   - {fileID: 1358098814950680323}
   - {fileID: 6328636074571532807}
   - {fileID: 7455848099091352319}
@@ -545,7 +470,7 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0
   Data:
-    IDName: WildBoar_State
+    IDName: WildBoar
     GameName: WildBoar
     Description: "\u7269\u54C1\u540D\u79F0\uFF1AWildBoar\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1AFalse\n\u7269\u54C1\u6807\u7B7E\uFF1ATagDictionary:\r\n 
       Type:\r\n  Material:\r\n  MakeTag:\r\n\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
@@ -565,6 +490,149 @@ MonoBehaviour:
     inHand: 0
     Guid: 1834089805
     code: 
+--- !u!1 &5993558180366969558
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3849199934911512678}
+  - component: {fileID: 8358856076963370307}
+  m_Layer: 9
+  m_Name: Module_AI_WildBoar
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3849199934911512678
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5993558180366969558}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 478715881179084011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8358856076963370307
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5993558180366969558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85bc528481ca06044a69c60e34b562de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    RuntimeOwnerInventoryData:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    BitData: 
+  _currentState: 0
+  _stateElapsed: 0
+  _isReady: 0
+  _mover: {fileID: 0}
+  _hp: {fileID: 0}
+  _detector: {fileID: 0}
+  _animator: {fileID: 0}
+  OnStateChanged:
+    _PersistentCalls: []
+  Data:
+    State: 0
+    Fatigue01: 0
+    RageLevel: 0
+  _currentFoodTarget: {fileID: 0}
+  _currentThreat: {fileID: 0}
+  debugLog: 1
+  eatEnterHungerRate: 0.4
+  eatExitHungerRate: 0.8
+  sleepEnterHpRate: 0.45
+  sleepExitHpRate: 0.5
+  sleepRecoverHpPerSecond: 5
+  sleepDuration: 8
+  sleepCooldown: 4
+  dayStartRatio: 0.25
+  dayEndRatio: 0.75
+  duskStartRatio: 0.65
+  aggressiveDuringDusk: 1
+  detectorRefreshInterval: 1
+  eatDistance: 1.5
+  enableWander: 1
+  idleMinDuration: 1
+  idleMaxDuration: 3
+  wanderRadius: 6
+  wanderStopDistance: 0.5
+  wanderPauseMin: 1
+  wanderPauseMax: 3
+  edibleTags:
+  - Food
+  - Corpse
+  wanderAvoidHighPenalty: 1
+  wanderDangerPenalty: 1200
+  wanderSampleCount: 8
+  wanderPenaltyWeight: 1
+  alertDetectDistance: 8
+  alertDuration: 3
+  alertToChaseDuration: 1
+  chaseTriggerDistance: 12
+  chaseLossDistance: 20
+  chaseThreatTags:
+  - Player
+  chasePlayer: 1
+  attackTriggerDistance: 1
+  attackDuration: 1.5
+  rageBuildupRate: 0.5
+  rageDecayRate: 0.2
+  attackCooldown: 2
+  attackDamageWindow: 0.2
+  fleeTriggerHpRate: 0.2
+  fleeSafeHpRate: 0.4
+  fleeRunDistance: 10
+  animIdle: Stand
+  animMove: Move
+  animSleep: Stand
+  animForage: Move
+  animEat: Stand
+  animAlert: Stand
+  animChase: Move
+  animAttack: Attack
+  animFlee: Move
+  _food: {fileID: 0}
 --- !u!1001 &1610503869733589615
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -701,7 +769,7 @@ PrefabInstance:
       objectReference: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
-      value: Chicken_State
+      value: Chicken
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName

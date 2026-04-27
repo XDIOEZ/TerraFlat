@@ -259,6 +259,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].LootPrefabName
+      value: Chicken
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.Weakness._serializedList.Array.data[0].Value
       value: 1
       objectReference: {fileID: 0}

@@ -75,6 +75,10 @@ public class Mod_ChunkLoader : Module
     private bool _isNavRefreshRunning;
     private bool _hasQueuedNavRefresh;
     private Vector2 _queuedNavRefreshCenter;
+    private int _queuedNavRefreshLoadDistance; // 排队请求的加载距离
+    private int _pendingRefreshLoadDistance; // 当前刷新使用的加载距离
+    private Vector2Int _pendingRefreshCenterChunk; // 当前刷新使用的区块中心坐标
+    private Coroutine _delayedNavRefreshCoroutine;
     #endregion
 
     #region 属性访问器
@@ -99,21 +103,13 @@ public class Mod_ChunkLoader : Module
 
     #region 生命周期方法
 
-    private void OnEnable()
-    {
-        GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld;
-    }
-
-    private void OnDisable()
-    {
-        GameManager.Event_PlayerEnterWorld -= OnPlayerEnterWorld;
-    }
+    private void OnEnable() => GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld;
+    private void OnDisable() => GameManager.Event_PlayerEnterWorld -= OnPlayerEnterWorld;
 
     private void OnPlayerEnterWorld(Player player)
     {
-        var owner = GetComponentInParent<Player>();
-        if (player != owner) return;
-
+        if (player != GetComponentInParent<Player>())
+            return;
         RefreshChunksAroundPlayer();
     }
 
@@ -125,37 +121,20 @@ public class Mod_ChunkLoader : Module
 
     public override void Load()
     {
-        // 从存档读取配置
         ModData.ReadData(ref distanceConfig);
-
-        // 初始化上一次区块位置
         lastChunkPos = Chunk.GetChunkPosition(transform.position);
-
-        // 尝试获取相机管理器引用
         _cameraFollowManager = item.GetComponentInChildren<Mod_Cam>();
     }
 
-    public override void Save()
-    {
-        ModData.WriteData(distanceConfig);
-    }
+    public override void Save() => ModData.WriteData(distanceConfig);
 
     public override void ModUpdate(float deltaTime)
     {
-        // 动态同步视距
         AutoAdjustDistance();
-
-        // 检测位置是否跨区块
         DetectChunkChange();
 
-        // 延迟执行区块更新（避免频繁调用）
-        if (needsChunkUpdate)
+        if (needsChunkUpdate && Time.unscaledTime - _lastChunkUpdateTime >= chunkUpdateMinInterval)
         {
-            if (Time.unscaledTime - _lastChunkUpdateTime < chunkUpdateMinInterval)
-            {
-                return;
-            }
-
             needsChunkUpdate = false;
             _lastChunkUpdateTime = Time.unscaledTime;
             UpdateChunks(lastChunkPos);
@@ -194,70 +173,37 @@ public class Mod_ChunkLoader : Module
 
     #region 动态视距逻辑
 
-    /// <summary>
-    /// 根据相机视野自动调整加载距离
-    /// </summary>
     private void AutoAdjustDistance()
     {
         if (!syncWithCamera) return;
 
-        // 1. 获取有效相机引用
-        if (_boundCamera == null)
-        {
-            if (_cameraFollowManager == null)
-                _cameraFollowManager = item.GetComponentInChildren<Mod_Cam>();
-
-            if (_cameraFollowManager != null)
-                _boundCamera = _cameraFollowManager.ControllerCamera;
-
-            // 备用方案：主相机
-            if (_boundCamera == null)
-                _boundCamera = Camera.main;
-        }
-
-        // 相机可能被销毁或未初始化，或非正交相机
+        // 获取有效相机引用（仅用于 aspect 和回退）
+        _boundCamera ??= _cameraFollowManager?.ControllerCamera ?? Camera.main;
         if (_boundCamera == null || !_boundCamera.orthographic) return;
 
-        // 2. 计算视野半径 (OrthographicSize是半高)
-        float camSize = _boundCamera.orthographicSize;
-        float height = camSize * 2f;
-        float width = height * _boundCamera.aspect;
-        float radius = Mathf.Max(width, height) / 2f;
+        // 关键修复：使用 Mod_Cam 的目标 lens size，避免 Cinemachine 同步延迟导致读取到旧的 orthographicSize
+        float camSize = _cameraFollowManager?.CurrentOrthographicSize ?? _boundCamera.orthographicSize;
+        if (camSize <= 0f) return;
 
-        // 3. 计算所需Chunk距离
+        // 计算视野半径（取半宽/半高中的较大者）
+        float radius = Mathf.Max(camSize * _boundCamera.aspect, camSize);
+
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        // 取较小边以确保覆盖最坏情况，或取ChunkSize
         float minChunkDim = Mathf.Min(chunkSize.x, chunkSize.y);
-        
-        // 防止除零
         if (minChunkDim <= 0.1f) return;
 
-        // 向上取整并增加缓冲区
-        int neededDist = Mathf.CeilToInt(radius / minChunkDim) + chunkBuffer;
-        neededDist = Mathf.Max(1, neededDist);
-        neededDist = Mathf.Min(maxAutoLoadDistance, neededDist);
-
-        // 4. 应用变更 (仅当需要改变时)
+        int neededDist = Mathf.Clamp(Mathf.CeilToInt(radius / minChunkDim) + chunkBuffer, 1, maxAutoLoadDistance);
         if (neededDist != LoadChunkDistance)
-        {
-            int diff = neededDist - LoadChunkDistance;
-
-            // 使用统一的方法进行调整
-            AdjustLoadDistance(diff);
-        }
+            AdjustLoadDistance(neededDist - LoadChunkDistance);
     }
 
     #endregion
 
     #region 区块检测与更新
 
-    /// <summary>
-    /// 检测是否跨区块
-    /// </summary>
     private void DetectChunkChange()
     {
         Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
-
         if (currentChunkPos != lastChunkPos)
         {
             lastChunkPos = currentChunkPos;
@@ -265,109 +211,156 @@ public class Mod_ChunkLoader : Module
         }
     }
 
-    /// <summary>
-    /// 更新周围区块的加载状态
-    /// </summary>
     private void UpdateChunks(Vector2 chunkPos)
     {
-        // 先清空上一轮尚未处理完的加载请求，避免高速移动时旧位置的 Chunk 迟到加载并残留
-        ChunkMgr.Instance.ResetChunkLoadQueue();
+        if (ChunkMgr.Instance == null) return;
 
-        // 销毁过远的失活区块
-        ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, Distance: DestroyChunkDistance);
+        // 保存当前的加载距离，避免回调触发时 LoadChunkDistance 已被修改
+        int currentLoadDistance = LoadChunkDistance;
+        // 将 Vector2 center 转为 Vector2Int 区块坐标，确保权重烘焙使用固定中心
+        Vector2Int centerChunkPos = new Vector2Int(Mathf.RoundToInt(chunkPos.x), Mathf.RoundToInt(chunkPos.y));
 
-        // 将较远的区块设置为非激活状态
-        ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, Distance: UnActiveDistance);
+        Debug.Log($"[AStar-Debug][ChunkLoader] UpdateChunks 触发 | chunkPos={chunkPos} centerChunkPos={centerChunkPos} LoadDistance={currentLoadDistance} UnActiveDistance={UnActiveDistance} DestroyDistance={DestroyChunkDistance}");
 
-
-        // 先完成区块加载，再刷新寻路范围，避免“区块已出现但网格/权重仍是旧状态”
-        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: LoadChunkDistance, onAllChunksLoaded: () =>
+        // 停止上一轮保底协程
+        if (_delayedNavRefreshCoroutine != null)
         {
-            // 调整Apath寻路网格覆盖范围（不需要扫描，只需调整范围）
+            StopCoroutine(_delayedNavRefreshCoroutine);
+            _delayedNavRefreshCoroutine = null;
+        }
+
+        ChunkMgr.Instance.ResetChunkLoadQueue();
+        ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, DestroyChunkDistance);
+        ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, UnActiveDistance);
+        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, currentLoadDistance, () =>
+        {
             if (AstarGameManager.Instance == null)
             {
-                Debug.LogError("[区块加载器] AstarGameManager 未初始化，无法刷新寻路网格", this);
+                Debug.LogError("[区块加载器] AstarGameManager 未初始化", this);
                 return;
             }
-
+            Debug.Log($"[AStar-Debug][ChunkLoader] 所有区块加载完成 → RequestNavMeshRefresh | center={chunkPos} centerChunkPos={centerChunkPos} currentLoadDistance={currentLoadDistance}");
+            _pendingRefreshLoadDistance = currentLoadDistance;
+            _pendingRefreshCenterChunk = centerChunkPos;
             RequestNavMeshRefresh(chunkPos);
         });
 
+        // 保底：即使回调因竞态未触发，也确保权重烘焙管线启动
+        if (!_isNavRefreshRunning)
+        {
+            _delayedNavRefreshCoroutine = StartCoroutine(DelayedNavMeshRefreshCoroutine(chunkPos, currentLoadDistance, centerChunkPos));
+        }
+    }
+
+    /// <summary>
+    /// 保底协程：等待区块加载就绪后触发NavMesh刷新和权重烘焙。
+    /// 如果回调已触发NavMesh刷新，此协程会被 _isNavRefreshRunning 标志跳过。
+    /// </summary>
+    private System.Collections.IEnumerator DelayedNavMeshRefreshCoroutine(Vector2 center, int loadDistance, Vector2Int centerChunkPos)
+    {
+        // 等待所有待加载区块处理完毕，避免在区块未激活时就触发烘焙
+        if (ChunkMgr.Instance != null)
+        {
+            int waitFrames = 0;
+            while (ChunkMgr.Instance.HasPendingChunkLoads && waitFrames < 120)
+            {
+                waitFrames++;
+                yield return null;
+            }
+        }
+
+        // 额外等待 2 帧确保区块激活状态同步
+        yield return null;
+        yield return null;
+
+        _delayedNavRefreshCoroutine = null;
+
+        // 如果回调链已触发NavMesh刷新，则跳过
+        if (_isNavRefreshRunning)
+        {
+            Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 检测到NavMesh已在刷新，跳过保底 | center={center}");
+            yield break;
+        }
+
+        if (AstarGameManager.Instance == null)
+        {
+            Debug.LogError("[区块加载器] DelayedNavMeshRefresh: AstarGameManager 未初始化", this);
+            yield break;
+        }
+
+        Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 保底触发 → RequestNavMeshRefresh | center={center} loadDistance={loadDistance} centerChunkPos={centerChunkPos}");
+        _pendingRefreshLoadDistance = loadDistance;
+        _pendingRefreshCenterChunk = centerChunkPos;
+        RequestNavMeshRefresh(center);
     }
 
     private void RequestNavMeshRefresh(Vector2 center)
     {
+        Debug.Log($"[AStar-Debug][ChunkLoader] RequestNavMeshRefresh | center={center} _isNavRefreshRunning={_isNavRefreshRunning} LoadDistance={LoadChunkDistance}");
+
         if (_isNavRefreshRunning)
         {
             _hasQueuedNavRefresh = true;
             _queuedNavRefreshCenter = center;
+            _queuedNavRefreshLoadDistance = LoadChunkDistance; // 保存排队请求的距离
+            Debug.Log($"[AStar-Debug][ChunkLoader] NavRefresh正在运行，排队等待 | queuedCenter={center} queuedLoadDistance={_queuedNavRefreshLoadDistance}");
             return;
         }
 
         _isNavRefreshRunning = true;
-        AstarGameManager.Instance.RefreshNavMeshAsync(center: center, radius: LoadChunkDistance, onComplete: OnMeshUpdateComplete);
+        _pendingRefreshLoadDistance = LoadChunkDistance; // 保存当前刷新使用的距离
+
+        var astar = AstarGameManager.Instance;
+        var gridGraph = astar?.Pathfinder?.data?.gridGraph;
+        Debug.Log($"[AStar-Debug][ChunkLoader] 开始RefreshNavMeshAsync | GridGraph: width={gridGraph?.width ?? -1} depth={gridGraph?.depth ?? -1} center={gridGraph?.center} nodeSize={gridGraph?.nodeSize ?? -1} pendingLoadDistance={_pendingRefreshLoadDistance}");
+
+        astar.RefreshNavMeshAsync(center, _pendingRefreshLoadDistance, OnMeshUpdateComplete);
     }
 
-    /// <summary>
-    /// 寻路网格更新完成后的回调 , 开始加载区块更新权重
-    /// </summary>
     private void OnMeshUpdateComplete()
     {
         _isNavRefreshRunning = false;
-
-        // 寻路网格范围调整/扫描完成后，再根据玩家位置重烘焙附近区块的权重
-        ChunkMgr.Instance.RefreshChunkPenaltyCloseToPlayer(gameObject, LoadChunkDistance);
+        int completedLoadDistance = _pendingRefreshLoadDistance;
+        Vector2Int completedCenterChunk = _pendingRefreshCenterChunk;
+        Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 | _hasQueuedNavRefresh={_hasQueuedNavRefresh} completedLoadDistance={completedLoadDistance} completedCenterChunk={completedCenterChunk}");
 
         if (_hasQueuedNavRefresh)
         {
             _hasQueuedNavRefresh = false;
+            _pendingRefreshLoadDistance = _queuedNavRefreshLoadDistance;
+            // 排队请求的中心坐标需要重新计算（排队请求来自 RefreshChunksAroundPlayer，使用当时的 lastChunkPos）
+            _pendingRefreshCenterChunk = new Vector2Int(Mathf.RoundToInt(_queuedNavRefreshCenter.x), Mathf.RoundToInt(_queuedNavRefreshCenter.y));
             RequestNavMeshRefresh(_queuedNavRefreshCenter);
+            return;
         }
+
+        Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 → RefreshChunkPenalty | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
+        // 使用固定中心坐标烘焙权重，避免异步扫描期间玩家移动导致范围偏移
+        ChunkMgr.Instance?.RefreshChunkPenalty(completedCenterChunk, completedLoadDistance);
     }
 
     #endregion
 
     #region 工具方法
 
-    /// <summary>
-    /// 统一调整所有加载距离参数
-    /// </summary>
-    /// <param name="adjustment">调整值（正数增加范围，负数减少范围）</param>
     [Button("调整加载距离")]
     public void AdjustLoadDistance(int adjustment)
     {
         distanceConfig.UnActiveDistance = Mathf.Max(1, distanceConfig.UnActiveDistance + adjustment);
         distanceConfig.DestroyChunkDistance = Mathf.Max(1, distanceConfig.DestroyChunkDistance + adjustment);
         distanceConfig.LoadChunkDistance = Mathf.Max(1, distanceConfig.LoadChunkDistance + adjustment);
-
-        // 调整完毕后立即更新区块
         needsChunkUpdate = true;
     }
 
-
-    /// <summary>
-    /// 获取是否自动生成地图的设置
-    /// </summary>
     private bool GetAutoGenerateMapSetting()
     {
-        // 默认启用自动生成
         const bool defaultAutoGenerate = true;
-
-        // 多层防护null检查
-        if (SaveDataMgr.Instance == null || SaveDataMgr.Instance.SaveData == null)
+        if (SaveDataMgr.Instance?.SaveData?.CurrentPlanetData == null)
         {
-            Debug.LogWarning("[区块加载器] ⚠️ SaveDataMgr 未初始化，使用默认自动生成设置");
+            Debug.LogWarning("[区块加载器] SaveDataMgr 未初始化，使用默认设置");
             return defaultAutoGenerate;
         }
-
-        PlanetData currentPlanetData = SaveDataMgr.Instance.SaveData.CurrentPlanetData;
-        if (currentPlanetData == null)
-        {
-            Debug.LogWarning("[区块加载器] ⚠️ CurrentPlanetData 为空，使用默认自动生成设置");
-            return defaultAutoGenerate;
-        }
-
-        return currentPlanetData.AutoGenerateMap;
+        return SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap;
     }
 
     #endregion

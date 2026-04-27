@@ -195,7 +195,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         // 添加null检查，确保AstarPath.active不为null
         if (AstarPath.active == null)
         {
-            Debug.LogError("AstarPath.active is null, cannot update mesh.");
+            Debug.LogError("[AStar-Debug][AstarGameManager] RefreshNavMeshAsync 失败: AstarPath.active is null");
             onComplete?.Invoke();
             return;
         }
@@ -208,29 +208,35 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         // 检查gridGraph是否为null
         if (gridGraph == null)
         {
-            Debug.LogError("AstarPath.active.data.gridGraph is null, cannot update mesh.");
+            Debug.LogError("[AStar-Debug][AstarGameManager] RefreshNavMeshAsync 失败: gridGraph is null");
             onComplete?.Invoke();
             return;
         }
 
         // 仅在中心或尺寸变化时才更新配置，避免每次都重建网格数据
         Vector3 targetCenter = new Vector3(Newcenter.x, Newcenter.y, 0f);
-        if (gridGraph.center != targetCenter)
-        {
-            gridGraph.center = targetCenter;
-        }
 
         int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
         int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
         float nodeSize = 1f;
 
+        Debug.Log($"[AStar-Debug][AstarGameManager] RefreshNavMeshAsync | center={center} Newcenter={Newcenter} radius={radius} | 网格图变更前: width={gridGraph.width} depth={gridGraph.depth} center={gridGraph.center} nodeSize={gridGraph.nodeSize} | 目标: width={width} depth={depth} targetCenter={targetCenter}");
+
+        if (gridGraph.center != targetCenter)
+        {
+            gridGraph.center = targetCenter;
+        }
+
         // 只有在尺寸或节点大小变化时才调用 SetDimensions（这一步可能比较重）
         if (gridGraph.width != width || gridGraph.depth != depth || !Mathf.Approximately(gridGraph.nodeSize, nodeSize))
         {
             gridGraph.SetDimensions(width, depth, nodeSize);
+            Debug.Log($"[AStar-Debug][AstarGameManager] SetDimensions 已调用 | width={width} depth={depth} nodeSize={nodeSize}");
         }
 
         InvalidateGridGraphPenaltyAccessCache();
+
+        Debug.Log($"[AStar-Debug][AstarGameManager] 开始ScanAsync | 网格图: width={gridGraph.width} depth={gridGraph.depth} center={gridGraph.center} nodeSize={gridGraph.nodeSize}");
 
         IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
 
@@ -247,7 +253,8 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             yield return null;
         }
 
-//        Debug.Log($"✅ NavMesh 更新完成，中心点: {center}，范围: {radius} 个 Chunk");
+        var gridGraph = AstarPath.active?.data?.gridGraph;
+        Debug.Log($"[AStar-Debug][AstarGameManager] ScanAsync完成 | 网格图: width={gridGraph?.width ?? -1} depth={gridGraph?.depth ?? -1} center={gridGraph?.center} nodeSize={gridGraph?.nodeSize ?? -1} nodes.Length={gridGraph?.nodes?.Length ?? -1} IsGridGraphReady={IsGridGraphReady}");
 
         InvalidateGridGraphPenaltyAccessCache();
 
@@ -409,7 +416,10 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         var active = AstarPath.active;
         var gg = active != null && active.data != null ? active.data.gridGraph : null;
         if (gg == null)
+        {
+            Debug.LogWarning($"[AStar-Debug][AstarGameManager] TryGetGridGraphPenaltyAccess 失败: gridGraph=null | AstarPath.active={active != null}");
             return false;
+        }
 
         var nodes = gg.nodes;
         int width = gg.width;
@@ -419,7 +429,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             if (!hasLoggedGridGraphNotReady)
             {
                 hasLoggedGridGraphNotReady = true;
-                Debug.LogWarning("[AstarGameManager.ModifyNodePenalty_GridGraphFast] GridGraph 未就绪（可能尚未 Scan），已跳过本次 fast 更新。", this);
+                Debug.LogWarning($"[AStar-Debug][AstarGameManager] TryGetGridGraphPenaltyAccess 失败: GridGraph未就绪 | nodes={nodes != null} nodes.Length={nodes?.Length ?? -1} width*depth={width * depth}", this);
             }
 
             return false;
@@ -427,7 +437,10 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
         float nodeSize = gg.nodeSize;
         if (nodeSize <= 0f)
+        {
+            Debug.LogWarning($"[AStar-Debug][AstarGameManager] TryGetGridGraphPenaltyAccess 失败: nodeSize={nodeSize}");
             return false;
+        }
 
         hasLoggedGridGraphNotReady = false;
 
@@ -468,6 +481,8 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
             cachedGridGraphPenaltyCenter = center;
             cachedGridGraphPenaltyNodeSize = nodeSize;
             hasCachedGridGraphPenaltyAccess = true;
+
+            Debug.Log($"[AStar-Debug][AstarGameManager] GridGraphPenaltyAccess缓存已更新 | width={width} depth={depth} center={center} nodeSize={nodeSize} left={left} bottom={bottom} useDirectCellMapping={useDirectCellMapping}");
         }
 
         access = cachedGridGraphPenaltyAccess;

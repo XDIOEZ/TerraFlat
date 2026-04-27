@@ -36,6 +36,11 @@ public class Mod_Cam : Module
     private GameObject instantiatedCamera;
     [SerializeField]
     private float povValue = 10f;
+
+    /// <summary>
+    /// 当前目标正交尺寸（直接读取 vcam lens，避免 Cinemachine 同步延迟）
+    /// </summary>
+    public float CurrentOrthographicSize => vcam != null ? vcam.m_Lens.OrthographicSize : (ControllerCamera != null ? ControllerCamera.orthographicSize : 0f);
     
     [Header("视野限制")]
     public float MaxPovValue = 20f; // 视野最大拉伸值
@@ -170,7 +175,8 @@ public class Mod_Cam : Module
             _chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
         }
 
-        _chunkLoader?.RefreshChunksForCameraView();
+        if (_chunkLoader != null)
+            _chunkLoader.RefreshChunksForCameraView();
 
         // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
     }

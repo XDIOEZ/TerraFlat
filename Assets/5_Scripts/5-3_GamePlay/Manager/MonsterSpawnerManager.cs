@@ -195,8 +195,8 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
             Vector3 spawnPos = playerPos + new Vector3(
                 Mathf.Cos(randomAngle) * randomDistance,
-                0f,
-                Mathf.Sin(randomAngle) * randomDistance
+                Mathf.Sin(randomAngle) * randomDistance,
+                0f
             );
 
             // 检查位置是否在已加载的区块内

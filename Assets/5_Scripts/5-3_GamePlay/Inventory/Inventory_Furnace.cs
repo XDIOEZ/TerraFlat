@@ -1009,18 +1009,18 @@ public class Inventory_Furnace : Inventory
             }
         }
 
-        // 执行配方动作
-        if (recipe.action != null)
-        {
-            foreach (var action in recipe.action)
-            {
-                if (action != null && inputInv.Data.itemSlots != null &&
-                    action.slotIndex >= 0 && action.slotIndex < inputInv.Data.itemSlots.Count)
-                {
-                    action.Apply(mod_Inventory);
-                }
-            }
-        }
+        // // 执行配方动作
+        // if (recipe.action != null)
+        // {
+        //     foreach (var action in recipe.action)
+        //     {
+        //         if (action != null && inputInv.Data.itemSlots != null &&
+        //             action.slotIndex >= 0 && action.slotIndex < inputInv.Data.itemSlots.Count)
+        //         {
+        //             action.Apply(mod_Inventory);
+        //         }
+        //     }
+        // }
 
         outputInv.RefreshUI();
         inputInv.RefreshUI();

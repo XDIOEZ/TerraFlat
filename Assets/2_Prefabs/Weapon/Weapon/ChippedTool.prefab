@@ -69,7 +69,7 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 
+    - Knife
     - Modern
     Stack:
       Amount: 1

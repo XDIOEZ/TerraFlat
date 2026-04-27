@@ -594,8 +594,116 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         foreach (var itemData in outputItems)
         {
-            if (!outputInv.Data.TryAddItem(itemData, false))
+            // 输出背包有空间 -> 继续原有流程
+            if (outputInv.Data.TryAddItem(itemData, false))
+                continue;
+
+            // 输出背包无空间，尝试把输入槽作为临时输出口（先检测是否有空输入槽）
+            var currentInputSlots = GetInputSlots(inputInv);
+            bool hasEmptyInputWithCapacity = currentInputSlots.Any(s => s.itemData == null && s.SlotMaxVolume >= itemData.Stack.Amount);
+            if (hasEmptyInputWithCapacity)
             {
+                LogCraftDebug($"输出空间不足，但检测到空输入槽且容量足够，可将输出放入输入槽：{itemData?.IDName} x{itemData?.Stack.Amount}");
+                continue;
+            }
+
+            // 模拟扣除后是否有可用输入槽（被消耗后的槽位或堆叠空位）
+            if (recipe.inputs.inputOrder == OrderedRule)
+            {
+                bool found = false;
+                for (int i = 0; i < InputSlotCount; i++)
+                {
+                    var slot = currentInputSlots[i];
+                    var required = GetOrderedRequired(recipe, i, isMirrorMatched, InputSlotCount);
+                    float remain = (slot.itemData == null ? 0f : slot.itemData.Stack.Amount) - required.amount;
+
+                    if (remain <= 0)
+                    {
+                        // 扣除后该槽位将为空，检查是否能容纳输出
+                        if (slot.SlotMaxVolume >= itemData.Stack.Amount)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        // 扣除后若为同类物品且有剩余容量，也可用于放置输出
+                        if (slot.itemData != null && slot.itemData.IDName == itemData.IDName)
+                        {
+                            float canAdd = slot.SlotMaxVolume - remain;
+                            if (canAdd >= itemData.Stack.Amount)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (found)
+                    continue;
+
+                LogCraftDebug($"输出空间不足：{itemData?.IDName} x{itemData?.Stack.Amount}");
+                return false;
+            }
+            else
+            {
+                // 无序配方，模拟扣除过程以判断释放的槽位容量
+                float[] remainAmounts = new float[InputSlotCount];
+                for (int i = 0; i < InputSlotCount; i++)
+                    remainAmounts[i] = currentInputSlots[i].itemData == null ? 0f : currentInputSlots[i].itemData.Stack.Amount;
+
+                foreach (var required in recipe.inputs.RowItems_List)
+                {
+                    if (required.amount == 0) continue;
+                    float need = required.amount;
+                    for (int i = 0; i < InputSlotCount && need > 0; i++)
+                    {
+                        var slot = currentInputSlots[i];
+                        if (slot.itemData == null) continue;
+                        bool isMatch = required.matchMode == MatchMode.ExactItem
+                            ? slot.itemData.IDName == required.ItemName
+                            : slot.itemData.Tags != null && slot.itemData.Tags.Contains(required.Tag);
+                        if (!isMatch || remainAmounts[i] <= 0) continue;
+                        float consume = Mathf.Min(need, remainAmounts[i]);
+                        remainAmounts[i] -= consume;
+                        need -= consume;
+                    }
+                    if (need > 0)
+                    {
+                        LogCraftDebug($"无序配方模拟扣除失败：需求未满足");
+                        return false;
+                    }
+                }
+
+                bool found = false;
+                for (int i = 0; i < InputSlotCount; i++)
+                {
+                    var slot = currentInputSlots[i];
+                    float remain = remainAmounts[i];
+                    if (remain <= 0)
+                    {
+                        if (slot.SlotMaxVolume >= itemData.Stack.Amount)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                    else if (slot.itemData != null && slot.itemData.IDName == itemData.IDName)
+                    {
+                        float canAdd = slot.SlotMaxVolume - remain;
+                        if (canAdd >= itemData.Stack.Amount)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (found)
+                    continue;
+
                 LogCraftDebug($"输出空间不足：{itemData?.IDName} x{itemData?.Stack.Amount}");
                 return false;
             }
@@ -608,16 +716,44 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         Debug.Log($"[Mod_HandCraftTable] 开始合成：{recipe.name}，输入={GenerateRecipeKey(inputInv)}");
 
+        // 检查输出背包是否有空间；若无，则先扣除输入以腾出输入槽，再把输出放入输出背包或输入槽
+        bool needUseInputSlot = false;
         foreach (var itemData in outputItems)
-            outputInv.Data.TryAddItem(itemData);
-
-        if (recipe.inputs.inputOrder == OrderedRule)
         {
-            ExecuteOrderedDeduction(inputInv, recipe, isMirrorMatched);
+            if (!outputInv.Data.TryAddItem(itemData, false))
+            {
+                needUseInputSlot = true;
+                break;
+            }
+        }
+
+        if (needUseInputSlot)
+        {
+            // 先扣除输入（腾出槽位）
+            if (recipe.inputs.inputOrder == OrderedRule)
+                ExecuteOrderedDeduction(inputInv, recipe, isMirrorMatched);
+            else
+                ExecuteUnorderedDeduction(inputInv, recipe);
+
+            // 再放输出：优先放输出背包，放不下则放入输入背包（此时输入槽应已腾出或可堆叠）
+            foreach (var itemData in outputItems)
+            {
+                if (!outputInv.Data.TryAddItem(itemData, true))
+                {
+                    inputInv.Data.TryAddItem(itemData, true);
+                }
+            }
         }
         else
         {
-            ExecuteUnorderedDeduction(inputInv, recipe);
+            // 常规流程：先放输出，再扣除输入
+            foreach (var itemData in outputItems)
+                outputInv.Data.TryAddItem(itemData, true);
+
+            if (recipe.inputs.inputOrder == OrderedRule)
+                ExecuteOrderedDeduction(inputInv, recipe, isMirrorMatched);
+            else
+                ExecuteUnorderedDeduction(inputInv, recipe);
         }
 
         if (recipe.action != null)
