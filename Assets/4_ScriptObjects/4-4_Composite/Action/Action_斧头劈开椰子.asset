@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 892ada6baba5e62428109a901476ee36, type: 3}
+  m_Name: "Action_\u65A7\u5934\u5288\u5F00\u6930\u5B50"
+  m_EditorClassIdentifier: 
+  Name: "\u65A7\u5934\u5288\u5F00\u6930\u5B50"
+  Description: 
+  slotIndex: 1
+  durabilityCost: 2
+  lostDurabilityItemTag: Axe

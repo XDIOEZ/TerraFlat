@@ -63,6 +63,61 @@ public class Map : Item
 
     private bool isMapGeneratorHooked;
 
+    public bool IsReadyForChunkLifecycle =>
+        Data != null &&
+        Data.TileLoaded &&
+        loadOrGenerateCoroutine == null &&
+        loadTileMapCoroutine == null;
+
+    protected virtual bool ShouldBakePenaltyAfterTilemapLoad => true;
+    protected virtual int TilemapLoadBatchSize => Mathf.Max(16, loadTileBatchSize);
+
+    /// <summary>
+    /// 重置地图就绪状态，用于重新加载场景
+    /// </summary>
+    public void ResetMapReadyState()
+    {
+        chunk?.ResetLifecycleState();
+    }
+
+    protected void BeginMapLoad()
+    {
+        chunk?.BeginMapLoad();
+    }
+
+    protected void NotifyChunkReady()
+    {
+        if (IsReadyForChunkLifecycle)
+        {
+            Debug.Log($"[AStar-Debug][Map] NotifyChunkReady → chunk.NotifyMapLoaded | chunk={chunk?.name ?? "null"} | Map={name}");
+            chunk?.NotifyMapLoaded();
+        }
+        else
+        {
+            Debug.LogWarning($"[AStar-Debug][Map] NotifyChunkReady 条件不满足 | Data={Data != null} TileLoaded={Data?.TileLoaded} loadOrGenerateCoroutine={loadOrGenerateCoroutine != null} loadTileMapCoroutine={loadTileMapCoroutine != null}");
+        }
+    }
+
+    protected virtual void OnTilemapLoaded()
+    {
+        if (!ShouldBakePenaltyAfterTilemapLoad)
+        {
+            Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 跳过烘焙 | ShouldBakePenaltyAfterTilemapLoad=false | Map={name}");
+            return;
+        }
+
+        Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 触发权重烘焙 | Map={name} | AstarGameManager.Instance={AstarGameManager.Instance != null} | GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+        MarkPenaltyDirtyFull();
+        BackTilePenalty_Async();
+    }
+
+    protected void FinalizeTilemapLoad()
+    {
+        Debug.Log($"[AStar-Debug][Map] FinalizeTilemapLoad 调用 | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded} | tileMap活跃={tileMap?.gameObject.activeSelf}");
+        OnTilemapLoaded();
+        NotifyChunkReady();
+    }
+
     private void Awake()
     {
         BindChunkOwner(GetComponentInParent<Chunk>());
@@ -77,7 +132,11 @@ public class Map : Item
     private void OnDestroy()
     {
         StopMapCoroutines();
+        UnhookMapGenerators();
+    }
 
+    private void UnhookMapGenerators()
+    {
         if (isMapGeneratorHooked)
         {
             OnMapGenerated_Start -= HandleMapGeneratedStart;
@@ -108,13 +167,31 @@ public class Map : Item
         backTilePenaltyPending = false;
     }
 
-    private void BindChunkOwner(Chunk ownerChunk)
+    protected void BindChunkOwner(Chunk ownerChunk)
     {
         chunk = ownerChunk;
         if (chunk != null)
         {
             chunk.Map = this;
         }
+    }
+
+    protected bool EnsureTilemapReference()
+    {
+        if (tileMap != null)
+            return true;
+
+        tileMap = LandGenerator != null ? LandGenerator.targetTilemap : null;
+        if (tileMap == null)
+        {
+            tileMap = GetComponentInChildren<Tilemap>(includeInactive: false);
+        }
+
+        if (tileMap != null)
+            return true;
+
+        Debug.LogError("[Map.Load] tileMap 为空，无法加载/生成地图", this);
+        return false;
     }
 
     private object GetBackTilePenaltyYieldToken()
@@ -238,8 +315,6 @@ public class Map : Item
         }
 
         Data.TileLoaded = true;
-        MarkPenaltyDirtyFull();
-        BackTilePenalty_Async();
     }
 
     private void OnGUI()
@@ -254,9 +329,16 @@ public class Map : Item
     #region 基类方法实现
     public override void Act()
     {
-        if (Data.TileLoaded == false
-            && SaveDataMgr.Instance.SaveData.PlanetData_Dict.TryGetValue(SceneManager.GetActiveScene().name, out var planetData))
+        if (Data.TileLoaded)
+            return;
+
+        var saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr?.SaveData?.PlanetData_Dict == null)
+            return;
+
+        if (saveDataMgr.SaveData.PlanetData_Dict.TryGetValue(SceneManager.GetActiveScene().name, out _))
         {
+            BeginMapLoad();
             OnMapGenerated_Start.Invoke();
         }
     }
@@ -275,20 +357,8 @@ public class Map : Item
         // 确保生成器列表已初始化并绑定当前 Map
         InitMapGenerators();
 
-        // 确保 tileMap 引用有效（支持不在 Inspector 里手动拖拽）
-        if (tileMap == null)
+        if (!EnsureTilemapReference())
         {
-            // 优先从“大陆生成器”拿 targetTilemap（兼容旧逻辑）
-            tileMap = LandGenerator != null ? LandGenerator.targetTilemap : null;
-            if (tileMap == null)
-            {
-                tileMap = GetComponentInChildren<Tilemap>(includeInactive: false);
-            }
-        }
-
-        if (tileMap == null)
-        {
-            Debug.LogError("[Map.Load] tileMap 为空，无法加载/生成地图", this);
             return;
         }
 
@@ -304,12 +374,16 @@ public class Map : Item
 
         bool hasTileData = Data.CountNonEmptyCells() > 0;
 
+        Debug.Log($"[AStar-Debug][Map] Load 开始 | Map={name} chunk={chunk?.name ?? "null"} hasTileData={hasTileData} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+
         // 先停止上一轮加载/生成流程（避免多次点击按钮叠加协程）
         if (loadOrGenerateCoroutine != null)
         {
             StopCoroutine(loadOrGenerateCoroutine);
             loadOrGenerateCoroutine = null;
         }
+
+        BeginMapLoad();
 
         if (!hasTileData)
         {
@@ -328,21 +402,16 @@ public class Map : Item
 
     private IEnumerator GenerateThenLoadTilemapCoroutine()
     {
-        // 触发生成器（生成器内部会根据 tilesPerFrame 选择立即/分帧生成）
         OnMapGenerated_Start.Invoke();
 
-        // 等待生成完成：既要有 TileData，也要等 TileLoaded 被标记为 true
-        // （TileLoaded 在 Map.GenerateByPipeline() 统一收尾中设置）
-        while (Data == null || Data.TileLoaded == false)
-        {
+        while (Data == null || !Data.TileLoaded)
             yield return null;
-        }
 
-        // 将生成的数据渲染到 Tilemap
         tileMap.ClearAllTiles();
         LoadTileData_To_TileMap_Ansync();
 
         loadOrGenerateCoroutine = null;
+        // NotifyChunkReady 由 LoadTileData_To_TileMapCoroutine 结束时的 FinalizeTilemapLoad 触发
     }
 
 
@@ -385,9 +454,7 @@ public class Map : Item
             tileMap.SetTile(position3D, tile);
         }
 
-        // 直接调用权重烘焙，不延迟
-        MarkPenaltyDirtyFull();
-        BackTilePenalty_Async();
+        FinalizeTilemapLoad();
     }
 
     public void LoadTileData_To_TileMap_Ansync()
@@ -402,27 +469,23 @@ public class Map : Item
         loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
     }
 
-    /// <summary>
-    /// 使用协程优化的加载Tile数据到Tilemap的方法
-    /// </summary>
     private IEnumerator LoadTileData_To_TileMapCoroutine()
     {
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
+            Debug.LogWarning($"[AStar-Debug][Map] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
             loadTileMapCoroutine = null;
+            FinalizeTilemapLoad();
             yield break;
         }
 
-        // 分批处理Tile数据，避免长时间阻塞主线程
-        int batchSize = Mathf.Max(16, loadTileBatchSize);
+        int batchSize = TilemapLoadBatchSize;
         int processedCount = 0;
 
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
-
             TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
             if (tile == null)
             {
@@ -430,30 +493,18 @@ public class Map : Item
                 continue;
             }
 
-            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
-
-            tileMap.SetTile(position3D, tile);
-
+            tileMap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), tile);
             processedCount++;
 
-            // 每处理一批就等待一帧，让出控制权给其他任务
             if (processedCount % batchSize == 0)
-            {
                 yield return null;
-            }
         }
 
-        // 等待一帧确保所有Tile设置完成
         yield return null;
-
-        // 使用异步权重烘焙，避免同帧尖峰
-        MarkPenaltyDirtyFull();
-        BackTilePenalty_Async();
-
         Debug.Log($"✅ 完成加载 {processedCount} 个Tile到Tilemap");
-
-        // 清理协程引用
+        Debug.Log($"[AStar-Debug][Map] Tilemap加载完成 | {processedCount} 个Tile | AstarGameManager.Instance={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady} | Map={name}");
         loadTileMapCoroutine = null;
+        FinalizeTilemapLoad();
     }
     #endregion
 
@@ -464,7 +515,7 @@ public class Map : Item
         // 检查自身是否处于激活状态
         if (!gameObject.activeInHierarchy || !enabled)
         {
-            Debug.Log("地图未激活，跳过权重烘焙");
+            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 跳过: 地图未激活 | Map={name} activeInHierarchy={gameObject.activeInHierarchy} enabled={enabled}");
             return;
         }
 
@@ -472,12 +523,14 @@ public class Map : Item
         if (now - lastBackTilePenaltyTime < backTilePenaltyMinInterval)
         {
             backTilePenaltyPending = true;
+            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 节流: 间隔过短({now - lastBackTilePenaltyTime:F3}s < {backTilePenaltyMinInterval}s) | 标记pending=true | Map={name}");
             return;
         }
 
         // 非全量且无脏区时，跳过空烘焙
         if (!backTilePenaltyForceFull && backTilePenaltyDirtyCells.Count == 0)
         {
+            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 跳过: 无脏区 | forceFull={backTilePenaltyForceFull} dirtyCells={backTilePenaltyDirtyCells.Count} | Map={name}");
             return;
         }
 
@@ -485,10 +538,12 @@ public class Map : Item
         if (backTilePenaltyCoroutine != null)
         {
             backTilePenaltyPending = true;
+            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 协程已在运行 | 标记pending=true | forceFull={backTilePenaltyForceFull} | Map={name}");
             return;
         }
 
         lastBackTilePenaltyTime = now;
+        Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 启动协程 | forceFull={backTilePenaltyForceFull} dirtyCells={backTilePenaltyDirtyCells.Count} | Map={name}");
         // 启动新的协程
         backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
     }
@@ -517,9 +572,13 @@ public class Map : Item
     {
         var astar = AstarGameManager.Instance;
         if (astar == null)
+        {
+            Debug.LogError($"[AStar-Debug][Map] BakePenaltyForAllTilesSync 中止: AstarGameManager.Instance=null | Map={name}");
             return;
+        }
 
         bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
+        Debug.Log($"[AStar-Debug][Map] BakePenaltyForAllTilesSync 开始 | hasFastAccess={hasFastAccess} GridGraphReady={astar.IsGridGraphReady} | Map={name}");
 
         // 处理所有节点数据 这个是根据地块数据进行烘焙的
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
@@ -575,6 +634,7 @@ public class Map : Item
         var astar = AstarGameManager.Instance;
         if (astar == null)
         {
+            Debug.LogError($"[AStar-Debug][Map] BackTilePenaltyCoroutine 中止: AstarGameManager.Instance=null | Map={name}");
             backTilePenaltyCoroutine = null;
             yield break;
         }
@@ -593,13 +653,19 @@ public class Map : Item
             yield break;
         }
 
+        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 等待GridGraph就绪 | IsGridGraphReady={astar.IsGridGraphReady} | Map={name}");
+
         while (!astar.IsGridGraphReady)
             yield return null;
+
+        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine GridGraph已就绪，开始烘焙 | Map={name}");
 
         int batchSize = Mathf.Max(1, backTilePenaltyTilesPerYield);
         object yieldToken = GetBackTilePenaltyYieldToken();
         int processed = 0;
         bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
+
+        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 烘焙参数 | hasFastAccess={hasFastAccess} forceFull={backTilePenaltyForceFull} dirtyCells={backTilePenaltyDirtyCells.Count} batchSize={batchSize} | Map={name} | 网格图: width={(hasFastAccess ? access.Width : -1)} depth={(hasFastAccess ? access.Depth : -1)} left={(hasFastAccess ? access.Left : -1)} bottom={(hasFastAccess ? access.Bottom : -1)} nodeSize={(hasFastAccess ? 1f / access.InvNodeSize : -1)}");
 
         if (backTilePenaltyForceFull)
         {
@@ -663,15 +729,18 @@ public class Map : Item
 
         //        Debug.Log($"✅ 完成烘焙 {nodesToProcess.Count} 个地块的寻路权重");
 
-        // 清理协程引用
         backTilePenaltyCoroutine = null;
+
+//        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 完成 | 烘焙了 {processed} 个地块 | pending={backTilePenaltyPending} forceFull={backTilePenaltyForceFull} | Map={name}");
 
         // 合并短时间内的重复请求：当前批次结束后补跑一次
         if (backTilePenaltyPending)
         {
             backTilePenaltyPending = false;
             MarkPenaltyDirtyFull();
-            BackTilePenalty_Async();
+            lastBackTilePenaltyTime = Time.unscaledTime;
+            Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 检测到pending请求，立即重启协程 | Map={name}");
+            backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
         }
     }
     #endregion

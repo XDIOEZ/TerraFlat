@@ -49,6 +49,11 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     private Vector2Int _loadPriorityCenterChunk;
     private bool _hasLoadPriorityCenter;
 
+    /// <summary>
+    /// 是否还有待加载的区块（供外部轮询，避免保底协程在区块未就绪时提前触发烘焙）。
+    /// </summary>
+    public bool HasPendingChunkLoads => _pendingChunkLoadQueue.Count > 0 || _chunkLoadPumpCoroutine != null;
+
     // 失活窗口差分缓存：仅处理离开窗口的区块，避免每次全量遍历激活字典
     private bool _windowDiffInitialized;
     private readonly HashSet<Vector2Int> _cachedKeepAliveWindow = new();
@@ -75,83 +80,66 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     private void HookChunkReadyEvent(Chunk chunk)
     {
-        if (chunk == null)
-        {
+        if (chunk == null || !_chunkReadyHookedSet.Add(chunk))
             return;
-        }
-
-        if (!_chunkReadyHookedSet.Add(chunk))
-        {
-            return;
-        }
 
         chunk.OnChunkLoaded += HandleChunkReady;
+        if (chunk.IsReady)
+            HandleChunkReady(chunk);
     }
 
     private void UnhookChunkReadyEvent(Chunk chunk)
     {
-        if (chunk == null)
-        {
+        if (chunk == null || !_chunkReadyHookedSet.Remove(chunk))
             return;
-        }
-
-        if (!_chunkReadyHookedSet.Remove(chunk))
-        {
-            return;
-        }
 
         chunk.OnChunkLoaded -= HandleChunkReady;
     }
 
-    private void HandleChunkReady(Chunk chunk)
+    private void HandleChunkReady(Chunk chunk) => OnChunkLoadFinish.Invoke(chunk);
+
+    private static void WaitForChunkReady(Chunk chunk, System.Action<Chunk> onReady)
     {
-        OnChunkLoadFinish.Invoke(chunk);
+        if (onReady == null)
+            return;
+
+        if (chunk == null || chunk.IsReady)
+        {
+            onReady(chunk);
+            return;
+        }
+
+        void HandleReady(Chunk readyChunk)
+        {
+            chunk.OnChunkLoaded -= HandleReady;
+            onReady(readyChunk);
+        }
+
+        chunk.OnChunkLoaded += HandleReady;
     }
 
     private void ClearChunkReadyHooks()
     {
-        if (_chunkReadyHookedSet.Count == 0)
-        {
-            return;
-        }
-
-        foreach (Chunk chunk in _chunkReadyHookedSet)
-        {
-            if (chunk == null)
-            {
-                continue;
-            }
-
+        foreach (var chunk in _chunkReadyHookedSet)
             chunk.OnChunkLoaded -= HandleChunkReady;
-        }
 
         _chunkReadyHookedSet.Clear();
     }
 
-    private bool TryGetChunkPos(Chunk chunk, out Vector2Int chunkPos)
+    private static bool TryGetChunkPos(Chunk chunk, out Vector2Int chunkPos)
     {
-        chunkPos = Vector2Int.zero;
+        chunkPos = default;
         if (chunk == null)
-        {
             return false;
-        }
 
-        if (chunk.MapSave != null)
-        {
-            chunkPos = chunk.MapSave.MapPosition;
-            return true;
-        }
-
-        chunkPos = Chunk.GetChunkPosition(chunk.transform.position);
+        chunkPos = chunk.MapSave?.MapPosition ?? Chunk.GetChunkPosition(chunk.transform.position);
         return true;
     }
 
     private void RefreshChunkStepCache()
     {
         if (_chunkStepCacheFrame == Time.frameCount)
-        {
             return;
-        }
 
         _cachedChunkSize = GetChunkSize();
         _cachedChunkStepX = Mathf.Max(1, Mathf.RoundToInt(_cachedChunkSize.x));
@@ -174,9 +162,7 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     private int GetBestPendingChunkIndex()
     {
         if (_pendingChunkLoadQueue.Count <= 1)
-        {
             return 0;
-        }
 
         int bestIndex = 0;
         int bestScore = GetChunkPriorityScore(_pendingChunkLoadQueue[0]);
@@ -189,7 +175,6 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 bestIndex = i;
             }
         }
-
         return bestIndex;
     }
 
@@ -359,7 +344,6 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
     [Button("加载距离玩家规定范围的全部Chunk")]
     public void LoadChunkCloseToPlayer(GameObject player, int Distance = 1, System.Action onAllChunksLoaded = null)
     {
-
         // 最小为 1
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
@@ -377,16 +361,26 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         _loadPriorityCenterChunk = new Vector2Int(playerChunkIndexX * _cachedChunkStepX, playerChunkIndexY * _cachedChunkStepY);
         _hasLoadPriorityCenter = true;
 
-        int pending = 0;
+        Debug.Log($"[AStar-Debug][ChunkMgr] LoadChunkCloseToPlayer | player={player.name} Distance={Distance} playerChunkIndex=({playerChunkIndexX},{playerChunkIndexY}) hasCallback={onAllChunksLoaded != null}");
+
+        int targetCount = 0;
+        int completedCount = 0;
         bool callbackInvoked = false;
+        bool hasEnumeratedAllTargets = false;
 
         void TryInvokeComplete()
         {
-            if (callbackInvoked)
+            if (callbackInvoked || !hasEnumeratedAllTargets || completedCount < targetCount)
                 return;
 
             callbackInvoked = true;
             onAllChunksLoaded?.Invoke();
+        }
+
+        void HandleTargetChunkReady(Chunk readyChunk)
+        {
+            completedCount++;
+            TryInvokeComplete();
         }
 
         for (int ix = playerChunkIndexX - radius; ix <= playerChunkIndexX + radius; ix++)
@@ -398,34 +392,23 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 int originY = iy * _cachedChunkStepY;
                 Vector2Int chunkPos = new Vector2Int(originX, originY);
 
-                if (!TryGetActiveChunkByPos(chunkPos, out _))
+                if (onAllChunksLoaded != null)
                 {
-                    if (onAllChunksLoaded != null)
+                    targetCount++;
+                    RequestLoadChunk_By_Position(chunkPos, loadedChunk =>
                     {
-                        pending++;
-                        RequestLoadChunk_By_Position(chunkPos, (loadedChunk) =>
-                        {
-                            // 无论成功与否都视为本次加载流程结束
-                            pending--;
-                            if (pending <= 0)
-                            {
-                                TryInvokeComplete();
-                            }
-                        });
-                    }
-                    else
-                    {
-                        RequestLoadChunk_By_Position(chunkPos);
-                    }
+                        WaitForChunkReady(loadedChunk, HandleTargetChunkReady);
+                    });
+                }
+                else if (!TryGetActiveChunkByPos(chunkPos, out _))
+                {
+                    RequestLoadChunk_By_Position(chunkPos);
                 }
             }
         }
 
-        // 如果没有需要异步等待的区块，直接触发完成回调
-        if (pending == 0)
-        {
-            TryInvokeComplete();
-        }
+        hasEnumeratedAllTargets = true;
+        TryInvokeComplete();
     }
 
     /// <summary>
@@ -443,9 +426,18 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        // 最小为 1
+        Vector2Int centerChunkPos = Chunk.GetChunkPosition(player.transform.position);
+        RefreshChunkPenalty(centerChunkPos, Distance);
+    }
+
+    /// <summary>
+    /// 以指定的区块坐标为中心，烘焙指定范围内所有已激活区块的寻路权重。
+    /// 使用固定中心点而非玩家实时位置，避免异步扫描期间玩家移动导致范围偏移。
+    /// </summary>
+    public void RefreshChunkPenalty(Vector2Int centerChunkPos, int Distance = 1)
+    {
         Distance = Mathf.Max(1, Distance);
-        int radius = Distance - 1; // Distance=1 -> radius=0 -> 1x1; Distance=2 -> radius=1 -> 3x3
+        int radius = Distance - 1;
 
         RefreshChunkStepCache();
         if (_cachedChunkSize.x <= 0f || _cachedChunkSize.y <= 0f)
@@ -454,39 +446,43 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
-        int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / _cachedChunkSize.x);
-        int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / _cachedChunkSize.y);
+        // 用传入的中心坐标反算 chunk 索引
+        int centerChunkIndexX = centerChunkPos.x / _cachedChunkStepX;
+        int centerChunkIndexY = centerChunkPos.y / _cachedChunkStepY;
+
+        Debug.Log($"[AStar-Debug][ChunkMgr] RefreshChunkPenalty | centerChunkPos={centerChunkPos} Distance={Distance} centerIndex=({centerChunkIndexX},{centerChunkIndexY}) ActiveChunkCount={Chunk_Dic_Active_ByPos.Count}");
 
         int updatedCount = 0;
 
-        for (int ix = playerChunkIndexX - radius; ix <= playerChunkIndexX + radius; ix++)
+        for (int ix = centerChunkIndexX - radius; ix <= centerChunkIndexX + radius; ix++)
         {
-            for (int iy = playerChunkIndexY - radius; iy <= playerChunkIndexY + radius; iy++)
+            for (int iy = centerChunkIndexY - radius; iy <= centerChunkIndexY + radius; iy++)
             {
-                // 计算该 chunk 的左下角世界坐标
                 int originX = ix * _cachedChunkStepX;
                 int originY = iy * _cachedChunkStepY;
                 Vector2Int chunkPos = new Vector2Int(originX, originY);
 
-                // 仅对已激活区块进行权重烘焙
                 if (TryGetActiveChunkByPos(chunkPos, out Chunk chunk) && chunk.Map != null)
                 {
+         //           Debug.Log($"[AStar-Debug][ChunkMgr] 刷新区块权重 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map.name} IsReady={chunk.IsReady} LifecycleState={chunk.LifecycleState} Data.TileLoaded={chunk.Map.Data?.TileLoaded}");
                     chunk.Map.MarkPenaltyDirtyFull();
                     chunk.Map.BackTilePenalty_Async();
                     updatedCount++;
                 }
+                else
+                {
+                    Debug.Log($"[AStar-Debug][ChunkMgr] 区块权重刷新跳过 | chunkPos={chunkPos} (区块未激活或无Map，属正常范围)");
+                }
             }
         }
 
-        // 可选日志，帮助确认更新范围与数量
         if (updatedCount > 0)
         {
-//            Debug.Log($"[ChunkMgr] 已触发玩家附近 {updatedCount} 个激活区块的权重重烘焙 (Distance={Distance})");
+            Debug.Log($"[AStar-Debug][ChunkMgr] 权重烘焙完成 | 更新了 {updatedCount} 个激活区块 (Distance={Distance})");
         }
         else
         {
-            Debug.Log("[ChunkMgr] 玩家附近未找到需要更新权重的激活区块");
+            Debug.Log("[AStar-Debug][ChunkMgr] 范围内未找到需要更新权重的激活区块");
         }
     }
     #endregion
@@ -817,8 +813,18 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         // 激活区块
         SetChunkActive(chunkGameObject, true);
 
-        // 仅负责恢复区块与其物体；权重烘焙由其他系统显式触发
-        if (chunkGameObject.Map == null)
+        Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 激活已有区块 | chunkPos={chunkPos} chunk={chunkGameObject.name} Map={chunkGameObject.Map != null} TileLoaded={chunkGameObject.Map?.Data?.TileLoaded}");
+
+        // 激活后标记地图权重为脏，确保后续烘焙管线能处理此区块
+        if (chunkGameObject.Map != null)
+        {
+            if (chunkGameObject.Map.Data?.TileLoaded == true)
+            {
+                chunkGameObject.Map.MarkPenaltyDirtyFull();
+                Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 标记权重脏区 | chunk={chunkGameObject.name} Map={chunkGameObject.Map.name}");
+            }
+        }
+        else
         {
             Debug.LogWarning($"[区块加载] ⚠️ 区块 {ChunkNameFromPos(chunkPos)} 的 Map 为空");
         }
@@ -910,9 +916,10 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return null;
         }
 
+        Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateNewChunk 创建新区块 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map != null} AstarGameManager={AstarGameManager.Instance != null}");
+
         // 注册到字典
         RegisterChunk(chunk);
-        chunk.MarkReady();
         return chunk;
     }
 
@@ -940,8 +947,12 @@ public class ChunkMgr : SingletonAutoMono<ChunkMgr>
         chunk.AddItem(map);
         map.chunk = chunk;
 
+        Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore 创建MapCore | chunk={chunk.name} map={map.name} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+
         // 调用Act方法进行初始化（会自动烘焙权重）
         map.Act();
+
+        Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore Act完成 | chunk={chunk.name} map.Data.TileLoaded={map.Data?.TileLoaded} loadOrGenerateCoroutine={map.loadOrGenerateCoroutine != null}");
 
         return true;
     }

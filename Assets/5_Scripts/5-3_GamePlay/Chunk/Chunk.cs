@@ -162,8 +162,11 @@ public class Chunk : MonoBehaviour
     public ChunkLifecycleState LifecycleState { get; private set; } = ChunkLifecycleState.Created;
     public bool IsReady => LifecycleState == ChunkLifecycleState.Ready;
 
+    private bool itemsLoaded;
+    private bool mapLoaded;
+
     /// <summary>
-    /// 区块完成加载（所有物品加载完并烘焙完权重）时的回调
+    /// 区块进入可参与后续系统联动的就绪态时的回调。
     /// </summary>
     public event System.Action<Chunk> OnChunkLoaded;
     public int ItemBatchSize = 1; // 每批处理的物品数量
@@ -178,12 +181,10 @@ public class Chunk : MonoBehaviour
             return this;
         }
 
-        MarkLoading();
+        BeginFullLoad();
         EnsurePositionArray();
-
         InitializeItems();
-        Map?.BackTilePenalty_Sync();
-        MarkReady();
+        NotifyItemsLoaded();
         return this;
     }
 
@@ -231,8 +232,7 @@ public class Chunk : MonoBehaviour
     public System.Collections.IEnumerator BatchLoadItemsCoroutine()
     {
         int itemCount = 0;
-        MarkLoading();
-
+        BeginFullLoad();
         EnsurePositionArray();
 
         // 第一步：按批实例化所有物品，但先不调用它们的 Load
@@ -281,7 +281,7 @@ public class Chunk : MonoBehaviour
 
         // 确保所有物品都已加载完成
         yield return null;
-        MarkReady();
+        NotifyItemsLoaded();
     }
     #endregion
 
@@ -307,20 +307,67 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region 生命周期
-    public void MarkLoading()
+    /// <summary>
+    /// 重置就绪状态，用于重新加载场景
+    /// </summary>
+    public void ResetLifecycleState()
     {
+        LifecycleState = ChunkLifecycleState.Created;
+        itemsLoaded = false;
+        mapLoaded = false;
+        hasNotifiedChunkReady = false;
+    }
+
+    private bool hasNotifiedChunkReady;
+
+    public void BeginFullLoad()
+    {
+        itemsLoaded = false;
+        mapLoaded = false;
+        hasNotifiedChunkReady = false;
         LifecycleState = ChunkLifecycleState.Loading;
     }
 
+    public void BeginMapLoad() => BeginFullLoad();
+
+    public void NotifyItemsLoaded()
+    {
+        itemsLoaded = true;
+        Debug.Log($"[AStar-Debug][Chunk] NotifyItemsLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded} Map={Map != null} Map.IsReady={Map?.IsReadyForChunkLifecycle}");
+
+        if (Map == null || Map.IsReadyForChunkLifecycle)
+            mapLoaded = true;
+
+        TryEnterReadyState();
+    }
+
+    public void NotifyMapLoaded()
+    {
+        mapLoaded = true;
+        Debug.Log($"[AStar-Debug][Chunk] NotifyMapLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded}");
+        TryEnterReadyState();
+    }
+
+    private void TryEnterReadyState()
+    {
+        if (itemsLoaded && mapLoaded && !hasNotifiedChunkReady)
+        {
+            hasNotifiedChunkReady = true;
+            LifecycleState = ChunkLifecycleState.Ready;
+            Debug.Log($"[AStar-Debug][Chunk] TryEnterReadyState → Ready | chunk={name} LifecycleState=Ready | Map={Map != null} Map.Data.TileLoaded={Map?.Data?.TileLoaded} Map.backTilePenaltyCoroutine={Map?.backTilePenaltyCoroutine != null}");
+            OnChunkLoaded?.Invoke(this);
+        }
+    }
+
+    public void MarkLoading() => LifecycleState = ChunkLifecycleState.Loading;
+
     public void MarkReady()
     {
-        if (LifecycleState == ChunkLifecycleState.Ready)
+        if (LifecycleState != ChunkLifecycleState.Ready)
         {
-            return;
+            LifecycleState = ChunkLifecycleState.Ready;
+            OnChunkLoaded?.Invoke(this);
         }
-
-        LifecycleState = ChunkLifecycleState.Ready;
-        OnChunkLoaded?.Invoke(this);
     }
     #endregion
 

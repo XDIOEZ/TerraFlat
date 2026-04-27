@@ -20,7 +20,11 @@ public enum WildBoarState
 	Flee
 }
 
-public partial class AI_WildBoar : Module
+/// <summary>
+/// 野猪 AI：支持觅食/进食/睡眠/愤怒值/攻击伤害窗口/逃跑等行为。
+/// 状态优先级：逃跑 > 攻击 > 追击 > 警觉 > 睡眠 > 进食 > 觅食 > 移动 > 待机
+/// </summary>
+public partial class AI_WildBoar : AI_Base<WildBoarState>
 {
 	#region SaveData
 	[Serializable]
@@ -29,60 +33,25 @@ public partial class AI_WildBoar : Module
 	{
 		public WildBoarState State = WildBoarState.Idle;
 		public float Fatigue01 = 0f;
-		public float RageLevel = 0f; // 0-1，用于控制攻击性
+		public float RageLevel = 0f;
 	}
 	#endregion
 
 	#region ModuleData
-	public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
-	public override ModuleData _Data
-	{
-		get => ModData;
-		set => ModData = (Ex_ModData_MemoryPackable)value;
-	}
-
 	public AI_WildBoarSaveData Data = new AI_WildBoarSaveData();
 	#endregion
 
-	#region RuntimeState
-	[SerializeField, ReadOnly]
-	private WildBoarState _currentState = WildBoarState.Idle;
-
-	[SerializeField, ReadOnly]
-	private float _stateElapsed;
-
-	[SerializeField, ReadOnly]
-	private bool _isReady;
-
+	#region RuntimeState - WildBoar 特有
 	[SerializeField, ReadOnly]
 	private Item _currentFoodTarget;
 
 	[SerializeField, ReadOnly]
 	private Item _currentThreat;
 
-	private float _detectorRefreshTimer;
 	private float _sleepCooldownTimer;
-	private float _idleRemainTimer;
-	private float _wanderWaitTimer;
-	private Vector3 _wanderTarget;
-	private bool _hasWanderTarget;
-	private Vector3 _chaseTarget;
 	private float _alertCooldownTimer;
-	private float _rageBuildupTimer;
-	private float _attackCooldownTimer;
-	private float _attackWindowRemainTimer;
-	private bool _attackWindowTriggered;
-	private string _lastPlayedAnimation;
-	private static GUIStyle _debugStateStyle;
-	#endregion
-
-	#region CachedModules
-	[SerializeField, ReadOnly] private Mover_AI _mover;
-	[SerializeField, ReadOnly] private Mod_Food _food;
-	[SerializeField, ReadOnly] private DamageReceiver _hp;
-	[SerializeField, ReadOnly] private Mod_ItemDetector _detector;
-	[SerializeField, ReadOnly] private Mod_AnimatorController _animator;
-	[SerializeField, ReadOnly] private List<Mod_Damage> _attackDamageMods = new List<Mod_Damage>();
+	private Vector3 _chaseTarget;
+	private AI_AttackController _attack = new AI_AttackController();
 	#endregion
 
 	#region Config
@@ -217,39 +186,39 @@ public partial class AI_WildBoar : Module
 	public string animFlee = "Move";
 	#endregion
 
-	#region Events
-	public UltEvent<WildBoarState, WildBoarState> OnStateChanged = new UltEvent<WildBoarState, WildBoarState>();
+	#region Base Overrides - Config Accessors
+	protected override AI_WanderConfig WanderConfig => new AI_WanderConfig
+	{
+		enabled = enableWander,
+		radius = wanderRadius,
+		stopDistance = wanderStopDistance,
+		pauseMin = wanderPauseMin,
+		pauseMax = wanderPauseMax,
+		avoidHighPenalty = wanderAvoidHighPenalty,
+		dangerPenalty = wanderDangerPenalty,
+		sampleCount = wanderSampleCount,
+		penaltyWeight = wanderPenaltyWeight
+	};
+
+	protected override AI_IdleConfig IdleConfig => new AI_IdleConfig
+	{
+		minDuration = idleMinDuration,
+		maxDuration = idleMaxDuration
+	};
+
+	protected override float DetectorRefreshInterval => detectorRefreshInterval;
+	protected override bool DebugLogEnabled => debugLog;
+	protected override bool IsMoveState(WildBoarState state) => state == WildBoarState.Move;
+	protected override bool IsIdleState(WildBoarState state) => state == WildBoarState.Idle;
 	#endregion
 
 	#region Lifecycle
-	public override void Awake()
-	{
-		if (string.IsNullOrEmpty(_Data.ID))
-		{
-			_Data.ID = ModText.AI;
-		}
-	}
-
 	public override void Load()
 	{
 		ModData.ReadData(ref Data);
-
 		_currentState = Data.State;
-		_stateElapsed = 0f;
-		_detectorRefreshTimer = 0f;
-		_sleepCooldownTimer = 0f;
-		_wanderWaitTimer = 0f;
 		_idleRemainTimer = GetIdleDuration();
-		_hasWanderTarget = false;
-		_alertCooldownTimer = 0f;
-		_rageBuildupTimer = 0f;
-		_attackCooldownTimer = 0f;
-		_attackWindowRemainTimer = 0f;
-		_attackWindowTriggered = false;
-		_lastPlayedAnimation = null;
-
-		BindModules();
-		PlayStateAnimation(_currentState, true);
+		InitializeAI();
 	}
 
 	public override void Save()
@@ -257,96 +226,96 @@ public partial class AI_WildBoar : Module
 		Data.State = _currentState;
 		ModData.WriteData(Data);
 	}
+	#endregion
 
-	public override void ModUpdate(float deltaTime)
+	#region Base Overrides - Hooks
+	protected override void OnResetRuntimeState()
 	{
-		if (!_isReady)
+		_sleepCooldownTimer = 0f;
+		_alertCooldownTimer = 0f;
+		_currentFoodTarget = null;
+		_currentThreat = null;
+		_attack.Reset();
+		_attack.Cooldown = attackCooldown;
+		_attack.DamageWindow = attackDamageWindow;
+	}
+
+	protected override void OnBindExtraModules()
+	{
+		item.itemMods.GetMod_ByID(ModText.Food, out Mod_Food food);
+		_food = food;
+		_attack.Bind(item);
+	}
+
+	protected override void OnValidateExtraModules()
+	{
+		if (_food == null)
 		{
-			return;
+			Debug.LogError($"[{nameof(AI_WildBoar)}] 缺少食物模块，AI 已禁用。目标物体: {name}", this);
+			_isReady = false;
 		}
 
-		_stateElapsed += deltaTime;
-		_detectorRefreshTimer += deltaTime;
-
-		if (_sleepCooldownTimer > 0f)
+		if (!_attack.HasDamageMods)
 		{
-			_sleepCooldownTimer = Mathf.Max(0f, _sleepCooldownTimer - deltaTime);
+			Debug.LogWarning($"[{nameof(AI_WildBoar)}] 未找到 Mod_Damage 组件，攻击不会造成伤害。目标物体: {name}", this);
 		}
+	}
 
-		if (_wanderWaitTimer > 0f)
-		{
-			_wanderWaitTimer = Mathf.Max(0f, _wanderWaitTimer - deltaTime);
-		}
-
-		if (_alertCooldownTimer > 0f)
-		{
-			_alertCooldownTimer = Mathf.Max(0f, _alertCooldownTimer - deltaTime);
-		}
-
-		if (_attackCooldownTimer > 0f)
-		{
-			_attackCooldownTimer = Mathf.Max(0f, _attackCooldownTimer - deltaTime);
-		}
-
-		UpdateAttackDamageWindow(deltaTime);
-
-		// 更新愤怒值
+	protected override void UpdateExtraTimers(float deltaTime)
+	{
+		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
+		_alertCooldownTimer = DecrementTimer(_alertCooldownTimer, deltaTime);
+		_attack.Update(deltaTime);
 		UpdateRageLevel(deltaTime);
-
-		AI_StateMachineRunner.EvaluateAndTick(
-			_currentState,
-			EvaluateNextState,
-			SwitchState,
-			TickCurrentState,
-			deltaTime);
 	}
 
-	private void OnGUI()
+	protected override void OnPreEvaluate()
 	{
-		if (!debugLog)
-		{
-			return;
-		}
-
-		if (!Application.isPlaying)
-		{
-			return;
-		}
-
-		if (Camera.main == null)
-		{
-			return;
-		}
-
-		Vector3 worldPos = transform.position + new Vector3(0f, 1.4f, 0f);
-		Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
-		if (screenPos.z <= 0f)
-		{
-			return;
-		}
-
-		if (_debugStateStyle == null)
-		{
-			_debugStateStyle = new GUIStyle(GUI.skin.box)
-			{
-				alignment = TextAnchor.MiddleCenter,
-				fontSize = 16,
-				normal = { textColor = Color.white }
-			};
-		}
-
-		string text = $"状态: {GetStateTextCN(_currentState)} | 愤怒: {Data.RageLevel:F2}";
-		Vector2 size = _debugStateStyle.CalcSize(new GUIContent(text));
-		float width = Mathf.Max(150f, size.x + 14f);
-		float height = 28f;
-		Rect rect = new Rect(
-			screenPos.x - width * 0.5f,
-			Screen.height - screenPos.y - height * 0.5f,
-			width,
-			height);
-
-		GUI.Box(rect, text, _debugStateStyle);
+		RefreshThreatTarget();
 	}
+
+	protected override void OnBeforeSwitchState(WildBoarState previous, WildBoarState next)
+	{
+		// 离开觅食/进食状态时清除食物目标
+		if (next != WildBoarState.Forage && next != WildBoarState.Eat)
+		{
+			_currentFoodTarget = null;
+		}
+
+		// 离开所有战斗相关状态时清除威胁目标
+		if (next != WildBoarState.Alert && next != WildBoarState.Chase
+		    && next != WildBoarState.Attack && next != WildBoarState.Flee)
+		{
+			_currentThreat = null;
+		}
+
+		// 离开攻击状态：停止伤害窗口，进入冷却
+		if (previous == WildBoarState.Attack && next != WildBoarState.Attack)
+		{
+			_attack.OnExitAttackState();
+		}
+
+		// 进入攻击状态：重置窗口触发标记
+		if (next == WildBoarState.Attack)
+		{
+			_attack.OnEnterAttackState();
+		}
+
+		// 离开睡眠状态：进入睡醒冷却
+		if (previous == WildBoarState.Sleep && next != WildBoarState.Sleep)
+		{
+			_sleepCooldownTimer = sleepCooldown;
+		}
+	}
+
+	protected override string GetDebugExtraInfo()
+	{
+		return $" | 愤怒: {Data.RageLevel:F2}";
+	}
+	#endregion
+
+	#region CachedModules - WildBoar 特有
+	[SerializeField, ReadOnly] private Mod_Food _food;
 	#endregion
 
 	#region PublicAPI
@@ -362,255 +331,65 @@ public partial class AI_WildBoar : Module
 	}
 	#endregion
 
-	#region Init
-	private void BindModules()
-	{
-		_isReady = true;
-
-		item.itemMods.GetMod_ByID(ModText.Mover, out _mover);
-		if (_mover == null)
-		{
-			item.itemMods.GetMod_ByID(ModText.Mover_AI, out _mover);
-		}
-
-		item.itemMods.GetMod_ByID(ModText.Food, out _food);
-		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);
-		item.itemMods.GetMod_ByID(ModText.Hp, out _hp);
-		item.GetMod(out _animator);
-		_attackDamageMods = item.GetComponentsInChildren<Mod_Damage>(true).Where(x => x != null).ToList();
-		SetAttackDamageEnabled(false);
-
-		if (_mover == null)
-		{
-			Debug.LogError($"[{nameof(AI_WildBoar)}] 缺少移动模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_food == null)
-		{
-			Debug.LogError($"[{nameof(AI_WildBoar)}] 缺少食物模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_detector == null)
-		{
-			Debug.LogError($"[{nameof(AI_WildBoar)}] 缺少检测模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_hp == null)
-		{
-			Debug.LogError($"[{nameof(AI_WildBoar)}] 缺少生命值模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_animator == null)
-		{
-			Debug.LogWarning($"[{nameof(AI_WildBoar)}] 未找到动画模块，将跳过状态动画同步。目标物体: {name}", this);
-		}
-
-		if (_attackDamageMods.Count == 0)
-		{
-			Debug.LogWarning($"[{nameof(AI_WildBoar)}] 未找到 Mod_Damage 组件，攻击不会造成伤害。目标物体: {name}", this);
-		}
-	}
-	#endregion
-
 	#region StateMachine
-	private WildBoarState EvaluateNextState()
+	protected override WildBoarState EvaluateNextState()
 	{
-		// 优先级：逃跑 > 攻击 > 追击 > 警觉 > 睡眠 > 进食 > 觅食 > 闲逛 > 待机
-
-		if (ShouldFlee())
-		{
-			return WildBoarState.Flee;
-		}
-
-		if (ShouldAttack())
-		{
-			return WildBoarState.Attack;
-		}
-
-		if (ShouldChase())
-		{
-			return WildBoarState.Chase;
-		}
-
-		if (ShouldAlert())
-		{
-			return WildBoarState.Alert;
-		}
-
-		if (ShouldSleep())
-		{
-			return WildBoarState.Sleep;
-		}
-
-		if (ShouldEat())
-		{
-			return WildBoarState.Eat;
-		}
-
-		if (ShouldForage())
-		{
-			return WildBoarState.Forage;
-		}
-
-		if (ShouldMove())
-		{
-			return WildBoarState.Move;
-		}
-
+		if (ShouldFlee())    return WildBoarState.Flee;
+		if (ShouldAttack())  return WildBoarState.Attack;
+		if (ShouldChase())   return WildBoarState.Chase;
+		if (ShouldAlert())   return WildBoarState.Alert;
+		if (ShouldSleep())   return WildBoarState.Sleep;
+		if (ShouldEat())     return WildBoarState.Eat;
+		if (ShouldForage())  return WildBoarState.Forage;
+		if (ShouldMoveBase())return WildBoarState.Move;
 		return WildBoarState.Idle;
 	}
 
-	private void SwitchState(WildBoarState next)
-	{
-		WildBoarState previous = _currentState;
-		_currentState = next;
-		_stateElapsed = 0f;
-
-		if (next != WildBoarState.Move)
-		{
-			_hasWanderTarget = false;
-		}
-
-		if (next != WildBoarState.Forage && next != WildBoarState.Eat)
-		{
-			_currentFoodTarget = null;
-		}
-
-		if (next == WildBoarState.Idle)
-		{
-			_idleRemainTimer = GetIdleDuration();
-		}
-
-		if (previous == WildBoarState.Attack && next != WildBoarState.Attack)
-		{
-			StopAttackDamageWindow();
-			_attackCooldownTimer = attackCooldown;
-		}
-
-		if (next == WildBoarState.Attack)
-		{
-			_attackWindowTriggered = false;
-		}
-
-		if (debugLog)
-		{
-			Debug.Log($"[WildBoarAI] {name} 状态切换: {previous} -> {next}", this);
-		}
-
-		if (previous == WildBoarState.Sleep && next != WildBoarState.Sleep)
-		{
-			_sleepCooldownTimer = sleepCooldown;
-		}
-
-		PlayStateAnimation(next);
-		OnStateChanged?.Invoke(previous, next);
-	}
-
-	private void TickCurrentState(float deltaTime)
+	protected override void TickCurrentState(float deltaTime)
 	{
 		switch (_currentState)
 		{
-			case WildBoarState.Idle:
-				TickIdle(deltaTime);
-				break;
-			case WildBoarState.Move:
-				TickMove(deltaTime);
-				break;
-			case WildBoarState.Forage:
-				TickForage();
-				break;
-			case WildBoarState.Eat:
-				TickEat(deltaTime);
-				break;
-			case WildBoarState.Sleep:
-				TickSleep(deltaTime);
-				break;
-			case WildBoarState.Alert:
-				TickAlert(deltaTime);
-				break;
-			case WildBoarState.Chase:
-				TickChase();
-				break;
-			case WildBoarState.Attack:
-				TickAttack(deltaTime);
-				break;
-			case WildBoarState.Flee:
-				TickFlee();
-				break;
-			default:
-				throw new ArgumentOutOfRangeException();
+			case WildBoarState.Idle:   TickIdle(deltaTime); break;
+			case WildBoarState.Move:   TickMove(deltaTime); break;
+			case WildBoarState.Forage: TickForage();        break;
+			case WildBoarState.Eat:    TickEat(deltaTime);  break;
+			case WildBoarState.Sleep:  TickSleep(deltaTime);break;
+			case WildBoarState.Alert:  TickAlert(deltaTime);break;
+			case WildBoarState.Chase:  TickChase();         break;
+			case WildBoarState.Attack: TickAttack();        break;
+			case WildBoarState.Flee:   TickFlee();          break;
+			default: throw new ArgumentOutOfRangeException();
 		}
 	}
 	#endregion
 
-	#region Tick
-	private void TickIdle(float deltaTime)
-	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-		if (_idleRemainTimer > 0f)
-		{
-			_idleRemainTimer = Mathf.Max(0f, _idleRemainTimer - deltaTime);
-		}
-	}
-
-	private void TickMove(float deltaTime)
-	{
-		TickIdleWander(deltaTime);
-	}
-
+	#region Tick - WildBoar 特有状态
 	private void TickForage()
 	{
 		TryRefreshDetector();
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				_mover.CanMove = false;
-				_mover.HasReachedTarget = true;
-				return;
-			}
+			if (_currentFoodTarget == null) { StopMove(); return; }
 		}
-
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _currentFoodTarget.transform.position;
+		MoveTo(_currentFoodTarget.transform.position);
 	}
 
 	private void TickEat(float deltaTime)
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-
+		StopMove();
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				return;
-			}
+			if (_currentFoodTarget == null) return;
 		}
 
-		float distance = Vector2.Distance(transform.position, _currentFoodTarget.transform.position);
-		if (distance > eatDistance)
-		{
-			return;
-		}
+		if (DistanceTo(_currentFoodTarget.transform) > eatDistance) return;
 
 		Mod_Food targetFood = _currentFoodTarget.GetComponentInChildren<Mod_Food>();
-		if (targetFood == null)
-		{
-			_currentFoodTarget = null;
-			return;
-		}
+		if (targetFood == null) { _currentFoodTarget = null; return; }
 
 		_food.Eat(targetFood);
-
 		if (_currentFoodTarget == null || _currentFoodTarget.itemData == null || _currentFoodTarget.itemData.Stack.Amount <= 0)
 		{
 			_currentFoodTarget = null;
@@ -619,138 +398,86 @@ public partial class AI_WildBoar : Module
 
 	private void TickSleep(float deltaTime)
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
+		StopMove();
 		_hp.Heal(deltaTime * sleepRecoverHpPerSecond, item);
 	}
 
 	private void TickAlert(float deltaTime)
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-
-		// 在警觉状态下看着威胁源（如果仍在范围内）
-		if (_currentThreat != null)
+		StopMove();
+		if (_currentThreat != null && DistanceTo(_currentThreat.transform) <= alertDetectDistance)
 		{
-			float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
-			if (distance <= alertDetectDistance)
-			{
-				Vector3 dirToThreat = (_currentThreat.transform.position - transform.position).normalized;
-				_mover.TargetPosition = transform.position + dirToThreat;
-			}
+			FaceTarget(_currentThreat.transform.position);
 		}
 	}
 
 	private void TickChase()
 	{
-		if (_currentThreat == null)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
+		if (_currentThreat == null) { StopMove(); return; }
 		_chaseTarget = _currentThreat.transform.position;
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _chaseTarget;
+		MoveTo(_chaseTarget);
 	}
 
-	private void TickAttack(float deltaTime)
+	private void TickAttack()
 	{
 		if (_currentThreat == null)
 		{
-			StopAttackDamageWindow();
-			_attackWindowTriggered = false;
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
+			_attack.StopWindow();
+			StopMove();
 			return;
 		}
 
-		float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
-
-		// 攻击范围内停止移动
+		float distance = DistanceTo(_currentThreat.transform);
 		if (distance <= attackTriggerDistance)
 		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-
-			if (!_attackWindowTriggered && _attackCooldownTimer <= 0f)
+			StopMove();
+			if (!_attack.IsWindowTriggered && _attack.IsCooldownDone)
 			{
-				StartAttackDamageWindow();
+				_attack.StartWindow(_animator, animAttack);
 			}
 		}
 		else
 		{
-			StopAttackDamageWindow();
-			_attackWindowTriggered = false;
-
-			// 超出攻击范围继续靠近
-			_mover.CanMove = true;
-			_mover.HasReachedTarget = false;
-			_mover.TargetPosition = _currentThreat.transform.position;
+			_attack.StopWindow();
+			MoveTo(_currentThreat.transform.position);
 		}
 	}
 
 	private void TickFlee()
 	{
-		if (_currentThreat == null)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		Vector3 awayDir = (transform.position - _currentThreat.transform.position).normalized;
-		Vector3 fleeTarget = transform.position + awayDir * fleeRunDistance;
-
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = fleeTarget;
+		if (_currentThreat == null) { StopMove(); return; }
+		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
 	}
 	#endregion
 
 	#region Conditions
+	/// <summary>逃跑条件：血量低于阈值（逃跑中需恢复到安全血量才停止）</summary>
 	private bool ShouldFlee()
 	{
 		float hpRate = GetHpRate();
-
-		if (_currentState == WildBoarState.Flee)
-		{
-			// 血量恢复到安全值才停止逃跑
-			return hpRate < fleeSafeHpRate;
-		}
-
-		// 血量低到一定程度立即逃跑
-		return hpRate < fleeTriggerHpRate;
+		return _currentState == WildBoarState.Flee
+			? hpRate < fleeSafeHpRate
+			: hpRate < fleeTriggerHpRate;
 	}
 
+	/// <summary>攻击条件：有威胁且距离/愤怒值满足要求</summary>
 	private bool ShouldAttack()
 	{
-		if (_currentThreat == null)
-		{
-			return false;
-		}
-
-		float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
+		if (_currentThreat == null) return false;
+		float distance = DistanceTo(_currentThreat.transform);
 		float rageLevel = Data.RageLevel;
 
 		if (_currentState == WildBoarState.Attack)
 		{
-			// 目标距离过远或愤怒值消退时停止攻击
 			return distance < chaseLossDistance && rageLevel > 0.1f;
 		}
 
 		// 从警觉或追击状态升级：愤怒值足够高时直接发起攻击
 		if (_currentState == WildBoarState.Alert || _currentState == WildBoarState.Chase)
 		{
-			if (rageLevel >= 0.7f && distance < chaseLossDistance)
-			{
-				return true;
-			}
+			if (rageLevel >= 0.7f && distance < chaseLossDistance) return true;
 		}
 
-		// 距离足够近且愤怒值足够高时开始攻击
 		return distance <= attackTriggerDistance && rageLevel > 0.3f;
 	}
 
@@ -761,26 +488,15 @@ public partial class AI_WildBoar : Module
 
 		if (_currentState == WildBoarState.Chase)
 		{
-			if (threat == null)
-			{
-				return false;
-			}
-
-			float distance = Vector2.Distance(transform.position, threat.transform.position);
+			if (threat == null) return false;
+			float distance = DistanceTo(threat.transform);
 			_currentThreat = threat;
 			return distance < chaseLossDistance;
 		}
 
-		if (threat == null)
-		{
-			return false;
-		}
-
-		float threatDistance = Vector2.Distance(transform.position, threat.transform.position);
-		if (threatDistance > chaseTriggerDistance)
-		{
-			return false;
-		}
+		if (threat == null) return false;
+		float threatDistance = DistanceTo(threat.transform);
+		if (threatDistance > chaseTriggerDistance) return false;
 
 		_currentThreat = threat;
 		return true;
@@ -791,7 +507,6 @@ public partial class AI_WildBoar : Module
 		TryRefreshDetector();
 		Item threat = FindThreatInAlertRange();
 
-		// 如果在警觉状态且仍然有威胁
 		if (_currentState == WildBoarState.Alert)
 		{
 			if (threat != null)
@@ -800,27 +515,17 @@ public partial class AI_WildBoar : Module
 				_alertCooldownTimer = alertDuration;
 				return true;
 			}
-
-			// 警觉状态下威胁消失，检查冷却计时是否还有剩余
-			if (_alertCooldownTimer > 0f)
-			{
-				// 冷却期间维持警觉状态
-				return true;
-			}
-
-			// 冷却结束，退出警觉
+			if (_alertCooldownTimer > 0f) return true;
 			_currentThreat = null;
 			return false;
 		}
 
-		// 非警觉状态下发现新威胁
 		if (threat != null)
 		{
 			_currentThreat = threat;
 			_alertCooldownTimer = alertDuration;
 			return true;
 		}
-
 		return false;
 	}
 
@@ -830,19 +535,11 @@ public partial class AI_WildBoar : Module
 
 		if (_currentState == WildBoarState.Sleep)
 		{
-			if (_stateElapsed < sleepDuration)
-			{
-				return true;
-			}
-
+			if (_stateElapsed < sleepDuration) return true;
 			return IsNightTime() || hpRate < sleepExitHpRate;
 		}
 
-		if (_sleepCooldownTimer > 0f)
-		{
-			return false;
-		}
-
+		if (_sleepCooldownTimer > 0f) return false;
 		return IsNightTime() || hpRate < sleepEnterHpRate;
 	}
 
@@ -851,97 +548,61 @@ public partial class AI_WildBoar : Module
 		float hungerRate = _food.Data.nutrition.GetFoodRate();
 		if (_currentState == WildBoarState.Eat)
 		{
-			if (hungerRate >= eatExitHungerRate)
-			{
-				return false;
-			}
-
+			if (hungerRate >= eatExitHungerRate) return false;
 			if (_currentFoodTarget == null)
 			{
 				_currentFoodTarget = FindClosestEdibleItem();
-				if (_currentFoodTarget == null)
-				{
-					return false;
-				}
+				if (_currentFoodTarget == null) return false;
 			}
-
-			return Vector2.Distance(transform.position, _currentFoodTarget.transform.position) <= eatDistance;
+			return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
 		}
 
-		if (hungerRate > eatEnterHungerRate)
-		{
-			return false;
-		}
-
+		if (hungerRate > eatEnterHungerRate) return false;
 		if (_currentFoodTarget == null)
 		{
 			TryRefreshDetector();
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				return false;
-			}
+			if (_currentFoodTarget == null) return false;
 		}
-
-		return Vector2.Distance(transform.position, _currentFoodTarget.transform.position) <= eatDistance;
+		return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
 	}
 
 	private bool ShouldForage()
 	{
 		float hungerRate = _food.Data.nutrition.GetFoodRate();
-		if (hungerRate > eatEnterHungerRate)
-		{
-			return false;
-		}
+		if (hungerRate > eatEnterHungerRate) return false;
 
 		if (_currentFoodTarget == null)
 		{
 			TryRefreshDetector();
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				return false;
-			}
+			if (_currentFoodTarget == null) return false;
 		}
-
-		return Vector2.Distance(transform.position, _currentFoodTarget.transform.position) > eatDistance;
-	}
-
-	private bool ShouldMove()
-	{
-		if (_currentState == WildBoarState.Move)
-		{
-			return _hasWanderTarget;
-		}
-
-		if (!enableWander)
-		{
-			return false;
-		}
-
-		if (_idleRemainTimer > 0f)
-		{
-			return false;
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			return false;
-		}
-
-		return true;
+		return DistanceTo(_currentFoodTarget.transform) > eatDistance;
 	}
 	#endregion
 
-	#region Helpers
+	#region Helpers - WildBoar 特有
+	private void RefreshThreatTarget()
+	{
+		TryRefreshDetector();
+		Item nearestThreat = FindClosestThreat();
+
+		if (nearestThreat != null)
+		{
+			_currentThreat = nearestThreat;
+			return;
+		}
+
+		// 没有检测到新威胁，清除现有威胁
+		_currentThreat = null;
+	}
+
 	private void UpdateRageLevel(float deltaTime)
 	{
 		if (_currentThreat != null && (_currentState == WildBoarState.Alert || _currentState == WildBoarState.Chase || _currentState == WildBoarState.Attack))
 		{
-			// 在看到威胁时积累愤怒值
 			Data.RageLevel = Mathf.Min(1f, Data.RageLevel + rageBuildupRate * deltaTime);
-
-			// 黄昏时期增加愤怒值积累速度
 			if (aggressiveDuringDusk && IsDuskTime())
 			{
 				Data.RageLevel = Mathf.Min(1f, Data.RageLevel + rageBuildupRate * 0.5f * deltaTime);
@@ -949,104 +610,17 @@ public partial class AI_WildBoar : Module
 		}
 		else
 		{
-			// 愤怒值自然消退
 			Data.RageLevel = Mathf.Max(0f, Data.RageLevel - rageDecayRate * deltaTime);
 		}
-	}
-
-	private void TryRefreshDetector()
-	{
-		if (_detectorRefreshTimer < detectorRefreshInterval)
-		{
-			return;
-		}
-
-		_detectorRefreshTimer = 0f;
-		_detector.Update_Detector();
-	}
-
-	private void TickIdleWander(float deltaTime)
-	{
-		if (!enableWander)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		if (_hasWanderTarget)
-		{
-			float distance = Vector2.Distance(transform.position, _wanderTarget);
-			if (distance <= wanderStopDistance || _mover.HasReachedTarget)
-			{
-				_hasWanderTarget = false;
-				_wanderWaitTimer = GetWanderPauseDuration();
-				_mover.CanMove = false;
-				_mover.HasReachedTarget = true;
-				return;
-			}
-
-			_mover.CanMove = true;
-			_mover.HasReachedTarget = false;
-			_mover.TargetPosition = _wanderTarget;
-			return;
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		Vector2 offset = UnityEngine.Random.insideUnitCircle * wanderRadius;
-		offset = AI_WanderUtility.PickSaferOffset(
-			transform.position,
-			offset,
-			wanderRadius,
-			wanderAvoidHighPenalty,
-			wanderSampleCount,
-			(uint)Mathf.Max(0, wanderDangerPenalty),
-			wanderPenaltyWeight);
-		_wanderTarget = new Vector3(transform.position.x + offset.x, transform.position.y + offset.y, transform.position.z);
-		_hasWanderTarget = true;
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _wanderTarget;
-	}
-
-	private float GetWanderPauseDuration()
-	{
-		if (wanderPauseMax <= wanderPauseMin)
-		{
-			return Mathf.Max(0f, wanderPauseMin);
-		}
-
-		return UnityEngine.Random.Range(Mathf.Max(0f, wanderPauseMin), Mathf.Max(0f, wanderPauseMax));
-	}
-
-	private float GetIdleDuration()
-	{
-		if (idleMaxDuration <= idleMinDuration)
-		{
-			return Mathf.Max(0f, idleMinDuration);
-		}
-
-		return UnityEngine.Random.Range(Mathf.Max(0f, idleMinDuration), Mathf.Max(0f, idleMaxDuration));
 	}
 
 	private Item FindClosestThreat()
 	{
 		List<Item> threats = new List<Item>();
 
-		// 检索追击目标标签
 		List<Item> tagThreats = _detector.GetItemsByTags(chaseThreatTags);
-		if (tagThreats != null)
-		{
-			threats.AddRange(tagThreats);
-		}
+		if (tagThreats != null) threats.AddRange(tagThreats);
 
-		// 检查玩家
 		if (chasePlayer)
 		{
 			foreach (Item it in _detector.CurrentItemsInArea)
@@ -1056,8 +630,7 @@ public partial class AI_WildBoar : Module
 			}
 		}
 
-		if (threats.Count == 0)
-			return null;
+		if (threats.Count == 0) return null;
 
 		return threats
 			.Where(x => x != null)
@@ -1068,32 +641,29 @@ public partial class AI_WildBoar : Module
 	private Item FindThreatInAlertRange()
 	{
 		List<Item> allItems = _detector.CurrentItemsInArea;
-		if (allItems == null || allItems.Count == 0)
-		{
-			return null;
-		}
+		if (allItems == null || allItems.Count == 0) return null;
 
 		Item closestThreat = null;
 		float closestDistance = float.MaxValue;
 
 		foreach (Item item in allItems)
 		{
-			if (item == null)
-				continue;
+			if (item == null) continue;
 
-			if (chasePlayer && item.CompareTag("Player"))
+			bool isThreat = false;
+			if (chasePlayer && item.CompareTag("Player")) isThreat = true;
+			if (!isThreat && chaseThreatTags != null && item.itemData != null && item.itemData.Tags != null)
 			{
-				float dist = Vector2.Distance(transform.position, item.transform.position);
-				if (dist < closestDistance && dist <= alertDetectDistance)
+				foreach (string tag in chaseThreatTags)
 				{
-					closestThreat = item;
-					closestDistance = dist;
+					if (item.itemData.Tags.Contains(tag)) { isThreat = true; break; }
 				}
 			}
+			if (item.name != null && chaseThreatTags != null && chaseThreatTags.Contains(item.name)) isThreat = true;
 
-			if (chaseThreatTags.Contains(item.name) || (item.itemData != null && item.itemData.Tags != null))
+			if (isThreat)
 			{
-				float dist = Vector2.Distance(transform.position, item.transform.position);
+				float dist = DistanceTo(item.transform);
 				if (dist < closestDistance && dist <= alertDetectDistance)
 				{
 					closestThreat = item;
@@ -1101,17 +671,13 @@ public partial class AI_WildBoar : Module
 				}
 			}
 		}
-
 		return closestThreat;
 	}
 
 	private Item FindClosestEdibleItem()
 	{
 		List<Item> items = _detector.GetItemsByTags(edibleTags);
-		if (items.Count == 0)
-		{
-			return null;
-		}
+		if (items.Count == 0) return null;
 
 		return items
 			.Where(x => x != null)
@@ -1121,185 +687,63 @@ public partial class AI_WildBoar : Module
 
 	private bool IsDayTime()
 	{
-		if (DayTimeSystem.Instance == null)
-		{
-			return true;
-		}
+		if (DayTimeSystem.Instance == null) return true;
 
 		string sceneName = gameObject.scene.name;
-		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
-		{
-			return true;
-		}
+		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData)) return true;
 
 		float dayLength = Mathf.Max(1f, timeData.DayLength);
 		float normalized = Mathf.Repeat(DayTimeSystem.Instance.GetCurrentTime(sceneName), dayLength) / dayLength;
 		return normalized >= dayStartRatio && normalized <= dayEndRatio;
 	}
 
-	private bool IsNightTime()
-	{
-		return !IsDayTime();
-	}
+	private bool IsNightTime() => !IsDayTime();
 
 	private bool IsDuskTime()
 	{
-		if (DayTimeSystem.Instance == null)
-		{
-			return false;
-		}
+		if (DayTimeSystem.Instance == null) return false;
 
 		string sceneName = gameObject.scene.name;
-		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
-		{
-			return false;
-		}
+		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData)) return false;
 
 		float dayLength = Mathf.Max(1f, timeData.DayLength);
 		float normalized = Mathf.Repeat(DayTimeSystem.Instance.GetCurrentTime(sceneName), dayLength) / dayLength;
 		return normalized >= duskStartRatio && normalized <= dayEndRatio;
 	}
+	#endregion
 
-	private float GetHpRate()
-	{
-		if (_hp.MaxHp <= 0f)
-		{
-			Debug.LogError($"[{nameof(AI_WildBoar)}] MaxHp 小于等于 0，无法计算血量百分比。目标物体: {name}", this);
-			return 0f;
-		}
-
-		return _hp.Hp / _hp.MaxHp;
-	}
-
-	private string GetAnimationNameForState(WildBoarState state)
+	#region Animation Mapping
+	protected override string GetAnimationNameForState(WildBoarState state)
 	{
 		switch (state)
 		{
-			case WildBoarState.Idle:
-				return animIdle;
-			case WildBoarState.Move:
-				return animMove;
-			case WildBoarState.Forage:
-				return animForage;
-			case WildBoarState.Eat:
-				return animEat;
-			case WildBoarState.Sleep:
-				return animSleep;
-			case WildBoarState.Alert:
-				return animAlert;
-			case WildBoarState.Chase:
-				return animChase;
-			case WildBoarState.Attack:
-				return animAttack;
-			case WildBoarState.Flee:
-				return animFlee;
-			default:
-				throw new ArgumentOutOfRangeException(nameof(state), state, null);
+			case WildBoarState.Idle:   return animIdle;
+			case WildBoarState.Move:   return animMove;
+			case WildBoarState.Forage: return animForage;
+			case WildBoarState.Eat:    return animEat;
+			case WildBoarState.Sleep:  return animSleep;
+			case WildBoarState.Alert:  return animAlert;
+			case WildBoarState.Chase:  return animChase;
+			case WildBoarState.Attack: return animAttack;
+			case WildBoarState.Flee:   return animFlee;
+			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
 		}
 	}
 
-	private string GetStateTextCN(WildBoarState state)
+	protected override string GetStateTextCN(WildBoarState state)
 	{
 		switch (state)
 		{
-			case WildBoarState.Idle:
-				return "待机";
-			case WildBoarState.Move:
-				return "闲逛";
-			case WildBoarState.Forage:
-				return "觅食";
-			case WildBoarState.Eat:
-				return "吃饭";
-			case WildBoarState.Sleep:
-				return "睡觉";
-			case WildBoarState.Alert:
-				return "警觉";
-			case WildBoarState.Chase:
-				return "追击";
-			case WildBoarState.Attack:
-				return "攻击";
-			case WildBoarState.Flee:
-				return "逃跑";
-			default:
-				throw new ArgumentOutOfRangeException(nameof(state), state, null);
-		}
-	}
-
-	private void PlayStateAnimation(WildBoarState state, bool force = false)
-	{
-		if (_animator == null)
-		{
-			return;
-		}
-
-		string animationName = GetAnimationNameForState(state);
-		if (string.IsNullOrEmpty(animationName))
-		{
-			Debug.LogError($"[{nameof(AI_WildBoar)}] 状态 {state} 未配置动画名。目标物体: {name}", this);
-			return;
-		}
-
-		if (!force && _lastPlayedAnimation == animationName)
-		{
-			return;
-		}
-
-		_animator.PlayAnimation(animationName);
-		_lastPlayedAnimation = animationName;
-	}
-
-	private void StartAttackDamageWindow()
-	{
-		_attackWindowTriggered = true;
-		_attackWindowRemainTimer = Mathf.Max(0.01f, attackDamageWindow);
-		SetAttackDamageEnabled(true);
-	}
-
-	private void StopAttackDamageWindow()
-	{
-		_attackWindowRemainTimer = 0f;
-		SetAttackDamageEnabled(false);
-	}
-
-	private void UpdateAttackDamageWindow(float deltaTime)
-	{
-		if (_attackWindowRemainTimer <= 0f)
-		{
-			return;
-		}
-
-		_attackWindowRemainTimer = Mathf.Max(0f, _attackWindowRemainTimer - deltaTime);
-		if (_attackWindowRemainTimer > 0f)
-		{
-			return;
-		}
-
-		SetAttackDamageEnabled(false);
-		_attackWindowTriggered = false;
-		if (attackCooldown > 0f)
-		{
-			_attackCooldownTimer = Mathf.Max(_attackCooldownTimer, attackCooldown);
-		}
-	}
-
-	private void SetAttackDamageEnabled(bool enabled)
-	{
-		for (int i = 0; i < _attackDamageMods.Count; i++)
-		{
-			Mod_Damage damageMod = _attackDamageMods[i];
-			if (damageMod == null)
-			{
-				continue;
-			}
-
-			if (enabled)
-			{
-				damageMod.StartAttack();
-			}
-			else
-			{
-				damageMod.StopAttack();
-			}
+			case WildBoarState.Idle:   return "待机";
+			case WildBoarState.Move:   return "闲逛";
+			case WildBoarState.Forage: return "觅食";
+			case WildBoarState.Eat:    return "吃饭";
+			case WildBoarState.Sleep:  return "睡觉";
+			case WildBoarState.Alert:  return "警觉";
+			case WildBoarState.Chase:  return "追击";
+			case WildBoarState.Attack: return "攻击";
+			case WildBoarState.Flee:   return "逃跑";
+			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
 		}
 	}
 	#endregion

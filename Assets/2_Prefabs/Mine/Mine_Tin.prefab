@@ -345,6 +345,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2048408006814487461, guid: ba78fb599b6f2904eac1ea100b08cca8, type: 3}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].LootPrefabName
+      value: Chicken
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
       value: Ore_Tin
       objectReference: {fileID: 0}

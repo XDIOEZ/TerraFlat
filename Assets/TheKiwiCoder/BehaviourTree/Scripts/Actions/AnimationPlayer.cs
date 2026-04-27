@@ -3,34 +3,34 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/Animator/²¥·Å¶¯»­")]
+[NodeMenu("ActionNode/Animator/æ’­æ”¾åŠ¨ç”»")]
 public class AnimationPlayer : ActionNode
 {
-    [Header("¶¯»­Ãû»ò²ÎÊıÃû")]
+    [Header("åŠ¨ç”»åæˆ–å‚æ•°å")]
     public string animationName;
 
-    [Header("¶¯»­²¥·ÅÊ±¼ä (Ãë)")]
-    public float time = 0f;  // ÔÚÕâ¶ÎÊ±¼äÄÚ·µ»Ø Running£¬²¥·ÅÍêºó·µ»Ø Success
+    [Header("åŠ¨ç”»æ’­æ”¾æ—¶é—´ (ç§’)")]
+    public float time = 0f;  // åœ¨è¿™æ®µæ—¶é—´å†…è¿”å› Runningï¼Œæ’­æ”¾å®Œåè¿”å› Success
 
-    [Header("²¥·Å·½Ê½")]
-    public PlayType playType = PlayType.¶¯»­Ãû;
+    [Header("æ’­æ”¾æ–¹å¼")]
+    public PlayType playType = PlayType.åŠ¨ç”»å;
 
-    [Header("ÇĞ»»Ä£Ê½ÏÂµÄ²¼¶ûÖµ")]
+    [Header("åˆ‡æ¢æ¨¡å¼ä¸‹çš„å¸ƒå°”å€¼")]
     public bool Setbool = true;
 
-    [Header("¶¯»­²ã¼¶")]
-    [Tooltip("¶¯»­²¥·ÅµÄ²ã¼¶£¨0Îª»ù´¡²ã£¬ÊıÖµÔ½´ó²ã¼¶Ô½¸ß£©")]
+    [Header("åŠ¨ç”»å±‚çº§")]
+    [Tooltip("åŠ¨ç”»æ’­æ”¾çš„å±‚çº§ï¼ˆ0ä¸ºåŸºç¡€å±‚ï¼Œæ•°å€¼è¶Šå¤§å±‚çº§è¶Šé«˜ï¼‰")]
     public int layerIndex = 0;
     
-    [Header("²¥·ÅÊ±È¨ÖØÉèÖÃ")]
-    [Tooltip("ÔÚ²¥·Å¶¯»­Ê±½«È¨ÖØÉèÖÃÎª1£¬È»ºóÔÚ¶¯»­²¥·ÅÍê±Ïºó½«È¨ÖØÉèÖÃÎª0")]
+    [Header("æ’­æ”¾æ—¶æƒé‡è®¾ç½®")]
+    [Tooltip("åœ¨æ’­æ”¾åŠ¨ç”»æ—¶å°†æƒé‡è®¾ç½®ä¸º1ï¼Œç„¶ååœ¨åŠ¨ç”»æ’­æ”¾å®Œæ¯•åå°†æƒé‡è®¾ç½®ä¸º0")]
     public float PlayWeight = 1f;
 
-    [Header("¿ØÖÆÑ¡Ïî")]
-    [Tooltip("ÊÇ·ñ×Ô¶¯»ñÈ¡¶¯»­³¤¶È£¨½öÔÚStartÊ±»ñÈ¡Ò»´Î£©")]
+    [Header("æ§åˆ¶é€‰é¡¹")]
+    [Tooltip("æ˜¯å¦è‡ªåŠ¨è·å–åŠ¨ç”»é•¿åº¦ï¼ˆä»…åœ¨Startæ—¶è·å–ä¸€æ¬¡ï¼‰")]
     public bool autoGetAnimationLength = false;
     
-    [Tooltip("ÊÇ·ñµÈ´ı¶¯»­²¥·ÅÍê±ÏÔÙ·µ»ØSuccess")]
+    [Tooltip("æ˜¯å¦ç­‰å¾…åŠ¨ç”»æ’­æ”¾å®Œæ¯•å†è¿”å›Success")]
     public bool waitForAnimationComplete = true;
 
     private float startTime;
@@ -41,39 +41,39 @@ public class AnimationPlayer : ActionNode
     protected override void OnStart()
     {
         startTime = Time.time;
-        animationLength = time; // Ä¬ÈÏÊ¹ÓÃÉèÖÃµÄÊ±¼ä
+        animationLength = time; // é»˜è®¤ä½¿ç”¨è®¾ç½®çš„æ—¶é—´
         animationHash = Animator.StringToHash(animationName);
 
-        // ´íÎó¼ì²é£º¼ì²éÉÏÏÂÎÄºÍ¶¯»­×é¼ş
+        // é”™è¯¯æ£€æŸ¥ï¼šæ£€æŸ¥ä¸Šä¸‹æ–‡å’ŒåŠ¨ç”»ç»„ä»¶
         if (context == null)
         {
-            Debug.LogError($"[{GetType().Name}] ÉÏÏÂÎÄÎª¿Õ£¡", this);
+            Debug.LogError($"[{GetType().Name}] ä¸Šä¸‹æ–‡ä¸ºç©ºï¼", this);
             return;
         }
 
         if (context.animator == null)
         {
-            Debug.LogError($"[{GetType().Name}] ¶¯»­×é¼şÎª¿Õ£¡Çë¼ì²éÓÎÏ·¶ÔÏóÊÇ·ñ°üº¬¶¯»­×é¼ş¡£", this);
+            Debug.LogError($"[{GetType().Name}] åŠ¨ç”»ç»„ä»¶ä¸ºç©ºï¼è¯·æ£€æŸ¥æ¸¸æˆå¯¹è±¡æ˜¯å¦åŒ…å«åŠ¨ç”»ç»„ä»¶ã€‚", this);
             return;
         }
 
-        // ´íÎó¼ì²é£º¼ì²é¶¯»­Ãû
+        // é”™è¯¯æ£€æŸ¥ï¼šæ£€æŸ¥åŠ¨ç”»å
         if (string.IsNullOrEmpty(animationName))
         {
-            Debug.LogWarning($"[{GetType().Name}] ¶¯»­Ãû³ÆÎª¿Õ»òÎ´ÉèÖÃ£¡", this);
+            Debug.LogWarning($"[{GetType().Name}] åŠ¨ç”»åç§°ä¸ºç©ºæˆ–æœªè®¾ç½®ï¼", this);
         }
 
         switch (playType)
         {
-            case PlayType.¶¯»­Ãû:
-                // ´íÎó¼ì²é£º¼ì²é¶¯»­¿ØÖÆÆ÷
+            case PlayType.åŠ¨ç”»å:
+                // é”™è¯¯æ£€æŸ¥ï¼šæ£€æŸ¥åŠ¨ç”»æ§åˆ¶å™¨
                 if (context.animator.runtimeAnimatorController == null)
                 {
-                    Debug.LogWarning($"[{GetType().Name}] ¶¯»­¿ØÖÆÆ÷Î´·ÖÅä£¡", this);
+                    Debug.LogWarning($"[{GetType().Name}] åŠ¨ç”»æ§åˆ¶å™¨æœªåˆ†é…ï¼", this);
                 }
                 
                 context.animator.Play(animationHash, layerIndex);
-                // ÔÚ²¥·Å¶¯»­Ê±½«È¨ÖØÉèÖÃÎªÖ¸¶¨Öµ
+                // åœ¨æ’­æ”¾åŠ¨ç”»æ—¶å°†æƒé‡è®¾ç½®ä¸ºæŒ‡å®šå€¼
                 context.animator.SetLayerWeight(layerIndex, PlayWeight);
                 hasSetWeight = true;
                 
@@ -84,14 +84,14 @@ public class AnimationPlayer : ActionNode
                 }
                 break;
                 
-            case PlayType.ÇĞ»»:
+            case PlayType.åˆ‡æ¢:
                 context.animator.SetBool(animationName, Setbool);
-                // ¶ÔÓÚ²¼¶ûÖµÇĞ»»£¬ÎÒÃÇÎŞ·¨×Ô¶¯»ñÈ¡³¤¶È£¬ĞèÒªÊÖ¶¯ÉèÖÃ
+                // å¯¹äºå¸ƒå°”å€¼åˆ‡æ¢ï¼Œæˆ‘ä»¬æ— æ³•è‡ªåŠ¨è·å–é•¿åº¦ï¼Œéœ€è¦æ‰‹åŠ¨è®¾ç½®
                 break;
                 
-            case PlayType.´¥·¢Æ÷:
+            case PlayType.è§¦å‘å™¨:
                 context.animator.SetTrigger(animationName);
-                // ÔÚ´¥·¢Æ÷Ä£Ê½ÏÂÒ²ÉèÖÃÈ¨ÖØ
+                // åœ¨è§¦å‘å™¨æ¨¡å¼ä¸‹ä¹Ÿè®¾ç½®æƒé‡
                 context.animator.SetLayerWeight(layerIndex, PlayWeight);
                 hasSetWeight = true;
                 
@@ -106,30 +106,30 @@ public class AnimationPlayer : ActionNode
 
     protected override void OnStop()
     {
-        // ´íÎó¼ì²é£ºÈ·±£×é¼şÈÔÈ»´æÔÚ
+        // é”™è¯¯æ£€æŸ¥ï¼šç¡®ä¿ç»„ä»¶ä»ç„¶å­˜åœ¨
         if (hasSetWeight && context != null && context.animator != null)
         {
-            // ¶¯»­½áÊøÊ±½«È¨ÖØÉèÖÃÎª0
+            // åŠ¨ç”»ç»“æŸæ—¶å°†æƒé‡è®¾ç½®ä¸º0
             context.animator.SetLayerWeight(layerIndex, 0f);
         }
     }
 
     protected override State OnUpdate()
     {
-        // ´íÎó¼ì²é£º¼ì²éÉÏÏÂÎÄºÍ¶¯»­×é¼ş
+        // é”™è¯¯æ£€æŸ¥ï¼šæ£€æŸ¥ä¸Šä¸‹æ–‡å’ŒåŠ¨ç”»ç»„ä»¶
         if (context == null || context.animator == null)
         {
-            Debug.LogError($"[{GetType().Name}] ¸üĞÂÊ±ÉÏÏÂÎÄ»ò¶¯»­×é¼şÎª¿Õ£¡", this);
+            Debug.LogError($"[{GetType().Name}] æ›´æ–°æ—¶ä¸Šä¸‹æ–‡æˆ–åŠ¨ç”»ç»„ä»¶ä¸ºç©ºï¼", this);
             return State.Failure;
         }
 
-        // Èç¹û²»µÈ´ı¶¯»­Íê³É£¬Á¢¼´·µ»ØSuccess
+        // å¦‚æœä¸ç­‰å¾…åŠ¨ç”»å®Œæˆï¼Œç«‹å³è¿”å›Success
         if (!waitForAnimationComplete)
         {
             return State.Success;
         }
 
-        // Ê¹ÓÃ»ùÓÚÊ±¼äµÄ¼ì²â£¨ĞÔÄÜ¸üºÃ£©
+        // ä½¿ç”¨åŸºäºæ—¶é—´çš„æ£€æµ‹ï¼ˆæ€§èƒ½æ›´å¥½ï¼‰
         float elapsed = Time.time - startTime;
         if (elapsed < animationLength)
         {
@@ -139,24 +139,24 @@ public class AnimationPlayer : ActionNode
         return State.Success;
     }
 
-    // »ñÈ¡¶¯»­¼ô¼­µÄ³¤¶È£¨Ö»ÔÚStartÊ±µ÷ÓÃÒ»´Î£©
+    // è·å–åŠ¨ç”»å‰ªè¾‘çš„é•¿åº¦ï¼ˆåªåœ¨Startæ—¶è°ƒç”¨ä¸€æ¬¡ï¼‰
     private float GetAnimationLength(string animName)
     {
-        // Èç¹ûÃ»ÓĞÆôÓÃ×Ô¶¯»ñÈ¡»òÃ»ÓĞÉèÖÃanimator£¬·µ»ØÄ¬ÈÏÊ±¼ä
+        // å¦‚æœæ²¡æœ‰å¯ç”¨è‡ªåŠ¨è·å–æˆ–æ²¡æœ‰è®¾ç½®animatorï¼Œè¿”å›é»˜è®¤æ—¶é—´
         if (!autoGetAnimationLength || context.animator == null)
         {
             return time;
         }
 
-        // »ñÈ¡AnimatorController
+        // è·å–AnimatorController
         RuntimeAnimatorController runtimeController = context.animator.runtimeAnimatorController;
         if (runtimeController == null)
         {
-            Debug.LogWarning($"[{GetType().Name}] ÔËĞĞÊ±¶¯»­¿ØÖÆÆ÷Îª¿Õ£¬Ê¹ÓÃÄ¬ÈÏÊ±¼ä: {time}Ãë", this);
+            Debug.LogWarning($"[{GetType().Name}] è¿è¡Œæ—¶åŠ¨ç”»æ§åˆ¶å™¨ä¸ºç©ºï¼Œä½¿ç”¨é»˜è®¤æ—¶é—´: {time}ç§’", this);
             return time;
         }
 
-        // ±éÀúËùÓĞ¶¯»­¼ô¼­£¨Ö»ÔÚ³õÊ¼»¯Ê±Ö´ĞĞÒ»´Î£©
+        // éå†æ‰€æœ‰åŠ¨ç”»å‰ªè¾‘ï¼ˆåªåœ¨åˆå§‹åŒ–æ—¶æ‰§è¡Œä¸€æ¬¡ï¼‰
         foreach (AnimationClip clip in runtimeController.animationClips)
         {
             if (clip != null && clip.name == animName)
@@ -165,15 +165,15 @@ public class AnimationPlayer : ActionNode
             }
         }
 
-        // Èç¹ûÕÒ²»µ½¶ÔÓ¦µÄ¶¯»­¼ô¼­£¬·µ»ØÄ¬ÈÏÊ±¼ä
-        Debug.LogWarning($"[{GetType().Name}] ÔÚ¿ØÖÆÆ÷ÖĞÎ´ÕÒµ½¶¯»­¼ô¼­ '{animName}'£¬Ê¹ÓÃÄ¬ÈÏÊ±¼ä: {time}Ãë", this);
+        // å¦‚æœæ‰¾ä¸åˆ°å¯¹åº”çš„åŠ¨ç”»å‰ªè¾‘ï¼Œè¿”å›é»˜è®¤æ—¶é—´
+        Debug.LogWarning($"[{GetType().Name}] åœ¨æ§åˆ¶å™¨ä¸­æœªæ‰¾åˆ°åŠ¨ç”»å‰ªè¾‘ '{animName}'ï¼Œä½¿ç”¨é»˜è®¤æ—¶é—´: {time}ç§’", this);
         return time;
     }
 }
 
 public enum PlayType
 {
-    ¶¯»­Ãû,
-    ÇĞ»»,
-    ´¥·¢Æ÷
+    åŠ¨ç”»å,
+    åˆ‡æ¢,
+    è§¦å‘å™¨
 }

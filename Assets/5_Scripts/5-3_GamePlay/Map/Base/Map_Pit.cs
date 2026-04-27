@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -9,43 +8,38 @@ public class Map_Pit : Map
     {
         chunk = GetComponentInParent<Chunk>();
         chunk.Map = this;
-
-        // TileData已生成完成，开始加载
+        chunk.ResetLifecycleState();
+        Data.TileLoaded = true;
         LoadTileData_To_TileMap_Ansync();
     }
+
+    protected override int TilemapLoadBatchSize => 500;
+
     public new void LoadTileData_To_TileMap_Ansync()
     {
-        // 如果已有协程在运行，先停止它
         if (loadTileMapCoroutine != null)
-        {
             StopCoroutine(loadTileMapCoroutine);
-        }
 
-        // 启动新的协程
         loadTileMapCoroutine = StartCoroutine(LoadTileData_To_TileMapCoroutine());
     }
 
-    /// <summary>
-    /// 使用协程优化的加载Tile数据到Tilemap的方法
-    /// </summary>
-    private  IEnumerator LoadTileData_To_TileMapCoroutine()
+    private IEnumerator LoadTileData_To_TileMapCoroutine()
     {
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
+            Debug.LogWarning($"[AStar-Debug][Map_Pit] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
             loadTileMapCoroutine = null;
+            FinalizeTilemapLoad();
             yield break;
         }
 
-        // 分批处理Tile数据，避免长时间阻塞主线程
         const int batchSize = 500;
         int processedCount = 0;
 
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
-
             TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
             if (tile == null)
             {
@@ -53,25 +47,15 @@ public class Map_Pit : Map
                 continue;
             }
 
-            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
-
-            tileMap.SetTile(position3D, tile);
-
-            processedCount++;
-
-            // 每处理一批就等待一帧，让出控制权给其他任务
-            if (processedCount % batchSize == 0)
-            {
+            tileMap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), tile);
+            if (++processedCount % batchSize == 0)
                 yield return null;
-            }
         }
 
-        // 等待一帧确保所有Tile设置完成
         yield return null;
-
         Debug.Log($"✅ 完成加载 {Data.CountNonEmptyCells()} 个Tile到Tilemap");
-
-        // 清理协程引用
+        Debug.Log($"[AStar-Debug][Map_Pit] Tilemap加载完成 | {processedCount} 个Tile | AstarGameManager.Instance={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady} | Map={name}");
         loadTileMapCoroutine = null;
+        FinalizeTilemapLoad();
     }
 }

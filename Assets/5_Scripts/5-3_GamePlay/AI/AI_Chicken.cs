@@ -19,7 +19,11 @@ public enum ChickenState
 	Flee
 }
 
-public partial class AI_Chicken : Module
+/// <summary>
+/// 鸡 AI：支持觅食/进食/睡眠/交配/下蛋/逃跑等行为。
+/// 状态优先级：逃跑 > 进食 > 睡眠 > 交配 > 下蛋 > 觅食 > 移动 > 待机
+/// </summary>
+public partial class AI_Chicken : AI_Base<ChickenState>
 {
 	#region SaveData
 	[Serializable]
@@ -33,49 +37,24 @@ public partial class AI_Chicken : Module
 	#endregion
 
 	#region ModuleData
-	public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
-	public override ModuleData _Data
-	{
-		get => ModData;
-		set => ModData = (Ex_ModData_MemoryPackable)value;
-	}
-
 	public AI_ChickenSaveData Data = new AI_ChickenSaveData();
 	#endregion
 
-	#region RuntimeState
-	[SerializeField, ReadOnly]
-	private ChickenState _currentState = ChickenState.Idle;
-
-	[SerializeField, ReadOnly]
-	private float _stateElapsed;
-
-	[SerializeField, ReadOnly]
-	private bool _isReady;
-
+	#region RuntimeState - Chicken 特有
 	[SerializeField, ReadOnly]
 	private Item _currentFoodTarget;
 
-	private float _detectorRefreshTimer;
+	[SerializeField, ReadOnly]
+	private Item _currentThreat;
+
 	private float _mateRequestRemain;
 	private float _sleepCooldownTimer;
-	private float _idleRemainTimer;
-	private float _wanderWaitTimer;
-	private Vector3 _wanderTarget;
-	private bool _hasWanderTarget;
 	private bool _layEggTriggered;
-	private string _lastPlayedAnimation;
-	private static GUIStyle _debugStateStyle;
-	private Item _currentThreat;
 	private Vector3 _fleeTarget;
 	#endregion
 
-	#region CachedModules
-	[SerializeField, ReadOnly] private Mover_AI _mover;
+	#region CachedModules - Chicken 特有
 	[SerializeField, ReadOnly] private Mod_Food _food;
-	[SerializeField, ReadOnly] private DamageReceiver _hp;
-	[SerializeField, ReadOnly] private Mod_ItemDetector _detector;
-	[SerializeField, ReadOnly] private Mod_AnimatorController _animator;
 	#endregion
 
 	#region Config
@@ -173,36 +152,39 @@ public partial class AI_Chicken : Module
 	public string animFlee = "Move";
 	#endregion
 
-	#region Events
-	public UltEvent<ChickenState, ChickenState> OnStateChanged = new UltEvent<ChickenState, ChickenState>();
+	#region Base Overrides - Config Accessors
+	protected override AI_WanderConfig WanderConfig => new AI_WanderConfig
+	{
+		enabled = enableIdleWander,
+		radius = wanderRadius,
+		stopDistance = wanderStopDistance,
+		pauseMin = wanderPauseMin,
+		pauseMax = wanderPauseMax,
+		avoidHighPenalty = wanderAvoidHighPenalty,
+		dangerPenalty = wanderDangerPenalty,
+		sampleCount = wanderSampleCount,
+		penaltyWeight = wanderPenaltyWeight
+	};
+
+	protected override AI_IdleConfig IdleConfig => new AI_IdleConfig
+	{
+		minDuration = idleMinDuration,
+		maxDuration = idleMaxDuration
+	};
+
+	protected override float DetectorRefreshInterval => detectorRefreshInterval;
+	protected override bool DebugLogEnabled => debugLog;
+	protected override bool IsMoveState(ChickenState state) => state == ChickenState.Move;
+	protected override bool IsIdleState(ChickenState state) => state == ChickenState.Idle;
 	#endregion
 
 	#region Lifecycle
-	public override void Awake()
-	{
-		if (string.IsNullOrEmpty(_Data.ID))
-		{
-			_Data.ID = ModText.AI;
-		}
-	}
-
 	public override void Load()
 	{
 		ModData.ReadData(ref Data);
-
 		_currentState = Data.State;
-		_stateElapsed = 0f;
-		_detectorRefreshTimer = 0f;
-		_mateRequestRemain = 0f;
-		_sleepCooldownTimer = 0f;
-		_wanderWaitTimer = 0f;
 		_idleRemainTimer = GetIdleDuration();
-		_hasWanderTarget = false;
-		_layEggTriggered = false;
-		_lastPlayedAnimation = null;
-
-		BindModules();
-		PlayStateAnimation(_currentState, true);
+		InitializeAI();
 	}
 
 	public override void Save()
@@ -210,86 +192,62 @@ public partial class AI_Chicken : Module
 		Data.State = _currentState;
 		ModData.WriteData(Data);
 	}
+#endregion
 
-	public override void ModUpdate(float deltaTime)
+	#region Base Overrides - Hooks
+	protected override void OnResetRuntimeState()
 	{
-		if (!_isReady)
-		{
-			return;
-		}
-
-		_stateElapsed += deltaTime;
-		_detectorRefreshTimer += deltaTime;
-		Data.EggTimer += deltaTime;
-
-		if (_mateRequestRemain > 0f)
-		{
-			_mateRequestRemain = Mathf.Max(0f, _mateRequestRemain - deltaTime);
-		}
-
-		if (_sleepCooldownTimer > 0f)
-		{
-			_sleepCooldownTimer = Mathf.Max(0f, _sleepCooldownTimer - deltaTime);
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			_wanderWaitTimer = Mathf.Max(0f, _wanderWaitTimer - deltaTime);
-		}
-
-		AI_StateMachineRunner.EvaluateAndTick(
-			_currentState,
-			EvaluateNextState,
-			SwitchState,
-			TickCurrentState,
-			deltaTime);
+		_mateRequestRemain = 0f;
+		_sleepCooldownTimer = 0f;
+		_layEggTriggered = false;
+		_currentFoodTarget = null;
+		_currentThreat = null;
 	}
 
-	private void OnGUI()
+	protected override void OnBindExtraModules()
 	{
-		if (!debugLog)
+		item.itemMods.GetMod_ByID(ModText.Food, out Mod_Food food);
+		_food = food;
+	}
+
+	protected override void OnValidateExtraModules()
+	{
+		if (_food == null)
 		{
-			return;
+			Debug.LogError($"[{nameof(AI_Chicken)}] 缺少食物模块，AI 已禁用。目标物体: {name}", this);
+			_isReady = false;
+		}
+	}
+
+	protected override void UpdateExtraTimers(float deltaTime)
+	{
+		_mateRequestRemain = DecrementTimer(_mateRequestRemain, deltaTime);
+		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
+		Data.EggTimer += deltaTime;
+	}
+
+	protected override void OnBeforeSwitchState(ChickenState previous, ChickenState next)
+	{
+		// 离开觅食/进食状态时清除食物目标
+		if (next != ChickenState.Forage && next != ChickenState.Eat)
+		{
+			_currentFoodTarget = null;
 		}
 
-		if (!Application.isPlaying)
+		// 离开逃跑状态时清除威胁目标
+		if (next != ChickenState.Flee)
 		{
-			return;
+			_currentThreat = null;
 		}
 
-		if (Camera.main == null)
+		// 重置下蛋触发标记（每次状态切换都重置，防止重复下蛋）
+		_layEggTriggered = false;
+
+		// 离开睡眠状态：进入睡醒冷却
+		if (previous == ChickenState.Sleep && next != ChickenState.Sleep)
 		{
-			return;
+			_sleepCooldownTimer = sleepCooldown;
 		}
-
-		Vector3 worldPos = transform.position + new Vector3(0f, 1.4f, 0f);
-		Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
-		if (screenPos.z <= 0f)
-		{
-			return;
-		}
-
-		if (_debugStateStyle == null)
-		{
-			_debugStateStyle = new GUIStyle(GUI.skin.box)
-			{
-				alignment = TextAnchor.MiddleCenter,
-				fontSize = 16,
-				normal = { textColor = Color.white }
-			};
-		}
-
-		string text = $"状态: {GetStateTextCN(_currentState)}";
-		Vector2 size = _debugStateStyle.CalcSize(new GUIContent(text));
-		float width = Mathf.Max(120f, size.x + 14f);
-		float height = 28f;
-		Rect rect = new Rect(
-			screenPos.x - width * 0.5f,
-			Screen.height - screenPos.y - height * 0.5f,
-			width,
-			height);
-
-		GUI.Box(rect, text, _debugStateStyle);
 	}
 	#endregion
 
@@ -301,233 +259,63 @@ public partial class AI_Chicken : Module
 	}
 	#endregion
 
-	#region Init
-	private void BindModules()
-	{
-		_isReady = true;
-
-		item.itemMods.GetMod_ByID(ModText.Mover, out _mover);
-		if (_mover == null)
-		{
-			item.itemMods.GetMod_ByID(ModText.Mover_AI, out _mover);
-		}
-
-		item.itemMods.GetMod_ByID(ModText.Food, out _food);
-		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);
-		item.itemMods.GetMod_ByID(ModText.Hp, out _hp);
-		item.itemMods.GetMod_ByID(ModText.AnimatorReceiver, out _animator);
-
-		if (_mover == null)
-		{
-			Debug.LogError($"[{nameof(AI_Chicken)}] 缺少移动模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_food == null)
-		{
-			Debug.LogError($"[{nameof(AI_Chicken)}] 缺少食物模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_detector == null)
-		{
-			Debug.LogError($"[{nameof(AI_Chicken)}] 缺少检测模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_hp == null)
-		{
-			Debug.LogError($"[{nameof(AI_Chicken)}] 缺少生命值模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_animator == null)
-		{
-			Debug.LogWarning($"[{nameof(AI_Chicken)}] 未找到动画模块，将跳过状态动画同步。目标物体: {name}", this);
-		}
-	}
-	#endregion
-
 	#region StateMachine
-	private ChickenState EvaluateNextState()
+	protected override ChickenState EvaluateNextState()
 	{
-		if (ShouldFlee())
-		{
-			return ChickenState.Flee;
-		}
-
-		if (ShouldEat())
-		{
-			return ChickenState.Eat;
-		}
-
-		if (ShouldSleep())
-		{
-			return ChickenState.Sleep;
-		}
-
-		if (ShouldMate())
-		{
-			return ChickenState.Mate;
-		}
-
-		if (ShouldLayEgg())
-		{
-			return ChickenState.LayEgg;
-		}
-
-		if (ShouldForage())
-		{
-			return ChickenState.Forage;
-		}
-
-		if (ShouldMove())
-		{
-			return ChickenState.Move;
-		}
-
+		if (ShouldFlee())    return ChickenState.Flee;
+		if (ShouldEat())     return ChickenState.Eat;
+		if (ShouldSleep())   return ChickenState.Sleep;
+		if (ShouldMate())    return ChickenState.Mate;
+		if (ShouldLayEgg())  return ChickenState.LayEgg;
+		if (ShouldForage())  return ChickenState.Forage;
+		if (ShouldMoveBase())return ChickenState.Move;
 		return ChickenState.Idle;
 	}
 
-	private void SwitchState(ChickenState next)
-	{
-		ChickenState previous = _currentState;
-		_currentState = next;
-		_stateElapsed = 0f;
-		_layEggTriggered = false;
-
-		if (next != ChickenState.Move)
-		{
-			_hasWanderTarget = false;
-		}
-
-		if (next != ChickenState.Forage && next != ChickenState.Eat)
-		{
-			_currentFoodTarget = null;
-		}
-
-		if (next != ChickenState.Flee)
-		{
-			_currentThreat = null;
-		}
-
-		if (next == ChickenState.Idle)
-		{
-			_idleRemainTimer = GetIdleDuration();
-		}
-
-		if (debugLog)
-		{
-			Debug.Log($"[ChickenAI] {name} 状态切换: {previous} -> {next}", this);
-		}
-
-		if (previous == ChickenState.Sleep && next != ChickenState.Sleep)
-		{
-			_sleepCooldownTimer = sleepCooldown;
-		}
-
-		PlayStateAnimation(next);
-		OnStateChanged?.Invoke(previous, next);
-	}
-
-	private void TickCurrentState(float deltaTime)
+	protected override void TickCurrentState(float deltaTime)
 	{
 		switch (_currentState)
 		{
-			case ChickenState.Idle:
-					TickIdle(deltaTime);
-				break;
-			case ChickenState.Move:
-					TickMove(deltaTime);
-				break;
-				case ChickenState.Forage:
-					TickForage();
-					break;
-			case ChickenState.Eat:
-				TickEat(deltaTime);
-				break;
-			case ChickenState.Sleep:
-				TickSleep(deltaTime);
-				break;
-			case ChickenState.Mate:
-				TickMate();
-				break;
-			case ChickenState.LayEgg:
-				TickLayEgg();
-				break;
-			case ChickenState.Flee:
-				TickFlee();
-				break;
-			default:
-				throw new ArgumentOutOfRangeException();
+			case ChickenState.Idle:   TickIdle(deltaTime); break;
+			case ChickenState.Move:   TickMove(deltaTime); break;
+			case ChickenState.Forage: TickForage();        break;
+			case ChickenState.Eat:    TickEat(deltaTime);  break;
+			case ChickenState.Sleep:  TickSleep(deltaTime);break;
+			case ChickenState.Mate:   TickMate();          break;
+			case ChickenState.LayEgg: TickLayEgg();        break;
+			case ChickenState.Flee:   TickFlee();          break;
+			default: throw new ArgumentOutOfRangeException();
 		}
 	}
 	#endregion
 
-	#region Tick
-	private void TickIdle(float deltaTime)
-	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-		if (_idleRemainTimer > 0f)
-		{
-			_idleRemainTimer = Mathf.Max(0f, _idleRemainTimer - deltaTime);
-		}
-	}
-
-	private void TickMove(float deltaTime)
-	{
-		TickIdleWander(deltaTime);
-	}
-
+	#region Tick - Chicken 特有状态
 	private void TickForage()
 	{
 		TryRefreshDetector();
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				_mover.CanMove = false;
-				_mover.HasReachedTarget = true;
-				return;
-			}
+			if (_currentFoodTarget == null) { StopMove(); return; }
 		}
-
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _currentFoodTarget.transform.position;
+		MoveTo(_currentFoodTarget.transform.position);
 	}
 
 	private void TickEat(float deltaTime)
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-
+		StopMove();
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				return;
-			}
+			if (_currentFoodTarget == null) return;
 		}
 
-		float distance = Vector2.Distance(transform.position, _currentFoodTarget.transform.position);
-		if (distance > eatDistance)
-		{
-			return;
-		}
+		if (DistanceTo(_currentFoodTarget.transform) > eatDistance) return;
 
 		Mod_Food targetFood = _currentFoodTarget.GetComponentInChildren<Mod_Food>();
-		if (targetFood == null)
-		{
-			_currentFoodTarget = null;
-			return;
-		}
+		if (targetFood == null) { _currentFoodTarget = null; return; }
 
 		_food.Eat(targetFood);
-
 		if (_currentFoodTarget == null || _currentFoodTarget.itemData == null || _currentFoodTarget.itemData.Stack.Amount <= 0)
 		{
 			_currentFoodTarget = null;
@@ -536,51 +324,30 @@ public partial class AI_Chicken : Module
 
 	private void TickSleep(float deltaTime)
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
+		StopMove();
 		_hp.Heal(deltaTime * sleepRecoverHpPerSecond, item);
 	}
 
 	private void TickMate()
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
+		StopMove();
 	}
 
 	private void TickLayEgg()
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-
-		if (_stateElapsed < layEggDuration)
-		{
-			return;
-		}
-
-		if (_layEggTriggered)
-		{
-			return;
-		}
+		StopMove();
+		if (_stateElapsed < layEggDuration || _layEggTriggered) return;
 
 		SpawnEgg();
 		Data.EggTimer = 0f;
 		_layEggTriggered = true;
 	}
+
 	private void TickFlee()
 	{
-		if (_currentThreat == null)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		Vector3 awayDir = (transform.position - _currentThreat.transform.position).normalized;
-		_fleeTarget = transform.position + awayDir * fleeRunDistance;
-
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _fleeTarget;
+		if (_currentThreat == null) { StopMove(); return; }
+		_fleeTarget = transform.position + (transform.position - _currentThreat.transform.position).normalized * fleeRunDistance;
+		MoveTo(_fleeTarget);
 	}
 	#endregion
 
@@ -592,20 +359,14 @@ public partial class AI_Chicken : Module
 
 		if (_currentState == ChickenState.Flee)
 		{
-			if (threat == null)
-				return false;
-
-			float dist = Vector2.Distance(transform.position, threat.transform.position);
+			if (threat == null) return false;
 			_currentThreat = threat;
-			return dist < fleeSafeDistance;
+			return DistanceTo(threat.transform) < fleeSafeDistance;
 		}
 
-		if (threat == null)
-			return false;
-
-		float distance = Vector2.Distance(transform.position, threat.transform.position);
-		if (distance > fleeTriggerDistance)
-			return false;
+		if (threat == null) return false;
+		float distance = DistanceTo(threat.transform);
+		if (distance > fleeTriggerDistance) return false;
 
 		_currentThreat = threat;
 		return true;
@@ -616,39 +377,23 @@ public partial class AI_Chicken : Module
 		float hungerRate = _food.Data.nutrition.GetFoodRate();
 		if (_currentState == ChickenState.Eat)
 		{
-			if (hungerRate >= eatExitHungerRate)
-			{
-				return false;
-			}
-
+			if (hungerRate >= eatExitHungerRate) return false;
 			if (_currentFoodTarget == null)
 			{
 				_currentFoodTarget = FindClosestEdibleItem();
-				if (_currentFoodTarget == null)
-				{
-					return false;
-				}
+				if (_currentFoodTarget == null) return false;
 			}
-
-			return Vector2.Distance(transform.position, _currentFoodTarget.transform.position) <= eatDistance;
+			return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
 		}
 
-		if (hungerRate > eatEnterHungerRate)
-		{
-			return false;
-		}
-
+		if (hungerRate > eatEnterHungerRate) return false;
 		if (_currentFoodTarget == null)
 		{
 			TryRefreshDetector();
 			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				return false;
-			}
+			if (_currentFoodTarget == null) return false;
 		}
-
-		return Vector2.Distance(transform.position, _currentFoodTarget.transform.position) <= eatDistance;
+		return DistanceTo(_currentFoodTarget.transform) <= eatDistance;
 	}
 
 	private bool ShouldSleep()
@@ -657,51 +402,16 @@ public partial class AI_Chicken : Module
 
 		if (_currentState == ChickenState.Sleep)
 		{
-			if (_stateElapsed < sleepDuration)
-			{
-				return true;
-			}
-
+			if (_stateElapsed < sleepDuration) return true;
 			return IsNightTime() || hpRate < sleepExitHpRate;
 		}
 
-		if (_sleepCooldownTimer > 0f)
-		{
-			return false;
-		}
-
+		if (_sleepCooldownTimer > 0f) return false;
 		return IsNightTime() || hpRate < sleepEnterHpRate;
-	}
-
-	private bool ShouldForage()
-	{
-       
-		float hungerRate = _food.Data.nutrition.GetFoodRate();
-		if (hungerRate > eatEnterHungerRate)
-		{
-			return false;
-		}
-
-		if (_currentFoodTarget == null)
-		{
-			TryRefreshDetector();
-			_currentFoodTarget = FindClosestEdibleItem();
-			if (_currentFoodTarget == null)
-			{
-				return false;
-			}
-		}
-
-		return Vector2.Distance(transform.position, _currentFoodTarget.transform.position) > eatDistance;
 	}
 
 	private bool ShouldMate()
 	{
-		if (_currentState == ChickenState.Mate)
-		{
-			return _mateRequestRemain > 0f;
-		}
-
 		return _mateRequestRemain > 0f;
 	}
 
@@ -711,118 +421,25 @@ public partial class AI_Chicken : Module
 		{
 			return !_layEggTriggered;
 		}
-
 		return Data.EggTimer >= layEggInterval;
 	}
 
-	private bool ShouldMove()
+	private bool ShouldForage()
 	{
-		if (_currentState == ChickenState.Move)
-		{
-			return _hasWanderTarget;
-		}
+		float hungerRate = _food.Data.nutrition.GetFoodRate();
+		if (hungerRate > eatEnterHungerRate) return false;
 
-		if (!enableIdleWander)
+		if (_currentFoodTarget == null)
 		{
-			return false;
+			TryRefreshDetector();
+			_currentFoodTarget = FindClosestEdibleItem();
+			if (_currentFoodTarget == null) return false;
 		}
-
-		if (_idleRemainTimer > 0f)
-		{
-			return false;
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			return false;
-		}
-
-		return true;
+		return DistanceTo(_currentFoodTarget.transform) > eatDistance;
 	}
 	#endregion
 
-	#region Helpers
-	private void TryRefreshDetector()
-	{
-		if (_detectorRefreshTimer < detectorRefreshInterval)
-		{
-			return;
-		}
-
-		_detectorRefreshTimer = 0f;
-		_detector.Update_Detector();
-	}
-
-	private void TickIdleWander(float deltaTime)
-	{
-		if (!enableIdleWander)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		if (_hasWanderTarget)
-		{
-			float distance = Vector2.Distance(transform.position, _wanderTarget);
-			if (distance <= wanderStopDistance || _mover.HasReachedTarget)
-			{
-				_hasWanderTarget = false;
-				_wanderWaitTimer = GetWanderPauseDuration();
-				_mover.CanMove = false;
-				_mover.HasReachedTarget = true;
-				return;
-			}
-
-			_mover.CanMove = true;
-			_mover.HasReachedTarget = false;
-			_mover.TargetPosition = _wanderTarget;
-			return;
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		Vector2 offset = UnityEngine.Random.insideUnitCircle * wanderRadius;
-		offset = AI_WanderUtility.PickSaferOffset(
-			transform.position,
-			offset,
-			wanderRadius,
-			wanderAvoidHighPenalty,
-			wanderSampleCount,
-			(uint)Mathf.Max(0, wanderDangerPenalty),
-			wanderPenaltyWeight);
-		_wanderTarget = new Vector3(transform.position.x + offset.x, transform.position.y + offset.y, transform.position.z);
-		_hasWanderTarget = true;
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _wanderTarget;
-	}
-
-	private float GetWanderPauseDuration()
-	{
-		if (wanderPauseMax <= wanderPauseMin)
-		{
-			return Mathf.Max(0f, wanderPauseMin);
-		}
-
-		return UnityEngine.Random.Range(Mathf.Max(0f, wanderPauseMin), Mathf.Max(0f, wanderPauseMax));
-	}
-
-	private float GetIdleDuration()
-	{
-		if (idleMaxDuration <= idleMinDuration)
-		{
-			return Mathf.Max(0f, idleMinDuration);
-		}
-
-		return UnityEngine.Random.Range(Mathf.Max(0f, idleMinDuration), Mathf.Max(0f, idleMaxDuration));
-	}
-
+	#region Helpers - Chicken 特有
 	private Item FindClosestThreat()
 	{
 		List<Item> threats = _detector.GetItemsByTags(threatTags);
@@ -836,8 +453,7 @@ public partial class AI_Chicken : Module
 			}
 		}
 
-		if (threats.Count == 0)
-			return null;
+		if (threats.Count == 0) return null;
 
 		return threats
 			.Where(x => x != null)
@@ -848,26 +464,12 @@ public partial class AI_Chicken : Module
 	private Item FindClosestEdibleItem()
 	{
 		List<Item> items = _detector.GetItemsByTags(edibleTags);
-		if (items.Count == 0)
-		{
-			return null;
-		}
+		if (items.Count == 0) return null;
 
 		return items
 			.Where(x => x != null)
 			.OrderBy(x => (x.transform.position - transform.position).sqrMagnitude)
 			.FirstOrDefault();
-	}
-
-	private void RecoverNutrition(float deltaTime)
-	{
-		Nutrition nutrition = _food.Data.nutrition;
-
-		nutrition.Carbohydrates = Mathf.Min(nutrition.Max_Carbohydrates, nutrition.Carbohydrates + deltaTime * 10f);
-		nutrition.Fat = Mathf.Min(nutrition.Max_Fat, nutrition.Fat + deltaTime * 6f);
-		nutrition.Protein = Mathf.Min(nutrition.Max_Protein, nutrition.Protein + deltaTime * 8f);
-		nutrition.Water = Mathf.Min(nutrition.Max_Water, nutrition.Water + deltaTime * 10f);
-		nutrition.Vitamins = Mathf.Min(nutrition.Max_Vitamins, nutrition.Vitamins + deltaTime * 2f);
 	}
 
 	private void SpawnEgg()
@@ -884,109 +486,50 @@ public partial class AI_Chicken : Module
 
 	private bool IsDayTime()
 	{
-		if (DayTimeSystem.Instance == null)
-		{
-			return true;
-		}
+		if (DayTimeSystem.Instance == null) return true;
 
 		string sceneName = gameObject.scene.name;
-		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
-		{
-			return true;
-		}
+		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData)) return true;
 
 		float dayLength = Mathf.Max(1f, timeData.DayLength);
 		float normalized = Mathf.Repeat(DayTimeSystem.Instance.GetCurrentTime(sceneName), dayLength) / dayLength;
 		return normalized >= dayStartRatio && normalized <= dayEndRatio;
 	}
 
-	private bool IsNightTime()
-	{
-		return !IsDayTime();
-	}
+	private bool IsNightTime() => !IsDayTime();
+	#endregion
 
-	private float GetHpRate()
-	{
-		if (_hp.MaxHp <= 0f)
-		{
-			Debug.LogError($"[{nameof(AI_Chicken)}] MaxHp 小于等于 0，无法计算血量百分比。目标物体: {name}", this);
-			return 0f;
-		}
-
-		return _hp.Hp / _hp.MaxHp;
-	}
-
-	private string GetAnimationNameForState(ChickenState state)
+	#region Animation Mapping
+	protected override string GetAnimationNameForState(ChickenState state)
 	{
 		switch (state)
 		{
-			case ChickenState.Idle:
-				return animIdle;
-			case ChickenState.Move:
-				return animMove;
-			case ChickenState.Forage:
-				return animForage;
-			case ChickenState.Eat:
-				return animEat;
-			case ChickenState.Sleep:
-				return animSleep;
-			case ChickenState.Mate:
-				return animMate;
-			case ChickenState.LayEgg:
-				return animLayEgg;
-			case ChickenState.Flee:
-				return animFlee;
-			default:
-				throw new ArgumentOutOfRangeException(nameof(state), state, null);
+			case ChickenState.Idle:   return animIdle;
+			case ChickenState.Move:   return animMove;
+			case ChickenState.Forage: return animForage;
+			case ChickenState.Eat:    return animEat;
+			case ChickenState.Sleep:  return animSleep;
+			case ChickenState.Mate:   return animMate;
+			case ChickenState.LayEgg: return animLayEgg;
+			case ChickenState.Flee:   return animFlee;
+			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
 		}
 	}
 
-	private string GetStateTextCN(ChickenState state)
+	protected override string GetStateTextCN(ChickenState state)
 	{
 		switch (state)
 		{
-			case ChickenState.Idle:
-				return "待机";
-			case ChickenState.Move:
-				return "闲逛";
-			case ChickenState.Forage:
-				return "觅食";
-			case ChickenState.Eat:
-				return "吃饭";
-			case ChickenState.Sleep:
-				return "睡觉";
-			case ChickenState.Mate:
-				return "交配";
-			case ChickenState.LayEgg:
-				return "下蛋";
-			case ChickenState.Flee:
-				return "逃跑";
-			default:
-				throw new ArgumentOutOfRangeException(nameof(state), state, null);
+			case ChickenState.Idle:   return "待机";
+			case ChickenState.Move:   return "闲逛";
+			case ChickenState.Forage: return "觅食";
+			case ChickenState.Eat:    return "吃饭";
+			case ChickenState.Sleep:  return "睡觉";
+			case ChickenState.Mate:   return "交配";
+			case ChickenState.LayEgg: return "下蛋";
+			case ChickenState.Flee:   return "逃跑";
+			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
 		}
-	}
-
-	private void PlayStateAnimation(ChickenState state, bool force = false)
-	{
-		if (_animator == null)
-		{
-			return;
-		}
-
-		string animationName = GetAnimationNameForState(state);
-		if (string.IsNullOrEmpty(animationName))
-		{
-			Debug.LogError($"[{nameof(AI_Chicken)}] 状态 {state} 未配置动画名。目标物体: {name}", this);
-			return;
-		}
-
-		if (!force && _lastPlayedAnimation == animationName)
-		{
-			return;
-		}
-
-		_animator.PlayAnimation(animationName);
-		_lastPlayedAnimation = animationName;
 	}
 	#endregion
 }

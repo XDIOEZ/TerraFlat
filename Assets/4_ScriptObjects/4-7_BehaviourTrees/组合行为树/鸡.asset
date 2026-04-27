@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-9108353916243057861
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer(Clone)
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: b175fa56e442a0346b88625d277f41de
+  position: {x: 1018.3999, y: 1413.6}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Move
+  time: 0
+  playType: 2
+  Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
+  autoGetAnimationLength: 0
+  waitForAnimationComplete: 1
 --- !u!114 &-9076180794578960652
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -316,7 +347,7 @@ MonoBehaviour:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
     target: {fileID: 0}
-  isCollapsed: 1
+  isCollapsed: 0
   description: 
   drawGizmos: 0
   child: {fileID: -9076180794578960652}
@@ -1047,7 +1078,7 @@ MonoBehaviour:
   state: 0
   started: 1
   guid: 1c014978be20c0340b8ca2ff3cb1005f
-  position: {x: -1295.2002, y: 1583.2001}
+  position: {x: -1485.0721, y: 1583.1998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -1868,7 +1899,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 5ad7cdfad704a3747a2c4417a0a3a71e
-  position: {x: 852.7998, y: 2728.7998}
+  position: {x: 701.6, y: 2739.9998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2120,7 +2151,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: ab1a7c2ade1b851409e80e0c393805f0
-  position: {x: 1003.2002, y: 2729.6}
+  position: {x: 851.99994, y: 2740.7998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -2859,6 +2890,8 @@ MonoBehaviour:
   - {fileID: -7334004479677630527}
   - {fileID: 2305473633506156150}
   - {fileID: -5232392605241463440}
+  - {fileID: 6462572096335755110}
+  - {fileID: 3163826672838606405}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -3956,6 +3989,37 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   children: []
+--- !u!114 &3163826672838606405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: 82e4751c205d27543a423e0621fd28a8
+  position: {x: -997.6, y: 1581.5997}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
+  autoGetAnimationLength: 0
+  waitForAnimationComplete: 1
 --- !u!114 &3195113844324407009
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3971,7 +4035,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 8345bfa094243594597133c67d8cba81
-  position: {x: -975.2002, y: 1582.4}
+  position: {x: -1165.0721, y: 1582.3998}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -4167,6 +4231,7 @@ MonoBehaviour:
   children:
   - {fileID: -3020730430072876194}
   - {fileID: -2125460349655136529}
+  - {fileID: 6462572096335755110}
   - {fileID: 6285257267111690994}
   - {fileID: 722161616346368145}
 --- !u!114 &3788801848114765792
@@ -5187,7 +5252,7 @@ MonoBehaviour:
   state: 0
   started: 0
   guid: 6f4a3453815cd3141890dfaaf20dcb70
-  position: {x: -1125.6001, y: 1581.6}
+  position: {x: -1315.4722, y: 1581.5997}
   blackboard:
     TargetPosition: {x: 0, y: 0, z: 0}
     BTUser: {fileID: 0}
@@ -5291,6 +5356,37 @@ MonoBehaviour:
   description: 
   drawGizmos: 0
   IsRunState: 0
+--- !u!114 &6462572096335755110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286b7c6ed88d94d419feb6920d7474f0, type: 3}
+  m_Name: AnimationPlayer
+  m_EditorClassIdentifier: 
+  state: 0
+  started: 0
+  guid: eb18d86fc26caf849a63d97aede2d3d2
+  position: {x: 1002.4, y: 2740.7998}
+  blackboard:
+    TargetPosition: {x: 0, y: 0, z: 0}
+    BTUser: {fileID: 0}
+    target: {fileID: 0}
+  isCollapsed: 0
+  description: 
+  drawGizmos: 0
+  animationName: Move
+  time: 0
+  playType: 0
+  Setbool: 1
+  layerIndex: 0
+  PlayWeight: 1
+  autoGetAnimationLength: 0
+  waitForAnimationComplete: 1
 --- !u!114 &6503405088610219470
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5957,6 +6053,7 @@ MonoBehaviour:
   - {fileID: -5203047082166904026}
   - {fileID: 6244768250013264156}
   - {fileID: 3195113844324407009}
+  - {fileID: 3163826672838606405}
   - {fileID: 8989517523720515445}
   - {fileID: 8264724959482460158}
 --- !u!114 &8255631480802371185

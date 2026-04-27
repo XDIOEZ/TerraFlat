@@ -20,7 +20,11 @@ public enum WolfState
     Flee
 }
 
-public partial class AI_Wolf : Module
+/// <summary>
+/// 狼 AI：支持群体协作（呼叫同伴、集火）、攻击伤害窗口、逃跑/避让等行为。
+/// 状态优先级：逃跑 > 攻击 > 追击 > 避让 > 警觉 > 移动 > 待机
+/// </summary>
+public partial class AI_Wolf : AI_Base<WolfState>
 {
 #region SaveData
 	[Serializable]
@@ -33,26 +37,10 @@ public partial class AI_Wolf : Module
 #endregion
 
 #region ModuleData
-	public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
-	public override ModuleData _Data
-	{
-		get => ModData;
-		set => ModData = (Ex_ModData_MemoryPackable)value;
-	}
-
 	public AI_WolfSaveData Data = new AI_WolfSaveData();
 #endregion
 
-#region RuntimeState
-	[SerializeField, ReadOnly]
-	private WolfState _currentState = WolfState.Idle;
-
-	[SerializeField, ReadOnly]
-	private float _stateElapsed;
-
-	[SerializeField, ReadOnly]
-	private bool _isReady;
-
+#region RuntimeState - Wolf 特有
 	[SerializeField, ReadOnly]
 	private Item _currentThreat;
 
@@ -65,25 +53,12 @@ public partial class AI_Wolf : Module
 	[SerializeField, ReadOnly]
 	private AI_Wolf _alphaWolf;
 
-	private float _detectorRefreshTimer;
 	private float _alertTimer;
 	private float _packAssistTimer;
 	private float _packCallCooldownTimer;
-	private float _idleRemainTimer;
-	private float _wanderWaitTimer;
-	private Vector3 _wanderTarget;
 	private Vector3 _packCenter;
-	private bool _hasWanderTarget;
 	private bool _hasPackMate;
-	private string _lastPlayedAnimation;
-	private static GUIStyle _debugStateStyle;
-#endregion
-
-#region CachedModules
-	[SerializeField, ReadOnly] private Mover_AI _mover;
-	[SerializeField, ReadOnly] private DamageReceiver _hp;
-	[SerializeField, ReadOnly] private Mod_ItemDetector _detector;
-	[SerializeField, ReadOnly] private Mod_AnimatorController _animator;
+	private AI_AttackController _attack = new AI_AttackController();
 #endregion
 
 #region Config
@@ -117,6 +92,11 @@ public partial class AI_Wolf : Module
 	public float attackTriggerDistance = 2f;
 	[HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("追击放弃"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float chaseLossDistance = 22f;
+
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
+	public float attackCooldown = 2f;
+	[HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("伤害窗口"), SuffixLabel("秒", true), MinValue(0.01f)]
+	public float attackDamageWindow = 0.2f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("警觉维持时长"), SuffixLabel("秒", true), MinValue(0f)]
 	public float alertKeepDuration = 2f;
@@ -178,43 +158,39 @@ public partial class AI_Wolf : Module
 	public string animFlee = "Run";
 #endregion
 
-#region Events
-	public UltEvent<WolfState, WolfState> OnStateChanged = new UltEvent<WolfState, WolfState>();
+#region Base Overrides - Config Accessors
+	protected override AI_WanderConfig WanderConfig => new AI_WanderConfig
+	{
+		enabled = enableWander,
+		radius = wanderRadius,
+		stopDistance = wanderStopDistance,
+		pauseMin = wanderPauseMin,
+		pauseMax = wanderPauseMax,
+		avoidHighPenalty = wanderAvoidHighPenalty,
+		dangerPenalty = wanderDangerPenalty,
+		sampleCount = wanderSampleCount,
+		penaltyWeight = wanderPenaltyWeight
+	};
+
+	protected override AI_IdleConfig IdleConfig => new AI_IdleConfig
+	{
+		minDuration = idleMinDuration,
+		maxDuration = idleMaxDuration
+	};
+
+	protected override float DetectorRefreshInterval => detectorRefreshInterval;
+	protected override bool DebugLogEnabled => debugLog;
+	protected override bool IsMoveState(WolfState state) => state == WolfState.Move;
+	protected override bool IsIdleState(WolfState state) => state == WolfState.Idle;
 #endregion
 
 #region Lifecycle
-	public override void Awake()
-	{
-		if (string.IsNullOrEmpty(_Data.ID))
-		{
-			_Data.ID = ModText.AI;
-		}
-	}
-
 	public override void Load()
 	{
 		ModData.ReadData(ref Data);
-
 		_currentState = Data.State;
-		_stateElapsed = 0f;
-		_detectorRefreshTimer = 0f;
-		_alertTimer = 0f;
-		_packAssistTimer = 0f;
-		_packCallCooldownTimer = 0f;
 		_idleRemainTimer = GetIdleDuration();
-		_wanderWaitTimer = 0f;
-		_hasWanderTarget = false;
-		_hasPackMate = false;
-		_isAlphaWolf = true;
-		_alphaWolf = this;
-		_packCenter = transform.position;
-		_currentThreat = null;
-		_lastPlayedAnimation = null;
-
-		BindModules();
-		TryRefreshDetector();
-		RefreshPackStatus();
-		PlayStateAnimation(_currentState, true);
+		InitializeAI();
 	}
 
 	public override void Save()
@@ -222,145 +198,98 @@ public partial class AI_Wolf : Module
 		Data.State = _currentState;
 		ModData.WriteData(Data);
 	}
+#endregion
 
-	public override void ModUpdate(float deltaTime)
+#region Base Overrides - Hooks
+	protected override void OnResetRuntimeState()
 	{
-		if (!_isReady)
+		_alertTimer = 0f;
+		_packAssistTimer = 0f;
+		_packCallCooldownTimer = 0f;
+		_packCount = 1;
+		_hasPackMate = false;
+		_isAlphaWolf = true;
+		_alphaWolf = this;
+		_packCenter = transform.position;
+		_currentThreat = null;
+		_attack.Reset();
+		_attack.Cooldown = attackCooldown;
+		_attack.DamageWindow = attackDamageWindow;
+	}
+
+	protected override void OnBindExtraModules()
+	{
+		_attack.Bind(item);
+	}
+
+	protected override void OnValidateExtraModules()
+	{
+		if (!_attack.HasDamageMods)
 		{
-			return;
+			Debug.LogWarning($"[{nameof(AI_Wolf)}] 未找到 Mod_Damage 组件，攻击不会造成伤害。目标物体: {name}", this);
 		}
+	}
 
-		_stateElapsed += deltaTime;
-		_detectorRefreshTimer += deltaTime;
+	protected override void UpdateExtraTimers(float deltaTime)
+	{
+		_alertTimer = DecrementTimer(_alertTimer, deltaTime);
+		_packAssistTimer = DecrementTimer(_packAssistTimer, deltaTime);
+		_packCallCooldownTimer = DecrementTimer(_packCallCooldownTimer, deltaTime);
+		_attack.Update(deltaTime);
+	}
 
-		if (_alertTimer > 0f)
-		{
-			_alertTimer = Mathf.Max(0f, _alertTimer - deltaTime);
-		}
-
-		if (_packAssistTimer > 0f)
-		{
-			_packAssistTimer = Mathf.Max(0f, _packAssistTimer - deltaTime);
-		}
-
-		if (_packCallCooldownTimer > 0f)
-		{
-			_packCallCooldownTimer = Mathf.Max(0f, _packCallCooldownTimer - deltaTime);
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			_wanderWaitTimer = Mathf.Max(0f, _wanderWaitTimer - deltaTime);
-		}
-
-		TryRefreshDetector();
+	protected override void OnPreEvaluate()
+	{
 		RefreshPackStatus();
 		RefreshThreatTarget();
-
-		AI_StateMachineRunner.EvaluateAndTick(
-			_currentState,
-			EvaluateNextState,
-			SwitchState,
-			TickCurrentState,
-			deltaTime);
 	}
 
-	private void OnGUI()
+	protected override void OnBeforeSwitchState(WolfState previous, WolfState next)
 	{
-		if (!debugLog)
+		// 离开战斗相关状态时，若支援计时器已过期则清除威胁目标
+		if (next != WolfState.Alert && next != WolfState.Chase
+		    && next != WolfState.Attack && next != WolfState.Avoid && next != WolfState.Flee)
 		{
-			return;
-		}
-
-		if (!Application.isPlaying)
-		{
-			return;
-		}
-
-		if (Camera.main == null)
-		{
-			return;
-		}
-
-		Vector3 worldPos = transform.position + new Vector3(0f, 1.4f, 0f);
-		Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
-		if (screenPos.z <= 0f)
-		{
-			return;
-		}
-
-		if (_debugStateStyle == null)
-		{
-			_debugStateStyle = new GUIStyle(GUI.skin.box)
+			if (_packAssistTimer <= 0f)
 			{
-				alignment = TextAnchor.MiddleCenter,
-				fontSize = 16,
-				normal = { textColor = Color.white }
-			};
-		}
-
-		string roleText = _isAlphaWolf ? "头狼" : "跟随";
-		string text = $"状态: {GetStateTextCN(_currentState)} | 狼群数: {_packCount} | 角色: {roleText}";
-		Vector2 size = _debugStateStyle.CalcSize(new GUIContent(text));
-		float width = Mathf.Max(220f, size.x + 14f);
-		float height = 28f;
-		Rect rect = new Rect(
-			screenPos.x - width * 0.5f,
-			Screen.height - screenPos.y - height * 0.5f,
-			width,
-			height);
-
-		GUI.Box(rect, text, _debugStateStyle);
-	}
-#if UNITY_EDITOR
-	private void OnDrawGizmosSelected()
-	{
-		Vector3 center = transform.position;
-
-		DrawRangeWithLabel(center, attackTriggerDistance, new Color(1f, 0.2f, 0.2f, 1f), "攻击距离 attackTriggerDistance", 8f);
-		DrawRangeWithLabel(center, wanderRadius, new Color(0.3f, 1f, 0.5f, 1f), "闲逛半径 wanderRadius", 52f);
-		DrawRangeWithLabel(center, avoidRunDistance, new Color(0.2f, 0.6f, 1f, 1f), "避让距离 avoidRunDistance", 96f);
-		DrawRangeWithLabel(center, alertDetectDistance, new Color(1f, 0.6f, 0.1f, 1f), "警觉距离 alertDetectDistance", 142f);
-		DrawRangeWithLabel(center, chaseTriggerDistance, new Color(1f, 0.9f, 0.2f, 1f), "追击触发 chaseTriggerDistance", 196f);
-		DrawRangeWithLabel(center, fleeRunDistance, new Color(0.5f, 0.8f, 1f, 1f), "逃跑距离 fleeRunDistance", 236f);
-		DrawRangeWithLabel(center, allyCallDistance, new Color(0.2f, 0.9f, 0.9f, 1f), "呼叫范围 allyCallDistance", 284f);
-		DrawRangeWithLabel(center, chaseLossDistance, new Color(0.9f, 0.3f, 0.9f, 1f), "追击放弃 chaseLossDistance", 328f);
-
-		if (_hasPackMate)
-		{
-			Gizmos.color = new Color(0.2f, 1f, 0.8f, 0.8f);
-			Gizmos.DrawLine(center, _packCenter);
-			Handles.Label(_packCenter + Vector3.up * 0.25f, "狼群中心 packCenter");
-
-			if (_alphaWolf != null)
-			{
-				Vector3 alphaPos = _alphaWolf.transform.position;
-				Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.85f);
-				Gizmos.DrawLine(center, alphaPos);
-				Handles.Label(alphaPos + Vector3.up * 0.42f, "头狼 alphaWolf");
+				_currentThreat = null;
 			}
 		}
+
+		// 离开攻击状态：停止伤害窗口，进入冷却
+		if (previous == WolfState.Attack && next != WolfState.Attack)
+		{
+			_attack.OnExitAttackState();
+		}
+
+		// 进入攻击状态：重置窗口触发标记
+		if (next == WolfState.Attack)
+		{
+			_attack.OnEnterAttackState();
+		}
 	}
 
-	private void DrawRangeWithLabel(Vector3 center, float radius, Color color, string labelText, float angleDeg)
+	/// <summary>狼群聚拢修正：非头狼向头狼/群中心偏移</summary>
+	protected override void ApplyWanderOffsetModifier(ref Vector2 offset)
 	{
-		if (radius <= 0f)
+		if (!_hasPackMate || _isAlphaWolf || wanderCohesionWeight <= 0f)
 		{
 			return;
 		}
 
-		Gizmos.color = color;
-		Gizmos.DrawWireSphere(center, radius);
-
-		float rad = angleDeg * Mathf.Deg2Rad;
-		Vector3 dir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f);
-		Vector3 edge = center + dir * radius;
-		Vector3 labelPos = edge + dir * 0.28f;
-
-		Handles.color = color;
-		Handles.Label(labelPos, labelText);
+		Vector3 cohesionAnchor = _alphaWolf != null ? _alphaWolf.transform.position : _packCenter;
+		Vector2 toPack = (Vector2)(cohesionAnchor - transform.position);
+		if (toPack.sqrMagnitude > 0.0001f)
+		{
+			offset += toPack.normalized * (wanderRadius * wanderCohesionWeight);
+		}
 	}
-#endif
+
+	protected override string GetDebugExtraInfo()
+	{
+		string roleText = _isAlphaWolf ? "头狼" : "跟随";
+		return $" | 狼群数: {_packCount} | 角色: {roleText}";
+	}
 #endregion
 
 #region PublicAPI
@@ -406,397 +335,155 @@ public partial class AI_Wolf : Module
 	}
 #endregion
 
-#region Init
-	private void BindModules()
-	{
-		_isReady = true;
-
-		item.itemMods.GetMod_ByID(ModText.Mover, out _mover);
-		if (_mover == null)
-		{
-			item.itemMods.GetMod_ByID(ModText.Mover_AI, out _mover);
-		}
-
-		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);
-		item.itemMods.GetMod_ByID(ModText.Hp, out _hp);
-		item.GetMod(out _animator);
-
-		if (_mover == null)
-		{
-			Debug.LogError($"[{nameof(AI_Wolf)}] 缺少移动模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_detector == null)
-		{
-			Debug.LogError($"[{nameof(AI_Wolf)}] 缺少检测模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_hp == null)
-		{
-			Debug.LogError($"[{nameof(AI_Wolf)}] 缺少生命值模块，AI 已禁用。目标物体: {name}", this);
-			_isReady = false;
-		}
-
-		if (_animator == null)
-		{
-			Debug.LogWarning($"[{nameof(AI_Wolf)}] 未找到动画模块，将跳过状态动画同步。目标物体: {name}", this);
-		}
-	}
-#endregion
-
 #region StateMachine
-	private WolfState EvaluateNextState()
+	protected override WolfState EvaluateNextState()
 	{
-		if (ShouldFlee())
-		{
-			return WolfState.Flee;
-		}
-
-		if (ShouldAttack())
-		{
-			return WolfState.Attack;
-		}
-
-		if (ShouldChase())
-		{
-			return WolfState.Chase;
-		}
-
-		if (ShouldAvoid())
-		{
-			return WolfState.Avoid;
-		}
-
-		if (ShouldAlert())
-		{
-			return WolfState.Alert;
-		}
-
-		if (ShouldMove())
-		{
-			return WolfState.Move;
-		}
-
+		if (ShouldFlee())     return WolfState.Flee;
+		if (ShouldAttack())   return WolfState.Attack;
+		if (ShouldChase())    return WolfState.Chase;
+		if (ShouldAvoid())    return WolfState.Avoid;
+		if (ShouldAlert())    return WolfState.Alert;
+		if (ShouldMoveBase()) return WolfState.Move;
 		return WolfState.Idle;
 	}
 
-	private void SwitchState(WolfState next)
-	{
-		WolfState previous = _currentState;
-		_currentState = next;
-		_stateElapsed = 0f;
-
-		if (next != WolfState.Move)
-		{
-			_hasWanderTarget = false;
-		}
-
-		if (next == WolfState.Idle)
-		{
-			_idleRemainTimer = GetIdleDuration();
-		}
-
-		if (next != WolfState.Alert && next != WolfState.Chase && next != WolfState.Attack && next != WolfState.Avoid && next != WolfState.Flee)
-		{
-			if (_packAssistTimer <= 0f)
-			{
-				_currentThreat = null;
-			}
-		}
-
-		if (debugLog)
-		{
-			Debug.Log($"[WolfAI] {name} 状态切换: {previous} -> {next} | 狼群数={_packCount}", this);
-		}
-
-		PlayStateAnimation(next);
-		OnStateChanged?.Invoke(previous, next);
-	}
-
-	private void TickCurrentState(float deltaTime)
+	protected override void TickCurrentState(float deltaTime)
 	{
 		switch (_currentState)
 		{
-			case WolfState.Idle:
-				TickIdle(deltaTime);
-				break;
-			case WolfState.Move:
-				TickMove(deltaTime);
-				break;
-			case WolfState.Alert:
-				TickAlert();
-				break;
-			case WolfState.Chase:
-				TickChase();
-				break;
-			case WolfState.Attack:
-				TickAttack();
-				break;
-			case WolfState.Avoid:
-				TickAvoid();
-				break;
-			case WolfState.Flee:
-				TickFlee();
-				break;
-			default:
-				throw new ArgumentOutOfRangeException();
+			case WolfState.Idle:   TickIdle(deltaTime); break;
+			case WolfState.Move:   TickMove(deltaTime); break;
+			case WolfState.Alert:  TickAlert();         break;
+			case WolfState.Chase:  TickChase();         break;
+			case WolfState.Attack: TickAttack();        break;
+			case WolfState.Avoid:  TickAvoid();         break;
+			case WolfState.Flee:   TickFlee();          break;
+			default: throw new ArgumentOutOfRangeException();
 		}
 	}
 #endregion
 
-#region Tick
-	private void TickIdle(float deltaTime)
-	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-		if (_idleRemainTimer > 0f)
-		{
-			_idleRemainTimer = Mathf.Max(0f, _idleRemainTimer - deltaTime);
-		}
-	}
-
-	private void TickMove(float deltaTime)
-	{
-		TickIdleWander(deltaTime);
-	}
-
+#region Tick - Wolf 特有状态
 	private void TickAlert()
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
-
-		if (_currentThreat == null)
-		{
-			return;
-		}
-
-		Vector3 dir = (_currentThreat.transform.position - transform.position).normalized;
-		_mover.TargetPosition = transform.position + dir;
+		StopMove();
+		if (_currentThreat == null) return;
+		FaceTarget(_currentThreat.transform.position);
 	}
 
 	private void TickChase()
 	{
-		if (_currentThreat == null)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
+		if (_currentThreat == null) { StopMove(); return; }
 
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _currentThreat.transform.position;
-
-		if (_packCount >= 2 && _packCallCooldownTimer <= 0f)
-		{
-			CallNearbyWolves(_currentThreat);
-			_packCallCooldownTimer = packCallCooldown;
-		}
+		MoveTo(_currentThreat.transform.position);
+		TryCallNearbyWolves();
 	}
 
 	private void TickAttack()
 	{
 		if (_currentThreat == null)
 		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
+			_attack.StopWindow();
+			StopMove();
 			return;
 		}
 
-		float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
+		float distance = DistanceTo(_currentThreat.transform);
 		if (distance <= attackTriggerDistance)
 		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
+			StopMove();
+			// 冷却结束且未触发窗口 → 发起攻击
+			if (!_attack.IsWindowTriggered && _attack.IsCooldownDone)
+			{
+				_attack.StartWindow(_animator, animAttack);
+			}
 		}
 		else
 		{
-			_mover.CanMove = true;
-			_mover.HasReachedTarget = false;
-			_mover.TargetPosition = _currentThreat.transform.position;
+			_attack.StopWindow();
+			MoveTo(_currentThreat.transform.position);
 		}
 
-		if (_packCount >= 2 && _packCallCooldownTimer <= 0f)
-		{
-			CallNearbyWolves(_currentThreat);
-			_packCallCooldownTimer = packCallCooldown;
-		}
+		TryCallNearbyWolves();
 	}
 
 	private void TickAvoid()
 	{
-		if (_currentThreat == null)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		Vector3 awayDir = (transform.position - _currentThreat.transform.position).normalized;
-		Vector3 target = transform.position + awayDir * avoidRunDistance;
-
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = target;
+		if (_currentThreat == null) { StopMove(); return; }
+		MoveAwayFrom(_currentThreat.transform.position, avoidRunDistance);
 	}
 
 	private void TickFlee()
 	{
-		if (_currentThreat == null)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		Vector3 awayDir = (transform.position - _currentThreat.transform.position).normalized;
-		Vector3 fleeTarget = transform.position + awayDir * fleeRunDistance;
-
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = fleeTarget;
+		if (_currentThreat == null) { StopMove(); return; }
+		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
 	}
 #endregion
 
 #region Conditions
+	/// <summary>逃跑条件：双狼且血量低于阈值</summary>
 	private bool ShouldFlee()
 	{
-		if (_currentThreat == null)
-		{
-			return false;
-		}
-
-		if (_packCount != 2)
-		{
-			return false;
-		}
+		if (_currentThreat == null) return false;
+		if (_packCount != 2) return false;
 
 		float hpRate = GetHpRate();
-		if (_currentState == WolfState.Flee)
-		{
-			return hpRate < fleeSafeHpRate;
-		}
-
-		return hpRate < fleeTriggerHpRate;
+		return _currentState == WolfState.Flee
+			? hpRate < fleeSafeHpRate
+			: hpRate < fleeTriggerHpRate;
 	}
 
+	/// <summary>攻击条件：有威胁目标且距离/群体数满足要求</summary>
 	private bool ShouldAttack()
 	{
-		if (_currentThreat == null)
-		{
-			return false;
-		}
+		if (_currentThreat == null) return false;
+		float distance = DistanceTo(_currentThreat.transform);
 
-		float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
-
-		if (_packCount >= 3)
-		{
-			return distance <= chaseLossDistance;
-		}
-
-		if (_packCount == 2)
-		{
-			return distance <= attackTriggerDistance;
-		}
-
+		// 3+ 狼群：在追击放弃距离内即可攻击
+		if (_packCount >= 3) return distance <= chaseLossDistance;
+		// 双狼：在攻击距离内
+		if (_packCount == 2) return distance <= attackTriggerDistance;
 		return false;
 	}
 
+	/// <summary>追击条件：双狼以上且在追击范围内</summary>
 	private bool ShouldChase()
 	{
-		if (_currentThreat == null)
-		{
-			return false;
-		}
-
-		float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
+		if (_currentThreat == null) return false;
+		float distance = DistanceTo(_currentThreat.transform);
 
 		if (_packCount >= 2)
 		{
-			if (_currentState == WolfState.Chase)
-			{
-				return distance <= chaseLossDistance;
-			}
-
-			return distance <= chaseTriggerDistance;
+			return _currentState == WolfState.Chase
+				? distance <= chaseLossDistance
+				: distance <= chaseTriggerDistance;
 		}
-
 		return false;
 	}
 
+	/// <summary>避让条件：独狼在追击触发范围内</summary>
 	private bool ShouldAvoid()
 	{
-		if (_currentThreat == null)
-		{
-			return false;
-		}
-
-		if (_packCount > 1)
-		{
-			return false;
-		}
-
-		float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
-		return distance <= chaseTriggerDistance;
+		if (_currentThreat == null) return false;
+		if (_packCount > 1) return false;
+		return DistanceTo(_currentThreat.transform) <= chaseTriggerDistance;
 	}
 
+	/// <summary>警觉条件：威胁在警觉距离内，或警觉计时器未过期</summary>
 	private bool ShouldAlert()
 	{
-		if (_currentThreat == null)
-		{
-			return _alertTimer > 0f;
-		}
+		if (_currentThreat == null) return _alertTimer > 0f;
 
-		float distance = Vector2.Distance(transform.position, _currentThreat.transform.position);
-		if (distance <= alertDetectDistance)
+		if (DistanceTo(_currentThreat.transform) <= alertDetectDistance)
 		{
 			_alertTimer = alertKeepDuration;
 			return true;
 		}
-
 		return _alertTimer > 0f;
-	}
-
-	private bool ShouldMove()
-	{
-		if (_currentState == WolfState.Move)
-		{
-			return _hasWanderTarget;
-		}
-
-		if (!enableWander)
-		{
-			return false;
-		}
-
-		if (_idleRemainTimer > 0f)
-		{
-			return false;
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			return false;
-		}
-
-		return true;
 	}
 #endregion
 
-#region Helpers
-	private void TryRefreshDetector()
-	{
-		if (_detectorRefreshTimer < detectorRefreshInterval)
-		{
-			return;
-		}
-
-		_detectorRefreshTimer = 0f;
-		_detector.Update_Detector();
-	}
-
+#region Helpers - Wolf 特有
 	private void RefreshPackStatus()
 	{
 		_packCount = 1;
@@ -805,27 +492,21 @@ public partial class AI_Wolf : Module
 		_alphaWolf = this;
 		_isAlphaWolf = true;
 
-		if (_detector.CurrentItemsInArea == null)
-		{
-			return;
-		}
+		if (_detector.CurrentItemsInArea == null) return;
 
 		int allyCount = 0;
 		Vector3 allyPosSum = Vector3.zero;
-		int alphaPriority = GetAlphaPriority(this);
+		int alphaPriority = GetInstanceID();
 
 		foreach (Item it in _detector.CurrentItemsInArea)
 		{
-			if (!TryGetWolfAlly(it, out AI_Wolf ally))
-			{
-				continue;
-			}
+			if (!TryGetWolfAlly(it, out AI_Wolf ally)) continue;
 
 			_packCount++;
 			allyCount++;
 			allyPosSum += ally.transform.position;
 
-			int allyPriority = GetAlphaPriority(ally);
+			int allyPriority = ally.GetInstanceID();
 			if (allyPriority < alphaPriority)
 			{
 				alphaPriority = allyPriority;
@@ -841,16 +522,6 @@ public partial class AI_Wolf : Module
 		}
 	}
 
-	private int GetAlphaPriority(AI_Wolf wolf)
-	{
-		if (wolf == null)
-		{
-			return int.MaxValue;
-		}
-
-		return wolf.GetInstanceID();
-	}
-
 	private void RefreshThreatTarget()
 	{
 		Item nearestPlayer = FindClosestPlayerThreat();
@@ -861,112 +532,67 @@ public partial class AI_Wolf : Module
 			return;
 		}
 
-		if (_currentThreat == null)
-		{
-			return;
-		}
-
-		if (_packAssistTimer > 0f)
-		{
-			return;
-		}
-
+		if (_currentThreat == null) return;
+		if (_packAssistTimer > 0f) return;
 		_currentThreat = null;
 	}
 
 	private Item FindClosestPlayerThreat()
 	{
 		List<Item> allItems = _detector.CurrentItemsInArea;
-		if (allItems == null || allItems.Count == 0)
-		{
-			return null;
-		}
+		if (allItems == null || allItems.Count == 0) return null;
 
 		Item closest = null;
 		float closestDistance = float.MaxValue;
 
 		foreach (Item it in allItems)
 		{
-			if (it == null)
-			{
-				continue;
-			}
-
-			if (!IsPlayerThreat(it))
-			{
-				continue;
-			}
-
-			float distance = Vector2.Distance(transform.position, it.transform.position);
+			if (it == null || !IsPlayerThreat(it)) continue;
+			float distance = DistanceTo(it.transform);
 			if (distance < closestDistance)
 			{
 				closest = it;
 				closestDistance = distance;
 			}
 		}
-
 		return closest;
 	}
 
 	private bool IsPlayerThreat(Item target)
 	{
-		if (target == null)
-		{
+		if (target == null || target.itemData == null
+		    || target.itemData.Tags == null || target.itemData.Tags.Count == 0)
 			return false;
-		}
 
-		if (target.itemData == null || target.itemData.Tags == null || target.itemData.Tags.Count == 0)
-		{
-			return false;
-		}
-
-		if (playerTags == null || playerTags.Count == 0)
-		{
-			return false;
-		}
+		if (playerTags == null || playerTags.Count == 0) return false;
 
 		foreach (string playerTag in playerTags)
 		{
-			if (string.IsNullOrEmpty(playerTag))
-			{
-				continue;
-			}
-
-			if (target.itemData.Tags.Contains(playerTag))
-			{
+			if (!string.IsNullOrEmpty(playerTag) && target.itemData.Tags.Contains(playerTag))
 				return true;
-			}
 		}
-
 		return false;
+	}
+
+	/// <summary>呼叫附近狼群同伴支援</summary>
+	private void TryCallNearbyWolves()
+	{
+		if (_packCount < 2 || _packCallCooldownTimer > 0f) return;
+		CallNearbyWolves(_currentThreat);
+		_packCallCooldownTimer = packCallCooldown;
 	}
 
 	private void CallNearbyWolves(Item threatSource)
 	{
-		if (threatSource == null)
-		{
-			return;
-		}
+		if (threatSource == null) return;
 
 		List<Item> allItems = _detector.CurrentItemsInArea;
-		if (allItems == null || allItems.Count == 0)
-		{
-			return;
-		}
+		if (allItems == null || allItems.Count == 0) return;
 
 		foreach (Item it in allItems)
 		{
-			if (!TryGetWolfAlly(it, out AI_Wolf ally))
-			{
-				continue;
-			}
-
-			float distance = Vector2.Distance(transform.position, ally.transform.position);
-			if (distance > allyCallDistance)
-			{
-				continue;
-			}
-
+			if (!TryGetWolfAlly(it, out AI_Wolf ally)) continue;
+			if (DistanceTo(ally.transform) > allyCallDistance) continue;
 			ally.ReceivePackCall(threatSource, this);
 		}
 	}
@@ -974,216 +600,103 @@ public partial class AI_Wolf : Module
 	private bool TryGetWolfAlly(Item target, out AI_Wolf ally)
 	{
 		ally = null;
-		if (target == null)
-		{
-			return false;
-		}
-
-		if (target == item)
-		{
-			return false;
-		}
+		if (target == null || target == item) return false;
 
 		ally = target.GetComponentInChildren<AI_Wolf>();
-		if (ally == null || ally == this)
-		{
-			return false;
-		}
+		if (ally == null || ally == this) return false;
 
-		if (wolfTags == null || wolfTags.Count == 0)
-		{
-			return true;
-		}
+		if (wolfTags == null || wolfTags.Count == 0) return true;
 
 		if (target.itemData == null || target.itemData.Tags == null || target.itemData.Tags.Count == 0)
-		{
 			return false;
-		}
 
 		foreach (string wolfTag in wolfTags)
 		{
-			if (string.IsNullOrEmpty(wolfTag))
-			{
-				continue;
-			}
-
-			if (target.itemData.Tags.Contains(wolfTag))
-			{
+			if (!string.IsNullOrEmpty(wolfTag) && target.itemData.Tags.Contains(wolfTag))
 				return true;
-			}
 		}
-
 		return false;
-	}
-
-	private void TickIdleWander(float deltaTime)
-	{
-		if (!enableWander)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		if (_hasWanderTarget)
-		{
-			float distance = Vector2.Distance(transform.position, _wanderTarget);
-			if (distance <= wanderStopDistance || _mover.HasReachedTarget)
-			{
-				_hasWanderTarget = false;
-				_wanderWaitTimer = GetWanderPauseDuration();
-				_mover.CanMove = false;
-				_mover.HasReachedTarget = true;
-				return;
-			}
-
-			_mover.CanMove = true;
-			_mover.HasReachedTarget = false;
-			_mover.TargetPosition = _wanderTarget;
-			return;
-		}
-
-		if (_wanderWaitTimer > 0f)
-		{
-			_mover.CanMove = false;
-			_mover.HasReachedTarget = true;
-			return;
-		}
-
-		Vector2 offset = UnityEngine.Random.insideUnitCircle * wanderRadius;
-		if (_hasPackMate && !_isAlphaWolf && wanderCohesionWeight > 0f)
-		{
-			Vector3 cohesionAnchor = _packCenter;
-			if (_alphaWolf != null)
-			{
-				cohesionAnchor = _alphaWolf.transform.position;
-			}
-
-			Vector2 toPack = (Vector2)(cohesionAnchor - transform.position);
-			if (toPack.sqrMagnitude > 0.0001f)
-			{
-				offset += toPack.normalized * (wanderRadius * wanderCohesionWeight);
-				if (offset.sqrMagnitude > wanderRadius * wanderRadius)
-				{
-					offset = offset.normalized * wanderRadius;
-				}
-			}
-		}
-
-		offset = AI_WanderUtility.PickSaferOffset(
-			transform.position,
-			offset,
-			wanderRadius,
-			wanderAvoidHighPenalty,
-			wanderSampleCount,
-			(uint)Mathf.Max(0, wanderDangerPenalty),
-			wanderPenaltyWeight);
-		_wanderTarget = new Vector3(transform.position.x + offset.x, transform.position.y + offset.y, transform.position.z);
-		_hasWanderTarget = true;
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = _wanderTarget;
-	}
-
-	private float GetWanderPauseDuration()
-	{
-		if (wanderPauseMax <= wanderPauseMin)
-		{
-			return Mathf.Max(0f, wanderPauseMin);
-		}
-
-		return UnityEngine.Random.Range(Mathf.Max(0f, wanderPauseMin), Mathf.Max(0f, wanderPauseMax));
-	}
-
-	private float GetIdleDuration()
-	{
-		if (idleMaxDuration <= idleMinDuration)
-		{
-			return Mathf.Max(0f, idleMinDuration);
-		}
-
-		return UnityEngine.Random.Range(Mathf.Max(0f, idleMinDuration), Mathf.Max(0f, idleMaxDuration));
-	}
-
-	private float GetHpRate()
-	{
-		if (_hp.MaxHp <= 0f)
-		{
-			Debug.LogError($"[{nameof(AI_Wolf)}] MaxHp 小于等于 0，无法计算血量百分比。目标物体: {name}", this);
-			return 0f;
-		}
-
-		return _hp.Hp / _hp.MaxHp;
-	}
-
-	private string GetAnimationNameForState(WolfState state)
-	{
-		switch (state)
-		{
-			case WolfState.Idle:
-				return animIdle;
-			case WolfState.Move:
-				return animMove;
-			case WolfState.Alert:
-				return animAlert;
-			case WolfState.Chase:
-				return animChase;
-			case WolfState.Attack:
-				return animAttack;
-			case WolfState.Avoid:
-				return animAvoid;
-			case WolfState.Flee:
-				return animFlee;
-			default:
-				throw new ArgumentOutOfRangeException(nameof(state), state, null);
-		}
-	}
-
-	private string GetStateTextCN(WolfState state)
-	{
-		switch (state)
-		{
-			case WolfState.Idle:
-				return "待机";
-			case WolfState.Move:
-				return "闲逛";
-			case WolfState.Alert:
-				return "警觉";
-			case WolfState.Chase:
-				return "追击";
-			case WolfState.Attack:
-				return "攻击";
-			case WolfState.Avoid:
-				return "避让";
-			case WolfState.Flee:
-				return "逃跑";
-			default:
-				throw new ArgumentOutOfRangeException(nameof(state), state, null);
-		}
-	}
-
-	private void PlayStateAnimation(WolfState state, bool force = false)
-	{
-		if (_animator == null)
-		{
-			return;
-		}
-
-		string animationName = GetAnimationNameForState(state);
-		if (string.IsNullOrEmpty(animationName))
-		{
-			Debug.LogError($"[{nameof(AI_Wolf)}] 状态 {state} 未配置动画名。目标物体: {name}", this);
-			return;
-		}
-
-		if (!force && _lastPlayedAnimation == animationName)
-		{
-			return;
-		}
-
-		_animator.PlayAnimation(animationName);
-		_lastPlayedAnimation = animationName;
 	}
 #endregion
 
+#region Animation Mapping
+	protected override string GetAnimationNameForState(WolfState state)
+	{
+		switch (state)
+		{
+			case WolfState.Idle:   return animIdle;
+			case WolfState.Move:   return animMove;
+			case WolfState.Alert:  return animAlert;
+			case WolfState.Chase:  return animChase;
+			case WolfState.Attack: return animAttack;
+			case WolfState.Avoid:  return animAvoid;
+			case WolfState.Flee:   return animFlee;
+			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
+		}
+	}
+
+	protected override string GetStateTextCN(WolfState state)
+	{
+		switch (state)
+		{
+			case WolfState.Idle:   return "待机";
+			case WolfState.Move:   return "闲逛";
+			case WolfState.Alert:  return "警觉";
+			case WolfState.Chase:  return "追击";
+			case WolfState.Attack: return "攻击";
+			case WolfState.Avoid:  return "避让";
+			case WolfState.Flee:   return "逃跑";
+			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
+		}
+	}
+#endregion
+
+#region Debug Gizmos
+#if UNITY_EDITOR
+	private void OnDrawGizmosSelected()
+	{
+		Vector3 center = transform.position;
+
+		DrawRangeWithLabel(center, attackTriggerDistance, new Color(1f, 0.2f, 0.2f, 1f), "攻击距离 attackTriggerDistance", 8f);
+		DrawRangeWithLabel(center, wanderRadius, new Color(0.3f, 1f, 0.5f, 1f), "闲逛半径 wanderRadius", 52f);
+		DrawRangeWithLabel(center, avoidRunDistance, new Color(0.2f, 0.6f, 1f, 1f), "避让距离 avoidRunDistance", 96f);
+		DrawRangeWithLabel(center, alertDetectDistance, new Color(1f, 0.6f, 0.1f, 1f), "警觉距离 alertDetectDistance", 142f);
+		DrawRangeWithLabel(center, chaseTriggerDistance, new Color(1f, 0.9f, 0.2f, 1f), "追击触发 chaseTriggerDistance", 196f);
+		DrawRangeWithLabel(center, fleeRunDistance, new Color(0.5f, 0.8f, 1f, 1f), "逃跑距离 fleeRunDistance", 236f);
+		DrawRangeWithLabel(center, allyCallDistance, new Color(0.2f, 0.9f, 0.9f, 1f), "呼叫范围 allyCallDistance", 284f);
+		DrawRangeWithLabel(center, chaseLossDistance, new Color(0.9f, 0.3f, 0.9f, 1f), "追击放弃 chaseLossDistance", 328f);
+
+		if (_hasPackMate)
+		{
+			Gizmos.color = new Color(0.2f, 1f, 0.8f, 0.8f);
+			Gizmos.DrawLine(center, _packCenter);
+			Handles.Label(_packCenter + Vector3.up * 0.25f, "狼群中心 packCenter");
+
+			if (_alphaWolf != null)
+			{
+				Vector3 alphaPos = _alphaWolf.transform.position;
+				Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.85f);
+				Gizmos.DrawLine(center, alphaPos);
+				Handles.Label(alphaPos + Vector3.up * 0.42f, "头狼 alphaWolf");
+			}
+		}
+	}
+
+	private void DrawRangeWithLabel(Vector3 center, float radius, Color color, string labelText, float angleDeg)
+	{
+		if (radius <= 0f) return;
+
+		Gizmos.color = color;
+		Gizmos.DrawWireSphere(center, radius);
+
+		float rad = angleDeg * Mathf.Deg2Rad;
+		Vector3 dir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f);
+		Vector3 edge = center + dir * radius;
+		Vector3 labelPos = edge + dir * 0.28f;
+
+		Handles.color = color;
+		Handles.Label(labelPos, labelText);
+	}
+#endif
+#endregion
 }

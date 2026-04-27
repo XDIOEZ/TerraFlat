@@ -147,8 +147,7 @@ MonoBehaviour:
     Durability: 100
     MaxDurability: 100
     Tags:
-    - 
-    - Modern
+    - Axe
     Stack:
       Amount: 1
       Volume: 2
