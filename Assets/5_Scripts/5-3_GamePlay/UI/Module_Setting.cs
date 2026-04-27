@@ -66,9 +66,9 @@ public class SettingCanvas : Module, IInstanceUI
             throw new System.InvalidOperationException("[SettingCanvas] SettingCanvasPrefab 为空，无法创建设置面板");
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(SettingCanvasPrefab);
-        BindButton(new[] { "返回主菜单按钮", "返回主菜单", "退出并返回主菜单按钮" }, ExitGame);
-        BindButton(new[] { "保存游戏", "保存", "存档按钮" }, SaveGame);
-        BindButton(new[] { "退出并关闭游戏按钮", "退出游戏", "关闭游戏按钮" }, ClossApp);
+        BindButton(UIText.ExitButtons, ExitGame);
+        BindButton(UIText.SaveButtons, SaveGame);
+        BindButton(UIText.CloseButtons, ClossApp);
         basePanel.SetPanelName(PanelName);
     }
 

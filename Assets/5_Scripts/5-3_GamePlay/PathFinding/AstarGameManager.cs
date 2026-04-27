@@ -23,7 +23,7 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     public bool Init = false;
 
     // 全局A*调试日志开关，其他模块可通过 AstarGameManager.EnableDebugLogs 控制 AStar 相关调试输出
-    public static bool EnableDebugLogs = true;
+    public bool EnableDebugLogs = true;
 
     // 权重修改区域的Gizmos可视化数据
     private List<DebugBounds> penaltyModifiedBounds = new List<DebugBounds>();
@@ -108,8 +108,11 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     {
         // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
         enabled = false;
-        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
-        GameManager.Event_GameWorldExit += OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+        }
     }
 
     private void OnGameWorldEnter()
@@ -128,10 +131,13 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         enabled = false;
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
-        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        }
     }
 
     private void Update()

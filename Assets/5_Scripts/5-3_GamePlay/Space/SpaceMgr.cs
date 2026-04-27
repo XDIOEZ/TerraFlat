@@ -48,8 +48,11 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     {
         // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
         enabled = false;
-        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
-        GameManager.Event_GameWorldExit += OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+        }
     }
 
     private void OnGameWorldEnter()
@@ -65,8 +68,11 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        }
     }
 
 #endregion

@@ -552,6 +552,10 @@ public class DamageReceiver : Module
 
     public Mod_Inventory Equipment_Inventory;
 
+    [Header("调试开关")]
+    [SerializeField]
+    private bool enableDebugTools = false;
+
     /// <summary>
     /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
     /// </summary>
@@ -637,6 +641,12 @@ public class DamageReceiver : Module
     [Button("添加全部1级弱点")]
     public void Debug_AddAllWeaknesses()
     {
+        if (!enableDebugTools)
+        {
+            Debug.LogWarning($"[{item?.itemData?.GameName}] 调试开关未开启，跳过添加全部1级弱点");
+            return;
+        }
+
         Data.Weakness.Clear();
 
         foreach (DamageTag tag in System.Enum.GetValues(typeof(DamageTag)))

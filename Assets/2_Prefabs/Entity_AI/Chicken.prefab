@@ -309,7 +309,7 @@ MonoBehaviour:
   _currentFoodTarget: {fileID: 0}
   _currentThreat: {fileID: 0}
   _food: {fileID: 0}
-  debugLog: 1
+  debugLog: 0
   eatEnterHungerRate: 0.35
   eatExitHungerRate: 0.85
   sleepEnterHpRate: 0.5

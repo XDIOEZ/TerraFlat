@@ -1,5 +1,6 @@
 ﻿using Force.DeepCloner;
 using Sirenix.OdinInspector;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -63,11 +64,15 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
     #region Unity Lifecycle
 
-    [Button("加载所有Runtime物品")]
     protected override void Awake()
     {
         base.Awake();
+        // 不在 Awake 中自动加载场景物品，避免破坏游戏生命周期。手动或在合适的时机调用 LoadAllRuntimeItems()
+    }
 
+    [Button("加载所有Runtime物品")]
+    public void LoadAllRuntimeItems()
+    {
         // 第一步：获取场景中所有的 Item（包括非激活状态）
         Item[] allItems = FindObjectsOfType<Item>(includeInactive: true);
 
@@ -86,12 +91,11 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
             RegisterRuntimeItem(item, item.name);
         }
-
     }
 
     public void Start()
     {
-                // Debug.Log("物品加载完毕");
+        // Debug.Log("物品加载完毕");
         GameManager.Instance.BackToHelloScene_Event_Start += CleanupNullItems;
     }
 

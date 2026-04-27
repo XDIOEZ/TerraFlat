@@ -91,7 +91,26 @@ public class SpawnerConfig : ScriptableObject
     [Tooltip("在有效区块中寻找生成位置时的最大重试次数")]
     public int SpawnSearchRetryCount = 5; // 生成位置搜索重试次数
 
-#endregion
+    #endregion
+
+    #region 额外配置
+
+    [LabelText("生成数量")]
+    [Tooltip("每次触发生成时生成的怪物数量")]
+    public int SpawnCount = 1; // 每次触发生成的怪物数量，默认1
+
+    [LabelText("总体生成概率")]
+    [Tooltip("每天触发时间点发生生成的总体概率（0-1），例如0.8表示80%概率生成")]
+    [Range(0f, 1f)]
+    public float SpawnChance = 1f; // 触发当天实际生成的概率
+
+    [LabelText("生成间隔天数")]
+    [Tooltip("两次成功生成之间至少间隔多少个游戏日")]
+    public int DaysBetweenSpawns = 1; // 两次成功生成之间的最小间隔，单位：游戏日
+
+    #endregion
+
+
 
 #region 辅助方法
 
