@@ -58,17 +58,31 @@ public static class SyncAllPrefabItemDataEditor
                         continue;
                     }
 
-                    item.itemData.IDName = item.gameObject.name;
-                    if (string.IsNullOrEmpty(item.itemData.GameName))
+                    bool itemChanged = false;
+                    string desiredName = item.gameObject.name;
+                    if (item.itemData.IDName != desiredName)
                     {
-                        item.itemData.GameName = item.gameObject.name;
+                        item.itemData.IDName = desiredName;
+                        itemChanged = true;
                     }
 
-                    item.SyncItemData();
-                    EditorUtility.SetDirty(prefab);
-                    PrefabUtility.SavePrefabAsset(prefab);
+                    if (string.IsNullOrEmpty(item.itemData.GameName))
+                    {
+                        item.itemData.GameName = desiredName;
+                        itemChanged = true;
+                    }
 
-                    syncedCount++;
+                    if (itemChanged)
+                    {
+                        item.SyncItemData();
+                        EditorUtility.SetDirty(prefab);
+                        PrefabUtility.SavePrefabAsset(prefab);
+                        syncedCount++;
+                    }
+                    else
+                    {
+                        skippedCount++;
+                    }
                     if ((i + 1) % 20 == 0)
                     {
                         AssetDatabase.SaveAssets();

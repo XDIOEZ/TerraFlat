@@ -20,7 +20,7 @@ MonoBehaviour:
     HumidityRange: {x: 0, y: 0.5}
     PrecipitationRange: {x: 0, y: 0.5}
     SolidityRange: {x: 0, y: 1}
-    HightRange: {x: 0.5, y: 1}
+    HightRange: {x: 0.55, y: 1}
   TerrainConfig:
     TileSpawns_NoSO:
     - TileBlock: {fileID: 11400000, guid: bf736d65367b9254dbd69cd783e538f8, type: 2}

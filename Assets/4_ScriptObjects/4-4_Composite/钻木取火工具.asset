@@ -35,10 +35,10 @@ MonoBehaviour:
       Tag: 
       amount: 0
     recipeType: 0
-    inputOrder: 1
+    inputOrder: 0
   outputs:
     results:
-    - ItemName: SparkBorer
+    - ItemName: SparkMaker
       ItemPrefab: {fileID: 6540100855143504370, guid: c81a87a3667f93340a56b3e016a55c95, type: 3}
       amount: 1
   enableMirrorCrafting: 1

@@ -28,5 +28,5 @@ MonoBehaviour:
       amount: 1
   enableMirrorCrafting: 1
   action: []
-  Temperature: 500
+  Temperature: 100
   Temperature_Max: 2000

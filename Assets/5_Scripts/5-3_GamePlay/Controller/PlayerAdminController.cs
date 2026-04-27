@@ -29,6 +29,9 @@ public class PlayerAdminController : Module
     [Tooltip("食物模块（管理员模式维持不饿）")]
     public Mod_Food foodMod;
 
+    public Mod_Cam adminCamera;
+    public Mod_ChunkLoader chunkLoader;
+
     [Header("时间控制")]
     [Tooltip("时间流逝速度")]
     public float timeScale = 1.0f;
@@ -51,6 +54,7 @@ public class PlayerAdminController : Module
     private float timeScaleHintTimer = 0f;
     private bool showTimeScaleHint = false;
     private float initialUnityTimeScale = 1.0f;
+    private bool adminRuntimeSettingsApplied = false;
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -95,6 +99,12 @@ public class PlayerAdminController : Module
 
             if (foodMod == null)
                 foodMod = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
+
+            if (adminCamera == null)
+                adminCamera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+
+            if (chunkLoader == null)
+                chunkLoader = player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
         }
     }
 
@@ -120,6 +130,7 @@ public class PlayerAdminController : Module
         // 非管理员不执行后续逻辑
         if (!IsAdmin()) return;
 
+        ApplyAdminRuntimeSettings();
         KeepAdminAlive();
         HandleAdminInput();
         HandleTimeScaleControl();
@@ -169,6 +180,64 @@ public class PlayerAdminController : Module
         {
             AddAmountToAllBagItems(999f);
         }
+
+        if (Input.GetKeyDown(KeyCode.F8))
+        {
+            IncreaseAdminChunkLoadDistance();
+        }
+    }
+
+    private void ApplyAdminRuntimeSettings()
+    {
+        if (adminRuntimeSettingsApplied)
+            return;
+
+        ResolveAdminRuntimeReferences();
+
+        if (adminCamera != null)
+        {
+            adminCamera.EnableUnlimitedView();
+        }
+
+        adminRuntimeSettingsApplied = adminCamera != null;
+    }
+
+    private void ResolveAdminRuntimeReferences()
+    {
+        if (player == null)
+            player = GetComponentInParent<Player>();
+
+        if (adminCamera == null)
+        {
+            if (player?.itemMods != null && player.itemMods.ContainsKey_ID(ModText.Camera))
+                adminCamera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+
+            if (adminCamera == null)
+                adminCamera = GetComponentInParent<Mod_Cam>();
+        }
+
+        if (chunkLoader == null)
+        {
+            if (player?.itemMods != null && player.itemMods.ContainsKey_ID(ModText.ChunkLoader))
+                chunkLoader = player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
+
+            if (chunkLoader == null)
+                chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
+        }
+    }
+
+    private void IncreaseAdminChunkLoadDistance()
+    {
+        ResolveAdminRuntimeReferences();
+
+        if (chunkLoader == null)
+        {
+            Debug.LogWarning("[Admin] Increase chunk load distance failed: Mod_ChunkLoader not found.");
+            return;
+        }
+
+        int currentDistance = chunkLoader.IncreaseLoadDistanceForAdmin(1);
+        Debug.Log($"[Admin] Chunk load distance increased to {currentDistance}.");
     }
 
     private void KeepAdminAlive()

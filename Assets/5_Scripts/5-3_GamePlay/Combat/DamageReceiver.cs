@@ -1,9 +1,11 @@
+using System;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
+using Random = UnityEngine.Random;
 
 /// <summary>
 /// 处理模块伤害接收与反馈动画
@@ -37,6 +39,16 @@ public class DamageReceiver : Module
     }
 
     public UltEvent OnDead = new();
+
+    [Header("受伤调用")]
+    [SerializeReference]
+    public List<DamageReciver_Action> HurtActions = new List<DamageReciver_Action>(); // 受伤触发动作列表
+
+    [Header("死亡调用")]
+    [SerializeReference]
+    public List<DamageReciver_Action> DeathActions = new List<DamageReciver_Action>(); // 死亡触发动作列表
+
+    public event Action<DamageReceiverDamageInfo> OnDamageReceived; // 收到伤害时触发，外部模块可订阅
 
     [System.Serializable]
     public class DamageReceiver_SaveData
@@ -77,6 +89,22 @@ public class DamageReceiver : Module
                 {
                     lootEntry.OnValidate();
                 }
+            }
+        }
+
+        if (HurtActions != null)
+        {
+            foreach (var action in HurtActions)
+            {
+                action?.OnValidate();
+            }
+        }
+
+        if (DeathActions != null)
+        {
+            foreach (var action in DeathActions)
+            {
+                action?.OnValidate();
             }
         }
 
@@ -151,7 +179,12 @@ public class DamageReceiver : Module
         NormalizeStatRanges();
     }
 
-
+//TODO 创建一个利用[SerializeReference]实现的模块数据类 DamageReciver_Action(我已经实现了)
+//然后再这个类中添加一个List<DamageReciver_Action> 受伤调用 和一个 List<DamageReciver_Action> 死亡调用
+//创建一个事件 收到伤害时调用这个事件并传入伤害信息（比如伤害数值、攻击者信息等）
+//外部模块（比如特效模块）可以订阅这个事件来实现受伤动画 (目前先不用实现受伤动画外移)
+//创建一个 受伤生成item的DamageReciver_Action 来实现受伤生成item的功能（比如 椰子树 被攻击的时候 可能会在周围生成一个 椰子）
+//关于椰子的生成动画可以参考 玩家采集浆果时生成浆果的动画(程序动画)
 
     public override void Load()
     {
@@ -239,6 +272,8 @@ public class DamageReceiver : Module
     {
         if (Hp <= 0 || item == null) return -1;
 
+        float hpBefore = Hp;
+
         // ⏱️ 受伤间隔判断
         if (Time.time - lastDamageTime < Data.DamageInterval)
         {
@@ -311,6 +346,8 @@ public class DamageReceiver : Module
         if (actualDamage > 0)
         {
             Hp -= actualDamage;
+            DamageReceiverDamageInfo damageInfo = CreateDamageInfo(damageSender, actualDamage, hpBefore, Hp);
+            DispatchDamageReceived(damageInfo);
             OnDamaged_ShowUiAndScheduleHide();
 
             if (Data.ShowCanvas)
@@ -331,7 +368,7 @@ public class DamageReceiver : Module
 
         if (Hp <= 0)
         {
-            HandleDeath();
+            HandleDeath(CreateDamageInfo(damageSender, actualDamage, hpBefore, Hp));
             return actualDamage; // 返回实际伤害
         }
 
@@ -343,7 +380,11 @@ public class DamageReceiver : Module
     {
         if (Hp <= 0) return -1;
 
+        float hpBefore = Hp;
+
         Hp -= damage;
+        DamageReceiverDamageInfo damageInfo = CreateDamageInfo(null, damage, hpBefore, Hp);
+        DispatchDamageReceived(damageInfo);
         OnDamaged_ShowUiAndScheduleHide();
 
         if (Data.ShowCanvas)
@@ -360,7 +401,7 @@ public class DamageReceiver : Module
 
         if (Hp <= 0)
         {
-            HandleDeath();
+            HandleDeath(damageInfo);
             return 0; // Ensure a return value for this path
         }
 
@@ -439,7 +480,7 @@ public class DamageReceiver : Module
         _hideUiCoroutine = null;
     }
 
-    private void HandleDeath()
+    private void HandleDeath(DamageReceiverDamageInfo damageInfo = null)
     {
         _deathConsumedByExternalHandler = false;
         OnDead.Invoke();
@@ -448,6 +489,8 @@ public class DamageReceiver : Module
         {
             return;
         }
+
+        DispatchDamageActions(DeathActions, damageInfo);
 
         // TODO添加战利品掉落逻辑
         DropLoot();
@@ -461,6 +504,49 @@ public class DamageReceiver : Module
     public void ConsumeCurrentDeath()
     {
         _deathConsumedByExternalHandler = true;
+    }
+
+    private void DispatchDamageReceived(DamageReceiverDamageInfo damageInfo)
+    {
+        OnDamageReceived?.Invoke(damageInfo);
+        DispatchDamageActions(HurtActions, damageInfo);
+    }
+
+    private void DispatchDamageActions(List<DamageReciver_Action> actions, DamageReceiverDamageInfo damageInfo)
+    {
+        if (actions == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < actions.Count; i++)
+        {
+            DamageReciver_Action action = actions[i];
+            if (action == null || !action.Enabled)
+            {
+                continue;
+            }
+
+            action.Execute(this, damageInfo);
+        }
+    }
+
+    private DamageReceiverDamageInfo CreateDamageInfo(IDamageSender damageSender, float damageValue, float hpBefore, float hpAfter)
+    {
+        return new DamageReceiverDamageInfo
+        {
+            Receiver = this,
+            ReceiverItem = item,
+            DamageSender = damageSender,
+            Attacker = damageSender?.attacker,
+            DamageValue = damageValue,
+            SenderDamageValue = damageSender != null ? damageSender.Damage.Value : damageValue,
+            HpBefore = hpBefore,
+            HpAfter = hpAfter,
+            IsFatal = hpAfter <= 0f,
+            HitPosition = transform.position,
+            Time = Time.time
+        };
     }
     #endregion
 

@@ -21,6 +21,10 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     #region 属性和字段
     public AstarPath Pathfinder;
     public bool Init = false;
+
+    // 全局A*调试日志开关，其他模块可通过 AstarGameManager.EnableDebugLogs 控制 AStar 相关调试输出
+    public static bool EnableDebugLogs = true;
+
     // 权重修改区域的Gizmos可视化数据
     private List<DebugBounds> penaltyModifiedBounds = new List<DebugBounds>();
 
