@@ -247,8 +247,11 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     private void Start()
     {
-        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
-        GameManager.Event_GameWorldExit += OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+        }
 
         bool isInGameWorld = GameManager.Instance != null && GameManager.Instance.IsInGameWorld;
         ApplyGameWorldLifecycleState(isInGameWorld);
@@ -256,8 +259,11 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     protected override void OnDestroy()
     {
-        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        }
     }
 
     private void OnGameWorldEnter()

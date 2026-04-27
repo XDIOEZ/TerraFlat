@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// 怪物自然生成管理器
@@ -11,7 +12,10 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
     [Header("生成配置")]
     [SerializeField, Required]
-    private SpawnerConfig _spawnerConfig; // 怪物生成配置资产
+    private List<SpawnerConfig> _spawnerConfigs = new List<SpawnerConfig>(); // 怪物生成配置资产，支持多个配置（按优先级/索引配置）
+
+    // 当前活动配置（兼容原先单个配置行为，使用第一个配置）
+    private SpawnerConfig ActiveSpawnerConfig => (_spawnerConfigs != null && _spawnerConfigs.Count > 0) ? _spawnerConfigs[0] : null;
 
     [Header("调试")]
     [SerializeField, ReadOnly]
@@ -23,6 +27,8 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
     [SerializeField, ReadOnly]
     private int _lastCheckedDay = -1; // 上次检查的游戏天数
 
+    private int _lastSpawnDay = -999; // 上次成功生成的游戏日（用于间隔控制）
+
     #endregion
 
     #region 生命周期
@@ -32,9 +38,9 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
         // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
         enabled = false;
 
-        if (_spawnerConfig == null)
+        if (ActiveSpawnerConfig == null)
         {
-            Debug.LogError("[MonsterSpawnerManager] SpawnerConfig 未配置，请在检查器中指定配置资产");
+            Debug.LogError("[MonsterSpawnerManager] SpawnerConfig 未配置，请在检查器中指定至少一个配置资产");
             return;
         }
 
@@ -49,8 +55,11 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
             Debug.LogError("[MonsterSpawnerManager] DayTimeSystem 未找到！");
         }
 
-        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
-        GameManager.Event_GameWorldExit += OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+        }
     }
 
     private void OnGameWorldEnter()
@@ -65,8 +74,11 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
     private void OnDestroy()
     {
-        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        }
     }
 
     private void Update()
@@ -112,16 +124,32 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
             _lastCheckedDay = currentDay;
         }
 
+        // 检查间隔天数（确保两次成功生成间隔足够）
+        if (ActiveSpawnerConfig.DaysBetweenSpawns > 1 && (currentDay - _lastSpawnDay) < ActiveSpawnerConfig.DaysBetweenSpawns)
+        {
+            return; // 未到间隔天数
+        }
+
         // 检查是否到达生成时间点
-        float timeDiff = Mathf.Abs(currentTimeInDay - _spawnerConfig.SpawnTriggerTime);
+        float timeDiff = Mathf.Abs(currentTimeInDay - ActiveSpawnerConfig.SpawnTriggerTime);
         
         // 检查是否在生成时间窗口内，且今天还没生成过
-        if (timeDiff <= _spawnerConfig.SpawnTimeTolerance && !_hasSpawnedToday)
+        if (timeDiff <= ActiveSpawnerConfig.SpawnTimeTolerance && !_hasSpawnedToday)
         {
             // 防止在同一帧多次触发
-            if (Mathf.Abs(currentTimeInDay - _lastCheckTime) > _spawnerConfig.SpawnTimeTolerance)
+            if (Mathf.Abs(currentTimeInDay - _lastCheckTime) > ActiveSpawnerConfig.SpawnTimeTolerance)
             {
-                TriggerSpawn();
+                // 总体概率判定
+                if (UnityEngine.Random.value <= ActiveSpawnerConfig.SpawnChance)
+                {
+                    TriggerSpawn();
+                    _lastSpawnDay = currentDay;
+                }
+                else
+                {
+                    Debug.LogFormat("[MonsterSpawnerManager] {0} 未触发生成（概率未命中）", ActiveSpawnerConfig.name);
+                }
+
                 _hasSpawnedToday = true;
                 _lastCheckTime = currentTimeInDay;
             }
@@ -133,34 +161,36 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
     /// </summary>
     private void TriggerSpawn()
     {
-        if (_spawnerConfig == null)
+        if (ActiveSpawnerConfig == null)
         {
-            throw new System.NullReferenceException("[MonsterSpawnerManager] SpawnerConfig 为空，无法执行生成");
+            throw new System.NullReferenceException("[MonsterSpawnerManager] SpawnerConfig 为空，无法执行生成，请至少配置一个 SpawnerConfig");
         }
 
-        // 生成随机值决定怪物类型
-        float randomValue = UnityEngine.Random.value;
-        string spawnType = _spawnerConfig.DetermineSpawnType(randomValue);
+        int count = Mathf.Max(1, ActiveSpawnerConfig.SpawnCount);
 
-        if (string.IsNullOrEmpty(spawnType))
+        for (int i = 0; i < count; i++)
         {
-            // 概率没有触发任何生成
-            Debug.LogFormat("[MonsterSpawnerManager] 12点生成检查：随机值 {0:F2}，未触发生成", randomValue);
-            return;
+            // 为每次生成选择类型
+            float rv = UnityEngine.Random.value;
+            string spawnType = ActiveSpawnerConfig.DetermineSpawnType(rv);
+
+            if (string.IsNullOrEmpty(spawnType))
+            {
+                Debug.LogFormat("[MonsterSpawnerManager] 第{0}次生成：随机值 {1:F2}，未触发生成", i + 1, rv);
+                continue;
+            }
+
+            // 获取有效的生成位置
+            Vector3 spawnPosition = GetValidSpawnPosition();
+            if (spawnPosition == Vector3.zero)
+            {
+                Debug.LogWarning("[MonsterSpawnerManager] 无法找到有效的生成位置");
+                continue;
+            }
+
+            Debug.LogFormat("[MonsterSpawnerManager] 触发怪物生成：类型={0}, 随机值={1:F2}", spawnType, rv);
+            SpawnMonster(spawnType, spawnPosition);
         }
-
-        Debug.LogFormat("[MonsterSpawnerManager] 触发12点怪物生成：类型={0}, 随机值={1:F2}", spawnType, randomValue);
-
-        // 获取有效的生成位置
-        Vector3 spawnPosition = GetValidSpawnPosition();
-        if (spawnPosition == Vector3.zero)
-        {
-            Debug.LogWarning("[MonsterSpawnerManager] 无法找到有效的生成位置");
-            return;
-        }
-
-        // 执行生成
-        SpawnMonster(spawnType, spawnPosition);
     }
 
     #endregion
@@ -184,13 +214,13 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
         Vector3 playerPos = player.transform.position;
 
         // 多次尝试找到有效位置
-        for (int i = 0; i < _spawnerConfig.SpawnSearchRetryCount; i++)
+        for (int i = 0; i < ActiveSpawnerConfig.SpawnSearchRetryCount; i++)
         {
             // 在指定距离范围内随机选择方向和距离
             float randomAngle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
             float randomDistance = UnityEngine.Random.Range(
-                _spawnerConfig.MinSpawnDistance,
-                _spawnerConfig.MaxSpawnDistance
+                ActiveSpawnerConfig.MinSpawnDistance,
+                ActiveSpawnerConfig.MaxSpawnDistance
             );
 
             Vector3 spawnPos = playerPos + new Vector3(

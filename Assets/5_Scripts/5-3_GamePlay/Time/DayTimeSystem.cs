@@ -30,14 +30,20 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
 
     private void OnEnable()
     {
-        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
-        GameManager.Event_GameWorldExit += OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+        }
     }
 
     private void OnDisable()
     {
-        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        }
     }
 
     private void OnGameWorldEnter()
@@ -105,23 +111,13 @@ private void TimeRun(string sceneName, float deltaTime)
             SetGlobalLight(lighting, lightColor);
         }
     }
-    
+
     /// <summary>
     /// 获取当前激活的场景名（需要根据实际项目实现）
     /// </summary>
     private string GetCurrentActiveSceneName()
     {
-        // 这里应该根据你的场景管理系统来实现
-        // 比如从SceneManager获取当前场景名
-        // 暂时返回第一个场景作为示例
-
         return SceneManager.GetActiveScene().name;
-
-        //foreach (var sceneName in WorldTimeDict.Keys)
-        //{
-        //    return sceneName;
-        //}
-        //return string.Empty;
     }
 
     /// <summary>

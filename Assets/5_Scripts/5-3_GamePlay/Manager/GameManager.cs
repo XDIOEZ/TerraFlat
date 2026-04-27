@@ -12,190 +12,183 @@ public class GameManager : SingletonAutoMono<GameManager>
     public static event Action<Player> Event_PlayerEnterWorld;
     #endregion
 
-    #region ÓÎÏ·ÉúÃüÖÜÆÚ×´Ì¬
+    #region æ¸¸æˆç”Ÿå‘½å‘¨æœŸçŠ¶æ€
     /// <summary>
-    /// Íæ¼ÒÊÇ·ñÒÑ½øÈëÓÎÏ·ÊÀ½ç¡£
-    /// ¹ÜÀíÆ÷ÔÚ GameStartScene ÖĞ³õÊ¼»¯Ê±²»Ó¦Ö´ĞĞÓÎÏ·Âß¼­£¬
-    /// Ö»ÓĞÍæ¼ÒÍ¨¹ı ContinueGame/CreateNewWorld ½øÈëÊÀ½çºó²ÅÎª true¡£
-    /// ±ã½İ²éÑ¯ÊôĞÔ£¬ÔËĞĞÊ±¿ØÖÆÇëÊ¹ÓÃÊÂ¼ş¶©ÔÄ¡£
+    /// ç©å®¶æ˜¯å¦å·²è¿›å…¥æ¸¸æˆä¸–ç•Œã€‚
+    /// ç®¡ç†å™¨åœ¨ GameStartScene ä¸­åˆå§‹åŒ–æ—¶ä¸åº”æ‰§è¡Œæ¸¸æˆé€»è¾‘ï¼Œ
+    /// åªæœ‰ç©å®¶é€šè¿‡ ContinueGame/CreateNewWorld è¿›å…¥ä¸–ç•Œåæ‰ä¸º trueã€‚
+    /// ä¾¿æ·æŸ¥è¯¢å±æ€§ï¼Œè¿è¡Œæ—¶æ§åˆ¶è¯·ä½¿ç”¨äº‹ä»¶è®¢é˜…ã€‚
     /// </summary>
     public bool IsInGameWorld { get; private set; } = false;
 
-    /// <summary>
-    /// Íæ¼Ò½øÈëÓÎÏ·ÊÀ½çÊ±´¥·¢£¨ÔÚ RunWorld ÖĞ´¥·¢£©¡£
-    /// ¸÷¹ÜÀíÆ÷Ó¦¶©ÔÄ´ËÊÂ¼şÀ´¼¤»î×ÔÉí£¨ÉèÖÃ enabled = true µÈ£©£¬
-    /// ¶ø·ÇÔÚ Update ÖĞÂÖÑ¯ IsInGameWorld¡£
-    /// </summary>
-    public static event Action Event_GameWorldEnter;
 
-    /// <summary>
-    /// Íæ¼ÒÍË³öÓÎÏ·ÊÀ½çÊ±´¥·¢£¨ÔÚ BackToHelloScene_Coroutine ½×¶Î1´¥·¢£©¡£
-    /// ¸÷¹ÜÀíÆ÷Ó¦¶©ÔÄ´ËÊÂ¼şÀ´Í£ÓÃ×ÔÉí£¨ÉèÖÃ enabled = false µÈ£©¡£
-    /// </summary>
-    public static event Action Event_GameWorldExit;
+
     #endregion
 
     [SerializeField]
     private GameObject SunAndMoonPrefab;
-    [Header("Ñ°Â·ÏµÍ³")]
+    [Header("å¯»è·¯ç³»ç»Ÿ")]
     public GameObject PathFindingSystem;
     public GameObject SunAndMoonObj { get; private set; }
 
-    [Header("×¼±¸ºÃµÄĞÇÇòÊı¾İ")]
+    [Header("å‡†å¤‡å¥½çš„æ˜Ÿçƒæ•°æ®")]
     public PlanetData ReadyPlanetData = new();
-    [Header("×¼±¸ºÃµÄÊ±¼äÊı¾İ")]
+    [Header("å‡†å¤‡å¥½çš„æ—¶é—´æ•°æ®")]
     public TimeData ReadyTimeData = new TimeData();
-    [Header("´æµµÊı¾İ")]
+    [Header("å­˜æ¡£æ•°æ®")]
     public GameSaveData ReadyGameSaveData = new GameSaveData();
 
-#region  ÓÎÏ·ºËĞÄÑ­»·µÄÊÂ¼şÃÇ
-    public UltEvent Event_GameStart_Start { get; set; } = new UltEvent(); //ÓÃ»§×¼±¸¿ªÊ¼ÓÎÏ·µÄÊÂ¼ş
-    public UltEvent Event_GameStart_End { get; set; } = new UltEvent(); //ÓÃ»§ÒÑ¾­¿ªÊ¼ÓÎÏ·Íê±ÏµÄÊÂ¼ş
-    public UltEvent BackToHelloScene_Event_Start { get; set; } = new UltEvent();//ÓÃ»§×¼±¸ÍË»Øµ½¿ªÊ¼½çÃæ¿ªÊ¼µÄÊÂ¼ş
-    public UltEvent BackToHelloScene_Event_End { get; set; } = new UltEvent();//ÓÃ»§ÍË»Øµ½¿ªÊ¼½çÃæ½áÊøµÄÊÂ¼ş
-#endregion
-    [Header("UI Ô¤ÖÆÌå")]
+    #region  æ¸¸æˆæ ¸å¿ƒå¾ªç¯çš„äº‹ä»¶ä»¬
+    public event Action Event_GameWorldEnter;
+
+    public event Action Event_GameWorldExit;
+    public UltEvent Event_GameStart_Start { get; set; } = new UltEvent(); //ç”¨æˆ·å‡†å¤‡å¼€å§‹æ¸¸æˆçš„äº‹ä»¶
+    public UltEvent Event_GameStart_End { get; set; } = new UltEvent(); //ç”¨æˆ·å·²ç»å¼€å§‹æ¸¸æˆå®Œæ¯•çš„äº‹ä»¶
+    public UltEvent BackToHelloScene_Event_Start { get; set; } = new UltEvent();//ç”¨æˆ·å‡†å¤‡é€€å›åˆ°å¼€å§‹ç•Œé¢å¼€å§‹çš„äº‹ä»¶
+    public UltEvent BackToHelloScene_Event_End { get; set; } = new UltEvent();//ç”¨æˆ·é€€å›åˆ°å¼€å§‹ç•Œé¢ç»“æŸçš„äº‹ä»¶
+    #endregion
+    [Header("UI é¢„åˆ¶ä½“")]
     public GameObject UIPrefab_HelloCanvas;
     public GameObject UIPrefab_SaveManager;
     public GameObject UIPrefab_NewGame;
     public GameObject UIPrefab_ContextMenu;
 
-    [Header("UI Ãæ°åÃû³ÆÅäÖÃ")]
+    [Header("UI é¢æ¿åç§°é…ç½®")]
     [SerializeField] private string saveManagerPanelName = "UI_GameSaveManager";
-    [SerializeField] private string saveManagerPanelNameLegacy = "´æµµÑ¡ÔñÃæ°å";
+    [SerializeField] private string saveManagerPanelNameLegacy = "å­˜æ¡£é€‰æ‹©é¢æ¿";
 
-    [Header("ĞÂÍæ¼Ò³öÉúµãËÑË÷ÅäÖÃ")]
+    [Header("æ–°ç©å®¶å‡ºç”Ÿç‚¹æœç´¢é…ç½®")]
     [SerializeField, Min(1)] private int spawnLandMaxSearchRadius = 256;
     [SerializeField, Min(0)] private int spawnSeedAnchorRange = 256;
     [SerializeField, Min(1)] private int spawnSearchRetryFrames = 60;
 
-    #region ÉúÃüÖÜÆÚ·½·¨
+    #region ç”Ÿå‘½å‘¨æœŸæ–¹æ³•
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
 
-        // Ñ°Â·ÏµÍ³²»ÔÚ StartScene ¼¤»î£¬µÈÍæ¼Ò½øÈëÓÎÏ·ÊÀ½çºóÔÙÆôÓÃ
-        // (PathFindingSystem ½«ÔÚ RunWorld Ê±»òÓÉ AstarGameManager ×ÔĞĞÑÓ³Ù³õÊ¼»¯)
+        // å¯»è·¯ç³»ç»Ÿä¸åœ¨ StartScene æ¿€æ´»ï¼Œç­‰ç©å®¶è¿›å…¥æ¸¸æˆä¸–ç•Œåå†å¯ç”¨
+        // (PathFindingSystem å°†åœ¨ RunWorld æ—¶æˆ–ç”± AstarGameManager è‡ªè¡Œå»¶è¿Ÿåˆå§‹åŒ–)
 
         Time.timeScale = 1;
-        
+
         BackToHelloScene_Event_End += OpenHellowCanvas;
     }
     #endregion
 
-    #region ÍË³öÓÎÏ·Ïà¹Ø
+    #region é€€å‡ºæ¸¸æˆç›¸å…³
     /// <summary>
-    /// Ê¹ÓÃĞ­³Ì´¦ÀíÍË³öÓÎÏ·Âß¼­£¬½â¾ö±£´æÓëÏú»ÙµÄÊ±ĞòÎÊÌâ
+    /// ä½¿ç”¨åç¨‹å¤„ç†é€€å‡ºæ¸¸æˆé€»è¾‘ï¼Œè§£å†³ä¿å­˜ä¸é”€æ¯çš„æ—¶åºé—®é¢˜
     /// </summary>
-    /// <param name="onComplete">ÍË³öÍê³ÉºóµÄ»Øµ÷º¯Êı</param>
+    /// <param name="onComplete">é€€å‡ºå®Œæˆåçš„å›è°ƒå‡½æ•°</param>
     /// <returns></returns>
     public IEnumerator BackToHelloScene_Coroutine(Item Player, System.Action onComplete = null)
     {
-        Debug.Log("<color=yellow>[ExitGame]</color> ¿ªÊ¼Ö´ĞĞÍË³öÁ÷³Ì...");
+        Debug.Log("<color=yellow>[ExitGame]</color> å¼€å§‹æ‰§è¡Œé€€å‡ºæµç¨‹...");
 
         ////////////////////////////////////////////////////////////////////////////////////
-        // ½×¶Î 1£º×¼±¸½×¶Î
+        // é˜¶æ®µ 1ï¼šå‡†å¤‡é˜¶æ®µ
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // ±ê¼ÇÒÑÍË³öÓÎÏ·ÊÀ½ç£¬¸÷¹ÜÀíÆ÷Ó¦Í£Ö¹ÔËĞĞ
+        // æ ‡è®°å·²é€€å‡ºæ¸¸æˆä¸–ç•Œï¼Œå„ç®¡ç†å™¨åº”åœæ­¢è¿è¡Œ
         IsInGameWorld = false;
 
-        // Í¨ÖªËùÓĞ¶©ÔÄÕß£ºÓÎÏ·ÊÀ½çÒÑÍË³ö
+        // é€šçŸ¥æ‰€æœ‰è®¢é˜…è€…ï¼šæ¸¸æˆä¸–ç•Œå·²é€€å‡º
         Event_GameWorldExit?.Invoke();
 
-        // ±£´æµ±Ç°Ê±¼äÊı¾İ£¬°üÀ¨ÈÕÒ¹×´Ì¬µÈ
+        // ä¿å­˜å½“å‰æ—¶é—´æ•°æ®ï¼ŒåŒ…æ‹¬æ—¥å¤œçŠ¶æ€ç­‰
         SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
 
 
-        // °²È«¼ì²é£ºÈ·±£ºËĞÄ¹ÜÀíÆ÷ÒÑ³õÊ¼»¯
+        // å®‰å…¨æ£€æŸ¥ï¼šç¡®ä¿æ ¸å¿ƒç®¡ç†å™¨å·²åˆå§‹åŒ–
         if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
             SaveDataMgr.Instance == null)
         {
-            Debug.LogError("[ExitGame] ºËĞÄ¹ÜÀíÆ÷Î´³õÊ¼»¯£¬ÍË³öÊ§°Ü£¡");
-            onComplete?.Invoke(); // ¼´Ê¹Ê§°ÜÒ²µ÷ÓÃ»Øµ÷
+            Debug.LogError("[ExitGame] æ ¸å¿ƒç®¡ç†å™¨æœªåˆå§‹åŒ–ï¼Œé€€å‡ºå¤±è´¥ï¼");
+            onComplete?.Invoke(); // å³ä½¿å¤±è´¥ä¹Ÿè°ƒç”¨å›è°ƒ
             yield break;
         }
 
-        // ´¥·¢ÍË³ö¿ªÊ¼ÊÂ¼ş
+        // è§¦å‘é€€å‡ºå¼€å§‹äº‹ä»¶
         BackToHelloScene_Event_Start?.Invoke();
 
         ////////////////////////////////////////////////////////////////////////////////////
-        // ½×¶Î 2£ºÊı¾İ±£´æ½×¶Î
+        // é˜¶æ®µ 2ï¼šæ•°æ®ä¿å­˜é˜¶æ®µ
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // ÏÈÖ´ĞĞ»ù´¡ÇåÀí
+        // å…ˆæ‰§è¡ŒåŸºç¡€æ¸…ç†
         ItemMgr.Instance.CleanupNullItems();
         ChunkMgr.Instance.CleanEmptyDicValues();
 
-        // ±£´æËùÓĞÇø¿éÊı¾İ
-        Debug.Log("[ExitGame] ¿ªÊ¼±£´æÇø¿éÊı¾İ...");
+        // ä¿å­˜æ‰€æœ‰åŒºå—æ•°æ®
+        Debug.Log("[ExitGame] å¼€å§‹ä¿å­˜åŒºå—æ•°æ®...");
         SaveAllChunks();
 
-        // ÌáÇ°±£´æÍæ¼ÒÊı¾İ£¨ÔÚÏú»ÙÂß¼­Ö´ĞĞÇ°£©
-        Debug.Log("[ExitGame] ¿ªÊ¼±£´æÍæ¼ÒÊı¾İ...");
+        // æå‰ä¿å­˜ç©å®¶æ•°æ®ï¼ˆåœ¨é”€æ¯é€»è¾‘æ‰§è¡Œå‰ï¼‰
+        Debug.Log("[ExitGame] å¼€å§‹ä¿å­˜ç©å®¶æ•°æ®...");
         ItemMgr.Instance.SavePlayer();
 
-        // ±£´æÊı¾İµ½´ÅÅÌ
-        Debug.Log("[ExitGame] Ğ´Èë´æµµÎÄ¼ş...");
+        // ä¿å­˜æ•°æ®åˆ°ç£ç›˜
+        Debug.Log("[ExitGame] å†™å…¥å­˜æ¡£æ–‡ä»¶...");
         SaveDataMgr.Instance.Save_And_WriteToDisk();
 
         ////////////////////////////////////////////////////////////////////////////////////
-        // ½×¶Î 3£ºÇåÀí½×¶Î
+        // é˜¶æ®µ 3ï¼šæ¸…ç†é˜¶æ®µ
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // Ïú»ÙÍæ¼Ò¶ÔÏó
+        // é”€æ¯ç©å®¶å¯¹è±¡
         if (Player != null)
         {
             Destroy(Player.gameObject);
-            Debug.Log("[ExitGame] ÒÑÏú»ÙÍæ¼Ò¶ÔÏó");
+            Debug.Log("[ExitGame] å·²é”€æ¯ç©å®¶å¯¹è±¡");
         }
 
-        // ÑÓ³ÙÒ»Ö¡£¬µÈ´ıËùÓĞ±ê¼ÇÎªÏú»ÙµÄ¶ÔÏóÊµ¼ÊÏú»Ù
+        // å»¶è¿Ÿä¸€å¸§ï¼Œç­‰å¾…æ‰€æœ‰æ ‡è®°ä¸ºé”€æ¯çš„å¯¹è±¡å®é™…é”€æ¯
         yield return null;
 
-        // Ïú»ÙÖ®Ç°ÊµÀı»¯µÄÌìÌå¶ÔÏó
+        // é”€æ¯ä¹‹å‰å®ä¾‹åŒ–çš„å¤©ä½“å¯¹è±¡
         if (SunAndMoonObj != null)
         {
             Destroy(SunAndMoonObj);
             SunAndMoonObj = null;
-            Debug.Log("[ExitGame] ÒÑÏú»Ù SunAndMoon ¶ÔÏó");
+            Debug.Log("[ExitGame] å·²é”€æ¯ SunAndMoon å¯¹è±¡");
         }
 
-        // ÇåÀíËùÓĞÇø¿é
-        Debug.Log("[ExitGame] ¿ªÊ¼ÇåÀíÇø¿é...");
+        // æ¸…ç†æ‰€æœ‰åŒºå—
+        Debug.Log("[ExitGame] å¼€å§‹æ¸…ç†åŒºå—...");
         ChunkMgr.Instance.ClearAllChunk();
 
-        // ÊÍ·ÅÎ´Ê¹ÓÃµÄ×ÊÔ´
+        // é‡Šæ”¾æœªä½¿ç”¨çš„èµ„æº
         Resources.UnloadUnusedAssets();
         System.GC.Collect();
 
         ////////////////////////////////////////////////////////////////////////////////////
-        // ½×¶Î 4£º³¡¾°ÇĞ»»½×¶Î
+        // é˜¶æ®µ 4ï¼šåœºæ™¯åˆ‡æ¢é˜¶æ®µ
         ////////////////////////////////////////////////////////////////////////////////////
 
-        Debug.Log("[ExitGame] ×¼±¸¼ÓÔØ GameStartScene...");
+        Debug.Log("[ExitGame] å‡†å¤‡åŠ è½½ GameStartScene...");
         AsyncOperation loadOp = SceneManager.LoadSceneAsync("GameStartScene");
         while (!loadOp.isDone)
             yield return null;
 
         ////////////////////////////////////////////////////////////////////////////////////
-        // ½×¶Î 5£ºÊÕÎ²½×¶Î
+        // é˜¶æ®µ 5ï¼šæ”¶å°¾é˜¶æ®µ
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // ÖØÖÃ´æµµÊı¾İ£¬×¼±¸ÏÂ´ÎÓÎÏ·
+        // é‡ç½®å­˜æ¡£æ•°æ®ï¼Œå‡†å¤‡ä¸‹æ¬¡æ¸¸æˆ
         SaveDataMgr.Instance.SaveData = new GameSaveData();
 
-        // ´¥·¢ÍË³ö½áÊøÊÂ¼ş
+        // è§¦å‘é€€å‡ºç»“æŸäº‹ä»¶
         BackToHelloScene_Event_End?.Invoke();
 
-        Debug.Log("<color=green>[ExitGame]</color> ÓÎÏ·ÍË³öÁ÷³ÌÍê³É");
+        Debug.Log("<color=green>[ExitGame]</color> æ¸¸æˆé€€å‡ºæµç¨‹å®Œæˆ");
 
-        // ×îÖÕµ÷ÓÃ»Øµ÷º¯Êı
+        // æœ€ç»ˆè°ƒç”¨å›è°ƒå‡½æ•°
         onComplete?.Invoke();
     }
 
     /// <summary>
-    /// ±£´æËùÓĞÇø¿éÊı¾İ£¨ÌáÈ¡Îª¶ÀÁ¢·½·¨£¬Ìá¸ß¿É¶ÁĞÔ£©
+    /// ä¿å­˜æ‰€æœ‰åŒºå—æ•°æ®ï¼ˆæå–ä¸ºç‹¬ç«‹æ–¹æ³•ï¼Œæé«˜å¯è¯»æ€§ï¼‰
     /// </summary>
     private void SaveAllChunks()
     {
@@ -203,7 +196,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         if (chunkDic.Count <= 0)
         {
-            Debug.LogWarning("Çø¿é×ÖµäÎª¿Õ£¬ÍË³öÊ±Î´±£´æÈÎºÎÇø¿é£¬Çë¼ì²é¼ÓÔØÂß¼­");
+            Debug.LogWarning("åŒºå—å­—å…¸ä¸ºç©ºï¼Œé€€å‡ºæ—¶æœªä¿å­˜ä»»ä½•åŒºå—ï¼Œè¯·æ£€æŸ¥åŠ è½½é€»è¾‘");
             return;
         }
 
@@ -211,7 +204,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         {
             if (chunk == null)
             {
-                Debug.LogWarning("·¢ÏÖ¿ÕÇø¿é¶ÔÏó£¬ÒÑÌø¹ı±£´æ");
+                Debug.LogWarning("å‘ç°ç©ºåŒºå—å¯¹è±¡ï¼Œå·²è·³è¿‡ä¿å­˜");
                 continue;
             }
 
@@ -224,8 +217,8 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
     #endregion
 
-    #region ÓÎÏ·¿ªÊ¼Ïà¹Ø
-    [Tooltip("¿ªÊ¼ĞÂÓÎÏ·,´´½¨Ò»¸öĞÂÊÀ½ç")]
+    #region æ¸¸æˆå¼€å§‹ç›¸å…³
+    [Tooltip("å¼€å§‹æ–°æ¸¸æˆ,åˆ›å»ºä¸€ä¸ªæ–°ä¸–ç•Œ")]
     public void CreateNewWorld()
     {
         SaveDataMgr.Instance.SaveData = new GameSaveData();
@@ -238,13 +231,13 @@ public class GameManager : SingletonAutoMono<GameManager>
             string randomSeed = GenerateRandomSeedString();
             SaveDataMgr.Instance.SaveData.SaveSeed = randomSeed;
             SaveDataMgr.Instance.SaveData.Seed = ConvertSeedStringToStableInt(randomSeed);
-            Debug.Log($"[GameManager] Íæ¼ÒÎ´ÊäÈëÖÖ×Ó£¬×Ô¶¯Éú³ÉËæ»úÖÖ×Ó={randomSeed}");
+            Debug.Log($"[GameManager] ç©å®¶æœªè¾“å…¥ç§å­ï¼Œè‡ªåŠ¨ç”Ÿæˆéšæœºç§å­={randomSeed}");
         }
         else
         {
             SaveDataMgr.Instance.SaveData.SaveSeed = inputSeed;
             SaveDataMgr.Instance.SaveData.Seed = ConvertSeedStringToStableInt(inputSeed);
-            Debug.Log($"[GameManager] Ê¹ÓÃÍæ¼ÒÊäÈëÖÖ×Ó={inputSeed}");
+            Debug.Log($"[GameManager] ä½¿ç”¨ç©å®¶è¾“å…¥ç§å­={inputSeed}");
         }
 
         if (SaveDataMgr.Instance.SaveData.Seed == 0)
@@ -256,7 +249,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         SetNewPlanetData(ReadyPlanetData, ReadyTimeData);
         BasePanel UI_NewGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
-        string PlayerName = UI_NewGame.GetInputField("ĞÂÔöÍæ¼ÒÃû³ÆÊäÈë¿ò").text;
+        string PlayerName = UI_NewGame.GetInputField("æ–°å¢ç©å®¶åç§°è¾“å…¥æ¡†").text;
         ContinueGame(PlayerName);
     }
 
@@ -273,7 +266,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
     private static int ConvertSeedStringToStableInt(string seedText)
     {
-        // FNV-1a 32-bit£¬È·±£Í¬Ò»×Ö·û´®Ê¼ÖÕÓ³Éäµ½Í¬Ò»ÕûÊıÖÖ×Ó
+        // FNV-1a 32-bitï¼Œç¡®ä¿åŒä¸€å­—ç¬¦ä¸²å§‹ç»ˆæ˜ å°„åˆ°åŒä¸€æ•´æ•°ç§å­
         unchecked
         {
             const uint offset = 2166136261;
@@ -296,55 +289,55 @@ public class GameManager : SingletonAutoMono<GameManager>
         }
     }
 
-    [Tooltip("´´½¨Ò»¸öĞÂĞÇÇò")]
+    [Tooltip("åˆ›å»ºä¸€ä¸ªæ–°æ˜Ÿçƒ")]
     public void SetNewPlanetData(PlanetData ReadyPlanetData_, TimeData ReadyTimeData_)
     {
-        //¸ù¾İ×¼±¸ºÃµÄĞÇÇòÊı¾İ´´½¨ĞÂĞÇÇò´æµµ
+        //æ ¹æ®å‡†å¤‡å¥½çš„æ˜Ÿçƒæ•°æ®åˆ›å»ºæ–°æ˜Ÿçƒå­˜æ¡£
         SaveDataMgr.Instance.SaveData.PlanetData_Dict[ReadyPlanetData_.Name] = FastCloner.FastCloner.DeepClone(ReadyPlanetData_);
         SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[ReadyPlanetData_.Name] = new SerializableTimeData(ReadyTimeData_);
         SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict[ReadyPlanetData_.Name] = 1.0f;
     }
 
-    [Tooltip("¼ÌĞøÓÎÏ·,¼ÓÔØ´«ÈëµÄÍæ¼ÒÃû³Æ,Í¨¹ıÃû³Æ»ñÈ¡Íæ¼ÒÊı¾İ, ")]
+    [Tooltip("ç»§ç»­æ¸¸æˆ,åŠ è½½ä¼ å…¥çš„ç©å®¶åç§°,é€šè¿‡åç§°è·å–ç©å®¶æ•°æ®, ")]
     public void ContinueGame(string PlayerName)
     {
-        // 1. ¸ù¾İ´æµµÁ¢¼´È·¶¨Íæ¼ÒËùÔÚµÄĞÇÇòÃû
+        // 1. æ ¹æ®å­˜æ¡£ç«‹å³ç¡®å®šç©å®¶æ‰€åœ¨çš„æ˜Ÿçƒå
         SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out Data_Player playerData);
         string planetName = playerData != null ? playerData.CurrentSceneName : ReadyPlanetData.Name;
 
 
-        //¸ù¾İÓÃ»§µ±Ç°¿ØÖÆµÄÍæ¼ÒÃû³Æ¼ÓÔØÍæ¼Ò 
+        //æ ¹æ®ç”¨æˆ·å½“å‰æ§åˆ¶çš„ç©å®¶åç§°åŠ è½½ç©å®¶ 
         RunWorld(NewScenename: planetName, () =>
         {
-            //¾É³¡¾°±»Ğ¶ÔØÍê±Ï ĞÂ³¡¾°ÒÔ¼°±»¼ÓÔØÍê±Ï
+            //æ—§åœºæ™¯è¢«å¸è½½å®Œæ¯• æ–°åœºæ™¯ä»¥åŠè¢«åŠ è½½å®Œæ¯•
             LoadPlayer(playerName: PlayerName);
         });
     }
 
     public void RunWorld(string NewScenename, Action onOldSceneUnloaded = null)
     {
-        // ±ê¼ÇÍæ¼ÒÒÑ½øÈëÓÎÏ·ÊÀ½ç£¬¸÷¹ÜÀíÆ÷¿É¿ªÊ¼ÔËĞĞ
+        // æ ‡è®°ç©å®¶å·²è¿›å…¥æ¸¸æˆä¸–ç•Œï¼Œå„ç®¡ç†å™¨å¯å¼€å§‹è¿è¡Œ
         IsInGameWorld = true;
 
-        // Í¨ÖªËùÓĞ¶©ÔÄÕß£ºÓÎÏ·ÊÀ½çÒÑ½øÈë
+        // é€šçŸ¥æ‰€æœ‰è®¢é˜…è€…ï¼šæ¸¸æˆä¸–ç•Œå·²è¿›å…¥
         Event_GameWorldEnter?.Invoke();
 
-        //2. ÊµÀı»¯ÈÕÔÂÏµÍ³
+        //2. å®ä¾‹åŒ–æ—¥æœˆç³»ç»Ÿ
         if (SunAndMoonPrefab != null)
         {
             SunAndMoonObj = Instantiate(SunAndMoonPrefab, Vector3.zero, Quaternion.identity);
-            // È·±£ÌìÌå¶ÔÏóÔÚ³¡¾°ÇĞ»»Ê±²»»á±»Ïú»Ù
+            // ç¡®ä¿å¤©ä½“å¯¹è±¡åœ¨åœºæ™¯åˆ‡æ¢æ—¶ä¸ä¼šè¢«é”€æ¯
             DontDestroyOnLoad(SunAndMoonObj);
         }
-        // 3. ¼ÓÔØÊ±¼äÊı¾İ
+        // 3. åŠ è½½æ—¶é—´æ•°æ®
         DayTimeSystem.Instance.LoadFromSaveData(SaveDataMgr.Instance.SaveData.DayTimeData);
 
         string OldSceneName = SceneManager.GetActiveScene().name;
-        // 2. Á¢¿Ì´´½¨²¢¼¤»î¿Õ³¡¾°
+        // 2. ç«‹åˆ»åˆ›å»ºå¹¶æ¿€æ´»ç©ºåœºæ™¯
         Scene newScene = SceneManager.CreateScene(NewScenename);
         SceneManager.SetActiveScene(newScene);
 
-        // 3. ×¼±¸Ğ¶ÔØ¾É³¡¾°£¨ÈçÓĞ£©
+        // 3. å‡†å¤‡å¸è½½æ—§åœºæ™¯ï¼ˆå¦‚æœ‰ï¼‰
         Scene startScene = SceneManager.GetSceneByName(OldSceneName);
         SceneManager.UnloadSceneAsync(startScene).completed += _ =>
         {
@@ -354,14 +347,14 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
     #endregion
 
-    #region ³¡¾°ÇĞ»»Ïà¹Ø
-    [Tooltip("ÇĞ»»³¡¾°")]
+    #region åœºæ™¯åˆ‡æ¢ç›¸å…³
+    [Tooltip("åˆ‡æ¢åœºæ™¯")]
     public void ChangeScene_By_SceneNames(string LastSceneName, string NextSceneName, Action onSceneUnloaded = null)
     {
-        // ±£´æÍæ¼ÒºÍÇø¿é
+        // ä¿å­˜ç©å®¶å’ŒåŒºå—
         ItemMgr.Instance.SavePlayer();
 
-        //±£´æ³¡¾°Êı¾İ
+        //ä¿å­˜åœºæ™¯æ•°æ®
         foreach (var go in ChunkMgr.Instance.Chunk_Dic_ByPos.Values)
         {
             go.SaveChunk();
@@ -371,11 +364,11 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         ChunkMgr.Instance.OnSceneChange();
 
-        ///////////////////////////ÉÏÃæ¶¼ÊÇ¶Ô¾É³¡¾°µÄ´¦Àí////////////////////
-        // ´´½¨ĞÂ³¡¾°
+        ///////////////////////////ä¸Šé¢éƒ½æ˜¯å¯¹æ—§åœºæ™¯çš„å¤„ç†////////////////////
+        // åˆ›å»ºæ–°åœºæ™¯
         Scene newScene = SceneManager.CreateScene(NextSceneName);
 
-        // Ğ¶ÔØ¾É³¡¾°
+        // å¸è½½æ—§åœºæ™¯
         Scene startScene = SceneManager.GetActiveScene();
 
         if (startScene.IsValid() && startScene.isLoaded)
@@ -384,15 +377,15 @@ public class GameManager : SingletonAutoMono<GameManager>
             unloadOp.completed += _ =>
             {
                 SceneManager.SetActiveScene(newScene);
-                Debug.Log($"¾É³¡¾°ÒÑĞ¶ÔØ£º{startScene.name}");
+                Debug.Log($"æ—§åœºæ™¯å·²å¸è½½ï¼š{startScene.name}");
 
-                // ´¥·¢»Øµ÷
+                // è§¦å‘å›è°ƒ
                 onSceneUnloaded?.Invoke();
             };
         }
         else
         {
-            // Èç¹ûÃ»ÓĞ¾É³¡¾°£¬Ö±½ÓÖ´ĞĞ»Øµ÷
+            // å¦‚æœæ²¡æœ‰æ—§åœºæ™¯ï¼Œç›´æ¥æ‰§è¡Œå›è°ƒ
             onSceneUnloaded?.Invoke();
         }
     }
@@ -401,13 +394,13 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         if (string.IsNullOrEmpty(sceneName))
         {
-            throw new ArgumentException("sceneName ²»ÄÜÎª¿Õ", nameof(sceneName));
+            throw new ArgumentException("sceneName ä¸èƒ½ä¸ºç©º", nameof(sceneName));
         }
 
         AsyncOperation loadOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
         if (loadOp == null)
         {
-            throw new InvalidOperationException($"[GameManager] ¼ÓÔØ³¡¾°Ê§°Ü£º{sceneName}");
+            throw new InvalidOperationException($"[GameManager] åŠ è½½åœºæ™¯å¤±è´¥ï¼š{sceneName}");
         }
 
         while (!loadOp.isDone)
@@ -436,7 +429,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         if (timeoutFrames <= 0)
         {
-            throw new TimeoutException($"[GameManager] ³¡¾°ÒÑ¼ÓÔØµ«¹ÜÀíÆ÷Î´¾ÍĞ÷£¬scene={sceneName}");
+            throw new TimeoutException($"[GameManager] åœºæ™¯å·²åŠ è½½ä½†ç®¡ç†å™¨æœªå°±ç»ªï¼Œscene={sceneName}");
         }
 
         onSceneReady?.Invoke();
@@ -451,22 +444,22 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         if (string.IsNullOrEmpty(targetSceneName))
         {
-            throw new ArgumentException("targetSceneName ²»ÄÜÎª¿Õ", nameof(targetSceneName));
+            throw new ArgumentException("targetSceneName ä¸èƒ½ä¸ºç©º", nameof(targetSceneName));
         }
 
         if (rocketItemData == null)
         {
-            throw new ArgumentNullException(nameof(rocketItemData), "rocketItemData ²»ÄÜÎª¿Õ");
+            throw new ArgumentNullException(nameof(rocketItemData), "rocketItemData ä¸èƒ½ä¸ºç©º");
         }
 
         if (playerItemData == null)
         {
-            throw new ArgumentNullException(nameof(playerItemData), "playerItemData ²»ÄÜÎª¿Õ");
+            throw new ArgumentNullException(nameof(playerItemData), "playerItemData ä¸èƒ½ä¸ºç©º");
         }
 
         if (string.IsNullOrEmpty(planetBodyId))
         {
-            throw new ArgumentException("planetBodyId ²»ÄÜÎª¿Õ", nameof(planetBodyId));
+            throw new ArgumentException("planetBodyId ä¸èƒ½ä¸ºç©º", nameof(planetBodyId));
         }
 
         Exception transferException = null;
@@ -481,13 +474,13 @@ public class GameManager : SingletonAutoMono<GameManager>
                 Module_Fly spaceFly = rocketItem.GetMod<Module_Fly>();
                 if (spaceFly == null)
                 {
-                    throw new InvalidOperationException($"[GameManager] Ì«¿Õ»ğ¼ıÈ±ÉÙ Module_Fly£¬rocket={rocketItemData.IDName}");
+                    throw new InvalidOperationException($"[GameManager] å¤ªç©ºç«ç®­ç¼ºå°‘ Module_Flyï¼Œrocket={rocketItemData.IDName}");
                 }
 
                 spaceFly.EnterControlFromTransfer(playerItem);
-                Debug.Log($"[GameManager] Ì«¿Õ½Ó¹Üµ÷ÓÃÍê³É£¬rocket={rocketItemData.IDName}, player={playerItemData.IDName}");
+                Debug.Log($"[GameManager] å¤ªç©ºæ¥ç®¡è°ƒç”¨å®Œæˆï¼Œrocket={rocketItemData.IDName}, player={playerItemData.IDName}");
 
-                Debug.Log($"[GameManager] Ì«¿ÕÇ¨ÒÆÍê³É£¬planetBodyId={planetBodyId}, rocket={rocketItemData.IDName}, player={playerItemData.IDName}");
+                Debug.Log($"[GameManager] å¤ªç©ºè¿ç§»å®Œæˆï¼ŒplanetBodyId={planetBodyId}, rocket={rocketItemData.IDName}, player={playerItemData.IDName}");
             }
             catch (Exception ex)
             {
@@ -503,16 +496,16 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
     #endregion
 
-    #region ¹¤¾ß·½·¨
+    #region å·¥å…·æ–¹æ³•
 
-    [Tooltip("ÔÚµ±Ç°³¡¾°ÖĞÊµÀı»¯²¢¼ÓÔØÍæ¼Ò")]
+    [Tooltip("åœ¨å½“å‰åœºæ™¯ä¸­å®ä¾‹åŒ–å¹¶åŠ è½½ç©å®¶")]
     private void LoadPlayer(string playerName)
     {
         Player player = ItemMgr.Instance.LoadPlayer(playerName);
 
         if (player.Data.transform.position == Vector3.zero)
         {
-            // ĞÂÍæ¼Ò£ºÇø¿éµØ±íÊÇÒì²½Éú³ÉµÄ£¬Ê¹ÓÃ¶àÖ¡ÖØÊÔ±ÜÃâÍ¬Ö¡¶ÁÈ¡µ½¿ÕµØ±í
+            // æ–°ç©å®¶ï¼šåŒºå—åœ°è¡¨æ˜¯å¼‚æ­¥ç”Ÿæˆçš„ï¼Œä½¿ç”¨å¤šå¸§é‡è¯•é¿å…åŒå¸§è¯»å–åˆ°ç©ºåœ°è¡¨
             StartCoroutine(PlaceNewPlayerOnLandThenEnterWorld(player));
             return;
         }
@@ -540,14 +533,14 @@ public class GameManager : SingletonAutoMono<GameManager>
         {
             ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));
             player.Data.transform.position = player.transform.position;
-            Debug.LogWarning($"[GameManager] ĞÂÍæ¼ÒÂ½µØ³öÉúµãËÑË÷Ê§°Ü£¨ÖØÊÔÖ¡Êı={retryFrames}£©£¬»ØÍËËæ»úÍ¶·Å£º{player.transform.position}");
+            Debug.LogWarning($"[GameManager] æ–°ç©å®¶é™†åœ°å‡ºç”Ÿç‚¹æœç´¢å¤±è´¥ï¼ˆé‡è¯•å¸§æ•°={retryFrames}ï¼‰ï¼Œå›é€€éšæœºæŠ•æ”¾ï¼š{player.transform.position}");
         }
 
         Event_PlayerEnterWorld?.Invoke(player);
     }
 
     /// <summary>
-    /// ÎªĞÂÍæ¼ÒÑ°ÕÒ×î½üÂ½µØ²¢ÉèÖÃ³öÉúÎ»ÖÃ
+    /// ä¸ºæ–°ç©å®¶å¯»æ‰¾æœ€è¿‘é™†åœ°å¹¶è®¾ç½®å‡ºç”Ÿä½ç½®
     /// </summary>
     public bool TryGetDefaultPlayerSpawnPosition(out Vector3 spawnPos)
     {
@@ -563,13 +556,13 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// ÎªĞÂÍæ¼ÒÑ°ÕÒ×î½üÂ½µØ²¢ÉèÖÃ³öÉúÎ»ÖÃ
+    /// ä¸ºæ–°ç©å®¶å¯»æ‰¾æœ€è¿‘é™†åœ°å¹¶è®¾ç½®å‡ºç”Ÿä½ç½®
     /// </summary>
     private bool TryPlaceNewPlayerOnNearestLand(Player player)
     {
         if (player == null)
         {
-            Debug.LogError("[GameManager] TryPlaceNewPlayerOnNearestLand Ê§°Ü£ºplayer Îª¿Õ");
+            Debug.LogError("[GameManager] TryPlaceNewPlayerOnNearestLand å¤±è´¥ï¼šplayer ä¸ºç©º");
             return false;
         }
 
@@ -582,12 +575,12 @@ public class GameManager : SingletonAutoMono<GameManager>
         player.Data.transform.position = spawnPos;
 
         Vector2Int seedAnchor = GetSeedAnchorPosition();
-        Debug.Log($"[GameManager] ĞÂÍæ¼Ò³öÉúµãÒÑ¶¨Î»µ½Â½µØ£ºseed={SaveDataMgr.Instance.SaveData.Seed}, anchor={seedAnchor}, spawn={spawnPos}");
+        Debug.Log($"[GameManager] æ–°ç©å®¶å‡ºç”Ÿç‚¹å·²å®šä½åˆ°é™†åœ°ï¼šseed={SaveDataMgr.Instance.SaveData.Seed}, anchor={seedAnchor}, spawn={spawnPos}");
         return true;
     }
 
     /// <summary>
-    /// Ê¹ÓÃ´æµµÖÖ×Ó¼ÆËãÈ·¶¨ĞÔµÄ³öÉúÃªµã
+    /// ä½¿ç”¨å­˜æ¡£ç§å­è®¡ç®—ç¡®å®šæ€§çš„å‡ºç”Ÿé”šç‚¹
     /// </summary>
     private Vector2Int GetSeedAnchorPosition()
     {
@@ -595,14 +588,14 @@ public class GameManager : SingletonAutoMono<GameManager>
         System.Random random = new System.Random(seed);
         int anchorRange = Mathf.Max(0, spawnSeedAnchorRange);
 
-        // ½«ÃªµãÏŞÖÆÔÚÖĞĞÄÇøÓò£¬½µµÍÊ×´ÎËÑË÷·¶Î§
+        // å°†é”šç‚¹é™åˆ¶åœ¨ä¸­å¿ƒåŒºåŸŸï¼Œé™ä½é¦–æ¬¡æœç´¢èŒƒå›´
         int anchorX = random.Next(-anchorRange, anchorRange + 1);
         int anchorY = random.Next(-anchorRange, anchorRange + 1);
         return new Vector2Int(anchorX, anchorY);
     }
 
     /// <summary>
-    /// ÒÔÃªµãÎªÖĞĞÄ°´ÂİĞı»·ËÑË÷×î½üÂ½µØ
+    /// ä»¥é”šç‚¹ä¸ºä¸­å¿ƒæŒ‰èºæ—‹ç¯æœç´¢æœ€è¿‘é™†åœ°
     /// </summary>
     private bool TryFindNearestLand(Vector2Int anchor, out Vector2Int landPos)
     {
@@ -662,7 +655,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// ÅĞ¶ÏÖ¸¶¨ÊÀ½ç×ø±êÊÇ·ñÎª¿É³öÉúÂ½µØ
+    /// åˆ¤æ–­æŒ‡å®šä¸–ç•Œåæ ‡æ˜¯å¦ä¸ºå¯å‡ºç”Ÿé™†åœ°
     /// </summary>
     private bool IsLandTile(Vector2Int worldPos, HashSet<string> loadedChunkCache)
     {
@@ -692,26 +685,26 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// ±£´æÓÎÏ·Êı¾İ×¨ÓÃ·½·¨£¬½öÖ´ĞĞ±£´æ²Ù×÷²»½øĞĞÆäËûÂß¼­´¦Àí
+    /// ä¿å­˜æ¸¸æˆæ•°æ®ä¸“ç”¨æ–¹æ³•ï¼Œä»…æ‰§è¡Œä¿å­˜æ“ä½œä¸è¿›è¡Œå…¶ä»–é€»è¾‘å¤„ç†
     /// </summary>
     public void SaveGame()
     {
-        // ±£´æÊ±¼äÊı¾İ
+        // ä¿å­˜æ—¶é—´æ•°æ®
         SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
 
-        // ÏÈ±£´æÍæ¼ÒÊı¾İ
+        // å…ˆä¿å­˜ç©å®¶æ•°æ®
         ItemMgr.Instance.SavePlayer();
 
-        // ±£´æËùÓĞÇø¿éÊı¾İ
+        // ä¿å­˜æ‰€æœ‰åŒºå—æ•°æ®
         SaveAllChunks();
 
-        // ½«Êı¾İ±£´æµ½´ÅÅÌ
+        // å°†æ•°æ®ä¿å­˜åˆ°ç£ç›˜
         SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
 
     #endregion
 
-    #region UIÏà¹Ø
+    #region UIç›¸å…³
 
     public void OpenHellowCanvas()
     {
@@ -726,8 +719,8 @@ public class GameManager : SingletonAutoMono<GameManager>
             BasePanel helloCanvas = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_HelloCanvas);
 
             helloCanvas.Open();
-            helloCanvas.GetButton("Ñ¡Ôñ´æµµ").onClick.AddListener(OpenGameSaveManager);
-            helloCanvas.GetButton("ĞÂÓÎÏ·").onClick.AddListener(OpenNewGame);
+            helloCanvas.GetButton("é€‰æ‹©å­˜æ¡£").onClick.AddListener(OpenGameSaveManager);
+            helloCanvas.GetButton("æ–°æ¸¸æˆ").onClick.AddListener(OpenNewGame);
         }
     }
 
@@ -756,13 +749,13 @@ public class GameManager : SingletonAutoMono<GameManager>
         {
             BasePanel UI_NewGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
             UI_NewGame.Open();
-            UI_NewGame.GetButton("¿ªÊ¼ĞÂÓÎÏ·").onClick.AddListener(CreateNewWorld);
-            UI_NewGame.GetButton("·µ»ØÉÏÒ»¸ö½çÃæ").onClick.AddListener(UI_NewGame.Close);
-            // ÉèÖÃÊäÈë¿òÖµ¸Ä±äÊÂ¼ş
-            UI_NewGame.GetInputField("ĞÂÔöÍæ¼ÒÃû³ÆÊäÈë¿ò")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
-            UI_NewGame.GetInputField("ĞÂÔö´æµµÃû³ÆÊäÈë¿ò")?.onValueChanged.AddListener(OnPlayerSaveNameChanged);
-            UI_NewGame.GetInputField("ĞÇÇò°ë¾¶ÊäÈë¿ò")?.onValueChanged.AddListener(OnPlanetReadiusChanged);
-            UI_NewGame.GetInputField("ÔëÉùËõ·ÅÊäÈë¿ò")?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+            UI_NewGame.GetButton("å¼€å§‹æ–°æ¸¸æˆ").onClick.AddListener(CreateNewWorld);
+            UI_NewGame.GetButton("è¿”å›ä¸Šä¸€ä¸ªç•Œé¢").onClick.AddListener(UI_NewGame.Close);
+            // è®¾ç½®è¾“å…¥æ¡†å€¼æ”¹å˜äº‹ä»¶
+            UI_NewGame.GetInputField("æ–°å¢ç©å®¶åç§°è¾“å…¥æ¡†")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
+            UI_NewGame.GetInputField("æ–°å¢å­˜æ¡£åç§°è¾“å…¥æ¡†")?.onValueChanged.AddListener(OnPlayerSaveNameChanged);
+            UI_NewGame.GetInputField("æ˜ŸçƒåŠå¾„è¾“å…¥æ¡†")?.onValueChanged.AddListener(OnPlanetReadiusChanged);
+            UI_NewGame.GetInputField("å™ªå£°ç¼©æ”¾è¾“å…¥æ¡†")?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
 
 
         }
@@ -779,11 +772,11 @@ public class GameManager : SingletonAutoMono<GameManager>
         {
             BasePanel saveManager = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_SaveManager, "UI_GameSaveManager");
 
-            // ÉèÖÃUIÊÂ¼ş°ó¶¨
-            // ÉèÖÃ°´Å¥µã»÷ÊÂ¼ş
-            saveManager.SetButtonOnClick("¿ªÊ¼ÓÎÏ·°´Å¥", OnClick_StartGame_Button);
-            saveManager.SetButtonOnClick("¼ÓÔØ´æµµ°´Å¥", OnClick_LoadSaveData_Button);
-            saveManager.GetInputField("Ñ¡Ôñ»òĞÂÔöÍæ¼ÒÃû³ÆÊäÈë¿ò")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
+            // è®¾ç½®UIäº‹ä»¶ç»‘å®š
+            // è®¾ç½®æŒ‰é’®ç‚¹å‡»äº‹ä»¶
+            saveManager.SetButtonOnClick("å¼€å§‹æ¸¸æˆæŒ‰é’®", OnClick_StartGame_Button);
+            saveManager.SetButtonOnClick("åŠ è½½å­˜æ¡£æŒ‰é’®", OnClick_LoadSaveData_Button);
+            saveManager.GetInputField("é€‰æ‹©æˆ–æ–°å¢ç©å®¶åç§°è¾“å…¥æ¡†")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
 
             saveManager.Open();
         }
@@ -791,7 +784,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
 
 
-    #region UIÊÂ¼ş´¦Àí·½·¨
+    #region UIäº‹ä»¶å¤„ç†æ–¹æ³•
 
     private BasePanel GetSaveManagerPanel()
     {
@@ -806,30 +799,30 @@ public class GameManager : SingletonAutoMono<GameManager>
                 return panel;
         }
 
-        Debug.LogError($"Î´ÕÒµ½´æµµ¹ÜÀíÃæ°å: {saveManagerPanelName}");
+        Debug.LogError($"æœªæ‰¾åˆ°å­˜æ¡£ç®¡ç†é¢æ¿: {saveManagerPanelName}");
         return null;
     }
 
     /// <summary>
-    /// µã»÷¿ªÊ¼ÓÎÏ·°´Å¥
+    /// ç‚¹å‡»å¼€å§‹æ¸¸æˆæŒ‰é’®
     /// </summary>
     public void OnClick_StartGame_Button()
     {
         if (SaveDataMgr.Instance?.SaveData == null || SaveDataMgr.Instance.SaveData.Seed == 0)
         {
-            Debug.LogWarning("ÇëÏÈÑ¡Ôñ´æµµ»ò´´½¨ĞÂÓÎÏ·");
+            Debug.LogWarning("è¯·å…ˆé€‰æ‹©å­˜æ¡£æˆ–åˆ›å»ºæ–°æ¸¸æˆ");
             return;
         }
 
         BasePanel saveManager = GetSaveManagerPanel();
         if (saveManager != null)
         {
-            ContinueGame(saveManager.GetInputField("Ñ¡Ôñ»òĞÂÔöÍæ¼ÒÃû³ÆÊäÈë¿ò")?.text);
+            ContinueGame(saveManager.GetInputField("é€‰æ‹©æˆ–æ–°å¢ç©å®¶åç§°è¾“å…¥æ¡†")?.text);
         }
     }
 
     /// <summary>
-    /// µã»÷¿ªÊ¼ĞÂÓÎÏ·°´Å¥
+    /// ç‚¹å‡»å¼€å§‹æ–°æ¸¸æˆæŒ‰é’®
     /// </summary>
     private void OnClick_StartNewGame_Button()
     {
@@ -843,12 +836,12 @@ public class GameManager : SingletonAutoMono<GameManager>
         }
         else
         {
-            Debug.LogWarning("SaveAndLoad×é¼şÎ´°ó¶¨£¡");
+            Debug.LogWarning("SaveAndLoadç»„ä»¶æœªç»‘å®šï¼");
         }
     }
 
     /// <summary>
-    /// µã»÷¼ÓÔØ´æµµ°´Å¥
+    /// ç‚¹å‡»åŠ è½½å­˜æ¡£æŒ‰é’®
     /// </summary>
     public void OnClick_LoadSaveData_Button()
     {
@@ -857,7 +850,7 @@ public class GameManager : SingletonAutoMono<GameManager>
             BasePanel saveManager = GetSaveManagerPanel();
             if (saveManager != null)
             {
-                var selectedSaveText = saveManager.GetText("Ñ¡ÖĞµÄ´æµµÃû³Æ");
+                var selectedSaveText = saveManager.GetText("é€‰ä¸­çš„å­˜æ¡£åç§°");
                 if (selectedSaveText != null)
                 {
                     string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveText.text + ".bytes");
@@ -867,31 +860,31 @@ public class GameManager : SingletonAutoMono<GameManager>
         }
         else
         {
-            Debug.LogWarning("SaveAndLoad×é¼şÎ´°ó¶¨£¡");
+            Debug.LogWarning("SaveAndLoadç»„ä»¶æœªç»‘å®šï¼");
         }
-        // Éú³ÉÍæ¼Ò°´Å¥
+        // ç”Ÿæˆç©å®¶æŒ‰é’®
         SaveDataManager_UI.Instance.GeneratePlayerButtons();
     }
 
     /// <summary>
-    /// µã»÷É¾³ı´æµµ°´Å¥
+    /// ç‚¹å‡»åˆ é™¤å­˜æ¡£æŒ‰é’®
     /// </summary>
     public void OnClick_DeletSave_Button()
     {
         if (SaveMenuRightMenuUI.Instance.SelectInfo.Path == "")
         {
-            //É¾³ıÍæ¼Ò
+            //åˆ é™¤ç©å®¶
             SaveDataMgr.Instance.SaveData.PlayerData_Dict.Remove(SaveMenuRightMenuUI.Instance.SelectInfo.Name);
         }
         else if (SaveMenuRightMenuUI.Instance.SelectInfo.Path != "")
         {
-            // É¾³ı´æµµ
+            // åˆ é™¤å­˜æ¡£
             if (SaveDataMgr.Instance != null)
             {
                 BasePanel saveManager = GetSaveManagerPanel();
                 if (saveManager != null)
                 {
-                    var selectedSaveText = saveManager.GetText("Ñ¡ÖĞµÄ´æµµÃû³Æ");
+                    var selectedSaveText = saveManager.GetText("é€‰ä¸­çš„å­˜æ¡£åç§°");
                     if (selectedSaveText != null)
                     {
                         string saveDir = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData");
@@ -904,7 +897,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// Íæ¼ÒÃû×ÖÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// ç©å®¶åå­—è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnUpdate_PlayerNameChanged_Text(string newName)
     {
@@ -915,7 +908,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// ´æµµÃû×ÖÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// å­˜æ¡£åå­—è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnPlayerSaveNameChanged(string newName)
     {
@@ -926,36 +919,36 @@ public class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// ĞÇÇò°ë¾¶ÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// æ˜ŸçƒåŠå¾„è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnPlanetReadiusChanged(string newValue)
     {
-        // ¼ì²â´«ÈëµÄ×Ö·û´®ÊÇ·ñÎªÓĞĞ§µÄÕûÊı
+        // æ£€æµ‹ä¼ å…¥çš„å­—ç¬¦ä¸²æ˜¯å¦ä¸ºæœ‰æ•ˆçš„æ•´æ•°
         if (int.TryParse(newValue, out int radius))
         {
             SaveDataManager_UI.Instance.Ready_planetData.Radius = radius;
         }
         else
         {
-            // ·Ç·¨ÊäÈë£¬²»×ö´¦Àí£¬±ØÒªÊ±¿ÉÌáÊ¾ÓÃ»§
-            Debug.LogWarning($"ÊäÈëµÄ°ë¾¶ÖµÎŞĞ§£º{newValue}");
+            // éæ³•è¾“å…¥ï¼Œä¸åšå¤„ç†ï¼Œå¿…è¦æ—¶å¯æç¤ºç”¨æˆ·
+            Debug.LogWarning($"è¾“å…¥çš„åŠå¾„å€¼æ— æ•ˆï¼š{newValue}");
         }
     }
 
     /// <summary>
-    /// ĞÇÇòÔëÉùËõ·ÅÊäÈë¿òÊµÊ±¸üĞÂÊÂ¼ş
+    /// æ˜Ÿçƒå™ªå£°ç¼©æ”¾è¾“å…¥æ¡†å®æ—¶æ›´æ–°äº‹ä»¶
     /// </summary>
     private void OnPlanetNoiseScaleChanged(string newValue)
     {
-        // ¼ì²â´«ÈëµÄ×Ö·û´®ÊÇ·ñÎªÓĞĞ§µÄ¸¡µãÊı
+        // æ£€æµ‹ä¼ å…¥çš„å­—ç¬¦ä¸²æ˜¯å¦ä¸ºæœ‰æ•ˆçš„æµ®ç‚¹æ•°
         if (float.TryParse(newValue, out float noiseScale))
         {
             SaveDataManager_UI.Instance.Ready_planetData.NoiseScale = noiseScale;
         }
         else
         {
-            // ·Ç·¨ÊäÈë£¬²»×ö´¦Àí£¬±ØÒªÊ±¿ÉÌáÊ¾ÓÃ»§
-            Debug.LogWarning($"ÊäÈëµÄÔëÉùËõ·ÅÖµÎŞĞ§£º{newValue}");
+            // éæ³•è¾“å…¥ï¼Œä¸åšå¤„ç†ï¼Œå¿…è¦æ—¶å¯æç¤ºç”¨æˆ·
+            Debug.LogWarning($"è¾“å…¥çš„å™ªå£°ç¼©æ”¾å€¼æ— æ•ˆï¼š{newValue}");
         }
     }
 

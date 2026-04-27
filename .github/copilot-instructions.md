@@ -10,13 +10,12 @@
 - Project name: FlatWorld
 - Unity version: Unity 2022.3.62f2c1
 - Active scene:
-  - Name: Apple
   - Tags:
     - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Laser, Enemy
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: Apple
+  - Name: Chicken
   - Tag: Untagged
   - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

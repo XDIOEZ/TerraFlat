@@ -124,8 +124,11 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
         currentSeasonRemainingDays = currentSeasonTotalDays;
         UpdateCurrentDayConfig();
 
-        GameManager.Event_GameWorldEnter += OnGameWorldEnter;
-        GameManager.Event_GameWorldExit += OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+        }
     }
 
     private void OnGameWorldEnter()
@@ -140,8 +143,11 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
 
     private void OnDestroy()
     {
-        GameManager.Event_GameWorldEnter -= OnGameWorldEnter;
-        GameManager.Event_GameWorldExit -= OnGameWorldExit;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        }
     }
     #endregion
 

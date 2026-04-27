@@ -232,7 +232,7 @@ public class Mod_ChunkLoader : Module
         // 将 Vector2 center 转为 Vector2Int 区块坐标，确保权重烘焙使用固定中心
         Vector2Int centerChunkPos = new Vector2Int(Mathf.RoundToInt(chunkPos.x), Mathf.RoundToInt(chunkPos.y));
 
-        if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] UpdateChunks 触发 | chunkPos={chunkPos} centerChunkPos={centerChunkPos} LoadDistance={currentLoadDistance} UnActiveDistance={UnActiveDistance} DestroyDistance={DestroyChunkDistance}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] UpdateChunks 触发 | chunkPos={chunkPos} centerChunkPos={centerChunkPos} LoadDistance={currentLoadDistance} UnActiveDistance={UnActiveDistance} DestroyDistance={DestroyChunkDistance}");
 
         // 停止上一轮保底协程
         if (_delayedNavRefreshCoroutine != null)
@@ -251,7 +251,7 @@ public class Mod_ChunkLoader : Module
                 Debug.LogError("[区块加载器] AstarGameManager 未初始化", this);
                 return;
             }
-            if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] 所有区块加载完成 → RequestNavMeshRefresh | center={chunkPos} centerChunkPos={centerChunkPos} currentLoadDistance={currentLoadDistance}");
+            if (AstarGameManager.Instance.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] 所有区块加载完成 → RequestNavMeshRefresh | center={chunkPos} centerChunkPos={centerChunkPos} currentLoadDistance={currentLoadDistance}");
             _pendingRefreshLoadDistance = currentLoadDistance;
             _pendingRefreshCenterChunk = centerChunkPos;
             RequestNavMeshRefresh(chunkPos);
@@ -290,7 +290,7 @@ public class Mod_ChunkLoader : Module
         // 如果回调链已触发NavMesh刷新，则跳过
         if (_isNavRefreshRunning)
         {
-            if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 检测到NavMesh已在刷新，跳过保底 | center={center}");
+            if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 检测到NavMesh已在刷新，跳过保底 | center={center}");
             yield break;
         }
 
@@ -300,7 +300,7 @@ public class Mod_ChunkLoader : Module
             yield break;
         }
 
-        if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 保底触发 → RequestNavMeshRefresh | center={center} loadDistance={loadDistance} centerChunkPos={centerChunkPos}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 保底触发 → RequestNavMeshRefresh | center={center} loadDistance={loadDistance} centerChunkPos={centerChunkPos}");
         _pendingRefreshLoadDistance = loadDistance;
         _pendingRefreshCenterChunk = centerChunkPos;
         RequestNavMeshRefresh(center);
@@ -308,14 +308,14 @@ public class Mod_ChunkLoader : Module
 
     private void RequestNavMeshRefresh(Vector2 center)
     {
-        if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] RequestNavMeshRefresh | center={center} _isNavRefreshRunning={_isNavRefreshRunning} LoadDistance={LoadChunkDistance}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] RequestNavMeshRefresh | center={center} _isNavRefreshRunning={_isNavRefreshRunning} LoadDistance={LoadChunkDistance}");
 
         if (_isNavRefreshRunning)
         {
             _hasQueuedNavRefresh = true;
             _queuedNavRefreshCenter = center;
             _queuedNavRefreshLoadDistance = LoadChunkDistance; // 保存排队请求的距离
-            if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] NavRefresh正在运行，排队等待 | queuedCenter={center} queuedLoadDistance={_queuedNavRefreshLoadDistance}");
+            if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] NavRefresh正在运行，排队等待 | queuedCenter={center} queuedLoadDistance={_queuedNavRefreshLoadDistance}");
             return;
         }
 
@@ -324,7 +324,7 @@ public class Mod_ChunkLoader : Module
 
         var astar = AstarGameManager.Instance;
         var gridGraph = astar?.Pathfinder?.data?.gridGraph;
-        if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] 开始RefreshNavMeshAsync | GridGraph: width={gridGraph?.width ?? -1} depth={gridGraph?.depth ?? -1} center={gridGraph?.center} nodeSize={gridGraph?.nodeSize ?? -1} pendingLoadDistance={_pendingRefreshLoadDistance}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] 开始RefreshNavMeshAsync | GridGraph: width={gridGraph?.width ?? -1} depth={gridGraph?.depth ?? -1} center={gridGraph?.center} nodeSize={gridGraph?.nodeSize ?? -1} pendingLoadDistance={_pendingRefreshLoadDistance}");
 
         astar.RefreshNavMeshAsync(center, _pendingRefreshLoadDistance, OnMeshUpdateComplete);
     }
@@ -334,7 +334,7 @@ public class Mod_ChunkLoader : Module
         _isNavRefreshRunning = false;
         int completedLoadDistance = _pendingRefreshLoadDistance;
         Vector2Int completedCenterChunk = _pendingRefreshCenterChunk;
-        if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 | _hasQueuedNavRefresh={_hasQueuedNavRefresh} completedLoadDistance={completedLoadDistance} completedCenterChunk={completedCenterChunk}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 | _hasQueuedNavRefresh={_hasQueuedNavRefresh} completedLoadDistance={completedLoadDistance} completedCenterChunk={completedCenterChunk}");
 
         if (_hasQueuedNavRefresh)
         {
@@ -346,7 +346,7 @@ public class Mod_ChunkLoader : Module
             return;
         }
 
-        if (AstarGameManager.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 → RefreshChunkPenalty | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 → RefreshChunkPenalty | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
         // 使用固定中心坐标烘焙权重，避免异步扫描期间玩家移动导致范围偏移
         ChunkMgr.Instance?.RefreshChunkPenalty(completedCenterChunk, completedLoadDistance);
     }
