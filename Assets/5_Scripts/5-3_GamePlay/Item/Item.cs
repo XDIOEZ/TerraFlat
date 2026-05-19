@@ -6,8 +6,6 @@ using System.Linq;
 using System;
 using FastCloner.Code;
 
-#if UNITY_EDITOR
-#endif
 
 /// <summary>
 /// 物品基类，游戏中所有物品的抽象基类
