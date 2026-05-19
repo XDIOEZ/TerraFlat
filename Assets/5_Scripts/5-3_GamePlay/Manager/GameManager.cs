@@ -33,6 +33,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
     [Header("准备好的星球数据")]
     public PlanetData ReadyPlanetData = new();
+    
     [Header("准备好的时间数据")]
     public TimeData ReadyTimeData = new TimeData();
     [Header("存档数据")]
@@ -95,10 +96,6 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         // 通知所有订阅者：游戏世界已退出
         Event_GameWorldExit?.Invoke();
-
-        // 保存当前时间数据，包括日夜状态等
-        SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
-
 
         // 安全检查：确保核心管理器已初始化
         if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
@@ -292,9 +289,17 @@ public class GameManager : SingletonAutoMono<GameManager>
     [Tooltip("创建一个新星球")]
     public void SetNewPlanetData(PlanetData ReadyPlanetData_, TimeData ReadyTimeData_)
     {
+        if (ReadyPlanetData_ == null || string.IsNullOrEmpty(ReadyPlanetData_.Name))
+        {
+            Debug.LogError("[GameManager] 创建新星球失败：ReadyPlanetData 或星球名称为空");
+            return;
+        }
+
+        TimeData timeData = ReadyTimeData_ ?? new TimeData();
+
         //根据准备好的星球数据创建新星球存档
         SaveDataMgr.Instance.SaveData.PlanetData_Dict[ReadyPlanetData_.Name] = FastCloner.FastCloner.DeepClone(ReadyPlanetData_);
-        SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[ReadyPlanetData_.Name] = new SerializableTimeData(ReadyTimeData_);
+        SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[ReadyPlanetData_.Name] = new SerializableTimeData(timeData);
         SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict[ReadyPlanetData_.Name] = 1.0f;
     }
 
@@ -319,9 +324,6 @@ public class GameManager : SingletonAutoMono<GameManager>
         // 标记玩家已进入游戏世界，各管理器可开始运行
         IsInGameWorld = true;
 
-        // 通知所有订阅者：游戏世界已进入
-        Event_GameWorldEnter?.Invoke();
-
         //2. 实例化日月系统
         if (SunAndMoonPrefab != null)
         {
@@ -329,13 +331,14 @@ public class GameManager : SingletonAutoMono<GameManager>
             // 确保天体对象在场景切换时不会被销毁
             DontDestroyOnLoad(SunAndMoonObj);
         }
-        // 3. 加载时间数据
-        DayTimeSystem.Instance.LoadFromSaveData(SaveDataMgr.Instance.SaveData.DayTimeData);
 
         string OldSceneName = SceneManager.GetActiveScene().name;
         // 2. 立刻创建并激活空场景
         Scene newScene = SceneManager.CreateScene(NewScenename);
         SceneManager.SetActiveScene(newScene);
+
+        // 通知所有订阅者：游戏世界已进入
+        Event_GameWorldEnter?.Invoke();
 
         // 3. 准备卸载旧场景（如有）
         Scene startScene = SceneManager.GetSceneByName(OldSceneName);

@@ -520,6 +520,50 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return true;
     }
 
+    private bool CanFullyStoreOutput(Inventory inventory, ItemData itemData)
+    {
+        if (inventory == null || inventory.Data == null || itemData == null || itemData.Stack == null)
+            return false;
+
+        return GetInventoryAddCapacity(inventory, itemData) >= itemData.Stack.Amount;
+    }
+
+    private float GetInventoryAddCapacity(Inventory inventory, ItemData itemData)
+    {
+        if (inventory == null || inventory.Data == null || itemData == null || itemData.Stack == null)
+            return 0f;
+
+        float unitVolume = itemData.Stack.Volume;
+
+        if (unitVolume > 1)
+        {
+            return inventory.Data.itemSlots.Any(slot => slot != null && slot.itemData == null) ? itemData.Stack.Amount : 0f;
+        }
+
+        float totalCapacity = 0f;
+        foreach (var slot in inventory.Data.itemSlots)
+        {
+            if (slot == null)
+                continue;
+
+            if (slot.itemData == null)
+            {
+                totalCapacity += slot.SlotMaxVolume;
+                continue;
+            }
+
+            bool sameItem = slot.itemData.IDName == itemData.IDName
+                && slot.itemData.ItemSpecialData == itemData.ItemSpecialData;
+
+            if (!sameItem || slot.IsFull)
+                continue;
+
+            totalCapacity += Mathf.Max(0f, slot.SlotMaxVolume - slot.itemData.Stack.CurrentVolume);
+        }
+
+        return totalCapacity;
+    }
+
     private List<ItemData> PrepareOutputItems(Recipe recipe)
     {
         var itemsToAdd = new List<ItemData>();
@@ -594,8 +638,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         foreach (var itemData in outputItems)
         {
-            // 输出背包有空间 -> 继续原有流程
-            if (outputInv.Data.TryAddItem(itemData, false))
+            if (CanFullyStoreOutput(outputInv, itemData))
                 continue;
 
             // 输出背包无空间，尝试把输入槽作为临时输出口（先检测是否有空输入槽）
@@ -716,18 +759,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         Debug.Log($"[Mod_HandCraftTable] 开始合成：{recipe.name}，输入={GenerateRecipeKey(inputInv)}");
 
-        // 检查输出背包是否有空间；若无，则先扣除输入以腾出输入槽，再把输出放入输出背包或输入槽
-        bool needUseInputSlot = false;
-        foreach (var itemData in outputItems)
-        {
-            if (!outputInv.Data.TryAddItem(itemData, false))
-            {
-                needUseInputSlot = true;
-                break;
-            }
-        }
+        bool outputNeedsInputSlot = outputItems.Any(itemData => !CanFullyStoreOutput(outputInv, itemData));
 
-        if (needUseInputSlot)
+        if (outputNeedsInputSlot)
         {
             // 先扣除输入（腾出槽位）
             if (recipe.inputs.inputOrder == OrderedRule)
@@ -735,13 +769,13 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             else
                 ExecuteUnorderedDeduction(inputInv, recipe);
 
-            // 再放输出：优先放输出背包，放不下则放入输入背包（此时输入槽应已腾出或可堆叠）
+            // 再放输出：输出口不足时，整件产物直接落到输入槽
             foreach (var itemData in outputItems)
             {
-                if (!outputInv.Data.TryAddItem(itemData, true))
-                {
+                if (CanFullyStoreOutput(outputInv, itemData))
+                    outputInv.Data.TryAddItem(itemData, true);
+                else
                     inputInv.Data.TryAddItem(itemData, true);
-                }
             }
         }
         else

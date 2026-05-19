@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 8656319766967340523}
   - component: {fileID: 8436068588726109976}
   m_Layer: 0
-  m_Name: "\u65E5\u6708\u7CFB\u7EDF"
+  m_Name: TimeSystem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

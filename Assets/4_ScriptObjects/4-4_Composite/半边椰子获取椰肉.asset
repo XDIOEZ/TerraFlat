@@ -19,10 +19,10 @@ MonoBehaviour:
       ItemPrefab: {fileID: 0}
       Tag: 
       amount: 0
-    - matchMode: 0
+    - matchMode: 1
       ItemName: 
       ItemPrefab: {fileID: 0}
-      Tag: 
+      Tag: Knife
       amount: 0
     - matchMode: 0
       ItemName: Coconut_Half
@@ -38,11 +38,11 @@ MonoBehaviour:
     inputOrder: 0
   outputs:
     results:
-    - ItemName: Coconut_Shell
-      ItemPrefab: {fileID: 4346459173911706397, guid: aaaa85dbc5eaa7b4f954d717aa97e2c1, type: 3}
-      amount: 1
     - ItemName: CoconutMeat
       ItemPrefab: {fileID: 3926578369279844245, guid: aae6f07605357cb49b47fba252201311, type: 3}
+      amount: 1
+    - ItemName: Coconut_Shell
+      ItemPrefab: {fileID: 4346459173911706397, guid: aaaa85dbc5eaa7b4f954d717aa97e2c1, type: 3}
       amount: 1
   enableMirrorCrafting: 1
   action: []

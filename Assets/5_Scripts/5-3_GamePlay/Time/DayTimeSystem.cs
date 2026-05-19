@@ -21,43 +21,66 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     [Tooltip("默认光源颜色")]
     public Color DefaultLightColor = Color.white;
 
-
-    private void Awake()
-    {
-        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
-        enabled = false;
-    }
-
     private void OnEnable()
     {
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
-            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
-        }
+        SubscribeGameManagerEvents();
+    }
+
+    private void Start()
+    {
+        SubscribeGameManagerEvents();
     }
 
     private void OnDisable()
     {
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
-            GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
-        }
+        UnsubscribeGameManagerEvents();
+    }
+
+    private void SubscribeGameManagerEvents()
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
+        GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
+    }
+
+    private void UnsubscribeGameManagerEvents()
+    {
+        if (GameManager.Instance == null)
+            return;
+
+        GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
+        GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
     }
 
     private void OnGameWorldEnter()
     {
-        enabled = true;
+        if (SaveDataMgr.Instance?.SaveData == null)
+            return;
+
+        LoadFromSaveData(SaveDataMgr.Instance.SaveData.DayTimeData);
+        EnsureSceneTimeData(SceneManager.GetActiveScene().name, GameManager.Instance.ReadyTimeData);
     }
 
     private void OnGameWorldExit()
     {
-        enabled = false;
+        if (SaveDataMgr.Instance?.SaveData != null)
+        {
+            SaveDataMgr.Instance.SaveData.DayTimeData = GetSaveData();
+        }
+
+        WorldTimeDict?.Clear();
+        SceneLightingRateDict?.Clear();
     }
 
     private void Update()
     {
+        if (GameManager.Instance == null || !GameManager.Instance.IsInGameWorld)
+            return;
+
         // 主循环推进所有独立场景的时间
         foreach (var kvp in WorldTimeDict)
         {
@@ -287,6 +310,34 @@ private void TimeRun(string sceneName, float deltaTime)
         }
 
         // 默认采光率为1.0（完全采光）
+        if (!SceneLightingRateDict.ContainsKey(sceneName))
+        {
+            SceneLightingRateDict[sceneName] = 1.0f;
+        }
+    }
+
+    public void EnsureSceneTimeData(string sceneName, TimeData readyTimeData)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            Debug.LogWarning("[DayTimeSystem] 无法初始化时间数据：sceneName 为空");
+            return;
+        }
+
+        if (WorldTimeDict == null)
+            WorldTimeDict = new Dictionary<string, TimeData>();
+
+        if (SceneLightingRateDict == null)
+            SceneLightingRateDict = new Dictionary<string, float>();
+
+        if (!WorldTimeDict.ContainsKey(sceneName) || WorldTimeDict[sceneName] == null)
+        {
+            TimeData sourceTimeData = readyTimeData ?? new TimeData();
+            WorldTimeDict[sceneName] = FastCloner.FastCloner.DeepClone(sourceTimeData);
+
+            Debug.Log($"[DayTimeSystem] 未找到场景时间数据，已拷贝 ReadyTimeData：{sceneName}");
+        }
+
         if (!SceneLightingRateDict.ContainsKey(sceneName))
         {
             SceneLightingRateDict[sceneName] = 1.0f;
