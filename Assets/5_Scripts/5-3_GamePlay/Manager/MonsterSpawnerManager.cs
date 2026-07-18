@@ -107,7 +107,7 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
     /// </summary>
     private void CheckAndTriggerSpawn()
     {
-        if (ItemMgr.Instance == null || _dayTimeSystem == null)
+        if (ItemMgr.Instance == null || ItemMgr.Instance.UserPlayerTransform == null || _dayTimeSystem == null)
             return;
 
         // 获取当前场景的时间数据
@@ -208,14 +208,11 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
     /// <returns>有效的生成世界坐标，失败返回 Vector3.zero</returns>
     private Vector3 GetValidSpawnPosition()
     {
-        Player player = ItemMgr.Instance.User_Player;
-        if (player == null)
-        {
-            Debug.LogError("[MonsterSpawnerManager] 玩家实例未找到");
+        Transform playerTransform = ItemMgr.Instance.UserPlayerTransform;
+        if (playerTransform == null)
             return Vector3.zero;
-        }
 
-        Vector3 playerPos = player.transform.position;
+        Vector3 playerPos = playerTransform.position;
 
         // 多次尝试找到有效位置
         for (int i = 0; i < ActiveSpawnerConfig.SpawnSearchRetryCount; i++)

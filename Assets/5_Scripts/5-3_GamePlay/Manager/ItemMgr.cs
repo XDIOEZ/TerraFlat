@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ItemMgr : SingletonMono<ItemMgr>
 {
@@ -24,13 +25,36 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
     private Map _cachedMap;
 
+    private Transform _externalPlayerTransform;
+
     private readonly List<Item> _runtimeItems = new();
     private readonly List<Item> _updateSnapshot = new(256);
     #endregion
 
     #region Properties
 
-    public string PlayerInSceneName => Player_DIC[SaveDataMgr.Instance.CurrentContrrolPlayerName].Data.CurrentSceneName;
+    public string PlayerInSceneName
+    {
+        get
+        {
+            string playerName = SaveDataMgr.Instance.CurrentContrrolPlayerName;
+            if (Player_DIC.TryGetValue(playerName, out Player runtimePlayer) && runtimePlayer?.Data != null)
+            {
+                return runtimePlayer.Data.CurrentSceneName;
+            }
+
+            // 联机走路模式使用轻量 NetworkWorldPlayer，不创建旧 Player 物品实例。
+            // 仍从同步后的玩家存档中提供当前场景，避免依赖旧运行时字典的系统报错。
+            if (SaveDataMgr.Instance.SaveData?.PlayerData_Dict != null &&
+                SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData) &&
+                !string.IsNullOrWhiteSpace(playerData.CurrentSceneName))
+            {
+                return playerData.CurrentSceneName;
+            }
+
+            return SceneManager.GetActiveScene().name;
+        }
+    }
     public Player User_Player
     {
         get
@@ -40,9 +64,34 @@ public class ItemMgr : SingletonMono<ItemMgr>
                 return player;
             }
 
-            Debug.LogError($"当前控制玩家未加载: {SaveDataMgr.Instance.CurrentContrrolPlayerName}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// 当前本地玩家的 Transform。单机模式返回旧 Player，联机走路模式返回网络玩家。
+    /// </summary>
+    public Transform UserPlayerTransform
+    {
+        get
+        {
+            string playerName = SaveDataMgr.Instance.CurrentContrrolPlayerName;
+            if (Player_DIC.TryGetValue(playerName, out Player runtimePlayer) && runtimePlayer != null)
+                return runtimePlayer.transform;
+
+            return _externalPlayerTransform;
+        }
+    }
+
+    public void RegisterExternalPlayerTransform(Transform playerTransform)
+    {
+        _externalPlayerTransform = playerTransform;
+    }
+
+    public void UnregisterExternalPlayerTransform(Transform playerTransform)
+    {
+        if (_externalPlayerTransform == playerTransform)
+            _externalPlayerTransform = null;
     }
 
     public Map Map

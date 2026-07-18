@@ -12,7 +12,7 @@ namespace FlatWorld.Networking.MirrorAdapter
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(KcpTransport))]
-    public sealed class FlatWorldNetworkManager : NetworkManager, INetworkSession
+    public class FlatWorldNetworkManager : NetworkManager, INetworkSession
     {
         private KcpTransport kcpTransport;
         private NetworkRole role = NetworkRole.Offline;

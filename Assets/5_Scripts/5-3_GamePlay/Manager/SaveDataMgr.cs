@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using MemoryPack;
@@ -72,6 +73,45 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     #endregion
 
     #region 保存功能
+
+    /// <summary>
+    /// 为联机客户端创建完整世界快照。快照包含存档种子、星球参数和地图区块数据，
+    /// 并使用 GZip 压缩以降低首次加入时的传输体积。
+    /// </summary>
+    public byte[] CreateCompressedNetworkSnapshot()
+    {
+        if (SaveData == null)
+            throw new InvalidOperationException("SaveData为null，无法创建联机世界快照");
+
+        byte[] rawData = MemoryPackSerializer.Serialize(SaveData);
+        using MemoryStream output = new MemoryStream();
+        using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
+        {
+            gzip.Write(rawData, 0, rawData.Length);
+        }
+
+        return output.ToArray();
+    }
+
+    /// <summary>
+    /// 应用主机发送的完整世界快照。客户端只替换内存数据，不写入本地磁盘。
+    /// </summary>
+    public void ApplyCompressedNetworkSnapshot(byte[] compressedData)
+    {
+        if (compressedData == null || compressedData.Length == 0)
+            throw new ArgumentException("联机世界快照为空", nameof(compressedData));
+
+        using MemoryStream input = new MemoryStream(compressedData, false);
+        using GZipStream gzip = new GZipStream(input, CompressionMode.Decompress);
+        using MemoryStream output = new MemoryStream();
+        gzip.CopyTo(output);
+
+        GameSaveData snapshot = MemoryPackSerializer.Deserialize<GameSaveData>(output.ToArray());
+        if (snapshot == null)
+            throw new InvalidDataException("联机世界快照反序列化失败");
+
+        SaveData = snapshot;
+    }
 
     /// <summary>
     /// 保存当前游戏状态到磁盘

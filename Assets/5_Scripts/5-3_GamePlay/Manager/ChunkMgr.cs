@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 /// - 负责区块的加载、销毁与激活切换
 /// - 提供按玩家位置加载 / 回收附近区块的接口
 /// </summary>
-public class ChunkMgr : SingletonAutoMono<ChunkMgr>
+public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 {
     #region 字段
 
