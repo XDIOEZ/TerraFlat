@@ -1,0 +1,18 @@
+{
+    "name": "FlatWorld.Networking.Mirror",
+    "rootNamespace": "FlatWorld.Networking.MirrorAdapter",
+    "references": [
+        "FlatWorld.Networking.Core",
+        "Mirror",
+        "Mirror.Transports"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
