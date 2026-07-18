@@ -16,7 +16,7 @@
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: WorkBench
+  - Name: Module_WorkBench
   - Tag: Untagged
-  - Layer: Collider
+  - Layer: 9
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

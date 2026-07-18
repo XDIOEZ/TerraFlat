@@ -29,6 +29,9 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
     private int _lastSpawnDay = -999; // 上次成功生成的游戏日（用于间隔控制）
 
+    // DayTimeSystem 会在进入游戏世界时由 GameManager 实例化，启动界面中尚不存在。
+    private DayTimeSystem _dayTimeSystem;
+
     #endregion
 
     #region 生命周期
@@ -44,17 +47,6 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
             return;
         }
 
-        // 订阅时间系统的更新
-        if (DayTimeSystem.Instance != null)
-        {
-            // 通过 Update 主动检查时间点，而非依赖事件系统
-            Debug.Log("[MonsterSpawnerManager] 已初始化，监听游戏时间系统");
-        }
-        else
-        {
-            Debug.LogError("[MonsterSpawnerManager] DayTimeSystem 未找到！");
-        }
-
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
@@ -64,21 +56,33 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
     private void OnGameWorldEnter()
     {
+        // RunWorld 会先实例化 TimeSystem，再触发 Event_GameWorldEnter。
+        _dayTimeSystem = DayTimeSystem.Instance;
+        if (_dayTimeSystem == null)
+        {
+            enabled = false;
+            return;
+        }
+
         enabled = true;
+        Debug.Log("[MonsterSpawnerManager] 已初始化，监听游戏时间系统");
     }
 
     private void OnGameWorldExit()
     {
         enabled = false;
+        _dayTimeSystem = null;
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
             GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
         }
+
+        base.OnDestroy();
     }
 
     private void Update()
@@ -103,12 +107,12 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
     /// </summary>
     private void CheckAndTriggerSpawn()
     {
-        if (ItemMgr.Instance == null || DayTimeSystem.Instance == null)
+        if (ItemMgr.Instance == null || _dayTimeSystem == null)
             return;
 
         // 获取当前场景的时间数据
         string currentScene = ItemMgr.Instance.PlayerInSceneName;
-        if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(currentScene, out TimeData timeData))
+        if (!_dayTimeSystem.WorldTimeDict.TryGetValue(currentScene, out TimeData timeData))
             return;
 
         // 获取当前时间（在 0-DayLength 范围内）
