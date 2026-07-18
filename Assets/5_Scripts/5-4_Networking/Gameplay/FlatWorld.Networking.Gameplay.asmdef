@@ -1,0 +1,27 @@
+{
+    "name": "FlatWorld.Networking.Gameplay",
+    "rootNamespace": "FlatWorld.Networking.Gameplay",
+    "references": [
+        "FlatWorld.Networking.Core",
+        "FlatWorld.Networking.Mirror",
+        "GamePlay",
+        "UI",
+        "m_Utilitiles",
+        "Mirror",
+        "Mirror.Components",
+        "Mirror.Transports",
+        "kcp2k",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Unity.ugui"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -237,7 +237,9 @@ public class TileEffectReceiver : Module
         // 注意：要求 Tile_Block.tileItemName 与 TileData.Name 对应，例如 "TileItem_Water" 等
         if (GameRes.Instance == null)
         {
-            Debug.LogError("TileEffectReceiver: GameRes.Instance 为空，无法获取 Tile_Block");
+            // 退出 Play Mode 时 GameRes 会先销毁，此时 TileEffectReceiver 的 OnExit 只需静默结束。
+            if (Application.isPlaying)
+                Debug.LogError("TileEffectReceiver: GameRes.Instance 为空，无法获取 Tile_Block");
             return false;
         }
 
