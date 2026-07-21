@@ -1,3 +1,5 @@
+// AI-Context: 联机模式面板的纯视图和状态呈现层；不直接启停 Mirror 会话。
+
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,11 +7,19 @@ using UnityEngine.UI;
 namespace FlatWorld.Networking.Gameplay
 {
     /// <summary>
-    /// 双脚本 UI 的视图脚本：仅负责 UGUI 结构与 BasePanel 控件收集。
+    /// 双脚本 UI 的联机视图：仅负责 UGUI 结构、视觉状态与 BasePanel 控件收集。
+    /// 联机业务与按钮事件由 NetworkModeUIController 负责。
     /// </summary>
     public sealed class NetworkModePanelView : BasePanel
     {
         public const string PanelKey = "UI_NetworkMode";
+
+        private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.98f);
+        private static readonly Color InkSoft = new Color(0.045f, 0.075f, 0.095f, 0.98f);
+        private static readonly Color Cream = new Color(0.95f, 0.91f, 0.81f, 1f);
+        private static readonly Color Muted = new Color(0.64f, 0.70f, 0.71f, 1f);
+        private static readonly Color Amber = new Color(0.83f, 0.49f, 0.23f, 1f);
+        private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
         private static TMP_FontAsset preferredFont;
 
         public static bool IsProjectFontReady => FindProjectFont() != null;
@@ -21,14 +31,18 @@ namespace FlatWorld.Networking.Gameplay
                 typeof(RectTransform),
                 typeof(Canvas),
                 typeof(CanvasGroup),
+                typeof(CanvasRenderer),
                 typeof(Image),
                 typeof(GraphicRaycaster),
                 typeof(NetworkModePanelView));
 
+            panelObject.layer = LayerMask.NameToLayer("UI");
             panelObject.transform.SetParent(parent, false);
+
             Canvas panelCanvas = panelObject.GetComponent<Canvas>();
             panelCanvas.overrideSorting = true;
             panelCanvas.sortingOrder = 500;
+
             NetworkModePanelView view = panelObject.GetComponent<NetworkModePanelView>();
             view.BuildVisualTree();
             view.PanelName = PanelKey;
@@ -43,148 +57,482 @@ namespace FlatWorld.Networking.Gameplay
             preferredFont = ResolvePreferredFont();
 
             RectTransform root = GetComponent<RectTransform>();
-            root.anchorMin = new Vector2(0.5f, 0.5f);
-            root.anchorMax = new Vector2(0.5f, 0.5f);
-            root.pivot = new Vector2(0.5f, 0.5f);
-            root.sizeDelta = new Vector2(640f, 540f);
-            root.anchoredPosition = Vector2.zero;
+            Stretch(root);
 
-            Image background = GetComponent<Image>();
-            background.color = new Color(0.055f, 0.075f, 0.11f, 0.97f);
+            Image scrim = GetComponent<Image>();
+            scrim.color = new Color(0.006f, 0.016f, 0.024f, 0.68f);
+            scrim.raycastTarget = true;
 
-            VerticalLayoutGroup layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(36, 36, 28, 28);
-            layout.spacing = 14f;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childControlHeight = true;
-            layout.childControlWidth = true;
-            layout.childForceExpandHeight = false;
-            layout.childForceExpandWidth = true;
+            Image shadow = CreateImage("面板投影", transform, new Color(0f, 0f, 0f, 0.38f));
+            SetRect(shadow.rectTransform, new Vector2(12f, -14f), new Vector2(920f, 680f), new Vector2(0.5f, 0.5f));
+            shadow.raycastTarget = false;
 
-            AddText(transform, "标题", "联机模式", 38f, 58f, FontStyles.Bold);
-            AddText(transform, "说明", "主机同步地图数据；WASD / 方向键移动", 20f, 38f, FontStyles.Normal,
-                new Color(0.72f, 0.8f, 0.92f));
-            AddInput(transform, "玩家名称输入框", "玩家名称", $"玩家_{Random.Range(1000, 9999)}");
-            AddInput(transform, "地址输入框", "主机地址", "127.0.0.1");
-            AddInput(transform, "端口输入框", "端口", "7777", TMP_InputField.ContentType.IntegerNumber);
-            AddText(transform, "状态文本", "离线", 20f, 34f, FontStyles.Normal, new Color(0.45f, 0.95f, 0.72f));
-            AddText(transform, "玩家数量文本", "玩家：0 / 2", 18f, 30f, FontStyles.Normal,
-                new Color(0.82f, 0.86f, 0.92f));
+            Image card = CreateImage("联机主卡片", transform, Ink);
+            SetRect(card.rectTransform, Vector2.zero, new Vector2(920f, 680f), new Vector2(0.5f, 0.5f));
 
-            GameObject buttons = new GameObject("操作按钮组", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-            buttons.transform.SetParent(transform, false);
-            HorizontalLayoutGroup buttonLayout = buttons.GetComponent<HorizontalLayoutGroup>();
-            buttonLayout.spacing = 12f;
-            buttonLayout.childControlHeight = true;
-            buttonLayout.childControlWidth = true;
-            buttonLayout.childForceExpandWidth = true;
-            buttons.GetComponent<LayoutElement>().preferredHeight = 54f;
+            Outline cardOutline = card.gameObject.AddComponent<Outline>();
+            cardOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.32f);
+            cardOutline.effectDistance = new Vector2(1f, -1f);
+            cardOutline.useGraphicAlpha = true;
 
-            AddButton(buttons.transform, "创建主机按钮", "创建主机", new Color(0.18f, 0.55f, 0.38f));
-            AddButton(buttons.transform, "加入游戏按钮", "加入游戏", new Color(0.18f, 0.4f, 0.68f));
-            AddButton(buttons.transform, "断开按钮", "断开", new Color(0.62f, 0.25f, 0.25f));
-            AddButton(transform, "关闭按钮", "关闭界面", new Color(0.22f, 0.25f, 0.32f), 44f);
+            Image accent = CreateImage("卡片强调线", card.transform, Amber);
+            accent.rectTransform.anchorMin = new Vector2(0f, 0f);
+            accent.rectTransform.anchorMax = new Vector2(0f, 1f);
+            accent.rectTransform.pivot = new Vector2(0f, 0.5f);
+            accent.rectTransform.anchoredPosition = Vector2.zero;
+            accent.rectTransform.sizeDelta = new Vector2(6f, 0f);
+            accent.raycastTarget = false;
+
+            BuildHeader(card.transform);
+            BuildConnectionForm(card.transform);
+            BuildSessionSummary(card.transform);
+            BuildActions(card.transform);
         }
 
-        private static TextMeshProUGUI AddText(
-            Transform parent,
-            string objectName,
-            string value,
-            float fontSize,
-            float height,
-            FontStyles style,
-            Color? color = null)
+        private static void BuildHeader(Transform card)
         {
-            GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI), typeof(LayoutElement));
-            textObject.transform.SetParent(parent, false);
-            TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
-            text.text = value;
-            if (preferredFont != null)
-                text.font = preferredFont;
-            text.fontSize = fontSize;
-            text.fontStyle = style;
-            text.alignment = TextAlignmentOptions.Center;
-            text.color = color ?? Color.white;
-            text.enableWordWrapping = false;
-            textObject.GetComponent<LayoutElement>().preferredHeight = height;
-            return text;
+            TextMeshProUGUI eyebrow = CreateText(
+                "联机眉题",
+                card,
+                "MULTIPLAYER  /  网络会话",
+                16f,
+                Amber,
+                FontStyles.Bold,
+                TextAlignmentOptions.Left);
+            SetRect(eyebrow.rectTransform, new Vector2(42f, -34f), new Vector2(560f, 26f), new Vector2(0f, 1f));
+            eyebrow.characterSpacing = 3f;
+
+            TextMeshProUGUI title = CreateText(
+                "标题",
+                card,
+                "联机模式",
+                42f,
+                Cream,
+                FontStyles.Bold,
+                TextAlignmentOptions.Left);
+            SetRect(title.rectTransform, new Vector2(42f, -70f), new Vector2(500f, 58f), new Vector2(0f, 1f));
+
+            TextMeshProUGUI description = CreateText(
+                "说明",
+                card,
+                "创建你的世界，或输入好友的连接信息加入旅程。",
+                19f,
+                Muted,
+                FontStyles.Normal,
+                TextAlignmentOptions.Left);
+            SetRect(description.rectTransform, new Vector2(42f, -130f), new Vector2(720f, 34f), new Vector2(0f, 1f));
+
+            AddButton(
+                card,
+                "关闭按钮",
+                "×",
+                new Vector2(-34f, -34f),
+                new Vector2(48f, 48f),
+                new Color(0.08f, 0.11f, 0.13f, 0.96f),
+                new Color(0.64f, 0.70f, 0.71f, 0.28f),
+                28f,
+                new Vector2(1f, 1f));
+
+            Image divider = CreateImage("标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
+            divider.rectTransform.anchorMin = new Vector2(0f, 1f);
+            divider.rectTransform.anchorMax = new Vector2(1f, 1f);
+            divider.rectTransform.pivot = new Vector2(0.5f, 1f);
+            divider.rectTransform.anchoredPosition = new Vector2(0f, -178f);
+            divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
+            divider.raycastTarget = false;
+        }
+
+        private static void BuildConnectionForm(Transform card)
+        {
+            TextMeshProUGUI heading = CreateText(
+                "连接设置标题",
+                card,
+                "连接设置",
+                22f,
+                Cream,
+                FontStyles.Bold,
+                TextAlignmentOptions.Left);
+            SetRect(heading.rectTransform, new Vector2(42f, -208f), new Vector2(470f, 34f), new Vector2(0f, 1f));
+
+            AddInput(
+                card,
+                "玩家名称输入框",
+                "玩家名称",
+                "你在联机世界中的显示名称",
+                $"玩家_{Random.Range(1000, 9999)}",
+                new Vector2(42f, -258f),
+                new Vector2(500f, 66f));
+
+            AddInput(
+                card,
+                "地址输入框",
+                "主机地址",
+                "例如 127.0.0.1",
+                "127.0.0.1",
+                new Vector2(42f, -358f),
+                new Vector2(342f, 66f));
+
+            AddInput(
+                card,
+                "端口输入框",
+                "端口",
+                "7777",
+                "7777",
+                new Vector2(400f, -358f),
+                new Vector2(142f, 66f),
+                TMP_InputField.ContentType.IntegerNumber);
+
+            Image notice = CreateImage("同步说明底板", card, new Color(0.07f, 0.105f, 0.125f, 0.92f));
+            SetRect(notice.rectTransform, new Vector2(42f, -458f), new Vector2(500f, 78f), new Vector2(0f, 1f));
+
+            Image noticeAccent = CreateImage("同步说明强调线", notice.transform, Teal);
+            noticeAccent.rectTransform.anchorMin = new Vector2(0f, 0f);
+            noticeAccent.rectTransform.anchorMax = new Vector2(0f, 1f);
+            noticeAccent.rectTransform.pivot = new Vector2(0f, 0.5f);
+            noticeAccent.rectTransform.anchoredPosition = Vector2.zero;
+            noticeAccent.rectTransform.sizeDelta = new Vector2(4f, 0f);
+            noticeAccent.raycastTarget = false;
+
+            TextMeshProUGUI noticeTitle = CreateText(
+                "同步说明标题",
+                notice.transform,
+                "世界同步",
+                17f,
+                Teal,
+                FontStyles.Bold,
+                TextAlignmentOptions.Left);
+            SetRect(noticeTitle.rectTransform, new Vector2(18f, -10f), new Vector2(180f, 26f), new Vector2(0f, 1f));
+
+            TextMeshProUGUI noticeText = CreateText(
+                "同步说明文字",
+                notice.transform,
+                "主机负责地图与世界状态；加入者会自动接收当前世界。",
+                15f,
+                Muted,
+                FontStyles.Normal,
+                TextAlignmentOptions.Left);
+            SetRect(noticeText.rectTransform, new Vector2(18f, -38f), new Vector2(458f, 26f), new Vector2(0f, 1f));
+        }
+
+        private static void BuildSessionSummary(Transform card)
+        {
+            Image summary = CreateImage("会话状态卡", card, new Color(0.035f, 0.06f, 0.075f, 0.98f));
+            SetRect(summary.rectTransform, new Vector2(-42f, -208f), new Vector2(292f, 328f), new Vector2(1f, 1f));
+
+            Outline outline = summary.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.18f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            TextMeshProUGUI heading = CreateText(
+                "会话状态标题",
+                summary.transform,
+                "会话状态",
+                21f,
+                Cream,
+                FontStyles.Bold,
+                TextAlignmentOptions.Left);
+            SetRect(heading.rectTransform, new Vector2(24f, -24f), new Vector2(220f, 32f), new Vector2(0f, 1f));
+
+            Image statusPill = CreateImage("状态底板", summary.transform, new Color(0.07f, 0.16f, 0.15f, 1f));
+            SetRect(statusPill.rectTransform, new Vector2(24f, -70f), new Vector2(244f, 56f), new Vector2(0f, 1f));
+
+            Image statusDot = CreateImage("状态指示点", statusPill.transform, Teal);
+            SetRect(statusDot.rectTransform, new Vector2(18f, 0f), new Vector2(10f, 10f), new Vector2(0f, 0.5f));
+            statusDot.raycastTarget = false;
+
+            TextMeshProUGUI status = CreateText(
+                "状态文本",
+                statusPill.transform,
+                "离线",
+                16f,
+                new Color(0.58f, 0.88f, 0.79f, 1f),
+                FontStyles.Bold,
+                TextAlignmentOptions.Left,
+                true);
+            status.rectTransform.anchorMin = new Vector2(0f, 0f);
+            status.rectTransform.anchorMax = new Vector2(1f, 1f);
+            status.rectTransform.offsetMin = new Vector2(38f, 8f);
+            status.rectTransform.offsetMax = new Vector2(-12f, -8f);
+
+            TextMeshProUGUI playersLabel = CreateText(
+                "玩家数量标签",
+                summary.transform,
+                "当前连接",
+                14f,
+                Muted,
+                FontStyles.Normal,
+                TextAlignmentOptions.Left);
+            SetRect(playersLabel.rectTransform, new Vector2(24f, -146f), new Vector2(210f, 24f), new Vector2(0f, 1f));
+
+            TextMeshProUGUI players = CreateText(
+                "玩家数量文本",
+                summary.transform,
+                "玩家：0 / 2",
+                28f,
+                Cream,
+                FontStyles.Bold,
+                TextAlignmentOptions.Left);
+            SetRect(players.rectTransform, new Vector2(24f, -174f), new Vector2(220f, 42f), new Vector2(0f, 1f));
+
+            Image divider = CreateImage("状态分隔线", summary.transform, new Color(0.55f, 0.64f, 0.65f, 0.16f));
+            SetRect(divider.rectTransform, new Vector2(24f, -232f), new Vector2(244f, 1f), new Vector2(0f, 1f));
+            divider.raycastTarget = false;
+
+            TextMeshProUGUI controls = CreateText(
+                "操作提示",
+                summary.transform,
+                "移动  WASD / 方向键\n关闭  使用右上角按钮",
+                14f,
+                Muted,
+                FontStyles.Normal,
+                TextAlignmentOptions.TopLeft,
+                true);
+            SetRect(controls.rectTransform, new Vector2(24f, -252f), new Vector2(244f, 58f), new Vector2(0f, 1f));
+            controls.lineSpacing = 6f;
+        }
+
+        private static void BuildActions(Transform card)
+        {
+            Image divider = CreateImage("操作区分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
+            divider.rectTransform.anchorMin = new Vector2(0f, 0f);
+            divider.rectTransform.anchorMax = new Vector2(1f, 0f);
+            divider.rectTransform.pivot = new Vector2(0.5f, 0f);
+            divider.rectTransform.anchoredPosition = new Vector2(0f, 112f);
+            divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
+            divider.raycastTarget = false;
+
+            AddButton(
+                card,
+                "创建主机按钮",
+                "创建主机",
+                new Vector2(42f, 34f),
+                new Vector2(214f, 62f),
+                new Color(0.70f, 0.36f, 0.16f, 1f),
+                new Color(1f, 0.71f, 0.38f, 0.38f),
+                20f,
+                Vector2.zero);
+
+            AddButton(
+                card,
+                "加入游戏按钮",
+                "加入好友",
+                new Vector2(272f, 34f),
+                new Vector2(214f, 62f),
+                new Color(0.08f, 0.29f, 0.29f, 1f),
+                new Color(0.36f, 0.78f, 0.72f, 0.34f),
+                20f,
+                Vector2.zero);
+
+            AddButton(
+                card,
+                "断开按钮",
+                "断开连接",
+                new Vector2(-42f, 34f),
+                new Vector2(194f, 62f),
+                new Color(0.25f, 0.075f, 0.075f, 0.96f),
+                new Color(0.78f, 0.34f, 0.29f, 0.30f),
+                18f,
+                new Vector2(1f, 0f));
+
         }
 
         private static TMP_InputField AddInput(
             Transform parent,
             string objectName,
+            string labelValue,
             string placeholderValue,
             string initialValue,
+            Vector2 position,
+            Vector2 size,
             TMP_InputField.ContentType contentType = TMP_InputField.ContentType.Standard)
         {
-            GameObject inputObject = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(TMP_InputField), typeof(LayoutElement));
+            TextMeshProUGUI label = CreateText(
+                objectName + "_标签",
+                parent,
+                labelValue,
+                15f,
+                Muted,
+                FontStyles.Bold,
+                TextAlignmentOptions.Left);
+            SetRect(label.rectTransform, position, new Vector2(size.x, 24f), new Vector2(0f, 1f));
+
+            GameObject inputObject = new GameObject(
+                objectName,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(TMP_InputField));
+            inputObject.layer = LayerMask.NameToLayer("UI");
             inputObject.transform.SetParent(parent, false);
-            inputObject.GetComponent<Image>().color = new Color(0.12f, 0.16f, 0.22f, 1f);
-            inputObject.GetComponent<LayoutElement>().preferredHeight = 48f;
+
+            RectTransform inputRect = inputObject.GetComponent<RectTransform>();
+            SetRect(inputRect, position + new Vector2(0f, -26f), size, new Vector2(0f, 1f));
+
+            Image background = inputObject.GetComponent<Image>();
+            background.color = InkSoft;
+
+            Outline outline = inputObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.22f);
+            outline.effectDistance = new Vector2(1f, -1f);
 
             GameObject viewportObject = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
+            viewportObject.layer = LayerMask.NameToLayer("UI");
             viewportObject.transform.SetParent(inputObject.transform, false);
             RectTransform viewport = viewportObject.GetComponent<RectTransform>();
-            viewport.anchorMin = Vector2.zero;
-            viewport.anchorMax = Vector2.one;
-            viewport.offsetMin = new Vector2(16f, 6f);
-            viewport.offsetMax = new Vector2(-16f, -6f);
+            Stretch(viewport);
+            viewport.offsetMin = new Vector2(16f, 7f);
+            viewport.offsetMax = new Vector2(-16f, -7f);
 
-            TextMeshProUGUI placeholder = AddInputText(viewportObject.transform, "Placeholder", placeholderValue);
-            placeholder.color = new Color(0.55f, 0.6f, 0.68f, 0.85f);
-            TextMeshProUGUI valueText = AddInputText(viewportObject.transform, "Text", initialValue);
+            TextMeshProUGUI placeholder = AddInputText(viewportObject.transform, objectName + "_占位文字", placeholderValue);
+            placeholder.color = new Color(0.53f, 0.59f, 0.60f, 0.80f);
+
+            TextMeshProUGUI valueText = AddInputText(viewportObject.transform, objectName + "_输入文字", initialValue);
 
             TMP_InputField input = inputObject.GetComponent<TMP_InputField>();
+            input.targetGraphic = background;
             input.textViewport = viewport;
             input.textComponent = valueText;
             input.placeholder = placeholder;
             input.contentType = contentType;
             input.text = initialValue;
-            input.caretColor = Color.white;
-            input.selectionColor = new Color(0.25f, 0.55f, 0.85f, 0.5f);
+            input.caretColor = Cream;
+            input.selectionColor = new Color(0.83f, 0.49f, 0.23f, 0.42f);
+            input.customCaretColor = true;
+
+            ColorBlock colors = input.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.12f, 1.08f, 1f, 1f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.disabledColor = new Color(0.58f, 0.60f, 0.60f, 0.55f);
+            colors.fadeDuration = 0.12f;
+            input.colors = colors;
             return input;
         }
 
         private static TextMeshProUGUI AddInputText(Transform parent, string objectName, string value)
         {
-            GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI));
-            textObject.transform.SetParent(parent, false);
-            RectTransform rect = textObject.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
-            text.text = value;
-            if (preferredFont != null)
-                text.font = preferredFont;
-            text.fontSize = 22f;
-            text.alignment = TextAlignmentOptions.MidlineLeft;
-            text.color = Color.white;
-            text.enableWordWrapping = false;
+            TextMeshProUGUI text = CreateText(
+                objectName,
+                parent,
+                value,
+                19f,
+                Cream,
+                FontStyles.Normal,
+                TextAlignmentOptions.MidlineLeft);
+            Stretch(text.rectTransform);
             return text;
         }
 
-        private static Button AddButton(Transform parent, string objectName, string caption, Color color, float height = 54f)
+        private static Button AddButton(
+            Transform parent,
+            string objectName,
+            string caption,
+            Vector2 position,
+            Vector2 size,
+            Color color,
+            Color outlineColor,
+            float fontSize,
+            Vector2 pivot)
         {
-            GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            GameObject buttonObject = new GameObject(
+                objectName,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(Button));
+            buttonObject.layer = LayerMask.NameToLayer("UI");
             buttonObject.transform.SetParent(parent, false);
-            buttonObject.GetComponent<Image>().color = color;
-            buttonObject.GetComponent<LayoutElement>().preferredHeight = height;
+
+            RectTransform rect = buttonObject.GetComponent<RectTransform>();
+            SetRect(rect, position, size, pivot);
+
+            Image image = buttonObject.GetComponent<Image>();
+            image.color = color;
+
+            Outline outline = buttonObject.AddComponent<Outline>();
+            outline.effectColor = outlineColor;
+            outline.effectDistance = new Vector2(1f, -1f);
 
             Button button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+
             ColorBlock colors = button.colors;
-            colors.highlightedColor = Color.Lerp(color, Color.white, 0.18f);
-            colors.pressedColor = Color.Lerp(color, Color.black, 0.18f);
-            colors.disabledColor = new Color(0.2f, 0.2f, 0.22f, 0.6f);
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.18f, 1.13f, 1.04f, 1f);
+            colors.pressedColor = new Color(0.72f, 0.76f, 0.78f, 1f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.disabledColor = new Color(0.42f, 0.43f, 0.44f, 0.56f);
+            colors.fadeDuration = 0.12f;
             button.colors = colors;
 
-            TextMeshProUGUI label = AddInputText(buttonObject.transform, "按钮文字", caption);
-            label.alignment = TextAlignmentOptions.Center;
-            label.fontStyle = FontStyles.Bold;
-            label.fontSize = 20f;
+            TextMeshProUGUI label = CreateText(
+                objectName + "_文字",
+                buttonObject.transform,
+                caption,
+                fontSize,
+                Cream,
+                FontStyles.Bold,
+                TextAlignmentOptions.Center);
+            Stretch(label.rectTransform);
             return button;
+        }
+
+        private static Image CreateImage(string name, Transform parent, Color color)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = LayerMask.NameToLayer("UI");
+            go.transform.SetParent(parent, false);
+            Image image = go.GetComponent<Image>();
+            image.color = color;
+            return image;
+        }
+
+        private static TextMeshProUGUI CreateText(
+            string name,
+            Transform parent,
+            string value,
+            float fontSize,
+            Color color,
+            FontStyles style,
+            TextAlignmentOptions alignment,
+            bool wordWrapping = false)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            go.layer = LayerMask.NameToLayer("UI");
+            go.transform.SetParent(parent, false);
+
+            TextMeshProUGUI text = go.GetComponent<TextMeshProUGUI>();
+            text.text = value;
+            if (preferredFont != null)
+                text.font = preferredFont;
+            text.fontSize = fontSize;
+            text.fontStyle = style;
+            text.color = color;
+            text.alignment = alignment;
+            text.enableWordWrapping = wordWrapping;
+            text.overflowMode = wordWrapping ? TextOverflowModes.Ellipsis : TextOverflowModes.Overflow;
+            text.raycastTarget = false;
+            return text;
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private static void SetRect(RectTransform rect, Vector2 position, Vector2 size, Vector2 pivot)
+        {
+            rect.anchorMin = pivot;
+            rect.anchorMax = pivot;
+            rect.pivot = pivot;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
         }
 
         private static TMP_FontAsset ResolvePreferredFont()

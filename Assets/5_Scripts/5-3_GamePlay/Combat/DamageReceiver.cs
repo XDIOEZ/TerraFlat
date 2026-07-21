@@ -1,3 +1,5 @@
+// AI-Context: 生命值权威数据与受伤反馈模块；远程应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
+
 using System;
 using Sirenix.OdinInspector;
 using System.Collections;
@@ -10,8 +12,10 @@ using Random = UnityEngine.Random;
 /// <summary>
 /// 处理模块伤害接收与反馈动画
 /// </summary>
-public class DamageReceiver : Module
+public class DamageReceiver : Module, IRemoteNetworkModule
 {
+    private const int CurrentBodyPartDataVersion = 1;
+
     #region 数据引用
 
     public Ex_ModData modData;
@@ -22,14 +26,14 @@ public class DamageReceiver : Module
 
     public float MaxHp
     {
-        get => Data.MaxHp;
-        set => Data.MaxHp = Mathf.Max(0f, value);
+        get => UsesBodyPartHealth ? GetBodyPartMaxHpTotal() : Data.MaxHp;
+        set => SetOverallMaxHp(value);
     }
 
     public float Hp
     {
-        get => Data.Hp;
-        set => Data.Hp = value;
+        get => UsesBodyPartHealth ? GetBodyPartHpTotal() : Data.Hp;
+        set => SetOverallHp(value, false);
     }
 
     public float Defense
@@ -50,12 +54,34 @@ public class DamageReceiver : Module
 
     public event Action<DamageReceiverDamageInfo> OnDamageReceived; // 收到伤害时触发，外部模块可订阅
 
+    public event Action<BodyPartDamageInfo> OnBodyPartDamaged;
+    public event Action<BodyPartHealthChangeInfo> OnBodyPartHealthChanged;
+
+    public bool UsesBodyPartHealth =>
+        Data != null &&
+        Data.UseBodyPartHealth &&
+        Data.BodyParts != null &&
+        Data.BodyParts.Count > 0;
+
+    public IReadOnlyList<BodyPartHealth> BodyParts => Data?.BodyParts;
+
     [System.Serializable]
     public class DamageReceiver_SaveData
     {
         [Header("生命值设置")]
         public float Hp = 100;
         public float MaxHp = 100;
+
+        [Header("Body part health")]
+        [Tooltip("Characters can use independent body-part health. Non-character receivers keep legacy total health.")]
+        public bool UseBodyPartHealth = false;
+
+        [Range(0f, 1f)]
+        [Tooltip("Chance that one attack selects two distinct parts. Each selected part receives 50% damage.")]
+        public float TwoPartHitChance = 0.25f;
+
+        public int BodyPartDataVersion = 0;
+        public List<BodyPartHealth> BodyParts = new List<BodyPartHealth>();
 
         [Header("防御设置")]
         public float Defense = 0;
@@ -108,6 +134,7 @@ public class DamageReceiver : Module
             }
         }
 
+        NormalizeStatRanges();
         _Data.ID = ModText.Hp;
     }
 
@@ -189,6 +216,7 @@ public class DamageReceiver : Module
     public override void Load()
     {
         modData.ReadData(ref Data);
+        UpgradeBodyPartData();
         NormalizeStatRanges();
 
         if (item.itemMods.ContainsKey_ID(ModText.Equipment))
@@ -203,6 +231,42 @@ public class DamageReceiver : Module
         {
             HidePanel();
         }
+    }
+
+    public override void ApplyNetworkData(ModuleData data)
+    {
+        if (data is not Ex_ModData networkData)
+            return;
+
+        float previousHp = Hp;
+        Dictionary<BodyPartType, BodyPartSnapshot> previousBodyParts = CaptureBodyPartSnapshots();
+        modData = networkData;
+        modData.ReadData(ref Data);
+        UpgradeBodyPartData();
+        NormalizeStatRanges();
+
+        if (item?.itemData != null && !string.IsNullOrEmpty(modData.Name))
+            item.itemData.ModuleDataDic[modData.Name] = modData;
+
+        if (Hp < previousHp)
+            OnDamaged_ShowUiAndScheduleHide();
+
+        DispatchNetworkBodyPartChanges(previousBodyParts);
+
+        if (Data.ShowCanvas)
+            RefreshUI();
+
+        DataUpdate?.Invoke();
+        OnAction?.Invoke(Hp);
+    }
+
+    public void ApplyRemoteNetworkData(Item owner, ModuleData data)
+    {
+        if (owner == null || data == null)
+            return;
+
+        ModuleInit(owner, data, owner.itemData);
+        ApplyNetworkData(data);
     }
 
     [Button("显示面板")]
@@ -264,6 +328,7 @@ public class DamageReceiver : Module
     [Button]
     public override void Save()
     {
+        SynchronizeOverallHealthFromBodyParts();
         modData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
@@ -343,10 +408,22 @@ public class DamageReceiver : Module
         }
 
         // 只有造成实际伤害时才减少血量
+        float appliedDamage = 0f;
+        DamageReceiverDamageInfo damageInfo = null;
         if (actualDamage > 0)
         {
-            Hp -= actualDamage;
-            DamageReceiverDamageInfo damageInfo = CreateDamageInfo(damageSender, actualDamage, hpBefore, Hp);
+            List<BodyPartDamageInfo> bodyPartHits = null;
+            if (UsesBodyPartHealth)
+            {
+                appliedDamage = ApplyRandomBodyPartDamage(actualDamage, out bodyPartHits);
+            }
+            else
+            {
+                Hp -= actualDamage;
+                appliedDamage = actualDamage;
+            }
+
+            damageInfo = CreateDamageInfo(damageSender, appliedDamage, hpBefore, Hp, bodyPartHits);
             DispatchDamageReceived(damageInfo);
             OnDamaged_ShowUiAndScheduleHide();
 
@@ -361,6 +438,9 @@ public class DamageReceiver : Module
                 Hit_Flash(item.Sprite);
                 StartCoroutine(ShakeSprite(item.Sprite.transform));
             }
+
+
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         }
 
         // 装备耐久度减少（即使没有造成实际伤害也会减少，但只减少一半）
@@ -368,22 +448,37 @@ public class DamageReceiver : Module
 
         if (Hp <= 0)
         {
-            HandleDeath(CreateDamageInfo(damageSender, actualDamage, hpBefore, Hp));
-            return actualDamage; // 返回实际伤害
+            if (ItemNetworkStateSerialization.DeferLocalDestruction())
+                return appliedDamage;
+
+            HandleDeath(damageInfo ?? CreateDamageInfo(damageSender, appliedDamage, hpBefore, Hp));
+            return appliedDamage; // 返回实际伤害
         }
 
-        return actualDamage; // 返回实际伤害
+        return appliedDamage; // 返回实际伤害
     }
 
 
     public virtual float ForceHurt(float damage)
     {
         if (Hp <= 0) return -1;
+        if (damage <= 0f) return Hp;
 
         float hpBefore = Hp;
 
-        Hp -= damage;
-        DamageReceiverDamageInfo damageInfo = CreateDamageInfo(null, damage, hpBefore, Hp);
+        List<BodyPartDamageInfo> bodyPartHits = null;
+        float appliedDamage;
+        if (UsesBodyPartHealth)
+        {
+            appliedDamage = ApplyFullBodyDamage(damage, out bodyPartHits);
+        }
+        else
+        {
+            Hp -= damage;
+            appliedDamage = damage;
+        }
+
+        DamageReceiverDamageInfo damageInfo = CreateDamageInfo(null, appliedDamage, hpBefore, Hp, bodyPartHits);
         DispatchDamageReceived(damageInfo);
         OnDamaged_ShowUiAndScheduleHide();
 
@@ -399,8 +494,13 @@ public class DamageReceiver : Module
             StartCoroutine(ShakeSprite(item.Sprite.transform));
         }
 
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+
         if (Hp <= 0)
         {
+            if (ItemNetworkStateSerialization.DeferLocalDestruction())
+                return 0f;
+
             HandleDeath(damageInfo);
             return 0; // Ensure a return value for this path
         }
@@ -413,7 +513,13 @@ public class DamageReceiver : Module
     public virtual float Heal(float healAmount, Item healer = null)
     {
         float oldHp = Hp;
-        Hp = Mathf.Min(Hp + healAmount, MaxHp);
+        if (healAmount <= 0f)
+            return Hp;
+
+        if (UsesBodyPartHealth)
+            HealAllBodyParts(healAmount);
+        else
+            Hp = Mathf.Min(Hp + healAmount, MaxHp);
 
         // 只有在血量发生变化时才刷新UI
         if (Mathf.Abs(Hp - oldHp) > 0.001f && Data.ShowCanvas)
@@ -421,7 +527,20 @@ public class DamageReceiver : Module
             RefreshUI();
         }
 
+        if (Mathf.Abs(Hp - oldHp) > 0.001f)
+        {
+            DataUpdate?.Invoke();
+            OnAction?.Invoke(Hp);
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        }
+
         return Hp;
+    }
+
+    public void ResolveNetworkAuthoritativeDeath()
+    {
+        if (Hp <= 0f)
+            HandleDeath(CreateDamageInfo(null, 0f, Hp, Hp));
     }
 
     public void AddDefense(float value)
@@ -439,12 +558,555 @@ public class DamageReceiver : Module
         Defense = value;
     }
 
+    [Button("Enable and reset body-part health")]
+    public void ConfigureDefaultBodyParts()
+    {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
+        float totalHp = Mathf.Max(0f, Data.Hp);
+        float totalMaxHp = Mathf.Max(0f, Data.MaxHp);
+        Data.UseBodyPartHealth = true;
+        Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
+        Data.BodyParts = CreateDefaultBodyParts(totalHp, totalMaxHp);
+        SynchronizeOverallHealthFromBodyParts();
+    }
+
+    public void SetBodyPartHealthEnabled(bool enabled)
+    {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
+        if (enabled && (Data.BodyParts == null || Data.BodyParts.Count == 0))
+            Data.BodyParts = CreateDefaultBodyParts(Data.Hp, Data.MaxHp);
+
+        if (!enabled && UsesBodyPartHealth)
+            SynchronizeOverallHealthFromBodyParts();
+
+        Data.UseBodyPartHealth = enabled;
+        Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
+        NormalizeStatRanges();
+    }
+
+    public bool TryGetBodyPart(BodyPartType part, out BodyPartHealth bodyPart)
+    {
+        bodyPart = null;
+        if (!UsesBodyPartHealth)
+            return false;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth candidate = Data.BodyParts[i];
+            if (candidate != null && candidate.Part == part)
+            {
+                bodyPart = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public float GetBodyPartHealth01(BodyPartType part)
+    {
+        if (TryGetBodyPart(part, out BodyPartHealth bodyPart))
+            return bodyPart.Health01;
+
+        return MaxHp <= 0f ? 0f : Mathf.Clamp01(Hp / MaxHp);
+    }
+
+    public float GetCombinedBodyPartHealth01(params BodyPartType[] parts)
+    {
+        if (!UsesBodyPartHealth || parts == null || parts.Length == 0)
+            return MaxHp <= 0f ? 0f : Mathf.Clamp01(Hp / MaxHp);
+
+        float hpTotal = 0f;
+        float maxHpTotal = 0f;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (!TryGetBodyPart(parts[i], out BodyPartHealth bodyPart))
+                continue;
+
+            hpTotal += bodyPart.Hp;
+            maxHpTotal += bodyPart.MaxHp;
+        }
+
+        return maxHpTotal <= 0f ? 0f : Mathf.Clamp01(hpTotal / maxHpTotal);
+    }
+
+    public float HealBodyPart(BodyPartType part, float healAmount)
+    {
+        if (healAmount <= 0f || !TryGetBodyPart(part, out BodyPartHealth bodyPart))
+            return 0f;
+
+        float hpBefore = bodyPart.Hp;
+        bodyPart.Hp = Mathf.Min(bodyPart.MaxHp, bodyPart.Hp + healAmount);
+        float appliedHeal = bodyPart.Hp - hpBefore;
+        if (appliedHeal <= 0f)
+            return 0f;
+
+        SynchronizeOverallHealthFromBodyParts();
+        DispatchBodyPartHealthChanged(bodyPart, hpBefore);
+        DataUpdate?.Invoke();
+        OnAction?.Invoke(Hp);
+
+        if (Data.ShowCanvas)
+            RefreshUI();
+
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        return appliedHeal;
+    }
+
+    private void UpgradeBodyPartData()
+    {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
+        if (Data.BodyParts == null)
+            Data.BodyParts = new List<BodyPartHealth>();
+
+        if (Data.BodyPartDataVersion < CurrentBodyPartDataVersion)
+        {
+            Data.UseBodyPartHealth = Data.UseBodyPartHealth || ShouldUseBodyPartHealthByDefault();
+            Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
+        }
+
+        if (Data.UseBodyPartHealth && Data.BodyParts.Count == 0)
+            Data.BodyParts = CreateDefaultBodyParts(Data.Hp, Data.MaxHp);
+    }
+
+    private bool ShouldUseBodyPartHealthByDefault()
+    {
+        if (item is Player)
+            return true;
+
+        if (item?.itemMods == null)
+            return false;
+
+        return item.itemMods.ContainsKey_ID(ModText.AI) ||
+               item.itemMods.ContainsKey_ID(ModText.Mover_AI);
+    }
+
+    private static List<BodyPartHealth> CreateDefaultBodyParts(float totalHp, float totalMaxHp)
+    {
+        totalMaxHp = Mathf.Max(0f, totalMaxHp);
+        float healthRatio = totalMaxHp <= 0f ? 0f : Mathf.Clamp01(totalHp / totalMaxHp);
+        Array values = Enum.GetValues(typeof(BodyPartType));
+        List<BodyPartHealth> result = new List<BodyPartHealth>(values.Length);
+
+        foreach (BodyPartType part in values)
+        {
+            float maxHp = totalMaxHp * GetDefaultHealthShare(part);
+            result.Add(new BodyPartHealth
+            {
+                Part = part,
+                Hp = maxHp * healthRatio,
+                MaxHp = maxHp,
+                AreaRatio = GetDefaultAreaRatio(part),
+                InjuryProbability = 1f
+            });
+        }
+
+        return result;
+    }
+
+    private static float GetDefaultHealthShare(BodyPartType part)
+    {
+        switch (part)
+        {
+            case BodyPartType.Head: return 0.10f;
+            case BodyPartType.Chest: return 0.25f;
+            case BodyPartType.Abdomen: return 0.15f;
+            case BodyPartType.LeftHand:
+            case BodyPartType.RightHand: return 0.075f;
+            case BodyPartType.Pelvis: return 0.10f;
+            case BodyPartType.LeftLeg:
+            case BodyPartType.RightLeg: return 0.125f;
+            default: return 0f;
+        }
+    }
+
+    private static float GetDefaultAreaRatio(BodyPartType part)
+    {
+        switch (part)
+        {
+            case BodyPartType.Head: return 0.08f;
+            case BodyPartType.Chest: return 0.22f;
+            case BodyPartType.Abdomen: return 0.16f;
+            case BodyPartType.LeftHand:
+            case BodyPartType.RightHand: return 0.09f;
+            case BodyPartType.Pelvis: return 0.10f;
+            case BodyPartType.LeftLeg:
+            case BodyPartType.RightLeg: return 0.13f;
+            default: return 0f;
+        }
+    }
+
+    private float GetBodyPartHpTotal()
+    {
+        float total = 0f;
+        if (Data?.BodyParts == null)
+            return total;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            if (Data.BodyParts[i] != null)
+                total += Mathf.Max(0f, Data.BodyParts[i].Hp);
+        }
+
+        return total;
+    }
+
+    private float GetBodyPartMaxHpTotal()
+    {
+        float total = 0f;
+        if (Data?.BodyParts == null)
+            return total;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            if (Data.BodyParts[i] != null)
+                total += Mathf.Max(0f, Data.BodyParts[i].MaxHp);
+        }
+
+        return total;
+    }
+
+    private void SetOverallMaxHp(float value)
+    {
+        value = Mathf.Max(0f, value);
+        if (!UsesBodyPartHealth)
+        {
+            Data.MaxHp = value;
+            Data.Hp = Mathf.Min(Data.Hp, Data.MaxHp);
+            return;
+        }
+
+        float oldMaxHp = GetBodyPartMaxHpTotal();
+        if (oldMaxHp <= 0f)
+        {
+            Data.BodyParts = CreateDefaultBodyParts(0f, value);
+            SynchronizeOverallHealthFromBodyParts();
+            return;
+        }
+
+        float scale = value / oldMaxHp;
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null)
+                continue;
+
+            part.MaxHp *= scale;
+            part.Hp = Mathf.Clamp(part.Hp, 0f, part.MaxHp);
+        }
+
+        SynchronizeOverallHealthFromBodyParts();
+    }
+
+    private void SetOverallHp(float value, bool dispatchEvents)
+    {
+        if (!UsesBodyPartHealth)
+        {
+            Data.Hp = value;
+            return;
+        }
+
+        float currentHp = GetBodyPartHpTotal();
+        float targetHp = Mathf.Clamp(value, 0f, GetBodyPartMaxHpTotal());
+        if (Mathf.Approximately(currentHp, targetHp))
+            return;
+
+        Dictionary<BodyPartType, BodyPartSnapshot> previous =
+            dispatchEvents ? CaptureBodyPartSnapshots() : null;
+
+        if (targetHp < currentHp && currentHp > 0f)
+        {
+            float ratio = targetHp / currentHp;
+            for (int i = 0; i < Data.BodyParts.Count; i++)
+            {
+                BodyPartHealth part = Data.BodyParts[i];
+                if (part != null)
+                    part.Hp *= ratio;
+            }
+        }
+        else
+        {
+            float missingHp = GetBodyPartMaxHpTotal() - currentHp;
+            float fillRatio = missingHp <= 0f ? 0f : (targetHp - currentHp) / missingHp;
+            for (int i = 0; i < Data.BodyParts.Count; i++)
+            {
+                BodyPartHealth part = Data.BodyParts[i];
+                if (part != null)
+                    part.Hp += (part.MaxHp - part.Hp) * fillRatio;
+            }
+        }
+
+        SynchronizeOverallHealthFromBodyParts();
+        if (dispatchEvents)
+            DispatchNetworkBodyPartChanges(previous);
+    }
+
+    private float ApplyRandomBodyPartDamage(float damage, out List<BodyPartDamageInfo> hits)
+    {
+        hits = new List<BodyPartDamageInfo>(2);
+        BodyPartHealth first = SelectRandomBodyPart(null);
+        if (first == null)
+            return 0f;
+
+        bool useSecondPart = Random.value < Mathf.Clamp01(Data.TwoPartHitChance);
+        BodyPartHealth second = useSecondPart ? SelectRandomBodyPart(first) : null;
+        int hitCount = second == null ? 1 : 2;
+        float damageShare = 1f / hitCount;
+        float damagePerPart = damage * damageShare;
+
+        ApplyDamageToBodyPart(first, damagePerPart, damageShare, hits);
+        if (second != null)
+            ApplyDamageToBodyPart(second, damagePerPart, damageShare, hits);
+
+        SynchronizeOverallHealthFromBodyParts();
+
+        float appliedDamage = 0f;
+        for (int i = 0; i < hits.Count; i++)
+        {
+            appliedDamage += hits[i].DamageValue;
+            DispatchBodyPartDamaged(hits[i]);
+        }
+
+        return appliedDamage;
+    }
+
+    private float ApplyFullBodyDamage(float damage, out List<BodyPartDamageInfo> hits)
+    {
+        hits = new List<BodyPartDamageInfo>(Data.BodyParts.Count);
+        Dictionary<BodyPartType, BodyPartSnapshot> previous = CaptureBodyPartSnapshots();
+        float hpBefore = GetBodyPartHpTotal();
+        SetOverallHp(hpBefore - damage, false);
+        float appliedDamage = hpBefore - GetBodyPartHpTotal();
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null || !previous.TryGetValue(part.Part, out BodyPartSnapshot oldState))
+                continue;
+
+            float partDamage = oldState.Hp - part.Hp;
+            if (partDamage <= 0.0001f)
+                continue;
+
+            BodyPartDamageInfo hit = new BodyPartDamageInfo
+            {
+                Part = part.Part,
+                DamageValue = partDamage,
+                DamageShare = appliedDamage <= 0f ? 0f : partDamage / appliedDamage,
+                HpBefore = oldState.Hp,
+                HpAfter = part.Hp,
+                MaxHp = part.MaxHp,
+                IsDepleted = part.Hp <= 0f
+            };
+            hits.Add(hit);
+            DispatchBodyPartDamaged(hit);
+        }
+
+        return appliedDamage;
+    }
+
+    private void HealAllBodyParts(float healAmount)
+    {
+        Dictionary<BodyPartType, BodyPartSnapshot> previous = CaptureBodyPartSnapshots();
+        SetOverallHp(Hp + healAmount, false);
+        DispatchNetworkBodyPartChanges(previous);
+    }
+
+    private BodyPartHealth SelectRandomBodyPart(BodyPartHealth excluded)
+    {
+        List<BodyPartHealth> candidates = new List<BodyPartHealth>(Data.BodyParts.Count);
+        float totalWeight = 0f;
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null || part == excluded || part.Hp <= 0f || part.MaxHp <= 0f)
+                continue;
+
+            float weight = Mathf.Max(0f, part.AreaRatio) * Mathf.Max(0f, part.InjuryProbability);
+            if (weight <= 0f)
+                continue;
+
+            candidates.Add(part);
+            totalWeight += weight;
+        }
+
+        if (candidates.Count == 0)
+            return null;
+
+        float roll = Random.value * totalWeight;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            BodyPartHealth part = candidates[i];
+            roll -= Mathf.Max(0f, part.AreaRatio) * Mathf.Max(0f, part.InjuryProbability);
+            if (roll <= 0f)
+                return part;
+        }
+
+        return candidates[candidates.Count - 1];
+    }
+
+    private static void ApplyDamageToBodyPart(
+        BodyPartHealth part,
+        float damage,
+        float damageShare,
+        List<BodyPartDamageInfo> hits)
+    {
+        float hpBefore = part.Hp;
+        part.Hp = Mathf.Max(0f, part.Hp - damage);
+        hits.Add(new BodyPartDamageInfo
+        {
+            Part = part.Part,
+            DamageValue = hpBefore - part.Hp,
+            DamageShare = damageShare,
+            HpBefore = hpBefore,
+            HpAfter = part.Hp,
+            MaxHp = part.MaxHp,
+            IsDepleted = part.Hp <= 0f
+        });
+    }
+
+    private void DispatchBodyPartDamaged(BodyPartDamageInfo hit)
+    {
+        OnBodyPartDamaged?.Invoke(hit);
+        if (TryGetBodyPart(hit.Part, out BodyPartHealth part))
+            DispatchBodyPartHealthChanged(part, hit.HpBefore);
+    }
+
+    private void DispatchBodyPartHealthChanged(BodyPartHealth part, float hpBefore)
+    {
+        OnBodyPartHealthChanged?.Invoke(new BodyPartHealthChangeInfo
+        {
+            Receiver = this,
+            Part = part.Part,
+            HpBefore = hpBefore,
+            HpAfter = part.Hp,
+            MaxHp = part.MaxHp,
+            Delta = part.Hp - hpBefore,
+            Health01 = part.Health01,
+            IsDepleted = part.Hp <= 0f
+        });
+    }
+
+    private Dictionary<BodyPartType, BodyPartSnapshot> CaptureBodyPartSnapshots()
+    {
+        Dictionary<BodyPartType, BodyPartSnapshot> result =
+            new Dictionary<BodyPartType, BodyPartSnapshot>();
+
+        if (Data?.BodyParts == null)
+            return result;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part != null && !result.ContainsKey(part.Part))
+                result.Add(part.Part, new BodyPartSnapshot(part.Hp, part.MaxHp));
+        }
+
+        return result;
+    }
+
+    private void DispatchNetworkBodyPartChanges(Dictionary<BodyPartType, BodyPartSnapshot> previous)
+    {
+        if (!UsesBodyPartHealth || previous == null)
+            return;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null || !previous.TryGetValue(part.Part, out BodyPartSnapshot oldState))
+                continue;
+
+            if (!Mathf.Approximately(oldState.Hp, part.Hp) ||
+                !Mathf.Approximately(oldState.MaxHp, part.MaxHp))
+            {
+                DispatchBodyPartHealthChanged(part, oldState.Hp);
+            }
+        }
+    }
+
+    private void EnsureCompleteBodyPartList()
+    {
+        if (!Data.UseBodyPartHealth)
+            return;
+
+        if (Data.BodyParts == null)
+            Data.BodyParts = new List<BodyPartHealth>();
+
+        HashSet<BodyPartType> seen = new HashSet<BodyPartType>();
+        bool requiresRepair = false;
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null || !seen.Add(part.Part))
+            {
+                requiresRepair = true;
+                break;
+            }
+        }
+
+        int expectedCount = Enum.GetValues(typeof(BodyPartType)).Length;
+        if (!requiresRepair && seen.Count == expectedCount)
+            return;
+
+        float totalMaxHp = Mathf.Max(0f, Data.MaxHp);
+        float totalHp = Mathf.Clamp(Data.Hp, 0f, totalMaxHp);
+        Data.BodyParts = CreateDefaultBodyParts(totalHp, totalMaxHp);
+    }
+
+    private void SynchronizeOverallHealthFromBodyParts()
+    {
+        if (!UsesBodyPartHealth)
+            return;
+
+        Data.MaxHp = GetBodyPartMaxHpTotal();
+        Data.Hp = Mathf.Clamp(GetBodyPartHpTotal(), 0f, Data.MaxHp);
+    }
+
+    private readonly struct BodyPartSnapshot
+    {
+        public readonly float Hp;
+        public readonly float MaxHp;
+
+        public BodyPartSnapshot(float hp, float maxHp)
+        {
+            Hp = hp;
+            MaxHp = maxHp;
+        }
+    }
+
     private void NormalizeStatRanges()
     {
+        if (Data == null)
+            Data = new DamageReceiver_SaveData();
+
         Data.MaxHp = Mathf.Max(0f, Data.MaxHp);
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
-
+        Data.TwoPartHitChance = Mathf.Clamp01(Data.TwoPartHitChance);
         Data.Defense = Mathf.Max(0f, Data.Defense);
+
+        if (!Data.UseBodyPartHealth)
+            return;
+
+        EnsureCompleteBodyPartList();
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth part = Data.BodyParts[i];
+            if (part == null)
+                continue;
+
+            part.MaxHp = Mathf.Max(0f, part.MaxHp);
+            part.Hp = Mathf.Clamp(part.Hp, 0f, part.MaxHp);
+            part.AreaRatio = Mathf.Clamp01(part.AreaRatio);
+            part.InjuryProbability = Mathf.Clamp01(part.InjuryProbability);
+        }
+
+        SynchronizeOverallHealthFromBodyParts();
     }
 
     private void OnDamaged_ShowUiAndScheduleHide()
@@ -531,7 +1193,12 @@ public class DamageReceiver : Module
         }
     }
 
-    private DamageReceiverDamageInfo CreateDamageInfo(IDamageSender damageSender, float damageValue, float hpBefore, float hpAfter)
+    private DamageReceiverDamageInfo CreateDamageInfo(
+        IDamageSender damageSender,
+        float damageValue,
+        float hpBefore,
+        float hpAfter,
+        List<BodyPartDamageInfo> bodyPartHits = null)
     {
         return new DamageReceiverDamageInfo
         {
@@ -545,7 +1212,8 @@ public class DamageReceiver : Module
             HpAfter = hpAfter,
             IsFatal = hpAfter <= 0f,
             HitPosition = transform.position,
-            Time = Time.time
+            Time = Time.time,
+            BodyPartHits = bodyPartHits ?? new List<BodyPartDamageInfo>()
         };
     }
     #endregion

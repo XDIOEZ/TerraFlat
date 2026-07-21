@@ -68,6 +68,9 @@ public abstract class Item : MonoBehaviour
     public SpriteRenderer Sprite;
 
     private bool isInitialized = false;
+    private bool destructionHandled = false;
+
+    public bool IsInitialized => isInitialized;
     [Tooltip("物品初始化时触发的事件，用于根据环境因素初始化物品")]
     public UltEvent<EnvironmentLayers, Vector2Int> OnInit_Env = new();
 
@@ -151,8 +154,27 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void OnDestroy()
     {
+        if (destructionHandled)
+            return;
+
+        destructionHandled = true;
         OnItemDestroy.Invoke(this);
-        ModuleSave();
+        if (isInitialized && itemData != null)
+            ModuleSave();
+    }
+
+    /// <summary>
+    /// 由 ItemMgr 主动回收时统一处理事件与保存，避免 Unity OnDestroy 二次保存。
+    /// </summary>
+    public void PrepareForDespawn(bool saveData)
+    {
+        if (destructionHandled)
+            return;
+
+        destructionHandled = true;
+        OnItemDestroy.Invoke(this);
+        if (saveData && isInitialized && itemData != null)
+            Save();
     }
 
     /// <summary>

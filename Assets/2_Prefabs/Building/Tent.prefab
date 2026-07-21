@@ -158,7 +158,7 @@ MonoBehaviour:
     Stack:
       Amount: 1
       Volume: 2
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     transform:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -527,6 +527,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: -5184887567455039970}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Role
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Version
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: boxCollider2D
       value: 
       objectReference: {fileID: 7595501820574997015}
@@ -544,7 +552,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: BuildingData.BitData
-      value: 
+      value: '{"Version":3,"maxVisibleDistance":10.0,"minVisibleDistance":1.0,"State":0,"Role":1,"SnapshotBase64":null,"BuildingPrefabId":"Tent","SummonerPrefabId":"Tent_Summoner"}'
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.BuildingPrefabId
+      value: Tent
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.SummonerPrefabId
+      value: Tent_Summoner
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

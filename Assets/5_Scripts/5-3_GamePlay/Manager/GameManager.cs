@@ -1,3 +1,4 @@
+// AI-Context: 游戏世界总生命周期与出生点服务；出生点查询可能触发区块加载，调用方应允许跨帧重试，严禁在搜索失败时默认投放到水面。
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -173,6 +174,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         ////////////////////////////////////////////////////////////////////////////////////
 
         // 重置存档数据，准备下次游戏
+        SaveDataMgr.Instance.ResetChunkDifferenceState();
         SaveDataMgr.Instance.SaveData = new GameSaveData();
 
         // 触发退出结束事件
@@ -218,6 +220,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     [Tooltip("开始新游戏,创建一个新世界")]
     public void CreateNewWorld()
     {
+        SaveDataMgr.Instance.ResetChunkDifferenceState();
         SaveDataMgr.Instance.SaveData = new GameSaveData();
 
         string inputSeed = ReadyGameSaveData.SaveSeed?.Trim();
@@ -323,6 +326,9 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         // 标记玩家已进入游戏世界，各管理器可开始运行
         IsInGameWorld = true;
+
+        // 光照层管理器需要在区块开始加载前就绪，以便持续维护每格光照数据。
+        _ = LightLayerMgr.Instance;
 
         //2. 实例化日月系统
         if (SunAndMoonPrefab != null)
@@ -516,6 +522,17 @@ public class GameManager : SingletonAutoMono<GameManager>
         Event_PlayerEnterWorld?.Invoke(player);
     }
 
+    /// <summary>
+    /// 联机身份完成核心 Player Item 初始化后，复用单机玩家进入世界事件。
+    /// </summary>
+    public void NotifyNetworkLocalPlayerEntered(Player player)
+    {
+        if (player == null)
+            throw new ArgumentNullException(nameof(player));
+
+        Event_PlayerEnterWorld?.Invoke(player);
+    }
+
     private IEnumerator PlaceNewPlayerOnLandThenEnterWorld(Player player)
     {
         bool hasPlacedOnLand = false;
@@ -549,6 +566,36 @@ public class GameManager : SingletonAutoMono<GameManager>
     {
         Vector2Int seedAnchor = GetSeedAnchorPosition();
         if (!TryFindNearestLand(seedAnchor, out Vector2Int landPos))
+        {
+            spawnPos = Vector3.zero;
+            return false;
+        }
+
+        spawnPos = new Vector3(landPos.x + 0.5f, landPos.y + 0.5f, 0f);
+        return true;
+    }
+
+    /// <summary>
+    /// 判断当前位置所在格是否为可行走陆地；联机服务端用它验证旧存档出生点。
+    /// </summary>
+    public bool IsValidLandSpawnPosition(Vector3 position)
+    {
+        if (float.IsNaN(position.x) || float.IsInfinity(position.x) ||
+            float.IsNaN(position.y) || float.IsInfinity(position.y))
+        {
+            return false;
+        }
+
+        return IsLandTile(Vector2Int.FloorToInt(position), new HashSet<string>());
+    }
+
+    /// <summary>
+    /// 从指定世界坐标向外寻找最近的可行走陆地，供联机玩家错位修正和多人错峰出生。
+    /// </summary>
+    public bool TryGetNearestLandSpawnPosition(Vector3 preferredPosition, out Vector3 spawnPos)
+    {
+        Vector2Int anchor = Vector2Int.FloorToInt(preferredPosition);
+        if (!TryFindNearestLand(anchor, out Vector2Int landPos))
         {
             spawnPos = Vector3.zero;
             return false;
@@ -711,9 +758,9 @@ public class GameManager : SingletonAutoMono<GameManager>
 
     public void OpenHellowCanvas()
     {
-        if (UIManager.Instance.GetPanel("HelloCanvas") != null)
+        if (UIManager.Instance.GetPanel("UI_Hello") != null)
         {
-            UIManager.Instance.GetPanel("HelloCanvas").Open();
+            UIManager.Instance.GetPanel("UI_Hello").Open();
             return;
         }
 

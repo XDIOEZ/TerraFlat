@@ -230,8 +230,8 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
                 0f
             );
 
-            // 检查位置是否在已加载的区块内
-            if (IsPositionInLoadedChunk(spawnPos))
+            // 怪物只允许在已加载且光照为 0 的地块生成。
+            if (IsPositionInLoadedChunk(spawnPos) && LightLayerMgr.Instance.IsCompletelyDark(spawnPos))
             {
                 return spawnPos;
             }

@@ -1,13 +1,14 @@
+// AI-Context: ç©å®¶ä¸–ç•Œç‰©å“æ‹¾å–å…¥å£ï¼›è”æœºæ—¶åªå‘èµ·æœåŠ¡ç«¯äº‹åŠ¡ï¼Œæ”¶åˆ°æˆæƒåæ‰å†™å…¥èƒŒåŒ…ï¼Œç¦æ­¢ç›´æ¥ Destroy ç»•è¿‡ ItemMgr/ç½‘ç»œç”Ÿå‘½å‘¨æœŸã€‚
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ÎïÆ·Ê°È¡Æ÷×é¼ş£¬ÓÃÓÚ×Ô¶¯ÊÕ¼¯¿ÉÊ°È¡ÎïÆ·
+/// ç‰©å“æ‹¾å–å™¨ç»„ä»¶ï¼Œç”¨äºè‡ªåŠ¨æ”¶é›†å¯æ‹¾å–ç‰©å“
 /// </summary>
 public class ItemPicker : Module
 {
 
-    #region »ù´¡²ÎÊı
+    #region åŸºç¡€å‚æ•°
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -15,7 +16,7 @@ public class ItemPicker : Module
     public string[] Data;
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
 
     public override void Awake()
     {
@@ -27,14 +28,14 @@ public class ItemPicker : Module
         ModSaveData.ReadData(ref Data);
         RebuildTargetInventories();
 
-        // Ä¬ÈÏÓÅÏÈ¼¶£ºHotbar -> Bag
-        // ÎŞÂÛÁĞ±íÊÇ·ñÒÑÓĞÅäÖÃ£¬¶¼²¹ÆëÕâÁ½¸öºËĞÄÈİÆ÷£¨ÄÚ²¿»áÈ¥ÖØ£©
+        // é»˜è®¤ä¼˜å…ˆçº§ï¼šHotbar -> Bag
+        // æ— è®ºåˆ—è¡¨æ˜¯å¦å·²æœ‰é…ç½®ï¼Œéƒ½è¡¥é½è¿™ä¸¤ä¸ªæ ¸å¿ƒå®¹å™¨ï¼ˆå†…éƒ¨ä¼šå»é‡ï¼‰
         TryAddInventoryById(ModText.Hotbar);
         TryAddInventoryById(ModText.Bag);
     }
 
     /// <summary>
-    /// ³õÊ¼»¯Ê±³¢ÊÔ»ñÈ¡×ÔÉíµÄInventory×é¼ş
+    /// åˆå§‹åŒ–æ—¶å°è¯•è·å–è‡ªèº«çš„Inventoryç»„ä»¶
     /// </summary>
     private void Start()
     {
@@ -51,9 +52,9 @@ public class ItemPicker : Module
 
 
     /// <summary>
-    /// ³¢ÊÔ¸ù¾İÄ£¿é ID »ñÈ¡¶ÔÓ¦µÄ Mod_Inventory£¬²¢½«Æä inventory ¼ÓÈëÄ¿±êÁĞ±í
+    /// å°è¯•æ ¹æ®æ¨¡å— ID è·å–å¯¹åº”çš„ Mod_Inventoryï¼Œå¹¶å°†å…¶ inventory åŠ å…¥ç›®æ ‡åˆ—è¡¨
     /// </summary>
-    /// <param name="modId">ModText ÖĞ¶¨ÒåµÄ±³°üÄ£¿é ID</param>
+    /// <param name="modId">ModText ä¸­å®šä¹‰çš„èƒŒåŒ…æ¨¡å— ID</param>
     private void TryAddInventoryById(string modId)
     {
         var module = item.itemMods.GetMod_ByID(modId);
@@ -68,24 +69,24 @@ public class ItemPicker : Module
     }
 
 
-    #region ×Ö¶ÎÓëÊôĞÔ
+    #region å­—æ®µä¸å±æ€§
 
-    [Header("Ä¿±êÎïÆ·À¸£¨°´ÓÅÏÈ¼¶ÅÅÁĞ£©")]
+    [Header("ç›®æ ‡ç‰©å“æ ï¼ˆæŒ‰ä¼˜å…ˆçº§æ’åˆ—ï¼‰")]
     [SerializeField]
-    public List<Module> AddTargetInventoryModules = new List<Module>(); // ¼ì²éÆ÷¿ÉÍÏ×§µÄÄ¿±ê¿â´æÄ£¿é
+    public List<Module> AddTargetInventoryModules = new List<Module>(); // æ£€æŸ¥å™¨å¯æ‹–æ‹½çš„ç›®æ ‡åº“å­˜æ¨¡å—
 
     [System.NonSerialized]
-    public List<IInventory> AddTargetInventories = new List<IInventory>(); // ÔËĞĞÊ±Ê¹ÓÃµÄÄ¿±ê¿â´æ½Ó¿ÚÁĞ±í
+    public List<IInventory> AddTargetInventories = new List<IInventory>(); // è¿è¡Œæ—¶ä½¿ç”¨çš„ç›®æ ‡åº“å­˜æ¥å£åˆ—è¡¨
 
     /// <summary>
-    /// »ù´¡Ê°È¡È¨ÏŞ¿ØÖÆ±äÁ¿
+    /// åŸºç¡€æ‹¾å–æƒé™æ§åˆ¶å˜é‡
     /// </summary>
     private bool canPickUp = true;
 
     /// <summary>
-    /// ×ÛºÏÅĞ¶ÏÊÇ·ñ¿ÉÒÔÊ°È¡ÎïÆ·
-    /// 1. ¼ì²é»ù´¡È¨ÏŞ
-    /// 2. ¼ì²éÊÇ·ñÓĞ¿ÉÓÃµÄÎïÆ·À¸
+    /// ç»¼åˆåˆ¤æ–­æ˜¯å¦å¯ä»¥æ‹¾å–ç‰©å“
+    /// 1. æ£€æŸ¥åŸºç¡€æƒé™
+    /// 2. æ£€æŸ¥æ˜¯å¦æœ‰å¯ç”¨çš„ç‰©å“æ 
     /// </summary>
     public bool CanPickUp
     {
@@ -94,8 +95,8 @@ public class ItemPicker : Module
             if (!canPickUp)
                 return false;
 
-            // Ö»Òª´æÔÚÓĞĞ§±³°ü¾ÍÔÊĞí½øÈëÊ°È¡Á÷³Ì¡£
-            // ÊÇ·ñÄÜÊµ¼Ê·ÅÈë£¨°üÀ¨Âú°ü¶Ñµş£©ÓÉ TryAddItem ¾ö¶¨¡£
+            // åªè¦å­˜åœ¨æœ‰æ•ˆèƒŒåŒ…å°±å…è®¸è¿›å…¥æ‹¾å–æµç¨‹ã€‚
+            // æ˜¯å¦èƒ½å®é™…æ”¾å…¥ï¼ˆåŒ…æ‹¬æ»¡åŒ…å †å ï¼‰ç”± TryAddItem å†³å®šã€‚
             foreach (var inventory in AddTargetInventories)
             {
                 var targetInventory = inventory?.GetDefaultTargetInventory();
@@ -112,7 +113,7 @@ public class ItemPicker : Module
     #endregion
 
 
-#region Ë½ÓĞ·½·¨
+#region ç§æœ‰æ–¹æ³•
 
     private void RebuildTargetInventories()
     {
@@ -137,59 +138,72 @@ public class ItemPicker : Module
 
 
 
-    #region ÎïÆ·½»»¥
+    #region ç‰©å“äº¤äº’
 
     /// <summary>
-    /// µ±ÓĞÎïÌå½øÈë´¥·¢Æ÷Ê±³¢ÊÔÊ°È¡ÎïÆ·
+    /// å½“æœ‰ç‰©ä½“è¿›å…¥è§¦å‘å™¨æ—¶å°è¯•æ‹¾å–ç‰©å“
     /// </summary>
-    /// <param name="other">½øÈë´¥·¢Æ÷µÄÅö×²Ìå</param>
+    /// <param name="other">è¿›å…¥è§¦å‘å™¨çš„ç¢°æ’ä½“</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // ¼ì²éÎïÆ·À¸ÁĞ±íÊÇ·ñÎª¿Õ
+        // æ£€æŸ¥ç‰©å“æ åˆ—è¡¨æ˜¯å¦ä¸ºç©º
         if (AddTargetInventories.Count == 0)
         {
             Debug.LogWarning($"[{nameof(ItemPicker)}] AddTargetInventories is empty on {gameObject.name}");
             return;
         }
 
-        // ¼ì²éÊÇ·ñ¾ßÓĞÊ°È¡È¨ÏŞ
+        // æ£€æŸ¥æ˜¯å¦å…·æœ‰æ‹¾å–æƒé™
         if (!CanPickUp)
         {
             return;
         }
 
-        // »ñÈ¡ÎïÆ·×é¼ş
+        // è·å–ç‰©å“ç»„ä»¶
         var pickAble = other.GetComponent<Item>();
 
         if (pickAble != null && pickAble.itemData.Stack.CanBePickedUp)
         {
-            ItemData itemData = pickAble.itemData;
-
-            // ±éÀúËùÓĞ±³°ü£¬ÕÒµ½µÚÒ»¸ö¿ÉÒÔÌí¼ÓµÄ
-            foreach (var inventory in AddTargetInventories)
+            if (ItemNetworkStateSerialization.BeginNetworkPickup(this, pickAble))
             {
-                var targetInventory = inventory?.GetDefaultTargetInventory();
-                if (targetInventory != null && targetInventory.Data != null)
-                {
-                    if (targetInventory.Data.TryAddItem(itemData))
-                    {
-                        targetInventory.RefreshUI();
-                        // ±ê¼ÇÎïÆ·ÎªÒÑ±»Ê°È¡
-                        itemData.Stack.CanBePickedUp = false;
-
-                        // ±£´æÎïÆ·Êı¾İ
-                        pickAble.ModuleSave();
-
-                        // Ïú»ÙÎïÆ·¶ÔÏó
-                        Destroy(pickAble.gameObject);
-
-                        return; // Ìí¼Ó³É¹¦ºóÁ¢¼´·µ»Ø
-                    }
-                }
+                return;
             }
 
-            Debug.Log($"[{nameof(ItemPicker)}] All target inventories are full, cannot pick up item: {itemData.IDName}");
+            pickAble.ModuleSave();
+            if (TryAcceptNetworkPickup(pickAble.itemData))
+            {
+                ItemMgr.Instance.DespawnItem(pickAble);
+                return;
+            }
+
+            Debug.Log($"[{nameof(ItemPicker)}] All target inventories are full, cannot pick up item: {pickAble.itemData.IDName}");
         }
+    }
+
+    /// <summary>
+    /// ç½‘ç»œæ‹¾å–æˆæƒå’Œå•æœºæ‹¾å–å…±ç”¨çš„å”¯ä¸€å…¥åŒ…å…¥å£ã€‚
+    /// </summary>
+    public bool TryAcceptNetworkPickup(ItemData itemData)
+    {
+        if (itemData == null || itemData.Stack == null)
+            return false;
+
+        foreach (IInventory inventory in AddTargetInventories)
+        {
+            Inventory targetInventory = inventory?.GetDefaultTargetInventory();
+            if (targetInventory?.Data == null)
+                continue;
+
+            if (!targetInventory.Data.TryAddItem(itemData))
+                continue;
+
+            itemData.Stack.CanBePickedUp = false;
+            targetInventory.RefreshUI();
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            return true;
+        }
+
+        return false;
     }
 
     #endregion

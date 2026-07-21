@@ -63,7 +63,8 @@ MonoBehaviour:
     inputOrder: 1
   outputs:
     results:
-    - ItemName: Smelter
-      ItemPrefab: {fileID: 7534172511798132841, guid: d11f29cf83ce4dd46932f8463f0e81f7, type: 3}
+    - ItemName: Smelter_Summoner
+      ItemPrefab: {fileID: 1706737390468541653, guid: 32c99d8f834e6894fbb07320774a30be, type: 3}
       amount: 1
+  enableMirrorCrafting: 1
   action: []

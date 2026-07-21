@@ -380,6 +380,14 @@ public class Chunk : MonoBehaviour
             return this;
         }
 
+        // Procedural chunks persist only changes against their deterministic baseline.
+        // Legacy chunks without a captured baseline continue through the full-snapshot path below.
+        if (SaveDataMgr.Instance != null && SaveDataMgr.Instance.TrySaveChunkDifferences(this))
+        {
+            RefreshPositionDictionary();
+            return this;
+        }
+
         MapSave.items.Clear();
 
         // 调用所有item的Save方法
@@ -751,6 +759,30 @@ public class Chunk : MonoBehaviour
         }
 
         Item item = ItemMgr.Instance.InstantiateItem(itemName, position, rotation, scale, parent: gameObject);
+        AddItem(item);
+        return item;
+    }
+
+    public Item InstantiateItemInChunkDeterministic(
+        string itemName,
+        int deterministicGuid,
+        Vector3 position,
+        Quaternion rotation = default,
+        Vector3 scale = default)
+    {
+        if (ItemMgr.Instance == null)
+        {
+            Debug.LogError("[Chunk] ItemMgr.Instance为空，无法实例化确定性物品", this);
+            return null;
+        }
+
+        Item item = ItemMgr.Instance.InstantiateItemDeterministic(
+            itemName,
+            deterministicGuid,
+            position,
+            rotation,
+            scale,
+            parent: gameObject);
         AddItem(item);
         return item;
     }

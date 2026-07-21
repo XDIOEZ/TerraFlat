@@ -67,6 +67,7 @@ public static class ModText
     #endregion
 
     #region M
+    public static string LightSource = "Module_LightSource";
     public static string MoveSpeed = "移动模块";
     public static string Mover = "移动模块";
     public static string Mover_AI = "移动模块_AI";

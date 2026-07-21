@@ -1,3 +1,4 @@
+// AI-Context: 玩家动画接收器；本地角色读取 Mover/Rigidbody，网络远端角色由 SetNetworkPresentation 注入移动状态，避免插值位移被误判为静止。
 using UltEvents;
 using UnityEngine;
 
@@ -53,6 +54,8 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
     private float _walkPhase;
     private bool _isDashPlaying;
     private float _dashTimer;
+    private bool _networkPresentationActive;
+    private bool _networkIsMoving;
 
     void Update()
     {
@@ -135,6 +138,16 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
     public override void Act()
     {
         base.Act();
+    }
+
+    /// <summary>
+    /// 网络远端副本使用显式移动状态驱动单精灵步行动画；本地角色传 false 恢复原有检测。
+    /// </summary>
+    public void SetNetworkPresentation(bool active, bool isMoving)
+    {
+        _networkPresentationActive = active;
+        _networkIsMoving = isMoving;
+        enabled = true;
     }
 
     private void UpdateSingleSpriteVisual(float deltaTime)
@@ -256,6 +269,11 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
 
     private bool IsMovingInSingleSpriteMode()
     {
+        if (_networkPresentationActive)
+        {
+            return _networkIsMoving;
+        }
+
         if (_mover is Mover_AI moverAI)
         {
             return moverAI.CanMove && !moverAI.HasReachedTarget;

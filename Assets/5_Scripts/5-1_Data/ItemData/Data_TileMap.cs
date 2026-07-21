@@ -128,6 +128,29 @@ public partial class Data_TileMap : ItemData
         EnvironmentLayers.SetSolidity(x, y, solidity);
     }
 
+    public void SetLightAtLocal(int x, int y, float light)
+    {
+        if (!IsEnvironmentLocalValid(x, y))
+        {
+            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 光照坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
+        }
+
+        EnvironmentLayers.SetLight(x, y, light);
+    }
+
+    public bool TryGetLightAtWorld(Vector2 worldPos, out float light)
+    {
+        Vector2Int worldCell = new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y));
+        if (!TryGetEnvironmentLocalPos(worldCell, out Vector2Int localPos))
+        {
+            light = 0f;
+            return false;
+        }
+
+        light = EnvironmentLayers.GetLight(localPos.x, localPos.y);
+        return true;
+    }
+
     #endregion
 
     #region TileData ??

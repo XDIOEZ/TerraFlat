@@ -6,8 +6,16 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+// AI-Context: Item 实例、运行时注册和网络玩家副本的生命周期管理器；远程视觉物不得进入本地 Tick/存档索引。
+
 public class ItemMgr : SingletonMono<ItemMgr>
 {
+    /// <summary>
+    /// AI-Context: 网络层通过这两个事件观察运行时 Item 生命周期；GamePlay 层不反向依赖 Mirror。
+    /// 事件发生在注册完成后、销毁注销前，订阅方不得在回调内再次销毁同一 Item。
+    /// </summary>
+    public static event Action<Item> RuntimeItemInstantiated;
+    public static event Action<Item> RuntimeItemDespawning;
 
     #region Const
     private const string GROUP_MAP_CORE = "MapCore";
@@ -27,6 +35,10 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
     private Transform _externalPlayerTransform;
 
+    private readonly HashSet<Player> _networkPlayers = new();
+    private readonly HashSet<Player> _networkRemoteReplicas = new();
+    private readonly HashSet<Player> _networkInitializedPlayers = new();
+
     private readonly List<Item> _runtimeItems = new();
     private readonly List<Item> _updateSnapshot = new(256);
     #endregion
@@ -43,8 +55,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
                 return runtimePlayer.Data.CurrentSceneName;
             }
 
-            // 联机走路模式使用轻量 NetworkWorldPlayer，不创建旧 Player 物品实例。
-            // 仍从同步后的玩家存档中提供当前场景，避免依赖旧运行时字典的系统报错。
+            // 联机玩家尚未完成 Item 实例创建时，从同步后的玩家存档提供当前场景作为保底。
             if (SaveDataMgr.Instance.SaveData?.PlayerData_Dict != null &&
                 SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData) &&
                 !string.IsNullOrWhiteSpace(playerData.CurrentSceneName))
@@ -69,7 +80,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
     }
 
     /// <summary>
-    /// 当前本地玩家的 Transform。单机模式返回旧 Player，联机走路模式返回网络玩家。
+    /// 当前本地玩家的 Transform。单机与联机模式均优先返回核心 Player Item。
     /// </summary>
     public Transform UserPlayerTransform
     {
@@ -210,11 +221,12 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
         RegisterRuntimeItem(item, itemData.IDName);
         AttachToParentOrChunk(item, itemObj, position, parent);
+        RuntimeItemInstantiated?.Invoke(item);
 
         return item;
     }
 
-    public void DespawnItem(Item item)
+    public void DespawnItem(Item item, bool saveData = true)
     {
         if (item == null)
         {
@@ -223,11 +235,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
         UnregisterRuntimeItem(item);
 
-        item.OnItemDestroy.Invoke(item);
-        if (item.itemData != null)
-        {
-        item.Save();
-        }
+        item.PrepareForDespawn(saveData);
         Destroy(item.gameObject);
     }
 
@@ -253,6 +261,56 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
         ItemData templateData = templateItem.itemData.DeepClone();
         return InstantiateItem(templateData, position, rotation, scale, parent);
+    }
+
+    /// <summary>
+    /// 噪声地图使用的确定性实例化入口。相同世界种子与格子会在所有联机端得到相同 Guid。
+    /// </summary>
+    public Item InstantiateItemDeterministic(
+        string itemName,
+        int deterministicGuid,
+        Vector3 position = default,
+        Quaternion rotation = default,
+        Vector3 scale = default,
+        GameObject parent = null)
+    {
+        var prefab = GameRes.Instance.GetPrefab(itemName);
+        if (prefab == null)
+            throw new InvalidOperationException($"找不到物品Prefab: {itemName}");
+
+        var templateItem = prefab.GetComponent<Item>();
+        if (templateItem == null || templateItem.itemData == null)
+            throw new InvalidOperationException($"Prefab 缺少 Item 或 itemData: {itemName}");
+
+        ItemData templateData = templateItem.itemData.DeepClone();
+        templateData.Guid = deterministicGuid == 0 ? 1 : deterministicGuid;
+        return InstantiateItem(templateData, position, rotation, scale, parent);
+    }
+
+    /// <summary>
+    /// AI-Context: 仅供权威网络快照补建世界 Item；调用方必须先校验 ID、GUID 与位置。
+    /// </summary>
+    public Item InstantiateNetworkItem(
+        string itemName,
+        int authoritativeGuid,
+        Vector3 position,
+        Quaternion rotation,
+        Vector3 scale)
+    {
+        if (authoritativeGuid == 0)
+            throw new ArgumentOutOfRangeException(nameof(authoritativeGuid), "网络 Item GUID 不能为 0");
+
+        GameObject prefab = GameRes.Instance.GetPrefab(itemName);
+        if (prefab == null)
+            throw new InvalidOperationException($"找不到物品Prefab: {itemName}");
+
+        Item templateItem = prefab.GetComponent<Item>();
+        if (templateItem == null || templateItem.itemData == null)
+            throw new InvalidOperationException($"Prefab 缺少 Item 或 itemData: {itemName}");
+
+        ItemData data = templateItem.itemData.DeepClone();
+        data.Guid = authoritativeGuid;
+        return InstantiateItem(data, position, rotation, scale);
     }
 
     // 通过ItemData的transform信息实例化（保留此重载：项目内多处在用）
@@ -301,6 +359,15 @@ public class ItemMgr : SingletonMono<ItemMgr>
             context = item?.itemData != null ? item.itemData.IDName : item?.name;
         }
         RegisterRuntimeItem(item, context);
+    }
+
+    /// <summary>
+    /// 将网络远程手持物从本地权威 Item 循环中移除，保留 GameObject 仅作视觉展示。
+    /// </summary>
+    public void MarkAsRemoteVisualOnly(Item item)
+    {
+        RuntimeItemDespawning?.Invoke(item);
+        UnregisterRuntimeItem(item);
     }
 
     private void UnregisterRuntimeItem(Item item)
@@ -469,6 +536,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
         foreach (Player player in players)
         {
             if (player == null) continue;
+            if (_networkRemoteReplicas.Contains(player)) continue;
             player.Save();
 
             SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
@@ -507,6 +575,126 @@ public class ItemMgr : SingletonMono<ItemMgr>
         ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
 
         return player;
+    }
+
+    /// <summary>
+    /// 为 Mirror 网络身份创建对应的核心 Player Item。
+    /// 本地玩家完整加载模块；远端玩家只创建数据与外观副本，避免重复启用输入、UI 和相机。
+    /// </summary>
+    public Player LoadNetworkPlayer(string playerName, int networkGuid, Vector3 spawnPosition, bool initializeLocalModules)
+    {
+        if (string.IsNullOrWhiteSpace(playerName))
+            throw new ArgumentException("联机玩家名称不能为空", nameof(playerName));
+
+        if (Player_DIC.TryGetValue(playerName, out Player existingPlayer) && existingPlayer != null)
+        {
+            if (_networkPlayers.Contains(existingPlayer) && initializeLocalModules)
+                PromoteNetworkPlayerToLocal(existingPlayer, spawnPosition);
+
+            return existingPlayer;
+        }
+
+        bool hasSavedData = SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData);
+        if (!hasSavedData || playerData == null)
+        {
+            playerData = CreateDefaultPlayerData(playerName);
+            if (networkGuid != 0)
+                playerData.Guid = networkGuid;
+        }
+
+        playerData.Name_User = playerName;
+        playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
+        playerData.transform.position = spawnPosition;
+        playerData.transform.rotation = Quaternion.identity;
+        if (playerData.transform.scale == Vector3.zero)
+            playerData.transform.scale = Vector3.one;
+
+        Player player = CreatePlayer(playerData);
+        Player_DIC[playerName] = player;
+        _networkPlayers.Add(player);
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerName] = playerData;
+
+        if (initializeLocalModules)
+        {
+            InitializeNetworkLocalPlayer(player, spawnPosition);
+        }
+        else
+        {
+            _networkRemoteReplicas.Add(player);
+            ConfigureRemoteNetworkReplica(player, spawnPosition);
+        }
+
+        return player;
+    }
+
+    public void PromoteNetworkPlayerToLocal(Player player, Vector3 spawnPosition)
+    {
+        if (player == null || !_networkPlayers.Contains(player))
+            return;
+
+        _networkRemoteReplicas.Remove(player);
+        InitializeNetworkLocalPlayer(player, spawnPosition);
+    }
+
+    public void ReleaseNetworkPlayer(Player player, bool persistData)
+    {
+        if (player == null || !_networkPlayers.Remove(player))
+            return;
+
+        _networkRemoteReplicas.Remove(player);
+        _networkInitializedPlayers.Remove(player);
+
+        if (player.Data != null)
+        {
+            if (Player_DIC.TryGetValue(player.Data.Name_User, out Player registeredPlayer) && registeredPlayer == player)
+                Player_DIC.Remove(player.Data.Name_User);
+
+            if (persistData)
+            {
+                player.Save();
+                SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
+            }
+        }
+
+        DespawnItem(player, saveData: false);
+    }
+
+    private void InitializeNetworkLocalPlayer(Player player, Vector3 spawnPosition)
+    {
+        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.bodyType = RigidbodyType2D.Dynamic;
+            body.velocity = Vector2.zero;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
+
+        if (_networkInitializedPlayers.Add(player))
+            player.Load();
+
+        player.transform.position = spawnPosition;
+        player.Data.transform.position = spawnPosition;
+
+        GameController controller = player.GetComponentInChildren<GameController>(true);
+        controller?.SetGameplayInputLocked(false);
+    }
+
+    private static void ConfigureRemoteNetworkReplica(Player player, Vector3 spawnPosition)
+    {
+        player.transform.position = spawnPosition;
+        player.Data.transform.position = spawnPosition;
+
+        GameController controller = player.GetComponentInChildren<GameController>(true);
+        controller?.SetGameplayInputLocked(true);
+
+        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.velocity = Vector2.zero;
+            body.bodyType = RigidbodyType2D.Kinematic;
+            // 网络层已经按每帧生成平滑视觉坐标，关闭物理插值避免再次插值造成节拍抖动。
+            body.interpolation = RigidbodyInterpolation2D.None;
+        }
     }
     private Data_Player LoadOrCreatePlayerData(string playerName)
     {

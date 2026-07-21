@@ -61,6 +61,9 @@ sysinfo.txt
 *.unitypackage
 *.app
 
+# Local full-project archives are too large for GitHub and must stay outside Git history.
+/FlatWorld.zip
+
 # Crashlytics generated file
 crashlytics-build.properties
 

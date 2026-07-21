@@ -121,8 +121,10 @@ MonoBehaviour:
   syncInterval: 0
   movementSpeed: 5
   cameraOrthographicSize: 8
-  networkSendInterval: 0.05
+  networkSendInterval: 0.033
   remotePositionLerpSpeed: 18
+  maxRemoteExtrapolation: 0.08
+  itemStateFallbackInterval: 0.75
 --- !u!114 &3936749435497726024
 MonoBehaviour:
   m_ObjectHideFlags: 0

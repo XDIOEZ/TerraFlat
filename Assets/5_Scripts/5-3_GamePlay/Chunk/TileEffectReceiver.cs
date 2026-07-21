@@ -96,7 +96,8 @@ public class TileEffectReceiver : Module
     public override void Save()
     {
         // 确保在销毁时退出当前Tile
-        OnTileExit(lastGridPos);
+        if (GameRes.Instance != null && Cache_map != null)
+            OnTileExit(lastGridPos);
         ModSaveData.WriteData(lastGridPos);
     }
 

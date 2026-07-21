@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4969519381451034378}
   - component: {fileID: 5175292470693907942}
   - component: {fileID: 8233460568870623006}
+  - component: {fileID: 4806120374398569123}
   m_Layer: 0
   m_Name: MapCore
   m_TagString: MapCore
@@ -229,6 +230,30 @@ MonoBehaviour:
         biomes: []
         globalSpawnMultiplier: 0.1
         logSummary: 0
+--- !u!114 &4806120374398569123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111103676966031222}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ac87b9d15e4451680c7dc529d0d5d23, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  sourceTexture: {fileID: 2800000, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  grassTileId: Tile_Grass
+  variantCount: 32
+  textureColumns: 6
+  spriteSizePixels: 16
+  pixelsPerUnit: 32
+  density: 0.22
+  varyDensityWithHumidity: 1
+  positionJitter: 0.22
+  scaleRange: {x: 0.85, y: 1.15}
+  accentVariantChance: 0.2
+  sortingOrderOffset: 1
 --- !u!1 &3401113203274231406
 GameObject:
   m_ObjectHideFlags: 0

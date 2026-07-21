@@ -4,6 +4,7 @@
     "references": [
         "FlatWorld.Networking.Core",
         "FlatWorld.Networking.Mirror",
+        "Data",
         "GamePlay",
         "UI",
         "m_Utilitiles",

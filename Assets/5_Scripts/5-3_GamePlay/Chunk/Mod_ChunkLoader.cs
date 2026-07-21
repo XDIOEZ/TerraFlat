@@ -80,6 +80,7 @@ public class Mod_ChunkLoader : Module
     private int _pendingRefreshLoadDistance; // 当前刷新使用的加载距离
     private Vector2Int _pendingRefreshCenterChunk; // 当前刷新使用的区块中心坐标
     private Coroutine _delayedNavRefreshCoroutine;
+    private bool _externalStreamingManaged;
     #endregion
 
     #region 属性访问器
@@ -113,6 +114,8 @@ public class Mod_ChunkLoader : Module
     {
         if (player != GetComponentInParent<Player>())
             return;
+        if (_externalStreamingManaged)
+            return;
         RefreshChunksAroundPlayer();
     }
 
@@ -133,6 +136,9 @@ public class Mod_ChunkLoader : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (_externalStreamingManaged)
+            return;
+
         AutoAdjustDistance();
         DetectChunkChange();
 
@@ -147,6 +153,15 @@ public class Mod_ChunkLoader : Module
     #endregion
 
     #region 外部接口
+
+    /// <summary>
+    /// 联机模式由 NetworkChunkStreamingCoordinator 按所有玩家位置联合管理区块。
+    /// </summary>
+    public void SetExternalStreamingManaged(bool managed)
+    {
+        _externalStreamingManaged = managed;
+        needsChunkUpdate = false;
+    }
 
     [Button("刷新周围区块")]
     public void RefreshChunksAroundPlayer()

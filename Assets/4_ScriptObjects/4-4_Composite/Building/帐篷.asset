@@ -63,8 +63,8 @@ MonoBehaviour:
     inputOrder: 1
   outputs:
     results:
-    - ItemName: Tent
-      ItemPrefab: {fileID: 5803474980971561914, guid: 2cf443899d309994e8491f7fa4e3026b, type: 3}
+    - ItemName: Tent_Summoner
+      ItemPrefab: {fileID: 3666964978501309105, guid: 955350c909684f84783e1dcd827d163e, type: 3}
       amount: 1
   enableMirrorCrafting: 1
   action: []

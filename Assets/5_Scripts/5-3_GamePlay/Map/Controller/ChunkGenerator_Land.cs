@@ -58,7 +58,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     #endregion
 
     #region 内部变量
-    private int Seed => SaveDataMgr.Instance.SaveData.Seed;
+    [NonSerialized]
+    private int generationSeed;
+
+    private int Seed => generationSeed != 0
+        ? generationSeed
+        : (SaveDataMgr.Instance?.SaveData?.Seed ?? 1);
 
     public float NoiseScale => plantData != null ? plantData.NoiseScale : 0.01f;
 
@@ -121,6 +126,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             return;
         }
 
+        generationSeed = context.WorldSeed;
         GenerateRandomMap_TileData(context.Map, context.PlanetData);
     }
     #endregion

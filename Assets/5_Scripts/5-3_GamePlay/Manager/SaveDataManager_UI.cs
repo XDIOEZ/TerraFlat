@@ -178,7 +178,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
                 var btn = buttonObj.GetComponent<Button>();
                 if (btn != null)
-                    btn.onClick.AddListener(() => OnClick_List_PlayerName_Button(playerName));
+                btn.onClick.AddListener(() => OnClick_List_PlayerName_Button(playerName, buttonObj));
             }
         }
     }
@@ -240,29 +240,23 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void OnClick_List_Save_Button(string saveName, GameObject buttonObj)
     {
-        // 禁用所有存档按钮的选择图像 & 还原颜色
+        // 清除旧选择态
         foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<ButtonInfoData>())
         {
-            if (saveInfo.SelectImage != null)
+            GameSaveItemView itemView = saveInfo.GetComponent<GameSaveItemView>();
+            if (itemView != null)
+                itemView.SetSelected(false);
+            else if (saveInfo.SelectImage != null)
                 saveInfo.SelectImage.enabled = false;
-
-            var img = saveInfo.GetComponent<UnityEngine.UI.Image>();
-            if (img != null)
-                img.color = Color.white; // 还原为默认白色
         }
 
-        // 启用当前按钮的选择图像 & 高亮颜色
+        // 启用当前条目的选择态
         var currentInfo = buttonObj.GetComponent<ButtonInfoData>();
-        if (currentInfo != null && currentInfo.SelectImage != null)
-        {
+        GameSaveItemView currentView = buttonObj.GetComponent<GameSaveItemView>();
+        if (currentView != null)
+            currentView.SetSelected(true);
+        else if (currentInfo != null && currentInfo.SelectImage != null)
             currentInfo.SelectImage.enabled = true;
-        }
-
-        var currentImg = buttonObj.GetComponent<UnityEngine.UI.Image>();
-        if (currentImg != null)
-        {
-            currentImg.color = Color.green; // 选中时变绿
-        }
 
         // 使用BaseUIManager更新文本
         uiManager.GetPanel(name).SetText("选中的存档名称", saveName);
@@ -275,6 +269,17 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void OnClick_List_PlayerName_Button(string playerName)
     {
+        OnClick_List_PlayerName_Button(playerName, null);
+    }
+
+    private void OnClick_List_PlayerName_Button(string playerName, GameObject buttonObj)
+    {
+        foreach (GameSaveItemView itemView in Player_SelectButton_Parent_Content.GetComponentsInChildren<GameSaveItemView>())
+            itemView.SetSelected(false);
+
+        if (buttonObj != null)
+            buttonObj.GetComponent<GameSaveItemView>()?.SetSelected(true);
+
         if (saveAndLoad != null)
         {
             saveAndLoad.CurrentContrrolPlayerName = playerName;

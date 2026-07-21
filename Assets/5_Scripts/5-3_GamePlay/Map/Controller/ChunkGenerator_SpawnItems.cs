@@ -86,7 +86,13 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
                 if (biome == null)
                     continue;
 
-                spawnedCount += GenerateResourcesForBiome(Map, worldPos, new Vector2Int(x, y), biome, globalSpawnMultiplier);
+                spawnedCount += GenerateResourcesForBiome(
+                    Map,
+                    worldPos,
+                    new Vector2Int(x, y),
+                    biome,
+                    globalSpawnMultiplier,
+                    context.WorldSeed);
             }
         }
 
@@ -131,7 +137,13 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
     #endregion
 
     #region 资源生成逻辑（从 ChunkGenerator_Land 提取）
-    private static int GenerateResourcesForBiome(Map map, Vector2Int worldPos, Vector2Int localPos, BiomeData biome, float globalSpawnMultiplier)
+    private static int GenerateResourcesForBiome(
+        Map map,
+        Vector2Int worldPos,
+        Vector2Int localPos,
+        BiomeData biome,
+        float globalSpawnMultiplier,
+        int worldSeed)
     {
         if (biome == null || biome.TerrainConfig == null)
             return 0;
@@ -139,7 +151,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         float spawnMultiplier = Mathf.Clamp01(globalSpawnMultiplier);
 
         // 初始化伪随机数生成器（使用坐标作为种子，确保同一位置生成结果一致）
-        uint randomState = (uint)(worldPos.x * 114514 ^ worldPos.y * 1919810);
+        uint randomState = MixSeed(worldPos.x, worldPos.y, worldSeed);
         Vector2 spawnCenterPos = new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f);
 
         int spawned = 0;
@@ -213,8 +225,13 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
                     continue;
                 }
 
-                Item spawnedItem = map.chunk.InstantiateItemInChunk(
+                int deterministicGuid = unchecked((int)Xorshift32(ref randomState));
+                if (deterministicGuid == 0)
+                    deterministicGuid = 1;
+
+                Item spawnedItem = map.chunk.InstantiateItemInChunkDeterministic(
                     spawn.itemName,
+                    deterministicGuid,
                     new Vector3(spawnPos.x, spawnPos.y, 0f)
                 );
 
@@ -244,6 +261,18 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         state ^= state >> 17;
         state ^= state << 5;
         return state;
+    }
+
+    private static uint MixSeed(int x, int y, int worldSeed)
+    {
+        unchecked
+        {
+            uint state = 2166136261u;
+            state = (state ^ (uint)x) * 16777619u;
+            state = (state ^ (uint)y) * 16777619u;
+            state = (state ^ (uint)worldSeed) * 16777619u;
+            return state == 0u ? 0x9E3779B9u : state;
+        }
     }
     #endregion
 }

@@ -89,6 +89,22 @@ public class Module_Equipment_Store : Module
     [Button("Save")]
     public abstract void Save();
 
+    /// <summary>
+    /// 应用联机端传来的模块数据。默认重新执行 Load，让继承 Module 的现有组件
+    /// 无需逐个接入网络代码也能刷新运行时字段；有副作用的模块可重写此方法。
+    /// </summary>
+    public virtual void ApplyNetworkData(ModuleData data)
+    {
+        if (data == null)
+            return;
+
+        _Data = data;
+        if (item != null && item.itemData != null && !string.IsNullOrEmpty(data.Name))
+            item.itemData.ModuleDataDic[data.Name] = data;
+
+        Load();
+    }
+
     public virtual void ModUpdate(float deltaTime)
     {
 

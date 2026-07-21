@@ -1,3 +1,5 @@
+// AI-Context: 联机 UI 与 Mirror 会话的控制器；负责校验、状态转换和视图更新，不承载玩家模块同步。
+
 using System;
 using System.Collections;
 using FlatWorld.Networking;
@@ -23,6 +25,7 @@ namespace FlatWorld.Networking.Gameplay
         private Button hostButton;
         private Button joinButton;
         private Button disconnectButton;
+        private Button mainMenuMultiplayerButton;
 
         public void Initialize(FlatWorldGameNetworkManager manager)
         {
@@ -40,6 +43,9 @@ namespace FlatWorld.Networking.Gameplay
 
             GameNetwork.Session.StateChanged -= OnSessionStateChanged;
             GameNetwork.Session.Error -= SetStatus;
+
+            if (mainMenuMultiplayerButton != null)
+                mainMenuMultiplayerButton.onClick.RemoveListener(I_ShowPanel);
         }
 
         private IEnumerator CreatePanelWhenUIReady()
@@ -69,7 +75,27 @@ namespace FlatWorld.Networking.Gameplay
 
             SetStatus("离线：可创建主机或加入 127.0.0.1");
             RefreshInteractableState();
-            I_ShowPanel();
+            panel.Close();
+            StartCoroutine(BindMainMenuButtonWhenReady());
+        }
+
+        private IEnumerator BindMainMenuButtonWhenReady()
+        {
+            while (mainMenuMultiplayerButton == null)
+            {
+                MainMenuPanelView mainMenu = FindObjectOfType<MainMenuPanelView>(true);
+                if (mainMenu != null)
+                {
+                    mainMenuMultiplayerButton = mainMenu.GetButton(MainMenuPanelView.MultiplayerButtonKey);
+                    if (mainMenuMultiplayerButton != null)
+                    {
+                        mainMenuMultiplayerButton.onClick.AddListener(I_ShowPanel);
+                        yield break;
+                    }
+                }
+
+                yield return null;
+            }
         }
 
         private void Update()

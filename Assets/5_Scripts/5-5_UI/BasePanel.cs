@@ -1,4 +1,6 @@
 ﻿using Sirenix.OdinInspector;
+// AI-Context: 双脚本 UI 的面板视图基类；按节点名收集控件、管理开关状态，并在初始化时套用 FlatWorld 全局视觉主题。
+
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -73,6 +75,9 @@ public class BasePanel : MonoBehaviour
         CollectUIComponents();
 
         EnsureRuntimeReferences();
+
+        // 视觉由主题系统统一维护；业务子类只需保留控件命名契约与事件逻辑。
+        FlatWorldUITheme.Apply(transform);
 
         // 初始化面板状态
         if (canvasGroup != null)
@@ -730,6 +735,7 @@ public class BasePanel : MonoBehaviour
     public void RefreshUIComponents()
     {
         CollectUIComponents();
+        FlatWorldUITheme.Apply(transform);
     }
 
     #endregion

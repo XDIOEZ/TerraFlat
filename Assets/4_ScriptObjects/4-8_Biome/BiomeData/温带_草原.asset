@@ -44,7 +44,7 @@ MonoBehaviour:
     - itemPrefab: {fileID: 463977462678543879, guid: a2d494b844ece424088d4bfb48532082, type: 3}
       itemName: Weed
       itemCount: 1
-      SpawnChance: 0.005
+      SpawnChance: 0.06
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
