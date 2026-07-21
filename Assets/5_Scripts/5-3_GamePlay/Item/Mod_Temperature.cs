@@ -75,8 +75,10 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public override void Save()
     {
-        Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
-        modData.WriteData(Data);
+        if (TemperatureMgr.Instance != null)
+            Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
+
+        modData?.WriteData(Data);
     }
 
     public override void ModUpdate(float deltaTime)

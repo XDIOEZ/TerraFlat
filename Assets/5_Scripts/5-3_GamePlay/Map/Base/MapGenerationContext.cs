@@ -8,13 +8,15 @@ public sealed class MapGenerationContext
     #region 只读数据
     public Map Map { get; }
     public PlanetData PlanetData { get; }
+    public int WorldSeed { get; }
     #endregion
 
     #region 构造
-    public MapGenerationContext(Map map, PlanetData planetData)
+    public MapGenerationContext(Map map, PlanetData planetData, int worldSeed)
     {
         Map = map;
         PlanetData = planetData;
+        WorldSeed = worldSeed == 0 ? 1 : worldSeed;
     }
     #endregion
 }

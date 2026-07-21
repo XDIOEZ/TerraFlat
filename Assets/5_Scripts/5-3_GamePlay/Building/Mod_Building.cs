@@ -1,182 +1,175 @@
-﻿using Force.DeepCloner;
-using NUnit.Framework.Interfaces;
-using Pathfinding;
-using Sirenix.OdinInspector;
 using System;
+using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
 
-/// <summary>
-/// 建筑物状态枚举
-/// </summary>
 public enum BuildingState
 {
-    /// <summary>未安装 - 建筑在背包中或未放置</summary>
     NotInstalled,
-
-    /// <summary>安装中 - 建筑正在安装过程中</summary>
     Installing,
-
-    /// <summary>已安装 - 建筑已成功放置</summary>
     Installed,
-
-    /// <summary>损坏中 - 建筑血量低于50%</summary>
     Damaged,
-
-    /// <summary>卸载中 - 建筑正在被卸载</summary>
     Uninstalling,
-
-    /// <summary>已卸载 - 建筑已被卸载并可重新拾取</summary>
     Uninstalled
 }
 
+/// <summary>同一个物品预制体的两种明确用途，禁止再通过血量推断。</summary>
+public enum BuildingRole
+{
+    Summoner,
+    PlacedBuilding
+}
+
+/// <summary>
+/// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
+/// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
+/// </summary>
 public class Mod_Building : Module
 {
-    #region 数据定义
+    private const int CurrentDataVersion = 3;
+    public const string SummonerPrefabSuffix = "_Summoner";
+    public static int CurrentBuildingDataVersion => CurrentDataVersion;
+    private const uint BlockedTilePenalty = 1000;
+    private const float BoundsEpsilon = 0.001f;
+    private const int MaxEmbeddedSnapshotBytes = 320 * 1024;
+    private const string StatefulSummonerPrefix = "building-snapshot:";
+
     [Serializable]
     public class Building_Data
     {
+        // 不设置字段初值，旧 JSON 缺少 Version 时保持 0，才能正确迁移。
+        public int Version;
         public float maxVisibleDistance = 10f;
         public float minVisibleDistance = 1f;
+        public BuildingState State = BuildingState.NotInstalled;
+        public BuildingRole Role = BuildingRole.Summoner;
+        public string SnapshotBase64;
+        public string BuildingPrefabId;
+        public string SummonerPrefabId;
     }
-    #endregion
 
-    #region 公共字段
-    public Building_Data Data = new Building_Data();
+    public Building_Data Data = new();
     public Ex_ModData BuildingData;
     public BuildingShadow GhostShadow;
     public BoxCollider2D boxCollider2D;
     public DamageReceiver damageReceiver;
-    public UltEvent StartInstall = new UltEvent();
-    public UltEvent StartUnInstall = new UltEvent();
+    public UltEvent StartInstall = new();
+    public UltEvent StartUnInstall = new();
+    public UltEvent<BuildingState, BuildingState> OnStateChanged = new();
 
-    // 建筑状态字段
     [SerializeField] private BuildingState _currentState = BuildingState.NotInstalled;
-    private bool _eventsBound; // 运行时事件是否已绑定
-    private bool _isLoaded; // 模块是否已完成Load初始化
+    private bool _eventsBound;
+    private bool _isLoaded;
+    private bool _placementPending;
+    private bool _dismantlePending;
+    private bool _ghostCreationFailed;
+    private GameController _ownerController;
 
-    // 状态变化事件
-    public UltEvent<BuildingState, BuildingState> OnStateChanged = new UltEvent<BuildingState, BuildingState>();
-    #endregion
-
-    #region 属性
     public override ModuleData _Data
     {
         get => BuildingData;
         set => BuildingData = (Ex_ModData)value;
     }
 
-    public bool IsItemInInventory => item.InHand && item.Owner != null;
+    public bool IsSummoner => Data != null && Data.Role == BuildingRole.Summoner;
+    public bool IsItemInInventory => IsSummoner && item != null && item.itemData != null && item.InHand && item.Owner != null;
+    public bool IsPlacementPending => _placementPending;
+    public bool IsDismantlePending => _dismantlePending;
+    public bool CanCommitDismantle => Data?.Role == BuildingRole.PlacedBuilding &&
+                                      CurrentState is BuildingState.Installed or BuildingState.Damaged or
+                                          BuildingState.Uninstalling;
 
-    /// <summary>
-    /// 当前建筑状态
-    /// </summary>
     public BuildingState CurrentState
     {
         get => _currentState;
         private set
         {
-            if (_currentState != value)
-            {
-                BuildingState previousState = _currentState;
-                _currentState = value;
-                OnStateChanged?.Invoke(previousState, value);
+            if (_currentState == value)
+                return;
 
-                // 调试日志
-                Debug.Log($"[建筑状态] {item?.name} 状态变更: {previousState} -> {value}");
-            }
+            BuildingState previous = _currentState;
+            _currentState = value;
+            Data ??= new Building_Data();
+            Data.State = value;
+            OnStateChanged?.Invoke(previous, value);
         }
     }
-    #endregion
 
     public override void Awake()
     {
-        _Data.ID = ModText.Building;
+        if (_Data != null)
+            _Data.ID = ModText.Building;
     }
 
-    private void Start()
-    {
-        if (item == null)
-        {
-            item = GetComponentInParent<Item>();
-            if (item == null)
-                throw new NullReferenceException("[Mod_Building] Start失败：未找到附属Item组件");
-        }
-
-        if (_isLoaded)
-        {
-            SyncRuntimeState();
-        }
-    }
-
-    //TODO OnValidate实现
     protected void OnValidate()
     {
-        _Data.ID = ModText.Building;
+        if (_Data != null)
+            _Data.ID = ModText.Building;
     }
-
-
-
-    #region 生命周期
 
     public override void Load()
     {
         EnsureRuntimeReferences();
-
-        BuildingData.ReadData(ref Data);
-
-        damageReceiver.Data.DestroyDelay = -1f;
+        Data = new Building_Data();
+        BuildingData?.ReadData(ref Data);
+        Data ??= new Building_Data();
+        MigrateLegacyData(Data, item?.itemData?.IDName);
+        _currentState = Data.State;
 
         UnbindRuntimeEvents();
         BindRuntimeEvents();
-
-        SyncRuntimeState();
         _isLoaded = true;
+        SyncRuntimeState();
     }
 
     public override void Save()
     {
+        if (BuildingData == null || item?.itemData?.ModuleDataDic == null)
+            return;
+
+        Data ??= new Building_Data();
+        Data.Version = CurrentDataVersion;
+        Data.State = _currentState;
         BuildingData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = BuildingData;
     }
 
+    public override void ApplyNetworkData(ModuleData data)
+    {
+        if (data is not Ex_ModData networkData)
+            return;
+
+        BuildingData = networkData;
+        Data = new Building_Data();
+        BuildingData.ReadData(ref Data);
+        Data ??= new Building_Data();
+        MigrateLegacyData(Data, item?.itemData?.IDName);
+        _currentState = Data.State;
+
+        if (item != null)
+        {
+            EnsureRuntimeReferences();
+            SyncRuntimeState();
+        }
+    }
+
     public override void ModUpdate(float deltaTime)
     {
-        if (item == null)
+        if (!_isLoaded || item == null)
+            return;
+
+        if (!IsItemInInventory || _placementPending || !IsSummoner)
         {
-            Debug.LogWarning("item 尚未初始化！");
+            CleanupGhost();
             return;
         }
-        // 只有在玩家手上时才显示幽灵投影
-        if (IsItemInInventory)
-        {
-            // 如果已经安装完成，清理幽灵投影
-            if (IsInstalled())
-            {
-                CleanupGhost();
-                return;
-            }
 
-            // 如果还未安装，继续显示幽灵投影
-            HandleGhostShadow();
+        SetColliderMode(enabled: false, trigger: true);
+        if (CurrentState == BuildingState.Uninstalled)
+            CurrentState = BuildingState.NotInstalled;
 
-            // 确保状态是未安装
-            if (CurrentState == BuildingState.Uninstalled)
-            {
-                CurrentState = BuildingState.NotInstalled;
-            }
-        }
-        else
-        {
-            // 不在玩家手上时清理幽灵投影
-            CleanupGhost();
-
-            // 如果状态是未安装且不在玩家手中，更新为已卸载状态
-            if (CurrentState == BuildingState.NotInstalled && item != null && damageReceiver.Hp <= 0)
-            {
-                CurrentState = BuildingState.Uninstalled;
-            }
-        }
+        HandleGhostShadow();
     }
 
     public void OnEnable()
@@ -186,398 +179,744 @@ public class Mod_Building : Module
 
         EnsureRuntimeReferences();
         BindRuntimeEvents();
+        SyncNavigationOccupancy();
     }
 
     public void OnDisable()
     {
         CleanupGhost();
+        BuildingOccupancyRegistry.Unregister(this);
         UnbindRuntimeEvents();
     }
 
     public void OnDestroy()
     {
         CleanupGhost();
+        BuildingOccupancyRegistry.Unregister(this);
         UnbindRuntimeEvents();
     }
-    #endregion
 
-    #region 伤害处理
-    private void OnHit(float hp)
-    {
-        // 更新建筑状态（根据血量）
-        UpdateBuildingState();
-
-        if (hp <= 0)
-        {
-            UnInstall();
-        }
-        // Debug.Log("伤害：" + hp);
-    }
-    #endregion
-
-    #region 建筑安装/卸载
     [Button]
     public virtual void Install()
     {
-        // 只有在玩家手上时才能安装
-        if (!IsItemInInventory)
+        if (_placementPending || !IsItemInInventory)
+            return;
+
+        if (!TryGetGhostPlacementPosition(out Vector3 placement))
         {
-            Debug.LogWarning($"[建筑安装] 安装失败: 物品不在玩家手上");
+            Debug.LogWarning("[建筑安装] 放置预览尚未就绪", item);
             return;
         }
 
-        if (!CanInstall())
+        if (!ValidatePlacement(placement, GetAuthorityPosition(), true, out string reason))
+        {
+            Debug.LogWarning($"[建筑安装] {reason}", item);
             return;
+        }
 
-        // 设置状态为安装中
         CurrentState = BuildingState.Installing;
-
-        // === 触发开始事件 ===
         StartInstall?.Invoke();
+        _placementPending = true;
 
-        // === 消耗物品 ===
-        ConsumeItem(item);
-
-
-        // === 实例化建筑 ===
-        Item newBuilding = CreateBuildingInstance(item, GetGhostPlacementPosition());
-
-        // === 如果物品耗尽，清理原始对象 ===
-        if (item.itemData.Stack.Amount <= 0)
+        if (ItemNetworkStateSerialization.BeginNetworkBuilding(this, placement))
         {
             CleanupGhost();
-            Destroy(item.gameObject);
+            return;
         }
 
-        MeshUpdate(newBuilding);
+        _placementPending = false;
+        if (!TryCreateInstalledBuilding(placement, out Item building, out reason))
+        {
+            CurrentState = BuildingState.NotInstalled;
+            Save();
+            Debug.LogWarning($"[建筑安装] {reason}", item);
+            return;
+        }
+
+        CompletePlacementTransaction(building);
     }
 
-    private void MeshUpdate(Item newBuilding)
+    /// <summary>服务端在候选建筑生成后调用，不依赖客户端预览。</summary>
+    public bool ValidateAuthoritativePlacement(Vector3 authorityPosition, out string reason)
     {
-        Debug.Log($"[MeshUpdate] 开始更新新建筑的网格和导航，建筑: {newBuilding?.name}");
+        Vector3 position = item != null ? item.transform.position : transform.position;
+        return ValidatePlacement(position, authorityPosition, false, out reason);
+    }
 
-        // === 更新寻路区域 ===
-        if (newBuilding != null)
+    public void CompleteNetworkPlacement(float authoritativeRemainingAmount)
+    {
+        if (!_placementPending)
+            return;
+
+        _placementPending = false;
+        CurrentState = BuildingState.NotInstalled;
+        Save();
+        ApplySourceAmount(authoritativeRemainingAmount);
+    }
+
+    public void RejectNetworkPlacement(string reason)
+    {
+        if (!_placementPending)
+            return;
+
+        _placementPending = false;
+        CurrentState = BuildingState.NotInstalled;
+        Save();
+        if (!string.IsNullOrWhiteSpace(reason))
+            Debug.LogWarning($"[联机建造] 放置被拒绝：{reason}", item);
+    }
+
+    public bool TryCreateInstalledBuilding(Vector3 position, out Item building, out string reason)
+    {
+        building = null;
+        reason = null;
+        if (ItemMgr.Instance == null || item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
         {
-            // 获取建筑物的2D碰撞体范围
-            Bounds buildingBounds;
-            var collider2D = newBuilding.GetComponent<BoxCollider2D>(); // 使用新建筑的碰撞体而不是本地的
-            if (collider2D != null)
+            reason = "召唤器不足或物品管理器尚未就绪";
+            return false;
+        }
+
+        item.Save();
+        if (!TryCreatePlacementCandidateData(item.itemData, position, out ItemData placedData,
+                out bool restoredSnapshot, out reason))
+        {
+            return false;
+        }
+
+        try
+        {
+            building = ItemMgr.Instance.InstantiateItem(placedData, placedData.transform.position);
+            building.Load();
+
+            Mod_Building module = building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+            if (module == null)
+                throw new MissingComponentException($"{building.name} 缺少建筑模块");
+
+            module.SetAsInstalled(initializeHealth: !restoredSnapshot);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            reason = exception.Message;
+            if (building != null && ItemMgr.Instance != null)
+                ItemMgr.Instance.DespawnItem(building, false);
+            building = null;
+            return false;
+        }
+    }
+
+    /// <summary>只构造候选数据。联机服务端可先实例化、校验位置，再提交安装。</summary>
+    public static bool TryCreatePlacementCandidateData(
+        ItemData summonerData,
+        Vector3 position,
+        out ItemData placedData,
+        out bool restoredSnapshot,
+        out string reason)
+    {
+        placedData = null;
+        restoredSnapshot = false;
+        reason = null;
+
+        if (!TryReadBuildingData(summonerData, out _, out Building_Data carrierState))
+        {
+            reason = "物品不包含有效建筑模块";
+            return false;
+        }
+
+        MigrateLegacyData(carrierState, summonerData.IDName);
+        if (carrierState.Role != BuildingRole.Summoner)
+        {
+            reason = "只有建筑召唤器可以安装建筑";
+            return false;
+        }
+
+        string buildingPrefabId = ResolveBuildingPrefabId(summonerData.IDName, carrierState);
+        if (string.IsNullOrWhiteSpace(buildingPrefabId) || GameRes.Instance?.GetPrefab(buildingPrefabId) == null)
+        {
+            reason = $"找不到召唤器对应的建筑预制体：{buildingPrefabId}";
+            return false;
+        }
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(carrierState.SnapshotBase64))
             {
-                Debug.Log("[MeshUpdate] 使用新建筑的BoxCollider2D的bounds");
-                // 对于2D游戏，使用BoxCollider2D的bounds，但确保Z轴为0
-                Vector3 center = collider2D.bounds.center;
-                center.z = 0f; // 确保2D游戏中Z坐标为0
-                Vector3 size = collider2D.bounds.size;
-                buildingBounds = new Bounds(center, size);
+                byte[] payload = Convert.FromBase64String(carrierState.SnapshotBase64);
+                if (!ItemNetworkStateSerialization.TryDeserializeItemData(payload, out placedData))
+                {
+                    reason = "召唤器内的建筑快照无效";
+                    return false;
+                }
+
+                restoredSnapshot = true;
             }
             else
             {
-                Debug.LogWarning("[MeshUpdate] 新建筑上没有找到BoxCollider2D，尝试使用本地组件或默认大小（1x1）");
-
-                // 尝试使用本地的碰撞体
-                if (boxCollider2D != null)
-                {
-                    Debug.Log("[MeshUpdate] 使用本地的BoxCollider2D的bounds");
-                    Vector3 center = boxCollider2D.bounds.center;
-                    center.z = 0f; // 确保2D游戏中Z坐标为0
-                    Vector3 size = boxCollider2D.bounds.size;
-                    buildingBounds = new Bounds(center, size);
-                }
-                else
-                {
-                    Debug.Log("[MeshUpdate] 使用默认大小（1x1）");
-                    // 如果没有碰撞体，使用默认大小（1x1）
-                    Vector3 pos = newBuilding.transform.position;
-                    pos.z = 0f; // 确保2D游戏中Z坐标为0
-                    buildingBounds = new Bounds(pos, Vector3.one);
-                }
-            }
-
-            Debug.Log($"[MeshUpdate] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
-            Vector3 cpos = newBuilding.transform.position;
-
-            UpdateNavigation(position: cpos, UseTilePenalty: false);
-
-            // 设置新建筑为已安装状态
-            var newBuildingMod = newBuilding.GetComponent<Mod_Building>();
-            if (newBuildingMod != null)
-            {
-                newBuildingMod.CurrentState = BuildingState.Installed;
-                Debug.Log($"[MeshUpdate] 新建筑 {newBuilding.name} 状态设置为已安装");
-            }
-
-            // 安装完毕后：
-            // - 场景中的新建筑保持为 Installed
-            // - 手上的物品如果还有剩余数量，则恢复为 NotInstalled，方便继续预览/放置
-            if (item != null && item.itemData != null && item.itemData.Stack.Amount > 0)
-            {
-                CurrentState = BuildingState.NotInstalled;
-                Debug.Log("[MeshUpdate] 原物品仍有剩余数量，状态重置为未安装");
-            }
-            else
-            {
-                // 没有剩余堆叠（或即将被销毁），保持已安装状态
-                CurrentState = BuildingState.Installed;
+                placedData = FastCloner.FastCloner.DeepClone(summonerData);
+                placedData.IDName = buildingPrefabId;
             }
         }
-        else
+        catch (Exception exception)
         {
-            Debug.LogError("[MeshUpdate] newBuilding为空，无法更新网格");
+            reason = $"读取建筑快照失败：{exception.Message}";
+            return false;
         }
+
+        if (placedData == null || !string.Equals(placedData.IDName, buildingPrefabId, StringComparison.Ordinal) ||
+            placedData.Stack == null)
+        {
+            reason = "召唤器快照与建筑预制体不匹配";
+            placedData = null;
+            return false;
+        }
+
+        if (!WriteBuildingData(placedData, state =>
+            {
+                state.Version = CurrentDataVersion;
+                state.Role = BuildingRole.PlacedBuilding;
+                state.State = BuildingState.NotInstalled;
+                state.SnapshotBase64 = null;
+                state.BuildingPrefabId = buildingPrefabId;
+                state.SummonerPrefabId = ResolveSummonerPrefabId(buildingPrefabId, carrierState);
+            }))
+        {
+            reason = "建筑快照缺少建筑模块";
+            placedData = null;
+            return false;
+        }
+
+        placedData.Guid = GenerateUniqueRuntimeGuid();
+        placedData.inHand = false;
+        placedData.Stack.Amount = 1f;
+        placedData.Stack.CanBePickedUp = false;
+        placedData.transform ??= new ItemTransform();
+        placedData.transform.position = NormalizePlacement(position);
+        placedData.transform.rotation = Quaternion.identity;
+        placedData.transform.scale = Vector3.one;
+        return true;
+    }
+
+    public static bool IsValidSummonerData(ItemData itemData, out string reason)
+    {
+        reason = null;
+        if (!TryReadBuildingData(itemData, out _, out Building_Data data))
+        {
+            reason = "物品不包含建筑模块";
+            return false;
+        }
+
+        MigrateLegacyData(data, itemData.IDName);
+        if (data.Role != BuildingRole.Summoner)
+        {
+            reason = "物品不是建筑召唤器";
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(data.SnapshotBase64) && itemData.Stack?.Amount != 1f)
+        {
+            reason = "带快照的建筑召唤器必须为单件";
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>旧调用兼容：把候选数据显式标记为世界建筑。</summary>
+    public static void PreparePlacementCandidateData(ItemData itemData)
+    {
+        if (!TryReadBuildingData(itemData, out _, out Building_Data currentState))
+            return;
+
+        MigrateLegacyData(currentState, itemData.IDName);
+        string buildingPrefabId = ResolveBuildingPrefabId(itemData.IDName, currentState);
+        WriteBuildingData(itemData, state =>
+        {
+            state.Version = CurrentDataVersion;
+            state.Role = BuildingRole.PlacedBuilding;
+            state.State = BuildingState.NotInstalled;
+            state.SnapshotBase64 = null;
+            state.BuildingPrefabId = buildingPrefabId;
+            state.SummonerPrefabId = ResolveSummonerPrefabId(buildingPrefabId, state);
+        });
+        itemData.IDName = buildingPrefabId;
     }
 
     [Button]
     public virtual void UnInstall()
     {
-        // 设置状态为卸载中
+        if (_dismantlePending || Data?.Role != BuildingRole.PlacedBuilding || !IsInstalled())
+            return;
+
+        BuildingState previousState = CurrentState;
         CurrentState = BuildingState.Uninstalling;
+        StartUnInstall?.Invoke();
+        _dismantlePending = true;
 
-        // === 重置血量为0（标记为卸载状态）===
-        if (damageReceiver != null)
+        if (ItemNetworkStateSerialization.BeginNetworkBuildingDismantle(this))
+            return;
+
+        _dismantlePending = false;
+        if (!TryCreateDismantledSummoner(out _, out string reason))
         {
-            damageReceiver.Hp = 0;
-            Debug.Log($"[建筑卸载] ✅ 血量已重置为0");
+            CurrentState = previousState;
+            Save();
+            Debug.LogWarning($"[建筑拆除] {reason}", item);
+            return;
         }
 
-        StartUnInstall.Invoke();
-        item.transform.localScale *= 0.5f;
+        BuildingOccupancyRegistry.Unregister(this);
+        ItemMgr.Instance.DespawnItem(item, false);
+    }
 
-        BoxCollider2D itemRootCollider = item.GetComponent<BoxCollider2D>();
-        if (itemRootCollider != null)
+    /// <summary>生成带完整建筑快照的世界召唤器，不删除当前建筑。</summary>
+    public bool TryCreateDismantledSummoner(out Item summoner, out string reason)
+    {
+        summoner = null;
+        reason = null;
+        if (ItemMgr.Instance == null || item?.itemData == null || Data?.Role != BuildingRole.PlacedBuilding)
         {
-            itemRootCollider.isTrigger = true;
-        }
-        else
-        {
-            Debug.LogError($"[建筑卸载] {item.name} 同对象未找到 BoxCollider2D，无法设置为触发器");
-        }
-
-        if (boxCollider2D != null && boxCollider2D != itemRootCollider)
-        {
-            boxCollider2D.isTrigger = true;
+            reason = "当前对象不是可拆除的世界建筑";
+            return false;
         }
 
-        if (item.itemData != null)
+        if (!TryCapturePlacedSnapshot(out string snapshotBase64, out reason))
+            return false;
+
+        try
         {
-            item.itemData.Stack.CanBePickedUp = true;
+            Vector3 dropPosition = NormalizePlacement(item.transform.position);
+            string buildingPrefabId = ResolveBuildingPrefabId(item.itemData.IDName, Data);
+            string summonerPrefabId = ResolveSummonerPrefabId(buildingPrefabId, Data);
+            GameObject prefab = GameRes.Instance?.GetPrefab(summonerPrefabId);
+            Item templateItem = prefab != null ? prefab.GetComponent<Item>() : null;
+            if (templateItem?.itemData == null)
+                throw new InvalidOperationException($"找不到建筑召唤器预制体：{summonerPrefabId}");
+
+            ItemData summonerData = FastCloner.FastCloner.DeepClone(templateItem.itemData);
+            summonerData.IDName = summonerPrefabId;
+            summonerData.Guid = GenerateUniqueRuntimeGuid();
+            summonerData.inHand = false;
+            summonerData.Stack ??= new ItemStack();
+            summonerData.Stack.Amount = 1f;
+            summonerData.Stack.CanBePickedUp = true;
+            summonerData.transform ??= new ItemTransform();
+            summonerData.transform.position = dropPosition;
+            summonerData.transform.rotation = Quaternion.identity;
+            summonerData.transform.scale = Vector3.one;
+
+            summoner = ItemMgr.Instance.InstantiateItem(summonerData, dropPosition);
+            summoner.Load();
+
+            Mod_Building summonerModule = summoner.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+            if (summonerModule == null)
+                throw new MissingComponentException($"{summoner.name} 缺少建筑模块");
+
+            summonerModule.ConfigureAsSummoner(snapshotBase64);
+            summoner.Save();
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(summoner);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            reason = exception.Message;
+            if (summoner != null && ItemMgr.Instance != null)
+                ItemMgr.Instance.DespawnItem(summoner, false);
+            summoner = null;
+            return false;
+        }
+    }
+
+    public void CompleteNetworkDismantle()
+    {
+        _dismantlePending = false;
+    }
+
+    public void RejectNetworkDismantle(string reason)
+    {
+        if (!_dismantlePending)
+            return;
+
+        _dismantlePending = false;
+        CurrentState = damageReceiver != null && damageReceiver.Hp < damageReceiver.MaxHp * 0.5f
+            ? BuildingState.Damaged
+            : BuildingState.Installed;
+        Save();
+        if (!string.IsNullOrWhiteSpace(reason))
+            Debug.LogWarning($"[联机拆除] 请求被拒绝：{reason}", item);
+    }
+
+    public void SetAsInstalled(bool initializeHealth = true)
+    {
+        EnsureRuntimeReferences();
+        Data ??= new Building_Data();
+        Data.Version = CurrentDataVersion;
+        Data.Role = BuildingRole.PlacedBuilding;
+        Data.SnapshotBase64 = null;
+        Data.BuildingPrefabId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
+        Data.SummonerPrefabId = ResolveSummonerPrefabId(Data.BuildingPrefabId, Data);
+
+        item.transform.position = NormalizePlacement(item.transform.position);
+        item.transform.localScale = Vector3.one;
+        item.SetInHand(false);
+
+        if (item.itemData?.Stack != null)
+        {
+            item.itemData.Stack.Amount = 1f;
+            item.itemData.Stack.CanBePickedUp = false;
         }
 
-        Vector2 pos = (Vector2)item.transform.position;
-        ItemMaker itemMaker = new ItemMaker();
-        itemMaker.DropItemWithAnimation(
-            item.transform,
-            item.transform.position,
-            pos + (UnityEngine.Random.insideUnitCircle * 1f),
-            item);
+        if (initializeHealth || damageReceiver.Hp <= 0f)
+            damageReceiver.Hp = damageReceiver.MaxHp > 0f ? damageReceiver.MaxHp : 100f;
+
+        SetColliderMode(enabled: true, trigger: false);
+        CleanupGhost();
+        CurrentState = damageReceiver.Hp > 0f && damageReceiver.Hp < damageReceiver.MaxHp * 0.5f
+            ? BuildingState.Damaged
+            : BuildingState.Installed;
+        SyncNavigationOccupancy();
+        damageReceiver.Save();
+        Save();
+    }
+
+#if UNITY_EDITOR
+    [Button("设置为已安装状态（编辑器调试）")]
+    public void SetAsInstalledEditor() => SetAsInstalled();
+#endif
+
+    public bool IsInstalled()
+        => Data?.Role == BuildingRole.PlacedBuilding &&
+           CurrentState is BuildingState.Installed or BuildingState.Damaged;
+
+    public string GetStateDescription()
+    {
+        return CurrentState switch
+        {
+            BuildingState.NotInstalled => "未安装",
+            BuildingState.Installing => "安装中",
+            BuildingState.Installed => "已安装",
+            BuildingState.Damaged => "损坏中",
+            BuildingState.Uninstalling => "拆除中",
+            BuildingState.Uninstalled => "召唤器",
+            _ => "未知状态"
+        };
+    }
+
+    public void CleanupGhost()
+    {
+        if (GhostShadow == null)
+            return;
+
+        Destroy(GhostShadow.gameObject);
+        GhostShadow = null;
+    }
+
+    public void ReleasePlacementOccupancy()
+    {
+        BuildingOccupancyRegistry.Unregister(this);
+    }
+
+    protected void EnableChildColliders(bool enable, Transform root = null)
+    {
+        Transform target = root != null ? root : item != null ? item.transform : transform;
+        Collider2D[] colliders = target.GetComponentsInChildren<Collider2D>(true);
+        for (int i = 0; i < colliders.Length; i++)
+            colliders[i].enabled = enable;
+    }
+
+    private void ConfigureAsSummoner(string snapshotBase64)
+    {
+        EnsureRuntimeReferences();
+        Data ??= new Building_Data();
+        Data.Version = CurrentDataVersion;
+        Data.Role = BuildingRole.Summoner;
+        Data.State = BuildingState.Uninstalled;
+        Data.SnapshotBase64 = snapshotBase64;
+        Data.BuildingPrefabId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
+        Data.SummonerPrefabId = ResolveSummonerPrefabId(Data.BuildingPrefabId, Data);
+        _currentState = BuildingState.Uninstalled;
+
+        item.SetInHand(false);
+        item.itemData.inHand = false;
+        item.itemData.Stack.Amount = 1f;
+        item.itemData.Stack.CanBePickedUp = true;
+        item.itemData.ItemSpecialData = StatefulSummonerPrefix + item.itemData.Guid;
+        SetColliderMode(enabled: true, trigger: true);
+        BuildingOccupancyRegistry.Unregister(this);
+        Save();
+    }
+
+    private bool TryCapturePlacedSnapshot(out string snapshotBase64, out string reason)
+    {
+        snapshotBase64 = null;
+        reason = null;
+
+        try
+        {
+            item.Save();
+            ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
+            if (!WriteBuildingData(snapshot, state =>
+                {
+                    state.Version = CurrentDataVersion;
+                    state.Role = BuildingRole.PlacedBuilding;
+                    state.State = damageReceiver.Hp < damageReceiver.MaxHp * 0.5f
+                        ? BuildingState.Damaged
+                        : BuildingState.Installed;
+                    state.BuildingPrefabId = ResolveBuildingPrefabId(item.itemData.IDName, Data);
+                    state.SummonerPrefabId = ResolveSummonerPrefabId(state.BuildingPrefabId, Data);
+                    // 防止快照递归包含自己。
+                    state.SnapshotBase64 = null;
+                }))
+            {
+                reason = "建筑数据缺少建筑模块";
+                return false;
+            }
+
+            snapshot.inHand = false;
+            snapshot.Stack.Amount = 1f;
+            snapshot.Stack.CanBePickedUp = false;
+            snapshot.transform ??= new ItemTransform();
+            snapshot.transform.position = item.transform.position;
+            snapshot.transform.rotation = item.transform.rotation;
+            snapshot.transform.scale = item.transform.localScale;
+
+            if (!ItemNetworkStateSerialization.TrySerializeItemData(snapshot, out byte[] payload) ||
+                payload.Length > MaxEmbeddedSnapshotBytes)
+            {
+                reason = "建筑数据过大或无法序列化";
+                return false;
+            }
+
+            snapshotBase64 = Convert.ToBase64String(payload);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            reason = $"保存建筑快照失败：{exception.Message}";
+            return false;
+        }
+    }
+
+    private void CompletePlacementTransaction(Item building)
+    {
+        if (building == null)
+        {
+            CurrentState = BuildingState.NotInstalled;
+            Save();
+            return;
+        }
+
+        CurrentState = BuildingState.NotInstalled;
+        Save();
+        if (ConsumeOneSourceItem())
+            return;
+
+        building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.ReleasePlacementOccupancy();
+        ItemMgr.Instance?.DespawnItem(building, false);
+    }
+
+    private bool ConsumeOneSourceItem()
+    {
+        if (item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
+            return false;
+
+        ApplySourceAmount(item.itemData.Stack.Amount - 1f);
+        return true;
+    }
+
+    private void ApplySourceAmount(float amount)
+    {
+        if (item?.itemData?.Stack == null)
+            return;
+
+        Item owner = item.Owner;
+        Inventory_HotBar hotBar = owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        ItemSlot selectedSlot = hotBar?.CurrentSelectItemSlot;
+
+        item.itemData.Stack.Amount = Mathf.Max(0f, amount);
+        bool depleted = item.itemData.Stack.Amount <= 0f;
+        if (depleted && selectedSlot != null && ReferenceEquals(selectedSlot.itemData, item.itemData))
+        {
+            selectedSlot.ClearData();
+            selectedSlot.RefreshUI();
+        }
+
+        item.OnUIRefresh?.Invoke();
+        if (owner != null)
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(owner);
+
+        if (!depleted)
+            return;
 
         CleanupGhost();
-
-        Debug.Log("[UnInstall] 开始卸载建筑，准备更新导航区域");
-
-        // 获取建筑物的2D碰撞体范围
-        Bounds buildingBounds;
-        if (boxCollider2D != null)
-        {
-            Debug.Log("[UnInstall] 使用BoxCollider2D的bounds");
-            // 对于2D游戏，使用BoxCollider2D的bounds，但确保Z轴为0
-            Vector3 center = boxCollider2D.bounds.center;
-            center.z = 0f; // 确保2D游戏中Z坐标为0
-            Vector3 size = boxCollider2D.bounds.size;
-            buildingBounds = new Bounds(center, size);
-        }
+        if (ItemMgr.Instance != null)
+            ItemMgr.Instance.DespawnItem(item, false);
         else
-        {
-            Debug.Log("[UnInstall] 没有找到BoxCollider2D，使用默认大小（1x1）");
-            // 如果没有碰撞体，使用默认大小（1x1）
-            Vector3 npos = transform.position;
-            npos.z = 0f; // 确保2D游戏中Z坐标为0
-            buildingBounds = new Bounds(npos, Vector3.one);
-        }
-
-        Debug.Log($"[UnInstall] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
-        UpdateNavigation(position: pos, UseTilePenalty: true);
-
-        // 设置为已卸载状态
-        CurrentState = BuildingState.Uninstalled;
-
-        Debug.Log($"[建筑卸载] ✅ 建筑卸载完成");
+            item.DestroySelf();
     }
-    #endregion
 
-    #region 安装验证
-    private bool CanInstall()
+    private bool ValidatePlacement(
+        Vector3 position,
+        Vector3 authorityPosition,
+        bool requireGhostClear,
+        out string reason)
     {
-        // 1. 检查幽灵投影
-        if (GhostShadow == null)
+        reason = null;
+        position = NormalizePlacement(position);
+
+        if (!IsFinite(position) || !IsFinite(authorityPosition))
         {
-            Debug.LogError($"[建筑安装] 安装失败: 幽灵投影对象不存在 (宿主位置: {item.transform.position})");
+            reason = "坐标无效";
             return false;
         }
 
-        // 2. 检查周围障碍物
-        if (GhostShadow.AroundHaveGameObject)
+        if (item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
         {
-            string obstacleInfo = GhostShadow.obstacleCollider != null ?
-                $"{GhostShadow.obstacleCollider.gameObject.name} (位置: {GhostShadow.obstacleCollider.transform.position})" :
-                "未知碰撞体";
-//TODO Debug输出障碍物的名字 方便调试
-            Debug.LogWarning($"[建筑安装] 安装失败: 检测到障碍物 - {obstacleInfo}");
-            Debug.DrawLine(item.transform.position, GetGhostPlacementPosition(), Color.red, 5f);
+            reason = "召唤器数量不足";
             return false;
         }
 
-        // 3. 检查距离限制
-        float distance = Vector2.Distance(item.transform.position, GetGhostPlacementPosition());
-        if (distance > Data.maxVisibleDistance)
+        if (Vector2.Distance(authorityPosition, position) > Mathf.Max(1f, Data.maxVisibleDistance))
         {
-            Debug.LogWarning($"[建筑安装] 安装失败: 距离超出限制 {distance:F2}m (最大允许: {Data.maxVisibleDistance:F2}m)");
-            Debug.DrawLine(item.transform.position, GetGhostPlacementPosition(), Color.yellow, 5f);
+            reason = "目标超出建造距离";
             return false;
         }
 
-        // 4. 检查地块权重
-        if (!CheckTilePenalties())
+        if (requireGhostClear && GhostShadow == null)
         {
+            reason = "放置预览尚未就绪";
             return false;
         }
 
-        // // 5. 检查物品数量
-        // if (item.itemData.Stack.Amount <= 0)
-        // {
-        //     Debug.LogError($"[建筑安装] 安装失败: 物品数量不足 (当前: {item.itemData.Stack.Amount})");
-        //     return false;
-        // }
+        Bounds bounds = GetPlacementBounds(position);
+        if (!CheckWorldObstacles(bounds, out reason))
+            return false;
+
+        return CheckTilePenalties(bounds, out reason);
+    }
+
+    private bool CheckWorldObstacles(Bounds bounds, out string reason)
+    {
+        reason = null;
+        Collider2D[] overlaps = Physics2D.OverlapBoxAll(bounds.center, bounds.size, 0f);
+        for (int i = 0; i < overlaps.Length; i++)
+        {
+            Collider2D overlap = overlaps[i];
+            if (overlap == null || overlap.isTrigger ||
+                (item != null && overlap.transform.IsChildOf(item.transform)) ||
+                overlap.CompareTag("Player") || overlap.gameObject.tag == "IgnoreShadow")
+            {
+                continue;
+            }
+
+            reason = $"目标被 {overlap.gameObject.name} 阻挡";
+            return false;
+        }
 
         return true;
     }
 
-    /// <summary>
-    /// 检查建筑占用的所有地块是否有权重大于1000的地块
-    /// </summary>
-    /// <returns>如果存在权重大于1000的地块返回false，否则返回true</returns>
-    private bool CheckTilePenalties()
+    private bool CheckTilePenalties(Bounds bounds, out string reason)
     {
-        Debug.Log("[CheckTilePenalties] 开始检查地块权重");
-
-        // 获取建筑将要占用的地块范围
-        Vector3 buildingPos = GetGhostPlacementPosition();
-
-        // 使用幽灵投影的碰撞体大小来确定占用的地块范围
-        Bounds buildingBounds;
-        if (GhostShadow.GetComponent<BoxCollider2D>() != null)
-        {
-            var collider = GhostShadow.GetComponent<BoxCollider2D>();
-            Vector3 center = collider.bounds.center;
-            center.z = 0f; // 确保2D游戏中Z坐标为0
-            Vector3 size = collider.bounds.size;
-            buildingBounds = new Bounds(center, size);
-        }
-        else
-        {
-            // 如果没有碰撞体，使用默认大小（1x1）
-            Vector3 pos = buildingPos;
-            pos.z = 0f; // 确保2D游戏中Z坐标为0
-            buildingBounds = new Bounds(pos, Vector3.one);
-        }
-
-        Debug.Log($"[CheckTilePenalties] 建筑Bounds: 中心({buildingBounds.center.x:F2}, {buildingBounds.center.y:F2}), 大小({buildingBounds.size.x:F2}, {buildingBounds.size.y:F2})");
-
-        // 计算建筑占用的地块坐标范围，带有0.5的右上角偏移
-        int minX = Mathf.FloorToInt(buildingBounds.min.x);
-        int maxX = Mathf.FloorToInt(buildingBounds.max.x);
-        int minY = Mathf.FloorToInt(buildingBounds.min.y);
-        int maxY = Mathf.FloorToInt(buildingBounds.max.y);
-
-        // 添加较小的偏移，避免范围过大
-        // 确保包含格子中心坐标（使用0.5偏移）
-        maxX += 0; // 减小偏移量，避免范围过大
-        maxY += 0; // 减小偏移量，避免范围过大
-
-        Debug.Log($"[CheckTilePenalties] 检查地块范围(减小偏移): X[{minX}, {maxX}], Y[{minY}, {maxY}]");
-
-        // 获取Chunk和Map
+        reason = null;
         if (ChunkMgr.Instance == null)
         {
-            Debug.LogError("[CheckTilePenalties] ChunkMgr.Instance为空，无法检查地块权重");
+            reason = "区块管理器尚未就绪";
             return false;
         }
 
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(buildingPos, out Chunk chunk);
-        if (chunk == null)
-        {
-            Debug.LogError($"[CheckTilePenalties] 无法找到位置({buildingPos.x:F2}, {buildingPos.y:F2})对应的Chunk");
-            return false;
-        }
+        int minX = Mathf.FloorToInt(bounds.min.x + BoundsEpsilon);
+        int maxX = Mathf.FloorToInt(bounds.max.x - BoundsEpsilon);
+        int minY = Mathf.FloorToInt(bounds.min.y + BoundsEpsilon);
+        int maxY = Mathf.FloorToInt(bounds.max.y - BoundsEpsilon);
 
-        if (chunk.Map == null || chunk.Map.Data == null)
-        {
-            Debug.LogError("[CheckTilePenalties] 地图数据不完整，无法检查地块权重");
-            return false;
-        }
-
-        // 检查每个地块的权重
         for (int x = minX; x <= maxX; x++)
         {
             for (int y = minY; y <= maxY; y++)
             {
-                Vector2Int tilePos = new Vector2Int(x, y);
-
-                var tileList = chunk.Map.Data.GetTileListAt(tilePos);
-                if (tileList != null && tileList.Count > 0)
+                Vector2 tileCenter = new(x + 0.5f, y + 0.5f);
+                ChunkMgr.Instance.GetChunkBy_ItemPosition(tileCenter, out Chunk chunk);
+                if (chunk?.Map?.Data == null)
                 {
-                    TileData topTile = tileList[^1];
-                    uint penalty = topTile.Penalty;
-
-                    Debug.Log($"[CheckTilePenalties] 地块({x}, {y})的权重: {penalty}");
-
-                    // 如果权重大于1000，禁止安装
-                    if (penalty > 1000)
-                    {
-                        Debug.LogWarning($"[建筑安装] 安装失败: 地块({x}, {y})的权重({penalty})大于1000，禁止在此处安装建筑");
-                        return false;
-                    }
+                    reason = $"地块 ({x},{y}) 尚未加载";
+                    return false;
                 }
-                else
+
+                var tiles = chunk.Map.Data.GetTileListAt(new Vector2Int(x, y));
+                if (tiles == null || tiles.Count == 0)
                 {
-                    Debug.Log($"[CheckTilePenalties] 地块({x}, {y})不存在数据，权重视为0");
+                    reason = $"地块 ({x},{y}) 不可建造";
+                    return false;
+                }
+
+                TileData topTile = tiles[^1];
+                if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
+                {
+                    reason = $"地块 ({x},{y}) 不可通行";
+                    return false;
+                }
+
+                if (BuildingOccupancyRegistry.IsOccupied(new Vector2Int(x, y), this))
+                {
+                    reason = $"地块 ({x},{y}) 已被建筑占用";
+                    return false;
                 }
             }
         }
 
-        Debug.Log("[CheckTilePenalties] 所有地块权重检查通过，没有发现权重大于1000的地块");
         return true;
     }
 
-    #region 私有辅助方法
+    private Bounds GetPlacementBounds(Vector3 position)
+    {
+        if (boxCollider2D == null)
+            return new Bounds(position, Vector3.one * 0.9f);
+
+        Transform itemTransform = item != null ? item.transform : transform;
+        Vector2 half = boxCollider2D.size * 0.5f;
+        Vector2 offset = boxCollider2D.offset;
+        Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
+        Vector2 max = new(float.NegativeInfinity, float.NegativeInfinity);
+
+        for (int x = -1; x <= 1; x += 2)
+        {
+            for (int y = -1; y <= 1; y += 2)
+            {
+                Vector3 colliderLocal = offset + Vector2.Scale(half, new Vector2(x, y));
+                Vector3 world = boxCollider2D.transform.TransformPoint(colliderLocal);
+                Vector3 itemLocal = itemTransform.InverseTransformPoint(world);
+                min = Vector2.Min(min, itemLocal);
+                max = Vector2.Max(max, itemLocal);
+            }
+        }
+
+        Vector2 localCenter = (min + max) * 0.5f;
+        Vector2 size = max - min;
+        return new Bounds((Vector2)position + localCenter,
+            new Vector3(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y), 0.1f));
+    }
 
     private void EnsureRuntimeReferences()
     {
+        item ??= GetComponentInParent<Item>();
         if (item == null)
-        {
-            item = GetComponentInParent<Item>();
-        }
+            throw new MissingComponentException("[Mod_Building] 未找到所属 Item");
 
-        if (item == null)
-            throw new NullReferenceException("[Mod_Building] 初始化失败：未找到附属Item组件");
+        boxCollider2D ??= item.GetComponent<BoxCollider2D>();
+        boxCollider2D ??= GetComponent<BoxCollider2D>();
+        boxCollider2D ??= item.GetComponentInChildren<BoxCollider2D>(true);
 
-        boxCollider2D = item.GetComponent<BoxCollider2D>();
-        if (boxCollider2D == null)
-            throw new MissingComponentException($"[Mod_Building] {item.name} 同对象缺少 BoxCollider2D");
-
+        damageReceiver ??= item.GetMod<DamageReceiver>();
         if (damageReceiver == null)
-            damageReceiver = item.GetMod<DamageReceiver>();
-
-        if (damageReceiver == null)
-            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver 模块");
+            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver");
     }
 
     private void BindRuntimeEvents()
     {
-        if (_eventsBound)
+        if (_eventsBound || damageReceiver == null || item == null)
             return;
 
         damageReceiver.OnAction += OnHit;
+        damageReceiver.OnDead += OnDeath;
         item.OnAct += Install;
         _eventsBound = true;
     }
@@ -588,587 +927,398 @@ public class Mod_Building : Module
             return;
 
         if (damageReceiver != null)
+        {
             damageReceiver.OnAction -= OnHit;
-
+            damageReceiver.OnDead -= OnDeath;
+        }
         if (item != null)
             item.OnAct -= Install;
-
         _eventsBound = false;
+    }
+
+    private void OnHit(float hp)
+    {
+        if (Data?.Role != BuildingRole.PlacedBuilding)
+            return;
+
+        if (hp <= 0f)
+            return;
+
+        CurrentState = hp < damageReceiver.MaxHp * 0.5f
+            ? BuildingState.Damaged
+            : BuildingState.Installed;
+        Save();
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+    }
+
+    private void OnDeath()
+    {
+        if (Data?.Role != BuildingRole.PlacedBuilding || !IsInstalled())
+            return;
+
+        damageReceiver.ConsumeCurrentDeath();
+        UnInstall();
     }
 
     private void SyncRuntimeState()
     {
-        // 物品在手上时，取消关联碰撞体，避免手持状态下产生场景碰撞
+        if (Data.Role == BuildingRole.Summoner)
+        {
+            BuildingOccupancyRegistry.Unregister(this);
+            if (item.itemData?.Stack != null)
+                item.itemData.Stack.CanBePickedUp = true;
+
+            SetColliderMode(enabled: !item.InHand, trigger: true);
+            CurrentState = item.InHand ? BuildingState.NotInstalled : BuildingState.Uninstalled;
+            return;
+        }
+
         if (item.InHand)
         {
-            EnableChildColliders(false, item.transform);
-            boxCollider2D.isTrigger = true;
-            CurrentState = BuildingState.NotInstalled;
+            BuildingOccupancyRegistry.Unregister(this);
+            SetColliderMode(enabled: false, trigger: true);
             return;
         }
 
-        EnableChildColliders(true, item.transform);
-        boxCollider2D.isTrigger = damageReceiver.Hp == 0;
-        InitializeState();
-    }
-
-    private Vector3 GetGhostPlacementPosition()
-    {
-        if (GhostShadow == null)
+        bool installed = Data.State is BuildingState.Installed or BuildingState.Damaged;
+        if (!installed)
         {
-            throw new NullReferenceException("[Mod_Building] GhostShadow为空，无法获取放置坐标");
+            BuildingOccupancyRegistry.Unregister(this);
+            SetColliderMode(enabled: true, trigger: true);
+            return;
         }
 
-        Vector3 placementPos = GhostShadow.transform.position - (Vector3)GhostShadow.ShadowPositionOffset;
-        placementPos.z = 0f;
-        return placementPos;
+        if (item.itemData?.Stack != null)
+            item.itemData.Stack.CanBePickedUp = false;
+        SetColliderMode(enabled: true, trigger: false);
+        CurrentState = damageReceiver.Hp > 0f && damageReceiver.Hp < damageReceiver.MaxHp * 0.5f
+            ? BuildingState.Damaged
+            : BuildingState.Installed;
+        SyncNavigationOccupancy();
     }
 
-    /// <summary>
-    /// 消耗指定物品（减少数量 + 更新UI）
-    /// </summary>
-    private void ConsumeItem(Item sourceItem)
+    private void SetColliderMode(bool enabled, bool trigger)
     {
-        sourceItem.itemData.Stack.Amount--;
-        sourceItem.itemData.Stack.CanBePickedUp = false;
-        sourceItem.OnUIRefresh?.Invoke();
-    }
-    /// <summary>
-    /// 实例化建筑（根据是否在房间内，选择父对象规则）
-    /// </summary>
-    private Item CreateBuildingInstance(Item sourceItem, Vector3 position)
-    {
-        //将血量拉满 然后保存
-        damageReceiver.Data.Hp = damageReceiver.MaxHp;
-        sourceItem.Save();
-        ItemData newitemData = FastCloner.FastCloner.DeepClone(sourceItem.itemData);
+        if (item == null)
+            return;
 
-        // 直接使用幽灵阴影位置，避免二次取整导致“阴影位置”和“实际安装位置”不一致
-        Vector3 finalPosition = position;
-        finalPosition.z = 0f;
-
-        newitemData.transform.position = finalPosition;
-
-        Item newItem = ItemMgr.Instance.InstantiateItem(
-                newitemData,
-                position: finalPosition
-            );
-
-        newItem.Load();
-
-        newItem.transform.localScale = Vector3.one;
-        newItem.itemData.Stack.Amount = 1;
-        newItem.itemData.Stack.CanBePickedUp = false;
-
-        // 确保新建筑的建筑模块设置为已安装状态
-        var newBuildingMod = newItem.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
-        if (newBuildingMod != null)
+        Collider2D[] colliders = item.GetComponentsInChildren<Collider2D>(true);
+        for (int i = 0; i < colliders.Length; i++)
         {
-            newBuildingMod.SetAsInstalled();
-            Debug.Log($"[CreateBuildingInstance] 新建筑 {newItem.name} 初始化时设置为已安装状态");
-        }
-
-        damageReceiver.Data.Hp = 0;
-
-        return newItem;
-    }
-
-    /// <summary>
-    /// 更新导航区域
-    /// </summary>
-    private void UpdateNavigation(Vector2 position, bool UseTilePenalty)
-    {
-        Vector2 gridCenter = new Vector2(
-            Mathf.Floor(position.x) + 0.5f,
-            Mathf.Floor(position.y) + 0.5f
-        );
-
-        Debug.Log($"[UpdateNavigation] 开始更新导航区域，位置: ({position.x:F2}, {position.y:F2})，格子中心: ({gridCenter.x:F2}, {gridCenter.y:F2})");
-
-        if (ChunkMgr.Instance != null)
-        {
-            Debug.Log($"[UpdateNavigation] 尝试获取Chunk，位置: ({position.x:F2}, {position.y:F2})");
-
-            ChunkMgr.Instance.GetChunkBy_ItemPosition(position, out Chunk chunk);
-            if (chunk != null)
-            {
-                Debug.Log($"[UpdateNavigation] 成功获取Chunk: {chunk.name}");
-
-                // 使用BackTilePenalty_Cell方法处理单个地块的烘焙
-                if (chunk.Map != null)
-                {
-                    if (UseTilePenalty)
-                    {
-                        // 仅做九宫格精确回填；避免区域重扫引入额外外圈节点污染
-                        AstarPath.active.AddWorkItem(new AstarWorkItem(() =>
-                        {
-                        },
-    force =>
-    {
-        chunk.Map.BackTilePenalty_Cell_3x3(gridCenter);
-
-        return true;
-    }));
-                    }
-                    else
-                        chunk.Map.BackTilePenalty_Cell_NotMove(gridCenter);
-                    Debug.Log("[UpdateNavigation] BackTilePenalty_Cell方法调用完成");
-                }
-                else
-                {
-                    Debug.LogError("[UpdateNavigation] chunk.Map为空，无法更新导航区域");
-                }
-            }
-            else
-            {
-                Debug.LogError($"[UpdateNavigation] 无法找到位置({position.x:F2}, {position.y:F2})对应的Chunk");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("[UpdateNavigation] ChunkMgr.Instance 为空，无法更新导航区域");
+            colliders[i].enabled = enabled;
+            if (colliders[i] == boxCollider2D)
+                colliders[i].isTrigger = trigger;
         }
     }
 
-
-
-    #endregion
-
-    #endregion
-
-    #region 建筑状态管理
-
-    /// <summary>
-    /// 初始化建筑状态
-    /// </summary>
-    private void InitializeState()
-    {
-        if (damageReceiver.Hp > 0)
-        {
-            CurrentState = BuildingState.Installed;
-            Debug.Log($"[InitializeState] {item?.name} 血量>0，设置为已安装状态");
-        }
-        else
-        {
-            CurrentState = BuildingState.NotInstalled;
-            Debug.Log($"[InitializeState] {item?.name} 血量<=0，设置为未安装状态");
-        }
-    }
-
-    /// <summary>
-    /// 更新建筑状态（根据血量等条件）
-    /// </summary>
-    private void UpdateBuildingState()
-    {
-        if (damageReceiver == null) return;
-
-        // 根据血量确定状态
-        if (damageReceiver.Hp <= 0)
-        {
-            if (CurrentState != BuildingState.Uninstalled)
-            {
-                CurrentState = BuildingState.Uninstalled;
-            }
-        }
-        else if (damageReceiver.Hp < damageReceiver.MaxHp * 0.5f)
-        {
-            if (CurrentState != BuildingState.Damaged)
-            {
-                CurrentState = BuildingState.Damaged;
-            }
-        }
-        else if (CurrentState != BuildingState.Installed)
-        {
-            CurrentState = BuildingState.Installed;
-        }
-    }
-
-    #endregion
-
-    #region 辅助方法
     private void HandleGhostShadow()
     {
-        // === 检查Camera.main ===
-        if (Camera.main == null)
-        {
-            Debug.LogWarning("[Ghost管理] ❌ Camera.main 为空，无法获取鼠标世界坐标");
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
             return;
-        }
 
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        mouseWorldPos.z = 0f;
-
-        // 取整到格子并偏移 0.5，让位置落在格子中心
-        mouseWorldPos.x = Mathf.Floor(mouseWorldPos.x) + 0.5f;
-        mouseWorldPos.y = Mathf.Floor(mouseWorldPos.y) + 0.5f;
-
-        Vector3 shadowWorldPos = mouseWorldPos + new Vector3(0f, 0.5f, 0f);
-        if (GhostShadow != null)
-            shadowWorldPos = GhostShadow.ApplyPlacementOffset(mouseWorldPos);
-
-        // 创建 Shadow 实例（如果不存在）
+        Vector3 mouse = NormalizePlacement(GetPointerWorldPosition(mainCamera));
         if (GhostShadow == null)
         {
-            Debug.Log("[Ghost管理] 📝 GhostShadow为空，开始创建...");
             CreateGhostShadow();
-
-            // 新创建的幽灵阴影直接设置到鼠标位置，避免从(0,0)移动
-            if (GhostShadow != null)
-            {
-                Debug.Log($"[Ghost管理] ✅ 成功创建GhostShadow，位置: {mouseWorldPos}");
-                shadowWorldPos = GhostShadow.ApplyPlacementOffset(mouseWorldPos);
-                GhostShadow.transform.position = shadowWorldPos;
-            }
-            else
-            {
-                Debug.LogError("[Ghost管理] ❌ 创建GhostShadow失败，将在下一帧重试");
+            if (GhostShadow == null)
                 return;
-            }
         }
 
-        if (GhostShadow == null)
-        {
-            Debug.LogError("[Ghost管理] ❌ GhostShadow仍然为空，无法继续处理");
-            return;
-        }
-
-        // 计算距离
-        float distance = Vector2.Distance(item.transform.position, shadowWorldPos);
-
-        // 定义过渡区间（距离超过最大可见距离后，在这个范围内逐渐消失）
-        float transitionRange = 1.5f; // 可根据需要调整这个值
-
-        // 计算基础透明度（在有效范围内的正常渐变）
-        float baseAlpha = Mathf.InverseLerp(Data.maxVisibleDistance, Data.minVisibleDistance, distance);
-
-        // 计算超出范围后的衰减因子
-        float overDistance = distance - Data.maxVisibleDistance;
-        float fadeFactor = 1f;
-
-        // 如果超出最大距离，在过渡区间内逐渐降低透明度
-        if (overDistance > 0)
-        {
-            // 超出越多，透明度衰减越多，超过过渡范围后完全透明
-            fadeFactor = 1 - Mathf.InverseLerp(0, transitionRange, overDistance);
-        }
-
-        // 最终透明度 = 基础透明度 × 衰减因子（确保在0-1范围内）
-        float alpha = Mathf.Clamp01(baseAlpha * fadeFactor);
-
+        GhostShadow.transform.position = GhostShadow.ApplyPlacementOffset(mouse);
+        float distance = Vector2.Distance(GetAuthorityPosition(), mouse);
+        float alpha = Mathf.Clamp01(Mathf.InverseLerp(
+            Data.maxVisibleDistance + 1.5f,
+            Data.minVisibleDistance,
+            distance));
         GhostShadow.UpdateAlpha(alpha);
-
-        // 只有当阴影可见时才执行移动和颜色更新
-        if (alpha > 0f)
-        {
-            // === 检查ShadowRenderer ===
-            if (GhostShadow.ShadowRenderer == null)
-            {
-                Debug.LogError("[Ghost管理] ❌ GhostShadow.ShadowRenderer 为空");
-                Debug.LogWarning("[Ghost管理] 🔍 BuildingShadow组件的初始化可能失败");
-                return;
-            }
-
-            if (!GhostShadow.ShadowRenderer.enabled)
-            {
-                Debug.LogWarning("[Ghost管理] ⚠️ ShadowRenderer 已禁用，无法显示");
-                return;
-            }
-
-            // 直接设置位置而不是平滑移动，确保总是对齐到格子中心
-            GhostShadow.transform.position = shadowWorldPos;
-            GhostShadow.UpdateColor(GhostShadow.AroundHaveGameObject);
-        }
+        GhostShadow.UpdateColor(!ValidatePlacement(mouse, GetAuthorityPosition(), false, out _));
     }
-
-
 
     private void CreateGhostShadow()
     {
-        // === 第一步：检查GameRes实例 ===
-        if (GameRes.Instance == null)
-        {
-            Debug.LogError("[Shadow生成] ❌ GameRes.Instance 为空！无法获取资源管理器");
+        if (_ghostCreationFailed || GameRes.Instance == null || item == null)
             return;
-        }
 
-        // === 第二步：尝试实例化预制体 ===
-        GameObject shadowPrefab = null;
+        GameObject shadowObject = null;
         try
         {
-            Debug.Log("[Shadow生成] 📝 开始从GameRes加载BuildingShadow预制体...");
-            shadowPrefab = GameRes.Instance.InstantiatePrefab("BuildingShadow");
+            shadowObject = GameRes.Instance.InstantiatePrefab("BuildingShadow");
+            GhostShadow = shadowObject != null
+                ? shadowObject.GetComponentInChildren<BuildingShadow>(true)
+                : null;
+
+            SpriteRenderer source = GetBuildingPreviewRenderer();
+            if (GhostShadow == null || source == null)
+                throw new MissingComponentException("BuildingShadow 预制体或建筑 SpriteRenderer 配置不完整");
+
+            GhostShadow.InitShadow(source, GetBuildingPreviewFootprint());
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Debug.LogError($"[Shadow生成] ❌ 实例化预制体异常: {ex.GetType().Name}");
-            Debug.LogError($"[Shadow生成] 📌 错误信息: {ex.Message}");
-            Debug.LogError($"[Shadow生成] 📌 堆栈跟踪:\n{ex.StackTrace}");
-            return;
+            _ghostCreationFailed = true;
+            if (shadowObject != null)
+                Destroy(shadowObject);
+            GhostShadow = null;
+            Debug.LogError($"[建筑预览] 创建失败：{exception.Message}", item);
         }
+    }
 
-        // === 第三步：检查实例化结果 ===
-        if (shadowPrefab == null)
-        {
-            Debug.LogError("[Shadow生成] ❌ GameRes.InstantiatePrefab 返回 null");
-            Debug.LogWarning("[Shadow生成] 🔍 可能原因：");
-            Debug.LogWarning("   1. 预制体名称 'BuildingShadow' 不存在或拼写错误");
-            Debug.LogWarning("   2. GameRes资源库未正确初始化");
-            Debug.LogWarning("   3. 预制体文件已被删除或移动");
-            return;
-        }
-
-        Debug.Log($"[Shadow生成] ✅ 成功实例化预制体: {shadowPrefab.name}");
-
-        // === 第四步：检查BuildingShadow组件 ===
-        GhostShadow = shadowPrefab.GetComponent<BuildingShadow>();
+    private bool TryGetGhostPlacementPosition(out Vector3 position)
+    {
+        position = default;
         if (GhostShadow == null)
+            return false;
+
+        position = NormalizePlacement(GhostShadow.transform.position - (Vector3)GhostShadow.ShadowPositionOffset);
+        return true;
+    }
+
+    private Vector3 GetPointerWorldPosition(Camera mainCamera)
+    {
+        if (_ownerController == null && item?.Owner != null)
         {
-            Debug.LogError($"[Shadow生成] ❌ 预制体 '{shadowPrefab.name}' 缺少BuildingShadow组件");
-            Debug.LogWarning("[Shadow生成] 🔍 检测到的组件：");
+            _ownerController = item.Owner.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+            if (_ownerController == null)
+                _ownerController = item.Owner.GetComponent<GameController>();
+        }
 
-            // 列出预制体上的所有组件
-            Component[] components = shadowPrefab.GetComponents<Component>();
-            if (components.Length > 0)
-            {
-                foreach (var comp in components)
-                {
-                    Debug.LogWarning($"   - {comp.GetType().Name}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("   - (无任何组件)");
-            }
+        Vector2 screenPosition = _ownerController != null
+            ? _ownerController.GetPointerScreenPosition()
+            : (Vector2)Input.mousePosition;
+        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(
+            screenPosition.x,
+            screenPosition.y,
+            Mathf.Abs(mainCamera.transform.position.z)));
+        worldPosition.z = 0f;
+        return worldPosition;
+    }
 
-            // 检查子对象中是否有BuildingShadow
-            BuildingShadow childShadow = shadowPrefab.GetComponentInChildren<BuildingShadow>();
-            if (childShadow != null)
+    private SpriteRenderer GetBuildingPreviewRenderer()
+    {
+        if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
+        {
+            Item buildingItem = buildingPrefab.GetComponent<Item>();
+            SpriteRenderer bodyRenderer = buildingItem != null ? buildingItem.Sprite : null;
+            bodyRenderer ??= buildingPrefab.GetComponentInChildren<SpriteRenderer>(true);
+            if (bodyRenderer != null)
+                return bodyRenderer;
+        }
+
+        return item.Sprite != null ? item.Sprite : item.GetComponentInChildren<SpriteRenderer>(true);
+    }
+
+    private Vector2 GetBuildingPreviewFootprint()
+    {
+        if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
+        {
+            BoxCollider2D bodyCollider = buildingPrefab.GetComponent<BoxCollider2D>();
+            bodyCollider ??= buildingPrefab.GetComponentInChildren<BoxCollider2D>(true);
+            if (bodyCollider != null)
+                return GetColliderFootprint(buildingPrefab.transform, bodyCollider);
+        }
+
+        return GetPlacementBounds(Vector3.zero).size;
+    }
+
+    private bool TryGetBuildingBodyPrefab(out GameObject buildingPrefab)
+    {
+        buildingPrefab = null;
+        string buildingPrefabId = Data?.BuildingPrefabId;
+        if (string.IsNullOrWhiteSpace(buildingPrefabId))
+            buildingPrefabId = GetBuildingPrefabId(item?.itemData?.IDName);
+
+        return GameRes.Instance != null &&
+               GameRes.Instance.AllPrefabs != null &&
+               GameRes.Instance.AllPrefabs.TryGetValue(buildingPrefabId, out buildingPrefab) &&
+               buildingPrefab != null;
+    }
+
+    private static Vector2 GetColliderFootprint(Transform root, BoxCollider2D collider)
+    {
+        Vector2 half = collider.size * 0.5f;
+        Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
+        Vector2 max = new(float.NegativeInfinity, float.NegativeInfinity);
+
+        for (int x = -1; x <= 1; x += 2)
+        {
+            for (int y = -1; y <= 1; y += 2)
             {
-                Debug.LogWarning($"[Shadow生成] ⚠️ 在子对象中找到BuildingShadow: {childShadow.gameObject.name}");
-                GhostShadow = childShadow;
-            }
-            else
-            {
-                Debug.LogError("[Shadow生成] 📌 在子对象中也未找到BuildingShadow组件");
-                Destroy(shadowPrefab);
-                return;
+                Vector3 colliderLocal = collider.offset + Vector2.Scale(half, new Vector2(x, y));
+                Vector3 rootLocal = root.InverseTransformPoint(collider.transform.TransformPoint(colliderLocal));
+                min = Vector2.Min(min, rootLocal);
+                max = Vector2.Max(max, rootLocal);
             }
         }
 
-        Debug.Log($"[Shadow生成] ✅ 成功获取BuildingShadow组件");
+        Vector2 size = max - min;
+        return new Vector2(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y));
+    }
 
-        // === 第五步：检查item.Sprite（为空时尝试子对象兜底）===
-        if (item == null)
+    private Vector3 GetAuthorityPosition()
+        => item?.Owner != null ? item.Owner.transform.position : item != null ? item.transform.position : transform.position;
+
+    private void SyncNavigationOccupancy()
+    {
+        if (!isActiveAndEnabled || item == null || !IsInstalled())
         {
-            Debug.LogError("[Shadow生成] ❌ item 为空，无法初始化阴影");
-            Destroy(shadowPrefab);
+            BuildingOccupancyRegistry.Unregister(this);
             return;
         }
 
-        SpriteRenderer spriteRendererForShadow = item.Sprite;
-        if (spriteRendererForShadow == null)
+        BuildingOccupancyRegistry.Register(this, GetPlacementCells(item.transform.position));
+    }
+
+    private IEnumerable<Vector2Int> GetPlacementCells(Vector3 position)
+    {
+        Bounds bounds = GetPlacementBounds(position);
+        int minX = Mathf.FloorToInt(bounds.min.x + BoundsEpsilon);
+        int maxX = Mathf.FloorToInt(bounds.max.x - BoundsEpsilon);
+        int minY = Mathf.FloorToInt(bounds.min.y + BoundsEpsilon);
+        int maxY = Mathf.FloorToInt(bounds.max.y - BoundsEpsilon);
+
+        for (int x = minX; x <= maxX; x++)
         {
-            spriteRendererForShadow = item.GetComponentInChildren<SpriteRenderer>(true);
-            if (spriteRendererForShadow != null)
+            for (int y = minY; y <= maxY; y++)
+                yield return new Vector2Int(x, y);
+        }
+    }
+
+    /// <summary>Editor tooling uses this to stamp a prefab as the world body or its matching summoner.</summary>
+    public void ConfigurePrefabRole(BuildingRole role, string buildingPrefabId, string summonerPrefabId)
+    {
+        if (string.IsNullOrWhiteSpace(buildingPrefabId))
+            throw new ArgumentException("建筑本体 ID 不能为空", nameof(buildingPrefabId));
+
+        summonerPrefabId = string.IsNullOrWhiteSpace(summonerPrefabId)
+            ? GetSummonerPrefabId(buildingPrefabId)
+            : summonerPrefabId;
+
+        Data ??= new Building_Data();
+        Data.Version = CurrentDataVersion;
+        Data.Role = role;
+        Data.State = BuildingState.NotInstalled;
+        Data.SnapshotBase64 = null;
+        Data.BuildingPrefabId = buildingPrefabId;
+        Data.SummonerPrefabId = summonerPrefabId;
+        _currentState = Data.State;
+
+        BuildingData ??= new Ex_ModData();
+        BuildingData.ID = ModText.Building;
+        BuildingData.WriteData(Data);
+    }
+
+    public static string GetSummonerPrefabId(string buildingPrefabId)
+    {
+        if (string.IsNullOrWhiteSpace(buildingPrefabId))
+            return string.Empty;
+
+        return buildingPrefabId.EndsWith(SummonerPrefabSuffix, StringComparison.Ordinal)
+            ? buildingPrefabId
+            : buildingPrefabId + SummonerPrefabSuffix;
+    }
+
+    public static string GetBuildingPrefabId(string itemPrefabId)
+    {
+        if (string.IsNullOrWhiteSpace(itemPrefabId))
+            return string.Empty;
+
+        return itemPrefabId.EndsWith(SummonerPrefabSuffix, StringComparison.Ordinal)
+            ? itemPrefabId.Substring(0, itemPrefabId.Length - SummonerPrefabSuffix.Length)
+            : itemPrefabId;
+    }
+
+    private static bool TryReadBuildingData(
+        ItemData itemData,
+        out Ex_ModData moduleData,
+        out Building_Data buildingState)
+    {
+        moduleData = null;
+        buildingState = null;
+        if (itemData?.ModuleDataDic == null)
+            return false;
+
+        foreach (ModuleData candidate in itemData.ModuleDataDic.Values)
+        {
+            if (candidate is not Ex_ModData exData ||
+                !string.Equals(candidate.ID, ModText.Building, StringComparison.Ordinal))
             {
-                Debug.LogWarning($"[Shadow生成] item.Sprite为空，已使用子对象SpriteRenderer兜底: {spriteRendererForShadow.name}");
+                continue;
             }
-            else
-            {
-                Debug.LogError($"[Shadow生成] ❌ item.Sprite为空且子对象也没有SpriteRenderer (item: {item.name})");
-                Debug.LogWarning("[Shadow生成] 🔍 可能原因：");
-                Debug.LogWarning("   1. Item组件未正确初始化");
-                Debug.LogWarning("   2. Item.itemData 为空");
-                Debug.LogWarning("   3. 物品及其子对象都没有SpriteRenderer");
 
-                if (item.itemData == null)
-                {
-                    Debug.LogWarning("   📌 item.itemData 为空");
-                }
-                else
-                {
-                    Debug.LogWarning($"   📌 item.itemData: {item.itemData.IDName}");
-                }
-
-                Destroy(shadowPrefab);
-                GhostShadow = null;
-                return;
-            }
+            Building_Data state = new();
+            exData.ReadData(ref state);
+            state ??= new Building_Data();
+            moduleData = exData;
+            buildingState = state;
+            return true;
         }
 
-        // === 第六步：初始化阴影 ===
-        try
-        {
-            Debug.Log($"[Shadow生成] 📝 初始化阴影，使用Sprite: {spriteRendererForShadow.name}");
-            GhostShadow.InitShadow(spriteRendererForShadow);
-            Debug.Log("[Shadow生成] ✅ 阴影初始化成功");
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[Shadow生成] ❌ 初始化阴影失败: {ex.GetType().Name}");
-            Debug.LogError($"[Shadow生成] 📌 错误信息: {ex.Message}");
-            Debug.LogError($"[Shadow生成] 📌 堆栈跟踪:\n{ex.StackTrace}");
-            Destroy(shadowPrefab);
-            GhostShadow = null;
-        }
+        return false;
     }
 
-    protected void EnableChildColliders(bool enable, Transform root = null)
+    private static bool WriteBuildingData(ItemData itemData, Action<Building_Data> mutate)
     {
-        foreach (var col in root.GetComponentsInChildren<Collider2D>())
-        {
-            col.enabled = enable;
-        }
-        //     root.GetComponent<BoxCollider2D>().isTrigger = false;
+        if (!TryReadBuildingData(itemData, out Ex_ModData moduleData, out Building_Data state))
+            return false;
+
+        MigrateLegacyData(state, itemData?.IDName);
+        mutate?.Invoke(state);
+        moduleData.WriteData(state);
+        return true;
     }
 
-    public void CleanupGhost()
+    private static void MigrateLegacyData(Building_Data state, string carrierItemId = null)
     {
-        if (GhostShadow != null)
-        {
-            Destroy(GhostShadow.gameObject);
-            GhostShadow = null;
-        }
-    }
-
-    public bool IsInstalled()
-    {
-        // 检查建筑状态是否为已安装或损坏中
-        return CurrentState == BuildingState.Installed || CurrentState == BuildingState.Damaged;
-    }
-
-    /// <summary>
-    /// 获取当前建筑状态的中文描述
-    /// </summary>
-    public string GetStateDescription()
-    {
-        return CurrentState switch
-        {
-            BuildingState.NotInstalled => "未安装",
-            BuildingState.Installing => "安装中",
-            BuildingState.Installed => "已安装",
-            BuildingState.Damaged => "损坏中",
-            BuildingState.Uninstalling => "卸载中",
-            BuildingState.Uninstalled => "已卸载",
-            _ => "未知状态"
-        };
-    }
-    #endregion
-    // 添加到Mod_Building.cs文件中，放在合适的位置（比如在其他Button方法附近）
-
-#if UNITY_EDITOR
-    [Button("设置为已安装状态(编辑器调试)")]
-    public void SetAsInstalledEditor()
-    {
-        // 检查必要的组件
-        if (item == null)
-        {
-
-            item = GetComponentInParent<Item>();
-        }
-
-        // 查找DamageReceiver组件（如果还没有引用的话）
-        if (damageReceiver == null)
-        {
-            damageReceiver = item.GetComponent<DamageReceiver>();
-            if (damageReceiver == null)
-            {
-                damageReceiver = item.GetComponentInChildren<DamageReceiver>();
-            }
-            if (damageReceiver == null)
-            {
-                Debug.LogError("[编辑器调试] 无法找到DamageReceiver组件");
-                return;
-            }
-        }
-
-        // 设置为最大血量（表示已安装）
-        damageReceiver.Hp = damageReceiver.MaxHp;
-
-        item.SetInHand(false);
-
-        // 设置缩放为1
-        item.transform.localScale = Vector3.one;
-        item.itemData.Stack.CanBePickedUp = false;
-        // 确保碰撞器设置正确
-        BoxCollider2D collider = item.GetComponent<BoxCollider2D>();
-        if (collider != null)
-        {
-            collider.isTrigger = false;
-        }
-
-        // 更新碰撞器状态
-        EnableChildColliders(true, item.transform);
-
-        // 更新建筑状态
-        CurrentState = BuildingState.Installed;
-
-        Debug.Log($"[编辑器调试] 成功将 {item.name} 设置为已安装状态");
-    }
-#endif
-
-    /// <summary>
-    /// 将当前建筑设置为已安装状态（游戏运行时调用）
-    /// </summary>
-    public void SetAsInstalled()
-    {
-        // 检查必要的组件
-        if (item == null)
-        {
-            Debug.LogError("[设置安装状态] item引用为空");
+        if (state == null)
             return;
-        }
 
-        // 查找DamageReceiver组件（如果还没有引用的话）
-        if (damageReceiver == null)
+        if (state.Version < 2)
         {
-            damageReceiver = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
-            if (damageReceiver == null)
-            {
-                Debug.LogError("[设置安装状态] 无法找到DamageReceiver组件");
-                return;
-            }
+            state.Role = state.State is BuildingState.Installed or BuildingState.Damaged
+                ? BuildingRole.PlacedBuilding
+                : BuildingRole.Summoner;
+            state.SnapshotBase64 = null;
         }
 
-        // 设置为最大血量（表示已安装）
-        if (damageReceiver.MaxHp > 0f)
+        if (string.IsNullOrWhiteSpace(state.BuildingPrefabId))
+            state.BuildingPrefabId = GetBuildingPrefabId(carrierItemId);
+
+        if (string.IsNullOrWhiteSpace(state.SummonerPrefabId))
+            state.SummonerPrefabId = GetSummonerPrefabId(state.BuildingPrefabId);
+
+        state.Version = CurrentDataVersion;
+    }
+
+    private static string ResolveBuildingPrefabId(string carrierItemId, Building_Data state)
+        => !string.IsNullOrWhiteSpace(state?.BuildingPrefabId)
+            ? state.BuildingPrefabId
+            : GetBuildingPrefabId(carrierItemId);
+
+    private static string ResolveSummonerPrefabId(string buildingPrefabId, Building_Data state)
+        => !string.IsNullOrWhiteSpace(state?.SummonerPrefabId)
+            ? state.SummonerPrefabId
+            : GetSummonerPrefabId(buildingPrefabId);
+
+    private static Vector3 NormalizePlacement(Vector3 position)
+        => new(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f, 0f);
+
+    private static bool IsFinite(Vector3 value)
+        => !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+           !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
+           !float.IsNaN(value.z) && !float.IsInfinity(value.z);
+
+    private static int GenerateUniqueRuntimeGuid()
+    {
+        if (ItemMgr.Instance == null)
+            throw new InvalidOperationException("ItemMgr 尚未就绪");
+
+        int guid;
+        do
         {
-            damageReceiver.Hp = damageReceiver.MaxHp;
+            guid = ItemMgr.Instance.GenerateGuid();
         }
-        else
-        {
-            damageReceiver.Hp = 100f; // 默认血量
-            Debug.LogWarning("[设置安装状态] DamageReceiver的最大血量未设置，使用默认值100");
-        }
-
-        item.
-        SetInHand(false);
-
-        // 设置缩放为1
-        item.transform.localScale = Vector3.one;
-
-        // 设置物品不可被拾取
-        if (item.itemData != null)
-        {
-            item.itemData.Stack.CanBePickedUp = false;
-        }
-
-        // 确保碰撞器设置正确
-        BoxCollider2D collider = GetComponent<BoxCollider2D>();
-        if (collider != null)
-        {
-            collider.isTrigger = false;
-        }
-
-        // 更新子对象碰撞器状态
-        EnableChildColliders(true, item.transform);
-
-        // 清理幽灵阴影（如果存在）
-        CleanupGhost();
-
-        // 更新建筑状态
-        CurrentState = BuildingState.Installed;
-
-        Debug.Log($"[设置安装状态] 成功将 {item.name} 设置为已安装状态");
+        while (guid == 0 || ItemMgr.Instance.GetItemByGuid(guid) != null);
+        return guid;
     }
 }

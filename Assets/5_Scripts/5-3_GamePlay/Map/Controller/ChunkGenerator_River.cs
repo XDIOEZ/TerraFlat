@@ -31,6 +31,9 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     [Tooltip("噪声种子（用于让不同星球/地图拥有不同河网分布）")]
     public int seed = 12345;
 
+    [NonSerialized]
+    private int activeWorldSeed = 1;
+
     [Tooltip("Voronoi 单元大小（世界格子单位）。越大河网越稀疏；越小河网越密")]
     public float cellSize = 18f;
 
@@ -198,6 +201,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         }
 
         Map = context.Map;
+        activeWorldSeed = context.WorldSeed;
 
         // Tilemap
         if (targetTilemap == null)
@@ -357,9 +361,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             ewMax = ewFallback;
         }
 
-        // PerlinNoise 输入不要太大：用 seed 做偏移
-        float seedX = (seed % 100000) * 0.001f;
-        float seedY = ((seed / 100000) % 100000) * 0.001f;
+        int generationSeed = GetGenerationSeed();
+
+        // PerlinNoise 输入不要太大：用世界种子与生成器种子的组合值做偏移
+        float seedX = (generationSeed % 100000) * 0.001f;
+        float seedY = ((generationSeed / 100000) % 100000) * 0.001f;
 
         for (int x = 0; x < width; x++)
         {
@@ -390,15 +396,15 @@ public class ChunkGenerator_River : ChunkGeneratorBase
 
                     // 5点采样：中心 + 四角（内缩）
                     minEdge = float.PositiveInfinity;
-                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(0.5f, 0.5f), cs, wf, wa, twA, twF, twNF, seedX, seedY, seed));
-                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(a, a), cs, wf, wa, twA, twF, twNF, seedX, seedY, seed));
-                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(b, a), cs, wf, wa, twA, twF, twNF, seedX, seedY, seed));
-                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(a, b), cs, wf, wa, twA, twF, twNF, seedX, seedY, seed));
-                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(b, b), cs, wf, wa, twA, twF, twNF, seedX, seedY, seed));
+                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(0.5f, 0.5f), cs, wf, wa, twA, twF, twNF, seedX, seedY, generationSeed));
+                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(a, a), cs, wf, wa, twA, twF, twNF, seedX, seedY, generationSeed));
+                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(b, a), cs, wf, wa, twA, twF, twNF, seedX, seedY, generationSeed));
+                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(a, b), cs, wf, wa, twA, twF, twNF, seedX, seedY, generationSeed));
+                    minEdge = Mathf.Min(minEdge, ComputeVoronoiEdgeValue(world + new Vector2(b, b), cs, wf, wa, twA, twF, twNF, seedX, seedY, generationSeed));
                 }
                 else
                 {
-                    minEdge = ComputeVoronoiEdgeValue(world + new Vector2(0.5f, 0.5f), cs, wf, wa, twA, twF, twNF, seedX, seedY, seed);
+                    minEdge = ComputeVoronoiEdgeValue(world + new Vector2(0.5f, 0.5f), cs, wf, wa, twA, twF, twNF, seedX, seedY, generationSeed);
                 }
 
                 float ewLocal;
@@ -518,6 +524,17 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             h *= 3266489917u;
             h ^= h >> 16;
             return (h & 0x00FFFFFFu) / 16777216f;
+        }
+    }
+
+    private int GetGenerationSeed()
+    {
+        unchecked
+        {
+            uint mixed = 2166136261u;
+            mixed = (mixed ^ (uint)activeWorldSeed) * 16777619u;
+            mixed = (mixed ^ (uint)seed) * 16777619u;
+            return mixed == 0u ? 1 : (int)mixed;
         }
     }
 
@@ -655,6 +672,7 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         int saltRiver = unchecked((int)0x6D2B79F5);
         int saltBank = unchecked((int)0x1B873593);
         int saltFlintBank = unchecked((int)0x3C6EF372);
+        int generationSeed = GetGenerationSeed();
 
         float riverChance = Mathf.Clamp01(riverStoneChance);
         float bankChance = Mathf.Clamp01(bankStoneChance);
@@ -694,11 +712,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                     continue;
 
                 Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
-                float r01 = Hash01(worldPos.x, worldPos.y, seed ^ saltRiver);
+                float r01 = Hash01(worldPos.x, worldPos.y, generationSeed ^ saltRiver);
                 if (r01 > riverChance)
                     continue;
 
-                PlaceOnePickup(Prefab_Stone, worldPos, root, seed ^ saltRiver);
+                PlaceOnePickup(Prefab_Stone, worldPos, root, generationSeed ^ saltRiver);
                 placed++;
             }
         }
@@ -722,10 +740,10 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                 if (!IsBankCell(x, y, width, height, riverWater, radius))
                     continue;
 
-                float r01 = Hash01(worldPos.x, worldPos.y, seed ^ saltBank);
+                float r01 = Hash01(worldPos.x, worldPos.y, generationSeed ^ saltBank);
                 if (r01 <= bankChance)
                 {
-                    PlaceOnePickup(Prefab_Stone, worldPos, root, seed ^ saltBank);
+                    PlaceOnePickup(Prefab_Stone, worldPos, root, generationSeed ^ saltBank);
                     placed++;
                     continue;
                 }
@@ -733,11 +751,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
                 if (Prefab_Flint == null)
                     continue;
 
-                float flintR01 = Hash01(worldPos.x, worldPos.y, seed ^ saltFlintBank);
+                float flintR01 = Hash01(worldPos.x, worldPos.y, generationSeed ^ saltFlintBank);
                 if (flintR01 > bankFlintChance01)
                     continue;
 
-                PlaceOnePickup(Prefab_Flint, worldPos, root, seed ^ saltFlintBank);
+                PlaceOnePickup(Prefab_Flint, worldPos, root, generationSeed ^ saltFlintBank);
                 placed++;
             }
         }

@@ -387,7 +387,7 @@ MonoBehaviour:
     Stack:
       Amount: 1
       Volume: 200
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     transform:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -548,6 +548,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 5720747661594404640}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Role
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Version
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: boxCollider2D
       value: 
       objectReference: {fileID: 0}
@@ -558,6 +566,18 @@ PrefabInstance:
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: BuildingData.ID
       value: "\u5EFA\u7B51\u6A21\u5757"
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: BuildingData.BitData
+      value: '{"Version":3,"maxVisibleDistance":10.0,"minVisibleDistance":1.0,"State":0,"Role":1,"SnapshotBase64":null,"BuildingPrefabId":"Smelter","SummonerPrefabId":"Smelter_Summoner"}'
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.BuildingPrefabId
+      value: Smelter
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.SummonerPrefabId
+      value: Smelter_Summoner
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

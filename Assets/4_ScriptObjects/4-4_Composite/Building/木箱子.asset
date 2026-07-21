@@ -63,7 +63,8 @@ MonoBehaviour:
     inputOrder: 1
   outputs:
     results:
-    - ItemName: Chest_Wood
-      ItemPrefab: {fileID: 6626571208127967517, guid: 4c2d602b69d751141870951cc6fcf398, type: 3}
+    - ItemName: Chest_Wood_Summoner
+      ItemPrefab: {fileID: 6007756369419665970, guid: 56f687a312c1c9f44a02b7622dbd5ef4, type: 3}
       amount: 1
+  enableMirrorCrafting: 1
   action: []

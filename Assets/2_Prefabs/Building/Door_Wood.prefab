@@ -156,7 +156,7 @@ MonoBehaviour:
     Stack:
       Amount: 1
       Volume: 1
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     transform:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -258,8 +258,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   Data:
+    Version: 3
     maxVisibleDistance: 10
     minVisibleDistance: 1
+    State: 0
+    Role: 1
+    SnapshotBase64:
+    BuildingPrefabId: Door_Wood
+    SummonerPrefabId: Door_Wood_Summoner
   BuildingData:
     Name: 
     ID: "\u5EFA\u7B51\u6A21\u5757"
@@ -287,7 +293,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData: 
+    BitData: '{"Version":3,"maxVisibleDistance":10.0,"minVisibleDistance":1.0,"State":0,"Role":1,"SnapshotBase64":null,"BuildingPrefabId":"Door_Wood","SummonerPrefabId":"Door_Wood_Summoner"}'
   GhostShadow: {fileID: 0}
   boxCollider2D: {fileID: 0}
   damageReceiver: {fileID: 0}
@@ -295,9 +301,9 @@ MonoBehaviour:
     _PersistentCalls: []
   StartUnInstall:
     _PersistentCalls: []
-  _currentState: 0
   OnStateChanged:
     _PersistentCalls: []
+  _currentState: 0
 --- !u!61 &4499975697599601602
 BoxCollider2D:
   m_ObjectHideFlags: 0

@@ -47,6 +47,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   GlobalLight: {fileID: 8436068588726109976}
   DefaultLightColor: {r: 1, g: 1, b: 1, a: 1}
+  SyncTileLightLayer: 1
+  ActiveChunkLightRefreshInterval: 0.25
+  InactiveChunkLightRefreshInterval: 5
 --- !u!114 &8436068588726109976
 MonoBehaviour:
   m_ObjectHideFlags: 0

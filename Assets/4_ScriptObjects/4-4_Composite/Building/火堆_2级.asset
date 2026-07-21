@@ -63,8 +63,8 @@ MonoBehaviour:
     inputOrder: 1
   outputs:
     results:
-    - ItemName: Bonfire
-      ItemPrefab: {fileID: 7534172511798132841, guid: dbe0fdf0241e35442b1a020284fc6eb3, type: 3}
+    - ItemName: Bonfire_Summoner
+      ItemPrefab: {fileID: 6450166259549472650, guid: bef35c376aeb59546adadda04aaa61f7, type: 3}
       amount: 1
   enableMirrorCrafting: 1
   action: []

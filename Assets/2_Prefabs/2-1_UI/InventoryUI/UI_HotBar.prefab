@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1640294151393726780}
   - component: {fileID: 3939185238689431394}
   - component: {fileID: 1563698371532000345}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -75,7 +75,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -145,7 +145,7 @@ GameObject:
   - component: {fileID: 7147012616356240781}
   - component: {fileID: 8430636702780516931}
   - component: {fileID: 8249638740707584782}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -209,7 +209,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -282,7 +282,7 @@ GameObject:
   - component: {fileID: 5579194632341324560}
   - component: {fileID: 2055930607545525624}
   - component: {fileID: 1040064683099975567}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -330,7 +330,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -359,6 +359,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 3000742501926070241}
   text: {fileID: 5814995670155687318}
   OnLeftClick:
@@ -366,6 +367,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &2055930607545525624
 MonoBehaviour:
@@ -389,12 +392,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -454,7 +457,7 @@ GameObject:
   - component: {fileID: 2280353199376899097}
   - component: {fileID: 582651285120734836}
   - component: {fileID: 690076226195933268}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -502,7 +505,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -531,6 +534,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 1997625049145933420}
   text: {fileID: 3192612287251433424}
   OnLeftClick:
@@ -538,6 +542,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &582651285120734836
 MonoBehaviour:
@@ -561,12 +567,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -626,7 +632,7 @@ GameObject:
   - component: {fileID: 8526437502427608224}
   - component: {fileID: 2197092174572566843}
   - component: {fileID: 5037178479811295755}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -674,7 +680,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -703,6 +709,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 2530090156641906019}
   text: {fileID: 1503089655068853135}
   OnLeftClick:
@@ -710,6 +717,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &2197092174572566843
 MonoBehaviour:
@@ -733,12 +742,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -795,7 +804,7 @@ GameObject:
   - component: {fileID: 1196640944693931636}
   - component: {fileID: 5761966496371759128}
   - component: {fileID: 4986976713081012985}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -871,7 +880,7 @@ GameObject:
   - component: {fileID: 2615543986129190242}
   - component: {fileID: 3165186507698823832}
   - component: {fileID: 1805487657096091547}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -935,7 +944,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1011,7 +1020,8 @@ GameObject:
   - component: {fileID: 5528959699480711915}
   - component: {fileID: 8088798927402857268}
   - component: {fileID: 4806202536982753114}
-  m_Layer: 9
+  - component: {fileID: 5088824897039345772}
+  m_Layer: 5
   m_Name: UI_HotBar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1043,8 +1053,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 20}
-  m_SizeDelta: {x: 1010.841, y: 138.5545}
+  m_AnchoredPosition: {x: 0, y: 28}
+  m_SizeDelta: {x: 890, y: 104}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!223 &1544882477443259844
 Canvas:
@@ -1107,15 +1117,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.025, g: 0.043, b: 0.058, a: 0.92}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: baf9a68d42f14524c98af8cbe0dde09c, type: 3}
-  m_Type: 1
+  m_Sprite: {fileID: 0}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -1137,17 +1147,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 10
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
+    m_Left: 18
+    m_Right: 18
+    m_Top: 12
+    m_Bottom: 10
   m_ChildAlignment: 4
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 100, y: 100}
-  m_Spacing: {x: 10, y: 10}
-  m_Constraint: 0
-  m_ConstraintCount: 2
+  m_CellSize: {x: 82, y: 82}
+  m_Spacing: {x: 10, y: 0}
+  m_Constraint: 1
+  m_ConstraintCount: 9
 --- !u!225 &5528959699480711915
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1175,7 +1185,7 @@ MonoBehaviour:
   canvasGroup: {fileID: 5528959699480711915}
   CanDrag: 0
   Dragger: {fileID: 0}
-  rectTransform: {fileID: 0}
+  rectTransform: {fileID: 8703750263991372234}
   PanelName: 
   isOpen: 0
 --- !u!114 &4806202536982753114
@@ -1190,6 +1200,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4750e6f025bb694458c58f2d87c0ffce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &5088824897039345772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3157743334102886615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_EffectColor: {r: 0.83, g: 0.49, b: 0.23, a: 0.34}
+  m_EffectDistance: {x: 1, y: -1}
+  m_UseGraphicAlpha: 1
 --- !u!1 &3447175037505886172
 GameObject:
   m_ObjectHideFlags: 0
@@ -1201,7 +1226,7 @@ GameObject:
   - component: {fileID: 7575454876055434703}
   - component: {fileID: 6493068521147773123}
   - component: {fileID: 8352786445748501051}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1280,7 +1305,7 @@ GameObject:
   - component: {fileID: 664686707007176872}
   - component: {fileID: 4639739115379791426}
   - component: {fileID: 6683638321038628244}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1328,7 +1353,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1357,6 +1382,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 1123156927941148272}
   text: {fileID: 1805487657096091547}
   OnLeftClick:
@@ -1364,6 +1390,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &4639739115379791426
 MonoBehaviour:
@@ -1387,12 +1415,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -1452,7 +1480,7 @@ GameObject:
   - component: {fileID: 8139214420642744051}
   - component: {fileID: 6892363462367969972}
   - component: {fileID: 8004864760897056601}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1500,7 +1528,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1529,6 +1557,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 1746567580345291105}
   text: {fileID: 2764283417727162105}
   OnLeftClick:
@@ -1536,6 +1565,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &6892363462367969972
 MonoBehaviour:
@@ -1559,12 +1590,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -1624,7 +1655,7 @@ GameObject:
   - component: {fileID: 7579419366871599294}
   - component: {fileID: 7523254558003749048}
   - component: {fileID: 653667792938139136}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1672,7 +1703,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1701,6 +1732,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 4986976713081012985}
   text: {fileID: 8249638740707584782}
   OnLeftClick:
@@ -1708,6 +1740,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &7523254558003749048
 MonoBehaviour:
@@ -1731,12 +1765,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -1793,7 +1827,7 @@ GameObject:
   - component: {fileID: 5511967801483495828}
   - component: {fileID: 4828330968155250271}
   - component: {fileID: 3000742501926070241}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1869,7 +1903,7 @@ GameObject:
   - component: {fileID: 4242633317584709862}
   - component: {fileID: 2116853526750564863}
   - component: {fileID: 1997625049145933420}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1945,7 +1979,7 @@ GameObject:
   - component: {fileID: 3609345008751219954}
   - component: {fileID: 7092340647781296683}
   - component: {fileID: 919592561831074942}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2009,7 +2043,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -2079,7 +2113,7 @@ GameObject:
   - component: {fileID: 3611735030771163554}
   - component: {fileID: 3820832268281527183}
   - component: {fileID: 1746567580345291105}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2155,7 +2189,7 @@ GameObject:
   - component: {fileID: 8301856182896566885}
   - component: {fileID: 643260887541015351}
   - component: {fileID: 4056764522220058032}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2219,7 +2253,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -2289,7 +2323,7 @@ GameObject:
   - component: {fileID: 109715392723803912}
   - component: {fileID: 7531388630946428632}
   - component: {fileID: 2530090156641906019}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2365,7 +2399,7 @@ GameObject:
   - component: {fileID: 3430231903666231071}
   - component: {fileID: 7387658141980528556}
   - component: {fileID: 3506122796055526718}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2444,7 +2478,7 @@ GameObject:
   - component: {fileID: 1437433781907766591}
   - component: {fileID: 5130000967231433293}
   - component: {fileID: 2312955784688156657}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2492,7 +2526,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2521,6 +2555,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 4989666967747810473}
   text: {fileID: 4056764522220058032}
   OnLeftClick:
@@ -2528,6 +2563,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &5130000967231433293
 MonoBehaviour:
@@ -2551,12 +2588,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -2613,7 +2650,7 @@ GameObject:
   - component: {fileID: 9216438311540170730}
   - component: {fileID: 8530887748841775016}
   - component: {fileID: 4989666967747810473}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2692,7 +2729,7 @@ GameObject:
   - component: {fileID: 1198846563415561625}
   - component: {fileID: 8698700679624545211}
   - component: {fileID: 4113566350365401515}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2740,7 +2777,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2769,6 +2806,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 3506122796055526718}
   text: {fileID: 1563698371532000345}
   OnLeftClick:
@@ -2776,6 +2814,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &8698700679624545211
 MonoBehaviour:
@@ -2799,12 +2839,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -2861,7 +2901,7 @@ GameObject:
   - component: {fileID: 1911046033317743519}
   - component: {fileID: 905812561038624511}
   - component: {fileID: 3192612287251433424}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2925,7 +2965,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -2995,7 +3035,7 @@ GameObject:
   - component: {fileID: 4589076348829241460}
   - component: {fileID: 2241051474645626617}
   - component: {fileID: 1123156927941148272}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3071,7 +3111,7 @@ GameObject:
   - component: {fileID: 8779596241913327464}
   - component: {fileID: 6993033667252299726}
   - component: {fileID: 1503089655068853135}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3135,7 +3175,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -3208,7 +3248,7 @@ GameObject:
   - component: {fileID: 4194992196108010972}
   - component: {fileID: 8891763370273516740}
   - component: {fileID: 3536354738632800062}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Slot_UI(Clone)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3256,7 +3296,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3285,6 +3325,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b4bbc2a485991f4ab1d1590ad2c4ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slotIndex: -1
   image: {fileID: 8352786445748501051}
   text: {fileID: 919592561831074942}
   OnLeftClick:
@@ -3292,6 +3333,8 @@ MonoBehaviour:
   _OnScroll:
     _PersistentCalls: []
   OnRightClick:
+    _PersistentCalls: []
+  OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &8891763370273516740
 MonoBehaviour:
@@ -3315,12 +3358,12 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
+    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
+    m_FadeDuration: 0.11
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 0}
@@ -3377,7 +3420,7 @@ GameObject:
   - component: {fileID: 3804261795051769317}
   - component: {fileID: 6868073957753926448}
   - component: {fileID: 5814995670155687318}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3441,7 +3484,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -3511,7 +3554,7 @@ GameObject:
   - component: {fileID: 7342714509900411125}
   - component: {fileID: 4698956004225987851}
   - component: {fileID: 2764283417727162105}
-  m_Layer: 9
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3575,7 +3618,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

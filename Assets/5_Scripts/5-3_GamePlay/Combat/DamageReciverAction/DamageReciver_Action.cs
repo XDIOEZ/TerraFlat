@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
@@ -14,6 +15,7 @@ public class DamageReceiverDamageInfo
     public bool IsFatal;
     public Vector3 HitPosition;
     public float Time;
+    public List<BodyPartDamageInfo> BodyPartHits;
 }
 
 [System.Serializable]

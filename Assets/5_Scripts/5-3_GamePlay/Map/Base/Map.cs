@@ -100,6 +100,8 @@ public class Map : Item
 
     protected virtual void OnTilemapLoaded()
     {
+        GetComponent<GrassDetailLayer>()?.Rebuild(this);
+
         if (!ShouldBakePenaltyAfterTilemapLoad)
         {
             Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 跳过烘焙 | ShouldBakePenaltyAfterTilemapLoad=false | Map={name}");
@@ -286,7 +288,8 @@ public class Map : Item
         // 开始生成：先标记为未完成
         Data.TileLoaded = false;
 
-        var context = new MapGenerationContext(this, planetData);
+        int worldSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        var context = new MapGenerationContext(this, planetData, worldSeed);
 
         for (int i = 0; i < mapGenerators.Count; i++)
         {
@@ -315,6 +318,7 @@ public class Map : Item
         }
 
         Data.TileLoaded = true;
+        SaveDataMgr.Instance?.OnProceduralChunkGenerated(chunk);
     }
 
     private void OnGUI()
@@ -585,14 +589,15 @@ public class Map : Item
         {
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
+            bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
             if (hasFastAccess)
             {
-                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
             }
             else
             {
-                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
             }
         }
 
@@ -614,14 +619,15 @@ public class Map : Item
             {
                 continue;
             }
+            bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
             if (hasFastAccess)
             {
-                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
             }
             else
             {
-                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
             }
         }
     }
@@ -672,14 +678,15 @@ public class Map : Item
             foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
             {
                 TileData topTile = tileDataList[^1];
+                bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
                 if (hasFastAccess)
                 {
-                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
                 }
                 else
                 {
-                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
                 }
 
                 processed++;
@@ -709,14 +716,15 @@ public class Map : Item
                 {
                     continue;
                 }
+                bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
                 if (hasFastAccess)
                 {
-                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, topTile.IsWalkable);
+                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
                 }
                 else
                 {
-                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, topTile.IsWalkable);
+                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
                 }
 
                 processed++;
@@ -1195,6 +1203,7 @@ public class Map : Item
         if (list == null || list.Count == 0)
         {
             tileMap.SetTile(position3D, null); // 清除该 Tile
+            GetComponent<GrassDetailLayer>()?.RefreshCell(this, position);
             Debug.Log($"清除了位置 {position} 上的 TileBase（无数据）");
             return;
         }
@@ -1225,6 +1234,7 @@ public class Map : Item
         }
 
         tileMap.SetTile(position3D, tile);
+        GetComponent<GrassDetailLayer>()?.RefreshCell(this, position);
         //Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_TileBase}");
     }
     #endregion

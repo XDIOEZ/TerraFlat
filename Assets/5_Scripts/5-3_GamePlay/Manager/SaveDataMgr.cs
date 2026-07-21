@@ -12,6 +12,12 @@ using Sirenix.OdinInspector;
 /// </summary>
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
+    private const int CompactSaveVersion = 1;
+    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'2' };
+
+    private readonly Dictionary<string, ChunkBaseline> chunkBaselines = new();
+    private readonly Dictionary<string, ChunkSaveRecord> chunkDeltas = new();
+
     #region 存档配置
     [Tooltip("玩家的存档路径")]
     public string UserSavePath = ""; // 初始化为空，将在Awake中设置
@@ -83,7 +89,8 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (SaveData == null)
             throw new InvalidOperationException("SaveData为null，无法创建联机世界快照");
 
-        byte[] rawData = MemoryPackSerializer.Serialize(SaveData);
+        PrepareLoadedChunksForSave();
+        byte[] rawData = BuildCompactSavePayload(SaveData);
         using MemoryStream output = new MemoryStream();
         using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
         {
@@ -101,12 +108,15 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (compressedData == null || compressedData.Length == 0)
             throw new ArgumentException("联机世界快照为空", nameof(compressedData));
 
+        if (compressedData.Length < 2 || compressedData[0] != 0x1F || compressedData[1] != 0x8B)
+            throw new InvalidDataException("联机世界快照缺少 GZip 文件头，请确认两端脚本版本一致");
+
         using MemoryStream input = new MemoryStream(compressedData, false);
         using GZipStream gzip = new GZipStream(input, CompressionMode.Decompress);
         using MemoryStream output = new MemoryStream();
         gzip.CopyTo(output);
 
-        GameSaveData snapshot = MemoryPackSerializer.Deserialize<GameSaveData>(output.ToArray());
+        GameSaveData snapshot = DeserializeSavePayload(output.ToArray());
         if (snapshot == null)
             throw new InvalidDataException("联机世界快照反序列化失败");
 
@@ -125,6 +135,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return;
         }
 
+        PrepareLoadedChunksForSave();
         SaveToDisk(SaveData, UserSavePath, SaveData.saveName);
     }
 
@@ -189,7 +200,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             EnsureDirectoryExists(savePath);
 
             string fullPath = GetSaveFilePath(savePath, saveName);
-            byte[] dataBytes = MemoryPackSerializer.Serialize(saveData);
+            byte[] dataBytes = BuildCompactSavePayload(saveData);
             File.WriteAllBytes(fullPath, dataBytes);
 
             Debug.Log($"✅ 存档成功！路径: {fullPath}");
@@ -314,7 +325,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             }
 
             Debug.Log($"📖 开始加载存档：{fullPath}");
-            SaveData = MemoryPackSerializer.Deserialize<GameSaveData>(File.ReadAllBytes(fullPath));
+            SaveData = DeserializeSavePayload(File.ReadAllBytes(fullPath));
             Debug.Log($"✅ 存档加载成功");
         }
         catch (Exception ex)
@@ -464,6 +475,487 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         return itemDataDict;
     }
+
+    #region Chunk difference persistence
+
+    /// <summary>
+    /// Called after deterministic terrain/resource generation and before saved changes are applied.
+    /// </summary>
+    public void OnProceduralChunkGenerated(Chunk chunk)
+    {
+        if (chunk?.MapSave == null || chunk.Map?.Data == null)
+            return;
+
+        string planetName = SceneManager.GetActiveScene().name;
+        string key = BuildChunkKey(planetName, chunk.MapSave.Name);
+        chunkBaselines[key] = CaptureChunkBaseline(chunk);
+
+        if (chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta))
+        {
+            ApplyChunkDelta(chunk, delta);
+        }
+    }
+
+    /// <summary>
+    /// Builds a delta against the deterministic baseline. Returns false for legacy/full-snapshot chunks.
+    /// </summary>
+    public bool TrySaveChunkDifferences(Chunk chunk)
+    {
+        if (chunk?.MapSave == null || chunk.Map?.Data == null)
+            return false;
+
+        string planetName = SceneManager.GetActiveScene().name;
+        string key = BuildChunkKey(planetName, chunk.MapSave.Name);
+        if (!chunkBaselines.TryGetValue(key, out ChunkBaseline baseline))
+            return false;
+
+        ChunkSaveRecord delta = new ChunkSaveRecord
+        {
+            PlanetName = planetName,
+            ChunkName = chunk.MapSave.Name,
+            ChunkPosition = chunk.MapSave.MapPosition,
+            SunlightIntensity = chunk.MapSave.SunlightIntensity,
+            IsDelta = true
+        };
+
+        HashSet<int> currentGuids = new HashSet<int>();
+        foreach (Item item in chunk.RunTimeItems.Values)
+        {
+            if (item == null || item is Map || item.itemData == null)
+                continue;
+
+            try
+            {
+                item.Save();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveDataMgr] 保存区块物品失败: {item.name}", item);
+                Debug.LogException(ex);
+            }
+
+            ItemData itemData = item.itemData;
+            currentGuids.Add(itemData.Guid);
+            ulong currentHash = ComputeItemHash(itemData);
+            if (!baseline.ItemHashes.TryGetValue(itemData.Guid, out ulong baselineHash) || currentHash != baselineHash)
+            {
+                delta.ChangedItems.Add(CloneItemData(itemData));
+            }
+        }
+
+        foreach (int generatedGuid in baseline.ItemHashes.Keys)
+        {
+            if (!currentGuids.Contains(generatedGuid))
+                delta.RemovedItemGuids.Add(generatedGuid);
+        }
+
+        delta.ChangedItems.Sort((a, b) => (a?.Guid ?? 0).CompareTo(b?.Guid ?? 0));
+        delta.RemovedItemGuids.Sort();
+        CollectTileDifferences(chunk.Map.Data, baseline, delta.TileDeltas);
+
+        // Prevent the old full-snapshot path from retaining generated content in memory.
+        chunk.MapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
+        chunk.MapSave.items.Clear();
+
+        if (delta.HasChanges)
+            chunkDeltas[key] = delta;
+        else
+            chunkDeltas.Remove(key);
+
+        return true;
+    }
+
+    public bool TryGetChunkDelta(string planetName, string chunkName, out ChunkSaveRecord delta)
+    {
+        return chunkDeltas.TryGetValue(BuildChunkKey(planetName, chunkName), out delta);
+    }
+
+    public void ResetChunkDifferenceState()
+    {
+        chunkBaselines.Clear();
+        chunkDeltas.Clear();
+    }
+
+    private void PrepareLoadedChunksForSave()
+    {
+        if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic_ByPos == null)
+            return;
+
+        List<Chunk> chunks = new List<Chunk>(ChunkMgr.Instance.Chunk_Dic_ByPos.Values);
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            Chunk chunk = chunks[i];
+            if (chunk != null)
+                chunk.SaveChunk();
+        }
+    }
+
+    private ChunkBaseline CaptureChunkBaseline(Chunk chunk)
+    {
+        ChunkBaseline baseline = new ChunkBaseline();
+
+        foreach (Item item in chunk.RunTimeItems.Values)
+        {
+            if (item == null || item is Map || item.itemData == null)
+                continue;
+
+            try
+            {
+                item.Save();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveDataMgr] 捕获区块基线失败: {item.name}", item);
+                Debug.LogException(ex);
+            }
+
+            baseline.ItemHashes[item.itemData.Guid] = ComputeItemHash(item.itemData);
+        }
+
+        Data_TileMap mapData = chunk.Map.Data;
+        baseline.TileWidth = mapData.Width;
+        baseline.TileHeight = mapData.Height;
+        baseline.TileHashes = new ulong[baseline.TileWidth, baseline.TileHeight];
+        for (int x = 0; x < baseline.TileWidth; x++)
+        {
+            for (int y = 0; y < baseline.TileHeight; y++)
+            {
+                baseline.TileHashes[x, y] = ComputeTileHash(mapData.TileData_Array[x, y]);
+            }
+        }
+
+        return baseline;
+    }
+
+    private static void CollectTileDifferences(
+        Data_TileMap mapData,
+        ChunkBaseline baseline,
+        List<TileCellSaveDelta> output)
+    {
+        int width = mapData.Width;
+        int height = mapData.Height;
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                List<TileData> tiles = mapData.TileData_Array[x, y];
+                ulong currentHash = ComputeTileHash(tiles);
+                bool hasBaselineCell = x < baseline.TileWidth && y < baseline.TileHeight;
+                if (hasBaselineCell && currentHash == baseline.TileHashes[x, y])
+                    continue;
+
+                output.Add(new TileCellSaveDelta
+                {
+                    LocalPosition = new Vector2Int(x, y),
+                    Tiles = CloneTileList(tiles)
+                });
+            }
+        }
+    }
+
+    private void ApplyChunkDelta(Chunk chunk, ChunkSaveRecord delta)
+    {
+        Data_TileMap mapData = chunk.Map?.Data;
+        if (mapData == null)
+            return;
+
+        for (int i = 0; i < (delta.TileDeltas?.Count ?? 0); i++)
+        {
+            TileCellSaveDelta cell = delta.TileDeltas[i];
+            int x = cell.LocalPosition.x;
+            int y = cell.LocalPosition.y;
+            if ((uint)x >= (uint)mapData.Width || (uint)y >= (uint)mapData.Height)
+                continue;
+
+            mapData.TileData_Array[x, y] = CloneTileList(cell.Tiles);
+            Vector2Int worldPosition = mapData.position + cell.LocalPosition;
+            chunk.Map.UpdateTileBaseAtPosition(worldPosition);
+            chunk.Map.MarkPenaltyDirty(worldPosition);
+        }
+
+        for (int i = 0; i < (delta.RemovedItemGuids?.Count ?? 0); i++)
+        {
+            RemoveRuntimeItem(chunk, delta.RemovedItemGuids[i]);
+        }
+
+        for (int i = 0; i < (delta.ChangedItems?.Count ?? 0); i++)
+        {
+            ItemData savedData = delta.ChangedItems[i];
+            if (savedData == null || string.IsNullOrEmpty(savedData.IDName))
+                continue;
+
+            RemoveRuntimeItem(chunk, savedData.Guid);
+
+            try
+            {
+                ItemData runtimeData = CloneItemData(savedData);
+                Item item = chunk.InstantiateItemInChunk(
+                    runtimeData,
+                    runtimeData.transform.position,
+                    runtimeData.transform.rotation,
+                    runtimeData.transform.scale);
+                item?.Load();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveDataMgr] 应用区块物品差异失败: {savedData.IDName}, Guid={savedData.Guid}", chunk);
+                Debug.LogException(ex);
+            }
+        }
+    }
+
+    private static void RemoveRuntimeItem(Chunk chunk, int guid)
+    {
+        if (!chunk.RunTimeItems.TryGetValue(guid, out Item item) || item == null)
+        {
+            chunk.RunTimeItems.Remove(guid);
+            return;
+        }
+
+        chunk.RemoveItem(item);
+        if (ItemMgr.Instance != null)
+            ItemMgr.Instance.DespawnItem(item, saveData: false);
+        else
+            Destroy(item.gameObject);
+    }
+
+    private byte[] BuildCompactSavePayload(GameSaveData saveData)
+    {
+        CompactSaveEnvelope envelope = new CompactSaveEnvelope
+        {
+            Version = CompactSaveVersion,
+            CoreSaveData = SerializeCoreDataWithoutChunks(saveData)
+        };
+
+        HashSet<string> addedKeys = new HashSet<string>();
+        foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
+        {
+            if (pair.Value == null || !pair.Value.HasChanges)
+                continue;
+
+            envelope.ChunkRecords.Add(pair.Value);
+            addedKeys.Add(pair.Key);
+        }
+
+        if (saveData.PlanetData_Dict != null)
+        {
+            foreach (KeyValuePair<string, PlanetData> planetPair in saveData.PlanetData_Dict)
+            {
+                Dictionary<string, MapSave> maps = planetPair.Value?.MapData_Dict;
+                if (maps == null)
+                    continue;
+
+                foreach (KeyValuePair<string, MapSave> mapPair in maps)
+                {
+                    string key = BuildChunkKey(planetPair.Key, mapPair.Key);
+                    if (addedKeys.Contains(key) || chunkBaselines.ContainsKey(key) || mapPair.Value == null)
+                        continue;
+
+                    envelope.ChunkRecords.Add(new ChunkSaveRecord
+                    {
+                        PlanetName = planetPair.Key,
+                        ChunkName = mapPair.Key,
+                        ChunkPosition = mapPair.Value.MapPosition,
+                        SunlightIntensity = mapPair.Value.SunlightIntensity,
+                        IsDelta = false,
+                        FullSnapshot = mapPair.Value
+                    });
+                    addedKeys.Add(key);
+                }
+            }
+        }
+
+        envelope.ChunkRecords.Sort((a, b) =>
+        {
+            int planetCompare = string.CompareOrdinal(a?.PlanetName, b?.PlanetName);
+            return planetCompare != 0 ? planetCompare : string.CompareOrdinal(a?.ChunkName, b?.ChunkName);
+        });
+
+        byte[] body = MemoryPackSerializer.Serialize(envelope);
+        byte[] payload = new byte[CompactSaveMagic.Length + body.Length];
+        Buffer.BlockCopy(CompactSaveMagic, 0, payload, 0, CompactSaveMagic.Length);
+        Buffer.BlockCopy(body, 0, payload, CompactSaveMagic.Length, body.Length);
+        return payload;
+    }
+
+    private static byte[] SerializeCoreDataWithoutChunks(GameSaveData saveData)
+    {
+        List<(PlanetData planet, Dictionary<string, MapSave> maps)> backups = new();
+        if (saveData.PlanetData_Dict != null)
+        {
+            foreach (PlanetData planet in saveData.PlanetData_Dict.Values)
+            {
+                if (planet == null)
+                    continue;
+
+                backups.Add((planet, planet.MapData_Dict));
+                planet.MapData_Dict = new Dictionary<string, MapSave>();
+            }
+        }
+
+        try
+        {
+            return MemoryPackSerializer.Serialize(saveData);
+        }
+        finally
+        {
+            for (int i = 0; i < backups.Count; i++)
+                backups[i].planet.MapData_Dict = backups[i].maps;
+        }
+    }
+
+    private GameSaveData DeserializeSavePayload(byte[] payload)
+    {
+        ResetChunkDifferenceState();
+
+        if (!HasCompactSaveHeader(payload))
+            return MemoryPackSerializer.Deserialize<GameSaveData>(payload);
+
+        byte[] body = new byte[payload.Length - CompactSaveMagic.Length];
+        Buffer.BlockCopy(payload, CompactSaveMagic.Length, body, 0, body.Length);
+        CompactSaveEnvelope envelope = MemoryPackSerializer.Deserialize<CompactSaveEnvelope>(body);
+        if (envelope == null || envelope.Version != CompactSaveVersion || envelope.CoreSaveData == null)
+            throw new InvalidDataException("不支持或损坏的差异存档格式");
+
+        GameSaveData saveData = MemoryPackSerializer.Deserialize<GameSaveData>(envelope.CoreSaveData);
+        if (saveData == null)
+            throw new InvalidDataException("差异存档的核心数据为空");
+
+        saveData.PlanetData_Dict ??= new Dictionary<string, PlanetData>();
+        if (envelope.ChunkRecords == null)
+            return saveData;
+
+        for (int i = 0; i < envelope.ChunkRecords.Count; i++)
+        {
+            ChunkSaveRecord record = envelope.ChunkRecords[i];
+            if (record == null || string.IsNullOrEmpty(record.PlanetName) || string.IsNullOrEmpty(record.ChunkName))
+                continue;
+
+            if (!saveData.PlanetData_Dict.TryGetValue(record.PlanetName, out PlanetData planet) || planet == null)
+                continue;
+
+            planet.MapData_Dict ??= new Dictionary<string, MapSave>();
+            if (record.IsDelta)
+            {
+                chunkDeltas[BuildChunkKey(record.PlanetName, record.ChunkName)] = record;
+            }
+            else if (record.FullSnapshot != null)
+            {
+                planet.MapData_Dict[record.ChunkName] = record.FullSnapshot;
+            }
+        }
+
+        return saveData;
+    }
+
+    private static bool HasCompactSaveHeader(byte[] payload)
+    {
+        if (payload == null || payload.Length <= CompactSaveMagic.Length)
+            return false;
+
+        for (int i = 0; i < CompactSaveMagic.Length; i++)
+        {
+            if (payload[i] != CompactSaveMagic[i])
+                return false;
+        }
+
+        return true;
+    }
+
+    private static string BuildChunkKey(string planetName, string chunkName)
+    {
+        return $"{planetName}\u001f{chunkName}";
+    }
+
+    private static ulong ComputeItemHash(ItemData itemData)
+    {
+        return ComputeHash(MemoryPackSerializer.Serialize<ItemData>(itemData));
+    }
+
+    private static ulong ComputeTileHash(List<TileData> tiles)
+    {
+        return ComputeHash(MemoryPackSerializer.Serialize(tiles ?? new List<TileData>()));
+    }
+
+    private static ulong ComputeHash(byte[] bytes)
+    {
+        const ulong offset = 14695981039346656037UL;
+        const ulong prime = 1099511628211UL;
+        ulong hash = offset;
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            hash ^= bytes[i];
+            hash *= prime;
+        }
+        return hash;
+    }
+
+    private static ItemData CloneItemData(ItemData itemData)
+    {
+        if (itemData == null)
+            return null;
+
+        byte[] bytes = MemoryPackSerializer.Serialize<ItemData>(itemData);
+        return MemoryPackSerializer.Deserialize<ItemData>(bytes);
+    }
+
+    private static List<TileData> CloneTileList(List<TileData> tiles)
+    {
+        if (tiles == null || tiles.Count == 0)
+            return new List<TileData>();
+
+        byte[] bytes = MemoryPackSerializer.Serialize(tiles);
+        return MemoryPackSerializer.Deserialize<List<TileData>>(bytes) ?? new List<TileData>();
+    }
+
+    private sealed class ChunkBaseline
+    {
+        public readonly Dictionary<int, ulong> ItemHashes = new();
+        public int TileWidth;
+        public int TileHeight;
+        public ulong[,] TileHashes = new ulong[0, 0];
+    }
+
+    #endregion
     
     #endregion
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class CompactSaveEnvelope
+{
+    public int Version;
+    public byte[] CoreSaveData;
+    public List<ChunkSaveRecord> ChunkRecords = new();
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class ChunkSaveRecord
+{
+    public string PlanetName;
+    public string ChunkName;
+    public Vector2Int ChunkPosition;
+    public float SunlightIntensity;
+    public bool IsDelta;
+    public MapSave FullSnapshot;
+    public List<ItemData> ChangedItems = new();
+    public List<int> RemovedItemGuids = new();
+    public List<TileCellSaveDelta> TileDeltas = new();
+
+    [MemoryPackIgnore]
+    public bool HasChanges =>
+        IsDelta &&
+        ((ChangedItems?.Count ?? 0) > 0 ||
+         (RemovedItemGuids?.Count ?? 0) > 0 ||
+         (TileDeltas?.Count ?? 0) > 0);
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class TileCellSaveDelta
+{
+    public Vector2Int LocalPosition;
+    public List<TileData> Tiles = new();
 }

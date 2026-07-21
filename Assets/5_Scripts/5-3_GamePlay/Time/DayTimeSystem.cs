@@ -21,6 +21,18 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     [Tooltip("默认光源颜色")]
     public Color DefaultLightColor = Color.white;
 
+    [Header("时间 -> 地块光照层")]
+    [Tooltip("是否将昼夜光照同步到已加载地块的光照层")]
+    public bool SyncTileLightLayer = true;
+
+    [Tooltip("玩家可见/激活区块的光照层刷新间隔")]
+    [Min(0.05f)]
+    public float ActiveChunkLightRefreshInterval = 0.25f;
+
+    [Tooltip("已实例化但失活区块的低频刷新间隔；未加载存档不更新")]
+    [Min(0.1f)]
+    public float InactiveChunkLightRefreshInterval = 5f;
+
     private void OnEnable()
     {
         SubscribeGameManagerEvents();
@@ -152,6 +164,16 @@ private void TimeRun(string sceneName, float deltaTime)
         {
             GlobalLight.intensity = intensity;
             GlobalLight.color = color;
+        }
+
+        if (SyncTileLightLayer)
+        {
+            LightLayerMgr.Instance.SetTimeLighting(
+                GlobalLight,
+                intensity,
+                color,
+                ActiveChunkLightRefreshInterval,
+                InactiveChunkLightRefreshInterval);
         }
     }
 

@@ -1,5 +1,9 @@
+// AI-Context: 玩家快捷栏与手持物实例的唯一来源；远程应用只创建视觉副本，不绑定 UI/输入或参与 ItemMgr Tick。
+
 using DG.Tweening;
+using MemoryPack;
 using Sirenix.OdinInspector;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -9,7 +13,7 @@ using UnityEngine.InputSystem;
 /// 快捷栏模块（Module形态）
 /// 内部通过 RuntimeInventory 复用原有 Inventory 逻辑。
 /// </summary>
-public class Inventory_HotBar : Module, IInventory
+public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 {
 #region 基础参数
 
@@ -87,7 +91,7 @@ public class Inventory_HotBar : Module, IInventory
     private Mod_FocusPoint faceMouse;
     private Mod_TurnBack turnBody;
 
-    private InputAction _rightClickAction;
+    private GameController _inputController;
     private InputAction _mouseScrollAction;
 
     public Inventory_Data Data => RuntimeInventory?.Data;
@@ -119,9 +123,11 @@ public class Inventory_HotBar : Module, IInventory
 
     public override void Load()
     {
-        ModSaveData.ReadData(ref RawData);
-
         EnsureRuntimeInventoryBinding();
+
+        // 旧版本只保存 RawData；新版本将真实快捷栏库存与选中格写入 ModuleData。
+        // 无法读取新格式时保留 Prefab/旧存档中的原始数据。
+        TryRestoreSavedState();
 
         if (RuntimeInventory == null)
         {
@@ -138,7 +144,71 @@ public class Inventory_HotBar : Module, IInventory
 
     public override void Save()
     {
-        ModSaveData.WriteData(RawData);
+        EnsureRuntimeInventoryBinding();
+        ModSaveData.WriteData(new InventoryHotBarSaveState
+        {
+            Version = InventoryHotBarSaveState.CurrentVersion,
+            Inventory = RuntimeInventory?.Data
+        });
+
+        if (item?.itemData != null && !string.IsNullOrEmpty(_Data.Name))
+            item.itemData.ModuleDataDic[_Data.Name] = ModSaveData;
+    }
+
+    public override void ApplyNetworkData(ModuleData data)
+    {
+        if (data is not Ex_ModData_MemoryPackable networkData)
+            return;
+
+        ModSaveData = networkData;
+        EnsureRuntimeInventoryBinding();
+        if (!TryRestoreSavedState())
+            return;
+
+        EnsureHotBarSlots();
+        RuntimeInventory.item = item;
+        RuntimeInventory.InitData();
+        SyncCurrentHeldItemWithSlot();
+        RefreshUI();
+    }
+
+    /// <summary>
+    /// 远端玩家仅恢复快捷栏数据与手持物外观，不创建本地 UI、输入或相机。
+    /// </summary>
+    public void ApplyRemoteNetworkData(Item owner, ModuleData data)
+    {
+        if (owner == null || data is not Ex_ModData_MemoryPackable networkData)
+            return;
+
+        ModuleInit(owner, networkData, owner.itemData);
+        ModSaveData = networkData;
+        EnsureRuntimeInventoryBinding();
+        if (!TryRestoreSavedState())
+            return;
+
+        EnsureHotBarSlots();
+        RuntimeInventory.item = owner;
+        UnloadCurrentItem();
+        GetRequiredComponents();
+        LoadItemFromSlot(CurrentIndex);
+
+        // 远端手持物只负责显示，不能再次参与碰撞、攻击或 ItemMgr Tick。
+        if (CurentSelectItem != null)
+        {
+            ItemMgr.Instance?.MarkAsRemoteVisualOnly(CurentSelectItem);
+            CurentSelectItem.enabled = false;
+            Module[] gameplayModules = CurentSelectItem.GetComponentsInChildren<Module>(true);
+            for (int i = 0; i < gameplayModules.Length; i++)
+                gameplayModules[i].enabled = false;
+
+            Collider2D[] colliders = CurentSelectItem.GetComponentsInChildren<Collider2D>(true);
+            for (int i = 0; i < colliders.Length; i++)
+                colliders[i].enabled = false;
+
+            Rigidbody2D body = CurentSelectItem.GetComponent<Rigidbody2D>();
+            if (body != null)
+                body.simulated = false;
+        }
     }
 
     private void OnDestroy()
@@ -164,6 +234,37 @@ public class Inventory_HotBar : Module, IInventory
         }
 
         RuntimeInventory.Owner = this;
+    }
+
+    private bool TryRestoreSavedState()
+    {
+        if (ModSaveData?.BitData == null || ModSaveData.BitData.Length == 0)
+            return false;
+
+        try
+        {
+            InventoryHotBarSaveState state =
+                MemoryPackSerializer.Deserialize<InventoryHotBarSaveState>(ModSaveData.BitData);
+            if (state == null || state.Version != InventoryHotBarSaveState.CurrentVersion || state.Inventory == null)
+                return false;
+
+            RuntimeInventory.Data = state.Inventory;
+            return true;
+        }
+        catch
+        {
+            // 兼容旧版 List<string> RawData。旧数据没有库存内容，因此保留现有 RuntimeInventory.Data。
+            try
+            {
+                ModSaveData.ReadData(ref RawData);
+            }
+            catch
+            {
+                // 非本版本数据也不应阻断玩家加载。
+            }
+
+            return false;
+        }
     }
 
     private void OnInventoryValidate()
@@ -222,6 +323,7 @@ public class Inventory_HotBar : Module, IInventory
     private void OnInventoryShiftQuickTransfer(int index)
     {
         SyncCurrentHeldItemWithSlot();
+        NotifyOwnerNetworkStateChanged();
     }
 
     private void OnInventoryModUpdate(float deltaTime)
@@ -305,19 +407,20 @@ public class Inventory_HotBar : Module, IInventory
             return;
         }
 
-        GameController controller = item.GetComponent<GameController>();
-        if (controller == null || controller._inputActions == null)
+        GameController controller = item.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+        controller ??= item.GetComponent<GameController>();
+        if (controller == null)
         {
             return;
         }
 
-        _rightClickAction = controller._inputActions.Win10.RightClick;
-        _mouseScrollAction = controller._inputActions.Win10.MouseScroll;
+        _inputController = controller;
+        _inputController.RightClick += OnRightClickPerformed;
 
-        if (_rightClickAction != null)
-        {
-            _rightClickAction.performed += OnRightClickPerformed;
-        }
+        if (controller._inputActions == null)
+            return;
+
+        _mouseScrollAction = controller._inputActions.Win10.MouseScroll;
 
         if (_mouseScrollAction != null)
         {
@@ -327,10 +430,10 @@ public class Inventory_HotBar : Module, IInventory
 
     private void UnbindHotbarInput()
     {
-        if (_rightClickAction != null)
+        if (_inputController != null)
         {
-            _rightClickAction.performed -= OnRightClickPerformed;
-            _rightClickAction = null;
+            _inputController.RightClick -= OnRightClickPerformed;
+            _inputController = null;
         }
 
         if (_mouseScrollAction != null)
@@ -340,12 +443,17 @@ public class Inventory_HotBar : Module, IInventory
         }
     }
 
-    private void OnRightClickPerformed(InputAction.CallbackContext ctx)
+    private void OnRightClickPerformed()
     {
         if (IsGameplayInputLocked())
         {
             return;
         }
+
+        if (IsPointerOverUI())
+            return;
+
+        SyncCurrentHeldItemWithSlot();
 
         if (CurentSelectItem == null)
         {
@@ -423,6 +531,7 @@ public class Inventory_HotBar : Module, IInventory
         MoveSelectBox(targetIndex);
         LoadItemFromSlot(targetIndex);
         RefreshUI(CurrentIndex);
+        NotifyOwnerNetworkStateChanged();
     }
 
     private void LoadItemFromSlot(int index)
@@ -493,12 +602,13 @@ public class Inventory_HotBar : Module, IInventory
 
         itemInstance.itemData = data;
         itemInstance.Owner = item;
+        // 模块 Load 时必须已经知道自己属于玩家并处于手持状态。
+        itemInstance.SetInHand(true);
 
         itemInstance.OnUIRefresh += RefreshUI;
         itemInstance.OnItemDestroy += OnDestroyCurrentObject;
 
         itemInstance.Load();
-        itemInstance.SetInHand(true);
 
         CurentSelectItem = itemInstance;
         CurrentSelectItemSlot = slot;
@@ -542,9 +652,18 @@ public class Inventory_HotBar : Module, IInventory
 
     private bool IsPointerOverUI()
     {
+        if (EventSystem.current == null)
+            return false;
+
+        Vector2 pointerPosition = _inputController != null
+            ? _inputController.GetPointerScreenPosition()
+            : Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition;
+
         PointerEventData eventData = new PointerEventData(EventSystem.current)
         {
-            position = Mouse.current.position.ReadValue()
+            position = pointerPosition
         };
 
         List<RaycastResult> results = new List<RaycastResult>();
@@ -574,6 +693,7 @@ public class Inventory_HotBar : Module, IInventory
 
         obj.SetInHand(false);
         UnloadCurrentItem();
+        NotifyOwnerNetworkStateChanged();
     }
 
     private void SyncCurrentHeldItemWithSlot()
@@ -583,7 +703,10 @@ public class Inventory_HotBar : Module, IInventory
 
         int fixedIndex = NormalizeIndex(CurrentIndex);
         if (fixedIndex != CurrentIndex)
+        {
             CurrentIndex = fixedIndex;
+            NotifyOwnerNetworkStateChanged();
+        }
 
         ItemSlot currentSlot = Data.itemSlots[CurrentIndex];
         CurrentSelectItemSlot = currentSlot;
@@ -593,7 +716,10 @@ public class Inventory_HotBar : Module, IInventory
         if (slotData == null)
         {
             if (CurentSelectItem != null)
+            {
                 UnloadCurrentItem();
+                NotifyOwnerNetworkStateChanged();
+            }
 
             return;
         }
@@ -601,6 +727,7 @@ public class Inventory_HotBar : Module, IInventory
         if (CurentSelectItem == null)
         {
             LoadItemFromSlot(CurrentIndex);
+            NotifyOwnerNetworkStateChanged();
             return;
         }
 
@@ -608,8 +735,25 @@ public class Inventory_HotBar : Module, IInventory
         {
             UnloadCurrentItem();
             LoadItemFromSlot(CurrentIndex);
+            NotifyOwnerNetworkStateChanged();
         }
     }
 
+    private void NotifyOwnerNetworkStateChanged()
+    {
+        if (item != null)
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+    }
+
 #endregion
+}
+
+[Serializable]
+[MemoryPackable]
+public partial class InventoryHotBarSaveState
+{
+    public const int CurrentVersion = 1;
+
+    public int Version;
+    public Inventory_Data Inventory;
 }

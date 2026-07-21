@@ -284,6 +284,7 @@ GameObject:
   - component: {fileID: 3681087309403493207}
   - component: {fileID: 7706538685806905227}
   - component: {fileID: 1045927130170377979}
+  - component: {fileID: 4273094557522732137}
   m_Layer: 0
   m_Name: Torch
   m_TagString: Untagged
@@ -423,6 +424,53 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4273094557522732137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6598347724538692461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 257a1dcc2cd974c4d8dbebb4748e9bfd, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModData:
+    Name:
+    ID: Module_LightSource
+    isRunning: 1
+    Type: 0
+    RuntimeOwnerInventoryData:
+      Name:
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName:
+      UIPrefabName:
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    RuntimeOwnerSlot:
+      CanAcceptTags: []
+      SlotMaxVolume: 0
+      Index: 0
+    RuntimeOwnerSlotIndex: -1
+    BitData:
+  TargetLight: {fileID: 2891261174467680020}
+  Data:
+    IsEnabled: 1
+    Intensity: 1
+    Range: 8
+    InnerRadius: 0.1
 --- !u!1001 &1503584275506472771
 PrefabInstance:
   m_ObjectHideFlags: 0

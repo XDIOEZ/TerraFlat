@@ -12,6 +12,7 @@ public partial class EnvironmentLayers
     public float[,] Solidity = new float[0, 0]; // 固体化程度层
     public float[,] Hight = new float[0, 0]; // 海拔层
     public float[,] Pollution = new float[0, 0]; // 污染层
+    public float[,] Light = new float[0, 0]; // 光照亮度层（0=完全黑暗，1=最大亮度）
 
     public int Width => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(0) : 0;
     public int Height => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(1) : 0;
@@ -32,7 +33,8 @@ public partial class EnvironmentLayers
             && IsSameSize(Precipitation, width, height)
             && IsSameSize(Solidity, width, height)
             && IsSameSize(Hight, width, height)
-            && IsSameSize(Pollution, width, height);
+            && IsSameSize(Pollution, width, height)
+            && IsSameSize(Light, width, height);
     }
 
     public void EnsureSize(int width, int height)
@@ -50,6 +52,7 @@ public partial class EnvironmentLayers
         if (!IsSameSize(Solidity, width, height)) Solidity = new float[width, height];
         if (!IsSameSize(Hight, width, height)) Hight = new float[width, height];
         if (!IsSameSize(Pollution, width, height)) Pollution = new float[width, height];
+        if (!IsSameSize(Light, width, height)) Light = new float[width, height];
     }
 
     public void SetCell(
@@ -80,6 +83,16 @@ public partial class EnvironmentLayers
     public void SetSolidity(int x, int y, float value)
     {
         Solidity[x, y] = value;
+    }
+
+    public void SetLight(int x, int y, float value)
+    {
+        Light[x, y] = Mathf.Clamp01(value);
+    }
+
+    public float GetLight(int x, int y)
+    {
+        return Contains(x, y) ? Light[x, y] : 0f;
     }
 
     private static bool IsSameSize(float[,] array, int width, int height)

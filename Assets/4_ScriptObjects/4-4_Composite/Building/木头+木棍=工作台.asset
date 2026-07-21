@@ -38,8 +38,8 @@ MonoBehaviour:
     inputOrder: 1
   outputs:
     results:
-    - ItemName: WorkBench
-      ItemPrefab: {fileID: 6616435716361065375, guid: cca6f0741d956684bbb9a6c9ea0fe5c7, type: 3}
+    - ItemName: WorkBench_Summoner
+      ItemPrefab: {fileID: 8349957839753435587, guid: 3206a0b4db2f5564ca00d3dcf354bc77, type: 3}
       amount: 1
   enableMirrorCrafting: 1
   action: []

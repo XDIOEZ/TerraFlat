@@ -846,6 +846,12 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return null;
         }
 
+        // Difference saves regenerate the deterministic baseline first, then SaveDataMgr
+        // overlays removed resources, changed resource state, buildings and tile edits.
+        string planetName = SceneManager.GetActiveScene().name;
+        if (SaveDataMgr.Instance.TryGetChunkDelta(planetName, mapName, out ChunkSaveRecord delta))
+            return TryLoadChunkFromDelta(chunkPos, delta, onChunkLoaded);
+
         // 查找存档数据
         if (!activePlanetData.MapData_Dict.TryGetValue(mapName, out MapSave mapSave))
             return null;
@@ -883,6 +889,33 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         chunk.StartCoroutine(chunk.BatchLoadItemsCoroutine());
         // 注册到字典
         RegisterChunk(chunk);
+        return chunk;
+    }
+
+    private Chunk TryLoadChunkFromDelta(
+        Vector2Int chunkPos,
+        ChunkSaveRecord delta,
+        System.Action<Chunk> onChunkLoaded)
+    {
+        MapSave mapSave = new MapSave
+        {
+            Name = delta.ChunkName,
+            MapPosition = chunkPos,
+            SunlightIntensity = delta.SunlightIntensity
+        };
+
+        Chunk chunk = CreateChunk_ByMapSave(mapSave);
+        if (chunk == null)
+            return null;
+
+        if (!TryCreateMapCore(chunk))
+        {
+            Destroy(chunk.gameObject);
+            return null;
+        }
+
+        RegisterChunk(chunk);
+        onChunkLoaded?.Invoke(chunk);
         return chunk;
     }
 
