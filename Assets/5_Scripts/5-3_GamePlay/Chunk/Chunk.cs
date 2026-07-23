@@ -14,7 +14,9 @@ public class Chunk : MonoBehaviour
     {
         Created,
         Loading,
-        Ready
+        Ready,
+        Releasing,
+        Pooled
     }
 
     [ShowInInspector]
@@ -164,6 +166,78 @@ public class Chunk : MonoBehaviour
 
     private bool itemsLoaded;
     private bool mapLoaded;
+
+    #region 对象池生命周期
+
+    public void PrepareForReuse(MapSave mapSave)
+    {
+        StopAllCoroutines();
+        MapSave = mapSave;
+        Map = null;
+        ChunkOwner = null;
+        ClearRuntimeState();
+        ResetLifecycleState();
+
+        transform.SetPositionAndRotation(
+            new Vector3(mapSave.MapPosition.x, mapSave.MapPosition.y, 0f),
+            Quaternion.identity);
+        transform.localScale = Vector3.one;
+        name = mapSave.Name;
+        EnsurePositionArray();
+    }
+
+    public void PrepareForPool()
+    {
+        LifecycleState = ChunkLifecycleState.Releasing;
+        StopAllCoroutines();
+        OnChunkLoaded = null;
+
+        Item[] runtimeItems = GetComponentsInChildren<Item>(includeInactive: true);
+        for (int i = 0; i < runtimeItems.Length; i++)
+        {
+            Item runtimeItem = runtimeItems[i];
+            if (runtimeItem == null)
+                continue;
+
+            if (ItemMgr.Instance != null)
+                ItemMgr.Instance.DespawnItem(runtimeItem, saveData: true, detachFromChunk: false);
+            else
+                Destroy(runtimeItem.gameObject);
+        }
+
+        Map = null;
+        MapSave = null;
+        ChunkOwner = null;
+        ClearRuntimeState();
+    }
+
+    public void MarkPooled()
+    {
+        LifecycleState = ChunkLifecycleState.Pooled;
+        name = "PooledChunk";
+    }
+
+    private void ClearRuntimeState()
+    {
+        RunTimeItems.Clear();
+        RuntimeItemsGroup.Clear();
+        _itemGuidToLocalPos.Clear();
+        _rangeQueryBuffer.Clear();
+        _hasLoggedArrayNotInit = false;
+
+        if (RunTimeItems_ByPosition_Array == null || RunTimeItems_ByPosition_Array.Length == 0)
+            return;
+
+        int width = RunTimeItems_ByPosition_Array.GetLength(0);
+        int height = RunTimeItems_ByPosition_Array.GetLength(1);
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+                RunTimeItems_ByPosition_Array[x, y]?.Clear();
+        }
+    }
+
+    #endregion
 
     /// <summary>
     /// 区块进入可参与后续系统联动的就绪态时的回调。

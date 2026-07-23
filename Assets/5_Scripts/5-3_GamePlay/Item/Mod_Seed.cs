@@ -110,7 +110,7 @@ public partial class Mod_Seed : Module
         Debug.Log($"[Mod_Seed] 种子已种植在 {cellPos}，地块实例={plantedSeed.name}，手上剩余：{item.itemData.Stack.Amount}");
 
         if (item.itemData.Stack.Amount <= 0)
-            Destroy(item.gameObject);
+            item.DestroySelf();
     }
 
 #endregion
@@ -436,7 +436,7 @@ public partial class Mod_Seed : Module
         harvestedCrop.itemData.Stack.CanBePickedUp = false;
         Debug.Log($"[Mod_Seed] 幼苗已生成在 {Data.plantedTilePos}，Mod_Seed职责结束并销毁自身");
 
-        Destroy(item.gameObject);
+        item.DestroySelf();
     }
 
 #endregion

@@ -580,7 +580,10 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         CurentSelectItem.OnUIRefresh -= RefreshUI;
         CurentSelectItem.OnItemDestroy -= OnDestroyCurrentObject;
 
-        Destroy(CurentSelectItem.gameObject);
+        if (!CurentSelectItem.DestructionHandled && ItemMgr.Instance != null)
+            ItemMgr.Instance.DespawnItem(CurentSelectItem);
+        else if (!CurentSelectItem.DestructionHandled)
+            Destroy(CurentSelectItem.gameObject);
 
         CurentSelectItem = null;
         currentObject = null;

@@ -35,7 +35,7 @@ public class Mod_PlantGrow : Module
         {
             if (_data.specialProductionPoints[_data.nodeIndex].DestroySelf)
             {
-                Destroy(item.gameObject);
+                item.DestroySelf();
             }
 
             ProduceItem(_data.specialProductionPoints[_data.nodeIndex].loot);

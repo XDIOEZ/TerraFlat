@@ -402,7 +402,7 @@ public partial class Mod_Food : Module, IInstanceUI
 
             if (item.itemData.Stack.Amount <= 0)
             {
-                Destroy(item.gameObject); // 吃完销毁
+                item.DestroySelf();
             }
         }
     }
@@ -430,7 +430,7 @@ public partial class Mod_Food : Module, IInstanceUI
             // 如果被吃食物的堆叠数量为 0，销毁该食物
             if (BeEater.item.itemData.Stack.Amount <= 0)
             {
-                Destroy(BeEater.item.gameObject);  // 销毁被吃的食物
+                BeEater.item.DestroySelf();
             }
             else
             {

@@ -69,6 +69,80 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     #endregion
 
+    #region Chunk对象池
+
+    [Header("Chunk对象池")]
+    [SerializeField, Min(1)]
+    private int maxPooledChunkCount = 32;
+
+    [ShowInInspector]
+    private readonly Queue<Chunk> _chunkPool = new();
+    private readonly HashSet<Chunk> _chunksPendingPoolReturn = new();
+    private Transform _chunkPoolRoot;
+
+    public int PooledChunkCount => _chunkPool.Count;
+
+    private Transform GetChunkPoolRoot()
+    {
+        if (_chunkPoolRoot != null)
+            return _chunkPoolRoot;
+
+        GameObject poolRoot = new GameObject("ChunkPool");
+        poolRoot.transform.SetParent(transform, false);
+        _chunkPoolRoot = poolRoot.transform;
+        return _chunkPoolRoot;
+    }
+
+    private Chunk AcquireChunk(MapSave mapSave)
+    {
+        Chunk chunk = null;
+        while (_chunkPool.Count > 0 && chunk == null)
+            chunk = _chunkPool.Dequeue();
+
+        if (chunk == null)
+        {
+            GameObject chunkObject = new GameObject();
+            chunk = chunkObject.AddComponent<Chunk>();
+        }
+
+        chunk.transform.SetParent(null, false);
+        chunk.PrepareForReuse(mapSave);
+        chunk.gameObject.SetActive(true);
+        return chunk;
+    }
+
+    private void ReleaseChunkToPool(Chunk chunk)
+    {
+        if (chunk == null || !_chunksPendingPoolReturn.Add(chunk))
+            return;
+
+        chunk.gameObject.SetActive(false);
+        chunk.transform.SetParent(GetChunkPoolRoot(), false);
+        chunk.PrepareForPool();
+        StartCoroutine(FinalizeChunkPoolReturn(chunk));
+    }
+
+    private System.Collections.IEnumerator FinalizeChunkPoolReturn(Chunk chunk)
+    {
+        // Item 的 Destroy 在帧末执行；延迟一帧后再允许复用，避免旧子物体混入新生命周期。
+        yield return null;
+
+        _chunksPendingPoolReturn.Remove(chunk);
+        if (chunk == null)
+            yield break;
+
+        if (_chunkPool.Count >= Mathf.Max(1, maxPooledChunkCount))
+        {
+            Destroy(chunk.gameObject);
+            yield break;
+        }
+
+        chunk.MarkPooled();
+        _chunkPool.Enqueue(chunk);
+    }
+
+    #endregion
+
     #endregion
 
     #region 坐标索引辅助
@@ -212,8 +286,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         ClearChunkLoadQueue();
         ClearChunkReadyHooks();
 
-        //清理区块字典引用
-        CleanDic();
+        ClearAllChunk();
     }
 
     #region Chunk加载队列
@@ -317,15 +390,22 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     #endregion
 
     /// <summary>
-    /// 清空所有区块相关的字典引用，不销毁实际的区块 GameObject。
+    /// 回收所有区块并清空区块索引。
     /// </summary>
     public void ClearAllChunk()
     {
-        // 清空字典
+        ClearChunkLoadQueue();
+
+        HashSet<Chunk> chunksToRelease = new HashSet<Chunk>(Chunk_Dic_ByPos.Values);
+        chunksToRelease.UnionWith(Chunk_Dic_Active_ByPos.Values);
+        chunksToRelease.UnionWith(Chunk_Dic_UnActive_ByPos.Values);
         Chunk_Dic_ByPos.Clear();
         Chunk_Dic_Active_ByPos.Clear();
         Chunk_Dic_UnActive_ByPos.Clear();
         ClearChunkReadyHooks();
+
+        foreach (Chunk chunk in chunksToRelease)
+            ReleaseChunkToPool(chunk);
 
         _windowDiffInitialized = false;
         _cachedKeepAliveWindow.Clear();
@@ -509,10 +589,11 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     #region 清理区块
 
     /// <summary>
-    /// 完整销毁一个 Chunk：
+    /// 完整回收一个 Chunk：
     /// - 从所有管理字典中移除
     /// - 停止该 Chunk 上所有地图加载与权重烘焙协程
-    /// - 销毁实际 GameObject
+    /// - 清理运行时 Item 与事件
+    /// - 延迟一帧放回对象池，避免 Unity 延迟销毁造成生命周期串线
     /// </summary>
     public void DestroyChunk(Chunk chunk)
     {
@@ -544,8 +625,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             }
         }
 
-        // 销毁对象
-        Destroy(chunk.gameObject);
+        ReleaseChunkToPool(chunk);
     }
 
     /// <summary>
@@ -910,7 +990,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         if (!TryCreateMapCore(chunk))
         {
-            Destroy(chunk.gameObject);
+            DestroyChunk(chunk);
             return null;
         }
 
@@ -945,7 +1025,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         if (!TryCreateMapCore(chunk))
         {
             Debug.LogError($"[区块加载] ❌ 方式3/3: 创建地图核心失败 {mapName}");
-            Destroy(chunk.gameObject);
+            DestroyChunk(chunk);
             return null;
         }
 
@@ -1030,20 +1110,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             mapSave.Name = ChunkNameFromPos(mapSave.MapPosition);
         }
 
-        // 1. 创建根GameObject
-        GameObject newMapObj = new GameObject(mapSave.Name);
-
-        // 2. 添加Chunk组件
-        Chunk chunk = newMapObj.AddComponent<Chunk>();
-        chunk.MapSave = mapSave;
-
-        // 3. 设置位置
-        newMapObj.transform.position = new Vector3(
-            mapSave.MapPosition.x,
-            mapSave.MapPosition.y,
-            0f
-        );
-        return chunk;
+        return AcquireChunk(mapSave);
     }
 
     #endregion
