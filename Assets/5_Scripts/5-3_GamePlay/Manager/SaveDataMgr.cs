@@ -552,6 +552,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         delta.ChangedItems.Sort((a, b) => (a?.Guid ?? 0).CompareTo(b?.Guid ?? 0));
         delta.RemovedItemGuids.Sort();
         CollectTileDifferences(chunk.Map.Data, baseline, delta.TileDeltas);
+        CollectGrassDifferences(chunk.Map.Data, baseline, delta.GrassDeltas);
 
         // Prevent the old full-snapshot path from retaining generated content in memory.
         chunk.MapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
@@ -624,6 +625,11 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             }
         }
 
+        mapData.EnsureGrassLayerStorage(mapData.Width, mapData.Height);
+        baseline.GrassWidth = mapData.GrassLayer.Width;
+        baseline.GrassHeight = mapData.GrassLayer.Height;
+        baseline.GrassStates = mapData.GrassLayer.CopyCells();
+
         return baseline;
     }
 
@@ -653,6 +659,39 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
     }
 
+    private static void CollectGrassDifferences(
+        Data_TileMap mapData,
+        ChunkBaseline baseline,
+        List<GrassCellSaveDelta> output)
+    {
+        mapData.EnsureGrassLayerStorage(mapData.Width, mapData.Height);
+        GrassLayerData grassLayer = mapData.GrassLayer;
+
+        for (int x = 0; x < grassLayer.Width; x++)
+        {
+            for (int y = 0; y < grassLayer.Height; y++)
+            {
+                GrassCellState currentState = grassLayer.Get(x, y);
+                bool hasBaselineCell = x < baseline.GrassWidth && y < baseline.GrassHeight;
+                int baselineIndex = y * baseline.GrassWidth + x;
+                GrassCellState baselineState = hasBaselineCell &&
+                    baseline.GrassStates != null &&
+                    (uint)baselineIndex < (uint)baseline.GrassStates.Length
+                        ? (GrassCellState)baseline.GrassStates[baselineIndex]
+                        : GrassCellState.Uninitialized;
+
+                if (currentState == baselineState)
+                    continue;
+
+                output.Add(new GrassCellSaveDelta
+                {
+                    LocalPosition = new Vector2Int(x, y),
+                    State = currentState
+                });
+            }
+        }
+    }
+
     private void ApplyChunkDelta(Chunk chunk, ChunkSaveRecord delta)
     {
         Data_TileMap mapData = chunk.Map?.Data;
@@ -671,6 +710,19 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             Vector2Int worldPosition = mapData.position + cell.LocalPosition;
             chunk.Map.UpdateTileBaseAtPosition(worldPosition);
             chunk.Map.MarkPenaltyDirty(worldPosition);
+        }
+
+        mapData.EnsureGrassLayerStorage(mapData.Width, mapData.Height);
+        for (int i = 0; i < (delta.GrassDeltas?.Count ?? 0); i++)
+        {
+            GrassCellSaveDelta cell = delta.GrassDeltas[i];
+            int x = cell.LocalPosition.x;
+            int y = cell.LocalPosition.y;
+            if (!mapData.GrassLayer.Set(x, y, cell.State))
+                continue;
+
+            Vector2Int worldPosition = mapData.position + cell.LocalPosition;
+            chunk.Map.GetComponent<GrassDetailLayer>()?.RefreshCell(chunk.Map, worldPosition);
         }
 
         for (int i = 0; i < (delta.RemovedItemGuids?.Count ?? 0); i++)
@@ -914,6 +966,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         public int TileWidth;
         public int TileHeight;
         public ulong[,] TileHashes = new ulong[0, 0];
+        public int GrassWidth;
+        public int GrassHeight;
+        public byte[] GrassStates = Array.Empty<byte>();
     }
 
     #endregion
@@ -943,13 +998,15 @@ public partial class ChunkSaveRecord
     public List<ItemData> ChangedItems = new();
     public List<int> RemovedItemGuids = new();
     public List<TileCellSaveDelta> TileDeltas = new();
+    public List<GrassCellSaveDelta> GrassDeltas = new();
 
     [MemoryPackIgnore]
     public bool HasChanges =>
         IsDelta &&
         ((ChangedItems?.Count ?? 0) > 0 ||
          (RemovedItemGuids?.Count ?? 0) > 0 ||
-         (TileDeltas?.Count ?? 0) > 0);
+         (TileDeltas?.Count ?? 0) > 0 ||
+         (GrassDeltas?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]
@@ -958,4 +1015,12 @@ public partial class TileCellSaveDelta
 {
     public Vector2Int LocalPosition;
     public List<TileData> Tiles = new();
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class GrassCellSaveDelta
+{
+    public Vector2Int LocalPosition;
+    public GrassCellState State;
 }

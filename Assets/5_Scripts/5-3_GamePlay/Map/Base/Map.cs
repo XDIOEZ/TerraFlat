@@ -318,6 +318,7 @@ public class Map : Item
         }
 
         Data.TileLoaded = true;
+        GetComponent<GrassDetailLayer>()?.Rebuild(this);
         SaveDataMgr.Instance?.OnProceduralChunkGenerated(chunk);
     }
 
@@ -1139,6 +1140,12 @@ public class Map : Item
     #endregion
 
     #region Tile操作方法
+    public bool RemoveGrassAt(Vector2Int position)
+    {
+        GrassDetailLayer grassLayer = GetComponent<GrassDetailLayer>();
+        return grassLayer != null && grassLayer.RemoveGrassAt(this, position);
+    }
+
     public void ADDTile(Vector2Int position, TileData tileData)
     {
         tileData.position = (Vector3Int)position;

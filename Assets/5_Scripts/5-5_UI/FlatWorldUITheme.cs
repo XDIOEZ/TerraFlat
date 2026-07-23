@@ -223,6 +223,7 @@ public static class FlatWorldUITheme
 
     private static void StyleSliders(Transform root)
     {
+        bool keepInputHandle = ContainsAny(root.name, "UI_Canvas", "Settings", "Setting", "设置");
         Slider[] sliders = root.GetComponentsInChildren<Slider>(true);
         foreach (Slider slider in sliders)
         {
@@ -231,21 +232,60 @@ public static class FlatWorldUITheme
 
             Image background = FindNamedImage(slider.transform, "Background", "背景", "底板");
             if (background != null)
+            {
                 background.color = SurfaceLow;
+                background.sprite = null;
+                background.type = Image.Type.Simple;
+                background.preserveAspect = false;
+
+                RectTransform backgroundRect = background.rectTransform;
+                backgroundRect.anchorMin = new Vector2(0f, 0.25f);
+                backgroundRect.anchorMax = new Vector2(1f, 0.75f);
+                backgroundRect.anchoredPosition = Vector2.zero;
+                backgroundRect.sizeDelta = Vector2.zero;
+            }
 
             if (slider.fillRect != null)
             {
                 Image fill = slider.fillRect.GetComponent<Image>();
                 if (fill != null)
+                {
                     fill.color = IsHealthName(slider.name) ? Danger : Accent;
+                    fill.sprite = null;
+                    fill.type = Image.Type.Simple;
+                    fill.preserveAspect = false;
+                    fill.raycastTarget = false;
+                }
+
+                RectTransform fillRect = slider.fillRect;
+                fillRect.anchoredPosition = Vector2.zero;
+                fillRect.sizeDelta = Vector2.zero;
+
+                if (fillRect.parent is RectTransform fillArea)
+                {
+                    fillArea.anchorMin = new Vector2(0f, 0.25f);
+                    fillArea.anchorMax = new Vector2(1f, 0.75f);
+                    fillArea.anchoredPosition = Vector2.zero;
+                    fillArea.sizeDelta = Vector2.zero;
+                }
             }
 
             if (slider.handleRect != null)
             {
                 Image handle = slider.handleRect.GetComponent<Image>();
-                if (handle != null)
+                if (!keepInputHandle)
                 {
+                    slider.handleRect.gameObject.SetActive(false);
+                }
+                else if (handle != null)
+                {
+                    slider.handleRect.gameObject.SetActive(true);
+                    slider.handleRect.sizeDelta = new Vector2(7f, 0f);
                     handle.color = TextPrimary;
+                    handle.sprite = null;
+                    handle.type = Image.Type.Simple;
+                    handle.preserveAspect = false;
+                    handle.raycastTarget = false;
                     AddOutline(handle, Hex("08151D", 0.54f));
                 }
             }

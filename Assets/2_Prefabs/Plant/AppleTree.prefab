@@ -114,7 +114,7 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 
+    - Tree
     Stack:
       Amount: 1
       Volume: 2

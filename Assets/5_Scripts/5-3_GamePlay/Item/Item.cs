@@ -43,6 +43,9 @@ public abstract class Item : MonoBehaviour
     [Tooltip("此物品是否在手上?")]
     public bool InHand => itemData.inHand;
 
+    /// <summary>手持状态改变时触发，供需要切换世界表现的模块监听。</summary>
+    public event Action<bool> OnInHandChanged;
+
     [HideInInspector]
     /// <summary>
     /// 物品UI更新事件
@@ -598,7 +601,11 @@ public abstract class Item : MonoBehaviour
 
     public void SetInHand(bool inHand)
     {
+        if (itemData.inHand == inHand)
+            return;
+
         itemData.inHand = inHand;
+        OnInHandChanged?.Invoke(inHand);
     }
 
     private List<Module> GetModsSnapshot()

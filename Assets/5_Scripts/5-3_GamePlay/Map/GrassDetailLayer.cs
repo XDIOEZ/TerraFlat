@@ -39,6 +39,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
         if (map == null || map.Data == null || sourceTexture == null)
             return;
 
+        map.Data.EnsureGrassLayerStorage(map.Data.Width, map.Data.Height);
         EnsureDetailTilemap(map);
         EnsureRuntimeTiles();
         if (detailTilemap == null || runtimeTiles.Count == 0)
@@ -61,6 +62,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
         if (map == null || map.Data == null || sourceTexture == null)
             return;
 
+        map.Data.EnsureGrassLayerStorage(map.Data.Width, map.Data.Height);
         EnsureDetailTilemap(map);
         EnsureRuntimeTiles();
         if (detailTilemap == null || runtimeTiles.Count == 0)
@@ -69,6 +71,20 @@ public sealed class GrassDetailLayer : MonoBehaviour
         TileData topTile = map.Data.GetTileDataAt(worldPosition);
         int worldSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         ApplyCell(map, worldPosition, topTile, worldSeed);
+    }
+
+    public bool RemoveGrassAt(Map map, Vector2Int worldPosition)
+    {
+        if (map == null || map.Data == null)
+            return false;
+
+        map.Data.EnsureGrassLayerStorage(map.Data.Width, map.Data.Height);
+        if (!map.Data.TrySetGrassStateAtWorld(worldPosition, GrassCellState.Removed))
+            return false;
+
+        EnsureDetailTilemap(map);
+        detailTilemap?.SetTile(new Vector3Int(worldPosition.x, worldPosition.y, 0), null);
+        return true;
     }
 
     private void ApplyCell(Map map, Vector2Int worldPosition, TileData topTile, int worldSeed)
@@ -82,7 +98,21 @@ public sealed class GrassDetailLayer : MonoBehaviour
 
         uint state = MixSeed(worldPosition.x, worldPosition.y, worldSeed);
         float localDensity = GetLocalDensity(map, worldPosition);
-        if (Next01(ref state) >= localDensity)
+        bool generatedWithGrass = Next01(ref state) < localDensity;
+
+        if (!map.Data.TryGetGrassStateAtWorld(worldPosition, out GrassCellState grassState))
+        {
+            detailTilemap.SetTile(cell, null);
+            return;
+        }
+
+        if (grassState == GrassCellState.Uninitialized)
+        {
+            grassState = generatedWithGrass ? GrassCellState.Present : GrassCellState.Empty;
+            map.Data.TrySetGrassStateAtWorld(worldPosition, grassState);
+        }
+
+        if (grassState != GrassCellState.Present)
         {
             detailTilemap.SetTile(cell, null);
             return;
