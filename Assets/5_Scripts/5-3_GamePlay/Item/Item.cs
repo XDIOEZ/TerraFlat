@@ -71,6 +71,7 @@ public abstract class Item : MonoBehaviour
     private bool destructionHandled = false;
 
     public bool IsInitialized => isInitialized;
+    public bool DestructionHandled => destructionHandled;
     [Tooltip("物品初始化时触发的事件，用于根据环境因素初始化物品")]
     public UltEvent<EnvironmentLayers, Vector2Int> OnInit_Env = new();
 
@@ -175,6 +176,51 @@ public abstract class Item : MonoBehaviour
         OnItemDestroy.Invoke(this);
         if (saveData && isInitialized && itemData != null)
             Save();
+    }
+
+    public void PrepareForPoolReuse()
+    {
+        StopAllCoroutines();
+        destructionHandled = false;
+        isInitialized = false;
+        updateTimer = 0f;
+        Owner = null;
+        itemMods = new ItemMods();
+
+        OnUIRefresh.Clear();
+        OnItemDestroy.Clear();
+        OnAct.Clear();
+        OnInit_Env.Clear();
+        OnDurabilityModified.Clear();
+
+        Rigidbody2D[] rigidbodies = GetComponentsInChildren<Rigidbody2D>(true);
+        for (int i = 0; i < rigidbodies.Length; i++)
+        {
+            rigidbodies[i].velocity = Vector2.zero;
+            rigidbodies[i].angularVelocity = 0f;
+        }
+
+        ParticleSystem[] particleSystems = GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < particleSystems.Length; i++)
+        {
+            particleSystems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            particleSystems[i].Clear(true);
+        }
+
+        TrailRenderer[] trails = GetComponentsInChildren<TrailRenderer>(true);
+        for (int i = 0; i < trails.Length; i++)
+            trails[i].Clear();
+
+        IItemPoolLifecycle[] lifecycleHandlers = GetComponentsInChildren<IItemPoolLifecycle>(true);
+        for (int i = 0; i < lifecycleHandlers.Length; i++)
+            lifecycleHandlers[i].OnItemTakenFromPool();
+    }
+
+    public void NotifyReturnedToPool()
+    {
+        IItemPoolLifecycle[] lifecycleHandlers = GetComponentsInChildren<IItemPoolLifecycle>(true);
+        for (int i = 0; i < lifecycleHandlers.Length; i++)
+            lifecycleHandlers[i].OnItemReturnedToPool();
     }
 
     /// <summary>
@@ -495,7 +541,10 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void DestroySelf()
     {
-        Destroy(gameObject);
+        if (ItemMgr.Instance != null)
+            ItemMgr.Instance.DespawnItem(this);
+        else
+            Destroy(gameObject);
     }
 
     /// <summary>

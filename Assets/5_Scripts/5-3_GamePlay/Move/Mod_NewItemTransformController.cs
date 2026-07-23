@@ -326,7 +326,7 @@ end
     {
         if (_spawnedItem != null)
         {
-            Destroy(_spawnedItem.gameObject);
+            _spawnedItem.DestroySelf();
             _spawnedItem = null;
         }
     }

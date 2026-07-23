@@ -41,6 +41,21 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
     private readonly List<Item> _runtimeItems = new();
     private readonly List<Item> _updateSnapshot = new(256);
+
+    #region Item对象池
+
+    [Header("Item对象池")]
+    [SerializeField, Min(1)] private int maxPoolSizePerItem = 24;
+    [SerializeField, Min(1)] private int maxTotalPooledItems = 256;
+
+    [ShowInInspector]
+    private readonly Dictionary<string, Queue<Item>> _itemPools = new();
+    private Transform _itemPoolRoot;
+    private int _totalPooledItems;
+
+    public int TotalPooledItemCount => _totalPooledItems;
+
+    #endregion
     #endregion
 
     #region Properties
@@ -206,18 +221,21 @@ public class ItemMgr : SingletonMono<ItemMgr>
         if (rotation == default) rotation = Quaternion.identity;
         if (scale == default || scale == Vector3.zero) scale = Vector3.one;
 
-        GameObject itemObj = SpawnItemObject(itemData.IDName);
-        itemObj.transform.position = position;
-        itemObj.transform.rotation = rotation;
-        itemObj.transform.localScale = scale;
-
+        GameObject itemObj = AcquireItemObject(itemData.IDName);
         Item item = itemObj.GetComponent<Item>();
         if (item == null)
         {
+            Destroy(itemObj);
             throw new System.InvalidOperationException($"Prefab 缺少 Item 组件: {itemData.IDName}");
         }
 
         item.itemData = itemData;
+        item.PrepareForPoolReuse();
+        itemObj.name = itemData.IDName;
+        itemObj.transform.position = position;
+        itemObj.transform.rotation = rotation;
+        itemObj.transform.localScale = scale;
+        itemObj.SetActive(true);
 
         RegisterRuntimeItem(item, itemData.IDName);
         AttachToParentOrChunk(item, itemObj, position, parent);
@@ -226,16 +244,27 @@ public class ItemMgr : SingletonMono<ItemMgr>
         return item;
     }
 
-    public void DespawnItem(Item item, bool saveData = true)
+    public void DespawnItem(Item item, bool saveData = true, bool detachFromChunk = true)
     {
         if (item == null)
         {
             throw new System.ArgumentNullException(nameof(item));
         }
 
+        if (item.DestructionHandled)
+            return;
+
+        RuntimeItemDespawning?.Invoke(item);
+
+        if (detachFromChunk)
+            item.GetComponentInParent<Chunk>()?.RemoveItem(item);
+
         UnregisterRuntimeItem(item);
 
         item.PrepareForDespawn(saveData);
+        if (saveData && TryReturnItemToPool(item))
+            return;
+
         Destroy(item.gameObject);
     }
 
@@ -430,6 +459,107 @@ public class ItemMgr : SingletonMono<ItemMgr>
         GameObject obj = GameRes.Instance.InstantiatePrefab(itemId);
         if (obj == null) throw new System.InvalidOperationException($"InstantiatePrefab 失败: {itemId}");
         return obj;
+    }
+
+    private GameObject AcquireItemObject(string itemId)
+    {
+        if (_itemPools.TryGetValue(itemId, out Queue<Item> pool))
+        {
+            while (pool.Count > 0)
+            {
+                Item pooledItem = pool.Dequeue();
+                _totalPooledItems = Mathf.Max(0, _totalPooledItems - 1);
+                if (pooledItem == null)
+                    continue;
+
+                PooledItemMarker marker = pooledItem.GetComponent<PooledItemMarker>();
+                if (marker != null)
+                {
+                    marker.InPool = false;
+                    marker.RestoreBaseline();
+                }
+
+                pooledItem.transform.SetParent(null, false);
+                return pooledItem.gameObject;
+            }
+        }
+
+        GameObject itemObject = SpawnItemObject(itemId);
+        PooledItemMarker newMarker = itemObject.GetComponent<PooledItemMarker>();
+        if (newMarker == null)
+            newMarker = itemObject.AddComponent<PooledItemMarker>();
+
+        newMarker.PoolKey = itemId;
+        newMarker.InPool = false;
+        newMarker.PoolingDisabled = !CanPoolItem(itemObject.GetComponent<Item>());
+        newMarker.CaptureBaseline();
+        return itemObject;
+    }
+
+    private bool TryReturnItemToPool(Item item)
+    {
+        PooledItemMarker marker = item.GetComponent<PooledItemMarker>();
+        if (marker == null || marker.InPool || marker.PoolingDisabled ||
+            !marker.HasOriginalHierarchy() || !CanPoolItem(item))
+            return false;
+
+        string poolKey = string.IsNullOrEmpty(marker.PoolKey) ? item.itemData?.IDName : marker.PoolKey;
+        if (string.IsNullOrEmpty(poolKey) || _totalPooledItems >= Mathf.Max(1, maxTotalPooledItems))
+            return false;
+
+        if (!_itemPools.TryGetValue(poolKey, out Queue<Item> pool))
+        {
+            pool = new Queue<Item>();
+            _itemPools[poolKey] = pool;
+        }
+
+        if (pool.Count >= Mathf.Max(1, maxPoolSizePerItem))
+            return false;
+
+        item.NotifyReturnedToPool();
+        marker.InPool = true;
+        item.gameObject.SetActive(false);
+        item.transform.SetParent(GetItemPoolRoot(), false);
+        pool.Enqueue(item);
+        _totalPooledItems++;
+        return true;
+    }
+
+    private bool CanPoolItem(Item item)
+    {
+        if (item == null || item is Player || item is Map)
+            return false;
+
+        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            MonoBehaviour behaviour = behaviours[i];
+            if (behaviour == null || behaviour == item || behaviour is PooledItemMarker || behaviour is IItemPoolLifecycle)
+                continue;
+
+            System.Type type = behaviour.GetType();
+            const System.Reflection.BindingFlags flags =
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.DeclaredOnly;
+
+            if (type.GetMethod("OnDestroy", flags) != null && type.GetMethod("OnDisable", flags) == null)
+                return false;
+        }
+
+        return true;
+    }
+
+    private Transform GetItemPoolRoot()
+    {
+        if (_itemPoolRoot != null)
+            return _itemPoolRoot;
+
+        GameObject poolRoot = new GameObject("ItemPool");
+        poolRoot.transform.SetParent(transform, false);
+        _itemPoolRoot = poolRoot.transform;
+        return _itemPoolRoot;
     }
 
     #endregion
