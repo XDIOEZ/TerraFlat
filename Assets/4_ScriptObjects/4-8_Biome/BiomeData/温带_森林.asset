@@ -35,12 +35,16 @@ MonoBehaviour:
       itemName: Twine
       itemCount: 1
       SpawnChance: 0.005625
+      SpawnChanceMultiplier: 10
       environmentConditionRange:
-        TemperatureRange: {x: 0.5, y: 1}
+        TemperatureRange: {x: 0.4, y: 1}
         HumidityRange: {x: 0, y: 1}
-        PrecipitationRange: {x: 0.5, y: 1}
+        PrecipitationRange: {x: 0.4, y: 1}
         SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
+      CompanionHostTag: Tree
+      CompanionSpawnChance: 0.35
+      CompanionSpawnOffset: {x: 0, y: -0.25}
     - itemPrefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
       itemName: Bush
       itemCount: 1
@@ -72,7 +76,7 @@ MonoBehaviour:
         SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
-      itemName: "\u82F9\u679C\u6811"
+      itemName: AppleTree
       itemCount: 1
       SpawnChance: 0.015
       environmentConditionRange:

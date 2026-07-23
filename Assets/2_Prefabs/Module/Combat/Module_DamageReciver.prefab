@@ -125,7 +125,7 @@ MonoBehaviour:
     Defense: 8
     Weakness: []
     AttackersUIDs: 
-    ShowCanvas: 1
+    ShowCanvas: 0
     DamageInterval: 0.12
     DestroyDelay: 0
     HasSleepRespawnPoint: 0
@@ -150,7 +150,7 @@ MonoBehaviour:
   DataUpdate:
     _PersistentCalls: []
   UIValues: {fileID: 0}
-  HideUiDelayAfterLastDamage: 30
+  HideUiDelayAfterLastDamage: 4
   EnablePlayerDyingState: 0
   RespawnHpRate: 1
   DyingPanelPrefab: {fileID: 0}

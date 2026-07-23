@@ -16,6 +16,8 @@ public partial class Data_TileMap : ItemData
     [Tooltip("环境多层网格（性能优先主存储）")]
     public EnvironmentLayers EnvironmentLayers = new EnvironmentLayers();
     public List<TileData>[,] TileData_Array = new List<TileData>[20, 20];//00??????? ????position??
+    [Tooltip("装饰草层数据，每格使用一个字节保存状态")]
+    public GrassLayerData GrassLayer = new GrassLayerData();
 
     #region TileData ?????
     public int Width => TileData_Array != null && TileData_Array.Length > 0 ? TileData_Array.GetLength(0) : 0;
@@ -33,6 +35,8 @@ public partial class Data_TileMap : ItemData
         {
             TileData_Array = new List<TileData>[width, height];
         }
+
+        EnsureGrassLayerStorage(width, height);
 
         if (!initCells)
             return;
@@ -60,6 +64,39 @@ public partial class Data_TileMap : ItemData
                 }
             }
         }
+
+        GrassLayer?.Clear();
+    }
+
+    #endregion
+
+    #region Grass Layer
+
+    public void EnsureGrassLayerStorage(int width, int height)
+    {
+        GrassLayer ??= new GrassLayerData();
+        GrassLayer.EnsureSize(width, height);
+    }
+
+    public bool TryGetGrassStateAtWorld(Vector2Int worldPos, out GrassCellState state)
+    {
+        Vector2Int localPos = worldPos - position;
+        EnsureGrassLayerStorage(Width, Height);
+        if (!GrassLayer.Contains(localPos.x, localPos.y))
+        {
+            state = GrassCellState.Uninitialized;
+            return false;
+        }
+
+        state = GrassLayer.Get(localPos.x, localPos.y);
+        return true;
+    }
+
+    public bool TrySetGrassStateAtWorld(Vector2Int worldPos, GrassCellState state)
+    {
+        Vector2Int localPos = worldPos - position;
+        EnsureGrassLayerStorage(Width, Height);
+        return GrassLayer.Set(localPos.x, localPos.y, state);
     }
 
     #endregion

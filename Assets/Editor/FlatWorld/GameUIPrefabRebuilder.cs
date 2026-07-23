@@ -189,6 +189,45 @@ public static class GameUIPrefabRebuilder
         Debug.Log($"[Game UI] 快捷栏修复完成：{rebuilt}/{targets.Length} 个 Prefab。快捷栏直属子节点只保留物品槽。");
     }
 
+    [MenuItem("FlatWorld/UI/重建矩形进度条UI")]
+    public static void RebuildRectangularProgressBars()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Game UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        BuildTarget[] targets =
+        {
+            new BuildTarget(CommonRoot + "Base_UI/UI_Slider.prefab", BuildBaseSlider),
+            new BuildTarget(ModsRoot + "UI_Food.prefab", BuildNutritionHud),
+            new BuildTarget(InventoryRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
+            new BuildTarget(InventoryRoot + "UI_BoneFire.prefab", root => BuildFurnace(root, true)),
+            new BuildTarget(ModsRoot + "UI_Canvas.prefab", BuildSettingsPanel)
+        };
+
+        int rebuilt = 0;
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (BuildTarget target in targets)
+            {
+                if (RebuildSinglePrefab(target))
+                    rebuilt++;
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[Game UI] 矩形进度条重建完成：{rebuilt}/{targets.Length} 个 Prefab；状态条手柄已隐藏。");
+    }
+
     private static bool RebuildSinglePrefab(BuildTarget target)
     {
         if (!System.IO.File.Exists(target.Path))
@@ -481,6 +520,15 @@ public static class GameUIPrefabRebuilder
             grid.childAlignment = TextAnchor.MiddleCenter;
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 9;
+        }
+
+        // 快捷栏内嵌的是旧版槽位实例，必须同时清掉其绿色像素底图，
+        // 否则统一色值仍会被底图相乘成棕绿，和行囊动态槽位不一致。
+        for (int i = 0; i < root.transform.childCount; i++)
+        {
+            Transform child = root.transform.GetChild(i);
+            if (child.GetComponent("ItemSlot_UI") != null)
+                BuildSlot(child.gameObject);
         }
     }
 

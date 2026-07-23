@@ -168,31 +168,23 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public BasePanel UIValues;
     [Header("受伤UI自动隐藏设置")]
-    public float HideUiDelayAfterLastDamage = 30f;
+    [Min(0f)]
+    public float HideUiDelayAfterLastDamage = 4f;
     private Coroutine _hideUiCoroutine;
     private float _lastDamageUiTime = -999f;
+    private Item _handStateEventOwner;
 
     private bool _deathConsumedByExternalHandler;
 
     public bool ShowCanvas
     {
-        get => Data.ShowCanvas;
+        get => IsPanelVisible();
         set
         {
-            if (Data.ShowCanvas != value)
-            {
-                Data.ShowCanvas = value;
-
-                // 根据值调用对应的面板函数
-                if (Data.ShowCanvas)
-                {
-                    ShowPanel();
-                }
-                else
-                {
-                    HidePanel();
-                }
-            }
+            if (value)
+                ShowPanel();
+            else
+                HidePanel();
         }
     }
 
@@ -204,6 +196,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         _Data.ID = ModText.Hp;
         NormalizeStatRanges();
+        Data.ShowCanvas = false;
     }
 
 //TODO 创建一个利用[SerializeReference]实现的模块数据类 DamageReciver_Action(我已经实现了)
@@ -218,19 +211,15 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         modData.ReadData(ref Data);
         UpgradeBodyPartData();
         NormalizeStatRanges();
+        BindHandStateEvent();
 
         if (item.itemMods.ContainsKey_ID(ModText.Equipment))
 
             Equipment_Inventory = item.itemMods.GetMod_ByID(ModText.Equipment) as Mod_Inventory;
 
-        if (Data.ShowCanvas)
-        {
-            ShowPanel();
-        }
-        else
-        {
-            HidePanel();
-        }
+        // 血条可见性是运行时表现，不从预制体或存档恢复。
+        Data.ShowCanvas = false;
+        HidePanel();
     }
 
     public override void ApplyNetworkData(ModuleData data)
@@ -244,6 +233,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         modData.ReadData(ref Data);
         UpgradeBodyPartData();
         NormalizeStatRanges();
+        Data.ShowCanvas = false;
 
         if (item?.itemData != null && !string.IsNullOrEmpty(modData.Name))
             item.itemData.ModuleDataDic[modData.Name] = modData;
@@ -253,7 +243,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
         DispatchNetworkBodyPartChanges(previousBodyParts);
 
-        if (Data.ShowCanvas)
+        if (IsPanelVisible())
             RefreshUI();
 
         DataUpdate?.Invoke();
@@ -272,6 +262,13 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     [Button("显示面板")]
     public void ShowPanel()
     {
+        if (ShouldHidePanelWhileHeld())
+        {
+            if (PanleInstance != null)
+                HidePanel();
+            return;
+        }
+
         if (PanleInstance != null) return;
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
         GameObject panel = Instantiate(PanelPrefab, transform);
@@ -282,7 +279,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         DataUpdate += RefreshUI;
 
         RefreshUI();
-        Data.ShowCanvas = true;
+        // 兼容旧数据字段，但不再把临时的血条可见性写入存档。
+        Data.ShowCanvas = false;
 
 
         // ✅ 从 UI_Drag 中获取 rectTransform 并恢复位置
@@ -304,7 +302,15 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     [Button("隐藏面板")]
     public void HidePanel()
     {
-        if (PanleInstance == null) return;
+        Data.ShowCanvas = false;
+        DataUpdate -= RefreshUI;
+
+        if (PanleInstance == null)
+        {
+            UIValues = null;
+            return;
+        }
+
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
 
         // ✅ 从 UI_Drag 中获取 rectTransform 并保存位置
@@ -315,20 +321,55 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         Destroy(PanleInstance);
-        DataUpdate -= RefreshUI;
+        PanleInstance = null;
         UIValues = null;
-        Data.ShowCanvas = false;
     }
     public bool IsPanelVisible()
     {
         return PanleInstance != null;
     }// 添加检查面板是否可见的方法
 
+    private void BindHandStateEvent()
+    {
+        if (_handStateEventOwner == item)
+            return;
+
+        if (_handStateEventOwner != null)
+            _handStateEventOwner.OnInHandChanged -= HandleInHandChanged;
+
+        _handStateEventOwner = item;
+        if (_handStateEventOwner != null)
+            _handStateEventOwner.OnInHandChanged += HandleInHandChanged;
+    }
+
+    private void HandleInHandChanged(bool inHand)
+    {
+        if (inHand && IsBuildingOwner())
+            HidePanel();
+    }
+
+    private bool ShouldHidePanelWhileHeld()
+    {
+        return item != null && item.itemData != null && item.InHand && IsBuildingOwner();
+    }
+
+    private bool IsBuildingOwner()
+    {
+        return item != null && item.GetComponentInChildren<Mod_Building>(true) != null;
+    }
+
+    private void OnDestroy()
+    {
+        if (_handStateEventOwner != null)
+            _handStateEventOwner.OnInHandChanged -= HandleInHandChanged;
+    }
+
 
     [Button]
     public override void Save()
     {
         SynchronizeOverallHealthFromBodyParts();
+        Data.ShowCanvas = false;
         modData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
@@ -427,7 +468,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             DispatchDamageReceived(damageInfo);
             OnDamaged_ShowUiAndScheduleHide();
 
-            if (Data.ShowCanvas)
+            if (IsPanelVisible())
                 RefreshUI();
 
             // UI & 特效处理（只有在造成实际伤害时才触发）
@@ -482,7 +523,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         DispatchDamageReceived(damageInfo);
         OnDamaged_ShowUiAndScheduleHide();
 
-        if (Data.ShowCanvas)
+        if (IsPanelVisible())
             RefreshUI();
 
         // UI & 特效处理
@@ -522,7 +563,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             Hp = Mathf.Min(Hp + healAmount, MaxHp);
 
         // 只有在血量发生变化时才刷新UI
-        if (Mathf.Abs(Hp - oldHp) > 0.001f && Data.ShowCanvas)
+        if (Mathf.Abs(Hp - oldHp) > 0.001f && IsPanelVisible())
         {
             RefreshUI();
         }
@@ -650,7 +691,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         DataUpdate?.Invoke();
         OnAction?.Invoke(Hp);
 
-        if (Data.ShowCanvas)
+        if (IsPanelVisible())
             RefreshUI();
 
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
@@ -1113,7 +1154,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         _lastDamageUiTime = Time.time;
 
-        if (!Data.ShowCanvas)
+        if (!IsPanelVisible())
         {
             ShowPanel();
         }

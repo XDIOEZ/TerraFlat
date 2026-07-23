@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Sirenix.OdinInspector;
 
@@ -155,6 +156,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         Vector2 spawnCenterPos = new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f);
 
         int spawned = 0;
+        List<Biome_ItemSpawn_NoSO> spawnedConfigs = null;
 
         // === 生成配置中的 SO 物品 ===
         // 注意：当前数据结构只有 ItemSpawn_NoSO，这里保持与旧逻辑一致
@@ -163,7 +165,10 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
                 if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, localPos, biome.BiomeName, spawnMultiplier))
+                {
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
+                    RecordSpawnedConfig(ref spawnedConfigs, spawn);
+                }
             }
         }
 
@@ -174,11 +179,108 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
                 if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, localPos, biome.BiomeName, spawnMultiplier))
+                {
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
+                    RecordSpawnedConfig(ref spawnedConfigs, spawn);
+                }
+            }
+        }
+
+        spawned += GenerateCompanionResources(
+            biome.TerrainConfig.ItemSpawn_NoSO,
+            spawnedConfigs,
+            map,
+            spawnCenterPos,
+            localPos,
+            biome.BiomeName,
+            spawnMultiplier,
+            worldPos,
+            worldSeed);
+
+        return spawned;
+    }
+
+    private static int GenerateCompanionResources(
+        List<Biome_ItemSpawn_NoSO> spawnConfigs,
+        List<Biome_ItemSpawn_NoSO> spawnedConfigs,
+        Map map,
+        Vector2 spawnCenterPos,
+        Vector2Int localPos,
+        string biomeName,
+        float globalSpawnMultiplier,
+        Vector2Int worldPos,
+        int worldSeed)
+    {
+        if (spawnConfigs == null || spawnedConfigs == null || spawnedConfigs.Count == 0)
+            return 0;
+
+        uint companionRandomState = MixSeed(
+            worldPos.x,
+            worldPos.y,
+            worldSeed ^ 0x51F15EED);
+
+        int spawned = 0;
+        for (int i = 0; i < spawnConfigs.Count; i++)
+        {
+            Biome_ItemSpawn_NoSO companion = spawnConfigs[i];
+            if (companion == null ||
+                string.IsNullOrWhiteSpace(companion.CompanionHostTag) ||
+                companion.CompanionSpawnChance <= 0f)
+            {
+                continue;
+            }
+
+            // 当前格已经独立生成了该资源时，不再额外叠一份。
+            if (spawnedConfigs.Contains(companion))
+                continue;
+
+            if (!HasSpawnedHostTag(spawnedConfigs, companion.CompanionHostTag))
+                continue;
+
+            if (TrySpawnItem(
+                companion,
+                map,
+                spawnCenterPos,
+                ref companionRandomState,
+                localPos,
+                biomeName,
+                globalSpawnMultiplier,
+                companion.CompanionSpawnChance,
+                companion.CompanionSpawnOffset))
+            {
+                spawned += Mathf.Max(1, companion.itemCount);
             }
         }
 
         return spawned;
+    }
+
+    private static bool HasSpawnedHostTag(
+        List<Biome_ItemSpawn_NoSO> spawnedConfigs,
+        string hostTag)
+    {
+        for (int i = 0; i < spawnedConfigs.Count; i++)
+        {
+            GameObject prefab = spawnedConfigs[i]?.itemPrefab;
+            Item prefabItem = prefab != null ? prefab.GetComponent<Item>() : null;
+            List<string> tags = prefabItem?.itemData?.Tags;
+            if (tags != null && tags.Count > 0 && tags.ContainsTag(hostTag))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static void RecordSpawnedConfig(
+        ref List<Biome_ItemSpawn_NoSO> spawnedConfigs,
+        Biome_ItemSpawn_NoSO spawn)
+    {
+        if (spawn == null)
+            return;
+
+        spawnedConfigs ??= new List<Biome_ItemSpawn_NoSO>(2);
+        if (!spawnedConfigs.Contains(spawn))
+            spawnedConfigs.Add(spawn);
     }
 
     private static bool TrySpawnItem(
@@ -188,7 +290,9 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         ref uint randomState,
         Vector2Int localPos,
         string biomeName,
-        float globalSpawnMultiplier)
+        float globalSpawnMultiplier,
+        float? spawnChanceOverride = null,
+        Vector2 spawnOffset = default)
     {
         if (spawn == null)
             return false;
@@ -204,7 +308,12 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             return false;
 
         // 2. 概率检查
-        float effectiveChance = Mathf.Clamp01(spawn.SpawnChance * globalSpawnMultiplier);
+        float baseChance = spawnChanceOverride ?? spawn.SpawnChance;
+        // 旧群系资产没有该字段时可能反序列化为 0，按 1 倍处理以保持兼容。
+        float resourceMultiplier = spawn.SpawnChanceMultiplier > 0f
+            ? spawn.SpawnChanceMultiplier
+            : 1f;
+        float effectiveChance = Mathf.Clamp01(baseChance * globalSpawnMultiplier * resourceMultiplier);
         if (effectiveChance <= 0f)
             return false;
 
@@ -232,7 +341,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
                 Item spawnedItem = map.chunk.InstantiateItemInChunkDeterministic(
                     spawn.itemName,
                     deterministicGuid,
-                    new Vector3(spawnPos.x, spawnPos.y, 0f)
+                    new Vector3(spawnPos.x + spawnOffset.x, spawnPos.y + spawnOffset.y, 0f)
                 );
 
                 if (spawnedItem == null)

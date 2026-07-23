@@ -203,7 +203,7 @@ public partial class Mod_PlayerDeathState : Module
         _gameController.SetGameplayInputLocked(false);
         CloseAndDestroyDyingPanel();
 
-        if (_damageReceiver.Data.ShowCanvas)
+        if (_damageReceiver.IsPanelVisible())
         {
             _damageReceiver.RefreshUI();
         }
