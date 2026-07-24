@@ -5,10 +5,13 @@ using TheKiwiCoder;
 [NodeMenu("ActionNode/搜查/更新角色搜查器")]
 public class node_ItemDetector : ActionNode
 {
+    private long _requestVersion;
+
     protected override void OnStart()
     {
-/*        if (itemDetector == null)
-            itemDetector = context.gameObject.GetComponentInChildren<IDetector>();*/
+        _requestVersion = context?.itemDetector != null
+            ? context.itemDetector.RequestDetectorUpdate()
+            : 0;
     }
 
     protected override void OnStop()
@@ -18,8 +21,11 @@ public class node_ItemDetector : ActionNode
 
     protected override State OnUpdate()
     {
-        // 直接执行检测，无需间隔控制
-        context.itemDetector.Update_Detector();
-        return State.Success; // 或根据需求返回 Running/Success
+        if (context?.itemDetector == null || _requestVersion == 0)
+            return State.Failure;
+
+        return context.itemDetector.IsRequestApplied(_requestVersion)
+            ? State.Success
+            : State.Running;
     }
 }

@@ -30,39 +30,34 @@ public class EatFood : ActionNode
             return State.Running;
         }
 
-        List<Item> allFoodItems = new List<Item>();
-        
-        // 从多个tag中收集食物
-        foreach (string tag in FoodTags)
+        for (int tagIndex = 0; tagIndex < FoodTags.Count; tagIndex++)
         {
+            string tag = FoodTags[tagIndex];
             if (context.itemDetector.Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> items))
             {
-                allFoodItems.AddRange(items);
+                for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+                {
+                    Item detectedItem = items[itemIndex];
+                    if (detectedItem == null)
+                        continue;
+
+                    Vector2 offset = (Vector2)detectedItem.transform.position - (Vector2)context.transform.position;
+                    if (offset.sqrMagnitude > EatingRange * EatingRange)
+                        continue;
+
+                    Food = detectedItem.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+                    if (Food == null)
+                        continue;
+
+                    Food.BeEat(Self);
+                    LastEatingTime = Time.time;
+
+                    if (Food.Data.nutrition.GetFoodRate() > 0.9f)
+                        return State.Success;
+
+                    return State.Running;
+                }
             }
-        }
-
-        foreach (var item in allFoodItems)
-        {
-            //判断物体是否在进食范围内
-            if (Vector2.Distance(context.transform.position, item.transform.position) > EatingRange)
-            {
-                continue;
-            }
-
-            Food = item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
-
-            Food.BeEat(Self);
-
-            LastEatingTime = Time.time;
-
-
-            //判断是否已经吃饱了
-            if (Food.Data.nutrition.GetFoodRate() > 0.9f)
-            {
-                return State.Success;
-            }
-
-            return State.Running;
         }
 
         return State.Failure;

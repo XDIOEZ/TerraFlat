@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -483,8 +482,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private bool ShouldChase()
 	{
-		TryRefreshDetector();
-		Item threat = FindClosestThreat();
+		Item threat = _currentThreat;
 
 		if (_currentState == WildBoarState.Chase)
 		{
@@ -616,26 +614,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private Item FindClosestThreat()
 	{
-		List<Item> threats = new List<Item>();
-
-		List<Item> tagThreats = _detector.GetItemsByTags(chaseThreatTags);
-		if (tagThreats != null) threats.AddRange(tagThreats);
-
-		if (chasePlayer)
-		{
-			foreach (Item it in _detector.CurrentItemsInArea)
-			{
-				if (it != null && it.CompareTag("Player") && !threats.Contains(it))
-					threats.Add(it);
-			}
-		}
-
-		if (threats.Count == 0) return null;
-
-		return threats
-			.Where(x => x != null)
-			.OrderBy(x => (x.transform.position - transform.position).sqrMagnitude)
-			.FirstOrDefault();
+		return _detector.FindClosestItemByTags(chaseThreatTags, transform.position, chasePlayer);
 	}
 
 	private Item FindThreatInAlertRange()
@@ -676,13 +655,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private Item FindClosestEdibleItem()
 	{
-		List<Item> items = _detector.GetItemsByTags(edibleTags);
-		if (items.Count == 0) return null;
-
-		return items
-			.Where(x => x != null)
-			.OrderBy(x => (x.transform.position - transform.position).sqrMagnitude)
-			.FirstOrDefault();
+		return _detector.FindClosestItemByTags(edibleTags, transform.position);
 	}
 
 	private bool IsDayTime()

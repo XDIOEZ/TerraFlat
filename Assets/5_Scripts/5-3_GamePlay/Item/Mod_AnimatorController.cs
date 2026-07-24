@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class Mod_AnimatorController : Module, ITrunDirection
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
 

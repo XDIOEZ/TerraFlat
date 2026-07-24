@@ -167,7 +167,7 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	protected void InitializeAI()
 	{
 		_stateElapsed = 0f;
-		_detectorRefreshTimer = 0f;
+		_detectorRefreshTimer = GetDetectorPhaseOffset();
 		_wanderWaitTimer = 0f;
 		_hasWanderTarget = false;
 		_lastPlayedAnimation = null;
@@ -371,13 +371,25 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	/// <summary>按间隔刷新检测器</summary>
 	protected void TryRefreshDetector()
 	{
-		if (_detectorRefreshTimer < DetectorRefreshInterval)
+		float refreshInterval = Mathf.Max(0.01f, DetectorRefreshInterval);
+		if (_detectorRefreshTimer < refreshInterval)
 		{
 			return;
 		}
 
-		_detectorRefreshTimer = 0f;
+		_detectorRefreshTimer -= refreshInterval;
 		_detector.Update_Detector();
+	}
+
+	private float GetDetectorPhaseOffset()
+	{
+		float refreshInterval = Mathf.Max(0.01f, DetectorRefreshInterval);
+		int seed = item?.itemData != null && item.itemData.Guid != 0
+			? item.itemData.Guid
+			: GetInstanceID();
+		uint hash = unchecked((uint)seed * 2654435761u);
+		float normalizedPhase = (hash & 0xFFFFu) / 65536f;
+		return normalizedPhase * refreshInterval;
 	}
 
 	/// <summary>获取随机的闲逛停顿时长</summary>

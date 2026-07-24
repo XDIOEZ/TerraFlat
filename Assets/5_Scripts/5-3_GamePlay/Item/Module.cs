@@ -12,6 +12,22 @@ public interface IEnvironmentAdjustable
     void AdjustByEnvironment(EnvironmentLayers layers, Vector2Int localPos);
 }
 
+public enum ModuleTickMode
+{
+    EveryFrame,
+    FixedInterval,
+    Disabled
+}
+
+public enum ItemTickTier
+{
+    Dormant,
+    EveryFrame,
+    Fast,
+    Normal,
+    Slow
+}
+
 public abstract class Module : MonoBehaviour
 {
     /*  参考代码
@@ -57,6 +73,21 @@ public class Module_Equipment_Store : Module
     public ItemData Item_Data;
     public UltEvent<float> OnAction { get; set; } = new UltEvent<float>();
     public UltEvent<Module> OnAct { get; set; } = new UltEvent<Module>();
+
+    #region 更新调度
+
+    /// <summary>旧模块默认保持逐帧更新，只有显式声明的模块才会被降频或休眠。</summary>
+    public virtual ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+
+    /// <summary>FixedInterval 模式下的更新间隔。</summary>
+    public virtual float FixedTickInterval => 0.1f;
+
+    protected void InvalidateTickSchedule()
+    {
+        item?.MarkModuleScheduleDirty();
+    }
+
+    #endregion
 
     public virtual void Awake()
     {

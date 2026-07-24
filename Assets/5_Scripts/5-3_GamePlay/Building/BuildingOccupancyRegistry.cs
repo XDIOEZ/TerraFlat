@@ -1,4 +1,4 @@
-// 建筑动态占地覆盖层：不修改地形 TileData，按建筑实例引用计数并刷新 A* 节点。
+// 建筑动态占地覆盖层：不修改地形 TileData，只提交导航脏格。
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -96,9 +96,7 @@ public static class BuildingOccupancyRegistry
         if (tiles == null || tiles.Count == 0)
             return;
 
-        TileData topTile = tiles[^1];
-        bool walkable = GetEffectiveWalkable(cell, topTile.IsWalkable);
         chunk.Map.MarkPenaltyDirty(cell);
-        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(center, topTile.Penalty, walkable);
+        chunk.Map.BackTilePenalty_Async();
     }
 }

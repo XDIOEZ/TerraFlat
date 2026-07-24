@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public partial class Mod_Stamina : Module
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
     [System.Serializable]
     [MemoryPackable]
     public partial class StaminaData

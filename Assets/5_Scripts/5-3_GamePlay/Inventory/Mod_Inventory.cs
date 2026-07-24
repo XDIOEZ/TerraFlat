@@ -8,6 +8,9 @@ using UnityEngine.UI;
 
 public class Mod_Inventory : Module, IInventory, IInstanceUI
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.25f;
+
     #region 字段和属性
     public Inventory_ModuleData Data = new Inventory_ModuleData();
     public override ModuleData _Data { get => Data; set => Data = (Inventory_ModuleData)value; }

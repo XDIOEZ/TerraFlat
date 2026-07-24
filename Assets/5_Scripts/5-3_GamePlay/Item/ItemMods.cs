@@ -8,14 +8,42 @@ using UnityEngine;
 [Serializable]
 public class ItemMods
 {
+    [NonSerialized]
+    private Item _owner;
+
+    [FastClonerIgnore]
+    private Dictionary<string, Module> _mods = new Dictionary<string, Module>();
+
     [ShowInInspector]
     [FastClonerIgnore]
-    public Dictionary<string, Module> Mods { get; set; } = new Dictionary<string, Module>();
+    public Dictionary<string, Module> Mods
+    {
+        get => _mods;
+        set
+        {
+            _mods = value ?? new Dictionary<string, Module>();
+            _owner?.MarkModuleScheduleDirty();
+        }
+    }
 
     
     [ShowInInspector]
     [FastClonerIgnore]
     public Dictionary<string, List<Module>> Mods_List { get; set; } = new();
+
+    public ItemMods()
+    {
+    }
+
+    public ItemMods(Item owner)
+    {
+        BindOwner(owner);
+    }
+
+    public void BindOwner(Item owner)
+    {
+        _owner = owner;
+    }
 
     public List<Module> GetModList_ByID(string modID)
     {
@@ -81,6 +109,7 @@ public class ItemMods
         }
         // 添加到 Mods_List
         Mods_List[mod._Data.ID].Add(mod);
+        _owner?.MarkModuleScheduleDirty();
     }
 
     public void RemoveMod(Module mod)
@@ -96,6 +125,8 @@ public class ItemMods
             if (modList.Count == 0)
                 Mods_List.Remove(mod._Data.ID);
         }
+
+        _owner?.MarkModuleScheduleDirty();
     }
 
     public bool HasMod(Module mod)

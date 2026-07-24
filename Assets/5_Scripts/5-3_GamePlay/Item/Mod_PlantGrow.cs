@@ -4,6 +4,9 @@ using UltEvents;
 using UnityEngine;
 public class Mod_PlantGrow : Module
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.25f;
+
     public Mod_PlantGrow_Data _data = new Mod_PlantGrow_Data();
     public Ex_ModData_MemoryPackable _memoryPackable = new Ex_ModData_MemoryPackable();
     public override ModuleData _Data

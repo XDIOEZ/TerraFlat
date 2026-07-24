@@ -1,48 +1,74 @@
-// （完整类代码 — 基本保留你原来的所有方法，仅在 #region 后面新增了 UpdateAreaPenalty_Rectangle 与协程实现）
-using NavMeshPlus.Components;
 using Pathfinding;
+using Pathfinding.Graphs.Grid;
+using Pathfinding.Jobs;
 using Sirenix.OdinInspector;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Jobs;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 using Progress = Pathfinding.Progress;
-using Pathfinding.Graphs.Grid;
-
-
-
-
-#if UNITY_EDITOR
-using UnityEditor; // 仅Editor模式用Handles.Label，打包不报错
-#endif
 
 public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 {
-    #region 属性和字段
+    #region 配置
+
     public AstarPath Pathfinder;
-    public bool Init = false;
+    public bool Init;
+    public bool EnableDebugLogs;
 
-    // 全局A*调试日志开关，其他模块可通过 AstarGameManager.EnableDebugLogs 控制 AStar 相关调试输出
-    public bool EnableDebugLogs = true;
+    [Header("按键调权重配置")]
+    public bool enableKeyControl = true;
+    public int penaltyStep = 100;
+    public int minPenalty;
+    public int maxPenalty = 10000;
+    public Camera mainCamera;
 
-    // 权重修改区域的Gizmos可视化数据
-    private List<DebugBounds> penaltyModifiedBounds = new List<DebugBounds>();
+    [Header("增量导航更新")]
+    [SerializeField, Min(0.01f)] private float dirtyUpdateInterval = 0.04f;
+    [SerializeField, Min(64)] private int maxGridNodesPerAxis = 512;
 
-    [Header("按键调权重配置（策划可改）")]
-    public bool enableKeyControl = true; // 游戏状态下启用按键控制
-    public int penaltyStep = 100; // 每次按键增减的权重步长
-    public int minPenalty = 0; // 权重最小值（避免负权重）
-    public int maxPenalty = 10000; // 权重最大值（避免寻路异常）
-    public Camera mainCamera; // 转换鼠标坐标（未指定则自动获取）
+    #endregion
 
-    // 导航网格异步扫描状态
-    private bool isScanningNavmesh = false;
-    private bool hasPendingScanRequest = false;
-    private Vector2 pendingScanCenter;
-    private int pendingScanRadius;
-    private System.Action pendingScanOnComplete;
+    #region 运行时状态
 
+    private readonly List<RectInt> pendingNavigationRects = new List<RectInt>(16);
+    private readonly List<RectInt> navigationRectSnapshot = new List<RectInt>(16);
+    private readonly Dictionary<Vector2Int, NavigationOverride> pendingOverrides = new Dictionary<Vector2Int, NavigationOverride>();
+    private readonly List<DebugBounds> penaltyModifiedBounds = new List<DebugBounds>();
+    private readonly List<DebugBounds> updatedBounds = new List<DebugBounds>();
+
+    private bool navigationWorkItemQueued;
+    private float nextDirtyUpdateTime;
+    private bool isRefreshingNavigation;
+    private bool processQueuedRefreshNextFrame;
+    private bool hasQueuedRefreshRequest;
+    private Vector2 queuedRefreshCenter;
+    private int queuedRefreshRadius;
+    private Action queuedRefreshOnComplete;
+    private bool astarInitialized;
     private bool hasLoggedGridGraphNotReady;
+
+    private GridGraphPenaltyAccess cachedGridGraphPenaltyAccess;
+    private GridGraph cachedGridGraphPenaltyGraph;
+    private GridNodeBase[] cachedGridGraphPenaltyNodes;
+    private int cachedGridGraphPenaltyWidth;
+    private int cachedGridGraphPenaltyDepth;
+    private Vector3 cachedGridGraphPenaltyCenter;
+    private float cachedGridGraphPenaltyNodeSize;
+    private bool hasCachedGridGraphPenaltyAccess;
+
+    private readonly struct NavigationOverride
+    {
+        public readonly uint Penalty;
+        public readonly bool Walkable;
+
+        public NavigationOverride(uint penalty, bool walkable)
+        {
+            Penalty = penalty;
+            Walkable = walkable;
+        }
+    }
 
     public readonly struct GridGraphPenaltyAccess
     {
@@ -79,56 +105,63 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         }
     }
 
-    private GridGraphPenaltyAccess cachedGridGraphPenaltyAccess;
-    private GridGraph cachedGridGraphPenaltyGraph;
-    private GridNodeBase[] cachedGridGraphPenaltyNodes;
-    private int cachedGridGraphPenaltyWidth;
-    private int cachedGridGraphPenaltyDepth;
-    private Vector3 cachedGridGraphPenaltyCenter;
-    private float cachedGridGraphPenaltyNodeSize;
-    private bool hasCachedGridGraphPenaltyAccess;
+    private sealed class DebugBounds
+    {
+        public Bounds Bounds;
+        public float Time;
+        public bool IsKeyAdjust;
+    }
+
     #endregion
+
+    #region 生命周期
 
     public bool IsGridGraphReady
     {
         get
         {
-            var active = AstarPath.active;
-            if (active == null || active.data == null)
+            if (!TryGetGridGraph(out GridGraph gridGraph))
                 return false;
-            var gg = active.data.gridGraph;
-            return gg != null && gg.nodes != null && gg.nodes.Length == gg.width * gg.depth;
+
+            return gridGraph.isScanned &&
+                   gridGraph.nodes != null &&
+                   gridGraph.nodes.Length == gridGraph.width * gridGraph.depth;
         }
     }
 
-    #region 生命周期方法
-    private bool _astarInitialized = false;
-
-    public void Start()
+    private void Start()
     {
-        // 初始状态禁用 Update，等玩家进入游戏世界后由事件激活
         enabled = false;
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
-            GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
-        }
+        if (GameManager.Instance == null)
+            return;
+
+        GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
+        GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
     }
 
     private void OnGameWorldEnter()
     {
-        // 延迟初始化：首次进入游戏世界时初始化寻路系统
-        if (!_astarInitialized)
+        if (!astarInitialized)
         {
             InitializeAstar();
-            _astarInitialized = true;
+            astarInitialized = true;
         }
+
         enabled = true;
     }
 
     private void OnGameWorldExit()
     {
         enabled = false;
+        pendingNavigationRects.Clear();
+        navigationRectSnapshot.Clear();
+        pendingOverrides.Clear();
+        queuedRefreshOnComplete = null;
+        navigationWorkItemQueued = false;
+        isRefreshingNavigation = false;
+        hasQueuedRefreshRequest = false;
+        processQueuedRefreshNextFrame = false;
+        InvalidateGridGraphPenaltyAccessCache();
     }
 
     protected override void OnDestroy()
@@ -142,274 +175,442 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
 
     private void Update()
     {
-        // 按键调试功能
         UpdateKeyControl();
+
+        if (processQueuedRefreshNextFrame ||
+            (hasQueuedRefreshRequest && !isRefreshingNavigation && !navigationWorkItemQueued))
+        {
+            processQueuedRefreshNextFrame = false;
+            ProcessQueuedRefreshRequest();
+        }
+
+        TrySchedulePendingNavigationUpdates();
     }
 
     private void InitializeAstar()
     {
         Pathfinder = GetComponent<AstarPath>();
+        if (Pathfinder == null && AstarPath.active != null)
+            Pathfinder = AstarPath.active;
 
-        // 如果没有找到AstarPath组件，尝试通过GameRes实例化AStar预制体
+        if (Pathfinder == null && GameRes.Instance != null)
+        {
+            GameObject astarPrefab = GameRes.Instance.InstantiatePrefab("AStar");
+            Pathfinder = astarPrefab != null ? astarPrefab.GetComponent<AstarPath>() : null;
+        }
+
         if (Pathfinder == null)
-        {
-            if (GameRes.Instance != null)
-            {
-                GameObject astarPrefab = GameRes.Instance.InstantiatePrefab("AStar");
-                if (astarPrefab != null)
-                {
-                    Pathfinder = astarPrefab.GetComponent<AstarPath>();
+            Debug.LogError("[AstarGameManager] AstarPath 初始化失败", this);
 
-                    if (Pathfinder != null)
-                    {
-                        Debug.Log("✅ AStar预制体已自动实例化");
-                    }
-                }
-                else
-                {
-                    Debug.LogError("❌ 无法从GameRes找到AStar预制体！");
-                }
-            }
-            else
-            {
-                Debug.LogError("❌ GameRes未初始化，无法实例化AStar预制体！");
-            }
-        }
-
-        // 自动获取MainCamera（避免策划忘记赋值）
-        if (mainCamera == null)
-        {
-            mainCamera = Camera.main;
-            if (mainCamera == null)
-            {
-                Debug.LogError("❌ 未找到MainCamera！请给相机添加'Tag:MainCamera'或手动指定");
-            }
-        }
+        mainCamera ??= Camera.main;
     }
+
     #endregion
 
-    #region 导航网格更新方法
-    internal void ModifyNodePenalty_Internal(Vector2Int nodePos, uint penalty)
-    {
-        var graph = AstarPath.active.data.gridGraph;
-        var node = graph.GetNode(nodePos.x, nodePos.y);
-        if (node == null)
-            return;
-
-        node.Penalty = penalty;
-    }
+    #region 局部网格移动
 
     [Button("Update NavMesh")]
-    public void RefreshNavMeshAsync(Vector2 center = default, int radius = 1, System.Action onComplete = null)
+    public void RefreshNavMeshAsync(Vector2 center = default, int radius = 1, Action onComplete = null)
     {
-        // 添加null检查，确保AstarPath.active不为null
-        if (AstarPath.active == null)
+        if (!TryGetGridGraph(out GridGraph gridGraph))
         {
-            Debug.LogError("[AStar-Debug][AstarGameManager] RefreshNavMeshAsync 失败: AstarPath.active is null");
+            Debug.LogError("[AstarGameManager] 无法刷新导航：GridGraph 尚未初始化", this);
             onComplete?.Invoke();
             return;
         }
 
+        if (isRefreshingNavigation || navigationWorkItemQueued || AstarPath.active.isScanning)
+        {
+            QueueRefreshRequest(center, radius, onComplete);
+            return;
+        }
+
+        radius = Mathf.Max(1, radius);
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        Vector2 Newcenter = center + chunkSize * 0.5f;
+        Vector3 targetCenter = new Vector3(
+            center.x + chunkSize.x * 0.5f,
+            center.y + chunkSize.y * 0.5f,
+            0f);
 
-        var gridGraph = AstarPath.active.data.gridGraph;
+        int requestedWidth = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
+        int requestedDepth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
+        int targetWidth = Mathf.Clamp(requestedWidth, 1, maxGridNodesPerAxis);
+        int targetDepth = Mathf.Clamp(requestedDepth, 1, maxGridNodesPerAxis);
 
-        // 检查gridGraph是否为null
-        if (gridGraph == null)
+        if (EnableDebugLogs && (requestedWidth != targetWidth || requestedDepth != targetDepth))
         {
-            Debug.LogError("[AStar-Debug][AstarGameManager] RefreshNavMeshAsync 失败: gridGraph is null");
-            onComplete?.Invoke();
+            Debug.LogWarning(
+                $"[AstarGameManager] 导航窗口已限制为 {targetWidth}x{targetDepth}，请求值={requestedWidth}x{requestedDepth}",
+                this);
+        }
+
+        gridGraph.collision.collisionCheck = false;
+        gridGraph.collision.heightCheck = false;
+
+        bool requiresInitialScan = !gridGraph.isScanned ||
+                                   gridGraph.nodes == null ||
+                                   gridGraph.nodes.Length != gridGraph.width * gridGraph.depth ||
+                                   gridGraph.width != targetWidth ||
+                                   gridGraph.depth != targetDepth ||
+                                   !Mathf.Approximately(gridGraph.nodeSize, 1f);
+
+        if (requiresInitialScan)
+        {
+            BeginInitialScan(gridGraph, targetCenter, targetWidth, targetDepth, onComplete);
             return;
         }
 
-        // 仅在中心或尺寸变化时才更新配置，避免每次都重建网格数据
-        Vector3 targetCenter = new Vector3(Newcenter.x, Newcenter.y, 0f);
-
-        int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
-        int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
-        float nodeSize = 1f;
-
-        Debug.Log($"[AStar-Debug][AstarGameManager] RefreshNavMeshAsync | center={center} Newcenter={Newcenter} radius={radius} | 网格图变更前: width={gridGraph.width} depth={gridGraph.depth} center={gridGraph.center} nodeSize={gridGraph.nodeSize} | 目标: width={width} depth={depth} targetCenter={targetCenter}");
-
-        if (gridGraph.center != targetCenter)
-        {
-            gridGraph.center = targetCenter;
-        }
-
-        // 只有在尺寸或节点大小变化时才调用 SetDimensions（这一步可能比较重）
-        if (gridGraph.width != width || gridGraph.depth != depth || !Mathf.Approximately(gridGraph.nodeSize, nodeSize))
-        {
-            gridGraph.SetDimensions(width, depth, nodeSize);
-            Debug.Log($"[AStar-Debug][AstarGameManager] SetDimensions 已调用 | width={width} depth={depth} nodeSize={nodeSize}");
-        }
-
-        InvalidateGridGraphPenaltyAccessCache();
-
-        Debug.Log($"[AStar-Debug][AstarGameManager] 开始ScanAsync | 网格图: width={gridGraph.width} depth={gridGraph.depth} center={gridGraph.center} nodeSize={gridGraph.nodeSize}");
-
-        IEnumerable<Progress> scanProgress = AstarPath.active.ScanAsync();
-
-        isScanningNavmesh = true;
-        StartCoroutine(HandleScanProgress(scanProgress, center, radius, onComplete));
+        BeginIncrementalMove(gridGraph, targetCenter, onComplete);
     }
 
-    // 处理扫描进度的协程，在扫描完成后更新权重
-    private IEnumerator HandleScanProgress(IEnumerable<Progress> progressEnumerable, Vector2 center, int radius, System.Action onComplete = null)
+    private void BeginInitialScan(
+        GridGraph gridGraph,
+        Vector3 targetCenter,
+        int targetWidth,
+        int targetDepth,
+        Action onComplete)
     {
-        // 迭代进度枚举器，获取实时进度
-        foreach (var progress in progressEnumerable)
-        {
-            yield return null;
-        }
-
-        var gridGraph = AstarPath.active?.data?.gridGraph;
-        Debug.Log($"[AStar-Debug][AstarGameManager] ScanAsync完成 | 网格图: width={gridGraph?.width ?? -1} depth={gridGraph?.depth ?? -1} center={gridGraph?.center} nodeSize={gridGraph?.nodeSize ?? -1} nodes.Length={gridGraph?.nodes?.Length ?? -1} IsGridGraphReady={IsGridGraphReady}");
-
+        isRefreshingNavigation = true;
+        gridGraph.center = targetCenter;
+        gridGraph.SetDimensions(targetWidth, targetDepth, 1f);
         InvalidateGridGraphPenaltyAccessCache();
-
-        // 调用回调函数
-        onComplete?.Invoke();
+        StartCoroutine(HandleInitialScan(AstarPath.active.ScanAsync(gridGraph), onComplete));
     }
 
-    [Button("Update NavMesh")]
+    private IEnumerator HandleInitialScan(IEnumerable<Progress> progressEnumerable, Action onComplete)
+    {
+        foreach (Progress _ in progressEnumerable)
+            yield return null;
+
+        InvalidateGridGraphPenaltyAccessCache();
+        QueueEntireGrid();
+        FlushPendingNavigationUpdates(() => FinishRefresh(onComplete));
+    }
+
+    private void BeginIncrementalMove(GridGraph gridGraph, Vector3 targetCenter, Action onComplete)
+    {
+        Vector3 graphDelta = gridGraph.transform.InverseTransformVector(targetCenter - gridGraph.center);
+        int dx = Mathf.RoundToInt(graphDelta.x);
+        int dz = Mathf.RoundToInt(graphDelta.z);
+
+        isRefreshingNavigation = true;
+        if (dx == 0 && dz == 0)
+        {
+            FlushPendingNavigationUpdates(() => FinishRefresh(onComplete));
+            return;
+        }
+
+        List<(IGraphUpdatePromise, IEnumerator<JobHandle>)> promises =
+            new List<(IGraphUpdatePromise, IEnumerator<JobHandle>)>(1);
+
+        navigationWorkItemQueued = true;
+        AstarPath.active.AddWorkItem(new AstarWorkItem(
+            context =>
+            {
+                IGraphUpdatePromise promise = gridGraph.TranslateInDirection(dx, dz);
+                promises.Add((promise, promise.Prepare()));
+            },
+            (context, force) =>
+            {
+                TimeSlice timeSlice = force ? TimeSlice.Infinite : TimeSlice.MillisFromNow(2f);
+                if (GraphUpdateProcessor.ProcessGraphUpdatePromises(promises, context, timeSlice) != -1)
+                    return false;
+
+                InvalidateGridGraphPenaltyAccessCache();
+                QueueMovedGridInsets(gridGraph, dx, dz);
+                ApplyPendingNavigationUpdatesInsideWorkItem(gridGraph);
+                navigationWorkItemQueued = false;
+                FinishRefresh(onComplete);
+                return true;
+            }));
+    }
+
+    private void FinishRefresh(Action onComplete)
+    {
+        Init = true;
+        onComplete?.Invoke();
+        isRefreshingNavigation = false;
+        if (hasQueuedRefreshRequest)
+            processQueuedRefreshNextFrame = true;
+    }
+
+    private void QueueRefreshRequest(Vector2 center, int radius, Action onComplete)
+    {
+        hasQueuedRefreshRequest = true;
+        queuedRefreshCenter = center;
+        queuedRefreshRadius = Mathf.Max(1, radius);
+        queuedRefreshOnComplete += onComplete;
+    }
+
+    private void ProcessQueuedRefreshRequest()
+    {
+        if (!hasQueuedRefreshRequest || isRefreshingNavigation || navigationWorkItemQueued)
+            return;
+
+        hasQueuedRefreshRequest = false;
+        Vector2 center = queuedRefreshCenter;
+        int radius = queuedRefreshRadius;
+        Action onComplete = queuedRefreshOnComplete;
+        queuedRefreshOnComplete = null;
+        RefreshNavMeshAsync(center, radius, onComplete);
+    }
+
+    [Button("Update NavMesh Sync")]
     public void UpdateMeshSync(Vector2 center = default, int radius = 1)
     {
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        Vector2 Newcenter = center + chunkSize * 0.5f;
-        AstarPath.active.data.gridGraph.center = new Vector3(Newcenter.x, Newcenter.y, 0f);
-
-        int width = Mathf.RoundToInt(chunkSize.x * (2 * radius - 1));
-        int depth = Mathf.RoundToInt(chunkSize.y * (2 * radius - 1));
-        float nodeSize = 1f;
-
-        AstarPath.active.data.gridGraph.SetDimensions(width, depth, nodeSize);
-
-        InvalidateGridGraphPenaltyAccessCache();
-        AstarPath.active.Scan();
-        InvalidateGridGraphPenaltyAccessCache();
-    }
-
-    /// <summary>
-    /// 更新指定区域内的所有区块权重
-    /// </summary>
-    private void UpdateChunksPenaltyInArea(Vector2 center, int stepSize)
-    {
-        if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic_ByPos == null)
-        {
-            Debug.LogWarning("ChunkMgr 或 Chunk_Dic_ByPos 未初始化，无法更新区块权重");
+        if (!TryGetGridGraph(out GridGraph gridGraph))
             return;
-        }
 
+        radius = Mathf.Max(1, radius);
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        // 将世界坐标中心转换为区块索引中心
-        Vector2Int centerChunkPos = new Vector2Int(
-            Mathf.FloorToInt(center.x / chunkSize.x),
-            Mathf.FloorToInt(center.y / chunkSize.y)
-        );
+        gridGraph.center = new Vector3(center.x + chunkSize.x * 0.5f, center.y + chunkSize.y * 0.5f, 0f);
+        gridGraph.SetDimensions(
+            Mathf.Clamp(Mathf.RoundToInt(chunkSize.x * (2 * radius - 1)), 1, maxGridNodesPerAxis),
+            Mathf.Clamp(Mathf.RoundToInt(chunkSize.y * (2 * radius - 1)), 1, maxGridNodesPerAxis),
+            1f);
+        gridGraph.collision.collisionCheck = false;
+        gridGraph.collision.heightCheck = false;
 
-        // 根据你的说明：步长为1时遍历1个区块(1x1)，步长为2时遍历9个区块(3x3)
-        // 步长为n时，遍历 (2*n-1) x (2*n-1) 个区块
-        int halfRange = stepSize - 1;
-
-        // 遍历指定步长内的所有区块索引
-        for (int x = -halfRange; x <= halfRange; x++)
+        AstarPath.active.Scan(gridGraph);
+        InvalidateGridGraphPenaltyAccessCache();
+        QueueEntireGrid();
+        navigationWorkItemQueued = true;
+        AstarPath.active.AddWorkItem(() =>
         {
-            for (int y = -halfRange; y <= halfRange; y++)
-            {
-                // 计算实际的区块世界坐标位置（区块索引乘以区块大小）
-                Vector2Int chunkWorldPos = new Vector2Int(
-                    (centerChunkPos.x + x) * (int)chunkSize.x,
-                    (centerChunkPos.y + y) * (int)chunkSize.y
-                );
-                // 检查区块是否存在
-                if (ChunkMgr.Instance.TryGetChunkByPos(chunkWorldPos, out Chunk chunk))
-                {
-                    // 检查区块是否已加载且包含地图
-                    if (chunk != null && chunk.Map != null)
-                    {
-                        // 更新该区块的权重
-                        chunk.Map.BackTilePenalty_Sync();
-                    }
-                }
-            }
-        }
+            ApplyPendingNavigationUpdatesInsideWorkItem(gridGraph);
+            navigationWorkItemQueued = false;
+            Init = true;
+        });
+        AstarPath.active.FlushWorkItems();
     }
+
     #endregion
 
-    #region 权重（Penalty）修改功能（适配 A* 3.5 及以下超旧版本）
-    [Button("修改单个节点权重")]//TODO 这个是及高频调用的 1帧 4w+ 次，优化一下
-    public void ModifyNodePenalty(Vector3 worldPos, uint newPenalty = 1000)
+    #region 脏区队列
+
+    public void QueueNavigationCell(Vector2Int worldCell)
     {
-        if (Pathfinder == null || AstarPath.active == null)
+        QueueNavigationRegion(new RectInt(worldCell.x, worldCell.y, 1, 1));
+    }
+
+    public void QueueNavigationRegion(RectInt worldRect)
+    {
+        if (worldRect.width <= 0 || worldRect.height <= 0)
+            return;
+
+        RectInt merged = worldRect;
+        for (int i = pendingNavigationRects.Count - 1; i >= 0; i--)
         {
-            Debug.LogError("❌ AstarPath 组件未初始化！");
+            RectInt current = pendingNavigationRects[i];
+            if (!CanMergeWithoutAreaInflation(current, merged))
+                continue;
+
+            merged = Union(current, merged);
+            pendingNavigationRects.RemoveAt(i);
+        }
+
+        pendingNavigationRects.Add(merged);
+    }
+
+    private void QueueEntireGrid()
+    {
+        if (TryGetGridGraph(out GridGraph gridGraph))
+            QueueNavigationRegion(GetGridWorldRect(gridGraph));
+    }
+
+    private void QueueMovedGridInsets(GridGraph gridGraph, int dx, int dz)
+    {
+        if (Mathf.Abs(dx) > gridGraph.width / 2 || Mathf.Abs(dz) > gridGraph.depth / 2)
+        {
+            QueueNavigationRegion(GetGridWorldRect(gridGraph));
             return;
         }
 
-        // 获取目标位置节点
-        NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
-        GraphNode targetNode = nnInfo.node;
+        RectInt gridRect = GetGridWorldRect(gridGraph);
+        int insetLeft = Mathf.Min(gridRect.width, Mathf.Max(1, -dx));
+        int insetRight = Mathf.Min(gridRect.width, Mathf.Max(1, dx));
+        int insetBottom = Mathf.Min(gridRect.height, Mathf.Max(1, -dz));
+        int insetTop = Mathf.Min(gridRect.height, Mathf.Max(1, dz));
 
-        if (targetNode == null)
+        QueueNavigationRegion(new RectInt(gridRect.xMin, gridRect.yMin, insetLeft, gridRect.height));
+        QueueNavigationRegion(new RectInt(gridRect.xMax - insetRight, gridRect.yMin, insetRight, gridRect.height));
+
+        int middleWidth = Mathf.Max(0, gridRect.width - insetLeft - insetRight);
+        if (middleWidth <= 0)
+            return;
+
+        QueueNavigationRegion(new RectInt(gridRect.xMin + insetLeft, gridRect.yMin, middleWidth, insetBottom));
+        QueueNavigationRegion(new RectInt(gridRect.xMin + insetLeft, gridRect.yMax - insetTop, middleWidth, insetTop));
+    }
+
+    private void TrySchedulePendingNavigationUpdates()
+    {
+        if (navigationWorkItemQueued || isRefreshingNavigation || pendingNavigationRects.Count == 0)
+            return;
+        if (!IsGridGraphReady || Time.unscaledTime < nextDirtyUpdateTime)
+            return;
+
+        FlushPendingNavigationUpdates();
+    }
+
+    private void FlushPendingNavigationUpdates(Action onComplete = null)
+    {
+        if (pendingNavigationRects.Count == 0)
         {
-            Debug.LogError($"❌ 节点获取失败！位置：{worldPos}（不在寻路图内）");
+            onComplete?.Invoke();
             return;
         }
 
-        if (!targetNode.Walkable)
+        if (navigationWorkItemQueued || !TryGetGridGraph(out GridGraph gridGraph) || !gridGraph.isScanned)
         {
-            Debug.Log($"⚠️ 节点不可通行，已跳过。位置：{worldPos}");
+            onComplete?.Invoke();
             return;
         }
 
-        // 修改权重
-        targetNode.Penalty = newPenalty;
-
-        // Gizmos可视化（标记为"按键调整"，黄色线框）
-        Bounds nodeBounds = new Bounds(worldPos, Vector3.one * 0.8f);
-        penaltyModifiedBounds.Add(new DebugBounds
+        navigationWorkItemQueued = true;
+        nextDirtyUpdateTime = Time.unscaledTime + dirtyUpdateInterval;
+        AstarPath.active.AddWorkItem(() =>
         {
-            bounds = nodeBounds,
-            time = Time.time,
-            isKeyAdjust = true // 标记为按键调整
+            ApplyPendingNavigationUpdatesInsideWorkItem(gridGraph);
+            navigationWorkItemQueued = false;
+            onComplete?.Invoke();
         });
     }
 
-    /// <summary>
-    /// 高频调用优化版：修改单个节点的可通行性与权重。
-    /// - 无 Log（避免控制台刷屏卡顿）
-    /// - 避免重复赋值（Walkable / Penalty 都相同则直接返回）
-    /// - newPenalty == 0 或 isWalkable == false 时，将节点标记为不可通行
-    /// </summary>
-    public void ModifyNodePenalty_Optimized(Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
+    private void ApplyPendingNavigationUpdatesInsideWorkItem(GridGraph gridGraph)
     {
-        // 1. 获取节点
-        NNInfo nnInfo = AstarPath.active.GetNearest(worldPos);
-        GraphNode targetNode = nnInfo.node;
-
-        if (targetNode == null)
-        {
-//            Debug.LogWarning($"⚠️ 节点获取失败！位置：{worldPos}（不在寻路图内");
+        if (pendingNavigationRects.Count == 0)
             return;
+
+        navigationRectSnapshot.Clear();
+        navigationRectSnapshot.AddRange(pendingNavigationRects);
+        pendingNavigationRects.Clear();
+
+        RectInt gridWorldRect = GetGridWorldRect(gridGraph);
+        for (int i = 0; i < navigationRectSnapshot.Count; i++)
+        {
+            RectInt worldRect = Intersect(navigationRectSnapshot[i], gridWorldRect);
+            if (worldRect.width > 0 && worldRect.height > 0)
+                ApplyNavigationWorldRect(gridGraph, gridWorldRect, worldRect);
         }
 
-        // 2. 计算目标 Walkable 状态：
-        //    - 如果显示标记为不可通行
-        //    - 或者 权重为 0，则一律视为不可通行
-        bool targetWalkable = isWalkable && newPenalty > 0;
+        InvalidateGridGraphPenaltyAccessCache();
+    }
 
-        // 3. 如果当前状态与目标状态完全一致，则无需修改
-        if (targetNode.Walkable == targetWalkable && targetNode.Penalty == newPenalty)
+    private void ApplyNavigationWorldRect(GridGraph gridGraph, RectInt gridWorldRect, RectInt worldRect)
+    {
+        int graphXMin = worldRect.xMin - gridWorldRect.xMin;
+        int graphYMin = worldRect.yMin - gridWorldRect.yMin;
+        int graphXMaxExclusive = graphXMin + worldRect.width;
+        int graphYMaxExclusive = graphYMin + worldRect.height;
+
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        int chunkStepX = Mathf.Max(1, Mathf.RoundToInt(chunkSize.x));
+        int chunkStepY = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
+        Chunk cachedChunk = null;
+        Vector2Int cachedChunkPosition = new Vector2Int(int.MinValue, int.MinValue);
+
+        for (int graphY = graphYMin; graphY < graphYMaxExclusive; graphY++)
         {
-            return;
+            int worldY = gridWorldRect.yMin + graphY;
+            int rowOffset = graphY * gridGraph.width;
+
+            for (int graphX = graphXMin; graphX < graphXMaxExclusive; graphX++)
+            {
+                int worldX = gridWorldRect.xMin + graphX;
+                Vector2Int worldCell = new Vector2Int(worldX, worldY);
+                Vector2Int chunkPosition = new Vector2Int(
+                    Mathf.FloorToInt((worldX + 0.5f) / chunkSize.x) * chunkStepX,
+                    Mathf.FloorToInt((worldY + 0.5f) / chunkSize.y) * chunkStepY);
+
+                if (chunkPosition != cachedChunkPosition)
+                {
+                    cachedChunkPosition = chunkPosition;
+                    cachedChunk = null;
+                    ChunkMgr.Instance?.TryGetActiveChunkByPos(chunkPosition, out cachedChunk);
+                }
+
+                uint penalty = 0u;
+                bool walkable = false;
+                if (pendingOverrides.TryGetValue(worldCell, out NavigationOverride navigationOverride))
+                {
+                    penalty = navigationOverride.Penalty;
+                    walkable = navigationOverride.Walkable;
+                    pendingOverrides.Remove(worldCell);
+                }
+                else
+                {
+                    List<TileData> tiles = cachedChunk?.Map?.Data?.GetTileListAt(worldCell);
+                    if (tiles != null && tiles.Count > 0)
+                    {
+                        TileData topTile = tiles[^1];
+                        penalty = topTile.Penalty;
+                        walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, topTile.IsWalkable);
+                    }
+                }
+
+                ApplyNodePenaltyFast(gridGraph.nodes[rowOffset + graphX], penalty, walkable);
+            }
         }
 
-        // 4. 应用修改
-        targetNode.Walkable = targetWalkable;
+        gridGraph.RecalculateConnectionsInRegion(new IntRect(
+            graphXMin - 1,
+            graphYMin - 1,
+            graphXMaxExclusive,
+            graphYMaxExclusive));
+    }
 
-        // 对于不可通行节点，统一将 Penalty 置为 0，避免无意义的高权重
-        targetNode.Penalty = targetWalkable ? newPenalty : 0u;
+    private static RectInt GetGridWorldRect(GridGraph gridGraph)
+    {
+        int minX = Mathf.RoundToInt(gridGraph.center.x - gridGraph.width * gridGraph.nodeSize * 0.5f);
+        int minY = Mathf.RoundToInt(gridGraph.center.y - gridGraph.depth * gridGraph.nodeSize * 0.5f);
+        return new RectInt(minX, minY, gridGraph.width, gridGraph.depth);
+    }
+
+    private static bool CanMergeWithoutAreaInflation(RectInt a, RectInt b)
+    {
+        RectInt union = Union(a, b);
+        RectInt intersection = Intersect(a, b);
+        int exactArea = a.width * a.height + b.width * b.height - intersection.width * intersection.height;
+        if (union.width * union.height == exactArea)
+            return true;
+
+        bool horizontalNeighbours = a.yMin == b.yMin && a.yMax == b.yMax &&
+                                    (a.xMax == b.xMin || b.xMax == a.xMin);
+        bool verticalNeighbours = a.xMin == b.xMin && a.xMax == b.xMax &&
+                                  (a.yMax == b.yMin || b.yMax == a.yMin);
+        return horizontalNeighbours || verticalNeighbours;
+    }
+
+    private static RectInt Union(RectInt a, RectInt b)
+    {
+        int xMin = Mathf.Min(a.xMin, b.xMin);
+        int yMin = Mathf.Min(a.yMin, b.yMin);
+        int xMax = Mathf.Max(a.xMax, b.xMax);
+        int yMax = Mathf.Max(a.yMax, b.yMax);
+        return new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    private static RectInt Intersect(RectInt a, RectInt b)
+    {
+        int xMin = Mathf.Max(a.xMin, b.xMin);
+        int yMin = Mathf.Max(a.yMin, b.yMin);
+        int xMax = Mathf.Min(a.xMax, b.xMax);
+        int yMax = Mathf.Min(a.yMax, b.yMax);
+        return xMax <= xMin || yMax <= yMin
+            ? new RectInt()
+            : new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    #endregion
+
+    #region 节点映射和查询
+
+    private bool TryGetGridGraph(out GridGraph gridGraph)
+    {
+        AstarPath active = AstarPath.active;
+        gridGraph = active != null && active.data != null ? active.data.gridGraph : null;
+        return gridGraph != null;
     }
 
     private void InvalidateGridGraphPenaltyAccessCache()
@@ -422,56 +623,43 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     public bool TryGetGridGraphPenaltyAccess(out GridGraphPenaltyAccess access)
     {
         access = default;
-
-        var active = AstarPath.active;
-        var gg = active != null && active.data != null ? active.data.gridGraph : null;
-        if (gg == null)
-        {
-            Debug.LogWarning($"[AStar-Debug][AstarGameManager] TryGetGridGraphPenaltyAccess 失败: gridGraph=null | AstarPath.active={active != null}");
+        if (!TryGetGridGraph(out GridGraph gridGraph))
             return false;
-        }
 
-        var nodes = gg.nodes;
-        int width = gg.width;
-        int depth = gg.depth;
+        GridNodeBase[] nodes = gridGraph.nodes;
+        int width = gridGraph.width;
+        int depth = gridGraph.depth;
         if (nodes == null || nodes.Length != width * depth)
         {
-            if (!hasLoggedGridGraphNotReady)
+            if (!hasLoggedGridGraphNotReady && EnableDebugLogs)
             {
                 hasLoggedGridGraphNotReady = true;
-                Debug.LogWarning($"[AStar-Debug][AstarGameManager] TryGetGridGraphPenaltyAccess 失败: GridGraph未就绪 | nodes={nodes != null} nodes.Length={nodes?.Length ?? -1} width*depth={width * depth}", this);
+                Debug.LogWarning("[AstarGameManager] GridGraph 尚未就绪", this);
             }
-
             return false;
         }
 
-        float nodeSize = gg.nodeSize;
+        float nodeSize = gridGraph.nodeSize;
         if (nodeSize <= 0f)
-        {
-            Debug.LogWarning($"[AStar-Debug][AstarGameManager] TryGetGridGraphPenaltyAccess 失败: nodeSize={nodeSize}");
             return false;
-        }
 
         hasLoggedGridGraphNotReady = false;
-
-        Vector3 center = gg.center;
+        Vector3 center = gridGraph.center;
         if (!hasCachedGridGraphPenaltyAccess ||
-            cachedGridGraphPenaltyGraph != gg ||
+            cachedGridGraphPenaltyGraph != gridGraph ||
             cachedGridGraphPenaltyNodes != nodes ||
             cachedGridGraphPenaltyWidth != width ||
             cachedGridGraphPenaltyDepth != depth ||
             cachedGridGraphPenaltyCenter != center ||
             !Mathf.Approximately(cachedGridGraphPenaltyNodeSize, nodeSize))
         {
-            float halfWidth = width * nodeSize * 0.5f;
-            float halfDepth = depth * nodeSize * 0.5f;
-            float left = center.x - halfWidth;
-            float bottom = center.y - halfDepth;
+            float left = center.x - width * nodeSize * 0.5f;
+            float bottom = center.y - depth * nodeSize * 0.5f;
             int cellOriginX = Mathf.RoundToInt(left);
             int cellOriginY = Mathf.RoundToInt(bottom);
-            bool useDirectCellMapping = Mathf.Approximately(nodeSize, 1f) &&
-                                        Mathf.Abs(left - cellOriginX) < 0.0001f &&
-                                        Mathf.Abs(bottom - cellOriginY) < 0.0001f;
+            bool directMapping = Mathf.Approximately(nodeSize, 1f) &&
+                                 Mathf.Abs(left - cellOriginX) < 0.0001f &&
+                                 Mathf.Abs(bottom - cellOriginY) < 0.0001f;
 
             cachedGridGraphPenaltyAccess = new GridGraphPenaltyAccess(
                 nodes,
@@ -482,17 +670,14 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
                 1f / nodeSize,
                 cellOriginX,
                 cellOriginY,
-                useDirectCellMapping);
-
-            cachedGridGraphPenaltyGraph = gg;
+                directMapping);
+            cachedGridGraphPenaltyGraph = gridGraph;
             cachedGridGraphPenaltyNodes = nodes;
             cachedGridGraphPenaltyWidth = width;
             cachedGridGraphPenaltyDepth = depth;
             cachedGridGraphPenaltyCenter = center;
             cachedGridGraphPenaltyNodeSize = nodeSize;
             hasCachedGridGraphPenaltyAccess = true;
-
-            Debug.Log($"[AStar-Debug][AstarGameManager] GridGraphPenaltyAccess缓存已更新 | width={width} depth={depth} center={center} nodeSize={nodeSize} left={left} bottom={bottom} useDirectCellMapping={useDirectCellMapping}");
         }
 
         access = cachedGridGraphPenaltyAccess;
@@ -503,7 +688,6 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
     {
         int x = Mathf.FloorToInt((worldX - access.Left) * access.InvNodeSize);
         int y = Mathf.FloorToInt((worldY - access.Bottom) * access.InvNodeSize);
-
         if ((uint)x >= (uint)access.Width || (uint)y >= (uint)access.Depth)
         {
             node = null;
@@ -514,29 +698,28 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         return node != null;
     }
 
-    private static bool TryGetGridGraphNode(GridGraphPenaltyAccess access, Vector2Int cellPos, out GridNodeBase node)
+    public bool TryGetNodePenalty_GridGraphFast(Vector2 worldPosition, out uint penalty, out bool walkable)
     {
-        if (!access.UseDirectCellMapping)
-            return TryGetGridGraphNode(access, cellPos.x + 0.5f, cellPos.y + 0.5f, out node);
-
-        int x = cellPos.x - access.CellOriginX;
-        int y = cellPos.y - access.CellOriginY;
-
-        if ((uint)x >= (uint)access.Width || (uint)y >= (uint)access.Depth)
+        penalty = 0u;
+        walkable = false;
+        if (!TryGetGridGraphPenaltyAccess(out GridGraphPenaltyAccess access) ||
+            !TryGetGridGraphNode(access, worldPosition.x, worldPosition.y, out GridNodeBase node))
         {
-            node = null;
             return false;
         }
 
-        node = access.Nodes[x + y * access.Width];
-        return node != null;
+        penalty = node.Penalty;
+        walkable = node.Walkable;
+        return true;
     }
 
-    private static void ApplyNodePenaltyFast(GridNodeBase node, uint newPenalty, bool isWalkable)
+    private static void ApplyNodePenaltyFast(GridNodeBase node, uint penalty, bool walkable)
     {
-        bool targetWalkable = isWalkable && newPenalty > 0;
-        uint targetPenalty = targetWalkable ? newPenalty : 0u;
+        if (node == null)
+            return;
 
+        bool targetWalkable = walkable && penalty > 0u;
+        uint targetPenalty = targetWalkable ? penalty : 0u;
         if (node.Walkable == targetWalkable && node.Penalty == targetPenalty)
             return;
 
@@ -544,432 +727,199 @@ public class AstarGameManager : SingletonAutoMono<AstarGameManager>
         node.Penalty = targetPenalty;
     }
 
-    private static void ApplyNodePenaltyFast(GridGraphPenaltyAccess access, float worldX, float worldY, uint newPenalty, bool isWalkable)
+    #endregion
+
+    #region 兼容节点修改 API
+
+    internal void ModifyNodePenalty_Internal(Vector2Int nodePosition, uint penalty)
     {
-        if (!TryGetGridGraphNode(access, worldX, worldY, out var node))
+        if (!TryGetGridGraphPenaltyAccess(out GridGraphPenaltyAccess access))
+            return;
+        if ((uint)nodePosition.x >= (uint)access.Width || (uint)nodePosition.y >= (uint)access.Depth)
             return;
 
-        ApplyNodePenaltyFast(node, newPenalty, isWalkable);
+        Vector2Int worldCell = new Vector2Int(access.CellOriginX + nodePosition.x, access.CellOriginY + nodePosition.y);
+        QueueNavigationOverride(worldCell, penalty, penalty > 0u);
     }
 
-    /// <summary>
-    /// 超高频调用专用：直接按 GridGraph 坐标映射到节点，避免 GetNearest 的高开销。
-    /// 前提：使用的是 AstarPath.active.data.gridGraph 且 graph 未旋转（本项目 center.z=0 的2D用法）。
-    /// </summary>
-    public void ModifyNodePenalty_GridGraphFast(Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
+    [Button("修改单个节点权重")]
+    public void ModifyNodePenalty(Vector3 worldPosition, uint newPenalty = 1000)
     {
-        if (!TryGetGridGraphPenaltyAccess(out var access))
-        {
-            ModifyNodePenalty_Optimized(worldPos, newPenalty, isWalkable);
-            return;
-        }
-
-        ApplyNodePenaltyFast(access, worldPos.x, worldPos.y, newPenalty, isWalkable);
+        QueueNavigationOverride(
+            new Vector2Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y)),
+            newPenalty,
+            newPenalty > 0u);
     }
 
-    public void ModifyNodePenalty_GridGraphFast(GridGraphPenaltyAccess access, Vector2 worldPos, uint newPenalty = 1000, bool isWalkable = true)
+    public void ModifyNodePenalty_Optimized(Vector2 worldPosition, uint newPenalty = 1000, bool isWalkable = true)
     {
-        ApplyNodePenaltyFast(access, worldPos.x, worldPos.y, newPenalty, isWalkable);
+        QueueNavigationOverride(
+            new Vector2Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y)),
+            newPenalty,
+            isWalkable);
     }
 
-    public void ModifyNodePenalty_GridGraphFast(GridGraphPenaltyAccess access, Vector2Int cellPos, uint newPenalty = 1000, bool isWalkable = true)
+    public void ModifyNodePenalty_GridGraphFast(Vector2 worldPosition, uint newPenalty = 1000, bool isWalkable = true)
     {
-        if (!TryGetGridGraphNode(access, cellPos, out var node))
-            return;
-
-        ApplyNodePenaltyFast(node, newPenalty, isWalkable);
+        ModifyNodePenalty_Optimized(worldPosition, newPenalty, isWalkable);
     }
 
-    /// <summary>
-    /// 按世界坐标读取当前节点权重与可通行性。
-    /// 优先走 GridGraph 快速映射；在网格未就绪时回退到 GetNearest。
-    /// </summary>
-    public bool TryGetNodePenalty_GridGraphFast(Vector2 worldPos, out uint penalty, out bool isWalkable)
+    public void ModifyNodePenalty_GridGraphFast(
+        GridGraphPenaltyAccess access,
+        Vector2 worldPosition,
+        uint newPenalty = 1000,
+        bool isWalkable = true)
     {
-        penalty = 0u;
-        isWalkable = false;
-
-        if (!TryGetGridGraphPenaltyAccess(out var access))
-            return TryGetNodePenalty_Optimized(worldPos, out penalty, out isWalkable);
-
-        if (!TryGetGridGraphNode(access, worldPos.x, worldPos.y, out var node))
-            return false;
-
-        penalty = node.Penalty;
-        isWalkable = node.Walkable;
-        return true;
+        ModifyNodePenalty_Optimized(worldPosition, newPenalty, isWalkable);
     }
 
-    private bool TryGetNodePenalty_Optimized(Vector2 worldPos, out uint penalty, out bool isWalkable)
+    public void ModifyNodePenalty_GridGraphFast(
+        GridGraphPenaltyAccess access,
+        Vector2Int cellPosition,
+        uint newPenalty = 1000,
+        bool isWalkable = true)
     {
-        penalty = 0u;
-        isWalkable = false;
+        QueueNavigationOverride(cellPosition, newPenalty, isWalkable);
+    }
 
-        var active = AstarPath.active;
-        if (active == null)
-            return false;
-
-        NNInfo nnInfo = active.GetNearest(worldPos);
-        GraphNode targetNode = nnInfo.node;
-        if (targetNode == null)
-            return false;
-
-        penalty = targetNode.Penalty;
-        isWalkable = targetNode.Walkable;
-        return true;
+    private void QueueNavigationOverride(Vector2Int worldCell, uint penalty, bool walkable)
+    {
+        pendingOverrides[worldCell] = new NavigationOverride(penalty, walkable);
+        QueueNavigationCell(worldCell);
     }
 
     [Button("修改区域权重")]
     public void ModifyRegionPenalty(Vector2 center, int sizeX, int sizeY, int penaltyDelta = 500)
     {
-        if (Pathfinder == null || AstarPath.active == null)
-        {
-            Debug.LogError("❌ AstarPath 组件未初始化！");
+        if (AstarPath.active == null)
             return;
-        }
 
-        // 1. 构建区域边界（确保与节点对齐）
-        Vector3 boundsCenter = new Vector3(center.x, center.y, 0f);
-        Bounds targetRegion = new Bounds(boundsCenter, new Vector3(sizeX, sizeY, 1f));
-
-        // 2. 超旧版本核心配置：无updatePenalty！仅需addPenalty+禁用modifyWalkability（避免删节点）
-        GraphUpdateObject guo = new GraphUpdateObject(targetRegion);
-        guo.modifyWalkability = false; // 绝对禁用"可通行性修改"，彻底防止误删节点
-        guo.addPenalty = penaltyDelta; // 直接设置权重增量（正数加，负数减）
-
-        // 3. 应用区域权重修改
-        AstarPath.active.UpdateGraphs(guo);
-        Debug.Log($"✅ 区域权重修改成功！\n区域：{targetRegion}\n权重增量：{penaltyDelta}\n提示：权重建议控制在 {minPenalty}-{maxPenalty} 内");
-
-        // 4. Gizmos可视化（标记为"区域调整"，绿色线框）
-        penaltyModifiedBounds.Add(new DebugBounds
+        Bounds bounds = new Bounds(new Vector3(center.x, center.y, 0f), new Vector3(sizeX, sizeY, 1f));
+        GraphUpdateObject update = new GraphUpdateObject(bounds)
         {
-            bounds = targetRegion,
-            time = Time.time,
-            isKeyAdjust = false // 标记为区域调整
-        });
+            modifyWalkability = false,
+            addPenalty = penaltyDelta
+        };
+        AstarPath.active.UpdateGraphs(update);
+        penaltyModifiedBounds.Add(new DebugBounds { Bounds = bounds, Time = Time.time });
     }
 
-    // public GridGraphNodeData GetAllNodesData()
-    // {
-    //    GridGraph gridGraph = AstarPath.active.data.gridGraph;
-    //    return nodeData;
-    // }
-    #endregion
-
-    #region 按键调整鼠标节点权重（策划友好功能）
-    private void UpdateKeyControl()
-    {
-        // 仅在"功能启用+相机有效+寻路组件就绪"时生效
-        if (!enableKeyControl || mainCamera == null || Pathfinder == null || AstarPath.active == null)
-        {
-            return;
-        }
-
-        // 1. 按"+"（主键盘/小键盘）：增加鼠标位置节点权重
-        if (Input.GetKeyDown(KeyCode.Plus) || Input.GetKeyDown(KeyCode.KeypadPlus))
-        {
-            AdjustPenaltyAtMousePos(penaltyStep);
-        }
-
-        // 2. 按"-"（主键盘/小键盘）：减少鼠标位置节点权重
-        if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
-        {
-            AdjustPenaltyAtMousePos(-penaltyStep);
-        }
-    }
-
-    /// <summary>
-    /// 调整鼠标位置下节点的权重（增量方式）
-    /// </summary>
-    private void AdjustPenaltyAtMousePos(int penaltyDelta)
-    {
-        // 1. 鼠标屏幕坐标 → 世界坐标（适配2D场景，z轴设为0）
-        Vector3 mouseScreenPos = Input.mousePosition;
-        mouseScreenPos.z = Mathf.Abs(mainCamera.transform.position.z); // 确保与节点在同一平面
-        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
-        mouseWorldPos.z = 0; // 强制2D平面（匹配寻路节点z轴）
-
-        // 2. 世界坐标 → 寻路节点
-        NNInfo nnInfo = AstarPath.active.GetNearest(mouseWorldPos);
-        GraphNode targetNode = nnInfo.node;
-
-        // 3. 节点有效性校验
-        if (targetNode == null || !targetNode.Walkable)
-        {
-            Debug.LogWarning($"⚠️ 鼠标位置无有效节点！\n世界坐标：{mouseWorldPos}\n是否可通行：{targetNode?.Walkable ?? false}");
-            return;
-        }
-
-        // 4. 计算新权重（限制范围，避免异常）
-        int currentPenalty = (int)targetNode.Penalty; // 超旧版本Penalty为int/uint，强制转换安全
-        int newPenalty = Mathf.Clamp(currentPenalty + penaltyDelta, minPenalty, maxPenalty);
-
-        // 5. 应用新权重 + 日志提示
-        targetNode.Penalty = (uint)newPenalty;
-        Debug.Log($"🔧 鼠标节点权重调整成功！\n位置：{mouseWorldPos}\n原权重：{currentPenalty} → 新权重：{newPenalty}\n步长：{penaltyDelta}");
-
-        // 6. Gizmos可视化（标记为"按键调整"）
-        Bounds nodeBounds = new Bounds(mouseWorldPos, Vector3.one * 0.8f);
-        penaltyModifiedBounds.Add(new DebugBounds
-        {
-            bounds = nodeBounds,
-            time = Time.time,
-            isKeyAdjust = true
-        });
-    }
-    #endregion
-
-    #region Gizmos 可视化与辅助类
-    // 修复核心：补充 isKeyAdjust 字段，用于区分权重修改类型
-    private class DebugBounds
-    {
-        public Bounds bounds; // 区域边界
-        public float time; // 绘制起始时间
-        public bool isKeyAdjust = false; // true=按键调整，false=区域调整（新增字段）
-    }
-
-    private List<DebugBounds> updatedBounds = new List<DebugBounds>();
-    //TODO 能参考下面的更新特定区块的烘焙 然后新建一个更新特定区块的权重的方法吗
-
-    // —— 新增方法：按矩形区域更新权重（支持增量 addPenalty 与 逐节点绝对设置两种模式）
     [Button("更新特定区块权重")]
-    public void UpdateAreaPenalty_Rectangle(Vector2 center, int length, int width, int penaltyValue = 500, bool setAbsolute = false)
+    public void UpdateAreaPenalty_Rectangle(
+        Vector2 center,
+        int length,
+        int width,
+        int penaltyValue = 500,
+        bool setAbsolute = false)
     {
-        if (Pathfinder == null || AstarPath.active == null)
-        {
-            Debug.LogError("❌ AstarPath 组件未初始化！");
-            return;
-        }
-
-        Vector3 boundsCenter = new Vector3(center.x, center.y, 0f);
-        Bounds targetRegion = new Bounds(boundsCenter, new Vector3(length, width, 1f));
-
+        RectInt rect = CreateWorldRect(center, length, width);
         if (!setAbsolute)
         {
-            // 快速批量：使用 GraphUpdateObject.addPenalty（增量模式，性能最好）
-            GraphUpdateObject guo = new GraphUpdateObject(targetRegion);
-            guo.modifyWalkability = false;
-            guo.addPenalty = penaltyValue;
-            AstarPath.active.UpdateGraphs(guo);
-
-            Debug.Log($"✅ 区域（增量）权重修改成功！ 区域：{targetRegion} 权重增量：{penaltyValue}");
-        }
-        else
-        {
-            // 逐节点绝对赋值（比较耗时，采用协程分帧）
-            int clamped = Mathf.Clamp(penaltyValue, minPenalty, maxPenalty);
-            uint targetPenalty = (uint)clamped;
-
-            // 取 grid 的 nodeSize（如果可用），用于精确采样
-            float nodeSize = 1f;
-            var gg = AstarPath.active.data.gridGraph as GridGraph;
-            if (gg != null) nodeSize = gg.nodeSize;
-
-            // 计算采样的左下角与范围
-            float halfLen = length * 0.5f;
-            float halfWid = width * 0.5f;
-            float left = center.x - halfLen;
-            float bottom = center.y - halfWid;
-
-            // 启动协程做分帧设置（避免卡顿）
-            StartCoroutine(IterateSetPenalty_CoRod(left, bottom, length, width, nodeSize, targetPenalty));
-            Debug.Log($"🔧 已开始异步（分帧）区域绝对权重设置：区域中心 {center} 大小 {length}x{width} 目标权重 {targetPenalty}");
+            ModifyRegionPenalty(center, length, width, penaltyValue);
+            return;
         }
 
-        // 可视化（区域调整为绿色）
-        penaltyModifiedBounds.Add(new DebugBounds
+        uint penalty = (uint)Mathf.Clamp(penaltyValue, minPenalty, maxPenalty);
+        for (int x = rect.xMin; x < rect.xMax; x++)
         {
-            bounds = targetRegion,
-            time = Time.time,
-            isKeyAdjust = false
-        });
-    }
-
-    // 协程：按 nodeSize 逐点采样并设置权重（带分帧）
-    private IEnumerator IterateSetPenalty_CoRod(float left, float bottom, int length, int width, float nodeSize, uint targetPenalty)
-    {
-        if (AstarPath.active == null) yield break;
-
-        float right = left + length;
-        float top = bottom + width;
-
-        int rows = 0;
-        for (float x = left + nodeSize * 0.5f; x < right; x += nodeSize)
-        {
-            for (float y = bottom + nodeSize * 0.5f; y < top; y += nodeSize)
-            {
-                Vector3 samplePos = new Vector3(x, y, 0f);
-                NNInfo nn = AstarPath.active.GetNearest(samplePos);
-                GraphNode node = nn.node;
-                if (node != null && node.Walkable)
-                {
-                    if (node.Penalty != targetPenalty)
-                    {
-                        node.Penalty = targetPenalty;
-                    }
-                }
-            }
-
-            rows++;
-            // 每处理若干列分帧一次，避免卡顿（数值可调）
-            if (rows % 8 == 0)
-            {
-                yield return null;
-            }
+            for (int y = rect.yMin; y < rect.yMax; y++)
+                pendingOverrides[new Vector2Int(x, y)] = new NavigationOverride(penalty, penalty > 0u);
         }
+        QueueNavigationRegion(rect);
     }
 
     public void UpdateArea_Rectangle(Vector2 center, int length, int width)
     {
-        // 获取网格的节点大小，确保精确对齐
-        float nodeSize = 1f;
-        if (AstarPath.active != null)
+        RectInt rect = CreateWorldRect(center, length, width);
+        QueueNavigationRegion(rect);
+        updatedBounds.Add(new DebugBounds
         {
-            var gridGraph = AstarPath.active.data.gridGraph as GridGraph;
-            if (gridGraph != null) nodeSize = gridGraph.nodeSize;
-        }
-
-        // 计算精确的区域边界，确保只更新指定的节点数量
-        float halfLength = (length * nodeSize) * 0.5f;
-        float halfWidth = (width * nodeSize) * 0.5f;
-
-        Vector3 min = new Vector3(center.x - halfLength, center.y - halfWidth, 0f);
-        Vector3 max = new Vector3(center.x + halfLength, center.y + halfWidth, 0f);
-
-        Bounds bounds = new Bounds();
-        bounds.SetMinMax(min, max);
-
-        StartCoroutine(DelayedUpdate(bounds));
+            Bounds = new Bounds(new Vector3(center.x, center.y, 0f), new Vector3(length, width, 1f)),
+            Time = Time.time
+        });
     }
 
-    /// <summary>
-    /// 同步更新矩形区域的导航网格
-    /// </summary>
     public void UpdateArea_Rectangle_Sync(Vector2 center, int length, int width)
     {
-        // 添加空检查，避免 NullReferenceException
-        if (AstarPath.active == null)
-        {
-            Debug.LogError("❌ AstarPath.active 为 null，无法更新导航网格！");
+        UpdateArea_Rectangle(center, length, width);
+        if (AstarPath.active == null || !TryGetGridGraph(out GridGraph gridGraph))
             return;
-        }
 
-        if (updatedBounds == null)
+        navigationWorkItemQueued = true;
+        AstarPath.active.AddWorkItem(() =>
         {
-            Debug.LogError("❌ updatedBounds 为 null，无法记录更新区域！");
-            return;
-        }
-
-        // 获取网格的节点大小，确保精确对齐
-        float nodeSize = 1f;
-        var gridGraph = AstarPath.active.data.gridGraph as GridGraph;
-        if (gridGraph != null) nodeSize = gridGraph.nodeSize;
-
-        // 计算起始节点坐标（基于网格对齐）
-        int startX = Mathf.FloorToInt((center.x - (length * nodeSize * 0.5f)) / nodeSize);
-        int startY = Mathf.FloorToInt((center.y - (width * nodeSize * 0.5f)) / nodeSize);
-
-        // 创建精确的Bounds，确保只包含指定的节点
-        Bounds bounds = new Bounds();
-        bounds.center = new Vector3(center.x, center.y, 0f);
-
-        // 对于2D游戏，我们需要特别设置bounds的大小
-        // 使用nodeSize-0.01f确保不会包含额外的节点
-        bounds.size = new Vector3(length * nodeSize - 0.01f, width * nodeSize - 0.01f, 1f);
-        AstarPath.active.UpdateGraphs(bounds);
-        updatedBounds.Add(new DebugBounds { bounds = bounds, time = Time.time });
-
-        Debug.Log($"✅ 更新区域导航网格完成！中心：{center}，节点数：{length}x{width}，边界中心：{bounds.center}，边界大小：{bounds.size}");
+            ApplyPendingNavigationUpdatesInsideWorkItem(gridGraph);
+            navigationWorkItemQueued = false;
+        });
+        AstarPath.active.FlushWorkItems();
     }
 
-    private IEnumerator DelayedUpdate(Bounds originalBounds)
+    private static RectInt CreateWorldRect(Vector2 center, int width, int height)
     {
-        yield return null;
-
-        // 添加空检查，避免 NullReferenceException
-        if (AstarPath.active == null)
-        {
-            Debug.LogError("❌ AstarPath.active 为 null，无法更新导航网格！");
-            yield break;
-        }
-
-        if (updatedBounds == null)
-        {
-            Debug.LogError("❌ updatedBounds 为 null，无法记录更新区域！");
-            yield break;
-        }
-
-        // 获取网格的节点大小，确保精确对齐
-        float nodeSize = 1f;
-        var gridGraph = AstarPath.active.data.gridGraph as GridGraph;
-        if (gridGraph != null) nodeSize = gridGraph.nodeSize;
-
-        // 计算节点数量
-        int length = Mathf.RoundToInt(originalBounds.size.x / nodeSize);
-        int width = Mathf.RoundToInt(originalBounds.size.y / nodeSize);
-        Vector2 center = new Vector2(originalBounds.center.x, originalBounds.center.y);
-
-        // 创建精确的Bounds，确保只包含指定的节点
-        Bounds preciseBounds = new Bounds();
-        preciseBounds.center = new Vector3(center.x, center.y, 0f);
-        // 对于2D游戏，我们需要特别设置bounds的大小
-        // 使用nodeSize-0.01f确保不会包含额外的节点
-        preciseBounds.size = new Vector3(length * nodeSize - 0.01f, width * nodeSize - 0.01f, 1f);
-
-        var guo = new GraphUpdateObject(preciseBounds);
-        AstarPath.active.UpdateGraphs(guo);
-        updatedBounds.Add(new DebugBounds { bounds = preciseBounds, time = Time.time });
-
-        Debug.Log($"✅ 异步更新区域导航网格完成！中心：{center}，节点数：{length}x{width}，边界中心：{preciseBounds.center}，边界大小：{preciseBounds.size}");
+        int xMin = Mathf.FloorToInt(center.x - width * 0.5f);
+        int yMin = Mathf.FloorToInt(center.y - height * 0.5f);
+        return new RectInt(xMin, yMin, Mathf.Max(1, width), Mathf.Max(1, height));
     }
 
-    // 优化Gizmos：区分"原有更新区（红）""按键调整（黄）""区域调整（绿）"
+    #endregion
+
+    #region 调试
+
+    private void UpdateKeyControl()
+    {
+        if (!enableKeyControl || mainCamera == null || AstarPath.active == null)
+            return;
+
+        int delta = 0;
+        if (Input.GetKeyDown(KeyCode.Plus) || Input.GetKeyDown(KeyCode.KeypadPlus))
+            delta = penaltyStep;
+        else if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
+            delta = -penaltyStep;
+
+        if (delta == 0)
+            return;
+
+        Vector3 mousePosition = Input.mousePosition;
+        mousePosition.z = Mathf.Abs(mainCamera.transform.position.z);
+        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(mousePosition);
+        if (!TryGetNodePenalty_GridGraphFast(worldPosition, out uint currentPenalty, out bool walkable) || !walkable)
+            return;
+
+        uint nextPenalty = (uint)Mathf.Clamp((int)currentPenalty + delta, minPenalty, maxPenalty);
+        Vector2Int cell = new Vector2Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y));
+        QueueNavigationOverride(cell, nextPenalty, true);
+        penaltyModifiedBounds.Add(new DebugBounds
+        {
+            Bounds = new Bounds(new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f), Vector3.one * 0.8f),
+            Time = Time.time,
+            IsKeyAdjust = true
+        });
+    }
+
     private void OnDrawGizmos()
     {
-        // 1. 绘制原有NavMesh更新区域（红色线框，保留10秒）
-        if (updatedBounds != null && updatedBounds.Count > 0)
-        {
-            Gizmos.color = Color.red;
-            for (int i = updatedBounds.Count - 1; i >= 0; i--)
-            {
-                DebugBounds db = updatedBounds[i];
-                if (Time.time - db.time < 10f)
-                {
-                    Gizmos.DrawWireCube(db.bounds.center, db.bounds.size);
-                }
-                else
-                {
-                    updatedBounds.RemoveAt(i); // 超时移除，避免内存泄漏
-                }
-            }
-        }
+        DrawDebugBounds(updatedBounds, Color.red, 10f);
+        DrawDebugBounds(penaltyModifiedBounds, Color.green, 10f);
+    }
 
-        // 2. 绘制权重修改区域（黄色=按键调整，绿色=区域调整）
-        if (penaltyModifiedBounds != null && penaltyModifiedBounds.Count > 0)
-        {
-            for (int i = penaltyModifiedBounds.Count - 1; i >= 0; i--)
-            {
-                DebugBounds db = penaltyModifiedBounds[i];
-                // 按键调整保留5秒，区域调整保留10秒
-                if (Time.time - db.time < (db.isKeyAdjust ? 5f : 10f))
-                {
-                    // 颜色区分：黄色=按键，绿色=区域
-                    Gizmos.color = db.isKeyAdjust ? Color.yellow : Color.green;
-                    Gizmos.DrawWireCube(db.bounds.center, db.bounds.size);
+    private static void DrawDebugBounds(List<DebugBounds> boundsList, Color defaultColor, float lifetime)
+    {
+        if (boundsList == null)
+            return;
 
-                    // Editor模式下添加文字标签（更直观）
-#if UNITY_EDITOR
-                    string labelText = db.isKeyAdjust ? "Key Adjust" : "Area Adjust";
-                    Handles.Label(db.bounds.center + Vector3.up * 0.5f, labelText);
-#endif
-                }
-                else
-                {
-                    penaltyModifiedBounds.RemoveAt(i); // 超时移除
-                }
+        for (int i = boundsList.Count - 1; i >= 0; i--)
+        {
+            DebugBounds debugBounds = boundsList[i];
+            if (Time.time - debugBounds.Time > lifetime)
+            {
+                boundsList.RemoveAt(i);
+                continue;
             }
+
+            Gizmos.color = debugBounds.IsKeyAdjust ? Color.yellow : defaultColor;
+            Gizmos.DrawWireCube(debugBounds.Bounds.center, debugBounds.Bounds.size);
         }
     }
+
     #endregion
 }

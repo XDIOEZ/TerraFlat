@@ -25,6 +25,9 @@ public class CompostBinSaveState
 
 public class Mod_CompostBin : Module, IInteractable
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.5f;
+
 #region 基础参数
 
     public Ex_ModData ModSaveData = new Ex_ModData(); // 通用存档数据

@@ -4,6 +4,9 @@ using UnityEngine;
 
 public partial class Mod_Seed : Module
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.25f;
+
 #region 数据定义
 
     [System.Serializable]
