@@ -13,7 +13,10 @@ using Sirenix.OdinInspector;
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
     private const int CompactSaveVersion = 1;
+    private const string TemporarySaveSuffix = ".tmp";
+    private const string BackupSaveSuffix = ".bak";
     private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'2' };
+    private static readonly object SaveFileLock = new object();
 
     private readonly Dictionary<string, ChunkBaseline> chunkBaselines = new();
     private readonly Dictionary<string, ChunkSaveRecord> chunkDeltas = new();
@@ -201,7 +204,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             string fullPath = GetSaveFilePath(savePath, saveName);
             byte[] dataBytes = BuildCompactSavePayload(saveData);
-            File.WriteAllBytes(fullPath, dataBytes);
+            WriteSaveAtomically(fullPath, dataBytes);
 
             Debug.Log($"✅ 存档成功！路径: {fullPath}");
         }
@@ -317,16 +320,42 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         try
         {
             string fullPath = NormalizeSavePath(loadSavePath);
-            
-            if (!File.Exists(fullPath))
+            string backupPath = GetBackupSavePath(fullPath);
+            string temporaryPath = GetTemporarySavePath(fullPath);
+            string[] candidatePaths = { fullPath, backupPath, temporaryPath };
+            Exception lastException = null;
+
+            for (int i = 0; i < candidatePaths.Length; i++)
             {
-                Debug.LogWarning($"⚠️ 存档文件不存在：{fullPath}");
-                return;
+                string candidatePath = candidatePaths[i];
+                if (!File.Exists(candidatePath))
+                    continue;
+
+                try
+                {
+                    Debug.Log($"📖 开始加载存档：{candidatePath}");
+                    GameSaveData loadedSaveData = DeserializeSavePayload(File.ReadAllBytes(candidatePath));
+                    if (loadedSaveData == null)
+                        throw new InvalidDataException("存档反序列化结果为空");
+
+                    SaveData = loadedSaveData;
+                    if (i == 0)
+                        Debug.Log("✅ 存档加载成功");
+                    else
+                        Debug.LogWarning($"⚠️ 正式存档不可用，已从{(i == 1 ? "备份" : "临时文件")}恢复：{candidatePath}");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    Debug.LogWarning($"⚠️ 存档文件无效，尝试恢复文件：{candidatePath}\n{ex.Message}");
+                }
             }
 
-            Debug.Log($"📖 开始加载存档：{fullPath}");
-            SaveData = DeserializeSavePayload(File.ReadAllBytes(fullPath));
-            Debug.Log($"✅ 存档加载成功");
+            if (lastException != null)
+                throw new InvalidDataException("正式存档、备份及临时存档均无法加载", lastException);
+
+            Debug.LogWarning($"⚠️ 存档文件不存在：{fullPath}");
         }
         catch (Exception ex)
         {
@@ -369,9 +398,16 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         try
         {
-            if (File.Exists(fullPath))
+            string backupPath = GetBackupSavePath(fullPath);
+            string temporaryPath = GetTemporarySavePath(fullPath);
+            bool foundSaveFile = File.Exists(fullPath) || File.Exists(backupPath) || File.Exists(temporaryPath);
+
+            DeleteFileIfExists(fullPath);
+            DeleteFileIfExists(backupPath);
+            DeleteFileIfExists(temporaryPath);
+
+            if (foundSaveFile)
             {
-                File.Delete(fullPath);
                 Debug.Log($"✅ 存档已删除：{fullPath}");
             }
             else
@@ -413,6 +449,16 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return Path.Combine(basePath, saveName + ".bytes");
     }
 
+    private static string GetTemporarySavePath(string fullPath)
+    {
+        return fullPath + TemporarySaveSuffix;
+    }
+
+    private static string GetBackupSavePath(string fullPath)
+    {
+        return fullPath + BackupSaveSuffix;
+    }
+
     /// <summary>
     /// 规范化存档路径（添加.bytes扩展名）
     /// </summary>
@@ -426,11 +472,94 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// </summary>
     private void EnsureDirectoryExists(string path)
     {
-        string directory = Path.GetDirectoryName(path);
-        if (!Directory.Exists(directory))
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("存档目录为空", nameof(path));
+
+        Directory.CreateDirectory(path);
+    }
+
+    /// <summary>
+    /// 先将完整存档写入同目录临时文件并强制落盘，再原子替换正式文件。
+    /// 正式文件的上一版本会保留为.bak备份。
+    /// </summary>
+    private static void WriteSaveAtomically(string fullPath, byte[] dataBytes)
+    {
+        string temporaryPath = GetTemporarySavePath(fullPath);
+        string backupPath = GetBackupSavePath(fullPath);
+
+        lock (SaveFileLock)
         {
-            Directory.CreateDirectory(directory);
+            DeleteFileIfExists(temporaryPath);
+
+            try
+            {
+                using (FileStream stream = new FileStream(
+                    temporaryPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None,
+                    4096,
+                    FileOptions.WriteThrough))
+                {
+                    stream.Write(dataBytes, 0, dataBytes.Length);
+                    stream.Flush(true);
+                }
+
+                if (new FileInfo(temporaryPath).Length != dataBytes.LongLength)
+                    throw new IOException("临时存档写入不完整");
+
+                if (!File.Exists(fullPath))
+                {
+                    File.Move(temporaryPath, fullPath);
+                    return;
+                }
+
+                DeleteFileIfExists(backupPath);
+
+                try
+                {
+                    File.Replace(temporaryPath, fullPath, backupPath);
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    ReplaceSaveWithBackupFallback(temporaryPath, fullPath, backupPath);
+                }
+                catch (NotSupportedException)
+                {
+                    ReplaceSaveWithBackupFallback(temporaryPath, fullPath, backupPath);
+                }
+            }
+            finally
+            {
+                DeleteFileIfExists(temporaryPath);
+            }
         }
+    }
+
+    /// <summary>
+    /// 不支持File.Replace的平台使用可恢复的两步替换：旧正式存档先转为备份，再提交新存档。
+    /// </summary>
+    private static void ReplaceSaveWithBackupFallback(string temporaryPath, string fullPath, string backupPath)
+    {
+        File.Move(fullPath, backupPath);
+
+        try
+        {
+            File.Move(temporaryPath, fullPath);
+        }
+        catch
+        {
+            if (!File.Exists(fullPath) && File.Exists(backupPath))
+                File.Copy(backupPath, fullPath);
+
+            throw;
+        }
+    }
+
+    private static void DeleteFileIfExists(string path)
+    {
+        if (File.Exists(path))
+            File.Delete(path);
     }
 
     /// <summary>

@@ -9,6 +9,9 @@ using UltEvents;
 
 public partial class Mod_Food : Module, IInstanceUI
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.1f;
+
     [MemoryPackable]
     public partial class ObserverSnapshot
     {

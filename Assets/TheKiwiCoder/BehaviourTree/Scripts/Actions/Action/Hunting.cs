@@ -38,15 +38,16 @@ public class Hunting : ActionNode
     /// </summary>
     private Item FindTargetItem()
     {
-        foreach (Item item in context.itemDetector.CurrentItemsInArea)
+        for (int itemIndex = 0; itemIndex < context.itemDetector.CurrentItemsInArea.Count; itemIndex++)
         {
+            Item item = context.itemDetector.CurrentItemsInArea[itemIndex];
             if (item?.itemData.Tags == null)
                 continue;
 
-            // 检查物品类型是否匹配
-            if (ItemType.Exists(type => item.itemData.Tags.ContainsTag(type)))
+            for (int typeIndex = 0; typeIndex < ItemType.Count; typeIndex++)
             {
-                return item;
+                if (item.itemData.Tags.ContainsTag(ItemType[typeIndex]))
+                    return item;
             }
         }
 

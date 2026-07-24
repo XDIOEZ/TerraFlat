@@ -95,6 +95,9 @@ public partial class MeatrackSaveData
 /// </summary>
 public class Meatrack : Module, IInteractable, IInteract
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.5f;
+
 #region 常量
 
     private const string ModName = "晾肉架模块";

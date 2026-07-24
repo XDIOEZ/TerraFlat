@@ -4,6 +4,9 @@ using UnityEngine;
 
 public partial class Mod_Production : Module, IEnvironmentAdjustable
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.5f;
+
     #region 数据结构
 
     [System.Serializable]

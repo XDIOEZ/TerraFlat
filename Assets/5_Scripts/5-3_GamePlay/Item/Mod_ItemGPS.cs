@@ -5,6 +5,9 @@ using TMPro;
 
 public class Mod_ItemGPS : Module
 {
+  public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+  public override float FixedTickInterval => 0.25f;
+
     public Ex_ModData DebugData;
     public override ModuleData _Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
 

@@ -6,6 +6,9 @@ using UnityEngine;
 using UnityEngine.UI;
 public class Mod_Furnace : Module, IInteractable
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.1f;
+
     #region 基础参数
 
     public Ex_ModData_MemoryPackable ModSaveData;

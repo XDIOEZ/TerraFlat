@@ -1,5 +1,4 @@
 ﻿using Force.DeepCloner;
-using NavMeshPlus.Components;
 using NPOI.SS.Formula.Functions;
 using Sirenix.OdinInspector;
 using System.Collections;
@@ -211,27 +210,20 @@ public class Map : Item
         return backTilePenaltyWait;
     }
 
-    /// <summary>
-    /// 初始化随机地图生成器：
-    /// - 确保有实例（可在 Inspector 中直接配置字段）
-    /// - 绑定当前 Map / Item 引用
-    /// - 订阅 OnMapGenerated_Start 事件
-    /// </summary>
     private void InitMapGenerators()
     {
         for (int i = 0; i < mapGenerators.Count; i++)
         {
-            var gen = mapGenerators[i];
-            if (gen == null)
+            ChunkGeneratorBase generator = mapGenerators[i];
+            if (generator == null)
             {
-                Debug.LogError($"[Map.InitMapGenerators] ❌ mapGenerators[{i}] 为空（SerializeReference 丢失/未实例化？）", this);
+                Debug.LogError($"[Map.InitMapGenerators] mapGenerators[{i}] 为空", this);
                 continue;
             }
 
-            gen.Init(this);
+            generator.Init(this);
         }
 
-        // 由 Map 负责把事件桥接到生成器（生成器不再持有 Map 引用）
         if (!isMapGeneratorHooked)
         {
             OnMapGenerated_Start += HandleMapGeneratedStart;
@@ -239,9 +231,6 @@ public class Map : Item
         }
     }
 
-    /// <summary>
-    /// 获取第一个指定类型的生成器（常用于调试/显示脚本取 LandGenerator）。
-    /// </summary>
     public T GetGenerator<T>() where T : ChunkGeneratorBase
     {
         if (mapGenerators == null)
@@ -258,65 +247,46 @@ public class Map : Item
 
     private void HandleMapGeneratedStart()
     {
-        var planetData = SaveDataMgr.Instance != null ? SaveDataMgr.Instance.GetCurrentPlanetData() : null;
+        PlanetData planetData = SaveDataMgr.Instance != null
+            ? SaveDataMgr.Instance.GetCurrentPlanetData()
+            : null;
         GenerateByPipeline(planetData);
     }
 
-    /// <summary>
-    /// 按列表顺序执行所有生成器：0号位（大陆）→ 1号位（河流）→ ...
-    /// </summary>
     private void GenerateByPipeline(PlanetData planetData)
     {
         InitMapGenerators();
-
         if (mapGenerators == null || mapGenerators.Count == 0)
         {
-            Debug.LogError("[Map.GenerateByPipeline] ❌ mapGenerators 为空，无法生成", this);
+            Debug.LogError("[Map.GenerateByPipeline] mapGenerators 为空，无法生成", this);
             return;
         }
 
-        if (Data == null)
-        {
-            Debug.LogWarning("[Map.GenerateByPipeline] ⚠️ Data 为空，已自动创建 Data_TileMap", this);
-            Data = new Data_TileMap();
-        }
-
-        // 确保数组已初始化（数组为主存储）
+        Data ??= new Data_TileMap();
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
-
-        // 开始生成：先标记为未完成
         Data.TileLoaded = false;
 
         int worldSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         var context = new MapGenerationContext(this, planetData, worldSeed);
-
         for (int i = 0; i < mapGenerators.Count; i++)
         {
-            var gen = mapGenerators[i];
-            if (gen == null)
-            {
-                Debug.LogError($"[Map.GenerateByPipeline] ❌ mapGenerators[{i}] 为空，已跳过", this);
+            ChunkGeneratorBase generator = mapGenerators[i];
+            if (generator == null)
                 continue;
-            }
 
             try
             {
-                gen.Init(this);
-                gen.Generate(context);
+                generator.Init(this);
+                generator.Generate(context);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                Debug.LogError($"[Map.GenerateByPipeline] ❌ 执行生成器[{i}]({gen.GetType().Name})异常：{ex}", this);
+                Debug.LogError($"[Map.GenerateByPipeline] 生成器 {generator.GetType().Name} 执行失败：{exception}", this);
             }
         }
 
-        // 统一收尾：保证“迭代式生成”全部完成后再标记 TileLoaded
-        if (tileMap != null)
-        {
-            tileMap.RefreshAllTiles();
-        }
-
+        tileMap?.RefreshAllTiles();
         Data.TileLoaded = true;
         GetComponent<GrassDetailLayer>()?.Rebuild(this);
         SaveDataMgr.Instance?.OnProceduralChunkGenerated(chunk);
@@ -324,14 +294,18 @@ public class Map : Item
 
     private void OnGUI()
     {
-        // Map 自身不再负责调试 GUI，相关调试由 EnvironmentInfoDisplay 处理
     }
 
-    // 强制类型转换属性（保持与基类 Item 的兼容）
-    public override ItemData itemData { get => Data; set => Data = value as Data_TileMap; }
+    public override ItemData itemData
+    {
+        get => Data;
+        set => Data = value as Data_TileMap;
+    }
+
     #endregion
 
-    #region 基类方法实现
+    #region 基础方法实现
+
     public override void Act()
     {
         if (Data.TileLoaded)
@@ -347,27 +321,21 @@ public class Map : Item
             OnMapGenerated_Start.Invoke();
         }
     }
+
     #endregion
 
     #region 保存和加载
-
 
     [Button("从数据加载地图")]
     public override void Load()
     {
         base.Load();
-
         BindChunkOwner(GetComponentInParent<Chunk>());
-
-        // 确保生成器列表已初始化并绑定当前 Map
         InitMapGenerators();
 
         if (!EnsureTilemapReference())
-        {
             return;
-        }
 
-        // TODO 1：检查 Data，如果不存在或为空，则按种子 + 噪声生成 TileData
         if (Data == null)
         {
             Data = new Data_TileMap();
@@ -517,60 +485,39 @@ public class Map : Item
     [Button("异步烘焙地块寻路权重")]
     public void BackTilePenalty_Async()
     {
-        // 检查自身是否处于激活状态
         if (!gameObject.activeInHierarchy || !enabled)
-        {
-            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 跳过: 地图未激活 | Map={name} activeInHierarchy={gameObject.activeInHierarchy} enabled={enabled}");
             return;
-        }
 
-        float now = Time.unscaledTime;
-        if (now - lastBackTilePenaltyTime < backTilePenaltyMinInterval)
-        {
-            backTilePenaltyPending = true;
-            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 节流: 间隔过短({now - lastBackTilePenaltyTime:F3}s < {backTilePenaltyMinInterval}s) | 标记pending=true | Map={name}");
-            return;
-        }
-
-        // 非全量且无脏区时，跳过空烘焙
-        if (!backTilePenaltyForceFull && backTilePenaltyDirtyCells.Count == 0)
-        {
-            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 跳过: 无脏区 | forceFull={backTilePenaltyForceFull} dirtyCells={backTilePenaltyDirtyCells.Count} | Map={name}");
-            return;
-        }
-
-        // 已有协程在跑时，仅标记一次补跑，避免频繁Stop/Start
-        if (backTilePenaltyCoroutine != null)
-        {
-            backTilePenaltyPending = true;
-            Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 协程已在运行 | 标记pending=true | forceFull={backTilePenaltyForceFull} | Map={name}");
-            return;
-        }
-
-        lastBackTilePenaltyTime = now;
-        Debug.Log($"[AStar-Debug][Map] BackTilePenalty_Async 启动协程 | forceFull={backTilePenaltyForceFull} dirtyCells={backTilePenaltyDirtyCells.Count} | Map={name}");
-        // 启动新的协程
-        backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
+        QueuePendingNavigationChanges();
     }
 
     public void BackTilePenalty_Sync()
     {
+        QueuePendingNavigationChanges();
+    }
+
+    private void QueuePendingNavigationChanges()
+    {
+        var astar = AstarGameManager.Instance;
+        if (astar == null || Data == null)
+            return;
+
         if (backTilePenaltyForceFull)
         {
-            BakePenaltyForAllTilesSync();
+            if (Data.Width > 0 && Data.Height > 0)
+                astar.QueueNavigationRegion(new RectInt(Data.position.x, Data.position.y, Data.Width, Data.Height));
+
             backTilePenaltyForceFull = false;
             backTilePenaltyDirtyCells.Clear();
+            backTilePenaltyPending = false;
             return;
         }
 
-        if (backTilePenaltyDirtyCells.Count > 0)
-        {
-            BakePenaltyForDirtyCellsSync();
-            backTilePenaltyDirtyCells.Clear();
-            return;
-        }
+        foreach (Vector2Int worldCell in backTilePenaltyDirtyCells)
+            astar.QueueNavigationCell(worldCell);
 
-        // 无脏区时无需执行
+        backTilePenaltyDirtyCells.Clear();
+        backTilePenaltyPending = false;
     }
 
     private void BakePenaltyForAllTilesSync()
@@ -761,13 +708,9 @@ public class Map : Item
     /// <param name="position2D">地块的2D坐标</param>
     public void BackTilePenalty_Cell(Vector2 position2D)
     {
-        var tile = GetTile(new Vector2Int(x: (int)position2D.x, y: (int)position2D.y));
-        if (tile == null) return;
-
-        MarkPenaltyDirty(new Vector2Int((int)position2D.x, (int)position2D.y));
-
-        uint penalty = tile.Penalty;
-        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(position2D, penalty, tile.IsWalkable);
+        Vector2Int cell = new Vector2Int(Mathf.FloorToInt(position2D.x), Mathf.FloorToInt(position2D.y));
+        MarkPenaltyDirty(cell);
+        BackTilePenalty_Async();
     }
     /// <summary>
     /// 烘焙指定位置为中心的 3×3 地块寻路权重
@@ -779,12 +722,6 @@ public class Map : Item
             Mathf.FloorToInt(centerPosition2D.y)
         );
 
-        var astar = AstarGameManager.Instance;
-        if (astar == null)
-            return;
-
-        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
-
         for (int offsetX = -1; offsetX <= 1; offsetX++)
         {
             for (int offsetY = -1; offsetY <= 1; offsetY++)
@@ -794,27 +731,11 @@ public class Map : Item
                     center.y + offsetY
                 );
 
-                var tile = GetTile(tilePos);
-                if (tile == null)
-                    continue;
-
-                // 卸载建筑或恢复区域时，默认把地块恢复为可通行
-                tile.IsWalkable = true;
-
                 MarkPenaltyDirty(tilePos);
-
-                uint penalty = tile.Penalty;
-
-                if (hasFastAccess)
-                {
-                    astar.ModifyNodePenalty_GridGraphFast(access, tilePos, penalty, tile.IsWalkable);
-                }
-                else
-                {
-                    astar?.ModifyNodePenalty_Optimized(new Vector2(tilePos.x + 0.5f, tilePos.y + 0.5f), penalty, tile.IsWalkable);
-                }
             }
         }
+
+        BackTilePenalty_Async();
     }
 
 
@@ -838,19 +759,7 @@ public class Map : Item
             MarkPenaltyDirty(gridPos);
         }
 
-        var astar = AstarGameManager.Instance;
-        if (astar == null)
-            return;
-
-        // 再更新寻路节点：Penalty=0 + Walkable=false
-        if (astar.TryGetGridGraphPenaltyAccess(out var access))
-        {
-            astar.ModifyNodePenalty_GridGraphFast(access, gridPos, 0, false);
-        }
-        else
-        {
-            astar.ModifyNodePenalty_Optimized(new Vector2(gridPos.x + 0.5f, gridPos.y + 0.5f), 0, false);
-        }
+        BackTilePenalty_Async();
     }
 
     /// <summary>
@@ -859,90 +768,26 @@ public class Map : Item
     /// <param name="bounds">要烘焙的区域</param>
     public void BackTilePenalty_Bounds(Bounds bounds, bool useTilepenalty = false)
     {
-        Debug.Log($"[BackTilePenalty_Bounds] 开始烘焙Bounds区域，中心: {bounds.center}, 大小: {bounds.size}");
+        var astar = AstarGameManager.Instance;
+        if (astar == null)
+            return;
 
-        // 检查必要组件
-        if (Data == null)
+        int minX = Mathf.FloorToInt(bounds.min.x);
+        int minY = Mathf.FloorToInt(bounds.min.y);
+        int maxX = Mathf.CeilToInt(bounds.max.x);
+        int maxY = Mathf.CeilToInt(bounds.max.y);
+
+        if (useTilepenalty)
         {
-            Debug.LogError("[BackTilePenalty_Bounds] Data为空，无法执行烘焙");
+            astar.QueueNavigationRegion(new RectInt(minX, minY, maxX - minX, maxY - minY));
             return;
         }
 
-        // TileData_Array 在 Data 内部维护
-
-        if (tileMap == null)
+        for (int x = minX; x < maxX; x++)
         {
-            Debug.LogError("[BackTilePenalty_Bounds] tileMap为空，无法执行烘焙");
-            return;
+            for (int y = minY; y < maxY; y++)
+                astar.ModifyNodePenalty_Optimized(new Vector2(x + 0.5f, y + 0.5f), 0u, false);
         }
-
-        if (AstarGameManager.Instance == null)
-        {
-            Debug.LogError("[BackTilePenalty_Bounds] AstarGameManager.Instance为空，无法执行烘焙");
-            return;
-        }
-
-        // 获取GridGraph以获得节点尺寸信息
-        var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
-        float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
-        Debug.Log($"[BackTilePenalty_Bounds] 节点尺寸: {nodeSize}");
-
-        // 计算Bounds覆盖的整数坐标范围，带有0.5的右上角偏移
-        Vector2Int min = new Vector2Int(
-            Mathf.FloorToInt(bounds.min.x),
-            Mathf.FloorToInt(bounds.min.y)
-        );
-        Vector2Int max = new Vector2Int(
-            Mathf.FloorToInt(bounds.max.x),
-            Mathf.FloorToInt(bounds.max.y)
-        );
-
-        // 添加0.5的右上角偏移，确保与建筑放置时的网格对齐方式一致
-        max.x += 1; // 右上角偏移0.5相当于增加一个单位
-        max.y += 1; // 右上角偏移0.5相当于增加一个单位
-
-        Debug.Log($"[BackTilePenalty_Bounds] 计算出的坐标范围(带0.5偏移): min({min.x}, {min.y}) - max({max.x}, {max.y})");
-
-        int processedTiles = 0;
-        int skippedTiles = 0;
-
-        // 遍历Bounds内的所有地块
-        for (int x = min.x; x <= max.x; x++)
-        {
-            for (int y = min.y; y <= max.y; y++)
-            {
-                Vector2Int position2D = new Vector2Int(x, y);
-
-                // 只有当地图数据中存在该位置的地块时才处理
-                var list = Data.GetTileListAt(position2D);
-                if (list != null && list.Count > 0)
-                {
-                    TileData topTile = list[^1];
-                    Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
-
-                    // 使用更精确的世界坐标计算方法，解决偏移问题
-                    Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
-
-                    // 进一步校正坐标以匹配A*网格节点中心
-                    float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
-                    float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
-                    Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
-                    if (useTilepenalty == false)
-                        // 区域强制不可通行
-                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, 0, false);
-                    else
-                        // 使用地块自身的可通行性与权重
-                        AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty, topTile.IsWalkable);
-                    processedTiles++;
-                }
-                else
-                {
-                    skippedTiles++;
-                }
-            }
-        }
-
-        Debug.Log($"[BackTilePenalty_Bounds] 烘焙完成: 处理了{processedTiles}个地块，跳过了{skippedTiles}个不存在的地块");
     }
 
     public void MarkPenaltyDirty(Vector2Int worldPos)
@@ -956,75 +801,6 @@ public class Map : Item
         backTilePenaltyDirtyCells.Clear();
     }
 
-    /// <summary>
-    /// 协程：异步烘焙指定区域（Bounds）内所有地块的寻路权重
-    /// </summary>
-    /// <param name="bounds">要烘焙的区域</param>
-    /// <returns></returns>
-    private IEnumerator BackTilePenalty_BoundsCoroutine(Bounds bounds)
-    {
-        // 获取GridGraph以获得节点尺寸信息
-        var gridGraph = AstarGameManager.Instance?.Pathfinder?.data?.gridGraph;
-        float nodeSize = gridGraph != null ? gridGraph.nodeSize : 1f;
-
-        // 计算Bounds覆盖的整数坐标范围，带有0.5的右上角偏移
-        Vector2Int min = new Vector2Int(
-            Mathf.FloorToInt(bounds.min.x),
-            Mathf.FloorToInt(bounds.min.y)
-        );
-        Vector2Int max = new Vector2Int(
-            Mathf.FloorToInt(bounds.max.x),
-            Mathf.FloorToInt(bounds.max.y)
-        );
-
-        // 添加0.5的右上角偏移，确保与建筑放置时的网格对齐方式一致
-        max.x += 1; // 右上角偏移0.5相当于增加一个单位
-        max.y += 1; // 右上角偏移0.5相当于增加一个单位
-
-        // 计算总共需要处理的地块数量
-        int totalTiles = (max.x - min.x + 1) * (max.y - min.y + 1);
-
-        // 分批处理地块，避免长时间阻塞主线程
-        const int batchSize = 100;
-        int processedCount = 0;
-
-        // 遍历Bounds内的所有地块
-        for (int x = min.x; x <= max.x; x++)
-        {
-            for (int y = min.y; y <= max.y; y++)
-            {
-                Vector2Int position2D = new Vector2Int(x, y);
-
-                // 只有当地图数据中存在该位置的地块时才处理
-                var list = Data.GetTileListAt(position2D);
-                if (list != null && list.Count > 0)
-                {
-                    TileData topTile = list[^1];
-                    Vector3Int position3D = new Vector3Int(position2D.x, position2D.y, 0);
-
-                    // 使用更精确的世界坐标计算方法，解决偏移问题
-                    Vector3 cellCenterWorld = tileMap.CellToWorld(position3D) + tileMap.cellSize / 2f;
-
-                    // 进一步校正坐标以匹配A*网格节点中心
-                    float alignedX = Mathf.Floor(cellCenterWorld.x / nodeSize) * nodeSize + nodeSize * 0.5f;
-                    float alignedY = Mathf.Floor(cellCenterWorld.y / nodeSize) * nodeSize + nodeSize * 0.5f;
-                    Vector3 alignedWorldPos = new Vector3(alignedX, alignedY, cellCenterWorld.z);
-
-                    AstarGameManager.Instance?.ModifyNodePenalty_Optimized(alignedWorldPos, topTile.Penalty, topTile.IsWalkable);
-                }
-
-                processedCount++;
-
-                // 每处理一批就等待一帧，让出控制权给其他任务
-                if (processedCount % batchSize == 0)
-                {
-                    yield return null;
-                }
-            }
-        }
-
-        Debug.Log($"✅ 完成烘焙 Bounds 区域内 {processedCount} 个地块的寻路权重");
-    }
     #endregion
 
     #region 数据初始化

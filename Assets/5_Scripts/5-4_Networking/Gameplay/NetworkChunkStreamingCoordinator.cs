@@ -16,6 +16,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly List<Transform> observers = new List<Transform>();
         private readonly List<Vector3> observerPositions = new List<Vector3>();
         private int lastObserverSignature;
+        private Vector2Int lastNavigationAnchorChunk = new Vector2Int(int.MinValue, int.MinValue);
         private float nextRefreshTime;
 
         [SerializeField, Min(1)] private int loadDistance = 2;
@@ -98,7 +99,35 @@ namespace FlatWorld.Networking.Gameplay
                 inactiveDistance,
                 destroyDistance);
 
+            RefreshLocalNavigationAnchor();
+
             Debug.Log($"[联机区块] 已按 {observerPositions.Count} 个玩家刷新区块窗口");
+        }
+
+        private void RefreshLocalNavigationAnchor()
+        {
+            Transform anchor = null;
+            for (int i = 0; i < observers.Count; i++)
+            {
+                Transform observer = observers[i];
+                NetworkIdentity identity = observer != null ? observer.GetComponent<NetworkIdentity>() : null;
+                if (identity != null && identity.isOwned)
+                {
+                    anchor = observer;
+                    break;
+                }
+            }
+
+            anchor ??= observers.Count > 0 ? observers[0] : null;
+            if (anchor == null || !IsValidObserverPosition(anchor.position))
+                return;
+
+            Vector2Int anchorChunk = Chunk.GetChunkPosition(anchor.position);
+            if (anchorChunk == lastNavigationAnchorChunk)
+                return;
+
+            lastNavigationAnchorChunk = anchorChunk;
+            AstarGameManager.Instance?.RefreshNavMeshAsync(anchorChunk, loadDistance);
         }
 
         private static bool IsValidObserverPosition(Vector3 position)

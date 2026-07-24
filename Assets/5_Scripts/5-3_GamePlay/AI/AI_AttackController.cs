@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -55,8 +54,13 @@ public class AI_AttackController
 	public void Bind(Item item)
 	{
 		_damageMods.Clear();
-		_damageMods.AddRange(
-			item.GetComponentsInChildren<Mod_Damage>(true).Where(x => x != null));
+		Mod_Damage[] damageModules = item.GetComponentsInChildren<Mod_Damage>(true);
+		for (int i = 0; i < damageModules.Length; i++)
+		{
+			Mod_Damage damageModule = damageModules[i];
+			if (damageModule != null)
+				_damageMods.Add(damageModule);
+		}
 
 		// 缓存 Mod_AnimatorController_Receiver，用于同步 IsAttacking 状态
 		_animatorReceiver = item.GetComponentInChildren<Mod_AnimatorController_Receiver>(true);

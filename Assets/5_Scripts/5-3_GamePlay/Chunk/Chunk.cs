@@ -587,6 +587,8 @@ public class Chunk : MonoBehaviour
         {
             AddToPositionArray(item);
         }
+
+        ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(item);
     }
 
     /// <summary>
@@ -632,6 +634,7 @@ public class Chunk : MonoBehaviour
         RemoveFromGroup(item);
         RemoveFromPositionArray(item);
         MapSave?.RemoveItemData(item.itemData);
+        ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(item);
     }
     #endregion
 

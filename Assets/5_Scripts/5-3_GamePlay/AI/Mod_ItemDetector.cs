@@ -1,6 +1,5 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
-using System.Linq;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -26,6 +25,15 @@ public class Mod_ItemDetector : Module
     [Tooltip("string为tag,Item列表为Value的字典")]
     [ShowInInspector]
     public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>(); // 标签与物品列表的映射字典
+
+    private readonly HashSet<Item> _currentItemSet = new HashSet<Item>();
+    private readonly HashSet<Item> _previousItemSet = new HashSet<Item>();
+    private readonly List<Item> _emptyItems = new List<Item>(0);
+    private long _requestedVersion;
+    private long _appliedVersion;
+
+    public long RequestedVersion => _requestedVersion;
+    public long AppliedVersion => _appliedVersion;
     #endregion
 
     #region 属性和字段
@@ -59,40 +67,82 @@ public class Mod_ItemDetector : Module
     /// </summary>
     public void Update_Detector()
     {
+        RequestDetectorUpdate();
+    }
+
+    public long RequestDetectorUpdate()
+    {
+        _requestedVersion++;
+
+        ItemMgr itemManager = ItemMgr.GetInstance();
+        if (itemManager == null)
+        {
+            ApplyDetectorResults(_requestedVersion, _emptyItems);
+            return _requestedVersion;
+        }
+
+        itemManager.QueueDetectorQuery(this, _requestedVersion);
+        return _requestedVersion;
+    }
+
+    public bool IsRequestApplied(long requestVersion)
+    {
+        return requestVersion > 0 && _appliedVersion >= requestVersion;
+    }
+
+    internal void ApplyDetectorResults(long requestVersion, List<Item> detectedItems)
+    {
+        if (requestVersion != _requestedVersion)
+            return;
+
         if (DebugMode)
-            Debug.Log($"<color=yellow>=== 开始检测（位置：{transform.position}，半径：{DetectionRadius}）===</color>");
+            Debug.Log($"<color=yellow>=== 应用检测结果（位置：{transform.position}，半径：{DetectionRadius}）===</color>");
 
-        // 获取检测范围内的所有碰撞体
-        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position, DetectionRadius, itemLayer);
+        _previousItemSet.Clear();
+        for (int i = 0; i < CurrentItemsInArea.Count; i++)
+        {
+            Item previousItem = CurrentItemsInArea[i];
+            if (previousItem != null)
+                _previousItemSet.Add(previousItem);
+        }
 
-        // 转换为物品列表并排除自身
-        List<Item> currentItems = hitColliders
-            .Select(col => col.GetComponent<Item>())
-            .Where(item => item != null && item != this.item) // 排除自己
-            .Distinct()
-            .ToList();
-
-        // 清空现有数据
-        Type_Tag_Item_Dict.Clear();
         CurrentItemsInArea.Clear();
+        _currentItemSet.Clear();
+        if (detectedItems != null)
+        {
+            for (int i = 0; i < detectedItems.Count; i++)
+            {
+                Item detectedItem = detectedItems[i];
+                if (detectedItem != null && _currentItemSet.Add(detectedItem))
+                    CurrentItemsInArea.Add(detectedItem);
+            }
+        }
+
+        foreach (List<Item> taggedItems in Type_Tag_Item_Dict.Values)
+            taggedItems.Clear();
 
         // 重建标签映射字典
-        foreach (var item in currentItems)
+        for (int itemIndex = 0; itemIndex < CurrentItemsInArea.Count; itemIndex++)
         {
-            foreach (var tag in item.itemData.Tags)
+            Item detectedItem = CurrentItemsInArea[itemIndex];
+            List<string> tags = detectedItem.itemData.Tags;
+            for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
             {
+                string tag = tags[tagIndex];
                 // 如果标签不存在，创建新的列表
-                if (!Type_Tag_Item_Dict.ContainsKey(tag))
+                if (!Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> taggedItems))
                 {
-                    Type_Tag_Item_Dict[tag] = new List<Item>();
+                    taggedItems = new List<Item>(4);
+                    Type_Tag_Item_Dict[tag] = taggedItems;
                 }
                 // 将物品添加到对应标签的列表中
-                Type_Tag_Item_Dict[tag].Add(item);
+                taggedItems.Add(detectedItem);
             }
         }
 
         // 检查物品变化
-        CheckItemEntries(currentItems);
+        CheckItemEntries();
+        _appliedVersion = requestVersion;
     }
 
     /// <summary>
@@ -106,7 +156,7 @@ public class Mod_ItemDetector : Module
         {
             return items;
         }
-        return new List<Item>();
+        return _emptyItems;
     }
 
     /// <summary>
@@ -116,20 +166,25 @@ public class Mod_ItemDetector : Module
     /// <returns>具有任一指定标签的物品列表</returns>
     public List<Item> GetItemsByTags(List<string> tags)
     {
-        HashSet<Item> result = new HashSet<Item>();
+        List<Item> result = new List<Item>();
+        if (tags == null)
+            return result;
 
-        foreach (string tag in tags)
+        for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
         {
+            string tag = tags[tagIndex];
             if (Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> items))
             {
-                foreach (Item item in items)
+                for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
                 {
-                    result.Add(item);
+                    Item detectedItem = items[itemIndex];
+                    if (detectedItem != null && !result.Contains(detectedItem))
+                        result.Add(detectedItem);
                 }
             }
         }
 
-        return new List<Item>(result);
+        return result;
     }
 
     /// <summary>
@@ -150,8 +205,23 @@ public class Mod_ItemDetector : Module
     /// <returns>匹配指定ID名称的第一个物品，如果没有则返回null</returns>
     public Item GetFirstItemByIdNamesFast(List<string> itemIds)
     {
-        List<Item> items = GetItemsByIdNamesFast(itemIds);
-        return items.Count > 0 ? items[0] : null;
+        if (itemIds == null || itemIds.Count == 0)
+            return null;
+
+        for (int itemIndex = 0; itemIndex < CurrentItemsInArea.Count; itemIndex++)
+        {
+            Item detectedItem = CurrentItemsInArea[itemIndex];
+            if (detectedItem == null || detectedItem.itemData == null)
+                continue;
+
+            for (int idIndex = 0; idIndex < itemIds.Count; idIndex++)
+            {
+                if (detectedItem.itemData.IDName == itemIds[idIndex])
+                    return detectedItem;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -164,14 +234,25 @@ public class Mod_ItemDetector : Module
         if (tags == null || tags.Count == 0)
             return new List<Item>();
 
-        // 获取第一个标签的物品列表作为基础
-        List<Item> result = GetItemsByTag(tags[0]);
-
-        // 对于后续标签，只保留同时存在于所有标签中的物品
-        for (int i = 1; i < tags.Count; i++)
+        List<Item> result = new List<Item>();
+        for (int itemIndex = 0; itemIndex < CurrentItemsInArea.Count; itemIndex++)
         {
-            List<Item> currentTagItems = GetItemsByTag(tags[i]);
-            result = result.Intersect(currentTagItems).ToList();
+            Item detectedItem = CurrentItemsInArea[itemIndex];
+            if (detectedItem == null || detectedItem.itemData?.Tags == null)
+                continue;
+
+            bool containsAllTags = true;
+            for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
+            {
+                if (!detectedItem.itemData.Tags.Contains(tags[tagIndex]))
+                {
+                    containsAllTags = false;
+                    break;
+                }
+            }
+
+            if (containsAllTags)
+                result.Add(detectedItem);
         }
 
         return result;
@@ -187,21 +268,72 @@ public class Mod_ItemDetector : Module
         if (itemIds == null || itemIds.Count == 0)
             return new List<Item>();
 
-        // 创建ID名称的HashSet以提高查找效率
-        HashSet<string> idSet = new HashSet<string>(itemIds);
         List<Item> result = new List<Item>();
 
         // 遍历所有当前检测到的物品
-        foreach (Item item in CurrentItemsInArea)
+        for (int itemIndex = 0; itemIndex < CurrentItemsInArea.Count; itemIndex++)
         {
-            // 使用HashSet快速检查是否存在
-            if (idSet.Contains(item.itemData.IDName))
+            Item detectedItem = CurrentItemsInArea[itemIndex];
+            if (detectedItem == null || detectedItem.itemData == null)
+                continue;
+
+            for (int idIndex = 0; idIndex < itemIds.Count; idIndex++)
             {
-                result.Add(item);
+                if (detectedItem.itemData.IDName != itemIds[idIndex])
+                    continue;
+
+                result.Add(detectedItem);
+                break;
             }
         }
 
         return result;
+    }
+
+    public Item FindClosestItemByTags(List<string> tags, Vector3 origin, bool includeUnityPlayerTag = false)
+    {
+        Item closestItem = null;
+        float closestDistanceSqr = float.MaxValue;
+
+        for (int i = 0; i < CurrentItemsInArea.Count; i++)
+        {
+            Item detectedItem = CurrentItemsInArea[i];
+            if (detectedItem == null || detectedItem.itemData == null)
+                continue;
+
+            bool matches = HasAnyTag(detectedItem.itemData.Tags, tags);
+            if (!matches && includeUnityPlayerTag)
+                matches = detectedItem.CompareTag("Player");
+            if (!matches)
+                continue;
+
+            float distanceSqr = (detectedItem.transform.position - origin).sqrMagnitude;
+            if (distanceSqr >= closestDistanceSqr)
+                continue;
+
+            closestDistanceSqr = distanceSqr;
+            closestItem = detectedItem;
+        }
+
+        return closestItem;
+    }
+
+    private static bool HasAnyTag(List<string> itemTags, List<string> targetTags)
+    {
+        if (itemTags == null || targetTags == null)
+            return false;
+
+        for (int targetIndex = 0; targetIndex < targetTags.Count; targetIndex++)
+        {
+            string targetTag = targetTags[targetIndex];
+            for (int itemTagIndex = 0; itemTagIndex < itemTags.Count; itemTagIndex++)
+            {
+                if (itemTags[itemTagIndex] == targetTag)
+                    return true;
+            }
+        }
+
+        return false;
     }
     #endregion
 
@@ -209,36 +341,33 @@ public class Mod_ItemDetector : Module
     /// <summary>
     /// 检查物品进入和离开的变化
     /// </summary>
-    /// <param name="currentItems">当前检测到的物品列表</param>
-    private void CheckItemEntries(List<Item> currentItems)
+    private void CheckItemEntries()
     {
         if (DebugMode)
-            Debug.Log($"<color=green>=== 检测物品变化（当前区域内：{currentItems.Count}个，上次检测：{CurrentItemCount}个） ===</color>");
+            Debug.Log($"<color=green>=== 检测物品变化（当前区域内：{CurrentItemsInArea.Count}个，上次检测：{_previousItemSet.Count}个） ===</color>");
 
         // 检查新进入的物品
-        foreach (var item in currentItems)
+        for (int i = 0; i < CurrentItemsInArea.Count; i++)
         {
-            if (!CurrentItemsInArea.Contains(item))
+            Item detectedItem = CurrentItemsInArea[i];
+            if (!_previousItemSet.Contains(detectedItem))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=lime>进入区域：{item.name}（ID：{item.GetInstanceID()}，物品ID：{item.itemData.IDName}）</color>");
-                OnItemEnter(item);
+                    Debug.Log($"<color=lime>进入区域：{detectedItem.name}（ID：{detectedItem.GetInstanceID()}，物品ID：{detectedItem.itemData.IDName}）</color>");
+                OnItemEnter(detectedItem);
             }
         }
 
         // 检查离开的物品
-        foreach (var item in CurrentItemsInArea.ToList())
+        foreach (Item previousItem in _previousItemSet)
         {
-            if (!currentItems.Contains(item))
+            if (!_currentItemSet.Contains(previousItem))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=orange>离开区域：{item.name}（ID：{item.GetInstanceID()}，物品ID：{item.itemData.IDName}）</color>");
-                OnItemExit(item);
+                    Debug.Log($"<color=orange>离开区域：{previousItem.name}（ID：{previousItem.GetInstanceID()}，物品ID：{previousItem.itemData.IDName}）</color>");
+                OnItemExit(previousItem);
             }
         }
-
-        // 更新当前物品列表
-        CurrentItemsInArea = currentItems;
 
         if (DebugMode)
             Debug.Log($"<color=blue>当前区域物品总数：{CurrentItemCount}</color>");

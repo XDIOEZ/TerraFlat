@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
-using System.Linq;
 using UnityEditor;
 
 [NodeMenu("ActionNode/检测/物体与本体的距离")]
@@ -31,23 +30,36 @@ public class ItemDistanceCheck : ActionNode
             return State.Failure;
         }
 
-        // 优化匹配性能
-        HashSet<string> tagSet = new HashSet<string>(itemTypeTags);
-
-        foreach (var item in context.itemDetector.CurrentItemsInArea)
+        for (int itemIndex = 0; itemIndex < context.itemDetector.CurrentItemsInArea.Count; itemIndex++)
         {
-            var itemTags = item.itemData.Tags;
+            Item item = context.itemDetector.CurrentItemsInArea[itemIndex];
+            if (item == null || item.itemData?.Tags == null)
+                continue;
 
-            bool matches = itemTags.Any(tag => tagSet.Contains(tag.ToString()));
+            bool matches = false;
+            List<string> itemTags = item.itemData.Tags;
+            for (int targetTagIndex = 0; targetTagIndex < itemTypeTags.Count && !matches; targetTagIndex++)
+            {
+                string targetTag = itemTypeTags[targetTagIndex];
+                for (int itemTagIndex = 0; itemTagIndex < itemTags.Count; itemTagIndex++)
+                {
+                    if (itemTags[itemTagIndex] == targetTag)
+                    {
+                        matches = true;
+                        break;
+                    }
+                }
+            }
+
             if (!matches)
                 continue;
 
-            float distance = Vector2.Distance(
-                new Vector2(context.transform.position.x, context.transform.position.y),
-                new Vector2(item.transform.position.x, item.transform.position.y)
-            );
+            Vector2 offset = (Vector2)item.transform.position - (Vector2)context.transform.position;
+            float distanceSqr = offset.sqrMagnitude;
+            float minDistanceSqr = Range.x * Range.x;
+            float maxDistanceSqr = Range.y * Range.y;
 
-            if (distance >= Range.x && distance <= Range.y)
+            if (distanceSqr >= minDistanceSqr && distanceSqr <= maxDistanceSqr)
             {
                 return State.Success;
             }

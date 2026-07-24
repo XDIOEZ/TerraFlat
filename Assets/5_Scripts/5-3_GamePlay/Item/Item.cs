@@ -31,7 +31,15 @@ public abstract class Item : MonoBehaviour
     /// 模块字典，通过名称访问各个模块
     /// </summary>
     [FastClonerIgnore]
-    public Dictionary<string, Module> Mods { get => itemMods.Mods; set => itemMods.Mods = value; }
+    public Dictionary<string, Module> Mods
+    {
+        get => itemMods.Mods;
+        set
+        {
+            itemMods.BindOwner(this);
+            itemMods.Mods = value;
+        }
+    }
 
     #endregion
 
@@ -82,6 +90,20 @@ public abstract class Item : MonoBehaviour
     public UltEvent<float> OnDurabilityModified = new();
 
     private readonly List<Module> modsSnapshot = new List<Module>(16);
+
+    private sealed class ScheduledModuleTick
+    {
+        public Module Module;
+        public float Interval;
+        public float Elapsed;
+    }
+
+    private readonly List<Module> everyFrameModules = new List<Module>(8);
+    private readonly List<ScheduledModuleTick> scheduledModules = new List<ScheduledModuleTick>(8);
+    private static readonly Dictionary<Type, bool> moduleTickImplementationCache = new Dictionary<Type, bool>();
+    private bool moduleScheduleDirty = true;
+    private ItemTickTier tickTier = ItemTickTier.Dormant;
+    private float lastScheduledTickTime = -1f;
     #endregion
 
     #region 生命周期方法
@@ -93,7 +115,10 @@ public abstract class Item : MonoBehaviour
     public virtual void Load()
     {
         isInitialized = true;
+        itemMods.BindOwner(this);
         ModuleLoad();
+        MarkModuleScheduleDirty();
+        ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(this);
     }
 
 
@@ -129,28 +154,34 @@ public abstract class Item : MonoBehaviour
         if (!isInitialized)
             return;
 
-        var mods = GetModsSnapshot();
+        EnsureModuleSchedule();
 
-        // 低频更新逻辑（有间隔）
-        if (updateInterval > 0.1f)
+        for (int i = 0; i < everyFrameModules.Count; i++)
         {
-            updateTimer += deltaTime;
-            if (updateTimer < updateInterval)
-                return;
+            Module mod = everyFrameModules[i];
+            if (IsScheduledModuleValid(mod))
+                mod.ModUpdate(deltaTime);
+        }
 
-            updateTimer = 0f;
-            foreach (Module mod in mods)
-            {
-                mod.ModUpdate(updateInterval);
-            }
+        TickScheduledModules(deltaTime);
+    }
+
+    internal void TickScheduled(float currentTime)
+    {
+        if (!isInitialized)
+            return;
+
+        EnsureModuleSchedule();
+
+        if (lastScheduledTickTime < 0f)
+        {
+            lastScheduledTickTime = currentTime;
             return;
         }
 
-        // 高频更新逻辑（无间隔）
-        foreach (Module mod in mods)
-        {
-            mod.ModUpdate(deltaTime);
-        }
+        float elapsed = Mathf.Max(0f, currentTime - lastScheduledTickTime);
+        lastScheduledTickTime = currentTime;
+        TickScheduledModules(elapsed);
     }
 
     /// <summary>
@@ -188,7 +219,8 @@ public abstract class Item : MonoBehaviour
         isInitialized = false;
         updateTimer = 0f;
         Owner = null;
-        itemMods = new ItemMods();
+        itemMods = new ItemMods(this);
+        ClearModuleSchedule();
 
         OnUIRefresh.Clear();
         OnItemDestroy.Clear();
@@ -320,6 +352,8 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void ModuleLoad()
     {
+        itemMods.BindOwner(this);
+        MarkModuleScheduleDirty();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         var modules = GetComponentsInChildren<Module>().ToList();
@@ -430,6 +464,8 @@ public abstract class Item : MonoBehaviour
                 mod.Load();
             }
         }
+
+        MarkModuleScheduleDirty();
     }
 
     /// <summary>
@@ -492,6 +528,7 @@ public abstract class Item : MonoBehaviour
         transform.position = itemData.transform.position;
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
+        ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(this);
     }
 
     /// <summary>
@@ -617,6 +654,145 @@ public abstract class Item : MonoBehaviour
         }
         return modsSnapshot;
     }
+
+    #region 更新调度
+
+    internal ItemTickTier GetTickTier()
+    {
+        EnsureModuleSchedule();
+        return tickTier;
+    }
+
+    internal void ResetScheduledTickClock(float currentTime)
+    {
+        lastScheduledTickTime = currentTime;
+    }
+
+    public void MarkModuleScheduleDirty()
+    {
+        moduleScheduleDirty = true;
+        ItemMgr itemManager = ItemMgr.GetInstance();
+        if (itemManager != null)
+            itemManager.NotifyItemScheduleChanged(this);
+    }
+
+    private void EnsureModuleSchedule()
+    {
+        if (!moduleScheduleDirty)
+            return;
+
+        everyFrameModules.Clear();
+        scheduledModules.Clear();
+
+        float shortestInterval = float.MaxValue;
+        bool useLegacyItemInterval = updateInterval > 0.1f;
+
+        foreach (Module mod in Mods.Values)
+        {
+            if (mod == null)
+                continue;
+
+            ModuleTickMode mode = useLegacyItemInterval
+                ? ModuleTickMode.FixedInterval
+                : ResolveModuleTickMode(mod);
+            if (mode == ModuleTickMode.Disabled)
+                continue;
+
+            if (mode == ModuleTickMode.EveryFrame)
+            {
+                everyFrameModules.Add(mod);
+                continue;
+            }
+
+            float interval = useLegacyItemInterval
+                ? updateInterval
+                : Mathf.Max(0.01f, mod.FixedTickInterval);
+
+            scheduledModules.Add(new ScheduledModuleTick
+            {
+                Module = mod,
+                Interval = interval,
+                Elapsed = 0f
+            });
+            shortestInterval = Mathf.Min(shortestInterval, interval);
+        }
+
+        if (everyFrameModules.Count > 0)
+        {
+            tickTier = ItemTickTier.EveryFrame;
+        }
+        else if (scheduledModules.Count == 0)
+        {
+            tickTier = ItemTickTier.Dormant;
+        }
+        else if (shortestInterval <= 0.075f)
+        {
+            tickTier = ItemTickTier.Fast;
+        }
+        else if (shortestInterval <= 0.15f)
+        {
+            tickTier = ItemTickTier.Normal;
+        }
+        else
+        {
+            tickTier = ItemTickTier.Slow;
+        }
+
+        moduleScheduleDirty = false;
+    }
+
+    private static ModuleTickMode ResolveModuleTickMode(Module mod)
+    {
+        ModuleTickMode mode = mod.TickMode;
+        if (mode != ModuleTickMode.EveryFrame)
+            return mode;
+
+        Type moduleType = mod.GetType();
+        if (!moduleTickImplementationCache.TryGetValue(moduleType, out bool hasTickImplementation))
+        {
+            var tickMethod = moduleType.GetMethod(nameof(Module.ModUpdate), new[] { typeof(float) });
+            hasTickImplementation = tickMethod != null && tickMethod.DeclaringType != typeof(Module);
+            moduleTickImplementationCache[moduleType] = hasTickImplementation;
+        }
+
+        return hasTickImplementation ? ModuleTickMode.EveryFrame : ModuleTickMode.Disabled;
+    }
+
+    private void TickScheduledModules(float deltaTime)
+    {
+        for (int i = 0; i < scheduledModules.Count; i++)
+        {
+            ScheduledModuleTick scheduled = scheduledModules[i];
+            scheduled.Elapsed += deltaTime;
+            if (scheduled.Elapsed < scheduled.Interval)
+                continue;
+
+            float elapsed = scheduled.Elapsed;
+            scheduled.Elapsed = 0f;
+
+            if (IsScheduledModuleValid(scheduled.Module))
+                scheduled.Module.ModUpdate(elapsed);
+        }
+    }
+
+    private bool IsScheduledModuleValid(Module mod)
+    {
+        if (mod == null || mod._Data == null || string.IsNullOrEmpty(mod._Data.Name))
+            return false;
+
+        return Mods.TryGetValue(mod._Data.Name, out Module current) && current == mod;
+    }
+
+    private void ClearModuleSchedule()
+    {
+        everyFrameModules.Clear();
+        scheduledModules.Clear();
+        tickTier = ItemTickTier.Dormant;
+        lastScheduledTickTime = -1f;
+        moduleScheduleDirty = true;
+    }
+
+    #endregion
 
     public T GetMod<T>(out T mod) where T : Module
     {

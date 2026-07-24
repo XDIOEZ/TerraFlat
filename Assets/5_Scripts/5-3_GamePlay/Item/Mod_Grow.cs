@@ -30,6 +30,9 @@ public partial class GrowData
 
 public class Mod_Grow : Module
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.25f;
+
     public Ex_ModData_MemoryPackable ModData;
     public override ModuleData _Data
     {

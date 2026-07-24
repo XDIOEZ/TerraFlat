@@ -5,6 +5,9 @@ using UnityEngine;
 
 public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 0.25f;
+
 #region 嵌套类型
 
     [System.Serializable]

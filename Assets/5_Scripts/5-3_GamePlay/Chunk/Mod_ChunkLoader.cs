@@ -361,9 +361,8 @@ public class Mod_ChunkLoader : Module
             return;
         }
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 → RefreshChunkPenalty | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
-        // 使用固定中心坐标烘焙权重，避免异步扫描期间玩家移动导致范围偏移
-        ChunkMgr.Instance?.RefreshChunkPenalty(completedCenterChunk, completedLoadDistance);
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AstarGameManager] 增量导航更新完成 | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
     }
 
     #endregion

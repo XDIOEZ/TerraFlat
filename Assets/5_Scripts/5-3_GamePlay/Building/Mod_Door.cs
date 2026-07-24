@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Mod_Door : Module, IInteractable
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
     #region 数据定义
     [System.Serializable]
     public class DoorStateData

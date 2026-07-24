@@ -717,7 +717,7 @@ MonoBehaviour:
     seed: 0
     pivotPointRoot: {fileID: 0}
     spreadOutCount: 1
-  showGraphs: 1
+  showGraphs: 0
 --- !u!114 &1976977817011761695
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -732,7 +732,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Pathfinder: {fileID: 1944405980370659897}
   Init: 1
-  EnableDebugLogs: 1
+  EnableDebugLogs: 0
   enableKeyControl: 1
   penaltyStep: 100
   minPenalty: 0
