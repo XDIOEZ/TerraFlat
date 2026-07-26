@@ -52,19 +52,25 @@ public partial class Nutrition
     //重写+ operator
     public static Nutrition operator +(Nutrition a, Nutrition b)
     {
-        Nutrition result = new Nutrition();
-        result.Carbohydrates = a.Carbohydrates + b.Carbohydrates;
-        result.Protein = a.Protein + b.Protein;
-        result.Water = a.Water + b.Water;
-        result.Fat = a.Fat + b.Fat;
-        result.Vitamins = a.Vitamins + b.Vitamins;
-        //确保输出不会大于a的最大值
-        result.Carbohydrates = Mathf.Min(result.Carbohydrates, a.Max_Carbohydrates);
-        result.Protein = Mathf.Min(result.Protein, a.Max_Protein);
-        result.Water = Mathf.Min(result.Water, a.Max_Water);
-        result.Fat = Mathf.Min(result.Fat, a.Max_Fat);
-        result.Vitamins = Mathf.Min(result.Vitamins, a.Max_Vitamins);
-        return result;
+        if (a == null)
+            return b;
+        if (b == null)
+            return a;
+
+        // 营养增减只改变当前值；容量上限始终继承被食用者，不能被临时食物或 Buff 重置。
+        return new Nutrition
+        {
+            Max_Carbohydrates = a.Max_Carbohydrates,
+            Max_Protein = a.Max_Protein,
+            Max_Water = a.Max_Water,
+            Max_Fat = a.Max_Fat,
+            Max_Vitamins = a.Max_Vitamins,
+            Carbohydrates = Mathf.Clamp(a.Carbohydrates + b.Carbohydrates, 0f, a.Max_Carbohydrates),
+            Protein = Mathf.Clamp(a.Protein + b.Protein, 0f, a.Max_Protein),
+            Water = Mathf.Clamp(a.Water + b.Water, 0f, a.Max_Water),
+            Fat = Mathf.Clamp(a.Fat + b.Fat, 0f, a.Max_Fat),
+            Vitamins = Mathf.Clamp(a.Vitamins + b.Vitamins, 0f, a.Max_Vitamins)
+        };
     }
 
     //新增一个方法 更新最大值 到当前值

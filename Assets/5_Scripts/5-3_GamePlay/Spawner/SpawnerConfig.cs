@@ -3,6 +3,12 @@ using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 
+public enum SpawnerScheduleMode
+{
+    TimedWindows = 0,
+    DayMilestoneGrowth = 1
+}
+
 /// <summary>
 /// 怪物生成系统配置类 - 包含所有生成相关的常数和配置
 /// </summary>
@@ -48,6 +54,17 @@ public class SpawnerConfig : ScriptableObject
 
 #region 时间配置
 
+    [LabelText("持久化标识")]
+    [Tooltip("用于存档中区分不同生成配置。留空时使用资源名称。")]
+    public string PersistentId;
+
+    [LabelText("调度模式")]
+    public SpawnerScheduleMode ScheduleMode = SpawnerScheduleMode.TimedWindows;
+
+    [LabelText("仅在全局无光时生成")]
+    [Tooltip("启用后，只在昼夜系统的全局光照为0时处理生成。")]
+    public bool RequireGlobalDarkness;
+
     /// <summary>
     /// 生成触发时间 - 白天12点（游戏秒数）
     /// 一天时长1440秒，12点对应 12/24 * 1440 = 720秒
@@ -63,6 +80,11 @@ public class SpawnerConfig : ScriptableObject
     [LabelText("时间容差")]
     [Tooltip("允许的触发误差范围，避免浮点误差导致漏刷或重复刷怪")]
     public float SpawnTimeTolerance = 1f; // 触发窗口容差
+
+    [LabelText("每日生成次数")]
+    [Tooltip("每天均匀分布多少个生成窗口。1 表示每天一次，2 表示刷新频率翻倍")]
+    [MinValue(1)]
+    public int SpawnsPerDay = 1;
 
 #endregion
 
@@ -107,6 +129,24 @@ public class SpawnerConfig : ScriptableObject
     [LabelText("生成间隔天数")]
     [Tooltip("两次成功生成之间至少间隔多少个游戏日")]
     public int DaysBetweenSpawns = 1; // 两次成功生成之间的最小间隔，单位：游戏日
+
+    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
+    [LabelText("每多少天增加一次")]
+    [MinValue(1)]
+    public int GrowthIntervalDays = 3;
+
+    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
+    [LabelText("累计生成上限")]
+    [MinValue(1)]
+    public int MaxLifetimeSpawnCount = 64;
+
+    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
+    [LabelText("分帧生成间隔")]
+    [MinValue(0f)]
+    public float AsyncSpawnInterval;
+
+    [LabelText("必须生成在完全黑暗地块")]
+    public bool RequireCompletelyDarkTile = true;
 
     #endregion
 

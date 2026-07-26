@@ -43,6 +43,15 @@ public class Mod_Grow : Module
     [SerializeField]
     public GrowData Data = new GrowData();
 
+    [Header("各生长阶段的最大生命值比例")]
+    [Tooltip("以成熟阶段最大生命值为基准；列表顺序与生长阶段一致。")]
+    [SerializeField]
+    private List<float> growState_MaxHealthRatios = new List<float>() { 0.25f, 0.5f, 0.75f, 1f };
+
+    [Header("成熟阶段最大生命值")]
+    [SerializeField, Min(1f)]
+    private float matureMaxHealth = 200f;
+
     public enum GrowState
     {
         幼苗,
@@ -53,6 +62,7 @@ public class Mod_Grow : Module
 
     // 缓存DamageReceiver组件
     private DamageReceiver cachedDamageReceiver;
+    private int lastAppliedHealthStage = -1;
 
 [System.Serializable]
 public class LootEntryCollection
@@ -79,6 +89,7 @@ public List<LootEntryCollection> stageLoots = new List<LootEntryCollection>();
         {
             cachedDamageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
         }
+        lastAppliedHealthStage = -1;
 
         // 根据当前生长阶段直接更新视觉（缩放），仅视觉不添加战利品
         if (item != null && Data.growState_Scale != null && Data.growState_Scale.Count > 0)
@@ -132,6 +143,7 @@ private void UpdateVisualAndBehavior()
                 // 更新视觉表现（缩放），保护索引越界
                 float scale = (i < Data.growState_Scale.Count) ? Data.growState_Scale[i] : 1f;
                 item.transform.localScale = new Vector3(scale, scale, 1);
+                ApplyStageHealth(true);
 
                 // 执行阶段相关的行为（添加战利品），避免重复添加
                 if (cachedDamageReceiver != null && stageLoots != null && stageLoots.Count > i)
@@ -160,6 +172,8 @@ private void UpdateVisualAndBehavior()
 
     public override void ModUpdate(float deltaTime)
     {
+        ApplyStageHealth();
+
         if (Data.growState == GrowState.成熟) return; // 已成熟则不再生长
 
         // 增加生长进度
@@ -174,6 +188,41 @@ private void UpdateVisualAndBehavior()
         // 同时更新视觉与行为（只在阶段变化时触发添加战利品）
         UpdateVisualAndBehavior();
     }
+
+private void ApplyStageHealth(bool force = false)
+{
+    if (item == null || Data == null)
+        return;
+
+    if (cachedDamageReceiver == null)
+        cachedDamageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+
+    if (cachedDamageReceiver == null ||
+        growState_MaxHealthRatios == null ||
+        growState_MaxHealthRatios.Count == 0)
+    {
+        return;
+    }
+
+    int stageIndex = Mathf.Clamp(
+        (int)Data.growState,
+        0,
+        growState_MaxHealthRatios.Count - 1);
+
+    if (!force && lastAppliedHealthStage == stageIndex)
+        return;
+
+    float healthRatio = cachedDamageReceiver.MaxHp > 0f
+        ? Mathf.Clamp01(cachedDamageReceiver.Hp / cachedDamageReceiver.MaxHp)
+        : 1f;
+    float stageRatio = Mathf.Max(0.01f, growState_MaxHealthRatios[stageIndex]);
+    float targetMaxHealth = Mathf.Max(1f, matureMaxHealth * stageRatio);
+
+    cachedDamageReceiver.MaxHp = targetMaxHealth;
+    cachedDamageReceiver.Hp = targetMaxHealth * healthRatio;
+    cachedDamageReceiver.DataUpdate?.Invoke();
+    lastAppliedHealthStage = stageIndex;
+}
 
 public void OnValidate()
 {
@@ -198,5 +247,8 @@ public void OnValidate()
     // 保证阈值、缩放等列表长度合理（可选容错）
     if (Data.growState_Value == null) Data.growState_Value = new List<float>() { 0, 20, 50, 100 };
     if (Data.growState_Scale == null) Data.growState_Scale = new List<float>() { 0.1f, 0.2f, 0.6f, 1f };
+    if (growState_MaxHealthRatios == null || growState_MaxHealthRatios.Count == 0)
+        growState_MaxHealthRatios = new List<float>() { 0.25f, 0.5f, 0.75f, 1f };
+    matureMaxHealth = Mathf.Max(1f, matureMaxHealth);
 }
 }

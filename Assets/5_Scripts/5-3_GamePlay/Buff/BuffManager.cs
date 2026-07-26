@@ -1,424 +1,454 @@
-using Sirenix.OdinInspector;
+using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
-/// Buff ¹ÜÀíÏµÍ³£¬¸ºÔğ¹ÜÀíËùÓĞ Buff µÄÌí¼Ó¡¢ÒÆ³ı¡¢ÔËĞĞºÍ±£´æ
+/// Buff ç”Ÿå‘½å‘¨æœŸã€å åŠ ã€æŒä¹…åŒ–å’Œè§’è‰²æ¶ˆè´¹äº‹ä»¶çš„ç»Ÿä¸€å…¥å£ã€‚
 /// </summary>
 public class BuffManager : Module
 {
-    #region ×Ö¶ÎÓëÊôĞÔ
+    private const float TickInterval = 0.1f;
+
     [ShowInInspector]
-    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
+    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new();
 
     public Ex_ModData_MemoryPackable ModData;
+
     public override ModuleData _Data
     {
-        get { return ModData; }
-        set { ModData = (Ex_ModData_MemoryPackable)value; }
+        get => ModData;
+        set => ModData = (Ex_ModData_MemoryPackable)value;
     }
 
-    /// <summary>
-    /// Buff ½ÓÊÕÕß£¨Í¨³£ÊÇ Item£©
-    /// </summary>
-    private Item buffReceiver;
-    #endregion
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => TickInterval;
 
-    #region ³õÊ¼»¯ÓëÉúÃüÖÜÆÚ
-    public new void Awake()
+    public event Action<BuffRunTime> BuffAdded;
+    public event Action<BuffRunTime> BuffRemoved;
+    public event Action<BuffRunTime> BuffDurationChanged;
+
+    private readonly List<string> iterationIds = new(16);
+    private readonly List<string> expiredIds = new(8);
+
+    private Item buffReceiver;
+    private Mod_Food observedFood;
+
+    public override void Awake()
     {
         base.Awake();
         _Data.ID = ModText.BuffManager;
         buffReceiver = GetComponentInParent<Item>();
 
         if (buffReceiver == null)
-        {
-            Debug.LogWarning($"?? BuffManager ÕÒ²»µ½ Item ×é¼ş");
-        }
+            Debug.LogWarning("[BuffManager] æ‰¾ä¸åˆ°çˆ¶çº§ Itemã€‚", this);
     }
+
     public override void Load()
     {
+        buffReceiver ??= item;
+        BuffRunTimeData_Dic ??= new Dictionary<string, BuffRunTime>();
+
         if (ModData == null)
         {
-            Debug.LogError("? ModData Îª null£¬ÎŞ·¨¼ÓÔØ Buff Êı¾İ");
+            Debug.LogError("[BuffManager] ModData ä¸ºç©ºï¼Œæ— æ³•åŠ è½½ Buffã€‚", this);
             return;
         }
 
-        ModData.ReadData(ref BuffRunTimeData_Dic);
+        try
+        {
+            ModData.ReadData(ref BuffRunTimeData_Dic);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[BuffManager] Buff å­˜æ¡£è¯»å–å¤±è´¥ï¼Œå·²ä½¿ç”¨ç©ºçŠ¶æ€ï¼š{exception.Message}", this);
+            BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
+        }
 
+        BuffRunTimeData_Dic ??= new Dictionary<string, BuffRunTime>();
         InitializeBuffs();
+        BindFoodEvents();
     }
 
     public override void Save()
     {
         if (ModData == null)
         {
-            Debug.LogError("? ModData Îª null£¬ÎŞ·¨±£´æ Buff Êı¾İ");
+            Debug.LogError("[BuffManager] ModData ä¸ºç©ºï¼Œæ— æ³•ä¿å­˜ Buffã€‚", this);
             return;
         }
 
         ModData.WriteData(BuffRunTimeData_Dic);
     }
-    #endregion
 
-    #region Buff ³õÊ¼»¯
-    /// <summary>
-    /// ³õÊ¼»¯ËùÓĞ Buff Êı¾İ
-    /// </summary>
+    private void OnDestroy()
+    {
+        UnbindFoodEvents();
+    }
+
     private void InitializeBuffs()
-    {
-        if (BuffRunTimeData_Dic == null || BuffRunTimeData_Dic.Count == 0)
-            return;
-
-        // È·±£½ÓÊÕÕßÒıÓÃÓĞĞ§
-        if (buffReceiver == null)
-        {
-            buffReceiver = item;
-        }
-
-        // Í¬²½ Data ºó£¬³õÊ¼»¯ Buff µÄ½ÓÊÕÕßĞÅÏ¢£º
-        // ÓÅÏÈÍ¨¹ı³Ö¾Ã»¯µÄ Guid ´Ó ItemMgr ÖĞ²éÕÒ¶ÔÓ¦ Item£¬ÕÒ²»µ½ÔòÍË»Øµ½±¾µØ buffReceiver
-        foreach (var buff in BuffRunTimeData_Dic.Values)
-        {
-            if (buff == null) continue;
-
-            Item receiver = buffReceiver;
-            Item sender = null;
-
-            if (ItemMgr.Instance != null)
-            {
-                // ¸ù¾İ³Ö¾Ã»¯µÄ Guid ÖØĞÂ°ó¶¨½ÓÊÕÕß
-                if (buff.receiverGuid != 0)
-                {
-                    var guidReceiver = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
-                    if (guidReceiver != null)
-                    {
-                        receiver = guidReceiver;
-                    }
-                }
-                else
-                {
-                    var guidReceiver = ItemMgr.Instance.GetItemByGuid(buff.receiverGuid);
-                    if (guidReceiver != null)
-                    {
-                        receiver = guidReceiver;
-                    }
-                    Debug.LogWarning($"?? Buff {buff.buff_IDName} µÄ receiverGuid Îª 0£¬ÎŞ·¨´Ó ItemMgr »¹Ô­½ÓÊÕÕß");
-                }
-
-                // ¸ù¾İ³Ö¾Ã»¯µÄ Guid ÖØĞÂ°ó¶¨·¢ËÍÕß£¨Èç¹ûÓĞ£©
-                if (buff.senderGuid != 0)
-                {
-                    var guidSender = ItemMgr.Instance.GetItemByGuid(buff.senderGuid);
-                    if (guidSender != null)
-                    {
-                        sender = guidSender;
-                    }
-                }
-                else if (sender == null)
-                {
-                    Debug.LogWarning($"?? Buff {buff.buff_IDName} µÄ senderGuid Îª 0£¬ÎŞ·¨´Ó ItemMgr »¹Ô­·¢ËÍÕß");
-                }
-            }
-
-            // ÕâÀï´«ÈëµÄ sender/receiver ¿ÉÄÜÎª null£¬SetBuffData »áÖ»¸üĞÂ·Ç¿ÕµÄÒıÓÃºÍ Guid
-            buff.SetBuffData(sender: sender, receiver: receiver);
-        }
-
-        Debug.Log($"? ÒÑ³õÊ¼»¯ {BuffRunTimeData_Dic.Count} ¸ö Buff");
-    }
-    #endregion
-
-    #region Buff Ìí¼Ó
-    /// <summary>
-    /// Ìí¼Ó Buff£¨¼òÒ×°æ±¾£©
-    /// </summary>
-    /// <param name="buffData_SO">Buff Êı¾İ ScriptableObject</param>
-    public void AddBuff(Buff_Data buffData_SO)
-    {
-        if (buffReceiver == null)
-        {
-            Debug.LogError("? BuffReceiver Îª null£¬ÎŞ·¨Ìí¼Ó Buff");
-            return;
-        }
-
-        AddBuffRuntime(buffData_SO, buffReceiver);
-    }
-
-    /// <summary>
-    /// Ìí¼Ó Buff ÔËĞĞÊ±ÊµÀı
-    /// </summary>
-    /// <param name="buffData_SO">Buff Êı¾İ ScriptableObject</param>
-    /// <param name="receiver">Buff ½ÓÊÕÕß</param>
-    public void AddBuffRuntime(Buff_Data buffData_SO, Item receiver)
-    {
-        // ÑéÖ¤ÊäÈë²ÎÊı
-        if (buffData_SO == null)
-        {
-            Debug.LogWarning("?? buffData_SO Îª¿Õ£¬ÎŞ·¨Ìí¼Ó Buff");
-            return;
-        }
-
-        if (receiver == null)
-        {
-            Debug.LogWarning("?? Buff ½ÓÊÕÕßÎª¿Õ£¬ÎŞ·¨Ìí¼Ó Buff");
-            return;
-        }
-
-        if (string.IsNullOrEmpty(buffData_SO.buff_ID))
-        {
-            Debug.LogError("? Buff ID Îª¿Õ£¬ÎŞ·¨Ìí¼Ó Buff");
-            return;
-        }
-
-        // ¼ì²éÊÇ·ñÓ¦¸ÃÓ¦ÓÃ´Ë Buff
-        if (!ShouldApplyBuff(buffData_SO))
-        {
-            Debug.Log($"? Buff {buffData_SO.buff_ID} Ìø¹ıÓ¦ÓÃ£¨ÒÑ´æÔÚÇÒ²»¿Éµş¼Ó£©");
-            return;
-        }
-
-        // ¿ËÂ¡ Buff_Data ÒÔ±ÜÃâĞŞ¸ÄÔ­Ê¼ ScriptableObject
-        Buff_Data clonedBuffData = buffData_SO.Clone();
-
-        if (clonedBuffData == null)
-        {
-            Debug.LogError("? ¿ËÂ¡ Buff Êı¾İÊ§°Ü");
-            return;
-        }
-
-        // ´´½¨ Buff ÔËĞĞÊ±ÊµÀı
-        BuffRunTime newBuff = new BuffRunTime
-        {
-            buff_IDName = clonedBuffData.buff_ID,
-            buff = clonedBuffData,
-            buff_Receiver = receiver,
-        };
-
-        AddBuffByData(newBuff);
-    }
-
-    /// <summary>
-    /// ¼ì²éÊÇ·ñÓ¦¸ÃÓ¦ÓÃ´Ë Buff£¨¸ù¾İÒÑÓĞµÄ Buff ºÍµş¼ÓÀàĞÍÅĞ¶Ï£©
-    /// </summary>
-    /// <param name="buffData">ÒªÓ¦ÓÃµÄ Buff Êı¾İ</param>
-    /// <returns>true Ó¦¸ÃÓ¦ÓÃ£¬false Ó¦¸ÃÌø¹ı</returns>
-    private bool ShouldApplyBuff(Buff_Data buffData)
-    {
-        if (buffData == null || string.IsNullOrEmpty(buffData.buff_ID))
-            return false;
-
-        // Èç¹û´Ë Buff »¹²»´æÔÚ£¬Ó¦¸ÃÓ¦ÓÃ
-        if (!BuffRunTimeData_Dic.ContainsKey(buffData.buff_ID))
-        {
-            return true;
-        }
-
-        // Buff ÒÑ´æÔÚ£¬¸ù¾İµş¼ÓÀàĞÍÅĞ¶Ï
-        switch (buffData.buff_StackType)
-        {
-            case BuffStackType.DurationAdd:
-                // ÑÓ³¤³ÖĞøÊ±¼ä£¬Ó¦¸ÃÓ¦ÓÃ
-                Debug.Log($"? Buff {buffData.buff_ID} ½«ÑÓ³¤³ÖĞøÊ±¼ä");
-                return true;
-
-            case BuffStackType.RefreshDuration:
-                // Ë¢ĞÂ³ÖĞøÊ±¼ä£¬Ó¦¸ÃÓ¦ÓÃ
-                Debug.Log($"? Buff {buffData.buff_ID} ½«Ë¢ĞÂ³ÖĞøÊ±¼ä");
-                return true;
-
-            case BuffStackType.StackCount:
-                // ¶Ñµş¼ÆÊı£¬¼ì²éÊÇ·ñ´ïµ½ÉÏÏŞ
-                if (BuffRunTimeData_Dic.TryGetValue(buffData.buff_ID, out var buffWithStack))
-                {
-                    if (buffWithStack.buff_CurrentStack < buffData.buff_MaxStack)
-                    {
-                        Debug.Log($"? Buff {buffData.buff_ID} ¿ÉÒÔ¼ÌĞø¶Ñµş");
-                        return true;
-                    }
-                    else
-                    {
-                        Debug.Log($"?? Buff {buffData.buff_ID} ÒÑ´ï×î´ó¶ÑµşÊı£¬²»¿É¼ÌĞø¶Ñµş");
-                        return false;
-                    }
-                }
-                return true;
-
-            case BuffStackType.Keep:
-                // ±£³ÖÏÖÓĞ×´Ì¬£¬²»Ó¦ÓÃĞÂµÄ Buff
-                Debug.Log($"? Buff {buffData.buff_ID} ±£³ÖÏÖÓĞ×´Ì¬£¬²»Ó¦ÓÃ");
-                return false;
-
-            default:
-                Debug.LogWarning($"?? Î´ÖªµÄ Buff µş¼ÓÀàĞÍ: {buffData.buff_StackType}");
-                return true;
-        }
-    }
-
-    /// <summary>
-    /// Í¨¹ı BuffRunTime Êı¾İÌí¼Ó Buff
-    /// </summary>
-    /// <param name="newBuff">ĞÂµÄ Buff ÔËĞĞÊ±Êı¾İ</param>
-    private void AddBuffByData(BuffRunTime newBuff)
-    {
-        if (newBuff == null)
-        {
-            Debug.LogError("? newBuff Îª null");
-            return;
-        }
-
-        string buffID = newBuff.buff_IDName;
-
-        if (BuffRunTimeData_Dic.TryGetValue(buffID, out var existingBuff))
-        {
-            // Buff ÒÑ´æÔÚ£¬¸ù¾İµş¼ÓÀàĞÍ´¦Àí
-            HandleBuffStack(newBuff, existingBuff);
-        }
-        else
-        {
-            // µÚÒ»´ÎÌí¼Ó¸Ã Buff
-            BuffRunTimeData_Dic[buffID] = newBuff;
-            newBuff.OnBuff_Start();
-            //            Debug.Log($"? Ìí¼ÓĞÂ Buff: {buffID}");
-        }
-    }
-
-    /// <summary>
-    /// ´¦Àí Buff µş¼ÓÂß¼­
-    /// </summary>
-    private void HandleBuffStack(BuffRunTime newBuff, BuffRunTime existingBuff)
-    {
-        if (existingBuff == null || newBuff?.buff == null)
-        {
-            Debug.LogWarning("?? Buff Êı¾İÎª null£¬ÎŞ·¨´¦Àíµş¼Ó");
-            return;
-        }
-
-        string buffID = newBuff.buff_IDName;
-
-        switch (newBuff.buff.buff_StackType)
-        {
-            case BuffStackType.DurationAdd:
-                // ÑÓ³¤ÏÖÓĞ Buff µÄ³ÖĞøÊ±¼ä
-                float remainingTime = newBuff.buff.buff_Duration - existingBuff.buff_CurrentDuration;
-                existingBuff.buff_CurrentDuration += remainingTime;
-                Debug.Log($"? Buff {buffID} ÑÓ³¤³ÖĞøÊ±¼ä£º+{remainingTime}s");
-                break;
-
-            case BuffStackType.RefreshDuration:
-                // Ë¢ĞÂ³ÖĞøÊ±¼ä
-                existingBuff.buff_CurrentDuration = 0;
-                Debug.Log($"? Buff {buffID} Ë¢ĞÂ³ÖĞøÊ±¼ä");
-                break;
-
-            case BuffStackType.StackCount:
-                // Ôö¼Ó¶ÑµşÊı
-                if (existingBuff.buff_CurrentStack < existingBuff.buff.buff_MaxStack)
-                {
-                    existingBuff.buff_CurrentStack += 1;
-                    Debug.Log($"? Buff {buffID} ¶ÑµşÊıÔö¼Ó£º{existingBuff.buff_CurrentStack}/{existingBuff.buff.buff_MaxStack}");
-                }
-                else
-                {
-                    // ´ïµ½×î´ó¶Ñµş£¬ÖØÖÃ³ÖĞøÊ±¼ä
-                    existingBuff.buff_CurrentDuration = 0;
-                    Debug.Log($"?? Buff {buffID} ´ïµ½×î´ó¶Ñµş£¬³ÖĞøÊ±¼äÒÑÖØÖÃ");
-                }
-                break;
-
-            case BuffStackType.Keep:
-                // ±£³ÖÏÖÓĞ×´Ì¬£¬Ê²Ã´¶¼²»×ö
-                Debug.Log($"? Buff {buffID} ±£³ÖÏÖÓĞ×´Ì¬£¨²»µş¼Ó£©");
-                break;
-
-            default:
-                Debug.LogWarning($"?? Î´ÖªµÄ Buff µş¼ÓÀàĞÍ: {newBuff.buff.buff_StackType}");
-                break;
-        }
-    }
-    #endregion
-
-    #region Buff ²éÑ¯
-    /// <summary>
-    /// ¼ì²éÊÇ·ñ´æÔÚÖ¸¶¨ ID µÄ Buff
-    /// </summary>
-    /// <param name="buffId">Buff ID</param>
-    /// <returns>ÊÇ·ñ´æÔÚ</returns>
-    public bool HasBuff(string buffId)
-    {
-        if (string.IsNullOrEmpty(buffId))
-            return false;
-
-        return BuffRunTimeData_Dic.ContainsKey(buffId);
-    }
-
-    /// <summary>
-    /// »ñÈ¡Ö¸¶¨ ID µÄ Buff ÔËĞĞÊ±Êı¾İ
-    /// </summary>
-    /// <param name="buffId">Buff ID</param>
-    /// <param name="buff">Êä³öµÄ Buff Êı¾İ</param>
-    /// <returns>ÊÇ·ñ»ñÈ¡³É¹¦</returns>
-    public bool TryGetBuff(string buffId, out BuffRunTime buff)
-    {
-        return BuffRunTimeData_Dic.TryGetValue(buffId, out buff);
-    }
-    #endregion
-
-    #region Buff ÒÆ³ı
-    /// <summary>
-    /// ÒÆ³ıÖ¸¶¨ ID µÄ Buff
-    /// </summary>
-    /// <param name="buffId">Buff ID</param>
-    public void RemoveBuff(string buffId)
-    {
-        if (string.IsNullOrEmpty(buffId))
-        {
-            Debug.LogWarning("?? Buff ID Îª¿Õ");
-            return;
-        }
-
-        if (!BuffRunTimeData_Dic.TryGetValue(buffId, out var buff))
-        {
-            Debug.LogWarning($"?? ÕÒ²»µ½ Buff: {buffId}");
-            return;
-        }
-
-        buff?.OnBuff_Stop();
-        BuffRunTimeData_Dic.Remove(buffId);
-        //  Debug.Log($"? ÒÆ³ı Buff: {buffId}");
-    }
-
-    /// <summary>
-    /// Çå³ıËùÓĞ Buff
-    /// </summary>
-    public void ClearAllBuffs()
-    {
-        foreach (var buff in BuffRunTimeData_Dic.Values)
-        {
-            buff?.OnBuff_Stop();
-        }
-
-        BuffRunTimeData_Dic.Clear();
-        // Debug.Log($"? ÒÑÇå³ıËùÓĞ Buff");
-    }
-    #endregion
-
-    #region Buff ¸üĞÂ
-    /// <summary>
-    /// ¹Ì¶¨¸üĞÂ£¬´¦ÀíËùÓĞ Buff µÄÔËĞĞÂß¼­
-    /// </summary>
-    public void FixedUpdate()
     {
         if (BuffRunTimeData_Dic.Count == 0)
             return;
 
-        // ±éÀú²¢ÔËĞĞËùÓĞ Buff
-        var buffList = new List<BuffRunTime>(BuffRunTimeData_Dic.Values);
-        foreach (var buff in buffList)
+        iterationIds.Clear();
+        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+
+        for (int i = 0; i < iterationIds.Count; i++)
         {
-            if (buff == null) continue;
-            buff.Run();
+            string dictionaryId = iterationIds[i];
+            if (!BuffRunTimeData_Dic.TryGetValue(dictionaryId, out BuffRunTime runtime) ||
+                runtime == null)
+            {
+                BuffRunTimeData_Dic.Remove(dictionaryId);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(runtime.buff_IDName))
+                runtime.buff_IDName = dictionaryId;
+
+            Item receiver = ResolveItem(runtime.receiverGuid) ?? buffReceiver;
+            Item sender = ResolveItem(runtime.senderGuid);
+
+            if (!runtime.SetBuffData(sender, receiver))
+            {
+                Debug.LogWarning($"[BuffManager] å·²è·³è¿‡ç¼ºå°‘å®šä¹‰çš„ Buffï¼š{runtime.buff_IDName}", this);
+                BuffRunTimeData_Dic.Remove(dictionaryId);
+                continue;
+            }
+
+            runtime.PrepareRestore();
+            if (runtime.IsExpired)
+                RemoveBuffInternal(dictionaryId, runtime, invokeStop: true);
         }
     }
+
+    private static Item ResolveItem(int guid)
+    {
+        if (guid == 0 || ItemMgr.Instance == null)
+            return null;
+
+        return ItemMgr.Instance.GetItemByGuid(guid);
+    }
+
+    #region æ·»åŠ ä¸å åŠ 
+
+    public void AddBuff(Buff_Data buffData)
+    {
+        buffReceiver ??= item;
+        AddBuffInternal(buffData, sender: null, receiver: buffReceiver);
+    }
+
+    public void AddBuffRuntime(Buff_Data buffData, Item receiver)
+    {
+        AddBuffInternal(buffData, sender: null, receiver: receiver);
+    }
+
+    public void AddBuffRuntime(Buff_Data buffData, Item sender, Item receiver)
+    {
+        AddBuffInternal(buffData, sender, receiver);
+    }
+
+    private bool AddBuffInternal(Buff_Data buffData, Item sender, Item receiver)
+    {
+        if (buffData == null)
+        {
+            Debug.LogWarning("[BuffManager] ä¸èƒ½æ·»åŠ ç©º Buff å®šä¹‰ã€‚", this);
+            return false;
+        }
+
+        if (receiver == null)
+        {
+            Debug.LogWarning($"[BuffManager] Buff {buffData.buff_ID} ç¼ºå°‘æ¥æ”¶è€…ã€‚", this);
+            return false;
+        }
+
+        string buffId = buffData.buff_ID?.Trim();
+        if (string.IsNullOrEmpty(buffId))
+        {
+            Debug.LogError($"[BuffManager] Buff èµ„æº {buffData.name} çš„ ID ä¸ºç©ºã€‚", buffData);
+            return false;
+        }
+
+        BuffRunTimeData_Dic ??= new Dictionary<string, BuffRunTime>();
+        if (BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime existing) &&
+            existing != null)
+        {
+            return HandleBuffStack(buffData, existing);
+        }
+
+        BuffRunTime runtime = new()
+        {
+            buff_IDName = buffId,
+            buff = buffData,
+            buff_CurrentDuration = 0f,
+            buff_CurrentStack = 1f
+        };
+
+        if (!runtime.SetBuffData(sender, receiver))
+            return false;
+
+        BuffRunTimeData_Dic[buffId] = runtime;
+        runtime.OnBuff_Start();
+        BuffAdded?.Invoke(runtime);
+        return true;
+    }
+
+    private bool HandleBuffStack(Buff_Data incoming, BuffRunTime existing)
+    {
+        switch (incoming.buff_StackType)
+        {
+            case BuffStackType.DurationAdd:
+                existing.ExtendDuration(Mathf.Max(0f, incoming.buff_Duration));
+                BuffDurationChanged?.Invoke(existing);
+                return true;
+
+            case BuffStackType.RefreshDuration:
+                existing.RefreshDuration();
+                BuffDurationChanged?.Invoke(existing);
+                return true;
+
+            case BuffStackType.StackCount:
+                existing.TryAddStack();
+                BuffDurationChanged?.Invoke(existing);
+                return true;
+
+            case BuffStackType.Keep:
+                return false;
+
+            default:
+                Debug.LogWarning($"[BuffManager] æœªçŸ¥å åŠ ç±»å‹ï¼š{incoming.buff_StackType}", this);
+                return false;
+        }
+    }
+
     #endregion
+
+    #region æŸ¥è¯¢ä¸å»¶æ—¶
+
+    public bool HasBuff(string buffId)
+    {
+        return !string.IsNullOrWhiteSpace(buffId) &&
+               BuffRunTimeData_Dic != null &&
+               BuffRunTimeData_Dic.ContainsKey(buffId);
+    }
+
+    public bool TryGetBuff(string buffId, out BuffRunTime runtime)
+    {
+        runtime = null;
+        return !string.IsNullOrWhiteSpace(buffId) &&
+               BuffRunTimeData_Dic != null &&
+               BuffRunTimeData_Dic.TryGetValue(buffId, out runtime);
+    }
+
+    public bool TryExtendBuffDuration(string buffId, float seconds)
+    {
+        if (seconds <= 0f || !TryGetBuff(buffId, out BuffRunTime runtime))
+            return false;
+
+        if (runtime.ExtendDuration(seconds) <= 0f)
+            return false;
+
+        BuffDurationChanged?.Invoke(runtime);
+        return true;
+    }
+
+    /// <summary>
+    /// å®Œæ•´å–ä¸‹ä¸€ä»½é¥®å“åè°ƒç”¨ã€‚æ¯ä¸ªè¡€æ¶²æµé€ Buff ä½¿ç”¨è‡ªå·±çš„å›ºå®šå»¶æ—¶é…ç½®ã€‚
+    /// </summary>
+    public int ExtendBloodLossBuffsForDrink()
+    {
+        if (BuffRunTimeData_Dic == null || BuffRunTimeData_Dic.Count == 0)
+            return 0;
+
+        int extendedCount = 0;
+        iterationIds.Clear();
+        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+
+        for (int i = 0; i < iterationIds.Count; i++)
+        {
+            if (!BuffRunTimeData_Dic.TryGetValue(iterationIds[i], out BuffRunTime runtime) ||
+                runtime?.buff == null ||
+                runtime.buff.buff_Category != BuffCategory.BloodLoss)
+            {
+                continue;
+            }
+
+            float extension = Mathf.Max(0f, runtime.buff.buff_DrinkDurationExtension);
+            if (extension <= 0f)
+                continue;
+
+            runtime.ExtendDuration(extension);
+            BuffDurationChanged?.Invoke(runtime);
+            extendedCount++;
+        }
+
+        return extendedCount;
+    }
+
+    #endregion
+
+    #region ç§»é™¤ä¸æ›´æ–°
+
+    public void RemoveBuff(string buffId)
+    {
+        if (string.IsNullOrWhiteSpace(buffId) ||
+            BuffRunTimeData_Dic == null ||
+            !BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime))
+        {
+            return;
+        }
+
+        RemoveBuffInternal(buffId, runtime, invokeStop: true);
+    }
+
+    public void ClearAllBuffs()
+    {
+        if (BuffRunTimeData_Dic == null || BuffRunTimeData_Dic.Count == 0)
+            return;
+
+        iterationIds.Clear();
+        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+
+        for (int i = 0; i < iterationIds.Count; i++)
+        {
+            string buffId = iterationIds[i];
+            if (BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime))
+                RemoveBuffInternal(buffId, runtime, invokeStop: true);
+        }
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        Tick(deltaTime);
+    }
+
+    public void Tick(float deltaTime)
+    {
+        if (BuffRunTimeData_Dic == null ||
+            BuffRunTimeData_Dic.Count == 0 ||
+            deltaTime <= 0f)
+        {
+            return;
+        }
+
+        iterationIds.Clear();
+        expiredIds.Clear();
+        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+
+        for (int i = 0; i < iterationIds.Count; i++)
+        {
+            string buffId = iterationIds[i];
+            if (!BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime) ||
+                runtime == null ||
+                runtime.Tick(deltaTime))
+            {
+                expiredIds.Add(buffId);
+            }
+        }
+
+        for (int i = 0; i < expiredIds.Count; i++)
+        {
+            string buffId = expiredIds[i];
+            if (BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime))
+                RemoveBuffInternal(buffId, runtime, invokeStop: true);
+        }
+    }
+
+    private void RemoveBuffInternal(string buffId, BuffRunTime runtime, bool invokeStop)
+    {
+        if (runtime != null && invokeStop)
+            runtime.OnBuff_Stop();
+
+        BuffRunTimeData_Dic.Remove(buffId);
+        if (runtime != null)
+            BuffRemoved?.Invoke(runtime);
+    }
+
+    #endregion
+
+    #region é¥®æ°´äº‹ä»¶
+
+    private void BindFoodEvents()
+    {
+        UnbindFoodEvents();
+        if (item?.itemMods == null)
+            return;
+
+        observedFood = item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+        if (observedFood != null)
+            observedFood.ConsumeCompleted += OnConsumeCompleted;
+    }
+
+    private void UnbindFoodEvents()
+    {
+        if (observedFood != null)
+            observedFood.ConsumeCompleted -= OnConsumeCompleted;
+
+        observedFood = null;
+    }
+
+    private void OnConsumeCompleted(FoodConsumeResult result)
+    {
+        if (!result.IsDrink)
+            return;
+
+        ExtendBloodLossBuffsForDrink();
+    }
+
+    #endregion
+
+    #region è°ƒè¯•å…¥å£
+
+    [Button("è°ƒè¯•ï¼šæ·»åŠ å¤±è¡€")]
+    private void DebugAddBloodLoss()
+    {
+        DebugAddBuff(BloodLossBuffIds.BloodLoss);
+    }
+
+    [Button("è°ƒè¯•ï¼šæ·»åŠ æµè¡€")]
+    private void DebugAddBleeding()
+    {
+        DebugAddBuff(BloodLossBuffIds.Bleeding);
+    }
+
+    [Button("è°ƒè¯•ï¼šæ·»åŠ å‡ºè¡€")]
+    private void DebugAddHemorrhage()
+    {
+        DebugAddBuff(BloodLossBuffIds.Hemorrhage);
+    }
+
+    [Button("è°ƒè¯•ï¼šæ¨¡æ‹Ÿå®Œæ•´å–æ°´ä¸€æ¬¡")]
+    private void DebugDrinkOnce()
+    {
+        int count = ExtendBloodLossBuffsForDrink();
+        Debug.Log($"[BuffManager] æ¨¡æ‹Ÿå–æ°´å®Œæˆï¼Œå»¶é•¿ {count} ä¸ªè¡€æ¶²æµé€ Buffã€‚", this);
+    }
+
+    [Button("è°ƒè¯•ï¼šæ¸…é™¤å…¨éƒ¨ Buff")]
+    private void DebugClearAll()
+    {
+        ClearAllBuffs();
+    }
+
+    private void DebugAddBuff(string buffId)
+    {
+        Buff_Data definition = GameRes.Instance?.GetBuffData(buffId);
+        if (definition == null)
+        {
+            Debug.LogWarning($"[BuffManager] è°ƒè¯•æ·»åŠ å¤±è´¥ï¼Œæ‰¾ä¸åˆ° Buffï¼š{buffId}", this);
+            return;
+        }
+
+        AddBuff(definition);
+    }
+
+    #endregion
+}
+
+public static class BloodLossBuffIds
+{
+    public const string BloodLoss = "å¤±è¡€";
+    public const string Bleeding = "æµè¡€";
+    public const string Hemorrhage = "å‡ºè¡€";
 }

@@ -9,7 +9,7 @@ using System.IO;
 
 public static class CreateBuffActionScript
 {
-    [MenuItem("Assets/Create/Buff/´´½¨ Buff Action ½Å±¾", false, 80)]
+    [MenuItem("Assets/Create/Buff/åˆ›å»º Buff Action è„šæœ¬", false, 80)]
     public static void CreateBuffActionScriptAsset()
     {
         string path = GetSelectedPathOrFallback();
@@ -18,7 +18,7 @@ public static class CreateBuffActionScript
         string fullPath = Path.Combine(path, fileName);
         fullPath = AssetDatabase.GenerateUniqueAssetPath(fullPath);
 
-        // ´´½¨Ò»¸ö¿ÕÎÄ¼şÓÃÓÚÖØÃüÃû
+        // åˆ›å»ºä¸€ä¸ªç©ºæ–‡ä»¶ç”¨äºé‡å‘½åã€‚
         var icon = EditorGUIUtility.IconContent("cs Script Icon").image as Texture2D;
         ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
             0,
@@ -63,8 +63,7 @@ public class {className} : BuffAction
 {{
     public override void Apply(BuffRunTime data)
     {{
-        // TODO: Implement buff logic
-        throw new System.NotImplementedException();
+        // TODO: åœ¨è¿™é‡Œå®ç° Buff è¡Œä¸ºã€‚
     }}
 }}";
 

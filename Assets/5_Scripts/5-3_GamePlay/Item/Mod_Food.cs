@@ -1,5 +1,6 @@
 ﻿using AYellowpaper.SerializedCollections;
 using DG.Tweening;
+using FlatWorld.Audio;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
@@ -7,8 +8,73 @@ using System.Collections.Generic;
 using UnityEngine;
 using UltEvents;
 
-public partial class Mod_Food : Module, IInstanceUI
+public enum FoodConsumeKind
 {
+    Solid = 0,
+    Drink = 1
+}
+
+public readonly struct FoodConsumeResult
+{
+    public FoodConsumeResult(
+        Item consumer,
+        Item consumedItem,
+        FoodConsumeKind kind,
+        float consumedWater,
+        float actualWaterGain)
+    {
+        Consumer = consumer;
+        ConsumedItem = consumedItem;
+        Kind = kind;
+        ConsumedWater = consumedWater;
+        ActualWaterGain = actualWaterGain;
+    }
+
+    public Item Consumer { get; }
+    public Item ConsumedItem { get; }
+    public FoodConsumeKind Kind { get; }
+    public float ConsumedWater { get; }
+    public float ActualWaterGain { get; }
+    public bool IsDrink => Kind == FoodConsumeKind.Drink;
+}
+
+public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
+{
+    [Serializable]
+    public sealed class ConsumeAudioSettings
+    {
+        [LabelText("启用进食音效")]
+        public bool Enabled = true;
+
+        [LabelText("音效 Cue ID")]
+        [Tooltip("默认 food.eat。可为每种食物设置 food.crunch、food.drink 或后续新增的 AudioCatalog Cue ID。")]
+        public string CueId = AudioEventIds.FoodEat;
+
+        [LabelText("音量")]
+        [Range(0f, 2f)]
+        public float VolumeScale = 0.78f;
+
+        [LabelText("音高最小值")]
+        [MinValue(0.01f)]
+        public float PitchMin = 0.96f;
+
+        [LabelText("音高最大值")]
+        [MinValue(0.01f)]
+        public float PitchMax = 1.04f;
+
+        public string ResolveCueId()
+        {
+            return string.IsNullOrWhiteSpace(CueId) ? AudioEventIds.FoodEat : CueId.Trim();
+        }
+
+        public float SamplePitch()
+        {
+            float min = Mathf.Max(0.01f, Mathf.Min(PitchMin, PitchMax));
+            float max = Mathf.Max(min, Mathf.Max(PitchMin, PitchMax));
+            return Mathf.Approximately(min, max) ? min : UnityEngine.Random.Range(min, max);
+        }
+    }
+
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.1f;
 
@@ -97,6 +163,18 @@ public partial class Mod_Food : Module, IInstanceUI
     [LabelText("生命联动状态")]
     public FoodHealthState HealthState = new FoodHealthState();
 
+    [FoldoutGroup("音频")]
+    [LabelText("进食音效")]
+    [Tooltip("此配置属于食物自身。不同食物只需在各自预制体覆盖 Cue ID，无需修改右键或进食流程。")]
+    public ConsumeAudioSettings ConsumeAudio = new ConsumeAudioSettings();
+
+    [FoldoutGroup("食用类型")]
+    [LabelText("食用方式")]
+    [Tooltip("静态物品定义。Drink 只在完整喝下一份饮品后触发饮水玩法事件。")]
+    public FoodConsumeKind ConsumeKind = FoodConsumeKind.Solid;
+
+    public event Action<FoodConsumeResult> ConsumeCompleted;
+
     [MemoryPackIgnore]
     private Mod_Stamina _stamina;
 
@@ -105,6 +183,9 @@ public partial class Mod_Food : Module, IInstanceUI
 
     [MemoryPackIgnore]
     private float _hungerDamageTickTimer;
+
+    [MemoryPackIgnore]
+    private UnityEngine.InputSystem.InputAction _tabAction;
 
     #endregion
 
@@ -127,10 +208,12 @@ public partial class Mod_Food : Module, IInstanceUI
         ResolveFoodRuntimeModules();
         LoadRuntimeStateFromLegacyData();
 
+        UnbindTabInput();
         item.itemMods.GetMod_ByID(ModText.Controller, out GameController Controller);
         if (Controller != null)
         {
-            Controller._inputActions.Win10.Tab.performed += _ => TogglePanel();
+            _tabAction = Controller._inputActions.Win10.Tab;
+            _tabAction.performed += OnTogglePanelPerformed;
         }
 
         // 根据保存的状态决定是否显示面板
@@ -141,6 +224,7 @@ public partial class Mod_Food : Module, IInstanceUI
 
         if (item != null)
         {
+            item.OnAct -= Act;
             item.OnAct += Act;
         }
 
@@ -153,6 +237,7 @@ public partial class Mod_Food : Module, IInstanceUI
         {
             item.OnAct -= Act;
         }
+        UnbindTabInput();
 
         // 保存面板位置
         if (PanleInstance != null)
@@ -172,8 +257,44 @@ public partial class Mod_Food : Module, IInstanceUI
     /// </summary>
     public override void Act()
     {
-        var Player_FoodModule = item.Owner.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
-        Player_FoodModule.Eat(BeEater: this);
+        Item owner = item?.Owner;
+        Mod_Food playerFood = owner?.itemMods?.GetMod_ByID(ModText.Food) as Mod_Food;
+        if (playerFood == null)
+        {
+            Debug.LogWarning($"[Mod_Food] {item?.name ?? name} 缺少有效食用者或食用者 Food 模块。", this);
+            return;
+        }
+
+        playerFood.Eat(BeEater: this);
+    }
+
+    public void OnItemTakenFromPool()
+    {
+        EatingProgress = 0f;
+        ConsumeCompleted = null;
+        UnbindTabInput();
+    }
+
+    public void OnItemReturnedToPool()
+    {
+        EatingProgress = 0f;
+        ConsumeCompleted = null;
+        if (item != null)
+            item.OnAct -= Act;
+        UnbindTabInput();
+    }
+
+    private void OnTogglePanelPerformed(UnityEngine.InputSystem.InputAction.CallbackContext _)
+    {
+        TogglePanel();
+    }
+
+    private void UnbindTabInput()
+    {
+        if (_tabAction != null)
+            _tabAction.performed -= OnTogglePanelPerformed;
+
+        _tabAction = null;
     }
 
     public override void ModUpdate(float timeDelta)
@@ -386,7 +507,11 @@ public partial class Mod_Food : Module, IInstanceUI
     #region 进食行为
     public void BeEat(Mod_Food Eater)
     {
+        if (Eater == null || item?.itemData?.Stack == null || Data == null)
+            return;
+
         ShakeItem(item.transform);
+        PlayConsumeAudio();
 
         EatingProgress++;
 
@@ -399,9 +524,7 @@ public partial class Mod_Food : Module, IInstanceUI
             // 进度归零
             EatingProgress = 0;
 
-            Eater.Data.nutrition = Eater.Data.nutrition + Data.nutrition;
-
-            DataUpdate.Invoke();
+            Eater.ApplyConsumedNutrition(this);
 
             if (item.itemData.Stack.Amount <= 0)
             {
@@ -412,7 +535,16 @@ public partial class Mod_Food : Module, IInstanceUI
 
     public void Eat(Mod_Food BeEater)
     {
+        if (BeEater == null ||
+            BeEater.item?.itemData?.Stack == null ||
+            BeEater.Data == null ||
+            Data == null)
+        {
+            return;
+        }
+
         ShakeItem(BeEater.item.transform);  // 播放摇晃动画或者其他视觉效果
+        BeEater.PlayConsumeAudio();
 
         BeEater.EatingProgress++;  // 更新被吃食物的进度
 
@@ -426,9 +558,7 @@ public partial class Mod_Food : Module, IInstanceUI
             BeEater.EatingProgress = 0; // 吃进度归零
 
             // 吃掉目标食物的营养值
-            Data.nutrition = Data.nutrition + BeEater.Data.nutrition;
-
-            DataUpdate.Invoke();  // 通知数据更新
+            ApplyConsumedNutrition(BeEater);
 
             // 如果被吃食物的堆叠数量为 0，销毁该食物
             if (BeEater.item.itemData.Stack.Amount <= 0)
@@ -440,6 +570,41 @@ public partial class Mod_Food : Module, IInstanceUI
 
             }
         }
+    }
+
+    private void ApplyConsumedNutrition(Mod_Food consumedFood)
+    {
+        if (consumedFood?.Data?.nutrition == null || Data?.nutrition == null)
+            return;
+
+        float consumedWater = Mathf.Max(0f, consumedFood.Data.nutrition.Water);
+        float waterBefore = Data.nutrition.Water;
+
+        Data.nutrition = Data.nutrition + consumedFood.Data.nutrition;
+
+        float actualWaterGain = Mathf.Max(0f, Data.nutrition.Water - waterBefore);
+        DataUpdate?.Invoke();
+        ConsumeCompleted?.Invoke(new FoodConsumeResult(
+            item,
+            consumedFood.item,
+            consumedFood.ConsumeKind,
+            consumedWater,
+            actualWaterGain));
+    }
+    #endregion
+
+    #region 进食音频
+    private void PlayConsumeAudio()
+    {
+        ConsumeAudio ??= new ConsumeAudioSettings();
+        if (!ConsumeAudio.Enabled)
+        {
+            return;
+        }
+
+        AudioService.Instance.Play(
+            ConsumeAudio.ResolveCueId(),
+            AudioPlayOptions.Global(ConsumeAudio.VolumeScale, ConsumeAudio.SamplePitch()));
     }
     #endregion
 

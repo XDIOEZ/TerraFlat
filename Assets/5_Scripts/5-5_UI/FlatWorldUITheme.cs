@@ -70,7 +70,12 @@ public static class FlatWorldUITheme
     /// </summary>
     public static void Apply(Transform root)
     {
-        if (root == null || UsesBespokeVisuals(root))
+        if (root == null)
+            return;
+
+        FlatWorldAudioUIFeedback.EnsureFor(root);
+
+        if (UsesBespokeVisuals(root))
             return;
 
         bool isHud = IsHud(root.name);

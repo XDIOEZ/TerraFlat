@@ -192,6 +192,7 @@ public class Inventory_Furnace : Inventory
             FuelInventory.DefaultTarget_Inventory = handMod.inventory;
         }
         SwitchUI();
+        InputInventory.SyncQuickTransferTarget(basePanel);
         Debug.Log($"玩家 {playerItem.name} 开始交互工作台");
     }
     #endregion

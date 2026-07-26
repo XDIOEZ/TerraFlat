@@ -451,8 +451,24 @@ public void HotReloadAllResources()
     
     public Buff_Data GetBuffData(string buffName)
     {
-        BuffData_Dict.TryGetValue(buffName, out var buff);
-        return buff;
+        if (string.IsNullOrWhiteSpace(buffName))
+            return null;
+
+        if (BuffData_Dict.TryGetValue(buffName, out Buff_Data buff))
+            return buff;
+
+        // 旧实现只按资源名建索引，但运行时与存档保存的是 buff_ID。
+        // 为资源名与 ID 不一致的旧 Buff（例如“饥饿(1.6)”）提供稳定回退。
+        foreach (Buff_Data candidate in BuffData_Dict.Values)
+        {
+            if (candidate != null &&
+                string.Equals(candidate.buff_ID, buffName, System.StringComparison.Ordinal))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
     
     public Recipe GetRecipe(string recipeName)

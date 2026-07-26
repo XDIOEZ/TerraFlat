@@ -56,16 +56,21 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
     [SerializeField] private float xOffset = 0.5f;
     public void ToOtherDirection(Vector2 direction)
     {
+        SnapToDirection(direction);
+    }
+
+    /// <summary>立即将 AI 伤害碰撞体放到面朝的一侧，避免短伤害窗口内仍在跨身移动。</summary>
+    public void SnapToDirection(Vector2 direction)
+    {
+        if (Mathf.Abs(direction.x) < 0.001f)
+        {
+            return;
+        }
+
         float sign = Mathf.Sign(direction.x);
-
-        // 目标 x 位置，根据方向添加水平偏移值
-        float targetX = xOffset * sign;
-
-        // 水平移动修改器的 x 位置
+        transform.DOKill();
         Vector3 currentLocalPos = transform.localPosition;
-        Vector3 targetLocalPos = new Vector3(targetX, currentLocalPos.y, currentLocalPos.z);
-
-        // 平滑移动，0.15秒，使用缓动
-        transform.DOLocalMoveX(targetLocalPos.x, 0.15f).SetEase(Ease.OutSine);
+        currentLocalPos.x = xOffset * sign;
+        transform.localPosition = currentLocalPos;
     }
 }

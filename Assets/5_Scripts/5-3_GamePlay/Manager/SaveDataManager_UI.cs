@@ -40,8 +40,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     #endregion
 
-    public void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         Ins = this;
         // 确保存档目录存在
         EnsureSaveDirectoryExists();
@@ -115,6 +116,19 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         }
 
         string[] files = Directory.GetFiles(PathToSaveFolder, "*.bytes");
+        System.Array.Sort(files, (left, right) =>
+        {
+            System.DateTime leftExitTime = SaveDataMgr.GetLastExitTimeUtc(left);
+            System.DateTime rightExitTime = SaveDataMgr.GetLastExitTimeUtc(right);
+            int timeComparison = rightExitTime.CompareTo(leftExitTime);
+            if (timeComparison != 0)
+                return timeComparison;
+
+            return System.StringComparer.OrdinalIgnoreCase.Compare(
+                Path.GetFileNameWithoutExtension(left),
+                Path.GetFileNameWithoutExtension(right));
+        });
+
         foreach (string file in files)
         {
             string fileName = Path.GetFileNameWithoutExtension(file);
@@ -260,6 +274,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
         // 使用BaseUIManager更新文本
         uiManager.GetPanel(name).SetText("选中的存档名称", saveName);
+
+        // 选择存档后立即复用现有加载流程，并刷新可用角色列表。
+        GameManager.Instance?.OnClick_LoadSaveData_Button();
     }
 
     #endregion
@@ -383,7 +400,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         GenerateSaveButtons();
         
         // 刷新BaseUIManager中的组件
-        uiManager.GetPanel(name).RefreshUIComponents();
+        BasePanel panel = uiManager.GetPanel(GameSavePanelView.PanelKey) ?? uiManager.GetPanel(BasePanelName);
+        panel?.RefreshUIComponents();
     }
     #endregion
 }

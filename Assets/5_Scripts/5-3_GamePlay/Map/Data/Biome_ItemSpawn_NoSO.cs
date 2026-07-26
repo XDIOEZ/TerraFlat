@@ -27,8 +27,19 @@ public class Biome_ItemSpawn_NoSO
     [Range(0f, 1f)]
     public float CompanionSpawnChance = 0f;
 
+    [Tooltip("启用后，本资源不会独立散布，只会在宿主资源成功生成时出现在其附近。")]
+    public bool CompanionOnly;
+
     [Tooltip("伴生物相对宿主格中心的位置偏移。")]
     public Vector2 CompanionSpawnOffset = new Vector2(0f, -0.25f);
+
+    [Tooltip("伴生物围绕宿主生成时的最小随机半径。为 0 时允许生成在中心附近。")]
+    [Min(0f)]
+    public float CompanionSpawnMinRadius = 0f;
+
+    [Tooltip("伴生物围绕宿主生成时的最大随机半径。为 0 时只使用固定偏移。")]
+    [Min(0f)]
+    public float CompanionSpawnRadius = 0f;
 
     public void OnValidate()
     {

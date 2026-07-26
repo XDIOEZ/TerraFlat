@@ -389,7 +389,6 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 
     - Modern
     Stack:
       Amount: 1
@@ -434,23 +433,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 257a1dcc2cd974c4d8dbebb4748e9bfd, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModData:
-    Name:
+    Name: 
     ID: Module_LightSource
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -464,7 +463,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
   TargetLight: {fileID: 2891261174467680020}
   Data:
     IsEnabled: 1

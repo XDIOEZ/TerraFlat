@@ -64,9 +64,10 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
         if (dropAmount <= 0)
             return;
 
-        Vector2 startPos = damageInfo != null ? (Vector2)damageInfo.HitPosition : (Vector2)receiver.transform.position;
-        // 支持Y轴偏移，用于从高处生成物品（例如树上的椰子）
-        startPos.y += SpawnYOffset;
+        Vector2 groundOrigin = damageInfo != null
+            ? (Vector2)damageInfo.HitPosition
+            : (Vector2)receiver.transform.position;
+        Vector2 startPos = groundOrigin + Vector2.up * SpawnYOffset;
 
         for (int i = 0; i < dropAmount; i++)
         {
@@ -83,7 +84,8 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
                 randomDir = Vector2.right;
 
             float randomDist = Random.Range(0.5f * SpawnRadius, SpawnRadius);
-            Vector2 endPos = startPos + randomDir * randomDist;
+            // 生成点可以位于树冠等高处，但落点始终回到物品根节点周围。
+            Vector2 endPos = groundOrigin + randomDir * randomDist;
 
             Mod_BaseDroper.StaticDropItem_Pos(
                 spawnedItem,

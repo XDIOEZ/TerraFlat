@@ -125,9 +125,11 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	public float fleeSafeDistance = 10f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(57), LabelText("逃跑偏移距离"), SuffixLabel("米", true), MinValue(1f)]
 	public float fleeRunDistance = 8f;
+	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("受击威胁记忆"), SuffixLabel("秒", true), MinValue(0.1f)]
+	public float damageFleeDuration = 5f;
 	[FoldoutGroup("逃跑参数"), PropertyOrder(58), LabelText("威胁TypeTag列表")]
 	public List<string> threatTags = new List<string> { "Predator" };
-	[FoldoutGroup("逃跑参数"), PropertyOrder(59), LabelText("检测玩家(Player标签)")]
+	[FoldoutGroup("逃跑参数"), PropertyOrder(59), LabelText("检测所有玩家")]
 	public bool fleeFromPlayer = true;
 
 	[FoldoutGroup("交配参数"), PropertyOrder(60), LabelText("交配占位时长"), SuffixLabel("秒", true), MinValue(0.1f)]
@@ -173,6 +175,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	protected override float DetectorRefreshInterval => detectorRefreshInterval;
 	protected override bool DebugLogEnabled => debugLog;
+	protected override float DamageThreatMemoryDuration => damageFleeDuration;
 	protected override bool IsMoveState(ChickenState state) => state == ChickenState.Move;
 	protected override bool IsIdleState(ChickenState state) => state == ChickenState.Idle;
 	#endregion
@@ -203,10 +206,36 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		_currentThreat = null;
 	}
 
+	protected override void OnDamageThreatUpdated(DamageReceiverDamageInfo damageInfo)
+	{
+		if (!TryGetRecentDamageThreat(out Item threat, out Vector3 sourcePosition))
+			return;
+
+		_currentThreat = threat;
+		UpdateFleeDestination(sourcePosition);
+
+		if (_isReady &&
+			_stateMachine != null &&
+			_stateMachine.IsInitialized &&
+			_currentState != ChickenState.Flee)
+		{
+			SwitchState(ChickenState.Flee);
+		}
+
+		MoveTo(_fleeTarget);
+	}
+
 	protected override void OnBindExtraModules()
 	{
 		item.itemMods.GetMod_ByID(ModText.Food, out Mod_Food food);
 		_food = food;
+
+		if (_detector != null)
+		{
+			_detector.DetectionRadius = Mathf.Max(
+				_detector.DetectionRadius,
+				Mathf.Max(fleeTriggerDistance, fleeSafeDistance));
+		}
 	}
 
 	protected override void OnValidateExtraModules()
@@ -271,20 +300,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		return ChickenState.Idle;
 	}
 
-	protected override void TickCurrentState(float deltaTime)
+	protected override void ConfigureStateNodes(AIStateMachine<ChickenState> stateMachine)
 	{
-		switch (_currentState)
-		{
-			case ChickenState.Idle:   TickIdle(deltaTime); break;
-			case ChickenState.Move:   TickMove(deltaTime); break;
-			case ChickenState.Forage: TickForage();        break;
-			case ChickenState.Eat:    TickEat(deltaTime);  break;
-			case ChickenState.Sleep:  TickSleep(deltaTime);break;
-			case ChickenState.Mate:   TickMate();          break;
-			case ChickenState.LayEgg: TickLayEgg();        break;
-			case ChickenState.Flee:   TickFlee();          break;
-			default: throw new ArgumentOutOfRangeException();
-		}
+		RegisterLocomotionStateNodes(stateMachine, ChickenState.Idle, ChickenState.Move);
+		stateMachine.Register(CreateMovingStateNode(ChickenState.Forage, _ => TickForage()));
+		stateMachine.Register(CreateStoppedStateNode(ChickenState.Eat, TickEat));
+		stateMachine.Register(CreateStoppedStateNode(ChickenState.Sleep, TickSleep));
+		stateMachine.Register(CreateStoppedStateNode(ChickenState.Mate, _ => TickMate()));
+		stateMachine.Register(CreateStoppedStateNode(ChickenState.LayEgg, _ => TickLayEgg()));
+		stateMachine.Register(CreateMovingStateNode(ChickenState.Flee, _ => TickFlee()));
 	}
 	#endregion
 
@@ -302,7 +326,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private void TickEat(float deltaTime)
 	{
-		StopMove();
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
@@ -323,18 +346,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private void TickSleep(float deltaTime)
 	{
-		StopMove();
 		_hp.Heal(deltaTime * sleepRecoverHpPerSecond, item);
 	}
 
 	private void TickMate()
 	{
-		StopMove();
 	}
 
 	private void TickLayEgg()
 	{
-		StopMove();
 		if (_stateElapsed < layEggDuration || _layEggTriggered) return;
 
 		SpawnEgg();
@@ -344,8 +364,16 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private void TickFlee()
 	{
+		if (TryGetRecentDamageThreat(out Item damageThreat, out Vector3 damageSource))
+		{
+			_currentThreat = damageThreat;
+			UpdateFleeDestination(damageSource);
+			MoveTo(_fleeTarget);
+			return;
+		}
+
 		if (_currentThreat == null) { StopMove(); return; }
-		_fleeTarget = transform.position + (transform.position - _currentThreat.transform.position).normalized * fleeRunDistance;
+		UpdateFleeDestination(_currentThreat.transform.position);
 		MoveTo(_fleeTarget);
 	}
 	#endregion
@@ -353,6 +381,12 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#region Conditions
 	private bool ShouldFlee()
 	{
+		if (TryGetRecentDamageThreat(out Item damageThreat, out _))
+		{
+			_currentThreat = damageThreat;
+			return true;
+		}
+
 		TryRefreshDetector();
 		Item threat = FindClosestThreat();
 
@@ -439,9 +473,38 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#endregion
 
 	#region Helpers - Chicken 特有
+	private void UpdateFleeDestination(Vector3 threatPosition)
+	{
+		Vector2 awayDirection = GetDirectionAwayFrom(threatPosition);
+		_fleeTarget = (Vector2)transform.position + awayDirection * fleeRunDistance;
+	}
+
 	private Item FindClosestThreat()
 	{
-		return _detector.FindClosestItemByTags(threatTags, transform.position, fleeFromPlayer);
+		Item closestThreat = _detector.FindClosestItemByTags(threatTags, transform.position);
+		float closestDistanceSqr = closestThreat != null
+			? (closestThreat.transform.position - transform.position).sqrMagnitude
+			: float.MaxValue;
+
+		if (!fleeFromPlayer)
+			return closestThreat;
+
+		List<Item> detectedItems = _detector.CurrentItemsInArea;
+		for (int i = 0; i < detectedItems.Count; i++)
+		{
+			Item detectedItem = detectedItems[i];
+			if (!(detectedItem is Player))
+				continue;
+
+			float distanceSqr = (detectedItem.transform.position - transform.position).sqrMagnitude;
+			if (distanceSqr >= closestDistanceSqr)
+				continue;
+
+			closestThreat = detectedItem;
+			closestDistanceSqr = distanceSqr;
+		}
+
+		return closestThreat;
 	}
 
 	private Item FindClosestEdibleItem()

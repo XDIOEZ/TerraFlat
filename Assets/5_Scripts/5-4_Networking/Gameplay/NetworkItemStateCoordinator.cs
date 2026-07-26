@@ -545,6 +545,12 @@ namespace FlatWorld.Networking.Gameplay
                             ItemNetworkStateSerialization.TryDeserializeItemData(response.Payload, out ItemData itemData) &&
                             request.Picker.TryAcceptNetworkPickup(itemData);
 
+            if (accepted)
+            {
+                Item pickupSource = ItemMgr.Instance?.GetItemByGuid(response.ItemGuid);
+                request.Picker.PlayPickupSuction(pickupSource, hideSourceRenderers: true);
+            }
+
             NetworkClient.Send(new NetworkItemPickupCommit
             {
                 ItemGuid = response.ItemGuid,

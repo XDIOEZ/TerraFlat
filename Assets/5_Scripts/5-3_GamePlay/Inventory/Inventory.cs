@@ -186,7 +186,7 @@ public class Inventory
                 return;
             }
             basePanel.Open();
-            TryMarkAsLastOpenedContainer();
+            SyncQuickTransferTarget(basePanel);
             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
             return;
@@ -195,10 +195,11 @@ public class Inventory
         basePanel.Toggle();
         if (basePanel.IsOpen())
         {
-            TryMarkAsLastOpenedContainer();
             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
         }
+
+        SyncQuickTransferTarget(basePanel);
     }
 
     private static IEnumerator DelayedBringToFront(RectTransform rectTransform)
@@ -349,6 +350,8 @@ public class Inventory
 
         //初始化时自动同步UI显示
         RefreshUI();
+
+        InventorySortButton.EnsureFor(this);
     }
     //同步UI与Data
     public void SyncData()
@@ -708,11 +711,20 @@ public class Inventory
 
     public virtual void OnShiftQuickTransfer(int index)
     {
-        Inventory targetInventory = ResolveShiftQuickTransferTarget();
-        if (targetInventory == null || targetInventory == this)
-            return;
+        TryShiftQuickTransfer(index);
+    }
 
-        TryQuickMoveSlotToInventory(index, targetInventory);
+    /// <summary>
+    /// 执行一次 Shift 快速转移，并返回是否实际移动了物品。
+    /// 子类可据此只在成功时同步手持物或网络状态。
+    /// </summary>
+    protected bool TryShiftQuickTransfer(int index)
+    {
+        Inventory targetInventory = ResolveShiftQuickTransferTarget();
+        if (!IsValidQuickTransferTarget(targetInventory) || targetInventory == this)
+            return false;
+
+        return TryQuickMoveSlotToInventory(index, targetInventory);
     }
 
     private Inventory ResolveShiftQuickTransferTarget()
@@ -770,7 +782,7 @@ public class Inventory
             if (transferCount <= 0)
                 break;
 
-            if (targetInventory.Data.TransferItemQuantity(sourceSlot, targetSlot, transferCount))
+            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount))
                 moved = true;
         }
 
@@ -795,25 +807,72 @@ public class Inventory
             if (transferCount <= 0)
                 break;
 
-            if (targetInventory.Data.TransferItemQuantity(sourceSlot, targetSlot, transferCount))
+            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount))
                 moved = true;
         }
 
         return moved;
     }
 
+    private bool TryTransferQuickQuantity(
+        ItemSlot sourceSlot,
+        Inventory targetInventory,
+        ItemSlot targetSlot,
+        int transferCount)
+    {
+        if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
+            return false;
+
+        return Data.TransferItemQuantityTo(
+            sourceSlot,
+            targetInventory.Data,
+            targetSlot,
+            transferCount);
+    }
+
+    /// <summary>
+    /// 快速转移的目标槽接收策略。普通槽默认允许所有物品；
+    /// 配置了 CanAcceptTags 时至少需匹配一个标签，特殊库存可覆写追加业务规则。
+    /// </summary>
+    public virtual bool CanAcceptQuickTransfer(ItemSlot sourceSlot, ItemSlot targetSlot)
+    {
+        ItemData sourceItem = sourceSlot?.itemData;
+        if (sourceItem == null || targetSlot == null)
+            return false;
+
+        if (targetSlot.CanAcceptTags == null || targetSlot.CanAcceptTags.Count == 0)
+            return true;
+
+        return sourceItem.Tags != null &&
+               sourceItem.Tags.ContainsAnyTag(targetSlot.CanAcceptTags);
+    }
+
     private Inventory GetPlayerHotBarInventory()
     {
-        Inventory hotBar = TryGetHotBarFromItem(item);
-        if (hotBar != null)
+        // 首选 PlayerHand：它代表当前本地玩家，与打开方式、来源容器和 UI 层级无关。
+        // 合成/熔炉等独立 Inventory 没有自身 item 时，仍能稳定找到同一条快捷栏。
+        Inventory hotBar = TryGetHotBarFromItem(Inventory_Hand.PlayerHand?.item);
+        if (IsValidQuickTransferTarget(hotBar) && hotBar != this)
+            return hotBar;
+
+        // 以下是兼容自定义玩家库存和旧存档运行时绑定的回退路径。
+        hotBar = TryGetHotBarFromItem(item);
+        if (IsValidQuickTransferTarget(hotBar) && hotBar != this)
             return hotBar;
 
         hotBar = TryGetHotBarFromItem(DefaultTarget_Inventory?.item);
-        if (hotBar != null)
+        if (IsValidQuickTransferTarget(hotBar) && hotBar != this)
             return hotBar;
 
-        hotBar = TryGetHotBarFromItem(Inventory_Hand.PlayerHand?.item);
-        return hotBar;
+        return null;
+    }
+
+    private static bool IsValidQuickTransferTarget(Inventory inventory)
+    {
+        return inventory != null &&
+               inventory.Data != null &&
+               inventory.Data.itemSlots != null &&
+               inventory.Data.itemSlots.Count > 0;
     }
 
     private static Inventory TryGetHotBarFromItem(Item ownerItem)
@@ -838,20 +897,34 @@ public class Inventory
             return null;
 
         if (LastOpenedContainer.basePanel == null || !LastOpenedContainer.basePanel.IsOpen())
+        {
+            LastOpenedContainer = null;
             return null;
+        }
 
         return LastOpenedContainer;
     }
 
-    private void TryMarkAsLastOpenedContainer()
+    /// <summary>
+    /// 将当前容器同步为快捷栏 Shift+左键的目标。
+    /// 组合式面板（合成台、熔炉等）应把真正接收物品的输入 Inventory 传入此统一入口。
+    /// </summary>
+    public void SyncQuickTransferTarget(BasePanel ownerPanel = null)
     {
+        if (ownerPanel != null)
+            basePanel = ownerPanel;
+
         if (IsHotBarInventory() || IsHandInventory())
             return;
 
-        if (basePanel == null || !basePanel.IsOpen())
+        if (basePanel != null && basePanel.IsOpen())
+        {
+            LastOpenedContainer = this;
             return;
+        }
 
-        LastOpenedContainer = this;
+        if (LastOpenedContainer == this)
+            LastOpenedContainer = null;
     }
 
     private bool IsHotBarInventory()

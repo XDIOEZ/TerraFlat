@@ -57,12 +57,16 @@ public class UIManager : MonoBehaviour
     private void EnsurePanelRootExists()
     {
         if (panelRoot != null)
+        {
+            UIScaleController.Ensure(panelRoot);
             return;
+        }
 
         GameObject existingPanelRoot = GameObject.Find("PanelRoot");
         if (existingPanelRoot != null)
         {
             panelRoot = existingPanelRoot.transform;
+            UIScaleController.Ensure(panelRoot);
             return;
         }
 
@@ -87,6 +91,7 @@ public class UIManager : MonoBehaviour
         }
 
         panelRoot = canvasObj.transform;
+        UIScaleController.Ensure(panelRoot);
     }
 
     private void InitializePanels()

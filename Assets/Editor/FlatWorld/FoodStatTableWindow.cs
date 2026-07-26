@@ -190,7 +190,7 @@ public class FoodStatTableWindow : EditorWindow
                 row.Water = Mathf.Max(0f, newWater);
                 row.Vitamins = Mathf.Max(0f, newVitamins);
                 row.Max_EatingProgress = Mathf.Max(1f, newProgress);
-                row.nutritionConsumeSpeed = Mathf.Max(0.1f, newConsumeSpeed);
+                row.nutritionConsumeSpeed = Mathf.Max(0f, newConsumeSpeed);
                 _config.SaveNow();
             }
 
@@ -366,9 +366,9 @@ public class FoodStatTableWindow : EditorWindow
             Max_Water = 0f,
             Max_Vitamins = 0f,
             Max_EatingProgress = 3f,
-            nutritionConsumeSpeed = 1f,
-            WaterConsumeSpeedRate = 1f,
-            nutritionConsumeRate = 1f,
+            nutritionConsumeSpeed = 0f,
+            WaterConsumeSpeedRate = 0f,
+            nutritionConsumeRate = 0f,
             EnableSpoilage = true,
             SpoilageIntervalSeconds = 1800f,
             SpoilageTargetItemID = "Meat_Rotten",
@@ -402,9 +402,9 @@ public class FoodStatTableWindow : EditorWindow
                 }
 
                 row.Max_EatingProgress = foodData?.Max_EatingProgress ?? 3f;
-                row.nutritionConsumeSpeed = foodData?.nutritionConsumeSpeed?.Value ?? 1f;
-                row.WaterConsumeSpeedRate = foodData?.WaterConsumeSpeedRate ?? 1f;
-                row.nutritionConsumeRate = foodData?.nutritionConsumeRate ?? 1f;
+                row.nutritionConsumeSpeed = foodData?.nutritionConsumeSpeed?.Value ?? 0f;
+                row.WaterConsumeSpeedRate = foodData?.WaterConsumeSpeedRate ?? 0f;
+                row.nutritionConsumeRate = foodData?.nutritionConsumeRate ?? 0f;
 
                 row.EnableSpoilage = food.FoodModData.EnableSpoilage;
                 row.SpoilageIntervalSeconds = food.FoodModData.SpoilageIntervalSeconds;
@@ -478,13 +478,13 @@ public class FoodStatTableWindow : EditorWindow
                 foodData.Max_EatingProgress = Mathf.Max(1f, row.Max_EatingProgress);
                 if (foodData.nutritionConsumeSpeed != null)
                 {
-                    foodData.nutritionConsumeSpeed.BaseValue = Mathf.Max(0.1f, row.nutritionConsumeSpeed);
+                    foodData.nutritionConsumeSpeed.BaseValue = Mathf.Max(0f, row.nutritionConsumeSpeed);
                 }
                 else
                 {
-                    foodData.nutritionConsumeSpeed = new GameValue_float(Mathf.Max(0.1f, row.nutritionConsumeSpeed));
+                    foodData.nutritionConsumeSpeed = new GameValue_float(Mathf.Max(0f, row.nutritionConsumeSpeed));
                 }
-                foodData.WaterConsumeSpeedRate = Mathf.Max(0.1f, row.WaterConsumeSpeedRate);
+                foodData.WaterConsumeSpeedRate = Mathf.Max(0f, row.WaterConsumeSpeedRate);
                 foodData.nutritionConsumeRate = Mathf.Max(0f, row.nutritionConsumeRate);
 
                 food.FoodModData.EnableSpoilage = row.EnableSpoilage;

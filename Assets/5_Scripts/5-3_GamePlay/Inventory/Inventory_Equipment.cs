@@ -11,6 +11,18 @@ public class Inventory_Equipment : Inventory
             Data.Name = ModText.Equipment_Module;
     }
 
+    public override bool CanAcceptQuickTransfer(ItemSlot sourceSlot, ItemSlot targetSlot)
+    {
+        if (!base.CanAcceptQuickTransfer(sourceSlot, targetSlot))
+            return false;
+
+        return sourceSlot.itemData.ModuleDataDic != null &&
+               sourceSlot.itemData.ModuleDataDic.Values.Any(
+                   module => module != null &&
+                             module.ID == ModText.Equipment_Store &&
+                             module is Ex_ModData_MemoryPackable);
+    }
+
     public override void OnLeftClick(int index)
     {
         ItemSlot slot = Data.GetItemSlot(index);

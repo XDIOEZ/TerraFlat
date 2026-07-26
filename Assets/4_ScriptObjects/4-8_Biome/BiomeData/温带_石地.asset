@@ -34,17 +34,7 @@ MonoBehaviour:
     - itemPrefab: {fileID: 2383149550844687321, guid: 58df281e8bb89684ca779ca6009f0c54, type: 3}
       itemName: Mine_Coal
       itemCount: 1
-      SpawnChance: 0.0002
-      environmentConditionRange:
-        TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
-        PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
-        HightRange: {x: 0, y: 1}
-    - itemPrefab: {fileID: 1928828623759498003, guid: 65f16806af06edb43a1919bd9b8518a6, type: 3}
-      itemName: Golem_Stone
-      itemCount: 1
-      SpawnChance: 0.0003
+      SpawnChance: 0.0004
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
@@ -54,7 +44,7 @@ MonoBehaviour:
     - itemPrefab: {fileID: 1127970862557664809, guid: 471c4ce24372590429646f3580bb9fd3, type: 3}
       itemName: Mine_Copper
       itemCount: 1
-      SpawnChance: 0.0002
+      SpawnChance: 0.0004
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
@@ -64,7 +54,7 @@ MonoBehaviour:
     - itemPrefab: {fileID: 2383149550844687321, guid: d583767306a467b47a8ffff035dc9395, type: 3}
       itemName: Mine_Iron
       itemCount: 1
-      SpawnChance: 0.0001
+      SpawnChance: 0.0002
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
@@ -74,7 +64,7 @@ MonoBehaviour:
     - itemPrefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
       itemName: Mine_Stone
       itemCount: 1
-      SpawnChance: 0.001
+      SpawnChance: 0.0005
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}
@@ -84,7 +74,7 @@ MonoBehaviour:
     - itemPrefab: {fileID: 2383149550844687321, guid: 742285658deda7b44a8723ac170c91f4, type: 3}
       itemName: Mine_Tin
       itemCount: 1
-      SpawnChance: 0.0001
+      SpawnChance: 0.0002
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         HumidityRange: {x: 0, y: 1}

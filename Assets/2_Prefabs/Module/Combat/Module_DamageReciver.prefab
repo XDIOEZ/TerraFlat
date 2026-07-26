@@ -122,16 +122,16 @@ MonoBehaviour:
   Data:
     Hp: 180
     MaxHp: 180
+    UseBodyPartHealth: 0
+    TwoPartHitChance: 0.25
+    BodyPartDataVersion: 0
+    BodyParts: []
     Defense: 8
     Weakness: []
     AttackersUIDs: 
-    ShowCanvas: 0
+    ShowCanvas: 1
     DamageInterval: 0.12
     DestroyDelay: 0
-    HasSleepRespawnPoint: 0
-    SleepRespawnX: 0
-    SleepRespawnY: 0
-    SleepRespawnZ: 0
     LootTable:
     - LootPrefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
       LootPrefabName: Chicken
@@ -140,6 +140,10 @@ MonoBehaviour:
       MaxAmount: 1
   OnDead:
     _PersistentCalls: []
+  HurtActions: []
+  DeathActions: []
+  impactAudioMaterial: 0
+  hurtAudioCueId: 
   flashCount: 1
   flashDuration: 0.2
   flashColor: {r: 1, g: 0, b: 0, a: 1}
@@ -151,8 +155,10 @@ MonoBehaviour:
     _PersistentCalls: []
   UIValues: {fileID: 0}
   HideUiDelayAfterLastDamage: 4
-  EnablePlayerDyingState: 0
-  RespawnHpRate: 1
-  DyingPanelPrefab: {fileID: 0}
-  DyingPanelPrefabName: UI_Death
+  healthBarTopPadding: 0.16
+  healthBarWorldScale: 0.55
   Equipment_Inventory: {fileID: 0}
+  enableDebugTools: 0
+  references:
+    version: 2
+    RefIds: []

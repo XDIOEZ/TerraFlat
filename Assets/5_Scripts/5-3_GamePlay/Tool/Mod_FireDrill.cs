@@ -25,7 +25,6 @@ public class Mod_FireDrill : Module, IInteractable
     public GameObject UI_Prefab;
     public Button FrictionButton;
     public Button CloseButton;
-    public Image ProgressImage;
     public ItemSlot_UI InputSlotUI;
     public ItemSlot_UI OutputSlotUI;
 
@@ -41,6 +40,7 @@ public class Mod_FireDrill : Module, IInteractable
     float _progress; // 当前进度值（0 ~ RequiredClickCount）
     bool _hasClickedThisSession; // 本次打开是否已点击过
     bool _isActBound;
+    CraftingOutputPreview _outputPreview;
 
 #endregion
 
@@ -65,6 +65,8 @@ public class Mod_FireDrill : Module, IInteractable
     {
         UnbindItemActEvent();
         UnbindInteractEvents();
+        if (InputInventory?.Data != null)
+            InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
         DestroyUI();
         ModSaveData.WriteData(RawData);
     }
@@ -73,7 +75,7 @@ public class Mod_FireDrill : Module, IInteractable
     {
         // 每帧持续衰减进度
         _progress = Mathf.Max(0, _progress - (DecayRatePerSecond * deltaTime));
-        UpdateProgressUI();
+        UpdateOutputPreviewProgress();
     }
 
 #endregion
@@ -103,6 +105,13 @@ public class Mod_FireDrill : Module, IInteractable
         InputInventory.RefreshUI();
         OutputInventory.RefreshUI();
         basePanel.Toggle();
+        InputInventory.SyncQuickTransferTarget(basePanel);
+
+        if (!basePanel.IsOpen())
+        {
+            InputInventory.DefaultTarget_Inventory = null;
+            OutputInventory.DefaultTarget_Inventory = null;
+        }
     }
 
     public void OnInteractCancel(Item playerItem)
@@ -110,9 +119,7 @@ public class Mod_FireDrill : Module, IInteractable
         if (basePanel == null)
             return;
 
-        InputInventory.DefaultTarget_Inventory = null;
-        OutputInventory.DefaultTarget_Inventory = null;
-        basePanel.Close();
+        ClosePanelAndClearTransferContext();
     }
 
     private void DestroyUI()
@@ -120,13 +127,14 @@ public class Mod_FireDrill : Module, IInteractable
         if (basePanel == null)
             return;
 
+        ClosePanelAndClearTransferContext();
         UIManager.Instance.DestroyPanel(basePanel);
         basePanel = null;
         InputSlotUI = null;
         OutputSlotUI = null;
         FrictionButton = null;
         CloseButton = null;
-        ProgressImage = null;
+        _outputPreview = null;
     }
 
     public void OpenUI()
@@ -149,9 +157,9 @@ public class Mod_FireDrill : Module, IInteractable
         OutputInventory.SyncData();
 
         basePanel.Close();
-        UpdateProgressUI();
         InputInventory.RefreshUI();
         OutputInventory.RefreshUI();
+        RefreshOutputPreview();
     }
 
     private void EnsureUIBindingsOnOpen()
@@ -173,6 +181,7 @@ public class Mod_FireDrill : Module, IInteractable
         OutputInventory.itemSlot_UI.Clear();
         InputInventory.BindSlotUI(InputSlotUI, 0);
         OutputInventory.BindSlotUI(OutputSlotUI, 0);
+        BindOutputPreview();
 
         FrictionButton = basePanel.GetButton("合成按钮");
         if (FrictionButton == null)
@@ -195,11 +204,6 @@ public class Mod_FireDrill : Module, IInteractable
             CloseButton.onClick.AddListener(OnCloseButtonClick);
         }
 
-        ProgressImage = basePanel.GetImage("Progress");
-        if (ProgressImage == null)
-        {
-            throw new InvalidOperationException("[Mod_FireDrill] UI 缺少名为 Progress 的进度条 Image。");
-        }
     }
 
     private ItemSlot_UI FindSlotUI(params string[] names)
@@ -220,9 +224,18 @@ public class Mod_FireDrill : Module, IInteractable
 
     private void OnCloseButtonClick()
     {
+        ClosePanelAndClearTransferContext();
+    }
+
+    private void ClosePanelAndClearTransferContext()
+    {
         InputInventory.DefaultTarget_Inventory = null;
         OutputInventory.DefaultTarget_Inventory = null;
-        basePanel.Close();
+
+        if (basePanel != null)
+            basePanel.Close();
+
+        InputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     private void EnsureRuntimeDefaults()
@@ -282,16 +295,21 @@ public class Mod_FireDrill : Module, IInteractable
 
         // 增加进度
         _progress = Mathf.Min(_progress + increment, RequiredClickCount);
-        UpdateProgressUI();
+        UpdateOutputPreviewProgress();
 
         // 检查是否完成
         if (_progress >= RequiredClickCount)
         {
-            if (TryConvertToFireSeed(tinderSlot, tinderIndex))
+            bool craftResult = TryConvertToFireSeed(tinderSlot, tinderIndex);
+            if (craftResult)
             {
                 Debug.Log($"[Mod_FireDrill] 钻木成功：已将火绒转化为火种，进度={_progress:F1}/{RequiredClickCount}");
             }
+
             ResetProgress();
+            RefreshOutputPreview();
+            if (craftResult)
+                _outputPreview?.PlaySuccess();
         }
     }
 
@@ -339,24 +357,9 @@ public class Mod_FireDrill : Module, IInteractable
         if (OutputInventory == null || OutputInventory.Data == null)
             throw new InvalidOperationException("[Mod_FireDrill] 输出容器为空，无法生成火种。");
 
-        var prefab = GameRes.Instance.GetPrefab(FireSeedItemID);
-        if (prefab == null)
-        {
-            Debug.LogError($"[Mod_FireDrill] 找不到火种预制体: {FireSeedItemID}");
+        ItemData fireSeedData = CreateFireSeedData();
+        if (fireSeedData == null)
             return false;
-        }
-
-        var item = prefab.GetComponent<Item>();
-        if (item == null)
-            throw new InvalidOperationException($"[Mod_FireDrill] 预制体 {FireSeedItemID} 缺少 Item 组件。");
-
-        ItemData fireSeedData = item.Get_NewItemData();
-        fireSeedData.Stack.Amount = 1;
-        fireSeedData.Tags ??= new List<string>();
-        if (!fireSeedData.Tags.Contains("火种"))
-        {
-            fireSeedData.Tags.Add("火种");
-        }
 
         if (!OutputInventory.Data.TryAddItem(fireSeedData, false))
         {
@@ -379,21 +382,67 @@ public class Mod_FireDrill : Module, IInteractable
     private void ResetProgress()
     {
         _progress = 0f;
-        UpdateProgressUI();
+        UpdateOutputPreviewProgress();
     }
 
-    private void UpdateProgressUI()
+    private void BindOutputPreview()
     {
-        if (ProgressImage == null)
+        _outputPreview = CraftingOutputPreview.Attach(basePanel, OutputSlotUI);
+        InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        InputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
+        RefreshOutputPreview();
+    }
+
+    private void OnInputSlotChanged(ItemSlot _)
+    {
+        _hasClickedThisSession = false;
+        ResetProgress();
+        RefreshOutputPreview();
+    }
+
+    private void RefreshOutputPreview()
+    {
+        if (_outputPreview == null)
             return;
 
-        if (RequiredClickCount <= 0)
+        if (TryGetTinderSlot(out _, out _) &&
+            CreateFireSeedData() is ItemData fireSeedData &&
+            OutputInventory.Data.TryAddItem(fireSeedData, false))
+            _outputPreview.Show(fireSeedData, GetProgress01());
+        else
+            _outputPreview.Clear();
+    }
+
+    private void UpdateOutputPreviewProgress()
+    {
+        _outputPreview?.SetProgress(GetProgress01());
+    }
+
+    private float GetProgress01()
+    {
+        return RequiredClickCount <= 0 ? 0f : Mathf.Clamp01(_progress / RequiredClickCount);
+    }
+
+    private ItemData CreateFireSeedData()
+    {
+        GameObject prefab = GameRes.Instance.GetPrefab(FireSeedItemID);
+        if (prefab == null)
         {
-            ProgressImage.fillAmount = 0f;
-            return;
+            Debug.LogError($"[Mod_FireDrill] 找不到火种预制体: {FireSeedItemID}");
+            return null;
         }
 
-        ProgressImage.fillAmount = Mathf.Clamp01(_progress / (float)RequiredClickCount);
+        Item itemComponent = prefab.GetComponent<Item>();
+        if (itemComponent == null)
+            throw new InvalidOperationException($"[Mod_FireDrill] 预制体 {FireSeedItemID} 缺少 Item 组件。");
+
+        ItemData fireSeedData = itemComponent.Get_NewItemData();
+        fireSeedData.Stack.Amount = 1;
+        fireSeedData.Tags ??= new List<string>();
+        if (!fireSeedData.Tags.Contains("火种"))
+            fireSeedData.Tags.Add("火种");
+
+        return fireSeedData;
     }
 
 #endregion

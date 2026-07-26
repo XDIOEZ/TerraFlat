@@ -34,8 +34,8 @@ MonoBehaviour:
     - itemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
       itemName: Twine
       itemCount: 1
-      SpawnChance: 0.005625
-      SpawnChanceMultiplier: 10
+      SpawnChance: 0.0028125
+      SpawnChanceMultiplier: 1
       environmentConditionRange:
         TemperatureRange: {x: 0.4, y: 1}
         HumidityRange: {x: 0, y: 1}
@@ -43,8 +43,11 @@ MonoBehaviour:
         SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
       CompanionHostTag: Tree
-      CompanionSpawnChance: 0.35
-      CompanionSpawnOffset: {x: 0, y: -0.25}
+      CompanionSpawnChance: 0.945
+      CompanionOnly: 1
+      CompanionSpawnOffset: {x: 0, y: 0}
+      CompanionSpawnMinRadius: 0.45
+      CompanionSpawnRadius: 1.25
     - itemPrefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
       itemName: Bush
       itemCount: 1
@@ -58,13 +61,17 @@ MonoBehaviour:
     - itemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
       itemName: Log
       itemCount: 1
-      SpawnChance: 0.0009375
+      SpawnChance: 0.006
       environmentConditionRange:
         TemperatureRange: {x: 0.4, y: 1}
         HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
         SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
+      CompanionHostTag: Tree
+      CompanionSpawnChance: 1
+      CompanionOnly: 1
+      CompanionSpawnOffset: {x: 0.9, y: -0.3}
     - itemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
       itemName: Stick_Wood
       itemCount: 1

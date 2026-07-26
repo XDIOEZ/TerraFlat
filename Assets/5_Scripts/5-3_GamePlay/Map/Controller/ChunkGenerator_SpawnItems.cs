@@ -73,6 +73,13 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             for (int y = 0; y < height; y++)
             {
                 Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
+                if (context.StructureMask != null && context.StructureMask.IsOccupied(x, y))
+                    continue;
+
+                // 以河流生成后写入的最终地块为准，陆地资源不得生成在河流或海水上。
+                if (Map.GetTopTile(worldPos) is TileData_Water)
+                    continue;
+
                 if (!Map.Data.IsEnvironmentLocalValid(x, y))
                 {
                     if (!_hasLoggedEnvMissing)
@@ -164,6 +171,9 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         {
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
+                if (spawn != null && spawn.CompanionOnly)
+                    continue;
+
                 if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, localPos, biome.BiomeName, spawnMultiplier))
                 {
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
@@ -178,6 +188,9 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
         {
             foreach (Biome_ItemSpawn_NoSO spawn in biome.TerrainConfig.ItemSpawn_NoSO)
             {
+                if (spawn != null && spawn.CompanionOnly)
+                    continue;
+
                 if (TrySpawnItem(spawn, map, spawnCenterPos, ref randomState, localPos, biome.BiomeName, spawnMultiplier))
                 {
                     spawned += Mathf.Max(1, spawn != null ? spawn.itemCount : 1);
@@ -237,6 +250,10 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             if (!HasSpawnedHostTag(spawnedConfigs, companion.CompanionHostTag))
                 continue;
 
+            Vector2 companionOffset = GetCompanionSpawnOffset(
+                companion,
+                ref companionRandomState);
+
             if (TrySpawnItem(
                 companion,
                 map,
@@ -246,13 +263,37 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
                 biomeName,
                 globalSpawnMultiplier,
                 companion.CompanionSpawnChance,
-                companion.CompanionSpawnOffset))
+                companionOffset))
             {
                 spawned += Mathf.Max(1, companion.itemCount);
             }
         }
 
         return spawned;
+    }
+
+    private static Vector2 GetCompanionSpawnOffset(
+        Biome_ItemSpawn_NoSO companion,
+        ref uint randomState)
+    {
+        float maxRadius = Mathf.Max(0f, companion.CompanionSpawnRadius);
+        if (maxRadius <= 0f)
+            return companion.CompanionSpawnOffset;
+
+        float minRadius = Mathf.Clamp(companion.CompanionSpawnMinRadius, 0f, maxRadius);
+        float angle = NextUnitFloat(ref randomState) * Mathf.PI * 2f;
+        float radius = Mathf.Sqrt(Mathf.Lerp(
+            minRadius * minRadius,
+            maxRadius * maxRadius,
+            NextUnitFloat(ref randomState)));
+
+        return companion.CompanionSpawnOffset +
+               new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+    }
+
+    private static float NextUnitFloat(ref uint randomState)
+    {
+        return (Xorshift32(ref randomState) & 0xFFFFFF) / (float)0x1000000;
     }
 
     private static bool HasSpawnedHostTag(

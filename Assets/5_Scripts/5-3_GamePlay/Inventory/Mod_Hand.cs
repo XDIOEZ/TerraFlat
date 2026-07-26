@@ -19,6 +19,10 @@ public class Mod_Hand : Module
     public override void Load()
     {
         ModSaveData.ReadData(ref RawData);
+
+        // Inventory_Hand 是所有独立容器（合成、熔炉、箱子等）反查本地快捷栏的
+        // 通用入口；必须保留所属玩家，不能只依赖各窗口临时设置 DefaultTarget_Inventory。
+        HandInventory.item = item;
         HandInventory.InitData();
         HandInventory.SwitchUI();
     }

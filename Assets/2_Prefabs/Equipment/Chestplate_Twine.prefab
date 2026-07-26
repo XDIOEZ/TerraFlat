@@ -151,7 +151,7 @@ MonoBehaviour:
     Durability: 200
     MaxDurability: 1
     Tags:
-    - 
+    - 36
     Stack:
       Amount: 1
       Volume: 5

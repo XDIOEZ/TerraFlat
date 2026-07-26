@@ -7,14 +7,19 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-    /// Creates one summoner prefab for every building body prefab.
-/// Generated assets live under Building/Summoners and are refreshed from their building body
+/// Creates one summoner prefab for every placeable building or tool body prefab.
+/// Generated assets live beside their source category and are refreshed from the placed body
 /// while preserving the summoner asset GUID used by recipes and saves.
 /// </summary>
 public static class BuildingSummonerPrefabGenerator
 {
     public const string BuildingRoot = "Assets/2_Prefabs/Building";
     public const string SummonerRoot = BuildingRoot + "/Summoners";
+    public const string ToolRoot = "Assets/2_Prefabs/Tools";
+    public const string ToolSummonerRoot = ToolRoot + "/Summoners";
+
+    private static readonly string[] SourceRoots = { BuildingRoot, ToolRoot };
+    private static readonly string[] SummonerRoots = { SummonerRoot, ToolSummonerRoot };
 
     private static readonly HashSet<string> PendingBuildingPaths = new(StringComparer.OrdinalIgnoreCase);
     private static bool _scheduled;
@@ -23,7 +28,18 @@ public static class BuildingSummonerPrefabGenerator
     [MenuItem("FlatWorld/建筑/生成或刷新全部建筑召唤器")]
     public static void GenerateAll()
     {
-        string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { BuildingRoot });
+        GenerateFromRoots(SourceRoots, relinkAllRecipes: true);
+    }
+
+    [MenuItem("FlatWorld/Building/Generate Placeable Tool Summoners")]
+    public static void GeneratePlaceableToolSummoners()
+    {
+        GenerateFromRoots(new[] { ToolRoot }, relinkAllRecipes: false);
+    }
+
+    private static void GenerateFromRoots(string[] roots, bool relinkAllRecipes)
+    {
+        string[] guids = AssetDatabase.FindAssets("t:Prefab", roots);
         List<string> buildingPaths = new(guids.Length);
         for (int i = 0; i < guids.Length; i++)
         {
@@ -32,15 +48,15 @@ public static class BuildingSummonerPrefabGenerator
                 buildingPaths.Add(path);
         }
 
-        Generate(buildingPaths, relinkAllRecipes: true);
+        Generate(buildingPaths, relinkAllRecipes);
     }
 
     internal static bool IsBuildingSourcePath(string assetPath)
     {
         if (string.IsNullOrWhiteSpace(assetPath) ||
             !assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase) ||
-            !assetPath.StartsWith(BuildingRoot + "/", StringComparison.OrdinalIgnoreCase) ||
-            assetPath.StartsWith(SummonerRoot + "/", StringComparison.OrdinalIgnoreCase))
+            !IsUnderAnyRoot(assetPath, SourceRoots) ||
+            IsUnderAnyRoot(assetPath, SummonerRoots))
         {
             return false;
         }
@@ -164,7 +180,12 @@ public static class BuildingSummonerPrefabGenerator
             throw new InvalidOperationException($"无法读取建筑 Prefab 的本地对象 ID：{buildingPath}");
         }
 
-        string summonerPath = $"{SummonerRoot}/{MakeSafeFileName(summonerId)}.prefab";
+        string destinationRoot = buildingPath.StartsWith(
+            ToolRoot + "/",
+            StringComparison.OrdinalIgnoreCase)
+            ? ToolSummonerRoot
+            : SummonerRoot;
+        string summonerPath = $"{destinationRoot}/{MakeSafeFileName(summonerId)}.prefab";
         // Prefab variants cannot represent every custom ItemData value (for example
         // DamageType dictionary keys). Mirror the source YAML instead and preserve an
         // existing destination .meta file so references to the summoner remain stable.
@@ -387,7 +408,7 @@ public static class BuildingSummonerPrefabGenerator
     private static int RelinkEveryBuildingRecipe()
     {
         int updated = 0;
-        string[] summonerGuids = AssetDatabase.FindAssets("t:Prefab", new[] { SummonerRoot });
+        string[] summonerGuids = AssetDatabase.FindAssets("t:Prefab", SummonerRoots);
         for (int i = 0; i < summonerGuids.Length; i++)
         {
             GameObject summoner = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -404,8 +425,7 @@ public static class BuildingSummonerPrefabGenerator
             if (state == null || string.IsNullOrWhiteSpace(state.BuildingPrefabId))
                 continue;
 
-            GameObject building = AssetDatabase.LoadAssetAtPath<GameObject>(
-                $"{BuildingRoot}/{state.BuildingPrefabId}.prefab");
+            GameObject building = LoadPlaceablePrefab(state.BuildingPrefabId);
             if (building != null)
                 updated += RelinkRecipes(building, summoner);
         }
@@ -417,6 +437,32 @@ public static class BuildingSummonerPrefabGenerator
     {
         if (!AssetDatabase.IsValidFolder(SummonerRoot))
             AssetDatabase.CreateFolder(BuildingRoot, "Summoners");
+        if (!AssetDatabase.IsValidFolder(ToolSummonerRoot))
+            AssetDatabase.CreateFolder(ToolRoot, "Summoners");
+    }
+
+    private static GameObject LoadPlaceablePrefab(string prefabId)
+    {
+        for (int i = 0; i < SourceRoots.Length; i++)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                $"{SourceRoots[i]}/{prefabId}.prefab");
+            if (prefab != null)
+                return prefab;
+        }
+
+        return null;
+    }
+
+    private static bool IsUnderAnyRoot(string assetPath, IReadOnlyList<string> roots)
+    {
+        for (int i = 0; i < roots.Count; i++)
+        {
+            if (assetPath.StartsWith(roots[i] + "/", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string MakeSafeFileName(string value)

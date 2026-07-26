@@ -3,23 +3,18 @@ using UnityEngine;
 [System.Serializable]
 public class BuffAction_MoverSpeedChange : BuffAction
 {
-    [Header("�ƶ��ٶȸı䱶�ʣ�>1�ӿ죬<1������(���㱶��)")]
-    public float SpeedChangeValue;
-    [SerializeField]
-    Mover mod;
+    [Header("移动速度改变倍率（>1 加快，<1 减慢）")]
+    public float SpeedChangeValue = 1f;
 
     public override void Apply(BuffRunTime data)
     {
-        if (mod == null)
-        {
-            data.buff_Receiver.itemMods.GetMod_ByID(ModText.Mover, out mod);
+        Item receiver = data?.buff_Receiver;
+        if (receiver == null)
+            return;
 
-            if (mod == null)
-            {
-                Debug.LogError("BuffAction_MoverSpeedChange: SpeedMod is null.");
-                return;
-            }
-        }
+        Mover mod = receiver.itemMods.GetMod_ByID(ModText.Mover) as Mover;
+        if (mod?.Speed == null)
+            return;
 
         mod.Speed.MultiplicativeModifier *= SpeedChangeValue;
     }

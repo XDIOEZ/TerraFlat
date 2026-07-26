@@ -27,9 +27,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -49,9 +49,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Humus
@@ -115,7 +115,7 @@ MonoBehaviour:
     Max_Water: 300
     Max_Vitamins: 0
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
+    nutritionConsumeSpeed: 0
     WaterConsumeSpeedRate: 0
     nutritionConsumeRate: 0
     EnableSpoilage: 1
@@ -137,7 +137,7 @@ MonoBehaviour:
     Max_Water: 300
     Max_Vitamins: 0
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
+    nutritionConsumeSpeed: 0
     WaterConsumeSpeedRate: 0
     nutritionConsumeRate: 0
     EnableSpoilage: 1
@@ -159,7 +159,7 @@ MonoBehaviour:
     Max_Water: 300
     Max_Vitamins: 0
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
+    nutritionConsumeSpeed: 0
     WaterConsumeSpeedRate: 0
     nutritionConsumeRate: 0
     EnableSpoilage: 1
@@ -181,9 +181,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Humus
@@ -203,9 +203,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -225,9 +225,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -247,9 +247,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -269,9 +269,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Humus
@@ -291,9 +291,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -313,9 +313,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -335,9 +335,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -357,9 +357,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 0
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -379,9 +379,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -423,9 +423,9 @@ MonoBehaviour:
     Max_Water: 1
     Max_Vitamins: 1
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
@@ -445,9 +445,9 @@ MonoBehaviour:
     Max_Water: 500
     Max_Vitamins: 500
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
+    nutritionConsumeSpeed: 0
+    WaterConsumeSpeedRate: 0
+    nutritionConsumeRate: 0
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten

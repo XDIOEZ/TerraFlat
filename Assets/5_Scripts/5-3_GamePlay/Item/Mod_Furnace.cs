@@ -52,19 +52,24 @@ public class Mod_Furnace : Module, IInteractable
             OpenUI();
         }
 
-        CancelPanelDestroyCountdown();
-        basePanel.Toggle();
-        
         var handInv = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (handInv == null)
         {
             Debug.LogError("玩家手部容器为空！");
             return;
         }
-        
-        InputInventory.DefaultTarget_Inventory = handInv;
-        OutputInventory.DefaultTarget_Inventory = handInv;
-        FuelInventory.DefaultTarget_Inventory = handInv;
+
+        CancelPanelDestroyCountdown();
+        basePanel.Toggle();
+
+        bool isOpen = basePanel.IsOpen();
+        InputInventory.DefaultTarget_Inventory = isOpen ? handInv : null;
+        OutputInventory.DefaultTarget_Inventory = isOpen ? handInv : null;
+        FuelInventory.DefaultTarget_Inventory = isOpen ? handInv : null;
+        InputInventory.SyncQuickTransferTarget(basePanel);
+
+        if (!isOpen)
+            StartPanelDestroyCountdown();
     }
 
     public void OnInteractCancel(Item playerItem)
@@ -72,7 +77,7 @@ public class Mod_Furnace : Module, IInteractable
         if (basePanel == null)
             return;
 
-        basePanel.Close();
+        ClosePanelAndClearTransferContext();
         StartPanelDestroyCountdown();
     }
 
@@ -83,7 +88,20 @@ public class Mod_Furnace : Module, IInteractable
 
     private void OnDestroy()
     {
+        ClosePanelAndClearTransferContext();
         CancelPanelDestroyCountdown();
+    }
+
+    private void ClosePanelAndClearTransferContext()
+    {
+        InputInventory.DefaultTarget_Inventory = null;
+        OutputInventory.DefaultTarget_Inventory = null;
+        FuelInventory.DefaultTarget_Inventory = null;
+
+        if (basePanel != null)
+            basePanel.Close();
+
+        InputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     #region 面板延迟销毁

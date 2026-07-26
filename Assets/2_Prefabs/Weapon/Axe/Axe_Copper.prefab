@@ -242,6 +242,9 @@ MonoBehaviour:
   DamageInterval: 0.2
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0
+  weaponAudioClass: 0
+  attackAudioCueId: 
+  impactAudioOverrides: []
   showDebugWarnings: 1
   damageCollider: {fileID: 5871641198939068763}
   lastDamageTime: 0

@@ -151,7 +151,7 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 
+    - 47
     Stack:
       Amount: 1
       Volume: 1
@@ -218,6 +218,14 @@ PrefabInstance:
     m_TransformParent: {fileID: 6784684965543096060}
     m_Modifications:
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: ConsumeKind
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: ConsumeAudio.CueId
+      value: food.drink
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Fat
       value: 0
       objectReference: {fileID: 0}
@@ -275,7 +283,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: FoodModData.FoodData.nutrition.Water
-      value: 300
+      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Max_Vitamins.BaseValue
@@ -295,10 +303,14 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: FoodModData.FoodData.nutrition.Max_Water
-      value: 300
+      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: FoodModData.FoodData.nutritionConsumeRate
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutritionConsumeSpeed.BaseValue
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}

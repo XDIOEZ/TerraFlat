@@ -28,8 +28,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     [Header("交互组件")]
     [Tooltip("合成按钮")]
     public Button workButton;
-    [Tooltip("合成进度条Image（可选，不填则自动查找名为Progress的Image）")]
-    public Image progressImage;
     [Tooltip("打开/关闭手工合成台的按键")]
     public KeyCode toggleKey = KeyCode.H;
     [Tooltip("工作台等级，等级越高需要点击次数越少")]
@@ -42,6 +40,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     public int minClickCount = 1;
 
     private int _currentClickProgress;
+    private CraftingOutputPreview _outputPreview;
 
     private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
 
@@ -71,6 +70,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     public override void Save()
     {
+        if (inputInventory?.Data != null)
+            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+
         ModSaveData.WriteData(RawData);
     }
 
@@ -95,25 +97,26 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             return;
         }
 
-        if (basePanel.gameObject.activeInHierarchy)
+        if (basePanel.IsOpen())
         {
+            basePanel.Close();
+            inputInventory.SyncQuickTransferTarget(basePanel);
             inputInventory.DefaultTarget_Inventory = null;
             outputInventory.DefaultTarget_Inventory = null;
+            return;
         }
-        else
+
+        var handInv = GetPlayerHandInventory();
+        if (handInv == null)
         {
-            var handInv = GetPlayerHandInventory();
-            if (handInv == null)
-            {
-                Debug.LogError("[Mod_HandCraftTable] 玩家手部容器为空，无法打开手工合成台");
-                return;
-            }
-
-            inputInventory.DefaultTarget_Inventory = handInv;
-            outputInventory.DefaultTarget_Inventory = handInv;
+            Debug.LogError("[Mod_HandCraftTable] 玩家手部容器为空，无法打开手工合成台");
+            return;
         }
 
-        basePanel.Toggle();
+        inputInventory.DefaultTarget_Inventory = handInv;
+        outputInventory.DefaultTarget_Inventory = handInv;
+        basePanel.Open();
+        inputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     public bool EnsurePanelCreated()
@@ -189,6 +192,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         inputInventory.SyncData();
         outputInventory.SyncData();
+        BindCraftPreview();
 
         workButton = basePanel.GetButton("合成按钮");
         if (workButton == null)
@@ -199,51 +203,72 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         workButton.onClick.RemoveListener(OnCraftButtonClick);
         workButton.onClick.AddListener(OnCraftButtonClick);
-        TryBindProgressImage();
-        UpdateCraftProgressUI();
 
         inputInventory.RefreshUI();
         outputInventory.RefreshUI();
+        RefreshCraftPreview();
     }
 
     private void OnCraftButtonClick()
     {
+        if (!TryGetCraftPreview(out _))
+        {
+            ResetCraftProgress();
+            return;
+        }
+
         _currentClickProgress++;
         int requiredClickCount = RequiredClickCount;
         _currentClickProgress = Mathf.Min(_currentClickProgress, requiredClickCount);
-        UpdateCraftProgressUI();
+        _outputPreview?.SetProgress(_currentClickProgress / (float)requiredClickCount);
         LogCraftDebug($"点击进度：{_currentClickProgress}/{requiredClickCount}，等级={workbenchLevel}");
 
         if (_currentClickProgress < requiredClickCount)
             return;
 
         bool craftResult = Craft(inputInventory, outputInventory);
-        _currentClickProgress = 0;
-        UpdateCraftProgressUI();
+        ResetCraftProgress();
+        RefreshCraftPreview();
+        if (craftResult)
+            _outputPreview?.PlaySuccess();
+
         if (!craftResult)
         {
             LogCraftDebug("合成失败，已重置点击进度");
         }
     }
 
-    private void TryBindProgressImage()
+    private void BindCraftPreview()
     {
-        if (progressImage != null)
+        if (outputInventory.itemSlot_UI.Count == 0)
             return;
 
-        progressImage = basePanel.GetComponentsInChildren<Image>(true)
-            .FirstOrDefault(image => image.name == "Progress");
+        _outputPreview = CraftingOutputPreview.Attach(basePanel, outputInventory.itemSlot_UI[0]);
+        inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        inputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
     }
 
-    private void UpdateCraftProgressUI()
+    private void OnInputSlotChanged(ItemSlot _)
     {
-        if (progressImage == null)
+        ResetCraftProgress();
+        RefreshCraftPreview();
+    }
+
+    private void ResetCraftProgress()
+    {
+        _currentClickProgress = 0;
+        _outputPreview?.SetProgress(0f);
+    }
+
+    private void RefreshCraftPreview()
+    {
+        if (_outputPreview == null)
             return;
 
-        int requiredClickCount = RequiredClickCount;
-        progressImage.fillAmount = requiredClickCount <= 0
-            ? 0f
-            : Mathf.Clamp01(_currentClickProgress / (float)requiredClickCount);
+        if (TryGetCraftPreview(out ItemData previewItem))
+            _outputPreview.Show(previewItem, _currentClickProgress / (float)RequiredClickCount);
+        else
+            _outputPreview.Clear();
     }
 
     private void BindInputSlots()
@@ -329,7 +354,14 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         if (basePanel == null)
             throw new System.InvalidOperationException("[Mod_HandCraftTable] basePanel 为空，无法打开面板");
 
+        var handInv = GetPlayerHandInventory();
+        if (handInv == null)
+            throw new System.InvalidOperationException("[Mod_HandCraftTable] 玩家手部容器为空，无法打开面板");
+
+        inputInventory.DefaultTarget_Inventory = handInv;
+        outputInventory.DefaultTarget_Inventory = handInv;
         basePanel.Open();
+        inputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     public void I_ClosePanel()
@@ -338,6 +370,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             throw new System.InvalidOperationException("[Mod_HandCraftTable] basePanel 为空，无法关闭面板");
 
         basePanel.Close();
+        inputInventory.SyncQuickTransferTarget(basePanel);
+        inputInventory.DefaultTarget_Inventory = null;
+        outputInventory.DefaultTarget_Inventory = null;
     }
 
     public void I_TogglePanel()
@@ -438,49 +473,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     public bool Craft(Inventory inputInv, Inventory outputInv)
     {
-        HashSet<string> mirroredKeys = new HashSet<string>();
-        List<string> recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
-        List<ItemSlot> inputSlots = GetInputSlots(inputInv);
-
-        LogCraftDebug($"开始匹配，输入槽快照={BuildSlotSnapshot(inputSlots)}");
-        LogCraftDebug($"候选键数量={recipeKeys.Count}");
-
-        Recipe recipe = null;
-        bool isMirrorMatched = false;
-        foreach (string recipeKey in recipeKeys)
-        {
-            LogCraftDebug($"尝试键：{recipeKey}，镜像键={mirroredKeys.Contains(recipeKey)}");
-
-            if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
-            {
-                LogCraftDebug("字典未命中该键");
-                continue;
-            }
-
-            LogCraftDebug($"命中配方：{recipe.name}，规则={recipe.inputs.inputOrder}，允许镜像={recipe.enableMirrorCrafting}");
-
-            bool isMirrorKey = mirroredKeys.Contains(recipeKey);
-            if (isMirrorKey && recipe.inputs.inputOrder == OrderedRule && !recipe.enableMirrorCrafting)
-            {
-                LogCraftDebug("命中镜像键但配方未启用镜像，跳过");
-                recipe = null;
-                continue;
-            }
-
-            // 防止无序Key误命中有序配方：命中后再按槽位顺序做一次严格校验
-            if (recipe.inputs.inputOrder == OrderedRule && !IsOrderedRecipeActuallyMatched(inputInv, recipe, isMirrorKey))
-            {
-                LogCraftDebug("有序配方严格校验失败，跳过该命中");
-                recipe = null;
-                continue;
-            }
-
-            isMirrorMatched = isMirrorKey;
-            LogCraftDebug($"最终匹配成功：{recipe.name}，镜像匹配={isMirrorMatched}");
-                break;
-        }
-
-        if (recipe == null)
+        if (!TryResolveRecipe(inputInv, out Recipe recipe, out bool isMirrorMatched, out List<string> recipeKeys))
         {
             Debug.LogError($"[Mod_HandCraftTable] 配方不存在：{string.Join(" 或 ", recipeKeys)}");
             return false;
@@ -501,6 +494,76 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
         return true;
+    }
+
+    private bool TryGetCraftPreview(out ItemData previewItem)
+    {
+        previewItem = null;
+        if (!TryResolveRecipe(inputInventory, out Recipe recipe, out bool isMirrorMatched, out _))
+            return false;
+
+        if (!ValidateSlotCount(recipe))
+            return false;
+
+        List<ItemData> outputItems = PrepareOutputItems(recipe);
+        if (outputItems == null || outputItems.Count == 0)
+            return false;
+
+        if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems, isMirrorMatched))
+            return false;
+
+        previewItem = outputItems[0];
+        return true;
+    }
+
+    private bool TryResolveRecipe(
+        Inventory inputInv,
+        out Recipe recipe,
+        out bool isMirrorMatched,
+        out List<string> recipeKeys)
+    {
+        HashSet<string> mirroredKeys = new HashSet<string>();
+        recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
+        List<ItemSlot> inputSlots = GetInputSlots(inputInv);
+
+        LogCraftDebug($"开始匹配，输入槽快照={BuildSlotSnapshot(inputSlots)}");
+        LogCraftDebug($"候选键数量={recipeKeys.Count}");
+
+        recipe = null;
+        isMirrorMatched = false;
+        foreach (string recipeKey in recipeKeys)
+        {
+            LogCraftDebug($"尝试键：{recipeKey}，镜像键={mirroredKeys.Contains(recipeKey)}");
+
+            if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+            {
+                LogCraftDebug("字典未命中该键");
+                continue;
+            }
+
+            LogCraftDebug($"命中配方：{recipe.name}，规则={recipe.inputs.inputOrder}，允许镜像={recipe.enableMirrorCrafting}");
+
+            bool isMirrorKey = mirroredKeys.Contains(recipeKey);
+            if (isMirrorKey && recipe.inputs.inputOrder == OrderedRule && !recipe.enableMirrorCrafting)
+            {
+                LogCraftDebug("命中镜像键但配方未启用镜像，跳过");
+                recipe = null;
+                continue;
+            }
+
+            if (recipe.inputs.inputOrder == OrderedRule && !IsOrderedRecipeActuallyMatched(inputInv, recipe, isMirrorKey))
+            {
+                LogCraftDebug("有序配方严格校验失败，跳过该命中");
+                recipe = null;
+                continue;
+            }
+
+            isMirrorMatched = isMirrorKey;
+            LogCraftDebug($"最终匹配成功：{recipe.name}，镜像匹配={isMirrorMatched}");
+            return true;
+        }
+
+        return false;
     }
 
     private bool ValidateSlotCount(Recipe recipe)
@@ -568,10 +631,40 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         var itemsToAdd = new List<ItemData>();
 
+        if (recipe == null || recipe.outputs == null || recipe.outputs.results == null)
+            return null;
+
         foreach (var output in recipe.outputs.results)
         {
-            Item outputItem = output.ItemPrefab.GetComponent<Item>();
+            if (output == null || string.IsNullOrEmpty(output.ItemName))
+            {
+                Debug.LogError($"[Mod_HandCraftTable] 配方输出项名称为空（配方：{recipe.name}）");
+                return null;
+            }
+
+            if (GameRes.Instance == null ||
+                GameRes.Instance.AllPrefabs == null ||
+                !GameRes.Instance.AllPrefabs.TryGetValue(output.ItemName, out GameObject outputPrefab) ||
+                outputPrefab == null)
+            {
+                Debug.LogError($"[Mod_HandCraftTable] 找不到有效的产物预制体：{output.ItemName}（配方：{recipe.name}）");
+                return null;
+            }
+
+            Item outputItem = outputPrefab.GetComponent<Item>();
+            if (outputItem == null)
+            {
+                Debug.LogError($"[Mod_HandCraftTable] 产物预制体缺少 Item 组件：{output.ItemName}（配方：{recipe.name}）");
+                return null;
+            }
+
             ItemData newItem = outputItem.Get_NewItemData();
+            if (newItem == null || newItem.Stack == null)
+            {
+                Debug.LogError($"[Mod_HandCraftTable] 无法创建产物数据：{output.ItemName}（配方：{recipe.name}）");
+                return null;
+            }
+
             newItem.Stack.Amount = output.amount;
             itemsToAdd.Add(newItem);
         }

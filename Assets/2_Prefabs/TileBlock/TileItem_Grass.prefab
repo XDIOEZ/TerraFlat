@@ -158,7 +158,7 @@ MonoBehaviour:
   updateInterval: 0
   data:
     IDName: TileItem_Grass
-    GameName: "\u8349\u5757"
+    GameName: TileItem_Grass
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
     MaxDurability: 1

@@ -78,6 +78,13 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 
 	protected string _lastPlayedAnimation;
 	protected static GUIStyle _debugStateStyle;
+	protected AIStateMachine<TState> _stateMachine;
+
+	// Reusable memory of the item that most recently caused damage.
+	[SerializeField, ReadOnly] private Item _recentDamageThreat;
+	[SerializeField, ReadOnly] private float _damageThreatRemain;
+	private Vector3 _lastDamageThreatPosition;
+	private DamageReceiver _damageEventSource;
 #endregion
 
 #region CachedModules
@@ -85,6 +92,7 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	[SerializeField, ReadOnly] protected DamageReceiver _hp;
 	[SerializeField, ReadOnly] protected Mod_ItemDetector _detector;
 	[SerializeField, ReadOnly] protected Mod_AnimatorController _animator;
+	[SerializeField, ReadOnly] protected Mod_TurnBack _turnBody;
 #endregion
 
 #region Events
@@ -96,8 +104,8 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	/// <summary>评估下一状态（按优先级从高到低判断）</summary>
 	protected abstract TState EvaluateNextState();
 
-	/// <summary>帧逻辑分发（switch 当前状态调用对应 Tick 方法）</summary>
-	protected abstract void TickCurrentState(float deltaTime);
+	/// <summary>注册该动物使用的状态节点。</summary>
+	protected abstract void ConfigureStateNodes(AIStateMachine<TState> stateMachine);
 
 	/// <summary>获取状态对应的动画名</summary>
 	protected abstract string GetAnimationNameForState(TState state);
@@ -126,6 +134,15 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 
 	/// <summary>判断是否为待机状态（进入时重置待机计时器）</summary>
 	protected virtual bool IsIdleState(TState state) => false;
+
+	/// <summary>
+	/// How long this animal remembers the source that hurt it.
+	/// A value of zero disables the reusable damage-threat reaction.
+	/// </summary>
+	protected virtual float DamageThreatMemoryDuration => 0f;
+
+	/// <summary>仅用于抑制 Idle/Move 在边界条件下的逐帧抖动，高优先级状态不受限制。</summary>
+	protected virtual float LocomotionStateDebounce => 0.15f;
 #endregion
 
 #region Virtual - 扩展钩子
@@ -143,6 +160,9 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 
 	/// <summary>评估前的数据刷新（如刷新威胁目标、群体状态等）</summary>
 	protected virtual void OnPreEvaluate() { }
+
+	/// <summary>Called immediately after a valid damage source is remembered.</summary>
+	protected virtual void OnDamageThreatUpdated(DamageReceiverDamageInfo damageInfo) { }
 
 	/// <summary>重置运行时状态（Load 时调用，子类初始化自己的运行时字段）</summary>
 	protected virtual void OnResetRuntimeState() { }
@@ -171,9 +191,15 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		_wanderWaitTimer = 0f;
 		_hasWanderTarget = false;
 		_lastPlayedAnimation = null;
+		ClearRecentDamageThreat();
 
 		BindCommonModules();
 		OnResetRuntimeState();
+		BuildStateMachine();
+		if (IsIdleState(_currentState))
+		{
+			_idleRemainTimer = GetIdleDuration();
+		}
 		TryRefreshDetector();
 		OnPreEvaluate();
 		PlayStateAnimation(_currentState, true);
@@ -189,6 +215,7 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		// 更新状态计时器
 		_stateElapsed += deltaTime;
 		_detectorRefreshTimer += deltaTime;
+		TickDamageThreatMemory(deltaTime);
 
 		// 子类特有计时器递减
 		UpdateExtraTimers(deltaTime);
@@ -200,18 +227,108 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		TryRefreshDetector();
 		OnPreEvaluate();
 
-		// ---- 状态机核心循环：评估 → 切换 → 帧逻辑 ----
-		TState nextState = EvaluateNextState();
-		if (!EqualityComparer<TState>.Default.Equals(nextState, _currentState))
-		{
-			SwitchState(nextState);
-		}
-
-		TickCurrentState(deltaTime);
+		// ---- 状态机核心循环：评估 → 切换 → 当前节点帧逻辑 ----
+		AI_StateMachineRunner.EvaluateAndTick(
+			_stateMachine,
+			_currentState,
+			EvaluateNextState,
+			SwitchState,
+			deltaTime,
+			CanTransitionTo);
 	}
 #endregion
 
 #region StateMachine
+	private void BuildStateMachine()
+	{
+		_stateMachine = new AIStateMachine<TState>();
+		ConfigureStateNodes(_stateMachine);
+		_stateMachine.Initialize(_currentState);
+	}
+
+	/// <summary>注册所有动物都能复用的待机与闲逛节点。</summary>
+	protected void RegisterLocomotionStateNodes(
+		AIStateMachine<TState> stateMachine,
+		TState idleState,
+		TState moveState)
+	{
+		stateMachine.Register(CreateStoppedStateNode(idleState, TickIdle));
+		stateMachine.Register(CreateMovingStateNode(moveState, TickMove));
+	}
+
+	/// <summary>创建普通行为节点。</summary>
+	protected AIStateNode<TState> CreateStateNode(
+		TState state,
+		Action<float> onTick,
+		Action onEnter = null,
+		Action onExit = null)
+	{
+		return new AIStateNode<TState>(
+			state,
+			onTick,
+			onEnter,
+			onExit,
+			AIStateAnimationRole.Action);
+	}
+
+	/// <summary>创建移动行为节点；动画缺失时自动回退到 Move。</summary>
+	protected AIStateNode<TState> CreateMovingStateNode(
+		TState state,
+		Action<float> onTick,
+		Action onEnter = null,
+		Action onExit = null)
+	{
+		return new AIStateNode<TState>(
+			state,
+			onTick,
+			onEnter,
+			onExit,
+			AIStateAnimationRole.Moving);
+	}
+
+	/// <summary>创建每帧自动停止移动的行为节点。</summary>
+	protected AIStoppedStateNode<TState> CreateStoppedStateNode(
+		TState state,
+		Action<float> onTick = null,
+		Action onEnter = null,
+		Action onExit = null)
+	{
+		return new AIStoppedStateNode<TState>(
+			state,
+			StopMove,
+			onTick,
+			onEnter,
+			onExit);
+	}
+
+	/// <summary>创建保持静止的动作节点，适用于攻击、施法等不可滑行的动作。</summary>
+	protected AIStoppedStateNode<TState> CreateStoppedActionStateNode(
+		TState state,
+		Action<float> onTick,
+		Action onEnter = null,
+		Action onExit = null)
+	{
+		return new AIStoppedStateNode<TState>(
+			state,
+			StopMove,
+			onTick,
+			onEnter,
+			onExit,
+			AIStateAnimationRole.Action);
+	}
+
+	private bool CanTransitionTo(TState next)
+	{
+		if (_stateElapsed >= LocomotionStateDebounce)
+		{
+			return true;
+		}
+
+		bool currentIsLocomotion = IsIdleState(_currentState) || IsMoveState(_currentState);
+		bool nextIsLocomotion = IsIdleState(next) || IsMoveState(next);
+		return !currentIsLocomotion || !nextIsLocomotion;
+	}
+
 	/// <summary>
 	/// 状态切换通用逻辑：
 	/// 1. 更新当前状态与计时器
@@ -223,23 +340,26 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	protected void SwitchState(TState next)
 	{
 		TState previous = _currentState;
-		_currentState = next;
-		_stateElapsed = 0f;
-
-		// 离开移动状态时清除闲逛目标
-		if (!IsMoveState(next))
+		_stateMachine.TransitionTo(next, () =>
 		{
-			_hasWanderTarget = false;
-		}
+			_currentState = next;
+			_stateElapsed = 0f;
 
-		// 进入待机状态时重置待机计时器
-		if (IsIdleState(next))
-		{
-			_idleRemainTimer = GetIdleDuration();
-		}
+			// 离开移动状态时清除闲逛目标
+			if (!IsMoveState(next))
+			{
+				_hasWanderTarget = false;
+			}
 
-		// 子类自定义切换逻辑
-		OnBeforeSwitchState(previous, next);
+			// 进入待机状态时重置待机计时器
+			if (IsIdleState(next))
+			{
+				_idleRemainTimer = GetIdleDuration();
+			}
+
+			// 子类自定义切换逻辑
+			OnBeforeSwitchState(previous, next);
+		});
 
 		if (DebugLogEnabled)
 		{
@@ -255,8 +375,7 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	/// <summary>待机帧逻辑：停止移动，递减待机计时器</summary>
 	protected void TickIdle(float deltaTime)
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
+		StopMove();
 		_idleRemainTimer = DecrementTimer(_idleRemainTimer, deltaTime);
 	}
 
@@ -362,6 +481,63 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 #endregion
 
 #region Helpers
+	/// <summary>
+	/// Returns the current damage threat and its latest known world position.
+	/// The position remains available if the attacker object disappears during the reaction.
+	/// </summary>
+	protected bool TryGetRecentDamageThreat(out Item threat, out Vector3 sourcePosition)
+	{
+		threat = _recentDamageThreat;
+		if (_damageThreatRemain <= 0f)
+		{
+			sourcePosition = default;
+			return false;
+		}
+
+		if (threat != null)
+			_lastDamageThreatPosition = threat.transform.position;
+
+		sourcePosition = _lastDamageThreatPosition;
+		return true;
+	}
+
+	/// <summary>Calculates a stable escape direction, including the overlapping-source case.</summary>
+	protected Vector2 GetDirectionAwayFrom(Vector3 sourcePosition)
+	{
+		Vector2 currentPosition = transform.position;
+		Vector2 away = currentPosition - (Vector2)sourcePosition;
+		if (away.sqrMagnitude > 0.0001f)
+			return away.normalized;
+
+		if (_mover != null)
+		{
+			Vector2 currentHeading = _mover.TargetPosition - currentPosition;
+			if (currentHeading.sqrMagnitude > 0.0001f)
+				return currentHeading.normalized;
+		}
+
+		return Vector2.right;
+	}
+
+	protected void ClearRecentDamageThreat()
+	{
+		_recentDamageThreat = null;
+		_damageThreatRemain = 0f;
+		_lastDamageThreatPosition = transform.position;
+	}
+
+	private void TickDamageThreatMemory(float deltaTime)
+	{
+		if (_damageThreatRemain <= 0f)
+			return;
+
+		if (_recentDamageThreat != null)
+			_lastDamageThreatPosition = _recentDamageThreat.transform.position;
+
+		_damageThreatRemain = DecrementTimer(_damageThreatRemain, deltaTime);
+		if (_damageThreatRemain <= 0f)
+			_recentDamageThreat = null;
+	}
 	/// <summary>递减计时器，确保不低于 0</summary>
 	protected static float DecrementTimer(float timer, float deltaTime)
 	{
@@ -448,8 +624,22 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 			return;
 		}
 
-		_animator.PlayAnimation(animationName);
-		_lastPlayedAnimation = animationName;
+		if (_animator.TryPlayAnimation(animationName, force))
+		{
+			_lastPlayedAnimation = animationName;
+			return;
+		}
+
+		AIStateAnimationRole animationRole = _stateMachine != null
+			? _stateMachine.GetAnimationRole(state)
+			: AIStateAnimationRole.Stopped;
+		string fallbackAnimation = animationRole == AIStateAnimationRole.Moving ? "Move" : "Stand";
+
+		if (animationName != fallbackAnimation &&
+			_animator.TryPlayAnimation(fallbackAnimation, force))
+		{
+			_lastPlayedAnimation = fallbackAnimation;
+		}
 	}
 
 	// --- 移动控制工具方法 ---
@@ -457,16 +647,13 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	/// <summary>停止移动</summary>
 	protected void StopMove()
 	{
-		_mover.CanMove = false;
-		_mover.HasReachedTarget = true;
+		_mover.StopMovement();
 	}
 
 	/// <summary>移动到指定位置</summary>
 	protected void MoveTo(Vector3 target)
 	{
-		_mover.CanMove = true;
-		_mover.HasReachedTarget = false;
-		_mover.TargetPosition = target;
+		_mover.SetDestination(target);
 	}
 
 	/// <summary>远离指定位置方向移动</summary>
@@ -476,11 +663,34 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		MoveTo(transform.position + awayDir * distance);
 	}
 
-	/// <summary>面向目标方向（不移动，仅设置朝向）</summary>
-	protected void FaceTarget(Vector3 targetPosition)
+	/// <summary>面向目标方向（不移动，仅设置朝向）。攻击前可立即完成翻转。</summary>
+	protected void FaceTarget(Vector3 targetPosition, bool immediate = false)
 	{
-		Vector3 dir = (targetPosition - transform.position).normalized;
-		_mover.TargetPosition = transform.position + dir;
+		Vector2 direction = targetPosition - transform.position;
+		if (direction.sqrMagnitude < 0.0001f)
+		{
+			return;
+		}
+
+		direction.Normalize();
+		_mover.TargetPosition = (Vector2)transform.position + direction;
+
+		if (_turnBody == null)
+		{
+			return;
+		}
+
+		if (immediate)
+		{
+			_turnBody.ResetTurnState();
+		}
+
+		_turnBody.TurnBodyToDirection(direction);
+		if (immediate)
+		{
+			_turnBody.UpdateTurn(float.MaxValue);
+			_turnBody.UpdateAllTransformDirections();
+		}
 	}
 
 	/// <summary>计算到目标的 2D 距离</summary>
@@ -504,7 +714,9 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 
 		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);
 		item.itemMods.GetMod_ByID(ModText.Hp, out _hp);
+		item.itemMods.GetMod_ByID(ModText.TrunBody, out _turnBody);
 		item.GetMod(out _animator);
+		BindDamageThreatEvents();
 
 		// 子类绑定额外模块
 		OnBindExtraModules();
@@ -535,6 +747,45 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 
 		// 子类验证额外模块
 		OnValidateExtraModules();
+	}
+
+	private void BindDamageThreatEvents()
+	{
+		UnbindDamageThreatEvents();
+		if (_hp == null || DamageThreatMemoryDuration <= 0f)
+			return;
+
+		_damageEventSource = _hp;
+		_damageEventSource.OnDamageReceived += HandleDamageReceived;
+	}
+
+	private void UnbindDamageThreatEvents()
+	{
+		if (_damageEventSource != null)
+			_damageEventSource.OnDamageReceived -= HandleDamageReceived;
+
+		_damageEventSource = null;
+	}
+
+	private void HandleDamageReceived(DamageReceiverDamageInfo damageInfo)
+	{
+		if (damageInfo == null ||
+			damageInfo.DamageValue <= 0f ||
+			damageInfo.Attacker == null ||
+			damageInfo.Attacker == item)
+		{
+			return;
+		}
+
+		_recentDamageThreat = damageInfo.Attacker;
+		_lastDamageThreatPosition = damageInfo.Attacker.transform.position;
+		_damageThreatRemain = Mathf.Max(0.1f, DamageThreatMemoryDuration);
+		OnDamageThreatUpdated(damageInfo);
+	}
+
+	private void OnDestroy()
+	{
+		UnbindDamageThreatEvents();
 	}
 #endregion
 

@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce6568136f8bc9d44b7f4037a9f4b83c, type: 3}
+  m_Name: abandoned_camp
+  m_EditorClassIdentifier: 
+  StructureId: abandoned_camp
+  DisplayName: "\u5E9F\u5F03\u8425\u5730"
+  Enabled: 1
+  SeedSalt: 0
+  Weight: 1
+  SpawnChance: 0.35
+  RegionSizeInTiles: 48
+  MinDistanceFromWorldOrigin: 24
+  ChunkEdgeMargin: 1
+  MaxHeightDelta: 0.2
+  EnvironmentCondition:
+    TemperatureRange: {x: 0, y: 1}
+    HumidityRange: {x: 0, y: 1}
+    PrecipitationRange: {x: 0, y: 1}
+    SolidityRange: {x: 0, y: 1}
+    HightRange: {x: 0, y: 1}
+  AllowedBiomes:
+  - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
+  AllowRotation: 1
+  AllowMirror: 1
+  ClearProceduralItemsInFootprint: 1
+  Templates:
+  - Template: {fileID: 11400000, guid: 25980b159492de2498210404d9013283, type: 2}
+    Weight: 1
+  - Template: {fileID: 11400000, guid: d7cce310ccfcf63429fa213141acb189, type: 2}
+    Weight: 1

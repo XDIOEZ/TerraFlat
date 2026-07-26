@@ -8,13 +8,13 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// ÊÖ¹¤ÖÆ×÷Ä£¿é£¬Ìá¹©ºÏ³ÉÎïÆ·µÄ¹¦ÄÜ
+/// æ‰‹å·¥åˆ¶ä½œæ¨¡å—ï¼Œæä¾›åˆæˆç‰©å“çš„åŠŸèƒ½
 /// </summary>
 public class Mod_HandMade : Module,IInventory
 {
-    #region ×Ö¶ÎºÍÊôĞÔ
+    #region å­—æ®µå’Œå±æ€§
 
-    [Header("Ä£¿éÊı¾İ")]
+    [Header("æ¨¡å—æ•°æ®")]
     public Inventory_ModuleData inventoryModuleData = new Inventory_ModuleData();
     public override ModuleData _Data 
     { 
@@ -22,27 +22,32 @@ public class Mod_HandMade : Module,IInventory
         set => inventoryModuleData = (Inventory_ModuleData)value; 
     }
 
-    [Header("UI×é¼ş")]
-    [Tooltip("ºÏ³É½çÃæÃæ°å")]
+    [Header("UIç»„ä»¶")]
+    [Tooltip("åˆæˆç•Œé¢é¢æ¿")]
     public BasePanel basePanel;
 
-    [Tooltip("InventoryÒıÓÃ×Öµä-ÅäÖÃ×Ö¶Î")]
+    [Tooltip("Inventoryå¼•ç”¨å­—å…¸-é…ç½®å­—æ®µ")]
     public SerializedDictionary<string, Inventory> inventoryRefDic = new();
-    [Tooltip("InventoryÒıÓÃ×Öµä-½Ó¿ÚÊµÏÖ")]
+    [Tooltip("Inventoryå¼•ç”¨å­—å…¸-æ¥å£å®ç°")]
     public SerializedDictionary<string, Inventory> InventoryRefDic { get => inventoryRefDic; set => inventoryRefDic = value; }
 
-    [Tooltip("ÊäÈëÈİÆ÷£¬ÓÃÓÚ´æ·ÅºÏ³ÉËùĞèµÄÔ­²ÄÁÏÎïÆ·")]
-    public Inventory inputInventory => inventoryRefDic["ÊäÈë²å²Û"];
-    [Tooltip("Êä³öÈİÆ÷£¬ÓÃÓÚ´æ·ÅºÏ³ÉºóµÃµ½µÄÎïÆ·")]
-    public Inventory outputInventory => inventoryRefDic["Êä³ö²å²Û"];
+    [Tooltip("è¾“å…¥å®¹å™¨ï¼Œç”¨äºå­˜æ”¾åˆæˆæ‰€éœ€çš„åŸææ–™ç‰©å“")]
+    public Inventory inputInventory => inventoryRefDic["è¾“å…¥æ’æ§½"];
+    [Tooltip("è¾“å‡ºå®¹å™¨ï¼Œç”¨äºå­˜æ”¾åˆæˆåå¾—åˆ°çš„ç‰©å“")]
+    public Inventory outputInventory => inventoryRefDic["è¾“å‡ºæ’æ§½"];
 
-    [Header("½»»¥×é¼ş")]
-    [Tooltip("ºÏ³É°´Å¥")]
+    [Header("äº¤äº’ç»„ä»¶")]
+    [Tooltip("åˆæˆæŒ‰é’®")]
     public Button workButton;
+    [Tooltip("å®Œæˆä¸€æ¬¡æ‰‹å·¥åˆæˆéœ€è¦ç‚¹å‡»çš„æ¬¡æ•°")]
+    public int requiredClickCount = 6;
+
+    private int _currentClickProgress;
+    private CraftingOutputPreview _outputPreview;
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
 
     public override void Awake()
     {
@@ -55,11 +60,11 @@ public class Mod_HandMade : Module,IInventory
     [Button]
     public override void Load()
     {
-        //³õÊ¼»¯¿â´æ
+        //åˆå§‹åŒ–åº“å­˜
         InitializeInventories();
-        //³õÊ¼»¯ÊÂ¼ş¼àÌı
+        //åˆå§‹åŒ–äº‹ä»¶ç›‘å¬
         SetupEventListeners();
-        //»¹Ô­Ãæ°åÎ»ÖÃ
+        //è¿˜åŸé¢æ¿ä½ç½®
         RestorePanelPosition();
     }
 
@@ -72,77 +77,121 @@ public class Mod_HandMade : Module,IInventory
 
     #endregion
 
-    #region ÊÂ¼ş´¦Àí
+    #region äº‹ä»¶å¤„ç†
 
     private void OnCraftButtonClick()
     {
-        Act();
+        if (!TryGetCraftPreview(out _))
+        {
+            ResetCraftProgress();
+            return;
+        }
+
+        int clickCount = Mathf.Max(1, requiredClickCount);
+        _currentClickProgress = Mathf.Min(_currentClickProgress + 1, clickCount);
+        _outputPreview?.SetProgress(_currentClickProgress / (float)clickCount);
+
+        if (_currentClickProgress < clickCount)
+            return;
+
+        bool craftResult = Craft(inputInventory, outputInventory);
+        ResetCraftProgress();
+        RefreshCraftPreview();
+        if (craftResult)
+            _outputPreview?.PlaySuccess();
     }
 
     public override void Act()
     {
-        Craft(inputInventory, outputInventory);
+        bool craftResult = Craft(inputInventory, outputInventory);
+        ResetCraftProgress();
+        RefreshCraftPreview();
+        if (craftResult)
+            _outputPreview?.PlaySuccess();
     }
 /// <summary>
-/// Ö´ĞĞºÏ³É²Ù×÷
+/// æ‰§è¡Œåˆæˆæ“ä½œ
 /// </summary>
 public bool Craft(Inventory inputInv, Inventory outputInv)
 {
-    // Éú³ÉÅä·½¼üÁĞ±í
+    if (!TryResolveRecipe(inputInv, out Recipe recipe, out bool isMirrorMatched, out List<string> recipeKeys))
+    {
+        Debug.LogError($"é…æ–¹ {string.Join(" æˆ– ", recipeKeys)} ä¸å­˜åœ¨");
+        return false;
+    }
+
+    // éªŒè¯è¾“å…¥æ§½ä½æ•°é‡
+    if (!ValidateSlotCount(inputInv, recipe))
+        return false;
+
+    // å‡†å¤‡è¾“å‡ºç‰©å“
+    var outputItems = PrepareOutputItems(recipe);
+    if (outputItems == null)
+        return false;
+
+    // æ£€æŸ¥èµ„æºå’Œç©ºé—´
+    if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems, isMirrorMatched))
+    {
+        Debug.LogError("åˆæˆå¤±è´¥ï¼šææ–™ä¸è¶³æˆ–è¾“å‡ºç©ºé—´ä¸è¶³");
+        return false;
+    }
+
+    // æ‰§è¡Œåˆæˆ
+    ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
+    return true;
+}
+
+private bool TryGetCraftPreview(out ItemData previewItem)
+{
+    previewItem = null;
+    if (!TryResolveRecipe(inputInventory, out Recipe recipe, out bool isMirrorMatched, out _))
+        return false;
+
+    if (!ValidateSlotCount(inputInventory, recipe))
+        return false;
+
+    List<ItemData> outputItems = PrepareOutputItems(recipe);
+    if (outputItems == null || outputItems.Count == 0)
+        return false;
+
+    if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems, isMirrorMatched))
+        return false;
+
+    previewItem = outputItems[0];
+    return true;
+}
+
+private bool TryResolveRecipe(
+    Inventory inputInv,
+    out Recipe recipe,
+    out bool isMirrorMatched,
+    out List<string> recipeKeys)
+{
     HashSet<string> mirroredKeys = new HashSet<string>();
-    List<string> recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
-    
-    Recipe recipe = null;
-    string matchedKey = null;
-    bool isMirrorMatched = false;
-    
-    // ³¢ÊÔÆ¥ÅäÃ¿¸öÅä·½¼ü
+    recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
+
+    recipe = null;
+    isMirrorMatched = false;
     foreach (string recipeKey in recipeKeys)
     {
         if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
             continue;
 
         bool isMirrorKey = mirroredKeys.Contains(recipeKey);
-        if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.¹æÔòºÏ³É && !recipe.enableMirrorCrafting)
+        if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.è§„åˆ™åˆæˆ && !recipe.enableMirrorCrafting)
         {
             recipe = null;
             continue;
         }
 
-        matchedKey = recipeKey;
         isMirrorMatched = isMirrorKey;
-        break;
-    }
-    
-    // ÑéÖ¤Åä·½
-    if (recipe == null)
-    {
-        Debug.LogError($"Åä·½ {string.Join(" »ò ", recipeKeys)} ²»´æÔÚ");
-        return false;
+        return true;
     }
 
-    // ÑéÖ¤ÊäÈë²ÛÎ»ÊıÁ¿
-    if (!ValidateSlotCount(inputInv, recipe))
-        return false;
-
-    // ×¼±¸Êä³öÎïÆ·
-    var outputItems = PrepareOutputItems(recipe);
-    if (outputItems == null)
-        return false;
-
-    // ¼ì²é×ÊÔ´ºÍ¿Õ¼ä
-    if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems, isMirrorMatched))
-    {
-        Debug.LogError("ºÏ³ÉÊ§°Ü£º²ÄÁÏ²»×ã»òÊä³ö¿Õ¼ä²»×ã");
-        return false;
-    }
-
-    // Ö´ĞĞºÏ³É
-    ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
-    return true;
+    return false;
 }
     /// <summary>
-    /// Íæ¼Ò¿ªÊ¼½»»¥
+    /// ç©å®¶å¼€å§‹äº¤äº’
     /// </summary>
     public void Interact_Start(Item playerItem)
     {
@@ -155,7 +204,7 @@ public bool Craft(Inventory inputInv, Inventory outputInv)
     }
 
     /// <summary>
-    /// Íæ¼Ò½áÊø½»»¥
+    /// ç©å®¶ç»“æŸäº¤äº’
     /// </summary>
     public void Interact_Stop(Item playerItem)
     {
@@ -170,17 +219,17 @@ public bool Craft(Inventory inputInv, Inventory outputInv)
 
     #endregion
 
-    #region ºÏ³ÉÂß¼­
+    #region åˆæˆé€»è¾‘
 
-[Tooltip("Êä³öÒ»¸ö×Ö·û´®ÁĞ±í °üº¬ËùÓĞTagÄ£Ê½ ºÍitemNameÄ£Ê½µÄ ¼¯ºÏ , ¸´ÔÓ¶ÈÊÇO(n^2)")]
+[Tooltip("è¾“å‡ºä¸€ä¸ªå­—ç¬¦ä¸²åˆ—è¡¨ åŒ…å«æ‰€æœ‰Tagæ¨¡å¼ å’ŒitemNameæ¨¡å¼çš„ é›†åˆ , å¤æ‚åº¦æ˜¯O(n^2)")]
 private List<string> GenerateRecipeKey_List(Inventory inputInv, HashSet<string> mirroredKeys)
 {
     List<string> recipeKeys = new List<string>();
     
-    // 1. Éú³É»ùÓÚÎïÆ·IDµÄÅä·½¼ü£¨ÓĞĞòºÏ³É£©
+    // 1. ç”ŸæˆåŸºäºç‰©å“IDçš„é…æ–¹é”®ï¼ˆæœ‰åºåˆæˆï¼‰
     Input_List orderedInputList = new Input_List();
     orderedInputList.recipeType = RecipeType.Crafting;
-    orderedInputList.inputOrder = RecipeInputRule.¹æÔòºÏ³É;
+    orderedInputList.inputOrder = RecipeInputRule.è§„åˆ™åˆæˆ;
     foreach (ItemSlot slot in inputInv.Data.itemSlots)
     {
         if (slot.itemData == null)
@@ -202,25 +251,25 @@ private List<string> GenerateRecipeKey_List(Inventory inputInv, HashSet<string> 
         mirroredKeys.Add(mirroredOrderedKey);
     }
     
-    // 2. Éú³É»ùÓÚÎïÆ·IDµÄÅä·½¼ü£¨ÎŞĞòºÏ³É£©- Í¨¹ıĞŞ¸ÄÓĞĞòºÏ³ÉµÄ¹æÔò
-    orderedInputList.inputOrder = RecipeInputRule.ÎŞ¹æÔòºÏ³É;
+    // 2. ç”ŸæˆåŸºäºç‰©å“IDçš„é…æ–¹é”®ï¼ˆæ— åºåˆæˆï¼‰- é€šè¿‡ä¿®æ”¹æœ‰åºåˆæˆçš„è§„åˆ™
+    orderedInputList.inputOrder = RecipeInputRule.æ— è§„åˆ™åˆæˆ;
     recipeKeys.Add(orderedInputList.ToString());
     
-    // 3. Éú³É»ùÓÚTagµÄÅä·½¼ü£¨ÓĞĞòºÏ³É£©
+    // 3. ç”ŸæˆåŸºäºTagçš„é…æ–¹é”®ï¼ˆæœ‰åºåˆæˆï¼‰
     for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
     {
         var slot = inputInv.Data.itemSlots[i];
         if (slot.itemData != null && slot.itemData.Tags != null)
         {
-            // ÎªÃ¿¸ö°üº¬TagµÄÎïÆ·Éú³ÉÒ»¸ö»ùÓÚTagµÄÅä·½¼ü°æ±¾£¨ÓĞĞò£©
+            // ä¸ºæ¯ä¸ªåŒ…å«Tagçš„ç‰©å“ç”Ÿæˆä¸€ä¸ªåŸºäºTagçš„é…æ–¹é”®ç‰ˆæœ¬ï¼ˆæœ‰åºï¼‰
             Input_List orderedTagInputList = new Input_List();
             orderedTagInputList.recipeType = RecipeType.Crafting;
-            orderedTagInputList.inputOrder = RecipeInputRule.¹æÔòºÏ³É;
+            orderedTagInputList.inputOrder = RecipeInputRule.è§„åˆ™åˆæˆ;
             for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
             {
                 if (j == i && slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
                 {
-                    // Ê¹ÓÃµÚÒ»¸öType±êÇ©
+                    // ä½¿ç”¨ç¬¬ä¸€ä¸ªTypeæ ‡ç­¾
                     if (slot.itemData.Tags.Count > 0)
                     {
                         orderedTagInputList.AddTagItem(slot.itemData.Tags[0]);
@@ -246,8 +295,8 @@ private List<string> GenerateRecipeKey_List(Inventory inputInv, HashSet<string> 
                 mirroredKeys.Add(mirroredOrderedTagKey);
             }
             
-            // 4. Éú³É»ùÓÚTagµÄÅä·½¼ü£¨ÎŞĞòºÏ³É£©- Í¨¹ıĞŞ¸ÄÓĞĞòºÏ³ÉµÄ¹æÔò
-            orderedTagInputList.inputOrder = RecipeInputRule.ÎŞ¹æÔòºÏ³É;
+            // 4. ç”ŸæˆåŸºäºTagçš„é…æ–¹é”®ï¼ˆæ— åºåˆæˆï¼‰- é€šè¿‡ä¿®æ”¹æœ‰åºåˆæˆçš„è§„åˆ™
+            orderedTagInputList.inputOrder = RecipeInputRule.æ— è§„åˆ™åˆæˆ;
             recipeKeys.Add(orderedTagInputList.ToString());
         }
     }
@@ -279,7 +328,7 @@ private string GenerateRecipeKey(Inventory inputInv)
         
         if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
         {
-            Debug.LogError($"Åä·½ {recipeKey} ²»´æÔÚ");
+            Debug.LogError($"é…æ–¹ {recipeKey} ä¸å­˜åœ¨");
             return false;
         }
         return true;
@@ -289,7 +338,7 @@ private string GenerateRecipeKey(Inventory inputInv)
     {
         if (inputInv.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
         {
-            Debug.LogError($"²å²ÛÊıÁ¿²»Æ¥Åä£ºÅä·½ÒªÇó {recipe.inputs.RowItems_List.Count} ¸ö²å²Û£¬µ±Ç°ÓĞ {inputInv.Data.itemSlots.Count} ¸ö");
+            Debug.LogError($"æ’æ§½æ•°é‡ä¸åŒ¹é…ï¼šé…æ–¹è¦æ±‚ {recipe.inputs.RowItems_List.Count} ä¸ªæ’æ§½ï¼Œå½“å‰æœ‰ {inputInv.Data.itemSlots.Count} ä¸ª");
             return false;
         }
         return true;
@@ -314,10 +363,10 @@ private string GenerateRecipeKey(Inventory inputInv)
     private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, 
     Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
 {
-    // ¼ì²érecipe.inputsÊÇÓĞ¹æÔòºÏ³É»¹ÊÇÎŞ¹æÔòºÏ³É
-    if (recipe.inputs.inputOrder == RecipeInputRule.¹æÔòºÏ³É)
+    // æ£€æŸ¥recipe.inputsæ˜¯æœ‰è§„åˆ™åˆæˆè¿˜æ˜¯æ— è§„åˆ™åˆæˆ
+    if (recipe.inputs.inputOrder == RecipeInputRule.è§„åˆ™åˆæˆ)
     {
-        // ÓĞ¹æÔòºÏ³É°´ÕÕÔ­ÓĞÂß¼­×ß
+        // æœ‰è§„åˆ™åˆæˆæŒ‰ç…§åŸæœ‰é€»è¾‘èµ°
         for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
         {
             var slot = inputInv.Data.itemSlots[i];
@@ -332,21 +381,21 @@ private string GenerateRecipeKey(Inventory inputInv)
                 return false;
         }
     }
-    else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
+    else if (recipe.inputs.inputOrder == RecipeInputRule.æ— è§„åˆ™åˆæˆ)
     {
-        // Èç¹ûÊÇÎŞ¹æÔòºÏ³É ÔòÍ¨¹ı±éÀúrecipe.inputs.RowItems_List²éÕÒ¶ÔÓ¦µÄrequired ²¢¼ì²éÊÇ·ñÓĞ×ã¹»µÄÎïÆ·
+        // å¦‚æœæ˜¯æ— è§„åˆ™åˆæˆ åˆ™é€šè¿‡éå†recipe.inputs.RowItems_ListæŸ¥æ‰¾å¯¹åº”çš„required å¹¶æ£€æŸ¥æ˜¯å¦æœ‰è¶³å¤Ÿçš„ç‰©å“
         foreach (var required in recipe.inputs.RowItems_List)
         {
             if (required.amount == 0) continue;
 
-            // ÔÚÊäÈë¿â´æÖĞ²éÕÒÆ¥ÅäµÄÎïÆ·
+            // åœ¨è¾“å…¥åº“å­˜ä¸­æŸ¥æ‰¾åŒ¹é…çš„ç‰©å“
             float foundAmount = 0;
             foreach (var slot in inputInv.Data.itemSlots)
             {
                 if (slot.itemData == null) continue;
 
                 bool isMatch = false;
-                // ¸ù¾İÆ¥ÅäÄ£Ê½¼ì²éÊÇ·ñÆ¥Åä
+                // æ ¹æ®åŒ¹é…æ¨¡å¼æ£€æŸ¥æ˜¯å¦åŒ¹é…
                 if (required.matchMode == MatchMode.ExactItem)
                 {
                     isMatch = slot.itemData.IDName == required.ItemName;
@@ -364,13 +413,13 @@ private string GenerateRecipeKey(Inventory inputInv)
                 }
             }
 
-            // ¼ì²éÕÒµ½µÄÊıÁ¿ÊÇ·ñ×ã¹»
+            // æ£€æŸ¥æ‰¾åˆ°çš„æ•°é‡æ˜¯å¦è¶³å¤Ÿ
             if (foundAmount < required.amount)
                 return false;
         }
     }
 
-    // ¼ì²éÊä³ö¿Õ¼ä
+    // æ£€æŸ¥è¾“å‡ºç©ºé—´
     foreach (var item in outputItems)
     {
         if (!outputInv.Data.TryAddItem(item, false))
@@ -383,21 +432,21 @@ private string GenerateRecipeKey(Inventory inputInv)
 private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, 
     Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
     {
-        Debug.Log($"¿ªÊ¼ºÏ³É£º{recipe.name}");
-        Debug.Log($"ÊäÈë²ÄÁÏ£º{GenerateRecipeKey(inputInv)}");
-        Debug.Log($"Êä³ö²úÎï£º{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
+        Debug.Log($"å¼€å§‹åˆæˆï¼š{recipe.name}");
+        Debug.Log($"è¾“å…¥ææ–™ï¼š{GenerateRecipeKey(inputInv)}");
+        Debug.Log($"è¾“å‡ºäº§ç‰©ï¼š{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
 
-        // Ìí¼ÓÊä³öÎïÆ·
+        // æ·»åŠ è¾“å‡ºç‰©å“
         foreach (var item in outputItems)
         {
             outputInv.Data.TryAddItem(item);
-            Debug.Log($"Ìí¼Ó²úÎï£º{item.Stack.Amount}x{item.IDName}");
+            Debug.Log($"æ·»åŠ äº§ç‰©ï¼š{item.Stack.Amount}x{item.IDName}");
         }
 
-        // ¿Û³ıÊäÈë²ÄÁÏ
-if (recipe.inputs.inputOrder == RecipeInputRule.¹æÔòºÏ³É)
+        // æ‰£é™¤è¾“å…¥ææ–™
+if (recipe.inputs.inputOrder == RecipeInputRule.è§„åˆ™åˆæˆ)
 {
-    // ÓĞĞòºÏ³É - °´Î»ÖÃ¶ÔÓ¦¿Û³ı
+    // æœ‰åºåˆæˆ - æŒ‰ä½ç½®å¯¹åº”æ‰£é™¤
     for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
     {
         var slot = inputInv.Data.itemSlots[i];
@@ -405,37 +454,37 @@ if (recipe.inputs.inputOrder == RecipeInputRule.¹æÔòºÏ³É)
 
         if (required.amount == 0) continue;
 
-        Debug.Log($"²å²Û {i}£ºĞèÒª {required.ItemName} x{required.amount}£¬µ±Ç°ÓĞ {slot.itemData.Stack.Amount}");
+        Debug.Log($"æ’æ§½ {i}ï¼šéœ€è¦ {required.ItemName} x{required.amount}ï¼Œå½“å‰æœ‰ {slot.itemData.Stack.Amount}");
 
         slot.itemData.Stack.Amount -= required.amount;
         if (slot.itemData.Stack.Amount <= 0)
         {
-            Debug.Log($"²å²Û {i}£º{required.ItemName} ÒÑºÄ¾¡£¬ÒÆ³ıÎïÆ·");
+            Debug.Log($"æ’æ§½ {i}ï¼š{required.ItemName} å·²è€—å°½ï¼Œç§»é™¤ç‰©å“");
             inputInv.Data.RemoveItemAll(slot, i);
         }
         else
         {
-            Debug.Log($"²å²Û {i}£ºÊ£Óà {required.ItemName} x{slot.itemData.Stack.Amount}");
+            Debug.Log($"æ’æ§½ {i}ï¼šå‰©ä½™ {required.ItemName} x{slot.itemData.Stack.Amount}");
         }
         inputInv.RefreshUI(i);
     }
 }
-else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
+else if (recipe.inputs.inputOrder == RecipeInputRule.æ— è§„åˆ™åˆæˆ)
 {
-    // ÎŞĞòºÏ³É - ¸ù¾İÅä·½ĞèÇó²éÕÒ²¢¿Û³ı¶ÔÓ¦ÎïÆ·
+    // æ— åºåˆæˆ - æ ¹æ®é…æ–¹éœ€æ±‚æŸ¥æ‰¾å¹¶æ‰£é™¤å¯¹åº”ç‰©å“
     foreach (var required in recipe.inputs.RowItems_List)
     {
         if (required.amount == 0) continue;
 
         float remainingAmountToConsume = required.amount;
         
-        // ±éÀúËùÓĞ²ÛÎ»²éÕÒÆ¥ÅäµÄÎïÆ·
+        // éå†æ‰€æœ‰æ§½ä½æŸ¥æ‰¾åŒ¹é…çš„ç‰©å“
         for (int i = 0; i < inputInv.Data.itemSlots.Count && remainingAmountToConsume > 0; i++)
         {
             var slot = inputInv.Data.itemSlots[i];
             if (slot.itemData == null) continue;
 
-            // ¼ì²éÎïÆ·ÊÇ·ñÆ¥ÅäĞèÇó
+            // æ£€æŸ¥ç‰©å“æ˜¯å¦åŒ¹é…éœ€æ±‚
             bool isMatch = false;
             if (required.matchMode == MatchMode.ExactItem)
             {
@@ -450,17 +499,17 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
 
             if (isMatch && slot.itemData.Stack.Amount > 0)
             {
-                // ¼ÆËã±¾´Î¿ÉÒÔÏûºÄµÄÊıÁ¿
+                // è®¡ç®—æœ¬æ¬¡å¯ä»¥æ¶ˆè€—çš„æ•°é‡
                 float consumeAmount = Mathf.Min(remainingAmountToConsume, slot.itemData.Stack.Amount);
                 slot.itemData.Stack.Amount -= consumeAmount;
                 remainingAmountToConsume -= consumeAmount;
                 
-                Debug.Log($"²å²Û {i}£ºÏûºÄ {slot.itemData.IDName} x{consumeAmount}£¬Ê£Óà {slot.itemData.Stack.Amount}");
+                Debug.Log($"æ’æ§½ {i}ï¼šæ¶ˆè€— {slot.itemData.IDName} x{consumeAmount}ï¼Œå‰©ä½™ {slot.itemData.Stack.Amount}");
                 
-                // Èç¹ûÎïÆ·ÓÃÍê£¬ÒÆ³ıÎïÆ·
+                // å¦‚æœç‰©å“ç”¨å®Œï¼Œç§»é™¤ç‰©å“
                 if (slot.itemData.Stack.Amount <= 0)
                 {
-                    Debug.Log($"²å²Û {i}£º{slot.itemData.IDName} ÒÑºÄ¾¡£¬ÒÆ³ıÎïÆ·");
+                    Debug.Log($"æ’æ§½ {i}ï¼š{slot.itemData.IDName} å·²è€—å°½ï¼Œç§»é™¤ç‰©å“");
                     inputInv.Data.RemoveItemAll(slot, i);
                 }
                 
@@ -470,7 +519,7 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
     }
 }
         
-        // Ö´ĞĞÅä·½¶¯×÷£¨Ìí¼Ó¿ÕÖµ¼ì²é£©
+        // æ‰§è¡Œé…æ–¹åŠ¨ä½œï¼ˆæ·»åŠ ç©ºå€¼æ£€æŸ¥ï¼‰
         if (recipe.action != null)
         {
             foreach(var action in recipe.action)
@@ -484,7 +533,7 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
 
         outputInv.RefreshUI();
         inputInv.RefreshUI();
-        Debug.Log($"ºÏ³ÉÍê³É£º{recipe.name}");
+        Debug.Log($"åˆæˆå®Œæˆï¼š{recipe.name}");
     }
 
     private static bool TryBuildMirroredInputList(Input_List source, out Input_List mirrored)
@@ -532,11 +581,11 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
 
     #endregion
 
-    #region ³õÊ¼»¯ºÍÉèÖÃ
+    #region åˆå§‹åŒ–å’Œè®¾ç½®
 
     private void InitializeInventories()
     {
-        // Í¬²½Êı¾İ
+        // åŒæ­¥æ•°æ®
         if (inventoryModuleData.Data.Count == 0)
         {
             inventoryModuleData.Data[inputInventory.Data.Name] = inputInventory.Data;
@@ -551,15 +600,19 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
         inputInventory.InitData();
         outputInventory.InitData();
 
-        //TODO ³õÊ¼»¯Íê±Ïºó ´ÓÊä³ö²å²ÛÉÏ±éÀú»ñÈ¡
-       workButton = outputInventory.basePanel.GetButton("ºÏ³É°´Å¥");
+        //TODO åˆå§‹åŒ–å®Œæ¯•å ä»è¾“å‡ºæ’æ§½ä¸Šéå†è·å–
+       workButton = outputInventory.basePanel.GetButton("åˆæˆæŒ‰é’®");
     }
 
     private void SetupEventListeners()
     {
+        basePanel = GetComponentInChildren<BasePanel>();
+        workButton?.onClick.RemoveListener(OnCraftButtonClick);
         workButton?.onClick.AddListener(OnCraftButtonClick);
+        BindCraftPreview();
+        RefreshCraftPreview();
 
-        // ÉèÖÃÄ¬ÈÏÄ¿±ê±³°ü
+        // è®¾ç½®é»˜è®¤ç›®æ ‡èƒŒåŒ…
         if (item.itemMods.ContainsKey_ID(ModText.Hand))
         {
             var handInventory = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>().GetDefaultTargetInventory();
@@ -567,19 +620,19 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
             outputInventory.DefaultTarget_Inventory = handInventory;
         }
 
-        // ÉèÖÃ½»»¥ÊÂ¼ş
+        // è®¾ç½®äº¤äº’äº‹ä»¶
         if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_InteractReciver interactMod))
         {
             interactMod.OnAction_Start += Interact_Start;
             interactMod.OnAction_Stop += Interact_Stop;
         }
-
-        basePanel = GetComponentInChildren<BasePanel>();
     }
 
     private void CleanupEventListeners()
     {
         workButton?.onClick.RemoveListener(OnCraftButtonClick);
+        if (inputInventory?.Data != null)
+            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
 
         if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_InteractReciver interactMod))
         {
@@ -588,9 +641,41 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
         }
     }
 
+    private void BindCraftPreview()
+    {
+        ItemSlot_UI outputSlot = outputInventory.itemSlot_UI.FirstOrDefault();
+        _outputPreview = CraftingOutputPreview.Attach(outputInventory.basePanel ?? basePanel, outputSlot);
+
+        inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        inputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
+    }
+
+    private void OnInputSlotChanged(ItemSlot _)
+    {
+        ResetCraftProgress();
+        RefreshCraftPreview();
+    }
+
+    private void ResetCraftProgress()
+    {
+        _currentClickProgress = 0;
+        _outputPreview?.SetProgress(0f);
+    }
+
+    private void RefreshCraftPreview()
+    {
+        if (_outputPreview == null)
+            return;
+
+        if (TryGetCraftPreview(out ItemData previewItem))
+            _outputPreview.Show(previewItem, _currentClickProgress / (float)Mathf.Max(1, requiredClickCount));
+        else
+            _outputPreview.Clear();
+    }
+
     #endregion
 
-    #region Ãæ°åÎ»ÖÃ¹ÜÀí
+    #region é¢æ¿ä½ç½®ç®¡ç†
 
     private void RestorePanelPosition()
     {

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class Mod_Weapon_AnimationAction : Module
 {
@@ -103,7 +104,10 @@ public class Mod_Weapon_AnimationAction : Module
             return;
         }
 
-        if (useLocalInput && Input.GetMouseButtonDown(0))
+        if (useLocalInput &&
+            cachedController == null &&
+            Input.GetMouseButtonDown(0) &&
+            !IsLegacyPointerOverUI())
         {
             RequestAttack();
         }
@@ -233,7 +237,12 @@ public class Mod_Weapon_AnimationAction : Module
             return;
         }
 
-        bool isHolding = (useLocalInput && Input.GetMouseButton(0)) || isHoldingInput;
+        bool isHolding =
+            (useLocalInput &&
+             cachedController == null &&
+             Input.GetMouseButton(0) &&
+             !IsLegacyPointerOverUI()) ||
+            isHoldingInput;
         if (!queuedNext && !isHolding)
         {
             return;
@@ -277,6 +286,21 @@ public class Mod_Weapon_AnimationAction : Module
         queuedNext = false;
         currentStateHash = 0;
         animator.Play(idleAnimationName, 0, 0f);
+    }
+
+    private static bool IsLegacyPointerOverUI()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return false;
+
+        PointerEventData eventData = new PointerEventData(eventSystem)
+        {
+            position = Input.mousePosition
+        };
+        List<RaycastResult> results = new List<RaycastResult>();
+        eventSystem.RaycastAll(eventData, results);
+        return results.Count > 0;
     }
 
     private void OnControllerLeftClick()

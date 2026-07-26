@@ -1,110 +1,205 @@
-using UnityEngine;
-using DG.Tweening;
-using Sirenix.OdinInspector;
 using Pathfinding;
+using Sirenix.OdinInspector;
+using UnityEngine;
 
 /// <summary>
-/// ʹ�� NavMesh + Rigidbody2D ���Ƶ� AI �ƶ���
+/// AI 公共移动模块。统一负责目的地提交、到达判定和卡住后的重新寻路。
+/// 所有动物 AI 都应通过 SetDestination/StopMovement 控制移动。
 /// </summary>
 public class Mover_AI : Mover
 {
-    #region �ֶ�
+    #region Inspector
+    [Title("AI 移动")]
+    [Header("移动目标")]
+    public Transform target;
 
-    [Title("AI ��ز���")]
-
-
-    [Header("�ƶ�Ŀ��")]
-    public Transform target; // ��ѡĿ������
-
-    [Header("ֹͣ����")]
+    [Header("到达判定")]
+    [MinValue(0.01f)]
     public float stopDistance = 0.5f;
 
-    [Header("״̬����")]
-    public bool CanMove = true; // �Ƿ�����ƶ�
-    public bool HasReachedTarget = false; // �Ƿ񵽴�Ŀ��
+    [Tooltip("目的地变化超过该距离时视为新请求")]
+    [MinValue(0.001f)]
+    public float destinationChangeThreshold = 0.05f;
 
-    [Header("��������")]
-    [ShowInInspector]
-   public IAstarAI aiPath; // AI ·�����
+    [Header("卡住恢复")]
+    [Tooltip("在有移动命令但位置没有有效变化时，多久强制重新寻路")]
+    [MinValue(0.1f)]
+    public float stalledRepathDelay = 0.8f;
 
+    [Tooltip("视为产生移动进展的最小距离")]
+    [MinValue(0.001f)]
+    public float progressDistanceThreshold = 0.02f;
 
+    [Header("运行时状态")]
+    public bool CanMove = true;
+    public bool HasReachedTarget;
+
+    [ShowInInspector, ReadOnly]
+    public IAstarAI aiPath;
     #endregion
 
-    #region ����
+    #region Runtime
+    private bool _hasDestination;
+    private Vector2 _lastSubmittedDestination;
+    private Vector2 _lastProgressPosition;
+    private float _lastProgressTime;
+    #endregion
 
     public float SpeedValue => Speed.Value;
-
-    #endregion
-
-    #region ��������
+    public bool HasActiveDestination => _hasDestination;
+    public bool IsPathPending => aiPath != null && aiPath.pathPending;
 
     public override void Load()
     {
         base.Load();
         aiPath = item.GetComponent<IAstarAI>();
-        
-    }
 
-    public void Start()
-    {
-        TargetPosition = transform.position;
-    }
-
-    #endregion
-
-    #region �ƶ��߼�
-
-    public override void ModUpdate(float deltaTime)
-    {
-      //TODO ͨ������HasReachedTarget����ִ��Move�ж�
-        if(CanMove == false)
+        if (aiPath == null)
         {
-            if (aiPath != null) aiPath.isStopped = true;
+            Debug.LogError($"[{nameof(Mover_AI)}] 未找到 IAstarAI，移动模块已禁用。目标物体: {name}", this);
+            CanMove = false;
             return;
         }
 
-        // ����Ƿ��Ѿ�����Ŀ�꣬���δ������ִ���ƶ�
-        if (!HasReachedTarget)
-        {
-            aiPath.isStopped = false;
-            if (target == null)
-            {
-                // ���� Move ʵ���ƶ�
-                Move(TargetPosition, deltaTime);
-            }
-           
-            if(target != null)
-            {
-                Move(target.position, deltaTime);
-            }
-        }
-        else
+        Vector2 currentPosition = transform.position;
+        TargetPosition = currentPosition;
+        _lastSubmittedDestination = currentPosition;
+        _lastProgressPosition = currentPosition;
+        _lastProgressTime = Time.time;
+        _hasDestination = false;
+        HasReachedTarget = true;
+        aiPath.isStopped = true;
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        if (aiPath == null)
+            return;
+
+        if (target != null)
+            SetDestination(target.position);
+
+        if (!CanMove || !_hasDestination)
         {
             aiPath.isStopped = true;
+            return;
         }
 
-        // �����Ƿ񵽴�Ŀ���״̬
-        if (aiPath != null)
+        aiPath.maxSpeed = SpeedValue;
+        aiPath.destination = TargetPosition;
+        aiPath.isStopped = false;
+
+        Vector2 currentPosition = transform.position;
+        float directDistance = Vector2.Distance(currentPosition, TargetPosition);
+
+        // 世界坐标已足够接近时可以立即完成，不依赖路径状态。
+        if (directDistance <= stopDistance)
         {
-            if (aiPath.remainingDistance <= stopDistance)
-            {
-                HasReachedTarget = true;
-            }
-            else
-            {
-                HasReachedTarget = false;
-            }
+            CompleteDestination();
+            return;
         }
+
+        // 路径计算期间 remainingDistance 可能暂时为 0。
+        // 此时绝不能把 0 当作已经到达，这正是旧逻辑中途停走的根源。
+        if (aiPath.pathPending)
+        {
+            HasReachedTarget = false;
+            return;
+        }
+
+        bool hasValidRemainingDistance =
+            aiPath.hasPath &&
+            !float.IsNaN(aiPath.remainingDistance) &&
+            !float.IsInfinity(aiPath.remainingDistance);
+
+        float directDistanceGuard = Mathf.Max(stopDistance * 2f, stopDistance + 0.25f);
+        bool reachedByPath =
+            directDistance <= directDistanceGuard &&
+            (aiPath.reachedDestination ||
+             (hasValidRemainingDistance &&
+              aiPath.remainingDistance <= stopDistance));
+
+        if (reachedByPath)
+        {
+            CompleteDestination();
+            return;
+        }
+
+        HasReachedTarget = false;
+        RecoverIfStalled(currentPosition);
     }
 
-    public override void Move(Vector2 targetPosition, float deltaTime = 0.0f)
+    /// <summary>提交或更新目的地，并保证停止过的寻路组件恢复移动。</summary>
+    public void SetDestination(Vector2 destination, bool forceRepath = false)
     {
-        if (aiPath != null)
-        {
-            aiPath.maxSpeed = SpeedValue;
-            aiPath.destination = targetPosition;
-        }
+        bool isNewRequest =
+            !_hasDestination ||
+            (destination - _lastSubmittedDestination).sqrMagnitude >
+            destinationChangeThreshold * destinationChangeThreshold;
+
+        TargetPosition = destination;
+        CanMove = true;
+        HasReachedTarget = false;
+        _hasDestination = true;
+
+        if (aiPath == null)
+            return;
+
+        aiPath.maxSpeed = SpeedValue;
+        aiPath.destination = destination;
+        aiPath.isStopped = false;
+
+        if (!isNewRequest && !forceRepath)
+            return;
+
+        _lastSubmittedDestination = destination;
+        _lastProgressPosition = transform.position;
+        _lastProgressTime = Time.time;
+
+        // 不取消正在进行的路径请求；新目的地会由自动重寻路接管。
+        if (!aiPath.pathPending && (forceRepath || !aiPath.hasPath))
+            aiPath.SearchPath();
     }
 
-    #endregion
+    /// <summary>停止当前移动，但保留最后目的地，便于之后恢复。</summary>
+    public void StopMovement()
+    {
+        CanMove = false;
+        HasReachedTarget = true;
+
+        if (aiPath != null)
+            aiPath.isStopped = true;
+    }
+
+    public override void Move(Vector2 targetPosition, float deltaTime = 0f)
+    {
+        SetDestination(targetPosition);
+    }
+
+    private void CompleteDestination()
+    {
+        HasReachedTarget = true;
+        if (aiPath != null)
+            aiPath.isStopped = true;
+    }
+
+    private void RecoverIfStalled(Vector2 currentPosition)
+    {
+        float progressThresholdSqr = progressDistanceThreshold * progressDistanceThreshold;
+        if ((currentPosition - _lastProgressPosition).sqrMagnitude >= progressThresholdSqr)
+        {
+            _lastProgressPosition = currentPosition;
+            _lastProgressTime = Time.time;
+            return;
+        }
+
+        if (Time.time - _lastProgressTime < stalledRepathDelay)
+            return;
+
+        _lastProgressPosition = currentPosition;
+        _lastProgressTime = Time.time;
+
+        if (!aiPath.pathPending)
+            aiPath.SearchPath();
+    }
 }

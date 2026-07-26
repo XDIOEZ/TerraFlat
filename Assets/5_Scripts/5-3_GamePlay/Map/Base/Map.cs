@@ -44,6 +44,13 @@ public class Map : Item
     [SerializeField, Min(16)]
     private int loadTileBatchSize = 256;
 
+    [SerializeField, Min(0.25f)]
+    private float loadTileFrameBudgetMilliseconds = 2f;
+
+    [Header("程序化生成分帧配置")]
+    [SerializeField, Min(1)]
+    private int proceduralGenerationCellsPerFrame = 64;
+
     private float backTilePenaltyWaitSeconds = -1f;
     private WaitForSeconds backTilePenaltyWait;
     private float lastBackTilePenaltyTime = -999f;
@@ -59,8 +66,6 @@ public class Map : Item
     /// 兼容调试/显示：通常 0 号位放 ChunkGenerator_Land。
     /// </summary>
     public ChunkGenerator_Land LandGenerator => GetGenerator<ChunkGenerator_Land>();
-
-    private bool isMapGeneratorHooked;
 
     public bool IsReadyForChunkLifecycle =>
         Data != null &&
@@ -88,12 +93,14 @@ public class Map : Item
     {
         if (IsReadyForChunkLifecycle)
         {
-            Debug.Log($"[AStar-Debug][Map] NotifyChunkReady → chunk.NotifyMapLoaded | chunk={chunk?.name ?? "null"} | Map={name}");
+            if (AstarGameManager.Instance?.EnableDebugLogs == true)
+                Debug.Log($"[AStar-Debug][Map] NotifyChunkReady → chunk.NotifyMapLoaded | chunk={chunk?.name ?? "null"} | Map={name}");
             chunk?.NotifyMapLoaded();
         }
         else
         {
-            Debug.LogWarning($"[AStar-Debug][Map] NotifyChunkReady 条件不满足 | Data={Data != null} TileLoaded={Data?.TileLoaded} loadOrGenerateCoroutine={loadOrGenerateCoroutine != null} loadTileMapCoroutine={loadTileMapCoroutine != null}");
+            if (AstarGameManager.Instance?.EnableDebugLogs == true)
+                Debug.LogWarning($"[AStar-Debug][Map] NotifyChunkReady 条件不满足 | Data={Data != null} TileLoaded={Data?.TileLoaded} loadOrGenerateCoroutine={loadOrGenerateCoroutine != null} loadTileMapCoroutine={loadTileMapCoroutine != null}");
         }
     }
 
@@ -103,18 +110,21 @@ public class Map : Item
 
         if (!ShouldBakePenaltyAfterTilemapLoad)
         {
-            Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 跳过烘焙 | ShouldBakePenaltyAfterTilemapLoad=false | Map={name}");
+            if (AstarGameManager.Instance?.EnableDebugLogs == true)
+                Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 跳过烘焙 | ShouldBakePenaltyAfterTilemapLoad=false | Map={name}");
             return;
         }
 
-        Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 触发权重烘焙 | Map={name} | AstarGameManager.Instance={AstarGameManager.Instance != null} | GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 触发权重烘焙 | Map={name} | AstarGameManager.Instance={AstarGameManager.Instance != null} | GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
         MarkPenaltyDirtyFull();
         BackTilePenalty_Async();
     }
 
     protected void FinalizeTilemapLoad()
     {
-        Debug.Log($"[AStar-Debug][Map] FinalizeTilemapLoad 调用 | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded} | tileMap活跃={tileMap?.gameObject.activeSelf}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][Map] FinalizeTilemapLoad 调用 | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded} | tileMap活跃={tileMap?.gameObject.activeSelf}");
         OnTilemapLoaded();
         NotifyChunkReady();
     }
@@ -130,19 +140,9 @@ public class Map : Item
         StopMapCoroutines();
     }
 
-    private void OnDestroy()
+    private new void OnDestroy()
     {
         StopMapCoroutines();
-        UnhookMapGenerators();
-    }
-
-    private void UnhookMapGenerators()
-    {
-        if (isMapGeneratorHooked)
-        {
-            OnMapGenerated_Start -= HandleMapGeneratedStart;
-            isMapGeneratorHooked = false;
-        }
     }
 
     private void StopMapCoroutines()
@@ -224,11 +224,6 @@ public class Map : Item
             generator.Init(this);
         }
 
-        if (!isMapGeneratorHooked)
-        {
-            OnMapGenerated_Start += HandleMapGeneratedStart;
-            isMapGeneratorHooked = true;
-        }
     }
 
     public T GetGenerator<T>() where T : ChunkGeneratorBase
@@ -245,26 +240,19 @@ public class Map : Item
         return null;
     }
 
-    private void HandleMapGeneratedStart()
-    {
-        PlanetData planetData = SaveDataMgr.Instance != null
-            ? SaveDataMgr.Instance.GetCurrentPlanetData()
-            : null;
-        GenerateByPipeline(planetData);
-    }
-
-    private void GenerateByPipeline(PlanetData planetData)
+    private IEnumerator GenerateByPipelineCoroutine(PlanetData planetData)
     {
         InitMapGenerators();
         if (mapGenerators == null || mapGenerators.Count == 0)
         {
             Debug.LogError("[Map.GenerateByPipeline] mapGenerators 为空，无法生成", this);
-            return;
+            yield break;
         }
 
         Data ??= new Data_TileMap();
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        // 格子列表由 AddTileData 按需创建，避免新区块首帧一次分配 width * height 个 List。
+        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: false);
         Data.TileLoaded = false;
 
         int worldSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
@@ -275,20 +263,47 @@ public class Map : Item
             if (generator == null)
                 continue;
 
+            IEnumerator generatorRoutine;
             try
             {
                 generator.Init(this);
-                generator.Generate(context);
+                generatorRoutine = generator.GenerateAsync(
+                    context,
+                    Mathf.Max(1, proceduralGenerationCellsPerFrame));
             }
             catch (Exception exception)
             {
                 Debug.LogError($"[Map.GenerateByPipeline] 生成器 {generator.GetType().Name} 执行失败：{exception}", this);
+                continue;
             }
+
+            while (generatorRoutine != null)
+            {
+                bool hasNext;
+                object current = null;
+                try
+                {
+                    hasNext = generatorRoutine.MoveNext();
+                    if (hasNext)
+                        current = generatorRoutine.Current;
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogError($"[Map.GenerateByPipeline] 生成器 {generator.GetType().Name} 执行失败：{exception}", this);
+                    break;
+                }
+
+                if (!hasNext)
+                    break;
+
+                yield return current;
+            }
+
+            // 旧生成器即使仍是同步实现，各生成阶段也不会再挤在同一帧。
+            yield return null;
         }
 
-        tileMap?.RefreshAllTiles();
         Data.TileLoaded = true;
-        GetComponent<GrassDetailLayer>()?.Rebuild(this);
         SaveDataMgr.Instance?.OnProceduralChunkGenerated(chunk);
     }
 
@@ -318,7 +333,8 @@ public class Map : Item
         if (saveDataMgr.SaveData.PlanetData_Dict.TryGetValue(SceneManager.GetActiveScene().name, out _))
         {
             BeginMapLoad();
-            OnMapGenerated_Start.Invoke();
+            Data.TileLoaded = false;
+            loadOrGenerateCoroutine = StartCoroutine(GenerateThenLoadTilemapCoroutine());
         }
     }
 
@@ -342,12 +358,14 @@ public class Map : Item
         }
 
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        // 存档中没有数据的格子保持 null，避免加载时为所有空格创建 List。
+        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: false);
         Data.EnsureEnvironmentStorage((int)chunkSize.x, (int)chunkSize.y);
 
         bool hasTileData = Data.CountNonEmptyCells() > 0;
 
-        Debug.Log($"[AStar-Debug][Map] Load 开始 | Map={name} chunk={chunk?.name ?? "null"} hasTileData={hasTileData} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][Map] Load 开始 | Map={name} chunk={chunk?.name ?? "null"} hasTileData={hasTileData} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
 
         // 先停止上一轮加载/生成流程（避免多次点击按钮叠加协程）
         if (loadOrGenerateCoroutine != null)
@@ -377,13 +395,20 @@ public class Map : Item
     {
         OnMapGenerated_Start.Invoke();
 
-        while (Data == null || !Data.TileLoaded)
-            yield return null;
+        PlanetData planetData = SaveDataMgr.Instance != null
+            ? SaveDataMgr.Instance.GetCurrentPlanetData()
+            : null;
+        yield return GenerateByPipelineCoroutine(planetData);
+
+        if (Data == null || !Data.TileLoaded)
+        {
+            loadOrGenerateCoroutine = null;
+            yield break;
+        }
 
         tileMap.ClearAllTiles();
-        LoadTileData_To_TileMap_Ansync();
-
         loadOrGenerateCoroutine = null;
+        LoadTileData_To_TileMap_Ansync();
         // NotifyChunkReady 由 LoadTileData_To_TileMapCoroutine 结束时的 FinalizeTilemapLoad 触发
     }
 
@@ -447,7 +472,8 @@ public class Map : Item
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
-            Debug.LogWarning($"[AStar-Debug][Map] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
+            if (AstarGameManager.Instance?.EnableDebugLogs == true)
+                Debug.LogWarning($"[AStar-Debug][Map] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
             loadTileMapCoroutine = null;
             FinalizeTilemapLoad();
             yield break;
@@ -455,6 +481,10 @@ public class Map : Item
 
         int batchSize = TilemapLoadBatchSize;
         int processedCount = 0;
+        int processedThisFrame = 0;
+        double frameBudgetMilliseconds = Mathf.Max(0.25f, loadTileFrameBudgetMilliseconds);
+        double ticksPerMillisecond = System.Diagnostics.Stopwatch.Frequency / 1000d;
+        long frameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
@@ -468,14 +498,24 @@ public class Map : Item
 
             tileMap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), tile);
             processedCount++;
+            processedThisFrame++;
 
-            if (processedCount % batchSize == 0)
+            double elapsedMilliseconds =
+                (System.Diagnostics.Stopwatch.GetTimestamp() - frameStartTimestamp) / ticksPerMillisecond;
+            if (processedThisFrame >= batchSize || elapsedMilliseconds >= frameBudgetMilliseconds)
+            {
+                processedThisFrame = 0;
                 yield return null;
+                frameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+            }
         }
 
         yield return null;
-        Debug.Log($"✅ 完成加载 {processedCount} 个Tile到Tilemap");
-        Debug.Log($"[AStar-Debug][Map] Tilemap加载完成 | {processedCount} 个Tile | AstarGameManager.Instance={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady} | Map={name}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+        {
+            Debug.Log($"✅ 完成加载 {processedCount} 个Tile到Tilemap");
+            Debug.Log($"[AStar-Debug][Map] Tilemap加载完成 | {processedCount} 个Tile | AstarGameManager.Instance={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady} | Map={name}");
+        }
         loadTileMapCoroutine = null;
         FinalizeTilemapLoad();
     }

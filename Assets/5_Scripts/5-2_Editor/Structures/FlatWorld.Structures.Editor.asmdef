@@ -1,0 +1,23 @@
+{
+    "name": "FlatWorld.Structures.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0994f0b99b69bfe47a086609b9a07e33",
+        "GUID:6b2403a08572f7c49b7802a26e472b30",
+        "GUID:b428d770df5b16d49a9a8fa3176ef68a",
+        "GUID:26201a8de44cbb84c80cc799d6b461eb",
+        "GUID:7baea1a086362ef42a47c71f6c0b003f",
+        "GUID:57a6d82589ae03c4cabdc058f719f231"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

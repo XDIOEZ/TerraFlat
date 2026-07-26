@@ -21,6 +21,10 @@ MonoBehaviour:
     Probability: 0.5
   SpawnTriggerTime: 720
   SpawnTimeTolerance: 1
+  SpawnsPerDay: 2
   MinSpawnDistance: 15
   MaxSpawnDistance: 50
   SpawnSearchRetryCount: 5
+  SpawnCount: 2
+  SpawnChance: 1
+  DaysBetweenSpawns: 1

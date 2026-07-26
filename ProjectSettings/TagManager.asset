@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Entity
   - MapCore
+  - Ghost
   layers:
   - Default
   - TransparentFX

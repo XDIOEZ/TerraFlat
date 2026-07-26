@@ -1,5 +1,7 @@
 // AI-Context: 玩家世界物品拾取入口；联机时只发起服务端事务，收到授权后才写入背包，禁止直接 Destroy 绕过 ItemMgr/网络生命周期。
+using System.Collections;
 using System.Collections.Generic;
+using FlatWorld.Audio;
 using UnityEngine;
 
 /// <summary>
@@ -77,6 +79,16 @@ public class ItemPicker : Module
 
     [System.NonSerialized]
     public List<IInventory> AddTargetInventories = new List<IInventory>(); // 运行时使用的目标库存接口列表
+
+    [Header("拾取吸入动画")]
+    [SerializeField, Min(0.05f)]
+    private float pickupSuctionDuration = 0.28f;
+
+    [SerializeField, Min(0f)]
+    private float pickupSuctionCurveOffset = 0.3f;
+
+    [SerializeField]
+    private float pickupSuctionRotation = 90f;
 
     /// <summary>
     /// 基础拾取权限控制变量
@@ -172,6 +184,7 @@ public class ItemPicker : Module
             pickAble.ModuleSave();
             if (TryAcceptNetworkPickup(pickAble.itemData))
             {
+                PlayPickupSuction(pickAble);
                 ItemMgr.Instance.DespawnItem(pickAble);
                 return;
             }
@@ -204,6 +217,143 @@ public class ItemPicker : Module
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 创建不含碰撞与业务脚本的视觉快照，并将其加速缩小吸入玩家身体。
+    /// 真实物品可立即按原生命周期回收，动画不会污染对象池状态。
+    /// </summary>
+    public void PlayPickupSuction(Item worldItem, bool hideSourceRenderers = false)
+    {
+        if (worldItem == null)
+            return;
+
+        AudioService.Instance.PlayAt(AudioEventIds.ItemPickup, worldItem.transform.position);
+
+        SpriteRenderer[] sourceRenderers = worldItem.GetComponentsInChildren<SpriteRenderer>(false);
+        GameObject visualRoot = CreatePickupVisualSnapshot(worldItem, sourceRenderers);
+        if (visualRoot == null)
+            return;
+
+        if (hideSourceRenderers)
+        {
+            for (int i = 0; i < sourceRenderers.Length; i++)
+            {
+                if (sourceRenderers[i] != null)
+                    sourceRenderers[i].enabled = false;
+            }
+        }
+
+        Transform target = item != null ? item.transform : transform;
+        Vector3 targetLocalPoint = Vector3.zero;
+        SpriteRenderer bodyRenderer = item != null
+            ? (item.Sprite != null ? item.Sprite : item.GetComponentInChildren<SpriteRenderer>())
+            : GetComponentInChildren<SpriteRenderer>();
+
+        if (bodyRenderer != null)
+            targetLocalPoint = target.InverseTransformPoint(bodyRenderer.bounds.center);
+
+        StartCoroutine(AnimatePickupSuction(
+            visualRoot,
+            target,
+            targetLocalPoint,
+            worldItem.itemData?.Guid ?? worldItem.GetInstanceID()));
+    }
+
+    private static GameObject CreatePickupVisualSnapshot(
+        Item worldItem,
+        SpriteRenderer[] sourceRenderers)
+    {
+        if (sourceRenderers == null || sourceRenderers.Length == 0)
+            return null;
+
+        GameObject visualRoot = new GameObject($"PickupSuction_{worldItem.name}");
+        visualRoot.layer = worldItem.gameObject.layer;
+        visualRoot.transform.SetPositionAndRotation(worldItem.transform.position, Quaternion.identity);
+        visualRoot.transform.localScale = Vector3.one;
+
+        int copiedRendererCount = 0;
+        for (int i = 0; i < sourceRenderers.Length; i++)
+        {
+            SpriteRenderer source = sourceRenderers[i];
+            if (source == null || !source.enabled || source.sprite == null ||
+                !source.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            GameObject rendererObject = new GameObject(source.gameObject.name);
+            rendererObject.layer = source.gameObject.layer;
+            rendererObject.transform.SetParent(visualRoot.transform, false);
+            rendererObject.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+            rendererObject.transform.localScale = source.transform.lossyScale;
+
+            SpriteRenderer copy = rendererObject.AddComponent<SpriteRenderer>();
+            copy.sprite = source.sprite;
+            copy.sharedMaterial = source.sharedMaterial;
+            copy.color = source.color;
+            copy.flipX = source.flipX;
+            copy.flipY = source.flipY;
+            copy.drawMode = source.drawMode;
+            copy.size = source.size;
+            copy.maskInteraction = source.maskInteraction;
+            copy.spriteSortPoint = source.spriteSortPoint;
+            copy.sortingLayerID = source.sortingLayerID;
+            copy.sortingOrder = source.sortingOrder + 1;
+            copiedRendererCount++;
+        }
+
+        if (copiedRendererCount > 0)
+            return visualRoot;
+
+        Destroy(visualRoot);
+        return null;
+    }
+
+    private IEnumerator AnimatePickupSuction(
+        GameObject visualRoot,
+        Transform target,
+        Vector3 targetLocalPoint,
+        int itemIdentity)
+    {
+        Vector3 startPosition = visualRoot.transform.position;
+        Vector3 initialScale = visualRoot.transform.localScale;
+        float duration = Mathf.Max(0.05f, pickupSuctionDuration);
+        float elapsed = 0f;
+
+        Vector3 initialTarget = target != null
+            ? target.TransformPoint(targetLocalPoint)
+            : startPosition;
+        Vector2 direction = initialTarget - startPosition;
+        Vector2 perpendicular = direction.sqrMagnitude > 0.0001f
+            ? new Vector2(-direction.y, direction.x).normalized
+            : Vector2.up;
+        float curveSign = (itemIdentity & 1) == 0 ? 1f : -1f;
+        Vector3 curveOffset = perpendicular * (pickupSuctionCurveOffset * curveSign);
+
+        while (elapsed < duration && visualRoot != null)
+        {
+            if (target == null)
+                break;
+
+            elapsed += Time.deltaTime;
+            float normalizedTime = Mathf.Clamp01(elapsed / duration);
+            float suctionTime = normalizedTime * normalizedTime * normalizedTime;
+            Vector3 targetPosition = target.TransformPoint(targetLocalPoint);
+            float arcWeight = Mathf.Sin(normalizedTime * Mathf.PI);
+
+            visualRoot.transform.position =
+                Vector3.LerpUnclamped(startPosition, targetPosition, suctionTime) +
+                curveOffset * arcWeight;
+            visualRoot.transform.localScale =
+                initialScale * Mathf.Max(0.02f, 1f - normalizedTime * normalizedTime);
+            visualRoot.transform.rotation =
+                Quaternion.Euler(0f, 0f, pickupSuctionRotation * suctionTime * curveSign);
+            yield return null;
+        }
+
+        if (visualRoot != null)
+            Destroy(visualRoot);
     }
 
     #endregion
