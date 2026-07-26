@@ -641,7 +641,7 @@ public class Mod_Building : Module
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = true;
         item.itemData.ItemSpecialData = StatefulSummonerPrefix + item.itemData.Guid;
-        SetColliderMode(enabled: true, trigger: true);
+        SetColliderMode(enabled: true, trigger: true, damageReceiverEnabled: false);
         BuildingOccupancyRegistry.Unregister(this);
         Save();
     }
@@ -951,7 +951,10 @@ public class Mod_Building : Module
             if (item.itemData?.Stack != null)
                 item.itemData.Stack.CanBePickedUp = true;
 
-            SetColliderMode(enabled: !item.InHand, trigger: true);
+            SetColliderMode(
+                enabled: !item.InHand,
+                trigger: true,
+                damageReceiverEnabled: false);
             CurrentState = item.InHand ? BuildingState.NotInstalled : BuildingState.Uninstalled;
             return;
         }
@@ -980,7 +983,7 @@ public class Mod_Building : Module
         SyncNavigationOccupancy();
     }
 
-    private void SetColliderMode(bool enabled, bool trigger)
+    private void SetColliderMode(bool enabled, bool trigger, bool damageReceiverEnabled = true)
     {
         if (item == null)
             return;
@@ -992,6 +995,13 @@ public class Mod_Building : Module
             if (colliders[i] == boxCollider2D)
                 colliders[i].isTrigger = trigger;
         }
+
+        if (damageReceiver == null)
+            return;
+
+        Collider2D[] damageReceiverColliders = damageReceiver.GetComponentsInChildren<Collider2D>(true);
+        for (int i = 0; i < damageReceiverColliders.Length; i++)
+            damageReceiverColliders[i].enabled = enabled && damageReceiverEnabled;
     }
 
     private void HandleGhostShadow()
