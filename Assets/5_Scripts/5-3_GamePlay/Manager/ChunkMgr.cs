@@ -939,10 +939,17 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         if (!activePlanetData.MapData_Dict.TryGetValue(mapName, out MapSave mapSave))
             return null;
 
-        // 验证存档数据的完整性
-        if (mapSave == null || mapSave.items.Count == 0)
+        if (mapSave == null)
         {
-            Debug.LogWarning($"[区块加载] ⚠️ 方式2/3: 存档区块 {mapName} 无效或为空");
+            activePlanetData.MapData_Dict.Remove(mapName);
+            return null;
+        }
+
+        // 程序化区块采用差分存档时会主动清空旧的全量 items。
+        // 没有 Delta 的空记录表示区块应按世界种子重新生成，并非损坏存档。
+        if (mapSave.items == null || mapSave.items.Count == 0)
+        {
+            activePlanetData.MapData_Dict.Remove(mapName);
             return null;
         }
 
