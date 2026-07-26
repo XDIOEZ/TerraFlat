@@ -177,10 +177,19 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
 
     public virtual void BindController()
     {
-        GameController GameController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        GameController gameController = null;
+        if (item?.itemMods?.ContainsKey_ID(ModText.Controller) == true)
+            gameController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        else if (item?.Owner?.itemMods?.ContainsKey_ID(ModText.Controller) == true)
+            gameController = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
 
-        foreach (var inventory in inventoryRefDic.Values)
-            inventory.BindController(GameController);
+        foreach (var currentInventory in inventoryRefDic.Values)
+        {
+            if (gameController != null)
+                currentInventory.BindController(gameController);
+            else
+                currentInventory.UnbindController();
+        }
     }
 
     public override void ModUpdate(float deltaTime)

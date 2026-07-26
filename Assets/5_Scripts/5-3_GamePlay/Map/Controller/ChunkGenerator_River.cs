@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -116,6 +117,57 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     [Range(0.2f, 4f)]
     public float riverWidthPower = 1.35f;
 
+    #region 水文河湖
+    [Header("真实水文生成")]
+    [Tooltip("当前 Chunk 外额外参与水文计算的格数。越大越容易形成跨区块连续河流，但生成成本越高")]
+    [Min(8)] public int hydrologyHalo = 32;
+
+    [Tooltip("水文生成每帧最少处理的格子数。独立于地形生成预算，避免大型 Chunk 等待数百帧")]
+    [Min(64)] public int hydrologyCellsPerFrame = 768;
+
+    [Tooltip("河流源头候选网格间距，每个网格最多产生一个源头")]
+    [Min(6)] public int sourceSpacing = 18;
+
+    [Tooltip("源头最低海拔，仅高海拔石地可成为源头")]
+    [Range(0f, 1f)] public float sourceMinHeight = 0.68f;
+
+    [Tooltip("源头最低降水量，避免极干旱石地大量产生河流")]
+    [Range(0f, 1f)] public float sourceMinPrecipitation = 0.08f;
+
+    [Tooltip("单条河流最多追踪步数")]
+    [Min(32)] public int maxRiverTraceSteps = 480;
+
+    [Tooltip("河流遇到低洼时，搜索湖泊出口的最大半径")]
+    [Min(2)] public int maxLakeRadius = 12;
+
+    [Tooltip("湖泊水位允许高于洼地最低点的最大高度")]
+    [Range(0.001f, 0.25f)] public float maxLakeLevelRise = 0.08f;
+
+    [Tooltip("形成湖泊至少需要覆盖的格子数")]
+    [Min(2)] public int minLakeCells = 5;
+
+    [Tooltip("河道最小半径")]
+    [Range(0f, 4f)] public float minRiverRadius = 0.35f;
+
+    [Tooltip("主河道最大半径")]
+    [Range(1f, 8f)] public float maxRiverRadius = 3f;
+
+    [Tooltip("汇流量对河宽的影响")]
+    [Range(0.05f, 2f)] public float flowWidthScale = 0.55f;
+
+    [Tooltip("河流曲流强度。越大越倾向沿近似等高线摆动，但始终限制在可下降方向")]
+    [Range(0f, 0.08f)] public float meanderStrength = 0.025f;
+
+    [Tooltip("河流曲流噪声频率。越低弯道越舒缓，越高弯道越频繁")]
+    [Range(0.002f, 0.2f)] public float meanderFrequency = 0.025f;
+
+    [Tooltip("湖岸形变强度。越大湖岸越不规则，0 表示完全服从等高线")]
+    [Range(0f, 0.08f)] public float lakeShoreIrregularity = 0.025f;
+
+    [Tooltip("湖岸形变噪声频率")]
+    [Range(0.01f, 0.3f)] public float lakeShoreFrequency = 0.09f;
+    #endregion
+
     #region 石头生成（河床/河岸）
     [Header("河床/河岸石头")]
     [Tooltip("是否在生成河流后，额外在河内与河两侧生成石头")]
@@ -187,6 +239,21 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     #region 管线入口
     [Button("生成河流")]
     public override void Generate(MapGenerationContext context)
+    {
+        IEnumerator routine = GenerateHydrologyCoroutine(context, int.MaxValue);
+        while (routine.MoveNext())
+        {
+        }
+    }
+
+    public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
+    {
+        return GenerateHydrologyCoroutine(
+            context,
+            Mathf.Max(Mathf.Max(1, workBatchSize), hydrologyCellsPerFrame));
+    }
+
+    private void GenerateLegacyVoronoi(MapGenerationContext context)
     {
         if (context == null)
         {
@@ -312,6 +379,534 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         }
 
 //        Debug.Log($"[ChunkGenerator_River] ✅ 河流遮罩生成完成（网络噪声/Voronoi边界），覆盖格子数: {appliedCount}", Map);
+    }
+
+    private IEnumerator GenerateHydrologyCoroutine(MapGenerationContext context, int workBatchSize)
+    {
+        if (!TryPrepareGeneration(context, out ChunkGenerator_Land land, out int width, out int height))
+            yield break;
+
+        int halo = Mathf.Max(8, hydrologyHalo);
+        int workWidth = width + halo * 2;
+        int workHeight = height + halo * 2;
+        int workCount = workWidth * workHeight;
+        Vector2Int coreOrigin = Map.Data.position;
+        Vector2Int workOrigin = coreOrigin - new Vector2Int(halo, halo);
+
+        float[] heights = new float[workCount];
+        float[] precipitation = new float[workCount];
+        bool[] stoneGround = new bool[workCount];
+        bool[] centerLine = new bool[workCount];
+        bool[] lakeMask = new bool[workCount];
+        float[] waterDepth = new float[workCount];
+        int[] flow = new int[workCount];
+        int[] visitStamp = new int[workCount];
+        int stamp = 0;
+        int processed = 0;
+
+        for (int x = 0; x < workWidth; x++)
+        {
+            for (int y = 0; y < workHeight; y++)
+            {
+                Vector2Int worldPos = workOrigin + new Vector2Int(x, y);
+                EnvironmentSample sample = land.SampleEnvironmentAtWorld(worldPos, context.WorldSeed);
+                int index = Index(x, y, workWidth);
+                heights[index] = sample.Hight;
+                precipitation[index] = sample.Precipitation;
+                stoneGround[index] = IsStoneGround(land, sample);
+
+                if (++processed >= workBatchSize)
+                {
+                    processed = 0;
+                    yield return null;
+                }
+            }
+        }
+
+        int spacing = Mathf.Max(6, sourceSpacing);
+        int minSourceCellX = FloorDiv(workOrigin.x, spacing) - 1;
+        int maxSourceCellX = FloorDiv(workOrigin.x + workWidth - 1, spacing) + 1;
+        int minSourceCellY = FloorDiv(workOrigin.y, spacing) - 1;
+        int maxSourceCellY = FloorDiv(workOrigin.y + workHeight - 1, spacing) + 1;
+        int generationSeed = GetGenerationSeed();
+        int sourceSalt = unchecked((int)0x51ED270B);
+
+        for (int sourceCellX = minSourceCellX; sourceCellX <= maxSourceCellX; sourceCellX++)
+        {
+            for (int sourceCellY = minSourceCellY; sourceCellY <= maxSourceCellY; sourceCellY++)
+            {
+                int sourceWorldX = sourceCellX * spacing + Mathf.FloorToInt(Hash01(sourceCellX, sourceCellY, generationSeed ^ sourceSalt) * spacing);
+                int sourceWorldY = sourceCellY * spacing + Mathf.FloorToInt(Hash01(sourceCellX, sourceCellY, generationSeed ^ (sourceSalt + 1)) * spacing);
+                int sourceX = sourceWorldX - workOrigin.x;
+                int sourceY = sourceWorldY - workOrigin.y;
+                if (!Contains(sourceX, sourceY, workWidth, workHeight))
+                    continue;
+
+                int sourceIndex = Index(sourceX, sourceY, workWidth);
+                if (!stoneGround[sourceIndex] ||
+                    heights[sourceIndex] < sourceMinHeight ||
+                    precipitation[sourceIndex] < sourceMinPrecipitation ||
+                    !IsLocalHighPoint(sourceX, sourceY, workWidth, workHeight, heights))
+                {
+                    continue;
+                }
+
+                stamp++;
+                int currentX = sourceX;
+                int currentY = sourceY;
+                Vector2Int previousDirection = Vector2Int.zero;
+                int maxSteps = Mathf.Max(32, maxRiverTraceSteps);
+                for (int step = 0; step < maxSteps; step++)
+                {
+                    if (!Contains(currentX, currentY, workWidth, workHeight))
+                        break;
+
+                    int currentIndex = Index(currentX, currentY, workWidth);
+                    if (visitStamp[currentIndex] == stamp)
+                        break;
+
+                    visitStamp[currentIndex] = stamp;
+                    centerLine[currentIndex] = true;
+                    flow[currentIndex]++;
+
+                    if (heights[currentIndex] <= minHeight)
+                        break;
+
+                    if (TryGetDownhillNeighbor(
+                            currentX,
+                            currentY,
+                            workWidth,
+                            workHeight,
+                            heights,
+                            generationSeed,
+                            workOrigin,
+                            previousDirection,
+                            meanderStrength,
+                            meanderFrequency,
+                            out int nextX,
+                            out int nextY))
+                    {
+                        previousDirection = new Vector2Int(nextX - currentX, nextY - currentY);
+                        currentX = nextX;
+                        currentY = nextY;
+                    }
+                    else if (TryCreateLakeAtSink(
+                                 currentX,
+                                 currentY,
+                                 workWidth,
+                                 workHeight,
+                                 heights,
+                                 lakeMask,
+                                 waterDepth,
+                                 generationSeed,
+                                 workOrigin,
+                                 out nextX,
+                                 out nextY))
+                    {
+                        previousDirection = Vector2Int.zero;
+                        currentX = nextX;
+                        currentY = nextY;
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                    if (++processed >= workBatchSize)
+                    {
+                        processed = 0;
+                        yield return null;
+                    }
+                }
+            }
+        }
+
+        bool[] riverMask = new bool[workCount];
+        float maxRadius = Mathf.Max(1f, maxRiverRadius);
+        for (int x = 0; x < workWidth; x++)
+        {
+            for (int y = 0; y < workHeight; y++)
+            {
+                int centerIndex = Index(x, y, workWidth);
+                if (!centerLine[centerIndex])
+                    continue;
+
+                float radius = Mathf.Clamp(
+                    minRiverRadius + Mathf.Log(flow[centerIndex] + 1f, 2f) * flowWidthScale,
+                    Mathf.Max(0f, minRiverRadius),
+                    maxRadius);
+                int cellRadius = Mathf.CeilToInt(radius);
+                for (int dx = -cellRadius; dx <= cellRadius; dx++)
+                {
+                    int nx = x + dx;
+                    if ((uint)nx >= (uint)workWidth)
+                        continue;
+
+                    for (int dy = -cellRadius; dy <= cellRadius; dy++)
+                    {
+                        int ny = y + dy;
+                        if ((uint)ny >= (uint)workHeight)
+                            continue;
+
+                        float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                        if (distance > radius + 0.35f)
+                            continue;
+
+                        int targetIndex = Index(nx, ny, workWidth);
+                        riverMask[targetIndex] = true;
+                        float centerStrength = 1f - Mathf.Clamp01(distance / (radius + 0.5f));
+                        float depth = Mathf.Lerp(
+                            Mathf.Clamp01(riverDepthMin),
+                            Mathf.Clamp01(riverDepthMax),
+                            Mathf.Pow(centerStrength, Mathf.Max(0.2f, riverDepthPower)));
+                        waterDepth[targetIndex] = Mathf.Max(waterDepth[targetIndex], depth);
+                    }
+                }
+
+                if (++processed >= workBatchSize)
+                {
+                    processed = 0;
+                    yield return null;
+                }
+            }
+        }
+
+        bool[] coreWaterMask = new bool[width * height];
+        for (int localX = 0; localX < width; localX++)
+        {
+            for (int localY = 0; localY < height; localY++)
+            {
+                int workIndex = Index(localX + halo, localY + halo, workWidth);
+                if (!riverMask[workIndex] && !lakeMask[workIndex])
+                    continue;
+
+                Vector2Int worldPos = coreOrigin + new Vector2Int(localX, localY);
+                if (IsSeaWaterAt(worldPos))
+                    continue;
+
+                WriteFreshWaterAt(worldPos, waterDepth[workIndex], renderImmediately: false);
+                coreWaterMask[Index(localX, localY, width)] = true;
+
+                if (++processed >= workBatchSize)
+                {
+                    processed = 0;
+                    yield return null;
+                }
+            }
+        }
+
+        if (spawnRiverStones)
+        {
+            SpawnStones_ForRiver(width, height, coreOrigin, coreWaterMask);
+            yield return null;
+        }
+    }
+
+    private bool TryPrepareGeneration(
+        MapGenerationContext context,
+        out ChunkGenerator_Land land,
+        out int width,
+        out int height)
+    {
+        land = null;
+        width = 0;
+        height = 0;
+        if (context?.Map == null)
+        {
+            LogNullContext(nameof(ChunkGenerator_River));
+            return false;
+        }
+
+        Map = context.Map;
+        activeWorldSeed = context.WorldSeed;
+        targetTilemap ??= Map.tileMap;
+        if (riverTileBlock == null || riverTileBlock.tileDataTemplate is not TileData_Water)
+        {
+            Debug.LogError("[ChunkGenerator_River] riverTileBlock 必须配置淡水 TileData_Water", Map);
+            return false;
+        }
+
+        if (Map.Data == null)
+        {
+            Debug.LogError("[ChunkGenerator_River] Map.Data 为空，无法生成水文", Map);
+            return false;
+        }
+
+        land = Map.GetGenerator<ChunkGenerator_Land>();
+        if (land == null)
+        {
+            Debug.LogError("[ChunkGenerator_River] 缺少 ChunkGenerator_Land，无法采样世界高度", Map);
+            return false;
+        }
+
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        width = Mathf.Max(1, Mathf.RoundToInt(chunkSize.x));
+        height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
+        Map.Data.EnsureTileDataArray(width, height, initCells: false);
+        return true;
+    }
+
+    private static bool Contains(int x, int y, int width, int height)
+    {
+        return (uint)x < (uint)width && (uint)y < (uint)height;
+    }
+
+    private static int FloorDiv(int value, int divisor)
+    {
+        return Mathf.FloorToInt((float)value / divisor);
+    }
+
+    private static bool IsLocalHighPoint(int x, int y, int width, int height, float[] heights)
+    {
+        float center = heights[Index(x, y, width)];
+        int lowerNeighbors = 0;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
+
+                int nx = x + dx;
+                int ny = y + dy;
+                if (!Contains(nx, ny, width, height))
+                    continue;
+
+                if (heights[Index(nx, ny, width)] <= center)
+                    lowerNeighbors++;
+            }
+        }
+        return lowerNeighbors >= 6;
+    }
+
+    private bool IsStoneGround(ChunkGenerator_Land land, EnvironmentSample sample)
+    {
+        if (land.biomes == null)
+            return false;
+
+        for (int i = 0; i < land.biomes.Count; i++)
+        {
+            BiomeData biome = land.biomes[i];
+            if (biome?.Condition == null || !biome.Condition.IsMatch(sample))
+                continue;
+
+            List<BiomeTileSpawn_NoSo> tileSpawns = biome.TerrainConfig?.TileSpawns_NoSO;
+            if (tileSpawns == null || tileSpawns.Count == 0 || tileSpawns[0]?.TileBlock?.tileDataTemplate == null)
+                return false;
+
+            return string.Equals(tileSpawns[0].TileBlock.tileDataTemplate.ID, "Tile_Stone", StringComparison.Ordinal);
+        }
+        return false;
+    }
+
+    private static bool TryGetDownhillNeighbor(
+        int x,
+        int y,
+        int width,
+        int height,
+        float[] heights,
+        int generationSeed,
+        Vector2Int workOrigin,
+        Vector2Int previousDirection,
+        float curveStrength,
+        float curveFrequency,
+        out int nextX,
+        out int nextY)
+    {
+        nextX = x;
+        nextY = y;
+        float currentHeight = heights[Index(x, y, width)];
+        float bestScore = float.PositiveInfinity;
+        bool found = false;
+        Vector2 previous = previousDirection.sqrMagnitude > 0
+            ? ((Vector2)previousDirection).normalized
+            : Vector2.zero;
+        int worldX = workOrigin.x + x;
+        int worldY = workOrigin.y + y;
+        float frequency = Mathf.Max(0.002f, curveFrequency);
+        float phase = Mathf.PerlinNoise(
+            worldX * frequency + generationSeed * 0.000013f,
+            worldY * frequency - generationSeed * 0.000017f) * Mathf.PI * 2f;
+        Vector2 preferredCurve = new Vector2(Mathf.Cos(phase), Mathf.Sin(phase));
+
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
+
+                int nx = x + dx;
+                int ny = y + dy;
+                if (!Contains(nx, ny, width, height))
+                    continue;
+
+                float neighborHeight = heights[Index(nx, ny, width)];
+                if (neighborHeight >= currentHeight - 0.00005f)
+                    continue;
+
+                Vector2 direction = new Vector2(dx, dy).normalized;
+                float turnPenalty = previousDirection.sqrMagnitude > 0
+                    ? (1f - Vector2.Dot(previous, direction)) * 0.006f
+                    : 0f;
+                float curveBias = -Vector2.Dot(preferredCurve, direction) * Mathf.Max(0f, curveStrength);
+                float diagonalPenalty = dx != 0 && dy != 0 ? 0.0005f : 0f;
+                float tieBreak = Hash01(workOrigin.x + nx, workOrigin.y + ny, generationSeed ^ 0x1974) * 0.0001f;
+                float score = neighborHeight + turnPenalty + curveBias + diagonalPenalty + tieBreak;
+                if (score >= bestScore)
+                    continue;
+
+                bestScore = score;
+                nextX = nx;
+                nextY = ny;
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    private bool TryCreateLakeAtSink(
+        int sinkX,
+        int sinkY,
+        int width,
+        int height,
+        float[] heights,
+        bool[] lakeMask,
+        float[] waterDepth,
+        int generationSeed,
+        Vector2Int workOrigin,
+        out int outletX,
+        out int outletY)
+    {
+        outletX = sinkX;
+        outletY = sinkY;
+        float sinkHeight = heights[Index(sinkX, sinkY, width)];
+        int radius = Mathf.Max(2, maxLakeRadius);
+        float spillHeight = float.PositiveInfinity;
+
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) != radius)
+                    continue;
+
+                int x = sinkX + dx;
+                int y = sinkY + dy;
+                if (!Contains(x, y, width, height))
+                    continue;
+
+                float heightValue = heights[Index(x, y, width)];
+                if (heightValue >= spillHeight)
+                    continue;
+
+                spillHeight = heightValue;
+                outletX = x;
+                outletY = y;
+            }
+        }
+
+        if (float.IsPositiveInfinity(spillHeight))
+            return false;
+
+        float lakeLevel = Mathf.Max(sinkHeight, spillHeight);
+        if (lakeLevel - sinkHeight > Mathf.Max(0.001f, maxLakeLevelRise))
+            lakeLevel = sinkHeight + Mathf.Max(0.001f, maxLakeLevelRise);
+
+        bool[] visited = new bool[width * height];
+        Queue<Vector2Int> frontier = new Queue<Vector2Int>();
+        List<int> basinCells = new List<int>();
+        frontier.Enqueue(new Vector2Int(sinkX, sinkY));
+        visited[Index(sinkX, sinkY, width)] = true;
+        float shoreFrequency = Mathf.Max(0.01f, lakeShoreFrequency);
+        float shoreIrregularity = Mathf.Max(0f, lakeShoreIrregularity);
+
+        while (frontier.Count > 0)
+        {
+            Vector2Int cell = frontier.Dequeue();
+            int dx = cell.x - sinkX;
+            int dy = cell.y - sinkY;
+            if (dx * dx + dy * dy > radius * radius)
+                continue;
+
+            int index = Index(cell.x, cell.y, width);
+            int worldX = workOrigin.x + cell.x;
+            int worldY = workOrigin.y + cell.y;
+            float shoreNoise = Mathf.PerlinNoise(
+                worldX * shoreFrequency + generationSeed * 0.000021f,
+                worldY * shoreFrequency - generationSeed * 0.000019f);
+            float localLakeLevel = lakeLevel + (shoreNoise - 0.5f) * 2f * shoreIrregularity;
+            if (heights[index] > localLakeLevel + 0.002f)
+                continue;
+
+            basinCells.Add(index);
+            for (int nx = cell.x - 1; nx <= cell.x + 1; nx++)
+            {
+                for (int ny = cell.y - 1; ny <= cell.y + 1; ny++)
+                {
+                    if ((nx == cell.x && ny == cell.y) || !Contains(nx, ny, width, height))
+                        continue;
+
+                    int neighborIndex = Index(nx, ny, width);
+                    if (visited[neighborIndex])
+                        continue;
+
+                    visited[neighborIndex] = true;
+                    frontier.Enqueue(new Vector2Int(nx, ny));
+                }
+            }
+        }
+
+        if (basinCells.Count < Mathf.Max(2, minLakeCells))
+            return false;
+
+        for (int i = 0; i < basinCells.Count; i++)
+        {
+            int index = basinCells[i];
+            lakeMask[index] = true;
+            float normalizedDepth = Mathf.Clamp01(
+                (lakeLevel - heights[index] + 0.01f) /
+                Mathf.Max(0.01f, maxLakeLevelRise));
+            waterDepth[index] = Mathf.Max(
+                waterDepth[index],
+                Mathf.Lerp(riverDepthMin, riverDepthMax, normalizedDepth));
+        }
+
+        // 从湖岸最低点继续出流；若最低边界仍高于允许水位，则保留为封闭湖。
+        float bestOutletHeight = float.PositiveInfinity;
+        bool foundOutlet = false;
+        for (int i = 0; i < basinCells.Count; i++)
+        {
+            int index = basinCells[i];
+            int cellY = index / width;
+            int cellX = index - cellY * width;
+            for (int nx = cellX - 1; nx <= cellX + 1; nx++)
+            {
+                for (int ny = cellY - 1; ny <= cellY + 1; ny++)
+                {
+                    if (!Contains(nx, ny, width, height))
+                        continue;
+
+                    int neighborIndex = Index(nx, ny, width);
+                    if (lakeMask[neighborIndex] || heights[neighborIndex] >= bestOutletHeight)
+                        continue;
+
+                    bestOutletHeight = heights[neighborIndex];
+                    outletX = nx;
+                    outletY = ny;
+                    foundOutlet = true;
+                }
+            }
+        }
+
+        if (!foundOutlet || bestOutletHeight > lakeLevel + Mathf.Max(0.001f, maxLakeLevelRise))
+        {
+            outletX = sinkX;
+            outletY = sinkY;
+            return false;
+        }
+
+        return true;
     }
     #endregion
 
@@ -831,87 +1426,58 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     #region 写入
     private void ApplyRiverAt(Vector2Int worldPos, int localX, int localY, int width, int height, bool[] riverMask)
     {
-        // 海水（salt=80）不覆盖：避免河流/石头刷进海里
+        WriteFreshWaterAt(
+            worldPos,
+            ComputeRiverDepth(localX, localY, width, height, riverMask),
+            renderImmediately: true);
+    }
+
+    private void WriteFreshWaterAt(Vector2Int worldPos, float depth, bool renderImmediately)
+    {
         if (IsSeaWaterAt(worldPos))
             return;
 
-        // 1) 克隆 TileData
         TileData riverTile = riverTileBlock.tileDataTemplate.Clone();
-       
         if (riverTile is not TileData_Water waterTile)
         {
-            Debug.LogError($"[ChunkGenerator_River] ❌ riverTileBlock({riverTileBlock.name}) 生成的 TileData 不是 TileData_Water，无法写入 salt=0 的河流", Map);
+            Debug.LogError($"[ChunkGenerator_River] riverTileBlock({riverTileBlock.name}) 无法生成淡水 TileData", Map);
             return;
+        }
+
+        riverTile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
+        Vector2Int localPos = worldPos - Map.Data.position;
+        EnvironmentLayers layers = Map.Data.EnvironmentLayers;
+        if (layers != null && layers.Contains(localPos.x, localPos.y))
+        {
+            Map.Data.SetHumidityAtLocal(localPos.x, localPos.y, 1f);
+            Map.Data.SetSolidityAtLocal(localPos.x, localPos.y, 0f);
+            riverTile.Initialize_Env(layers, localPos.x, localPos.y);
         }
 
         waterTile.salt = 0f;
-        waterTile.deepValue = ComputeRiverDepth(localX, localY, width, height, riverMask);
+        waterTile.deepValue = Mathf.Clamp01(depth);
 
-        // 2) 设置位置
-        riverTile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
-
-        // 3) 环境初始化（如果有）
-        if (Map != null && Map.Data != null)
+        List<TileData> list = Map.Data.GetTileListAt(worldPos);
+        if (list == null || list.Count == 0)
         {
-            if (Map.Data.EnvironmentLayers != null)
-            {
-                Vector2Int localPos = worldPos - Map.Data.position;
-                var layers = Map.Data.EnvironmentLayers;
-                if (localPos.x >= 0 && localPos.y >= 0 &&
-                    localPos.x < layers.Width &&
-                    localPos.y < layers.Height)
-                {
-                    // 河流覆盖：同步修改该格环境参数
-                    Map.Data.SetHumidityAtLocal(localPos.x, localPos.y, 1f);
-                    Map.Data.SetSolidityAtLocal(localPos.x, localPos.y, 0f);
-
-                    // 用更新后的环境层初始化 TileData
-                    riverTile.Initialize_Env(Map.Data.EnvironmentLayers, localPos.x, localPos.y);
-
-                    // 河流深度由河道强度决定：主河道更深，边缘更浅
-                    waterTile.deepValue = ComputeRiverDepth(localX, localY, width, height, riverMask);
-                }
-            }
-            else
-            {
-                if (!_hasLoggedEnvMissing)
-                {
-                    _hasLoggedEnvMissing = true;
-                    Debug.LogWarning("[ChunkGenerator_River] ⚠️ EnvironmentLayers 为空：无法把河流格子的湿度设为1、固体设为0（仍会生成河流 Tile）", Map);
-                }
-            }
+            Map.Data.AddTileData(worldPos, riverTile);
         }
-
-        // 4) 写入数据层：替换顶层 or 加层
-        var list = Map.Data.GetTileListAt(worldPos);
-        if (list == null)
-        {
-            Debug.LogError($"[ChunkGenerator_River] ❌ TileData_Array 未初始化或越界：worldPos={worldPos} mapPos={Map.Data.position}", Map);
-            return;
-        }
-
-        if (writeMode == RiverWriteMode.AddLayer)
+        else if (writeMode == RiverWriteMode.AddLayer &&
+                 list[list.Count - 1] is not TileData_Water existingWater)
         {
             list.Add(riverTile);
         }
         else
         {
-            if (list.Count == 0)
-                list.Add(riverTile);
-            else
-                list[list.Count - 1] = riverTile;
+            list[list.Count - 1] = riverTile;
         }
 
-
-        // 5) 写入视觉层
-        TileBase unityTileBase = riverTileBlock.GetTileBaseAsset();
-        if (unityTileBase == null)
-        {
-            Debug.LogError($"[ChunkGenerator_River] ❌ riverTileBlock({riverTileBlock.name}) 的 TileBase 为空，无法绘制", Map);
+        if (!renderImmediately || targetTilemap == null)
             return;
-        }
 
-        targetTilemap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), unityTileBase);
+        TileBase unityTileBase = riverTileBlock.GetTileBaseAsset();
+        if (unityTileBase != null)
+            targetTilemap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), unityTileBase);
     }
 
     private float ComputeRiverDepth(int x, int y, int width, int height, bool[] riverMask)
