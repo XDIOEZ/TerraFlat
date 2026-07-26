@@ -1,26 +1,24 @@
 using UnityEngine;
-using static Cinemachine.AxisState;
 
 [System.Serializable]
 public class BuffAction_HpValueChange : BuffAction
 {
-    [Tooltip("????????")]
+    [Tooltip("每次恢复的生命值")]
     public float value;
-    [Tooltip("?????")]
-    public DamageReceiver mod;
 
     public override void Apply(BuffRunTime data)
     {
+        Item receiver = data?.buff_Receiver;
+        if (receiver == null || value <= 0f)
+            return;
+
+        DamageReceiver mod = receiver.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
         if (mod == null)
         {
-            data.buff_Receiver.itemMods.GetMod_ByID(ModText.Hp, out mod);
-            if (mod == null)
-            {
-                Debug.LogError($"{data.buff_Receiver}BuffAction_HpValueChange: damageReceiver is null");
-                return;
-            }
-
+            Debug.LogWarning($"[BuffAction_HpValueChange] {receiver.name} 缺少 DamageReceiver。");
+            return;
         }
+
         mod.Heal(value);
     }
 }

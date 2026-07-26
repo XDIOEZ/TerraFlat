@@ -204,6 +204,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
         EnsureInventoryPanelPrefabAssigned(target);
         EnsurePanelCreated(target);
         target.basePanel.Open();
+        target.SyncQuickTransferTarget(target.basePanel);
     }
 
     public void I_ClosePanel()
@@ -213,7 +214,10 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
             throw new System.InvalidOperationException("[Mod_Inventory] inventory 为空，无法关闭面板");
 
         if (target.basePanel != null)
+        {
             target.basePanel.Close();
+            target.SyncQuickTransferTarget(target.basePanel);
+        }
     }
 
     public void I_TogglePanel()

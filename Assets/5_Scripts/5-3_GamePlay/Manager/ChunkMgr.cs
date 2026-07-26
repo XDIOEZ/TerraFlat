@@ -39,7 +39,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     #region Chunk加载限流
     [Header("Chunk加载限流")]
     [SerializeField, Min(1)]
-    private int maxChunkLoadPerFrame = 2;
+    private int maxChunkLoadPerFrame = 1;
 
     private readonly List<Vector2Int> _pendingChunkLoadQueue = new();
     private readonly HashSet<Vector2Int> _pendingChunkLoadSet = new();
@@ -441,7 +441,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         _loadPriorityCenterChunk = new Vector2Int(playerChunkIndexX * _cachedChunkStepX, playerChunkIndexY * _cachedChunkStepY);
         _hasLoadPriorityCenter = true;
 
-        Debug.Log($"[AStar-Debug][ChunkMgr] LoadChunkCloseToPlayer | player={player.name} Distance={Distance} playerChunkIndex=({playerChunkIndexX},{playerChunkIndexY}) hasCallback={onAllChunksLoaded != null}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][ChunkMgr] LoadChunkCloseToPlayer | player={player.name} Distance={Distance} playerChunkIndex=({playerChunkIndexX},{playerChunkIndexY}) hasCallback={onAllChunksLoaded != null}");
 
         int targetCount = 0;
         int completedCount = 0;
@@ -893,7 +894,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         // 激活区块
         SetChunkActive(chunkGameObject, true);
 
-        Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 激活已有区块 | chunkPos={chunkPos} chunk={chunkGameObject.name} Map={chunkGameObject.Map != null} TileLoaded={chunkGameObject.Map?.Data?.TileLoaded}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 激活已有区块 | chunkPos={chunkPos} chunk={chunkGameObject.name} Map={chunkGameObject.Map != null} TileLoaded={chunkGameObject.Map?.Data?.TileLoaded}");
 
         // 激活后标记地图权重为脏，确保后续烘焙管线能处理此区块
         if (chunkGameObject.Map != null)
@@ -901,7 +903,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             if (chunkGameObject.Map.Data?.TileLoaded == true)
             {
                 chunkGameObject.Map.MarkPenaltyDirtyFull();
-                Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 标记权重脏区 | chunk={chunkGameObject.name} Map={chunkGameObject.Map.name}");
+                if (AstarGameManager.Instance?.EnableDebugLogs == true)
+                    Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 标记权重脏区 | chunk={chunkGameObject.name} Map={chunkGameObject.Map.name}");
             }
         }
         else
@@ -1029,7 +1032,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return null;
         }
 
-        Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateNewChunk 创建新区块 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map != null} AstarGameManager={AstarGameManager.Instance != null}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateNewChunk 创建新区块 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map != null} AstarGameManager={AstarGameManager.Instance != null}");
 
         // 注册到字典
         RegisterChunk(chunk);
@@ -1060,12 +1064,14 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         chunk.AddItem(map);
         map.chunk = chunk;
 
-        Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore 创建MapCore | chunk={chunk.name} map={map.name} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore 创建MapCore | chunk={chunk.name} map={map.name} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
 
         // 调用Act方法进行初始化（会自动烘焙权重）
         map.Act();
 
-        Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore Act完成 | chunk={chunk.name} map.Data.TileLoaded={map.Data?.TileLoaded} loadOrGenerateCoroutine={map.loadOrGenerateCoroutine != null}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore Act完成 | chunk={chunk.name} map.Data.TileLoaded={map.Data?.TileLoaded} loadOrGenerateCoroutine={map.loadOrGenerateCoroutine != null}");
 
         return true;
     }

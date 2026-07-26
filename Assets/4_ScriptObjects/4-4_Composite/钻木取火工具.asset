@@ -38,8 +38,8 @@ MonoBehaviour:
     inputOrder: 0
   outputs:
     results:
-    - ItemName: SparkMaker
-      ItemPrefab: {fileID: 6540100855143504370, guid: c81a87a3667f93340a56b3e016a55c95, type: 3}
+    - ItemName: SparkMaker_Summoner
+      ItemPrefab: {fileID: 6540100855143504370, guid: 92c40ea4c73544d4e9061baa2ca3b5ee, type: 3}
       amount: 1
   enableMirrorCrafting: 1
   action: []

@@ -57,6 +57,15 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     public event Action<BodyPartDamageInfo> OnBodyPartDamaged;
     public event Action<BodyPartHealthChangeInfo> OnBodyPartHealthChanged;
 
+    [Header("受击材质音效")]
+    [SerializeField]
+    private CombatImpactMaterial impactAudioMaterial = CombatImpactMaterial.Auto;
+    [SerializeField, Tooltip("对象专属受击 AudioCue ID。留空时按材质及武器组合自动选择。")]
+    private string hurtAudioCueId;
+
+    public CombatImpactMaterial ImpactAudioMaterial => impactAudioMaterial;
+    public string HurtAudioCueId => hurtAudioCueId;
+
     public bool UsesBodyPartHealth =>
         Data != null &&
         Data.UseBodyPartHealth &&
@@ -135,6 +144,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         NormalizeStatRanges();
+        healthBarWorldScale = Mathf.Max(0.01f, healthBarWorldScale);
         _Data.ID = ModText.Hp;
     }
 
@@ -170,9 +180,17 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     [Header("受伤UI自动隐藏设置")]
     [Min(0f)]
     public float HideUiDelayAfterLastDamage = 4f;
+
+    [Header("世界血条自适应")]
+    [SerializeField, Min(0f)]
+    private float healthBarTopPadding = 0.16f;
+    [SerializeField, Min(0.01f)]
+    private float healthBarWorldScale = 0.55f;
+
     private Coroutine _hideUiCoroutine;
     private float _lastDamageUiTime = -999f;
     private Item _handStateEventOwner;
+    private bool _isVisualShaking;
 
     private bool _deathConsumedByExternalHandler;
 
@@ -274,8 +292,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         GameObject panel = Instantiate(PanelPrefab, transform);
         UIValues = panel.GetComponentInChildren<BasePanel>();
         UIValues.CollectUIComponents();
-        panel.transform.position = transform.position + Vector3.up * 1f;
         PanleInstance = panel;
+        UpdateWorldHealthBarLayout();
         DataUpdate += RefreshUI;
 
         RefreshUI();
@@ -328,6 +346,90 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         return PanleInstance != null;
     }// 添加检查面板是否可见的方法
+
+    public override void ModUpdate(float deltaTime)
+    {
+        // 抖动只属于受击视觉，血条继续跟随稳定的物品根节点。
+        if (PanleInstance != null && !_isVisualShaking)
+            UpdateWorldHealthBarLayout();
+    }
+
+    private void UpdateWorldHealthBarLayout()
+    {
+        if (PanleInstance == null)
+            return;
+
+        Bounds visualBounds = GetOwnerVisualBounds();
+
+        Transform panelTransform = PanleInstance.transform;
+        panelTransform.rotation = Quaternion.identity;
+        panelTransform.position = new Vector3(
+            visualBounds.center.x,
+            visualBounds.max.y + GetAdaptiveTopPadding(visualBounds),
+            transform.position.z);
+
+        Vector3 parentScale = panelTransform.parent != null
+            ? panelTransform.parent.lossyScale
+            : Vector3.one;
+
+        panelTransform.localScale = new Vector3(
+            healthBarWorldScale / SafeScale(parentScale.x),
+            healthBarWorldScale / SafeScale(parentScale.y),
+            healthBarWorldScale / SafeScale(parentScale.z));
+    }
+
+    private Bounds GetOwnerVisualBounds()
+    {
+        GameObject owner = item != null ? item.gameObject : gameObject;
+        SpriteRenderer[] renderers = owner.GetComponentsInChildren<SpriteRenderer>(false);
+        bool hasBounds = false;
+        Bounds bounds = default;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            SpriteRenderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled || renderer.sprite == null)
+                continue;
+
+            // 手持武器等物品会挂在角色节点下，但不属于角色自身外观。
+            // 只合并由当前 Item 直接拥有的渲染器，避免武器位置改变血条锚点。
+            Item rendererOwner = renderer.GetComponentInParent<Item>();
+            if (item != null && rendererOwner != item)
+                continue;
+
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        if (hasBounds)
+            return bounds;
+
+        Collider2D ownerCollider = owner.GetComponentInChildren<Collider2D>(false);
+        if (ownerCollider != null)
+            return ownerCollider.bounds;
+
+        return new Bounds(owner.transform.position, Vector3.one);
+    }
+
+    private float GetAdaptiveTopPadding(Bounds bounds)
+    {
+        return Mathf.Clamp(
+            bounds.size.y * 0.035f,
+            healthBarTopPadding,
+            healthBarTopPadding * 1.75f);
+    }
+
+    private static float SafeScale(float scale)
+    {
+        return Mathf.Max(0.0001f, Mathf.Abs(scale));
+    }
 
     private void BindHandStateEvent()
     {
@@ -1211,6 +1313,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     private void DispatchDamageReceived(DamageReceiverDamageInfo damageInfo)
     {
+        CombatAudioRouter.PlayImpact(this, damageInfo);
         OnDamageReceived?.Invoke(damageInfo);
         DispatchDamageActions(HurtActions, damageInfo);
     }
@@ -1405,6 +1508,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         Vector3 originalPos = spriteTransform.localPosition;
         float elapsed = 0f;
+        _isVisualShaking = true;
 
         while (elapsed < shakeDuration)
         {
@@ -1417,6 +1521,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         spriteTransform.localPosition = originalPos;
+        _isVisualShaking = false;
+        UpdateWorldHealthBarLayout();
     }
 
     #endregion

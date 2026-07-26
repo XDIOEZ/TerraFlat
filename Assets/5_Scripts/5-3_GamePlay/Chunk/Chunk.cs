@@ -407,7 +407,8 @@ public class Chunk : MonoBehaviour
     public void NotifyItemsLoaded()
     {
         itemsLoaded = true;
-        Debug.Log($"[AStar-Debug][Chunk] NotifyItemsLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded} Map={Map != null} Map.IsReady={Map?.IsReadyForChunkLifecycle}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][Chunk] NotifyItemsLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded} Map={Map != null} Map.IsReady={Map?.IsReadyForChunkLifecycle}");
 
         if (Map == null || Map.IsReadyForChunkLifecycle)
             mapLoaded = true;
@@ -418,7 +419,8 @@ public class Chunk : MonoBehaviour
     public void NotifyMapLoaded()
     {
         mapLoaded = true;
-        Debug.Log($"[AStar-Debug][Chunk] NotifyMapLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded}");
+        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[AStar-Debug][Chunk] NotifyMapLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded}");
         TryEnterReadyState();
     }
 
@@ -428,7 +430,8 @@ public class Chunk : MonoBehaviour
         {
             hasNotifiedChunkReady = true;
             LifecycleState = ChunkLifecycleState.Ready;
-            Debug.Log($"[AStar-Debug][Chunk] TryEnterReadyState → Ready | chunk={name} LifecycleState=Ready | Map={Map != null} Map.Data.TileLoaded={Map?.Data?.TileLoaded} Map.backTilePenaltyCoroutine={Map?.backTilePenaltyCoroutine != null}");
+            if (AstarGameManager.Instance?.EnableDebugLogs == true)
+                Debug.Log($"[AStar-Debug][Chunk] TryEnterReadyState → Ready | chunk={name} LifecycleState=Ready | Map={Map != null} Map.Data.TileLoaded={Map?.Data?.TileLoaded} Map.backTilePenaltyCoroutine={Map?.backTilePenaltyCoroutine != null}");
             OnChunkLoaded?.Invoke(this);
         }
     }

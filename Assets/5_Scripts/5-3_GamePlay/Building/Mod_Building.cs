@@ -512,6 +512,7 @@ public class Mod_Building : Module
                 throw new MissingComponentException($"{summoner.name} 缺少建筑模块");
 
             summonerModule.ConfigureAsSummoner(snapshotBase64);
+            summoner.DropInRange();
             summoner.Save();
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(summoner);
             return true;
@@ -872,27 +873,9 @@ public class Mod_Building : Module
             return new Bounds(position, Vector3.one * 0.9f);
 
         Transform itemTransform = item != null ? item.transform : transform;
-        Vector2 half = boxCollider2D.size * 0.5f;
-        Vector2 offset = boxCollider2D.offset;
-        Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
-        Vector2 max = new(float.NegativeInfinity, float.NegativeInfinity);
-
-        for (int x = -1; x <= 1; x += 2)
-        {
-            for (int y = -1; y <= 1; y += 2)
-            {
-                Vector3 colliderLocal = offset + Vector2.Scale(half, new Vector2(x, y));
-                Vector3 world = boxCollider2D.transform.TransformPoint(colliderLocal);
-                Vector3 itemLocal = itemTransform.InverseTransformPoint(world);
-                min = Vector2.Min(min, itemLocal);
-                max = Vector2.Max(max, itemLocal);
-            }
-        }
-
-        Vector2 localCenter = (min + max) * 0.5f;
-        Vector2 size = max - min;
-        return new Bounds((Vector2)position + localCenter,
-            new Vector3(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y), 0.1f));
+        Bounds localBounds = GetColliderLocalBounds(itemTransform, boxCollider2D);
+        localBounds.center += position;
+        return localBounds;
     }
 
     private void EnsureRuntimeReferences()
@@ -1025,11 +1008,12 @@ public class Mod_Building : Module
                 return;
         }
 
-        GhostShadow.transform.position = GhostShadow.ApplyPlacementOffset(mouse);
+        GhostShadow.transform.position = mouse;
         float distance = Vector2.Distance(GetAuthorityPosition(), mouse);
+        float maximumPlacementDistance = Mathf.Max(1f, Data.maxVisibleDistance);
         float alpha = Mathf.Clamp01(Mathf.InverseLerp(
-            Data.maxVisibleDistance + 1.5f,
-            Data.minVisibleDistance,
+            maximumPlacementDistance + 1.5f,
+            maximumPlacementDistance,
             distance));
         GhostShadow.UpdateAlpha(alpha);
         GhostShadow.UpdateColor(!ValidatePlacement(mouse, GetAuthorityPosition(), false, out _));
@@ -1052,7 +1036,10 @@ public class Mod_Building : Module
             if (GhostShadow == null || source == null)
                 throw new MissingComponentException("BuildingShadow 预制体或建筑 SpriteRenderer 配置不完整");
 
-            GhostShadow.InitShadow(source, GetBuildingPreviewFootprint());
+            Transform sourceRoot = TryGetBuildingBodyPrefab(out GameObject buildingPrefab)
+                ? buildingPrefab.transform
+                : item.transform;
+            GhostShadow.InitShadow(source, sourceRoot, GetBuildingPreviewBounds());
         }
         catch (Exception exception)
         {
@@ -1070,7 +1057,7 @@ public class Mod_Building : Module
         if (GhostShadow == null)
             return false;
 
-        position = NormalizePlacement(GhostShadow.transform.position - (Vector3)GhostShadow.ShadowPositionOffset);
+        position = NormalizePlacement(GhostShadow.transform.position);
         return true;
     }
 
@@ -1108,17 +1095,17 @@ public class Mod_Building : Module
         return item.Sprite != null ? item.Sprite : item.GetComponentInChildren<SpriteRenderer>(true);
     }
 
-    private Vector2 GetBuildingPreviewFootprint()
+    private Bounds GetBuildingPreviewBounds()
     {
         if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
         {
             BoxCollider2D bodyCollider = buildingPrefab.GetComponent<BoxCollider2D>();
             bodyCollider ??= buildingPrefab.GetComponentInChildren<BoxCollider2D>(true);
             if (bodyCollider != null)
-                return GetColliderFootprint(buildingPrefab.transform, bodyCollider);
+                return GetColliderLocalBounds(buildingPrefab.transform, bodyCollider);
         }
 
-        return GetPlacementBounds(Vector3.zero).size;
+        return GetPlacementBounds(Vector3.zero);
     }
 
     private bool TryGetBuildingBodyPrefab(out GameObject buildingPrefab)
@@ -1134,7 +1121,7 @@ public class Mod_Building : Module
                buildingPrefab != null;
     }
 
-    private static Vector2 GetColliderFootprint(Transform root, BoxCollider2D collider)
+    private static Bounds GetColliderLocalBounds(Transform root, BoxCollider2D collider)
     {
         Vector2 half = collider.size * 0.5f;
         Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
@@ -1151,8 +1138,11 @@ public class Mod_Building : Module
             }
         }
 
+        Vector2 center = (min + max) * 0.5f;
         Vector2 size = max - min;
-        return new Vector2(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y));
+        return new Bounds(
+            center,
+            new Vector3(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y), 0.1f));
     }
 
     private Vector3 GetAuthorityPosition()

@@ -87,15 +87,15 @@ MonoBehaviour:
       Max_EatingProgress: 3
       ShowCanvas: 0
       nutritionConsumeSpeed:
-        BaseValue: 1
+        BaseValue: 0
         BaseAdditive: 0
         AdditiveModifier: 0
         MultiplicativeModifier: 1
         FinalAdditive: 0
       FeelGood: 0
       PanelPosition: {x: 0, y: 0}
-      WaterConsumeSpeedRate: 1
-      nutritionConsumeRate: 1
+      WaterConsumeSpeedRate: 0
+      nutritionConsumeRate: 0
       ObserverState: 
     EnableSpoilage: 1
     SpoilageElapsedSeconds: 0
@@ -114,6 +114,13 @@ MonoBehaviour:
   PanelPrefab: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
   PanleInstance: {fileID: 0}
   panelUI: {fileID: 0}
+  ConsumeAudio:
+    Enabled: 1
+    CueId: food.eat
+    VolumeScale: 0.78
+    PitchMin: 0.96
+    PitchMax: 1.04
+  ConsumeKind: 0
   observers: []
   references:
     version: 2

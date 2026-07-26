@@ -1,56 +1,90 @@
-using MemoryPack;
-using Sirenix.OdinInspector;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "ĞÂBuffÊı¾İ", menuName = "Buff/ĞÂ½¨BuffData")]
+[CreateAssetMenu(fileName = "æ–°Buffæ•°æ®", menuName = "Buff/æ–°å»ºBuffData")]
 public class Buff_Data : ScriptableObject
 {
-    [Tooltip("BuffµÄÎ¨Ò»±êÊ¶")]
+    [Tooltip("Buff çš„ç¨³å®šå”¯ä¸€æ ‡è¯†ã€‚å­˜æ¡£å’Œè¿è¡Œæ—¶æŸ¥è¯¢å‡ä½¿ç”¨æ­¤å€¼ã€‚")]
     public string buff_ID;
-    [Tooltip("ÏÔÊ¾Ãû³Æ")]
+
+    [Tooltip("æ˜¾ç¤ºåç§°")]
     public string buff_Name;
-    [Tooltip("·ÖÀà»ò±êÇ©")]
+
+    [Tooltip("æ—§ç‰ˆåˆ†ç±»æ–‡æœ¬ï¼Œä¿ç•™ç»™ç°æœ‰ UI å’Œèµ„æºä½¿ç”¨ã€‚")]
     public string buff_Type;
-    [Tooltip("ÃèÊöÎÄ°¸")]
+
+    [Tooltip("ç»“æ„åŒ–åˆ†ç±»ï¼Œä¾›ç©æ³•é€»è¾‘å¯é ç­›é€‰ã€‚")]
+    public BuffCategory buff_Category = BuffCategory.General;
+
+    [Tooltip("æè¿°æ–‡æ¡ˆ")]
     public string buff_Description;
 
-    [Tooltip("³ÖĞøÊ±¼ä(Ãë)")]
+    [Min(0f)]
+    [Tooltip("åŸºç¡€æŒç»­æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float buff_Duration = 5f;
-    [Tooltip("Ö´ĞĞ¼ä¸ô(Ãë)£¬0Îª½ö¿ªÊ¼/½áÊø")]
-    public float buff_Interval = 0f;
-    [Tooltip("×î´óµş¼Ó²ãÊı")]
+
+    [Min(0f)]
+    [Tooltip("å‘¨æœŸè¡Œä¸ºæ‰§è¡Œé—´éš”ï¼ˆç§’ï¼‰ï¼›0 è¡¨ç¤ºä¸æ‰§è¡Œå‘¨æœŸè¡Œä¸ºã€‚")]
+    public float buff_Interval;
+
+    [Min(1)]
+    [Tooltip("æœ€å¤§å åŠ å±‚æ•°")]
     public int buff_MaxStack = 1;
-    [Tooltip("µş¼Ó·½Ê½")]
+
+    [Tooltip("é‡å¤è·å¾—åŒ ID Buff æ—¶çš„å¤„ç†æ–¹å¼")]
     public BuffStackType buff_StackType;
 
+    [Tooltip("è¯»æ¡£æ—¶ Start è¡Œä¸ºçš„æ¢å¤ç­–ç•¥ã€‚ä»…è¿è¡Œæ—¶ä¿®æ­£æœªå†™å…¥æ¨¡å—å­˜æ¡£æ—¶æ‰é€‰æ‹© ReapplyStartã€‚")]
+    public BuffLoadBehavior buff_LoadBehavior = BuffLoadBehavior.AssumeApplied;
+
+    [Min(0f)]
+    [Tooltip("å®Œæ•´å–ä¸‹ä¸€ä»½é¥®å“æ—¶ï¼Œä¸ºè¯¥ Buff å¢åŠ çš„æŒç»­æ—¶é—´ï¼ˆç§’ï¼‰ã€‚")]
+    public float buff_DrinkDurationExtension;
+
     [SerializeReference]
-    [Tooltip("¿ªÊ¼Ê±Ö´ĞĞµÄĞĞÎª")]
+    [Tooltip("å¼€å§‹æ—¶æ‰§è¡Œçš„è¡Œä¸º")]
     public BuffAction buff_Behavior_Start;
+
     [SerializeReference]
-    [Tooltip("¼ä¸ôÖ´ĞĞµÄĞĞÎª")]
+    [Tooltip("æŒ‰é—´éš”æ‰§è¡Œçš„è¡Œä¸º")]
     public BuffAction buff_Behavior_Update;
+
     [SerializeReference]
-    [Tooltip("½áÊøÊ±Ö´ĞĞµÄĞĞÎª")]
+    [Tooltip("ç»“æŸæ—¶æ‰§è¡Œçš„è¡Œä¸º")]
     public BuffAction buff_Behavior_Stop;
 
     /// <summary>
-    /// ´´½¨µ±Ç°Buff_DataµÄÉî¿½±´¸±±¾
+    /// ä¸ºå…¼å®¹æ—§è°ƒç”¨ä¿ç•™ã€‚BuffManager å°†å®šä¹‰è§†ä¸ºåªè¯»èµ„æºï¼Œä¸å†ä¸ºæ¯æ¬¡æ·»åŠ å…‹éš†å¯¹è±¡ã€‚
     /// </summary>
-    /// <returns>Éî¿½±´µÄBuff_DataÊµÀı</returns>
     public Buff_Data Clone()
     {
-        // ´´½¨ĞÂµÄBuff_DataÊµÀı
-        Buff_Data clonedData = Instantiate(this);
-        return clonedData;
+        return Instantiate(this);
+    }
+
+    private void OnValidate()
+    {
+        buff_Duration = Mathf.Max(0f, buff_Duration);
+        buff_Interval = Mathf.Max(0f, buff_Interval);
+        buff_MaxStack = Mathf.Max(1, buff_MaxStack);
+        buff_DrinkDurationExtension = Mathf.Max(0f, buff_DrinkDurationExtension);
     }
 }
 
 public enum BuffStackType
 {
-    DurationAdd,       // µş¼ÓµÄÑÓ³¤³ÖĞøÊ±¼ä
-    RefreshDuration,   // Ã¿´ÎË¢ĞÂ³ÖĞøÊ±¼ä
-    StackCount,        // Ôö¼Ó²ãÊı
+    DurationAdd,
+    RefreshDuration,
+    StackCount,
     Keep
+}
+
+public enum BuffCategory
+{
+    General = 0,
+    BloodLoss = 1
+}
+
+public enum BuffLoadBehavior
+{
+    AssumeApplied = 0,
+    ReapplyStart = 1
 }

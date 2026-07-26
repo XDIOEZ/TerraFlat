@@ -23,6 +23,9 @@ public class Mod_Fuel : Module
     [Tooltip("燃烧消耗速度系数")]
     public float burnSpeedMultiplier = 1f;
 
+    [Tooltip("手持该燃料时自动点亮，离手后自动熄灭")]
+    public bool igniteWhileHeld = false;
+
     private void OnValidate()
     {
         _Data.ID = ModText.Fuel;
@@ -31,15 +34,35 @@ public class Mod_Fuel : Module
     public override void Load()
     {
         ExData.ReadData(ref Data);
-        // 初始化时根据点燃状态设置灯光
-        fuelLight = item.GetComponentInChildren<Light2D>();
-        UpdateLightState();
+        fuelLight ??= item.GetComponentInChildren<Light2D>(true);
 
+        item.OnInHandChanged -= HandleInHandChanged;
+        if (igniteWhileHeld)
+        {
+            item.OnInHandChanged += HandleInHandChanged;
+            SetIgnited(item.InHand && HasFuel());
+        }
+        else
+        {
+            UpdateLightState();
+        }
     }
 
     public override void Save()
     {
         ExData.WriteData(Data);
+    }
+
+    private void OnDestroy()
+    {
+        if (item != null)
+            item.OnInHandChanged -= HandleInHandChanged;
+    }
+
+    private void HandleInHandChanged(bool inHand)
+    {
+        if (igniteWhileHeld)
+            SetIgnited(inHand && HasFuel());
     }
 
     /// <summary>

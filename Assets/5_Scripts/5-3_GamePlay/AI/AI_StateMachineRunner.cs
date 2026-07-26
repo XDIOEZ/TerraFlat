@@ -1,27 +1,175 @@
 using System;
 using System.Collections.Generic;
 
+/// <summary>状态节点对应的动画语义，用于在具体动画缺失时选择安全回退。</summary>
+public enum AIStateAnimationRole
+{
+    Stopped,
+    Moving,
+    Action
+}
+
 /// <summary>
-/// AI 状态机运行器，提供通用的状态机主循环：
-/// 1. 评估下一状态
-/// 2. 若状态变化则执行切换
-/// 3. 执行当前状态的帧逻辑
-///
-/// 注意：重构后 AI_Base&lt;TState&gt; 已将此逻辑内联到 ModUpdate 中，
-/// 本类保留用于向后兼容，新代码建议直接继承 AI_Base。
+/// 可复用 AI 状态节点。节点只负责 Enter/Tick/Exit，
+/// 状态选择优先级仍由具体动物的 EvaluateNextState 决定。
+/// </summary>
+public class AIStateNode<TState> where TState : struct, Enum
+{
+    private readonly Action _onEnter;
+    private readonly Action<float> _onTick;
+    private readonly Action _onExit;
+
+    public TState State { get; }
+    public AIStateAnimationRole AnimationRole { get; }
+
+    public AIStateNode(
+        TState state,
+        Action<float> onTick,
+        Action onEnter = null,
+        Action onExit = null,
+        AIStateAnimationRole animationRole = AIStateAnimationRole.Action)
+    {
+        State = state;
+        AnimationRole = animationRole;
+        _onTick = onTick ?? throw new ArgumentNullException(nameof(onTick));
+        _onEnter = onEnter;
+        _onExit = onExit;
+    }
+
+    public virtual void Enter() => _onEnter?.Invoke();
+    public virtual void Tick(float deltaTime) => _onTick(deltaTime);
+    public virtual void Exit() => _onExit?.Invoke();
+}
+
+/// <summary>
+/// 进入后必须保持静止的通用节点，适用于待机、睡眠、进食、警觉等状态。
+/// </summary>
+public sealed class AIStoppedStateNode<TState> : AIStateNode<TState> where TState : struct, Enum
+{
+    public AIStoppedStateNode(
+        TState state,
+        Action stopMovement,
+        Action<float> onTick,
+        Action onEnter = null,
+        Action onExit = null,
+        AIStateAnimationRole animationRole = AIStateAnimationRole.Stopped)
+        : base(
+            state,
+            deltaTime =>
+            {
+                stopMovement();
+                onTick?.Invoke(deltaTime);
+            },
+            onEnter,
+            onExit,
+            animationRole)
+    {
+        if (stopMovement == null)
+            throw new ArgumentNullException(nameof(stopMovement));
+    }
+}
+
+/// <summary>
+/// 与动物种类无关的状态机容器。不同动物可以复用相同节点类型，
+/// 只需提供自己的状态枚举、条件和少量行为回调。
+/// </summary>
+public sealed class AIStateMachine<TState> where TState : struct, Enum
+{
+    private readonly Dictionary<TState, AIStateNode<TState>> _nodes =
+        new Dictionary<TState, AIStateNode<TState>>();
+
+    private AIStateNode<TState> _currentNode;
+
+    public bool IsInitialized { get; private set; }
+    public TState CurrentState { get; private set; }
+
+    public void Register(AIStateNode<TState> node)
+    {
+        if (node == null)
+            throw new ArgumentNullException(nameof(node));
+
+        if (_nodes.ContainsKey(node.State))
+            throw new InvalidOperationException($"AI 状态节点重复注册: {node.State}");
+
+        _nodes.Add(node.State, node);
+    }
+
+    public void Initialize(TState initialState)
+    {
+        _currentNode = GetRequiredNode(initialState);
+        CurrentState = initialState;
+        IsInitialized = true;
+        _currentNode.Enter();
+    }
+
+    /// <summary>
+    /// 状态退出与进入之间执行切换回调，保证宿主先完成状态字段和资源清理，
+    /// 新节点再开始工作。
+    /// </summary>
+    public void TransitionTo(TState nextState, Action transitionCallback)
+    {
+        if (!IsInitialized)
+            throw new InvalidOperationException("AI 状态机尚未初始化。");
+
+        if (EqualityComparer<TState>.Default.Equals(nextState, CurrentState))
+            return;
+
+        AIStateNode<TState> nextNode = GetRequiredNode(nextState);
+        _currentNode.Exit();
+        transitionCallback?.Invoke();
+        CurrentState = nextState;
+        _currentNode = nextNode;
+        _currentNode.Enter();
+    }
+
+    public void Tick(float deltaTime)
+    {
+        if (!IsInitialized || _currentNode == null)
+            return;
+
+        _currentNode.Tick(deltaTime);
+    }
+
+    public AIStateAnimationRole GetAnimationRole(TState state)
+    {
+        return GetRequiredNode(state).AnimationRole;
+    }
+
+    private AIStateNode<TState> GetRequiredNode(TState state)
+    {
+        if (_nodes.TryGetValue(state, out AIStateNode<TState> node))
+            return node;
+
+        throw new InvalidOperationException($"AI 状态 {state} 没有注册对应节点。");
+    }
+}
+
+/// <summary>
+/// AI 状态机统一运行入口：评估、切换、更新当前节点。
 /// </summary>
 public static class AI_StateMachineRunner
 {
-#region API
+    public static void EvaluateAndTick<TState>(
+        AIStateMachine<TState> stateMachine,
+        TState currentState,
+        Func<TState> evaluateNextState,
+        Action<TState> switchState,
+        float deltaTime,
+        Func<TState, bool> canTransition = null)
+        where TState : struct, Enum
+    {
+        if (stateMachine == null)
+            throw new ArgumentNullException(nameof(stateMachine));
 
-    /// <summary>
-    /// 执行单帧状态机逻辑：评估 → 切换 → 帧更新
-    /// </summary>
-    /// <param name="currentState">当前状态</param>
-    /// <param name="evaluateNextState">评估下一状态的函数（按优先级返回最高优先级状态）</param>
-    /// <param name="switchState">状态切换回调（更新内部状态、播放动画、触发事件等）</param>
-    /// <param name="tickCurrentState">当前状态的帧逻辑回调</param>
-    /// <param name="deltaTime">帧间隔时间</param>
+        TState nextState = evaluateNextState();
+        if (!EqualityComparer<TState>.Default.Equals(nextState, currentState) &&
+            (canTransition == null || canTransition(nextState)))
+            switchState(nextState);
+
+        stateMachine.Tick(deltaTime);
+    }
+
+    /// <summary>保留旧入口，避免项目内尚未迁移的调用失效。</summary>
     public static void EvaluateAndTick<TState>(
         TState currentState,
         Func<TState> evaluateNextState,
@@ -31,12 +179,8 @@ public static class AI_StateMachineRunner
     {
         TState nextState = evaluateNextState();
         if (!EqualityComparer<TState>.Default.Equals(nextState, currentState))
-        {
             switchState(nextState);
-        }
 
         tickCurrentState(deltaTime);
     }
-
-#endregion
 }

@@ -193,16 +193,6 @@ MonoBehaviour:
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
-  - Prefab: {fileID: 1928828623759498003, guid: 65f16806af06edb43a1919bd9b8518a6, type: 3}
-    PrefabPath: Assets/2_Prefabs/_PassTime/Golem_Stone.prefab
-    PrefabName: Golem_Stone
-    MaxHp: 180
-    Hp: 180
-    Defense: 8
-    Damage: 10
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: 6f04f63db18870946977a64dc9373560, type: 3}
     PrefabPath: Assets/2_Prefabs/Weapon/Axe/Hoe_Stone.prefab
     PrefabName: Hoe_Stone

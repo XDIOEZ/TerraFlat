@@ -57,19 +57,26 @@ public class SettingCanvas : Module, IInstanceUI
         I_TogglePanel();
     }
 
-    private void EnsurePanelCreated()
+    private bool EnsurePanelCreated()
     {
         if (basePanel != null && basePanel.gameObject != null)
-            return;
+            return false;
 
         if (SettingCanvasPrefab == null)
             throw new System.InvalidOperationException("[SettingCanvas] SettingCanvasPrefab 为空，无法创建设置面板");
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(SettingCanvasPrefab);
+        AudioSettingsPanelBinder.Ensure(basePanel.transform);
         BindButton(UIText.ExitButtons, ExitGame);
         BindButton(UIText.SaveButtons, SaveGame);
         BindButton(UIText.CloseButtons, ClossApp);
+        AudioSettingsPanelLauncher.Ensure(basePanel.transform);
+        UISettingsPanelLauncher.Ensure(basePanel.transform);
+        AutoSaveSettingsPanelLauncher.Ensure(basePanel.transform);
+        DifficultySettingsPanelLauncher.Ensure(basePanel.transform);
+        InputBindingPanelLauncher.Ensure(basePanel.transform, gameController);
         basePanel.SetPanelName(PanelName);
+        return true;
     }
 
     private void BindButton(string[] buttonNames, UnityEngine.Events.UnityAction action)
@@ -121,7 +128,12 @@ public class SettingCanvas : Module, IInstanceUI
 
     public void I_TogglePanel()
     {
-        EnsurePanelCreated();
+        if (EnsurePanelCreated())
+        {
+            basePanel.Open();
+            return;
+        }
+
         TogglePanel();
     }
 

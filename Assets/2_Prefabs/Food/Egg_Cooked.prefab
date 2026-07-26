@@ -151,7 +151,7 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 
+    - 47
     Stack:
       Amount: 1
       Volume: 1
@@ -218,6 +218,18 @@ PrefabInstance:
     m_TransformParent: {fileID: 957358242643349336}
     m_Modifications:
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutritionConsumeRate
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutritionConsumeSpeed.BaseValue
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.WaterConsumeSpeedRate
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Fat
       value: 0
       objectReference: {fileID: 0}
@@ -246,16 +258,56 @@ PrefabInstance:
       value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Fat
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Max_Protein.BaseValue
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Water
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Max_Vitamins.BaseValue
       value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Max_Fat
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Protein
+      value: 35
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Vitamins
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Max_Water
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Max_Carbohydrates.BaseValue
       value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Max_Protein
+      value: 35
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Max_Vitamins
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Carbohydrates
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutrition.Max_Carbohydrates
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: m_Name

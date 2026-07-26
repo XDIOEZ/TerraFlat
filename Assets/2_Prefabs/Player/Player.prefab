@@ -353,6 +353,9 @@ GameObject:
   - component: {fileID: 4377666045775335801}
   - component: {fileID: 9206547286300101542}
   - component: {fileID: 7130251929038421976}
+  - component: {fileID: 8512309475123094751}
+  - component: {fileID: 8512309475123094752}
+  - component: {fileID: 8512309475123094753}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -616,6 +619,8 @@ MonoBehaviour:
   damageReceiver: {fileID: 0}
   sanMod: {fileID: 0}
   foodMod: {fileID: 0}
+  adminCamera: {fileID: 0}
+  chunkLoader: {fileID: 0}
   timeScale: 1
   timeScaleStep: 0.5
   minTimeScale: 0.1
@@ -743,6 +748,62 @@ MonoBehaviour:
   UIContainer: {fileID: 0}
   UIButton_Instances: []
   ButtonListPrefab: {fileID: 3157743334102886615, guid: eb2b2826902af0c48a89020b32f241c9, type: 3}
+--- !u!114 &8512309475123094751
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d78cb4a275f9405481768a633eeda67c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  initialDelay: 5
+  minIdleInterval: 18
+  maxIdleInterval: 32
+  statePollInterval: 0.5
+  providerTimeout: 8
+  suppressLowerPriorityWhileVisible: 1
+--- !u!114 &8512309475123094752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7333db1987e4fdfb4bbbe997ef424b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lowThreshold: 0.4
+  criticalThreshold: 0.15
+  lowRepeatCooldown: 50
+  criticalRepeatCooldown: 35
+  starvingRepeatCooldown: 22
+--- !u!114 &8512309475123094753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60b11994e2e14d319ad81ba2013fcc98, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  worldOffset: {x: 0, y: 1.25, z: 0}
+  safeMargin: 18
+  minWidth: 170
+  maxWidth: 360
+  minHeight: 58
+  maxHeight: 132
+  horizontalPadding: 18
+  verticalPadding: 12
+  fadeDuration: 0.22
 --- !u!1 &7418924436426645882
 GameObject:
   m_ObjectHideFlags: 0
@@ -867,6 +928,13 @@ MonoBehaviour:
     ProteinSelfHurt: 1
     VitaminSelfHurt: 1
     HealNeedRatio: 0.6
+  ConsumeAudio:
+    Enabled: 1
+    CueId: food.eat
+    VolumeScale: 0.78
+    PitchMin: 0.96
+    PitchMax: 1.04
+  ConsumeKind: 0
 --- !u!1 &7574631112993380532
 GameObject:
   m_ObjectHideFlags: 0
@@ -1004,7 +1072,6 @@ MonoBehaviour:
   InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
   InventoryPanelPrefabName: UI_WorkBench
   workButton: {fileID: 0}
-  progressImage: {fileID: 0}
   toggleKey: 104
   workbenchLevel: 1
   baseClickCount: 6

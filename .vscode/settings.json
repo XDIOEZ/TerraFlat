@@ -56,7 +56,7 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "TerraFlat-master.sln",
+    "dotnet.defaultSolution": "FlatWorld.sln",
     "dotnet.preferCSharpExtension": true,
     "outline-map.follow": "manual",
     "outline-map.expand": "expanded"

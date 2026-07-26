@@ -68,6 +68,7 @@ public class GameManager : SingletonAutoMono<GameManager>
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
+        AutoSaveController.Ensure(this);
 
         // 寻路系统不在 StartScene 激活，等玩家进入游戏世界后再启用
         // (PathFindingSystem 将在 RunWorld 时或由 AstarGameManager 自行延迟初始化)
@@ -128,7 +129,7 @@ public class GameManager : SingletonAutoMono<GameManager>
 
         // 保存数据到磁盘
         Debug.Log("[ExitGame] 写入存档文件...");
-        SaveDataMgr.Instance.Save_And_WriteToDisk();
+        SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
 
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 3：清理阶段
@@ -220,8 +221,19 @@ public class GameManager : SingletonAutoMono<GameManager>
     [Tooltip("开始新游戏,创建一个新世界")]
     public void CreateNewWorld()
     {
-        SaveDataMgr.Instance.ResetChunkDifferenceState();
-        SaveDataMgr.Instance.SaveData = new GameSaveData();
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr == null)
+        {
+            Debug.LogError("[GameManager] 创建新世界失败：SaveDataMgr 未就绪");
+            return;
+        }
+
+        BasePanel newGamePanel = UIManager.Instance?.GetPanel(NewGamePanelView.PanelKey);
+        string requestedSaveName = newGamePanel?.GetInputField(NewGamePanelView.SaveNameInputKey)?.text;
+        string playerName = newGamePanel?.GetInputField(NewGamePanelView.PlayerNameInputKey)?.text;
+
+        saveDataMgr.ResetChunkDifferenceState();
+        saveDataMgr.SaveData = new GameSaveData();
 
         string inputSeed = ReadyGameSaveData.SaveSeed?.Trim();
         bool isNoSeedInput = string.IsNullOrEmpty(inputSeed) || inputSeed == "0";
@@ -240,17 +252,22 @@ public class GameManager : SingletonAutoMono<GameManager>
             Debug.Log($"[GameManager] 使用玩家输入种子={inputSeed}");
         }
 
-        if (SaveDataMgr.Instance.SaveData.Seed == 0)
+        if (saveDataMgr.SaveData.Seed == 0)
         {
-            SaveDataMgr.Instance.SaveData.Seed = 1;
+            saveDataMgr.SaveData.Seed = 1;
         }
 
-        UnityEngine.Random.InitState(SaveDataMgr.Instance.SaveData.Seed);
+        UnityEngine.Random.InitState(saveDataMgr.SaveData.Seed);
 
         SetNewPlanetData(ReadyPlanetData, ReadyTimeData);
-        BasePanel UI_NewGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
-        string PlayerName = UI_NewGame.GetInputField("新增玩家名称输入框").text;
-        ContinueGame(PlayerName);
+        if (!saveDataMgr.TryCreateNewSave(saveDataMgr.SaveData, requestedSaveName, out string createdSaveName))
+        {
+            Debug.LogError("[GameManager] 创建新世界失败：首个存档文件未能写入磁盘。");
+            return;
+        }
+
+        Debug.Log($"[GameManager] 已创建新世界存档：{createdSaveName}");
+        ContinueGame(playerName);
     }
 
     private static string GenerateRandomSeedString()
@@ -816,6 +833,7 @@ public class GameManager : SingletonAutoMono<GameManager>
         if (UIManager.Instance.GetPanel("UI_GameSaveManager") != null)
         {
             UIManager.Instance.GetPanel("UI_GameSaveManager").Open();
+            SaveDataManager_UI.Instance?.Refresh();
             return;
         }
         if (UIPrefab_SaveManager != null)
@@ -829,6 +847,7 @@ public class GameManager : SingletonAutoMono<GameManager>
             saveManager.GetInputField("选择或新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
 
             saveManager.Open();
+            SaveDataManager_UI.Instance?.Refresh();
         }
     }
 

@@ -3,17 +3,17 @@ using UnityEngine;
 [System.Serializable]
 public class BuffAction_StaminaChange : BuffAction
 {
-    [Header("¾«Á¦»Ö¸´ËÙ¶È")]
-    [Tooltip("¸Ä±ä±¶ÂÊ")]
+    [Header("ç²¾åŠ›å˜åŒ–")]
+    [Tooltip("æ¯æ¬¡æ‰§è¡Œå¢åŠ çš„ç²¾åŠ›ï¼›è´Ÿæ•°è¡¨ç¤ºæ¶ˆè€—ã€‚")]
     public float SpeedRate;
+
     public override void Apply(BuffRunTime data)
     {
-        data.buff_Receiver.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina, out var mod);
-        if (mod == null)
-        {
-            // Buff½ÓÊÜÕßÃ»ÓĞËÙ¶È½Ó¿Ú£¬È¡Ïûapply
+        Item receiver = data?.buff_Receiver;
+        if (receiver == null)
             return;
-        }
-        mod.Data.CurrentStamina += SpeedRate;
+
+        Mod_Stamina mod = receiver.itemMods.GetMod_ByID(ModText.Stamina) as Mod_Stamina;
+        mod?.AddStamina(SpeedRate);
     }
 }

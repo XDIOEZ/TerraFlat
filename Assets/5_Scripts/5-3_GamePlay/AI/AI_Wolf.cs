@@ -88,7 +88,7 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	public float chaseTriggerDistance = 14f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("攻击距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float attackTriggerDistance = 2f;
+	public float attackTriggerDistance = 1.4f;
 	[HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("追击放弃"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float chaseLossDistance = 22f;
 
@@ -346,26 +346,20 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		return WolfState.Idle;
 	}
 
-	protected override void TickCurrentState(float deltaTime)
+	protected override void ConfigureStateNodes(AIStateMachine<WolfState> stateMachine)
 	{
-		switch (_currentState)
-		{
-			case WolfState.Idle:   TickIdle(deltaTime); break;
-			case WolfState.Move:   TickMove(deltaTime); break;
-			case WolfState.Alert:  TickAlert();         break;
-			case WolfState.Chase:  TickChase();         break;
-			case WolfState.Attack: TickAttack();        break;
-			case WolfState.Avoid:  TickAvoid();         break;
-			case WolfState.Flee:   TickFlee();          break;
-			default: throw new ArgumentOutOfRangeException();
-		}
+		RegisterLocomotionStateNodes(stateMachine, WolfState.Idle, WolfState.Move);
+		stateMachine.Register(CreateStoppedStateNode(WolfState.Alert, _ => TickAlert()));
+		stateMachine.Register(CreateMovingStateNode(WolfState.Chase, _ => TickChase()));
+		stateMachine.Register(CreateStoppedActionStateNode(WolfState.Attack, _ => TickAttack()));
+		stateMachine.Register(CreateMovingStateNode(WolfState.Avoid, _ => TickAvoid()));
+		stateMachine.Register(CreateMovingStateNode(WolfState.Flee, _ => TickFlee()));
 	}
 #endregion
 
 #region Tick - Wolf 特有状态
 	private void TickAlert()
 	{
-		StopMove();
 		if (_currentThreat == null) return;
 		FaceTarget(_currentThreat.transform.position);
 	}
@@ -387,6 +381,9 @@ public partial class AI_Wolf : AI_Base<WolfState>
 			return;
 		}
 
+		Vector3 targetPosition = _currentThreat.transform.position;
+		FaceTarget(targetPosition, true);
+
 		float distance = DistanceTo(_currentThreat.transform);
 		if (distance <= attackTriggerDistance)
 		{
@@ -394,13 +391,16 @@ public partial class AI_Wolf : AI_Base<WolfState>
 			// 冷却结束且未触发窗口 → 发起攻击
 			if (!_attack.IsWindowTriggered && _attack.IsCooldownDone)
 			{
-				_attack.StartWindow(_animator, animAttack);
+				_attack.StartWindow(
+					_animator,
+					animAttack,
+					targetPosition - transform.position);
 			}
 		}
 		else
 		{
 			_attack.StopWindow();
-			MoveTo(_currentThreat.transform.position);
+			StopMove();
 		}
 
 		TryCallNearbyWolves();
@@ -438,11 +438,9 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		if (_currentThreat == null) return false;
 		float distance = DistanceTo(_currentThreat.transform);
 
-		// 3+ 狼群：在追击放弃距离内即可攻击
-		if (_packCount >= 3) return distance <= chaseLossDistance;
-		// 双狼：在攻击距离内
-		if (_packCount == 2) return distance <= attackTriggerDistance;
-		return false;
+		if (_packCount < 2) return false;
+
+		return distance <= attackTriggerDistance;
 	}
 
 	/// <summary>追击条件：双狼以上且在追击范围内</summary>

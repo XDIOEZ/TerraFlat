@@ -59,8 +59,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         public override void OnShiftQuickTransfer(int index)
         {
-            base.OnShiftQuickTransfer(index);
-            Owner?.OnInventoryShiftQuickTransfer(index);
+            if (TryShiftQuickTransfer(index))
+                Owner?.OnInventoryShiftQuickTransfer(index);
         }
 
         public override void ModUpdate(float deltaTime)
@@ -640,6 +640,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         SelectBox.transform.DOKill();
         SelectBox.transform.SetParent(itemSlot_UI[index].transform, true);
+        // 选中框只负责描边，固定在槽位最底层，避免遮挡后绘制的物品图标与数量文字。
+        SelectBox.transform.SetAsFirstSibling();
         SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration).SetEase(Ease.OutQuad);
     }
 

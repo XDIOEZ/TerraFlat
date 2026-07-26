@@ -2,6 +2,36 @@ using MemoryPack;
 using UnityEngine;
 
 [System.Serializable]
+public readonly struct EnvironmentSample
+{
+    public readonly float Temperature;
+    public readonly float TemperatureCelsius;
+    public readonly float Humidity;
+    public readonly float Precipitation;
+    public readonly float Solidity;
+    public readonly float Hight;
+    public readonly float Pollution;
+
+    public EnvironmentSample(
+        float temperature,
+        float temperatureCelsius,
+        float humidity,
+        float precipitation,
+        float solidity,
+        float hight,
+        float pollution)
+    {
+        Temperature = temperature;
+        TemperatureCelsius = temperatureCelsius;
+        Humidity = humidity;
+        Precipitation = precipitation;
+        Solidity = solidity;
+        Hight = hight;
+        Pollution = pollution;
+    }
+}
+
+[System.Serializable]
 [MemoryPackable]
 public partial class EnvironmentLayers
 {

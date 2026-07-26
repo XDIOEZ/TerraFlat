@@ -22,8 +22,6 @@ public class Inventory_WorkBench : Inventory
     [Header("交互组件")]
     [Tooltip("合成按钮")]
     public Button workButton;
-    [Tooltip("合成进度条Image（可选，不填则自动查找名为Progress的Image）")]
-    public Image progressImage;
     [Tooltip("工作台等级，等级越高需要点击次数越少")]
     public int workbenchLevel = 1;
     [Tooltip("1级工作台每次合成需要的基础点击次数")]
@@ -34,6 +32,7 @@ public class Inventory_WorkBench : Inventory
     public int minClickCount = 1;
 
     private int _currentClickProgress;
+    private CraftingOutputPreview _outputPreview;
 
     private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
 
@@ -47,10 +46,16 @@ public class Inventory_WorkBench : Inventory
 
     private void OnCraftButtonClick()
     {
+        if (!TryGetCraftPreview(out _))
+        {
+            ResetCraftProgress();
+            return;
+        }
+
         _currentClickProgress++;
         int requiredClickCount = RequiredClickCount;
         _currentClickProgress = Mathf.Min(_currentClickProgress, requiredClickCount);
-        UpdateCraftProgressUI();
+        _outputPreview?.SetProgress(_currentClickProgress / (float)requiredClickCount);
         Debug.Log($"工作台点击进度：{_currentClickProgress}/{requiredClickCount}，等级={workbenchLevel}");
 
         if (_currentClickProgress < requiredClickCount)
@@ -60,24 +65,24 @@ public class Inventory_WorkBench : Inventory
         if (inputInventory == null)
         {
             Debug.LogError("inputInventory 为 null！");
-            _currentClickProgress = 0;
-            UpdateCraftProgressUI();
+            ResetCraftProgress();
             return;
         }
 
         if (outputInventory == null)
         {
             Debug.LogError("outputInventory 为 null！");
-            _currentClickProgress = 0;
-            UpdateCraftProgressUI();
+            ResetCraftProgress();
             return;
         }
 
         Debug.Log("开始执行合成操作...");
         bool craftResult = Craft(inputInventory, outputInventory);
         Debug.Log($"合成操作完成，结果: {craftResult}");
-        _currentClickProgress = 0;
-        UpdateCraftProgressUI();
+        ResetCraftProgress();
+        RefreshCraftPreview();
+        if (craftResult)
+            _outputPreview?.PlaySuccess();
     }
 
 
@@ -115,29 +120,46 @@ public class Inventory_WorkBench : Inventory
         workButton.onClick.RemoveListener(OnCraftButtonClick);
         // 监听合成按钮点击事件
         workButton.onClick.AddListener(OnCraftButtonClick);
-        TryBindProgressImage();
-        UpdateCraftProgressUI();
+        BindCraftPreview();
+        RefreshCraftPreview();
         Debug.Log("合成按钮事件绑定成功！");
     }
 
-    private void TryBindProgressImage()
+    private void BindCraftPreview()
     {
-        if (progressImage != null)
-            return;
+        ItemSlot_UI outputSlot = null;
+        if (outputInventory != null && outputInventory.itemSlot_UI.Count > 0)
+            outputSlot = outputInventory.itemSlot_UI[0];
 
-        progressImage = basePanel.GetComponentsInChildren<Image>(true)
-            .FirstOrDefault(image => image.name == "Progress");
+        if (outputSlot == null)
+            outputSlot = basePanel.GetButton("输出_1")?.GetComponent<ItemSlot_UI>();
+
+        _outputPreview = CraftingOutputPreview.Attach(basePanel, outputSlot);
+        Data.Event_OnDataChanged -= OnInputSlotChanged;
+        Data.Event_OnDataChanged += OnInputSlotChanged;
     }
 
-    private void UpdateCraftProgressUI()
+    private void OnInputSlotChanged(ItemSlot _)
     {
-        if (progressImage == null)
+        ResetCraftProgress();
+        RefreshCraftPreview();
+    }
+
+    private void ResetCraftProgress()
+    {
+        _currentClickProgress = 0;
+        _outputPreview?.SetProgress(0f);
+    }
+
+    private void RefreshCraftPreview()
+    {
+        if (_outputPreview == null)
             return;
 
-        int requiredClickCount = RequiredClickCount;
-        progressImage.fillAmount = requiredClickCount <= 0
-            ? 0f
-            : Mathf.Clamp01(_currentClickProgress / (float)requiredClickCount);
+        if (TryGetCraftPreview(out ItemData previewItem))
+            _outputPreview.Show(previewItem, _currentClickProgress / (float)RequiredClickCount);
+        else
+            _outputPreview.Clear();
     }
 
     /// <summary>
@@ -258,42 +280,7 @@ public class Inventory_WorkBench : Inventory
     /// </summary>
     public bool Craft(Inventory inputInv, Inventory outputInv)
     {
-        // 生成配方键列表
-        HashSet<string> mirroredKeys = new HashSet<string>();
-        List<string> recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
-
-        // TODO 在这里根据配方键列表,察觉其是否是3x3或者更大的网格 并获取其最小包围网格 作为最终的配方键输出
-
-        // 计算最小包围网格的配方键
-        List<string> optimizedRecipeKeys = CalculateMinimalBoundingGrid(inputInv);
-
-        // 将优化后的配方键添加到原有列表中
-        recipeKeys.AddRange(optimizedRecipeKeys);
-
-        Recipe recipe = null;
-        string matchedKey;
-        bool isMirrorMatched = false;
-
-        // 尝试匹配每个配方键
-        foreach (string recipeKey in recipeKeys)
-        {
-            if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
-                continue;
-
-            bool isMirrorKey = mirroredKeys.Contains(recipeKey);
-            if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.规则合成 && !recipe.enableMirrorCrafting)
-            {
-                recipe = null;
-                continue;
-            }
-
-            matchedKey = recipeKey;
-            isMirrorMatched = isMirrorKey;
-            break;
-        }
-
-        // 验证配方
-        if (recipe == null)
+        if (!TryResolveRecipe(inputInv, out Recipe recipe, out bool isMirrorMatched, out List<string> recipeKeys))
         {
             Debug.LogError($"配方 {string.Join(" 或 ", recipeKeys)} 不存在");
             return false;
@@ -318,6 +305,57 @@ public class Inventory_WorkBench : Inventory
         // 执行合成
         ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
         return true;
+    }
+
+    private bool TryGetCraftPreview(out ItemData previewItem)
+    {
+        previewItem = null;
+        if (outputInventory == null)
+            return false;
+
+        if (!TryResolveRecipe(inputInventory, out Recipe recipe, out bool isMirrorMatched, out _))
+            return false;
+
+        List<ItemData> outputItems = PrepareOutputItems(recipe);
+        if (outputItems == null || outputItems.Count == 0)
+            return false;
+
+        if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems, isMirrorMatched))
+            return false;
+
+        previewItem = outputItems[0];
+        return true;
+    }
+
+    private bool TryResolveRecipe(
+        Inventory inputInv,
+        out Recipe recipe,
+        out bool isMirrorMatched,
+        out List<string> recipeKeys)
+    {
+        HashSet<string> mirroredKeys = new HashSet<string>();
+        recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
+        recipeKeys.AddRange(CalculateMinimalBoundingGrid(inputInv));
+
+        recipe = null;
+        isMirrorMatched = false;
+        foreach (string recipeKey in recipeKeys)
+        {
+            if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+                continue;
+
+            bool isMirrorKey = mirroredKeys.Contains(recipeKey);
+            if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.规则合成 && !recipe.enableMirrorCrafting)
+            {
+                recipe = null;
+                continue;
+            }
+
+            isMirrorMatched = isMirrorKey;
+            return true;
+        }
+
+        return false;
     }
     /// <summary>
     /// 玩家开始交互

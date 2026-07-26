@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using FlatWorld.Audio;
 using UnityEngine;
 
 public class Mod_Door : Module, IInteractable
@@ -33,7 +34,12 @@ public class Mod_Door : Module, IInteractable
 
     #region 运行时缓存
     public SpriteRenderer DoorRenderer;
+
+    [Tooltip("关闭时用于阻挡移动的碰撞体；门打开时会被禁用。")]
     public BoxCollider2D DoorCollider;
+
+    [Tooltip("专用于交互检测的 Trigger。为空时会在运行时自动创建，不参与物理阻挡。")]
+    public BoxCollider2D InteractionCollider;
     #endregion
 
     #region 生命周期
@@ -82,6 +88,9 @@ public class Mod_Door : Module, IInteractable
     {
         Data.IsOpen = !Data.IsOpen;
         ApplyDoorState();
+        AudioService.Instance.PlayAt(
+            Data.IsOpen ? AudioEventIds.DoorOpen : AudioEventIds.DoorClose,
+            transform.position);
     }
 
     public void OnInteractCancel(Item playerItem)
@@ -107,8 +116,21 @@ public class Mod_Door : Module, IInteractable
 
         if (DoorCollider == null)
         {
-            DoorCollider = GetComponent<BoxCollider2D>();
+            BoxCollider2D[] colliders = GetComponents<BoxCollider2D>();
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                if (colliders[i] != null && !colliders[i].isTrigger)
+                {
+                    DoorCollider = colliders[i];
+                    break;
+                }
+            }
+
+            if (DoorCollider == null && colliders.Length > 0)
+                DoorCollider = colliders[0];
         }
+
+        EnsureInteractionCollider();
     }
 
     private void ApplyDoorState()
@@ -126,7 +148,52 @@ public class Mod_Door : Module, IInteractable
         }
 
         DoorRenderer.sprite = Data.IsOpen ? OpenSprite : CloseSprite;
-        DoorCollider.isTrigger = Data.IsOpen;
+
+        // Trigger 在部分移动/寻路检测中仍会被视为可碰撞目标，不能作为“打开门”的唯一实现。
+        // 阻挡碰撞体彻底关闭；独立的 InteractionCollider 保持 Trigger，以支持从门两侧再次交互。
+        DoorCollider.isTrigger = false;
+        DoorCollider.enabled = !Data.IsOpen;
+
+        if (InteractionCollider != null)
+        {
+            InteractionCollider.isTrigger = true;
+            InteractionCollider.enabled = true;
+        }
+
+        // 让当前物理步之前的 Cast/Overlap 立即看到新的碰撞状态。
+        Physics2D.SyncTransforms();
+    }
+
+    private void EnsureInteractionCollider()
+    {
+        if (DoorCollider == null)
+            return;
+
+        if (InteractionCollider == DoorCollider)
+            InteractionCollider = null;
+
+        if (InteractionCollider == null)
+        {
+            BoxCollider2D[] colliders = GetComponents<BoxCollider2D>();
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                BoxCollider2D collider = colliders[i];
+                if (collider != null && collider != DoorCollider && collider.isTrigger)
+                {
+                    InteractionCollider = collider;
+                    break;
+                }
+            }
+        }
+
+        if (InteractionCollider == null)
+        {
+            InteractionCollider = gameObject.AddComponent<BoxCollider2D>();
+        }
+
+        InteractionCollider.size = DoorCollider.size;
+        InteractionCollider.offset = DoorCollider.offset;
+        InteractionCollider.isTrigger = true;
     }
     #endregion
 }

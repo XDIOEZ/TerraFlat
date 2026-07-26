@@ -26,7 +26,6 @@ public class Mod_FlintStrike : Module, IInteractable
     public GameObject UI_Prefab;
     public Button StrikeButton;
     public Button CloseButton;
-    public Image ProgressImage;
     public ItemSlot_UI InputSlotUI;
     public ItemSlot_UI OutputSlotUI;
 
@@ -46,6 +45,7 @@ public class Mod_FlintStrike : Module, IInteractable
     Tween _progressTween; // 进度条动画
     ItemSlot _pendingTinderSlot; // 待消耗的火绒槽位
     int _pendingTinderIndex = -1; // 待消耗的火绒索引
+    CraftingOutputPreview _outputPreview;
 
 #endregion
 
@@ -73,6 +73,8 @@ public class Mod_FlintStrike : Module, IInteractable
     {
         UnbindItemActEvent();
         UnbindInteractEvents();
+        if (InputInventory?.Data != null)
+            InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
         DestroyUI();
         ModSaveData.WriteData(RawData);
     }
@@ -83,7 +85,7 @@ public class Mod_FlintStrike : Module, IInteractable
             return;
 
         _progress = Mathf.Max(0f, _progress - (DecayRatePerSecond * deltaTime));
-        UpdateProgressUI();
+        UpdateOutputPreviewProgress();
     }
 
 #endregion
@@ -110,6 +112,13 @@ public class Mod_FlintStrike : Module, IInteractable
         InputInventory.RefreshUI();
         OutputInventory.RefreshUI();
         basePanel.Toggle();
+        InputInventory.SyncQuickTransferTarget(basePanel);
+
+        if (!basePanel.IsOpen())
+        {
+            InputInventory.DefaultTarget_Inventory = null;
+            OutputInventory.DefaultTarget_Inventory = null;
+        }
     }
 
     public void OnInteractCancel(Item playerItem)
@@ -117,10 +126,8 @@ public class Mod_FlintStrike : Module, IInteractable
         if (basePanel == null)
             return;
 
-        InputInventory.DefaultTarget_Inventory = null;
-        OutputInventory.DefaultTarget_Inventory = null;
         CancelSuccessAnimation();
-        basePanel.Close();
+        ClosePanelAndClearTransferContext();
     }
 
     public void OpenUI()
@@ -142,9 +149,9 @@ public class Mod_FlintStrike : Module, IInteractable
         OutputInventory.SyncData();
 
         basePanel.Close();
-        UpdateProgressUI();
         InputInventory.RefreshUI();
         OutputInventory.RefreshUI();
+        RefreshOutputPreview();
     }
 
     private void DestroyUI()
@@ -154,13 +161,14 @@ public class Mod_FlintStrike : Module, IInteractable
         if (basePanel == null)
             return;
 
+        ClosePanelAndClearTransferContext();
         UIManager.Instance.DestroyPanel(basePanel);
         basePanel = null;
         InputSlotUI = null;
         OutputSlotUI = null;
         StrikeButton = null;
         CloseButton = null;
-        ProgressImage = null;
+        _outputPreview = null;
     }
 
     private void EnsureUIBindingsOnOpen()
@@ -181,6 +189,7 @@ public class Mod_FlintStrike : Module, IInteractable
         OutputInventory.itemSlot_UI.Clear();
         InputInventory.BindSlotUI(InputSlotUI, 0);
         OutputInventory.BindSlotUI(OutputSlotUI, 0);
+        BindOutputPreview();
 
         StrikeButton = basePanel.GetButton("合成按钮");
         if (StrikeButton == null)
@@ -203,11 +212,6 @@ public class Mod_FlintStrike : Module, IInteractable
             CloseButton.onClick.AddListener(OnCloseButtonClick);
         }
 
-        ProgressImage = basePanel.GetImage("Progress");
-        if (ProgressImage == null)
-        {
-            throw new InvalidOperationException("[Mod_FlintStrike] UI 缺少名为 Progress 的进度条 Image。");
-        }
     }
 
     private ItemSlot_UI FindSlotUI(params string[] names)
@@ -228,10 +232,19 @@ public class Mod_FlintStrike : Module, IInteractable
 
     private void OnCloseButtonClick()
     {
+        CancelSuccessAnimation();
+        ClosePanelAndClearTransferContext();
+    }
+
+    private void ClosePanelAndClearTransferContext()
+    {
         InputInventory.DefaultTarget_Inventory = null;
         OutputInventory.DefaultTarget_Inventory = null;
-        CancelSuccessAnimation();
-        basePanel.Close();
+
+        if (basePanel != null)
+            basePanel.Close();
+
+        InputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     private void EnsureRuntimeDefaults()
@@ -284,7 +297,7 @@ public class Mod_FlintStrike : Module, IInteractable
         }
 
         _progress = Mathf.Min(_progress + ClickIncrement, RequiredClickCount);
-        UpdateProgressUI();
+        UpdateOutputPreviewProgress();
 
         if (UnityEngine.Random.value > SuccessChancePerClick)
             return;
@@ -313,17 +326,22 @@ public class Mod_FlintStrike : Module, IInteractable
         StrikeButton.interactable = false;
         CancelProgressTween();
 
-        if (ProgressImage == null || SuccessFillDuration <= 0f)
+        if (_outputPreview == null || SuccessFillDuration <= 0f)
         {
+            _outputPreview?.SetProgress(1f);
             CompleteSuccessSequence();
             return;
         }
 
-        float targetFill = 1f;
+        float previewProgress = GetProgress01();
         _progressTween = DOTween.To(
-            () => ProgressImage.fillAmount,
-            value => ProgressImage.fillAmount = value,
-            targetFill,
+            () => previewProgress,
+            value =>
+            {
+                previewProgress = value;
+                _outputPreview.SetProgress(value);
+            },
+            1f,
             SuccessFillDuration)
             .SetEase(Ease.OutCubic)
             .OnComplete(CompleteSuccessSequence);
@@ -353,6 +371,7 @@ public class Mod_FlintStrike : Module, IInteractable
 
         Debug.Log($"[Mod_FlintStrike] 打火成功：已生成火种 {FireSeedItemID}，进度={_progress:F1}/{RequiredClickCount}");
         ResetAfterSuccess();
+        _outputPreview?.PlaySuccess();
     }
 
     private void ResetAfterSuccess()
@@ -361,7 +380,7 @@ public class Mod_FlintStrike : Module, IInteractable
         _pendingTinderSlot = null;
         _pendingTinderIndex = -1;
         _progress = 0f;
-        UpdateProgressUI();
+        RefreshOutputPreview();
         if (StrikeButton != null)
         {
             StrikeButton.interactable = true;
@@ -374,7 +393,7 @@ public class Mod_FlintStrike : Module, IInteractable
         _pendingTinderSlot = null;
         _pendingTinderIndex = -1;
         _progress = 0f;
-        UpdateProgressUI();
+        RefreshOutputPreview();
         if (StrikeButton != null)
         {
             StrikeButton.interactable = true;
@@ -487,18 +506,45 @@ public class Mod_FlintStrike : Module, IInteractable
         }
     }
 
-    private void UpdateProgressUI()
+    private void BindOutputPreview()
     {
-        if (ProgressImage == null || _isResolvingSuccess)
+        _outputPreview = CraftingOutputPreview.Attach(basePanel, OutputSlotUI);
+        InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        InputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
+        RefreshOutputPreview();
+    }
+
+    private void OnInputSlotChanged(ItemSlot _)
+    {
+        if (_isResolvingSuccess)
             return;
 
-        if (RequiredClickCount <= 0)
-        {
-            ProgressImage.fillAmount = 0f;
-            return;
-        }
+        _progress = 0f;
+        RefreshOutputPreview();
+    }
 
-        ProgressImage.fillAmount = Mathf.Clamp01(_progress / (float)RequiredClickCount);
+    private void RefreshOutputPreview()
+    {
+        if (_outputPreview == null)
+            return;
+
+        if (TryGetTinderSlot(out _, out _) &&
+            CreateFireSeedData() is ItemData fireSeedData &&
+            OutputInventory.Data.TryAddItem(fireSeedData, false))
+            _outputPreview.Show(fireSeedData, GetProgress01());
+        else
+            _outputPreview.Clear();
+    }
+
+    private void UpdateOutputPreviewProgress()
+    {
+        if (!_isResolvingSuccess)
+            _outputPreview?.SetProgress(GetProgress01());
+    }
+
+    private float GetProgress01()
+    {
+        return RequiredClickCount <= 0 ? 0f : Mathf.Clamp01(_progress / RequiredClickCount);
     }
 
 #endregion

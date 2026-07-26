@@ -66,3 +66,9 @@ MonoBehaviour:
     GrowProgress: 0
     MaxGrowProgress: 100
     GrowSpeed: 5
+  growState_MaxHealthRatios:
+  - 0.25
+  - 0.5
+  - 0.75
+  - 1
+  matureMaxHealth: 200

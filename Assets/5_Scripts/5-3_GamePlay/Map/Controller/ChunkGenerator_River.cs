@@ -247,7 +247,8 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         }
 
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        Map.Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        // 河流仅为命中的格子按需创建列表，避免为整块地图预建大量空 List。
+        Map.Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: false);
 
         Vector2Int startPos = Map.Data.position;
         int width = (int)chunkSize.x;

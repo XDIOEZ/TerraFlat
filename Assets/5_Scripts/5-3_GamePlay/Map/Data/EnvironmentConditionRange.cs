@@ -26,17 +26,23 @@ public class EnvironmentConditionRange
         if (layers == null || !layers.Contains(x, y))
             return false;
 
-        float temperature = layers.Temperature[x, y];
-        float humidity = layers.Humidity[x, y];
-        float precipitation = layers.Precipitation[x, y];
-        float hight = layers.Hight[x, y];
-        float solidity = layers.Solidity[x, y];
+        return IsMatch(new EnvironmentSample(
+            layers.Temperature[x, y],
+            layers.TemperatureCelsius[x, y],
+            layers.Humidity[x, y],
+            layers.Precipitation[x, y],
+            layers.Solidity[x, y],
+            layers.Hight[x, y],
+            layers.Pollution[x, y]));
+    }
 
-        return TemperatureRange.x <= temperature && temperature <= TemperatureRange.y &&
-               HumidityRange.x <= humidity && humidity <= HumidityRange.y &&
-               PrecipitationRange.x <= precipitation && precipitation <= PrecipitationRange.y &&
-               HightRange.x <= hight && hight <= HightRange.y &&
-               SolidityRange.x <= solidity && solidity <= SolidityRange.y;
+    public bool IsMatch(EnvironmentSample sample)
+    {
+        return TemperatureRange.x <= sample.Temperature && sample.Temperature <= TemperatureRange.y &&
+               HumidityRange.x <= sample.Humidity && sample.Humidity <= HumidityRange.y &&
+               PrecipitationRange.x <= sample.Precipitation && sample.Precipitation <= PrecipitationRange.y &&
+               HightRange.x <= sample.Hight && sample.Hight <= HightRange.y &&
+               SolidityRange.x <= sample.Solidity && sample.Solidity <= SolidityRange.y;
     }
     
     private void OnValidate()

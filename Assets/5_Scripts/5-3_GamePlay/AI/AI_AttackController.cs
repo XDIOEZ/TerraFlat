@@ -128,8 +128,12 @@ public class AI_AttackController
 	/// - 启用伤害碰撞
 	/// - 通过动画控制器播放攻击动画
 	/// </summary>
-	public void StartWindow(Mod_AnimatorController animator, string attackAnimName)
+	public void StartWindow(
+		Mod_AnimatorController animator,
+		string attackAnimName,
+		Vector2 attackDirection)
 	{
+		AlignDamageDirection(attackDirection);
 		_windowTriggered = true;
 		_windowRemainTimer = Mathf.Max(0.01f, DamageWindow);
 
@@ -142,7 +146,7 @@ public class AI_AttackController
 		// 播放攻击动画
 		if (animator != null && !string.IsNullOrEmpty(attackAnimName))
 		{
-			animator.PlayAnimation(attackAnimName);
+			animator.ForcePlayAnimation(attackAnimName);
 		}
 	}
 
@@ -216,6 +220,22 @@ public class AI_AttackController
 		if (_animatorReceiver != null)
 		{
 			_animatorReceiver.IsAttacking = attacking;
+		}
+	}
+
+	private void AlignDamageDirection(Vector2 attackDirection)
+	{
+		if (Mathf.Abs(attackDirection.x) < 0.001f)
+		{
+			return;
+		}
+
+		for (int i = 0; i < _damageMods.Count; i++)
+		{
+			if (_damageMods[i] is Mod_Damage_AI damageAI)
+			{
+				damageAI.SnapToDirection(attackDirection);
+			}
 		}
 	}
 

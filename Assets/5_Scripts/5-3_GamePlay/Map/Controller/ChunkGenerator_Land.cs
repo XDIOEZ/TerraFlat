@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -129,6 +130,46 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         generationSeed = context.WorldSeed;
         GenerateRandomMap_TileData(context.Map, context.PlanetData);
     }
+
+    public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
+    {
+        if (context == null)
+        {
+            LogNullContext(nameof(ChunkGenerator_Land));
+            yield break;
+        }
+
+        if (context.Map == null)
+        {
+            LogNullMap(nameof(ChunkGenerator_Land));
+            yield break;
+        }
+
+        generationSeed = context.WorldSeed;
+        Map = context.Map;
+        plantData = context.PlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData() ?? plantData;
+        InitializeGenerationEnvironment(Map);
+
+        Vector2Int startPos = Map.Data.position;
+        Vector2 size = ChunkSize;
+        int batchSize = Mathf.Max(1, workBatchSize);
+        int processedInBatch = 0;
+
+        for (int x = 0; x < size.x; x++)
+        {
+            for (int y = 0; y < size.y; y++)
+            {
+                GenerateTile(Map, startPos, x, y, renderImmediately: false);
+                processedInBatch++;
+
+                if (processedInBatch >= batchSize)
+                {
+                    processedInBatch = 0;
+                    yield return null;
+                }
+            }
+        }
+    }
     #endregion
 
     #region 主逻辑
@@ -194,58 +235,56 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         {
             for (int y = 0; y < size.y; y++)
             {
-                Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
-                Vector2Int localPos = worldPos - map.Data.position;
-
-                // 1. 计算环境参数
-                CalculateEnvironmentFactors(
-                    worldPos,
-                    out float temperature,
-                    out float humidity,
-                    out float precipitation,
-                    out float solidity,
-                    out float hight,
-                    out float pollution);
-
-                // 先写入采样结果，再进行群系匹配，避免读到未初始化默认值导致全海洋。
-                float defaultTempCelsius = EvaluateTemperatureCelsius(temperature, null);
-                StoreEnvironmentFactors(
-                    map,
-                    localPos,
-                    temperature,
-                    defaultTempCelsius,
-                    humidity,
-                    precipitation,
-                    solidity,
-                    hight,
-                    pollution);
-
-                // 2. 匹配生物群系（归一化环境参数判定）
-                BiomeData biome = GenerateBiomeTile(map, localPos);
-                if (biome == null)
-                {
-                    continue;
-                }
-
-                // 3. 在不影响群系判定的前提下，根据群系重算摄氏温度并回写
-                float temperatureCelsius = EvaluateTemperatureCelsius(temperature, biome);
-                StoreEnvironmentFactors(
-                    map,
-                    localPos,
-                    temperature,
-                    temperatureCelsius,
-                    humidity,
-                    precipitation,
-                    solidity,
-                    hight,
-                    pollution);
-
-                // 4. 生成地形瓦片
-                GenerateTerrainTile(map, worldPos, localPos, biome);
+                GenerateTile(map, startPos, x, y, renderImmediately: true);
             }
         }
         // 注意：收尾（TileLoaded/烘焙/刷新）由 Map.GenerateByPipeline() 统一处理，
         // 以保证后续生成器（例如河流）可以基于本次大陆生成结果继续加工。
+    }
+
+    private void GenerateTile(Map map, Vector2Int startPos, int x, int y, bool renderImmediately)
+    {
+        Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
+        Vector2Int localPos = worldPos - map.Data.position;
+
+        CalculateEnvironmentFactors(
+            worldPos,
+            out float temperature,
+            out float humidity,
+            out float precipitation,
+            out float solidity,
+            out float hight,
+            out float pollution);
+
+        float defaultTempCelsius = EvaluateTemperatureCelsius(temperature, null);
+        StoreEnvironmentFactors(
+            map,
+            localPos,
+            temperature,
+            defaultTempCelsius,
+            humidity,
+            precipitation,
+            solidity,
+            hight,
+            pollution);
+
+        BiomeData biome = GenerateBiomeTile(map, localPos);
+        if (biome == null)
+            return;
+
+        float temperatureCelsius = EvaluateTemperatureCelsius(temperature, biome);
+        StoreEnvironmentFactors(
+            map,
+            localPos,
+            temperature,
+            temperatureCelsius,
+            humidity,
+            precipitation,
+            solidity,
+            hight,
+            pollution);
+
+        GenerateTerrainTile(map, worldPos, localPos, biome, renderImmediately);
     }
     #endregion
 
@@ -265,7 +304,44 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     {
         float gx = worldPos.x * NoiseScale;
         float gy = worldPos.y * NoiseScale;
-        SampleEnvironmentFactors(gx, gy, out temperature, out humidity, out precipitation, out solidity, out hight, out pollution);
+        SampleEnvironmentFactors(
+            gx,
+            gy,
+            Seed,
+            out temperature,
+            out humidity,
+            out precipitation,
+            out solidity,
+            out hight,
+            out pollution);
+    }
+
+    /// <summary>
+    /// 不创建 Chunk，直接使用与正式地形生成相同的噪声配置预测任意世界坐标。
+    /// </summary>
+    public EnvironmentSample SampleEnvironmentAtWorld(Vector2Int worldPos, int worldSeed)
+    {
+        float gx = worldPos.x * NoiseScale;
+        float gy = worldPos.y * NoiseScale;
+        SampleEnvironmentFactors(
+            gx,
+            gy,
+            worldSeed == 0 ? 1 : worldSeed,
+            out float temperature,
+            out float humidity,
+            out float precipitation,
+            out float solidity,
+            out float hight,
+            out float pollution);
+
+        return new EnvironmentSample(
+            temperature,
+            EvaluateTemperatureCelsius(temperature, null),
+            humidity,
+            precipitation,
+            solidity,
+            hight,
+            pollution);
     }
 
     /// <summary>
@@ -274,6 +350,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     private void SampleEnvironmentFactors(
         float x,
         float y,
+        int seed,
         out float temperature,
         out float humidity,
         out float precipitation,
@@ -326,8 +403,6 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int countPrecipitation = 0;
         int countSolidity = 0;
         int countHeight = 0;
-
-        int seed = Seed;
 
         for (int i = 0; i < NoiseConfigs.Count; i++)
         {
@@ -491,7 +566,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     /// <summary>
     /// 生成地形瓦片数据并添加到地图
     /// </summary>
-    private void GenerateTerrainTile(Map map, Vector2Int worldPos, Vector2Int localPos, BiomeData biome)
+    private void GenerateTerrainTile(
+        Map map,
+        Vector2Int worldPos,
+        Vector2Int localPos,
+        BiomeData biome,
+        bool renderImmediately)
     {
         // 1. 获取 Tile_Block SO
         Tile_Block tileBlock = biome.TerrainConfig.Get_Tile_Block();
@@ -502,8 +582,6 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         // 3. 克隆 TileData（使用手写 Clone，避免通用深拷贝开销）
         var tile = template.Clone();
 
-        var unityTileBase = tileBlock.GetTileBaseAsset();
-
         // 4. 初始化瓦片（根据环境因子调整）
         tile.Initialize_Env(map.Data.EnvironmentLayers, localPos.x, localPos.y);
 
@@ -512,8 +590,13 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
         // 6. 仅添加到地图数据层；实际 Tilemap 绘制由 Map 自身的加载/刷新流程负责
         map.ADDTileData(worldPos, tile);
-        // 7. 直接设置 Tilemap（视觉层）
-        map.tileMap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), unityTileBase);
+
+        // 手动同步生成入口仍立即绘制；运行时异步管线统一交给 Map 分帧写入。
+        if (renderImmediately)
+        {
+            var unityTileBase = tileBlock.GetTileBaseAsset();
+            map.tileMap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), unityTileBase);
+        }
     }
 
     #endregion

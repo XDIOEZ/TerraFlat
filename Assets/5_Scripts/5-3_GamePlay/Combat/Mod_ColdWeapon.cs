@@ -1,10 +1,8 @@
 ﻿using MemoryPack;
 using Sirenix.OdinInspector;
-using System.Collections;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 public partial class Mod_ColdWeapon : Module
@@ -223,22 +221,11 @@ public partial class Mod_ColdWeapon : Module
             return;
         }
 
-        if (context.started)
-            StartCoroutine(DelayedCheckUIThenAttack());
-    }
-
-    private IEnumerator DelayedCheckUIThenAttack()
-    {
-        // 延迟到下一帧以确保 EventSystem 状态正确
-        yield return null;
-
-        if (cachedController != null && cachedController.IsGameplayInputLocked)
+        if (context.started &&
+            (cachedController == null || !cachedController.IsPointerOverUI()))
         {
-            yield break;
-        }
-
-        if (!IsPointerOverUI())
             StartAttack();
+        }
     }
 
     private void OnInputActionCanceled(InputAction.CallbackContext context) => StopAttack();
@@ -560,17 +547,6 @@ public partial class Mod_ColdWeapon : Module
     }
     #endregion
 
-    #region 工具函数
-    bool IsPointerOverUI()
-    {
-        if (EventSystem.current == null) return false;
-#if UNITY_STANDALONE || UNITY_EDITOR
-        return EventSystem.current.IsPointerOverGameObject();
-#else
-        return false;
-#endif
-    }
-    #endregion
 }
 
 public enum AttackState

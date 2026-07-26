@@ -12,10 +12,8 @@ public class BuildingShadow : MonoBehaviour
 
     [Header("碰撞体设置")]
     public Vector2 BoxColliderScale = Vector2.one;
+    public Vector2 BoxColliderOffset;
     [SerializeField] private BoxCollider2D previewCollider;
-
-    [Header("位置偏移")]
-    public Vector2 ShadowPositionOffset = new(0f, 0.5f);
 
     [Header("调试信息")]
     public Collider2D obstacleCollider;
@@ -38,13 +36,6 @@ public class BuildingShadow : MonoBehaviour
             PruneDestroyedObstacles();
             return obstacles.Count > 0;
         }
-    }
-
-    public Vector3 ApplyPlacementOffset(Vector3 worldPosition)
-    {
-        worldPosition += (Vector3)ShadowPositionOffset;
-        worldPosition.z = 0f;
-        return worldPosition;
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -89,17 +80,28 @@ public class BuildingShadow : MonoBehaviour
         ApplyVisualState();
     }
 
-    public void InitShadow(SpriteRenderer sourceRenderer, Vector2 footprintSize)
+    public void InitShadow(SpriteRenderer sourceRenderer, Transform sourceRoot, Bounds footprint)
     {
-        if (sourceRenderer == null || ShadowRenderer == null)
+        if (sourceRenderer == null || sourceRoot == null || ShadowRenderer == null)
             throw new MissingComponentException("BuildingShadow 缺少 SpriteRenderer 引用");
 
         ShadowRenderer.sprite = sourceRenderer.sprite;
         ShadowRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
         ShadowRenderer.sortingOrder = sourceRenderer.sortingOrder - 1;
+        ShadowRenderer.flipX = sourceRenderer.flipX;
+        ShadowRenderer.flipY = sourceRenderer.flipY;
+        ShadowRenderer.drawMode = sourceRenderer.drawMode;
+        ShadowRenderer.size = sourceRenderer.size;
+
+        Transform shadowTransform = ShadowRenderer.transform;
+        shadowTransform.localPosition = sourceRoot.InverseTransformPoint(sourceRenderer.transform.position);
+        shadowTransform.localRotation = Quaternion.Inverse(sourceRoot.rotation) * sourceRenderer.transform.rotation;
+        shadowTransform.localScale = DivideScale(sourceRenderer.transform.lossyScale, sourceRoot.lossyScale);
+
         BoxColliderScale = new Vector2(
-            Mathf.Max(0.05f, footprintSize.x),
-            Mathf.Max(0.05f, footprintSize.y));
+            Mathf.Max(0.05f, footprint.size.x),
+            Mathf.Max(0.05f, footprint.size.y));
+        BoxColliderOffset = footprint.center;
         RefreshColliderSize();
         ApplyVisualState();
     }
@@ -131,10 +133,12 @@ public class BuildingShadow : MonoBehaviour
 
     public void RefreshColliderSize()
     {
-        // Unity 的 MissingReference 不等同于 C# null，不能使用 ??= 处理这里的引用。
-        if (previewCollider == null)
-            previewCollider = GetComponentInChildren<BoxCollider2D>(true);
+        // 渲染节点需要复刻建筑自身的局部偏移，因此预览碰撞体必须独立放在根节点，
+        // 否则图片偏移会再次影响占地检测。
+        if (previewCollider != null && previewCollider.transform != transform)
+            previewCollider.enabled = false;
 
+        previewCollider = GetComponent<BoxCollider2D>();
         if (previewCollider == null)
         {
             previewCollider = gameObject.AddComponent<BoxCollider2D>();
@@ -150,9 +154,17 @@ public class BuildingShadow : MonoBehaviour
         }
 
         previewCollider.size = new Vector2(Mathf.Max(0.05f, BoxColliderScale.x), Mathf.Max(0.05f, BoxColliderScale.y));
-        previewCollider.offset = Vector2.zero;
+        previewCollider.offset = BoxColliderOffset;
         previewCollider.enabled = true;
         previewCollider.isTrigger = true;
+    }
+
+    private static Vector3 DivideScale(Vector3 value, Vector3 divisor)
+    {
+        return new Vector3(
+            Mathf.Abs(divisor.x) > Mathf.Epsilon ? value.x / divisor.x : value.x,
+            Mathf.Abs(divisor.y) > Mathf.Epsilon ? value.y / divisor.y : value.y,
+            Mathf.Abs(divisor.z) > Mathf.Epsilon ? value.z / divisor.z : value.z);
     }
 
     private void ApplyVisualState()

@@ -47,8 +47,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   Data:
+    Version: 0
     maxVisibleDistance: 10
     minVisibleDistance: 1
+    State: 0
+    Role: 0
+    SnapshotBase64: 
+    BuildingPrefabId: 
+    SummonerPrefabId: 
   BuildingData:
     Name: 
     ID: "\u5EFA\u7B51\u6A21\u5757"
@@ -84,9 +90,9 @@ MonoBehaviour:
     _PersistentCalls: []
   StartUnInstall:
     _PersistentCalls: []
-  _currentState: 0
   OnStateChanged:
     _PersistentCalls: []
+  _currentState: 0
 --- !u!61 &3342255097933952259
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -285,7 +291,7 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 
+    - 35
     Stack:
       Amount: 1
       Volume: 1

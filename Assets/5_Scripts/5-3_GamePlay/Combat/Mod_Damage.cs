@@ -19,6 +19,15 @@ public class Mod_Damage : Module, IDamageSender
     [Tooltip("是否仅允许物品在手上时造成伤害")]
     public bool OnlyDealDamageWhenInHand = false;
 
+    [Header("武器攻击音效")]
+    [SerializeField]
+    private CombatWeaponAudioClass weaponAudioClass = CombatWeaponAudioClass.Auto;
+    [SerializeField, Tooltip("武器动作层 AudioCue ID。留空时按武器分类自动选择。")]
+    private string attackAudioCueId;
+    [SerializeField, Tooltip("可选的“武器×受击材质”命中声音覆盖。")]
+    private List<CombatImpactAudioOverride> impactAudioOverrides =
+        new List<CombatImpactAudioOverride>();
+
     [Header("调试信息")]
     [SerializeField] private bool showDebugWarnings = true;
     [SerializeField] private Collider2D damageCollider;
@@ -41,6 +50,9 @@ public class Mod_Damage : Module, IDamageSender
     /// 造成伤害后回调事件，参数为本次造成的伤害值（可能小于等于 0）
     /// </summary>
     public event System.Action<float> OnDamageApplied;
+
+    public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
+    public string AttackAudioCueId => attackAudioCueId;
     #endregion
 
     #region IDamageSender 实现
@@ -78,7 +90,13 @@ public class Mod_Damage : Module, IDamageSender
             if (colliderEnabled != lastColliderEnabled)
             {
                 lastColliderEnabled = colliderEnabled;
-                if (!colliderEnabled)
+                if (colliderEnabled)
+                {
+                    // 动画片段会直接切换 BoxCollider2D.m_Enabled，
+                    // 因此这里也是通用的攻击动作音效入口。
+                    CombatAudioRouter.PlayWeaponAttack(this);
+                }
+                else
                 {
                     insideReceivers.Clear();
                 }
@@ -213,9 +231,16 @@ public class Mod_Damage : Module, IDamageSender
             damageCollider = GetComponent<Collider2D>();
         }
 
+        bool wasEnabled = damageCollider != null && damageCollider.enabled;
         if (damageCollider != null && damageCollider.enabled != enabled)
         {
            damageCollider.enabled = enabled; // 先切换状态以确保触发器事件正确调用，从而维护内部接收器列表的准确性
+        }
+
+        lastColliderEnabled = damageCollider != null && damageCollider.enabled;
+        if (enabled && !wasEnabled)
+        {
+            CombatAudioRouter.PlayWeaponAttack(this);
         }
 
         if (!enabled)
@@ -236,11 +261,38 @@ public class Mod_Damage : Module, IDamageSender
     public void StartAttack()
     {
         SetDamageEnabled(true);
+        // 某些持续伤害模块的碰撞体可能已经启用，路由器会按攻击者去重。
+        CombatAudioRouter.PlayWeaponAttack(this);
         lastDamageTime = Time.time; // 重置伤害计时
     }
     public void StopAttack()
     {
         SetDamageEnabled(false);
+    }
+
+    public bool TryGetImpactAudioOverride(
+        CombatImpactMaterial material,
+        out string cueId)
+    {
+        cueId = null;
+        if (impactAudioOverrides == null)
+            return false;
+
+        for (int i = 0; i < impactAudioOverrides.Count; i++)
+        {
+            CombatImpactAudioOverride entry = impactAudioOverrides[i];
+            if (entry == null ||
+                entry.Material != material ||
+                string.IsNullOrWhiteSpace(entry.CueId))
+            {
+                continue;
+            }
+
+            cueId = entry.CueId.Trim();
+            return true;
+        }
+
+        return false;
     }
 
     #endregion

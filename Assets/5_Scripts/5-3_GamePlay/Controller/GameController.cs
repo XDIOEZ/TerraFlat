@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UltEvents;
 using InputSystem;
@@ -15,6 +17,7 @@ public class GameController : Module
 #region 输入系统
 
     public PlayerInputActions _inputActions; // 新输入系统动作集合
+    public InputBindingService InputBindings { get; private set; }
     public Camera _mainCamera; // 主相机引用
     public bool CtrlIsDown; // Ctrl状态（保留原字段）
     public InputDeviceType CurrentInputDevice => _currentInputDevice; // 当前活跃输入设备
@@ -30,6 +33,9 @@ public class GameController : Module
     private Vector2 _virtualCursorScreenPosition; // 手柄虚拟光标位置
     private bool _virtualCursorInitialized; // 虚拟光标是否初始化
     private bool _isGameplayInputLocked; // 濒死/过场时是否锁定玩家输入
+    private bool _suppressLeftClickUntilRelease;
+    private bool _suppressRightClickUntilRelease;
+    private readonly List<RaycastResult> _uiRaycastResults = new List<RaycastResult>(8);
 
 #endregion
 
@@ -58,6 +64,7 @@ public class GameController : Module
 
         _inputActions = new PlayerInputActions();
         InjectGamepadBindings();
+        InputBindings = new InputBindingService(_inputActions.asset);
         InitializeVirtualCursor();
     }
 
@@ -90,6 +97,8 @@ public class GameController : Module
 
     public void OnDestroy()
     {
+        InputBindings?.Dispose();
+        InputBindings = null;
         LeftClick.Clear();
         LeftClickUp.Clear();
         RightClick.Clear();
@@ -102,45 +111,61 @@ public class GameController : Module
 
     public void LeftClickAction(InputAction.CallbackContext obj) /// 左键按下
     {
-        if (_isGameplayInputLocked)
+        UpdateCurrentInputDevice(obj);
+        if (_isGameplayInputLocked || IsPointerOverUI())
         {
+            _suppressLeftClickUntilRelease = true;
             return;
         }
 
-        UpdateCurrentInputDevice(obj);
+        _suppressLeftClickUntilRelease = false;
         LeftClick.Invoke();
     }
 
     public void LeftClickUpAction(InputAction.CallbackContext obj) /// 左键抬起
     {
+        UpdateCurrentInputDevice(obj);
+        if (_suppressLeftClickUntilRelease)
+        {
+            _suppressLeftClickUntilRelease = false;
+            return;
+        }
+
         if (_isGameplayInputLocked)
         {
             return;
         }
 
-        UpdateCurrentInputDevice(obj);
         LeftClickUp.Invoke();
     }
 
     public void RightClickAction(InputAction.CallbackContext obj) /// 右键按下
     {
-        if (_isGameplayInputLocked)
+        UpdateCurrentInputDevice(obj);
+        if (_isGameplayInputLocked || IsPointerOverUI())
         {
+            _suppressRightClickUntilRelease = true;
             return;
         }
 
-        UpdateCurrentInputDevice(obj);
+        _suppressRightClickUntilRelease = false;
         RightClick.Invoke();
     }
 
     public void RightClickUpAction(InputAction.CallbackContext obj) /// 右键抬起
     {
+        UpdateCurrentInputDevice(obj);
+        if (_suppressRightClickUntilRelease)
+        {
+            _suppressRightClickUntilRelease = false;
+            return;
+        }
+
         if (_isGameplayInputLocked)
         {
             return;
         }
 
-        UpdateCurrentInputDevice(obj);
         RightClickUp.Invoke();
     }
 
@@ -166,6 +191,22 @@ public class GameController : Module
         }
 
         return Input.mousePosition;
+    }
+
+    public bool IsPointerOverUI()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return false;
+
+        PointerEventData eventData = new PointerEventData(eventSystem)
+        {
+            position = GetPointerScreenPosition()
+        };
+
+        _uiRaycastResults.Clear();
+        eventSystem.RaycastAll(eventData, _uiRaycastResults);
+        return _uiRaycastResults.Count > 0;
     }
 
     public Vector3 GetMouseWorldPosition() /// 获取指针世界坐标（鼠标或手柄虚拟光标）

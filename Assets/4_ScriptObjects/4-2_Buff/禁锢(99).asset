@@ -20,6 +20,7 @@ MonoBehaviour:
   buff_Interval: 0
   buff_MaxStack: 1
   buff_StackType: 3
+  buff_LoadBehavior: 1
   buff_Behavior_Start:
     rid: 6445419665800036364
   buff_Behavior_Update:

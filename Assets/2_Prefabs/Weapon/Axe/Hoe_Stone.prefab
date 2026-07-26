@@ -69,7 +69,8 @@ MonoBehaviour:
       Type:\r\n  Material:\r\n  MakeTag:\r\n\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
     Durability: 1
     MaxDurability: 1
-    Tags: []
+    Tags:
+    - 36
     Stack:
       Amount: 1
       Volume: 2

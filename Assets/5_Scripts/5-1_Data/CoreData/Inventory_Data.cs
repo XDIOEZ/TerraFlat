@@ -382,14 +382,68 @@ public partial class Inventory_Data
     /// </summary>
     public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCount)
     {
+        EnsureRuntimeEvents();
+
+        if (!TryTransferItemQuantityCore(slotFrom, slotTo, upToCount))
+            return false;
+
+        // 兼容旧调用：调用方仍被视为两个槽位的共同事件所有者。
+        Event_OnDataChanged.Invoke(slotFrom);
+        Event_OnDataChanged.Invoke(slotTo);
+        return true;
+    }
+
+    /// <summary>
+    /// 在两个不同库存之间转移物品，并分别通知来源与目标库存。
+    /// 快速转移等跨库存事务应使用此入口，避免来源库存的配方、装备等监听器漏更新。
+    /// </summary>
+    public bool TransferItemQuantityTo(
+        ItemSlot slotFrom,
+        Inventory_Data targetInventory,
+        ItemSlot slotTo,
+        int upToCount)
+    {
+        if (targetInventory == null)
+            return false;
+
+        if (ReferenceEquals(this, targetInventory))
+            return TransferItemQuantity(slotFrom, slotTo, upToCount);
+
+        EnsureRuntimeEvents();
+        targetInventory.EnsureRuntimeEvents();
+
+        if (itemSlots == null || targetInventory.itemSlots == null ||
+            !itemSlots.Contains(slotFrom) || !targetInventory.itemSlots.Contains(slotTo))
+        {
+            Debug.LogError("[Inventory_Data] 跨库存转移的槽位不属于声明的来源或目标库存");
+            return false;
+        }
+
+        if (!TryTransferItemQuantityCore(slotFrom, slotTo, upToCount))
+            return false;
+
+        Event_RefreshUI.Invoke(slotFrom.Index);
+        targetInventory.Event_RefreshUI.Invoke(slotTo.Index);
+
+        Event_OnDataChanged.Invoke(slotFrom);
+        targetInventory.Event_OnDataChanged.Invoke(slotTo);
+        Event_OnDataChanged_TwoSlots.Invoke(slotFrom, slotTo);
+        targetInventory.Event_OnDataChanged_TwoSlots.Invoke(slotTo, slotFrom);
+        return true;
+    }
+
+    private static bool TryTransferItemQuantityCore(ItemSlot slotFrom, ItemSlot slotTo, int upToCount)
+    {
         if (slotFrom == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
             return false;
 
         var dataFrom = slotFrom.itemData;
-        if (dataFrom == null || dataFrom.Stack.Amount <= 0)
+        if (dataFrom?.Stack == null || dataFrom.Stack.Amount < 1f)
             return false;
 
         var dataTo = slotTo.itemData;
+        if (dataTo != null && dataTo.Stack == null)
+            return false;
 
         // 若目标槽位已有物品，需确保ID与特殊数据一致
         if (dataTo != null &&
@@ -400,7 +454,7 @@ public partial class Inventory_Data
         if (dataFrom.Stack.Volume > 1)
         {
             // 非空槽位不能接收不可堆叠物品
-            if (dataTo != null)
+            if (dataTo != null || slotTo.SlotMaxVolume < dataFrom.Stack.Volume)
                 return false;
 
             // 只允许转移一个
@@ -414,7 +468,7 @@ public partial class Inventory_Data
             else
             {
                 // 从原数据中复制出一个新对象
-                var newData = FastCloner.FastCloner.DeepClone(dataFrom);
+                var newData = CloneForStackSplit(dataFrom);
                 newData.Stack.Amount = 1;
                 dataFrom.Stack.Amount -= 1;
                 slotTo.itemData = newData;
@@ -422,40 +476,37 @@ public partial class Inventory_Data
 
             slotFrom.RefreshUI();
             slotTo.RefreshUI();
-            Event_OnDataChanged.Invoke(slotFrom);
-            Event_OnDataChanged.Invoke(slotTo);
             return true;
         }
 
         // 堆叠逻辑处理
-        int transferCount = Mathf.Min(upToCount, (int)dataFrom.Stack.Amount);
+        int availableSourceCount = Mathf.FloorToInt(dataFrom.Stack.Amount);
+        int transferCount = Mathf.Min(upToCount, availableSourceCount);
+        if (transferCount <= 0)
+            return false;
 
-        // 检查目标槽位是否能容纳转移的物品数量
-        if (dataTo != null)
+        float unitVolume = dataFrom.Stack.Volume > 0f ? dataFrom.Stack.Volume : 1f;
+        float targetCurrentVolume = dataTo?.Stack?.CurrentVolume ?? 0f;
+        float availableTargetVolume = Mathf.Max(0f, slotTo.SlotMaxVolume - targetCurrentVolume);
+        int targetCapacity = Mathf.FloorToInt((availableTargetVolume / unitVolume) + 0.0001f);
+        transferCount = Mathf.Min(transferCount, targetCapacity);
+        if (transferCount <= 0)
+            return false;
+
+        // 整堆移入空槽时直接搬迁引用，避免无意义克隆及重复实例标识。
+        if (dataTo == null &&
+            transferCount == availableSourceCount &&
+            Mathf.Approximately(dataFrom.Stack.Amount, availableSourceCount))
         {
-            // 计算转移后目标槽位的总数量
-            float targetTotalAmount = dataTo.Stack.Amount + transferCount;
-            if (targetTotalAmount > slotTo.SlotMaxVolume)
-            {
-                // 如果会超出上限，则计算实际可转移的数量
-                transferCount = Mathf.FloorToInt(slotTo.SlotMaxVolume - dataTo.Stack.Amount);
-                if (transferCount <= 0)
-                    return false; // 目标槽位已满，无法转移
-            }
-        }
-        else
-        {
-            // 目标槽位为空，检查要转移的数量是否超出槽位上限
-            if (transferCount > slotTo.SlotMaxVolume)
-            {
-                transferCount = Mathf.FloorToInt(slotTo.SlotMaxVolume);
-                if (transferCount <= 0)
-                    return false; // 槽位上限为0或负数
-            }
+            slotTo.itemData = dataFrom;
+            slotFrom.ClearData();
+            slotFrom.RefreshUI();
+            slotTo.RefreshUI();
+            return true;
         }
 
         // 克隆一个转移对象，设置转移数量
-        var transferData = FastCloner.FastCloner.DeepClone(dataFrom);
+        var transferData = CloneForStackSplit(dataFrom);
         transferData.Stack.Amount = transferCount;
 
         // 扣除来源物品数量
@@ -472,10 +523,21 @@ public partial class Inventory_Data
         slotFrom.RefreshUI();
         slotTo.RefreshUI();
 
-        Event_OnDataChanged.Invoke(slotFrom);
-        Event_OnDataChanged.Invoke(slotTo);
-
         return true;
+    }
+
+    private static ItemData CloneForStackSplit(ItemData source)
+    {
+        ItemData clone = FastCloner.FastCloner.DeepClone(source);
+        int newGuid;
+        do
+        {
+            newGuid = Guid.NewGuid().GetHashCode();
+        }
+        while (newGuid == 0 || newGuid == source.Guid);
+
+        clone.Guid = newGuid;
+        return clone;
     }
 
 
@@ -536,6 +598,146 @@ public partial class Inventory_Data
             }
         }
         return count;
+    }
+
+    /// <summary>
+    /// 使用背包默认规则整理物品：相同物品先合并堆叠，再按物品 ID、
+    /// 特殊数据和实例 Guid 确定性排序，空槽统一移动到末尾。
+    /// </summary>
+    public bool SortDefault()
+    {
+        EnsureRuntimeEvents();
+
+        if (itemSlots == null || itemSlots.Count == 0)
+            return false;
+
+        List<ItemData> items = new List<ItemData>(itemSlots.Count);
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            ItemData itemData = itemSlots[i]?.itemData;
+            if (itemData == null)
+                continue;
+
+            if (itemData.Stack != null && itemData.Stack.Amount <= 0f)
+                continue;
+
+            items.Add(itemData);
+        }
+
+        if (items.Count == 0)
+            return false;
+
+        items.Sort(CompareItemsForDefaultSort);
+
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            ItemSlot slot = GetOrCreateItemSlot(i);
+            if (slot == null)
+                continue;
+
+            Event_OnBeforeDataChanged.Invoke(slot);
+            slot.itemData = null;
+        }
+
+        int occupiedSlotCount = 0;
+        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+        {
+            ItemData source = items[itemIndex];
+            if (source == null)
+                continue;
+
+            float remainingAmount = source.Stack != null ? source.Stack.Amount : 1f;
+            if (CanUseDefaultStacking(source))
+            {
+                for (int slotIndex = 0; slotIndex < occupiedSlotCount && remainingAmount > 0f; slotIndex++)
+                {
+                    ItemSlot targetSlot = itemSlots[slotIndex];
+                    ItemData target = targetSlot?.itemData;
+                    if (!CanMergeForDefaultSort(source, target))
+                        continue;
+
+                    float availableAmount = GetAvailableStackAmount(targetSlot, target);
+                    if (availableAmount <= 0f)
+                        continue;
+
+                    float movedAmount = Mathf.Min(remainingAmount, availableAmount);
+                    target.Stack.Amount += movedAmount;
+                    remainingAmount -= movedAmount;
+                }
+            }
+
+            if (remainingAmount <= 0f)
+                continue;
+
+            if (occupiedSlotCount >= itemSlots.Count)
+            {
+                Debug.LogError("[Inventory_Data.SortDefault] 整理后槽位不足，已中止以避免丢失物品。");
+                return false;
+            }
+
+            if (source.Stack != null)
+                source.Stack.Amount = remainingAmount;
+            itemSlots[occupiedSlotCount].itemData = source;
+            occupiedSlotCount++;
+        }
+
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            ItemSlot slot = itemSlots[i];
+            slot.Index = i;
+            slot.RefreshUI();
+            Event_RefreshUI.Invoke(i);
+            Event_OnDataChanged.Invoke(slot);
+        }
+
+        return true;
+    }
+
+    private static int CompareItemsForDefaultSort(ItemData left, ItemData right)
+    {
+        if (ReferenceEquals(left, right))
+            return 0;
+        if (left == null)
+            return 1;
+        if (right == null)
+            return -1;
+
+        int result = StringComparer.OrdinalIgnoreCase.Compare(left.IDName ?? string.Empty, right.IDName ?? string.Empty);
+        if (result != 0)
+            return result;
+
+        result = StringComparer.Ordinal.Compare(left.ItemSpecialData ?? string.Empty, right.ItemSpecialData ?? string.Empty);
+        if (result != 0)
+            return result;
+
+        result = StringComparer.OrdinalIgnoreCase.Compare(left.GameName ?? string.Empty, right.GameName ?? string.Empty);
+        if (result != 0)
+            return result;
+
+        return left.Guid.CompareTo(right.Guid);
+    }
+
+    private static bool CanUseDefaultStacking(ItemData itemData)
+    {
+        return itemData?.Stack != null && itemData.Stack.Volume <= 1f;
+    }
+
+    private static bool CanMergeForDefaultSort(ItemData source, ItemData target)
+    {
+        return CanUseDefaultStacking(source) &&
+               CanUseDefaultStacking(target) &&
+               string.Equals(source.IDName, target.IDName, StringComparison.Ordinal) &&
+               string.Equals(source.ItemSpecialData, target.ItemSpecialData, StringComparison.Ordinal);
+    }
+
+    private static float GetAvailableStackAmount(ItemSlot slot, ItemData itemData)
+    {
+        if (slot == null || itemData?.Stack == null)
+            return 0f;
+
+        float unitVolume = itemData.Stack.Volume > 0f ? itemData.Stack.Volume : 1f;
+        float availableVolume = Mathf.Max(0f, slot.SlotMaxVolume - itemData.Stack.CurrentVolume);
+        return Mathf.Floor(availableVolume / unitVolume);
     }
 
 

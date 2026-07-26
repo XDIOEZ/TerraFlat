@@ -93,6 +93,10 @@ MonoBehaviour:
     Guid: -1070873522
     position: {x: 50, y: 50}
     TileLoaded: 0
+    GrassLayer:
+      Width: 0
+      Height: 0
+      Cells: 
   tileMap: {fileID: 6321057560787975102}
   OnMapGenerated_Start:
     _PersistentCalls: []
@@ -105,6 +109,7 @@ MonoBehaviour:
   mapGenerators:
   - rid: 6445419845959286799
   - rid: 6445419845959286807
+  - rid: 3876953343422103555
   - rid: 6445419845959286808
   references:
     version: 2
@@ -138,6 +143,14 @@ MonoBehaviour:
         octaves: 4
         lacunarity: 2
         persistence: 0.55
+    - rid: 3876953343422103555
+      type: {class: ChunkGenerator_Structures, ns: , asm: GamePlay}
+      data:
+        Catalog: {fileID: 11400000, guid: 3396679be21708f41abece0a8db23caf, type: 2}
+        LogSummary: 0
+        TestMode: 0
+        TestWorldAnchor: {x: 0, y: 0}
+        TestLocalOrigin: {x: 2, y: 2}
     - rid: 6445419845959286799
       type: {class: ChunkGenerator_Land, ns: , asm: GamePlay}
       data:
@@ -214,8 +227,8 @@ MonoBehaviour:
         Prefab_Stone: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
         stoneParent: {fileID: 0}
         maxStonesPerChunk: 120
-        riverStoneChance: 0.03
-        bankStoneChance: 0.016666668
+        riverStoneChance: 0.015
+        bankStoneChance: 0.008333334
         Prefab_Flint: {fileID: 3926578369279844245, guid: e768a5cbf9bac7745bf1d9b2dc0a09a7, type: 3}
         bankFlintChance: 0.004
         bankRadius: 1
@@ -240,8 +253,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0ac87b9d15e4451680c7dc529d0d5d23, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   sourceTexture: {fileID: 2800000, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
   grassTileId: Tile_Grass
   variantCount: 32

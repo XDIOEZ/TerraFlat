@@ -15,6 +15,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private const int CompactSaveVersion = 1;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
+    private const string LastExitTimeSuffix = ".lastplayed";
     private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'2' };
     private static readonly object SaveFileLock = new object();
 
@@ -132,6 +133,19 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     [Button("保存存档到磁盘上")]
     public void Save_And_WriteToDisk()
     {
+        SaveCurrentToDisk(recordExitTime: false);
+    }
+
+    /// <summary>
+    /// 保存当前游戏状态，并记录玩家退出该存档的现实时间。
+    /// </summary>
+    public void Save_And_WriteToDiskAndRecordExitTime()
+    {
+        SaveCurrentToDisk(recordExitTime: true);
+    }
+
+    private void SaveCurrentToDisk(bool recordExitTime)
+    {
         if (SaveData == null)
         {
             Debug.LogError("❌ SaveData为null，无法保存");
@@ -139,7 +153,14 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
 
         PrepareLoadedChunksForSave();
-        SaveToDisk(SaveData, UserSavePath, SaveData.saveName);
+        if (!SaveToDisk(SaveData, UserSavePath, SaveData.saveName))
+            return;
+
+        if (recordExitTime)
+        {
+            string fullPath = GetSaveFilePath(UserSavePath, SaveData.saveName);
+            RecordLastExitTimeUtc(fullPath, DateTime.UtcNow);
+        }
     }
 
     /// <summary>
@@ -187,12 +208,18 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <param name="saveData">存档数据</param>
     /// <param name="savePath">保存路径</param>
     /// <param name="saveName">保存名称</param>
-    public void SaveToDisk(GameSaveData saveData, string savePath, string saveName)
+    public bool SaveToDisk(GameSaveData saveData, string savePath, string saveName)
     {
         if (saveData == null)
         {
             Debug.LogError("❌ saveData为null，无法保存");
-            return;
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(saveName))
+        {
+            Debug.LogError("❌ 存档名称为空，无法保存");
+            return false;
         }
 
         try
@@ -207,12 +234,57 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             WriteSaveAtomically(fullPath, dataBytes);
 
             Debug.Log($"✅ 存档成功！路径: {fullPath}");
+            return true;
         }
         catch (Exception ex)
         {
             Debug.LogError($"❌ 保存存档失败: {ex.Message}");
             Debug.LogException(ex);
+            return false;
         }
+    }
+
+    /// <summary>
+    /// 为新世界分配一个安全且未被占用的存档名，并立即创建首个存档文件。
+    /// 新建世界不会覆盖任何已有世界；重名时自动追加编号。
+    /// </summary>
+    public bool TryCreateNewSave(GameSaveData saveData, string requestedName, out string createdSaveName)
+    {
+        createdSaveName = GetAvailableSaveName(requestedName);
+        return SaveToDisk(saveData, UserSavePath, createdSaveName);
+    }
+
+    private string GetAvailableSaveName(string requestedName)
+    {
+        string normalizedName = NormalizeSaveName(requestedName);
+        string candidate = normalizedName;
+        int suffix = 2;
+
+        while (File.Exists(GetSaveFilePath(UserSavePath, candidate)))
+        {
+            candidate = $"{normalizedName} ({suffix})";
+            suffix++;
+        }
+
+        return candidate;
+    }
+
+    private static string NormalizeSaveName(string requestedName)
+    {
+        string value = requestedName?.Trim() ?? string.Empty;
+        foreach (char invalidCharacter in Path.GetInvalidFileNameChars())
+        {
+            value = value.Replace(invalidCharacter.ToString(), "_");
+        }
+
+        value = value.Trim().TrimEnd('.', ' ');
+        if (string.IsNullOrWhiteSpace(value) || value == "." || value == "..")
+        {
+            value = $"世界_{DateTime.Now:yyyyMMdd_HHmmss}";
+        }
+
+        const int maxLength = 48;
+        return value.Length <= maxLength ? value : value.Substring(0, maxLength);
     }
 
     /// <summary>
@@ -405,6 +477,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             DeleteFileIfExists(fullPath);
             DeleteFileIfExists(backupPath);
             DeleteFileIfExists(temporaryPath);
+            DeleteFileIfExists(GetLastExitTimePath(fullPath));
 
             if (foundSaveFile)
             {
@@ -457,6 +530,62 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static string GetBackupSavePath(string fullPath)
     {
         return fullPath + BackupSaveSuffix;
+    }
+
+    private static string GetLastExitTimePath(string fullPath)
+    {
+        return fullPath + LastExitTimeSuffix;
+    }
+
+    /// <summary>
+    /// 获取存档最后退出时间。旧存档没有元数据时，使用存档文件修改时间兼容。
+    /// </summary>
+    public static DateTime GetLastExitTimeUtc(string fullSavePath)
+    {
+        if (string.IsNullOrWhiteSpace(fullSavePath))
+            return DateTime.MinValue;
+
+        try
+        {
+            string metadataPath = GetLastExitTimePath(fullSavePath);
+            if (File.Exists(metadataPath))
+            {
+                string value = File.ReadAllText(metadataPath);
+                if (DateTime.TryParse(
+                    value,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.RoundtripKind,
+                    out DateTime timestamp))
+                {
+                    return timestamp.ToUniversalTime();
+                }
+            }
+
+            return File.Exists(fullSavePath)
+                ? File.GetLastWriteTimeUtc(fullSavePath)
+                : DateTime.MinValue;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"读取存档最后退出时间失败，将该存档排到列表末尾：{fullSavePath}\n{ex.Message}");
+            return DateTime.MinValue;
+        }
+    }
+
+    private static void RecordLastExitTimeUtc(string fullSavePath, DateTime exitTimeUtc)
+    {
+        try
+        {
+            File.WriteAllText(
+                GetLastExitTimePath(fullSavePath),
+                exitTimeUtc.ToUniversalTime().ToString(
+                    "O",
+                    System.Globalization.CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"存档已保存，但记录最后退出时间失败：{fullSavePath}\n{ex.Message}");
+        }
     }
 
     /// <summary>
@@ -902,6 +1031,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private byte[] BuildCompactSavePayload(GameSaveData saveData)
     {
+        MonsterSpawnerManager spawnerManager = FindObjectOfType<MonsterSpawnerManager>();
+        spawnerManager?.CaptureSaveData(saveData);
+
         CompactSaveEnvelope envelope = new CompactSaveEnvelope
         {
             Version = CompactSaveVersion,

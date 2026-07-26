@@ -36,6 +36,9 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private void OnDestroy()
     {
+        if (inputInventory?.Data != null)
+            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+
         if (mod_InteractReciver != null)
         {
             mod_InteractReciver.OnAction_Start -= Interact_Start;
@@ -51,8 +54,6 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
     [Header("交互组件")]
     [Tooltip("合成按钮")]
     public Button workButton;
-    [Tooltip("合成进度条Image（可选，不填则自动查找名为Progress的Image）")]
-    public Image progressImage;
     [Tooltip("工作台等级，等级越高需要点击次数越少")]
     public int workbenchLevel = 1;
     [Tooltip("1级工作台每次合成需要的基础点击次数")]
@@ -63,6 +64,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
     public int minClickCount = 1;
 
     private int _currentClickProgress;
+    private CraftingOutputPreview _outputPreview;
 
     private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
 
@@ -76,18 +78,27 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private void OnCraftButtonClick()
     {
+        if (!TryGetCraftPreview(out _))
+        {
+            ResetCraftProgress();
+            return;
+        }
+
         _currentClickProgress++;
         int requiredClickCount = RequiredClickCount;
         _currentClickProgress = Mathf.Min(_currentClickProgress, requiredClickCount);
-        UpdateCraftProgressUI();
+        _outputPreview?.SetProgress(_currentClickProgress / (float)requiredClickCount);
         Debug.Log($"[Mod_MakeTable] 点击进度：{_currentClickProgress}/{requiredClickCount}，等级={workbenchLevel}");
 
         if (_currentClickProgress < requiredClickCount)
             return;
 
         bool craftResult = Craft(inputInventory, outputInventory);
-        _currentClickProgress = 0;
-        UpdateCraftProgressUI();
+        ResetCraftProgress();
+        RefreshCraftPreview();
+        if (craftResult)
+            _outputPreview?.PlaySuccess();
+
         if (!craftResult)
         {
             Debug.Log("[Mod_MakeTable] 合成失败，已重置点击进度");
@@ -179,38 +190,51 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         // 同步 UI 数据
         inputInventory.SyncData();
         outputInventory.SyncData();
+        BindCraftPreview();
 
         // 绑定合成按钮
         workButton = basePanel.GetButton("合成按钮");
         workButton.onClick.RemoveListener(OnCraftButtonClick);
         workButton.onClick.AddListener(OnCraftButtonClick);
-        TryBindProgressImage();
-        UpdateCraftProgressUI();
 
         // 初始化UI显示
         basePanel?.Close();
         inputInventory.RefreshUI();
         outputInventory.RefreshUI();
+        RefreshCraftPreview();
     }
 
-    private void TryBindProgressImage()
+    private void BindCraftPreview()
     {
-        if (progressImage != null)
+        if (outputInventory.itemSlot_UI.Count == 0)
             return;
 
-        progressImage = basePanel.GetComponentsInChildren<Image>(true)
-            .FirstOrDefault(image => image.name == "Progress");
+        _outputPreview = CraftingOutputPreview.Attach(basePanel, outputInventory.itemSlot_UI[0]);
+        inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        inputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
     }
 
-    private void UpdateCraftProgressUI()
+    private void OnInputSlotChanged(ItemSlot _)
     {
-        if (progressImage == null)
+        ResetCraftProgress();
+        RefreshCraftPreview();
+    }
+
+    private void ResetCraftProgress()
+    {
+        _currentClickProgress = 0;
+        _outputPreview?.SetProgress(0f);
+    }
+
+    private void RefreshCraftPreview()
+    {
+        if (_outputPreview == null)
             return;
 
-        int requiredClickCount = RequiredClickCount;
-        progressImage.fillAmount = requiredClickCount <= 0
-            ? 0f
-            : Mathf.Clamp01(_currentClickProgress / (float)requiredClickCount);
+        if (TryGetCraftPreview(out ItemData previewItem))
+            _outputPreview.Show(previewItem, _currentClickProgress / (float)RequiredClickCount);
+        else
+            _outputPreview.Clear();
     }
 
     private void BindSlotsByPrefix(Inventory inventory, string prefix)
@@ -361,42 +385,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
     /// </summary>
     public bool Craft(Inventory inputInv, Inventory outputInv)
     {
-        // 生成配方键列表
-        HashSet<string> mirroredKeys = new HashSet<string>();
-        List<string> recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
-
-        // TODO 在这里根据配方键列表,察觉其是否是3x3或者更大的网格 并获取其最小包围网格 作为最终的配方键输出
-
-        // 计算最小包围网格的配方键
-        List<string> optimizedRecipeKeys = CalculateMinimalBoundingGrid(inputInv);
-
-        // 将优化后的配方键添加到原有列表中
-        recipeKeys.AddRange(optimizedRecipeKeys);
-
-        Recipe recipe = null;
-        string matchedKey;
-        bool isMirrorMatched = false;
-
-        // 尝试匹配每个配方键
-        foreach (string recipeKey in recipeKeys)
-        {
-            if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
-                continue;
-
-            bool isMirrorKey = mirroredKeys.Contains(recipeKey);
-            if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.规则合成 && !recipe.enableMirrorCrafting)
-            {
-                recipe = null;
-                continue;
-            }
-
-            matchedKey = recipeKey;
-            isMirrorMatched = isMirrorKey;
-            break;
-        }
-
-        // 验证配方
-        if (recipe == null)
+        if (!TryResolveRecipe(inputInv, out Recipe recipe, out bool isMirrorMatched, out List<string> recipeKeys))
         {
             Debug.LogError($"配方 {string.Join(" 或 ", recipeKeys)} 不存在");
             return false;
@@ -422,22 +411,80 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
         return true;
     }
+
+    private bool TryGetCraftPreview(out ItemData previewItem)
+    {
+        previewItem = null;
+        if (!TryResolveRecipe(inputInventory, out Recipe recipe, out bool isMirrorMatched, out _))
+            return false;
+
+        List<ItemData> outputItems = PrepareOutputItems(recipe);
+        if (outputItems == null || outputItems.Count == 0)
+            return false;
+
+        if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems, isMirrorMatched))
+            return false;
+
+        previewItem = outputItems[0];
+        return true;
+    }
+
+    private bool TryResolveRecipe(
+        Inventory inputInv,
+        out Recipe recipe,
+        out bool isMirrorMatched,
+        out List<string> recipeKeys)
+    {
+        HashSet<string> mirroredKeys = new HashSet<string>();
+        recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
+        recipeKeys.AddRange(CalculateMinimalBoundingGrid(inputInv));
+
+        recipe = null;
+        isMirrorMatched = false;
+        foreach (string recipeKey in recipeKeys)
+        {
+            if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
+                continue;
+
+            bool isMirrorKey = mirroredKeys.Contains(recipeKey);
+            if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.规则合成 && !recipe.enableMirrorCrafting)
+            {
+                recipe = null;
+                continue;
+            }
+
+            isMirrorMatched = isMirrorKey;
+            return true;
+        }
+
+        return false;
+    }
     /// <summary>
     /// 玩家开始交互
     /// </summary>
     public void Interact_Start(Item playerItem)
     {
         EnsurePanelCreated();
-        basePanel.Toggle();
-
         var handInv = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (handInv == null)
         {
             Debug.LogError("玩家手部容器为空！");
             return;
         }
+
+        if (basePanel.IsOpen())
+        {
+            basePanel.Close();
+            inputInventory.SyncQuickTransferTarget(basePanel);
+            inputInventory.DefaultTarget_Inventory = null;
+            outputInventory.DefaultTarget_Inventory = null;
+            return;
+        }
+
         inputInventory.DefaultTarget_Inventory = handInv;
         outputInventory.DefaultTarget_Inventory = handInv;
+        basePanel.Open();
+        inputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     /// <summary>
@@ -451,6 +498,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         inputInventory.DefaultTarget_Inventory = null;
         outputInventory.DefaultTarget_Inventory = null;
         basePanel.Close();
+        inputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     #endregion
@@ -463,7 +511,15 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         if (basePanel == null)
             throw new System.InvalidOperationException("[Mod_MakeTable] basePanel 为空，无法打开面板");
 
+        Inventory handInv = item?.GetComponentInChildren<Mod_Hand>()?.HandInventory ?? Inventory_Hand.PlayerHand;
+        if (handInv != null)
+        {
+            inputInventory.DefaultTarget_Inventory = handInv;
+            outputInventory.DefaultTarget_Inventory = handInv;
+        }
+
         basePanel.Open();
+        inputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     public void I_ClosePanel()
@@ -472,6 +528,9 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
             throw new System.InvalidOperationException("[Mod_MakeTable] basePanel 为空，无法关闭面板");
 
         basePanel.Close();
+        inputInventory.SyncQuickTransferTarget(basePanel);
+        inputInventory.DefaultTarget_Inventory = null;
+        outputInventory.DefaultTarget_Inventory = null;
     }
 
     public void I_TogglePanel()
@@ -480,7 +539,10 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         if (basePanel == null)
             throw new System.InvalidOperationException("[Mod_MakeTable] basePanel 为空，无法切换面板");
 
-        basePanel.Toggle();
+        if (basePanel.IsOpen())
+            I_ClosePanel();
+        else
+            I_ShowPanel();
     }
 
     #endregion

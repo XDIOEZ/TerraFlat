@@ -123,7 +123,6 @@ MonoBehaviour:
   UI_Prefab: {fileID: 2639614329428065687, guid: 5b952bf558866bc499d7e8c320ea5530, type: 3}
   FrictionButton: {fileID: 0}
   CloseButton: {fileID: 0}
-  ProgressImage: {fileID: 0}
   InputSlotUI: {fileID: 0}
   OutputSlotUI: {fileID: 0}
   FireSeedItemID: FireSeed
@@ -249,11 +248,11 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 
+    - 35
     Stack:
       Amount: 1
       Volume: 5
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     transform:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -399,6 +398,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5922215337311247547}
     m_Modifications:
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Role
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Version
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: BuildingData.BitData
+      value: '{"Version":3,"maxVisibleDistance":10.0,"minVisibleDistance":1.0,"State":0,"Role":1,"SnapshotBase64":null,"BuildingPrefabId":"SparkMaker","SummonerPrefabId":"SparkMaker_Summoner"}'
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.BuildingPrefabId
+      value: SparkMaker
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.SummonerPrefabId
+      value: SparkMaker_Summoner
+      objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

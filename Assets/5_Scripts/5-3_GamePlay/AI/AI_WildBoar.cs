@@ -344,21 +344,16 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		return WildBoarState.Idle;
 	}
 
-	protected override void TickCurrentState(float deltaTime)
+	protected override void ConfigureStateNodes(AIStateMachine<WildBoarState> stateMachine)
 	{
-		switch (_currentState)
-		{
-			case WildBoarState.Idle:   TickIdle(deltaTime); break;
-			case WildBoarState.Move:   TickMove(deltaTime); break;
-			case WildBoarState.Forage: TickForage();        break;
-			case WildBoarState.Eat:    TickEat(deltaTime);  break;
-			case WildBoarState.Sleep:  TickSleep(deltaTime);break;
-			case WildBoarState.Alert:  TickAlert(deltaTime);break;
-			case WildBoarState.Chase:  TickChase();         break;
-			case WildBoarState.Attack: TickAttack();        break;
-			case WildBoarState.Flee:   TickFlee();          break;
-			default: throw new ArgumentOutOfRangeException();
-		}
+		RegisterLocomotionStateNodes(stateMachine, WildBoarState.Idle, WildBoarState.Move);
+		stateMachine.Register(CreateMovingStateNode(WildBoarState.Forage, _ => TickForage()));
+		stateMachine.Register(CreateStoppedStateNode(WildBoarState.Eat, TickEat));
+		stateMachine.Register(CreateStoppedStateNode(WildBoarState.Sleep, TickSleep));
+		stateMachine.Register(CreateStoppedStateNode(WildBoarState.Alert, TickAlert));
+		stateMachine.Register(CreateMovingStateNode(WildBoarState.Chase, _ => TickChase()));
+		stateMachine.Register(CreateStoppedActionStateNode(WildBoarState.Attack, _ => TickAttack()));
+		stateMachine.Register(CreateMovingStateNode(WildBoarState.Flee, _ => TickFlee()));
 	}
 	#endregion
 
@@ -376,7 +371,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private void TickEat(float deltaTime)
 	{
-		StopMove();
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
@@ -397,13 +391,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private void TickSleep(float deltaTime)
 	{
-		StopMove();
 		_hp.Heal(deltaTime * sleepRecoverHpPerSecond, item);
 	}
 
 	private void TickAlert(float deltaTime)
 	{
-		StopMove();
 		if (_currentThreat != null && DistanceTo(_currentThreat.transform) <= alertDetectDistance)
 		{
 			FaceTarget(_currentThreat.transform.position);
@@ -426,19 +418,25 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			return;
 		}
 
+		Vector3 targetPosition = _currentThreat.transform.position;
+		FaceTarget(targetPosition, true);
+
 		float distance = DistanceTo(_currentThreat.transform);
 		if (distance <= attackTriggerDistance)
 		{
 			StopMove();
 			if (!_attack.IsWindowTriggered && _attack.IsCooldownDone)
 			{
-				_attack.StartWindow(_animator, animAttack);
+				_attack.StartWindow(
+					_animator,
+					animAttack,
+					targetPosition - transform.position);
 			}
 		}
 		else
 		{
 			_attack.StopWindow();
-			MoveTo(_currentThreat.transform.position);
+			StopMove();
 		}
 	}
 
@@ -466,18 +464,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		float distance = DistanceTo(_currentThreat.transform);
 		float rageLevel = Data.RageLevel;
 
-		if (_currentState == WildBoarState.Attack)
-		{
-			return distance < chaseLossDistance && rageLevel > 0.1f;
-		}
-
-		// 从警觉或追击状态升级：愤怒值足够高时直接发起攻击
-		if (_currentState == WildBoarState.Alert || _currentState == WildBoarState.Chase)
-		{
-			if (rageLevel >= 0.7f && distance < chaseLossDistance) return true;
-		}
-
-		return distance <= attackTriggerDistance && rageLevel > 0.3f;
+		float allowedDistance = _currentState == WildBoarState.Attack
+			? attackTriggerDistance * 1.15f
+			: attackTriggerDistance;
+		float requiredRage = _currentState == WildBoarState.Attack ? 0.1f : 0.3f;
+		return distance <= allowedDistance && rageLevel > requiredRage;
 	}
 
 	private bool ShouldChase()

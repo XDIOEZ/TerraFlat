@@ -1,28 +1,25 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+
 [System.Serializable]
 public class BuffAction_FoodValueChange : BuffAction
 {
-    [Header("Ê³ÎïÊıÖµ±ä»¯")]
+    [Header("é£Ÿç‰©æ•°å€¼å˜åŒ–")]
     public Nutrition NutritionChangeValue;
-
-    Mod_Food mod;
 
     public override void Apply(BuffRunTime data)
     {
+        Item receiver = data?.buff_Receiver;
+        if (receiver == null || NutritionChangeValue == null)
+            return;
 
-        if (mod == null)
+        Mod_Food mod = receiver.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+        if (mod?.Data?.nutrition == null)
         {
-            data.buff_Receiver.itemMods.GetMod_ByID(ModText.Food, out mod);
-            // Buff½ÓÊÜÕßÃ»ÓĞËÙ¶È½Ó¿Ú£¬È¡Ïûapply
-            if (mod == null)
-            {
-                Debug.Log("Buff½ÓÊÜÕßÃ»ÓĞÊ³Îï½Ó¿Ú£¬È¡Ïûapply");
-                return;
-            }
+            Debug.LogWarning("[BuffAction_FoodValueChange] æ¥æ”¶è€…ç¼ºå°‘ Food æ¨¡å—ã€‚");
+            return;
         }
-        mod.Data.nutrition += NutritionChangeValue;
-    }
 
+        mod.Data.nutrition += NutritionChangeValue;
+        mod.DataUpdate?.Invoke();
+    }
 }

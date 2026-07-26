@@ -189,6 +189,25 @@ public static class GameUIPrefabRebuilder
         Debug.Log($"[Game UI] 快捷栏修复完成：{rebuilt}/{targets.Length} 个 Prefab。快捷栏直属子节点只保留物品槽。");
     }
 
+    [MenuItem("FlatWorld/UI/居中功能列表按钮")]
+    public static void RebuildActionListUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Game UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        BuildTarget target = new BuildTarget(MenuRoot + "Info_Button_List.prefab", BuildActionList);
+        bool rebuilt = RebuildSinglePrefab(target);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log(rebuilt
+            ? "[Game UI] 功能列表按钮已居中。"
+            : "[Game UI] 功能列表按钮重建失败，请检查控制台。");
+    }
+
     [MenuItem("FlatWorld/UI/重建矩形进度条UI")]
     public static void RebuildRectangularProgressBars()
     {
@@ -660,7 +679,36 @@ public static class GameUIPrefabRebuilder
         AddSection(frame, "AVAILABLE", "可用操作", 24f, 104f, 382f, 390f);
         RectTransform scroll = FindRect(root.transform, "Scroll View");
         if (scroll != null)
+        {
             SetTopLeft(scroll, 42f, 148f, 346f, 322f);
+
+            RectTransform content = FindRect(scroll, "Content");
+            if (content != null)
+            {
+                ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
+                if (fitter != null)
+                    UnityEngine.Object.DestroyImmediate(fitter);
+
+                content.anchorMin = Vector2.zero;
+                content.anchorMax = Vector2.one;
+                content.pivot = new Vector2(0.5f, 0.5f);
+                content.anchoredPosition = Vector2.zero;
+                content.sizeDelta = Vector2.zero;
+
+                GridLayoutGroup grid = content.GetComponent<GridLayoutGroup>();
+                if (grid != null)
+                {
+                    grid.padding = new RectOffset(0, 0, 0, 0);
+                    grid.childAlignment = TextAnchor.MiddleCenter;
+                    grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+                    grid.startAxis = GridLayoutGroup.Axis.Vertical;
+                    grid.cellSize = new Vector2(264f, 52f);
+                    grid.spacing = new Vector2(0f, 14f);
+                    grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                    grid.constraintCount = 1;
+                }
+            }
+        }
         RectTransform oldInfo = FindDirectRect(root.transform, "信息");
         if (oldInfo != null)
             oldInfo.gameObject.SetActive(false);
@@ -701,9 +749,28 @@ public static class GameUIPrefabRebuilder
             return;
 
         ConfigureFloatingCard(panel, 468f, 590f, "物品详情", "ITEM / FIELD NOTES");
+        RectTransform panelRect = panel as RectTransform;
+        if (panelRect != null)
+            panelRect.localScale = Vector3.one;
+
         PlaceTopLeft(panel, "Image", 30f, 112f, 112f, 112f);
         PlaceTopLeft(panel, "信息", 164f, 112f, 270f, 380f);
         PlaceTopLeft(panel, "销毁", 30f, 516f, 404f, 50f);
+
+        TextMeshProUGUI infoText = FindTransform(panel, "信息")?.GetComponent<TextMeshProUGUI>();
+        if (infoText != null)
+        {
+            infoText.font = font;
+            infoText.fontSize = 16f;
+            infoText.enableAutoSizing = true;
+            infoText.fontSizeMin = 13f;
+            infoText.fontSizeMax = 16f;
+            infoText.fontStyle = FontStyles.Normal;
+            infoText.alignment = TextAlignmentOptions.TopLeft;
+            infoText.enableWordWrapping = true;
+            infoText.overflowMode = TextOverflowModes.Page;
+            infoText.rectTransform.localScale = Vector3.one;
+        }
     }
 
     private static void BuildNutritionHud(GameObject root)

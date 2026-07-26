@@ -261,6 +261,12 @@ public partial class Mod_PlayerDeathState : Module
         _damageReceiver.Hp = 0f;
         _damageReceiver.Data.AttackersUIDs.Clear();
 
+        if (GameDifficultyService.Current.PlayerDeath.DropAllCarriedItems)
+        {
+            int droppedStackCount = PlayerDeathInventoryDropper.DropAll(_player);
+            Debug.Log($"[Mod_PlayerDeathState] 困难难度死亡掉落完成，共掉落 {droppedStackCount} 组物品");
+        }
+
         if (_mover != null)
         {
             _mover.SetRunState(false);

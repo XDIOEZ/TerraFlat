@@ -90,11 +90,9 @@ MonoBehaviour:
   SkillNameList:
   - "\u6FC0\u5149"
   - "\u706B\u7403"
-  - "\u53EC\u5524\u77F3\u5934\u4EBA"
   - "\u77F3\u5934\u4EBA_\u624B\u91CC\u5251"
   skillDataList:
   - {fileID: 11400000, guid: a1efba705b88bd44aa95b25afb544666, type: 2}
-  - {fileID: 11400000, guid: 31058827d5a63034e83c55c19610d079, type: 2}
   - {fileID: 11400000, guid: 3604d48e3504a7d4ba89c1ee40a320bf, type: 2}
   - {fileID: 11400000, guid: e768ac1d53193504da24b3b06b5c3582, type: 2}
   focusPoint: {fileID: 0}
