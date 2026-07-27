@@ -59,5 +59,7 @@
     "dotnet.defaultSolution": "TerraFlat-master.sln",
     "dotnet.preferCSharpExtension": true,
     "outline-map.follow": "manual",
-    "outline-map.expand": "expanded"
+    "outline-map.expand": "expanded",
+    "chat.permissions.default": "autopilot",
+    "chat.autopilot.advanced.enabled": true
 }

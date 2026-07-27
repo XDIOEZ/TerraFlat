@@ -113,6 +113,20 @@ public class UIManager : MonoBehaviour
         return null;
     }
 
+    public bool TryGetPanel(string panelName, out BasePanel panel)
+    {
+        panel = null;
+        if (!panels.TryGetValue(panelName, out List<BasePanel> panelList))
+            return false;
+
+        panelList.RemoveAll(item => item == null);
+        if (panelList.Count == 0)
+            return false;
+
+        panel = panelList[0];
+        return true;
+    }
+
     public List<BasePanel> GetAllPanelsOfType(string panelName)
     {
         if (panels.TryGetValue(panelName, out List<BasePanel> panelList))
@@ -199,6 +213,8 @@ public class UIManager : MonoBehaviour
         GameObject panelInstance = Instantiate(panelPrefab, panelRoot);
 
         BasePanel _basePanel = panelInstance.GetComponent<BasePanel>();
+        if (_basePanel == null)
+            _basePanel = panelInstance.AddComponent<BasePanel>();
 
         string baseName = string.IsNullOrEmpty(panelName) ? panelPrefab.name : panelName;
         

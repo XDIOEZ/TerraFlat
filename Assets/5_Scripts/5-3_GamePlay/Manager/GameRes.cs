@@ -81,6 +81,8 @@ public class GameRes : SingletonAutoMono<GameRes>
     
     private System.Collections.IEnumerator LoadResourcesWithProgress()
     {
+        isLoadFinish = false;
+
         // 记录上次加载的资源数量
         int previousLoadedCount = LoadedCount;
         
@@ -153,6 +155,18 @@ public class GameRes : SingletonAutoMono<GameRes>
             null,
             "加载技能"));
 
+        // 内建资源完成后再加载 MOD，确保 MOD 可以引用游戏本体内容。
+        ModRuntimeManager modRuntime = ModRuntimeManager.Ensure(gameObject);
+        yield return StartCoroutine(modRuntime.LoadEnabledMods(this, ReportModLoadingProgress));
+        if (!modRuntime.IsReady)
+        {
+            ClearAllDictionaries();
+            loadingText = $"MOD 加载失败：{modRuntime.FailureReason}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            yield break;
+        }
+
         isLoadFinish = true;
         showLoadingGUI = false; // 隐藏加载界面
         
@@ -173,6 +187,12 @@ public class GameRes : SingletonAutoMono<GameRes>
         // 这里可以根据经验数据估算，或者先进行一次异步预加载来获取数量
         // 简单估算：假设每种类型大约有100个资源
         return ADBLabels.Count * 100;
+    }
+
+    private void ReportModLoadingProgress(string text, float progress)
+    {
+        loadingText = text;
+        loadingProgress = Mathf.Clamp01(progress);
     }
 
     // 带进度的同步加载
@@ -249,66 +269,9 @@ public class GameRes : SingletonAutoMono<GameRes>
     
 public void LoadResourcesSync()
 {
-    // 记录上次加载的资源数量
-    int previousLoadedCount = LoadedCount;
-    
-    // 清空现有字典并重置计数器
-    ClearAllDictionaries();
-    LoadedCount = 0;
-
-    // 默认标签
-    if (ADBLabels.Count == 0)
-    {
-        ADBLabels.Add("ItemPrefab");
-        ADBLabels.Add("Prefab");
-        ADBLabels.Add("CraftingRecipe");
-        ADBLabels.Add("TileBase");
-        ADBLabels.Add("TileBlock");
-        ADBLabels.Add("Buff");
-        ADBLabels.Add("InventoryInit");
-        ADBLabels.Add("Skill");
-    }
-
-    // 分别同步加载
-    SyncLoadAssetsByLabels<GameObject>(
-        new List<string> { "ItemPrefab", "Prefab" },
-        AllPrefabs,
-        HandlePrefab);
-    SyncLoadAssetsByLabels<Recipe>(
-        new List<string> { "CraftingRecipe" },
-        recipeDict,
-        null);
-    SyncLoadAssetsByLabels<TileBase>(
-        new List<string> { "TileBase" },
-        tileBaseDict,
-        null);
-    // 额外处理：BuffData
-    SyncLoadAssetsByLabels<Buff_Data>(
-        new List<string> { "Buff" },
-        BuffData_Dict,
-        null);
-    // 新增：加载InventoryInit资源
-    SyncLoadAssetsByLabels<Inventoryinit>(
-        new List<string> { "InventoryInit" },
-        InventoryInitDict,
-        null);
-    // 新增：加载Skill资源
-    SyncLoadAssetsByLabels<BaseSkill>(
-        new List<string> { "Skill" },
-        SkillDict,
-        null);
-
-    isLoadFinish = true;
-    
-    // 计算本次加载的资源数量
-    int currentLoadedCount = LoadedCount;
-    int difference = currentLoadedCount - previousLoadedCount;
-    
-    string differenceText = difference > 0 ? $"(比上次多加载 {difference} 个)" : 
-                           difference < 0 ? $"(比上次少加载 {Mathf.Abs(difference)} 个)" : 
-                           "(与上次加载数量相同)";
-    
-    Debug.Log($"所有资源同步加载完成！共加载 {currentLoadedCount} 个资源 {differenceText}");
+    showLoadingGUI = true;
+    StopAllCoroutines();
+    StartCoroutine(LoadResourcesWithProgress());
 }
 
 // 清空所有字典
@@ -328,7 +291,7 @@ public void HotReloadAllResources()
 {
     Debug.Log("开始热更新所有资源...");
     LoadResourcesSync();
-    Debug.Log("热更新完成！");
+    Debug.Log("已开始重新加载本体资源与 MOD；完成前不可进入世界。");
 }
 
     // 通用同步加载，并填充到字典
@@ -410,6 +373,9 @@ public void HotReloadAllResources()
             if (obj.transform.localScale.y == 0) obj.transform.localScale = new Vector3(obj.transform.localScale.x, 1, obj.transform.localScale.z);
             if (obj.transform.localScale.z == 0) obj.transform.localScale = new Vector3(obj.transform.localScale.x, obj.transform.localScale.y, 1);
 
+            if (ModRuntimeManager.Instance != null && ModRuntimeManager.Instance.IsRuntimeTemplate(go))
+                obj.SetActive(true);
+
             return obj;
         }
         Debug.LogError($"预制件不存在:{prefab}");
@@ -420,7 +386,7 @@ public void HotReloadAllResources()
     {
         
     }
-    public GameObject GetPrefab(string prefabName)
+    public GameObject GetPrefab(string prefabName, bool logError = true)
     {
         if (AllPrefabs.TryGetValue(prefabName, out var go))
         {
@@ -429,7 +395,8 @@ public void HotReloadAllResources()
         else
         {
             // 输出错误日志，包含关键信息便于调试
-            Debug.LogError($"找不到名为 [{prefabName}] 的预制体！请检查AllPrefabs字典中是否正确注册了该预制体", this);
+            if (logError)
+                Debug.LogError($"找不到名为 [{prefabName}] 的预制体！请检查AllPrefabs字典中是否正确注册了该预制体", this);
             return null;
         }
     }

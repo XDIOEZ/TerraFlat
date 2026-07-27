@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlatWorld Item Defs",
+  "type": "object",
+  "properties": {
+    "assets": { "type": "array", "items": { "$ref": "#/$defs/asset" } },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+  },
+  "$defs": {
+    "asset": {
+      "type": "object",
+      "required": ["id", "type", "bundle", "asset"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["prefab", "recipe", "tile", "tileblock", "buff", "inventory", "skill"] },
+        "bundle": { "type": "string" },
+        "asset": { "type": "string" }
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9._-]+:.+$" },
+        "abstract": { "type": "boolean" },
+        "parent": { "type": "string" },
+        "basePrefab": { "type": "string" },
+        "gameName": { "type": "string" },
+        "description": { "type": "string" },
+        "labelKey": { "type": "string" },
+        "descriptionKey": { "type": "string" },
+        "durability": { "type": "number" },
+        "maxDurability": { "type": "number" },
+        "amount": { "type": "number" },
+        "volume": { "type": "number" },
+        "canBePickedUp": { "type": "boolean" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "modules": { "type": "array", "items": { "type": "string" } },
+        "spriteBundle": { "type": "string" },
+        "spriteAsset": { "type": "string" }
+      }
+    }
+  }
+}

@@ -17,7 +17,7 @@ namespace FlatWorld.Networking.Gameplay
     public sealed class FlatWorldGameNetworkManager : FlatWorldNetworkManager
     {
         private readonly Dictionary<int, string> pendingPlayerNames = new Dictionary<int, string>();
-        private readonly Dictionary<int, int> clientProtocolVersions = new Dictionary<int, int>();
+        private readonly Dictionary<int, NetworkProtocolHello> clientProtocolHellos = new Dictionary<int, NetworkProtocolHello>();
         private readonly HashSet<int> pendingPlayerSpawns = new HashSet<int>();
         private string localPlayerName = "玩家";
         private string currentPlanetName;
@@ -98,6 +98,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStartServer()
         {
+            ModRuntimeManager.Instance?.SetWorldMutationAuthority(true);
             NetworkServer.RegisterHandler<NetworkProtocolHello>(OnServerProtocolHello, false);
             NetworkServer.RegisterHandler<NetworkJoinRequest>(OnServerJoinRequest, false);
             NetworkServer.RegisterHandler<NetworkWorldReady>(OnServerWorldReady, false);
@@ -108,6 +109,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStartClient()
         {
+            ModRuntimeManager.Instance?.SetWorldMutationAuthority(NetworkServer.active);
             NetworkClient.RegisterHandler<NetworkProtocolRejected>(OnClientProtocolRejected, false);
             NetworkClient.RegisterHandler<NetworkWorldSnapshotBegin>(OnClientWorldSnapshotBegin, false);
             NetworkClient.RegisterHandler<NetworkWorldSnapshotChunk>(OnClientWorldSnapshotChunk, false);
@@ -118,7 +120,14 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnClientConnect()
         {
             base.OnClientConnect();
-            NetworkClient.Send(new NetworkProtocolHello { Version = NetworkGameplayProtocol.CurrentVersion });
+            ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
+            NetworkClient.Send(new NetworkProtocolHello
+            {
+                Version = NetworkGameplayProtocol.CurrentVersion,
+                ModApiVersion = ModRuntimeManager.SupportedApiVersion,
+                ModSetHash = modRuntime?.ModSetHash ?? string.Empty,
+                ModSummary = modRuntime?.GetNetworkSummary() ?? string.Empty
+            });
             NetworkClient.Send(new NetworkJoinRequest { PlayerName = localPlayerName });
             SetGameplayStatus("已连接，正在同步世界数据");
         }
@@ -185,7 +194,7 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnServerDisconnect(NetworkConnectionToClient connection)
         {
             pendingPlayerNames.Remove(connection.connectionId);
-            clientProtocolVersions.Remove(connection.connectionId);
+            clientProtocolHellos.Remove(connection.connectionId);
             pendingPlayerSpawns.Remove(connection.connectionId);
             base.OnServerDisconnect(connection);
             SetGameplayStatus($"玩家已断开（当前 {NetworkServer.connections.Count} 人）");
@@ -193,6 +202,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopClient()
         {
+            ModRuntimeManager.Instance?.SetWorldMutationAuthority(NetworkServer.active);
             NetworkClient.UnregisterHandler<NetworkProtocolRejected>();
             NetworkClient.UnregisterHandler<NetworkWorldSnapshotBegin>();
             NetworkClient.UnregisterHandler<NetworkWorldSnapshotChunk>();
@@ -205,13 +215,14 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopServer()
         {
+            ModRuntimeManager.Instance?.SetWorldMutationAuthority(!NetworkClient.active);
             NetworkServer.UnregisterHandler<NetworkProtocolHello>();
             NetworkServer.UnregisterHandler<NetworkJoinRequest>();
             NetworkServer.UnregisterHandler<NetworkWorldReady>();
             if (itemStateCoordinator != null)
                 itemStateCoordinator.StopServerSide();
             pendingPlayerNames.Clear();
-            clientProtocolVersions.Clear();
+            clientProtocolHellos.Clear();
             pendingPlayerSpawns.Clear();
             base.OnStopServer();
             SetGameplayStatus("服务器已停止");
@@ -219,7 +230,12 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnServerProtocolHello(NetworkConnectionToClient connection, NetworkProtocolHello hello)
         {
-            clientProtocolVersions[connection.connectionId] = hello.Version;
+            if ((hello.ModSetHash?.Length ?? 0) > 128 || (hello.ModSummary?.Length ?? 0) > 4096)
+            {
+                connection.Disconnect();
+                return;
+            }
+            clientProtocolHellos[connection.connectionId] = hello;
         }
 
         private void OnServerJoinRequest(NetworkConnectionToClient connection, NetworkJoinRequest request)
@@ -227,14 +243,30 @@ namespace FlatWorld.Networking.Gameplay
             if (connection.identity != null)
                 return;
 
-            if (!clientProtocolVersions.TryGetValue(connection.connectionId, out int clientVersion) ||
-                clientVersion != NetworkGameplayProtocol.CurrentVersion)
+            if (!clientProtocolHellos.TryGetValue(connection.connectionId, out NetworkProtocolHello hello) ||
+                hello.Version != NetworkGameplayProtocol.CurrentVersion)
             {
                 connection.Send(new NetworkProtocolRejected
                 {
                     ServerVersion = NetworkGameplayProtocol.CurrentVersion,
-                    ClientVersion = clientVersion,
+                    ClientVersion = hello.Version,
                     Reason = "联机脚本版本不一致，请在两个 Unity 编辑器中按 Ctrl+R 刷新后重试。"
+                });
+                StartCoroutine(DisconnectProtocolMismatchNextFrame(connection));
+                return;
+            }
+
+            ModRuntimeManager serverMods = ModRuntimeManager.Instance;
+            string serverHash = serverMods?.ModSetHash ?? string.Empty;
+            if (hello.ModApiVersion != ModRuntimeManager.SupportedApiVersion ||
+                !string.Equals(hello.ModSetHash, serverHash, StringComparison.OrdinalIgnoreCase))
+            {
+                string serverSummary = serverMods?.GetNetworkSummary() ?? "<未就绪>";
+                connection.Send(new NetworkProtocolRejected
+                {
+                    ServerVersion = NetworkGameplayProtocol.CurrentVersion,
+                    ClientVersion = hello.Version,
+                    Reason = $"MOD 环境不一致。主机：{serverSummary}；客户端：{hello.ModSummary ?? "<空>"}"
                 });
                 StartCoroutine(DisconnectProtocolMismatchNextFrame(connection));
                 return;

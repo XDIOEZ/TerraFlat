@@ -1,4 +1,4 @@
-// AI-Context: 编辑器新游戏 Prefab 重建器；不得改名 GameManager 依赖的输入框与按钮节点。
+// AI-Context: 编辑器新游戏 Prefab 重建器；根节点直接组合 BasePanel，不得改名 GameManager 依赖的控件节点。
 
 using TMPro;
 using UnityEditor;
@@ -68,18 +68,13 @@ public static class NewGamePrefabBuilder
         group.interactable = true;
         group.blocksRaycasts = true;
 
-        NewGamePanelView view = root.GetComponent<NewGamePanelView>();
-        if (view == null)
-        {
-            BasePanel oldPanel = root.GetComponent<BasePanel>();
-            if (oldPanel != null)
-                Object.DestroyImmediate(oldPanel, true);
-            view = root.AddComponent<NewGamePanelView>();
-        }
+        BasePanel panel = root.GetComponent<BasePanel>();
+        if (panel == null)
+            panel = root.AddComponent<BasePanel>();
 
-        view.canvasGroup = group;
-        view.rectTransform = rect;
-        view.PanelName = NewGamePanelView.PanelKey;
+        panel.canvasGroup = group;
+        panel.rectTransform = rect;
+        panel.PanelName = GameManager.NewGamePanelKey;
     }
 
     private static void BuildScrim(Transform root)
@@ -124,7 +119,7 @@ public static class NewGamePrefabBuilder
         TMP_Text description = CreateText("新世界说明", card, "为新的旅程命名，并决定这个世界最初的轮廓。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(description.rectTransform, new Vector2(42f, -116f), new Vector2(720f, 30f), new Vector2(0f, 1f));
 
-        CreateButton(card, font, NewGamePanelView.BackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, 17f, new Vector2(1f, 1f));
+        CreateButton(card, font, GameManager.NewGameBackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, 17f, new Vector2(1f, 1f));
 
         Image divider = CreateImage("新世界标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -145,10 +140,10 @@ public static class NewGamePrefabBuilder
         SetRect(heading.rectTransform, new Vector2(24f, -58f), new Vector2(320f, 34f), new Vector2(0f, 1f));
 
         CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "你在这个世界中的身份", new Vector2(24f, -108f), 452f);
-        CreateInput(panel.transform, font, NewGamePanelView.PlayerNameInputKey, "例如：旅人", string.Empty, new Vector2(24f, -152f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
+        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "例如：旅人", string.Empty, new Vector2(24f, -152f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
 
         CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "用于识别这段旅程", new Vector2(24f, -244f), 452f);
-        CreateInput(panel.transform, font, NewGamePanelView.SaveNameInputKey, "例如：篝火以北", string.Empty, new Vector2(24f, -288f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
+        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "例如：篝火以北", string.Empty, new Vector2(24f, -288f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
 
         Image note = CreateImage("存档命名提示底板", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
         SetRect(note.rectTransform, new Vector2(24f, -380f), new Vector2(452f, 50f), new Vector2(0f, 1f));
@@ -176,8 +171,8 @@ public static class NewGamePrefabBuilder
         CreateCompactLabel(panel.transform, font, "星球半径标签", "星球半径", "越大，探索范围越广", new Vector2(24f, -108f), 258f);
         CreateCompactLabel(panel.transform, font, "噪声缩放标签", "地形尺度", "越小，地貌越舒展", new Vector2(306f, -108f), 266f);
 
-        CreateInput(panel.transform, font, NewGamePanelView.RadiusInputKey, "1000", "1000", new Vector2(24f, -164f), new Vector2(258f, 64f), TMP_InputField.ContentType.IntegerNumber);
-        CreateInput(panel.transform, font, NewGamePanelView.NoiseInputKey, "0.01", "0.01", new Vector2(306f, -164f), new Vector2(266f, 64f), TMP_InputField.ContentType.DecimalNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, "1000", "1000", new Vector2(24f, -164f), new Vector2(258f, 64f), TMP_InputField.ContentType.IntegerNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, "0.01", "0.01", new Vector2(306f, -164f), new Vector2(266f, 64f), TMP_InputField.ContentType.DecimalNumber);
 
         Image profile = CreateImage("世界生成概览", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
         SetRect(profile.rectTransform, new Vector2(24f, -252f), new Vector2(548f, 174f), new Vector2(0f, 1f));
@@ -208,7 +203,7 @@ public static class NewGamePrefabBuilder
         SetRect(flow.rectTransform, new Vector2(42f, 34f), new Vector2(650f, 34f), new Vector2(0f, 0f));
         flow.characterSpacing = 1f;
 
-        CreateButton(card, font, NewGamePanelView.StartButtonKey, "生成新世界", new Vector2(-42f, 22f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), 21f, new Vector2(1f, 0f));
+        CreateButton(card, font, GameManager.NewGameStartButtonKey, "生成新世界", new Vector2(-42f, 22f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), 21f, new Vector2(1f, 0f));
     }
 
     private static void CreateLabel(Transform parent, TMP_FontAsset font, string name, string title, string subtitle, Vector2 position, float width)

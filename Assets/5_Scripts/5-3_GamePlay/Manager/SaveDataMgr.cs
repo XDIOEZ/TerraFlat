@@ -13,10 +13,12 @@ using Sirenix.OdinInspector;
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
     private const int CompactSaveVersion = 1;
+    private const int ModdedSaveVersion = 1;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
     private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'2' };
+    private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'3' };
     private static readonly object SaveFileLock = new object();
 
     private readonly Dictionary<string, ChunkBaseline> chunkBaselines = new();
@@ -1031,6 +1033,28 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private byte[] BuildCompactSavePayload(GameSaveData saveData)
     {
+        ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
+        if (modRuntime == null || !modRuntime.IsReady)
+            throw new InvalidOperationException("MOD 框架尚未完成加载，无法保存世界");
+
+        byte[] corePayload = BuildCoreCompactSavePayload(saveData);
+        ModdedSaveEnvelope moddedEnvelope = new ModdedSaveEnvelope
+        {
+            Version = ModdedSaveVersion,
+            CoreSavePayload = corePayload,
+            ModMetadata = MemoryPackSerializer.Serialize(modRuntime.CaptureSaveMetadata())
+        };
+
+        byte[] body = MemoryPackSerializer.Serialize(moddedEnvelope);
+        byte[] payload = new byte[ModdedSaveMagic.Length + body.Length];
+        Buffer.BlockCopy(ModdedSaveMagic, 0, payload, 0, ModdedSaveMagic.Length);
+        Buffer.BlockCopy(body, 0, payload, ModdedSaveMagic.Length, body.Length);
+        return payload;
+    }
+
+    private byte[] BuildCoreCompactSavePayload(GameSaveData saveData)
+    {
+
         MonsterSpawnerManager spawnerManager = FindObjectOfType<MonsterSpawnerManager>();
         spawnerManager?.CaptureSaveData(saveData);
 
@@ -1121,7 +1145,30 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         ResetChunkDifferenceState();
 
-        if (!HasCompactSaveHeader(payload))
+        ModSaveMetadata metadata = null;
+        byte[] corePayload = payload;
+        if (HasSaveHeader(payload, ModdedSaveMagic))
+        {
+            byte[] body = new byte[payload.Length - ModdedSaveMagic.Length];
+            Buffer.BlockCopy(payload, ModdedSaveMagic.Length, body, 0, body.Length);
+            ModdedSaveEnvelope envelope = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(body);
+            if (envelope == null || envelope.Version != ModdedSaveVersion || envelope.CoreSavePayload == null)
+                throw new InvalidDataException("不支持或损坏的 MOD 存档格式");
+
+            corePayload = envelope.CoreSavePayload;
+            if (envelope.ModMetadata != null && envelope.ModMetadata.Length > 0)
+                metadata = MemoryPackSerializer.Deserialize<ModSaveMetadata>(envelope.ModMetadata);
+        }
+
+        GameSaveData saveData = DeserializeCoreSavePayload(corePayload);
+        ValidateAndRestoreModMetadata(metadata);
+        return saveData;
+    }
+
+    private GameSaveData DeserializeCoreSavePayload(byte[] payload)
+    {
+
+        if (!HasSaveHeader(payload, CompactSaveMagic))
             return MemoryPackSerializer.Deserialize<GameSaveData>(payload);
 
         byte[] body = new byte[payload.Length - CompactSaveMagic.Length];
@@ -1161,14 +1208,26 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return saveData;
     }
 
-    private static bool HasCompactSaveHeader(byte[] payload)
+    private static void ValidateAndRestoreModMetadata(ModSaveMetadata metadata)
     {
-        if (payload == null || payload.Length <= CompactSaveMagic.Length)
+        ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
+        if (modRuntime == null || !modRuntime.IsReady)
+            throw new InvalidOperationException("MOD 框架尚未完成加载，不能读取存档");
+
+        if (!modRuntime.ValidateSaveMetadata(metadata, out string error))
+            throw new InvalidDataException($"存档 MOD 环境不兼容：{error}");
+
+        modRuntime.RestoreSaveMetadata(metadata);
+    }
+
+    private static bool HasSaveHeader(byte[] payload, byte[] magic)
+    {
+        if (payload == null || magic == null || payload.Length <= magic.Length)
             return false;
 
-        for (int i = 0; i < CompactSaveMagic.Length; i++)
+        for (int i = 0; i < magic.Length; i++)
         {
-            if (payload[i] != CompactSaveMagic[i])
+            if (payload[i] != magic[i])
                 return false;
         }
 
@@ -1235,6 +1294,15 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     #endregion
     
     #endregion
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class ModdedSaveEnvelope
+{
+    public int Version;
+    public byte[] CoreSavePayload;
+    public byte[] ModMetadata;
 }
 
 [MemoryPackable]

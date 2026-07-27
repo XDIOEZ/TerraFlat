@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlatWorld MOD Localization",
+  "type": "object",
+  "required": ["language", "entries"],
+  "properties": {
+    "language": { "type": "string", "minLength": 1 },
+    "entries": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

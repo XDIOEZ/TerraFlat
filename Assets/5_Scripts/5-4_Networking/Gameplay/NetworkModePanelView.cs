@@ -1,4 +1,4 @@
-// AI-Context: 联机模式面板的纯视图和状态呈现层；不直接启停 Mirror 会话。
+// AI-Context: NetworkModeUIController 的动态视觉树分部；UI 状态与绑定位于 NetworkModeUIController.UI.cs。
 
 using TMPro;
 using UnityEngine;
@@ -7,12 +7,11 @@ using UnityEngine.UI;
 namespace FlatWorld.Networking.Gameplay
 {
     /// <summary>
-    /// 双脚本 UI 的联机视图：仅负责 UGUI 结构、视觉状态与 BasePanel 控件收集。
-    /// 联机业务与按钮事件由 NetworkModeUIController 负责。
+    /// 联机 UI：动态构建视觉树、绑定控件并更新显示状态。
     /// </summary>
-    public sealed class NetworkModePanelView : BasePanel
+    public sealed partial class NetworkModeUIController
     {
-        public const string PanelKey = "UI_NetworkMode";
+        public const string NetworkPanelKey = "UI_NetworkMode";
 
         private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.98f);
         private static readonly Color InkSoft = new Color(0.045f, 0.075f, 0.095f, 0.98f);
@@ -22,19 +21,19 @@ namespace FlatWorld.Networking.Gameplay
         private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
         private static TMP_FontAsset preferredFont;
 
-        public static bool IsProjectFontReady => FindProjectFont() != null;
+        #region 动态视觉树
 
-        public static NetworkModePanelView Create(Transform parent)
+        private static BasePanel CreateNetworkPanel(Transform parent)
         {
             GameObject panelObject = new GameObject(
-                PanelKey,
+                NetworkPanelKey,
                 typeof(RectTransform),
                 typeof(Canvas),
                 typeof(CanvasGroup),
                 typeof(CanvasRenderer),
                 typeof(Image),
                 typeof(GraphicRaycaster),
-                typeof(NetworkModePanelView));
+                typeof(BasePanel));
 
             panelObject.layer = LayerMask.NameToLayer("UI");
             panelObject.transform.SetParent(parent, false);
@@ -43,31 +42,31 @@ namespace FlatWorld.Networking.Gameplay
             panelCanvas.overrideSorting = true;
             panelCanvas.sortingOrder = 500;
 
-            NetworkModePanelView view = panelObject.GetComponent<NetworkModePanelView>();
-            view.BuildVisualTree();
-            view.PanelName = PanelKey;
-            view.Init();
-            UIManager.Instance.RegisterPanel(view, PanelKey);
+            BuildVisualTree(panelObject);
+            BasePanel basePanel = panelObject.GetComponent<BasePanel>();
+            basePanel.PanelName = NetworkPanelKey;
+            basePanel.Init();
+            UIManager.Instance.RegisterPanel(basePanel, NetworkPanelKey);
             panelObject.transform.SetAsLastSibling();
-            return view;
+            return basePanel;
         }
 
-        private void BuildVisualTree()
+        private static void BuildVisualTree(GameObject panelObject)
         {
             preferredFont = ResolvePreferredFont();
 
-            RectTransform root = GetComponent<RectTransform>();
+            RectTransform root = panelObject.GetComponent<RectTransform>();
             Stretch(root);
 
-            Image scrim = GetComponent<Image>();
+            Image scrim = panelObject.GetComponent<Image>();
             scrim.color = new Color(0.006f, 0.016f, 0.024f, 0.68f);
             scrim.raycastTarget = true;
 
-            Image shadow = CreateImage("面板投影", transform, new Color(0f, 0f, 0f, 0.38f));
+            Image shadow = CreateImage("面板投影", panelObject.transform, new Color(0f, 0f, 0f, 0.38f));
             SetRect(shadow.rectTransform, new Vector2(12f, -14f), new Vector2(920f, 680f), new Vector2(0.5f, 0.5f));
             shadow.raycastTarget = false;
 
-            Image card = CreateImage("联机主卡片", transform, Ink);
+            Image card = CreateImage("联机主卡片", panelObject.transform, Ink);
             SetRect(card.rectTransform, Vector2.zero, new Vector2(920f, 680f), new Vector2(0.5f, 0.5f));
 
             Outline cardOutline = card.gameObject.AddComponent<Outline>();
@@ -563,5 +562,7 @@ namespace FlatWorld.Networking.Gameplay
 
             return null;
         }
+
+        #endregion
     }
 }

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "need.hunger.low",
+      "topic": "hunger.low",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Need",
+      "conditions": [
+        {
+          "fact": "hunger.tier",
+          "operator": "Equal",
+          "value": "Low"
+        }
+      ],
+      "lines": [
+        "我有点饿了"
+      ],
+      "duration": 3.2,
+      "cooldown": 50,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "need.hunger.critical",
+      "topic": "hunger.critical",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Critical",
+      "conditions": [
+        {
+          "fact": "hunger.tier",
+          "operator": "Equal",
+          "value": "Critical"
+        }
+      ],
+      "lines": [
+        "我快饿扁了"
+      ],
+      "duration": 3.5,
+      "cooldown": 35,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "need.hunger.starving",
+      "topic": "hunger.starving",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Emergency",
+      "conditions": [
+        {
+          "fact": "hunger.tier",
+          "operator": "Equal",
+          "value": "Starving"
+        }
+      ],
+      "lines": [
+        "我撑不了多久"
+      ],
+      "duration": 3.8,
+      "cooldown": 22,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    }
+  ]
+}
