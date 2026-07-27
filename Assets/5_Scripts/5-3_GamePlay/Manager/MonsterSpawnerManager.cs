@@ -296,8 +296,13 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
                 Mathf.Cos(randomAngle) * randomDistance,
                 Mathf.Sin(randomAngle) * randomDistance,
                 0f);
+            candidate.x = Mathf.Floor(candidate.x) + 0.5f;
+            candidate.y = Mathf.Floor(candidate.y) + 0.5f;
 
             if (!IsPositionInLoadedChunk(candidate))
+                continue;
+
+            if (!IsWalkableSpawnPosition(candidate))
                 continue;
 
             if (config.RequireCompletelyDarkTile &&
@@ -312,6 +317,15 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
         }
 
         return false;
+    }
+
+    private static bool IsWalkableSpawnPosition(Vector3 worldPos)
+    {
+        AstarGameManager astarManager = AstarGameManager.Instance;
+        if (astarManager == null || !astarManager.IsGridGraphReady)
+            return false;
+
+        return astarManager.TryGetNodePenalty_GridGraphFast(worldPos, out _, out bool walkable) && walkable;
     }
 
     private static bool IsPositionInLoadedChunk(Vector3 worldPos)
@@ -395,5 +409,22 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
         int limit = Mathf.Clamp(config.MaxLifetimeSpawnCount, 1, 64);
         if (state.LifetimeSpawnCount + state.PendingSpawnCount < limit)
             state.PendingSpawnCount++;
+    }
+
+    [Button("调试：立即生成幽灵")]
+    public void DebugSpawnGhostImmediate()
+    {
+        SpawnerConfig config = _spawnerConfigs?.Find(
+            value => value != null && value.ScheduleMode == SpawnerScheduleMode.DayMilestoneGrowth);
+        if (config == null)
+        {
+            Debug.LogWarning("[MonsterSpawnerManager] 未找到幽灵生成配置。", this);
+            return;
+        }
+
+        if (!TrySpawnOne(config))
+        {
+            Debug.LogWarning("[MonsterSpawnerManager] 幽灵生成失败，请确认玩家附近存在已加载、可行走的完全黑暗格。", this);
+        }
     }
 }

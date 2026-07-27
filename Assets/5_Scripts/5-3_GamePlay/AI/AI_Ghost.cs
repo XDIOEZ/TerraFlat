@@ -1,5 +1,6 @@
 using System;
 using MemoryPack;
+using Pathfinding;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -21,8 +22,9 @@ public partial class GhostAISaveData
 }
 
 /// <summary>
-/// Direct, pathfinding-free ghost movement. Light avoidance always has higher
-/// priority than chasing, and every movement step is checked against tile light.
+/// Ghost artificial intelligence module.
+/// Uses A* for obstacle avoidance while selecting only completely dark destinations.
+/// If there is nowhere dark to retreat to it enters a radiance state and takes periodic true damage.
 /// </summary>
 public class AI_Ghost : Module
 {
@@ -53,6 +55,8 @@ public class AI_Ghost : Module
     private float retreatSpeed = 2f;
     [SerializeField, Min(0.05f)]
     private float decisionInterval = 0.2f;
+    [SerializeField, Min(0.1f)]
+    private float stuckRepathDelay = 0.75f;
     [SerializeField, Min(1)]
     private int darkPositionSamples = 16;
     [SerializeField, Min(0.5f)]
@@ -74,10 +78,13 @@ public class AI_Ghost : Module
     private DamageReceiver _damageReceiver;
     private BuffManager _buffManager;
     private Buff_Data _radianceBuff;
+    private IAstarAI _pathAgent;
     private Vector3 _visualBaseLocalPosition;
     private Vector2 _moveTarget;
     private bool _hasMoveTarget;
     private float _decisionTimer;
+    private float _stuckTimer;
+    private Vector2 _lastAgentPosition;
     private bool _loggedMissingRadianceBuff;
 
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
@@ -112,10 +119,32 @@ public class AI_Ghost : Module
         if (visualTransform != null)
             _visualBaseLocalPosition = visualTransform.localPosition;
 
+        EnsurePathfindingComponents();
         _moveTarget = Data.WanderTarget;
         _hasMoveTarget = Data.HasWanderTarget;
         _state = GhostState.Wander;
         _decisionTimer = 0f;
+        _lastAgentPosition = item.transform.position;
+    }
+
+    private void EnsurePathfindingComponents()
+    {
+        if (item.GetComponent<Seeker>() == null)
+            item.gameObject.AddComponent<Seeker>();
+
+        _pathAgent = item.GetComponent<IAstarAI>();
+        if (_pathAgent == null)
+            _pathAgent = item.gameObject.AddComponent<AILerp>();
+
+        if (_pathAgent is AILerp aiLerp)
+        {
+            aiLerp.orientation = OrientationMode.YAxisForward;
+            aiLerp.enableRotation = false;
+        }
+
+        _pathAgent.canMove = true;
+        _pathAgent.canSearch = true;
+        _pathAgent.isStopped = true;
     }
 
     public override void Save()
@@ -211,8 +240,11 @@ public class AI_Ghost : Module
 
     private void Move(float deltaTime)
     {
-        if (!_hasMoveTarget || _state == GhostState.Radiance)
+        if (_pathAgent == null || !_hasMoveTarget || _state == GhostState.Radiance)
+        {
+            StopMoving();
             return;
+        }
 
         Vector2 current = item.transform.position;
         if (_state == GhostState.Chase)
@@ -221,6 +253,7 @@ public class AI_Ghost : Module
             if (player == null || !LightLayerMgr.Instance.IsCompletelyDark(player.position))
             {
                 _hasMoveTarget = false;
+                StopMoving();
                 return;
             }
 
@@ -234,39 +267,83 @@ public class AI_Ghost : Module
             _ => wanderSpeed
         };
 
-        Vector2 next = Vector2.MoveTowards(current, _moveTarget, speed * Mathf.Max(0f, deltaTime));
-        if (!CanMoveTo(current, next))
+        if (!CanMoveTo(_moveTarget))
         {
             _hasMoveTarget = false;
+            StopMoving();
             return;
         }
 
-        item.transform.position = new Vector3(next.x, next.y, item.transform.position.z);
-        if (spriteRenderer != null && Mathf.Abs(next.x - current.x) > 0.001f)
-            spriteRenderer.flipX = next.x < current.x;
+        bool destinationChanged = ((Vector2)_pathAgent.destination - _moveTarget).sqrMagnitude > 0.01f;
+        _pathAgent.maxSpeed = speed;
+        _pathAgent.isStopped = false;
+        _pathAgent.destination = _moveTarget;
+        if (destinationChanged && !_pathAgent.pathPending)
+            _pathAgent.SearchPath();
+
+        HandleStuckRepath(current, deltaTime);
 
         UpdateChunkOwnership();
 
-        if (Vector2.Distance(next, _moveTarget) <= 0.05f)
+        if (Vector2.Distance(current, _moveTarget) <= 0.05f)
+        {
             _hasMoveTarget = false;
+            StopMoving();
+        }
     }
 
-    private bool CanMoveTo(Vector2 current, Vector2 next)
+    private void HandleStuckRepath(Vector2 currentPosition, float deltaTime)
+    {
+        if ((currentPosition - _lastAgentPosition).sqrMagnitude <= 0.0001f)
+        {
+            _stuckTimer += deltaTime;
+            if (_stuckTimer >= stuckRepathDelay && !_pathAgent.pathPending)
+            {
+                _stuckTimer = 0f;
+                _pathAgent.SearchPath();
+            }
+        }
+        else
+        {
+            _stuckTimer = 0f;
+            _lastAgentPosition = currentPosition;
+        }
+    }
+
+    private void StopMoving()
+    {
+        _stuckTimer = 0f;
+        if (_pathAgent != null)
+            _pathAgent.isStopped = true;
+    }
+
+    private bool CanMoveTo(Vector2 next)
     {
         if (!TryGetActiveChunk(next, out _))
             return false;
 
+        if (!IsWalkable(next))
+            return false;
+
         LightLayerMgr lightManager = LightLayerMgr.Instance;
-        if (!lightManager.TryGetLightLevel(current, out float currentLight) ||
-            !lightManager.TryGetLightLevel(next, out float nextLight))
+        if (lightManager == null)
+            return true;
+
+        if (!lightManager.TryGetLightLevel(next, out float nextLight))
         {
             return false;
         }
 
-        if (currentLight <= LightEpsilon)
-            return nextLight <= LightEpsilon;
+        return nextLight <= LightEpsilon;
+    }
 
-        return nextLight <= currentLight + LightEpsilon;
+    private static bool IsWalkable(Vector2 worldPosition)
+    {
+        AstarGameManager astarManager = AstarGameManager.Instance;
+        if (astarManager == null || !astarManager.IsGridGraphReady)
+            return false;
+
+        return astarManager.TryGetNodePenalty_GridGraphFast(worldPosition, out _, out bool walkable) && walkable;
     }
 
     private bool TryFindDarkPosition(Vector2 origin, float radius, out Vector2 position)
@@ -291,7 +368,8 @@ public class AI_Ghost : Module
                     Mathf.Sin(angle)) * distance;
 
                 if (TryGetActiveChunk(candidate, out _) &&
-                    lightManager.IsCompletelyDark(candidate))
+                    lightManager.IsCompletelyDark(candidate) &&
+                    IsWalkable(candidate))
                 {
                     position = candidate;
                     return true;
