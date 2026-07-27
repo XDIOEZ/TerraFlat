@@ -76,3 +76,11 @@ crashlytics-build.properties
 
 # Codex temporary files
 /.codex-tmp/
+
+# Local task outputs
+/outputs/
+
+# Legacy Plastic SCM workspace files
+/cloaked.conf
+/hidden_changes.conf
+/ignore.conf
