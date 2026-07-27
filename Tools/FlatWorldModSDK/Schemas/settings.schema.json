@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlatWorld MOD Settings",
+  "type": "object",
+  "required": ["settings"],
+  "properties": {
+    "settings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "default"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["bool", "int", "float", "string", "enum", "color", "content"] },
+          "scope": { "enum": ["client", "world", "server"] },
+          "default": {},
+          "min": { "type": "number" },
+          "max": { "type": "number" },
+          "options": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "labelKey": { "type": "string" },
+          "descriptionKey": { "type": "string" },
+          "restartRequired": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

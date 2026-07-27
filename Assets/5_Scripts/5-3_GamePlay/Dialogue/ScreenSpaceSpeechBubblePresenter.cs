@@ -58,10 +58,10 @@ namespace FlatWorld.Dialogue
                 Destroy(viewObject);
         }
 
-        public void Show(CharacterSpeechRequest request)
+        public bool Show(CharacterSpeechRequest request)
         {
             if (request == null || !request.IsValid || !EnsureView())
-                return;
+            return false;
 
             if (hideRoutine != null)
                 StopCoroutine(hideRoutine);
@@ -75,6 +75,7 @@ namespace FlatWorld.Dialogue
             UpdateScreenPosition();
             canvasGroup.alpha = 1f;
             hideRoutine = StartCoroutine(HideAfterDelay(Mathf.Max(0.1f, request.Duration)));
+            return true;
         }
 
         public void HideImmediate()

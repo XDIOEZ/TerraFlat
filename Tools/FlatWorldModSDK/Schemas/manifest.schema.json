@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlatWorld MOD Manifest",
+  "type": "object",
+  "required": ["apiVersion", "id", "version"],
+  "properties": {
+    "apiVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9._-]{1,96}$" },
+    "name": { "type": "string" },
+    "version": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "author": { "type": "string" },
+    "minGameVersion": { "type": "string" },
+    "maxGameVersion": { "type": "string" },
+    "loadOrder": { "type": "integer" },
+    "dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+    "conflicts": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "loadAfter": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "loadBefore": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "definitionFiles": { "type": "array", "items": { "$ref": "#/$defs/path" } },
+    "patchFiles": { "type": "array", "items": { "$ref": "#/$defs/path" } },
+    "localizationFiles": { "type": "array", "items": { "$ref": "#/$defs/path" } },
+    "settingsFile": { "$ref": "#/$defs/path" },
+    "entryLua": { "$ref": "#/$defs/path" },
+    "bundles": { "type": "array", "items": { "$ref": "#/$defs/bundle" } },
+    "contentHash": { "type": "string" }
+  },
+  "$defs": {
+    "path": { "type": "string", "minLength": 1, "pattern": "^(?![A-Za-z]:|/|.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "dependency": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "minVersion": { "type": "string" },
+        "maxVersion": { "type": "string" },
+        "optional": { "type": "boolean" }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "required": ["id", "path"],
+      "properties": {
+        "id": { "type": "string" },
+        "path": { "$ref": "#/$defs/path" },
+        "platform": { "type": "string" }
+      }
+    }
+  }
+}

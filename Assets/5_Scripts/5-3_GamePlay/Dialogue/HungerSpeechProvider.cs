@@ -1,19 +1,17 @@
-using System;
 using System.Globalization;
 using UnityEngine;
 
 namespace FlatWorld.Dialogue
 {
     /// <summary>
-    /// 只负责把 Mod_Food 状态翻译成饥饿台词，不依赖任何 UI。
+    /// 只负责读取 Mod_Food，并向自言自语上下文贡献稳定的饥饿 Facts。
+    /// 台词、优先级、显示时间和冷却均由 JSON 配置负责。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class HungerSpeechProvider :
-        MonoBehaviour,
-        ICharacterSpeechContextContributor,
-        ICharacterSpeechProvider,
-        ICharacterSpeechTriggerSource
+    public sealed class HungerSpeechProvider : MonoBehaviour, ICharacterSpeechContextContributor
     {
+        #region 饥饿等级
+
         private enum HungerTier
         {
             Healthy,
@@ -22,22 +20,22 @@ namespace FlatWorld.Dialogue
             Starving
         }
 
+        #endregion
+
+        #region 配置与缓存
+
         [Header("阈值")]
         [SerializeField, Range(0f, 1f)] private float lowThreshold = 0.4f;
         [SerializeField, Range(0f, 1f)] private float criticalThreshold = 0.15f;
 
-        [Header("重复间隔")]
-        [SerializeField, Min(1f)] private float lowRepeatCooldown = 50f;
-        [SerializeField, Min(1f)] private float criticalRepeatCooldown = 35f;
-        [SerializeField, Min(1f)] private float starvingRepeatCooldown = 22f;
-
         private Item actorItem;
         private Mod_Food food;
-        private HungerTier previousTier = HungerTier.Healthy;
-        private float nextAllowedSpeechAt;
+
+        #endregion
 
         public int ContextOrder => 100;
-        public int ProviderOrder => 100;
+
+        #region Fact 贡献
 
         public void Contribute(CharacterSpeechContext context)
         {
@@ -47,59 +45,17 @@ namespace FlatWorld.Dialogue
             float rate = GetHungerRate();
             HungerTier tier = GetTier(rate);
             context.SetFact(
-                "hunger.rate",
+                CharacterSpeechFacts.HungerRate,
                 rate.ToString("0.000", CultureInfo.InvariantCulture));
-            context.SetFact("hunger.tier", tier.ToString());
+            context.SetFact(CharacterSpeechFacts.HungerTier, tier.ToString());
             context.SetFact(
-                "hunger.isTakingDamage",
+                CharacterSpeechFacts.HungerIsTakingDamage,
                 (tier == HungerTier.Starving).ToString());
         }
 
-        public bool CanProvide(CharacterSpeechContext context)
-        {
-            if (!TryResolveFood())
-                return false;
+        #endregion
 
-            HungerTier tier = GetTier(GetHungerRate());
-            return tier != HungerTier.Healthy &&
-                   Time.unscaledTime >= nextAllowedSpeechAt;
-        }
-
-        public void RequestSpeech(
-            CharacterSpeechContext context,
-            Action<CharacterSpeechRequest> onCompleted)
-        {
-            if (!TryResolveFood())
-            {
-                onCompleted?.Invoke(null);
-                return;
-            }
-
-            HungerTier tier = GetTier(GetHungerRate());
-            CharacterSpeechRequest request = BuildRequest(tier);
-            if (request != null)
-                RecordSpeech(tier);
-
-            onCompleted?.Invoke(request);
-        }
-
-        public CharacterSpeechRequest PollTriggeredSpeech(CharacterSpeechContext context)
-        {
-            if (!TryResolveFood())
-                return null;
-
-            HungerTier currentTier = GetTier(GetHungerRate());
-            bool becameMoreSevere = currentTier > previousTier;
-            previousTier = currentTier;
-
-            if (!becameMoreSevere)
-                return null;
-
-            CharacterSpeechRequest request = BuildRequest(currentTier);
-            if (request != null)
-                RecordSpeech(currentTier);
-            return request;
-        }
+        #region 饥饿状态读取
 
         private bool TryResolveFood()
         {
@@ -133,50 +89,6 @@ namespace FlatWorld.Dialogue
             return HungerTier.Healthy;
         }
 
-        private static CharacterSpeechRequest BuildRequest(HungerTier tier)
-        {
-            switch (tier)
-            {
-                case HungerTier.Low:
-                    return new CharacterSpeechRequest(
-                        "我有点饿了",
-                        "hunger.low",
-                        CharacterSpeechPriority.Need,
-                        3.2f);
-                case HungerTier.Critical:
-                    return new CharacterSpeechRequest(
-                        "我快饿扁了",
-                        "hunger.critical",
-                        CharacterSpeechPriority.Critical,
-                        3.5f);
-                case HungerTier.Starving:
-                    return new CharacterSpeechRequest(
-                        "我撑不了多久",
-                        "hunger.starving",
-                        CharacterSpeechPriority.Emergency,
-                        3.8f);
-                default:
-                    return null;
-            }
-        }
-
-        private void RecordSpeech(HungerTier tier)
-        {
-            float cooldown;
-            switch (tier)
-            {
-                case HungerTier.Starving:
-                    cooldown = starvingRepeatCooldown;
-                    break;
-                case HungerTier.Critical:
-                    cooldown = criticalRepeatCooldown;
-                    break;
-                default:
-                    cooldown = lowRepeatCooldown;
-                    break;
-            }
-
-            nextAllowedSpeechAt = Time.unscaledTime + Mathf.Max(1f, cooldown);
-        }
+        #endregion
     }
 }

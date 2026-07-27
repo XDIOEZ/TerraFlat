@@ -1,4 +1,4 @@
-// AI-Context: 编辑器主界面 Prefab 重建器；修改视觉时必须保留双脚本 UI 控件命名契约。
+// AI-Context: 编辑器主界面 Prefab 重建器；根节点直接组合 BasePanel，修改视觉时必须保留控件命名契约。
 
 using TMPro;
 using UnityEditor;
@@ -84,7 +84,7 @@ public static class MainMenuPrefabBuilder
 
     private static void ConfigureRoot(GameObject root)
     {
-        root.name = MainMenuPanelView.PanelKey;
+        root.name = GameManager.MainMenuPanelKey;
         SetUILayerRecursively(root);
 
         RectTransform rect = root.GetComponent<RectTransform>();
@@ -101,18 +101,13 @@ public static class MainMenuPrefabBuilder
         group.interactable = true;
         group.blocksRaycasts = true;
 
-        MainMenuPanelView view = root.GetComponent<MainMenuPanelView>();
-        if (view == null)
-        {
-            BasePanel oldPanel = root.GetComponent<BasePanel>();
-            if (oldPanel != null)
-                Object.DestroyImmediate(oldPanel, true);
-            view = root.AddComponent<MainMenuPanelView>();
-        }
+        BasePanel panel = root.GetComponent<BasePanel>();
+        if (panel == null)
+            panel = root.AddComponent<BasePanel>();
 
-        view.canvasGroup = group;
-        view.rectTransform = rect;
-        view.PanelName = MainMenuPanelView.PanelKey;
+        panel.canvasGroup = group;
+        panel.rectTransform = rect;
+        panel.PanelName = GameManager.MainMenuPanelKey;
     }
 
     private static void BuildBackground(Transform root, Sprite sprite)
@@ -186,9 +181,9 @@ public static class MainMenuPrefabBuilder
         TMP_Text hint = CreateText("菜单提示", card.transform, "选择一种方式进入世界", font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(hint.rectTransform, new Vector2(30f, -66f), new Vector2(360f, 28f), new Vector2(0f, 1f));
 
-        CreateMenuButton(card.transform, font, MainMenuPanelView.ContinueButtonKey, "01", "继续旅程", "载入已有世界", 112f, true, false);
-        CreateMenuButton(card.transform, font, MainMenuPanelView.NewGameButtonKey, "02", "新建世界", "自定义你的开局", 202f, false, false);
-        CreateMenuButton(card.transform, font, MainMenuPanelView.MultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 292f, false, true);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 112f, true, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 202f, false, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 292f, false, true);
     }
 
     private static void CreateMenuButton(

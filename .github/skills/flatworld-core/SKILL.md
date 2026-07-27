@@ -1,0 +1,54 @@
+---
+name: flatworld-core
+description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界、继续游戏、退出世界、出生点、场景切换、资源初始化与全局生命周期。关键词：GameManager、GameRes、SceneMgr、GameStartScene、Manager scene。"
+argument-hint: "生命周期、场景或启动问题"
+user-invocable: true
+disable-model-invocation: false
+---
+
+# FlatWorld 核心生命周期定位
+
+> 最后核对：2026-07-27。路径相对仓库根目录。
+
+## 修改前先读
+
+1. `Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs`：世界生命周期、新建/继续/退出、出生点、核心事件。
+2. `Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.UI.cs`：主菜单、新游戏、存档面板绑定与控件命名契约。
+3. `Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs`：Addressables 本体资源加载完成后接入 MOD。
+4. `Assets/5_Scripts/5-3_GamePlay/Manager/SceneMgr.cs`：通用同步/异步场景服务。
+
+## 关键入口与路径
+
+- 世界事件：`GameManager.Event_GameWorldEnter`、`Event_GameWorldExit`、`Event_PlayerEnterWorld`。
+- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Manager/AutoSaveController.cs`。
+- 玩家控制入口：`Assets/5_Scripts/5-3_GamePlay/Controller/GameController.cs`。
+- 输入重绑定：`Assets/5_Scripts/5-3_GamePlay/Controller/InputBindingService.cs`。
+- 管理/调试控制：`Assets/5_Scripts/5-3_GamePlay/Controller/PlayerAdminController.cs`。
+- 主菜单场景：`Assets/3_Scenes/GameStartScene.unity`。
+- 管理器场景：`Assets/3_Scenes/Manager.unity`。
+- 开发场景：`Assets/3_Scenes/Develop.unity`。
+
+## 数据与调用链
+
+```text
+GameStartScene
+→ GameRes 加载 Addressables 与 MOD
+→ GameManager.CreateNewWorld / ContinueGame
+→ SaveDataMgr 准备存档
+→ 进入世界并触发 Event_GameWorldEnter
+→ ChunkMgr / ItemMgr / 时间天气 / 导航等订阅者启动
+```
+
+## 易误判点
+
+- `Assets/5_Scripts/5-3_GamePlay/Manager/GameWorldSceneManager.cs` 仅保留简单切场景逻辑，不是世界生命周期权威入口。
+- UI 绑定已从 `GameManager.cs` 拆到 `GameManager.UI.cs`；修改主菜单控件名时两处职责不要重新混合。
+- 世界逻辑应受 `GameManager.IsInGameWorld` 或世界事件控制，避免在主菜单场景提前运行。
+
+## 近期变更
+
+- 2026-07-27：`GameManager` 使用 partial 分离世界生命周期与主菜单/存档 UI 绑定；领域控制器直接组合 `BasePanel`。
+
+## 修改后维护本 Skill
+
+若改变生命周期事件、入口脚本、场景名、UI partial、资源加载顺序或管理器 Prefab/场景位置，必须同步更新本 Skill；跨到存档、UI、MOD 时也更新对应 Skill。近期变更最多保留 8 条，先写日期、再写影响与新约束。

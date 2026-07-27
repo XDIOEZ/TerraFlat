@@ -29,10 +29,24 @@ namespace FlatWorld.Dialogue
     [Serializable]
     public sealed class CharacterSpeechRequest
     {
+        #region 显示内容
+
         public string Text;
         public string Topic;
         public CharacterSpeechPriority Priority;
         public float Duration;
+
+        #endregion
+
+        #region 配置来源
+
+        /// <summary>配置条目的稳定 ID；外部直接发言时为空。</summary>
+        public string SourceId;
+
+        /// <summary>一次性台词的完成标记；仅在成功显示后写入玩家存档。</summary>
+        public string CompletionFlag;
+
+        #endregion
 
         public bool IsValid => !string.IsNullOrWhiteSpace(Text);
 
@@ -125,7 +139,7 @@ namespace FlatWorld.Dialogue
     {
         bool IsVisible { get; }
         CharacterSpeechPriority VisiblePriority { get; }
-        void Show(CharacterSpeechRequest request);
+        bool Show(CharacterSpeechRequest request);
         void HideImmediate();
     }
 }

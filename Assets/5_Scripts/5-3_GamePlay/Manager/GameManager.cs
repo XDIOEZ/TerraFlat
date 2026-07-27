@@ -2,12 +2,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class GameManager : SingletonAutoMono<GameManager>
+public partial class GameManager : SingletonAutoMono<GameManager>
 {
     #region Events
     public static event Action<Player> Event_PlayerEnterWorld;
@@ -49,16 +48,6 @@ public class GameManager : SingletonAutoMono<GameManager>
     public UltEvent BackToHelloScene_Event_Start { get; set; } = new UltEvent();//用户准备退回到开始界面开始的事件
     public UltEvent BackToHelloScene_Event_End { get; set; } = new UltEvent();//用户退回到开始界面结束的事件
     #endregion
-    [Header("UI 预制体")]
-    public GameObject UIPrefab_HelloCanvas;
-    public GameObject UIPrefab_SaveManager;
-    public GameObject UIPrefab_NewGame;
-    public GameObject UIPrefab_ContextMenu;
-
-    [Header("UI 面板名称配置")]
-    [SerializeField] private string saveManagerPanelName = "UI_GameSaveManager";
-    [SerializeField] private string saveManagerPanelNameLegacy = "存档选择面板";
-
     [Header("新玩家出生点搜索配置")]
     [SerializeField, Min(1)] private int spawnLandMaxSearchRadius = 256;
     [SerializeField, Min(0)] private int spawnSeedAnchorRange = 256;
@@ -221,6 +210,9 @@ public class GameManager : SingletonAutoMono<GameManager>
     [Tooltip("开始新游戏,创建一个新世界")]
     public void CreateNewWorld()
     {
+        if (!EnsureContentReady("创建新世界"))
+            return;
+
         SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
         if (saveDataMgr == null)
         {
@@ -228,9 +220,7 @@ public class GameManager : SingletonAutoMono<GameManager>
             return;
         }
 
-        BasePanel newGamePanel = UIManager.Instance?.GetPanel(NewGamePanelView.PanelKey);
-        string requestedSaveName = newGamePanel?.GetInputField(NewGamePanelView.SaveNameInputKey)?.text;
-        string playerName = newGamePanel?.GetInputField(NewGamePanelView.PlayerNameInputKey)?.text;
+        ReadNewGameCreationInputs(out string requestedSaveName, out string playerName);
 
         saveDataMgr.ResetChunkDifferenceState();
         saveDataMgr.SaveData = new GameSaveData();
@@ -326,6 +316,9 @@ public class GameManager : SingletonAutoMono<GameManager>
     [Tooltip("继续游戏,加载传入的玩家名称,通过名称获取玩家数据, ")]
     public void ContinueGame(string PlayerName)
     {
+        if (!EnsureContentReady("继续游戏"))
+            return;
+
         // 1. 根据存档立即确定玩家所在的星球名
         SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(PlayerName, out Data_Player playerData);
         string planetName = playerData != null ? playerData.CurrentSceneName : ReadyPlanetData.Name;
@@ -341,6 +334,9 @@ public class GameManager : SingletonAutoMono<GameManager>
 
     public void RunWorld(string NewScenename, Action onOldSceneUnloaded = null)
     {
+        if (!EnsureContentReady("进入世界"))
+            return;
+
         // 标记玩家已进入游戏世界，各管理器可开始运行
         IsInGameWorld = true;
 
@@ -370,6 +366,25 @@ public class GameManager : SingletonAutoMono<GameManager>
             onOldSceneUnloaded.Invoke();
         };
 
+    }
+
+    private static bool EnsureContentReady(string actionName)
+    {
+        if (GameRes.Instance == null || !GameRes.Instance.isLoadFinish)
+        {
+            Debug.LogWarning($"[GameManager] 无法{actionName}：游戏资源仍在加载。");
+            return false;
+        }
+
+        ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
+        if (modRuntime == null || !modRuntime.IsReady)
+        {
+            string reason = modRuntime?.FailureReason;
+            Debug.LogError($"[GameManager] 无法{actionName}：MOD 框架未就绪。{reason}");
+            return false;
+        }
+
+        return true;
     }
     #endregion
 
@@ -771,257 +786,4 @@ public class GameManager : SingletonAutoMono<GameManager>
 
     #endregion
 
-    #region UI相关
-
-    public void OpenHellowCanvas()
-    {
-        if (UIManager.Instance.GetPanel("UI_Hello") != null)
-        {
-            UIManager.Instance.GetPanel("UI_Hello").Open();
-            return;
-        }
-
-        if (UIPrefab_HelloCanvas != null)
-        {
-            BasePanel helloCanvas = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_HelloCanvas);
-
-            helloCanvas.Open();
-            helloCanvas.GetButton("选择存档").onClick.AddListener(OpenGameSaveManager);
-            helloCanvas.GetButton("新游戏").onClick.AddListener(OpenNewGame);
-        }
-    }
-
-    public void OpenContextMenu()
-    {
-        if (UIManager.Instance.GetPanel("ContextMenu") != null)
-        {
-            UIManager.Instance.GetPanel("ContextMenu").Open();
-            return;
-        }
-        if (UIPrefab_ContextMenu != null)
-        {
-            BasePanel contextMenu = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_ContextMenu);
-            contextMenu.Open();
-        }
-    }
-
-    public void OpenNewGame()
-    {
-        if (UIManager.Instance.GetPanel("NewGame") != null)
-        {
-            UIManager.Instance.GetPanel("NewGame").Open();
-            return;
-        }
-        if (UIPrefab_NewGame != null)
-        {
-            BasePanel UI_NewGame = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, "NewGame");
-            UI_NewGame.Open();
-            UI_NewGame.GetButton("开始新游戏").onClick.AddListener(CreateNewWorld);
-            UI_NewGame.GetButton("返回上一个界面").onClick.AddListener(UI_NewGame.Close);
-            // 设置输入框值改变事件
-            UI_NewGame.GetInputField("新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
-            UI_NewGame.GetInputField("新增存档名称输入框")?.onValueChanged.AddListener(OnPlayerSaveNameChanged);
-            UI_NewGame.GetInputField("星球半径输入框")?.onValueChanged.AddListener(OnPlanetReadiusChanged);
-            UI_NewGame.GetInputField("噪声缩放输入框")?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
-
-
-        }
-    }
-
-    public void OpenGameSaveManager()
-    {
-        if (UIManager.Instance.GetPanel("UI_GameSaveManager") != null)
-        {
-            UIManager.Instance.GetPanel("UI_GameSaveManager").Open();
-            SaveDataManager_UI.Instance?.Refresh();
-            return;
-        }
-        if (UIPrefab_SaveManager != null)
-        {
-            BasePanel saveManager = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_SaveManager, "UI_GameSaveManager");
-
-            // 设置UI事件绑定
-            // 设置按钮点击事件
-            saveManager.SetButtonOnClick("开始游戏按钮", OnClick_StartGame_Button);
-            saveManager.SetButtonOnClick("加载存档按钮", OnClick_LoadSaveData_Button);
-            saveManager.GetInputField("选择或新增玩家名称输入框")?.onValueChanged.AddListener(OnUpdate_PlayerNameChanged_Text);
-
-            saveManager.Open();
-            SaveDataManager_UI.Instance?.Refresh();
-        }
-    }
-
-
-
-    #region UI事件处理方法
-
-    private BasePanel GetSaveManagerPanel()
-    {
-        BasePanel panel = UIManager.Instance.GetPanel(saveManagerPanelName);
-        if (panel != null)
-            return panel;
-
-        if (!string.IsNullOrEmpty(saveManagerPanelNameLegacy))
-        {
-            panel = UIManager.Instance.GetPanel(saveManagerPanelNameLegacy);
-            if (panel != null)
-                return panel;
-        }
-
-        Debug.LogError($"未找到存档管理面板: {saveManagerPanelName}");
-        return null;
-    }
-
-    /// <summary>
-    /// 点击开始游戏按钮
-    /// </summary>
-    public void OnClick_StartGame_Button()
-    {
-        if (SaveDataMgr.Instance?.SaveData == null || SaveDataMgr.Instance.SaveData.Seed == 0)
-        {
-            Debug.LogWarning("请先选择存档或创建新游戏");
-            return;
-        }
-
-        BasePanel saveManager = GetSaveManagerPanel();
-        if (saveManager != null)
-        {
-            ContinueGame(saveManager.GetInputField("选择或新增玩家名称输入框")?.text);
-        }
-    }
-
-    /// <summary>
-    /// 点击开始新游戏按钮
-    /// </summary>
-    private void OnClick_StartNewGame_Button()
-    {
-        if (SaveDataMgr.Instance != null)
-        {
-            BasePanel saveManager = GetSaveManagerPanel();
-            if (saveManager != null)
-            {
-                CreateNewWorld();
-            }
-        }
-        else
-        {
-            Debug.LogWarning("SaveAndLoad组件未绑定！");
-        }
-    }
-
-    /// <summary>
-    /// 点击加载存档按钮
-    /// </summary>
-    public void OnClick_LoadSaveData_Button()
-    {
-        if (SaveDataMgr.Instance != null)
-        {
-            BasePanel saveManager = GetSaveManagerPanel();
-            if (saveManager != null)
-            {
-                var selectedSaveText = saveManager.GetText("选中的存档名称");
-                if (selectedSaveText != null)
-                {
-                    string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveText.text + ".bytes");
-                    SaveDataMgr.Instance.LoadSaveByDisk(path);
-                }
-            }
-        }
-        else
-        {
-            Debug.LogWarning("SaveAndLoad组件未绑定！");
-        }
-        // 生成玩家按钮
-        SaveDataManager_UI.Instance.GeneratePlayerButtons();
-    }
-
-    /// <summary>
-    /// 点击删除存档按钮
-    /// </summary>
-    public void OnClick_DeletSave_Button()
-    {
-        if (SaveMenuRightMenuUI.Instance.SelectInfo.Path == "")
-        {
-            //删除玩家
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict.Remove(SaveMenuRightMenuUI.Instance.SelectInfo.Name);
-        }
-        else if (SaveMenuRightMenuUI.Instance.SelectInfo.Path != "")
-        {
-            // 删除存档
-            if (SaveDataMgr.Instance != null)
-            {
-                BasePanel saveManager = GetSaveManagerPanel();
-                if (saveManager != null)
-                {
-                    var selectedSaveText = saveManager.GetText("选中的存档名称");
-                    if (selectedSaveText != null)
-                    {
-                        string saveDir = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData");
-                        SaveDataMgr.Instance.DeleteSave(saveDir, selectedSaveText.text);
-                    }
-                }
-            }
-        }
-        SaveDataManager_UI.Instance.Refresh();
-    }
-
-    /// <summary>
-    /// 玩家名字输入框实时更新事件
-    /// </summary>
-    private void OnUpdate_PlayerNameChanged_Text(string newName)
-    {
-        if (SaveDataMgr.Instance != null)
-        {
-            SaveDataMgr.Instance.CurrentContrrolPlayerName = newName;
-        }
-    }
-
-    /// <summary>
-    /// 存档名字输入框实时更新事件
-    /// </summary>
-    private void OnPlayerSaveNameChanged(string newName)
-    {
-        if (SaveDataMgr.Instance != null && SaveDataMgr.Instance.SaveData != null)
-        {
-            SaveDataMgr.Instance.SaveData.saveName = newName;
-        }
-    }
-
-    /// <summary>
-    /// 星球半径输入框实时更新事件
-    /// </summary>
-    private void OnPlanetReadiusChanged(string newValue)
-    {
-        // 检测传入的字符串是否为有效的整数
-        if (int.TryParse(newValue, out int radius))
-        {
-            SaveDataManager_UI.Instance.Ready_planetData.Radius = radius;
-        }
-        else
-        {
-            // 非法输入，不做处理，必要时可提示用户
-            Debug.LogWarning($"输入的半径值无效：{newValue}");
-        }
-    }
-
-    /// <summary>
-    /// 星球噪声缩放输入框实时更新事件
-    /// </summary>
-    private void OnPlanetNoiseScaleChanged(string newValue)
-    {
-        // 检测传入的字符串是否为有效的浮点数
-        if (float.TryParse(newValue, out float noiseScale))
-        {
-            SaveDataManager_UI.Instance.Ready_planetData.NoiseScale = noiseScale;
-        }
-        else
-        {
-            // 非法输入，不做处理，必要时可提示用户
-            Debug.LogWarning($"输入的噪声缩放值无效：{newValue}");
-        }
-    }
-
-    #endregion
-
-    #endregion
 }

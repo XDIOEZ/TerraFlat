@@ -105,24 +105,6 @@ namespace FlatWorld.Dialogue
             return TryPresent(request);
         }
 
-        [ContextMenu("测试气泡/我有点饿了")]
-        private void DebugSayHungry()
-        {
-            Say("我有点饿了", CharacterSpeechPriority.Need, 3.2f, "debug.hunger.low");
-        }
-
-        [ContextMenu("测试气泡/我快饿扁了")]
-        private void DebugSayCritical()
-        {
-            Say("我快饿扁了", CharacterSpeechPriority.Critical, 3.5f, "debug.hunger.critical");
-        }
-
-        [ContextMenu("测试气泡/我撑不了多久")]
-        private void DebugSayStarving()
-        {
-            Say("我撑不了多久", CharacterSpeechPriority.Emergency, 3.8f, "debug.hunger.starving");
-        }
-
         private void StartController()
         {
             StopController();
@@ -337,7 +319,9 @@ namespace FlatWorld.Dialogue
             }
 
             SpeechRequested?.Invoke(request);
-            presenter.Show(request);
+            if (!presenter.Show(request))
+                return false;
+
             SpeechShown?.Invoke(request);
             return true;
         }

@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -28,6 +28,9 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkProtocolHello : NetworkMessage
     {
         public int Version;
+        public int ModApiVersion;
+        public string ModSetHash;
+        public string ModSummary;
     }
 
     public struct NetworkProtocolRejected : NetworkMessage

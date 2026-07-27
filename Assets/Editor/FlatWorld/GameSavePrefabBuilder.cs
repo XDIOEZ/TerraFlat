@@ -1,4 +1,4 @@
-// AI-Context: 编辑器存档选择 Prefab 重建器；保持列表项、返回与确认按钮的命名契约。
+// AI-Context: 编辑器存档选择 Prefab 重建器；根节点直接组合 BasePanel，保持列表项与控件命名契约。
 
 using TMPro;
 using UnityEditor;
@@ -73,7 +73,7 @@ public static class GameSavePrefabBuilder
 
     private static void ConfigureRoot(GameObject root)
     {
-        root.name = GameSavePanelView.PanelKey;
+        root.name = GameManager.GameSavePanelKey;
         SetUILayerRecursively(root);
 
         RectTransform rect = root.GetComponent<RectTransform>();
@@ -86,18 +86,13 @@ public static class GameSavePrefabBuilder
         group.interactable = true;
         group.blocksRaycasts = true;
 
-        GameSavePanelView view = root.GetComponent<GameSavePanelView>();
-        if (view == null)
-        {
-            BasePanel oldPanel = root.GetComponent<BasePanel>();
-            if (oldPanel != null)
-                Object.DestroyImmediate(oldPanel, true);
-            view = root.AddComponent<GameSavePanelView>();
-        }
+        BasePanel panel = root.GetComponent<BasePanel>();
+        if (panel == null)
+            panel = root.AddComponent<BasePanel>();
 
-        view.canvasGroup = group;
-        view.rectTransform = rect;
-        view.PanelName = GameSavePanelView.PanelKey;
+        panel.canvasGroup = group;
+        panel.rectTransform = rect;
+        panel.PanelName = GameManager.GameSavePanelKey;
     }
 
     private static void BuildScrim(Transform root)
@@ -142,7 +137,7 @@ public static class GameSavePrefabBuilder
         TMP_Text description = CreateText("存档说明", card, "从上一次篝火继续旅程，并选择本次操控的角色。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(description.rectTransform, new Vector2(42f, -116f), new Vector2(780f, 30f), new Vector2(0f, 1f));
 
-        CreateButton(card, font, GameSavePanelView.BackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, Cream, 17f, new Vector2(1f, 1f));
+        CreateButton(card, font, GameManager.GameSaveBackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, Cream, 17f, new Vector2(1f, 1f));
 
         Image divider = CreateImage("存档标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -177,10 +172,10 @@ public static class GameSavePrefabBuilder
         TMP_Text currentLabel = CreateText("当前存档标签", panel.transform, "当前选择", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 24f), new Vector2(0f, 1f));
 
-        TMP_Text currentSave = CreateText(GameSavePanelView.SelectedSaveTextKey, panel.transform, "尚未选择存档", font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        TMP_Text currentSave = CreateText(GameManager.GameSaveSelectedTextKey, panel.transform, "尚未选择存档", font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(currentSave.rectTransform, new Vector2(24f, -82f), new Vector2(560f, 46f), new Vector2(0f, 1f));
 
-        CreateButton(panel.transform, font, GameSavePanelView.LoadButtonKey, "载入存档", new Vector2(-24f, -36f), new Vector2(190f, 62f), new Color(0.08f, 0.29f, 0.29f, 1f), Cream, 19f, new Vector2(1f, 1f));
+        CreateButton(panel.transform, font, GameManager.GameSaveLoadButtonKey, "载入存档", new Vector2(-24f, -36f), new Vector2(190f, 62f), new Color(0.08f, 0.29f, 0.29f, 1f), Cream, 19f, new Vector2(1f, 1f));
 
         Image divider = CreateImage("当前存档分隔线", panel.transform, new Color(0.55f, 0.64f, 0.65f, 0.17f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -204,7 +199,7 @@ public static class GameSavePrefabBuilder
         SetRect(identityHeading.rectTransform, new Vector2(20f, -54f), new Vector2(300f, 30f), new Vector2(0f, 1f));
         TMP_Text nameLabel = CreateText("玩家名称标签", identity.transform, "玩家名称", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(nameLabel.rectTransform, new Vector2(20f, -96f), new Vector2(360f, 24f), new Vector2(0f, 1f));
-        CreateInput(identity.transform, font, GameSavePanelView.PlayerInputKey, "选择角色或输入新名称", new Vector2(20f, -124f), new Vector2(404f, 62f));
+        CreateInput(identity.transform, font, GameManager.GameSavePlayerInputKey, "选择角色或输入新名称", new Vector2(20f, -124f), new Vector2(404f, 62f));
 
         TMP_Text identityHint = CreateText("角色身份提示", identity.transform, "角色名称决定进入世界后操控的身份。\n首次进入也可以直接创建新角色。", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.TopLeft, true);
         SetRect(identityHint.rectTransform, new Vector2(20f, -202f), new Vector2(404f, 58f), new Vector2(0f, 1f));
@@ -226,7 +221,7 @@ public static class GameSavePrefabBuilder
         SetRect(flow.rectTransform, new Vector2(42f, 38f), new Vector2(760f, 34f), new Vector2(0f, 0f));
         flow.characterSpacing = 1f;
 
-        CreateButton(card, font, GameSavePanelView.StartButtonKey, "进入世界", new Vector2(-42f, 26f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 21f, new Vector2(1f, 0f));
+        CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 26f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 21f, new Vector2(1f, 0f));
     }
 
     private static void RebuildItemPrefab(TMP_FontAsset font)

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FlatWorld MOD Patches",
+  "type": "object",
+  "required": ["patches"],
+  "properties": {
+    "patches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "operation", "path"],
+        "properties": {
+          "target": { "type": "string" },
+          "operation": { "enum": ["set", "replace", "merge", "add", "remove", "test"] },
+          "path": { "type": "string", "minLength": 1 },
+          "value": {},
+          "expect": {},
+          "optional": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

@@ -14,7 +14,7 @@ using TMPro;
 /// 提供显示与隐藏面板的接口
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
-public class BasePanel : MonoBehaviour
+public sealed class BasePanel : MonoBehaviour
 {
     // 每种UI类型都有一个字典 用来存储UI组件 名字就用挂接的gameObject.name 作为Key
     private Dictionary<string, Button> buttons = new Dictionary<string, Button>();
@@ -69,7 +69,7 @@ public class BasePanel : MonoBehaviour
     }
 
     #region  Unity生命周期
-    public virtual void Init()
+    public void Init()
     {
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
@@ -747,7 +747,7 @@ public class BasePanel : MonoBehaviour
     /// 通过子类重写来处理不同按钮的点击逻辑
     /// </summary>
     /// <param name="btnName">按钮名称</param>
-    protected virtual void OnClick(string btnName)
+    private void OnClick(string btnName)
     {
 
     }
@@ -758,7 +758,7 @@ public class BasePanel : MonoBehaviour
     /// </summary>
     /// <param name="toggleName">Toggle名称</param>
     /// <param name="value">Toggle的当前值</param>
-    protected virtual void OnValueChanged(string toggleName, bool value)
+    private void OnValueChanged(string toggleName, bool value)
     {
 
     }
