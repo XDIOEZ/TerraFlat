@@ -211,7 +211,7 @@ MonoBehaviour:
     Durability: 1
     MaxDurability: 1
     Tags:
-    - 47
+    - 35
     Stack:
       Amount: 1
       Volume: 1
@@ -743,18 +743,6 @@ PrefabInstance:
     m_TransformParent: {fileID: 4778519347457968648}
     m_Modifications:
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.FoodData.nutritionConsumeSpeed.BaseValue
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.FoodData.WaterConsumeSpeedRate
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.FoodData.nutritionConsumeRate
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: PanelPrefab
       value: 
       objectReference: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
@@ -815,8 +803,20 @@ PrefabInstance:
       value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutritionConsumeRate
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.nutrition.Max_Carbohydrates.BaseValue
       value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.WaterConsumeSpeedRate
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutritionConsumeSpeed.BaseValue
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: m_Name

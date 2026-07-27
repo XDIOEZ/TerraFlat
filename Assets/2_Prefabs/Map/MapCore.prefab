@@ -106,6 +106,8 @@ MonoBehaviour:
   backTilePenaltyMinInterval: 0.08
   backTilePenaltyYieldSeconds: 0
   loadTileBatchSize: 256
+  loadTileFrameBudgetMilliseconds: 2
+  proceduralGenerationCellsPerFrame: 64
   mapGenerators:
   - rid: 6445419845959286799
   - rid: 6445419845959286807
@@ -223,6 +225,22 @@ MonoBehaviour:
         riverDepthPower: 4
         useDepthPowerForWidth: 1
         riverWidthPower: 0.2
+        hydrologyHalo: 32
+        hydrologyCellsPerFrame: 768
+        sourceSpacing: 18
+        sourceMinHeight: 0.68
+        sourceMinPrecipitation: 0.08
+        maxRiverTraceSteps: 480
+        maxLakeRadius: 12
+        maxLakeLevelRise: 0.08
+        minLakeCells: 5
+        minRiverRadius: 0.35
+        maxRiverRadius: 3
+        flowWidthScale: 0.55
+        meanderStrength: 0.025
+        meanderFrequency: 0.025
+        lakeShoreIrregularity: 0.025
+        lakeShoreFrequency: 0.09
         spawnRiverStones: 1
         Prefab_Stone: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
         stoneParent: {fileID: 0}
