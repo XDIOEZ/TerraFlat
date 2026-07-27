@@ -13,13 +13,7 @@ public partial class TimeData
 
     [Tooltip("光照参数曲线（时间比例到光照强度）")]
     [MemoryPackIgnore]
-    public AnimationCurve LightParams = new AnimationCurve(
-        new Keyframe(0f, 0.0f),
-        new Keyframe(0.25f, 1.0f),
-        new Keyframe(0.5f, 1.0f),
-        new Keyframe(0.75f, 1.0f),
-        new Keyframe(1f, 0.0f)
-    );
+    public AnimationCurve LightParams = CreateDefaultLightCurve();
 
     [Tooltip("昼夜颜色梯度（存档安全）")]
     [MemoryPackIgnore]
@@ -53,6 +47,42 @@ public partial class TimeData
     public int GetCurrentDay()
     {
         return Mathf.FloorToInt(CurrentTime / DayLength) + TotalDays;
+    }
+
+    public static AnimationCurve CreateDefaultLightCurve()
+    {
+        return new AnimationCurve(
+            new Keyframe(0f, 0f),
+            new Keyframe(0.15f, 0f),
+            new Keyframe(0.25f, 1f),
+            new Keyframe(0.5f, 1f),
+            new Keyframe(0.75f, 1f),
+            new Keyframe(0.85f, 0f),
+            new Keyframe(1f, 0f));
+    }
+
+    public void EnsureDarkNightWindow()
+    {
+        if (LightParams == null || LightParams.length == 0 || IsLegacyDefaultLightCurve())
+            LightParams = CreateDefaultLightCurve();
+    }
+
+    private bool IsLegacyDefaultLightCurve()
+    {
+        Keyframe[] keys = LightParams.keys;
+        if (keys.Length != 5)
+            return false;
+
+        return Mathf.Approximately(keys[0].time, 0f) &&
+               Mathf.Approximately(keys[1].time, 0.25f) &&
+               Mathf.Approximately(keys[2].time, 0.5f) &&
+               Mathf.Approximately(keys[3].time, 0.75f) &&
+               Mathf.Approximately(keys[4].time, 1f) &&
+               keys[0].value <= 0.2001f &&
+               Mathf.Approximately(keys[1].value, 1f) &&
+               Mathf.Approximately(keys[2].value, 1f) &&
+               Mathf.Approximately(keys[3].value, 1f) &&
+               keys[4].value <= 0.2001f;
     }
 
     /// <summary>

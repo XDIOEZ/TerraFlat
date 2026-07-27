@@ -321,13 +321,7 @@ private void TimeRun(string sceneName, float deltaTime)
             {
                 DayLength = dayLength,
                 TimeScaleModifier = timeScale,
-                LightParams = new AnimationCurve(
-                    new Keyframe(0f, 0.2f),    // 夜晚
-                    new Keyframe(0.25f, 1.0f), // 日出
-                    new Keyframe(0.5f, 1.0f),  // 正午
-                    new Keyframe(0.75f, 1.0f), // 日落
-                    new Keyframe(1f, 0.2f)     // 夜晚
-                )
+                LightParams = TimeData.CreateDefaultLightCurve()
             };
         }
 
@@ -359,6 +353,8 @@ private void TimeRun(string sceneName, float deltaTime)
 
             Debug.Log($"[DayTimeSystem] 未找到场景时间数据，已拷贝 ReadyTimeData：{sceneName}");
         }
+
+        WorldTimeDict[sceneName].EnsureDarkNightWindow();
 
         if (!SceneLightingRateDict.ContainsKey(sceneName))
         {
@@ -413,7 +409,9 @@ public void LoadFromSaveData(DayTimeSaveData saveData)
         // 恢复时间数据
         foreach (var kvp in saveData.WorldTimeDict)
         {
-            WorldTimeDict[kvp.Key] = kvp.Value.ToTimeData();
+            TimeData timeData = kvp.Value.ToTimeData();
+            timeData?.EnsureDarkNightWindow();
+            WorldTimeDict[kvp.Key] = timeData;
         }
         
         // 恢复采光率数据
