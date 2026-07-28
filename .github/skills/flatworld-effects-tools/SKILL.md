@@ -42,6 +42,15 @@ disable-model-invocation: false
 
 - 2026-07-27：完成运行时特效、Shader 与编辑器工具路径首版拆分。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/EffectsTools/EffectsToolsSmokeTests.cs`；当前基础覆盖视觉管理器、伤害文字、粒子 Prefab 和 Shader 入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；特效与工具测试约定目录：`Assets/GameTest/EffectsTools/`；场景目录：`Assets/GameTest/Scenes/EffectsTools/`；冒烟分类：`EffectsTools.Smoke`。
+- 新增特效创建回收、Shader 参数、伤害文字或编辑器工具行为时必须增加系统测试；修复 Bug 时先增加回归测试。运行时特效主流程变化时同步更新隔离冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；视觉效果至少验证对象、材质、生命周期和关键参数，最终观感仍交由人工确认。
+- 完成修改后检查 Unity 编译和 Console，再运行 `EffectsTools.Smoke`；涉及战斗、地图、环境或 UI 时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 移动特效 Prefab、材质、Shader、编辑器窗口、菜单工具、调试脚本或测试入口后，必须更新本 Skill；若特效属于战斗、天气、UI 或音频，也同步更新对应系统 Skill。

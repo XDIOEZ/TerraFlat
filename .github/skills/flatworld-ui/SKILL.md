@@ -58,6 +58,15 @@ disable-model-invocation: false
 - 2026-07-27：领域 UI 改为直接组合密封 `BasePanel`；`GameManager` 与联机控制器使用 partial 分离业务和 UI。
 - 2026-07-27：联机动态视觉树仍在 `NetworkModePanelView.cs`，但类型已并入 `NetworkModeUIController` partial。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs`；当前基础覆盖UIManager、BasePanel、UIRoot 与 UI Prefab 根目录入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；UI 测试约定目录：`Assets/GameTest/UI/`；场景目录：`Assets/GameTest/Scenes/UI/`；冒烟分类：`UI.Smoke`。
+- 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；必须验证控件命名契约、组件类型、事件绑定和重复打开关闭，视觉观感仍交由人工确认。
+- 完成修改后检查 Unity 编译和 Console，再运行 `UI.Smoke`；涉及核心流程、玩家输入、存档、联机或音频时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 任何 UI Prefab 移动、重命名、删除，控件节点名变化，PanelKey 变化，动态 UI 文件拆分，`PanelRoot` 规则或领域控制器绑定变化后，必须在同一任务内更新本 Skill 的路径、命名契约和近期变更；涉及具体系统时也更新该系统 Skill。

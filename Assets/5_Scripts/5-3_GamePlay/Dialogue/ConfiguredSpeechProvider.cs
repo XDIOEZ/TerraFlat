@@ -201,7 +201,7 @@ namespace FlatWorld.Dialogue
 
             nextAllowedSpeechAt[entry.Id] = Time.unscaledTime + Mathf.Max(0f, entry.Cooldown);
             if (entry.Once)
-                completionStore.MarkCompleted(entry.CompletionFlag);
+                completionStore.MarkCompleted(request.CompletionFlag);
         }
 
         #endregion

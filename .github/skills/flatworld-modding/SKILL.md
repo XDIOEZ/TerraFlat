@@ -49,6 +49,15 @@ GameRes 完成本体 Addressables
 
 - 2026-07-27：当前 MOD 流程在本体资源加载后执行，支持 manifest 依赖排序、AssetBundle、JSON Item 定义、Lua 生命周期与集合哈希。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/Modding/ModdingSmokeTests.cs`；当前基础覆盖运行时管理、manifest、Lua 与模板工具入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；MOD 测试约定目录：`Assets/GameTest/Modding/`；场景目录：`Assets/GameTest/Scenes/Modding/`；冒烟分类：`Modding.Smoke`。
+- 新增 manifest、依赖排序、内容哈希、AssetBundle、JSON、Lua 生命周期或 MOD 存档行为时必须增加系统测试；修复 Bug 时先增加回归测试。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试 MOD 必须位于隔离目录，覆盖合法、缺失依赖、循环依赖和损坏配置，并在结束时清理。
+- 完成修改后检查 Unity 编译和 Console，再运行 `Modding.Smoke`；涉及资源、Item/Module、存档或 UI 时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 改变 manifest 字段、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；影响联机兼容时同步更新 Networking Skill。
