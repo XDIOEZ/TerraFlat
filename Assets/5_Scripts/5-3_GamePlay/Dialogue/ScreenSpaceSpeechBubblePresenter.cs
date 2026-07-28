@@ -72,7 +72,12 @@ namespace FlatWorld.Dialogue
             viewObject.SetActive(true);
             viewRect.SetAsLastSibling();
             UpdateLayout();
-            UpdateScreenPosition();
+            if (!UpdateScreenPosition())
+            {
+                HideImmediate();
+                return false;
+            }
+
             canvasGroup.alpha = 1f;
             hideRoutine = StartCoroutine(HideAfterDelay(Mathf.Max(0.1f, request.Duration)));
             return true;
@@ -228,17 +233,17 @@ namespace FlatWorld.Dialogue
             LayoutRebuilder.ForceRebuildLayoutImmediate(viewRect);
         }
 
-        private void UpdateScreenPosition()
+        private bool UpdateScreenPosition()
         {
             if (viewObject == null || rootRect == null)
-                return;
+            return false;
 
             if (worldCamera == null)
                 worldCamera = Camera.main;
             if (worldCamera == null)
             {
                 viewObject.SetActive(false);
-                return;
+                return false;
             }
 
             Vector3 screenPoint =
@@ -251,7 +256,7 @@ namespace FlatWorld.Dialogue
             if (!onScreen)
             {
                 viewObject.SetActive(false);
-                return;
+                return false;
             }
 
             viewObject.SetActive(true);
@@ -266,7 +271,7 @@ namespace FlatWorld.Dialogue
                     canvasCamera,
                     out Vector2 localPoint))
             {
-                return;
+                return false;
             }
 
             Rect canvasBounds = rootRect.rect;
@@ -281,6 +286,7 @@ namespace FlatWorld.Dialogue
                 canvasBounds.yMin + safeMargin,
                 canvasBounds.yMax - height - safeMargin);
             viewRect.anchoredPosition = localPoint;
+            return true;
         }
 
         private IEnumerator HideAfterDelay(float duration)

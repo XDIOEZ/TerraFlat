@@ -60,6 +60,15 @@ ItemMaker / ItemMgr 实例化
 - `Item.OnDestroy` 与主动 `PrepareForDespawn` 有防重复逻辑，不能在外部再次保存/销毁同一 Item。
 - 新模块不仅要创建脚本，还要检查 Module Prefab、ModuleData、Addressables 标签和目标 Item Prefab 挂载。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`；当前基础覆盖ItemMgr、Item、Module 与 Item/Module Prefab 入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；Item/Module 测试约定目录：`Assets/GameTest/ItemModule/`；场景目录：`Assets/GameTest/Scenes/ItemModule/`；冒烟分类：`ItemModule.Smoke`。
+- 新增实体创建销毁、模块加载保存、Tick 调度、对象池或运行时注册行为时必须增加系统测试；修复 Bug 时先增加回归测试。Item 完整生命周期变化时同步更新冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试结束必须验证注册表、调度器、空间索引和对象池不存在残留引用。
+- 完成修改后检查 Unity 编译和 Console，再运行 `ItemModule.Smoke`；涉及存档、背包、战斗、地图或联机序列化时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 改变 Item/Module 生命周期、Tick 档位、池化规则、注册索引、Prefab 目录或网络边界后，必须更新本 Skill；若调整具体玩法模块，也同步更新该玩法 Skill 的近期变更。

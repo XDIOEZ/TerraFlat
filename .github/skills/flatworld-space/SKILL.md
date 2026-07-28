@@ -44,6 +44,15 @@ GameManager.Event_GameWorldEnter
 
 - 2026-07-27：太空系统首版定位确认以 `SpaceMgr + PlanetData partial + SpaceScene` 为主链。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/Space/SpaceSmokeTests.cs`；当前基础覆盖SpaceMgr、飞行模块、太空场景和星体 Prefab 入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；太空系统测试约定目录：`Assets/GameTest/Space/`；场景目录：`Assets/GameTest/Scenes/Space/`；冒烟分类：`Space.Smoke`。
+- 新增太空场景、星球运行、公转自转、飞行模块或场景切换行为时必须增加系统测试；修复 Bug 时先增加回归测试。进入太空到星体运行主流程变化时同步更新太空冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；轨道和时间测试必须使用确定数据与时间步长。
+- 完成修改后检查 Unity 编译和 Console，再运行 `Space.Smoke`；涉及核心场景切换、星体存档、玩家或地图时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 改变星球数据字段、轨道关系、Prefab 命名/位置、场景、飞行模块、保存策略或 `GameRes` 注册方式后，必须更新本 Skill；天气温度字段变化同时更新 Environment/Data Skill。

@@ -53,6 +53,15 @@ GameManager.Event_GameWorldEnter
 
 - 2026-07-27：当前环境链明确为 `DayTimeSystem → LightLayerMgr` 与 `PlanetData → WeatherMgr/TemperatureMgr`。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`；当前基础覆盖时间、天气、温度与雨效 Resources 入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；环境测试约定目录：`Assets/GameTest/Environment/`；场景目录：`Assets/GameTest/Scenes/Environment/`；冒烟分类：`Environment.Smoke`。
+- 新增时间、昼夜、季节、天气、光照或温度行为时必须增加系统测试；修复 Bug 时先增加回归测试。时间推进到环境反馈主流程变化时同步更新环境冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；时间与天气测试必须注入确定值，不能依赖真实等待或随机天气。
+- 完成修改后检查 Unity 编译和 Console，再运行 `Environment.Smoke`；涉及地图、角色状态、特效或存档时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 改变时间入口、场景时间引用、季节实现、光照同步、天气字段、雨效/材质位置、温度阈值或资源加载路径后，必须更新本 Skill；涉及伤害时同步更新 Combat Skill。

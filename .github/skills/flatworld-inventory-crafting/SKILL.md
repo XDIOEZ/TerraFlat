@@ -63,6 +63,15 @@ disable-model-invocation: false
 
 - 2026-07-27：库存类模块已纳入低频 Tick；修改库存数据更新频率时先检查 Item/Module Skill 的调度约束。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前基础覆盖库存模块、装备、配方和初始库存资源入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；背包制作测试约定目录：`Assets/GameTest/InventoryCrafting/`；场景目录：`Assets/GameTest/Scenes/InventoryCrafting/`；冒烟分类：`InventoryCrafting.Smoke`。
+- 新增背包、槽位、快捷栏、容器、装备、配方、食物或植物行为时必须增加系统测试；修复 Bug 时先增加回归测试。物品进入背包到使用或制作主流程变化时同步更新冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试物品必须使用隔离数据并验证数量守恒、引用清理和失败路径。
+- 完成修改后检查 Unity 编译和 Console，再运行 `InventoryCrafting.Smoke`；涉及 Item/Module、存档、玩家输入或 UI 时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 移动 Inventory/Equipment/Food Prefab、制作或初始库存 SO，修改槽位模型、配方注册、装备入口、农业 TileData 或控件命名后，必须更新本 Skill。

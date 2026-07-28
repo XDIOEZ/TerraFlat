@@ -28,12 +28,15 @@ namespace FlatWorld.Dialogue.Editor
             if (result.HasErrors)
             {
                 Debug.LogError(
+                    $"[FlatWorld.Dialogue] Soliloquy JSON validation failed. " +
                     $"[自言自语配置] 校验失败：{result.Issues.Count} 个错误，" +
                     $"其余 {result.Entries.Count} 个有效条目仍可加载。");
                 return;
             }
 
-            Debug.Log($"[自言自语配置] 校验通过，共 {result.Entries.Count} 个有效条目。");
+            Debug.Log(
+                $"[FlatWorld.Dialogue] Soliloquy JSON validation passed. " +
+                $"[自言自语配置] 校验通过，共 {result.Entries.Count} 个有效条目。");
         }
 
         #endregion

@@ -53,6 +53,15 @@ disable-model-invocation: false
 
 - 2026-07-27：战斗网络边界明确为本地权威结算、远端仅应用模块数据与表现。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/Combat/CombatSmokeTests.cs`；当前基础覆盖伤害接收、Buff、技能管理和武器 Prefab 入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；战斗测试约定目录：`Assets/GameTest/Combat/`；场景目录：`Assets/GameTest/Scenes/Combat/`；冒烟分类：`Combat.Smoke`。
+- 新增伤害、Buff、死亡、掉落、武器或技能行为时必须增加系统测试；修复 Bug 时先增加回归测试。攻击到受伤、死亡与掉落主流程变化时同步更新战斗冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；伤害随机项必须固定输入，死亡和掉落事件必须验证不会重复触发。
+- 完成修改后检查 Unity 编译和 Console，再运行 `Combat.Smoke`；涉及 Item/Module、存档、AI、音频或联机时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 新增伤害接口、身体部位版本、Buff 类型、技能资源、掉落动作、Prefab 路径或网络结算边界后，必须更新本 Skill；音效与 UI 路径变化也同步更新对应 Skill。

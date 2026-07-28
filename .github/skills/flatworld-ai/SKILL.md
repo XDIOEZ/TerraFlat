@@ -62,6 +62,15 @@ Mod_ItemDetector 提交请求
 - 2026-07-27：`Mod_ItemDetector` 复用集合；鸡/野猪目标选择改为无分配线性扫描；旧 Kiwi 相关节点也移除热路径 LINQ。
 - 2026-07-27：AI 检测刷新错峰，减少大量同类 AI 的同帧尖峰。
 
+## 修改后自动测试
+
+- 基础测试脚本：`Assets/GameTest/AI/AISmokeTests.cs`；当前基础覆盖状态机、感知、Spawner 配置和生物 Prefab 入口。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；AI 测试约定目录：`Assets/GameTest/AI/`；场景目录：`Assets/GameTest/Scenes/AI/`；冒烟分类：`AI.Smoke`。
+- 新增 AI 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。感知、目标选择、状态切换、攻击或闲逛主流程变化时同步更新 AI 冒烟场景。
+- 测试失败时优先修复生产代码，禁止删除测试、放宽断言或改写输入来制造通过；随机行为必须固定种子或注入确定输入。
+- 完成修改后至少检查 Unity 编译和 Console，再运行 `AI.Smoke`；涉及导航、战斗、Item/Module 或生成器时同步运行对应系统测试。
+- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+
 ## 修改后维护本 Skill
 
 改变 AI 状态、感知半径或标签、空间格、目标算法、移动组件、Spawner 配置/资源、Prefab 挂载或新旧行为树边界后，必须更新本 Skill；影响 Item 注册或导航时同步更新对应 Skill。

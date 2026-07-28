@@ -235,7 +235,7 @@ namespace FlatWorld.Dialogue
             bool logIssues)
         {
             bool valid = true;
-                if (!TryParseDefinedEnum(
+            if (!TryParseDefinedEnum(
                     entryObject["priority"],
                     out CharacterSpeechPriority _))
             {
