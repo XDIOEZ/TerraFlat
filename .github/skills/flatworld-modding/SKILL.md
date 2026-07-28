@@ -36,6 +36,8 @@ GameRes 完成本体 Addressables
 - MOD 存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.Mods.cs`。
 - 示例模板：`Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs`。
 - 本体资源衔接：`Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs`。
+- MOD `definitionFiles` 可直接声明 `recipes` 数组，格式复用本体 `RecipeDto`；配方 ID 必须使用 MOD 命名空间。
+- 旧 `assets[].type = recipe` AssetBundle 仍通过 `LegacyRecipeConverter` 转成 `RuntimeRecipe`，仅作为兼容桥。
 
 ## 安全与兼容边界
 
@@ -47,6 +49,7 @@ GameRes 完成本体 Addressables
 
 ## 近期变更
 
+- 2026-07-28：MOD 定义文件新增纯 JSON `recipes`，加载顺序为先物品 Def、再校验并注册配方；保留旧 Recipe AssetBundle 转换兼容。
 - 2026-07-27：当前 MOD 流程在本体资源加载后执行，支持 manifest 依赖排序、AssetBundle、JSON Item 定义、Lua 生命周期与集合哈希。
 
 ## 修改后自动测试
@@ -60,4 +63,4 @@ GameRes 完成本体 Addressables
 
 ## 修改后维护本 Skill
 
-改变 manifest 字段、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；影响联机兼容时同步更新 Networking Skill。
+改变 manifest 字段、RecipeDto、JSON `recipes`、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；影响联机兼容时同步更新 Networking Skill。

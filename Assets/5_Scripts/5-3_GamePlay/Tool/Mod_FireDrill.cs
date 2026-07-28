@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Gameplay.Progress;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -41,6 +42,7 @@ public class Mod_FireDrill : Module, IInteractable
     bool _hasClickedThisSession; // 本次打开是否已点击过
     bool _isActBound;
     CraftingOutputPreview _outputPreview;
+    Player _currentInteractingPlayer;
 
 #endregion
 
@@ -84,6 +86,7 @@ public class Mod_FireDrill : Module, IInteractable
 
     public void OnInteractStart(Item playerItem)
     {
+        _currentInteractingPlayer = ResolvePlayer(playerItem);
         if (basePanel == null)
         {
             OpenUI();
@@ -111,6 +114,7 @@ public class Mod_FireDrill : Module, IInteractable
         {
             InputInventory.DefaultTarget_Inventory = null;
             OutputInventory.DefaultTarget_Inventory = null;
+            _currentInteractingPlayer = null;
         }
     }
 
@@ -229,6 +233,7 @@ public class Mod_FireDrill : Module, IInteractable
 
     private void ClosePanelAndClearTransferContext()
     {
+        _currentInteractingPlayer = null;
         InputInventory.DefaultTarget_Inventory = null;
         OutputInventory.DefaultTarget_Inventory = null;
 
@@ -376,7 +381,15 @@ public class Mod_FireDrill : Module, IInteractable
         OutputInventory.Data.TryAddItem(fireSeedData, true);
         InputInventory.RefreshUI();
         OutputInventory.RefreshUI();
+        GameplayProgressEvents.PublishFireSeedCreated(
+            _currentInteractingPlayer,
+            fireSeedData.IDName);
         return true;
+    }
+
+    private static Player ResolvePlayer(Item actorItem)
+    {
+        return actorItem as Player ?? actorItem?.GetComponentInParent<Player>();
     }
 
     private void ResetProgress()

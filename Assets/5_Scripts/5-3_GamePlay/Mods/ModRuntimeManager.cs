@@ -57,6 +57,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private readonly List<UnityEngine.Object> clonedAssets = new();
     private readonly HashSet<GameObject> runtimeTemplates = new();
     private readonly List<PendingItemDefinition> pendingItemDefinitions = new();
+    private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
     private readonly List<PendingPatchDocument> pendingPatchDocuments = new();
     private readonly Dictionary<string, ModDefinitionInfo> definitionInfos = new(IdComparer);
     private ModProfile activeProfile;
@@ -190,6 +191,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
 
         reportProgress?.Invoke("解析 Def 继承与 Patch", 0.55f);
         ProcessItemDefinitions(gameRes);
+        ProcessRecipeDefinitions(gameRes);
         yield return null;
 
         for (int i = 0; i < loadedPackages.Count; i++)
@@ -380,6 +382,15 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 ValidateContentId(package.Manifest.Id, id);
                 pendingItemDefinitions.Add(new PendingItemDefinition(package, definitionFile, itemIndex++, (JObject)itemObject.DeepClone()));
             }
+
+            int recipeIndex = 0;
+            foreach (JToken token in document["recipes"] as JArray ?? new JArray())
+            {
+                RecipeDto recipe = token.ToObject<RecipeDto>()
+                    ?? throw new InvalidDataException($"MOD {package.Manifest.Id} 配方 Def 无效：{definitionFile}#{recipeIndex}");
+                ValidateContentId(package.Manifest.Id, recipe.Id);
+                pendingRecipeDefinitions.Add(new PendingRecipeDefinition(package, definitionFile, recipeIndex++, recipe));
+            }
         }
 
         foreach (string patchFile in package.Manifest.PatchFiles ?? Enumerable.Empty<string>())
@@ -458,6 +469,18 @@ public sealed class ModRuntimeManager : MonoBehaviour
             ModDefinitionInfo info = GetOrCreateDefinitionInfo(definition.Id);
             info.Materialized = true;
             info.ReplacedBuiltInContent = replacesExisting;
+        }
+    }
+
+    private void ProcessRecipeDefinitions(GameRes gameRes)
+    {
+        foreach (PendingRecipeDefinition pending in pendingRecipeDefinitions)
+        {
+            RuntimeRecipe recipe = RecipeRuntimeFactory.Build(
+                pending.Definition,
+                itemId => gameRes.AllPrefabs.ContainsKey(itemId));
+            gameRes.RegisterRecipe(recipe, false);
+            Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册 JSON 配方：{recipe.Id}");
         }
     }
 
@@ -694,7 +717,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 RegisterPrefab(gameRes, package.Manifest.Id, definition.Id, (GameObject)asset);
                 break;
             case "recipe":
-                RegisterRecipe(gameRes, definition.Id, CloneAsset((Recipe)asset));
+                RegisterLegacyRecipe(gameRes, definition.Id, CloneAsset((Recipe)asset));
                 break;
             case "tile":
                 RegisterUnique(gameRes.tileBaseDict, definition.Id, CloneAsset((TileBase)asset));
@@ -817,12 +840,13 @@ public sealed class ModRuntimeManager : MonoBehaviour
         Debug.Log($"[MOD:{modId}] 已注册 Prefab：{contentId}");
     }
 
-    private void RegisterRecipe(GameRes gameRes, string contentId, Recipe recipe)
+    private void RegisterLegacyRecipe(GameRes gameRes, string contentId, Recipe recipe)
     {
-        RegisterUnique(gameRes.recipeDict, contentId, recipe);
-        string inputKey = recipe.inputs?.ToString();
-        if (!string.IsNullOrWhiteSpace(inputKey))
-            RegisterUnique(gameRes.recipeDict, inputKey, recipe);
+        RuntimeRecipe runtimeRecipe = LegacyRecipeConverter.ToRuntime(
+            recipe,
+            contentId,
+            itemId => gameRes.AllPrefabs.ContainsKey(itemId));
+        gameRes.RegisterRecipe(runtimeRecipe, false);
     }
 
     private T CloneAsset<T>(T asset) where T : UnityEngine.Object
@@ -1472,6 +1496,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         packagesById.Clear();
         globalStates.Clear();
         pendingItemDefinitions.Clear();
+        pendingRecipeDefinitions.Clear();
         pendingPatchDocuments.Clear();
         definitionInfos.Clear();
         ModLocalizationRegistry.Clear();
@@ -1530,6 +1555,22 @@ public sealed class ModRuntimeManager : MonoBehaviour
         public ModPackage Package { get; }
         public string File { get; }
         public ModPatchDocument Document { get; }
+    }
+
+    private sealed class PendingRecipeDefinition
+    {
+        public PendingRecipeDefinition(ModPackage package, string file, int index, RecipeDto definition)
+        {
+            Package = package;
+            File = file;
+            Index = index;
+            Definition = definition;
+        }
+
+        public ModPackage Package { get; }
+        public string File { get; }
+        public int Index { get; }
+        public RecipeDto Definition { get; }
     }
 }
 

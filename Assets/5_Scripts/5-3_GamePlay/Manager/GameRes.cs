@@ -20,7 +20,11 @@ public class GameRes : SingletonAutoMono<GameRes>
 
     [Header("配方字典")]
     [ShowInInspector]
-    public Dictionary<string, Recipe> recipeDict = new Dictionary<string, Recipe>();
+    public Dictionary<string, RuntimeRecipe> recipeDict = new Dictionary<string, RuntimeRecipe>();
+
+    [Header("配方ID字典")]
+    [ShowInInspector]
+    public Dictionary<string, RuntimeRecipe> recipeById = new Dictionary<string, RuntimeRecipe>();
 
     [Header("TileBase字典")]
     [ShowInInspector]
@@ -96,7 +100,6 @@ public class GameRes : SingletonAutoMono<GameRes>
         {
             ADBLabels.Add("ItemPrefab");
             ADBLabels.Add("Prefab");
-            ADBLabels.Add("CraftingRecipe");
             ADBLabels.Add("TileBase");
             ADBLabels.Add("TileBlock");
             ADBLabels.Add("Buff");
@@ -115,11 +118,20 @@ public class GameRes : SingletonAutoMono<GameRes>
             HandlePrefab,
             "加载预制体"));
             
-        yield return StartCoroutine(SyncLoadAssetsWithProgress<Recipe>(
-            new List<string> { "CraftingRecipe" },
-            recipeDict,
-            null,
-            "加载配方"));
+        loadingText = "加载JSON配方";
+        try
+        {
+            loadedAssetsCount += RecipeCatalogLoader.LoadBuiltIn(this);
+            loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        }
+        catch (System.Exception exception)
+        {
+            loadingText = $"配方加载失败：{exception.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(exception);
+            yield break;
+        }
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
             new List<string> { "TileBase" },
@@ -238,7 +250,6 @@ public class GameRes : SingletonAutoMono<GameRes>
             string key = asset switch
             {
                 GameObject go => go.name,
-                Recipe recipe => recipe.inputs.ToString(),
                 TileBase tile => tile.name,
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
@@ -279,6 +290,7 @@ private void ClearAllDictionaries()
 {
     AllPrefabs.Clear();
     recipeDict.Clear();
+    recipeById.Clear();
     tileBaseDict.Clear();
     TileBlockDict.Clear();
     BuffData_Dict.Clear();
@@ -325,7 +337,6 @@ public void HotReloadAllResources()
             string key = asset switch
             {
                 GameObject go => go.name,
-                Recipe recipe => recipe.inputs.ToString(),
                 TileBase tile => tile.name,
                 Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
@@ -438,10 +449,36 @@ public void HotReloadAllResources()
         return null;
     }
     
-    public Recipe GetRecipe(string recipeName)
+    public RuntimeRecipe GetRecipe(string recipeName)
     {
-        recipeDict.TryGetValue(recipeName, out var recipe);
+        if (recipeById.TryGetValue(recipeName, out RuntimeRecipe recipe))
+            return recipe;
+
+        recipeDict.TryGetValue(recipeName, out recipe);
         return recipe;
+    }
+
+    /// <summary>
+    /// 注册校验后的运行时配方，同时建立 ID 与旧输入签名索引。
+    /// </summary>
+    public void RegisterRecipe(RuntimeRecipe recipe, bool replaceExistingSignature)
+    {
+        if (recipe == null || string.IsNullOrWhiteSpace(recipe.Id))
+            throw new System.IO.InvalidDataException("注册的运行时配方或配方 ID 为空");
+        if (recipeById.ContainsKey(recipe.Id))
+            throw new System.IO.InvalidDataException($"配方 ID 冲突：{recipe.Id}");
+
+        string inputKey = recipe.inputs?.ToString();
+        if (string.IsNullOrWhiteSpace(inputKey))
+            throw new System.IO.InvalidDataException($"配方 {recipe.Id} 无法生成输入签名");
+        if (recipeDict.ContainsKey(inputKey) && !replaceExistingSignature)
+            throw new System.IO.InvalidDataException($"配方输入签名冲突：{recipe.Id} -> {inputKey}");
+        if (recipeDict.TryGetValue(inputKey, out RuntimeRecipe existing))
+            Debug.LogWarning($"[RecipeCatalog] 配方 {recipe.Id} 覆盖相同输入签名的配方 {existing.Id}：{inputKey}");
+
+        recipeById.Add(recipe.Id, recipe);
+        recipeDict[inputKey] = recipe;
+        LoadedCount++;
     }
     
     // 新增：获取InventoryInit资源

@@ -12,5 +12,13 @@ namespace FlatWorld.Dialogue
         public const string HungerIsTakingDamage = "hunger.isTakingDamage";
 
         #endregion
+
+        #region 新手引导
+
+        public const string TutorialEnabled = "tutorial.enabled";
+        public const string TutorialStage = "tutorial.stage";
+        public const string TutorialCompleted = "tutorial.completed";
+
+        #endregion
     }
 }

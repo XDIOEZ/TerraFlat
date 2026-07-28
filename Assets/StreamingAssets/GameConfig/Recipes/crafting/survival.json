@@ -1,0 +1,567 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:半边椰子获取椰肉",
+      "displayName": "半边椰子获取椰肉",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "tag",
+          "itemId": "",
+          "tag": "Knife",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Coconut_Half",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "CoconutMeat",
+          "amount": 1
+        },
+        {
+          "itemId": "Coconut_Shell",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:小刀剥皮椰子",
+      "displayName": "小刀剥皮椰子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "tag",
+          "itemId": "",
+          "tag": "Knife",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Coconut_Green",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Coconut_Nude",
+          "amount": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_durability",
+          "targetRole": "Knife",
+          "value": 1.0,
+          "slotIndex": 1
+        }
+      ]
+    },
+    {
+      "id": "core:斧头劈开椰子",
+      "displayName": "斧头劈开椰子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "tag",
+          "itemId": "",
+          "tag": "Axe",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Coconut_Nude",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Coconut_Half",
+          "amount": 2
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_durability",
+          "targetRole": "Axe",
+          "value": 2.0,
+          "slotIndex": 1
+        }
+      ]
+    },
+    {
+      "id": "core:木板",
+      "displayName": "木板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 5,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 6,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 7,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 8,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Plank",
+          "amount": 3
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:木板_切削合成",
+      "displayName": "木板_切削合成",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "tag",
+          "itemId": "",
+          "tag": "Axe",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Plank",
+          "amount": 2
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_durability",
+          "targetRole": "Axe",
+          "value": 1.0,
+          "slotIndex": 1
+        }
+      ]
+    },
+    {
+      "id": "core:木质盔甲",
+      "displayName": "木质盔甲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 5,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 6,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 7,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 8,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Chestplate_Wood",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:火把_煤炭",
+      "displayName": "火把_煤炭",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ore_Coal",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Torch",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:火把_脂肪",
+      "displayName": "火把_脂肪",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Fat",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Torch",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:藤甲",
+      "displayName": "藤甲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 5,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 6,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 0
+        },
+        {
+          "slot": 7,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 8,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Chestplate_Twine",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

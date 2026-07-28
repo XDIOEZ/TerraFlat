@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:铁矿+碳=钢",
+      "displayName": "铁矿+碳=钢",
+      "recipeType": "smelting",
+      "inputRule": "ordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 1489.0,
+      "maxTemperature": 9999.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Iron",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ore_Coal",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Ore_Iron",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Ore_Coal",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_Steel",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铜+锡=青铜",
+      "displayName": "铜+锡=青铜",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1000.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "tag": "",
+          "amount": 9
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_Tin",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_Bronze",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铜+锡=青铜 1",
+      "displayName": "铜+锡=青铜 1",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1000.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Copper",
+          "tag": "",
+          "amount": 9
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ore_Tin",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_Bronze",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:石制小刀",
+      "displayName": "石制小刀",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "ChippedTool",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Dagger_Stone",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:骨头+木棍=骨刀",
+      "displayName": "骨头+木棍=骨刀",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Bone",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "tag",
+          "itemId": "",
+          "tag": "Rope",
+          "amount": 1
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Dagger_Bone",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

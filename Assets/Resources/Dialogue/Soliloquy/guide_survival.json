@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "guide.survival.open-inventory",
+      "topic": "guide.survival.open-inventory",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "OpenInventory" }
+      ],
+      "lines": [
+        "先看看身上的背包吧，得知道自己还缺些什么。"
+      ],
+      "duration": 4.2,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.open-inventory.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.gather-materials",
+      "topic": "guide.survival.gather-materials",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "GatherSurvivalMaterials" }
+      ],
+      "lines": [
+        "三根木棍、三块原木，再找一片树叶……这些应该够我把火生起来。"
+      ],
+      "duration": 5.2,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.gather-materials.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.craft-spark-maker",
+      "topic": "guide.survival.craft-spark-maker",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "CraftSparkMaker" }
+      ],
+      "lines": [
+        "木棍和原木能做个钻木取火器，先把它合成出来。"
+      ],
+      "duration": 4.5,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.craft-spark-maker.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.place-spark-maker",
+      "topic": "guide.survival.place-spark-maker",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "PlaceSparkMaker" }
+      ],
+      "lines": [
+        "找块平整的地方，把钻木取火器安置下来。"
+      ],
+      "duration": 4.0,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.place-spark-maker.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.create-fire-seed",
+      "topic": "guide.survival.create-fire-seed",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "CreateFireSeed" }
+      ],
+      "lines": [
+        "把树叶当作火绒，多摩擦几次，应该就能得到火种。"
+      ],
+      "duration": 4.6,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.create-fire-seed.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.craft-bonfire",
+      "topic": "guide.survival.craft-bonfire",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "CraftBonfire" }
+      ],
+      "lines": [
+        "火种有了，再用剩下的木棍和原木搭一个火堆。"
+      ],
+      "duration": 4.4,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.craft-bonfire.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.place-bonfire",
+      "topic": "guide.survival.place-bonfire",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "PlaceBonfire" }
+      ],
+      "lines": [
+        "把火堆放在安全又方便照看的地方。"
+      ],
+      "duration": 3.9,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.place-bonfire.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.ignite-bonfire",
+      "topic": "guide.survival.ignite-bonfire",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "IgniteBonfire" }
+      ],
+      "lines": [
+        "把火种放进火堆的燃料槽，再亲手点燃它。"
+      ],
+      "duration": 4.3,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.ignite-bonfire.shown",
+      "enabled": true
+    },
+    {
+      "id": "guide.survival.completed",
+      "topic": "guide.survival.completed",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "tutorial.enabled", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.completed", "operator": "Equal", "value": "True" },
+        { "fact": "tutorial.stage", "operator": "Equal", "value": "Completed" }
+      ],
+      "lines": [
+        "火终于生起来了。接下来，我得靠自己在这里活下去。"
+      ],
+      "duration": 5.0,
+      "cooldown": 45,
+      "once": true,
+      "completionFlag": "guide.survival.completed.shown",
+      "enabled": true
+    }
+  ]
+}

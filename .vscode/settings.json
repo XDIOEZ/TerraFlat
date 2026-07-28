@@ -60,6 +60,6 @@
     "dotnet.preferCSharpExtension": true,
     "outline-map.follow": "manual",
     "outline-map.expand": "expanded",
-    "chat.permissions.default": "autopilot",
+    "chat.permissions.default": "autoApprove",
     "chat.autopilot.advanced.enabled": true
 }

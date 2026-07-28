@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Audio;
+using FlatWorld.Gameplay.Progress;
 using UnityEngine;
 
 /// <summary>
@@ -213,6 +214,7 @@ public class ItemPicker : Module
             itemData.Stack.CanBePickedUp = false;
             targetInventory.RefreshUI();
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            GameplayProgressEvents.PublishPickupSucceeded(item as Player, itemData.IDName);
             return true;
         }
 

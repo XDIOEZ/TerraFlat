@@ -374,7 +374,15 @@ public static class BuildingSummonerPrefabGenerator
 
     private static int RelinkRecipes(GameObject buildingPrefab, GameObject summonerPrefab)
     {
-        int updated = 0;
+        Item buildingItem = buildingPrefab != null ? buildingPrefab.GetComponent<Item>() : null;
+        Item summonerItem = summonerPrefab != null ? summonerPrefab.GetComponent<Item>() : null;
+        string buildingItemId = buildingItem?.itemData != null && !string.IsNullOrWhiteSpace(buildingItem.itemData.IDName)
+            ? buildingItem.itemData.IDName
+            : buildingPrefab.name;
+        string summonerItemId = summonerItem?.itemData != null && !string.IsNullOrWhiteSpace(summonerItem.itemData.IDName)
+            ? summonerItem.itemData.IDName
+            : summonerPrefab.name;
+        int updated = RecipeExcelSyncService.RelinkOutputItemId(buildingItemId, summonerItemId);
         string[] recipeGuids = AssetDatabase.FindAssets("t:Recipe", new[] { "Assets" });
         for (int i = 0; i < recipeGuids.Length; i++)
         {

@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Gameplay.Progress;
 using UnityEngine;
 using UnityEngine.UI;
+using RuntimeRecipeModel = RuntimeRecipe;
 
 public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 {
@@ -473,7 +475,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     public bool Craft(Inventory inputInv, Inventory outputInv)
     {
-        if (!TryResolveRecipe(inputInv, out Recipe recipe, out bool isMirrorMatched, out List<string> recipeKeys))
+        if (!TryResolveRecipe(inputInv, out RuntimeRecipeModel recipe, out bool isMirrorMatched, out List<string> recipeKeys))
         {
             Debug.LogError($"[Mod_HandCraftTable] 配方不存在：{string.Join(" 或 ", recipeKeys)}");
             return false;
@@ -499,7 +501,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private bool TryGetCraftPreview(out ItemData previewItem)
     {
         previewItem = null;
-        if (!TryResolveRecipe(inputInventory, out Recipe recipe, out bool isMirrorMatched, out _))
+        if (!TryResolveRecipe(inputInventory, out RuntimeRecipeModel recipe, out bool isMirrorMatched, out _))
             return false;
 
         if (!ValidateSlotCount(recipe))
@@ -518,7 +520,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private bool TryResolveRecipe(
         Inventory inputInv,
-        out Recipe recipe,
+        out RuntimeRecipeModel recipe,
         out bool isMirrorMatched,
         out List<string> recipeKeys)
     {
@@ -566,7 +568,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return false;
     }
 
-    private bool ValidateSlotCount(Recipe recipe)
+    private bool ValidateSlotCount(RuntimeRecipeModel recipe)
     {
         if (recipe.inputs.RowItems_List.Count != InputSlotCount)
         {
@@ -627,7 +629,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return totalCapacity;
     }
 
-    private List<ItemData> PrepareOutputItems(Recipe recipe)
+    private List<ItemData> PrepareOutputItems(RuntimeRecipeModel recipe)
     {
         var itemsToAdd = new List<ItemData>();
 
@@ -672,7 +674,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return itemsToAdd;
     }
 
-    private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
+    private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, RuntimeRecipeModel recipe, List<ItemData> outputItems, bool isMirrorMatched)
     {
         List<ItemSlot> inputSlots = GetInputSlots(inputInv);
 
@@ -848,7 +850,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return true;
     }
 
-    private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, Recipe recipe, List<ItemData> outputItems, bool isMirrorMatched)
+    private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, RuntimeRecipeModel recipe, List<ItemData> outputItems, bool isMirrorMatched)
     {
         Debug.Log($"[Mod_HandCraftTable] 开始合成：{recipe.name}，输入={GenerateRecipeKey(inputInv)}");
 
@@ -883,21 +885,23 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
                 ExecuteUnorderedDeduction(inputInv, recipe);
         }
 
-        if (recipe.action != null)
-        {
-            foreach (var action in recipe.action)
-            {
-                if (action != null)
-                    action.Apply(this);
-            }
-        }
+        RecipeActionRunner.Execute(recipe, inputInv);
 
         outputInv.RefreshUI();
         inputInv.RefreshUI();
         Debug.Log($"[Mod_HandCraftTable] 合成完成：{recipe.name}");
+
+        Player actor = ResolveCraftActor();
+        for (int i = 0; i < outputItems.Count; i++)
+            GameplayProgressEvents.PublishCraftSucceeded(actor, outputItems[i]?.IDName);
     }
 
-    private void ExecuteOrderedDeduction(Inventory inputInv, Recipe recipe, bool isMirrorMatched)
+    private Player ResolveCraftActor()
+    {
+        return item as Player ?? item?.Owner as Player ?? item?.GetComponentInParent<Player>();
+    }
+
+    private void ExecuteOrderedDeduction(Inventory inputInv, RuntimeRecipeModel recipe, bool isMirrorMatched)
     {
         List<ItemSlot> inputSlots = GetInputSlots(inputInv);
 
@@ -917,7 +921,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         }
     }
 
-    private void ExecuteUnorderedDeduction(Inventory inputInv, Recipe recipe)
+    private void ExecuteUnorderedDeduction(Inventory inputInv, RuntimeRecipeModel recipe)
     {
         List<ItemSlot> inputSlots = GetInputSlots(inputInv);
 
@@ -985,7 +989,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return true;
     }
 
-    private static CraftingIngredient GetOrderedRequired(Recipe recipe, int slotIndex, bool isMirrorMatched, int slotCount)
+    private static CraftingIngredient GetOrderedRequired(RuntimeRecipeModel recipe, int slotIndex, bool isMirrorMatched, int slotCount)
     {
         if (!isMirrorMatched)
             return recipe.inputs.RowItems_List[slotIndex];
@@ -997,7 +1001,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return recipe.inputs.RowItems_List[mirroredIndex];
     }
 
-    private bool IsOrderedRecipeActuallyMatched(Inventory inputInv, Recipe recipe, bool isMirrorMatched)
+    private bool IsOrderedRecipeActuallyMatched(Inventory inputInv, RuntimeRecipeModel recipe, bool isMirrorMatched)
     {
         List<ItemSlot> inputSlots = GetInputSlots(inputInv);
         LogCraftDebug($"开始有序严格校验：配方={recipe.name}，镜像匹配={isMirrorMatched}");

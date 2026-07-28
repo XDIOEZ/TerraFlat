@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using FlatWorld.Gameplay.Progress;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -13,7 +13,6 @@ namespace FlatWorld.Dialogue
     {
         private const string DialogueNamespace = "flatworld.dialogue";
         private const string CompletedProperty = "completed";
-        private const string LegacyProperty = "flatworld.legacyItemSpecialData";
 
         private readonly Component owner;
         private readonly HashSet<string> completed = new(StringComparer.Ordinal);
@@ -44,14 +43,12 @@ namespace FlatWorld.Dialogue
             if (loadedPlayerData == null || !completed.Add(completionFlag))
                 return;
 
-            JObject root = ReadRoot(loadedPlayerData.ItemSpecialData, preserveLegacy: true);
-            JObject dialogue = root[DialogueNamespace] as JObject ?? new JObject();
-            root[DialogueNamespace] = dialogue;
+            JObject dialogue = ItemSpecialDataJsonStore.ReadNamespace(loadedPlayerData, DialogueNamespace);
 
             List<string> orderedFlags = new(completed);
             orderedFlags.Sort(StringComparer.Ordinal);
             dialogue[CompletedProperty] = JArray.FromObject(orderedFlags);
-            loadedPlayerData.ItemSpecialData = root.ToString(Formatting.None);
+            ItemSpecialDataJsonStore.WriteNamespace(loadedPlayerData, DialogueNamespace, dialogue);
         }
 
         #endregion
@@ -69,9 +66,8 @@ namespace FlatWorld.Dialogue
             if (loadedPlayerData == null)
                 return;
 
-            JObject root = ReadRoot(loadedPlayerData.ItemSpecialData, preserveLegacy: false);
-            if (root[DialogueNamespace] is not JObject dialogue ||
-                dialogue[CompletedProperty] is not JArray completedArray)
+            JObject dialogue = ItemSpecialDataJsonStore.ReadNamespace(loadedPlayerData, DialogueNamespace);
+            if (dialogue[CompletedProperty] is not JArray completedArray)
             {
                 return;
             }
@@ -88,28 +84,6 @@ namespace FlatWorld.Dialogue
         {
             Item actorItem = owner != null ? owner.GetComponentInParent<Item>() : null;
             return actorItem?.itemData as Data_Player;
-        }
-
-        private static JObject ReadRoot(string rawData, bool preserveLegacy)
-        {
-            if (string.IsNullOrWhiteSpace(rawData))
-                return new JObject();
-
-            try
-            {
-                JToken token = JToken.Parse(rawData);
-                if (token is JObject root)
-                    return root;
-            }
-            catch (JsonException)
-            {
-                // 旧数据可能不是 JSON；写入时原样保存在独立字段中。
-            }
-
-            JObject fallback = new();
-            if (preserveLegacy)
-                fallback[LegacyProperty] = rawData;
-            return fallback;
         }
 
         #endregion

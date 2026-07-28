@@ -1,9 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Gameplay.Progress;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using RuntimeRecipeModel = RuntimeRecipe;
 public class Mod_Furnace : Module, IInteractable
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
@@ -32,6 +34,7 @@ public class Mod_Furnace : Module, IInteractable
     public GameObject UI_Prefab; // 熔炉UI预制体
     private const float PanelDestroyDelay = 30f;
     private Coroutine panelDestroyCoroutine;
+    private Player currentInteractingPlayer;
     #endregion
 
     #region 生命周期
@@ -47,6 +50,7 @@ public class Mod_Furnace : Module, IInteractable
 
     public void OnInteractStart(Item playerItem)
     {
+        currentInteractingPlayer = playerItem as Player ?? playerItem?.GetComponentInParent<Player>();
         if (basePanel == null)
         {
             OpenUI();
@@ -69,7 +73,10 @@ public class Mod_Furnace : Module, IInteractable
         InputInventory.SyncQuickTransferTarget(basePanel);
 
         if (!isOpen)
+        {
+            currentInteractingPlayer = null;
             StartPanelDestroyCountdown();
+        }
     }
 
     public void OnInteractCancel(Item playerItem)
@@ -94,6 +101,7 @@ public class Mod_Furnace : Module, IInteractable
 
     private void ClosePanelAndClearTransferContext()
     {
+        currentInteractingPlayer = null;
         InputInventory.DefaultTarget_Inventory = null;
         OutputInventory.DefaultTarget_Inventory = null;
         FuelInventory.DefaultTarget_Inventory = null;
@@ -372,7 +380,7 @@ public class Mod_Furnace : Module, IInteractable
         if (optimizedRecipeKeys != null && optimizedRecipeKeys.Count > 0)
             recipeKeys.AddRange(optimizedRecipeKeys);
 
-        Recipe recipe = null;
+        RuntimeRecipeModel recipe = null;
         string matchedKey = null;
 
         // 尝试匹配每个配方键
@@ -394,10 +402,10 @@ public class Mod_Furnace : Module, IInteractable
             return;
         }
 
-        CookRecipe cookRecipe = recipe as CookRecipe;
-        if (cookRecipe == null)
+        RuntimeRecipeModel cookRecipe = recipe;
+        if (recipe.inputs.recipeType != RecipeType.Smelting)
         {
-            Debug.LogError($"配方类型错误：{matchedKey} 不是 CookRecipe");
+            Debug.LogError($"配方类型错误：{matchedKey} 不是熔炼配方");
             return;
         }
 
@@ -720,7 +728,7 @@ public class Mod_Furnace : Module, IInteractable
         return result;
     }
 
-    private bool ValidateSlotCount(Inventory inputInv, Recipe recipe)
+    private bool ValidateSlotCount(Inventory inputInv, RuntimeRecipeModel recipe)
     {
         if (inputInv == null || inputInv.Data == null || recipe == null || recipe.inputs == null)
             return false;
@@ -736,7 +744,7 @@ public class Mod_Furnace : Module, IInteractable
         return true;
     }
 
-    private List<ItemData> PrepareOutputItems(Recipe recipe)
+    private List<ItemData> PrepareOutputItems(RuntimeRecipeModel recipe)
     {
         var itemsToAdd = new List<ItemData>();
 
@@ -785,7 +793,7 @@ public class Mod_Furnace : Module, IInteractable
     }
 
     private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv,
-        Recipe recipe, List<ItemData> outputItems)
+        RuntimeRecipeModel recipe, List<ItemData> outputItems)
     {
         // 检查recipe.inputs是有规则合成还是无规则合成（参考工作台的高级检查逻辑）
         if (recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null)
@@ -953,7 +961,7 @@ public class Mod_Furnace : Module, IInteractable
     }
 
     private void ExecuteSmelting(Inventory inputInv, Inventory outputInv,
-        Recipe recipe, List<ItemData> outputItems)
+        RuntimeRecipeModel recipe, List<ItemData> outputItems)
     {
         if (inputInv == null || inputInv.Data == null ||
             outputInv == null || outputInv.Data == null ||
@@ -1108,18 +1116,7 @@ public class Mod_Furnace : Module, IInteractable
             }
         }
 
-        // 执行配方动作
-        if (recipe.action != null)
-        {
-            foreach (var action in recipe.action)
-            {
-                if (action != null && inputInv.Data.itemSlots != null &&
-                    action.slotIndex >= 0 && action.slotIndex < inputInv.Data.itemSlots.Count)
-                {
-
-                }
-            }
-        }
+        RecipeActionRunner.Execute(recipe, inputInv);
 
         outputInv.RefreshUI();
         inputInv.RefreshUI();
@@ -1127,7 +1124,7 @@ public class Mod_Furnace : Module, IInteractable
     }
 
     // 提取传统的位置扣除逻辑为单独方法，方便复用
-    private void ExecuteTraditionalDeduction(Inventory inputInv, Recipe recipe)
+    private void ExecuteTraditionalDeduction(Inventory inputInv, RuntimeRecipeModel recipe)
     {
         int loopCount = Mathf.Min(inputInv.Data.itemSlots.Count, recipe.inputs.RowItems_List.Count);
         for (int i = 0; i < loopCount; i++)
@@ -1282,6 +1279,12 @@ public class Mod_Furnace : Module, IInteractable
 
         // 点燃燃料模块
         mod_Fuel?.SetIgnited(true);
+        if (mod_Fuel != null && mod_Fuel.GetIgnitedState())
+        {
+            GameplayProgressEvents.PublishFurnaceIgnited(
+                currentInteractingPlayer,
+                item?.itemData?.IDName);
+        }
         Debug.Log("熔炉已点燃并开始熔炼！");
     }
 

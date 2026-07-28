@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using FlatWorld.Gameplay.Progress;
 using UnityEngine.InputSystem;
 [System.Serializable]
 public class Inventory
@@ -187,6 +188,7 @@ public class Inventory
             }
             basePanel.Open();
             SyncQuickTransferTarget(basePanel);
+            PublishPlayerBagOpened();
             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
             return;
@@ -195,11 +197,31 @@ public class Inventory
         basePanel.Toggle();
         if (basePanel.IsOpen())
         {
+            PublishPlayerBagOpened();
             // 延迟一帧将面板置顶，确保不会被其他UI遮挡
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
         }
 
         SyncQuickTransferTarget(basePanel);
+    }
+
+    private void PublishPlayerBagOpened()
+    {
+        if (item is not Player player || player.itemMods == null)
+            return;
+
+        Mod_Inventory bag = player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        if (bag?.InventoryInstances == null)
+            return;
+
+        for (int i = 0; i < bag.InventoryInstances.Count; i++)
+        {
+            if (!ReferenceEquals(bag.InventoryInstances[i], this))
+                continue;
+
+            GameplayProgressEvents.PublishInventoryOpened(player);
+            return;
+        }
     }
 
     private static IEnumerator DelayedBringToFront(RectTransform rectTransform)

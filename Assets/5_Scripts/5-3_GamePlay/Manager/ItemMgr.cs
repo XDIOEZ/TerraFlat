@@ -1546,9 +1546,10 @@ public class ItemMgr : SingletonMono<ItemMgr>
     public Player LoadPlayer(string playerName)
     {
         // 加载或者创建玩家数据
-        Data_Player playerData = LoadOrCreatePlayerData(playerName);
+        Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
+        player.SetProfileContext(localProfile: true, profileDataWasCreated: wasCreated);
         //设置玩家数据到玩家引用字典
         ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
 
@@ -1561,9 +1562,10 @@ public class ItemMgr : SingletonMono<ItemMgr>
     public Player CreatePlayer(string playerName)
     {
         // 加载或者创建玩家数据
-        Data_Player playerData = LoadOrCreatePlayerData(playerName);
+        Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
+        player.SetProfileContext(localProfile: true, profileDataWasCreated: wasCreated);
         //设置玩家数据到玩家引用字典
         ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
 
@@ -1603,6 +1605,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
             playerData.transform.scale = Vector3.one;
 
         Player player = CreatePlayer(playerData);
+        player.SetProfileContext(
+            localProfile: initializeLocalModules,
+            profileDataWasCreated: !hasSavedData);
         Player_DIC[playerName] = player;
         _networkPlayers.Add(player);
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerName] = playerData;
@@ -1626,6 +1631,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
             return;
 
         _networkRemoteReplicas.Remove(player);
+        player.SetProfileContext(
+            localProfile: true,
+            profileDataWasCreated: player.WasProfileDataCreated);
         InitializeNetworkLocalPlayer(player, spawnPosition);
     }
 
@@ -1674,6 +1682,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
     private static void ConfigureRemoteNetworkReplica(Player player, Vector3 spawnPosition)
     {
+        player.SetProfileContext(
+            localProfile: false,
+            profileDataWasCreated: player.WasProfileDataCreated);
         player.transform.position = spawnPosition;
         player.Data.transform.position = spawnPosition;
 
@@ -1689,17 +1700,19 @@ public class ItemMgr : SingletonMono<ItemMgr>
             body.interpolation = RigidbodyInterpolation2D.None;
         }
     }
-    private Data_Player LoadOrCreatePlayerData(string playerName)
+    private Data_Player LoadOrCreatePlayerData(string playerName, out bool wasCreated)
     {
         Data_Player playerData;
         //检测存档中是否存在玩家数据
         if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out var loadedPlayerData))
         {
             playerData = loadedPlayerData;
+            wasCreated = false;
         }
         else //如果不存在，则创建默认玩家数据
         {
             playerData = CreateDefaultPlayerData(playerName);
+            wasCreated = true;
         }
         return playerData;
     }

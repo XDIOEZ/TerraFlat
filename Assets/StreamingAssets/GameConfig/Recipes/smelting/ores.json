@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:原木=木炭",
+      "displayName": "原木=木炭",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 500.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ore_Coal",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:粗铁锭=铁锭",
+      "displayName": "粗铁锭=铁锭",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1489.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铁矿=粗铁锭",
+      "displayName": "铁矿=粗铁锭",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1000.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Iron",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_RawIron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铁矿=铁锭",
+      "displayName": "铁矿=铁锭",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1489.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Iron",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ore_Iron",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铜矿=铜",
+      "displayName": "铜矿=铜",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1000.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Copper",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_Copper",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:锡矿=锡",
+      "displayName": "锡矿=锡",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 1000.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Tin",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Ingot_Tin",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}
