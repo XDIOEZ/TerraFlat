@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:椰子壳-脏水 = 椰子壳-水",
+      "displayName": "椰子壳-脏水 = 椰子壳-水",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 100.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Coconut_Addle",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Coconut_Water",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:生肉=熟肉",
+      "displayName": "生肉=熟肉",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 200.0,
+      "maxTemperature": 400.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Meat",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Meat_Cooked",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:鸡蛋=煎鸡蛋",
+      "displayName": "鸡蛋=煎鸡蛋",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 150.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Egg",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Egg_Cooked",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

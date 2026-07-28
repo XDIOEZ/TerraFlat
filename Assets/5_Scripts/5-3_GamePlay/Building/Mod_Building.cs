@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Gameplay.Progress;
 using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
@@ -65,6 +66,7 @@ public class Mod_Building : Module
     private bool _dismantlePending;
     private bool _ghostCreationFailed;
     private GameController _ownerController;
+    private Player _placementActor;
 
     public override ModuleData _Data
     {
@@ -217,6 +219,7 @@ public class Mod_Building : Module
         CurrentState = BuildingState.Installing;
         StartInstall?.Invoke();
         _placementPending = true;
+        _placementActor = ResolvePlacementActor();
 
         if (ItemNetworkStateSerialization.BeginNetworkBuilding(this, placement))
         {
@@ -227,6 +230,7 @@ public class Mod_Building : Module
         _placementPending = false;
         if (!TryCreateInstalledBuilding(placement, out Item building, out reason))
         {
+            _placementActor = null;
             CurrentState = BuildingState.NotInstalled;
             Save();
             Debug.LogWarning($"[建筑安装] {reason}", item);
@@ -248,10 +252,14 @@ public class Mod_Building : Module
         if (!_placementPending)
             return;
 
+        Player actor = _placementActor;
+        string buildingId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
         _placementPending = false;
+        _placementActor = null;
         CurrentState = BuildingState.NotInstalled;
         Save();
         ApplySourceAmount(authoritativeRemainingAmount);
+        GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
     }
 
     public void RejectNetworkPlacement(string reason)
@@ -260,6 +268,7 @@ public class Mod_Building : Module
             return;
 
         _placementPending = false;
+        _placementActor = null;
         CurrentState = BuildingState.NotInstalled;
         Save();
         if (!string.IsNullOrWhiteSpace(reason))
@@ -701,6 +710,7 @@ public class Mod_Building : Module
     {
         if (building == null)
         {
+            _placementActor = null;
             CurrentState = BuildingState.NotInstalled;
             Save();
             return;
@@ -709,7 +719,15 @@ public class Mod_Building : Module
         CurrentState = BuildingState.NotInstalled;
         Save();
         if (ConsumeOneSourceItem())
+        {
+            GameplayProgressEvents.PublishBuildingPlaced(
+                _placementActor,
+                building.itemData?.IDName);
+            _placementActor = null;
             return;
+        }
+
+        _placementActor = null;
 
         building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.ReleasePlacementOccupancy();
         ItemMgr.Instance?.DespawnItem(building, false);
@@ -722,6 +740,12 @@ public class Mod_Building : Module
 
         ApplySourceAmount(item.itemData.Stack.Amount - 1f);
         return true;
+    }
+
+    private Player ResolvePlacementActor()
+    {
+        Item owner = item?.Owner;
+        return owner as Player ?? owner?.GetComponentInParent<Player>();
     }
 
     private void ApplySourceAmount(float amount)

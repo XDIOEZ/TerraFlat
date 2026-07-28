@@ -8,6 +8,7 @@ using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using RuntimeRecipeModel = RuntimeRecipe;
 
 public class Inventory_Furnace : Inventory
 {
@@ -274,7 +275,7 @@ public class Inventory_Furnace : Inventory
         if (optimizedRecipeKeys != null && optimizedRecipeKeys.Count > 0)
             recipeKeys.AddRange(optimizedRecipeKeys);
 
-        Recipe recipe = null;
+        RuntimeRecipeModel recipe = null;
         string matchedKey = null;
 
         // 尝试匹配每个配方键
@@ -296,10 +297,10 @@ public class Inventory_Furnace : Inventory
             return;
         }
 
-        CookRecipe cookRecipe = recipe as CookRecipe;
-        if (cookRecipe == null)
+        RuntimeRecipeModel cookRecipe = recipe;
+        if (recipe.inputs.recipeType != RecipeType.Smelting)
         {
-            Debug.LogError($"配方类型错误：{matchedKey} 不是 CookRecipe");
+            Debug.LogError($"配方类型错误：{matchedKey} 不是熔炼配方");
             return;
         }
 
@@ -622,7 +623,7 @@ public class Inventory_Furnace : Inventory
         return result;
     }
 
-    private bool ValidateSlotCount(Inventory inputInv, Recipe recipe)
+    private bool ValidateSlotCount(Inventory inputInv, RuntimeRecipeModel recipe)
     {
         if (inputInv == null || inputInv.Data == null || recipe == null || recipe.inputs == null)
             return false;
@@ -638,7 +639,7 @@ public class Inventory_Furnace : Inventory
         return true;
     }
 
-    private List<ItemData> PrepareOutputItems(Recipe recipe)
+    private List<ItemData> PrepareOutputItems(RuntimeRecipeModel recipe)
     {
         var itemsToAdd = new List<ItemData>();
 
@@ -687,7 +688,7 @@ public class Inventory_Furnace : Inventory
     }
 
     private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv,
-        Recipe recipe, List<ItemData> outputItems)
+        RuntimeRecipeModel recipe, List<ItemData> outputItems)
     {
         // 检查recipe.inputs是有规则合成还是无规则合成（参考工作台的高级检查逻辑）
         if (recipe == null || recipe.inputs == null || recipe.inputs.RowItems_List == null)
@@ -855,7 +856,7 @@ public class Inventory_Furnace : Inventory
     }
 
     private void ExecuteSmelting(Inventory inputInv, Inventory outputInv,
-        Recipe recipe, List<ItemData> outputItems)
+        RuntimeRecipeModel recipe, List<ItemData> outputItems)
     {
         if (inputInv == null || inputInv.Data == null ||
             outputInv == null || outputInv.Data == null ||
@@ -1010,18 +1011,7 @@ public class Inventory_Furnace : Inventory
             }
         }
 
-        // // 执行配方动作
-        // if (recipe.action != null)
-        // {
-        //     foreach (var action in recipe.action)
-        //     {
-        //         if (action != null && inputInv.Data.itemSlots != null &&
-        //             action.slotIndex >= 0 && action.slotIndex < inputInv.Data.itemSlots.Count)
-        //         {
-        //             action.Apply(mod_Inventory);
-        //         }
-        //     }
-        // }
+        RecipeActionRunner.Execute(recipe, inputInv);
 
         outputInv.RefreshUI();
         inputInv.RefreshUI();
@@ -1029,7 +1019,7 @@ public class Inventory_Furnace : Inventory
     }
 
     // 提取传统的位置扣除逻辑为单独方法，方便复用
-    private void ExecuteTraditionalDeduction(Inventory inputInv, Recipe recipe)
+    private void ExecuteTraditionalDeduction(Inventory inputInv, RuntimeRecipeModel recipe)
     {
         int loopCount = Mathf.Min(inputInv.Data.itemSlots.Count, recipe.inputs.RowItems_List.Count);
         for (int i = 0; i < loopCount; i++)

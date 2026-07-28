@@ -40,13 +40,15 @@ GameSaveData
 - 地图存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/MapSave.cs`。
 - 星球存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`。
 - 自动保存：`Assets/5_Scripts/5-3_GamePlay/Manager/AutoSaveController.cs`。
+- `ItemSpecialData` 命名空间合并：`Assets/5_Scripts/5-3_GamePlay/Progress/ItemSpecialDataJsonStore.cs`。
 - Addressables：`Assets/AddressableAssetsData/`。
 - Excel 配置：`Assets/GameConfig/Excel/`；读取工具为 `Assets/5_Scripts/Utilitiles/ExcelManager.cs`。
 
 ## 资源注册边界
 
-- `Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs` 按 Addressables 标签注册 Prefab、Recipe、TileBase、TileBlock、Buff、InventoryInit、Skill。
+- `Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs` 按 Addressables 标签注册 Prefab、TileBase、TileBlock、Buff、InventoryInit、Skill；配方由 `Assets/StreamingAssets/GameConfig/Recipes/recipe-manifest.json` 聚合业务分包后注册。
 - 仅移动资源文件并不能保证运行时可用；需同时验证 Addressables 地址/标签与 `GameRes` 字典键。
+- 配方编辑源为 `Assets/GameConfig/Excel/RecipeConfig.xlsx`，由 Editor 工具整表校验并根据 `Recipes.Package` 导出 8 个业务 JSON；运行时不读取 Excel。
 - 玩家正式存档位于 `Application.persistentDataPath`；`Assets/Saves/` 主要用于项目内编辑或测试资源。
 
 ## 易误判点
@@ -54,9 +56,14 @@ GameSaveData
 - `PlanetData` 是 partial class，另一部分位于 `Assets/5_Scripts/5-3_GamePlay/Space/PlanetData.cs`。
 - 新增 MemoryPack 派生类型时必须检查 `MemoryPackUnion`、版本迁移和旧存档兼容。
 - 联机世界快照由 `SaveDataMgr` 生成/应用，但网络传输流程位于 Networking Skill。
+- 对话与教程不得各自覆盖 `Data_Player.ItemSpecialData`：统一通过 `ItemSpecialDataJsonStore` 替换目标命名空间并保留未知根属性；旧非 JSON 字符串保存到 `flatworld.legacyItemSpecialData`。
+- 新手引导状态位于 `flatworld.tutorial`，保存 `eligible`、幂等 `milestones`、派生 `stage` 与 `completed`；新玩家资格需跨保存保留，旧存档无资格标记时默认禁用。禁止为教程修改 `Data_Player` 的 MemoryPack 布局。
 
 ## 近期变更
 
+- 2026-07-28：配方存储由单 JSON 改为清单驱动的业务分包；编辑层统一、存储层分包、运行时聚合注册。
+- 2026-07-28：新增 `ItemSpecialDataJsonStore` 命名空间合并；对话使用 `flatworld.dialogue`，教程使用 `flatworld.tutorial`，并兼容保留旧非 JSON 数据。
+- 2026-07-28：配方配置脱离 ScriptableObject/Addressables，改为 Excel 编辑、JSON 运行时加载；`GameRes` 建立配方 ID 与输入签名双索引。
 - 2026-07-27：完成数据与存档系统首版索引；当前权威链仍为 `GameSaveData → PlanetData → MapSave → ItemData → ModuleData`。
 
 ## 修改后自动测试
@@ -66,6 +73,7 @@ GameSaveData
 - 新增数据字段、MemoryPack Union、自动保存、区块差量或配置加载行为时必须增加往返测试；修复 Bug 时先增加回归测试。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；不得写入玩家真实存档，必须使用临时路径并验证序列化前后关键字段一致。
 - 完成修改后检查 Unity 编译和 Console，再运行 `DataSave.Smoke`；涉及地图、Item/Module、建筑、对话一次性标记或联机快照时同步运行对应系统测试。
+- 教程存档、旧数据兼容及命名空间共存由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

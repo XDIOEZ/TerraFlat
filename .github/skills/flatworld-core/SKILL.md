@@ -16,12 +16,14 @@ disable-model-invocation: false
 2. `Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.UI.cs`：主菜单、新游戏、存档面板绑定与控件命名契约。
 3. `Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs`：Addressables 本体资源加载完成后接入 MOD。
 4. `Assets/5_Scripts/5-3_GamePlay/Manager/SceneMgr.cs`：通用同步/异步场景服务。
+5. `Assets/5_Scripts/5-3_GamePlay/Manager/ItemMgr.cs`：单机/联机 Player 加载、创建与本地档案上下文建立。
 
 ## 关键入口与路径
 
 - 世界事件：`GameManager.Event_GameWorldEnter`、`Event_GameWorldExit`、`Event_PlayerEnterWorld`。
 - 自动保存：`Assets/5_Scripts/5-3_GamePlay/Manager/AutoSaveController.cs`。
 - 玩家控制入口：`Assets/5_Scripts/5-3_GamePlay/Controller/GameController.cs`。
+- 玩家档案上下文：`ItemMgr.LoadOrCreatePlayerData(..., out wasCreated)`；创建、加载、网络提升与远程副本配置都必须显式调用 `Player.SetProfileContext()`。
 - 输入重绑定：`Assets/5_Scripts/5-3_GamePlay/Controller/InputBindingService.cs`。
 - 管理/调试控制：`Assets/5_Scripts/5-3_GamePlay/Controller/PlayerAdminController.cs`。
 - 主菜单场景：`Assets/3_Scenes/GameStartScene.unity`。
@@ -47,6 +49,7 @@ GameStartScene
 
 ## 近期变更
 
+- 2026-07-28：`ItemMgr` 在单机和联机 Player 创建链显式区分本地档案、新建档案与远程副本，为新玩家教程和本地系统隔离提供权威运行时上下文。
 - 2026-07-27：`GameManager` 使用 partial 分离世界生命周期与主菜单/存档 UI 绑定；领域控制器直接组合 `BasePanel`。
 
 ## 修改后自动测试

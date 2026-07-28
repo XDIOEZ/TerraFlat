@@ -49,9 +49,11 @@ Summoner（库存中的持久化载体）
 - 动态占地不修改地形 `TileData`，由 `BuildingOccupancyRegistry` 叠加阻挡。
 - 放置和拆除必须保持事务顺序，失败时不能同时丢失召唤器和世界建筑。
 - 联机权威校验位于 `Mod_Building` 与网络序列化桥接，客户端预览不能作为服务端最终依据。
+- 教程进度事件必须使用请求开始时捕获的 `_placementActor`：单机仅在创建建筑且成功消耗召唤器后发布；联机仅在 accepted 回执并应用权威剩余数量后发布。Reject、创建失败或 actor 丢失路径不得发布。
 
 ## 近期变更
 
+- 2026-07-28：`Mod_Building` 在放置事务中暂存玩家 actor，并于单机提交或联机 accepted 回执后的最终成功点发布 `GameplayProgressEvents.BuildingPlaced`。
 - 2026-07-27：建筑占地已从地形数据中分离，统一通过 `BuildingOccupancyRegistry` 提交导航脏格。
 - 2026-07-27：建筑使用召唤器/世界实例双角色与嵌入式快照事务。
 
@@ -62,6 +64,7 @@ Summoner（库存中的持久化载体）
 - 新增放置、占地、安装拆除或建筑快照行为时必须增加系统测试；修复 Bug 时先增加回归测试。建筑主流程变化时同步更新建筑冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试创建的占地、Prefab 和临时快照必须清理。
 - 完成修改后检查 Unity 编译和 Console，再运行 `Building.Smoke`；涉及导航、地图、存档或联机事务时同步运行对应系统测试。
+- 建筑教程事件的 actor、稳定 ID 与成功锚点由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

@@ -20,7 +20,10 @@ namespace FlatWorld.Dialogue
         {
             CharacterSpeechFacts.HungerRate,
             CharacterSpeechFacts.HungerTier,
-            CharacterSpeechFacts.HungerIsTakingDamage
+            CharacterSpeechFacts.HungerIsTakingDamage,
+            CharacterSpeechFacts.TutorialEnabled,
+            CharacterSpeechFacts.TutorialStage,
+            CharacterSpeechFacts.TutorialCompleted
         };
 
         #region 公共加载入口

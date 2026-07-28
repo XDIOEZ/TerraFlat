@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "crafting/survival",
+      "path": "crafting/survival.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/tools",
+      "path": "crafting/tools.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/weapons",
+      "path": "crafting/weapons.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/buildings",
+      "path": "crafting/buildings.json",
+      "enabled": true
+    },
+    {
+      "id": "cooking/basic_food",
+      "path": "cooking/basic_food.json",
+      "enabled": true
+    },
+    {
+      "id": "cooking/advanced_food",
+      "path": "cooking/advanced_food.json",
+      "enabled": true
+    },
+    {
+      "id": "smelting/ores",
+      "path": "smelting/ores.json",
+      "enabled": true
+    },
+    {
+      "id": "smelting/alloys",
+      "path": "smelting/alloys.json",
+      "enabled": true
+    }
+  ]
+}

@@ -35,6 +35,7 @@ namespace FlatWorld.Dialogue
         private Coroutine providerRoutine;
         private bool started;
         private int requestGeneration;
+        private Player actorPlayer;
 
         public event Action<CharacterSpeechRequest> SpeechRequested;
         public event Action<CharacterSpeechRequest> SpeechShown;
@@ -42,18 +43,24 @@ namespace FlatWorld.Dialogue
         private void Start()
         {
             started = true;
-            StartController();
+            RefreshActorPlayerSubscription();
+            if (CanRunForActor())
+                StartController();
         }
 
         private void OnEnable()
         {
-            if (started)
+            RefreshActorPlayerSubscription();
+            if (started && CanRunForActor())
                 StartController();
         }
 
         private void OnDisable()
         {
             StopController();
+            if (actorPlayer != null)
+                actorPlayer.ProfileContextChanged -= HandleProfileContextChanged;
+            actorPlayer = null;
         }
 
         /// <summary>
@@ -106,9 +113,42 @@ namespace FlatWorld.Dialogue
 
         private void StartController()
         {
+            if (!CanRunForActor())
+                return;
+
             StopController();
             RebuildExtensions();
             startupRoutine = StartCoroutine(StartWhenActorReady());
+        }
+
+        private void RefreshActorPlayerSubscription()
+        {
+            Player resolvedPlayer = GetComponentInParent<Player>();
+            if (ReferenceEquals(actorPlayer, resolvedPlayer))
+                return;
+
+            if (actorPlayer != null)
+                actorPlayer.ProfileContextChanged -= HandleProfileContextChanged;
+
+            actorPlayer = resolvedPlayer;
+            if (actorPlayer != null)
+                actorPlayer.ProfileContextChanged += HandleProfileContextChanged;
+        }
+
+        private void HandleProfileContextChanged()
+        {
+            if (!isActiveAndEnabled || !started)
+                return;
+
+            if (CanRunForActor())
+                StartController();
+            else
+                StopController();
+        }
+
+        private bool CanRunForActor()
+        {
+            return actorPlayer == null || actorPlayer.IsLocalProfile;
         }
 
         private void StopController()
