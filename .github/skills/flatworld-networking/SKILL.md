@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 联机系统定位
 
-> 最后核对：2026-07-27。修改时严格区分本地权威实体与远程视觉副本。
+> 最后核对：2026-07-29。修改时严格区分本地权威实体与远程视觉副本。
 
 ## 修改前先读
 
@@ -38,11 +38,15 @@ disable-model-invocation: false
 
 - 会话控制：`NetworkModeUIController.cs`。
 - UI 状态：`NetworkModeUIController.UI.cs`。
-- 动态视觉树：`NetworkModePanelView.cs`，实际类型为 `NetworkModeUIController` partial。
+- Prefab 加载：`NetworkModePanelView.cs`，实际类型为 `NetworkModeUIController` partial；运行时只调用 `GameRes.InstantiatePrefab("UI_NetworkMode")`，不得创建视觉节点。
+- 联机面板 Prefab：`Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NetworkMode.prefab`；位于 Addressables 的 `Assets/2_Prefabs` 文件夹条目下，由 `GameRes` 的 `Prefab` 标签预加载。
+- Prefab 编辑器重建入口：`Assets/Editor/FlatWorld/NetworkModePrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Network Mode UI`；玩家可直接打开 Prefab 检查和编辑布局。
+- 穿透端点解析：`Core/NetworkConnectionEndpoint.cs`；客户端地址支持域名、IPv4、IPv6、`域名:端口`、`kcp://` 与 `udp://`，地址内端口优先于 UI 默认端口。
+- 当前传输为 KCP/UDP；内网穿透服务必须建立 UDP 隧道，TCP/HTTP 隧道会在连接前被拒绝。
 
 ## 资源与测试
 
-- 网络玩家 Prefab：`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
+- 网络玩家 Prefab：`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`；根下必须预制名为 `玩家名称` 的 `TextMeshPro`，`NetworkWorldPlayer` 只更新文字与颜色，不得运行时创建名称视觉。
 - 测试脚本：`Assets/5_Scripts/5-4_Networking/Tests/`。
 - 测试 Prefab：`Assets/2_Prefabs/NetworkingTest/`。
 - 测试场景：`Assets/3_Scenes/NetworkTest.unity`。
@@ -55,16 +59,21 @@ disable-model-invocation: false
 - 客户端不重复结算伤害、死亡、建筑放置或世界生成；应用服务端权威结果。
 - 局部导航图跟随本地 owned 玩家；Chunk 流送按所有观察者并集。
 - `NetworkGameBootstrap` 从 `Resources/Networking/FlatWorldNetworkPlayer` 加载 Prefab；移动后同步常量与本 Skill。
+- `GamePlay.asmdef` 直接引用无引擎依赖的 `FlatWorld.Networking.Core`；`MonsterSpawnerManager` 使用 `GameNetwork.HasStateAuthority` 门控世界生物生成，客户端不得重复投放。
 
 ## 近期变更
 
+- 2026-07-29：联机玩家名称固化到 `FlatWorldNetworkPlayer.prefab`；统一 Runtime UI 重建器负责生成该节点，网络运行时只查找并绑定现有 `TextMeshPro`。
+- 2026-07-29：联机面板从运行时代码构建改为 `UI_NetworkMode.prefab`；`GameRes` 预加载后实例化，新增编辑器重建菜单并删除运行时视觉树代码。
+- 2026-07-29：联机面板支持直接粘贴 UDP 内网穿透完整地址；Core 统一解析端点并校验协议、主机、端口，Mirror 客户端使用解析后的域名/IP 与外部端口连接。
+- 2026-07-29：生态生成器接入 `GameNetwork.HasStateAuthority`，离线与 Host/Server 结算，普通客户端只应用权威世界状态。
 - 2026-07-28：网络 Player 创建链增加显式本地档案上下文；远程副本隔离自言自语与新手教程，本地提升通过 `ProfileContextChanged` 恢复。
 - 2026-07-27：联机 UI 使用 `NetworkModeUIController` 三个 partial 文件分离会话、UI 状态和动态视觉树。
 - 2026-07-27：本地导航窗口跟随 owned 玩家；远程副本继续排除出本地 Tick/感知/存档。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；当前基础覆盖网络启动器、正式管理器、玩家 Prefab 与网络测试场景入口。
+- 基础测试脚本：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；当前基础覆盖网络启动器、正式管理器、玩家 Prefab、预制玩家名称节点、联机 UI Prefab、GameRes 实例化约束、网络测试场景入口与 UDP 穿透端点解析/拒绝规则。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；网络测试约定目录：`Assets/GameTest/Networking/`；场景目录：`Assets/GameTest/Scenes/Networking/`；冒烟分类：`Networking.Smoke`。现有独立进程 Harness 位于 `Assets/5_Scripts/5-4_Networking/Tests/`，不得重复实现。
 - 新增 Host/Client、会话、网络玩家、世界快照、Chunk、Item 或建筑同步行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心连接与同步流程变化时同步更新网络测试场景和现有 Harness。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；端口、临时存档和生成进程必须隔离，测试结束必须关闭测试实例并清理状态。

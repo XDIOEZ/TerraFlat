@@ -51,6 +51,7 @@ ItemMaker / ItemMgr 实例化
 
 ## 近期变更
 
+- 2026-07-29：统一内容校验器建立 Prefab 名与 `ItemData.IDName` 注册快照，报告重复/覆盖键、模块数据空值与 ID、模块 Prefab 可解析性、`ModuleDataDic` 键值一致性、Missing Script/序列化丢失引用及显示名/描述污染。
 - 2026-07-27：Item/Module 已采用声明式分级调度；堆肥/晾肉/生产 0.5s，库存/生长/种子/温度/GPS 0.25s，食物/熔炉/打火工具 0.1s，门/动画接收器/体力 UI 可休眠。
 - 2026-07-27：`ItemMgr` 的感知空间索引同时服务 AI；修改实体注册、移动同步或对象池时必须检查 AI Skill。
 

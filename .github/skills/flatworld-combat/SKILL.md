@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 战斗、Buff 与技能定位
 
-> 最后核对：2026-07-27。
+> 最后核对：2026-07-29。
 
 ## 修改前先读
 
@@ -48,9 +48,17 @@ disable-model-invocation: false
 - Buff ID 是持久化键；修改命名或叠加策略需考虑旧存档。
 - 技能定义由 `GameRes.SkillDict` 注册，资源移动要检查 Addressables `Skill` 标签。
 - 伤害死亡回调可能生成 Item、播放音效和更新 UI，修改时检查这些订阅者。
+- `DamageReceiver.DeathStarted` 是带接收器参数的真实死亡信号；未被外部消费的死亡最终必须走 `ItemMgr.DespawnItem(item, saveData:false)`，同步清理运行时索引和 Chunk 存档，禁止直接 `Destroy` 遗留幽灵注册。
+- 玩家死亡掉落规则由 `Assets/5_Scripts/5-3_GamePlay/Difficulty/GameDifficulty.cs` 的 `GameDifficultyService.Current.PlayerDeath` 统一提供；`Mod_PlayerDeathState` 不得直接判断预设枚举。官方预设与新世界自定义规则共享此入口。
+- `DamageReceiver.Hurt()` 是直接伤害难度结算点：玩家攻击、生物攻击和非玩家实体等效生命倍率统一由 `GameDifficultyService.ResolveDirectDamageMultiplier()` 计算；倍率为 0 时不得触发最低 1 点伤害或装备耐久损耗。
+- `DamageReceiver.ForceHurt()` 与 `Heal()` 分别承接玩家环境伤害倍率和治疗倍率；`DamageReceiver.DropLoot()`、`DamageReciver_Action_SpawnItem` 统一应用世界战利品数量倍率。
 
 ## 近期变更
 
+- 2026-07-29：统一内容校验器递归扫描 Prefab 与 ScriptableObject 中的 `LootEntry`/旧 `LootData`，报告战利品 ID、Prefab 对应关系、概率、数量范围和丢失引用。
+- 2026-07-29：自定义难度接入玩家伤害、生物伤害、生物等效生命、环境伤害、治疗和战利品数量；统一从 `GameDifficultyService` 读取，禁止发送端重复乘算。
+- 2026-07-29：难度目录增加新世界自定义类型；玩家死亡掉落继续通过 `GameDifficultyService` 统一读取，支持预设与自定义规则共用结算链。
+- 2026-07-29：死亡销毁统一接入 `ItemMgr` 注销链，并增加生态补位使用的 `DeathStarted` 事件。
 - 2026-07-27：战斗网络边界明确为本地权威结算、远端仅应用模块数据与表现。
 
 ## 修改后自动测试

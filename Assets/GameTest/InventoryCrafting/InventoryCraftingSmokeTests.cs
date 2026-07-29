@@ -5,6 +5,7 @@ using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace FlatWorld.GameTest.InventoryCrafting
 {
@@ -19,6 +20,10 @@ namespace FlatWorld.GameTest.InventoryCrafting
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Equipment/Mod_Equipment.cs", "Mod_Equipment");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Crafting/RecipeDto.cs", "RecipeDto");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Crafting/RuntimeRecipe.cs", "RuntimeRecipe");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Crafting/CraftingRecipeMatcher.cs", "CraftingRecipeMatcher");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Crafting/CraftingTransaction.cs", "CraftingTransaction");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Crafting/CraftingResult.cs", "CraftingResult");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Crafting/CraftingService.cs", "CraftingService");
             GameTestAssertions.AssertAssetExists("Assets/StreamingAssets/GameConfig/Recipes/recipe-manifest.json");
             GameTestAssertions.AssertAssetExists("Assets/StreamingAssets/GameConfig/Recipes/crafting/survival.json");
             GameTestAssertions.AssertAssetExists("Assets/StreamingAssets/GameConfig/Recipes/crafting/tools.json");
@@ -30,6 +35,26 @@ namespace FlatWorld.GameTest.InventoryCrafting
             GameTestAssertions.AssertAssetExists("Assets/StreamingAssets/GameConfig/Recipes/smelting/alloys.json");
             GameTestAssertions.AssertAssetExists("Assets/GameConfig/Excel/RecipeConfig.xlsx");
             GameTestAssertions.AssertFolderContainsAsset("Assets/4_ScriptObjects/4-6_InventoryInit", "t:ScriptableObject");
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Smoke")]
+        public void InventoryAndCraftingRuntimeVisualsExistInPrefabs()
+        {
+            const string bagPath = "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Bag.prefab";
+            GameObject bag = AssetDatabase.LoadAssetAtPath<GameObject>(bagPath);
+            Assert.That(bag, Is.Not.Null, $"缺少背包 Prefab：{bagPath}");
+            Assert.That(
+                Array.Exists(bag.GetComponentsInChildren<Button>(true), button => button.name == "整理"),
+                Is.True,
+                "UI_Bag.prefab 缺少预制的整理按钮。");
+
+            const string slotPath = "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Slot.prefab";
+            GameObject slot = AssetDatabase.LoadAssetAtPath<GameObject>(slotPath);
+            Assert.That(slot, Is.Not.Null, $"缺少槽位 Prefab：{slotPath}");
+            Image[] images = slot.GetComponentsInChildren<Image>(true);
+            Assert.That(Array.Exists(images, image => image.name == "Crafting Output Ghost"), Is.True);
+            Assert.That(Array.Exists(images, image => image.name == "Crafting Output Reveal"), Is.True);
         }
 
         [Test]

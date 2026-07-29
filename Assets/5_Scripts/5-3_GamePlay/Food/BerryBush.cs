@@ -73,7 +73,9 @@ public class BerryBush : MonoBehaviour, IInteractable
 			return;
 		}
 
-		_productionTimer += Time.deltaTime;
+		_productionTimer +=
+			Time.deltaTime *
+			GameDifficultyService.Current.Production.CropGrowthMultiplier;
 		if (_productionTimer >= Mathf.Max(0.1f, ProductionIntervalSeconds))
 		{
 			_productionTimer = 0f;
@@ -116,11 +118,21 @@ public class BerryBush : MonoBehaviour, IInteractable
 	{
 		Vector2 harvestStartPos = ResolveHarvestStartPosition();
 		Item berry = InstantiateBerryLikePlayerDrop(harvestStartPos);
-		berry.itemData.Stack.Amount = 1;
+		int outputAmount = GameDifficultyService.ScaleRandomizedAmount(
+			1,
+			GameDifficultyService.Current.World.LootAmountMultiplier);
+		berry.itemData.Stack.Amount = outputAmount;
+		if (outputAmount <= 0)
+		{
+			berry.DestroySelf();
+			_currentBerryCount = Mathf.Max(0, _currentBerryCount - 1);
+			RefreshReadySpriteVisual();
+			return;
+		}
 		ApplyParabolaThrowLikePlayerDrop(berry, harvestStartPos);
 
 		_currentBerryCount = Mathf.Max(0, _currentBerryCount - 1);
-		Debug.Log($"[BerryBush] 采摘完成，生成浆果数量=1, 剩余库存={_currentBerryCount}, 物品ID={BerryItemId}");
+		Debug.Log($"[BerryBush] 采摘完成，生成浆果数量={outputAmount}, 剩余库存={_currentBerryCount}, 物品ID={BerryItemId}");
 
 		RefreshReadySpriteVisual();
 	}

@@ -39,6 +39,7 @@ public static class NewGamePrefabBuilder
             BuildIdentity(card.transform, font);
             BuildWorldSettings(card.transform, font);
             BuildFooter(card.transform, font);
+            BuildDifficultyPanel(root.transform, font);
 
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -199,11 +200,357 @@ public static class NewGamePrefabBuilder
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
 
-        TMP_Text flow = CreateText("新世界流程提示", card, "确认身份  >  调整世界参数  >  生成世界", font, 15f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(flow.rectTransform, new Vector2(42f, 34f), new Vector2(650f, 34f), new Vector2(0f, 0f));
+        CreateButton(card, font, GameManager.NewGameDifficultyButtonKey, "难度设置  ·  简单", new Vector2(42f, 22f), new Vector2(238f, 66f), InkSoft, 17f, new Vector2(0f, 0f));
+
+        TMP_Text flow = CreateText("新世界流程提示", card, "确认身份  >  调整规则  >  生成世界", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(flow.rectTransform, new Vector2(304f, 34f), new Vector2(490f, 34f), new Vector2(0f, 0f));
         flow.characterSpacing = 1f;
 
         CreateButton(card, font, GameManager.NewGameStartButtonKey, "生成新世界", new Vector2(-42f, 22f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), 21f, new Vector2(1f, 0f));
+    }
+
+    private static void BuildDifficultyPanel(Transform root, TMP_FontAsset font)
+    {
+        Image overlay = CreateImage(GameManager.NewGameDifficultyPanelKey, root, new Color(0.004f, 0.012f, 0.018f, 0.92f));
+        Stretch(overlay.rectTransform);
+
+        Image dialog = CreatePanelCard("难度设置窗口", overlay.transform);
+        SetRect(dialog.rectTransform, Vector2.zero, new Vector2(1120f, 650f), new Vector2(0.5f, 0.5f));
+
+        TMP_Text eyebrow = CreateText("难度设置眉题", dialog.transform, "DIFFICULTY  /  沙盒规则", font, 14f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(eyebrow.rectTransform, new Vector2(30f, -24f), new Vector2(500f, 24f), new Vector2(0f, 1f));
+        eyebrow.characterSpacing = 2f;
+
+        TMP_Text title = CreateText("难度设置标题", dialog.transform, "选择官方预设，或创建自己的规则", font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(30f, -50f), new Vector2(760f, 42f), new Vector2(0f, 1f));
+
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCloseButtonKey, "关闭", new Vector2(-30f, -28f), new Vector2(112f, 46f), InkSoft, 16f, new Vector2(1f, 1f));
+
+        Image divider = CreateImage("难度标题分隔线", dialog.transform, new Color(0.55f, 0.64f, 0.65f, 0.18f));
+        divider.rectTransform.anchorMin = new Vector2(0f, 1f);
+        divider.rectTransform.anchorMax = new Vector2(1f, 1f);
+        divider.rectTransform.pivot = new Vector2(0.5f, 1f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -104f);
+        divider.rectTransform.sizeDelta = new Vector2(-60f, 1f);
+        divider.raycastTarget = false;
+
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyOfficialTabKey, "官方预设", new Vector2(30f, -126f), new Vector2(190f, 46f), Amber, 16f, new Vector2(0f, 1f));
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCustomTabKey, "自定义", new Vector2(232f, -126f), new Vector2(190f, 46f), InkSoft, 16f, new Vector2(0f, 1f));
+
+        BuildOfficialDifficultyPage(dialog.transform, font);
+        BuildCustomDifficultyPage(dialog.transform, font);
+        BuildDifficultyDetails(dialog.transform, font);
+
+        TMP_Text note = CreateText("难度存档提示", dialog.transform, "难度属于当前世界存档；进入游戏后可在设置面板中切换官方预设。", font, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(note.rectTransform, new Vector2(30f, 24f), new Vector2(720f, 28f), new Vector2(0f, 0f));
+
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyConfirmButtonKey, "确认选择", new Vector2(-30f, 18f), new Vector2(190f, 52f), new Color(0.70f, 0.36f, 0.16f, 1f), 18f, new Vector2(1f, 0f));
+        overlay.gameObject.SetActive(false);
+    }
+
+    private static void BuildOfficialDifficultyPage(Transform dialog, TMP_FontAsset font)
+    {
+        Image page = CreateImage(GameManager.NewGameDifficultyOfficialPageKey, dialog, Surface);
+        SetRect(page.rectTransform, new Vector2(30f, -188f), new Vector2(392f, 372f), new Vector2(0f, 1f));
+
+        TMP_Text heading = CreateText("官方预设标题", page.transform, "官方预设", font, 19f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(heading.rectTransform, new Vector2(18f, -16f), new Vector2(340f, 28f), new Vector2(0f, 1f));
+
+        TMP_Text caption = CreateText("官方预设说明", page.transform, "预设会持续扩充，并保持规则组合清晰。", font, 12.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(caption.rectTransform, new Vector2(18f, -46f), new Vector2(348f, 24f), new Vector2(0f, 1f));
+
+        GameObject scrollObject = new GameObject("官方预设列表", typeof(RectTransform), typeof(ScrollRect));
+        scrollObject.layer = LayerMask.NameToLayer("UI");
+        scrollObject.transform.SetParent(page.transform, false);
+        SetRect(scrollObject.GetComponent<RectTransform>(), new Vector2(18f, -84f), new Vector2(356f, 270f), new Vector2(0f, 1f));
+
+        GameObject viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+        viewportObject.layer = LayerMask.NameToLayer("UI");
+        viewportObject.transform.SetParent(scrollObject.transform, false);
+        RectTransform viewport = viewportObject.GetComponent<RectTransform>();
+        Stretch(viewport);
+
+        GameObject contentObject = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        contentObject.layer = LayerMask.NameToLayer("UI");
+        contentObject.transform.SetParent(viewportObject.transform, false);
+        RectTransform content = contentObject.GetComponent<RectTransform>();
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup layout = contentObject.GetComponent<VerticalLayoutGroup>();
+        layout.spacing = 12f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = contentObject.GetComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = scrollObject.GetComponent<ScrollRect>();
+        scroll.content = content;
+        scroll.viewport = viewport;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Elastic;
+        scroll.scrollSensitivity = 24f;
+
+        for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
+        {
+            GameDifficultyDefinition definition = GameDifficultyCatalog.All[i];
+            string rule = definition.PlayerDeath.DropAllCarriedItems
+                ? "死亡掉落全部物品"
+                : "死亡保留全部物品";
+
+            CreateDifficultyPresetButton(
+                content,
+                font,
+                GameManager.GetNewGameDifficultyPresetButtonKey(definition.Id),
+                definition.DisplayName,
+                $"{rule} · {definition.Description}");
+        }
+    }
+
+    private static void BuildCustomDifficultyPage(Transform dialog, TMP_FontAsset font)
+    {
+        Image page = CreateImage(GameManager.NewGameDifficultyCustomPageKey, dialog, Surface);
+        SetRect(page.rectTransform, new Vector2(30f, -188f), new Vector2(392f, 372f), new Vector2(0f, 1f));
+
+        TMP_Text heading = CreateText("自定义规则标题", page.transform, "自定义规则", font, 19f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(heading.rectTransform, new Vector2(18f, -16f), new Vector2(340f, 28f), new Vector2(0f, 1f));
+
+        TMP_Text caption = CreateText("自定义规则说明", page.transform, "17 项规则均已接入实际游戏系统。", font, 12.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(caption.rectTransform, new Vector2(18f, -46f), new Vector2(348f, 24f), new Vector2(0f, 1f));
+        caption.enableWordWrapping = true;
+        caption.overflowMode = TextOverflowModes.Ellipsis;
+
+        CreateButton(page.transform, font, GameManager.NewGameDifficultyCombatCategoryKey, "战斗", new Vector2(18f, -78f), new Vector2(80f, 34f), Amber, 13f, new Vector2(0f, 1f));
+        CreateButton(page.transform, font, GameManager.NewGameDifficultySurvivalCategoryKey, "生存", new Vector2(106f, -78f), new Vector2(80f, 34f), InkSoft, 13f, new Vector2(0f, 1f));
+        CreateButton(page.transform, font, GameManager.NewGameDifficultyWorldCategoryKey, "世界", new Vector2(194f, -78f), new Vector2(80f, 34f), InkSoft, 13f, new Vector2(0f, 1f));
+        CreateButton(page.transform, font, GameManager.NewGameDifficultyProductionCategoryKey, "生产", new Vector2(282f, -78f), new Vector2(80f, 34f), InkSoft, 13f, new Vector2(0f, 1f));
+
+        BuildCustomCombatPage(page.transform, font);
+        BuildCustomSurvivalPage(page.transform, font);
+        BuildCustomWorldPage(page.transform, font);
+        BuildCustomProductionPage(page.transform, font);
+    }
+
+    private static void BuildCustomCombatPage(Transform parent, TMP_FontAsset font)
+    {
+        Image page = CreateCustomCategoryPage(GameManager.NewGameDifficultyCombatPageKey, parent);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyPlayerAttackSliderKey, "玩家伤害", "玩家及手持武器造成的伤害", 0f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCreatureAttackSliderKey, "生物伤害", "非玩家攻击者造成的伤害", 54f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCreatureHealthSliderKey, "生物生命", "生物与可破坏实体的等效耐久", 108f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyEnvironmentalDamageSliderKey, "环境伤害", "饥饿、温度、流血与真实伤害", 162f);
+    }
+
+    private static void BuildCustomSurvivalPage(Transform parent, TMP_FontAsset font)
+    {
+        Image page = CreateCustomCategoryPage(GameManager.NewGameDifficultySurvivalPageKey, parent);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyHungerDrainSliderKey, "饥饿消耗", "营养与水分自然消耗速度", 0f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyStaminaConsumptionSliderKey, "耐力消耗", "移动、奔跑与攻击耐力消耗", 42f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyStaminaRecoverySliderKey, "耐力恢复", "营养充足时的耐力恢复", 84f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyHealingSliderKey, "治疗效果", "食物、睡眠和其他治疗效果", 126f);
+        CreateCompactDifficultyToggle(page.transform, font, GameManager.NewGameDifficultyDropToggleKey, "死亡掉落全部随身物品", 174f);
+    }
+
+    private static void BuildCustomWorldPage(Transform parent, TMP_FontAsset font)
+    {
+        Image page = CreateCustomCategoryPage(GameManager.NewGameDifficultyWorldPageKey, parent);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyTimeSpeedSliderKey, "时间流逝", "昼夜与游戏日推进速度", 0f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultySpawnFrequencySliderKey, "生成频率", "每日生成窗口与每次生成数量", 54f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultySpawnPopulationSliderKey, "种群上限", "生态预算与生物存活上限", 108f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyLootAmountSliderKey, "战利品", "生物、资源与植物产出数量", 162f);
+    }
+
+    private static void BuildCustomProductionPage(Transform parent, TMP_FontAsset font)
+    {
+        Image page = CreateCustomCategoryPage(GameManager.NewGameDifficultyProductionPageKey, parent);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCropGrowthSliderKey, "作物生长", "种子、作物和浆果成熟速度", 0f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultySmeltingSpeedSliderKey, "熔炼速度", "熔炉生产进度速度", 54f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyFuelConsumptionSliderKey, "燃料消耗", "所有燃料模块的消耗速度", 108f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCraftingOutputSliderKey, "制作产量", "手工、工作台与熔炉产量", 162f);
+    }
+
+    private static Image CreateCustomCategoryPage(string name, Transform parent)
+    {
+        Image page = CreateImage(name, parent, new Color(0.035f, 0.06f, 0.075f, 0.98f));
+        SetRect(page.rectTransform, new Vector2(18f, -122f), new Vector2(356f, 230f), new Vector2(0f, 1f));
+        return page;
+    }
+
+    private static void CreateDifficultySlider(
+        Transform parent,
+        TMP_FontAsset font,
+        string name,
+        string title,
+        string description,
+        float top)
+    {
+        GameObject row = new GameObject(name + "_行", typeof(RectTransform));
+        row.layer = LayerMask.NameToLayer("UI");
+        row.transform.SetParent(parent, false);
+        SetRect(row.GetComponent<RectTransform>(), new Vector2(10f, -top), new Vector2(336f, 50f), new Vector2(0f, 1f));
+
+        TMP_Text titleText = CreateText(name + "_标题", row.transform, title, font, 13.5f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(0f, 0f), new Vector2(120f, 20f), new Vector2(0f, 1f));
+        TMP_Text descriptionText = CreateText(name + "_说明", row.transform, description, font, 10.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(descriptionText.rectTransform, new Vector2(0f, -19f), new Vector2(174f, 20f), new Vector2(0f, 1f));
+
+        TMP_Text valueText = CreateText(name + "_数值", row.transform, "100%", font, 13f, Amber, FontStyles.Bold, TextAlignmentOptions.Right);
+        SetRect(valueText.rectTransform, new Vector2(-2f, 0f), new Vector2(62f, 20f), new Vector2(1f, 1f));
+
+        GameObject sliderObject = new GameObject(name, typeof(RectTransform), typeof(Slider));
+        sliderObject.layer = LayerMask.NameToLayer("UI");
+        sliderObject.transform.SetParent(row.transform, false);
+        SetRect(sliderObject.GetComponent<RectTransform>(), new Vector2(-2f, -27f), new Vector2(154f, 18f), new Vector2(1f, 1f));
+
+        Image background = CreateImage("Background", sliderObject.transform, InkSoft);
+        Stretch(background.rectTransform, 0f, 0f, 6f, 6f);
+
+        GameObject fillAreaObject = new GameObject("Fill Area", typeof(RectTransform));
+        fillAreaObject.layer = LayerMask.NameToLayer("UI");
+        fillAreaObject.transform.SetParent(sliderObject.transform, false);
+        RectTransform fillArea = fillAreaObject.GetComponent<RectTransform>();
+        Stretch(fillArea, 3f, 3f, 6f, 6f);
+        Image fill = CreateImage("Fill", fillArea, Amber);
+        Stretch(fill.rectTransform);
+
+        GameObject handleAreaObject = new GameObject("Handle Slide Area", typeof(RectTransform));
+        handleAreaObject.layer = LayerMask.NameToLayer("UI");
+        handleAreaObject.transform.SetParent(sliderObject.transform, false);
+        RectTransform handleArea = handleAreaObject.GetComponent<RectTransform>();
+        Stretch(handleArea, 5f, 5f);
+        Image handle = CreateImage("Handle", handleArea, Cream);
+        SetRect(handle.rectTransform, Vector2.zero, new Vector2(8f, 18f), new Vector2(0.5f, 0.5f));
+
+        Slider slider = sliderObject.GetComponent<Slider>();
+        slider.fillRect = fill.rectTransform;
+        slider.handleRect = handle.rectTransform;
+        slider.targetGraphic = handle;
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0f;
+        slider.maxValue = 3f;
+        slider.value = 1f;
+        slider.navigation = new Navigation { mode = Navigation.Mode.None };
+    }
+
+    private static void CreateCompactDifficultyToggle(
+        Transform parent,
+        TMP_FontAsset font,
+        string name,
+        string title,
+        float top)
+    {
+        GameObject toggleObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Toggle));
+        toggleObject.layer = LayerMask.NameToLayer("UI");
+        toggleObject.transform.SetParent(parent, false);
+        SetRect(toggleObject.GetComponent<RectTransform>(), new Vector2(10f, -top), new Vector2(336f, 42f), new Vector2(0f, 1f));
+
+        Image background = toggleObject.GetComponent<Image>();
+        background.color = InkSoft;
+        Image box = CreateImage("选择框", toggleObject.transform, new Color(0.02f, 0.04f, 0.05f, 1f));
+        SetRect(box.rectTransform, new Vector2(10f, -9f), new Vector2(24f, 24f), new Vector2(0f, 1f));
+        Image mark = CreateImage("勾选标记", box.transform, Amber);
+        Stretch(mark.rectTransform, 5f, 5f, 5f, 5f);
+
+        TMP_Text label = CreateText(name + "_标题", toggleObject.transform, title, font, 13f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(label.rectTransform, new Vector2(44f, -8f), new Vector2(278f, 26f), new Vector2(0f, 1f));
+
+        Toggle toggle = toggleObject.GetComponent<Toggle>();
+        toggle.targetGraphic = box;
+        toggle.graphic = mark;
+        toggle.isOn = false;
+        toggle.navigation = new Navigation { mode = Navigation.Mode.None };
+    }
+
+    private static void BuildDifficultyDetails(Transform dialog, TMP_FontAsset font)
+    {
+        Image details = CreateImage("难度详情区", dialog, new Color(0.035f, 0.06f, 0.075f, 0.98f));
+        SetRect(details.rectTransform, new Vector2(442f, -126f), new Vector2(648f, 434f), new Vector2(0f, 1f));
+
+        TMP_Text eyebrow = CreateText("难度详情眉题", details.transform, "SELECTED PROFILE", font, 12f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(eyebrow.rectTransform, new Vector2(24f, -22f), new Vector2(420f, 22f), new Vector2(0f, 1f));
+        eyebrow.characterSpacing = 2f;
+
+        TMP_Text title = CreateText(GameManager.NewGameDifficultyTitleTextKey, details.transform, "简单", font, 34f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(24f, -54f), new Vector2(580f, 48f), new Vector2(0f, 1f));
+
+        TMP_Text description = CreateText(GameManager.NewGameDifficultyDescriptionTextKey, details.transform, "保持当前游戏配置。玩家死亡后不会掉落随身物品。", font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(description.rectTransform, new Vector2(24f, -118f), new Vector2(600f, 74f), new Vector2(0f, 1f));
+        description.enableWordWrapping = true;
+        description.overflowMode = TextOverflowModes.Ellipsis;
+
+        Image ruleCard = CreateImage("难度规则卡片", details.transform, Surface);
+        SetRect(ruleCard.rectTransform, new Vector2(24f, -204f), new Vector2(600f, 166f), new Vector2(0f, 1f));
+        TMP_Text ruleLabel = CreateText("难度规则标签", ruleCard.transform, "当前已接入规则", font, 13f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(ruleLabel.rectTransform, new Vector2(16f, -14f), new Vector2(360f, 24f), new Vector2(0f, 1f));
+        TMP_Text rule = CreateText(GameManager.NewGameDifficultyRuleTextKey, ruleCard.transform, "战斗：玩家 100% / 生物伤害 100% / 生物生命 100%", font, 13.5f, Cream, FontStyles.Bold, TextAlignmentOptions.TopLeft);
+        SetRect(rule.rectTransform, new Vector2(16f, -46f), new Vector2(568f, 108f), new Vector2(0f, 1f));
+        rule.enableWordWrapping = true;
+        rule.overflowMode = TextOverflowModes.Ellipsis;
+
+        TMP_Text future = CreateText("难度未来规则提示", details.transform, "官方预设与自定义面板共享同一套存档规则，后续扩充时不需要玩家重新创建世界。", font, 13.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(future.rectTransform, new Vector2(24f, -388f), new Vector2(600f, 34f), new Vector2(0f, 1f));
+        future.enableWordWrapping = true;
+        future.overflowMode = TextOverflowModes.Ellipsis;
+    }
+
+    private static void CreateDifficultyPresetButton(Transform parent, TMP_FontAsset font, string name, string title, string description)
+    {
+        Button button = CreateButton(parent, font, name, string.Empty, Vector2.zero, new Vector2(356f, 100f), InkSoft, 16f, new Vector2(0f, 1f));
+        button.gameObject.AddComponent<LayoutElement>().preferredHeight = 100f;
+        TMP_Text generatedLabel = button.GetComponentInChildren<TMP_Text>();
+        if (generatedLabel != null)
+            generatedLabel.gameObject.SetActive(false);
+
+        TMP_Text titleText = CreateText(name + "_标题", button.transform, title, font, 21f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(16f, -14f), new Vector2(320f, 30f), new Vector2(0f, 1f));
+        TMP_Text descriptionText = CreateText(name + "_说明", button.transform, description, font, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(descriptionText.rectTransform, new Vector2(16f, -50f), new Vector2(320f, 42f), new Vector2(0f, 1f));
+        descriptionText.enableWordWrapping = true;
+        descriptionText.overflowMode = TextOverflowModes.Ellipsis;
+    }
+
+    private static Toggle CreateToggle(Transform parent, TMP_FontAsset font, string name, string title, string description, Vector2 position, Vector2 size)
+    {
+        GameObject toggleObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Toggle));
+        toggleObject.layer = LayerMask.NameToLayer("UI");
+        toggleObject.transform.SetParent(parent, false);
+        SetRect(toggleObject.GetComponent<RectTransform>(), position, size, new Vector2(0f, 1f));
+
+        Image row = toggleObject.GetComponent<Image>();
+        row.color = InkSoft;
+        Outline outline = toggleObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.24f);
+        outline.effectDistance = new Vector2(1f, -1f);
+
+        Image box = CreateImage("选择框", toggleObject.transform, new Color(0.02f, 0.04f, 0.05f, 1f));
+        SetRect(box.rectTransform, new Vector2(16f, -20f), new Vector2(30f, 30f), new Vector2(0f, 1f));
+        Outline boxOutline = box.gameObject.AddComponent<Outline>();
+        boxOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.55f);
+        boxOutline.effectDistance = new Vector2(1f, -1f);
+
+        Image mark = CreateImage("勾选标记", box.transform, Amber);
+        Stretch(mark.rectTransform, 6f, 6f, 6f, 6f);
+
+        TMP_Text titleText = CreateText(name + "_标题", toggleObject.transform, title, font, 16f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(58f, -14f), new Vector2(276f, 28f), new Vector2(0f, 1f));
+        TMP_Text descriptionText = CreateText(name + "_说明", toggleObject.transform, description, font, 12.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(descriptionText.rectTransform, new Vector2(58f, -48f), new Vector2(276f, 48f), new Vector2(0f, 1f));
+        descriptionText.enableWordWrapping = true;
+        descriptionText.overflowMode = TextOverflowModes.Ellipsis;
+
+        Toggle toggle = toggleObject.GetComponent<Toggle>();
+        toggle.targetGraphic = box;
+        toggle.graphic = mark;
+        toggle.isOn = false;
+        toggle.navigation = new Navigation { mode = Navigation.Mode.None };
+        return toggle;
     }
 
     private static void CreateLabel(Transform parent, TMP_FontAsset font, string name, string title, string subtitle, Vector2 position, float width)

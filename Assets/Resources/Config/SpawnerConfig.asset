@@ -14,17 +14,41 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SpawnEntries:
   - PrefabName: Chicken
-    Probability: 0.5
+    Probability: 5
+    EcologyCost: 1
+    SpeciesAliveLimit: 8
   - PrefabName: WildBoar
-    Probability: 0.2
-  - PrefabName: Wolf
-    Probability: 0.5
+    Probability: 2
+    EcologyCost: 2
+    SpeciesAliveLimit: 5
+  PersistentId: wildlife_resources
+  ScheduleMode: 0
+  EcologyGroup: 0
+  RequireGlobalDarkness: 0
   SpawnTriggerTime: 720
   SpawnTimeTolerance: 1
   SpawnsPerDay: 2
   MinSpawnDistance: 15
   MaxSpawnDistance: 50
+  PlayerVisibilityExclusionDistance: 20
+  PlayerPopulationRadius: 60
+  PerPlayerAliveLimit: 8
   SpawnSearchRetryCount: 5
   SpawnCount: 2
   SpawnChance: 1
   DaysBetweenSpawns: 1
+  GroupAliveLimit: 12
+  MaxEcologyBudget: 12
+  DailyBudgetRecovery: 6
+  RecoveryTargetPopulation: 8
+  RecoveryCheckInterval: 8
+  GrowthIntervalDays: 3
+  MaxLifetimeSpawnCount: 64
+  AsyncSpawnInterval: 0
+  RequireCompletelyDarkTile: 0
+  MaxAllowedTileLight: 1
+  AllowedBiomeNames:
+  - "\u68EE\u6797"
+  - "\u77F3\u5730"
+  RecycleDistance: 110
+  RecycleGraceSeconds: 20

@@ -55,6 +55,7 @@ public class PlayerAdminController : Module
     private bool showTimeScaleHint = false;
     private float initialUnityTimeScale = 1.0f;
     private bool adminRuntimeSettingsApplied = false;
+    private GameController gameController;
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -78,6 +79,9 @@ public class PlayerAdminController : Module
             Debug.LogError($"[PlayerAdminController] 初始化失败：未找到 Player 组件！GameObject: {name}");
             return;
         }
+
+        if (gameController == null)
+            gameController = GetComponentInParent<GameController>();
 
         // 尝试获取模块引用
         if (player.itemMods != null)
@@ -120,6 +124,11 @@ public class PlayerAdminController : Module
 
         UpdateTimeScaleHint();
 
+        if (gameController == null)
+            gameController = GetComponentInParent<GameController>();
+        if (gameController != null && gameController.IsGameplayInputLocked)
+            return;
+
         // F1：切换管理员权限
         if (Input.GetKeyDown(KeyCode.F1))
         {
@@ -157,8 +166,9 @@ public class PlayerAdminController : Module
 
     private void HandleAdminInput()
     {
-        // T：传送到鼠标位置
-        if (Input.GetKeyDown(KeyCode.T))
+        // Ctrl + T：传送到鼠标位置，裸 T 留给聊天框
+        if (Input.GetKeyDown(KeyCode.T) &&
+            (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
         {
             playerTraits?.TeleportToMousePosition();
         }

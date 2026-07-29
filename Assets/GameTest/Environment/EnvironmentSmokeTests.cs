@@ -15,5 +15,24 @@ namespace FlatWorld.GameTest.Environment
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/TemperatureMgr.cs", "TemperatureMgr");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Weather/RainEffect.prefab");
         }
+
+        [Test]
+        [Category("Environment.Smoke")]
+        public void SerializableTimeDataPreservesTotalDays()
+        {
+            var source = new TimeData
+            {
+                CurrentTime = 321f,
+                DayLength = 1440f,
+                TimeScaleModifier = 12f,
+                TotalDays = 17
+            };
+
+            TimeData restored = new SerializableTimeData(source).ToTimeData();
+
+            Assert.That(restored.TotalDays, Is.EqualTo(17));
+            Assert.That(restored.CurrentTime, Is.EqualTo(321f));
+            Assert.That(restored.GetTotalGameTime(), Is.EqualTo(17 * 1440f + 321f));
+        }
     }
 }

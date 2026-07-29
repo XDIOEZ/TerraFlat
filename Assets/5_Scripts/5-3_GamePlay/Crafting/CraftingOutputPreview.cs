@@ -131,8 +131,15 @@ public sealed class CraftingOutputPreview : MonoBehaviour
             _hasRealImageColor = true;
         }
 
-        _ghostImage = FindOrCreateImage(GhostName, reference);
-        _revealImage = FindOrCreateImage(RevealName, reference);
+        _ghostImage = FindImage(GhostName);
+        _revealImage = FindImage(RevealName);
+        if (_ghostImage == null || _revealImage == null)
+        {
+            Debug.LogError(
+                "[CraftingOutputPreview] UI_Slot Prefab 缺少制作预览图层，请重建并直接检查 Prefab。",
+                _slotUI);
+            return;
+        }
 
         _ghostImage.color = new Color(1f, 1f, 1f, GhostAlpha);
         _ghostImage.raycastTarget = false;
@@ -152,7 +159,7 @@ public sealed class CraftingOutputPreview : MonoBehaviour
         Clear();
     }
 
-    private Image FindOrCreateImage(string imageName, Image reference)
+private Image FindImage(string imageName)
     {
         Image[] images = _slotUI.GetComponentsInChildren<Image>(true);
         for (int i = 0; i < images.Length; i++)
@@ -161,23 +168,10 @@ public sealed class CraftingOutputPreview : MonoBehaviour
                 return images[i];
         }
 
-        GameObject imageObject = new GameObject(imageName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        RectTransform rect = imageObject.GetComponent<RectTransform>();
-        rect.SetParent(reference.transform.parent, false);
-        CopyRectTransform(reference.rectTransform, rect);
-        return imageObject.GetComponent<Image>();
+        return null;
     }
 
-    private static void CopyRectTransform(RectTransform source, RectTransform target)
-    {
-        target.anchorMin = source.anchorMin;
-        target.anchorMax = source.anchorMax;
-        target.pivot = source.pivot;
-        target.anchoredPosition = source.anchoredPosition;
-        target.sizeDelta = source.sizeDelta;
-        target.localRotation = source.localRotation;
-        target.localScale = source.localScale;
-    }
+
 
     private IEnumerator PopRoutine()
     {

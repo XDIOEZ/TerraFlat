@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 核心生命周期定位
 
-> 最后核对：2026-07-27。路径相对仓库根目录。
+> 最后核对：2026-07-29。路径相对仓库根目录。
 
 ## 修改前先读
 
@@ -36,10 +36,16 @@ disable-model-invocation: false
 GameStartScene
 → GameRes 加载 Addressables 与 MOD
 → GameManager.CreateNewWorld / ContinueGame
+→ 显示持久化 UI_WorldLoading Prefab
 → SaveDataMgr 准备存档
 → 进入世界并触发 Event_GameWorldEnter
-→ ChunkMgr / ItemMgr / 时间天气 / 导航等订阅者启动
+→ ItemMgr 创建玩家并触发 Event_PlayerEnterWorld
+→ 等待玩家周围 ChunkMgr 队列完成后关闭加载面板
 ```
+
+- `CreateNewWorld()` 创建新的 `GameSaveData` 后，会先通过 `ApplyPendingNewWorldDifficulty()` 写入玩家选择的官方预设或完整自定义规则值对象，再生成种子与首个磁盘存档；不得在首存档之后补写难度。
+- 新建世界和进入已有存档必须先调用 `BeginWorldEntryLoading()`，让 `UI_WorldLoading.prefab` 至少渲染一帧后再执行同步准备；加载面板持续到 `Event_PlayerEnterWorld` 且首批 `ChunkMgr.HasPendingChunkLoads` 清空。
+- 加载失败必须调用 `FailWorldEntryLoading()`，避免遮罩永久阻塞；重复进入请求由 `isWorldEntryLoading` 拦截。
 
 ## 易误判点
 
@@ -49,12 +55,15 @@ GameStartScene
 
 ## 近期变更
 
+- 2026-07-29：新建世界和进入已有存档接入持久化加载面板；覆盖存档准备、场景卸载、玩家创建、出生点重试和首批周围区块加载，完成或失败后自动关闭。
+- 2026-07-29：新世界创建链改为在首存档前写入自定义难度的死亡开关与 16 个倍率字段。
+- 2026-07-29：新世界创建链在首个存档落盘前应用创建面板选择的难度类型与自定义死亡掉落规则。
 - 2026-07-28：`ItemMgr` 在单机和联机 Player 创建链显式区分本地档案、新建档案与远程副本，为新玩家教程和本地系统隔离提供权威运行时上下文。
 - 2026-07-27：`GameManager` 使用 partial 分离世界生命周期与主菜单/存档 UI 绑定；领域控制器直接组合 `BasePanel`。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Core/CoreSmokeTests.cs`；当前基础覆盖GameManager、GameRes、SceneMgr 和启动/管理器场景入口。
+- 基础测试脚本：`Assets/GameTest/Core/CoreSmokeTests.cs`；当前覆盖 GameManager、GameRes、SceneMgr、启动/管理器场景入口，以及新建/进入存档必须使用 Prefab 加载界面、先等待渲染帧并持续到区块队列完成的源码契约。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；核心流程测试约定目录：`Assets/GameTest/Core/`；场景目录：`Assets/GameTest/Scenes/Core/`；冒烟分类：`Core.Smoke`。
 - 新增启动、世界创建、继续游戏、场景切换或退出行为时必须增加系统测试；修复 Bug 时先增加回归测试。全局生命周期变化时同步更新最小启动冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用临时世界和临时存档，并在结束时清理全局对象与事件订阅。

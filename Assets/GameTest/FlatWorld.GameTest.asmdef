@@ -4,8 +4,12 @@
     "references": [
         "FlatWorld.Dialogue",
         "FlatWorld.Guide",
+        "FlatWorld.Networking.Core",
         "GamePlay",
-        "Data"
+        "Data",
+        "UI",
+        "m_Utilitiles",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

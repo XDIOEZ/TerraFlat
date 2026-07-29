@@ -345,7 +345,10 @@ public class Mod_Furnace : Module, IInteractable
         Data.SmeltingSpeed = Mathf.Lerp(1f, Data.MaxSmeltingSpeed, tempRatio);
 
         // 按当前速度推进进度
-        Data.SmeltingProgress += Data.SmeltingSpeed * deltaTime;
+        Data.SmeltingProgress +=
+            Data.SmeltingSpeed *
+            GameDifficultyService.Current.Production.SmeltingSpeedMultiplier *
+            deltaTime;
 
         // 消耗燃料
         mod_Fuel?.ConsumeFuel(deltaTime);
@@ -785,7 +788,10 @@ public class Mod_Furnace : Module, IInteractable
                 return null;
             }
 
-            newItem.Stack.Amount = output.amount;
+            newItem.Stack.Amount = GameDifficultyService.ScaleCount(
+                output.amount,
+                GameDifficultyService.Current.Production.CraftingOutputMultiplier,
+                1);
             itemsToAdd.Add(newItem);
         }
 

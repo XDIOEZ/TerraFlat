@@ -240,7 +240,10 @@ public class Inventory_Furnace : Inventory
         _Data.SmeltingSpeed = Mathf.Lerp(1f, _Data.MaxSmeltingSpeed, tempRatio);
 
         // 按当前速度推进进度
-        _Data.SmeltingProgress += _Data.SmeltingSpeed * deltaTime;
+        _Data.SmeltingProgress +=
+            _Data.SmeltingSpeed *
+            GameDifficultyService.Current.Production.SmeltingSpeedMultiplier *
+            deltaTime;
 
         // 消耗燃料
         mod_Fuel?.ConsumeFuel(deltaTime);
@@ -680,7 +683,10 @@ public class Inventory_Furnace : Inventory
                 return null;
             }
 
-            newItem.Stack.Amount = output.amount;
+            newItem.Stack.Amount = GameDifficultyService.ScaleCount(
+                output.amount,
+                GameDifficultyService.Current.Production.CraftingOutputMultiplier,
+                1);
             itemsToAdd.Add(newItem);
         }
 

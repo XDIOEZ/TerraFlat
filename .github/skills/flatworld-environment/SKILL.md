@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 时间、天气与温度定位
 
-> 最后核对：2026-07-27。
+> 最后核对：2026-07-29。
 
 ## 修改前先读
 
@@ -24,6 +24,9 @@ disable-model-invocation: false
 - 地块光照层：`Assets/5_Scripts/5-3_GamePlay/Manager/LightLayerMgr.cs`。
 - 季节/特殊日并行实现：`Assets/5_Scripts/5-3_GamePlay/Time/DayNightTimeManager.cs`。
 - 空主体旧入口：`Assets/5_Scripts/5-3_GamePlay/Time/GameTimeManager.cs`，不要作为主时间系统。
+- `DayTimeSystem.AdvanceTime()` 统一结算跨日并发布 `TimeAdvanced` / `DayChanged`；`TryGetResolvedTimeData()` 解析场景时间引用并限制循环深度。
+- `DayTimeSystem.TimeRun()` 在场景 `TimeScaleModifier` 基础上乘 `GameDifficultyService.Current.World.TimeSpeedMultiplier`；0% 可冻结自然昼夜推进，但显式调用 `AdvanceTime()` 的跳时逻辑不受影响。
+- `SerializableTimeData` 必须往返保存 `TotalDays`，生成周期等跨日系统依赖 `TimeData.GetTotalGameTime()`。
 
 ## 天气与温度
 
@@ -48,14 +51,17 @@ GameManager.Event_GameWorldEnter
 - `DayTimeSystem` 与 `DayNightTimeManager` 都存在；当前跨场景时间与存档主入口优先看前者，修改季节功能前确认场景实际挂载。
 - 天气状态保存在 `PlanetData`，不是 `WeatherMgr` 自身字段。
 - 雨效通过 `Resources/Weather/RainEffect` 加载；移动 Prefab 后必须同步修改常量与本 Skill。
+- 温度、饥饿、流血等最终进入 `DamageReceiver.ForceHurt()` 的玩家伤害统一受 `EnvironmentalDamageMultiplier` 影响；不要在各环境发送端重复乘算。
 
 ## 近期变更
 
+- 2026-07-29：自定义难度接入自然昼夜流逝倍率与玩家环境伤害倍率，时间发送端和伤害接收端各保持单一结算点。
+- 2026-07-29：修复 `TotalDays` 未进入时间存档；增加统一时间推进、跨日事件和引用场景解析入口。
 - 2026-07-27：当前环境链明确为 `DayTimeSystem → LightLayerMgr` 与 `PlanetData → WeatherMgr/TemperatureMgr`。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`；当前基础覆盖时间、天气、温度与雨效 Resources 入口。
+- 基础测试脚本：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`；当前基础覆盖时间、天气、温度、雨效 Resources 入口与 `TotalDays` 存档往返。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；环境测试约定目录：`Assets/GameTest/Environment/`；场景目录：`Assets/GameTest/Scenes/Environment/`；冒烟分类：`Environment.Smoke`。
 - 新增时间、昼夜、季节、天气、光照或温度行为时必须增加系统测试；修复 Bug 时先增加回归测试。时间推进到环境反馈主流程变化时同步更新环境冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；时间与天气测试必须注入确定值，不能依赖真实等待或随机天气。

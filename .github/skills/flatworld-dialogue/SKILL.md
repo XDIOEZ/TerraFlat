@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 角色对话系统定位
 
-> 最后核对：2026-07-28。
+> 最后核对：2026-07-29。
 
 ## 修改前先读
 
@@ -19,6 +19,8 @@ disable-model-invocation: false
 5. `Assets/5_Scripts/5-3_GamePlay/Dialogue/ConfiguredSpeechProvider.cs`：JSON 条目匹配、上升沿、运行时冷却和一次性完成标记。
 6. `Assets/5_Scripts/5-3_GamePlay/Dialogue/CharacterSpeechConfigLoader.cs`：Resources 多文件加载、确定排序、合并与容错校验。
 7. `Assets/5_Scripts/5-3_GamePlay/Guide/NewPlayerGuideController.cs`：只贡献教程 Facts，不创建第二套调度器或直接调用气泡。
+8. `Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatInputController.cs`：本地玩家 T 键聊天、输入锁、气泡提交与斜杠命令分发。
+9. `Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatContracts.cs`：显式命令处理器接口与提交上下文。
 
 ## 自言自语数据链
 
@@ -39,6 +41,8 @@ ICharacterSpeechContextContributor
 - `once=true` 必须有 `completionFlag`；完成标记通过 `ItemSpecialDataJsonStore` 写入 `Data_Player.ItemSpecialData` 的 `flatworld.dialogue.completed`，与教程及未知命名空间合并，不扩展旧 MemoryPack 核心字段。
 - `Player.prefab` 根节点挂载 `ConfiguredSpeechProvider` 与 `NewPlayerGuideController`，均由 `RebuildExtensions()` 自动发现；不要给 Controller 添加手工 Provider 引用。
 - `CharacterSoliloquyController` 对 Player 显式要求 `IsLocalProfile=true`；远程视觉副本不启动调度，本地提升通过 `ProfileContextChanged` 自动恢复。不要依赖 `IsInitialized` 无限等待隔离远程副本。
+- 玩家手动聊天调用 `CharacterSoliloquyController.Present()`，topic/sourceId 为 `player.chat`，优先级使用 `Player`（25）：高于普通 Need/Critical 提示、低于 Emergency，不建立第二套气泡或调度器。
+- `/` 开头文本先交给玩家节点上的 `IPlayerChatCommandHandler`；处理器按 `CommandOrder` 排序。命令必须显式注册、校验参数和权限，联机权威操作交给服务端，禁止反射执行任意方法。未识别命令仍作为普通聊天显示。
 
 ## 配置与校验
 
@@ -49,6 +53,14 @@ ICharacterSpeechContextContributor
 - 配置按资源名确定排序；跨文件重复 ID 报错。单个坏文件或坏条目只被跳过，其他有效条目继续加载。
 - 新增 Fact 时必须同时更新 Contributor、`CharacterSpeechFacts` 和 `CharacterSpeechConfigLoader` 的已知 Fact 注册表。
 
+## 对话 UI Prefab
+
+- 聊天输入：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab`，固定节点 `Text Area`、`Placeholder`、`Text`。
+- 角色气泡：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_CharacterSpeechBubble.prefab`，固定节点 `Tail`、`Message`，根节点包含 `CanvasGroup`。
+- `PlayerChatInputController` 与 `ScreenSpaceSpeechBubblePresenter` 只通过 `GameRes` 实例化 Prefab、查找节点和更新数据，禁止运行时创建背景、文本、输入框或气泡尾部。
+- Prefab 查询键统一位于 `Assets/5_Scripts/5-5_UI/RuntimeUIPrefabKeys.cs`；重建入口为 `Assets/Editor/FlatWorld/RuntimeUIPrefabBuilder.cs` 的菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI`。
+- `FlatWorld.Dialogue.asmdef` 直接引用 `GamePlay`、`UI` 与 `m_Utilitiles`；访问 `GameRes.Instance` 时不要移除基类程序集引用。
+
 ## 系统边界
 
 - `CharacterSoliloquyController` 只负责组合上下文、Provider、Trigger 与 Presenter，不应内置具体饥饿或任务规则。
@@ -58,6 +70,8 @@ ICharacterSpeechContextContributor
 
 ## 近期变更
 
+- 2026-07-29：新增 T 键玩家聊天，Enter 提交到既有角色气泡、Esc 取消；新增 `Player` 台词优先级和显式斜杠命令处理接口，远程 Player 禁止本地输入。
+- 2026-07-29：玩家聊天输入与屏幕空间角色气泡固化为 `Runtime/Dialogue` 下的可视化 Prefab；Presenter 只绑定现有节点，不再程序化创建视觉树。
 - 2026-07-28：新增依赖自言自语链的新手生存引导；Guide 仅贡献 `tutorial.*` Facts，台词全部位于 `guide_survival.json`，远程 Player 改为显式本地档案门控。
 - 2026-07-28：从原音频与对话混合 Skill 中拆分；角色自言自语维持 Resources JSON 配置驱动、结构化条件、StateChanged/Idle、运行时冷却和一次性完成标记。
 - 2026-07-28：饥饿三档台词迁移到 `need_hunger.json`。
@@ -65,11 +79,12 @@ ICharacterSpeechContextContributor
 ## 修改后自动测试
 
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；测试脚本：`Assets/GameTest/Dialogue/DialogueSmokeTests.cs`；场景探针：`Assets/GameTest/Dialogue/DialogueSmokeTestProbe.cs`；测试场景：`Assets/GameTest/Scenes/Dialogue/DialogueSmokeTest.unity`；冒烟分类：`Dialogue.Smoke`。
-- 当前冒烟用例 `CriticalHungerFact_ShowsConfiguredSpeech` 会加载隔离场景，通过固定 `hunger.*` Facts 验证 `CharacterSpeechContext → ConfiguredSpeechProvider → CharacterSoliloquyController → ICharacterSpeechPresenter` 完整链路，并断言命中 `need.hunger.critical`。
+- 当前冒烟覆盖 `CriticalHungerFact_ShowsConfiguredSpeech` 完整调度链，以及 `RuntimeDialogueUIUsesInspectablePrefabs` 对聊天/气泡 Prefab 节点和无运行时视觉构建的约束。
 - 新增 Fact、Provider、Trigger、Presenter 或 JSON 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。核心调度链变化时同步更新此场景和冒烟用例。
 - 测试失败时优先修复生产代码，禁止删除测试、弱化断言或修改 JSON 输入来制造通过；随机台词测试必须限制为唯一候选或固定随机状态。
 - 完成修改后检查 Unity 编译和 Console，再运行 `Dialogue.Smoke`；涉及一次性完成标记、玩家状态、UI 气泡或联机边界时同步运行对应系统测试。
 - 教程链测试位于 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`，分类 `Guide.Smoke`；覆盖 Facts、JSON、一次性标记、Player Prefab、远程隔离与成功事件边界。
+- 玩家聊天测试位于 `Assets/GameTest/Dialogue/PlayerChatSmokeTests.cs`，同时归类 `Dialogue.Smoke`、`PlayerInteraction.Smoke`、`UI.Smoke`；覆盖本地/远程资格、输入锁恢复、Prefab 单例接线、气泡提交、命令处理和 Ctrl+T 冲突。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

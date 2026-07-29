@@ -9,6 +9,13 @@ public enum SpawnerScheduleMode
     DayMilestoneGrowth = 1
 }
 
+public enum SpawnerEcologyGroup
+{
+    Animals = 0,
+    CommonEnemies = 1,
+    NightEnemies = 2
+}
+
 /// <summary>
 /// 怪物生成系统配置类 - 包含所有生成相关的常数和配置
 /// </summary>
@@ -27,10 +34,20 @@ public class SpawnerConfig : ScriptableObject
         [Tooltip("生成时使用的预制体/物品标识，需与项目里的名称完全一致")]
         public string PrefabName = "Chicken"; // 生成的怪物预制体名称，需与物品/预制体标识一致
 
-        [LabelText("生成概率")]
-        [Tooltip("该怪物在随机抽取中的权重，建议所有条目总和不超过 1")]
-        [Range(0f, 1f)]
-        public float Probability = 0.5f; // 该怪物的生成概率，建议所有项总和不超过 1
+        [LabelText("生成权重")]
+        [Tooltip("参与归一化抽取的相对权重，不要求总和为 1")]
+        [MinValue(0f)]
+        public float Probability = 0.5f;
+
+        [LabelText("生态成本")]
+        [Tooltip("每生成一只该生物消耗的生态预算")]
+        [MinValue(1)]
+        public int EcologyCost = 1;
+
+        [LabelText("物种存活上限")]
+        [Tooltip("当前世界中该物种允许存活的最大数量；0 表示仅受生成组上限控制")]
+        [MinValue(0)]
+        public int SpeciesAliveLimit;
     }
 
 #endregion
@@ -60,6 +77,9 @@ public class SpawnerConfig : ScriptableObject
 
     [LabelText("调度模式")]
     public SpawnerScheduleMode ScheduleMode = SpawnerScheduleMode.TimedWindows;
+
+    [LabelText("生态生成组")]
+    public SpawnerEcologyGroup EcologyGroup = SpawnerEcologyGroup.Animals;
 
     [LabelText("仅在全局无光时生成")]
     [Tooltip("启用后，只在昼夜系统的全局光照为0时处理生成。")]
@@ -105,6 +125,21 @@ public class SpawnerConfig : ScriptableObject
     [Tooltip("怪物最多会在玩家周围这个距离内生成")]
     public float MaxSpawnDistance = 50f; // 最大生成距离
 
+    [LabelText("玩家可视排斥距离")]
+    [Tooltip("候选点距离任意玩家小于该值时不允许生成")]
+    [MinValue(0f)]
+    public float PlayerVisibilityExclusionDistance = 18f;
+
+    [LabelText("玩家周边统计半径")]
+    [Tooltip("计算玩家周边种群上限时使用的半径")]
+    [MinValue(1f)]
+    public float PlayerPopulationRadius = 60f;
+
+    [LabelText("每位玩家周边上限")]
+    [Tooltip("任意玩家统计半径内属于该生成组的生物上限；0 表示不单独限制")]
+    [MinValue(0)]
+    public int PerPlayerAliveLimit;
+
     /// <summary>
     /// 生成位置搜索重试次数
     /// 如果找不到有效生成位置，最多重试多少次
@@ -130,6 +165,31 @@ public class SpawnerConfig : ScriptableObject
     [Tooltip("两次成功生成之间至少间隔多少个游戏日")]
     public int DaysBetweenSpawns = 1; // 两次成功生成之间的最小间隔，单位：游戏日
 
+    [LabelText("生成组存活上限")]
+    [Tooltip("当前世界中该配置生成组允许存活的最大数量")]
+    [MinValue(1)]
+    public int GroupAliveLimit = 12;
+
+    [LabelText("基础生态预算")]
+    [Tooltip("进入世界时及首次迁移时使用的组预算上限")]
+    [MinValue(1)]
+    public int MaxEcologyBudget = 12;
+
+    [LabelText("每日预算恢复")]
+    [Tooltip("跨过一个游戏日时恢复的生态预算")]
+    [MinValue(0)]
+    public int DailyBudgetRecovery = 4;
+
+    [LabelText("目标种群数量")]
+    [Tooltip("低于该值时按照恢复间隔产生补位需求；0 表示仅按时间窗口生成")]
+    [MinValue(0)]
+    public int RecoveryTargetPopulation;
+
+    [LabelText("生态恢复间隔")]
+    [Tooltip("检查死亡补位和生态恢复的真实秒数")]
+    [MinValue(0.5f)]
+    public float RecoveryCheckInterval = 8f;
+
     [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
     [LabelText("每多少天增加一次")]
     [MinValue(1)]
@@ -148,6 +208,25 @@ public class SpawnerConfig : ScriptableObject
     [LabelText("必须生成在完全黑暗地块")]
     public bool RequireCompletelyDarkTile = true;
 
+    [LabelText("最大允许地块光照")]
+    [Tooltip("候选地块光照高于该值时拒绝生成；1 表示不限制局部光照")]
+    [Range(0f, 1f)]
+    public float MaxAllowedTileLight = 1f;
+
+    [LabelText("允许的生物群系")]
+    [Tooltip("填写 BiomeName 或资源名；为空时允许所有群系")]
+    public List<string> AllowedBiomeNames = new();
+
+    [LabelText("远距离回收距离")]
+    [Tooltip("生物距离全部玩家均超过该值时允许回收；0 表示不回收")]
+    [MinValue(0f)]
+    public float RecycleDistance = 110f;
+
+    [LabelText("远距离回收宽限")]
+    [Tooltip("持续远离全部玩家达到该真实秒数后才回收")]
+    [MinValue(0f)]
+    public float RecycleGraceSeconds = 20f;
+
     #endregion
 
 
@@ -161,7 +240,32 @@ public class SpawnerConfig : ScriptableObject
     /// <returns>生成的怪物类型（如果都不符合返回 null）</returns>
     public string DetermineSpawnType(float randomValue)
     {
+        SpawnEntry entry = DetermineSpawnEntry(randomValue);
+        return entry?.PrefabName;
+    }
+
+    /// <summary>
+    /// 按有效条目的相对权重归一化抽取。
+    /// </summary>
+    public SpawnEntry DetermineSpawnEntry(float randomValue)
+    {
+        if (SpawnEntries == null || SpawnEntries.Count == 0)
+            return null;
+
+        float totalWeight = 0f;
+        for (int i = 0; i < SpawnEntries.Count; i++)
+        {
+            SpawnEntry entry = SpawnEntries[i];
+            if (entry != null && !string.IsNullOrWhiteSpace(entry.PrefabName) && entry.Probability > 0f)
+                totalWeight += entry.Probability;
+        }
+
+        if (totalWeight <= 0f)
+            return null;
+
+        float targetWeight = Mathf.Clamp01(randomValue) * totalWeight;
         float cumulative = 0f;
+        SpawnEntry lastValidEntry = null;
 
         for (int i = 0; i < SpawnEntries.Count; i++)
         {
@@ -171,15 +275,15 @@ public class SpawnerConfig : ScriptableObject
                 continue;
             }
 
+            lastValidEntry = entry;
             cumulative += entry.Probability;
-            if (randomValue < cumulative)
+            if (targetWeight < cumulative)
             {
-                return entry.PrefabName;
+                return entry;
             }
         }
 
-        // 其他情况不生成
-        return null;
+        return lastValidEntry;
     }
 
 #endregion

@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld AI 与生物生成定位
 
-> 最后核对：2026-07-27。移动和可走性问题请同时加载 `flatworld-navigation`。
+> 最后核对：2026-07-29。移动和可走性问题请同时加载 `flatworld-navigation`。
 
 ## 修改前先读
 
@@ -34,6 +34,11 @@ disable-model-invocation: false
 - 配置类型：`Assets/5_Scripts/5-3_GamePlay/Spawner/SpawnerConfig.cs`。
 - 存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.MonsterSpawner.cs`、`MonsterSpawnerSaveData.cs`。
 - 配置资产：`Assets/Resources/Config/SpawnerConfig*.asset`。
+- 生成组：`SpawnerConfig.asset` 仅含 Chicken/WildBoar 资源动物；`SpawnerConfig_Wolves.asset` 仅含 Wolf 普通敌人；`SpawnerConfig_Ghost.asset` 为里程碑成长的夜间敌人。
+- `SpawnEntry.Probability` 是归一化相对权重，并带生态成本与物种存活上限；配置同时提供组上限、玩家周边上限、预算恢复、群系、局部光照和远距离回收规则。
+- `MonsterSpawnerManager` 只在 `GameNetwork.HasStateAuthority` 端生成，按 `TimeData.GetTotalGameTime()` 处理跨过的窗口；`LastProcessedTotalTime`、预算和补位债务进入存档。
+- 当前加载种群由 `ItemMgr` 生命周期事件追踪；真实死亡通过 `DamageReceiver.DeathStarted` 产生补位，区块重载后的超额存量会按全局/组/物种/玩家周边上限裁剪。
+- 难度的 `SpawnFrequencyMultiplier` 只改变每日窗口、里程碑速度和单次排队数量；`SpawnPopulationMultiplier` 统一缩放全局/组/物种/玩家周边上限、生态预算、恢复目标与终身生成上限。不得回写 `SpawnerConfig` 资产；倍率降低时先裁剪持久化待生成队列和预算。
 
 ## 当前感知架构
 
@@ -58,13 +63,16 @@ Mod_ItemDetector 提交请求
 
 ## 近期变更
 
+- 2026-07-29：统一内容校验器检查全部 Resources `SpawnerConfig` 的 `PersistentId`、生物 ID、组内/跨配置重复、权重、生态参数、Prefab 引用、允许群系及 `WorldManager.prefab._spawnerConfigs` 活跃引用。
+- 2026-07-29：生物生成接入自定义频率与种群倍率；0% 频率会推进时间游标但不补算停用期间窗口，种群倍率会动态裁剪预算和待生成债务。
+- 2026-07-29：生物生成拆为动物、普通敌人、夜间敌人三组；加入归一化权重、生态预算、三级种群上限、跨时刻调度、群系/光照校验、死亡补位和远距离回收。
 - 2026-07-27：感知从 `Physics2D.OverlapCircleAll + LINQ` 切换为 `ItemMgr` 空间哈希 + 批量 Job + 精确 Collider 确认。
 - 2026-07-27：`Mod_ItemDetector` 复用集合；鸡/野猪目标选择改为无分配线性扫描；旧 Kiwi 相关节点也移除热路径 LINQ。
 - 2026-07-27：AI 检测刷新错峰，减少大量同类 AI 的同帧尖峰。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/AI/AISmokeTests.cs`；当前基础覆盖状态机、感知、Spawner 配置和生物 Prefab 入口。
+- 基础测试脚本：`Assets/GameTest/AI/AISmokeTests.cs`；当前覆盖状态机、感知、生物 Prefab、生成组唯一物种归属、持久化 ID 与归一化权重分布。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；AI 测试约定目录：`Assets/GameTest/AI/`；场景目录：`Assets/GameTest/Scenes/AI/`；冒烟分类：`AI.Smoke`。
 - 新增 AI 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。感知、目标选择、状态切换、攻击或闲逛主流程变化时同步更新 AI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试、放宽断言或改写输入来制造通过；随机行为必须固定种子或注入确定输入。

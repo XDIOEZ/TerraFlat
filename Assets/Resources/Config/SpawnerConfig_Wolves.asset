@@ -15,11 +15,36 @@ MonoBehaviour:
   SpawnEntries:
   - PrefabName: Wolf
     Probability: 1
-  SpawnTriggerTime: 1440
+    EcologyCost: 2
+    SpeciesAliveLimit: 6
+  PersistentId: wolf_common_enemy
+  ScheduleMode: 0
+  EcologyGroup: 1
+  RequireGlobalDarkness: 0
+  SpawnTriggerTime: 1200
   SpawnTimeTolerance: 1
-  MinSpawnDistance: 15
+  SpawnsPerDay: 1
+  MinSpawnDistance: 24
   MaxSpawnDistance: 50
+  PlayerVisibilityExclusionDistance: 22
+  PlayerPopulationRadius: 65
+  PerPlayerAliveLimit: 4
   SpawnSearchRetryCount: 10
-  SpawnCount: 3
+  SpawnCount: 2
   SpawnChance: 0.8
   DaysBetweenSpawns: 2
+  GroupAliveLimit: 6
+  MaxEcologyBudget: 8
+  DailyBudgetRecovery: 2
+  RecoveryTargetPopulation: 3
+  RecoveryCheckInterval: 10
+  GrowthIntervalDays: 3
+  MaxLifetimeSpawnCount: 64
+  AsyncSpawnInterval: 0
+  RequireCompletelyDarkTile: 0
+  MaxAllowedTileLight: 0.35
+  AllowedBiomeNames:
+  - "\u68EE\u6797"
+  - "\u77F3\u5730"
+  RecycleDistance: 120
+  RecycleGraceSeconds: 25

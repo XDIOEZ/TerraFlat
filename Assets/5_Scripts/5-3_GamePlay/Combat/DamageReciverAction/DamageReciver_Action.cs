@@ -60,7 +60,9 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
         if (Random.value > Loot.DropChance)
             return;
 
-        int dropAmount = Random.Range(Loot.MinAmount, Loot.MaxAmount + 1);
+        int dropAmount = GameDifficultyService.ScaleRandomizedAmount(
+            Random.Range(Loot.MinAmount, Loot.MaxAmount + 1),
+            GameDifficultyService.Current.World.LootAmountMultiplier);
         if (dropAmount <= 0)
             return;
 

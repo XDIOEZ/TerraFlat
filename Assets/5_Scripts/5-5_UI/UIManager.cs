@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -70,26 +70,17 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        GameObject canvasObj;
-
-        if (panelRootPrefab != null)
+        GameObject rootPrefab = panelRootPrefab != null
+            ? panelRootPrefab
+            : Resources.Load<GameObject>("UI/UIRoot");
+        if (rootPrefab == null)
         {
-            canvasObj = Instantiate(panelRootPrefab);
-            canvasObj.name = "PanelRoot";
-        }
-        else
-        {
-            canvasObj = new GameObject("PanelRoot");
-            Canvas canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-
-            canvasObj.AddComponent<GraphicRaycaster>();
+            throw new System.InvalidOperationException(
+                "[UIManager] 缺少 Assets/Resources/UI/UIRoot.prefab，禁止运行时程序化创建 Canvas。");
         }
 
+        GameObject canvasObj = Instantiate(rootPrefab);
+        canvasObj.name = "PanelRoot";
         panelRoot = canvasObj.transform;
         UIScaleController.Ensure(panelRoot);
     }

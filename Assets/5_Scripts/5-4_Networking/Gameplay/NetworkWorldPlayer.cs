@@ -815,24 +815,10 @@ namespace FlatWorld.Networking.Gameplay
             if (nameLabel != null)
                 return;
 
-            GameObject labelObject = new GameObject("玩家名称");
-            labelObject.transform.SetParent(transform, false);
-            labelObject.transform.localPosition = new Vector3(0f, 1.35f, 0f);
-            nameLabel = labelObject.AddComponent<TextMeshPro>();
-            nameLabel.alignment = TextAlignmentOptions.Center;
-            nameLabel.fontSize = 2.4f;
-            nameLabel.color = Color.white;
-            nameLabel.sortingOrder = 100;
-
-            TMP_FontAsset[] fonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
-            for (int i = 0; i < fonts.Length; i++)
-            {
-                if (fonts[i] != null && fonts[i].name.Contains("fusion-pixel"))
-                {
-                    nameLabel.font = fonts[i];
-                    break;
-                }
-            }
+            Transform labelTransform = transform.Find("玩家名称");
+            nameLabel = labelTransform != null ? labelTransform.GetComponent<TextMeshPro>() : null;
+            if (nameLabel == null)
+                Debug.LogError("[联机玩家] FlatWorldNetworkPlayer.prefab 缺少“玩家名称”TextMeshPro 节点。", this);
         }
 
         private void OnDisplayNameChanged(string oldName, string newName) => ApplyDisplayName(newName);
@@ -840,7 +826,8 @@ namespace FlatWorld.Networking.Gameplay
         private void ApplyDisplayName(string value)
         {
             EnsureNameLabel();
-            nameLabel.text = value;
+            if (nameLabel != null)
+                nameLabel.text = value;
         }
 
         private void OnPlayerColorChanged(Color oldColor, Color newColor) => ApplyPlayerColor(newColor);

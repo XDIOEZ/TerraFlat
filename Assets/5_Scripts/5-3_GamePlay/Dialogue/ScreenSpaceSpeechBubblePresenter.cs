@@ -100,7 +100,7 @@ namespace FlatWorld.Dialogue
                 viewObject.SetActive(false);
         }
 
-        private bool EnsureView()
+private bool EnsureView()
         {
             Transform panelRoot = UIManager.Instance?.panelRoot;
             if (panelRoot == null)
@@ -121,87 +121,40 @@ namespace FlatWorld.Dialogue
                 return true;
             }
 
+            GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.CharacterSpeechBubble);
+            if (prefab == null)
+            {
+                Debug.LogError(
+                    $"[ScreenSpaceSpeechBubblePresenter] 缺少 Prefab：{RuntimeUIPrefabKeys.CharacterSpeechBubble}。",
+                    this);
+                return false;
+            }
+
             rootRect = currentRootRect;
             rootCanvas = rootRect.GetComponentInParent<Canvas>();
-
-            viewObject = new GameObject(
-                "CharacterSpeechBubble",
-                typeof(RectTransform),
-                typeof(CanvasGroup),
-                typeof(Image),
-                typeof(Shadow));
+            viewObject = Instantiate(prefab, rootRect, false);
+            viewObject.name = RuntimeUIPrefabKeys.CharacterSpeechBubble;
             viewRect = viewObject.GetComponent<RectTransform>();
-            viewRect.SetParent(rootRect, false);
-            viewRect.anchorMin = new Vector2(0.5f, 0.5f);
-            viewRect.anchorMax = new Vector2(0.5f, 0.5f);
-            viewRect.pivot = new Vector2(0.5f, 0f);
-
-            Image background = viewObject.GetComponent<Image>();
-            background.color = new Color(0.08f, 0.09f, 0.10f, 0.94f);
-            background.raycastTarget = false;
-
-            Shadow shadow = viewObject.GetComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.48f);
-            shadow.effectDistance = new Vector2(3f, -3f);
-            shadow.useGraphicAlpha = true;
-
             canvasGroup = viewObject.GetComponent<CanvasGroup>();
+            label = FindMessageLabel(viewObject.transform);
+            if (viewRect == null || canvasGroup == null || label == null)
+            {
+                Debug.LogError("[ScreenSpaceSpeechBubblePresenter] 气泡 Prefab 控件命名契约不完整。", viewObject);
+                Destroy(viewObject);
+                viewObject = null;
+                return false;
+            }
+
             canvasGroup.alpha = 0f;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
-            canvasGroup.ignoreParentGroups = false;
-
-            CreateTail();
-            CreateLabel();
             viewObject.SetActive(false);
             return true;
         }
 
-        private void CreateTail()
-        {
-            GameObject tailObject = new GameObject(
-                "Tail",
-                typeof(RectTransform),
-                typeof(Image));
-            RectTransform tailRect = tailObject.GetComponent<RectTransform>();
-            tailRect.SetParent(viewRect, false);
-            tailRect.anchorMin = new Vector2(0.5f, 0f);
-            tailRect.anchorMax = new Vector2(0.5f, 0f);
-            tailRect.pivot = new Vector2(0.5f, 0.5f);
-            tailRect.anchoredPosition = new Vector2(0f, -6f);
-            tailRect.sizeDelta = new Vector2(18f, 18f);
-            tailRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
-            Image tail = tailObject.GetComponent<Image>();
-            tail.color = new Color(0.08f, 0.09f, 0.10f, 0.94f);
-            tail.raycastTarget = false;
-        }
 
-        private void CreateLabel()
-        {
-            GameObject labelObject = new GameObject(
-                "Message",
-                typeof(RectTransform),
-                typeof(TextMeshProUGUI));
-            RectTransform labelRect = labelObject.GetComponent<RectTransform>();
-            labelRect.SetParent(viewRect, false);
-            labelRect.anchorMin = Vector2.zero;
-            labelRect.anchorMax = Vector2.one;
-            labelRect.offsetMin = new Vector2(horizontalPadding, verticalPadding);
-            labelRect.offsetMax = new Vector2(-horizontalPadding, -verticalPadding);
 
-            label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.font = TMP_Settings.defaultFontAsset;
-            label.fontSize = 28f;
-            label.enableAutoSizing = true;
-            label.fontSizeMin = 20f;
-            label.fontSizeMax = 28f;
-            label.enableWordWrapping = true;
-            label.overflowMode = TextOverflowModes.Ellipsis;
-            label.alignment = TextAlignmentOptions.Center;
-            label.color = new Color(0.96f, 0.94f, 0.88f, 1f);
-            label.raycastTarget = false;
-        }
 
         private void UpdateLayout()
         {
@@ -306,5 +259,18 @@ namespace FlatWorld.Dialogue
             hideRoutine = null;
             HideImmediate();
         }
-    }
+    
+
+private static TextMeshProUGUI FindMessageLabel(Transform root)
+        {
+            TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                if (texts[i] != null && texts[i].name == "Message")
+                    return texts[i];
+            }
+
+            return null;
+        }
+}
 }

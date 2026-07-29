@@ -71,10 +71,17 @@ namespace FlatWorld.Networking.MirrorAdapter
 
         public NetworkStartResult StartClient(string address, ushort port = 7777)
         {
-            if (string.IsNullOrWhiteSpace(address))
-                return NetworkStartResult.Failed("Server address cannot be empty.");
+            if (!NetworkConnectionEndpoint.TryParse(
+                    address,
+                    port,
+                    out NetworkConnectionEndpoint endpoint,
+                    out string error))
+            {
+                return NetworkStartResult.Failed(error);
+            }
 
-            return StartSession(NetworkRole.Client, port, address.Trim());
+            Debug.Log($"[联机] 正在连接 {endpoint}", this);
+            return StartSession(NetworkRole.Client, endpoint.Port, endpoint.Host);
         }
 
         public void Stop()

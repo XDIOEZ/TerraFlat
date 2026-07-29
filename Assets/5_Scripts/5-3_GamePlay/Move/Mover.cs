@@ -218,7 +218,7 @@ public partial class Mover : Module
             if (stamina != null)
             {
                 float consumePerSecond = IsRunning ? RunStaminaConsume : MoveStaminaConsume;
-                stamina.CurrentValue -= deltaTime * consumePerSecond;
+                stamina.AddStamina(-deltaTime * consumePerSecond);
 
                 // 自动中断奔跑
                 if (IsRunning && stamina.CurrentValue < RunStaminaThreshold)

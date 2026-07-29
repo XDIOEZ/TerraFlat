@@ -72,7 +72,8 @@ public partial class Mod_Stamina : Module
 
     public void AddStamina(float value)
     {
-        CurrentValue += value; // 会自动触发事件和更新Slider
+        float multiplier = GameDifficultyService.ResolveStaminaDeltaMultiplier(item, value);
+        CurrentValue += value * multiplier; // 会自动触发事件和更新Slider
     }
 
 
