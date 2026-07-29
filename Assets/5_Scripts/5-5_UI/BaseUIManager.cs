@@ -1,5 +1,5 @@
 ﻿using System.Collections;
-// AI-Context: 双脚本 UI 的逻辑侧控件访问器；按节点名读取按钮/输入框/文字，并让非 BasePanel UI 也采用全局视觉主题。
+// AI-Context: 双脚本 UI 的逻辑侧控件访问器；按节点名读取按钮/输入框/文字，视觉结构完全由 Prefab 决定。
 
 using System.Collections.Generic;
 using UnityEngine;
@@ -29,7 +29,7 @@ public class BaseUIManager : MonoBehaviour
     {
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
-        FlatWorldUITheme.Apply(transform);
+        FlatWorldAudioUIFeedback.EnsureFor(transform);
     }
 
     /// <summary>
@@ -362,7 +362,7 @@ public class BaseUIManager : MonoBehaviour
     public void RefreshUIComponents()
     {
         CollectUIComponents();
-        FlatWorldUITheme.Apply(transform);
+        FlatWorldAudioUIFeedback.EnsureFor(transform);
     }
 
     /// <summary>

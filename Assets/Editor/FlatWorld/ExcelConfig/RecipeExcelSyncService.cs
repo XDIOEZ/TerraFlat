@@ -18,8 +18,6 @@ public static class RecipeExcelSyncService
     public const string ExcelAssetPath = "Assets/GameConfig/Excel/RecipeConfig.xlsx";
     public const string RecipeRootAssetPath = "Assets/StreamingAssets/GameConfig/Recipes";
     public const string ManifestAssetPath = RecipeRootAssetPath + "/recipe-manifest.json";
-    public const string LegacyJsonAssetPath = "Assets/StreamingAssets/GameConfig/recipes.json";
-    public const string LegacyBackupAssetPath = "Assets/GameConfig/Legacy/recipes.single-file.backup.json";
 
     private const string RecipesSheet = "Recipes";
     private const string InputsSheet = "Inputs";
@@ -40,19 +38,6 @@ public static class RecipeExcelSyncService
         ExportCatalogToExcel(catalog);
         AssetDatabase.Refresh();
         Debug.Log($"[RecipeExcel] 已迁移 {catalog.Recipes.Count} 条旧配方到业务分包与 Excel。");
-    }
-
-    [MenuItem("FlatWorld/合成配方/将单JSON迁移为业务分包")]
-    public static void MigrateSingleJsonToPackages()
-    {
-        RecipeCatalogDto catalog = ReadLegacySingleJson();
-        AssignDefaultPackages(catalog);
-        ValidateCatalog(catalog);
-        WriteJsonPackages(catalog);
-        ExportCatalogToExcel(catalog);
-        ArchiveLegacySingleJson();
-        AssetDatabase.Refresh();
-        Debug.Log($"[RecipeExcel] 已将 {catalog.Recipes.Count} 条单文件配方迁移到 8 个业务分包。");
     }
 
     [MenuItem("FlatWorld/合成配方/从JSON导出Excel")]
@@ -219,14 +204,6 @@ public static class RecipeExcelSyncService
 
     #region JSON 分包
 
-    private static RecipeCatalogDto ReadLegacySingleJson()
-    {
-        string path = ToAbsolutePath(LegacyJsonAssetPath);
-        if (!File.Exists(path))
-            throw new FileNotFoundException($"找不到旧单文件配方 JSON：{LegacyJsonAssetPath}", path);
-        return RecipeRuntimeFactory.Deserialize(File.ReadAllText(path));
-    }
-
     private static RecipeCatalogDto ReadJsonPackages()
     {
         string manifestPath = ToAbsolutePath(ManifestAssetPath);
@@ -298,31 +275,6 @@ public static class RecipeExcelSyncService
         if (File.Exists(path))
             File.Delete(path);
         File.Move(temporaryPath, path);
-    }
-
-    private static void ArchiveLegacySingleJson()
-    {
-        if (!File.Exists(ToAbsolutePath(LegacyJsonAssetPath)))
-            return;
-        EnsureAssetFolder("Assets/GameConfig/Legacy");
-        if (File.Exists(ToAbsolutePath(LegacyBackupAssetPath)))
-            throw new IOException($"旧配方备份已存在，请先处理：{LegacyBackupAssetPath}");
-        string error = AssetDatabase.MoveAsset(LegacyJsonAssetPath, LegacyBackupAssetPath);
-        if (!string.IsNullOrWhiteSpace(error))
-            throw new IOException($"移动旧配方 JSON 失败：{error}");
-    }
-
-    private static void EnsureAssetFolder(string assetPath)
-    {
-        string[] parts = assetPath.Split('/');
-        string current = parts[0];
-        for (int i = 1; i < parts.Length; i++)
-        {
-            string next = current + "/" + parts[i];
-            if (!AssetDatabase.IsValidFolder(next))
-                AssetDatabase.CreateFolder(current, parts[i]);
-            current = next;
-        }
     }
 
     #endregion

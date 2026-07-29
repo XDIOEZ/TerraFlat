@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 地图与 Chunk 系统定位
 
-> 最后核对：2026-07-27。导航节点更新请同时加载 `flatworld-navigation`。
+> 最后核对：2026-07-29。导航节点更新请同时加载 `flatworld-navigation`。
 
 ## 修改前先读
 
@@ -59,9 +59,12 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 地形可走性来源于 `TileData`，动态建筑占地来源于 `BuildingOccupancyRegistry`。
 - `Map` 完成 Tilemap 加载后通过脏格/脏区通知导航，不应全场扫描碰撞体。
 - Chunk 对象池复用前后必须重置地图就绪状态、运行时 Item 和事件订阅。
+- 运行时群系查询统一调用 `ChunkGenerator_Land.TryGetBiomeAtWorld()`，使用正式地形生成时的有序 `biomes` 和 `EnvironmentLayers`，不要在生成器外复制匹配逻辑。
 
 ## 近期变更
 
+- 2026-07-29：统一内容校验器检查 `BiomeData` ID、地块/物品生成条目、生成物 Prefab 与 `itemName`、概率倍率、环境条件和伴生宿主配置，并为 Spawner 群系引用提供权威 ID 集合。
+- 2026-07-29：`ChunkGenerator_Land` 公开世界格群系查询，供生态生成位置校验复用。
 - 2026-07-27：导航与地图生成已解耦为 TileData 权威数据 + 导航脏区批处理；Chunk 流送后禁止无条件全窗口重烘焙。
 
 ## 修改后自动测试

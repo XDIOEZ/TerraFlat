@@ -1,13 +1,8 @@
 using AYellowpaper.SerializedCollections;
-using Force.DeepCloner;
 using Sirenix.OdinInspector;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using FlatWorld.Gameplay.Progress;
 using UnityEngine;
 using UnityEngine.UI;
-using RuntimeRecipeModel = RuntimeRecipe;
 
 /// <summary>
 /// 手工制作模块，提供合成物品的功能
@@ -46,6 +41,12 @@ public class Mod_HandMade : Module,IInventory
 
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
+    private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
+    {
+        RecipeType = RecipeType.Crafting,
+        AllowCompactGrid = false,
+        AllowOutputIntoInput = false
+    };
 
     #endregion
 
@@ -111,87 +112,26 @@ public class Mod_HandMade : Module,IInventory
         if (craftResult)
             _outputPreview?.PlaySuccess();
     }
-/// <summary>
-/// 执行合成操作
-/// </summary>
-public bool Craft(Inventory inputInv, Inventory outputInv)
-{
-    if (!TryResolveRecipe(inputInv, out RuntimeRecipeModel recipe, out bool isMirrorMatched, out List<string> recipeKeys))
+
+    /// <summary>
+    /// 通过公共事务执行制作。
+    /// </summary>
+    public bool Craft(Inventory inputInv, Inventory outputInv)
     {
-        Debug.LogError($"配方 {string.Join(" 或 ", recipeKeys)} 不存在");
-        return false;
+        Player actor = item as Player ?? item?.Owner as Player ?? item?.GetComponentInParent<Player>();
+        CraftingResult result = CraftingService.Craft(inputInv, outputInv, Capabilities, actor);
+        if (!result.Success)
+            Debug.LogWarning($"[Mod_HandMade] 合成失败：{result.Message}");
+        return result.Success;
     }
 
-    // 验证输入槽位数量
-    if (!ValidateSlotCount(inputInv, recipe))
-        return false;
-
-    // 准备输出物品
-    var outputItems = PrepareOutputItems(recipe);
-    if (outputItems == null)
-        return false;
-
-    // 检查资源和空间
-    if (!CheckResourcesAndSpace(inputInv, outputInv, recipe, outputItems, isMirrorMatched))
+    private bool TryGetCraftPreview(out ItemData previewItem)
     {
-        Debug.LogError("合成失败：材料不足或输出空间不足");
-        return false;
+        CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
+        previewItem = result.PrimaryOutput;
+        return result.Success;
     }
 
-    // 执行合成
-    ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);
-    return true;
-}
-
-private bool TryGetCraftPreview(out ItemData previewItem)
-{
-    previewItem = null;
-    if (!TryResolveRecipe(inputInventory, out RuntimeRecipeModel recipe, out bool isMirrorMatched, out _))
-        return false;
-
-    if (!ValidateSlotCount(inputInventory, recipe))
-        return false;
-
-    List<ItemData> outputItems = PrepareOutputItems(recipe);
-    if (outputItems == null || outputItems.Count == 0)
-        return false;
-
-    if (!CheckResourcesAndSpace(inputInventory, outputInventory, recipe, outputItems, isMirrorMatched))
-        return false;
-
-    previewItem = outputItems[0];
-    return true;
-}
-
-private bool TryResolveRecipe(
-    Inventory inputInv,
-    out RuntimeRecipeModel recipe,
-    out bool isMirrorMatched,
-    out List<string> recipeKeys)
-{
-    HashSet<string> mirroredKeys = new HashSet<string>();
-    recipeKeys = GenerateRecipeKey_List(inputInv, mirroredKeys);
-
-    recipe = null;
-    isMirrorMatched = false;
-    foreach (string recipeKey in recipeKeys)
-    {
-        if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
-            continue;
-
-        bool isMirrorKey = mirroredKeys.Contains(recipeKey);
-        if (isMirrorKey && recipe.inputs.inputOrder == RecipeInputRule.规则合成 && !recipe.enableMirrorCrafting)
-        {
-            recipe = null;
-            continue;
-        }
-
-        isMirrorMatched = isMirrorKey;
-        return true;
-    }
-
-    return false;
-}
     /// <summary>
     /// 玩家开始交互
     /// </summary>
@@ -217,374 +157,6 @@ private bool TryResolveRecipe(
         inputInventory.DefaultTarget_Inventory = null;
         outputInventory.DefaultTarget_Inventory = null;
         basePanel?.Close();
-    }
-
-    #endregion
-
-    #region 合成逻辑
-
-[Tooltip("输出一个字符串列表 包含所有Tag模式 和itemName模式的 集合 , 复杂度是O(n^2)")]
-private List<string> GenerateRecipeKey_List(Inventory inputInv, HashSet<string> mirroredKeys)
-{
-    List<string> recipeKeys = new List<string>();
-    
-    // 1. 生成基于物品ID的配方键（有序合成）
-    Input_List orderedInputList = new Input_List();
-    orderedInputList.recipeType = RecipeType.Crafting;
-    orderedInputList.inputOrder = RecipeInputRule.规则合成;
-    foreach (ItemSlot slot in inputInv.Data.itemSlots)
-    {
-        if (slot.itemData == null)
-        {
-            orderedInputList.AddNameItem("");
-        }
-        else
-        {
-            orderedInputList.AddNameItem(slot.itemData.IDName);
-        }
-    }
-    string orderedKey = orderedInputList.ToString();
-    recipeKeys.Add(orderedKey);
-
-    if (TryBuildMirroredInputList(orderedInputList, out Input_List mirroredOrderedInputList))
-    {
-        string mirroredOrderedKey = mirroredOrderedInputList.ToString();
-        recipeKeys.Add(mirroredOrderedKey);
-        mirroredKeys.Add(mirroredOrderedKey);
-    }
-    
-    // 2. 生成基于物品ID的配方键（无序合成）- 通过修改有序合成的规则
-    orderedInputList.inputOrder = RecipeInputRule.无规则合成;
-    recipeKeys.Add(orderedInputList.ToString());
-    
-    // 3. 生成基于Tag的配方键（有序合成）
-    for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
-    {
-        var slot = inputInv.Data.itemSlots[i];
-        if (slot.itemData != null && slot.itemData.Tags != null)
-        {
-            // 为每个包含Tag的物品生成一个基于Tag的配方键版本（有序）
-            Input_List orderedTagInputList = new Input_List();
-            orderedTagInputList.recipeType = RecipeType.Crafting;
-            orderedTagInputList.inputOrder = RecipeInputRule.规则合成;
-            for (int j = 0; j < inputInv.Data.itemSlots.Count; j++)
-            {
-                if (j == i && slot.itemData.Tags != null && slot.itemData.Tags.Count > 0)
-                {
-                    // 使用第一个Type标签
-                    if (slot.itemData.Tags.Count > 0)
-                    {
-                        orderedTagInputList.AddTagItem(slot.itemData.Tags[0]);
-                    }
-                    else
-                    {
-                        orderedTagInputList.AddNameItem(slot.itemData?.IDName ?? "");
-                    }
-                }
-                else
-                {
-                    var otherSlot = inputInv.Data.itemSlots[j];
-                    orderedTagInputList.AddNameItem(otherSlot.itemData?.IDName ?? "");
-                }
-            }
-            string orderedTagKey = orderedTagInputList.ToString();
-            recipeKeys.Add(orderedTagKey);
-
-            if (TryBuildMirroredInputList(orderedTagInputList, out Input_List mirroredOrderedTagInputList))
-            {
-                string mirroredOrderedTagKey = mirroredOrderedTagInputList.ToString();
-                recipeKeys.Add(mirroredOrderedTagKey);
-                mirroredKeys.Add(mirroredOrderedTagKey);
-            }
-            
-            // 4. 生成基于Tag的配方键（无序合成）- 通过修改有序合成的规则
-            orderedTagInputList.inputOrder = RecipeInputRule.无规则合成;
-            recipeKeys.Add(orderedTagInputList.ToString());
-        }
-    }
-    
-    return recipeKeys;
-}
-
-private string GenerateRecipeKey(Inventory inputInv)
-{
-    Input_List inputList = new Input_List();
-    inputList.recipeType = RecipeType.Crafting;
-    foreach (ItemSlot slot in inputInv.Data.itemSlots)
-    {
-        if (slot.itemData == null)
-        {
-            inputList.AddNameItem("");
-        }
-        else
-        {
-            inputList.AddNameItem(slot.itemData.IDName);
-        }
-    }
-    return inputList.ToString();
-}
-
-    private bool ValidateRecipe(string recipeKey, out RuntimeRecipeModel recipe)
-    {
-        recipe = null;
-        
-        if (!GameRes.Instance.recipeDict.TryGetValue(recipeKey, out recipe))
-        {
-            Debug.LogError($"配方 {recipeKey} 不存在");
-            return false;
-        }
-        return true;
-    }
-
-    private bool ValidateSlotCount(Inventory inputInv, RuntimeRecipeModel recipe)
-    {
-        if (inputInv.Data.itemSlots.Count != recipe.inputs.RowItems_List.Count)
-        {
-            Debug.LogError($"插槽数量不匹配：配方要求 {recipe.inputs.RowItems_List.Count} 个插槽，当前有 {inputInv.Data.itemSlots.Count} 个");
-            return false;
-        }
-        return true;
-    }
-
-    private List<ItemData> PrepareOutputItems(RuntimeRecipeModel recipe)
-    {
-        var itemsToAdd = new List<ItemData>();
-        
-        foreach (var output in recipe.outputs.results)
-        {
-            if (!GameRes.Instance.AllPrefabs.TryGetValue(output.ItemName, out GameObject outputPrefab) || outputPrefab == null)
-            {
-                Debug.LogError($"配方 {recipe.Id} 找不到输出物品：{output.ItemName}");
-                return null;
-            }
-
-            Item outputitem = outputPrefab.GetComponent<Item>();
-            if (outputitem == null)
-            {
-                Debug.LogError($"配方 {recipe.Id} 的输出 Prefab 缺少 Item：{output.ItemName}");
-                return null;
-            }
-            ItemData newItem = outputitem.Get_NewItemData();
-            newItem.Stack.Amount = output.amount;
-
-            itemsToAdd.Add(newItem);
-        }
-        
-        return itemsToAdd;
-    }
-
-    private bool CheckResourcesAndSpace(Inventory inputInv, Inventory outputInv, 
-    RuntimeRecipeModel recipe, List<ItemData> outputItems, bool isMirrorMatched)
-{
-    // 检查recipe.inputs是有规则合成还是无规则合成
-    if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
-    {
-        // 有规则合成按照原有逻辑走
-        for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
-        {
-            var slot = inputInv.Data.itemSlots[i];
-            var required = GetOrderedRequired(recipe, i, isMirrorMatched, inputInv.Data.itemSlots.Count);
-
-            if (required.amount == 0) continue;
-
-            if (slot.itemData == null)
-                return false;
-
-            if (slot.itemData.Stack.Amount < required.amount)
-                return false;
-        }
-    }
-    else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
-    {
-        // 如果是无规则合成 则通过遍历recipe.inputs.RowItems_List查找对应的required 并检查是否有足够的物品
-        foreach (var required in recipe.inputs.RowItems_List)
-        {
-            if (required.amount == 0) continue;
-
-            // 在输入库存中查找匹配的物品
-            float foundAmount = 0;
-            foreach (var slot in inputInv.Data.itemSlots)
-            {
-                if (slot.itemData == null) continue;
-
-                bool isMatch = false;
-                // 根据匹配模式检查是否匹配
-                if (required.matchMode == MatchMode.ExactItem)
-                {
-                    isMatch = slot.itemData.IDName == required.ItemName;
-                }
-                else if (required.matchMode == MatchMode.ByTag)
-                {
-                    isMatch = slot.itemData.Tags != null && 
-                             slot.itemData.Tags != null && 
-                             slot.itemData.Tags.Contains(required.Tag);
-                }
-
-                if (isMatch)
-                {
-                    foundAmount += slot.itemData.Stack.Amount;
-                }
-            }
-
-            // 检查找到的数量是否足够
-            if (foundAmount < required.amount)
-                return false;
-        }
-    }
-
-    // 检查输出空间
-    foreach (var item in outputItems)
-    {
-        if (!outputInv.Data.TryAddItem(item, false))
-            return false;
-    }
-
-    return true;
-}
-
-private void ExecuteCrafting(Inventory inputInv, Inventory outputInv, 
-    RuntimeRecipeModel recipe, List<ItemData> outputItems, bool isMirrorMatched)
-    {
-        Debug.Log($"开始合成：{recipe.name}");
-        Debug.Log($"输入材料：{GenerateRecipeKey(inputInv)}");
-        Debug.Log($"输出产物：{string.Join(", ", outputItems.Select(item => $"{item.Stack.Amount}x{item.IDName}"))}");
-
-        // 添加输出物品
-        foreach (var item in outputItems)
-        {
-            outputInv.Data.TryAddItem(item);
-            Debug.Log($"添加产物：{item.Stack.Amount}x{item.IDName}");
-        }
-
-        // 扣除输入材料
-if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
-{
-    // 有序合成 - 按位置对应扣除
-    for (int i = 0; i < inputInv.Data.itemSlots.Count; i++)
-    {
-        var slot = inputInv.Data.itemSlots[i];
-        var required = GetOrderedRequired(recipe, i, isMirrorMatched, inputInv.Data.itemSlots.Count);
-
-        if (required.amount == 0) continue;
-
-        Debug.Log($"插槽 {i}：需要 {required.ItemName} x{required.amount}，当前有 {slot.itemData.Stack.Amount}");
-
-        slot.itemData.Stack.Amount -= required.amount;
-        if (slot.itemData.Stack.Amount <= 0)
-        {
-            Debug.Log($"插槽 {i}：{required.ItemName} 已耗尽，移除物品");
-            inputInv.Data.RemoveItemAll(slot, i);
-        }
-        else
-        {
-            Debug.Log($"插槽 {i}：剩余 {required.ItemName} x{slot.itemData.Stack.Amount}");
-        }
-        inputInv.RefreshUI(i);
-    }
-}
-else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
-{
-    // 无序合成 - 根据配方需求查找并扣除对应物品
-    foreach (var required in recipe.inputs.RowItems_List)
-    {
-        if (required.amount == 0) continue;
-
-        float remainingAmountToConsume = required.amount;
-        
-        // 遍历所有槽位查找匹配的物品
-        for (int i = 0; i < inputInv.Data.itemSlots.Count && remainingAmountToConsume > 0; i++)
-        {
-            var slot = inputInv.Data.itemSlots[i];
-            if (slot.itemData == null) continue;
-
-            // 检查物品是否匹配需求
-            bool isMatch = false;
-            if (required.matchMode == MatchMode.ExactItem)
-            {
-                isMatch = slot.itemData.IDName == required.ItemName;
-            }
-            else if (required.matchMode == MatchMode.ByTag)
-            {
-                isMatch = slot.itemData.Tags != null && 
-                         slot.itemData.Tags != null && 
-                         slot.itemData.Tags.Contains(required.Tag);
-            }
-
-            if (isMatch && slot.itemData.Stack.Amount > 0)
-            {
-                // 计算本次可以消耗的数量
-                float consumeAmount = Mathf.Min(remainingAmountToConsume, slot.itemData.Stack.Amount);
-                slot.itemData.Stack.Amount -= consumeAmount;
-                remainingAmountToConsume -= consumeAmount;
-                
-                Debug.Log($"插槽 {i}：消耗 {slot.itemData.IDName} x{consumeAmount}，剩余 {slot.itemData.Stack.Amount}");
-                
-                // 如果物品用完，移除物品
-                if (slot.itemData.Stack.Amount <= 0)
-                {
-                    Debug.Log($"插槽 {i}：{slot.itemData.IDName} 已耗尽，移除物品");
-                    inputInv.Data.RemoveItemAll(slot, i);
-                }
-                
-                inputInv.RefreshUI(i);
-            }
-        }
-    }
-}
-        
-        // 执行配方动作（添加空值检查）
-        RecipeActionRunner.Execute(recipe, inputInv);
-
-        outputInv.RefreshUI();
-        inputInv.RefreshUI();
-        Debug.Log($"合成完成：{recipe.name}");
-
-        Player actor = item as Player ?? item?.Owner as Player ?? item?.GetComponentInParent<Player>();
-        for (int i = 0; i < outputItems.Count; i++)
-            GameplayProgressEvents.PublishCraftSucceeded(actor, outputItems[i]?.IDName);
-    }
-
-    private static bool TryBuildMirroredInputList(Input_List source, out Input_List mirrored)
-    {
-        mirrored = null;
-        int count = source.RowItems_List.Count;
-        int gridSize = Mathf.RoundToInt(Mathf.Sqrt(count));
-        if (gridSize * gridSize != count)
-            return false;
-
-        mirrored = new Input_List();
-        mirrored.recipeType = source.recipeType;
-        mirrored.inputOrder = source.inputOrder;
-
-        for (int row = 0; row < gridSize; row++)
-        {
-            for (int col = 0; col < gridSize; col++)
-            {
-                int sourceIndex = row * gridSize + (gridSize - 1 - col);
-                CraftingIngredient ingredient = source.RowItems_List[sourceIndex];
-                if (ingredient.matchMode == MatchMode.ByTag)
-                    mirrored.AddTagItem(ingredient.Tag);
-                else
-                    mirrored.AddNameItem(ingredient.ItemName);
-            }
-        }
-
-        return true;
-    }
-
-    private static CraftingIngredient GetOrderedRequired(RuntimeRecipeModel recipe, int slotIndex, bool isMirrorMatched, int slotCount)
-    {
-        if (!isMirrorMatched)
-            return recipe.inputs.RowItems_List[slotIndex];
-
-        int gridSize = Mathf.RoundToInt(Mathf.Sqrt(slotCount));
-        if (gridSize * gridSize != slotCount)
-            return recipe.inputs.RowItems_List[slotIndex];
-
-        int row = slotIndex / gridSize;
-        int col = slotIndex % gridSize;
-        int mirroredIndex = row * gridSize + (gridSize - 1 - col);
-        return recipe.inputs.RowItems_List[mirroredIndex];
     }
 
     #endregion
@@ -719,7 +291,7 @@ else if (recipe.inputs.inputOrder == RecipeInputRule.无规则合成)
 
     public Inventory GetDefaultTargetInventory()
     {
-        throw new NotImplementedException();
+        return inputInventory;
     }
 
     #endregion

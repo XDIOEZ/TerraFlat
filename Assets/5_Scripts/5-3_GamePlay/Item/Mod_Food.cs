@@ -313,6 +313,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     #region 营养管理
     public float ConsumeNutrition(float timeDelta)
     {
+        if (GameDifficultyService.IsPlayer(item))
+            timeDelta *= GameDifficultyService.Current.PlayerSurvival.HungerDrainMultiplier;
+
         // 食物消耗与水分消耗分别按各自倍率独立计算，避免互相耦合
         float foodDelta = timeDelta * Data.nutritionConsumeSpeed.Value;
         float remainingDelta = foodDelta;

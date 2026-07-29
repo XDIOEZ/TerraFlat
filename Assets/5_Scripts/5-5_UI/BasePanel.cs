@@ -1,5 +1,5 @@
 ﻿using Sirenix.OdinInspector;
-// AI-Context: 双脚本 UI 的面板视图基类；按节点名收集控件、管理开关状态，并在初始化时套用 FlatWorld 全局视觉主题。
+// AI-Context: 双脚本 UI 的面板视图基类；按节点名收集控件并管理开关状态，视觉结构完全由 Prefab 决定。
 
 using System.Collections.Generic;
 using UnityEngine;
@@ -76,8 +76,8 @@ public sealed class BasePanel : MonoBehaviour
 
         EnsureRuntimeReferences();
 
-        // 视觉由主题系统统一维护；业务子类只需保留控件命名契约与事件逻辑。
-        FlatWorldUITheme.Apply(transform);
+        // 只补充非视觉的音频反馈；颜色、布局和装饰必须在 Prefab 中完成。
+        FlatWorldAudioUIFeedback.EnsureFor(transform);
 
         // 初始化面板状态
         if (canvasGroup != null)
@@ -735,7 +735,7 @@ public sealed class BasePanel : MonoBehaviour
     public void RefreshUIComponents()
     {
         CollectUIComponents();
-        FlatWorldUITheme.Apply(transform);
+        FlatWorldAudioUIFeedback.EnsureFor(transform);
     }
 
     #endregion

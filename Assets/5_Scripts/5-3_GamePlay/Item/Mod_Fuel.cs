@@ -87,7 +87,10 @@ public class Mod_Fuel : Module
     public bool ConsumeFuel(float amount)
     {
         // 根据燃烧速度系数调整消耗量
-        float actualAmount = amount * burnSpeedMultiplier;
+        float actualAmount =
+            amount *
+            burnSpeedMultiplier *
+            GameDifficultyService.Current.Production.FuelConsumptionMultiplier;
         Data.Fuel.x = Mathf.Max(Data.Fuel.x - actualAmount, 0f);
         
         if (Data.Fuel.x <= 0.01f) 

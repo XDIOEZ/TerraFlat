@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 背包、制作、装备与农业定位
 
-> 最后核对：2026-07-28。
+> 最后核对：2026-07-29。
 
 ## 修改前先读
 
@@ -26,6 +26,9 @@ disable-model-invocation: false
 - 手持库存：`Inventory_Hand.cs`、`Mod_Hand.cs`。
 - 容器/工作台：`Mod_Box.cs`、`Mod_MakeTable.cs`、`Inventory_WorkBench.cs`。
 - 初始库存 SO：`Assets/4_ScriptObjects/4-6_InventoryInit/`。
+- 背包面板 Prefab：`Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Bag.prefab`；`整理` Button 必须预制，`InventorySortButton` 只负责查找、绑定和调用 `SortDefault()`。
+- 槽位 Prefab：`Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Slot.prefab`；制作产物预览必须预制 `Crafting Output Ghost` 与 `Crafting Output Reveal` 两个 Image，`CraftingOutputPreview` 只更新 Sprite、颜色、显隐和填充量。
+- 上述视觉节点由 `Assets/Editor/FlatWorld/RuntimeUIPrefabBuilder.cs` 的菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI` 固化；运行时禁止缺失时补建视觉节点。
 
 ## 制作与装备
 
@@ -33,11 +36,16 @@ disable-model-invocation: false
 - 固定分包：`crafting/{survival,tools,weapons,buildings}.json`、`cooking/{basic_food,advanced_food}.json`、`smelting/{ores,alloys}.json`。
 - 配方 Excel：`Assets/GameConfig/Excel/RecipeConfig.xlsx`；`Recipes.Package` 决定配方导出分包，编辑器同步入口为 `Assets/Editor/FlatWorld/ExcelConfig/RecipeExcelSyncService.cs`。
 - 运行时模型与校验：`RecipeDto.cs`、`RuntimeRecipe.cs`、`RecipeRuntimeFactory.cs`、`RecipeCatalogLoader.cs`。
+- 制作公共核心：`CraftingRecipeMatcher.cs` 负责有序/无序、ExactItem/Tag、镜像和紧凑网格匹配并返回精确槽位消费计划；`CraftingTransaction.cs` 在深拷贝快照上统一扣料和放置全部产物；`CraftingService.cs` 统一预览、提交、动作与成功事件；`CraftingResult.cs` 提供失败原因和入口能力。
 - 动作执行：JSON 只保存 `action.type + 参数`，由 `RecipeActionRunner` 的 C# Handler 执行；当前支持 `change_durability`。
 - 输入 `amount = 0` 表示参与配方签名匹配但不消耗，主要用于工具/催化材料；空槽同样为 0，但不填写 `itemId`/`tag`。
 - 配方运行时注册：`GameRes.recipeById` 按 ID 查询，`GameRes.recipeDict` 保留旧输入签名查询兼容。
 - 旧 `Recipe`/`CookRecipe` SO 只作为迁移和旧 MOD AssetBundle 兼容桥，不再是本体运行时配方来源。
-- Player Prefab 实际手工制作入口是 `Assets/5_Scripts/5-3_GamePlay/Inventory/Mod_HandCraftTable.cs`；旧 `Mod_HandMade` 仅保留兼容。两者都必须在产物写入、扣料、动作和 UI 刷新全部成功后发布 `GameplayProgressEvents.CraftSucceeded(actor, stableId)`。
+- 四个制作入口 `Mod_HandMade`、`Mod_HandCraftTable`、`Mod_MakeTable`、`Inventory_WorkBench` 只保留点击进度、库存引用、`CraftingCapabilities` 和成功表现，制作与预览必须调用 `CraftingService`，禁止恢复入口私有匹配、容量、扣料或产出算法。
+- `CraftingService.TryPrepareOutputs()` 是通用制作产量难度入口；两套熔炉兼容实现 `Mod_Furnace` 与 `Inventory_Furnace` 也必须同步应用制作产量和熔炼速度倍率，避免不同入口结果不一致。
+- `Mod_HandCraftTable` 固定 2x2，并允许产物在输出槽不足时写入扣料后释放的输入槽；大工作台允许在正方形输入网格中匹配最小包围区域。
+- 制作容量预检禁止直接依赖 `Inventory_Data.TryAddItem(..., false)`，因为其成功语义允许部分容纳；多输出必须在同一快照中全部放置成功后才可提交，失败不得扣料或留下部分产物。
+- 配方动作成功后再完成库存通知并发布 `GameplayProgressEvents.CraftSucceeded(actor, stableId)`；动作异常必须恢复事务快照，进度事件监听器异常只记录日志，不反向撤销已完成制作。
 - 玩家背包只在自己的 Bag 最终打开后发布 `InventoryOpened`；`ItemPicker` 只在 `TryAddItem` 成功并完成状态更新后发布 `PickupSucceeded`。箱子、工作台、非玩家容器与失败入包不得推进教程。
 - 装备定义：`Assets/5_Scripts/5-3_GamePlay/Equipment/Equipment_SO.cs`。
 - 装备效果实例：`Assets/5_Scripts/5-3_GamePlay/Equipment/EquipmentInstance*.cs`。
@@ -47,6 +55,7 @@ disable-model-invocation: false
 
 - 食物模块：`Assets/5_Scripts/5-3_GamePlay/Item/Mod_Food.cs`。
 - 种子/生长：`Mod_Seed.cs`、`Mod_Grow.cs`、`Mod_PlantGrow.cs`。
+- 自定义难度统一入口：`Mod_Food.ConsumeNutrition()` 处理饥饿消耗，`Mod_Stamina.AddStamina()` 按正负值处理耐力恢复/消耗，`Mod_Seed`、`Mod_PlantGrow`、`BerryBush` 处理作物生长，`Mod_Fuel.ConsumeFuel()` 处理燃料消耗。
 - 农具/杂草表现：`Assets/5_Scripts/5-3_GamePlay/Food/`。
 - 耕地数据：`Assets/5_Scripts/5-1_Data/TileData/TileData_Farmland.cs`。
 - 烹饪 SO：`Assets/4_ScriptObjects/4-5_Cook/`。
@@ -69,6 +78,11 @@ disable-model-invocation: false
 
 ## 近期变更
 
+- 2026-07-29：统一内容校验器会读取配方 manifest 和全部启用分包，校验配方结构、跨分包重复 ID、输入/输出 `itemId` 引用及配方 Excel；缺失物品 ID 在构建前作为错误报告。
+- 2026-07-29：背包整理按钮和制作产物 Ghost/Reveal 图层固化进 UI Prefab；运行时脚本删除视觉兜底创建，只绑定预制节点。
+- 2026-07-29：自定义难度接入饥饿、耐力消耗/恢复、作物生长、熔炼速度、燃料消耗、制作产量与植物产出数量；所有入口统一读取 `GameDifficultyService`。
+- 2026-07-29：确认 8 个业务分包与旧 `Assets/StreamingAssets/GameConfig/recipes.json` 的 38 个配方 ID 完全一致后，删除旧单文件及“将单 JSON 迁移为业务分包”一次性编辑器入口；运行时与 Excel 只使用清单和分包。
+- 2026-07-29：四套制作算法收敛到 `CraftingRecipeMatcher + CraftingTransaction + CraftingService + CraftingResult`；统一镜像/Tag/紧凑网格匹配、组合容量预检、原子扣料与多输出，并修复 `Mod_HandMade.GetDefaultTargetInventory()`。
 - 2026-07-28：本体配方由单个 `recipes.json` 改为 `recipe-manifest.json + 8 个业务分包`；运行时仍统一注册，Excel 新增 `Package` 列控制落盘位置。
 - 2026-07-28：背包打开、成功拾取和成功制作接入通用 `GameplayProgressEvents`，供 JSON 自言自语教程消费；玩法层不引用 Guide 程序集。
 - 2026-07-28：本体配方由 ScriptableObject/Addressables 改为 JSON 数据驱动；增加纯运行时模型、动作 Handler、Excel 四表编辑导出和旧 SO 一次性迁移入口。
@@ -76,11 +90,12 @@ disable-model-invocation: false
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前基础覆盖库存模块、装备、配方和初始库存资源入口。
+- 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前覆盖库存模块、装备、配方、制作公共核心、初始库存资源入口，以及 `UI_Bag` 整理按钮和 `UI_Slot` 制作预览图层命名契约。
+- 公共核心回归：`Assets/GameTest/InventoryCrafting/CraftingCoreTests.cs`，分类 `InventoryCrafting.Core`；覆盖失败不扣料、多输出空间不足不部分产出、输入槽回落、镜像 + Tag + 紧凑网格消费映射和无序配方多余输入拒绝。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；背包制作测试约定目录：`Assets/GameTest/InventoryCrafting/`；场景目录：`Assets/GameTest/Scenes/InventoryCrafting/`；冒烟分类：`InventoryCrafting.Smoke`。
 - 新增背包、槽位、快捷栏、容器、装备、配方、食物或植物行为时必须增加系统测试；修复 Bug 时先增加回归测试。物品进入背包到使用或制作主流程变化时同步更新冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试物品必须使用隔离数据并验证数量守恒、引用清理和失败路径。
-- 完成修改后检查 Unity 编译和 Console，再运行 `InventoryCrafting.Smoke`；涉及 Item/Module、存档、玩家输入或 UI 时同步运行对应系统测试。
+- 完成修改后检查 Unity 编译和 Console，再运行 `InventoryCrafting.Smoke` 与 `InventoryCrafting.Core`；涉及 Item/Module、存档、玩家输入或 UI 时同步运行对应系统测试。
 - 教程使用的拾取/制作成功锚点及稳定 ID 由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 

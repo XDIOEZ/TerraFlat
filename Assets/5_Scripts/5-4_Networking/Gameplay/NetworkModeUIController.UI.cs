@@ -42,18 +42,19 @@ namespace FlatWorld.Networking.Gameplay
 
         #region 面板生命周期
 
-        private static bool IsProjectFontReady => FindProjectFont() != null;
-
         private IEnumerator CreatePanelWhenUIReady()
         {
-            while (UIManager.Instance == null || UIManager.Instance.panelRoot == null)
-                yield return null;
-
-            float fontWaitDeadline = Time.realtimeSinceStartup + 15f;
-            while (!IsProjectFontReady && Time.realtimeSinceStartup < fontWaitDeadline)
+            while (UIManager.Instance == null || UIManager.Instance.panelRoot == null ||
+                   GameRes.Instance == null || !GameRes.Instance.isLoadFinish)
                 yield return null;
 
             panel = CreateNetworkPanel(UIManager.Instance.panelRoot);
+            if (panel == null)
+            {
+                Debug.LogError($"[联机UI] 无法从 GameRes 实例化 {NetworkPanelKey}。", this);
+                yield break;
+            }
+
             playerNameInput = panel.GetInputField(PlayerNameInputKey);
             addressInput = panel.GetInputField(AddressInputKey);
             portInput = panel.GetInputField(PortInputKey);
@@ -64,12 +65,14 @@ namespace FlatWorld.Networking.Gameplay
             disconnectButton = panel.GetButton(DisconnectButtonKey);
             closeButton = panel.GetButton(CloseButtonKey);
 
+            playerNameInput?.SetTextWithoutNotify($"玩家_{Random.Range(1000, 9999)}");
+
             hostButton?.onClick.AddListener(StartHost);
             joinButton?.onClick.AddListener(StartClient);
             disconnectButton?.onClick.AddListener(StopSession);
             closeButton?.onClick.AddListener(I_ClosePanel);
 
-            SetStatus("离线：可创建主机或加入 127.0.0.1");
+            SetStatus("离线：可创建主机，或粘贴好友提供的 UDP 穿透地址");
             RefreshInteractableState();
             panel.Close();
             StartCoroutine(BindMainMenuButtonWhenReady());
@@ -107,8 +110,6 @@ namespace FlatWorld.Networking.Gameplay
             if (playerCountText != null)
                 playerCountText.text = $"玩家：{playerCount} / 2";
 
-            if (statusText != null && networkManager != null && !string.IsNullOrEmpty(networkManager.GameplayStatus))
-                statusText.text = networkManager.GameplayStatus;
         }
 
         public void I_ShowPanel()

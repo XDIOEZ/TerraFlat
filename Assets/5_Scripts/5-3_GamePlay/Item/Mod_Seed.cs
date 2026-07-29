@@ -306,7 +306,11 @@ public partial class Mod_Seed : Module
         }
 
         // 增加生长进度
-        float growthThisFrame = baseGrowthSpeed * growthMultiplier * deltaTime;
+        float growthThisFrame =
+            baseGrowthSpeed *
+            growthMultiplier *
+            GameDifficultyService.Current.Production.CropGrowthMultiplier *
+            deltaTime;
         Data.growProgress += growthThisFrame;
 
         // 消耗肥力和水分

@@ -344,14 +344,16 @@ namespace FlatWorld.GameTest.Guide
                 "Assets/5_Scripts/5-3_GamePlay/Inventory/ItemPicker.cs",
                 "if (!targetInventory.Data.TryAddItem(itemData))",
                 "GameplayProgressEvents.PublishPickupSucceeded");
+            Assert.That(
+                ReadProjectFile("Assets/5_Scripts/5-3_GamePlay/Inventory/Mod_HandCraftTable.cs"),
+                Does.Contain("CraftingService.Craft"));
+            Assert.That(
+                ReadProjectFile("Assets/5_Scripts/5-3_GamePlay/Item/Mod_HandMade.cs"),
+                Does.Contain("CraftingService.Craft"));
             AssertOrdered(
-                "Assets/5_Scripts/5-3_GamePlay/Inventory/Mod_HandCraftTable.cs",
-                "ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);",
-                "GameplayProgressEvents.PublishCraftSucceeded");
-            AssertOrdered(
-                "Assets/5_Scripts/5-3_GamePlay/Item/Mod_HandMade.cs",
-                "ExecuteCrafting(inputInv, outputInv, recipe, outputItems, isMirrorMatched);",
-                "GameplayProgressEvents.PublishCraftSucceeded");
+                "Assets/5_Scripts/5-3_GamePlay/Crafting/CraftingService.cs",
+                "transaction.Complete();",
+                "PublishSuccess(actor, prepared.Outputs);");
             AssertOrdered(
                 "Assets/5_Scripts/5-3_GamePlay/Building/Mod_Building.cs",
                 "ApplySourceAmount(authoritativeRemainingAmount);",

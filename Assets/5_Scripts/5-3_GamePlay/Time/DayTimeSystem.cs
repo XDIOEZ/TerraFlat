@@ -4,9 +4,13 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using MemoryPack;
 using UnityEngine.SceneManagement;
+using System;
 
 public class DayTimeSystem : SingletonMono<DayTimeSystem>
 {
+    public event Action<string, float, float> TimeAdvanced;
+    public event Action<string, int, int> DayChanged;
+
     [ShowInInspector]
     public Dictionary<string, TimeData> WorldTimeDict = new Dictionary<string, TimeData>();
     
@@ -115,20 +119,12 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
 /// </summary>
 private void TimeRun(string sceneName, float deltaTime)
 {
-    if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
-        return;
-
-    // 根据时间倍率推进时间
-    float oldTime = timeData.CurrentTime;
-    timeData.CurrentTime += deltaTime * timeData.TimeScaleModifier;
-    
-    // 处理时间溢出（超过一天时长则循环）
-    if (timeData.CurrentTime >= timeData.DayLength)
-    {
-        int daysPassed = Mathf.FloorToInt(timeData.CurrentTime / timeData.DayLength);
-        timeData.TotalDays += daysPassed;
-        timeData.CurrentTime %= timeData.DayLength;
-    }
+    if (WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
+        AdvanceTime(
+            sceneName,
+            deltaTime *
+            timeData.TimeScaleModifier *
+            GameDifficultyService.Current.World.TimeSpeedMultiplier);
 }
 
     /// <summary>
@@ -193,16 +189,40 @@ private void TimeRun(string sceneName, float deltaTime)
     /// </summary>
     public float GetCurrentTime(string sceneName)
     {
-        if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
-            return 0f;
+        return TryGetResolvedTimeData(sceneName, out _, out TimeData timeData)
+            ? timeData.CurrentTime
+            : 0f;
+    }
 
-        // 如果该场景引用了其他场景，则返回被引用场景的时间
-        if (!string.IsNullOrEmpty(timeData.ReferenceScene))
+    /// <summary>
+    /// 解析场景时间引用，循环引用或缺失数据时返回 false。
+    /// </summary>
+    public bool TryGetResolvedTimeData(string sceneName, out string resolvedSceneName, out TimeData timeData)
+    {
+        resolvedSceneName = sceneName;
+        timeData = null;
+
+        for (int depth = 0; depth < 16; depth++)
         {
-            return GetCurrentTime(timeData.ReferenceScene);
+            if (string.IsNullOrEmpty(resolvedSceneName) ||
+                WorldTimeDict == null ||
+                !WorldTimeDict.TryGetValue(resolvedSceneName, out timeData) ||
+                timeData == null)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(timeData.ReferenceScene))
+                return true;
+
+            if (timeData.ReferenceScene == resolvedSceneName)
+                return false;
+
+            resolvedSceneName = timeData.ReferenceScene;
         }
 
-        return timeData.CurrentTime;
+        timeData = null;
+        return false;
     }
 
     /// <summary>
@@ -285,7 +305,45 @@ private void TimeRun(string sceneName, float deltaTime)
             WorldTimeDict[sceneName] = timeData;
         }
 
-        timeData.CurrentTime = timeValue;
+        float dayLength = Mathf.Max(1f, timeData.DayLength);
+        int oldDay = timeData.GetCurrentDay();
+        float oldTotalTime = timeData.GetTotalGameTime();
+        int additionalDays = Mathf.Max(0, Mathf.FloorToInt(timeValue / dayLength));
+
+        timeData.TotalDays += additionalDays;
+        timeData.CurrentTime = Mathf.Repeat(timeValue, dayLength);
+
+        TimeAdvanced?.Invoke(sceneName, oldTotalTime, timeData.GetTotalGameTime());
+        if (oldDay != timeData.GetCurrentDay())
+            DayChanged?.Invoke(sceneName, oldDay, timeData.GetCurrentDay());
+    }
+
+    /// <summary>
+    /// 推进指定场景的游戏时间，并正确结算跨过的全部游戏日。
+    /// </summary>
+    public void AdvanceTime(string sceneName, float gameSeconds)
+    {
+        if (gameSeconds <= 0f ||
+            WorldTimeDict == null ||
+            !WorldTimeDict.TryGetValue(sceneName, out TimeData timeData) ||
+            timeData == null)
+        {
+            return;
+        }
+
+        float dayLength = Mathf.Max(1f, timeData.DayLength);
+        int oldDay = timeData.GetCurrentDay();
+        float oldTotalTime = timeData.GetTotalGameTime();
+        float nextTime = timeData.CurrentTime + gameSeconds;
+        int daysPassed = Mathf.Max(0, Mathf.FloorToInt(nextTime / dayLength));
+
+        timeData.TotalDays += daysPassed;
+        timeData.CurrentTime = Mathf.Repeat(nextTime, dayLength);
+
+        float newTotalTime = timeData.GetTotalGameTime();
+        TimeAdvanced?.Invoke(sceneName, oldTotalTime, newTotalTime);
+        if (oldDay != timeData.GetCurrentDay())
+            DayChanged?.Invoke(sceneName, oldDay, timeData.GetCurrentDay());
     }
 
     /// <summary>
@@ -434,6 +492,7 @@ public partial class SerializableTimeData
     public SerializableKeyframe[] LightParamsKeys;
     public float TimeScaleModifier;
     public string ReferenceScene;
+    public int TotalDays;
     // ↓↓↓ 新增：把梯度颜色一起存进来
     public SerializableGradient DayNightGradient;
 
@@ -443,7 +502,8 @@ public partial class SerializableTimeData
                                 SerializableKeyframe[] lightParamsKeys,
                                 float timeScaleModifier,
                                 string referenceScene,
-                                SerializableGradient dayNightGradient)
+                                SerializableGradient dayNightGradient,
+                                int totalDays)
     {
         CurrentTime = currentTime;
         DayLength = dayLength;
@@ -451,6 +511,7 @@ public partial class SerializableTimeData
         TimeScaleModifier = timeScaleModifier;
         ReferenceScene = referenceScene ?? "";
         DayNightGradient = dayNightGradient;
+        TotalDays = Mathf.Max(0, totalDays);
     }
 
     // 从运行时 TimeData 抽数据
@@ -460,6 +521,7 @@ public partial class SerializableTimeData
         DayLength = timeData.DayLength;
         TimeScaleModifier = timeData.TimeScaleModifier;
         ReferenceScene = timeData.ReferenceScene ?? "";
+        TotalDays = Mathf.Max(0, timeData.TotalDays);
 
         // AnimationCurve → 数组
         if (timeData.LightParams != null && timeData.LightParams.keys != null)
@@ -494,6 +556,7 @@ public partial class SerializableTimeData
             LightParams = curve,
             TimeScaleModifier = TimeScaleModifier,
             ReferenceScene = ReferenceScene,
+            TotalDays = Mathf.Max(0, TotalDays),
             dayNightGradient = DayNightGradient.ToGradient()// 字段赋值（内部用）
         };
     }

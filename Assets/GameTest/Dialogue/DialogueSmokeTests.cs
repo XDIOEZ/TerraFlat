@@ -1,4 +1,6 @@
 using System.Collections;
+using System.IO;
+using System.Linq;
 using FlatWorld.Dialogue;
 using NUnit.Framework;
 using UnityEditor;
@@ -17,6 +19,25 @@ namespace FlatWorld.GameTest.Dialogue
         private const string ScenePath = "Assets/GameTest/Scenes/Dialogue/DialogueSmokeTest.unity";
 
         #region 对话主流程
+
+        [Test]
+        [Category("Dialogue.Smoke")]
+        public void RuntimeDialogueUIUsesInspectablePrefabs()
+        {
+            AssertPrefabContains(
+                "Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab",
+                "Text Area", "Placeholder", "Text");
+            AssertPrefabContains(
+                "Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_CharacterSpeechBubble.prefab",
+                "Tail", "Message");
+
+            string chatSource = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatInputController.cs");
+            string bubbleSource = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Dialogue/ScreenSpaceSpeechBubblePresenter.cs");
+            Assert.That(chatSource, Does.Not.Contain("new GameObject"));
+            Assert.That(bubbleSource, Does.Not.Contain("new GameObject"));
+        }
 
         [UnityTest]
         [Category("Dialogue.Smoke")]
@@ -52,6 +73,17 @@ namespace FlatWorld.GameTest.Dialogue
             Assert.That(probe.LastRequest.Priority, Is.EqualTo(CharacterSpeechPriority.Critical));
             Assert.That(probe.LastRequest.Text, Is.EqualTo("我快饿扁了"));
             Assert.That(probe.IsVisible, Is.True, "Presenter 未收到有效台词。");
+        }
+
+        private static void AssertPrefabContains(string prefabPath, params string[] expectedNames)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少对话 UI Prefab：{prefabPath}");
+            string[] objectNames = prefab.GetComponentsInChildren<Transform>(true)
+                .Select(item => item.name)
+                .ToArray();
+            foreach (string expectedName in expectedNames)
+                Assert.That(objectNames, Does.Contain(expectedName), $"{prefabPath} 缺少节点：{expectedName}");
         }
 
         #endregion

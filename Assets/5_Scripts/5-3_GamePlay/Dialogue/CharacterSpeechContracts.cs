@@ -12,6 +12,7 @@ namespace FlatWorld.Dialogue
         Ambient = 0,
         Need = 10,
         Critical = 20,
+        Player = 25,
         Emergency = 30
     }
 

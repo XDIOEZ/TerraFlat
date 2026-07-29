@@ -564,6 +564,22 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     }
 
     /// <summary>
+    /// 查询当前已生成地图上指定世界格所属的生物群系。
+    /// </summary>
+    public bool TryGetBiomeAtWorld(Vector2Int worldPos, out BiomeData biome)
+    {
+        biome = null;
+        if (Map == null || Map.Data == null || Map.Data.EnvironmentLayers == null || biomes == null)
+            return false;
+
+        if (!Map.Data.TryGetEnvironmentLocalPos(worldPos, out Vector2Int localPos))
+            return false;
+
+        biome = FindMatchingBiome(localPos);
+        return biome != null;
+    }
+
+    /// <summary>
     /// 生成地形瓦片数据并添加到地图
     /// </summary>
     private void GenerateTerrainTile(

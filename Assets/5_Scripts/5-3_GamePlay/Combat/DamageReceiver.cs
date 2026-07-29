@@ -44,6 +44,9 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public UltEvent OnDead = new();
 
+    /// <summary>死亡流程开始时触发，供生态等系统识别真实死亡。</summary>
+    public event Action<DamageReceiver> DeathStarted;
+
     [Header("受伤调用")]
     [SerializeReference]
     public List<DamageReciver_Action> HurtActions = new List<DamageReciver_Action>(); // 受伤触发动作列表
@@ -520,19 +523,28 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             }
         }
 
+        float difficultyDamageMultiplier = GameDifficultyService.ResolveDirectDamageMultiplier(
+            damageSender.attacker,
+            item);
+        float senderDamageValue = damageSender.Damage.Value * difficultyDamageMultiplier;
+
         // 计算实际伤害
         float actualDamage;
-        if (isDefenseBreak)
+        if (senderDamageValue <= 0f)
+        {
+            actualDamage = 0f;
+        }
+        else if (isDefenseBreak)
         {
             // 考虑破防比例，计算剩余的有效防御力
             float effectiveDefense = Defense * (1f - defenseReductionRatio);
-            float normalDamage = damageSender.Damage.Value - effectiveDefense;
+            float normalDamage = senderDamageValue - effectiveDefense;
             actualDamage = normalDamage < 1f ? 1f : normalDamage;
         }
         else
         {
             // 计算实际伤害（减法公式：攻击力 - 当前防御）
-            float normalDamage = damageSender.Damage.Value - Defense;
+            float normalDamage = senderDamageValue - Defense;
             // 未破防时保底造成 1 点伤害
             actualDamage = normalDamage < 1f ? 1f : normalDamage;
         }
@@ -587,7 +599,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         // 装备耐久度减少（即使没有造成实际伤害也会减少，但只减少一半）
-        ApplyDurabilityDamageToEquipments(actualDamage > 0 ? 1 : 0.5f);
+        if (difficultyDamageMultiplier > 0f)
+            ApplyDurabilityDamageToEquipments(actualDamage > 0 ? 1 : 0.5f);
 
         if (Hp <= 0)
         {
@@ -605,6 +618,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     public virtual float ForceHurt(float damage)
     {
         if (Hp <= 0) return -1;
+        damage *= GameDifficultyService.ResolveEnvironmentalDamageMultiplier(item);
         if (damage <= 0f) return Hp;
 
         float hpBefore = Hp;
@@ -656,6 +670,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     public virtual float Heal(float healAmount, Item healer = null)
     {
         float oldHp = Hp;
+        healAmount *= GameDifficultyService.ResolveHealingMultiplier(item);
         if (healAmount <= 0f)
             return Hp;
 
@@ -1288,6 +1303,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     private void HandleDeath(DamageReceiverDamageInfo damageInfo = null)
     {
         _deathConsumedByExternalHandler = false;
+        DeathStarted?.Invoke(this);
         OnDead.Invoke();
 
         if (_deathConsumedByExternalHandler)
@@ -1302,8 +1318,28 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
         if (Data.DestroyDelay >= 0)
         {
-            Destroy(item.gameObject, Data.DestroyDelay);
+            if (Data.DestroyDelay <= 0f)
+                DespawnDeadItem();
+            else
+                StartCoroutine(DespawnDeadItemAfterDelay(Data.DestroyDelay));
         }
+    }
+
+    private IEnumerator DespawnDeadItemAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        DespawnDeadItem();
+    }
+
+    private void DespawnDeadItem()
+    {
+        if (item == null)
+            return;
+
+        if (ItemMgr.Instance != null)
+            ItemMgr.Instance.DespawnItem(item, saveData: false);
+        else
+            Destroy(item.gameObject);
     }
 
     public void ConsumeCurrentDeath()
@@ -1425,7 +1461,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule
                 continue;
 
             // 确定掉落数量（在MinAmount和MaxAmount之间）
-            int dropAmount = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
+            int baseDropAmount = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
+            int dropAmount = GameDifficultyService.ScaleRandomizedAmount(
+                baseDropAmount,
+                GameDifficultyService.Current.World.LootAmountMultiplier);
 
             // 如果数量为0，跳过
             if (dropAmount <= 0)

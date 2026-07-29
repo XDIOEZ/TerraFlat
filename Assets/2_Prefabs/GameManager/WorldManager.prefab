@@ -48,8 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3728acca7d2bf834aa32d083b7c9a9c1, type: 2}
   - {fileID: 11400001, guid: d761520c2ce00864abbe419e138f92c7, type: 2}
   - {fileID: 11400000, guid: b14e9d6f8c0a2b3d5e7f9a1c4d6b8e0f, type: 2}
-  _lastCheckTime: -1
-  _lastCheckedDay: -1
+  _globalAliveLimit: 40
+  _spawnRetryInterval: 0.5
+  _populationMaintenanceInterval: 2
+  _recycleCheckInterval: 2
 --- !u!1 &2048257428238950690
 GameObject:
   m_ObjectHideFlags: 0

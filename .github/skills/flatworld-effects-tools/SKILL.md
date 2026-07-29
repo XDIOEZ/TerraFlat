@@ -40,6 +40,7 @@ disable-model-invocation: false
 
 ## 近期变更
 
+- 2026-07-29：新增统一只读内容校验器 `Assets/Editor/FlatWorld/ContentValidation/FlatWorldContentValidator.cs`；菜单 `FlatWorld/内容配置/校验全部本体内容` 覆盖本体配置，`IPreprocessBuildWithReport` 在正式构建前以同一规则阻断错误，禁止自动修改资产。
 - 2026-07-27：完成运行时特效、Shader 与编辑器工具路径首版拆分。
 
 ## 修改后自动测试

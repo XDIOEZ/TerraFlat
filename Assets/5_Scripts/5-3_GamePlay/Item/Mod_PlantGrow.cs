@@ -30,7 +30,10 @@ public class Mod_PlantGrow : Module
         }
 
         // 更新生产进度
-        _data.progress += _data.productionSpeed.Value * deltaTime;
+        _data.progress +=
+            _data.productionSpeed.Value *
+            GameDifficultyService.Current.Production.CropGrowthMultiplier *
+            deltaTime;
 
         // 检查是否达到特殊生产点
         if (_data.nodeIndex < _data.specialProductionPoints.Count &&
@@ -65,24 +68,33 @@ public class Mod_PlantGrow : Module
     {
         if (loot.lootName != "")
         {
+            int outputAmount = GameDifficultyService.ScaleRandomizedAmount(
+                loot.GetRandomLootAmount(),
+                GameDifficultyService.Current.World.LootAmountMultiplier);
+            if (outputAmount <= 0)
+            {
+                _data.nodeIndex++;
+                OnAction.Invoke(_data.nodeIndex);
+                return;
+            }
+
             // 调用物品管理器实例化物品
             Item product = ItemMgr.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
+            if (product == null)
+            {
+                Debug.LogWarning($"无法实例化物品: {loot.lootName}");
+                _data.nodeIndex++;
+                OnAction.Invoke(_data.nodeIndex);
+                return;
+            }
+
             product.Load();
+            product.itemData.Stack.Amount = outputAmount;
             // new ItemMaker().DropItem_cric(product, transform.position, 2);
             var dropComp = GetComponent<Mod_BaseDroper>();
             if (dropComp != null)
             {
                 dropComp.DropItem_Range(product, transform.position, 2, 1);
-            }
-
-            // 如果实例化成功，设置物品数量
-            if (product != null)
-            {
-                product.itemData.Stack.Amount = loot.GetRandomLootAmount();
-            }
-            else
-            {
-                Debug.LogWarning($"无法实例化物品: {loot.lootName}");
             }
         }
 

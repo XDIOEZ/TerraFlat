@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
@@ -24,11 +23,10 @@ public sealed class AutoSaveSettingsPanelLauncher : MonoBehaviour
     };
 
     private Button entryButton;
-    private GameObject settingsWindow;
+    private BasePanel settingsPanel;
     private TMP_Dropdown intervalDropdown;
     private TMP_InputField intervalInput;
     private TextMeshProUGUI statusText;
-    private TMP_FontAsset font;
 
     public static AutoSaveSettingsPanelLauncher Ensure(Transform settingsPanel)
     {
@@ -44,213 +42,89 @@ public sealed class AutoSaveSettingsPanelLauncher : MonoBehaviour
         return launcher;
     }
 
-    private void EnsureEntryButton()
+private void EnsureEntryButton()
     {
         if (entryButton != null)
             return;
 
-        Button[] buttons = GetComponentsInChildren<Button>(true);
-        Button template = null;
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            Button candidate = buttons[i];
-            if (candidate == null)
-                continue;
-
-            if (candidate.name == EntryButtonName)
-            {
-                entryButton = candidate;
-                break;
-            }
-
-            if (candidate.name == "音量调节")
-                template = candidate;
-            else
-                template ??= candidate;
-        }
-
-        if (entryButton == null && template != null)
-        {
-            GameObject clone = Instantiate(template.gameObject, template.transform.parent);
-            clone.name = EntryButtonName;
-            clone.SetActive(true);
-            entryButton = clone.GetComponent<Button>();
-            SetButtonLabel(entryButton, EntryButtonName);
-        }
-
+        entryButton = FindButton(EntryButtonName);
         if (entryButton == null)
         {
-            Debug.LogWarning(
-                "[AutoSaveSettingsPanelLauncher] 设置面板中没有可复用的按钮，未能创建“自动保存”入口。",
+            Debug.LogError(
+                $"[AutoSaveSettingsPanelLauncher] Prefab 缺少入口按钮“{EntryButtonName}”。",
                 this);
             return;
         }
 
-        entryButton.onClick.RemoveAllListeners();
+        entryButton.onClick.RemoveListener(Open);
         entryButton.onClick.AddListener(Open);
     }
 
-    private void Open()
+private void Open()
     {
         EnsureWindow();
-        RefreshControls();
-        settingsWindow.SetActive(true);
-        settingsWindow.transform.SetAsLastSibling();
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(settingsWindow.GetComponent<RectTransform>());
-    }
-
-    private void EnsureWindow()
-    {
-        if (settingsWindow != null)
+        if (settingsPanel == null)
             return;
 
-        Canvas canvas = GetComponentInParent<Canvas>();
-        Transform parent = canvas != null ? canvas.transform : transform.parent;
-
-        settingsWindow = CreateObject("自动保存设置面板", parent);
-        RectTransform panelRect = settingsWindow.GetComponent<RectTransform>();
-        panelRect.anchorMin = panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.pivot = new Vector2(0.5f, 0.5f);
-        panelRect.sizeDelta = new Vector2(640f, 410f);
-
-        Image panelImage = settingsWindow.AddComponent<Image>();
-        panelImage.color = new Color(0.045f, 0.075f, 0.085f, 0.99f);
-        Outline outline = settingsWindow.AddComponent<Outline>();
-        outline.effectColor = new Color(0.86f, 0.37f, 0.15f, 0.95f);
-        outline.effectDistance = new Vector2(2f, -2f);
-
-        VerticalLayoutGroup layout = settingsWindow.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(20, 20, 18, 18);
-        layout.spacing = 10f;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-
-        CreateHeader();
-
-        TextMeshProUGUI hint = CreateText(
-            settingsWindow.transform,
-            "自动保存只在游戏世界中运行，并按现实时间计时。设置会立即保存。",
-            13f,
-            new Color(0.67f, 0.75f, 0.76f));
-        hint.enableWordWrapping = true;
-        hint.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
-
-        CreateDropdownRow();
-        CreateInputRow();
-
-        statusText = CreateText(
-            settingsWindow.transform,
-            string.Empty,
-            13f,
-            new Color(0.21f, 0.78f, 0.74f));
-        statusText.enableWordWrapping = false;
-        statusText.overflowMode = TextOverflowModes.Ellipsis;
-        statusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
-
-        CreateFooter();
-
         RefreshControls();
+        settingsPanel.Open();
+        settingsPanel.transform.SetAsLastSibling();
         Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
-        settingsWindow.SetActive(false);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(settingsPanel.rectTransform);
     }
 
-    private void CreateHeader()
+private void EnsureWindow()
     {
-        GameObject header = CreateObject("标题", settingsWindow.transform);
-        header.AddComponent<LayoutElement>().preferredHeight = 50f;
-        header.AddComponent<Image>().color = new Color(0.07f, 0.18f, 0.21f, 1f);
+        if (settingsPanel != null)
+            return;
 
-        HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-        headerLayout.padding = new RectOffset(14, 10, 6, 6);
-        headerLayout.spacing = 10f;
-        headerLayout.childAlignment = TextAnchor.MiddleLeft;
-        headerLayout.childControlWidth = true;
-        headerLayout.childControlHeight = true;
-        headerLayout.childForceExpandWidth = false;
-        headerLayout.childForceExpandHeight = false;
+        GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.AutoSaveSettings);
+        if (prefab == null)
+        {
+            Debug.LogError(
+                $"[AutoSaveSettingsPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.AutoSaveSettings}。",
+                this);
+            return;
+        }
 
-        TextMeshProUGUI title = CreateText(
-            header.transform,
-            "自动保存",
-            21f,
-            new Color(0.96f, 0.96f, 0.92f));
-        title.fontStyle = FontStyles.Bold;
-        title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        CreateButton(header.transform, "关闭", Close, 68f, 34f);
+        settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
+            prefab,
+            RuntimeUIPrefabKeys.AutoSaveSettings);
+        intervalDropdown = settingsPanel.GetComponentInChildren<TMP_Dropdown>(true);
+        intervalInput = settingsPanel.GetInputField("自动保存间隔输入框");
+        statusText = settingsPanel.GetText("状态文本");
+
+        Button closeButton = settingsPanel.GetButton("关闭按钮");
+        Button cancelButton = settingsPanel.GetButton("取消按钮");
+        Button applyButton = settingsPanel.GetButton("应用按钮");
+        closeButton?.onClick.AddListener(Close);
+        cancelButton?.onClick.AddListener(Close);
+        applyButton?.onClick.AddListener(Apply);
+
+        if (intervalDropdown != null)
+        {
+            intervalDropdown.ClearOptions();
+            intervalDropdown.AddOptions(PresetLabels);
+            intervalDropdown.onValueChanged.AddListener(OnPresetChanged);
+        }
+
+        if (intervalDropdown == null || intervalInput == null || statusText == null)
+            Debug.LogError("[AutoSaveSettingsPanelLauncher] 自动保存 Prefab 控件命名契约不完整。", settingsPanel);
+
+        settingsPanel.Close();
     }
 
-    private void CreateDropdownRow()
-    {
-        GameObject row = CreateRow("保存模式", 52f);
-        CreateRowLabel(row.transform, "保存模式");
 
-        intervalDropdown = CreateDropdown(row.transform);
-        intervalDropdown.ClearOptions();
-        intervalDropdown.AddOptions(PresetLabels);
-        intervalDropdown.onValueChanged.AddListener(OnPresetChanged);
-    }
 
-    private void CreateInputRow()
-    {
-        GameObject row = CreateRow("自定义间隔", 52f);
-        CreateRowLabel(row.transform, "间隔（分钟）");
 
-        intervalInput = CreateInputField(row.transform, "输入 1–1440", 340f);
 
-        TextMeshProUGUI range = CreateText(
-            row.transform,
-            "1–1440",
-            12f,
-            new Color(0.58f, 0.65f, 0.66f));
-        range.alignment = TextAlignmentOptions.MidlineRight;
-        range.gameObject.AddComponent<LayoutElement>().preferredWidth = 62f;
-    }
 
-    private GameObject CreateRow(string name, float height)
-    {
-        GameObject row = CreateObject(name, settingsWindow.transform);
-        row.AddComponent<LayoutElement>().preferredHeight = height;
 
-        HorizontalLayoutGroup rowLayout = row.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.spacing = 12f;
-        rowLayout.childAlignment = TextAnchor.MiddleLeft;
-        rowLayout.childControlWidth = true;
-        rowLayout.childControlHeight = true;
-        rowLayout.childForceExpandWidth = false;
-        rowLayout.childForceExpandHeight = false;
-        return row;
-    }
 
-    private void CreateRowLabel(Transform parent, string label)
-    {
-        TextMeshProUGUI labelText = CreateText(
-            parent,
-            label,
-            14f,
-            new Color(0.9f, 0.93f, 0.92f));
-        labelText.gameObject.AddComponent<LayoutElement>().preferredWidth = 130f;
-    }
 
-    private void CreateFooter()
-    {
-        GameObject footer = CreateObject("底部操作", settingsWindow.transform);
-        footer.AddComponent<LayoutElement>().preferredHeight = 42f;
 
-        HorizontalLayoutGroup footerLayout = footer.AddComponent<HorizontalLayoutGroup>();
-        footerLayout.spacing = 10f;
-        footerLayout.childAlignment = TextAnchor.MiddleRight;
-        footerLayout.childControlWidth = false;
-        footerLayout.childControlHeight = true;
-        footerLayout.childForceExpandWidth = false;
-        footerLayout.childForceExpandHeight = false;
 
-        CreateButton(footer.transform, "取消", Close, 82f, 36f);
-        CreateButton(footer.transform, "应用", Apply, 92f, 36f, true);
-    }
+
 
     private void RefreshControls()
     {
@@ -345,270 +219,45 @@ public sealed class AutoSaveSettingsPanelLauncher : MonoBehaviour
             : new Color(0.21f, 0.78f, 0.74f);
     }
 
-    private void Close()
+private void Close()
     {
-        if (settingsWindow != null)
-            settingsWindow.SetActive(false);
+        settingsPanel?.Close();
     }
 
-    private void OnDestroy()
+private void OnDestroy()
     {
-        if (settingsWindow != null)
-            Destroy(settingsWindow);
+        if (entryButton != null)
+            entryButton.onClick.RemoveListener(Open);
+        if (settingsPanel != null)
+            Destroy(settingsPanel.gameObject);
     }
 
-    private TMP_Dropdown CreateDropdown(Transform parent)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+private Button FindButton(string buttonName)
     {
-        GameObject root = CreateObject("自动保存间隔下拉列表", parent);
-        LayoutElement rootLayout = root.AddComponent<LayoutElement>();
-        rootLayout.preferredWidth = 402f;
-        rootLayout.preferredHeight = 42f;
-        Image rootImage = root.AddComponent<Image>();
-        rootImage.color = new Color(0.028f, 0.071f, 0.094f, 1f);
-        AddSubtleOutline(root);
-
-        TMP_Dropdown dropdown = root.AddComponent<TMP_Dropdown>();
-        dropdown.targetGraphic = rootImage;
-
-        TextMeshProUGUI caption = CreateText(
-            root.transform,
-            string.Empty,
-            14f,
-            new Color(0.95f, 0.91f, 0.84f));
-        caption.name = "Label";
-        caption.alignment = TextAlignmentOptions.MidlineLeft;
-        caption.rectTransform.anchorMin = Vector2.zero;
-        caption.rectTransform.anchorMax = Vector2.one;
-        caption.rectTransform.offsetMin = new Vector2(12f, 2f);
-        caption.rectTransform.offsetMax = new Vector2(-42f, -2f);
-        dropdown.captionText = caption;
-
-        TextMeshProUGUI arrow = CreateText(
-            root.transform,
-            "▼",
-            13f,
-            new Color(0.86f, 0.57f, 0.31f));
-        arrow.name = "Arrow";
-        arrow.alignment = TextAlignmentOptions.Center;
-        arrow.rectTransform.anchorMin = new Vector2(1f, 0f);
-        arrow.rectTransform.anchorMax = Vector2.one;
-        arrow.rectTransform.pivot = new Vector2(1f, 0.5f);
-        arrow.rectTransform.sizeDelta = new Vector2(36f, 0f);
-        arrow.rectTransform.anchoredPosition = Vector2.zero;
-
-        GameObject templateObject = CreateObject("Template", root.transform);
-        RectTransform templateRect = templateObject.GetComponent<RectTransform>();
-        templateRect.anchorMin = new Vector2(0f, 0f);
-        templateRect.anchorMax = new Vector2(1f, 0f);
-        templateRect.pivot = new Vector2(0.5f, 1f);
-        templateRect.anchoredPosition = new Vector2(0f, -3f);
-        templateRect.sizeDelta = new Vector2(0f, 224f);
-        Image templateImage = templateObject.AddComponent<Image>();
-        templateImage.color = new Color(0.035f, 0.09f, 0.11f, 1f);
-        AddSubtleOutline(templateObject);
-
-        ScrollRect scrollRect = templateObject.AddComponent<ScrollRect>();
-        scrollRect.horizontal = false;
-        scrollRect.vertical = true;
-        scrollRect.movementType = ScrollRect.MovementType.Clamped;
-
-        GameObject viewportObject = CreateObject("Viewport", templateObject.transform);
-        RectTransform viewportRect = viewportObject.GetComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = new Vector2(3f, 3f);
-        viewportRect.offsetMax = new Vector2(-3f, -3f);
-        viewportObject.AddComponent<RectMask2D>();
-
-        GameObject contentObject = CreateObject("Content", viewportObject.transform);
-        RectTransform contentRect = contentObject.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.anchoredPosition = Vector2.zero;
-        contentRect.sizeDelta = Vector2.zero;
-
-        VerticalLayoutGroup contentLayout = contentObject.AddComponent<VerticalLayoutGroup>();
-        contentLayout.childControlWidth = true;
-        contentLayout.childControlHeight = true;
-        contentLayout.childForceExpandWidth = true;
-        contentLayout.childForceExpandHeight = false;
-        ContentSizeFitter fitter = contentObject.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        GameObject itemObject = CreateObject("Item", contentObject.transform);
-        itemObject.AddComponent<LayoutElement>().preferredHeight = 31f;
-        Image itemBackground = itemObject.AddComponent<Image>();
-        itemBackground.color = new Color(0.075f, 0.18f, 0.20f, 1f);
-        Toggle itemToggle = itemObject.AddComponent<Toggle>();
-        itemToggle.targetGraphic = itemBackground;
-
-        GameObject checkmarkObject = CreateObject("Item Checkmark", itemObject.transform);
-        RectTransform checkmarkRect = checkmarkObject.GetComponent<RectTransform>();
-        checkmarkRect.anchorMin = new Vector2(0f, 0.5f);
-        checkmarkRect.anchorMax = new Vector2(0f, 0.5f);
-        checkmarkRect.pivot = new Vector2(0f, 0.5f);
-        checkmarkRect.anchoredPosition = new Vector2(10f, 0f);
-        checkmarkRect.sizeDelta = new Vector2(8f, 18f);
-        Image checkmark = checkmarkObject.AddComponent<Image>();
-        checkmark.color = new Color(0.95f, 0.62f, 0.28f, 1f);
-        itemToggle.graphic = checkmark;
-
-        TextMeshProUGUI itemLabel = CreateText(
-            itemObject.transform,
-            "选项",
-            13f,
-            new Color(0.95f, 0.91f, 0.84f));
-        itemLabel.name = "Item Label";
-        itemLabel.alignment = TextAlignmentOptions.MidlineLeft;
-        itemLabel.rectTransform.anchorMin = Vector2.zero;
-        itemLabel.rectTransform.anchorMax = Vector2.one;
-        itemLabel.rectTransform.offsetMin = new Vector2(28f, 1f);
-        itemLabel.rectTransform.offsetMax = new Vector2(-8f, -1f);
-
-        scrollRect.viewport = viewportRect;
-        scrollRect.content = contentRect;
-        dropdown.template = templateRect;
-        dropdown.itemText = itemLabel;
-        templateObject.SetActive(false);
-        return dropdown;
-    }
-
-    private TMP_InputField CreateInputField(Transform parent, string placeholder, float width)
-    {
-        GameObject root = CreateObject("自动保存间隔输入框", parent);
-        LayoutElement rootLayout = root.AddComponent<LayoutElement>();
-        rootLayout.preferredWidth = width;
-        rootLayout.preferredHeight = 42f;
-        Image image = root.AddComponent<Image>();
-        image.color = new Color(0.028f, 0.071f, 0.094f, 1f);
-        AddSubtleOutline(root);
-
-        TMP_InputField field = root.AddComponent<TMP_InputField>();
-        field.targetGraphic = image;
-        field.lineType = TMP_InputField.LineType.SingleLine;
-        field.contentType = TMP_InputField.ContentType.IntegerNumber;
-
-        GameObject textArea = CreateObject("Text Area", root.transform);
-        RectTransform areaRect = textArea.GetComponent<RectTransform>();
-        areaRect.anchorMin = Vector2.zero;
-        areaRect.anchorMax = Vector2.one;
-        areaRect.offsetMin = new Vector2(12f, 3f);
-        areaRect.offsetMax = new Vector2(-12f, -3f);
-        textArea.AddComponent<RectMask2D>();
-        field.textViewport = areaRect;
-
-        TextMeshProUGUI valueText = CreateText(
-            textArea.transform,
-            string.Empty,
-            14f,
-            new Color(0.95f, 0.91f, 0.84f));
-        valueText.alignment = TextAlignmentOptions.MidlineLeft;
-        valueText.rectTransform.anchorMin = Vector2.zero;
-        valueText.rectTransform.anchorMax = Vector2.one;
-        valueText.rectTransform.offsetMin = Vector2.zero;
-        valueText.rectTransform.offsetMax = Vector2.zero;
-        field.textComponent = valueText;
-
-        TextMeshProUGUI placeholderText = CreateText(
-            textArea.transform,
-            placeholder,
-            13f,
-            new Color(0.51f, 0.57f, 0.58f));
-        placeholderText.fontStyle = FontStyles.Italic;
-        placeholderText.rectTransform.anchorMin = Vector2.zero;
-        placeholderText.rectTransform.anchorMax = Vector2.one;
-        placeholderText.rectTransform.offsetMin = Vector2.zero;
-        placeholderText.rectTransform.offsetMax = Vector2.zero;
-        field.placeholder = placeholderText;
-        return field;
-    }
-
-    private Button CreateButton(
-        Transform parent,
-        string label,
-        UnityAction action,
-        float width,
-        float height,
-        bool primary = false)
-    {
-        GameObject buttonObject = CreateObject(label, parent);
-        Image image = buttonObject.AddComponent<Image>();
-        image.color = primary
-            ? new Color(0.70f, 0.29f, 0.10f, 1f)
-            : new Color(0.12f, 0.31f, 0.34f, 1f);
-
-        Button button = buttonObject.AddComponent<Button>();
-        button.targetGraphic = image;
-        button.onClick.AddListener(action);
-
-        LayoutElement layout = buttonObject.AddComponent<LayoutElement>();
-        layout.preferredWidth = width;
-        layout.preferredHeight = height;
-
-        TextMeshProUGUI text = CreateText(
-            buttonObject.transform,
-            label,
-            13f,
-            new Color(0.95f, 0.96f, 0.93f));
-        text.alignment = TextAlignmentOptions.Center;
-        text.rectTransform.anchorMin = Vector2.zero;
-        text.rectTransform.anchorMax = Vector2.one;
-        text.rectTransform.offsetMin = Vector2.zero;
-        text.rectTransform.offsetMax = Vector2.zero;
-        return button;
-    }
-
-    private TextMeshProUGUI CreateText(Transform parent, string value, float size, Color color)
-    {
-        GameObject textObject = CreateObject("Text", parent);
-        TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
-        text.font = ResolveFont();
-        text.text = value;
-        text.fontSize = size;
-        text.color = color;
-        text.alignment = TextAlignmentOptions.MidlineLeft;
-        text.raycastTarget = false;
-        return text;
-    }
-
-    private TMP_FontAsset ResolveFont()
-    {
-        if (font != null)
-            return font;
-
-        TextMeshProUGUI existing = GetComponentInChildren<TextMeshProUGUI>(true);
-        font = existing != null && existing.font != null
-            ? existing.font
-            : TMP_Settings.defaultFontAsset;
-        return font;
-    }
-
-    private static void AddSubtleOutline(GameObject target)
-    {
-        Outline outline = target.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
-    }
-
-    private static void SetButtonLabel(Button button, string label)
-    {
-        TextMeshProUGUI tmpText = button.GetComponentInChildren<TextMeshProUGUI>(true);
-        if (tmpText != null)
+        Button[] buttons = GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
         {
-            tmpText.text = label;
-            return;
+            if (buttons[i] != null && buttons[i].name == buttonName)
+                return buttons[i];
         }
 
-        Text legacyText = button.GetComponentInChildren<Text>(true);
-        if (legacyText != null)
-            legacyText.text = label;
-    }
-
-    private static GameObject CreateObject(string name, Transform parent)
-    {
-        GameObject value = new GameObject(name, typeof(RectTransform));
-        value.transform.SetParent(parent, false);
-        return value;
+        return null;
     }
 }
