@@ -20,5 +20,17 @@ namespace FlatWorld.Dialogue
         public const string TutorialCompleted = "tutorial.completed";
 
         #endregion
+
+        #region 天气与暴露
+
+        public const string WeatherType = "weather.type";
+        public const string WeatherPhase = "weather.phase";
+        public const string WeatherIntensity = "weather.intensity";
+        public const string WeatherIsRaining = "weather.isRaining";
+        public const string WeatherIsExposed = "weather.isExposed";
+        public const string WeatherHasHeatSource = "weather.hasHeatSource";
+        public const string WeatherRemainingSeconds = "weather.remainingSeconds";
+
+        #endregion
     }
 }

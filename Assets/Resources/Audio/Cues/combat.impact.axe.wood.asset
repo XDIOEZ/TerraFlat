@@ -11,19 +11,23 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
   m_Name: combat.impact.axe.wood
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: combat.impact.axe.wood
   bus: 1
   clips:
   - {fileID: 8300000, guid: b2e475d40f7fa59d00555f8f06e6c0de, type: 3}
   selection: 0
   loop: 0
-  volume: {Min: 0.92, Max: 1}
-  pitch: {Min: 0.95, Max: 1.03}
+  volume:
+    Min: 0.92
+    Max: 1
+  pitch:
+    Min: 0.95
+    Max: 1.03
   spatialBlend: 0.72
   minDistance: 1.5
   maxDistance: 14
-  priority: 120
+  priority: 128
   cooldown: 0.04
   maxInstances: 5
   concurrencyPolicy: 1

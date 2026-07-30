@@ -23,7 +23,14 @@ namespace FlatWorld.Dialogue
             CharacterSpeechFacts.HungerIsTakingDamage,
             CharacterSpeechFacts.TutorialEnabled,
             CharacterSpeechFacts.TutorialStage,
-            CharacterSpeechFacts.TutorialCompleted
+            CharacterSpeechFacts.TutorialCompleted,
+            CharacterSpeechFacts.WeatherType,
+            CharacterSpeechFacts.WeatherPhase,
+            CharacterSpeechFacts.WeatherIntensity,
+            CharacterSpeechFacts.WeatherIsRaining,
+            CharacterSpeechFacts.WeatherIsExposed,
+            CharacterSpeechFacts.WeatherHasHeatSource,
+            CharacterSpeechFacts.WeatherRemainingSeconds
         };
 
         #region 公共加载入口

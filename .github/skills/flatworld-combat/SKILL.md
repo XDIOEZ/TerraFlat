@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 战斗、Buff 与技能定位
 
-> 最后核对：2026-07-29。
+> 最后核对：2026-07-30。
 
 ## 修改前先读
 
@@ -45,6 +45,7 @@ disable-model-invocation: false
 ## 边界约束
 
 - `DamageReceiver` 是生命值权威模块；远程网络应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
+- 旧 `Mod_HealthPoints` 已删除；禁止重新建立第二套生命值模块，生命、死亡与通用战利品继续统一走 `DamageReceiver`。
 - Buff ID 是持久化键；修改命名或叠加策略需考虑旧存档。
 - 技能定义由 `GameRes.SkillDict` 注册，资源移动要检查 Addressables `Skill` 标签。
 - 伤害死亡回调可能生成 Item、播放音效和更新 UI，修改时检查这些订阅者。
@@ -55,6 +56,7 @@ disable-model-invocation: false
 
 ## 近期变更
 
+- 2026-07-30：删除无引用的旧 `Mod_HealthPoints`；清理 `DamageReceiver.DropLoot()` 过时 TODO，并在调用掉落行为前过滤实例化失败结果。
 - 2026-07-29：统一内容校验器递归扫描 Prefab 与 ScriptableObject 中的 `LootEntry`/旧 `LootData`，报告战利品 ID、Prefab 对应关系、概率、数量范围和丢失引用。
 - 2026-07-29：自定义难度接入玩家伤害、生物伤害、生物等效生命、环境伤害、治疗和战利品数量；统一从 `GameDifficultyService` 读取，禁止发送端重复乘算。
 - 2026-07-29：难度目录增加新世界自定义类型；玩家死亡掉落继续通过 `GameDifficultyService` 统一读取，支持预设与自定义规则共用结算链。

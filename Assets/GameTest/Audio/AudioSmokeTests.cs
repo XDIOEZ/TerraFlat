@@ -1,5 +1,7 @@
 using FlatWorld.GameTest.Shared;
+using FlatWorld.Audio;
 using NUnit.Framework;
+using UnityEditor;
 
 namespace FlatWorld.GameTest.Audio
 {
@@ -14,6 +16,14 @@ namespace FlatWorld.GameTest.Audio
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-6_Audio/Runtime/AudioCue.cs", "AudioCue");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Audio/AudioRuntimeConfig.asset");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Audio/AudioCatalog.asset");
+            GameTestAssertions.AssertAssetExists("Assets/Audio/Generated/weather.rain.loop__01.wav");
+            GameTestAssertions.AssertAssetExists("Assets/Resources/Audio/Cues/weather.rain.loop.asset");
+
+            AudioCatalog catalog = AssetDatabase.LoadAssetAtPath<AudioCatalog>(
+                "Assets/Resources/Audio/AudioCatalog.asset");
+            Assert.That(catalog.TryGet(AudioEventIds.WeatherRainLoop, out AudioCue cue), Is.True);
+            Assert.That(cue.Loop, Is.True);
+            Assert.That(cue.Bus, Is.EqualTo(AudioBus.Ambient));
         }
     }
 }

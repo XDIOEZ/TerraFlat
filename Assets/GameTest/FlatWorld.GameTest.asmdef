@@ -2,6 +2,7 @@
     "name": "FlatWorld.GameTest",
     "rootNamespace": "FlatWorld.GameTest",
     "references": [
+        "FlatWorld.Audio",
         "FlatWorld.Dialogue",
         "FlatWorld.Guide",
         "FlatWorld.Networking.Core",

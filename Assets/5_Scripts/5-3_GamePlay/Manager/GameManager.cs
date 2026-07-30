@@ -220,7 +220,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return;
         }
 
-        ReadNewGameCreationInputs(out string requestedSaveName, out string playerName);
+        if (!TryReadNewGameCreationInputs(out string requestedSaveName, out string playerName))
+            return;
 
         if (!BeginWorldEntryLoading("正在创建新世界", "正在准备新存档数据…", 0.08f))
             return;

@@ -184,12 +184,28 @@ public static class StructureAuthoringPrefabUtility
                 metadataOwner.GetComponent<StructureItemAuthoring>() ??
                 metadataOwner.AddComponent<StructureItemAuthoring>();
             metadata.ItemPrefabId = stamp.ItemPrefabId;
+            metadata.MemberId = string.IsNullOrWhiteSpace(stamp.MemberId)
+                ? CreateLegacyMemberId(stamp.ItemPrefabId, i)
+                : stamp.MemberId;
             metadata.SourcePrefab = prefab;
             metadata.OrientationMode = stamp.OrientationMode;
             metadata.Optional = stamp.Optional;
             metadata.SpawnChance = stamp.SpawnChance;
             metadata.SeedSalt = stamp.SeedSalt;
+            metadata.ContainerContents = stamp.ContainerContents?.Clone() ?? new StructureContainerContents();
         }
+    }
+
+    private static string CreateLegacyMemberId(string itemId, int index)
+    {
+        string source = string.IsNullOrWhiteSpace(itemId) ? "item" : itemId.Trim().ToLowerInvariant();
+        char[] characters = source.ToCharArray();
+        for (int i = 0; i < characters.Length; i++)
+        {
+            if (!char.IsLetterOrDigit(characters[i]) && characters[i] != '_' && characters[i] != '-')
+                characters[i] = '_';
+        }
+        return $"{new string(characters)}_{index + 1}";
     }
 
     private static void RestoreMarkers(

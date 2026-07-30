@@ -55,7 +55,7 @@ public class Player : Item
 
     public override void Act()
     {
-        throw new NotImplementedException();
+        // 玩家行为由输入控制器和功能模块驱动，不参与普通物品的 Act/OnAct 使用链。
     }
 
     public override void Load()

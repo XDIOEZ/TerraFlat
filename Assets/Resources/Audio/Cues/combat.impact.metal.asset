@@ -11,15 +11,19 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
   m_Name: combat.impact.metal
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: combat.impact.metal
   bus: 1
   clips:
   - {fileID: 8300000, guid: ac29b975b3ee9708773d2fc86c48b44c, type: 3}
   selection: 0
   loop: 0
-  volume: {Min: 0.9, Max: 1}
-  pitch: {Min: 0.97, Max: 1.05}
+  volume:
+    Min: 0.9
+    Max: 1
+  pitch:
+    Min: 0.97
+    Max: 1.05
   spatialBlend: 0.72
   minDistance: 1.5
   maxDistance: 14

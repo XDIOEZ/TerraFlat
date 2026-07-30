@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld Item / Module 系统定位
 
-> 最后核对：2026-07-27。绝大多数玩法最终挂接到 Item 的 Module。
+> 最后核对：2026-07-30。绝大多数玩法最终挂接到 Item 的 Module。
 
 ## 修改前先读
 
@@ -51,6 +51,8 @@ ItemMaker / ItemMgr 实例化
 
 ## 近期变更
 
+- 2026-07-30：农业模块边界收敛；`Mod_Seed` 的低频 Tick 仅迁移旧落地种子，`Mod_Grow` 低频 Tick 成为唯一作物成长与成熟状态机，`Mod_FarmlandSupply` 为休眠模块且仅响应物品使用事件；`Item.ModuleLoad()` 会先清理 Apple/AppleTree 的废弃农业模块数据再执行缺失模块自动修复。
+- 2026-07-30：删除无引用且未完成的 `Mod_HealthPoints`，禁止通过通用 Module 重新建立与 `DamageReceiver` 并行的生命值状态。
 - 2026-07-29：统一内容校验器建立 Prefab 名与 `ItemData.IDName` 注册快照，报告重复/覆盖键、模块数据空值与 ID、模块 Prefab 可解析性、`ModuleDataDic` 键值一致性、Missing Script/序列化丢失引用及显示名/描述污染。
 - 2026-07-27：Item/Module 已采用声明式分级调度；堆肥/晾肉/生产 0.5s，库存/生长/种子/温度/GPS 0.25s，食物/熔炉/打火工具 0.1s，门/动画接收器/体力 UI 可休眠。
 - 2026-07-27：`ItemMgr` 的感知空间索引同时服务 AI；修改实体注册、移动同步或对象池时必须检查 AI Skill。
@@ -60,6 +62,7 @@ ItemMaker / ItemMgr 实例化
 - 远程网络视觉副本不得注册进本地 Tick、AI 感知或本地存档索引。
 - `Item.OnDestroy` 与主动 `PrepareForDespawn` 有防重复逻辑，不能在外部再次保存/销毁同一 Item。
 - 新模块不仅要创建脚本，还要检查 Module Prefab、ModuleData、Addressables 标签和目标 Item Prefab 挂载。
+- 旧 `Item/Mod_HealthPoints.cs` 已确认无代码或资源引用并删除；实体生命值不是通用 Item Module 扩展点，统一由战斗系统 `DamageReceiver` 管理。
 
 ## 修改后自动测试
 

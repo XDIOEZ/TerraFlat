@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 特效、Shader 与工具定位
 
-> 最后核对：2026-07-27。
+> 最后核对：2026-07-30。
 
 ## 运行时视觉
 
@@ -40,6 +40,7 @@ disable-model-invocation: false
 
 ## 近期变更
 
+- 2026-07-30：遗迹编辑器右侧属性区支持滚动和容器可视化配置；可选择多库存目标，并按目标 Prefab 的真实槽位以物品 Prefab 预览、数量上限、清空操作完成配置，烘焙前校验成员 ID、槽位、容量和物品引用。
 - 2026-07-29：新增统一只读内容校验器 `Assets/Editor/FlatWorld/ContentValidation/FlatWorldContentValidator.cs`；菜单 `FlatWorld/内容配置/校验全部本体内容` 覆盖本体配置，`IPreprocessBuildWithReport` 在正式构建前以同一规则阻断错误，禁止自动修改资产。
 - 2026-07-27：完成运行时特效、Shader 与编辑器工具路径首版拆分。
 

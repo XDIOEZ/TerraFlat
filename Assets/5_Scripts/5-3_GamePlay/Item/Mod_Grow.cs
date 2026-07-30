@@ -28,7 +28,7 @@ public partial class GrowData
 }
 
 
-public class Mod_Grow : Module
+public partial class Mod_Grow : Module, IInteractable
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;
@@ -82,7 +82,8 @@ public List<LootEntryCollection> stageLoots = new List<LootEntryCollection>();
     public override void Load()
     {
         // 从 ModData 反序列化
-        ModData.ReadData(ref Data);
+        ReadGrowthDataWithMigration();
+        LoadAuthoritativeCropState();
 
         // 确保 cachedDamageReceiver，如果前面没成功，这里再尝试一次
         if (cachedDamageReceiver == null && item != null)
@@ -106,17 +107,11 @@ public List<LootEntryCollection> stageLoots = new List<LootEntryCollection>();
             item.transform.localScale = new Vector3(scale, scale, 1f);
         }
 
-        item.OnInit_Env += AdjustByEnvironment;
     }
 
     void AdjustByEnvironment(EnvironmentLayers layers, Vector2Int localPos)
     {
-        if (layers == null || !layers.Contains(localPos.x, localPos.y))
-            return;
-
-        Data.GrowProgress = UnityEngine.Random.Range(0f, Data.MaxGrowProgress);
-        //TODO 根据降水层调整生长速度，范围在0.8~1.2f之间
-        Data.GrowSpeed *= Mathf.Lerp(0.8f, 1.2f, Mathf.Clamp01(layers.Precipitation[localPos.x, localPos.y]));
+        InitializeNaturalEnvironment(layers, localPos);
     }
 
 
@@ -146,10 +141,10 @@ private void UpdateVisualAndBehavior()
                 ApplyStageHealth(true);
 
                 // 执行阶段相关的行为（添加战利品），避免重复添加
-                if (cachedDamageReceiver != null && stageLoots != null && stageLoots.Count > i)
+                if (cachedDamageReceiver != null && i > 0 && stageLoots != null && stageLoots.Count >= i && stageLoots[i - 1] != null)
                 {
                     // 添加该阶段的所有战利品
-                    foreach (LootEntry lootEntry in stageLoots[i-1].lootEntries)
+                    foreach (LootEntry lootEntry in stageLoots[i - 1].lootEntries)
                     {
                         if (lootEntry != null && !cachedDamageReceiver.Data.LootTable.Contains(lootEntry))
                         {
@@ -172,21 +167,7 @@ private void UpdateVisualAndBehavior()
 
     public override void ModUpdate(float deltaTime)
     {
-        ApplyStageHealth();
-
-        if (Data.growState == GrowState.成熟) return; // 已成熟则不再生长
-
-        // 增加生长进度
-        Data.GrowProgress += Data.GrowSpeed * deltaTime;
-
-        // 限制最大值
-        if (Data.GrowProgress > Data.MaxGrowProgress)
-            Data.GrowProgress = Data.MaxGrowProgress;
-        if (Data.GrowProgress < 0)
-            Data.GrowProgress = 0;
-
-        // 同时更新视觉与行为（只在阶段变化时触发添加战利品）
-        UpdateVisualAndBehavior();
+        UpdateAuthoritativeGrowth(deltaTime);
     }
 
 private void ApplyStageHealth(bool force = false)
@@ -250,5 +231,6 @@ public void OnValidate()
     if (growState_MaxHealthRatios == null || growState_MaxHealthRatios.Count == 0)
         growState_MaxHealthRatios = new List<float>() { 0.25f, 0.5f, 0.75f, 1f };
     matureMaxHealth = Mathf.Max(1f, matureMaxHealth);
+    ValidateAuthoritativeCropConfig();
 }
 }

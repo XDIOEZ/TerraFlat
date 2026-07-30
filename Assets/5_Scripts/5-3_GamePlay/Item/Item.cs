@@ -354,6 +354,7 @@ public abstract class Item : MonoBehaviour
     {
         itemMods.BindOwner(this);
         MarkModuleScheduleDirty();
+        MigrateDeprecatedAgricultureModuleData();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         var modules = GetComponentsInChildren<Module>().ToList();
@@ -466,6 +467,36 @@ public abstract class Item : MonoBehaviour
         }
 
         MarkModuleScheduleDirty();
+    }
+
+    /// <summary>
+    /// 在模块自动修复前清理旧农业链数据，避免区块重载后重新挂回已废弃实现。
+    /// </summary>
+    private void MigrateDeprecatedAgricultureModuleData()
+    {
+        if (itemData?.ModuleDataDic == null || itemData.ModuleDataDic.Count == 0)
+            return;
+
+        string deprecatedModuleId = itemData.IDName switch
+        {
+            "Apple" => ModText.PlantSeed,
+            "AppleTree" => "生产模块",
+            _ => null
+        };
+        if (string.IsNullOrEmpty(deprecatedModuleId))
+            return;
+
+        List<string> keysToRemove = itemData.ModuleDataDic
+            .Where(pair => pair.Value != null && pair.Value.ID == deprecatedModuleId)
+            .Select(pair => pair.Key)
+            .ToList();
+        foreach (string key in keysToRemove)
+            itemData.ModuleDataDic.Remove(key);
+
+        if (keysToRemove.Count > 0)
+        {
+            Debug.Log($"[Item] 已迁移 {itemData.IDName} 的旧农业模块数据：{deprecatedModuleId} ×{keysToRemove.Count}", this);
+        }
     }
 
     /// <summary>

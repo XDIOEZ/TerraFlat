@@ -355,7 +355,9 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
                 itemSeed,
                 candidate.WorldOrigin + point,
                 rotation,
-                scale);
+                scale,
+                candidate,
+                stamp);
         }
     }
 
@@ -406,7 +408,9 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
                 seed,
                 candidate.WorldOrigin + point,
                 rotation,
-                scale);
+                scale,
+                candidate,
+                null);
         }
     }
 
@@ -415,7 +419,9 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
         uint itemSeed,
         Vector2 worldPosition,
         float rotationZ,
-        Vector3 scale)
+        Vector3 scale,
+        Candidate candidate,
+        StructureItemStamp stamp)
     {
         int guid = ResolveGuidCollision(unchecked((int)itemSeed));
         try
@@ -426,13 +432,171 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
                 new Vector3(worldPosition.x, worldPosition.y, 0f),
                 Quaternion.Euler(0f, 0f, rotationZ),
                 scale);
-            item?.Load();
+            if (item == null)
+                return;
+
+            item.Load();
+            ApplyContainerContents(item, stamp, itemSeed, candidate);
         }
         catch (Exception exception)
         {
             Debug.LogError($"[ChunkGenerator_Structures] 生成遗迹物品失败: {itemId}\n{exception}", Map);
         }
     }
+
+    #region 遗迹容器内容
+
+    /// <summary>用模板配置覆盖遗迹容器内容，并为内部物品生成确定性GUID。</summary>
+    private void ApplyContainerContents(
+        Item containerItem,
+        StructureItemStamp stamp,
+        uint itemSeed,
+        Candidate candidate)
+    {
+        StructureContainerContents contents = stamp?.ContainerContents;
+        if (contents == null || !contents.OverrideContents)
+            return;
+
+        Mod_Inventory inventoryModule =
+            containerItem.GetComponentInChildren<Mod_Inventory>(true);
+        Inventory targetInventory = ResolveTargetInventory(inventoryModule, contents);
+        if (targetInventory?.Data?.itemSlots == null)
+        {
+            LogContainerError(candidate, stamp, "找不到已加载的目标库存");
+            return;
+        }
+
+        for (int i = 0; i < targetInventory.Data.itemSlots.Count; i++)
+        {
+            ItemSlot slot = targetInventory.Data.itemSlots[i];
+            if (slot == null)
+                continue;
+
+            slot.itemData = null;
+            targetInventory.Data.Event_RefreshUI?.Invoke(i);
+        }
+
+        HashSet<int> configuredSlots = new();
+        IEnumerable<StructureContainerItemEntry> entries =
+            (contents.Items ?? new List<StructureContainerItemEntry>())
+            .Where(entry => entry != null)
+            .OrderBy(entry => entry.SlotIndex);
+        foreach (StructureContainerItemEntry entry in entries)
+        {
+            if (entry.SlotIndex < 0 || entry.SlotIndex >= targetInventory.Data.itemSlots.Count)
+            {
+                LogContainerError(candidate, stamp, $"槽位越界：{entry.SlotIndex + 1}");
+                continue;
+            }
+            if (!configuredSlots.Add(entry.SlotIndex))
+            {
+                LogContainerError(candidate, stamp, $"槽位重复：{entry.SlotIndex + 1}");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(entry.ItemPrefabId) || entry.Amount <= 0)
+            {
+                LogContainerError(candidate, stamp, $"槽位 {entry.SlotIndex + 1} 的物品ID或数量无效");
+                continue;
+            }
+
+            GameObject prefab = GameRes.Instance?.GetPrefab(entry.ItemPrefabId, false);
+            Item templateItem = prefab?.GetComponent<Item>() ??
+                                prefab?.GetComponentInChildren<Item>(true);
+            ItemData itemData = templateItem?.Get_NewItemData();
+            if (itemData?.Stack == null)
+            {
+                LogContainerError(candidate, stamp, $"无法创建物品数据：{entry.ItemPrefabId}");
+                continue;
+            }
+
+            ItemSlot targetSlot = targetInventory.Data.itemSlots[entry.SlotIndex];
+            float slotCapacity = targetSlot != null && targetSlot.SlotMaxVolume > 0f
+                ? targetSlot.SlotMaxVolume
+                : 100f;
+            if (itemData.Stack.Volume > 1f && entry.Amount > 1 ||
+                itemData.Stack.Volume * entry.Amount > slotCapacity)
+            {
+                LogContainerError(candidate, stamp,
+                    $"槽位 {entry.SlotIndex + 1} 无法容纳 {entry.ItemPrefabId} x{entry.Amount}");
+                continue;
+            }
+
+            itemData.Guid = BuildContainerItemGuid(itemSeed, stamp, contents, entry);
+            itemData.Stack.Amount = entry.Amount;
+            itemData.Stack.CanBePickedUp = false;
+            targetInventory.Data.SetOne_ItemData(entry.SlotIndex, itemData);
+            targetInventory.Data.Event_RefreshUI?.Invoke(entry.SlotIndex);
+        }
+
+        inventoryModule.Save();
+    }
+
+    /// <summary>按名称优先、索引兜底解析多库存容器。</summary>
+    private static Inventory ResolveTargetInventory(
+        Mod_Inventory inventoryModule,
+        StructureContainerContents contents)
+    {
+        if (inventoryModule == null)
+            return null;
+
+        if (inventoryModule.InventoryInstances != null &&
+            contents.TargetInventoryIndex >= 0 &&
+            contents.TargetInventoryIndex < inventoryModule.InventoryInstances.Count)
+        {
+            Inventory indexedInventory = inventoryModule.InventoryInstances[contents.TargetInventoryIndex];
+            if (string.IsNullOrWhiteSpace(contents.TargetInventoryName) ||
+                string.Equals(indexedInventory?.Data?.Name, contents.TargetInventoryName, StringComparison.Ordinal))
+            {
+                return indexedInventory;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(contents.TargetInventoryName) &&
+            inventoryModule.InventoryRefDic != null &&
+            inventoryModule.InventoryRefDic.TryGetValue(contents.TargetInventoryName, out Inventory namedInventory))
+        {
+            return namedInventory;
+        }
+
+        return inventoryModule.InventoryInstances?.Count == 1
+            ? inventoryModule.InventoryInstances[0]
+            : null;
+    }
+
+    /// <summary>生成可跨区块重建的容器内物品GUID。</summary>
+    private static int BuildContainerItemGuid(
+        uint itemSeed,
+        StructureItemStamp stamp,
+        StructureContainerContents contents,
+        StructureContainerItemEntry entry)
+    {
+        uint hash = StructureHashUtility.Begin();
+        hash = StructureHashUtility.Add(hash, "structure_container_item");
+        hash = StructureHashUtility.Add(hash, itemSeed);
+        hash = StructureHashUtility.Add(hash, stamp.MemberId);
+        hash = StructureHashUtility.Add(hash, contents.TargetInventoryIndex);
+        hash = StructureHashUtility.Add(hash, contents.TargetInventoryName);
+        hash = StructureHashUtility.Add(hash, entry.SlotIndex);
+        hash = StructureHashUtility.Add(hash, entry.ItemPrefabId);
+        int guid = unchecked((int)hash);
+        return guid == 0 ? 1 : guid;
+    }
+
+    /// <summary>输出包含遗迹和成员上下文的容器配置错误。</summary>
+    private void LogContainerError(
+        Candidate candidate,
+        StructureItemStamp stamp,
+        string message)
+    {
+        Debug.LogError(
+            $"[ChunkGenerator_Structures] 遗迹容器配置错误：{message} | " +
+            $"Structure={candidate?.Definition?.StructureId}, " +
+            $"Template={candidate?.Template?.TemplateId}, " +
+            $"Member={stamp?.MemberId}, Item={stamp?.ItemPrefabId}",
+            Map);
+    }
+
+    #endregion
 
     private int ResolveGuidCollision(int initialGuid)
     {

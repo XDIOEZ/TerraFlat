@@ -69,6 +69,7 @@ public static class StructureTemplateValidator
 
         StructureItemAuthoring[] itemMetadata =
             root.GetComponentsInChildren<StructureItemAuthoring>(true);
+        HashSet<string> memberIds = new(StringComparer.Ordinal);
         for (int i = 0; i < itemMetadata.Length; i++)
         {
             StructureItemAuthoring metadata = itemMetadata[i];
@@ -82,6 +83,14 @@ public static class StructureTemplateValidator
             {
                 Add(issues, StructureValidationSeverity.Error, $"找不到物件Prefab：{metadata.ItemPrefabId}", metadata);
             }
+
+            if (!string.IsNullOrWhiteSpace(metadata.MemberId) &&
+                !memberIds.Add(metadata.MemberId.Trim()))
+            {
+                Add(issues, StructureValidationSeverity.Error, $"遗迹成员ID重复：{metadata.MemberId}", metadata);
+            }
+
+            ValidateContainerContents(metadata, issues);
         }
 
         StructureMarkerAuthoring[] markers = root.GetComponentsInChildren<StructureMarkerAuthoring>(true);
@@ -110,6 +119,123 @@ public static class StructureTemplateValidator
         ValidateTiles(root, issues);
         ValidateCatalogIds(root, issues);
         return issues;
+    }
+
+    private static void ValidateContainerContents(
+        StructureItemAuthoring metadata,
+        List<StructureValidationIssue> issues)
+    {
+        StructureContainerContents contents = metadata.ContainerContents;
+        if (contents == null || !contents.OverrideContents)
+            return;
+
+        if (string.IsNullOrWhiteSpace(metadata.MemberId))
+        {
+            Add(issues, StructureValidationSeverity.Error, $"配置容器物品前必须设置成员ID：{metadata.name}", metadata);
+        }
+
+        GameObject prefab = metadata.SourcePrefab != null
+            ? metadata.SourcePrefab
+            : StructureAuthoringPrefabUtility.FindItemPrefabById(metadata.ItemPrefabId);
+        Mod_Inventory inventoryModule = prefab?.GetComponentInChildren<Mod_Inventory>(true);
+        if (inventoryModule == null)
+        {
+            Add(issues, StructureValidationSeverity.Error, $"物件没有Mod_Inventory，不能配置容器内容：{metadata.name}", metadata);
+            return;
+        }
+
+        Inventory targetInventory = ResolveTargetInventory(inventoryModule, contents);
+        if (targetInventory?.Data?.itemSlots == null)
+        {
+            Add(issues, StructureValidationSeverity.Error, $"找不到目标库存：{metadata.name}", metadata);
+            return;
+        }
+
+        HashSet<int> configuredSlots = new();
+        List<StructureContainerItemEntry> entries = contents.Items ?? new List<StructureContainerItemEntry>();
+        for (int i = 0; i < entries.Count; i++)
+        {
+            StructureContainerItemEntry entry = entries[i];
+            if (entry == null)
+            {
+                Add(issues, StructureValidationSeverity.Error, $"容器物品配置存在空条目：{metadata.name}", metadata);
+                continue;
+            }
+
+            if (entry.SlotIndex < 0 || entry.SlotIndex >= targetInventory.Data.itemSlots.Count)
+            {
+                Add(issues, StructureValidationSeverity.Error, $"容器槽位越界：{metadata.name} / {entry.SlotIndex + 1}", metadata);
+                continue;
+            }
+
+            if (!configuredSlots.Add(entry.SlotIndex))
+                Add(issues, StructureValidationSeverity.Error, $"容器槽位重复配置：{metadata.name} / {entry.SlotIndex + 1}", metadata);
+            if (string.IsNullOrWhiteSpace(entry.ItemPrefabId))
+            {
+                Add(issues, StructureValidationSeverity.Error, $"容器槽位缺少物品ID：{metadata.name} / {entry.SlotIndex + 1}", metadata);
+                continue;
+            }
+            if (entry.Amount <= 0)
+            {
+                Add(issues, StructureValidationSeverity.Error, $"容器物品数量必须大于0：{metadata.name} / {entry.SlotIndex + 1}", metadata);
+                continue;
+            }
+
+            GameObject itemPrefab = StructureAuthoringPrefabUtility.FindItemPrefabById(entry.ItemPrefabId);
+            Item item = itemPrefab?.GetComponent<Item>() ?? itemPrefab?.GetComponentInChildren<Item>(true);
+            if (item?.itemData?.Stack == null)
+            {
+                Add(issues, StructureValidationSeverity.Error, $"找不到容器物品Prefab或ItemData：{entry.ItemPrefabId}", metadata);
+                continue;
+            }
+
+            float unitVolume = Mathf.Max(0f, item.itemData.Stack.Volume);
+            if (unitVolume > 1f && entry.Amount > 1)
+            {
+                Add(issues, StructureValidationSeverity.Error, $"不可堆叠物品数量必须为1：{entry.ItemPrefabId}", metadata);
+            }
+
+            ItemSlot slot = targetInventory.Data.itemSlots[entry.SlotIndex];
+            float slotCapacity = slot != null && slot.SlotMaxVolume > 0f
+                ? slot.SlotMaxVolume
+                : 100f;
+            if (unitVolume * entry.Amount > slotCapacity)
+            {
+                Add(issues, StructureValidationSeverity.Error,
+                    $"容器物品超过槽位容量：{entry.ItemPrefabId} x{entry.Amount} / 容量{slotCapacity}", metadata);
+            }
+        }
+    }
+
+    private static Inventory ResolveTargetInventory(
+        Mod_Inventory inventoryModule,
+        StructureContainerContents contents)
+    {
+        if (inventoryModule?.InventoryInstances == null || inventoryModule.InventoryInstances.Count == 0)
+            return null;
+
+        if (contents.TargetInventoryIndex >= 0 &&
+            contents.TargetInventoryIndex < inventoryModule.InventoryInstances.Count)
+        {
+            Inventory indexedInventory = inventoryModule.InventoryInstances[contents.TargetInventoryIndex];
+            if (string.IsNullOrWhiteSpace(contents.TargetInventoryName) ||
+                string.Equals(indexedInventory?.Data?.Name, contents.TargetInventoryName, StringComparison.Ordinal))
+            {
+                return indexedInventory;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(contents.TargetInventoryName))
+        {
+            for (int i = 0; i < inventoryModule.InventoryInstances.Count; i++)
+            {
+                Inventory inventory = inventoryModule.InventoryInstances[i];
+                if (string.Equals(inventory?.Data?.Name, contents.TargetInventoryName, StringComparison.Ordinal))
+                    return inventory;
+            }
+            return null;
+        }
+        return null;
     }
 
     internal static bool IsTopLevelPlacedItem(StructureAuthoringRoot root, Item item)
@@ -269,6 +395,7 @@ public static class StructureTemplateBaker
                 ItemPrefabId = !string.IsNullOrWhiteSpace(metadata?.ItemPrefabId)
                     ? metadata.ItemPrefabId
                     : item.itemData.IDName,
+                MemberId = metadata?.MemberId,
                 LocalPosition = new Vector2(localPosition.x, localPosition.y),
                 RotationZ = localRotation.eulerAngles.z,
                 Scale = item.transform.localScale,
@@ -277,7 +404,8 @@ public static class StructureTemplateBaker
                     : StructureOrientationMode.KeepWorldOrientation,
                 Optional = metadata != null && metadata.Optional,
                 SpawnChance = metadata != null ? metadata.SpawnChance : 1f,
-                SeedSalt = metadata != null ? metadata.SeedSalt : 0
+                SeedSalt = metadata != null ? metadata.SeedSalt : 0,
+                ContainerContents = metadata?.ContainerContents?.Clone() ?? new StructureContainerContents()
             });
         }
 
@@ -296,13 +424,15 @@ public static class StructureTemplateBaker
             output.Add(new StructureItemStamp
             {
                 ItemPrefabId = metadata.ItemPrefabId,
+                MemberId = metadata.MemberId,
                 LocalPosition = new Vector2(localPosition.x, localPosition.y),
                 RotationZ = localRotation.eulerAngles.z,
                 Scale = metadata.transform.localScale,
                 OrientationMode = metadata.OrientationMode,
                 Optional = metadata.Optional,
                 SpawnChance = metadata.SpawnChance,
-                SeedSalt = metadata.SeedSalt
+                SeedSalt = metadata.SeedSalt,
+                ContainerContents = metadata.ContainerContents?.Clone() ?? new StructureContainerContents()
             });
         }
 

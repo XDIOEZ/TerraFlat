@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 7;
+        public const int CurrentVersion = 8;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -124,6 +124,25 @@ namespace FlatWorld.Networking.Gameplay
 
     public struct NetworkWorldReady : NetworkMessage
     {
+    }
+
+    public struct NetworkWeatherStateRequest : NetworkMessage
+    {
+    }
+
+    /// <summary>服务器广播的权威天气事件状态；客户端只应用，不参与阶段调度。</summary>
+    public struct NetworkWeatherStateMessage : NetworkMessage
+    {
+        public string PlanetName;
+        public WeatherType Weather;
+        public WeatherPhase Phase;
+        public float Intensity;
+        public float PhaseStartedTotalTime;
+        public float PhaseEndTotalTime;
+        public float NextWeatherEventTotalTime;
+        public int RandomCursor;
+        public int EventSequence;
+        public int DataVersion;
     }
 
     public struct NetworkItemStateRequest : NetworkMessage

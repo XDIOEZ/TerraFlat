@@ -39,6 +39,27 @@ namespace FlatWorld.GameTest.Dialogue
             Assert.That(bubbleSource, Does.Not.Contain("new GameObject"));
         }
 
+        [Test]
+        [Category("Dialogue.Weather")]
+        public void PlayerPrefabProvidesWeatherFactsAndRainLines()
+        {
+            const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
+            GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(playerPath);
+            Assert.That(player, Is.Not.Null, $"缺少玩家 Prefab：{playerPath}");
+            Assert.That(player.GetComponent<WeatherExposureSpeechProvider>(), Is.Not.Null);
+
+            TextAsset weatherConfig = AssetDatabase.LoadAssetAtPath<TextAsset>(
+                "Assets/Resources/Dialogue/Soliloquy/weather_rain.json");
+            Assert.That(weatherConfig, Is.Not.Null);
+
+            CharacterSpeechConfigLoadResult result = CharacterSpeechConfigLoader.LoadSources(
+                new[] { new CharacterSpeechConfigSource("weather_rain.json", weatherConfig.text) },
+                logIssues: false);
+            Assert.That(result.Issues, Is.Empty);
+            Assert.That(result.Entries.Select(entry => entry.Id), Does.Contain("weather.rain.exposed"));
+            Assert.That(result.Entries.Select(entry => entry.Id), Does.Contain("weather.rain.recovery"));
+        }
+
         [UnityTest]
         [Category("Dialogue.Smoke")]
         [Timeout(10000)]

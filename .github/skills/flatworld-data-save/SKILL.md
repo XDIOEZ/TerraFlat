@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 数据与存档定位
 
-> 最后核对：2026-07-29。序列化字段改动属于高影响变更。
+> 最后核对：2026-07-30。序列化字段改动属于高影响变更。
 
 ## 修改前先读
 
@@ -62,9 +62,15 @@ GameSaveData
 - 新手引导状态位于 `flatworld.tutorial`，保存 `eligible`、幂等 `milestones`、派生 `stage` 与 `completed`；新玩家资格需跨保存保留，旧存档无资格标记时默认禁用。禁止为教程修改 `Data_Player` 的 MemoryPack 布局。
 - `SpawnerProgressSaveData.DataVersion` 当前为 1；新增字段保存生成总时间游标、可用生态预算、最后预算恢复日和待补位数量，旧版本加载时必须重置游标避免重放历史周期。
 - `SerializableTimeData.TotalDays` 是世界时间存档的一部分，不能仅保存日内 `CurrentTime`。
+- `PlanetData` 保存权威天气事件：`WeatherDataVersion`、`WeatherPhase`、阶段开始/结束绝对总时间、下一事件总时间、`WeatherRandomCursor` 与 `WeatherEventSequence`；剩余时间必须由绝对边界减当前总时间得到，禁止另存递减值。
+- 玩家播种作物的权威状态位于 `GrowData`：保存 `GrowProgress`、`growState`、`plantedTilePos`、`isCultivatedCrop`、`isMature`、`isHarvested`、`growthStatus` 与环境初始化状态；`Mod_Grow.ReadGrowthDataWithMigration()` 兼容读取旧版六字段成长数据。
+- `Item.ModuleLoad()` 在模块缺失自动修复之前删除 Apple 的旧种子模块数据和 AppleTree 的旧生产模块数据，确保旧区块差量不会把废弃农业链重新实例化。
+- 耕地水分和肥力继续随 `TileData_Farmland` 进入 Tile 差量；最大肥力使用非序列化常量边界，禁止为固定上限无意义改变旧 TileData 二进制布局。
 
 ## 近期变更
 
+- 2026-07-30：星球存档追加天气阶段、绝对时间边界、确定性随机游标和事件序号；旧存档由 `WeatherEventScheduler.InitializeIfNeeded()` 根据已有天气迁移。
+- 2026-07-30：作物存档补齐种植格、成长阶段、成熟、已收获和反馈状态；旧 `GrowData` BitData 可迁移，区块卸载重载后不会重置成长或再次收获。
 - 2026-07-29：新建存档首写和进入已选存档接入 Prefab 加载反馈；存档层职责不变，界面由 GameManager 驱动并持续到玩家周围区块就绪。
 - 2026-07-29：新增统一只读内容校验入口，检查本体 Prefab/物品注册键、Addressables `Assets/2_Prefabs` 的 `Prefab` 标签，以及天气、结构、Spawner、联机玩家、音频和对话的固定 Resources 路径；正式构建前有错误会被阻断。
 - 2026-07-29：自定义难度存档升级为版本 1，新增 16 个倍率字段并加入旧存档默认 100% 的迁移保护。
@@ -76,7 +82,7 @@ GameSaveData
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/DataSave/DataSaveSmokeTests.cs`；当前基础覆盖 SaveDataMgr、GameSaveData、ItemData、ModuleData 权威入口、生成周期/预算字段、自定义难度规则往返与版本 0 迁移默认值。
+- 基础测试脚本：`Assets/GameTest/DataSave/DataSaveSmokeTests.cs`；当前基础覆盖 SaveDataMgr、GameSaveData、ItemData、ModuleData 权威入口、生成周期/预算字段、自定义难度规则、作物状态以及天气阶段/边界/随机游标的 MemoryPack 往返。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；存档测试约定目录：`Assets/GameTest/DataSave/`；场景目录：`Assets/GameTest/Scenes/DataSave/`；冒烟分类：`DataSave.Smoke`。
 - 新增数据字段、MemoryPack Union、自动保存、区块差量或配置加载行为时必须增加往返测试；修复 Bug 时先增加回归测试。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；不得写入玩家真实存档，必须使用临时路径并验证序列化前后关键字段一致。
