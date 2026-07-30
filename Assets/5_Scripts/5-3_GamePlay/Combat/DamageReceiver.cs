@@ -1313,7 +1313,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
         DispatchDamageActions(DeathActions, damageInfo);
 
-        // TODO添加战利品掉落逻辑
         DropLoot();
 
         if (Data.DestroyDelay >= 0)
@@ -1439,7 +1438,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
     }
 
-    // TODO实现战利品掉落方法
     /// <summary>
     /// 根据战利品表掉落物品
     /// </summary>
@@ -1476,9 +1474,12 @@ public class DamageReceiver : Module, IRemoteNetworkModule
                 // 使用ItemMgr的实例化方法确保一致性
                 Item lootItem = ItemMgr.Instance.InstantiateItem(
                     lootEntry.LootPrefabName, this.transform.position);
+                if (lootItem == null)
+                    continue;
+
                 lootItem.DropInRange();
                 // 确保战利品可以被拾取
-                if (lootItem != null && lootItem.itemData != null)
+                if (lootItem.itemData != null)
                 {
                     lootItem.itemData.Stack.CanBePickedUp = true;
                     lootItem.Load(); // 确保物品正确加载

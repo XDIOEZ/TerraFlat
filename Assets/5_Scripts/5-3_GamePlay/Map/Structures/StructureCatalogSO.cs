@@ -89,6 +89,7 @@ public sealed class StructureCatalogSO : ScriptableObject
         foreach (StructureItemStamp stamp in template.ItemStamps ?? new List<StructureItemStamp>())
         {
             hash = StructureHashUtility.Add(hash, stamp.ItemPrefabId);
+            hash = StructureHashUtility.Add(hash, stamp.MemberId);
             hash = StructureHashUtility.Add(hash, stamp.LocalPosition.x);
             hash = StructureHashUtility.Add(hash, stamp.LocalPosition.y);
             hash = StructureHashUtility.Add(hash, stamp.RotationZ);
@@ -99,6 +100,26 @@ public sealed class StructureCatalogSO : ScriptableObject
             hash = StructureHashUtility.Add(hash, stamp.Optional);
             hash = StructureHashUtility.Add(hash, stamp.SpawnChance);
             hash = StructureHashUtility.Add(hash, stamp.SeedSalt);
+
+            StructureContainerContents contents = stamp.ContainerContents;
+            bool overrideContents = contents?.OverrideContents == true;
+            hash = StructureHashUtility.Add(hash, overrideContents);
+            if (!overrideContents)
+                continue;
+
+            hash = StructureHashUtility.Add(hash, contents.TargetInventoryIndex);
+            hash = StructureHashUtility.Add(hash, contents.TargetInventoryName);
+            IEnumerable<StructureContainerItemEntry> entries =
+                (contents.Items ?? new List<StructureContainerItemEntry>())
+                .Where(entry => entry != null)
+                .OrderBy(entry => entry.SlotIndex)
+                .ThenBy(entry => entry.ItemPrefabId, StringComparer.Ordinal);
+            foreach (StructureContainerItemEntry entry in entries)
+            {
+                hash = StructureHashUtility.Add(hash, entry.SlotIndex);
+                hash = StructureHashUtility.Add(hash, entry.ItemPrefabId);
+                hash = StructureHashUtility.Add(hash, entry.Amount);
+            }
         }
 
         foreach (StructureMarkerData marker in template.Markers ?? new List<StructureMarkerData>())

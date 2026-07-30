@@ -17,39 +17,59 @@ using Sirenix.OdinInspector;
 public class ChunkGenerator_Land : ChunkGeneratorBase
 {
     #region 配置参数
-    [Header("世界配置")]
-    [Tooltip("星球/世界配置数据（可选，不填则使用默认噪声缩放值）")]
+    [FoldoutGroup("高级/运行时回退", Expanded = false)]
+    [LabelText("回退星球配置")]
+    [PropertyTooltip("仅用于脱离正式生成管线时调试。正常运行会由 MapGenerationContext 中的存档星球数据覆盖。")]
     public PlanetData plantData;
 
-    [Header("地图配置")]
-    [Tooltip("（可选）手动指定Grid组件，未指定则自动从当前对象/子对象获取")]
+    [FoldoutGroup("高级/运行时引用", Expanded = false)]
+    [LabelText("Grid 引用")]
+    [PropertyTooltip("可选。未指定时自动从当前 Map 或子对象获取。")]
     public Grid mapGrid;
-    [Tooltip("（可选）手动指定Tilemap组件，未指定则自动从当前对象的子对象获取")]
-    public Tilemap targetTilemap;
-    [Tooltip("赤道坐标")] public float Equator = 0;
 
-    [Header("生物群系 & 噪声")]
-    [Tooltip("不同温度/湿度对应的生物群系配置")]
+    [FoldoutGroup("高级/运行时引用", Expanded = false)]
+    [LabelText("目标 Tilemap")]
+    [PropertyTooltip("可选。未指定时自动从当前 Map 子对象获取。")]
+    public Tilemap targetTilemap;
+
+    // 旧字段当前未参与温度计算，隐藏但保留序列化数据。
+    [HideInInspector] public float Equator = 0;
+
+    [Title("1. 生物群系")]
+    [LabelText("有序群系列表")]
+    [PropertyTooltip("根据环境范围按列表顺序匹配群系。顺序会影响重叠范围的最终结果。")]
     public List<BiomeData> biomes;
 
-    [Header("温度映射")]
-    [Tooltip("温度映射配置（0~1 -> 摄氏温度），可由策划配表控制")]
+    [Title("2. 温度映射")]
+    [LabelText("温度映射配置")]
+    [PropertyTooltip("将归一化温度 0~1 转换为摄氏温度。为空时使用下方默认区间。")]
     public TemperatureMappingProfile temperatureMappingProfile;
-    [Tooltip("当 temperatureMappingProfile 为空时使用的默认摄氏区间")]
+
+    [LabelText("默认摄氏区间")]
+    [PropertyTooltip("仅在温度映射配置为空时使用，X 为最低温，Y 为最高温。")]
     public Vector2 defaultTemperatureRangeCelsius = new Vector2(-10f, 16f);
 
-    [Tooltip("噪声配置列表：直接配置 BaseNoise（SerializeReference 多态）。\n通过 BaseNoise.noiseType 匹配采样类型。")]
+    [Title("3. 环境噪声通道")]
+    [LabelText("噪声配置")]
+    [PropertyTooltip("每项通过环境通道决定用途；同类型配置会取平均值，未配置通道固定回退为 0.5。最终频率还会乘 PlanetData 的世界坐标缩放。")]
     [SerializeReference]
     public List<BaseNoise> NoiseConfigs = new List<BaseNoise>();
 
-    [Header("调试设置")]
-    [Tooltip("是否在屏幕上用颜色块可视化各个格子的生物群系分布")]
+    [ShowInInspector, ReadOnly, MultiLineProperty(3)]
+    [LabelText("通道配置摘要")]
+    private string NoiseConfigurationSummary => BuildNoiseConfigurationSummary();
+
+    // 旧调试字段当前未接入绘制逻辑，隐藏但保留序列化数据。
+    [HideInInspector]
     public bool showBiomeOverlay = false;
 
-    [Header("高度二次强化")]
-    [Tooltip("开启后二次强化地形高度：高的更高，低的更低")]
+    [Title("4. 高度后处理")]
+    [LabelText("启用高度二次强化")]
+    [PropertyTooltip("开启后让高地更高、低地更低；会直接改变地形生成结果。")]
     public bool enableHeightSecondaryBoost = false;
-    [Tooltip("二次强化强度，0=关闭效果，1=明显强化")]
+
+    [LabelText("强化强度")]
+    [PropertyTooltip("0 表示无额外效果，1 表示明显强化。")]
     [Range(0f, 2f)]
     public float heightSecondaryBoostStrength = 1f;
     #endregion
@@ -66,7 +86,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         ? generationSeed
         : (SaveDataMgr.Instance?.SaveData?.Seed ?? 1);
 
-    public float NoiseScale => plantData != null ? plantData.NoiseScale : 0.01f;
+    public float NoiseScale => PlanetData.NormalizeNoiseScale(
+        plantData != null ? plantData.NoiseScale : PlanetData.DefaultNoiseScale);
 
     [NonSerialized]
     private bool _hasLoggedNoiseConfigsNull;
@@ -76,6 +97,9 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
     [NonSerialized]
     private bool _hasLoggedMissingLandNoise;
+
+    [NonSerialized]
+    private bool _hasLoggedInvalidNoiseSample;
 
     #endregion
 
@@ -411,6 +435,22 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 continue;
 
             float v = noise.Sample(x, y, seed);
+            if (float.IsNaN(v) || float.IsInfinity(v))
+            {
+                if (!_hasLoggedInvalidNoiseSample)
+                {
+                    _hasLoggedInvalidNoiseSample = true;
+                    Debug.LogWarning(
+                        $"[ChunkGenerator_Land] 噪声配置 {noise.GetType().Name}/{noise.noiseType} 返回了非法值，已回退为 0.5。请检查频率、八度和振幅参数。",
+                        Map);
+                }
+
+                v = defaultValue;
+            }
+            else
+            {
+                v = Mathf.Clamp01(v);
+            }
 
             switch (noise.noiseType)
             {
@@ -461,6 +501,45 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         solidity = Mathf.Clamp01(solidity);
         hight = Mathf.Clamp01(hight);
     }
+
+    #region 配置摘要
+    private string BuildNoiseConfigurationSummary()
+    {
+        if (NoiseConfigs == null)
+            return "配置列表为空引用；全部环境通道将回退为 0.5。";
+
+        int land = CountNoiseType(NoiseType.Land);
+        int temperature = CountNoiseType(NoiseType.Temperature);
+        int humidity = CountNoiseType(NoiseType.Humidity);
+        int precipitation = CountNoiseType(NoiseType.Precipitation);
+        int solidity = CountNoiseType(NoiseType.Solidity);
+
+        return
+            $"高度 Land: {FormatNoiseCount(land)} | 温度 Temperature: {FormatNoiseCount(temperature)}\n" +
+            $"湿度 Humidity: {FormatNoiseCount(humidity)} | 降水 Precipitation: {FormatNoiseCount(precipitation)}\n" +
+            $"土壤 Solidity: {FormatNoiseCount(solidity)} | 同类型多项将取平均值";
+    }
+
+    private int CountNoiseType(NoiseType type)
+    {
+        if (NoiseConfigs == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < NoiseConfigs.Count; i++)
+        {
+            if (NoiseConfigs[i] != null && NoiseConfigs[i].noiseType == type)
+                count++;
+        }
+
+        return count;
+    }
+
+    private static string FormatNoiseCount(int count)
+    {
+        return count > 0 ? $"{count} 项" : "未配置（0.5）";
+    }
+    #endregion
 
     private float ApplyHeightSecondaryBoost(float height)
     {

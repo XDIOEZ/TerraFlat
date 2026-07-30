@@ -1,5 +1,6 @@
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace FlatWorld.GameTest.DataSave
 {
@@ -79,6 +80,70 @@ namespace FlatWorld.GameTest.DataSave
             Assert.That(restored.DropAllCarriedItems, Is.True);
             Assert.That(restored.PlayerAttackMultiplier, Is.EqualTo(1f));
             Assert.That(restored.CropGrowthMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        [Category("DataSave.Smoke")]
+        public void CultivatedCropStateRoundTripsThroughModuleData()
+        {
+            var source = new GrowData
+            {
+                growState = Mod_Grow.GrowState.成熟,
+                GrowProgress = 100f,
+                MaxGrowProgress = 100f,
+                isCultivatedCrop = true,
+                plantedTilePos = new Vector2Int(8, 13),
+                isMature = true,
+                isHarvested = true,
+                growthStatus = Mod_Grow.GrowthStatus.Harvested,
+                environmentInitialized = true,
+                environmentGrowthMultiplier = 1f
+            };
+            var moduleData = new Ex_ModData_MemoryPackable();
+            moduleData.WriteData(source);
+
+            GrowData restored = new GrowData();
+            moduleData.ReadData(ref restored);
+
+            Assert.That(restored.GrowProgress, Is.EqualTo(100f));
+            Assert.That(restored.growState, Is.EqualTo(Mod_Grow.GrowState.成熟));
+            Assert.That(restored.plantedTilePos, Is.EqualTo(new Vector2Int(8, 13)));
+            Assert.That(restored.isCultivatedCrop, Is.True);
+            Assert.That(restored.isMature, Is.True);
+            Assert.That(restored.isHarvested, Is.True);
+            Assert.That(restored.growthStatus, Is.EqualTo(Mod_Grow.GrowthStatus.Harvested));
+        }
+
+        [Test]
+        [Category("DataSave.Weather")]
+        public void WeatherEventStateRoundTripsThroughMemoryPackContainer()
+        {
+            var source = new PlanetData
+            {
+                Name = "测试星球",
+                CurrentWeather = WeatherType.Rain,
+                WeatherIntensity = 0.65f,
+                WeatherDataVersion = WeatherEventScheduler.CurrentDataVersion,
+                WeatherPhase = WeatherPhase.RainSteady,
+                WeatherPhaseStartedTotalTime = 120f,
+                WeatherPhaseEndTotalTime = 360f,
+                NextWeatherEventTotalTime = 0f,
+                WeatherRandomCursor = 7,
+                WeatherEventSequence = 3
+            };
+            var moduleData = new Ex_ModData_MemoryPackable();
+            moduleData.WriteData(source);
+
+            PlanetData restored = new PlanetData();
+            moduleData.ReadData(ref restored);
+
+            Assert.That(restored.CurrentWeather, Is.EqualTo(WeatherType.Rain));
+            Assert.That(restored.WeatherIntensity, Is.EqualTo(0.65f));
+            Assert.That(restored.WeatherPhase, Is.EqualTo(WeatherPhase.RainSteady));
+            Assert.That(restored.WeatherPhaseStartedTotalTime, Is.EqualTo(120f));
+            Assert.That(restored.WeatherPhaseEndTotalTime, Is.EqualTo(360f));
+            Assert.That(restored.WeatherRandomCursor, Is.EqualTo(7));
+            Assert.That(restored.WeatherEventSequence, Is.EqualTo(3));
         }
     }
 }

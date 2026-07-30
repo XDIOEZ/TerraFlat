@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "weather.rain.forecast",
+      "topic": "weather.rain.forecast",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Need",
+      "conditions": [
+        { "fact": "weather.phase", "operator": "Equal", "value": "Forecast" }
+      ],
+      "lines": [
+        "云压得很低，像是要下雨了",
+        "得赶紧把外面的事收个尾"
+      ],
+      "duration": 3.5,
+      "cooldown": 75,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "weather.rain.exposed",
+      "topic": "weather.rain.exposed",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Critical",
+      "conditions": [
+        { "fact": "weather.isExposed", "operator": "Equal", "value": "True" }
+      ],
+      "lines": [
+        "雨水太冷了，我得找个火源",
+        "再淋下去体温会撑不住"
+      ],
+      "duration": 3.8,
+      "cooldown": 45,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "weather.rain.heavy",
+      "topic": "weather.rain.heavy",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Critical",
+      "conditions": [
+        { "fact": "weather.phase", "operator": "Equal", "value": "RainHeavy" }
+      ],
+      "lines": [
+        "雨势变大了，现在不适合远行",
+        "这场雨越来越急了"
+      ],
+      "duration": 3.6,
+      "cooldown": 60,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "weather.rain.heat",
+      "topic": "weather.rain.heat",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Need",
+      "conditions": [
+        { "fact": "weather.isRaining", "operator": "Equal", "value": "True" },
+        { "fact": "weather.hasHeatSource", "operator": "Equal", "value": "True" }
+      ],
+      "lines": [
+        "靠着火暖一会儿，体温正在恢复",
+        "火还燃着，先在这里避避雨"
+      ],
+      "duration": 3.5,
+      "cooldown": 70,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "weather.rain.recovery",
+      "topic": "weather.rain.recovery",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "weather.phase", "operator": "Equal", "value": "Recovery" }
+      ],
+      "lines": [
+        "雨停了，空气还很凉",
+        "雨势过去了，可以重新安排外出了"
+      ],
+      "duration": 3.4,
+      "cooldown": 80,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    }
+  ]
+}

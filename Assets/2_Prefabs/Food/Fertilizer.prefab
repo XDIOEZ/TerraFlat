@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5219115998653945698}
   - component: {fileID: 181608679492739873}
   - component: {fileID: 409376903168723279}
+  - component: {fileID: 6455377738219001123}
   m_Layer: 0
   m_Name: Fertilizer
   m_TagString: Untagged
@@ -79,6 +80,27 @@ MonoBehaviour:
     inHand: 0
     Guid: -1202260312
     code: 
+--- !u!114 &6455377738219001123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6774296006110154599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f94d42b4bda4e50889258a8f407ae31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    Name: 
+    ID: Mod_FarmlandSupply
+    isRunning: 1
+    Type: 0
+    BitData: 
+  waterAmount: 25
+  fertilityAmount: 0.35
 --- !u!61 &409376903168723279
 BoxCollider2D:
   m_ObjectHideFlags: 0

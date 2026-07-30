@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 建造系统定位
 
-> 最后核对：2026-07-27。建筑占地会直接影响导航。
+> 最后核对：2026-07-30。建筑占地会直接影响导航。
 
 ## 修改前先读
 
@@ -53,6 +53,7 @@ Summoner（库存中的持久化载体）
 
 ## 近期变更
 
+- 2026-07-30：结构作者物件新增稳定 `MemberId` 和容器槽位配置；遗迹中的箱子等带 `Mod_Inventory` 建筑可在结构编辑器中选择目标库存并按真实槽位配置物品。Loot Marker 仍只负责按 `ContentId` 生成物件。
 - 2026-07-29：统一内容校验器检查建筑本体/召唤器双向配对、角色、`BuildingPrefabId`/`SummonerPrefabId`、嵌入 BitData、可拾取状态以及 `DamageReceiver`、`BoxCollider2D`、`SpriteRenderer`、`BuildingShadow` 必填引用。
 - 2026-07-28：`Mod_Building` 在放置事务中暂存玩家 actor，并于单机提交或联机 accepted 回执后的最终成功点发布 `GameplayProgressEvents.BuildingPlaced`。
 - 2026-07-27：建筑占地已从地形数据中分离，统一通过 `BuildingOccupancyRegistry` 提交导航脏格。

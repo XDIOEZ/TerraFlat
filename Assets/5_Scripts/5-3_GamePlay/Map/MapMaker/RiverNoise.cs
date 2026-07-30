@@ -1,6 +1,7 @@
-using UltEvents;
+using System;
 using UnityEngine;
 
+[Obsolete("当前正式地图管线使用 ChunkGenerator_River 的真实水文算法；此噪声仅保留旧 SerializeReference 兼容。")]
 [System.Serializable]
 public class TriFractalRiverNoise : BaseNoise
 {

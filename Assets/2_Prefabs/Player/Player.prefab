@@ -194,6 +194,8 @@ MonoBehaviour:
     HotDamageStart: 60
     ColdDamagePerSecond: 1
     HotDamagePerSecond: 1
+    RuntimeAmbientOffset: 0
+    RuntimeChangeSpeedMultiplier: 1
   OnTemperatureChanged:
     _PersistentCalls: []
 --- !u!1 &4411885219965820198
@@ -359,6 +361,7 @@ GameObject:
   - component: {fileID: 8399066523655960300}
   - component: {fileID: 8865909770618348367}
   - component: {fileID: 3734231163300843963}
+  - component: {fileID: 8533438104814499899}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -844,6 +847,28 @@ MonoBehaviour:
   characterLimit: 160
   openKey: 34
   speechPriority: 25
+--- !u!114 &8533438104814499899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d038b8f0da728374599a9a919217ddda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heatSourceRadius: 6
+  scanInterval: 0.5
+  heatSourceLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  lightRainAmbientPenalty: -8
+  heavyRainAmbientPenalty: -16
+  rainCoolingSpeedMultiplier: 4
+  heatSourceAmbientBonus: 10
+  heatRecoverySpeedMultiplier: 5
 --- !u!1 &7418924436426645882
 GameObject:
   m_ObjectHideFlags: 0

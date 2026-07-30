@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 联机系统定位
 
-> 最后核对：2026-07-29。修改时严格区分本地权威实体与远程视觉副本。
+> 最后核对：2026-07-30。修改时严格区分本地权威实体与远程视觉副本。
 
 ## 修改前先读
 
@@ -30,6 +30,7 @@ disable-model-invocation: false
 - 世界快照：`SaveDataMgr.CreateCompressedNetworkSnapshot()` / `ApplyCompressedNetworkSnapshot()`。
 - Chunk 流送：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkChunkStreamingCoordinator.cs`。
 - Item 状态：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkItemStateCoordinator.cs`。
+- 天气状态：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkWeatherStateCoordinator.cs`。
 - Item 序列化桥：`Assets/5_Scripts/5-3_GamePlay/Item/ItemNetworkStateSerialization.cs`。
 - 玩家视觉：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkPlayerVisualState.cs`。
 - 消息定义：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkGameMessages.cs`。
@@ -57,12 +58,14 @@ disable-model-invocation: false
 - `ItemMgr.LoadNetworkPlayer()`、`PromoteNetworkPlayerToLocal()` 与 `ConfigureRemoteNetworkReplica()` 必须显式维护 `Player.SetProfileContext()`；远程副本 `IsLocalProfile=false`，提升成本地时保留原始 `WasProfileDataCreated`。
 - Player 自言自语和新手引导都以 `IsLocalProfile` 为硬门；远程副本即使挂载正式 Player Prefab 组件也不得启动调度、贡献有效教程 Facts 或持久化教程进度。
 - 客户端不重复结算伤害、死亡、建筑放置或世界生成；应用服务端权威结果。
+- 天气事件只由 `GameNetwork.HasStateAuthority` 为真的离线/Host/Server 调度；`NetworkWeatherStateCoordinator` 广播阶段、强度、绝对时间边界、随机游标和事件序号，普通 Client 只调用 `WeatherMgr.ApplyReplicatedWeatherState()`。
 - 局部导航图跟随本地 owned 玩家；Chunk 流送按所有观察者并集。
 - `NetworkGameBootstrap` 从 `Resources/Networking/FlatWorldNetworkPlayer` 加载 Prefab；移动后同步常量与本 Skill。
 - `GamePlay.asmdef` 直接引用无引擎依赖的 `FlatWorld.Networking.Core`；`MonsterSpawnerManager` 使用 `GameNetwork.HasStateAuthority` 门控世界生物生成，客户端不得重复投放。
 
 ## 近期变更
 
+- 2026-07-30：联机协议升级到 8，新增天气状态请求与服务器广播；初始世界快照仍携带 PlanetData，进入世界后再请求一次当前权威天气以避免加载期间漏状态。
 - 2026-07-29：联机玩家名称固化到 `FlatWorldNetworkPlayer.prefab`；统一 Runtime UI 重建器负责生成该节点，网络运行时只查找并绑定现有 `TextMeshPro`。
 - 2026-07-29：联机面板从运行时代码构建改为 `UI_NetworkMode.prefab`；`GameRes` 预加载后实例化，新增编辑器重建菜单并删除运行时视觉树代码。
 - 2026-07-29：联机面板支持直接粘贴 UDP 内网穿透完整地址；Core 统一解析端点并校验协议、主机、端口，Mirror 客户端使用解析后的域名/IP 与外部端口连接。
@@ -73,7 +76,7 @@ disable-model-invocation: false
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；当前基础覆盖网络启动器、正式管理器、玩家 Prefab、预制玩家名称节点、联机 UI Prefab、GameRes 实例化约束、网络测试场景入口与 UDP 穿透端点解析/拒绝规则。
+- 基础测试脚本：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；当前基础覆盖网络启动器、正式管理器、天气状态协调器、玩家 Prefab、预制玩家名称节点、联机 UI Prefab、GameRes 实例化约束、网络测试场景入口与 UDP 穿透端点解析/拒绝规则。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；网络测试约定目录：`Assets/GameTest/Networking/`；场景目录：`Assets/GameTest/Scenes/Networking/`；冒烟分类：`Networking.Smoke`。现有独立进程 Harness 位于 `Assets/5_Scripts/5-4_Networking/Tests/`，不得重复实现。
 - 新增 Host/Client、会话、网络玩家、世界快照、Chunk、Item 或建筑同步行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心连接与同步流程变化时同步更新网络测试场景和现有 Harness。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；端口、临时存档和生成进程必须隔离，测试结束必须关闭测试实例并清理状态。

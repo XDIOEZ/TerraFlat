@@ -1,6 +1,8 @@
+using System;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "RiverNoiseSettings", menuName = "Configs/River Noise Settings")]
+[Obsolete("当前正式地图管线使用 ChunkGenerator_River 的水文参数；此配置仅保留旧资源兼容。")]
+[CreateAssetMenu(fileName = "RiverNoiseSettings", menuName = "Configs/Legacy/River Noise Settings")]
 public class RiverNoiseSettings : ScriptableObject
 {
     [Header("基础参数")]

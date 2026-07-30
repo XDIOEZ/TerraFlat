@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -124,6 +125,23 @@ namespace FlatWorld.GameTest.UI
             Assert.That(sliderNames, Does.Contain(GameManager.NewGameDifficultyCropGrowthSliderKey));
             Assert.That(sliderNames, Does.Contain(GameManager.NewGameDifficultyCraftingOutputSliderKey));
             Assert.That(sliderNames.Length, Is.GreaterThanOrEqualTo(16));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void NewGamePrefabUsesSharedTerrainScaleDefault()
+        {
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NewGame.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少新世界 Prefab：{prefabPath}");
+
+            TMP_InputField noiseInput = prefab.GetComponentsInChildren<TMP_InputField>(true)
+                .SingleOrDefault(input => input.name == GameManager.NewGameNoiseInputKey);
+            Assert.That(noiseInput, Is.Not.Null, "新世界 Prefab 缺少世界坐标缩放输入框。");
+            Assert.That(noiseInput.contentType, Is.EqualTo(TMP_InputField.ContentType.DecimalNumber));
+            Assert.That(float.TryParse(noiseInput.text, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out float defaultValue), Is.True);
+            Assert.That(defaultValue, Is.EqualTo(PlanetData.DefaultNoiseScale));
         }
 
         private static void AssertPrefabContains(string prefabPath, params string[] expectedNames)

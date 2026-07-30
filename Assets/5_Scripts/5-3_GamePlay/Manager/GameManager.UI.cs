@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections;
+using System.Globalization;
 using System.IO;
 using TMPro;
 using UnityEngine;
@@ -288,8 +289,19 @@ public partial class GameManager
         panel.SetButtonOnClick(NewGameBackButtonKey, panel.Close);
         panel.GetInputField(NewGamePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
         panel.GetInputField(NewGameSaveInputKey)?.onValueChanged.AddListener(OnSaveNameChanged);
-        panel.GetInputField(NewGameRadiusInputKey)?.onValueChanged.AddListener(OnPlanetRadiusChanged);
-        panel.GetInputField(NewGameNoiseInputKey)?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+
+        if (ReadyPlanetData == null)
+            ReadyPlanetData = new PlanetData();
+
+        ReadyPlanetData.Radius = Mathf.Max(1, ReadyPlanetData.Radius);
+        ReadyPlanetData.NoiseScale = PlanetData.NormalizeNoiseScale(ReadyPlanetData.NoiseScale);
+
+        TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
+        TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
+        radiusInput?.SetTextWithoutNotify(ReadyPlanetData.Radius.ToString(CultureInfo.InvariantCulture));
+        noiseInput?.SetTextWithoutNotify(ReadyPlanetData.NoiseScale.ToString("0.########", CultureInfo.InvariantCulture));
+        radiusInput?.onValueChanged.AddListener(OnPlanetRadiusChanged);
+        noiseInput?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
         BindNewGameDifficultyControls(panel);
         panel.Open();
     }
@@ -323,12 +335,40 @@ public partial class GameManager
         return true;
     }
 
-    private static void ReadNewGameCreationInputs(out string saveName, out string playerName)
+    private bool TryReadNewGameCreationInputs(out string saveName, out string playerName)
     {
         BasePanel panel = null;
         UIManager.Instance?.TryGetPanel(NewGamePanelKey, out panel);
         saveName = panel?.GetInputField(NewGameSaveInputKey)?.text;
         playerName = panel?.GetInputField(NewGamePlayerInputKey)?.text;
+
+        if (panel == null)
+        {
+            Debug.LogWarning("[GameManager] 新世界面板不存在，无法读取世界生成参数。");
+            return false;
+        }
+
+        TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
+        TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
+        if (!TryParsePlanetRadius(radiusInput?.text, out int radius))
+        {
+            Debug.LogWarning($"[GameManager] 星球半径无效：{radiusInput?.text}。请输入大于 0 的整数。");
+            return false;
+        }
+
+        if (!TryParseNoiseScale(noiseInput?.text, out float noiseScale))
+        {
+            Debug.LogWarning(
+                $"[GameManager] 世界坐标缩放无效：{noiseInput?.text}。请输入 {PlanetData.MinNoiseScale} 到 {PlanetData.MaxNoiseScale} 之间的有限数值。");
+            return false;
+        }
+
+        ReadyPlanetData ??= new PlanetData();
+        ReadyPlanetData.Radius = radius;
+        ReadyPlanetData.NoiseScale = noiseScale;
+        radiusInput.SetTextWithoutNotify(radius.ToString(CultureInfo.InvariantCulture));
+        noiseInput.SetTextWithoutNotify(noiseScale.ToString("0.########", CultureInfo.InvariantCulture));
+        return true;
     }
 
     private void BindNewGameDifficultyControls(BasePanel panel)
@@ -704,7 +744,7 @@ public partial class GameManager
 
     private void OnPlanetRadiusChanged(string value)
     {
-        if (int.TryParse(value, out int radius))
+        if (TryParsePlanetRadius(value, out int radius))
         {
             ReadyPlanetData.Radius = radius;
             return;
@@ -715,13 +755,25 @@ public partial class GameManager
 
     private void OnPlanetNoiseScaleChanged(string value)
     {
-        if (float.TryParse(value, out float noiseScale))
+        if (TryParseNoiseScale(value, out float noiseScale))
         {
             ReadyPlanetData.NoiseScale = noiseScale;
             return;
         }
 
         Debug.LogWarning($"输入的噪声缩放值无效：{value}");
+    }
+
+    private static bool TryParsePlanetRadius(string value, out int radius)
+    {
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out radius) && radius > 0;
+    }
+
+    private static bool TryParseNoiseScale(string value, out float noiseScale)
+    {
+        bool parsed = float.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out noiseScale) ||
+                      float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out noiseScale);
+        return parsed && PlanetData.IsValidNoiseScale(noiseScale);
     }
 
     #endregion

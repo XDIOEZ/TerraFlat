@@ -18,6 +18,9 @@ namespace FlatWorld.GameTest.Networking
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-4_Networking/Gameplay/NetworkGameBootstrap.cs", "NetworkGameBootstrap");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-4_Networking/Gameplay/FlatWorldGameNetworkManager.cs", "FlatWorldGameNetworkManager");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab");
+            GameTestAssertions.AssertScriptType(
+                "Assets/5_Scripts/5-4_Networking/Gameplay/NetworkWeatherStateCoordinator.cs",
+                "NetworkWeatherStateCoordinator");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NetworkMode.prefab");
             GameTestAssertions.AssertAssetExists("Assets/3_Scenes/NetworkTest.unity");
         }

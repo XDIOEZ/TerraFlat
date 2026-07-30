@@ -23,6 +23,7 @@ namespace FlatWorld.Networking.Gameplay
         private string currentPlanetName;
         private Coroutine worldEnterCoroutine;
         private NetworkItemStateCoordinator itemStateCoordinator;
+        private NetworkWeatherStateCoordinator weatherStateCoordinator;
         private IncomingWorldSnapshot incomingWorldSnapshot;
         private int nextSnapshotTransferId;
 
@@ -103,6 +104,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkJoinRequest>(OnServerJoinRequest, false);
             NetworkServer.RegisterHandler<NetworkWorldReady>(OnServerWorldReady, false);
             EnsureItemStateCoordinator().StartServerSide();
+            EnsureWeatherStateCoordinator().StartServerSide();
             base.OnStartServer();
             SetGameplayStatus("服务器已启动，等待玩家");
         }
@@ -114,6 +116,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkWorldSnapshotBegin>(OnClientWorldSnapshotBegin, false);
             NetworkClient.RegisterHandler<NetworkWorldSnapshotChunk>(OnClientWorldSnapshotChunk, false);
             EnsureItemStateCoordinator().StartClientSide();
+            EnsureWeatherStateCoordinator().StartClientSide();
             base.OnStartClient();
         }
 
@@ -209,6 +212,8 @@ namespace FlatWorld.Networking.Gameplay
             incomingWorldSnapshot = null;
             if (itemStateCoordinator != null)
                 itemStateCoordinator.StopClientSide();
+            if (weatherStateCoordinator != null)
+                weatherStateCoordinator.StopClientSide();
             base.OnStopClient();
             SetGameplayStatus("客户端已停止");
         }
@@ -221,6 +226,8 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.UnregisterHandler<NetworkWorldReady>();
             if (itemStateCoordinator != null)
                 itemStateCoordinator.StopServerSide();
+            if (weatherStateCoordinator != null)
+                weatherStateCoordinator.StopServerSide();
             pendingPlayerNames.Clear();
             clientProtocolHellos.Clear();
             pendingPlayerSpawns.Clear();
@@ -545,7 +552,7 @@ namespace FlatWorld.Networking.Gameplay
             SaveDataMgr.Instance.SaveData.Seed = snapshot.Seed == 0 ? 1 : snapshot.Seed;
             SaveDataMgr.Instance.SaveData.SaveSeed = SaveDataMgr.Instance.SaveData.Seed.ToString();
             planet.Radius = Mathf.Max(1, snapshot.PlanetRadius);
-            planet.NoiseScale = IsValidNoiseScale(snapshot.NoiseScale) ? snapshot.NoiseScale : 0.01f;
+            planet.NoiseScale = PlanetData.NormalizeNoiseScale(snapshot.NoiseScale);
             planet.AutoGenerateMap = snapshot.AutoGenerateMap;
             planet.ChunkSize = new Vector2Int(chunkSizeX, chunkSizeY);
 
@@ -579,18 +586,13 @@ namespace FlatWorld.Networking.Gameplay
 
         private static bool IsValidChunkSize(int value) => value > 0 && value <= 256;
 
-        private static bool IsValidNoiseScale(float value)
-        {
-            return !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f && value <= 100f;
-        }
-
         private static void NormalizeGenerationSettings(PlanetData planet)
         {
             if (planet == null)
                 throw new ArgumentNullException(nameof(planet));
 
             planet.Radius = Mathf.Max(1, planet.Radius);
-            planet.NoiseScale = IsValidNoiseScale(planet.NoiseScale) ? planet.NoiseScale : 0.01f;
+            planet.NoiseScale = PlanetData.NormalizeNoiseScale(planet.NoiseScale);
             int chunkSizeX = IsValidChunkSize(planet.ChunkSize.x) ? planet.ChunkSize.x : 16;
             int chunkSizeY = IsValidChunkSize(planet.ChunkSize.y) ? planet.ChunkSize.y : 16;
             planet.ChunkSize = new Vector2Int(chunkSizeX, chunkSizeY);
@@ -685,6 +687,15 @@ namespace FlatWorld.Networking.Gameplay
             if (itemStateCoordinator == null)
                 itemStateCoordinator = gameObject.AddComponent<NetworkItemStateCoordinator>();
             return itemStateCoordinator;
+        }
+
+        private NetworkWeatherStateCoordinator EnsureWeatherStateCoordinator()
+        {
+            if (weatherStateCoordinator == null)
+                weatherStateCoordinator = GetComponent<NetworkWeatherStateCoordinator>();
+            if (weatherStateCoordinator == null)
+                weatherStateCoordinator = gameObject.AddComponent<NetworkWeatherStateCoordinator>();
+            return weatherStateCoordinator;
         }
 
         private void SetGameplayStatus(string status)

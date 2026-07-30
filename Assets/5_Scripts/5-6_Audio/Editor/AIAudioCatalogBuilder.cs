@@ -143,6 +143,7 @@ namespace FlatWorld.Audio.Editor
         private static void ApplyPlaybackDefaults(SerializedObject cueObject, string eventId)
         {
             bool isUi = eventId.StartsWith("ui.", StringComparison.OrdinalIgnoreCase);
+            bool isWeatherAmbient = eventId.StartsWith("weather.", StringComparison.OrdinalIgnoreCase);
             bool isWorldSfx = eventId.StartsWith("door.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("item.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("combat.", StringComparison.OrdinalIgnoreCase);
@@ -150,9 +151,10 @@ namespace FlatWorld.Audio.Editor
             cueObject.FindProperty("spatialBlend").floatValue = isWorldSfx ? 0.72f : 0f;
             cueObject.FindProperty("minDistance").floatValue = isWorldSfx ? 1.5f : 1f;
             cueObject.FindProperty("maxDistance").floatValue = isWorldSfx ? 14f : 20f;
-            cueObject.FindProperty("priority").intValue = isUi ? 48 : 128;
-            cueObject.FindProperty("cooldown").floatValue = isUi ? 0.025f : 0.04f;
-            cueObject.FindProperty("maxInstances").intValue = isUi ? 3 : 5;
+            cueObject.FindProperty("priority").intValue = isUi ? 48 : isWeatherAmbient ? 96 : 128;
+            cueObject.FindProperty("cooldown").floatValue = isWeatherAmbient ? 0f : isUi ? 0.025f : 0.04f;
+            cueObject.FindProperty("maxInstances").intValue = isWeatherAmbient ? 1 : isUi ? 3 : 5;
+            cueObject.FindProperty("loop").boolValue = isWeatherAmbient;
         }
 
         private static AudioBus InferBus(string eventId)
@@ -162,6 +164,8 @@ namespace FlatWorld.Audio.Editor
             if (eventId.StartsWith("music.", StringComparison.OrdinalIgnoreCase))
                 return AudioBus.Music;
             if (eventId.StartsWith("ambient.", StringComparison.OrdinalIgnoreCase))
+                return AudioBus.Ambient;
+            if (eventId.StartsWith("weather.", StringComparison.OrdinalIgnoreCase))
                 return AudioBus.Ambient;
             if (eventId.StartsWith("voice.", StringComparison.OrdinalIgnoreCase))
                 return AudioBus.Voice;

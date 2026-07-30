@@ -1,5 +1,6 @@
 // AI-Context: 编辑器新游戏 Prefab 重建器；根节点直接组合 BasePanel，不得改名 GameManager 依赖的控件节点。
 
+using System.Globalization;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -170,10 +171,12 @@ public static class NewGamePrefabBuilder
         SetRect(heading.rectTransform, new Vector2(24f, -58f), new Vector2(320f, 34f), new Vector2(0f, 1f));
 
         CreateCompactLabel(panel.transform, font, "星球半径标签", "星球半径", "越大，探索范围越广", new Vector2(24f, -108f), 258f);
-        CreateCompactLabel(panel.transform, font, "噪声缩放标签", "地形尺度", "越小，地貌越舒展", new Vector2(306f, -108f), 266f);
+        CreateCompactLabel(panel.transform, font, "噪声缩放标签", "世界坐标缩放", "越小舒展，越大密集", new Vector2(306f, -108f), 266f);
 
-        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, "1000", "1000", new Vector2(24f, -164f), new Vector2(258f, 64f), TMP_InputField.ContentType.IntegerNumber);
-        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, "0.01", "0.01", new Vector2(306f, -164f), new Vector2(266f, 64f), TMP_InputField.ContentType.DecimalNumber);
+        string defaultRadius = PlanetData.DefaultRadius.ToString(CultureInfo.InvariantCulture);
+        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, defaultRadius, defaultRadius, new Vector2(24f, -164f), new Vector2(258f, 64f), TMP_InputField.ContentType.IntegerNumber);
+        string defaultNoiseScale = PlanetData.DefaultNoiseScale.ToString("0.########", CultureInfo.InvariantCulture);
+        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(306f, -164f), new Vector2(266f, 64f), TMP_InputField.ContentType.DecimalNumber);
 
         Image profile = CreateImage("世界生成概览", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
         SetRect(profile.rectTransform, new Vector2(24f, -252f), new Vector2(548f, 174f), new Vector2(0f, 1f));

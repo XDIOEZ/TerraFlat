@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 音频系统定位
 
-> 最后核对：2026-07-28。
+> 最后核对：2026-07-30。
 
 ## 修改前先读
 
@@ -27,6 +27,8 @@ disable-model-invocation: false
 - Catalog/Config：`Assets/Resources/Audio/`。
 - Cue 资产：`Assets/Resources/Audio/Cues/`。
 - 生成素材：`Assets/Audio/Generated/`。
+- 雨声 Cue：`Assets/Resources/Audio/Cues/weather.rain.loop.asset`。
+- 原创循环雨声：`Assets/Audio/Generated/weather.rain.loop__01.wav`。
 
 ## 系统边界
 
@@ -34,15 +36,18 @@ disable-model-invocation: false
 - `AudioService` 从 `Resources/Audio/AudioRuntimeConfig` 与 `AudioCatalog` 回退加载；移动资源必须同步常量和本 Skill。
 - 战斗音效路由修改时同步检查 `flatworld-combat`；UI 音效修改时同步检查 `flatworld-ui`。
 - 角色自言自语、气泡、Speech Provider 和 JSON 台词配置属于 `flatworld-dialogue`，不要放回音频 Skill。
+- 天气雨声稳定 ID 为 `AudioEventIds.WeatherRainLoop`（`weather.rain.loop`）；由天气状态变化开始/淡出，不得在 `Update()` 每帧重播。
+- `AIAudioWaveGenerator` 会生成原创雨噪循环，`AIAudioCatalogBuilder` 将 `weather.*` 归入 Ambient、启用循环并限制单实例。
 
 ## 近期变更
 
+- 2026-07-30：新增原创 `weather.rain.loop` Ambient Cue；降雨开始时淡入、结束时淡出，状态未变化不重复播放。
 - 2026-07-28：从原音频与对话混合 Skill 中拆分，音频 Skill 仅维护音频服务、Cue、路由与资源边界。
 - 2026-07-27：音频统一通过跨场景 `AudioService` 与 Cue Catalog。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Audio/AudioSmokeTests.cs`；当前基础覆盖AudioService、AudioCue、RuntimeConfig 与 Catalog 入口。
+- 基础测试脚本：`Assets/GameTest/Audio/AudioSmokeTests.cs`；当前覆盖 AudioService、AudioCue、RuntimeConfig、Catalog 以及循环雨声 Cue 的资源、总线和循环配置。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；音频测试约定目录：`Assets/GameTest/Audio/`；场景目录：`Assets/GameTest/Scenes/Audio/`；冒烟分类：`Audio.Smoke`。
 - 新增 AudioCue、声源池、路由或淡入淡出行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心播放与回收流程变化时同步更新音频冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用短测试音频或可观察状态，避免依赖人工听感作为唯一判定。

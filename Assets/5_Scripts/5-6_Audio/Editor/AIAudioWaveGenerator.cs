@@ -47,7 +47,8 @@ namespace FlatWorld.Audio.Editor
             ImpactPickaxeStone,
             FoodEat,
             FoodCrunch,
-            FoodDrink
+            FoodDrink,
+            WeatherRainLoop
         }
 
         private static readonly KeyValuePair<string, SoundKind>[] DefaultSounds =
@@ -79,7 +80,8 @@ namespace FlatWorld.Audio.Editor
             new KeyValuePair<string, SoundKind>("combat.impact.pickaxe.stone__01.wav", SoundKind.ImpactPickaxeStone),
             new KeyValuePair<string, SoundKind>("food.eat__01.wav", SoundKind.FoodEat),
             new KeyValuePair<string, SoundKind>("food.crunch__01.wav", SoundKind.FoodCrunch),
-            new KeyValuePair<string, SoundKind>("food.drink__01.wav", SoundKind.FoodDrink)
+            new KeyValuePair<string, SoundKind>("food.drink__01.wav", SoundKind.FoodDrink),
+            new KeyValuePair<string, SoundKind>("weather.rain.loop__01.wav", SoundKind.WeatherRainLoop)
         };
 
         static AIAudioWaveGenerator()
@@ -173,8 +175,43 @@ namespace FlatWorld.Audio.Editor
                 case SoundKind.FoodEat: return CreateFoodEat();
                 case SoundKind.FoodCrunch: return CreateFoodCrunch();
                 case SoundKind.FoodDrink: return CreateFoodDrink();
+                case SoundKind.WeatherRainLoop: return CreateRainLoop();
                 default: return CreateChirp(0.06f, 440f, 440f, 0.2f, 0f, 1);
             }
+        }
+
+        private static float[] CreateRainLoop()
+        {
+            const float duration = 6f;
+            const float crossFadeDuration = 0.4f;
+            int count = Mathf.CeilToInt(duration * SampleRate);
+            int crossFadeSamples = Mathf.CeilToInt(crossFadeDuration * SampleRate);
+            float[] samples = new float[count];
+            float lowBand = 0f;
+            float highBand = 0f;
+            uint seed = 20260730;
+
+            for (int i = 0; i < count; i++)
+            {
+                float white = NextNoise(ref seed);
+                lowBand = Mathf.Lerp(lowBand, white, 0.018f);
+                highBand = Mathf.Lerp(highBand, white, 0.18f);
+                float rainBed = lowBand * 0.22f + (white - highBand) * 0.12f;
+
+                float drop = 0f;
+                if ((i % 997) == 0 || (i % 1553) == 0)
+                    drop = Mathf.Abs(white) * 0.14f;
+                samples[i] = Mathf.Clamp(rainBed + drop, -0.8f, 0.8f);
+            }
+
+            for (int i = 0; i < crossFadeSamples; i++)
+            {
+                int tailIndex = count - crossFadeSamples + i;
+                float blend = i / (float)Mathf.Max(1, crossFadeSamples - 1);
+                samples[tailIndex] = Mathf.Lerp(samples[tailIndex], samples[i], blend);
+            }
+
+            return samples;
         }
 
         private static float[] CreateChirp(

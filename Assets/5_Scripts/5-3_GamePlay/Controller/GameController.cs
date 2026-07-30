@@ -373,12 +373,12 @@ public class GameController : Module
 
     public override void Load()
     {
-        // TODO: 实现加载逻辑（例如玩家自定义键位）
+        // 输入绑定由 InputBindingService 构造时独立加载，不进入物品模块存档。
     }
 
     public override void Save()
     {
-        // TODO: 实现保存逻辑
+        // 输入绑定在重绑完成时独立保存，不进入物品模块存档。
     }
 
 #endregion

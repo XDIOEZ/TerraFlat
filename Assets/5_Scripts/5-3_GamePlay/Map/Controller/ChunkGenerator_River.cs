@@ -8,10 +8,8 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// 河流生成器：
 /// - 作为 Map.mapGenerators 管线中的一个步骤执行（通常放在大陆生成器之后）
-/// - 遮罩（网络状噪声 / Voronoi 边界）：
-///   1) 用 Worley/Voronoi 的“细胞边界”生成天然分叉的网络（更接近树状/蜘蛛网状河网）
-///   2) 可选：若存在 EnvironmentLayers，则用 Hight 层做高度门控
-///   3) 轻量后处理（补洞/去孤点）提升连通性
+/// - 当前正式管线基于大陆高度与降水预测源头、追踪下坡路径、形成湖泊并按汇流量扩宽
+/// - 旧 Voronoi 遮罩实现仅保留兼容，不在 Generate/GenerateAsync 中执行
 /// - 最后用 riverTileBlock 覆盖地表（TileData + Tilemap）
 /// </summary>
 [Serializable]
@@ -20,112 +18,115 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     private const float SeaSalt = 80f;
 
     #region 配置参数
-    [Header("Tilemap")]
-    [Tooltip("不填则使用 Map.tileMap")]
+    [FoldoutGroup("高级/运行时引用", Expanded = false)]
+    [LabelText("目标 Tilemap")]
+    [PropertyTooltip("可选。未指定时使用当前 Map.tileMap。")]
     public Tilemap targetTilemap;
 
-    [Header("河流 Tile")]
-    [Tooltip("河流/水面用的 Tile_Block（会用它的 tileDataTemplate 克隆运行时 TileData，并用 TileBase 覆盖到 Tilemap）")]
+    [Title("河流地块")]
+    [LabelText("河流 TileBlock")]
+    [PropertyTooltip("河流/水面使用的 Tile_Block；其模板必须是 TileData_Water。")]
     public Tile_Block riverTileBlock;
 
-    [Header("遮罩（网络状噪声 / Voronoi 边界）")]
-    [Tooltip("噪声种子（用于让不同星球/地图拥有不同河网分布）")]
+    [Title("确定性与终止条件")]
+    [LabelText("河流局部种子盐")]
+    [PropertyTooltip("与世界种子组合，控制源头与河网细节；修改后会改变未生成区域的河流结果。")]
     public int seed = 12345;
 
     [NonSerialized]
     private int activeWorldSeed = 1;
 
-    [Tooltip("Voronoi 单元大小（世界格子单位）。越大河网越稀疏；越小河网越密")]
+    [HideInInspector]
     public float cellSize = 18f;
 
-    [Tooltip("边界厚度（世界格子单位）。越大河越宽/越容易出现")]
+    [HideInInspector]
     public float edgeWidth = 1.2f;
 
-    [Tooltip("河流宽度范围（用于让 edgeWidth 在地图上随机变化）。x=最细，y=最粗；如果 x==y 则为固定宽度")]
+    [HideInInspector]
     public Vector2 edgeWidthRange = new Vector2(1.2f, 1.2f);
 
-    [Header("抗断裂（细河推荐）")]
-    [Tooltip("多点采样：用中心+四角采样来判断“河道是否穿过格子”。细河时能明显减少断开")]
+    [HideInInspector]
     public bool useMultiSample = true;
 
-    [Tooltip("采样内缩（0~0.49）。越大越靠近中心（更保守、更细）；越小越靠近格子边缘（更连续）")]
+    [HideInInspector]
     public float sampleInset = 0.18f;
 
-    [Header("形变（可选）")]
-    [Tooltip("对采样坐标做 Domain Warp 的幅度（世界格子单位）。0=更规则的细胞边界；越大越自然")]
+    [HideInInspector]
     public float warpAmplitude = 4f;
 
-    [Tooltip("Domain Warp 频率（越大变化越快）")]
+    [HideInInspector]
     public float warpFrequency = 0.025f;
 
-    [Header("波动（类似三角函数）")]
-    [Tooltip("在 Voronoi 边界上叠加类似 sin/cos 的波动幅度（世界格子单位）。0=关闭")]
+    [HideInInspector]
     public float trigWaveAmplitude = 2.0f;
 
-    [Tooltip("三角波动频率（越大波动越密）")]
+    [HideInInspector]
     public float trigWaveFrequency = 0.10f;
 
-    [Tooltip("三角波动的相位扰动噪声频率（让波动不那么“严格周期”）")]
+    [HideInInspector]
     public float trigWaveNoiseFrequency = 0.035f;
 
-    [Header("连通性后处理（轻量，推荐开）")]
-    [Tooltip("补洞迭代次数：每次把“周围河流邻居数>=阈值”的格子补成河流。0=不补")]
+    [HideInInspector]
     public int connectPasses = 2;
 
-    [Tooltip("补洞邻居阈值：2=比较容易连起来；3=更保守")]
+    [HideInInspector]
     public int connectNeighborThreshold = 2;
 
-    [Tooltip("是否去掉孤立河点（四邻域没有任何河流邻居的河点）")]
+    [HideInInspector]
     public bool removeIsolated = true;
 
-    [Header("断点桥接（细河建议开）")]
-    [Tooltip("是否桥接 1 格断点：当某格左右都是河（或上下都是河）时，把中间空格补成河。基本不增粗但能减少断裂")]
+    [HideInInspector]
     public bool bridgeGaps = true;
 
-    [Tooltip("桥接迭代次数：1 通常足够；想更强一点可设 2")]
+    [HideInInspector]
     public int bridgePasses = 1;
 
-    [Header("高度限制(可选)")]
-    [Tooltip("仅在有 EnvironmentLayers 时生效：Hight 低于该值则不生成河流")]
+    [LabelText("低地终止海拔")]
+    [PropertyTooltip("河流追踪到该归一化海拔以下时停止，视为已经汇入低地或海洋。")]
+    [Range(0f, 1f)]
     public float minHeight = 0.20f;
 
-    [Tooltip("仅在有 EnvironmentLayers 时生效：Hight 高于该值则不生成河流")]
+    [HideInInspector]
     public float maxHeight = 0.95f;
 
-    [Header("写入模式")]
-    [Tooltip("ReplaceTop：替换最顶层 TileData\nAddLayer：在顶部增加一层河流 TileData")]
+    [Title("写入与水深")]
+    [LabelText("地块写入模式")]
+    [PropertyTooltip("ReplaceTop 替换最顶层 TileData；AddLayer 在顶部增加河流层。")]
     public RiverWriteMode writeMode = RiverWriteMode.ReplaceTop;
 
-    [Header("河流深度")]
-    [Tooltip("河流边缘最浅深度（0~1）")]
+    [LabelText("边缘最浅深度")]
+    [PropertyTooltip("河流边缘的归一化水深。")]
     [Range(0f, 1f)]
     public float riverDepthMin = 0.15f;
 
-    [Tooltip("主河道最深深度（0~1）")]
+    [LabelText("主河道最深深度")]
+    [PropertyTooltip("主河道中心的归一化水深。")]
     [Range(0f, 1f)]
     public float riverDepthMax = 0.95f;
 
-    [Tooltip("深度曲线指数：>1 更强调中心深度，<1 整体更深")]
+    [LabelText("水深曲线指数")]
+    [PropertyTooltip("大于 1 更强调中心深度，小于 1 会让整体更深。")]
     [Range(0.2f, 4f)]
     public float riverDepthPower = 1.35f;
 
-    [Header("河流宽度曲线")]
-    [Tooltip("是否复用深度曲线指数控制河流宽度分布")]
+    [HideInInspector]
     public bool useDepthPowerForWidth = true;
 
-    [Tooltip("宽度曲线指数：>1 细支流更多，<1 整体更宽（仅在不复用深度指数时生效）")]
-    [Range(0.2f, 4f)]
+    [HideInInspector]
     public float riverWidthPower = 1.35f;
 
     #region 水文河湖
-    [Header("真实水文生成")]
-    [Tooltip("当前 Chunk 外额外参与水文计算的格数。越大越容易形成跨区块连续河流，但生成成本越高")]
+    [Title("真实水文生成（正式管线）")]
+    [LabelText("跨区块计算边距")]
+    [PropertyTooltip("当前 Chunk 外额外参与水文计算的格数。越大越容易形成连续河流，但生成成本越高。")]
     [Min(8)] public int hydrologyHalo = 32;
 
-    [Tooltip("水文生成每帧最少处理的格子数。独立于地形生成预算，避免大型 Chunk 等待数百帧")]
+    [LabelText("每帧处理格数")]
+    [PropertyTooltip("水文生成每帧至少处理的格子数量。")]
     [Min(64)] public int hydrologyCellsPerFrame = 768;
 
-    [Tooltip("河流源头候选网格间距，每个网格最多产生一个源头")]
+    [LabelText("源头候选间距")]
+    [PropertyTooltip("候选网格的世界格间距，每个候选网格最多产生一个源头。")]
     [Min(6)] public int sourceSpacing = 18;
 
     [Tooltip("源头最低海拔，仅高海拔石地可成为源头")]

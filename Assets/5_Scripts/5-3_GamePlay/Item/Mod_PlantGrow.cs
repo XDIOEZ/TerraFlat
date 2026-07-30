@@ -2,6 +2,7 @@ using MemoryPack;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
+[System.Obsolete("旧版节点生产成长模块，仅保留 MOD 兼容；正式农作物统一使用 Mod_Grow。", false)]
 public class Mod_PlantGrow : Module
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;

@@ -2,6 +2,7 @@ using MemoryPack;
 using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
+using FlatWorld.Networking;
 
 public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 {
@@ -31,6 +32,12 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         public float ColdDamagePerSecond = 0.6f; // 低温每秒伤害
         [LabelText("热伤每秒"), PropertyTooltip("高温状态下每秒造成的伤害值。")]
         public float HotDamagePerSecond = 1f; // 高温每秒伤害
+
+        [MemoryPackIgnore]
+        public float RuntimeAmbientOffset = 0f; // 天气暴露、火源等运行时环境修正
+
+        [MemoryPackIgnore]
+        public float RuntimeChangeSpeedMultiplier = 1f; // 运行时体温变化速度倍率
     }
 
 #endregion
@@ -86,6 +93,9 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public override void ModUpdate(float deltaTime)
     {
+        if (!GameNetwork.HasStateAuthority)
+            return;
+
         Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
         TemperatureMgr.Instance.ProcessTemperature(Data, _damageReceiver, deltaTime, SetTemperatureInternal, ref _damageTickTimer);
     }

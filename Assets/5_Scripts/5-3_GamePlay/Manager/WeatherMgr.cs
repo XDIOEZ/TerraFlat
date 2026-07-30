@@ -2,7 +2,7 @@ using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class WeatherMgr : SingletonAutoMono<WeatherMgr>
+public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 {
 #region 字段
 
@@ -43,6 +43,12 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     [ShowInInspector, ReadOnly, LabelText("天气强度")]
     public float CurrentWeatherIntensity => GetCurrentWeatherIntensity(); // 当前天气强度
+
+    [ShowInInspector, ReadOnly, LabelText("天气阶段")]
+    public WeatherPhase CurrentWeatherPhase => GetCurrentWeatherPhase(); // 当前天气事件阶段
+
+    [ShowInInspector, ReadOnly, LabelText("阶段剩余时间")]
+    public float CurrentWeatherRemainingTime => GetCurrentWeatherRemainingTime(); // 当前阶段或晴朗间隔剩余时间
 
     [ShowInInspector, ReadOnly, LabelText("天气修正(℃)")]
     public float CurrentWeatherTemperatureOffset => GetWeatherTemperatureOffset(); // 当前天气对环境温度的修正
@@ -90,44 +96,12 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     public float GetWeatherTemperatureOffset()
     {
-        PlanetData planetData = GetActivePlanetData();
-        if (planetData == null)
-        {
-            return DefaultWeatherTemperatureOffset;
-        }
-
-        float intensity = Mathf.Clamp01(planetData.WeatherIntensity);
-        return planetData.CurrentWeather switch
-        {
-            WeatherType.Cloudy => planetData.CloudyTemperatureOffset * intensity,
-            WeatherType.Rain => planetData.RainTemperatureOffset * intensity,
-            WeatherType.Storm => planetData.StormTemperatureOffset * intensity,
-            _ => DefaultWeatherTemperatureOffset
-        };
+        return CalculateWeatherTemperatureOffset(GetActivePlanetData());
     }
 
     public void SetWeather(WeatherType weatherType, float intensity = 1f)
     {
-        PlanetData planetData = GetActivePlanetData();
-        if (planetData == null)
-        {
-            if (EnableDebugLog)
-            {
-                Debug.LogWarning($"[WeatherMgr] 设置天气失败，未找到当前星球数据，目标天气={weatherType}, 强度={intensity:F2}");
-            }
-
-            return;
-        }
-
-        planetData.CurrentWeather = weatherType;
-        planetData.WeatherIntensity = Mathf.Clamp01(intensity);
-
-        if (EnableDebugLog)
-        {
-            Debug.Log($"[WeatherMgr] 设置天气成功，天气={weatherType}，强度={planetData.WeatherIntensity:F2}，天气修正={GetWeatherTemperatureOffset():F2}℃，有效环境温度={planetData.GlobalTemperature + GetWeatherTemperatureOffset():F2}℃");
-        }
-
-        RefreshRainEffect();
+        SetAuthoritativeWeather(weatherType, intensity);
     }
 
     public void SetRain(float intensity = 1f)
@@ -142,7 +116,9 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     public bool IsRaining()
     {
-        return GetCurrentWeather() == WeatherType.Rain && GetCurrentWeatherIntensity() > 0f;
+        WeatherType weather = GetCurrentWeather();
+        return (weather == WeatherType.Rain || weather == WeatherType.Storm) &&
+               GetCurrentWeatherIntensity() > 0f;
     }
 
     public void RefreshRainEffect()
@@ -213,6 +189,7 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
         if (_rainEffectController == null)
         {
+            _rainEffectLoadFailed = true;
             Debug.LogError($"[WeatherMgr] 雨效 prefab 缺少 RainEffectController，路径={RainEffectResourcePath}");
             Destroy(_rainEffectInstance);
             _rainEffectInstance = null;
@@ -255,10 +232,12 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
         bool isInGameWorld = GameManager.Instance != null && GameManager.Instance.IsInGameWorld;
         ApplyGameWorldLifecycleState(isInGameWorld);
+        InitializeWeatherEventSystem();
     }
 
     protected override void OnDestroy()
     {
+        ShutdownWeatherEventSystem();
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
@@ -282,6 +261,7 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
         if (!isActive)
         {
+            DeactivateWeatherFeedback();
             _debugPanelVisible = false;
             if (_rainEffectInstance != null)
             {
@@ -291,7 +271,8 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
             return;
         }
 
-        RefreshRainEffect();
+        ActivateWeatherEventSystem();
+        RefreshWeatherFeedback();
     }
 
     private void Update()
@@ -301,7 +282,9 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
             ToggleDebugPanel();
         }
 
-        RefreshRainEffect();
+        MaintainWeatherEventSystem();
+        if (_rainEffectInstance != null && _rainEffectInstance.activeSelf)
+            SyncRainEffectTransform(_rainEffectInstance.transform);
     }
 
     private void OnGUI()
@@ -337,7 +320,9 @@ public class WeatherMgr : SingletonAutoMono<WeatherMgr>
         _scrollPosition = GUILayout.BeginScrollView(_scrollPosition);
 
         GUILayout.Label($"当前天气: {CurrentWeather}", _labelStyle);
+        GUILayout.Label($"天气阶段: {CurrentWeatherPhase}", _valueStyle);
         GUILayout.Label($"天气强度: {CurrentWeatherIntensity:F2}", _valueStyle);
+        GUILayout.Label($"阶段剩余: {CurrentWeatherRemainingTime:F1} 秒", _valueStyle);
         GUILayout.Label($"天气修正: {CurrentWeatherTemperatureOffset:F2} ℃", _valueStyle);
 
         PlanetData planetData = GetActivePlanetData();

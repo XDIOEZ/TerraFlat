@@ -11,15 +11,19 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
   m_Name: combat.weapon.blunt.attack
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: combat.weapon.blunt.attack
   bus: 1
   clips:
   - {fileID: 8300000, guid: bd7a2cfc15a78a12c4f4ca69b4938376, type: 3}
   selection: 0
   loop: 0
-  volume: {Min: 0.85, Max: 1}
-  pitch: {Min: 0.94, Max: 1.03}
+  volume:
+    Min: 0.85
+    Max: 1
+  pitch:
+    Min: 0.94
+    Max: 1.03
   spatialBlend: 0.72
   minDistance: 1.5
   maxDistance: 14

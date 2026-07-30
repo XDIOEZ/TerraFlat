@@ -218,5 +218,6 @@ namespace FlatWorld.Audio
         public const string FoodEat = "food.eat";
         public const string FoodCrunch = "food.crunch";
         public const string FoodDrink = "food.drink";
+        public const string WeatherRainLoop = "weather.rain.loop";
     }
 }

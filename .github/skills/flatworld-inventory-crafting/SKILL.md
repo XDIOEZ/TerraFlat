@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 背包、制作、装备与农业定位
 
-> 最后核对：2026-07-29。
+> 最后核对：2026-07-30。
 
 ## 修改前先读
 
@@ -54,8 +54,14 @@ disable-model-invocation: false
 ## 食物与农业
 
 - 食物模块：`Assets/5_Scripts/5-3_GamePlay/Item/Mod_Food.cs`。
-- 种子/生长：`Mod_Seed.cs`、`Mod_Grow.cs`、`Mod_PlantGrow.cs`。
-- 自定义难度统一入口：`Mod_Food.ConsumeNutrition()` 处理饥饿消耗，`Mod_Stamina.AddStamina()` 按正负值处理耐力恢复/消耗，`Mod_Seed`、`Mod_PlantGrow`、`BerryBush` 处理作物生长，`Mod_Fuel.ConsumeFuel()` 处理燃料消耗。
+- 首种权威作物固定为 `Seed_Apple → AppleTree → Apple + Seed_Apple`：`Seed_Apple` 是唯一播种入口，`Apple` 只作为食物；成熟交互固定返还 1 颗种子，食物产量可受世界掉落倍率影响，因此循环可持续但不会指数增殖。
+- `Mod_Seed` 只负责耕地/水肥/同格占用校验、扣除种子和直接创建 `AppleTree`；旧存档中的落地种子会把原进度迁移给 `Mod_Grow`，不再自行结算成长。
+- `Mod_Grow` 是唯一成长状态机；扩展实现位于 `Mod_Grow.AuthoritativeCrop.cs`，在单点公式中各乘一次耕地、水肥、天气和 `CropGrowthMultiplier`，保存种植格、进度、阶段、成熟、已收获、反馈状态和自然环境初始化状态。
+- `Mod_PlantGrow` 已标记废弃，仅保留旧 MOD 二进制/脚本兼容；本体 Prefab 禁止挂载。`Mod_Production` 不再挂在 `AppleTree`，成熟产物只能通过 `Mod_Grow` 的一次性交互收获生成。
+- `Item.ModuleLoad()` 会在自动修复模块前迁移旧农业数据：Apple 删除旧 `Mod_Seed` 数据，AppleTree 删除旧“生产模块”数据；禁止移除此迁移，否则旧区块重载会重新挂回第二播种入口或无限生产。
+- 耕地补给：`Assets/5_Scripts/5-3_GamePlay/Food/Mod_FarmlandSupply.cs`；当前挂在 `Fertilizer.prefab`，单次补充水分与肥力，资源已满或目标不是耕地时不消耗。
+- 缺水、缺肥、耕地丢失、恢复成长、成熟和已收获只在状态变化或交互时反馈，禁止低频 Tick 持续刷日志。
+- 自定义难度统一入口：`Mod_Food.ConsumeNutrition()` 处理饥饿消耗，`Mod_Stamina.AddStamina()` 按正负值处理耐力恢复/消耗，`Mod_Grow` 处理作物生长，`BerryBush` 处理野生浆果成长与产量，`Mod_Fuel.ConsumeFuel()` 处理燃料消耗。
 - 农具/杂草表现：`Assets/5_Scripts/5-3_GamePlay/Food/`。
 - 耕地数据：`Assets/5_Scripts/5-1_Data/TileData/TileData_Farmland.cs`。
 - 烹饪 SO：`Assets/4_ScriptObjects/4-5_Cook/`。
@@ -73,11 +79,14 @@ disable-model-invocation: false
 ## 易误判点
 
 - `Assets/5_Scripts/5-3_GamePlay/Equipment/Module_Equipment.cs` 已废弃，优先使用 `Mod_Equipment.cs`。
+- 遗迹容器内容不使用空壳 `Mod_Box`，由 `StructureContainerContents` 配置并在结构物件 `Load()` 后写入 `Mod_Inventory`；固定槽位配置会完整覆盖目标库存，空配置可表示空箱子。
 - Inventory 持有数据和 UI 生命周期，但实际运行更新仍受 Item/Module Tick 调度影响。
 - 配方不再依赖 `CraftingRecipe` Addressables 标签；修改 Excel 后检查清单、对应分包 JSON、物品 ID 与 `GameRes` 配方字典。
 
 ## 近期变更
 
+- 2026-07-30：完成首种苹果作物闭环；`Mod_Seed` 收敛为播种入口，`Mod_Grow` 统一水肥/天气/难度成长、阶段、成熟、一次性收获与存档，AppleTree 移除无限 `Mod_Production`，Apple 移除播种模块，Fertilizer 接入水肥补给。
+- 2026-07-30：遗迹生成支持按真实库存槽位配置容器物品；运行时复用 `Item.Get_NewItemData()` 初始化完整模块数据，覆盖内部 GUID 为结构种子派生值，并通过既有 `Inventory_ModuleData` 自然进入存档基线。
 - 2026-07-29：统一内容校验器会读取配方 manifest 和全部启用分包，校验配方结构、跨分包重复 ID、输入/输出 `itemId` 引用及配方 Excel；缺失物品 ID 在构建前作为错误报告。
 - 2026-07-29：背包整理按钮和制作产物 Ghost/Reveal 图层固化进 UI Prefab；运行时脚本删除视觉兜底创建，只绑定预制节点。
 - 2026-07-29：自定义难度接入饥饿、耐力消耗/恢复、作物生长、熔炼速度、燃料消耗、制作产量与植物产出数量；所有入口统一读取 `GameDifficultyService`。
@@ -91,11 +100,12 @@ disable-model-invocation: false
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前覆盖库存模块、装备、配方、制作公共核心、初始库存资源入口，以及 `UI_Bag` 整理按钮和 `UI_Slot` 制作预览图层命名契约。
+- 农业闭环测试：`Assets/GameTest/InventoryCrafting/AgricultureLoopTests.cs`，分类 `InventoryCrafting.Agriculture`；覆盖唯一播种入口、AppleTree 单一 `Mod_Grow`、无无限生产/旧成长模块、肥料补给、倍率单次结算、水肥边界和成长状态 MemoryPack 往返。
 - 公共核心回归：`Assets/GameTest/InventoryCrafting/CraftingCoreTests.cs`，分类 `InventoryCrafting.Core`；覆盖失败不扣料、多输出空间不足不部分产出、输入槽回落、镜像 + Tag + 紧凑网格消费映射和无序配方多余输入拒绝。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；背包制作测试约定目录：`Assets/GameTest/InventoryCrafting/`；场景目录：`Assets/GameTest/Scenes/InventoryCrafting/`；冒烟分类：`InventoryCrafting.Smoke`。
 - 新增背包、槽位、快捷栏、容器、装备、配方、食物或植物行为时必须增加系统测试；修复 Bug 时先增加回归测试。物品进入背包到使用或制作主流程变化时同步更新冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试物品必须使用隔离数据并验证数量守恒、引用清理和失败路径。
-- 完成修改后检查 Unity 编译和 Console，再运行 `InventoryCrafting.Smoke` 与 `InventoryCrafting.Core`；涉及 Item/Module、存档、玩家输入或 UI 时同步运行对应系统测试。
+- 完成修改后检查 Unity 编译和 Console，再运行 `InventoryCrafting.Smoke`、`InventoryCrafting.Core` 与 `InventoryCrafting.Agriculture`；涉及 Item/Module、存档、玩家输入或 UI 时同步运行对应系统测试。
 - 教程使用的拾取/制作成功锚点及稳定 ID 由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 

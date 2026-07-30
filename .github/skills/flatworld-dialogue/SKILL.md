@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 角色对话系统定位
 
-> 最后核对：2026-07-29。
+> 最后核对：2026-07-30。
 
 ## 修改前先读
 
@@ -21,6 +21,7 @@ disable-model-invocation: false
 7. `Assets/5_Scripts/5-3_GamePlay/Guide/NewPlayerGuideController.cs`：只贡献教程 Facts，不创建第二套调度器或直接调用气泡。
 8. `Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatInputController.cs`：本地玩家 T 键聊天、输入锁、气泡提交与斜杠命令分发。
 9. `Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatContracts.cs`：显式命令处理器接口与提交上下文。
+10. `Assets/5_Scripts/5-3_GamePlay/Dialogue/WeatherExposureSpeechProvider.cs`：天气、雨中暴露、火源 Facts 与玩家运行时体温修正。
 
 ## 自言自语数据链
 
@@ -35,11 +36,11 @@ ICharacterSpeechContextContributor
 ```
 
 - `CharacterSoliloquyController` 仍是唯一调度入口，不内置饥饿或引导规则。
-- `CharacterSpeechFacts` 集中维护已注册 Fact；除 `hunger.*` 外，教程使用 `tutorial.enabled`、`tutorial.stage`、`tutorial.completed`。
+- `CharacterSpeechFacts` 集中维护已注册 Fact；除 `hunger.*`、`tutorial.*` 外，天气使用 `weather.type`、`weather.phase`、`weather.intensity`、`weather.isRaining`、`weather.isExposed`、`weather.hasHeatSource`、`weather.remainingSeconds`。
 - JSON 条件只允许 `Equal`、`NotEqual`、`Greater`、`GreaterOrEqual`、`Less`、`LessOrEqual`、`Exists`、`NotExists`，多条件固定为 AND。
 - 触发只允许 `StateChanged` 与 `Idle`；状态触发使用 false→true 上升沿，普通冷却使用 `Time.unscaledTime`。
 - `once=true` 必须有 `completionFlag`；完成标记通过 `ItemSpecialDataJsonStore` 写入 `Data_Player.ItemSpecialData` 的 `flatworld.dialogue.completed`，与教程及未知命名空间合并，不扩展旧 MemoryPack 核心字段。
-- `Player.prefab` 根节点挂载 `ConfiguredSpeechProvider` 与 `NewPlayerGuideController`，均由 `RebuildExtensions()` 自动发现；不要给 Controller 添加手工 Provider 引用。
+- `Player.prefab` 根节点挂载 `ConfiguredSpeechProvider`、`NewPlayerGuideController` 与 `WeatherExposureSpeechProvider`，均由 `RebuildExtensions()` 自动发现；不要给 Controller 添加手工 Provider 引用。
 - `CharacterSoliloquyController` 对 Player 显式要求 `IsLocalProfile=true`；远程视觉副本不启动调度，本地提升通过 `ProfileContextChanged` 自动恢复。不要依赖 `IsInitialized` 无限等待隔离远程副本。
 - 玩家手动聊天调用 `CharacterSoliloquyController.Present()`，topic/sourceId 为 `player.chat`，优先级使用 `Player`（25）：高于普通 Need/Critical 提示、低于 Emergency，不建立第二套气泡或调度器。
 - `/` 开头文本先交给玩家节点上的 `IPlayerChatCommandHandler`；处理器按 `CommandOrder` 排序。命令必须显式注册、校验参数和权限，联机权威操作交给服务端，禁止反射执行任意方法。未识别命令仍作为普通聊天显示。
@@ -49,6 +50,7 @@ ICharacterSpeechContextContributor
 - 运行时配置：`Assets/Resources/Dialogue/Soliloquy/*.json`；JSON 是角色自言自语内容、条件、优先级、时长和冷却的唯一来源。
 - 饥饿迁移配置：`Assets/Resources/Dialogue/Soliloquy/need_hunger.json`。
 - 生存引导配置：`Assets/Resources/Dialogue/Soliloquy/guide_survival.json`；九个阶段均使用 Ambient、StateChanged + Idle、一次性完成标记，教程不得使用 Emergency 抢占生存警告。
+- 降雨反馈配置：`Assets/Resources/Dialogue/Soliloquy/weather_rain.json`；覆盖预兆、雨中暴露、强降雨、火源恢复与雨后恢复。
 - 编辑器校验：`FlatWorld/自言自语/校验配置 JSON`；实现位于 `Assets/5_Scripts/5-3_GamePlay/Dialogue/Editor/ConfiguredSpeechJsonValidator.cs`。
 - 配置按资源名确定排序；跨文件重复 ID 报错。单个坏文件或坏条目只被跳过，其他有效条目继续加载。
 - 新增 Fact 时必须同时更新 Contributor、`CharacterSpeechFacts` 和 `CharacterSpeechConfigLoader` 的已知 Fact 注册表。
@@ -70,6 +72,7 @@ ICharacterSpeechContextContributor
 
 ## 近期变更
 
+- 2026-07-30：新增天气 Facts Contributor 与 `weather_rain.json`；现有 Controller 通过扩展发现自动接入，不建立第二套天气台词调度器。
 - 2026-07-29：新增 T 键玩家聊天，Enter 提交到既有角色气泡、Esc 取消；新增 `Player` 台词优先级和显式斜杠命令处理接口，远程 Player 禁止本地输入。
 - 2026-07-29：玩家聊天输入与屏幕空间角色气泡固化为 `Runtime/Dialogue` 下的可视化 Prefab；Presenter 只绑定现有节点，不再程序化创建视觉树。
 - 2026-07-28：新增依赖自言自语链的新手生存引导；Guide 仅贡献 `tutorial.*` Facts，台词全部位于 `guide_survival.json`，远程 Player 改为显式本地档案门控。
@@ -79,7 +82,7 @@ ICharacterSpeechContextContributor
 ## 修改后自动测试
 
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；测试脚本：`Assets/GameTest/Dialogue/DialogueSmokeTests.cs`；场景探针：`Assets/GameTest/Dialogue/DialogueSmokeTestProbe.cs`；测试场景：`Assets/GameTest/Scenes/Dialogue/DialogueSmokeTest.unity`；冒烟分类：`Dialogue.Smoke`。
-- 当前冒烟覆盖 `CriticalHungerFact_ShowsConfiguredSpeech` 完整调度链，以及 `RuntimeDialogueUIUsesInspectablePrefabs` 对聊天/气泡 Prefab 节点和无运行时视觉构建的约束。
+- 当前冒烟覆盖 `CriticalHungerFact_ShowsConfiguredSpeech` 完整调度链、聊天/气泡 Prefab 约束，以及 Player 天气 Contributor 与降雨 JSON 的已知 Fact 校验。
 - 新增 Fact、Provider、Trigger、Presenter 或 JSON 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。核心调度链变化时同步更新此场景和冒烟用例。
 - 测试失败时优先修复生产代码，禁止删除测试、弱化断言或修改 JSON 输入来制造通过；随机台词测试必须限制为唯一候选或固定随机状态。
 - 完成修改后检查 Unity 编译和 Console，再运行 `Dialogue.Smoke`；涉及一次性完成标记、玩家状态、UI 气泡或联机边界时同步运行对应系统测试。

@@ -38,8 +38,10 @@ public sealed class StructureEditorWindow : EditorWindow
     [SerializeField] private Vector2 canvasPan = new(40f, 40f);
     [SerializeField] private UnityEngine.Object canvasSelection;
     [SerializeField] private string paletteSearch = string.Empty;
+    [SerializeField] private Vector2 selectionScroll;
     private Vector2 paletteScroll;
     private List<GameObject> itemPalette = new();
+    private Dictionary<string, GameObject> itemPrefabLookup = new(StringComparer.Ordinal);
     private List<Tile_Block> tilePalette = new();
     private bool draggingSelection;
     private Vector2Int lastPaintedCell = new(int.MinValue, int.MinValue);
@@ -444,6 +446,10 @@ public sealed class StructureEditorWindow : EditorWindow
                 StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        itemPrefabLookup = itemPalette
+            .GroupBy(StructureAuthoringPrefabUtility.GetItemId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
         tilePalette = AssetDatabase.FindAssets("t:Tile_Block")
             .Select(AssetDatabase.GUIDToAssetPath)
             .Select(AssetDatabase.LoadAssetAtPath<Tile_Block>)
@@ -835,10 +841,12 @@ public sealed class StructureEditorWindow : EditorWindow
             metadataOwner.GetComponent<StructureItemAuthoring>() ??
             Undo.AddComponent<StructureItemAuthoring>(metadataOwner);
         metadata.ItemPrefabId = itemId;
+        metadata.MemberId = CreateUniqueMemberId(root, itemId, metadata);
         metadata.SourcePrefab = itemBrushPrefab;
         metadata.OrientationMode = StructureOrientationMode.KeepWorldOrientation;
         metadata.Optional = false;
         metadata.SpawnChance = 1f;
+        metadata.ContainerContents = new StructureContainerContents();
         EditorUtility.SetDirty(metadata);
         canvasSelection = instance;
         Selection.activeGameObject = instance;
@@ -991,59 +999,61 @@ public sealed class StructureEditorWindow : EditorWindow
 
     private void DrawSelectionPanel(StructureAuthoringRoot root)
     {
-        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(270f)))
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(350f)))
         {
             EditorGUILayout.LabelField("属性", EditorStyles.boldLabel);
             EditorGUILayout.ObjectField("Definition", root.Definition, typeof(StructureDefinitionSO), false);
             EditorGUILayout.ObjectField("Template", root.Template, typeof(StructureTemplateSO), false);
 
             GameObject selectedObject = canvasSelection as GameObject;
+            selectionScroll = EditorGUILayout.BeginScrollView(selectionScroll);
             if (selectedObject == null)
             {
                 EditorGUILayout.HelpBox("选择工具点击画布元素后，可在这里修改坐标、旋转及生成配置。", MessageType.Info);
-                return;
             }
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField(selectedObject.name, EditorStyles.boldLabel);
-            Transform selectedTransform = selectedObject.transform;
-            Vector3 oldPosition = selectedTransform.localPosition;
-            float oldRotation = selectedTransform.localEulerAngles.z;
-            Vector3 oldScale = selectedTransform.localScale;
-            Vector2 newPosition = EditorGUILayout.Vector2Field(
-                "坐标",
-                new Vector2(oldPosition.x, oldPosition.y));
-            float newRotation = EditorGUILayout.FloatField("旋转Z", oldRotation);
-            Vector3 newScale = EditorGUILayout.Vector3Field("缩放", oldScale);
-            if (newPosition != new Vector2(oldPosition.x, oldPosition.y) ||
-                !Mathf.Approximately(newRotation, oldRotation) ||
-                newScale != oldScale)
+            else
             {
-                Undo.RecordObject(selectedTransform, "修改遗迹元素");
-                selectedTransform.localPosition =
-                    new Vector3(newPosition.x, newPosition.y, oldPosition.z);
-                selectedTransform.localRotation = Quaternion.Euler(0f, 0f, newRotation);
-                selectedTransform.localScale = newScale;
-                MarkAuthoringDirty(root);
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField(selectedObject.name, EditorStyles.boldLabel);
+                Transform selectedTransform = selectedObject.transform;
+                Vector3 oldPosition = selectedTransform.localPosition;
+                float oldRotation = selectedTransform.localEulerAngles.z;
+                Vector3 oldScale = selectedTransform.localScale;
+                Vector2 newPosition = EditorGUILayout.Vector2Field(
+                    "坐标",
+                    new Vector2(oldPosition.x, oldPosition.y));
+                float newRotation = EditorGUILayout.FloatField("旋转Z", oldRotation);
+                Vector3 newScale = EditorGUILayout.Vector3Field("缩放", oldScale);
+                if (newPosition != new Vector2(oldPosition.x, oldPosition.y) ||
+                    !Mathf.Approximately(newRotation, oldRotation) ||
+                    newScale != oldScale)
+                {
+                    Undo.RecordObject(selectedTransform, "修改遗迹元素");
+                    selectedTransform.localPosition =
+                        new Vector3(newPosition.x, newPosition.y, oldPosition.z);
+                    selectedTransform.localRotation = Quaternion.Euler(0f, 0f, newRotation);
+                    selectedTransform.localScale = newScale;
+                    MarkAuthoringDirty(root);
+                }
+
+                StructureItemAuthoring itemMetadata =
+                    selectedObject.GetComponentInChildren<StructureItemAuthoring>(true);
+                if (itemMetadata != null)
+                    DrawItemMetadata(itemMetadata, root);
+
+                StructureMarkerAuthoring marker =
+                    selectedObject.GetComponent<StructureMarkerAuthoring>();
+                if (marker != null)
+                    DrawMarkerMetadata(marker, root);
             }
+            EditorGUILayout.EndScrollView();
 
-            StructureItemAuthoring itemMetadata =
-                selectedObject.GetComponentInChildren<StructureItemAuthoring>(true);
-            if (itemMetadata != null)
-                DrawItemMetadata(itemMetadata, root);
-
-            StructureMarkerAuthoring marker =
-                selectedObject.GetComponent<StructureMarkerAuthoring>();
-            if (marker != null)
-                DrawMarkerMetadata(marker, root);
-
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("删除选中", GUILayout.Height(28f)))
+            if (selectedObject != null && GUILayout.Button("删除选中", GUILayout.Height(28f)))
                 DeleteCanvasSelection(root);
         }
     }
 
-    private static void DrawItemMetadata(
+    private void DrawItemMetadata(
         StructureItemAuthoring metadata,
         StructureAuthoringRoot root)
     {
@@ -1055,6 +1065,25 @@ public sealed class StructureEditorWindow : EditorWindow
             metadata.SourcePrefab,
             typeof(GameObject),
             false);
+        if (source != metadata.SourcePrefab)
+        {
+            string sourceItemId = StructureAuthoringPrefabUtility.GetItemId(source);
+            if (!string.IsNullOrWhiteSpace(sourceItemId))
+                itemId = sourceItemId;
+        }
+
+        string memberId;
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            memberId = EditorGUILayout.TextField("成员 ID", metadata.MemberId);
+            if (GUILayout.Button(
+                    string.IsNullOrWhiteSpace(metadata.MemberId) ? "生成" : "更新",
+                    EditorStyles.miniButton,
+                    GUILayout.Width(44f)))
+            {
+                memberId = CreateUniqueMemberId(root, itemId, metadata);
+            }
+        }
         StructureOrientationMode orientationMode =
             (StructureOrientationMode)EditorGUILayout.EnumPopup(
                 "朝向模式",
@@ -1062,26 +1091,343 @@ public sealed class StructureEditorWindow : EditorWindow
         bool optional = EditorGUILayout.Toggle("可选生成", metadata.Optional);
         float chance = EditorGUILayout.Slider("生成概率", metadata.SpawnChance, 0f, 1f);
         int seedSalt = EditorGUILayout.IntField("Seed Salt", metadata.SeedSalt);
-        if (itemId == metadata.ItemPrefabId &&
-            source == metadata.SourcePrefab &&
-            orientationMode == metadata.OrientationMode &&
-            optional == metadata.Optional &&
-            Mathf.Approximately(chance, metadata.SpawnChance) &&
-            seedSalt == metadata.SeedSalt)
+        bool generationChanged =
+            itemId != metadata.ItemPrefabId ||
+            memberId != metadata.MemberId ||
+            source != metadata.SourcePrefab ||
+            orientationMode != metadata.OrientationMode ||
+            optional != metadata.Optional ||
+            !Mathf.Approximately(chance, metadata.SpawnChance) ||
+            seedSalt != metadata.SeedSalt;
+        if (generationChanged)
         {
+            Undo.RecordObject(metadata, "修改遗迹物件配置");
+            metadata.ItemPrefabId = itemId;
+            metadata.MemberId = memberId;
+            metadata.SourcePrefab = source;
+            metadata.OrientationMode = orientationMode;
+            metadata.Optional = optional;
+            metadata.SpawnChance = chance;
+            metadata.SeedSalt = seedSalt;
+            EditorUtility.SetDirty(metadata);
+            MarkAuthoringDirty(root);
+        }
+
+        DrawContainerContents(
+            metadata,
+            root,
+            source != null ? source : ResolveItemPrefab(itemId));
+    }
+
+    #region 容器内容可视化
+
+    /// <summary>绘制与目标Prefab真实库存槽位一致的容器内容配置。</summary>
+    private void DrawContainerContents(
+        StructureItemAuthoring metadata,
+        StructureAuthoringRoot root,
+        GameObject sourcePrefab)
+    {
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("容器内容", EditorStyles.boldLabel);
+
+        Mod_Inventory inventoryModule = sourcePrefab?.GetComponentInChildren<Mod_Inventory>(true);
+        if (inventoryModule == null)
+        {
+            EditorGUILayout.HelpBox("当前物件不是容器；只有带 Mod_Inventory 的Prefab可配置槽位。", MessageType.None);
             return;
         }
 
-        Undo.RecordObject(metadata, "修改遗迹物件配置");
-        metadata.ItemPrefabId = itemId;
-        metadata.SourcePrefab = source;
-        metadata.OrientationMode = orientationMode;
-        metadata.Optional = optional;
-        metadata.SpawnChance = chance;
-        metadata.SeedSalt = seedSalt;
-        EditorUtility.SetDirty(metadata);
-        MarkAuthoringDirty(root);
+        List<int> inventoryIndices = GetValidInventoryIndices(inventoryModule);
+        if (inventoryIndices.Count == 0)
+        {
+            EditorGUILayout.HelpBox("容器Prefab没有可用的 InventoryInstances 或槽位数据。", MessageType.Error);
+            return;
+        }
+
+        StructureContainerContents contents = metadata.ContainerContents ?? new StructureContainerContents();
+        bool overrideContents = EditorGUILayout.Toggle("覆盖容器内容", contents.OverrideContents);
+        if (overrideContents != contents.OverrideContents)
+        {
+            Undo.RecordObject(metadata, "切换遗迹容器内容");
+            contents = EnsureContainerContents(metadata);
+            contents.OverrideContents = overrideContents;
+            if (overrideContents)
+            {
+                if (string.IsNullOrWhiteSpace(metadata.MemberId))
+                    metadata.MemberId = CreateUniqueMemberId(root, metadata.ItemPrefabId, metadata);
+                EnsureValidInventoryTarget(contents, inventoryModule, inventoryIndices);
+            }
+            EditorUtility.SetDirty(metadata);
+            MarkAuthoringDirty(root);
+        }
+
+        if (!overrideContents)
+        {
+            EditorGUILayout.HelpBox("关闭时沿用容器Prefab自己的默认内容；开启后此处配置会完整覆盖目标库存。", MessageType.Info);
+            return;
+        }
+
+        contents = EnsureContainerContents(metadata);
+        int selectedOption = ResolveInventoryOption(contents, inventoryModule, inventoryIndices);
+        string[] labels = inventoryIndices
+            .Select(index => BuildInventoryLabel(inventoryModule.InventoryInstances[index], index))
+            .ToArray();
+        int nextOption = EditorGUILayout.Popup("目标库存", selectedOption, labels);
+        if (nextOption != selectedOption)
+        {
+            Undo.RecordObject(metadata, "切换遗迹容器库存");
+            int inventoryIndex = inventoryIndices[nextOption];
+            Inventory inventory = inventoryModule.InventoryInstances[inventoryIndex];
+            contents.TargetInventoryIndex = inventoryIndex;
+            contents.TargetInventoryName = inventory?.Data?.Name;
+            int slotCount = inventory?.Data?.itemSlots?.Count ?? 0;
+            contents.Items ??= new List<StructureContainerItemEntry>();
+            contents.Items.RemoveAll(entry =>
+                entry == null || entry.SlotIndex < 0 || entry.SlotIndex >= slotCount);
+            EditorUtility.SetDirty(metadata);
+            MarkAuthoringDirty(root);
+            selectedOption = nextOption;
+        }
+
+        int targetIndex = inventoryIndices[selectedOption];
+        Inventory targetInventory = inventoryModule.InventoryInstances[targetIndex];
+        int targetSlotCount = targetInventory?.Data?.itemSlots?.Count ?? 0;
+        contents.Items ??= new List<StructureContainerItemEntry>();
+        int configuredCount = contents.Items.Count(entry =>
+            entry != null && entry.SlotIndex >= 0 && entry.SlotIndex < targetSlotCount);
+
+        using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+        {
+            GUILayout.Label($"{targetSlotCount} 个槽位 / 已配置 {configuredCount}", EditorStyles.miniLabel);
+            GUILayout.FlexibleSpace();
+            using (new EditorGUI.DisabledScope(contents.Items.Count == 0))
+            {
+                if (GUILayout.Button("清空全部", EditorStyles.toolbarButton, GUILayout.Width(58f)))
+                {
+                    Undo.RecordObject(metadata, "清空遗迹容器内容");
+                    contents.Items.Clear();
+                    EditorUtility.SetDirty(metadata);
+                    MarkAuthoringDirty(root);
+                }
+            }
+        }
+
+        int invalidCount = contents.Items.Count(entry =>
+            entry == null || entry.SlotIndex < 0 || entry.SlotIndex >= targetSlotCount);
+        if (invalidCount > 0)
+        {
+            EditorGUILayout.HelpBox($"存在 {invalidCount} 条越界槽位配置，请切换库存或清理。", MessageType.Warning);
+            if (GUILayout.Button("移除越界配置"))
+            {
+                Undo.RecordObject(metadata, "清理遗迹容器槽位");
+                contents.Items.RemoveAll(entry =>
+                    entry == null || entry.SlotIndex < 0 || entry.SlotIndex >= targetSlotCount);
+                EditorUtility.SetDirty(metadata);
+                MarkAuthoringDirty(root);
+            }
+        }
+
+        for (int slotIndex = 0; slotIndex < targetSlotCount; slotIndex += 2)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                DrawContainerSlot(metadata, root, targetInventory, slotIndex);
+                if (slotIndex + 1 < targetSlotCount)
+                    DrawContainerSlot(metadata, root, targetInventory, slotIndex + 1);
+                else
+                    GUILayout.Space(154f);
+            }
+        }
     }
+
+    /// <summary>绘制单个可拖拽物品Prefab的库存槽卡片。</summary>
+    private void DrawContainerSlot(
+        StructureItemAuthoring metadata,
+        StructureAuthoringRoot root,
+        Inventory targetInventory,
+        int slotIndex)
+    {
+        StructureContainerContents contents = metadata.ContainerContents;
+        StructureContainerItemEntry currentEntry = contents.Items?
+            .FirstOrDefault(entry => entry != null && entry.SlotIndex == slotIndex);
+        GameObject currentPrefab = ResolveItemPrefab(currentEntry?.ItemPrefabId);
+
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(154f)))
+        {
+            EditorGUILayout.LabelField($"槽位 {slotIndex + 1}", EditorStyles.boldLabel);
+            GameObject selectedPrefab = (GameObject)EditorGUILayout.ObjectField(
+                currentPrefab,
+                typeof(GameObject),
+                false,
+                GUILayout.Height(42f));
+            string selectedItemId = StructureAuthoringPrefabUtility.GetItemId(selectedPrefab);
+            bool invalidSelection = selectedPrefab != null && string.IsNullOrWhiteSpace(selectedItemId);
+
+            int amount = Mathf.Max(1, currentEntry?.Amount ?? 1);
+            GameObject amountPrefab = selectedPrefab != null ? selectedPrefab : currentPrefab;
+            int maxAmount = ResolveSlotMaxAmount(targetInventory, slotIndex, amountPrefab);
+            using (new EditorGUI.DisabledScope(amountPrefab == null))
+                amount = EditorGUILayout.IntSlider("数量", Mathf.Clamp(amount, 1, maxAmount), 1, maxAmount);
+
+            string shownId = !string.IsNullOrWhiteSpace(selectedItemId)
+                ? selectedItemId
+                : currentEntry?.ItemPrefabId;
+            EditorGUILayout.LabelField(
+                string.IsNullOrWhiteSpace(shownId) ? "空" : shownId,
+                EditorStyles.centeredGreyMiniLabel,
+                GUILayout.Height(16f));
+
+            bool clearRequested = currentEntry != null &&
+                                  GUILayout.Button("清空槽位", EditorStyles.miniButton);
+            bool prefabChanged = selectedPrefab != currentPrefab;
+            bool amountChanged = currentEntry != null && amount != currentEntry.Amount;
+            if (invalidSelection)
+            {
+                EditorGUILayout.HelpBox("请选择带 Item 的Prefab", MessageType.Error);
+                return;
+            }
+            if (!clearRequested && !prefabChanged && !amountChanged)
+                return;
+
+            Undo.RecordObject(metadata, "修改遗迹容器槽位");
+            contents.Items ??= new List<StructureContainerItemEntry>();
+            contents.Items.RemoveAll(entry => entry == null || entry.SlotIndex == slotIndex);
+            if (!clearRequested && selectedPrefab != null)
+            {
+                contents.Items.Add(new StructureContainerItemEntry
+                {
+                    SlotIndex = slotIndex,
+                    ItemPrefabId = selectedItemId,
+                    Amount = amount
+                });
+                contents.Items = contents.Items
+                    .OrderBy(entry => entry.SlotIndex)
+                    .ToList();
+            }
+            EditorUtility.SetDirty(metadata);
+            MarkAuthoringDirty(root);
+        }
+    }
+
+    private GameObject ResolveItemPrefab(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+            return null;
+        if (itemPrefabLookup != null && itemPrefabLookup.TryGetValue(itemId, out GameObject prefab))
+            return prefab;
+        return StructureAuthoringPrefabUtility.FindItemPrefabById(itemId);
+    }
+
+    private static int ResolveSlotMaxAmount(
+        Inventory inventory,
+        int slotIndex,
+        GameObject itemPrefab)
+    {
+        Item item = itemPrefab?.GetComponent<Item>() ?? itemPrefab?.GetComponentInChildren<Item>(true);
+        float unitVolume = item?.itemData?.Stack?.Volume ?? 1f;
+        if (unitVolume > 1f)
+            return 1;
+
+        ItemSlot slot = inventory?.Data?.itemSlots != null &&
+                        slotIndex >= 0 && slotIndex < inventory.Data.itemSlots.Count
+            ? inventory.Data.itemSlots[slotIndex]
+            : null;
+        float capacity = slot != null && slot.SlotMaxVolume > 0f ? slot.SlotMaxVolume : 100f;
+        return Mathf.Max(1, Mathf.FloorToInt(capacity / Mathf.Max(0.0001f, unitVolume)));
+    }
+
+    private static List<int> GetValidInventoryIndices(Mod_Inventory inventoryModule)
+    {
+        List<int> output = new();
+        if (inventoryModule?.InventoryInstances == null)
+            return output;
+
+        for (int i = 0; i < inventoryModule.InventoryInstances.Count; i++)
+        {
+            if (inventoryModule.InventoryInstances[i]?.Data?.itemSlots != null)
+                output.Add(i);
+        }
+        return output;
+    }
+
+    private static int ResolveInventoryOption(
+        StructureContainerContents contents,
+        Mod_Inventory inventoryModule,
+        IReadOnlyList<int> inventoryIndices)
+    {
+        for (int option = 0; option < inventoryIndices.Count; option++)
+        {
+            if (inventoryIndices[option] != contents.TargetInventoryIndex)
+                continue;
+
+            Inventory indexedInventory = inventoryModule.InventoryInstances[inventoryIndices[option]];
+            if (string.IsNullOrWhiteSpace(contents.TargetInventoryName) ||
+                string.Equals(indexedInventory?.Data?.Name, contents.TargetInventoryName, StringComparison.Ordinal))
+            {
+                return option;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(contents.TargetInventoryName))
+        {
+            for (int option = 0; option < inventoryIndices.Count; option++)
+            {
+                Inventory inventory = inventoryModule.InventoryInstances[inventoryIndices[option]];
+                if (string.Equals(inventory?.Data?.Name, contents.TargetInventoryName, StringComparison.Ordinal))
+                    return option;
+            }
+        }
+        return 0;
+    }
+
+    private static string BuildInventoryLabel(Inventory inventory, int index)
+    {
+        string name = inventory?.Data?.Name;
+        int slotCount = inventory?.Data?.itemSlots?.Count ?? 0;
+        return $"{index + 1}. {(string.IsNullOrWhiteSpace(name) ? "未命名库存" : name)} ({slotCount}格)";
+    }
+
+    private static StructureContainerContents EnsureContainerContents(StructureItemAuthoring metadata)
+    {
+        metadata.ContainerContents ??= new StructureContainerContents();
+        metadata.ContainerContents.Items ??= new List<StructureContainerItemEntry>();
+        return metadata.ContainerContents;
+    }
+
+    private static void EnsureValidInventoryTarget(
+        StructureContainerContents contents,
+        Mod_Inventory inventoryModule,
+        IReadOnlyList<int> inventoryIndices)
+    {
+        int option = ResolveInventoryOption(contents, inventoryModule, inventoryIndices);
+        int inventoryIndex = inventoryIndices[option];
+        Inventory inventory = inventoryModule.InventoryInstances[inventoryIndex];
+        contents.TargetInventoryIndex = inventoryIndex;
+        contents.TargetInventoryName = inventory?.Data?.Name;
+    }
+
+    private static string CreateUniqueMemberId(
+        StructureAuthoringRoot root,
+        string itemId,
+        StructureItemAuthoring current)
+    {
+        string baseId = SanitizeId(itemId);
+        if (string.IsNullOrWhiteSpace(baseId))
+            baseId = "item";
+
+        HashSet<string> usedIds = root.GetComponentsInChildren<StructureItemAuthoring>(true)
+            .Where(metadata => metadata != null && metadata != current && !string.IsNullOrWhiteSpace(metadata.MemberId))
+            .Select(metadata => metadata.MemberId)
+            .ToHashSet(StringComparer.Ordinal);
+        for (int suffix = 1; ; suffix++)
+        {
+            string candidate = $"{baseId}_{suffix}";
+            if (!usedIds.Contains(candidate))
+                return candidate;
+        }
+    }
+
+    #endregion
 
     private static void DrawMarkerMetadata(
         StructureMarkerAuthoring marker,
