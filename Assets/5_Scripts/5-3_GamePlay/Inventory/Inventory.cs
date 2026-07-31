@@ -147,6 +147,12 @@ public class Inventory
         // 记录回调与 Action，便于之后解绑
         _toggleCallback = ctx =>
         {
+            if (gameController.IsGameplayInputLocked &&
+                (basePanel == null || !basePanel.IsOpen()))
+            {
+                return;
+            }
+
             SwitchUI();
         };
 
@@ -154,6 +160,9 @@ public class Inventory
 
         _boundController = gameController;
         _boundToggleAction = action;
+
+        if (basePanel != null && basePanel.IsOpen())
+            AcquirePanelInputLock();
     }
 
     /// <summary>
@@ -162,6 +171,7 @@ public class Inventory
     public void UnbindController()
     {
         Data.Event_RefreshUI -= RefreshUI;
+        _boundController?.ReleaseGameplayInputLock(this);
 
         if (_boundToggleAction != null && _toggleCallback != null)
         {
@@ -257,6 +267,11 @@ public class Inventory
 
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
+        ResolvePanelInputController();
+        bool closeOnCancel = !string.Equals(ToggleActionName, "B", StringComparison.OrdinalIgnoreCase);
+        basePanel.PrepareForGamepadNavigation(closeOnCancel: closeOnCancel);
+        basePanel.Opened += AcquirePanelInputLock;
+        basePanel.Closed += ReleasePanelInputLock;
 
         // 如果此 inventory 中保存了面板位置，则尝试在创建时恢复位置
         if (Data != null)
@@ -286,6 +301,25 @@ public class Inventory
         InitUI();
 
         return true; // 成功创建了面板
+    }
+
+    private void AcquirePanelInputLock()
+    {
+        _boundController?.AcquireGameplayInputLock(this);
+    }
+
+    private void ReleasePanelInputLock()
+    {
+        _boundController?.ReleaseGameplayInputLock(this);
+    }
+
+    private void ResolvePanelInputController()
+    {
+        if (_boundController != null || item == null)
+            return;
+
+        _boundController = item.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+        _boundController ??= item.GetComponent<GameController>();
     }
 
     // 辅助方法：检查 Vector2 是否有效

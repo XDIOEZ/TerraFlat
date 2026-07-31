@@ -220,7 +220,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 903940306571574032, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_InstanceId
-      value: -1051382
+      value: -100194
       objectReference: {fileID: 0}
     - target: {fileID: 1808889728832966955, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_Name
@@ -333,6 +333,10 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].MaxAmount
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[1].MaxAmount
       value: 2
       objectReference: {fileID: 0}
@@ -341,20 +345,28 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].DropChance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
+      propertyPath: Data.LootTable.Array.data[0].LootPrefab
+      value: 
+      objectReference: {fileID: 2048408006814487461, guid: ba78fb599b6f2904eac1ea100b08cca8, type: 3}
+    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[1].DropChance
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefab
       value: 
-      objectReference: {fileID: 2048408006814487461, guid: ba78fb599b6f2904eac1ea100b08cca8, type: 3}
+      objectReference: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
-      value: Chicken
+      value: Ore_Tin
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
-      value: Ore_Tin
+      value: Ore_Stone
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.Weakness._serializedList.Array.data[0].Value

@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 数据与存档定位
 
-> 最后核对：2026-07-30。序列化字段改动属于高影响变更。
+> 最后核对：2026-07-31。序列化字段改动属于高影响变更。
 
 ## 修改前先读
 
@@ -41,6 +41,7 @@ GameSaveData
 - 星球存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`。
 - 自动保存：`Assets/5_Scripts/5-3_GamePlay/Manager/AutoSaveController.cs`。
 - `ItemSpecialData` 命名空间合并：`Assets/5_Scripts/5-3_GamePlay/Progress/ItemSpecialDataJsonStore.cs`。
+- 维度位置进度：`Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionTravelProgressStore.cs`。
 - Addressables：`Assets/AddressableAssetsData/`。
 - Excel 配置：`Assets/GameConfig/Excel/`；读取工具为 `Assets/5_Scripts/Utilitiles/ExcelManager.cs`。
 
@@ -66,9 +67,13 @@ GameSaveData
 - 玩家播种作物的权威状态位于 `GrowData`：保存 `GrowProgress`、`growState`、`plantedTilePos`、`isCultivatedCrop`、`isMature`、`isHarvested`、`growthStatus` 与环境初始化状态；`Mod_Grow.ReadGrowthDataWithMigration()` 兼容读取旧版六字段成长数据。
 - `Item.ModuleLoad()` 在模块缺失自动修复之前删除 Apple 的旧种子模块数据和 AppleTree 的旧生产模块数据，确保旧区块差量不会把废弃农业链重新实例化。
 - 耕地水分和肥力继续随 `TileData_Farmland` 进入 Tile 差量；最大肥力使用非序列化常量边界，禁止为固定上限无意义改变旧 TileData 二进制布局。
+- 维度不新增 MemoryPack 字段：地表继续以旧 `PlanetId` 为 `PlanetData_Dict` 键，非地表使用 `PlanetId__dimension__DimensionId`，从而隔离各维度 `MapData_Dict`；玩家每维度位置通过 `flatworld.dimensions` 写入 `ItemSpecialData`。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：新增维度存档隔离；以兼容旧地表键的 `WorldKey` 复用 `PlanetData_Dict`，玩家各维度位置进入 `flatworld.dimensions`，未改变 MemoryPack 布局。
 - 2026-07-30：星球存档追加天气阶段、绝对时间边界、确定性随机游标和事件序号；旧存档由 `WeatherEventScheduler.InitializeIfNeeded()` 根据已有天气迁移。
 - 2026-07-30：作物存档补齐种植格、成长阶段、成熟、已收获和反馈状态；旧 `GrowData` BitData 可迁移，区块卸载重载后不会重置成长或再次收获。
 - 2026-07-29：新建存档首写和进入已选存档接入 Prefab 加载反馈；存档层职责不变，界面由 GameManager 驱动并持续到玩家周围区块就绪。
@@ -78,7 +83,6 @@ GameSaveData
 - 2026-07-29：生成器存档增加版本、跨窗口总时间游标、生态预算与补位债务；时间存档补齐 `TotalDays`。
 - 2026-07-28：配方存储由单 JSON 改为清单驱动的业务分包；编辑层统一、存储层分包、运行时聚合注册。
 - 2026-07-28：新增 `ItemSpecialDataJsonStore` 命名空间合并；对话使用 `flatworld.dialogue`，教程使用 `flatworld.tutorial`，并兼容保留旧非 JSON 数据。
-- 2026-07-28：配方配置脱离 ScriptableObject/Addressables，改为 Excel 编辑、JSON 运行时加载；`GameRes` 建立配方 ID 与输入签名双索引。
 
 ## 修改后自动测试
 
@@ -88,6 +92,7 @@ GameSaveData
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；不得写入玩家真实存档，必须使用临时路径并验证序列化前后关键字段一致。
 - 完成修改后检查 Unity 编译和 Console，再运行 `DataSave.Smoke`；涉及地图、Item/Module、建筑、对话一次性标记或联机快照时同步运行对应系统测试。
 - 教程存档、旧数据兼容及命名空间共存由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
+- 维度世界键兼容与默认目录由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

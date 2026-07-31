@@ -1137,7 +1137,7 @@ MonoBehaviour:
   InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
   InventoryPanelPrefabName: UI_WorkBench
   workButton: {fileID: 0}
-  toggleKey: 104
+  ToggleActionName: H
   workbenchLevel: 1
   baseClickCount: 6
   clickReductionPerLevel: 1

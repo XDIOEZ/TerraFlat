@@ -5,6 +5,7 @@ using NUnit.Framework;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace FlatWorld.GameTest.UI
@@ -20,6 +21,18 @@ namespace FlatWorld.GameTest.UI
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-5_UI/BasePanel.cs", "BasePanel");
             GameTestAssertions.AssertAssetExists("Assets/Resources/UI/UIRoot.prefab");
             GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/2-1_UI", "t:Prefab");
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void BasePanelExposesGamepadNavigationContract()
+        {
+            Assert.That(typeof(ICancelHandler).IsAssignableFrom(typeof(BasePanel)), Is.True);
+            Assert.That(
+                typeof(BasePanel).GetMethod(nameof(BasePanel.PrepareForGamepadNavigation)),
+                Is.Not.Null);
+            Assert.That(typeof(BasePanel).GetEvent(nameof(BasePanel.Opened)), Is.Not.Null);
+            Assert.That(typeof(BasePanel).GetEvent(nameof(BasePanel.Closed)), Is.Not.Null);
         }
 
         [Test]

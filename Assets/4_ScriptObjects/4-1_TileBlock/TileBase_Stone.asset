@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75b116e5f0ea93c45a60dada7fdafd73, type: 3}
+  m_Name: TileBase_Stone
+  m_EditorClassIdentifier: 
+  tileItemName: TileBase_Stone
+  displayName: "\u77FF\u6D1E\u77F3\u5730"
+  tileDataTemplate:
+    rid: 7812649051734021161
+  TileBase: {fileID: 11400000, guid: a3f92130325318049ba724dde2f232d5, type: 2}
+  behaviours: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 7812649051734021161
+      type: {class: TileData_Universal, ns: , asm: Data}
+      data:
+        ID: TileBase_Stone
+        Name: TileBase_Stone
+        TileTag: CaveFloor
+        position: {x: 0, y: 0, z: 0}
+        DemolitionTime: 0
+        workTime: 0
+        Penalty: 1000
+        IsWalkable: 1

@@ -72,6 +72,8 @@ ICharacterSpeechContextContributor
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
 - 2026-07-30：新增天气 Facts Contributor 与 `weather_rain.json`；现有 Controller 通过扩展发现自动接入，不建立第二套天气台词调度器。
 - 2026-07-29：新增 T 键玩家聊天，Enter 提交到既有角色气泡、Esc 取消；新增 `Player` 台词优先级和显式斜杠命令处理接口，远程 Player 禁止本地输入。
 - 2026-07-29：玩家聊天输入与屏幕空间角色气泡固化为 `Runtime/Dialogue` 下的可视化 Prefab；Presenter 只绑定现有节点，不再程序化创建视觉树。

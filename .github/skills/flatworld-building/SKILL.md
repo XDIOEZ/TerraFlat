@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 建造系统定位
 
-> 最后核对：2026-07-30。建筑占地会直接影响导航。
+> 最后核对：2026-07-31。建筑占地会直接影响导航。
 
 ## 修改前先读
 
@@ -40,6 +40,7 @@ Summoner（库存中的持久化载体）
 - 结构作者组件：`Assets/5_Scripts/5-3_GamePlay/Map/Structures/StructureItemAuthoring.cs`。
 - 结构 SO：`Assets/4_ScriptObjects/4-9_Structures/`。
 - 结构目录：`Assets/Resources/Config/StructureCatalog_Default.asset`。
+- 静态 Tile 阻挡层：`Assets/5_Scripts/5-3_GamePlay/Map/BlockingTilemapLayer.cs`。
 - 建筑 Prefab：`Assets/2_Prefabs/Building/`。
 - 编辑器工具：`Assets/5_Scripts/5-2_Editor/Structures/`。
 
@@ -47,12 +48,16 @@ Summoner（库存中的持久化载体）
 
 - `BuildingRole` 明确区分 `Summoner` 与 `PlacedBuilding`，禁止再用血量或位置推断角色。
 - 动态占地不修改地形 `TileData`，由 `BuildingOccupancyRegistry` 叠加阻挡。
+- “建筑阻挡层”只处理矿洞岩壁、地牢墙体、结构模板墙体等静态 Tile 障碍；数据顶层需使用 `TileTag=Blocking` 且 `IsWalkable=false`。玩家放置/拆除的动态建筑仍是 GameObject，并继续注册 `BuildingOccupancyRegistry`，不得迁移到 Tilemap。
 - 放置和拆除必须保持事务顺序，失败时不能同时丢失召唤器和世界建筑。
 - 联机权威校验位于 `Mod_Building` 与网络序列化桥接，客户端预览不能作为服务端最终依据。
 - 教程进度事件必须使用请求开始时捕获的 `_placementActor`：单机仅在创建建筑且成功消耗召唤器后发布；联机仅在 accepted 回执并应用权威剩余数量后发布。Reject、创建失败或 actor 丢失路径不得发布。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；明确只承载地图生成的静态墙体，动态建造系统继续使用建筑实体、快照和占地注册表。
 - 2026-07-30：结构作者物件新增稳定 `MemberId` 和容器槽位配置；遗迹中的箱子等带 `Mod_Inventory` 建筑可在结构编辑器中选择目标库存并按真实槽位配置物品。Loot Marker 仍只负责按 `ContentId` 生成物件。
 - 2026-07-29：统一内容校验器检查建筑本体/召唤器双向配对、角色、`BuildingPrefabId`/`SummonerPrefabId`、嵌入 BitData、可拾取状态以及 `DamageReceiver`、`BoxCollider2D`、`SpriteRenderer`、`BuildingShadow` 必填引用。
 - 2026-07-28：`Mod_Building` 在放置事务中暂存玩家 actor，并于单机提交或联机 accepted 回执后的最终成功点发布 `GameplayProgressEvents.BuildingPlaced`。
@@ -67,6 +72,7 @@ Summoner（库存中的持久化载体）
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试创建的占地、Prefab 和临时快照必须清理。
 - 完成修改后检查 Unity 编译和 Console，再运行 `Building.Smoke`；涉及导航、地图、存档或联机事务时同步运行对应系统测试。
 - 建筑教程事件的 actor、稳定 ID 与成功锚点由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
+- 静态阻挡 Tile 的层级路由与墙地可走性由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

@@ -201,6 +201,7 @@ public sealed class InputBindingService : IDisposable
             activeRebind = action.PerformInteractiveRebinding(bindingIndex)
                 .WithExpectedControlType<ButtonControl>()
                 .WithCancelingThrough("<Keyboard>/escape")
+                .WithCancelingThrough("<Gamepad>/buttonEast")
                 .WithControlsExcluding("<Mouse>/position")
                 .WithControlsExcluding("<Mouse>/delta")
                 .WithControlsExcluding("<Mouse>/scroll")

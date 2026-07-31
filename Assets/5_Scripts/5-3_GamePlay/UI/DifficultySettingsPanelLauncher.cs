@@ -103,6 +103,7 @@ private void EnsureWindow()
         if (statusText == null || optionButtons.Count != definitions.Count)
             Debug.LogError("[DifficultySettingsPanelLauncher] 难度 Prefab 控件命名契约不完整。", settingsPanel);
 
+        settingsPanel.PrepareForGamepadNavigation();
         settingsPanel.Close();
     }
 

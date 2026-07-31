@@ -165,6 +165,13 @@ MonoBehaviour:
           GlobalTemperature: 26
           CurrentWeather: 0
           WeatherIntensity: 0
+          WeatherDataVersion: 0
+          WeatherPhase: 0
+          WeatherPhaseStartedTotalTime: 0
+          WeatherPhaseEndTotalTime: 0
+          NextWeatherEventTotalTime: 0
+          WeatherRandomCursor: 0
+          WeatherEventSequence: 0
           RainTemperatureOffset: -4
           CloudyTemperatureOffset: -1
           StormTemperatureOffset: -6

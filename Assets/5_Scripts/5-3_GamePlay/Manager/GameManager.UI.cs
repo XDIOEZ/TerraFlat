@@ -262,6 +262,7 @@ public partial class GameManager
         BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_HelloCanvas, MainMenuPanelKey);
         panel.SetButtonOnClick(MainMenuContinueButtonKey, OpenGameSaveManager);
         panel.SetButtonOnClick(MainMenuNewGameButtonKey, OpenNewGame);
+        panel.PrepareForGamepadNavigation(MainMenuContinueButtonKey, false);
         panel.Open();
     }
 
@@ -273,7 +274,9 @@ public partial class GameManager
         if (UIPrefab_ContextMenu == null)
             return;
 
-        UIManager.Instance.CreatePanelFromGameObject(UIPrefab_ContextMenu, ContextMenuPanelKey).Open();
+        BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_ContextMenu, ContextMenuPanelKey);
+        panel.PrepareForGamepadNavigation();
+        panel.Open();
     }
 
     public void OpenNewGame()
@@ -303,6 +306,7 @@ public partial class GameManager
         radiusInput?.onValueChanged.AddListener(OnPlanetRadiusChanged);
         noiseInput?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
         BindNewGameDifficultyControls(panel);
+        panel.PrepareForGamepadNavigation(NewGameStartButtonKey);
         panel.Open();
     }
 
@@ -322,6 +326,7 @@ public partial class GameManager
         panel.SetButtonOnClick(GameSaveLoadButtonKey, OnClick_LoadSaveData_Button);
         panel.SetButtonOnClick(GameSaveBackButtonKey, panel.Close);
         panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
+        panel.PrepareForGamepadNavigation(GameSaveStartButtonKey);
         panel.Open();
         SaveDataManager_UI.Instance?.Refresh();
     }

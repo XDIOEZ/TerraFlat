@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -21,6 +22,8 @@ public class GameController : Module
     public Camera _mainCamera; // 主相机引用
     public bool CtrlIsDown; // Ctrl状态（保留原字段）
     public InputDeviceType CurrentInputDevice => _currentInputDevice; // 当前活跃输入设备
+    public bool IsUsingGamepad => _currentInputDevice == InputDeviceType.Gamepad;
+    public event Action<InputDeviceType> ActiveInputDeviceChanged;
 
     [Header("手柄适配")]
     public bool EnableGamepadAdapter = true; // 是否启用手柄适配
@@ -36,6 +39,7 @@ public class GameController : Module
     private bool _suppressLeftClickUntilRelease;
     private bool _suppressRightClickUntilRelease;
     private readonly List<RaycastResult> _uiRaycastResults = new List<RaycastResult>(8);
+    private readonly HashSet<object> _gameplayInputLockOwners = new HashSet<object>();
 
 #endregion
 
@@ -49,7 +53,7 @@ public class GameController : Module
     public Ex_ModData _modData; // 模组数据
     public override ModuleData _Data { get => _modData; set => _modData = value as Ex_ModData; }
 
-    public bool IsGameplayInputLocked => _isGameplayInputLocked; // 当前是否锁定玩家输入
+    public bool IsGameplayInputLocked => _isGameplayInputLocked || _gameplayInputLockOwners.Count > 0; // 当前是否锁定玩家输入
 
 #endregion
 
@@ -63,7 +67,7 @@ public class GameController : Module
         }
 
         _inputActions = new PlayerInputActions();
-        InjectGamepadBindings();
+        ConfigureDeviceBindings();
         InputBindings = new InputBindingService(_inputActions.asset);
         InitializeVirtualCursor();
     }
@@ -99,6 +103,10 @@ public class GameController : Module
     {
         InputBindings?.Dispose();
         InputBindings = null;
+        _inputActions?.Dispose();
+        _inputActions = null;
+        _gameplayInputLockOwners.Clear();
+        ActiveInputDeviceChanged = null;
         LeftClick.Clear();
         LeftClickUp.Clear();
         RightClick.Clear();
@@ -112,7 +120,7 @@ public class GameController : Module
     public void LeftClickAction(InputAction.CallbackContext obj) /// 左键按下
     {
         UpdateCurrentInputDevice(obj);
-        if (_isGameplayInputLocked || IsPointerOverUI())
+        if (IsGameplayInputLocked || IsPointerOverUI())
         {
             _suppressLeftClickUntilRelease = true;
             return;
@@ -131,7 +139,7 @@ public class GameController : Module
             return;
         }
 
-        if (_isGameplayInputLocked)
+        if (IsGameplayInputLocked)
         {
             return;
         }
@@ -142,7 +150,7 @@ public class GameController : Module
     public void RightClickAction(InputAction.CallbackContext obj) /// 右键按下
     {
         UpdateCurrentInputDevice(obj);
-        if (_isGameplayInputLocked || IsPointerOverUI())
+        if (IsGameplayInputLocked || IsPointerOverUI())
         {
             _suppressRightClickUntilRelease = true;
             return;
@@ -161,7 +169,7 @@ public class GameController : Module
             return;
         }
 
-        if (_isGameplayInputLocked)
+        if (IsGameplayInputLocked)
         {
             return;
         }
@@ -172,6 +180,18 @@ public class GameController : Module
     public void SetGameplayInputLocked(bool isLocked) /// 锁定或解锁玩家快捷键输入
     {
         _isGameplayInputLocked = isLocked;
+    }
+
+    public void AcquireGameplayInputLock(object owner)
+    {
+        if (owner != null)
+            _gameplayInputLockOwners.Add(owner);
+    }
+
+    public void ReleaseGameplayInputLock(object owner)
+    {
+        if (owner != null)
+            _gameplayInputLockOwners.Remove(owner);
     }
 
 #endregion
@@ -236,11 +256,20 @@ public class GameController : Module
         _inputActions.Win10.Move_Player.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.Move_Player.canceled += UpdateCurrentInputDevice;
         _inputActions.Win10.Mouse.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.GamepadCursor.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.GamepadCursor.canceled += UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarPrevious.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarNext.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.CtrlMouse.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.E.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.F.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.B.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.P.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.H.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.Shift.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.Ctrl.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.ESC.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.Tab.performed += UpdateCurrentInputDevice;
     }
 
     private void UnregisterInputCallbacks() /// 取消输入监听
@@ -253,46 +282,26 @@ public class GameController : Module
         _inputActions.Win10.Move_Player.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Move_Player.canceled -= UpdateCurrentInputDevice;
         _inputActions.Win10.Mouse.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.GamepadCursor.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.GamepadCursor.canceled -= UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarPrevious.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.HotbarNext.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.CtrlMouse.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.E.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.F.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.B.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.P.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.H.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Shift.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Ctrl.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.ESC.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.Tab.performed -= UpdateCurrentInputDevice;
     }
 
-    private void InjectGamepadBindings() /// 运行时注入手柄绑定
+    private void ConfigureDeviceBindings()
     {
         if (!EnableGamepadAdapter)
-        {
-            return;
-        }
-
-        AddBindingIfMissing(_inputActions.Win10.Move_Player, "<Gamepad>/leftStick");
-        AddBindingIfMissing(_inputActions.Win10.LeftClick, "<Gamepad>/rightTrigger");
-        AddBindingIfMissing(_inputActions.Win10.LeftClick, "<Gamepad>/buttonSouth");
-        AddBindingIfMissing(_inputActions.Win10.RightClick, "<Gamepad>/leftTrigger");
-        AddBindingIfMissing(_inputActions.Win10.RightClick, "<Gamepad>/leftShoulder");
-        AddBindingIfMissing(_inputActions.Win10.E, "<Gamepad>/buttonWest");
-        AddBindingIfMissing(_inputActions.Win10.F, "<Gamepad>/buttonNorth");
-        AddBindingIfMissing(_inputActions.Win10.Shift, "<Gamepad>/leftStickPress");
-        AddBindingIfMissing(_inputActions.Win10.Ctrl, "<Gamepad>/rightStickPress");
-        AddBindingIfMissing(_inputActions.Win10.ESC, "<Gamepad>/start");
-        AddBindingIfMissing(_inputActions.Win10.Tab, "<Gamepad>/select");
-        AddBindingIfMissing(_inputActions.Win10.CtrlMouse, "<Gamepad>/dpad");
-        AddBindingIfMissing(_inputActions.Win10.MouseScroll, "<Gamepad>/dpad");
-    }
-
-    private static void AddBindingIfMissing(InputAction action, string path) /// 添加绑定（去重）
-    {
-        for (int i = 0; i < action.bindings.Count; i++)
-        {
-            if (action.bindings[i].path == path)
-            {
-                return;
-            }
-        }
-
-        action.AddBinding(path);
+            _inputActions.asset.bindingMask = InputBinding.MaskByGroup("Keyboard&Mouse");
     }
 
     private void UpdateCurrentInputDevice(InputAction.CallbackContext context) /// 根据事件更新输入源
@@ -305,18 +314,30 @@ public class GameController : Module
         InputDevice device = context.control.device;
         if (device is Gamepad)
         {
-            _currentInputDevice = InputDeviceType.Gamepad;
+            if (!EnableGamepadAdapter)
+                return;
+
             if (!_virtualCursorInitialized)
             {
                 InitializeVirtualCursor();
             }
+            SetCurrentInputDevice(InputDeviceType.Gamepad);
             return;
         }
 
         if (device is Keyboard || device is Mouse)
         {
-            _currentInputDevice = InputDeviceType.KeyboardMouse;
+            SetCurrentInputDevice(InputDeviceType.KeyboardMouse);
         }
+    }
+
+    private void SetCurrentInputDevice(InputDeviceType deviceType)
+    {
+        if (_currentInputDevice == deviceType)
+            return;
+
+        _currentInputDevice = deviceType;
+        ActiveInputDeviceChanged?.Invoke(deviceType);
     }
 
     private void InitializeVirtualCursor() /// 初始化虚拟光标
@@ -340,13 +361,12 @@ public class GameController : Module
             return;
         }
 
-        Gamepad gamepad = Gamepad.current;
-        if (gamepad == null)
+        if (_inputActions == null)
         {
             return;
         }
 
-        Vector2 look = gamepad.rightStick.ReadValue();
+        Vector2 look = _inputActions.Win10.GamepadCursor.ReadValue<Vector2>();
         if (look.sqrMagnitude < GamepadCursorDeadZone * GamepadCursorDeadZone)
         {
             return;

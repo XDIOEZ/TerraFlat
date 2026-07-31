@@ -1,3 +1,4 @@
+using System.IO;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 
@@ -14,6 +15,19 @@ namespace FlatWorld.GameTest.Environment
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.cs", "WeatherMgr");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/TemperatureMgr.cs", "TemperatureMgr");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Weather/RainEffect.prefab");
+        }
+
+        [Test]
+        [Category("Environment.Weather")]
+        public void WeatherManagerDefersTimeSystemUntilWorldEntry()
+        {
+            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.cs");
+            int startIndex = source.IndexOf("private void Start()");
+            int destroyIndex = source.IndexOf("protected override void OnDestroy()", startIndex);
+
+            Assert.That(startIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(destroyIndex, Is.GreaterThan(startIndex));
+            Assert.That(source.Substring(startIndex, destroyIndex - startIndex), Does.Not.Contain("TimeSystem"));
         }
 
         [Test]

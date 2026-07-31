@@ -49,6 +49,8 @@ GameRes 完成本体 Addressables
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
 - 2026-07-28：MOD 定义文件新增纯 JSON `recipes`，加载顺序为先物品 Def、再校验并注册配方；保留旧 Recipe AssetBundle 转换兼容。
 - 2026-07-27：当前 MOD 流程在本体资源加载后执行，支持 manifest 依赖排序、AssetBundle、JSON Item 定义、Lua 生命周期与集合哈希。
 

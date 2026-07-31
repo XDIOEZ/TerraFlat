@@ -25,7 +25,6 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
     private RectTransform dialogRect;
     private TextMeshProUGUI statusText;
     private bool panelSuspendedInput;
-    private bool previousGameplayLock;
     private int suppressEscapeCloseFrame = -1;
 
     public static InputBindingPanelLauncher Ensure(
@@ -90,7 +89,11 @@ private void Update()
         if (bindingService.IsRebinding || Time.frameCount == suppressEscapeCloseFrame)
             return;
 
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        bool keyboardCanceled = Keyboard.current != null &&
+                                Keyboard.current.escapeKey.wasPressedThisFrame;
+        bool gamepadCanceled = Gamepad.current != null &&
+                               Gamepad.current.buttonEast.wasPressedThisFrame;
+        if (keyboardCanceled || gamepadCanceled)
             Close();
     }
 
@@ -110,16 +113,14 @@ private void Open()
 
         if (!panelSuspendedInput)
         {
-            previousGameplayLock =
-                gameController != null && gameController.IsGameplayInputLocked;
-            gameController?.SetGameplayInputLocked(true);
+            gameController?.AcquireGameplayInputLock(this);
             bindingService.SuspendGameplayInput();
             panelSuspendedInput = true;
         }
 
         UpdateDialogSize();
         RefreshRows();
-        SetStatus("选择一项后按下新按键；Esc 取消录入。设置会自动保存。");
+        SetStatus("选择一项后按下新按键；Esc 或手柄 B 取消录入。设置会自动保存。");
         bindingPanel.Open();
         bindingPanel.transform.SetAsLastSibling();
         Canvas.ForceUpdateCanvases();
@@ -169,6 +170,7 @@ private void EnsurePanel()
         }
 
         CreateRows(content, rowPrefab);
+        bindingPanel.PrepareForGamepadNavigation("修改按钮", false);
         UpdateDialogSize();
         bindingPanel.Close();
     }
@@ -330,7 +332,7 @@ private void CreateRows(Transform content, GameObject rowPrefab)
             return;
 
         bindingService?.ResumeGameplayInput();
-        gameController?.SetGameplayInputLocked(previousGameplayLock);
+        gameController?.ReleaseGameplayInputLock(this);
         panelSuspendedInput = false;
     }
 

@@ -232,7 +232,6 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
         bool isInGameWorld = GameManager.Instance != null && GameManager.Instance.IsInGameWorld;
         ApplyGameWorldLifecycleState(isInGameWorld);
-        InitializeWeatherEventSystem();
     }
 
     protected override void OnDestroy()
@@ -257,9 +256,10 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     private void ApplyGameWorldLifecycleState(bool isActive)
     {
-        enabled = isActive;
+        bool weatherAllowed = isActive && DimensionManager.Instance.ActiveDefinition?.SuppressWeather != true;
+        enabled = weatherAllowed;
 
-        if (!isActive)
+        if (!weatherAllowed)
         {
             DeactivateWeatherFeedback();
             _debugPanelVisible = false;

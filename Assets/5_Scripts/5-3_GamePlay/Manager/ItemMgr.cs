@@ -1558,6 +1558,24 @@ public class ItemMgr : SingletonMono<ItemMgr>
         return player;
     }
 
+    public void ReleasePlayerForWorldTransition(Player player)
+    {
+        if (player == null)
+            return;
+
+        if (player.Data != null &&
+            Player_DIC.TryGetValue(player.Data.Name_User, out Player registeredPlayer) &&
+            registeredPlayer == player)
+        {
+            Player_DIC.Remove(player.Data.Name_User);
+        }
+
+        _networkPlayers.Remove(player);
+        _networkRemoteReplicas.Remove(player);
+        _networkInitializedPlayers.Remove(player);
+        DespawnItem(player, saveData: false);
+    }
+
     [Tooltip("实例化玩家 但是不初始化")]
     public Player CreatePlayer(string playerName)
     {

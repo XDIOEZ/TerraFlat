@@ -40,6 +40,8 @@ disable-model-invocation: false
 ```
 
 - `BasePanel` 是 `sealed`，不要再建立领域 View 继承层或代理层。
+- 模态面板调用 `BasePanel.PrepareForGamepadNavigation()` 后会补齐 Automatic Navigation、打开时选择首个/指定控件、关闭时恢复父面板焦点，并可通过 `ICancelHandler` 接收手柄 B 返回；根主菜单必须关闭取消退出。
+- 需要锁定世界玩法的面板通过 `BasePanel.Opened/Closed` 让领域控制器持有和释放 `GameController` 输入锁，`BasePanel` 不直接依赖玩家系统。
 - 面板控制器依赖节点名作为键；重命名 Prefab 节点必须同步修改对应 `*Key` 常量。
 - UIManager 优先复用场景中的 `PanelRoot`，否则实例化 `Assets/Resources/UI/UIRoot.prefab`；缺失时直接报错，不得回退到运行时创建 Canvas。
 - `BasePanel`/`BaseUIManager` 只允许运行时收集控件和补充非视觉音频反馈，不得调用主题系统新增装饰、改颜色或改布局。
@@ -76,6 +78,9 @@ disable-model-invocation: false
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：`BasePanel` 增加可选手柄导航、默认焦点、焦点恢复、取消返回与开关事件；主菜单、创建/存档、设置子页和库存类面板接入。
 - 2026-07-29：玩家聊天输入支持裸 T 打开、Enter 发送、Esc 取消；打开期间锁定玩法输入，提交文字由现有角色气泡显示。
 - 2026-07-29：新增 `UI_WorldLoading.prefab`；新建世界和进入已有存档时以跨场景 Overlay 显示阶段、进度和提示，直至玩家及首批周围区块就绪。
 - 2026-07-29：设置、按键绑定动态行、聊天输入、角色气泡、背包整理、制作预览和联机玩家名称全部固化为可视化 Prefab；新增统一重建器与 `RuntimeUIPrefabKeys`，运行时只加载、实例化和绑定数据。
@@ -88,7 +93,7 @@ disable-model-invocation: false
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs`；当前覆盖 UIManager、BasePanel、Resources UIRoot、五个设置 Prefab、按键行 Prefab、世界加载 Prefab、设置入口节点、正式脚本无运行时视觉构建，以及新世界难度主分页、四个自定义分类页、16 个 Slider 和死亡掉落 Toggle 命名契约；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
+- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约、Resources UIRoot、五个设置 Prefab、按键行 Prefab、世界加载 Prefab、设置入口节点、正式脚本无运行时视觉构建，以及新世界难度主分页、四个自定义分类页、16 个 Slider 和死亡掉落 Toggle 命名契约；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；UI 测试约定目录：`Assets/GameTest/UI/`；场景目录：`Assets/GameTest/Scenes/UI/`；冒烟分类：`UI.Smoke`。
 - 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；必须验证控件命名契约、组件类型、事件绑定和重复打开关闭，视觉观感仍交由人工确认。

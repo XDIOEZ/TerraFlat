@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 时间、天气与温度定位
 
-> 最后核对：2026-07-30。
+> 最后核对：2026-07-31。
 
 ## 修改前先读
 
@@ -61,9 +61,14 @@ GameManager.Event_GameWorldEnter
 - 雨效通过 `Resources/Weather/RainEffect` 加载；移动 Prefab 后必须同步修改常量与本 Skill。
 - 雨效 Prefab 与控制器只在首次需要时加载；状态未变化时每帧只允许跟随相机，禁止重复 `Resources.Load`、`Instantiate` 或重新播放雨声。
 - 温度、饥饿、流血等最终进入 `DamageReceiver.ForceHurt()` 的玩家伤害统一受 `EnvironmentalDamageMultiplier` 影响；不要在各环境发送端重复乘算。
+- 维度环境覆盖从当前 `DimensionDefinition` 读取：`DayTimeSystem.GetLighting()` 可返回固定光照，`WeatherMgr` 可关闭天气与雨效；新增差异时扩展维度定义，不要在环境管理器硬编码 `cave`。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：环境链接入维度覆盖；地下矿洞使用固定 `0.08` 光照并抑制天气/雨效，地表行为保持不变。
+- 2026-07-31：`WeatherMgr` 不再于开始菜单阶段提前解析 `DayTimeSystem`；仅在游戏世界激活后订阅时间推进事件，避免将正常的未进入世界状态误报为场景缺少时间系统。
 - 2026-07-30：新增首个权威降雨事件闭环：预兆、起雨、稳定、增强、减弱、恢复；阶段使用绝对总时间、固定种子与持久化随机游标，时间跳跃可一次跨越多个阶段。
 - 2026-07-30：雨中暴露降低玩家有效环境温度并加快降温，附近已点燃 `Mod_Fuel` 火源提供恢复；普通 Client 不重复结算体温伤害。
 - 2026-07-30：动态天气接入权威农作物成长；雨量补水和天气成长倍率只在 `Mod_Grow` 单点结算，`Tile_Farmland.OnUpdate()` 不再二次修改成长进度或水分。
@@ -71,14 +76,15 @@ GameManager.Event_GameWorldEnter
 - 2026-07-29：修复 `TotalDays` 未进入时间存档；增加统一时间推进、跨日事件和引用场景解析入口。
 - 2026-07-27：当前环境链明确为 `DayTimeSystem → LightLayerMgr` 与 `PlanetData → WeatherMgr/TemperatureMgr`。
 
-## 修改后自动测试
+## 修改后验证
 
 - 基础测试脚本：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`；当前覆盖时间、天气、温度、雨效 Resources、`TotalDays` 往返、固定种子确定性天气和跨阶段跳时不重复结算。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；环境测试约定目录：`Assets/GameTest/Environment/`；场景目录：`Assets/GameTest/Scenes/Environment/`；冒烟分类：`Environment.Smoke`。
 - 新增时间、昼夜、季节、天气、光照或温度行为时必须增加系统测试；修复 Bug 时先增加回归测试。时间推进到环境反馈主流程变化时同步更新环境冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；时间与天气测试必须注入确定值，不能依赖真实等待或随机天气。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Environment.Smoke`；涉及地图、角色状态、特效或存档时同步运行对应系统测试。
+- 完成修改后检查 Unity 编译和 Console；仅当用户明确要求时运行 `Environment.Smoke`，否则在总结中列出建议测试项，避免 Unity 测试交互卡片中断聊天。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
+- 维度固定光照与禁天气配置由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 
 ## 修改后维护本 Skill
 

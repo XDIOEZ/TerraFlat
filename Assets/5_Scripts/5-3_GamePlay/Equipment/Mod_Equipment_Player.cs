@@ -15,6 +15,7 @@ public class Mod_Equipment_Player : Mod_Equipment
 
     private InputAction openPanelAction;
     private Action<InputAction.CallbackContext> openPanelCallback;
+    private GameController inputController;
 
     #endregion
 
@@ -22,8 +23,8 @@ public class Mod_Equipment_Player : Mod_Equipment
 
     protected override void BindOpenPanelTrigger()
     {
-        var controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-        if (controller == null || controller._inputActions == null)
+        inputController = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        if (inputController == null || inputController._inputActions == null)
         {
             Debug.LogError($"[Mod_Equipment_Player] GameController 或输入资产为空，无法绑定动作。物体: {name}");
             return;
@@ -35,7 +36,7 @@ public class Mod_Equipment_Player : Mod_Equipment
             return;
         }
 
-        openPanelAction = controller._inputActions.FindAction(OpenPanelActionName);
+        openPanelAction = inputController._inputActions.FindAction(OpenPanelActionName);
         if (openPanelAction == null)
         {
             Debug.LogError($"[Mod_Equipment_Player] 找不到输入动作 '{OpenPanelActionName}'。物体: {name}");
@@ -53,6 +54,7 @@ public class Mod_Equipment_Player : Mod_Equipment
 
         openPanelAction = null;
         openPanelCallback = null;
+        inputController = null;
     }
 
     #endregion
@@ -61,6 +63,12 @@ public class Mod_Equipment_Player : Mod_Equipment
 
     private void ToggleEquipmentPanelFromInput()
     {
+        if (inputController != null && inputController.IsGameplayInputLocked &&
+            (EquipmentInventory?.basePanel == null || !EquipmentInventory.basePanel.IsOpen()))
+        {
+            return;
+        }
+
         if (EquipmentInventory == null)
         {
             Debug.LogError($"[Mod_Equipment_Player] EquipmentInventory 为空，无法开关面板。物体: {name}");

@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 核心生命周期定位
 
-> 最后核对：2026-07-30。路径相对仓库根目录。
+> 最后核对：2026-07-31。路径相对仓库根目录。
 
 ## 修改前先读
 
@@ -17,6 +17,7 @@ disable-model-invocation: false
 3. `Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs`：Addressables 本体资源加载完成后接入 MOD。
 4. `Assets/5_Scripts/5-3_GamePlay/Manager/SceneMgr.cs`：通用同步/异步场景服务。
 5. `Assets/5_Scripts/5-3_GamePlay/Manager/ItemMgr.cs`：单机/联机 Player 加载、创建与本地档案上下文建立。
+6. 涉及星球表面、矿洞或跨世界旅行时同步读取 `flatworld-dimension`，权威入口为 `DimensionManager` 与 `GameManager.Dimension.cs`。
 
 ## 关键入口与路径
 
@@ -50,12 +51,18 @@ GameStartScene
 ## 易误判点
 
 - `Assets/5_Scripts/5-3_GamePlay/Manager/GameWorldSceneManager.cs` 仅保留简单切场景逻辑，不是世界生命周期权威入口。
+- 维度运行使用以 `WorldKey` 命名的动态空 Scene，不进入 Build Settings；`GameManager.RunWorld()` 仍是进入目标世界的权威入口，维度切换通过 partial 桥复用加载 UI 和世界事件。
 - 无资源引用且未实现的旧 `Manager/SceneChange.cs` 已删除；场景切换应使用 `SceneMgr` 或明确的世界生命周期入口，不要恢复旧 `IInteract` 传送组件。
 - UI 绑定已从 `GameManager.cs` 拆到 `GameManager.UI.cs`；修改主菜单控件名时两处职责不要重新混合。
+- 主菜单、新建世界、存档选择和上下文菜单创建后必须调用 `BasePanel.PrepareForGamepadNavigation()`；根主菜单禁止用手柄取消关闭，子面板关闭时恢复父面板焦点。
 - 世界逻辑应受 `GameManager.IsInGameWorld` 或世界事件控制，避免在主菜单场景提前运行。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：主菜单、新建世界、存档与上下文菜单接入通用手柄焦点导航；根主菜单保持不可被取消键误关。
+- 2026-07-31：新增维度世界切换链；动态 Scene、玩家释放/重建和失败恢复复用现有世界生命周期与加载遮罩，未建立第二套权威入口。
 - 2026-07-30：删除无代码或资源引用的旧 `SceneChange` 交互式切场景组件，正式场景入口继续由 `SceneMgr` 与世界生命周期链承担。
 - 2026-07-29：新建世界和进入已有存档接入持久化加载面板；覆盖存档准备、场景卸载、玩家创建、出生点重试和首批周围区块加载，完成或失败后自动关闭。
 - 2026-07-29：新世界创建链改为在首存档前写入自定义难度的死亡开关与 16 个倍率字段。
@@ -70,6 +77,7 @@ GameStartScene
 - 新增启动、世界创建、继续游戏、场景切换或退出行为时必须增加系统测试；修复 Bug 时先增加回归测试。全局生命周期变化时同步更新最小启动冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用临时世界和临时存档，并在结束时清理全局对象与事件订阅。
 - 完成修改后检查 Unity 编译和 Console，再运行 `Core.Smoke`；涉及资源、地图、玩家、存档或 UI 初始化时同步运行对应系统测试。
+- 维度生命周期契约由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

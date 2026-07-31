@@ -58,6 +58,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         DontDestroyOnLoad(gameObject);
         AutoSaveController.Ensure(this);
+        _ = DimensionManager.Instance;
 
         // 寻路系统不在 StartScene 激活，等玩家进入游戏世界后再启用
         // (PathFindingSystem 将在 RunWorld 时或由 AstarGameManager 自行延迟初始化)
@@ -398,6 +399,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (!EnsureContentReady("进入世界"))
             return;
 
+        WorldAddress worldAddress = WorldAddress.FromWorldKey(NewScenename);
+        DimensionManager.Instance.EnsureWorldData(worldAddress);
+
         // 标记玩家已进入游戏世界，各管理器可开始运行
         IsInGameWorld = true;
 
@@ -416,6 +420,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 2. 立刻创建并激活空场景
         Scene newScene = SceneManager.CreateScene(NewScenename);
         SceneManager.SetActiveScene(newScene);
+        DimensionManager.Instance.ActivateWorld(worldAddress);
 
         // 通知所有订阅者：游戏世界已进入
         Event_GameWorldEnter?.Invoke();

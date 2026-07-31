@@ -92,11 +92,6 @@ public partial class WeatherMgr
 
 #region 权威调度
 
-    private void InitializeWeatherEventSystem()
-    {
-        SubscribeTimeSystem();
-    }
-
     private void ActivateWeatherEventSystem()
     {
         SubscribeTimeSystem();

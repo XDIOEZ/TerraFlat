@@ -111,6 +111,7 @@ private void EnsureWindow()
         if (intervalDropdown == null || intervalInput == null || statusText == null)
             Debug.LogError("[AutoSaveSettingsPanelLauncher] 自动保存 Prefab 控件命名契约不完整。", settingsPanel);
 
+        settingsPanel.PrepareForGamepadNavigation();
         settingsPanel.Close();
     }
 

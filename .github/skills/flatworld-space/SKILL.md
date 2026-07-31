@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 太空与星球系统定位
 
-> 最后核对：2026-07-27。
+> 最后核对：2026-07-31。
 
 ## 修改前先读
 
@@ -16,6 +16,7 @@ disable-model-invocation: false
 2. `Assets/5_Scripts/5-3_GamePlay/Space/PlanetData.cs`：公转、自转与运行时轨迹 partial。
 3. `Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`：星球基础、地图、温度与天气 partial。
 4. `Assets/5_Scripts/5-3_GamePlay/Space/Module_Fly.cs`：飞行模块。
+5. 设计星球着陆或离开星球时同步读取 `flatworld-dimension`；星球与维度统一由 `WorldAddress` 表达。
 
 ## 资源与场景
 
@@ -39,9 +40,13 @@ GameManager.Event_GameWorldEnter
 - `PlanetData` 是 partial class，跨 `Map/Data` 与 `Space` 两个目录；修改序列化字段必须检查两处。
 - `RuntimeAngle` 与轨迹是非序列化运行时状态，初始化由 `InitializeRuntime()` 完成。
 - Prefab 名称由 `RuntimePlanetName` / `PrefabName` 决定，并通过 `GameRes` 实例化；移动或重命名资源需检查 Addressables。
+- 后续星球旅行不得把每颗星球实现为独立的一次性场景链：使用 `WorldAddress.PlanetId` 标识星球，`surface`/`cave` 等标识星球内维度，并复用 `DimensionManager` 动态世界切换。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：确立星球旅行的世界地址边界；当前地下矿洞作为首个维度切换切片，未来星球表面继续复用同一 `WorldAddress + DimensionManager` 架构。
 - 2026-07-27：太空系统首版定位确认以 `SpaceMgr + PlanetData partial + SpaceScene` 为主链。
 
 ## 修改后自动测试
