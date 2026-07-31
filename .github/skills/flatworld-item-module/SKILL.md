@@ -51,6 +51,8 @@ ItemMaker / ItemMgr 实例化
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
 - 2026-07-30：农业模块边界收敛；`Mod_Seed` 的低频 Tick 仅迁移旧落地种子，`Mod_Grow` 低频 Tick 成为唯一作物成长与成熟状态机，`Mod_FarmlandSupply` 为休眠模块且仅响应物品使用事件；`Item.ModuleLoad()` 会先清理 Apple/AppleTree 的废弃农业模块数据再执行缺失模块自动修复。
 - 2026-07-30：删除无引用且未完成的 `Mod_HealthPoints`，禁止通过通用 Module 重新建立与 `DamageReceiver` 并行的生命值状态。
 - 2026-07-29：统一内容校验器建立 Prefab 名与 `ItemData.IDName` 注册快照，报告重复/覆盖键、模块数据空值与 ID、模块 Prefab 可解析性、`ModuleDataDic` 键值一致性、Missing Script/序列化丢失引用及显示名/描述污染。

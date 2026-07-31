@@ -9,15 +9,24 @@ public sealed class MapGenerationContext
     public Map Map { get; }
     public PlanetData PlanetData { get; }
     public int WorldSeed { get; }
+    public WorldAddress WorldAddress { get; }
+    public DimensionDefinition DimensionDefinition { get; }
     public StructureGenerationMask StructureMask { get; }
     #endregion
 
     #region 构造
-    public MapGenerationContext(Map map, PlanetData planetData, int worldSeed)
+    public MapGenerationContext(
+        Map map,
+        PlanetData planetData,
+        int worldSeed,
+        WorldAddress worldAddress,
+        DimensionDefinition dimensionDefinition)
     {
         Map = map;
         PlanetData = planetData;
         WorldSeed = worldSeed == 0 ? 1 : worldSeed;
+        WorldAddress = worldAddress;
+        DimensionDefinition = dimensionDefinition;
         int width = map?.Data?.Width ?? 0;
         int height = map?.Data?.Height ?? 0;
         StructureMask = new StructureGenerationMask(width, height);

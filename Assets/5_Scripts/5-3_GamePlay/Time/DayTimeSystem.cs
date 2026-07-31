@@ -230,6 +230,12 @@ private void TimeRun(string sceneName, float deltaTime)
     /// </summary>
     public float GetLighting(string sceneName)
     {
+        if (DimensionManager.Instance.TryGetDefinitionForWorldKey(sceneName, out DimensionDefinition dimension) &&
+            dimension.UseFixedLighting)
+        {
+            return Mathf.Clamp01(dimension.FixedLighting);
+        }
+
         // 获取采光率
         float lightingRate = 1.0f;
         SceneLightingRateDict.TryGetValue(sceneName, out lightingRate);

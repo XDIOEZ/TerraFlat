@@ -244,7 +244,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.size
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.Weakness.Array.data[0]
@@ -259,27 +259,23 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.LootTable.Array.data[1].MaxAmount
+      propertyPath: Data.LootTable.Array.data[0].MaxAmount
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.LootTable.Array.data[1].MinAmount
-      value: 3
+      propertyPath: Data.LootTable.Array.data[0].MinAmount
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.LootTable.Array.data[1].DropChance
+      propertyPath: Data.LootTable.Array.data[0].DropChance
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.LootTable.Array.data[1].LootPrefab
+      propertyPath: Data.LootTable.Array.data[0].LootPrefab
       value: 
       objectReference: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
-      value: Chicken
-      objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.LootTable.Array.data[1].LootPrefabName
       value: Ore_Stone
       objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
@@ -346,7 +342,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 903940306571574032, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_InstanceId
-      value: -1051298
+      value: -100356
       objectReference: {fileID: 0}
     - target: {fileID: 1808889728832966955, guid: e815ac9fdcd49fd478b8159a2da77694, type: 3}
       propertyPath: m_Name

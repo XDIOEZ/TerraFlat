@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 联机系统定位
 
-> 最后核对：2026-07-30。修改时严格区分本地权威实体与远程视觉副本。
+> 最后核对：2026-07-31。修改时严格区分本地权威实体与远程视觉副本。
 
 ## 修改前先读
 
@@ -62,9 +62,13 @@ disable-model-invocation: false
 - 局部导航图跟随本地 owned 玩家；Chunk 流送按所有观察者并集。
 - `NetworkGameBootstrap` 从 `Resources/Networking/FlatWorldNetworkPlayer` 加载 Prefab；移动后同步常量与本 Skill。
 - `GamePlay.asmdef` 直接引用无引擎依赖的 `FlatWorld.Networking.Core`；`MonsterSpawnerManager` 使用 `GameNetwork.HasStateAuthority` 门控世界生物生成，客户端不得重复投放。
+- 首版 `DimensionManager.TryBeginTransition()` 在 `GameNetwork.IsOnline` 为真时拒绝切换；在实现服务器权威目标地址、观察者迁移、Chunk 流送重建和玩家同步前不得解除此门禁。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：明确维度切换首版仅离线可用，联机会话主动拒绝地表/矿洞迁移；后续需新增完整服务器权威协议后再开放。
 - 2026-07-30：联机协议升级到 8，新增天气状态请求与服务器广播；初始世界快照仍携带 PlanetData，进入世界后再请求一次当前权威天气以避免加载期间漏状态。
 - 2026-07-29：联机玩家名称固化到 `FlatWorldNetworkPlayer.prefab`；统一 Runtime UI 重建器负责生成该节点，网络运行时只查找并绑定现有 `TextMeshPro`。
 - 2026-07-29：联机面板从运行时代码构建改为 `UI_NetworkMode.prefab`；`GameRes` 预加载后实例化，新增编辑器重建菜单并删除运行时视觉树代码。

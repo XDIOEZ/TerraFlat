@@ -17,6 +17,7 @@ namespace FlatWorld.GameTest.Map
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/ChunkMgr.cs", "ChunkMgr");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Chunk/Chunk.cs", "Chunk");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Map/Base/Map.cs", "Map");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Map/BlockingTilemapLayer.cs", "BlockingTilemapLayer");
             GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/Map", "t:Prefab");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Config/StructureCatalog_Default.asset");
         }
@@ -68,6 +69,47 @@ namespace FlatWorld.GameTest.Map
             Assert.That(PlanetData.IsValidNoiseScale(float.NaN), Is.False);
             Assert.That(PlanetData.IsValidNoiseScale(PlanetData.MaxNoiseScale + 1f), Is.False);
             Assert.That(PlanetData.NormalizeNoiseScale(float.PositiveInfinity), Is.EqualTo(PlanetData.DefaultNoiseScale));
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void MapDoesNotBecomeReadyBeforeTilemapVisualCompletes()
+        {
+            GameObject mapObject = new GameObject("MapVisualReadyTest");
+            try
+            {
+                global::Map map = mapObject.AddComponent<global::Map>();
+                map.Data = new Data_TileMap { TileLoaded = true };
+
+                Assert.That(map.IsTilemapVisualReady, Is.False);
+                Assert.That(map.IsReadyForChunkLifecycle, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(mapObject);
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void BlockingLayerKeepsUnderlyingGroundVisual()
+        {
+            TileData floor = new TileData_Universal
+            {
+                ID = "Floor",
+                IsWalkable = true,
+                Penalty = 1000
+            };
+            TileData wall = new TileData_Universal
+            {
+                ID = "Wall",
+                TileTag = BlockingTilemapLayer.BlockingTileTag,
+                IsWalkable = false,
+                Penalty = 0
+            };
+
+            Assert.That(BlockingTilemapLayer.IsBlockingTile(wall), Is.True);
+            Assert.That(BlockingTilemapLayer.ResolveGroundTile(new[] { floor, wall }), Is.SameAs(floor));
         }
 
         [Test]

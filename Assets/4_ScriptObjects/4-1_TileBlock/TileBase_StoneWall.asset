@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75b116e5f0ea93c45a60dada7fdafd73, type: 3}
+  m_Name: TileBase_StoneWall
+  m_EditorClassIdentifier: 
+  tileItemName: TileBase_StoneWall
+  displayName: "\u77FF\u6D1E\u5CA9\u58C1"
+  tileDataTemplate:
+    rid: 7812649051734021162
+  TileBase: {fileID: 11400000, guid: 0e52102ba68465d4ebd356a6a1d8bd77, type: 2}
+  behaviours: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 7812649051734021162
+      type: {class: TileData_Universal, ns: , asm: Data}
+      data:
+        ID: TileBase_StoneWall
+        Name: TileBase_StoneWall
+        TileTag: Blocking
+        position: {x: 0, y: 0, z: 0}
+        DemolitionTime: 5
+        workTime: 0
+        Penalty: 0
+        IsWalkable: 0

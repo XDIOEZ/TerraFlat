@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d115603f38433147a7e3a3185dfeefb, type: 3}
+  m_Name: DimensionCatalog_Default
+  m_EditorClassIdentifier: 
+  Dimensions:
+  - DimensionId: surface
+    DisplayName: "\u5730\u8868"
+    GenerationMode: 0
+    MapCorePrefabId: MapCore
+    SeedSalt: 0
+    DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
+    PortalOffset: {x: 1.5, y: 0, z: 0}
+    PortalTargetDimensionId: cave
+    UseFixedLighting: 0
+    FixedLighting: 1
+    SuppressWeather: 0
+    EnableMonsterSpawning: 1
+    CaveFloorTileId: TileBase_Stone
+    CaveWallTileId: TileBase_StoneWall
+    CaveResourceDensity: 0.28
+    CaveSafeRadius: 4
+    CaveResources: []
+  - DimensionId: cave
+    DisplayName: "\u5730\u4E0B\u77FF\u6D1E"
+    GenerationMode: 1
+    MapCorePrefabId: MapCore
+    SeedSalt: 7919
+    DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
+    PortalOffset: {x: 1.5, y: 0, z: 0}
+    PortalTargetDimensionId: surface
+    UseFixedLighting: 1
+    FixedLighting: 0.08
+    SuppressWeather: 1
+    EnableMonsterSpawning: 0
+    CaveFloorTileId: TileBase_Stone
+    CaveWallTileId: TileBase_StoneWall
+    CaveResourceDensity: 0.28
+    CaveSafeRadius: 4
+    CaveResources:
+    - ItemId: Mine_Iron
+      VeinThreshold: 0.76
+      VeinScale: 0.032
+      NoiseOffset: 1103
+    - ItemId: Mine_Tin
+      VeinThreshold: 0.71
+      VeinScale: 0.038
+      NoiseOffset: 2207
+    - ItemId: Mine_Copper
+      VeinThreshold: 0.65
+      VeinScale: 0.044
+      NoiseOffset: 3301
+    - ItemId: Mine_Coal
+      VeinThreshold: 0.58
+      VeinScale: 0.052
+      NoiseOffset: 4409
+    - ItemId: Mine_Stone
+      VeinThreshold: 0
+      VeinScale: 0.06
+      NoiseOffset: 5501

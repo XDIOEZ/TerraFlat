@@ -60,6 +60,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     private readonly HashSet<Vector2Int> _targetKeepAliveWindow = new();
     private readonly List<Vector2Int> _windowDiffRemoveBuffer = new();
     private readonly List<Vector2Int> _destroyDistanceRemoveBuffer = new();
+    private readonly HashSet<Vector2Int> _pendingChunkDeactivationSet = new();
 
     // ChunkSize 步长缓存：统一网格步长计算，避免多处重复换算
     private Vector2 _cachedChunkSize = new Vector2(100f, 100f);
@@ -321,6 +322,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     public void RequestLoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
+        CancelDeferredChunkDeactivation(chunkPos);
+
         if (TryGetActiveChunkByPos(chunkPos, out var activeChunk))
         {
             onChunkLoaded?.Invoke(activeChunk);
@@ -395,6 +398,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public void ClearAllChunk()
     {
         ClearChunkLoadQueue();
+        _pendingChunkDeactivationSet.Clear();
 
         HashSet<Chunk> chunksToRelease = new HashSet<Chunk>(Chunk_Dic_ByPos.Values);
         chunksToRelease.UnionWith(Chunk_Dic_Active_ByPos.Values);
@@ -601,6 +605,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         // 从三个字典中移除
         if (TryGetChunkPos(chunk, out Vector2Int chunkPos))
         {
+            CancelDeferredChunkDeactivation(chunkPos);
             Chunk_Dic_ByPos.Remove(chunkPos);
             Chunk_Dic_Active_ByPos.Remove(chunkPos);
             Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
@@ -706,6 +711,9 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             }
         }
 
+        foreach (Vector2Int keepPos in _targetKeepAliveWindow)
+            CancelDeferredChunkDeactivation(keepPos);
+
         if (!_windowDiffInitialized)
         {
             _windowDiffRemoveBuffer.Clear();
@@ -794,8 +802,18 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        // ✅ 维护字典状态
         Vector2Int chunkPos = chunk.MapSave.MapPosition;
+        if (isActive)
+        {
+            CancelDeferredChunkDeactivation(chunkPos);
+        }
+        else if (chunk.Map != null && !chunk.Map.IsReadyForChunkLifecycle)
+        {
+            QueueDeferredChunkDeactivation(chunkPos, chunk);
+            return;
+        }
+
+        // ✅ 维护字典状态
         if (isActive)
         {
             Chunk_Dic_Active_ByPos[chunkPos] = chunk;
@@ -819,6 +837,50 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         // ✅ 设置区块GameObject的激活状态
         chunk.gameObject.SetActive(isActive);
+
+        if (isActive)
+            chunk.Map?.EnsureTilemapVisualReady();
+    }
+
+    private void QueueDeferredChunkDeactivation(Vector2Int chunkPos, Chunk chunk)
+    {
+        if (!_pendingChunkDeactivationSet.Add(chunkPos))
+            return;
+
+        StartCoroutine(DeactivateChunkWhenReadyCoroutine(chunkPos, chunk));
+    }
+
+    private System.Collections.IEnumerator DeactivateChunkWhenReadyCoroutine(Vector2Int chunkPos, Chunk chunk)
+    {
+        while (_pendingChunkDeactivationSet.Contains(chunkPos))
+        {
+            if (chunk == null ||
+                !TryGetActiveChunkByPos(chunkPos, out Chunk currentChunk) ||
+                currentChunk != chunk)
+            {
+                break;
+            }
+
+            if (chunk.Map == null || chunk.Map.IsReadyForChunkLifecycle)
+                break;
+
+            yield return null;
+        }
+
+        if (!_pendingChunkDeactivationSet.Remove(chunkPos))
+            yield break;
+
+        if (chunk != null &&
+            TryGetActiveChunkByPos(chunkPos, out Chunk current) &&
+            current == chunk)
+        {
+            SetChunkActive(chunk, false);
+        }
+    }
+
+    private void CancelDeferredChunkDeactivation(Vector2Int chunkPos)
+    {
+        _pendingChunkDeactivationSet.Remove(chunkPos);
     }
 
     /// <summary>
@@ -1052,18 +1114,20 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     private bool TryCreateMapCore(Chunk chunk)
     {
-        // 实例化地图核心物体
+        string mapCorePrefabId = DimensionManager.Instance.GetActiveMapCorePrefabId();
         Map map = ItemMgr.Instance.InstantiateItem(
-            "MapCore",
+            mapCorePrefabId,
             default, default, default,
             chunk.gameObject
         ) as Map;
 
         if (map == null)
         {
-            Debug.LogError($"[区块创建] ❌ 无法实例化MapCore或转换失败");
+            Debug.LogError($"[区块创建] ❌ 无法实例化地图核心或转换失败：{mapCorePrefabId}");
             return false;
         }
+
+        DimensionManager.Instance.ConfigureMap(map);
 
         // 配置地图属性
         map.ParentObject = chunk.gameObject;
@@ -1147,6 +1211,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         Chunk_Dic_ByPos.Clear();
         Chunk_Dic_Active_ByPos.Clear();
         Chunk_Dic_UnActive_ByPos.Clear();
+        _pendingChunkDeactivationSet.Clear();
         ClearChunkReadyHooks();
 
         _windowDiffInitialized = false;

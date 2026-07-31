@@ -1,6 +1,7 @@
 ﻿using Sirenix.OdinInspector;
 // AI-Context: 双脚本 UI 的面板视图基类；按节点名收集控件并管理开关状态，视觉结构完全由 Prefab 决定。
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -14,7 +15,7 @@ using TMPro;
 /// 提供显示与隐藏面板的接口
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
-public sealed class BasePanel : MonoBehaviour
+public sealed class BasePanel : MonoBehaviour, ICancelHandler
 {
     // 每种UI类型都有一个字典 用来存储UI组件 名字就用挂接的gameObject.name 作为Key
     private Dictionary<string, Button> buttons = new Dictionary<string, Button>();
@@ -62,6 +63,13 @@ public sealed class BasePanel : MonoBehaviour
     // 记录面板的开关状态
     [SerializeField]
     private bool isOpen = false;
+    private bool gamepadNavigationPrepared;
+    private bool closeOnGamepadCancel;
+    private string preferredSelectableName;
+    private GameObject previousSelectedObject;
+
+    public event Action Opened;
+    public event Action Closed;
 
     private void Awake()
     {
@@ -247,9 +255,23 @@ public sealed class BasePanel : MonoBehaviour
 
     #region 面板显示控制
 
+    public void PrepareForGamepadNavigation(
+        string preferredControlName = null,
+        bool closeOnCancel = true)
+    {
+        gamepadNavigationPrepared = true;
+        closeOnGamepadCancel = closeOnCancel;
+        preferredSelectableName = preferredControlName;
+        EnsureAutomaticNavigation();
+
+        if (isOpen)
+            SelectDefaultControl();
+    }
+
     [Button]
     public void Open()
     {
+        bool wasOpen = isOpen;
         if (canvasGroup != null)
         {
             canvasGroup.alpha = 1;
@@ -259,11 +281,21 @@ public sealed class BasePanel : MonoBehaviour
         }
         // 提升层级以显示在最上层
         BasePanel.BringToFront(rectTransform);
+
+        if (gamepadNavigationPrepared)
+        {
+            EnsureAutomaticNavigation();
+            SelectDefaultControl();
+        }
+
+        if (!wasOpen && isOpen)
+            Opened?.Invoke();
     }
 
     [Button]
     public void Close()
     {
+        bool wasOpen = isOpen;
         if (canvasGroup != null)
         {
             canvasGroup.alpha = 0;
@@ -272,6 +304,12 @@ public sealed class BasePanel : MonoBehaviour
             isOpen = false;
             // 层级以显示在最上层
             BasePanel.BringToBack(rectTransform);
+        }
+
+        if (wasOpen && !isOpen)
+        {
+            RestorePreviousSelection();
+            Closed?.Invoke();
         }
     }
 
@@ -305,6 +343,112 @@ public sealed class BasePanel : MonoBehaviour
     }
 
     #endregion
+
+    public void OnCancel(BaseEventData eventData)
+    {
+        if (!gamepadNavigationPrepared || !closeOnGamepadCancel || !isOpen)
+            return;
+
+        eventData.Use();
+        Close();
+    }
+
+    private void EnsureAutomaticNavigation()
+    {
+        Selectable[] selectables = GetComponentsInChildren<Selectable>(true);
+        for (int i = 0; i < selectables.Length; i++)
+        {
+            Selectable selectable = selectables[i];
+            if (selectable == null || selectable.navigation.mode != Navigation.Mode.None)
+                continue;
+
+            Navigation navigation = selectable.navigation;
+            navigation.mode = Navigation.Mode.Automatic;
+            selectable.navigation = navigation;
+        }
+    }
+
+    private void SelectDefaultControl()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return;
+
+        GameObject selectedObject = eventSystem.currentSelectedGameObject;
+        if (selectedObject == null || !selectedObject.transform.IsChildOf(transform))
+            previousSelectedObject = selectedObject;
+
+        Selectable selectable = FindPreferredSelectable();
+        if (selectable == null)
+            return;
+
+        eventSystem.SetSelectedGameObject(null);
+        eventSystem.SetSelectedGameObject(selectable.gameObject);
+    }
+
+    private Selectable FindPreferredSelectable()
+    {
+        Selectable[] selectables = GetComponentsInChildren<Selectable>(true);
+        if (!string.IsNullOrEmpty(preferredSelectableName))
+        {
+            for (int i = 0; i < selectables.Length; i++)
+            {
+                Selectable selectable = selectables[i];
+                if (CanSelect(selectable) && selectable.name == preferredSelectableName)
+                    return selectable;
+            }
+        }
+
+        Selectable fallback = null;
+        for (int i = 0; i < selectables.Length; i++)
+        {
+            Selectable selectable = selectables[i];
+            if (!CanSelect(selectable))
+                continue;
+
+            if (selectable is Button || selectable is Toggle || selectable is Slider)
+                return selectable;
+
+            fallback ??= selectable;
+        }
+
+        return fallback;
+    }
+
+    private static bool CanSelect(Selectable selectable)
+    {
+        return selectable != null &&
+               selectable.gameObject.activeInHierarchy &&
+               selectable.IsInteractable();
+    }
+
+    private void RestorePreviousSelection()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return;
+
+        GameObject selectedObject = eventSystem.currentSelectedGameObject;
+        if (selectedObject != null && !selectedObject.transform.IsChildOf(transform))
+            return;
+
+        GameObject restoreTarget = previousSelectedObject;
+        previousSelectedObject = null;
+        eventSystem.SetSelectedGameObject(
+            restoreTarget != null && restoreTarget.activeInHierarchy ? restoreTarget : null);
+    }
+
+    private void OnDestroy()
+    {
+        if (isOpen)
+        {
+            isOpen = false;
+            Closed?.Invoke();
+        }
+
+        Opened = null;
+        Closed = null;
+    }
 
     #region 按钮操作
 

@@ -23,6 +23,8 @@ disable-model-invocation: false
 - 槽位 UI：`Assets/5_Scripts/5-3_GamePlay/Inventory/ItemSlot_UI.cs`。
 - 背包 UI：`Inventory_UI.cs`。
 - 快捷栏：`Inventory_HotBar.cs`。
+- 手柄基础入口：B 打开背包、十字键上打开装备、下打开手工制作、左右独立切换快捷栏；快捷栏动作不得复用 `CtrlMouse` 相机缩放。
+- 库存/装备/手工制作面板打开时通过 `BasePanel.Opened/Closed` 持有玩家输入锁；自身开关键仍允许关闭当前面板，其他面板锁定期间不得串开。
 - 手持库存：`Inventory_Hand.cs`、`Mod_Hand.cs`。
 - 容器/工作台：`Mod_Box.cs`、`Mod_MakeTable.cs`、`Inventory_WorkBench.cs`。
 - 初始库存 SO：`Assets/4_ScriptObjects/4-6_InventoryInit/`。
@@ -85,6 +87,9 @@ disable-model-invocation: false
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：背包、装备、手工制作和快捷栏接入稳定手柄 Action；移除手工制作硬编码 `Input.GetKeyDown(H)`，模态库存面板增加手柄焦点与可嵌套玩法输入锁。
 - 2026-07-30：完成首种苹果作物闭环；`Mod_Seed` 收敛为播种入口，`Mod_Grow` 统一水肥/天气/难度成长、阶段、成熟、一次性收获与存档，AppleTree 移除无限 `Mod_Production`，Apple 移除播种模块，Fertilizer 接入水肥补给。
 - 2026-07-30：遗迹生成支持按真实库存槽位配置容器物品；运行时复用 `Item.Get_NewItemData()` 初始化完整模块数据，覆盖内部 GUID 为结构种子派生值，并通过既有 `Inventory_ModuleData` 自然进入存档基线。
 - 2026-07-29：统一内容校验器会读取配方 manifest 和全部启用分包，校验配方结构、跨分包重复 ID、输入/输出 `itemId` 引用及配方 Excel；缺失物品 ID 在构建前作为错误报告。
@@ -94,8 +99,6 @@ disable-model-invocation: false
 - 2026-07-29：四套制作算法收敛到 `CraftingRecipeMatcher + CraftingTransaction + CraftingService + CraftingResult`；统一镜像/Tag/紧凑网格匹配、组合容量预检、原子扣料与多输出，并修复 `Mod_HandMade.GetDefaultTargetInventory()`。
 - 2026-07-28：本体配方由单个 `recipes.json` 改为 `recipe-manifest.json + 8 个业务分包`；运行时仍统一注册，Excel 新增 `Package` 列控制落盘位置。
 - 2026-07-28：背包打开、成功拾取和成功制作接入通用 `GameplayProgressEvents`，供 JSON 自言自语教程消费；玩法层不引用 Guide 程序集。
-- 2026-07-28：本体配方由 ScriptableObject/Addressables 改为 JSON 数据驱动；增加纯运行时模型、动作 Handler、Excel 四表编辑导出和旧 SO 一次性迁移入口。
-- 2026-07-27：库存类模块已纳入低频 Tick；修改库存数据更新频率时先检查 Item/Module Skill 的调度约束。
 
 ## 修改后自动测试
 

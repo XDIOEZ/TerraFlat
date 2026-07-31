@@ -101,6 +101,7 @@ private void EnsureSettingsWindow()
         }
 
         ClampWindowToCanvas();
+        settingsPanel.PrepareForGamepadNavigation("界面缩放");
         settingsPanel.Close();
     }
 

@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 玩家、输入与交互定位
 
-> 最后核对：2026-07-30。
+> 最后核对：2026-07-31。
 
 ## 修改前先读
 
@@ -16,6 +16,7 @@ disable-model-invocation: false
 2. `Assets/5_Scripts/5-1_Data/ItemData/Data_Player.cs`：玩家持久化数据。
 3. `Assets/5_Scripts/5-3_GamePlay/Controller/GameController.cs`：输入动作、鼠标/手柄、虚拟光标、输入锁定。
 4. `Assets/5_Scripts/5-3_GamePlay/Controller/InputBindingService.cs`：输入绑定服务。
+5. `Assets/PlayerInput/PlayerInputActions.inputactions`：键鼠/手柄动作、Control Scheme 与稳定 Binding 的权威来源。
 
 ## 关键功能
 
@@ -29,6 +30,7 @@ disable-model-invocation: false
 - 玩家 Prefab：`Assets/2_Prefabs/Player/`。
 - Player 根 Prefab 当前包含 `CharacterSoliloquyController`、`ConfiguredSpeechProvider`、`HungerSpeechProvider`、`ScreenSpaceSpeechBubblePresenter` 与唯一一个 `NewPlayerGuideController`。
 - Player 根 Prefab 还包含唯一一个 `PlayerChatInputController`；仅 `IsLocalProfile=true` 的玩家监听聊天输入。
+- 维度入口：`Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionPortal.cs`，通过现有 `IInteractable`/E 键链请求 `DimensionManager` 切换。
 
 ## 调用边界
 
@@ -40,7 +42,10 @@ Input System / PlayerInputActions
 ```
 
 - UI 上方点击由 `GameController.IsPointerOverUI()` 拦截。
+- `PlayerInputActions.inputactions` 同时声明 `Keyboard&Mouse`、`Gamepad` Scheme；禁止在 `GameController` 运行时注入手柄 Binding，修改后由 Unity 自动生成 `PlayerInputActions.cs`。
+- 当前手柄基础映射：左摇杆移动、右摇杆虚拟光标、RT/A 主要操作、LT/LB 次要操作、X 交互、Y 丢弃、B 背包、十字键上装备/下手工制作/左右切快捷栏、Start 设置、Select 营养面板。
 - 濒死、过场或联机准备期间使用输入锁定，不要通过禁用整个玩家对象规避输入。
+- 模态 UI 使用 `AcquireGameplayInputLock(owner)` / `ReleaseGameplayInputLock(owner)` 叠加锁定，避免子窗口恢复时误解锁其他系统。
 - 玩家运行时引用优先从 `ItemMgr.User_Player` / `UserPlayerTransform` 获取，兼容单机与联机本地玩家。
 - `Player.Act()` 是显式安全空行为：玩家操作由 `GameController` 与功能模块驱动，不得回退到 `Item.Act()` 触发普通物品 `OnAct` 使用链。
 - `GameController.Load()` / `Save()` 不持有世界存档数据；按键覆盖由 `InputBindingService` 通过 `PlayerPrefsInputBindingStore` 独立加载和保存。
@@ -48,9 +53,14 @@ Input System / PlayerInputActions
 - 聊天按键契约：裸 `T` 打开聊天，`Enter` 提交，`Esc` 取消；打开期间同时设置 `GameController.SetGameplayInputLocked(true)` 并挂起 `InputBindingService` 的 Win10 Action Map，关闭时恢复之前的锁状态。
 - 管理员传送使用 `Ctrl+T`，且管理员快捷键尊重 `IsGameplayInputLocked`；聊天控制器忽略带 Ctrl 的 T，避免同时打开聊天和传送。
 - 玩家移动耐力不得直接修改 `Mod_Stamina.CurrentValue`；`Mover` 统一调用 `AddStamina()`，由该入口应用自定义难度的耐力消耗/恢复倍率。
+- 完整维度切换通过 `ItemMgr.ReleasePlayerForWorldTransition()` 注销旧世界玩家，再由现有加载链重建；不得只移动 Transform 后保留旧 Chunk、Item 索引或场景归属。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：手柄 Binding 与双 Control Scheme 固化进输入资产；新增右摇杆光标、独立快捷栏动作、设备切换事件和可嵌套玩法输入锁，移除运行时 Binding 注入。
+- 2026-07-31：玩家交互链接入 `DimensionPortal`；跨维度时保存每世界位置、安全释放旧玩家，并在目标动态世界重建后恢复位置。
 - 2026-07-30：玩家 `Act()` 改为显式安全空行为；`GameController` 明确不负责按键持久化，继续由 `InputBindingService` 独立管理。
 - 2026-07-29：Player Prefab 接入本地聊天输入；聊天期间暂停玩法输入，管理员传送由裸 T 改为 Ctrl+T，并隔离远程 Player。
 - 2026-07-29：玩家步行/奔跑耐力消耗改走 `Mod_Stamina.AddStamina()`，与攻击和食物恢复共享难度倍率入口。
@@ -59,7 +69,7 @@ Input System / PlayerInputActions
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/PlayerInteraction/PlayerInteractionSmokeTests.cs`；当前基础覆盖玩家实体、输入控制器、绑定服务与玩家 Prefab 入口。
+- 基础测试脚本：`Assets/GameTest/PlayerInteraction/PlayerInteractionSmokeTests.cs`；当前覆盖玩家实体、输入控制器、绑定服务、玩家 Prefab、双 Control Scheme、关键手柄 Binding 与十字键快捷栏/缩放冲突隔离。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；玩家交互测试约定目录：`Assets/GameTest/PlayerInteraction/`；场景目录：`Assets/GameTest/Scenes/PlayerInteraction/`；冒烟分类：`PlayerInteraction.Smoke`。
 - 新增输入、移动、摄像机、焦点、交互发送接收或玩家 Prefab 行为时必须增加系统测试；修复 Bug 时先增加回归测试。输入到移动或交互主流程变化时同步更新玩家冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；输入测试必须使用可注入输入，不能依赖真实鼠标、键盘或手柄操作。

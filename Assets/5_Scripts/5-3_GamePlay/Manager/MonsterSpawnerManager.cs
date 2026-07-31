@@ -78,6 +78,13 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
     private void OnGameWorldEnter()
     {
+        if (DimensionManager.Instance.ActiveDefinition?.EnableMonsterSpawning == false)
+        {
+            ClearTrackedPopulation();
+            enabled = false;
+            return;
+        }
+
         _dayTimeSystem = DayTimeSystem.Instance;
         if (_dayTimeSystem == null)
         {

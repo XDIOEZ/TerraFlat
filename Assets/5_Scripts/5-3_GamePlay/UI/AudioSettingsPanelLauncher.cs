@@ -95,6 +95,7 @@ private void EnsureVolumePanel()
 
         AudioSettingsPanelBinder.Ensure(volumePanel.transform);
         RefreshValues();
+        volumePanel.PrepareForGamepadNavigation("MasterVolume");
         volumePanel.Close();
     }
 

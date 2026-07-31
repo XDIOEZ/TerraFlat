@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
@@ -27,8 +29,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     [Header("交互组件")]
     [Tooltip("合成按钮")]
     public Button workButton;
-    [Tooltip("打开/关闭手工合成台的按键")]
-    public KeyCode toggleKey = KeyCode.H;
+    [Tooltip("打开/关闭手工合成台的 InputAction 名称")]
+    public string ToggleActionName = "H";
     [Tooltip("工作台等级，等级越高需要点击次数越少")]
     public int workbenchLevel = 1;
     [Tooltip("1级工作台每次合成需要的基础点击次数")]
@@ -40,6 +42,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
+    private GameController _inputController;
+    private InputAction _toggleAction;
+    private Action<InputAction.CallbackContext> _toggleCallback;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
@@ -71,6 +76,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         ModSaveData.ReadData(ref RawData);
         InitData();
+        BindToggleInput();
     }
 
     public override void Save()
@@ -81,12 +87,31 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         ModSaveData.WriteData(RawData);
     }
 
-    public override void ModUpdate(float deltaTime)
+    private void BindToggleInput()
     {
-        if (!Input.GetKeyDown(toggleKey))
+        _inputController = item?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+        _inputController ??= item != null ? item.GetComponent<GameController>() : null;
+        if (_inputController == null || _inputController._inputActions == null)
             return;
 
-        TogglePanelByKey();
+        _toggleAction = _inputController._inputActions.FindAction(ToggleActionName);
+        if (_toggleAction == null)
+        {
+            Debug.LogError($"[Mod_HandCraftTable] 找不到输入动作 '{ToggleActionName}'。", this);
+            return;
+        }
+
+        _toggleCallback = _ =>
+        {
+            if (_inputController.IsGameplayInputLocked &&
+                (basePanel == null || !basePanel.IsOpen()))
+            {
+                return;
+            }
+
+            TogglePanelByKey();
+        };
+        _toggleAction.performed += _toggleCallback;
     }
 
 #endregion
@@ -147,8 +172,35 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             basePanel.GetText("窗口信息").text = _Data.Name;
 
         InitUI();
+        basePanel.PrepareForGamepadNavigation();
+        basePanel.Opened += AcquirePanelInputLock;
+        basePanel.Closed += ReleasePanelInputLock;
         basePanel.Close();
         return true;
+    }
+
+    private void AcquirePanelInputLock()
+    {
+        _inputController?.AcquireGameplayInputLock(this);
+    }
+
+    private void ReleasePanelInputLock()
+    {
+        _inputController?.ReleaseGameplayInputLock(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (_toggleAction != null && _toggleCallback != null)
+            _toggleAction.performed -= _toggleCallback;
+
+        if (basePanel != null)
+        {
+            basePanel.Opened -= AcquirePanelInputLock;
+            basePanel.Closed -= ReleasePanelInputLock;
+        }
+
+        ReleasePanelInputLock();
     }
 
     private void EnsureInventoryPanelPrefabAssigned()

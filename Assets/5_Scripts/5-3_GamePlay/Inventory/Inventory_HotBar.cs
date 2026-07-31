@@ -93,6 +93,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private GameController _inputController;
     private InputAction _mouseScrollAction;
+    private InputAction _previousHotbarAction;
+    private InputAction _nextHotbarAction;
 
     public Inventory_Data Data => RuntimeInventory?.Data;
     public List<ItemSlot_UI> itemSlot_UI => RuntimeInventory?.itemSlot_UI;
@@ -421,11 +423,19 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
 
         _mouseScrollAction = controller._inputActions.Win10.MouseScroll;
+        _previousHotbarAction = controller._inputActions.Win10.HotbarPrevious;
+        _nextHotbarAction = controller._inputActions.Win10.HotbarNext;
 
         if (_mouseScrollAction != null)
         {
             _mouseScrollAction.started += OnScrollSwitch;
         }
+
+        if (_previousHotbarAction != null)
+            _previousHotbarAction.performed += OnPreviousHotbar;
+
+        if (_nextHotbarAction != null)
+            _nextHotbarAction.performed += OnNextHotbar;
     }
 
     private void UnbindHotbarInput()
@@ -440,6 +450,18 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         {
             _mouseScrollAction.started -= OnScrollSwitch;
             _mouseScrollAction = null;
+        }
+
+        if (_previousHotbarAction != null)
+        {
+            _previousHotbarAction.performed -= OnPreviousHotbar;
+            _previousHotbarAction = null;
+        }
+
+        if (_nextHotbarAction != null)
+        {
+            _nextHotbarAction.performed -= OnNextHotbar;
+            _nextHotbarAction = null;
         }
     }
 
@@ -479,6 +501,27 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             SwitchItem(CurrentIndex - 1);
         else if (value < 0)
             SwitchItem(CurrentIndex + 1);
+    }
+
+    private void OnPreviousHotbar(InputAction.CallbackContext context)
+    {
+        if (!CanSwitchHotbarFromInput())
+            return;
+
+        SwitchItem(CurrentIndex - 1);
+    }
+
+    private void OnNextHotbar(InputAction.CallbackContext context)
+    {
+        if (!CanSwitchHotbarFromInput())
+            return;
+
+        SwitchItem(CurrentIndex + 1);
+    }
+
+    private bool CanSwitchHotbarFromInput()
+    {
+        return !IsGameplayInputLocked() && !IsPointerOverUI();
     }
 
 #endregion

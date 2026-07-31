@@ -97,7 +97,7 @@ namespace InputSystem
                     ""name"": ""Move_Player"",
                     ""type"": ""Value"",
                     ""id"": ""21df0a26-24c7-4a33-b626-39cc18a453c5"",
-                    ""expectedControlType"": ""Integer"",
+                    ""expectedControlType"": ""Vector2"",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
@@ -193,6 +193,33 @@ namespace InputSystem
                     ""initialStateCheck"": true
                 },
                 {
+                    ""name"": ""GamepadCursor"",
+                    ""type"": ""Value"",
+                    ""id"": ""389c6e68-27b9-49ce-8cff-7c0ead6c4f62"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""HotbarPrevious"",
+                    ""type"": ""Button"",
+                    ""id"": ""b49ca5a8-3f20-4b92-aed7-d071df7949ae"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": ""Press"",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""HotbarNext"",
+                    ""type"": ""Button"",
+                    ""id"": ""2db7b452-ec0c-4709-b5ef-e6d8e450f1d6"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": ""Press"",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""E"",
                     ""type"": ""Button"",
                     ""id"": ""3a3d9a7c-08a7-4819-a436-fca3cd0bcf49"",
@@ -265,7 +292,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/w"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""Move_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
@@ -276,7 +303,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/s"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""Move_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
@@ -287,7 +314,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/a"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""Move_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
@@ -298,10 +325,21 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/d"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""Move_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7dc32df1-43c5-4d43-a700-b6f7f3fac0f8"",
+                    ""path"": ""<Gamepad>/leftStick"",
+                    ""interactions"": """",
+                    ""processors"": ""StickDeadzone"",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Move_Player"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
@@ -320,7 +358,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/#(1)"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -331,7 +369,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/#(2)"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -342,7 +380,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/#(3)"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -353,7 +391,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/#(4)"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -364,7 +402,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/#(5)"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -375,7 +413,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/6"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -386,7 +424,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/7"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -397,7 +435,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/8"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -408,7 +446,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/9"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""SwitchHotBar_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -419,7 +457,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/b"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""B"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""db1476f7-7414-453c-b651-efb9c89691e5"",
+                    ""path"": ""<Gamepad>/buttonEast"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""B"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -430,7 +479,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/escape"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""ESC"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9a08e7ae-eaf8-4ac3-81d7-a0a47d2730ac"",
+                    ""path"": ""<Gamepad>/start"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""ESC"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -441,7 +501,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/f"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""F"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""73160c04-487c-4fd6-bd68-5f48c118becf"",
+                    ""path"": ""<Gamepad>/buttonNorth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""F"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -452,7 +523,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/shift"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Shift"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b15368c5-1a16-4f77-8d1b-0bbf8f9fc789"",
+                    ""path"": ""<Gamepad>/leftStickPress"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""Shift"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -463,7 +545,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/ctrl"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Ctrl"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""18c4ae37-d626-4b7a-b21e-d6f0afc815d2"",
+                    ""path"": ""<Gamepad>/rightStickPress"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""Ctrl"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -485,7 +578,7 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/ctrl"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""CtrlMouse"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
@@ -496,7 +589,7 @@ namespace InputSystem
                     ""path"": ""<Mouse>/scroll"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""CtrlMouse"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
@@ -507,7 +600,7 @@ namespace InputSystem
                     ""path"": ""<Mouse>/scroll"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""MouseScroll"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -518,8 +611,41 @@ namespace InputSystem
                     ""path"": ""<Mouse>/position"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""Mouse"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""e69ed0f9-80df-46e1-b9f2-a2c22ff52ac5"",
+                    ""path"": ""<Gamepad>/rightStick"",
+                    ""interactions"": """",
+                    ""processors"": ""StickDeadzone"",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""GamepadCursor"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b4d57df6-0050-47f9-b155-f88dc0d64a0d"",
+                    ""path"": ""<Gamepad>/dpad/left"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""HotbarPrevious"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f417cc38-9c25-407e-8715-e60fe0accb37"",
+                    ""path"": ""<Gamepad>/dpad/right"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""HotbarNext"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -529,7 +655,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/e"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""E"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f8cffed1-9bf5-438c-9d43-32679de56ab7"",
+                    ""path"": ""<Gamepad>/buttonWest"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""E"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -540,7 +677,29 @@ namespace InputSystem
                     ""path"": ""<Mouse>/rightButton"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""RightClick"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f1fdbb4f-358e-497a-969e-a18496dfbf1b"",
+                    ""path"": ""<Gamepad>/leftTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""RightClick"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4188b1b4-a2e0-4db3-8354-338446341120"",
+                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""RightClick"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -551,7 +710,29 @@ namespace InputSystem
                     ""path"": ""<Mouse>/leftButton"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""LeftClick"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""107de28c-4b06-4549-ab11-60874c10c83a"",
+                    ""path"": ""<Gamepad>/rightTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""LeftClick"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""bc8c5b0e-a6e1-449c-abd6-f0bff4cc57e6"",
+                    ""path"": ""<Gamepad>/buttonSouth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""LeftClick"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -562,7 +743,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/p"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""P"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9cb806c1-793b-4eb5-bd40-10e6f160431e"",
+                    ""path"": ""<Gamepad>/dpad/up"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""P"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -573,7 +765,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/h"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""H"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""875689c6-c994-4588-84ca-fd67ef79c881"",
+                    ""path"": ""<Gamepad>/dpad/down"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""H"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -584,7 +787,18 @@ namespace InputSystem
                     ""path"": ""<Keyboard>/tab"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Tab"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""31f72f57-cd1a-42cd-93a9-9db5b02dcae4"",
+                    ""path"": ""<Gamepad>/select"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
                     ""action"": ""Tab"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -592,7 +806,35 @@ namespace InputSystem
             ]
         }
     ],
-    ""controlSchemes"": []
+    ""controlSchemes"": [
+        {
+            ""name"": ""Keyboard&Mouse"",
+            ""bindingGroup"": ""Keyboard&Mouse"",
+            ""devices"": [
+                {
+                    ""devicePath"": ""<Keyboard>"",
+                    ""isOptional"": false,
+                    ""isOR"": false
+                },
+                {
+                    ""devicePath"": ""<Mouse>"",
+                    ""isOptional"": false,
+                    ""isOR"": false
+                }
+            ]
+        },
+        {
+            ""name"": ""Gamepad"",
+            ""bindingGroup"": ""Gamepad"",
+            ""devices"": [
+                {
+                    ""devicePath"": ""<Gamepad>"",
+                    ""isOptional"": false,
+                    ""isOR"": false
+                }
+            ]
+        }
+    ]
 }");
             // Win10
             m_Win10 = asset.FindActionMap("Win10", throwIfNotFound: true);
@@ -607,6 +849,9 @@ namespace InputSystem
             m_Win10_Ctrl = m_Win10.FindAction("Ctrl", throwIfNotFound: true);
             m_Win10_MouseScroll = m_Win10.FindAction("MouseScroll", throwIfNotFound: true);
             m_Win10_Mouse = m_Win10.FindAction("Mouse", throwIfNotFound: true);
+            m_Win10_GamepadCursor = m_Win10.FindAction("GamepadCursor", throwIfNotFound: true);
+            m_Win10_HotbarPrevious = m_Win10.FindAction("HotbarPrevious", throwIfNotFound: true);
+            m_Win10_HotbarNext = m_Win10.FindAction("HotbarNext", throwIfNotFound: true);
             m_Win10_E = m_Win10.FindAction("E", throwIfNotFound: true);
             m_Win10_RightClick = m_Win10.FindAction("RightClick", throwIfNotFound: true);
             m_Win10_LeftClick = m_Win10.FindAction("LeftClick", throwIfNotFound: true);
@@ -704,6 +949,9 @@ namespace InputSystem
         private readonly InputAction m_Win10_Ctrl;
         private readonly InputAction m_Win10_MouseScroll;
         private readonly InputAction m_Win10_Mouse;
+        private readonly InputAction m_Win10_GamepadCursor;
+        private readonly InputAction m_Win10_HotbarPrevious;
+        private readonly InputAction m_Win10_HotbarNext;
         private readonly InputAction m_Win10_E;
         private readonly InputAction m_Win10_RightClick;
         private readonly InputAction m_Win10_LeftClick;
@@ -765,6 +1013,18 @@ namespace InputSystem
             /// Provides access to the underlying input action "Win10/Mouse".
             /// </summary>
             public InputAction @Mouse => m_Wrapper.m_Win10_Mouse;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/GamepadCursor".
+            /// </summary>
+            public InputAction @GamepadCursor => m_Wrapper.m_Win10_GamepadCursor;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/HotbarPrevious".
+            /// </summary>
+            public InputAction @HotbarPrevious => m_Wrapper.m_Win10_HotbarPrevious;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/HotbarNext".
+            /// </summary>
+            public InputAction @HotbarNext => m_Wrapper.m_Win10_HotbarNext;
             /// <summary>
             /// Provides access to the underlying input action "Win10/E".
             /// </summary>
@@ -848,6 +1108,15 @@ namespace InputSystem
                 @Mouse.started += instance.OnMouse;
                 @Mouse.performed += instance.OnMouse;
                 @Mouse.canceled += instance.OnMouse;
+                @GamepadCursor.started += instance.OnGamepadCursor;
+                @GamepadCursor.performed += instance.OnGamepadCursor;
+                @GamepadCursor.canceled += instance.OnGamepadCursor;
+                @HotbarPrevious.started += instance.OnHotbarPrevious;
+                @HotbarPrevious.performed += instance.OnHotbarPrevious;
+                @HotbarPrevious.canceled += instance.OnHotbarPrevious;
+                @HotbarNext.started += instance.OnHotbarNext;
+                @HotbarNext.performed += instance.OnHotbarNext;
+                @HotbarNext.canceled += instance.OnHotbarNext;
                 @E.started += instance.OnE;
                 @E.performed += instance.OnE;
                 @E.canceled += instance.OnE;
@@ -910,6 +1179,15 @@ namespace InputSystem
                 @Mouse.started -= instance.OnMouse;
                 @Mouse.performed -= instance.OnMouse;
                 @Mouse.canceled -= instance.OnMouse;
+                @GamepadCursor.started -= instance.OnGamepadCursor;
+                @GamepadCursor.performed -= instance.OnGamepadCursor;
+                @GamepadCursor.canceled -= instance.OnGamepadCursor;
+                @HotbarPrevious.started -= instance.OnHotbarPrevious;
+                @HotbarPrevious.performed -= instance.OnHotbarPrevious;
+                @HotbarPrevious.canceled -= instance.OnHotbarPrevious;
+                @HotbarNext.started -= instance.OnHotbarNext;
+                @HotbarNext.performed -= instance.OnHotbarNext;
+                @HotbarNext.canceled -= instance.OnHotbarNext;
                 @E.started -= instance.OnE;
                 @E.performed -= instance.OnE;
                 @E.canceled -= instance.OnE;
@@ -961,6 +1239,32 @@ namespace InputSystem
         /// Provides a new <see cref="Win10Actions" /> instance referencing this action map.
         /// </summary>
         public Win10Actions @Win10 => new Win10Actions(this);
+        private int m_KeyboardMouseSchemeIndex = -1;
+        /// <summary>
+        /// Provides access to the input control scheme.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputControlScheme" />
+        public InputControlScheme KeyboardMouseScheme
+        {
+            get
+            {
+                if (m_KeyboardMouseSchemeIndex == -1) m_KeyboardMouseSchemeIndex = asset.FindControlSchemeIndex("Keyboard&Mouse");
+                return asset.controlSchemes[m_KeyboardMouseSchemeIndex];
+            }
+        }
+        private int m_GamepadSchemeIndex = -1;
+        /// <summary>
+        /// Provides access to the input control scheme.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputControlScheme" />
+        public InputControlScheme GamepadScheme
+        {
+            get
+            {
+                if (m_GamepadSchemeIndex == -1) m_GamepadSchemeIndex = asset.FindControlSchemeIndex("Gamepad");
+                return asset.controlSchemes[m_GamepadSchemeIndex];
+            }
+        }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Win10" which allows adding and removing callbacks.
         /// </summary>
@@ -1045,6 +1349,27 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnMouse(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "GamepadCursor" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnGamepadCursor(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "HotbarPrevious" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnHotbarPrevious(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "HotbarNext" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnHotbarNext(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "E" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

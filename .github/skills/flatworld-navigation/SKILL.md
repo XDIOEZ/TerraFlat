@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 导航系统定位
 
-> 最后核对：2026-07-27。导航权威数据不是 Physics2D 碰撞扫描。
+> 最后核对：2026-07-31。导航权威数据不是 Physics2D 碰撞扫描。
 
 ## 修改前先读
 
@@ -43,9 +43,14 @@ TileData（地形可走性/权重）
 - Ghost 等障碍敏感 AI 不得直接 `MoveTowards`；使用 `Seeker + AILerp`。
 - 提交目的地或生成点前，使用 `TryGetNodePenalty_GridGraphFast` 验证节点可走。
 - 联机时导航图跟随本地 owned 玩家，Chunk 流送仍按所有观察者并集。
+- 地下矿洞开放格顶层为 `TileBase_Stone`（`IsWalkable=true`、`Penalty=1000`），岩壁顶层为 `TileBase_StoneWall`（`IsWalkable=false`、`Penalty=0`）；独立“建筑阻挡层”的 TilemapCollider 只负责实体物理碰撞，A* 仍以顶层 TileData 为权威。
 
 ## 近期变更
 
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-07-31：静态阻挡 Tile 独立渲染到“建筑阻挡层”，但导航仍读取原数据格顶层；禁止改为扫描该 TilemapCollider 决定节点权重。
+- 2026-07-31：矿洞生成新增不可走岩壁 TileData；房间和隧道在地图初次完成后统一进入现有全 Chunk 导航更新，不逐格触发烘焙。
 - 2026-07-27：导航权威数据切换为 `TileData + BuildingOccupancyRegistry`，移除物理碰撞全场扫描依赖。
 - 2026-07-27：运行时地块/建筑变化统一进入脏格/脏区批处理，在 A* WorkItem 中更新节点与连接。
 - 2026-07-27：Ghost 导航改为 `Seeker + AILerp`，并在目的地提交前验证节点权重。
@@ -57,6 +62,7 @@ TileData（地形可走性/权重）
 - 新增 A*、动态脏区、TileData 权重、建筑占地或 AI 移动行为时必须增加系统测试；修复 Bug 时先增加回归测试。可达路径与动态障碍更新主流程变化时同步更新导航冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；路径测试必须使用确定地图与起终点，并验证不可达路径不会产生伪结果。
 - 完成修改后检查 Unity 编译和 Console，再运行 `Navigation.Smoke`；涉及地图、建筑、AI 或联机本地窗口时同步运行对应系统测试。
+- 矿洞墙地可走性契约由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

@@ -56,6 +56,7 @@ public class Map : Item
     private float lastBackTilePenaltyTime = -999f;
     private bool backTilePenaltyPending;
     private bool backTilePenaltyForceFull = true;
+    [NonSerialized] private bool tilemapVisualReady;
     private readonly HashSet<Vector2Int> backTilePenaltyDirtyCells = new HashSet<Vector2Int>();
     private readonly List<Vector2Int> backTilePenaltyDirtySnapshot = new List<Vector2Int>(128);
 
@@ -70,8 +71,11 @@ public class Map : Item
     public bool IsReadyForChunkLifecycle =>
         Data != null &&
         Data.TileLoaded &&
+        tilemapVisualReady &&
         loadOrGenerateCoroutine == null &&
         loadTileMapCoroutine == null;
+
+    public bool IsTilemapVisualReady => tilemapVisualReady;
 
     protected virtual bool ShouldBakePenaltyAfterTilemapLoad => true;
     protected virtual int TilemapLoadBatchSize => Mathf.Max(16, loadTileBatchSize);
@@ -81,11 +85,13 @@ public class Map : Item
     /// </summary>
     public void ResetMapReadyState()
     {
+        tilemapVisualReady = false;
         chunk?.ResetLifecycleState();
     }
 
     protected void BeginMapLoad()
     {
+        tilemapVisualReady = false;
         chunk?.BeginMapLoad();
     }
 
@@ -106,6 +112,7 @@ public class Map : Item
 
     protected virtual void OnTilemapLoaded()
     {
+        BlockingTilemapLayer.SyncMap(this);
         GetComponent<GrassDetailLayer>()?.Rebuild(this);
 
         if (!ShouldBakePenaltyAfterTilemapLoad)
@@ -123,6 +130,7 @@ public class Map : Item
 
     protected void FinalizeTilemapLoad()
     {
+        tilemapVisualReady = true;
         if (AstarGameManager.Instance?.EnableDebugLogs == true)
             Debug.Log($"[AStar-Debug][Map] FinalizeTilemapLoad 调用 | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded} | tileMap活跃={tileMap?.gameObject.activeSelf}");
         OnTilemapLoaded();
@@ -147,6 +155,9 @@ public class Map : Item
 
     private void StopMapCoroutines()
     {
+        if (loadOrGenerateCoroutine != null || loadTileMapCoroutine != null)
+            tilemapVisualReady = false;
+
         if (loadTileMapCoroutine != null)
         {
             StopCoroutine(loadTileMapCoroutine);
@@ -166,6 +177,24 @@ public class Map : Item
         }
 
         backTilePenaltyPending = false;
+    }
+
+    public void EnsureTilemapVisualReady()
+    {
+        if (!isActiveAndEnabled ||
+            tilemapVisualReady ||
+            loadOrGenerateCoroutine != null ||
+            loadTileMapCoroutine != null ||
+            Data == null ||
+            !Data.TileLoaded ||
+            Data.CountNonEmptyCells() == 0 ||
+            !EnsureTilemapReference())
+        {
+            return;
+        }
+
+        tileMap.ClearAllTiles();
+        LoadTileData_To_TileMap_Ansync();
     }
 
     protected void BindChunkOwner(Chunk ownerChunk)
@@ -255,8 +284,15 @@ public class Map : Item
         Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: false);
         Data.TileLoaded = false;
 
-        int worldSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
-        var context = new MapGenerationContext(this, planetData, worldSeed);
+        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        DimensionManager dimensionManager = DimensionManager.Instance;
+        int worldSeed = dimensionManager.GetActiveGenerationSeed(baseSeed);
+        var context = new MapGenerationContext(
+            this,
+            planetData,
+            worldSeed,
+            dimensionManager.ActiveAddress,
+            dimensionManager.ActiveDefinition);
         for (int i = 0; i < mapGenerators.Count; i++)
         {
             ChunkGeneratorBase generator = mapGenerators[i];
@@ -429,6 +465,7 @@ public class Map : Item
     #region TileMap加载方法
     public void LoadTileData_To_TileMap_Sync()
     {
+        tilemapVisualReady = false;
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
@@ -437,8 +474,9 @@ public class Map : Item
 
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            // 获取最顶层 TileData（倒数第一个）
-            TileData topTile = tileDataList[^1];
+            TileData topTile = BlockingTilemapLayer.ResolveGroundTile(tileDataList);
+            if (topTile == null)
+                continue;
 
             TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
             if (tile == null)
@@ -457,6 +495,7 @@ public class Map : Item
 
     public void LoadTileData_To_TileMap_Ansync()
     {
+        tilemapVisualReady = false;
         // 如果已有协程在运行，先停止它
         if (loadTileMapCoroutine != null)
         {
@@ -488,7 +527,9 @@ public class Map : Item
 
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
         {
-            TileData topTile = tileDataList[^1];
+            TileData topTile = BlockingTilemapLayer.ResolveGroundTile(tileDataList);
+            if (topTile == null)
+                continue;
             TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
             if (tile == null)
             {
@@ -1026,13 +1067,20 @@ public class Map : Item
         if (list == null || list.Count == 0)
         {
             tileMap.SetTile(position3D, null); // 清除该 Tile
+            BlockingTilemapLayer.RefreshMapCell(this, position);
             GetComponent<GrassDetailLayer>()?.RefreshCell(this, position);
             Debug.Log($"清除了位置 {position} 上的 TileBase（无数据）");
             return;
         }
 
-        // 获取该位置最顶层的 TileData（最后一个）
-        TileData topTile = list[^1];
+        TileData topTile = BlockingTilemapLayer.ResolveGroundTile(list);
+        if (topTile == null)
+        {
+            tileMap.SetTile(position3D, null);
+            BlockingTilemapLayer.RefreshMapCell(this, position);
+            GetComponent<GrassDetailLayer>()?.RefreshCell(this, position);
+            return;
+        }
 
         if (GameRes.Instance == null)
         {
@@ -1057,6 +1105,7 @@ public class Map : Item
         }
 
         tileMap.SetTile(position3D, tile);
+        BlockingTilemapLayer.RefreshMapCell(this, position);
         GetComponent<GrassDetailLayer>()?.RefreshCell(this, position);
         //Debug.Log($"已更新 TileBase 于位置 {position}，使用资源：{topTile.Name_TileBase}");
     }

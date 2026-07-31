@@ -10,7 +10,8 @@
         "Data",
         "UI",
         "m_Utilitiles",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

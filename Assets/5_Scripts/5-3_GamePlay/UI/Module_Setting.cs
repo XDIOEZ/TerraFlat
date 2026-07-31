@@ -49,7 +49,8 @@ public class SettingCanvas : Module, IInstanceUI
     // ESC按键响应
     private void OnEscapePressed(InputAction.CallbackContext context)
     {
-        if (gameController != null && gameController.IsGameplayInputLocked)
+        bool panelOpen = basePanel != null && basePanel.IsOpen();
+        if (gameController != null && gameController.IsGameplayInputLocked && !panelOpen)
         {
             return;
         }
@@ -76,6 +77,9 @@ public class SettingCanvas : Module, IInstanceUI
         DifficultySettingsPanelLauncher.Ensure(basePanel.transform);
         InputBindingPanelLauncher.Ensure(basePanel.transform, gameController);
         basePanel.SetPanelName(PanelName);
+        basePanel.PrepareForGamepadNavigation();
+        basePanel.Opened += AcquirePanelInputLock;
+        basePanel.Closed += ReleasePanelInputLock;
         return true;
     }
 
@@ -171,5 +175,23 @@ public class SettingCanvas : Module, IInstanceUI
         {
             playerInputActions.Win10.ESC.performed -= OnEscapePressed;
         }
+
+        if (basePanel != null)
+        {
+            basePanel.Opened -= AcquirePanelInputLock;
+            basePanel.Closed -= ReleasePanelInputLock;
+        }
+
+        ReleasePanelInputLock();
+    }
+
+    private void AcquirePanelInputLock()
+    {
+        gameController?.AcquireGameplayInputLock(this);
+    }
+
+    private void ReleasePanelInputLock()
+    {
+        gameController?.ReleaseGameplayInputLock(this);
     }
 }

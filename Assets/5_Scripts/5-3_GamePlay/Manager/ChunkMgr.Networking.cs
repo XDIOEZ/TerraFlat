@@ -31,6 +31,9 @@ public partial class ChunkMgr
         HashSet<Vector2Int> loadWindow = BuildObserverWindow(observerPositions, loadDistance);
         HashSet<Vector2Int> keepAliveWindow = BuildObserverWindow(observerPositions, inactiveDistance);
 
+        foreach (Vector2Int keepPos in keepAliveWindow)
+            CancelDeferredChunkDeactivation(keepPos);
+
         ResetChunkLoadQueue();
 
         if (loadWindow.Count > 0)
