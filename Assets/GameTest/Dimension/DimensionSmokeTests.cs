@@ -54,6 +54,8 @@ namespace FlatWorld.GameTest.Dimension
             Assert.That(cave.CaveFloorTileId, Is.EqualTo("TileBase_Stone"));
             Assert.That(cave.CaveWallTileId, Is.EqualTo("TileBase_StoneWall"));
             Assert.That(cave.CaveResourceDensity, Is.GreaterThan(0.1f));
+            Assert.That(cave.CaveLooseOreDensity, Is.GreaterThan(0f));
+            Assert.That(cave.CaveLooseOreDensity, Is.LessThan(cave.CaveResourceDensity));
             Assert.That(cave.CaveResources.Select(rule => rule.ItemId), Does.Contain("Mine_Iron"));
         }
 
@@ -135,6 +137,47 @@ namespace FlatWorld.GameTest.Dimension
                 Assert.That(receiver.Data.LootTable.All(entry =>
                     entry != null && entry.LootPrefabName.StartsWith("Ore_")), Is.True,
                     $"{mineIds[i]} 包含非矿石掉落。");
+            }
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void CaveResourcesAreUprightLargeSolidObstacles()
+        {
+            Assert.That(ChunkGenerator_Cave.GeneratedResourceRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(ChunkGenerator_Cave.GeneratedResourceUniformScale, Is.GreaterThanOrEqualTo(2f));
+
+            string[] mineIds = { "Mine_Coal", "Mine_Copper", "Mine_Tin", "Mine_Iron", "Mine_Stone" };
+            int colliderLayer = LayerMask.NameToLayer("Collider");
+            for (int i = 0; i < mineIds.Length; i++)
+            {
+                string path = $"Assets/2_Prefabs/Mine/{mineIds[i]}.prefab";
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Collider2D collider = prefab.GetComponent<Collider2D>();
+
+                Assert.That(collider, Is.Not.Null, $"{mineIds[i]} 缺少实体碰撞体。");
+                Assert.That(collider.isTrigger, Is.False, $"{mineIds[i]} 的碰撞体不能是触发器。");
+                Assert.That(prefab.layer, Is.EqualTo(colliderLayer), $"{mineIds[i]} 未使用 Collider 层。");
+            }
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void CaveMineResourcesHaveDirectPickupCounterparts()
+        {
+            DimensionDefinition cave = DimensionDefinition.CreateCave();
+            for (int i = 0; i < cave.CaveResources.Count; i++)
+            {
+                string mineId = cave.CaveResources[i].ItemId;
+                string pickupId = ChunkGenerator_Cave.GetLooseOreItemId(mineId);
+                string path = $"Assets/2_Prefabs/Mineral/Ore/{pickupId}.prefab";
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Item pickup = prefab != null ? prefab.GetComponent<Item>() : null;
+                Collider2D collider = prefab != null ? prefab.GetComponent<Collider2D>() : null;
+
+                Assert.That(prefab, Is.Not.Null, $"{mineId} 缺少对应的可拾取矿石 {pickupId}。");
+                Assert.That(pickup?.itemData?.Stack.CanBePickedUp, Is.True, $"{pickupId} 不能直接拾取。");
+                Assert.That(collider?.isTrigger, Is.True, $"{pickupId} 应使用拾取触发器。");
             }
         }
     }

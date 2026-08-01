@@ -43,8 +43,8 @@ public class AI_Ghost : Module
     private GhostAISaveData Data = new();
 
     [Header("感知与移动")]
-    [SerializeField, Min(0.1f)]
-    private float perceptionRadius = 10f;
+    [SerializeField, Min(0.1f), Tooltip("主动发现玩家的距离，应覆盖幽灵的最大生成距离。")]
+    private float perceptionRadius = 60f;
     [SerializeField, Min(0.1f)]
     private float wanderRadius = 6f;
     [SerializeField, Min(0.1f)]

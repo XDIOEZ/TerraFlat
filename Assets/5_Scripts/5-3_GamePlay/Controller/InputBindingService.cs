@@ -75,12 +75,18 @@ public sealed class InputBindingService : IDisposable
         public readonly string ActionName;
         public readonly string PartName;
         public readonly string DisplayName;
+        public readonly int BindingOrdinal;
 
-        public BindingSpec(string actionName, string partName, string displayName)
+        public BindingSpec(
+            string actionName,
+            string partName,
+            string displayName,
+            int bindingOrdinal = 0)
         {
             ActionName = actionName;
             PartName = partName;
             DisplayName = displayName;
+            BindingOrdinal = bindingOrdinal;
         }
     }
 
@@ -96,6 +102,16 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("Shift", null, "奔跑"),
         new BindingSpec("Tab", null, "营养面板"),
         new BindingSpec("CtrlMouse", "Modifier", "镜头缩放修饰键"),
+        new BindingSpec("OpenChat", null, "打开聊天框"),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 1", 0),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 2", 1),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 3", 2),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 4", 3),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 5", 4),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 6", 5),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 7", 6),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 8", 7),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 9", 8),
         new BindingSpec("ESC", null, "打开设置")
     };
 
@@ -309,7 +325,10 @@ public sealed class InputBindingService : IDisposable
                 continue;
             }
 
-            int bindingIndex = FindBindingIndex(action, spec.PartName);
+            int bindingIndex = FindBindingIndex(
+                action,
+                spec.PartName,
+                spec.BindingOrdinal);
             if (bindingIndex < 0)
             {
                 Debug.LogWarning(
@@ -321,8 +340,12 @@ public sealed class InputBindingService : IDisposable
         }
     }
 
-    private static int FindBindingIndex(InputAction action, string partName)
+    private static int FindBindingIndex(
+        InputAction action,
+        string partName,
+        int bindingOrdinal)
     {
+        int matchingBindingOrdinal = 0;
         for (int i = 0; i < action.bindings.Count; i++)
         {
             InputBinding binding = action.bindings[i];
@@ -345,7 +368,10 @@ public sealed class InputBindingService : IDisposable
                 (path.StartsWith("<Keyboard>", StringComparison.OrdinalIgnoreCase) ||
                  path.StartsWith("<Mouse>", StringComparison.OrdinalIgnoreCase)))
             {
-                return i;
+                if (matchingBindingOrdinal == bindingOrdinal)
+                    return i;
+
+                matchingBindingOrdinal++;
             }
         }
 

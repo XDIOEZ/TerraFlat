@@ -18,6 +18,13 @@ public class BerryBush : MonoBehaviour, IInteractable
 	[Min(1)]
 	public int MaxBerryCount = 12; // 浆果库存上限
 
+	[Header("自然生成")]
+	[Min(0)]
+	public int NaturalInitialBerryCountMin = 1;
+
+	[Min(0)]
+	public int NaturalInitialBerryCountMax = 2;
+
 	[Min(0.05f)]
 	public float SpawnRadius = 1.2f; // 采摘后物品散落半径
 
@@ -46,6 +53,8 @@ public class BerryBush : MonoBehaviour, IInteractable
 	private int _currentBerryCount;
 	private readonly Dictionary<string, Sprite> _spriteCache = new Dictionary<string, Sprite>();
 	private SpriteRenderer _bushRenderer;
+
+	public int CurrentBerryCount => _currentBerryCount;
 
 #endregion
 
@@ -113,6 +122,21 @@ public class BerryBush : MonoBehaviour, IInteractable
 #endregion
 
 #region 产出逻辑
+
+	/// <summary>
+	/// 仅供自然资源生成流程调用；使用确定性随机值设置初始浆果库存。
+	/// </summary>
+	public void InitializeNaturalStock(uint deterministicRandomValue)
+	{
+		int capacity = Mathf.Max(1, MaxBerryCount);
+		int minCount = Mathf.Clamp(NaturalInitialBerryCountMin, 0, capacity);
+		int maxCount = Mathf.Clamp(NaturalInitialBerryCountMax, minCount, capacity);
+		uint range = (uint)(maxCount - minCount + 1);
+
+		_currentBerryCount = minCount + (int)(deterministicRandomValue % range);
+		_productionTimer = 0f;
+		RefreshReadySpriteVisual();
+	}
 
 	private void HarvestBerries()
 	{

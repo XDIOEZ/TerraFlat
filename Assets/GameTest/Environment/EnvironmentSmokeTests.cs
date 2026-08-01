@@ -31,6 +31,24 @@ namespace FlatWorld.GameTest.Environment
         }
 
         [Test]
+        [Category("Environment.Weather")]
+        public void CaveSuppressesWeatherAndStopsWeatherClockSubscription()
+        {
+            DimensionDefinition surface = DimensionDefinition.CreateSurface();
+            DimensionDefinition cave = DimensionDefinition.CreateCave();
+            Assert.That(WeatherMgr.IsWeatherSuppressedInDimension(surface), Is.False);
+            Assert.That(WeatherMgr.IsWeatherSuppressedInDimension(cave), Is.True);
+
+            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.cs");
+            int lifecycleIndex = source.IndexOf("private void ApplyGameWorldLifecycleState(bool isActive)");
+            int updateIndex = source.IndexOf("private void Update()", lifecycleIndex);
+            Assert.That(lifecycleIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(updateIndex, Is.GreaterThan(lifecycleIndex));
+            Assert.That(source.Substring(lifecycleIndex, updateIndex - lifecycleIndex),
+                Does.Contain("ShutdownWeatherEventSystem();"));
+        }
+
+        [Test]
         [Category("Environment.Smoke")]
         public void SerializableTimeDataPreservesTotalDays()
         {

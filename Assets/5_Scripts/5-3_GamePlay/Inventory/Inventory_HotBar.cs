@@ -93,6 +93,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private GameController _inputController;
     private InputAction _mouseScrollAction;
+    private InputAction _directHotbarAction;
     private InputAction _previousHotbarAction;
     private InputAction _nextHotbarAction;
 
@@ -423,6 +424,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
 
         _mouseScrollAction = controller._inputActions.Win10.MouseScroll;
+        _directHotbarAction = controller._inputActions.Win10.SwitchHotBar_Player;
         _previousHotbarAction = controller._inputActions.Win10.HotbarPrevious;
         _nextHotbarAction = controller._inputActions.Win10.HotbarNext;
 
@@ -430,6 +432,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         {
             _mouseScrollAction.started += OnScrollSwitch;
         }
+
+        if (_directHotbarAction != null)
+            _directHotbarAction.performed += OnDirectHotbar;
 
         if (_previousHotbarAction != null)
             _previousHotbarAction.performed += OnPreviousHotbar;
@@ -450,6 +455,12 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         {
             _mouseScrollAction.started -= OnScrollSwitch;
             _mouseScrollAction = null;
+        }
+
+        if (_directHotbarAction != null)
+        {
+            _directHotbarAction.performed -= OnDirectHotbar;
+            _directHotbarAction = null;
         }
 
         if (_previousHotbarAction != null)
@@ -509,6 +520,18 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
 
         SwitchItem(CurrentIndex - 1);
+    }
+
+    private void OnDirectHotbar(InputAction.CallbackContext context)
+    {
+        if (IsGameplayInputLocked() || context.control == null)
+            return;
+
+        int targetIndex = context.action.GetBindingIndexForControl(context.control);
+        if (targetIndex < 0 || targetIndex >= Mathf.Min(MaxIndex, HotBarMaxVolume))
+            return;
+
+        SwitchItem(targetIndex);
     }
 
     private void OnNextHotbar(InputAction.CallbackContext context)

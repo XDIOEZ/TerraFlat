@@ -282,8 +282,7 @@ public class Chunk : MonoBehaviour
                 if (item == null) continue;
 
                 // 先恢复位置信息和加入运行时字典
-                item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
-                item.transform.localScale = itemData.transform.scale;
+                RestoreItemTransform(item, itemData);
                 AddItemInternal(item);
 
                 createdItems.Add(item);
@@ -324,8 +323,7 @@ public class Chunk : MonoBehaviour
                 if (item == null) continue;
 
                 // 先恢复位置信息和加入运行时字典
-                item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
-                item.transform.localScale = itemData.transform.scale;
+                RestoreItemTransform(item, itemData);
                 AddItemInternal(item);
 
                 createdItems.Add(item);
@@ -371,9 +369,15 @@ public class Chunk : MonoBehaviour
         if (item == null) return;
 
         item.Load();
+        RestoreItemTransform(item, itemData);
+        AddItemInternal(item);
+    }
+
+    private static void RestoreItemTransform(Item item, ItemData itemData)
+    {
         item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
         item.transform.localScale = itemData.transform.scale;
-        AddItemInternal(item);
+        ChunkGenerator_Cave.ApplyGeneratedResourceTransform(DimensionManager.Instance?.ActiveDefinition, item);
     }
 
     #endregion

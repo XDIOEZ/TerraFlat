@@ -175,6 +175,8 @@ MonoBehaviour:
   BerryItemId: Berry
   ProductionIntervalSeconds: 45
   MaxBerryCount: 12
+  NaturalInitialBerryCountMin: 1
+  NaturalInitialBerryCountMax: 2
   SpawnRadius: 1.2
   ThrowDuration: 0.5
   ThrowBezierOffset: 0.8

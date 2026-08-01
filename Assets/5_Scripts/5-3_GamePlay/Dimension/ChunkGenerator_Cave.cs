@@ -6,6 +6,13 @@ using UnityEngine;
 [Serializable]
 public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
 {
+    private const int LooseOreSeedSalt = 0x6C8E9CF5;
+    public const float GeneratedResourceUniformScale = 2.5f;
+
+    public static Quaternion GeneratedResourceRotation => Quaternion.identity;
+    public static Vector3 GeneratedResourceScale =>
+        new(GeneratedResourceUniformScale, GeneratedResourceUniformScale, 1f);
+
     public override void Generate(MapGenerationContext context)
     {
         IEnumerator routine = GenerateAsync(context, int.MaxValue);
@@ -77,10 +84,13 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
                     TileData wallTile = wallBlock.tileDataTemplate.Clone();
                     Map.ADDTileData(worldPos, wallTile);
                 }
-                else if ((new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f) - safeCenter).sqrMagnitude > safeRadiusSqr &&
-                         CaveLayoutSampler.IsWallEdge(worldPos, definition, context.WorldSeed))
+                else if ((new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f) - safeCenter).sqrMagnitude > safeRadiusSqr)
                 {
-                    TrySpawnResource(context, definition, resources, worldPos, new Vector2Int(x, y));
+                    Vector2Int localPos = new Vector2Int(x, y);
+                    bool spawnedMine = CaveLayoutSampler.IsWallEdge(worldPos, definition, context.WorldSeed) &&
+                                       TrySpawnResource(context, definition, resources, worldPos, localPos);
+                    if (!spawnedMine)
+                        TrySpawnLooseOre(context, definition, resources, worldPos, localPos);
                 }
 
                 processed++;
@@ -109,7 +119,7 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         return available;
     }
 
-    private static void TrySpawnResource(
+    private static bool TrySpawnResource(
         MapGenerationContext context,
         DimensionDefinition definition,
         List<DimensionResourceRule> resources,
@@ -117,38 +127,115 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         Vector2Int localPos)
     {
         if (resources.Count == 0 || context.Map.chunk == null)
-            return;
+            return false;
 
         uint state = MixSeed(worldPos.x, worldPos.y, context.WorldSeed);
         float depositStrength = CaveLayoutSampler.GetDepositStrength(worldPos, context.WorldSeed);
         float depositFactor = Mathf.InverseLerp(0.48f, 0.82f, depositStrength);
         if (depositFactor <= 0f)
-            return;
+            return false;
 
         float spawnRoll = NextUnitFloat(ref state);
         float spawnChance = Mathf.Clamp01(definition.CaveResourceDensity * depositFactor * 1.5f);
         if (spawnRoll > spawnChance)
-            return;
+            return false;
 
         DimensionResourceRule selected = SelectResource(resources, worldPos, context.WorldSeed);
         if (selected == null)
-            return;
+            return false;
 
         int guid = StableGuid(context.WorldSeed, worldPos, selected.ItemId);
-        float rotation = NextUnitFloat(ref state) * 360f;
-        float scaleValue = Mathf.Lerp(0.85f, 1.15f, NextUnitFloat(ref state));
         Item item = context.Map.chunk.InstantiateItemInChunkDeterministic(
             selected.ItemId,
             guid,
             new Vector3(worldPos.x + 0.5f, worldPos.y + 0.5f, 0f),
-            Quaternion.Euler(0f, 0f, rotation),
-            new Vector3(scaleValue, scaleValue, 1f));
+            GeneratedResourceRotation,
+            GeneratedResourceScale);
 
         if (item == null)
-            return;
+            return false;
 
         item.Load();
         item.Initialize_Env(context.Map.Data.EnvironmentLayers, localPos);
+        return true;
+    }
+
+    private static bool TrySpawnLooseOre(
+        MapGenerationContext context,
+        DimensionDefinition definition,
+        List<DimensionResourceRule> resources,
+        Vector2Int worldPos,
+        Vector2Int localPos)
+    {
+        if (resources.Count == 0 || context.Map.chunk == null || definition.CaveLooseOreDensity <= 0f)
+            return false;
+
+        uint state = MixSeed(worldPos.x, worldPos.y, context.WorldSeed ^ LooseOreSeedSalt);
+        if (NextUnitFloat(ref state) > Mathf.Clamp01(definition.CaveLooseOreDensity))
+            return false;
+
+        DimensionResourceRule selected = SelectResource(resources, worldPos, context.WorldSeed);
+        string pickupItemId = GetLooseOreItemId(selected?.ItemId);
+        if (string.IsNullOrEmpty(pickupItemId) || GameRes.Instance?.GetPrefab(pickupItemId, false) == null)
+            return false;
+
+        float offsetX = Mathf.Lerp(-0.22f, 0.22f, NextUnitFloat(ref state));
+        float offsetY = Mathf.Lerp(-0.22f, 0.22f, NextUnitFloat(ref state));
+        float rotation = NextUnitFloat(ref state) * 360f;
+        float scale = Mathf.Lerp(0.85f, 1.1f, NextUnitFloat(ref state));
+        int guid = StableGuid(context.WorldSeed ^ LooseOreSeedSalt, worldPos, pickupItemId);
+        Item item = context.Map.chunk.InstantiateItemInChunkDeterministic(
+            pickupItemId,
+            guid,
+            new Vector3(worldPos.x + 0.5f + offsetX, worldPos.y + 0.5f + offsetY, 0f),
+            Quaternion.Euler(0f, 0f, rotation),
+            new Vector3(scale, scale, 1f));
+
+        if (item == null)
+            return false;
+
+        item.Load();
+        item.Initialize_Env(context.Map.Data.EnvironmentLayers, localPos);
+        return true;
+    }
+
+    public static string GetLooseOreItemId(string mineItemId)
+    {
+        const string minePrefix = "Mine_";
+        return !string.IsNullOrWhiteSpace(mineItemId) && mineItemId.StartsWith(minePrefix, StringComparison.Ordinal)
+            ? $"Ore_{mineItemId.Substring(minePrefix.Length)}"
+            : null;
+    }
+
+    public static bool ApplyGeneratedResourceTransform(DimensionDefinition definition, Item item)
+    {
+        if (definition == null ||
+            definition.GenerationMode != DimensionGenerationMode.Cave ||
+            item?.itemData == null ||
+            !ContainsResource(definition.CaveResources, item.itemData.IDName))
+        {
+            return false;
+        }
+
+        item.transform.rotation = GeneratedResourceRotation;
+        item.transform.localScale = GeneratedResourceScale;
+        item.itemData.transform.rotation = GeneratedResourceRotation;
+        item.itemData.transform.scale = GeneratedResourceScale;
+        return true;
+    }
+
+    private static bool ContainsResource(List<DimensionResourceRule> resources, string itemId)
+    {
+        if (resources == null || string.IsNullOrWhiteSpace(itemId))
+            return false;
+
+        for (int i = 0; i < resources.Count; i++)
+        {
+            if (string.Equals(resources[i]?.ItemId, itemId, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
     }
 
     private static DimensionResourceRule SelectResource(

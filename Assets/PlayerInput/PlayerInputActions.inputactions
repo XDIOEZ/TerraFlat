@@ -132,6 +132,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "OpenChat",
+                    "type": "Button",
+                    "id": "c1f57108-3752-4ea1-83d5-48f9b61d31c0",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "E",
                     "type": "Button",
                     "id": "3a3d9a7c-08a7-4819-a436-fca3cd0bcf49",
@@ -558,6 +567,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "HotbarNext",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "01c5a0f8-87b7-44e9-b213-93371fe31660",
+                    "path": "<Keyboard>/t",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "OpenChat",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

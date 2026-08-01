@@ -309,7 +309,7 @@ MonoBehaviour:
     WanderTarget: {x: 0, y: 0}
     HasWanderTarget: 0
     WanderPauseRemaining: 0
-  perceptionRadius: 10
+  perceptionRadius: 60
   wanderRadius: 6
   wanderSpeed: 1.25
   chaseSpeed: 2.5

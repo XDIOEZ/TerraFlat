@@ -39,6 +39,8 @@ public class UIManager : MonoBehaviour
     #region 初始化
     private void Awake()
     {
+        EventSystemGuard.EnsureExactlyOne();
+
         if (_instance == null)
         {
             _instance = this;
