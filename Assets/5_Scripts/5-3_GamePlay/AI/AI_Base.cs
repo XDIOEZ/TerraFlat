@@ -79,6 +79,8 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	protected string _lastPlayedAnimation;
 	protected static GUIStyle _debugStateStyle;
 	protected AIStateMachine<TState> _stateMachine;
+	private TState _locomotionIdleState;
+	private bool _hasLocomotionIdleState;
 
 	// Reusable memory of the item that most recently caused damage.
 	[SerializeField, ReadOnly] private Item _recentDamageThreat;
@@ -235,6 +237,8 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 			SwitchState,
 			deltaTime,
 			CanTransitionTo);
+
+		SynchronizeLocomotionAnimation();
 	}
 #endregion
 
@@ -252,6 +256,8 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		TState idleState,
 		TState moveState)
 	{
+		_locomotionIdleState = idleState;
+		_hasLocomotionIdleState = true;
 		stateMachine.Register(CreateStoppedStateNode(idleState, TickIdle));
 		stateMachine.Register(CreateMovingStateNode(moveState, TickMove));
 	}
@@ -643,6 +649,29 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	}
 
 	// --- 移动控制工具方法 ---
+
+	/// <summary>按实际寻路速度同步移动动画，避免动物停住后继续播放奔跑。</summary>
+	private void SynchronizeLocomotionAnimation()
+	{
+		if (_animator == null || _mover == null || _stateMachine == null)
+		{
+			return;
+		}
+
+		if (_stateMachine.GetAnimationRole(_currentState) != AIStateAnimationRole.Moving)
+		{
+			return;
+		}
+
+		if (_mover.IsActuallyMoving)
+		{
+			PlayStateAnimation(_currentState);
+		}
+		else if (_hasLocomotionIdleState)
+		{
+			PlayStateAnimation(_locomotionIdleState);
+		}
+	}
 
 	/// <summary>停止移动</summary>
 	protected void StopMove()

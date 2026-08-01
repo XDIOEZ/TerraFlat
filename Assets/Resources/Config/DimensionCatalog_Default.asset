@@ -28,6 +28,7 @@ MonoBehaviour:
     CaveFloorTileId: TileBase_Stone
     CaveWallTileId: TileBase_StoneWall
     CaveResourceDensity: 0.28
+    CaveLooseOreDensity: 0
     CaveSafeRadius: 4
     CaveResources: []
   - DimensionId: cave
@@ -45,6 +46,7 @@ MonoBehaviour:
     CaveFloorTileId: TileBase_Stone
     CaveWallTileId: TileBase_StoneWall
     CaveResourceDensity: 0.28
+    CaveLooseOreDensity: 0.0125
     CaveSafeRadius: 4
     CaveResources:
     - ItemId: Mine_Iron

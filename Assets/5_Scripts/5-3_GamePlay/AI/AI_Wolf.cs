@@ -140,21 +140,21 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	public float wanderPenaltyWeight = 1f;
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/状态"), HorizontalGroup("配置/动画/状态/Hr1"), LabelText("待机")]
-	public string animIdle = "Stand";
+	public string animIdle = "Idle";
 	[HorizontalGroup("配置/动画/状态/Hr1"), LabelText("移动")]
 	public string animMove = "Move";
 	[HorizontalGroup("配置/动画/状态/Hr1"), LabelText("警觉")]
-	public string animAlert = "Stand";
+	public string animAlert = "Idle";
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/状态"), HorizontalGroup("配置/动画/状态/Hr2"), LabelText("追击")]
-	public string animChase = "Run";
+	public string animChase = "Move";
 	[HorizontalGroup("配置/动画/状态/Hr2"), LabelText("攻击")]
 	public string animAttack = "Attack";
 	[HorizontalGroup("配置/动画/状态/Hr2"), LabelText("逃离")]
-	public string animAvoid = "Run";
+	public string animAvoid = "Move";
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/状态"), LabelText("残血逃跑")]
-	public string animFlee = "Run";
+	public string animFlee = "Move";
 #endregion
 
 #region Base Overrides - Config Accessors

@@ -2,6 +2,7 @@ using FlatWorld.GameTest.Shared;
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace FlatWorld.GameTest.AI
@@ -88,6 +89,29 @@ namespace FlatWorld.GameTest.AI
             }
 
             CollectionAssert.AreEquivalent(new[] { "Chicken", "WildBoar", "Wolf", "Ghost" }, speciesIds);
+        }
+
+        [Test]
+        [Category("AI.Smoke")]
+        public void GhostPerceptionCoversItsMaximumSpawnDistance()
+        {
+            SpawnerConfig ghosts = Resources.Load<SpawnerConfig>("Config/SpawnerConfig_Ghost");
+            GameObject ghostPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Ghost.prefab");
+
+            Assert.That(ghosts, Is.Not.Null);
+            Assert.That(ghostPrefab, Is.Not.Null);
+
+            AI_Ghost ghostAI = ghostPrefab.GetComponentInChildren<AI_Ghost>(true);
+            Assert.That(ghostAI, Is.Not.Null);
+
+            SerializedProperty perceptionRadius = new SerializedObject(ghostAI)
+                .FindProperty("perceptionRadius");
+            Assert.That(perceptionRadius, Is.Not.Null);
+            Assert.That(
+                perceptionRadius.floatValue,
+                Is.GreaterThanOrEqualTo(ghosts.MaxSpawnDistance),
+                "幽灵感知距离未覆盖最大生成距离，出生后可能永远无法主动追击玩家。");
         }
     }
 }

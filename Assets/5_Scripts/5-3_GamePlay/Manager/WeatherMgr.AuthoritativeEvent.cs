@@ -353,6 +353,9 @@ public partial class WeatherMgr
 
     private void DeactivateWeatherFeedback()
     {
+        if (_rainEffectInstance != null)
+            _rainEffectInstance.SetActive(false);
+
         if (_rainAudioHandle.IsPlaying)
             _rainAudioHandle.Stop(0.5f);
         _rainAudioHandle = AudioHandle.Invalid;

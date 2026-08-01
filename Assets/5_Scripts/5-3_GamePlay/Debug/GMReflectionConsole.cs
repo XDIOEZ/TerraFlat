@@ -5,10 +5,8 @@ using System.Linq;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -1013,11 +1011,7 @@ public sealed class GMReflectionConsole : MonoBehaviour
 
     private static void EnsureEventSystem()
     {
-        if (EventSystem.current != null)
-            return;
-
-        GameObject eventSystem = new GameObject("GM EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-        DontDestroyOnLoad(eventSystem);
+        EventSystemGuard.EnsureExactlyOne();
     }
 
     #endregion

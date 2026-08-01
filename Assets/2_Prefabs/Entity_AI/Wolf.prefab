@@ -752,9 +752,9 @@ MonoBehaviour:
   wanderDangerPenalty: 1200
   wanderSampleCount: 8
   wanderPenaltyWeight: 1
-  animIdle: Stand
+  animIdle: Idle
   animMove: Move
-  animAlert: Stand
+  animAlert: Idle
   animChase: Move
   animAttack: Attack
   animAvoid: Move

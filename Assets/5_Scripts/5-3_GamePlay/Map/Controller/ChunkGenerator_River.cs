@@ -129,7 +129,11 @@ public class ChunkGenerator_River : ChunkGeneratorBase
     [PropertyTooltip("候选网格的世界格间距，每个候选网格最多产生一个源头。")]
     [Min(6)] public int sourceSpacing = 18;
 
-    [Tooltip("源头最低海拔，仅高海拔石地可成为源头")]
+    [LabelText("源头区域生成概率")]
+    [PropertyTooltip("每个源头候选区域实际生成源头的确定性概率，用于控制河网密度。")]
+    [Range(0f, 1f)] public float sourceCellChance = 0.35f;
+
+    [Tooltip("源头最低海拔，候选区域只从达到该海拔的地形中选择源头")]
     [Range(0f, 1f)] public float sourceMinHeight = 0.68f;
 
     [Tooltip("源头最低降水量，避免极干旱石地大量产生河流")]
@@ -431,23 +435,31 @@ public class ChunkGenerator_River : ChunkGeneratorBase
         int maxSourceCellY = FloorDiv(workOrigin.y + workHeight - 1, spacing) + 1;
         int generationSeed = GetGenerationSeed();
         int sourceSalt = unchecked((int)0x51ED270B);
+        float sourceChance = Mathf.Clamp01(sourceCellChance);
 
         for (int sourceCellX = minSourceCellX; sourceCellX <= maxSourceCellX; sourceCellX++)
         {
             for (int sourceCellY = minSourceCellY; sourceCellY <= maxSourceCellY; sourceCellY++)
             {
-                int sourceWorldX = sourceCellX * spacing + Mathf.FloorToInt(Hash01(sourceCellX, sourceCellY, generationSeed ^ sourceSalt) * spacing);
-                int sourceWorldY = sourceCellY * spacing + Mathf.FloorToInt(Hash01(sourceCellX, sourceCellY, generationSeed ^ (sourceSalt + 1)) * spacing);
-                int sourceX = sourceWorldX - workOrigin.x;
-                int sourceY = sourceWorldY - workOrigin.y;
-                if (!Contains(sourceX, sourceY, workWidth, workHeight))
+                if (sourceChance <= 0f ||
+                    Hash01(sourceCellX, sourceCellY, generationSeed ^ sourceSalt) >= sourceChance)
+                {
                     continue;
+                }
 
-                int sourceIndex = Index(sourceX, sourceY, workWidth);
-                if (!stoneGround[sourceIndex] ||
-                    heights[sourceIndex] < sourceMinHeight ||
-                    precipitation[sourceIndex] < sourceMinPrecipitation ||
-                    !IsLocalHighPoint(sourceX, sourceY, workWidth, workHeight, heights))
+                if (!TrySelectHeadwater(
+                        sourceCellX,
+                        sourceCellY,
+                        spacing,
+                        workOrigin,
+                        workWidth,
+                        workHeight,
+                        heights,
+                        precipitation,
+                        stoneGround,
+                        generationSeed,
+                        out int sourceX,
+                        out int sourceY))
                 {
                     continue;
                 }
@@ -601,6 +613,83 @@ public class ChunkGenerator_River : ChunkGeneratorBase
             SpawnStones_ForRiver(width, height, coreOrigin, coreWaterMask);
             yield return null;
         }
+    }
+
+    private bool TrySelectHeadwater(
+        int sourceCellX,
+        int sourceCellY,
+        int spacing,
+        Vector2Int workOrigin,
+        int workWidth,
+        int workHeight,
+        float[] heights,
+        float[] precipitation,
+        bool[] stoneGround,
+        int generationSeed,
+        out int sourceX,
+        out int sourceY)
+    {
+        sourceX = 0;
+        sourceY = 0;
+
+        int minX = sourceCellX * spacing - workOrigin.x;
+        int minY = sourceCellY * spacing - workOrigin.y;
+        int maxX = minX + spacing - 1;
+        int maxY = minY + spacing - 1;
+
+        // Only evaluate complete global cells. This keeps headwater selection identical
+        // for neighboring chunks while the hydrology halo still covers the playable core.
+        if (minX < 1 || minY < 1 || maxX >= workWidth - 1 || maxY >= workHeight - 1)
+            return false;
+
+        int bestPeakIndex = -1;
+        int bestFallbackIndex = -1;
+        float bestPeakScore = float.NegativeInfinity;
+        float bestFallbackScore = float.NegativeInfinity;
+        int tieSalt = unchecked((int)0x36D8F13B);
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                int index = Index(x, y, workWidth);
+                if (heights[index] < sourceMinHeight ||
+                    precipitation[index] < sourceMinPrecipitation)
+                {
+                    continue;
+                }
+
+                int worldX = workOrigin.x + x;
+                int worldY = workOrigin.y + y;
+                float score = heights[index] * 2f + precipitation[index] * 0.15f;
+                if (stoneGround[index])
+                    score += 0.1f;
+                score += Hash01(worldX, worldY, generationSeed ^ tieSalt) * 0.0001f;
+
+                if (score > bestFallbackScore)
+                {
+                    bestFallbackScore = score;
+                    bestFallbackIndex = index;
+                }
+
+                if (!IsLocalHighPoint(x, y, workWidth, workHeight, heights) ||
+                    score <= bestPeakScore)
+                {
+                    continue;
+                }
+
+                bestPeakScore = score;
+                bestPeakIndex = index;
+            }
+        }
+
+        int selectedIndex = bestPeakIndex >= 0 ? bestPeakIndex : bestFallbackIndex;
+        if (selectedIndex < 0)
+            return false;
+
+        sourceX = selectedIndex % workWidth;
+        sourceY = selectedIndex / workWidth;
+        return true;
     }
 
     private bool TryPrepareGeneration(

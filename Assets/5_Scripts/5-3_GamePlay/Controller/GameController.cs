@@ -18,6 +18,7 @@ public class GameController : Module
 #region 输入系统
 
     public PlayerInputActions _inputActions; // 新输入系统动作集合
+    public InputActionAsset InputAsset => _inputActions?.asset;
     public InputBindingService InputBindings { get; private set; }
     public Camera _mainCamera; // 主相机引用
     public bool CtrlIsDown; // Ctrl状态（保留原字段）
@@ -258,6 +259,8 @@ public class GameController : Module
         _inputActions.Win10.Mouse.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.canceled += UpdateCurrentInputDevice;
+        _inputActions.Win10.OpenChat.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.SwitchHotBar_Player.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.HotbarPrevious.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.HotbarNext.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.CtrlMouse.performed += UpdateCurrentInputDevice;
@@ -284,6 +287,8 @@ public class GameController : Module
         _inputActions.Win10.Mouse.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.canceled -= UpdateCurrentInputDevice;
+        _inputActions.Win10.OpenChat.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.SwitchHotBar_Player.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.HotbarPrevious.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.HotbarNext.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.CtrlMouse.performed -= UpdateCurrentInputDevice;

@@ -393,6 +393,12 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
 
                 spawnedItem.Load();
 
+                BerryBush berryBush = spawnedItem.GetComponentInChildren<BerryBush>(true);
+                if (berryBush != null)
+                {
+                    berryBush.InitializeNaturalStock(unchecked((uint)deterministicGuid));
+                }
+
                 spawnedItem.Initialize_Env(map.Data.EnvironmentLayers, localPos);
                 anySpawned = true;
             }

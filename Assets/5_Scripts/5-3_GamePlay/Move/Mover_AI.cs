@@ -30,6 +30,10 @@ public class Mover_AI : Mover
     [MinValue(0.001f)]
     public float progressDistanceThreshold = 0.02f;
 
+    [Tooltip("实际速度低于该值时，动画视为已经停止移动")]
+    [MinValue(0f)]
+    public float animationMoveSpeedThreshold = 0.03f;
+
     [Header("运行时状态")]
     public bool CanMove = true;
     public bool HasReachedTarget;
@@ -48,6 +52,13 @@ public class Mover_AI : Mover
     public float SpeedValue => Speed.Value;
     public bool HasActiveDestination => _hasDestination;
     public bool IsPathPending => aiPath != null && aiPath.pathPending;
+    public bool IsActuallyMoving =>
+        CanMove &&
+        _hasDestination &&
+        !HasReachedTarget &&
+        aiPath != null &&
+        !aiPath.isStopped &&
+        aiPath.velocity.sqrMagnitude > animationMoveSpeedThreshold * animationMoveSpeedThreshold;
 
     public override void Load()
     {

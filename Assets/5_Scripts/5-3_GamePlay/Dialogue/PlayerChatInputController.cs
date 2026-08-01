@@ -9,7 +9,7 @@ namespace FlatWorld.Dialogue
 {
     /// <summary>
     /// 本地玩家聊天输入控制器。
-    /// T 打开、Enter 提交、Esc 取消；提交后复用角色现有屏幕空间气泡。
+    /// 绑定动作打开、Enter 提交、Esc 取消；提交后复用角色现有屏幕空间气泡。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Player))]
@@ -22,10 +22,10 @@ namespace FlatWorld.Dialogue
         public const string ViewName = "PlayerChatInput";
         public const string ChatTopic = "player.chat";
         public const string CommandTopic = "player.chat.command";
+        public const string OpenChatActionName = "OpenChat";
 
         [Header("聊天输入")]
         [SerializeField, Min(1)] private int characterLimit = 160;
-        [SerializeField] private Key openKey = Key.T;
         [SerializeField] private CharacterSpeechPriority speechPriority =
             CharacterSpeechPriority.Player;
 
@@ -48,6 +48,7 @@ namespace FlatWorld.Dialogue
         private bool inputSuspended;
         private bool previousGameplayLock;
         private Coroutine focusRoutine;
+        private InputAction openChatAction;
 
         public bool IsOpen => isOpen;
         public TMP_InputField InputField => inputField;
@@ -65,12 +66,19 @@ namespace FlatWorld.Dialogue
         private void OnEnable()
         {
             ResolveReferences();
+            BindOpenChatInput();
             if (player != null)
                 player.ProfileContextChanged += HandleProfileContextChanged;
         }
 
+        private void Start()
+        {
+            BindOpenChatInput();
+        }
+
         private void OnDisable()
         {
+            UnbindOpenChatInput();
             if (player != null)
                 player.ProfileContextChanged -= HandleProfileContextChanged;
             CloseChat(clearText: true);
@@ -91,21 +99,12 @@ namespace FlatWorld.Dialogue
                 return;
             }
 
+            if (!isOpen)
+                return;
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null)
                 return;
-
-            if (!isOpen)
-            {
-                if (!gameController.IsGameplayInputLocked &&
-                    !IsControlPressed(keyboard) &&
-                    keyboard[openKey].wasPressedThisFrame)
-                {
-                    OpenChat();
-                }
-
-                return;
-            }
 
             if (keyboard.escapeKey.wasPressedThisFrame)
             {
@@ -126,6 +125,40 @@ namespace FlatWorld.Dialogue
         #endregion
 
         #region 对外接口
+
+        private void BindOpenChatInput()
+        {
+            UnbindOpenChatInput();
+            ResolveReferences();
+
+            InputActionMap actionMap = gameController?.InputAsset?
+                .FindActionMap("Win10", false);
+            openChatAction = actionMap?.FindAction(OpenChatActionName, false);
+            if (openChatAction != null)
+                openChatAction.performed += HandleOpenChatPerformed;
+        }
+
+        private void UnbindOpenChatInput()
+        {
+            if (openChatAction == null)
+                return;
+
+            openChatAction.performed -= HandleOpenChatPerformed;
+            openChatAction = null;
+        }
+
+        private void HandleOpenChatPerformed(InputAction.CallbackContext context)
+        {
+            Keyboard keyboard = context.control?.device as Keyboard;
+            if (keyboard != null &&
+                context.control == keyboard.tKey &&
+                IsControlPressed(keyboard))
+            {
+                return;
+            }
+
+            OpenChat();
+        }
 
         /// <summary>重新扫描玩家节点上的显式命令处理器。</summary>
         public void RebuildCommandHandlers()
