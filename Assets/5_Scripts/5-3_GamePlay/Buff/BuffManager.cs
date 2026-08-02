@@ -11,7 +11,8 @@ public class BuffManager : Module
     private const float TickInterval = 0.1f;
 
     [ShowInInspector]
-    public Dictionary<string, BuffRunTime> BuffRunTimeData_Dic = new();
+    public Dictionary<string, BuffInstance> ActiveBuffs =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public Ex_ModData_MemoryPackable ModData;
 
@@ -24,9 +25,9 @@ public class BuffManager : Module
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => TickInterval;
 
-    public event Action<BuffRunTime> BuffAdded;
-    public event Action<BuffRunTime> BuffRemoved;
-    public event Action<BuffRunTime> BuffDurationChanged;
+    public event Action<BuffInstance> BuffAdded;
+    public event Action<BuffInstance> BuffRemoved;
+    public event Action<BuffInstance> BuffDurationChanged;
 
     private readonly List<string> iterationIds = new(16);
     private readonly List<string> expiredIds = new(8);
@@ -47,8 +48,6 @@ public class BuffManager : Module
     public override void Load()
     {
         buffReceiver ??= item;
-        BuffRunTimeData_Dic ??= new Dictionary<string, BuffRunTime>();
-
         if (ModData == null)
         {
             Debug.LogError("[BuffManager] ModData 为空，无法加载 Buff。", this);
@@ -57,15 +56,28 @@ public class BuffManager : Module
 
         try
         {
-            ModData.ReadData(ref BuffRunTimeData_Dic);
+            var saveData = new BuffManagerSaveData();
+            ModData.ReadData(ref saveData);
+            ActiveBuffs = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (BuffInstance runtime in saveData?.Buffs ?? new List<BuffInstance>())
+            {
+                if (runtime == null || string.IsNullOrWhiteSpace(runtime.DefinitionId))
+                    continue;
+
+                if (!ActiveBuffs.TryAdd(runtime.DefinitionId, runtime))
+                {
+                    throw new InvalidOperationException(
+                        $"Buff 存档包含重复定义 ID：{runtime.DefinitionId}");
+                }
+            }
         }
         catch (Exception exception)
         {
             Debug.LogError($"[BuffManager] Buff 存档读取失败，已使用空状态：{exception.Message}", this);
-            BuffRunTimeData_Dic = new Dictionary<string, BuffRunTime>();
+            ActiveBuffs = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
         }
 
-        BuffRunTimeData_Dic ??= new Dictionary<string, BuffRunTime>();
         InitializeBuffs();
         BindFoodEvents();
     }
@@ -78,7 +90,11 @@ public class BuffManager : Module
             return;
         }
 
-        ModData.WriteData(BuffRunTimeData_Dic);
+        var runtimes = new List<BuffInstance>(ActiveBuffs.Values);
+        runtimes.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(
+            left?.DefinitionId,
+            right?.DefinitionId));
+        ModData.WriteData(new BuffManagerSaveData { Buffs = runtimes });
     }
 
     private void OnDestroy()
@@ -88,136 +104,94 @@ public class BuffManager : Module
 
     private void InitializeBuffs()
     {
-        if (BuffRunTimeData_Dic.Count == 0)
+        if (ActiveBuffs.Count == 0)
             return;
 
         iterationIds.Clear();
-        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+        iterationIds.AddRange(ActiveBuffs.Keys);
 
         for (int i = 0; i < iterationIds.Count; i++)
         {
             string dictionaryId = iterationIds[i];
-            if (!BuffRunTimeData_Dic.TryGetValue(dictionaryId, out BuffRunTime runtime) ||
+            if (!ActiveBuffs.TryGetValue(dictionaryId, out BuffInstance runtime) ||
                 runtime == null)
             {
-                BuffRunTimeData_Dic.Remove(dictionaryId);
+                ActiveBuffs.Remove(dictionaryId);
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(runtime.buff_IDName))
-                runtime.buff_IDName = dictionaryId;
-
-            Item receiver = ResolveItem(runtime.receiverGuid) ?? buffReceiver;
-            Item sender = ResolveItem(runtime.senderGuid);
-
-            if (!runtime.SetBuffData(sender, receiver))
+            if (!runtime.Restore(buffReceiver))
             {
-                Debug.LogWarning($"[BuffManager] 已跳过缺少定义的 Buff：{runtime.buff_IDName}", this);
-                BuffRunTimeData_Dic.Remove(dictionaryId);
+                Debug.LogWarning($"[BuffManager] 已跳过无效 Buff：{runtime.DefinitionId}", this);
+                ActiveBuffs.Remove(dictionaryId);
                 continue;
             }
 
-            runtime.PrepareRestore();
             if (runtime.IsExpired)
                 RemoveBuffInternal(dictionaryId, runtime, invokeStop: true);
         }
     }
 
-    private static Item ResolveItem(int guid)
-    {
-        if (guid == 0 || ItemMgr.Instance == null)
-            return null;
-
-        return ItemMgr.Instance.GetItemByGuid(guid);
-    }
-
     #region 添加与叠加
 
-    public void AddBuff(Buff_Data buffData)
+    public bool AddBuff(string buffId)
     {
         buffReceiver ??= item;
-        AddBuffInternal(buffData, sender: null, receiver: buffReceiver);
-    }
-
-    public void AddBuffRuntime(Buff_Data buffData, Item receiver)
-    {
-        AddBuffInternal(buffData, sender: null, receiver: receiver);
-    }
-
-    public void AddBuffRuntime(Buff_Data buffData, Item sender, Item receiver)
-    {
-        AddBuffInternal(buffData, sender, receiver);
-    }
-
-    private bool AddBuffInternal(Buff_Data buffData, Item sender, Item receiver)
-    {
-        if (buffData == null)
+        if (string.IsNullOrWhiteSpace(buffId))
         {
-            Debug.LogWarning("[BuffManager] 不能添加空 Buff 定义。", this);
+            Debug.LogWarning("[BuffManager] 不能添加空 Buff ID。", this);
             return false;
         }
 
-        if (receiver == null)
+        BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(buffId.Trim());
+        if (definition == null)
         {
-            Debug.LogWarning($"[BuffManager] Buff {buffData.buff_ID} 缺少接收者。", this);
+            Debug.LogWarning($"[BuffManager] 找不到 Buff JSON 定义：{buffId}", this);
             return false;
         }
 
-        string buffId = buffData.buff_ID?.Trim();
-        if (string.IsNullOrEmpty(buffId))
+        if (buffReceiver == null)
         {
-            Debug.LogError($"[BuffManager] Buff 资源 {buffData.name} 的 ID 为空。", buffData);
+            Debug.LogWarning($"[BuffManager] Buff {definition.Id} 缺少接收者。", this);
             return false;
         }
 
-        BuffRunTimeData_Dic ??= new Dictionary<string, BuffRunTime>();
-        if (BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime existing) &&
+        string definitionId = definition.Id;
+        if (ActiveBuffs.TryGetValue(definitionId, out BuffInstance existing) &&
             existing != null)
         {
-            return HandleBuffStack(buffData, existing);
+            return HandleBuffStack(definition, existing);
         }
 
-        BuffRunTime runtime = new()
-        {
-            buff_IDName = buffId,
-            buff = buffData,
-            buff_CurrentDuration = 0f,
-            buff_CurrentStack = 1f
-        };
-
-        if (!runtime.SetBuffData(sender, receiver))
+        var runtime = new BuffInstance();
+        if (!runtime.Initialize(definition, buffReceiver))
             return false;
 
-        BuffRunTimeData_Dic[buffId] = runtime;
-        runtime.OnBuff_Start();
+        ActiveBuffs[definitionId] = runtime;
+        runtime.Start();
         BuffAdded?.Invoke(runtime);
         return true;
     }
 
-    private bool HandleBuffStack(Buff_Data incoming, BuffRunTime existing)
+    private bool HandleBuffStack(BuffDefinition incoming, BuffInstance existing)
     {
-        switch (incoming.buff_StackType)
+        switch (incoming.StackMode)
         {
-            case BuffStackType.DurationAdd:
-                existing.ExtendDuration(Mathf.Max(0f, incoming.buff_Duration));
+            case BuffStackMode.ExtendDuration:
+                existing.ExtendDuration(Mathf.Max(0f, incoming.DurationSeconds ?? 0f));
                 BuffDurationChanged?.Invoke(existing);
                 return true;
 
-            case BuffStackType.RefreshDuration:
+            case BuffStackMode.RefreshDuration:
                 existing.RefreshDuration();
                 BuffDurationChanged?.Invoke(existing);
                 return true;
 
-            case BuffStackType.StackCount:
-                existing.TryAddStack();
-                BuffDurationChanged?.Invoke(existing);
+            case BuffStackMode.Ignore:
                 return true;
 
-            case BuffStackType.Keep:
-                return false;
-
             default:
-                Debug.LogWarning($"[BuffManager] 未知叠加类型：{incoming.buff_StackType}", this);
+                Debug.LogWarning($"[BuffManager] 未知叠加模式：{incoming.StackMode}", this);
                 return false;
         }
     }
@@ -229,24 +203,22 @@ public class BuffManager : Module
     public bool HasBuff(string buffId)
     {
         return !string.IsNullOrWhiteSpace(buffId) &&
-               BuffRunTimeData_Dic != null &&
-               BuffRunTimeData_Dic.ContainsKey(buffId);
+               ActiveBuffs.ContainsKey(buffId);
     }
 
-    public bool TryGetBuff(string buffId, out BuffRunTime runtime)
+    public bool TryGetBuff(string buffId, out BuffInstance runtime)
     {
         runtime = null;
         return !string.IsNullOrWhiteSpace(buffId) &&
-               BuffRunTimeData_Dic != null &&
-               BuffRunTimeData_Dic.TryGetValue(buffId, out runtime);
+               ActiveBuffs.TryGetValue(buffId, out runtime);
     }
 
     public bool TryExtendBuffDuration(string buffId, float seconds)
     {
-        if (seconds <= 0f || !TryGetBuff(buffId, out BuffRunTime runtime))
+        if (seconds <= 0f || !TryGetBuff(buffId, out BuffInstance runtime))
             return false;
 
-        if (runtime.ExtendDuration(seconds) <= 0f)
+        if (!runtime.ExtendDuration(seconds))
             return false;
 
         BuffDurationChanged?.Invoke(runtime);
@@ -258,23 +230,23 @@ public class BuffManager : Module
     /// </summary>
     public int ExtendBloodLossBuffsForDrink()
     {
-        if (BuffRunTimeData_Dic == null || BuffRunTimeData_Dic.Count == 0)
+        if (ActiveBuffs.Count == 0)
             return 0;
 
         int extendedCount = 0;
         iterationIds.Clear();
-        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+        iterationIds.AddRange(ActiveBuffs.Keys);
 
         for (int i = 0; i < iterationIds.Count; i++)
         {
-            if (!BuffRunTimeData_Dic.TryGetValue(iterationIds[i], out BuffRunTime runtime) ||
-                runtime?.buff == null ||
-                runtime.buff.buff_Category != BuffCategory.BloodLoss)
+            if (!ActiveBuffs.TryGetValue(iterationIds[i], out BuffInstance runtime) ||
+                runtime?.Definition == null ||
+                runtime.Definition.Category != BuffCategory.BloodLoss)
             {
                 continue;
             }
 
-            float extension = Mathf.Max(0f, runtime.buff.buff_DrinkDurationExtension);
+            float extension = Mathf.Max(0f, runtime.Definition.DrinkDurationExtensionSeconds);
             if (extension <= 0f)
                 continue;
 
@@ -293,8 +265,7 @@ public class BuffManager : Module
     public void RemoveBuff(string buffId)
     {
         if (string.IsNullOrWhiteSpace(buffId) ||
-            BuffRunTimeData_Dic == null ||
-            !BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime))
+            !ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime))
         {
             return;
         }
@@ -304,16 +275,16 @@ public class BuffManager : Module
 
     public void ClearAllBuffs()
     {
-        if (BuffRunTimeData_Dic == null || BuffRunTimeData_Dic.Count == 0)
+        if (ActiveBuffs.Count == 0)
             return;
 
         iterationIds.Clear();
-        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+        iterationIds.AddRange(ActiveBuffs.Keys);
 
         for (int i = 0; i < iterationIds.Count; i++)
         {
             string buffId = iterationIds[i];
-            if (BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime))
+            if (ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime))
                 RemoveBuffInternal(buffId, runtime, invokeStop: true);
         }
     }
@@ -325,21 +296,19 @@ public class BuffManager : Module
 
     public void Tick(float deltaTime)
     {
-        if (BuffRunTimeData_Dic == null ||
-            BuffRunTimeData_Dic.Count == 0 ||
-            deltaTime <= 0f)
+        if (ActiveBuffs.Count == 0 || deltaTime <= 0f)
         {
             return;
         }
 
         iterationIds.Clear();
         expiredIds.Clear();
-        iterationIds.AddRange(BuffRunTimeData_Dic.Keys);
+        iterationIds.AddRange(ActiveBuffs.Keys);
 
         for (int i = 0; i < iterationIds.Count; i++)
         {
             string buffId = iterationIds[i];
-            if (!BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime) ||
+            if (!ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime) ||
                 runtime == null ||
                 runtime.Tick(deltaTime))
             {
@@ -350,17 +319,17 @@ public class BuffManager : Module
         for (int i = 0; i < expiredIds.Count; i++)
         {
             string buffId = expiredIds[i];
-            if (BuffRunTimeData_Dic.TryGetValue(buffId, out BuffRunTime runtime))
+            if (ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime))
                 RemoveBuffInternal(buffId, runtime, invokeStop: true);
         }
     }
 
-    private void RemoveBuffInternal(string buffId, BuffRunTime runtime, bool invokeStop)
+    private void RemoveBuffInternal(string buffId, BuffInstance runtime, bool invokeStop)
     {
         if (runtime != null && invokeStop)
-            runtime.OnBuff_Stop();
+            runtime.Stop();
 
-        BuffRunTimeData_Dic.Remove(buffId);
+        ActiveBuffs.Remove(buffId);
         if (runtime != null)
             BuffRemoved?.Invoke(runtime);
     }
@@ -433,14 +402,7 @@ public class BuffManager : Module
 
     private void DebugAddBuff(string buffId)
     {
-        Buff_Data definition = GameRes.Instance?.GetBuffData(buffId);
-        if (definition == null)
-        {
-            Debug.LogWarning($"[BuffManager] 调试添加失败，找不到 Buff：{buffId}", this);
-            return;
-        }
-
-        AddBuff(definition);
+        AddBuff(buffId);
     }
 
     #endregion

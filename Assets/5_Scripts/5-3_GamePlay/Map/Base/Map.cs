@@ -99,14 +99,14 @@ public class Map : Item
     {
         if (IsReadyForChunkLifecycle)
         {
-            if (AstarGameManager.Instance?.EnableDebugLogs == true)
-                Debug.Log($"[AStar-Debug][Map] NotifyChunkReady → chunk.NotifyMapLoaded | chunk={chunk?.name ?? "null"} | Map={name}");
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+                Debug.Log($"[WorldNav][Map] NotifyChunkReady | chunk={chunk?.name ?? "null"} | Map={name}");
             chunk?.NotifyMapLoaded();
         }
         else
         {
-            if (AstarGameManager.Instance?.EnableDebugLogs == true)
-                Debug.LogWarning($"[AStar-Debug][Map] NotifyChunkReady 条件不满足 | Data={Data != null} TileLoaded={Data?.TileLoaded} loadOrGenerateCoroutine={loadOrGenerateCoroutine != null} loadTileMapCoroutine={loadTileMapCoroutine != null}");
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+                Debug.LogWarning($"[WorldNav][Map] NotifyChunkReady 条件不满足 | Data={Data != null} TileLoaded={Data?.TileLoaded} loadOrGenerateCoroutine={loadOrGenerateCoroutine != null} loadTileMapCoroutine={loadTileMapCoroutine != null}");
         }
     }
 
@@ -117,13 +117,13 @@ public class Map : Item
 
         if (!ShouldBakePenaltyAfterTilemapLoad)
         {
-            if (AstarGameManager.Instance?.EnableDebugLogs == true)
-                Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 跳过烘焙 | ShouldBakePenaltyAfterTilemapLoad=false | Map={name}");
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+                Debug.Log($"[WorldNav][Map] 跳过导航注册 | ShouldBakePenaltyAfterTilemapLoad=false | Map={name}");
             return;
         }
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][Map] OnTilemapLoaded 触发权重烘焙 | Map={name} | AstarGameManager.Instance={AstarGameManager.Instance != null} | GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][Map] 注册地图导航 | Map={name} | Ready={WorldNavigationManager.Instance?.IsNavigationReady}");
         MarkPenaltyDirtyFull();
         BackTilePenalty_Async();
     }
@@ -131,8 +131,8 @@ public class Map : Item
     protected void FinalizeTilemapLoad()
     {
         tilemapVisualReady = true;
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][Map] FinalizeTilemapLoad 调用 | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded} | tileMap活跃={tileMap?.gameObject.activeSelf}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][Map] FinalizeTilemapLoad | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded}");
         OnTilemapLoaded();
         NotifyChunkReady();
     }
@@ -143,13 +143,21 @@ public class Map : Item
         InitMapGenerators();
     }
 
+    private void OnEnable()
+    {
+        if (Data?.TileLoaded == true)
+            WorldNavigationManager.Instance?.RegisterMap(this);
+    }
+
     private void OnDisable()
     {
+        WorldNavigationManager.ExistingInstance?.UnregisterMap(this);
         StopMapCoroutines();
     }
 
     private new void OnDestroy()
     {
+        WorldNavigationManager.ExistingInstance?.UnregisterMap(this);
         StopMapCoroutines();
     }
 
@@ -400,8 +408,8 @@ public class Map : Item
 
         bool hasTileData = Data.CountNonEmptyCells() > 0;
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][Map] Load 开始 | Map={name} chunk={chunk?.name ?? "null"} hasTileData={hasTileData} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][Map] Load | Map={name} chunk={chunk?.name ?? "null"} hasTileData={hasTileData} Ready={WorldNavigationManager.Instance?.IsNavigationReady}");
 
         // 先停止上一轮加载/生成流程（避免多次点击按钮叠加协程）
         if (loadOrGenerateCoroutine != null)
@@ -435,6 +443,7 @@ public class Map : Item
             ? SaveDataMgr.Instance.GetCurrentPlanetData()
             : null;
         yield return GenerateByPipelineCoroutine(planetData);
+        chunk?.NotifyItemsLoaded();
 
         if (Data == null || !Data.TileLoaded)
         {
@@ -511,8 +520,8 @@ public class Map : Item
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
-            if (AstarGameManager.Instance?.EnableDebugLogs == true)
-                Debug.LogWarning($"[AStar-Debug][Map] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+                Debug.LogWarning($"[WorldNav][Map] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
             loadTileMapCoroutine = null;
             FinalizeTilemapLoad();
             yield break;
@@ -552,10 +561,10 @@ public class Map : Item
         }
 
         yield return null;
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
         {
             Debug.Log($"✅ 完成加载 {processedCount} 个Tile到Tilemap");
-            Debug.Log($"[AStar-Debug][Map] Tilemap加载完成 | {processedCount} 个Tile | AstarGameManager.Instance={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady} | Map={name}");
+            Debug.Log($"[WorldNav][Map] Tilemap加载完成 | {processedCount} 个Tile | Ready={WorldNavigationManager.Instance?.IsNavigationReady} | Map={name}");
         }
         loadTileMapCoroutine = null;
         FinalizeTilemapLoad();
@@ -579,14 +588,14 @@ public class Map : Item
 
     private void QueuePendingNavigationChanges()
     {
-        var astar = AstarGameManager.Instance;
-        if (astar == null || Data == null)
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null || Data == null)
             return;
 
         if (backTilePenaltyForceFull)
         {
             if (Data.Width > 0 && Data.Height > 0)
-                astar.QueueNavigationRegion(new RectInt(Data.position.x, Data.position.y, Data.Width, Data.Height));
+                navigation.RegisterMap(this);
 
             backTilePenaltyForceFull = false;
             backTilePenaltyDirtyCells.Clear();
@@ -594,8 +603,7 @@ public class Map : Item
             return;
         }
 
-        foreach (Vector2Int worldCell in backTilePenaltyDirtyCells)
-            astar.QueueNavigationCell(worldCell);
+        navigation.QueueNavigationCells(backTilePenaltyDirtyCells);
 
         backTilePenaltyDirtyCells.Clear();
         backTilePenaltyPending = false;
@@ -603,15 +611,12 @@ public class Map : Item
 
     private void BakePenaltyForAllTilesSync()
     {
-        var astar = AstarGameManager.Instance;
-        if (astar == null)
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null)
         {
-            Debug.LogError($"[AStar-Debug][Map] BakePenaltyForAllTilesSync 中止: AstarGameManager.Instance=null | Map={name}");
+            Debug.LogError($"[WorldNav][Map] BakePenaltyForAllTilesSync 中止: manager=null | Map={name}");
             return;
         }
-
-        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
-        Debug.Log($"[AStar-Debug][Map] BakePenaltyForAllTilesSync 开始 | hasFastAccess={hasFastAccess} GridGraphReady={astar.IsGridGraphReady} | Map={name}");
 
         // 处理所有节点数据 这个是根据地块数据进行烘焙的
         foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
@@ -620,14 +625,7 @@ public class Map : Item
             TileData topTile = tileDataList[^1];
             bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
-            if (hasFastAccess)
-            {
-                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
-            }
-            else
-            {
-                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
-            }
+            navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
         }
 
         Debug.Log($"✅ 完成同步烘焙 {Data.CountNonEmptyCells()} 个地块的寻路权重");
@@ -635,11 +633,9 @@ public class Map : Item
 
     private void BakePenaltyForDirtyCellsSync()
     {
-        var astar = AstarGameManager.Instance;
-        if (astar == null)
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null)
             return;
-
-        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
 
         foreach (var worldPos in backTilePenaltyDirtyCells)
         {
@@ -650,14 +646,7 @@ public class Map : Item
             }
             bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
-            if (hasFastAccess)
-            {
-                astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
-            }
-            else
-            {
-                astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
-            }
+            navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
         }
     }
 
@@ -666,10 +655,10 @@ public class Map : Item
     /// </summary>
     private IEnumerator BackTilePenaltyCoroutine()
     {
-        var astar = AstarGameManager.Instance;
-        if (astar == null)
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null)
         {
-            Debug.LogError($"[AStar-Debug][Map] BackTilePenaltyCoroutine 中止: AstarGameManager.Instance=null | Map={name}");
+            Debug.LogError($"[WorldNav][Map] BackTilePenaltyCoroutine 中止: manager=null | Map={name}");
             backTilePenaltyCoroutine = null;
             yield break;
         }
@@ -688,19 +677,9 @@ public class Map : Item
             yield break;
         }
 
-        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 等待GridGraph就绪 | IsGridGraphReady={astar.IsGridGraphReady} | Map={name}");
-
-        while (!astar.IsGridGraphReady)
-            yield return null;
-
-        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine GridGraph已就绪，开始烘焙 | Map={name}");
-
         int batchSize = Mathf.Max(1, backTilePenaltyTilesPerYield);
         object yieldToken = GetBackTilePenaltyYieldToken();
         int processed = 0;
-        bool hasFastAccess = astar.TryGetGridGraphPenaltyAccess(out var access);
-
-        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 烘焙参数 | hasFastAccess={hasFastAccess} forceFull={backTilePenaltyForceFull} dirtyCells={backTilePenaltyDirtyCells.Count} batchSize={batchSize} | Map={name} | 网格图: width={(hasFastAccess ? access.Width : -1)} depth={(hasFastAccess ? access.Depth : -1)} left={(hasFastAccess ? access.Left : -1)} bottom={(hasFastAccess ? access.Bottom : -1)} nodeSize={(hasFastAccess ? 1f / access.InvNodeSize : -1)}");
 
         if (backTilePenaltyForceFull)
         {
@@ -709,14 +688,7 @@ public class Map : Item
                 TileData topTile = tileDataList[^1];
                 bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
-                if (hasFastAccess)
-                {
-                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
-                }
-                else
-                {
-                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
-                }
+                navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
 
                 processed++;
                 if (processed % batchSize == 0)
@@ -747,14 +719,7 @@ public class Map : Item
                 }
                 bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
 
-                if (hasFastAccess)
-                {
-                    astar.ModifyNodePenalty_GridGraphFast(access, worldPos, topTile.Penalty, walkable);
-                }
-                else
-                {
-                    astar.ModifyNodePenalty_Optimized(new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f), topTile.Penalty, walkable);
-                }
+                navigation.SetNavigationCell(this, worldPos, topTile.Penalty, walkable);
 
                 processed++;
                 if (processed % batchSize == 0)
@@ -768,7 +733,7 @@ public class Map : Item
 
         backTilePenaltyCoroutine = null;
 
-//        Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 完成 | 烘焙了 {processed} 个地块 | pending={backTilePenaltyPending} forceFull={backTilePenaltyForceFull} | Map={name}");
+//        Debug.Log($"[WorldNav][Map] BackTilePenaltyCoroutine 完成 | 烘焙了 {processed} 个地块 | pending={backTilePenaltyPending} forceFull={backTilePenaltyForceFull} | Map={name}");
 
         // 合并短时间内的重复请求：当前批次结束后补跑一次
         if (backTilePenaltyPending)
@@ -776,7 +741,7 @@ public class Map : Item
             backTilePenaltyPending = false;
             MarkPenaltyDirtyFull();
             lastBackTilePenaltyTime = Time.unscaledTime;
-            Debug.Log($"[AStar-Debug][Map] BackTilePenaltyCoroutine 检测到pending请求，立即重启协程 | Map={name}");
+            Debug.Log($"[WorldNav][Map] BackTilePenaltyCoroutine 检测到pending请求，立即重启协程 | Map={name}");
             backTilePenaltyCoroutine = StartCoroutine(BackTilePenaltyCoroutine());
         }
     }
@@ -849,8 +814,8 @@ public class Map : Item
     /// <param name="bounds">要烘焙的区域</param>
     public void BackTilePenalty_Bounds(Bounds bounds, bool useTilepenalty = false)
     {
-        var astar = AstarGameManager.Instance;
-        if (astar == null)
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null)
             return;
 
         int minX = Mathf.FloorToInt(bounds.min.x);
@@ -860,15 +825,15 @@ public class Map : Item
 
         if (useTilepenalty)
         {
-            astar.QueueNavigationRegion(new RectInt(minX, minY, maxX - minX, maxY - minY));
+            navigation.QueueNavigationRegion(new RectInt(minX, minY, maxX - minX, maxY - minY));
             return;
         }
 
-        for (int x = minX; x < maxX; x++)
-        {
-            for (int y = minY; y < maxY; y++)
-                astar.ModifyNodePenalty_Optimized(new Vector2(x + 0.5f, y + 0.5f), 0u, false);
-        }
+        navigation.SetNavigationRegion(
+            this,
+            new RectInt(minX, minY, maxX - minX, maxY - minY),
+            0u,
+            false);
     }
 
     public void MarkPenaltyDirty(Vector2Int worldPos)
@@ -1001,6 +966,22 @@ public class Map : Item
     {
         GrassDetailLayer grassLayer = GetComponent<GrassDetailLayer>();
         return grassLayer != null && grassLayer.RemoveGrassAt(this, position);
+    }
+
+    public bool HasGrassAt(Vector2Int position)
+    {
+        GrassDetailLayer grassLayer = GetComponent<GrassDetailLayer>();
+        return grassLayer != null && grassLayer.HasGrassAt(this, position);
+    }
+
+    public bool TryFindClosestGrass(Vector2 worldPosition, float searchRadius, out Vector2Int grassPosition)
+    {
+        GrassDetailLayer grassLayer = GetComponent<GrassDetailLayer>();
+        if (grassLayer != null)
+            return grassLayer.TryFindClosestGrass(this, worldPosition, searchRadius, out grassPosition);
+
+        grassPosition = default;
+        return false;
     }
 
     public void ADDTile(Vector2Int position, TileData tileData)

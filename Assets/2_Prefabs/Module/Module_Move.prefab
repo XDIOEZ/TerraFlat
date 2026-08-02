@@ -73,8 +73,8 @@ MonoBehaviour:
     Type: 0
     BitData: 
   animationController: {fileID: 0}
-  moveHungerBuff: {fileID: 11400000, guid: 202d06f90127eee4ea2c4bc310e3c58c, type: 2}
-  runHungerBuff: {fileID: 11400000, guid: 75ace42eca9a9af4fa49abb5406a96dc, type: 2}
+  moveHungerBuffId: "\u9965\u997F1.6"
+  runHungerBuffId: "\u9965\u997F2.0"
   OnMoveStart:
     _PersistentCalls: []
   OnMoveEnd:

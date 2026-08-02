@@ -370,6 +370,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             RuntimeInventory.EnsurePanelCreated();
         }
 
+        RuntimeInventory.basePanel?.SetEscapeShortcutEnabled(false);
+
         if (RuntimeInventory.basePanel != null && (itemSlot_UI == null || itemSlot_UI.Count == 0))
         {
             RuntimeInventory.InitUI();

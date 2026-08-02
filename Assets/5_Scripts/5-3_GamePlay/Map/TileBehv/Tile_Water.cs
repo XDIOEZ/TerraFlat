@@ -11,7 +11,7 @@ using UnityEngine;
 public class Tile_Water : TileBlockBehaviour
 {
     [Header("进入水体时附加的 Buff 列表")]
-    public List<Buff_Data> BuffInfo = new List<Buff_Data>();
+    public List<string> BuffInfo = new List<string>();
 
     public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {
@@ -51,12 +51,12 @@ public class Tile_Water : TileBlockBehaviour
         if (!validItem || buffManager == null || BuffInfo == null || BuffInfo.Count == 0)
             return;
 
-        foreach (Buff_Data buffData in BuffInfo)
+        foreach (string buffId in BuffInfo)
         {
-            if (buffData == null)
+            if (string.IsNullOrWhiteSpace(buffId))
                 continue;
 
-            buffManager.AddBuffRuntime(buffData, item);
+            buffManager.AddBuff(buffId);
         }
     }
 
@@ -85,15 +85,13 @@ public class Tile_Water : TileBlockBehaviour
         if (buffManager == null || BuffInfo == null)
             return;
 
-        foreach (Buff_Data buffData in BuffInfo)
+        foreach (string buffId in BuffInfo)
         {
-            if (buffData == null)
+            if (string.IsNullOrWhiteSpace(buffId))
                 continue;
 
-            if (buffManager.HasBuff(buffData.buff_ID))
-            {
-                buffManager.RemoveBuff(buffData.buff_ID);
-            }
+            if (buffManager.HasBuff(buffId))
+                buffManager.RemoveBuff(buffId);
         }
     }
 

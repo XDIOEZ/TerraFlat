@@ -247,7 +247,7 @@ public class Mod_ChunkLoader : Module
         // 将 Vector2 center 转为 Vector2Int 区块坐标，确保权重烘焙使用固定中心
         Vector2Int centerChunkPos = new Vector2Int(Mathf.RoundToInt(chunkPos.x), Mathf.RoundToInt(chunkPos.y));
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] UpdateChunks 触发 | chunkPos={chunkPos} centerChunkPos={centerChunkPos} LoadDistance={currentLoadDistance} UnActiveDistance={UnActiveDistance} DestroyDistance={DestroyChunkDistance}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] UpdateChunks | chunkPos={chunkPos} centerChunkPos={centerChunkPos} LoadDistance={currentLoadDistance} UnActiveDistance={UnActiveDistance} DestroyDistance={DestroyChunkDistance}");
 
         // 停止上一轮保底协程
         if (_delayedNavRefreshCoroutine != null)
@@ -261,12 +261,12 @@ public class Mod_ChunkLoader : Module
         ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, UnActiveDistance);
         ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, currentLoadDistance, () =>
         {
-            if (AstarGameManager.Instance == null)
+            if (WorldNavigationManager.Instance == null)
             {
-                Debug.LogError("[区块加载器] AstarGameManager 未初始化", this);
+                Debug.LogError("[区块加载器] WorldNavigationManager 未初始化", this);
                 return;
             }
-            if (AstarGameManager.Instance.EnableDebugLogs) Debug.Log($"[AStar-Debug][ChunkLoader] 所有区块加载完成 → RequestNavMeshRefresh | center={chunkPos} centerChunkPos={centerChunkPos} currentLoadDistance={currentLoadDistance}");
+            if (WorldNavigationManager.Instance.EnableDebugLogs) Debug.Log($"[WorldNav][ChunkLoader] 所有区块加载完成，刷新导航 | center={chunkPos} centerChunkPos={centerChunkPos} currentLoadDistance={currentLoadDistance}");
             _pendingRefreshLoadDistance = currentLoadDistance;
             _pendingRefreshCenterChunk = centerChunkPos;
             RequestNavMeshRefresh(chunkPos);
@@ -305,17 +305,17 @@ public class Mod_ChunkLoader : Module
         // 如果回调链已触发NavMesh刷新，则跳过
         if (_isNavRefreshRunning)
         {
-            if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 检测到NavMesh已在刷新，跳过保底 | center={center}");
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 导航已在刷新，跳过保底 | center={center}");
             yield break;
         }
 
-        if (AstarGameManager.Instance == null)
+        if (WorldNavigationManager.Instance == null)
         {
-            Debug.LogError("[区块加载器] DelayedNavMeshRefresh: AstarGameManager 未初始化", this);
+            Debug.LogError("[区块加载器] WorldNavigationManager 未初始化", this);
             yield break;
         }
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] DelayedNavMeshRefresh 保底触发 → RequestNavMeshRefresh | center={center} loadDistance={loadDistance} centerChunkPos={centerChunkPos}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 保底刷新 | center={center} loadDistance={loadDistance} centerChunkPos={centerChunkPos}");
         _pendingRefreshLoadDistance = loadDistance;
         _pendingRefreshCenterChunk = centerChunkPos;
         RequestNavMeshRefresh(center);
@@ -323,25 +323,29 @@ public class Mod_ChunkLoader : Module
 
     private void RequestNavMeshRefresh(Vector2 center)
     {
-        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] RequestNavMeshRefresh | center={center} _isNavRefreshRunning={_isNavRefreshRunning} LoadDistance={LoadChunkDistance}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] RequestNavigationRefresh | center={center} running={_isNavRefreshRunning} LoadDistance={LoadChunkDistance}");
 
         if (_isNavRefreshRunning)
         {
             _hasQueuedNavRefresh = true;
             _queuedNavRefreshCenter = center;
             _queuedNavRefreshLoadDistance = LoadChunkDistance; // 保存排队请求的距离
-            if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] NavRefresh正在运行，排队等待 | queuedCenter={center} queuedLoadDistance={_queuedNavRefreshLoadDistance}");
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 刷新运行中，合并后续请求 | queuedCenter={center} queuedLoadDistance={_queuedNavRefreshLoadDistance}");
             return;
         }
 
         _isNavRefreshRunning = true;
         _pendingRefreshLoadDistance = LoadChunkDistance; // 保存当前刷新使用的距离
 
-        var astar = AstarGameManager.Instance;
-        var gridGraph = astar?.Pathfinder?.data?.gridGraph;
-        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] 开始RefreshNavMeshAsync | GridGraph: width={gridGraph?.width ?? -1} depth={gridGraph?.depth ?? -1} center={gridGraph?.center} nodeSize={gridGraph?.nodeSize ?? -1} pendingLoadDistance={_pendingRefreshLoadDistance}");
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null)
+        {
+            _isNavRefreshRunning = false;
+            return;
+        }
 
-        astar.RefreshNavMeshAsync(center, _pendingRefreshLoadDistance, OnMeshUpdateComplete);
+        if (navigation.EnableDebugLogs) Debug.Log($"[WorldNav][ChunkLoader] 注册已加载区块 | pendingLoadDistance={_pendingRefreshLoadDistance}");
+        navigation.RefreshLoadedRegion(center, _pendingRefreshLoadDistance, OnMeshUpdateComplete);
     }
 
     private void OnMeshUpdateComplete()
@@ -349,7 +353,7 @@ public class Mod_ChunkLoader : Module
         _isNavRefreshRunning = false;
         int completedLoadDistance = _pendingRefreshLoadDistance;
         Vector2Int completedCenterChunk = _pendingRefreshCenterChunk;
-        if (AstarGameManager.Instance?.EnableDebugLogs == true) Debug.Log($"[AStar-Debug][ChunkLoader] NavMesh刷新完成 | _hasQueuedNavRefresh={_hasQueuedNavRefresh} completedLoadDistance={completedLoadDistance} completedCenterChunk={completedCenterChunk}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 导航刷新完成 | queued={_hasQueuedNavRefresh} completedLoadDistance={completedLoadDistance} completedCenterChunk={completedCenterChunk}");
 
         if (_hasQueuedNavRefresh)
         {
@@ -361,8 +365,8 @@ public class Mod_ChunkLoader : Module
             return;
         }
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AstarGameManager] 增量导航更新完成 | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav] 增量导航更新完成 | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
     }
 
     #endregion

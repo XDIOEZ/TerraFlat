@@ -1,5 +1,4 @@
 using MemoryPack;
-using Pathfinding;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -264,19 +263,7 @@ public partial class Mod_Hoe : Module
             return;
         }
 
-        if (AstarPath.active == null)
-        {
-            chunk.Map.BackTilePenalty_Cell_3x3(gridCenter);
-            return;
-        }
-
-        AstarPath.active.AddWorkItem(new AstarWorkItem(() =>
-        {
-        }, force =>
-        {
-            chunk.Map.BackTilePenalty_Cell_3x3(gridCenter);
-            return true;
-        }));
+        chunk.Map.BackTilePenalty_Cell_3x3(gridCenter);
     }
 
 #endregion

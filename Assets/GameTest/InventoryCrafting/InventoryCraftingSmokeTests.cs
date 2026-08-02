@@ -52,9 +52,55 @@ namespace FlatWorld.GameTest.InventoryCrafting
             const string slotPath = "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Slot.prefab";
             GameObject slot = AssetDatabase.LoadAssetAtPath<GameObject>(slotPath);
             Assert.That(slot, Is.Not.Null, $"缺少槽位 Prefab：{slotPath}");
+            AssertCraftingPreviewLayers(slot.GetComponent<ItemSlot_UI>(), slotPath);
+
+            string[] craftingPanelPaths =
+            {
+                "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_HandCraftTable.prefab",
+                "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_MakerTable.prefab",
+                "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_FireDrill.prefab",
+                "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_FlintStrike.prefab"
+            };
+
+            foreach (string craftingPanelPath in craftingPanelPaths)
+            {
+                GameObject panel = AssetDatabase.LoadAssetAtPath<GameObject>(craftingPanelPath);
+                Assert.That(panel, Is.Not.Null, $"缺少制作面板 Prefab：{craftingPanelPath}");
+
+                ItemSlot_UI[] panelSlots = panel.GetComponentsInChildren<ItemSlot_UI>(true);
+                ItemSlot_UI[] outputSlots = Array.FindAll(
+                    panelSlots,
+                    panelSlot => panelSlot != null && panelSlot.name.StartsWith("输出_", StringComparison.Ordinal));
+                Assert.That(outputSlots, Is.Not.Empty, $"{craftingPanelPath} 未找到输出槽");
+
+                foreach (ItemSlot_UI outputSlot in outputSlots)
+                    AssertCraftingPreviewLayers(outputSlot, craftingPanelPath);
+            }
+        }
+
+        private static void AssertCraftingPreviewLayers(ItemSlot_UI slot, string prefabPath)
+        {
+            Assert.That(slot, Is.Not.Null, $"{prefabPath} 缺少 ItemSlot_UI");
+            Assert.That(slot.image, Is.Not.Null, $"{prefabPath}/{slot.name} 缺少物品图标引用");
+
             Image[] images = slot.GetComponentsInChildren<Image>(true);
-            Assert.That(Array.Exists(images, image => image.name == "Crafting Output Ghost"), Is.True);
-            Assert.That(Array.Exists(images, image => image.name == "Crafting Output Reveal"), Is.True);
+            Image ghost = Array.Find(images, image => image != null && image.name == "Crafting Output Ghost");
+            Image reveal = Array.Find(images, image => image != null && image.name == "Crafting Output Reveal");
+            string context = $"{prefabPath}/{slot.name}";
+
+            Assert.That(ghost, Is.Not.Null, $"{context} 缺少 Crafting Output Ghost");
+            Assert.That(reveal, Is.Not.Null, $"{context} 缺少 Crafting Output Reveal");
+            Assert.That(ghost.gameObject.activeSelf, Is.False, $"{context} Ghost 默认应隐藏");
+            Assert.That(reveal.gameObject.activeSelf, Is.False, $"{context} Reveal 默认应隐藏");
+            Assert.That(ghost.raycastTarget, Is.False, $"{context} Ghost 不应拦截射线");
+            Assert.That(reveal.raycastTarget, Is.False, $"{context} Reveal 不应拦截射线");
+            Assert.That(ghost.preserveAspect, Is.True, $"{context} Ghost 应保持宽高比");
+            Assert.That(reveal.preserveAspect, Is.True, $"{context} Reveal 应保持宽高比");
+            Assert.That(reveal.type, Is.EqualTo(Image.Type.Filled), $"{context} Reveal 类型错误");
+            Assert.That(reveal.fillMethod, Is.EqualTo(Image.FillMethod.Vertical), $"{context} Reveal 填充方向错误");
+            Assert.That(reveal.fillOrigin, Is.EqualTo((int)Image.OriginVertical.Bottom), $"{context} Reveal 应从下方填充");
+            Assert.That(ghost.transform.parent, Is.EqualTo(slot.image.transform.parent), $"{context} Ghost 层级错误");
+            Assert.That(reveal.transform.parent, Is.EqualTo(slot.image.transform.parent), $"{context} Reveal 层级错误");
         }
 
         [Test]

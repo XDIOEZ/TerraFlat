@@ -10,9 +10,6 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T instance;
 
-    // 标记应用是否正在退出，防止在销毁阶段重新创建单例对象
-    private static bool isShuttingDown = false;
-
     /// <summary>
     /// 单例全局访问
     /// </summary>
@@ -21,7 +18,7 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
         get
         {
             // 如果应用正在退出，则不再尝试创建新的单例实例
-            if (isShuttingDown)
+            if (SingletonAutoMonoLifecycle.IsShuttingDown)
             {
                 return instance;
             }
@@ -63,7 +60,7 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
     /// </summary>
     protected virtual void OnApplicationQuit()
     {
-        isShuttingDown = true;
+        SingletonAutoMonoLifecycle.MarkShuttingDown();
     }
 
     /// <summary>
@@ -77,4 +74,24 @@ public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
         }
     }
 
+}
+
+/// <summary>
+/// 在关闭 Domain Reload 的快速进入播放模式下，静态字段不会自动清空。
+/// 统一在每次运行初始化时复位退出标记，避免下一轮运行的自动单例永久返回 null。
+/// </summary>
+internal static class SingletonAutoMonoLifecycle
+{
+    public static bool IsShuttingDown { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetState()
+    {
+        IsShuttingDown = false;
+    }
+
+    public static void MarkShuttingDown()
+    {
+        IsShuttingDown = true;
+    }
 }

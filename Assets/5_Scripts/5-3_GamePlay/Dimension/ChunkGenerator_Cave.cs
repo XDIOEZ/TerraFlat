@@ -7,7 +7,9 @@ using UnityEngine;
 public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
 {
     private const int LooseOreSeedSalt = 0x6C8E9CF5;
-    public const float GeneratedResourceUniformScale = 2.5f;
+    // Mine prefabs are authored as one world cell (1x1). Keep generated and restored
+    // cave mines at that size so visuals, colliders and navigation agree.
+    public const float GeneratedResourceUniformScale = 1f;
 
     public static Quaternion GeneratedResourceRotation => Quaternion.identity;
     public static Vector3 GeneratedResourceScale =>
@@ -55,6 +57,7 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
         int width = Mathf.Max(1, Mathf.RoundToInt(chunkSize.x));
         int height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
+        Vector2Int portalChunkSize = new Vector2Int(width, height);
         int batchSize = Mathf.Max(1, workBatchSize);
         int processed = 0;
 
@@ -78,7 +81,11 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
                 Map.Data.SetEnvironmentAtLocal(x, y, 0.3f, 12f, 0.7f, 0f, 0.95f, 0.05f);
                 Map.Data.SetLightAtLocal(x, y, definition.FixedLighting);
 
-                bool isOpen = CaveLayoutSampler.IsOpenAtWorld(worldPos, definition, context.WorldSeed);
+                bool isOpen = CaveLayoutSampler.IsOpenAtWorld(
+                    worldPos,
+                    definition,
+                    context.WorldSeed,
+                    portalChunkSize);
                 if (!isOpen)
                 {
                     TileData wallTile = wallBlock.tileDataTemplate.Clone();
@@ -87,7 +94,11 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
                 else if ((new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f) - safeCenter).sqrMagnitude > safeRadiusSqr)
                 {
                     Vector2Int localPos = new Vector2Int(x, y);
-                    bool spawnedMine = CaveLayoutSampler.IsWallEdge(worldPos, definition, context.WorldSeed) &&
+                    bool spawnedMine = CaveLayoutSampler.IsWallEdge(
+                                           worldPos,
+                                           definition,
+                                           context.WorldSeed,
+                                           portalChunkSize) &&
                                        TrySpawnResource(context, definition, resources, worldPos, localPos);
                     if (!spawnedMine)
                         TrySpawnLooseOre(context, definition, resources, worldPos, localPos);

@@ -8,7 +8,7 @@ using UnityEngine;
 /// 生物生成与生态预算管理器。
 /// 负责跨时刻调度、种群上限、环境校验、死亡补位和远距离回收。
 /// </summary>
-public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
+public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 {
     #region 配置
 
@@ -574,11 +574,11 @@ public class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
 
     private static bool IsWalkableSpawnPosition(Vector3 worldPos)
     {
-        AstarGameManager astarManager = AstarGameManager.Instance;
-        if (astarManager == null || !astarManager.IsGridGraphReady)
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null || !navigation.IsNavigationReady)
             return false;
 
-        return astarManager.TryGetNodePenalty_GridGraphFast(worldPos, out _, out bool walkable) && walkable;
+        return navigation.TryGetCell(worldPos, out _, out bool walkable) && walkable;
     }
 
     private static bool TryGetLoadedMap(Vector3 worldPos, out Map map)

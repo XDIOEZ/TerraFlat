@@ -100,7 +100,7 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("RightClick", null, "次要操作"),
         new BindingSpec("E", null, "交互"),
         new BindingSpec("Shift", null, "奔跑"),
-        new BindingSpec("Tab", null, "营养面板"),
+        new BindingSpec("Tab", null, "角色参数面板"),
         new BindingSpec("CtrlMouse", "Modifier", "镜头缩放修饰键"),
         new BindingSpec("OpenChat", null, "打开聊天框"),
         new BindingSpec("SwitchHotBar_Player", null, "快捷栏 1", 0),
@@ -112,7 +112,7 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("SwitchHotBar_Player", null, "快捷栏 7", 6),
         new BindingSpec("SwitchHotBar_Player", null, "快捷栏 8", 7),
         new BindingSpec("SwitchHotBar_Player", null, "快捷栏 9", 8),
-        new BindingSpec("ESC", null, "打开设置")
+        new BindingSpec("ESC", null, "关闭面板 / 打开设置")
     };
 
     private readonly InputActionAsset inputAsset;

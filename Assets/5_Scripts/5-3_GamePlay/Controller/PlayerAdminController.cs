@@ -9,6 +9,9 @@ public class PlayerAdminController : Module
     #region 常量与字段
 
     private const string AdminName = "管理员";
+    private static readonly float[] AdminMoveSpeedPresets = { 1f, 2f, 3f, 5f };
+
+    public static bool TeleportToMouseShortcutEnabled { get; private set; } = true;
 
     [Header("核心引用")]
     [Tooltip("要控制的玩家组件")]
@@ -56,6 +59,11 @@ public class PlayerAdminController : Module
     private float initialUnityTimeScale = 1.0f;
     private bool adminRuntimeSettingsApplied = false;
     private GameController gameController;
+    private Mover playerMover;
+    private Mover adminMoveSpeedTarget;
+    private float appliedAdminMoveSpeedMultiplier = 1f;
+
+    public float AdminMoveSpeedMultiplier { get; private set; } = 1f;
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -63,6 +71,12 @@ public class PlayerAdminController : Module
     #endregion
 
     #region 生命周期
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeSettings()
+    {
+        TeleportToMouseShortcutEnabled = true;
+    }
 
     private void Start()
     {
@@ -109,6 +123,9 @@ public class PlayerAdminController : Module
 
             if (chunkLoader == null)
                 chunkLoader = player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
+
+            if (playerMover == null)
+                playerMover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
         }
     }
 
@@ -167,7 +184,8 @@ public class PlayerAdminController : Module
     private void HandleAdminInput()
     {
         // Ctrl + T：传送到鼠标位置，裸 T 留给聊天框
-        if (Input.GetKeyDown(KeyCode.T) &&
+        if (TeleportToMouseShortcutEnabled &&
+            Input.GetKeyDown(KeyCode.T) &&
             (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
         {
             playerTraits?.TeleportToMousePosition();
@@ -195,6 +213,12 @@ public class PlayerAdminController : Module
         {
             IncreaseAdminChunkLoadDistance();
         }
+    }
+
+    public static bool ToggleTeleportToMouseShortcut()
+    {
+        TeleportToMouseShortcutEnabled = !TeleportToMouseShortcutEnabled;
+        return TeleportToMouseShortcutEnabled;
     }
 
     private void ApplyAdminRuntimeSettings()
@@ -234,6 +258,60 @@ public class PlayerAdminController : Module
             if (chunkLoader == null)
                 chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
         }
+
+        if (playerMover == null)
+        {
+            if (player?.itemMods != null && player.itemMods.ContainsKey_ID(ModText.Mover))
+                playerMover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+
+            if (playerMover == null)
+                playerMover = GetComponentInChildren<Mover>(true);
+        }
+    }
+
+    public bool TryCycleAdminMoveSpeedMultiplier(out float selectedMultiplier)
+    {
+        int nextIndex = 0;
+        for (int i = 0; i < AdminMoveSpeedPresets.Length; i++)
+        {
+            if (!Mathf.Approximately(AdminMoveSpeedMultiplier, AdminMoveSpeedPresets[i]))
+                continue;
+
+            nextIndex = (i + 1) % AdminMoveSpeedPresets.Length;
+            break;
+        }
+
+        selectedMultiplier = AdminMoveSpeedPresets[nextIndex];
+        if (TryApplyAdminMoveSpeedMultiplier(selectedMultiplier))
+            return true;
+
+        selectedMultiplier = AdminMoveSpeedMultiplier;
+        return false;
+    }
+
+    private bool TryApplyAdminMoveSpeedMultiplier(float multiplier)
+    {
+        ResolveAdminRuntimeReferences();
+        if (playerMover?.Speed == null)
+        {
+            Debug.LogWarning("[Admin] Player move speed adjustment failed: Mover not found.");
+            return false;
+        }
+
+        multiplier = Mathf.Clamp(multiplier, AdminMoveSpeedPresets[0], AdminMoveSpeedPresets[AdminMoveSpeedPresets.Length - 1]);
+        if (adminMoveSpeedTarget != playerMover)
+        {
+            adminMoveSpeedTarget = playerMover;
+            appliedAdminMoveSpeedMultiplier = 1f;
+        }
+
+        float previousMultiplier = Mathf.Max(0.01f, appliedAdminMoveSpeedMultiplier);
+        playerMover.Speed.MultiplicativeModifier =
+            playerMover.Speed.MultiplicativeModifier / previousMultiplier * multiplier;
+        appliedAdminMoveSpeedMultiplier = multiplier;
+        AdminMoveSpeedMultiplier = multiplier;
+        Debug.Log($"[Admin] Player move speed multiplier set to {multiplier:0.#}x.");
+        return true;
     }
 
     private void IncreaseAdminChunkLoadDistance()
