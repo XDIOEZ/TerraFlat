@@ -6,6 +6,7 @@ using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using UltEvents;
 
 public enum FoodConsumeKind
@@ -182,7 +183,24 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     private DamageReceiver _damageReceiver;
 
     [MemoryPackIgnore]
+    private Mod_Temperature _temperature;
+
+    [MemoryPackIgnore]
     private float _hungerDamageTickTimer;
+
+    [NonSerialized]
+    private float _runtimeNutritionConsumeMultiplier = 1f;
+
+    [NonSerialized]
+    private float _buffNutritionConsumeMultiplier = 1f;
+
+    public float RuntimeNutritionConsumeMultiplier
+    {
+        get => _runtimeNutritionConsumeMultiplier;
+        set => _runtimeNutritionConsumeMultiplier = Mathf.Max(0f, value);
+    }
+
+    public float BuffNutritionConsumeMultiplier => _buffNutritionConsumeMultiplier;
 
     [MemoryPackIgnore]
     private UnityEngine.InputSystem.InputAction _tabAction;
@@ -204,17 +222,13 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         FoodModData ??= new ModData_FoodData();
         FoodModData.ApplyToFoodData();
+        RuntimeNutritionConsumeMultiplier = 1f;
+        _buffNutritionConsumeMultiplier = 1f;
 
         ResolveFoodRuntimeModules();
         LoadRuntimeStateFromLegacyData();
 
-        UnbindTabInput();
-        item.itemMods.GetMod_ByID(ModText.Controller, out GameController Controller);
-        if (Controller != null)
-        {
-            _tabAction = Controller._inputActions.Win10.Tab;
-            _tabAction.performed += OnTogglePanelPerformed;
-        }
+        BindTabInput();
 
         // 根据保存的状态决定是否显示面板
         if (Data.ShowCanvas)
@@ -233,20 +247,11 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         Data.ObserverState = BuildRuntimeStateSnapshot();
 
-        if (item != null)
-        {
-            item.OnAct -= Act;
-        }
-        UnbindTabInput();
-
         // 保存面板位置
         if (PanleInstance != null)
         {
             SavePanelPosition();
         }
-
-        // 终止所有与该对象相关的 tween
-        DOTween.Kill(item?.transform);
 
         FoodModData ??= new ModData_FoodData();
         FoodModData.SyncFromFood(Data);
@@ -271,22 +276,43 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     public void OnItemTakenFromPool()
     {
         EatingProgress = 0f;
+        RuntimeNutritionConsumeMultiplier = 1f;
+        _buffNutritionConsumeMultiplier = 1f;
         ConsumeCompleted = null;
-        UnbindTabInput();
+        ReleaseRuntimeBindings(destroyPanel: true);
     }
 
     public void OnItemReturnedToPool()
     {
         EatingProgress = 0f;
+        RuntimeNutritionConsumeMultiplier = 1f;
+        _buffNutritionConsumeMultiplier = 1f;
         ConsumeCompleted = null;
-        if (item != null)
-            item.OnAct -= Act;
-        UnbindTabInput();
+        ReleaseRuntimeBindings(destroyPanel: true);
+    }
+
+    private void OnDestroy()
+    {
+        ReleaseRuntimeBindings(destroyPanel: true);
     }
 
     private void OnTogglePanelPerformed(UnityEngine.InputSystem.InputAction.CallbackContext _)
     {
         TogglePanel();
+    }
+
+    private void BindTabInput()
+    {
+        UnbindTabInput();
+        if (item?.itemMods == null)
+            return;
+
+        item.itemMods.GetMod_ByID(ModText.Controller, out GameController controller);
+        if (controller?._inputActions == null)
+            return;
+
+        _tabAction = controller._inputActions.Win10.Tab;
+        _tabAction.performed += OnTogglePanelPerformed;
     }
 
     private void UnbindTabInput()
@@ -295,6 +321,34 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
             _tabAction.performed -= OnTogglePanelPerformed;
 
         _tabAction = null;
+    }
+
+    private void ReleaseRuntimeBindings(bool destroyPanel)
+    {
+        if (item != null)
+            item.OnAct -= Act;
+
+        UnbindTabInput();
+        DOTween.Kill(item?.transform);
+        DataUpdate -= RefreshUI;
+
+        if (panelUI != null)
+        {
+            panelUI.Opened -= OnPanelOpened;
+            panelUI.Closed -= OnPanelClosed;
+        }
+
+        GameObject panelToDestroy = destroyPanel ? PanleInstance : null;
+        panelUI = null;
+        PanleInstance = null;
+
+        if (panelToDestroy == null)
+            return;
+
+        if (Application.isPlaying)
+            Destroy(panelToDestroy);
+        else
+            DestroyImmediate(panelToDestroy);
     }
 
     public override void ModUpdate(float timeDelta)
@@ -311,8 +365,24 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     #endregion
 
     #region 营养管理
+    public void MultiplyRuntimeNutritionConsumeSpeed(float multiplier)
+    {
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
+        {
+            Debug.LogWarning($"[Mod_Food] 忽略无效营养消耗倍率：{multiplier}", this);
+            return;
+        }
+
+        _buffNutritionConsumeMultiplier = Mathf.Clamp(
+            _buffNutritionConsumeMultiplier * multiplier,
+            0.01f,
+            100f);
+    }
+
     public float ConsumeNutrition(float timeDelta)
     {
+        timeDelta *= RuntimeNutritionConsumeMultiplier * BuffNutritionConsumeMultiplier;
+
         if (GameDifficultyService.IsPlayer(item))
             timeDelta *= GameDifficultyService.Current.PlayerSurvival.HungerDrainMultiplier;
 
@@ -359,16 +429,25 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         // 返回本次消耗的总能量值
         return totalEnergy;
     }
+
+    public void RestoreNutritionToMaximum()
+    {
+        if (Data?.nutrition == null)
+            return;
+
+        Data.nutrition.Max();
+        DataUpdate?.Invoke();
+    }
     #endregion
 
     #region 面板管理
     [Button("显示面板")]
     public void ShowPanel()
     {
-        if (PanleInstance != null) return;
+        if (!EnsurePanelExists())
+            return;
 
-        // 实例化操作已移动到TogglePanel方法中
-        TogglePanel();
+        OpenPanel();
     }
 
 
@@ -376,8 +455,12 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     [Button("隐藏面板")]
     public void HidePanel()
     {
-        if (PanleInstance == null) return;
+        if (!TryResolvePanel())
+            return;
+
         panelUI.Close();
+        Data.ShowCanvas = false;
+        SavePanelPosition();
     }
 
     /// <summary>
@@ -385,6 +468,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     /// </summary>
     private void SavePanelPosition()
     {
+        if (PanleInstance == null)
+            return;
+
         // 优先从拖拽组件获取位置
         var dragComponent = PanleInstance.GetComponentInChildren<UI_Drag>();
         if (dragComponent != null)
@@ -402,6 +488,71 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         }
     }
 
+    private void RestorePanelPosition()
+    {
+        if (PanleInstance == null)
+            return;
+
+        UI_Drag dragComponent = PanleInstance.GetComponentInChildren<UI_Drag>(true);
+        RectTransform movableRect = dragComponent != null
+            ? dragComponent.rectTransform
+            : PanleInstance.GetComponent<RectTransform>();
+        if (movableRect == null)
+            return;
+
+        if (Data.PanelPosition != Vector2.zero)
+            movableRect.anchoredPosition = Data.PanelPosition;
+
+        Canvas.ForceUpdateCanvases();
+        ClampInsideCanvas(movableRect, 20f);
+    }
+
+    private static void ClampInsideCanvas(RectTransform panelRect, float margin)
+    {
+        Canvas canvas = panelRect != null ? panelRect.GetComponentInParent<Canvas>() : null;
+        RectTransform canvasRect = canvas != null ? canvas.transform as RectTransform : null;
+        if (panelRect == null || canvasRect == null)
+            return;
+
+        Vector3[] worldCorners = new Vector3[4];
+        panelRect.GetWorldCorners(worldCorners);
+
+        Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
+        Vector2 max = new(float.NegativeInfinity, float.NegativeInfinity);
+        for (int i = 0; i < worldCorners.Length; i++)
+        {
+            Vector3 local = canvasRect.InverseTransformPoint(worldCorners[i]);
+            min = Vector2.Min(min, local);
+            max = Vector2.Max(max, local);
+        }
+
+        Rect canvasBounds = canvasRect.rect;
+        Vector2 correction = Vector2.zero;
+        float safeMinX = canvasBounds.xMin + margin;
+        float safeMaxX = canvasBounds.xMax - margin;
+        float safeMinY = canvasBounds.yMin + margin;
+        float safeMaxY = canvasBounds.yMax - margin;
+
+        if (min.x < safeMinX)
+            correction.x = safeMinX - min.x;
+        else if (max.x > safeMaxX)
+            correction.x = safeMaxX - max.x;
+
+        if (min.y < safeMinY)
+            correction.y = safeMinY - min.y;
+        else if (max.y > safeMaxY)
+            correction.y = safeMaxY - max.y;
+
+        if (correction == Vector2.zero)
+            return;
+
+        Vector3 worldCorrection = canvasRect.TransformVector(correction);
+        Vector3 parentCorrection = panelRect.parent != null
+            ? panelRect.parent.InverseTransformVector(worldCorrection)
+            : worldCorrection;
+        panelRect.anchoredPosition += new Vector2(parentCorrection.x, parentCorrection.y);
+    }
+
     /// <summary>
     /// 切换面板显示状态
     /// </summary>
@@ -417,14 +568,10 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
             }
         }
 
-        // 检测面板是否已经实例化，如果未实例化则先实例化
-        if (PanleInstance == null)
+        if (!TryResolvePanel())
         {
-            panelUI = UIManager.Instance.CreatePanelFromGameObject(PanelPrefab);
-            PanleInstance = panelUI.gameObject;
-            DataUpdate += RefreshUI;
-            RefreshUI();
-            panelUI.Open();
+            if (EnsurePanelExists())
+                OpenPanel();
             return;
         }
 
@@ -435,10 +582,72 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         }
         else
         {
-            // 设置面板为打开状态
-            panelUI.Open();
-            Data.ShowCanvas = true;
+            OpenPanel();
         }
+    }
+
+    private bool TryResolvePanel()
+    {
+        if (panelUI != null)
+            return true;
+
+        if (PanleInstance == null)
+            return false;
+
+        panelUI = PanleInstance.GetComponent<BasePanel>();
+        return panelUI != null;
+    }
+
+    private bool EnsurePanelExists()
+    {
+        if (TryResolvePanel())
+            return true;
+
+        if (PanelPrefab == null)
+        {
+            Debug.LogError("[Mod_Food] 角色参数面板 Prefab 未配置。", this);
+            return false;
+        }
+
+        panelUI = UIManager.Instance.CreatePanelFromGameObject(PanelPrefab);
+        if (panelUI == null)
+        {
+            Debug.LogError("[Mod_Food] 创建角色参数面板失败。", this);
+            return false;
+        }
+
+        panelUI.SetEscapeShortcutEnabled(false);
+
+        PanleInstance = panelUI.gameObject;
+        DataUpdate -= RefreshUI;
+        DataUpdate += RefreshUI;
+        panelUI.Opened -= OnPanelOpened;
+        panelUI.Opened += OnPanelOpened;
+        panelUI.Closed -= OnPanelClosed;
+        panelUI.Closed += OnPanelClosed;
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(panelUI.rectTransform);
+        RestorePanelPosition();
+        RefreshUI();
+        return true;
+    }
+
+    private void OpenPanel()
+    {
+        panelUI.Open();
+        Data.ShowCanvas = true;
+        RefreshUI();
+    }
+
+    private void OnPanelOpened()
+    {
+        Data.ShowCanvas = true;
+    }
+
+    private void OnPanelClosed()
+    {
+        Data.ShowCanvas = false;
+        SavePanelPosition();
     }
 
     public void I_ShowPanel()
@@ -477,6 +686,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         UpdateNutritionDataText("蛋白质", Data.nutrition.Protein, Data.nutrition.Max_Protein);
         UpdateNutritionDataText("水", Data.nutrition.Water, Data.nutrition.Max_Water);
         UpdateNutritionDataText("维生素", Data.nutrition.Vitamins, Data.nutrition.Max_Vitamins);
+        UpdateTemperatureUI();
     }
 
     /// <summary>
@@ -500,10 +710,38 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         var dataText = panelUI.GetText($"DataText_{nutritionName}");
         if (dataText != null)
         {
-                int currentInt = Mathf.RoundToInt(currentValue);
-                int maxInt = Mathf.RoundToInt(maxValue);
-                dataText.text = $"{currentInt}/{maxInt}";
+            int currentInt = Mathf.RoundToInt(currentValue);
+            int maxInt = Mathf.RoundToInt(maxValue);
+            dataText.text = $"{currentInt}/{maxInt}";
         }
+    }
+
+    private void UpdateTemperatureUI()
+    {
+        if (_temperature == null)
+            item?.itemMods?.GetMod_ByID(ModText.Temperature, out _temperature);
+
+        var slider = panelUI.GetSlider("体温");
+        var dataText = panelUI.GetText("DataText_体温");
+        if (_temperature?.Data == null)
+        {
+            if (dataText != null)
+                dataText.text = "--";
+            return;
+        }
+
+        float coldStart = _temperature.Data.ColdDamageStart;
+        float hotStart = Mathf.Max(coldStart + 1f, _temperature.Data.HotDamageStart);
+        float buffer = Mathf.Max(2f, (hotStart - coldStart) * 0.2f);
+        if (slider != null)
+        {
+            slider.minValue = coldStart - buffer;
+            slider.maxValue = hotStart + buffer;
+            slider.value = _temperature.Data.CurrentTemperature;
+        }
+
+        if (dataText != null)
+            dataText.text = $"{_temperature.Data.CurrentTemperature:0.0}°C";
     }
     #endregion
 
@@ -676,6 +914,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
         item.itemMods.GetMod_ByID(ModText.Stamina, out _stamina);
         item.itemMods.GetMod_ByID(ModText.Hp, out _damageReceiver);
+        item.itemMods.GetMod_ByID(ModText.Temperature, out _temperature);
     }
 
     private void LoadRuntimeStateFromLegacyData()

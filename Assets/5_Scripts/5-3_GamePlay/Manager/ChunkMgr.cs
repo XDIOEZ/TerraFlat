@@ -445,8 +445,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         _loadPriorityCenterChunk = new Vector2Int(playerChunkIndexX * _cachedChunkStepX, playerChunkIndexY * _cachedChunkStepY);
         _hasLoadPriorityCenter = true;
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][ChunkMgr] LoadChunkCloseToPlayer | player={player.name} Distance={Distance} playerChunkIndex=({playerChunkIndexX},{playerChunkIndexY}) hasCallback={onAllChunksLoaded != null}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][ChunkMgr] LoadChunkCloseToPlayer | player={player.name} Distance={Distance} playerChunkIndex=({playerChunkIndexX},{playerChunkIndexY}) hasCallback={onAllChunksLoaded != null}");
 
         int targetCount = 0;
         int completedCount = 0;
@@ -535,7 +535,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         int centerChunkIndexX = centerChunkPos.x / _cachedChunkStepX;
         int centerChunkIndexY = centerChunkPos.y / _cachedChunkStepY;
 
-        Debug.Log($"[AStar-Debug][ChunkMgr] RefreshChunkPenalty | centerChunkPos={centerChunkPos} Distance={Distance} centerIndex=({centerChunkIndexX},{centerChunkIndexY}) ActiveChunkCount={Chunk_Dic_Active_ByPos.Count}");
+        Debug.Log($"[WorldNav][ChunkMgr] RefreshChunkPenalty | centerChunkPos={centerChunkPos} Distance={Distance} centerIndex=({centerChunkIndexX},{centerChunkIndexY}) ActiveChunkCount={Chunk_Dic_Active_ByPos.Count}");
 
         int updatedCount = 0;
 
@@ -549,25 +549,25 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
                 if (TryGetActiveChunkByPos(chunkPos, out Chunk chunk) && chunk.Map != null)
                 {
-         //           Debug.Log($"[AStar-Debug][ChunkMgr] 刷新区块权重 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map.name} IsReady={chunk.IsReady} LifecycleState={chunk.LifecycleState} Data.TileLoaded={chunk.Map.Data?.TileLoaded}");
+         //           Debug.Log($"[WorldNav][ChunkMgr] 刷新区块权重 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map.name} IsReady={chunk.IsReady} LifecycleState={chunk.LifecycleState} Data.TileLoaded={chunk.Map.Data?.TileLoaded}");
                     chunk.Map.MarkPenaltyDirtyFull();
                     chunk.Map.BackTilePenalty_Async();
                     updatedCount++;
                 }
                 else
                 {
-                    Debug.Log($"[AStar-Debug][ChunkMgr] 区块权重刷新跳过 | chunkPos={chunkPos} (区块未激活或无Map，属正常范围)");
+                    Debug.Log($"[WorldNav][ChunkMgr] 区块权重刷新跳过 | chunkPos={chunkPos} (区块未激活或无Map，属正常范围)");
                 }
             }
         }
 
         if (updatedCount > 0)
         {
-            Debug.Log($"[AStar-Debug][ChunkMgr] 权重烘焙完成 | 更新了 {updatedCount} 个激活区块 (Distance={Distance})");
+            Debug.Log($"[WorldNav][ChunkMgr] 权重烘焙完成 | 更新了 {updatedCount} 个激活区块 (Distance={Distance})");
         }
         else
         {
-            Debug.Log("[AStar-Debug][ChunkMgr] 范围内未找到需要更新权重的激活区块");
+            Debug.Log("[WorldNav][ChunkMgr] 范围内未找到需要更新权重的激活区块");
         }
     }
     #endregion
@@ -956,20 +956,12 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         // 激活区块
         SetChunkActive(chunkGameObject, true);
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 激活已有区块 | chunkPos={chunkPos} chunk={chunkGameObject.name} Map={chunkGameObject.Map != null} TileLoaded={chunkGameObject.Map?.Data?.TileLoaded}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][ChunkMgr] 激活已有区块 | chunkPos={chunkPos} chunk={chunkGameObject.name} Map={chunkGameObject.Map != null} TileLoaded={chunkGameObject.Map?.Data?.TileLoaded}");
 
-        // 激活后标记地图权重为脏，确保后续烘焙管线能处理此区块
-        if (chunkGameObject.Map != null)
-        {
-            if (chunkGameObject.Map.Data?.TileLoaded == true)
-            {
-                chunkGameObject.Map.MarkPenaltyDirtyFull();
-                if (AstarGameManager.Instance?.EnableDebugLogs == true)
-                    Debug.Log($"[AStar-Debug][ChunkMgr] TryActivateExistingChunk 标记权重脏区 | chunk={chunkGameObject.name} Map={chunkGameObject.Map.name}");
-            }
-        }
-        else
+        // SetActive 会触发 Map.OnEnable；已经加载过的区块会在那里一次性恢复导航数据。
+        // 不再重复标记整块为脏，避免下一次单格修改意外重扫整个区块。
+        if (chunkGameObject.Map == null)
         {
             Debug.LogWarning($"[区块加载] ⚠️ 区块 {ChunkNameFromPos(chunkPos)} 的 Map 为空");
         }
@@ -1101,8 +1093,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return null;
         }
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateNewChunk 创建新区块 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map != null} AstarGameManager={AstarGameManager.Instance != null}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][ChunkMgr] 创建新区块 | chunkPos={chunkPos} chunk={chunk.name} Map={chunk.Map != null}");
 
         // 注册到字典
         RegisterChunk(chunk);
@@ -1135,14 +1127,14 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         chunk.AddItem(map);
         map.chunk = chunk;
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore 创建MapCore | chunk={chunk.name} map={map.name} AstarGameManager={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][ChunkMgr] 创建MapCore | chunk={chunk.name} map={map.name} Ready={WorldNavigationManager.Instance?.IsNavigationReady}");
 
         // 调用Act方法进行初始化（会自动烘焙权重）
         map.Act();
 
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][ChunkMgr] TryCreateMapCore Act完成 | chunk={chunk.name} map.Data.TileLoaded={map.Data?.TileLoaded} loadOrGenerateCoroutine={map.loadOrGenerateCoroutine != null}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][ChunkMgr] MapCore Act完成 | chunk={chunk.name} map.Data.TileLoaded={map.Data?.TileLoaded} loadOrGenerateCoroutine={map.loadOrGenerateCoroutine != null}");
 
         return true;
     }

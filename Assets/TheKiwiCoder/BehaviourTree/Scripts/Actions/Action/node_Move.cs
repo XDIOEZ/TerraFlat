@@ -1,14 +1,13 @@
 using UnityEngine;
 using TheKiwiCoder;
-using UnityEngine.AI;
 
-[NodeMenu("ActionNode/ĞĞ¶¯/ÒÆ¶¯")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/ç§»åŠ¨")]
 public class Move : ActionNode
 {
 
-    #region ×Ö¶Î
+    #region å­—æ®µ
 
-    private Vector2 lastPosition;     // ÉÏÒ»´ÎÎ»ÖÃ
+    private Vector2 lastPosition;     // ä¸Šä¸€æ¬¡ä½ç½®
     public bool IsRunState = false;
 
 
@@ -16,7 +15,7 @@ public class Move : ActionNode
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
     protected override void OnInit()
     {
         context.OnTreeStop += () => context.mover.SetRunState(false);
@@ -26,6 +25,7 @@ public class Move : ActionNode
     {
         context.mover.IsMoving = true;
         context.mover.HasReachedTarget = false;
+        context.mover.SetDestination(context.mover.TargetPosition);
         if (IsRunState)
         {
             context.mover.SetRunState(true);
@@ -34,9 +34,9 @@ public class Move : ActionNode
 
     protected override void OnStop()
     {
-        // Í£Ö¹Ê±ÎŞĞè¶îÍâ´¦Àí£¬Áô¿Õ
+        // åœæ­¢æ—¶æ— éœ€é¢å¤–å¤„ç†ï¼Œç•™ç©º
         context.mover.IsMoving = false;
-        context.mover.aiPath.isStopped = true;
+        context.mover.StopMovement();
         
                 if (IsRunState)
         {
@@ -46,7 +46,7 @@ public class Move : ActionNode
 
     #endregion
 
-    #region ĞĞÎª¸üĞÂ
+    #region è¡Œä¸ºæ›´æ–°
 
     protected override State OnUpdate()
     {
@@ -60,39 +60,39 @@ public class Move : ActionNode
 
     #endregion
 
-    #region Ë½ÓĞ·½·¨
+    #region ç§æœ‰æ–¹æ³•
 
-    /// <summary>×Ô¶¯Ğı×ª³¢ÊÔĞŞÕı¿¨×¡Â·¾¶</summary>
+    /// <summary>è‡ªåŠ¨æ—‹è½¬å°è¯•ä¿®æ­£å¡ä½è·¯å¾„</summary>
     private void HandleAutoRotate(Vector2 currentPosition)
     {
         if (context.mover.IsLock)
         {
-            // Ô­Ê¼·½Ïò
+            // åŸå§‹æ–¹å‘
             Vector2 originalDir = (context.mover.TargetPosition - currentPosition).normalized;
 
-            // Ëæ»ú ¡À90~180 ¶ÈÆ«×ª
+            // éšæœº Â±90~180 åº¦åè½¬
             float angleOffset = Random.Range(90f, 180f);
             angleOffset = Random.value < 0.5f ? angleOffset : -angleOffset;
 
             Vector2 newDir = RotateVector2(originalDir, angleOffset);
             float runDistance = (context.mover.TargetPosition - currentPosition).magnitude;
 
-            // ¸üĞÂĞÂÄ¿±êÎ»ÖÃ
+            // æ›´æ–°æ–°ç›®æ ‡ä½ç½®
             context.mover.TargetPosition = currentPosition + newDir * runDistance;
         }
 
         context.mover.IsLock = true;
 
-        // ¼ÇÂ¼½ûÖ¹ÇøÓò£¬±ÜÃâÖØ¸´³¢ÊÔ
+        // è®°å½•ç¦æ­¢åŒºåŸŸï¼Œé¿å…é‡å¤å°è¯•
         if (context.mover.MemoryPath_Forbidden.Count < 3)
         {
             context.mover.MemoryPath_Forbidden.Add(lastPosition);
         }
 
-        context.agent.SetDestination(context.mover.TargetPosition);
+        context.mover.SetDestination(context.mover.TargetPosition, forceRepath: true);
     }
 
-    /// <summary>Ğı×ª2DÏòÁ¿</summary>
+    /// <summary>æ—‹è½¬2Då‘é‡</summary>
     private Vector2 RotateVector2(Vector2 vector, float angleDegrees)
     {
         float rad = angleDegrees * Mathf.Deg2Rad;

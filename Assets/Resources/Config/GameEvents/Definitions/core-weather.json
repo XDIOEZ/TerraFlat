@@ -1,0 +1,55 @@
+{
+  "$schema": "../game-events.schema.json",
+  "schemaVersion": 1,
+  "events": [
+    {
+      "id": "survival_day_10_long_rain",
+      "displayName": "漫长降雨",
+      "description": "玩家生存到第10天时，触发持续3个游戏日的降雨。",
+      "enabled": true,
+      "priority": 80,
+      "conflictGroup": "forced_weather",
+      "oncePerWorld": true,
+      "cooldownDays": 0,
+      "durationDays": 3.0,
+      "trigger": {
+        "type": "day.schedule",
+        "parameters": {
+          "minimumDay": 10,
+          "repeatEveryDays": 0,
+          "timeOfDay": 0,
+          "chance": 1.0
+        }
+      },
+      "conditions": [
+        {
+          "type": "dimension.is",
+          "parameters": {
+            "allowedDimensionIds": ["surface"]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "id": "announce",
+          "type": "signal.emit",
+          "parameters": {
+            "signal": "weather.long_rain.started",
+            "payload": {
+              "title": "漫长降雨",
+              "message": "厚重的雨云将在未来三天笼罩天空。"
+            }
+          }
+        },
+        {
+          "id": "force_rain",
+          "type": "weather.override",
+          "parameters": {
+            "weather": "Rain",
+            "intensity": 0.8
+          }
+        }
+      ]
+    }
+  ]
+}

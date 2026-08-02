@@ -402,6 +402,10 @@ PrefabInstance:
       value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: tileDamageToolKind
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: Damage.BaseValue
       value: 25
       objectReference: {fileID: 0}

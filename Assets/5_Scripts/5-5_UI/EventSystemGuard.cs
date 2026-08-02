@@ -16,6 +16,7 @@ public static class EventSystemGuard
     {
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        EnsureExactlyOne();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -88,14 +89,45 @@ public static class EventSystemGuard
 
     private static void DisableAndDestroy(EventSystem duplicate)
     {
-        foreach (BaseInputModule inputModule in duplicate.GetComponents<BaseInputModule>())
+        GameObject owner = duplicate.gameObject;
+        BaseInputModule[] inputModules = owner.GetComponents<BaseInputModule>();
+        foreach (BaseInputModule inputModule in inputModules)
             inputModule.enabled = false;
         duplicate.enabled = false;
 
+        if (IsDedicatedEventSystemObject(owner))
+        {
+            Destroy(owner);
+            return;
+        }
+
+        foreach (BaseInputModule inputModule in inputModules)
+            Destroy(inputModule);
+        Destroy(duplicate);
+    }
+
+    private static bool IsDedicatedEventSystemObject(GameObject owner)
+    {
+        if (owner.transform.childCount > 0)
+            return false;
+
+        foreach (Component component in owner.GetComponents<Component>())
+        {
+            if (component is Transform || component is EventSystem || component is BaseInputModule)
+                continue;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private static void Destroy(UnityEngine.Object target)
+    {
         if (Application.isPlaying)
-            UnityEngine.Object.Destroy(duplicate.gameObject);
+            UnityEngine.Object.Destroy(target);
         else
-            UnityEngine.Object.DestroyImmediate(duplicate.gameObject);
+            UnityEngine.Object.DestroyImmediate(target);
     }
 
     private static void OnActiveSceneChanged(Scene previous, Scene next)

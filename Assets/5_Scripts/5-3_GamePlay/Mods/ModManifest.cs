@@ -112,6 +112,9 @@ public sealed class ModDefinitionDocument
 
     [JsonProperty("recipes")]
     public List<RecipeDto> Recipes = new();
+
+    [JsonProperty("buffs")]
+    public List<BuffDefinitionDto> Buffs = new();
 }
 
 [Serializable]

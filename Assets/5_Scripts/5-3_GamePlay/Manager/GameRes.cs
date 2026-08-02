@@ -36,7 +36,8 @@ public class GameRes : SingletonAutoMono<GameRes>
 
     [Header("Buff数据字典")]
     [ShowInInspector]
-    public Dictionary<string, Buff_Data> BuffData_Dict = new Dictionary<string, Buff_Data>();
+    public Dictionary<string, BuffDefinition> BuffDefinitions =
+        new Dictionary<string, BuffDefinition>(System.StringComparer.OrdinalIgnoreCase);
 
     [Header("初始库存字典")]
     [ShowInInspector]
@@ -102,7 +103,6 @@ public class GameRes : SingletonAutoMono<GameRes>
             ADBLabels.Add("Prefab");
             ADBLabels.Add("TileBase");
             ADBLabels.Add("TileBlock");
-            ADBLabels.Add("Buff");
             ADBLabels.Add("InventoryInit");
             ADBLabels.Add("Skill");
         }
@@ -132,6 +132,21 @@ public class GameRes : SingletonAutoMono<GameRes>
             Debug.LogException(exception);
             yield break;
         }
+
+        loadingText = "加载JSON Buff";
+        try
+        {
+            loadedAssetsCount += BuffCatalogLoader.LoadBuiltIn(this);
+            loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        }
+        catch (System.Exception exception)
+        {
+            loadingText = $"Buff 加载失败：{exception.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(exception);
+            yield break;
+        }
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
             new List<string> { "TileBase" },
@@ -145,13 +160,6 @@ public class GameRes : SingletonAutoMono<GameRes>
             TileBlockDict,
             null,
             "加载TileBlock SO"));
-            
-        // 额外处理：BuffData
-        yield return StartCoroutine(SyncLoadAssetsWithProgress<Buff_Data>(
-            new List<string> { "Buff" },
-            BuffData_Dict,
-            null,
-            "加载Buff数据"));
             
         // 新增：加载InventoryInit资源
         yield return StartCoroutine(SyncLoadAssetsWithProgress<Inventoryinit>(
@@ -251,7 +259,6 @@ public class GameRes : SingletonAutoMono<GameRes>
             {
                 GameObject go => go.name,
                 TileBase tile => tile.name,
-                Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
                 BaseSkill skill => skill.name,
                 Tile_Block tileBlock => tileBlock.name,
@@ -293,7 +300,7 @@ private void ClearAllDictionaries()
     recipeById.Clear();
     tileBaseDict.Clear();
     TileBlockDict.Clear();
-    BuffData_Dict.Clear();
+    BuffDefinitions.Clear();
     InventoryInitDict.Clear();
     SkillDict.Clear();
 }
@@ -338,7 +345,6 @@ public void HotReloadAllResources()
             {
                 GameObject go => go.name,
                 TileBase tile => tile.name,
-                Buff_Data buff => buff.name,
                 Inventoryinit inventoryInit => inventoryInit.name,
                 BaseSkill skill => skill.name,
                 Tile_Block tileBlock => string.IsNullOrEmpty(tileBlock.tileItemName) ? tileBlock.name : tileBlock.tileItemName,
@@ -427,26 +433,26 @@ public void HotReloadAllResources()
         return block;
     }
     
-    public Buff_Data GetBuffData(string buffName)
+    public BuffDefinition GetBuffDefinition(string buffId)
     {
-        if (string.IsNullOrWhiteSpace(buffName))
+        if (string.IsNullOrWhiteSpace(buffId))
             return null;
 
-        if (BuffData_Dict.TryGetValue(buffName, out Buff_Data buff))
-            return buff;
+        BuffDefinitions.TryGetValue(buffId.Trim(), out BuffDefinition definition);
+        return definition;
+    }
 
-        // 旧实现只按资源名建索引，但运行时与存档保存的是 buff_ID。
-        // 为资源名与 ID 不一致的旧 Buff（例如“饥饿(1.6)”）提供稳定回退。
-        foreach (Buff_Data candidate in BuffData_Dict.Values)
-        {
-            if (candidate != null &&
-                string.Equals(candidate.buff_ID, buffName, System.StringComparison.Ordinal))
-            {
-                return candidate;
-            }
-        }
+    public void RegisterBuff(BuffDefinition definition)
+    {
+        if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
+            throw new InvalidDataException("注册的 Buff JSON 定义或 ID 为空");
 
-        return null;
+        string id = definition.Id.Trim();
+        if (BuffDefinitions.ContainsKey(id))
+            throw new InvalidDataException($"Buff ID 冲突：{id}");
+
+        BuffDefinitions[id] = definition;
+        LoadedCount++;
     }
     
     public RuntimeRecipe GetRecipe(string recipeName)

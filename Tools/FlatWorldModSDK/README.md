@@ -55,6 +55,29 @@ MyMod/
 
 物品 Lua 模块支持 `OnLoad`、`OnUpdate`、`OnAct`、`OnSave`。
 
+## JSON Buff
+
+Buff 写在 `definitionFiles` 的 `buffs` 数组中，不再使用 Buff ScriptableObject：
+
+```json
+{
+  "buffs": [
+    {
+      "id": "my.mod:burning",
+      "displayName": "燃烧",
+      "durationSeconds": 10,
+      "tickIntervalSeconds": 1,
+      "stackMode": "refresh_duration",
+      "effects": [
+        { "phase": "tick", "typeId": "core:true_damage", "value": 2 }
+      ]
+    }
+  ]
+}
+```
+
+加载时会把 `typeId` 解析为 C# Handler 并缓存；运行 Tick 不再进行字符串字典查询。完整字段和内建效果 ID 见 `Schemas/items.schema.json`。
+
 ## 安全和兼容
 
 - 不支持外部 C# DLL、Harmony、私有字段反射或运行时 IL Patch。

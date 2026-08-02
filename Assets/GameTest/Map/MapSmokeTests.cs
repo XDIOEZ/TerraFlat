@@ -179,6 +179,42 @@ namespace FlatWorld.GameTest.Map
 
         [Test]
         [Category("Map.Smoke")]
+        public void GrassLayerFindsNearestGrassAndConsumesItOnce()
+        {
+            GameObject mapObject = new GameObject("GrassForageMapTest");
+            try
+            {
+                global::Map map = mapObject.AddComponent<global::Map>();
+                mapObject.AddComponent<GrassDetailLayer>();
+                map.Data = new Data_TileMap { position = Vector2Int.zero };
+                map.Data.EnsureTileDataArray(4, 4);
+
+                Vector2Int nearGrass = new Vector2Int(1, 1);
+                Vector2Int farGrass = new Vector2Int(3, 3);
+                map.Data.AddTileData(nearGrass, new TileData_Grass { ID = "Tile_Grass" });
+                map.Data.AddTileData(farGrass, new TileData_Grass { ID = "Tile_Grass" });
+                Assert.That(map.Data.TrySetGrassStateAtWorld(nearGrass, GrassCellState.Present), Is.True);
+                Assert.That(map.Data.TrySetGrassStateAtWorld(farGrass, GrassCellState.Present), Is.True);
+
+                Assert.That(
+                    map.TryFindClosestGrass(new Vector2(0.5f, 0.5f), 8f, out Vector2Int found),
+                    Is.True);
+                Assert.That(found, Is.EqualTo(nearGrass));
+                Assert.That(map.RemoveGrassAt(found), Is.True);
+                Assert.That(map.RemoveGrassAt(found), Is.False, "同一朵草不能被重复食用。");
+                Assert.That(
+                    map.Data.TryGetGrassStateAtWorld(found, out GrassCellState state),
+                    Is.True);
+                Assert.That(state, Is.EqualTo(GrassCellState.Removed));
+            }
+            finally
+            {
+                Object.DestroyImmediate(mapObject);
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
         public void BlockingLayerKeepsUnderlyingGroundVisual()
         {
             TileData floor = new TileData_Universal

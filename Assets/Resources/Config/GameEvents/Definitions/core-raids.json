@@ -1,0 +1,167 @@
+{
+  "$schema": "../game-events.schema.json",
+  "schemaVersion": 1,
+  "events": [
+    {
+      "id": "raw_meat_wolf_lure",
+      "displayName": "血腥诱狼",
+      "description": "生肉在地面停留两分钟后，吸引七只会沿途攻击生物的狼向肉块推进。",
+      "enabled": true,
+      "priority": 70,
+      "conflictGroup": "",
+      "oncePerWorld": false,
+      "cooldownDays": 3,
+      "durationDays": 0,
+      "trigger": {
+        "type": "world.item.dwell",
+        "parameters": {
+          "itemId": "Meat",
+          "dwellGameSeconds": 120,
+          "requirePickupable": true
+        }
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "id": "spawn_advancing_wolves",
+          "type": "creature.advance",
+          "parameters": {
+            "prefabId": "Wolf",
+            "count": 7,
+            "maxSpawnAttemptsPerTick": 7,
+            "minDistance": 16,
+            "maxDistance": 24,
+            "playerVisibilityExclusionDistance": 14,
+            "requireOutsidePlayerView": true,
+            "searchAttemptsPerCreature": 48,
+            "arrivalDistance": 1.25,
+            "attackActorsOnRoute": true,
+            "allowedBiomes": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "ghost_siege",
+      "displayName": "幽灵围攻",
+      "description": "每7天的夜间，幽灵分批出现在玩家周围。",
+      "enabled": true,
+      "priority": 100,
+      "conflictGroup": "hostile_raid",
+      "oncePerWorld": false,
+      "cooldownDays": 1,
+      "durationDays": 0.25,
+      "trigger": {
+        "type": "day.schedule",
+        "parameters": {
+          "minimumDay": 7,
+          "repeatEveryDays": 7,
+          "timeOfDay": 1200,
+          "chance": 1.0
+        }
+      },
+      "conditions": [
+        {
+          "type": "dimension.is",
+          "parameters": {
+            "allowedDimensionIds": ["surface"]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "id": "announce",
+          "type": "signal.emit",
+          "parameters": {
+            "signal": "raid.ghost.started",
+            "payload": {
+              "title": "幽灵围攻",
+              "message": "黑暗中传来了幽灵的低语……"
+            }
+          }
+        },
+        {
+          "id": "ghost_waves",
+          "type": "creature.waves",
+          "parameters": {
+            "prefabId": "Ghost",
+            "waves": 3,
+            "countPerWave": 4,
+            "countPerPlayer": false,
+            "waveIntervalGameSeconds": 30,
+            "maxSpawnAttemptsPerTick": 4,
+            "minDistance": 15,
+            "maxDistance": 32,
+            "playerVisibilityExclusionDistance": 15,
+            "searchAttemptsPerCreature": 24,
+            "requireGlobalDarkness": true,
+            "requireCompletelyDarkTile": true,
+            "maxAllowedTileLight": 0,
+            "allowedBiomes": ["森林", "石地", "沙漠"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wolf_pack_assault",
+      "displayName": "狼群袭击",
+      "description": "每3天出现一批主动搜寻玩家的狼群。",
+      "enabled": true,
+      "priority": 50,
+      "conflictGroup": "hostile_raid",
+      "oncePerWorld": false,
+      "cooldownDays": 1,
+      "durationDays": 0.15,
+      "trigger": {
+        "type": "day.schedule",
+        "parameters": {
+          "minimumDay": 3,
+          "repeatEveryDays": 3,
+          "timeOfDay": 720,
+          "chance": 1.0
+        }
+      },
+      "conditions": [
+        {
+          "type": "dimension.is",
+          "parameters": {
+            "allowedDimensionIds": ["surface"]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "id": "announce",
+          "type": "signal.emit",
+          "parameters": {
+            "signal": "raid.wolf.started",
+            "payload": {
+              "title": "狼群袭击",
+              "message": "附近响起了成群的狼嚎。"
+            }
+          }
+        },
+        {
+          "id": "wolf_waves",
+          "type": "creature.waves",
+          "parameters": {
+            "prefabId": "Wolf",
+            "waves": 2,
+            "countPerWave": 4,
+            "countPerPlayer": false,
+            "waveIntervalGameSeconds": 30,
+            "maxSpawnAttemptsPerTick": 4,
+            "minDistance": 9,
+            "maxDistance": 13,
+            "playerVisibilityExclusionDistance": 8,
+            "searchAttemptsPerCreature": 20,
+            "requireGlobalDarkness": false,
+            "requireCompletelyDarkTile": false,
+            "maxAllowedTileLight": 1,
+            "allowedBiomes": ["森林", "石地", "沙漠"]
+          }
+        }
+      ]
+    }
+  ]
+}

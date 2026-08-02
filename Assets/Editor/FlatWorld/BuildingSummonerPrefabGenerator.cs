@@ -228,7 +228,8 @@ public static class BuildingSummonerPrefabGenerator
             Role = BuildingRole.Summoner,
             SnapshotBase64 = null,
             BuildingPrefabId = buildingId,
-            SummonerPrefabId = summonerId
+            SummonerPrefabId = summonerId,
+            TileBlockId = Mod_Building.GetDefaultTileBlockId(buildingId)
         };
         Ex_ModData container = new();
         container.WriteData(state);
@@ -338,6 +339,7 @@ public static class BuildingSummonerPrefabGenerator
 
         string desiredItemId = role == BuildingRole.Summoner ? summonerId : buildingId;
         bool desiredPickable = role == BuildingRole.Summoner;
+        string desiredTileBlockId = Mod_Building.GetDefaultTileBlockId(buildingId);
         Mod_Building.Building_Data persisted = new();
         building.BuildingData?.ReadData(ref persisted);
         persisted ??= new Mod_Building.Building_Data();
@@ -352,7 +354,8 @@ public static class BuildingSummonerPrefabGenerator
             persisted.State != BuildingState.NotInstalled ||
             !string.IsNullOrEmpty(persisted.SnapshotBase64) ||
             !string.Equals(persisted.BuildingPrefabId, buildingId, StringComparison.Ordinal) ||
-            !string.Equals(persisted.SummonerPrefabId, summonerId, StringComparison.Ordinal);
+            !string.Equals(persisted.SummonerPrefabId, summonerId, StringComparison.Ordinal) ||
+            !string.Equals(persisted.TileBlockId, desiredTileBlockId, StringComparison.Ordinal);
 
         if (!changed)
             return false;

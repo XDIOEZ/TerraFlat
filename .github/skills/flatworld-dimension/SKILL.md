@@ -40,8 +40,8 @@ DimensionPortal.Interact
 → GameManager.RunWorld
 → ChunkMgr 按维度实例化并配置 MapCore
 → ItemMgr 创建玩家
-→ 恢复目标维度最后位置或入口偏移位置
-→ 次帧生成返回入口
+→ 以源世界坐标 1:1 设置目标维度位置
+→ 在已加载 Chunk 的对应坐标生成返回入口
 → 等待首批 Chunk 完成并关闭加载界面
 ```
 
@@ -72,8 +72,9 @@ DimensionPortal.Interact
 
 ## 玩家进度与入口
 
-- 玩家每个 `WorldKey` 的最后位置存于 `Data_Player.ItemSpecialData` 的 `flatworld.dimensions` 命名空间，不修改 MemoryPack 布局。
-- 首次进入使用入口位置加 `PortalOffset`；再次进入优先恢复该维度最后位置。
+- 玩家每个 `WorldKey` 的最后位置和已发现入口坐标存于 `Data_Player.ItemSpecialData` 的 `flatworld.dimensions` 命名空间，不修改 MemoryPack 布局。
+- 地表入口按世界种子、Chunk 坐标和 `CaveEntranceChunkChance` 确定性概率生成；矿洞会在同一世界坐标雕刻安全区并生成返回入口。
+- 每次维度往返都保留玩家源位置，地表与矿洞的世界坐标始终 1:1 对应；`PortalOffset` 仅保留旧目录兼容，不参与切换。
 - `DimensionPortal` 通过现有 `IInteractable`/E 键链触发，目标维度来自当前定义的 `PortalTargetDimensionId`。
 - 默认目录资源：`Assets/Resources/Config/DimensionCatalog_Default.asset`。
 - 默认目录安装器：`Assets/5_Scripts/5-2_Editor/Dimension/DimensionProjectInstaller.cs`，菜单 `FlatWorld/Dimension/Install Default Catalog`；安装器只重建目录资产，不重存矿物 Prefab。
@@ -103,6 +104,7 @@ DimensionPortal.Interact
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-02：地表矿洞入口改为按 Chunk 确定性概率生成；地表/矿洞入口和玩家切换位置统一为世界坐标 1:1 对应。
 - 2026-07-31：矿洞岩壁从地面 Tilemap 分离到通用“建筑阻挡层”；底层地面、阻挡视觉/碰撞和顶层导航 TileData 各自保持单一职责。
 - 2026-07-31：矿洞升级为跨 Chunk 连续的不规则房间、弯曲隧道和入口安全室；新增实体岩壁与沿墙噪声矿床，取代整块平坦石地随机散点矿物。
 - 2026-07-31：新增统一星球/维度世界地址、动态世界 Scene、独立地图与种子、玩家位置进度、地表与地下矿洞往返。

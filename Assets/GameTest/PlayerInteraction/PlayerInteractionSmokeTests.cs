@@ -1,7 +1,9 @@
 using System.Linq;
+using System.Reflection;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace FlatWorld.GameTest.PlayerInteraction
@@ -43,6 +45,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
             AssertBinding(map, "B", "<Gamepad>/buttonEast");
             AssertBinding(map, "P", "<Gamepad>/dpad/up");
             AssertBinding(map, "H", "<Gamepad>/dpad/down");
+            AssertBinding(map, "Tab", "<Keyboard>/tab");
             AssertBinding(map, "HotbarPrevious", "<Gamepad>/dpad/left");
             AssertBinding(map, "HotbarNext", "<Gamepad>/dpad/right");
             AssertBinding(map, "OpenChat", "<Keyboard>/t");
@@ -82,6 +85,36 @@ namespace FlatWorld.GameTest.PlayerInteraction
             Assert.That(
                 service.Entries.Select(entry => entry.DisplayName),
                 Does.Contain("打开聊天框"));
+            Assert.That(
+                service.Entries.Select(entry => entry.DisplayName),
+                Does.Contain("角色参数面板"));
+        }
+
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
+        public void SavingFoodModuleKeepsCharacterPanelTabBinding()
+        {
+            GameObject owner = new GameObject("FoodModuleSave_Test");
+            InputAction tabAction = new InputAction("Tab", InputActionType.Button, "<Keyboard>/tab");
+            try
+            {
+                Mod_Food food = owner.AddComponent<Mod_Food>();
+                FieldInfo tabField = typeof(Mod_Food).GetField(
+                    "_tabAction",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(tabField, Is.Not.Null);
+
+                tabField.SetValue(food, tabAction);
+                food.Save();
+
+                Assert.That(tabField.GetValue(food), Is.SameAs(tabAction),
+                    "普通存档不能解绑仍在运行的 Tab 参数面板快捷键。");
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                tabAction.Dispose();
+            }
         }
 
         private static void AssertBinding(

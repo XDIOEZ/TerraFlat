@@ -22,17 +22,18 @@
 ### 相关文档
 
 <!-- UNITY CODE ASSIST INSTRUCTIONS START -->
-- Project name: TerraFlat-master
+- Project name: FlatWorld
 - Unity version: Unity 2022.3.62f3c1
 - Active scene:
+  - Name: DontDestroyOnLoad
   - Tags:
     - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
   - Layers:
     - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender
 - Active game object:
-  - Name: NetworkTestPlayer
+  - Name: Mine_Copper
   - Tag: Untagged
-  - Layer: Default
+  - Layer: Collider
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
 
 #### 其他

@@ -104,6 +104,7 @@ public partial class WeatherMgr
             WeatherEventScheduler.InitializeIfNeeded(
                 planetData,
                 GetCurrentTotalTime(),
+                GetCurrentDayLength(),
                 GetDeterministicSeed(),
                 _rainEventConfig);
             PublishAuthoritativeWeatherState();
@@ -158,6 +159,7 @@ public partial class WeatherMgr
             planetData,
             oldTotalTime,
             newTotalTime,
+            GetCurrentDayLength(),
             GetDeterministicSeed(),
             _rainEventConfig);
         if (transitions <= 0)
@@ -195,15 +197,25 @@ public partial class WeatherMgr
 
     private float GetCurrentTotalTime()
     {
-        string activeSceneName = SceneManager.GetActiveScene().name;
-        if (DayTimeSystem.Instance != null &&
-            DayTimeSystem.Instance.TryGetResolvedTimeData(activeSceneName, out _, out TimeData timeData) &&
-            timeData != null)
-        {
-            return timeData.GetTotalGameTime();
-        }
+        return TryGetCurrentTimeData(out TimeData timeData)
+            ? timeData.GetTotalGameTime()
+            : 0f;
+    }
 
-        return 0f;
+    private float GetCurrentDayLength()
+    {
+        return TryGetCurrentTimeData(out TimeData timeData)
+            ? Mathf.Max(1f, timeData.DayLength)
+            : 1440f;
+    }
+
+    private static bool TryGetCurrentTimeData(out TimeData timeData)
+    {
+        timeData = null;
+        string activeSceneName = SceneManager.GetActiveScene().name;
+        return DayTimeSystem.Instance != null &&
+               DayTimeSystem.Instance.TryGetResolvedTimeData(activeSceneName, out _, out timeData) &&
+               timeData != null;
     }
 
 #endregion
@@ -233,6 +245,7 @@ public partial class WeatherMgr
             planetData,
             phase,
             GetCurrentTotalTime(),
+            GetCurrentDayLength(),
             GetDeterministicSeed(),
             _rainEventConfig);
         planetData.CurrentWeather = weatherType;

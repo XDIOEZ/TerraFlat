@@ -127,7 +127,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             lastNavigationAnchorChunk = anchorChunk;
-            AstarGameManager.Instance?.RefreshNavMeshAsync(anchorChunk, loadDistance);
+            WorldNavigationManager.Instance?.RefreshLoadedRegion(anchorChunk, loadDistance);
         }
 
         private static bool IsValidObserverPosition(Vector3 position)

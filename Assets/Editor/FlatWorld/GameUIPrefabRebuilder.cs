@@ -19,6 +19,16 @@ public static class GameUIPrefabRebuilder
     private const string MenuRoot = "Assets/2_Prefabs/2-1_UI/Menu_UI/";
     private const string ModsRoot = "Assets/2_Prefabs/2-1_UI/ModsUI/";
     private const string CommonRoot = "Assets/2_Prefabs/2-1_UI/";
+    private const string SlotPrefabPath = InventoryRoot + "UI_Slot.prefab";
+
+    private static readonly string[] CraftingPreviewPrefabPaths =
+    {
+        SlotPrefabPath,
+        InventoryRoot + "UI_HandCraftTable.prefab",
+        InventoryRoot + "UI_MakerTable.prefab",
+        InventoryRoot + "UI_FireDrill.prefab",
+        InventoryRoot + "UI_FlintStrike.prefab"
+    };
 
     private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.985f);
     private static readonly Color InkSoft = new Color(0.045f, 0.075f, 0.095f, 0.985f);
@@ -49,7 +59,7 @@ public static class GameUIPrefabRebuilder
         { CommonRoot + "物品信息面板.prefab", new[] { "面板", "信息", "销毁" } },
         { ModsRoot + "UI_Canvas.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { ModsRoot + "UI_HP.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
-        { ModsRoot + "UI_Food.prefab", new[] { "碳水", "脂肪", "蛋白质", "水", "维生素" } },
+        { ModsRoot + "UI_Food.prefab", new[] { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_体温" } },
         { ModsRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
     };
 
@@ -189,6 +199,103 @@ public static class GameUIPrefabRebuilder
         Debug.Log($"[Game UI] 快捷栏修复完成：{rebuilt}/{targets.Length} 个 Prefab。快捷栏直属子节点只保留物品槽。");
     }
 
+    [MenuItem("FlatWorld/UI/修复制作预览图层")]
+    public static void RebuildCraftingPreviewLayers()
+    {
+        int rebuilt = 0;
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (string path in CraftingPreviewPrefabPaths)
+            {
+                if (!System.IO.File.Exists(path))
+                {
+                    Debug.LogError($"[Crafting Preview Prefab] 未找到 Prefab：{path}");
+                    continue;
+                }
+
+                GameObject root = PrefabUtility.LoadPrefabContents(path);
+                try
+                {
+                    int repairedSlots = path == SlotPrefabPath
+                        ? RepairBaseSlotPreview(root)
+                        : EnsureCraftingOutputPreviewLayers(root.transform);
+                    if (repairedSlots == 0)
+                        throw new MissingReferenceException($"{path} 未找到制作输出槽。");
+
+                    SetUILayerRecursively(root);
+                    EditorUtility.SetDirty(root);
+                    PrefabUtility.SaveAsPrefabAsset(root, path);
+                    rebuilt++;
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogError($"[Crafting Preview Prefab] 修复失败：{path}\n{exception}");
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(root);
+                }
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[Crafting Preview Prefab] 已重建 {rebuilt}/{CraftingPreviewPrefabPaths.Length} 个 Prefab。");
+        ValidateCraftingPreviewPrefabs();
+    }
+
+    [MenuItem("FlatWorld/UI/验证制作预览图层")]
+    public static void ValidateCraftingPreviewPrefabs()
+    {
+        List<string> failures = new List<string>();
+        int checkedSlots = 0;
+        foreach (string path in CraftingPreviewPrefabPaths)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                if (path == SlotPrefabPath)
+                {
+                    ValidateCraftingPreviewSlot(root.GetComponent<ItemSlot_UI>(), path, failures);
+                    checkedSlots++;
+                    continue;
+                }
+
+                ItemSlot_UI[] slots = root.GetComponentsInChildren<ItemSlot_UI>(true);
+                int outputCount = 0;
+                foreach (ItemSlot_UI slot in slots)
+                {
+                    if (slot == null || !slot.name.StartsWith("输出_", StringComparison.Ordinal))
+                        continue;
+
+                    outputCount++;
+                    checkedSlots++;
+                    ValidateCraftingPreviewSlot(slot, path, failures);
+                }
+
+                if (outputCount == 0)
+                    failures.Add($"{path} 未找到输出槽");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        if (failures.Count == 0)
+        {
+            Debug.Log($"[Crafting Preview Prefab] 验证通过：{CraftingPreviewPrefabPaths.Length} 个 Prefab、{checkedSlots} 个槽位结构完整。");
+            return;
+        }
+
+        Debug.LogError("[Crafting Preview Prefab] 验证失败：\n- " + string.Join("\n- ", failures));
+    }
+
     [MenuItem("FlatWorld/UI/居中功能列表按钮")]
     public static void RebuildActionListUI()
     {
@@ -245,6 +352,25 @@ public static class GameUIPrefabRebuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"[Game UI] 矩形进度条重建完成：{rebuilt}/{targets.Length} 个 Prefab；状态条手柄已隐藏。");
+    }
+
+    [MenuItem("FlatWorld/UI/重建角色参数面板")]
+    public static void RebuildCharacterStatusPanel()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Game UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        BuildTarget target = new BuildTarget(ModsRoot + "UI_Food.prefab", BuildNutritionHud);
+        bool rebuilt = RebuildSinglePrefab(target);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log(rebuilt
+            ? "[Game UI] 角色参数面板重建完成。"
+            : "[Game UI] 角色参数面板重建失败，请检查控制台。");
     }
 
     private static bool RebuildSinglePrefab(BuildTarget target)
@@ -386,6 +512,7 @@ public static class GameUIPrefabRebuilder
 
         PlaceProgress(root.transform, 38f, height - 100f, width - 312f, 14f);
         PlaceActionButton(root.transform, "合成按钮", width, height, compact ? "执行" : "开始制作");
+        EnsureCraftingOutputPreviewLayers(root.transform);
     }
 
     private static void BuildMakerTable(GameObject root)
@@ -415,6 +542,7 @@ public static class GameUIPrefabRebuilder
 
         PlaceProgress(root.transform, 48f, height - 82f, 464f, 14f);
         PlaceActionButton(root.transform, "合成按钮", width, height, "开始制作");
+        EnsureCraftingOutputPreviewLayers(root.transform);
     }
 
     private static void BuildFurnace(GameObject root, bool bonfire)
@@ -779,24 +907,68 @@ public static class GameUIPrefabRebuilder
         if (panel == null)
             return;
 
+        RectTransform rootRect = root.GetComponent<RectTransform>();
         RectTransform panelRect = panel as RectTransform;
         if (panelRect == null)
             return;
 
-        panelRect.sizeDelta = new Vector2(382f, 286f);
+        if (rootRect != null)
+            Stretch(rootRect);
+
+        EnsureNutritionTemperatureRow(panel);
+        SetCenter(panelRect, new Vector2(-480f, 120f), new Vector2(382f, 324f));
         Image panelImage = EnsureImage(panel.gameObject);
         panelImage.color = new Color(0.025f, 0.043f, 0.058f, 0.90f);
         panelImage.sprite = null;
         panelImage.type = Image.Type.Simple;
         AddOutline(panelImage, Border);
-        BuildCardHeader(panel, "营养状态", "SURVIVAL / NUTRITION", 382f);
+        BuildCardHeader(panel, "角色参数", "SURVIVAL / VITALS", 382f);
 
-        string[] sliders = { "碳水", "脂肪", "蛋白质", "水", "维生素" };
+        string[] sliders = { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" };
         for (int i = 0; i < sliders.Length; i++)
         {
             RectTransform slider = FindRect(panel, sliders[i]);
             if (slider != null)
+            {
                 SetTopLeft(slider, 28f, 86f + i * 38f, 326f, 26f);
+                Slider sliderComponent = slider.GetComponent<Slider>();
+                if (sliderComponent != null)
+                    sliderComponent.interactable = false;
+            }
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+    }
+
+    private static void EnsureNutritionTemperatureRow(Transform panel)
+    {
+        if (FindTransform(panel, "体温") != null)
+            return;
+
+        RectTransform source = FindRect(panel, "维生素");
+        if (source == null)
+            throw new InvalidOperationException("UI_Food 缺少可复用的维生素状态行。");
+
+        GameObject temperatureRow = UnityEngine.Object.Instantiate(source.gameObject, panel, false);
+        temperatureRow.name = "体温";
+
+        TextMeshProUGUI[] labels = temperatureRow.GetComponentsInChildren<TextMeshProUGUI>(true);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            TextMeshProUGUI label = labels[i];
+            label.raycastTarget = false;
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+
+            if (label.name.StartsWith("DataText_", StringComparison.Ordinal))
+            {
+                label.name = "DataText_体温";
+                label.text = "36.5°C";
+            }
+            else if (label.text == "维生素")
+            {
+                label.text = "体温";
+            }
         }
     }
 
@@ -854,6 +1026,84 @@ public static class GameUIPrefabRebuilder
             colors.fadeDuration = 0.08f;
             button.colors = colors;
         }
+
+        RuntimeUIPrefabBuilder.AddCraftingPreviewLayers(root);
+    }
+
+    private static int RepairBaseSlotPreview(GameObject root)
+    {
+        RuntimeUIPrefabBuilder.AddCraftingPreviewLayers(root);
+        return 1;
+    }
+
+    private static int EnsureCraftingOutputPreviewLayers(Transform root)
+    {
+        int repairedSlots = 0;
+        ItemSlot_UI[] slots = root.GetComponentsInChildren<ItemSlot_UI>(true);
+        foreach (ItemSlot_UI slot in slots)
+        {
+            if (slot == null || !slot.name.StartsWith("输出_", StringComparison.Ordinal))
+                continue;
+
+            RuntimeUIPrefabBuilder.AddCraftingPreviewLayers(slot.gameObject);
+            repairedSlots++;
+        }
+
+        return repairedSlots;
+    }
+
+    private static void ValidateCraftingPreviewSlot(ItemSlot_UI slot, string prefabPath, List<string> failures)
+    {
+        if (slot == null)
+        {
+            failures.Add($"{prefabPath} 缺少 ItemSlot_UI");
+            return;
+        }
+
+        Image reference = slot.image;
+        Image ghost = FindNamedImage(slot.transform, "Crafting Output Ghost");
+        Image reveal = FindNamedImage(slot.transform, "Crafting Output Reveal");
+        string context = $"{prefabPath}/{slot.name}";
+
+        if (reference == null)
+            failures.Add($"{context} 缺少物品图标引用");
+        if (ghost == null)
+            failures.Add($"{context} 缺少 Crafting Output Ghost");
+        if (reveal == null)
+            failures.Add($"{context} 缺少 Crafting Output Reveal");
+        if (reference == null || ghost == null || reveal == null)
+            return;
+
+        if (ghost.gameObject.activeSelf || reveal.gameObject.activeSelf)
+            failures.Add($"{context} 预览图层默认必须隐藏");
+        if (ghost.raycastTarget || reveal.raycastTarget)
+            failures.Add($"{context} 预览图层不得拦截射线");
+        if (!ghost.preserveAspect || !reveal.preserveAspect)
+            failures.Add($"{context} 预览图层必须保持宽高比");
+        if (reveal.type != Image.Type.Filled ||
+            reveal.fillMethod != Image.FillMethod.Vertical ||
+            reveal.fillOrigin != (int)Image.OriginVertical.Bottom)
+        {
+            failures.Add($"{context} Reveal 必须由下向上填充");
+        }
+
+        if (ghost.transform.parent != reference.transform.parent ||
+            reveal.transform.parent != reference.transform.parent)
+        {
+            failures.Add($"{context} 预览图层必须与物品图标同级");
+        }
+    }
+
+    private static Image FindNamedImage(Transform root, string name)
+    {
+        Image[] images = root.GetComponentsInChildren<Image>(true);
+        foreach (Image image in images)
+        {
+            if (image != null && image.name == name)
+                return image;
+        }
+
+        return null;
     }
 
     private static void BuildBaseSlider(GameObject root)

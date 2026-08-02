@@ -38,6 +38,12 @@ public partial class Mover : Module
     [Tooltip("速度源")]
     [SerializeField] public Mover_SaveData Data = new();
 
+    [Header("奔跑输入设置")]
+    [SerializeField]
+    [Min(0.05f)]
+    [Tooltip("Shift 按住不超过该时长时视为短按，并切换常驻奔跑/移动。")]
+    private float runToggleTapThreshold = 0.25f;
+
     public List<Vector2> MemoryPath_Forbidden = new();  // 禁止路径点
     public bool IsLock = false;
     public bool hightReaction = false;
@@ -49,6 +55,8 @@ public partial class Mover : Module
     public bool IsMoving;
 
     private InputAction moveAction;
+    private InputAction runAction;
+    private bool runToggleEnabled;
     public Rigidbody2D rb;
 
     public Mod_Stamina stamina;                         // 体力模块
@@ -58,11 +66,11 @@ public partial class Mover : Module
 
     // 饥饿相关：移动/奔跑时通过 Buff 加快 Food 模块的消耗
     [Header("饥饿消耗设置")]
-    [Tooltip("移动时附加的饥饿 Buff 数据（直接挂接 Buff_Data SO）")]
-    public Buff_Data moveHungerBuff;
+    [Tooltip("移动时附加的 JSON Buff ID")]
+    public string moveHungerBuffId = "饥饿1.6";
 
-    [Tooltip("奔跑时附加的饥饿 Buff 数据（直接挂接 Buff_Data SO）")]
-    public Buff_Data runHungerBuff;
+    [Tooltip("奔跑时附加的 JSON Buff ID")]
+    public string runHungerBuffId = "饥饿2.0";
 
     private BuffManager buffManager;
     private bool moveHungerBuffActive = false;
@@ -134,6 +142,9 @@ public partial class Mover : Module
         get => Data.RunStaminaThreshold;
         set => Data.RunStaminaThreshold = value;
     }
+
+    public float RunToggleTapThreshold => Mathf.Max(0.05f, runToggleTapThreshold);
+    public bool IsRunToggleEnabled => runToggleEnabled;
     #endregion
 
     #region Unity 生命周期
@@ -156,8 +167,7 @@ public partial class Mover : Module
         {
             // 回调里才赋值 moveAction
             moveAction = controller._inputActions.Win10.Move_Player;
-            controller._inputActions.Win10.Shift.started += _ => SetRunState(true);
-            controller._inputActions.Win10.Shift.canceled += _ => SetRunState(false);
+            BindRunAction(controller._inputActions.Win10.Shift);
         });
 
         // 加载体力模块
@@ -237,8 +247,31 @@ public partial class Mover : Module
     #endregion
 
     #region 公共方法
+    public void HandleRunInputPressed()
+    {
+        SetRunState(true);
+    }
+
+    public void HandleRunInputReleased(double heldDuration)
+    {
+        bool isShortPress = heldDuration <= RunToggleTapThreshold;
+        if (!isShortPress)
+        {
+            runToggleEnabled = false;
+            SetRunState(false);
+            return;
+        }
+
+        bool shouldKeepRunning = !runToggleEnabled;
+        SetRunState(shouldKeepRunning);
+        runToggleEnabled = shouldKeepRunning && IsRunning;
+    }
+
     public void SetRunState(bool isRun)
     {
+        if (!isRun)
+            runToggleEnabled = false;
+
         if (item != null)
         {
             GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
@@ -321,12 +354,48 @@ public partial class Mover : Module
     }
     public void OnDestroy()
     {
-        OnMoveStart.Clear();
-        OnMoveEnd.Clear();
+        UnbindRunAction();
+        OnMoveStart?.Clear();
+        OnMoveEnd?.Clear();
 
         // 模块被销毁时，确保清除与移动/奔跑相关的饥饿状态 Buff
         ClearHungerBuffs();
     }
+    #endregion
+
+    #region 奔跑输入
+
+    private void BindRunAction(InputAction action)
+    {
+        UnbindRunAction();
+        runAction = action;
+        if (runAction == null)
+            return;
+
+        runAction.started += OnRunActionStarted;
+        runAction.canceled += OnRunActionCanceled;
+    }
+
+    private void UnbindRunAction()
+    {
+        if (runAction == null)
+            return;
+
+        runAction.started -= OnRunActionStarted;
+        runAction.canceled -= OnRunActionCanceled;
+        runAction = null;
+    }
+
+    private void OnRunActionStarted(InputAction.CallbackContext context)
+    {
+        HandleRunInputPressed();
+    }
+
+    private void OnRunActionCanceled(InputAction.CallbackContext context)
+    {
+        HandleRunInputReleased(context.duration);
+    }
+
     #endregion
 
     #region 饥饿 Buff 逻辑
@@ -345,45 +414,40 @@ public partial class Mover : Module
         // 1. 处理移动饥饿 Buff
         if (isMoving)
         {
-            TryAddHungerBuff(moveHungerBuff, ref moveHungerBuffActive);
+            TryAddHungerBuff(moveHungerBuffId, ref moveHungerBuffActive);
         }
         else
         {
-            TryRemoveHungerBuff(moveHungerBuff, ref moveHungerBuffActive);
+            TryRemoveHungerBuff(moveHungerBuffId, ref moveHungerBuffActive);
         }
 
         // 2. 处理奔跑附加饥饿 Buff（只在移动且奔跑时生效）
         if (isMoving && isRunning)
         {
-            TryAddHungerBuff(runHungerBuff, ref runHungerBuffActive);
+            TryAddHungerBuff(runHungerBuffId, ref runHungerBuffActive);
         }
         else
         {
-            TryRemoveHungerBuff(runHungerBuff, ref runHungerBuffActive);
+            TryRemoveHungerBuff(runHungerBuffId, ref runHungerBuffActive);
         }
     }
 
-    private void TryAddHungerBuff(Buff_Data buffData, ref bool stateFlag)
+    private void TryAddHungerBuff(string buffId, ref bool stateFlag)
     {
         if (stateFlag) return;
         if (buffManager == null) return;
-        if (buffData == null) return;
+        if (string.IsNullOrWhiteSpace(buffId)) return;
 
-        buffManager.AddBuff(buffData);
-        stateFlag = true;
+        stateFlag = buffManager.AddBuff(buffId);
     }
 
-    private void TryRemoveHungerBuff(Buff_Data buffData, ref bool stateFlag)
+    private void TryRemoveHungerBuff(string buffId, ref bool stateFlag)
     {
-        if (!stateFlag) return;
         if (buffManager == null) return;
-        if (buffData == null) return;
+        if (string.IsNullOrWhiteSpace(buffId)) return;
+        if (!stateFlag && !buffManager.HasBuff(buffId)) return;
 
-        // 使用 Buff 的 ID 进行移除
-        if (!string.IsNullOrEmpty(buffData.buff_ID))
-        {
-            buffManager.RemoveBuff(buffData.buff_ID);
-        }
+        buffManager.RemoveBuff(buffId);
         stateFlag = false;
     }
 
@@ -398,7 +462,7 @@ public partial class Mover : Module
         if (buffManager == null) return;
 
         // 不直接操作字典，而是复用已有的移除逻辑和状态位
-        TryRemoveHungerBuff(moveHungerBuff, ref moveHungerBuffActive);
-        TryRemoveHungerBuff(runHungerBuff, ref runHungerBuffActive);
+        TryRemoveHungerBuff(moveHungerBuffId, ref moveHungerBuffActive);
+        TryRemoveHungerBuff(runHungerBuffId, ref runHungerBuffActive);
     }
 }
