@@ -926,7 +926,7 @@ public class Map : Item
             Data.AddTileData(pos2D, tileData);
         }
 
-        Debug.Log("多层 TileData 已保存到 Data_TileMap 中" + Data.CountNonEmptyCells());
+        // 存档热路径不再为每个区块额外全量统计格子并输出调用栈。
     }
     #endregion
 

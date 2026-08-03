@@ -40,5 +40,22 @@ namespace FlatWorld.GameTest.Core
             Assert.That(uiSource, Does.Not.Contain("new GameObject"),
                 "世界加载界面不得由运行时代码硬编码创建视觉节点。 ");
         }
+
+        [Test]
+        [Category("Core.Smoke")]
+        public void NewPlayerSpawnSearchDoesNotSynchronouslyGenerateEveryVisitedChunk()
+        {
+            const string managerPath = "Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs";
+            string managerSource = File.ReadAllText(managerPath);
+
+            Assert.That(managerSource, Does.Contain("FindNewPlayerSpawnCoroutine"),
+                "New-player placement must wait for one candidate chunk at a time.");
+            Assert.That(managerSource, Does.Contain("TryFindNearestLandInChunk"),
+                "Spawn search must scan bounded, ready chunk data instead of the whole world radius.");
+            Assert.That(managerSource, Does.Not.Contain("ChunkMgr.Instance.LoadChunk_By_Position(chunkPos)"),
+                "A tile probe must never synchronously create a chunk; this queued hundreds of chunks while creating a world.");
+            Assert.That(managerSource, Does.Not.Contain("SaveAllChunks();"),
+                "GameManager must not save every chunk before SaveDataMgr repeats the same scan.");
+        }
     }
 }
