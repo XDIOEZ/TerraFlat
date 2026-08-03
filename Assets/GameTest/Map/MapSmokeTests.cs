@@ -1,5 +1,6 @@
 using FlatWorld.GameTest.Shared;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -68,6 +69,22 @@ namespace FlatWorld.GameTest.Map
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(concurrentField, Is.Not.Null);
             Assert.That((int)concurrentField.GetValue(chunkManager), Is.EqualTo(1));
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void DirectChunkLoadReusesAnAlreadyActiveChunk()
+        {
+            const string chunkManagerPath = "Assets/5_Scripts/5-3_GamePlay/Manager/ChunkMgr.cs";
+            string source = File.ReadAllText(chunkManagerPath);
+            int methodStart = source.IndexOf("public Chunk LoadChunk_By_Position", System.StringComparison.Ordinal);
+            int createStart = source.IndexOf("// === 第二优先级", methodStart, System.StringComparison.Ordinal);
+
+            Assert.That(methodStart, Is.GreaterThanOrEqualTo(0));
+            Assert.That(createStart, Is.GreaterThan(methodStart));
+            string activeLookupSection = source.Substring(methodStart, createStart - methodStart);
+            Assert.That(activeLookupSection, Does.Contain("TryGetActiveChunkByPos(chunkPos, out Chunk activeChunk)"));
+            Assert.That(activeLookupSection, Does.Contain("return activeChunk;"));
         }
 
         [Test]

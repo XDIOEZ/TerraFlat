@@ -112,15 +112,11 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         ItemMgr.Instance.CleanupNullItems();
         ChunkMgr.Instance.CleanEmptyDicValues();
 
-        // 保存所有区块数据
-        Debug.Log("[ExitGame] 开始保存区块数据...");
-        SaveAllChunks();
-
         // 提前保存玩家数据（在销毁逻辑执行前）
         Debug.Log("[ExitGame] 开始保存玩家数据...");
         ItemMgr.Instance.SavePlayer();
 
-        // 保存数据到磁盘
+        // SaveDataMgr 在写盘前统一保存全部已加载区块，避免同一批区块被扫描两次。
         Debug.Log("[ExitGame] 写入存档文件...");
         SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
 
@@ -642,28 +638,112 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     private IEnumerator PlaceNewPlayerOnLandThenEnterWorld(Player player)
     {
-        bool hasPlacedOnLand = false;
-        int retryFrames = Mathf.Max(1, spawnSearchRetryFrames);
-
-        for (int i = 0; i < retryFrames; i++)
+        if (player == null)
         {
-            if (TryPlaceNewPlayerOnNearestLand(player))
-            {
-                hasPlacedOnLand = true;
-                break;
-            }
+            FailWorldEntryLoading("玩家创建失败，无法计算出生点。");
+            yield break;
+        }
 
-            yield return null;
+        Vector2Int seedAnchor = GetSeedAnchorPosition();
+        bool hasPlacedOnLand = false;
+        Vector2Int landPos = seedAnchor;
+
+        yield return FindNewPlayerSpawnCoroutine(seedAnchor, (found, position) =>
+        {
+            hasPlacedOnLand = found;
+            landPos = position;
+        });
+
+        if (hasPlacedOnLand)
+        {
+            Vector3 spawnPosition = new Vector3(landPos.x + 0.5f, landPos.y + 0.5f, 0f);
+            player.transform.position = spawnPosition;
+            player.Data.transform.position = spawnPosition;
+            Debug.Log($"[GameManager] 新玩家出生点已定位到陆地：seed={SaveDataMgr.Instance.SaveData.Seed}, anchor={seedAnchor}, spawn={spawnPosition}");
         }
 
         if (!hasPlacedOnLand)
         {
             ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));
             player.Data.transform.position = player.transform.position;
-            Debug.LogWarning($"[GameManager] 新玩家陆地出生点搜索失败（重试帧数={retryFrames}），回退随机投放：{player.transform.position}");
+            Debug.LogWarning($"[GameManager] 新玩家陆地出生点搜索失败，回退随机投放：{player.transform.position}");
         }
 
         Event_PlayerEnterWorld?.Invoke(player);
+    }
+
+    private IEnumerator FindNewPlayerSpawnCoroutine(
+        Vector2Int anchor,
+        Action<bool, Vector2Int> onCompleted)
+    {
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null)
+        {
+            onCompleted?.Invoke(false, anchor);
+            yield break;
+        }
+
+        int maxSearchRadius = Mathf.Max(1, spawnLandMaxSearchRadius);
+        List<Vector2Int> candidateChunks = BuildSpawnChunkCandidates(anchor, maxSearchRadius);
+        int maxWaitFrames = Mathf.Max(600, spawnSearchRetryFrames * 10);
+
+        for (int i = 0; i < candidateChunks.Count; i++)
+        {
+            Vector2Int candidateChunkPos = candidateChunks[i];
+            Chunk candidateChunk = null;
+            bool requestDispatched = false;
+
+            chunkManager.RequestLoadChunk_By_Position(candidateChunkPos, chunk =>
+            {
+                candidateChunk = chunk;
+                requestDispatched = true;
+            });
+
+            int waitedFrames = 0;
+            while (!requestDispatched && waitedFrames < maxWaitFrames)
+            {
+                waitedFrames++;
+                yield return null;
+            }
+
+            if (!requestDispatched || candidateChunk == null)
+                continue;
+
+            while (!IsSpawnChunkDataReady(candidateChunk) && waitedFrames < maxWaitFrames)
+            {
+                waitedFrames++;
+                yield return null;
+            }
+
+            if (!IsSpawnChunkDataReady(candidateChunk))
+            {
+                Debug.LogError($"[GameManager] 出生区块生成超时：{candidateChunkPos}");
+                onCompleted?.Invoke(false, anchor);
+                yield break;
+            }
+
+            float progress = Mathf.Lerp(0.68f, 0.86f, (i + 1f) / candidateChunks.Count);
+            SetWorldLoadingView(
+                "正在进入世界",
+                $"正在寻找安全出生点… ({i + 1}/{candidateChunks.Count})",
+                progress);
+
+            if (TryFindNearestLandInChunk(
+                    anchor,
+                    candidateChunk,
+                    maxSearchRadius,
+                    out Vector2Int candidateLandPos,
+                    out _))
+            {
+                onCompleted?.Invoke(true, candidateLandPos);
+                yield break;
+            }
+
+            // 即使相邻区块也逐帧处理，避免连续扫描多个 100x100 TileData 数组。
+            yield return null;
+        }
+
+        onCompleted?.Invoke(false, anchor);
     }
 
     /// <summary>
@@ -693,7 +773,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        return IsLandTile(Vector2Int.FloorToInt(position), new HashSet<string>());
+        return IsLandTile(Vector2Int.FloorToInt(position));
     }
 
     /// <summary>
@@ -752,93 +832,187 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 以锚点为中心按螺旋环搜索最近陆地
+    /// 在已经完成数据生成的区块中搜索最近陆地；该同步入口绝不创建新区块。
     /// </summary>
     private bool TryFindNearestLand(Vector2Int anchor, out Vector2Int landPos)
     {
         landPos = anchor;
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null)
+            return false;
+
         int maxSearchRadius = Mathf.Max(1, spawnLandMaxSearchRadius);
-        HashSet<string> loadedChunkCache = new HashSet<string>();
+        long bestDistanceSquared = long.MaxValue;
+        bool found = false;
 
-        if (IsLandTile(anchor, loadedChunkCache))
+        foreach (Chunk chunk in chunkManager.Chunk_Dic_Active_ByPos.Values)
         {
-            landPos = anchor;
-            return true;
-        }
-
-        for (int radius = 1; radius <= maxSearchRadius; radius++)
-        {
-            int minX = anchor.x - radius;
-            int maxX = anchor.x + radius;
-            int minY = anchor.y - radius;
-            int maxY = anchor.y + radius;
-
-            for (int x = minX; x <= maxX; x++)
+            if (!TryFindNearestLandInChunk(
+                    anchor,
+                    chunk,
+                    maxSearchRadius,
+                    out Vector2Int candidate,
+                    out long candidateDistanceSquared) ||
+                candidateDistanceSquared >= bestDistanceSquared)
             {
-                Vector2Int top = new Vector2Int(x, maxY);
-                if (IsLandTile(top, loadedChunkCache))
-                {
-                    landPos = top;
-                    return true;
-                }
-
-                Vector2Int bottom = new Vector2Int(x, minY);
-                if (IsLandTile(bottom, loadedChunkCache))
-                {
-                    landPos = bottom;
-                    return true;
-                }
+                continue;
             }
 
-            for (int y = minY + 1; y <= maxY - 1; y++)
-            {
-                Vector2Int left = new Vector2Int(minX, y);
-                if (IsLandTile(left, loadedChunkCache))
-                {
-                    landPos = left;
-                    return true;
-                }
-
-                Vector2Int right = new Vector2Int(maxX, y);
-                if (IsLandTile(right, loadedChunkCache))
-                {
-                    landPos = right;
-                    return true;
-                }
-            }
+            bestDistanceSquared = candidateDistanceSquared;
+            landPos = candidate;
+            found = true;
         }
 
-        return false;
+        return found;
     }
 
     /// <summary>
-    /// 判断指定世界坐标是否为可出生陆地
+    /// 判断指定世界坐标是否为可出生陆地；只读取已就绪数据，不触发区块创建。
     /// </summary>
-    private bool IsLandTile(Vector2Int worldPos, HashSet<string> loadedChunkCache)
+    private bool IsLandTile(Vector2Int worldPos)
     {
         Vector2Int chunkPos = Chunk.GetChunkPosition(worldPos);
-        string chunkName = chunkPos.ToString();
-
-        if (!loadedChunkCache.Contains(chunkName))
-        {
-            ChunkMgr.Instance.LoadChunk_By_Position(chunkPos);
-            loadedChunkCache.Add(chunkName);
-        }
-
         if (!ChunkMgr.Instance.TryGetActiveChunkByPos(chunkPos, out Chunk chunk) || chunk == null)
             return false;
 
-        if (chunk.Map == null)
+        if (!IsSpawnChunkDataReady(chunk))
             return false;
 
         TileData topTile = chunk.Map.GetTopTile(worldPos);
-        if (topTile == null)
+        return topTile != null && !(topTile is TileData_Water) && topTile.IsWalkable;
+    }
+
+    private static bool IsSpawnChunkDataReady(Chunk chunk)
+    {
+        Data_TileMap data = chunk?.Map?.Data;
+        return data != null &&
+               data.TileLoaded &&
+               data.TileData_Array != null &&
+               data.Width > 0 &&
+               data.Height > 0;
+    }
+
+    private static bool TryFindNearestLandInChunk(
+        Vector2Int anchor,
+        Chunk chunk,
+        int maxSearchRadius,
+        out Vector2Int landPos,
+        out long distanceSquared)
+    {
+        landPos = anchor;
+        distanceSquared = long.MaxValue;
+        if (!IsSpawnChunkDataReady(chunk))
             return false;
 
-        if (topTile is TileData_Water)
+        Data_TileMap data = chunk.Map.Data;
+        int minX = Mathf.Max(data.position.x, anchor.x - maxSearchRadius);
+        int maxX = Mathf.Min(data.position.x + data.Width - 1, anchor.x + maxSearchRadius);
+        int minY = Mathf.Max(data.position.y, anchor.y - maxSearchRadius);
+        int maxY = Mathf.Min(data.position.y + data.Height - 1, anchor.y + maxSearchRadius);
+        if (minX > maxX || minY > maxY)
             return false;
 
-        return topTile.IsWalkable;
+        bool found = false;
+        for (int worldX = minX; worldX <= maxX; worldX++)
+        {
+            int localX = worldX - data.position.x;
+            for (int worldY = minY; worldY <= maxY; worldY++)
+            {
+                int localY = worldY - data.position.y;
+                List<TileData> tiles = data.TileData_Array[localX, localY];
+                if (tiles == null || tiles.Count == 0)
+                    continue;
+
+                TileData topTile = tiles[tiles.Count - 1];
+                if (topTile == null || topTile is TileData_Water || !topTile.IsWalkable)
+                    continue;
+
+                long deltaX = worldX - anchor.x;
+                long deltaY = worldY - anchor.y;
+                long candidateDistanceSquared = deltaX * deltaX + deltaY * deltaY;
+                if (candidateDistanceSquared >= distanceSquared)
+                    continue;
+
+                distanceSquared = candidateDistanceSquared;
+                landPos = new Vector2Int(worldX, worldY);
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    private static List<Vector2Int> BuildSpawnChunkCandidates(Vector2Int anchor, int maxSearchRadius)
+    {
+        Vector2 chunkSize = ChunkMgr.GetChunkSize();
+        int stepX = Mathf.Max(1, Mathf.RoundToInt(chunkSize.x));
+        int stepY = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
+        Vector2Int centerChunk = Chunk.GetChunkPosition(anchor, chunkSize);
+        int maxRing = Mathf.Max(
+            Mathf.CeilToInt((float)maxSearchRadius / stepX),
+            Mathf.CeilToInt((float)maxSearchRadius / stepY)) + 1;
+
+        List<Vector2Int> candidates = new List<Vector2Int>();
+        for (int ring = 0; ring <= maxRing; ring++)
+        {
+            for (int offsetX = -ring; offsetX <= ring; offsetX++)
+            {
+                for (int offsetY = -ring; offsetY <= ring; offsetY++)
+                {
+                    if (ring > 0 && Mathf.Abs(offsetX) != ring && Mathf.Abs(offsetY) != ring)
+                        continue;
+
+                    Vector2Int chunkPos = new Vector2Int(
+                        centerChunk.x + offsetX * stepX,
+                        centerChunk.y + offsetY * stepY);
+                    if (ChunkIntersectsSpawnSearchSquare(
+                            anchor,
+                            chunkPos,
+                            stepX,
+                            stepY,
+                            maxSearchRadius))
+                    {
+                        candidates.Add(chunkPos);
+                    }
+                }
+            }
+        }
+
+        candidates.Sort((left, right) =>
+            DistanceSquaredToChunkBounds(anchor, left, stepX, stepY)
+                .CompareTo(DistanceSquaredToChunkBounds(anchor, right, stepX, stepY)));
+        return candidates;
+    }
+
+    private static bool ChunkIntersectsSpawnSearchSquare(
+        Vector2Int anchor,
+        Vector2Int chunkPos,
+        int width,
+        int height,
+        int radius)
+    {
+        int maxX = chunkPos.x + width - 1;
+        int maxY = chunkPos.y + height - 1;
+        int deltaX = anchor.x < chunkPos.x ? chunkPos.x - anchor.x :
+            anchor.x > maxX ? anchor.x - maxX : 0;
+        int deltaY = anchor.y < chunkPos.y ? chunkPos.y - anchor.y :
+            anchor.y > maxY ? anchor.y - maxY : 0;
+        return deltaX <= radius && deltaY <= radius;
+    }
+
+    private static long DistanceSquaredToChunkBounds(
+        Vector2Int anchor,
+        Vector2Int chunkPos,
+        int width,
+        int height)
+    {
+        int maxX = chunkPos.x + width - 1;
+        int maxY = chunkPos.y + height - 1;
+        long deltaX = anchor.x < chunkPos.x ? chunkPos.x - anchor.x :
+            anchor.x > maxX ? anchor.x - maxX : 0;
+        long deltaY = anchor.y < chunkPos.y ? chunkPos.y - anchor.y :
+            anchor.y > maxY ? anchor.y - maxY : 0;
+        return deltaX * deltaX + deltaY * deltaY;
     }
 
     /// <summary>
@@ -852,10 +1026,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 先保存玩家数据
         ItemMgr.Instance.SavePlayer();
 
-        // 保存所有区块数据
-        SaveAllChunks();
-
-        // 将数据保存到磁盘
+        // SaveDataMgr 在写盘前统一保存全部已加载区块。
         SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
 

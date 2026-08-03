@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 核心生命周期定位
 
-> 最后核对：2026-08-03。路径相对仓库根目录。
+> 最后核对：2026-08-04。路径相对仓库根目录。
 
 ## 修改前先读
 
@@ -73,6 +73,7 @@ GameStartScene
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-04：新玩家出生点改为协程逐个请求候选 Chunk，等待 TileData 就绪后再做单 Chunk 有界扫描；同步出生点查询只读已加载数据，禁止在格子探测中直接创建区块。
 - 2026-07-31：主菜单、新建世界、存档与上下文菜单接入通用手柄焦点导航；根主菜单保持不可被取消键误关。
 - 2026-07-31：新增维度世界切换链；动态 Scene、玩家释放/重建和失败恢复复用现有世界生命周期与加载遮罩，未建立第二套权威入口。
 - 2026-07-30：删除无代码或资源引用的旧 `SceneChange` 交互式切场景组件，正式场景入口继续由 `SceneMgr` 与世界生命周期链承担。
@@ -84,7 +85,7 @@ GameStartScene
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Core/CoreSmokeTests.cs`；当前覆盖 GameManager、GameRes、SceneMgr、启动/管理器场景入口，以及新建/进入存档必须使用 Prefab 加载界面、先等待渲染帧并持续到区块队列完成的源码契约。
+- 基础测试脚本：`Assets/GameTest/Core/CoreSmokeTests.cs`；当前覆盖 GameManager、GameRes、SceneMgr、启动/管理器场景入口，以及加载界面、出生区块异步搜索、禁止格子探测同步建区块和禁止双重区块存档扫描的源码契约。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；核心流程测试约定目录：`Assets/GameTest/Core/`；场景目录：`Assets/GameTest/Scenes/Core/`；冒烟分类：`Core.Smoke`。
 - 新增启动、世界创建、继续游戏、场景切换或退出行为时必须增加系统测试；修复 Bug 时先增加回归测试。全局生命周期变化时同步更新最小启动冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用临时世界和临时存档，并在结束时清理全局对象与事件订阅。

@@ -934,6 +934,14 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public Chunk LoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
+        // 同步调用方可能在区块尚未 Ready 时重复查询；已经注册的激活区块必须直接复用，
+        // 否则会为同一坐标反复创建 MapCore，并覆盖字典中的旧实例。
+        if (TryGetActiveChunkByPos(chunkPos, out Chunk activeChunk) && activeChunk != null)
+        {
+            onChunkLoaded?.Invoke(activeChunk);
+            return activeChunk;
+        }
+
         Chunk chunk = null;
 
         // === 第一优先级：激活已存在但未激活的区块 ===
