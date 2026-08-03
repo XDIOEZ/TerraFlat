@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 建造系统定位
 
-> 最后核对：2026-07-31。建筑占地会直接影响导航。
+> 最后核对：2026-08-03。建筑占地会直接影响导航。
 
 ## 修改前先读
 
@@ -55,6 +55,18 @@ Summoner（库存中的持久化载体）
 - 教程进度事件必须使用请求开始时捕获的 `_placementActor`：单机仅在创建建筑且成功消耗召唤器后发布；联机仅在 accepted 回执并应用权威剩余数量后发布。Reject、创建失败或 actor 丢失路径不得发布。
 - 矿坑入口的 `DimensionPortal` 与交互 Trigger 必须位于 Item 根 GameObject；Summoner 会复制该组件，但必须通过 `BuildingRole.Summoner`/未安装状态拒绝维度切换。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；Prefab 外观或放置预览配色变化不要扩散检查。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| `BuildingOccupancyRegistry`、占地格计算、安装/拆除时的注册顺序 | `flatworld-navigation`、`flatworld-map` | 动态占地不写 TileData，提交对应导航脏格且无残留 | `Navigation.Smoke`、`Map.Smoke` |
+| Summoner/PlacedBuilding 角色、放置消耗或拆除返还事务 | `flatworld-item-module`、`flatworld-inventory-crafting` | Item 创建/销毁与库存扣除/返还原子完成 | `ItemModule.Smoke`、`InventoryCrafting.Smoke` |
+| Building Snapshot、Chunk 归属或持久化字段 | `flatworld-data-save` | 安装/拆除和卸载重载后角色、GUID 与模块数据一致 | `DataSave.Smoke` |
+| 服务端放置校验、accepted/reject 回执或网络剩余数量 | `flatworld-networking` | 客户端预览不成为权威，成功事件只在最终提交点发布 | `Networking.Smoke` |
+| `MineEntrance`、`DimensionPortal` 或入口锚点 | `flatworld-dimension` | Summoner 不可传送，已安装入口与 CaveExit 稳定绑定 | `Dimension.Smoke` |
+
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
@@ -73,11 +85,11 @@ Summoner（库存中的持久化载体）
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；建筑测试约定目录：`Assets/GameTest/Building/`；场景目录：`Assets/GameTest/Scenes/Building/`；冒烟分类：`Building.Smoke`。
 - 新增放置、占地、安装拆除或建筑快照行为时必须增加系统测试；修复 Bug 时先增加回归测试。建筑主流程变化时同步更新建筑冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试创建的占地、Prefab 和临时快照必须清理。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Building.Smoke`；涉及导航、地图、存档或联机事务时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Building.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有放置预览或最终外观变化才做定向截图。
 - 建筑教程事件的 actor、稳定 ID 与成功锚点由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 静态阻挡 Tile 的层级路由与墙地可走性由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
 
-改变建筑角色、快照版本、Prefab 命名、占地算法、放置校验、结构资源路径或编辑器烘焙流程后，必须更新本 Skill；涉及导航或联机时同步更新对应 Skill。
+改变建筑角色、快照版本、Prefab 命名、占地算法、放置校验、结构资源路径或编辑器烘焙流程后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。

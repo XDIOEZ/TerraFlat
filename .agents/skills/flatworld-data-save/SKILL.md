@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 数据与存档定位
 
-> 最后核对：2026-07-31。序列化字段改动属于高影响变更。
+> 最后核对：2026-08-03。序列化字段改动属于高影响变更。
 
 ## 修改前先读
 
@@ -70,6 +70,17 @@ GameSaveData
 - 维度不新增 MemoryPack 字段：地表继续以旧 `PlanetId` 为 `PlanetData_Dict` 键，非地表使用 `PlanetId__dimension__DimensionId`，从而隔离各维度 `MapData_Dict`；玩家每维度位置和矿坑入口/出口锚点通过 `flatworld.dimensions` 写入 `ItemSpecialData`。
 - `CaveExit` 必须在程序化 Chunk 基线捕获完成后创建；这样新出口会进入 `ChunkSaveRecord.ChangedItems`。只扫描 `MapSave.items` 会漏掉差量新增 Item。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；仅调整编辑器显示名或未参与持久化的字段不要扩散检查。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| `GameSaveData` 根、磁盘读写、备份、自动保存或首存档顺序 | `flatworld-core` | 新建/继续/退出期间只写目标存档，失败恢复不留下半状态 | `Core.Smoke` |
+| `ItemData`、`ModuleData`、MemoryPack Union 或模块序列化布局 | `flatworld-item-module`，并只加载实际数据所属玩法 Skill | 旧数据迁移、模块 ID/类型与 Prefab 挂载仍匹配 | `ItemModule.Smoke` 加对应玩法 Smoke |
+| `PlanetData`、`MapSave`、TileData、Chunk 差量或 `WorldKey` | `flatworld-map`、`flatworld-dimension` | 地表旧键兼容、维度隔离、基线与 ChangedItems 往返一致 | `Map.Smoke`、`Dimension.Smoke` |
+| 压缩世界快照、MOD 记录或兼容版本 | `flatworld-networking`、`flatworld-modding` | 网络快照可往返，MOD 集合/协议不接受不兼容存档 | `Networking.Smoke`、`Modding.Smoke` |
+
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
@@ -91,7 +102,7 @@ GameSaveData
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；存档测试约定目录：`Assets/GameTest/DataSave/`；场景目录：`Assets/GameTest/Scenes/DataSave/`；冒烟分类：`DataSave.Smoke`。
 - 新增数据字段、MemoryPack Union、自动保存、区块差量或配置加载行为时必须增加往返测试；修复 Bug 时先增加回归测试。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；不得写入玩家真实存档，必须使用临时路径并验证序列化前后关键字段一致。
-- 完成修改后检查 Unity 编译和 Console，再运行 `DataSave.Smoke`；涉及地图、Item/Module、建筑、对话一次性标记或联机快照时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category DataSave.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类。
 - 教程存档、旧数据兼容及命名空间共存由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 维度世界键兼容与默认目录由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。

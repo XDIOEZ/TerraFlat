@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld Buff"
+  short_description: "定位并修改 FlatWorld Buff 定义、运行时、效果与存档"
+  default_prompt: "使用 $flatworld-buff 定位并修改 FlatWorld 的 Buff 定义、效果、生命周期或存档问题。"

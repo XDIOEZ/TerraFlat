@@ -53,7 +53,7 @@ disable-model-invocation: false
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；音频测试约定目录：`Assets/GameTest/Audio/`；场景目录：`Assets/GameTest/Scenes/Audio/`；冒烟分类：`Audio.Smoke`。
 - 新增 AudioCue、声源池、路由或淡入淡出行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心播放与回收流程变化时同步更新音频冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用短测试音频或可观察状态，避免依赖人工听感作为唯一判定。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Audio.Smoke`；涉及战斗、实体或 UI 音效时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Audio.Smoke`；无需视觉模型或测试工具卡片。涉及战斗、实体或 UI 音效时追加对应分类；听感只在确有音频内容变化时人工确认。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

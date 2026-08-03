@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 地图与 Chunk 系统定位
 
-> 最后核对：2026-07-31。导航节点更新请同时加载 `flatworld-navigation`。
+> 最后核对：2026-08-03。
 
 ## 修改前先读
 
@@ -73,6 +73,17 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - `BlockingTilemapLayer` 负责 `TileTag=Blocking` 的静态 Tile 障碍：地面 Tilemap 渲染阻挡层下方的数据，独立“建筑阻挡层”渲染顶层障碍并持有 `TilemapCollider2D`；A* 与存档仍读取原顶层 TileData。
 - 动态可放置建筑不得写入阻挡 Tilemap，继续使用 GameObject Collider + `BuildingOccupancyRegistry`；阻挡层只服务矿洞岩壁、地牢墙体和结构模板中的静态 Tile 障碍。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；单纯地形美术或不改变数据的生成参数调整不要扩散检查。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| `TileData` 可走性、Penalty、顶层 Tile 或导航脏格/脏区通知 | `flatworld-navigation` | A* 仍从权威 TileData 取值，节点和连接在数据变化后刷新 | `Navigation.Smoke` |
+| Chunk 激活窗口、加载/卸载、对象池、Ready 条件或 MapCore 创建 | `flatworld-navigation`；涉及观察者/维度时再加载 `flatworld-networking`、`flatworld-dimension` | GridGraph 窗口、观察者并集、维度 MapCore 与延迟失活顺序 | `Navigation.Smoke`；按命中项追加 `Networking.Smoke` 或 `Dimension.Smoke` |
+| `MapSave`、Chunk 差量、确定性 Item GUID 或 Item 区块归属 | `flatworld-data-save`、`flatworld-item-module` | 基线与 ChangedItems、不重复注册、卸载重载结果一致 | `DataSave.Smoke`、`ItemModule.Smoke` |
+| 结构生成、静态阻挡层或动态建筑边界 | `flatworld-building`、`flatworld-navigation` | 静态 Tile 阻挡与 `BuildingOccupancyRegistry` 动态占地不混用 | `Building.Smoke`、`Navigation.Smoke` |
+
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
@@ -93,10 +104,10 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；地图测试约定目录：`Assets/GameTest/Map/`；场景目录：`Assets/GameTest/Scenes/Map/`；冒烟分类：`Map.Smoke`。
 - 新增 Chunk 流送、Tilemap、程序生成、Biome、River、Structure 或地图差量行为时必须增加系统测试；修复 Bug 时先增加回归测试。中心 Chunk 加载与卸载主流程变化时同步更新地图冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；程序生成必须固定种子，测试结束必须清理 Chunk、Tilemap 与临时地图数据。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Map.Smoke`；涉及导航、存档、建筑、Item/Module 或环境时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Map.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有地形、河流或 Tilemap 最终观感变化才做定向截图。
 - 地表兼容、矿洞目录、洞穴布局确定性、阻挡层路由、墙地可走性和资源生成入口由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
 
-移动生成器、地图 Prefab、Biome/Structure/Tile 资源，改变 Chunk 生命周期、生成顺序、MapSave 结构或就绪条件后，必须同步更新本 Skill；涉及可走性时同步更新 Navigation Skill。
+移动生成器、地图 Prefab、Biome/Structure/Tile 资源，改变 Chunk 生命周期、生成顺序、MapSave 结构或就绪条件后，必须同步更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。

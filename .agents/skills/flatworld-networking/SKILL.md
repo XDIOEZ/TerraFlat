@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 联机系统定位
 
-> 最后核对：2026-07-31。修改时严格区分本地权威实体与远程视觉副本。
+> 最后核对：2026-08-03。修改时严格区分本地权威实体与远程视觉副本。
 
 ## 修改前先读
 
@@ -64,6 +64,18 @@ disable-model-invocation: false
 - `GamePlay.asmdef` 直接引用无引擎依赖的 `FlatWorld.Networking.Core`；`MonsterSpawnerManager` 使用 `GameNetwork.HasStateAuthority` 门控世界生物生成，客户端不得重复投放。
 - 首版 `DimensionManager.TryBeginTransition()` 在 `GameNetwork.IsOnline` 为真时拒绝切换；在实现服务器权威目标地址、观察者迁移、Chunk 流送重建和玩家同步前不得解除此门禁。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；网络面板纯布局或文案变化只交给 UI 验证。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| 会话状态、Host/Client 世界进入或本地/远程 Player 提升 | `flatworld-core`、`flatworld-player-interaction` | 世界生命周期只执行一次，本地档案与远程视觉副本严格隔离 | `Core.Smoke`、`PlayerInteraction.Smoke` |
+| 世界快照、Item 状态消息、协议版本或序列化桥 | `flatworld-data-save`、`flatworld-item-module` | 服务端权威状态可往返，客户端不进入本地保存/Tick | `DataSave.Smoke`、`ItemModule.Smoke` |
+| Chunk 观察者并集、本地导航窗口或世界坐标同步 | `flatworld-map`、`flatworld-navigation` | Chunk 按全部观察者流送，GridGraph 只跟随本地 owned 玩家 | `Map.Smoke`、`Navigation.Smoke` |
+| 建筑放置/拆除请求、accepted/reject 或库存剩余数量 | `flatworld-building` | 服务端校验和提交为唯一权威，拒绝路径无副作用 | `Building.Smoke` |
+| MOD 集合哈希、兼容握手或存档 MOD 记录 | `flatworld-modding` | 不兼容集合在加入世界前被拒绝 | `Modding.Smoke` |
+
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
@@ -84,10 +96,10 @@ disable-model-invocation: false
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；网络测试约定目录：`Assets/GameTest/Networking/`；场景目录：`Assets/GameTest/Scenes/Networking/`；冒烟分类：`Networking.Smoke`。现有独立进程 Harness 位于 `Assets/5_Scripts/5-4_Networking/Tests/`，不得重复实现。
 - 新增 Host/Client、会话、网络玩家、世界快照、Chunk、Item 或建筑同步行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心连接与同步流程变化时同步更新网络测试场景和现有 Harness。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；端口、临时存档和生成进程必须隔离，测试结束必须关闭测试实例并清理状态。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Networking.Smoke`；涉及核心生命周期、玩家、地图、Item/Module、建筑或存档时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Networking.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；独立进程 Harness 仍按其原有入口运行。
 - 远程 Player 教程/自言自语隔离由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
 
-改变网络入口、端口/传输、Prefab 路径、消息、会话状态、玩家权威边界、Chunk/Item 同步、建筑事务、MOD 校验或联机 UI 文件后，必须更新本 Skill；同时更新受影响的 Item、Map、Navigation、UI 或 Modding Skill。
+改变网络入口、端口/传输、Prefab 路径、消息、会话状态、玩家权威边界、Chunk/Item 同步、建筑事务、MOD 校验或联机 UI 文件后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
