@@ -1,4 +1,5 @@
 using System.Linq;
+using System.IO;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 using UnityEditor;
@@ -20,6 +21,9 @@ namespace FlatWorld.GameTest.Dimension
             GameTestAssertions.AssertAssetExists("Assets/Resources/Config/DimensionCatalog_Default.asset");
             GameTestAssertions.AssertAssetExists("Assets/4_ScriptObjects/4-1_TileBlock/TileBase_Stone.asset");
             GameTestAssertions.AssertAssetExists("Assets/4_ScriptObjects/4-1_TileBlock/TileBase_StoneWall.asset");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/MineEntrance.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Dimension/CaveExit.prefab");
         }
 
         [Test]
@@ -136,6 +140,99 @@ namespace FlatWorld.GameTest.Dimension
                     entry != null && entry.LootPrefabName.StartsWith("Ore_")), Is.True,
                     $"{mineIds[i]} 包含非矿石掉落。");
             }
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void MineEntranceAndCaveExitUseFormalPortalContracts()
+        {
+            GameObject placedPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Building/MineEntrance.prefab");
+            GameObject summonerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab");
+            GameObject caveExitPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Dimension/CaveExit.prefab");
+
+            Assert.That(placedPrefab.GetComponent<Item>().itemData.IDName, Is.EqualTo("MineEntrance"));
+            Assert.That(placedPrefab.GetComponent<DimensionPortal>().TargetDimensionId, Is.EqualTo(WorldAddress.CaveDimensionId));
+            Assert.That(placedPrefab.GetComponent<DimensionPortal>().RequiresInstalledBuilding, Is.True);
+            Assert.That(placedPrefab.GetComponentInChildren<Mod_Building>(true).Data.Role, Is.EqualTo(BuildingRole.PlacedBuilding));
+            Assert.That(placedPrefab.GetComponents<BoxCollider2D>().Any(collider => collider.isTrigger), Is.True);
+
+            Assert.That(summonerPrefab.GetComponent<Item>().itemData.IDName, Is.EqualTo("MineEntrance_Summoner"));
+            Assert.That(summonerPrefab.GetComponent<Item>().itemData.Stack.CanBePickedUp, Is.True);
+            Assert.That(summonerPrefab.GetComponentInChildren<Mod_Building>(true).Data.Role, Is.EqualTo(BuildingRole.Summoner));
+
+            Assert.That(caveExitPrefab.GetComponent<Item>().itemData.IDName, Is.EqualTo("CaveExit"));
+            Assert.That(caveExitPrefab.GetComponent<Item>().itemData.Stack.CanBePickedUp, Is.False);
+            Assert.That(caveExitPrefab.GetComponent<DimensionPortal>().TargetDimensionId, Is.EqualTo(WorldAddress.SurfaceDimensionId));
+            Assert.That(caveExitPrefab.GetComponent<DimensionPortal>().RequiresInstalledBuilding, Is.False);
+            Assert.That(caveExitPrefab.GetComponent<BoxCollider2D>().isTrigger, Is.True);
+
+            RecipeCatalogDto recipes = RecipeRuntimeFactory.Deserialize(File.ReadAllText(
+                "Assets/StreamingAssets/GameConfig/Recipes/crafting/buildings.json"));
+            RecipeDto mineEntranceRecipe = recipes.Recipes.Single(recipe => recipe.Id == "core:矿坑入口");
+            Assert.That(mineEntranceRecipe.Outputs.Single().ItemId, Is.EqualTo("MineEntrance_Summoner"));
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void PortalAnchorRoundTripKeepsEntranceAndExitIdentity()
+        {
+            Data_Player playerData = new Data_Player();
+            GameObject entranceObject = new GameObject("MineEntrance_Test");
+            GameObject exitObject = new GameObject("CaveExit_Test");
+            try
+            {
+                GameItem entrance = entranceObject.AddComponent<GameItem>();
+                entrance.Data = CreatePortalItemData("MineEntrance", 112233);
+                entrance.transform.position = new Vector3(18.5f, -7.5f, 0f);
+
+                WorldAddress surface = new WorldAddress("TestPlanet", WorldAddress.SurfaceDimensionId);
+                WorldAddress cave = surface.WithDimension(WorldAddress.CaveDimensionId);
+                DimensionPortalAnchor anchor = DimensionTravelProgressStore.GetOrCreateCaveAnchor(
+                    playerData,
+                    surface,
+                    entrance,
+                    cave,
+                    DimensionDefinition.CreateCave());
+
+                GameItem caveExit = exitObject.AddComponent<GameItem>();
+                caveExit.Data = CreatePortalItemData("CaveExit", anchor.CaveExitGuid);
+                caveExit.transform.position = anchor.CaveExitPosition;
+                DimensionTravelProgressStore.UpdateCaveExit(playerData, anchor, caveExit);
+
+                Assert.That(DimensionTravelProgressStore.TryGetAnchorByCaveExit(
+                    playerData,
+                    cave,
+                    caveExit,
+                    out DimensionPortalAnchor restored), Is.True);
+                Assert.That(restored.SurfaceEntranceGuid, Is.EqualTo(entrance.itemData.Guid));
+                Assert.That(restored.SurfaceEntrancePosition, Is.EqualTo(entrance.transform.position));
+                Assert.That(restored.CaveExitGuid, Is.EqualTo(caveExit.itemData.Guid));
+                Assert.That(restored.CaveExitPosition, Is.EqualTo(caveExit.transform.position));
+            }
+            finally
+            {
+                Object.DestroyImmediate(entranceObject);
+                Object.DestroyImmediate(exitObject);
+            }
+        }
+
+        private static Data_GeneralItem CreatePortalItemData(string itemId, int guid)
+        {
+            return new Data_GeneralItem
+            {
+                IDName = itemId,
+                Guid = guid,
+                Stack = new ItemStack
+                {
+                    Amount = 1f,
+                    Volume = 1f,
+                    CanBePickedUp = false
+                },
+                transform = new ItemTransform()
+            };
         }
     }
 }

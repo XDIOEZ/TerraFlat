@@ -53,6 +53,7 @@ namespace FlatWorld.GameTest.UI
                 "难度_Simple", "难度_Hard", "应用按钮");
             AssertPrefabContains(
                 "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InputBindingSettings.prefab",
+                "设备分页", "键鼠分页按钮", "手柄分页按钮",
                 "绑定列表", "Content", "恢复默认按钮", "完成按钮");
             AssertPrefabContains(
                 "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InputBindingRow.prefab",

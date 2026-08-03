@@ -9,10 +9,10 @@ using UnityEngine.SceneManagement;
 public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 {
     private const string DefaultCatalogResourcePath = "Config/DimensionCatalog_Default";
+    private const string CaveExitPrefabId = "CaveExit";
 
     [SerializeField] private DimensionCatalogSO catalog;
 
-    private GameObject runtimePortal;
     private bool isTransitioning;
 
     public WorldAddress ActiveAddress { get; private set; }
@@ -95,6 +95,11 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
     public bool TryBeginTransition(Player player, string targetDimensionId)
     {
+        return TryBeginTransition(player, targetDimensionId, null);
+    }
+
+    public bool TryBeginTransition(Player player, string targetDimensionId, Item sourcePortalItem)
+    {
         if (isTransitioning || player == null || player != ItemMgr.Instance?.User_Player)
             return false;
 
@@ -122,7 +127,19 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition.DisplayName))
             return false;
 
-        StartCoroutine(TransitionCoroutine(player, sourceAddress, targetAddress, targetDefinition));
+        PortalTransitionContext portalContext = ResolvePortalTransition(
+            player.Data,
+            sourceAddress,
+            targetAddress,
+            targetDefinition,
+            sourcePortalItem);
+        if (portalContext == null && IsMinePortalTransition(sourceAddress, targetAddress))
+        {
+            GameManager.Instance.FailDimensionTransitionLoading("矿坑入口锚点无效，无法切换维度。", null);
+            return false;
+        }
+
+        StartCoroutine(TransitionCoroutine(player, sourceAddress, targetAddress, targetDefinition, portalContext));
         return true;
     }
 
@@ -154,7 +171,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         Player sourcePlayer,
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
-        DimensionDefinition targetDefinition)
+        DimensionDefinition targetDefinition,
+        PortalTransitionContext portalContext)
     {
         isTransitioning = true;
         Data_Player playerData = sourcePlayer.Data;
@@ -167,6 +185,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             sourceAddress,
             targetAddress,
             targetDefinition,
+            portalContext,
             state);
         Exception failure = null;
 
@@ -206,6 +225,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
         DimensionDefinition targetDefinition,
+        PortalTransitionContext portalContext,
         TransitionState state)
     {
         Data_Player playerData = sourcePlayer.Data;
@@ -220,7 +240,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         SaveDataMgr.Instance.Save_And_WriteToDisk();
 
         ItemMgr.Instance.ReleasePlayerForWorldTransition(sourcePlayer);
-        ClearRuntimePortal();
         ChunkMgr.Instance.OnSceneChange();
         yield return null;
 
@@ -241,9 +260,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                 yield return null;
         }
 
-        Vector3 targetPosition = DimensionTravelProgressStore.TryGetLastPosition(playerData, targetAddress, out Vector3 savedPosition)
-            ? savedPosition
-            : targetDefinition.DefaultSpawnPosition;
+        Vector3 targetPosition = ResolveTargetPosition(playerData, targetAddress, targetDefinition, portalContext);
         playerData.CurrentSceneName = targetAddress.WorldKey;
         playerData.transform.position = targetPosition;
         playerData.transform.rotation = Quaternion.identity;
@@ -264,6 +281,12 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         while (ChunkMgr.Instance.HasPendingChunkLoads)
             yield return null;
 
+        if (portalContext?.EnsureCaveExit == true)
+        {
+            GameManager.Instance.SetDimensionTransitionLoading("正在固定矿洞出口…", 0.88f);
+            yield return EnsureCaveExitCoroutine(playerData, targetPlayer, targetDefinition, portalContext);
+        }
+
         yield return null;
         targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
         ItemMgr.Instance.SavePlayer();
@@ -274,6 +297,13 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     {
         public bool ExitNotified;
         public bool EnterNotified;
+    }
+
+    private sealed class PortalTransitionContext
+    {
+        public DimensionPortalAnchor Anchor;
+        public Vector3 TargetPortalPosition;
+        public bool EnsureCaveExit;
     }
 
     private void RecoverAfterTransitionFailure(
@@ -320,37 +350,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             return;
 
         ActivateWorldFromScene(SceneManager.GetActiveScene().name);
-        StartCoroutine(SpawnPortalNextFrame(player));
-    }
-
-    private IEnumerator SpawnPortalNextFrame(Player player)
-    {
-        yield return null;
-        if (player == null || ActiveDefinition == null || string.IsNullOrWhiteSpace(ActiveDefinition.PortalTargetDimensionId))
-            yield break;
-
-        ClearRuntimePortal();
-        runtimePortal = new GameObject($"DimensionPortal_{ActiveDefinition.PortalTargetDimensionId}");
-        runtimePortal.transform.position = player.transform.position + ActiveDefinition.PortalOffset;
-        SceneManager.MoveGameObjectToScene(runtimePortal, SceneManager.GetActiveScene());
-
-        SpriteRenderer renderer = runtimePortal.AddComponent<SpriteRenderer>();
-        GameObject stonePrefab = GameRes.Instance?.GetPrefab("Mine_Stone", false);
-        renderer.sprite = stonePrefab != null
-            ? stonePrefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite
-            : null;
-        renderer.color = ActiveDefinition.GenerationMode == DimensionGenerationMode.Cave
-            ? new Color(0.35f, 0.85f, 1f, 1f)
-            : new Color(0.72f, 0.35f, 1f, 1f);
-        renderer.sortingOrder = 50;
-        runtimePortal.transform.localScale = new Vector3(1.35f, 1.35f, 1f);
-
-        CircleCollider2D collider = runtimePortal.AddComponent<CircleCollider2D>();
-        collider.isTrigger = true;
-        collider.radius = 0.75f;
-
-        DimensionPortal portal = runtimePortal.AddComponent<DimensionPortal>();
-        portal.Initialize(ActiveDefinition.PortalTargetDimensionId);
     }
 
     private void OnActiveSceneChanged(Scene oldScene, Scene newScene)
@@ -359,12 +358,151 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             ActivateWorldFromScene(newScene.name);
     }
 
-    private void ClearRuntimePortal()
+
+    #region 正式矿坑入口
+
+    private static bool IsMinePortalTransition(WorldAddress sourceAddress, WorldAddress targetAddress)
     {
-        if (runtimePortal != null)
-            Destroy(runtimePortal);
-        runtimePortal = null;
+        return sourceAddress.IsSurface && targetAddress.DimensionId == WorldAddress.CaveDimensionId ||
+               sourceAddress.DimensionId == WorldAddress.CaveDimensionId && targetAddress.IsSurface;
     }
+
+    private static PortalTransitionContext ResolvePortalTransition(
+        Data_Player playerData,
+        WorldAddress sourceAddress,
+        WorldAddress targetAddress,
+        DimensionDefinition targetDefinition,
+        Item sourcePortalItem)
+    {
+        if (sourceAddress.IsSurface && targetAddress.DimensionId == WorldAddress.CaveDimensionId)
+        {
+            DimensionPortalAnchor anchor = DimensionTravelProgressStore.GetOrCreateCaveAnchor(
+                playerData,
+                sourceAddress,
+                sourcePortalItem,
+                targetAddress,
+                targetDefinition);
+            return anchor == null
+                ? null
+                : new PortalTransitionContext
+                {
+                    Anchor = anchor,
+                    TargetPortalPosition = anchor.CaveExitPosition,
+                    EnsureCaveExit = true
+                };
+        }
+
+        if (sourceAddress.DimensionId == WorldAddress.CaveDimensionId && targetAddress.IsSurface)
+        {
+            if (!DimensionTravelProgressStore.TryGetAnchorByCaveExit(
+                    playerData,
+                    sourceAddress,
+                    sourcePortalItem,
+                    out DimensionPortalAnchor anchor))
+            {
+                return null;
+            }
+
+            return new PortalTransitionContext
+            {
+                Anchor = anchor,
+                TargetPortalPosition = anchor.SurfaceEntrancePosition
+            };
+        }
+
+        return null;
+    }
+
+    private static Vector3 ResolveTargetPosition(
+        Data_Player playerData,
+        WorldAddress targetAddress,
+        DimensionDefinition targetDefinition,
+        PortalTransitionContext portalContext)
+    {
+        if (portalContext != null)
+            return portalContext.TargetPortalPosition + targetDefinition.PortalOffset;
+
+        return DimensionTravelProgressStore.TryGetLastPosition(playerData, targetAddress, out Vector3 savedPosition)
+            ? savedPosition
+            : targetDefinition.DefaultSpawnPosition;
+    }
+
+    private static IEnumerator EnsureCaveExitCoroutine(
+        Data_Player playerData,
+        Player targetPlayer,
+        DimensionDefinition targetDefinition,
+        PortalTransitionContext portalContext)
+    {
+        Vector3 desiredPosition = portalContext.TargetPortalPosition;
+        Vector2Int chunkPosition = Chunk.GetChunkPosition(desiredPosition);
+        Chunk targetChunk = null;
+        bool requestCompleted = false;
+        ChunkMgr.Instance.RequestLoadChunk_By_Position(chunkPosition, loadedChunk =>
+        {
+            targetChunk = loadedChunk;
+            requestCompleted = true;
+        });
+
+        while (!requestCompleted || targetChunk == null || !targetChunk.IsReady)
+            yield return null;
+
+        Item caveExit = FindCaveExit(targetChunk, portalContext.Anchor, desiredPosition);
+        if (caveExit == null)
+        {
+            caveExit = targetChunk.InstantiateItemInChunkDeterministic(
+                CaveExitPrefabId,
+                portalContext.Anchor.CaveExitGuid,
+                desiredPosition,
+                Quaternion.identity,
+                Vector3.one);
+            if (caveExit == null)
+                throw new InvalidOperationException("无法在目标 Chunk 创建 CaveExit。");
+
+            caveExit.Load();
+        }
+        else if (!caveExit.IsInitialized)
+        {
+            caveExit.Load();
+        }
+
+        caveExit.transform.SetPositionAndRotation(desiredPosition, Quaternion.identity);
+        caveExit.transform.localScale = Vector3.one;
+        caveExit.itemData.transform.position = desiredPosition;
+        caveExit.itemData.transform.rotation = Quaternion.identity;
+        caveExit.itemData.transform.scale = Vector3.one;
+        caveExit.itemData.Stack.CanBePickedUp = false;
+        targetChunk.AddItem(caveExit);
+
+        portalContext.TargetPortalPosition = caveExit.transform.position;
+        DimensionTravelProgressStore.UpdateCaveExit(playerData, portalContext.Anchor, caveExit);
+        Vector3 safePosition = portalContext.TargetPortalPosition + targetDefinition.PortalOffset;
+        targetPlayer.transform.position = safePosition;
+        targetPlayer.Data.transform.position = safePosition;
+        playerData.transform.position = safePosition;
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerData.Name_User] = playerData;
+    }
+
+    private static Item FindCaveExit(Chunk chunk, DimensionPortalAnchor anchor, Vector3 desiredPosition)
+    {
+        if (chunk.RunTimeItems.TryGetValue(anchor.CaveExitGuid, out Item anchoredExit) &&
+            anchoredExit?.itemData?.IDName == CaveExitPrefabId)
+        {
+            return anchoredExit;
+        }
+
+        if (!chunk.RuntimeItemsGroup.TryGetValue(CaveExitPrefabId, out HashSet<Item> exits))
+            return null;
+
+        foreach (Item candidate in exits)
+        {
+            if (candidate != null && (candidate.transform.position - desiredPosition).sqrMagnitude <= 0.01f)
+                return candidate;
+        }
+
+        return null;
+    }
+
+    #endregion
 
     private void LoadCatalog()
     {

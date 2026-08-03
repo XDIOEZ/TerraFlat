@@ -332,7 +332,20 @@ public static class RuntimeUIPrefabBuilder
         layout.childForceExpandHeight = false;
 
         CreateHeader(dialog.transform, "按键绑定", "关闭按钮");
-        CreateHint(dialog.transform, "点击“修改”后按下新按键；重复绑定会被拦截，Esc 用于安全取消。", 42f);
+        CreateHint(dialog.transform, "分别设置键鼠与手柄；重复绑定会被拦截，修改后自动保存。", 42f);
+
+        GameObject deviceTabs = CreateUIObject("设备分页", dialog.transform);
+        deviceTabs.AddComponent<LayoutElement>().preferredHeight = 40f;
+        HorizontalLayoutGroup tabLayout = deviceTabs.AddComponent<HorizontalLayoutGroup>();
+        tabLayout.spacing = 10f;
+        tabLayout.childAlignment = TextAnchor.MiddleCenter;
+        tabLayout.childControlWidth = true;
+        tabLayout.childControlHeight = true;
+        tabLayout.childForceExpandWidth = false;
+        tabLayout.childForceExpandHeight = true;
+        CreateButton("键鼠分页按钮", deviceTabs.transform, "键鼠", 180f, 38f, true);
+        CreateButton("手柄分页按钮", deviceTabs.transform, "手柄", 180f, 38f, false);
+
         CreateBindingScrollView(dialog.transform);
         TextMeshProUGUI status = CreateText("状态文本", dialog.transform, "选择一项后按下新按键。", 13f, Muted);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;

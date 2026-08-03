@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace FlatWorld.GameTest.PlayerInteraction
@@ -54,6 +56,73 @@ namespace FlatWorld.GameTest.PlayerInteraction
                 "相机缩放不能与手柄十字键快捷栏动作重复绑定。");
         }
 
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
+        public void BindingServiceExposesSeparateKeyboardAndGamepadPages()
+        {
+            InputActionAsset actions = CreateRuntimeInputAsset();
+            MemoryBindingStore store = new MemoryBindingStore();
+            using InputBindingService service = new InputBindingService(actions, store);
+
+            try
+            {
+                IReadOnlyList<InputBindingEntry> keyboardEntries =
+                    service.GetEntries(InputBindingDeviceGroup.KeyboardMouse);
+                IReadOnlyList<InputBindingEntry> gamepadEntries =
+                    service.GetEntries(InputBindingDeviceGroup.Gamepad);
+
+                Assert.That(keyboardEntries, Is.Not.Empty);
+                Assert.That(gamepadEntries, Is.Not.Empty);
+                Assert.That(keyboardEntries.All(entry => entry.BindingGroup == "Keyboard&Mouse"), Is.True);
+                Assert.That(gamepadEntries.All(entry => entry.BindingGroup == "Gamepad"), Is.True);
+                Assert.That(gamepadEntries.Any(entry =>
+                    entry.Action.name == "Move_Player" &&
+                    entry.ExpectedControlLayout == "Vector2"), Is.True);
+                Assert.That(gamepadEntries.Any(entry => entry.Action.name == "B"), Is.True);
+                Assert.That(gamepadEntries.Any(entry => entry.Action.name == "HotbarPrevious"), Is.True);
+                Assert.That(gamepadEntries.Any(entry => entry.Action.name == "HotbarNext"), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(actions);
+            }
+        }
+
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
+        public void ResettingGamepadBindingsKeepsKeyboardOverrides()
+        {
+            InputActionAsset actions = CreateRuntimeInputAsset();
+            MemoryBindingStore store = new MemoryBindingStore();
+            using InputBindingService service = new InputBindingService(actions, store);
+
+            try
+            {
+                InputBindingEntry keyboardBag = service
+                    .GetEntries(InputBindingDeviceGroup.KeyboardMouse)
+                    .Single(entry => entry.Action.name == "B");
+                InputBindingEntry gamepadBag = service
+                    .GetEntries(InputBindingDeviceGroup.Gamepad)
+                    .Single(entry => entry.Action.name == "B");
+                keyboardBag.Action.ApplyBindingOverride(keyboardBag.BindingIndex, "<Keyboard>/i");
+                gamepadBag.Action.ApplyBindingOverride(gamepadBag.BindingIndex, "<Gamepad>/buttonSouth");
+
+                service.ResetToDefaults(InputBindingDeviceGroup.Gamepad);
+
+                Assert.That(
+                    keyboardBag.Action.bindings[keyboardBag.BindingIndex].overridePath,
+                    Is.EqualTo("<Keyboard>/i"));
+                Assert.That(
+                    gamepadBag.Action.bindings[gamepadBag.BindingIndex].overridePath,
+                    Is.Null.Or.Empty);
+                Assert.That(store.SavedJson, Is.Not.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(actions);
+            }
+        }
+
         private static void AssertBinding(
             InputActionMap map,
             string actionName,
@@ -64,6 +133,34 @@ namespace FlatWorld.GameTest.PlayerInteraction
                 action.bindings.Any(binding => binding.path == expectedPath),
                 Is.True,
                 $"动作 {actionName} 缺少绑定 {expectedPath}。");
+        }
+
+        private static InputActionAsset CreateRuntimeInputAsset()
+        {
+            InputActionAsset source = AssetDatabase.LoadAssetAtPath<InputActionAsset>(
+                InputActionsPath);
+            Assert.That(source, Is.Not.Null, $"无法加载输入资产：{InputActionsPath}");
+            return Object.Instantiate(source);
+        }
+
+        private sealed class MemoryBindingStore : IInputBindingStore
+        {
+            public string SavedJson { get; private set; } = string.Empty;
+
+            public string Load()
+            {
+                return SavedJson;
+            }
+
+            public void Save(string json)
+            {
+                SavedJson = json ?? string.Empty;
+            }
+
+            public void Clear()
+            {
+                SavedJson = string.Empty;
+            }
         }
     }
 }
