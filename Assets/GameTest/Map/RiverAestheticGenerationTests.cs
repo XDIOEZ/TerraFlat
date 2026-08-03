@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -9,52 +8,47 @@ namespace FlatWorld.GameTest.Map
     public sealed class RiverAestheticGenerationTests
     {
         private const string MapPrefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
-        private const string DesertBiomePath =
-            "Assets/4_ScriptObjects/4-8_Biome/BiomeData/热带_沙漠.asset";
 
         [Test]
         [Category("Map.Hydrology")]
-        public void DefaultHydrologyFavorsSparseReadableWaterways()
+        public void DefaultRiverConfigurationIsPerformanceFirst()
         {
             ChunkGenerator_River river = LoadRiverGenerator();
 
-            Assert.That(river.sourceSpacing, Is.GreaterThanOrEqualTo(64));
-            Assert.That(river.minRiverTraceCells, Is.GreaterThanOrEqualTo(20));
-            Assert.That(river.maxRiverTraceSteps, Is.LessThanOrEqualTo(256));
-            Assert.That(river.minLakeCells, Is.GreaterThanOrEqualTo(12));
-            Assert.That(river.lakeChance, Is.InRange(0.1f, 0.6f));
+            Assert.That(river.channelSpacing, Is.GreaterThanOrEqualTo(64f));
+            Assert.That(river.channelHalfWidth, Is.InRange(0.5f, 3f));
+            Assert.That(river.bendFrequency, Is.LessThanOrEqualTo(0.02f));
+            Assert.That(river.spawnRiverStones, Is.False);
         }
 
         [Test]
         [Category("Map.Hydrology")]
-        public void DesertStronglySuppressesRiverAndLakeOrigins()
+        public void RiverQueryIsDeterministicAndUsesWorldCoordinates()
         {
             ChunkGenerator_River river = LoadRiverGenerator();
-            BiomeData desert = AssetDatabase.LoadAssetAtPath<BiomeData>(DesertBiomePath);
-            Assert.That(desert, Is.Not.Null);
+            river.channelSpacing = 16f;
+            river.channelHalfWidth = 1f;
+            river.bendAmplitude = 0f;
+            river.flowDirection = Vector2.up;
 
-            ChunkGenerator_River.BiomeHydrologyRule rule =
-                river.biomeHydrologyRules.SingleOrDefault(candidate => candidate.biome == desert);
-            Assert.That(rule, Is.Not.Null, "沙漠必须显式配置河湖权重，不能依赖名称硬编码。");
-            Assert.That(rule.riverSourceWeight, Is.LessThanOrEqualTo(0.1f));
-            Assert.That(rule.lakeWeight, Is.LessThanOrEqualTo(0.2f));
+            bool first = river.TryEvaluateRiverCell(new Vector2Int(0, 99), out float firstDepth);
+            bool adjacentChunk = river.TryEvaluateRiverCell(new Vector2Int(0, 100), out float adjacentDepth);
+            bool repeated = river.TryEvaluateRiverCell(new Vector2Int(0, 99), out float repeatedDepth);
+
+            Assert.That(first, Is.True);
+            Assert.That(adjacentChunk, Is.True, "River must continue across chunk boundaries.");
+            Assert.That(repeated, Is.EqualTo(first));
+            Assert.That(repeatedDepth, Is.EqualTo(firstDepth).Within(0.000001f));
+            Assert.That(adjacentDepth, Is.GreaterThan(0f));
         }
 
         [Test]
         [Category("Map.Hydrology")]
-        public void DryDesertCandidateIsFarLessLikelyThanWetCandidate()
+        public void LegacyHydrologyBuffersAreNotPartOfRuntimeGenerator()
         {
-            ChunkGenerator_River river = LoadRiverGenerator();
-            MethodInfo method = typeof(ChunkGenerator_River).GetMethod(
-                "CalculateHeadwaterChance",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.That(method, Is.Not.Null);
-
-            float wetChance = (float)method.Invoke(river, new object[] { 0.8f, 1f });
-            float dryDesertChance = (float)method.Invoke(river, new object[] { 0.35f, 0.06f });
-
-            Assert.That(wetChance, Is.GreaterThan(0f));
-            Assert.That(dryDesertChance, Is.LessThan(wetChance * 0.02f));
+            Assert.That(typeof(ChunkGenerator_River).GetField("hydrologyHalo"), Is.Null);
+            Assert.That(typeof(ChunkGenerator_River).GetField("hydrologyCellsPerFrame"), Is.Null);
+            Assert.That(typeof(ChunkGenerator_River).GetField("biomeHydrologyRules"), Is.Null);
         }
 
         private static ChunkGenerator_River LoadRiverGenerator()

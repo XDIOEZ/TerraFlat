@@ -96,11 +96,12 @@ public class Mod_PlayerTraits : Module
             return;
         }
 
-        var prefabs = GameRes.Instance.AllPrefabs.Values;
-        var creativeItems = new List<ItemData>(prefabs.Count);
+        IReadOnlyList<string> itemIds = GameRes.Instance.GetAllItemIds();
+        var creativeItems = new List<ItemData>(itemIds.Count);
 
-        foreach (var prefab in prefabs)
+        foreach (string itemId in itemIds)
         {
+            GameObject prefab = GameRes.Instance.GetPrefab(itemId, false);
             if (prefab == null)
             {
                 continue;
@@ -114,7 +115,7 @@ public class Mod_PlayerTraits : Module
             }
 
             // 生成新 ItemData，避免污染 prefab 本体
-            var data = itemComponent.Get_NewItemData();
+            ItemData data = GameRes.Instance.CreateItemData(itemId);
             if (data == null)
             {
                 continue;

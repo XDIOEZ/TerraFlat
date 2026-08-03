@@ -49,7 +49,13 @@ public class Map : Item
 
     [Header("程序化生成分帧配置")]
     [SerializeField, Min(1)]
-    private int proceduralGenerationCellsPerFrame = 64;
+    private int proceduralGenerationCellsPerFrame = 256;
+
+    [SerializeField, Min(0.25f)]
+    private float proceduralGenerationFrameBudgetMilliseconds = 1.5f;
+
+    public float ProceduralGenerationFrameBudgetMilliseconds =>
+        Mathf.Max(0.25f, proceduralGenerationFrameBudgetMilliseconds);
 
     private float backTilePenaltyWaitSeconds = -1f;
     private WaitForSeconds backTilePenaltyWait;
@@ -57,6 +63,8 @@ public class Map : Item
     private bool backTilePenaltyPending;
     private bool backTilePenaltyForceFull = true;
     [NonSerialized] private bool tilemapVisualReady;
+    private static Map activeProceduralGenerationMap;
+    [NonSerialized] private bool ownsProceduralGenerationSlot;
     private readonly HashSet<Vector2Int> backTilePenaltyDirtyCells = new HashSet<Vector2Int>();
     private readonly List<Vector2Int> backTilePenaltyDirtySnapshot = new List<Vector2Int>(128);
 
@@ -184,7 +192,30 @@ public class Map : Item
             loadOrGenerateCoroutine = null;
         }
 
+        ReleaseProceduralGenerationSlot();
         backTilePenaltyPending = false;
+    }
+
+    private IEnumerator WaitForProceduralGenerationSlot()
+    {
+        while (activeProceduralGenerationMap != null &&
+               activeProceduralGenerationMap != this)
+        {
+            yield return null;
+        }
+
+        activeProceduralGenerationMap = this;
+        ownsProceduralGenerationSlot = true;
+    }
+
+    private void ReleaseProceduralGenerationSlot()
+    {
+        if (!ownsProceduralGenerationSlot)
+            return;
+
+        ownsProceduralGenerationSlot = false;
+        if (activeProceduralGenerationMap == this)
+            activeProceduralGenerationMap = null;
     }
 
     public void EnsureTilemapVisualReady()
@@ -437,12 +468,21 @@ public class Map : Item
 
     private IEnumerator GenerateThenLoadTilemapCoroutine()
     {
-        OnMapGenerated_Start.Invoke();
+        yield return WaitForProceduralGenerationSlot();
+        try
+        {
+            OnMapGenerated_Start.Invoke();
 
-        PlanetData planetData = SaveDataMgr.Instance != null
-            ? SaveDataMgr.Instance.GetCurrentPlanetData()
-            : null;
-        yield return GenerateByPipelineCoroutine(planetData);
+            PlanetData planetData = SaveDataMgr.Instance != null
+                ? SaveDataMgr.Instance.GetCurrentPlanetData()
+                : null;
+            yield return GenerateByPipelineCoroutine(planetData);
+        }
+        finally
+        {
+            ReleaseProceduralGenerationSlot();
+        }
+
         chunk?.NotifyItemsLoaded();
 
         if (Data == null || !Data.TileLoaded)

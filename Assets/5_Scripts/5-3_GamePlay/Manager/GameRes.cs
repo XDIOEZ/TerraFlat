@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.Tilemaps;
 using UnityEngine;
 using System.IO;
+using System.Linq;
 
 public class GameRes : SingletonAutoMono<GameRes>
 {
@@ -17,6 +19,14 @@ public class GameRes : SingletonAutoMono<GameRes>
     [Header("所有预制体字典")]
     [ShowInInspector]
     public Dictionary<string, GameObject> AllPrefabs = new Dictionary<string, GameObject>();
+
+    [Header("JSON 物品定义字典")]
+    [ShowInInspector]
+    public Dictionary<string, RuntimeItemDefinition> ItemDefinitions =
+        new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, ItemData> legacyItemDataTemplates =
+        new Dictionary<string, ItemData>(System.StringComparer.OrdinalIgnoreCase);
 
     [Header("配方字典")]
     [ShowInInspector]
@@ -111,12 +121,44 @@ public class GameRes : SingletonAutoMono<GameRes>
         totalAssetsToLoad = EstimateTotalAssets();
         loadingProgress = 0f;
 
-        // 分别同步加载
-        yield return StartCoroutine(SyncLoadAssetsWithProgress<GameObject>(
+        HashSet<string> redundantItemPrefabPaths;
+        try
+        {
+            redundantItemPrefabPaths = ItemDefinitionCatalogLoader.GetRedundantBuiltInPrefabPaths();
+        }
+        catch (System.Exception exception)
+        {
+            loadingText = $"物品定义预检失败：{exception.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(exception);
+            yield break;
+        }
+
+        // 先解析 Addressables 位置，再过滤已迁入 JSON 的旧变体 Prefab。
+        yield return StartCoroutine(SyncLoadPrefabsWithProgress(
             new List<string> { "ItemPrefab", "Prefab" },
-            AllPrefabs,
-            HandlePrefab,
-            "加载预制体"));
+            redundantItemPrefabPaths,
+            "加载运行时预制体"));
+
+        loadingText = "加载 JSON 物品定义";
+        int loadedItemDefinitionCount = 0;
+        System.Exception itemDefinitionError = null;
+        yield return StartCoroutine(ItemDefinitionCatalogLoader.LoadBuiltInAsync(
+            this,
+            count => loadedItemDefinitionCount = count,
+            exception => itemDefinitionError = exception,
+            progress => loadingProgress = Mathf.Clamp01(progress)));
+        if (itemDefinitionError != null)
+        {
+            loadingText = $"物品定义加载失败：{itemDefinitionError.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(itemDefinitionError);
+            yield break;
+        }
+        loadedAssetsCount += loadedItemDefinitionCount;
+        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
             
         loadingText = "加载JSON配方";
         try
@@ -281,6 +323,67 @@ public class GameRes : SingletonAutoMono<GameRes>
         loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
     }
 
+    private System.Collections.IEnumerator SyncLoadPrefabsWithProgress(
+        List<string> labels,
+        HashSet<string> excludedPaths,
+        string progressText)
+    {
+        if (labels == null || labels.Count == 0)
+            yield break;
+
+        AsyncOperationHandle<IList<IResourceLocation>> locationsHandle =
+            Addressables.LoadResourceLocationsAsync(labels, Addressables.MergeMode.Union, typeof(GameObject));
+        while (!locationsHandle.IsDone)
+        {
+            loadingText = progressText;
+            yield return null;
+        }
+        if (locationsHandle.Status != AsyncOperationStatus.Succeeded)
+        {
+            Debug.LogError("无法解析 Prefab Addressables 位置");
+            yield break;
+        }
+
+        excludedPaths ??= new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        List<IResourceLocation> locations = locationsHandle.Result
+            .Where(location => location != null)
+            .GroupBy(location => location.PrimaryKey, System.StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Where(location => !excludedPaths.Contains((location.PrimaryKey ?? string.Empty).Replace('\\', '/')))
+            .ToList();
+        int skippedCount = locationsHandle.Result.Count - locations.Count;
+
+        AsyncOperationHandle<IList<GameObject>> assetsHandle =
+            Addressables.LoadAssetsAsync<GameObject>(locations, null, true);
+        while (!assetsHandle.IsDone)
+        {
+            loadingText = $"{progressText}（已跳过 {skippedCount} 个 JSON 变体）";
+            loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+            yield return null;
+        }
+        if (assetsHandle.Status != AsyncOperationStatus.Succeeded)
+        {
+            Debug.LogError("加载运行时 Prefab 失败");
+            yield break;
+        }
+
+        foreach (GameObject prefab in assetsHandle.Result)
+        {
+            if (prefab == null)
+                continue;
+            HandlePrefab(prefab);
+            AllPrefabs[prefab.name] = prefab;
+            LoadedCount++;
+            loadedAssetsCount++;
+            if (loadedAssetsCount % 10 == 0)
+                yield return null;
+        }
+
+        Debug.Log($"[GameRes] Prefab 加载计划：加载 {locations.Count}，跳过 JSON 旧变体 {skippedCount}");
+        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        Addressables.Release(locationsHandle);
+    }
+
     #endregion
 
     #region 同步加载资源（原有方法保持不变）
@@ -296,6 +399,8 @@ public void LoadResourcesSync()
 private void ClearAllDictionaries()
 {
     AllPrefabs.Clear();
+    ItemDefinitions.Clear();
+    legacyItemDataTemplates.Clear();
     recipeDict.Clear();
     recipeById.Clear();
     tileBaseDict.Clear();
@@ -393,6 +498,12 @@ public void HotReloadAllResources()
             if (ModRuntimeManager.Instance != null && ModRuntimeManager.Instance.IsRuntimeTemplate(go))
                 obj.SetActive(true);
 
+            if (ItemDefinitions.TryGetValue(prefab, out RuntimeItemDefinition definition) &&
+                obj.TryGetComponent(out Item item))
+            {
+                ItemDefinitionRuntime.ConfigureInstance(this, definition, item, definition.CreateItemData());
+            }
+
             return obj;
         }
         Debug.LogError($"预制件不存在:{prefab}");
@@ -440,6 +551,97 @@ public void HotReloadAllResources()
 
         BuffDefinitions.TryGetValue(buffId.Trim(), out BuffDefinition definition);
         return definition;
+    }
+
+    public void RegisterItemDefinition(RuntimeItemDefinition definition)
+    {
+        if (definition == null || string.IsNullOrWhiteSpace(definition.Id) || definition.ShellPrefab == null)
+            throw new InvalidDataException("注册的 ItemDefinition、ID 或外壳为空");
+        if (ItemDefinitions.ContainsKey(definition.Id))
+            throw new InvalidDataException($"ItemDefinition ID 冲突：{definition.Id}");
+
+        ItemDefinitions.Add(definition.Id, definition);
+        // 兼容仍以 AllPrefabs.ContainsKey 判断物品是否存在的配方与玩法代码。
+        AllPrefabs[definition.Id] = definition.ShellPrefab;
+        LoadedCount++;
+    }
+
+    public bool TryGetItemDefinition(string itemId, out RuntimeItemDefinition definition)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            definition = null;
+            return false;
+        }
+        return ItemDefinitions.TryGetValue(itemId, out definition);
+    }
+
+    /// <summary>按物品 ID 创建数据；JSON 定义优先，未迁移物品回退到旧 Prefab。</summary>
+    public ItemData CreateItemData(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+            throw new System.ArgumentException("物品 ID 不能为空", nameof(itemId));
+
+        string requestedId = itemId.Trim();
+        ItemData data;
+        if (TryGetItemDefinition(requestedId, out RuntimeItemDefinition definition))
+        {
+            data = definition.CreateItemData();
+        }
+        else
+        {
+            if (!legacyItemDataTemplates.TryGetValue(requestedId, out ItemData template))
+            {
+                GameObject prefab = GetPrefab(requestedId, false);
+                Item item = prefab != null ? prefab.GetComponent<Item>() : null;
+                template = item?.Get_NewItemData();
+                if (template != null)
+                {
+                    template.Guid = 0;
+                    legacyItemDataTemplates.Add(requestedId, template);
+                }
+            }
+
+            data = template != null
+                ? FastCloner.FastCloner.DeepClone(template)
+                : null;
+        }
+
+        if (data != null)
+        {
+            data.IDName = requestedId;
+            data.Guid = System.Guid.NewGuid().GetHashCode();
+        }
+        return data;
+    }
+
+    public IReadOnlyList<string> GetAllItemIds()
+    {
+        var ids = new HashSet<string>(ItemDefinitions.Keys, System.StringComparer.OrdinalIgnoreCase);
+        var definitionShells = new HashSet<GameObject>();
+        foreach (RuntimeItemDefinition definition in ItemDefinitions.Values)
+            definitionShells.Add(definition.ShellPrefab);
+
+        foreach (KeyValuePair<string, GameObject> pair in AllPrefabs)
+        {
+            if (pair.Value == null || definitionShells.Contains(pair.Value))
+                continue;
+            Item item = pair.Value.GetComponent<Item>();
+            if (item?.itemData != null && item is not Player && item is not Map)
+                ids.Add(item.itemData.IDName);
+        }
+        return new List<string>(ids);
+    }
+
+    public void ApplyItemModuleConfiguration(string itemId, string moduleName, Module module, ModuleData data)
+    {
+        if (!TryGetItemDefinition(itemId, out RuntimeItemDefinition definition) ||
+            !definition.TryGetModuleParameters(moduleName, out string json))
+        {
+            return;
+        }
+
+        ModuleJsonConfigurator.Apply(module, itemId, moduleName, data?.ID, json);
     }
 
     public void RegisterBuff(BuffDefinition definition)

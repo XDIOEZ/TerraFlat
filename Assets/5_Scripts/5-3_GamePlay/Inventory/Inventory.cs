@@ -1113,7 +1113,8 @@ public class Inventory
             var itemComp = prefab.GetComponent<Item>();
             if (itemComp == null) { failCount++; continue; }
 
-            var itemData = itemComp.Get_NewItemData();
+            string itemId = itemComp.itemData?.IDName ?? prefab.name;
+            ItemData itemData = GameRes.Instance?.CreateItemData(itemId) ?? itemComp.Get_NewItemData();
             if (itemData == null) { failCount++; continue; }
 
             itemData.Stack.Amount = count;
@@ -1190,7 +1191,8 @@ public class Inventory
             }
 
             // 克隆ItemData
-            ItemData itemData = itemComponent.Get_NewItemData();
+            string itemId = itemComponent.itemData?.IDName ?? prefab.name;
+            ItemData itemData = GameRes.Instance?.CreateItemData(itemId) ?? itemComponent.Get_NewItemData();
             if (itemData == null)
             {
                 Debug.LogError($"自动注入失败：无法克隆 {prefab.name} 的ItemData（索引 {i}）");

@@ -176,21 +176,18 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
         Vector2Int startPos = Map.Data.position;
         Vector2 size = ChunkSize;
-        int batchSize = Mathf.Max(1, workBatchSize);
-        int processedInBatch = 0;
+        var budget = new ChunkGenerationWorkBudget(Map, workBatchSize);
 
         for (int x = 0; x < size.x; x++)
         {
             for (int y = 0; y < size.y; y++)
             {
                 GenerateTile(Map, startPos, x, y, renderImmediately: false);
-                processedInBatch++;
+                if (!budget.ShouldYield())
+                    continue;
 
-                if (processedInBatch >= batchSize)
-                {
-                    processedInBatch = 0;
-                    yield return null;
-                }
+                yield return null;
+                budget.BeginNextFrame();
             }
         }
     }
