@@ -477,13 +477,9 @@ public class Mod_FlintStrike : Module, IInteractable
             throw new InvalidOperationException($"[Mod_FlintStrike] 找不到火种预制体: {FireSeedItemID}");
         }
 
-        var item = prefab.GetComponent<Item>();
-        if (item == null)
-        {
-            throw new InvalidOperationException($"[Mod_FlintStrike] 预制体 {FireSeedItemID} 缺少 Item 组件。");
-        }
-
-        ItemData fireSeedData = item.Get_NewItemData();
+        ItemData fireSeedData = GameRes.Instance.CreateItemData(FireSeedItemID);
+        if (fireSeedData == null)
+            throw new InvalidOperationException($"[Mod_FlintStrike] 无法创建物品数据: {FireSeedItemID}");
         fireSeedData.Stack.Amount = 1;
         fireSeedData.Tags ??= new List<string>();
         if (!fireSeedData.Tags.Contains("火种"))

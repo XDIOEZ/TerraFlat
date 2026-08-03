@@ -535,12 +535,10 @@ public class Mod_Building : Module
             Vector3 dropPosition = NormalizePlacement(item.transform.position);
             string buildingPrefabId = ResolveBuildingPrefabId(item.itemData.IDName, Data);
             string summonerPrefabId = ResolveSummonerPrefabId(buildingPrefabId, Data);
-            GameObject prefab = GameRes.Instance?.GetPrefab(summonerPrefabId);
-            Item templateItem = prefab != null ? prefab.GetComponent<Item>() : null;
-            if (templateItem?.itemData == null)
+            ItemData summonerData = GameRes.Instance?.CreateItemData(summonerPrefabId);
+            if (summonerData == null)
                 throw new InvalidOperationException($"找不到建筑召唤器预制体：{summonerPrefabId}");
 
-            ItemData summonerData = FastCloner.FastCloner.DeepClone(templateItem.itemData);
             summonerData.IDName = summonerPrefabId;
             summonerData.Guid = GenerateUniqueRuntimeGuid();
             summonerData.inHand = false;

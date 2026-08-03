@@ -136,6 +136,32 @@ namespace FlatWorld.GameTest.AI
         }
 
         [Test]
+        [Category("AI.Smoke")]
+        public void ChickenPrefabCreatesItemDataWithStableId()
+        {
+            GameObject chickenPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Chicken.prefab");
+            Item chickenItem = chickenPrefab != null ? chickenPrefab.GetComponent<Item>() : null;
+
+            Assert.That(chickenPrefab, Is.Not.Null);
+            Assert.That(chickenItem, Is.Not.Null);
+
+            ItemData data = chickenItem.Get_NewItemData();
+            Assert.That(data, Is.Not.Null);
+            Assert.That(data.IDName, Is.EqualTo("Chicken"));
+            Assert.That(data.ModuleDataDic, Is.Not.Null);
+            Assert.That(data.ModuleDataDic, Is.Not.Empty);
+            Assert.That(data.ModuleDataDic.Keys, Has.None.Null);
+            foreach (KeyValuePair<string, ModuleData> pair in data.ModuleDataDic)
+            {
+                Assert.That(pair.Key, Is.Not.Empty);
+                Assert.That(pair.Value, Is.Not.Null, pair.Key);
+                Assert.That(pair.Value.Name, Is.EqualTo(pair.Key));
+                Assert.That(pair.Value.ID, Is.Not.Null.And.Not.Empty, pair.Key);
+            }
+        }
+
+        [Test]
         [Category("AI.StateMachine")]
         public void AdvanceNodeMovesUntilArrivalAndNotifiesOnce()
         {

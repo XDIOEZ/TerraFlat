@@ -91,7 +91,7 @@ public class Module_Equipment_Store : Module
 
     public virtual void Awake()
     {
-        if (_Data.ID == "")
+        if (_Data != null && string.IsNullOrWhiteSpace(_Data.ID))
         {
             _Data.ID = gameObject.name;
         }
@@ -112,6 +112,12 @@ public class Module_Equipment_Store : Module
         {
             _Data = data;
         }
+
+        GameRes.Instance?.ApplyItemModuleConfiguration(
+            Item_Data?.IDName,
+            _Data?.Name,
+            this,
+            _Data);
     }
 
 
@@ -132,6 +138,12 @@ public class Module_Equipment_Store : Module
         _Data = data;
         if (item != null && item.itemData != null && !string.IsNullOrEmpty(data.Name))
             item.itemData.ModuleDataDic[data.Name] = data;
+
+        GameRes.Instance?.ApplyItemModuleConfiguration(
+            item?.itemData?.IDName,
+            data.Name,
+            this,
+            data);
 
         Load();
     }

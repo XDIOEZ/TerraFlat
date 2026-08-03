@@ -480,17 +480,13 @@ public class Mod_Furnace : Module, IInteractable
                 GameRes.Instance.AllPrefabs.TryGetValue(charredMatterId, out var prefab) &&
                 prefab != null)
             {
-                Item outputItem = prefab.GetComponent<Item>();
-                if (outputItem != null)
+                ItemData newItem = GameRes.Instance.CreateItemData(charredMatterId);
+                if (newItem != null)
                 {
-                    ItemData newItem = outputItem.Get_NewItemData();
-                    if (newItem != null)
-                    {
-                        // 产出1个烧焦物
-                        newItem.Stack.Amount = 1;
-                        OutputInventory.Data.TryAddItem(newItem);
-                        Debug.LogWarning($"产出烧焦物：{newItem.IDName} x{newItem.Stack.Amount}");
-                    }
+                    // 产出1个烧焦物
+                    newItem.Stack.Amount = 1;
+                    OutputInventory.Data.TryAddItem(newItem);
+                    Debug.LogWarning($"产出烧焦物：{newItem.IDName} x{newItem.Stack.Amount}");
                 }
             }
 
@@ -774,14 +770,7 @@ public class Mod_Furnace : Module, IInteractable
                 return null;
             }
 
-            Item outputitem = prefab.GetComponent<Item>();
-            if (outputitem == null)
-            {
-                Debug.LogError($"预制体 {output.ItemName} 上找不到Item组件（配方：{recipe.name}）");
-                return null;
-            }
-
-            ItemData newItem = outputitem.Get_NewItemData();
+            ItemData newItem = GameRes.Instance.CreateItemData(output.ItemName);
             if (newItem == null)
             {
                 Debug.LogError($"无法创建 {output.ItemName} 的ItemData（配方：{recipe.name}）");

@@ -65,6 +65,7 @@ Mod_ItemDetector 提交请求
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-03：生物 Prefab 模板提取不再执行 AI Module 的 `Load/Save`；`MonsterSpawnerManager` 追踪种群前过滤空物种 ID，生成失败日志保留完整异常堆栈。
 - 2026-07-29：统一内容校验器检查全部 Resources `SpawnerConfig` 的 `PersistentId`、生物 ID、组内/跨配置重复、权重、生态参数、Prefab 引用、允许群系及 `WorldManager.prefab._spawnerConfigs` 活跃引用。
 - 2026-07-29：生物生成接入自定义频率与种群倍率；0% 频率会推进时间游标但不补算停用期间窗口，种群倍率会动态裁剪预算和待生成债务。
 - 2026-07-29：生物生成拆为动物、普通敌人、夜间敌人三组；加入归一化权重、生态预算、三级种群上限、跨时刻调度、群系/光照校验、死亡补位和远距离回收。
@@ -74,7 +75,7 @@ Mod_ItemDetector 提交请求
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/AI/AISmokeTests.cs`；当前覆盖状态机、感知、生物 Prefab、生成组唯一物种归属、持久化 ID 与归一化权重分布。
+- 基础测试脚本：`Assets/GameTest/AI/AISmokeTests.cs`；当前覆盖状态机、感知、生物 Prefab、Chicken 模板 Item/Module 字典键、生成组唯一物种归属、持久化 ID 与归一化权重分布。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；AI 测试约定目录：`Assets/GameTest/AI/`；场景目录：`Assets/GameTest/Scenes/AI/`；冒烟分类：`AI.Smoke`。
 - 新增 AI 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。感知、目标选择、状态切换、攻击或闲逛主流程变化时同步更新 AI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试、放宽断言或改写输入来制造通过；随机行为必须固定种子或注入确定输入。

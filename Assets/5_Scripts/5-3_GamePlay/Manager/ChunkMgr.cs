@@ -41,10 +41,15 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     [SerializeField, Min(1)]
     private int maxChunkLoadPerFrame = 1;
 
+    [SerializeField, Min(1)]
+    [Tooltip("同时处于生成/加载过程的区块上限，防止多个地图生成协程在同一帧叠加。")]
+    private int maxConcurrentChunkLoads = 1;
+
     private readonly List<Vector2Int> _pendingChunkLoadQueue = new();
     private readonly HashSet<Vector2Int> _pendingChunkLoadSet = new();
     private readonly Dictionary<Vector2Int, List<System.Action<Chunk>>> _pendingChunkCallbacks = new();
     private readonly HashSet<Chunk> _chunkReadyHookedSet = new();
+    private readonly HashSet<Chunk> _chunksLoading = new();
     private Coroutine _chunkLoadPumpCoroutine;
     private Vector2Int _loadPriorityCenterChunk;
     private bool _hasLoadPriorityCenter;
@@ -52,7 +57,10 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// <summary>
     /// 是否还有待加载的区块（供外部轮询，避免保底协程在区块未就绪时提前触发烘焙）。
     /// </summary>
-    public bool HasPendingChunkLoads => _pendingChunkLoadQueue.Count > 0 || _chunkLoadPumpCoroutine != null;
+    public bool HasPendingChunkLoads =>
+        _pendingChunkLoadQueue.Count > 0 ||
+        _chunksLoading.Count > 0 ||
+        _chunkLoadPumpCoroutine != null;
 
     // 失活窗口差分缓存：仅处理离开窗口的区块，避免每次全量遍历激活字典
     private bool _windowDiffInitialized;
@@ -165,13 +173,19 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     private void UnhookChunkReadyEvent(Chunk chunk)
     {
-        if (chunk == null || !_chunkReadyHookedSet.Remove(chunk))
+        if (chunk == null)
             return;
 
-        chunk.OnChunkLoaded -= HandleChunkReady;
+        _chunksLoading.Remove(chunk);
+        if (_chunkReadyHookedSet.Remove(chunk))
+            chunk.OnChunkLoaded -= HandleChunkReady;
     }
 
-    private void HandleChunkReady(Chunk chunk) => OnChunkLoadFinish.Invoke(chunk);
+    private void HandleChunkReady(Chunk chunk)
+    {
+        _chunksLoading.Remove(chunk);
+        OnChunkLoadFinish.Invoke(chunk);
+    }
 
     private static void WaitForChunkReady(Chunk chunk, System.Action<Chunk> onReady)
     {
@@ -199,6 +213,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             chunk.OnChunkLoaded -= HandleChunkReady;
 
         _chunkReadyHookedSet.Clear();
+        _chunksLoading.Clear();
     }
 
     private static bool TryGetChunkPos(Chunk chunk, out Vector2Int chunkPos)
@@ -362,9 +377,14 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     {
         while (_pendingChunkLoadQueue.Count > 0)
         {
+            while (_chunksLoading.Count >= Mathf.Max(1, maxConcurrentChunkLoads))
+                yield return null;
+
             int budget = Mathf.Max(1, maxChunkLoadPerFrame);
 
-            while (budget > 0 && _pendingChunkLoadQueue.Count > 0)
+            while (budget > 0 &&
+                   _pendingChunkLoadQueue.Count > 0 &&
+                   _chunksLoading.Count < Mathf.Max(1, maxConcurrentChunkLoads))
             {
                 int bestIndex = GetBestPendingChunkIndex();
                 Vector2Int chunkPos = _pendingChunkLoadQueue[bestIndex];
@@ -372,6 +392,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 _pendingChunkLoadSet.Remove(chunkPos);
 
                 Chunk loadedChunk = LoadChunk_By_Position(chunkPos);
+                if (loadedChunk != null && !loadedChunk.IsReady)
+                    _chunksLoading.Add(loadedChunk);
 
                 if (_pendingChunkCallbacks.TryGetValue(chunkPos, out var callbacks))
                 {
