@@ -95,6 +95,7 @@ GameObject:
   - component: {fileID: 7348428604803880190}
   - component: {fileID: 5957708655117159811}
   - component: {fileID: 7793935756207322713}
+  - component: {fileID: 8800000000000000001}
   m_Layer: 6
   m_Name: Mine_Coal
   m_TagString: Untagged
@@ -102,6 +103,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &8800000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2383149550844687321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ac8bbf65a31428c99f36be4685aceb4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  obstacleColliders:
+  - {fileID: 5957708655117159811}
 --- !u!4 &7348428604803880190
 Transform:
   m_ObjectHideFlags: 0

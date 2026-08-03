@@ -2232,8 +2232,8 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 1
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
-  - {fileID: 11400000, guid: 431101909b7e58240ba158de22e2aeba, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
+  - "\u7981\u9522(99)"
 --- !u!114 &-5418134490117192180
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2333,7 +2333,7 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 0
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
 --- !u!114 &-5242897872574634015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3534,7 +3534,7 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 1
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
 --- !u!114 &-3627383671887214688
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3830,7 +3830,7 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 0
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
 --- !u!114 &-2945086397746093526
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3989,7 +3989,7 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 1
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
 --- !u!114 &-2681122352445361135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4233,7 +4233,7 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 1
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
 --- !u!114 &-2288843678011037661
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6982,7 +6982,7 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 0
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
 --- !u!114 &1305202070872936105
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11863,8 +11863,8 @@ MonoBehaviour:
   drawGizmos: 0
   Modifier_Type: 0
   Modifier_Buffs:
-  - {fileID: 11400000, guid: ab972e87df2cc5e4aaba91b7f2a8bad9, type: 2}
-  - {fileID: 11400000, guid: 431101909b7e58240ba158de22e2aeba, type: 2}
+  - "\u751F\u547D\u6062\u590D(1)"
+  - "\u7981\u9522(99)"
 --- !u!114 &8755093601151687167
 MonoBehaviour:
   m_ObjectHideFlags: 0

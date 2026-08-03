@@ -39,5 +39,5 @@ MonoBehaviour:
       type: {class: Tile_Water, ns: , asm: GamePlay}
       data:
         BuffInfo:
-        - {fileID: 11400000, guid: 0aa80856752ea5447b1879e5c8321c5b, type: 2}
-        - {fileID: 11400000, guid: ad61b721e5a424c4ba65796d9207ca4e, type: 2}
+        - "\u6C34\u4F53\u51CF\u901F"
+        - "\u6F6E\u6E7F"

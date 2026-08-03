@@ -2,6 +2,7 @@ using FlatWorld.GameTest.Shared;
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace FlatWorld.GameTest.AI
@@ -9,6 +10,11 @@ namespace FlatWorld.GameTest.AI
     /// <summary>AI 基础冒烟测试：保护状态机、感知和生物资源入口。</summary>
     public sealed class AISmokeTests
     {
+        private enum AdvanceTestState
+        {
+            Advance
+        }
+
         [Test]
         [Category("AI.Smoke")]
         public void RequiredEntryPointsAndAssetsExist()
@@ -88,6 +94,122 @@ namespace FlatWorld.GameTest.AI
             }
 
             CollectionAssert.AreEquivalent(new[] { "Chicken", "WildBoar", "Wolf", "Ghost" }, speciesIds);
+        }
+
+        [Test]
+        [Category("AI.Smoke")]
+        public void GhostPerceptionCoversItsMaximumSpawnDistance()
+        {
+            SpawnerConfig ghosts = Resources.Load<SpawnerConfig>("Config/SpawnerConfig_Ghost");
+            GameObject ghostPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Ghost.prefab");
+
+            Assert.That(ghosts, Is.Not.Null);
+            Assert.That(ghostPrefab, Is.Not.Null);
+
+            AI_Ghost ghostAI = ghostPrefab.GetComponentInChildren<AI_Ghost>(true);
+            Assert.That(ghostAI, Is.Not.Null);
+
+            SerializedProperty perceptionRadius = new SerializedObject(ghostAI)
+                .FindProperty("perceptionRadius");
+            Assert.That(perceptionRadius, Is.Not.Null);
+            Assert.That(
+                perceptionRadius.floatValue,
+                Is.GreaterThanOrEqualTo(ghosts.MaxSpawnDistance),
+                "幽灵感知距离未覆盖最大生成距离，出生后可能永远无法主动追击玩家。");
+        }
+
+        [Test]
+        [Category("AI.Smoke")]
+        public void ChickenGrassForagingDefaultsToOneMealEveryTwoDays()
+        {
+            GameObject chickenPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Chicken.prefab");
+            Assert.That(chickenPrefab, Is.Not.Null);
+
+            AI_Chicken chicken = chickenPrefab.GetComponentInChildren<AI_Chicken>(true);
+            Assert.That(chicken, Is.Not.Null);
+            Assert.That(chicken.enableGrassForaging, Is.True);
+            Assert.That(chicken.grassSearchRadius, Is.GreaterThan(chicken.eatDistance));
+            Assert.That(chicken.grassEatDuration, Is.GreaterThan(0f));
+            Assert.That(chicken.grassSustenanceDays, Is.EqualTo(2f).Within(0.001f));
+        }
+
+        [Test]
+        [Category("AI.StateMachine")]
+        public void AdvanceNodeMovesUntilArrivalAndNotifiesOnce()
+        {
+            Vector3 actorPosition = Vector3.zero;
+            Vector3 targetPosition = new(3f, 0f, 0f);
+            int moveCount = 0;
+            int stopCount = 0;
+            int arrivalCount = 0;
+            AIAdvanceStateNode<AdvanceTestState> node = new(
+                AdvanceTestState.Advance,
+                () => new AIAdvanceTarget(true, targetPosition),
+                () => actorPosition,
+                () => 0.1f,
+                target =>
+                {
+                    moveCount++;
+                    actorPosition = Vector3.MoveTowards(actorPosition, target, 1f);
+                },
+                () => stopCount++,
+                () => arrivalCount++);
+
+            node.Enter();
+            for (int i = 0; i < 5; i++)
+                node.Tick(1f);
+
+            Assert.That(node.AnimationRole, Is.EqualTo(AIStateAnimationRole.Moving));
+            Assert.That(actorPosition, Is.EqualTo(targetPosition));
+            Assert.That(moveCount, Is.EqualTo(3));
+            Assert.That(stopCount, Is.EqualTo(2));
+            Assert.That(arrivalCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        [Category("AI.Smoke")]
+        public void WolfPrefabAcceptsReusableAdvanceCommands()
+        {
+            GameObject wolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Wolf.prefab");
+            AI_Wolf wolf = wolfPrefab != null
+                ? wolfPrefab.GetComponentInChildren<AI_Wolf>(true)
+                : null;
+
+            Assert.That(wolfPrefab, Is.Not.Null);
+            Assert.That(wolf, Is.Not.Null);
+            Assert.That(wolf, Is.InstanceOf<IAIAdvanceCommandReceiver>());
+            Assert.That((int)WolfState.Advance, Is.EqualTo(7), "推进状态必须追加在末尾，避免破坏旧存档枚举值。");
+        }
+
+        [Test]
+        [Category("AI.Smoke")]
+        public void GrassSustenanceCanPauseAndRestoreNutrition()
+        {
+            GameObject foodObject = new GameObject("ChickenGrassNutritionTest");
+            try
+            {
+                Mod_Food food = foodObject.AddComponent<Mod_Food>();
+                food.Data.nutrition = new Nutrition(10f, 10f, 10f, 10f, 10f);
+                food.Data.nutritionConsumeSpeed = new GameValue_float(1f);
+
+                food.RuntimeNutritionConsumeMultiplier = 0f;
+                Assert.That(food.ConsumeNutrition(5f), Is.Zero);
+                Assert.That(food.Data.nutrition.Carbohydrates, Is.EqualTo(10f));
+
+                food.RuntimeNutritionConsumeMultiplier = 1f;
+                Assert.That(food.ConsumeNutrition(5f), Is.EqualTo(5f));
+                Assert.That(food.Data.nutrition.Carbohydrates, Is.EqualTo(5f));
+
+                food.RestoreNutritionToMaximum();
+                Assert.That(food.Data.nutrition.Carbohydrates, Is.EqualTo(10f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(foodObject);
+            }
         }
     }
 }

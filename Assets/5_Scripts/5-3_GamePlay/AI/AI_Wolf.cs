@@ -16,14 +16,15 @@ public enum WolfState
     Chase,
     Attack,
     Avoid,
-    Flee
+    Flee,
+    Advance
 }
 
 /// <summary>
 /// 狼 AI：支持群体协作（呼叫同伴、集火）、攻击伤害窗口、逃跑/避让等行为。
 /// 状态优先级：逃跑 > 攻击 > 追击 > 避让 > 警觉 > 移动 > 待机
 /// </summary>
-public partial class AI_Wolf : AI_Base<WolfState>
+public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 {
 #region SaveData
 	[Serializable]
@@ -32,6 +33,11 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	{
 		public WolfState State = WolfState.Idle;
 		public float Fatigue01 = 0f;
+		public bool HasAdvanceCommand;
+		public int AdvanceTargetItemGuid;
+		public Vector3 AdvanceTargetPosition;
+		public float AdvanceArrivalDistance = 1.25f;
+		public bool AttackActorsOnRoute;
 	}
 #endregion
 
@@ -140,21 +146,21 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	public float wanderPenaltyWeight = 1f;
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/状态"), HorizontalGroup("配置/动画/状态/Hr1"), LabelText("待机")]
-	public string animIdle = "Stand";
+	public string animIdle = "Idle";
 	[HorizontalGroup("配置/动画/状态/Hr1"), LabelText("移动")]
 	public string animMove = "Move";
 	[HorizontalGroup("配置/动画/状态/Hr1"), LabelText("警觉")]
-	public string animAlert = "Stand";
+	public string animAlert = "Idle";
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/状态"), HorizontalGroup("配置/动画/状态/Hr2"), LabelText("追击")]
-	public string animChase = "Run";
+	public string animChase = "Move";
 	[HorizontalGroup("配置/动画/状态/Hr2"), LabelText("攻击")]
 	public string animAttack = "Attack";
 	[HorizontalGroup("配置/动画/状态/Hr2"), LabelText("逃离")]
-	public string animAvoid = "Run";
+	public string animAvoid = "Move";
 
 	[TabGroup("配置", "动画"), BoxGroup("配置/动画/状态"), LabelText("残血逃跑")]
-	public string animFlee = "Run";
+	public string animFlee = "Move";
 #endregion
 
 #region Base Overrides - Config Accessors
@@ -179,7 +185,8 @@ public partial class AI_Wolf : AI_Base<WolfState>
 
 	protected override float DetectorRefreshInterval => detectorRefreshInterval;
 	protected override bool DebugLogEnabled => debugLog;
-	protected override bool IsMoveState(WolfState state) => state == WolfState.Move;
+	protected override bool IsMoveState(WolfState state) =>
+		state == WolfState.Move || state == WolfState.Advance;
 	protected override bool IsIdleState(WolfState state) => state == WolfState.Idle;
 #endregion
 
@@ -187,7 +194,11 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	public override void Load()
 	{
 		ModData.ReadData(ref Data);
+		Data ??= new AI_WolfSaveData();
+		NormalizeAdvanceData();
 		_currentState = Data.State;
+		if (_currentState == WolfState.Advance && !Data.HasAdvanceCommand)
+			_currentState = WolfState.Idle;
 		_idleRemainTimer = GetIdleDuration();
 		InitializeAI();
 	}
@@ -287,11 +298,43 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	protected override string GetDebugExtraInfo()
 	{
 		string roleText = _isAlphaWolf ? "头狼" : "跟随";
-		return $" | 狼群数: {_packCount} | 角色: {roleText}";
+		string advanceText = HasAdvanceCommand ? " | 推进: 是" : string.Empty;
+		return $" | 狼群数: {_packCount} | 角色: {roleText}{advanceText}";
 	}
 #endregion
 
 #region PublicAPI
+	public bool HasAdvanceCommand => Data?.HasAdvanceCommand == true;
+	public Vector3 AdvanceTargetPosition => Data?.AdvanceTargetPosition ?? transform.position;
+
+	/// <summary>
+	/// 接收外部推进命令。目标物品消失后仍会走向最后记录的位置；
+	/// 若开启沿途攻击，狼会在战斗结束后继续推进。
+	/// </summary>
+	public void BeginAdvance(AIAdvanceCommand command)
+	{
+		if (!IsFinite(command.TargetPosition))
+			throw new ArgumentException("推进目标必须是有限坐标。", nameof(command));
+
+		Data ??= new AI_WolfSaveData();
+		Data.HasAdvanceCommand = true;
+		Data.AdvanceTargetItemGuid = command.TargetItemGuid;
+		Data.AdvanceTargetPosition = command.TargetPosition;
+		Data.AdvanceArrivalDistance = Mathf.Max(0.05f, command.ArrivalDistance);
+		Data.AttackActorsOnRoute = command.AttackActorsOnRoute;
+		_currentThreat = null;
+		_alertTimer = 0f;
+		_packAssistTimer = 0f;
+
+		if (debugLog)
+		{
+			Debug.Log(
+				$"[WolfAI] {name} 接收推进命令，目标={command.TargetPosition}, " +
+				$"沿途攻击={command.AttackActorsOnRoute}",
+				this);
+		}
+	}
+
 	[Button("狼群集火玩家")]
 	public void TriggerPackAttack(Item threatSource)
 	{
@@ -342,6 +385,7 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		if (ShouldChase())    return WolfState.Chase;
 		if (ShouldAvoid())    return WolfState.Avoid;
 		if (ShouldAlert())    return WolfState.Alert;
+		if (ShouldAdvance())  return WolfState.Advance;
 		if (ShouldMoveBase()) return WolfState.Move;
 		return WolfState.Idle;
 	}
@@ -354,6 +398,11 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		stateMachine.Register(CreateStoppedActionStateNode(WolfState.Attack, _ => TickAttack()));
 		stateMachine.Register(CreateMovingStateNode(WolfState.Avoid, _ => TickAvoid()));
 		stateMachine.Register(CreateMovingStateNode(WolfState.Flee, _ => TickFlee()));
+		stateMachine.Register(CreateAdvanceStateNode(
+			WolfState.Advance,
+			ResolveAdvanceTarget,
+			() => Data?.AdvanceArrivalDistance ?? 1.25f,
+			CompleteAdvance));
 	}
 #endregion
 
@@ -417,6 +466,39 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		if (_currentThreat == null) { StopMove(); return; }
 		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
 	}
+
+	private AIAdvanceTarget ResolveAdvanceTarget()
+	{
+		if (Data?.HasAdvanceCommand != true)
+			return AIAdvanceTarget.None;
+
+		if (Data.AdvanceTargetItemGuid != 0 && ItemMgr.Instance != null)
+		{
+			Item targetItem = ItemMgr.Instance.GetItemByGuid(Data.AdvanceTargetItemGuid);
+			if (targetItem != null)
+				Data.AdvanceTargetPosition = targetItem.transform.position;
+		}
+
+		return IsFinite(Data.AdvanceTargetPosition)
+			? new AIAdvanceTarget(true, Data.AdvanceTargetPosition)
+			: AIAdvanceTarget.None;
+	}
+
+	private void CompleteAdvance()
+	{
+		if (Data == null)
+			return;
+
+		Data.HasAdvanceCommand = false;
+		Data.AdvanceTargetItemGuid = 0;
+		Data.AttackActorsOnRoute = false;
+		_currentThreat = null;
+		_alertTimer = 0f;
+		_packAssistTimer = 0f;
+
+		if (debugLog)
+			Debug.Log($"[WolfAI] {name} 已到达推进目标。", this);
+	}
 #endregion
 
 #region Conditions
@@ -438,7 +520,7 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		if (_currentThreat == null) return false;
 		float distance = DistanceTo(_currentThreat.transform);
 
-		if (_packCount < 2) return false;
+		if (!IsAggressiveAdvanceActive() && _packCount < 2) return false;
 
 		return distance <= attackTriggerDistance;
 	}
@@ -448,10 +530,14 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	{
 		if (_currentThreat == null) return false;
 		float distance = DistanceTo(_currentThreat.transform);
+		bool alreadyEngaged = _currentState == WolfState.Chase || _currentState == WolfState.Attack;
+
+		if (IsAggressiveAdvanceActive())
+			return distance <= (alreadyEngaged ? chaseLossDistance : chaseTriggerDistance);
 
 		if (_packCount >= 2)
 		{
-			return _currentState == WolfState.Chase
+			return alreadyEngaged
 				? distance <= chaseLossDistance
 				: distance <= chaseTriggerDistance;
 		}
@@ -462,6 +548,7 @@ public partial class AI_Wolf : AI_Base<WolfState>
 	private bool ShouldAvoid()
 	{
 		if (_currentThreat == null) return false;
+		if (IsAggressiveAdvanceActive()) return false;
 		if (_packCount > 1) return false;
 		return DistanceTo(_currentThreat.transform) <= chaseTriggerDistance;
 	}
@@ -478,9 +565,35 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		}
 		return _alertTimer > 0f;
 	}
+
+	private bool ShouldAdvance()
+	{
+		return Data?.HasAdvanceCommand == true;
+	}
 #endregion
 
 #region Helpers - Wolf 特有
+	private void NormalizeAdvanceData()
+	{
+		Data.AdvanceArrivalDistance = Data.AdvanceArrivalDistance > 0f
+			? Mathf.Max(0.05f, Data.AdvanceArrivalDistance)
+			: 1.25f;
+
+		if (!Data.HasAdvanceCommand || !IsFinite(Data.AdvanceTargetPosition))
+		{
+			Data.HasAdvanceCommand = false;
+			Data.AdvanceTargetItemGuid = 0;
+			Data.AttackActorsOnRoute = false;
+		}
+	}
+
+	private static bool IsFinite(Vector3 value)
+	{
+		return !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+		       !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
+		       !float.IsNaN(value.z) && !float.IsInfinity(value.z);
+	}
+
 	private void RefreshPackStatus()
 	{
 		_packCount = 1;
@@ -521,6 +634,25 @@ public partial class AI_Wolf : AI_Base<WolfState>
 
 	private void RefreshThreatTarget()
 	{
+		if (IsAggressiveAdvanceActive())
+		{
+			Item nearestActor = FindClosestAdvanceAggressionTarget();
+			if (nearestActor != null)
+			{
+				_currentThreat = nearestActor;
+				return;
+			}
+
+			if (IsLivingActorTarget(_currentThreat) &&
+			    DistanceTo(_currentThreat.transform) <= chaseLossDistance)
+			{
+				return;
+			}
+
+			_currentThreat = null;
+			return;
+		}
+
 		Item nearestPlayer = FindClosestPlayerThreat();
 
 		if (nearestPlayer != null)
@@ -532,6 +664,56 @@ public partial class AI_Wolf : AI_Base<WolfState>
 		if (_currentThreat == null) return;
 		if (_packAssistTimer > 0f) return;
 		_currentThreat = null;
+	}
+
+	private Item FindClosestAdvanceAggressionTarget()
+	{
+		List<Item> allItems = _detector.CurrentItemsInArea;
+		if (allItems == null || allItems.Count == 0) return null;
+
+		Item closest = null;
+		float closestDistance = float.MaxValue;
+		foreach (Item candidate in allItems)
+		{
+			if (!IsLivingActorTarget(candidate)) continue;
+
+			float distance = DistanceTo(candidate.transform);
+			if (distance < closestDistance)
+			{
+				closest = candidate;
+				closestDistance = distance;
+			}
+		}
+
+		return closest;
+	}
+
+	private bool IsLivingActorTarget(Item target)
+	{
+		if (target == null || target == item)
+			return false;
+
+		if (TryGetWolfAlly(target, out _))
+			return false;
+
+		DamageReceiver receiver = target.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+		if (receiver == null || receiver.Hp <= 0f)
+			return false;
+
+		if (IsPlayerThreat(target))
+			return true;
+
+		Module aiModule = target.itemMods?.GetMod_ByID(ModText.AI);
+		if (aiModule == null)
+			return false;
+
+		// 新状态机动物可提供精确存活语义；旧 AI（例如幽灵）仍由生命模块兜底纳入。
+		return aiModule is not IAIActor actor || actor.IsAlive;
+	}
+
+	private bool IsAggressiveAdvanceActive()
+	{
+		return Data?.HasAdvanceCommand == true && Data.AttackActorsOnRoute;
 	}
 
 	private Item FindClosestPlayerThreat()
@@ -628,6 +810,7 @@ public partial class AI_Wolf : AI_Base<WolfState>
 			case WolfState.Attack: return animAttack;
 			case WolfState.Avoid:  return animAvoid;
 			case WolfState.Flee:   return animFlee;
+			case WolfState.Advance:return animMove;
 			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
 		}
 	}
@@ -643,6 +826,7 @@ public partial class AI_Wolf : AI_Base<WolfState>
 			case WolfState.Attack: return "攻击";
 			case WolfState.Avoid:  return "避让";
 			case WolfState.Flee:   return "逃跑";
+			case WolfState.Advance:return "推进";
 			default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
 		}
 	}

@@ -4,6 +4,8 @@ using UnityEngine;
 
 public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 {
+    private bool _weatherRuntimeAllowed;
+
 #region 字段
 
     public const float DefaultWeatherTemperatureOffset = 0f; // 默认天气温度修正
@@ -84,19 +86,33 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     public WeatherType GetCurrentWeather()
     {
+        if (!_weatherRuntimeAllowed)
+            return WeatherType.Clear;
+
         PlanetData planetData = GetActivePlanetData();
         return planetData != null ? planetData.CurrentWeather : WeatherType.Clear;
     }
 
     public float GetCurrentWeatherIntensity()
     {
+        if (!_weatherRuntimeAllowed)
+            return 0f;
+
         PlanetData planetData = GetActivePlanetData();
         return planetData != null ? Mathf.Clamp01(planetData.WeatherIntensity) : 0f;
     }
 
     public float GetWeatherTemperatureOffset()
     {
+        if (!_weatherRuntimeAllowed)
+            return DefaultWeatherTemperatureOffset;
+
         return CalculateWeatherTemperatureOffset(GetActivePlanetData());
+    }
+
+    public static bool IsWeatherSuppressedInDimension(DimensionDefinition definition)
+    {
+        return definition?.SuppressWeather == true;
     }
 
     public void SetWeather(WeatherType weatherType, float intensity = 1f)
@@ -256,18 +272,14 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     private void ApplyGameWorldLifecycleState(bool isActive)
     {
-        bool weatherAllowed = isActive && DimensionManager.Instance.ActiveDefinition?.SuppressWeather != true;
-        enabled = weatherAllowed;
+        _weatherRuntimeAllowed = isActive &&
+                                 !IsWeatherSuppressedInDimension(DimensionManager.Instance.ActiveDefinition);
+        enabled = _weatherRuntimeAllowed;
 
-        if (!weatherAllowed)
+        if (!_weatherRuntimeAllowed)
         {
-            DeactivateWeatherFeedback();
+            ShutdownWeatherEventSystem();
             _debugPanelVisible = false;
-            if (_rainEffectInstance != null)
-            {
-                _rainEffectInstance.SetActive(false);
-            }
-
             return;
         }
 

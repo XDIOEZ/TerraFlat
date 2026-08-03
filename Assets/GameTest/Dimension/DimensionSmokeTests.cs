@@ -40,6 +40,70 @@ namespace FlatWorld.GameTest.Dimension
 
         [Test]
         [Category("Dimension.Smoke")]
+        public void DimensionTravelKeepsWorldPositionOneToOne()
+        {
+            Vector3 surfacePosition = new Vector3(-123.25f, 456.75f, 0f);
+
+            Assert.That(
+                DimensionManager.GetCorrespondingPosition(surfacePosition),
+                Is.EqualTo(surfacePosition));
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void ProbabilisticEntranceLayoutIsDeterministicAndOpenUnderground()
+        {
+            DimensionDefinition cave = DimensionDefinition.CreateCave();
+            cave.CaveEntranceChunkChance = 1f;
+            Vector2Int chunkOrigin = new Vector2Int(-32, 48);
+            Vector2Int chunkSize = new Vector2Int(16, 16);
+            const int caveSeed = 918273;
+
+            Assert.That(DimensionPortalLayout.ShouldGenerateEntrance(
+                chunkOrigin,
+                caveSeed,
+                cave.CaveEntranceChunkChance), Is.True);
+
+            Vector2Int first = DimensionPortalLayout.GetCandidateCell(
+                chunkOrigin,
+                chunkSize,
+                caveSeed,
+                0);
+            Vector2Int second = DimensionPortalLayout.GetCandidateCell(
+                chunkOrigin,
+                chunkSize,
+                caveSeed,
+                0);
+
+            Assert.That(second, Is.EqualTo(first));
+            Assert.That(first.x, Is.InRange(chunkOrigin.x, chunkOrigin.x + chunkSize.x - 1));
+            Assert.That(first.y, Is.InRange(chunkOrigin.y, chunkOrigin.y + chunkSize.y - 1));
+            Assert.That(CaveLayoutSampler.IsOpenAtWorld(first, cave, caveSeed, chunkSize), Is.True);
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void PortalAnchorsPersistOncePerWorldCell()
+        {
+            Data_Player playerData = new Data_Player();
+            Vector3 entrance = new Vector3(18.5f, -7.5f, 0f);
+
+            Assert.That(DimensionTravelProgressStore.AddPortalAnchor(
+                playerData,
+                "地球",
+                entrance), Is.True);
+            Assert.That(DimensionTravelProgressStore.AddPortalAnchor(
+                playerData,
+                "地球",
+                entrance), Is.False);
+
+            Assert.That(
+                DimensionTravelProgressStore.GetPortalAnchors(playerData, "地球"),
+                Is.EqualTo(new[] { entrance }));
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
         public void DefaultCatalogContainsMineDimension()
         {
             DimensionCatalogSO catalog = AssetDatabase.LoadAssetAtPath<DimensionCatalogSO>(
@@ -52,13 +116,47 @@ namespace FlatWorld.GameTest.Dimension
             Assert.That(cave, Is.Not.Null);
             Assert.That(surface.PortalTargetDimensionId, Is.EqualTo(WorldAddress.CaveDimensionId));
             Assert.That(cave.PortalTargetDimensionId, Is.EqualTo(WorldAddress.SurfaceDimensionId));
+            Assert.That(surface.PortalOffset, Is.EqualTo(Vector3.zero));
+            Assert.That(cave.PortalOffset, Is.EqualTo(Vector3.zero));
             Assert.That(cave.GenerationMode, Is.EqualTo(DimensionGenerationMode.Cave));
             Assert.That(cave.UseFixedLighting, Is.True);
             Assert.That(cave.SuppressWeather, Is.True);
             Assert.That(cave.CaveFloorTileId, Is.EqualTo("TileBase_Stone"));
             Assert.That(cave.CaveWallTileId, Is.EqualTo("TileBase_StoneWall"));
+            Assert.That(cave.CaveEntranceChunkChance, Is.GreaterThan(0f));
+            Assert.That(cave.CaveEntranceSafeRadius, Is.GreaterThanOrEqualTo(1f));
             Assert.That(cave.CaveResourceDensity, Is.GreaterThan(0.1f));
+            Assert.That(cave.CaveLooseOreDensity, Is.GreaterThan(0f));
+            Assert.That(cave.CaveLooseOreDensity, Is.LessThan(cave.CaveResourceDensity));
             Assert.That(cave.CaveResources.Select(rule => rule.ItemId), Does.Contain("Mine_Iron"));
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void DefaultCaveResourcesAreOrderedFromRarestToMostCommon()
+        {
+            DimensionCatalogSO catalog = AssetDatabase.LoadAssetAtPath<DimensionCatalogSO>(
+                "Assets/Resources/Config/DimensionCatalog_Default.asset");
+            Assert.That(catalog, Is.Not.Null);
+            DimensionDefinition cave = catalog.Find(WorldAddress.CaveDimensionId);
+            Assert.That(cave, Is.Not.Null);
+            string[] rareToCommon =
+            {
+                "Mine_Tin",
+                "Mine_Iron",
+                "Mine_Copper",
+                "Mine_Coal",
+                "Mine_Stone"
+            };
+
+            Assert.That(cave.CaveResourceDensity, Is.EqualTo(0.14f).Within(0.0001f));
+            Assert.That(cave.CaveLooseOreDensity, Is.EqualTo(0.004f).Within(0.0001f));
+            Assert.That(cave.CaveResources.Select(rule => rule.ItemId), Is.EqualTo(rareToCommon));
+            for (int i = 0; i < cave.CaveResources.Count - 1; i++)
+            {
+                Assert.That(cave.CaveResources[i].VeinThreshold,
+                    Is.GreaterThan(cave.CaveResources[i + 1].VeinThreshold));
+            }
         }
 
         [Test]
@@ -177,6 +275,52 @@ namespace FlatWorld.GameTest.Dimension
 
         [Test]
         [Category("Dimension.Smoke")]
+        public void CaveResourcesAreUprightSingleCellSolidObstacles()
+        {
+            Assert.That(ChunkGenerator_Cave.GeneratedResourceRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(ChunkGenerator_Cave.GeneratedResourceUniformScale,
+                Is.EqualTo(1f).Within(0.0001f));
+
+            string[] mineIds = { "Mine_Coal", "Mine_Copper", "Mine_Tin", "Mine_Iron", "Mine_Stone" };
+            int colliderLayer = LayerMask.NameToLayer("Collider");
+            for (int i = 0; i < mineIds.Length; i++)
+            {
+                string path = $"Assets/2_Prefabs/Mine/{mineIds[i]}.prefab";
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Collider2D collider = prefab.GetComponent<Collider2D>();
+                BoxCollider2D boxCollider = collider as BoxCollider2D;
+                SpriteRenderer spriteRenderer = prefab.GetComponentInChildren<SpriteRenderer>(true);
+
+                Assert.That(collider, Is.Not.Null, $"{mineIds[i]} 缺少实体碰撞体。");
+                Assert.That(collider.isTrigger, Is.False, $"{mineIds[i]} 的碰撞体不能是触发器。");
+                Assert.That(prefab.layer, Is.EqualTo(colliderLayer), $"{mineIds[i]} 未使用 Collider 层。");
+                Assert.That(boxCollider, Is.Not.Null, $"{mineIds[i]} must use a bounded box collider.");
+                Assert.That(spriteRenderer?.sprite, Is.Not.Null, $"{mineIds[i]} is missing its mine sprite.");
+
+                Vector2 generatedColliderSize = Vector2.Scale(
+                    boxCollider.size,
+                    new Vector2(
+                        Mathf.Abs(boxCollider.transform.localScale.x) * ChunkGenerator_Cave.GeneratedResourceUniformScale,
+                        Mathf.Abs(boxCollider.transform.localScale.y) * ChunkGenerator_Cave.GeneratedResourceUniformScale));
+                Vector2 generatedVisualSize = Vector2.Scale(
+                    spriteRenderer.sprite.bounds.size,
+                    new Vector2(
+                        Mathf.Abs(spriteRenderer.transform.localScale.x) * ChunkGenerator_Cave.GeneratedResourceUniformScale,
+                        Mathf.Abs(spriteRenderer.transform.localScale.y) * ChunkGenerator_Cave.GeneratedResourceUniformScale));
+
+                Assert.That(generatedColliderSize.x, Is.LessThanOrEqualTo(1.001f),
+                    $"{mineIds[i]} collider spans more than one navigation cell horizontally.");
+                Assert.That(generatedColliderSize.y, Is.LessThanOrEqualTo(1.001f),
+                    $"{mineIds[i]} collider spans more than one navigation cell vertically.");
+                Assert.That(generatedVisualSize.x, Is.LessThanOrEqualTo(1.001f),
+                    $"{mineIds[i]} sprite spans more than one cell horizontally.");
+                Assert.That(generatedVisualSize.y, Is.LessThanOrEqualTo(1.001f),
+                    $"{mineIds[i]} sprite spans more than one cell vertically.");
+        }
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
         public void PortalAnchorRoundTripKeepsEntranceAndExitIdentity()
         {
             Data_Player playerData = new Data_Player();
@@ -233,6 +377,56 @@ namespace FlatWorld.GameTest.Dimension
                 },
                 transform = new ItemTransform()
             };
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void RestoredCaveMineScaleIsNormalizedToOneCell()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Mine/Mine_Stone.prefab");
+            Assert.That(prefab, Is.Not.Null);
+
+            GameObject owner = Object.Instantiate(prefab);
+            try
+            {
+                GameItem mine = owner.GetComponent<GameItem>();
+                Assert.That(mine?.itemData, Is.Not.Null);
+                mine.transform.localScale = new Vector3(2.5f, 2.5f, 1f);
+                mine.itemData.transform.scale = mine.transform.localScale;
+
+                bool normalized = ChunkGenerator_Cave.ApplyGeneratedResourceTransform(
+                    DimensionDefinition.CreateCave(),
+                    mine);
+
+                Assert.That(normalized, Is.True);
+                Assert.That(mine.transform.localScale, Is.EqualTo(ChunkGenerator_Cave.GeneratedResourceScale));
+                Assert.That(mine.itemData.transform.scale, Is.EqualTo(ChunkGenerator_Cave.GeneratedResourceScale));
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+            }
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
+        public void CaveMineResourcesHaveDirectPickupCounterparts()
+        {
+            DimensionDefinition cave = DimensionDefinition.CreateCave();
+            for (int i = 0; i < cave.CaveResources.Count; i++)
+            {
+                string mineId = cave.CaveResources[i].ItemId;
+                string pickupId = ChunkGenerator_Cave.GetLooseOreItemId(mineId);
+                string path = $"Assets/2_Prefabs/Mineral/Ore/{pickupId}.prefab";
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Item pickup = prefab != null ? prefab.GetComponent<Item>() : null;
+                Collider2D collider = prefab != null ? prefab.GetComponent<Collider2D>() : null;
+
+                Assert.That(prefab, Is.Not.Null, $"{mineId} 缺少对应的可拾取矿石 {pickupId}。");
+                Assert.That(pickup?.itemData?.Stack.CanBePickedUp, Is.True, $"{pickupId} 不能直接拾取。");
+                Assert.That(collider?.isTrigger, Is.True, $"{pickupId} 应使用拾取触发器。");
+        }
         }
     }
 }

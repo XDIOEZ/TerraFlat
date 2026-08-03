@@ -19,15 +19,18 @@ MonoBehaviour:
     MapCorePrefabId: MapCore
     SeedSalt: 0
     DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
-    PortalOffset: {x: 1.5, y: 0, z: 0}
+    PortalOffset: {x: 0, y: 0, z: 0}
     PortalTargetDimensionId: cave
     UseFixedLighting: 0
     FixedLighting: 1
     SuppressWeather: 0
     EnableMonsterSpawning: 1
+    CaveEntranceChunkChance: 0.04
+    CaveEntranceSafeRadius: 3
     CaveFloorTileId: TileBase_Stone
     CaveWallTileId: TileBase_StoneWall
-    CaveResourceDensity: 0.28
+    CaveResourceDensity: 0.14
+    CaveLooseOreDensity: 0
     CaveSafeRadius: 4
     CaveResources: []
   - DimensionId: cave
@@ -36,31 +39,34 @@ MonoBehaviour:
     MapCorePrefabId: MapCore
     SeedSalt: 7919
     DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
-    PortalOffset: {x: 1.5, y: 0, z: 0}
+    PortalOffset: {x: 0, y: 0, z: 0}
     PortalTargetDimensionId: surface
     UseFixedLighting: 1
     FixedLighting: 0.08
     SuppressWeather: 1
     EnableMonsterSpawning: 0
+    CaveEntranceChunkChance: 0.04
+    CaveEntranceSafeRadius: 3
     CaveFloorTileId: TileBase_Stone
     CaveWallTileId: TileBase_StoneWall
-    CaveResourceDensity: 0.28
+    CaveResourceDensity: 0.14
+    CaveLooseOreDensity: 0.004
     CaveSafeRadius: 4
     CaveResources:
-    - ItemId: Mine_Iron
-      VeinThreshold: 0.76
-      VeinScale: 0.032
-      NoiseOffset: 1103
     - ItemId: Mine_Tin
-      VeinThreshold: 0.71
-      VeinScale: 0.038
+      VeinThreshold: 0.82
+      VeinScale: 0.032
       NoiseOffset: 2207
+    - ItemId: Mine_Iron
+      VeinThreshold: 0.77
+      VeinScale: 0.036
+      NoiseOffset: 1103
     - ItemId: Mine_Copper
-      VeinThreshold: 0.65
+      VeinThreshold: 0.7
       VeinScale: 0.044
       NoiseOffset: 3301
     - ItemId: Mine_Coal
-      VeinThreshold: 0.58
+      VeinThreshold: 0.61
       VeinScale: 0.052
       NoiseOffset: 4409
     - ItemId: Mine_Stone

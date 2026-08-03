@@ -11,6 +11,10 @@ public sealed class BlockingTilemapLayer : MonoBehaviour
     private const int SortingOrderOffset = 2;
 
     private Tilemap blockingTilemap;
+    private TilemapCollider2D blockingCollider;
+
+    public Tilemap BlockingTilemap => blockingTilemap;
+    public TilemapCollider2D BlockingCollider => blockingCollider;
 
     #region 地图同步
 
@@ -109,6 +113,13 @@ public sealed class BlockingTilemapLayer : MonoBehaviour
     private void Clear()
     {
         blockingTilemap?.ClearAllTiles();
+        ProcessColliderChanges();
+    }
+
+    public void ProcessColliderChanges()
+    {
+        if (blockingCollider != null && blockingCollider.hasTilemapChanges)
+            blockingCollider.ProcessTilemapChanges();
     }
 
     #endregion
@@ -117,25 +128,36 @@ public sealed class BlockingTilemapLayer : MonoBehaviour
 
     private void EnsureTilemap(Map map)
     {
-        if (blockingTilemap != null || map == null)
+        if (map == null)
             return;
 
-        Transform existing = transform.Find(LayerObjectName);
         GameObject layerObject;
-        if (existing != null)
+        if (blockingTilemap != null)
         {
-            layerObject = existing.gameObject;
+            layerObject = blockingTilemap.gameObject;
         }
         else
         {
-            layerObject = new GameObject(LayerObjectName);
-            layerObject.layer = map.tileMap != null ? map.tileMap.gameObject.layer : gameObject.layer;
-            layerObject.transform.SetParent(transform, false);
+            Transform existing = transform.Find(LayerObjectName);
+            if (existing != null)
+            {
+                layerObject = existing.gameObject;
+            }
+            else
+            {
+                layerObject = new GameObject(LayerObjectName);
+                layerObject.transform.SetParent(transform, false);
+            }
+
+            blockingTilemap = layerObject.GetComponent<Tilemap>();
+            if (blockingTilemap == null)
+                blockingTilemap = layerObject.AddComponent<Tilemap>();
         }
 
-        blockingTilemap = layerObject.GetComponent<Tilemap>();
-        if (blockingTilemap == null)
-            blockingTilemap = layerObject.AddComponent<Tilemap>();
+        int colliderLayer = LayerMask.NameToLayer("Collider");
+        layerObject.layer = colliderLayer >= 0
+            ? colliderLayer
+            : map.tileMap != null ? map.tileMap.gameObject.layer : gameObject.layer;
 
         TilemapRenderer blockingRenderer = layerObject.GetComponent<TilemapRenderer>();
         if (blockingRenderer == null)
@@ -151,8 +173,14 @@ public sealed class BlockingTilemapLayer : MonoBehaviour
             blockingRenderer.sharedMaterial = groundRenderer.sharedMaterial;
         }
 
-        if (layerObject.GetComponent<TilemapCollider2D>() == null)
-            layerObject.AddComponent<TilemapCollider2D>();
+        blockingCollider = layerObject.GetComponent<TilemapCollider2D>();
+        if (blockingCollider == null)
+            blockingCollider = layerObject.AddComponent<TilemapCollider2D>();
+
+        TilemapDamageReceiver damageReceiver = layerObject.GetComponent<TilemapDamageReceiver>();
+        if (damageReceiver == null)
+            damageReceiver = layerObject.AddComponent<TilemapDamageReceiver>();
+        damageReceiver.Bind(map, blockingTilemap, blockingCollider);
     }
 
     #endregion

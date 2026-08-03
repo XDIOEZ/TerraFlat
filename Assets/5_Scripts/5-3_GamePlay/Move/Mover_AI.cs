@@ -1,14 +1,13 @@
-using Pathfinding;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
-/// AI 公共移动模块。统一负责目的地提交、到达判定和卡住后的重新寻路。
-/// 所有动物 AI 都应通过 SetDestination/StopMovement 控制移动。
+/// AI 公共移动模块。对上层保持原有目标、停止和到达接口，内部使用无限地图导航。
 /// </summary>
 public class Mover_AI : Mover
 {
-    #region Inspector
+    private const float MinimumDestinationChangeDistance = 0.5f;
+
     [Title("AI 移动")]
     [Header("移动目标")]
     public Transform target;
@@ -19,187 +18,126 @@ public class Mover_AI : Mover
 
     [Tooltip("目的地变化超过该距离时视为新请求")]
     [MinValue(0.001f)]
-    public float destinationChangeThreshold = 0.05f;
+    public float destinationChangeThreshold = MinimumDestinationChangeDistance;
 
     [Header("卡住恢复")]
-    [Tooltip("在有移动命令但位置没有有效变化时，多久强制重新寻路")]
     [MinValue(0.1f)]
     public float stalledRepathDelay = 0.8f;
 
-    [Tooltip("视为产生移动进展的最小距离")]
     [MinValue(0.001f)]
     public float progressDistanceThreshold = 0.02f;
+
+    [Tooltip("实际速度低于该值时，动画视为停止")]
+    [MinValue(0f)]
+    public float animationMoveSpeedThreshold = 0.03f;
 
     [Header("运行时状态")]
     public bool CanMove = true;
     public bool HasReachedTarget;
 
     [ShowInInspector, ReadOnly]
-    public IAstarAI aiPath;
-    #endregion
+    public WorldNavigationAgent NavigationAgent { get; private set; }
 
-    #region Runtime
-    private bool _hasDestination;
-    private Vector2 _lastSubmittedDestination;
-    private Vector2 _lastProgressPosition;
-    private float _lastProgressTime;
-    #endregion
+    private bool hasDestination;
+    private Vector2 lastSubmittedDestination;
+    private float EffectiveDestinationChangeDistance =>
+        Mathf.Max(MinimumDestinationChangeDistance, destinationChangeThreshold);
 
     public float SpeedValue => Speed.Value;
-    public bool HasActiveDestination => _hasDestination;
-    public bool IsPathPending => aiPath != null && aiPath.pathPending;
+    public bool HasActiveDestination => hasDestination;
+    public bool IsPathPending => NavigationAgent != null && NavigationAgent.PathPending;
+    public bool IsActuallyMoving =>
+        CanMove &&
+        hasDestination &&
+        !HasReachedTarget &&
+        NavigationAgent != null &&
+        NavigationAgent.Velocity.sqrMagnitude >
+        animationMoveSpeedThreshold * animationMoveSpeedThreshold;
 
     public override void Load()
     {
         base.Load();
-        aiPath = item.GetComponent<IAstarAI>();
 
-        if (aiPath == null)
-        {
-            Debug.LogError($"[{nameof(Mover_AI)}] 未找到 IAstarAI，移动模块已禁用。目标物体: {name}", this);
-            CanMove = false;
-            return;
-        }
+        GameObject agentObject = item != null ? item.gameObject : gameObject;
+        NavigationAgent = agentObject.GetComponent<WorldNavigationAgent>();
+        if (NavigationAgent == null)
+            NavigationAgent = agentObject.AddComponent<WorldNavigationAgent>();
 
-        Vector2 currentPosition = transform.position;
+        NavigationAgent.Bind(rb);
+        NavigationAgent.Configure(
+            stopDistance,
+            EffectiveDestinationChangeDistance,
+            stalledRepathDelay,
+            progressDistanceThreshold);
+
+        Vector2 currentPosition = rb != null ? rb.position : (Vector2)agentObject.transform.position;
         TargetPosition = currentPosition;
-        _lastSubmittedDestination = currentPosition;
-        _lastProgressPosition = currentPosition;
-        _lastProgressTime = Time.time;
-        _hasDestination = false;
+        lastSubmittedDestination = currentPosition;
+        hasDestination = false;
         HasReachedTarget = true;
-        aiPath.isStopped = true;
+        CanMove = true;
+        NavigationAgent.Stop(clearDestination: true);
     }
 
     public override void ModUpdate(float deltaTime)
     {
-        if (aiPath == null)
+        if (NavigationAgent == null)
             return;
 
         if (target != null)
             SetDestination(target.position);
 
-        if (!CanMove || !_hasDestination)
+        NavigationAgent.MaxSpeed = SpeedValue;
+        NavigationAgent.CanMove = CanMove && hasDestination;
+        NavigationAgent.Tick(deltaTime);
+
+        if (!CanMove || !hasDestination)
         {
-            aiPath.isStopped = true;
+            HasReachedTarget = true;
             return;
         }
 
-        aiPath.maxSpeed = SpeedValue;
-        aiPath.destination = TargetPosition;
-        aiPath.isStopped = false;
-
-        Vector2 currentPosition = transform.position;
-        float directDistance = Vector2.Distance(currentPosition, TargetPosition);
-
-        // 世界坐标已足够接近时可以立即完成，不依赖路径状态。
-        if (directDistance <= stopDistance)
-        {
-            CompleteDestination();
-            return;
-        }
-
-        // 路径计算期间 remainingDistance 可能暂时为 0。
-        // 此时绝不能把 0 当作已经到达，这正是旧逻辑中途停走的根源。
-        if (aiPath.pathPending)
-        {
-            HasReachedTarget = false;
-            return;
-        }
-
-        bool hasValidRemainingDistance =
-            aiPath.hasPath &&
-            !float.IsNaN(aiPath.remainingDistance) &&
-            !float.IsInfinity(aiPath.remainingDistance);
-
-        float directDistanceGuard = Mathf.Max(stopDistance * 2f, stopDistance + 0.25f);
-        bool reachedByPath =
-            directDistance <= directDistanceGuard &&
-            (aiPath.reachedDestination ||
-             (hasValidRemainingDistance &&
-              aiPath.remainingDistance <= stopDistance));
-
-        if (reachedByPath)
-        {
-            CompleteDestination();
-            return;
-        }
-
-        HasReachedTarget = false;
-        RecoverIfStalled(currentPosition);
+        HasReachedTarget = NavigationAgent.ReachedDestination;
     }
 
-    /// <summary>提交或更新目的地，并保证停止过的寻路组件恢复移动。</summary>
     public void SetDestination(Vector2 destination, bool forceRepath = false)
     {
         bool isNewRequest =
-            !_hasDestination ||
-            (destination - _lastSubmittedDestination).sqrMagnitude >
-            destinationChangeThreshold * destinationChangeThreshold;
+            !hasDestination ||
+            (destination - lastSubmittedDestination).sqrMagnitude >
+            EffectiveDestinationChangeDistance * EffectiveDestinationChangeDistance;
 
         TargetPosition = destination;
         CanMove = true;
         HasReachedTarget = false;
-        _hasDestination = true;
+        hasDestination = true;
 
-        if (aiPath == null)
+        if (NavigationAgent == null)
             return;
 
-        aiPath.maxSpeed = SpeedValue;
-        aiPath.destination = destination;
-        aiPath.isStopped = false;
+        NavigationAgent.MaxSpeed = SpeedValue;
+        NavigationAgent.SetDestination(destination, forceRepath);
 
-        if (!isNewRequest && !forceRepath)
-            return;
-
-        _lastSubmittedDestination = destination;
-        _lastProgressPosition = transform.position;
-        _lastProgressTime = Time.time;
-
-        // 不取消正在进行的路径请求；新目的地会由自动重寻路接管。
-        if (!aiPath.pathPending && (forceRepath || !aiPath.hasPath))
-            aiPath.SearchPath();
+        if (isNewRequest || forceRepath)
+            lastSubmittedDestination = destination;
     }
 
-    /// <summary>停止当前移动，但保留最后目的地，便于之后恢复。</summary>
     public void StopMovement()
     {
         CanMove = false;
         HasReachedTarget = true;
+        NavigationAgent?.Stop();
+        if (rb != null)
+            rb.velocity = Vector2.zero;
+    }
 
-        if (aiPath != null)
-            aiPath.isStopped = true;
+    public void ForceRepath()
+    {
+        NavigationAgent?.ForceRepath();
     }
 
     public override void Move(Vector2 targetPosition, float deltaTime = 0f)
     {
         SetDestination(targetPosition);
-    }
-
-    private void CompleteDestination()
-    {
-        HasReachedTarget = true;
-        if (aiPath != null)
-            aiPath.isStopped = true;
-    }
-
-    private void RecoverIfStalled(Vector2 currentPosition)
-    {
-        float progressThresholdSqr = progressDistanceThreshold * progressDistanceThreshold;
-        if ((currentPosition - _lastProgressPosition).sqrMagnitude >= progressThresholdSqr)
-        {
-            _lastProgressPosition = currentPosition;
-            _lastProgressTime = Time.time;
-            return;
-        }
-
-        if (Time.time - _lastProgressTime < stalledRepathDelay)
-            return;
-
-        _lastProgressPosition = currentPosition;
-        _lastProgressTime = Time.time;
-
-        if (!aiPath.pathPending)
-            aiPath.SearchPath();
     }
 }

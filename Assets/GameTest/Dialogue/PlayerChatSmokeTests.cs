@@ -87,7 +87,8 @@ namespace FlatWorld.GameTest.Dialogue
             string adminSource = File.ReadAllText(
                 "Assets/5_Scripts/5-3_GamePlay/Controller/PlayerAdminController.cs");
 
-            Assert.That(chatSource, Does.Contain("!IsControlPressed(keyboard)"));
+            Assert.That(chatSource, Does.Contain("context.control == keyboard.tKey"));
+            Assert.That(chatSource, Does.Contain("IsControlPressed(keyboard)"));
             Assert.That(adminSource, Does.Contain("Input.GetKey(KeyCode.LeftControl)"));
             Assert.That(adminSource, Does.Contain("Input.GetKey(KeyCode.RightControl)"));
         }

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flatworld.local/schemas/game-events.schema.json",
+  "title": "FlatWorld Game Event Catalog",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "events"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "配置结构版本。"
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "extension": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "parameters"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "parameters": { "type": "object" }
+      }
+    },
+    "action": {
+      "allOf": [
+        { "$ref": "#/$defs/extension" },
+        {
+          "type": "object",
+          "required": ["id"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "动作稳定ID；事件开始后不要改名，否则旧存档无法关联动作进度。"
+            }
+          }
+        }
+      ]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "enabled", "trigger", "actions"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "description": "进入存档的稳定ID；发布后不要改名。"
+        },
+        "displayName": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "priority": { "type": "integer" },
+        "conflictGroup": { "type": "string" },
+        "oncePerWorld": { "type": "boolean" },
+        "cooldownDays": { "type": "number", "minimum": 0 },
+        "durationDays": { "type": "number", "minimum": 0 },
+        "trigger": { "$ref": "#/$defs/extension" },
+        "conditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/extension" },
+          "default": []
+        },
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/action" }
+        }
+      }
+    }
+  }
+}

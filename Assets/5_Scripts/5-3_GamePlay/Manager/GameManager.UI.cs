@@ -77,6 +77,8 @@ public partial class GameManager
     public const string WorldLoadingProgressKey = "加载进度";
     public const string WorldLoadingProgressTextKey = "加载进度文本";
 
+    private const float WorldLoadingEllipsisFrameSeconds = 0.35f;
+
     private GameDifficultyId pendingNewWorldDifficulty = GameDifficultyId.Simple;
     private GameDifficultyRuleValues pendingCustomDifficultyRules = new GameDifficultyRuleValues();
 
@@ -87,6 +89,10 @@ public partial class GameManager
     private TextMeshProUGUI worldLoadingProgressText;
     private Slider worldLoadingProgress;
     private Coroutine worldLoadingCompletionCoroutine;
+    private Coroutine worldLoadingStatusAnimationCoroutine;
+    private string worldLoadingAnimatedStatusSource = string.Empty;
+    private string worldLoadingStatusBase = string.Empty;
+    private int worldLoadingStatusDotCount;
     private bool isWorldEntryLoading;
 
     public static string GetNewGameDifficultyPresetButtonKey(GameDifficultyId difficulty)
@@ -166,9 +172,91 @@ public partial class GameManager
 
         float normalizedProgress = Mathf.Clamp01(progress);
         worldLoadingTitle.text = title;
-        worldLoadingStatus.text = status;
+        SetWorldLoadingStatus(status);
         worldLoadingProgress.value = normalizedProgress;
         worldLoadingProgressText.text = $"{Mathf.RoundToInt(normalizedProgress * 100f)}%";
+    }
+
+    private void SetWorldLoadingStatus(string status)
+    {
+        status ??= string.Empty;
+        if (worldLoadingStatusAnimationCoroutine != null &&
+            string.Equals(worldLoadingAnimatedStatusSource, status, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (!TryGetAnimatedStatusBase(status, out string statusBase))
+        {
+            StopWorldLoadingStatusAnimation();
+            worldLoadingStatus.text = status;
+            return;
+        }
+
+        worldLoadingAnimatedStatusSource = status;
+        if (!string.Equals(worldLoadingStatusBase, statusBase, StringComparison.Ordinal))
+        {
+            worldLoadingStatusBase = statusBase;
+            worldLoadingStatusDotCount = 1;
+            RefreshWorldLoadingStatusDots();
+        }
+
+        if (worldLoadingStatusAnimationCoroutine == null)
+            worldLoadingStatusAnimationCoroutine = StartCoroutine(AnimateWorldLoadingStatusCoroutine());
+    }
+
+    private static bool TryGetAnimatedStatusBase(string status, out string statusBase)
+    {
+        if (status.EndsWith("...", StringComparison.Ordinal))
+        {
+            statusBase = status.Substring(0, status.Length - 3);
+            return true;
+        }
+
+        if (status.EndsWith("…", StringComparison.Ordinal))
+        {
+            statusBase = status.Substring(0, status.Length - 1);
+            return true;
+        }
+
+        statusBase = string.Empty;
+        return false;
+    }
+
+    private IEnumerator AnimateWorldLoadingStatusCoroutine()
+    {
+        WaitForSecondsRealtime frameDelay = new WaitForSecondsRealtime(WorldLoadingEllipsisFrameSeconds);
+        while (worldLoadingStatus != null && !string.IsNullOrEmpty(worldLoadingStatusBase))
+        {
+            yield return frameDelay;
+            worldLoadingStatusDotCount = worldLoadingStatusDotCount % 3 + 1;
+            RefreshWorldLoadingStatusDots();
+        }
+
+        worldLoadingStatusAnimationCoroutine = null;
+    }
+
+    private void RefreshWorldLoadingStatusDots()
+    {
+        if (worldLoadingStatus == null)
+            return;
+
+        int visibleDotCount = Mathf.Clamp(worldLoadingStatusDotCount, 1, 3);
+        string visibleDots = new string('.', visibleDotCount);
+        string hiddenDots = new string('.', 3 - visibleDotCount);
+        worldLoadingStatus.text = hiddenDots.Length == 0
+            ? worldLoadingStatusBase + visibleDots
+            : $"{worldLoadingStatusBase}{visibleDots}<alpha=#00>{hiddenDots}";
+    }
+
+    private void StopWorldLoadingStatusAnimation()
+    {
+        if (worldLoadingStatusAnimationCoroutine != null)
+            StopCoroutine(worldLoadingStatusAnimationCoroutine);
+        worldLoadingStatusAnimationCoroutine = null;
+        worldLoadingAnimatedStatusSource = string.Empty;
+        worldLoadingStatusBase = string.Empty;
+        worldLoadingStatusDotCount = 0;
     }
 
     private void OnWorldEntryPlayerReady(Player player)
@@ -227,6 +315,7 @@ public partial class GameManager
     private void HideWorldLoadingView()
     {
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
+        StopWorldLoadingStatusAnimation();
         if (worldLoadingView != null)
             worldLoadingView.SetActive(false);
         worldLoadingCompletionCoroutine = null;

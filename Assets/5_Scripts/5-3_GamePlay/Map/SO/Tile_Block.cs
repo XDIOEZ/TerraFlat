@@ -2,6 +2,43 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+public enum TileDamageToolKind
+{
+    None,
+    Pickaxe,
+    Axe,
+    Hammer
+}
+
+[System.Serializable]
+public sealed class TileBuildingDamageProfile
+{
+    [Tooltip("开启后，此 Tile 可由格子建筑伤害系统扣血和摧毁。")]
+    public bool Damageable;
+
+    [Min(1f)]
+    public float MaxHealth = 100f;
+
+    [Min(0f)]
+    public float Defense;
+
+    [Tooltip("None 表示不限制工具类型。石墙/岩壁应配置为 Pickaxe。")]
+    public TileDamageToolKind RequiredTool = TileDamageToolKind.None;
+
+    [Tooltip("开启后，攻击至少要命中一项弱点标签才会造成伤害。")]
+    public bool RequireWeaknessMatch;
+
+    public List<DamageType> Weakness = new List<DamageType>();
+
+    public CombatImpactMaterial ImpactMaterial = CombatImpactMaterial.Default;
+
+    [Tooltip("摧毁后掉落的 Item ID；留空则不掉落。")]
+    public string DropItemId;
+
+    [Min(0)]
+    public int DropAmount;
+}
+
 /// <summary>
 /// 地块逻辑 ScriptableObject
 /// 负责描述「踩在某个 Tile 上时」的进入 / 退出 / 持续效果接口。
@@ -25,6 +62,9 @@ public class Tile_Block : ScriptableObject
 
     [Header("对应的 Unity TileBase 资源")]
     public TileBase TileBase;
+
+    [Header("格子建筑伤害")]
+    public TileBuildingDamageProfile damageProfile = new TileBuildingDamageProfile();
 
     [Header("逻辑行为列表（组合方式")]
     [Tooltip("按顺序执行的地块逻辑行为列表，通过 SerializeReference 支持多态，多种逻辑可以叠加生效")]

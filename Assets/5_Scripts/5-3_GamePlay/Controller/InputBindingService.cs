@@ -95,6 +95,7 @@ public sealed class InputBindingService : IDisposable
         public readonly InputBindingDeviceGroup DeviceGroup;
         public readonly string BindingGroup;
         public readonly string ExpectedControlLayout;
+        public readonly int BindingOrdinal;
 
         public BindingSpec(
             string actionName,
@@ -102,7 +103,8 @@ public sealed class InputBindingService : IDisposable
             string displayName,
             InputBindingDeviceGroup deviceGroup,
             string bindingGroup,
-            string expectedControlLayout)
+            string expectedControlLayout,
+            int bindingOrdinal = 0)
         {
             ActionName = actionName;
             PartName = partName;
@@ -110,6 +112,7 @@ public sealed class InputBindingService : IDisposable
             DeviceGroup = deviceGroup;
             BindingGroup = bindingGroup;
             ExpectedControlLayout = expectedControlLayout;
+            BindingOrdinal = bindingOrdinal;
         }
     }
 
@@ -127,9 +130,19 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("P", null, "装备面板", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("H", null, "手工制作", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("Shift", null, "奔跑", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
-        new BindingSpec("Tab", null, "营养面板", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("Tab", null, "角色参数面板", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("CtrlMouse", "Modifier", "镜头缩放修饰键", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
-        new BindingSpec("ESC", null, "打开设置", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("OpenChat", null, "打开聊天框", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 1", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 0),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 2", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 1),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 3", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 2),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 4", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 3),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 5", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 4),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 6", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 5),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 7", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 6),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 8", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 7),
+        new BindingSpec("SwitchHotBar_Player", null, "快捷栏 9", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button", 8),
+        new BindingSpec("ESC", null, "关闭面板 / 打开设置", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("Move_Player", null, "角色移动", InputBindingDeviceGroup.Gamepad, "Gamepad", "Vector2"),
         new BindingSpec("GamepadCursor", null, "虚拟光标", InputBindingDeviceGroup.Gamepad, "Gamepad", "Vector2"),
         new BindingSpec("LeftClick", null, "主要操作", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
@@ -143,7 +156,7 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("Tab", null, "营养面板", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("HotbarPrevious", null, "快捷栏上一格", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("HotbarNext", null, "快捷栏下一格", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
-        new BindingSpec("ESC", null, "打开设置", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button")
+        new BindingSpec("ESC", null, "关闭面板 / 打开设置", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button")
     };
 
     private readonly InputActionAsset inputAsset;
@@ -404,7 +417,11 @@ public sealed class InputBindingService : IDisposable
                 continue;
             }
 
-            int bindingIndex = FindBindingIndex(action, spec.PartName, spec.BindingGroup);
+            int bindingIndex = FindBindingIndex(
+                action,
+                spec.PartName,
+                spec.BindingGroup,
+                spec.BindingOrdinal);
             if (bindingIndex < 0)
             {
                 Debug.LogWarning(
@@ -425,8 +442,10 @@ public sealed class InputBindingService : IDisposable
     private static int FindBindingIndex(
         InputAction action,
         string partName,
-        string bindingGroup)
+        string bindingGroup,
+        int bindingOrdinal)
     {
+        int matchingBindingOrdinal = 0;
         for (int i = 0; i < action.bindings.Count; i++)
         {
             InputBinding binding = action.bindings[i];
@@ -447,7 +466,10 @@ public sealed class InputBindingService : IDisposable
             if (binding.isComposite || binding.isPartOfComposite)
                 continue;
 
-            return i;
+            if (matchingBindingOrdinal == bindingOrdinal)
+                return i;
+
+            matchingBindingOrdinal++;
         }
 
         return -1;

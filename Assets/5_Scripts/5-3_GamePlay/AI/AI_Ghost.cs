@@ -1,6 +1,5 @@
 using System;
 using MemoryPack;
-using Pathfinding;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -23,13 +22,13 @@ public partial class GhostAISaveData
 
 /// <summary>
 /// Ghost artificial intelligence module.
-/// Uses A* for obstacle avoidance while selecting only completely dark destinations.
+/// Uses the infinite-world navigation service while selecting only completely dark destinations.
 /// If there is nowhere dark to retreat to it enters a radiance state and takes periodic true damage.
 /// </summary>
 public class AI_Ghost : Module
 {
     private const string ModuleId = "AI_Ghost";
-    private const string RadianceBuffName = "光耀";
+    private const string RadianceBuffId = "光耀";
     private const float LightEpsilon = 0.0001f;
 
     public Ex_ModData_MemoryPackable ModData = new();
@@ -43,8 +42,8 @@ public class AI_Ghost : Module
     private GhostAISaveData Data = new();
 
     [Header("感知与移动")]
-    [SerializeField, Min(0.1f)]
-    private float perceptionRadius = 10f;
+    [SerializeField, Min(0.1f), Tooltip("主动发现玩家的距离，应覆盖幽灵的最大生成距离。")]
+    private float perceptionRadius = 60f;
     [SerializeField, Min(0.1f)]
     private float wanderRadius = 6f;
     [SerializeField, Min(0.1f)]
@@ -77,14 +76,11 @@ public class AI_Ghost : Module
 
     private DamageReceiver _damageReceiver;
     private BuffManager _buffManager;
-    private Buff_Data _radianceBuff;
-    private IAstarAI _pathAgent;
+    private WorldNavigationAgent _pathAgent;
     private Vector3 _visualBaseLocalPosition;
     private Vector2 _moveTarget;
     private bool _hasMoveTarget;
     private float _decisionTimer;
-    private float _stuckTimer;
-    private Vector2 _lastAgentPosition;
     private bool _loggedMissingRadianceBuff;
 
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
@@ -103,10 +99,6 @@ public class AI_Ghost : Module
 
         item.itemMods.GetMod_ByID(ModText.Hp, out _damageReceiver);
         _buffManager = item.GetComponentInChildren<BuffManager>(true);
-        _radianceBuff = GameRes.Instance != null
-            ? GameRes.Instance.GetBuffData(RadianceBuffName)
-            : null;
-
         if (visualTransform == null && item.Sprite != null)
             visualTransform = item.Sprite.transform;
         if (spriteRenderer == null)
@@ -119,32 +111,22 @@ public class AI_Ghost : Module
         if (visualTransform != null)
             _visualBaseLocalPosition = visualTransform.localPosition;
 
-        EnsurePathfindingComponents();
+        EnsureNavigationAgent();
         _moveTarget = Data.WanderTarget;
         _hasMoveTarget = Data.HasWanderTarget;
         _state = GhostState.Wander;
         _decisionTimer = 0f;
-        _lastAgentPosition = item.transform.position;
     }
 
-    private void EnsurePathfindingComponents()
+    private void EnsureNavigationAgent()
     {
-        if (item.GetComponent<Seeker>() == null)
-            item.gameObject.AddComponent<Seeker>();
-
-        _pathAgent = item.GetComponent<IAstarAI>();
+        _pathAgent = item.GetComponent<WorldNavigationAgent>();
         if (_pathAgent == null)
-            _pathAgent = item.gameObject.AddComponent<AILerp>();
+            _pathAgent = item.gameObject.AddComponent<WorldNavigationAgent>();
 
-        if (_pathAgent is AILerp aiLerp)
-        {
-            aiLerp.orientation = OrientationMode.YAxisForward;
-            aiLerp.enableRotation = false;
-        }
-
-        _pathAgent.canMove = true;
-        _pathAgent.canSearch = true;
-        _pathAgent.isStopped = true;
+        _pathAgent.Bind(item.GetComponent<Rigidbody2D>());
+        _pathAgent.Configure(0.05f, 0.1f, stuckRepathDelay, 0.01f);
+        _pathAgent.Stop(clearDestination: true);
     }
 
     public override void Save()
@@ -246,7 +228,6 @@ public class AI_Ghost : Module
             return;
         }
 
-        Vector2 current = item.transform.position;
         if (_state == GhostState.Chase)
         {
             Transform player = ItemMgr.Instance?.UserPlayerTransform;
@@ -274,47 +255,22 @@ public class AI_Ghost : Module
             return;
         }
 
-        bool destinationChanged = ((Vector2)_pathAgent.destination - _moveTarget).sqrMagnitude > 0.01f;
-        _pathAgent.maxSpeed = speed;
-        _pathAgent.isStopped = false;
-        _pathAgent.destination = _moveTarget;
-        if (destinationChanged && !_pathAgent.pathPending)
-            _pathAgent.SearchPath();
-
-        HandleStuckRepath(current, deltaTime);
+        _pathAgent.MaxSpeed = speed;
+        _pathAgent.SetDestination(_moveTarget);
+        _pathAgent.Tick(deltaTime);
 
         UpdateChunkOwnership();
 
-        if (Vector2.Distance(current, _moveTarget) <= 0.05f)
+        if (_pathAgent.ReachedDestination)
         {
             _hasMoveTarget = false;
             StopMoving();
         }
     }
 
-    private void HandleStuckRepath(Vector2 currentPosition, float deltaTime)
-    {
-        if ((currentPosition - _lastAgentPosition).sqrMagnitude <= 0.0001f)
-        {
-            _stuckTimer += deltaTime;
-            if (_stuckTimer >= stuckRepathDelay && !_pathAgent.pathPending)
-            {
-                _stuckTimer = 0f;
-                _pathAgent.SearchPath();
-            }
-        }
-        else
-        {
-            _stuckTimer = 0f;
-            _lastAgentPosition = currentPosition;
-        }
-    }
-
     private void StopMoving()
     {
-        _stuckTimer = 0f;
-        if (_pathAgent != null)
-            _pathAgent.isStopped = true;
+        _pathAgent?.Stop();
     }
 
     private bool CanMoveTo(Vector2 next)
@@ -339,11 +295,11 @@ public class AI_Ghost : Module
 
     private static bool IsWalkable(Vector2 worldPosition)
     {
-        AstarGameManager astarManager = AstarGameManager.Instance;
-        if (astarManager == null || !astarManager.IsGridGraphReady)
+        WorldNavigationManager navigation = WorldNavigationManager.Instance;
+        if (navigation == null || !navigation.IsNavigationReady)
             return false;
 
-        return astarManager.TryGetNodePenalty_GridGraphFast(worldPosition, out _, out bool walkable) && walkable;
+        return navigation.TryGetCell(worldPosition, out _, out bool walkable) && walkable;
     }
 
     private bool TryFindDarkPosition(Vector2 origin, float radius, out Vector2 position)
@@ -410,14 +366,13 @@ public class AI_Ghost : Module
         if (_buffManager == null)
             _buffManager = item.GetComponentInChildren<BuffManager>(true);
 
-        if (_radianceBuff == null && GameRes.Instance != null)
-            _radianceBuff = GameRes.Instance.GetBuffData(RadianceBuffName);
-
-        if (_buffManager != null && _radianceBuff != null)
+        if (_buffManager != null)
         {
-            if (!_buffManager.HasBuff(_radianceBuff.buff_ID))
-                _buffManager.AddBuffRuntime(_radianceBuff, item);
-            return;
+            if (_buffManager.HasBuff(RadianceBuffId) ||
+                _buffManager.AddBuff(RadianceBuffId))
+            {
+                return;
+            }
         }
 
         if (!_loggedMissingRadianceBuff)
@@ -429,8 +384,8 @@ public class AI_Ghost : Module
 
     private void RemoveRadianceBuff()
     {
-        if (_buffManager != null && _buffManager.HasBuff(RadianceBuffName))
-            _buffManager.RemoveBuff(RadianceBuffName);
+        if (_buffManager != null && _buffManager.HasBuff(RadianceBuffId))
+            _buffManager.RemoveBuff(RadianceBuffId);
     }
 
     private void UpdateVisual()

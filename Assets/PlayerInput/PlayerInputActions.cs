@@ -220,6 +220,15 @@ namespace InputSystem
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""OpenChat"",
+                    ""type"": ""Button"",
+                    ""id"": ""c1f57108-3752-4ea1-83d5-48f9b61d31c0"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": ""Press"",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""E"",
                     ""type"": ""Button"",
                     ""id"": ""3a3d9a7c-08a7-4819-a436-fca3cd0bcf49"",
@@ -651,6 +660,17 @@ namespace InputSystem
                 },
                 {
                     ""name"": """",
+                    ""id"": ""01c5a0f8-87b7-44e9-b213-93371fe31660"",
+                    ""path"": ""<Keyboard>/t"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""OpenChat"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""5d34c481-8501-4aca-abe0-2b2618af12ab"",
                     ""path"": ""<Keyboard>/e"",
                     ""interactions"": """",
@@ -852,6 +872,7 @@ namespace InputSystem
             m_Win10_GamepadCursor = m_Win10.FindAction("GamepadCursor", throwIfNotFound: true);
             m_Win10_HotbarPrevious = m_Win10.FindAction("HotbarPrevious", throwIfNotFound: true);
             m_Win10_HotbarNext = m_Win10.FindAction("HotbarNext", throwIfNotFound: true);
+            m_Win10_OpenChat = m_Win10.FindAction("OpenChat", throwIfNotFound: true);
             m_Win10_E = m_Win10.FindAction("E", throwIfNotFound: true);
             m_Win10_RightClick = m_Win10.FindAction("RightClick", throwIfNotFound: true);
             m_Win10_LeftClick = m_Win10.FindAction("LeftClick", throwIfNotFound: true);
@@ -952,6 +973,7 @@ namespace InputSystem
         private readonly InputAction m_Win10_GamepadCursor;
         private readonly InputAction m_Win10_HotbarPrevious;
         private readonly InputAction m_Win10_HotbarNext;
+        private readonly InputAction m_Win10_OpenChat;
         private readonly InputAction m_Win10_E;
         private readonly InputAction m_Win10_RightClick;
         private readonly InputAction m_Win10_LeftClick;
@@ -1025,6 +1047,10 @@ namespace InputSystem
             /// Provides access to the underlying input action "Win10/HotbarNext".
             /// </summary>
             public InputAction @HotbarNext => m_Wrapper.m_Win10_HotbarNext;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/OpenChat".
+            /// </summary>
+            public InputAction @OpenChat => m_Wrapper.m_Win10_OpenChat;
             /// <summary>
             /// Provides access to the underlying input action "Win10/E".
             /// </summary>
@@ -1117,6 +1143,9 @@ namespace InputSystem
                 @HotbarNext.started += instance.OnHotbarNext;
                 @HotbarNext.performed += instance.OnHotbarNext;
                 @HotbarNext.canceled += instance.OnHotbarNext;
+                @OpenChat.started += instance.OnOpenChat;
+                @OpenChat.performed += instance.OnOpenChat;
+                @OpenChat.canceled += instance.OnOpenChat;
                 @E.started += instance.OnE;
                 @E.performed += instance.OnE;
                 @E.canceled += instance.OnE;
@@ -1188,6 +1217,9 @@ namespace InputSystem
                 @HotbarNext.started -= instance.OnHotbarNext;
                 @HotbarNext.performed -= instance.OnHotbarNext;
                 @HotbarNext.canceled -= instance.OnHotbarNext;
+                @OpenChat.started -= instance.OnOpenChat;
+                @OpenChat.performed -= instance.OnOpenChat;
+                @OpenChat.canceled -= instance.OnOpenChat;
                 @E.started -= instance.OnE;
                 @E.performed -= instance.OnE;
                 @E.canceled -= instance.OnE;
@@ -1370,6 +1402,13 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnHotbarNext(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "OpenChat" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnOpenChat(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "E" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

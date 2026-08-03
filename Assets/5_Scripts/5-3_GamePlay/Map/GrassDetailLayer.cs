@@ -75,16 +75,73 @@ public sealed class GrassDetailLayer : MonoBehaviour
 
     public bool RemoveGrassAt(Map map, Vector2Int worldPosition)
     {
-        if (map == null || map.Data == null)
+        if (!HasGrassAt(map, worldPosition))
             return false;
 
-        map.Data.EnsureGrassLayerStorage(map.Data.Width, map.Data.Height);
         if (!map.Data.TrySetGrassStateAtWorld(worldPosition, GrassCellState.Removed))
             return false;
 
         EnsureDetailTilemap(map);
         detailTilemap?.SetTile(new Vector3Int(worldPosition.x, worldPosition.y, 0), null);
         return true;
+    }
+
+    public bool HasGrassAt(Map map, Vector2Int worldPosition)
+    {
+        if (map == null || map.Data == null)
+            return false;
+
+        TileData topTile = map.Data.GetTileDataAt(worldPosition);
+        return topTile != null &&
+               topTile.ID == grassTileId &&
+               map.Data.TryGetGrassStateAtWorld(worldPosition, out GrassCellState state) &&
+               state == GrassCellState.Present;
+    }
+
+    public bool TryFindClosestGrass(
+        Map map,
+        Vector2 worldPosition,
+        float searchRadius,
+        out Vector2Int grassPosition)
+    {
+        grassPosition = default;
+        if (map == null || map.Data == null || searchRadius < 0f)
+            return false;
+
+        int width = map.Data.Width;
+        int height = map.Data.Height;
+        if (width <= 0 || height <= 0)
+            return false;
+
+        Vector2Int mapOrigin = map.Data.position;
+        int minX = Mathf.Max(mapOrigin.x, Mathf.FloorToInt(worldPosition.x - searchRadius));
+        int maxX = Mathf.Min(mapOrigin.x + width - 1, Mathf.FloorToInt(worldPosition.x + searchRadius));
+        int minY = Mathf.Max(mapOrigin.y, Mathf.FloorToInt(worldPosition.y - searchRadius));
+        int maxY = Mathf.Min(mapOrigin.y + height - 1, Mathf.FloorToInt(worldPosition.y + searchRadius));
+        float radiusSqr = searchRadius * searchRadius;
+        float closestDistanceSqr = float.MaxValue;
+        bool found = false;
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                Vector2Int candidate = new(x, y);
+                Vector2 candidateCenter = new(x + 0.5f, y + 0.5f);
+                float distanceSqr = (candidateCenter - worldPosition).sqrMagnitude;
+                if (distanceSqr > radiusSqr || distanceSqr >= closestDistanceSqr)
+                    continue;
+
+                if (!HasGrassAt(map, candidate))
+                    continue;
+
+                grassPosition = candidate;
+                closestDistanceSqr = distanceSqr;
+                found = true;
+            }
+        }
+
+        return found;
     }
 
     private void ApplyCell(Map map, Vector2Int worldPosition, TileData topTile, int worldSeed)

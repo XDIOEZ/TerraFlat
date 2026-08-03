@@ -24,6 +24,7 @@ public sealed class CraftingOutputPreview : MonoBehaviour
     private bool _hasRealImageColor;
     private bool _previewVisible;
     private float _progress01;
+    private bool _missingLayersLogged;
 
     public static CraftingOutputPreview Attach(BasePanel panel, ItemSlot_UI outputSlot)
     {
@@ -135,11 +136,17 @@ public sealed class CraftingOutputPreview : MonoBehaviour
         _revealImage = FindImage(RevealName);
         if (_ghostImage == null || _revealImage == null)
         {
-            Debug.LogError(
-                "[CraftingOutputPreview] UI_Slot Prefab 缺少制作预览图层，请重建并直接检查 Prefab。",
-                _slotUI);
+            if (!_missingLayersLogged)
+            {
+                Debug.LogError(
+                    $"[CraftingOutputPreview] 槽位 '{_slotUI.name}' 缺少制作预览图层，请重建其所属 UI Prefab。",
+                    _slotUI);
+                _missingLayersLogged = true;
+            }
             return;
         }
+
+        _missingLayersLogged = false;
 
         _ghostImage.color = new Color(1f, 1f, 1f, GhostAlpha);
         _ghostImage.raycastTarget = false;

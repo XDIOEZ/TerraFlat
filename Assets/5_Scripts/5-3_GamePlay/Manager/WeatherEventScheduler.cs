@@ -15,12 +15,19 @@ public enum WeatherPhase
 [Serializable]
 public sealed class RainEventScheduleConfig
 {
-    [Min(0.1f)] public float MinClearInterval = 360f;
-    [Min(0.1f)] public float MaxClearInterval = 720f;
+    [Header("每日降雨")]
+    [Range(0f, 1f), Tooltip("每天只判定一次降雨；0.05 表示每天有 5% 概率下雨。")]
+    public float DailyRainChance = 0.05f;
+
+    [Min(0.01f), Tooltip("一次降雨最少持续多少个游戏日；总时长包含起雨、稳定、暴雨和收尾阶段。")]
+    public float MinRainDurationDays = 0.5f;
+
+    [Min(0.01f), Tooltip("一次降雨最多持续多少个游戏日；1 表示一整天。")]
+    public float MaxRainDurationDays = 1f;
+
+    [Header("天气阶段（游戏秒）")]
     [Min(0.1f)] public float ForecastDuration = 90f;
     [Min(0.1f)] public float RainStartingDuration = 45f;
-    [Min(0.1f)] public float MinSteadyRainDuration = 180f;
-    [Min(0.1f)] public float MaxSteadyRainDuration = 300f;
     [Min(0.1f)] public float HeavyRainDuration = 150f;
     [Min(0.1f)] public float RainEndingDuration = 60f;
     [Min(0.1f)] public float RecoveryDuration = 90f;
@@ -38,7 +45,7 @@ public sealed class RainEventScheduleConfig
 /// </summary>
 public static class WeatherEventScheduler
 {
-    public const int CurrentDataVersion = 1;
+    public const int CurrentDataVersion = 2;
     public const int MaxTransitionsPerAdvance = 100000;
 
 #region 初始化与推进
@@ -46,6 +53,7 @@ public static class WeatherEventScheduler
     public static void InitializeIfNeeded(
         PlanetData planetData,
         float currentTotalTime,
+        float dayLength,
         int worldSeed,
         RainEventScheduleConfig config)
     {
@@ -57,36 +65,52 @@ public static class WeatherEventScheduler
 
         if (planetData.WeatherDataVersion < CurrentDataVersion)
         {
-            planetData.WeatherPhase = ResolveLegacyPhase(planetData);
-            planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
-            planetData.WeatherEventSequence = planetData.WeatherPhase == WeatherPhase.Clear ? 0 : 1;
-            planetData.WeatherRandomCursor = Mathf.Max(0, planetData.WeatherRandomCursor);
+            bool hasStructuredWeatherData = planetData.WeatherDataVersion >= 1;
+            if (!hasStructuredWeatherData || !Enum.IsDefined(typeof(WeatherPhase), planetData.WeatherPhase))
+            {
+                planetData.WeatherPhase = ResolveLegacyPhase(planetData);
+                planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
+                planetData.WeatherEventSequence = planetData.WeatherPhase == WeatherPhase.Clear ? 0 : 1;
+            }
 
             if (planetData.WeatherPhase == WeatherPhase.Clear)
             {
+                planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
                 planetData.WeatherPhaseEndTotalTime = 0f;
-                ScheduleNextEvent(planetData, currentTotalTime, worldSeed, config);
+                ScheduleNextDailyCheck(planetData, currentTotalTime, dayLength);
             }
-            else
+            else if (!hasStructuredWeatherData || planetData.WeatherPhaseEndTotalTime <= currentTotalTime)
             {
                 planetData.NextWeatherEventTotalTime = 0f;
+                planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
                 planetData.WeatherPhaseEndTotalTime =
-                    currentTotalTime + GetPhaseDuration(planetData.WeatherPhase, planetData, worldSeed, config);
+                    currentTotalTime + GetPhaseDuration(
+                        planetData.WeatherPhase,
+                        planetData,
+                        dayLength,
+                        worldSeed,
+                        config);
             }
 
             planetData.WeatherDataVersion = CurrentDataVersion;
+            ApplyPhasePresentation(planetData, config);
             return;
         }
 
         if (!Enum.IsDefined(typeof(WeatherPhase), planetData.WeatherPhase))
-            EnterClearPhase(planetData, currentTotalTime, worldSeed, config);
+            EnterClearPhase(planetData, currentTotalTime, dayLength, config);
         else if (planetData.WeatherPhase == WeatherPhase.Clear &&
                  planetData.NextWeatherEventTotalTime <= 0f)
-            ScheduleNextEvent(planetData, currentTotalTime, worldSeed, config);
+            ScheduleNextDailyCheck(planetData, currentTotalTime, dayLength);
         else if (planetData.WeatherPhase != WeatherPhase.Clear &&
                  planetData.WeatherPhaseEndTotalTime <= 0f)
             planetData.WeatherPhaseEndTotalTime =
-                currentTotalTime + GetPhaseDuration(planetData.WeatherPhase, planetData, worldSeed, config);
+                currentTotalTime + GetPhaseDuration(
+                    planetData.WeatherPhase,
+                    planetData,
+                    dayLength,
+                    worldSeed,
+                    config);
 
         ApplyPhasePresentation(planetData, config);
     }
@@ -95,6 +119,7 @@ public static class WeatherEventScheduler
         PlanetData planetData,
         float oldTotalTime,
         float newTotalTime,
+        float dayLength,
         int worldSeed,
         RainEventScheduleConfig config)
     {
@@ -104,7 +129,7 @@ public static class WeatherEventScheduler
             return 0;
 
         config ??= new RainEventScheduleConfig();
-        InitializeIfNeeded(planetData, oldTotalTime, worldSeed, config);
+        InitializeIfNeeded(planetData, oldTotalTime, dayLength, worldSeed, config);
 
         int transitions = 0;
         while (transitions < MaxTransitionsPerAdvance)
@@ -113,7 +138,7 @@ public static class WeatherEventScheduler
             if (boundary > newTotalTime)
                 break;
 
-            TransitionAtBoundary(planetData, boundary, worldSeed, config);
+            TransitionAtBoundary(planetData, boundary, dayLength, worldSeed, config);
             transitions++;
         }
 
@@ -131,6 +156,7 @@ public static class WeatherEventScheduler
         PlanetData planetData,
         WeatherPhase phase,
         float currentTotalTime,
+        float dayLength,
         int worldSeed,
         RainEventScheduleConfig config)
     {
@@ -144,23 +170,33 @@ public static class WeatherEventScheduler
 
         if (phase == WeatherPhase.Clear)
         {
-            EnterClearPhase(planetData, currentTotalTime, worldSeed, config);
+            EnterClearPhase(planetData, currentTotalTime, dayLength, config);
             return;
         }
 
         planetData.WeatherEventSequence = Mathf.Max(1, planetData.WeatherEventSequence + 1);
         planetData.NextWeatherEventTotalTime = 0f;
         planetData.WeatherPhaseEndTotalTime =
-            currentTotalTime + GetPhaseDuration(phase, planetData, worldSeed, config);
+            currentTotalTime + GetPhaseDuration(phase, planetData, dayLength, worldSeed, config);
         ApplyPhasePresentation(planetData, config);
     }
 
     private static void TransitionAtBoundary(
         PlanetData planetData,
         float boundary,
+        float dayLength,
         int worldSeed,
         RainEventScheduleConfig config)
     {
+        if (planetData.WeatherPhase == WeatherPhase.Clear &&
+            !ShouldStartRainEvent(planetData, worldSeed, config))
+        {
+            planetData.WeatherPhaseStartedTotalTime = boundary;
+            ScheduleNextDailyCheck(planetData, boundary, dayLength);
+            ApplyPhasePresentation(planetData, config);
+            return;
+        }
+
         WeatherPhase nextPhase = planetData.WeatherPhase switch
         {
             WeatherPhase.Clear => WeatherPhase.Forecast,
@@ -174,7 +210,7 @@ public static class WeatherEventScheduler
 
         if (nextPhase == WeatherPhase.Clear)
         {
-            EnterClearPhase(planetData, boundary, worldSeed, config);
+            EnterClearPhase(planetData, boundary, dayLength, config);
             return;
         }
 
@@ -185,35 +221,32 @@ public static class WeatherEventScheduler
         planetData.WeatherPhaseStartedTotalTime = boundary;
         planetData.NextWeatherEventTotalTime = 0f;
         planetData.WeatherPhaseEndTotalTime =
-            boundary + GetPhaseDuration(nextPhase, planetData, worldSeed, config);
+            boundary + GetPhaseDuration(nextPhase, planetData, dayLength, worldSeed, config);
         ApplyPhasePresentation(planetData, config);
     }
 
     private static void EnterClearPhase(
         PlanetData planetData,
         float currentTotalTime,
-        int worldSeed,
+        float dayLength,
         RainEventScheduleConfig config)
     {
         planetData.WeatherPhase = WeatherPhase.Clear;
         planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
         planetData.WeatherPhaseEndTotalTime = 0f;
         ApplyPhasePresentation(planetData, config);
-        ScheduleNextEvent(planetData, currentTotalTime, worldSeed, config);
+        ScheduleNextDailyCheck(planetData, currentTotalTime, dayLength);
     }
 
-    private static void ScheduleNextEvent(
+    private static void ScheduleNextDailyCheck(
         PlanetData planetData,
         float currentTotalTime,
-        int worldSeed,
-        RainEventScheduleConfig config)
+        float dayLength)
     {
-        float interval = NextRange(
-            planetData,
-            worldSeed,
-            config.MinClearInterval,
-            config.MaxClearInterval);
-        planetData.NextWeatherEventTotalTime = currentTotalTime + Mathf.Max(0.1f, interval);
+        double normalizedDayLength = Math.Max(1d, dayLength);
+        double normalizedCurrentTime = Math.Max(0d, currentTotalTime);
+        double nextDay = (Math.Floor(normalizedCurrentTime / normalizedDayLength) + 1d) * normalizedDayLength;
+        planetData.NextWeatherEventTotalTime = (float)Math.Max(normalizedCurrentTime + 0.1d, nextDay);
     }
 
 #endregion
@@ -241,6 +274,7 @@ public static class WeatherEventScheduler
     private static float GetPhaseDuration(
         WeatherPhase phase,
         PlanetData planetData,
+        float dayLength,
         int worldSeed,
         RainEventScheduleConfig config)
     {
@@ -248,13 +282,7 @@ public static class WeatherEventScheduler
         {
             WeatherPhase.Forecast => Mathf.Max(0.1f, config.ForecastDuration),
             WeatherPhase.RainStarting => Mathf.Max(0.1f, config.RainStartingDuration),
-            WeatherPhase.RainSteady => Mathf.Max(
-                0.1f,
-                NextRange(
-                    planetData,
-                    worldSeed,
-                    config.MinSteadyRainDuration,
-                    config.MaxSteadyRainDuration)),
+            WeatherPhase.RainSteady => GetSteadyRainDuration(planetData, dayLength, worldSeed, config),
             WeatherPhase.RainHeavy => Mathf.Max(0.1f, config.HeavyRainDuration),
             WeatherPhase.RainEnding => Mathf.Max(0.1f, config.RainEndingDuration),
             WeatherPhase.Recovery => Mathf.Max(0.1f, config.RecoveryDuration),
@@ -262,10 +290,42 @@ public static class WeatherEventScheduler
         };
     }
 
+    private static float GetSteadyRainDuration(
+        PlanetData planetData,
+        float dayLength,
+        int worldSeed,
+        RainEventScheduleConfig config)
+    {
+        float totalRainDuration = NextRange(
+                                      planetData,
+                                      worldSeed,
+                                      config.MinRainDurationDays,
+                                      config.MaxRainDurationDays) *
+                                  Mathf.Max(1f, dayLength);
+        float fixedRainDuration =
+            Mathf.Max(0.1f, config.RainStartingDuration) +
+            Mathf.Max(0.1f, config.HeavyRainDuration) +
+            Mathf.Max(0.1f, config.RainEndingDuration);
+        return Mathf.Max(0.1f, totalRainDuration - fixedRainDuration);
+    }
+
+    private static bool ShouldStartRainEvent(
+        PlanetData planetData,
+        int worldSeed,
+        RainEventScheduleConfig config)
+    {
+        return NextUnit(planetData, worldSeed) < Mathf.Clamp01(config.DailyRainChance);
+    }
+
     private static float NextRange(PlanetData planetData, int worldSeed, float min, float max)
     {
         float lower = Mathf.Min(min, max);
         float upper = Mathf.Max(min, max);
+        return Mathf.Lerp(lower, upper, NextUnit(planetData, worldSeed));
+    }
+
+    private static float NextUnit(PlanetData planetData, int worldSeed)
+    {
         uint value = unchecked((uint)(worldSeed == 0 ? 1 : worldSeed));
         value ^= unchecked((uint)(planetData.WeatherRandomCursor + 1) * 0x9E3779B9u);
         value ^= unchecked((uint)(planetData.WeatherEventSequence + 1) * 0x85EBCA6Bu);
@@ -275,8 +335,7 @@ public static class WeatherEventScheduler
         value *= 0x846CA68Bu;
         value ^= value >> 16;
         planetData.WeatherRandomCursor++;
-        float unit = (value & 0x00FFFFFFu) / 16777216f;
-        return Mathf.Lerp(lower, upper, unit);
+        return (value & 0x00FFFFFFu) / 16777216f;
     }
 
 #endregion

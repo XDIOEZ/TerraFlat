@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public partial class GameManager : SingletonAutoMono<GameManager>
 {
@@ -28,7 +29,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     [SerializeField]
     private GameObject SunAndMoonPrefab;
     [Header("寻路系统")]
-    public GameObject PathFindingSystem;
+    [FormerlySerializedAs("PathFindingSystem")]
+    public GameObject NavigationSystem;
     public GameObject SunAndMoonObj { get; private set; }
 
     [Header("准备好的星球数据")]
@@ -59,9 +61,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         DontDestroyOnLoad(gameObject);
         AutoSaveController.Ensure(this);
         _ = DimensionManager.Instance;
+        _ = FlatWorld.Gameplay.Events.GameEventManager.Instance;
 
         // 寻路系统不在 StartScene 激活，等玩家进入游戏世界后再启用
-        // (PathFindingSystem 将在 RunWorld 时或由 AstarGameManager 自行延迟初始化)
+        // WorldNavigationManager 在进入世界后注册当前已加载区块。
 
         Time.timeScale = 1;
 
@@ -610,7 +613,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         Player player = ItemMgr.Instance.LoadPlayer(playerName);
 
-        if (player.Data.transform.position == Vector3.zero)
+        if (RequiresInitialPlayerPlacement(player))
         {
             // 新玩家：区块地表是异步生成的，使用多帧重试避免同帧读取到空地表
             StartCoroutine(PlaceNewPlayerOnLandThenEnterWorld(player));
@@ -618,6 +621,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
 
         Event_PlayerEnterWorld?.Invoke(player);
+    }
+
+    private static bool RequiresInitialPlayerPlacement(Player player)
+    {
+        // 世界原点是合法存档坐标，不能再用 Vector3.zero 充当“新玩家”哨兵。
+        return player != null && player.IsNewProfile;
     }
 
     /// <summary>

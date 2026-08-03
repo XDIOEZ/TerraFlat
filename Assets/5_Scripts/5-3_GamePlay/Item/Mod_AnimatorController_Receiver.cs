@@ -276,7 +276,7 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
 
         if (_mover is Mover_AI moverAI)
         {
-            return moverAI.CanMove && !moverAI.HasReachedTarget;
+            return moverAI.IsActuallyMoving;
         }
 
         if (_mover != null && _mover.IsMoving)

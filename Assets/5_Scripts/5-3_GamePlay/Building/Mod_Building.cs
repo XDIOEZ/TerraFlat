@@ -29,6 +29,8 @@ public enum BuildingRole
 public class Mod_Building : Module
 {
     private const int CurrentDataVersion = 3;
+    private const string StoneWallBuildingId = "Wall_Stone";
+    private const string StoneWallTileBlockId = "TileBase_BuiltStoneWall";
     public const string SummonerPrefabSuffix = "_Summoner";
     public static int CurrentBuildingDataVersion => CurrentDataVersion;
     private const uint BlockedTilePenalty = 1000;
@@ -48,6 +50,8 @@ public class Mod_Building : Module
         public string SnapshotBase64;
         public string BuildingPrefabId;
         public string SummonerPrefabId;
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string TileBlockId;
     }
 
     public Building_Data Data = new();
@@ -228,6 +232,41 @@ public class Mod_Building : Module
         }
 
         _placementPending = false;
+        if (!string.IsNullOrWhiteSpace(Data.TileBlockId))
+        {
+            if (!TileBuildingSystem.TryPlace(
+                    placement,
+                    Data.TileBlockId,
+                    out TileBuildingCell placedCell,
+                    out reason))
+            {
+                _placementActor = null;
+                CurrentState = BuildingState.NotInstalled;
+                Save();
+                Debug.LogWarning($"[格子建筑安装] {reason}", item);
+                return;
+            }
+
+            Player actor = _placementActor;
+            string buildingId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
+            _placementActor = null;
+            CurrentState = BuildingState.NotInstalled;
+            Save();
+            if (ConsumeOneSourceItem())
+            {
+                GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
+                return;
+            }
+
+            TileBuildingSystem.TryRemove(
+                placedCell.Map,
+                placedCell.Position,
+                spawnDrop: false,
+                out _);
+            Debug.LogWarning("[格子建筑安装] 消耗建造材料失败，已回滚墙体", item);
+            return;
+        }
+
         if (!TryCreateInstalledBuilding(placement, out Item building, out reason))
         {
             _placementActor = null;
@@ -822,7 +861,11 @@ public class Mod_Building : Module
     private bool CheckWorldObstacles(Bounds bounds, out string reason)
     {
         reason = null;
-        Collider2D[] overlaps = Physics2D.OverlapBoxAll(bounds.center, bounds.size, 0f);
+        // 相邻格建筑只共享边界，不应被 Physics2D 当作重叠；轻微收缩查询框允许墙体连续铺设。
+        Vector2 overlapSize = new(
+            Mathf.Max(BoundsEpsilon, bounds.size.x - BoundsEpsilon * 2f),
+            Mathf.Max(BoundsEpsilon, bounds.size.y - BoundsEpsilon * 2f));
+        Collider2D[] overlaps = Physics2D.OverlapBoxAll(bounds.center, overlapSize, 0f);
         for (int i = 0; i < overlaps.Length; i++)
         {
             Collider2D overlap = overlaps[i];
@@ -1218,6 +1261,7 @@ public class Mod_Building : Module
             ? GetSummonerPrefabId(buildingPrefabId)
             : summonerPrefabId;
 
+        string configuredTileBlockId = Data?.TileBlockId;
         Data ??= new Building_Data();
         Data.Version = CurrentDataVersion;
         Data.Role = role;
@@ -1225,6 +1269,9 @@ public class Mod_Building : Module
         Data.SnapshotBase64 = null;
         Data.BuildingPrefabId = buildingPrefabId;
         Data.SummonerPrefabId = summonerPrefabId;
+        Data.TileBlockId = string.IsNullOrWhiteSpace(configuredTileBlockId)
+            ? GetDefaultTileBlockId(buildingPrefabId)
+            : configuredTileBlockId;
         _currentState = Data.State;
 
         BuildingData ??= new Ex_ModData();
@@ -1250,6 +1297,13 @@ public class Mod_Building : Module
         return itemPrefabId.EndsWith(SummonerPrefabSuffix, StringComparison.Ordinal)
             ? itemPrefabId.Substring(0, itemPrefabId.Length - SummonerPrefabSuffix.Length)
             : itemPrefabId;
+    }
+
+    public static string GetDefaultTileBlockId(string buildingPrefabId)
+    {
+        return string.Equals(buildingPrefabId, StoneWallBuildingId, StringComparison.Ordinal)
+            ? StoneWallTileBlockId
+            : null;
     }
 
     private static bool TryReadBuildingData(
@@ -1310,6 +1364,13 @@ public class Mod_Building : Module
 
         if (string.IsNullOrWhiteSpace(state.SummonerPrefabId))
             state.SummonerPrefabId = GetSummonerPrefabId(state.BuildingPrefabId);
+
+        // 旧石墙召唤器/存档没有 TileBlockId，迁移后新放置直接进入格子建筑系统。
+        if (string.IsNullOrWhiteSpace(state.TileBlockId) &&
+            !string.IsNullOrWhiteSpace(state.BuildingPrefabId))
+        {
+            state.TileBlockId = GetDefaultTileBlockId(state.BuildingPrefabId);
+        }
 
         state.Version = CurrentDataVersion;
     }

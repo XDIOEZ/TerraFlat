@@ -10,9 +10,16 @@ public static class CaveLayoutSampler
 
     #region 洞穴采样
 
-    public static bool IsOpenAtWorld(Vector2Int worldCell, DimensionDefinition definition, int worldSeed)
+    public static bool IsOpenAtWorld(
+        Vector2Int worldCell,
+        DimensionDefinition definition,
+        int worldSeed,
+        Vector2Int portalChunkSize = default)
     {
         Vector2 point = new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f);
+        if (IsInsidePortalNetwork(point, definition, worldSeed, portalChunkSize))
+            return true;
+
         Vector2 entrance = definition != null
             ? (Vector2)definition.DefaultSpawnPosition
             : new Vector2(0.5f, 0.5f);
@@ -54,15 +61,81 @@ public static class CaveLayoutSampler
         return false;
     }
 
-    public static bool IsWallEdge(Vector2Int worldCell, DimensionDefinition definition, int worldSeed)
+    private static bool IsInsidePortalNetwork(
+        Vector2 point,
+        DimensionDefinition definition,
+        int worldSeed,
+        Vector2Int requestedChunkSize)
     {
-        if (!IsOpenAtWorld(worldCell, definition, worldSeed))
+        float chance = Mathf.Clamp01(definition?.CaveEntranceChunkChance ?? 0f);
+        if (chance <= 0f)
             return false;
 
-        return !IsOpenAtWorld(worldCell + Vector2Int.left, definition, worldSeed) ||
-               !IsOpenAtWorld(worldCell + Vector2Int.right, definition, worldSeed) ||
-               !IsOpenAtWorld(worldCell + Vector2Int.up, definition, worldSeed) ||
-               !IsOpenAtWorld(worldCell + Vector2Int.down, definition, worldSeed);
+        Vector2 rawChunkSize = requestedChunkSize == default
+            ? ChunkMgr.GetChunkSize()
+            : requestedChunkSize;
+        Vector2Int chunkSize = new Vector2Int(
+            Mathf.Max(1, Mathf.RoundToInt(rawChunkSize.x)),
+            Mathf.Max(1, Mathf.RoundToInt(rawChunkSize.y)));
+        Vector2Int currentChunk = Chunk.GetChunkPosition(point, chunkSize);
+        float safeRadius = Mathf.Max(1f, definition?.CaveEntranceSafeRadius ?? 3f);
+        float connectionReach = RegionSize + MaximumRoomRadius + safeRadius;
+        int searchX = Mathf.Max(1, Mathf.CeilToInt(connectionReach / chunkSize.x));
+        int searchY = Mathf.Max(1, Mathf.CeilToInt(connectionReach / chunkSize.y));
+
+        for (int chunkX = -searchX; chunkX <= searchX; chunkX++)
+        {
+            for (int chunkY = -searchY; chunkY <= searchY; chunkY++)
+            {
+                Vector2Int chunkOrigin = new Vector2Int(
+                    currentChunk.x + chunkX * chunkSize.x,
+                    currentChunk.y + chunkY * chunkSize.y);
+                if (!DimensionPortalLayout.ShouldGenerateEntrance(chunkOrigin, worldSeed, chance))
+                    continue;
+
+                for (int candidateIndex = 0;
+                     candidateIndex < DimensionPortalLayout.CandidateCount;
+                     candidateIndex++)
+                {
+                    Vector2Int entranceCell = DimensionPortalLayout.GetCandidateCell(
+                        chunkOrigin,
+                        chunkSize,
+                        worldSeed,
+                        candidateIndex);
+                    Vector2 entranceCenter = new Vector2(entranceCell.x + 0.5f, entranceCell.y + 0.5f);
+                    if ((point - entranceCenter).sqrMagnitude <= safeRadius * safeRadius)
+                        return true;
+
+                    GetRegionCoordinates(entranceCenter, out int regionX, out int regionY);
+                    RoomData room = CreateRoom(regionX, regionY, worldSeed);
+                    if (IsInsideTunnel(
+                            point,
+                            entranceCenter,
+                            room.Center,
+                            Hash(worldSeed, entranceCell.x, entranceCell.y, 7919 + candidateIndex * 397)))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public static bool IsWallEdge(
+        Vector2Int worldCell,
+        DimensionDefinition definition,
+        int worldSeed,
+        Vector2Int portalChunkSize = default)
+    {
+        if (!IsOpenAtWorld(worldCell, definition, worldSeed, portalChunkSize))
+            return false;
+
+        return !IsOpenAtWorld(worldCell + Vector2Int.left, definition, worldSeed, portalChunkSize) ||
+               !IsOpenAtWorld(worldCell + Vector2Int.right, definition, worldSeed, portalChunkSize) ||
+               !IsOpenAtWorld(worldCell + Vector2Int.up, definition, worldSeed, portalChunkSize) ||
+               !IsOpenAtWorld(worldCell + Vector2Int.down, definition, worldSeed, portalChunkSize);
     }
 
     public static float GetDepositStrength(Vector2Int worldCell, int worldSeed)
@@ -195,4 +268,73 @@ public static class CaveLayoutSampler
     }
 
     #endregion
+}
+
+/// <summary>
+/// 地表矿洞入口的确定性布局。概率只决定某个 Chunk 是否拥有入口，
+/// 候选格由同一矿洞种子计算，因此地表与矿洞天然保持 1:1 坐标。
+/// </summary>
+public static class DimensionPortalLayout
+{
+    public const int CandidateCount = 4;
+
+    public static bool ShouldGenerateEntrance(Vector2Int chunkOrigin, int caveWorldSeed, float chance)
+    {
+        float normalizedChance = Mathf.Clamp01(chance);
+        if (normalizedChance <= 0f)
+            return false;
+        if (normalizedChance >= 1f)
+            return true;
+
+        uint state = Hash(caveWorldSeed, chunkOrigin.x, chunkOrigin.y, 0x45D9F3B);
+        return NextUnitFloat(ref state) < normalizedChance;
+    }
+
+    public static Vector2Int GetCandidateCell(
+        Vector2Int chunkOrigin,
+        Vector2Int chunkSize,
+        int caveWorldSeed,
+        int candidateIndex)
+    {
+        int width = Mathf.Max(1, chunkSize.x);
+        int height = Mathf.Max(1, chunkSize.y);
+        int marginX = width >= 5 ? 2 : 0;
+        int marginY = height >= 5 ? 2 : 0;
+        int availableWidth = Mathf.Max(1, width - marginX * 2);
+        int availableHeight = Mathf.Max(1, height - marginY * 2);
+        int normalizedIndex = Mathf.Max(0, candidateIndex);
+        uint state = Hash(
+            caveWorldSeed,
+            chunkOrigin.x,
+            chunkOrigin.y,
+            unchecked(0x27D4EB2D + normalizedIndex * 0x165667B1));
+        int localX = marginX + Mathf.Min(
+            availableWidth - 1,
+            Mathf.FloorToInt(NextUnitFloat(ref state) * availableWidth));
+        int localY = marginY + Mathf.Min(
+            availableHeight - 1,
+            Mathf.FloorToInt(NextUnitFloat(ref state) * availableHeight));
+        return chunkOrigin + new Vector2Int(localX, localY);
+    }
+
+    private static uint Hash(int worldSeed, int x, int y, int salt)
+    {
+        unchecked
+        {
+            uint state = 2166136261u;
+            state = (state ^ (uint)worldSeed) * 16777619u;
+            state = (state ^ (uint)x) * 16777619u;
+            state = (state ^ (uint)y) * 16777619u;
+            state = (state ^ (uint)salt) * 16777619u;
+            return state == 0u ? 0x9E3779B9u : state;
+        }
+    }
+
+    private static float NextUnitFloat(ref uint state)
+    {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        return (state & 0xFFFFFF) / (float)0x1000000;
+    }
 }

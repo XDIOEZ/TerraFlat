@@ -1,5 +1,7 @@
+using System.Reflection;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace FlatWorld.GameTest.DataSave
@@ -15,6 +17,47 @@ namespace FlatWorld.GameTest.DataSave
             GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.cs");
             GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-1_Data/ItemData/ItemData.cs");
             GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-1_Data/ModData/ModuleData.cs");
+        }
+
+        [Test]
+        [Category("DataSave.Player")]
+        public void InitialPlayerPlacementUsesProfileCreationStateInsteadOfSavedPosition()
+        {
+            MethodInfo requiresInitialPlacement = typeof(GameManager).GetMethod(
+                "RequiresInitialPlayerPlacement",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(requiresInitialPlacement, Is.Not.Null);
+
+            GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Player/Player.prefab");
+            Assert.That(playerPrefab, Is.Not.Null);
+
+            GameObject playerObject = Object.Instantiate(playerPrefab);
+            playerObject.name = "PlayerPositionPersistenceTest";
+            Player player = playerObject.GetComponent<Player>();
+            Assert.That(player, Is.Not.Null);
+            Assert.That(player.Data, Is.Not.Null);
+
+            try
+            {
+                player.Data.transform.position = Vector3.zero;
+                player.SetProfileContext(localProfile: true, profileDataWasCreated: false);
+                Assert.That(
+                    requiresInitialPlacement.Invoke(null, new object[] { player }),
+                    Is.False,
+                    "旧玩家保存在世界原点时也必须原样恢复。");
+
+                player.Data.transform.position = new Vector3(17f, -9f, 0f);
+                player.SetProfileContext(localProfile: true, profileDataWasCreated: true);
+                Assert.That(
+                    requiresInitialPlacement.Invoke(null, new object[] { player }),
+                    Is.True,
+                    "新玩家判定必须来自档案创建状态，而不是坐标值。");
+            }
+            finally
+            {
+                Object.DestroyImmediate(playerObject);
+            }
         }
 
         [Test]
