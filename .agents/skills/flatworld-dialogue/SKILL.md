@@ -87,7 +87,7 @@ ICharacterSpeechContextContributor
 - 当前冒烟覆盖 `CriticalHungerFact_ShowsConfiguredSpeech` 完整调度链、聊天/气泡 Prefab 约束，以及 Player 天气 Contributor 与降雨 JSON 的已知 Fact 校验。
 - 新增 Fact、Provider、Trigger、Presenter 或 JSON 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。核心调度链变化时同步更新此场景和冒烟用例。
 - 测试失败时优先修复生产代码，禁止删除测试、弱化断言或修改 JSON 输入来制造通过；随机台词测试必须限制为唯一候选或固定随机状态。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Dialogue.Smoke`；涉及一次性完成标记、玩家状态、UI 气泡或联机边界时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Dialogue.Smoke`；无需视觉模型或测试工具卡片。涉及一次性完成标记、玩家状态、UI 气泡或联机边界时追加对应分类；只有气泡布局或最终观感变化才做定向截图。
 - 教程链测试位于 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`，分类 `Guide.Smoke`；覆盖 Facts、JSON、一次性标记、Player Prefab、远程隔离与成功事件边界。
 - 玩家聊天测试位于 `Assets/GameTest/Dialogue/PlayerChatSmokeTests.cs`，同时归类 `Dialogue.Smoke`、`PlayerInteraction.Smoke`、`UI.Smoke`；覆盖本地/远程资格、输入锁恢复、Prefab 单例接线、气泡提交、命令处理和 Ctrl+T 冲突。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。

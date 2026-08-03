@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld Test Automation"
+  short_description: "Run FlatWorld Unity tests without visual tool calls"
+  default_prompt: "Use $flatworld-test-automation to run the relevant FlatWorld Unity test categories and summarize failures."

@@ -82,7 +82,7 @@ GameManager.Event_GameWorldEnter
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；环境测试约定目录：`Assets/GameTest/Environment/`；场景目录：`Assets/GameTest/Scenes/Environment/`；冒烟分类：`Environment.Smoke`。
 - 新增时间、昼夜、季节、天气、光照或温度行为时必须增加系统测试；修复 Bug 时先增加回归测试。时间推进到环境反馈主流程变化时同步更新环境冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；时间与天气测试必须注入确定值，不能依赖真实等待或随机天气。
-- 完成修改后检查 Unity 编译和 Console；仅当用户明确要求时运行 `Environment.Smoke`，否则在总结中列出建议测试项，避免 Unity 测试交互卡片中断聊天。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Environment.Smoke`；脚本不会产生 Unity 测试交互卡片，也无需视觉模型。涉及温度或天气细节时追加对应分类；只有光照、雨效等最终观感变化才做定向截图。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 - 维度固定光照与禁天气配置由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 

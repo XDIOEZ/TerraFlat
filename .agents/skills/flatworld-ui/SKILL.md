@@ -97,7 +97,7 @@ disable-model-invocation: false
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；UI 测试约定目录：`Assets/GameTest/UI/`；场景目录：`Assets/GameTest/Scenes/UI/`；冒烟分类：`UI.Smoke`。
 - 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；必须验证控件命名契约、组件类型、事件绑定和重复打开关闭，视觉观感仍交由人工确认。
-- 完成修改后检查 Unity 编译和 Console，再运行 `UI.Smoke`；涉及核心流程、玩家输入、存档、联机或音频时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category UI.Smoke`；无需视觉模型或测试工具卡片。涉及核心流程、玩家输入、存档、联机或音频时追加对应分类；只有布局、配色或最终视觉观感变化才做定向截图。
 - 玩家聊天 UI 行为由 `Assets/GameTest/Dialogue/PlayerChatSmokeTests.cs` 覆盖；`DialogueSmokeTests.RuntimeDialogueUIUsesInspectablePrefabs` 保护聊天框/气泡 Prefab 节点契约和“运行时不构造视觉树”约束。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 

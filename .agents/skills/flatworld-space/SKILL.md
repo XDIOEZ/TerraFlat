@@ -55,7 +55,7 @@ GameManager.Event_GameWorldEnter
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；太空系统测试约定目录：`Assets/GameTest/Space/`；场景目录：`Assets/GameTest/Scenes/Space/`；冒烟分类：`Space.Smoke`。
 - 新增太空场景、星球运行、公转自转、飞行模块或场景切换行为时必须增加系统测试；修复 Bug 时先增加回归测试。进入太空到星体运行主流程变化时同步更新太空冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；轨道和时间测试必须使用确定数据与时间步长。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Space.Smoke`；涉及核心场景切换、星体存档、玩家或地图时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Space.Smoke`；无需视觉模型或测试工具卡片。涉及核心场景切换、星体存档、玩家或地图时追加对应分类；只有太空场景最终观感变化才做定向截图。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

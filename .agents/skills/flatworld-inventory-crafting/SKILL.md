@@ -109,7 +109,7 @@ disable-model-invocation: false
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；背包制作测试约定目录：`Assets/GameTest/InventoryCrafting/`；场景目录：`Assets/GameTest/Scenes/InventoryCrafting/`；冒烟分类：`InventoryCrafting.Smoke`。
 - 新增背包、槽位、快捷栏、容器、装备、配方、食物或植物行为时必须增加系统测试；修复 Bug 时先增加回归测试。物品进入背包到使用或制作主流程变化时同步更新冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试物品必须使用隔离数据并验证数量守恒、引用清理和失败路径。
-- 完成修改后检查 Unity 编译和 Console，再运行 `InventoryCrafting.Smoke`、`InventoryCrafting.Core` 与 `InventoryCrafting.Agriculture`；涉及 Item/Module、存档、玩家输入或 UI 时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category InventoryCrafting.Smoke --category InventoryCrafting.Core --category InventoryCrafting.Agriculture`；无需视觉模型或测试工具卡片。涉及 Item/Module、存档、玩家输入或 UI 时追加对应分类；只有界面最终观感变化才做定向截图。
 - 教程使用的拾取/制作成功锚点及稳定 ID 由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 

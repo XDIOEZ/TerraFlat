@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 核心生命周期定位
 
-> 最后核对：2026-07-31。路径相对仓库根目录。
+> 最后核对：2026-08-03。路径相对仓库根目录。
 
 ## 修改前先读
 
@@ -57,6 +57,18 @@ GameStartScene
 - 主菜单、新建世界、存档选择和上下文菜单创建后必须调用 `BasePanel.PrepareForGamepadNavigation()`；根主菜单禁止用手柄取消关闭，子面板关闭时恢复父面板焦点。
 - 世界逻辑应受 `GameManager.IsInGameWorld` 或世界事件控制，避免在主菜单场景提前运行。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；先检查，确认契约被破坏后才修改下游代码。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| `GameRes` 的 Addressables 加载阶段、Prefab/Item/Module 注册或资源键 | `flatworld-item-module`、`flatworld-modding` | 本体先于 MOD、运行时字典键与 Prefab/Module 数据仍一致 | `ItemModule.Smoke`、`Modding.Smoke` |
+| `GameRes` 的 Buff、Recipe 或 Skill 字典 | 只加载实际被改注册表对应的 `flatworld-buff`、`flatworld-inventory-crafting` 或 `flatworld-combat` | ID、加载顺序和冲突规则不变 | 对应领域 Smoke |
+| 世界创建/进入/退出、存档准备、动态世界 Scene 或全局事件顺序 | `flatworld-dimension`、`flatworld-data-save` | 加载遮罩、首存档、世界事件和失败恢复顺序 | `Dimension.Smoke`、`DataSave.Smoke` |
+| 玩家创建/释放、出生点或 `SetProfileContext()` | `flatworld-player-interaction`；涉及远程副本时再加载 `flatworld-networking` | 本地档案身份、远程副本隔离和玩家事件只触发一次 | `PlayerInteraction.Smoke`；联机时追加 `Networking.Smoke` |
+| `GameManager.UI.cs` 控件键、加载面板或主菜单绑定 | `flatworld-ui` | Prefab 节点名、焦点恢复和世界输入锁 | `UI.Smoke` |
+
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
@@ -76,10 +88,10 @@ GameStartScene
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；核心流程测试约定目录：`Assets/GameTest/Core/`；场景目录：`Assets/GameTest/Scenes/Core/`；冒烟分类：`Core.Smoke`。
 - 新增启动、世界创建、继续游戏、场景切换或退出行为时必须增加系统测试；修复 Bug 时先增加回归测试。全局生命周期变化时同步更新最小启动冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用临时世界和临时存档，并在结束时清理全局对象与事件订阅。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Core.Smoke`；涉及资源、地图、玩家、存档或 UI 初始化时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Core.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有场景或界面最终观感变化才做定向截图。
 - 维度生命周期契约由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
 
-若改变生命周期事件、入口脚本、场景名、UI partial、资源加载顺序或管理器 Prefab/场景位置，必须同步更新本 Skill；跨到存档、UI、MOD 时也更新对应 Skill。近期变更最多保留 8 条，先写日期、再写影响与新约束。
+若改变生命周期事件、入口脚本、场景名、UI partial、资源加载顺序或管理器 Prefab/场景位置，必须同步更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。近期变更最多保留 8 条，先写日期、再写影响与新约束。

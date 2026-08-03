@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld MOD 与 Lua 系统定位
 
-> 最后核对：2026-07-27。
+> 最后核对：2026-08-03。
 
 ## 修改前先读
 
@@ -47,6 +47,17 @@ GameRes 完成本体 Addressables
 - MOD 注册的 Prefab/Item ID 需避免覆盖本体或其他 MOD，除非 API 明确允许。
 - 联机加入前应比较 MOD 集合哈希与存档 MOD 记录。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；Lua 脚本内部玩法逻辑只加载它实际调用的领域 Skill。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| `GameRes` 接入点、本体/MOD 加载顺序、全局注册或覆盖规则 | `flatworld-core` | 本体资源先完成、冲突可诊断、失败不留下半注册内容 | `Core.Smoke` |
+| JSON Item/Module Def、Prefab/Bundle 物品注册或内容 ID | `flatworld-item-module`、`flatworld-data-save` | ID 命名空间、ModuleData、Prefab 类型和旧存档引用一致 | `ItemModule.Smoke`、`DataSave.Smoke` |
+| JSON `recipes` 或 `buffs` DTO、校验与注册 | 只加载实际定义类型对应的 `flatworld-inventory-crafting` 或 `flatworld-buff` | 与本体共用 DTO/校验器，加载顺序满足 Item 先于 Recipe/Buff | 对应领域 Smoke |
+| ModSetHash、manifest 兼容范围、存档 MOD 记录或加入世界握手 | `flatworld-networking`、`flatworld-data-save` | 不兼容集合在进入世界前拒绝，存档记录可往返 | `Networking.Smoke`、`DataSave.Smoke` |
+
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
@@ -60,9 +71,9 @@ GameRes 完成本体 Addressables
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；MOD 测试约定目录：`Assets/GameTest/Modding/`；场景目录：`Assets/GameTest/Scenes/Modding/`；冒烟分类：`Modding.Smoke`。
 - 新增 manifest、依赖排序、内容哈希、AssetBundle、JSON、Lua 生命周期或 MOD 存档行为时必须增加系统测试；修复 Bug 时先增加回归测试。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试 MOD 必须位于隔离目录，覆盖合法、缺失依赖、循环依赖和损坏配置，并在结束时清理。
-- 完成修改后检查 Unity 编译和 Console，再运行 `Modding.Smoke`；涉及资源、Item/Module、存档或 UI 时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Modding.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
 
-改变 manifest 字段、RecipeDto、JSON `recipes`、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；影响联机兼容时同步更新 Networking Skill。
+改变 manifest 字段、RecipeDto、JSON `recipes`、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。

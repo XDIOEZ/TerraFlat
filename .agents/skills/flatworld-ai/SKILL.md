@@ -78,7 +78,7 @@ Mod_ItemDetector 提交请求
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；AI 测试约定目录：`Assets/GameTest/AI/`；场景目录：`Assets/GameTest/Scenes/AI/`；冒烟分类：`AI.Smoke`。
 - 新增 AI 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。感知、目标选择、状态切换、攻击或闲逛主流程变化时同步更新 AI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试、放宽断言或改写输入来制造通过；随机行为必须固定种子或注入确定输入。
-- 完成修改后至少检查 Unity 编译和 Console，再运行 `AI.Smoke`；涉及导航、战斗、Item/Module 或生成器时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category AI.Smoke`；无需视觉模型或测试工具卡片。涉及导航、战斗、Item/Module 或生成器时追加对应分类；只有最终视觉观感改动才做定向截图。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

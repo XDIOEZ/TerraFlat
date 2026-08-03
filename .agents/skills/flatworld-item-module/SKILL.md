@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld Item / Module 系统定位
 
-> 最后核对：2026-07-30。绝大多数玩法最终挂接到 Item 的 Module。
+> 最后核对：2026-08-03。绝大多数玩法最终挂接到 Item 的 Module。
 
 ## 修改前先读
 
@@ -66,13 +66,24 @@ ItemMaker / ItemMgr 实例化
 - 新模块不仅要创建脚本，还要检查 Module Prefab、ModuleData、Addressables 标签和目标 Item Prefab 挂载。
 - 旧 `Item/Mod_HealthPoints.cs` 已确认无代码或资源引用并删除；实体生命值不是通用 Item Module 扩展点，统一由战斗系统 `DamageReceiver` 管理。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；单个玩法模块的内部数值调整只加载该玩法 Skill。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| Item 创建/加载/保存/Despawn、对象池复用或 ModuleData | `flatworld-data-save`；涉及远端状态时再加载 `flatworld-networking` | 注册与注销各一次、池化无旧订阅、序列化往返不丢模块 | `DataSave.Smoke`；联机时追加 `Networking.Smoke` |
+| Module Tick 档位、累计 deltaTime 或调度缓存失效 | 只加载实际受影响模块所属 Skill，例如 `flatworld-buff`、`flatworld-inventory-crafting`、`flatworld-combat` | FixedInterval 语义不变，增删模块和复用后重新建缓存 | 对应玩法 Smoke |
+| 玩家注册、创建/释放或 `SetProfileContext()` | `flatworld-core`、`flatworld-player-interaction`；涉及远程副本时再加载 `flatworld-networking` | 本地档案、玩家索引与远程副本隔离 | `Core.Smoke`、`PlayerInteraction.Smoke`；联机时追加 `Networking.Smoke` |
+| 感知空间索引、移动同步或实体位置注册 | `flatworld-ai`、`flatworld-navigation` | AI 查询不读到池中/远程残留，导航位置与实体位置一致 | `AI.Smoke`、`Navigation.Smoke` |
+
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`；当前基础覆盖ItemMgr、Item、Module 与 Item/Module Prefab 入口。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；Item/Module 测试约定目录：`Assets/GameTest/ItemModule/`；场景目录：`Assets/GameTest/Scenes/ItemModule/`；冒烟分类：`ItemModule.Smoke`。
 - 新增实体创建销毁、模块加载保存、Tick 调度、对象池或运行时注册行为时必须增加系统测试；修复 Bug 时先增加回归测试。Item 完整生命周期变化时同步更新冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试结束必须验证注册表、调度器、空间索引和对象池不存在残留引用。
-- 完成修改后检查 Unity 编译和 Console，再运行 `ItemModule.Smoke`；涉及存档、背包、战斗、地图或联机序列化时同步运行对应系统测试。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category ItemModule.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

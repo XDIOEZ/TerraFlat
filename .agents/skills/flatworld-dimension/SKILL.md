@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 维度与星球世界定位
 
-> 最后核对：2026-07-31。首版只开放离线地表与地下矿洞往返。
+> 最后核对：2026-08-03。首版只开放离线地表与地下矿洞往返。
 
 ## 修改前先读
 
@@ -96,11 +96,22 @@ DimensionPortal.Interact
 - 未完成服务器权威目标地址、全体观察者迁移、Chunk 流送重建和玩家同步前，不得解除该限制。
 - 后续星球旅行应继续复用 `WorldAddress`，星球 ID 放在 `PlanetId`，星球表面维度仍为 `surface`。
 
+## 高耦合联动
+
+只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；矿洞装饰、光照数值等局部表现变化不要扩散检查。
+
+| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
+|---|---|---|---|
+| `WorldAddress`、`WorldKey`、动态 Scene 或世界切换事件顺序 | `flatworld-core`、`flatworld-data-save` | 旧地表键兼容、世界事件/加载遮罩顺序和每维度存档隔离 | `Core.Smoke`、`DataSave.Smoke` |
+| `MapGenerationContext`、MapCore、派生种子、洞穴墙地或确定性生成 | `flatworld-map`、`flatworld-navigation` | 跨 Chunk 无接缝、顶层 TileData 可走性和 GUID 空间按维度隔离 | `Map.Smoke`、`Navigation.Smoke` |
+| MineEntrance/CaveExit、入口锚点、玩家释放/重建或安全落点 | `flatworld-building`、`flatworld-player-interaction` | Summoner 门禁、稳定入口绑定和本地玩家档案上下文 | `Building.Smoke`、`PlayerInteraction.Smoke` |
+| 在线切换门禁、服务器目标地址或观察者迁移协议 | `flatworld-networking` | 未具备完整服务器权威迁移链前继续拒绝在线切换 | `Networking.Smoke` |
+
 ## 修改后验证
 
 - 基础测试：`Assets/GameTest/Dimension/DimensionSmokeTests.cs`；分类：`Dimension.Smoke`。
 - 当前覆盖世界键地表兼容/往返、默认目录与矿洞环境配置、洞穴布局确定性、开放/封闭格混合、阻挡层路由、岩壁可走性、正式入口/召唤器/出口角色、锚点 JSON 往返、矿坑配方，以及五种矿物只能掉落 `Ore_*`。
-- 按项目约束默认只检查 Unity 编译与 Console；仅当用户明确要求时运行 Test Runner。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Dimension.Smoke`；无需视觉模型或测试工具卡片。涉及 Tile Effect 时追加 `--category Dimension.TileEffects`；只有维度场景最终观感变化才做定向截图。
 - 手动 Play Mode 建议验证：地表入口交互、矿洞大量生成矿物、开采掉落、返回地表、两边位置恢复、退出重进后的 Chunk 差量。
 
 ## 近期变更
@@ -116,4 +127,4 @@ DimensionPortal.Interact
 
 ## 修改后维护本 Skill
 
-改变世界键格式、动态 Scene、切换链、目录字段、生成种子、玩家位置命名空间、矿洞资源、环境覆盖、联机限制或测试目录后必须同步更新本 Skill；同时更新 Core、Map、DataSave、Space、Environment、PlayerInteraction、Combat 或 Networking 中实际受影响的条目。
+改变世界键格式、动态 Scene、切换链、目录字段、生成种子、玩家位置命名空间、矿洞资源、环境覆盖、联机限制或测试目录后必须同步更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
