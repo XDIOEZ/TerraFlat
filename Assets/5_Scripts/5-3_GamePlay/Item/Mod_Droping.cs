@@ -25,6 +25,7 @@ public class Mod_Droping : Module
     public override void Load()
     {
         modData.ReadData(ref drop);
+        LastChunk = item != null ? item.GetComponentInParent<Chunk>() : null;
         item.itemData.Stack.CanBePickedUp = false;
     }
 
@@ -51,7 +52,12 @@ public class Mod_Droping : Module
 
         // 更新进度时间并计算插值参数
         drop.progressTime += deltaTime;
-        float t = Mathf.Clamp01(drop.progressTime / drop.time);
+        float duration = Mathf.Max(0.0001f, drop.time);
+        float t = Mathf.Clamp01(drop.progressTime / duration);
+
+        // Chunk 归属按地面轨迹计算。贝塞尔高度和 arcHeight 只是表现层高度，
+        // 不能让物品在抛起时误切换到上方相邻 Chunk。
+        Vector2 ownershipPos = Vector2.Lerp(drop.startPos, drop.endPos, t);
 
         // 使用存储在drop中的控制点进行贝塞尔插值计算位置
         Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
@@ -64,50 +70,78 @@ public class Mod_Droping : Module
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
         // 更新 Chunk 归属
-        UpdateChunkOwner(drop.item);
+        bool hasTargetChunk = UpdateChunkOwner(drop.item, ownershipPos);
 
         // 检查动画是否完成
         if (t >= 1f)
         {
+            if (!hasTargetChunk)
+            {
+                RequestTargetChunk(Chunk.GetChunkPosition(drop.endPos));
+                return;
+            }
+
+            // 确保 Chunk 内的位置索引记录的是最终落点，而不是动画起点。
+            LastChunk.AddItem(drop.item);
             drop.item.itemData.Stack.CanBePickedUp = true;
             drop = null; // 销毁droping
         }
     }
 
-/// <summary>
-/// 更新物品所属的 Chunk
-/// </summary>
-/// <param name="item">需要更新归属的物品</param>
-private void UpdateChunkOwner(Item item)
-{
-    // 获取当前物品所在的 Chunk 坐标
-    Vector2Int currentChunkPos = Chunk.GetChunkPosition(item.transform.position);
-
-    // 如果 LastChunk 为空或者需要切换 Chunk
-    if (LastChunk == null || LastChunk.MapSave.MapPosition != currentChunkPos)
+    /// <summary>
+    /// 更新物品所属的 Chunk。只有确认目标 Chunk 可用后才解除旧归属。
+    /// </summary>
+    private bool UpdateChunkOwner(Item targetItem, Vector2 ownershipPos)
     {
-        // 如果有旧的 Chunk，则从旧 Chunk 中移除物品
-        if (LastChunk != null)
+        if (targetItem == null)
+            return false;
+
+        Vector2Int currentChunkPos = Chunk.GetChunkPosition(ownershipPos);
+
+        // 新掉落物可能已被 ItemMgr 挂到 Chunk 下，但 LastChunk 尚未初始化。
+        if (LastChunk == null)
+            LastChunk = targetItem.GetComponentInParent<Chunk>();
+
+        if (IsChunkAtPosition(LastChunk, currentChunkPos))
         {
-            LastChunk.RemoveItem(item);
+            // 显式 parent 实例化不会自动写入 Chunk 的运行时字典，这里补齐一次。
+            if (targetItem.itemData != null && !LastChunk.RunTimeItems.ContainsKey(targetItem.itemData.Guid))
+                LastChunk.AddItem(targetItem);
+
+            return true;
         }
 
-        // 添加到新的 Chunk
-        if (ChunkMgr.Instance.TryGetActiveChunkByPos(currentChunkPos, out Chunk newChunk))
-        {
-            newChunk.AddItem(item);
-            LastChunk = newChunk;
-        }
-        else
-        {
-            // 如果目标 Chunk 不存在，尝试获取最近的 Chunk
+        ChunkMgr chunkMgr = ChunkMgr.Instance;
+        if (chunkMgr == null || !chunkMgr.TryGetActiveChunkByPos(currentChunkPos, out Chunk newChunk))
+            return false;
 
-                Debug.LogError("无法找到合适的 Chunk 来放置物品");
-                LastChunk = null;
-            
-        }
+        // 先确认新 Chunk，再从旧 Chunk 移除，避免加载边缘出现无归属物品。
+        LastChunk?.RemoveItem(targetItem);
+        newChunk.AddItem(targetItem);
+        LastChunk = newChunk;
+        return true;
     }
-}
+
+    private static bool IsChunkAtPosition(Chunk chunk, Vector2Int chunkPos)
+    {
+        if (chunk == null)
+            return false;
+
+        Vector2Int ownerPos = chunk.MapSave?.MapPosition
+            ?? Chunk.GetChunkPosition(chunk.transform.position);
+        return ownerPos == chunkPos;
+    }
+
+    private void RequestTargetChunk(Vector2Int chunkPos)
+    {
+        ChunkMgr chunkMgr = ChunkMgr.Instance;
+        if (chunkMgr == null)
+            return;
+
+        // ChunkMgr 内部会对相同坐标的请求去重；每帧重试可避免加载队列
+        // 因场景切换或快速移动被清空后，掉落物永久停留在等待状态。
+        chunkMgr.RequestLoadChunk_By_Position(chunkPos);
+    }
 
     public override void Save()
     {

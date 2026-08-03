@@ -44,6 +44,93 @@ namespace FlatWorld.GameTest.Map
 
         [Test]
         [Category("Map.Smoke")]
+        public void RiverHeadwaterSelectionCannotStarveOnEligibleTerrain()
+        {
+            const string prefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"Missing map prefab: {prefabPath}");
+
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                global::Map map = instance.GetComponent<global::Map>();
+                Assert.That(map, Is.Not.Null);
+
+                ChunkGenerator_River river = map.mapGenerators.OfType<ChunkGenerator_River>().SingleOrDefault();
+                Assert.That(river, Is.Not.Null);
+
+                river.spawnRiverStones = false;
+                river.sourceSpacing = 6;
+                river.sourceCellChance = 1f;
+                river.sourceMinHeight = 0f;
+                river.sourceMinPrecipitation = 0f;
+
+                map.Data = new Data_TileMap { position = Vector2Int.zero };
+                MapGenerationContext context = new MapGenerationContext(
+                    map,
+                    new PlanetData { NoiseScale = PlanetData.DefaultNoiseScale },
+                    12345,
+                    new WorldAddress("river_test", WorldAddress.SurfaceDimensionId),
+                    DimensionDefinition.CreateSurface());
+
+                river.Generate(context);
+
+                int freshWaterCells = 0;
+                Vector2Int chunkSize = Vector2Int.RoundToInt(ChunkMgr.GetChunkSize());
+                for (int x = 0; x < chunkSize.x; x++)
+                {
+                    for (int y = 0; y < chunkSize.y; y++)
+                    {
+                        if (map.GetTopTile(new Vector2Int(x, y)) is TileData_Water water &&
+                            Mathf.Approximately(water.salt, 0f))
+                        {
+                            freshWaterCells++;
+                        }
+                    }
+                }
+
+                Assert.That(freshWaterCells, Is.GreaterThan(0),
+                    "Eligible terrain produced no fresh-water cells; headwater selection starved.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void NaturalBerryBushStockIsDeterministicallyOneOrTwo()
+        {
+            const string prefabPath = "Assets/2_Prefabs/Plant/Bush.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少浆果丛 Prefab：{prefabPath}");
+
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                BerryBush berryBush = instance.GetComponentInChildren<BerryBush>(true);
+                Assert.That(berryBush, Is.Not.Null, "浆果丛 Prefab 缺少 BerryBush 组件。");
+                Assert.That(berryBush.NaturalInitialBerryCountMin, Is.EqualTo(1));
+                Assert.That(berryBush.NaturalInitialBerryCountMax, Is.EqualTo(2));
+
+                berryBush.InitializeNaturalStock(0u);
+                Assert.That(berryBush.CurrentBerryCount, Is.EqualTo(1));
+
+                berryBush.InitializeNaturalStock(1u);
+                Assert.That(berryBush.CurrentBerryCount, Is.EqualTo(2));
+
+                berryBush.InitializeNaturalStock(2u);
+                Assert.That(berryBush.CurrentBerryCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
         public void PerlinNoiseInvalidParametersStillReturnFiniteValue()
         {
             var noise = new PerlinNoise
@@ -83,6 +170,42 @@ namespace FlatWorld.GameTest.Map
 
                 Assert.That(map.IsTilemapVisualReady, Is.False);
                 Assert.That(map.IsReadyForChunkLifecycle, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(mapObject);
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void GrassLayerFindsNearestGrassAndConsumesItOnce()
+        {
+            GameObject mapObject = new GameObject("GrassForageMapTest");
+            try
+            {
+                global::Map map = mapObject.AddComponent<global::Map>();
+                mapObject.AddComponent<GrassDetailLayer>();
+                map.Data = new Data_TileMap { position = Vector2Int.zero };
+                map.Data.EnsureTileDataArray(4, 4);
+
+                Vector2Int nearGrass = new Vector2Int(1, 1);
+                Vector2Int farGrass = new Vector2Int(3, 3);
+                map.Data.AddTileData(nearGrass, new TileData_Grass { ID = "Tile_Grass" });
+                map.Data.AddTileData(farGrass, new TileData_Grass { ID = "Tile_Grass" });
+                Assert.That(map.Data.TrySetGrassStateAtWorld(nearGrass, GrassCellState.Present), Is.True);
+                Assert.That(map.Data.TrySetGrassStateAtWorld(farGrass, GrassCellState.Present), Is.True);
+
+                Assert.That(
+                    map.TryFindClosestGrass(new Vector2(0.5f, 0.5f), 8f, out Vector2Int found),
+                    Is.True);
+                Assert.That(found, Is.EqualTo(nearGrass));
+                Assert.That(map.RemoveGrassAt(found), Is.True);
+                Assert.That(map.RemoveGrassAt(found), Is.False, "同一朵草不能被重复食用。");
+                Assert.That(
+                    map.Data.TryGetGrassStateAtWorld(found, out GrassCellState state),
+                    Is.True);
+                Assert.That(state, Is.EqualTo(GrassCellState.Removed));
             }
             finally
             {

@@ -49,6 +49,13 @@ public class SettingCanvas : Module, IInstanceUI
     // ESC按键响应
     private void OnEscapePressed(InputAction.CallbackContext context)
     {
+        UIManager uiManager = UIManager.Instance;
+        if (uiManager.WasCancelHandledThisFrame() ||
+            uiManager.TryCloseTopmostCancelPanel(basePanel))
+        {
+            return;
+        }
+
         bool panelOpen = basePanel != null && basePanel.IsOpen();
         if (gameController != null && gameController.IsGameplayInputLocked && !panelOpen)
         {

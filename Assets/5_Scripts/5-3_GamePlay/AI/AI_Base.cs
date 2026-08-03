@@ -43,7 +43,7 @@ public struct AI_IdleConfig
 ///
 /// 子类只需实现差异化的状态评估、帧逻辑和配置即可。
 /// </summary>
-public abstract class AI_Base<TState> : Module where TState : struct, Enum
+public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, Enum
 {
 #region ModuleData
 	public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
@@ -52,6 +52,9 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		get => ModData;
 		set => ModData = (Ex_ModData_MemoryPackable)value;
 	}
+
+	public Item ActorItem => item;
+	public bool IsAlive => _hp != null && _hp.Hp > 0f;
 #endregion
 
 #region RuntimeState
@@ -79,6 +82,8 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	protected string _lastPlayedAnimation;
 	protected static GUIStyle _debugStateStyle;
 	protected AIStateMachine<TState> _stateMachine;
+	private TState _locomotionIdleState;
+	private bool _hasLocomotionIdleState;
 
 	// Reusable memory of the item that most recently caused damage.
 	[SerializeField, ReadOnly] private Item _recentDamageThreat;
@@ -235,7 +240,10 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 			SwitchState,
 			deltaTime,
 			CanTransitionTo);
+
+		SynchronizeLocomotionAnimation();
 	}
+
 #endregion
 
 #region StateMachine
@@ -252,6 +260,8 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		TState idleState,
 		TState moveState)
 	{
+		_locomotionIdleState = idleState;
+		_hasLocomotionIdleState = true;
 		stateMachine.Register(CreateStoppedStateNode(idleState, TickIdle));
 		stateMachine.Register(CreateMovingStateNode(moveState, TickMove));
 	}
@@ -284,6 +294,30 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 			onEnter,
 			onExit,
 			AIStateAnimationRole.Moving);
+	}
+
+	/// <summary>
+	/// 创建可复用推进节点。具体动物只提供目标、到达距离与到达回调，
+	/// 寻路提交、停车和移动动画语义由节点统一处理。
+	/// </summary>
+	protected AIAdvanceStateNode<TState> CreateAdvanceStateNode(
+		TState state,
+		Func<AIAdvanceTarget> resolveTarget,
+		Func<float> getArrivalDistance,
+		Action onArrived = null,
+		Action onEnter = null,
+		Action onExit = null)
+	{
+		return new AIAdvanceStateNode<TState>(
+			state,
+			resolveTarget,
+			() => transform.position,
+			getArrivalDistance,
+			MoveTo,
+			StopMove,
+			onArrived,
+			onEnter,
+			onExit);
 	}
 
 	/// <summary>创建每帧自动停止移动的行为节点。</summary>
@@ -436,6 +470,9 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 		}
 
 		// 安全性评估：选择更安全的位置
+		float minimumWanderDistance = Mathf.Min(
+			cfg.radius,
+			Mathf.Max(cfg.stopDistance * 2f, cfg.radius * 0.35f));
 		offset = AI_WanderUtility.PickSaferOffset(
 			transform.position,
 			offset,
@@ -443,7 +480,8 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 			cfg.avoidHighPenalty,
 			cfg.sampleCount,
 			(uint)Mathf.Max(0, cfg.dangerPenalty),
-			cfg.penaltyWeight);
+			cfg.penaltyWeight,
+			minimumWanderDistance);
 
 		_wanderTarget = new Vector3(
 			transform.position.x + offset.x,
@@ -643,6 +681,29 @@ public abstract class AI_Base<TState> : Module where TState : struct, Enum
 	}
 
 	// --- 移动控制工具方法 ---
+
+	/// <summary>按实际寻路速度同步移动动画，避免动物停住后继续播放奔跑。</summary>
+	private void SynchronizeLocomotionAnimation()
+	{
+		if (_animator == null || _mover == null || _stateMachine == null)
+		{
+			return;
+		}
+
+		if (_stateMachine.GetAnimationRole(_currentState) != AIStateAnimationRole.Moving)
+		{
+			return;
+		}
+
+		if (_mover.IsActuallyMoving)
+		{
+			PlayStateAnimation(_currentState);
+		}
+		else if (_hasLocomotionIdleState)
+		{
+			PlayStateAnimation(_locomotionIdleState);
+		}
+	}
 
 	/// <summary>停止移动</summary>
 	protected void StopMove()

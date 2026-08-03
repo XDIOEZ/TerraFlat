@@ -35,12 +35,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - CraftingRecipe
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6f11a58230ff2854f900a50cd06ba2ce
-    m_Address: Assets/004_ScriptObjects/004-2_Buff
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Buff
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 831f25d745a488a47b9743c641d12651
     m_Address: Assets/2_Prefabs
     m_ReadOnly: 0

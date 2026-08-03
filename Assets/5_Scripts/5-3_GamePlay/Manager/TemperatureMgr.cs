@@ -37,6 +37,8 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         data.HotDamageStart = Mathf.Max(data.ColdDamageStart, data.HotDamageStart);
         if (data.RuntimeChangeSpeedMultiplier <= 0f)
             data.RuntimeChangeSpeedMultiplier = 1f;
+        if (data.RuntimeCoolingSpeedMultiplier <= 0f)
+            data.RuntimeCoolingSpeedMultiplier = 1f;
     }
 
     public void ProcessTemperature(
@@ -102,6 +104,9 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         float targetTemperature =
             GetGlobalAmbientTemperature() + data.Insulation + data.RuntimeAmbientOffset;
         float changeSpeed = data.ChangeSpeed * Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier);
+        if (targetTemperature < data.CurrentTemperature)
+            changeSpeed *= Mathf.Max(0f, data.RuntimeCoolingSpeedMultiplier);
+
         return Mathf.MoveTowards(data.CurrentTemperature, targetTemperature, changeSpeed * deltaTime);
     }
 

@@ -65,11 +65,19 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private bool isOpen = false;
     private bool gamepadNavigationPrepared;
     private bool closeOnGamepadCancel;
+    private bool closeOnEscapeShortcut;
     private string preferredSelectableName;
     private GameObject previousSelectedObject;
 
     public event Action Opened;
     public event Action Closed;
+
+    /// <summary>
+    /// 是否属于可由全局取消快捷键关闭的临时面板。
+    /// 只有显式启用导航/取消契约的面板会参与，常驻 HUD 不受影响。
+    /// </summary>
+    public bool IsCancelShortcutTarget =>
+        gamepadNavigationPrepared && closeOnEscapeShortcut && isOpen && gameObject.activeInHierarchy;
 
     private void Awake()
     {
@@ -257,15 +265,25 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     public void PrepareForGamepadNavigation(
         string preferredControlName = null,
-        bool closeOnCancel = true)
+        bool closeOnCancel = true,
+        bool closeOnEscape = true)
     {
         gamepadNavigationPrepared = true;
         closeOnGamepadCancel = closeOnCancel;
+        closeOnEscapeShortcut = closeOnEscape;
         preferredSelectableName = preferredControlName;
         EnsureAutomaticNavigation();
 
         if (isOpen)
             SelectDefaultControl();
+    }
+
+    /// <summary>
+    /// 设置该面板是否参与全局 Escape 关闭路由；常驻 HUD 应显式传入 false。
+    /// </summary>
+    public void SetEscapeShortcutEnabled(bool enabled)
+    {
+        closeOnEscapeShortcut = enabled;
     }
 
     [Button]
@@ -350,6 +368,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             return;
 
         eventData.Use();
+        UIManager.Instance.NotifyCancelHandled();
         Close();
     }
 

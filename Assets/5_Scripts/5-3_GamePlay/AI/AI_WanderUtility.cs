@@ -10,13 +10,15 @@ public static class AI_WanderUtility
         bool enableAvoidDanger = true,
         int sampleCount = 6,
         uint dangerPenalty = 1200u,
-        float penaltyWeight = 1f)
+        float penaltyWeight = 1f,
+        float minimumDistance = 0f)
     {
         float safeRadius = Mathf.Max(0.01f, radius);
-        Vector2 preferred = ClampOffset(baseOffset, safeRadius);
+        float safeMinimumDistance = Mathf.Clamp(minimumDistance, 0f, safeRadius);
+        Vector2 preferred = ClampOffset(baseOffset, safeMinimumDistance, safeRadius);
         if (preferred.sqrMagnitude <= 0.0001f)
         {
-            preferred = Random.insideUnitCircle * safeRadius;
+            preferred = RandomOffset(safeMinimumDistance, safeRadius);
         }
 
         if (!enableAvoidDanger)
@@ -24,7 +26,7 @@ public static class AI_WanderUtility
             return preferred;
         }
 
-        if (AstarGameManager.Instance == null)
+        if (WorldNavigationManager.Instance == null)
         {
             return preferred;
         }
@@ -35,7 +37,7 @@ public static class AI_WanderUtility
 
         for (int i = 0; i < totalSamples; i++)
         {
-            Vector2 candidate = Random.insideUnitCircle * safeRadius;
+            Vector2 candidate = RandomOffset(safeMinimumDistance, safeRadius);
             float score = EvaluateCandidate(origin, candidate, preferred, safeRadius, dangerPenalty, penaltyWeight);
             if (score < bestScore)
             {
@@ -58,7 +60,7 @@ public static class AI_WanderUtility
         float penaltyWeight)
     {
         Vector2 worldPos = new Vector2(origin.x + candidate.x, origin.y + candidate.y);
-        bool ok = AstarGameManager.Instance.TryGetNodePenalty_GridGraphFast(worldPos, out uint penalty, out bool isWalkable);
+        bool ok = WorldNavigationManager.Instance.TryGetCell(worldPos, out uint penalty, out bool isWalkable);
 
         float score = 0f;
 
@@ -79,15 +81,28 @@ public static class AI_WanderUtility
         return score;
     }
 
-    private static Vector2 ClampOffset(Vector2 offset, float radius)
+    private static Vector2 ClampOffset(Vector2 offset, float minimumDistance, float radius)
     {
-        float maxSqr = radius * radius;
-        if (offset.sqrMagnitude <= maxSqr)
-        {
+        float magnitude = offset.magnitude;
+        if (magnitude <= 0.0001f)
+            return RandomOffset(minimumDistance, radius);
+
+        if (magnitude < minimumDistance)
+            return offset / magnitude * minimumDistance;
+
+        if (magnitude <= radius)
             return offset;
-        }
 
         return offset.normalized * radius;
+    }
+
+    private static Vector2 RandomOffset(float minimumDistance, float radius)
+    {
+        float angle = Random.value * Mathf.PI * 2f;
+        float distance = Mathf.Sqrt(Random.Range(
+            minimumDistance * minimumDistance,
+            radius * radius));
+        return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
     }
 #endregion
 }

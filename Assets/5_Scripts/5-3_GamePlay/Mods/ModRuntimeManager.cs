@@ -58,6 +58,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private readonly HashSet<GameObject> runtimeTemplates = new();
     private readonly List<PendingItemDefinition> pendingItemDefinitions = new();
     private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
+    private readonly List<PendingBuffDefinition> pendingBuffDefinitions = new();
     private readonly List<PendingPatchDocument> pendingPatchDocuments = new();
     private readonly Dictionary<string, ModDefinitionInfo> definitionInfos = new(IdComparer);
     private ModProfile activeProfile;
@@ -192,6 +193,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         reportProgress?.Invoke("解析 Def 继承与 Patch", 0.55f);
         ProcessItemDefinitions(gameRes);
         ProcessRecipeDefinitions(gameRes);
+        ProcessBuffDefinitions(gameRes);
         yield return null;
 
         for (int i = 0; i < loadedPackages.Count; i++)
@@ -391,6 +393,24 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 ValidateContentId(package.Manifest.Id, recipe.Id);
                 pendingRecipeDefinitions.Add(new PendingRecipeDefinition(package, definitionFile, recipeIndex++, recipe));
             }
+
+            int buffIndex = 0;
+            foreach (JToken token in document["buffs"] as JArray ?? new JArray())
+            {
+                BuffDefinitionDto buff;
+                try
+                {
+                    buff = BuffDefinitionFactory.DeserializeDefinition(token);
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} Buff Def 无效：{definitionFile}#{buffIndex}",
+                        exception);
+                }
+                ValidateContentId(package.Manifest.Id, buff.Id);
+                pendingBuffDefinitions.Add(new PendingBuffDefinition(package, definitionFile, buffIndex++, buff));
+            }
         }
 
         foreach (string patchFile in package.Manifest.PatchFiles ?? Enumerable.Empty<string>())
@@ -481,6 +501,31 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 itemId => gameRes.AllPrefabs.ContainsKey(itemId));
             gameRes.RegisterRecipe(recipe, false);
             Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册 JSON 配方：{recipe.Id}");
+        }
+    }
+
+    private void ProcessBuffDefinitions(GameRes gameRes)
+    {
+        foreach (PendingBuffDefinition pending in pendingBuffDefinitions)
+        {
+            BuffDefinitionDto dto = pending.Definition;
+            if (!string.IsNullOrWhiteSpace(dto.LabelKey))
+                dto.DisplayName = ModLocalizationRegistry.Translate(dto.LabelKey, dto.DisplayName);
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionKey))
+                dto.Description = ModLocalizationRegistry.Translate(dto.DescriptionKey, dto.Description);
+
+            BuffDefinition definition = BuffDefinitionFactory.Build(dto);
+            gameRes.RegisterBuff(definition);
+
+            definitionInfos[definition.Id] = new ModDefinitionInfo
+            {
+                Id = definition.Id,
+                DeclaringModId = pending.Package.Manifest.Id,
+                SourceFile = pending.File,
+                SourceIndex = pending.Index,
+                Materialized = true
+            };
+            Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册 JSON Buff：{definition.Id}");
         }
     }
 
@@ -726,11 +771,6 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 Tile_Block tileBlock = CloneAsset((Tile_Block)asset);
                 tileBlock.tileItemName = definition.Id;
                 RegisterUnique(gameRes.TileBlockDict, definition.Id, tileBlock);
-                break;
-            case "buff":
-                Buff_Data buff = CloneAsset((Buff_Data)asset);
-                buff.buff_ID = definition.Id;
-                RegisterUnique(gameRes.BuffData_Dict, definition.Id, buff);
                 break;
             case "inventory":
                 RegisterUnique(gameRes.InventoryInitDict, definition.Id, CloneAsset((Inventoryinit)asset));
@@ -1309,7 +1349,6 @@ public sealed class ModRuntimeManager : MonoBehaviour
             "recipe" => typeof(Recipe),
             "tile" => typeof(TileBase),
             "tileblock" => typeof(Tile_Block),
-            "buff" => typeof(Buff_Data),
             "inventory" => typeof(Inventoryinit),
             "skill" => typeof(BaseSkill),
             _ => throw new InvalidDataException($"不支持的 MOD 资源类型：{type}")
@@ -1497,6 +1536,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         globalStates.Clear();
         pendingItemDefinitions.Clear();
         pendingRecipeDefinitions.Clear();
+        pendingBuffDefinitions.Clear();
         pendingPatchDocuments.Clear();
         definitionInfos.Clear();
         ModLocalizationRegistry.Clear();
@@ -1571,6 +1611,22 @@ public sealed class ModRuntimeManager : MonoBehaviour
         public string File { get; }
         public int Index { get; }
         public RecipeDto Definition { get; }
+    }
+
+    private sealed class PendingBuffDefinition
+    {
+        public PendingBuffDefinition(ModPackage package, string file, int index, BuffDefinitionDto definition)
+        {
+            Package = package;
+            File = file;
+            Index = index;
+            Definition = definition;
+        }
+
+        public ModPackage Package { get; }
+        public string File { get; }
+        public int Index { get; }
+        public BuffDefinitionDto Definition { get; }
     }
 }
 

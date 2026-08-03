@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6705025086629224100}
   - component: {fileID: 596533282442804094}
   - component: {fileID: 3136577712920988239}
+  - component: {fileID: 8800000000000000001}
   m_Layer: 6
   m_Name: Mine_Stone
   m_TagString: Untagged
@@ -18,6 +19,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &8800000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4005766048098034071}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ac8bbf65a31428c99f36be4685aceb4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  obstacleColliders:
+  - {fileID: 3136577712920988239}
 --- !u!4 &6705025086629224100
 Transform:
   m_ObjectHideFlags: 0

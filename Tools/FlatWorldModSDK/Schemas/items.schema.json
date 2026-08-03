@@ -4,7 +4,8 @@
   "type": "object",
   "properties": {
     "assets": { "type": "array", "items": { "$ref": "#/$defs/asset" } },
-    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+    "buffs": { "type": "array", "items": { "$ref": "#/$defs/buff" } }
   },
   "$defs": {
     "asset": {
@@ -12,7 +13,7 @@
       "required": ["id", "type", "bundle", "asset"],
       "properties": {
         "id": { "type": "string" },
-        "type": { "enum": ["prefab", "recipe", "tile", "tileblock", "buff", "inventory", "skill"] },
+        "type": { "enum": ["prefab", "recipe", "tile", "tileblock", "inventory", "skill"] },
         "bundle": { "type": "string" },
         "asset": { "type": "string" }
       }
@@ -38,6 +39,51 @@
         "modules": { "type": "array", "items": { "type": "string" } },
         "spriteBundle": { "type": "string" },
         "spriteAsset": { "type": "string" }
+      }
+    },
+    "buff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "effects"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9._-]+:.+$" },
+        "displayName": { "type": "string" },
+        "category": { "enum": ["general", "blood_loss"] },
+        "description": { "type": "string" },
+        "labelKey": { "type": "string" },
+        "descriptionKey": { "type": "string" },
+        "durationSeconds": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "null 表示永久 Buff"
+        },
+        "tickIntervalSeconds": { "type": "number", "minimum": 0 },
+        "stackMode": { "enum": ["ignore", "extend_duration", "refresh_duration"] },
+        "drinkDurationExtensionSeconds": { "type": "number", "minimum": 0 },
+        "effects": { "type": "array", "items": { "$ref": "#/$defs/buffEffect" } }
+      }
+    },
+    "buffEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "typeId"],
+      "properties": {
+        "phase": { "enum": ["start", "tick", "stop"] },
+        "typeId": {
+          "enum": [
+            "core:move_speed_multiplier",
+            "core:food_consume_speed_multiplier",
+            "core:temperature_cooling_multiplier",
+            "core:heal",
+            "core:stamina_change",
+            "core:nutrition_change",
+            "core:true_damage",
+            "core:max_health_percent_true_damage"
+          ]
+        },
+        "targetId": { "type": "string" },
+        "requiredTag": { "type": "string" },
+        "value": { "type": "number" }
       }
     }
   }

@@ -4,7 +4,7 @@ using UnityEngine;
 using TheKiwiCoder;
 
 
-[NodeMenu("ActionNode/ÐÐ¶¯/ÐÞ¸ÄBuff")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/ä¿®æ”¹Buff")]
 public class BuffModifier : ActionNode
 {
     public enum ModifierType
@@ -13,22 +13,22 @@ public class BuffModifier : ActionNode
         Remove
     }
     public ModifierType Modifier_Type;
-    public List<Buff_Data> Modifier_Buffs;
+    public List<string> Modifier_Buffs = new();
 
     protected override void OnStart()
     {
         switch (Modifier_Type)
         {
             case ModifierType.Add:
-                foreach (Buff_Data buff in Modifier_Buffs)
+                foreach (string buffId in Modifier_Buffs)
                 {
-                    context.buffManager.AddBuff(buff);
+                    context.buffManager.AddBuff(buffId);
                 }
                 break;
             case ModifierType.Remove:
-                foreach (Buff_Data buff in Modifier_Buffs)
+                foreach (string buffId in Modifier_Buffs)
                 {
-                    context.buffManager.RemoveBuff(buff.buff_ID);
+                    context.buffManager.RemoveBuff(buffId);
                 }
                 break;
         }

@@ -13,7 +13,7 @@ public class Tile_Grass : TileBlockBehaviour
 {
 
     [Header("进入草地时附加的 Buff（预留，暂未使用）")]
-    public List<Buff_Data> BuffInfo = new List<Buff_Data>();
+    public List<string> BuffInfo = new List<string>();
 
     public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {

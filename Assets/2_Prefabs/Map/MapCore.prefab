@@ -232,22 +232,32 @@ MonoBehaviour:
         riverDepthPower: 4
         useDepthPowerForWidth: 1
         riverWidthPower: 0.2
-        hydrologyHalo: 32
-        hydrologyCellsPerFrame: 768
-        sourceSpacing: 18
-        sourceMinHeight: 0.68
-        sourceMinPrecipitation: 0.08
-        maxRiverTraceSteps: 480
-        maxLakeRadius: 12
-        maxLakeLevelRise: 0.08
-        minLakeCells: 5
-        minRiverRadius: 0.35
-        maxRiverRadius: 3
-        flowWidthScale: 0.55
+        hydrologyHalo: 96
+        hydrologyCellsPerFrame: 4096
+        sourceSpacing: 72
+        sourceCellChance: 0.72
+        sourceMinHeight: 0.62
+        sourceMinPrecipitation: 0.2
+        sourcePrecipitationPower: 1.6
+        biomeHydrologyRules:
+        - biome: {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
+          riverSourceWeight: 0.06
+          lakeWeight: 0.15
+        maxRiverTraceSteps: 180
+        minRiverTraceCells: 24
+        aestheticUphillTolerance: 0.003
+        lakeChance: 0.32
+        maxLakeRadius: 10
+        maxLakeLevelRise: 0.045
+        minLakeCells: 18
+        maxLakeCells: 220
+        minRiverRadius: 0.55
+        maxRiverRadius: 2.4
+        flowWidthScale: 0.35
         meanderStrength: 0.025
-        meanderFrequency: 0.025
+        meanderFrequency: 0.018
         lakeShoreIrregularity: 0.025
-        lakeShoreFrequency: 0.09
+        lakeShoreFrequency: 0.065
         spawnRiverStones: 1
         Prefab_Stone: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
         stoneParent: {fileID: 0}

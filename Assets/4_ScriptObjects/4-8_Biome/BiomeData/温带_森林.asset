@@ -58,6 +58,17 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         SolidityRange: {x: 0.5, y: 1}
         HightRange: {x: 0, y: 1}
+    - itemPrefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
+      itemName: Mine_Stone
+      itemCount: 1
+      SpawnChance: 0.0005
+      SpawnChanceMultiplier: 2.5
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        HumidityRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        SolidityRange: {x: 0, y: 1}
+        HightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
       itemName: Log
       itemCount: 1
@@ -76,6 +87,7 @@ MonoBehaviour:
       itemName: Stick_Wood
       itemCount: 1
       SpawnChance: 0.0009375
+      SpawnChanceMultiplier: 1.5
       environmentConditionRange:
         TemperatureRange: {x: 0.4, y: 1}
         HumidityRange: {x: 0, y: 1}

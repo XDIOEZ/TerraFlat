@@ -38,7 +38,8 @@ public sealed class DimensionDefinition
     public string MapCorePrefabId = "MapCore";
     public int SeedSalt;
     public Vector3 DefaultSpawnPosition = new Vector3(0.5f, 0.5f, 0f);
-    public Vector3 PortalOffset = new Vector3(1.5f, 0f, 0f);
+    [Tooltip("Legacy catalog compatibility only; 1:1 dimension travel no longer applies this offset.")]
+    public Vector3 PortalOffset = Vector3.zero;
     public string PortalTargetDimensionId;
     public bool UseFixedLighting;
     [Range(0f, 1f)] public float FixedLighting = 1f;
@@ -46,9 +47,12 @@ public sealed class DimensionDefinition
     public bool EnableMonsterSpawning = true;
 
     [Header("矿洞生成")]
+    [Range(0f, 1f)] public float CaveEntranceChunkChance = 0.04f;
+    [Min(1f)] public float CaveEntranceSafeRadius = 3f;
     public string CaveFloorTileId = "TileBase_Stone";
     public string CaveWallTileId = "TileBase_StoneWall";
-    [Range(0f, 0.5f)] public float CaveResourceDensity = 0.28f;
+    [Range(0f, 0.5f)] public float CaveResourceDensity = 0.14f;
+    [Range(0f, 0.1f)] public float CaveLooseOreDensity;
     [Min(0f)] public float CaveSafeRadius = 4f;
     public List<DimensionResourceRule> CaveResources = new();
 
@@ -59,6 +63,7 @@ public sealed class DimensionDefinition
             DimensionId = WorldAddress.SurfaceDimensionId,
             DisplayName = "地表",
             GenerationMode = DimensionGenerationMode.Surface,
+            PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.CaveDimensionId,
             EnableMonsterSpawning = true
         };
@@ -72,21 +77,27 @@ public sealed class DimensionDefinition
             DisplayName = "地下矿洞",
             GenerationMode = DimensionGenerationMode.Cave,
             SeedSalt = 7919,
+            PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.SurfaceDimensionId,
             UseFixedLighting = true,
             FixedLighting = 0.08f,
             SuppressWeather = true,
             EnableMonsterSpawning = false,
+            CaveEntranceChunkChance = 0.04f,
+            CaveEntranceSafeRadius = 3f,
             CaveFloorTileId = "TileBase_Stone",
             CaveWallTileId = "TileBase_StoneWall",
-            CaveResourceDensity = 0.28f,
+            CaveResourceDensity = 0.14f,
+            CaveLooseOreDensity = 0.004f,
             CaveSafeRadius = 4f,
             CaveResources = new List<DimensionResourceRule>
             {
-                new DimensionResourceRule("Mine_Iron", 0.76f, 0.032f, 1103),
-                new DimensionResourceRule("Mine_Tin", 0.71f, 0.038f, 2207),
-                new DimensionResourceRule("Mine_Copper", 0.65f, 0.044f, 3301),
-                new DimensionResourceRule("Mine_Coal", 0.58f, 0.052f, 4409),
+                // SelectResource evaluates top-to-bottom and uses the final rule as fallback.
+                // Keep rare ores first and stone last to guarantee descending abundance.
+                new DimensionResourceRule("Mine_Tin", 0.82f, 0.032f, 2207),
+                new DimensionResourceRule("Mine_Iron", 0.77f, 0.036f, 1103),
+                new DimensionResourceRule("Mine_Copper", 0.70f, 0.044f, 3301),
+                new DimensionResourceRule("Mine_Coal", 0.61f, 0.052f, 4409),
                 new DimensionResourceRule("Mine_Stone", 0f, 0.06f, 5501)
             }
         };

@@ -34,11 +34,14 @@ public class UIManager : MonoBehaviour
     public Transform panelRoot;
     public GameObject panelRootPrefab;
     public GameObject[] panelPrefabs;
+    private int lastHandledCancelFrame = -1;
     #endregion
 
     #region 初始化
     private void Awake()
     {
+        EventSystemGuard.EnsureExactlyOne();
+
         if (_instance == null)
         {
             _instance = this;
@@ -192,6 +195,58 @@ public class UIManager : MonoBehaviour
                 panel.Close();
             }
         }
+    }
+
+    /// <summary>
+    /// 同一帧内，EventSystem 和游戏输入可能同时收到 Escape；记录消费状态可避免一次按键又打开设置面板。
+    /// </summary>
+    public bool WasCancelHandledThisFrame()
+    {
+        return lastHandledCancelFrame == Time.frameCount;
+    }
+
+    public void NotifyCancelHandled()
+    {
+        lastHandledCancelFrame = Time.frameCount;
+    }
+
+    /// <summary>
+    /// 关闭最上层的临时面板。excludedPanel 通常是设置面板本身。
+    /// </summary>
+    public bool TryCloseTopmostCancelPanel(BasePanel excludedPanel = null)
+    {
+        EnsurePanelRootExists();
+        BasePanel panel = FindTopmostCancelPanel(panelRoot, excludedPanel);
+        if (panel == null)
+            return false;
+
+        NotifyCancelHandled();
+        panel.Close();
+        return true;
+    }
+
+    public static BasePanel FindTopmostCancelPanel(
+        Transform root,
+        BasePanel excludedPanel = null)
+    {
+        if (root == null)
+            return null;
+
+        for (int childIndex = root.childCount - 1; childIndex >= 0; childIndex--)
+        {
+            Transform child = root.GetChild(childIndex);
+            BasePanel[] childPanels = child.GetComponentsInChildren<BasePanel>(true);
+            for (int panelIndex = childPanels.Length - 1; panelIndex >= 0; panelIndex--)
+            {
+                BasePanel panel = childPanels[panelIndex];
+                if (panel == null || panel == excludedPanel || !panel.IsCancelShortcutTarget)
+                    continue;
+
+                return panel;
+            }
+        }
+
+        return null;
     }
     #endregion
 

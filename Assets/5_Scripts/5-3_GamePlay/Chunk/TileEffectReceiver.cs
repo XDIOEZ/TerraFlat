@@ -21,6 +21,15 @@ public class TileEffectReceiver : Module
 
     [Tooltip("当前踩着的TileData缓存，供其他模块引用")]
     public TileData currentTileData;
+
+    private Tile_Block activeTileBlock;
+    private TileData activeTileData;
+    private Map activeTileMap;
+    private Vector2Int activeGridPos;
+    private bool hasActiveTileEffects;
+    private bool isPreparedForWorldTransition;
+
+    public bool HasActiveTileEffects => hasActiveTileEffects;
     #endregion
 
     #region 静态缓存相关
@@ -41,12 +50,8 @@ public class TileEffectReceiver : Module
     #region 生命周期
     private void Start()
     {
-        lastGridPos = GetCurrentGridPos();
-        // 初始化当前TileData缓存
-        currentTileData = Cache_map?.GetTile(lastGridPos);
         enabled = true;
-
-        OnTileEnter(lastGridPos);
+        RefreshCurrentTileEffects();
     }
 
     private void OnValidate()
@@ -63,14 +68,18 @@ public class TileEffectReceiver : Module
         if (currentGridPos != lastGridPos)
         {
             // 先退出旧的Tile
-            OnTileExit(lastGridPos);
+            ExitCurrentTileEffects();
 
             // 获取新位置所在的Chunk
-            Chunk chunk;
-            ChunkMgr.Instance.GetChunkBy_ItemPosition(currentGridPos, out chunk);
+            Chunk chunk = null;
+            ChunkMgr.Instance?.GetChunkBy_ItemPosition(currentGridPos, out chunk);
 
             if (chunk == null)
-            {                // 踏上空白地图，不触发事件
+            {
+                // 踏上空白地图，不触发事件；后续地图可用时会自动重试进入。
+                Cache_map = null;
+                lastGridPos = currentGridPos;
+                currentTileData = null;
                 return;
             }
 
@@ -78,6 +87,12 @@ public class TileEffectReceiver : Module
             lastGridPos = currentGridPos;
 
             // 进入新的Tile
+            OnTileEnter(currentGridPos);
+        }
+        else if (!hasActiveTileEffects || activeTileMap != Cache_map)
+        {
+            // 地图/维度加载可能在玩家生成后才完成，即使坐标没变也要补触发进入事件。
+            ExitCurrentTileEffects();
             OnTileEnter(currentGridPos);
         }
 
@@ -95,9 +110,7 @@ public class TileEffectReceiver : Module
 
     public override void Save()
     {
-        // 确保在销毁时退出当前Tile
-        if (GameRes.Instance != null && Cache_map != null)
-            OnTileExit(lastGridPos);
+        // 保存必须保持无副作用；普通自动保存不代表玩家离开了当前地块。
         ModSaveData.WriteData(lastGridPos);
     }
 
@@ -167,25 +180,98 @@ public class TileEffectReceiver : Module
 
         if (TryGetTileBlock(gridPos, out TileData tileData, out Tile_Block tileBlock))
         {
-            // 更新当前TileData缓存
-            currentTileData = tileData;
             tileBlock.OnEnter(item, tileData, Cache_map, this);
+
+            activeTileBlock = tileBlock;
+            activeTileData = tileData;
+            activeTileMap = Cache_map;
+            activeGridPos = gridPos;
+            hasActiveTileEffects = true;
+            isPreparedForWorldTransition = false;
+            currentTileData = tileData;
             OnTileEnterEvent.Invoke(tileData);
         }
     }
 
     /// <summary>
-    /// 处理离开Tile的逻辑
+    /// 退出当前已进入的 Tile。使用进入时缓存，避免换维度后错误地去新地图查旧坐标。
     /// </summary>
-    private void OnTileExit(Vector2Int gridPos)
+    private bool ExitCurrentTileEffects()
     {
-        if (item == null) return;
-
-        if (TryGetTileBlock(gridPos, out TileData tileData, out Tile_Block tileBlock))
+        if (!hasActiveTileEffects)
         {
-            tileBlock.OnExit(item, tileData, Cache_map, this);
-            OnTileExitEvent.Invoke(tileData);
+            currentTileData = null;
+            return false;
         }
+
+        Tile_Block tileBlock = activeTileBlock;
+        TileData tileData = activeTileData;
+        Map tileMap = activeTileMap;
+
+        // 先清状态，确保事件回调或重复调用不会执行两次 OnExit。
+        activeTileBlock = null;
+        activeTileData = null;
+        activeTileMap = null;
+        hasActiveTileEffects = false;
+        currentTileData = null;
+
+        if (item == null || tileBlock == null || tileData == null)
+            return false;
+
+        tileBlock.OnExit(item, tileData, tileMap, this);
+        OnTileExitEvent.Invoke(tileData);
+        return true;
+    }
+
+    /// <summary>
+    /// 世界切换保存前显式退出当前地块，让环境 Buff 先被精确撤销并写入存档。
+    /// </summary>
+    public void PrepareForWorldTransition()
+    {
+        if (isPreparedForWorldTransition)
+            return;
+
+        isPreparedForWorldTransition = true;
+
+        // 兼容旧存档或延迟地图加载：若尚未记录进入态，尝试从当前旧地图补获一次。
+        if (!hasActiveTileEffects && item != null && Cache_map != null)
+        {
+            Vector2Int gridPos = GetCurrentGridPos();
+            if (TryGetTileBlock(gridPos, out TileData tileData, out Tile_Block tileBlock))
+            {
+                activeTileBlock = tileBlock;
+                activeTileData = tileData;
+                activeTileMap = Cache_map;
+                activeGridPos = gridPos;
+                hasActiveTileEffects = true;
+                currentTileData = tileData;
+                lastGridPos = gridPos;
+            }
+        }
+
+        ExitCurrentTileEffects();
+    }
+
+    /// <summary>
+    /// 地图加载完成或切换失败恢复后，重新绑定玩家脚下的地块效果。
+    /// </summary>
+    public bool RefreshCurrentTileEffects()
+    {
+        UpdateMapReference();
+        if (item == null || Cache_map == null)
+            return false;
+
+        Vector2Int gridPos = GetCurrentGridPos();
+        if (hasActiveTileEffects && activeTileMap == Cache_map && activeGridPos == gridPos)
+        {
+            lastGridPos = gridPos;
+            return true;
+        }
+
+        ExitCurrentTileEffects();
+        lastGridPos = gridPos;
+        OnTileEnter(gridPos);
+        return hasActiveTileEffects;
     }
 
     /// <summary>

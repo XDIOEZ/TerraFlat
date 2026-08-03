@@ -89,7 +89,6 @@ MonoBehaviour:
     - CraftingRecipe
     - TileBlock
     - TileBase
-    - Buff
     - InventoryInit
     - Skill
   m_SchemaTemplates: []

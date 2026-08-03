@@ -19,6 +19,10 @@ public class Mod_Damage : Module, IDamageSender
     [Tooltip("是否仅允许物品在手上时造成伤害")]
     public bool OnlyDealDamageWhenInHand = false;
 
+    [Header("格子建筑伤害")]
+    [SerializeField, Tooltip("明确标记该攻击模块可使用的拆墙工具类型。None 不会绕过目标自身的工具限制。")]
+    private TileDamageToolKind tileDamageToolKind = TileDamageToolKind.None;
+
     [Header("武器攻击音效")]
     [SerializeField]
     private CombatWeaponAudioClass weaponAudioClass = CombatWeaponAudioClass.Auto;
@@ -37,6 +41,7 @@ public class Mod_Damage : Module, IDamageSender
     private float lastDamageTime = 0f;
     private List<DamageReceiver> insideReceivers = new List<DamageReceiver>();
     private bool lastColliderEnabled = false;
+    private bool tileDamageAppliedThisWindow;
 
     // 实现ModuleData属性
     public override ModuleData _Data
@@ -53,6 +58,7 @@ public class Mod_Damage : Module, IDamageSender
 
     public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
     public string AttackAudioCueId => attackAudioCueId;
+    public TileDamageToolKind TileDamageToolKind => tileDamageToolKind;
     #endregion
 
     #region IDamageSender 实现
@@ -75,6 +81,7 @@ public class Mod_Damage : Module, IDamageSender
         lastDamageTime = 0f;
         insideReceivers.Clear();
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
+        tileDamageAppliedThisWindow = false;
     }
 
     public override void Save()
@@ -92,16 +99,21 @@ public class Mod_Damage : Module, IDamageSender
                 lastColliderEnabled = colliderEnabled;
                 if (colliderEnabled)
                 {
+                    BeginTileDamageWindow();
                     // 动画片段会直接切换 BoxCollider2D.m_Enabled，
                     // 因此这里也是通用的攻击动作音效入口。
                     CombatAudioRouter.PlayWeaponAttack(this);
                 }
                 else
                 {
-                    insideReceivers.Clear();
+                    EndDamageWindow();
                 }
             }
         }
+
+        // TilemapCollider2D 的整层只会产生一个 Collider 回调；主动查询当前攻击触发器，
+        // 才能在连续墙面内移动时仍准确选中当前格，并保证一次攻击窗只伤一格。
+        TryApplyDamageToTilemap();
 
         // 处理定时伤害逻辑
         if (DamageInterval >= 0 && damageCollider != null && damageCollider.enabled && CanDealDamageNow())
@@ -198,6 +210,45 @@ public class Mod_Damage : Module, IDamageSender
 
     }
 
+    private void TryApplyDamageToTilemap()
+    {
+        if (tileDamageAppliedThisWindow ||
+            damageCollider == null ||
+            !damageCollider.enabled ||
+            !CanDealDamageNow() ||
+            !IsDamageIntervalReady())
+        {
+            return;
+        }
+
+        if (!TileBuildingSystem.TryDamageNearest(this, damageCollider, out TileBuildingDamageResult result))
+            return;
+
+        tileDamageAppliedThisWindow = true;
+        if (AttackEffects != null && AttackEffects.Count > 0)
+            SpawnEffect(result.HitPoint, result.AppliedDamage);
+        OnDamageApplied?.Invoke(result.AppliedDamage);
+        lastDamageTime = Time.time;
+    }
+
+    private bool IsDamageIntervalReady()
+    {
+        return DamageInterval < 0f ||
+               DamageInterval == 0f ||
+               Time.time - lastDamageTime >= DamageInterval;
+    }
+
+    private void BeginTileDamageWindow()
+    {
+        tileDamageAppliedThisWindow = false;
+    }
+
+    private void EndDamageWindow()
+    {
+        insideReceivers.Clear();
+        tileDamageAppliedThisWindow = false;
+    }
+
     private bool CanDealDamageNow()
     {
         if (!OnlyDealDamageWhenInHand) return true;
@@ -240,12 +291,13 @@ public class Mod_Damage : Module, IDamageSender
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         if (enabled && !wasEnabled)
         {
+            BeginTileDamageWindow();
             CombatAudioRouter.PlayWeaponAttack(this);
         }
 
         if (!enabled)
         {
-            insideReceivers.Clear();
+            EndDamageWindow();
         }
     }
 

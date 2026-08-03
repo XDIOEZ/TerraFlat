@@ -282,8 +282,7 @@ public class Chunk : MonoBehaviour
                 if (item == null) continue;
 
                 // 先恢复位置信息和加入运行时字典
-                item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
-                item.transform.localScale = itemData.transform.scale;
+                RestoreItemTransform(item, itemData);
                 AddItemInternal(item);
 
                 createdItems.Add(item);
@@ -324,8 +323,7 @@ public class Chunk : MonoBehaviour
                 if (item == null) continue;
 
                 // 先恢复位置信息和加入运行时字典
-                item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
-                item.transform.localScale = itemData.transform.scale;
+                RestoreItemTransform(item, itemData);
                 AddItemInternal(item);
 
                 createdItems.Add(item);
@@ -371,9 +369,15 @@ public class Chunk : MonoBehaviour
         if (item == null) return;
 
         item.Load();
+        RestoreItemTransform(item, itemData);
+        AddItemInternal(item);
+    }
+
+    private static void RestoreItemTransform(Item item, ItemData itemData)
+    {
         item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
         item.transform.localScale = itemData.transform.scale;
-        AddItemInternal(item);
+        ChunkGenerator_Cave.ApplyGeneratedResourceTransform(DimensionManager.Instance?.ActiveDefinition, item);
     }
 
     #endregion
@@ -407,8 +411,8 @@ public class Chunk : MonoBehaviour
     public void NotifyItemsLoaded()
     {
         itemsLoaded = true;
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][Chunk] NotifyItemsLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded} Map={Map != null} Map.IsReady={Map?.IsReadyForChunkLifecycle}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][Chunk] NotifyItemsLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded} Map={Map != null} Map.IsReady={Map?.IsReadyForChunkLifecycle}");
 
         if (Map == null || Map.IsReadyForChunkLifecycle)
             mapLoaded = true;
@@ -419,8 +423,8 @@ public class Chunk : MonoBehaviour
     public void NotifyMapLoaded()
     {
         mapLoaded = true;
-        if (AstarGameManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[AStar-Debug][Chunk] NotifyMapLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded}");
+        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+            Debug.Log($"[WorldNav][Chunk] NotifyMapLoaded | chunk={name} itemsLoaded={itemsLoaded} mapLoaded={mapLoaded}");
         TryEnterReadyState();
     }
 
@@ -430,8 +434,8 @@ public class Chunk : MonoBehaviour
         {
             hasNotifiedChunkReady = true;
             LifecycleState = ChunkLifecycleState.Ready;
-            if (AstarGameManager.Instance?.EnableDebugLogs == true)
-                Debug.Log($"[AStar-Debug][Chunk] TryEnterReadyState → Ready | chunk={name} LifecycleState=Ready | Map={Map != null} Map.Data.TileLoaded={Map?.Data?.TileLoaded} Map.backTilePenaltyCoroutine={Map?.backTilePenaltyCoroutine != null}");
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+                Debug.Log($"[WorldNav][Chunk] Ready | chunk={name} Map={Map != null} TileLoaded={Map?.Data?.TileLoaded}");
             OnChunkLoaded?.Invoke(this);
         }
     }

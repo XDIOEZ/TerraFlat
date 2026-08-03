@@ -532,12 +532,12 @@ public static class RuntimeUIPrefabBuilder
         ConfigureButtonVisual(button, false, "整理");
     }
 
-    private static void AddCraftingPreviewLayers(GameObject root)
+    internal static void AddCraftingPreviewLayers(GameObject root)
     {
         ItemSlot_UI slot = root.GetComponent<ItemSlot_UI>();
         Image reference = slot != null ? slot.image : root.GetComponentInChildren<Image>(true);
         if (reference == null)
-            throw new MissingReferenceException("UI_Slot.prefab 缺少物品图标 Image。");
+            throw new MissingReferenceException($"{root.name} 缺少物品图标 Image。");
 
         Image ghost = EnsurePreviewImage(root.transform, reference, "Crafting Output Ghost");
         ghost.color = new Color(1f, 1f, 1f, 0.28f);

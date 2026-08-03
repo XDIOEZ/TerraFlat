@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: TileBase_StoneWall
   m_EditorClassIdentifier: 
-  m_Sprite: {fileID: -2062921593, guid: 89db67cb5fb16144e82e1ea4c35dc298, type: 3}
-  m_Color: {r: 0.2603773, g: 0.2603773, b: 0.2603773, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 42e0b4fd5a43d9148916d0617fa9de68, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1
     e01: 0

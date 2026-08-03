@@ -38,6 +38,9 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         [MemoryPackIgnore]
         public float RuntimeChangeSpeedMultiplier = 1f; // 运行时体温变化速度倍率
+
+        [MemoryPackIgnore]
+        public float RuntimeCoolingSpeedMultiplier = 1f; // 仅在体温下降时生效的运行时倍率
     }
 
 #endregion
@@ -143,6 +146,20 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     {
         TemperatureMgr.Instance.SetGlobalAmbientTemperature(value);
         Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
+    }
+
+    public void MultiplyRuntimeCoolingSpeed(float multiplier)
+    {
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
+        {
+            Debug.LogWarning($"[Mod_Temperature] 忽略无效降温倍率：{multiplier}", this);
+            return;
+        }
+
+        Data.RuntimeCoolingSpeedMultiplier = Mathf.Clamp(
+            Data.RuntimeCoolingSpeedMultiplier * multiplier,
+            0.01f,
+            100f);
     }
 
     public bool IsComfortable()

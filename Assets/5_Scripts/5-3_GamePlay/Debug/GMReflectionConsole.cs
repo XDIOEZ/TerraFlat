@@ -5,10 +5,8 @@ using System.Linq;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -19,7 +17,7 @@ using UnityEngine.UI;
 /// </summary>
 [DefaultExecutionOrder(-10000)]
 [DisallowMultipleComponent]
-public sealed class GMReflectionConsole : MonoBehaviour
+public sealed partial class GMReflectionConsole : MonoBehaviour
 {
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private const string AdministratorName = "管理员";
@@ -78,6 +76,9 @@ public sealed class GMReflectionConsole : MonoBehaviour
     private TextMeshProUGUI structureSelectionText;
     private TextMeshProUGUI structureHintText;
     private TextMeshProUGUI commandCountText;
+    private Button teleportShortcutButton;
+    private Button playerMoveSpeedButton;
+    private Button navigationPathButton;
     private Transform commandGrid;
     private Transform airdropItemGrid;
     private Transform aiCreatureGrid;
@@ -109,6 +110,7 @@ public sealed class GMReflectionConsole : MonoBehaviour
     private void OnDestroy()
     {
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        UnbindGameEventManager();
     }
 
     private void Update()
@@ -151,6 +153,7 @@ public sealed class GMReflectionConsole : MonoBehaviour
         if (!visible)
             return;
 
+        ClampTabbedWindowToCanvas();
         RefreshRuntimeData();
         SetStatus("GM 窗口已打开：反射命令仅作用于当前运行场景。", new Color(0.35f, 0.95f, 0.85f));
     }
@@ -305,8 +308,13 @@ public sealed class GMReflectionConsole : MonoBehaviour
         windowRoot.SetActive(false);
     }
 
-    // 规整的单栏式 GM 工具界面：只保留真实可用的功能，不模拟无效菜单与标签页。
     private void BuildWindow()
+    {
+        BuildTabbedWindow();
+    }
+
+    // 旧版单页布局暂时保留为回归参考，不再由运行时入口创建。
+    private void BuildLegacyWindow()
     {
         GameObject canvasObject = new GameObject("GM Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasObject.transform.SetParent(transform, false);
@@ -394,7 +402,7 @@ public sealed class GMReflectionConsole : MonoBehaviour
         CreateSectionTitle(windowRoot.transform, "常用操作");
         GameObject quickGrid = CreateUiObject("Quick Actions", windowRoot.transform);
         LayoutElement quickLayout = quickGrid.AddComponent<LayoutElement>();
-        quickLayout.preferredHeight = 80f;
+        quickLayout.preferredHeight = 124f;
         GridLayoutGroup quickGridLayout = quickGrid.AddComponent<GridLayoutGroup>();
         quickGridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         quickGridLayout.constraintCount = 4;
@@ -403,12 +411,18 @@ public sealed class GMReflectionConsole : MonoBehaviour
 
         CreateButton(quickGrid.transform, "设为管理员", SetAdministrator, 0f, 35f);
         CreateButton(quickGrid.transform, "传送至鼠标", () => InvokeByTypeName("Mod_PlayerTraits", "TeleportToMousePosition"), 0f, 35f);
+        teleportShortcutButton = CreateButton(quickGrid.transform, "Ctrl+T 传送：开", ToggleTeleportShortcut, 0f, 35f);
+        RefreshTeleportShortcutButton();
+        playerMoveSpeedButton = CreateButton(quickGrid.transform, "玩家移速：1x", CyclePlayerMoveSpeed, 0f, 35f);
+        RefreshPlayerMoveSpeedButton();
         CreateButton(quickGrid.transform, "创造背包", () => InvokeByTypeName("Mod_PlayerTraits", "InitializeCreativeInventoryForAdmin"), 0f, 35f);
         CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 35f);
         CreateButton(quickGrid.transform, "背包 +999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 999f), 0f, 35f);
         CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 35f);
         CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 35f);
         CreateButton(quickGrid.transform, "区块距离 +1", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"), 0f, 35f);
+        navigationPathButton = CreateButton(quickGrid.transform, "AI 路线提示：关", ToggleNavigationPathHints, 0f, 35f);
+        RefreshNavigationPathButton();
 
         CreateSectionTitle(windowRoot.transform, "遗迹传送");
         GameObject structureRow = CreateUiObject("Structure Teleport Row", windowRoot.transform);
@@ -812,8 +826,8 @@ public sealed class GMReflectionConsole : MonoBehaviour
     {
         GameObject textObject = CreateUiObject("Text", parent);
         TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
-        text.text = value;
         text.font = ResolveUiFont();
+        text.text = value;
         text.fontSize = fontSize;
         text.color = color;
         text.alignment = TextAlignmentOptions.MidlineLeft;
@@ -825,6 +839,20 @@ public sealed class GMReflectionConsole : MonoBehaviour
     {
         if (uiFont != null)
             return uiFont;
+
+        List<TMP_FontAsset> configuredFallbacks = TMP_Settings.fallbackFontAssets;
+        if (configuredFallbacks != null)
+        {
+            for (int i = 0; i < configuredFallbacks.Count; i++)
+            {
+                TMP_FontAsset candidate = configuredFallbacks[i];
+                if (candidate != null && candidate.HasCharacter(0x5F00))
+                {
+                    uiFont = candidate;
+                    return uiFont;
+                }
+            }
+        }
 
         TMP_FontAsset[] loadedFonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
         for (int i = 0; i < loadedFonts.Length; i++)
@@ -839,15 +867,6 @@ public sealed class GMReflectionConsole : MonoBehaviour
                 fontName.IndexOf("cjk", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 uiFont = candidate;
-                return uiFont;
-            }
-        }
-
-        foreach (TextMeshProUGUI sceneText in FindObjectsOfType<TextMeshProUGUI>(true))
-        {
-            if (sceneText != null && sceneText.font != null)
-            {
-                uiFont = sceneText.font;
                 return uiFont;
             }
         }
@@ -882,6 +901,8 @@ public sealed class GMReflectionConsole : MonoBehaviour
 
         TextMeshProUGUI text = CreateText(buttonObject.transform, label, 13f, new Color(0.95f, 0.91f, 0.84f));
         text.alignment = TextAlignmentOptions.Center;
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Ellipsis;
         RectTransform textRect = text.rectTransform;
         textRect.anchorMin = Vector2.zero;
         textRect.anchorMax = Vector2.one;
@@ -1013,11 +1034,7 @@ public sealed class GMReflectionConsole : MonoBehaviour
 
     private static void EnsureEventSystem()
     {
-        if (EventSystem.current != null)
-            return;
-
-        GameObject eventSystem = new GameObject("GM EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-        DontDestroyOnLoad(eventSystem);
+        EventSystemGuard.EnsureExactlyOne();
     }
 
     #endregion
@@ -1194,10 +1211,113 @@ public sealed class GMReflectionConsole : MonoBehaviour
     private void RefreshRuntimeData()
     {
         RebindLegacyF4Conflict();
+        BindGameEventManager();
+        RefreshTeleportShortcutButton();
+        RefreshPlayerMoveSpeedButton();
+        RefreshNavigationPathButton();
         RefreshItemIds();
         RefreshAiCreatureIds();
         RefreshStructureOptions();
         RebuildReflectedCommands();
+        RebuildGameEventPage();
+    }
+
+    private void CyclePlayerMoveSpeed()
+    {
+        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        if (controller == null)
+        {
+            SetStatus("未找到本地玩家，无法调整移动速度。", Color.yellow);
+            RefreshPlayerMoveSpeedButton();
+            return;
+        }
+
+        if (!controller.TryCycleAdminMoveSpeedMultiplier(out float multiplier))
+        {
+            SetStatus("未找到玩家移动模块，移动速度调整失败。", Color.yellow);
+            return;
+        }
+
+        RefreshPlayerMoveSpeedButton();
+        SetStatus(
+            $"玩家移动速度已调整为 {multiplier:0.#} 倍。",
+            multiplier > 1f ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void RefreshPlayerMoveSpeedButton()
+    {
+        if (playerMoveSpeedButton == null)
+            return;
+
+        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        float multiplier = controller != null ? controller.AdminMoveSpeedMultiplier : 1f;
+        TextMeshProUGUI label = playerMoveSpeedButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = $"玩家移速：{multiplier:0.#}x";
+
+        Image image = playerMoveSpeedButton.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = multiplier > 1f
+                ? new Color(0.10f, 0.45f, 0.31f, 1f)
+                : new Color(0.094f, 0.212f, 0.251f, 1f);
+        }
+    }
+
+    private void ToggleTeleportShortcut()
+    {
+        bool enabled = PlayerAdminController.ToggleTeleportToMouseShortcut();
+        RefreshTeleportShortcutButton();
+        SetStatus(
+            enabled ? "Ctrl+T 鼠标传送已开启。" : "Ctrl+T 鼠标传送已关闭。",
+            enabled ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void RefreshTeleportShortcutButton()
+    {
+        if (teleportShortcutButton == null)
+            return;
+
+        bool enabled = PlayerAdminController.TeleportToMouseShortcutEnabled;
+        TextMeshProUGUI label = teleportShortcutButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = enabled ? "Ctrl+T 传送：开" : "Ctrl+T 传送：关";
+
+        Image image = teleportShortcutButton.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = enabled
+                ? new Color(0.10f, 0.45f, 0.31f, 1f)
+                : new Color(0.094f, 0.212f, 0.251f, 1f);
+        }
+    }
+
+    private void ToggleNavigationPathHints()
+    {
+        bool visible = WorldNavigationPathDebugOverlay.ToggleRoutesVisible();
+        RefreshNavigationPathButton();
+        SetStatus(
+            visible ? "AI 导航路线提示已开启。" : "AI 导航路线提示已关闭。",
+            visible ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void RefreshNavigationPathButton()
+    {
+        if (navigationPathButton == null)
+            return;
+
+        bool visible = WorldNavigationPathDebugOverlay.RoutesVisible;
+        TextMeshProUGUI label = navigationPathButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = visible ? "AI 路线提示：开" : "AI 路线提示：关";
+
+        Image image = navigationPathButton.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = visible
+                ? new Color(0.10f, 0.45f, 0.31f, 1f)
+                : new Color(0.094f, 0.212f, 0.251f, 1f);
+        }
     }
 
     private void RebuildReflectedCommands()
@@ -1274,16 +1394,7 @@ public sealed class GMReflectionConsole : MonoBehaviour
 
     private void RebuildCommandButtons()
     {
-        for (int i = commandGrid.childCount - 1; i >= 0; i--)
-            Destroy(commandGrid.GetChild(i).gameObject);
-
-        for (int i = 0; i < commands.Count; i++)
-        {
-            ReflectedCommand command = commands[i];
-            CreateButton(commandGrid, $"{command.Category} · {command.Label}", () => InvokeCommand(command), 0f, 34f);
-        }
-
-        commandCountText.text = $"反射调试命令（{commands.Count}）";
+        RebuildCommandPage();
     }
 
     private static bool IsSafeAutoCommand(MethodInfo method)

@@ -28,7 +28,7 @@ public class Map_Pit : Map
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
-            Debug.LogWarning($"[AStar-Debug][Map_Pit] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
+            Debug.LogWarning($"[WorldNav][Map_Pit] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
             loadTileMapCoroutine = null;
             FinalizeTilemapLoad();
             yield break;
@@ -54,7 +54,7 @@ public class Map_Pit : Map
 
         yield return null;
         Debug.Log($"✅ 完成加载 {Data.CountNonEmptyCells()} 个Tile到Tilemap");
-        Debug.Log($"[AStar-Debug][Map_Pit] Tilemap加载完成 | {processedCount} 个Tile | AstarGameManager.Instance={AstarGameManager.Instance != null} GridGraphReady={AstarGameManager.Instance?.IsGridGraphReady} | Map={name}");
+        Debug.Log($"[WorldNav][Map_Pit] Tilemap加载完成 | {processedCount} 个Tile | Ready={WorldNavigationManager.Instance?.IsNavigationReady} | Map={name}");
         loadTileMapCoroutine = null;
         FinalizeTilemapLoad();
     }
