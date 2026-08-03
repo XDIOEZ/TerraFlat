@@ -2,7 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
+
+public enum InputBindingDeviceGroup
+{
+    KeyboardMouse,
+    Gamepad
+}
 
 public enum InputRebindStatus
 {
@@ -24,12 +29,24 @@ public sealed class InputBindingEntry
     public string DisplayName { get; }
     public InputAction Action { get; }
     public int BindingIndex { get; }
+    public InputBindingDeviceGroup DeviceGroup { get; }
+    public string BindingGroup { get; }
+    public string ExpectedControlLayout { get; }
 
-    public InputBindingEntry(string displayName, InputAction action, int bindingIndex)
+    public InputBindingEntry(
+        string displayName,
+        InputAction action,
+        int bindingIndex,
+        InputBindingDeviceGroup deviceGroup,
+        string bindingGroup,
+        string expectedControlLayout)
     {
         DisplayName = displayName;
         Action = action;
         BindingIndex = bindingIndex;
+        DeviceGroup = deviceGroup;
+        BindingGroup = bindingGroup;
+        ExpectedControlLayout = expectedControlLayout;
     }
 }
 
@@ -75,28 +92,58 @@ public sealed class InputBindingService : IDisposable
         public readonly string ActionName;
         public readonly string PartName;
         public readonly string DisplayName;
+        public readonly InputBindingDeviceGroup DeviceGroup;
+        public readonly string BindingGroup;
+        public readonly string ExpectedControlLayout;
 
-        public BindingSpec(string actionName, string partName, string displayName)
+        public BindingSpec(
+            string actionName,
+            string partName,
+            string displayName,
+            InputBindingDeviceGroup deviceGroup,
+            string bindingGroup,
+            string expectedControlLayout)
         {
             ActionName = actionName;
             PartName = partName;
             DisplayName = displayName;
+            DeviceGroup = deviceGroup;
+            BindingGroup = bindingGroup;
+            ExpectedControlLayout = expectedControlLayout;
         }
     }
 
     private static readonly BindingSpec[] EditableBindingSpecs =
     {
-        new BindingSpec("Move_Player", "up", "向上移动"),
-        new BindingSpec("Move_Player", "down", "向下移动"),
-        new BindingSpec("Move_Player", "left", "向左移动"),
-        new BindingSpec("Move_Player", "right", "向右移动"),
-        new BindingSpec("LeftClick", null, "主要操作"),
-        new BindingSpec("RightClick", null, "次要操作"),
-        new BindingSpec("E", null, "交互"),
-        new BindingSpec("Shift", null, "奔跑"),
-        new BindingSpec("Tab", null, "营养面板"),
-        new BindingSpec("CtrlMouse", "Modifier", "镜头缩放修饰键"),
-        new BindingSpec("ESC", null, "打开设置")
+        new BindingSpec("Move_Player", "up", "向上移动", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("Move_Player", "down", "向下移动", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("Move_Player", "left", "向左移动", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("Move_Player", "right", "向右移动", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("LeftClick", null, "主要操作", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("RightClick", null, "次要操作", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("E", null, "交互", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("F", null, "丢弃", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("B", null, "背包", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("P", null, "装备面板", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("H", null, "手工制作", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("Shift", null, "奔跑", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("Tab", null, "营养面板", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("CtrlMouse", "Modifier", "镜头缩放修饰键", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("ESC", null, "打开设置", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("Move_Player", null, "角色移动", InputBindingDeviceGroup.Gamepad, "Gamepad", "Vector2"),
+        new BindingSpec("GamepadCursor", null, "虚拟光标", InputBindingDeviceGroup.Gamepad, "Gamepad", "Vector2"),
+        new BindingSpec("LeftClick", null, "主要操作", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("RightClick", null, "次要操作", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("E", null, "交互", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("F", null, "丢弃", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("B", null, "背包", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("P", null, "装备面板", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("H", null, "手工制作", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("Shift", null, "奔跑", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("Tab", null, "营养面板", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("HotbarPrevious", null, "快捷栏上一格", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("HotbarNext", null, "快捷栏下一格", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("ESC", null, "打开设置", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button")
     };
 
     private readonly InputActionAsset inputAsset;
@@ -115,6 +162,18 @@ public sealed class InputBindingService : IDisposable
 
     public IReadOnlyList<InputBindingEntry> Entries => entries;
     public bool IsRebinding => activeRebind != null;
+
+    public IReadOnlyList<InputBindingEntry> GetEntries(InputBindingDeviceGroup deviceGroup)
+    {
+        List<InputBindingEntry> result = new List<InputBindingEntry>();
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (entries[i].DeviceGroup == deviceGroup)
+                result.Add(entries[i]);
+        }
+
+        return result;
+    }
 
     public InputBindingService(InputActionAsset inputAsset, IInputBindingStore store = null)
     {
@@ -198,14 +257,34 @@ public sealed class InputBindingService : IDisposable
 
         try
         {
+            string keyboardCancelPath = IsEffectivePath(entry, "<Keyboard>/escape")
+                ? "<Keyboard>/backspace"
+                : "<Keyboard>/escape";
+            string gamepadCancelPath = IsEffectivePath(entry, "<Gamepad>/buttonEast")
+                ? "<Gamepad>/start"
+                : "<Gamepad>/buttonEast";
+
             activeRebind = action.PerformInteractiveRebinding(bindingIndex)
-                .WithExpectedControlType<ButtonControl>()
-                .WithCancelingThrough("<Keyboard>/escape")
-                .WithCancelingThrough("<Gamepad>/buttonEast")
+                .WithExpectedControlType(entry.ExpectedControlLayout)
+                .WithCancelingThrough(keyboardCancelPath)
+                .WithCancelingThrough(gamepadCancelPath)
                 .WithControlsExcluding("<Mouse>/position")
                 .WithControlsExcluding("<Mouse>/delta")
                 .WithControlsExcluding("<Mouse>/scroll")
-                .OnMatchWaitForAnother(0.1f)
+                .OnMatchWaitForAnother(0.1f);
+
+            if (entry.DeviceGroup == InputBindingDeviceGroup.Gamepad)
+            {
+                activeRebind.WithControlsHavingToMatchPath("<Gamepad>");
+            }
+            else
+            {
+                activeRebind
+                    .WithControlsHavingToMatchPath("<Keyboard>")
+                    .WithControlsHavingToMatchPath("<Mouse>");
+            }
+
+            activeRebind
                 .OnCancel(_ => FinishRebind(new InputRebindResult
                 {
                     Status = InputRebindStatus.Canceled
@@ -259,6 +338,22 @@ public sealed class InputBindingService : IDisposable
         BindingsChanged?.Invoke();
     }
 
+    public void ResetToDefaults(InputBindingDeviceGroup deviceGroup)
+    {
+        ThrowIfDisposed();
+        CancelActiveRebind();
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            InputBindingEntry entry = entries[i];
+            if (entry.DeviceGroup == deviceGroup)
+                entry.Action.RemoveBindingOverride(entry.BindingIndex);
+        }
+
+        SaveOverrides();
+        BindingsChanged?.Invoke();
+    }
+
     public void Dispose()
     {
         if (disposed)
@@ -309,7 +404,7 @@ public sealed class InputBindingService : IDisposable
                 continue;
             }
 
-            int bindingIndex = FindBindingIndex(action, spec.PartName);
+            int bindingIndex = FindBindingIndex(action, spec.PartName, spec.BindingGroup);
             if (bindingIndex < 0)
             {
                 Debug.LogWarning(
@@ -317,15 +412,27 @@ public sealed class InputBindingService : IDisposable
                 continue;
             }
 
-            entries.Add(new InputBindingEntry(spec.DisplayName, action, bindingIndex));
+            entries.Add(new InputBindingEntry(
+                spec.DisplayName,
+                action,
+                bindingIndex,
+                spec.DeviceGroup,
+                spec.BindingGroup,
+                spec.ExpectedControlLayout));
         }
     }
 
-    private static int FindBindingIndex(InputAction action, string partName)
+    private static int FindBindingIndex(
+        InputAction action,
+        string partName,
+        string bindingGroup)
     {
         for (int i = 0; i < action.bindings.Count; i++)
         {
             InputBinding binding = action.bindings[i];
+            if (!BelongsToGroup(binding, bindingGroup))
+                continue;
+
             if (!string.IsNullOrEmpty(partName))
             {
                 if (binding.isPartOfComposite &&
@@ -340,13 +447,7 @@ public sealed class InputBindingService : IDisposable
             if (binding.isComposite || binding.isPartOfComposite)
                 continue;
 
-            string path = binding.path;
-            if (path != null &&
-                (path.StartsWith("<Keyboard>", StringComparison.OrdinalIgnoreCase) ||
-                 path.StartsWith("<Mouse>", StringComparison.OrdinalIgnoreCase)))
-            {
-                return i;
-            }
+            return i;
         }
 
         return -1;
@@ -358,16 +459,42 @@ public sealed class InputBindingService : IDisposable
         if (string.IsNullOrWhiteSpace(changedPath))
             return null;
 
-        for (int i = 0; i < entries.Count; i++)
+        foreach (InputAction action in actionMap.actions)
         {
-            InputBindingEntry candidate = entries[i];
-            if (ReferenceEquals(candidate, changedEntry))
-                continue;
+            for (int bindingIndex = 0; bindingIndex < action.bindings.Count; bindingIndex++)
+            {
+                if (ReferenceEquals(action, changedEntry.Action) &&
+                    bindingIndex == changedEntry.BindingIndex)
+                {
+                    continue;
+                }
 
-            string candidatePath =
-                candidate.Action.bindings[candidate.BindingIndex].effectivePath;
-            if (string.Equals(changedPath, candidatePath, StringComparison.OrdinalIgnoreCase))
-                return candidate;
+                InputBinding binding = action.bindings[bindingIndex];
+                if (!BelongsToGroup(binding, changedEntry.BindingGroup) ||
+                    !string.Equals(changedPath, binding.effectivePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    InputBindingEntry candidate = entries[i];
+                    if (candidate.DeviceGroup == changedEntry.DeviceGroup &&
+                        ReferenceEquals(candidate.Action, action) &&
+                        candidate.BindingIndex == bindingIndex)
+                    {
+                        return candidate;
+                    }
+                }
+
+                return new InputBindingEntry(
+                    action.name,
+                    action,
+                    bindingIndex,
+                    changedEntry.DeviceGroup,
+                    changedEntry.BindingGroup,
+                    action.expectedControlType);
+            }
         }
 
         return null;
@@ -380,6 +507,29 @@ public sealed class InputBindingService : IDisposable
                entry.Action != null &&
                entry.BindingIndex >= 0 &&
                entry.BindingIndex < entry.Action.bindings.Count;
+    }
+
+    private static bool IsEffectivePath(InputBindingEntry entry, string path)
+    {
+        return string.Equals(
+            entry.Action.bindings[entry.BindingIndex].effectivePath,
+            path,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool BelongsToGroup(InputBinding binding, string bindingGroup)
+    {
+        if (string.IsNullOrEmpty(binding.groups) || string.IsNullOrEmpty(bindingGroup))
+            return false;
+
+        string[] groups = binding.groups.Split(InputBinding.Separator);
+        for (int i = 0; i < groups.Length; i++)
+        {
+            if (string.Equals(groups[i], bindingGroup, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static void RestoreOverride(

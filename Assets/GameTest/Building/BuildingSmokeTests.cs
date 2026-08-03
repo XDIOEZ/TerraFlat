@@ -13,6 +13,8 @@ namespace FlatWorld.GameTest.Building
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Building/Mod_Building.cs", "Mod_Building");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Building/BuildingOccupancyRegistry.cs", "BuildingOccupancyRegistry");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/BuildingShadow.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/MineEntrance.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Config/StructureCatalog_Default.asset");
         }
     }

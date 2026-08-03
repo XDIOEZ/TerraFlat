@@ -11,6 +11,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
 
     private sealed class BindingRow
     {
+        public GameObject Root;
         public InputBindingEntry Entry;
         public TextMeshProUGUI BindingText;
         public Button RebindButton;
@@ -23,7 +24,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
     private Button entryButton;
     private BasePanel bindingPanel;
     private RectTransform dialogRect;
+    private Transform content;
+    private GameObject rowPrefab;
     private TextMeshProUGUI statusText;
+    private Button keyboardMouseTabButton;
+    private Button gamepadTabButton;
+    private InputBindingDeviceGroup currentDeviceGroup = InputBindingDeviceGroup.KeyboardMouse;
     private bool panelSuspendedInput;
     private int suppressEscapeCloseFrame = -1;
 
@@ -119,8 +125,8 @@ private void Open()
         }
 
         UpdateDialogSize();
-        RefreshRows();
-        SetStatus("选择一项后按下新按键；Esc 或手柄 B 取消录入。设置会自动保存。");
+        RebuildRows();
+        SetStatus(GetDevicePageHint());
         bindingPanel.Open();
         bindingPanel.transform.SetAsLastSibling();
         Canvas.ForceUpdateCanvases();
@@ -142,7 +148,7 @@ private void EnsurePanel()
             return;
 
         GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingSettings);
-        GameObject rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
+        rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
         if (prefab == null || rowPrefab == null)
         {
             Debug.LogError(
@@ -155,22 +161,27 @@ private void EnsurePanel()
             prefab,
             RuntimeUIPrefabKeys.InputBindingSettings);
         dialogRect = FindTransform(bindingPanel.transform, "按键绑定面板") as RectTransform;
-        Transform content = FindTransform(bindingPanel.transform, "Content");
+        content = FindTransform(bindingPanel.transform, "Content");
         statusText = bindingPanel.GetText("状态文本");
+        keyboardMouseTabButton = bindingPanel.GetButton("键鼠分页按钮");
+        gamepadTabButton = bindingPanel.GetButton("手柄分页按钮");
 
         bindingPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
         bindingPanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefaults);
         bindingPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
+        keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
+        gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
 
-        if (dialogRect == null || content == null || statusText == null)
+        if (dialogRect == null || content == null || statusText == null ||
+            keyboardMouseTabButton == null || gamepadTabButton == null)
         {
             Debug.LogError("[InputBindingPanelLauncher] 按键绑定 Prefab 控件命名契约不完整。", bindingPanel);
             bindingPanel.Close();
             return;
         }
 
-        CreateRows(content, rowPrefab);
-        bindingPanel.PrepareForGamepadNavigation("修改按钮", false);
+        SetDeviceGroup(InputBindingDeviceGroup.KeyboardMouse);
+        bindingPanel.PrepareForGamepadNavigation("键鼠分页按钮", false);
         UpdateDialogSize();
         bindingPanel.Close();
     }
@@ -181,15 +192,29 @@ private void EnsurePanel()
 
 
 
-private void CreateRows(Transform content, GameObject rowPrefab)
+    private void RebuildRows()
     {
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (rows[i]?.Root == null)
+                continue;
+
+            rows[i].Root.SetActive(false);
+            Destroy(rows[i].Root);
+        }
+
         rows.Clear();
-        IReadOnlyList<InputBindingEntry> entries = bindingService.Entries;
+        if (bindingService == null || content == null || rowPrefab == null)
+            return;
+
+        IReadOnlyList<InputBindingEntry> entries =
+            bindingService.GetEntries(currentDeviceGroup);
         for (int i = 0; i < entries.Count; i++)
         {
             InputBindingEntry entry = entries[i];
             GameObject rowObject = Instantiate(rowPrefab, content, false);
-            rowObject.name = $"绑定项_{entry.Action?.name ?? i.ToString()}";
+            rowObject.name =
+                $"绑定项_{currentDeviceGroup}_{entry.Action?.name ?? i.ToString()}_{entry.BindingIndex}";
             rowObject.SetActive(true);
 
             TextMeshProUGUI label = FindText(rowObject.transform, "操作名称");
@@ -207,12 +232,64 @@ private void CreateRows(Transform content, GameObject rowPrefab)
 
             BindingRow row = new BindingRow
             {
+                Root = rowObject,
                 Entry = entry,
                 BindingText = bindingText,
                 RebindButton = rebindButton
             };
             rebindButton.onClick.AddListener(() => BeginRebind(row));
             rows.Add(row);
+        }
+
+        UpdateTabVisuals();
+
+        if (bindingPanel != null && bindingPanel.IsVisible())
+            bindingPanel.PrepareForGamepadNavigation("修改按钮", false);
+    }
+
+    private void ShowKeyboardMouseBindings()
+    {
+        SetDeviceGroup(InputBindingDeviceGroup.KeyboardMouse);
+    }
+
+    private void ShowGamepadBindings()
+    {
+        SetDeviceGroup(InputBindingDeviceGroup.Gamepad);
+    }
+
+    private void SetDeviceGroup(InputBindingDeviceGroup deviceGroup)
+    {
+        if (bindingService != null && bindingService.IsRebinding)
+            return;
+
+        currentDeviceGroup = deviceGroup;
+        RebuildRows();
+        SetStatus(GetDevicePageHint());
+
+        if (dialogRect != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(dialogRect);
+        }
+    }
+
+    private void UpdateTabVisuals()
+    {
+        SetTabVisual(
+            keyboardMouseTabButton,
+            currentDeviceGroup == InputBindingDeviceGroup.KeyboardMouse);
+        SetTabVisual(
+            gamepadTabButton,
+            currentDeviceGroup == InputBindingDeviceGroup.Gamepad);
+    }
+
+    private static void SetTabVisual(Button button, bool selected)
+    {
+        if (button?.targetGraphic != null)
+        {
+            button.targetGraphic.color = selected
+                ? FlatWorldUITheme.Accent
+                : FlatWorldUITheme.Surface;
         }
     }
 
@@ -227,7 +304,8 @@ private void CreateRows(Transform content, GameObject rowPrefab)
 
         SetRowsInteractable(false);
         row.BindingText.text = "等待输入…";
-        SetStatus($"正在修改“{row.Entry.DisplayName}”；按 Esc 取消。");
+        SetStatus(
+            $"正在修改“{row.Entry.DisplayName}”；Esc / 手柄 B 取消，绑定该键时改用 Backspace / Start。");
         bindingService.BeginInteractiveRebind(row.Entry, result =>
         {
             SetRowsInteractable(true);
@@ -261,9 +339,9 @@ private void CreateRows(Transform content, GameObject rowPrefab)
         if (bindingService == null)
             return;
 
-        bindingService.ResetToDefaults();
-        RefreshRows();
-        SetStatus("已恢复默认按键。");
+        bindingService.ResetToDefaults(currentDeviceGroup);
+        RebuildRows();
+        SetStatus($"{GetDevicePageName()}绑定已恢复默认值。");
     }
 
     private void RefreshRows()
@@ -289,6 +367,11 @@ private void CreateRows(Transform content, GameObject rowPrefab)
             if (rows[i]?.RebindButton != null)
                 rows[i].RebindButton.interactable = interactable;
         }
+
+        if (keyboardMouseTabButton != null)
+            keyboardMouseTabButton.interactable = interactable;
+        if (gamepadTabButton != null)
+            gamepadTabButton.interactable = interactable;
     }
 
     private void SetStatus(string message, bool isError = false)
@@ -300,6 +383,18 @@ private void CreateRows(Transform content, GameObject rowPrefab)
         statusText.color = isError
             ? new Color(1f, 0.48f, 0.35f)
             : new Color(0.69f, 0.78f, 0.79f);
+    }
+
+    private string GetDevicePageHint()
+    {
+        return $"当前：{GetDevicePageName()}。选择一项后输入新控制；冲突会被拦截并自动保存。";
+    }
+
+    private string GetDevicePageName()
+    {
+        return currentDeviceGroup == InputBindingDeviceGroup.Gamepad
+            ? "手柄"
+            : "键鼠";
     }
 
     private void UpdateDialogSize()
@@ -361,6 +456,10 @@ private void OnDestroy()
 
         if (entryButton != null)
             entryButton.onClick.RemoveListener(Open);
+        if (keyboardMouseTabButton != null)
+            keyboardMouseTabButton.onClick.RemoveListener(ShowKeyboardMouseBindings);
+        if (gamepadTabButton != null)
+            gamepadTabButton.onClick.RemoveListener(ShowGamepadBindings);
         ReleaseInputLock();
         if (bindingPanel != null)
             Destroy(bindingPanel.gameObject);

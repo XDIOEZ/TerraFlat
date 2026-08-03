@@ -111,7 +111,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
                 }
             }
 
-            Assert.That(recipeCount, Is.EqualTo(38));
+            Assert.That(recipeCount, Is.EqualTo(39));
             Assert.That(durabilityActions, Is.EqualTo(3));
         }
     }

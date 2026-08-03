@@ -147,6 +147,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         NormalizeStatRanges();
+        hitSlowMultiplier = Mathf.Clamp(hitSlowMultiplier, 0.05f, 1f);
+        hitSlowDuration = Mathf.Max(0f, hitSlowDuration);
         healthBarWorldScale = Mathf.Max(0.01f, healthBarWorldScale);
         _Data.ID = ModText.Hp;
     }
@@ -156,6 +158,28 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     /// 上一次受到伤害的时间（秒）
     /// </summary>
     private float lastDamageTime = -999f;
+
+    #region 受击减速参数
+
+    [Header("受击减速设置")]
+    [SerializeField]
+    private bool enableHitSlowdown = true;
+
+    [SerializeField, Range(0.05f, 1f)]
+    private float hitSlowMultiplier = 0.5f;
+
+    [SerializeField, Min(0f)]
+    private float hitSlowDuration = 0.35f;
+
+    private GameValue_float _slowedMoveSpeed;
+    private float _appliedHitSlowMultiplier = 1f;
+    private float _hitSlowRemainingDuration;
+
+    public bool HitSlowdownEnabled => enableHitSlowdown;
+    public float HitSlowMultiplier => hitSlowMultiplier;
+    public float HitSlowDuration => hitSlowDuration;
+
+    #endregion
 
     #endregion
 
@@ -229,6 +253,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public override void Load()
     {
+        ClearHitSlowdown();
         modData.ReadData(ref Data);
         UpgradeBodyPartData();
         NormalizeStatRanges();
@@ -352,6 +377,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public override void ModUpdate(float deltaTime)
     {
+        UpdateHitSlowdown(deltaTime);
+
         // 抖动只属于受击视觉，血条继续跟随稳定的物品根节点。
         if (PanleInstance != null && !_isVisualShaking)
             UpdateWorldHealthBarLayout();
@@ -465,6 +492,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     private void OnDestroy()
     {
+        ClearHitSlowdown();
+
         if (_handStateEventOwner != null)
             _handStateEventOwner.OnInHandChanged -= HandleInHandChanged;
     }
@@ -579,6 +608,9 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             }
 
             damageInfo = CreateDamageInfo(damageSender, appliedDamage, hpBefore, Hp, bodyPartHits);
+            if (Hp > 0f)
+                ApplyHitSlowdown();
+
             DispatchDamageReceived(damageInfo);
             OnDamaged_ShowUiAndScheduleHide();
 
@@ -613,6 +645,68 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
         return appliedDamage; // 返回实际伤害
     }
+
+    #region 受击减速
+
+    public void ApplyHitSlowdown()
+    {
+        if (!enableHitSlowdown || hitSlowDuration <= 0f || hitSlowMultiplier >= 1f)
+            return;
+
+        Mover mover = ResolveMover();
+        GameValue_float moveSpeed = mover?.Speed;
+        if (moveSpeed == null)
+            return;
+
+        if (_slowedMoveSpeed == moveSpeed)
+        {
+            _hitSlowRemainingDuration = hitSlowDuration;
+            return;
+        }
+
+        ClearHitSlowdown();
+
+        _appliedHitSlowMultiplier = Mathf.Clamp(hitSlowMultiplier, 0.05f, 1f);
+        _slowedMoveSpeed = moveSpeed;
+        _slowedMoveSpeed.MultiplicativeModifier *= _appliedHitSlowMultiplier;
+        _hitSlowRemainingDuration = hitSlowDuration;
+    }
+
+    private void UpdateHitSlowdown(float deltaTime)
+    {
+        if (_slowedMoveSpeed == null || deltaTime <= 0f)
+            return;
+
+        _hitSlowRemainingDuration -= deltaTime;
+        if (_hitSlowRemainingDuration <= 0f)
+            ClearHitSlowdown();
+    }
+
+    private void ClearHitSlowdown()
+    {
+        if (_slowedMoveSpeed != null && _appliedHitSlowMultiplier > 0f)
+            _slowedMoveSpeed.MultiplicativeModifier /= _appliedHitSlowMultiplier;
+
+        _slowedMoveSpeed = null;
+        _appliedHitSlowMultiplier = 1f;
+        _hitSlowRemainingDuration = 0f;
+    }
+
+    private Mover ResolveMover()
+    {
+        if (item?.itemMods != null)
+        {
+            Mover mover = item.itemMods.GetMod_ByID(ModText.Mover) as Mover;
+            if (mover != null)
+                return mover;
+        }
+
+        return item != null
+            ? item.GetComponentInChildren<Mover>(true)
+            : null;
+    }
+
+    #endregion
 
 
     public virtual float ForceHurt(float damage)
