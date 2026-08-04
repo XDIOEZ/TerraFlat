@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "environment",
+      "path": "environment.json",
+      "enabled": true
+    },
+    {
+      "id": "combat",
+      "path": "combat.json",
+      "enabled": true
+    },
+    {
+      "id": "survival",
+      "path": "survival.json",
+      "enabled": true
+    },
+    {
+      "id": "movement",
+      "path": "movement.json",
+      "enabled": true
+    }
+  ]
+}

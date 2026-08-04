@@ -119,34 +119,40 @@ public class GameRes : SingletonAutoMono<GameRes>
             "加载预制体"));
             
         loadingText = "加载JSON配方";
-        try
+        int loadedRecipeCount = 0;
+        System.Exception recipeLoadError = null;
+        yield return StartCoroutine(RecipeCatalogLoader.LoadBuiltInAsync(
+            this,
+            count => loadedRecipeCount = count,
+            exception => recipeLoadError = exception));
+        if (recipeLoadError != null)
         {
-            loadedAssetsCount += RecipeCatalogLoader.LoadBuiltIn(this);
-            loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
-        }
-        catch (System.Exception exception)
-        {
-            loadingText = $"配方加载失败：{exception.Message}";
+            loadingText = $"配方加载失败：{recipeLoadError.Message}";
             loadingProgress = 1f;
             Debug.LogError(loadingText);
-            Debug.LogException(exception);
+            Debug.LogException(recipeLoadError);
             yield break;
         }
+        loadedAssetsCount += loadedRecipeCount;
+        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
 
         loadingText = "加载JSON Buff";
-        try
+        int loadedBuffCount = 0;
+        System.Exception buffLoadError = null;
+        yield return StartCoroutine(BuffCatalogLoader.LoadBuiltInAsync(
+            this,
+            count => loadedBuffCount = count,
+            exception => buffLoadError = exception));
+        if (buffLoadError != null)
         {
-            loadedAssetsCount += BuffCatalogLoader.LoadBuiltIn(this);
-            loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
-        }
-        catch (System.Exception exception)
-        {
-            loadingText = $"Buff 加载失败：{exception.Message}";
+            loadingText = $"Buff 加载失败：{buffLoadError.Message}";
             loadingProgress = 1f;
             Debug.LogError(loadingText);
-            Debug.LogException(exception);
+            Debug.LogException(buffLoadError);
             yield break;
         }
+        loadedAssetsCount += loadedBuffCount;
+        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
             new List<string> { "TileBase" },
