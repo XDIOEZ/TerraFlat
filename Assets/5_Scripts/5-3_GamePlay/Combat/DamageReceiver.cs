@@ -150,7 +150,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         hitSlowMultiplier = Mathf.Clamp(hitSlowMultiplier, 0.05f, 1f);
         hitSlowDuration = Mathf.Max(0f, hitSlowDuration);
         healthBarWorldScale = Mathf.Max(0.01f, healthBarWorldScale);
-        _Data.ID = ModText.Hp;
+        modData ??= new Ex_ModData();
+        modData.ID = ModText.Hp;
     }
 
 

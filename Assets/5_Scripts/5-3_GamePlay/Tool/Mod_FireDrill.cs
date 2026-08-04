@@ -445,11 +445,9 @@ public class Mod_FireDrill : Module, IInteractable
             return null;
         }
 
-        Item itemComponent = prefab.GetComponent<Item>();
-        if (itemComponent == null)
-            throw new InvalidOperationException($"[Mod_FireDrill] 预制体 {FireSeedItemID} 缺少 Item 组件。");
-
-        ItemData fireSeedData = itemComponent.Get_NewItemData();
+        ItemData fireSeedData = GameRes.Instance.CreateItemData(FireSeedItemID);
+        if (fireSeedData == null)
+            throw new InvalidOperationException($"[Mod_FireDrill] 无法创建物品数据: {FireSeedItemID}");
         fireSeedData.Stack.Amount = 1;
         fireSeedData.Tags ??= new List<string>();
         if (!fireSeedData.Tags.Contains("火种"))

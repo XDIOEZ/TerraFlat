@@ -17,11 +17,647 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 00321e829cd3f504ebf5c22b9aeff708
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Slot.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 00bfdba00e76bca42b6cdf0a5b5f1742
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Ice.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 00d67b3edb83a734eb42c550ef8852f6
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Grass.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 018ed509539fc28468cb88879c9f8966
+    m_Address: "Assets/2_Prefabs/Space/\u6C34\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 01e06613c3bd50842a7758269b38aead
+    m_Address: "Assets/2_Prefabs/Module/Var/\u7194\u70BC\u6A21\u5757 Variant.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 02227e6017399414abaa0ef5e37adbe1
+    m_Address: Assets/2_Prefabs/Mineral/Ore/Ore_Stone_Bullet.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 02ddd1e1b0c823d4cb6c6d5efe0eb359
+    m_Address: Assets/2_Prefabs/Building/Summoners/Meatrack_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0389d777920d856458f6db3a2e122e34
+    m_Address: Assets/6_Art/item/Plant/GrassAndFlower.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0426f7891b648414fb89071a6f0276f7
+    m_Address: Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NewGame.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0434548b68b1de944beebf33a5bf303f
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Flint.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 04d78b873e1da2341a6666c85506542b
+    m_Address: Assets/2_Prefabs/Map/MapEdge.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 050f0e3d37d8b3241b174df6ad8fd017
+    m_Address: Assets/2_Prefabs/Module/AI/Module_Stamina.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 08d3d4e1050f6084f867e5cf9aa1e058
+    m_Address: Assets/6_Art/Food/Item_Food_Fruit.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0a4826ce897a8f948a5511963204d0f4
+    m_Address: Assets/2_Prefabs/Inventory/Module_Inventory_Equipment.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0b0b63be0af1a1349acffa15df66bfe8
+    m_Address: Assets/2_Prefabs/Module/Equipment/Module_Equipment.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0be51199011097e49b9e67cd1c7d8486
+    m_Address: Assets/6_Art/Food/Fried_Egg.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0e2bd9e8c7ee9244a8f7883b77b2aad1
+    m_Address: Assets/6_Art/item/Tool/Item_Weapon_020.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0eb56e0150600244293302d12bcbe0f6
+    m_Address: "Assets/2_Prefabs/ParticleEffect/VisualEffect/\u5165\u6C34\u7279\u6548.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0eb9ae520e073464f97c533ee93b68b9
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_115.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0fa9b0096397a854fa8c73a07541d090
     m_Address: Assets/4_ScriptObjects/4-6_InventoryInit
     m_ReadOnly: 0
     m_SerializedLabels:
     - InventoryInit
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0fc8137885e212a4db27be3ec37ff185
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Equipment.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0fd232a8cd0b723439ca172b76b6aba7
+    m_Address: "Assets/2_Prefabs/2-1_UI/\u57FA\u7840\u9762\u677F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 10f28c4bb987c9948bab5bcd57ecb926
+    m_Address: Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 120388a9c6809dd4fbf2befd3bb4577d
+    m_Address: Assets/6_Art/item/Gun/iron-weapons.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1237ee2abfaec7249a2e460316dd2f3f
+    m_Address: Assets/6_Art/item/Tool/Item_ingot_001.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 12e2f551084738f4f8d5d0b21ee55179
+    m_Address: Assets/2_Prefabs/ParticleEffect/Particle_Hit.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 137baebbabba0f94d805e97c42f47e7b
+    m_Address: "Assets/2_Prefabs/Module/\u8010\u4E45\u6A21\u5757.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 15d7395a1c9a46e4592996e6b0ccd15a
+    m_Address: Assets/2_Prefabs/Entity_AI/Wolf_Tree.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 165cdd179ecf95240a837f111f66d1d5
+    m_Address: "Assets/2_Prefabs/Space/\u571F\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 16f38f33714285247b623a2423e14c90
+    m_Address: Assets/2_Prefabs/GameManager/WorldManager.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1708703c07cce624892b595ae445e268
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/Dagger_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1786879d924b75a48b0e065c2f7f8174
+    m_Address: Assets/2_Prefabs/Module/Module_Interaction.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 17b385e876a029e4095ccb77881ffd0a
+    m_Address: Assets/2_Prefabs/Module/Animator/Module_TurnBody.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1914fd03091c23347a1d4a82962a56ca
+    m_Address: Assets/2_Prefabs/2-1_UI/ModsUI/UI_Sleep.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1b6dd32ba60554e4b9129e54cd9c8f6a
+    m_Address: Assets/6_Art/Food/Item_Food_013.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1c0b3ac6cd62afb45a3edd32a0b36876
+    m_Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u7A7A.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1cb4530b256bf0249bacbbbee03d739b
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Death.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 20fa46eba2a77114f8e5b6ae80b2af5a
+    m_Address: Assets/2_Prefabs/Module/World/Module_TileReciver.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 215a9df040199634fb89efb65997fb42
+    m_Address: Assets/2_Prefabs/2-1_UI/ModsUI/UI_Food.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 239704e336f808945b1d8fc10dc29fbd
+    m_Address: Assets/6_Art/item/Plant/Tree/item299.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 26098265c1fc4be4cbf641f826c955aa
+    m_Address: Assets/2_Prefabs/2-1_UI/Menu_UI/UI_ContextMenu .prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 26b52ee9b6c7f0b4a84435c715363a8e
+    m_Address: Assets/2_Prefabs/Equipment/Chestplate_Iron.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 277576181c69cb04bae7907eee0e7bb0
+    m_Address: Assets/2_Prefabs/Map/MapCore.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2867b73ca70b9c04cac4f3aa8fe446b9
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/Spear_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 296e945b0a9dda44b9a5d58075d795da
+    m_Address: Assets/2_Prefabs/Building/Scarecrow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 29938b1287529f34fa0ffe33aac52ce1
+    m_Address: Assets/6_Art/item/Tool/Item_Weapon_032.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2ac7438069ffb464980388cdb844aef5
+    m_Address: Assets/2_Prefabs/Module/Combat/AttackTrigger.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2acfce0c4e0c5ff4e86ae5352b33299c
+    m_Address: Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2b3a984870a8c114f9ac30088f5aadf0
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2b439f796a647c74a8ac03a9b68b0259
+    m_Address: Assets/2_Prefabs/Plant/Tree_Coconut.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2cf443899d309994e8491f7fa4e3026b
+    m_Address: Assets/2_Prefabs/Building/Tent.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2f9cd3e8d01c92a4a84a12894d7e253c
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_408.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 30335a1d847f20547aba60b7da974cf8
+    m_Address: Assets/2_Prefabs/Inventory/Module_Bag.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 314fc0b19c2478b459f9cf3665a4d841
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/ChippedTool.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3206a0b4db2f5564ca00d3dcf354bc77
+    m_Address: Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 32c99d8f834e6894fbb07320774a30be
+    m_Address: Assets/2_Prefabs/Building/Summoners/Smelter_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 337af568711ba9442ad340dc4cf5cadc
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/Sword_Bronze.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 338383de9b781ad42b3f88396afdaba2
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_371.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 356700cc834eab64a82a57f57ff3ffec
+    m_Address: Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 35ac961aa6c4ef249978ccaa5e039afd
+    m_Address: Assets/2_Prefabs/Dimension/CaveExit.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 36f0b47149ae978459b4bb8863638d94
+    m_Address: "Assets/2_Prefabs/Space/\u91D1\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 382257fc2209ca64ab7c0de33d6a8a4f
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Hand.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 38596f03f2136a34b91d1e6cfb2e8777
+    m_Address: Assets/2_Prefabs/Building/Door_Wood.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 38a8e9aeab95ec449a3606e2283fa18d
+    m_Address: Assets/2_Prefabs/Module/AI/Module_Base_AI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 38ee20713ed57f548af3746e835a0984
+    m_Address: Assets/2_Prefabs/Skills/LaserFoucus.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3b8b0ac52f922cc499112bd9e5b27298
+    m_Address: Assets/2_Prefabs/ParticleEffect/DamageText.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3c46ab8e0ed4f064685fd412d78b98ee
+    m_Address: Assets/2_Prefabs/Module/Item/Module_DiscardItem.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3dd470cc7fe3a724db6e455263253c29
+    m_Address: "Assets/2_Prefabs/Space/\u5730\u7403.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3dfc40753affecf47b6d630f4d9a4668
+    m_Address: Assets/2_Prefabs/Mine/Mine_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 41d17800f3397ad4085f635c2fd9b1f6
+    m_Address: Assets/2_Prefabs/Space/Rocket.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4211cef457a224643b17e0433f6d9e72
+    m_Address: "Assets/2_Prefabs/2-1_UI/\u5B58\u6863\u9009\u62E9\u6309\u94AE.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 42acff50be302dc4d99613be14b0844e
+    m_Address: Assets/2_Prefabs/Module/Cam/Main Camera.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 42b6479597bb7e04083b8dcf245e3f71
+    m_Address: "Assets/2_Prefabs/Space/\u5929\u738B\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 43a4f364b6845db4ba5ee4ea6676cd92
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_229.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4449fdf41529cdf488d41484f92e53e9
+    m_Address: Assets/2_Prefabs/Entity_AI/Chicken.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 459532248325a9d41aa69c33047a58ee
+    m_Address: Assets/2_Prefabs/Module/Var/DamageSender Axe.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 46220fac86a489c48ab7f0d514bc3e40
+    m_Address: Assets/2_Prefabs/Player/Player.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 471c4ce24372590429646f3580bb9fd3
+    m_Address: Assets/2_Prefabs/Mine/Mine_Copper.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 473f485126015cc4b84fb49bca1191ea
+    m_Address: Assets/6_Art/item/Tool_Weapon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4c2d602b69d751141870951cc6fcf398
+    m_Address: Assets/2_Prefabs/Building/Chest_Wood.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4cb534e9d0f40154c903e5b80d013024
+    m_Address: "Assets/6_Art/Food/\u6930\u8089.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4d484101ae0272b46b3d851b09b6dca3
+    m_Address: Assets/2_Prefabs/Module/ItemGPS.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5132a6b17bc20a34ba0177cce336d330
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Snow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 515d3c3d90817df4a95fbacce9bdea68
+    m_Address: Assets/2_Prefabs/2-1_UI/Mod_UI_OpenUIButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 52846d0816513ac489300d4d4c7f5c1c
+    m_Address: Assets/2_Prefabs/Module/Item/Module_Player.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 541e52aaac751114695281ff755dd515
+    m_Address: "Assets/2_Prefabs/2-1_UI/\u53F3\u952E\u83DC\u5355.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 54b04d56d01340446a63b5317921045a
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_165.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 557a871734f51524682e543106eb309f
+    m_Address: Assets/2_Prefabs/Equipment/Chestplate_Wood.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5615491ee5491d545ac4c633133d01cc
+    m_Address: Assets/2_Prefabs/Module/Module_Cam.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 563cf4d7f1a585648ba44577bc5f9aaa
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_StoneWall.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 56f687a312c1c9f44a02b7622dbd5ef4
+    m_Address: Assets/2_Prefabs/Building/Summoners/Chest_Wood_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5723168605491a440939c98a7a3f6e7a
+    m_Address: Assets/6_Art/Food/Item_Food_009.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5819de873e8913b42a726562edbd0bdb
+    m_Address: "Assets/2_Prefabs/Module/\u79FB\u901F\u6A21\u5757.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 58df281e8bb89684ca779ca6009f0c54
+    m_Address: Assets/2_Prefabs/Mine/Mine_Coal.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 593cb509fd710a24aaeb539d5d1b2cb9
+    m_Address: Assets/2_Prefabs/Building/Summoners/Door_Stone_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 59ea3cb6a2f6eec4ba71f287f1c5e03d
+    m_Address: Assets/2_Prefabs/Module/Work/Module_WorkBench_Player.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5a96499898ce6c9439cd1b78525d7b66
+    m_Address: "Assets/2_Prefabs/Map/\u5BFB\u8DEF.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5b952bf558866bc499d7e8c320ea5530
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_FireDrill.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5c0312d9a4c30ca42bc62b3bfb10074e
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_AudioSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5de7be0374cdef34fb44ea8b4db43440
+    m_Address: Assets/2_Prefabs/GameManager/Time/TimeSystem.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5f1ef5a0e4a293f4f9c9269cb005480c
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5f4725251cfd07349bf6c42a527e6826
+    m_Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u6709\u6C34.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5fd8b428d015c7044aee5e5491698e72
+    m_Address: Assets/2_Prefabs/2-1_UI/Base_UI/UI_SelectBox.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 605d848763ec2b14b894091dbe0dc2ee
+    m_Address: Assets/2_Prefabs/Module/Combat/Mod_Damage.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 63385f96683848648b48555cb0876c19
+    m_Address: Assets/2_Prefabs/Entity_AI/WildBoar.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 64842fb553039f44a99a4fe673c1babf
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_DifficultySettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 648dac1c2de9b3544ad86849c39a90fd
+    m_Address: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 65854954f78fed540ac15cdb352b19e6
     m_Address: Assets/004_ScriptObjects/TileBlock
@@ -29,14 +665,314 @@ MonoBehaviour:
     m_SerializedLabels:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 65b76ad232c002141b31fb204da0ba2b
+    m_Address: Assets/2_Prefabs/Module/Skill/Mod_SkillManager.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6713e9f9746a02e45be91e7e20ac557b
+    m_Address: Assets/2_Prefabs/Module/Manager/Module_Setting.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 683191f95f278944b82a4ad08bcac6df
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_376.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6ab24a325d4d2c84682dc38bedd41163
     m_Address: Assets/4_ScriptObjects/4-4_Composite
     m_ReadOnly: 0
     m_SerializedLabels:
     - CraftingRecipe
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 831f25d745a488a47b9743c641d12651
-    m_Address: Assets/2_Prefabs
+  - m_GUID: 6b482d47c04124340abeb0703ea48c4c
+    m_Address: "Assets/2_Prefabs/Module/\u6389\u843D\u6A21\u5757.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6b76adaa9ade3a944bd13a582e3b9ee9
+    m_Address: Assets/2_Prefabs/Module/Manager/TileReciver.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6bc82347947d5234196874132eda820e
+    m_Address: Assets/2_Prefabs/Mineral/Ore/Ore_Flint_Bullet.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6c3a1f4436d999445b39c197107ce458
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InterfaceSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6dad61aac020ddd4a802165922117e55
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Bag.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6f04f63db18870946977a64dc9373560
+    m_Address: Assets/2_Prefabs/Weapon/Axe/Hoe_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6f27a587bf720974ca9a865de93b5e99
+    m_Address: Assets/2_Prefabs/Skills/Stone_KnifeThrowing.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 70d725d8194078249a195891ee61da07
+    m_Address: Assets/2_Prefabs/2-1_UI/Menu_UI/UI_GameSaveManager.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 742285658deda7b44a8723ac170c91f4
+    m_Address: Assets/2_Prefabs/Mine/Mine_Tin.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 76afaf461fddb7e4c8771cb15aea456f
+    m_Address: Assets/2_Prefabs/Item/Stick_Wood.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 789943bea24026d43aff45dba8a66fc9
+    m_Address: Assets/2_Prefabs/Mineral/Ore/Ore_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7939cd1121d1caf48a4f4bcb810d16d2
+    m_Address: Assets/2_Prefabs/Building/BlastFurnace.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7ef3d949fb4a7374fb43fc85b09d4cc2
+    m_Address: Assets/2_Prefabs/Module/Module_Fuel.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7fa1725ad46407f47a171f54026e684b
+    m_Address: Assets/2_Prefabs/Item/Bone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8042e942207940647b24ee91463aa184
+    m_Address: Assets/2_Prefabs/Weapon/Weapon-Remote/StoneThrowingRope.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 80b43ebacdbd03246a46c10b9692be80
+    m_Address: Assets/2_Prefabs/Building/Summoners/Wall_Wood_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 817e26a006be65341b7082d816c170d5
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InputBindingSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 81b4dc488d6e9914596d43f5ebd2e6a0
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_327.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8282ac646f27954489b33bd62385edb8
+    m_Address: Assets/2_Prefabs/Inventory/Module_Furnace.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 834b874f2bd43a34e95f52adb0e4a211
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_HotBar.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 85010448eb6bc8d4695b75a6845d1c00
+    m_Address: Assets/2_Prefabs/Entity_AI/Chicken_Tree.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 863d4517d8f443f4da9cb1cd400b1ead
+    m_Address: Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 86c0577500e3dd147be665ae92740702
+    m_Address: Assets/6_Art/item/Plant/Tree/plants.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 87098d23f0b9ec442afa8b16f5662ef4
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_391.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8841df00bfd66a54baa5541a3b58946b
+    m_Address: Assets/2_Prefabs/Module/Module_Mover_AI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 88450745eac117c4295962551e0db2d7
+    m_Address: Assets/2_Prefabs/Module/AI/Module_AttackTrigger_AI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8b4619eba9808f64f92359a091d87a46
+    m_Address: "Assets/2_Prefabs/Space/\u592A\u9633.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8be4b8027fc3f8940a68d8a195ab4781
+    m_Address: "Assets/2_Prefabs/Module/\u751F\u957F\u6A21\u5757.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c8eb8cf412e3ca4d8845cecbc358d4d
+    m_Address: Assets/2_Prefabs/2-1_UI/Menu_UI/UI_Hello.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8d957a5691b916f48b40231a4b297ea4
+    m_Address: Assets/2_Prefabs/Skills/FireBall.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 919298e480c9ff54bab22393ad6c54b1
+    m_Address: Assets/2_Prefabs/Module/Skill/Module_SkillManager_AI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9242b06f74fcedc44bae433e9bd5e3ab
+    m_Address: Assets/6_Art/item/Plant/Tree/item296.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 92c40ea4c73544d4e9061baa2ca3b5ee
+    m_Address: Assets/2_Prefabs/Tools/Summoners/SparkMaker_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 947555c30fcaed346b47ef9fe73f313f
+    m_Address: Assets/2_Prefabs/Materials/Humus.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 953b7b5b07a613949b9263e579a3f146
+    m_Address: Assets/2_Prefabs/Inventory/Module_Hotbar.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 955350c909684f84783e1dcd827d163e
+    m_Address: Assets/2_Prefabs/Building/Summoners/Tent_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 964feee04ca4a384487366a36f5f8019
+    m_Address: Assets/2_Prefabs/Tools/FlintStrike.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 96b781ca01a5169469e6113a54a33ae6
+    m_Address: Assets/2_Prefabs/Module/ItemTransformController.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 97e7d2adcd4bf2b479296591882482ba
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_363.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 98884601a3d373a40ab86aff00f45a08
+    m_Address: Assets/2_Prefabs/Module/Module_AutoChunkOwner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 98dec10f825f70a42813d13105431a62
+    m_Address: Assets/2_Prefabs/Equipment/Chestplate_Twine.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 992baff2372d5b447946a74b230d5ca4
+    m_Address: Assets/2_Prefabs/Module/Manager/Module_BuffManager.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 998a093c37fb0784abd9897a0e96eff4
+    m_Address: Assets/2_Prefabs/ParticleEffect/Particle_BeEat.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 99e86f308e574534bae5d88a9b404146
+    m_Address: Assets/2_Prefabs/Module/Mover.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9d6c3cee7e6aea74d892677e88925c7f
+    m_Address: Assets/2_Prefabs/Module/Module_FocusPoint.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9edc5571020b8c042adbb67fe384f5ca
+    m_Address: Assets/2_Prefabs/Seed/Seed_Apple.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9f21e9d2ca9c26d46a1df78bda87f035
+    m_Address: Assets/6_Art/item/RawHide.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9f2c7b4d6a8e0f1b3c5d7e9a2b4f6c8d
+    m_Address: Assets/2_Prefabs/Entity_AI/Ghost.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -47,17 +983,666 @@ MonoBehaviour:
     m_SerializedLabels:
     - Skill
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a00706d638acbb2499172cab668bf016
+    m_Address: Assets/2_Prefabs/Building/Door_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a0dc5a480ea75bf4d9d7b74bfdf2c4dc
+    m_Address: Assets/6_Art/Food/Tea.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a11b372bb3f1f2947973949c650b7f4b
+    m_Address: "Assets/2_Prefabs/Space/\u6728\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a22deda0be9d7904b9557728d6986f2d
+    m_Address: Assets/6_Art/item/Tool/Item_ingot_003.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a231ae82b21c66641b5a1c9e708fa683
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_368.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a2d494b844ece424088d4bfb48532082
+    m_Address: Assets/2_Prefabs/Food/Weed.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a34e2fcafdaf4624d88a4ed6f0a3090e
+    m_Address: Assets/6_Art/item/Tool/Item_Weapon_006.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a427477b3d8f14d43a13bb2a3620ef8e
+    m_Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u810F\u6C34.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a588cc1b750da76439797f1756447a6e
+    m_Address: "Assets/2_Prefabs/Module/Var/\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757
+      \u77FF\u7269.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a5e7e15236241a2499485d672ad182fe
+    m_Address: Assets/2_Prefabs/Skills/LuaSkill.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a6d627d3b13bbc54bb2b613ad872b30d
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/System/UI_WorldLoading.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a84f90f79ba86a34aa88b8e752960665
+    m_Address: Assets/2_Prefabs/Module/Animator/Module_Animator_AI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a8aa3c91b5ca83a4d9ae1a44c729bce7
+    m_Address: Assets/2_Prefabs/Module/AI/Module_Mover_AI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a9085e62ed1626245870fe5a6d4d30fe
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Dirt.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a9b4d26be9e50e847a0219cbf2344fb5
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_CompostBin.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aa1366b7aaea32e4bb00bbfd19554890
+    m_Address: Assets/2_Prefabs/Module/Module_Building.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ab36d19445e99a54ca06f4650472e418
+    m_Address: Assets/2_Prefabs/Weapon/Torch.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: abd82adf4391d7c4aad84ee431f16c2e
+    m_Address: "Assets/2_Prefabs/Space/\u6D77\u738B\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ad835bb3ac4f9ca4891ba15924362b31
     m_Address: Assets/4_ScriptObjects/4-5_Cook
     m_ReadOnly: 0
     m_SerializedLabels:
     - CraftingRecipe
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ae0742267fe3e7b498e8ab9d28074677
+    m_Address: Assets/2_Prefabs/Module/World/Module_ChunkLoder.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ae7d61a702120fe43a5c3fdcfea8279e
+    m_Address: Assets/2_Prefabs/2-1_UI/Base_UI/UI_Slider.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: afedc3279fc9e4642ba49ebc62089d51
+    m_Address: Assets/6_Art/item/Tool/Item_Weapon_021.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b33b36a78f5818647976e4e5b86efe8c
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_MakerTable.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b3c23f7adaac0c74bbc76798803d6c75
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_394.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b3ce3e3a1adb1de418fdcfdc4c5a9e94
+    m_Address: Assets/2_Prefabs/Weapon/Weapon-Remote/Staff_Wood.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b614f979ae7094b42b6d0f058d4052cc
+    m_Address: Assets/2_Prefabs/2-1_UI/ModsUI/UI_HP.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b75b25d35b5356244b3000caf49b049c
+    m_Address: Assets/2_Prefabs/Module/Module_Animator.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b7bb17f855b07ef47a96ea42eefb4d19
+    m_Address: Assets/2_Prefabs/Building/Wall_Wood.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b81ac21ec38797245a976d9f921b2bd4
+    m_Address: Assets/6_Art/Food/pixelate (1).png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bb680c5a720608844a39de820c689aa6
+    m_Address: "Assets/2_Prefabs/Map/\u5730\u9762.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bbeb9613546705242ad5f2b362253355
+    m_Address: Assets/2_Prefabs/Building/Meatrack.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bc05f0780d6922a4d81a1fc36a9e029e
+    m_Address: Assets/2_Prefabs/Module/Common/Module_Renderer.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bd2bc3f205807dc4cae1e00c1f3c8ab3
+    m_Address: Assets/2_Prefabs/Module/Skill/Mod_SkillManager_Item.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bd889e1a71d862d46b871cce3b4e4f45
+    m_Address: "Assets/2_Prefabs/Space/\u6708\u4EAE.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: be2baeaf723df76448f5ab8b658d9d3b
+    m_Address: Assets/2_Prefabs/Inventory/Module_Picker.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bef35c376aeb59546adadda04aaa61f7
+    m_Address: Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bf674b2448ea7454a845f005c9ab05e1
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_AutoSaveSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c107cb4a775f75a4ab50708e43ad3078
+    m_Address: Assets/2_Prefabs/Module/Combat/Module_DamageReciver.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c42240ced9693a44480444691dac2be3
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_CharacterSpeechBubble.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c422e4cb7f4f5c540a5f83256abdceaf
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_393.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c56368145ed98b84da8f176212fb6b75
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InputBindingRow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c56ada92b0ffaf94fafaa99c1bd0f0c6
+    m_Address: Assets/2_Prefabs/Building/Wall_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c62241a5ed45f4d4090c1b7c06e3af4a
+    m_Address: Assets/2_Prefabs/Inventory/Module_Hand.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c62ffd66631e4b54db78add2abc249c8
+    m_Address: Assets/2_Prefabs/Module/Combat/Mod_ColdWeapon.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c6f55e2336b63394fbc8d77a46530e95
+    m_Address: Assets/2_Prefabs/Equipment/StorageBag_Leather.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c76dbbddee7ddf34fbdc0b88b51b3cd6
+    m_Address: Assets/2_Prefabs/2-1_UI/ModsUI/UI_Debug.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c7b85e6a507f33440a540cb2a66ea374
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_373.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c7dc8a6dfe6cb24488ccff466b999811
+    m_Address: Assets/2_Prefabs/ParticleEffect/BladeAttackEffect_1.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c81a87a3667f93340a56b3e016a55c95
+    m_Address: Assets/2_Prefabs/Tools/SparkMaker.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c9071f519ad95e14b8f643d82db1e458
+    m_Address: Assets/2_Prefabs/Module/Module_Food.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ca4e9b1fb55d2354882fd54109ad9dfa
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_BoneFire.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: caae0063482ab824ca16a7bcf2cf8dfe
+    m_Address: Assets/2_Prefabs/Module/Work/Module_WorkBench.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cc5364d105c82f74db3f9d7ee1c58e61
+    m_Address: Assets/6_Art/item/icons_sheet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cca6f0741d956684bbb9a6c9ea0fe5c7
+    m_Address: Assets/2_Prefabs/Building/WorkBench.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ce24645065817804fbd6156e223ca429
+    m_Address: Assets/2_Prefabs/Plant/AppleTree.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cfcaae5d4c4ccea4fb3554ba602b7890
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Water.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cff57bd8f54557d42a62beae37596a95
+    m_Address: Assets/6_Art/item/Tool/Item_Weapon_031.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d053d623af3d3ba49a09e3bd67e7b696
+    m_Address: Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NetworkMode.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d11f29cf83ce4dd46932f8463f0e81f7
+    m_Address: Assets/2_Prefabs/Building/Smelter.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d24e46f0dd4ed92499330994f5eeb75d
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_MeatRack.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d26d8677005feca48b824994b77d7e34
+    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Sand.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d2a3c08c6a3925746b84b9c128f8c793
+    m_Address: Assets/2_Prefabs/Weapon/Axe/Axe_Stone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d468c0a9bce573849aeb6a18be930f9c
+    m_Address: Assets/2_Prefabs/Module/Var/DamageSender Pickaxe.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d52e8e0393ca8974095cb621f030f5c1
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/Button.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d57908da393bf244fa8d5a4ed5f9f261
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_FlintStrike.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d583767306a467b47a8ffff035dc9395
+    m_Address: Assets/2_Prefabs/Mine/Mine_Iron.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d5de42ffc1564ed4ab0ce836b7db9477
+    m_Address: Assets/2_Prefabs/Building/BuildingShadow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d6b00dfad111de046a0fb9da3fb4ff53
+    m_Address: Assets/2_Prefabs/Skills/Item_Summon.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dbe0fdf0241e35442b1a020284fc6eb3
+    m_Address: Assets/2_Prefabs/Building/Bonfire.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dd531bf9262d2dd4bad34506f71b2385
+    m_Address: Assets/2_Prefabs/Entity_AI/Wolf.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: de2c021d01f7a8149ae5f7b18a453254
+    m_Address: "Assets/2_Prefabs/Module/\u9632\u5FA1\u6A21\u5757.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: df3c57f10524b144a9fe355ef83589ba
+    m_Address: Assets/2_Prefabs/Module/Module_Move.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: df7296a1187573644b2e04c97ef1e809
+    m_Address: Assets/6_Art/item/Tool/Item_ingot_004.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dfb54154f48975249a320ea8607f624b
+    m_Address: Assets/2_Prefabs/NetworkingTest/NetworkTestPlayer.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e00b181a6243dfe4ba98db751aa25634
+    m_Address: Assets/2_Prefabs/Food/CompostBin.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e1958d25f8baa7a48b6f0c754ee6317e
+    m_Address: Assets/2_Prefabs/Entity_AI/WildBoar_Tree.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e6a55fdebce51df4b8c1cbe7f57fb33d
+    m_Address: Assets/2_Prefabs/2-1_UI/ModsUI/UI_Canvas.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e815ac9fdcd49fd478b8159a2da77694
+    m_Address: Assets/2_Prefabs/Module/Shadow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e831a9eb194325143b7e7e1a10f84b45
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_231.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e85cc03b266d12743bd84901adde12af
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_239.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e8bfaef07b026a54da8a2e2fd6559c58
+    m_Address: Assets/2_Prefabs/Building/MineEntrance.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e92ff9f445bbe42498036ec3756abe05
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Furnace.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e93fb2825dd39564687eb4afe114ce36
+    m_Address: "Assets/2_Prefabs/2-1_UI/\u7269\u54C1\u4FE1\u606F\u9762\u677F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e996c081176bb7b479f0b1296fcb4175
+    m_Address: Assets/2_Prefabs/Food/Fertilizer.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ea09d6ba54b17364dadc9cba1433a48c
+    m_Address: Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: eae5f08c6c704a24a8bbbcb19d3dcf13
+    m_Address: Assets/2_Prefabs/Module/Equipment/Module_Equipment_Store.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: eb2b2826902af0c48a89020b32f241c9
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_GameModuleUI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ef21b70312127db4cae4b4dadf7d10b7
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_366.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ef2a888dba596134b8df58b62bae5ee6
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/Needle_Bone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f13b81f3d392ba844bd4703a6aa081cc
+    m_Address: Assets/2_Prefabs/Module/Work/Module_Detector.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f1d7b5a1e3e07cc499990b3552108139
+    m_Address: Assets/2_Prefabs/Module/Module_TurnBack.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f2f1cb8fedd42b74abe0946fade69c11
+    m_Address: Assets/6_Art/item/Ore/ores.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f4b1ad2c128ff8f47919ef031ff61bb7
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_399.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f4cc48e2af981584b99bbfbe41c565cd
+    m_Address: Assets/2_Prefabs/Skills/LaserLine.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f4dcbe1f822581441bf51c160e1e75a6
+    m_Address: Assets/2_Prefabs/Module/AI/Module_FocusPoint_AI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f4e4284d9b97d0746a88b6db98a7e8e4
+    m_Address: Assets/2_Prefabs/Module/Module_Production.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f548d8c788434c54db52f9aa1e5cc5ac
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_HandCraftTable.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f6c78a2c3efe0264c8c88828280695cf
+    m_Address: "Assets/2_Prefabs/Space/\u706B\u661F.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f885d956305b04b4d9be0d53393d435c
+    m_Address: Assets/2_Prefabs/2-1_UI/Hand_Slot_UI.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f8bb8b9f59d14134aa1dbf93ed5554b6
+    m_Address: Assets/2_Prefabs/Building/Summoners/BlastFurnace_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f9a410976af5f9f45b18b1575157b348
+    m_Address: Assets/6_Art/item/Plant/Tree/item302.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fa58326bec18db04197e79b78491bda2
+    m_Address: "Assets/2_Prefabs/2-1_UI/\u57FA\u7840\u6587\u5B57UI.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fb25fd29dbd41ca4eb8c394cf2df0185
+    m_Address: Assets/6_Art/item/Tool/Item_Weapon_033.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fb763dc65b2d9544e8226c33949df9d2
+    m_Address: Assets/6_Art/item/resources_basic.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fbffc25086cf10846861a513617f0dd8
     m_Address: Assets/Tiles/TIleBase
     m_ReadOnly: 0
     m_SerializedLabels:
     - TileBase
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fc0a4fadfb68ee74483be04e91686872
+    m_Address: Assets/2_Prefabs/Map/GeneralWorldEdge.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fd8723ea4457a3a48aa43f299cc9b24f
+    m_Address: "Assets/2_Prefabs/Space/\u901A\u7528\u661F\u4F53.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fe41e37ac04bf324085013b7d80b586c
+    m_Address: Assets/2_Prefabs/Materials/FireSeed.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fee68fa8026ccf1459d9d4b36eae05a3
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_402.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ffe53350727c81c47b55bde5e24c3142
+    m_Address: Assets/2_Prefabs/Plant/Bush.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

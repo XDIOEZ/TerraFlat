@@ -50,3 +50,43 @@ public abstract class ChunkGeneratorBase
     }
     #endregion
 }
+
+/// <summary>
+/// Limits generator work by both item count and elapsed main-thread time.
+/// A time budget prevents a few expensive cells from creating a long frame.
+/// </summary>
+internal sealed class ChunkGenerationWorkBudget
+{
+    private readonly int maxWorkItems;
+    private readonly double maxMilliseconds;
+    private int workItems;
+    private long frameStartTimestamp;
+
+    public ChunkGenerationWorkBudget(Map map, int maxWorkItems)
+    {
+        this.maxWorkItems = Mathf.Max(1, maxWorkItems);
+        maxMilliseconds = map != null
+            ? map.ProceduralGenerationFrameBudgetMilliseconds
+            : 1.5d;
+        BeginNextFrame();
+    }
+
+    public bool ShouldYield()
+    {
+        workItems++;
+        if (workItems >= maxWorkItems)
+            return true;
+
+        double elapsedMilliseconds =
+            (System.Diagnostics.Stopwatch.GetTimestamp() - frameStartTimestamp) *
+            1000d /
+            System.Diagnostics.Stopwatch.Frequency;
+        return elapsedMilliseconds >= maxMilliseconds;
+    }
+
+    public void BeginNextFrame()
+    {
+        workItems = 0;
+        frameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+    }
+}
