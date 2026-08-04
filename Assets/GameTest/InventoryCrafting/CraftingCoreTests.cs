@@ -11,7 +11,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
         public void Transaction_MissingMaterials_DoesNotMutateInventory()
         {
             Inventory input = CreateInventory("输入", 10f, CreateItem("wood", 1f));
-            Inventory output = CreateInventory("输出", 10f, null);
+            Inventory output = CreateInventory("输出", 10f, (ItemData)null);
             CraftingRecipeMatch match = CreateMatch(new CraftingConsumption(0, 2f));
 
             bool prepared = CraftingTransaction.TryCreate(
@@ -35,7 +35,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
         public void Transaction_MultipleOutputsInsufficientSpace_DoesNotPartiallyProduce()
         {
             Inventory input = CreateInventory("输入", 10f, CreateItem("wood", 2f));
-            Inventory output = CreateInventory("输出", 1f, null);
+            Inventory output = CreateInventory("输出", 1f, (ItemData)null);
             CraftingRecipeMatch match = CreateMatch(new CraftingConsumption(0, 1f));
 
             bool prepared = CraftingTransaction.TryCreate(

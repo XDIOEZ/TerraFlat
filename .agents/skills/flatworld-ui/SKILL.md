@@ -24,6 +24,7 @@ disable-model-invocation: false
 - 旧视觉主题工具：`Assets/5_Scripts/5-5_UI/FlatWorldUITheme.cs`；正式运行时面板不再调用，Prefab 是视觉真相。
 - UI 反馈：`Assets/5_Scripts/5-5_UI/FlatWorldUIFeedback.cs`。
 - 游戏内适配：`Assets/5_Scripts/5-3_GamePlay/UI/`。
+- 开发调试控制台：`Assets/5_Scripts/5-3_GamePlay/Debug/GMReflectionConsole.cs` 及其 `Navigation`/`Buffs` partial；F4 GM 工具是既有的运行时调试 Canvas，属于正式 Prefab UI 规则之外的开发者专用例外。
 - UI 音频绑定：`Assets/5_Scripts/5-5_UI/Audio/`。
 - UI Prefab 根目录：`Assets/2_Prefabs/2-1_UI/`。
 - PanelRoot Prefab：`Assets/Resources/UI/UIRoot.prefab`；`UIManager` 必须从该 Prefab 实例化，禁止运行时拼装 Canvas。
@@ -80,6 +81,8 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-04：`UI_GameSaveManager` 新增“删除存档按钮”；默认禁用，选中世界后启用，调用 `SaveDataMgr.DeleteSave` 清理完整存档族并刷新列表、清空角色选择。
+- 2026-08-04：F4 GM 控制台新增 `Buff` 分页，提供目录浏览/ID 输入、限时持续时间覆盖、施加次数、确认/取消点选及清除 Buff 开关；页内状态显示当前点选模式。
 - 2026-07-31：`BasePanel` 增加通用手柄导航；`UI_InputBindingSettings` 固化键鼠/手柄分页，运行时按设备筛选重绑行、切换焦点并恢复当前分页默认值。
 - 2026-07-29：玩家聊天输入支持裸 T 打开、Enter 发送、Esc 取消；打开期间锁定玩法输入，提交文字由现有角色气泡显示。
 - 2026-07-29：新增 `UI_WorldLoading.prefab`；新建世界和进入已有存档时以跨场景 Overlay 显示阶段、进度和提示，直至玩家及首批周围区块就绪。
@@ -88,8 +91,6 @@ disable-model-invocation: false
 - 2026-07-29：联机面板固化为可在 Unity 中直接查看和编辑的 `UI_NetworkMode.prefab`；运行时只通过 `GameRes` 实例化，移除全部视觉节点构建代码。
 - 2026-07-29：自定义难度扩展为战斗、生存、世界、生产四个分类页，提供 16 个倍率滑条与死亡掉落开关；详情卡实时汇总四类规则。
 - 2026-07-29：联机动态面板的地址输入支持直接粘贴 `域名:端口`、`kcp://` 或 `udp://` 穿透端点，并明确提示必须使用 UDP 隧道；控件节点名保持不变。
-- 2026-07-29：新世界面板增加“难度设置”入口、官方预设/自定义分页、规则详情预览与死亡掉落自定义开关；官方预设为目录驱动的可滚动列表，扩充 `GameDifficultyCatalog.All` 后重建 Prefab 即可生成入口。
-- 2026-07-27：领域 UI 改为直接组合密封 `BasePanel`；`GameManager` 与联机控制器使用 partial 分离业务和 UI。
 
 ## 修改后自动测试
 

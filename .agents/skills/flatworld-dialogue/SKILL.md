@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 角色对话系统定位
 
-> 最后核对：2026-07-30。
+> 最后核对：2026-08-04。
 
 ## 修改前先读
 
@@ -74,6 +74,7 @@ ICharacterSpeechContextContributor
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-04：`WeatherExposureSpeechProvider` 扫描附近火源时，先确认物品存在燃料模块再读取点燃状态；普通物品不是错误条件，必须静默跳过，避免按扫描频率重复输出“找不到燃料模块”警告。
 - 2026-07-30：新增天气 Facts Contributor 与 `weather_rain.json`；现有 Controller 通过扩展发现自动接入，不建立第二套天气台词调度器。
 - 2026-07-29：新增 T 键玩家聊天，Enter 提交到既有角色气泡、Esc 取消；新增 `Player` 台词优先级和显式斜杠命令处理接口，远程 Player 禁止本地输入。
 - 2026-07-29：玩家聊天输入与屏幕空间角色气泡固化为 `Runtime/Dialogue` 下的可视化 Prefab；Presenter 只绑定现有节点，不再程序化创建视觉树。

@@ -88,7 +88,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-04：出生点搜索不再按格同步调用 `LoadChunk_By_Position()`；候选 Chunk 按距离逐个排队并等待数据就绪。直接加载入口必须优先复用已激活 Chunk，存档入口不得在 `GameManager` 与 `SaveDataMgr` 重复扫描同一批区块。
+- 2026-08-04：`ChunkGenerator_Land` 可直接以 MapCore Prefab 配置、当前 `PlanetData` 与世界种子采样安全陆地；`ChunkGenerator_River` 支持显式种子查询以排除河流格。出生定位不实例化 Map/Chunk，之后由玩家流送模块加载周围区块；直接加载入口优先复用已激活 Chunk，旧存档零 `NoiseScale` 仍在运行时回退默认值。
 - 2026-08-03：地表河流改为性能优先的世界坐标连续水带，移除水文 halo/汇流/湖泊计算；Land、River、SpawnItems、Structures 统一受毫秒预算分帧，ChunkMgr 限制同时仅生成一个区块，资源列表不再重复生成。
 - 2026-08-03：MapCore 通过旧 Prefab 入口提取模板 `ItemData` 时不再运行 `Map.Load()` / `Map.Save()`，防止无 Chunk 父节点的临时 Map 启动地形生成或 Tilemap 存储。
 - 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；阻挡 Tile 与地面分层渲染，支持独立碰撞和单格刷新，同时不改变顶层 TileData 导航/存档契约。
@@ -98,12 +98,10 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 2026-07-30：整理地形噪声 Inspector 与参数职责，统一世界坐标缩放默认值和合法性校验；新建世界会在点击创建时重新读取半径/尺度；旧河流噪声配置已明确标记为兼容项，正式河流仅配置 `ChunkGenerator_River` 水文参数。
 - 2026-07-30：遗迹普通物件支持模板内唯一 `MemberId` 与固定槽位容器内容；结构生成在世界 Item `Load()` 后按 `Mod_Inventory` 目标库存写入物品，并为容器内物品派生确定性 GUID。配置会进入结构目录内容哈希和区块程序生成基线。
 - 2026-07-29：统一内容校验器检查 `BiomeData` ID、地块/物品生成条目、生成物 Prefab 与 `itemName`、概率倍率、环境条件和伴生宿主配置，并为 Spawner 群系引用提供权威 ID 集合。
-- 2026-07-29：`ChunkGenerator_Land` 公开世界格群系查询，供生态生成位置校验复用。
-- 2026-07-27：导航与地图生成已解耦为 TileData 权威数据 + 导航脏区批处理；Chunk 流送后禁止无条件全窗口重烘焙。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Map/MapSmokeTests.cs`；当前基础覆盖 ChunkMgr、Chunk、Map、已激活 Chunk 直接复用、静态阻挡层入口与底层地面解析、地图 Prefab、MapCore 环境噪声通道、非法 Perlin 参数有限值保护、世界坐标缩放规则、Tilemap 视觉完成前禁止地图进入就绪态、结构目录入口，以及遗迹容器配置深复制与内容哈希。
+- 基础测试脚本：`Assets/GameTest/Map/MapSmokeTests.cs`；当前基础覆盖 ChunkMgr、Chunk、Map、已激活 Chunk 直接复用、静态阻挡层入口与底层地面解析、地图 Prefab、MapCore 环境噪声通道、默认种子下直接读取 Prefab 的安全陆地/河流排除采样、旧存档零缩放回退、非法 Perlin 参数有限值保护、世界坐标缩放规则、Tilemap 视觉完成前禁止地图进入就绪态、结构目录入口，以及遗迹容器配置深复制与内容哈希。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；地图测试约定目录：`Assets/GameTest/Map/`；场景目录：`Assets/GameTest/Scenes/Map/`；冒烟分类：`Map.Smoke`。
 - 新增 Chunk 流送、Tilemap、程序生成、Biome、River、Structure 或地图差量行为时必须增加系统测试；修复 Bug 时先增加回归测试。中心 Chunk 加载与卸载主流程变化时同步更新地图冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；程序生成必须固定种子，测试结束必须清理 Chunk、Tilemap 与临时地图数据。

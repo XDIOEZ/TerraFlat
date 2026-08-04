@@ -86,8 +86,25 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         ? generationSeed
         : (SaveDataMgr.Instance?.SaveData?.Seed ?? 1);
 
-    public float NoiseScale => PlanetData.NormalizeNoiseScale(
-        plantData != null ? plantData.NoiseScale : PlanetData.DefaultNoiseScale);
+    public float NoiseScale => ResolveNoiseScale(plantData);
+
+    /// <summary>
+    /// 返回用于世界坐标采样的有效缩放。出生点可以直接读取 MapCore Prefab 的生成器，
+    /// 因此必须允许调用方传入当前存档的 PlanetData，而不是修改 Prefab 上的调试回退数据。
+    /// </summary>
+    private static float ResolveNoiseScale(PlanetData sourcePlanetData)
+    {
+        float configuredScale = sourcePlanetData != null
+            ? sourcePlanetData.NoiseScale
+            : PlanetData.DefaultNoiseScale;
+
+        // 早期存档缺少该字段时会反序列化为 0；零缩放会让整个世界命中同一个噪声点，
+        // 因而可能全部生成水或陆地。运行时统一迁移为项目默认值。
+        if (configuredScale <= 0f)
+            return PlanetData.DefaultNoiseScale;
+
+        return PlanetData.NormalizeNoiseScale(configuredScale);
+    }
 
     [NonSerialized]
     private bool _hasLoggedNoiseConfigsNull;
@@ -342,8 +359,21 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     /// </summary>
     public EnvironmentSample SampleEnvironmentAtWorld(Vector2Int worldPos, int worldSeed)
     {
-        float gx = worldPos.x * NoiseScale;
-        float gy = worldPos.y * NoiseScale;
+        return SampleEnvironmentAtWorld(worldPos, worldSeed, plantData);
+    }
+
+    /// <summary>
+    /// 不修改运行时生成器状态，直接按指定星球数据采样环境。
+    /// 用于玩家出生前的纯种子定位：此时尚未创建任何 Chunk 或 Map 实例。
+    /// </summary>
+    public EnvironmentSample SampleEnvironmentAtWorld(
+        Vector2Int worldPos,
+        int worldSeed,
+        PlanetData sourcePlanetData)
+    {
+        float noiseScale = ResolveNoiseScale(sourcePlanetData);
+        float gx = worldPos.x * noiseScale;
+        float gy = worldPos.y * noiseScale;
         SampleEnvironmentFactors(
             gx,
             gy,
@@ -363,6 +393,141 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             solidity,
             hight,
             pollution);
+    }
+
+    /// <summary>
+    /// 以正式地形生成相同的噪声和生物群系规则，预测一个可行走陆地格。
+    /// 此方法不会创建或加载 Chunk，适合出生点等必须避免批量加载世界的调用方。
+    /// </summary>
+    public bool TryFindWalkableTerrainNear(
+        Vector2Int anchor,
+        int worldSeed,
+        int maxSearchRadius,
+        int maxSamples,
+        out Vector2Int terrainPosition)
+    {
+        return TryFindWalkableTerrainNear(
+            anchor,
+            worldSeed,
+            plantData,
+            null,
+            maxSearchRadius,
+            maxSamples,
+            out terrainPosition);
+    }
+
+    /// <summary>
+    /// 以 MapCore Prefab 的地形规则和当前存档的星球数据，纯计算一个安全出生候选格。
+    /// 不会实例化 Map/Chunk；若提供河流生成器，也会排除会被后续河流管线覆盖的水格。
+    /// </summary>
+    public bool TryFindWalkableTerrainNear(
+        Vector2Int anchor,
+        int worldSeed,
+        PlanetData sourcePlanetData,
+        ChunkGenerator_River riverGenerator,
+        int maxSearchRadius,
+        int maxSamples,
+        out Vector2Int terrainPosition)
+    {
+        terrainPosition = anchor;
+        int searchRadius = Mathf.Max(0, maxSearchRadius);
+        int sampleBudget = Mathf.Max(1, maxSamples);
+        int sampled = 0;
+
+        if (IsWalkableTerrainAtWorld(anchor, worldSeed, sourcePlanetData, riverGenerator))
+            return true;
+
+        sampled++;
+
+        // 先细查锚点附近，通常可以给新玩家一个更自然的初始位置。
+        int localRadius = Mathf.Min(searchRadius, 8);
+        for (int y = -localRadius; y <= localRadius && sampled < sampleBudget; y++)
+        {
+            for (int x = -localRadius; x <= localRadius && sampled < sampleBudget; x++)
+            {
+                if (x == 0 && y == 0)
+                    continue;
+
+                Vector2Int candidate = anchor + new Vector2Int(x, y);
+                sampled++;
+                if (!IsWalkableTerrainAtWorld(candidate, worldSeed, sourcePlanetData, riverGenerator))
+                    continue;
+
+                terrainPosition = candidate;
+                return true;
+            }
+        }
+
+        if (searchRadius == 0 || sampled >= sampleBudget)
+            return false;
+
+        // 再在整个允许范围内均匀取样。相比逐格螺旋扫描，这给出明确的
+        // 工作上限，即使错误配置把整张世界生成成水也不会卡住主线程。
+        int gridSize = Mathf.Max(2, Mathf.CeilToInt(Mathf.Sqrt(sampleBudget - sampled)));
+        for (int y = 0; y < gridSize && sampled < sampleBudget; y++)
+        {
+            for (int x = 0; x < gridSize && sampled < sampleBudget; x++)
+            {
+                float normalizedX = (x + 0.5f) / gridSize;
+                float normalizedY = (y + 0.5f) / gridSize;
+                Vector2Int candidate = new Vector2Int(
+                    anchor.x + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, normalizedX)),
+                    anchor.y + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, normalizedY)));
+
+                sampled++;
+                if (!IsWalkableTerrainAtWorld(candidate, worldSeed, sourcePlanetData, riverGenerator))
+                    continue;
+
+                terrainPosition = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 判断指定世界坐标按当前大陆生成配置最终会落在可行走的基础地形上。
+    /// 不带河流参数的旧调用只检查大陆；出生流程使用下方重载并传入河流生成器。
+    /// </summary>
+    public bool IsWalkableTerrainAtWorld(Vector2Int worldPos, int worldSeed)
+    {
+        return IsWalkableTerrainAtWorld(worldPos, worldSeed, plantData, riverGenerator: null);
+    }
+
+    /// <summary>
+    /// 纯判断指定位置最终是否会是可行走基础地形。传入河流生成器后，
+    /// 会使用相同世界种子排除将被河流覆盖的格子。
+    /// </summary>
+    public bool IsWalkableTerrainAtWorld(
+        Vector2Int worldPos,
+        int worldSeed,
+        PlanetData sourcePlanetData,
+        ChunkGenerator_River riverGenerator)
+    {
+        if (biomes == null || biomes.Count == 0)
+            return false;
+
+        if (riverGenerator != null && riverGenerator.TryEvaluateRiverCell(worldPos, worldSeed, out _))
+            return false;
+
+        EnvironmentSample sample = SampleEnvironmentAtWorld(worldPos, worldSeed, sourcePlanetData);
+        for (int i = 0; i < biomes.Count; i++)
+        {
+            BiomeData biome = biomes[i];
+            if (biome == null || biome.Condition == null || !biome.Condition.IsMatch(sample))
+                continue;
+
+            BiomeTerrainConfig terrainConfig = biome.TerrainConfig;
+            if (terrainConfig?.TileSpawns_NoSO == null || terrainConfig.TileSpawns_NoSO.Count == 0)
+                return false;
+
+            Tile_Block tileBlock = terrainConfig.TileSpawns_NoSO[0]?.TileBlock;
+            TileData tileTemplate = tileBlock?.tileDataTemplate;
+            return tileTemplate != null && !(tileTemplate is TileData_Water) && tileTemplate.IsWalkable;
+        }
+
+        return false;
     }
 
     /// <summary>

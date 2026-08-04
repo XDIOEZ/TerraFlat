@@ -15,6 +15,7 @@ public sealed partial class GMReflectionConsole
     private enum GmPageId
     {
         Player,
+        Buff,
         Spawn,
         World,
         Structures,
@@ -111,6 +112,7 @@ public sealed partial class GMReflectionConsole
         gmPageHost = pageHostObject.transform;
 
         BuildPlayerPage();
+        BuildBuffPage();
         BuildSpawnPage();
         BuildWorldPage();
         BuildStructurePage();
@@ -232,6 +234,7 @@ public sealed partial class GMReflectionConsole
         layout.childForceExpandWidth = true;
 
         CreateTab(tabBar.transform, GmPageId.Player, "玩家", 150f);
+        CreateTab(tabBar.transform, GmPageId.Buff, "Buff", 150f);
         CreateTab(tabBar.transform, GmPageId.Spawn, "生成与召唤", 170f);
         CreateTab(tabBar.transform, GmPageId.World, "世界", 150f);
         CreateTab(tabBar.transform, GmPageId.Structures, "遗迹", 150f);
@@ -996,6 +999,7 @@ public sealed partial class GMReflectionConsole
         return pageId switch
         {
             GmPageId.Player => "玩家",
+            GmPageId.Buff => "Buff",
             GmPageId.Spawn => "生成与召唤",
             GmPageId.World => "世界",
             GmPageId.Structures => "遗迹",
