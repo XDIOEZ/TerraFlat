@@ -217,7 +217,6 @@ public abstract class Item : MonoBehaviour
         StopAllCoroutines();
         destructionHandled = false;
         isInitialized = false;
-        updateTimer = 0f;
         Owner = null;
         itemMods = new ItemMods(this);
         ClearModuleSchedule();
@@ -284,11 +283,6 @@ public abstract class Item : MonoBehaviour
     /// 物品的更新频率，单位：秒
     /// </summary>
     public float updateInterval = 0f; // 每0.1秒执行一次
-
-    /// <summary>
-    /// 更新计时器
-    /// </summary>
-    float updateTimer = 0f;
 
     /// <summary>
     /// 创建新的物品数据

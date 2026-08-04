@@ -425,10 +425,11 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
         }
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
         // 确保在对象销毁时清理所有资源，但不重新创建父对象
         ClearPool(false);
+        base.OnDestroy();
     }
     
     #endregion

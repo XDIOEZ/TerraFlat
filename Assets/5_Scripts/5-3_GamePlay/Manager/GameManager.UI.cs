@@ -66,9 +66,11 @@ public partial class GameManager
     public const string GameSavePanelKey = "UI_GameSaveManager";
     public const string GameSaveStartButtonKey = "开始游戏按钮";
     public const string GameSaveLoadButtonKey = "加载存档按钮";
+    public const string GameSaveDeleteButtonKey = "删除存档按钮";
     public const string GameSaveBackButtonKey = "返回按钮";
     public const string GameSavePlayerInputKey = "选择或新增玩家名称输入框";
     public const string GameSaveSelectedTextKey = "选中的存档名称";
+    public const string GameSaveNoSelectionText = "尚未选择存档";
 
     private const string ContextMenuPanelKey = "ContextMenu";
 
@@ -431,6 +433,7 @@ public partial class GameManager
         BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_SaveManager, GameSavePanelKey);
         panel.SetButtonOnClick(GameSaveStartButtonKey, OnClick_StartGame_Button);
         panel.SetButtonOnClick(GameSaveLoadButtonKey, OnClick_LoadSaveData_Button);
+        panel.SetButtonOnClick(GameSaveDeleteButtonKey, OnClick_DeleteSave_Button);
         panel.SetButtonOnClick(GameSaveBackButtonKey, panel.Close);
         panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
         panel.PrepareForGamepadNavigation(GameSaveStartButtonKey);
@@ -819,23 +822,52 @@ public partial class GameManager
         SaveDataManager_UI.Instance?.GeneratePlayerButtons();
     }
 
-    public void OnClick_DeletSave_Button()
+    public void OnClick_DeleteSave_Button()
     {
-        if (SaveMenuRightMenuUI.Instance.SelectInfo.Path == "")
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr == null)
         {
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict.Remove(SaveMenuRightMenuUI.Instance.SelectInfo.Name);
-        }
-        else if (SaveDataMgr.Instance != null)
-        {
-            string selectedSaveName = GetSaveManagerPanel()?.GetText(GameSaveSelectedTextKey)?.text;
-            if (!string.IsNullOrEmpty(selectedSaveName))
-            {
-                string saveDirectory = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData");
-                SaveDataMgr.Instance.DeleteSave(saveDirectory, selectedSaveName);
-            }
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
+            return;
         }
 
-        SaveDataManager_UI.Instance?.Refresh();
+        BasePanel panel = GetSaveManagerPanel();
+        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
+        if (string.IsNullOrWhiteSpace(selectedSaveName) ||
+            string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
+        {
+            Debug.LogWarning("请先选择要删除的存档");
+            return;
+        }
+
+        saveDataMgr.DeleteSave(saveDataMgr.UserSavePath, selectedSaveName);
+        if (saveDataMgr.SaveData != null &&
+            string.Equals(saveDataMgr.SaveData.saveName, selectedSaveName, StringComparison.Ordinal))
+        {
+            saveDataMgr.SaveData = null;
+            saveDataMgr.CurrentContrrolPlayerName = string.Empty;
+        }
+
+        SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
+        if (saveList != null)
+        {
+            saveList.Refresh();
+            saveList.ClearSaveSelection();
+        }
+        else
+        {
+            panel?.SetText(GameSaveSelectedTextKey, GameSaveNoSelectionText);
+            panel?.SetInputFieldText(GameSavePlayerInputKey, string.Empty);
+            Button deleteButton = panel?.GetButton(GameSaveDeleteButtonKey);
+            if (deleteButton != null)
+                deleteButton.interactable = false;
+        }
+    }
+
+    // 保留旧拼写入口，避免已有 Inspector 事件丢失。
+    public void OnClick_DeletSave_Button()
+    {
+        OnClick_DeleteSave_Button();
     }
 
     #endregion

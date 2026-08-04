@@ -202,6 +202,32 @@ namespace FlatWorld.GameTest.UI
 
         [Test]
         [Category("UI.Smoke")]
+        public void GameSavePrefabContainsDeleteControlAndRuntimeBinding()
+        {
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_GameSaveManager.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少存档选择 Prefab：{prefabPath}");
+
+            Button deleteButton = prefab.GetComponentsInChildren<Button>(true)
+                .SingleOrDefault(button => button.name == GameManager.GameSaveDeleteButtonKey);
+            Assert.That(deleteButton, Is.Not.Null, "存档选择面板缺少删除存档按钮。");
+            Assert.That(deleteButton.interactable, Is.False, "未选择存档时不应允许删除。");
+            Assert.That(
+                typeof(GameManager).GetMethod(nameof(GameManager.OnClick_DeleteSave_Button)),
+                Is.Not.Null,
+                "GameManager 必须提供存档删除入口。");
+
+            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.UI.cs");
+            Assert.That(
+                source,
+                Does.Contain("panel.SetButtonOnClick(GameSaveDeleteButtonKey, OnClick_DeleteSave_Button);"));
+            Assert.That(
+                source,
+                Does.Contain("saveDataMgr.DeleteSave(saveDataMgr.UserSavePath, selectedSaveName);"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
         public void RuntimeUIScriptsDoNotBuildVisualTrees()
         {
             string[] scriptPaths =

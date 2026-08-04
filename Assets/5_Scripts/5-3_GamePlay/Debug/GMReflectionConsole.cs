@@ -110,11 +110,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void OnDestroy()
     {
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        DisposeBuffTargeting();
         UnbindGameEventManager();
     }
 
     private void Update()
     {
+        UpdateBuffTargetingInput();
+
         bool f4Pressed = Keyboard.current != null
             ? Keyboard.current.f4Key.wasPressedThisFrame
             : Input.GetKeyDown(KeyCode.F4);
@@ -134,6 +137,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void OnActiveSceneChanged(Scene previous, Scene next)
     {
         RebindLegacyF4Conflict();
+        HandleBuffTargetingSceneChanged();
         if ((windowRoot != null && windowRoot.activeSelf) ||
             (airdropBrowserRoot != null && airdropBrowserRoot.activeSelf) ||
             (aiCreatureBrowserRoot != null && aiCreatureBrowserRoot.activeSelf))
@@ -1212,6 +1216,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         RebindLegacyF4Conflict();
         BindGameEventManager();
+        RefreshBuffDefinitions();
+        RefreshBuffTargetingControls();
         RefreshTeleportShortcutButton();
         RefreshPlayerMoveSpeedButton();
         RefreshNavigationPathButton();

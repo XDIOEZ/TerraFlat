@@ -23,8 +23,11 @@ public class ReNameSystem
     }
     public void Rename_SaveName(string oldName,string oldSavePath,string newName)
     {
+        string oldSaveDirectory = System.IO.Path.GetDirectoryName(oldSavePath);
+        string oldSaveName = System.IO.Path.GetFileNameWithoutExtension(oldSavePath);
+
         SaveDataMgr.Instance.SaveData.saveName = newName;
-        SaveDataMgr.Instance.DeletSave(oldSavePath);
+        SaveDataMgr.Instance.DeleteSave(oldSaveDirectory, oldSaveName);
         SaveDataMgr.Instance.Save_And_WriteToDisk();
         SaveDataManager_UI.Ins.Refresh();
     }
