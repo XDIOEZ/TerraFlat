@@ -1,6 +1,6 @@
 ---
 name: flatworld-buff
-description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录、运行时实例、叠加与持续时间、Tick 效果、效果处理器、Buff 存档、MOD Buff 注册或 BuffManager Prefab。关键词：BuffManager、BuffDefinition、BuffInstance、BuffEffectDispatcher、BuffCatalogLoader、buffs.json。"
+description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录、运行时实例、叠加与持续时间、Tick 效果、效果处理器、Buff 存档、MOD Buff 注册或 BuffManager Prefab。关键词：BuffManager、BuffDefinition、BuffInstance、BuffEffectDispatcher、BuffCatalogLoader、buff-manifest.json。"
 ---
 
 # FlatWorld Buff 定位
@@ -13,13 +13,13 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 2. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffDefinition.cs`、`BuffDefinitionDto.cs`、`BuffDefinitionFactory.cs`：运行时定义、JSON DTO、严格校验与效果处理器缓存。
 3. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffInstance.cs`：持续时间、Start/Tick/Stop、过期和可持久化运行时状态。
 4. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffEffectDispatcher.cs`：`typeId` 到 C# 效果函数的唯一映射。
-5. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffCatalogLoader.cs` 与 `Assets/StreamingAssets/GameConfig/Buffs/buffs.json`：本体 Buff 目录加载入口与数据源。
+5. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffCatalogLoader.cs` 与 `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json`：本体 Buff 分包加载入口与清单。
 
-主链路：`buffs.json / MOD Def -> BuffDefinitionFactory -> GameRes.RegisterBuff -> BuffManager.AddBuff -> BuffInstance -> BuffEffectDispatcher`。
+主链路：`buff-manifest.json -> 启用的 Buff 分包 / MOD Def -> BuffDefinitionFactory -> GameRes.RegisterBuff -> BuffManager.AddBuff -> BuffInstance -> BuffEffectDispatcher`。
 
 ## 按任务定位
 
-- 修改本体 Buff 数值或组合：编辑 `Assets/StreamingAssets/GameConfig/Buffs/buffs.json`，不要恢复已淘汰的 Buff ScriptableObject 路径。
+- 修改本体 Buff 数值或组合：编辑 `Assets/StreamingAssets/GameConfig/Buffs/` 下由 `buff-manifest.json` 声明的业务分包；新增分包必须登记稳定 ID、相对路径和启用状态，不要恢复已淘汰的 Buff ScriptableObject 路径。
 - 修改字段、类别或叠加规则：同步检查 `BuffDefinitionDto`、`BuffDefinition`、`BuffDefinitionFactory` 和现有 JSON。
 - 新增效果类型：在 `BuffEffectTypeIds` 定义稳定 ID，在 `BuffEffectDispatcher` 注册处理器，并在 `BuffDefinitionFactory.ValidateEffectParameters()` 增加参数校验。
 - 修改添加、移除、叠加、饮水延时或事件：编辑 `BuffManager`。
@@ -53,6 +53,12 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - MemoryPack 只持久化 `DefinitionId`、剩余时间和 Tick 累计；Unity 对象与定义引用在加载时通过 `GameRes` 恢复。缺失定义应跳过并报告，不得留下半初始化实例。
 - 保留 `BuffManager` 的模块 Tick 调度与 `BuffInstance` 的单次更新 Tick 上限，避免长帧造成无限补算。
 - MOD Buff 与本体 Buff 共用 `GameRes.RegisterBuff()` 的冲突检测；不要绕过注册入口覆盖已有 ID。
+
+## 近期变更
+
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-08-03：本体 Buff 从单个 `buffs.json` 拆为 `buff-manifest.json + environment/combat/survival/movement` 四个分包；运行时先聚合并检查跨包重复 ID，再统一注册。StreamingAssets 文本读取接入 Android/WebGL 的 `UnityWebRequest` 协程路径。
 
 ## 修改后自动测试
 

@@ -15,6 +15,30 @@ public sealed class BuffCatalogDto
     public List<BuffDefinitionDto> Buffs = new();
 }
 
+/// <summary>本体 Buff 分包清单；按声明顺序加载启用的 JSON 文件。</summary>
+[Serializable]
+public sealed class BuffManifestDto
+{
+    [JsonProperty("schemaVersion", Required = Required.Always)]
+    public int SchemaVersion = 1;
+
+    [JsonProperty("packages", Required = Required.Always)]
+    public List<BuffPackageDto> Packages = new();
+}
+
+[Serializable]
+public sealed class BuffPackageDto
+{
+    [JsonProperty("id", Required = Required.Always)]
+    public string Id;
+
+    [JsonProperty("path", Required = Required.Always)]
+    public string Path;
+
+    [JsonProperty("enabled")]
+    public bool Enabled = true;
+}
+
 [Serializable]
 public sealed class BuffDefinitionDto
 {

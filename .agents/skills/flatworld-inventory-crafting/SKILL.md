@@ -90,6 +90,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-03：配方分包启动加载改用共享 StreamingAssets 文本协程；桌面/编辑器读取文件，Android/WebGL 通过 `UnityWebRequest` 读取包内清单与分包，保持先聚合校验再统一注册。
 - 2026-07-31：建筑配方新增 `core:矿坑入口`，正式产出可放置的 `MineEntrance_Summoner`；内建配方总数更新为 39。
 - 2026-07-31：背包、装备、手工制作和快捷栏接入稳定手柄 Action；移除手工制作硬编码 `Input.GetKeyDown(H)`，模态库存面板增加手柄焦点与可嵌套玩法输入锁。
 - 2026-07-30：完成首种苹果作物闭环；`Mod_Seed` 收敛为播种入口，`Mod_Grow` 统一水肥/天气/难度成长、阶段、成熟、一次性收获与存档，AppleTree 移除无限 `Mod_Production`，Apple 移除播种模块，Fertilizer 接入水肥补给。
@@ -99,7 +100,6 @@ disable-model-invocation: false
 - 2026-07-29：自定义难度接入饥饿、耐力消耗/恢复、作物生长、熔炼速度、燃料消耗、制作产量与植物产出数量；所有入口统一读取 `GameDifficultyService`。
 - 2026-07-29：确认 8 个业务分包与旧 `Assets/StreamingAssets/GameConfig/recipes.json` 的 38 个配方 ID 完全一致后，删除旧单文件及“将单 JSON 迁移为业务分包”一次性编辑器入口；运行时与 Excel 只使用清单和分包。
 - 2026-07-29：四套制作算法收敛到 `CraftingRecipeMatcher + CraftingTransaction + CraftingService + CraftingResult`；统一镜像/Tag/紧凑网格匹配、组合容量预检、原子扣料与多输出，并修复 `Mod_HandMade.GetDefaultTargetInventory()`。
-- 2026-07-28：本体配方由单个 `recipes.json` 改为 `recipe-manifest.json + 8 个业务分包`；运行时仍统一注册，Excel 新增 `Package` 列控制落盘位置。
 
 ## 修改后自动测试
 
