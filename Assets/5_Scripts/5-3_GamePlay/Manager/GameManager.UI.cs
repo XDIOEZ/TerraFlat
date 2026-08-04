@@ -346,9 +346,27 @@ public partial class GameManager
             return;
 
         if (UIPrefab_HelloCanvas == null)
+        {
+            Debug.LogError(
+                "[GameManager] 无法创建主菜单：UIPrefab_HelloCanvas 未配置。请检查 WorldManager.prefab 的 UI 预制体引用。",
+                this);
             return;
+        }
 
-        BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_HelloCanvas, MainMenuPanelKey);
+        UIManager uiManager = UIManager.Instance;
+        if (uiManager == null)
+        {
+            Debug.LogError("[GameManager] 无法创建主菜单：UIManager 未就绪。", this);
+            return;
+        }
+
+        BasePanel panel = uiManager.CreatePanelFromGameObject(UIPrefab_HelloCanvas, MainMenuPanelKey);
+        if (panel == null)
+        {
+            Debug.LogError("[GameManager] 主菜单 Prefab 实例化后未获得 BasePanel。", this);
+            return;
+        }
+
         panel.SetButtonOnClick(MainMenuContinueButtonKey, OpenGameSaveManager);
         panel.SetButtonOnClick(MainMenuNewGameButtonKey, OpenNewGame);
         panel.PrepareForGamepadNavigation(MainMenuContinueButtonKey, false);

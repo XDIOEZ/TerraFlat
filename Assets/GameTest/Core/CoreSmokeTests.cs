@@ -40,5 +40,33 @@ namespace FlatWorld.GameTest.Core
             Assert.That(uiSource, Does.Not.Contain("new GameObject"),
                 "世界加载界面不得由运行时代码硬编码创建视觉节点。 ");
         }
+
+        [Test]
+        [Category("Core.Smoke")]
+        public void NewPlayerSpawnUsesPureSeedSamplingBeforeChunkStreaming()
+        {
+            const string managerPath = "Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs";
+            const string chunkLoaderPath = "Assets/5_Scripts/5-3_GamePlay/Chunk/Mod_ChunkLoader.cs";
+            string managerSource = File.ReadAllText(managerPath);
+            string chunkLoaderSource = File.ReadAllText(chunkLoaderPath);
+
+            Assert.That(managerSource, Does.Contain("TryFindWalkableTerrainNear("));
+            Assert.That(managerSource, Does.Contain("spawnTerrainSampleBudget"));
+            Assert.That(managerSource, Does.Contain("GetActiveMapCorePrefabId()"));
+            Assert.That(managerSource, Does.Contain("GetPrefab(mapCorePrefabId, logError: false)"));
+            Assert.That(managerSource, Does.Not.Contain("RandomDropInMap(player.gameObject"),
+                "出生搜索失败时不得将玩家随机投放到可能是水面的坐标。");
+            Assert.That(managerSource, Does.Not.Contain("LoadChunk_By_Position("),
+                "出生定位阶段不得创建 Chunk；Chunk 必须在玩家坐标设置后由流送模块加载。 ");
+            Assert.That(managerSource, Does.Not.Contain("WaitForSpawnChunkTerrain("));
+
+            int teleportIndex = managerSource.IndexOf("player.transform.position = spawnPosition;", System.StringComparison.Ordinal);
+            int worldEnterIndex = managerSource.IndexOf("Event_PlayerEnterWorld?.Invoke(player);", teleportIndex, System.StringComparison.Ordinal);
+            Assert.That(teleportIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(worldEnterIndex, Is.GreaterThan(teleportIndex),
+                "必须先设置出生坐标，再触发玩家进入世界事件。 ");
+            Assert.That(chunkLoaderSource, Does.Contain("GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld"));
+            Assert.That(chunkLoaderSource, Does.Contain("RefreshChunksAroundPlayer();"));
+        }
     }
 }

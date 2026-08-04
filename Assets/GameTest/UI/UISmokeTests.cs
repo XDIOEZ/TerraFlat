@@ -48,10 +48,26 @@ namespace FlatWorld.GameTest.UI
         [Category("UI.Smoke")]
         public System.Collections.IEnumerator GameStartCreatesMainMenuWithExactlyOneEventSystem()
         {
+            UnityEngine.SceneManagement.Scene previousActiveScene =
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             UnityEngine.AsyncOperation loadOperation =
-                UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("GameStartScene");
+                UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                    "GameStartScene",
+                    UnityEngine.SceneManagement.LoadSceneMode.Additive);
             while (!loadOperation.isDone)
                 yield return null;
+
+            UnityEngine.SceneManagement.Scene gameStartScene =
+                UnityEngine.SceneManagement.SceneManager.GetSceneByName("GameStartScene");
+            Assert.That(gameStartScene.isLoaded, Is.True,
+                "GameStartScene failed to load for the main-menu smoke test.");
+            UnityEngine.SceneManagement.SceneManager.SetActiveScene(gameStartScene);
+
+            GameManager gameManager = GameManager.Instance;
+            Assert.That(gameManager, Is.Not.Null,
+                "GameStartScene must provide a GameManager instance.");
+            Assert.That(gameManager.UIPrefab_HelloCanvas, Is.Not.Null,
+                "The active GameManager lost its serialized main-menu Prefab reference.");
 
             EventSystem[] eventSystems = null;
             GameObject panelRoot = null;
@@ -70,6 +86,9 @@ namespace FlatWorld.GameTest.UI
 
                 yield return null;
             }
+
+            if (previousActiveScene.IsValid() && previousActiveScene.isLoaded)
+                UnityEngine.SceneManagement.SceneManager.SetActiveScene(previousActiveScene);
 
             Assert.That(eventSystems, Has.Length.EqualTo(1),
                 "GameStartScene must have exactly one EventSystem.");

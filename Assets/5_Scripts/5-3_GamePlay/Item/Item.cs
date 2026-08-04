@@ -382,21 +382,39 @@ public abstract class Item : MonoBehaviour
             //通过数据进行匹配修复
             foreach (ModuleData modData in itemData.ModuleDataDic.Values)
             {
-                var modList = tempMods.GetModList_ByID(modData.ID);
-                Module mod;//待安装数据模块引用
+                if (modData == null || string.IsNullOrWhiteSpace(modData.ID))
+                {
+                    Debug.LogWarning($"物品 {gameObject.name} 包含没有有效 ID 的模块数据，已跳过自动修复。", this);
+                    continue;
+                }
+
+                Module mod = tempMods.FindModByPersistedId(modData.ID);//待安装数据模块引用
 
                 //不存在模块
-                if (modList == null || modList.Count == 0)
+                if (mod == null)
                 {
 
                     Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {modData.Name} " +
                         $" ID: {modData.ID}，下面开始尝试自动修复。");
 
-                    GameObject @object = GameRes.Instance.InstantiatePrefab(modData.ID);
+                    GameObject @object = GameRes.Instance?.InstantiatePrefab(modData.ID);
+                    if (@object == null)
+                    {
+                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {modData.Name} " +
+                            $" ID: {modData.ID}：找不到对应的模块 Prefab。", this);
+                        continue;
+                    }
 
                     @object.transform.SetParent(transform);
 
                     mod = @object.GetComponentInChildren<Module>();
+                    if (mod == null)
+                    {
+                        Debug.LogError($"物品 {gameObject.name} 无法修复模块 {modData.Name} " +
+                            $" ID: {modData.ID}：Prefab 未包含 Module 组件。", @object);
+                        Destroy(@object);
+                        continue;
+                    }
 
                     mod._Data = modData;
 
@@ -407,11 +425,9 @@ public abstract class Item : MonoBehaviour
 
                 else//存在模块
                 {
-                    mod = modList[^1];
+                    tempMods.RemoveMod(mod);
 
                     mod._Data = modData;
-
-                    tempMods.RemoveMod(mod);
 
                     modsToInit.Add(mod);//添加到待初始化列表
 

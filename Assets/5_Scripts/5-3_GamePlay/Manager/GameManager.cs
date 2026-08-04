@@ -1,4 +1,4 @@
-// AI-Context: 游戏世界总生命周期与出生点服务；出生点查询可能触发区块加载，调用方应允许跨帧重试，严禁在搜索失败时默认投放到水面。
+// AI-Context: 游戏世界总生命周期与出生点服务；出生点必须直接按种子和 MapCore 配置纯计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时创建任何 Chunk 或默认投放到水面。
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -52,10 +52,36 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     #endregion
     [Header("新玩家出生点搜索配置")]
     [SerializeField, Min(1)] private int spawnLandMaxSearchRadius = 256;
+    [SerializeField, Min(1)] private int spawnTerrainSampleBudget = 4096;
     [SerializeField, Min(0)] private int spawnSeedAnchorRange = 256;
-    [SerializeField, Min(1)] private int spawnSearchRetryFrames = 60;
 
     #region 生命周期方法
+    protected override void Awake()
+    {
+        if (instance == null)
+        {
+            base.Awake();
+            return;
+        }
+
+        if (instance == this)
+            return;
+
+        // GameManager 依赖 WorldManager Prefab 上的序列化配置。若较早的代码路径
+        // 通过 SingletonAutoMono 自动创建了空实例，必须由场景中的已配置实例接管。
+        if (UIPrefab_HelloCanvas != null && instance.UIPrefab_HelloCanvas == null)
+        {
+            Debug.LogWarning(
+                "[GameManager] 已用 GameStartScene 中配置完整的实例替换自动创建的空实例。",
+                this);
+            Destroy(instance);
+            instance = this;
+            return;
+        }
+
+        Destroy(gameObject);
+    }
+
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
@@ -615,7 +641,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         if (RequiresInitialPlayerPlacement(player))
         {
-            // 新玩家：区块地表是异步生成的，使用多帧重试避免同帧读取到空地表
+            // 新玩家：先按种子纯计算出生位置，再通过玩家进入事件触发常规 Chunk 流送。
             StartCoroutine(PlaceNewPlayerOnLandThenEnterWorld(player));
             return;
         }
@@ -642,32 +668,34 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     private IEnumerator PlaceNewPlayerOnLandThenEnterWorld(Player player)
     {
-        bool hasPlacedOnLand = false;
-        int retryFrames = Mathf.Max(1, spawnSearchRetryFrames);
-
-        for (int i = 0; i < retryFrames; i++)
+        if (player == null || player.Data == null)
         {
-            if (TryPlaceNewPlayerOnNearestLand(player))
-            {
-                hasPlacedOnLand = true;
-                break;
-            }
-
-            yield return null;
+            FailWorldEntryLoading("新玩家数据无效，无法准备出生区域。");
+            yield break;
         }
 
-        if (!hasPlacedOnLand)
+        Vector2Int seedAnchor = GetSeedAnchorPosition();
+        int worldSeed = GetActiveWorldGenerationSeed();
+        SetWorldLoadingView("正在进入存档", "正在根据世界种子定位安全出生点…", 0.7f);
+
+        // 读取已加载的 MapCore Prefab 配置做纯采样，不实例化 Map 或 Chunk。
+        // 玩家位置设置完成后才触发 Event_PlayerEnterWorld，由 Mod_ChunkLoader 正常流送周围区块。
+        if (!TryFindNearestLand(seedAnchor, out Vector2Int landPosition, out string failureReason))
         {
-            ItemMgr.Instance.RandomDropInMap(player.gameObject, null, new Vector2Int(-1, -1));
-            player.Data.transform.position = player.transform.position;
-            Debug.LogWarning($"[GameManager] 新玩家陆地出生点搜索失败（重试帧数={retryFrames}），回退随机投放：{player.transform.position}");
+            FailWorldEntryLoading(
+                $"{failureReason} seed={worldSeed}, anchor={seedAnchor}。请检查世界噪声缩放和生物群系配置。");
+            yield break;
         }
 
+        Vector3 spawnPosition = new Vector3(landPosition.x + 0.5f, landPosition.y + 0.5f, 0f);
+        player.transform.position = spawnPosition;
+        player.Data.transform.position = spawnPosition;
+        Debug.Log($"[GameManager] 新玩家出生点已按种子定位到安全陆地：seed={worldSeed}, anchor={seedAnchor}, spawn={spawnPosition}");
         Event_PlayerEnterWorld?.Invoke(player);
     }
 
     /// <summary>
-    /// 为新玩家寻找最近陆地并设置出生位置
+    /// 为新玩家寻找附近陆地并设置出生位置。
     /// </summary>
     public bool TryGetDefaultPlayerSpawnPosition(out Vector3 spawnPos)
     {
@@ -693,14 +721,21 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        return IsLandTile(Vector2Int.FloorToInt(position), new HashSet<string>());
+        return TryGetLoadedLandTile(Vector2Int.FloorToInt(position));
     }
 
     /// <summary>
-    /// 从指定世界坐标向外寻找最近的可行走陆地，供联机玩家错位修正和多人错峰出生。
+    /// 从指定世界坐标向外寻找附近的可行走陆地，供联机玩家错位修正和多人错峰出生。
     /// </summary>
     public bool TryGetNearestLandSpawnPosition(Vector3 preferredPosition, out Vector3 spawnPos)
     {
+        if (float.IsNaN(preferredPosition.x) || float.IsInfinity(preferredPosition.x) ||
+            float.IsNaN(preferredPosition.y) || float.IsInfinity(preferredPosition.y))
+        {
+            spawnPos = Vector3.zero;
+            return false;
+        }
+
         Vector2Int anchor = Vector2Int.FloorToInt(preferredPosition);
         if (!TryFindNearestLand(anchor, out Vector2Int landPos))
         {
@@ -709,30 +744,6 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
 
         spawnPos = new Vector3(landPos.x + 0.5f, landPos.y + 0.5f, 0f);
-        return true;
-    }
-
-    /// <summary>
-    /// 为新玩家寻找最近陆地并设置出生位置
-    /// </summary>
-    private bool TryPlaceNewPlayerOnNearestLand(Player player)
-    {
-        if (player == null)
-        {
-            Debug.LogError("[GameManager] TryPlaceNewPlayerOnNearestLand 失败：player 为空");
-            return false;
-        }
-
-        if (!TryGetDefaultPlayerSpawnPosition(out Vector3 spawnPos))
-        {
-            return false;
-        }
-
-        player.transform.position = spawnPos;
-        player.Data.transform.position = spawnPos;
-
-        Vector2Int seedAnchor = GetSeedAnchorPosition();
-        Debug.Log($"[GameManager] 新玩家出生点已定位到陆地：seed={SaveDataMgr.Instance.SaveData.Seed}, anchor={seedAnchor}, spawn={spawnPos}");
         return true;
     }
 
@@ -752,93 +763,144 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 以锚点为中心按螺旋环搜索最近陆地
+    /// 用当前维度的 MapCore Prefab 与存档星球数据采样候选陆地。
+    /// 该路径绝不能因搜索而实例化 Map 或创建 Chunk。
     /// </summary>
     private bool TryFindNearestLand(Vector2Int anchor, out Vector2Int landPos)
     {
-        landPos = anchor;
-        int maxSearchRadius = Mathf.Max(1, spawnLandMaxSearchRadius);
-        HashSet<string> loadedChunkCache = new HashSet<string>();
+        return TryFindNearestLand(anchor, out landPos, out _);
+    }
 
-        if (IsLandTile(anchor, loadedChunkCache))
+    private bool TryFindNearestLand(
+        Vector2Int anchor,
+        out Vector2Int landPos,
+        out string failureReason)
+    {
+        landPos = anchor;
+        failureReason = string.Empty;
+        if (!TryGetSpawnTerrainSampler(
+                out ChunkGenerator_Land landGenerator,
+                out ChunkGenerator_River riverGenerator,
+                out PlanetData planetData,
+                out failureReason))
         {
-            landPos = anchor;
+            return false;
+        }
+
+        if (landGenerator.TryFindWalkableTerrainNear(
+            anchor,
+            GetActiveWorldGenerationSeed(),
+            planetData,
+            riverGenerator,
+            Mathf.Max(1, spawnLandMaxSearchRadius),
+            Mathf.Max(1, spawnTerrainSampleBudget),
+            out landPos))
+        {
             return true;
         }
 
-        for (int radius = 1; radius <= maxSearchRadius; radius++)
-        {
-            int minX = anchor.x - radius;
-            int maxX = anchor.x + radius;
-            int minY = anchor.y - radius;
-            int maxY = anchor.y + radius;
-
-            for (int x = minX; x <= maxX; x++)
-            {
-                Vector2Int top = new Vector2Int(x, maxY);
-                if (IsLandTile(top, loadedChunkCache))
-                {
-                    landPos = top;
-                    return true;
-                }
-
-                Vector2Int bottom = new Vector2Int(x, minY);
-                if (IsLandTile(bottom, loadedChunkCache))
-                {
-                    landPos = bottom;
-                    return true;
-                }
-            }
-
-            for (int y = minY + 1; y <= maxY - 1; y++)
-            {
-                Vector2Int left = new Vector2Int(minX, y);
-                if (IsLandTile(left, loadedChunkCache))
-                {
-                    landPos = left;
-                    return true;
-                }
-
-                Vector2Int right = new Vector2Int(maxX, y);
-                if (IsLandTile(right, loadedChunkCache))
-                {
-                    landPos = right;
-                    return true;
-                }
-            }
-        }
-
+        failureReason = "未能在出生范围内采样到非水且可行走的陆地。";
         return false;
     }
 
     /// <summary>
-    /// 判断指定世界坐标是否为可出生陆地
+    /// 从当前维度的 MapCore Prefab 获取地形采样器。该 Prefab 仅作为只读配置源，
+    /// 不会 Instantiate，也不会写入运行时生成器的 PlanetData。
     /// </summary>
-    private bool IsLandTile(Vector2Int worldPos, HashSet<string> loadedChunkCache)
+    private static bool TryGetSpawnTerrainSampler(
+        out ChunkGenerator_Land landGenerator,
+        out ChunkGenerator_River riverGenerator,
+        out PlanetData planetData,
+        out string failureReason)
     {
-        Vector2Int chunkPos = Chunk.GetChunkPosition(worldPos);
-        string chunkName = chunkPos.ToString();
+        landGenerator = null;
+        riverGenerator = null;
+        planetData = null;
+        failureReason = string.Empty;
 
-        if (!loadedChunkCache.Contains(chunkName))
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr?.SaveData?.PlanetData_Dict == null)
         {
-            ChunkMgr.Instance.LoadChunk_By_Position(chunkPos);
-            loadedChunkCache.Add(chunkName);
+            failureReason = "当前星球存档数据未就绪。";
+            return false;
         }
 
-        if (!ChunkMgr.Instance.TryGetActiveChunkByPos(chunkPos, out Chunk chunk) || chunk == null)
+        planetData = saveDataMgr.GetCurrentPlanetData();
+        if (planetData == null)
+        {
+            failureReason = "当前场景未找到对应的星球生成数据。";
             return false;
+        }
 
-        if (chunk.Map == null)
+        DimensionManager dimensionManager = DimensionManager.Instance;
+        if (dimensionManager == null)
+        {
+            failureReason = "维度管理器未就绪。";
             return false;
+        }
 
-        TileData topTile = chunk.Map.GetTopTile(worldPos);
-        if (topTile == null)
+        if (dimensionManager.ActiveDefinition?.GenerationMode == DimensionGenerationMode.Cave)
+        {
+            failureReason = "矿洞维度不使用地表陆地出生采样。";
             return false;
+        }
 
-        if (topTile is TileData_Water)
+        string mapCorePrefabId = dimensionManager.GetActiveMapCorePrefabId();
+        GameObject mapCorePrefab = GameRes.Instance?.GetPrefab(mapCorePrefabId, logError: false);
+        if (mapCorePrefab == null)
+        {
+            failureReason = $"缺少当前维度的 MapCore Prefab：{mapCorePrefabId}。";
             return false;
+        }
 
-        return topTile.IsWalkable;
+        Map mapTemplate = mapCorePrefab.GetComponent<Map>();
+        if (mapTemplate == null)
+            mapTemplate = mapCorePrefab.GetComponentInChildren<Map>(true);
+        if (mapTemplate == null)
+        {
+            failureReason = $"MapCore Prefab 缺少 Map 组件：{mapCorePrefabId}。";
+            return false;
+        }
+
+        landGenerator = mapTemplate.LandGenerator;
+        if (landGenerator == null)
+        {
+            failureReason = $"MapCore Prefab 缺少 ChunkGenerator_Land：{mapCorePrefabId}。";
+            return false;
+        }
+
+        riverGenerator = mapTemplate.GetGenerator<ChunkGenerator_River>();
+        return true;
+    }
+
+    private int GetActiveWorldGenerationSeed()
+    {
+        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        if (baseSeed == 0)
+            baseSeed = 1;
+
+        return DimensionManager.Instance != null
+            ? DimensionManager.Instance.GetActiveGenerationSeed(baseSeed)
+            : baseSeed;
+    }
+
+    private static bool TryGetLoadedLandTile(Vector2Int worldPosition)
+    {
+        ChunkMgr chunkMgr = ChunkMgr.Instance;
+        if (chunkMgr == null ||
+            !chunkMgr.TryGetActiveChunkByPos(Chunk.GetChunkPosition(worldPosition), out Chunk chunk) ||
+            chunk?.Map?.Data == null ||
+            !chunk.Map.Data.TileLoaded)
+        {
+            return false;
+        }
+
+        return IsWalkableLandTile(chunk.Map.GetTopTile(worldPosition));
+    }
+
+    private static bool IsWalkableLandTile(TileData tile)
+    {
+        return tile != null && !(tile is TileData_Water) && tile.IsWalkable;
     }
 
     /// <summary>

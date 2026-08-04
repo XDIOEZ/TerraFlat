@@ -5,8 +5,15 @@ using UnityEngine;
 public class GameStartIndex : MonoBehaviour
 {
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-        GameManager.Instance.OpenHellowCanvas();
+        GameManager gameManager = GameManager.Instance;
+        if (gameManager == null)
+        {
+            Debug.LogError("[GameStartIndex] 无法创建主菜单：GameManager 未就绪。", this);
+            return;
+        }
+
+        gameManager.OpenHellowCanvas();
     }
 }
