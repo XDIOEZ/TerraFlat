@@ -42,6 +42,7 @@ Input System / PlayerInputActions
 ```
 
 - UI 上方点击由 `GameController.IsPointerOverUI()` 拦截。
+- F4 GM 的 Buff 点选模式订阅本地 `GameController.LeftClick.DynamicCalls`，因此沿用统一鼠标/虚拟光标坐标与 UI 点击拦截；模式由 GM 的确认、取消与清除按钮管理，场景切换时自动解除订阅。
 - `PlayerInputActions.inputactions` 同时声明 `Keyboard&Mouse`、`Gamepad` Scheme；禁止在 `GameController` 运行时注入手柄 Binding，修改后由 Unity 自动生成 `PlayerInputActions.cs`。
 - 当前手柄基础映射：左摇杆移动、右摇杆虚拟光标、RT/A 主要操作、LT/LB 次要操作、X 交互、Y 丢弃、B 背包、十字键上装备/下手工制作/左右切快捷栏、Start 设置、Select 营养面板。
 - 濒死、过场或联机准备期间使用输入锁定，不要通过禁用整个玩家对象规避输入。
@@ -61,6 +62,7 @@ Input System / PlayerInputActions
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-04：GM Buff 分发使用本地玩家 `GameController` 的左键事件选择世界目标；只处理带 `BuffManager` 的对象，避免向不兼容对象运行时注入模块。
 - 2026-07-31：正式矿坑交互传递入口 Item GUID；只有已安装 `MineEntrance` 可进入矿洞，`CaveExit` 返回绑定地表入口，Summoner 交互会被拒绝。
 - 2026-07-31：手柄 Binding 与双 Control Scheme 固化进输入资产；绑定服务新增键鼠/手柄分页、Button/Vector2 重绑、同设备冲突检测和分页恢复默认，并保留设备切换事件与可嵌套玩法输入锁。
 - 2026-07-31：玩家交互链接入 `DimensionPortal`；跨维度时保存每世界位置、安全释放旧玩家，并在目标动态世界重建后恢复位置。

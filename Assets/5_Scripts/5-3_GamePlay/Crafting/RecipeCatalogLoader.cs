@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,12 +20,12 @@ public static class RecipeCatalogLoader
         if (gameRes == null)
             throw new ArgumentNullException(nameof(gameRes));
 
-        string recipeRoot = Path.Combine(Application.streamingAssetsPath, RelativeRecipeRoot);
-        string manifestPath = Path.Combine(recipeRoot, ManifestFileName);
-        if (!File.Exists(manifestPath))
-            throw new FileNotFoundException($"找不到配方分包清单：{manifestPath}", manifestPath);
-
-        RecipeManifestDto manifest = DeserializeManifest(File.ReadAllText(manifestPath));
+        string recipeRoot = StreamingAssetsTextLoader.CombinePath(
+            Application.streamingAssetsPath,
+            RelativeRecipeRoot);
+        string manifestPath = StreamingAssetsTextLoader.CombinePath(recipeRoot, ManifestFileName);
+        RecipeManifestDto manifest = DeserializeManifest(
+            StreamingAssetsTextLoader.ReadAllText(manifestPath));
         ValidateManifest(manifest);
 
         var recipeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -33,10 +34,8 @@ public static class RecipeCatalogLoader
         foreach (RecipePackageDto package in manifest.Packages.Where(package => package.Enabled))
         {
             string packagePath = ResolvePackagePath(recipeRoot, package.Path);
-            if (!File.Exists(packagePath))
-                throw new FileNotFoundException($"配方分包 {package.Id} 不存在：{packagePath}", packagePath);
-
-            RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(File.ReadAllText(packagePath));
+            RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(
+                StreamingAssetsTextLoader.ReadAllText(packagePath));
             List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(
                 catalog,
                 itemId => gameRes.AllPrefabs.ContainsKey(itemId),
@@ -59,6 +58,129 @@ public static class RecipeCatalogLoader
 
         Debug.Log($"[RecipeCatalog] 已从 {loadedPackageCount} 个业务分包加载 {loadedRecipes.Count} 条配方：{manifestPath}");
         return loadedRecipes.Count;
+    }
+
+    /// <summary>跨平台协程入口；Android/WebGL 使用 UnityWebRequest 读取包内文件。</summary>
+    public static IEnumerator LoadBuiltInAsync(
+        GameRes gameRes,
+        Action<int> onCompleted,
+        Action<Exception> onFailed)
+    {
+        if (gameRes == null)
+        {
+            onFailed?.Invoke(new ArgumentNullException(nameof(gameRes)));
+            yield break;
+        }
+
+        string recipeRoot;
+        string manifestPath;
+        try
+        {
+            recipeRoot = StreamingAssetsTextLoader.CombinePath(
+                Application.streamingAssetsPath,
+                RelativeRecipeRoot);
+            manifestPath = StreamingAssetsTextLoader.CombinePath(recipeRoot, ManifestFileName);
+        }
+        catch (Exception exception)
+        {
+            onFailed?.Invoke(exception);
+            yield break;
+        }
+
+        string manifestJson = null;
+        Exception readError = null;
+        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+            manifestPath,
+            text => manifestJson = text,
+            exception => readError = exception);
+
+        if (readError != null)
+        {
+            onFailed?.Invoke(readError);
+            yield break;
+        }
+
+        RecipeManifestDto manifest;
+        try
+        {
+            manifest = DeserializeManifest(manifestJson);
+            ValidateManifest(manifest);
+        }
+        catch (Exception exception)
+        {
+            onFailed?.Invoke(exception);
+            yield break;
+        }
+
+        var recipeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var loadedRecipes = new List<RuntimeRecipe>();
+        int loadedPackageCount = 0;
+        foreach (RecipePackageDto package in manifest.Packages.Where(package => package.Enabled))
+        {
+            string packagePath;
+            try
+            {
+                packagePath = ResolvePackagePath(recipeRoot, package.Path);
+            }
+            catch (Exception exception)
+            {
+                onFailed?.Invoke(exception);
+                yield break;
+            }
+
+            string packageJson = null;
+            readError = null;
+            yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+                packagePath,
+                text => packageJson = text,
+                exception => readError = exception);
+
+            if (readError != null)
+            {
+                onFailed?.Invoke(new IOException(
+                    $"配方分包 {package.Id} 读取失败：{packagePath}",
+                    readError));
+                yield break;
+            }
+
+            try
+            {
+                RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(packageJson);
+                List<RuntimeRecipe> recipes = RecipeRuntimeFactory.BuildCatalog(
+                    catalog,
+                    itemId => gameRes.AllPrefabs.ContainsKey(itemId),
+                    out List<string> warnings);
+
+                foreach (string warning in warnings)
+                    Debug.LogWarning($"[RecipeCatalog:{package.Id}] {warning}");
+                foreach (RuntimeRecipe recipe in recipes)
+                {
+                    if (!recipeIds.Add(recipe.Id))
+                        throw new InvalidDataException($"跨分包存在重复配方 ID：{recipe.Id}");
+                    loadedRecipes.Add(recipe);
+                }
+
+                loadedPackageCount++;
+            }
+            catch (Exception exception)
+            {
+                onFailed?.Invoke(exception);
+                yield break;
+            }
+        }
+
+        try
+        {
+            foreach (RuntimeRecipe recipe in loadedRecipes)
+                gameRes.RegisterRecipe(recipe, true);
+
+            Debug.Log($"[RecipeCatalog] 已从 {loadedPackageCount} 个业务分包加载 {loadedRecipes.Count} 条配方：{manifestPath}");
+            onCompleted?.Invoke(loadedRecipes.Count);
+        }
+        catch (Exception exception)
+        {
+            onFailed?.Invoke(exception);
+        }
     }
 
     public static string Serialize(RecipeCatalogDto catalog)
@@ -108,6 +230,9 @@ public static class RecipeCatalogLoader
             throw new ArgumentException("配方根目录不能为空", nameof(recipeRoot));
         if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
             throw new InvalidDataException($"配方分包路径无效：{relativePath}");
+
+        if (StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
+            return StreamingAssetsTextLoader.CombinePath(recipeRoot, relativePath);
 
         string normalizedRoot = Path.GetFullPath(recipeRoot)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;

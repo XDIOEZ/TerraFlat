@@ -706,11 +706,17 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         if (SelectBox == null || itemSlot_UI == null || index < 0 || index >= itemSlot_UI.Count) return;
 
+        ItemSlot_UI targetSlot = itemSlot_UI[index];
+        if (targetSlot == null) return;
+
         SelectBox.transform.DOKill();
-        SelectBox.transform.SetParent(itemSlot_UI[index].transform, true);
-        // 选中框只负责描边，固定在槽位最底层，避免遮挡后绘制的物品图标与数量文字。
-        SelectBox.transform.SetAsFirstSibling();
-        SelectBox.transform.DOLocalMove(Vector3.zero, SelectBoxChangeDuration).SetEase(Ease.OutQuad);
+        // 保持初始父节点不变，只将选中框移动到目标快捷栏位的位置。
+        SelectBox.transform.DOMove(GetSelectBoxTargetPosition(targetSlot.transform), SelectBoxChangeDuration).SetEase(Ease.OutQuad);
+    }
+
+    private static Vector3 GetSelectBoxTargetPosition(Transform targetSlot)
+    {
+        return targetSlot.position;
     }
 
 #endregion

@@ -128,6 +128,9 @@ namespace FlatWorld.Dialogue
                 if (nearbyItem == null || nearbyItem == actorItem || nearbyItem.itemMods == null)
                     continue;
 
+                if (!nearbyItem.itemMods.ContainsKey_ID(ModText.Fuel))
+                    continue;
+
                 Mod_Fuel fuel = nearbyItem.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
                 if (fuel != null && fuel.GetIgnitedState() && fuel.HasFuel())
                     return true;

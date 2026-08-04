@@ -303,6 +303,7 @@ public class Module_Fly : Module, IInteract, IInteractable
 			}
 		}
 
+		_reEnterBlockedUntil = Time.unscaledTime + Mathf.Max(0f, reEnterBlockSeconds);
 		_isControlling = false;
 		_isSwitchingScene = false;
 		_launchStarted = false;

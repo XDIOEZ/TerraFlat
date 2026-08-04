@@ -43,19 +43,43 @@ namespace FlatWorld.GameTest.Core
 
         [Test]
         [Category("Core.Smoke")]
-        public void NewPlayerSpawnSearchDoesNotSynchronouslyGenerateEveryVisitedChunk()
+        public void NewPlayerSpawnUsesPureSeedSamplingBeforeChunkStreaming()
+        {
+            const string managerPath = "Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs";
+            const string chunkLoaderPath = "Assets/5_Scripts/5-3_GamePlay/Chunk/Mod_ChunkLoader.cs";
+            string managerSource = File.ReadAllText(managerPath);
+            string chunkLoaderSource = File.ReadAllText(chunkLoaderPath);
+
+            Assert.That(managerSource, Does.Contain("TryFindWalkableTerrainNear("));
+            Assert.That(managerSource, Does.Contain("spawnTerrainSampleBudget"));
+            Assert.That(managerSource, Does.Contain("GetActiveMapCorePrefabId()"));
+            Assert.That(managerSource, Does.Contain("GetPrefab(mapCorePrefabId, logError: false)"));
+            Assert.That(managerSource, Does.Not.Contain("RandomDropInMap(player.gameObject"),
+                "出生搜索失败时不得将玩家随机投放到可能是水面的坐标。");
+            Assert.That(managerSource, Does.Not.Contain("LoadChunk_By_Position("),
+                "出生定位阶段不得创建 Chunk；Chunk 必须在玩家坐标设置后由流送模块加载。 ");
+            Assert.That(managerSource, Does.Not.Contain("WaitForSpawnChunkTerrain("));
+
+            int teleportIndex = managerSource.IndexOf("player.transform.position = spawnPosition;", System.StringComparison.Ordinal);
+            int worldEnterIndex = managerSource.IndexOf("Event_PlayerEnterWorld?.Invoke(player);", teleportIndex, System.StringComparison.Ordinal);
+            Assert.That(teleportIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(worldEnterIndex, Is.GreaterThan(teleportIndex),
+                "必须先设置出生坐标，再触发玩家进入世界事件。 ");
+            Assert.That(chunkLoaderSource, Does.Contain("GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld"));
+            Assert.That(chunkLoaderSource, Does.Contain("RefreshChunksAroundPlayer();"));
+        }
+
+        [Test]
+        [Category("Core.Smoke")]
+        public void GameManagerDelegatesChunkPersistenceToSaveDataManager()
         {
             const string managerPath = "Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs";
             string managerSource = File.ReadAllText(managerPath);
 
-            Assert.That(managerSource, Does.Contain("FindNewPlayerSpawnCoroutine"),
-                "New-player placement must wait for one candidate chunk at a time.");
-            Assert.That(managerSource, Does.Contain("TryFindNearestLandInChunk"),
-                "Spawn search must scan bounded, ready chunk data instead of the whole world radius.");
-            Assert.That(managerSource, Does.Not.Contain("ChunkMgr.Instance.LoadChunk_By_Position(chunkPos)"),
-                "A tile probe must never synchronously create a chunk; this queued hundreds of chunks while creating a world.");
             Assert.That(managerSource, Does.Not.Contain("SaveAllChunks();"),
-                "GameManager must not save every chunk before SaveDataMgr repeats the same scan.");
+                "GameManager 不应在 SaveDataMgr 写盘前重复扫描并保存同一批区块。 ");
+            Assert.That(managerSource, Does.Contain("Save_And_WriteToDisk()"));
+            Assert.That(managerSource, Does.Contain("Save_And_WriteToDiskAndRecordExitTime()"));
         }
     }
 }

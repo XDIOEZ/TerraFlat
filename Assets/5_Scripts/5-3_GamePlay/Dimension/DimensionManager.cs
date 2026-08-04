@@ -18,7 +18,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     private readonly Dictionary<Vector2Int, GameObject> runtimePortals = new();
     private readonly List<Vector2Int> stalePortalCells = new();
     private ChunkMgr boundChunkManager;
-    private Coroutine portalRefreshCoroutine;
     private bool isTransitioning;
 
     public WorldAddress ActiveAddress { get; private set; }
@@ -372,7 +371,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     private IEnumerator RefreshPortalsNextFrame(Player player)
     {
         yield return null;
-        portalRefreshCoroutine = null;
         if (player == null ||
             ActiveDefinition == null ||
             string.IsNullOrWhiteSpace(ActiveDefinition.PortalTargetDimensionId))

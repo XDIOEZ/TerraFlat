@@ -304,16 +304,16 @@ public sealed class GrassDetailLayer : MonoBehaviour
     private void DestroyRuntimeAssets()
     {
         for (int i = 0; i < runtimeTiles.Count; i++)
-            DestroyObject(runtimeTiles[i]);
+            DestroyRuntimeAsset(runtimeTiles[i]);
         for (int i = 0; i < runtimeSprites.Count; i++)
-            DestroyObject(runtimeSprites[i]);
+            DestroyRuntimeAsset(runtimeSprites[i]);
 
         runtimeTiles.Clear();
         runtimeSprites.Clear();
         boundTexture = null;
     }
 
-    private static void DestroyObject(Object target)
+    private static void DestroyRuntimeAsset(Object target)
     {
         if (target == null)
             return;

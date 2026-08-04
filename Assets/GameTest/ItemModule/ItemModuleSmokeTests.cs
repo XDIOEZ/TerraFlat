@@ -94,6 +94,34 @@ namespace FlatWorld.GameTest.ItemModule
                 Object.DestroyImmediate(gameObject);
             }
         }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        public void PersistedModuleIdFallsBackToThePrefabChildIdentity()
+        {
+            var root = new GameObject("LegacyEntity");
+            var child = new GameObject("Module_AI_Chicken");
+            child.transform.SetParent(root.transform);
+
+            try
+            {
+                ModuleIdentityProbe module = child.AddComponent<ModuleIdentityProbe>();
+                module.Data.ID = "AI";
+                module.Data.Name = "RuntimeAI";
+
+                var modules = new ItemMods();
+                modules.AddMod(module);
+
+                Assert.That(modules.GetMod_ByID("Module_AI_Chicken"), Is.Null);
+                Assert.That(
+                    modules.FindModByPersistedId("Module_AI_Chicken"),
+                    Is.SameAs(module));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
     }
 
     public sealed class ItemTemplateLifecycleProbe : Item
@@ -131,6 +159,25 @@ namespace FlatWorld.GameTest.ItemModule
         {
             SaveCalls++;
             base.Save();
+        }
+    }
+
+    public sealed class ModuleIdentityProbe : Module
+    {
+        public Ex_ModData_MemoryPackable Data = new();
+
+        public override ModuleData _Data
+        {
+            get => Data;
+            set => Data = (Ex_ModData_MemoryPackable)value;
+        }
+
+        public override void Load()
+        {
+        }
+
+        public override void Save()
+        {
         }
     }
 }

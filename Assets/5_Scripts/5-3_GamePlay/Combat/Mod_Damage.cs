@@ -32,8 +32,6 @@ public class Mod_Damage : Module, IDamageSender
     private List<CombatImpactAudioOverride> impactAudioOverrides =
         new List<CombatImpactAudioOverride>();
 
-    [Header("调试信息")]
-    [SerializeField] private bool showDebugWarnings = true;
     [SerializeField] private Collider2D damageCollider;
 
     // 定时伤害相关

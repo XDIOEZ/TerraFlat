@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using FlatWorld.Dialogue;
 using NUnit.Framework;
 using UnityEditor;
@@ -60,6 +61,38 @@ namespace FlatWorld.GameTest.Dialogue
             Assert.That(result.Entries.Select(entry => entry.Id), Does.Contain("weather.rain.recovery"));
         }
 
+        [Test]
+        [Category("Dialogue.Smoke")]
+        public void WeatherHeatSourceScanSkipsItemsWithoutFuelModules()
+        {
+            GameObject actor = new("WeatherExposureActor");
+            GameObject nearbyItemObject = new("NonFuelNearbyItem");
+
+            try
+            {
+                WeatherExposureSpeechProvider provider = actor.AddComponent<WeatherExposureSpeechProvider>();
+                nearbyItemObject.AddComponent<WeatherExposureTestItem>();
+                nearbyItemObject.AddComponent<CircleCollider2D>();
+                nearbyItemObject.transform.position = new Vector3(10000f, 10000f, 0f);
+                actor.transform.position = nearbyItemObject.transform.position;
+                Physics2D.SyncTransforms();
+
+                MethodInfo scanMethod = typeof(WeatherExposureSpeechProvider).GetMethod(
+                    "FindNearbyIgnitedHeatSource",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(scanMethod, Is.Not.Null);
+
+                bool hasHeatSource = (bool)scanMethod.Invoke(provider, null);
+                Assert.That(hasHeatSource, Is.False);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(actor);
+                Object.DestroyImmediate(nearbyItemObject);
+            }
+        }
+
         [UnityTest]
         [Category("Dialogue.Smoke")]
         [Timeout(10000)]
@@ -108,5 +141,20 @@ namespace FlatWorld.GameTest.Dialogue
         }
 
         #endregion
+    }
+
+    public sealed class WeatherExposureTestItem : Item
+    {
+        private Data_GeneralItem data = new()
+        {
+            IDName = "WeatherExposureTestItem",
+            Stack = new ItemStack()
+        };
+
+        public override ItemData itemData
+        {
+            get => data;
+            set => data = (Data_GeneralItem)value;
+        }
     }
 }
