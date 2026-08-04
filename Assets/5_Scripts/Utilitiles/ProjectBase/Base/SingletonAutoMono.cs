@@ -8,7 +8,7 @@ using UnityEngine;
 /// </summary>
 public class SingletonAutoMono<T> : MonoBehaviour where T : MonoBehaviour
 {
-    private static T instance;
+    protected static T instance;
 
     /// <summary>
     /// 单例全局访问

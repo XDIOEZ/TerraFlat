@@ -83,6 +83,15 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
     /// </summary>
     public bool TryEvaluateRiverCell(Vector2Int worldPosition, out float depth)
     {
+        return TryEvaluateRiverCell(worldPosition, activeWorldSeed, out depth);
+    }
+
+    /// <summary>
+    /// 以显式世界种子纯计算河流格。出生定位在 Chunk 尚未创建时调用它，
+    /// 以排除随后会被河流管线覆盖的候选陆地。
+    /// </summary>
+    public bool TryEvaluateRiverCell(Vector2Int worldPosition, int worldSeed, out float depth)
+    {
         Vector2 direction = flowDirection.sqrMagnitude > 0.0001f
             ? flowDirection.normalized
             : Vector2.up;
@@ -91,7 +100,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
         float along = Vector2.Dot(position, direction);
         float across = Vector2.Dot(position, normal);
-        float seedOffset = (GetGenerationSeed() & 0xFFFF) * 0.01337f;
+        float seedOffset = (GetGenerationSeed(worldSeed) & 0xFFFF) * 0.01337f;
 
         float bend = (Mathf.PerlinNoise(
                           along * Mathf.Max(0.0005f, bendFrequency) + seedOffset,
@@ -185,9 +194,14 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
     private int GetGenerationSeed()
     {
+        return GetGenerationSeed(activeWorldSeed);
+    }
+
+    private int GetGenerationSeed(int worldSeed)
+    {
         unchecked
         {
-            return activeWorldSeed * 486187739 ^ seed * 16777619;
+            return worldSeed * 486187739 ^ seed * 16777619;
         }
     }
 

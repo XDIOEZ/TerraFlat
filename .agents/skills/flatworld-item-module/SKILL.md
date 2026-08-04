@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld Item / Module 系统定位
 
-> 最后核对：2026-08-03。绝大多数玩法最终挂接到 Item 的 Module。
+> 最后核对：2026-08-04。绝大多数玩法最终挂接到 Item 的 Module。
 
 ## 修改前先读
 
@@ -53,6 +53,7 @@ ItemMaker / ItemMgr 实例化
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-04：`Item.ModuleLoad()` 先按持久化 ID 匹配模块；旧实体 Prefab 的运行时模块若使用通用 ID，则回退按子物体名或组件类型匹配，避免将内嵌 AI/动画模块误判为缺失并错误实例化独立 Prefab。无法恢复的模块必须记录明确错误并跳过，禁止解引用空对象。
 - 2026-08-03：`Item.Get_NewItemData()` 的 Prefab 模板提取只复制静态 Item/ModuleData，不执行 Item 或 Module 的 `Load/Save`；空模块 ID 会按模块物体名补齐，`GameRes` 以请求 ID 固化新数据，`ItemMgr` 在进入任何字典前拒绝空 `IDName`。
 - 2026-07-30：农业模块边界收敛；`Mod_Seed` 的低频 Tick 仅迁移旧落地种子，`Mod_Grow` 低频 Tick 成为唯一作物成长与成熟状态机，`Mod_FarmlandSupply` 为休眠模块且仅响应物品使用事件；`Item.ModuleLoad()` 会先清理 Apple/AppleTree 的废弃农业模块数据再执行缺失模块自动修复。
 - 2026-07-30：删除无引用且未完成的 `Mod_HealthPoints`，禁止通过通用 Module 重新建立与 `DamageReceiver` 并行的生命值状态。

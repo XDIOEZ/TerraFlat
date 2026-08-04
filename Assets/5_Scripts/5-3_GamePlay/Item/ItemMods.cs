@@ -82,6 +82,50 @@ public class ItemMods
         return mod;
     }
 
+    /// <summary>
+    /// Resolves a persisted module ID. Older entity prefabs can initialize a module
+    /// with a shared runtime ID (for example, the generic AI ID), while their saved
+    /// template identifies it by the child GameObject name. Prefer the exact ID and
+    /// then fall back to that stable prefab identity.
+    /// </summary>
+    public Module FindModByPersistedId(string modID)
+    {
+        if (string.IsNullOrWhiteSpace(modID))
+            return null;
+
+        List<Module> exactMatches = GetModList_ByID(modID);
+        if (exactMatches != null && exactMatches.Count > 0)
+            return exactMatches[^1];
+
+        foreach (List<Module> candidates in Mods_List.Values)
+        {
+            foreach (Module candidate in candidates)
+            {
+                if (candidate == null)
+                    continue;
+
+                if (string.Equals(candidate.gameObject.name, modID, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        foreach (List<Module> candidates in Mods_List.Values)
+        {
+            foreach (Module candidate in candidates)
+            {
+                if (candidate != null &&
+                    string.Equals(candidate.GetType().Name, modID, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public Module GetMod_ByName(string name)
     {
         return Mods[name];

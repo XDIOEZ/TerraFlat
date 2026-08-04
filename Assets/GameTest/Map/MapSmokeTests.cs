@@ -45,6 +45,49 @@ namespace FlatWorld.GameTest.Map
 
         [Test]
         [Category("Map.Smoke")]
+        public void DefaultTerrainSamplerFindsWalkableLandForRepresentativeSeeds()
+        {
+            const string prefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少地图核心 Prefab：{prefabPath}");
+
+            // 出生点在任何 Chunk 被创建前，直接读取 MapCore Prefab 的只读生成配置。
+            global::Map map = prefab.GetComponent<global::Map>();
+            ChunkGenerator_Land land = map?.LandGenerator;
+            ChunkGenerator_River river = map?.GetGenerator<ChunkGenerator_River>();
+            Assert.That(land, Is.Not.Null, "MapCore 缺少大陆生成器。");
+            Assert.That(river, Is.Not.Null, "MapCore 缺少河流生成器。");
+
+            PlanetData activePlanetData = new PlanetData
+            {
+                NoiseScale = PlanetData.DefaultNoiseScale
+            };
+
+            foreach (int seed in new[] { 1, 12345, -24680, 987654321 })
+            {
+                var random = new System.Random(seed);
+                Vector2Int anchor = new Vector2Int(
+                    random.Next(-512, 513),
+                    random.Next(-512, 513));
+
+                bool found = land.TryFindWalkableTerrainNear(
+                    anchor,
+                    seed,
+                    activePlanetData,
+                    river,
+                    maxSearchRadius: 512,
+                    maxSamples: 4096,
+                    out Vector2Int position);
+
+                Assert.That(found, Is.True, $"默认地形在种子 {seed} 附近未采样到安全陆地。");
+                Assert.That(land.IsWalkableTerrainAtWorld(position, seed, activePlanetData, river), Is.True);
+                Assert.That(river.TryEvaluateRiverCell(position, seed, out _), Is.False,
+                    "安全出生点不能落在随后会生成河流的格子。 ");
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
         public void ChunkGenerationUsesTimeSlicingAndSingleFlightLoading()
         {
             MethodInfo spawnAsync = typeof(ChunkGenerator_SpawnItems).GetMethod(
@@ -184,6 +227,23 @@ namespace FlatWorld.GameTest.Map
             Assert.That(PlanetData.IsValidNoiseScale(float.NaN), Is.False);
             Assert.That(PlanetData.IsValidNoiseScale(PlanetData.MaxNoiseScale + 1f), Is.False);
             Assert.That(PlanetData.NormalizeNoiseScale(float.PositiveInfinity), Is.EqualTo(PlanetData.DefaultNoiseScale));
+
+            const string prefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                ChunkGenerator_Land land = instance.GetComponent<global::Map>()?.LandGenerator;
+                Assert.That(land, Is.Not.Null);
+
+                land.plantData = new PlanetData { NoiseScale = 0f };
+                Assert.That(land.NoiseScale, Is.EqualTo(PlanetData.DefaultNoiseScale),
+                    "旧存档中的零噪声缩放必须迁移为默认值，避免整张地图只有水或陆地。");
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
         }
 
         [Test]
