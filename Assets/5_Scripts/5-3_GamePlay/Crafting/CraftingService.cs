@@ -125,8 +125,7 @@ public static class CraftingService
                 return false;
             }
 
-            Item item = prefab.GetComponent<Item>();
-            ItemData itemData = item?.Get_NewItemData();
+            ItemData itemData = GameRes.Instance.CreateItemData(output.ItemName);
             if (itemData?.Stack == null)
             {
                 failure = CraftingResult.Failed(

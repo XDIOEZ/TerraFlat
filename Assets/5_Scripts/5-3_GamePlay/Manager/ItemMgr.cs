@@ -409,6 +409,10 @@ public class ItemMgr : SingletonMono<ItemMgr>
         {
             throw new System.ArgumentNullException(nameof(itemData));
         }
+        if (string.IsNullOrWhiteSpace(itemData.IDName))
+        {
+            throw new System.ArgumentException("ItemData.IDName 不能为空", nameof(itemData));
+        }
 
         if (rotation == default) rotation = Quaternion.identity;
         if (scale == default || scale == Vector3.zero) scale = Vector3.one;
@@ -423,6 +427,8 @@ public class ItemMgr : SingletonMono<ItemMgr>
 
         item.itemData = itemData;
         item.PrepareForPoolReuse();
+        if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+            ItemDefinitionRuntime.ConfigureInstance(GameRes.Instance, definition, item, itemData);
         itemObj.name = itemData.IDName;
         itemObj.transform.position = position;
         itemObj.transform.rotation = rotation;
@@ -468,19 +474,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
     // 通过名称实例化：只保留一个（用可选参数覆盖绝大多数用法）
     public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
     {
-        var prefab = GameRes.Instance.GetPrefab(itemName);
-        if (prefab == null)
-        {
-            throw new System.InvalidOperationException($"找不到物品Prefab: {itemName}");
-        }
-
-        var templateItem = prefab.GetComponent<Item>();
-        if (templateItem == null || templateItem.itemData == null)
-        {
-            throw new System.InvalidOperationException($"Prefab 缺少 Item 或 itemData: {itemName}");
-        }
-
-        ItemData templateData = templateItem.itemData.DeepClone();
+        ItemData templateData = GameRes.Instance.CreateItemData(itemName);
+        if (templateData == null)
+            throw new System.InvalidOperationException($"找不到物品定义或有效 Prefab: {itemName}");
         return InstantiateItem(templateData, position, rotation, scale, parent);
     }
 
@@ -495,15 +491,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
         Vector3 scale = default,
         GameObject parent = null)
     {
-        var prefab = GameRes.Instance.GetPrefab(itemName);
-        if (prefab == null)
-            throw new InvalidOperationException($"找不到物品Prefab: {itemName}");
-
-        var templateItem = prefab.GetComponent<Item>();
-        if (templateItem == null || templateItem.itemData == null)
-            throw new InvalidOperationException($"Prefab 缺少 Item 或 itemData: {itemName}");
-
-        ItemData templateData = templateItem.itemData.DeepClone();
+        ItemData templateData = GameRes.Instance.CreateItemData(itemName);
+        if (templateData == null)
+            throw new InvalidOperationException($"找不到物品定义或有效 Prefab: {itemName}");
         templateData.Guid = deterministicGuid == 0 ? 1 : deterministicGuid;
         return InstantiateItem(templateData, position, rotation, scale, parent);
     }
@@ -521,15 +511,9 @@ public class ItemMgr : SingletonMono<ItemMgr>
         if (authoritativeGuid == 0)
             throw new ArgumentOutOfRangeException(nameof(authoritativeGuid), "网络 Item GUID 不能为 0");
 
-        GameObject prefab = GameRes.Instance.GetPrefab(itemName);
-        if (prefab == null)
-            throw new InvalidOperationException($"找不到物品Prefab: {itemName}");
-
-        Item templateItem = prefab.GetComponent<Item>();
-        if (templateItem == null || templateItem.itemData == null)
-            throw new InvalidOperationException($"Prefab 缺少 Item 或 itemData: {itemName}");
-
-        ItemData data = templateItem.itemData.DeepClone();
+        ItemData data = GameRes.Instance.CreateItemData(itemName);
+        if (data == null)
+            throw new InvalidOperationException($"找不到物品定义或有效 Prefab: {itemName}");
         data.Guid = authoritativeGuid;
         return InstantiateItem(data, position, rotation, scale);
     }
@@ -779,6 +763,12 @@ public class ItemMgr : SingletonMono<ItemMgr>
         }
 
         string key = item.itemData.IDName;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            Debug.LogError($"AddToGroup: IDName为空, item={item.name}", item);
+            return;
+        }
+
         if (!RuntimeItemsGroup.TryGetValue(key, out var list))
         {
             list = new List<Item>();

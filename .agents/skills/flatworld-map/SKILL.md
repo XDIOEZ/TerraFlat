@@ -66,7 +66,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - Chunk 对象池复用前后必须重置地图就绪状态、运行时 Item 和事件订阅。
 - 运行时群系查询统一调用 `ChunkGenerator_Land.TryGetBiomeAtWorld()`，使用正式地形生成时的有序 `biomes` 和 `EnvironmentLayers`，不要在生成器外复制匹配逻辑。
 - 地形尺度分为三层：`PlanetData.NoiseScale` 是世界级坐标缩放，`BaseNoise.coordScale` 是单通道坐标倍率，`BaseNoise.frequency` 是单通道基础频率；三者共同决定最终采样频率。
-- `ChunkGenerator_River` 正式入口使用真实水文算法；旧 Voronoi 参数和 `TriFractalRiverNoise`/`RiverNoiseSettings` 只保留序列化兼容，不应作为新配置入口。
+- `ChunkGenerator_River` 正式入口使用世界坐标连续水带：单次遍历当前 Chunk，不建立水文 halo、汇流图或湖泊缓存；河流形状由间距、宽度、弯曲幅度/频率和方向配置。
 - `MapGenerationContext` 现携带 `WorldAddress` 与 `DimensionDefinition`；基础种子按 `WorldKey + SeedSalt` 派生，保证同星球不同维度的地图、确定性 Item GUID 和 Chunk 差量隔离。
 - `ChunkMgr.TryCreateMapCore()` 按当前维度的 `MapCorePrefabId` 创建地图；矿洞运行时替换为 `ChunkGenerator_Cave`，地表继续使用 MapCore 原生成管线。
 - 矿洞的房间/隧道由 `CaveLayoutSampler` 以绝对世界坐标采样；每格先铺可走地面，封闭格再叠加不可走岩壁，保证 Tilemap、导航和 Chunk 存档读取同一顶层 `TileData`。
@@ -88,6 +88,8 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-03：地表河流改为性能优先的世界坐标连续水带，移除水文 halo/汇流/湖泊计算；Land、River、SpawnItems、Structures 统一受毫秒预算分帧，ChunkMgr 限制同时仅生成一个区块，资源列表不再重复生成。
+- 2026-08-03：MapCore 通过旧 Prefab 入口提取模板 `ItemData` 时不再运行 `Map.Load()` / `Map.Save()`，防止无 Chunk 父节点的临时 Map 启动地形生成或 Tilemap 存储。
 - 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；阻挡 Tile 与地面分层渲染，支持独立碰撞和单格刷新，同时不改变顶层 TileData 导航/存档契约。
 - 2026-07-31：矿洞地图由整块石地改为跨 Chunk 连续的房间与弯曲隧道；新增地面/岩壁双层 TileData、Tilemap 墙体碰撞和沿墙聚集矿床。
 - 2026-07-31：地图生成接入维度上下文和派生种子；新增全石地面、入口安全区和确定性矿脉生成器，各维度使用独立 `PlanetData.MapData_Dict`。

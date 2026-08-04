@@ -263,7 +263,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void OnValidate()
     {
-        itemData.Tags.EnsureTagStructure();
+        itemData?.Tags?.EnsureTagStructure();
     }
 
     public virtual void Initialize_Env(EnvironmentLayers layers, Vector2Int localPos)
@@ -297,49 +297,36 @@ public abstract class Item : MonoBehaviour
     /// <returns>新的物品数据实例</returns>
     public ItemData Get_NewItemData()
     {
-        // 创建一个临时的游戏对象实例来处理初始化
-        GameObject tempGO = null;
-        tempGO = Instantiate(gameObject);
-        tempGO.hideFlags = HideFlags.HideAndDontSave; // 隐藏临时对象
-
-        Item tempItem = tempGO.GetComponent<Item>();
-        if (tempItem == null)
+        // Prefab 本身已经包含完整静态模板。直接深拷贝，避免为了提取数据而
+        // Instantiate/Destroy 一次临时对象，并避免在物理回调中触发 DestroyImmediate。
+        if (itemData == null)
         {
-            Debug.LogError($"[Item] 无法创建 {gameObject.name} 的ItemData: 临时对象缺少Item组件");
+            Debug.LogError($"[Item] 无法创建 {gameObject.name} 的 ItemData：模板数据为空", this);
             return null;
         }
 
-        // 获取所有子对象的Module并初始化
-        var modules = tempGO.GetComponentsInChildren<Module>(true).ToList();
+        ItemData templateData = FastCloner.FastCloner.DeepClone(itemData);
+        templateData.Guid = Guid.NewGuid().GetHashCode();
+        templateData.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
 
-        // 为每个模块调用Awake方法
-        foreach (var mod in modules)
+        foreach (Module module in GetComponentsInChildren<Module>(true))
         {
-            if (mod != null)
-            {
-                mod.Awake();
-            }
+            if (module?._Data == null)
+                continue;
+
+            ModuleData moduleData = FastCloner.FastCloner.DeepClone(module._Data);
+            if (string.IsNullOrWhiteSpace(moduleData.ID))
+                moduleData.ID = module.gameObject.name;
+            if (string.IsNullOrWhiteSpace(moduleData.Name))
+                moduleData.Name = Module.GenerateUniqueModName(moduleData.ID);
+
+            while (templateData.ModuleDataDic.ContainsKey(moduleData.Name))
+                moduleData.Name = Module.GenerateUniqueModName(moduleData.ID);
+
+            templateData.ModuleDataDic.Add(moduleData.Name, moduleData);
         }
 
-        // 生成新的Guid
-        tempItem.itemData.Guid = Guid.NewGuid().GetHashCode();
-
-        // 加载模块
-        tempItem.Load();
-
-        // 保存模块数据
-        tempItem.Save();
-
-        // 克隆最终的itemData作为返回值
-        ItemData result = FastCloner.FastCloner.DeepClone(tempItem.itemData);
-
-        // 销毁临时对象，确保不留下任何痕迹
-        if (tempGO != null)
-        {
-            DestroyImmediate(tempGO);
-        }
-
-        return result;
+        return templateData;
     }
 
     #endregion

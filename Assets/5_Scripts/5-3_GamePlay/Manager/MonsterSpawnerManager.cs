@@ -659,7 +659,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[MonsterSpawnerManager] 生成 {spawnType} 失败: {ex.Message}");
+            Debug.LogError($"[MonsterSpawnerManager] 生成 {spawnType} 失败: {ex}");
             return false;
         }
     }
@@ -861,9 +861,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void TrackItem(Item item)
     {
-        if (item?.itemData == null ||
+        string speciesId = item?.itemData?.IDName;
+        if (string.IsNullOrWhiteSpace(speciesId) ||
             _trackedItems.ContainsKey(item) ||
-            !_configBySpecies.TryGetValue(item.itemData.IDName, out SpawnerConfig config))
+            !_configBySpecies.TryGetValue(speciesId, out SpawnerConfig config))
         {
             return;
         }

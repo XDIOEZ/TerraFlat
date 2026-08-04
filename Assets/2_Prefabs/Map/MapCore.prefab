@@ -107,7 +107,8 @@ MonoBehaviour:
   backTilePenaltyYieldSeconds: 0
   loadTileBatchSize: 256
   loadTileFrameBudgetMilliseconds: 2
-  proceduralGenerationCellsPerFrame: 64
+  proceduralGenerationCellsPerFrame: 256
+  proceduralGenerationFrameBudgetMilliseconds: 1.5
   mapGenerators:
   - rid: 6445419845959286799
   - rid: 6445419845959286807
@@ -209,69 +210,16 @@ MonoBehaviour:
         targetTilemap: {fileID: 0}
         riverTileBlock: {fileID: 11400000, guid: 7161f78828c23bc43a28d345ef6f8bc1, type: 2}
         seed: 12345
-        cellSize: 200
-        edgeWidth: 1
-        edgeWidthRange: {x: 0, y: 5}
-        useMultiSample: 1
-        sampleInset: 0.1
-        warpAmplitude: 0.5
-        warpFrequency: 0.5
-        trigWaveAmplitude: 10
-        trigWaveFrequency: 0.1
-        trigWaveNoiseFrequency: 0.035
-        connectPasses: 0
-        connectNeighborThreshold: 2
-        removeIsolated: 1
-        bridgeGaps: 1
-        bridgePasses: 2
-        minHeight: 0.2
-        maxHeight: 0.9
+        channelSpacing: 128
+        channelHalfWidth: 1.4
+        bendAmplitude: 16
+        bendFrequency: 0.006
+        widthVariation: 0.3
+        flowDirection: {x: 0.35, y: 0.94}
         writeMode: 0
-        riverDepthMin: 0
-        riverDepthMax: 0.2
-        riverDepthPower: 4
-        useDepthPowerForWidth: 1
-        riverWidthPower: 0.2
-        hydrologyHalo: 96
-        hydrologyCellsPerFrame: 4096
-        sourceSpacing: 72
-        sourceCellChance: 0.72
-        sourceMinHeight: 0.62
-        sourceMinPrecipitation: 0.2
-        sourcePrecipitationPower: 1.6
-        biomeHydrologyRules:
-        - biome: {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
-          riverSourceWeight: 0.06
-          lakeWeight: 0.15
-        maxRiverTraceSteps: 180
-        minRiverTraceCells: 24
-        aestheticUphillTolerance: 0.003
-        lakeChance: 0.32
-        maxLakeRadius: 10
-        maxLakeLevelRise: 0.045
-        minLakeCells: 18
-        maxLakeCells: 220
-        minRiverRadius: 0.55
-        maxRiverRadius: 2.4
-        flowWidthScale: 0.35
-        meanderStrength: 0.025
-        meanderFrequency: 0.018
-        lakeShoreIrregularity: 0.025
-        lakeShoreFrequency: 0.065
-        spawnRiverStones: 1
-        Prefab_Stone: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
-        stoneParent: {fileID: 0}
-        maxStonesPerChunk: 120
-        riverStoneChance: 0.015
-        bankStoneChance: 0.008333334
-        Prefab_Flint: {fileID: 3926578369279844245, guid: e768a5cbf9bac7745bf1d9b2dc0a09a7, type: 3}
-        bankFlintChance: 0.004
-        bankRadius: 1
-        stoneOffsetRange: {x: 0.25, y: 0.25}
-        stoneRotationZRange: {x: 0, y: 360}
-        stoneUniformScaleRange: {x: 0.75, y: 1.25}
-        clearPreviousStones: 1
-        stoneRootNamePrefix: RiverStones
+        riverDepthMin: 0.2
+        riverDepthMax: 0.9
+        spawnRiverStones: 0
     - rid: 6445419845959286808
       type: {class: ChunkGenerator_SpawnItems, ns: , asm: GamePlay}
       data:

@@ -1,6 +1,7 @@
 using FlatWorld.GameTest.Shared;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -44,7 +45,34 @@ namespace FlatWorld.GameTest.Map
 
         [Test]
         [Category("Map.Smoke")]
-        public void RiverHeadwaterSelectionCannotStarveOnEligibleTerrain()
+        public void ChunkGenerationUsesTimeSlicingAndSingleFlightLoading()
+        {
+            MethodInfo spawnAsync = typeof(ChunkGenerator_SpawnItems).GetMethod(
+                nameof(ChunkGenerator_SpawnItems.GenerateAsync),
+                new[] { typeof(MapGenerationContext), typeof(int) });
+            MethodInfo structureAsync = typeof(ChunkGenerator_Structures).GetMethod(
+                nameof(ChunkGenerator_Structures.GenerateAsync),
+                new[] { typeof(MapGenerationContext), typeof(int) });
+
+            Assert.That(spawnAsync?.DeclaringType, Is.EqualTo(typeof(ChunkGenerator_SpawnItems)));
+            Assert.That(structureAsync?.DeclaringType, Is.EqualTo(typeof(ChunkGenerator_Structures)));
+
+            const string worldManagerPath = "Assets/2_Prefabs/GameManager/WorldManager.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(worldManagerPath);
+            Assert.That(prefab, Is.Not.Null);
+            ChunkMgr chunkManager = prefab.GetComponentInChildren<ChunkMgr>(true);
+            Assert.That(chunkManager, Is.Not.Null);
+
+            FieldInfo concurrentField = typeof(ChunkMgr).GetField(
+                "maxConcurrentChunkLoads",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(concurrentField, Is.Not.Null);
+            Assert.That((int)concurrentField.GetValue(chunkManager), Is.EqualTo(1));
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void FastRiverGeneratorProducesFreshWaterOnEligibleTerrain()
         {
             const string prefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
@@ -60,10 +88,10 @@ namespace FlatWorld.GameTest.Map
                 Assert.That(river, Is.Not.Null);
 
                 river.spawnRiverStones = false;
-                river.sourceSpacing = 6;
-                river.sourceCellChance = 1f;
-                river.sourceMinHeight = 0f;
-                river.sourceMinPrecipitation = 0f;
+                river.channelSpacing = 8f;
+                river.channelHalfWidth = 2f;
+                river.bendAmplitude = 0f;
+                river.flowDirection = Vector2.up;
 
                 map.Data = new Data_TileMap { position = Vector2Int.zero };
                 MapGenerationContext context = new MapGenerationContext(
@@ -90,7 +118,7 @@ namespace FlatWorld.GameTest.Map
                 }
 
                 Assert.That(freshWaterCells, Is.GreaterThan(0),
-                    "Eligible terrain produced no fresh-water cells; headwater selection starved.");
+                    "Fast river generator produced no fresh-water cells.");
             }
             finally
             {

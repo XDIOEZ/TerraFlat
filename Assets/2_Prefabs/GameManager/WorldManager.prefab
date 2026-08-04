@@ -645,3 +645,4 @@ MonoBehaviour:
   OnChunkLoadFinish:
     _PersistentCalls: []
   maxChunkLoadPerFrame: 1
+  maxConcurrentChunkLoads: 1

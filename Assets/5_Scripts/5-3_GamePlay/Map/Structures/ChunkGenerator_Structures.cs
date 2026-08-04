@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -31,16 +32,29 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
 
     public override void Generate(MapGenerationContext context)
     {
+        IEnumerator routine = GenerateCandidates(context, int.MaxValue);
+        while (routine.MoveNext())
+        {
+        }
+    }
+
+    public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
+    {
+        return GenerateCandidates(context, Mathf.Max(1, workBatchSize));
+    }
+
+    private IEnumerator GenerateCandidates(MapGenerationContext context, int maxCandidatesPerFrame)
+    {
         if (context?.Map?.Data == null || context.Map.chunk == null)
         {
             Debug.LogError("[ChunkGenerator_Structures] Map、Map.Data或Chunk为空，遗迹生成已跳过", context?.Map);
-            return;
+            yield break;
         }
 
         Map = context.Map;
         StructureCatalogSO catalog = Catalog != null ? Catalog : StructureCatalogSO.LoadDefault();
         if (catalog == null || !catalog.Enabled || catalog.Definitions == null || catalog.Definitions.Count == 0)
-            return;
+            yield break;
 
         List<Candidate> candidates = CollectCandidates(context, catalog);
         candidates.Sort((left, right) =>
@@ -52,31 +66,37 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
         });
 
         int generatedCount = 0;
+        var budget = new ChunkGenerationWorkBudget(Map, maxCandidatesPerFrame);
         for (int i = 0; i < candidates.Count; i++)
         {
             Candidate candidate = candidates[i];
             RectInt localBounds = new(candidate.LocalOrigin, candidate.TransformedSize);
-            if (context.StructureMask.Overlaps(localBounds))
-                continue;
-            if (!TestMode && !ValidateFootprintEnvironment(candidate, Map.Data))
+            if (!context.StructureMask.Overlaps(localBounds) &&
+                (TestMode || ValidateFootprintEnvironment(candidate, Map.Data)))
+            {
+                if (candidate.Definition.ClearProceduralItemsInFootprint)
+                    ClearProceduralItems(localBounds);
+
+                ApplyTiles(candidate);
+                SpawnTemplateItems(candidate, context.WorldSeed);
+                SpawnMarkerItems(candidate, context.WorldSeed);
+                context.StructureMask.Fill(localBounds);
+                StructureRuntimeRegistry.Register(
+                    context.WorldSeed,
+                    candidate.Definition.StructureId,
+                    string.IsNullOrWhiteSpace(candidate.Definition.DisplayName)
+                        ? candidate.Definition.StructureId
+                        : candidate.Definition.DisplayName,
+                    candidate.InstanceSeed,
+                    StructureSeedPlanner.ResolveTeleportPoint(candidate.SeedCandidate));
+                generatedCount++;
+            }
+
+            if (!budget.ShouldYield())
                 continue;
 
-            if (candidate.Definition.ClearProceduralItemsInFootprint)
-                ClearProceduralItems(localBounds);
-
-            ApplyTiles(candidate);
-            SpawnTemplateItems(candidate, context.WorldSeed);
-            SpawnMarkerItems(candidate, context.WorldSeed);
-            context.StructureMask.Fill(localBounds);
-            StructureRuntimeRegistry.Register(
-                context.WorldSeed,
-                candidate.Definition.StructureId,
-                string.IsNullOrWhiteSpace(candidate.Definition.DisplayName)
-                    ? candidate.Definition.StructureId
-                    : candidate.Definition.DisplayName,
-                candidate.InstanceSeed,
-                StructureSeedPlanner.ResolveTeleportPoint(candidate.SeedCandidate));
-            generatedCount++;
+            yield return null;
+            budget.BeginNextFrame();
         }
 
         if (LogSummary && generatedCount > 0)
@@ -499,10 +519,7 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
                 continue;
             }
 
-            GameObject prefab = GameRes.Instance?.GetPrefab(entry.ItemPrefabId, false);
-            Item templateItem = prefab?.GetComponent<Item>() ??
-                                prefab?.GetComponentInChildren<Item>(true);
-            ItemData itemData = templateItem?.Get_NewItemData();
+            ItemData itemData = GameRes.Instance?.CreateItemData(entry.ItemPrefabId);
             if (itemData?.Stack == null)
             {
                 LogContainerError(candidate, stamp, $"无法创建物品数据：{entry.ItemPrefabId}");
