@@ -172,10 +172,12 @@ public static class GameSavePrefabBuilder
         TMP_Text currentLabel = CreateText("当前存档标签", panel.transform, "当前选择", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 24f), new Vector2(0f, 1f));
 
-        TMP_Text currentSave = CreateText(GameManager.GameSaveSelectedTextKey, panel.transform, "尚未选择存档", font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        TMP_Text currentSave = CreateText(GameManager.GameSaveSelectedTextKey, panel.transform, GameManager.GameSaveNoSelectionText, font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(currentSave.rectTransform, new Vector2(24f, -82f), new Vector2(560f, 46f), new Vector2(0f, 1f));
 
         CreateButton(panel.transform, font, GameManager.GameSaveLoadButtonKey, "载入存档", new Vector2(-24f, -36f), new Vector2(190f, 62f), new Color(0.08f, 0.29f, 0.29f, 1f), Cream, 19f, new Vector2(1f, 1f));
+        Button deleteButton = CreateButton(panel.transform, font, GameManager.GameSaveDeleteButtonKey, "删除存档", new Vector2(-24f, -104f), new Vector2(190f, 30f), new Color(0.38f, 0.11f, 0.10f, 1f), Cream, 15f, new Vector2(1f, 1f));
+        deleteButton.interactable = false;
 
         Image divider = CreateImage("当前存档分隔线", panel.transform, new Color(0.55f, 0.64f, 0.65f, 0.17f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);

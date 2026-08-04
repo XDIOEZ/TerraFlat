@@ -156,6 +156,26 @@ public partial class BuffInstance
         return true;
     }
 
+    /// <summary>
+    /// 设置限时 Buff 的剩余持续时间。用于受控的运行时调试入口；
+    /// 永久 Buff 仍由其 JSON 定义控制，不能在实例层面改写为限时 Buff。
+    /// </summary>
+    public bool TrySetRemainingDuration(float seconds)
+    {
+        if (Definition == null ||
+            Definition.IsPermanent ||
+            float.IsNaN(seconds) ||
+            float.IsInfinity(seconds) ||
+            seconds < 0f)
+        {
+            return false;
+        }
+
+        RemainingDurationSeconds = seconds;
+        stopped = false;
+        return true;
+    }
+
     private void EnsureStarted()
     {
         if (startPending)

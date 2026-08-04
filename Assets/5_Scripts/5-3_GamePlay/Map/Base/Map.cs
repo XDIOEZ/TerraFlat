@@ -34,9 +34,6 @@ public class Map : Item
     [SerializeField, Min(1)]
     private int backTilePenaltyTilesPerYield = 200;
 
-    [SerializeField, Min(0.01f)]
-    private float backTilePenaltyMinInterval = 0.08f;
-
     [SerializeField, Min(0f)]
     private float backTilePenaltyYieldSeconds = 0f;
 

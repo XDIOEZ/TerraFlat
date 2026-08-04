@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - 修改字段、类别或叠加规则：同步检查 `BuffDefinitionDto`、`BuffDefinition`、`BuffDefinitionFactory` 和现有 JSON。
 - 新增效果类型：在 `BuffEffectTypeIds` 定义稳定 ID，在 `BuffEffectDispatcher` 注册处理器，并在 `BuffDefinitionFactory.ValidateEffectParameters()` 增加参数校验。
 - 修改添加、移除、叠加、饮水延时或事件：编辑 `BuffManager`。
+- GM 对限时 Buff 的时长覆盖：先经 `BuffManager.AddBuff()` 创建/叠加，再调用 `TrySetBuffDuration(buffId, seconds)`；永久 Buff 必须保持 JSON 的永久语义，拒绝运行时覆盖。
 - 修改持续时间、补帧 Tick、Start/Stop 或存档字段：编辑 `BuffInstance` 与 `BuffManagerSaveData`。
 - 修改本体加载或全局注册：检查 `BuffCatalogLoader`、`GameRes.BuffDefinitions`、`GameRes.RegisterBuff()` 和 `GameRes.GetBuffDefinition()`。
 - 修改 MOD Buff：检查 `ModRuntimeManager.ProcessBuffDefinitions()`、内容 Def 的 `buffs` 数组与本地化键，并同时使用 `flatworld-modding`。
@@ -58,11 +59,13 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-04：F4 GM 控制台新增 Buff 分发分页；确认后通过本地 `GameController.LeftClick` 点选带 `BuffManager` 的目标施加已注册 Buff，支持限时 Buff 的时长覆盖与重复施加；清除模式调用 `ClearAllBuffs()`，不会绕过 Stop/Removed 生命周期。
 - 2026-08-03：本体 Buff 从单个 `buffs.json` 拆为 `buff-manifest.json + environment/combat/survival/movement` 四个分包；运行时先聚合并检查跨包重复 ID，再统一注册。StreamingAssets 文本读取接入 Android/WebGL 的 `UnityWebRequest` 协程路径。
 
 ## 修改后自动测试
 
 - Buff 冒烟测试：`Assets/GameTest/Buff/BuffSmokeTests.cs`；分类：`Buff.Smoke`。
+- GM Buff 目标解析与时长覆盖：`Assets/GameTest/Buff/GmBuffTargetingTests.cs`；分类：`Buff.GM`。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Buff.Smoke`；无需视觉模型、截图或测试工具卡片。
 - 仅按“高耦合联动”表命中项追加分类。
 - 新行为先增加确定性回归测试；测试失败时优先修复生产代码，禁止删除测试或弱化断言。

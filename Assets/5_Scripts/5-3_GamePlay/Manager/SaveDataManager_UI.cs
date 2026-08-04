@@ -192,7 +192,11 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             currentInfo.SelectImage.enabled = true;
 
         // 使用BaseUIManager更新文本
-        uiManager.GetPanel(GameManager.GameSavePanelKey)?.SetText(GameManager.GameSaveSelectedTextKey, saveName);
+        BasePanel panel = uiManager.GetPanel(GameManager.GameSavePanelKey);
+        panel?.SetText(GameManager.GameSaveSelectedTextKey, saveName);
+        Button deleteButton = panel?.GetButton(GameManager.GameSaveDeleteButtonKey);
+        if (deleteButton != null)
+            deleteButton.interactable = true;
 
         // 选择存档后立即复用现有加载流程，并刷新可用角色列表。
         GameManager.Instance?.OnClick_LoadSaveData_Button();
@@ -245,6 +249,31 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (!uiManager.TryGetPanel(GameManager.GameSavePanelKey, out BasePanel panel))
             uiManager.TryGetPanel(BasePanelName, out panel);
         panel?.RefreshUIComponents();
+    }
+
+    /// <summary>
+    /// 清空已删除存档对应的 UI 选择与角色列表，避免继续进入已不存在的世界。
+    /// </summary>
+    public void ClearSaveSelection()
+    {
+        if (Player_SelectButton_Parent_Content != null)
+        {
+            foreach (Transform child in Player_SelectButton_Parent_Content)
+                Destroy(child.gameObject);
+        }
+
+        if (!uiManager.TryGetPanel(GameManager.GameSavePanelKey, out BasePanel panel))
+            uiManager.TryGetPanel(BasePanelName, out panel);
+
+        if (panel == null)
+            return;
+
+        panel.SetText(GameManager.GameSaveSelectedTextKey, GameManager.GameSaveNoSelectionText);
+        panel.SetInputFieldText(GameManager.GameSavePlayerInputKey, string.Empty);
+
+        Button deleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
+        if (deleteButton != null)
+            deleteButton.interactable = false;
     }
     #endregion
 }

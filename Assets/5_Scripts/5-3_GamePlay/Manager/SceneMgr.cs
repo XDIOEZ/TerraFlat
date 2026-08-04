@@ -60,9 +60,6 @@ public class SceneMgr : SingletonAutoMono<SceneMgr>
     // 当前正在执行的协程集合（便于场景切换时统一停止）
     private HashSet<Coroutine> _activeCoroutines = new();
 
-    // 加载参数缓存
-    private LoadSceneMode _defaultLoadMode = LoadSceneMode.Single;
-
     #endregion
 
     #region Unity生命周期
@@ -76,7 +73,7 @@ public class SceneMgr : SingletonAutoMono<SceneMgr>
         Debug.Log($"[SceneMgr] 初始化完成，当前场景: {_currentActiveSceneName}");
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
         // 清理所有正在运行的协程
         foreach (var coroutine in _activeCoroutines)
@@ -85,6 +82,7 @@ public class SceneMgr : SingletonAutoMono<SceneMgr>
                 StopCoroutine(coroutine);
         }
         _activeCoroutines.Clear();
+        base.OnDestroy();
     }
 
     #endregion

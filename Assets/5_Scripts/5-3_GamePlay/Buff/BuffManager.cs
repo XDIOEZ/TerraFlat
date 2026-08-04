@@ -226,6 +226,22 @@ public class BuffManager : Module
     }
 
     /// <summary>
+    /// 覆盖一个限时 Buff 的剩余时间。
+    /// 永久 Buff 不支持覆盖，以免运行时调试操作改变 JSON 定义的永久语义。
+    /// </summary>
+    public bool TrySetBuffDuration(string buffId, float seconds)
+    {
+        if (!TryGetBuff(buffId, out BuffInstance runtime) ||
+            !runtime.TrySetRemainingDuration(seconds))
+        {
+            return false;
+        }
+
+        BuffDurationChanged?.Invoke(runtime);
+        return true;
+    }
+
+    /// <summary>
     /// 完整喝下一份饮品后调用。每个血液流逝 Buff 使用自己的固定延时配置。
     /// </summary>
     public int ExtendBloodLossBuffsForDrink()
