@@ -209,7 +209,7 @@ public partial class Mod_Hoe : Module
 
         // 锄地同时清除并记录装饰草状态，避免读档或地块刷新后重新出现。
         map.RemoveGrassAt(tilePos);
-        map.UPDTile(tilePos, topIndex, farmlandData);
+        map.UpdateTile(tilePos, topIndex, farmlandData);
 
         // 再强制刷新一次，确保鼠标位置地块表现与数据一致。
         map.UpdateTileBaseAtPosition(tilePos);

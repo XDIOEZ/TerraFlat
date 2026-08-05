@@ -103,7 +103,6 @@ MonoBehaviour:
   chunk: {fileID: 0}
   ParentObject: {fileID: 0}
   backTilePenaltyTilesPerYield: 25
-  backTilePenaltyMinInterval: 0.08
   backTilePenaltyYieldSeconds: 0
   loadTileBatchSize: 256
   loadTileFrameBudgetMilliseconds: 2
@@ -117,35 +116,6 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 3622605424666345474
-      type: {class: LandNoise, ns: , asm: GamePlay}
-      data:
-        noiseType: 0
-        coordScale: 2
-        frequency: 0.05
-        octaves: 5
-        lacunarity: 2
-        persistence: 0.45
-        outputScale: 1
-        coordOffset: {x: 9000, y: 0}
-    - rid: 3622605424666345478
-      type: {class: PerlinNoise, ns: , asm: GamePlay}
-      data:
-        noiseType: 2
-        coordScale: 10
-        frequency: 0.02
-        octaves: 4
-        lacunarity: 2
-        persistence: 0.55
-    - rid: 3622605424666345480
-      type: {class: PerlinNoise, ns: , asm: GamePlay}
-      data:
-        noiseType: 3
-        coordScale: 10
-        frequency: 0.015
-        octaves: 4
-        lacunarity: 2
-        persistence: 0.55
     - rid: 3876953343422103555
       type: {class: ChunkGenerator_Structures, ns: , asm: GamePlay}
       data:
@@ -157,57 +127,41 @@ MonoBehaviour:
     - rid: 6445419845959286799
       type: {class: ChunkGenerator_Land, ns: , asm: GamePlay}
       data:
-        plantData:
-          Name: 
-          Radius: 1000
-          NoiseScale: 0.1
-          ChunkSize: {x: 100, y: 100}
-          AutoGenerateMap: 1
-          GlobalTemperature: 26
-          CurrentWeather: 0
-          WeatherIntensity: 0
-          WeatherDataVersion: 0
-          WeatherPhase: 0
-          WeatherPhaseStartedTotalTime: 0
-          WeatherPhaseEndTotalTime: 0
-          NextWeatherEventTotalTime: 0
-          WeatherRandomCursor: 0
-          WeatherEventSequence: 0
-          RainTemperatureOffset: -4
-          CloudyTemperatureOffset: -1
-          StormTemperatureOffset: -6
-          name: 
-          BodyId: 
-          PrefabName: 
-          OrbitCenterBodyId: 
-          OrbitRadius: 20
-          OrbitHeight: 0
-          OrbitAngularSpeed: 8
-          OrbitStartAngle: 0
-          OrbitClockwise: 0
-          SelfRotateSpeed: 20
-        mapGrid: {fileID: 0}
-        targetTilemap: {fileID: 0}
-        Equator: 0
         biomes:
         - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
         - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
         - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
+        - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
         - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
         - {fileID: 11400000, guid: 48f012ff64b95af4aadbe80d96858d78, type: 2}
-        temperatureMappingProfile: {fileID: 0}
-        defaultTemperatureRangeCelsius: {x: 0, y: 50}
+        TemperatureCelsiusRange: {x: 0, y: 50}
         NoiseConfigs:
-        - rid: 3622605424666345474
-        - rid: 3622605424666345478
-        - rid: 3622605424666345480
-        showBiomeOverlay: 0
+        - noiseType: 0
+          coordScale: 2
+          frequency: 0.05
+          octaves: 5
+          lacunarity: 2
+          persistence: 0.45
+          coordOffset: {x: 9000, y: 0}
+        - noiseType: 2
+          coordScale: 10
+          frequency: 0.02
+          octaves: 4
+          lacunarity: 2
+          persistence: 0.55
+          coordOffset: {x: 0, y: 0}
+        - noiseType: 3
+          coordScale: 10
+          frequency: 0.015
+          octaves: 4
+          lacunarity: 2
+          persistence: 0.55
+          coordOffset: {x: 0, y: 0}
         enableHeightSecondaryBoost: 1
         heightSecondaryBoostStrength: 1
     - rid: 6445419845959286807
       type: {class: ChunkGenerator_River, ns: , asm: GamePlay}
       data:
-        targetTilemap: {fileID: 0}
         riverTileBlock: {fileID: 11400000, guid: 7161f78828c23bc43a28d345ef6f8bc1, type: 2}
         seed: 12345
         channelSpacing: 128
@@ -219,11 +173,9 @@ MonoBehaviour:
         writeMode: 0
         riverDepthMin: 0.2
         riverDepthMax: 0.9
-        spawnRiverStones: 0
     - rid: 6445419845959286808
       type: {class: ChunkGenerator_SpawnItems, ns: , asm: GamePlay}
       data:
-        biomes: []
         globalSpawnMultiplier: 0.1
         logSummary: 0
 --- !u!114 &4806120374398569123
@@ -245,7 +197,7 @@ MonoBehaviour:
   spriteSizePixels: 16
   pixelsPerUnit: 32
   density: 0.22
-  varyDensityWithHumidity: 1
+  varyDensityWithPrecipitation: 1
   positionJitter: 0.22
   scaleRange: {x: 0.85, y: 1.15}
   accentVariantChance: 0.2

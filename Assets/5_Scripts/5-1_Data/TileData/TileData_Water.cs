@@ -13,7 +13,12 @@ public partial class TileData_Water : TileData
         if (layers == null || !layers.Contains(x, y))
             return;
 
-        deepValue = (0.5f - layers.Hight[x, y]) / 0.5f;
+        deepValue = CalculateDepthFromHeight(layers.Height[x, y]);
+    }
+
+    public static float CalculateDepthFromHeight(float height)
+    {
+        return (0.5f - height) / 0.5f;
     }
     /// <summary>
     /// 重写ToString方法，返回水地块的详细信息（中文格式）

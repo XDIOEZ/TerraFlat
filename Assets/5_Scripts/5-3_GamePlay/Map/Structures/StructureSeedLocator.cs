@@ -202,7 +202,7 @@ public static class StructureSeedLocator
         StructureCatalogSO catalog,
         StructureDefinitionSO targetDefinition,
         Vector2 searchOrigin,
-        ChunkGenerator_Land landGenerator,
+        TerrainPreviewSampler terrainPreview,
         out StructureRuntimeLocation nearest,
         out int scannedRegionCount)
     {
@@ -249,7 +249,7 @@ public static class StructureSeedLocator
                     catalog,
                     targetDefinition,
                     searchOrigin,
-                    landGenerator,
+                    terrainPreview,
                     chunkSize,
                     ref nearest,
                     ref nearestDistance,
@@ -264,7 +264,7 @@ public static class StructureSeedLocator
                         catalog,
                         targetDefinition,
                         searchOrigin,
-                        landGenerator,
+                        terrainPreview,
                         chunkSize,
                         ref nearest,
                         ref nearestDistance,
@@ -281,7 +281,7 @@ public static class StructureSeedLocator
                     catalog,
                     targetDefinition,
                     searchOrigin,
-                    landGenerator,
+                    terrainPreview,
                     chunkSize,
                     ref nearest,
                     ref nearestDistance,
@@ -296,7 +296,7 @@ public static class StructureSeedLocator
                         catalog,
                         targetDefinition,
                         searchOrigin,
-                        landGenerator,
+                        terrainPreview,
                         chunkSize,
                         ref nearest,
                         ref nearestDistance,
@@ -315,7 +315,7 @@ public static class StructureSeedLocator
         StructureCatalogSO catalog,
         StructureDefinitionSO targetDefinition,
         Vector2 searchOrigin,
-        ChunkGenerator_Land landGenerator,
+        TerrainPreviewSampler terrainPreview,
         Vector2Int chunkSize,
         ref StructureRuntimeLocation nearest,
         ref float nearestDistance,
@@ -342,7 +342,7 @@ public static class StructureSeedLocator
                 target,
                 chunkOrigin,
                 chunkSize,
-                landGenerator,
+                terrainPreview,
                 out StructureSeedCandidate accepted))
         {
             return;
@@ -370,7 +370,7 @@ public static class StructureSeedLocator
         StructureSeedCandidate target,
         Vector2Int chunkOrigin,
         Vector2Int chunkSize,
-        ChunkGenerator_Land landGenerator,
+        TerrainPreviewSampler terrainPreview,
         out StructureSeedCandidate acceptedTarget)
     {
         acceptedTarget = null;
@@ -379,7 +379,7 @@ public static class StructureSeedLocator
             catalog,
             chunkOrigin,
             chunkSize,
-            landGenerator);
+            terrainPreview);
         candidates.Sort((left, right) =>
         {
             int seedCompare = left.InstanceSeed.CompareTo(right.InstanceSeed);
@@ -418,7 +418,7 @@ public static class StructureSeedLocator
         StructureCatalogSO catalog,
         Vector2Int chunkOrigin,
         Vector2Int chunkSize,
-        ChunkGenerator_Land landGenerator)
+        TerrainPreviewSampler terrainPreview)
     {
         List<StructureSeedCandidate> output = new();
         IEnumerable<StructureDefinitionSO> definitions =
@@ -464,7 +464,7 @@ public static class StructureSeedLocator
                         !IsEnvironmentValid(
                             candidate,
                             worldSeed,
-                            landGenerator))
+                            terrainPreview))
                     {
                         continue;
                     }
@@ -480,17 +480,16 @@ public static class StructureSeedLocator
     private static bool IsEnvironmentValid(
         StructureSeedCandidate candidate,
         int worldSeed,
-        ChunkGenerator_Land landGenerator)
+        TerrainPreviewSampler terrainPreview)
     {
-        if (landGenerator == null)
+        if (terrainPreview == null)
             return true;
 
         Vector2Int center = candidate.WorldOrigin + new Vector2Int(
             candidate.TransformedSize.x / 2,
             candidate.TransformedSize.y / 2);
-        EnvironmentSample centerSample =
-            landGenerator.SampleEnvironmentAtWorld(center, worldSeed);
-        if (!candidate.Definition.IsEnvironmentValid(centerSample))
+        if (!terrainPreview.TrySample(center, out TerrainPreviewSample centerPreview) ||
+            !candidate.Definition.IsEnvironmentValid(centerPreview.Environment, centerPreview.Biome))
             return false;
 
         float minHeight = float.MaxValue;
@@ -499,11 +498,14 @@ public static class StructureSeedLocator
         {
             for (int y = 0; y < candidate.TransformedSize.y; y++)
             {
-                EnvironmentSample sample = landGenerator.SampleEnvironmentAtWorld(
-                    candidate.WorldOrigin + new Vector2Int(x, y),
-                    worldSeed);
-                minHeight = Mathf.Min(minHeight, sample.Hight);
-                maxHeight = Mathf.Max(maxHeight, sample.Hight);
+                if (!terrainPreview.TrySample(
+                        candidate.WorldOrigin + new Vector2Int(x, y),
+                        out TerrainPreviewSample sample))
+                {
+                    return false;
+                }
+                minHeight = Mathf.Min(minHeight, sample.Environment.Height);
+                maxHeight = Mathf.Max(maxHeight, sample.Environment.Height);
             }
         }
 

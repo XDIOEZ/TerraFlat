@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 地图与 Chunk 系统定位
 
-> 最后核对：2026-08-03。
+> 最后核对：2026-08-05。
 
 ## 修改前先读
 
@@ -25,8 +25,8 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 → ChunkMgr 请求区块
 → Chunk 获取 MapSave 或创建新区块
 → Map.GenerateByPipeline
-→ Land / River / SpawnItems / Structures
-→ Data_TileMap + TileData
+→ BaseTerrain(100) / Hydrology(200) / Structures(300) / Ecology(400)
+→ Data_TileMap + TileStackCell + EnvironmentLayers
 → Chunk Ready
 ```
 
@@ -37,13 +37,14 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - Item 区块归属：`Assets/5_Scripts/5-3_GamePlay/Chunk/Mod_ItemChunkAssigner.cs`。
 - 生成上下文：`Assets/5_Scripts/5-3_GamePlay/Map/Base/MapGenerationContext.cs`。
 - 地形生成：`Assets/5_Scripts/5-3_GamePlay/Map/Controller/ChunkGenerator_Land.cs`。
-- 噪声基类与实现：`Assets/5_Scripts/5-3_GamePlay/Map/Base/BaseNoise.cs`、`Assets/5_Scripts/5-3_GamePlay/Map/MapMaker/LandNoise.cs`、`PerlinNoise.cs`。
+- 统一噪声核与生成签名：`Assets/5_Scripts/5-3_GamePlay/Map/Base/TerrainNoise.cs`。
+- Biome 集中解析：`Assets/5_Scripts/5-3_GamePlay/Map/Base/BiomeResolver.cs`。
 - 河流生成：`Assets/5_Scripts/5-3_GamePlay/Map/Controller/ChunkGenerator_River.cs`。
 - 物品生成：`Assets/5_Scripts/5-3_GamePlay/Map/Controller/ChunkGenerator_SpawnItems.cs`。
 - 结构生成：`Assets/5_Scripts/5-3_GamePlay/Map/Structures/ChunkGenerator_Structures.cs`。
 - 矿洞生成：`Assets/5_Scripts/5-3_GamePlay/Dimension/ChunkGenerator_Cave.cs`。
 - 地图存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/MapSave.cs`。
-- Tilemap 数据：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`。
+- Tilemap 数据：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`、`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
 - 静态阻挡层：`Assets/5_Scripts/5-3_GamePlay/Map/BlockingTilemapLayer.cs`。
 - 地块权威数据：`Assets/5_Scripts/5-1_Data/TileData/`。
 
@@ -65,7 +66,12 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - Chunk 流送不得在 `Map.IsReadyForChunkLifecycle` 为 false 时直接失活对象，否则 Unity 会中断生成或 Tilemap 写入协程；延迟失活请求必须在地图视觉完成后执行。
 - Chunk 对象池复用前后必须重置地图就绪状态、运行时 Item 和事件订阅。
 - 运行时群系查询统一调用 `ChunkGenerator_Land.TryGetBiomeAtWorld()`，使用正式地形生成时的有序 `biomes` 和 `EnvironmentLayers`，不要在生成器外复制匹配逻辑。
-- 地形尺度分为三层：`PlanetData.NoiseScale` 是世界级坐标缩放，`BaseNoise.coordScale` 是单通道坐标倍率，`BaseNoise.frequency` 是单通道基础频率；三者共同决定最终采样频率。
+- 地形只有 `Height=0`、`Precipitation=2`、`Temperature=3` 三个 `TerrainNoiseConfig` 通道；`PlanetData.NoiseScale`、`coordScale` 与 `frequency` 共同决定最终采样频率。区块 Job、同步单点、出生点与结构定位必须复用 `TerrainNoiseKernel` / `TerrainPreviewSampler`。
+- `BiomeResolver` 按稳定 `BiomeId` 和 MapCore 列表顺序解析，`255` 为未匹配标记；重复 ID、非法范围、超过 255 个 Biome、未匹配格或结构引用未启用 Biome 都是生成失败。
+- `Data_TileMap` 以 `TileStackCell[,]` 持久化基础层、覆盖层和第三层起才分配的溢出层；只能通过 `GetTileAt/GetTopTile/PushTile/RemoveTile/ReplaceStack` 等 API 读写，不得恢复可变 `List<TileData>` 暴露。
+- `Map` 按阶段和序列化原序稳定排序，且必须恰好有一个 `BaseTerrain`。生成器仅以 `GenerateAsync` 为逻辑入口；失败或取消时必须完成并释放 Job/NativeArray。
+- 必需阶段、差量应用或 Tilemap 最终化失败时，Chunk 进入 `Failed`，不设置 `TileLoaded`、不捕获成功基线、不渲染也不发送 Ready；`ChunkMgr` 必须解除 loading 并结束等待者。
+- 初次 Tilemap 渲染按行复用数组并调用 `SetTilesBlock`，同一次遍历产生地面与顶层阻挡层，最后统一刷新碰撞体；单格实时编辑仍走单格刷新。
 - `ChunkGenerator_River` 正式入口使用世界坐标连续水带：单次遍历当前 Chunk，不建立水文 halo、汇流图或湖泊缓存；河流形状由间距、宽度、弯曲幅度/频率和方向配置。
 - `MapGenerationContext` 现携带 `WorldAddress` 与 `DimensionDefinition`；基础种子按 `WorldKey + SeedSalt` 派生，保证同星球不同维度的地图、确定性 Item GUID 和 Chunk 差量隔离。
 - `ChunkMgr.TryCreateMapCore()` 按当前维度的 `MapCorePrefabId` 创建地图；矿洞运行时替换为 `ChunkGenerator_Cave`，地表继续使用 MapCore 原生成管线。
@@ -87,6 +93,8 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-08-05：地形生成收敛为三通道 `TerrainNoiseKernel`、稳定 `BiomeResolver`、四阶段异步管线和 `TerrainPreviewSampler`；地图存储切换为 `TileStackCell[,]`，增加 Burst 地表/河流/洞穴 Job、Chunk Failed 收口与分行 `SetTilesBlock` 渲染。
 
 - 2026-08-04：`ChunkGenerator_Land` 可直接以 MapCore Prefab 配置、当前 `PlanetData` 与世界种子采样安全陆地；`ChunkGenerator_River` 也支持显式种子查询以排除河流格。出生定位不实例化 Map/Chunk，之后由玩家流送模块加载周围区块；旧存档零 `NoiseScale` 仍在运行时回退默认值。
 - 2026-08-03：地表河流改为性能优先的世界坐标连续水带，移除水文 halo/汇流/湖泊计算；Land、River、SpawnItems、Structures 统一受毫秒预算分帧，ChunkMgr 限制同时仅生成一个区块，资源列表不再重复生成。

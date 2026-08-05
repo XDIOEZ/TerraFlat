@@ -13,11 +13,8 @@ using Sirenix.OdinInspector;
 [Serializable]
 public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
 {
+    public override GenerationStage Stage => GenerationStage.Ecology;
     #region 配置参数
-    [Header("依赖")]
-    [Tooltip("不填则自动使用 Map 上的 ChunkGenerator_Land.biomes")]
-    public System.Collections.Generic.List<BiomeData> biomes;
-
     [Header("生成控制")]
     [Tooltip("全局实例化倍率（0.1 约等于原生成量的10%）")]
     [Range(0f, 1f)]
@@ -31,15 +28,6 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
     #endregion
 
     #region 管线入口
-    [Button("生成物品")]
-    public override void Generate(MapGenerationContext context)
-    {
-        IEnumerator routine = GenerateCells(context, int.MaxValue);
-        while (routine.MoveNext())
-        {
-        }
-    }
-
     public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
     {
         return GenerateCells(context, Mathf.Max(1, workBatchSize));
@@ -48,31 +36,18 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
     private IEnumerator GenerateCells(MapGenerationContext context, int maxCellsPerFrame)
     {
         if (context == null)
-        {
-            LogNullContext(nameof(ChunkGenerator_SpawnItems));
-            yield break;
-        }
+            throw new ArgumentNullException(nameof(context));
 
         if (context.Map == null)
-        {
-            LogNullMap(nameof(ChunkGenerator_SpawnItems));
-            yield break;
-        }
+            throw new InvalidOperationException("[ChunkGenerator_SpawnItems] Map is null.");
 
         Map = context.Map;
 
         if (Map.Data == null)
-        {
-            Debug.LogError("[ChunkGenerator_SpawnItems] ❌ Map.Data 为空，无法生成物品", Map);
-            yield break;
-        }
+            throw new InvalidOperationException("[ChunkGenerator_SpawnItems] Map.Data is null.");
 
-        var usedBiomes = ResolveBiomes();
-        if (usedBiomes == null || usedBiomes.Count == 0)
-        {
-            Debug.LogError("[ChunkGenerator_SpawnItems] ❌ biomes 为空：无法根据群系生成物品", Map);
-            yield break;
-        }
+        if (context.BiomeResolver == null || context.BiomeIndices == null)
+            throw new InvalidOperationException("[ChunkGenerator_SpawnItems] 缺少基础地形阶段生成的 Biome 缓存。");
 
         Vector2Int startPos = Map.Data.position;
         Vector2 size = ChunkMgr.GetChunkSize();
@@ -90,7 +65,6 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
                 Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
                 spawnedCount += GenerateCell(
                     context,
-                    usedBiomes,
                     worldPos,
                     new Vector2Int(x, y));
 
@@ -110,7 +84,6 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
 
     private int GenerateCell(
         MapGenerationContext context,
-        List<BiomeData> usedBiomes,
         Vector2Int worldPosition,
         Vector2Int localPosition)
     {
@@ -133,13 +106,8 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             return 0;
         }
 
-        BiomeData biome = FindMatchingBiome(
-            usedBiomes,
-            Map.Data.EnvironmentLayers,
-            localPosition.x,
-            localPosition.y);
-        if (biome == null)
-            return 0;
+        if (!context.TryGetResolvedBiome(localPosition, out BiomeData biome))
+            throw new InvalidOperationException($"[ChunkGenerator_SpawnItems] {worldPosition} 没有已解析的 Biome。");
 
         return GenerateResourcesForBiome(
             Map,
@@ -148,39 +116,6 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             biome,
             globalSpawnMultiplier,
             context.WorldSeed);
-    }
-    #endregion
-
-    #region 生物群系
-    private System.Collections.Generic.List<BiomeData> ResolveBiomes()
-    {
-        if (biomes != null && biomes.Count > 0)
-            return biomes;
-
-        // 尝试从 LandGenerator 取
-        if (Map != null)
-        {
-            var land = Map.GetGenerator<ChunkGenerator_Land>();
-            if (land != null && land.biomes != null && land.biomes.Count > 0)
-                return land.biomes;
-        }
-
-        return biomes;
-    }
-
-    private static BiomeData FindMatchingBiome(System.Collections.Generic.List<BiomeData> biomeList, EnvironmentLayers layers, int x, int y)
-    {
-        for (int i = 0; i < biomeList.Count; i++)
-        {
-            var biome = biomeList[i];
-            if (biome == null)
-                continue;
-
-            if (biome.IsEnvironmentValid(layers, x, y))
-                return biome;
-        }
-
-        return null;
     }
     #endregion
 

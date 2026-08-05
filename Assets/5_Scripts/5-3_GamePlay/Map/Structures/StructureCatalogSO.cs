@@ -9,7 +9,7 @@ public sealed class StructureCatalogSO : ScriptableObject
     public const string DefaultResourcesPath = "Config/StructureCatalog_Default";
 
     public bool Enabled = true;
-    [Min(1)] public int GenerationVersion = 1;
+    [Min(1)] public int GenerationVersion = 2;
     public List<StructureDefinitionSO> Definitions = new();
 
     public uint CalculateContentHash()
@@ -40,7 +40,7 @@ public sealed class StructureCatalogSO : ScriptableObject
 
             IEnumerable<string> biomeIds = (definition.AllowedBiomes ?? new List<BiomeData>())
                 .Where(biome => biome != null)
-                .Select(biome => string.IsNullOrEmpty(biome.BiomeName) ? biome.name : biome.BiomeName)
+                .Select(biome => biome.BiomeId)
                 .OrderBy(value => value, StringComparer.Ordinal);
             foreach (string biomeId in biomeIds)
                 hash = StructureHashUtility.Add(hash, biomeId);
@@ -147,14 +147,10 @@ public sealed class StructureCatalogSO : ScriptableObject
 
         hash = StructureHashUtility.Add(hash, range.TemperatureRange.x);
         hash = StructureHashUtility.Add(hash, range.TemperatureRange.y);
-        hash = StructureHashUtility.Add(hash, range.HumidityRange.x);
-        hash = StructureHashUtility.Add(hash, range.HumidityRange.y);
         hash = StructureHashUtility.Add(hash, range.PrecipitationRange.x);
         hash = StructureHashUtility.Add(hash, range.PrecipitationRange.y);
-        hash = StructureHashUtility.Add(hash, range.SolidityRange.x);
-        hash = StructureHashUtility.Add(hash, range.SolidityRange.y);
-        hash = StructureHashUtility.Add(hash, range.HightRange.x);
-        hash = StructureHashUtility.Add(hash, range.HightRange.y);
+        hash = StructureHashUtility.Add(hash, range.HeightRange.x);
+        hash = StructureHashUtility.Add(hash, range.HeightRange.y);
         return hash;
     }
 }

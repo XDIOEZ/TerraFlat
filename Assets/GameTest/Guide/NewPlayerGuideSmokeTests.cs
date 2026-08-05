@@ -433,8 +433,11 @@ namespace FlatWorld.GameTest.Guide
         {
             string source = ReadProjectFile(path);
             int firstIndex = source.IndexOf(first, StringComparison.Ordinal);
-            int secondIndex = source.IndexOf(second, StringComparison.Ordinal);
             Assert.That(firstIndex, Is.GreaterThanOrEqualTo(0), $"未找到成功锚点：{path} / {first}");
+            int secondIndex = source.IndexOf(
+                second,
+                firstIndex + first.Length,
+                StringComparison.Ordinal);
             Assert.That(secondIndex, Is.GreaterThan(firstIndex), $"事件必须位于成功锚点之后：{path} / {second}");
         }
 

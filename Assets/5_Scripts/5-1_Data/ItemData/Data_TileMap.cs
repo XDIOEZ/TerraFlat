@@ -1,74 +1,61 @@
 using MemoryPack;
-using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
-[System.Serializable]
+[Serializable]
 [MemoryPackable]
 public partial class Data_TileMap : ItemData
 {
-    [NonSerialized] private bool _hasLoggedArrayNotInit;
+    [NonSerialized]
+    private bool _hasLoggedStorageNotInitialized;
+
+    [NonSerialized]
+    private int _nonEmptyCellCount = -1;
+
+    [MemoryPackInclude]
+    [SerializeField, HideInInspector]
+    private TileStackCell[,] _tileCells = new TileStackCell[20, 20];
+
     [Tooltip("地图的位置")]
-    public Vector2Int position = new Vector2Int(0, 0);
-    public bool TileLoaded = false;
-    [Tooltip("环境多层网格（性能优先主存储）")]
+    public Vector2Int position = Vector2Int.zero;
+
+    public bool TileLoaded;
+
+    [Tooltip("环境多层网格（温度、摄氏温度、降水、高度与光照）")]
     public EnvironmentLayers EnvironmentLayers = new EnvironmentLayers();
-    public List<TileData>[,] TileData_Array = new List<TileData>[20, 20];//00??????? ????position??
+
     [Tooltip("装饰草层数据，每格使用一个字节保存状态")]
     public GrassLayerData GrassLayer = new GrassLayerData();
 
-    #region TileData ?????
-    public int Width => TileData_Array != null && TileData_Array.Length > 0 ? TileData_Array.GetLength(0) : 0;
-    public int Height => TileData_Array != null && TileData_Array.Length > 0 ? TileData_Array.GetLength(1) : 0;
+    [MemoryPackIgnore]
+    public int Width => _tileCells != null && _tileCells.Length > 0 ? _tileCells.GetLength(0) : 0;
 
-    public void EnsureTileDataArray(int width, int height, bool initCells = true)
+    [MemoryPackIgnore]
+    public int Height => _tileCells != null && _tileCells.Length > 0 ? _tileCells.GetLength(1) : 0;
+
+    public void EnsureTileStorage(int width, int height)
     {
         if (width <= 0 || height <= 0)
-        {
-            Debug.LogError($"[Data_TileMap] ? EnsureTileDataArray ?????{width}x{height}");
-            return;
-        }
+            throw new ArgumentOutOfRangeException(nameof(width), $"[Data_TileMap] 地形尺寸非法：{width}x{height}");
 
-        if (TileData_Array == null || TileData_Array.GetLength(0) != width || TileData_Array.GetLength(1) != height)
+        if (_tileCells == null || _tileCells.GetLength(0) != width || _tileCells.GetLength(1) != height)
         {
-            TileData_Array = new List<TileData>[width, height];
+            _tileCells = new TileStackCell[width, height];
+            _nonEmptyCellCount = 0;
         }
 
         EnsureGrassLayerStorage(width, height);
-
-        if (!initCells)
-            return;
-
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                TileData_Array[x, y] ??= new List<TileData>(capacity: 2);
-            }
-        }
     }
 
     public void ClearAllTiles()
     {
-        if (TileData_Array != null && TileData_Array.Length > 0)
-        {
-            int w = TileData_Array.GetLength(0);
-            int h = TileData_Array.GetLength(1);
-            for (int x = 0; x < w; x++)
-            {
-                for (int y = 0; y < h; y++)
-                {
-                    TileData_Array[x, y]?.Clear();
-                }
-            }
-        }
+        if (_tileCells != null && _tileCells.Length > 0)
+            Array.Clear(_tileCells, 0, _tileCells.Length);
 
+        _nonEmptyCellCount = 0;
         GrassLayer?.Clear();
     }
-
-    #endregion
 
     #region Grass Layer
 
@@ -106,10 +93,7 @@ public partial class Data_TileMap : ItemData
     public void EnsureEnvironmentStorage(int width, int height)
     {
         if (width <= 0 || height <= 0)
-        {
-            Debug.LogError($"[Data_TileMap] EnsureEnvironmentStorage 参数非法：{width}x{height}");
-            return;
-        }
+            throw new ArgumentOutOfRangeException(nameof(width), $"[Data_TileMap] 环境尺寸非法：{width}x{height}");
 
         EnvironmentLayers ??= new EnvironmentLayers();
         EnvironmentLayers.EnsureSize(width, height);
@@ -131,47 +115,22 @@ public partial class Data_TileMap : ItemData
         int y,
         float temperature,
         float temperatureCelsius,
-        float humidity,
         float precipitation,
-        float solidity,
-        float hight,
-        float pollution = 0f)
+        float height)
     {
-        if (!IsEnvironmentLocalValid(x, y))
-        {
-            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 环境坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
-        }
-
-        EnvironmentLayers.SetCell(x, y, temperature, temperatureCelsius, humidity, precipitation, solidity, hight, pollution);
+        ValidateEnvironmentCell(x, y);
+        EnvironmentLayers.SetCell(x, y, temperature, temperatureCelsius, precipitation, height);
     }
 
-    public void SetHumidityAtLocal(int x, int y, float humidity)
+    public void SetPrecipitationAtLocal(int x, int y, float precipitation)
     {
-        if (!IsEnvironmentLocalValid(x, y))
-        {
-            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 环境坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
-        }
-
-        EnvironmentLayers.SetHumidity(x, y, humidity);
-    }
-
-    public void SetSolidityAtLocal(int x, int y, float solidity)
-    {
-        if (!IsEnvironmentLocalValid(x, y))
-        {
-            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 环境坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
-        }
-
-        EnvironmentLayers.SetSolidity(x, y, solidity);
+        ValidateEnvironmentCell(x, y);
+        EnvironmentLayers.SetPrecipitation(x, y, precipitation);
     }
 
     public void SetLightAtLocal(int x, int y, float light)
     {
-        if (!IsEnvironmentLocalValid(x, y))
-        {
-            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 光照坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.Height}");
-        }
-
+        ValidateEnvironmentCell(x, y);
         EnvironmentLayers.SetLight(x, y, light);
     }
 
@@ -188,130 +147,269 @@ public partial class Data_TileMap : ItemData
         return true;
     }
 
+    private void ValidateEnvironmentCell(int x, int y)
+    {
+        if (!IsEnvironmentLocalValid(x, y))
+            throw new ArgumentOutOfRangeException(nameof(x), $"[Data_TileMap] 环境坐标越界：({x},{y}) size={EnvironmentLayers?.Width}x{EnvironmentLayers?.GridHeight}");
+    }
+
     #endregion
 
-    #region TileData ??
-    /// <summary>
-    /// ????????? TileData?
-    /// ???? TileData_Array????????????/??/??????? TileData ???????????
-    /// ??????????????
-    /// </summary>
-    public TileData GetTileDataAt(Vector2Int worldPos, int? index = null)
+    #region Tile Stack Queries
+
+    public int GetLayerCount(Vector2Int worldPos)
     {
-        var list = GetTileListAt(worldPos);
-        if (list == null || list.Count == 0)
-            return null;
-
-        int i = index ?? (list.Count - 1);
-        if (i < 0 || i >= list.Count)
-        {
-            Debug.LogWarning($"?? {worldPos} ??? {i} ????", null);
-            return null;
-        }
-
-        return list[i];
+        return TryGetCellIndex(worldPos, out int x, out int y) ? _tileCells[x, y].Count : 0;
     }
 
-    public List<TileData> GetTileListAt(Vector2Int worldPos)
+    public TileData GetTileAt(Vector2Int worldPos, int index)
     {
-        if (TileData_Array == null || TileData_Array.Length == 0)
-        {
-            if (!_hasLoggedArrayNotInit)
-            {
-                _hasLoggedArrayNotInit = true;
-                Debug.LogError("[Data_TileMap] ? TileData_Array ???????????? EnsureTileDataArray()", null);
-            }
-            return null;
-        }
-
-        Vector2Int localPos = worldPos - position;
-        int w = TileData_Array.GetLength(0);
-        int h = TileData_Array.GetLength(1);
-        if ((uint)localPos.x >= (uint)w || (uint)localPos.y >= (uint)h)
-            return null;
-
-        return TileData_Array[localPos.x, localPos.y];
-    }
-    #endregion
-
-    #region TileData ??
-    public void AddTileData(Vector2Int worldPos, TileData tileData)
-    {
-        Vector2Int localPos = worldPos - position;
-        int w = Width;
-        int h = Height;
-        if ((uint)localPos.x >= (uint)w || (uint)localPos.y >= (uint)h)
-        {
-            Debug.LogError($"[Data_TileMap] ? AddTileData ???world={worldPos} local={localPos} size={w}x{h}");
-            return;
-        }
-
-        var list = TileData_Array[localPos.x, localPos.y] ??= new List<TileData>(capacity: 2);
-        list.Add(tileData);
+        return TryGetCellIndex(worldPos, out int x, out int y) ? _tileCells[x, y].GetAt(index) : null;
     }
 
-    public bool RemoveTileData(Vector2Int worldPos, int? index = null)
+    public TileData GetTileFromTop(Vector2Int worldPos, int offset = 0)
     {
-        var list = GetTileListAt(worldPos);
-        if (list == null || list.Count == 0)
-            return false;
+        return TryGetCellIndex(worldPos, out int x, out int y) ? _tileCells[x, y].GetFromTop(offset) : null;
+    }
 
-        int i = index ?? (list.Count - 1);
-        if ((uint)i >= (uint)list.Count)
+    public TileData GetTopTile(Vector2Int worldPos)
+    {
+        return GetTileFromTop(worldPos);
+    }
+
+    public bool TryGetStackView(Vector2Int worldPos, out TileStackView stack)
+    {
+        if (!TryGetCellIndex(worldPos, out int x, out int y))
         {
-            Debug.LogWarning($"?? {worldPos} ????? {i} ???", null);
+            stack = default;
             return false;
         }
 
-        list.RemoveAt(i);
+        stack = _tileCells[x, y].AsView();
         return true;
     }
 
-    public bool UpdateTileData(Vector2Int worldPos, int index, TileData tileData)
+    public bool TryGetStackViewLocal(int x, int y, out TileStackView stack)
     {
-        var list = GetTileListAt(worldPos);
-        if (list == null || list.Count == 0)
-            return false;
-
-        if ((uint)index >= (uint)list.Count)
+        if (!IsLocalCellValid(x, y))
         {
-            Debug.LogWarning($"?? {worldPos} ??? {index} ????", null);
+            stack = default;
             return false;
         }
 
-        list[index] = tileData;
+        stack = _tileCells[x, y].AsView();
         return true;
     }
+
+    public bool CopyStackTo(Vector2Int worldPos, List<TileData> destination)
+    {
+        if (destination == null)
+            throw new ArgumentNullException(nameof(destination));
+
+        destination.Clear();
+        if (!TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        _tileCells[x, y].CopyTo(destination);
+        return destination.Count > 0;
+    }
+
+    public bool CopyStackLocalTo(int x, int y, List<TileData> destination)
+    {
+        if (destination == null)
+            throw new ArgumentNullException(nameof(destination));
+
+        destination.Clear();
+        if (!IsLocalCellValid(x, y))
+            return false;
+
+        _tileCells[x, y].CopyTo(destination);
+        return destination.Count > 0;
+    }
+
     #endregion
 
-    #region ??
-    public IEnumerable<(Vector2Int worldPos, List<TileData> list)> EnumerateNonEmptyTiles()
+    #region Tile Stack Mutations
+
+    public bool SetBaseTile(Vector2Int worldPos, TileData tile)
     {
-        if (TileData_Array == null || TileData_Array.Length == 0)
+        if (tile == null || !TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        _tileCells[x, y].SetBase(tile);
+        InvalidateNonEmptyCount();
+        return true;
+    }
+
+    public bool PushTile(Vector2Int worldPos, TileData tile)
+    {
+        if (tile == null || !TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        _tileCells[x, y].Push(tile);
+        InvalidateNonEmptyCount();
+        return true;
+    }
+
+    public bool ReplaceTop(Vector2Int worldPos, TileData tile)
+    {
+        if (tile == null || !TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        _tileCells[x, y].ReplaceTop(tile);
+        InvalidateNonEmptyCount();
+        return true;
+    }
+
+    public bool UpdateTileAt(Vector2Int worldPos, int index, TileData tile)
+    {
+        if (tile == null || !TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        bool updated = _tileCells[x, y].ReplaceAt(index, tile);
+        if (updated)
+            InvalidateNonEmptyCount();
+        return updated;
+    }
+
+    public bool RemoveTile(Vector2Int worldPos, int? index = null)
+    {
+        if (!TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        int resolvedIndex = index ?? (_tileCells[x, y].Count - 1);
+        bool removed = _tileCells[x, y].RemoveAt(resolvedIndex);
+        if (removed)
+            InvalidateNonEmptyCount();
+        return removed;
+    }
+
+    public bool ClearCell(Vector2Int worldPos)
+    {
+        if (!TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        bool changed = !_tileCells[x, y].IsEmpty;
+        _tileCells[x, y].Clear();
+        if (changed)
+            InvalidateNonEmptyCount();
+        return changed;
+    }
+
+    public bool ReplaceStack(Vector2Int worldPos, IReadOnlyList<TileData> tiles)
+    {
+        if (!TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        _tileCells[x, y].ReplaceWith(tiles);
+        InvalidateNonEmptyCount();
+        return true;
+    }
+
+    public bool ReplaceStack(Vector2Int worldPos, TileData tile)
+    {
+        if (tile == null || !TryGetCellIndex(worldPos, out int x, out int y))
+            return false;
+
+        _tileCells[x, y].Clear();
+        _tileCells[x, y].SetBase(tile);
+        InvalidateNonEmptyCount();
+        return true;
+    }
+
+    public bool ReplaceStackLocal(int x, int y, IReadOnlyList<TileData> tiles)
+    {
+        if (!IsLocalCellValid(x, y))
+            return false;
+
+        _tileCells[x, y].ReplaceWith(tiles);
+        InvalidateNonEmptyCount();
+        return true;
+    }
+
+    #endregion
+
+    public IEnumerable<OccupiedTileCell> EnumerateOccupiedCells()
+    {
+        if (_tileCells == null || _tileCells.Length == 0)
             yield break;
 
-        int w = TileData_Array.GetLength(0);
-        int h = TileData_Array.GetLength(1);
-
-        for (int x = 0; x < w; x++)
+        int width = Width;
+        int height = Height;
+        for (int x = 0; x < width; x++)
         {
-            for (int y = 0; y < h; y++)
+            for (int y = 0; y < height; y++)
             {
-                var list = TileData_Array[x, y];
-                if (list == null || list.Count == 0)
+                TileStackCell cell = _tileCells[x, y];
+                if (cell.IsEmpty)
                     continue;
 
-                yield return (new Vector2Int(position.x + x, position.y + y), list);
+                yield return new OccupiedTileCell(
+                    new Vector2Int(position.x + x, position.y + y),
+                    cell.AsView());
             }
         }
     }
 
     public int CountNonEmptyCells()
     {
+        if (_nonEmptyCellCount >= 0)
+            return _nonEmptyCellCount;
+
         int count = 0;
-        foreach (var _ in EnumerateNonEmptyTiles())
+        foreach (OccupiedTileCell _ in EnumerateOccupiedCells())
             count++;
+
+        _nonEmptyCellCount = count;
         return count;
     }
-    #endregion
+
+    public int CountOverflowAllocations()
+    {
+        if (_tileCells == null)
+            return 0;
+
+        int count = 0;
+        for (int x = 0; x < Width; x++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                if (_tileCells[x, y].HasOverflowAllocation)
+                    count++;
+            }
+        }
+
+        return count;
+    }
+
+    private bool TryGetCellIndex(Vector2Int worldPos, out int x, out int y)
+    {
+        if (_tileCells == null || _tileCells.Length == 0)
+        {
+            if (!_hasLoggedStorageNotInitialized)
+            {
+                _hasLoggedStorageNotInitialized = true;
+                Debug.LogError("[Data_TileMap] 地形存储未初始化，请先调用 EnsureTileStorage()。");
+            }
+
+            x = 0;
+            y = 0;
+            return false;
+        }
+
+        Vector2Int localPos = worldPos - position;
+        x = localPos.x;
+        y = localPos.y;
+        return IsLocalCellValid(x, y);
+    }
+
+    private bool IsLocalCellValid(int x, int y)
+    {
+        return _tileCells != null && (uint)x < (uint)Width && (uint)y < (uint)Height;
+    }
+
+    private void InvalidateNonEmptyCount()
+    {
+        _nonEmptyCellCount = -1;
+    }
 }

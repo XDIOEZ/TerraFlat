@@ -12,24 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef0d6fc82e9dffd4bb109cc0bc9963b4, type: 3}
   m_Name: "\u6E29\u5E26_\u8349\u539F"
   m_EditorClassIdentifier: 
+  BiomeId: grassland
   BiomeName: "\u6E29\u5E26\u8349\u539F"
   Description: "\u6563\u843D\u7684\u77F3\u5934,\u5C0F\u6C34\u5751,\u7A00\u5C11\u7684\u6811,\u5E7F\u9614\u7684\u8349\u5730"
   PreviewColor: {r: 0.5759594, g: 0.84313726, b: 0.19999997, a: 1}
   Condition:
     TemperatureRange: {x: 0.25, y: 0.75}
-    HumidityRange: {x: 0, y: 1}
     PrecipitationRange: {x: 0.25, y: 0.75}
-    SolidityRange: {x: 0, y: 1}
-    HightRange: {x: 0.5, y: 1}
+    HeightRange: {x: 0.5, y: 1}
   TerrainConfig:
     TileSpawns_NoSO:
     - TileBlock: {fileID: 11400000, guid: 843e8341b637e024399c21bb22e77547, type: 2}
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     ItemSpawn_NoSO:
     - itemPrefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
       itemName: Bush
@@ -37,29 +34,21 @@ MonoBehaviour:
       SpawnChance: 0.001
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
       itemName: Mine_Stone
       itemCount: 1
       SpawnChance: 0.0005
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 463977462678543879, guid: a2d494b844ece424088d4bfb48532082, type: 3}
       itemName: Weed
       itemCount: 1
       SpawnChance: 0.08
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
-        HightRange: {x: 0, y: 1}
-  UseCustomTemperatureRange: 0
-  TemperatureRangeCelsius: {x: 15, y: 26}
+        HeightRange: {x: 0, y: 1}

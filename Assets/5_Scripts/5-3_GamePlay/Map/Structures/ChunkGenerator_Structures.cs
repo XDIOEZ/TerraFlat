@@ -7,6 +7,7 @@ using UnityEngine;
 [Serializable]
 public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
 {
+    public override GenerationStage Stage => GenerationStage.Structures;
     [Tooltip("未指定时从 Resources/Config/StructureCatalog_Default 加载")]
     public StructureCatalogSO Catalog;
     public bool LogSummary;
@@ -30,14 +31,6 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
         public uint InstanceSeed;
     }
 
-    public override void Generate(MapGenerationContext context)
-    {
-        IEnumerator routine = GenerateCandidates(context, int.MaxValue);
-        while (routine.MoveNext())
-        {
-        }
-    }
-
     public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
     {
         return GenerateCandidates(context, Mathf.Max(1, workBatchSize));
@@ -46,15 +39,13 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
     private IEnumerator GenerateCandidates(MapGenerationContext context, int maxCandidatesPerFrame)
     {
         if (context?.Map?.Data == null || context.Map.chunk == null)
-        {
-            Debug.LogError("[ChunkGenerator_Structures] Map、Map.Data或Chunk为空，遗迹生成已跳过", context?.Map);
-            yield break;
-        }
+            throw new InvalidOperationException("[ChunkGenerator_Structures] Map, Map.Data and Chunk are required.");
 
         Map = context.Map;
         StructureCatalogSO catalog = Catalog != null ? Catalog : StructureCatalogSO.LoadDefault();
         if (catalog == null || !catalog.Enabled || catalog.Definitions == null || catalog.Definitions.Count == 0)
             yield break;
+        ValidateBiomeReferences(context, catalog);
 
         List<Candidate> candidates = CollectCandidates(context, catalog);
         candidates.Sort((left, right) =>
@@ -172,11 +163,14 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
                     Vector2Int centerLocal = localOrigin + new Vector2Int(
                         Mathf.Clamp(transformedSize.x / 2, 0, width - 1),
                         Mathf.Clamp(transformedSize.y / 2, 0, height - 1));
+                    if (!context.TryGetResolvedBiome(centerLocal, out BiomeData resolvedBiome))
+                        throw new InvalidOperationException($"遗迹候选中心 {chunkOrigin + centerLocal} 缺少已解析 Biome。");
                     if (!mapData.IsEnvironmentLocalValid(centerLocal.x, centerLocal.y) ||
                         !definition.IsEnvironmentValid(
                             mapData.EnvironmentLayers,
                             centerLocal.x,
-                            centerLocal.y))
+                            centerLocal.y,
+                            resolvedBiome))
                     {
                         continue;
                     }
@@ -198,6 +192,43 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
         }
 
         return output;
+    }
+
+    private static void ValidateBiomeReferences(MapGenerationContext context, StructureCatalogSO catalog)
+    {
+        if (context.BiomeResolver == null)
+            throw new InvalidOperationException("结构阶段缺少基础地形的 BiomeResolver。");
+
+        var activeIds = new HashSet<string>(
+            context.BiomeResolver.Biomes.Select(biome => biome.BiomeId),
+            StringComparer.Ordinal);
+        var structureIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (StructureDefinitionSO definition in catalog.Definitions)
+        {
+            if (definition == null)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(definition.StructureId))
+                throw new InvalidOperationException("结构目录包含空 StructureId。");
+            if (!structureIds.Add(definition.StructureId))
+                throw new InvalidOperationException($"结构 ID 重复：{definition.StructureId}");
+            if (definition.EnvironmentCondition != null &&
+                !definition.EnvironmentCondition.TryValidate(out string rangeReason))
+            {
+                throw new InvalidOperationException(
+                    $"结构 {definition.StructureId} 的环境范围非法：{rangeReason}");
+            }
+
+            if (definition.AllowedBiomes == null)
+                continue;
+
+            for (int i = 0; i < definition.AllowedBiomes.Count; i++)
+            {
+                BiomeData allowed = definition.AllowedBiomes[i];
+                if (allowed == null || string.IsNullOrWhiteSpace(allowed.BiomeId) || !activeIds.Contains(allowed.BiomeId))
+                    throw new InvalidOperationException($"结构 {definition.StructureId} 引用了未启用的 Biome：{allowed?.name ?? "null"}");
+            }
+        }
     }
 
     private List<Candidate> CollectTestCandidate(
@@ -283,7 +314,7 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
             {
                 if (!mapData.IsEnvironmentLocalValid(x, y))
                     return false;
-                float height = mapData.EnvironmentLayers.Hight[x, y];
+                float height = mapData.EnvironmentLayers.Height[x, y];
                 minHeight = Mathf.Min(minHeight, height);
                 maxHeight = Mathf.Max(maxHeight, height);
             }
@@ -310,22 +341,10 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
                 candidate.QuarterTurns,
                 candidate.MirrorX);
             Vector2Int worldPosition = candidate.WorldOrigin + transformed;
-            List<TileData> tiles = Map.Data.GetTileListAt(worldPosition);
-            if (tiles == null)
-                continue;
-
-            switch (stamp.WriteMode)
+            if (stamp.WriteMode == StructureTileWriteMode.Clear)
             {
-                case StructureTileWriteMode.Clear:
-                    tiles.Clear();
-                    continue;
-                case StructureTileWriteMode.ReplaceAll:
-                    tiles.Clear();
-                    break;
-                case StructureTileWriteMode.ReplaceTop:
-                    if (tiles.Count > 0)
-                        tiles.RemoveAt(tiles.Count - 1);
-                    break;
+                Map.Data.ClearCell(worldPosition);
+                continue;
             }
 
             TileData template = stamp.TileBlock?.tileDataTemplate;
@@ -333,7 +352,18 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
                 continue;
             TileData tile = template.Clone();
             tile.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
-            tiles.Add(tile);
+            switch (stamp.WriteMode)
+            {
+                case StructureTileWriteMode.ReplaceAll:
+                    Map.Data.ReplaceStack(worldPosition, tile);
+                    break;
+                case StructureTileWriteMode.ReplaceTop:
+                    Map.Data.ReplaceTop(worldPosition, tile);
+                    break;
+                default:
+                    Map.Data.PushTile(worldPosition, tile);
+                    break;
+            }
         }
     }
 
