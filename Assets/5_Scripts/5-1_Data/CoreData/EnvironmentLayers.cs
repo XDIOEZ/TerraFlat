@@ -6,28 +6,19 @@ public readonly struct EnvironmentSample
 {
     public readonly float Temperature;
     public readonly float TemperatureCelsius;
-    public readonly float Humidity;
     public readonly float Precipitation;
-    public readonly float Solidity;
-    public readonly float Hight;
-    public readonly float Pollution;
+    public readonly float Height;
 
     public EnvironmentSample(
         float temperature,
         float temperatureCelsius,
-        float humidity,
         float precipitation,
-        float solidity,
-        float hight,
-        float pollution)
+        float height)
     {
         Temperature = temperature;
         TemperatureCelsius = temperatureCelsius;
-        Humidity = humidity;
         Precipitation = precipitation;
-        Solidity = solidity;
-        Hight = hight;
-        Pollution = pollution;
+        Height = height;
     }
 }
 
@@ -37,19 +28,16 @@ public partial class EnvironmentLayers
 {
     public float[,] Temperature = new float[0, 0]; // 温度归一化层（0~1）
     public float[,] TemperatureCelsius = new float[0, 0]; // 温度摄氏层（℃）
-    public float[,] Humidity = new float[0, 0]; // 湿度层
     public float[,] Precipitation = new float[0, 0]; // 降水层
-    public float[,] Solidity = new float[0, 0]; // 固体化程度层
-    public float[,] Hight = new float[0, 0]; // 海拔层
-    public float[,] Pollution = new float[0, 0]; // 污染层
+    public float[,] Height = new float[0, 0]; // 海拔层
     public float[,] Light = new float[0, 0]; // 光照亮度层（0=完全黑暗，1=最大亮度）
 
     public int Width => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(0) : 0;
-    public int Height => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(1) : 0;
+    public int GridHeight => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(1) : 0;
 
     public bool Contains(int x, int y)
     {
-        return (uint)x < (uint)Width && (uint)y < (uint)Height;
+        return (uint)x < (uint)Width && (uint)y < (uint)GridHeight;
     }
 
     public bool IsValidSize(int width, int height)
@@ -59,11 +47,8 @@ public partial class EnvironmentLayers
 
         return IsSameSize(Temperature, width, height)
             && IsSameSize(TemperatureCelsius, width, height)
-            && IsSameSize(Humidity, width, height)
             && IsSameSize(Precipitation, width, height)
-            && IsSameSize(Solidity, width, height)
-            && IsSameSize(Hight, width, height)
-            && IsSameSize(Pollution, width, height)
+            && IsSameSize(Height, width, height)
             && IsSameSize(Light, width, height);
     }
 
@@ -77,11 +62,8 @@ public partial class EnvironmentLayers
 
         if (!IsSameSize(Temperature, width, height)) Temperature = new float[width, height];
         if (!IsSameSize(TemperatureCelsius, width, height)) TemperatureCelsius = new float[width, height];
-        if (!IsSameSize(Humidity, width, height)) Humidity = new float[width, height];
         if (!IsSameSize(Precipitation, width, height)) Precipitation = new float[width, height];
-        if (!IsSameSize(Solidity, width, height)) Solidity = new float[width, height];
-        if (!IsSameSize(Hight, width, height)) Hight = new float[width, height];
-        if (!IsSameSize(Pollution, width, height)) Pollution = new float[width, height];
+        if (!IsSameSize(Height, width, height)) Height = new float[width, height];
         if (!IsSameSize(Light, width, height)) Light = new float[width, height];
     }
 
@@ -90,29 +72,18 @@ public partial class EnvironmentLayers
         int y,
         float temperature,
         float temperatureCelsius,
-        float humidity,
         float precipitation,
-        float solidity,
-        float hight,
-        float pollution = 0f)
+        float height)
     {
         Temperature[x, y] = temperature;
         TemperatureCelsius[x, y] = temperatureCelsius;
-        Humidity[x, y] = humidity;
         Precipitation[x, y] = precipitation;
-        Solidity[x, y] = solidity;
-        Hight[x, y] = hight;
-        Pollution[x, y] = pollution;
+        Height[x, y] = height;
     }
 
-    public void SetHumidity(int x, int y, float value)
+    public void SetPrecipitation(int x, int y, float value)
     {
-        Humidity[x, y] = value;
-    }
-
-    public void SetSolidity(int x, int y, float value)
-    {
-        Solidity[x, y] = value;
+        Precipitation[x, y] = Mathf.Clamp01(value);
     }
 
     public void SetLight(int x, int y, float value)

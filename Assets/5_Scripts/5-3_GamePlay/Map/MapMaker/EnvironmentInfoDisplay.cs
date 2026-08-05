@@ -1,15 +1,14 @@
-// ĞÂ½¨ÎÄ¼ş£ºEnvironmentInfoDisplay.cs
+// æ–°å»ºæ–‡ä»¶ï¼šEnvironmentInfoDisplay.cs
 
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// »·¾³ĞÅÏ¢ÏÔÊ¾Àà£¬ÓÃÓÚÊµÊ±ÏÔÊ¾Êó±êĞüÍ£Î»ÖÃµÄ»·¾³²ÎÊı
+/// ç¯å¢ƒä¿¡æ¯æ˜¾ç¤ºç±»ï¼Œç”¨äºå®æ—¶æ˜¾ç¤ºé¼ æ ‡æ‚¬åœä½ç½®çš„ç¯å¢ƒå‚æ•°
 /// </summary>
 public class EnvironmentInfoDisplay : MonoBehaviour
 {
-    #region µ¥Àı
+    #region å•ä¾‹
 
     public static EnvironmentInfoDisplay Instance { get; private set; }
 
@@ -30,44 +29,44 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     #endregion
 
-    #region ×Ö¶ÎºÍÊôĞÔ
+    #region å­—æ®µå’Œå±æ€§
     
-    [Header("ÏÔÊ¾ÉèÖÃ")]
+    [Header("æ˜¾ç¤ºè®¾ç½®")]
     public KeyCode toggleKey = KeyCode.F3;
     public Vector2 panelSize = new Vector2(300, 150);
     public Vector2 offset = new Vector2(20, 20);
     
-    [Header("ĞüÍ£Ö¸Ê¾Æ÷ÉèÖÃ")]
+    [Header("æ‚¬åœæŒ‡ç¤ºå™¨è®¾ç½®")]
     public Color hoverIndicatorColor = Color.white;
     public float hoverIndicatorThickness = 2f;
     
-    [Header("ÑùÊ½ÉèÖÃ")]
+    [Header("æ ·å¼è®¾ç½®")]
     public Color backgroundColor = new Color(0, 0, 0, 0.7f);
     public Color textColor = Color.white;
     public int fontSize = 12;
     
-    // ÒıÓÃ
+    // å¼•ç”¨
     private Camera mainCamera;
     private Grid mapGrid;
     private Tilemap targetTilemap;
     private Map map;
-    private List<BiomeData> biomes;
+    [SerializeField]
     private bool showBiomeOverlay;
     
-    // ÏÔÊ¾¿ØÖÆ
+    // æ˜¾ç¤ºæ§åˆ¶
     private bool isVisible = true;
     private Vector3 mouseWorldPos = Vector3.zero;
     private Vector2 mouseScreenPos = Vector2.zero;
     private Vector2Int hoveredGridPos = Vector2Int.zero;
     private Vector2Int hoveredLocalPos = Vector2Int.zero;
-    private string hoveredBiomeName = "Î´Öª";
+    private string hoveredBiomeName = "æœªçŸ¥";
     private TileData hoveredTileData = null;
     private bool isValidPosition = false;
 
-    // ·­Ò³¿ØÖÆ
-    private int currentPage = 0; // 0: »·¾³ĞÅÏ¢Ò³, 1: ÍßÆ¬ĞÅÏ¢Ò³
+    // ç¿»é¡µæ§åˆ¶
+    private int currentPage = 0; // 0: ç¯å¢ƒä¿¡æ¯é¡µ, 1: ç“¦ç‰‡ä¿¡æ¯é¡µ
     
-    // GUIÑùÊ½
+    // GUIæ ·å¼
     private GUIStyle boxStyle;
     private GUIStyle labelStyle;
     private Texture2D backgroundTexture;
@@ -76,7 +75,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     
     #endregion
 
-    #region UnityÉúÃüÖÜÆÚ
+    #region Unityç”Ÿå‘½å‘¨æœŸ
 
     private void Awake()
     {
@@ -97,16 +96,16 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     private void Update()
     {
-        // ¸üĞÂÊó±êÆÁÄ»Î»ÖÃ
+        // æ›´æ–°é¼ æ ‡å±å¹•ä½ç½®
         mouseScreenPos = Input.mousePosition;
         
-        // ¸üĞÂÊó±êÎ»ÖÃĞÅÏ¢
+        // æ›´æ–°é¼ æ ‡ä½ç½®ä¿¡æ¯
         UpdateMouseInfo();
         
-        // ·­Ò³£ºÃæ°å¿É¼ûÊ±¿ÉÇĞ»»Ò³Ãæ£»Êı¾İÊ¹ÓÃ×î½üÒ»´ÎÓĞĞ§ĞüÍ£½á¹û
+        // ç¿»é¡µï¼šé¢æ¿å¯è§æ—¶å¯åˆ‡æ¢é¡µé¢ï¼›æ•°æ®ä½¿ç”¨æœ€è¿‘ä¸€æ¬¡æœ‰æ•ˆæ‚¬åœç»“æœ
         if (isVisible)
         {
-            int maxPage = (hoveredTileData != null) ? 1 : 0; // 0 »ò 1
+            int maxPage = (hoveredTileData != null) ? 1 : 0; // 0 æˆ– 1
 
             if (Input.GetKeyDown(KeyCode.UpArrow))
             {
@@ -119,7 +118,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
                 if (currentPage > maxPage) currentPage = 0;
             }
 
-            // ·ÀÓùĞÔÔ¼Êø£¬±ÜÃâ hoveredTileData ±äÎª null Ê±Ò³ÂëÔ½½ç
+            // é˜²å¾¡æ€§çº¦æŸï¼Œé¿å… hoveredTileData å˜ä¸º null æ—¶é¡µç è¶Šç•Œ
             if (currentPage > maxPage) currentPage = maxPage;
         }
     }
@@ -130,12 +129,12 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
         if (!isVisible) return;
 
-        // ½öÔÚÏÔÊ¾Ãæ°åÊ±»æÖÆµ÷ÊÔ¸²¸Ç£¬±ÜÃâ´óµØÍ¼ OnGUI ¹ıÔØ
+        // ä»…åœ¨æ˜¾ç¤ºé¢æ¿æ—¶ç»˜åˆ¶è°ƒè¯•è¦†ç›–ï¼Œé¿å…å¤§åœ°å›¾ OnGUI è¿‡è½½
         DrawBiomeOverlay();
 
         DrawHoverIndicatorGUI();
         
-        // È·±£GUIÑùÊ½ÒÑ´´½¨
+        // ç¡®ä¿GUIæ ·å¼å·²åˆ›å»º
         if (!stylesCreated)
         {
             CreateGUIStyles();
@@ -147,28 +146,29 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        // ²»ÔÙÊ¹ÓÃOnDrawGizmos£¬¸ÄÓÃPrefabÊµÀı
+        // ä¸å†ä½¿ç”¨OnDrawGizmosï¼Œæ”¹ç”¨Prefabå®ä¾‹
     }
 
     #endregion
 
-    #region ºËĞÄ¹¦ÄÜ
+    #region æ ¸å¿ƒåŠŸèƒ½
 
     /// <summary>
-    /// »æÖÆÉúÎïÈºÏµÑÕÉ«¸²¸Ç²ã£¨»ùÓÚ EnvFactorsGrid + Biomes ÏÖËãÑÕÉ«£©
+    /// ç»˜åˆ¶ç”Ÿç‰©ç¾¤ç³»é¢œè‰²è¦†ç›–å±‚ï¼ˆåŸºäº EnvFactorsGrid + Biomes ç°ç®—é¢œè‰²ï¼‰
     /// </summary>
     private void DrawBiomeOverlay()
     {
         if (!showBiomeOverlay)
             return;
 
-        if (map == null || map.Data == null || biomes == null || biomes.Count == 0)
+        ChunkGenerator_Land landGenerator = map?.LandGenerator;
+        if (map == null || map.Data == null || landGenerator?.biomes == null || landGenerator.biomes.Count == 0)
             return;
 
         if (!TryGetEnvironmentGridSize(out int width, out int height))
             return;
 
-        // ĞèÒªÉãÏñ»úºÍTilemapÀ´½øĞĞ×ø±ê×ª»»
+        // éœ€è¦æ‘„åƒæœºå’ŒTilemapæ¥è¿›è¡Œåæ ‡è½¬æ¢
         Camera cam = GetMainCamera();
         if (cam == null)
             return;
@@ -177,7 +177,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         if (tex == null)
             return;
 
-        const float size = 6f; // ÑÕÉ«¿é³ß´ç£¨ÏñËØ£©
+        const float size = 6f; // é¢œè‰²å—å°ºå¯¸ï¼ˆåƒç´ ï¼‰
         int totalCellCount = width * height;
         int step = 1;
         if (totalCellCount > BiomeOverlayMaxSamples)
@@ -195,26 +195,16 @@ public class EnvironmentInfoDisplay : MonoBehaviour
                 if (!TryGetEnvironmentAtLocal(xIndex, yIndex))
                     continue;
 
-                // ¸ù¾İ»·¾³Æ¥ÅäÉúÎïÈºÏµ£¬»ñÈ¡Ô¤ÀÀÑÕÉ«
-                Color color = Color.clear;
-                bool found = false;
-                foreach (var biome in biomes)
-                {
-                    if (biome != null && biome.IsEnvironmentValid(map.Data.EnvironmentLayers, xIndex, yIndex))
-                    {
-                        color = biome.PreviewColor;
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
+                // æ ¹æ®ç¯å¢ƒåŒ¹é…ç”Ÿç‰©ç¾¤ç³»ï¼Œè·å–é¢„è§ˆé¢œè‰²
+                Vector2Int worldPosition = mapOrigin + new Vector2Int(xIndex, yIndex);
+                if (!landGenerator.TryGetBiomeAtWorld(worldPosition, out BiomeData resolvedBiome))
                     continue;
+                Color color = resolvedBiome.PreviewColor;
 
                 int worldX = mapOrigin.x + xIndex;
                 int worldY = mapOrigin.y + yIndex;
 
-                // Èç¹ûÓĞ Tilemap£¬Ôò¿ÉÑ¡µØ¼ì²éÊÇ·ñÓĞÊµ¼Ê Tile
+                // å¦‚æœæœ‰ Tilemapï¼Œåˆ™å¯é€‰åœ°æ£€æŸ¥æ˜¯å¦æœ‰å®é™… Tile
                 if (targetTilemap != null)
                 {
                     Vector3Int cellPos = new Vector3Int(worldX, worldY, 0);
@@ -222,17 +212,17 @@ public class EnvironmentInfoDisplay : MonoBehaviour
                         continue;
                 }
 
-                // ½«¸ñ×ÓÖĞĞÄ×ª»»ÎªÆÁÄ»×ø±ê
+                // å°†æ ¼å­ä¸­å¿ƒè½¬æ¢ä¸ºå±å¹•åæ ‡
                 Vector3 worldPos = new Vector3(worldX + 0.5f, worldY + 0.5f,
                     targetTilemap != null ? targetTilemap.transform.position.z : 0f);
                 Vector3 screenPos = cam.WorldToScreenPoint(worldPos);
 
-                // ÔÚÏà»úÊÓ×¶ÍâÔòÌø¹ı
+                // åœ¨ç›¸æœºè§†é”¥å¤–åˆ™è·³è¿‡
                 if (screenPos.z < 0f)
                     continue;
 
                 float guiX = screenPos.x - size * 0.5f;
-                float guiY = Screen.height - screenPos.y - size * 0.5f; // OnGUI µÄ Y ÖáÓëÆÁÄ»×ø±êÏà·´
+                float guiY = Screen.height - screenPos.y - size * 0.5f; // OnGUI çš„ Y è½´ä¸å±å¹•åæ ‡ç›¸å
 
                 Rect rect = new Rect(guiX, guiY, size, size);
 
@@ -258,12 +248,10 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         mapGrid = map.GetComponentInChildren<Grid>(includeInactive: true);
 
         var landGen = map.LandGenerator;
-        biomes = landGen != null ? landGen.biomes : null;
-        showBiomeOverlay = landGen != null && landGen.showBiomeOverlay;
     }
 
     /// <summary>
-    /// Ê¹ÓÃ OnGUI ÔÚĞüÍ£¸ñ×ÓÉÏ»æÖÆ±ß¿òÖ¸Ê¾Æ÷
+    /// ä½¿ç”¨ OnGUI åœ¨æ‚¬åœæ ¼å­ä¸Šç»˜åˆ¶è¾¹æ¡†æŒ‡ç¤ºå™¨
     /// </summary>
     private void DrawHoverIndicatorGUI()
     {
@@ -300,10 +288,10 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         GUI.color = hoverIndicatorColor;
 
         float line = Mathf.Max(1f, hoverIndicatorThickness);
-        GUI.DrawTexture(new Rect(x, y, width, line), tex); // ÉÏ
-        GUI.DrawTexture(new Rect(x, y + height - line, width, line), tex); // ÏÂ
-        GUI.DrawTexture(new Rect(x, y, line, height), tex); // ×ó
-        GUI.DrawTexture(new Rect(x + width - line, y, line, height), tex); // ÓÒ
+        GUI.DrawTexture(new Rect(x, y, width, line), tex); // ä¸Š
+        GUI.DrawTexture(new Rect(x, y + height - line, width, line), tex); // ä¸‹
+        GUI.DrawTexture(new Rect(x, y, line, height), tex); // å·¦
+        GUI.DrawTexture(new Rect(x + width - line, y, line, height), tex); // å³
 
         GUI.color = oldColor;
     }
@@ -323,7 +311,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     }
 
 /// <summary>
-/// »ñÈ¡Ö÷ÉãÏñ»ú
+/// è·å–ä¸»æ‘„åƒæœº
 /// </summary>
 private Camera GetMainCamera()
 {
@@ -336,7 +324,7 @@ private Camera GetMainCamera()
         }
         if (mainCamera == null)
         {
-            // Èç¹û»¹ÕÒ²»µ½£¬³¢ÊÔ´Ó×Ó¶ÔÏó»ñÈ¡
+            // å¦‚æœè¿˜æ‰¾ä¸åˆ°ï¼Œå°è¯•ä»å­å¯¹è±¡è·å–
             Camera[] childCameras = GetComponentsInChildren<Camera>(true);
             if (childCameras != null && childCameras.Length > 0)
             {
@@ -345,7 +333,7 @@ private Camera GetMainCamera()
         }
         if (mainCamera == null)
         {
-            // ×îºó³¢ÊÔ²éÕÒ³¡¾°ÖĞËùÓĞµÄÉãÏñ»ú
+            // æœ€åå°è¯•æŸ¥æ‰¾åœºæ™¯ä¸­æ‰€æœ‰çš„æ‘„åƒæœº
             Camera[] cameras = FindObjectsOfType<Camera>();
             if (cameras.Length > 0)
             {
@@ -357,30 +345,30 @@ private Camera GetMainCamera()
 }
 
 /// <summary>
-/// ¸üĞÂÊó±êÎ»ÖÃµÄ»·¾³ĞÅÏ¢
+/// æ›´æ–°é¼ æ ‡ä½ç½®çš„ç¯å¢ƒä¿¡æ¯
 /// </summary>
 private void UpdateMouseInfo()
 {
-    // »ñÈ¡ÉãÏñ»ú
+    // è·å–æ‘„åƒæœº
     Camera cam = GetMainCamera();
 
-    // Ç°ÖÃ¼ì²é
+    // å‰ç½®æ£€æŸ¥
     if (cam == null)
     {
         isValidPosition = false;
         return;
     }
 
-    // 1. Êó±êÆÁÄ»×ø±ê ¡ú ÊÀ½ç×ø±ê
+    // 1. é¼ æ ‡å±å¹•åæ ‡ â†’ ä¸–ç•Œåæ ‡
     Vector3 mouseScreenPos3D = new Vector3(mouseScreenPos.x, mouseScreenPos.y, 0);
     mouseScreenPos3D.z = Mathf.Abs(cam.transform.position.z);
     mouseWorldPos = cam.ScreenToWorldPoint(mouseScreenPos3D);
     mouseWorldPos.z = 0;
 
-    // 2. ÊÀ½ç×ø±ê ¡ú Íø¸ñÕûÊı×ø±ê£¨È«¾Ö£©
+    // 2. ä¸–ç•Œåæ ‡ â†’ ç½‘æ ¼æ•´æ•°åæ ‡ï¼ˆå…¨å±€ï¼‰
     Vector2Int gridPos = new Vector2Int(Mathf.FloorToInt(mouseWorldPos.x), Mathf.FloorToInt(mouseWorldPos.y));
 
-    // 3. Í¨¹ıÈ«¾Ö Chunk ½Ó¿Ú»ñÈ¡µ±Ç°µØÍ¼
+    // 3. é€šè¿‡å…¨å±€ Chunk æ¥å£è·å–å½“å‰åœ°å›¾
     if (ChunkMgr.Instance == null)
     {
         isValidPosition = false;
@@ -406,7 +394,7 @@ private void UpdateMouseInfo()
         return;
     }
 
-    // Èç¹ûÓĞTilemap£¬²¹Ò»²ãÊÓ¾õ´æÔÚĞÔ¼ì²é
+    // å¦‚æœæœ‰Tilemapï¼Œè¡¥ä¸€å±‚è§†è§‰å­˜åœ¨æ€§æ£€æŸ¥
     if (targetTilemap != null)
     {
         Vector3Int cellPos = new Vector3Int(gridPos.x, gridPos.y, 0);
@@ -417,10 +405,10 @@ private void UpdateMouseInfo()
         }
     }
 
-    // 4. ¼ÆËã±¾µØ×ø±ê
+    // 4. è®¡ç®—æœ¬åœ°åæ ‡
     Vector2Int localGridPos = gridPos - map.Data.position;
 
-    // 5. ¼ì²âÊÇ·ñÔÚÓĞĞ§·¶Î§ÄÚ
+    // 5. æ£€æµ‹æ˜¯å¦åœ¨æœ‰æ•ˆèŒƒå›´å†…
 
     if (!TryGetEnvironmentGridSize(out int width, out int height) ||
         localGridPos.x < 0 || localGridPos.x >= width ||
@@ -430,7 +418,7 @@ private void UpdateMouseInfo()
         return;
     }
 
-    // 6. »ñÈ¡»·¾³ĞÅÏ¢
+    // 6. è·å–ç¯å¢ƒä¿¡æ¯
     isValidPosition = true;
     hoveredGridPos = gridPos;
     if (!TryGetEnvironmentAtLocal(localGridPos.x, localGridPos.y))
@@ -442,92 +430,81 @@ private void UpdateMouseInfo()
     hoveredLocalPos = localGridPos;
     hoveredTileData = map.GetTile(gridPos);
     
-    // Æ¥ÅäÉúÎïÈºÏµ
-    hoveredBiomeName = "Î´Öª";
-    if (biomes != null)
-    {
-        foreach (var biome in biomes)
-        {
-            if (biome != null && biome.IsEnvironmentValid(map.Data.EnvironmentLayers, hoveredLocalPos.x, hoveredLocalPos.y))
-            {
-                hoveredBiomeName = biome.BiomeName;
-                break;
-            }
-        }
-    }
+    // åŒ¹é…ç”Ÿç‰©ç¾¤ç³»
+    hoveredBiomeName = "æœªçŸ¥";
+    if (map.LandGenerator != null && map.LandGenerator.TryGetBiomeAtWorld(gridPos, out BiomeData resolvedBiome))
+        hoveredBiomeName = resolvedBiome.BiomeName;
 }
 
     /// <summary>
-    /// »æÖÆĞÅÏ¢Ãæ°å
+    /// ç»˜åˆ¶ä¿¡æ¯é¢æ¿
     /// </summary>
     private void DrawInfoPanel()
     {
         int totalPages = (hoveredTileData != null) ? 2 : 1;
         currentPage = Mathf.Clamp(currentPage, 0, totalPages - 1);
 
-        // Ô¤¹ÀĞèÒªµÄĞĞÊı£¨ÓÃÓÚ¶¯Ì¬¼ÆËã¸ß¶È£©£¬²»Í¬Ò³ÄÚÈİ²»Í¬
+        // é¢„ä¼°éœ€è¦çš„è¡Œæ•°ï¼ˆç”¨äºåŠ¨æ€è®¡ç®—é«˜åº¦ï¼‰ï¼Œä¸åŒé¡µå†…å®¹ä¸åŒ
         int lineCount = 0;
         if (currentPage == 0)
         {
-            // ±êÌâ¡¢×ø±ê¡¢ÉúÎïÈºÏµ¡¢ÎÂÊª¡¢½µË®¼á¹Ì¡¢¸ß¶È
+            // æ ‡é¢˜ã€åæ ‡ã€ç”Ÿç‰©ç¾¤ç³»ã€æ¸©æ¹¿ã€é™æ°´åšå›ºã€é«˜åº¦
             lineCount += 6;
         }
         else
         {
-            // ±êÌâ¡¢×ø±ê¡¢ÍßÆ¬Ãû¡¢ÒÆ¶¯È¨ÖØ
+            // æ ‡é¢˜ã€åæ ‡ã€ç“¦ç‰‡åã€ç§»åŠ¨æƒé‡
             lineCount += (hoveredTileData != null) ? 4 : 2;
         }
 
-        // µ×²¿Í³Ò»Ìí¼Ó£ºÇĞ»»ÏÔÊ¾ÌáÊ¾ + Ò³ÂëÌáÊ¾
+        // åº•éƒ¨ç»Ÿä¸€æ·»åŠ ï¼šåˆ‡æ¢æ˜¾ç¤ºæç¤º + é¡µç æç¤º
         lineCount += 2;
 
         float lineHeight = fontSize + 4;
         float panelHeight = Mathf.Max(panelSize.y, lineCount * lineHeight + 10);
         
-        // ¼ÆËãGUIÎ»ÖÃ£¨¸úËæÊó±ê£¬µ«±£³ÖÔÚÆÁÄ»ÄÚ£©
-        // ×¢Òâ£ºGUIµÄYÖáÊÇ´ÓÉÏµ½ÏÂµÄ£¬¶øÊó±ê×ø±êµÄYÖáÊÇ´ÓÏÂµ½ÉÏµÄ
+        // è®¡ç®—GUIä½ç½®ï¼ˆè·Ÿéšé¼ æ ‡ï¼Œä½†ä¿æŒåœ¨å±å¹•å†…ï¼‰
+        // æ³¨æ„ï¼šGUIçš„Yè½´æ˜¯ä»ä¸Šåˆ°ä¸‹çš„ï¼Œè€Œé¼ æ ‡åæ ‡çš„Yè½´æ˜¯ä»ä¸‹åˆ°ä¸Šçš„
         float guiX = Mathf.Clamp(mouseScreenPos.x + offset.x, 0, Screen.width - panelSize.x);
-        // ×ª»»Y×ø±ê£ºScreen.height - mouseScreenPos.y ½«Êó±êY×ø±ê×ª»»ÎªGUI×ø±êÏµ
+        // è½¬æ¢Yåæ ‡ï¼šScreen.height - mouseScreenPos.y å°†é¼ æ ‡Yåæ ‡è½¬æ¢ä¸ºGUIåæ ‡ç³»
         float guiY = Mathf.Clamp(Screen.height - mouseScreenPos.y - panelHeight - offset.y, 0, Screen.height - panelHeight);
         
-        // »æÖÆĞÅÏ¢Ãæ°å
+        // ç»˜åˆ¶ä¿¡æ¯é¢æ¿
         GUILayout.BeginArea(new Rect(guiX, guiY, panelSize.x, panelHeight), boxStyle);
 
         if (currentPage == 0)
         {
-            // µÚ 1 Ò³£º»·¾³ÒòËØ
+            // ç¬¬ 1 é¡µï¼šç¯å¢ƒå› ç´ 
             float displayTempCelsius = GetDisplayTemperatureCelsius(hoveredLocalPos.x, hoveredLocalPos.y);
             float temperature = map.Data.EnvironmentLayers.Temperature[hoveredLocalPos.x, hoveredLocalPos.y];
-            float humidity = map.Data.EnvironmentLayers.Humidity[hoveredLocalPos.x, hoveredLocalPos.y];
             float precipitation = map.Data.EnvironmentLayers.Precipitation[hoveredLocalPos.x, hoveredLocalPos.y];
-            float solidity = map.Data.EnvironmentLayers.Solidity[hoveredLocalPos.x, hoveredLocalPos.y];
-            float hight = map.Data.EnvironmentLayers.Hight[hoveredLocalPos.x, hoveredLocalPos.y];
+            float height = map.Data.EnvironmentLayers.Height[hoveredLocalPos.x, hoveredLocalPos.y];
 
-            GUILayout.Label($"<b>»·¾³ĞÅÏ¢</b>", labelStyle);
-            GUILayout.Label($"×ø±ê: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
-            GUILayout.Label($"ÉúÎïÈºÏµ: {hoveredBiomeName}", labelStyle);
-            GUILayout.Label($"ÎÂ¶È: {temperature:F2} ({displayTempCelsius:F1}¡æ) | Êª¶È: {humidity:F2}", labelStyle);
-            GUILayout.Label($"½µË®Á¿: {precipitation:F2} | ¼á¹Ì¶È: {solidity:F2}", labelStyle);
-            GUILayout.Label($"¸ß¶È: {hight:F2}", labelStyle);
+            GUILayout.Label($"<b>ç¯å¢ƒä¿¡æ¯</b>", labelStyle);
+            GUILayout.Label($"åæ ‡: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
+            GUILayout.Label($"ç”Ÿç‰©ç¾¤ç³»: {hoveredBiomeName}", labelStyle);
+            GUILayout.Label($"æ¸©åº¦: {temperature:F2} ({displayTempCelsius:F1}â„ƒ)", labelStyle);
+            GUILayout.Label($"é™æ°´é‡: {precipitation:F2}", labelStyle);
+            GUILayout.Label($"é«˜åº¦: {height:F2}", labelStyle);
         }
         else
         {
-            // µÚ 2 Ò³£ºÍßÆ¬ĞÅÏ¢
-            GUILayout.Label($"<b>ÍßÆ¬ĞÅÏ¢</b>", labelStyle);
-            GUILayout.Label($"×ø±ê: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
+            // ç¬¬ 2 é¡µï¼šç“¦ç‰‡ä¿¡æ¯
+            GUILayout.Label($"<b>ç“¦ç‰‡ä¿¡æ¯</b>", labelStyle);
+            GUILayout.Label($"åæ ‡: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
 
             if (hoveredTileData != null)
             {
-                GUILayout.Label($"ÍßÆ¬: {hoveredTileData.Name}", labelStyle);
-                GUILayout.Label($"ÒÆ¶¯È¨ÖØ: {hoveredTileData.Penalty}", labelStyle);
+                GUILayout.Label($"ç“¦ç‰‡: {hoveredTileData.Name}", labelStyle);
+                GUILayout.Label($"ç§»åŠ¨æƒé‡: {hoveredTileData.Penalty}", labelStyle);
             }
         }
 
-        // µ×²¿Í¨ÓÃÌáÊ¾
-        GUILayout.Label($"°´ {toggleKey} ¼üÇĞ»»ÏÔÊ¾", labelStyle);
+        // åº•éƒ¨é€šç”¨æç¤º
+        GUILayout.Label($"æŒ‰ {toggleKey} é”®åˆ‡æ¢æ˜¾ç¤º", labelStyle);
         if (totalPages > 1)
         {
-            GUILayout.Label($"µÚ {currentPage + 1}/{totalPages} Ò³£¨¡ü¡ı ·­Ò³£©", labelStyle);
+            GUILayout.Label($"ç¬¬ {currentPage + 1}/{totalPages} é¡µï¼ˆâ†‘â†“ ç¿»é¡µï¼‰", labelStyle);
         }
         
         GUILayout.EndArea();
@@ -545,11 +522,11 @@ private void UpdateMouseInfo()
     }
 
     /// <summary>
-    /// ´´½¨GUIÑùÊ½
+    /// åˆ›å»ºGUIæ ·å¼
     /// </summary>
     private void CreateGUIStyles()
     {
-        // ´´½¨±³¾°ÎÆÀí
+        // åˆ›å»ºèƒŒæ™¯çº¹ç†
         backgroundTexture = new Texture2D(2, 2);
         Color[] colors = new Color[4];
         for (int i = 0; i < colors.Length; i++)
@@ -559,11 +536,11 @@ private void UpdateMouseInfo()
         backgroundTexture.SetPixels(colors);
         backgroundTexture.Apply();
         
-        // ´´½¨BoxÑùÊ½
+        // åˆ›å»ºBoxæ ·å¼
         boxStyle = new GUIStyle(GUI.skin.box);
         boxStyle.normal.background = backgroundTexture;
         
-        // ´´½¨LabelÑùÊ½
+        // åˆ›å»ºLabelæ ·å¼
         labelStyle = new GUIStyle(GUI.skin.label);
         labelStyle.normal.textColor = textColor;
         labelStyle.fontSize = fontSize;
@@ -572,10 +549,10 @@ private void UpdateMouseInfo()
 
     #endregion
 
-    #region ¹«¹²·½·¨
+    #region å…¬å…±æ–¹æ³•
 
     /// <summary>
-    /// ÏÔÊ¾ĞÅÏ¢Ãæ°å
+    /// æ˜¾ç¤ºä¿¡æ¯é¢æ¿
     /// </summary>
     public void Show()
     {
@@ -583,7 +560,7 @@ private void UpdateMouseInfo()
     }
 
     /// <summary>
-    /// Òş²ØĞÅÏ¢Ãæ°å
+    /// éšè—ä¿¡æ¯é¢æ¿
     /// </summary>
     public void Hide()
     {
@@ -591,7 +568,7 @@ private void UpdateMouseInfo()
     }
 
     /// <summary>
-    /// ÇĞ»»ÏÔÊ¾×´Ì¬
+    /// åˆ‡æ¢æ˜¾ç¤ºçŠ¶æ€
     /// </summary>
     public void Toggle()
     {
@@ -599,7 +576,7 @@ private void UpdateMouseInfo()
     }
 
     /// <summary>
-    /// ÉèÖÃÇĞ»»¼ü
+    /// è®¾ç½®åˆ‡æ¢é”®
     /// </summary>
     public void SetToggleKey(KeyCode key)
     {
@@ -608,7 +585,7 @@ private void UpdateMouseInfo()
 
     #endregion
 
-    #region ÇåÀí
+    #region æ¸…ç†
 
 private void OnDestroy()
 {
@@ -622,7 +599,7 @@ private void OnDestroy()
         Destroy(backgroundTexture);
     }
     
-    // Ïú»ÙGUIÑùÊ½
+    // é”€æ¯GUIæ ·å¼
     if (boxStyle != null && boxStyle.normal.background != null)
     {
         Destroy(boxStyle.normal.background);
@@ -640,10 +617,10 @@ private bool TryGetEnvironmentGridSize(out int width, out int height)
         return false;
 
     EnvironmentLayers layers = map.Data.EnvironmentLayers;
-    if (layers != null && layers.Width > 0 && layers.Height > 0)
+    if (layers != null && layers.Width > 0 && layers.GridHeight > 0)
     {
         width = layers.Width;
-        height = layers.Height;
+        height = layers.GridHeight;
         return true;
     }
 

@@ -21,7 +21,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
 
     [Header("分布")]
     [SerializeField, Range(0f, 0.8f)] private float density = 0.22f;
-    [SerializeField] private bool varyDensityWithHumidity = true;
+    [SerializeField] private bool varyDensityWithPrecipitation = true;
     [SerializeField, Range(0f, 0.45f)] private float positionJitter = 0.22f;
     [SerializeField] private Vector2 scaleRange = new(0.85f, 1.15f);
     [SerializeField, Range(0f, 1f)] private float accentVariantChance = 0.2f;
@@ -48,9 +48,9 @@ public sealed class GrassDetailLayer : MonoBehaviour
         detailTilemap.ClearAllTiles();
         int worldSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
 
-        foreach (var (worldPosition, tileDataList) in map.Data.EnumerateNonEmptyTiles())
+        foreach (var (worldPosition, tileDataList) in map.Data.EnumerateOccupiedCells())
         {
-            if (tileDataList == null || tileDataList.Count == 0)
+            if (tileDataList.Count == 0)
                 continue;
 
             ApplyCell(map, worldPosition, tileDataList[^1], worldSeed);
@@ -68,7 +68,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
         if (detailTilemap == null || runtimeTiles.Count == 0)
             return;
 
-        TileData topTile = map.Data.GetTileDataAt(worldPosition);
+        TileData topTile = map.Data.GetTopTile(worldPosition);
         int worldSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         ApplyCell(map, worldPosition, topTile, worldSeed);
     }
@@ -91,7 +91,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
         if (map == null || map.Data == null)
             return false;
 
-        TileData topTile = map.Data.GetTileDataAt(worldPosition);
+        TileData topTile = map.Data.GetTopTile(worldPosition);
         return topTile != null &&
                topTile.ID == grassTileId &&
                map.Data.TryGetGrassStateAtWorld(worldPosition, out GrassCellState state) &&
@@ -198,12 +198,12 @@ public sealed class GrassDetailLayer : MonoBehaviour
     private float GetLocalDensity(Map map, Vector2Int worldPosition)
     {
         float result = density;
-        if (!varyDensityWithHumidity ||
+        if (!varyDensityWithPrecipitation ||
             !map.Data.TryGetEnvironmentLocalPos(worldPosition, out Vector2Int localPosition))
             return result;
 
-        float humidity = map.Data.EnvironmentLayers.Humidity[localPosition.x, localPosition.y];
-        return Mathf.Clamp01(result * Mathf.Lerp(0.7f, 1.25f, Mathf.Clamp01(humidity)));
+        float precipitation = map.Data.EnvironmentLayers.Precipitation[localPosition.x, localPosition.y];
+        return Mathf.Clamp01(result * Mathf.Lerp(0.7f, 1.25f, Mathf.Clamp01(precipitation)));
     }
 
     private int SelectVariant(ref uint state)

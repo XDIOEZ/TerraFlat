@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 维度与星球世界定位
 
-> 最后核对：2026-08-03。首版只开放离线地表与地下矿洞往返。
+> 最后核对：2026-08-05。首版只开放离线地表与地下矿洞往返。
 
 ## 修改前先读
 
@@ -55,10 +55,12 @@ DimensionPortal.Interact
 - `ChunkMgr.TryCreateMapCore()` 从当前 `DimensionDefinition.MapCorePrefabId` 解析地图 Prefab。
 - `DimensionManager.ConfigureMap()` 在矿洞维度把原 `Map.mapGenerators` 替换为 `ChunkGenerator_Cave`；地表继续使用 MapCore 原管线。
 - `MapGenerationContext` 携带当前 `WorldAddress` 与 `DimensionDefinition`。
+- 矿洞取代地表管线后，`ChunkGenerator_Cave` 是唯一 `BaseTerrain(100)` 生成器；不得与 `ChunkGenerator_Land` 同时存在。
 - 程序生成种子由基础种子、`WorldKey` 和 `SeedSalt` 混合；不同维度不得共享同一确定性 GUID 空间。
 - `CaveLayoutSampler` 按绝对世界坐标划分稳定区域，在区域内生成不规则椭圆房间，并用带双弯点的宽隧道连接相邻房间；采样不依赖 Chunk 局部坐标，因此跨 Chunk 无接缝。
+- 矿洞 Job 先并行生成带一格 halo 的开放掩码，再分类封闭格、开放格和墙边格；`SampleCellClassification()` 为同步单点入口，必须与 Job 结果一致。
 - 入口位置固定雕刻安全室并连接最近房间；禁止读取玩家实时位置参与基线生成，否则区块加载顺序会改变地图。
-- 开放格只铺 `TileBase_Stone`；封闭格在数据层追加不可走的 `TileBase_StoneWall`。`Map` 将 `TileTag=Blocking` 的顶层数据路由到独立“建筑阻挡层” Tilemap，由该层持有碰撞，地面 Tilemap 始终保留底层石地。
+- 开放格只写 `TileBase_Stone` 基础层；封闭格通过 `PushTile` 追加 `TileBase_StoneWall` 覆盖层，单层和双层都不应分配 `OverflowLayers`。`Map` 将 `TileTag=Blocking` 的顶层数据路由到独立阻挡 Tilemap，地面 Tilemap 始终保留底层石地。
 - 矿床只生成在开放格与岩壁相邻的边缘，并由宽域/细节噪声聚集成矿床；具体矿种继续由 `DimensionResourceRule` 阈值和 Item ID 决定。
 - 生成矿物必须走 Chunk 确定性 Item 创建和差量基线，不得仅 `Instantiate()` 临时物体。
 
@@ -117,6 +119,8 @@ DimensionPortal.Interact
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-08-05：矿洞生成改为带一格边界的 Burst 开放掩码与分类 Job；主线程通过新地形栈 API 写入地板/墙体两层，取消和销毁必须完成并释放 NativeArray。
 
 - 2026-07-31：移除玩家旁免费运行时 Portal；新增可建造/可拆除/可存档 `MineEntrance`、不可拾取差量存档 `CaveExit` 和按入口 GUID 绑定的双向锚点。
 - 2026-07-31：矿洞岩壁从地面 Tilemap 分离到通用“建筑阻挡层”；底层地面、阻挡视觉/碰撞和顶层导航 TileData 各自保持单一职责。

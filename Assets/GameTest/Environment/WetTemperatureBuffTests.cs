@@ -71,8 +71,8 @@ namespace FlatWorld.GameTest.Environment
             Assert.That(wetBuff.IsPermanent, Is.True);
             Assert.That(wetBuff.TickIntervalSeconds, Is.Zero);
 
-            Assert.That(wetBuff.StartEffects, Has.Count.EqualTo(1));
-            Assert.That(wetBuff.StopEffects, Has.Count.EqualTo(1));
+            Assert.That(wetBuff.StartEffects.Count, Is.EqualTo(1));
+            Assert.That(wetBuff.StopEffects.Count, Is.EqualTo(1));
             Assert.That(wetBuff.StartEffects[0].TypeId,
                 Is.EqualTo(BuffEffectTypeIds.TemperatureCoolingMultiplier));
             Assert.That(wetBuff.StartEffects[0].Value, Is.EqualTo(2f));

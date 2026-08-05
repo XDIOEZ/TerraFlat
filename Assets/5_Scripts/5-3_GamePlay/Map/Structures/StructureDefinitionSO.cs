@@ -21,36 +21,32 @@ public sealed class StructureDefinitionSO : ScriptableObject
     public bool ClearProceduralItemsInFootprint = true;
     public List<WeightedStructureTemplate> Templates = new();
 
-    public bool IsEnvironmentValid(EnvironmentLayers layers, int x, int y)
+    public bool IsEnvironmentValid(EnvironmentLayers layers, int x, int y, BiomeData resolvedBiome)
     {
         if (EnvironmentCondition != null && !EnvironmentCondition.IsMatch(layers, x, y))
             return false;
-
-        if (AllowedBiomes == null || AllowedBiomes.Count == 0)
-            return true;
-
-        for (int i = 0; i < AllowedBiomes.Count; i++)
-        {
-            BiomeData biome = AllowedBiomes[i];
-            if (biome != null && biome.IsEnvironmentValid(layers, x, y))
-                return true;
-        }
-
-        return false;
+        return IsBiomeAllowed(resolvedBiome);
     }
 
-    public bool IsEnvironmentValid(EnvironmentSample sample)
+    public bool IsEnvironmentValid(EnvironmentSample sample, BiomeData resolvedBiome)
     {
         if (EnvironmentCondition != null && !EnvironmentCondition.IsMatch(sample))
             return false;
 
+        return IsBiomeAllowed(resolvedBiome);
+    }
+
+    public bool IsBiomeAllowed(BiomeData resolvedBiome)
+    {
         if (AllowedBiomes == null || AllowedBiomes.Count == 0)
             return true;
+        if (resolvedBiome == null || string.IsNullOrWhiteSpace(resolvedBiome.BiomeId))
+            return false;
 
         for (int i = 0; i < AllowedBiomes.Count; i++)
         {
             BiomeData biome = AllowedBiomes[i];
-            if (biome?.Condition != null && biome.Condition.IsMatch(sample))
+            if (biome != null && string.Equals(biome.BiomeId, resolvedBiome.BiomeId, System.StringComparison.Ordinal))
                 return true;
         }
 

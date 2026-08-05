@@ -110,14 +110,14 @@ public static class TileBuildingSystem
             return false;
         }
 
-        List<TileData> tiles = map.Data.GetTileListAt(cell);
-        if (tiles == null || tiles.Count == 0)
+        int layerCount = map.Data.GetLayerCount(cell);
+        if (layerCount == 0)
         {
             reason = $"地块 {cell} 不可建造";
             return false;
         }
 
-        if (BlockingTilemapLayer.IsBlockingTile(tiles[^1]))
+        if (BlockingTilemapLayer.IsBlockingTile(map.Data.GetTopTile(cell)))
         {
             reason = $"地块 {cell} 已有阻挡方块";
             return false;
@@ -128,7 +128,7 @@ public static class TileBuildingSystem
         if (profile?.Damageable == true)
             tile = TileData_CellBuilding.FromTile(tile, Mathf.Max(1f, profile.MaxHealth));
 
-        map.ADDTile(cell, tile);
+        map.PushTile(cell, tile);
         RefreshBlockingState(map, cell);
         placedCell = new TileBuildingCell(map, cell);
         CellPlaced?.Invoke(placedCell);
@@ -142,15 +142,14 @@ public static class TileBuildingSystem
         out string reason)
     {
         reason = null;
-        if (!TryGetTopBlockingTile(map, cell, out List<TileData> tiles, out TileData topTile))
+        if (!TryGetTopBlockingTile(map, cell, out int topIndex, out TileData topTile))
         {
             reason = $"地块 {cell} 没有可移除的阻挡方块";
             return false;
         }
 
         TileBuildingDamageProfile profile = ResolveProfile(topTile);
-        int topIndex = tiles.Count - 1;
-        map.DELTile(cell, topIndex);
+        map.RemoveTile(cell, topIndex);
         RefreshBlockingState(map, cell);
         if (spawnDrop)
             SpawnDrop(profile, cell);
@@ -269,7 +268,7 @@ public static class TileBuildingSystem
     {
         result = default;
         Map map = hit.Receiver != null ? hit.Receiver.BoundMap : null;
-        if (!TryGetTopBlockingTile(map, hit.Cell, out List<TileData> tiles, out TileData topTile))
+        if (!TryGetTopBlockingTile(map, hit.Cell, out int topIndex, out TileData topTile))
             return false;
 
         TileBuildingDamageProfile profile = ResolveProfile(topTile);
@@ -277,12 +276,11 @@ public static class TileBuildingSystem
         if (calculatedDamage <= 0f)
             return false;
 
-        int topIndex = tiles.Count - 1;
         TileData_CellBuilding state = topTile as TileData_CellBuilding;
         if (state == null)
         {
             state = TileData_CellBuilding.FromTile(topTile, Mathf.Max(1f, profile.MaxHealth));
-            if (state == null || !map.Data.UpdateTileData(hit.Cell, topIndex, state))
+            if (state == null || !map.Data.UpdateTileAt(hit.Cell, topIndex, state))
                 return false;
         }
 
@@ -302,7 +300,7 @@ public static class TileBuildingSystem
         bool destroyed = state.CurrentHp <= 0f;
         if (destroyed)
         {
-            map.DELTile(hit.Cell, topIndex);
+            map.RemoveTile(hit.Cell, topIndex);
             RefreshBlockingState(map, hit.Cell);
             SpawnDrop(profile, hit.Cell);
         }
@@ -344,11 +342,12 @@ public static class TileBuildingSystem
     private static bool TryGetTopBlockingTile(
         Map map,
         Vector2Int cell,
-        out List<TileData> tiles,
+        out int topIndex,
         out TileData topTile)
     {
-        tiles = map?.Data?.GetTileListAt(cell);
-        topTile = tiles != null && tiles.Count > 0 ? tiles[^1] : null;
+        int layerCount = map?.Data?.GetLayerCount(cell) ?? 0;
+        topIndex = layerCount - 1;
+        topTile = layerCount > 0 ? map.Data.GetTopTile(cell) : null;
         return BlockingTilemapLayer.IsBlockingTile(topTile);
     }
 
