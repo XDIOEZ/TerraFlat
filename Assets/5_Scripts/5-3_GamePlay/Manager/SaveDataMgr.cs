@@ -12,7 +12,7 @@ using Sirenix.OdinInspector;
 /// </summary>
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 2;
+    private const int CompactSaveVersion = 3;
     private const int ModdedSaveVersion = 2;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";

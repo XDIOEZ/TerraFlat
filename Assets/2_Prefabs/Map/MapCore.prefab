@@ -128,8 +128,8 @@ MonoBehaviour:
       type: {class: ChunkGenerator_Land, ns: , asm: GamePlay}
       data:
         biomes:
-        - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
         - {fileID: 11400000, guid: 61bbaaf1f23af6840ae2b9a842155991, type: 2}
+        - {fileID: 11400000, guid: 627b4a02334bb5947a49b0c3c54d816a, type: 2}
         - {fileID: 11400000, guid: e196fdad4f138d349adaf78a88b9b570, type: 2}
         - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
         - {fileID: 11400000, guid: fbe3dc8d209bdee44bed41b634c87688, type: 2}
@@ -159,17 +159,33 @@ MonoBehaviour:
           coordOffset: {x: 0, y: 0}
         enableHeightSecondaryBoost: 1
         heightSecondaryBoostStrength: 1
+        WindField:
+          RegionSize: 256
+          SeedSalt: 1779033703
+        OrographicSampleDistance: 64
+        OrographicSampleCount: 4
+        WindwardRainGain: 0.8
+        LeewardRainLoss: 0.6
     - rid: 6445419845959286807
       type: {class: ChunkGenerator_River, ns: , asm: GamePlay}
       data:
         riverTileBlock: {fileID: 11400000, guid: 7161f78828c23bc43a28d345ef6f8bc1, type: 2}
         seed: 12345
-        channelSpacing: 128
-        channelHalfWidth: 1.4
-        bendAmplitude: 16
-        bendFrequency: 0.006
-        widthVariation: 0.3
-        flowDirection: {x: 0.35, y: 0.94}
+        hydrologyRegionSize: 256
+        runoffCellSize: 64
+        runoffSampleStride: 8
+        maxTraceSteps: 512
+        seaLevel: 0.5
+        infiltrationFloor: 0.25
+        riverStartFlow: 0.12
+        fullWidthFlow: 2.5
+        maxRiverWidth: 5
+        meanderTieTolerance: 0.002
+        minLakeCells: 18
+        maxLakeCells: 220
+        maxLakeLevelRise: 0.045
+        lakeMinFlow: 0.35
+        maxCachedRegions: 9
         writeMode: 0
         riverDepthMin: 0.2
         riverDepthMax: 0.9

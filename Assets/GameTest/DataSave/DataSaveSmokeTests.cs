@@ -160,12 +160,13 @@ namespace FlatWorld.GameTest.DataSave
 
         [Test]
         [Category("DataSave.Smoke")]
-        public void EnvironmentLayersRoundTripKeepsFiveSupportedGrids()
+        public void EnvironmentLayersRoundTripKeepsClimateAndWindGrids()
         {
             var source = new EnvironmentLayers();
             source.EnsureSize(2, 2);
             source.SetCell(1, 0, 0.2f, 7f, 0.8f, 0.6f);
             source.SetLight(1, 0, 0.4f);
+            source.SetWind(1, 0, new Vector2(0.6f, 0.8f));
 
             var moduleData = new Ex_ModData_MemoryPackable();
             moduleData.WriteData(source);
@@ -179,6 +180,8 @@ namespace FlatWorld.GameTest.DataSave
             Assert.That(restored.Precipitation[1, 0], Is.EqualTo(0.8f));
             Assert.That(restored.Height[1, 0], Is.EqualTo(0.6f));
             Assert.That(restored.Light[1, 0], Is.EqualTo(0.4f));
+            Assert.That(restored.WindX[1, 0], Is.EqualTo(0.6f).Within(0.000001f));
+            Assert.That(restored.WindY[1, 0], Is.EqualTo(0.8f).Within(0.000001f));
 
             FieldInfo[] gridFields = typeof(EnvironmentLayers)
                 .GetFields(BindingFlags.Instance | BindingFlags.Public)
@@ -186,7 +189,27 @@ namespace FlatWorld.GameTest.DataSave
                 .ToArray();
             Assert.That(
                 gridFields.Select(field => field.Name),
-                Is.EquivalentTo(new[] { "Temperature", "TemperatureCelsius", "Precipitation", "Height", "Light" }));
+                Is.EquivalentTo(new[]
+                {
+                    "Temperature", "TemperatureCelsius", "Precipitation", "Height", "Light", "WindX", "WindY"
+                }));
+        }
+
+        [Test]
+        [Category("DataSave.Smoke")]
+        public void EnvironmentLayerSizeValidationIncludesWindGrids()
+        {
+            var layers = new EnvironmentLayers();
+            layers.EnsureSize(3, 2);
+            Assert.That(layers.IsValidSize(3, 2), Is.True);
+
+            layers.WindX = new float[1, 1];
+            Assert.That(layers.IsValidSize(3, 2), Is.False);
+
+            layers.EnsureSize(3, 2);
+            Assert.That(layers.IsValidSize(3, 2), Is.True);
+            Assert.That(layers.WindX.GetLength(0), Is.EqualTo(3));
+            Assert.That(layers.WindY.GetLength(1), Is.EqualTo(2));
         }
 
         [Test]
@@ -203,6 +226,7 @@ namespace FlatWorld.GameTest.DataSave
             source.EnsureEnvironmentStorage(2, 2);
             source.SetEnvironmentAtLocal(1, 1, 0.25f, 12.5f, 0.75f, 0.6f);
             source.SetLightAtLocal(1, 1, 0.4f);
+            source.SetWindAtLocal(1, 1, new Vector2(-0.8f, 0.6f));
             Vector2Int oneLayer = source.position + new Vector2Int(1, 0);
             Vector2Int twoLayers = source.position + new Vector2Int(0, 1);
             Vector2Int fourLayers = source.position + new Vector2Int(1, 1);
@@ -239,15 +263,17 @@ namespace FlatWorld.GameTest.DataSave
             Assert.That(restored.EnvironmentLayers.Precipitation[1, 1], Is.EqualTo(0.75f));
             Assert.That(restored.EnvironmentLayers.Height[1, 1], Is.EqualTo(0.6f));
             Assert.That(restored.EnvironmentLayers.Light[1, 1], Is.EqualTo(0.4f));
+            Assert.That(restored.EnvironmentLayers.WindX[1, 1], Is.EqualTo(-0.8f).Within(0.000001f));
+            Assert.That(restored.EnvironmentLayers.WindY[1, 1], Is.EqualTo(0.6f).Within(0.000001f));
             Assert.That(restored.TryGetGrassStateAtWorld(fourLayers, out GrassCellState grass), Is.True);
             Assert.That(grass, Is.EqualTo(GrassCellState.Present));
         }
 
         [Test]
         [Category("DataSave.Smoke")]
-        public void SaveFormatVersionTwoRejectsLegacyAndHeaderlessPayloads()
+        public void SaveFormatVersionThreeRejectsLegacyAndHeaderlessPayloads()
         {
-            Assert.That(ReadPrivateVersion("CompactSaveVersion"), Is.EqualTo(2));
+            Assert.That(ReadPrivateVersion("CompactSaveVersion"), Is.EqualTo(3));
             Assert.That(ReadPrivateVersion("ModdedSaveVersion"), Is.EqualTo(2));
 
             SaveDataMgr existing = Object.FindObjectOfType<SaveDataMgr>();

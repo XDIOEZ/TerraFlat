@@ -76,7 +76,27 @@ namespace FlatWorld.GameTest.Map
             land.ValidateConfiguration();
             Assert.That(
                 land.biomes.Select(biome => biome.BiomeId),
-                Is.EqualTo(new[] { "desert", "stone", "beach", "grassland", "forest", "ocean" }));
+                Is.EqualTo(new[] { "stone", "desert", "beach", "grassland", "forest", "ocean" }));
+
+            foreach (float temperature in new[] { 0.1f, 0.5f, 0.9f })
+            {
+                foreach (float precipitation in new[] { 0.1f, 0.5f, 0.9f })
+                {
+                    var mountainSample = new EnvironmentSample(
+                        temperature,
+                        0f,
+                        precipitation,
+                        0.8f);
+                    Assert.That(land.TryResolveBiome(mountainSample, out BiomeData mountainBiome), Is.True);
+                    Assert.That(mountainBiome.BiomeId, Is.EqualTo("stone"),
+                        $"高地应始终为石地：T={temperature}, P={precipitation}");
+                }
+
+                var dryLowlandSample = new EnvironmentSample(temperature, 0f, 0.1f, 0.6f);
+                Assert.That(land.TryResolveBiome(dryLowlandSample, out BiomeData dryLowlandBiome), Is.True);
+                Assert.That(dryLowlandBiome.BiomeId, Is.EqualTo("desert"),
+                    $"低雨陆地应按降雨解析为沙漠：T={temperature}");
+            }
 
             for (int temperatureStep = 0; temperatureStep <= 20; temperatureStep++)
             {
@@ -150,9 +170,17 @@ namespace FlatWorld.GameTest.Map
             try
             {
                 global::Map map = instance.GetComponent<global::Map>();
-                map.Data = new Data_TileMap { position = Vector2Int.zero };
+                // 远离原点可覆盖 Burst 与托管噪声在大坐标下的确定性一致性。
+                map.Data = new Data_TileMap { position = new Vector2Int(-224, -704) };
                 ChunkGenerator_Land land = map.LandGenerator;
                 ChunkGenerator_River river = map.GetGenerator<ChunkGenerator_River>();
+                river.hydrologyRegionSize = 64;
+                river.runoffCellSize = 16;
+                river.runoffSampleStride = 4;
+                river.maxTraceSteps = 64;
+                river.infiltrationFloor = 0f;
+                river.riverStartFlow = 0.05f;
+                river.fullWidthFlow = 2f;
                 var planet = new PlanetData { NoiseScale = PlanetData.DefaultNoiseScale };
                 const int worldSeed = 731927;
                 var context = new MapGenerationContext(
@@ -161,6 +189,8 @@ namespace FlatWorld.GameTest.Map
                     worldSeed,
                     new WorldAddress("terrain_consistency", WorldAddress.SurfaceDimensionId),
                     DimensionDefinition.CreateSurface());
+                Assert.That(context.ClimateService, Is.SameAs(land));
+                Assert.That(context.HydrologyService, Is.SameAs(river));
 
                 land.Generate(context);
                 river.Generate(context);
@@ -169,6 +199,22 @@ namespace FlatWorld.GameTest.Map
                 byte[] biomeIndices = land.CopyRuntimeBiomeIndices();
                 Assert.That(biomeIndices, Has.Length.EqualTo(map.Data.Width * map.Data.Height));
                 Assert.That(biomeIndices, Has.None.EqualTo(BiomeResolver.UnmatchedIndex));
+                for (int y = 0; y < map.Data.Height; y++)
+                {
+                    for (int x = 0; x < map.Data.Width; x++)
+                    {
+                        Assert.That(context.TryGetResolvedBiome(x, y, out BiomeData generatedBiome), Is.True);
+                        float height = map.Data.EnvironmentLayers.Height[x, y];
+                        float precipitation = map.Data.EnvironmentLayers.Precipitation[x, y];
+                        if (generatedBiome.BiomeId == "stone")
+                            Assert.That(height, Is.GreaterThanOrEqualTo(0.72f));
+                        else if (generatedBiome.BiomeId == "desert")
+                        {
+                            Assert.That(height, Is.LessThan(0.72f));
+                            Assert.That(precipitation, Is.LessThanOrEqualTo(0.28f));
+                        }
+                    }
+                }
 
                 int[] sampleXs = new[]
                     {
@@ -202,6 +248,11 @@ namespace FlatWorld.GameTest.Map
                             Is.EqualTo(expected.Environment.Precipitation).Within(burstTolerance));
                         Assert.That(map.Data.EnvironmentLayers.Height[x, y],
                             Is.EqualTo(expected.Environment.Height).Within(burstTolerance));
+                        ClimateSample climate = land.SampleClimateAtWorld(world, worldSeed, planet);
+                        Assert.That(map.Data.EnvironmentLayers.WindX[x, y],
+                            Is.EqualTo(climate.Wind.Direction.x).Within(burstTolerance));
+                        Assert.That(map.Data.EnvironmentLayers.WindY[x, y],
+                            Is.EqualTo(climate.Wind.Direction.y).Within(burstTolerance));
 
                         TileData top = map.Data.GetTopTile(world);
                         Assert.That(top is TileData_Water, Is.EqualTo(expected.HasWater));
@@ -380,7 +431,10 @@ namespace FlatWorld.GameTest.Map
                 .ToArray();
             Assert.That(
                 gridFields.Select(field => field.Name),
-                Is.EquivalentTo(new[] { "Temperature", "TemperatureCelsius", "Precipitation", "Height", "Light" }));
+                Is.EquivalentTo(new[]
+                {
+                    "Temperature", "TemperatureCelsius", "Precipitation", "Height", "Light", "WindX", "WindY"
+                }));
 
             var range = new EnvironmentConditionRange
             {
@@ -522,22 +576,70 @@ namespace FlatWorld.GameTest.Map
                 ChunkGenerator_River river = map.mapGenerators.OfType<ChunkGenerator_River>().SingleOrDefault();
                 Assert.That(river, Is.Not.Null);
 
-                river.channelSpacing = 8f;
-                river.channelHalfWidth = 2f;
-                river.bendAmplitude = 0f;
-                river.flowDirection = Vector2.up;
+                river.hydrologyRegionSize = 64;
+                river.runoffCellSize = 16;
+                river.runoffSampleStride = 4;
+                river.maxTraceSteps = 64;
+                river.infiltrationFloor = 0f;
+                river.riverStartFlow = 0.001f;
+                river.fullWidthFlow = 0.01f;
 
-                map.Data = new Data_TileMap { position = Vector2Int.zero };
                 Vector2Int chunkSize = Vector2Int.RoundToInt(ChunkMgr.GetChunkSize());
+                var planet = new PlanetData { NoiseScale = PlanetData.DefaultNoiseScale };
+                const int worldSeed = 12345;
+                Assert.That(map.LandGenerator.TryFindWalkableTerrainNear(
+                    Vector2Int.zero,
+                    worldSeed,
+                    planet,
+                    null,
+                    512,
+                    4096,
+                    out Vector2Int landAnchor), Is.True);
+                var preview = new TerrainPreviewSampler(map.LandGenerator, river, planet, worldSeed);
+                Vector2Int hydrologyCell = default;
+                bool foundHydrology = false;
+                int baseRegionX = Mathf.FloorToInt(landAnchor.x / 64f);
+                int baseRegionY = Mathf.FloorToInt(landAnchor.y / 64f);
+                for (int regionOffsetY = -1; regionOffsetY <= 1 && !foundHydrology; regionOffsetY++)
+                {
+                    for (int regionOffsetX = -1; regionOffsetX <= 1 && !foundHydrology; regionOffsetX++)
+                    {
+                        Vector2Int regionOrigin = new(
+                            (baseRegionX + regionOffsetX) * 64,
+                            (baseRegionY + regionOffsetY) * 64);
+                        for (int y = 0; y < 64 && !foundHydrology; y++)
+                        for (int x = 0; x < 64; x++)
+                        {
+                            Vector2Int world = regionOrigin + new Vector2Int(x, y);
+                            if (!preview.TrySample(world, out TerrainPreviewSample sample) ||
+                                sample.WaterKind == HydrologyWaterKind.None)
+                            {
+                                continue;
+                            }
+                            hydrologyCell = world;
+                            foundHydrology = true;
+                            break;
+                        }
+                    }
+                }
+                Assert.That(foundHydrology, Is.True, "Representative land regions produced no hydrology cell.");
+
+                map.Data = new Data_TileMap
+                {
+                    position = hydrologyCell - new Vector2Int(chunkSize.x / 2, chunkSize.y / 2)
+                };
                 map.Data.EnsureTileStorage(chunkSize.x, chunkSize.y);
                 map.Data.EnsureEnvironmentStorage(chunkSize.x, chunkSize.y);
                 MapGenerationContext context = new MapGenerationContext(
                     map,
-                    new PlanetData { NoiseScale = PlanetData.DefaultNoiseScale },
-                    12345,
+                    planet,
+                    worldSeed,
                     new WorldAddress("river_test", WorldAddress.SurfaceDimensionId),
                     DimensionDefinition.CreateSurface());
 
+                map.LandGenerator.Generate(context);
+                float[,] precipitationBefore =
+                    (float[,])map.Data.EnvironmentLayers.Precipitation.Clone();
                 river.Generate(context);
 
                 int freshWaterCells = 0;
@@ -545,14 +647,14 @@ namespace FlatWorld.GameTest.Map
                 {
                     for (int y = 0; y < chunkSize.y; y++)
                     {
-                        if (map.GetTopTile(new Vector2Int(x, y)) is TileData_Water water &&
+                        Vector2Int world = map.Data.position + new Vector2Int(x, y);
+                        if (map.GetTopTile(world) is TileData_Water water &&
                             Mathf.Approximately(water.salt, 0f))
                         {
                             freshWaterCells++;
-                            Assert.That(
-                                map.Data.EnvironmentLayers.Precipitation[x, y],
-                                Is.EqualTo(1f),
-                                $"河道格 ({x}, {y}) 应写入最大降水。");
+                            Assert.That(map.Data.EnvironmentLayers.Precipitation[x, y],
+                                Is.EqualTo(precipitationBefore[x, y]).Within(0.000001f),
+                                $"河道格 ({x}, {y}) 不得反写降雨。");
                         }
                     }
                 }

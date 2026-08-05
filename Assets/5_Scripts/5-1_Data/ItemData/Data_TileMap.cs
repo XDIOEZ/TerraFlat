@@ -22,7 +22,7 @@ public partial class Data_TileMap : ItemData
 
     public bool TileLoaded;
 
-    [Tooltip("环境多层网格（温度、摄氏温度、降水、高度与光照）")]
+    [Tooltip("环境多层网格（温度、摄氏温度、降水、高度、风向与光照）")]
     public EnvironmentLayers EnvironmentLayers = new EnvironmentLayers();
 
     [Tooltip("装饰草层数据，每格使用一个字节保存状态")]
@@ -126,6 +126,12 @@ public partial class Data_TileMap : ItemData
     {
         ValidateEnvironmentCell(x, y);
         EnvironmentLayers.SetPrecipitation(x, y, precipitation);
+    }
+
+    public void SetWindAtLocal(int x, int y, Vector2 direction)
+    {
+        ValidateEnvironmentCell(x, y);
+        EnvironmentLayers.SetWind(x, y, direction);
     }
 
     public void SetLightAtLocal(int x, int y, float light)

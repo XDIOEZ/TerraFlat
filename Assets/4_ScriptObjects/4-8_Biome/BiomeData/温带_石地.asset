@@ -17,9 +17,9 @@ MonoBehaviour:
   Description: "\u6563\u843D\u7684\u77F3\u5934,\u5C0F\u6C34\u5751,\u7A00\u5C11\u7684\u6811,\u5E7F\u9614\u7684\u8349\u5730"
   PreviewColor: {r: 0.690566, g: 0.690566, b: 0.690566, a: 1}
   Condition:
-    TemperatureRange: {x: 0.3, y: 0.6}
-    PrecipitationRange: {x: 0, y: 0.33}
-    HeightRange: {x: 0.5, y: 1}
+    TemperatureRange: {x: 0, y: 1}
+    PrecipitationRange: {x: 0, y: 1}
+    HeightRange: {x: 0.72, y: 1}
   TerrainConfig:
     TileSpawns_NoSO:
     - TileBlock: {fileID: 11400000, guid: 4812ad3ae4f2aad44b77c4f5e6d53e77, type: 2}

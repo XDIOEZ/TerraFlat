@@ -51,12 +51,13 @@ namespace FlatWorld.Automation
         {
             // 在新的黄金路径开始前重置各玩法场景的静态状态。
             ResetBurningBuffScenario();
+            ResetHydrologyScenario();
         }
 
         internal static void OnWorldReady(FlatWorldGoldenPathScenarioContext context)
         {
             // 玩家和初始 Chunk 就绪后的一次性安排挂在这里。
-            _ = context;
+            BeginHydrologyScenario(context);
         }
 
         internal static void OnTraversalTick(FlatWorldGoldenPathScenarioContext context)
@@ -70,18 +71,21 @@ namespace FlatWorld.Automation
         {
             // 每个目标 Chunk 就绪后的阶段断言挂在这里。
             VerifyBurningBuffAtChunkReady(context);
+            VerifyHydrologyAtChunkReady(context);
         }
 
         internal static void BeforeWorldExit(FlatWorldGoldenPathScenarioContext context)
         {
             // 完成移动后、退出世界前的长时状态断言挂在这里。
             AssertBurningBuffScenarioCompleted();
+            AssertHydrologyScenarioCompleted();
         }
 
         internal static void Cleanup(FlatWorldGoldenPathScenarioContext context)
         {
             // 通过和失败都会调用；在这里恢复 Buff、生命、物品和临时对象。
             CleanupBurningBuffScenario();
+            CleanupHydrologyScenario();
         }
     }
 }
