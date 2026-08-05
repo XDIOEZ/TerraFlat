@@ -91,6 +91,7 @@ disable-model-invocation: false
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
 - 2026-08-05：`Inventory.OnValidate()` 在动态组件或空序列化数据场景下先创建 `Inventory_Data`，避免快捷栏及编辑器校验因空数据抛异常。
+- 2026-08-04：快捷栏新建/旧版数据默认选中 1 号位，合法存档仍恢复原选中位；初次创建选框时直接对齐槽位，后续切换继续保留不改父节点的移动动画。
 - 2026-08-03：配方分包启动加载改用共享 StreamingAssets 文本协程；桌面/编辑器读取文件，Android/WebGL 通过 `UnityWebRequest` 读取包内清单与分包，保持先聚合校验再统一注册。
 - 2026-07-31：建筑配方新增 `core:矿坑入口`，正式产出可放置的 `MineEntrance_Summoner`；内建配方总数更新为 39。
 - 2026-07-31：背包、装备、手工制作和快捷栏接入稳定手柄 Action；移除手工制作硬编码 `Input.GetKeyDown(H)`，模态库存面板增加手柄焦点与可嵌套玩法输入锁。
@@ -104,7 +105,7 @@ disable-model-invocation: false
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前覆盖库存模块、装备、配方、制作公共核心、初始库存资源入口，以及 `UI_Bag` 整理按钮和 `UI_Slot` 制作预览图层命名契约。
+- 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前覆盖库存模块、装备、配方、制作公共核心、初始库存资源入口、快捷栏初始选框对齐与切换父节点稳定性，以及 `UI_Bag` 整理按钮和 `UI_Slot` 制作预览图层命名契约。
 - 农业闭环测试：`Assets/GameTest/InventoryCrafting/AgricultureLoopTests.cs`，分类 `InventoryCrafting.Agriculture`；覆盖唯一播种入口、AppleTree 单一 `Mod_Grow`、无无限生产/旧成长模块、肥料补给、倍率单次结算、水肥边界和成长状态 MemoryPack 往返。
 - 公共核心回归：`Assets/GameTest/InventoryCrafting/CraftingCoreTests.cs`，分类 `InventoryCrafting.Core`；覆盖失败不扣料、多输出空间不足不部分产出、输入槽回落、镜像 + Tag + 紧凑网格消费映射和无序配方多余输入拒绝。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；背包制作测试约定目录：`Assets/GameTest/InventoryCrafting/`；场景目录：`Assets/GameTest/Scenes/InventoryCrafting/`；冒烟分类：`InventoryCrafting.Smoke`。

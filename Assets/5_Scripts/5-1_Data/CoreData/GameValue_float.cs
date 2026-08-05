@@ -5,27 +5,27 @@ using UnityEngine;
 [MemoryPackable]
 public partial class GameValue_float
 {
-    [Header("»ù´¡ÊıÖµ")]
-    [Tooltip("»ù´¡Öµ")]
-    public float BaseValue = 1; // »ù´¡Öµ
+    [Header("åŸºç¡€æ•°å€¼")]
+    [Tooltip("åŸºç¡€å€¼")]
+    public float BaseValue = 1; // åŸºç¡€å€¼
 
-    [Header("»ù´¡Öµ¼ÓËãÏî")]
-    [Tooltip("»ù´¡¼ÓËã£¨×°±¸¡¢BuffµÈ£©")]
-    public float BaseAdditive = 0; // »ù´¡¼ÓËã£¨×°±¸¡¢BuffµÈ£©
+    [Header("åŸºç¡€å€¼åŠ ç®—é¡¹")]
+    [Tooltip("åŸºç¡€åŠ ç®—ï¼ˆè£…å¤‡ã€Buffç­‰ï¼‰")]
+    public float BaseAdditive = 0; // åŸºç¡€åŠ ç®—ï¼ˆè£…å¤‡ã€Buffç­‰ï¼‰
 
-    [Header("°Ù·Ö±È¼Ó³É")]
-    [Tooltip("°Ù·Ö±È¼Ó³É£¨¼¼ÄÜ¡¢±»¶¯¼Ó³É£©")]
-    public float AdditiveModifier = 0; // °Ù·Ö±È¼Ó³É£¨¼¼ÄÜ¡¢±»¶¯¼Ó³É£©
+    [Header("ç™¾åˆ†æ¯”åŠ æˆ")]
+    [Tooltip("ç™¾åˆ†æ¯”åŠ æˆï¼ˆæŠ€èƒ½ã€è¢«åŠ¨åŠ æˆï¼‰")]
+    public float AdditiveModifier = 0; // ç™¾åˆ†æ¯”åŠ æˆï¼ˆæŠ€èƒ½ã€è¢«åŠ¨åŠ æˆï¼‰
 
-    [Header("³ËËãĞŞÕı")]
-    [Tooltip("³ËËãĞŞÕı£¨±©»÷¡¢×´Ì¬±¶ÂÊ£©")]
-    public float MultiplicativeModifier = 1; // ³ËËãĞŞÕı£¨±©»÷¡¢×´Ì¬±¶ÂÊ£©
+    [Header("ä¹˜ç®—ä¿®æ­£")]
+    [Tooltip("ä¹˜ç®—ä¿®æ­£ï¼ˆæš´å‡»ã€çŠ¶æ€å€ç‡ï¼‰")]
+    public float MultiplicativeModifier = 1; // ä¹˜ç®—ä¿®æ­£ï¼ˆæš´å‡»ã€çŠ¶æ€å€ç‡ï¼‰
 
-    [Header("×îÖÕ¼ÓËãÏî")]
-    [Tooltip("×îÖÕ¼ÓËã£¨½áËãÊ±¶îÍâÔö¼ÓµÄÊıÖµ£©")]
-    public float FinalAdditive = 0; // ×îÖÕ¼ÓËã£¨½áËãÊ±¶îÍâÔö¼ÓµÄÊıÖµ£©
+    [Header("æœ€ç»ˆåŠ ç®—é¡¹")]
+    [Tooltip("æœ€ç»ˆåŠ ç®—ï¼ˆç»“ç®—æ—¶é¢å¤–å¢åŠ çš„æ•°å€¼ï¼‰")]
+    public float FinalAdditive = 0; // æœ€ç»ˆåŠ ç®—ï¼ˆç»“ç®—æ—¶é¢å¤–å¢åŠ çš„æ•°å€¼ï¼‰
 
-    // ×îÖÕÊıÖµ¼ÆËã¹«Ê½
+    // æœ€ç»ˆæ•°å€¼è®¡ç®—å…¬å¼
     public float Value
     {
         get
@@ -43,7 +43,7 @@ public partial class GameValue_float
     {
     }
     
-    // ÖØÔØ¼Ó·¨ÔËËã·û - ÓëfloatÏà¼Ó
+    // é‡è½½åŠ æ³•è¿ç®—ç¬¦ - ä¸floatç›¸åŠ 
     public static GameValue_float operator +(GameValue_float gv, float value)
     {
         GameValue_float result = new GameValue_float
@@ -57,7 +57,7 @@ public partial class GameValue_float
         return result;
     }
     
-    // ÖØÔØ¼Ó·¨ÔËËã·û - ÓëÁíÒ»¸öGameValue_floatÏà¼Ó
+    // é‡è½½åŠ æ³•è¿ç®—ç¬¦ - ä¸å¦ä¸€ä¸ªGameValue_floatç›¸åŠ 
     public static GameValue_float operator +(GameValue_float gv1, GameValue_float gv2)
     {
         GameValue_float result = new GameValue_float
@@ -71,7 +71,7 @@ public partial class GameValue_float
         return result;
     }
     
-    // ÖØÔØ¼õ·¨ÔËËã·û - ÓëfloatÏà¼õ
+    // é‡è½½å‡æ³•è¿ç®—ç¬¦ - ä¸floatç›¸å‡
     public static GameValue_float operator -(GameValue_float gv, float value)
     {
         GameValue_float result = new GameValue_float
@@ -85,7 +85,7 @@ public partial class GameValue_float
         return result;
     }
     
-    // ÖØÔØ¼õ·¨ÔËËã·û - ÓëÁíÒ»¸öGameValue_floatÏà¼õ
+    // é‡è½½å‡æ³•è¿ç®—ç¬¦ - ä¸å¦ä¸€ä¸ªGameValue_floatç›¸å‡
     public static GameValue_float operator -(GameValue_float gv1, GameValue_float gv2)
     {
         GameValue_float result = new GameValue_float
@@ -99,7 +99,7 @@ public partial class GameValue_float
         return result;
     }
     
-    // ÖØÔØ³Ë·¨ÔËËã·û - ÓëfloatÏà³Ë
+    // é‡è½½ä¹˜æ³•è¿ç®—ç¬¦ - ä¸floatç›¸ä¹˜
     public static GameValue_float operator *(GameValue_float gv, float value)
     {
         GameValue_float result = new GameValue_float
@@ -113,12 +113,12 @@ public partial class GameValue_float
         return result;
     }
     
-    // ÖØÔØ³ı·¨ÔËËã·û - ÓëfloatÏà³ı
+    // é‡è½½é™¤æ³•è¿ç®—ç¬¦ - ä¸floatç›¸é™¤
     public static GameValue_float operator /(GameValue_float gv, float value)
     {
         if (value == 0)
         {
-            Debug.LogError("GameValue_float ³ıÁã´íÎó");
+            Debug.LogError("GameValue_float é™¤é›¶é”™è¯¯");
             return gv;
         }
         
@@ -133,7 +133,7 @@ public partial class GameValue_float
         return result;
     }
     
-    // ÖØÔØÏàµÈÔËËã·û
+    // é‡è½½ç›¸ç­‰è¿ç®—ç¬¦
     public static bool operator ==(GameValue_float gv1, GameValue_float gv2)
     {
         if (ReferenceEquals(gv1, null) && ReferenceEquals(gv2, null)) return true;
@@ -142,13 +142,13 @@ public partial class GameValue_float
         return Mathf.Approximately(gv1.Value, gv2.Value);
     }
     
-    // ÖØÔØ²»µÈÔËËã·û
+    // é‡è½½ä¸ç­‰è¿ç®—ç¬¦
     public static bool operator !=(GameValue_float gv1, GameValue_float gv2)
     {
         return !(gv1 == gv2);
     }
     
-    // ÖØĞ´Equals·½·¨
+    // é‡å†™Equalsæ–¹æ³•
     public override bool Equals(object obj)
     {
         if (obj is GameValue_float other)
@@ -158,25 +158,25 @@ public partial class GameValue_float
         return false;
     }
     
-    // ÖØĞ´GetHashCode·½·¨
+    // é‡å†™GetHashCodeæ–¹æ³•
     public override int GetHashCode()
     {
         return Value.GetHashCode();
     }
     
-    // ÖØÔØÒşÊ½×ª»»Îªfloat
+    // é‡è½½éšå¼è½¬æ¢ä¸ºfloat
     public static implicit operator float(GameValue_float gv)
     {
         return gv.Value;
     }
     
-    // ÖØÔØÒşÊ½×ª»»ÎªGameValue_float
+    // é‡è½½éšå¼è½¬æ¢ä¸ºGameValue_float
     public static implicit operator GameValue_float(float value)
     {
         return new GameValue_float(value);
     }
     
-    // ÖØĞ´ToString·½·¨
+    // é‡å†™ToStringæ–¹æ³•
     public override string ToString()
     {
         return Value.ToString();

@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 黄金路径演进"
+  short_description: "持续扩展并验证 FlatWorld 完整运行流程测试"
+  default_prompt: "Use $flatworld-golden-path to extend the runtime golden path for this gameplay change and validate it."

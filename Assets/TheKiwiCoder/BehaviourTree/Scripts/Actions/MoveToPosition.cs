@@ -5,75 +5,75 @@ using TheKiwiCoder;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// ĞĞÎªÊ÷¶¯×÷½Úµã£º¿ØÖÆ½ÇÉ«ÒÆ¶¯µ½Ö¸¶¨Ä¿±êÎ»ÖÃ
+/// è¡Œä¸ºæ ‘åŠ¨ä½œèŠ‚ç‚¹ï¼šæ§åˆ¶è§’è‰²ç§»åŠ¨åˆ°æŒ‡å®šç›®æ ‡ä½ç½®
 /// </summary>
 public class MoveToPosition : ActionNode
 {
-    // ÒÆ¶¯ËÙ¶È£¨µ¥Î»£ºµ¥Î»/Ãë£©
+    // ç§»åŠ¨é€Ÿåº¦ï¼ˆå•ä½ï¼šå•ä½/ç§’ï¼‰
     public float speed = 5;
 
-    // Í£Ö¹¾àÀëãĞÖµ£¬µ±½Ó½üÄ¿±êÊ±ÌáÇ°Í£Ö¹
+    // åœæ­¢è·ç¦»é˜ˆå€¼ï¼Œå½“æ¥è¿‘ç›®æ ‡æ—¶æå‰åœæ­¢
     public float stoppingDistance = 0.1f;
 
-    // ÊÇ·ñÔÚÒÆ¶¯¹ı³ÌÖĞ¸üĞÂ½ÇÉ«³¯Ïò
+    // æ˜¯å¦åœ¨ç§»åŠ¨è¿‡ç¨‹ä¸­æ›´æ–°è§’è‰²æœå‘
     public bool updateRotation = true;
 
-    // ¼ÓËÙ¶È²ÎÊı£¬¿ØÖÆÒÆ¶¯Ê±µÄ¼ÓËÙĞ§¹û
+    // åŠ é€Ÿåº¦å‚æ•°ï¼Œæ§åˆ¶ç§»åŠ¨æ—¶çš„åŠ é€Ÿæ•ˆæœ
     public float acceleration = 40.0f;
 
-    // ÔÊĞíµÄÎó²î·¶Î§£¬µ±Ê£Óà¾àÀëĞ¡ÓÚ¸ÃÖµÊ±ÊÓÎªµ½´ïÄ¿±ê
+    // å…è®¸çš„è¯¯å·®èŒƒå›´ï¼Œå½“å‰©ä½™è·ç¦»å°äºè¯¥å€¼æ—¶è§†ä¸ºåˆ°è¾¾ç›®æ ‡
     public float tolerance = 1.0f;
 
     /// <summary>
-    /// ½Úµã¿ªÊ¼Ö´ĞĞÊ±³õÊ¼»¯µ¼º½²ÎÊı
+    /// èŠ‚ç‚¹å¼€å§‹æ‰§è¡Œæ—¶åˆå§‹åŒ–å¯¼èˆªå‚æ•°
     /// </summary>
     protected override void OnStart()
     {
-        // ÉèÖÃµ¼º½´úÀíµÄÍ£Ö¹¾àÀë
+        // è®¾ç½®å¯¼èˆªä»£ç†çš„åœæ­¢è·ç¦»
         context.agent.stoppingDistance = stoppingDistance;
-        // ÉèÖÃÒÆ¶¯ËÙ¶È
+        // è®¾ç½®ç§»åŠ¨é€Ÿåº¦
         context.agent.speed = speed;
-        // ´ÓºÚ°å»ñÈ¡Ä¿±êÎ»ÖÃ²¢ÉèÖÃÎªµ¼º½Ä¿µÄµØ
+        // ä»é»‘æ¿è·å–ç›®æ ‡ä½ç½®å¹¶è®¾ç½®ä¸ºå¯¼èˆªç›®çš„åœ°
         context.agent.destination = blackboard.TargetPosition;
-        // ÉèÖÃÊÇ·ñ¸üĞÂĞı×ª
+        // è®¾ç½®æ˜¯å¦æ›´æ–°æ—‹è½¬
         context.agent.updateRotation = updateRotation;
-        // ÉèÖÃ¼ÓËÙ¶È²ÎÊı
+        // è®¾ç½®åŠ é€Ÿåº¦å‚æ•°
         context.agent.acceleration = acceleration;
     }
 
     /// <summary>
-    /// ½ÚµãÍ£Ö¹Ê±µÄÇåÀí²Ù×÷£¨µ±Ç°ÎŞ²Ù×÷£©
+    /// èŠ‚ç‚¹åœæ­¢æ—¶çš„æ¸…ç†æ“ä½œï¼ˆå½“å‰æ— æ“ä½œï¼‰
     /// </summary>
     protected override void OnStop()
     {
-        // ÎŞĞèÖ´ĞĞÈÎºÎÇåÀí²Ù×÷
+        // æ— éœ€æ‰§è¡Œä»»ä½•æ¸…ç†æ“ä½œ
     }
 
     /// <summary>
-    /// Ã¿Ö¡¸üĞÂÊ±¼ì²éÒÆ¶¯×´Ì¬²¢·µ»Ø½Úµã×´Ì¬
+    /// æ¯å¸§æ›´æ–°æ—¶æ£€æŸ¥ç§»åŠ¨çŠ¶æ€å¹¶è¿”å›èŠ‚ç‚¹çŠ¶æ€
     /// </summary>
-    /// <returns>ĞĞÎªÊ÷½Úµã×´Ì¬£¨Success/Running/Failed£©</returns>
+    /// <returns>è¡Œä¸ºæ ‘èŠ‚ç‚¹çŠ¶æ€ï¼ˆSuccess/Running/Failedï¼‰</returns>
     protected override State OnUpdate()
     {
-        // Èç¹ûÂ·¾¶ÈÔÔÚ¼ÆËãÖĞ£¬±£³ÖÔËĞĞ×´Ì¬
+        // å¦‚æœè·¯å¾„ä»åœ¨è®¡ç®—ä¸­ï¼Œä¿æŒè¿è¡ŒçŠ¶æ€
         if (context.agent.pathPending)
         {
             return State.Running;
         }
 
-        // Èç¹ûÊ£Óà¾àÀëĞ¡ÓÚÎó²î·¶Î§£¬ÊÓÎªµ½´ïÄ¿±ê
+        // å¦‚æœå‰©ä½™è·ç¦»å°äºè¯¯å·®èŒƒå›´ï¼Œè§†ä¸ºåˆ°è¾¾ç›®æ ‡
         if (context.agent.remainingDistance < tolerance)
         {
             return State.Success;
         }
 
-        // Èç¹ûÂ·¾¶ÎŞĞ§£¨ÈçÄ¿±ê²»¿É´ï£©£¬·µ»ØÊ§°Ü
+        // å¦‚æœè·¯å¾„æ— æ•ˆï¼ˆå¦‚ç›®æ ‡ä¸å¯è¾¾ï¼‰ï¼Œè¿”å›å¤±è´¥
         if (context.agent.pathStatus == UnityEngine.AI.NavMeshPathStatus.PathInvalid)
         {
             return State.Failure;
         }
 
-        // Ä¬ÈÏ¼ÌĞøÔËĞĞÖ±µ½Âú×ãÌõ¼ş
+        // é»˜è®¤ç»§ç»­è¿è¡Œç›´åˆ°æ»¡è¶³æ¡ä»¶
         return State.Running;
     }
 }

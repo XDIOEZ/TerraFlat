@@ -1,10 +1,10 @@
 using System.Collections;
 using UnityEngine;
 using TheKiwiCoder;
-[NodeMenu("ActionNode/通用节点/等待帧数")]
+[NodeMenu("ActionNode/閫氱敤鑺傜偣/绛夊緟甯ф暟")]
 public class WaitFrame : ActionNode
 {
-    public int frameCount = 1; // 要等待的帧数
+    public int frameCount = 1; // 瑕佺瓑寰呯殑甯ф暟
 
     public int counter;
 

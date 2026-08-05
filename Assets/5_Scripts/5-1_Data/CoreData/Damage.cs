@@ -10,12 +10,12 @@ using NaughtyAttributes;
 [MemoryPackable]
 public partial class Damage
 {
-    [Header("ÉËº¦ÊıÖµÉèÖÃ")]
+    [Header("ä¼¤å®³æ•°å€¼è®¾ç½®")]
     public float PhysicalDamage;
     public float ArmorBreaking;
     public float MagicDamage;
 
-    [Header("ÉËº¦ÀàĞÍÉèÖÃ")]
+    [Header("ä¼¤å®³ç±»å‹è®¾ç½®")]
     public List<string> DamageType;
 
     [MemoryPackIgnore]
@@ -23,70 +23,70 @@ public partial class Damage
 
 
     /// <summary>
-    /// ¹¹Ôìº¯Êı
+    /// æ„é€ å‡½æ•°
     /// </summary>
     public Damage()
     {
-        // ³õÊ¼»¯ DamageType ÁĞ±í£¬·ÀÖ¹¿ÕÒıÓÃÒì³£
+        // åˆå§‹åŒ– DamageType åˆ—è¡¨ï¼Œé˜²æ­¢ç©ºå¼•ç”¨å¼‚å¸¸
         DamageType = new List<string>();
     }
 
     /// <summary>
-    /// ¼ì²â Damage ÖĞ¶ÔÓ¦µÄÉËº¦ÀàĞÍÁĞ±í£¬²¢·µ»Ø»÷ÖĞÈõµãµÄÊıÁ¿
+    /// æ£€æµ‹ Damage ä¸­å¯¹åº”çš„ä¼¤å®³ç±»å‹åˆ—è¡¨ï¼Œå¹¶è¿”å›å‡»ä¸­å¼±ç‚¹çš„æ•°é‡
     /// </summary>
-    /// <param name="damageTypes">ĞèÒª¼ì²âµÄÉËº¦ÀàĞÍÁĞ±í</param>
-    /// <returns>·µ»Ø»÷ÖĞÈõµãµÄÊıÁ¿£¬0 ±íÊ¾Ã»ÓĞ»÷ÖĞÈÎºÎÈõµã</returns>
+    /// <param name="damageTypes">éœ€è¦æ£€æµ‹çš„ä¼¤å®³ç±»å‹åˆ—è¡¨</param>
+    /// <returns>è¿”å›å‡»ä¸­å¼±ç‚¹çš„æ•°é‡ï¼Œ0 è¡¨ç¤ºæ²¡æœ‰å‡»ä¸­ä»»ä½•å¼±ç‚¹</returns>
     public int Check_DamageType(List<string> damageTypes)
     {
-        // ÊäÈëÑéÖ¤£ºÈç¹û damageTypes Îª¿Õ»òÎŞĞ§£¬Ö±½Ó·µ»Ø 0
+        // è¾“å…¥éªŒè¯ï¼šå¦‚æœ damageTypes ä¸ºç©ºæˆ–æ— æ•ˆï¼Œç›´æ¥è¿”å› 0
         if (damageTypes == null || damageTypes.Count == 0)
         {
             return 0;
         }
 
-        int hitCount = 0; // ¼ÇÂ¼»÷ÖĞÈõµãµÄÊıÁ¿
+        int hitCount = 0; // è®°å½•å‡»ä¸­å¼±ç‚¹çš„æ•°é‡
 
-        // ±éÀúÊäÈëµÄÉËº¦ÀàĞÍÁĞ±í£¬¼ì²éÃ¿¸öÀàĞÍÊÇ·ñ´æÔÚÓÚ DamageType ÖĞ
+        // éå†è¾“å…¥çš„ä¼¤å®³ç±»å‹åˆ—è¡¨ï¼Œæ£€æŸ¥æ¯ä¸ªç±»å‹æ˜¯å¦å­˜åœ¨äº DamageType ä¸­
         foreach (string damageType in damageTypes)
         {
-            // Èç¹ûÉËº¦ÀàĞÍÎª¿Õ»òÎŞĞ§£¬Ìø¹ı
+            // å¦‚æœä¼¤å®³ç±»å‹ä¸ºç©ºæˆ–æ— æ•ˆï¼Œè·³è¿‡
             if (string.IsNullOrWhiteSpace(damageType))
             {
                 continue;
             }
 
-            // Èç¹ûÉËº¦ÀàĞÍ´æÔÚÓÚ DamageType ÖĞ£¬Ôö¼Ó»÷ÖĞ¼ÆÊı
+            // å¦‚æœä¼¤å®³ç±»å‹å­˜åœ¨äº DamageType ä¸­ï¼Œå¢åŠ å‡»ä¸­è®¡æ•°
             if (DamageType.Contains(damageType, StringComparer.OrdinalIgnoreCase))
             {
                 hitCount++;
             }
         }
 
-        // ·µ»Ø»÷ÖĞÈõµãµÄÊıÁ¿
+        // è¿”å›å‡»ä¸­å¼±ç‚¹çš„æ•°é‡
         return hitCount;
     }
 
     /// <summary>
-    /// ¼ÆËã×îÖÕÉËº¦
+    /// è®¡ç®—æœ€ç»ˆä¼¤å®³
     /// </summary>
-    /// <param name="defense">·ÀÓùÊôĞÔ</param>
-    /// <returns>×îÖÕÉËº¦Öµ</returns>
+    /// <param name="defense">é˜²å¾¡å±æ€§</param>
+    /// <returns>æœ€ç»ˆä¼¤å®³å€¼</returns>
     public float Return_EndDamage(Defense defense = null)
     {
         float damage = 0;
 
-        // Èç¹ûÃ»ÓĞ´«Èë·ÀÓùÊôĞÔ£¬ÔòÄ¬ÈÏÎª 0
+        // å¦‚æœæ²¡æœ‰ä¼ å…¥é˜²å¾¡å±æ€§ï¼Œåˆ™é»˜è®¤ä¸º 0
         float defenseStrength = defense?.defenseStrength ?? 0;
         float defenseToughness = defense?.defenseToughness ?? 0;
-        float defenseMagic = defense?.defenseMagic ?? 0; // Ä¬ÈÏÎª 0
+        float defenseMagic = defense?.defenseMagic ?? 0; // é»˜è®¤ä¸º 0
 
 
 
-        // ¼ÆËãÄ§·¨ÉËº¦£¬Ó¦ÓÃ¼õÃâ±ÈÀı
+        // è®¡ç®—é­”æ³•ä¼¤å®³ï¼Œåº”ç”¨å‡å…æ¯”ä¾‹
         damage += MagicDamage - (MagicDamage * defenseMagic);
 
        // float EndBreaking = ArmorBreaking - defenseToughness;
-        // ¼ÆËãÎïÀíÉËº¦£¬Ó¦ÓÃ¼õÃâ±ÈÀı
+        // è®¡ç®—ç‰©ç†ä¼¤å®³ï¼Œåº”ç”¨å‡å…æ¯”ä¾‹
         damage += PhysicalDamage - (PhysicalDamage * (defenseStrength * 0.01f));
 
 

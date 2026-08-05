@@ -5,43 +5,43 @@ using TheKiwiCoder;
 
 public class ItemNameSearcher : ActionNode
 {
-    [Tooltip("½«¶ÔÏóÉèÖÃÎªÒÆ¶¯Ä¿±ê")]
+    [Tooltip("å°†å¯¹è±¡è®¾ç½®ä¸ºç§»åŠ¨ç›®æ ‡")]
     public bool setMoveTarget = true;
 
-    [Tooltip("ĞèÒª²éÕÒµÄ¶ÔÏóÃû³ÆÁĞ±í")]
+    [Tooltip("éœ€è¦æŸ¥æ‰¾çš„å¯¹è±¡åç§°åˆ—è¡¨")]
     public List<string> searchNames = new List<string>();
 
     protected override void OnStart()
     {
-        // ¿ÉÑ¡£º³õÊ¼»¯Âß¼­
+        // å¯é€‰ï¼šåˆå§‹åŒ–é€»è¾‘
     }
 
     protected override void OnStop()
     {
-        // ¿ÉÑ¡£ºÇåÀíÂß¼­
+        // å¯é€‰ï¼šæ¸…ç†é€»è¾‘
     }
 
     protected override State OnUpdate()
     {
         foreach (Item item in context.itemDetector.CurrentItemsInArea)
         {
-            // »ñÈ¡ÎïÆ·µÄÊµ¼ÊÃû³Æ£¨È·±£Ê¹ÓÃÕıÈ·µÄÊôĞÔ£©
+            // è·å–ç‰©å“çš„å®é™…åç§°ï¼ˆç¡®ä¿ä½¿ç”¨æ­£ç¡®çš„å±æ€§ï¼‰
             string itemName = item.itemData.IDName;
 
-            // ¼ì²éÃû³ÆÊÇ·ñÔÚÄ¿±êÁĞ±íÖĞ£¨²»Çø·Ö´óĞ¡Ğ´Æ¥Åä£©
+            // æ£€æŸ¥åç§°æ˜¯å¦åœ¨ç›®æ ‡åˆ—è¡¨ä¸­ï¼ˆä¸åŒºåˆ†å¤§å°å†™åŒ¹é…ï¼‰
             if (searchNames.Contains(itemName))
             {
-                // Èç¹ûĞèÒªÉèÖÃÒÆ¶¯Ä¿±ê
+                // å¦‚æœéœ€è¦è®¾ç½®ç§»åŠ¨ç›®æ ‡
                 if (setMoveTarget)
                 {
                     context.mover.TargetPosition = item.transform.position;
                 }
-                // Á¢¼´·µ»Ø³É¹¦
+                // ç«‹å³è¿”å›æˆåŠŸ
                 return State.Success;
             }
         }
 
-        // Ñ­»·½áÊøÎ´ÕÒµ½Æ¥ÅäÏî
+        // å¾ªç¯ç»“æŸæœªæ‰¾åˆ°åŒ¹é…é¡¹
         return State.Failure;
     }
 }

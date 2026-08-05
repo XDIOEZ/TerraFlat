@@ -15,68 +15,68 @@ using Newtonsoft.Json;
 using FastCloner.Code;
 
 
-[MemoryPackUnion(4, typeof(Data_GeneralItem))]//Í¨ÓÃÎïÆ·Êı¾İ
-[MemoryPackUnion(6, typeof(Data_Player))]//Íæ¼ÒÊı¾İ
-[MemoryPackUnion(8, typeof(Data_TileMap))]//ÍßÆ¬µØÍ¼Êı¾İ
-[MemoryPackUnion(9, typeof(BlockData))]//ÍßÆ¬µØÍ¼Êı¾İ
+[MemoryPackUnion(4, typeof(Data_GeneralItem))]//é€šç”¨ç‰©å“æ•°æ®
+[MemoryPackUnion(6, typeof(Data_Player))]//ç©å®¶æ•°æ®
+[MemoryPackUnion(8, typeof(Data_TileMap))]//ç“¦ç‰‡åœ°å›¾æ•°æ®
+[MemoryPackUnion(9, typeof(BlockData))]//ç“¦ç‰‡åœ°å›¾æ•°æ®
 
 
 [MemoryPackable]
 [System.Serializable]
 public abstract partial class ItemData
 {
-    [Tooltip("ÎïÆ·Ãû³Æ")]
+    [Tooltip("ç‰©å“åç§°")]
     public string IDName;
 
-    [Tooltip("ÎïÆ·Ãû³Æ")]
+    [Tooltip("ç‰©å“åç§°")]
     public string GameName;
 
-    [Tooltip("ÎïÆ·ÃèÊö")]
+    [Tooltip("ç‰©å“æè¿°")]
     [TextArea]
     [MemoryPackIgnore]
     [JsonIgnore]
     [FastClonerIgnore]
-    public string Description = "Ê²Ã´¶¼Ã»ÓĞÃèÊö";
+    public string Description = "ä»€ä¹ˆéƒ½æ²¡æœ‰æè¿°";
 
-    [Tooltip("ÎïÆ·ÄÍ¾Ã¶È")]
+    [Tooltip("ç‰©å“è€ä¹…åº¦")]
     public float Durability = 1;
 
-    [Tooltip("ÎïÆ·ÄÍ¾Ã¶È")]
+    [Tooltip("ç‰©å“è€ä¹…åº¦")]
     public float MaxDurability = 1;
 
-    [Tooltip("ĞÂ°æTagÏµÍ³_ÊÊÅäĞÂ°æºÏ³É±í")]
+    [Tooltip("æ–°ç‰ˆTagç³»ç»Ÿ_é€‚é…æ–°ç‰ˆåˆæˆè¡¨")]
     public List<string> Tags = new();
 
-    [Tooltip("ÎïÆ·¶ÑµşĞÅÏ¢")]
+    [Tooltip("ç‰©å“å †å ä¿¡æ¯")]
     public ItemStack Stack;
 
-    [Tooltip("ÎïÆ·Ëõ·Å")]
+    [Tooltip("ç‰©å“ç¼©æ”¾")]
     public ItemTransform transform = new();
 
-    [Tooltip("ÎïÆ·ÌØÊâÊı¾İ")]
+    [Tooltip("ç‰©å“ç‰¹æ®Šæ•°æ®")]
     public string ItemSpecialData;
 
-    [Tooltip("´ËÎïÆ·ÊÇ·ñÔÚÊÖÉÏ?")]
+    [Tooltip("æ­¤ç‰©å“æ˜¯å¦åœ¨æ‰‹ä¸Š?")]
     public bool inHand = false;
 
-    [Tooltip("È«¾ÖÎ¨Ò»±êÊ¶")]
+    [Tooltip("å…¨å±€å”¯ä¸€æ ‡è¯†")]
     public int Guid;
     [ShowInInspector]
     public Dictionary<string, ModuleData> ModuleDataDic = new();
 
-    //ÖØĞ´ToString·½·¨£¬ÓÃÓÚÔÚ¿ØÖÆÌ¨Êä³öÎïÆ·ĞÅÏ¢
+    //é‡å†™ToStringæ–¹æ³•ï¼Œç”¨äºåœ¨æ§åˆ¶å°è¾“å‡ºç‰©å“ä¿¡æ¯
     public override string ToString()
     {
         string str =
-            $"ÎïÆ·Ãû³Æ£º{IDName}\n" +
-            $"ÎïÆ·ÃèÊö£º{Description}\n" +
-            $"ÎïÆ·Ìå»ı£º{Stack.Volume}\n" +
-            $"ÎïÆ·ÄÍ¾Ã¶È£º{Durability}\n" +
-            $"ÊÇ·ñ¿ÉÊ°È¡£º{Stack.CanBePickedUp}\n" +
-            $"ÎïÆ·±êÇ©£º{string.Join(", ", Tags)}\n" +
-            $"ÎïÆ·¶ÑµşĞÅÏ¢£º{Stack}\n" +
-            $"ÎïÆ·ÌØÊâÊı¾İ£º{ItemSpecialData}\n" +
-            $"È«¾ÖÎ¨Ò»±êÊ¶£º{Guid}";
+            $"ç‰©å“åç§°ï¼š{IDName}\n" +
+            $"ç‰©å“æè¿°ï¼š{Description}\n" +
+            $"ç‰©å“ä½“ç§¯ï¼š{Stack.Volume}\n" +
+            $"ç‰©å“è€ä¹…åº¦ï¼š{Durability}\n" +
+            $"æ˜¯å¦å¯æ‹¾å–ï¼š{Stack.CanBePickedUp}\n" +
+            $"ç‰©å“æ ‡ç­¾ï¼š{string.Join(", ", Tags)}\n" +
+            $"ç‰©å“å †å ä¿¡æ¯ï¼š{Stack}\n" +
+            $"ç‰©å“ç‰¹æ®Šæ•°æ®ï¼š{ItemSpecialData}\n" +
+            $"å…¨å±€å”¯ä¸€æ ‡è¯†ï¼š{Guid}";
         return str;
     }
 
@@ -94,7 +94,7 @@ public abstract partial class ItemData
                 return item;
             }
         }
-        Debug.LogError($"Ã»ÓĞÕÒµ½¶ÔÓ¦µÄÄ£¿é({moduleID})Êı¾İ!,¼ì²âItemDataÖĞµÄModsÊÇ·ñ±»³õÊ¼»¯,¼ì²émodÊÇ·ñ±»Save");
+        Debug.LogError($"æ²¡æœ‰æ‰¾åˆ°å¯¹åº”çš„æ¨¡å—({moduleID})æ•°æ®!,æ£€æµ‹ItemDataä¸­çš„Modsæ˜¯å¦è¢«åˆå§‹åŒ–,æ£€æŸ¥modæ˜¯å¦è¢«Save");
         return null;
     }
 

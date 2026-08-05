@@ -10,18 +10,18 @@ using System.Linq;
 [Serializable]
 public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
 {
-    #region ×Ö¶ÎºÍÊôĞÔ
-    public string path = "Assets/_Data/Æ½Ì¹ÊÀ½ç- ÉúÎï¼°ÎïÆ·Êı¾İ.xlsx";
+    #region å­—æ®µå’Œå±æ€§
+    public string path = "Assets/_Data/å¹³å¦ä¸–ç•Œ- ç”Ÿç‰©åŠç‰©å“æ•°æ®.xlsx";
     public string OpenSheetName = "Sheet1";
     private IWorkbook workbook;
     private ISheet worksheet;
     public List<string> SheetNames;
-    public DateTime _lastKnownModifiedTime; // ¼ÇÂ¼ÎÄ¼ş×îºóÒ»´Î¼ÓÔØÊ±µÄĞŞ¸ÄÊ±¼ä
+    public DateTime _lastKnownModifiedTime; // è®°å½•æ–‡ä»¶æœ€åä¸€æ¬¡åŠ è½½æ—¶çš„ä¿®æ”¹æ—¶é—´
     #endregion
 
-    #region ³õÊ¼»¯Óë¼ÓÔØ
+    #region åˆå§‹åŒ–ä¸åŠ è½½
     /// <summary>
-    /// UnityÆô¶¯Ê±¼ÓÔØ Excel ²¢Ñ¡Ôñ¹¤×÷±í
+    /// Unityå¯åŠ¨æ—¶åŠ è½½ Excel å¹¶é€‰æ‹©å·¥ä½œè¡¨
     /// </summary>
     public void Start()
     {
@@ -32,14 +32,14 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
         _lastKnownModifiedTime = File.GetLastWriteTime(path);
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException("Excel ÎÄ¼şÎ´ÕÒµ½: " + path);
+            throw new FileNotFoundException("Excel æ–‡ä»¶æœªæ‰¾åˆ°: " + path);
         }
         using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
         {
             if (Path.GetExtension(path) == ".xls")
-                workbook = new HSSFWorkbook(fs); // ¾É°æ Excel (.xls)
+                workbook = new HSSFWorkbook(fs); // æ—§ç‰ˆ Excel (.xls)
             else
-                workbook = new XSSFWorkbook(fs); // ĞÂ°æ Excel (.xlsx)
+                workbook = new XSSFWorkbook(fs); // æ–°ç‰ˆ Excel (.xlsx)
         }
     }
 
@@ -58,7 +58,7 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
     }
     #endregion
 
-    #region ¹¤×÷±í²Ù×÷
+    #region å·¥ä½œè¡¨æ“ä½œ
     public ISheet Worksheet
     {
         get
@@ -90,13 +90,13 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
         Worksheet = workbook.GetSheet(sheetName);
         if (Worksheet == null)
         {
-            print("Î´ÕÒµ½¹¤×÷±í: " + sheetName);
+            print("æœªæ‰¾åˆ°å·¥ä½œè¡¨: " + sheetName);
             return;
         }
     }
     #endregion
 
-    #region Êı¾İ·ÃÎÊ·½·¨
+    #region æ•°æ®è®¿é—®æ–¹æ³•
     public T GetConvertedValue<T>(string columnName, int rowIndex, T defaultValue = default)
     {
         int columnIndex = FindColumn(0, columnName);
@@ -112,7 +112,7 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
             else if (typeof(T) == typeof(string))
                 return (T)(object)cellValue.ToString();
             else
-                throw new ArgumentException($"²»Ö§³ÖµÄÀàĞÍ£º{typeof(T).Name}");
+                throw new ArgumentException($"ä¸æ”¯æŒçš„ç±»å‹ï¼š{typeof(T).Name}");
         }
         catch
         {
@@ -150,7 +150,7 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
     }
     #endregion
 
-    #region ²éÕÒ¹¦ÄÜ
+    #region æŸ¥æ‰¾åŠŸèƒ½
     public int FindColumn(int row, string value)
     {
         if (row < 0)
@@ -174,7 +174,7 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
         {
             return -1;
         }
-           // throw new ArgumentException("ÁĞË÷Òı±ØĞë >= 0");
+           // throw new ArgumentException("åˆ—ç´¢å¼•å¿…é¡» >= 0");
         for (int row = 0; row <= Worksheet.LastRowNum; row++)
         {
             IRow sheetRow = Worksheet.GetRow(row);
@@ -206,7 +206,7 @@ public class m_ExcelManager : SingletonAutoMono<m_ExcelManager>
     }
     #endregion
 
-    #region ¹¤¾ß·½·¨
+    #region å·¥å…·æ–¹æ³•
     public List<LootData> Parse(string rawLootString)
     {
         var list = new List<LootData>();

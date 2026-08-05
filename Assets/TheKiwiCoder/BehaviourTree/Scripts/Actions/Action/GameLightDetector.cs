@@ -4,13 +4,13 @@ using UnityEngine;
 using TheKiwiCoder;
 using Sirenix.OdinInspector;
 
-[NodeMenu("ActionNode/ÊÀ½ç/¼ì²âÓÎÏ·Ê±¼ä")]
+[NodeMenu("ActionNode/ä¸–ç•Œ/æ£€æµ‹æ¸¸æˆæ—¶é—´")]
 public class GameLightDetector : ActionNode
 {
-    [Tooltip("´¥·¢Ë¯ÃßµÄÌ«Ñô¹âÕÕÇ¿¶ÈãĞÖµ")]
+    [Tooltip("è§¦å‘ç¡çœ çš„å¤ªé˜³å…‰ç…§å¼ºåº¦é˜ˆå€¼")]
     public Vector2 SunlightIntensityThreshold = new Vector2();
 
-    [Tooltip("µ±Ç°Ì«Ñô¹âÕÕÇ¿¶È"), ReadOnly, ShowInInspector]
+    [Tooltip("å½“å‰å¤ªé˜³å…‰ç…§å¼ºåº¦"), ReadOnly, ShowInInspector]
     public float CurrentSunLightIntensity = 0;
 
     protected override void OnStart() {

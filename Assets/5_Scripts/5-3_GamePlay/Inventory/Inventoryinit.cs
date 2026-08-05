@@ -11,27 +11,27 @@ public class Inventoryinit : ScriptableObject
 
 public void InjectRandomItemsToInventory(Inventory targetInventory)
 {
-    // ¼ì²éÊÇ·ñÒÑ¾­×¢Èë¹ı£¬Èç¹ûÒÑ¾­×¢ÈëÔòÈ¡ÏûĞĞÎª
+    // æ£€æŸ¥æ˜¯å¦å·²ç»æ³¨å…¥è¿‡ï¼Œå¦‚æœå·²ç»æ³¨å…¥åˆ™å–æ¶ˆè¡Œä¸º
     if (targetInventory.Data.IsInjected)
         return;
 
     if (items == null || items.Count == 0)
         return;
 
-    // ÊÕ¼¯ËùÓĞÓĞĞ§µÄÕ½ÀûÆ·ÌõÄ¿
+    // æ”¶é›†æ‰€æœ‰æœ‰æ•ˆçš„æˆ˜åˆ©å“æ¡ç›®
     List<GameObject> validPrefabs = new List<GameObject>();
     List<int> validCounts = new List<int>();
     
     foreach (var lootEntry in items)
     {
-        // ¸ù¾İµôÂä¸ÅÂÊ¾ö¶¨ÊÇ·ñÌí¼Ó¸ÃÎïÆ·
+        // æ ¹æ®æ‰è½æ¦‚ç‡å†³å®šæ˜¯å¦æ·»åŠ è¯¥ç‰©å“
         if (Random.value <= lootEntry.DropChance)
         {
-            // »ñÈ¡Ô¤ÖÆÌå
+            // è·å–é¢„åˆ¶ä½“
             GameObject prefab = GetPrefabFromLootEntry(lootEntry);
             if (prefab != null)
             {
-                // Ëæ»úÉú³ÉÊıÁ¿£¨ÔÚ×îĞ¡ºÍ×î´óÊıÁ¿Ö®¼ä£©
+                // éšæœºç”Ÿæˆæ•°é‡ï¼ˆåœ¨æœ€å°å’Œæœ€å¤§æ•°é‡ä¹‹é—´ï¼‰
                 int count = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
                 if (count > 0)
                 {
@@ -44,23 +44,23 @@ public void InjectRandomItemsToInventory(Inventory targetInventory)
     
     if (validPrefabs.Count > 0)
     {
-        // Ê¹ÓÃËæ»ú×¢Èë·½·¨½«ËùÓĞÎïÆ·×¢Èë
+        // ä½¿ç”¨éšæœºæ³¨å…¥æ–¹æ³•å°†æ‰€æœ‰ç‰©å“æ³¨å…¥
         targetInventory.RandomOrderAutoInjectItemDataList(validPrefabs, validCounts);
-        // ±ê¼ÇÎªÒÑ×¢Èë
+        // æ ‡è®°ä¸ºå·²æ³¨å…¥
         targetInventory.Data.IsInjected = true;
     }
 }
     
-    // ´ÓLootEntry»ñÈ¡Ô¤ÖÆÌåµÄ¸¨Öú·½·¨
+    // ä»LootEntryè·å–é¢„åˆ¶ä½“çš„è¾…åŠ©æ–¹æ³•
     private GameObject GetPrefabFromLootEntry(LootEntry lootEntry)
     {
-        // ÓÅÏÈÊ¹ÓÃLootEntryÖĞµÄGameObjectÒıÓÃ
+        // ä¼˜å…ˆä½¿ç”¨LootEntryä¸­çš„GameObjectå¼•ç”¨
         if (lootEntry.LootPrefab != null)
         {
             return lootEntry.LootPrefab;
         }
         
-        // Èç¹ûÃ»ÓĞÖ±½ÓÒıÓÃ£¬³¢ÊÔÍ¨¹ıÃû³Æ»ñÈ¡Ô¤ÖÆÌå
+        // å¦‚æœæ²¡æœ‰ç›´æ¥å¼•ç”¨ï¼Œå°è¯•é€šè¿‡åç§°è·å–é¢„åˆ¶ä½“
         if (!string.IsNullOrEmpty(lootEntry.LootPrefabName))
         {
             return GameRes.Instance.GetPrefab(lootEntry.LootPrefabName);
@@ -69,14 +69,14 @@ public void InjectRandomItemsToInventory(Inventory targetInventory)
         return null;
     }
     
-    // ÔÚ±à¼­Æ÷ÖĞÑéÖ¤Ê±×Ô¶¯Í¬²½PrefabĞÅÏ¢
+    // åœ¨ç¼–è¾‘å™¨ä¸­éªŒè¯æ—¶è‡ªåŠ¨åŒæ­¥Prefabä¿¡æ¯
     private void OnValidate()
     {
         if (items != null)
         {
             foreach (var lootEntry in items)
             {
-                // µ÷ÓÃLootEntryµÄ¸üĞÂ·½·¨Í¬²½PrefabÃû³Æ
+                // è°ƒç”¨LootEntryçš„æ›´æ–°æ–¹æ³•åŒæ­¥Prefabåç§°
                 lootEntry.OnValidate();
             }
         }

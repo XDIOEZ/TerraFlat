@@ -8,28 +8,28 @@ using UnityEngine.SceneManagement;
 [System.Serializable]
 public partial class GameSaveData
 {
-    // ===== »ù´¡´æµµĞÅÏ¢ =====
-    [Tooltip("µ±Ç°¼ÓÔØ×ÅµÄ´æµµÃû³Æ")]
+    // ===== åŸºç¡€å­˜æ¡£ä¿¡æ¯ =====
+    [Tooltip("å½“å‰åŠ è½½ç€çš„å­˜æ¡£åç§°")]
     public string saveName = "defaultSaveName";
 
-    [Tooltip("´æµµÖÖ×Ó£¨×Ö·û´®°æ±¾£©")]
+    [Tooltip("å­˜æ¡£ç§å­ï¼ˆå­—ç¬¦ä¸²ç‰ˆæœ¬ï¼‰")]
     public string SaveSeed = "0";
 
-    [Tooltip("´æµµËæ»úÖÖ×Ó£¨ÕûÊı°æ±¾£©")]
+    [Tooltip("å­˜æ¡£éšæœºç§å­ï¼ˆæ•´æ•°ç‰ˆæœ¬ï¼‰")]
     public int Seed;
 
-    [Tooltip("ÀÛ¼ÆÓÎÏ·Ê±¼ä")]
+    [Tooltip("ç´¯è®¡æ¸¸æˆæ—¶é—´")]
     public float Time = 0;
 
-    [Tooltip("Ê±¼äÁ÷ËÙ£¨Ã¿ÃëÁ÷ÊÅ¶àÉÙÓÎÏ·Ê±¼ä£©")]
+    [Tooltip("æ—¶é—´æµé€Ÿï¼ˆæ¯ç§’æµé€å¤šå°‘æ¸¸æˆæ—¶é—´ï¼‰")]
     public float TimeSpeed = 1f;
 
 
-    // ===== Íæ¼ÒÏà¹Ø =====
+    // ===== ç©å®¶ç›¸å…³ =====
     [ShowInInspector]
     public Dictionary<string, Data_Player> PlayerData_Dict = new();
 
-    // ===== ĞÇÇòÊı¾İ =====
+    // ===== æ˜Ÿçƒæ•°æ® =====
     [ShowInInspector]
     public Dictionary<string, PlanetData> PlanetData_Dict = new();
     [ShowInInspector]
@@ -51,7 +51,7 @@ public partial class GameSaveData
         }
     }
 
-    // ===== ¹¹Ôìº¯Êı =====
+    // ===== æ„é€ å‡½æ•° =====
     public GameSaveData()
     {
         PlayerData_Dict = new Dictionary<string, Data_Player>();

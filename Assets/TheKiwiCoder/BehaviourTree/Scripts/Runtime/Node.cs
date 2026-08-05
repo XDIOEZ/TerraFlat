@@ -23,7 +23,7 @@ namespace TheKiwiCoder
         [TextArea] public string description;
         public bool drawGizmos = false;
 
-        // ĞÂÔö×Ö¶Î£ºÓÃÓÚ±£´æ½ÚµãÊÇ·ñÕÛµş
+        // æ–°å¢å­—æ®µï¼šç”¨äºä¿å­˜èŠ‚ç‚¹æ˜¯å¦æŠ˜å 
 
 
 

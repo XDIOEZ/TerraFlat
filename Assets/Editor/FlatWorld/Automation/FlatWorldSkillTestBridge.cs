@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
@@ -18,7 +19,9 @@ namespace FlatWorld.Automation
         private const string TestAssembly = "FlatWorld.GameTest";
         private const string RequestPrefix = "request-";
         private const string RunningPrefix = "running-";
+        private const string PendingPrefix = "pending-";
         private const string ResultPrefix = "result-";
+        private const string IsolationSnapshotPrefix = "isolation-";
         private const double PollIntervalSeconds = 0.25d;
 
         private static readonly string[] VolatilePlayModeAssetPaths =
@@ -40,11 +43,15 @@ namespace FlatWorld.Automation
         private static TestResponse _pendingResponse;
         private static double _finalizeNotBefore;
 
+        private static readonly MethodInfo IsTestRunActiveMethod = typeof(TestRunnerApi).GetMethod(
+            "IsRunActive",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
         static FlatWorldSkillTestBridge()
         {
             Directory.CreateDirectory(RequestDirectory);
-            RecoverOrphanedRequests();
             EditorApplication.update += Poll;
+            EditorApplication.delayCall += RecoverOrphanedRequests;
         }
 
         private static void Poll()
@@ -53,6 +60,7 @@ namespace FlatWorld.Automation
             {
                 if (!EditorApplication.isPlayingOrWillChangePlaymode &&
                     !EditorApplication.isCompiling &&
+                    !IsUnityTestRunActive() &&
                     EditorApplication.timeSinceStartup >= _finalizeNotBefore)
                 {
                     FinalizePendingRun();
@@ -71,6 +79,12 @@ namespace FlatWorld.Automation
                 .OrderBy(File.GetCreationTimeUtc)
                 .FirstOrDefault();
             if (requestPath == null)
+                return;
+
+            // AI 可能在 Editor 失焦或关闭 Auto Refresh 时修改了生产代码或测试。
+            // 在接管请求前同步导入并编译；若触发 Domain Reload，请求仍保留给新 Domain。
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
                 return;
 
             string fileName = Path.GetFileNameWithoutExtension(requestPath);
@@ -107,13 +121,80 @@ namespace FlatWorld.Automation
 
         private static void RecoverOrphanedRequests()
         {
-            foreach (string runningPath in Directory.GetFiles(RequestDirectory, RunningPrefix + "*.json"))
+            string[] runningPaths = Directory.GetFiles(RequestDirectory, RunningPrefix + "*.json");
+            if (runningPaths.Length == 0)
+                return;
+
+            if (runningPaths.Length > 1)
             {
-                string fileName = Path.GetFileNameWithoutExtension(runningPath);
-                string id = fileName.Substring(RunningPrefix.Length);
-                WriteImmediateError(id, runningPath,
-                    "The Unity domain reloaded before the test run returned a result. Run the request again.");
+                foreach (string orphanedPath in runningPaths)
+                {
+                    string orphanedId = GetRequestId(orphanedPath, RunningPrefix);
+                    WriteImmediateError(
+                        orphanedId,
+                        orphanedPath,
+                        "Multiple unfinished test requests were found after a Unity domain reload.");
+                }
+                return;
             }
+
+            string runningPath = runningPaths[0];
+            string id = GetRequestId(runningPath, RunningPrefix);
+            try
+            {
+                TestRequest request = JsonUtility.FromJson<TestRequest>(File.ReadAllText(runningPath));
+                ValidateRequest(id, request);
+                RestoreActiveRequestState(id, runningPath, request);
+
+                string pendingPath = GetRequestPath(PendingPrefix, id);
+                if (File.Exists(pendingPath))
+                {
+                    TestResponse response = JsonUtility.FromJson<TestResponse>(File.ReadAllText(pendingPath));
+                    if (response == null || !string.Equals(response.id, id, StringComparison.Ordinal))
+                        throw new InvalidDataException("The pending test result is empty or has the wrong request ID.");
+
+                    _pendingResponse = response;
+                    _finalizeNotBefore = EditorApplication.timeSinceStartup + 1d;
+                    Debug.Log($"[FlatWorldSkillTestBridge] Recovered completed request {id} after domain reload.");
+                    return;
+                }
+
+                if (!IsUnityTestRunActive() && !EditorApplication.isPlayingOrWillChangePlaymode)
+                {
+                    WriteImmediateError(
+                        id,
+                        runningPath,
+                        "The Unity domain reloaded, but no active test run or pending result could be recovered.");
+                    return;
+                }
+
+                AttachCallbacksToActiveRun();
+                Debug.Log($"[FlatWorldSkillTestBridge] Reattached request {id} after domain reload.");
+            }
+            catch (Exception exception)
+            {
+                WriteImmediateError(id, runningPath, $"Failed to recover test request: {exception.Message}");
+            }
+        }
+
+        private static void RestoreActiveRequestState(
+            string id,
+            string runningPath,
+            TestRequest request)
+        {
+            _activeId = id;
+            _activeRunningPath = runningPath;
+            _activeRequest = request;
+            _activeStartedUtc = DateTime.TryParse(request.createdUtc, out DateTime createdUtc)
+                ? createdUtc.ToUniversalTime()
+                : DateTime.UtcNow;
+        }
+
+        private static void AttachCallbacksToActiveRun()
+        {
+            _callbacks = new TestCallbacks();
+            _testRunnerApi = ScriptableObject.CreateInstance<TestRunnerApi>();
+            _testRunnerApi.RegisterCallbacks(_callbacks, 100);
         }
 
         private static void ValidateRequest(string fileId, TestRequest request)
@@ -137,9 +218,6 @@ namespace FlatWorld.Automation
                 ? TestMode.PlayMode
                 : TestMode.EditMode;
 
-            if (mode == TestMode.PlayMode)
-                PreparePlayModeIsolation();
-
             var filter = new Filter
             {
                 testMode = mode,
@@ -150,13 +228,12 @@ namespace FlatWorld.Automation
 
             try
             {
-                _activeId = id;
-                _activeRunningPath = runningPath;
-                _activeRequest = request;
+                RestoreActiveRequestState(id, runningPath, request);
                 _activeStartedUtc = DateTime.UtcNow;
-                _callbacks = new TestCallbacks();
-                _testRunnerApi = ScriptableObject.CreateInstance<TestRunnerApi>();
-                _testRunnerApi.RegisterCallbacks(_callbacks, 100);
+                if (mode == TestMode.PlayMode)
+                    PreparePlayModeIsolation(id);
+
+                AttachCallbacksToActiveRun();
                 _testRunnerApi.Execute(new ExecutionSettings(filter));
             }
             catch
@@ -169,39 +246,68 @@ namespace FlatWorld.Automation
                       $"categories=[{string.Join(", ", categories)}]; tests=[{string.Join(", ", testNames)}]");
         }
 
-        private static void PreparePlayModeIsolation()
+        private static bool IsUnityTestRunActive()
         {
-            _volatileAssetSnapshots = new Dictionary<string, byte[]>(StringComparer.Ordinal);
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            foreach (string assetPath in VolatilePlayModeAssetPaths)
+            if (IsTestRunActiveMethod == null)
+                return true;
+
+            try
             {
-                string fullPath = Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar));
-                if (File.Exists(fullPath))
-                    _volatileAssetSnapshots[assetPath] = File.ReadAllBytes(fullPath);
+                return IsTestRunActiveMethod.Invoke(null, null) is true;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                return true;
             }
         }
 
-        private static void RestorePlayModeIsolation()
+        private static void PreparePlayModeIsolation(string requestId)
+        {
+            _volatileAssetSnapshots = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            for (int i = 0; i < VolatilePlayModeAssetPaths.Length; i++)
+            {
+                string assetPath = VolatilePlayModeAssetPaths[i];
+                string fullPath = Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(fullPath))
+                {
+                    byte[] snapshot = File.ReadAllBytes(fullPath);
+                    _volatileAssetSnapshots[assetPath] = snapshot;
+                    File.WriteAllBytes(GetIsolationSnapshotPath(requestId, i), snapshot);
+                }
+            }
+        }
+
+        private static void RestorePlayModeIsolation(string requestId = null)
         {
             Exception restoreError = null;
             try
             {
-                if (_volatileAssetSnapshots != null)
+                string resolvedRequestId = string.IsNullOrWhiteSpace(requestId) ? _activeId : requestId;
+                var snapshots = _volatileAssetSnapshots ??
+                                new Dictionary<string, byte[]>(StringComparer.Ordinal);
+                for (int i = 0; i < VolatilePlayModeAssetPaths.Length; i++)
                 {
-                    string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-                    foreach (KeyValuePair<string, byte[]> snapshot in _volatileAssetSnapshots)
-                    {
-                        string fullPath = Path.Combine(projectRoot,
-                            snapshot.Key.Replace('/', Path.DirectorySeparatorChar));
-                        byte[] current = File.Exists(fullPath)
-                            ? File.ReadAllBytes(fullPath)
-                            : Array.Empty<byte>();
-                        if (current.SequenceEqual(snapshot.Value))
-                            continue;
+                    string assetPath = VolatilePlayModeAssetPaths[i];
+                    string snapshotPath = GetIsolationSnapshotPath(resolvedRequestId, i);
+                    if (!snapshots.ContainsKey(assetPath) && File.Exists(snapshotPath))
+                        snapshots[assetPath] = File.ReadAllBytes(snapshotPath);
+                }
 
-                        File.WriteAllBytes(fullPath, snapshot.Value);
-                        AssetDatabase.ImportAsset(snapshot.Key, ImportAssetOptions.ForceUpdate);
-                    }
+                string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                foreach (KeyValuePair<string, byte[]> snapshot in snapshots)
+                {
+                    string fullPath = Path.Combine(projectRoot,
+                        snapshot.Key.Replace('/', Path.DirectorySeparatorChar));
+                    byte[] current = File.Exists(fullPath)
+                        ? File.ReadAllBytes(fullPath)
+                        : Array.Empty<byte>();
+                    if (current.SequenceEqual(snapshot.Value))
+                        continue;
+
+                    File.WriteAllBytes(fullPath, snapshot.Value);
+                    AssetDatabase.ImportAsset(snapshot.Key, ImportAssetOptions.ForceUpdate);
                 }
             }
             catch (Exception exception)
@@ -211,6 +317,7 @@ namespace FlatWorld.Automation
             finally
             {
                 _volatileAssetSnapshots = null;
+                DeleteIsolationSnapshots(requestId ?? _activeId);
             }
 
             if (restoreError != null)
@@ -227,7 +334,7 @@ namespace FlatWorld.Automation
                     .ToArray();
         }
 
-        private static void FinishRun(ITestResultAdaptor result, List<TestFailure> failures)
+        private static void FinishRun(ITestResultAdaptor result)
         {
             if (_activeId == null)
                 return;
@@ -252,11 +359,14 @@ namespace FlatWorld.Automation
                 failed = failed,
                 skipped = skipped,
                 inconclusive = inconclusive,
-                failures = failures ?? new List<TestFailure>(),
+                failures = CollectFailures(result),
                 message = result?.Message ?? ""
             };
 
             _pendingResponse = response;
+            AtomicWrite(
+                GetRequestPath(PendingPrefix, _activeId),
+                JsonUtility.ToJson(response, true));
             bool playModeRun = string.Equals(_activeRequest?.mode, "PlayMode", StringComparison.OrdinalIgnoreCase);
             _finalizeNotBefore = EditorApplication.timeSinceStartup + (playModeRun ? 1d : 0d);
             if (!EditorApplication.isPlayingOrWillChangePlaymode && !playModeRun)
@@ -271,7 +381,7 @@ namespace FlatWorld.Automation
 
             try
             {
-                RestorePlayModeIsolation();
+                RestorePlayModeIsolation(response.id);
                 string resultPath = Path.Combine(RequestDirectory, ResultPrefix + response.id + ".json");
                 AtomicWrite(resultPath, JsonUtility.ToJson(response, true));
                 Debug.Log($"[FlatWorldSkillTestBridge] Finished {response.id}: " +
@@ -297,6 +407,15 @@ namespace FlatWorld.Automation
 
         private static void WriteImmediateError(string id, string runningPath, string message)
         {
+            try
+            {
+                RestorePlayModeIsolation(id);
+            }
+            catch (Exception exception)
+            {
+                message = $"{message} Isolation cleanup also failed: {exception.Message}";
+            }
+
             var response = new TestResponse
             {
                 id = id,
@@ -311,8 +430,21 @@ namespace FlatWorld.Automation
             };
             AtomicWrite(Path.Combine(RequestDirectory, ResultPrefix + id + ".json"),
                 JsonUtility.ToJson(response, true));
+            DeleteIfExists(GetRequestPath(PendingPrefix, id));
             DeleteIfExists(runningPath);
             Debug.LogError($"[FlatWorldSkillTestBridge] Request {id} failed: {response.message}");
+
+            if (string.Equals(_activeId, id, StringComparison.Ordinal))
+            {
+                try
+                {
+                    CleanupActiveRun();
+                }
+                catch (Exception cleanupException)
+                {
+                    Debug.LogException(cleanupException);
+                }
+            }
         }
 
         private static void CleanupActiveRun()
@@ -331,12 +463,72 @@ namespace FlatWorld.Automation
 
             if (_testRunnerApi != null)
                 UnityEngine.Object.DestroyImmediate(_testRunnerApi);
+            DeleteIfExists(GetRequestPath(PendingPrefix, _activeId));
             DeleteIfExists(_activeRunningPath);
             _testRunnerApi = null;
             _callbacks = null;
+            _pendingResponse = null;
+            _finalizeNotBefore = 0d;
             _activeRequest = null;
             _activeRunningPath = null;
             _activeId = null;
+        }
+
+        private static List<TestFailure> CollectFailures(ITestResultAdaptor result)
+        {
+            var failures = new List<TestFailure>();
+            CollectFailures(result, failures);
+            return failures;
+        }
+
+        private static void CollectFailures(ITestResultAdaptor result, List<TestFailure> failures)
+        {
+            if (result == null)
+                return;
+
+            if (result.Test != null && !result.Test.IsSuite && result.TestStatus == TestStatus.Failed)
+            {
+                failures.Add(new TestFailure
+                {
+                    fullName = result.FullName,
+                    resultState = result.ResultState,
+                    message = result.Message,
+                    stackTrace = result.StackTrace,
+                    durationSeconds = result.Duration
+                });
+            }
+
+            foreach (ITestResultAdaptor child in result.Children ?? Enumerable.Empty<ITestResultAdaptor>())
+                CollectFailures(child, failures);
+        }
+
+        private static string GetRequestId(string path, string prefix)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(path);
+            return fileName.Substring(prefix.Length);
+        }
+
+        private static string GetRequestPath(string prefix, string id)
+        {
+            return string.IsNullOrWhiteSpace(id)
+                ? null
+                : Path.Combine(RequestDirectory, prefix + id + ".json");
+        }
+
+        private static string GetIsolationSnapshotPath(string requestId, int index)
+        {
+            return string.IsNullOrWhiteSpace(requestId)
+                ? null
+                : Path.Combine(RequestDirectory, $"{IsolationSnapshotPrefix}{requestId}-{index}.bin");
+        }
+
+        private static void DeleteIsolationSnapshots(string requestId)
+        {
+            if (string.IsNullOrWhiteSpace(requestId))
+                return;
+
+            for (int i = 0; i < VolatilePlayModeAssetPaths.Length; i++)
+                DeleteIfExists(GetIsolationSnapshotPath(requestId, i));
         }
 
         private static void AtomicWrite(string path, string contents)
@@ -396,15 +588,13 @@ namespace FlatWorld.Automation
 
         private sealed class TestCallbacks : ICallbacks
         {
-            private readonly List<TestFailure> _failures = new();
-
             public void RunStarted(ITestAdaptor testsToRun)
             {
             }
 
             public void RunFinished(ITestResultAdaptor result)
             {
-                FinishRun(result, _failures);
+                FinishRun(result);
             }
 
             public void TestStarted(ITestAdaptor test)
@@ -413,17 +603,6 @@ namespace FlatWorld.Automation
 
             public void TestFinished(ITestResultAdaptor result)
             {
-                if (result?.Test == null || result.Test.IsSuite || result.TestStatus != TestStatus.Failed)
-                    return;
-
-                _failures.Add(new TestFailure
-                {
-                    fullName = result.FullName,
-                    resultState = result.ResultState,
-                    message = result.Message,
-                    stackTrace = result.StackTrace,
-                    durationSeconds = result.Duration
-                });
             }
         }
     }

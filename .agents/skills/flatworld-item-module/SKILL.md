@@ -57,6 +57,7 @@ ItemMaker / ItemMgr 实例化
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
 - 2026-08-05：`Data_TileMap` 改为 MemoryPack 持久化 `TileStackCell[,]`，继续保持 ItemData 联合序列化身份；环境初始化收敛为五张网格，生产环境系数统一读取降水，`ItemModule.Smoke` 覆盖新栈往返与初始化契约。
+- 2026-08-04：`Module.CanonicalModuleId` 统一模板、存档与运行时索引使用的模块 ID；`Item.ModuleLoad()` 会按旧 ID/Prefab 子物体名匹配后迁移为规范 ID，`GameRes` 为独立模块 Prefab 注册规范 ID 与旧序列化 ID 别名。`ItemDefinitionRuntime` 在实例化独立模块前也必须按规范 ID、旧 ID、子物体名和组件类型复用共享外壳中的模块，避免把内置的 `Mod_Weapon_AnimationAction` 误判为缺失。
 - 2026-08-04：`Item.ModuleLoad()` 先按持久化 ID 匹配模块；旧实体 Prefab 的运行时模块若使用通用 ID，则回退按子物体名或组件类型匹配，避免将内嵌 AI/动画模块误判为缺失并错误实例化独立 Prefab。无法恢复的模块必须记录明确错误并跳过，禁止解引用空对象。
 - 2026-08-03：`Item.Get_NewItemData()` 的 Prefab 模板提取只复制静态 Item/ModuleData，不执行 Item 或 Module 的 `Load/Save`；空模块 ID 会按模块物体名补齐，`GameRes` 以请求 ID 固化新数据，`ItemMgr` 在进入任何字典前拒绝空 `IDName`。
 - 2026-07-30：农业模块边界收敛；`Mod_Seed` 的低频 Tick 仅迁移旧落地种子，`Mod_Grow` 低频 Tick 成为唯一作物成长与成熟状态机，`Mod_FarmlandSupply` 为休眠模块且仅响应物品使用事件；`Item.ModuleLoad()` 会先清理 Apple/AppleTree 的废弃农业模块数据再执行缺失模块自动修复。
@@ -85,7 +86,7 @@ ItemMaker / ItemMgr 实例化
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`；当前基础覆盖ItemMgr、Item、Module 与 Item/Module Prefab 入口。
+- 基础测试脚本：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`；当前基础覆盖 ItemMgr、Item、Module、Item/Module Prefab 入口，以及 JSON 物品定义复用共享外壳模块的 ID/类型别名。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；Item/Module 测试约定目录：`Assets/GameTest/ItemModule/`；场景目录：`Assets/GameTest/Scenes/ItemModule/`；冒烟分类：`ItemModule.Smoke`。
 - 新增实体创建销毁、模块加载保存、Tick 调度、对象池或运行时注册行为时必须增加系统测试；修复 Bug 时先增加回归测试。Item 完整生命周期变化时同步更新冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试结束必须验证注册表、调度器、空间索引和对象池不存在残留引用。

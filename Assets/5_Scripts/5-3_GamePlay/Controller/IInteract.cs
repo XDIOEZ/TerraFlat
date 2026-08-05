@@ -1,8 +1,8 @@
-// ¶¨Òå IInteract ½Ó¿Ú£¬°üº¬Ò»¸ö½»»¥·½·¨
+// å®šä¹‰ IInteract æ¥å£ï¼ŒåŒ…å«ä¸€ä¸ªäº¤äº’æ–¹æ³•
 public interface IInteract
 {
     void Interact_Start(IInteractor interacter = null);
-    //´¦ÓÚ½»»¥×´Ì¬
+    //å¤„äºäº¤äº’çŠ¶æ€
     void Interact_Update(IInteractor interacter = null);
     void Interact_Cancel(IInteractor interacter = null);
 }

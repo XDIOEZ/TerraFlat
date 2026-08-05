@@ -4881,7 +4881,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -5065,7 +5064,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -5295,7 +5293,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -5479,7 +5476,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -5663,7 +5659,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -5847,7 +5842,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -6032,7 +6026,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -6216,7 +6209,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -6408,7 +6400,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -6631,7 +6622,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -6777,7 +6767,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -6962,7 +6951,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -7155,7 +7143,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -7348,7 +7335,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -7533,7 +7519,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -7718,7 +7703,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
@@ -7903,7 +7887,6 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
-            "showDebugWarnings": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {

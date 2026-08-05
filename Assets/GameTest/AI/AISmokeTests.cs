@@ -152,13 +152,20 @@ namespace FlatWorld.GameTest.AI
             Assert.That(data.ModuleDataDic, Is.Not.Null);
             Assert.That(data.ModuleDataDic, Is.Not.Empty);
             Assert.That(data.ModuleDataDic.Keys, Has.None.Null);
+            var moduleIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (KeyValuePair<string, ModuleData> pair in data.ModuleDataDic)
             {
                 Assert.That(pair.Key, Is.Not.Empty);
                 Assert.That(pair.Value, Is.Not.Null, pair.Key);
                 Assert.That(pair.Value.Name, Is.EqualTo(pair.Key));
                 Assert.That(pair.Value.ID, Is.Not.Null.And.Not.Empty, pair.Key);
+                moduleIds.Add(pair.Value.ID);
             }
+
+            Assert.That(moduleIds, Does.Contain(ModText.Food));
+            Assert.That(moduleIds, Does.Contain(ModText.BuffManager));
+            Assert.That(moduleIds, Does.Not.Contain("Module_Food"));
+            Assert.That(moduleIds, Does.Not.Contain("Buff模块"));
         }
 
         [Test]

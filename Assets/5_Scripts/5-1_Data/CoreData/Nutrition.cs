@@ -7,33 +7,33 @@ using UnityEngine;
 [System.Serializable]
 public partial class Nutrition
 {
-    [Tooltip("Ì¼Ë®»¯ºÏÎï")]
+    [Tooltip("ç¢³æ°´åŒ–åˆç‰©")]
     public float Carbohydrates = 500;
-    [Tooltip("Ì¼Ë®»¯ºÏÎïÈİÄÉÉÏÏŞ£¨ÓÃÓÚ±ÈÀı¼ÆËãºÍ½øÊ³Ô¼Êø£©")]
+    [Tooltip("ç¢³æ°´åŒ–åˆç‰©å®¹çº³ä¸Šé™ï¼ˆç”¨äºæ¯”ä¾‹è®¡ç®—å’Œè¿›é£Ÿçº¦æŸï¼‰")]
     public float Max_Carbohydrates = 500;
 
 
-    [Tooltip("Ö¬·¾")]
+    [Tooltip("è„‚è‚ª")]
     public float Fat = 500;
-    [Tooltip("Ö¬·¾ÈİÄÉÉÏÏŞ£¨ÓÃÓÚ±ÈÀı¼ÆËãºÍ½øÊ³Ô¼Êø£©")]
+    [Tooltip("è„‚è‚ªå®¹çº³ä¸Šé™ï¼ˆç”¨äºæ¯”ä¾‹è®¡ç®—å’Œè¿›é£Ÿçº¦æŸï¼‰")]
     public float Max_Fat = 500;
 
 
-    [Tooltip("µ°°×ÖÊ")]
+    [Tooltip("è›‹ç™½è´¨")]
     public float Protein = 500;
-    [Tooltip("µ°°×ÖÊÈİÄÉÉÏÏŞ£¨ÓÃÓÚ±ÈÀı¼ÆËãºÍ½øÊ³Ô¼Êø£©")]
+    [Tooltip("è›‹ç™½è´¨å®¹çº³ä¸Šé™ï¼ˆç”¨äºæ¯”ä¾‹è®¡ç®—å’Œè¿›é£Ÿçº¦æŸï¼‰")]
     public float Max_Protein = 500;
 
 
-    [Tooltip("Ë®")]
+    [Tooltip("æ°´")]
     public float Water = 500;
-    [Tooltip("Ë®ÈİÄÉÉÏÏŞ£¨ÓÃÓÚ±ÈÀı¼ÆËãºÍ½øÊ³Ô¼Êø£©")]
+    [Tooltip("æ°´å®¹çº³ä¸Šé™ï¼ˆç”¨äºæ¯”ä¾‹è®¡ç®—å’Œè¿›é£Ÿçº¦æŸï¼‰")]
     public float Max_Water = 500;
-    [Tooltip("Î¬ÉúËØ")]
+    [Tooltip("ç»´ç”Ÿç´ ")]
     public float Vitamins = 500;
-    [Tooltip("Î¬ÉúËØÈİÄÉÉÏÏŞ£¨ÓÃÓÚ±ÈÀı¼ÆËãºÍ½øÊ³Ô¼Êø£©")]
+    [Tooltip("ç»´ç”Ÿç´ å®¹çº³ä¸Šé™ï¼ˆç”¨äºæ¯”ä¾‹è®¡ç®—å’Œè¿›é£Ÿçº¦æŸï¼‰")]
     public float Max_Vitamins = 500;
-    //TODO ´´½¨Ò»¸ö·½·¨ ÓÃÓÚ´ÖÂÔµÄ¼ì²â ´¦ÓÚ¼¢¶ö×´Ì¬ µÄ¸ÅÂÊÕ¼±È
+    //TODO åˆ›å»ºä¸€ä¸ªæ–¹æ³• ç”¨äºç²—ç•¥çš„æ£€æµ‹ å¤„äºé¥¥é¥¿çŠ¶æ€ çš„æ¦‚ç‡å æ¯”
     public float GetFoodRate()
     {
         float rate = 0;
@@ -49,7 +49,7 @@ public partial class Nutrition
         return rate;
     }
 
-    //ÖØĞ´+ operator
+    //é‡å†™+ operator
     public static Nutrition operator +(Nutrition a, Nutrition b)
     {
         if (a == null)
@@ -57,7 +57,7 @@ public partial class Nutrition
         if (b == null)
             return a;
 
-        // ÓªÑøÔö¼õÖ»¸Ä±äµ±Ç°Öµ£»ÈİÁ¿ÉÏÏŞÊ¼ÖÕ¼Ì³Ğ±»Ê³ÓÃÕß£¬²»ÄÜ±»ÁÙÊ±Ê³Îï»ò Buff ÖØÖÃ¡£
+        // è¥å…»å¢å‡åªæ”¹å˜å½“å‰å€¼ï¼›å®¹é‡ä¸Šé™å§‹ç»ˆç»§æ‰¿è¢«é£Ÿç”¨è€…ï¼Œä¸èƒ½è¢«ä¸´æ—¶é£Ÿç‰©æˆ– Buff é‡ç½®ã€‚
         return new Nutrition
         {
             Max_Carbohydrates = a.Max_Carbohydrates,
@@ -73,8 +73,8 @@ public partial class Nutrition
         };
     }
 
-    //ĞÂÔöÒ»¸ö·½·¨ ¸üĞÂ×î´óÖµ µ½µ±Ç°Öµ
-    [Button("¸üĞÂ×î´óÖµµ½µ±Ç°Öµ")]
+    //æ–°å¢ä¸€ä¸ªæ–¹æ³• æ›´æ–°æœ€å¤§å€¼ åˆ°å½“å‰å€¼
+    [Button("æ›´æ–°æœ€å¤§å€¼åˆ°å½“å‰å€¼")]
     public void UpdateMaxToCurrent()
     {
         Max_Carbohydrates = Carbohydrates;
@@ -84,7 +84,7 @@ public partial class Nutrition
         Max_Vitamins = Vitamins;
     }
 
-    //ĞÂÔöÒ»¸ö·½·¨ ¸üĞÂµ±Ç°Öµ µ½×î´óÖµ
+    //æ–°å¢ä¸€ä¸ªæ–¹æ³• æ›´æ–°å½“å‰å€¼ åˆ°æœ€å¤§å€¼
     public void Max()
     {
         Carbohydrates = Max_Carbohydrates;
@@ -110,14 +110,14 @@ public partial class Nutrition
         Max_Vitamins = Vitamins;
     }
 
-    //¿Õ°×¹¹Ôìº¯Êı
+    //ç©ºç™½æ„é€ å‡½æ•°
     public Nutrition()
     {
     }
 
     /// <summary>
-    /// °´¡¸Ì¼Ë® -> Ö¬·¾ -> µ°°×ÖÊ¡¹Ë³ĞòÏûºÄÄÜÁ¿¡£
-    /// ·µ»Ø true ±íÊ¾³É¹¦Âú×ã±¾´ÎÄÜÁ¿ĞèÇó£»false ±íÊ¾×ÜÁ¿²»×ã£¬²»Ö´ĞĞ¿Û¼õ¡£
+    /// æŒ‰ã€Œç¢³æ°´ -> è„‚è‚ª -> è›‹ç™½è´¨ã€é¡ºåºæ¶ˆè€—èƒ½é‡ã€‚
+    /// è¿”å› true è¡¨ç¤ºæˆåŠŸæ»¡è¶³æœ¬æ¬¡èƒ½é‡éœ€æ±‚ï¼›false è¡¨ç¤ºæ€»é‡ä¸è¶³ï¼Œä¸æ‰§è¡Œæ‰£å‡ã€‚
     /// </summary>
     public bool TryConsumeEnergy(float energy)
     {

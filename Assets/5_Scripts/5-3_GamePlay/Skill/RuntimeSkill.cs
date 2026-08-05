@@ -3,24 +3,25 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class RuntimeSkill
-{//����ʱ�Ĳ���  ���ݴ󲿷����Լ��ܱ��� ����������ʱ�����仯
-    [Tooltip("��������")]
+{
+    // 运行时参数：数据大部分来自技能模板，并在技能运行期间动态变化。
+    [Tooltip("技能数据")]
     public BaseSkill skillData;
-    [Tooltip("���ܳ���ʱ��")]
+    [Tooltip("技能持续时间")]
     public float duration = 1;
-    [Tooltip("���ܽ���")]
+    [Tooltip("技能进度")]
     public float progress = 0;
-    [Tooltip("���ܷ�����")]
+    [Tooltip("技能发送者")]
     public Item skillSender;
-    [Tooltip("���ܽ�����")]
+    [Tooltip("技能接收者")]
     public Item skillReceiver;
-    [Tooltip("������ʼ��")]
+    [Tooltip("技能起点")]
     public Vector2 startPoint;
-    [Tooltip("�����յ�")]
+    [Tooltip("技能终点")]
     public Vector2 targetPoint;
-    [Tooltip("���ܹ���ģ��")]
+    [Tooltip("技能管理模块")]
     public Mod_SkillManager skillManager;
-    [Tooltip("����ʵ���ֵ�")]
+    [Tooltip("技能实例字典")]
     public Dictionary<string, Skill> skillInstanceDict = new Dictionary<string, Skill>();
 
     public void Start()
@@ -70,7 +71,7 @@ public class RuntimeSkill
                     GameObject.Destroy(skill.gameObject);
                 }
             }
-        // ����ʵ���ֵ�
+        // 清空技能实例字典。
         skillInstanceDict.Clear();
     }
 

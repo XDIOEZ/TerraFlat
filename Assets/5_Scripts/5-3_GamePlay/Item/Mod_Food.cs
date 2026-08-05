@@ -41,6 +41,8 @@ public readonly struct FoodConsumeResult
 
 public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 {
+    public override string CanonicalModuleId => ModText.Food;
+
     [Serializable]
     public sealed class ConsumeAudioSettings
     {
@@ -211,11 +213,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     public override void Awake()
     {
         ModData_FoodData.SharedCreateTargetItemData = CreateSpoilageTargetItemData;
-
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.Food;
-        }
+        base.Awake();
     }
 
     public override void Load()

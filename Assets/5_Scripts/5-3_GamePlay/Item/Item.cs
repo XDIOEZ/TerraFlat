@@ -309,8 +309,7 @@ public abstract class Item : MonoBehaviour
                 continue;
 
             ModuleData moduleData = FastCloner.FastCloner.DeepClone(module._Data);
-            if (string.IsNullOrWhiteSpace(moduleData.ID))
-                moduleData.ID = module.gameObject.name;
+            moduleData.ID = module.CanonicalModuleId;
             if (string.IsNullOrWhiteSpace(moduleData.Name))
                 moduleData.Name = Module.GenerateUniqueModName(moduleData.ID);
 
@@ -344,6 +343,7 @@ public abstract class Item : MonoBehaviour
         {
             foreach (var mod in modules)
             {
+                NormalizeModuleDataId(mod, mod._Data);
                 if (string.IsNullOrWhiteSpace(mod._Data.Name))
                     mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
 
@@ -410,6 +410,7 @@ public abstract class Item : MonoBehaviour
                         continue;
                     }
 
+                    NormalizeModuleDataId(mod, modData);
                     mod._Data = modData;
 
                     itemMods.AddMod(mod);
@@ -421,6 +422,7 @@ public abstract class Item : MonoBehaviour
                 {
                     tempMods.RemoveMod(mod);
 
+                    NormalizeModuleDataId(mod, modData);
                     mod._Data = modData;
 
                     modsToInit.Add(mod);//添加到待初始化列表
@@ -436,6 +438,7 @@ public abstract class Item : MonoBehaviour
                 {
                     foreach (var mod in LostMod)
                     {
+                        NormalizeModuleDataId(mod, mod._Data);
                         if (string.IsNullOrWhiteSpace(mod._Data.Name))
                         {
                             Debug.LogWarning($"物品 {gameObject.name} 额外添加了模块 {mod._Data.Name} " +
@@ -464,6 +467,16 @@ public abstract class Item : MonoBehaviour
         }
 
         MarkModuleScheduleDirty();
+    }
+
+    private static void NormalizeModuleDataId(Module module, ModuleData data)
+    {
+        if (module == null || data == null)
+            return;
+
+        string canonicalId = module.CanonicalModuleId;
+        if (!string.IsNullOrWhiteSpace(canonicalId))
+            data.ID = canonicalId.Trim();
     }
 
     /// <summary>

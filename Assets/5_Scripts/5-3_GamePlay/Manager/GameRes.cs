@@ -377,8 +377,8 @@ public class GameRes : SingletonAutoMono<GameRes>
         {
             if (prefab == null)
                 continue;
+            RegisterPrefabAlias(prefab.name, prefab);
             HandlePrefab(prefab);
-            AllPrefabs[prefab.name] = prefab;
             LoadedCount++;
             loadedAssetsCount++;
             if (loadedAssetsCount % 10 == 0)
@@ -469,14 +469,32 @@ public void HotReloadAllResources()
       //  Debug.Log($"同步加载 {typeof(T).Name} 完成，数量：{assets.Count}");
     }
 
-    // 专门处理 Prefab 的额外逻辑：把 Item ID 也加入字典
+    // 专门处理 Prefab 的额外逻辑：把 Item ID 和独立模块 ID 也加入字典
     private void HandlePrefab(GameObject prefab)
     {
         var item = prefab.GetComponent<Item>();
-        if (item != null && !string.IsNullOrEmpty(item.itemData.IDName))
+        if (item != null)
         {
-            AllPrefabs[item.itemData.IDName] = prefab;
+            RegisterPrefabAlias(item.itemData?.IDName, prefab);
+            return;
         }
+
+        foreach (Module module in prefab.GetComponentsInChildren<Module>(true))
+        {
+            if (module == null)
+                continue;
+
+            RegisterPrefabAlias(module.CanonicalModuleId, prefab);
+            RegisterPrefabAlias(module._Data?.ID, prefab);
+        }
+    }
+
+    private void RegisterPrefabAlias(string key, GameObject prefab)
+    {
+        if (prefab == null || string.IsNullOrWhiteSpace(key))
+            return;
+
+        AllPrefabs[key.Trim()] = prefab;
     }
 
     #endregion

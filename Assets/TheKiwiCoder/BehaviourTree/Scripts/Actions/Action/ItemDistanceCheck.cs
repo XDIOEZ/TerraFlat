@@ -3,17 +3,17 @@ using UnityEngine;
 using TheKiwiCoder;
 using UnityEditor;
 
-[NodeMenu("ActionNode/¼ì²â/ÎïÌåÓë±¾ÌåµÄ¾àÀë")]
+[NodeMenu("ActionNode/æ£€æµ‹/ç‰©ä½“ä¸æœ¬ä½“çš„è·ç¦»")]
 public class ItemDistanceCheck : ActionNode
 {
     public Vector2 Range;
     public List<string> itemTypeTags = new List<string>();
-    [Tooltip("±¾µØ¼ì²âµãÎ»ÖÃ")]
+    [Tooltip("æœ¬åœ°æ£€æµ‹ç‚¹ä½ç½®")]
     public Transform  localPoint;
 
     protected override void OnStart()
     {
-        // ²»ÔÙÔÚÕâÀï»º´æ targetItem
+        // ä¸å†åœ¨è¿™é‡Œç¼“å­˜ targetItem
         if (localPoint == null)
         localPoint = context.gameObject.GetComponentInChildren<ITriggerAttack>().Weapon_GameObject.transform;
     }
@@ -26,7 +26,7 @@ public class ItemDistanceCheck : ActionNode
     {
         if (context?.itemDetector?.CurrentItemsInArea == null || itemTypeTags == null || itemTypeTags.Count == 0)
         {
-            Debug.LogWarning("¼ì²âÌõ¼şÒì³££¬¿ÉÄÜÊÇÎ´ÉèÖÃ±êÇ©»ò¼ì²âÆ÷Îª¿Õ");
+            Debug.LogWarning("æ£€æµ‹æ¡ä»¶å¼‚å¸¸ï¼Œå¯èƒ½æ˜¯æœªè®¾ç½®æ ‡ç­¾æˆ–æ£€æµ‹å™¨ä¸ºç©º");
             return State.Failure;
         }
 
@@ -78,9 +78,9 @@ public class ItemDistanceCheck : ActionNode
         Vector3 position = context.transform.position;
         Handles.color = Color.yellow;
 
-        // ×îĞ¡¾àÀëÈ¦
+        // æœ€å°è·ç¦»åœˆ
         Handles.DrawWireDisc(position, Vector3.forward, Range.x);
-        // ×î´ó¾àÀëÈ¦
+        // æœ€å¤§è·ç¦»åœˆ
         Handles.DrawWireDisc(position, Vector3.forward, Range.y);
 #endif
     }

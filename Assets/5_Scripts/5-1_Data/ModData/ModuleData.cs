@@ -9,32 +9,32 @@ using UnityEngine;
 [MemoryPackable]
 public abstract partial class ModuleData
 {
-    [Tooltip("Ä£¿é¶ÀÁ¢Ãû³Æ")]
+    [Tooltip("æ¨¡å—ç‹¬ç«‹åç§°")]
     public string Name;
-    [Tooltip("Ä£¿éÊµÀı»¯Ãû³Æ")]
+    [Tooltip("æ¨¡å—å®ä¾‹åŒ–åç§°")]
     public string ID;
-    [Tooltip("ÊÇ·ñÕıÔÚÔËĞĞ")]
+    [Tooltip("æ˜¯å¦æ­£åœ¨è¿è¡Œ")]
     public bool isRunning = true;
     public ModuleType Type;
 
     [MemoryPackIgnore]
-    [Tooltip("ÔËĞĞÊ±ËùÊôÎïÆ·Êı¾İ£¨ÓÉÍâ²¿µ÷¶È×¢Èë£©")]
+    [Tooltip("è¿è¡Œæ—¶æ‰€å±ç‰©å“æ•°æ®ï¼ˆç”±å¤–éƒ¨è°ƒåº¦æ³¨å…¥ï¼‰")]
     public ItemData RuntimeOwnerItemData;
 
     [MemoryPackIgnore]
-    [Tooltip("ÔËĞĞÊ±ËùÊôÈİÆ÷Êı¾İ£¨ÓÉÍâ²¿µ÷¶È×¢Èë£©")]
+    [Tooltip("è¿è¡Œæ—¶æ‰€å±å®¹å™¨æ•°æ®ï¼ˆç”±å¤–éƒ¨è°ƒåº¦æ³¨å…¥ï¼‰")]
     public Inventory_Data RuntimeOwnerInventoryData;
 
     [MemoryPackIgnore]
-    [Tooltip("ÔËĞĞÊ±ËùÊô²ÛÎ»£¨ÓÉÍâ²¿µ÷¶È×¢Èë£©")]
+    [Tooltip("è¿è¡Œæ—¶æ‰€å±æ§½ä½ï¼ˆç”±å¤–éƒ¨è°ƒåº¦æ³¨å…¥ï¼‰")]
     public ItemSlot RuntimeOwnerSlot;
 
     [MemoryPackIgnore]
-    [Tooltip("ÔËĞĞÊ±ËùÊô²ÛÎ»Ë÷Òı£¨ÓÉÍâ²¿µ÷¶È×¢Èë£©")]
+    [Tooltip("è¿è¡Œæ—¶æ‰€å±æ§½ä½ç´¢å¼•ï¼ˆç”±å¤–éƒ¨è°ƒåº¦æ³¨å…¥ï¼‰")]
     public int RuntimeOwnerSlotIndex = -1;
 
     /// <summary>
-    /// Ä£¿éÊı¾İ¸üĞÂÈë¿Ú£¬deltaTime ÓÉÍâ²¿µ÷¶È²ã´«Èë¡£
+    /// æ¨¡å—æ•°æ®æ›´æ–°å…¥å£ï¼ŒdeltaTime ç”±å¤–éƒ¨è°ƒåº¦å±‚ä¼ å…¥ã€‚
     /// </summary>
     public virtual void DataUpdate(float deltaTime)
     {
@@ -43,7 +43,7 @@ public abstract partial class ModuleData
     
     public override string ToString()
     {
-        return $"Ä£¿éÊı¾İ:(Name: {Name}, ID: {ID}, Type: {Type}, isRunning: {isRunning})";
+        return $"æ¨¡å—æ•°æ®:(Name: {Name}, ID: {ID}, Type: {Type}, isRunning: {isRunning})";
     }
 }
 

@@ -4,7 +4,7 @@ public partial class GameManager
 {
     internal bool BeginDimensionTransitionLoading(string targetDisplayName)
     {
-        return BeginWorldEntryLoading(
+        return BeginWorldEntry(
             "正在切换维度",
             $"正在前往：{targetDisplayName}",
             0.1f);
@@ -12,7 +12,7 @@ public partial class GameManager
 
     internal void SetDimensionTransitionLoading(string status, float progress)
     {
-        SetWorldLoadingView("正在切换维度", status, progress);
+        ReportWorldEntryProgress("正在切换维度", status, progress);
     }
 
     internal void NotifyDimensionWorldExiting()
@@ -32,6 +32,6 @@ public partial class GameManager
 
     internal void FailDimensionTransitionLoading(string message, Exception exception = null)
     {
-        FailWorldEntryLoading(message, exception);
+        FailWorldEntry(message, exception);
     }
 }

@@ -132,6 +132,44 @@ namespace FlatWorld.GameTest.InventoryCrafting
             }
         }
 
+        [Test]
+        [Category("InventoryCrafting.Smoke")]
+        public void HotbarSelectionBoxStartsCenteredOnFirstSlot()
+        {
+            GameObject hotbarObject = new("HotbarInitialSelection_Test");
+            GameObject firstSlotObject = new("HotbarSlot_0_Test", typeof(RectTransform));
+            GameObject selectionObject = new("HotbarSelectionBox_Test", typeof(RectTransform));
+
+            try
+            {
+                Inventory_HotBar hotbar = hotbarObject.AddComponent<Inventory_HotBar>();
+                ItemSlot_UI firstSlot = firstSlotObject.AddComponent<ItemSlot_UI>();
+                RectTransform slotRect = firstSlotObject.GetComponent<RectTransform>();
+                RectTransform selectionRect = selectionObject.GetComponent<RectTransform>();
+                selectionRect.SetParent(slotRect, false);
+                selectionRect.anchoredPosition = new Vector2(-80f, -40f);
+
+                hotbar.SelectBox = selectionObject;
+                hotbar.RuntimeInventory.itemSlot_UI.Add(firstSlot);
+
+                MethodInfo snapSelection = typeof(Inventory_HotBar).GetMethod(
+                    "SnapSelectBoxToSlot",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(snapSelection, Is.Not.Null, "快捷栏首次显示必须提供无补间定位入口。");
+
+                snapSelection.Invoke(hotbar, new object[] { 0 });
+
+                Assert.That(selectionRect.parent, Is.EqualTo(slotRect));
+                Assert.That(selectionRect.anchoredPosition, Is.EqualTo(Vector2.zero));
+                Assert.That(selectionRect.position, Is.EqualTo(slotRect.position));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(hotbarObject);
+                UnityEngine.Object.DestroyImmediate(firstSlotObject);
+            }
+        }
+
         private static void AssertCraftingPreviewLayers(ItemSlot_UI slot, string prefabPath)
         {
             Assert.That(slot, Is.Not.Null, $"{prefabPath} 缺少 ItemSlot_UI");

@@ -2,10 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static DamageReceiver;
-[CreateAssetMenu(fileName = "New LootDropAdjuster", menuName = "ModActions/Õ½ÀûÆ·µ÷Õû", order = 0)]
+[CreateAssetMenu(fileName = "New LootDropAdjuster", menuName = "ModActions/æˆ˜åˆ©å“è°ƒæ•´", order = 0)]
 public class LootDropAdjuster : ModAction
 {
-    [Header("ÏòËÀÍöµôÂäÎïÖĞ´«ÈëµÄ¶îÍâÎïÆ·")]
+    [Header("å‘æ­»äº¡æ‰è½ç‰©ä¸­ä¼ å…¥çš„é¢å¤–ç‰©å“")]
     public LootEntry dropLoot;
     public override void Action(Item ModOwner, Module module, Item targetItem = null)
     {

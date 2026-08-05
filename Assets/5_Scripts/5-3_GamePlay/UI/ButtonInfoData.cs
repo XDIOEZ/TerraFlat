@@ -14,17 +14,17 @@ public class ButtonInfoData : MonoBehaviour, IPointerClickHandler
     {
         GetComponentInChildren<TextMeshProUGUI>().text = Name;
     }
-    // µ±ÎïÌå±»µã»÷Ê±µ÷ÓÃ
+    // å½“ç‰©ä½“è¢«ç‚¹å‡»æ—¶è°ƒç”¨
     public void OnPointerClick(PointerEventData eventData)
     {
-        // ÓÒ¼üµã»÷
+        // å³é”®ç‚¹å‡»
         if (eventData.button == PointerEventData.InputButton.Right)
         {
             OnContextMenu(eventData.position);
         }
     }
 
-    // ÓÒ¼ü²Ëµ¥µ÷ÓÃ
+    // å³é”®èœå•è°ƒç”¨
     public void OnContextMenu(Vector2 point)
     {
         SaveMenuRightMenuUI.Instance.OpenUI(point);

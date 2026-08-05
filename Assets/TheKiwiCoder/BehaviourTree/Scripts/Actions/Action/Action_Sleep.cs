@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/ĞĞ¶¯/Ë¯¾õ")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/ç¡è§‰")]
 public class Action_Sleep : ActionNode
 {
     public float duration = 1;

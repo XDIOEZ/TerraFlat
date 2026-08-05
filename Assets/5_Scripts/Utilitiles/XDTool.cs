@@ -10,19 +10,19 @@ using Debug = UnityEngine.Debug;
 
 public static class XDTool
 {
-    // ¾²Ì¬±äÁ¿´æ´¢ÎïÆ· ID£¬²¢Ê¹ÓÃ PlayerPrefs ½øĞĞÓÀ¾Ã´æ´¢
+    // é™æ€å˜é‡å­˜å‚¨ç‰©å“ IDï¼Œå¹¶ä½¿ç”¨ PlayerPrefs è¿›è¡Œæ°¸ä¹…å­˜å‚¨
     private static int itemId;
 
     public static int ItemId
     {
         get 
         {
-            PlayerPrefs.SetInt("ItemId",(PlayerPrefs.GetInt("ItemId", 0)+1)); // ±£´æµ½ PlayerPrefs
+            PlayerPrefs.SetInt("ItemId",(PlayerPrefs.GetInt("ItemId", 0)+1)); // ä¿å­˜åˆ° PlayerPrefs
 
-            PlayerPrefs.Save(); // È·±£Êı¾İĞ´Èë´ÅÅÌ
+            PlayerPrefs.Save(); // ç¡®ä¿æ•°æ®å†™å…¥ç£ç›˜
 
             return PlayerPrefs.GetInt("ItemId", 0) ;
-        } // ¶ÁÈ¡´æ´¢µÄ ItemId£¬Ä¬ÈÏÖµÎª 0
+        } // è¯»å–å­˜å‚¨çš„ ItemIdï¼Œé»˜è®¤å€¼ä¸º 0
         set
         {
            
@@ -35,28 +35,28 @@ public static class XDTool
             int i;
             i = PlayerPrefs.GetInt("Guid", 0);
             i++;
-            PlayerPrefs.SetInt("Guid", i); // ±£´æµ½ PlayerPrefs
+            PlayerPrefs.SetInt("Guid", i); // ä¿å­˜åˆ° PlayerPrefs
             return i; 
-        } // ¶ÁÈ¡´æ´¢µÄ ItemId£¬Ä¬ÈÏÖµÎª 0
+        } // è¯»å–å­˜å‚¨çš„ ItemIdï¼Œé»˜è®¤å€¼ä¸º 0
     }
 
-    //±éÀúÊä³ö×ÖµäÖĞËùÓĞµÄkeyºÍvalue
+    //éå†è¾“å‡ºå­—å…¸ä¸­æ‰€æœ‰çš„keyå’Œvalue
     public static void PrintDic<TKey, TValue>(Dictionary<TKey, TValue> dictionary) 
     {
         if (dictionary == null || dictionary.Count == 0)
         {
-            Debug.Log("×ÖµäÎª¿Õ»òÎ´³õÊ¼»¯£¡");
+            Debug.Log("å­—å…¸ä¸ºç©ºæˆ–æœªåˆå§‹åŒ–ï¼");
             return;
         }
 
-        // Æ´½Ó¼üÖµ¶Ôµ½Ò»¸ö×Ö·û´®
-        string debugText = "×ÖµäÄÚÈİ:\n";
+        // æ‹¼æ¥é”®å€¼å¯¹åˆ°ä¸€ä¸ªå­—ç¬¦ä¸²
+        string debugText = "å­—å…¸å†…å®¹:\n";
         foreach (KeyValuePair<TKey, TValue> kvp in dictionary)
         {
             debugText += $"Key: {kvp.Key}, Value: {kvp.Value.ToString()}\n";
         }
 
-        // Ò»´ÎĞÔÊä³ö
+        // ä¸€æ¬¡æ€§è¾“å‡º
         Debug.Log(debugText);
     }
 
@@ -64,11 +64,11 @@ public static class XDTool
     {
         if (list == null || list.Count == 0)
         {
-            Debug.Log("ÁĞ±íÎª¿Õ»òÎ´³õÊ¼»¯£¡");
+            Debug.Log("åˆ—è¡¨ä¸ºç©ºæˆ–æœªåˆå§‹åŒ–ï¼");
             return;
         }
 
-        string debugText = "ÁĞ±íÄÚÈİ:\n";
+        string debugText = "åˆ—è¡¨å†…å®¹:\n";
         foreach (T element in list)
         {
             debugText += $"{element}\n";
@@ -77,14 +77,14 @@ public static class XDTool
         Debug.Log(debugText);
     }
     /// <summary>
-    /// ÀÏÈËĞ¡º¢ÏÈÆğ·É
+    /// è€äººå°å­©å…ˆèµ·é£
     /// </summary>
-    /// <typeparam name="T">Òª»ñÈ¡µÄ×é¼şÀàĞÍ</typeparam>
-    /// <param name="obj">´ÓË­ÉíÉÏ¿ªÊ¼»ñÈ¡</param>
+    /// <typeparam name="T">è¦è·å–çš„ç»„ä»¶ç±»å‹</typeparam>
+    /// <param name="obj">ä»è°èº«ä¸Šå¼€å§‹è·å–</param>
     /// <returns></returns>
     public static T GetComponentInChildrenAndParent<T>(GameObject obj) where T : class
     {
-        //ÓÎÏ·´¦ÓÚÔËĞĞ×´Ì¬Ê±£¬²Å»áÓĞGetComponentInChildrenºÍGetComponentInParent·½·¨
+        //æ¸¸æˆå¤„äºè¿è¡ŒçŠ¶æ€æ—¶ï¼Œæ‰ä¼šæœ‰GetComponentInChildrenå’ŒGetComponentInParentæ–¹æ³•
         if (Application.isPlaying)
         {
             T component = obj.GetComponentInChildren<T>();
@@ -95,43 +95,43 @@ public static class XDTool
             }
             if (component == null)
             {
-                //Debug.LogWarning($"GameObject {obj.name} Ã»ÓĞÕÒµ½×é¼ş {typeof(T).Name}£¡");
+                //Debug.LogWarning($"GameObject {obj.name} æ²¡æœ‰æ‰¾åˆ°ç»„ä»¶ {typeof(T).Name}ï¼");
             }else
             {
-                //Debug.Log($"GameObject {obj.name} ÕÒµ½×é¼ş {typeof(T).Name}£¡");
+                //Debug.Log($"GameObject {obj.name} æ‰¾åˆ°ç»„ä»¶ {typeof(T).Name}ï¼");
             }
             return component;
         }
         else
         {
-            Debug.LogWarning("ÓÎÏ·´¦ÓÚ±à¼­×´Ì¬£¬ÎŞ·¨Ê¹ÓÃGetComponentInChildrenºÍGetComponentInParent·½·¨£¡");
+            Debug.LogWarning("æ¸¸æˆå¤„äºç¼–è¾‘çŠ¶æ€ï¼Œæ— æ³•ä½¿ç”¨GetComponentInChildrenå’ŒGetComponentInParentæ–¹æ³•ï¼");
             return null;
         }
     }
 
 
     /// <summary>
-    /// Ê¹ÓÃ Addressables Í¬²½¼ÓÔØ×ÊÔ´£¬²¢¼ÇÂ¼¼ÓÔØÊ±¼ä
+    /// ä½¿ç”¨ Addressables åŒæ­¥åŠ è½½èµ„æºï¼Œå¹¶è®°å½•åŠ è½½æ—¶é—´
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="address"></param>
     /// <returns></returns>
     public static T LoadABByAddressSync<T>(string address) where T : UnityEngine.Object
     {
-        // ´´½¨²¢Æô¶¯¼ÆÊ±Æ÷
+        // åˆ›å»ºå¹¶å¯åŠ¨è®¡æ—¶å™¨
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Start();
 
-        // ¿ªÊ¼Òì²½¼ÓÔØ²Ù×÷
+        // å¼€å§‹å¼‚æ­¥åŠ è½½æ“ä½œ
         AsyncOperationHandle<T> handle = Addressables.LoadAssetAsync<T>(address);
-        // µÈ´ıÒì²½²Ù×÷Íê³É£¬ÊµÏÖÍ¬²½¼ÓÔØĞ§¹û
+        // ç­‰å¾…å¼‚æ­¥æ“ä½œå®Œæˆï¼Œå®ç°åŒæ­¥åŠ è½½æ•ˆæœ
         T result = handle.WaitForCompletion();
 
-        // Í£Ö¹¼ÆÊ±Æ÷
+        // åœæ­¢è®¡æ—¶å™¨
         stopwatch.Stop();
 
-        // Êä³ö¼ÓÔØÊ±¼ä
-        UnityEngine.Debug.Log($"¼ÓÔØ×ÊÔ´ '{address}' ºÄÊ±: {stopwatch.ElapsedMilliseconds} ºÁÃë");
+        // è¾“å‡ºåŠ è½½æ—¶é—´
+        UnityEngine.Debug.Log($"åŠ è½½èµ„æº '{address}' è€—æ—¶: {stopwatch.ElapsedMilliseconds} æ¯«ç§’");
 
         if (handle.Status == AsyncOperationStatus.Succeeded)
         {
@@ -139,17 +139,17 @@ public static class XDTool
         }
         else
         {
-            UnityEngine.Debug.LogError($"Í¬²½¼ÓÔØ Addressable ×ÊÔ´Ê§°Ü: {address}");
+            UnityEngine.Debug.LogError($"åŒæ­¥åŠ è½½ Addressable èµ„æºå¤±è´¥: {address}");
             return null;
         }
     }
 
     /// <summary>
-    /// Òì²½¼ÓÔØ Addressable ×ÊÔ´
+    /// å¼‚æ­¥åŠ è½½ Addressable èµ„æº
     /// </summary>
-    /// <typeparam name="T">×ÊÔ´ÀàĞÍ</typeparam>
-    /// <param name="address">×ÊÔ´µØÖ·</param>
-    /// <param name="callback">¼ÓÔØÍê³ÉºóµÄ»Øµ÷</param>
+    /// <typeparam name="T">èµ„æºç±»å‹</typeparam>
+    /// <param name="address">èµ„æºåœ°å€</param>
+    /// <param name="callback">åŠ è½½å®Œæˆåçš„å›è°ƒ</param>
     public  static void LoadResourceAsync<T>(string address, System.Action<T> callback) where T : UnityEngine.Object
     {
         MonoMgr.GetInstance().StartCoroutine(LoadResourceCoroutine(address, callback));
@@ -157,19 +157,19 @@ public static class XDTool
 
     private  static IEnumerator LoadResourceCoroutine<T>(string address, System.Action<T> callback) where T : UnityEngine.Object
     {
-        // ¿ªÊ¼Òì²½¼ÓÔØ²Ù×÷
+        // å¼€å§‹å¼‚æ­¥åŠ è½½æ“ä½œ
         AsyncOperationHandle<T> handle = Addressables.LoadAssetAsync<T>(address);
         yield return handle;
 
         if (handle.Status == AsyncOperationStatus.Succeeded)
         {
-            // ¼ÓÔØ³É¹¦£¬Ö´ĞĞ»Øµ÷
+            // åŠ è½½æˆåŠŸï¼Œæ‰§è¡Œå›è°ƒ
             callback?.Invoke(handle.Result);
         }
         else
         {
-            // ¼ÓÔØÊ§°Ü£¬Êä³ö´íÎóĞÅÏ¢
-            Debug.LogError($"¼ÓÔØ Addressable ×ÊÔ´Ê§°Ü: {address}");
+            // åŠ è½½å¤±è´¥ï¼Œè¾“å‡ºé”™è¯¯ä¿¡æ¯
+            Debug.LogError($"åŠ è½½ Addressable èµ„æºå¤±è´¥: {address}");
             callback?.Invoke(null);
         }
     }
@@ -180,18 +180,18 @@ public static class XDTool
     }
 
     /// <summary>
-    /// Òì²½¼ÓÔØ×ÊÔ´¡£
+    /// å¼‚æ­¥åŠ è½½èµ„æºã€‚
     /// </summary>
-    /// <typeparam name="T">×ÊÔ´ÀàĞÍ</typeparam>
-    /// <param name="address">×ÊÔ´µØÖ·</param>
-    /// <param name="onSuccess">¼ÓÔØ³É¹¦»Øµ÷</param>
-    /// <param name="onFail">¼ÓÔØÊ§°Ü»Øµ÷</param>
+    /// <typeparam name="T">èµ„æºç±»å‹</typeparam>
+    /// <param name="address">èµ„æºåœ°å€</param>
+    /// <param name="onSuccess">åŠ è½½æˆåŠŸå›è°ƒ</param>
+    /// <param name="onFail">åŠ è½½å¤±è´¥å›è°ƒ</param>
     public static void LoadAssetAsync<T>(string address, Action<T> onSuccess, Action<Exception> onFail = null) where T : UnityEngine.Object
     {
         if (string.IsNullOrEmpty(address))
         {
 
-            Debug.LogError("×ÊÔ´µØÖ·²»ÄÜÎª¿Õ£¡");
+            Debug.LogError("èµ„æºåœ°å€ä¸èƒ½ä¸ºç©ºï¼");
             return;
         }
         Addressables.LoadAssetAsync<T>(address).Completed += handle =>
@@ -203,25 +203,25 @@ public static class XDTool
             else
             {
                 onFail?.Invoke(handle.OperationException);
-                Debug.LogError($"×ÊÔ´¼ÓÔØÊ§°Ü£º{address}\n´íÎóĞÅÏ¢£º{handle.OperationException}");
+                Debug.LogError($"èµ„æºåŠ è½½å¤±è´¥ï¼š{address}\né”™è¯¯ä¿¡æ¯ï¼š{handle.OperationException}");
             }
         };
     }
     /// <summary>
-    /// Òì²½¼ÓÔØ²¢ÊµÀı»¯ Addressables ×ÊÔ´
+    /// å¼‚æ­¥åŠ è½½å¹¶å®ä¾‹åŒ– Addressables èµ„æº
     /// </summary>
-    /// <param name="address">Addressables ×ÊÔ´µØÖ·</param>
-    /// <param name="position">ÊµÀı»¯Î»ÖÃ</param>
-    /// <param name="rotation">ÊµÀı»¯Ğı×ª</param>
-    /// <param name="onSuccess">³É¹¦»Øµ÷£¬·µ»Ø GameObject</param>
-    /// <param name="onFail">Ê§°Ü»Øµ÷£¬·µ»ØÒì³£ĞÅÏ¢</param>
+    /// <param name="address">Addressables èµ„æºåœ°å€</param>
+    /// <param name="position">å®ä¾‹åŒ–ä½ç½®</param>
+    /// <param name="rotation">å®ä¾‹åŒ–æ—‹è½¬</param>
+    /// <param name="onSuccess">æˆåŠŸå›è°ƒï¼Œè¿”å› GameObject</param>
+    /// <param name="onFail">å¤±è´¥å›è°ƒï¼Œè¿”å›å¼‚å¸¸ä¿¡æ¯</param>
     public static void InstantiateAddressableAsync(string address, Vector3 position, Quaternion rotation, Action<GameObject> onSuccess, Action<Exception> onFail = null)
     {
-        Debug.Log($"ÊµÀı»¯ Addressable ×ÊÔ´£º{address}");
+        Debug.Log($"å®ä¾‹åŒ– Addressable èµ„æºï¼š{address}");
         if (string.IsNullOrEmpty(address))
         {
-            Debug.LogError("×ÊÔ´µØÖ·²»ÄÜÎª¿Õ£¡");
-            onFail?.Invoke(new ArgumentException("×ÊÔ´µØÖ·²»ÄÜÎª¿Õ£¡"));
+            Debug.LogError("èµ„æºåœ°å€ä¸èƒ½ä¸ºç©ºï¼");
+            onFail?.Invoke(new ArgumentException("èµ„æºåœ°å€ä¸èƒ½ä¸ºç©ºï¼"));
             return;
         }
 
@@ -234,7 +234,7 @@ public static class XDTool
             else
             {
                 onFail?.Invoke(handle.OperationException);
-                Debug.LogError($"ÊµÀı»¯Ê§°Ü£º{address}\n´íÎóĞÅÏ¢£º{handle.OperationException}");
+                Debug.LogError($"å®ä¾‹åŒ–å¤±è´¥ï¼š{address}\né”™è¯¯ä¿¡æ¯ï¼š{handle.OperationException}");
             }
         };
     }

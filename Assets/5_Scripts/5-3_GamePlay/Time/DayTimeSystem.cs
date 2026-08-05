@@ -413,7 +413,7 @@ private void TimeRun(string sceneName, float deltaTime)
         if (!WorldTimeDict.ContainsKey(sceneName) || WorldTimeDict[sceneName] == null)
         {
             TimeData sourceTimeData = readyTimeData ?? new TimeData();
-            WorldTimeDict[sceneName] = FastCloner.FastCloner.DeepClone(sourceTimeData);
+            WorldTimeDict[sceneName] = sourceTimeData.CreateRuntimeCopy();
 
             Debug.Log($"[DayTimeSystem] 未找到场景时间数据，已拷贝 ReadyTimeData：{sceneName}");
         }

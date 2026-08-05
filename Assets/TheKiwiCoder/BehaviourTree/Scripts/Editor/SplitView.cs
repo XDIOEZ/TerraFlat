@@ -8,7 +8,7 @@ namespace TheKiwiCoder
 
         public new class UxmlTraits : TwoPaneSplitView.UxmlTraits
         {
-            // Äã¿ÉÒÔÔÚÕâÀï¶¨Òå×Ô¶¨ÒåÊôĞÔ
+            // ä½ å¯ä»¥åœ¨è¿™é‡Œå®šä¹‰è‡ªå®šä¹‰å±æ€§
         }
     }
 }

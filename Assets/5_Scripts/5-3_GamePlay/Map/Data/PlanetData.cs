@@ -16,13 +16,13 @@ public enum WeatherType
 [System.Serializable]
 public partial class PlanetData
 {
-    #region ÊÀ½çÉú³ÉÄ¬ÈÏÖµ
+    #region ä¸–ç•Œç”Ÿæˆé»˜è®¤å€¼
     public const int DefaultRadius = 1000;
     public const float DefaultNoiseScale = 0.01f;
     public const float MinNoiseScale = 0f;
     public const float MaxNoiseScale = 100f;
 
-    /// <summary>ÅĞ¶ÏÊÀ½ç×ø±êËõ·ÅÊÇ·ñ¿ÉÓÃÓÚ³ÌĞòÉú³É¡£</summary>
+    /// <summary>åˆ¤æ–­ä¸–ç•Œåæ ‡ç¼©æ”¾æ˜¯å¦å¯ç”¨äºç¨‹åºç”Ÿæˆã€‚</summary>
     public static bool IsValidNoiseScale(float value)
     {
         return !float.IsNaN(value) &&
@@ -31,72 +31,72 @@ public partial class PlanetData
                value <= MaxNoiseScale;
     }
 
-    /// <summary>·Ç·¨ÊÀ½ç×ø±êËõ·ÅÍ³Ò»»ØÍËµ½ÏîÄ¿Ä¬ÈÏÖµ¡£</summary>
+    /// <summary>éæ³•ä¸–ç•Œåæ ‡ç¼©æ”¾ç»Ÿä¸€å›é€€åˆ°é¡¹ç›®é»˜è®¤å€¼ã€‚</summary>
     public static float NormalizeNoiseScale(float value)
     {
         return IsValidNoiseScale(value) ? value : DefaultNoiseScale;
     }
     #endregion
 
-    #region ĞÇÇò»ù´¡Êı¾İ
-    //ĞÇÇòÃû³Æ
+    #region æ˜ŸçƒåŸºç¡€æ•°æ®
+    //æ˜Ÿçƒåç§°
     public string Name;
-    //ĞÇÇò°ë¾¶
-    [LabelText("ĞÇÇò°ë¾¶"), MinValue(1), PropertyTooltip("ĞÇÇò¿ÉÌ½Ë÷·¶Î§µÄ»ù´¡°ë¾¶¡£")]
+    //æ˜ŸçƒåŠå¾„
+    [LabelText("æ˜ŸçƒåŠå¾„"), MinValue(1), PropertyTooltip("æ˜Ÿçƒå¯æ¢ç´¢èŒƒå›´çš„åŸºç¡€åŠå¾„ã€‚")]
     public int Radius = DefaultRadius;
 
-    [LabelText("ÊÀ½ç×ø±êËõ·Å"), MinValue(MinNoiseScale), PropertyTooltip("ËùÓĞµØĞÎÔëÉù¹²ÏíµÄÊÀ½ç¼¶×ø±ê±¶ÂÊ¡£Ô½Ğ¡µØÃ²Ô½ÊæÕ¹£¬Ô½´óµØÃ²Ô½ÃÜ¼¯£»×îÖÕÆµÂÊ»¹»á³Ë¸÷Í¨µÀµÄ×ø±ê±¶ÂÊºÍ»ù´¡ÆµÂÊ¡£")]
+    [LabelText("ä¸–ç•Œåæ ‡ç¼©æ”¾"), MinValue(MinNoiseScale), PropertyTooltip("æ‰€æœ‰åœ°å½¢å™ªå£°å…±äº«çš„ä¸–ç•Œçº§åæ ‡å€ç‡ã€‚è¶Šå°åœ°è²Œè¶Šèˆ’å±•ï¼Œè¶Šå¤§åœ°è²Œè¶Šå¯†é›†ï¼›æœ€ç»ˆé¢‘ç‡è¿˜ä¼šä¹˜å„é€šé“çš„åæ ‡å€ç‡å’ŒåŸºç¡€é¢‘ç‡ã€‚")]
     public float NoiseScale = DefaultNoiseScale;
 
-    //ĞÇÇòµØÍ¼´óĞ¡
+    //æ˜Ÿçƒåœ°å›¾å¤§å°
     public Vector2Int ChunkSize = new Vector2Int(16, 16);
     #endregion
 
-    #region µØÍ¼Óë»·¾³Êı¾İ
-    //ĞÇÇòµØÍ¼Êı¾İ×Öµä
+    #region åœ°å›¾ä¸ç¯å¢ƒæ•°æ®
+    //æ˜Ÿçƒåœ°å›¾æ•°æ®å­—å…¸
     [ShowInInspector]
     public Dictionary<string, MapSave> MapData_Dict = new();
 
-    [Tooltip("ĞÇÇòÊÇ·ñ×Ô¶¯Éú³ÉµØÍ¼")]
+    [Tooltip("æ˜Ÿçƒæ˜¯å¦è‡ªåŠ¨ç”Ÿæˆåœ°å›¾")]
     public bool AutoGenerateMap = true;
 
-    [LabelText("»ù´¡ÎÂ¶È"), SuffixLabel("¡æ", true), PropertyTooltip("¸ÃĞÇÇò²»°üº¬ÌìÆøĞŞÕıµÄ»ù´¡»·¾³ÎÂ¶È¡£")]
+    [LabelText("åŸºç¡€æ¸©åº¦"), SuffixLabel("â„ƒ", true), PropertyTooltip("è¯¥æ˜Ÿçƒä¸åŒ…å«å¤©æ°”ä¿®æ­£çš„åŸºç¡€ç¯å¢ƒæ¸©åº¦ã€‚")]
     public float GlobalTemperature = 26f;
 
-    [LabelText("µ±Ç°ÌìÆø"), PropertyTooltip("¸ÃĞÇÇòµ±Ç°ÌìÆøÀàĞÍ¡£")]
+    [LabelText("å½“å‰å¤©æ°”"), PropertyTooltip("è¯¥æ˜Ÿçƒå½“å‰å¤©æ°”ç±»å‹ã€‚")]
     public WeatherType CurrentWeather = WeatherType.Clear;
 
-    [LabelText("ÌìÆøÇ¿¶È"), Range(0f, 1f), PropertyTooltip("µ±Ç°ÌìÆøµÄÇ¿¶È£¬0±íÊ¾ÎŞÓ°Ïì£¬1±íÊ¾ÂúÇ¿¶È¡£")]
+    [LabelText("å¤©æ°”å¼ºåº¦"), Range(0f, 1f), PropertyTooltip("å½“å‰å¤©æ°”çš„å¼ºåº¦ï¼Œ0è¡¨ç¤ºæ— å½±å“ï¼Œ1è¡¨ç¤ºæ»¡å¼ºåº¦ã€‚")]
     public float WeatherIntensity = 0f;
 
-    [LabelText("ÌìÆøÊı¾İ°æ±¾"), PropertyTooltip("ÌìÆøÊÂ¼ş´æµµ½á¹¹°æ±¾£¬ÓÃÓÚ¾É´æµµÇ¨ÒÆ¡£")]
+    [LabelText("å¤©æ°”æ•°æ®ç‰ˆæœ¬"), PropertyTooltip("å¤©æ°”äº‹ä»¶å­˜æ¡£ç»“æ„ç‰ˆæœ¬ï¼Œç”¨äºæ—§å­˜æ¡£è¿ç§»ã€‚")]
     public int WeatherDataVersion = 0;
 
-    [LabelText("ÌìÆø½×¶Î"), PropertyTooltip("È¨ÍşÌìÆøÊÂ¼şµ±Ç°Ëù´¦½×¶Î¡£")]
+    [LabelText("å¤©æ°”é˜¶æ®µ"), PropertyTooltip("æƒå¨å¤©æ°”äº‹ä»¶å½“å‰æ‰€å¤„é˜¶æ®µã€‚")]
     public WeatherPhase WeatherPhase = WeatherPhase.Clear;
 
-    [LabelText("½×¶Î¿ªÊ¼×ÜÊ±¼ä"), PropertyTooltip("µ±Ç°ÌìÆø½×¶Î¿ªÊ¼Ê±µÄ¾ø¶ÔÊÀ½çÊ±¼ä¡£")]
+    [LabelText("é˜¶æ®µå¼€å§‹æ€»æ—¶é—´"), PropertyTooltip("å½“å‰å¤©æ°”é˜¶æ®µå¼€å§‹æ—¶çš„ç»å¯¹ä¸–ç•Œæ—¶é—´ã€‚")]
     public float WeatherPhaseStartedTotalTime = 0f;
 
-    [LabelText("½×¶Î½áÊø×ÜÊ±¼ä"), PropertyTooltip("·ÇÇçÀÊ½×¶Î½áÊøÊ±µÄ¾ø¶ÔÊÀ½çÊ±¼ä¡£")]
+    [LabelText("é˜¶æ®µç»“æŸæ€»æ—¶é—´"), PropertyTooltip("éæ™´æœ—é˜¶æ®µç»“æŸæ—¶çš„ç»å¯¹ä¸–ç•Œæ—¶é—´ã€‚")]
     public float WeatherPhaseEndTotalTime = 0f;
 
-    [LabelText("ÏÂ´ÎÌìÆøÊÂ¼ş×ÜÊ±¼ä"), PropertyTooltip("ÇçÀÊ½×¶ÎÏÂÒ»´ÎÌìÆøÔ¤Õ×¿ªÊ¼Ê±µÄ¾ø¶ÔÊÀ½çÊ±¼ä¡£")]
+    [LabelText("ä¸‹æ¬¡å¤©æ°”äº‹ä»¶æ€»æ—¶é—´"), PropertyTooltip("æ™´æœ—é˜¶æ®µä¸‹ä¸€æ¬¡å¤©æ°”é¢„å…†å¼€å§‹æ—¶çš„ç»å¯¹ä¸–ç•Œæ—¶é—´ã€‚")]
     public float NextWeatherEventTotalTime = 0f;
 
-    [LabelText("ÌìÆøËæ»úÓÎ±ê"), PropertyTooltip("È·¶¨ĞÔÌìÆøËæ»úĞòÁĞµÄ³Ö¾Ã»¯ÓÎ±ê¡£")]
+    [LabelText("å¤©æ°”éšæœºæ¸¸æ ‡"), PropertyTooltip("ç¡®å®šæ€§å¤©æ°”éšæœºåºåˆ—çš„æŒä¹…åŒ–æ¸¸æ ‡ã€‚")]
     public int WeatherRandomCursor = 0;
 
-    [LabelText("ÌìÆøÊÂ¼şĞòºÅ"), PropertyTooltip("ÒÑ¾­¿ªÊ¼¹ıµÄ½µÓêÊÂ¼şÊıÁ¿¡£")]
+    [LabelText("å¤©æ°”äº‹ä»¶åºå·"), PropertyTooltip("å·²ç»å¼€å§‹è¿‡çš„é™é›¨äº‹ä»¶æ•°é‡ã€‚")]
     public int WeatherEventSequence = 0;
 
-    [LabelText("ÓêÌì½µÎÂ"), SuffixLabel("¡æ", true), PropertyTooltip("ÓêÌì¶Ô»·¾³ÎÂ¶ÈµÄ¶îÍâ½µÎÂÖµ¡£")]
+    [LabelText("é›¨å¤©é™æ¸©"), SuffixLabel("â„ƒ", true), PropertyTooltip("é›¨å¤©å¯¹ç¯å¢ƒæ¸©åº¦çš„é¢å¤–é™æ¸©å€¼ã€‚")]
     public float RainTemperatureOffset = -4f;
 
-    [LabelText("ÒõÌìÌìÆøĞŞÕı"), SuffixLabel("¡æ", true), PropertyTooltip("ÒõÌì¶Ô»·¾³ÎÂ¶ÈµÄ¶îÍâĞŞÕıÖµ¡£")]
+    [LabelText("é˜´å¤©å¤©æ°”ä¿®æ­£"), SuffixLabel("â„ƒ", true), PropertyTooltip("é˜´å¤©å¯¹ç¯å¢ƒæ¸©åº¦çš„é¢å¤–ä¿®æ­£å€¼ã€‚")]
     public float CloudyTemperatureOffset = -1f;
 
-    [LabelText("±©·çÌìÆøĞŞÕı"), SuffixLabel("¡æ", true), PropertyTooltip("±©·çÌìÆø¶Ô»·¾³ÎÂ¶ÈµÄ¶îÍâĞŞÕıÖµ¡£")]
+    [LabelText("æš´é£å¤©æ°”ä¿®æ­£"), SuffixLabel("â„ƒ", true), PropertyTooltip("æš´é£å¤©æ°”å¯¹ç¯å¢ƒæ¸©åº¦çš„é¢å¤–ä¿®æ­£å€¼ã€‚")]
     public float StormTemperatureOffset = -6f;
     #endregion
 

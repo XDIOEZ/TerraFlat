@@ -11,10 +11,10 @@ public class Mod_Droping : Module
 
     public Mod_BaseDroper.Drop drop;
     public Ex_ModData modData;
-    public Chunk LastChunk; // ÉÏÒ»Ö¡ item Ëù´¦µÄ chunk
+    public Chunk LastChunk; // ä¸Šä¸€å¸§ item æ‰€å¤„çš„ chunk
 
-    [Header("¶ªÆú¶¯»­²ÎÊı")]
-    [Tooltip("´¹Ö±·½Ïò×î´ó¸ß¶È£¨ÓëÖ®Ç°Ò»ÖÂ£©")]
+    [Header("ä¸¢å¼ƒåŠ¨ç”»å‚æ•°")]
+    [Tooltip("å‚ç›´æ–¹å‘æœ€å¤§é«˜åº¦ï¼ˆä¸ä¹‹å‰ä¸€è‡´ï¼‰")]
     public float arcHeight = 1f;
 
     public override void Awake()
@@ -31,48 +31,48 @@ public class Mod_Droping : Module
 
     public override void ModUpdate(float deltaTime)
     {
-        // ¼ì²âdropingÊÇ·ñÎª¿Õ£¬Èç¹ûÎª¿Õ×Ô¶¯Ïú»ÙÄ£¿é±¾Éí
+        // æ£€æµ‹dropingæ˜¯å¦ä¸ºç©ºï¼Œå¦‚æœä¸ºç©ºè‡ªåŠ¨é”€æ¯æ¨¡å—æœ¬èº«
         if (drop == null)
         {
             Module.REMOVEModFROMItem(item, _Data);
             return;
         }
 
-        // ¼ì²éÎïÆ·ÊÇ·ñÎª¿Õ£¬Èç¹ûÎª¿ÕÔò³¢ÊÔÖØĞÂ»ñÈ¡
+        // æ£€æŸ¥ç‰©å“æ˜¯å¦ä¸ºç©ºï¼Œå¦‚æœä¸ºç©ºåˆ™å°è¯•é‡æ–°è·å–
         if (drop.item == null)
         {
             drop.item = ItemMgr.Instance.GetItemByGuid(drop.itemGuid);
             if (drop.item == null)
             {
-                Debug.LogError("¶ªÆúÎïÆ·¶ªÊ§");
+                Debug.LogError("ä¸¢å¼ƒç‰©å“ä¸¢å¤±");
                 drop.item = item;
                 return;
             }
         }
 
-        // ¸üĞÂ½ø¶ÈÊ±¼ä²¢¼ÆËã²åÖµ²ÎÊı
+        // æ›´æ–°è¿›åº¦æ—¶é—´å¹¶è®¡ç®—æ’å€¼å‚æ•°
         drop.progressTime += deltaTime;
         float duration = Mathf.Max(0.0001f, drop.time);
         float t = Mathf.Clamp01(drop.progressTime / duration);
 
-        // Chunk ¹éÊô°´µØÃæ¹ì¼£¼ÆËã¡£±´Èû¶û¸ß¶ÈºÍ arcHeight Ö»ÊÇ±íÏÖ²ã¸ß¶È£¬
-        // ²»ÄÜÈÃÎïÆ·ÔÚÅ×ÆğÊ±ÎóÇĞ»»µ½ÉÏ·½ÏàÁÚ Chunk¡£
+        // Chunk å½’å±æŒ‰åœ°é¢è½¨è¿¹è®¡ç®—ã€‚è´å¡å°”é«˜åº¦å’Œ arcHeight åªæ˜¯è¡¨ç°å±‚é«˜åº¦ï¼Œ
+        // ä¸èƒ½è®©ç‰©å“åœ¨æŠ›èµ·æ—¶è¯¯åˆ‡æ¢åˆ°ä¸Šæ–¹ç›¸é‚» Chunkã€‚
         Vector2 ownershipPos = Vector2.Lerp(drop.startPos, drop.endPos, t);
 
-        // Ê¹ÓÃ´æ´¢ÔÚdropÖĞµÄ¿ØÖÆµã½øĞĞ±´Èû¶û²åÖµ¼ÆËãÎ»ÖÃ
+        // ä½¿ç”¨å­˜å‚¨åœ¨dropä¸­çš„æ§åˆ¶ç‚¹è¿›è¡Œè´å¡å°”æ’å€¼è®¡ç®—ä½ç½®
         Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
 
-        // ´¹Ö±·½Ïòµş¼ÓÕıÏÒ¸ß¶È£¬ĞÎ³ÉÅ×ÎïÏßĞ§¹û
+        // å‚ç›´æ–¹å‘å åŠ æ­£å¼¦é«˜åº¦ï¼Œå½¢æˆæŠ›ç‰©çº¿æ•ˆæœ
         pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
 
-        // ¸üĞÂÎïÆ·Î»ÖÃºÍĞı×ª
+        // æ›´æ–°ç‰©å“ä½ç½®å’Œæ—‹è½¬
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
-        // ¸üĞÂ Chunk ¹éÊô
+        // æ›´æ–° Chunk å½’å±
         bool hasTargetChunk = UpdateChunkOwner(drop.item, ownershipPos);
 
-        // ¼ì²é¶¯»­ÊÇ·ñÍê³É
+        // æ£€æŸ¥åŠ¨ç”»æ˜¯å¦å®Œæˆ
         if (t >= 1f)
         {
             if (!hasTargetChunk)
@@ -81,15 +81,15 @@ public class Mod_Droping : Module
                 return;
             }
 
-            // È·±£ Chunk ÄÚµÄÎ»ÖÃË÷Òı¼ÇÂ¼µÄÊÇ×îÖÕÂäµã£¬¶ø²»ÊÇ¶¯»­Æğµã¡£
+            // ç¡®ä¿ Chunk å†…çš„ä½ç½®ç´¢å¼•è®°å½•çš„æ˜¯æœ€ç»ˆè½ç‚¹ï¼Œè€Œä¸æ˜¯åŠ¨ç”»èµ·ç‚¹ã€‚
             LastChunk.AddItem(drop.item);
             drop.item.itemData.Stack.CanBePickedUp = true;
-            drop = null; // Ïú»Ùdroping
+            drop = null; // é”€æ¯droping
         }
     }
 
     /// <summary>
-    /// ¸üĞÂÎïÆ·ËùÊôµÄ Chunk¡£Ö»ÓĞÈ·ÈÏÄ¿±ê Chunk ¿ÉÓÃºó²Å½â³ı¾É¹éÊô¡£
+    /// æ›´æ–°ç‰©å“æ‰€å±çš„ Chunkã€‚åªæœ‰ç¡®è®¤ç›®æ ‡ Chunk å¯ç”¨åæ‰è§£é™¤æ—§å½’å±ã€‚
     /// </summary>
     private bool UpdateChunkOwner(Item targetItem, Vector2 ownershipPos)
     {
@@ -98,13 +98,13 @@ public class Mod_Droping : Module
 
         Vector2Int currentChunkPos = Chunk.GetChunkPosition(ownershipPos);
 
-        // ĞÂµôÂäÎï¿ÉÄÜÒÑ±» ItemMgr ¹Òµ½ Chunk ÏÂ£¬µ« LastChunk ÉĞÎ´³õÊ¼»¯¡£
+        // æ–°æ‰è½ç‰©å¯èƒ½å·²è¢« ItemMgr æŒ‚åˆ° Chunk ä¸‹ï¼Œä½† LastChunk å°šæœªåˆå§‹åŒ–ã€‚
         if (LastChunk == null)
             LastChunk = targetItem.GetComponentInParent<Chunk>();
 
         if (IsChunkAtPosition(LastChunk, currentChunkPos))
         {
-            // ÏÔÊ½ parent ÊµÀı»¯²»»á×Ô¶¯Ğ´Èë Chunk µÄÔËĞĞÊ±×Öµä£¬ÕâÀï²¹ÆëÒ»´Î¡£
+            // æ˜¾å¼ parent å®ä¾‹åŒ–ä¸ä¼šè‡ªåŠ¨å†™å…¥ Chunk çš„è¿è¡Œæ—¶å­—å…¸ï¼Œè¿™é‡Œè¡¥é½ä¸€æ¬¡ã€‚
             if (targetItem.itemData != null && !LastChunk.RunTimeItems.ContainsKey(targetItem.itemData.Guid))
                 LastChunk.AddItem(targetItem);
 
@@ -115,7 +115,7 @@ public class Mod_Droping : Module
         if (chunkMgr == null || !chunkMgr.TryGetActiveChunkByPos(currentChunkPos, out Chunk newChunk))
             return false;
 
-        // ÏÈÈ·ÈÏĞÂ Chunk£¬ÔÙ´Ó¾É Chunk ÒÆ³ı£¬±ÜÃâ¼ÓÔØ±ßÔµ³öÏÖÎŞ¹éÊôÎïÆ·¡£
+        // å…ˆç¡®è®¤æ–° Chunkï¼Œå†ä»æ—§ Chunk ç§»é™¤ï¼Œé¿å…åŠ è½½è¾¹ç¼˜å‡ºç°æ— å½’å±ç‰©å“ã€‚
         LastChunk?.RemoveItem(targetItem);
         newChunk.AddItem(targetItem);
         LastChunk = newChunk;
@@ -138,8 +138,8 @@ public class Mod_Droping : Module
         if (chunkMgr == null)
             return;
 
-        // ChunkMgr ÄÚ²¿»á¶ÔÏàÍ¬×ø±êµÄÇëÇóÈ¥ÖØ£»Ã¿Ö¡ÖØÊÔ¿É±ÜÃâ¼ÓÔØ¶ÓÁĞ
-        // Òò³¡¾°ÇĞ»»»ò¿ìËÙÒÆ¶¯±»Çå¿Õºó£¬µôÂäÎïÓÀ¾ÃÍ£ÁôÔÚµÈ´ı×´Ì¬¡£
+        // ChunkMgr å†…éƒ¨ä¼šå¯¹ç›¸åŒåæ ‡çš„è¯·æ±‚å»é‡ï¼›æ¯å¸§é‡è¯•å¯é¿å…åŠ è½½é˜Ÿåˆ—
+        // å› åœºæ™¯åˆ‡æ¢æˆ–å¿«é€Ÿç§»åŠ¨è¢«æ¸…ç©ºåï¼Œæ‰è½ç‰©æ°¸ä¹…åœç•™åœ¨ç­‰å¾…çŠ¶æ€ã€‚
         chunkMgr.RequestLoadChunk_By_Position(chunkPos);
     }
 
@@ -150,13 +150,13 @@ public class Mod_Droping : Module
     }
 
     /// <summary>
-    /// ¶ş½×±´Èû¶ûÇúÏß¼ÆËã
+    /// äºŒé˜¶è´å¡å°”æ›²çº¿è®¡ç®—
     /// </summary>
-    /// <param name="p0">Æğµã</param>
-    /// <param name="p1">¿ØÖÆµã</param>
-    /// <param name="p2">ÖÕµã</param>
-    /// <param name="t">²åÖµ²ÎÊı(0-1)</param>
-    /// <returns>²åÖµÎ»ÖÃ</returns>
+    /// <param name="p0">èµ·ç‚¹</param>
+    /// <param name="p1">æ§åˆ¶ç‚¹</param>
+    /// <param name="p2">ç»ˆç‚¹</param>
+    /// <param name="t">æ’å€¼å‚æ•°(0-1)</param>
+    /// <returns>æ’å€¼ä½ç½®</returns>
     public static Vector2 Bezier2(Vector2 p0, Vector2 p1, Vector2 p2, float t)
     {
         float mt = 1f - t;
@@ -164,40 +164,40 @@ public class Mod_Droping : Module
     }
     
     /// <summary>
-    /// ´´½¨Ö±ÏßÔË¶¯µÄ¿ØÖÆµã£¨Èıµã¹²ÏßÊµÏÖÖ±ÏßÒÆ¶¯£©
+    /// åˆ›å»ºç›´çº¿è¿åŠ¨çš„æ§åˆ¶ç‚¹ï¼ˆä¸‰ç‚¹å…±çº¿å®ç°ç›´çº¿ç§»åŠ¨ï¼‰
     /// </summary>
-    /// <param name="startPos">Æğµã</param>
-    /// <param name="endPos">ÖÕµã</param>
-    /// <returns>¿ØÖÆµãÎ»ÖÃ</returns>
+    /// <param name="startPos">èµ·ç‚¹</param>
+    /// <param name="endPos">ç»ˆç‚¹</param>
+    /// <returns>æ§åˆ¶ç‚¹ä½ç½®</returns>
     public static Vector2 CreateLinearControlPoint(Vector2 startPos, Vector2 endPos)
     {
-        // ¿ØÖÆµãÉèÎªÆğµãºÍÖÕµãµÄÖĞµã£¬ÊµÏÖÖ±ÏßÒÆ¶¯
+        // æ§åˆ¶ç‚¹è®¾ä¸ºèµ·ç‚¹å’Œç»ˆç‚¹çš„ä¸­ç‚¹ï¼Œå®ç°ç›´çº¿ç§»åŠ¨
         return (startPos + endPos) * 0.5f;
     }
     
     /// <summary>
-    /// ´´½¨Å×ÎïÏßÔË¶¯µÄ¿ØÖÆµã
+    /// åˆ›å»ºæŠ›ç‰©çº¿è¿åŠ¨çš„æ§åˆ¶ç‚¹
     /// </summary>
-    /// <param name="startPos">Æğµã</param>
-    /// <param name="endPos">ÖÕµã</param>
-    /// <param name="bezierOffset">¿ØÖÆµã´¹Ö±Æ«ÒÆÁ¿</param>
-    /// <returns>¿ØÖÆµãÎ»ÖÃ</returns>
+    /// <param name="startPos">èµ·ç‚¹</param>
+    /// <param name="endPos">ç»ˆç‚¹</param>
+    /// <param name="bezierOffset">æ§åˆ¶ç‚¹å‚ç›´åç§»é‡</param>
+    /// <returns>æ§åˆ¶ç‚¹ä½ç½®</returns>
     public static Vector2 CreateParabolicControlPoint(Vector2 startPos, Vector2 endPos, float bezierOffset)
     {
-        // ¼ÆËã¶ş½×±´Èû¶û¿ØÖÆµã£ºÖĞµãÏòÉÏÆ«ÒÆ
+        // è®¡ç®—äºŒé˜¶è´å¡å°”æ§åˆ¶ç‚¹ï¼šä¸­ç‚¹å‘ä¸Šåç§»
         Vector2 mid = (startPos + endPos) * 0.5f;
         mid.y += bezierOffset;
         return mid;
     }
     
     /// <summary>
-    /// ¾²Ì¬¶ªÆúÎïÆ··½·¨£¬¹©Íâ²¿Ä£¿éµ÷ÓÃ
+    /// é™æ€ä¸¢å¼ƒç‰©å“æ–¹æ³•ï¼Œä¾›å¤–éƒ¨æ¨¡å—è°ƒç”¨
     /// </summary>
     public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, bool isLinear = false, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
     {
         item.transform.position = startPos;
 
-        // ¸ù¾İÊÇ·ñÖ±ÏßÔË¶¯¼ÆËã¿ØÖÆµã
+        // æ ¹æ®æ˜¯å¦ç›´çº¿è¿åŠ¨è®¡ç®—æ§åˆ¶ç‚¹
         Vector2 controlPos;
         if (isLinear)
         {
@@ -223,12 +223,12 @@ public class Mod_Droping : Module
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
         itemDrop.Load();
         itemDrop.drop = drop;
-        itemDrop.arcHeight = arcHeight; // ´«µİ»¡¸ß²ÎÊı
+        itemDrop.arcHeight = arcHeight; // ä¼ é€’å¼§é«˜å‚æ•°
         item.itemData.Stack.CanBePickedUp = false;
     }
     
     /// <summary>
-    /// ¾²Ì¬¶ªÆúÎïÆ·£¨ÔÚÖ¸¶¨°ë¾¶·¶Î§ÄÚËæ»úÎ»ÖÃ£©
+    /// é™æ€ä¸¢å¼ƒç‰©å“ï¼ˆåœ¨æŒ‡å®šåŠå¾„èŒƒå›´å†…éšæœºä½ç½®ï¼‰
     /// </summary>
     public static void StaticDropItemInARange(Item item, Vector2 startPos, float radius, float time, bool isLinear = false, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
     {

@@ -16,7 +16,7 @@ public partial class Mod_Stamina : Module
         public float CurrentStamina;
         public float MaxStamina;
     }
-    // ÊÇ·ñÎªÂú¾«Á¦ - ÊµÊ±ÅĞ¶Ï
+    // æ˜¯å¦ä¸ºæ»¡ç²¾åŠ› - å®æ—¶åˆ¤æ–­
     public bool IsStaminaFull => Mathf.Approximately(Data.CurrentStamina, MaxValue);
 
     public StaminaData Data;
@@ -31,7 +31,7 @@ public partial class Mod_Stamina : Module
 
     public Ex_ModData_MemoryPackable modData;
 
-    public GameObject Prefab_UI;//TODO Õâ¸öÊÇUIµÄÔ¤ÖÆÌå
+    public GameObject Prefab_UI;//TODO è¿™ä¸ªæ˜¯UIçš„é¢„åˆ¶ä½“
 
     public Slider slider;
     public override void Awake()
@@ -45,7 +45,7 @@ public partial class Mod_Stamina : Module
     {
         modData.ReadData(ref Data);
 
-        // ÊµÀı»¯ÌåÁ¦ UI Ô¤ÖÆÌå²¢»ñÈ¡ Slider ×é¼ş
+        // å®ä¾‹åŒ–ä½“åŠ› UI é¢„åˆ¶ä½“å¹¶è·å– Slider ç»„ä»¶
         if (Prefab_UI != null)
         {
             BasePanel staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
@@ -55,13 +55,13 @@ public partial class Mod_Stamina : Module
             }
         }
 
-        // ¶µµ×£ºÈç¹ûÔ¤ÖÆÌåÉÏÃ»ÕÒµ½£¬¾ÍÔÚµ±Ç°ÎïÌåµÄ×Ó½ÚµãÖĞÕÒ Slider
+        // å…œåº•ï¼šå¦‚æœé¢„åˆ¶ä½“ä¸Šæ²¡æ‰¾åˆ°ï¼Œå°±åœ¨å½“å‰ç‰©ä½“çš„å­èŠ‚ç‚¹ä¸­æ‰¾ Slider
         if (slider == null)
         {
             slider = GetComponentInChildren<Slider>();
         }
 
-        // ÓÃµ±Ç°ÌåÁ¦ÖµË¢ĞÂÒ»´Î UI
+        // ç”¨å½“å‰ä½“åŠ›å€¼åˆ·æ–°ä¸€æ¬¡ UI
         UpdateSlider();
     }
 
@@ -73,7 +73,7 @@ public partial class Mod_Stamina : Module
     public void AddStamina(float value)
     {
         float multiplier = GameDifficultyService.ResolveStaminaDeltaMultiplier(item, value);
-        CurrentValue += value * multiplier; // »á×Ô¶¯´¥·¢ÊÂ¼şºÍ¸üĞÂSlider
+        CurrentValue += value * multiplier; // ä¼šè‡ªåŠ¨è§¦å‘äº‹ä»¶å’Œæ›´æ–°Slider
     }
 
 
@@ -91,22 +91,22 @@ public partial class Mod_Stamina : Module
     }
 
 
-    // µ±Ç°ÌåÁ¦Öµ - ´øÊÂ¼ş´¥·¢
+    // å½“å‰ä½“åŠ›å€¼ - å¸¦äº‹ä»¶è§¦å‘
     public float CurrentValue
     {
         get => Data.CurrentStamina;
         set
         {
             Data.CurrentStamina = Mathf.Clamp(value, 0, MaxValue);
-            OnChangeStamina.Invoke(); // Öµ¸Ä±äÊ±´¥·¢ÊÂ¼ş
-            UpdateSlider(); // ¸üĞÂSliderÏÔÊ¾
+            OnChangeStamina.Invoke(); // å€¼æ”¹å˜æ—¶è§¦å‘äº‹ä»¶
+            UpdateSlider(); // æ›´æ–°Slideræ˜¾ç¤º
         }
     }
 
-    // ×î´óÌåÁ¦Öµ - Ö»¶ÁÊôĞÔ£¬²»ÊÜÊÂ¼şÓ°Ïì
+    // æœ€å¤§ä½“åŠ›å€¼ - åªè¯»å±æ€§ï¼Œä¸å—äº‹ä»¶å½±å“
     public float MaxValue
     {
         get => Data.MaxStamina;
-        // ÒÆ³ıÁË setter£¬Ê¹Æä³ÉÎªÖ»¶ÁÊôĞÔ
+        // ç§»é™¤äº† setterï¼Œä½¿å…¶æˆä¸ºåªè¯»å±æ€§
     }
 }

@@ -13,7 +13,7 @@ public class CraftingIngredient
     public string ItemName = "";
     public GameObject ItemPrefab;
 
-    public string Tag = "";//µ±Tag´æÔÚÊ± ±íÊ¾¸ÃÎïÆ·ÊÊÅä¶ÔÓ¦TagµÄÎïÆ·,
+    public string Tag = "";//å½“Tagå­˜åœ¨æ—¶ è¡¨ç¤ºè¯¥ç‰©å“é€‚é…å¯¹åº”Tagçš„ç‰©å“,
 
     public int amount = 1;
 
@@ -43,14 +43,14 @@ public class CraftingIngredient
         }
     }
 
-    // ĞŞ¸´ÁËÔ­À´ ToStringList ÖĞÊ¹ÓÃ IndexOf µÄÇ±ÔÚÎÊÌâ
+    // ä¿®å¤äº†åŸæ¥ ToStringList ä¸­ä½¿ç”¨ IndexOf çš„æ½œåœ¨é—®é¢˜
     public string ToStringList(List<CraftingIngredient> list)
     {
         if (list == null || list.Count == 0) return "";
         var strings = new string[list.Count];
         for (int i = 0; i < list.Count; i++)
         {
-            strings[i] = list[i] != null ? list[i].ToString() : "¿Õ";
+            strings[i] = list[i] != null ? list[i].ToString() : "ç©º";
         }
         return string.Join(",", strings);
     }
@@ -79,6 +79,6 @@ public class CraftingIngredient
 
 public enum MatchMode
 {
-    ExactItem, // ±ØĞëÊÇÖ¸¶¨ÎïÆ·
-    ByTag      // ÈÎÒâ´øÕâ¸ö Tag µÄÎïÆ·
+    ExactItem, // å¿…é¡»æ˜¯æŒ‡å®šç‰©å“
+    ByTag      // ä»»æ„å¸¦è¿™ä¸ª Tag çš„ç‰©å“
 }

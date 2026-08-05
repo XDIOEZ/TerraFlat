@@ -360,10 +360,8 @@ public static class ItemDefinitionCatalogLoader
         if (module != null)
             return module;
 
-        return shell.GetComponentsInChildren<Module>(true).FirstOrDefault(candidate =>
-            string.Equals(candidate.gameObject.name, moduleId, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(candidate.GetType().Name, moduleId, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(candidate._Data?.ID, moduleId, StringComparison.OrdinalIgnoreCase));
+        return shell.GetComponentsInChildren<Module>(true)
+            .FirstOrDefault(candidate => candidate != null && candidate.MatchesPersistedId(moduleId));
     }
 
     private static Sprite ResolveSprite(

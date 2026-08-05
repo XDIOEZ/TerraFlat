@@ -90,12 +90,11 @@ public partial class GameManager
     private TextMeshProUGUI worldLoadingStatus;
     private TextMeshProUGUI worldLoadingProgressText;
     private Slider worldLoadingProgress;
-    private Coroutine worldLoadingCompletionCoroutine;
+    private Coroutine worldLoadingHideCoroutine;
     private Coroutine worldLoadingStatusAnimationCoroutine;
     private string worldLoadingAnimatedStatusSource = string.Empty;
     private string worldLoadingStatusBase = string.Empty;
     private int worldLoadingStatusDotCount;
-    private bool isWorldEntryLoading;
 
     public static string GetNewGameDifficultyPresetButtonKey(GameDifficultyId difficulty)
     {
@@ -106,24 +105,36 @@ public partial class GameManager
 
     #region 世界加载面板
 
-    private bool BeginWorldEntryLoading(string title, string status, float progress)
+    partial void InitializeWorldEntryPresentation()
     {
-        if (isWorldEntryLoading)
+        WorldEntryProgressChanged -= OnWorldEntryProgressChanged;
+        WorldEntryProgressChanged += OnWorldEntryProgressChanged;
+    }
+
+    partial void DisposeWorldEntryPresentation()
+    {
+        WorldEntryProgressChanged -= OnWorldEntryProgressChanged;
+    }
+
+    private void OnWorldEntryProgressChanged(WorldEntryProgressInfo progress)
+    {
+        if (!EnsureWorldLoadingView())
+            return;
+
+        if (worldLoadingHideCoroutine != null)
         {
-            Debug.LogWarning("[GameManager] 世界进入流程已在执行，忽略重复请求。");
-            return false;
+            StopCoroutine(worldLoadingHideCoroutine);
+            worldLoadingHideCoroutine = null;
         }
 
-        if (!EnsureWorldLoadingView())
-            return false;
-
-        isWorldEntryLoading = true;
-        Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
-        Event_PlayerEnterWorld += OnWorldEntryPlayerReady;
-        SetWorldLoadingView(title, status, progress);
+        UpdateWorldLoadingView(progress.Title, progress.Status, progress.Progress);
         worldLoadingView.SetActive(true);
         worldLoadingCanvas.sortingOrder = 32000;
-        return true;
+
+        if (progress.State == WorldEntryProgressState.Completed)
+            worldLoadingHideCoroutine = StartCoroutine(HideWorldLoadingViewAfterDelay(0.15f));
+        else if (progress.State == WorldEntryProgressState.Failed)
+            worldLoadingHideCoroutine = StartCoroutine(HideWorldLoadingViewAfterDelay(1.5f));
     }
 
     private bool EnsureWorldLoadingView()
@@ -167,7 +178,7 @@ public partial class GameManager
         return true;
     }
 
-    private void SetWorldLoadingView(string title, string status, float progress)
+    private void UpdateWorldLoadingView(string title, string status, float progress)
     {
         if (!EnsureWorldLoadingView())
             return;
@@ -261,67 +272,18 @@ public partial class GameManager
         worldLoadingStatusDotCount = 0;
     }
 
-    private void OnWorldEntryPlayerReady(Player player)
+    private IEnumerator HideWorldLoadingViewAfterDelay(float delaySeconds)
     {
-        if (!isWorldEntryLoading)
-            return;
-
-        Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
-        if (worldLoadingCompletionCoroutine != null)
-            StopCoroutine(worldLoadingCompletionCoroutine);
-        worldLoadingCompletionCoroutine = StartCoroutine(CompleteWorldEntryLoadingCoroutine());
-    }
-
-    private IEnumerator CompleteWorldEntryLoadingCoroutine()
-    {
-        SetWorldLoadingView("正在进入世界", "正在加载玩家周围区域…", 0.78f);
-        yield return null;
-
-        float displayedProgress = 0.78f;
-        while (ChunkMgr.Instance != null && ChunkMgr.Instance.HasPendingChunkLoads)
-        {
-            displayedProgress = Mathf.MoveTowards(
-                displayedProgress,
-                0.95f,
-                Mathf.Max(0.002f, Time.unscaledDeltaTime * 0.08f));
-            SetWorldLoadingView("正在进入世界", "正在生成并加载周围区块…", displayedProgress);
-            yield return null;
-        }
-
-        yield return null;
-        yield return null;
-        SetWorldLoadingView("加载完成", "世界已经准备完毕。", 1f);
-        yield return new WaitForSecondsRealtime(0.15f);
-        HideWorldLoadingView();
-    }
-
-    private void FailWorldEntryLoading(string message, Exception exception = null)
-    {
-        Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
-        if (exception != null)
-            Debug.LogException(exception, this);
-        Debug.LogError($"[GameManager] {message}", this);
-
-        if (worldLoadingCompletionCoroutine != null)
-            StopCoroutine(worldLoadingCompletionCoroutine);
-        worldLoadingCompletionCoroutine = StartCoroutine(HideFailedWorldLoadingCoroutine(message));
-    }
-
-    private IEnumerator HideFailedWorldLoadingCoroutine(string message)
-    {
-        SetWorldLoadingView("加载失败", message, 0f);
-        yield return new WaitForSecondsRealtime(1.5f);
+        yield return new WaitForSecondsRealtime(Mathf.Max(0f, delaySeconds));
         HideWorldLoadingView();
     }
 
     private void HideWorldLoadingView()
     {
-        Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
         StopWorldLoadingStatusAnimation();
         if (worldLoadingView != null)
             worldLoadingView.SetActive(false);
-        worldLoadingCompletionCoroutine = null;
-        isWorldEntryLoading = false;
+        worldLoadingHideCoroutine = null;
     }
 
     #endregion
@@ -450,12 +412,22 @@ public partial class GameManager
         return true;
     }
 
-    private bool TryReadNewGameCreationInputs(out string saveName, out string playerName)
+    [Tooltip("从新世界面板组装请求并创建世界")]
+    public void CreateNewWorld()
     {
+        if (!TryBuildNewWorldCreationRequest(out NewWorldCreationRequest request))
+            return;
+
+        CreateNewWorld(request);
+    }
+
+    private bool TryBuildNewWorldCreationRequest(out NewWorldCreationRequest request)
+    {
+        request = null;
         BasePanel panel = null;
         UIManager.Instance?.TryGetPanel(NewGamePanelKey, out panel);
-        saveName = panel?.GetInputField(NewGameSaveInputKey)?.text;
-        playerName = panel?.GetInputField(NewGamePlayerInputKey)?.text;
+        string saveName = panel?.GetInputField(NewGameSaveInputKey)?.text;
+        string playerName = panel?.GetInputField(NewGamePlayerInputKey)?.text;
 
         if (panel == null)
         {
@@ -483,6 +455,22 @@ public partial class GameManager
         ReadyPlanetData.NoiseScale = noiseScale;
         radiusInput.SetTextWithoutNotify(radius.ToString(CultureInfo.InvariantCulture));
         noiseInput.SetTextWithoutNotify(noiseScale.ToString("0.########", CultureInfo.InvariantCulture));
+
+        request = new NewWorldCreationRequest(
+            saveName,
+            playerName,
+            ReadyGameSaveData?.SaveSeed,
+            ReadyPlanetData,
+            ReadyTimeData,
+            pendingNewWorldDifficulty,
+            pendingCustomDifficultyRules);
+        if (!request.TryValidate(out string validationError))
+        {
+            Debug.LogWarning($"[GameManager] 新世界参数无效：{validationError}");
+            request = null;
+            return false;
+        }
+
         return true;
     }
 
@@ -756,19 +744,6 @@ public partial class GameManager
     {
         if (button?.targetGraphic != null)
             button.targetGraphic.color = selected ? FlatWorldUITheme.Accent : FlatWorldUITheme.SurfaceRaised;
-    }
-
-    #endregion
-
-    #region 新世界难度
-
-    private void ApplyPendingNewWorldDifficulty(GameSaveData saveData)
-    {
-        if (saveData == null)
-            return;
-
-        saveData.Difficulty = GameDifficultyCatalog.Normalize(pendingNewWorldDifficulty);
-        GameDifficultyCatalog.WriteCustomRules(saveData, pendingCustomDifficultyRules);
     }
 
     #endregion

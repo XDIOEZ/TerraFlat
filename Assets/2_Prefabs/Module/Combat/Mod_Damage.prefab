@@ -59,7 +59,6 @@ MonoBehaviour:
   DamageInterval: 0.2
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0
-  showDebugWarnings: 1
   damageCollider: {fileID: 3581692118764745406}
   lastDamageTime: 0
   MemoryPackableData:

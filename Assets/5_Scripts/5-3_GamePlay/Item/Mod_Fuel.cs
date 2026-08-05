@@ -8,22 +8,22 @@ public class Mod_Fuel : Module
     public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }
     public FuelData Data = new FuelData();
 
-    // ÊÇ·ñµãÈ¼
+    // æ˜¯å¦ç‚¹ç‡ƒ
     public bool IsIgnited { get; private set; } = false;
     
-    // µÆ¹â×é¼şÒıÓÃ
-    [Tooltip("È¼ÉÕÊ±¼¤»îµÄµÆ¹â×é¼ş")]
+    // ç¯å…‰ç»„ä»¶å¼•ç”¨
+    [Tooltip("ç‡ƒçƒ§æ—¶æ¿€æ´»çš„ç¯å…‰ç»„ä»¶")]
     public Light2D fuelLight;
     
-    // µÆ¹â»ù´¡Ç¿¶È
-    [Tooltip("µÆ¹â»ù´¡Ç¿¶È")]
+    // ç¯å…‰åŸºç¡€å¼ºåº¦
+    [Tooltip("ç¯å…‰åŸºç¡€å¼ºåº¦")]
     public float lightBaseIntensity = 1f;
     
-    // È¼ÉÕÏûºÄËÙ¶ÈÏµÊı£¨¿ØÖÆµÆ¹â±ä»¯£©
-    [Tooltip("È¼ÉÕÏûºÄËÙ¶ÈÏµÊı")]
+    // ç‡ƒçƒ§æ¶ˆè€—é€Ÿåº¦ç³»æ•°ï¼ˆæ§åˆ¶ç¯å…‰å˜åŒ–ï¼‰
+    [Tooltip("ç‡ƒçƒ§æ¶ˆè€—é€Ÿåº¦ç³»æ•°")]
     public float burnSpeedMultiplier = 1f;
 
-    [Tooltip("ÊÖ³Ö¸ÃÈ¼ÁÏÊ±×Ô¶¯µãÁÁ£¬ÀëÊÖºó×Ô¶¯Ï¨Ãğ")]
+    [Tooltip("æ‰‹æŒè¯¥ç‡ƒæ–™æ—¶è‡ªåŠ¨ç‚¹äº®ï¼Œç¦»æ‰‹åè‡ªåŠ¨ç†„ç­")]
     public bool igniteWhileHeld = false;
 
     private void OnValidate()
@@ -66,7 +66,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// ÊÇ·ñÓĞÈ¼ÁÏ
+    /// æ˜¯å¦æœ‰ç‡ƒæ–™
     /// </summary>
     public bool HasFuel()
     {
@@ -74,7 +74,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// Ìí¼ÓÈ¼ÁÏ
+    /// æ·»åŠ ç‡ƒæ–™
     /// </summary>
     public void AddFuel(float amount)
     {
@@ -82,11 +82,11 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// ÏûºÄÈ¼ÁÏ
+    /// æ¶ˆè€—ç‡ƒæ–™
     /// </summary>
     public bool ConsumeFuel(float amount)
     {
-        // ¸ù¾İÈ¼ÉÕËÙ¶ÈÏµÊıµ÷ÕûÏûºÄÁ¿
+        // æ ¹æ®ç‡ƒçƒ§é€Ÿåº¦ç³»æ•°è°ƒæ•´æ¶ˆè€—é‡
         float actualAmount =
             amount *
             burnSpeedMultiplier *
@@ -95,11 +95,11 @@ public class Mod_Fuel : Module
         
         if (Data.Fuel.x <= 0.01f) 
         {
-            SetIgnited(false); // È¼ÁÏºÄ¾¡×Ô¶¯Ï¨Ãğ
+            SetIgnited(false); // ç‡ƒæ–™è€—å°½è‡ªåŠ¨ç†„ç­
         }
         else
         {
-            // ¸üĞÂµÆ¹âÇ¿¶È£¨¸ù¾İÊ£ÓàÈ¼ÁÏ±ÈÀı£©
+            // æ›´æ–°ç¯å…‰å¼ºåº¦ï¼ˆæ ¹æ®å‰©ä½™ç‡ƒæ–™æ¯”ä¾‹ï¼‰
             UpdateLightIntensity();
         }
         
@@ -107,7 +107,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// µãÈ¼
+    /// ç‚¹ç‡ƒ
     /// </summary>
     public void Ignite()
     {
@@ -118,7 +118,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// Ï¨Ãğ
+    /// ç†„ç­
     /// </summary>
     public void Extinguish()
     {
@@ -126,9 +126,9 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// ÉèÖÃµãÈ¼×´Ì¬
+    /// è®¾ç½®ç‚¹ç‡ƒçŠ¶æ€
     /// </summary>
-    /// <param name="ignited">ÊÇ·ñµãÈ¼</param>
+    /// <param name="ignited">æ˜¯å¦ç‚¹ç‡ƒ</param>
     public void SetIgnited(bool ignited)
     {
         IsIgnited = ignited;
@@ -136,7 +136,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// ÇĞ»»µãÈ¼×´Ì¬
+    /// åˆ‡æ¢ç‚¹ç‡ƒçŠ¶æ€
     /// </summary>
     public void ToggleIgnited()
     {
@@ -144,7 +144,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// »ñÈ¡µãÈ¼×´Ì¬
+    /// è·å–ç‚¹ç‡ƒçŠ¶æ€
     /// </summary>
     public bool GetIgnitedState()
     {
@@ -152,7 +152,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// È¼ÁÏÊ£Óà±ÈÀı (0~1)
+    /// ç‡ƒæ–™å‰©ä½™æ¯”ä¾‹ (0~1)
     /// </summary>
     public float GetFuelRatio()
     {
@@ -161,7 +161,7 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// ¸üĞÂµÆ¹â×´Ì¬
+    /// æ›´æ–°ç¯å…‰çŠ¶æ€
     /// </summary>
     private void UpdateLightState()
     {
@@ -176,17 +176,17 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// ¸üĞÂµÆ¹âÇ¿¶È
+    /// æ›´æ–°ç¯å…‰å¼ºåº¦
     /// </summary>
     private void UpdateLightIntensity()
     {
         if (fuelLight != null && IsIgnited)
         {
-            // µÆ¹âÇ¿¶È¸ù¾İÈ¼ÁÏÊ£Óà±ÈÀıºÍÈ¼ÉÕËÙ¶Èµ÷Õû
+            // ç¯å…‰å¼ºåº¦æ ¹æ®ç‡ƒæ–™å‰©ä½™æ¯”ä¾‹å’Œç‡ƒçƒ§é€Ÿåº¦è°ƒæ•´
             float fuelRatio = GetFuelRatio();
             float intensity = lightBaseIntensity * fuelRatio;
             
-            // ¿ÉÒÔÌí¼ÓÒ»Ğ©Ëæ»ú²¨¶¯Ê¹µÆ¹â¸ü×ÔÈ»
+            // å¯ä»¥æ·»åŠ ä¸€äº›éšæœºæ³¢åŠ¨ä½¿ç¯å…‰æ›´è‡ªç„¶
             intensity *= Random.Range(0.9f, 1.1f);
             
             fuelLight.intensity = intensity;
@@ -194,16 +194,16 @@ public class Mod_Fuel : Module
     }
 
     /// <summary>
-    /// ÉèÖÃÈ¼ÉÕËÙ¶ÈÏµÊı
+    /// è®¾ç½®ç‡ƒçƒ§é€Ÿåº¦ç³»æ•°
     /// </summary>
-    /// <param name="multiplier">ËÙ¶ÈÏµÊı</param>
+    /// <param name="multiplier">é€Ÿåº¦ç³»æ•°</param>
     public void SetBurnSpeedMultiplier(float multiplier)
     {
-        burnSpeedMultiplier = Mathf.Max(multiplier, 0.1f); // ÏŞÖÆ×îĞ¡Öµ±ÜÃâ³ıÁã
+        burnSpeedMultiplier = Mathf.Max(multiplier, 0.1f); // é™åˆ¶æœ€å°å€¼é¿å…é™¤é›¶
     }
 
     /// <summary>
-    /// »ñÈ¡È¼ÉÕËÙ¶ÈÏµÊı
+    /// è·å–ç‡ƒçƒ§é€Ÿåº¦ç³»æ•°
     /// </summary>
     public float GetBurnSpeedMultiplier()
     {
@@ -216,9 +216,9 @@ public class Mod_Fuel : Module
 public partial class FuelData
 {
     /// <summary>
-    /// x = µ±Ç°È¼ÁÏÖµ, y = ×î´óÈ¼ÁÏÖµ
+    /// x = å½“å‰ç‡ƒæ–™å€¼, y = æœ€å¤§ç‡ƒæ–™å€¼
     /// </summary>
     public Vector2 Fuel = new Vector2(100f, 100f);
-    [Tooltip("È¼ÉÕÊ±Ìá¹©µÄ×î´óÎÂ¶È")]
+    [Tooltip("ç‡ƒçƒ§æ—¶æä¾›çš„æœ€å¤§æ¸©åº¦")]
     public float MaxTemperature = 100f;
 }

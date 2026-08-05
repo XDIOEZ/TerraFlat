@@ -6,32 +6,32 @@ using UnityEngine;
 public class Mod_BaseDroper : Module
 {
     /// <summary>
-    /// ÎïÆ·ÒÆ¶¯Ä£Ê½
+    /// ç‰©å“ç§»åŠ¨æ¨¡å¼
     /// </summary>
     public enum MoveMode
     {
-        BezierCurve,    // ±´Èû¶ûÇúÏß£¨Å×ÎïÏß£©
-        StraightLine    // Ö±ÏßÔË¶¯
+        BezierCurve,    // è´å¡å°”æ›²çº¿ï¼ˆæŠ›ç‰©çº¿ï¼‰
+        StraightLine    // ç›´çº¿è¿åŠ¨
     }
     
     public Ex_ModData modData;
     public override ModuleData _Data { get => modData; set => modData = (Ex_ModData)value; }
 
-    [Tooltip("µ±Ç°ÕıÔÚ½øĞĞµÄÎïÆ·¶ªÆúÁĞ±í")]
+    [Tooltip("å½“å‰æ­£åœ¨è¿›è¡Œçš„ç‰©å“ä¸¢å¼ƒåˆ—è¡¨")]
     public List<Drop> drops = new List<Drop>();
 
-    [Header("¶ªÆú¶¯»­²ÎÊı")]
-    [Tooltip("Ä¬ÈÏÒÆ¶¯Ä£Ê½")]
+    [Header("ä¸¢å¼ƒåŠ¨ç”»å‚æ•°")]
+    [Tooltip("é»˜è®¤ç§»åŠ¨æ¨¡å¼")]
     public MoveMode defaultMoveMode = MoveMode.BezierCurve;
     
-    [Tooltip("¶ş½×±´Èû¶û¿ØÖÆµãÏà¶ÔÓÚÆğµãÖÕµãµÄÆ«ÒÆÁ¿")]
-    public float bezierOffset = 1f;          // ¿ØÖÆµã¸ß¶È
+    [Tooltip("äºŒé˜¶è´å¡å°”æ§åˆ¶ç‚¹ç›¸å¯¹äºèµ·ç‚¹ç»ˆç‚¹çš„åç§»é‡")]
+    public float bezierOffset = 1f;          // æ§åˆ¶ç‚¹é«˜åº¦
     
-    [Tooltip("´¹Ö±·½Ïò×î´ó¸ß¶È£¨ÓëÖ®Ç°Ò»ÖÂ£©")]
-    public float arcHeight = 1f;             // ´¹Ö±·½Ïò×î´ó¸ß¶È£¨ÓëÖ®Ç°Ò»ÖÂ£©
+    [Tooltip("å‚ç›´æ–¹å‘æœ€å¤§é«˜åº¦ï¼ˆä¸ä¹‹å‰ä¸€è‡´ï¼‰")]
+    public float arcHeight = 1f;             // å‚ç›´æ–¹å‘æœ€å¤§é«˜åº¦ï¼ˆä¸ä¹‹å‰ä¸€è‡´ï¼‰
 
     /* ----------------------------------------------------------
-     * ¶ªÆúÎïÆ·£¨×Ô¶¯Ëæ»úÖÕµã£©
+     * ä¸¢å¼ƒç‰©å“ï¼ˆè‡ªåŠ¨éšæœºç»ˆç‚¹ï¼‰
      * ----------------------------------------------------------*/
     public override void Awake()
     {
@@ -41,17 +41,17 @@ public class Mod_BaseDroper : Module
         }
     }
 
-    [Tooltip("¶ªÆúÎïÆ·£¨×Ô¶¯Ëæ»úÖÕµã£©")]
+    [Tooltip("ä¸¢å¼ƒç‰©å“ï¼ˆè‡ªåŠ¨éšæœºç»ˆç‚¹ï¼‰")]
     public void DropItem_Range(Item item, Vector2 startPos, float radius, float time)
     {
         item.transform.position = startPos;
 
-        // Ëæ»úÖÕµã
+        // éšæœºç»ˆç‚¹
         Vector2 randomDir = Random.insideUnitCircle.normalized;
         float randomDist = Random.Range(0.5f * radius, radius);
         Vector2 endPos = startPos + randomDir * randomDist;
 
-        // ¸ù¾İÒÆ¶¯Ä£Ê½¼ÆËã¿ØÖÆµã
+        // æ ¹æ®ç§»åŠ¨æ¨¡å¼è®¡ç®—æ§åˆ¶ç‚¹
         Vector2 controlPos = CalculateControlPoint(startPos, endPos, defaultMoveMode);
 
         Drop drop = new Drop
@@ -69,23 +69,23 @@ public class Mod_BaseDroper : Module
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
         itemDrop.Load();
         itemDrop.drop = drop;
-        itemDrop.arcHeight = arcHeight; // ´«µİ»¡¸ß²ÎÊı
+        itemDrop.arcHeight = arcHeight; // ä¼ é€’å¼§é«˜å‚æ•°
         drops.Add(drop);
     }
 
     /// <summary>
-    /// ¶ªÆúÎïÆ·£¨Ö¸¶¨ÆğµãÓëÖÕµã£©
+    /// ä¸¢å¼ƒç‰©å“ï¼ˆæŒ‡å®šèµ·ç‚¹ä¸ç»ˆç‚¹ï¼‰
     /// </summary>
-    [Tooltip("¶ªÆúÎïÆ·£¨Ö¸¶¨ÆğµãÓëÖÕµã£©")]
+    [Tooltip("ä¸¢å¼ƒç‰©å“ï¼ˆæŒ‡å®šèµ·ç‚¹ä¸ç»ˆç‚¹ï¼‰")]
     public void DropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time)
     {
         StaticDropItem_Pos(item, startPos, endPos, time, defaultMoveMode);
     }
 
     /// <summary>
-    /// ¶ªÆúÎïÆ·£¨ÔÚÖ¸¶¨°ë¾¶·¶Î§ÄÚËæ»úÎ»ÖÃ£©
+    /// ä¸¢å¼ƒç‰©å“ï¼ˆåœ¨æŒ‡å®šåŠå¾„èŒƒå›´å†…éšæœºä½ç½®ï¼‰
     /// </summary>
-    [Tooltip("¶ªÆúÎïÆ·£¨ÔÚÖ¸¶¨°ë¾¶·¶Î§ÄÚËæ»úÎ»ÖÃ")]
+    [Tooltip("ä¸¢å¼ƒç‰©å“ï¼ˆåœ¨æŒ‡å®šåŠå¾„èŒƒå›´å†…éšæœºä½ç½®")]
     public static void DropItemInARange(Item item, Vector2 startPos,float radius, float time)
     {
         Vector2 randomDir = Random.insideUnitCircle.normalized;
@@ -95,14 +95,14 @@ public class Mod_BaseDroper : Module
     }
 
     /// <summary>
-    /// ¡¾¾²Ì¬·½·¨¡¿¹©Íâ²¿Ä£¿é£¨ÈçMod_DeathLoot£©µ÷ÓÃ£¬¸´ÓÃµôÂä¶¯»­Âß¼­
+    /// ã€é™æ€æ–¹æ³•ã€‘ä¾›å¤–éƒ¨æ¨¡å—ï¼ˆå¦‚Mod_DeathLootï¼‰è°ƒç”¨ï¼Œå¤ç”¨æ‰è½åŠ¨ç”»é€»è¾‘
     /// </summary>
-    [Tooltip("¾²Ì¬¶ªÆúÎïÆ··½·¨£¬¹©Íâ²¿Ä£¿éµ÷ÓÃ")]
+    [Tooltip("é™æ€ä¸¢å¼ƒç‰©å“æ–¹æ³•ï¼Œä¾›å¤–éƒ¨æ¨¡å—è°ƒç”¨")]
     public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, MoveMode mode = MoveMode.BezierCurve, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
     {
         item.transform.position = startPos;
 
-        // ¸ù¾İÒÆ¶¯Ä£Ê½¼ÆËã¿ØÖÆµã
+        // æ ¹æ®ç§»åŠ¨æ¨¡å¼è®¡ç®—æ§åˆ¶ç‚¹
         Vector2 controlPos = CalculateControlPoint(startPos, endPos, mode, bezierOffset);
 
         Mod_BaseDroper.Drop drop = new Mod_BaseDroper.Drop
@@ -120,18 +120,18 @@ public class Mod_BaseDroper : Module
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
         itemDrop.Load();
         itemDrop.drop = drop;
-        itemDrop.arcHeight = arcHeight; // ´«µİ»¡¸ß²ÎÊı
+        itemDrop.arcHeight = arcHeight; // ä¼ é€’å¼§é«˜å‚æ•°
         item.itemData.Stack.CanBePickedUp = false;
     }
     
     /// <summary>
-    /// ¸ù¾İÒÆ¶¯Ä£Ê½¼ÆËã¿ØÖÆµã
+    /// æ ¹æ®ç§»åŠ¨æ¨¡å¼è®¡ç®—æ§åˆ¶ç‚¹
     /// </summary>
-    /// <param name="startPos">Æğµã</param>
-    /// <param name="endPos">ÖÕµã</param>
-    /// <param name="mode">ÒÆ¶¯Ä£Ê½</param>
-    /// <param name="bezierOffset">±´Èû¶ûÆ«ÒÆÁ¿</param>
-    /// <returns>¿ØÖÆµãÎ»ÖÃ</returns>
+    /// <param name="startPos">èµ·ç‚¹</param>
+    /// <param name="endPos">ç»ˆç‚¹</param>
+    /// <param name="mode">ç§»åŠ¨æ¨¡å¼</param>
+    /// <param name="bezierOffset">è´å¡å°”åç§»é‡</param>
+    /// <returns>æ§åˆ¶ç‚¹ä½ç½®</returns>
     private static Vector2 CalculateControlPoint(Vector2 startPos, Vector2 endPos, MoveMode mode, float bezierOffset = 1f)
     {
         Vector2 mid = (startPos + endPos) * 0.5f;
@@ -139,20 +139,20 @@ public class Mod_BaseDroper : Module
         switch (mode)
         {
             case MoveMode.StraightLine:
-                // Ö±ÏßÄ£Ê½£¬¿ØÖÆµã¾ÍÔÚÖĞµãÉÏ£¬ĞÎ³ÉÖ±Ïß
+                // ç›´çº¿æ¨¡å¼ï¼Œæ§åˆ¶ç‚¹å°±åœ¨ä¸­ç‚¹ä¸Šï¼Œå½¢æˆç›´çº¿
                 return mid;
             case MoveMode.BezierCurve:
             default:
-                // ±´Èû¶ûÇúÏßÄ£Ê½£¬¿ØÖÆµãÏòÉÏÆ«ÒÆ
+                // è´å¡å°”æ›²çº¿æ¨¡å¼ï¼Œæ§åˆ¶ç‚¹å‘ä¸Šåç§»
                 mid.y += bezierOffset;
                 return mid;
         }
     }
     
     /* ----------------------------------------------------------
-     * Ã¿Ö¡¸üĞÂ
+     * æ¯å¸§æ›´æ–°
      * ----------------------------------------------------------*/
-    [Tooltip("Ã¿Ö¡¸üĞÂ¶ªÆú¶¯»­")]
+    [Tooltip("æ¯å¸§æ›´æ–°ä¸¢å¼ƒåŠ¨ç”»")]
     public override void ModUpdate(float deltaTime)
     {
         if (!_Data.isRunning) return;
@@ -166,9 +166,9 @@ public class Mod_BaseDroper : Module
             drop.progressTime += deltaTime;
             float t = Mathf.Clamp01(drop.progressTime / drop.time);
 
-            // Ê¹ÓÃ´æ´¢ÔÚdropÖĞµÄ¿ØÖÆµã½øĞĞ±´Èû¶û²åÖµ
+            // ä½¿ç”¨å­˜å‚¨åœ¨dropä¸­çš„æ§åˆ¶ç‚¹è¿›è¡Œè´å¡å°”æ’å€¼
             Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
-            // ´¹Ö±·½Ïòµş¼ÓÕıÏÒ¸ß¶È
+            // å‚ç›´æ–¹å‘å åŠ æ­£å¼¦é«˜åº¦
             pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
 
             drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
@@ -183,9 +183,9 @@ public class Mod_BaseDroper : Module
     }
 
     /* ----------------------------------------------------------
-     * ¶ş½×±´Èû¶ûÇúÏß
+     * äºŒé˜¶è´å¡å°”æ›²çº¿
      * ----------------------------------------------------------*/
-    [Tooltip("¼ÆËã¶ş½×±´Èû¶ûÇúÏßÉÏµÄµã")]
+    [Tooltip("è®¡ç®—äºŒé˜¶è´å¡å°”æ›²çº¿ä¸Šçš„ç‚¹")]
     private static Vector2 Bezier2(Vector2 p0, Vector2 p1, Vector2 p2, float t)
     {
         float mt = 1f - t;
@@ -193,71 +193,71 @@ public class Mod_BaseDroper : Module
     }
 
     /* ----------------------------------------------------------
-     * ĞòÁĞ»¯/·´ĞòÁĞ»¯
+     * åºåˆ—åŒ–/ååºåˆ—åŒ–
      * ----------------------------------------------------------*/
-    [Tooltip("¼ÓÔØ¶ªÆúÊı¾İ")]
+    [Tooltip("åŠ è½½ä¸¢å¼ƒæ•°æ®")]
     public override void Load()
     {
         modData.ReadData(ref drops);
 
-        // ÁÙÊ±ÁĞ±í£¬¼ÇÂ¼ĞèÒªÒÆ³ıµÄ drop
+        // ä¸´æ—¶åˆ—è¡¨ï¼Œè®°å½•éœ€è¦ç§»é™¤çš„ drop
         List<Drop> toRemove = new List<Drop>();
 
         foreach (Drop drop in drops)
         {
             drop.item = ItemMgr.Instance.GetItemByGuid(drop.itemGuid);
             if (drop.item == null)
-                toRemove.Add(drop); // ÑÓ³ÙÒÆ³ı
+                toRemove.Add(drop); // å»¶è¿Ÿç§»é™¤
         }
 
-        // Í³Ò»ÒÆ³ı
+        // ç»Ÿä¸€ç§»é™¤
         foreach (Drop drop in toRemove)
         {
             drops.Remove(drop);
         }
     }
 
-    [Tooltip("±£´æ¶ªÆúÊı¾İ")]
+    [Tooltip("ä¿å­˜ä¸¢å¼ƒæ•°æ®")]
     public override void Save()
     {
         modData.WriteData(drops);
     }
 
     /* ----------------------------------------------------------
-     * Êı¾İ½á¹¹
+     * æ•°æ®ç»“æ„
      * ----------------------------------------------------------*/
     [System.Serializable]
     public class Drop
     {
-        [Tooltip("ÎïÆ·µÄÎ¨Ò»±êÊ¶·û")]
+        [Tooltip("ç‰©å“çš„å”¯ä¸€æ ‡è¯†ç¬¦")]
         public int itemGuid;
 
-        // Ô­À´µÄ Vector2 ¸ÄÎª x ºÍ y Á½¸ö float
-        [Tooltip("ÆğµãX×ø±ê")]
+        // åŸæ¥çš„ Vector2 æ”¹ä¸º x å’Œ y ä¸¤ä¸ª float
+        [Tooltip("èµ·ç‚¹Xåæ ‡")]
         public float startX, startY;
         
-        [Tooltip("ÖÕµãX×ø±ê")]
+        [Tooltip("ç»ˆç‚¹Xåæ ‡")]
         public float endX, endY;
         
-        [Tooltip("¿ØÖÆµãX×ø±ê")]
+        [Tooltip("æ§åˆ¶ç‚¹Xåæ ‡")]
         public float controlX, controlY;
 
-        [Tooltip("×ÜÊ±¼ä")]
+        [Tooltip("æ€»æ—¶é—´")]
         public float time;
         
-        [Tooltip("ÒÑ½øĞĞµÄÊ±¼ä")]
+        [Tooltip("å·²è¿›è¡Œçš„æ—¶é—´")]
         public float progressTime;
         
-        [Tooltip("Ã¿ÃëĞı×ª½Ç¶È£¨µ¥Î»£º¶È£©")]
+        [Tooltip("æ¯ç§’æ—‹è½¬è§’åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰")]
         public float rotationSpeed = 360f;
         
         [JsonIgnore]
         [ShowInInspector]
         [System.NonSerialized] 
-        [Tooltip("ÎïÆ·ÒıÓÃ")]
+        [Tooltip("ç‰©å“å¼•ç”¨")]
         public Item item;
 
-        // ÊôĞÔ·â×°£¬·½±ãÊ¹ÓÃ Vector2 ½Ó¿Ú
+        // å±æ€§å°è£…ï¼Œæ–¹ä¾¿ä½¿ç”¨ Vector2 æ¥å£
         [JsonIgnore]
         public Vector2 startPos
         {

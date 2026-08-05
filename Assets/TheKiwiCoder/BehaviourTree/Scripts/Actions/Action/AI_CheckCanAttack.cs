@@ -1,14 +1,14 @@
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/ÐÐ¶¯/¼ì²âÊÇ·ñ¿ÉÒÔ¹¥»÷")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/æ£€æµ‹æ˜¯å¦å¯ä»¥æ”»å‡»")]
 public class AI_CheckCanAttack : ActionNode
 {
-    [Header("×î´ó¹¥»÷¾àÀë")]
-    public float maxAttackDistance = 0.5f; // ×î´ó¹¥»÷¾àÀë
+    [Header("æœ€å¤§æ”»å‡»è·ç¦»")]
+    public float maxAttackDistance = 0.5f; // æœ€å¤§æ”»å‡»è·ç¦»
     
-    [Header("×îÐ¡¹¥»÷¾àÀë")]
-    public float minAttackDistance = 0.0f; // ×îÐ¡¹¥»÷¾àÀë
+    [Header("æœ€å°æ”»å‡»è·ç¦»")]
+    public float minAttackDistance = 0.0f; // æœ€å°æ”»å‡»è·ç¦»
 
     public Color debugColor;
 
@@ -20,7 +20,7 @@ public class AI_CheckCanAttack : ActionNode
     {
         float dist = Vector2.Distance(context.mover.TargetPosition, context.Damage.transform.position);
         
-        // ¼ì²é¾àÀëÊÇ·ñÔÚÓÐÐ§¹¥»÷·¶Î§ÄÚ£¨´óÓÚ×îÐ¡¾àÀëÇÒÐ¡ÓÚ×î´ó¾àÀë£©
+        // æ£€æŸ¥è·ç¦»æ˜¯å¦åœ¨æœ‰æ•ˆæ”»å‡»èŒƒå›´å†…ï¼ˆå¤§äºŽæœ€å°è·ç¦»ä¸”å°äºŽæœ€å¤§è·ç¦»ï¼‰
         return (dist >= minAttackDistance && dist <= maxAttackDistance) ? State.Success : State.Failure;
     }
 
@@ -31,11 +31,11 @@ public class AI_CheckCanAttack : ActionNode
 
     Vector3 attackPosition = context.Damage.transform.position;
     
-    // Ê¹ÓÃdebugColor»æÖÆ×î´ó¹¥»÷¾àÀë
+    // ä½¿ç”¨debugColorç»˜åˆ¶æœ€å¤§æ”»å‡»è·ç¦»
     Gizmos.color = debugColor;
     Gizmos.DrawWireSphere(attackPosition, maxAttackDistance);
     
-    // »æÖÆ×îÐ¡¹¥»÷¾àÀë£¨Èç¹û´óÓÚ0£©
+    // ç»˜åˆ¶æœ€å°æ”»å‡»è·ç¦»ï¼ˆå¦‚æžœå¤§äºŽ0ï¼‰
     if (minAttackDistance > 0)
     {
         Gizmos.DrawWireSphere(attackPosition, minAttackDistance);

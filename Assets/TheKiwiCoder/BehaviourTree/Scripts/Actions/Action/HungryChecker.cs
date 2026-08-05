@@ -6,9 +6,9 @@ using TheKiwiCoder;
 public class HungryChecker : ActionNode
 {
 
-    [Tooltip("饥饿阈值（百分比）")]
-    [Range(0, 1)] // 0~100%的滑动条
-    public float hungryThreshold = 0.6f; // 默认60%
+    [Tooltip("楗ラタ闃堝�硷紙鐧惧垎姣旓級")]
+    [Range(0, 1)] // 0~100%鐨勬粦鍔ㄦ潯
+    public float hungryThreshold = 0.6f; // 榛樿60%
 
     protected override void OnStart() 
     {
@@ -20,7 +20,7 @@ public class HungryChecker : ActionNode
 
     protected override State OnUpdate() 
     {
-        // 添加空检查，如果找不到FOOD组件直接返回Failure
+        // 娣诲姞绌烘鏌ワ紝濡傛灉鎵句笉鍒癋OOD缁勪欢鐩存帴杩斿洖Failure
         if (context.Food == null || context.Food.Data == null || context.Food.Data.nutrition == null)
         {
             return State.Failure;

@@ -9,11 +9,11 @@ namespace TheKiwiCoder {
     // Add other properties here that make sense for your specific use case.
     [System.Serializable]
     public class Blackboard {
-        [Tooltip("Ä¿±êÎ»ÖÃ")]
+        [Tooltip("ç›®æ ‡ä½ç½®")]
         public Vector3 TargetPosition;
-        [Tooltip("ĞĞÎªÊ÷¹Ò½Ó¶ÔÏó")]
+        [Tooltip("è¡Œä¸ºæ ‘æŒ‚æ¥å¯¹è±¡")]
         public GameObject BTUser;
-        [Tooltip("Ä¿±ê¶ÔÏó")]
+        [Tooltip("ç›®æ ‡å¯¹è±¡")]
         public Transform target;
     }
 }

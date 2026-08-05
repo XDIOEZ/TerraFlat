@@ -7,17 +7,17 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// ÓÒ¼ü²Ëµ¥½»»¥Ãæ°å£º¸ºÔğÊ¹ÓÃÎïÆ·¡¢²é¿´ÏêÇéºÍ¹Ø±Õ²Ëµ¥¡£
+/// å³é”®èœå•äº¤äº’é¢æ¿ï¼šè´Ÿè´£ä½¿ç”¨ç‰©å“ã€æŸ¥çœ‹è¯¦æƒ…å’Œå…³é—­èœå•ã€‚
 /// </summary>
 public class RightClickMenu_UI : MonoBehaviour
 {
-    public ItemSlot itemSlot; // µ±Ç°ÓÒ¼üÑ¡ÖĞµÄÊı¾İ²ÛÎ»
-    public ItemSlot_UI itemSlotUI; // µ±Ç°ÓÒ¼üÑ¡ÖĞµÄUI²ÛÎ»
-    public BasePanel basePanel; // ÓÒ¼ü²Ëµ¥Ãæ°å
-    Item SlotOwner; // ²ÛÎ»ËùÊôÎïÆ·£¨Í¨³£ÎªÈİÆ÷»òÍæ¼Ò£©
+    public ItemSlot itemSlot; // å½“å‰å³é”®é€‰ä¸­çš„æ•°æ®æ§½ä½
+    public ItemSlot_UI itemSlotUI; // å½“å‰å³é”®é€‰ä¸­çš„UIæ§½ä½
+    public BasePanel basePanel; // å³é”®èœå•é¢æ¿
+    Item SlotOwner; // æ§½ä½æ‰€å±ç‰©å“ï¼ˆé€šå¸¸ä¸ºå®¹å™¨æˆ–ç©å®¶ï¼‰
 
     /// <summary>
-    /// ³õÊ¼»¯ÓÒ¼ü²Ëµ¥²¢°ó¶¨°´Å¥ÊÂ¼ş¡£
+    /// åˆå§‹åŒ–å³é”®èœå•å¹¶ç»‘å®šæŒ‰é’®äº‹ä»¶ã€‚
     /// </summary>
     public void Init(ItemSlot_UI _itemSlotUI, ItemSlot _itemSlot, Item _SlotOwner)
     {
@@ -26,38 +26,38 @@ public class RightClickMenu_UI : MonoBehaviour
         basePanel = GetComponent<BasePanel>();
         if (basePanel == null)
         {
-            Debug.LogError("[RightClickMenu_UI.Init] È±ÉÙ BasePanel ×é¼ş");
+            Debug.LogError("[RightClickMenu_UI.Init] ç¼ºå°‘ BasePanel ç»„ä»¶");
             return;
         }
 
         basePanel.CollectUIComponents();
         SlotOwner = _SlotOwner;
 
-        Button destroyButton = basePanel.GetButton("Ïú»ÙÃæ°å");
+        Button destroyButton = basePanel.GetButton("é”€æ¯é¢æ¿");
         if (destroyButton != null)
             destroyButton.onClick.AddListener(DestroyPanel);
 
-        Button useButton = basePanel.GetButton("Ê¹ÓÃÎïÆ·");
+        Button useButton = basePanel.GetButton("ä½¿ç”¨ç‰©å“");
         if (useButton != null)
             useButton.onClick.AddListener(UseItem);
 
-        Button showInfoButton = basePanel.GetButton("²é¿´ÎïÆ·ĞÅÏ¢");
+        Button showInfoButton = basePanel.GetButton("æŸ¥çœ‹ç‰©å“ä¿¡æ¯");
         if (showInfoButton != null)
             showInfoButton.onClick.AddListener(ShowItemInfo);
     }
 
     /// <summary>
-    /// ÁÙÊ±ÊµÀı»¯²¢Ö´ĞĞÎïÆ· Act ĞĞÎª£¬È»ºóÁ¢¼´»ØÊÕÊµÀı¡£
+    /// ä¸´æ—¶å®ä¾‹åŒ–å¹¶æ‰§è¡Œç‰©å“ Act è¡Œä¸ºï¼Œç„¶åç«‹å³å›æ”¶å®ä¾‹ã€‚
     /// </summary>
     public void UseItem()
     {
         if (itemSlot == null || itemSlot.itemData == null)
         {
-            Debug.LogError("[RightClickMenu_UI.UseItem] itemSlot »ò itemData Îª¿Õ");
+            Debug.LogError("[RightClickMenu_UI.UseItem] itemSlot æˆ– itemData ä¸ºç©º");
             return;
         }
 
-        // ÓÒ¼ü¡°Ê¹ÓÃ¡±Ö»´¥·¢ĞĞÎª£¬²»Ö±½Ó¸Ä¶¯³¡¾°ÖĞµÄ³Ö¾ÃÊµÀı¡£
+        // å³é”®â€œä½¿ç”¨â€åªè§¦å‘è¡Œä¸ºï¼Œä¸ç›´æ¥æ”¹åŠ¨åœºæ™¯ä¸­çš„æŒä¹…å®ä¾‹ã€‚
         Item item = ItemMgr.Instance.InstantiateItem(itemSlot.itemData);
         item.Load();
         item.Owner = SlotOwner;
@@ -66,7 +66,7 @@ public class RightClickMenu_UI : MonoBehaviour
     }
 
     /// <summary>
-    /// ¹Ø±Õ²¢Ïú»ÙÓÒ¼ü²Ëµ¥Ãæ°å¡£
+    /// å…³é—­å¹¶é”€æ¯å³é”®èœå•é¢æ¿ã€‚
     /// </summary>
     public void DestroyPanel()
     {
@@ -74,41 +74,41 @@ public class RightClickMenu_UI : MonoBehaviour
     }
 
     /// <summary>
-    /// ´ò¿ª¡°ÎïÆ·ĞÅÏ¢Ãæ°å¡±£¬Õ¹Ê¾»ù´¡ĞÅÏ¢¡¢Ä£¿éĞÅÏ¢ºÍ¸¯°ÜĞÅÏ¢¡£
+    /// æ‰“å¼€â€œç‰©å“ä¿¡æ¯é¢æ¿â€ï¼Œå±•ç¤ºåŸºç¡€ä¿¡æ¯ã€æ¨¡å—ä¿¡æ¯å’Œè…è´¥ä¿¡æ¯ã€‚
     /// </summary>
     public void ShowItemInfo()
     {
         if (itemSlot == null || itemSlot.itemData == null)
         {
-            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] itemSlot »ò itemData Îª¿Õ");
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] itemSlot æˆ– itemData ä¸ºç©º");
             return;
         }
 
         if (GameRes.Instance == null)
         {
-            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] GameRes.Instance Îª¿Õ");
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] GameRes.Instance ä¸ºç©º");
             return;
         }
 
-        GameObject itemInfoPanel = GameRes.Instance.InstantiatePrefab("ÎïÆ·ĞÅÏ¢Ãæ°å");
+        GameObject itemInfoPanel = GameRes.Instance.InstantiatePrefab("ç‰©å“ä¿¡æ¯é¢æ¿");
         if (itemInfoPanel == null)
         {
-            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] ÎïÆ·ĞÅÏ¢Ãæ°åÔ¤ÖÆÌåÊµÀı»¯Ê§°Ü");
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] ç‰©å“ä¿¡æ¯é¢æ¿é¢„åˆ¶ä½“å®ä¾‹åŒ–å¤±è´¥");
             return;
         }
 
         BasePanel itemInfoPanelBasePanel = itemInfoPanel.GetComponent<BasePanel>();
         if (itemInfoPanelBasePanel == null)
         {
-            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] ÎïÆ·ĞÅÏ¢Ãæ°åÈ±ÉÙ BasePanel ×é¼ş");
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] ç‰©å“ä¿¡æ¯é¢æ¿ç¼ºå°‘ BasePanel ç»„ä»¶");
             return;
         }
 
         itemInfoPanelBasePanel.CollectUIComponents();
-        TextMeshProUGUI infoText = itemInfoPanelBasePanel.GetText("ĞÅÏ¢");
+        TextMeshProUGUI infoText = itemInfoPanelBasePanel.GetText("ä¿¡æ¯");
         if (infoText == null)
         {
-            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] Î´ÕÒµ½ÎÄ±¾×é¼ş: ĞÅÏ¢");
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] æœªæ‰¾åˆ°æ–‡æœ¬ç»„ä»¶: ä¿¡æ¯");
             return;
         }
 
@@ -125,18 +125,18 @@ public class RightClickMenu_UI : MonoBehaviour
 
         if (infoRect == null)
         {
-            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] ÎïÆ·ĞÅÏ¢Ãæ°åÈ±ÉÙ RectTransform");
+            Debug.LogError("[RightClickMenu_UI.ShowItemInfo] ç‰©å“ä¿¡æ¯é¢æ¿ç¼ºå°‘ RectTransform");
             return;
         }
         
-        // ½«ĞÅÏ¢Ãæ°åÒÆ¶¯µ½ÆÁÄ»ÖĞ¼ä
+        // å°†ä¿¡æ¯é¢æ¿ç§»åŠ¨åˆ°å±å¹•ä¸­é—´
         infoRect.anchorMin = new Vector2(0.5f, 0.5f);
         infoRect.anchorMax = new Vector2(0.5f, 0.5f);
         infoRect.anchoredPosition = Vector2.zero;
     }
 
     /// <summary>
-    /// ¹¹½¨¡°ÏêÏ¸½éÉÜ¡±ÎÄ±¾£º»ù´¡ĞÅÏ¢ + Ä£¿éĞÅÏ¢ + Ê³Îï¸¯°ÜĞÅÏ¢¡£
+    /// æ„å»ºâ€œè¯¦ç»†ä»‹ç»â€æ–‡æœ¬ï¼šåŸºç¡€ä¿¡æ¯ + æ¨¡å—ä¿¡æ¯ + é£Ÿç‰©è…è´¥ä¿¡æ¯ã€‚
     /// </summary>
     private string BuildItemInfoText(ItemData itemData)
     {
@@ -145,7 +145,7 @@ public class RightClickMenu_UI : MonoBehaviour
 
         if (itemData.ModuleDataDic == null)
         {
-            Debug.LogError($"[RightClickMenu_UI.BuildItemInfoText] Ä£¿é×ÖµäÎª¿Õ£¬ÎïÆ·={itemData.IDName}");
+            Debug.LogError($"[RightClickMenu_UI.BuildItemInfoText] æ¨¡å—å­—å…¸ä¸ºç©ºï¼Œç‰©å“={itemData.IDName}");
         }
         else
         {
@@ -170,7 +170,7 @@ public class RightClickMenu_UI : MonoBehaviour
     }
 
     /// <summary>
-    /// ¶ÁÈ¡µ±Ç°Ê³Îï¸¯°Ü×´Ì¬²¢¸ñÊ½»¯Îª¿É¶ÁÎÄ±¾¡£
+    /// è¯»å–å½“å‰é£Ÿç‰©è…è´¥çŠ¶æ€å¹¶æ ¼å¼åŒ–ä¸ºå¯è¯»æ–‡æœ¬ã€‚
     /// </summary>
     private string BuildFoodSpoilageText(ItemData itemData)
     {
@@ -181,7 +181,7 @@ public class RightClickMenu_UI : MonoBehaviour
 
         if (!TryGetFoodModuleData(itemData, out ModData_FoodData foodModuleData))
         {
-            return "\n\n[Ê³Îï¸¯°Ü]\nÎ´ÕÒµ½Ê³ÎïÄ£¿éÊı¾İ";
+            return "\n\n[é£Ÿç‰©è…è´¥]\næœªæ‰¾åˆ°é£Ÿç‰©æ¨¡å—æ•°æ®";
         }
 
         foodModuleData.ApplyToFoodData();
@@ -190,19 +190,19 @@ public class RightClickMenu_UI : MonoBehaviour
         float elapsedSeconds = Mathf.Max(0f, foodModuleData.SpoilageElapsedSeconds);
         float progress01 = Mathf.Clamp01(elapsedSeconds / intervalSeconds);
         float remainSeconds = Mathf.Max(0f, intervalSeconds - elapsedSeconds);
-        string enableText = foodModuleData.EnableSpoilage ? "ÆôÓÃ" : "¹Ø±Õ";
-        string targetItemID = string.IsNullOrWhiteSpace(foodModuleData.SpoilageTargetItemID) ? "Î´ÅäÖÃ" : foodModuleData.SpoilageTargetItemID;
+        string enableText = foodModuleData.EnableSpoilage ? "å¯ç”¨" : "å…³é—­";
+        string targetItemID = string.IsNullOrWhiteSpace(foodModuleData.SpoilageTargetItemID) ? "æœªé…ç½®" : foodModuleData.SpoilageTargetItemID;
 
-        return $"\n\n[Ê³Îï¸¯°Ü]" +
-               $"\n×´Ì¬£º{enableText}" +
-               $"\n½ø¶È£º{progress01 * 100f:F1}%" +
-               $"\nÀÛ¼Æ£º{elapsedSeconds:F1}s / {intervalSeconds:F1}s" +
-               $"\nÊ£Óà£º{remainSeconds:F1}s" +
-               $"\n¸¯°ÜÄ¿±ê£º{targetItemID}";
+        return $"\n\n[é£Ÿç‰©è…è´¥]" +
+               $"\nçŠ¶æ€ï¼š{enableText}" +
+               $"\nè¿›åº¦ï¼š{progress01 * 100f:F1}%" +
+               $"\nç´¯è®¡ï¼š{elapsedSeconds:F1}s / {intervalSeconds:F1}s" +
+               $"\nå‰©ä½™ï¼š{remainSeconds:F1}s" +
+               $"\nè…è´¥ç›®æ ‡ï¼š{targetItemID}";
     }
 
     /// <summary>
-    /// ´ÓÎïÆ·Ä£¿é×ÖµäÖĞÌáÈ¡ Food µÄĞòÁĞ»¯Ä£¿éÊı¾İ¡£
+    /// ä»ç‰©å“æ¨¡å—å­—å…¸ä¸­æå– Food çš„åºåˆ—åŒ–æ¨¡å—æ•°æ®ã€‚
     /// </summary>
     private bool TryGetFoodModuleData(ItemData itemData, out ModData_FoodData foodModuleData)
     {

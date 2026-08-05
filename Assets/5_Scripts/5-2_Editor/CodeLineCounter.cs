@@ -6,9 +6,9 @@ using UnityEngine;
 
 public class CodeLineCounter : EditorWindow
 {
-    private DefaultAsset targetFolder; // ÍÏ×§µÄÎÄ¼ş¼Ğ
-    private int totalLineCount = 0; // ×ÜĞĞÊı£¨ËùÓĞĞĞ£©
-    private int totalValidLineCount = 0; // ×ÜÓĞĞ§´úÂëĞĞÊı
+    private DefaultAsset targetFolder; // æ‹–æ‹½çš„æ–‡ä»¶å¤¹
+    private int totalLineCount = 0; // æ€»è¡Œæ•°ï¼ˆæ‰€æœ‰è¡Œï¼‰
+    private int totalValidLineCount = 0; // æ€»æœ‰æ•ˆä»£ç è¡Œæ•°
     private int fileCount = 0;
     private int maxLineCount = 0;
     private int minLineCount = int.MaxValue;
@@ -16,44 +16,44 @@ public class CodeLineCounter : EditorWindow
     private float medianLineCount = 0f;
     private string maxLineFileName = "";
     private string minLineFileName = "";
-    private float averageTotalLineCountPerScript = 0f; // Æ½¾ùÃ¿¸ö½Å±¾µÄ×ÜĞĞÊı£¨°üÀ¨¿ÕĞĞºÍ×¢ÊÍĞĞ£©
-    private System.Collections.Generic.List<string> scriptsBelowCustomLimit = new System.Collections.Generic.List<string>(); // ´æ´¢Ğ¡ÓÚ×Ô¶¨ÒåĞĞÊıµÄ½Å±¾ÎÄ¼şÃû
-    private float lineLimit = 10f; // ÓÃ»§×Ô¶¨ÒåµÄĞ¡ÓÚĞĞÊıÏÂÏŞ£¬Ä¬ÈÏÎª10ĞĞ
-    private float fontSize = 12f; // ÓÃ»§×Ô¶¨ÒåµÄ×ÖÌå´óĞ¡
+    private float averageTotalLineCountPerScript = 0f; // å¹³å‡æ¯ä¸ªè„šæœ¬çš„æ€»è¡Œæ•°ï¼ˆåŒ…æ‹¬ç©ºè¡Œå’Œæ³¨é‡Šè¡Œï¼‰
+    private System.Collections.Generic.List<string> scriptsBelowCustomLimit = new System.Collections.Generic.List<string>(); // å­˜å‚¨å°äºè‡ªå®šä¹‰è¡Œæ•°çš„è„šæœ¬æ–‡ä»¶å
+    private float lineLimit = 10f; // ç”¨æˆ·è‡ªå®šä¹‰çš„å°äºè¡Œæ•°ä¸‹é™ï¼Œé»˜è®¤ä¸º10è¡Œ
+    private float fontSize = 12f; // ç”¨æˆ·è‡ªå®šä¹‰çš„å­—ä½“å¤§å°
 
-    [MenuItem("Tools/Í³¼ÆÓĞĞ§´úÂëĞĞÊı")]
+    [MenuItem("Tools/ç»Ÿè®¡æœ‰æ•ˆä»£ç è¡Œæ•°")]
     public static void OpenWindow()
     {
-        GetWindow<CodeLineCounter>("ÓĞĞ§´úÂëĞĞÊıÍ³¼ÆÆ÷");
+        GetWindow<CodeLineCounter>("æœ‰æ•ˆä»£ç è¡Œæ•°ç»Ÿè®¡å™¨");
     }
 
     private void OnGUI()
     {
-        GUILayout.Label("Í³¼ÆÌØ¶¨ÎÄ¼ş¼ĞÏÂÓĞĞ§´úÂëĞĞÊı", EditorStyles.boldLabel);
+        GUILayout.Label("ç»Ÿè®¡ç‰¹å®šæ–‡ä»¶å¤¹ä¸‹æœ‰æ•ˆä»£ç è¡Œæ•°", EditorStyles.boldLabel);
 
         GUILayout.Space(10);
 
-        targetFolder = (DefaultAsset)EditorGUILayout.ObjectField("Ä¿±êÎÄ¼ş¼Ğ", targetFolder, typeof(DefaultAsset), false);
+        targetFolder = (DefaultAsset)EditorGUILayout.ObjectField("ç›®æ ‡æ–‡ä»¶å¤¹", targetFolder, typeof(DefaultAsset), false);
 
         GUILayout.Space(10);
 
-        // »¬¶¯Ìõ¿ØÖÆÓĞĞ§´úÂëĞĞÊıÏÂÏŞ
-        GUILayout.Label($"ÉèÖÃĞ¡ÓÚ´ËĞĞÊıµÄ½Å±¾ÏÔÊ¾£º{lineLimit} ĞĞ");
-        lineLimit = EditorGUILayout.Slider(lineLimit, 1f, 50f); // ÉèÖÃ»¬¶¯Ìõ·¶Î§Îª1µ½50ĞĞ
+        // æ»‘åŠ¨æ¡æ§åˆ¶æœ‰æ•ˆä»£ç è¡Œæ•°ä¸‹é™
+        GUILayout.Label($"è®¾ç½®å°äºæ­¤è¡Œæ•°çš„è„šæœ¬æ˜¾ç¤ºï¼š{lineLimit} è¡Œ");
+        lineLimit = EditorGUILayout.Slider(lineLimit, 1f, 50f); // è®¾ç½®æ»‘åŠ¨æ¡èŒƒå›´ä¸º1åˆ°50è¡Œ
 
         GUILayout.Space(10);
 
-        // »¬¶¯Ìõ¿ØÖÆÊä³öÎÄ±¾µÄ×ÖÌå´óĞ¡
-        GUILayout.Label($"ÉèÖÃÊä³öÎÄ±¾µÄ×ÖÌå´óĞ¡£º{fontSize:F0}");
-        fontSize = EditorGUILayout.Slider(fontSize, 10f, 30f); // ÉèÖÃ×ÖÌå´óĞ¡µÄ»¬¶¯Ìõ·¶Î§Îª10µ½30
+        // æ»‘åŠ¨æ¡æ§åˆ¶è¾“å‡ºæ–‡æœ¬çš„å­—ä½“å¤§å°
+        GUILayout.Label($"è®¾ç½®è¾“å‡ºæ–‡æœ¬çš„å­—ä½“å¤§å°ï¼š{fontSize:F0}");
+        fontSize = EditorGUILayout.Slider(fontSize, 10f, 30f); // è®¾ç½®å­—ä½“å¤§å°çš„æ»‘åŠ¨æ¡èŒƒå›´ä¸º10åˆ°30
 
         GUILayout.Space(10);
 
-        if (GUILayout.Button("¿ªÊ¼Í³¼Æ"))
+        if (GUILayout.Button("å¼€å§‹ç»Ÿè®¡"))
         {
             if (targetFolder == null)
             {
-                EditorUtility.DisplayDialog("´íÎó", "ÇëÏÈÑ¡ÔñÒ»¸öÄ¿±êÎÄ¼ş¼Ğ£¡", "È·¶¨");
+                EditorUtility.DisplayDialog("é”™è¯¯", "è¯·å…ˆé€‰æ‹©ä¸€ä¸ªç›®æ ‡æ–‡ä»¶å¤¹ï¼", "ç¡®å®š");
                 return;
             }
 
@@ -61,7 +61,7 @@ public class CodeLineCounter : EditorWindow
 
             if (!Directory.Exists(path))
             {
-                EditorUtility.DisplayDialog("´íÎó", $"Ñ¡ÔñµÄÂ·¾¶ÎŞĞ§: {path}", "È·¶¨");
+                EditorUtility.DisplayDialog("é”™è¯¯", $"é€‰æ‹©çš„è·¯å¾„æ— æ•ˆ: {path}", "ç¡®å®š");
                 return;
             }
 
@@ -70,33 +70,33 @@ public class CodeLineCounter : EditorWindow
 
         GUILayout.Space(20);
 
-        GUILayout.Label($"×ÜÎÄ¼şÊı£º{fileCount}");
-        GUILayout.Label($"×Ü´úÂëĞĞÊı£º{totalLineCount}£¨°üÀ¨¿ÕĞĞºÍ×¢ÊÍĞĞ£©");
-        GUILayout.Label($"×ÜÓĞĞ§´úÂëĞĞÊı£º{totalValidLineCount}");
+        GUILayout.Label($"æ€»æ–‡ä»¶æ•°ï¼š{fileCount}");
+        GUILayout.Label($"æ€»ä»£ç è¡Œæ•°ï¼š{totalLineCount}ï¼ˆåŒ…æ‹¬ç©ºè¡Œå’Œæ³¨é‡Šè¡Œï¼‰");
+        GUILayout.Label($"æ€»æœ‰æ•ˆä»£ç è¡Œæ•°ï¼š{totalValidLineCount}");
         if (fileCount > 0)
         {
-            GUILayout.Label($"×î´óÓĞĞ§´úÂëĞĞÊı£º{maxLineCount} £¨{maxLineFileName}£©");
-            GUILayout.Label($"×îĞ¡ÓĞĞ§´úÂëĞĞÊı£º{minLineCount} £¨{minLineFileName}£©");
-            GUILayout.Label($"ÓĞĞ§´úÂëĞĞÊıÖĞÎ»Êı£º{medianLineCount}");
-            GUILayout.Label($"Æ½¾ùÓĞĞ§´úÂëĞĞÊı£º{averageLineCount:F2}");
-            GUILayout.Label($"Æ½¾ùÃ¿¸ö½Å±¾µÄ×Ü´úÂëĞĞÊı£º{averageTotalLineCountPerScript:F2}");
+            GUILayout.Label($"æœ€å¤§æœ‰æ•ˆä»£ç è¡Œæ•°ï¼š{maxLineCount} ï¼ˆ{maxLineFileName}ï¼‰");
+            GUILayout.Label($"æœ€å°æœ‰æ•ˆä»£ç è¡Œæ•°ï¼š{minLineCount} ï¼ˆ{minLineFileName}ï¼‰");
+            GUILayout.Label($"æœ‰æ•ˆä»£ç è¡Œæ•°ä¸­ä½æ•°ï¼š{medianLineCount}");
+            GUILayout.Label($"å¹³å‡æœ‰æ•ˆä»£ç è¡Œæ•°ï¼š{averageLineCount:F2}");
+            GUILayout.Label($"å¹³å‡æ¯ä¸ªè„šæœ¬çš„æ€»ä»£ç è¡Œæ•°ï¼š{averageTotalLineCountPerScript:F2}");
         }
 
         GUILayout.Space(10);
 
-        // ĞÂÔöµÄ°´Å¥£ºÊä³öËùÓĞĞ¡ÓÚ×Ô¶¨ÒåĞĞÊıµÄ½Å±¾
-        if (GUILayout.Button("Êä³öËùÓĞĞ¡ÓÚ×Ô¶¨ÒåĞĞÊıµÄ½Å±¾"))
+        // æ–°å¢çš„æŒ‰é’®ï¼šè¾“å‡ºæ‰€æœ‰å°äºè‡ªå®šä¹‰è¡Œæ•°çš„è„šæœ¬
+        if (GUILayout.Button("è¾“å‡ºæ‰€æœ‰å°äºè‡ªå®šä¹‰è¡Œæ•°çš„è„šæœ¬"))
         {
             OutputScriptsBelowCustomLimit();
         }
 
-        // ÏÔÊ¾ËùÓĞ·ûºÏÌõ¼şµÄ½Å±¾
+        // æ˜¾ç¤ºæ‰€æœ‰ç¬¦åˆæ¡ä»¶çš„è„šæœ¬
         if (scriptsBelowCustomLimit.Count > 0)
         {
-            GUILayout.Label($"ÒÔÏÂ½Å±¾µÄÓĞĞ§´úÂëĞĞÊıĞ¡ÓÚ {lineLimit} ĞĞ£º", EditorStyles.boldLabel);
+            GUILayout.Label($"ä»¥ä¸‹è„šæœ¬çš„æœ‰æ•ˆä»£ç è¡Œæ•°å°äº {lineLimit} è¡Œï¼š", EditorStyles.boldLabel);
             GUIStyle textStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.RoundToInt(fontSize) // ÉèÖÃ×ÖÌå´óĞ¡
+                fontSize = Mathf.RoundToInt(fontSize) // è®¾ç½®å­—ä½“å¤§å°
             };
             foreach (var script in scriptsBelowCustomLimit)
             {
@@ -105,7 +105,7 @@ public class CodeLineCounter : EditorWindow
         }
         else
         {
-            GUILayout.Label("Ã»ÓĞ½Å±¾µÄÓĞĞ§´úÂëĞĞÊıĞ¡ÓÚÉèÖÃµÄĞĞÊı¡£", EditorStyles.boldLabel);
+            GUILayout.Label("æ²¡æœ‰è„šæœ¬çš„æœ‰æ•ˆä»£ç è¡Œæ•°å°äºè®¾ç½®çš„è¡Œæ•°ã€‚", EditorStyles.boldLabel);
         }
     }
 
@@ -121,11 +121,11 @@ public class CodeLineCounter : EditorWindow
         averageTotalLineCountPerScript = 0f;
         maxLineFileName = "";
         minLineFileName = "";
-        scriptsBelowCustomLimit.Clear(); // Çå¿ÕÉÏ´ÎÍ³¼ÆµÄ½á¹û
+        scriptsBelowCustomLimit.Clear(); // æ¸…ç©ºä¸Šæ¬¡ç»Ÿè®¡çš„ç»“æœ
 
         string[] files = Directory.GetFiles(path, "*.cs", SearchOption.AllDirectories);
         var validLineCounts = new System.Collections.Generic.List<int>();
-        var totalLineCounts = new System.Collections.Generic.List<int>(); // ÓÃÓÚ¼ÆËãÃ¿¸ö½Å±¾µÄ×Ü´úÂëĞĞÊı
+        var totalLineCounts = new System.Collections.Generic.List<int>(); // ç”¨äºè®¡ç®—æ¯ä¸ªè„šæœ¬çš„æ€»ä»£ç è¡Œæ•°
 
         foreach (var file in files)
         {
@@ -133,41 +133,41 @@ public class CodeLineCounter : EditorWindow
             {
                 string[] lines = File.ReadAllLines(file);
                 int validLineCount = CountValidLines(lines);
-                int totalFileLineCount = lines.Length; // ËùÓĞĞĞÊı£¨°üÀ¨¿ÕĞĞºÍ×¢ÊÍĞĞ£©
-                totalLineCount += totalFileLineCount; // ¼Óµ½×Ü´úÂëĞĞÊı
-                totalValidLineCount += validLineCount; // ×ÜÓĞĞ§´úÂëĞĞÊı
+                int totalFileLineCount = lines.Length; // æ‰€æœ‰è¡Œæ•°ï¼ˆåŒ…æ‹¬ç©ºè¡Œå’Œæ³¨é‡Šè¡Œï¼‰
+                totalLineCount += totalFileLineCount; // åŠ åˆ°æ€»ä»£ç è¡Œæ•°
+                totalValidLineCount += validLineCount; // æ€»æœ‰æ•ˆä»£ç è¡Œæ•°
                 fileCount++;
 
-                // ¸üĞÂ×î´óÓĞĞ§ĞĞÊı
+                // æ›´æ–°æœ€å¤§æœ‰æ•ˆè¡Œæ•°
                 if (validLineCount > maxLineCount)
                 {
                     maxLineCount = validLineCount;
                     maxLineFileName = Path.GetFileName(file);
                 }
 
-                // ¸üĞÂ×îĞ¡ÓĞĞ§ĞĞÊı
+                // æ›´æ–°æœ€å°æœ‰æ•ˆè¡Œæ•°
                 if (validLineCount < minLineCount)
                 {
                     minLineCount = validLineCount;
                     minLineFileName = Path.GetFileName(file);
                 }
 
-                validLineCounts.Add(validLineCount); // ÊÕ¼¯ÓĞĞ§ĞĞÊı
-                totalLineCounts.Add(totalFileLineCount); // ÊÕ¼¯×ÜĞĞÊı
+                validLineCounts.Add(validLineCount); // æ”¶é›†æœ‰æ•ˆè¡Œæ•°
+                totalLineCounts.Add(totalFileLineCount); // æ”¶é›†æ€»è¡Œæ•°
             }
             catch (System.Exception ex)
             {
-                EditorUtility.DisplayDialog("´íÎó", $"¶ÁÈ¡ÎÄ¼şÊ§°Ü: {file}\n´íÎóĞÅÏ¢: {ex.Message}", "È·¶¨");
+                EditorUtility.DisplayDialog("é”™è¯¯", $"è¯»å–æ–‡ä»¶å¤±è´¥: {file}\né”™è¯¯ä¿¡æ¯: {ex.Message}", "ç¡®å®š");
             }
         }
 
-        // ¼ÆËãÆ½¾ùĞĞÊıºÍÖĞÎ»Êı
+        // è®¡ç®—å¹³å‡è¡Œæ•°å’Œä¸­ä½æ•°
         if (fileCount > 0)
         {
             averageLineCount = (float)totalValidLineCount / fileCount;
             validLineCounts.Sort();
 
-            // ¼ÆËãÖĞÎ»Êı
+            // è®¡ç®—ä¸­ä½æ•°
             if (validLineCounts.Count % 2 == 0)
             {
                 medianLineCount = (validLineCounts[validLineCounts.Count / 2 - 1] + validLineCounts[validLineCounts.Count / 2]) / 2f;
@@ -177,14 +177,14 @@ public class CodeLineCounter : EditorWindow
                 medianLineCount = validLineCounts[validLineCounts.Count / 2];
             }
 
-            // ¼ÆËãÃ¿¸ö½Å±¾µÄÆ½¾ùÓĞĞ§´úÂëĞĞÊı
+            // è®¡ç®—æ¯ä¸ªè„šæœ¬çš„å¹³å‡æœ‰æ•ˆä»£ç è¡Œæ•°
             averageTotalLineCountPerScript = (float)totalLineCount / fileCount;
         }
 
-        EditorUtility.DisplayDialog("Í³¼ÆÍê³É", $"Í³¼Æ½á¹ûÒÑÍê³É£¡¹²Í³¼ÆÁË {fileCount} ¸ö½Å±¾", "È·¶¨");
+        EditorUtility.DisplayDialog("ç»Ÿè®¡å®Œæˆ", $"ç»Ÿè®¡ç»“æœå·²å®Œæˆï¼å…±ç»Ÿè®¡äº† {fileCount} ä¸ªè„šæœ¬", "ç¡®å®š");
     }
 
-    // Í³¼ÆÓĞĞ§´úÂëĞĞÊı£¨ÅÅ³ı¿ÕĞĞºÍ×¢ÊÍĞĞ£©
+    // ç»Ÿè®¡æœ‰æ•ˆä»£ç è¡Œæ•°ï¼ˆæ’é™¤ç©ºè¡Œå’Œæ³¨é‡Šè¡Œï¼‰
     private int CountValidLines(string[] lines)
     {
         int validLineCount = 0;
@@ -194,46 +194,46 @@ public class CodeLineCounter : EditorWindow
         {
             string trimmedLine = line.Trim();
 
-            // ¼ì²é¶àĞĞ×¢ÊÍ¿éµÄ¿ªÊ¼ºÍ½áÊø
+            // æ£€æŸ¥å¤šè¡Œæ³¨é‡Šå—çš„å¼€å§‹å’Œç»“æŸ
             if (isInMultilineComment)
             {
                 if (trimmedLine.Contains("*/"))
                 {
                     isInMultilineComment = false;
                 }
-                continue; // ¼ÌĞøÌø¹ı¸ÃĞĞ
+                continue; // ç»§ç»­è·³è¿‡è¯¥è¡Œ
             }
 
-            // Èç¹ûÊÇ¶àĞĞ×¢ÊÍ¿ªÊ¼£¬±ê¼Ç½øÈë¶àĞĞ×¢ÊÍ¿é
+            // å¦‚æœæ˜¯å¤šè¡Œæ³¨é‡Šå¼€å§‹ï¼Œæ ‡è®°è¿›å…¥å¤šè¡Œæ³¨é‡Šå—
             if (trimmedLine.Contains("/*"))
             {
                 isInMultilineComment = true;
                 continue;
             }
 
-            // Ìø¹ı¿ÕĞĞ»òµ¥ĞĞ×¢ÊÍ
+            // è·³è¿‡ç©ºè¡Œæˆ–å•è¡Œæ³¨é‡Š
             if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("//"))
             {
                 continue;
             }
 
-            // Èç¹û²»ÊÇ×¢ÊÍĞĞ»òÕß¿ÕĞĞ£¬ÔòÓĞĞ§ĞĞÊı+1
+            // å¦‚æœä¸æ˜¯æ³¨é‡Šè¡Œæˆ–è€…ç©ºè¡Œï¼Œåˆ™æœ‰æ•ˆè¡Œæ•°+1
             validLineCount++;
         }
 
         return validLineCount;
     }
 
-    // Êä³öËùÓĞÓĞĞ§´úÂëĞĞÊıĞ¡ÓÚ×Ô¶¨ÒåĞĞÊıµÄ½Å±¾
+    // è¾“å‡ºæ‰€æœ‰æœ‰æ•ˆä»£ç è¡Œæ•°å°äºè‡ªå®šä¹‰è¡Œæ•°çš„è„šæœ¬
     private void OutputScriptsBelowCustomLimit()
     {
         if (fileCount <= 0)
         {
-            EditorUtility.DisplayDialog("ÌáÊ¾", "Ã»ÓĞÕÒµ½ÈÎºÎ½Å±¾£¡", "È·¶¨");
+            EditorUtility.DisplayDialog("æç¤º", "æ²¡æœ‰æ‰¾åˆ°ä»»ä½•è„šæœ¬ï¼", "ç¡®å®š");
             return;
         }
 
-        scriptsBelowCustomLimit.Clear(); // Çå¿Õ¾ÉÊı¾İ
+        scriptsBelowCustomLimit.Clear(); // æ¸…ç©ºæ—§æ•°æ®
 
         string[] files = Directory.GetFiles(AssetDatabase.GetAssetPath(targetFolder), "*.cs", SearchOption.AllDirectories);
         foreach (var file in files)
@@ -249,11 +249,11 @@ public class CodeLineCounter : EditorWindow
             }
             catch (System.Exception ex)
             {
-                EditorUtility.DisplayDialog("´íÎó", $"¶ÁÈ¡ÎÄ¼şÊ§°Ü: {file}\n´íÎóĞÅÏ¢: {ex.Message}", "È·¶¨");
+                EditorUtility.DisplayDialog("é”™è¯¯", $"è¯»å–æ–‡ä»¶å¤±è´¥: {file}\né”™è¯¯ä¿¡æ¯: {ex.Message}", "ç¡®å®š");
             }
         }
 
-        // ÔÚ´°¿ÚÖĞÏÔÊ¾ËùÓĞ·ûºÏÌõ¼şµÄ½Å±¾
+        // åœ¨çª—å£ä¸­æ˜¾ç¤ºæ‰€æœ‰ç¬¦åˆæ¡ä»¶çš„è„šæœ¬
         Repaint();
     }
 }

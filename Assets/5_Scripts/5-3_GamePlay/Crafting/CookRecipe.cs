@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
-[CreateAssetMenu(fileName = "ĞÂÈÛÁ¶Åä·½", menuName = "ºÏ³É/ÈÛÁ¶Åä·½")]
+[CreateAssetMenu(fileName = "æ–°ç†”ç‚¼é…æ–¹", menuName = "åˆæˆ/ç†”ç‚¼é…æ–¹")]
 public class CookRecipe : Recipe
 {
-    [Header("ÈÛÁ¶ÎÂ¶È")]
+    [Header("ç†”ç‚¼æ¸©åº¦")]
     public float Temperature  = 0;
-    [Header("ÉÕ½¹ÎÂ¶È")]
+    [Header("çƒ§ç„¦æ¸©åº¦")]
     public float Temperature_Max = 2000;
 }

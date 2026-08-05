@@ -6,18 +6,18 @@ using Unity.Collections;
 
 public class DisPlay : DecoratorNode
 {
-    // ÔÚ¼ì²éÆ÷ÖÐÏÔÊ¾µ±Ç°×´Ì¬£¨ÐèÌí¼ÓInInspectorÊôÐÔ£©
+    // åœ¨æ£€æŸ¥å™¨ä¸­æ˜¾ç¤ºå½“å‰çŠ¶æ€ï¼ˆéœ€æ·»åŠ InInspectorå±žæ€§ï¼‰
     public State currentState;
 
     protected override void OnStart()
     {
-        // ÖØÖÃ×´Ì¬£¨¿ÉÑ¡£©
+        // é‡ç½®çŠ¶æ€ï¼ˆå¯é€‰ï¼‰
         currentState = State.Running;
     }
 
     protected override void OnStop()
     {
-        // ÇåÀí»òÖØÖÃ×´Ì¬£¨¿ÉÑ¡£©
+        // æ¸…ç†æˆ–é‡ç½®çŠ¶æ€ï¼ˆå¯é€‰ï¼‰
         currentState = State.Failure;
     }
 

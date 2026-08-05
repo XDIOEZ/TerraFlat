@@ -4,11 +4,11 @@ using UnityEngine;
 
 public abstract class BaseSkillAction : ScriptableObject
 {
-    [Tooltip("¿ªÊ¼Ö´ĞĞ¼¼ÄÜ")]
+    [Tooltip("å¼€å§‹æ‰§è¡ŒæŠ€èƒ½")]
     public abstract void StartExecuteSkill(RuntimeSkill Data);
-    [Tooltip("³ÖĞø¸üĞÂ¼¼ÄÜ")]
+    [Tooltip("æŒç»­æ›´æ–°æŠ€èƒ½")]
     public abstract void StayExecuteSkill(RuntimeSkill Data,float deltaTime);
-    [Tooltip("½áÊø¼¼ÄÜ")]
+    [Tooltip("ç»“æŸæŠ€èƒ½")]
     public abstract void StopExecuteSkill(RuntimeSkill Data);
 
 }

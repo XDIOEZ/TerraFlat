@@ -20,14 +20,14 @@ public partial class Loot_List
             }
         }
 
-        // Èç¹ûÃ»ÓĞÕÒµ½£¬´´½¨Ò»¸öĞÂµÄLoot¶ÔÏó²¢³õÊ¼»¯
+        // å¦‚æœæ²¡æœ‰æ‰¾åˆ°ï¼Œåˆ›å»ºä¸€ä¸ªæ–°çš„Lootå¯¹è±¡å¹¶åˆå§‹åŒ–
         Loot newLoot = new Loot
         {
             lootsName = lootName,
             lootList = new List<LootData>()
         };
 
-        // ½«ĞÂ´´½¨µÄLoot¶ÔÏóÌí¼Óµ½lootListÖĞ
+        // å°†æ–°åˆ›å»ºçš„Lootå¯¹è±¡æ·»åŠ åˆ°lootListä¸­
         lootList.Add(newLoot);
 
         return newLoot;
@@ -56,10 +56,10 @@ public partial class LootData
     public int LootAmountMin { get => lootAmountRange.x; }
     public int LootAmountMax { get => lootAmountRange.y; }
 
-    //Ëæ»úÊä³öÒ»¸ölootAmount·¶Î§ÄÚµÄËæ»úÊı
+    //éšæœºè¾“å‡ºä¸€ä¸ªlootAmountèŒƒå›´å†…çš„éšæœºæ•°
     public int GetRandomLootAmount()
     {
         return Random.Range(lootAmountRange.x, lootAmountRange.y+1);
     }
 }
-//TODO ÕâÊÇÎÒµÄÕ½ÀûÆ·»ùÀà ½áºÏÆäÖØĞÂĞŞ¸ÄÖ®Ç°µÄ½Å±¾
+//TODO è¿™æ˜¯æˆ‘çš„æˆ˜åˆ©å“åŸºç±» ç»“åˆå…¶é‡æ–°ä¿®æ”¹ä¹‹å‰çš„è„šæœ¬

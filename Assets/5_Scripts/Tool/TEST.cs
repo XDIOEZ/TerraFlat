@@ -9,13 +9,13 @@ public class TESTEditor : Editor
     public override void OnInspectorGUI()
     {
         Rect rect = GUILayoutUtility.GetRect(1, 20);
-        GUI.Label(rect, "TEST (×Ô¶¨Òå×é¼ş)");
+        GUI.Label(rect, "TEST (è‡ªå®šä¹‰ç»„ä»¶)");
 
         Rect buttonRect = new Rect(rect.xMax - 100, rect.y, 90, 18);
-        if (GUI.Button(buttonRect, "ÇåÀíÄÚ´æ"))
+        if (GUI.Button(buttonRect, "æ¸…ç†å†…å­˜"))
         {
             System.GC.Collect();
-            Debug.Log("ÒÑÊÖ¶¯ÇåÀíÄÚ´æ");
+            Debug.Log("å·²æ‰‹åŠ¨æ¸…ç†å†…å­˜");
         }
 
         GUILayout.Space(5);

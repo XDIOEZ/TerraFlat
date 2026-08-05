@@ -5,7 +5,7 @@ using TheKiwiCoder;
 
 public class FoodChecker : ActionNode
 {
-    [Tooltip("将食物设置为移动目标")]
+    [Tooltip("灏嗛鐗╄缃负绉诲姩鐩爣")]
     public bool setMoveTarget = true;
     protected override void OnStart() {
     }

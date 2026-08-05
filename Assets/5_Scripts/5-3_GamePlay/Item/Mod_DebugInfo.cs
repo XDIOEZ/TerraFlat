@@ -8,27 +8,27 @@ public class Mod_DebugInfo : Module, IInstanceUI
     public Ex_ModData DebugData;
     public override ModuleData _Data { get => DebugData; set => DebugData = (Ex_ModData)value; }
 
-    [Header("����������")]
-    public BasePanel DebugPanel;        // UI��壨��ѡ��
-    public GameObject Content;          // ��Ŀ��������һ���� VerticalLayoutGroup
-    public GameObject stringPrefab;     // ����������Ϣ��Ԥ���壬����� TextMeshProUGUI ���
+    [Header("调试面板设置")]
+    public BasePanel DebugPanel;        // UI 面板（可选）
+    public GameObject Content;          // 条目容器，需要包含 VerticalLayoutGroup
+    public GameObject stringPrefab;     // 单条调试信息的预制体，需要包含 TextMeshProUGUI 组件
 
-    [Header("������Ϣ")]
+    [Header("调试信息")]
     public List<string> DebugInfo = new List<string>();
 
     public override void Load()
     {
-        // �������Ҫ����Debug��Ϣ�����������ﴦ��
+        // 如需加载调试信息，可在这里处理。
        
     }
 
     public override void Save()
     {
-        // �������Ҫ����Debug��Ϣ�����������ﴦ��
+        // 如需保存调试信息，可在这里处理。
     }
 
     /// <summary>
-    /// ���õ�����Ϣ�б�����ˢ��UI
+    /// 设置调试信息列表并刷新 UI。
     /// </summary>
     public void SetDebugInfo(List<string> newInfo)
     {
@@ -37,7 +37,7 @@ public class Mod_DebugInfo : Module, IInstanceUI
     }
 
     /// <summary>
-    /// ����һ��������Ϣ��ˢ��UI
+    /// 添加一条调试信息并刷新 UI。
     /// </summary>
     public void AddDebugLine(string line)
     {
@@ -70,19 +70,19 @@ public class Mod_DebugInfo : Module, IInstanceUI
     }
 
     /// <summary>
-    /// ���� DebugInfo ˢ�� UI �������
+    /// 根据 DebugInfo 刷新 UI 条目列表。
     /// </summary>
     public void RefreshDebugPanel()
     {
         if (Content == null || stringPrefab == null) return;
 
-        // ��վɵĵ�����Ŀ
+        // 清空旧的调试条目。
         foreach (Transform child in Content.transform)
         {
             Destroy(child.gameObject);
         }
 
-        // �����µĵ�����Ŀ
+        // 创建新的调试条目。
         foreach (var info in DebugInfo)
         {
             GameObject entry = Instantiate(stringPrefab, Content.transform);

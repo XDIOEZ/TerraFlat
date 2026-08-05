@@ -7,18 +7,18 @@ using UnityEngine.InputSystem;
 
 public class Module_DiscardItem : Mod_BaseDroper
 {
-    [Header("»ù´¡ÅäÖÃ")]
+    [Header("åŸºç¡€é…ç½®")]
     public Inventory DroperInventory;
     public ItemSlot ItemToDrop_Slot;
 
-    [Header("µôÂä¶¯»­²ÎÊı")]
-    public float parabolaHeight = 2f; // Å×ÎïÏß×î´ó¸ß¶È
-    public float baseDropDuration = 0.5f; // ¶¯»­»ù´¡³ÖĞøÊ±¼ä
-    public float distanceSensitivity = 0.1f; // ¶¯»­Ê±¼ä¾àÀëÃô¸Ğ¶È
+    [Header("æ‰è½åŠ¨ç”»å‚æ•°")]
+    public float parabolaHeight = 2f; // æŠ›ç‰©çº¿æœ€å¤§é«˜åº¦
+    public float baseDropDuration = 0.5f; // åŠ¨ç”»åŸºç¡€æŒç»­æ—¶é—´
+    public float distanceSensitivity = 0.1f; // åŠ¨ç”»æ—¶é—´è·ç¦»æ•æ„Ÿåº¦
 
-    [Header("¶ªÆú²Ù×÷ÅäÖÃ")]
-    public float dropRepeatDelay = 0.3f; // ³¤°´ÖØ¸´¶ªÆúµÄÑÓ³Ù
-    public float dropRepeatInterval = 0.1f; // ³¤°´ÖØ¸´¶ªÆúµÄ¼ä¸ô
+    [Header("ä¸¢å¼ƒæ“ä½œé…ç½®")]
+    public float dropRepeatDelay = 0.3f; // é•¿æŒ‰é‡å¤ä¸¢å¼ƒçš„å»¶è¿Ÿ
+    public float dropRepeatInterval = 0.1f; // é•¿æŒ‰é‡å¤ä¸¢å¼ƒçš„é—´éš”
 
     public Inventory_HotBar Hotbar;
     public Mod_Hand hand;
@@ -29,7 +29,7 @@ public class Module_DiscardItem : Mod_BaseDroper
     public GameController GameController;
     public Vector2 DropPos => GameController.GetMouseWorldPosition();
 
-    // ³¤°´Ïà¹Ø±äÁ¿
+    // é•¿æŒ‰ç›¸å…³å˜é‡
     [SerializeField]
     private bool isDropButtonPressed = false;
     [SerializeField]
@@ -37,13 +37,13 @@ public class Module_DiscardItem : Mod_BaseDroper
     [SerializeField]
     private bool isDropRepeatActive = false;
     [SerializeField]
-    private float lastDropTime = 0f; // ÉÏ´Î¶ªÆúµÄÊ±¼ä
+    private float lastDropTime = 0f; // ä¸Šæ¬¡ä¸¢å¼ƒçš„æ—¶é—´
     [SerializeField]
     private ItemSlot_UI hoveredSlot = null;
     [SerializeField]
     private bool isCtrlPressed = false;
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
 
     private void OnValidate()
     {
@@ -62,7 +62,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
         GameController = item.GetComponent<GameController>();
 
-        // °ó¶¨°´¼üÊÂ¼ş
+        // ç»‘å®šæŒ‰é”®äº‹ä»¶
         var inputActions = GameController._inputActions.Win10;
         inputActions.F.started += OnDropButtonPressed;
         inputActions.F.canceled += OnDropButtonReleased;
@@ -74,40 +74,40 @@ public class Module_DiscardItem : Mod_BaseDroper
     {
         base.ModUpdate(deltaTime);
 
-        // ´¦Àí³¤°´Âß¼­
+        // å¤„ç†é•¿æŒ‰é€»è¾‘
         if (isDropButtonPressed)
         {
             dropButtonPressTime += deltaTime;
 
-            // ¼ì²éÊÇ·ñ´ïµ½ÖØ¸´¶ªÆúµÄÌõ¼ş
+            // æ£€æŸ¥æ˜¯å¦è¾¾åˆ°é‡å¤ä¸¢å¼ƒçš„æ¡ä»¶
             if (!isDropRepeatActive && dropButtonPressTime >= dropRepeatDelay)
             {
                 isDropRepeatActive = true;
                 lastDropTime = 0f;
-                Debug.Log("[ItemDroper] ³¤°´¼¤»î£¬½øÈë³ÖĞø¶ªÆúÄ£Ê½");
+                Debug.Log("[ItemDroper] é•¿æŒ‰æ¿€æ´»ï¼Œè¿›å…¥æŒç»­ä¸¢å¼ƒæ¨¡å¼");
             }
 
-            // ³¤°´¼¤»îºóÖ´ĞĞÖØ¸´¶ªÆú£¨²»ÔÙÒÀÀµhoveredSlot£©
+            // é•¿æŒ‰æ¿€æ´»åæ‰§è¡Œé‡å¤ä¸¢å¼ƒï¼ˆä¸å†ä¾èµ–hoveredSlotï¼‰
             if (isDropRepeatActive)
             {
                 lastDropTime += deltaTime;
-                // ¼ì²éÊÇ·ñµ½ÁËÖØ¸´¼ä¸ôÊ±¼ä
+                // æ£€æŸ¥æ˜¯å¦åˆ°äº†é‡å¤é—´éš”æ—¶é—´
                 if (lastDropTime >= dropRepeatInterval)
                 {
                     HandleRepeatDrop();
-                    lastDropTime = 0f; // ÖØÖÃ¼ÆÊ±Æ÷
+                    lastDropTime = 0f; // é‡ç½®è®¡æ—¶å™¨
                 }
             }
         }
         else
         {
-            // °´¼üÎ´°´ÏÂÊ±ÖØÖÃ×´Ì¬
+            // æŒ‰é”®æœªæŒ‰ä¸‹æ—¶é‡ç½®çŠ¶æ€
             isDropRepeatActive = false;
             dropButtonPressTime = 0f;
             lastDropTime = 0f;
         }
 
-        // ¸üĞÂµ±Ç°Êó±êĞüÍ£µÄ²ÛÎ»
+        // æ›´æ–°å½“å‰é¼ æ ‡æ‚¬åœçš„æ§½ä½
         UpdateHoveredSlot();
     }
 
@@ -140,7 +140,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     private void HandleRepeatDrop()
     {
-        // ¼ì²éÊÖÉÏÊÇ·ñÓĞÎïÆ·
+        // æ£€æŸ¥æ‰‹ä¸Šæ˜¯å¦æœ‰ç‰©å“
         ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots?[hand.HandInventory.Data.Index];
         if (handSlot != null && handSlot.itemData != null && handSlot.Amount > 0)
         {
@@ -152,7 +152,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             {
                 DropItemByCount(handSlot, 1);
             }
-            // Ö»ÓĞµ±ÎïÆ·ÍêÈ«¶ªÆúÍêºó²ÅË¢ĞÂUI
+            // åªæœ‰å½“ç‰©å“å®Œå…¨ä¸¢å¼ƒå®Œåæ‰åˆ·æ–°UI
             if (handSlot.Amount <= 0)
             {
                 handSlot.RefreshUI();
@@ -160,7 +160,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             return;
         }
 
-        // ¼ì²é¿ì½İÀ¸ÊÇ·ñÓĞÑ¡ÖĞÎïÆ·
+        // æ£€æŸ¥å¿«æ·æ æ˜¯å¦æœ‰é€‰ä¸­ç‰©å“
         else if (Hotbar?.currentObject != null)
         {
             ItemSlot hotbarSlot = Hotbar.CurrentSelectItemSlot;
@@ -174,7 +174,7 @@ public class Module_DiscardItem : Mod_BaseDroper
                 {
                     DropItemByCount(hotbarSlot, 1);
                 }
-                // Ö»ÓĞµ±ÎïÆ·ÍêÈ«¶ªÆúÍêºó²ÅÏú»Ù¶ÔÏó
+                // åªæœ‰å½“ç‰©å“å®Œå…¨ä¸¢å¼ƒå®Œåæ‰é”€æ¯å¯¹è±¡
                 if (hotbarSlot.Amount <= 0)
                 {
                     Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
@@ -183,7 +183,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             }
         }
 
-        // Ö»ÓĞµ±ÊÖÉÏºÍ¿ì½İÀ¸¶¼Ã»ÓĞÎïÆ·Ê±£¬²Å´¦ÀíUIĞüÍ£µÄÎïÆ·
+        // åªæœ‰å½“æ‰‹ä¸Šå’Œå¿«æ·æ éƒ½æ²¡æœ‰ç‰©å“æ—¶ï¼Œæ‰å¤„ç†UIæ‚¬åœçš„ç‰©å“
         if (hoveredSlot != null && hoveredSlot.GetSlotDataFunc != null)
         {
             ItemSlot hoveredSlotData = hoveredSlot.GetSlotDataFunc?.Invoke(-1);
@@ -198,7 +198,7 @@ public class Module_DiscardItem : Mod_BaseDroper
                     DropItemByCount(hoveredSlotData, 1);
                 }
 
-                // Èç¹ûÎïÆ·ÒÑ¾­ºÄ¾¡£¬ÇÒÊÇµ±Ç°¿ì½İÀ¸Ñ¡ÖĞµÄÎïÆ·£¬ÔòÏú»ÙÊÖÉÏÎïÌå
+                // å¦‚æœç‰©å“å·²ç»è€—å°½ï¼Œä¸”æ˜¯å½“å‰å¿«æ·æ é€‰ä¸­çš„ç‰©å“ï¼Œåˆ™é”€æ¯æ‰‹ä¸Šç‰©ä½“
                 if (hoveredSlotData.Amount <= 0 && hoveredSlotData == Hotbar?.CurrentSelectItemSlot)
                 {
                     Hotbar?.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
@@ -225,23 +225,23 @@ public class Module_DiscardItem : Mod_BaseDroper
         lastDropTime = 0f;
         hoveredSlot = null;
 
-        // ËÉ¿ª°´¼üÊ±Ö´ĞĞÒ»´Î¶ªÆú²Ù×÷
-        // ËÉ¿ª°´¼üÊ±Ö´ĞĞÒ»´Î¶ªÆú²Ù×÷
+        // æ¾å¼€æŒ‰é”®æ—¶æ‰§è¡Œä¸€æ¬¡ä¸¢å¼ƒæ“ä½œ
+        // æ¾å¼€æŒ‰é”®æ—¶æ‰§è¡Œä¸€æ¬¡ä¸¢å¼ƒæ“ä½œ
         if (hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index].itemData != null)
         {
             ItemSlot handSlot = hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index];
             if (isCtrlPressed)
             {
-                // Ctrl+F ¶ªÆúÕû×é
+                // Ctrl+F ä¸¢å¼ƒæ•´ç»„
                 DropItemByCount(handSlot, handSlot.Amount);
             }
             else
             {
-                // F ¶ªÆúµ¥¸ö
+                // F ä¸¢å¼ƒå•ä¸ª
                 DropItemByCount(handSlot, 1);
             }
 
-            // Ö»ÓĞµ±ÎïÆ·ÍêÈ«¶ªÆúÍêºó²ÅË¢ĞÂUI
+            // åªæœ‰å½“ç‰©å“å®Œå…¨ä¸¢å¼ƒå®Œåæ‰åˆ·æ–°UI
             if (handSlot.Amount <= 0)
             {
                 handSlot.RefreshUI();
@@ -252,16 +252,16 @@ public class Module_DiscardItem : Mod_BaseDroper
             ItemSlot hotbarSlot = Hotbar.CurrentSelectItemSlot;
             if (isCtrlPressed)
             {
-                // Ctrl+F ¶ªÆúÕû×é
+                // Ctrl+F ä¸¢å¼ƒæ•´ç»„
                 DropItemByCount(hotbarSlot, hotbarSlot.Amount);
             }
             else
             {
-                // F ¶ªÆúµ¥¸ö
+                // F ä¸¢å¼ƒå•ä¸ª
                 DropItemByCount(hotbarSlot, 1);
             }
 
-            // Ö»ÓĞµ±ÎïÆ·ÍêÈ«¶ªÆúÍêºó²ÅÏú»Ù¶ÔÏó
+            // åªæœ‰å½“ç‰©å“å®Œå…¨ä¸¢å¼ƒå®Œåæ‰é”€æ¯å¯¹è±¡
             if (hotbarSlot.Amount <= 0)
             {
                 Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
@@ -271,12 +271,12 @@ public class Module_DiscardItem : Mod_BaseDroper
         {
             if (isCtrlPressed)
             {
-                // Ctrl+F ¿ìËÙ¶ªÆúÕû×é
+                // Ctrl+F å¿«é€Ÿä¸¢å¼ƒæ•´ç»„
                 FastDropStack();
             }
             else
             {
-                // F ¿ìËÙ¶ªÆúµ¥¸ö
+                // F å¿«é€Ÿä¸¢å¼ƒå•ä¸ª
                 FastDropItem();
             }
             Hotbar.RefreshUI(Hotbar.CurrentIndex);
@@ -306,14 +306,14 @@ public class Module_DiscardItem : Mod_BaseDroper
     }
     #endregion
 
-    #region ÎïÆ·¶ªÆú½Ó¿Ú
+    #region ç‰©å“ä¸¢å¼ƒæ¥å£
 
     [Button("DropItemBySlot")]
     public void DropItemBySlot(ItemSlot slot)
     {
         if (slot == null)
         {
-            Debug.LogError("´«ÈëµÄ ItemSlot Îª¿Õ£¡");
+            Debug.LogError("ä¼ å…¥çš„ ItemSlot ä¸ºç©ºï¼");
             return;
         }
 
@@ -325,7 +325,7 @@ public class Module_DiscardItem : Mod_BaseDroper
     {
         if (slot == null)
         {
-            Debug.LogError("´«ÈëµÄ ItemSlot Îª¿Õ£¡");
+            Debug.LogError("ä¼ å…¥çš„ ItemSlot ä¸ºç©ºï¼");
             return;
         }
 
@@ -336,23 +336,23 @@ public class Module_DiscardItem : Mod_BaseDroper
     {
         if (count <= 0 || slot == null || slot.Amount <= 0)
         {
-            Debug.LogWarning("¶ªÆúÊıÁ¿·Ç·¨»òÎïÆ·²ÛÎª¿Õ£¡");
+            Debug.LogWarning("ä¸¢å¼ƒæ•°é‡éæ³•æˆ–ç‰©å“æ§½ä¸ºç©ºï¼");
             return;
         }
 
         if (count <= slot.Amount)
         {
-            // ¿ËÂ¡Êı¾İ
+            // å…‹éš†æ•°æ®
             ItemData newItemData = FastCloner.FastCloner.DeepClone(slot.itemData);
             newItemData.Stack.Amount = count;
             newItemData.Stack.CanBePickedUp = false;
             newItemData.inHand = false;
 
-            // ¼õÉÙÔ­ÎïÆ·ÊıÁ¿
+            // å‡å°‘åŸç‰©å“æ•°é‡
             slot.Amount -= count;
 
             Item newObject = null;
-            // ÊµÀı»¯ĞÂÎïÌå
+            // å®ä¾‹åŒ–æ–°ç‰©ä½“
             ChunkMgr.Instance.TryGetActiveChunkByPos(Chunk.GetChunkPosition(transform.position), out Chunk chunk);
             if (chunk != null)
             {
@@ -361,36 +361,36 @@ public class Module_DiscardItem : Mod_BaseDroper
 
             if (newObject == null)
             {
-                Debug.LogError("ÊµÀı»¯Ê§°Ü£¬ÕÒ²»µ½×ÊÔ´£º" + newItemData.IDName);
+                Debug.LogError("å®ä¾‹åŒ–å¤±è´¥ï¼Œæ‰¾ä¸åˆ°èµ„æºï¼š" + newItemData.IDName);
                 return;
             }
 
             Item newItem = newObject.GetComponent<Item>();
             if (newItem == null)
             {
-                Debug.LogError("ĞÂÎïÌåÖĞÈ±ÉÙ Item ×é¼ş£¡");
+                Debug.LogError("æ–°ç‰©ä½“ä¸­ç¼ºå°‘ Item ç»„ä»¶ï¼");
                 return;
             }
 
-            // Ê¹ÓÃ InstantiateItem ÖĞĞÂÉú³ÉµÄ GUID ºÍÊı¾İ
-            // ²»ÔÙÊÖ¶¯ÉèÖÃ newItem.itemData = newItemData£¬ÒòÎª InstantiateItem ÒÑ¾­´¦ÀíÁËÕâÒ»²½
+            // ä½¿ç”¨ InstantiateItem ä¸­æ–°ç”Ÿæˆçš„ GUID å’Œæ•°æ®
+            // ä¸å†æ‰‹åŠ¨è®¾ç½® newItem.itemData = newItemDataï¼Œå› ä¸º InstantiateItem å·²ç»å¤„ç†äº†è¿™ä¸€æ­¥
 
-            // ÉèÖÃµôÂäÎï×´Ì¬£ºËõ·ÅÎª0.5±¶
+            // è®¾ç½®æ‰è½ç‰©çŠ¶æ€ï¼šç¼©æ”¾ä¸º0.5å€
             newItem.transform.localScale = Vector3.one * 0.5f;
 
-            // ¼ÆËãÎ»ÖÃ
+            // è®¡ç®—ä½ç½®
             Vector2 startPos = transform.position;
             Vector2 endPos = DropPos;
 
             float distance = Vector2.Distance(startPos, endPos);
             float animTime = baseDropDuration + distance * distanceSensitivity;
 
-            // µ÷ÓÃ¸¸Àà DropItem ÊµÏÖ¶¯»­¿ØÖÆ
+            // è°ƒç”¨çˆ¶ç±» DropItem å®ç°åŠ¨ç”»æ§åˆ¶
             newItem.Load();
             newItem.SetInHand(false);
             DropItem_Pos(newItem, startPos, endPos, animTime);
 
-            // Ö»ÓĞµ±ÎïÆ·ÍêÈ«¶ªÆúÍêºó²ÅÇå³ıÊı¾İ
+            // åªæœ‰å½“ç‰©å“å®Œå…¨ä¸¢å¼ƒå®Œåæ‰æ¸…é™¤æ•°æ®
             if (slot.Amount <= 0)
             {
                 slot.ClearData();
@@ -399,7 +399,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
         slot.RefreshUI();
     }
-    [Button("¿ìËÙ¶ªÆú")]
+    [Button("å¿«é€Ÿä¸¢å¼ƒ")]
     public void FastDropItem(int count = 1)
     {
         Vector2 mousePosition = Mouse.current.position.ReadValue();
@@ -427,7 +427,7 @@ public class Module_DiscardItem : Mod_BaseDroper
         }
     }
 
-    [Button("¿ìËÙ¶ªÆúÕû×é")]
+    [Button("å¿«é€Ÿä¸¢å¼ƒæ•´ç»„")]
     public void FastDropStack()
     {
         Vector2 mousePosition = Mouse.current.position.ReadValue();

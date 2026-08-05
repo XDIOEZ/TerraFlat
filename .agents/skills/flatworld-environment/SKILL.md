@@ -32,6 +32,7 @@ disable-model-invocation: false
 ## 天气与温度
 
 - 星球天气数据：`Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`。
+- 地表静态降水层：`EnvironmentLayers.Precipitation` 由 `ChunkGenerator_Land` 根据最终高度图生成；它影响群系、资源和自然作物环境，不等同于 `WeatherMgr` 的动态降雨事件强度。
 - 雨效控制：`Assets/5_Scripts/5-3_GamePlay/Manager/RainEffectController.cs`。
 - 权威天气事件接线：`Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.AuthoritativeEvent.cs`。
 - 角色温度模块：`Assets/5_Scripts/5-3_GamePlay/Item/Mod_Temperature.cs`。
@@ -67,6 +68,7 @@ GameManager.Event_GameWorldEnter
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-04：地表静态降水取消独立噪声，改由最终高度图平滑反向映射；动态天气事件、雨效及权威端调度契约保持不变。
 - 2026-07-31：环境链接入维度覆盖；地下矿洞使用固定 `0.08` 光照并抑制天气/雨效，地表行为保持不变。
 - 2026-07-31：`WeatherMgr` 不再于开始菜单阶段提前解析 `DayTimeSystem`；仅在游戏世界激活后订阅时间推进事件，避免将正常的未进入世界状态误报为场景缺少时间系统。
 - 2026-07-30：新增首个权威降雨事件闭环：预兆、起雨、稳定、增强、减弱、恢复；阶段使用绝对总时间、固定种子与持久化随机游标，时间跳跃可一次跨越多个阶段。
@@ -79,6 +81,7 @@ GameManager.Event_GameWorldEnter
 ## 修改后验证
 
 - 基础测试脚本：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`；当前覆盖时间、天气、温度、雨效 Resources、`TotalDays` 往返、固定种子确定性天气和跨阶段跳时不重复结算。
+- 地表静态降水的高度映射与 MapCore 无独立降水噪声契约由 `Assets/GameTest/Map/MapSmokeTests.cs`（`Map.Smoke`）覆盖。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；环境测试约定目录：`Assets/GameTest/Environment/`；场景目录：`Assets/GameTest/Scenes/Environment/`；冒烟分类：`Environment.Smoke`。
 - 新增时间、昼夜、季节、天气、光照或温度行为时必须增加系统测试；修复 Bug 时先增加回归测试。时间推进到环境反馈主流程变化时同步更新环境冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；时间与天气测试必须注入确定值，不能依赖真实等待或随机天气。

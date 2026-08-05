@@ -9,7 +9,7 @@ public partial class MapSave
     public string Name;
 
     [ShowInInspector]
-    // ½«Ô­ÏÈ´æ´¢µ¥¸ö ItemData µÄ×Öµä¸ÄÎª´æ´¢ HashSet<ItemData>£¬key ÎªÎïÆ·Ãû³Æ
+    // å°†åŸå…ˆå­˜å‚¨å•ä¸ª ItemData çš„å­—å…¸æ”¹ä¸ºå­˜å‚¨ HashSet<ItemData>ï¼Œkey ä¸ºç‰©å“åç§°
     public Dictionary<string, HashSet<ItemData>> items = new Dictionary<string, HashSet<ItemData>>();
 
     public float SunlightIntensity;
@@ -33,7 +33,7 @@ public partial class MapSave
         if (items.TryGetValue(key, out var set))
         {
             set.Remove(itemData);
-            // Èç¹û¼¯ºÏÎª¿Õ£¬¿ÉÒÔÑ¡ÔñÒÆ³ıÕû¸ö¼üÖµ¶Ô
+            // å¦‚æœé›†åˆä¸ºç©ºï¼Œå¯ä»¥é€‰æ‹©ç§»é™¤æ•´ä¸ªé”®å€¼å¯¹
             if (set.Count == 0)
             {
                 items.Remove(key);

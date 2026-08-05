@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace FlatWorld.GameTest.Buff
@@ -44,11 +46,40 @@ namespace FlatWorld.GameTest.Buff
 
         [Test]
         [Category("Buff.Smoke")]
+        public void BuffModuleUsesCanonicalIdAndAcceptsLegacySaveId()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Module/Manager/Module_BuffManager.prefab");
+            BuffManager manager = prefab != null ? prefab.GetComponent<BuffManager>() : null;
+
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(manager, Is.Not.Null);
+            Assert.That(manager.CanonicalModuleId, Is.EqualTo(ModText.BuffManager));
+
+            var runtimeObject = new GameObject("BuffIdentityProbe");
+            runtimeObject.SetActive(false);
+            try
+            {
+                BuffManager runtimeManager = runtimeObject.AddComponent<BuffManager>();
+                runtimeManager.ModData = new Ex_ModData_MemoryPackable
+                {
+                    ID = ModText.BuffManager
+                };
+                Assert.That(runtimeManager.MatchesPersistedId("Buff模块"), Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(runtimeObject);
+            }
+        }
+
+        [Test]
+        [Category("Buff.Smoke")]
         public void BuiltInCatalogHasUniqueIdsAndCachedHandlers()
         {
             List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
             Assert.That(definitions, Is.Not.Empty, "内置 Buff 目录不能为空。");
-            Assert.That(definitions, Has.Count.EqualTo(12), "拆分后必须保留全部内置 Buff。");
+            Assert.That(definitions, Has.Count.EqualTo(13), "内置 Buff 数量与分包内容必须一致。");
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (BuffDefinition definition in definitions)
@@ -69,10 +100,30 @@ namespace FlatWorld.GameTest.Buff
                 new[]
                 {
                     "补水", "潮湿", "出血", "光耀", "饥饿1.6", "饥饿2.0",
-                    "禁锢(99)", "流血", "跑步", "生命恢复(1)", "失血", "水体减速"
+                    "禁锢(99)", "流血", "燃烧", "跑步", "生命恢复(1)", "失血", "水体减速"
                 },
                 ids,
                 "Buff 分包迁移不得改变存档使用的稳定 ID。");
+        }
+
+        [Test]
+        [Category("Buff.Smoke")]
+        public void BurningBuffUsesTimedTrueDamageDefinition()
+        {
+            List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
+            BuffDefinition burning = definitions.Find(
+                definition => definition.Id == BurningBuffIds.Burning);
+
+            Assert.That(burning, Is.Not.Null, "本体目录必须注册燃烧 Buff。");
+            Assert.That(burning.DurationSeconds, Is.EqualTo(5f));
+            Assert.That(burning.TickIntervalSeconds, Is.EqualTo(1f));
+            Assert.That(burning.StackMode, Is.EqualTo(BuffStackMode.RefreshDuration));
+            Assert.That(burning.TickEffects.Count, Is.EqualTo(1));
+
+            BuffEffectDefinition tickEffect = burning.TickEffects[0];
+            Assert.That(tickEffect.TypeId, Is.EqualTo(BuffEffectTypeIds.TrueDamage));
+            Assert.That(tickEffect.Value, Is.EqualTo(1f));
+            Assert.That(tickEffect.IsHandlerCached, Is.True);
         }
 
         [UnityTest]
@@ -87,7 +138,7 @@ namespace FlatWorld.GameTest.Buff
                 exception => loadError = exception);
 
             Assert.That(loadError, Is.Null);
-            Assert.That(definitions, Has.Count.EqualTo(12));
+            Assert.That(definitions, Has.Count.EqualTo(13));
         }
 
         [Test]

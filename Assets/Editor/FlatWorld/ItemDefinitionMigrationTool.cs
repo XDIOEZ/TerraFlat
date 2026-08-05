@@ -599,8 +599,9 @@ public static class ItemDefinitionMigrationTool
 
     private static string ResolveModuleId(Module module)
     {
-        if (!string.IsNullOrWhiteSpace(module._Data?.ID))
-            return module._Data.ID.Trim();
+        string canonicalId = module?.CanonicalModuleId;
+        if (!string.IsNullOrWhiteSpace(canonicalId))
+            return canonicalId.Trim();
 
         return module.GetType().Name;
     }

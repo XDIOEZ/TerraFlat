@@ -1,0 +1,4 @@
+root = true
+
+[*.{cs,json,asmdef,asmref,shader,cginc,compute,hlsl,uxml,uss,xml,md,txt,lua,py,ps1,yaml,yml}]
+charset = utf-8

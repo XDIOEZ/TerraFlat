@@ -11,22 +11,22 @@ using UnityEngine.SceneManagement;
 public class BundleSystem : MonoBehaviour
 {
     [FolderPath]
-    public string savePath = "Assets/Saves/Map"; // Ä¬ÈÏ±£´æÂ·¾¶
-    public string fileName = ""; // Ä¬ÈÏÎÄ¼şÃû
-    //TODO Èç¹ûÎÄ¼şÃûÎª¿Õ(Ò²¾ÍÊÇÍæ¼ÒÃ»ÓĞÊäÈëÎÄ¼şÃû)£¬Ôò Ê¹ÓÃMapSave.MapName×÷ÎªÎÄ¼şÃû
+    public string savePath = "Assets/Saves/Map"; // é»˜è®¤ä¿å­˜è·¯å¾„
+    public string fileName = ""; // é»˜è®¤æ–‡ä»¶å
+    //TODO å¦‚æœæ–‡ä»¶åä¸ºç©º(ä¹Ÿå°±æ˜¯ç©å®¶æ²¡æœ‰è¾“å…¥æ–‡ä»¶å)ï¼Œåˆ™ ä½¿ç”¨MapSave.MapNameä½œä¸ºæ–‡ä»¶å
     [ShowInInspector]
     private string statusMessage = "";
 
-    public MapSave mapSave; // InspectorÖĞ¿ÉÒÔÔ¤ÀÀ
-    public TextAsset mapSaveAsset; // ¿É¹Ò½Ó TextAsset
+    public MapSave mapSave; // Inspectorä¸­å¯ä»¥é¢„è§ˆ
+    public TextAsset mapSaveAsset; // å¯æŒ‚æ¥ TextAsset
 
     [ShowInInspector]
-    private List<TextAsset> mapFiles = new List<TextAsset>(); // ×Ô¶¯É¨ÃèµÄTextAssetÁĞ±í
+    private List<TextAsset> mapFiles = new List<TextAsset>(); // è‡ªåŠ¨æ‰«æçš„TextAssetåˆ—è¡¨
 
     [ShowInInspector]
-    private int selectedIndex = 0; // µ±Ç°Ñ¡ÔñµÄÎÄ¼şË÷Òı
+    private int selectedIndex = 0; // å½“å‰é€‰æ‹©çš„æ–‡ä»¶ç´¢å¼•
 
-    [Button("Ë¢ĞÂµØÍ¼ÁĞ±í")]
+    [Button("åˆ·æ–°åœ°å›¾åˆ—è¡¨")]
     public void RefreshMapFiles()
     {
         mapFiles.Clear();
@@ -43,12 +43,12 @@ public class BundleSystem : MonoBehaviour
         }
 
         if (mapFiles.Count > 0)
-            statusMessage = $"ÕÒµ½ {mapFiles.Count} ¸öµØÍ¼ÎÄ¼ş";
+            statusMessage = $"æ‰¾åˆ° {mapFiles.Count} ä¸ªåœ°å›¾æ–‡ä»¶";
         else
-            statusMessage = "Î´ÕÒµ½µØÍ¼ÎÄ¼ş";
+            statusMessage = "æœªæ‰¾åˆ°åœ°å›¾æ–‡ä»¶";
     }
 
-    [Button("´ò¿ªÑ¡ÖĞµØÍ¼")]
+    [Button("æ‰“å¼€é€‰ä¸­åœ°å›¾")]
     public void OpenSelectedMap()
     {
         if (mapFiles.Count == 0) return;
@@ -56,31 +56,31 @@ public class BundleSystem : MonoBehaviour
         mapSaveAsset = mapFiles[selectedIndex];
         mapSave = MemoryPackSerializer.Deserialize<MapSave>(mapSaveAsset.bytes);
 
-        statusMessage = $"ÒÑ´ò¿ª£º{mapSaveAsset.name}";
+        statusMessage = $"å·²æ‰“å¼€ï¼š{mapSaveAsset.name}";
         Debug.Log(statusMessage);
     }
 
-    // ¹Ò½ÓTextAsset²¢¼ÓÔØ
-    [Button("´ò¿ªÎÄ±¾±à¼­Æ÷")]
+    // æŒ‚æ¥TextAssetå¹¶åŠ è½½
+    [Button("æ‰“å¼€æ–‡æœ¬ç¼–è¾‘å™¨")]
     public void TextEditor()
     {
         if (mapSaveAsset == null)
         {
-            statusMessage = "ÇëÏÈ¹Ò½ÓÒ»¸ö TextAsset£¡";
+            statusMessage = "è¯·å…ˆæŒ‚æ¥ä¸€ä¸ª TextAssetï¼";
             return;
         }
 
         mapSave = MemoryPackSerializer.Deserialize<MapSave>(mapSaveAsset.bytes);
-        statusMessage = $"ÒÑ¼ÓÔØ¹Ò½Ó TextAsset£º{mapSaveAsset.name}";
+        statusMessage = $"å·²åŠ è½½æŒ‚æ¥ TextAssetï¼š{mapSaveAsset.name}";
     }
 
-    // ±£´æ¸²¸Ç¹Ò½ÓµÄTextAsset
-    [Button("±£´æ¸²¸Çµ±Ç°¹Ò½ÓµØÍ¼")]
+    // ä¿å­˜è¦†ç›–æŒ‚æ¥çš„TextAsset
+    [Button("ä¿å­˜è¦†ç›–å½“å‰æŒ‚æ¥åœ°å›¾")]
     public void TextEditorDone()
     {
         if (mapSaveAsset == null)
         {
-            statusMessage = "ÇëÏÈ¹Ò½ÓÒ»¸ö TextAsset£¡";
+            statusMessage = "è¯·å…ˆæŒ‚æ¥ä¸€ä¸ª TextAssetï¼";
             Debug.LogError(statusMessage);
             return;
         }
@@ -90,19 +90,19 @@ public class BundleSystem : MonoBehaviour
 
         File.WriteAllBytes(path, data);
         AssetDatabase.Refresh();
-        statusMessage = $"±£´æ³É¹¦£º{path}";
+        statusMessage = $"ä¿å­˜æˆåŠŸï¼š{path}";
         Debug.Log(statusMessage);
     }
 
-    // Çå¿Õ MapSave
-    [Button("Çå¿ÕMapSave")]
+    // æ¸…ç©º MapSave
+    [Button("æ¸…ç©ºMapSave")]
     public void ClearMapSave()
     {
         mapSave = new MapSave();
-        statusMessage = "MapSave ÒÑÇå¿Õ";
+        statusMessage = "MapSave å·²æ¸…ç©º";
     }
 
-    [Button("±£´æµ±Ç°µØÍ¼")]
+    [Button("ä¿å­˜å½“å‰åœ°å›¾")]
     private void SaveCurrentMap()
     {
         if (!Directory.Exists(savePath))
@@ -110,22 +110,22 @@ public class BundleSystem : MonoBehaviour
             Directory.CreateDirectory(savePath);
         }
 
-        // ²¥·ÅÓÎÏ·£¨½ö±à¼­Æ÷ÓĞĞ§£©
+        // æ’­æ”¾æ¸¸æˆï¼ˆä»…ç¼–è¾‘å™¨æœ‰æ•ˆï¼‰
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = true;
 #endif
 
-        // ±£´æÇ°½«Ê±¼äÉèÖÃÎª0£¬·ÀÖ¹ÉúÎïÒÆ¶¯
+        // ä¿å­˜å‰å°†æ—¶é—´è®¾ç½®ä¸º0ï¼Œé˜²æ­¢ç”Ÿç‰©ç§»åŠ¨
         float originalTimeScale = Time.timeScale;
         Time.timeScale = 0f;
         
         Chunk chunk = GameObject.FindObjectOfType<Chunk>();
         if (chunk == null)
         {
-            statusMessage = "Î´ÕÒµ½ Chunk£¬ÇëÈ·±£³¡¾°ÖĞ´æÔÚ Chunk ¶ÔÏó£¡";
+            statusMessage = "æœªæ‰¾åˆ° Chunkï¼Œè¯·ç¡®ä¿åœºæ™¯ä¸­å­˜åœ¨ Chunk å¯¹è±¡ï¼";
             Debug.LogWarning(statusMessage);
             
-            // »Ö¸´Ê±¼äÁ÷ÊÅËÙ¶È
+            // æ¢å¤æ—¶é—´æµé€é€Ÿåº¦
             Time.timeScale = originalTimeScale;
             return;
         }
@@ -143,10 +143,10 @@ public class BundleSystem : MonoBehaviour
         }
         if (currentMap == null)
         {
-            statusMessage = "»ñÈ¡ MapSave Ê§°Ü£¬ÇëÈ·±£³¡¾°ÒÑ³õÊ¼»¯£¡";
+            statusMessage = "è·å– MapSave å¤±è´¥ï¼Œè¯·ç¡®ä¿åœºæ™¯å·²åˆå§‹åŒ–ï¼";
             Debug.LogWarning(statusMessage);
             
-            // »Ö¸´Ê±¼äÁ÷ÊÅËÙ¶È
+            // æ¢å¤æ—¶é—´æµé€é€Ÿåº¦
             Time.timeScale = originalTimeScale;
             return;
         }
@@ -162,21 +162,21 @@ public class BundleSystem : MonoBehaviour
 #if UNITY_EDITOR
             AssetDatabase.Refresh();
 #endif
-            statusMessage = $"±£´æ³É¹¦£º{fullPath}";
+            statusMessage = $"ä¿å­˜æˆåŠŸï¼š{fullPath}";
             Debug.Log(statusMessage);
         }
         catch (System.Exception ex)
         {
-            statusMessage = $"±£´æÊ§°Ü£º{ex.Message}";
+            statusMessage = $"ä¿å­˜å¤±è´¥ï¼š{ex.Message}";
             Debug.LogError(statusMessage);
         }
         finally
         {
-            // È·±£»Ö¸´Ê±¼äÁ÷ÊÅËÙ¶È
+            // ç¡®ä¿æ¢å¤æ—¶é—´æµé€é€Ÿåº¦
             Time.timeScale = originalTimeScale;
         }
 
-        // ¹Ø±ÕÓÎÏ·£¨½ö±à¼­Æ÷ÓĞĞ§ / ÔËĞĞÊ±ÍË³ö£©
+        // å…³é—­æ¸¸æˆï¼ˆä»…ç¼–è¾‘å™¨æœ‰æ•ˆ / è¿è¡Œæ—¶é€€å‡ºï¼‰
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #else

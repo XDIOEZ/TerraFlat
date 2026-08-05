@@ -59,6 +59,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-05：本体 combat 分包新增稳定 ID `燃烧`：持续 5 秒、每秒 1 点真实伤害、重复施加刷新持续时间；真实单机黄金路径会在玩家移动阶段施加并跨 Tick 验证伤害，随后移除 Buff、恢复生命。
+- 2026-08-04：`BuffManager` 的规范模块 ID 固定为 `BuffManager`，并兼容旧存档/Prefab 中的 `Buff模块`；模板提取和模块自动修复不得再把旧 ID 写回运行时索引。
 - 2026-08-04：F4 GM 控制台新增 Buff 分发分页；确认后通过本地 `GameController.LeftClick` 点选带 `BuffManager` 的目标施加已注册 Buff，支持限时 Buff 的时长覆盖与重复施加；清除模式调用 `ClearAllBuffs()`，不会绕过 Stop/Removed 生命周期。
 - 2026-08-03：本体 Buff 从单个 `buffs.json` 拆为 `buff-manifest.json + environment/combat/survival/movement` 四个分包；运行时先聚合并检查跨包重复 ID，再统一注册。StreamingAssets 文本读取接入 Android/WebGL 的 `UnityWebRequest` 协程路径。
 

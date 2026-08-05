@@ -8,7 +8,7 @@ public class Mod_Treasure_Inventory : Mod_Inventory
 
     public override void Load()
     {
-        //TODO ´ÓinventoryInitListÖĞËæ»úÑ¡Ò»¸ö
+        //TODO ä»inventoryInitListä¸­éšæœºé€‰ä¸€ä¸ª
         string inventoryName = inventoryInitList[Random.Range(0, inventoryInitList.Count)].name;
         Data.InventoryInitName = inventoryName;
         base.Load();

@@ -2,56 +2,56 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "DurabilityModifier", menuName = "Crafting/DurabilityModifier")]
 public class DurabilityModifier : CraftingAction
 {
-    [Header("ÄÍ¾Ã¶ÈÉèÖÃ")]
-    public float durabilityCost = 1f; // ÏûºÄµÄÄÍ¾Ã¶È
-    [Header("ËğÊ§ÄÍ¾ÃµÄItemµÄTagÃû³Æ")]
-    public string lostDurabilityItemTag = "Axe"; // ËğÊ§ÄÍ¾Ã¶ÈµÄÎïÆ·µÄTagÃû³Æ
+    [Header("è€ä¹…åº¦è®¾ç½®")]
+    public float durabilityCost = 1f; // æ¶ˆè€—çš„è€ä¹…åº¦
+    [Header("æŸå¤±è€ä¹…çš„Itemçš„Tagåç§°")]
+    public string lostDurabilityItemTag = "Axe"; // æŸå¤±è€ä¹…åº¦çš„ç‰©å“çš„Tagåç§°
 
     public override void Apply(IInventory inventory)
     {
-        // ĞŞ¸ÄÎª±éÀú»ñÈ¡inventory.InventoryRefDic[InventoryName].Data.itemSlots ÖĞTagÎªlostDurabilityItemTagµÄItemData ²¢ÏûºÄÆäÄÍ¾Ã
+        // ä¿®æ”¹ä¸ºéå†è·å–inventory.InventoryRefDic[InventoryName].Data.itemSlots ä¸­Tagä¸ºlostDurabilityItemTagçš„ItemData å¹¶æ¶ˆè€—å…¶è€ä¹…
         Inventory targetInventory = inventory.GetDefaultTargetInventory();
         if (targetInventory == null || targetInventory.Data == null || targetInventory.Data.itemSlots == null)
         {
-            Debug.LogWarning("DurabilityModifier: Ä¿±ê¿â´æÎª¿Õ»òÎ´³õÊ¼»¯");
+            Debug.LogWarning("DurabilityModifier: ç›®æ ‡åº“å­˜ä¸ºç©ºæˆ–æœªåˆå§‹åŒ–");
             return;
         }
 
-        // ±éÀú¿â´æÖĞµÄËùÓĞÎïÆ·²Û
+        // éå†åº“å­˜ä¸­çš„æ‰€æœ‰ç‰©å“æ§½
         foreach (ItemSlot itemSlot in targetInventory.Data.itemSlots)
         {
-            // ¼ì²éÎïÆ·²ÛºÍÎïÆ·Êı¾İÊÇ·ñ´æÔÚ
+            // æ£€æŸ¥ç‰©å“æ§½å’Œç‰©å“æ•°æ®æ˜¯å¦å­˜åœ¨
             if (itemSlot == null || itemSlot.itemData == null)
                 continue;
 
-            // ¼ì²éÎïÆ·ÊÇ·ñ°üº¬Ö¸¶¨µÄTag
+            // æ£€æŸ¥ç‰©å“æ˜¯å¦åŒ…å«æŒ‡å®šçš„Tag
             if (itemSlot.itemData.Tags != null && 
                 itemSlot.itemData.Tags != null && 
                 itemSlot.itemData.Tags != null && 
                 itemSlot.itemData.Tags.Contains(lostDurabilityItemTag))
             {
-                // ¼ì²éÊÇ·ñÓĞÄÍ¾Ã¶ÈÊı¾İ
+                // æ£€æŸ¥æ˜¯å¦æœ‰è€ä¹…åº¦æ•°æ®
                 if (itemSlot.itemData.Durability > 0 && itemSlot.itemData.MaxDurability > 0)
                 {
-                    // Ê¹ÓÃÎïÆ·×ÔÉíµÄÄÍ¾Ã½Ó¿Ú¼õÉÙÄÍ¾Ã¶È£¨´«Èë¸ºÖµ£©
+                    // ä½¿ç”¨ç‰©å“è‡ªèº«çš„è€ä¹…æ¥å£å‡å°‘è€ä¹…åº¦ï¼ˆä¼ å…¥è´Ÿå€¼ï¼‰
                     itemSlot.itemData.AddDurability(-durabilityCost);
                     
-                    Debug.Log($"ÎïÆ· {itemSlot.itemData.IDName} ÏûºÄÄÍ¾Ã¶È: {durabilityCost}, Ê£ÓàÄÍ¾Ã¶È: {itemSlot.itemData.Durability}/{itemSlot.itemData.MaxDurability}");
+                    Debug.Log($"ç‰©å“ {itemSlot.itemData.IDName} æ¶ˆè€—è€ä¹…åº¦: {durabilityCost}, å‰©ä½™è€ä¹…åº¦: {itemSlot.itemData.Durability}/{itemSlot.itemData.MaxDurability}");
                     
-                    // È·±£ÄÍ¾Ã¶È²»µÍÓÚ0
+                    // ç¡®ä¿è€ä¹…åº¦ä¸ä½äº0
                     if (itemSlot.itemData.Durability <= 0)
                     {
                         itemSlot.itemData.Durability = 0;
                         itemSlot.ClearData();
-                        Debug.Log($"ÎïÆ· {itemSlot.itemData?.IDName ?? "Unknown"} ÄÍ¾Ã¶È¹éÁã£¬ÒÑÇå³ıÊı¾İ");
+                        Debug.Log($"ç‰©å“ {itemSlot.itemData?.IDName ?? "Unknown"} è€ä¹…åº¦å½’é›¶ï¼Œå·²æ¸…é™¤æ•°æ®");
                     }
                     
-                    // ÕÒµ½²¢´¦ÀíÁËÄ¿±êÎïÆ·ºóÍË³öÑ­»·
+                    // æ‰¾åˆ°å¹¶å¤„ç†äº†ç›®æ ‡ç‰©å“åé€€å‡ºå¾ªç¯
                     break;
                 }
                 else
                 {
-                    Debug.LogWarning($"ÎïÆ· {itemSlot.itemData.IDName} Ã»ÓĞÄÍ¾Ã¶ÈÊı¾İ£¬ÎŞ·¨Ó¦ÓÃÄÍ¾Ã¶ÈĞŞ¸Ä");
+                    Debug.LogWarning($"ç‰©å“ {itemSlot.itemData.IDName} æ²¡æœ‰è€ä¹…åº¦æ•°æ®ï¼Œæ— æ³•åº”ç”¨è€ä¹…åº¦ä¿®æ”¹");
                 }
             }
         }

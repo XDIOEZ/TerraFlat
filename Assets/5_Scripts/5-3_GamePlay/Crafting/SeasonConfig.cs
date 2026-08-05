@@ -5,32 +5,32 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Game/Season Config", fileName = "NewSeasonConfig")]
 public class SeasonConfig : ScriptableObject
 {
-    [Tooltip("¼¾½ÚÀàĞÍ")]
+    [Tooltip("å­£èŠ‚ç±»å‹")]
     public SeasonType season;
-    [Tooltip("¼¾½ÚÃû³Æ")]
+    [Tooltip("å­£èŠ‚åç§°")]
     public string seasonName;
 
-    [Tooltip("´Ë¼¾½ÚÖĞµÄÓÎÏ·ÌìÊı")]
+    [Tooltip("æ­¤å­£èŠ‚ä¸­çš„æ¸¸æˆå¤©æ•°")]
     public List<DayConfig> days;
 
-    [Tooltip("¸Ã¼¾½ÚÖĞÒ»ÌìµÄÓÎÏ·Ê±³¤£¨Ãë£©")]
-    public float gameDayDuration = 24f * 60f; // Ä¬ÈÏ24·ÖÖÓ
+    [Tooltip("è¯¥å­£èŠ‚ä¸­ä¸€å¤©çš„æ¸¸æˆæ—¶é•¿ï¼ˆç§’ï¼‰")]
+    public float gameDayDuration = 24f * 60f; // é»˜è®¤24åˆ†é’Ÿ
 
-    [Tooltip("¼¾½Ú³ÖĞøµÄÓÎÏ·ÌìÊı")]
+    [Tooltip("å­£èŠ‚æŒç»­çš„æ¸¸æˆå¤©æ•°")]
     public float durationInDays;
 
-    [Tooltip("ÈÕ³ö¿ªÊ¼Ê±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥å‡ºå¼€å§‹æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunriseStartTime;
-    [Tooltip("ÈÕ³ö½áÊøÊ±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥å‡ºç»“æŸæ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunriseEndTime;
-    [Tooltip("ÈÕÂä¿ªÊ¼Ê±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥è½å¼€å§‹æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunsetStartTime;
-    [Tooltip("ÈÕÂä½áÊøÊ±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥è½ç»“æŸæ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunsetEndTime;
 
     public void AutoGenerateParameters()
     {
-        Random.InitState((int)season); // È·±£Í¬Ò»¼¾½ÚµÄËæ»úĞÔÒ»ÖÂ
+        Random.InitState((int)season); // ç¡®ä¿åŒä¸€å­£èŠ‚çš„éšæœºæ€§ä¸€è‡´
         days.Clear();
 
         switch (season)
@@ -61,7 +61,7 @@ public class SeasonConfig : ScriptableObject
             var dayConfig = ScriptableObject.CreateInstance<DayConfig>();
             dayConfig.gameDayDuration = gameDayDuration;
 
-            // ¼ÆËãËæ»úÆ«ÒÆ£¨¡À5%£©
+            // è®¡ç®—éšæœºåç§»ï¼ˆÂ±5%ï¼‰
             float randomFactor = Random.Range(-0.05f, 0.05f);
 
             dayConfig.sunriseStartTime = sunriseStartBase * gameDayDuration * (1 + randomFactor);
@@ -69,7 +69,7 @@ public class SeasonConfig : ScriptableObject
             dayConfig.sunsetStartTime = sunsetStartBase * gameDayDuration * (1 + randomFactor);
             dayConfig.sunsetEndTime = sunsetEndBase * gameDayDuration * (1 + randomFactor);
 
-            // È·±£Ê±¼äË³ĞòÕıÈ·
+            // ç¡®ä¿æ—¶é—´é¡ºåºæ­£ç¡®
             dayConfig.sunriseEndTime = Mathf.Max(dayConfig.sunriseStartTime + 0.05f * gameDayDuration, dayConfig.sunriseEndTime);
             dayConfig.sunsetStartTime = Mathf.Max(dayConfig.sunriseEndTime + 0.05f * gameDayDuration, dayConfig.sunsetStartTime);
             dayConfig.sunsetEndTime = Mathf.Min(dayConfig.sunsetStartTime + 0.1f * gameDayDuration, gameDayDuration);

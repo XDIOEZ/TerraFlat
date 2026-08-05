@@ -1,73 +1,70 @@
-using System.Collections.Generic;
 using System;
-using UnityEngine;
+using System.Collections.Generic;
 using System.Linq;
 using Sirenix.OdinInspector;
+using UnityEngine;
 
 [Serializable]
 public class Input_List
 {
-    [Header("ĞèÒªµÄÔ­²ÄÁÏÁĞ±í")]
+    [Header("éœ€è¦çš„åŸææ–™åˆ—è¡¨")]
     [TableList(AlwaysExpanded = true, ShowIndexLabels = true)]
     public List<CraftingIngredient> RowItems_List = new List<CraftingIngredient>();
-    [Header("Åä·½ÀàĞÍ")]
+
+    [Header("é…æ–¹ç±»å‹")]
     public RecipeType recipeType = RecipeType.Crafting;
-    [Header("ºÏ³ÉË³Ğò")]
-    public RecipeInputRule inputOrder = RecipeInputRule.¹æÔòºÏ³É;
-    
+
+    [Header("åˆæˆé¡ºåº")]
+    public RecipeInputRule inputOrder = RecipeInputRule.è§„åˆ™åˆæˆ;
 
     public override string ToString()
     {
         if (RowItems_List == null || RowItems_List.Count == 0)
-        {
             return $"[][{recipeType}]";
-        }
 
-        // ´´½¨Ò»¸ö¸±±¾ÓÃÓÚ´¦Àí
-        List<CraftingIngredient> itemsToProcess = new List<CraftingIngredient>(RowItems_List);
-
-        // Èç¹ûÊÇÎŞ¹æÔòºÏ³É£¬Ôò¶ÔÎïÆ·½øĞĞÅÅĞòÒÔÏû³ı°Ú·ÅË³ĞòµÄÓ°Ïì
-        if (inputOrder == RecipeInputRule.ÎŞ¹æÔòºÏ³É)
+        // ä½¿ç”¨å‰¯æœ¬æ’åºï¼Œé¿å…ä¿®æ”¹åŸå§‹é…æ–¹è¾“å…¥ã€‚
+        var itemsToProcess = new List<CraftingIngredient>(RowItems_List);
+        if (inputOrder == RecipeInputRule.æ— è§„åˆ™åˆæˆ)
         {
-            itemsToProcess.Sort((a, b) => 
+            itemsToProcess.Sort((a, b) =>
             {
-                // Ê×ÏÈ°´Æ¥ÅäÄ£Ê½ÅÅĞò
                 int modeComparison = a.matchMode.CompareTo(b.matchMode);
                 if (modeComparison != 0)
                     return modeComparison;
-                
-                // È»ºó°´ÎïÆ·Ãû»ò±êÇ©ÅÅĞò
+
                 string aKey = a.matchMode == MatchMode.ExactItem ? a.ItemName : a.Tag;
                 string bKey = b.matchMode == MatchMode.ExactItem ? b.ItemName : b.Tag;
-                
                 return string.Compare(aKey, bKey, StringComparison.Ordinal);
             });
         }
-        
-        // ¹¹½¨±È½Ï¼ü
+
         string ingredients = string.Join(",", itemsToProcess.Select(ingredient => ingredient.ToString()));
         return $"{ingredients}[{recipeType}]";
     }
 
     public void AddNameItem(string name)
     {
-        CraftingIngredient ingredient = new CraftingIngredient();
-        ingredient.ItemName = name;
-        ingredient.matchMode = MatchMode.ExactItem;
+        var ingredient = new CraftingIngredient
+        {
+            ItemName = name,
+            matchMode = MatchMode.ExactItem
+        };
         RowItems_List.Add(ingredient);
     }
-    
-    public void AddTagItem(string Tag)
+
+    public void AddTagItem(string tag)
     {
-        CraftingIngredient ingredient = new CraftingIngredient();
-        ingredient.Tag = Tag;
-        ingredient.matchMode = MatchMode.ByTag;
+        var ingredient = new CraftingIngredient
+        {
+            Tag = tag,
+            matchMode = MatchMode.ByTag
+        };
         RowItems_List.Add(ingredient);
     }
 }
 
 public enum RecipeInputRule
 {
-    ÎŞ¹æÔòºÏ³É,
-    ¹æÔòºÏ³É,
+    æ— è§„åˆ™åˆæˆ,
+    è§„åˆ™åˆæˆ,
 }

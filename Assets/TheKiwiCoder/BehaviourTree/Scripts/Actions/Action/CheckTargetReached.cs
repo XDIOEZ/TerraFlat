@@ -1,48 +1,48 @@
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/Ìõ¼ş/¼ì²éÊÇ·ñµ½´ïÄ¿±êµã")]
+[NodeMenu("ActionNode/æ¡ä»¶/æ£€æŸ¥æ˜¯å¦åˆ°è¾¾ç›®æ ‡ç‚¹")]
 public class CheckTargetReached : ActionNode
 {
-    [Header("¾àÀëãĞÖµ")]
-    [Tooltip("ÅĞ¶Ïµ½´ïÄ¿±êµãµÄ¾àÀëãĞÖµ")]
+    [Header("è·ç¦»é˜ˆå€¼")]
+    [Tooltip("åˆ¤æ–­åˆ°è¾¾ç›®æ ‡ç‚¹çš„è·ç¦»é˜ˆå€¼")]
     public float distanceThreshold = 0.1f;
 
     protected override void OnStart()
     {
-        // ²»ĞèÒª³õÊ¼»¯²Ù×÷
+        // ä¸éœ€è¦åˆå§‹åŒ–æ“ä½œ
         context.mover.stopDistance = distanceThreshold;
     }
 
     protected override void OnStop()
     {
-        // ²»ĞèÒªÇåÀí²Ù×÷
+        // ä¸éœ€è¦æ¸…ç†æ“ä½œ
     }
 
     protected override State OnUpdate()
     {
-        // ¼ì²é±ØÒªµÄ×é¼şÊÇ·ñ´æÔÚ
+        // æ£€æŸ¥å¿…è¦çš„ç»„ä»¶æ˜¯å¦å­˜åœ¨
         if (context.mover == null)
         {
             return State.Failure;
         }
 
-        // »ñÈ¡µ±Ç°Î»ÖÃºÍÄ¿±êÎ»ÖÃ
+        // è·å–å½“å‰ä½ç½®å’Œç›®æ ‡ä½ç½®
         Vector2 currentPosition = context.mover.transform.position;
         Vector2 targetPosition = context.mover.TargetPosition;
 
-        // ¼ÆËã¾àÀë
+        // è®¡ç®—è·ç¦»
         float distanceToTarget = Vector2.Distance(currentPosition, targetPosition);
 
-        // ¼ì²éÊÇ·ñÔÚãĞÖµ·¶Î§ÄÚ
+        // æ£€æŸ¥æ˜¯å¦åœ¨é˜ˆå€¼èŒƒå›´å†…
         if (distanceToTarget <= distanceThreshold)
         {
-            // ÒÑ¾­µ½´ïÄ¿±êµã
+            // å·²ç»åˆ°è¾¾ç›®æ ‡ç‚¹
             return State.Success;
         }
         else
         {
-            // »¹Î´µ½´ïÄ¿±êµã
+            // è¿˜æœªåˆ°è¾¾ç›®æ ‡ç‚¹
             return State.Failure;
         }
     }

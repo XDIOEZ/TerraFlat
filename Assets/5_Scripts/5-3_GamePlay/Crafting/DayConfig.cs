@@ -9,15 +9,15 @@ public class DayConfig : ScriptableObject
     public int year;
     public int day;
 
-    [Tooltip("¸ÃÌìµÄÓÎÏ·Ê±³¤£¨Ãë£©")]
-    public float gameDayDuration = 24f * 60f; // Ä¬ÈÏ24·ÖÖÓ
+    [Tooltip("è¯¥å¤©çš„æ¸¸æˆæ—¶é•¿ï¼ˆç§’ï¼‰")]
+    public float gameDayDuration = 24f * 60f; // é»˜è®¤24åˆ†é’Ÿ
 
-    [Tooltip("ÈÕ³ö¿ªÊ¼Ê±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥å‡ºå¼€å§‹æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunriseStartTime;
-    [Tooltip("ÈÕ³ö½áÊøÊ±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥å‡ºç»“æŸæ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunriseEndTime;
-    [Tooltip("ÈÕÂä¿ªÊ¼Ê±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥è½å¼€å§‹æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunsetStartTime;
-    [Tooltip("ÈÕÂä½áÊøÊ±¼ä£¨Ãë£©")]
+    [Tooltip("æ—¥è½ç»“æŸæ—¶é—´ï¼ˆç§’ï¼‰")]
     public float sunsetEndTime;
 }

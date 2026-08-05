@@ -10,18 +10,25 @@ description: "Use when validating FlatWorld Unity changes, running GameTest cate
 ## 运行测试
 
 1. 从当前领域 Skill 的“修改后自动测试/验证”段选择最小相关分类。
-2. 执行：
+2. 修改了可在真实单机世界执行的运行时玩法时，同时使用 `$flatworld-golden-path`，主动扩展完整流程场景。
+3. 执行：
 
    ```powershell
    python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category AI.Smoke
    ```
 
-3. 若 `python` 不在 PATH，先获取 Codex 工作区依赖，再用返回的 Python 绝对路径执行同一脚本。
-4. 根据进程退出码和结构化失败信息处理结果；不要仅根据 Unity 进程退出码判断测试通过。
+4. 若 `python` 不在 PATH，先获取 Codex 工作区依赖，再用返回的 Python 绝对路径执行同一脚本。
+5. 根据进程退出码和结构化失败信息处理结果；不要仅根据 Unity 进程退出码判断测试通过。
 
 常用调用：
 
 ```powershell
+# 只检查全部 C# 的 UTF-8 编码与非法替换字符
+python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --check-encoding
+
+# 固定黄金路径：启动游戏、代码创建世界、移动两圈并验证 Chunk 流送
+python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path
+
 # 同时运行多个相关分类
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py `
   --category Combat.Smoke --category Audio.Smoke
@@ -43,7 +50,11 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 - Unity Editor 已打开：向 `FlatWorldSkillTestBridge` 写入请求，由当前 Editor 内的 TestRunner 直接执行。
 - Unity Editor 未打开：定位项目声明的 Unity 版本并使用 batchmode 执行。
 - 两种通道都把机器可读结果写入被 Git 忽略的 `Library/FlatWorldSkillTests/`。
+- 每次测试前先扫描全部 `Assets/**/*.cs`；发现非 UTF-8 或 `U+FFFD (�)` 时一次性列出并终止，不再让 Unity 逐文件编译报错。
+- 打开的 Editor 会在接管请求前同步刷新 AssetDatabase，确保失焦或关闭 Auto Refresh 时也会先编译 AI 的最新修改。
+- `--golden-path` 使用隔离临时存档并只调用公开生产 API；不点击 UI、不发送物理输入、不做截图判断。
 - Editor 桥接通道在 PlayMode 前后保存并按字节恢复已知易变字体资源，避免动态字形写回污染 Git；不主动切换或保存用户场景。
+- Editor 桥接通道会跨 PlayMode Domain Reload 从 `running/pending` 状态恢复请求、重新挂接 TestRunner 回调，并持久化易变资源快照；测试不依赖用户的 Enter Play Mode 设置。
 
 退出码：`0` 表示全部通过；`1` 表示存在测试失败；`2` 表示没有匹配测试或请求无效；`3` 表示超时、编译失败或执行基础设施错误。
 
@@ -53,6 +64,7 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 - 禁止删除测试、弱化断言或改写输入来制造通过。
 - 编译失败时先修复编译；不要让旧程序集的测试结果冒充新代码验证。
 - 若测试分类不存在，运行 `--list-categories` 并更新领域 Skill 的分类记录。
+- 历史 GBK 源码可先预览并无损转换：`powershell -File .agents/skills/flatworld-test-automation/scripts/normalize_source_encoding.ps1`，确认列表后追加 `-Apply`；脚本只转换能按 CP936 字节往返的 `.cs`。
 
 ## 视觉验证边界
 

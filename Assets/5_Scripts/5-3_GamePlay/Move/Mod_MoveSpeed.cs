@@ -8,23 +8,23 @@ public partial class Mod_MoveSpeed : Module, IItemValueModifier
     public Ex_ModData_MemoryPackable SaveData;
     public override ModuleData _Data { get { return SaveData; } set { SaveData = (Ex_ModData_MemoryPackable)value; } }
 
-    public GameValue_float moveSpeed = new GameValue_float(1.2f); // Ä¬ÈÏ¼ÓËÙ±¶ÂÊ£¬ÀıÈç1.2±¶
+    public GameValue_float moveSpeed = new GameValue_float(1.2f); // é»˜è®¤åŠ é€Ÿå€ç‡ï¼Œä¾‹å¦‚1.2å€
 
     public override void Awake()
     {
         if (_Data.ID == "")
         {
-            _Data.ID = ModText.MoveSpeed; // È·±£ ModText ÓĞÕâ¸ö×Ö¶Î
+            _Data.ID = ModText.MoveSpeed; // ç¡®ä¿ ModText æœ‰è¿™ä¸ªå­—æ®µ
         }
     }
 
-    // Ô­LoadÂß¼­Ç¨ÒÆµ½Equip£¬×°±¸Ê±Ó¦ÓÃËÙ¶È¼Ó³É
+    // åŸLoadé€»è¾‘è¿ç§»åˆ°Equipï¼Œè£…å¤‡æ—¶åº”ç”¨é€Ÿåº¦åŠ æˆ
     public void Equip(Item EquipmentOwner, ItemData Equipment)
     {
-        // ¶ÁÈ¡±£´æµÄÊı¾İ
+        // è¯»å–ä¿å­˜çš„æ•°æ®
         SaveData.ReadData(ref moveSpeed);
 
-        // Ó¦ÓÃÒÆ¶¯ËÙ¶È¼Ó³É
+        // åº”ç”¨ç§»åŠ¨é€Ÿåº¦åŠ æˆ
         var movement = GetMover();
         if (movement != null && moveSpeed.Value != 0)
         {
@@ -32,33 +32,33 @@ public partial class Mod_MoveSpeed : Module, IItemValueModifier
         }
     }
 
-    // Ô­SaveÂß¼­Ç¨ÒÆµ½Unequip£¬Ğ¶ÏÂÊ±»¹Ô­ËÙ¶È²¢±£´æÊı¾İ
+    // åŸSaveé€»è¾‘è¿ç§»åˆ°Unequipï¼Œå¸ä¸‹æ—¶è¿˜åŸé€Ÿåº¦å¹¶ä¿å­˜æ•°æ®
     public void Unequip(Item EquipmentOwner, ItemData Equipment)
     {
-        // »¹Ô­ÒÆ¶¯ËÙ¶È¼Ó³É
+        // è¿˜åŸç§»åŠ¨é€Ÿåº¦åŠ æˆ
         var movement = GetMover();
         if (movement != null && moveSpeed.Value != 0)
         {
             movement.Data.Speed -= moveSpeed;
         }
 
-        // ±£´æµ±Ç°Êı¾İ
+        // ä¿å­˜å½“å‰æ•°æ®
         SaveData.WriteData(moveSpeed);
-        // Tip: ´ËÄ£¿éÊÇÊıÖµ¿ØÖÆÄ£¿é£¬²»ĞèÒª½«Æä±£´æµ½ itemdata.moddata ÖĞ
+        // Tip: æ­¤æ¨¡å—æ˜¯æ•°å€¼æ§åˆ¶æ¨¡å—ï¼Œä¸éœ€è¦å°†å…¶ä¿å­˜åˆ° itemdata.moddata ä¸­
     }
 
-    // ±£Áô»ùÀà·½·¨µ«Çå¿ÕÊµÏÖ£¬ÒòÎªÂß¼­ÒÑÇ¨ÒÆµ½½Ó¿Ú·½·¨
+    // ä¿ç•™åŸºç±»æ–¹æ³•ä½†æ¸…ç©ºå®ç°ï¼Œå› ä¸ºé€»è¾‘å·²è¿ç§»åˆ°æ¥å£æ–¹æ³•
     public override void Load()
     {
-        // Âß¼­ÒÑÇ¨ÒÆµ½Equip·½·¨£¬×°±¸Ê±´¥·¢
+        // é€»è¾‘å·²è¿ç§»åˆ°Equipæ–¹æ³•ï¼Œè£…å¤‡æ—¶è§¦å‘
     }
 
     public override void Save()
     {
-        // Âß¼­ÒÑÇ¨ÒÆµ½Unequip·½·¨£¬Ğ¶ÏÂÊ±´¥·¢
+        // é€»è¾‘å·²è¿ç§»åˆ°Unequipæ–¹æ³•ï¼Œå¸ä¸‹æ—¶è§¦å‘
     }
 
-    // ÌáÈ¡ÖØ¸´Âß¼­£º»ñÈ¡ Mover Ä£¿é
+    // æå–é‡å¤é€»è¾‘ï¼šè·å– Mover æ¨¡å—
     private Mover GetMover()
     {
         if (item?.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Mover))
@@ -69,7 +69,7 @@ public partial class Mod_MoveSpeed : Module, IItemValueModifier
     }
 }
 
-// ÊıÖµĞŞ¸Ä½Ó¿Ú
+// æ•°å€¼ä¿®æ”¹æ¥å£
 public interface IItemValueModifier
 {
     public void Equip(Item EquipmentOwner, ItemData Equipment);

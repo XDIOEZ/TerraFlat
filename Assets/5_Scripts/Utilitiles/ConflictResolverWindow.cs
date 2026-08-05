@@ -20,18 +20,18 @@ public class ConflictResolverFinal : EditorWindow
         public string chosen = "upper"; // "upper" or "lower"
     }
 
-    [MenuItem("Tools/³åÍ»½â¾ö¹¤¾ß Final°æ")]
+    [MenuItem("Tools/å†²çªè§£å†³å·¥å…· Finalç‰ˆ")]
     public static void ShowWindow()
     {
-        GetWindow<ConflictResolverFinal>("³åÍ»½â¾ö¹¤¾ß Final°æ");
+        GetWindow<ConflictResolverFinal>("å†²çªè§£å†³å·¥å…· Finalç‰ˆ");
     }
 
     private void OnGUI()
     {
-        GUILayout.Label("ÍÏ×§ÓĞ³åÍ»µÄ C# ÎÄ¼şµ½ÕâÀï", EditorStyles.boldLabel);
+        GUILayout.Label("æ‹–æ‹½æœ‰å†²çªçš„ C# æ–‡ä»¶åˆ°è¿™é‡Œ", EditorStyles.boldLabel);
 
         Rect dropArea = GUILayoutUtility.GetRect(0, 50, GUILayout.ExpandWidth(true));
-        GUI.Box(dropArea, "ÍÏ×§ÎÄ¼şµ½´ËÇøÓò", EditorStyles.helpBox);
+        GUI.Box(dropArea, "æ‹–æ‹½æ–‡ä»¶åˆ°æ­¤åŒºåŸŸ", EditorStyles.helpBox);
 
         Event evt = Event.current;
         if (evt.type == EventType.DragUpdated || evt.type == EventType.DragPerform)
@@ -57,7 +57,7 @@ public class ConflictResolverFinal : EditorWindow
         if (selectedFiles.Count > 0)
         {
             GUILayout.Space(10);
-            GUILayout.Label("ÒÑÑ¡ÔñÎÄ¼ş£º", EditorStyles.boldLabel);
+            GUILayout.Label("å·²é€‰æ‹©æ–‡ä»¶ï¼š", EditorStyles.boldLabel);
 
             foreach (var file in selectedFiles)
             {
@@ -66,18 +66,18 @@ public class ConflictResolverFinal : EditorWindow
 
             GUILayout.Space(10);
 
-            if (GUILayout.Button("ÔØÈëµÚÒ»¸öÎÄ¼ş´¦Àí"))
+            if (GUILayout.Button("è½½å…¥ç¬¬ä¸€ä¸ªæ–‡ä»¶å¤„ç†"))
             {
                 LoadFile(selectedFiles[0]);
             }
 
-            if (GUILayout.Button("ÅúÁ¿´¦ÀíËùÓĞÎÄ¼ş£¨Ä¬ÈÏ±£ÁôÉÏ·½£©"))
+            if (GUILayout.Button("æ‰¹é‡å¤„ç†æ‰€æœ‰æ–‡ä»¶ï¼ˆé»˜è®¤ä¿ç•™ä¸Šæ–¹ï¼‰"))
             {
                 BatchProcessAllFiles(true);
             }
 
 
-            if (GUILayout.Button("ÅúÁ¿´¦ÀíËùÓĞÎÄ¼ş£¨Ä¬ÈÏ±£ÁôÏÂ·½£©"))
+            if (GUILayout.Button("æ‰¹é‡å¤„ç†æ‰€æœ‰æ–‡ä»¶ï¼ˆé»˜è®¤ä¿ç•™ä¸‹æ–¹ï¼‰"))
             {
                 BatchProcessAllFiles(false);
             }
@@ -87,43 +87,43 @@ public class ConflictResolverFinal : EditorWindow
             GUILayout.Space(20);
             scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
 
-            GUILayout.Label($"³åÍ» {currentConflictIndex + 1}/{conflictBlocks.Count}", EditorStyles.boldLabel);
+            GUILayout.Label($"å†²çª {currentConflictIndex + 1}/{conflictBlocks.Count}", EditorStyles.boldLabel);
 
             var block = conflictBlocks[currentConflictIndex];
 
-            GUILayout.Label("Ñ¡Ôñ±£Áô²¿·Ö£º", EditorStyles.label);
+            GUILayout.Label("é€‰æ‹©ä¿ç•™éƒ¨åˆ†ï¼š", EditorStyles.label);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(block.chosen == "upper", "±£ÁôÉÏ·½ (Updated)", "Button"))
+            if (GUILayout.Toggle(block.chosen == "upper", "ä¿ç•™ä¸Šæ–¹ (Updated)", "Button"))
             {
                 block.chosen = "upper";
             }
-            if (GUILayout.Toggle(block.chosen == "lower", "±£ÁôÏÂ·½ (Stashed)", "Button"))
+            if (GUILayout.Toggle(block.chosen == "lower", "ä¿ç•™ä¸‹æ–¹ (Stashed)", "Button"))
             {
                 block.chosen = "lower";
             }
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
-            GUILayout.Label("ÉÏ·½ÄÚÈİ£º", EditorStyles.miniBoldLabel);
+            GUILayout.Label("ä¸Šæ–¹å†…å®¹ï¼š", EditorStyles.miniBoldLabel);
             EditorGUILayout.TextArea(string.Join("\n", block.upperPart), GUILayout.Height(100));
 
-            GUILayout.Label("ÏÂ·½ÄÚÈİ£º", EditorStyles.miniBoldLabel);
+            GUILayout.Label("ä¸‹æ–¹å†…å®¹ï¼š", EditorStyles.miniBoldLabel);
             EditorGUILayout.TextArea(string.Join("\n", block.lowerPart), GUILayout.Height(100));
 
             GUILayout.Space(10);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("ÉÏÒ»¸ö³åÍ»") && currentConflictIndex > 0)
+            if (GUILayout.Button("ä¸Šä¸€ä¸ªå†²çª") && currentConflictIndex > 0)
             {
                 currentConflictIndex--;
             }
-            if (GUILayout.Button("ÏÂÒ»¸ö³åÍ»") && currentConflictIndex < conflictBlocks.Count - 1)
+            if (GUILayout.Button("ä¸‹ä¸€ä¸ªå†²çª") && currentConflictIndex < conflictBlocks.Count - 1)
             {
                 currentConflictIndex++;
             }
             GUILayout.EndHorizontal();
 
             GUILayout.Space(20);
-            if (GUILayout.Button("Ó¦ÓÃµ±Ç°ÎÄ¼şµÄĞŞ¸Ä²¢±£´æ"))
+            if (GUILayout.Button("åº”ç”¨å½“å‰æ–‡ä»¶çš„ä¿®æ”¹å¹¶ä¿å­˜"))
             {
                 ApplyChanges();
             }
@@ -174,7 +174,7 @@ public class ConflictResolverFinal : EditorWindow
 
         if (conflictBlocks.Count == 0)
         {
-            EditorUtility.DisplayDialog("ÌáÊ¾", $"ÎÄ¼ş {asset.name} Ã»ÓĞ¼ì²âµ½³åÍ»±ê¼Ç£¡", "ºÃµÄ");
+            EditorUtility.DisplayDialog("æç¤º", $"æ–‡ä»¶ {asset.name} æ²¡æœ‰æ£€æµ‹åˆ°å†²çªæ ‡è®°ï¼", "å¥½çš„");
         }
     }
 
@@ -200,7 +200,7 @@ public class ConflictResolverFinal : EditorWindow
             }
             else if (line.StartsWith(">>>>>>>") && insideConflict)
             {
-                // ÕâÀïÔÚ³åÍ»½áÊøÊ±²åÈëÑ¡ÖĞµÄÄÚÈİ
+                // è¿™é‡Œåœ¨å†²çªç»“æŸæ—¶æ’å…¥é€‰ä¸­çš„å†…å®¹
                 insideConflict = false;
                 if (blockIndex < conflictBlocks.Count)
                 {
@@ -212,7 +212,7 @@ public class ConflictResolverFinal : EditorWindow
             }
             else if (insideConflict)
             {
-                // ÔÚ³åÍ»¿éÄÚ²¿Ê²Ã´¶¼²»×ö£¨Ìø¹ı£©
+                // åœ¨å†²çªå—å†…éƒ¨ä»€ä¹ˆéƒ½ä¸åšï¼ˆè·³è¿‡ï¼‰
             }
             else
             {
@@ -222,7 +222,7 @@ public class ConflictResolverFinal : EditorWindow
 
         File.WriteAllText(filePath, string.Join("\n", output));
         AssetDatabase.Refresh();
-        Debug.Log($"³åÍ»½â¾öÍê³É: {filePath}");
+        Debug.Log($"å†²çªè§£å†³å®Œæˆ: {filePath}");
     }
 
 
@@ -276,7 +276,7 @@ public class ConflictResolverFinal : EditorWindow
         }
 
         AssetDatabase.Refresh();
-        Debug.Log("ÅúÁ¿³åÍ»´¦ÀíÍê³É£¡");
+        Debug.Log("æ‰¹é‡å†²çªå¤„ç†å®Œæˆï¼");
     }
 }
 # endif

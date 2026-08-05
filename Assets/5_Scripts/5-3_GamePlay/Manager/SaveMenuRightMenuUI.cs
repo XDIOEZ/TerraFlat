@@ -38,7 +38,7 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
 
         if (string.IsNullOrEmpty(newName))
         {
-            Debug.LogWarning("ĞÂÃû³Æ²»ÄÜÎª¿Õ");
+            Debug.LogWarning("æ–°åç§°ä¸èƒ½ä¸ºç©º");
             return;
         }
 

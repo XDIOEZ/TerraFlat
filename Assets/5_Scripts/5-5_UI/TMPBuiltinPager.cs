@@ -8,17 +8,17 @@ using TMPro;
 [DisallowMultipleComponent]
 public class TMPBuiltinPagerMobile : MonoBehaviour
 {
-    [Header("TMP ÉèÖÃ")]
+    [Header("TMP è®¾ç½®")]
     public TextMeshProUGUI textComponent;
 
-    [Header("µã»÷ÇøÓò£¨¿ÉÑ¡£© - ÈôÎª¿Õ»á×Ô¶¯È¡¸¸Ãæ°å£©")]
+    [Header("ç‚¹å‡»åŒºåŸŸï¼ˆå¯é€‰ï¼‰ - è‹¥ä¸ºç©ºä¼šè‡ªåŠ¨å–çˆ¶é¢æ¿ï¼‰")]
     public RectTransform pageAreaRect;
 
-    [Header("ÆäËü")]
+    [Header("å…¶å®ƒ")]
     public bool enabledPaging = true;
     public bool showDebugLabel = false;
 
-    // ÄÚ²¿
+    // å†…éƒ¨
     private Canvas parentCanvas;
     private GraphicRaycaster graphicRaycaster;
     private EventSystem eventSystem;
@@ -26,7 +26,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
     private int currentPageIndex = 0; // 0-based
     private int cachedPageCount = 1;
 
-    // InputAction£ºÒ»¸öÓÃÓÚ×ó¼ü/´¥Ãş£¨Í³Ò»´¦Àí£©£¬Ò»¸öÓÃÓÚÊó±êÓÒ¼ü£¨ÉÏÒ»Ò³£©
+    // InputActionï¼šä¸€ä¸ªç”¨äºå·¦é”®/è§¦æ‘¸ï¼ˆç»Ÿä¸€å¤„ç†ï¼‰ï¼Œä¸€ä¸ªç”¨äºé¼ æ ‡å³é”®ï¼ˆä¸Šä¸€é¡µï¼‰
     private InputAction pointerPressAction;
     private InputAction rightClickAction;
 
@@ -36,7 +36,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
     {
         if (textComponent == null)
         {
-            Debug.LogError("TMPBuiltinPagerMobile: ÇëÔÚ Inspector °ó¶¨ TextMeshProUGUI µ½ textComponent ×Ö¶Î£¡");
+            Debug.LogError("TMPBuiltinPagerMobile: è¯·åœ¨ Inspector ç»‘å®š TextMeshProUGUI åˆ° textComponent å­—æ®µï¼");
             enabled = false;
             return;
         }
@@ -44,7 +44,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
         parentCanvas = textComponent.GetComponentInParent<Canvas>();
         if (parentCanvas == null)
         {
-            Debug.LogError("TMPBuiltinPagerMobile: TextMeshProUGUI ±ØĞëÎ»ÓÚ Canvas ÏÂ£¨ÕÒ²»µ½¸¸ Canvas£©¡£");
+            Debug.LogError("TMPBuiltinPagerMobile: TextMeshProUGUI å¿…é¡»ä½äº Canvas ä¸‹ï¼ˆæ‰¾ä¸åˆ°çˆ¶ Canvasï¼‰ã€‚");
             enabled = false;
             return;
         }
@@ -55,10 +55,10 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
         graphicRaycaster = parentCanvas.GetComponent<GraphicRaycaster>();
         eventSystem = EventSystem.current;
 
-        // È·±£ TMP Ê¹ÓÃ Page Ä£Ê½
+        // ç¡®ä¿ TMP ä½¿ç”¨ Page æ¨¡å¼
         textComponent.overflowMode = TextOverflowModes.Page;
 
-        // Ê×´Î¼ÆËãÒ³Êı²¢»º´æ
+        // é¦–æ¬¡è®¡ç®—é¡µæ•°å¹¶ç¼“å­˜
         RebuildAndCachePages();
         ShowPage(0);
 
@@ -67,12 +67,12 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
 
     void OnEnable()
     {
-        // pointerPressAction °ó¶¨µ½ Mouse left Óë Touch press£¨ÊÂ¼şÇı¶¯£©
+        // pointerPressAction ç»‘å®šåˆ° Mouse left ä¸ Touch pressï¼ˆäº‹ä»¶é©±åŠ¨ï¼‰
         if (pointerPressAction == null)
         {
             pointerPressAction = new InputAction(type: InputActionType.Button);
             pointerPressAction.AddBinding("<Mouse>/leftButton");
-            // °ó¶¨´¥Ãş°´ÏÂ£¨primary touch press£©¡ª¡ª³£ÓÃÂ·¾¶
+            // ç»‘å®šè§¦æ‘¸æŒ‰ä¸‹ï¼ˆprimary touch pressï¼‰â€”â€”å¸¸ç”¨è·¯å¾„
             pointerPressAction.AddBinding("<Touchscreen>/primaryTouch/press");
         }
 
@@ -103,26 +103,26 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
         }
     }
 
-    // pointerPress£¨Êó±ê×ó¼ü»ò´¥Ãş°´ÏÂ£©´¦Àí
+    // pointerPressï¼ˆé¼ æ ‡å·¦é”®æˆ–è§¦æ‘¸æŒ‰ä¸‹ï¼‰å¤„ç†
     private void OnPointerPressPerformed(InputAction.CallbackContext ctx)
     {
         if (!enabledPaging || !initialized) return;
 
-        // ¼ÆËãÆÁÄ»×ø±ê£ºÓÅÏÈ°´´¥Ãş¶Á£¬·ñÔò¶ÁÊó±ê
+        // è®¡ç®—å±å¹•åæ ‡ï¼šä¼˜å…ˆæŒ‰è§¦æ‘¸è¯»ï¼Œå¦åˆ™è¯»é¼ æ ‡
         Vector2 screenPos = Vector2.zero;
         if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed)
         {
             screenPos = Touchscreen.current.primaryTouch.position.ReadValue();
-            // ´¥Ãş£º²ÉÓÃ×óÓÒ°ëÇøÀ´¾ö¶¨·­Ò³£¨¸ü×ÔÈ»µÄÊÖ»ú½»»¥£©
+            // è§¦æ‘¸ï¼šé‡‡ç”¨å·¦å³åŠåŒºæ¥å†³å®šç¿»é¡µï¼ˆæ›´è‡ªç„¶çš„æ‰‹æœºäº¤äº’ï¼‰
             if (IsPointerOverPageAreaByRaycast(screenPos))
             {
-                // ½«ÆÁÄ»µã×ª»»µ½ pageAreaRect µÄ±¾µØ×ø±ê£¬ÒÔÅĞ¶Ï×óÓÒ°ëÇø
+                // å°†å±å¹•ç‚¹è½¬æ¢åˆ° pageAreaRect çš„æœ¬åœ°åæ ‡ï¼Œä»¥åˆ¤æ–­å·¦å³åŠåŒº
                 Camera cam = (parentCanvas.renderMode == RenderMode.ScreenSpaceCamera || parentCanvas.renderMode == RenderMode.WorldSpace)
                     ? parentCanvas.worldCamera : null;
 
                 if (RectTransformUtility.ScreenPointToLocalPointInRectangle(pageAreaRect, screenPos, cam, out Vector2 local))
                 {
-                    // RectTransform µÄ local origin ÔÚÖĞĞÄ£¬x >= 0 ±íÊ¾ÓÒ°ëÇø
+                    // RectTransform çš„ local origin åœ¨ä¸­å¿ƒï¼Œx >= 0 è¡¨ç¤ºå³åŠåŒº
                     if (local.x >= 0)
                         NextPage();
                     else
@@ -130,19 +130,19 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
                 }
                 else
                 {
-                    // Èô²»ÄÜ×ª»»×ø±ê£¨¼«ÉÙ¼û£©£¬Ä¬ÈÏÏÂÒ»Ò³
+                    // è‹¥ä¸èƒ½è½¬æ¢åæ ‡ï¼ˆæå°‘è§ï¼‰ï¼Œé»˜è®¤ä¸‹ä¸€é¡µ
                     NextPage();
                 }
             }
         }
         else
         {
-            // ·Ç´¥ÃşÉè±¸£¨Í¨³£ÎªÊó±ê£©£¬Ö±½ÓÓÃÊó±êÎ»ÖÃ²¢°Ñ×ó¼üÊÓÎª¡°ÏÂÒ»Ò³¡±
+            // éè§¦æ‘¸è®¾å¤‡ï¼ˆé€šå¸¸ä¸ºé¼ æ ‡ï¼‰ï¼Œç›´æ¥ç”¨é¼ æ ‡ä½ç½®å¹¶æŠŠå·¦é”®è§†ä¸ºâ€œä¸‹ä¸€é¡µâ€
             if (Mouse.current != null)
                 screenPos = Mouse.current.position.ReadValue();
             else
             {
-                // ±£ÏÕ»ØÍË£º³¢ÊÔÓÃ Pointer.current
+                // ä¿é™©å›é€€ï¼šå°è¯•ç”¨ Pointer.current
                 if (Pointer.current != null)
                 {
                     var posControl = Pointer.current.position;
@@ -171,12 +171,12 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
             PreviousPage();
     }
 
-    // Ö»ÓĞÔÚÕæÕıĞèÒªÊ±ÖØ½¨£¯»º´æÒ³ĞÅÏ¢£¨µ÷ÓÃ ForceMeshUpdate£©
+    // åªæœ‰åœ¨çœŸæ­£éœ€è¦æ—¶é‡å»ºï¼ç¼“å­˜é¡µä¿¡æ¯ï¼ˆè°ƒç”¨ ForceMeshUpdateï¼‰
     public void RebuildAndCachePages()
     {
         if (textComponent == null)
         {
-            Debug.LogWarning("TMPBuiltinPagerMobile.RebuildAndCachePages: textComponent Îª null£¬Ìø¹ıÖØ½¨¡£");
+            Debug.LogWarning("TMPBuiltinPagerMobile.RebuildAndCachePages: textComponent ä¸º nullï¼Œè·³è¿‡é‡å»ºã€‚");
             cachedPageCount = 1;
             currentPageIndex = 0;
             return;
@@ -184,7 +184,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
 
         if (!textComponent.gameObject.activeInHierarchy)
         {
-            Debug.LogWarning("TMPBuiltinPagerMobile.RebuildAndCachePages: textComponent Î´´¦ÓÚ¼¤»î×´Ì¬£¬Ìø¹ı ForceMeshUpdate¡£");
+            Debug.LogWarning("TMPBuiltinPagerMobile.RebuildAndCachePages: textComponent æœªå¤„äºæ¿€æ´»çŠ¶æ€ï¼Œè·³è¿‡ ForceMeshUpdateã€‚");
             cachedPageCount = 1;
             currentPageIndex = 0;
             return;
@@ -198,7 +198,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"TMPBuiltinPagerMobile.RebuildAndCachePages Òì³££º{ex}");
+            Debug.LogError($"TMPBuiltinPagerMobile.RebuildAndCachePages å¼‚å¸¸ï¼š{ex}");
             cachedPageCount = 1;
             currentPageIndex = 0;
         }
@@ -209,7 +209,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
         if (textComponent == null) return;
         pageIndex = Mathf.Clamp(pageIndex, 0, cachedPageCount - 1);
         currentPageIndex = pageIndex;
-        textComponent.pageToDisplay = currentPageIndex + 1; // TMP ÊÇ 1-based
+        textComponent.pageToDisplay = currentPageIndex + 1; // TMP æ˜¯ 1-based
     }
 
     public void NextPage()
@@ -230,7 +230,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
         ShowPage(currentPageIndex);
     }
 
-    // ¾ØĞÎÃüÖĞ¼ì²â£ºÓÅÏÈÓÃ GraphicRaycaster
+    // çŸ©å½¢å‘½ä¸­æ£€æµ‹ï¼šä¼˜å…ˆç”¨ GraphicRaycaster
     private bool IsPointerOverPageAreaByRaycast(Vector2 screenPos)
     {
         if (pageAreaRect == null || parentCanvas == null) return false;
@@ -284,7 +284,7 @@ public class TMPBuiltinPagerMobile : MonoBehaviour
     void OnRectTransformDimensionsChange()
     {
         if (!initialized) return;
-        // ÈôÈİÆ÷³ß´ç±ä»¯£¨Ğı×ª/ÊÊÅäÆÁÄ»£©Ê±ÖØ½¨Ò³Ë÷Òı
+        // è‹¥å®¹å™¨å°ºå¯¸å˜åŒ–ï¼ˆæ—‹è½¬/é€‚é…å±å¹•ï¼‰æ—¶é‡å»ºé¡µç´¢å¼•
         RebuildAndCachePages();
     }
 

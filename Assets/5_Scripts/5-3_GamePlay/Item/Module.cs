@@ -67,6 +67,31 @@ public class Module_Equipment_Store : Module
 
     */
     public abstract ModuleData _Data { get; set; }
+
+    /// <summary>
+    /// 模块写入模板和存档时使用的稳定 ID。Prefab 上的旧序列化值可以由具体模块覆盖。
+    /// </summary>
+    public virtual string CanonicalModuleId
+    {
+        get
+        {
+            string serializedId = _Data?.ID?.Trim();
+            return string.IsNullOrEmpty(serializedId) ? gameObject.name : serializedId;
+        }
+    }
+
+    /// <summary>兼容规范 ID、旧序列化 ID、Prefab 子物体名和组件类型名。</summary>
+    public virtual bool MatchesPersistedId(string persistedId)
+    {
+        if (string.IsNullOrWhiteSpace(persistedId))
+            return false;
+
+        string candidate = persistedId.Trim();
+        return string.Equals(candidate, CanonicalModuleId, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate, _Data?.ID?.Trim(), StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate, gameObject.name, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate, GetType().Name, StringComparison.OrdinalIgnoreCase);
+    }
     [ReadOnly]
     public Item item;
     [HideInInspector]
@@ -91,10 +116,8 @@ public class Module_Equipment_Store : Module
 
     public virtual void Awake()
     {
-        if (_Data != null && string.IsNullOrWhiteSpace(_Data.ID))
-        {
-            _Data.ID = gameObject.name;
-        }
+        if (_Data != null)
+            _Data.ID = CanonicalModuleId;
     }
     public void ModuleInit(Item item_, ModuleData data, ItemData itemData_ = null)
     {

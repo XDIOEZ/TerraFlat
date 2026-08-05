@@ -1,21 +1,21 @@
 using UnityEditor;
 using UnityEngine;
 using System.Diagnostics;
-using System.Reflection; // ÓÃÓÚ´¦Àí·½·¨µ÷ÓÃµÄ·´Éä
+using System.Reflection; // ç”¨äºå¤„ç†æ–¹æ³•è°ƒç”¨çš„åå°„
 
 #if UNITY_EDITOR
 
 [CustomEditor(typeof(MonoBehaviour), true)]
 public class LoadScriptOnce : Editor
 {
-    [MenuItem("CONTEXT/MonoBehaviour/Ö´ĞĞ Start ·½·¨")]
+    [MenuItem("CONTEXT/MonoBehaviour/æ‰§è¡Œ Start æ–¹æ³•")]
     private static void ExecuteStart(MenuCommand command)
     {
         ExecuteMethod(command.context as MonoBehaviour, "Awake");
         ExecuteMethod(command.context as MonoBehaviour, "Start");
     }
 
-    [MenuItem("CONTEXT/MonoBehaviour/Ö´ĞĞ PlayerInputActions ·½·¨")]
+    [MenuItem("CONTEXT/MonoBehaviour/æ‰§è¡Œ PlayerInputActions æ–¹æ³•")]
     private static void ExecuteTest(MenuCommand command)
     {
         ExecuteMethod(command.context as MonoBehaviour, "PlayerInputActions");
@@ -38,17 +38,17 @@ public class LoadScriptOnce : Editor
             }
             catch (TargetInvocationException e)
             {
-                UnityEngine.Debug.LogError($"Ö´ĞĞ {methodName} Ê±·¢Éú´íÎó: {e.InnerException}");
+                UnityEngine.Debug.LogError($"æ‰§è¡Œ {methodName} æ—¶å‘ç”Ÿé”™è¯¯: {e.InnerException}");
             }
             finally
             {
                 stopwatch.Stop();
-                UnityEngine.Debug.Log($"{methodName} ·½·¨Ö´ĞĞºÄÊ±: {stopwatch.ElapsedMilliseconds} ºÁÃë");
+                UnityEngine.Debug.Log($"{methodName} æ–¹æ³•æ‰§è¡Œè€—æ—¶: {stopwatch.ElapsedMilliseconds} æ¯«ç§’");
             }*/
         }
         else
         {
-            UnityEngine.Debug.LogWarning($"Î´ÕÒµ½ {methodName} ·½·¨£¬»ò {methodName} ·½·¨²»¿É·ÃÎÊ");
+            UnityEngine.Debug.LogWarning($"æœªæ‰¾åˆ° {methodName} æ–¹æ³•ï¼Œæˆ– {methodName} æ–¹æ³•ä¸å¯è®¿é—®");
         }
     }
 }

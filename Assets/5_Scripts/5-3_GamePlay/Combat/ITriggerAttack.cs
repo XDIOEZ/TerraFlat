@@ -2,7 +2,7 @@ using UltEvents;
 using UnityEngine;
 
 /// <summary>
-/// ¶¨Òå¹¥»÷¹¦ÄÜ½Ó¿Ú IFunction_TriggerAttack
+/// å®šä¹‰æ”»å‡»åŠŸèƒ½æ¥å£ IFunction_TriggerAttack
 /// </summary>
 public interface ITriggerAttack
 {
@@ -11,7 +11,7 @@ public interface ITriggerAttack
     UltEvent OnEndAttack { get; set; }
 
 
-    void TriggerAttack(KeyState keyState, Vector3 Target); // Ö´ĞĞ¹¥»÷ 
+    void TriggerAttack(KeyState keyState, Vector3 Target); // æ‰§è¡Œæ”»å‡» 
     
     void StartTriggerAttack();
 
@@ -23,12 +23,12 @@ public interface ITriggerAttack
 
     public void SetWeapon(GameObject weapon);
 
-    // ĞŞ¸´ºóµÄ´úÂë
+    // ä¿®å¤åçš„ä»£ç 
     public void DestroyWeapon()
     {
         if (Weapon_GameObject != null)
         {
-            Object.Destroy(Weapon_GameObject); // Ê¹ÓÃÀàĞÍÃû Object µ÷ÓÃ Destroy ·½·¨
+            Object.Destroy(Weapon_GameObject); // ä½¿ç”¨ç±»å‹å Object è°ƒç”¨ Destroy æ–¹æ³•
             Weapon_GameObject.SetActive(false);
             Weapon_GameObject = null;
         }
@@ -36,7 +36,7 @@ public interface ITriggerAttack
 
     public void CreateWeapon(ItemData weapon)
     {
-        //¸ù“ş‚÷ÈëµÄÎäÆ÷”µ“ş „“½¨Ò»‚€ÎäÆ÷Îï¼ş
+        //æ ¹æ“šå‚³å…¥çš„æ­¦å™¨æ•¸æ“š å‰µå»ºä¸€å€‹æ­¦å™¨ç‰©ä»¶
         GameObject weapon_GameObject = ItemMgr.Instance.InstantiateItem(weapon,null).gameObject;
         weapon.Stack.CanBePickedUp = false;
         SetWeapon(weapon_GameObject);
@@ -50,5 +50,5 @@ public interface ITriggerAttack
 
 
 }
-[Tooltip("¶¨Òå¹¥»÷×´Ì¬Ã¶¾Ù KeyState")]
+[Tooltip("å®šä¹‰æ”»å‡»çŠ¶æ€æšä¸¾ KeyState")]
 public enum KeyState { Start, Hold, End, Void }

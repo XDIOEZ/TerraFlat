@@ -15,6 +15,8 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 {
+    private const int FirstHotbarSlotIndex = 0;
+
 #region 基础参数
 
     public Ex_ModData_MemoryPackable ModSaveData;
@@ -130,7 +132,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         // 旧版本只保存 RawData；新版本将真实快捷栏库存与选中格写入 ModuleData。
         // 无法读取新格式时保留 Prefab/旧存档中的原始数据。
-        TryRestoreSavedState();
+        bool restoredSavedState = TryRestoreSavedState();
 
         if (RuntimeInventory == null)
         {
@@ -138,6 +140,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         }
 
         EnsureHotBarSlots();
+        if (!restoredSavedState)
+            CurrentIndex = FirstHotbarSlotIndex;
 
         RuntimeInventory.item = item;
         RuntimeInventory.InitData();
@@ -314,8 +318,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             Destroy(SelectBox);
         }
 
-        SelectBox = Instantiate(SelectBoxPrefab, itemSlot_UI[0].transform);
-        SwitchItem(CurrentIndex);
+        int initialIndex = Mathf.Clamp(NormalizeIndex(CurrentIndex), 0, itemSlot_UI.Count - 1);
+        SelectBox = Instantiate(SelectBoxPrefab, itemSlot_UI[initialIndex].transform, false);
+        SwitchItem(initialIndex, animateSelection: false);
     }
 
     private void OnInventoryLeftClick(int index)
@@ -591,12 +596,15 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
 #region 核心逻辑 - 物品切换
 
-    private void SwitchItem(int targetIndex)
+    private void SwitchItem(int targetIndex, bool animateSelection = true)
     {
         targetIndex = NormalizeIndex(targetIndex);
         UnloadCurrentItem();
         CurrentIndex = targetIndex;
-        MoveSelectBox(targetIndex);
+        if (animateSelection)
+            MoveSelectBox(targetIndex);
+        else
+            SnapSelectBoxToSlot(targetIndex);
         LoadItemFromSlot(targetIndex);
         RefreshUI(CurrentIndex);
         NotifyOwnerNetworkStateChanged();
@@ -712,6 +720,29 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         SelectBox.transform.DOKill();
         // 保持初始父节点不变，只将选中框移动到目标快捷栏位的位置。
         SelectBox.transform.DOMove(GetSelectBoxTargetPosition(targetSlot.transform), SelectBoxChangeDuration).SetEase(Ease.OutQuad);
+    }
+
+    private void SnapSelectBoxToSlot(int index)
+    {
+        if (SelectBox == null || itemSlot_UI == null || index < 0 || index >= itemSlot_UI.Count)
+            return;
+
+        ItemSlot_UI targetSlot = itemSlot_UI[index];
+        if (targetSlot == null)
+            return;
+
+        Transform selectionTransform = SelectBox.transform;
+        selectionTransform.DOKill();
+        if (selectionTransform.parent == targetSlot.transform)
+        {
+            if (selectionTransform is RectTransform selectionRect)
+                selectionRect.anchoredPosition = Vector2.zero;
+            else
+                selectionTransform.localPosition = Vector3.zero;
+            return;
+        }
+
+        selectionTransform.position = GetSelectBoxTargetPosition(targetSlot.transform);
     }
 
     private static Vector3 GetSelectBoxTargetPosition(Transform targetSlot)
