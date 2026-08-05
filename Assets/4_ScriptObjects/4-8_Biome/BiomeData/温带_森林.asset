@@ -12,24 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef0d6fc82e9dffd4bb109cc0bc9963b4, type: 3}
   m_Name: "\u6E29\u5E26_\u68EE\u6797"
   m_EditorClassIdentifier: 
+  BiomeId: forest
   BiomeName: "\u68EE\u6797"
   Description: "\u6563\u843D\u7684\u77F3\u5934,\u5C0F\u6C34\u5751,\u7A00\u5C11\u7684\u6811,\u5E7F\u9614\u7684\u8349\u5730"
   PreviewColor: {r: 0.12053394, g: 0.645283, b: 0.15730312, a: 1}
   Condition:
     TemperatureRange: {x: 0, y: 1}
-    HumidityRange: {x: 0, y: 1}
     PrecipitationRange: {x: 0, y: 1}
-    SolidityRange: {x: 0, y: 1}
-    HightRange: {x: 0.5, y: 1}
+    HeightRange: {x: 0.5, y: 1}
   TerrainConfig:
     TileSpawns_NoSO:
     - TileBlock: {fileID: 11400000, guid: 843e8341b637e024399c21bb22e77547, type: 2}
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     ItemSpawn_NoSO:
     - itemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
       itemName: Twine
@@ -38,10 +35,8 @@ MonoBehaviour:
       SpawnChanceMultiplier: 1
       environmentConditionRange:
         TemperatureRange: {x: 0.4, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
-        SolidityRange: {x: 0.5, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
       CompanionHostTag: Tree
       CompanionSpawnChance: 0.945
       CompanionOnly: 1
@@ -54,10 +49,8 @@ MonoBehaviour:
       SpawnChance: 0.00225
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0.5, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
       itemName: Mine_Stone
       itemCount: 1
@@ -65,20 +58,16 @@ MonoBehaviour:
       SpawnChanceMultiplier: 2.5
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
-        SolidityRange: {x: 0, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
       itemName: Log
       itemCount: 1
       SpawnChance: 0.006
       environmentConditionRange:
         TemperatureRange: {x: 0.4, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
-        SolidityRange: {x: 0.5, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
       CompanionHostTag: Tree
       CompanionSpawnChance: 1
       CompanionOnly: 1
@@ -90,19 +79,13 @@ MonoBehaviour:
       SpawnChanceMultiplier: 1.5
       environmentConditionRange:
         TemperatureRange: {x: 0.4, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
-        SolidityRange: {x: 0.5, y: 1}
-        HightRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
       itemName: AppleTree
       itemCount: 1
       SpawnChance: 0.015
       environmentConditionRange:
         TemperatureRange: {x: 0.4, y: 1}
-        HumidityRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
-        SolidityRange: {x: 0.5, y: 1}
-        HightRange: {x: 0, y: 1}
-  UseCustomTemperatureRange: 0
-  TemperatureRangeCelsius: {x: 18, y: 28}
+        HeightRange: {x: 0, y: 1}

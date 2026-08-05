@@ -49,6 +49,7 @@ public class Inventory
 
     public virtual void OnValidate()
     {
+        Data ??= new Inventory_Data(new List<ItemSlot>(), ModText.Bag);
         if (string.IsNullOrEmpty(Data.Name))
             Data.Name = ModText.Bag;
     }

@@ -24,10 +24,8 @@ MonoBehaviour:
   MaxHeightDelta: 0.2
   EnvironmentCondition:
     TemperatureRange: {x: 0, y: 1}
-    HumidityRange: {x: 0, y: 1}
     PrecipitationRange: {x: 0, y: 1}
-    SolidityRange: {x: 0, y: 1}
-    HightRange: {x: 0, y: 1}
+    HeightRange: {x: 0, y: 1}
   AllowedBiomes:
   - {fileID: 11400000, guid: 140f3a9231059b54d98099d4ec60e06d, type: 2}
   AllowRotation: 1

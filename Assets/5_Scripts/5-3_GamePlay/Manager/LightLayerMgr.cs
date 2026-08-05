@@ -152,7 +152,7 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         float globalLight = EvaluateGlobalLight();
         for (int x = 0; x < layers.Width; x++)
         {
-            for (int y = 0; y < layers.Height; y++)
+            for (int y = 0; y < layers.GridHeight; y++)
             {
                 layers.SetLight(x, y, globalLight);
             }
@@ -178,7 +178,7 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         int minX = Mathf.Max(0, Mathf.FloorToInt(lightPosition.x - outerRadius) - mapData.position.x);
         int maxX = Mathf.Min(layers.Width - 1, Mathf.CeilToInt(lightPosition.x + outerRadius) - 1 - mapData.position.x);
         int minY = Mathf.Max(0, Mathf.FloorToInt(lightPosition.y - outerRadius) - mapData.position.y);
-        int maxY = Mathf.Min(layers.Height - 1, Mathf.CeilToInt(lightPosition.y + outerRadius) - 1 - mapData.position.y);
+        int maxY = Mathf.Min(layers.GridHeight - 1, Mathf.CeilToInt(lightPosition.y + outerRadius) - 1 - mapData.position.y);
         if (minX > maxX || minY > maxY)
             return;
 

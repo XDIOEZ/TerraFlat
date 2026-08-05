@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 背包、制作、装备与农业定位
 
-> 最后核对：2026-07-31。
+> 最后核对：2026-08-05。
 
 ## 修改前先读
 
@@ -90,6 +90,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-05：`Inventory.OnValidate()` 在动态组件或空序列化数据场景下先创建 `Inventory_Data`，避免快捷栏及编辑器校验因空数据抛异常。
 - 2026-08-03：配方分包启动加载改用共享 StreamingAssets 文本协程；桌面/编辑器读取文件，Android/WebGL 通过 `UnityWebRequest` 读取包内清单与分包，保持先聚合校验再统一注册。
 - 2026-07-31：建筑配方新增 `core:矿坑入口`，正式产出可放置的 `MineEntrance_Summoner`；内建配方总数更新为 39。
 - 2026-07-31：背包、装备、手工制作和快捷栏接入稳定手柄 Action；移除手工制作硬编码 `Input.GetKeyDown(H)`，模态库存面板增加手柄焦点与可嵌套玩法输入锁。

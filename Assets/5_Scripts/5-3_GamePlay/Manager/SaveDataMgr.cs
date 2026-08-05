@@ -12,8 +12,8 @@ using Sirenix.OdinInspector;
 /// </summary>
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 1;
-    private const int ModdedSaveVersion = 1;
+    private const int CompactSaveVersion = 2;
+    private const int ModdedSaveVersion = 2;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
@@ -421,6 +421,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 }
                 catch (Exception ex)
                 {
+                    if (ex is SaveVersionIncompatibleException)
+                        throw;
+
                     lastException = ex;
                     Debug.LogWarning($"⚠️ 存档文件无效，尝试恢复文件：{candidatePath}\n{ex.Message}");
                 }
@@ -741,19 +744,42 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>
     /// Called after deterministic terrain/resource generation and before saved changes are applied.
     /// </summary>
-    public void OnProceduralChunkGenerated(Chunk chunk)
+    public bool TryFinalizeProceduralChunk(Chunk chunk, out string failureReason)
     {
+        failureReason = null;
         if (chunk?.MapSave == null || chunk.Map?.Data == null)
+        {
+            failureReason = "区块、MapSave 或地图数据为空。";
+            return false;
+        }
+
+        try
+        {
+            string planetName = SceneManager.GetActiveScene().name;
+            string key = BuildChunkKey(planetName, chunk.MapSave.Name);
+            chunkBaselines[key] = CaptureChunkBaseline(chunk);
+
+            if (chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta))
+                ApplyChunkDelta(chunk, delta);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            string planetName = SceneManager.GetActiveScene().name;
+            chunkBaselines.Remove(BuildChunkKey(planetName, chunk.MapSave.Name));
+            failureReason = exception.Message;
+            Debug.LogError($"[SaveDataMgr] 程序化区块最终化失败：{chunk.name}\n{exception}", chunk);
+            return false;
+        }
+    }
+
+    public void DiscardProceduralChunkBaseline(Chunk chunk)
+    {
+        if (chunk?.MapSave == null)
             return;
 
         string planetName = SceneManager.GetActiveScene().name;
-        string key = BuildChunkKey(planetName, chunk.MapSave.Name);
-        chunkBaselines[key] = CaptureChunkBaseline(chunk);
-
-        if (chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta))
-        {
-            ApplyChunkDelta(chunk, delta);
-        }
+        chunkBaselines.Remove(BuildChunkKey(planetName, chunk.MapSave.Name));
     }
 
     /// <summary>
@@ -868,6 +894,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             {
                 Debug.LogError($"[SaveDataMgr] 捕获区块基线失败: {item.name}", item);
                 Debug.LogException(ex);
+                throw;
             }
 
             baseline.ItemHashes[item.itemData.Guid] = ComputeItemHash(item.itemData);
@@ -877,11 +904,13 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         baseline.TileWidth = mapData.Width;
         baseline.TileHeight = mapData.Height;
         baseline.TileHashes = new ulong[baseline.TileWidth, baseline.TileHeight];
+        var tileBuffer = new List<TileData>(4);
         for (int x = 0; x < baseline.TileWidth; x++)
         {
             for (int y = 0; y < baseline.TileHeight; y++)
             {
-                baseline.TileHashes[x, y] = ComputeTileHash(mapData.TileData_Array[x, y]);
+                mapData.CopyStackLocalTo(x, y, tileBuffer);
+                baseline.TileHashes[x, y] = ComputeTileHash(tileBuffer);
             }
         }
 
@@ -900,12 +929,13 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         int width = mapData.Width;
         int height = mapData.Height;
+        var tileBuffer = new List<TileData>(4);
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                List<TileData> tiles = mapData.TileData_Array[x, y];
-                ulong currentHash = ComputeTileHash(tiles);
+                mapData.CopyStackLocalTo(x, y, tileBuffer);
+                ulong currentHash = ComputeTileHash(tileBuffer);
                 bool hasBaselineCell = x < baseline.TileWidth && y < baseline.TileHeight;
                 if (hasBaselineCell && currentHash == baseline.TileHashes[x, y])
                     continue;
@@ -913,7 +943,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 output.Add(new TileCellSaveDelta
                 {
                     LocalPosition = new Vector2Int(x, y),
-                    Tiles = CloneTileList(tiles)
+                    Tiles = CloneTileList(tileBuffer)
                 });
             }
         }
@@ -966,7 +996,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if ((uint)x >= (uint)mapData.Width || (uint)y >= (uint)mapData.Height)
                 continue;
 
-            mapData.TileData_Array[x, y] = CloneTileList(cell.Tiles);
+            mapData.ReplaceStackLocal(x, y, CloneTileList(cell.Tiles));
             Vector2Int worldPosition = mapData.position + cell.LocalPosition;
             chunk.Map.UpdateTileBaseAtPosition(worldPosition);
             chunk.Map.MarkPenaltyDirty(worldPosition);
@@ -1152,8 +1182,13 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             byte[] body = new byte[payload.Length - ModdedSaveMagic.Length];
             Buffer.BlockCopy(payload, ModdedSaveMagic.Length, body, 0, body.Length);
             ModdedSaveEnvelope envelope = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(body);
-            if (envelope == null || envelope.Version != ModdedSaveVersion || envelope.CoreSavePayload == null)
-                throw new InvalidDataException("不支持或损坏的 MOD 存档格式");
+            if (envelope == null || envelope.CoreSavePayload == null)
+                throw new InvalidDataException("MOD 存档封装已损坏");
+            if (envelope.Version != ModdedSaveVersion)
+            {
+                throw new SaveVersionIncompatibleException(
+                    $"MOD 存档版本不兼容：存档={envelope.Version}，当前={ModdedSaveVersion}。不会迁移、覆盖或删除该存档。");
+            }
 
             corePayload = envelope.CoreSavePayload;
             if (envelope.ModMetadata != null && envelope.ModMetadata.Length > 0)
@@ -1169,13 +1204,21 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
 
         if (!HasSaveHeader(payload, CompactSaveMagic))
-            return MemoryPackSerializer.Deserialize<GameSaveData>(payload);
+        {
+            throw new SaveVersionIncompatibleException(
+                "无头旧二进制存档与当前地形栈格式不兼容。不会迁移、覆盖或删除该存档。");
+        }
 
         byte[] body = new byte[payload.Length - CompactSaveMagic.Length];
         Buffer.BlockCopy(payload, CompactSaveMagic.Length, body, 0, body.Length);
         CompactSaveEnvelope envelope = MemoryPackSerializer.Deserialize<CompactSaveEnvelope>(body);
-        if (envelope == null || envelope.Version != CompactSaveVersion || envelope.CoreSaveData == null)
-            throw new InvalidDataException("不支持或损坏的差异存档格式");
+        if (envelope == null || envelope.CoreSaveData == null)
+            throw new InvalidDataException("差异存档封装已损坏");
+        if (envelope.Version != CompactSaveVersion)
+        {
+            throw new SaveVersionIncompatibleException(
+                $"差异存档版本不兼容：存档={envelope.Version}，当前={CompactSaveVersion}。不会迁移、覆盖或删除该存档。");
+        }
 
         GameSaveData saveData = MemoryPackSerializer.Deserialize<GameSaveData>(envelope.CoreSaveData);
         if (saveData == null)
@@ -1303,6 +1346,13 @@ public partial class ModdedSaveEnvelope
     public int Version;
     public byte[] CoreSavePayload;
     public byte[] ModMetadata;
+}
+
+public sealed class SaveVersionIncompatibleException : IOException
+{
+    public SaveVersionIncompatibleException(string message) : base(message)
+    {
+    }
 }
 
 [MemoryPackable]

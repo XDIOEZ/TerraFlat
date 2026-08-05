@@ -122,6 +122,74 @@ namespace FlatWorld.GameTest.ItemModule
                 Object.DestroyImmediate(root);
             }
         }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        public void ProductionEnvironmentAdjustmentUsesPrecipitation()
+        {
+            GameObject gameObject = new GameObject("ProductionPrecipitationTest");
+            try
+            {
+                Mod_Production production = gameObject.AddComponent<Mod_Production>();
+                var layers = new EnvironmentLayers();
+                layers.EnsureSize(1, 1);
+                layers.SetCell(0, 0, 0.5f, 20f, 0f, 0.5f);
+
+                production.AdjustByEnvironment(layers, Vector2Int.zero);
+                float drySpeed = production.ProductionSpeed;
+
+                layers.SetPrecipitation(0, 0, 1f);
+                production.AdjustByEnvironment(layers, Vector2Int.zero);
+                float wetSpeed = production.ProductionSpeed;
+
+                Assert.That(drySpeed, Is.EqualTo(0.9f).Within(0.0001f));
+                Assert.That(wetSpeed, Is.EqualTo(1.1f).Within(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        public void TileMapItemDataUnionRoundTripsNewStackAndInitializesFromFiveEnvironmentLayers()
+        {
+            var source = new Data_TileMap
+            {
+                IDName = "TileMap_Union_Test",
+                position = new Vector2Int(5, -3)
+            };
+            source.EnsureTileStorage(1, 1);
+            source.EnsureEnvironmentStorage(1, 1);
+            source.SetEnvironmentAtLocal(0, 0, 0.6f, 30f, 0.8f, 0.25f);
+            source.SetLightAtLocal(0, 0, 0.7f);
+            var water = new TileData_Water
+            {
+                ID = "Tile_Water_Test",
+                Name = "Tile_Water_Test",
+                salt = 0f,
+                IsWalkable = false
+            };
+            water.Initialize_Env(source.EnvironmentLayers, 0, 0);
+            source.SetBaseTile(source.position, water);
+
+            var container = new Ex_ModData_MemoryPackable();
+            container.WriteData<ItemData>(source);
+            ItemData restoredBase = container.GetData<ItemData>();
+
+            Assert.That(restoredBase, Is.TypeOf<Data_TileMap>());
+            Data_TileMap restored = (Data_TileMap)restoredBase;
+            Assert.That(restored.GetLayerCount(source.position), Is.EqualTo(1));
+            Assert.That(restored.GetTopTile(source.position), Is.TypeOf<TileData_Water>());
+            TileData_Water restoredWater = (TileData_Water)restored.GetTopTile(source.position);
+            Assert.That(restoredWater.deepValue, Is.EqualTo(0.5f).Within(0.000001f));
+            Assert.That(restored.EnvironmentLayers.Temperature[0, 0], Is.EqualTo(0.6f));
+            Assert.That(restored.EnvironmentLayers.TemperatureCelsius[0, 0], Is.EqualTo(30f));
+            Assert.That(restored.EnvironmentLayers.Precipitation[0, 0], Is.EqualTo(0.8f));
+            Assert.That(restored.EnvironmentLayers.Height[0, 0], Is.EqualTo(0.25f));
+            Assert.That(restored.EnvironmentLayers.Light[0, 0], Is.EqualTo(0.7f));
+        }
     }
 
     public sealed class ItemTemplateLifecycleProbe : Item

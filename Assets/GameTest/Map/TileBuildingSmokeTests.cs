@@ -132,7 +132,7 @@ namespace FlatWorld.GameTest.Map
                 TilemapDamageReceiver receiver = layerObject.AddComponent<TilemapDamageReceiver>();
                 map.tileMap = tilemap;
                 map.Data.position = new Vector2Int(-2, -1);
-                map.Data.EnsureTileDataArray(4, 3, initCells: false);
+                map.Data.EnsureTileStorage(4, 3);
 
                 AddWall(map, tilemap, tileAsset, new Vector2Int(-1, 0));
                 AddWall(map, tilemap, tileAsset, new Vector2Int(0, 0));
@@ -183,7 +183,7 @@ namespace FlatWorld.GameTest.Map
                 TilemapDamageReceiver receiver = layerObject.AddComponent<TilemapDamageReceiver>();
                 map.tileMap = tilemap;
                 map.Data.position = new Vector2Int(0, -1);
-                map.Data.EnsureTileDataArray(2, 2, initCells: false);
+                map.Data.EnsureTileStorage(2, 2);
 
                 AddWall(map, tilemap, tileAsset, new Vector2Int(0, 0));
                 AddWall(map, tilemap, tileAsset, new Vector2Int(1, -1));
@@ -273,6 +273,104 @@ namespace FlatWorld.GameTest.Map
             Assert.That(tile.sprite.pivot, Is.EqualTo(new Vector2(16f, 16f)));
         }
 
+        [Test]
+        [Category("Map.TileBuilding")]
+        public void TileStackRemovalPromotesFollowingLayersAndReleasesOverflow()
+        {
+            var data = new Data_TileMap { position = new Vector2Int(20, -10) };
+            data.EnsureTileStorage(1, 1);
+            Vector2Int cell = data.position;
+            TileData first = NewTile("first");
+            TileData second = NewTile("second");
+            TileData third = NewTile("third");
+            TileData fourth = NewTile("fourth");
+
+            Assert.That(data.SetBaseTile(cell, first), Is.True);
+            Assert.That(data.PushTile(cell, second), Is.True);
+            Assert.That(data.PushTile(cell, third), Is.True);
+            Assert.That(data.PushTile(cell, fourth), Is.True);
+            Assert.That(data.GetLayerCount(cell), Is.EqualTo(4));
+            Assert.That(data.CountOverflowAllocations(), Is.EqualTo(1));
+            Assert.That(data.GetTopTile(cell), Is.SameAs(fourth));
+
+            Assert.That(data.RemoveTile(cell, 0), Is.True);
+            Assert.That(data.GetLayerCount(cell), Is.EqualTo(3));
+            Assert.That(data.GetTileAt(cell, 0), Is.SameAs(second));
+            Assert.That(data.GetTileAt(cell, 1), Is.SameAs(third));
+            Assert.That(data.GetTileAt(cell, 2), Is.SameAs(fourth));
+
+            Assert.That(data.RemoveTile(cell, 1), Is.True);
+            Assert.That(data.GetLayerCount(cell), Is.EqualTo(2));
+            Assert.That(data.GetTileAt(cell, 0), Is.SameAs(second));
+            Assert.That(data.GetTileAt(cell, 1), Is.SameAs(fourth));
+            Assert.That(data.CountOverflowAllocations(), Is.Zero);
+
+            TileData replacement = NewTile("replacement");
+            Assert.That(data.ReplaceTop(cell, replacement), Is.True);
+            Assert.That(data.GetTopTile(cell), Is.SameAs(replacement));
+            Assert.That(data.RemoveTile(cell), Is.True);
+            Assert.That(data.GetTopTile(cell), Is.SameAs(second));
+            Assert.That(data.RemoveTile(cell, 0), Is.True);
+            Assert.That(data.GetLayerCount(cell), Is.Zero);
+            Assert.That(data.CountNonEmptyCells(), Is.Zero);
+        }
+
+        [Test]
+        [Category("Map.TileBuilding")]
+        public void SingleAndDoubleLayerChunkCellsDoNotAllocateOverflowLists()
+        {
+            var data = new Data_TileMap();
+            data.EnsureTileStorage(100, 100);
+            TileData floor = NewTile("floor");
+            TileData overlay = NewTile("overlay");
+
+            for (int y = 0; y < 100; y++)
+            {
+                for (int x = 0; x < 100; x++)
+                    data.SetBaseTile(new Vector2Int(x, y), floor);
+            }
+
+            Assert.That(data.CountNonEmptyCells(), Is.EqualTo(10_000));
+            Assert.That(data.CountOverflowAllocations(), Is.Zero);
+
+            for (int y = 0; y < 100; y++)
+            {
+                for (int x = 0; x < 100; x++)
+                    data.PushTile(new Vector2Int(x, y), overlay);
+            }
+
+            Assert.That(data.CountOverflowAllocations(), Is.Zero);
+            data.PushTile(new Vector2Int(37, 42), NewTile("third"));
+            Assert.That(data.CountOverflowAllocations(), Is.EqualTo(1));
+        }
+
+        [Test]
+        [Category("Map.TileBuilding")]
+        public void TileMapStorageExposesViewsInsteadOfMutableTileLists()
+        {
+            Assert.That(typeof(Data_TileMap).GetField("TileData_Array"), Is.Null);
+            Assert.That(typeof(Data_TileMap).GetMethod("GetTileListAt"), Is.Null);
+
+            var data = new Data_TileMap();
+            data.EnsureTileStorage(1, 1);
+            TileData floor = NewTile("floor");
+            TileData overlay = NewTile("overlay");
+            data.ReplaceStack(Vector2Int.zero, new[] { floor, overlay });
+
+            Assert.That(data.TryGetStackView(Vector2Int.zero, out TileStackView view), Is.True);
+            Assert.That(view.Count, Is.EqualTo(2));
+            Assert.That(view[0], Is.SameAs(floor));
+            Assert.That(view.GetFromTop(), Is.SameAs(overlay));
+
+            var buffer = new List<TileData>();
+            Assert.That(data.CopyStackTo(Vector2Int.zero, buffer), Is.True);
+            buffer.Clear();
+            Assert.That(data.GetLayerCount(Vector2Int.zero), Is.EqualTo(2),
+                "Mutating the caller-owned copy must not mutate terrain storage.");
+            Assert.That(data.ClearCell(Vector2Int.zero), Is.True);
+            Assert.That(data.GetLayerCount(Vector2Int.zero), Is.Zero);
+        }
+
         private sealed class FakeDamageSender : IDamageSender
         {
             public GameValue_float Damage { get; set; }
@@ -286,7 +384,7 @@ namespace FlatWorld.GameTest.Map
             Tile tileAsset,
             Vector2Int cell)
         {
-            map.Data.AddTileData(cell, new TileData_CellBuilding
+            map.Data.SetBaseTile(cell, new TileData_CellBuilding
             {
                 ID = "Wall",
                 Name = "Wall",
@@ -296,6 +394,16 @@ namespace FlatWorld.GameTest.Map
                 position = (Vector3Int)cell
             });
             tilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), tileAsset);
+        }
+
+        private static TileData NewTile(string id)
+        {
+            return new TileData_Universal
+            {
+                ID = id,
+                Name = id,
+                IsWalkable = true
+            };
         }
     }
 }

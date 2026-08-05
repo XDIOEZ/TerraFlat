@@ -1,5 +1,4 @@
 ﻿using Force.DeepCloner;
-using NPOI.SS.Formula.Functions;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
@@ -62,6 +61,12 @@ public class Map : Item
     [NonSerialized] private bool tilemapVisualReady;
     private static Map activeProceduralGenerationMap;
     [NonSerialized] private bool ownsProceduralGenerationSlot;
+    [NonSerialized] private MapGenerationContext activeGenerationContext;
+    [NonSerialized] private string lastGenerationFailure;
+    [NonSerialized] private TileBase[] groundTileRowBuffer;
+    [NonSerialized] private TileBase[] blockingTileRowBuffer;
+    [NonSerialized] private int lastInitialRenderBatchCount;
+    [NonSerialized] private int lastInitialRenderTileCount;
     private readonly HashSet<Vector2Int> backTilePenaltyDirtyCells = new HashSet<Vector2Int>();
     private readonly List<Vector2Int> backTilePenaltyDirtySnapshot = new List<Vector2Int>(128);
 
@@ -76,11 +81,18 @@ public class Map : Item
     public bool IsReadyForChunkLifecycle =>
         Data != null &&
         Data.TileLoaded &&
+        string.IsNullOrEmpty(lastGenerationFailure) &&
         tilemapVisualReady &&
         loadOrGenerateCoroutine == null &&
         loadTileMapCoroutine == null;
 
     public bool IsTilemapVisualReady => tilemapVisualReady;
+    public bool HasGenerationFailed => !string.IsNullOrEmpty(lastGenerationFailure);
+    public string LastGenerationFailure => lastGenerationFailure;
+    public MapGenerationContext ActiveGenerationContext => activeGenerationContext;
+    public int LastInitialRenderBatchCount => lastInitialRenderBatchCount;
+    public int LastInitialRenderTileCount => lastInitialRenderTileCount;
+    public event Action<Map, string> OnGenerationFailed;
 
     protected virtual bool ShouldBakePenaltyAfterTilemapLoad => true;
     protected virtual int TilemapLoadBatchSize => Mathf.Max(16, loadTileBatchSize);
@@ -91,12 +103,14 @@ public class Map : Item
     public void ResetMapReadyState()
     {
         tilemapVisualReady = false;
+        lastGenerationFailure = null;
         chunk?.ResetLifecycleState();
     }
 
     protected void BeginMapLoad()
     {
         tilemapVisualReady = false;
+        lastGenerationFailure = null;
         chunk?.BeginMapLoad();
     }
 
@@ -117,7 +131,6 @@ public class Map : Item
 
     protected virtual void OnTilemapLoaded()
     {
-        BlockingTilemapLayer.SyncMap(this);
         GetComponent<GrassDetailLayer>()?.Rebuild(this);
 
         if (!ShouldBakePenaltyAfterTilemapLoad)
@@ -135,11 +148,23 @@ public class Map : Item
 
     protected void FinalizeTilemapLoad()
     {
-        tilemapVisualReady = true;
-        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[WorldNav][Map] FinalizeTilemapLoad | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded}");
-        OnTilemapLoaded();
-        NotifyChunkReady();
+        try
+        {
+            tilemapVisualReady = true;
+            if (Data != null)
+                Data.TileLoaded = true;
+            activeGenerationContext?.MarkSucceeded();
+            if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
+                Debug.Log($"[WorldNav][Map] FinalizeTilemapLoad | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded}");
+            OnTilemapLoaded();
+            NotifyChunkReady();
+            activeGenerationContext = null;
+        }
+        catch (Exception exception)
+        {
+            FailGeneration(activeGenerationContext, "地图最终化失败", exception);
+            activeGenerationContext = null;
+        }
     }
 
     private void Awake()
@@ -171,6 +196,9 @@ public class Map : Item
         if (loadOrGenerateCoroutine != null || loadTileMapCoroutine != null)
             tilemapVisualReady = false;
 
+        activeGenerationContext?.Cancel("地图对象已停用或销毁");
+        CancelPendingGeneratorWork();
+
         if (loadTileMapCoroutine != null)
         {
             StopCoroutine(loadTileMapCoroutine);
@@ -191,6 +219,16 @@ public class Map : Item
 
         ReleaseProceduralGenerationSlot();
         backTilePenaltyPending = false;
+        activeGenerationContext = null;
+    }
+
+    private void CancelPendingGeneratorWork()
+    {
+        if (mapGenerators == null)
+            return;
+
+        for (int i = 0; i < mapGenerators.Count; i++)
+            mapGenerators[i]?.CancelPendingWork();
     }
 
     private IEnumerator WaitForProceduralGenerationSlot()
@@ -247,11 +285,7 @@ public class Map : Item
         if (tileMap != null)
             return true;
 
-        tileMap = LandGenerator != null ? LandGenerator.targetTilemap : null;
-        if (tileMap == null)
-        {
-            tileMap = GetComponentInChildren<Tilemap>(includeInactive: false);
-        }
+        tileMap = GetComponentInChildren<Tilemap>(includeInactive: false);
 
         if (tileMap != null)
             return true;
@@ -307,48 +341,64 @@ public class Map : Item
 
     private IEnumerator GenerateByPipelineCoroutine(PlanetData planetData)
     {
-        InitMapGenerators();
-        if (mapGenerators == null || mapGenerators.Count == 0)
+        if (!TryBuildOrderedPipeline(out List<ChunkGeneratorBase> orderedGenerators, out string validationError))
         {
-            Debug.LogError("[Map.GenerateByPipeline] mapGenerators 为空，无法生成", this);
+            FailGeneration(null, validationError, null);
             yield break;
         }
 
         Data ??= new Data_TileMap();
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        // 格子列表由 AddTileData 按需创建，避免新区块首帧一次分配 width * height 个 List。
-        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: false);
+        Data.EnsureTileStorage(
+            Mathf.Max(1, Mathf.RoundToInt(chunkSize.x)),
+            Mathf.Max(1, Mathf.RoundToInt(chunkSize.y)));
         Data.TileLoaded = false;
 
         int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         DimensionManager dimensionManager = DimensionManager.Instance;
-        int worldSeed = dimensionManager.GetActiveGenerationSeed(baseSeed);
+        int worldSeed = dimensionManager != null
+            ? dimensionManager.GetActiveGenerationSeed(baseSeed)
+            : baseSeed;
+        WorldAddress worldAddress = dimensionManager != null
+            ? dimensionManager.ActiveAddress
+            : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
         var context = new MapGenerationContext(
             this,
             planetData,
             worldSeed,
-            dimensionManager.ActiveAddress,
-            dimensionManager.ActiveDefinition);
-        for (int i = 0; i < mapGenerators.Count; i++)
+            worldAddress,
+            dimensionManager != null ? dimensionManager.ActiveDefinition : null);
+        activeGenerationContext = context;
+
+        GenerationStage? activeStage = null;
+        for (int i = 0; i < orderedGenerators.Count; i++)
         {
-            ChunkGeneratorBase generator = mapGenerators[i];
-            if (generator == null)
-                continue;
+            ChunkGeneratorBase generator = orderedGenerators[i];
 
             IEnumerator generatorRoutine;
             try
             {
                 generator.Init(this);
+                if (activeStage != generator.Stage)
+                {
+                    context.BeginStage(generator.Stage);
+                    activeStage = generator.Stage;
+                }
                 generatorRoutine = generator.GenerateAsync(
                     context,
                     Mathf.Max(1, proceduralGenerationCellsPerFrame));
             }
             catch (Exception exception)
             {
-                Debug.LogError($"[Map.GenerateByPipeline] 生成器 {generator.GetType().Name} 执行失败：{exception}", this);
-                continue;
+                FailGeneration(
+                    context,
+                    $"阶段 {generator.Stage} 初始化失败：{generator.GetType().Name}",
+                    exception);
+                yield break;
             }
 
+            bool generatorFailed = false;
+            Exception generatorException = null;
             while (generatorRoutine != null)
             {
                 bool hasNext;
@@ -361,7 +411,8 @@ public class Map : Item
                 }
                 catch (Exception exception)
                 {
-                    Debug.LogError($"[Map.GenerateByPipeline] 生成器 {generator.GetType().Name} 执行失败：{exception}", this);
+                    generatorFailed = true;
+                    generatorException = exception;
                     break;
                 }
 
@@ -371,12 +422,121 @@ public class Map : Item
                 yield return current;
             }
 
-            // 旧生成器即使仍是同步实现，各生成阶段也不会再挤在同一帧。
+            try
+            {
+                (generatorRoutine as IDisposable)?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                generatorFailed = true;
+                generatorException ??= exception;
+            }
+            if (context.IsCancellationRequested)
+                yield break;
+            if (generatorFailed)
+            {
+                FailGeneration(
+                    context,
+                    $"阶段 {generator.Stage} 执行失败：{generator.GetType().Name}",
+                    generatorException);
+                yield break;
+            }
+
+            bool stageCompleted = i == orderedGenerators.Count - 1 ||
+                                  orderedGenerators[i + 1].Stage != generator.Stage;
+            if (!stageCompleted)
+                continue;
+
+            try
+            {
+                context.CompleteStage(generator.Stage);
+                activeStage = null;
+            }
+            catch (Exception exception)
+            {
+                FailGeneration(
+                    context,
+                    $"阶段 {generator.Stage} 完成状态提交失败：{generator.GetType().Name}",
+                    exception);
+                yield break;
+            }
             yield return null;
         }
 
-        Data.TileLoaded = true;
-        SaveDataMgr.Instance?.OnProceduralChunkGenerated(chunk);
+        if (SaveDataMgr.Instance != null &&
+            !SaveDataMgr.Instance.TryFinalizeProceduralChunk(chunk, out string persistenceFailure))
+        {
+            FailGeneration(context, $"程序化区块基线或差量应用失败：{persistenceFailure}", null);
+            yield break;
+        }
+
+        // TileLoaded and Succeeded are committed only after batched Tilemap finalization succeeds.
+    }
+
+    private bool TryBuildOrderedPipeline(
+        out List<ChunkGeneratorBase> orderedGenerators,
+        out string failureReason)
+    {
+        orderedGenerators = new List<ChunkGeneratorBase>();
+        failureReason = null;
+        if (mapGenerators == null || mapGenerators.Count == 0)
+        {
+            failureReason = "mapGenerators 为空。";
+            return false;
+        }
+
+        var entries = new List<(ChunkGeneratorBase Generator, int SerializedIndex)>(mapGenerators.Count);
+        int baseTerrainCount = 0;
+        for (int i = 0; i < mapGenerators.Count; i++)
+        {
+            ChunkGeneratorBase generator = mapGenerators[i];
+            if (generator == null)
+            {
+                failureReason = $"mapGenerators[{i}] 为空。";
+                return false;
+            }
+
+            if (!Enum.IsDefined(typeof(GenerationStage), generator.Stage))
+            {
+                failureReason = $"mapGenerators[{i}] 使用了非法生成阶段 {(int)generator.Stage}。";
+                return false;
+            }
+
+            if (generator.Stage == GenerationStage.BaseTerrain)
+                baseTerrainCount++;
+            entries.Add((generator, i));
+        }
+
+        if (baseTerrainCount != 1)
+        {
+            failureReason = $"生成管线必须恰好包含一个 BaseTerrain，当前为 {baseTerrainCount}。";
+            return false;
+        }
+
+        entries.Sort((left, right) =>
+        {
+            int stageOrder = left.Generator.Stage.CompareTo(right.Generator.Stage);
+            return stageOrder != 0 ? stageOrder : left.SerializedIndex.CompareTo(right.SerializedIndex);
+        });
+        for (int i = 0; i < entries.Count; i++)
+            orderedGenerators.Add(entries[i].Generator);
+        return true;
+    }
+
+    private void FailGeneration(MapGenerationContext context, string reason, Exception exception)
+    {
+        string message = string.IsNullOrWhiteSpace(reason) ? "地图生成失败" : reason;
+        context?.Fail(message, exception);
+        if (Data != null)
+            Data.TileLoaded = false;
+        tilemapVisualReady = false;
+        tileMap?.ClearAllTiles();
+        BlockingTilemapLayer.ClearMap(this);
+        SaveDataMgr.Instance?.DiscardProceduralChunkBaseline(chunk);
+        lastGenerationFailure = exception == null ? message : $"{message}: {exception.Message}";
+        Debug.LogError($"[Map.GenerateByPipeline] {lastGenerationFailure}\n{exception}", this);
+        OnGenerationFailed?.Invoke(this, lastGenerationFailure);
+        chunk?.MarkFailed(lastGenerationFailure);
     }
 
     private void OnGUI()
@@ -430,8 +590,7 @@ public class Map : Item
         }
 
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        // 存档中没有数据的格子保持 null，避免加载时为所有空格创建 List。
-        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: false);
+        Data.EnsureTileStorage((int)chunkSize.x, (int)chunkSize.y);
         Data.EnsureEnvironmentStorage((int)chunkSize.x, (int)chunkSize.y);
 
         bool hasTileData = Data.CountNonEmptyCells() > 0;
@@ -447,6 +606,7 @@ public class Map : Item
         }
 
         BeginMapLoad();
+        Data.TileLoaded = false;
 
         if (!hasTileData)
         {
@@ -459,7 +619,6 @@ public class Map : Item
         // TODO 2：直接加载 Data 到 TileMap 上
         tileMap.ClearAllTiles();
         LoadTileData_To_TileMap_Ansync();
-        Data.TileLoaded = true;
     }
 
 
@@ -468,7 +627,17 @@ public class Map : Item
         yield return WaitForProceduralGenerationSlot();
         try
         {
-            OnMapGenerated_Start.Invoke();
+            try
+            {
+                OnMapGenerated_Start.Invoke();
+            }
+            catch (Exception exception)
+            {
+                FailGeneration(null, "地图生成开始回调失败", exception);
+            }
+
+            if (HasGenerationFailed)
+                yield break;
 
             PlanetData planetData = SaveDataMgr.Instance != null
                 ? SaveDataMgr.Instance.GetCurrentPlanetData()
@@ -480,13 +649,19 @@ public class Map : Item
             ReleaseProceduralGenerationSlot();
         }
 
-        chunk?.NotifyItemsLoaded();
-
-        if (Data == null || !Data.TileLoaded)
+        bool generationSucceeded =
+            activeGenerationContext != null &&
+            !activeGenerationContext.HasFailed &&
+            !activeGenerationContext.IsCancellationRequested &&
+            !HasGenerationFailed;
+        if (!generationSucceeded)
         {
+            activeGenerationContext = null;
             loadOrGenerateCoroutine = null;
             yield break;
         }
+
+        chunk?.NotifyItemsLoaded();
 
         tileMap.ClearAllTiles();
         loadOrGenerateCoroutine = null;
@@ -512,30 +687,30 @@ public class Map : Item
     public void LoadTileData_To_TileMap_Sync()
     {
         tilemapVisualReady = false;
+        lastInitialRenderBatchCount = 0;
+        lastInitialRenderTileCount = 0;
+        tileMap.ClearAllTiles();
+        BlockingTilemapLayer blockingLayer = BlockingTilemapLayer.BeginBatch(this);
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
+            CompleteInitialTilemapBatch(blockingLayer);
+            FinalizeTilemapLoad();
             return;
         }
 
-        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
+        EnsureTilemapRowBuffers(Data.Width);
+        for (int localY = 0; localY < Data.Height; localY++)
         {
-            TileData topTile = BlockingTilemapLayer.ResolveGroundTile(tileDataList);
-            if (topTile == null)
-                continue;
-
-            TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
-            if (tile == null)
+            if (!TryRenderTilemapRow(localY, ref blockingLayer, out string failureReason))
             {
-                Debug.LogError($"无法加载 Tile: {topTile.ID}");
-                continue;
+                FailGeneration(activeGenerationContext, failureReason, null);
+                activeGenerationContext = null;
+                return;
             }
-
-            Vector3Int position3D = new Vector3Int(worldPos.x, worldPos.y, 0);
-
-            tileMap.SetTile(position3D, tile);
         }
 
+        CompleteInitialTilemapBatch(blockingLayer);
         FinalizeTilemapLoad();
     }
 
@@ -554,16 +729,22 @@ public class Map : Item
 
     private IEnumerator LoadTileData_To_TileMapCoroutine()
     {
+        lastInitialRenderBatchCount = 0;
+        lastInitialRenderTileCount = 0;
+        tileMap.ClearAllTiles();
+        BlockingTilemapLayer blockingLayer = BlockingTilemapLayer.BeginBatch(this);
         if (Data == null || Data.CountNonEmptyCells() == 0)
         {
             Debug.LogWarning("TileData is empty. Nothing to load.");
             if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
                 Debug.LogWarning($"[WorldNav][Map] TileData为空，直接Finalize | Map={name} chunk={chunk?.name ?? "null"}");
+            CompleteInitialTilemapBatch(blockingLayer);
             loadTileMapCoroutine = null;
             FinalizeTilemapLoad();
             yield break;
         }
 
+        EnsureTilemapRowBuffers(Data.Width);
         int batchSize = TilemapLoadBatchSize;
         int processedCount = 0;
         int processedThisFrame = 0;
@@ -571,21 +752,20 @@ public class Map : Item
         double ticksPerMillisecond = System.Diagnostics.Stopwatch.Frequency / 1000d;
         long frameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 
-        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
+        for (int localY = 0; localY < Data.Height; localY++)
         {
-            TileData topTile = BlockingTilemapLayer.ResolveGroundTile(tileDataList);
-            if (topTile == null)
-                continue;
-            TileBase tile = GameRes.Instance.GetTileBase(topTile.ID);
-            if (tile == null)
+            int previousTileCount = lastInitialRenderTileCount;
+            if (!TryRenderTilemapRow(localY, ref blockingLayer, out string failureReason))
             {
-                Debug.LogError($"无法加载 Tile: {topTile.ID}");
-                continue;
+                CompleteInitialTilemapBatch(blockingLayer);
+                loadTileMapCoroutine = null;
+                FailGeneration(activeGenerationContext, failureReason, null);
+                activeGenerationContext = null;
+                yield break;
             }
-
-            tileMap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), tile);
-            processedCount++;
-            processedThisFrame++;
+            int renderedInRow = lastInitialRenderTileCount - previousTileCount;
+            processedCount += renderedInRow;
+            processedThisFrame += Data.Width;
 
             double elapsedMilliseconds =
                 (System.Diagnostics.Stopwatch.GetTimestamp() - frameStartTimestamp) / ticksPerMillisecond;
@@ -597,6 +777,7 @@ public class Map : Item
             }
         }
 
+        CompleteInitialTilemapBatch(blockingLayer);
         yield return null;
         if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
         {
@@ -605,6 +786,94 @@ public class Map : Item
         }
         loadTileMapCoroutine = null;
         FinalizeTilemapLoad();
+    }
+
+    private void EnsureTilemapRowBuffers(int width)
+    {
+        int safeWidth = Mathf.Max(1, width);
+        if (groundTileRowBuffer == null || groundTileRowBuffer.Length != safeWidth)
+            groundTileRowBuffer = new TileBase[safeWidth];
+        if (blockingTileRowBuffer == null || blockingTileRowBuffer.Length != safeWidth)
+            blockingTileRowBuffer = new TileBase[safeWidth];
+    }
+
+    private void CompleteInitialTilemapBatch(BlockingTilemapLayer blockingLayer)
+    {
+        tileMap?.RefreshAllTiles();
+        blockingLayer?.BlockingTilemap?.RefreshAllTiles();
+
+        TilemapCollider2D groundCollider = tileMap != null
+            ? tileMap.GetComponent<TilemapCollider2D>()
+            : null;
+        if (groundCollider != null && groundCollider.hasTilemapChanges)
+            groundCollider.ProcessTilemapChanges();
+
+        blockingLayer?.CompleteBatch();
+    }
+
+    private bool TryRenderTilemapRow(
+        int localY,
+        ref BlockingTilemapLayer blockingLayer,
+        out string failureReason)
+    {
+        failureReason = null;
+        Array.Clear(groundTileRowBuffer, 0, groundTileRowBuffer.Length);
+        Array.Clear(blockingTileRowBuffer, 0, blockingTileRowBuffer.Length);
+        bool hasBlockingTile = false;
+
+        for (int localX = 0; localX < Data.Width; localX++)
+        {
+            Vector2Int worldPosition = Data.position + new Vector2Int(localX, localY);
+            if (!Data.TryGetStackView(worldPosition, out TileStackView stack) || stack.Count == 0)
+                continue;
+
+            TileData groundData = BlockingTilemapLayer.ResolveGroundTile(stack);
+            if (groundData != null)
+            {
+                TileBase groundTile = GameRes.Instance?.GetTileBase(groundData.ID);
+                if (groundTile == null)
+                {
+                    failureReason = $"Tilemap 最终化失败：找不到地面 TileBase '{groundData.ID}'，位置 {worldPosition}。";
+                    return false;
+                }
+
+                groundTileRowBuffer[localX] = groundTile;
+                lastInitialRenderTileCount++;
+            }
+
+            TileData topData = stack[^1];
+            if (!BlockingTilemapLayer.IsBlockingTile(topData))
+                continue;
+
+            TileBase blockingTile = GameRes.Instance?.GetTileBase(topData.ID);
+            if (blockingTile == null)
+            {
+                failureReason = $"Tilemap 最终化失败：找不到阻挡 TileBase '{topData.ID}'，位置 {worldPosition}。";
+                return false;
+            }
+
+            blockingTileRowBuffer[localX] = blockingTile;
+            hasBlockingTile = true;
+        }
+
+        tileMap.SetTilesBlock(
+            new BoundsInt(Data.position.x, Data.position.y + localY, 0, Data.Width, 1, 1),
+            groundTileRowBuffer);
+        lastInitialRenderBatchCount++;
+
+        if (!hasBlockingTile)
+            return true;
+
+        blockingLayer ??= BlockingTilemapLayer.EnsureBatchLayer(this);
+        if (blockingLayer == null)
+        {
+            failureReason = "Tilemap 最终化失败：无法创建顶部阻挡层。";
+            return false;
+        }
+
+        blockingLayer.WriteBatchRow(Data.position, localY, blockingTileRowBuffer);
+        lastInitialRenderBatchCount++;
+        return true;
     }
     #endregion
 
@@ -656,7 +925,7 @@ public class Map : Item
         }
 
         // 处理所有节点数据 这个是根据地块数据进行烘焙的
-        foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
+        foreach (var (worldPos, tileDataList) in Data.EnumerateOccupiedCells())
         {
             // 获取最顶层 TileData（倒数第一个）
             TileData topTile = tileDataList[^1];
@@ -720,7 +989,7 @@ public class Map : Item
 
         if (backTilePenaltyForceFull)
         {
-            foreach (var (worldPos, tileDataList) in Data.EnumerateNonEmptyTiles())
+            foreach (var (worldPos, tileDataList) in Data.EnumerateOccupiedCells())
             {
                 TileData topTile = tileDataList[^1];
                 bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldPos, topTile.IsWalkable);
@@ -902,7 +1171,7 @@ public class Map : Item
             Mathf.RoundToInt(transform.parent.position.x),
             Mathf.RoundToInt(transform.parent.position.y)
         );
-        Data.EnsureTileDataArray((int)chunkSize.x, (int)chunkSize.y, initCells: true);
+        Data.EnsureTileStorage((int)chunkSize.x, (int)chunkSize.y);
         Data.ClearAllTiles();
 
         // 遍历 Tilemap 上的所有 Tile
@@ -920,7 +1189,7 @@ public class Map : Item
             tileData = GameRes.Instance.GetPrefab(Name_ItemName).
                 GetComponent<IBlockTile>().TileData.DeepClone();
 
-            Data.AddTileData(pos2D, tileData);
+            Data.SetBaseTile(pos2D, tileData);
         }
 
         // 存档热路径不再为每个区块额外全量统计格子并输出调用栈。
@@ -977,7 +1246,7 @@ public class Map : Item
         }
 
         int width = Data.EnvironmentLayers != null ? Data.EnvironmentLayers.Width : 0;
-        int height = Data.EnvironmentLayers != null ? Data.EnvironmentLayers.Height : 0;
+        int height = Data.EnvironmentLayers != null ? Data.EnvironmentLayers.GridHeight : 0;
         localPos = worldPos - Data.position;
 
         if ((uint)localPos.x >= (uint)width || (uint)localPos.y >= (uint)height)
@@ -1021,26 +1290,37 @@ public class Map : Item
         return false;
     }
 
-    public void ADDTile(Vector2Int position, TileData tileData)
+    public bool PushTile(Vector2Int position, TileData tileData)
     {
+        if (tileData == null)
+            return false;
+
         tileData.position = (Vector3Int)position;
-
-        Data.AddTileData(position, tileData);
-
+        if (!Data.PushTile(position, tileData))
+            return false;
         UpdateTileBaseAtPosition(position);
+        return true;
     }
 
-    public void ADDTileData(Vector2Int position, TileData tileData)
+    public bool SetBaseTile(Vector2Int position, TileData tileData, bool refreshVisual = true)
     {
-        tileData.position = (Vector3Int)position;
+        if (tileData == null)
+            return false;
 
-        Data.AddTileData(position, tileData);
+        tileData.position = (Vector3Int)position;
+        if (!Data.SetBaseTile(position, tileData))
+            return false;
+        if (refreshVisual)
+            UpdateTileBaseAtPosition(position);
+        return true;
     }
 
     [Button("获取 TileData")]
     public TileData GetTile(Vector2Int position, int? index = null)
     {
-        return Data.GetTileDataAt(position, index);
+        return index.HasValue
+            ? Data.GetTileAt(position, index.Value)
+            : Data.GetTopTile(position);
     }
 
     // 重载方法：只获取最上层的 TileData
@@ -1058,31 +1338,37 @@ public class Map : Item
     // 重载方法：获取所有 TileData
     public List<TileData> GetAllTiles(Vector2Int position)
     {
-        var list = Data.GetTileListAt(position);
-        return list != null ? new List<TileData>(list) : new List<TileData>();
+        var result = new List<TileData>(Data.GetLayerCount(position));
+        Data.CopyStackTo(position, result);
+        return result;
     }
 
-    public void DELTile(Vector2Int position, int? index = null)
+    public bool RemoveTile(Vector2Int position, int? index = null)
     {
-        if (!Data.RemoveTileData(position, index))
-            return;
+        if (!Data.RemoveTile(position, index))
+            return false;
 
         UpdateTileBaseAtPosition(position);
+        return true;
     }
 
-    public void UPDTile(Vector2Int position, int index, TileData tileData)
+    public bool UpdateTile(Vector2Int position, int index, TileData tileData)
     {
+        if (tileData == null)
+            return false;
+
         tileData.position = (Vector3Int)position;
-        Data.UpdateTileData(position, index, tileData);
+        if (!Data.UpdateTileAt(position, index, tileData))
+            return false;
         UpdateTileBaseAtPosition(position);
+        return true;
     }
 
     public void UpdateTileBaseAtPosition(Vector2Int position)
     {
         Vector3Int position3D = new Vector3Int(position.x, position.y, 0);
 
-        var list = Data.GetTileListAt(position);
-        if (list == null || list.Count == 0)
+        if (!Data.TryGetStackView(position, out TileStackView stack) || stack.Count == 0)
         {
             tileMap.SetTile(position3D, null); // 清除该 Tile
             BlockingTilemapLayer.RefreshMapCell(this, position);
@@ -1091,7 +1377,7 @@ public class Map : Item
             return;
         }
 
-        TileData topTile = BlockingTilemapLayer.ResolveGroundTile(list);
+        TileData topTile = BlockingTilemapLayer.ResolveGroundTile(stack);
         if (topTile == null)
         {
             tileMap.SetTile(position3D, null);

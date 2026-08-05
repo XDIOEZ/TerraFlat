@@ -66,7 +66,7 @@ public static class StructureProjectInstaller
         if (AssetDatabase.LoadMainAssetAtPath(CatalogAssetPath) != null)
             AssetDatabase.DeleteAsset(CatalogAssetPath);
         catalog = ScriptableObject.CreateInstance<StructureCatalogSO>();
-        catalog.GenerationVersion = 1;
+        catalog.GenerationVersion = 2;
         AssetDatabase.CreateAsset(catalog, CatalogAssetPath);
         RepairScriptReference(catalog);
         return catalog;

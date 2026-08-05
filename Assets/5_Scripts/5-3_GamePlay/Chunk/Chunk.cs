@@ -15,6 +15,7 @@ public class Chunk : MonoBehaviour
         Created,
         Loading,
         Ready,
+        Failed,
         Releasing,
         Pooled
     }
@@ -163,6 +164,8 @@ public class Chunk : MonoBehaviour
     public string ChunkOwner;
     public ChunkLifecycleState LifecycleState { get; private set; } = ChunkLifecycleState.Created;
     public bool IsReady => LifecycleState == ChunkLifecycleState.Ready;
+    public bool HasFailed => LifecycleState == ChunkLifecycleState.Failed;
+    public string FailureReason { get; private set; }
 
     private bool itemsLoaded;
     private bool mapLoaded;
@@ -191,6 +194,7 @@ public class Chunk : MonoBehaviour
         LifecycleState = ChunkLifecycleState.Releasing;
         StopAllCoroutines();
         OnChunkLoaded = null;
+        OnChunkLoadFailed = null;
 
         Item[] runtimeItems = GetComponentsInChildren<Item>(includeInactive: true);
         for (int i = 0; i < runtimeItems.Length; i++)
@@ -243,6 +247,7 @@ public class Chunk : MonoBehaviour
     /// 区块进入可参与后续系统联动的就绪态时的回调。
     /// </summary>
     public event System.Action<Chunk> OnChunkLoaded;
+    public event System.Action<Chunk> OnChunkLoadFailed;
     public int ItemBatchSize = 1; // 每批处理的物品数量
 
     #region 区块加载
@@ -394,6 +399,7 @@ public class Chunk : MonoBehaviour
         itemsLoaded = false;
         mapLoaded = false;
         hasNotifiedChunkReady = false;
+        FailureReason = null;
     }
 
     private bool hasNotifiedChunkReady;
@@ -403,6 +409,7 @@ public class Chunk : MonoBehaviour
         itemsLoaded = false;
         mapLoaded = false;
         hasNotifiedChunkReady = false;
+        FailureReason = null;
         LifecycleState = ChunkLifecycleState.Loading;
     }
 
@@ -430,6 +437,9 @@ public class Chunk : MonoBehaviour
 
     private void TryEnterReadyState()
     {
+        if (LifecycleState == ChunkLifecycleState.Failed)
+            return;
+
         if (itemsLoaded && mapLoaded && !hasNotifiedChunkReady)
         {
             hasNotifiedChunkReady = true;
@@ -449,6 +459,17 @@ public class Chunk : MonoBehaviour
             LifecycleState = ChunkLifecycleState.Ready;
             OnChunkLoaded?.Invoke(this);
         }
+    }
+
+    public void MarkFailed(string reason)
+    {
+        if (LifecycleState is ChunkLifecycleState.Failed or ChunkLifecycleState.Releasing or ChunkLifecycleState.Pooled)
+            return;
+
+        FailureReason = string.IsNullOrWhiteSpace(reason) ? "区块加载失败" : reason;
+        LifecycleState = ChunkLifecycleState.Failed;
+        hasNotifiedChunkReady = true;
+        OnChunkLoadFailed?.Invoke(this);
     }
     #endregion
 

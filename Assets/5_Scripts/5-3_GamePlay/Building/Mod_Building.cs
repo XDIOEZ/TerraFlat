@@ -907,14 +907,14 @@ public class Mod_Building : Module
                     return false;
                 }
 
-                var tiles = chunk.Map.Data.GetTileListAt(new Vector2Int(x, y));
-                if (tiles == null || tiles.Count == 0)
+                Vector2Int worldCell = new Vector2Int(x, y);
+                TileData topTile = chunk.Map.Data.GetTopTile(worldCell);
+                if (topTile == null)
                 {
                     reason = $"地块 ({x},{y}) 不可建造";
                     return false;
                 }
 
-                TileData topTile = tiles[^1];
                 if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
                 {
                     reason = $"地块 ({x},{y}) 不可通行";

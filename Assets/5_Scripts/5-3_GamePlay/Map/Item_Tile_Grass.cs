@@ -41,7 +41,7 @@ public class Item_Tile_Grass : Item
         tileData.position = cellPos3D;
 
         // 添加并刷新 Tile
-        mapCoreScript.ADDTile(cellPos2D, tileData);
+        mapCoreScript.PushTile(cellPos2D, tileData);
         mapCoreScript.UpdateTileBaseAtPosition(cellPos2D); // 确保你有这个方法
     }
 

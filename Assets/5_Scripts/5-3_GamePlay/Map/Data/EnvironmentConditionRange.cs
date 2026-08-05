@@ -8,17 +8,11 @@ public class EnvironmentConditionRange
     [Tooltip("温度范围（x=最低温，y=最高温")]
     public Vector2 TemperatureRange = new Vector2(0, 1);
 
-    [Tooltip("湿度范围（x=最低湿度，y=最高湿度）")]
-    public Vector2 HumidityRange = new Vector2(0, 1);
-
     [Tooltip("降水范围（x=最小降水，y=最大降水）")]
     public Vector2 PrecipitationRange = new Vector2(0, 1);
 
-    [Tooltip("固体比例（x=最低固体，y=最高固体）")]
-    public Vector2 SolidityRange = new Vector2(0, 1);
-
     [Tooltip("高度范围（x=最低高度，y=最高高度）")]
-    public Vector2 HightRange = new Vector2(0, 1);
+    public Vector2 HeightRange = new Vector2(0, 1);
 
     // 判断当前值是否在范围内
     public bool IsMatch(EnvironmentLayers layers, int x, int y)
@@ -29,20 +23,34 @@ public class EnvironmentConditionRange
         return IsMatch(new EnvironmentSample(
             layers.Temperature[x, y],
             layers.TemperatureCelsius[x, y],
-            layers.Humidity[x, y],
             layers.Precipitation[x, y],
-            layers.Solidity[x, y],
-            layers.Hight[x, y],
-            layers.Pollution[x, y]));
+            layers.Height[x, y]));
     }
 
     public bool IsMatch(EnvironmentSample sample)
     {
         return TemperatureRange.x <= sample.Temperature && sample.Temperature <= TemperatureRange.y &&
-               HumidityRange.x <= sample.Humidity && sample.Humidity <= HumidityRange.y &&
                PrecipitationRange.x <= sample.Precipitation && sample.Precipitation <= PrecipitationRange.y &&
-               HightRange.x <= sample.Hight && sample.Hight <= HightRange.y &&
-               SolidityRange.x <= sample.Solidity && sample.Solidity <= SolidityRange.y;
+               HeightRange.x <= sample.Height && sample.Height <= HeightRange.y;
+    }
+
+    public bool TryValidate(out string reason)
+    {
+        if (!IsFiniteRange(TemperatureRange) || !IsFiniteRange(PrecipitationRange) || !IsFiniteRange(HeightRange))
+        {
+            reason = "范围必须为 0~1 内的有限递增值";
+            return false;
+        }
+
+        reason = null;
+        return true;
+    }
+
+    private static bool IsFiniteRange(Vector2 range)
+    {
+        return !float.IsNaN(range.x) && !float.IsInfinity(range.x) &&
+               !float.IsNaN(range.y) && !float.IsInfinity(range.y) &&
+               range.x >= 0f && range.y <= 1f && range.x <= range.y;
     }
     
     private void OnValidate()
@@ -51,32 +59,20 @@ public class EnvironmentConditionRange
         if (TemperatureRange.x > TemperatureRange.y)
             TemperatureRange.y = TemperatureRange.x;
         
-        if (HumidityRange.x > HumidityRange.y)
-            HumidityRange.y = HumidityRange.x;
-            
         if (PrecipitationRange.x > PrecipitationRange.y)
             PrecipitationRange.y = PrecipitationRange.x;
-            
-        if (SolidityRange.x > SolidityRange.y)
-            SolidityRange.y = SolidityRange.x;
-            
-        if (HightRange.x > HightRange.y)
-            HightRange.y = HightRange.x;
+
+        if (HeightRange.x > HeightRange.y)
+            HeightRange.y = HeightRange.x;
             
         // 确保值在合理范围内
         TemperatureRange.x = Mathf.Clamp01(TemperatureRange.x);
         TemperatureRange.y = Mathf.Clamp01(TemperatureRange.y);
         
-        HumidityRange.x = Mathf.Clamp01(HumidityRange.x);
-        HumidityRange.y = Mathf.Clamp01(HumidityRange.y);
-        
         PrecipitationRange.x = Mathf.Clamp01(PrecipitationRange.x);
         PrecipitationRange.y = Mathf.Clamp01(PrecipitationRange.y);
-        
-        SolidityRange.x = Mathf.Clamp01(SolidityRange.x);
-        SolidityRange.y = Mathf.Clamp01(SolidityRange.y);
-        
-        HightRange.x = Mathf.Clamp01(HightRange.x);
-        HightRange.y = Mathf.Clamp01(HightRange.y);
+
+        HeightRange.x = Mathf.Clamp01(HeightRange.x);
+        HeightRange.y = Mathf.Clamp01(HeightRange.y);
     }
 }

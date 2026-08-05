@@ -30,6 +30,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// 单个区块完成加载时触发的事件。
     /// </summary>
     public UltEvent<Chunk> OnChunkLoadFinish = new();
+    public UltEvent<Chunk> OnChunkLoadFailed = new();
 
     /// <summary>
     /// 与随机地图生成相关的协程集合，用于场景切换时统一停止。
@@ -167,8 +168,11 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
 
         chunk.OnChunkLoaded += HandleChunkReady;
+        chunk.OnChunkLoadFailed += HandleChunkFailed;
         if (chunk.IsReady)
             HandleChunkReady(chunk);
+        else if (chunk.HasFailed)
+            HandleChunkFailed(chunk);
     }
 
     private void UnhookChunkReadyEvent(Chunk chunk)
@@ -178,13 +182,33 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         _chunksLoading.Remove(chunk);
         if (_chunkReadyHookedSet.Remove(chunk))
+        {
             chunk.OnChunkLoaded -= HandleChunkReady;
+            chunk.OnChunkLoadFailed -= HandleChunkFailed;
+        }
     }
 
     private void HandleChunkReady(Chunk chunk)
     {
         _chunksLoading.Remove(chunk);
         OnChunkLoadFinish.Invoke(chunk);
+    }
+
+    private void HandleChunkFailed(Chunk chunk)
+    {
+        if (chunk == null)
+            return;
+
+        _chunksLoading.Remove(chunk);
+        OnChunkLoadFailed.Invoke(chunk);
+        StartCoroutine(ReleaseFailedChunkCoroutine(chunk));
+    }
+
+    private System.Collections.IEnumerator ReleaseFailedChunkCoroutine(Chunk chunk)
+    {
+        yield return null;
+        if (chunk != null && chunk.HasFailed)
+            DestroyChunk(chunk);
     }
 
     private static void WaitForChunkReady(Chunk chunk, System.Action<Chunk> onReady)
@@ -198,19 +222,37 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
+        if (chunk.HasFailed)
+        {
+            onReady(null);
+            return;
+        }
+
         void HandleReady(Chunk readyChunk)
         {
             chunk.OnChunkLoaded -= HandleReady;
+            chunk.OnChunkLoadFailed -= HandleFailed;
             onReady(readyChunk);
         }
 
+        void HandleFailed(Chunk failedChunk)
+        {
+            chunk.OnChunkLoaded -= HandleReady;
+            chunk.OnChunkLoadFailed -= HandleFailed;
+            onReady(null);
+        }
+
         chunk.OnChunkLoaded += HandleReady;
+        chunk.OnChunkLoadFailed += HandleFailed;
     }
 
     private void ClearChunkReadyHooks()
     {
         foreach (var chunk in _chunkReadyHookedSet)
+        {
             chunk.OnChunkLoaded -= HandleChunkReady;
+            chunk.OnChunkLoadFailed -= HandleChunkFailed;
+        }
 
         _chunkReadyHookedSet.Clear();
         _chunksLoading.Clear();
@@ -829,7 +871,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         {
             CancelDeferredChunkDeactivation(chunkPos);
         }
-        else if (chunk.Map != null && !chunk.Map.IsReadyForChunkLifecycle)
+        else if (chunk.Map != null && !chunk.Map.IsReadyForChunkLifecycle && !chunk.HasFailed)
         {
             QueueDeferredChunkDeactivation(chunkPos, chunk);
             return;
@@ -883,7 +925,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 break;
             }
 
-            if (chunk.Map == null || chunk.Map.IsReadyForChunkLifecycle)
+            if (chunk.Map == null || chunk.Map.IsReadyForChunkLifecycle || chunk.HasFailed)
                 break;
 
             yield return null;

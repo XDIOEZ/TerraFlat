@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 数据与存档定位
 
-> 最后核对：2026-08-03。序列化字段改动属于高影响变更。
+> 最后核对：2026-08-05。序列化字段改动属于高影响变更。
 
 ## 修改前先读
 
@@ -36,6 +36,7 @@ GameSaveData
 - 物品数据：`Assets/5_Scripts/5-1_Data/ItemData/`。
 - 模块数据：`Assets/5_Scripts/5-1_Data/ModData/`。
 - 地块数据：`Assets/5_Scripts/5-1_Data/TileData/`。
+- 地图栈存储：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`、`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
 - 存档 partial：`Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.*.cs`。
 - 地图存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/MapSave.cs`。
 - 星球存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`。
@@ -56,7 +57,11 @@ GameSaveData
 ## 易误判点
 
 - `PlanetData` 是 partial class，另一部分位于 `Assets/5_Scripts/5-3_GamePlay/Space/PlanetData.cs`。
-- 新增 MemoryPack 派生类型时必须检查 `MemoryPackUnion`、版本迁移和旧存档兼容。
+- 新增 MemoryPack 派生类型时必须检查 `MemoryPackUnion` 与格式版本。当任务明确不兼容旧布局时，必须在解析入口明确拒绝，不得静默迁移、覆盖或删除用户文件。
+- `Data_TileMap` 当前 MemoryPack 布局持久化 `TileStackCell[,]`；单层/双层格不分配 `OverflowLayers`，第三层起才分配。非空格计数缓存不进存档。
+- 环境只持久化五张网格：归一化温度、摄氏温度、降水、高度、光照；不得恢复湿度、固体比例或污染网格。
+- 区块差量 DTO 仍用有序 Tile 列表表达单格层级，但基线哈希、捕获、应用和复用缓冲区都必须通过地形栈 API，不得反射或暴露底层数组。
+- 当前 `CompactSaveVersion=2`、`ModdedSaveVersion=2`。版本 1 和无文件头旧二进制存档返回 `SaveVersionIncompatibleException`；正式文件版本不兼容时不得回退到备份伪装成恢复成功。
 - 世界难度位于 `GameSaveData.Difficulty.cs`：`Difficulty` 保存官方预设或自定义类型，`CustomDifficultyDataVersion` 当前为 1，另有死亡掉落开关与战斗、生存、世界、生产共 16 个倍率字段。读写必须通过 `GameDifficultyCatalog.ReadCustomRules()` / `WriteCustomRules()`；旧存档版本为 0 时保留旧死亡掉落值，其余新增倍率统一迁移为 100%。
 - 联机世界快照由 `SaveDataMgr` 生成/应用，但网络传输流程位于 Networking Skill。
 - 对话与教程不得各自覆盖 `Data_Player.ItemSpecialData`：统一通过 `ItemSpecialDataJsonStore` 替换目标命名空间并保留未知根属性；旧非 JSON 字符串保存到 `flatworld.legacyItemSpecialData`。
@@ -84,6 +89,8 @@ GameSaveData
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-08-05：`Data_TileMap` 由每格 `List<TileData>` 切换为 MemoryPack `TileStackCell[,]`，环境固定五张网格；紧凑存档与 MOD 封装升到版本 2，明确拒绝版本 1 和无头旧二进制数据。
 
 - 2026-07-31：`flatworld.dimensions` 新增按地表入口 GUID 保存的矿坑双向锚点；正式 `CaveExit` 在 Chunk Ready 后创建并进入差量 `ChangedItems`，未改变 MemoryPack 布局。
 - 2026-07-31：新增维度存档隔离；以兼容旧地表键的 `WorldKey` 复用 `PlanetData_Dict`，玩家各维度位置进入 `flatworld.dimensions`，未改变 MemoryPack 布局。

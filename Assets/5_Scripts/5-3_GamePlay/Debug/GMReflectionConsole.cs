@@ -1156,12 +1156,19 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
+        ChunkGenerator_River riverGenerator = landGenerator.Map?.GetGenerator<ChunkGenerator_River>();
+        var terrainPreview = new TerrainPreviewSampler(
+            landGenerator,
+            riverGenerator,
+            SaveDataMgr.Instance?.GetCurrentPlanetData(),
+            worldSeed);
+
         if (!StructureSeedLocator.TryFindNearest(
                 worldSeed,
                 catalog,
                 definition,
                 playerTransform.position,
-                landGenerator,
+                terrainPreview,
                 out StructureRuntimeLocation location,
                 out int scannedRegionCount))
         {

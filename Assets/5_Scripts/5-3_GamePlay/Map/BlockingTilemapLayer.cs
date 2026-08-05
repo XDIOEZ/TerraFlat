@@ -41,26 +41,63 @@ public sealed class BlockingTilemapLayer : MonoBehaviour
         if (map?.Data == null)
             return;
 
-        BlockingTilemapLayer layer = map.GetComponent<BlockingTilemapLayer>();
-        bool hasBlockingTiles = false;
-        foreach (var (_, tiles) in map.Data.EnumerateNonEmptyTiles())
+        BlockingTilemapLayer layer = BeginBatch(map);
+        int width = map.Data.Width;
+        int height = map.Data.Height;
+        var row = new TileBase[width];
+        for (int y = 0; y < height; y++)
         {
-            if (tiles != null && tiles.Count > 0 && IsBlockingTile(tiles[^1]))
+            System.Array.Clear(row, 0, row.Length);
+            bool hasBlockingTileInRow = false;
+            for (int x = 0; x < width; x++)
             {
-                hasBlockingTiles = true;
-                break;
+                TileData top = map.Data.GetTileFromTop(map.Data.position + new Vector2Int(x, y), 0);
+                if (!IsBlockingTile(top))
+                    continue;
+
+                row[x] = GameRes.Instance?.GetTileBase(top.ID);
+                hasBlockingTileInRow = row[x] != null || hasBlockingTileInRow;
             }
+
+            if (!hasBlockingTileInRow)
+                continue;
+
+            layer ??= EnsureBatchLayer(map);
+            layer?.WriteBatchRow(map.Data.position, y, row);
         }
 
-        if (!hasBlockingTiles)
-        {
-            layer?.Clear();
-            return;
-        }
+        layer?.CompleteBatch();
+    }
 
+    public static BlockingTilemapLayer BeginBatch(Map map)
+    {
+        if (map == null)
+            return null;
+
+        BlockingTilemapLayer layer = map.GetComponent<BlockingTilemapLayer>();
+        if (layer == null)
+            return null;
+
+        layer.EnsureTilemap(map);
+        layer.blockingTilemap?.ClearAllTiles();
+        return layer;
+    }
+
+    public static BlockingTilemapLayer EnsureBatchLayer(Map map)
+    {
+        if (map == null)
+            return null;
+
+        BlockingTilemapLayer layer = map.GetComponent<BlockingTilemapLayer>();
         if (layer == null)
             layer = map.gameObject.AddComponent<BlockingTilemapLayer>();
-        layer.Rebuild(map);
+        layer.EnsureTilemap(map);
+        return layer;
+    }
+
+    public static void ClearMap(Map map)
+    {
+        map?.GetComponent<BlockingTilemapLayer>()?.Clear();
     }
 
     public static void RefreshMapCell(Map map, Vector2Int worldPosition)
@@ -68,7 +105,7 @@ public sealed class BlockingTilemapLayer : MonoBehaviour
         if (map?.Data == null)
             return;
 
-        TileData topTile = map.Data.GetTileDataAt(worldPosition);
+        TileData topTile = map.Data.GetTopTile(worldPosition);
         BlockingTilemapLayer layer = map.GetComponent<BlockingTilemapLayer>();
         if (IsBlockingTile(topTile))
         {
@@ -82,22 +119,19 @@ public sealed class BlockingTilemapLayer : MonoBehaviour
         }
     }
 
-    private void Rebuild(Map map)
+    internal void WriteBatchRow(Vector2Int mapOrigin, int localY, TileBase[] row)
     {
-        EnsureTilemap(map);
-        if (blockingTilemap == null)
+        if (blockingTilemap == null || row == null || row.Length == 0)
             return;
 
-        blockingTilemap.ClearAllTiles();
-        foreach (var (worldPosition, tiles) in map.Data.EnumerateNonEmptyTiles())
-        {
-            if (tiles == null || tiles.Count == 0)
-                continue;
+        blockingTilemap.SetTilesBlock(
+            new BoundsInt(mapOrigin.x, mapOrigin.y + localY, 0, row.Length, 1, 1),
+            row);
+    }
 
-            TileData topTile = tiles[^1];
-            if (IsBlockingTile(topTile))
-                SetCell(map, worldPosition, topTile);
-        }
+    internal void CompleteBatch()
+    {
+        ProcessColliderChanges();
     }
 
     private void SetCell(Map map, Vector2Int worldPosition, TileData tileData)

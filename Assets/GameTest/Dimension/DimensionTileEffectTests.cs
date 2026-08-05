@@ -103,8 +103,8 @@ namespace FlatWorld.GameTest.Dimension
                 global::Map map = mapObject.AddComponent<global::Map>();
                 map.tileMap = tilemapObject.GetComponent<Tilemap>();
                 map.Data.position = Vector2Int.zero;
-                map.Data.EnsureTileDataArray(1, 1);
-                map.ADDTileData(Vector2Int.zero, new TileData_Water
+                map.Data.EnsureTileStorage(1, 1);
+                map.Data.SetBaseTile(Vector2Int.zero, new TileData_Water
                 {
                     ID = TestTileId,
                     Name = TestTileId,
