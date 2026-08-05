@@ -6,19 +6,19 @@ public class ReNameSystem
 {
     public void Rename_PlayerName(string oldName,string newName)
     {
-        // »ñÈ¡´æµµÊı¾İÒıÓÃ
+        // è·å–å­˜æ¡£æ•°æ®å¼•ç”¨
         var saveData = SaveDataMgr.Instance.SaveData;
 
-        // »ñÈ¡¶ÔÓ¦ĞÇÇòÊı¾İ
+        // è·å–å¯¹åº”æ˜Ÿçƒæ•°æ®
         var planetData = saveData.PlayerData_Dict[oldName];
 
-        // ´Ó×ÖµäÖĞÒÆ³ı¾ÉÃû×ÖµÄ¼üÖµ¶Ô
+        // ä»å­—å…¸ä¸­ç§»é™¤æ—§åå­—çš„é”®å€¼å¯¹
         saveData.PlayerData_Dict.Remove(oldName);
 
-        // Ê¹ÓÃĞÂÃû×ÖÌí¼Óµ½×ÖµäÖĞ
+        // ä½¿ç”¨æ–°åå­—æ·»åŠ åˆ°å­—å…¸ä¸­
         saveData.PlayerData_Dict.Add(newName, planetData);
 
-        // ±£´æ¸ü¸Ä
+        // ä¿å­˜æ›´æ”¹
         SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
     public void Rename_SaveName(string oldName,string oldSavePath,string newName)

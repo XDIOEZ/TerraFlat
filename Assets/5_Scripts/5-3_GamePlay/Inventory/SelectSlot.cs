@@ -4,6 +4,6 @@ using UnityEngine;
 
 public class SelectSlot : MonoBehaviour
 {
-    //ItemSlot_UI Íæ¼ÒÊÖ²¿²å²ÛµÄ¹Ò½Ó¶ÔÏó
+    //ItemSlot_UI ç©å®¶æ‰‹éƒ¨æ’æ§½çš„æŒ‚æ¥å¯¹è±¡
     public Inventory_UI HandInventoryUI;
 }

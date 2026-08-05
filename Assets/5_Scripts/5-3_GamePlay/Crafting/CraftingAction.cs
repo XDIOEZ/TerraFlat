@@ -6,10 +6,10 @@ public abstract class CraftingAction : ScriptableObject
 {
     public string Name;
     public string Description;
-    [Header("²Ù×÷ÉèÖÃ")]
-    [Tooltip("²Ù×÷Ë÷Òı")]
-    public int slotIndex = 0; // ²Ù×÷µÄ²å²ÛË÷Òı£¬´Ó0¿ªÊ¼
-    [Tooltip("²Ù×÷ÈİÆ÷Ãû×Ö,Îª¿ÕÄ¬ÈÏÊ¹ÓÃ×ÖµäµÚÒ»¸ö")]
+    [Header("æ“ä½œè®¾ç½®")]
+    [Tooltip("æ“ä½œç´¢å¼•")]
+    public int slotIndex = 0; // æ“ä½œçš„æ’æ§½ç´¢å¼•ï¼Œä»0å¼€å§‹
+    [Tooltip("æ“ä½œå®¹å™¨åå­—,ä¸ºç©ºé»˜è®¤ä½¿ç”¨å­—å…¸ç¬¬ä¸€ä¸ª")]
 
     public abstract void Apply(IInventory _inventory);
 

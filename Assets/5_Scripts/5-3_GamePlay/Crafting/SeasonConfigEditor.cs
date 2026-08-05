@@ -9,8 +9,8 @@ public class SeasonConfigEditor : Editor
 {
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector(); // »æÖÆÄ¬ÈÏÊôĞÔ
-        if (GUILayout.Button("×Ô¶¯Éú³É²ÎÊı"))
+        DrawDefaultInspector(); // ç»˜åˆ¶é»˜è®¤å±æ€§
+        if (GUILayout.Button("è‡ªåŠ¨ç”Ÿæˆå‚æ•°"))
         {
             AutoGenerateParameters();
         }
@@ -19,17 +19,17 @@ public class SeasonConfigEditor : Editor
     private void AutoGenerateParameters()
     {
         var targetConfig = target as SeasonConfig;
-        Random.InitState((int)targetConfig.season); // È·±£Í¬Ò»¼¾½ÚµÄËæ»úĞÔÒ»ÖÂ
+        Random.InitState((int)targetConfig.season); // ç¡®ä¿åŒä¸€å­£èŠ‚çš„éšæœºæ€§ä¸€è‡´
         targetConfig.days.Clear();
 
-        // »ñÈ¡µ±Ç° SeasonConfig µÄÂ·¾¶ºÍÄ¿Â¼
+        // è·å–å½“å‰ SeasonConfig çš„è·¯å¾„å’Œç›®å½•
         string configPath = AssetDatabase.GetAssetPath(targetConfig);
         string configFolder = Path.GetDirectoryName(configPath);
 
-        // »ñÈ¡ÓÃ»§×Ô¶¨ÒåµÄ seasonName£¨ÓÃÓÚÉú³É DayConfig µÄÃû³Æ£©
+        // è·å–ç”¨æˆ·è‡ªå®šä¹‰çš„ seasonNameï¼ˆç”¨äºç”Ÿæˆ DayConfig çš„åç§°ï¼‰
         string seasonName = targetConfig.seasonName;
 
-        // Éú³É DayConfig µÄ»ù´¡²ÎÊı
+        // ç”Ÿæˆ DayConfig çš„åŸºç¡€å‚æ•°
         float gameDayDuration = targetConfig.gameDayDuration;
         int count = 0;
         float sunriseStartBase = 0;
@@ -37,7 +37,7 @@ public class SeasonConfigEditor : Editor
         float sunsetStartBase = 0;
         float sunsetEndBase = 0;
 
-        // ¸ù¾İ¼¾½ÚÀàĞÍÉèÖÃ»ù´¡²ÎÊı
+        // æ ¹æ®å­£èŠ‚ç±»å‹è®¾ç½®åŸºç¡€å‚æ•°
         switch (targetConfig.season)
         {
             case SeasonType.Spring:
@@ -72,34 +72,34 @@ public class SeasonConfigEditor : Editor
 
         for (int i = 0; i < count; i++)
         {
-            // ´´½¨ DayConfig ¶ÔÏó
+            // åˆ›å»º DayConfig å¯¹è±¡
             var dayConfig = ScriptableObject.CreateInstance<DayConfig>();
             dayConfig.gameDayDuration = gameDayDuration;
 
-            // Ëæ»úÆ«ÒÆ£¨¡À5%£©
+            // éšæœºåç§»ï¼ˆÂ±5%ï¼‰
             float randomFactor = Random.Range(-0.05f, 0.05f);
             dayConfig.sunriseStartTime = sunriseStartBase * gameDayDuration * (1 + randomFactor);
             dayConfig.sunriseEndTime = sunriseEndBase * gameDayDuration * (1 + randomFactor);
             dayConfig.sunsetStartTime = sunsetStartBase * gameDayDuration * (1 + randomFactor);
             dayConfig.sunsetEndTime = sunsetEndBase * gameDayDuration * (1 + randomFactor);
 
-            // È·±£Ê±¼äË³ĞòÕıÈ·
+            // ç¡®ä¿æ—¶é—´é¡ºåºæ­£ç¡®
             dayConfig.sunriseEndTime = Mathf.Max(dayConfig.sunriseStartTime + 0.05f * gameDayDuration, dayConfig.sunriseEndTime);
             dayConfig.sunsetStartTime = Mathf.Max(dayConfig.sunriseEndTime + 0.05f * gameDayDuration, dayConfig.sunsetStartTime);
             dayConfig.sunsetEndTime = Mathf.Min(dayConfig.sunsetStartTime + 0.1f * gameDayDuration, gameDayDuration);
 
-            // ÉèÖÃ dayName£¨Ê¹ÓÃ seasonName ×Ö¶Î£©
+            // è®¾ç½® dayNameï¼ˆä½¿ç”¨ seasonName å­—æ®µï¼‰
             dayConfig.dayName = $"{seasonName}_{i}";
 
-            // ±£´æµ½ SeasonConfig Í¬Ò»Ä¿Â¼
+            // ä¿å­˜åˆ° SeasonConfig åŒä¸€ç›®å½•
             string dayAssetPath = Path.Combine(configFolder, $"{dayConfig.dayName}.asset");
             AssetDatabase.CreateAsset(dayConfig, dayAssetPath);
 
-            // Ìí¼Óµ½ SeasonConfig µÄ days ÁĞ±í
+            // æ·»åŠ åˆ° SeasonConfig çš„ days åˆ—è¡¨
             targetConfig.days.Add(dayConfig);
         }
 
-        // ¸üĞÂ²¢±£´æÅäÖÃ
+        // æ›´æ–°å¹¶ä¿å­˜é…ç½®
         EditorUtility.SetDirty(targetConfig);
         AssetDatabase.SaveAssets();
     }

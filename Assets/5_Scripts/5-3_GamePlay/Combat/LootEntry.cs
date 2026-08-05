@@ -1,4 +1,4 @@
-// Õ½ÀûÆ·ÌõÄ¿Àà
+// æˆ˜åˆ©å“æ¡ç›®ç±»
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -6,49 +6,49 @@ using UnityEngine;
 [System.Serializable]
 public class LootEntry
 {
-    [Tooltip("Õ½ÀûÆ·Ô¤ÖÆÌå")]
-    [JsonIgnore] // ±ÜÃâJSONĞòÁĞ»¯´Ë×Ö¶Î
+    [Tooltip("æˆ˜åˆ©å“é¢„åˆ¶ä½“")]
+    [JsonIgnore] // é¿å…JSONåºåˆ—åŒ–æ­¤å­—æ®µ
     [UnityEngine.Serialization.FormerlySerializedAs("LootPrefab")]
     public GameObject LootPrefab;
 
-    [Tooltip("Õ½ÀûÆ·Ô¤ÖÆÌåÃû³Æ")]
+    [Tooltip("æˆ˜åˆ©å“é¢„åˆ¶ä½“åç§°")]
     [SerializeField]
     [ReadOnly]
     public string LootPrefabName = "";
 
-    [Tooltip("µôÂä¸ÅÂÊ (0-1)")]
+    [Tooltip("æ‰è½æ¦‚ç‡ (0-1)")]
     [Range(0f, 1f)]
     public float DropChance = 1f;
 
-    [Tooltip("×îĞ¡µôÂäÊıÁ¿")]
+    [Tooltip("æœ€å°æ‰è½æ•°é‡")]
     public int MinAmount = 1;
 
-    [Tooltip("×î´óµôÂäÊıÁ¿")]
+    [Tooltip("æœ€å¤§æ‰è½æ•°é‡")]
     public int MaxAmount = 1;
 
-    // ±à¼­Æ÷ÑéÖ¤·½·¨£¬È·±£ÊıÖµÓĞĞ§ĞÔ
+    // ç¼–è¾‘å™¨éªŒè¯æ–¹æ³•ï¼Œç¡®ä¿æ•°å€¼æœ‰æ•ˆæ€§
     public void OnValidate()
     {
 #if UNITY_EDITOR
-        // ¸üĞÂÔ¤ÖÆÌåÃû³Æ
+        // æ›´æ–°é¢„åˆ¶ä½“åç§°
         if (LootPrefab != null)
         {
             LootPrefabName = LootPrefab.name;
         }
         
-        // È·±£µôÂäÊıÁ¿·¶Î§ÓĞĞ§
-        MinAmount = Mathf.Max(0, MinAmount); // È·±£×îĞ¡ÊıÁ¿²»Ğ¡ÓÚ0
-        MaxAmount = Mathf.Max(0, MaxAmount); // È·±£×î´óÊıÁ¿²»Ğ¡ÓÚ0
+        // ç¡®ä¿æ‰è½æ•°é‡èŒƒå›´æœ‰æ•ˆ
+        MinAmount = Mathf.Max(0, MinAmount); // ç¡®ä¿æœ€å°æ•°é‡ä¸å°äº0
+        MaxAmount = Mathf.Max(0, MaxAmount); // ç¡®ä¿æœ€å¤§æ•°é‡ä¸å°äº0
         
-        // È·±£×îĞ¡ÊıÁ¿²»»á³¬¹ı×î´óÊıÁ¿£¨µ÷Õû×î´óÖµ¶ø²»ÊÇ×îĞ¡Öµ£©
+        // ç¡®ä¿æœ€å°æ•°é‡ä¸ä¼šè¶…è¿‡æœ€å¤§æ•°é‡ï¼ˆè°ƒæ•´æœ€å¤§å€¼è€Œä¸æ˜¯æœ€å°å€¼ï¼‰
         if (MinAmount > MaxAmount)
         {
-            MaxAmount = MinAmount; // µ÷Õû×î´óÊıÁ¿Îª×îĞ¡ÊıÁ¿
+            MaxAmount = MinAmount; // è°ƒæ•´æœ€å¤§æ•°é‡ä¸ºæœ€å°æ•°é‡
         }
 #endif
     }
 
-    // ÖØÖÃ·½·¨£¬ÓÃÓÚÇå³ıÒıÓÃµ«±£ÁôÃû³Æ
+    // é‡ç½®æ–¹æ³•ï¼Œç”¨äºæ¸…é™¤å¼•ç”¨ä½†ä¿ç•™åç§°
     public void ClearPrefabReference()
     {
         LootPrefab = null;

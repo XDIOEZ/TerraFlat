@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
-[NodeMenu("ActionNode/ËÑ²é/¸üĞÂ½ÇÉ«ËÑ²éÆ÷")]
+[NodeMenu("ActionNode/æœæŸ¥/æ›´æ–°è§’è‰²æœæŸ¥å™¨")]
 public class node_ItemDetector : ActionNode
 {
     private long _requestVersion;
@@ -16,7 +16,7 @@ public class node_ItemDetector : ActionNode
 
     protected override void OnStop()
     {
-        // ¿ÉÑ¡£ºÇåÀí²Ù×÷
+        // å¯é€‰ï¼šæ¸…ç†æ“ä½œ
     }
 
     protected override State OnUpdate()

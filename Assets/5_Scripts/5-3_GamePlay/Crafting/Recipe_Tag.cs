@@ -7,22 +7,22 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "ĞÂºÏ³ÉÅä·½_Tag°æ±¾", menuName = "ºÏ³É/ºÏ³ÉÅä·½_Tag°æ±¾")]
+[CreateAssetMenu(fileName = "æ–°åˆæˆé…æ–¹_Tagç‰ˆæœ¬", menuName = "åˆæˆ/åˆæˆé…æ–¹_Tagç‰ˆæœ¬")]
 public class Recipe_Tag : ScriptableObject
 {
-    [Header("Åä·½ÁĞ±í")]
+    [Header("é…æ–¹åˆ—è¡¨")]
     public List<CraftingIngredient_Tag> Ingredient_Tags = new List<CraftingIngredient_Tag>();
-    [Header("²úÎïÁĞ±í")]
+    [Header("äº§ç‰©åˆ—è¡¨")]
     public List<Result_List> results = new List<Result_List>();
-    [Header("Åä·½ÀàĞÍ")]
+    [Header("é…æ–¹ç±»å‹")]
     public RecipeType recipeType = RecipeType.Crafting;
-    [Header("ºÏ³ÉË³Ğò")]
-    public bool isOrdered = false;//ÊÇ·ñ¿ÉÒÔËæ±ã°Ú·ÅË³Ğò
+    [Header("åˆæˆé¡ºåº")]
+    public bool isOrdered = false;//æ˜¯å¦å¯ä»¥éšä¾¿æ‘†æ”¾é¡ºåº
 
     /// <summary>
-    /// Éú³ÉÅä·½µÄÎ¨Ò»±êÊ¶¼ü
+    /// ç”Ÿæˆé…æ–¹çš„å”¯ä¸€æ ‡è¯†é”®
     /// </summary>
-    /// <returns>Åä·½¼üÖµ×Ö·û´®</returns>
+    /// <returns>é…æ–¹é”®å€¼å­—ç¬¦ä¸²</returns>
     public string GetRecipeKey()
     {
         if (Ingredient_Tags == null || Ingredient_Tags.Count == 0)
@@ -32,7 +32,7 @@ public class Recipe_Tag : ScriptableObject
         
         if (isOrdered)
         {
-            // ÓĞĞòÅä·½£º°´Ô­Ê¼Ë³ĞòÉú³ÉKey
+            // æœ‰åºé…æ–¹ï¼šæŒ‰åŸå§‹é¡ºåºç”ŸæˆKey
             foreach (var ingredient in Ingredient_Tags)
             {
                 keyBuilder.Append(GetIngredientKey(ingredient));
@@ -41,7 +41,7 @@ public class Recipe_Tag : ScriptableObject
         }
         else
         {
-            // ÎŞĞòÅä·½£º°´±êÇ©ÄÚÈİÅÅĞòºóÉú³ÉKey
+            // æ— åºé…æ–¹ï¼šæŒ‰æ ‡ç­¾å†…å®¹æ’åºåç”ŸæˆKey
             var sortedIngredients = new List<string>();
             foreach (var ingredient in Ingredient_Tags)
             {
@@ -56,7 +56,7 @@ public class Recipe_Tag : ScriptableObject
             }
         }
         
-        // ÒÆ³ıÄ©Î²µÄ·Ö¸ô·û
+        // ç§»é™¤æœ«å°¾çš„åˆ†éš”ç¬¦
         if (keyBuilder.Length > 0 && keyBuilder[keyBuilder.Length - 1] == '|')
         {
             keyBuilder.Length--;
@@ -66,10 +66,10 @@ public class Recipe_Tag : ScriptableObject
     }
     
     /// <summary>
-    /// »ñÈ¡µ¥¸öÅä·½²ÄÁÏµÄ¼üÖµ
+    /// è·å–å•ä¸ªé…æ–¹ææ–™çš„é”®å€¼
     /// </summary>
-    /// <param name="ingredient">Åä·½²ÄÁÏ</param>
-    /// <returns>²ÄÁÏ¼üÖµ×Ö·û´®</returns>
+    /// <param name="ingredient">é…æ–¹ææ–™</param>
+    /// <returns>ææ–™é”®å€¼å­—ç¬¦ä¸²</returns>
     private string GetIngredientKey(CraftingIngredient_Tag ingredient)
     {
         if (ingredient == null || ingredient.Tags == null)
@@ -89,16 +89,16 @@ public class Recipe_Tag : ScriptableObject
             ingredientKey.Append($"Tag:{tag};");
         }
         
-        // Ìí¼ÓÊıÁ¿
+        // æ·»åŠ æ•°é‡
         ingredientKey.Append($"*{ingredient.amount}");
         
         return ingredientKey.ToString();
     }
     
-    [Button("Êä³öÅä·½Key")]
+    [Button("è¾“å‡ºé…æ–¹Key")]
     private void DebugRecipeKey()
     {
-        Debug.Log($"Åä·½ [{name}] µÄKey: {GetRecipeKey()}");
+        Debug.Log($"é…æ–¹ [{name}] çš„Key: {GetRecipeKey()}");
     }
 }
 

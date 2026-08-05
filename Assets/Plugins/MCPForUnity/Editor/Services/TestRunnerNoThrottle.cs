@@ -39,6 +39,10 @@ namespace MCPForUnity.Editor.Services
         // Keep reference to avoid GC and set HideFlags to avoid serialization issues
         private static TestRunnerApi _api;
 
+        private static readonly MethodInfo IsTestRunActiveMethod = typeof(TestRunnerApi).GetMethod(
+            "IsRunActive",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
         static TestRunnerNoThrottle()
         {
             try
@@ -114,6 +118,38 @@ namespace MCPForUnity.Editor.Services
             McpLog.Info("[TestRunnerNoThrottle] Restored Interaction Mode after test run.");
         }
 
+        private static void ScheduleRestoreThrottling()
+        {
+            EditorApplication.update -= RestoreThrottlingWhenEditorIsStable;
+            EditorApplication.update += RestoreThrottlingWhenEditorIsStable;
+        }
+
+        private static void RestoreThrottlingWhenEditorIsStable()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode ||
+                EditorApplication.isCompiling ||
+                IsUnityTestRunActive())
+                return;
+
+            EditorApplication.update -= RestoreThrottlingWhenEditorIsStable;
+            RestoreThrottling();
+        }
+
+        private static bool IsUnityTestRunActive()
+        {
+            if (IsTestRunActiveMethod == null)
+                return true;
+
+            try
+            {
+                return IsTestRunActiveMethod.Invoke(null, null) is true;
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
         private static void ForceEditorToApplyInteractionPrefs()
         {
             try
@@ -140,7 +176,9 @@ namespace MCPForUnity.Editor.Services
 
             public void RunFinished(ITestResultAdaptor result)
             {
-                RestoreThrottling();
+                // 不在 TestRunner 的 RunFinished 回调栈里反射切换 Editor InteractionMode。
+                // Unity 2022.3 在退出 PlayMode 时执行该操作可能破坏原生分配器并触发 SIGSEGV。
+                ScheduleRestoreThrottling();
             }
 
             public void TestStarted(ITestAdaptor test) { }

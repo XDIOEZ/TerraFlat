@@ -96,7 +96,7 @@ namespace TheKiwiCoder {
                 });
             });
             toolbarMenu.menu.AppendSeparator();
-            toolbarMenu.menu.AppendAction("ĞÂ½¨ĞĞÎªÊ÷", (a) => CreateNewTree("NewBehaviourTree"));
+            toolbarMenu.menu.AppendAction("æ–°å»ºè¡Œä¸ºæ ‘", (a) => CreateNewTree("NewBehaviourTree"));
 
             // New Tree Dialog
             treeNameField = root.Q<TextField>("TreeName");
@@ -199,16 +199,16 @@ namespace TheKiwiCoder {
 
         void CreateNewTree(string assetName)
         {
-            // »ñÈ¡ Project ´°¿Úµ±Ç°Ñ¡ÖĞµÄÎÄ¼ş¼ĞÂ·¾¶
+            // è·å– Project çª—å£å½“å‰é€‰ä¸­çš„æ–‡ä»¶å¤¹è·¯å¾„
             string folderPath = GetSelectedPathOrFallback();
 
-            // Èç¹ûÃ»ÓĞÑ¡ÖĞÎÄ¼ş¼Ğ£¬ÔòÄ¬ÈÏµ½ "Assets/_BehaviourTrees"
+            // å¦‚æœæ²¡æœ‰é€‰ä¸­æ–‡ä»¶å¤¹ï¼Œåˆ™é»˜è®¤åˆ° "Assets/_BehaviourTrees"
             if (string.IsNullOrEmpty(folderPath) || folderPath == "Assets")
             {
                 folderPath = "Assets/_BehaviourTrees";
             }
 
-            // Èç¹ûÎÄ¼ş¼Ğ²»´æÔÚ£¬ÔòÖğ²ã´´½¨
+            // å¦‚æœæ–‡ä»¶å¤¹ä¸å­˜åœ¨ï¼Œåˆ™é€å±‚åˆ›å»º
             if (!AssetDatabase.IsValidFolder(folderPath))
             {
                 string[] parts = folderPath.Split('/');
@@ -224,10 +224,10 @@ namespace TheKiwiCoder {
                 }
             }
 
-            // ×îÖÕ asset Â·¾¶
+            // æœ€ç»ˆ asset è·¯å¾„
             string path = Path.Combine(folderPath, $"{assetName}.asset");
 
-            // Èç¹ûÒÑÓĞÍ¬ÃûÎÄ¼ş£¬Ôò¾¯¸æ
+            // å¦‚æœå·²æœ‰åŒåæ–‡ä»¶ï¼Œåˆ™è­¦å‘Š
             if (AssetDatabase.LoadAssetAtPath<BehaviourTree>(path) != null)
             {
                 Debug.LogWarning($"Asset already exists at: {path}");
@@ -237,22 +237,22 @@ namespace TheKiwiCoder {
             Debug.Log($"Creating new BehaviourTree at: {path}");
 
             BehaviourTree tree = ScriptableObject.CreateInstance<BehaviourTree>();
-            tree.name = assetName;  // ×¢ÒâÕâÀïÊÇ assetName£¬²»ÊÇ treeNameField.value£¬±ÜÃânull
+            tree.name = assetName;  // æ³¨æ„è¿™é‡Œæ˜¯ assetNameï¼Œä¸æ˜¯ treeNameField.valueï¼Œé¿å…null
 
             AssetDatabase.CreateAsset(tree, path);
             AssetDatabase.SaveAssets();
 
-            // ×Ô¶¯Ñ¡ÖĞĞÂ½¨µÄ×ÊÔ´
+            // è‡ªåŠ¨é€‰ä¸­æ–°å»ºçš„èµ„æº
             Selection.activeObject = tree;
             EditorGUIUtility.PingObject(tree);
         }
 
-        // ¹¤¾ß·½·¨£ºÓÅÏÈ»ñÈ¡Ñ¡ÖĞÎÄ¼ş¼ĞÂ·¾¶£¬·ñÔò·µ»ØÄ¬ÈÏ
+        // å·¥å…·æ–¹æ³•ï¼šä¼˜å…ˆè·å–é€‰ä¸­æ–‡ä»¶å¤¹è·¯å¾„ï¼Œå¦åˆ™è¿”å›é»˜è®¤
         static string GetSelectedPathOrFallback()
         {
             string path = "Assets";
 
-            // Èç¹ûÑ¡ÖĞÁËÄ³¸ö×ÊÔ´
+            // å¦‚æœé€‰ä¸­äº†æŸä¸ªèµ„æº
             foreach (var obj in Selection.GetFiltered<UnityEngine.Object>(SelectionMode.Assets))
             {
                 path = AssetDatabase.GetAssetPath(obj);
@@ -262,7 +262,7 @@ namespace TheKiwiCoder {
                 }
                 break;
             }
-            return path.Replace("\\", "/"); // ±£Ö¤Â·¾¶·Ö¸ô·û
+            return path.Replace("\\", "/"); // ä¿è¯è·¯å¾„åˆ†éš”ç¬¦
         }
 
     }

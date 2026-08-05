@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/ÐÐ¶¯/±¼ÅÜ")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/å¥”è·‘")]
 public class RunAway : ActionNode
 {
     public bool isRunning = false;

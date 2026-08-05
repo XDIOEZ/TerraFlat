@@ -5,16 +5,16 @@ using UltEvents;
 using UnityEngine;
 
 /// <summary>
-/// ½»»¥Ä£¿é£¨Module£©
-/// - ¸ºÔğ´¦ÀíÓëÎïÆ·µÄ½»»¥Âß¼­
-/// - ×ñÑ­ IInteract ½Ó¿Ú
+/// äº¤äº’æ¨¡å—ï¼ˆModuleï¼‰
+/// - è´Ÿè´£å¤„ç†ä¸ç‰©å“çš„äº¤äº’é€»è¾‘
+/// - éµå¾ª IInteract æ¥å£
 /// </summary>
 public class Mod_InteractReciver : Module, IInteractable
 {
-    #region ÊôĞÔºÍ×Ö¶Î
+    #region å±æ€§å’Œå­—æ®µ
 
-    [Header("Ä£¿éÊı¾İ")]
-    [Tooltip("½»»¥Ä£¿éµÄÀ©Õ¹Êı¾İ")]
+    [Header("æ¨¡å—æ•°æ®")]
+    [Tooltip("äº¤äº’æ¨¡å—çš„æ‰©å±•æ•°æ®")]
     public Ex_ModData modData;
 
     public override ModuleData _Data
@@ -23,8 +23,8 @@ public class Mod_InteractReciver : Module, IInteractable
         set => modData = (Ex_ModData)value;
     }
 
-    [Header("½»»¥×´Ì¬")]
-    [Tooltip("µ±Ç°ÕıÔÚ½»»¥µÄÎïÆ·")]
+    [Header("äº¤äº’çŠ¶æ€")]
+    [Tooltip("å½“å‰æ­£åœ¨äº¤äº’çš„ç‰©å“")]
     public Item CurrentInteractItem;
 
     [ShowInInspector]
@@ -34,7 +34,7 @@ public class Mod_InteractReciver : Module, IInteractable
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ·½·¨
+    #region ç”Ÿå‘½å‘¨æœŸæ–¹æ³•
 
     private void OnValidate()
     {
@@ -45,7 +45,7 @@ public class Mod_InteractReciver : Module, IInteractable
 
     public override void Awake()
     {
-        base.Awake(); // µ÷ÓÃ»ùÀà·½·¨
+        base.Awake(); // è°ƒç”¨åŸºç±»æ–¹æ³•
 
         if (_Data != null)
             _Data.ID = ModText.Interact;
@@ -62,12 +62,12 @@ public class Mod_InteractReciver : Module, IInteractable
 
     #endregion
 
-    #region ½»»¥·½·¨
+    #region äº¤äº’æ–¹æ³•
 
     /// <summary>
-    /// ¿ªÊ¼½»»¥
+    /// å¼€å§‹äº¤äº’
     /// </summary>
-    /// <param name="interacter">½»»¥Õß</param>
+    /// <param name="interacter">äº¤äº’è€…</param>
     public void OnInteractStart(Item playerItem)
     {
         Interact_Start(playerItem);
@@ -80,49 +80,49 @@ public class Mod_InteractReciver : Module, IInteractable
 
     public void Interact_Start(Item interacter)
     {
-        // ¼ì²éÎïÆ·ÊÇ·ñ¿ÉÊ°È¡ ¡ú ¿ÉÊ°È¡Ôò½ûÖ¹½»»¥
+        // æ£€æŸ¥ç‰©å“æ˜¯å¦å¯æ‹¾å– â†’ å¯æ‹¾å–åˆ™ç¦æ­¢äº¤äº’
         if (item.itemData.Stack.CanBePickedUp == true)
         {
-            Debug.Log($"ÎïÆ· {item.name} ¿ÉÊ°È¡£¬ÒÑ½ûÖ¹½»»¥");
+            Debug.Log($"ç‰©å“ {item.name} å¯æ‹¾å–ï¼Œå·²ç¦æ­¢äº¤äº’");
             return;
         }
-        // ±ê¼Ç½»»¥ÎïÆ·
+        // æ ‡è®°äº¤äº’ç‰©å“
         CurrentInteractItem = interacter;
         OnAction_Start.Invoke(interacter);
     }
 
     /// <summary>
-    /// ¸üĞÂ½»»¥¹ı³Ì
+    /// æ›´æ–°äº¤äº’è¿‡ç¨‹
     /// </summary>
-    /// <param name="interacter">½»»¥Õß</param>
+    /// <param name="interacter">äº¤äº’è€…</param>
     public void Interact_Update(Item interacter = null)
     {
         OnAction_Update?.Invoke(interacter);
     }
 
     /// <summary>
-    /// È¡Ïû½»»¥
+    /// å–æ¶ˆäº¤äº’
     /// </summary>
-    /// <param name="interacter">½»»¥Õß</param>
+    /// <param name="interacter">äº¤äº’è€…</param>
     public void Interact_Cancel(Item interacter = null)
     {
-        // Çå³ı½»»¥ÎïÆ·
+        // æ¸…é™¤äº¤äº’ç‰©å“
         CurrentInteractItem = null;
 
-        // ´¥·¢È¡ÏûÊÂ¼ş
+        // è§¦å‘å–æ¶ˆäº‹ä»¶
         OnAction_Stop?.Invoke(interacter);
     }
 
     #endregion
 
-    #region µ÷ÊÔ·½·¨
+    #region è°ƒè¯•æ–¹æ³•
 
     #endregion
 
-    #region Ã¶¾Ù¶¨Òå
+    #region æšä¸¾å®šä¹‰
 
     /// <summary>
-    /// ÈÕÖ¾¼¶±ğ
+    /// æ—¥å¿—çº§åˆ«
     /// </summary>
     private enum LogLevel
     {

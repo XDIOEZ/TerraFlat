@@ -2,59 +2,59 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/ËÑ²é/¸ù¾İItemTypeÉè¶¨ÎªÄ¿±ê")]
+[NodeMenu("ActionNode/æœæŸ¥/æ ¹æ®ItemTypeè®¾å®šä¸ºç›®æ ‡")]
 public class GetItemPosition : ActionNode
 {
-    #region Ã¶¾Ù¶¨Òå
+    #region ç§»åŠ¨è¡Œä¸ºæšä¸¾
     public enum MovementBehaviorType
     {
-        ×·»÷,
-        ÌÓÀë
+        è¿½å‡»,
+        é€ƒç¦»
     }
     #endregion
 
-    #region ĞòÁĞ»¯×Ö¶Î
-    [Header("ÎïÆ·ËÑË÷ÉèÖÃ")]
-    [Tooltip("ÒªËÑË÷µÄÎïÆ·ÀàĞÍÁĞ±í£¨²¿·ÖÆ¥Åä£©")]
+    #region åºåˆ—åŒ–å­—æ®µ
+    [Header("ç‰©å“æœç´¢è®¾ç½®")]
+    [Tooltip("è¦æœç´¢çš„ç‰©å“ç±»å‹åˆ—è¡¨ï¼ˆéƒ¨åˆ†åŒ¹é…ï¼‰")]
     public List<string> ItemType = new List<string>();
 
-    [Header("ĞĞÎªÉèÖÃ")]
-    public MovementBehaviorType BehaviorType = MovementBehaviorType.×·»÷;
+    [Header("è¡Œä¸ºè®¾ç½®")]
+    public MovementBehaviorType BehaviorType = MovementBehaviorType.è¿½å‡»;
 
-    [Header("ÌÓÀëĞĞÎª²ÎÊı")]
-    [Tooltip("ÌÓÀë¾àÀë·¶Î§£ºx=×îĞ¡£¬y=×î´ó")]
+    [Header("é€ƒç¦»è¡Œä¸ºå‚æ•°")]
+    [Tooltip("é€ƒç¦»è·ç¦»èŒƒå›´ï¼šx=æœ€å°ï¼Œy=æœ€å¤§")]
     public Vector2 fleeDistanceRange = new Vector2(7f, 7f);
 
-    [Tooltip("ÌÓÀë½Ç¶È·¶Î§£¨¶È£©")]
+    [Tooltip("é€ƒç¦»è§’åº¦èŒƒå›´ï¼ˆåº¦ï¼‰")]
     [Range(0f, 180f)]
     public float fleeAngleRange = 45f;
 
-    [Header("ºÚ°åÉèÖÃ")]
+    [Header("é»‘æ¿è®¾ç½®")]
     public bool setBlackboardTarget = true;
     public bool doNothing = false;
 
     public Mover mover => context.mover;
     #endregion
 
-    #region ÖØĞ´·½·¨
+    #region é‡å†™æ–¹æ³•
     protected override void OnStart() { }
 
     protected override void OnStop() { }
 
     protected override State OnUpdate()
     {
-        // ²éÕÒÄ¿±êÎïÆ·
+        // æŸ¥æ‰¾ç›®æ ‡ç‰©å“
         Item targetItem = context.itemDetector.GetFirstItemByIdNamesFast(itemIds: ItemType);
         if (targetItem == null)
         {
             return State.Failure;
         }
 
-        // Èç¹ûÉèÖÃÎª²»Ö´ĞĞÈÎºÎ²Ù×÷£¬Ö±½Ó·µ»Ø³É¹¦
+        // å¦‚æœè®¾ç½®ä¸ºä¸æ‰§è¡Œä»»ä½•æ“ä½œï¼Œç›´æ¥è¿”å›æˆåŠŸ
         if (doNothing)
             return State.Success;
 
-        // ¸ù¾İĞĞÎªÀàĞÍ´¦Àí
+        // æ ¹æ®è¡Œä¸ºç±»å‹å¤„ç†
         ProcessMovementBehavior(targetItem);
         return State.Success;
     }
@@ -66,24 +66,24 @@ public class GetItemPosition : ActionNode
 
         Vector2 currentPosition = context.transform.position;
 
-        if (BehaviorType == MovementBehaviorType.ÌÓÀë)
+        if (BehaviorType == MovementBehaviorType.é€ƒç¦»)
         {
             DrawFleeConeGizmo(currentPosition);
         }
     }
     #endregion
 
-    #region ÒÆ¶¯Âß¼­
+    #region ç§»åŠ¨é€»è¾‘
     private void ProcessMovementBehavior(Item targetItem)
     {
         Vector2 targetPos = targetItem.transform.position;
         switch (BehaviorType)
         {
-            case MovementBehaviorType.×·»÷:
+            case MovementBehaviorType.è¿½å‡»:
                 ProcessChaseMovement(targetPos);
                 break;
 
-            case MovementBehaviorType.ÌÓÀë:
+            case MovementBehaviorType.é€ƒç¦»:
                 ProcessFleeMovement(targetPos);
                 break;
         }
@@ -99,15 +99,15 @@ public class GetItemPosition : ActionNode
         Vector2 currentPosition = context.transform.position;
         Vector2 awayDir = (currentPosition - targetPosition).normalized;
 
-        // Ëæ»ú½Ç¶È
+        // éšæœºè§’åº¦
         float angleOffset = Random.Range(-fleeAngleRange * 0.5f, fleeAngleRange * 0.5f);
         Vector2 finalDir = RotateVector2(awayDir, angleOffset);
 
-        // Ëæ»ú¾àÀë
+        // éšæœºè·ç¦»
         float fleeDistance = Random.Range(fleeDistanceRange.x, fleeDistanceRange.y);
         Vector2 escapePoint = currentPosition + finalDir * fleeDistance;
 
-        // ¾­¹ı½âËøµã´¦Àí£¨±Ü¿ªÎ£ÏÕµã£©
+        // ç»è¿‡è§£é”ç‚¹å¤„ç†ï¼ˆé¿å¼€å±é™©ç‚¹ï¼‰
         escapePoint = GetUnlockedTargetPosition(escapePoint);
 
         SetTarget(escapePoint);
@@ -121,7 +121,7 @@ public class GetItemPosition : ActionNode
     }
     #endregion
 
-    #region ¸¨ÖúÂß¼­
+    #region è¾…åŠ©é€»è¾‘
     private Vector2 RotateVector2(Vector2 vector, float angleDegrees)
     {
         float rad = angleDegrees * Mathf.Deg2Rad;
@@ -134,7 +134,7 @@ public class GetItemPosition : ActionNode
     }
 
     /// <summary>
-    /// ±Ü¿ªÎ£ÏÕµãÂß¼­£¨¿É¼òµ¥¸ÄÎªÑ°Â·¼ì²â£©
+    /// é¿å¼€å±é™©ç‚¹é€»è¾‘ï¼ˆå¯ç®€å•æ”¹ä¸ºå¯»è·¯æ£€æµ‹ï¼‰
     /// </summary>
     private Vector2 GetUnlockedTargetPosition(Vector2 targetPosition)
     {
@@ -149,7 +149,7 @@ public class GetItemPosition : ActionNode
             return currentPos + rotated * dist;
         }
 
-        // ±Ü¿ªÎ£ÏÕµã
+        // é¿å¼€å±é™©ç‚¹
         if (context.mover.MemoryPath_Forbidden.Count > 0)
         {
             Vector2 avgDangerDir = Vector2.zero;
@@ -168,26 +168,26 @@ public class GetItemPosition : ActionNode
     }
     #endregion
 
-    #region Gizmos ¿ÉÊÓ»¯Âß¼­
+    #region Gizmos å¯è§†åŒ–é€»è¾‘
     private void DrawFleeConeGizmo(Vector2 currentPosition)
     {
         Gizmos.color = new Color(1f, 0.6f, 0.1f, 0.3f);
 
-        // ´Óµ±Ç°Î»ÖÃ»æÖÆÒ»¸öÉÈĞÎ
+        // ä»å½“å‰ä½ç½®ç»˜åˆ¶ä¸€ä¸ªæ‰‡å½¢
         float minDist = fleeDistanceRange.x;
         float maxDist = fleeDistanceRange.y;
         float halfAngle = fleeAngleRange * 0.5f;
 
-        Vector2 forward = -context.transform.right; // ¼ÙÉè¡°ÌÓÀë¡±ÊÇ³¯±³Ãæ·½Ïò
+        Vector2 forward = -context.transform.right; // å‡è®¾â€œé€ƒç¦»â€æ˜¯æœèƒŒé¢æ–¹å‘
 
-        // »æÖÆ±ßÔµÏß
+        // ç»˜åˆ¶è¾¹ç¼˜çº¿
         Vector2 leftEdge = RotateVector2(forward, -halfAngle);
         Vector2 rightEdge = RotateVector2(forward, halfAngle);
 
         Gizmos.DrawLine(currentPosition, currentPosition + leftEdge * maxDist);
         Gizmos.DrawLine(currentPosition, currentPosition + rightEdge * maxDist);
 
-        // »æÖÆÉÈĞÎ»¡Ïß
+        // ç»˜åˆ¶æ‰‡å½¢å¼§çº¿
         int segments = 16;
         Vector2 prev = currentPosition + RotateVector2(forward, -halfAngle) * maxDist;
         for (int i = 1; i <= segments; i++)
@@ -198,7 +198,7 @@ public class GetItemPosition : ActionNode
             prev = next;
         }
 
-        // »æÖÆÄÚÈ¦£¨×îĞ¡¾àÀë£©
+        // ç»˜åˆ¶å†…åœˆï¼ˆæœ€å°è·ç¦»ï¼‰
         Gizmos.color = new Color(1f, 0.6f, 0.1f, 0.15f);
         prev = currentPosition + RotateVector2(forward, -halfAngle) * minDist;
         for (int i = 1; i <= segments; i++)
@@ -211,7 +211,7 @@ public class GetItemPosition : ActionNode
     }
     #endregion
 
-    #region ÑéÖ¤
+    #region éªŒè¯
     private void OnValidate()
     {
         fleeDistanceRange.x = Mathf.Max(0f, fleeDistanceRange.x);

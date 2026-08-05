@@ -3,32 +3,32 @@ using UnityEngine;
 using TheKiwiCoder;
 
 /// <summary>
-/// Ëæ»úÉú³ÉÄ¿±êÎ»ÖÃ£¬²¢¿¼ÂÇÍ¬ÀàÎüÒıÁ¦
+/// éšæœºç”Ÿæˆç›®æ ‡ä½ç½®ï¼Œå¹¶è€ƒè™‘åŒç±»å¸å¼•åŠ›
 /// </summary>
 public class RandomPosition : ActionNode
 {
-    #region ×Ö¶Î
+    #region å­—æ®µ
 
-    [Header("ÓÎµ´·¶Î§°ë¾¶")]
+    [Header("æ¸¸è¡èŒƒå›´åŠå¾„")]
     public float wanderRadius = 10f;
     
     public bool TrueRandom;
 
-    [Header("Í¬ÀàÎüÒı²ÎÊı")]
+    [Header("åŒç±»å¸å¼•å‚æ•°")]
     public float sameTypeAttraction = 3f;
 
     private Vector3 lastValidPosition = Vector3.zero;
     private const int maxTries = 5;
 
-    // ÖØÓÃÁĞ±í¼õÉÙGC·ÖÅä
+    // é‡ç”¨åˆ—è¡¨å‡å°‘GCåˆ†é…
     private readonly List<Vector2> sameTypePositions = new List<Vector2>(8);
     
-    // GizmosÏÔÊ¾Ïà¹Ø
+    // Gizmosæ˜¾ç¤ºç›¸å…³
     private Vector3 gizmoPosition = Vector3.zero;
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
 
     protected override void OnStart()
     {
@@ -37,12 +37,12 @@ public class RandomPosition : ActionNode
 
     protected override void OnStop()
     {
-        // ÎŞĞè²Ù×÷
+        // æ— éœ€æ“ä½œ
     }
 
     #endregion
 
-    #region ĞĞÎªÂß¼­
+    #region è¡Œä¸ºé€»è¾‘
 
     protected override State OnUpdate()
     {
@@ -54,54 +54,54 @@ public class RandomPosition : ActionNode
         }
         else
         {
-            // ÎŞµØÍ¼Ô¼Êø£¬Ö±½ÓËæ»ú
+            // æ— åœ°å›¾çº¦æŸï¼Œç›´æ¥éšæœº
             return HandleFreeMovement(sameTypeDirection);
         }
     }
 
     #endregion
 
-    #region Ë½ÓĞ·½·¨
+    #region ç§æœ‰æ–¹æ³•
 
 private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
 {
     Vector3 chosenPosition = Vector3.zero;
     bool found = false;
     int attempts = 0;
-    const int maxAttempts = 5; // Ôö¼Ó³¢ÊÔ´ÎÊı
+    const int maxAttempts = 5; // å¢åŠ å°è¯•æ¬¡æ•°
 
     Vector3 originalPosition = context.transform.position;
 
     while (attempts < maxAttempts)
     {
-        // ÔÚÔ²ĞÎ·¶Î§ÄÚÉú³ÉËæ»úÆ«ÒÆ
+        // åœ¨åœ†å½¢èŒƒå›´å†…ç”Ÿæˆéšæœºåç§»
         Vector2 randomOffset = Random.insideUnitCircle * wanderRadius;
 
-        // Ìí¼Ó·´ÏòÆ«ÒÆ
+        // æ·»åŠ åå‘åç§»
         if (lastValidPosition != originalPosition)
         {
             Vector2 direction = ((Vector2)originalPosition - (Vector2)lastValidPosition).normalized;
             randomOffset += direction * 0.5f;
         }
 
-        // Ìí¼ÓÍ¬ÀàÎüÒı
+        // æ·»åŠ åŒç±»å¸å¼•
         if (sameTypeDirection.sqrMagnitude > 0.001f)
         {
             randomOffset += sameTypeDirection * sameTypeAttraction;
         }
 
-        // Éú³É²âÊÔÎ»ÖÃA
+        // ç”Ÿæˆæµ‹è¯•ä½ç½®A
         Vector3 testPositionA = originalPosition + (Vector3)randomOffset;
         Vector2Int testPosIntA = Vector2Int.FloorToInt(testPositionA);
 
-        // ¼ì²éÎ»ÖÃAÊÇ·ñÎ£ÏÕ
+        // æ£€æŸ¥ä½ç½®Aæ˜¯å¦å±é™©
         if (IsDangerousTile(testPosIntA))
         {
-            // Î»ÖÃAÎ£ÏÕ£¬¼ÆËã¶Ô³ÆÎ»ÖÃB
+            // ä½ç½®Aå±é™©ï¼Œè®¡ç®—å¯¹ç§°ä½ç½®B
             Vector3 positionB = originalPosition - (Vector3)randomOffset;
             Vector2Int posIntB = Vector2Int.FloorToInt(positionB);
 
-            // ¼ì²éÎ»ÖÃBÊÇ·ñ°²È«
+            // æ£€æŸ¥ä½ç½®Bæ˜¯å¦å®‰å…¨
             if (!IsDangerousTile(posIntB))
             {
                 chosenPosition = positionB;
@@ -111,12 +111,12 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
             }
             else
             {
-                // Î»ÖÃBÒ²Î£ÏÕ£¬¼ÆËãÎ»ÖÃD (B-CÏòÁ¿*2)
+                // ä½ç½®Bä¹Ÿå±é™©ï¼Œè®¡ç®—ä½ç½®D (B-Cå‘é‡*2)
                 Vector3 vectorBC = positionB - originalPosition;
                 Vector3 positionD = positionB + vectorBC;
                 Vector2Int posIntD = Vector2Int.FloorToInt(positionD);
 
-                // ¼ì²éÎ»ÖÃDÊÇ·ñ°²È«
+                // æ£€æŸ¥ä½ç½®Dæ˜¯å¦å®‰å…¨
                 if (!IsDangerousTile(posIntD))
                 {
                     chosenPosition = positionD;
@@ -126,14 +126,14 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
                 }
                 else
                 {
-                    // Î»ÖÃDÒ²Î£ÏÕ£¬ÔÚÔ²ÄÚËæ»úÂäµãÈı´Î
+                    // ä½ç½®Dä¹Ÿå±é™©ï¼Œåœ¨åœ†å†…éšæœºè½ç‚¹ä¸‰æ¬¡
                     float radius = vectorBC.magnitude;
                     bool circlePointFound = false;
                     
-                    // ³¢ÊÔÈı´ÎÔ²ÄÚËæ»úµã
+                    // å°è¯•ä¸‰æ¬¡åœ†å†…éšæœºç‚¹
                     for (int i = 0; i < 3; i++)
                     {
-                        // ÔÚÒÔBÎªÔ²ĞÄ£¬°ë¾¶ÎªradiusµÄÔ²ÄÚËæ»úÉú³Éµã
+                        // åœ¨ä»¥Bä¸ºåœ†å¿ƒï¼ŒåŠå¾„ä¸ºradiusçš„åœ†å†…éšæœºç”Ÿæˆç‚¹
                         Vector2 randomInCircle = Random.insideUnitCircle * radius;
                         Vector3 positionEFG = positionB + (Vector3)randomInCircle;
                         Vector2Int posIntEFG = Vector2Int.FloorToInt(positionEFG);
@@ -157,7 +157,7 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
         }
         else
         {
-            // Î»ÖÃA°²È«
+            // ä½ç½®Aå®‰å…¨
             chosenPosition = testPositionA;
             found = true;
             gizmoPosition = chosenPosition;
@@ -167,10 +167,10 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
         attempts++;
     }
 
-    // Èç¹ûÇ°ÃæËùÓĞ³¢ÊÔ¶¼Ê§°ÜÁË£¬Ê¹ÓÃÒ»¸öÇ¿ÖÆµÄËæ»úµã£¨²»¹ÜÊÇ·ñÎ£ÏÕ£©
+    // å¦‚æœå‰é¢æ‰€æœ‰å°è¯•éƒ½å¤±è´¥äº†ï¼Œä½¿ç”¨ä¸€ä¸ªå¼ºåˆ¶çš„éšæœºç‚¹ï¼ˆä¸ç®¡æ˜¯å¦å±é™©ï¼‰
     if (!found)
     {
-        // Éú³É¸ü´óµÄËæ»úÆ«ÒÆ
+        // ç”Ÿæˆæ›´å¤§çš„éšæœºåç§»
         Vector2 finalOffset = Random.insideUnitCircle * wanderRadius * 2;
         
         if (sameTypeDirection.sqrMagnitude > 0.001f)
@@ -178,35 +178,35 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
 
         chosenPosition = originalPosition + (Vector3)finalOffset;
         gizmoPosition = chosenPosition;
-        Debug.Log("Ê¹ÓÃÇ¿ÖÆµÄËæ»úÎ»ÖÃ£¬¿ÉÄÜÎ£ÏÕ");
+        Debug.Log("ä½¿ç”¨å¼ºåˆ¶çš„éšæœºä½ç½®ï¼Œå¯èƒ½å±é™©");
     }
 
     SetTargetPosition(chosenPosition);
     return State.Success;
 }
 
-    // Î±´úÂë·½·¨£ºÅĞ¶ÏÊÇ·ñÎªÎ£ÏÕtile
+    // ä¼ªä»£ç æ–¹æ³•ï¼šåˆ¤æ–­æ˜¯å¦ä¸ºå±é™©tile
     private bool IsDangerousTile(Vector2Int tilePosition)
     {
-        // »ñÈ¡Ö¸¶¨Î»ÖÃµÄTileData
+        // è·å–æŒ‡å®šä½ç½®çš„TileData
         TileData tileData = context.tileEffectReceiver.Cache_map?.GetTile(tilePosition);
         if (tileData == null)
-            return true; // ¿ÕÎ»ÖÃÊÓÎªÎ£ÏÕ
+            return true; // ç©ºä½ç½®è§†ä¸ºå±é™©
             
-        // ¼ì²é³Í·£ÖµÊÇ·ñ´óÓÚµÈÓÚ5000
+        // æ£€æŸ¥æƒ©ç½šå€¼æ˜¯å¦å¤§äºç­‰äº5000
         return tileData.Penalty >= 5000;
     }
 
     private State HandleFreeMovement(Vector2 sameTypeDirection)
     {
-        // ÔÚÔ²ĞÎ·¶Î§ÄÚÉú³ÉËæ»úÆ«ÒÆ
+        // åœ¨åœ†å½¢èŒƒå›´å†…ç”Ÿæˆéšæœºåç§»
         Vector2 randomOffset = Random.insideUnitCircle * wanderRadius;
 
         if (sameTypeDirection.sqrMagnitude > 0.001f)
             randomOffset += sameTypeDirection * sameTypeAttraction;
 
         Vector3 targetPosition = context.transform.position + (Vector3)randomOffset;
-        // ÉèÖÃGizmosÏÔÊ¾Î»ÖÃ
+        // è®¾ç½®Gizmosæ˜¾ç¤ºä½ç½®
         gizmoPosition = targetPosition;
         
         SetTargetPosition(targetPosition, randomOffset);
@@ -215,14 +215,14 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
 
     private void SetTargetPosition(Vector3 worldPosition, Vector2? relativeOffset = null)
     {
-        // Ìí¼Ónull¼ì²éÒÔ±ÜÃâ¿ÕÒıÓÃÒì³£
+        // æ·»åŠ nullæ£€æŸ¥ä»¥é¿å…ç©ºå¼•ç”¨å¼‚å¸¸
         if (context != null && context.mover != null)
         {
             context.mover.TargetPosition = worldPosition;
         }
         else
         {
-            // Ìí¼ÓDebugÈÕÖ¾
+            // æ·»åŠ Debugæ—¥å¿—
             if (context == null)
             {
                 Debug.LogWarning("RandomPosition: context is null, cannot set target position!");
@@ -253,7 +253,7 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
     }
 
     /// <summary>
-    /// ¼ÆËãÍ¬ÀàÆ½¾ù·½Ïò
+    /// è®¡ç®—åŒç±»å¹³å‡æ–¹å‘
     /// </summary>
     private Vector2 GetSameTypeAverageDirection()
     {
@@ -295,85 +295,85 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
     
     public override void OnDrawGizmos()
     {
-        // ±£´æÔ­Ê¼GizmosÑÕÉ«
+        // ä¿å­˜åŸå§‹Gizmosé¢œè‰²
         Color originalColor = Gizmos.color;
         
-        // »æÖÆ¼ì²â·¶Î§£¨½öÔÚÔËĞĞÊ±£©
+        // ç»˜åˆ¶æ£€æµ‹èŒƒå›´ï¼ˆä»…åœ¨è¿è¡Œæ—¶ï¼‰
         if (Application.isPlaying && context != null)
         {
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(context.transform.position, 5f);
         }
         
-        // »æÖÆËæ»úÓÎµ´·¶Î§
+        // ç»˜åˆ¶éšæœºæ¸¸è¡èŒƒå›´
         DrawWanderRange();
         
-        // »æÖÆÄ¿±êÎ»ÖÃ±ê¼Ç
+        // ç»˜åˆ¶ç›®æ ‡ä½ç½®æ ‡è®°
         DrawTargetPositionMarker();
         
-        // »Ö¸´Ô­Ê¼ÑÕÉ«
+        // æ¢å¤åŸå§‹é¢œè‰²
         Gizmos.color = originalColor;
     }
     
     /// <summary>
-    /// »æÖÆËæ»úÓÎµ´·¶Î§
+    /// ç»˜åˆ¶éšæœºæ¸¸è¡èŒƒå›´
     /// </summary>
     private void DrawWanderRange()
     {
         if (context == null) return;
         
-        // ±£´æÔ­Ê¼GizmosÑÕÉ«
+        // ä¿å­˜åŸå§‹Gizmosé¢œè‰²
         Color originalColor = Gizmos.color;
         
-        // ÉèÖÃGizmosÑÕÉ«Îªµ­ÂÌÉ«°ëÍ¸Ã÷
+        // è®¾ç½®Gizmosé¢œè‰²ä¸ºæ·¡ç»¿è‰²åŠé€æ˜
         Gizmos.color = new Color(0.0f, 1.0f, 0.0f, 0.3f);
         
         Vector3 centerPosition = context != null ? context.transform.position : Vector3.zero;
         
-        // »æÖÆÔ²ĞÎ·¶Î§£¨ÊµĞÄ£©
+        // ç»˜åˆ¶åœ†å½¢èŒƒå›´ï¼ˆå®å¿ƒï¼‰
         DrawSolidDisc(centerPosition, wanderRadius);
         
-        // »æÖÆ±ß¿ò
+        // ç»˜åˆ¶è¾¹æ¡†
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(centerPosition, wanderRadius);
         
-        // »Ö¸´Ô­Ê¼ÑÕÉ«
+        // æ¢å¤åŸå§‹é¢œè‰²
         Gizmos.color = originalColor;
     }
     
     /// <summary>
-    /// »æÖÆÄ¿±êÎ»ÖÃ±ê¼Ç
+    /// ç»˜åˆ¶ç›®æ ‡ä½ç½®æ ‡è®°
     /// </summary>
     private void DrawTargetPositionMarker()
     {
-        // ±£´æÔ­Ê¼GizmosÑÕÉ«
+        // ä¿å­˜åŸå§‹Gizmosé¢œè‰²
         Color originalColor = Gizmos.color;
         
-        // ÉèÖÃGizmosÑÕÉ«
+        // è®¾ç½®Gizmosé¢œè‰²
         Gizmos.color = Color.yellow;
         
-        // »æÖÆÒ»¸öÔ²ĞÎ±ê¼Ç
+        // ç»˜åˆ¶ä¸€ä¸ªåœ†å½¢æ ‡è®°
         Gizmos.DrawWireSphere(gizmoPosition, 0.5f);
         
-        // »æÖÆÒ»¸öX±ê¼Ç
+        // ç»˜åˆ¶ä¸€ä¸ªXæ ‡è®°
         float size = 0.3f;
         Gizmos.DrawLine(gizmoPosition + new Vector3(size, size, 0), gizmoPosition + new Vector3(-size, -size, 0));
         Gizmos.DrawLine(gizmoPosition + new Vector3(-size, size, 0), gizmoPosition + new Vector3(size, -size, 0));
         
-        // »æÖÆÒ»¸öµã£¨Í¨¹ı»æÖÆĞ¡ÇòÊµÏÖ£©
+        // ç»˜åˆ¶ä¸€ä¸ªç‚¹ï¼ˆé€šè¿‡ç»˜åˆ¶å°çƒå®ç°ï¼‰
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(gizmoPosition, 0.1f);
         
-        // »Ö¸´Ô­Ê¼ÑÕÉ«
+        // æ¢å¤åŸå§‹é¢œè‰²
         Gizmos.color = originalColor;
     }
     
     /// <summary>
-    /// »æÖÆÊµĞÄÔ²ÅÌ
+    /// ç»˜åˆ¶å®å¿ƒåœ†ç›˜
     /// </summary>
     private void DrawSolidDisc(Vector3 center, float radius)
     {
-        // Í¨¹ı»æÖÆ¶à¸öÏß¶ÎÀ´Ä£ÄâÊµĞÄÔ²ÅÌĞ§¹û
+        // é€šè¿‡ç»˜åˆ¶å¤šä¸ªçº¿æ®µæ¥æ¨¡æ‹Ÿå®å¿ƒåœ†ç›˜æ•ˆæœ
         int segments = 32;
         float angleStep = (2f * Mathf.PI) / segments;
         
@@ -385,11 +385,11 @@ private State HandleMapConstrainedMovement(Vector2 sameTypeDirection)
             Vector3 point1 = center + new Vector3(Mathf.Cos(angle1) * radius, Mathf.Sin(angle1) * radius, 0);
             Vector3 point2 = center + new Vector3(Mathf.Cos(angle2) * radius, Mathf.Sin(angle2) * radius, 0);
             
-            // »æÖÆ´ÓÔ²ĞÄµ½±ßÔµµÄÏß¶Î
+            // ç»˜åˆ¶ä»åœ†å¿ƒåˆ°è¾¹ç¼˜çš„çº¿æ®µ
             Gizmos.DrawLine(center, point1);
             Gizmos.DrawLine(center, point2);
             
-            // »æÖÆ±ßÔµÏß¶Î
+            // ç»˜åˆ¶è¾¹ç¼˜çº¿æ®µ
             Gizmos.DrawLine(point1, point2);
         }
     }

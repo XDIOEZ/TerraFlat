@@ -12,7 +12,7 @@ namespace TheKiwiCoder
         [ShowInInspector]
         Context context;
 
-        public bool isRunning = false; // Ĭ��Ϊֹͣ״̬
+        public bool isRunning = false; // 默认为停止状态
         public Ex_ModData_MemoryPackable ModData;
         public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
 

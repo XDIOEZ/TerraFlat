@@ -6,17 +6,17 @@ public class GameTimeManager : SingletonMono<GameTimeManager>
 {/*
     protected override void Awake()
     {
-        DontDestroyOnLoad(gameObject); // ¿ç³¡¾°±£³Ö´æÔÚ
+        DontDestroyOnLoad(gameObject); // è·¨åœºæ™¯ä¿æŒå­˜åœ¨
     }
-    #region Ê±¼ä¹ÜÀíÊôÐÔ
-    [Header("Ê±¼äÉèÖÃ")]
+    #region æ—¶é—´ç®¡ç†å±žæ€§
+    [Header("æ—¶é—´è®¾ç½®")]
     [SerializeField] private float _timeScale = 1f;
     public float TimeScale
     {
         get => _timeScale;
         set
         {
-            _timeScale = Mathf.Max(0f, value); // ·ÀÖ¹¸ºÊý
+            _timeScale = Mathf.Max(0f, value); // é˜²æ­¢è´Ÿæ•°
         }
     }
 
@@ -29,7 +29,7 @@ public class GameTimeManager : SingletonMono<GameTimeManager>
             if (_isPaused == value) return;
 
             _isPaused = value;
-            Time.timeScale = _isPaused ? 0f : _timeScale; // ¿ØÖÆÈ«¾ÖÊ±¼äËõ·Å
+            Time.timeScale = _isPaused ? 0f : _timeScale; // æŽ§åˆ¶å…¨å±€æ—¶é—´ç¼©æ”¾
       
         }
     }
@@ -37,7 +37,7 @@ public class GameTimeManager : SingletonMono<GameTimeManager>
 
     #endregion
 
-    #region Ê±¼ä¸üÐÂÂß¼­
+    #region æ—¶é—´æ›´æ–°é€»è¾‘
     private void Update()
     {
 
@@ -45,7 +45,7 @@ public class GameTimeManager : SingletonMono<GameTimeManager>
 
     #endregion
 
-    #region ¹«¹²·½·¨
+    #region å…¬å…±æ–¹æ³•
     public void Pause()
     {
         IsPaused = true;

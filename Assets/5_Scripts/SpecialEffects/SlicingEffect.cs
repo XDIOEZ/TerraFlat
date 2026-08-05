@@ -3,31 +3,31 @@ using UnityEngine;
 
 public class SlicingEffect : GameEffect
 {
-    [Header("ÌØĞ§²ÎÊı")]
-    public int sampleFrames = 2; // ²ÉÑùÖ¡Êı
-    public float lifetime = 0.3f; // ÌØĞ§³ÖĞøÊ±¼ä
+    [Header("ç‰¹æ•ˆå‚æ•°")]
+    public int sampleFrames = 2; // é‡‡æ ·å¸§æ•°
+    public float lifetime = 0.3f; // ç‰¹æ•ˆæŒç»­æ—¶é—´
     
-    private Transform weaponTransform; // ÎäÆ÷±ä»»×é¼ş
-    private Vector2 startWeaponPosition; // ÎäÆ÷³õÊ¼Î»ÖÃ
+    private Transform weaponTransform; // æ­¦å™¨å˜æ¢ç»„ä»¶
+    private Vector2 startWeaponPosition; // æ­¦å™¨åˆå§‹ä½ç½®
     private bool hasStarted = false;
 
     public override void Effect(Transform Sender, object args)
     {
-        // ¼ÇÂ¼ÎäÆ÷³õÊ¼Î»ÖÃºÍ±ä»»×é¼ş
+        // è®°å½•æ­¦å™¨åˆå§‹ä½ç½®å’Œå˜æ¢ç»„ä»¶
         weaponTransform = Sender;
         startWeaponPosition = Sender.position;
         hasStarted = true;
         
-        // Æô¶¯ÌØĞ§³ÖĞøÊ±¼äĞ­³Ì
+        // å¯åŠ¨ç‰¹æ•ˆæŒç»­æ—¶é—´åç¨‹
         StartCoroutine(CalculateDirectionAndRotate());
     }
 
     private IEnumerator CalculateDirectionAndRotate()
     {
-        // µÈ´ıÖ¸¶¨Ö¡ÊıÒÔ»ñÈ¡×¼È·µÄ·½Ïò
+        // ç­‰å¾…æŒ‡å®šå¸§æ•°ä»¥è·å–å‡†ç¡®çš„æ–¹å‘
         for (int i = 0; i < sampleFrames; i++)
         {
-            // ¼ì²éweaponTransformÊÇ·ñ´æÔÚ£¬Èç¹û²»´æÔÚÔòÏú»ÙÌØĞ§
+            // æ£€æŸ¥weaponTransformæ˜¯å¦å­˜åœ¨ï¼Œå¦‚æœä¸å­˜åœ¨åˆ™é”€æ¯ç‰¹æ•ˆ
             if (weaponTransform == null)
             {
                 Destroy(gameObject);
@@ -36,36 +36,36 @@ public class SlicingEffect : GameEffect
             yield return null;
         }
 
-        // ¼ì²éweaponTransformÊÇ·ñ´æÔÚ£¬Èç¹û²»´æÔÚÔòÏú»ÙÌØĞ§
+        // æ£€æŸ¥weaponTransformæ˜¯å¦å­˜åœ¨ï¼Œå¦‚æœä¸å­˜åœ¨åˆ™é”€æ¯ç‰¹æ•ˆ
         if (weaponTransform == null)
         {
             Destroy(gameObject);
             yield break;
         }
 
-        // ¼ÆËãÎäÆ÷ÒÆ¶¯·½Ïò
+        // è®¡ç®—æ­¦å™¨ç§»åŠ¨æ–¹å‘
         Vector2 endWeaponPosition = weaponTransform.position;
         Vector2 dir = (endWeaponPosition - startWeaponPosition).normalized;
 
-        // Èç¹û·½ÏòÏòÁ¿Ì«Ğ¡£¬ÔòÊ¹ÓÃÄ¬ÈÏ·½Ïò
+        // å¦‚æœæ–¹å‘å‘é‡å¤ªå°ï¼Œåˆ™ä½¿ç”¨é»˜è®¤æ–¹å‘
         if (dir.sqrMagnitude < 0.0001f)
             dir = Vector2.right;
 
-        // ¼ÆËãĞı×ª½Ç¶È
+        // è®¡ç®—æ—‹è½¬è§’åº¦
         float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
 
         Vector3 euler = transform.rotation.eulerAngles;
         euler.z += angle;
         transform.rotation = Quaternion.Euler(euler);
 
-        // Ïú»ÙÌØĞ§
+        // é”€æ¯ç‰¹æ•ˆ
         Destroy(gameObject, lifetime);
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        // Èç¹ûÃ»ÓĞÍ¨¹ıEffect·½·¨³õÊ¼»¯£¬ÔòÊ¹ÓÃÄ¬ÈÏ²ÎÊı
+        // å¦‚æœæ²¡æœ‰é€šè¿‡Effectæ–¹æ³•åˆå§‹åŒ–ï¼Œåˆ™ä½¿ç”¨é»˜è®¤å‚æ•°
         if (!hasStarted)
         {
             startWeaponPosition = transform.position;
@@ -78,7 +78,7 @@ public class SlicingEffect : GameEffect
     // Update is called once per frame
     void Update()
     {
-        // ¼ì²éweaponTransformÊÇ·ñ´æÔÚ£¬Èç¹û²»´æÔÚÔòÏú»ÙÌØĞ§
+        // æ£€æŸ¥weaponTransformæ˜¯å¦å­˜åœ¨ï¼Œå¦‚æœä¸å­˜åœ¨åˆ™é”€æ¯ç‰¹æ•ˆ
         if (weaponTransform == null)
         {
             Destroy(gameObject);

@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/行动/执行攻击")]
+[NodeMenu("ActionNode/琛屽姩/鎵ц鏀诲嚮")]
 public class AI_ExecuteAttack : ActionNode
 {
-    [Tooltip("攻击动作的总持续时间（秒）")]
+    [Tooltip("鏀诲嚮鍔ㄤ綔鐨勬�绘寔缁椂闂达紙绉掞級")]
     public float AttackDuration = 1.0f;
 
-    [Tooltip("攻击准备阶段的持续时间（秒）")]
+    [Tooltip("鏀诲嚮鍑嗗闃舵鐨勬寔缁椂闂达紙绉掞級")]
     public float AttackPrepareTime = 0.2f;
 
-    [Tooltip("攻击判定阶段的持续时间（秒）")]
+    [Tooltip("鏀诲嚮鍒ゅ畾闃舵鐨勬寔缁椂闂达紙绉掞級")]
     public float AttackActiveTime = 0.5f;
 
     private float startTime;
@@ -84,7 +84,7 @@ public class AI_ExecuteAttack : ActionNode
     }
 
 #if UNITY_EDITOR
-    // 编辑器中限制设置错误
+    // 缂栬緫鍣ㄤ腑闄愬埗璁剧疆閿欒
     private void OnValidate()
     {
         AttackPrepareTime = Mathf.Clamp(AttackPrepareTime, 0f, AttackDuration);

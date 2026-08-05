@@ -25,7 +25,7 @@ namespace TheKiwiCoder
         public CharacterController characterController;
         public float lastAttackTime;
 
-        //Ìí¼Ó×Ô¶¨Òå×é¼þ
+        //æ·»åŠ è‡ªå®šä¹‰ç»„ä»¶
         public Mod_ItemDetector itemDetector;
         public Mover_AI mover;
         public Item item;

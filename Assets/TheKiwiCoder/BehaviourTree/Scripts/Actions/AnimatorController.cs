@@ -3,51 +3,51 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-//TODO ÈçºÎ×Ô¶¨ÒåÌØĞÔ ÌØĞÔÖĞ±£´æµ±Ç°½ÚµãÔÚÓÒ¼ü²Ëµ¥ÖĞµÄµØÖ·
-[NodeMenu("ActionNode/Animator/ÇĞ»»¶¯»­")]
+//TODO å¦‚ä½•è‡ªå®šä¹‰ç‰¹æ€§ ç‰¹æ€§ä¸­ä¿å­˜å½“å‰èŠ‚ç‚¹åœ¨å³é”®èœå•ä¸­çš„åœ°å€
+[NodeMenu("ActionNode/Animator/åˆ‡æ¢åŠ¨ç”»")]
 public class AnimatorController : ActionNode
 {
 
-    // Í¨¹ıÒ»¸öÃ¶¾ÙÊµÏÖ¶ÔSetTriggerºÍSetBoolµÄÑ¡Ôñ
+    // é€šè¿‡ä¸€ä¸ªæšä¸¾å®ç°å¯¹SetTriggerå’ŒSetBoolçš„é€‰æ‹©
     public enum ParameterType
     {
         SetTrigger,
         SetBool
     }
 
-    [Header("¶¯»­ÀàĞÍ")]
+    [Header("åŠ¨ç”»ç±»å‹")]
     public ParameterType parameterType = ParameterType.SetBool;
 
-    [Header("¶¯»­²ÎÊıÃû")]
+    [Header("åŠ¨ç”»å‚æ•°å")]
     public string animationName;
 
-    [Header("SetBool µÄÑ¡Ïî (¶Ô Trigger ÎŞÓ°Ïì)")]
+    [Header("SetBool çš„é€‰é¡¹ (å¯¹ Trigger æ— å½±å“)")]
     public bool boolSwitch = true;
-    [Header("---------------ÆäËûÉèÖÃ----------------")]
-    [Header("¼ì²âparamNameÊÇ·ñ´æÔÚÓÚAnimatorÖĞ")]
+    [Header("---------------å…¶ä»–è®¾ç½®----------------")]
+    [Header("æ£€æµ‹paramNameæ˜¯å¦å­˜åœ¨äºAnimatorä¸­")]
     public bool checkParamName = true;
 
     protected override void OnStart()
     {
-        // ¿ÉÑ¡³õÊ¼»¯Âß¼­
+        // å¯é€‰åˆå§‹åŒ–é€»è¾‘
     }
 
     protected override void OnStop()
     {
-        // ¿ÉÑ¡ÇåÀíÂß¼­
+        // å¯é€‰æ¸…ç†é€»è¾‘
     }
 
     protected override State OnUpdate()
     {
         if (context.animator == null)
         {
-            Debug.LogWarning($"[{nameof(AnimatorController)}] Animator Îª null£¬ÎŞ·¨²¥·Å¶¯»­¡£");
+            Debug.LogWarning($"[{nameof(AnimatorController)}] Animator ä¸º nullï¼Œæ— æ³•æ’­æ”¾åŠ¨ç”»ã€‚");
             return State.Failure;
         }
 
         if (!HasParameter(context.animator, animationName, parameterType))
         {
-            Debug.LogError($"[{nameof(AnimatorController)}] Animator ÖĞÎ´ÕÒµ½²ÎÊı£º{animationName}£¨ÀàĞÍ£º{parameterType}£©");
+            Debug.LogError($"[{nameof(AnimatorController)}] Animator ä¸­æœªæ‰¾åˆ°å‚æ•°ï¼š{animationName}ï¼ˆç±»å‹ï¼š{parameterType}ï¼‰");
             return State.Failure;
         }
 
@@ -66,7 +66,7 @@ public class AnimatorController : ActionNode
     }
 
     /// <summary>
-    /// ¼ì²é Animator ÊÇ·ñ°üº¬Ö¸¶¨²ÎÊı
+    /// æ£€æŸ¥ Animator æ˜¯å¦åŒ…å«æŒ‡å®šå‚æ•°
     /// </summary>
     private bool HasParameter(Animator animator, string paramName, ParameterType type)
     {

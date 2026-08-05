@@ -20,6 +20,10 @@ from typing import Any
 BRIDGE_SOURCE = Path("Assets/Editor/FlatWorld/Automation/FlatWorldSkillTestBridge.cs")
 RESULT_DIR = Path("Library/FlatWorldSkillTests")
 TEST_ASSEMBLY = "FlatWorld.GameTest"
+GOLDEN_PATH_CATEGORY = "Runtime.GoldenPath"
+GOLDEN_REQUEST_PREFIX = "golden-request-"
+GOLDEN_RUNNING_PREFIX = "golden-running-"
+GOLDEN_RESULT_PREFIX = "golden-result-"
 
 
 class RunnerError(RuntimeError):
@@ -33,7 +37,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--category", action="append", default=[], help="NUnit category; repeat as needed.")
     parser.add_argument("--test", action="append", default=[], help="Exact fully qualified test name; repeat as needed.")
     parser.add_argument("--all", action="store_true", help="Run the entire FlatWorld.GameTest assembly.")
+    parser.add_argument(
+        "--golden-path",
+        action="store_true",
+        help="Run the deterministic create-world, move-player, and chunk-streaming path.",
+    )
     parser.add_argument("--list-categories", action="store_true", help="List categories declared under Assets/GameTest.")
+    parser.add_argument(
+        "--check-encoding",
+        action="store_true",
+        help="Validate that all Assets/**/*.cs files are UTF-8 and contain no replacement characters.",
+    )
     parser.add_argument("--mode", choices=("EditMode", "PlayMode"), default="PlayMode")
     parser.add_argument("--project", type=Path, help="Unity project root. Defaults to automatic discovery.")
     parser.add_argument("--unity", type=Path, help="Unity executable for batchmode fallback.")
@@ -41,11 +55,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=float, default=600.0, help="Maximum wait in seconds (default: 600).")
     args = parser.parse_args()
 
+    if args.golden_path:
+        if args.all or args.category or args.test:
+            parser.error("--golden-path cannot be combined with --all/--category/--test")
+        args.category = [GOLDEN_PATH_CATEGORY]
+
     args.category = unique_nonempty(args.category)
     args.test = unique_nonempty(args.test)
     if args.timeout <= 0:
         parser.error("--timeout must be greater than zero")
-    if not args.list_categories and not args.all and not args.category and not args.test:
+    if (
+        not args.list_categories
+        and not args.check_encoding
+        and not args.all
+        and not args.category
+        and not args.test
+    ):
         parser.error("select --category/--test, or pass --all")
     if args.all and (args.category or args.test):
         parser.error("--all cannot be combined with --category or --test")
@@ -88,6 +113,33 @@ def list_categories(project: Path) -> int:
     for category in sorted(categories, key=str.casefold):
         print(category)
     return 0 if categories else 2
+
+
+def validate_source_encoding(project: Path) -> int:
+    invalid: list[str] = []
+    replacements: list[str] = []
+    source_root = project / "Assets"
+    for source in source_root.rglob("*.cs"):
+        try:
+            text = source.read_text(encoding="utf-8", errors="strict")
+        except UnicodeDecodeError:
+            invalid.append(source.relative_to(project).as_posix())
+            continue
+        if "\ufffd" in text:
+            replacements.append(source.relative_to(project).as_posix())
+
+    if invalid or replacements:
+        details = [
+            f"Source encoding preflight failed: {len(invalid)} non-UTF-8, "
+            f"{len(replacements)} containing U+FFFD."
+        ]
+        if invalid:
+            details.append("Non-UTF-8:\n  " + "\n  ".join(invalid))
+        if replacements:
+            details.append("Contains replacement character:\n  " + "\n  ".join(replacements))
+        raise RunnerError("\n".join(details))
+
+    return sum(1 for _ in source_root.rglob("*.cs"))
 
 
 def pid_exists(pid: int) -> bool:
@@ -166,6 +218,45 @@ def run_in_open_editor(project: Path, args: argparse.Namespace, editor_pid: int)
     raise RunnerError(f"Timed out after {args.timeout:g}s while the Editor request was {state}.")
 
 
+def run_golden_path_in_open_editor(
+    project: Path, args: argparse.Namespace, editor_pid: int
+) -> dict[str, Any]:
+    request_id = uuid.uuid4().hex
+    result_dir = project / RESULT_DIR
+    request_path = result_dir / f"{GOLDEN_REQUEST_PREFIX}{request_id}.json"
+    running_path = result_dir / f"{GOLDEN_RUNNING_PREFIX}{request_id}.json"
+    result_path = result_dir / f"{GOLDEN_RESULT_PREFIX}{request_id}.json"
+    atomic_write_json(
+        request_path,
+        {
+            "id": request_id,
+            "createdUtc": utc_now(),
+        },
+    )
+
+    deadline = time.monotonic() + args.timeout
+    try:
+        while time.monotonic() < deadline:
+            if result_path.is_file():
+                try:
+                    result = json.loads(result_path.read_text(encoding="utf-8"))
+                    result.setdefault("resultFile", str(result_path))
+                    return result
+                except (OSError, json.JSONDecodeError):
+                    time.sleep(0.1)
+                    continue
+            if not pid_exists(editor_pid):
+                raise RunnerError("Unity Editor exited before returning the golden-path result.")
+            time.sleep(0.2)
+    finally:
+        request_path.unlink(missing_ok=True)
+
+    state = "running" if running_path.exists() else "pending"
+    raise RunnerError(
+        f"Timed out after {args.timeout:g}s while the default-scene golden path was {state}."
+    )
+
+
 def utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -208,6 +299,26 @@ def find_unity(project: Path, explicit: Path | None) -> Path:
     raise RunnerError(
         f"Could not locate Unity {version or ''}. Pass --unity or set UNITY_PATH."
     )
+
+
+def start_editor(project: Path, args: argparse.Namespace) -> int:
+    unity = find_unity(project, args.unity)
+    process = subprocess.Popen(
+        [str(unity), "-projectPath", str(project)],
+        cwd=project,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    deadline = time.monotonic() + min(args.timeout, 240.0)
+    while time.monotonic() < deadline:
+        editor_pid = active_editor_pid(project)
+        if editor_pid is not None:
+            return editor_pid
+        return_code = process.poll()
+        if return_code is not None:
+            raise RunnerError(f"Unity Editor exited during startup with code {return_code}.")
+        time.sleep(0.5)
+    raise RunnerError("Timed out while starting the Unity Editor.")
 
 
 def run_in_batchmode(project: Path, args: argparse.Namespace) -> dict[str, Any]:
@@ -349,18 +460,36 @@ def report_result(result: dict[str, Any]) -> int:
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
     args = parse_args()
     try:
         project = discover_project(args.project)
         if args.list_categories:
             return list_categories(project)
 
+        source_count = validate_source_encoding(project)
+        if args.check_encoding and not args.all and not args.category and not args.test:
+            print(f"PASS: {source_count} C# source files are valid UTF-8 with no U+FFFD characters.")
+            return 0
+
         editor_pid = active_editor_pid(project)
+        if args.golden_path and args.force_batch:
+            raise RunnerError(
+                "--golden-path runs the real GameStartScene and does not support --force-batch."
+            )
+        if args.golden_path and editor_pid is None:
+            editor_pid = start_editor(project, args)
         if editor_pid is not None and args.force_batch:
             raise RunnerError(
                 "The project is already open in Unity; --force-batch cannot safely open the same project."
             )
-        if editor_pid is not None:
+        if args.golden_path:
+            result = run_golden_path_in_open_editor(project, args, editor_pid)
+        elif editor_pid is not None:
             result = run_in_open_editor(project, args, editor_pid)
         else:
             result = run_in_batchmode(project, args)

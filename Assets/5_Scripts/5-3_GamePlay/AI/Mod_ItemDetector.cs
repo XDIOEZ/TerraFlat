@@ -7,24 +7,24 @@ using UnityEngine;
 
 public class Mod_ItemDetector : Module
 {
-    #region ¼ì²â²ÎÊı
-    [SerializeField, BoxGroup("¼ì²â²ÎÊı")]
-    public float detectionRadius = 10f; // ¼ì²â°ë¾¶
+    #region æ£€æµ‹å‚æ•°
+    [SerializeField, BoxGroup("æ£€æµ‹å‚æ•°")]
+    public float detectionRadius = 10f; // æ£€æµ‹åŠå¾„
 
-    [SerializeField, BoxGroup("¼ì²â²ÎÊı")]
-    public LayerMask itemLayer; // ÎïÆ·ËùÔÚµÄ²ã¼¶
+    [SerializeField, BoxGroup("æ£€æµ‹å‚æ•°")]
+    public LayerMask itemLayer; // ç‰©å“æ‰€åœ¨çš„å±‚çº§
     #endregion
 
-    #region µ±Ç°×´Ì¬
-    [SerializeField, BoxGroup("µ±Ç°×´Ì¬")]
-    private List<Item> currentItemsInArea = new List<Item>(); // µ±Ç°ÇøÓòÄÚµÄÎïÆ·ÁĞ±í
+    #region å½“å‰çŠ¶æ€
+    [SerializeField, BoxGroup("å½“å‰çŠ¶æ€")]
+    private List<Item> currentItemsInArea = new List<Item>(); // å½“å‰åŒºåŸŸå†…çš„ç‰©å“åˆ—è¡¨
 
-    [Tooltip("µ±Ç°×´Ì¬")]
-    public int CurrentItemCount => CurrentItemsInArea.Count; // µ±Ç°ÇøÓòÄÚÎïÆ·ÊıÁ¿
+    [Tooltip("å½“å‰çŠ¶æ€")]
+    public int CurrentItemCount => CurrentItemsInArea.Count; // å½“å‰åŒºåŸŸå†…ç‰©å“æ•°é‡
 
-    [Tooltip("stringÎªtag,ItemÁĞ±íÎªValueµÄ×Öµä")]
+    [Tooltip("stringä¸ºtag,Itemåˆ—è¡¨ä¸ºValueçš„å­—å…¸")]
     [ShowInInspector]
-    public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>(); // ±êÇ©ÓëÎïÆ·ÁĞ±íµÄÓ³Éä×Öµä
+    public Dictionary<string, List<Item>> Type_Tag_Item_Dict = new Dictionary<string, List<Item>>(); // æ ‡ç­¾ä¸ç‰©å“åˆ—è¡¨çš„æ˜ å°„å­—å…¸
 
     private readonly HashSet<Item> _currentItemSet = new HashSet<Item>();
     private readonly HashSet<Item> _previousItemSet = new HashSet<Item>();
@@ -36,34 +36,34 @@ public class Mod_ItemDetector : Module
     public long AppliedVersion => _appliedVersion;
     #endregion
 
-    #region ÊôĞÔºÍ×Ö¶Î
-    public bool DebugMode { get; set; } = false; // ÊÇ·ñÆôÓÃµ÷ÊÔÄ£Ê½
+    #region å±æ€§å’Œå­—æ®µ
+    public bool DebugMode { get; set; } = false; // æ˜¯å¦å¯ç”¨è°ƒè¯•æ¨¡å¼
 
-    public List<Item> CurrentItemsInArea // µ±Ç°ÇøÓòÄÚµÄÎïÆ·ÁĞ±íÊôĞÔ
+    public List<Item> CurrentItemsInArea // å½“å‰åŒºåŸŸå†…çš„ç‰©å“åˆ—è¡¨å±æ€§
     {
         get => currentItemsInArea;
         set => currentItemsInArea = value;
     }
 
-    public float DetectionRadius // ¼ì²â°ë¾¶ÊôĞÔ
+    public float DetectionRadius // æ£€æµ‹åŠå¾„å±æ€§
     {
         get => detectionRadius;
         set => detectionRadius = value;
     }
 
-    public Ex_ModData_MemoryPackable ModData; // Ä£¿éÊı¾İ
+    public Ex_ModData_MemoryPackable ModData; // æ¨¡å—æ•°æ®
 
-    public override ModuleData _Data // ÖØĞ´µÄÄ£¿éÊı¾İÊôĞÔ
+    public override ModuleData _Data // é‡å†™çš„æ¨¡å—æ•°æ®å±æ€§
     {
         get => ModData;
         set => ModData = (Ex_ModData_MemoryPackable)value;
     }
     #endregion
 
-    #region ¹«¹²·½·¨
-    [Button("Ç¿ÖÆ¸üĞÂ¼ì²âÆ÷")]
+    #region å…¬å…±æ–¹æ³•
+    [Button("å¼ºåˆ¶æ›´æ–°æ£€æµ‹å™¨")]
     /// <summary>
-    /// Ç¿ÖÆ¸üĞÂ¼ì²âÆ÷£¬ÖØĞÂÉ¨Ãèµ±Ç°ÇøÓòÄÚµÄÎïÆ·
+    /// å¼ºåˆ¶æ›´æ–°æ£€æµ‹å™¨ï¼Œé‡æ–°æ‰«æå½“å‰åŒºåŸŸå†…çš„ç‰©å“
     /// </summary>
     public void Update_Detector()
     {
@@ -96,7 +96,7 @@ public class Mod_ItemDetector : Module
             return;
 
         if (DebugMode)
-            Debug.Log($"<color=yellow>=== Ó¦ÓÃ¼ì²â½á¹û£¨Î»ÖÃ£º{transform.position}£¬°ë¾¶£º{DetectionRadius}£©===</color>");
+            Debug.Log($"<color=yellow>=== åº”ç”¨æ£€æµ‹ç»“æœï¼ˆä½ç½®ï¼š{transform.position}ï¼ŒåŠå¾„ï¼š{DetectionRadius}ï¼‰===</color>");
 
         _previousItemSet.Clear();
         for (int i = 0; i < CurrentItemsInArea.Count; i++)
@@ -121,7 +121,7 @@ public class Mod_ItemDetector : Module
         foreach (List<Item> taggedItems in Type_Tag_Item_Dict.Values)
             taggedItems.Clear();
 
-        // ÖØ½¨±êÇ©Ó³Éä×Öµä
+        // é‡å»ºæ ‡ç­¾æ˜ å°„å­—å…¸
         for (int itemIndex = 0; itemIndex < CurrentItemsInArea.Count; itemIndex++)
         {
             Item detectedItem = CurrentItemsInArea[itemIndex];
@@ -129,27 +129,27 @@ public class Mod_ItemDetector : Module
             for (int tagIndex = 0; tagIndex < tags.Count; tagIndex++)
             {
                 string tag = tags[tagIndex];
-                // Èç¹û±êÇ©²»´æÔÚ£¬´´½¨ĞÂµÄÁĞ±í
+                // å¦‚æœæ ‡ç­¾ä¸å­˜åœ¨ï¼Œåˆ›å»ºæ–°çš„åˆ—è¡¨
                 if (!Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> taggedItems))
                 {
                     taggedItems = new List<Item>(4);
                     Type_Tag_Item_Dict[tag] = taggedItems;
                 }
-                // ½«ÎïÆ·Ìí¼Óµ½¶ÔÓ¦±êÇ©µÄÁĞ±íÖĞ
+                // å°†ç‰©å“æ·»åŠ åˆ°å¯¹åº”æ ‡ç­¾çš„åˆ—è¡¨ä¸­
                 taggedItems.Add(detectedItem);
             }
         }
 
-        // ¼ì²éÎïÆ·±ä»¯
+        // æ£€æŸ¥ç‰©å“å˜åŒ–
         CheckItemEntries();
         _appliedVersion = requestVersion;
     }
 
     /// <summary>
-    /// ¸ù¾İ±êÇ©»ñÈ¡ÎïÆ·ÁĞ±í
+    /// æ ¹æ®æ ‡ç­¾è·å–ç‰©å“åˆ—è¡¨
     /// </summary>
-    /// <param name="tag">Òª²éÑ¯µÄ±êÇ©</param>
-    /// <returns>¾ßÓĞÖ¸¶¨±êÇ©µÄÎïÆ·ÁĞ±í£¬Èç¹û±êÇ©²»´æÔÚÔò·µ»Ø¿ÕÁĞ±í</returns>
+    /// <param name="tag">è¦æŸ¥è¯¢çš„æ ‡ç­¾</param>
+    /// <returns>å…·æœ‰æŒ‡å®šæ ‡ç­¾çš„ç‰©å“åˆ—è¡¨ï¼Œå¦‚æœæ ‡ç­¾ä¸å­˜åœ¨åˆ™è¿”å›ç©ºåˆ—è¡¨</returns>
     public List<Item> GetItemsByTag(string tag)
     {
         if (Type_Tag_Item_Dict.TryGetValue(tag, out List<Item> items))
@@ -160,10 +160,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// ¸ù¾İ¶à¸ö±êÇ©»ñÈ¡ÎïÆ·ÁĞ±í£¨²¢¼¯£©
+    /// æ ¹æ®å¤šä¸ªæ ‡ç­¾è·å–ç‰©å“åˆ—è¡¨ï¼ˆå¹¶é›†ï¼‰
     /// </summary>
-    /// <param name="tags">Òª²éÑ¯µÄ±êÇ©ÁĞ±í</param>
-    /// <returns>¾ßÓĞÈÎÒ»Ö¸¶¨±êÇ©µÄÎïÆ·ÁĞ±í</returns>
+    /// <param name="tags">è¦æŸ¥è¯¢çš„æ ‡ç­¾åˆ—è¡¨</param>
+    /// <returns>å…·æœ‰ä»»ä¸€æŒ‡å®šæ ‡ç­¾çš„ç‰©å“åˆ—è¡¨</returns>
     public List<Item> GetItemsByTags(List<string> tags)
     {
         List<Item> result = new List<Item>();
@@ -188,10 +188,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// ¸ù¾İ±êÇ©»ñÈ¡µÚÒ»¸öÎïÆ·
+    /// æ ¹æ®æ ‡ç­¾è·å–ç¬¬ä¸€ä¸ªç‰©å“
     /// </summary>
-    /// <param name="tag">Òª²éÑ¯µÄ±êÇ©</param>
-    /// <returns>¾ßÓĞÖ¸¶¨±êÇ©µÄµÚÒ»¸öÎïÆ·£¬Èç¹ûÃ»ÓĞÔò·µ»Ønull</returns>
+    /// <param name="tag">è¦æŸ¥è¯¢çš„æ ‡ç­¾</param>
+    /// <returns>å…·æœ‰æŒ‡å®šæ ‡ç­¾çš„ç¬¬ä¸€ä¸ªç‰©å“ï¼Œå¦‚æœæ²¡æœ‰åˆ™è¿”å›null</returns>
     public Item GetFirstItemByTag(string tag)
     {
         List<Item> items = GetItemsByTag(tag);
@@ -199,10 +199,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// ¸ù¾İÎïÆ·IDÃû³ÆÁĞ±í»ñÈ¡µÚÒ»¸öÎïÆ·
+    /// æ ¹æ®ç‰©å“IDåç§°åˆ—è¡¨è·å–ç¬¬ä¸€ä¸ªç‰©å“
     /// </summary>
-    /// <param name="itemIds">Òª²éÑ¯µÄÎïÆ·IDÃû³ÆÁĞ±í</param>
-    /// <returns>Æ¥ÅäÖ¸¶¨IDÃû³ÆµÄµÚÒ»¸öÎïÆ·£¬Èç¹ûÃ»ÓĞÔò·µ»Ønull</returns>
+    /// <param name="itemIds">è¦æŸ¥è¯¢çš„ç‰©å“IDåç§°åˆ—è¡¨</param>
+    /// <returns>åŒ¹é…æŒ‡å®šIDåç§°çš„ç¬¬ä¸€ä¸ªç‰©å“ï¼Œå¦‚æœæ²¡æœ‰åˆ™è¿”å›null</returns>
     public Item GetFirstItemByIdNamesFast(List<string> itemIds)
     {
         if (itemIds == null || itemIds.Count == 0)
@@ -225,10 +225,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// ¸ù¾İ¶à¸ö±êÇ©»ñÈ¡ÎïÆ·ÁĞ±í£¨½»¼¯£©
+    /// æ ¹æ®å¤šä¸ªæ ‡ç­¾è·å–ç‰©å“åˆ—è¡¨ï¼ˆäº¤é›†ï¼‰
     /// </summary>
-    /// <param name="tags">Òª²éÑ¯µÄ±êÇ©ÁĞ±í</param>
-    /// <returns>Í¬Ê±¾ßÓĞËùÓĞÖ¸¶¨±êÇ©µÄÎïÆ·ÁĞ±í</returns>
+    /// <param name="tags">è¦æŸ¥è¯¢çš„æ ‡ç­¾åˆ—è¡¨</param>
+    /// <returns>åŒæ—¶å…·æœ‰æ‰€æœ‰æŒ‡å®šæ ‡ç­¾çš„ç‰©å“åˆ—è¡¨</returns>
     public List<Item> GetItemsByTagsIntersection(List<string> tags)
     {
         if (tags == null || tags.Count == 0)
@@ -259,10 +259,10 @@ public class Mod_ItemDetector : Module
     }
 
     /// <summary>
-    /// ¸ù¾İÎïÆ·IDÃû³ÆÁĞ±í»ñÈ¡ÎïÆ·£¨¸ßĞÔÄÜ°æ±¾£©
+    /// æ ¹æ®ç‰©å“IDåç§°åˆ—è¡¨è·å–ç‰©å“ï¼ˆé«˜æ€§èƒ½ç‰ˆæœ¬ï¼‰
     /// </summary>
-    /// <param name="itemIds">Òª²éÑ¯µÄÎïÆ·IDÃû³ÆÁĞ±í</param>
-    /// <returns>Æ¥ÅäÖ¸¶¨IDÃû³ÆµÄÎïÆ·ÁĞ±í</returns>
+    /// <param name="itemIds">è¦æŸ¥è¯¢çš„ç‰©å“IDåç§°åˆ—è¡¨</param>
+    /// <returns>åŒ¹é…æŒ‡å®šIDåç§°çš„ç‰©å“åˆ—è¡¨</returns>
     public List<Item> GetItemsByIdNamesFast(List<string> itemIds)
     {
         if (itemIds == null || itemIds.Count == 0)
@@ -270,7 +270,7 @@ public class Mod_ItemDetector : Module
 
         List<Item> result = new List<Item>();
 
-        // ±éÀúËùÓĞµ±Ç°¼ì²âµ½µÄÎïÆ·
+        // éå†æ‰€æœ‰å½“å‰æ£€æµ‹åˆ°çš„ç‰©å“
         for (int itemIndex = 0; itemIndex < CurrentItemsInArea.Count; itemIndex++)
         {
             Item detectedItem = CurrentItemsInArea[itemIndex];
@@ -337,72 +337,72 @@ public class Mod_ItemDetector : Module
     }
     #endregion
 
-    #region Ë½ÓĞ·½·¨
+    #region ç§æœ‰æ–¹æ³•
     /// <summary>
-    /// ¼ì²éÎïÆ·½øÈëºÍÀë¿ªµÄ±ä»¯
+    /// æ£€æŸ¥ç‰©å“è¿›å…¥å’Œç¦»å¼€çš„å˜åŒ–
     /// </summary>
     private void CheckItemEntries()
     {
         if (DebugMode)
-            Debug.Log($"<color=green>=== ¼ì²âÎïÆ·±ä»¯£¨µ±Ç°ÇøÓòÄÚ£º{CurrentItemsInArea.Count}¸ö£¬ÉÏ´Î¼ì²â£º{_previousItemSet.Count}¸ö£© ===</color>");
+            Debug.Log($"<color=green>=== æ£€æµ‹ç‰©å“å˜åŒ–ï¼ˆå½“å‰åŒºåŸŸå†…ï¼š{CurrentItemsInArea.Count}ä¸ªï¼Œä¸Šæ¬¡æ£€æµ‹ï¼š{_previousItemSet.Count}ä¸ªï¼‰ ===</color>");
 
-        // ¼ì²éĞÂ½øÈëµÄÎïÆ·
+        // æ£€æŸ¥æ–°è¿›å…¥çš„ç‰©å“
         for (int i = 0; i < CurrentItemsInArea.Count; i++)
         {
             Item detectedItem = CurrentItemsInArea[i];
             if (!_previousItemSet.Contains(detectedItem))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=lime>½øÈëÇøÓò£º{detectedItem.name}£¨ID£º{detectedItem.GetInstanceID()}£¬ÎïÆ·ID£º{detectedItem.itemData.IDName}£©</color>");
+                    Debug.Log($"<color=lime>è¿›å…¥åŒºåŸŸï¼š{detectedItem.name}ï¼ˆIDï¼š{detectedItem.GetInstanceID()}ï¼Œç‰©å“IDï¼š{detectedItem.itemData.IDName}ï¼‰</color>");
                 OnItemEnter(detectedItem);
             }
         }
 
-        // ¼ì²éÀë¿ªµÄÎïÆ·
+        // æ£€æŸ¥ç¦»å¼€çš„ç‰©å“
         foreach (Item previousItem in _previousItemSet)
         {
             if (!_currentItemSet.Contains(previousItem))
             {
                 if (DebugMode)
-                    Debug.Log($"<color=orange>Àë¿ªÇøÓò£º{previousItem.name}£¨ID£º{previousItem.GetInstanceID()}£¬ÎïÆ·ID£º{previousItem.itemData.IDName}£©</color>");
+                    Debug.Log($"<color=orange>ç¦»å¼€åŒºåŸŸï¼š{previousItem.name}ï¼ˆIDï¼š{previousItem.GetInstanceID()}ï¼Œç‰©å“IDï¼š{previousItem.itemData.IDName}ï¼‰</color>");
                 OnItemExit(previousItem);
             }
         }
 
         if (DebugMode)
-            Debug.Log($"<color=blue>µ±Ç°ÇøÓòÎïÆ·×ÜÊı£º{CurrentItemCount}</color>");
+            Debug.Log($"<color=blue>å½“å‰åŒºåŸŸç‰©å“æ€»æ•°ï¼š{CurrentItemCount}</color>");
     }
 
     /// <summary>
-    /// ´¦ÀíÎïÆ·½øÈëÊÂ¼ş
+    /// å¤„ç†ç‰©å“è¿›å…¥äº‹ä»¶
     /// </summary>
-    /// <param name="item">½øÈëµÄÎïÆ·</param>
+    /// <param name="item">è¿›å…¥çš„ç‰©å“</param>
     private void OnItemEnter(Item item)
     {
         if (DebugMode)
-            Debug.Log($"<color=green>´¦Àí½øÈëÊÂ¼ş£º{item.name}£¨ÎïÆ·ID£º{item.itemData.IDName}£©</color>");
+            Debug.Log($"<color=green>å¤„ç†è¿›å…¥äº‹ä»¶ï¼š{item.name}ï¼ˆç‰©å“IDï¼š{item.itemData.IDName}ï¼‰</color>");
     }
 
     /// <summary>
-    /// ´¦ÀíÎïÆ·Àë¿ªÊÂ¼ş
+    /// å¤„ç†ç‰©å“ç¦»å¼€äº‹ä»¶
     /// </summary>
-    /// <param name="item">Àë¿ªµÄÎïÆ·</param>
+    /// <param name="item">ç¦»å¼€çš„ç‰©å“</param>
     private void OnItemExit(Item item)
     {
         if (DebugMode)
-            Debug.Log($"<color=orange>´¦ÀíÀë¿ªÊÂ¼ş£º{item.name}£¨ÎïÆ·ID£º{item.itemData.IDName}£©</color>");
+            Debug.Log($"<color=orange>å¤„ç†ç¦»å¼€äº‹ä»¶ï¼š{item.name}ï¼ˆç‰©å“IDï¼š{item.itemData.IDName}ï¼‰</color>");
     }
     #endregion
 
-    #region Unity»Øµ÷·½·¨
+    #region Unityå›è°ƒæ–¹æ³•
 #if UNITY_EDITOR
     /// <summary>
-    /// »æÖÆ³¡¾°ÖĞµÄ¼ì²â·¶Î§ gizmo
+    /// ç»˜åˆ¶åœºæ™¯ä¸­çš„æ£€æµ‹èŒƒå›´ gizmo
     /// </summary>
     private void OnDrawGizmos()
     {
-        Color transparentYellow = new Color(1f, 0.92f, 0.016f, 0.4f); // ¸üµ­µÄ»Æ
-        Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // µ­ºì
+        Color transparentYellow = new Color(1f, 0.92f, 0.016f, 0.4f); // æ›´æ·¡çš„é»„
+        Color transparentRed = new Color(1f, 0f, 0f, 0.6f);           // æ·¡çº¢
 
         Gizmos.color = transparentYellow;
         Gizmos.DrawWireSphere(transform.position, DetectionRadius);
@@ -416,19 +416,19 @@ public class Mod_ItemDetector : Module
 #endif
 
     /// <summary>
-    /// ¼ÓÔØÄ£¿éÊı¾İ
+    /// åŠ è½½æ¨¡å—æ•°æ®
     /// </summary>
     public override void Load()
     {
-        // ¿ÉÒÔÔÚĞèÒªÊ±ÊµÏÖ
+        // å¯ä»¥åœ¨éœ€è¦æ—¶å®ç°
     }
 
     /// <summary>
-    /// ±£´æÄ£¿éÊı¾İ
+    /// ä¿å­˜æ¨¡å—æ•°æ®
     /// </summary>
     public override void Save()
     {
-        // ¿ÉÒÔÔÚĞèÒªÊ±ÊµÏÖ
+        // å¯ä»¥åœ¨éœ€è¦æ—¶å®ç°
     }
 
     private void OnValidate()

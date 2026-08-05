@@ -4,10 +4,10 @@ using UnityEngine;
 
 public class UI_FollowMouse : MonoBehaviour
 {
-    [Tooltip("ÊÇ·ñÆôÓÃ¸úËæÊó±ê¹¦ÄÜ")]
+    [Tooltip("æ˜¯å¦å¯ç”¨è·Ÿéšé¼ æ ‡åŠŸèƒ½")]
     public bool followMouse = true;
 
-    [Tooltip("Êó±êÎ»ÖÃÓë UI ÔªËØµÄÆ«ÒÆÁ¿")]
+    [Tooltip("é¼ æ ‡ä½ç½®ä¸ UI å…ƒç´ çš„åç§»é‡")]
     public Vector3 offset = Vector3.zero;
 
     public RectTransform rectTransform;
@@ -30,10 +30,10 @@ public class UI_FollowMouse : MonoBehaviour
 
     private void FollowMousePosition()
     {
-        // »ñÈ¡Êó±êÔÚÆÁÄ»ÖĞµÄÎ»ÖÃ
+        // è·å–é¼ æ ‡åœ¨å±å¹•ä¸­çš„ä½ç½®
         Vector3 mousePosition = Input.mousePosition;
 
-        // ½«Êó±êÎ»ÖÃ×ª»»ÎªÊÀ½ç×ø±ê£¬²¢¼ÓÉÏÆ«ÒÆ
+        // å°†é¼ æ ‡ä½ç½®è½¬æ¢ä¸ºä¸–ç•Œåæ ‡ï¼Œå¹¶åŠ ä¸Šåç§»
         rectTransform.position = mousePosition + offset;
     }
 

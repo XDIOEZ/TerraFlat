@@ -6,14 +6,14 @@ public class EatFood : ActionNode
 {
     public Mod_Food Food;
     public Mod_Food Self;
-    [Header("½øÊ³·¶Î§")]
+    [Header("è¿›é£ŸèŒƒå›´")]
     public float EatingRange = 1f;
-    [Header("ÉÏÒ»´Î³ÔÒ»¿ÚµÄÊ±¼ä")]
+    [Header("ä¸Šä¸€æ¬¡åƒä¸€å£çš„æ—¶é—´")]
     public float LastEatingTime;
-    [Header("½øÊ³¼ä¸ôÊ±¼ä")]
+    [Header("è¿›é£Ÿé—´éš”æ—¶é—´")]
     public float EatingTime = 1f;
-    [Header("Ê³ÎïTags")]
-    public List<string> FoodTags = new List<string> { "Food" }; // ¸ÄÎªÁĞ±íĞÎÊ½
+    [Header("é£Ÿç‰©Tags")]
+    public List<string> FoodTags = new List<string> { "Food" }; // æ”¹ä¸ºåˆ—è¡¨å½¢å¼
     protected override void OnStart() {
         Self = context.gameObject.GetComponentInChildren<Mod_Food>();
         LastEatingTime = Time.time;
@@ -24,7 +24,7 @@ public class EatFood : ActionNode
 
     protected override State OnUpdate() 
     {
-        //ÊÇ·ñ´¦ÓÚ½øÊ³¼ä¸ô
+        //æ˜¯å¦å¤„äºè¿›é£Ÿé—´éš”
         if(Time.time - LastEatingTime < EatingTime)
         {
             return State.Running;
@@ -64,5 +64,5 @@ public class EatFood : ActionNode
     }
 }
 
-//TODO »ñÈ¡¸ĞÖª·¶Î§ÄÚµÄÊ³Îï  ±éÀúÊ³Îï¼ì²éÊÇ·ñÔÚ½øÊ³·¶Î§ÄÚ  ÔÚ×ì°Í±ßÉÏ  ³Ôµô  ³ÔÍêºóÅĞ¶ÏÊÇ·ñÒÑ¾­³Ô±¥ÁË
-//TODO ³Ô±¥ÁË·µ»Øtrue Ã»ÓĞ³ÔµÄÁË·µ»ØFailure
+//TODO è·å–æ„ŸçŸ¥èŒƒå›´å†…çš„é£Ÿç‰©  éå†é£Ÿç‰©æ£€æŸ¥æ˜¯å¦åœ¨è¿›é£ŸèŒƒå›´å†…  åœ¨å˜´å·´è¾¹ä¸Š  åƒæ‰  åƒå®Œååˆ¤æ–­æ˜¯å¦å·²ç»åƒé¥±äº†
+//TODO åƒé¥±äº†è¿”å›true æ²¡æœ‰åƒçš„äº†è¿”å›Failure

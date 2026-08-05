@@ -6,25 +6,25 @@ using UnityEngine;
 [Serializable]
 public class Output_List
 {
-    [Header("²úÎïÁĞ±í")]
+    [Header("äº§ç‰©åˆ—è¡¨")]
     public List<Result_List> results = new List<Result_List>();
 
     public override string ToString()
     {
         if (results == null || results.Count == 0)
-            return "ÎŞ²úÎï";
+            return "æ— äº§ç‰©";
 
         List<string> resultStrings = new List<string>();
         foreach (var result in results)
         {
             resultStrings.Add($"{result.amount}x{result.ItemName}");
         }
-        return $"²úÎï: [{string.Join(",",resultStrings)}]";
+        return $"äº§ç‰©: [{string.Join(",",resultStrings)}]";
     }
     public string ToString(bool Ranking)
     {
         if (results == null || results.Count == 0)
-            return "ÎŞ²úÎï";
+            return "æ— äº§ç‰©";
 
         List<string> ingredientStrings = new List<string>();
 
@@ -33,12 +33,12 @@ public class Output_List
             ingredientStrings.Add(ingredient.ToString());
         }
 
-        // Èç¹ûRankingÎªtrue£¬°´×ÖµäË³ĞòÅÅĞò
+        // å¦‚æœRankingä¸ºtrueï¼ŒæŒ‰å­—å…¸é¡ºåºæ’åº
         if (Ranking)
         {
             ingredientStrings.Sort();
         }
 
-        return $"²úÎï: [{string.Join(",",ingredientStrings)}]";
+        return $"äº§ç‰©: [{string.Join(",",ingredientStrings)}]";
     }
 }

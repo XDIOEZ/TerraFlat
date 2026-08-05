@@ -5,7 +5,7 @@ using UnityEngine;
 public abstract class ModAction :ScriptableObject
 {
     public string Name;
-    [TextArea(3, 10)] // ²ÎÊı±íÊ¾×îĞ¡ĞĞÊıºÍ×î´óĞĞÊı
+    [TextArea(3, 10)] // å‚æ•°è¡¨ç¤ºæœ€å°è¡Œæ•°å’Œæœ€å¤§è¡Œæ•°
     public string Description;
     public abstract void Action(Item ModOwner ,Module module, Item targetItem=null);
 }

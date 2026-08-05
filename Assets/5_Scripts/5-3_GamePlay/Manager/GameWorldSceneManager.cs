@@ -5,19 +5,19 @@ using UnityEngine.SceneManagement;
 
 public class GameWorldSceneManager : SingletonAutoMono<GameWorldSceneManager>
 {
-    //µ±Ç°ÔËĞĞ³¡¾°
+    //å½“å‰è¿è¡Œåœºæ™¯
     public string currentSceneName;
 
 
-    //ÇĞ»»³¡¾°
-    //TODO ĞŞ¸ÄÎªÒì²½¼ÓÔØ
+    //åˆ‡æ¢åœºæ™¯
+    //TODO ä¿®æ”¹ä¸ºå¼‚æ­¥åŠ è½½
     public void SwitchScene(string NewSceneName)
     {
-        //±£´æµ±Ç°³¡¾°
+        //ä¿å­˜å½“å‰åœºæ™¯
    //     SaveAndLoad.Instance.SaveActiveMap();
-        //±£´æÍê±Ïºó¼ÓÔØĞÂ³¡¾°
+        //ä¿å­˜å®Œæ¯•ååŠ è½½æ–°åœºæ™¯
         SceneManager.LoadScene(NewSceneName);
-        //ĞÂ³¡¾°¼ÓÔØÍê±Ïºó´ÓSaveAndLoad ÖĞ¶ÁÈ¡´æµµÊı¾İ
+        //æ–°åœºæ™¯åŠ è½½å®Œæ¯•åä»SaveAndLoad ä¸­è¯»å–å­˜æ¡£æ•°æ®
         string currentSceneName = SceneManager.GetActiveScene().name;
        // SaveLoadManager.Instance.LoadMap(NewSceneName);
     }

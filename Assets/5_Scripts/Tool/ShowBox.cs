@@ -3,7 +3,7 @@ using UnityEngine.Tilemaps;
 
 public class ShowBox : MonoBehaviour
 {
-    // ÔÚ¼ì²éÆ÷ÖÐÏÔÊ¾²¢¿É±à¼­µÄ±äÁ¿
+    // åœ¨æ£€æŸ¥å™¨ä¸­æ˜¾ç¤ºå¹¶å¯ç¼–è¾‘çš„å˜é‡
     [SerializeField]
     private int minX = -100;
     [SerializeField]
@@ -22,19 +22,19 @@ public class ShowBox : MonoBehaviour
             return;
         }
 
-        // »ñÈ¡ËùÓÐÍßÆ¬µÄÎ»ÖÃ·¶Î§
+        // èŽ·å–æ‰€æœ‰ç“¦ç‰‡çš„ä½ç½®èŒƒå›´
         BoundsInt bounds = tilemap.cellBounds;
 
-        // ±éÀúËùÓÐ¿ÉÄÜ°üº¬ÍßÆ¬µÄÎ»ÖÃ
+        // éåŽ†æ‰€æœ‰å¯èƒ½åŒ…å«ç“¦ç‰‡çš„ä½ç½®
         foreach (Vector3Int pos in bounds.allPositionsWithin)
         {
             if (tilemap.HasTile(pos))
             {
-                // ¼ì²éÊÇ·ñÔÚÄ¿±êÇøÓòÄÚ
+                // æ£€æŸ¥æ˜¯å¦åœ¨ç›®æ ‡åŒºåŸŸå†…
                 bool shouldKeep = pos.x >= minX && pos.x <= maxX
                                && pos.y >= minY && pos.y <= maxY;
 
-                // É¾³ýÇøÓòÍâµÄÍßÆ¬
+                // åˆ é™¤åŒºåŸŸå¤–çš„ç“¦ç‰‡
                 if (!shouldKeep)
                 {
                     tilemap.SetTile(pos, null);
@@ -42,13 +42,13 @@ public class ShowBox : MonoBehaviour
             }
         }
 
-        Debug.Log("ÍßÆ¬ÇåÀíÍê³É");
+        Debug.Log("ç“¦ç‰‡æ¸…ç†å®Œæˆ");
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.blue;
-        // »æÖÆ¼ÓÔØÇøÓò
+        // ç»˜åˆ¶åŠ è½½åŒºåŸŸ
         Gizmos.DrawWireCube(transform.position, new Vector3(maxX - minX, maxY - minY, 0));
     }
 }

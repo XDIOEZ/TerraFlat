@@ -5,24 +5,24 @@ using UnityEngine;
 
 public class Mod_TurnBack : Module
 {
-    #region Êı¾İºÍÊôĞÔ
+    #region æ•°æ®å’Œå±æ€§
 
-    [Header("×ªÏò¿ØÖÆ")]
-    [SerializeField, Range(0.05f, 5f), Tooltip("×ªÏòËùĞèÊ±¼ä£¨Ãë£©")]
+    [Header("è½¬å‘æ§åˆ¶")]
+    [SerializeField, Range(0.05f, 5f), Tooltip("è½¬å‘æ‰€éœ€æ—¶é—´ï¼ˆç§’ï¼‰")]
     private float Duration = 0.3f;
 
-    [SerializeField, Tooltip("ĞèÒª¿ØÖÆĞı×ªµÄÄ¿±ê¶ÔÏóÁĞ±í£¬Ä¬ÈÏ×Ô¶¯»ñÈ¡×Ó¶ÔÏóÖĞº¬AnimatorµÄÎïÌå")]
+    [SerializeField, Tooltip("éœ€è¦æ§åˆ¶æ—‹è½¬çš„ç›®æ ‡å¯¹è±¡åˆ—è¡¨ï¼Œé»˜è®¤è‡ªåŠ¨è·å–å­å¯¹è±¡ä¸­å«Animatorçš„ç‰©ä½“")]
     public List<Transform> controlledTransforms_Direction = new();
-    [SerializeField, Tooltip("ĞèÒª¿ØÖÆÎ»ÖÃµÄÄ¿±ê¶ÔÏóÁĞ±í")]
+    [SerializeField, Tooltip("éœ€è¦æ§åˆ¶ä½ç½®çš„ç›®æ ‡å¯¹è±¡åˆ—è¡¨")]
     public List<Transform> controlledTransforms_Position = new();
 
-    [SerializeField, Tooltip("Ä¬ÈÏÎ»ÖÃ£¬ÓÃÓÚ¼ÆËãÄ¿±êÎ»ÖÃ(Ä¬ÈÏ½ÇÉ«³õÊ¼×´Ì¬³¯ÏòÓÒ±ß)")]
+    [SerializeField, Tooltip("é»˜è®¤ä½ç½®ï¼Œç”¨äºè®¡ç®—ç›®æ ‡ä½ç½®(é»˜è®¤è§’è‰²åˆå§‹çŠ¶æ€æœå‘å³è¾¹)")]
     public Vector2 DefaultPosition = new Vector2(0.5f, 0f);
 
-    [SerializeField, Tooltip("µ±Ç°ÃæÏò·½Ïò£¬Ä¬ÈÏÓÒ·½")]
+    [SerializeField, Tooltip("å½“å‰é¢å‘æ–¹å‘ï¼Œé»˜è®¤å³æ–¹")]
     public Vector2 currentDirection = Vector2.right;
 
-    [SerializeField, ReadOnly, Tooltip("ÊÇ·ñÕıÔÚ×ªÉí£¨ÓÉ½Å±¾×Ô¶¯¿ØÖÆ£©")]
+    [SerializeField, ReadOnly, Tooltip("æ˜¯å¦æ­£åœ¨è½¬èº«ï¼ˆç”±è„šæœ¬è‡ªåŠ¨æ§åˆ¶ï¼‰")]
     public bool isTurning = false;
 
     public UltEvent<Vector2> OnTrun = new UltEvent<Vector2>();
@@ -31,11 +31,11 @@ public class Mod_TurnBack : Module
     private float startY;
     private float targetY;
     
-    // Î»ÖÃ±ä»»¼ÇÂ¼
+    // ä½ç½®å˜æ¢è®°å½•
     private Dictionary<Transform, Vector3> positionStartValues = new Dictionary<Transform, Vector3>();
     private Dictionary<Transform, Vector3> positionTargetValues = new Dictionary<Transform, Vector3>();
     
-    // Î»ÖÃ×ª»»Íê³É±êÖ¾
+    // ä½ç½®è½¬æ¢å®Œæˆæ ‡å¿—
     private bool isPositionTransforming = false;
 
     public Mod_FocusPoint faceMouse;
@@ -49,7 +49,7 @@ public class Mod_TurnBack : Module
 
     #endregion
 
-    #region ÉúÃüÖÜÆÚ·½·¨
+    #region ç”Ÿå‘½å‘¨æœŸæ–¹æ³•
 
     public override void Awake()
     {
@@ -67,7 +67,7 @@ public class Mod_TurnBack : Module
         CollectTurnDirectionTransforms();
 
         if (faceMouse == null)
-            Debug.LogError("[TurnBody] ³õÊ¼»¯Ê§°Ü£ºFaceMouse Ä£¿éÎ´ÕÒµ½£¡" + item.name);
+            Debug.LogError("[TurnBody] åˆå§‹åŒ–å¤±è´¥ï¼šFaceMouse æ¨¡å—æœªæ‰¾åˆ°ï¼" + item.name);
     }
 
     public override void ModUpdate(float deltaTime)
@@ -81,7 +81,7 @@ public class Mod_TurnBack : Module
 
     #endregion
 
-    #region ×ªÏòÂß¼­
+    #region è½¬å‘é€»è¾‘
 
     private void UpdateWork()
     {
@@ -118,9 +118,9 @@ public class Mod_TurnBack : Module
         startY = NormalizeAngle(controlledTransforms_Direction[0].eulerAngles.y);
         targetY = (currentDirection == Vector2.right) ? 0f : 180f;
 
-        // ¼ÇÂ¼Î»ÖÃµÄÆğÊ¼ÖµºÍÄ¿±êÖµ
+        // è®°å½•ä½ç½®çš„èµ·å§‹å€¼å’Œç›®æ ‡å€¼
         RecordPositionTransformValues();
-        isPositionTransforming = true;  // ¿ªÊ¼Î»ÖÃ×ª»»
+        isPositionTransforming = true;  // å¼€å§‹ä½ç½®è½¬æ¢
     }
 
     public void UpdateTurn(float deltaTime)
@@ -135,7 +135,7 @@ public class Mod_TurnBack : Module
         {
             if (tform != null)
             {
-                // Ö»ĞŞ¸ÄYÖáĞı×ª£¬±£³ÖXºÍZÖá²»±ä
+                // åªä¿®æ”¹Yè½´æ—‹è½¬ï¼Œä¿æŒXå’ŒZè½´ä¸å˜
                 Vector3 currentEulerAngles = tform.eulerAngles;
                 tform.rotation = Quaternion.Euler(currentEulerAngles.x, newY, currentEulerAngles.z);
             }
@@ -147,7 +147,7 @@ public class Mod_TurnBack : Module
             {
                 if (tform != null)
                 {
-                    // Ö»ĞŞ¸ÄYÖáĞı×ª£¬±£³ÖXºÍZÖá²»±ä
+                    // åªä¿®æ”¹Yè½´æ—‹è½¬ï¼Œä¿æŒXå’ŒZè½´ä¸å˜
                     Vector3 currentEulerAngles = tform.eulerAngles;
                     tform.rotation = Quaternion.Euler(currentEulerAngles.x, targetY, currentEulerAngles.z);
                 }
@@ -159,13 +159,13 @@ public class Mod_TurnBack : Module
 
     #endregion
 
-    #region ÊÜ¿Ø¶ÔÏó¹ÜÀí
+    #region å—æ§å¯¹è±¡ç®¡ç†
 
     private void CollectTurnDirectionTransforms()
     {
         if (item == null)
         {
-            Debug.LogError("[TurnBody] ³õÊ¼»¯Ê§°Ü£ºitem Îª¿Õ£¬ÎŞ·¨ÊÕ¼¯ ITrunDirection Ä£¿é");
+            Debug.LogError("[TurnBody] åˆå§‹åŒ–å¤±è´¥ï¼šitem ä¸ºç©ºï¼Œæ— æ³•æ”¶é›† ITrunDirection æ¨¡å—");
             return;
         }
 
@@ -179,14 +179,14 @@ public class Mod_TurnBack : Module
     }
 
     /// <summary>
-    /// Ìí¼ÓÊÜ¿ØÖÆµÄ±ä»»¶ÔÏóµ½ÁĞ±íÖĞ£¬²¢¸üĞÂÆä³¯Ïò
+    /// æ·»åŠ å—æ§åˆ¶çš„å˜æ¢å¯¹è±¡åˆ°åˆ—è¡¨ä¸­ï¼Œå¹¶æ›´æ–°å…¶æœå‘
     /// </summary>
-    /// <param name="transform">ÒªÌí¼ÓµÄ±ä»»¶ÔÏó</param>
+    /// <param name="transform">è¦æ·»åŠ çš„å˜æ¢å¯¹è±¡</param>
     public void AddControlledTransform(Transform transform)
     {
         if (transform == null)
         {
-            Debug.LogError("[TurnBody] ÊÜ¿ØÖÆµÄ±ä»»¶ÔÏóÎª¿Õ£¡");
+            Debug.LogError("[TurnBody] å—æ§åˆ¶çš„å˜æ¢å¯¹è±¡ä¸ºç©ºï¼");
             return;
         }
 
@@ -194,28 +194,28 @@ public class Mod_TurnBack : Module
             return;
 
 
-        // Ìí¼Óµ½¿ØÖÆÁĞ±í
+        // æ·»åŠ åˆ°æ§åˆ¶åˆ—è¡¨
         controlledTransforms_Direction.Add(transform);
 
-        // Á¢¼´¸üĞÂ¸Ã¶ÔÏóµÄ³¯ÏòÒÔÆ¥Åäµ±Ç°·½Ïò
+        // ç«‹å³æ›´æ–°è¯¥å¯¹è±¡çš„æœå‘ä»¥åŒ¹é…å½“å‰æ–¹å‘
         UpdateTransformDirection(transform);
     }
 
     /// <summary>
-    /// ¸üĞÂÖ¸¶¨±ä»»¶ÔÏóµÄ³¯ÏòÒÔÆ¥Åäµ±Ç°·½Ïò
+    /// æ›´æ–°æŒ‡å®šå˜æ¢å¯¹è±¡çš„æœå‘ä»¥åŒ¹é…å½“å‰æ–¹å‘
     /// </summary>
-    /// <param name="transform">Òª¸üĞÂµÄ±ä»»¶ÔÏó</param>
+    /// <param name="transform">è¦æ›´æ–°çš„å˜æ¢å¯¹è±¡</param>
     private void UpdateTransformDirection(Transform transform)
     {
         if (transform == null) return;
 
-        // ¸ù¾İµ±Ç°·½ÏòÉèÖÃYÖáĞı×ª
+        // æ ¹æ®å½“å‰æ–¹å‘è®¾ç½®Yè½´æ—‹è½¬
         float targetYRotation = (currentDirection == Vector2.right) ? 0f : 180f;
         Vector3 currentEulerAngles = transform.eulerAngles;
         transform.rotation = Quaternion.Euler(currentEulerAngles.x, targetYRotation, currentEulerAngles.z);
     }
     /// <summary>
-    /// ÅúÁ¿¸üĞÂËùÓĞÊÜ¿ØÖÆ¶ÔÏóµÄ³¯Ïò
+    /// æ‰¹é‡æ›´æ–°æ‰€æœ‰å—æ§åˆ¶å¯¹è±¡çš„æœå‘
     /// </summary>
     public void UpdateAllTransformDirections()
     {
@@ -230,7 +230,7 @@ public class Mod_TurnBack : Module
     {
         if (!isPositionTransforming)
         {
-            // Î»ÖÃ×ª»»Íê³Éºó£¬Ö±½ÓÉèÖÃ×îÖÕÎ»ÖÃ
+            // ä½ç½®è½¬æ¢å®Œæˆåï¼Œç›´æ¥è®¾ç½®æœ€ç»ˆä½ç½®
             foreach (var transform in controlledTransforms_Position)
             {
                 if (transform == null) continue;
@@ -242,24 +242,24 @@ public class Mod_TurnBack : Module
             return;
         }
 
-        // Î»ÖÃ×ª»»ÖĞ£¬Ê¹ÓÃ²åÖµ¸üĞÂÎ»ÖÃ
+        // ä½ç½®è½¬æ¢ä¸­ï¼Œä½¿ç”¨æ’å€¼æ›´æ–°ä½ç½®
         float t = Mathf.Clamp01(turnTimeElapsed / Duration);
 
         foreach (var transform in controlledTransforms_Position)
         {
             if (transform == null) continue;
 
-            // »ñÈ¡ÆğÊ¼ÖµºÍÄ¿±êÖµ
+            // è·å–èµ·å§‹å€¼å’Œç›®æ ‡å€¼
             if (positionStartValues.TryGetValue(transform, out Vector3 startPos) &&
                 positionTargetValues.TryGetValue(transform, out Vector3 targetPos))
             {
-                // Ê¹ÓÃ Vector3.Lerp Æ½»¬²åÖµ
+                // ä½¿ç”¨ Vector3.Lerp å¹³æ»‘æ’å€¼
                 Vector3 lerpedPos = Vector3.Lerp(startPos, targetPos, t);
                 transform.localPosition = lerpedPos;
             }
         }
 
-        // ¼ì²éÎ»ÖÃ×ª»»ÊÇ·ñÍê³É
+        // æ£€æŸ¥ä½ç½®è½¬æ¢æ˜¯å¦å®Œæˆ
         if (t >= 1f)
         {
             isPositionTransforming = false;
@@ -267,7 +267,7 @@ public class Mod_TurnBack : Module
     }
 
     /// <summary>
-    /// ¼ÇÂ¼Î»ÖÃ±ä»»µÄÆğÊ¼ÖµºÍÄ¿±êÖµ
+    /// è®°å½•ä½ç½®å˜æ¢çš„èµ·å§‹å€¼å’Œç›®æ ‡å€¼
     /// </summary>
     private void RecordPositionTransformValues()
     {
@@ -278,15 +278,15 @@ public class Mod_TurnBack : Module
         {
             if (transform == null) continue;
 
-            // ¼ÇÂ¼µ±Ç°Î»ÖÃ×÷ÎªÆğÊ¼Öµ
+            // è®°å½•å½“å‰ä½ç½®ä½œä¸ºèµ·å§‹å€¼
             Vector3 currentPos = transform.localPosition;
             positionStartValues[transform] = currentPos;
 
-            // ¼ÆËãÄ¿±êÎ»ÖÃ£º¸ù¾İµ±Ç°³¯ÏòºÍDefaultPosition¾µÏñ
+            // è®¡ç®—ç›®æ ‡ä½ç½®ï¼šæ ¹æ®å½“å‰æœå‘å’ŒDefaultPositioné•œåƒ
             Vector3 targetPos = new Vector3(
                 DefaultPosition.x * currentDirection.x,
                 DefaultPosition.y,
-                currentPos.z  // ±£³ÖZÖá²»±ä
+                currentPos.z  // ä¿æŒZè½´ä¸å˜
             );
             positionTargetValues[transform] = targetPos;
         }
@@ -294,7 +294,7 @@ public class Mod_TurnBack : Module
 
     #endregion
 
-    #region ¹¤¾ßºÍ¸¨Öú·½·¨
+    #region å·¥å…·å’Œè¾…åŠ©æ–¹æ³•
 
     private float NormalizeAngle(float angle)
     {

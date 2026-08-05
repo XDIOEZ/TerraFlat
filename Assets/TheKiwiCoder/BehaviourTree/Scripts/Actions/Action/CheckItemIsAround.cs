@@ -16,7 +16,7 @@ public class CheckItemIsAround : ActionNode
         if(itemDetector == null)
         {
             itemDetector = context.gameObject.GetComponent<Mod_ItemDetector>();
-           // Debug.LogWarning("Î´Ö¸¶¨ÎïÆ·¼ì²âÆ÷£¬½«Ê¹ÓÃÄ¬ÈÏµÄÎïÆ·¼ì²âÆ÷");
+           // Debug.LogWarning("æœªæŒ‡å®šç‰©å“æ£€æµ‹å™¨ï¼Œå°†ä½¿ç”¨é»˜è®¤çš„ç‰©å“æ£€æµ‹å™¨");
         }
     }
 
@@ -24,7 +24,7 @@ public class CheckItemIsAround : ActionNode
     {
         if (DebugMode)
         {
-            Debug.Log($"<color=orange>CheckItemIsAround ¼ì²âÒÑÍ£Ö¹</color>");
+            Debug.Log($"<color=orange>CheckItemIsAround æ£€æµ‹å·²åœæ­¢</color>");
         }
     }
 
@@ -32,12 +32,12 @@ public class CheckItemIsAround : ActionNode
     {
         if (DebugMode)
         {
-            Debug.Log($"<color=green>ÕıÔÚ¼ì²âÖÜÎ§ÎïÆ·...</color>");
+            Debug.Log($"<color=green>æ­£åœ¨æ£€æµ‹å‘¨å›´ç‰©å“...</color>");
         }
 
         if (DebugMode)
         {
-            Debug.Log($"<color=gray>Î´¼ì²âµ½·ûºÏÌõ¼şµÄÎïÆ·£¬¼ÌĞø¼ì²â...</color>");
+            Debug.Log($"<color=gray>æœªæ£€æµ‹åˆ°ç¬¦åˆæ¡ä»¶çš„ç‰©å“ï¼Œç»§ç»­æ£€æµ‹...</color>");
         }
 
         return State.Failure;

@@ -29,7 +29,7 @@ public class DebugRAM : MonoBehaviour
         GUI.Label(new Rect(10, 10, 200, 20), "Memory Used: " + memoryUsedMB.ToString("F2") + " MB");
 
     }
-    // todo ´´½¨Ò»¸öÑÕÉ«ÊµÀý·½·¨
+    // todo åˆ›å»ºä¸€ä¸ªé¢œè‰²å®žä¾‹æ–¹æ³•
 
 
 

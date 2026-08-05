@@ -1,14 +1,14 @@
 using TheKiwiCoder;
 using UnityEngine;
 
-[NodeMenu("ActionNode/¼ì²â/¼ì²âÉúÃüÖµ")]
+[NodeMenu("ActionNode/æ£€æµ‹/æ£€æµ‹ç”Ÿå‘½å€¼")]
 public class CheckHealth : ActionNode
 {
-    [Header("¼ì²âÉèÖÃ")]
+    [Header("æ£€æµ‹è®¾ç½®")]
     [SerializeField]
-    private Vector2 healthValue = new Vector2(0, 0.5f); // ÔÊĞíÑªÁ¿·¶Î§
+    private Vector2 healthValue = new Vector2(0, 0.5f); // å…è®¸è¡€é‡èŒƒå›´
 
-    [Tooltip("ÊÇ·ñÊ¹ÓÃ°Ù·Ö±È¼ì²â£¨0-1£©£¬·ñÔòÊ¹ÓÃ¾ø¶ÔÑªÁ¿Öµ¼ì²â")]
+    [Tooltip("æ˜¯å¦ä½¿ç”¨ç™¾åˆ†æ¯”æ£€æµ‹ï¼ˆ0-1ï¼‰ï¼Œå¦åˆ™ä½¿ç”¨ç»å¯¹è¡€é‡å€¼æ£€æµ‹")]
     [SerializeField]
     private bool usePercent = true;
 
@@ -31,7 +31,7 @@ public class CheckHealth : ActionNode
         {
             if (maxHealth <= 0)
             {
-                Debug.LogWarning($"CheckHealth ½Úµã£º×î´óÉúÃüÖµÎª0£¬ÎŞ·¨½øĞĞ°Ù·Ö±È¼ì²â£¡");
+                Debug.LogWarning($"CheckHealth èŠ‚ç‚¹ï¼šæœ€å¤§ç”Ÿå‘½å€¼ä¸º0ï¼Œæ— æ³•è¿›è¡Œç™¾åˆ†æ¯”æ£€æµ‹ï¼");
                 return State.Failure;
             }
             currentHealth = currentHealth / maxHealth;

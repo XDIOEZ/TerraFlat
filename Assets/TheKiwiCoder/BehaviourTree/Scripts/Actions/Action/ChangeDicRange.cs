@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 using DG.Tweening;
-[NodeMenu("ActionNode/ĞĞ¶¯/ĞŞ¸Ä¼ì²â·¶Î§")]
+[NodeMenu("ActionNode/è¡ŒåŠ¨/ä¿®æ”¹æ£€æµ‹èŒƒå›´")]
 public class ChangeDicRange : ActionNode
 {
 
-    [Tooltip("»ù´¡Öµ£¬Æ«ÒÆ½«ÔÚ´Ë»ù´¡ÉÏ¼ÆËã")]
+    [Tooltip("åŸºç¡€å€¼ï¼Œåç§»å°†åœ¨æ­¤åŸºç¡€ä¸Šè®¡ç®—")]
     public float BaseValue = 5f;
 
-    [Tooltip("Æ«ÒÆ²ÎÊı£¬xÎª×îĞ¡Æ«ÒÆ£¨¿ÉÎª¸º£©£¬yÎª×î´óÆ«ÒÆ£¨¿ÉÎªÕı£©")]
+    [Tooltip("åç§»å‚æ•°ï¼Œxä¸ºæœ€å°åç§»ï¼ˆå¯ä¸ºè´Ÿï¼‰ï¼Œyä¸ºæœ€å¤§åç§»ï¼ˆå¯ä¸ºæ­£ï¼‰")]
     public Vector2 Offset = new Vector2(0,0);
 
-    [Tooltip("Æ½»¬µ÷ÕûµÄ³ÖĞøÊ±¼ä£¨Ãë£©£¬Îª 0 ±íÊ¾Á¢¼´ÉúĞ§")]
+    [Tooltip("å¹³æ»‘è°ƒæ•´çš„æŒç»­æ—¶é—´ï¼ˆç§’ï¼‰ï¼Œä¸º 0 è¡¨ç¤ºç«‹å³ç”Ÿæ•ˆ")]
     [Range(0f, 3f)]
     public float Duration = 0.5f;
 

@@ -4,23 +4,23 @@ using System.Collections.Generic;
 using NaughtyAttributes;
 using UltEvents;
 
-// ¿â´æUIÀà£¬ÓÃÓÚ¹ÜÀí¿â´æµÄÓÃ»§½çÃæ
+// åº“å­˜UIç±»ï¼Œç”¨äºç®¡ç†åº“å­˜çš„ç”¨æˆ·ç•Œé¢
 public class Inventory_UI : MonoBehaviour
 {
-    #region ×Ö¶Î
-    [Tooltip("ÒıÓÃµÄ±³°ü¶ÔÏó")]
+    #region å­—æ®µ
+    [Tooltip("å¼•ç”¨çš„èƒŒåŒ…å¯¹è±¡")]
     public Inventory inventory;
 
 
-    [Tooltip("ÎïÆ·²å²ÛUIÔ¤ÖÆÌå")]
+    [Tooltip("ç‰©å“æ’æ§½UIé¢„åˆ¶ä½“")]
     public GameObject itemSlot_UI_prefab;
 
-    [Tooltip("´ı´«µİÎïÆ·²ÛÑ¡ÔñÆ÷")]
+    [Tooltip("å¾…ä¼ é€’ç‰©å“æ§½é€‰æ‹©å™¨")]
     public SelectSlot TargetSendItemSlot = null;
     #endregion
 
-/*    #region ÊôĞÔ
-    [Tooltip("±³°üUI±ä»¯ÊÂ¼ş")]
+/*    #region å±æ€§
+    [Tooltip("èƒŒåŒ…UIå˜åŒ–äº‹ä»¶")]
     public UltEvent<int> OnUIChanged
     {
         get => inventory.Data.Event_RefreshUI;
@@ -28,11 +28,11 @@ public class Inventory_UI : MonoBehaviour
     }
     #endregion
 */
-    #region UnityÉúÃüÖÜÆÚ·½·¨
-    // ÔÚ½Å±¾ÊµÀı±»¼ÓÔØÊ±µ÷ÓÃ£¬½øĞĞÒ»Ğ©³õÊ¼»¯²Ù×÷
+    #region Unityç”Ÿå‘½å‘¨æœŸæ–¹æ³•
+    // åœ¨è„šæœ¬å®ä¾‹è¢«åŠ è½½æ—¶è°ƒç”¨ï¼Œè¿›è¡Œä¸€äº›åˆå§‹åŒ–æ“ä½œ
     public void Awake()
     {
-        // Èç¹ûÎ´ÊÖ¶¯Ö¸¶¨¿â´æ¶ÔÏó£¬Ôò³¢ÊÔ´Ó×ÔÉí×é¼şÖĞ»ñÈ¡
+        // å¦‚æœæœªæ‰‹åŠ¨æŒ‡å®šåº“å­˜å¯¹è±¡ï¼Œåˆ™å°è¯•ä»è‡ªèº«ç»„ä»¶ä¸­è·å–
         if (inventory == null)
         {
             inventory = GetComponent<Inventory>();
@@ -40,15 +40,15 @@ public class Inventory_UI : MonoBehaviour
     }
     #endregion
 
-    #region ¹«¹²·½·¨
-    // °´Å¥µã»÷¿Éµ÷ÓÃ£¬ÓÃÓÚÊµÀı»¯ÎïÆ·²å²ÛµÄUI
+    #region å…¬å…±æ–¹æ³•
+    // æŒ‰é’®ç‚¹å‡»å¯è°ƒç”¨ï¼Œç”¨äºå®ä¾‹åŒ–ç‰©å“æ’æ§½çš„UI
 /*    [Button]
     public void Instantiate_ItemSlotUI()
     {
-        // Çå¿ÕÔ­ÓĞµÄÎïÆ·²å²ÛUIÁĞ±í
+        // æ¸…ç©ºåŸæœ‰çš„ç‰©å“æ’æ§½UIåˆ—è¡¨
         itemSlots_UI.Clear();
 
-        //Ïú»ÙËùÓĞ×ÓÎïÌå
+        //é”€æ¯æ‰€æœ‰å­ç‰©ä½“
 
         List<GameObject> childrenToDestroy = new List<GameObject>();
 
@@ -62,12 +62,12 @@ public class Inventory_UI : MonoBehaviour
            DestroyImmediate(childObj);
         }
   
-        // ÊµÀı»¯ĞÂµÄÎïÆ·²å²ÛUI
+        // å®ä¾‹åŒ–æ–°çš„ç‰©å“æ’æ§½UI
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
-            // ÊµÀı»¯ĞÂµÄÎïÆ·²å²ÛUIÔ¤ÖÆÌå£¬²¢½«ÆäÉèÖÃÎªµ±Ç°¶ÔÏóµÄ×Ó¶ÔÏó
+            // å®ä¾‹åŒ–æ–°çš„ç‰©å“æ’æ§½UIé¢„åˆ¶ä½“ï¼Œå¹¶å°†å…¶è®¾ç½®ä¸ºå½“å‰å¯¹è±¡çš„å­å¯¹è±¡
             GameObject itemSlot_UI_go = Instantiate(itemSlot_UI_prefab, transform);
-            // ½«ĞÂÊµÀı»¯µÄÎïÆ·²å²ÛUI×é¼şÌí¼Óµ½ÁĞ±íÖĞ
+            // å°†æ–°å®ä¾‹åŒ–çš„ç‰©å“æ’æ§½UIç»„ä»¶æ·»åŠ åˆ°åˆ—è¡¨ä¸­
             ItemSlot_UI itemSlot_UI = itemSlot_UI_go.GetComponent<ItemSlot_UI>();
 
             itemSlots_UI.Add(itemSlot_UI);
@@ -85,14 +85,14 @@ public class Inventory_UI : MonoBehaviour
             {
                 itemSlot_UI.OnItemClick = new UltEvent<int>();
             }
-            // Çå³ı¾ÉµÄµã»÷ÊÂ¼ş¼àÌıÆ÷
+            // æ¸…é™¤æ—§çš„ç‚¹å‡»äº‹ä»¶ç›‘å¬å™¨
             itemSlot_UI.OnItemClick.Clear();
-            // Ìí¼ÓĞÂµÄµã»÷ÊÂ¼ş¼àÌıÆ÷
+            // æ·»åŠ æ–°çš„ç‚¹å‡»äº‹ä»¶ç›‘å¬å™¨
             itemSlot_UI.OnItemClick += OnItemSlotClicked;
 
             itemSlot_UI.OnItemClick += (int index) =>
             {
-                Debug.Log("µã»÷ÊÂ¼ş");
+                Debug.Log("ç‚¹å‡»äº‹ä»¶");
             };
 
             itemSlot_UI.RefreshUI();
@@ -108,36 +108,36 @@ public class Inventory_UI : MonoBehaviour
             {
                 itemSlot_UI.OnItemClick = new UltEvent<int>();
             }
-            // Çå³ı¾ÉµÄµã»÷ÊÂ¼ş¼àÌıÆ÷
+            // æ¸…é™¤æ—§çš„ç‚¹å‡»äº‹ä»¶ç›‘å¬å™¨
             itemSlot_UI.OnItemClick.Clear();
-            // Ìí¼ÓĞÂµÄµã»÷ÊÂ¼ş¼àÌıÆ÷
+            // æ·»åŠ æ–°çš„ç‚¹å‡»äº‹ä»¶ç›‘å¬å™¨
             itemSlot_UI.OnItemClick += OnItemSlotClicked;
 
             itemSlot_UI.OnItemClick += (int index) =>
             {
-                Debug.Log("µã»÷ÊÂ¼ş");
+                Debug.Log("ç‚¹å‡»äº‹ä»¶");
             };
         }
     }*/
 
 
 /*
-    // ³õÊ¼»¯²¢Ë¢ĞÂËùÓĞ¿â´æUIµÄ·½·¨
-    [Button("Ë¢ĞÂËùÓĞ¿â´æUI")]
+    // åˆå§‹åŒ–å¹¶åˆ·æ–°æ‰€æœ‰åº“å­˜UIçš„æ–¹æ³•
+    [Button("åˆ·æ–°æ‰€æœ‰åº“å­˜UI")]
     public void RefreshAllInventoryUI()
     {
         for (int i = 0; i < itemSlots_UI.Count; i++)
         {
-            // ½«UIµÄ±³ºóÊı¾İÇĞ»»ÒıÓÃÎªÕæÊµ±³°üÊı¾İ
+            // å°†UIçš„èƒŒåæ•°æ®åˆ‡æ¢å¼•ç”¨ä¸ºçœŸå®èƒŒåŒ…æ•°æ®
             UpdateDataFormInventory(i);
-            // ´¥·¢UI±ä»¯ÊÂ¼şÒÔË¢ĞÂ¶ÔÓ¦Ë÷ÒıµÄUI
+            // è§¦å‘UIå˜åŒ–äº‹ä»¶ä»¥åˆ·æ–°å¯¹åº”ç´¢å¼•çš„UI
             OnUIChanged.Invoke(i);
         }
     }
 
     void UpdateDataFormInventory(int i)
     {
-        //Èç¹ûË÷Òı³¬³ö·¶Î§£¬Ôò½«ÆäÉèÖÃÎª×îºóÒ»¸ö²å²ÛµÄË÷Òı
+        //å¦‚æœç´¢å¼•è¶…å‡ºèŒƒå›´ï¼Œåˆ™å°†å…¶è®¾ç½®ä¸ºæœ€åä¸€ä¸ªæ’æ§½çš„ç´¢å¼•
         if (i >= inventory.Data.itemSlots.Count)
         {
             i = inventory.Data.itemSlots.Count - 1;
@@ -146,35 +146,35 @@ public class Inventory_UI : MonoBehaviour
         itemSlots_UI[i].ItemSlot = inventory.Data.itemSlots[i];
     }
 
-    // Ë¢ĞÂÖ¸¶¨Ë÷ÒıµÄÎïÆ·²å²ÛUI
+    // åˆ·æ–°æŒ‡å®šç´¢å¼•çš„ç‰©å“æ’æ§½UI
     public void RefreshSlotUI(int index)
     {
         UpdateDataFormInventory(index);
 
-        // Èç¹ûË÷Òı³¬³ö·¶Î§£¬Ôò½«ÆäÉèÖÃÎª×îºóÒ»¸ö²å²ÛµÄË÷Òı
+        // å¦‚æœç´¢å¼•è¶…å‡ºèŒƒå›´ï¼Œåˆ™å°†å…¶è®¾ç½®ä¸ºæœ€åä¸€ä¸ªæ’æ§½çš„ç´¢å¼•
         if (index >= itemSlots_UI.Count)
         {
             index = itemSlots_UI.Count - 1;
         }
-        // µ÷ÓÃ¶ÔÓ¦Ë÷ÒıµÄÎïÆ·²å²ÛUIµÄË¢ĞÂ·½·¨
+        // è°ƒç”¨å¯¹åº”ç´¢å¼•çš„ç‰©å“æ’æ§½UIçš„åˆ·æ–°æ–¹æ³•
         itemSlots_UI[index].RefreshUI();
     }*/
 
     #endregion
 
-    #region Ë½ÓĞ·½·¨
-    // ´¦ÀíÎïÆ·²å²Ûµã»÷ÊÂ¼ş
+    #region ç§æœ‰æ–¹æ³•
+    // å¤„ç†ç‰©å“æ’æ§½ç‚¹å‡»äº‹ä»¶
     private void OnItemSlotClicked(int _index_)
     {
         int LocalIndex = _index_;
         int InputIndex = _index_;
 
-        if (TargetSendItemSlot.HandInventoryUI.inventory.Data.Name == "ÊÖ²¿²å²Û")
+        if (TargetSendItemSlot.HandInventoryUI.inventory.Data.Name == "æ‰‹éƒ¨æ’æ§½")
         {
             InputIndex = 0;
         }
 
-        // Ë¢ĞÂÊÖÉÏ²å²ÛµÄUI
+        // åˆ·æ–°æ‰‹ä¸Šæ’æ§½çš„UI
       //  TargetSendItemSlot.HandInventoryUI.OnUIChanged.Invoke(InputIndex);
     }
     #endregion
@@ -189,31 +189,31 @@ using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
 
-// ¿â´æÀà£¬¼Ì³Ğ×Ô MonoBehaviour
+// åº“å­˜ç±»ï¼Œç»§æ‰¿è‡ª MonoBehaviour
 [System.Serializable]
 public class Inventory : MonoBehaviour
 {
-    #region ×Ö¶Î
+    #region å­—æ®µ
     [Tooltip("Data From")]
     [ShowNonSerializedField]
     IInventoryData _inventoryData;
-    [Tooltip("ËùÊô¶ÔÏó")]
+    [Tooltip("æ‰€å±å¯¹è±¡")]
     public Item _belongItem;
-    [Tooltip("¶ÔÓ¦ UI ¹ÜÀíÆ÷")]
+    [Tooltip("å¯¹åº” UI ç®¡ç†å™¨")]
     public Inventory_UI _ui;
-    [Tooltip("ĞòÁĞ»¯±£´æµÄÈİÆ÷Êı¾İ")]
+    [Tooltip("åºåˆ—åŒ–ä¿å­˜çš„å®¹å™¨æ•°æ®")]
     [ShowInInspector]
     public Inventory_Data Data;
-    [Tooltip("×îĞ¡¶ÑµşÈİÁ¿ÊıÁ¿")]
+    [Tooltip("æœ€å°å †å å®¹é‡æ•°é‡")]
     public int MinStackVolume = 2;
-    [Tooltip("µ±ÎïÆ·²Û·¢Éú±ä»¯Ê±´¥·¢µÄÊÂ¼ş")]
+    [Tooltip("å½“ç‰©å“æ§½å‘ç”Ÿå˜åŒ–æ—¶è§¦å‘çš„äº‹ä»¶")]
     public UltEvent<int, ItemSlot> onSlotChanged = new UltEvent<int, ItemSlot>();
-    [Tooltip("µ±±³°ü·¢Éú±ä»¯Ê±´¥·¢µÄÊÂ¼ş")]
+    [Tooltip("å½“èƒŒåŒ…å‘ç”Ÿå˜åŒ–æ—¶è§¦å‘çš„äº‹ä»¶")]
     public UltEvent<int> onUIChanged = new UltEvent<int>();
     #endregion
 
-    #region ÊôĞÔ
-    // ±êÊ¶²å²ÛÊÇ·ñÒÑ¾­È«²¿ÂúÁË
+    #region å±æ€§
+    // æ ‡è¯†æ’æ§½æ˜¯å¦å·²ç»å…¨éƒ¨æ»¡äº†
     [ShowNativeProperty]
     public bool Inventory_Slots_All_IsFull
     {
@@ -253,12 +253,12 @@ public class Inventory : MonoBehaviour
     }
     #endregion
 
-    #region ÉúÃüÖÜÆÚ
+    #region ç”Ÿå‘½å‘¨æœŸ
 
     public void Awake()
     {
-        onSlotChanged += ChangeItemData_Default;//×¢²áÄ¬ÈÏ½»»¥ÊÂ¼ş
-        onSlotChanged += (int index, ItemSlot itemSlot) => { onUIChanged.Invoke(index); };//×¢²áUI±ä»¯ÊÂ¼ş                                                                          // ¶©ÔÄ¿â´æUI±ä»¯ÊÂ¼ş£¬µ±¿â´æUI±ä»¯Ê±µ÷ÓÃË¢ĞÂUI·½·¨
+        onSlotChanged += ChangeItemData_Default;//æ³¨å†Œé»˜è®¤äº¤äº’äº‹ä»¶
+        onSlotChanged += (int index, ItemSlot itemSlot) => { onUIChanged.Invoke(index); };//æ³¨å†ŒUIå˜åŒ–äº‹ä»¶                                                                          // è®¢é˜…åº“å­˜UIå˜åŒ–äº‹ä»¶ï¼Œå½“åº“å­˜UIå˜åŒ–æ—¶è°ƒç”¨åˆ·æ–°UIæ–¹æ³•
         onUIChanged += UI.RefreshSlotUI;
 
         if (Data.inventoryName == "")
@@ -268,20 +268,20 @@ public class Inventory : MonoBehaviour
 
     #endregion
 
-    #region ÔöÉ¾¸Ä
+    #region å¢åˆ æ”¹
     public bool AddItem(ItemData inputItemData, int index = -1)
     {
-        // ÎïÆ·Îª¿Õ»òÎŞ·¨Ìí¼ÓÊ±Ö±½Ó·µ»Ø
+        // ç‰©å“ä¸ºç©ºæˆ–æ— æ³•æ·»åŠ æ—¶ç›´æ¥è¿”å›
         if (!CanAddTheItem(inputItemData))
         {
-            // Debug.Log("ÎŞ·¨Ìí¼ÓÎïÆ·£ºÎïÆ·Îª¿Õ»ò±³°üÒÑÂú");
+            // Debug.Log("æ— æ³•æ·»åŠ ç‰©å“ï¼šç‰©å“ä¸ºç©ºæˆ–èƒŒåŒ…å·²æ»¡");
             return false;
         }
 
-        int stackIndex = -1; // ¿É¶ÑµşµÄ²ÛÎ»Ë÷Òı
-        int emptyIndex = -1; // ¿Õ²ÛÎ»Ë÷Òı
+        int stackIndex = -1; // å¯å †å çš„æ§½ä½ç´¢å¼•
+        int emptyIndex = -1; // ç©ºæ§½ä½ç´¢å¼•
 
-        // ¼ì²éÊÇ·ñ¿ÉÒÔ½øĞĞ¶Ñµş£¨½öµ±ÎïÆ·Ìå»ıĞ¡ÓÚ×îĞ¡¿É¶ÑµşÌå»ıÊ±ÔÊĞí£©
+        // æ£€æŸ¥æ˜¯å¦å¯ä»¥è¿›è¡Œå †å ï¼ˆä»…å½“ç‰©å“ä½“ç§¯å°äºæœ€å°å¯å †å ä½“ç§¯æ—¶å…è®¸ï¼‰
         if (inputItemData.Stack.Volume < MinStackVolume)
         {
             for (int i = 0; i < Data.itemSlots.Count; i++)
@@ -299,7 +299,7 @@ public class Inventory : MonoBehaviour
         }
 
 
-        // Èç¹ûÎŞ·¨¶Ñµş£¬ÔòÑ°ÕÒ¿Õ²ÛÎ»
+        // å¦‚æœæ— æ³•å †å ï¼Œåˆ™å¯»æ‰¾ç©ºæ§½ä½
         if (stackIndex == -1)
         {
             for (int i = 0; i < Data.itemSlots.Count; i++)
@@ -312,22 +312,22 @@ public class Inventory : MonoBehaviour
             }
         }
 
-        // ½øĞĞÎïÆ·Ìí¼Ó²Ù×÷
+        // è¿›è¡Œç‰©å“æ·»åŠ æ“ä½œ
         if (stackIndex != -1)
         {
-            // ¶ÑµşÎïÆ·
-            //  Debug.Log("¶ÑµşÎïÆ·µ½²ÛÎ»: " + stackIndex);
+            // å †å ç‰©å“
+            //  Debug.Log("å †å ç‰©å“åˆ°æ§½ä½: " + stackIndex);
             ChangeItemDataAmount(stackIndex, inputItemData.Stack.Amount);
         }
         else if (emptyIndex != -1)
         {
-            // ·ÅÈëĞÂÎïÆ·
-            // Debug.Log("·ÅÈëÎïÆ·µ½¿Õ²ÛÎ»: " + emptyIndex);
+            // æ”¾å…¥æ–°ç‰©å“
+            // Debug.Log("æ”¾å…¥ç‰©å“åˆ°ç©ºæ§½ä½: " + emptyIndex);
             SetOne_ItemData(emptyIndex, inputItemData);
         }
         else
         {
-            Debug.LogError("±³°üÒÑÂú£¬ÎŞ·¨Ìí¼ÓÎïÆ·");
+            Debug.LogError("èƒŒåŒ…å·²æ»¡ï¼Œæ— æ³•æ·»åŠ ç‰©å“");
             return false;
         }
         UI.RefreshAllInventoryUI();
@@ -339,11 +339,11 @@ public class Inventory : MonoBehaviour
     {
         if (inputItemData == null)
         {
-            // Debug.Log("ÎïÆ·Îª¿Õ£¬ÎŞ·¨Ìí¼Ó");
+            // Debug.Log("ç‰©å“ä¸ºç©ºï¼Œæ— æ³•æ·»åŠ ");
             return false;
         }
 
-        // Èç¹ûÎïÆ·Ìå»ı´óÓÚµÈÓÚ×îĞ¡¿É¶ÑµşÌå»ı£¬ÔòÖ»ÄÜ·ÅÈë¿Õ²ÛÎ»
+        // å¦‚æœç‰©å“ä½“ç§¯å¤§äºç­‰äºæœ€å°å¯å †å ä½“ç§¯ï¼Œåˆ™åªèƒ½æ”¾å…¥ç©ºæ§½ä½
         if (inputItemData.Stack.Volume >= MinStackVolume)
         {
             foreach (var slot in Data.itemSlots)
@@ -353,11 +353,11 @@ public class Inventory : MonoBehaviour
                     return true;
                 }
             }
-            Debug.Log("±³°üÒÑÂú£¬ÎŞ·¨Ìí¼Ó´óÌå»ıÎïÆ·");
+            Debug.Log("èƒŒåŒ…å·²æ»¡ï¼Œæ— æ³•æ·»åŠ å¤§ä½“ç§¯ç‰©å“");
             return false;
         }
 
-        // ²éÕÒ¿É¶ÑµşµÄÎ»ÖÃ
+        // æŸ¥æ‰¾å¯å †å çš„ä½ç½®
         foreach (var slot in Data.itemSlots)
         {
             if (!slot.IsFull && slot._ItemData != null &&
@@ -365,43 +365,43 @@ public class Inventory : MonoBehaviour
                 slot._ItemData.IDName == inputItemData.IDName &&
                 slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
             {
-                //  Debug.Log("ÕÒµ½¿É¶ÑµşµÄ²ÛÎ»");
+                //  Debug.Log("æ‰¾åˆ°å¯å †å çš„æ§½ä½");
                 return true;
             }
         }
 
-        // Èç¹û²»ÄÜ¶Ñµş£¬ÔòÑ°ÕÒ¿Õ²ÛÎ»
+        // å¦‚æœä¸èƒ½å †å ï¼Œåˆ™å¯»æ‰¾ç©ºæ§½ä½
         foreach (var slot in Data.itemSlots)
         {
             if (slot._ItemData == null)
             {
-                // Debug.Log("ÕÒµ½¿Õ²ÛÎ»");
+                // Debug.Log("æ‰¾åˆ°ç©ºæ§½ä½");
                 return true;
             }
         }
 
-        Debug.LogError("±³°üÒÑÂú£¬ÎŞ·¨Ìí¼ÓÎïÆ·");
+        Debug.LogError("èƒŒåŒ…å·²æ»¡ï¼Œæ— æ³•æ·»åŠ ç‰©å“");
         return false;
     }
-    // ÒÆ³ıÎïÆ·
+    // ç§»é™¤ç‰©å“
     public void RemoveItemAll(ItemSlot itemSlot, int index = 0)
     {
         onUIChanged.Invoke(index);
         itemSlot._ItemData = null;
     }
 
-    //Ìí¼ÓÒ»¸öĞÂ·½·¨ ÓÃÓÚ¼õÉÙÌØ¶¨ÊıÁ¿µÄÎïÆ·
+    //æ·»åŠ ä¸€ä¸ªæ–°æ–¹æ³• ç”¨äºå‡å°‘ç‰¹å®šæ•°é‡çš„ç‰©å“
     public bool RemoveItemAmount(ItemSlot itemSlot, int amount)
     {
         if (itemSlot._ItemData == null)
         {
-            Debug.Log("ÎïÆ·²ÛÎ»Îª¿Õ£¬ÎŞ·¨¼õÉÙ");
+            Debug.Log("ç‰©å“æ§½ä½ä¸ºç©ºï¼Œæ— æ³•å‡å°‘");
             return false;
         }
 
         if (itemSlot._ItemData.Stack.Amount < amount)
         {
-            Debug.Log("ÎïÆ·²ÛÎ»ÊıÁ¿²»×ã£¬ÎŞ·¨¼õÉÙ");
+            Debug.Log("ç‰©å“æ§½ä½æ•°é‡ä¸è¶³ï¼Œæ— æ³•å‡å°‘");
             return false;
         }
 
@@ -409,7 +409,7 @@ public class Inventory : MonoBehaviour
         onUIChanged.Invoke(itemSlot.Index);
         return true;
     }
-    // Ä¬ÈÏµÄÎïÆ·Êı¾İ½»»»·½·¨
+    // é»˜è®¤çš„ç‰©å“æ•°æ®äº¤æ¢æ–¹æ³•
     public void ChangeItemData_Default(int index, ItemSlot inputSlotHand)
     {
         float ChangeReate = 1;
@@ -427,13 +427,13 @@ public class Inventory : MonoBehaviour
 
 
 
-        // Á½ÕßÎª¿Õ
+        // ä¸¤è€…ä¸ºç©º
         if (inputDataHand == null && localData == null)
         {
             return;
         }
 
-        // ÊÖÉÏÓĞÎïÌå£¬±¾µØÎŞÎïÌå
+        // æ‰‹ä¸Šæœ‰ç‰©ä½“ï¼Œæœ¬åœ°æ— ç‰©ä½“
         if (inputDataHand != null && localData == null)
         {
             int changeAmount = (int)Mathf.Ceil(inputDataHand.Stack.Amount * ChangeReate);
@@ -442,7 +442,7 @@ public class Inventory : MonoBehaviour
             return;
         }
 
-        // ±¾µØÓĞÎïÌå£¬ÊÖÉÏÃ»ÎïÌå
+        // æœ¬åœ°æœ‰ç‰©ä½“ï¼Œæ‰‹ä¸Šæ²¡ç‰©ä½“
         if (localData != null && inputDataHand == null)
         {
             int changeAmount = (int)Mathf.Ceil(localData.Stack.Amount * ChangeReate);
@@ -451,16 +451,16 @@ public class Inventory : MonoBehaviour
             return;
         }
 
-        // ÌØÊâ½»»»
+        // ç‰¹æ®Šäº¤æ¢
         if (localSlot._ItemData.Stack.Volume > MinStackVolume || localSlot._ItemData.ItemSpecialData != inputSlotHand._ItemData.ItemSpecialData)
         {
-            Debug.Log("ÌØÊâ½»»»");
+            Debug.Log("ç‰¹æ®Šäº¤æ¢");
             localSlot.Change(inputSlotHand);
             onUIChanged.Invoke(index);
             return;
         }
 
-        // ÎïÆ·ÏàÍ¬
+        // ç‰©å“ç›¸åŒ
         if (inputSlotHand._ItemData.IDName == localSlot._ItemData.IDName)
         {
             int changeAmount = (int)Mathf.Ceil(localSlot._ItemData.Stack.Amount * ChangeReate);
@@ -469,16 +469,16 @@ public class Inventory : MonoBehaviour
             return;
         }
 
-        // Á½Õß²»Îª¿ÕÇÒÎïÆ·²»ÏàÍ¬
+        // ä¸¤è€…ä¸ä¸ºç©ºä¸”ç‰©å“ä¸ç›¸åŒ
         if (inputDataHand != null && localData != null && localData.IDName != inputDataHand.IDName)
         {
             localSlot.Change(inputSlotHand);
             onUIChanged.Invoke(index);
-            Debug.Log("(ÎïÆ·²»Í¬)½»»»ÎïÆ·²ÛÎ»:" + index + " ÎïÆ·:" + inputSlotHand._ItemData.IDName);
+            Debug.Log("(ç‰©å“ä¸åŒ)äº¤æ¢ç‰©å“æ§½ä½:" + index + " ç‰©å“:" + inputSlotHand._ItemData.IDName);
             return;
         }
     }
-    // ĞŞ¸ÄÎïÆ·ÊıÁ¿
+    // ä¿®æ”¹ç‰©å“æ•°é‡
     public bool ChangeItemAmount(ItemSlot localSlot, ItemSlot inputSlotHand, int count)
     {
         int changeCount = 0;
@@ -502,7 +502,7 @@ public class Inventory : MonoBehaviour
             changeCount++;
             inputSlotHand._ItemData.Stack.Amount++;
 
-            // Èç¹û±¾µØ²ÛÎ»ÈİÁ¿ÒÑ¾­ÂúÁË£¬Ìø³öÑ­»·
+            // å¦‚æœæœ¬åœ°æ§½ä½å®¹é‡å·²ç»æ»¡äº†ï¼Œè·³å‡ºå¾ªç¯
             if (changeCount >= count || localSlot._ItemData.Stack.Amount <= 0 || inputSlotHand._ItemData.Stack.Amount >= inputSlotHand.SlotMaxVolume)
             {
                 if (localSlot._ItemData.Stack.Amount <= 0)
@@ -516,18 +516,18 @@ public class Inventory : MonoBehaviour
 
     #endregion
 
-    #region ²å²ÛÎïÆ·²éÑ¯ ºÍ ÉèÖÃ
-    // ÉèÖÃµ¥¸öÎïÆ·
+    #region æ’æ§½ç‰©å“æŸ¥è¯¢ å’Œ è®¾ç½®
+    // è®¾ç½®å•ä¸ªç‰©å“
     public void SetOne_ItemData(int index, ItemData inputItemData)
     {
         Data.itemSlots[index]._ItemData = inputItemData;
     }
-    //ĞŞ¸Ä¶ÔÓ¦²å²ÛµÄÊıÁ¿
+    //ä¿®æ”¹å¯¹åº”æ’æ§½çš„æ•°é‡
     public void ChangeItemDataAmount(int index, float amount)
     {
         Data.itemSlots[index]._ItemData.Stack.Amount += amount;
     }
-    // »ñÈ¡Ö¸¶¨Ë÷ÒıµÄÎïÆ·²Û
+    // è·å–æŒ‡å®šç´¢å¼•çš„ç‰©å“æ§½
     public ItemSlot GetItemSlot(int index)
     {
         if (index < 0 || index >= Data.itemSlots.Count)
@@ -545,7 +545,7 @@ public class Inventory : MonoBehaviour
         }
     }
 
-    // »ñÈ¡Ö¸¶¨Ë÷ÒıµÄÎïÆ·Êı¾İ
+    // è·å–æŒ‡å®šç´¢å¼•çš„ç‰©å“æ•°æ®
     public ItemData GetItemData(int index)
     {
         return GetItemSlot(index)._ItemData;

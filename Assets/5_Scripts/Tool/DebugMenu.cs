@@ -5,32 +5,32 @@ using UnityEngine;
 
 public class DebugMenu : MonoBehaviour
 {
-    private bool debugMenuVisible = false; // ¿ØÖÆµ÷ÊÔ²Ëµ¥µÄÏÔÊ¾ÓëÒş²Ø
-    private string fpsOutput = ""; // ÓÃÓÚ´æ´¢FPSÊä³ö
-    private string memoryOutput = ""; // ÓÃÓÚ´æ´¢ÄÚ´æÕ¼ÓÃÊä³ö
-    private bool showFps = false; // ¿ØÖÆÊÇ·ñÏÔÊ¾FPSĞÅÏ¢
-    private float fpsUpdateTimer = 0f; // FPS¸üĞÂ¼ÆÊ±Æ÷
-    private float fps = 0f; // µ±Ç°FPSÖµ
+    private bool debugMenuVisible = false; // æ§åˆ¶è°ƒè¯•èœå•çš„æ˜¾ç¤ºä¸éšè—
+    private string fpsOutput = ""; // ç”¨äºå­˜å‚¨FPSè¾“å‡º
+    private string memoryOutput = ""; // ç”¨äºå­˜å‚¨å†…å­˜å ç”¨è¾“å‡º
+    private bool showFps = false; // æ§åˆ¶æ˜¯å¦æ˜¾ç¤ºFPSä¿¡æ¯
+    private float fpsUpdateTimer = 0f; // FPSæ›´æ–°è®¡æ—¶å™¨
+    private float fps = 0f; // å½“å‰FPSå€¼
 
 
     void Update()
     {
-        // ¼ì²éÊÇ·ñ°´ÏÂÁËF5¼ü
+        // æ£€æŸ¥æ˜¯å¦æŒ‰ä¸‹äº†F5é”®
         if (Input.GetKeyDown(KeyCode.F5))
         {
-            debugMenuVisible = !debugMenuVisible; // ÇĞ»»µ÷ÊÔ²Ëµ¥µÄ¿É¼ûĞÔ
+            debugMenuVisible = !debugMenuVisible; // åˆ‡æ¢è°ƒè¯•èœå•çš„å¯è§æ€§
         }
 
-        // Ã¿Ãë¸üĞÂÒ»´ÎFPS
+        // æ¯ç§’æ›´æ–°ä¸€æ¬¡FPS
         fpsUpdateTimer += Time.deltaTime;
-        if (fpsUpdateTimer >= 0.5f) // Ã¿Ãë¸üĞÂ
+        if (fpsUpdateTimer >= 0.5f) // æ¯ç§’æ›´æ–°
         {
-            fps = 1.0f / Time.deltaTime; // ¼ÆËãµ±Ç°FPS
-            fpsUpdateTimer = 0f; // ÖØÖÃ¼ÆÊ±Æ÷
+            fps = 1.0f / Time.deltaTime; // è®¡ç®—å½“å‰FPS
+            fpsUpdateTimer = 0f; // é‡ç½®è®¡æ—¶å™¨
 
-            if (showFps) // Ö»ÓĞÔÚÏÔÊ¾FPSÊ±¸üĞÂÏÔÊ¾ÄÚÈİ
+            if (showFps) // åªæœ‰åœ¨æ˜¾ç¤ºFPSæ—¶æ›´æ–°æ˜¾ç¤ºå†…å®¹
             {
-                fpsOutput = "µ±Ç°FPS: " + fps.ToString("F2"); // ¸ñÊ½»¯ÏÔÊ¾FPS
+                fpsOutput = "å½“å‰FPS: " + fps.ToString("F2"); // æ ¼å¼åŒ–æ˜¾ç¤ºFPS
             }
         }
     }
@@ -39,31 +39,31 @@ public class DebugMenu : MonoBehaviour
     {
         if (debugMenuVisible)
         {
-            // »æÖÆµ÷ÊÔ²Ëµ¥µÄGUI
-            GUILayout.BeginArea(new Rect(10, 10, 500, 600)); // À©Õ¹²Ëµ¥ÇøÓò¿í¶ÈÒÔÈİÄÉÁ½¸öBox
+            // ç»˜åˆ¶è°ƒè¯•èœå•çš„GUI
+            GUILayout.BeginArea(new Rect(10, 10, 500, 600)); // æ‰©å±•èœå•åŒºåŸŸå®½åº¦ä»¥å®¹çº³ä¸¤ä¸ªBox
 
-            // »æÖÆ²Ëµ¥Ïî
-            if (GUILayout.Button("ÇĞ»»FPSÊä³ö"))
+            // ç»˜åˆ¶èœå•é¡¹
+            if (GUILayout.Button("åˆ‡æ¢FPSè¾“å‡º"))
             {
-                showFps = !showFps; // ÇĞ»»ÊÇ·ñÏÔÊ¾FPSĞÅÏ¢
+                showFps = !showFps; // åˆ‡æ¢æ˜¯å¦æ˜¾ç¤ºFPSä¿¡æ¯
                 if (!showFps)
                 {
-                    fpsOutput = ""; // Òş²ØFPSÊ±Çå¿ÕÏÔÊ¾ÄÚÈİ
+                    fpsOutput = ""; // éšè—FPSæ—¶æ¸…ç©ºæ˜¾ç¤ºå†…å®¹
                 }
             }
 
-            if (GUILayout.Button("Êä³öÄÚ´æÕ¼ÓÃ"))
+            if (GUILayout.Button("è¾“å‡ºå†…å­˜å ç”¨"))
             {
                 DebugMemory();
             }
 
-            // »æÖÆµÚÒ»¸öÃæ°å£¨ÏÔÊ¾FPS£©
-            GUILayout.Space(10); // ¸øÃæ°åºÍ°´Å¥Ö®¼äÔö¼ÓÒ»µã¿Õ¼ä
-            GUILayout.Box(fpsOutput, GUILayout.Width(480), GUILayout.Height(200)); // ´´½¨Ò»¸öÃæ°åÓÃÓÚÏÔÊ¾FPSĞÅÏ¢
+            // ç»˜åˆ¶ç¬¬ä¸€ä¸ªé¢æ¿ï¼ˆæ˜¾ç¤ºFPSï¼‰
+            GUILayout.Space(10); // ç»™é¢æ¿å’ŒæŒ‰é’®ä¹‹é—´å¢åŠ ä¸€ç‚¹ç©ºé—´
+            GUILayout.Box(fpsOutput, GUILayout.Width(480), GUILayout.Height(200)); // åˆ›å»ºä¸€ä¸ªé¢æ¿ç”¨äºæ˜¾ç¤ºFPSä¿¡æ¯
 
-            // »æÖÆµÚ¶ş¸öÃæ°å£¨ÏÔÊ¾ÄÚ´æÕ¼ÓÃ£©
-            GUILayout.Space(10); // ¸øÃæ°åºÍ°´Å¥Ö®¼äÔö¼ÓÒ»µã¿Õ¼ä
-            GUILayout.Box(memoryOutput, GUILayout.Width(480), GUILayout.Height(200)); // ´´½¨Ò»¸öÃæ°åÓÃÓÚÏÔÊ¾ÄÚ´æÕ¼ÓÃ
+            // ç»˜åˆ¶ç¬¬äºŒä¸ªé¢æ¿ï¼ˆæ˜¾ç¤ºå†…å­˜å ç”¨ï¼‰
+            GUILayout.Space(10); // ç»™é¢æ¿å’ŒæŒ‰é’®ä¹‹é—´å¢åŠ ä¸€ç‚¹ç©ºé—´
+            GUILayout.Box(memoryOutput, GUILayout.Width(480), GUILayout.Height(200)); // åˆ›å»ºä¸€ä¸ªé¢æ¿ç”¨äºæ˜¾ç¤ºå†…å­˜å ç”¨
 
             GUILayout.EndArea();
         }
@@ -71,8 +71,8 @@ public class DebugMenu : MonoBehaviour
 
     void DebugMemory()
     {
-        // »ñÈ¡µ±Ç°ÄÚ´æÊ¹ÓÃÇé¿ö²¢¸üĞÂµ÷ÊÔĞÅÏ¢
-        float memoryUsage = (System.GC.GetTotalMemory(false) / 1048576f); // ×ª»»ÎªMB
-        memoryOutput = "µ±Ç°ÄÚ´æÕ¼ÓÃ: " + memoryUsage.ToString("F2") + " MB"; // ¸ñÊ½»¯ÏÔÊ¾ÄÚ´æÕ¼ÓÃ
+        // è·å–å½“å‰å†…å­˜ä½¿ç”¨æƒ…å†µå¹¶æ›´æ–°è°ƒè¯•ä¿¡æ¯
+        float memoryUsage = (System.GC.GetTotalMemory(false) / 1048576f); // è½¬æ¢ä¸ºMB
+        memoryOutput = "å½“å‰å†…å­˜å ç”¨: " + memoryUsage.ToString("F2") + " MB"; // æ ¼å¼åŒ–æ˜¾ç¤ºå†…å­˜å ç”¨
     }
 }

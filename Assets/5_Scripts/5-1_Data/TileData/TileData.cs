@@ -4,49 +4,49 @@ using UnityEngine;
 
 [System.Serializable]
 [MemoryPackable]
-[MemoryPackUnion(54, typeof(TileData_Grass))]//²İµØÊı¾İ
-[MemoryPackUnion(55, typeof(TileData_Water))]//Ë®µØÊı¾İ
-[MemoryPackUnion(56, typeof(TileData_Universal))]//Í¨ÓÃµØ¿éÊı¾İ
-[MemoryPackUnion(57, typeof(TileData_Farmland))]//¸ûµØÊı¾İ
+[MemoryPackUnion(54, typeof(TileData_Grass))]//è‰åœ°æ•°æ®
+[MemoryPackUnion(55, typeof(TileData_Water))]//æ°´åœ°æ•°æ®
+[MemoryPackUnion(56, typeof(TileData_Universal))]//é€šç”¨åœ°å—æ•°æ®
+[MemoryPackUnion(57, typeof(TileData_Farmland))]//è€•åœ°æ•°æ®
 public abstract partial class TileData
 {
-    //ÎïÆ·µÄ»æÖÆÎï¿é ÓÃÓÚÊµÏÖ
+    //ç‰©å“çš„ç»˜åˆ¶ç‰©å— ç”¨äºå®ç°
     public string ID;
-    //¶ÔÓ¦µÄÎïÆ·Ãû×Ö--ÓÃÓÚ»ñÈ¡ÎïÆ·ÖĞµÄ·½·¨
+    //å¯¹åº”çš„ç‰©å“åå­—--ç”¨äºè·å–ç‰©å“ä¸­çš„æ–¹æ³•
     public string Name;
-    //µØ¿éµÄTag
+    //åœ°å—çš„Tag
     public string TileTag = "";
-    //µØ¿éËùÔÚÎ»ÖÃ
+    //åœ°å—æ‰€åœ¨ä½ç½®
     public Vector3Int position;
-    //²ğ³ıËùĞèÊ±¼ä
+    //æ‹†é™¤æ‰€éœ€æ—¶é—´
     public float DemolitionTime;
-    //µ±Ç°²ğ³ıµÄÊ±¼ä
+    //å½“å‰æ‹†é™¤çš„æ—¶é—´
     public float workTime;
-    //µØ¿éÒÆ¶¯È¨ÖØ
+    //åœ°å—ç§»åŠ¨æƒé‡
     public uint Penalty = 1000;
     public bool IsWalkable = true;
 
 
-    // Ğéº¯Êı£º¸ù¾İ»·¾³²ã³õÊ¼»¯
+    // è™šå‡½æ•°ï¼šæ ¹æ®ç¯å¢ƒå±‚åˆå§‹åŒ–
     public virtual void Initialize_Env(EnvironmentLayers layers, int x, int y) { }
 
     /// <summary>
-    /// ÎªÔËĞĞÊ±´´½¨Ò»·İÇ³Á¿µÄÉî¿½±´£¨ÊÖĞ´£¬±ÜÃâÍ¨ÓÃÉî¿½±´²å¼ş¿ªÏú£©
+    /// ä¸ºè¿è¡Œæ—¶åˆ›å»ºä¸€ä»½æµ…é‡çš„æ·±æ‹·è´ï¼ˆæ‰‹å†™ï¼Œé¿å…é€šç”¨æ·±æ‹·è´æ’ä»¶å¼€é”€ï¼‰
     /// </summary>
     public abstract TileData Clone();
     /// <summary>
-    /// ÖØĞ´ToString·½·¨£¬·µ»Ø¶ÔÏóµÄÏêÏ¸ĞÅÏ¢
+    /// é‡å†™ToStringæ–¹æ³•ï¼Œè¿”å›å¯¹è±¡çš„è¯¦ç»†ä¿¡æ¯
     /// </summary>
-    /// <returns>°üº¬ËùÓĞ×Ö¶ÎĞÅÏ¢µÄ×Ö·û´®</returns>
+    /// <returns>åŒ…å«æ‰€æœ‰å­—æ®µä¿¡æ¯çš„å­—ç¬¦ä¸²</returns>
     public override string ToString()
     {
         return $"TileData {{\n" +
-        $"µØ¿é»ù´¡Ãû³Æ: {ID},\n" +
-        $" ¶ÔÓ¦ÎïÆ·Ãû³Æ: {Name},\n" +
-        $"µØ¿é±êÇ©: {TileTag},\n" +
-        $" µØ¿éÎ»ÖÃ: ({position.x}, {position.y}, {position.z}),\n" +
-        $"²ğ³ıËùĞèÊ±¼ä: {DemolitionTime:F2},\n" + // ±£Áô 2 Î»Ğ¡Êı£¬ÊıÖµ¸üÖ±¹Û
-        $"µ±Ç°²ğ³ıÊ±¼ä: {workTime:F2}\n" +
+        $"åœ°å—åŸºç¡€åç§°: {ID},\n" +
+        $" å¯¹åº”ç‰©å“åç§°: {Name},\n" +
+        $"åœ°å—æ ‡ç­¾: {TileTag},\n" +
+        $" åœ°å—ä½ç½®: ({position.x}, {position.y}, {position.z}),\n" +
+        $"æ‹†é™¤æ‰€éœ€æ—¶é—´: {DemolitionTime:F2},\n" + // ä¿ç•™ 2 ä½å°æ•°ï¼Œæ•°å€¼æ›´ç›´è§‚
+        $"å½“å‰æ‹†é™¤æ—¶é—´: {workTime:F2}\n" +
         "}";
     }
 }

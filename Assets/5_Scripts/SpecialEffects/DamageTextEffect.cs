@@ -5,12 +5,12 @@ using UnityEngine;
 
 public class DamageTextEffect : GameEffect
 {
-    [Header("ÎÄ±¾ÉèÖÃ")]
+    [Header("æ–‡æœ¬è®¾ç½®")]
     public TMP_Text TMP_text;
-    public float moveSpeed = 1.0f;          // ÉÏÉıËÙ¶È
-    public float fadeDuration = 1.0f;       // µ­³ö³ÖĞøÊ±¼ä
-    public float randomRange = 0.5f;        // Ëæ»úÉ¢¿ª·¶Î§
-    public Vector2 moveDirection = Vector2.up; // »ù±¾ÒÆ¶¯·½Ïò
+    public float moveSpeed = 1.0f;          // ä¸Šå‡é€Ÿåº¦
+    public float fadeDuration = 1.0f;       // æ·¡å‡ºæŒç»­æ—¶é—´
+    public float randomRange = 0.5f;        // éšæœºæ•£å¼€èŒƒå›´
+    public Vector2 moveDirection = Vector2.up; // åŸºæœ¬ç§»åŠ¨æ–¹å‘
     
     private float lifetime = 0f;
     private Color originalColor;
@@ -24,33 +24,33 @@ public class DamageTextEffect : GameEffect
             TMP_text = GetComponentInChildren<TMP_Text>();
             if (TMP_text == null)
             {
-                Debug.LogError("DamageTextEffect: TMP_Text×é¼şÎ´ÕÒµ½£¡");
+                Debug.LogError("DamageTextEffect: TMP_Textç»„ä»¶æœªæ‰¾åˆ°ï¼");
                 Destroy(gameObject);
                 return;
             }
         }
         
-        // ÉèÖÃÉËº¦ÊıÖµ
+        // è®¾ç½®ä¼¤å®³æ•°å€¼
         if (Data != null)
         {
             float data = System.Convert.ToSingle(Data);
             TMP_text.text = data.ToString("F0");
         }
         
-        // ¼ÇÂ¼³õÊ¼Î»ÖÃºÍÑÕÉ«
+        // è®°å½•åˆå§‹ä½ç½®å’Œé¢œè‰²
         originalColor = TMP_text.color;
         
-        // ¼ÆËãËæ»úÆ«ÒÆ
+        // è®¡ç®—éšæœºåç§»
         randomOffset = new Vector3(
             Random.Range(-randomRange, randomRange),
             Random.Range(-randomRange, randomRange),
             0f
         );
         
-        // ¼ÆËãÄ¿±êÎ»ÖÃ
+        // è®¡ç®—ç›®æ ‡ä½ç½®
         targetPosition = Sender.position + (Vector3)moveDirection + randomOffset;
         
-        // Æô¶¯¶¯»­Ğ­³Ì
+        // å¯åŠ¨åŠ¨ç”»åç¨‹
         StartCoroutine(AnimateText());
     }
 
@@ -62,20 +62,20 @@ public class DamageTextEffect : GameEffect
         {
             lifetime += Time.deltaTime;
             
-            // ¼ÆËãÒÆ¶¯½ø¶È
+            // è®¡ç®—ç§»åŠ¨è¿›åº¦
             float moveProgress = lifetime * moveSpeed;
             
-            // ¸üĞÂÎ»ÖÃ£¨ÏßĞÔ²åÖµ£©
+            // æ›´æ–°ä½ç½®ï¼ˆçº¿æ€§æ’å€¼ï¼‰
             transform.position = Vector3.Lerp(startPosition, targetPosition, moveProgress);
             
-            // ¼ÆËãÍ¸Ã÷¶È£¨ÏßĞÔµ­³ö£©
+            // è®¡ç®—é€æ˜åº¦ï¼ˆçº¿æ€§æ·¡å‡ºï¼‰
             float alpha = Mathf.Lerp(originalColor.a, 0f, lifetime / fadeDuration);
             TMP_text.color = new Color(originalColor.r, originalColor.g, originalColor.b, alpha);
             
             yield return null;
         }
         
-        // ¶¯»­½áÊø£¬Ïú»Ù¶ÔÏó
+        // åŠ¨ç”»ç»“æŸï¼Œé”€æ¯å¯¹è±¡
         Destroy(gameObject);
     }
 }

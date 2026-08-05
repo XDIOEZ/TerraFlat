@@ -12,6 +12,7 @@ namespace FlatWorld.GameTest.Core
         public void RequiredEntryPointsAndScenesExist()
         {
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs", "GameManager");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/NewWorldCreationRequest.cs", "NewWorldCreationRequest");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs", "GameRes");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/SceneMgr.cs", "SceneMgr");
             GameTestAssertions.AssertAssetExists("Assets/3_Scenes/GameStartScene.unity");
@@ -20,25 +21,68 @@ namespace FlatWorld.GameTest.Core
 
         [Test]
         [Category("Core.Smoke")]
-        public void NewAndExistingWorldEntryUsePrefabLoadingView()
+        public void WorldCreationCoreIsUiIndependentAndLoadingViewIsAnObserver()
         {
             const string managerPath = "Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs";
             const string uiPath = "Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.UI.cs";
+            const string worldEntryPath = "Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.WorldEntry.cs";
             string managerSource = File.ReadAllText(managerPath);
             string uiSource = File.ReadAllText(uiPath);
+            string worldEntrySource = File.ReadAllText(worldEntryPath);
 
+            Assert.That(typeof(GameManager).GetMethod(
+                nameof(GameManager.CreateNewWorld),
+                new[] { typeof(NewWorldCreationRequest) }), Is.Not.Null);
             Assert.That(managerSource, Does.Contain(
-                "BeginWorldEntryLoading(\"正在创建新世界\""));
-            Assert.That(managerSource, Does.Contain(
-                "BeginWorldEntryLoading(\"正在进入存档\""));
+                "CreateNewWorld(NewWorldCreationRequest request)"));
+            Assert.That(managerSource, Does.Not.Contain("UIManager"));
+            Assert.That(managerSource, Does.Not.Contain("TryBuildNewWorldCreationRequest"));
             Assert.That(managerSource, Does.Contain("yield return null;"),
-                "加载 Prefab 必须先获得渲染帧，再执行同步世界准备。 ");
+                "异步世界准备必须先交还一帧，避免在同一帧阻塞启动。 ");
+
+            Assert.That(uiSource, Does.Contain("TryBuildNewWorldCreationRequest"));
+            Assert.That(uiSource, Does.Contain("CreateNewWorld(request)"));
+            Assert.That(uiSource, Does.Contain(
+                "WorldEntryProgressChanged += OnWorldEntryProgressChanged"));
             Assert.That(uiSource, Does.Contain(
                 "InstantiatePrefab(RuntimeUIPrefabKeys.WorldLoading)"));
             Assert.That(uiSource, Does.Contain("DontDestroyOnLoad(worldLoadingView)"));
-            Assert.That(uiSource, Does.Contain("ChunkMgr.Instance.HasPendingChunkLoads"));
+            Assert.That(worldEntrySource, Does.Contain("ChunkMgr.Instance.HasPendingChunkLoads"));
             Assert.That(uiSource, Does.Not.Contain("new GameObject"),
                 "世界加载界面不得由运行时代码硬编码创建视觉节点。 ");
+        }
+
+        [Test]
+        [Category("Core.Smoke")]
+        public void NewWorldCreationRequestOwnsAValidatedSnapshot()
+        {
+            var sourcePlanet = new PlanetData
+            {
+                Name = "CoreSmokeWorld",
+                Radius = PlanetData.DefaultRadius,
+                NoiseScale = PlanetData.DefaultNoiseScale
+            };
+            var sourceTime = new TimeData();
+            var request = new NewWorldCreationRequest(
+                "CoreSmokeSave",
+                "CoreSmokePlayer",
+                "12345",
+                sourcePlanet,
+                sourceTime);
+
+            sourcePlanet.Name = "MutatedAfterConstruction";
+
+            Assert.That(request.TryValidate(out string error), Is.True, error);
+            Assert.That(request.PlanetData.Name, Is.EqualTo("CoreSmokeWorld"),
+                "请求必须保存输入快照，不能被 UI 或调用方随后修改。 ");
+            Assert.That(request.TimeData, Is.Not.SameAs(sourceTime));
+            Assert.That(request.TimeData.LightParams, Is.Not.SameAs(sourceTime.LightParams),
+                "AnimationCurve 持有 Unity 原生资源，必须显式重建。 ");
+            Assert.That(request.TimeData.dayNightGradient, Is.Not.SameAs(sourceTime.dayNightGradient),
+                "Gradient 持有 Unity 原生资源，必须显式重建。 ");
+            Assert.That(
+                request.TimeData.dayNightGradient.Evaluate(0.5f),
+                Is.EqualTo(sourceTime.dayNightGradient.Evaluate(0.5f)));
         }
 
         [Test]

@@ -1,7 +1,9 @@
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 namespace FlatWorld.GameTest.ItemModule
@@ -69,6 +71,59 @@ namespace FlatWorld.GameTest.ItemModule
             Assert.That(leather.ItemData, Is.Not.Null);
 
             Assert.That(ItemDefinitionCatalogLoader.GetRedundantBuiltInPrefabPaths().Count, Is.EqualTo(54));
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        public void StickDefinitionReusesEmbeddedAnimationModuleTypeAlias()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Item/Stick_Wood.prefab");
+            Assert.That(prefab, Is.Not.Null);
+
+            GameObject instance = null;
+            var gameResObject = new GameObject("GameResProbe");
+            gameResObject.SetActive(false);
+            try
+            {
+                GameRes gameRes = gameResObject.AddComponent<GameRes>();
+                instance = Object.Instantiate(prefab);
+                Item item = instance.GetComponent<Item>();
+                ItemData itemData = item.Get_NewItemData();
+                itemData.ModuleDataDic = new Dictionary<string, ModuleData>
+                {
+                    ["animation"] = new Ex_ModData_MemoryPackable
+                    {
+                        Name = "animation",
+                        ID = nameof(Mod_Weapon_AnimationAction),
+                        isRunning = true
+                    }
+                };
+                var definition = new RuntimeItemDefinition(
+                    "Stick_Wood",
+                    "Stick_Wood",
+                    prefab,
+                    itemData,
+                    null,
+                    null,
+                    new Dictionary<string, string>(),
+                    new Dictionary<string, string>
+                    {
+                        ["animation"] = nameof(Mod_Weapon_AnimationAction)
+                    });
+
+                Assert.DoesNotThrow(() =>
+                    ItemDefinitionRuntime.ConfigureInstance(gameRes, definition, item, itemData));
+                Assert.That(
+                    instance.GetComponentsInChildren<Mod_Weapon_AnimationAction>(true),
+                    Has.Length.EqualTo(1));
+            }
+            finally
+            {
+                if (instance != null)
+                    Object.DestroyImmediate(instance);
+                Object.DestroyImmediate(gameResObject);
+            }
         }
 
         [Test]
@@ -153,6 +208,37 @@ namespace FlatWorld.GameTest.ItemModule
 
         [Test]
         [Category("ItemModule.Smoke")]
+        public void StickDamageParametersMatchTheCurrentRuntimeModuleShape()
+        {
+            string path = Path.Combine(Application.dataPath, "StreamingAssets/GameConfig/Items/items.json");
+            ItemDefinitionDto definition = ItemDefinitionCatalogLoader
+                .ResolveDefinitions(File.ReadAllText(path))
+                .Single(item => item.Id == "Stick_Wood");
+            ItemModuleDefinitionDto damageDefinition = definition.Modules["damage"];
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Item/Stick_Wood.prefab");
+            Assert.That(prefab, Is.Not.Null);
+
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                Mod_Damage damage = instance.GetComponentInChildren<Mod_Damage>(true);
+                Assert.That(damage, Is.Not.Null);
+                Assert.DoesNotThrow(() => ModuleJsonConfigurator.Apply(
+                    damage,
+                    definition.Id,
+                    "damage",
+                    damageDefinition.Id,
+                    damageDefinition.Parameters.ToString()));
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
         public void TileMapItemDataUnionRoundTripsNewStackAndInitializesFromFiveEnvironmentLayers()
         {
             var source = new Data_TileMap
@@ -189,6 +275,43 @@ namespace FlatWorld.GameTest.ItemModule
             Assert.That(restored.EnvironmentLayers.Precipitation[0, 0], Is.EqualTo(0.8f));
             Assert.That(restored.EnvironmentLayers.Height[0, 0], Is.EqualTo(0.25f));
             Assert.That(restored.EnvironmentLayers.Light[0, 0], Is.EqualTo(0.7f));
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        public void ModuleLoadMigratesLegacyPrefabIdentityToCanonicalId()
+        {
+            const string legacyId = "LegacyModule";
+            const string canonicalId = "CanonicalModule";
+            var root = new GameObject("LegacyEntity");
+            var child = new GameObject(legacyId);
+            child.transform.SetParent(root.transform);
+
+            try
+            {
+                ItemTemplateLifecycleProbe item = root.AddComponent<ItemTemplateLifecycleProbe>();
+                ModuleIdentityProbe module = child.AddComponent<ModuleIdentityProbe>();
+                module.Data.ID = canonicalId;
+                module.Data.Name = "RuntimeModule";
+
+                var persisted = new Ex_ModData_MemoryPackable
+                {
+                    ID = legacyId,
+                    Name = "RuntimeModule"
+                };
+                item.itemData.ModuleDataDic.Clear();
+                item.itemData.ModuleDataDic[persisted.Name] = persisted;
+
+                item.ModuleLoad();
+
+                Assert.That(persisted.ID, Is.EqualTo(canonicalId));
+                Assert.That(item.itemMods.GetMod_ByID(canonicalId), Is.SameAs(module));
+                Assert.That(item.itemMods.GetMod_ByID(legacyId), Is.Null);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
         }
     }
 

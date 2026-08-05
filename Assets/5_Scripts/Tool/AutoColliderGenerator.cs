@@ -4,9 +4,9 @@ using System.Collections.Generic;
 [RequireComponent(typeof(PolygonCollider2D))]
 public class PixelColliderGenerator : MonoBehaviour
 {
-    public SpriteRenderer spriteRenderer; // °ó¶¨µÄ¾«ÁéäÖÈ¾Æ÷
-    public float pixelPerUnit = 100f; // Ã¿µ¥Î»ÏñËØÊı£¬ÓÃÓÚ¿ØÖÆÉú³É¾«¶È
-    public int simplificationFactor = 2; // ¶¥µã¼ò»¯Òò×Ó£¬ÖµÔ½¸ßÉú³ÉµÄ¶¥µãÔ½ÉÙ
+    public SpriteRenderer spriteRenderer; // ç»‘å®šçš„ç²¾çµæ¸²æŸ“å™¨
+    public float pixelPerUnit = 100f; // æ¯å•ä½åƒç´ æ•°ï¼Œç”¨äºæ§åˆ¶ç”Ÿæˆç²¾åº¦
+    public int simplificationFactor = 2; // é¡¶ç‚¹ç®€åŒ–å› å­ï¼Œå€¼è¶Šé«˜ç”Ÿæˆçš„é¡¶ç‚¹è¶Šå°‘
 
     private void Start()
     {
@@ -23,13 +23,13 @@ public class PixelColliderGenerator : MonoBehaviour
         Sprite sprite = spriteRenderer.sprite;
         if (sprite == null)
         {
-            Debug.LogError("Sprite Î´ÕÒµ½£¬ÇëÈ·±£ SpriteRenderer ÖĞÓĞ°ó¶¨µÄÍ¼Ïñ£¡");
+            Debug.LogError("Sprite æœªæ‰¾åˆ°ï¼Œè¯·ç¡®ä¿ SpriteRenderer ä¸­æœ‰ç»‘å®šçš„å›¾åƒï¼");
             return;
         }
 
         Texture2D texture = sprite.texture;
 
-        // »ñÈ¡¾«ÁéµÄÏñËØ±ß½ç
+        // è·å–ç²¾çµçš„åƒç´ è¾¹ç•Œ
         Rect spriteRect = sprite.textureRect;
         int xStart = Mathf.RoundToInt(spriteRect.x);
         int yStart = Mathf.RoundToInt(spriteRect.y);
@@ -38,15 +38,15 @@ public class PixelColliderGenerator : MonoBehaviour
 
         List<Vector2> outline = GetOutline(texture, xStart, yStart, width, height);
 
-        // ¼ò»¯¶¥µã
+        // ç®€åŒ–é¡¶ç‚¹
         outline = SimplifyOutline(outline, simplificationFactor);
 
-        // Ó¦ÓÃµ½ PolygonCollider2D
+        // åº”ç”¨åˆ° PolygonCollider2D
         PolygonCollider2D polygonCollider = GetComponent<PolygonCollider2D>();
         polygonCollider.pathCount = 1;
         polygonCollider.SetPath(0, outline.ToArray());
 
-        Debug.Log($"Åö×²Æ÷Éú³ÉÍê³É£¬¶¥µãÊı£º{outline.Count}");
+        Debug.Log($"ç¢°æ’å™¨ç”Ÿæˆå®Œæˆï¼Œé¡¶ç‚¹æ•°ï¼š{outline.Count}");
     }
 
     private List<Vector2> GetOutline(Texture2D texture, int xStart, int yStart, int width, int height)
@@ -62,7 +62,7 @@ public class PixelColliderGenerator : MonoBehaviour
 
                 Color pixelColor = texture.GetPixel(xStart + x, yStart + y);
 
-                if (pixelColor.a > 0.1f) // ÅĞ¶Ï·ÇÍ¸Ã÷ÏñËØ
+                if (pixelColor.a > 0.1f) // åˆ¤æ–­éé€æ˜åƒç´ 
                 {
                     outline.Add(new Vector2(x / pixelPerUnit, y / pixelPerUnit));
                     visited[x, y] = true;

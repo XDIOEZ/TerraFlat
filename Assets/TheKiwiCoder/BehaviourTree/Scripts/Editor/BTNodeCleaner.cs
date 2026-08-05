@@ -8,7 +8,7 @@ namespace TheKiwiCoder.EditorTools
     public class BTNodeCleaner : EditorWindow
     {
 
-        [MenuItem("TheKiwiCoder/ÇåÀíÎÞÐ§½Úµã")]
+        [MenuItem("TheKiwiCoder/æ¸…ç†æ— æ•ˆèŠ‚ç‚¹")]
         public static void CleanBrokenNodes()
         {
             string[] guids = AssetDatabase.FindAssets("t:BehaviourTree");
@@ -29,7 +29,7 @@ namespace TheKiwiCoder.EditorTools
                 if (before != after)
                 {
                     EditorUtility.SetDirty(tree);
-                    Debug.Log($"[BTNodeCleaner] ÇåÀíÎÄ¼þ {path}£ºÉ¾³ýÁË {before - after} ¸öÎÞÐ§½ÚµãÒýÓÃ¡£");
+                    Debug.Log($"[BTNodeCleaner] æ¸…ç†æ–‡ä»¶ {path}ï¼šåˆ é™¤äº† {before - after} ä¸ªæ— æ•ˆèŠ‚ç‚¹å¼•ç”¨ã€‚");
                     totalFixed += before - after;
                 }
             }
@@ -38,11 +38,11 @@ namespace TheKiwiCoder.EditorTools
 
             if (totalFixed > 0)
             {
-                EditorUtility.DisplayDialog("ÇåÀíÍê³É", $"¹²ÇåÀí {totalFixed} ¸ö¶ªÊ§ÒýÓÃµÄ½Úµã¡£", "ºÃµÄ");
+                EditorUtility.DisplayDialog("æ¸…ç†å®Œæˆ", $"å…±æ¸…ç† {totalFixed} ä¸ªä¸¢å¤±å¼•ç”¨çš„èŠ‚ç‚¹ã€‚", "å¥½çš„");
             }
             else
             {
-                EditorUtility.DisplayDialog("ÎÞÇåÀí±ØÒª", "ËùÓÐÐÐÎªÊ÷½Úµã¾ùÎªÓÐÐ§ÒýÓÃ¡£", "Ã÷°×");
+                EditorUtility.DisplayDialog("æ— æ¸…ç†å¿…è¦", "æ‰€æœ‰è¡Œä¸ºæ ‘èŠ‚ç‚¹å‡ä¸ºæœ‰æ•ˆå¼•ç”¨ã€‚", "æ˜Žç™½");
             }
         }
     }

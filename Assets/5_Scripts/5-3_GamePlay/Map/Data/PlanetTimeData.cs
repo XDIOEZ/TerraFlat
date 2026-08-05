@@ -5,35 +5,35 @@ using UnityEngine;
 [System.Serializable]
 public partial class PlanetTimeData
 {
-    [Header("Ê±¼äÏà¹Ø")]
+    [Header("æ—¶é—´ç›¸å…³")]
     public float DayTime = 0;
     public float SeasonTime = 0;
     public float YearTime = 0;
-    [Header("¼ÆÊıÏà¹Ø")]
-    public float Day = 0;//1440 ½øÒ»
-    public float Season = 0;//8640 ½øÒ»
-    public float Year = 0; //34560 ½øÒ»
+    [Header("è®¡æ•°ç›¸å…³")]
+    public float Day = 0;//1440 è¿›ä¸€
+    public float Season = 0;//8640 è¿›ä¸€
+    public float Year = 0; //34560 è¿›ä¸€
 
-    [Header("Ê±¼ä³£Êı")]
-    [Tooltip("Ò»ÌìÊ±¼ä")]
-    public float OneDayTime = 1440;//Ò»Ìì1440Ãë 60*24 µ¥Î»Ãë 1·ÖÖÓ60Ãë 24·ÖÖÓ
-    [Tooltip("Ò»¼¾Ê±¼ä")]
-    public float OneSeasonTime = 8640;//Ò»¼¾8640Ãë  6ÌìÎªÒ»¼¾ 24*6*60 µ¥Î»Ãë 1Ìì60·ÖÖÓ 6Ìì24Ğ¡Ê±
-    [Tooltip("Ò»ÄêÊ±¼ä")]
-    public float OneYearTime = 34560;//Ò»Äê31536Ãë 
+    [Header("æ—¶é—´å¸¸æ•°")]
+    [Tooltip("ä¸€å¤©æ—¶é—´")]
+    public float OneDayTime = 1440;//ä¸€å¤©1440ç§’ 60*24 å•ä½ç§’ 1åˆ†é’Ÿ60ç§’ 24åˆ†é’Ÿ
+    [Tooltip("ä¸€å­£æ—¶é—´")]
+    public float OneSeasonTime = 8640;//ä¸€å­£8640ç§’  6å¤©ä¸ºä¸€å­£ 24*6*60 å•ä½ç§’ 1å¤©60åˆ†é’Ÿ 6å¤©24å°æ—¶
+    [Tooltip("ä¸€å¹´æ—¶é—´")]
+    public float OneYearTime = 34560;//ä¸€å¹´31536ç§’ 
 
-    [Tooltip("×Ô×ªËÙ¶È")]
+    [Tooltip("è‡ªè½¬é€Ÿåº¦")]
     public float RotationSpeed = 1f;
-    [Tooltip("¹«×ªËÙ¶È")]
+    [Tooltip("å…¬è½¬é€Ÿåº¦")]
     public float OrbitSpeed = 1f;
 
-    [Header("¼¾½ÚÏà¹Ø²ÎÊı")]
-    [Tooltip("´º¼¾-ÈÕ³öÈÕÂäãĞÖµ")]//°×ÌìºÚÒ¹1:1
+    [Header("å­£èŠ‚ç›¸å…³å‚æ•°")]
+    [Tooltip("æ˜¥å­£-æ—¥å‡ºæ—¥è½é˜ˆå€¼")]//ç™½å¤©é»‘å¤œ1:1
     public Vector2 SunriseSunsetThreshold_Spring = new Vector2(0.3f, 0.2f);
-    [Tooltip("ÏÄ¼¾-ÈÕ³öÈÕÂäãĞÖµ")]//°×ÌìºÚÒ¹1.5:1
+    [Tooltip("å¤å­£-æ—¥å‡ºæ—¥è½é˜ˆå€¼")]//ç™½å¤©é»‘å¤œ1.5:1
     public Vector2 SunriseSunsetThreshold_Summer = new Vector2(0.2f, 0.1f);
-    [Tooltip("Çï¼¾-ÈÕ³öÈÕÂäãĞÖµ")]
+    [Tooltip("ç§‹å­£-æ—¥å‡ºæ—¥è½é˜ˆå€¼")]
     public Vector2 SunriseSunsetThreshold_Autumn = new Vector2(0.3f, 0.2f);
-    [Tooltip("¶¬¼¾-ÈÕ³öÈÕÂäãĞÖµ")]
+    [Tooltip("å†¬å­£-æ—¥å‡ºæ—¥è½é˜ˆå€¼")]
     public Vector2 SunriseSunsetThreshold_Winter = new Vector2(0.5f, 0.4f);
 }

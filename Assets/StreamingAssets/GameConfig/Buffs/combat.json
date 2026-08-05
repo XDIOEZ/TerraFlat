@@ -25,6 +25,22 @@
       ]
     },
     {
+      "id": "燃烧",
+      "displayName": "燃烧",
+      "category": "general",
+      "description": "持续燃烧，每秒受到1点真实伤害。",
+      "durationSeconds": 5.0,
+      "tickIntervalSeconds": 1.0,
+      "stackMode": "refresh_duration",
+      "effects": [
+        {
+          "phase": "tick",
+          "typeId": "core:true_damage",
+          "value": 1.0
+        }
+      ]
+    },
+    {
       "id": "光耀",
       "displayName": "光耀",
       "description": "每秒对幽灵造成5%最大生命值的真实伤害",

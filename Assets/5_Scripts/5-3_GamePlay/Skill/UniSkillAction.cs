@@ -4,18 +4,18 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "SkillAction_InstantiatePrefab", menuName = "Skill/SkillAction_InstantiatePrefab", order = 0)]
 public class UniSkillAction : BaseSkillAction
 {
-    [Tooltip("Ô¤ÖÆÌå")]
+    [Tooltip("é¢„åˆ¶ä½“")]
     public GameObject SkillPrefab;
 
     public override void StartExecuteSkill(RuntimeSkill Data)
     {
-        // ÊµÀı»¯ÀØÉäÏßÔ¤ÖÆÌå²¢´«µİRuntimeSkillÊı¾İ
+        // å®ä¾‹åŒ–é•­å°„çº¿é¢„åˆ¶ä½“å¹¶ä¼ é€’RuntimeSkillæ•°æ®
         GameObject laserObject = Instantiate(SkillPrefab);
     }
 
     public override void StayExecuteSkill(RuntimeSkill Data, float deltaTime)
     {
-        // Âß¼­ÏÖÔÚÔÚLaser_Skill×é¼şÖĞ´¦Àí
+        // é€»è¾‘ç°åœ¨åœ¨Laser_Skillç»„ä»¶ä¸­å¤„ç†
         Data.progress += deltaTime;
     }
 

@@ -85,6 +85,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     private void Start()
     {
         DontDestroyOnLoad(gameObject);
+        InitializeWorldEntryPresentation();
         AutoSaveController.Ensure(this);
         _ = DimensionManager.Instance;
         _ = FlatWorld.Gameplay.Events.GameEventManager.Instance;
@@ -95,6 +96,13 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         Time.timeScale = 1;
 
         BackToHelloScene_Event_End += OpenHellowCanvas;
+    }
+
+    protected override void OnDestroy()
+    {
+        ResetWorldEntryLifecycle();
+        DisposeWorldEntryPresentation();
+        base.OnDestroy();
     }
     #endregion
 
@@ -172,9 +180,14 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         Debug.Log("[ExitGame] 开始清理区块...");
         ChunkMgr.Instance.ClearAllChunk();
 
-        // 释放未使用的资源
-        Resources.UnloadUnusedAssets();
-        System.GC.Collect();
+        // 等待 Unity 在主线程完成资源卸载。不在场景切换中强制执行托管终结器，
+        // 避免与 Unity 原生对象的延迟销毁发生重入。
+        AsyncOperation unloadUnusedAssets = Resources.UnloadUnusedAssets();
+        if (unloadUnusedAssets != null)
+        {
+            while (!unloadUnusedAssets.isDone)
+                yield return null;
+        }
 
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 4：场景切换阶段
@@ -233,32 +246,43 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     #endregion
 
     #region 游戏开始相关
-    [Tooltip("开始新游戏,创建一个新世界")]
-    public void CreateNewWorld()
+    /// <summary>
+    /// 使用完整请求创建新世界。该入口不读取任何 UI，可由菜单、自动化测试或其他系统调用。
+    /// </summary>
+    public bool CreateNewWorld(NewWorldCreationRequest request)
     {
         if (!EnsureContentReady("创建新世界"))
-            return;
+            return false;
+
+        if (request == null)
+        {
+            Debug.LogError("[GameManager] 创建新世界失败：请求为空");
+            return false;
+        }
+
+        if (!request.TryValidate(out string validationError))
+        {
+            Debug.LogError($"[GameManager] 创建新世界失败：{validationError}");
+            return false;
+        }
 
         SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
         if (saveDataMgr == null)
         {
             Debug.LogError("[GameManager] 创建新世界失败：SaveDataMgr 未就绪");
-            return;
+            return false;
         }
 
-        if (!TryReadNewGameCreationInputs(out string requestedSaveName, out string playerName))
-            return;
+        if (!BeginWorldEntry("正在创建新世界", "正在准备新存档数据…", 0.08f))
+            return false;
 
-        if (!BeginWorldEntryLoading("正在创建新世界", "正在准备新存档数据…", 0.08f))
-            return;
-
-        StartCoroutine(CreateNewWorldCoroutine(saveDataMgr, requestedSaveName, playerName));
+        StartCoroutine(CreateNewWorldCoroutine(saveDataMgr, request));
+        return true;
     }
 
     private IEnumerator CreateNewWorldCoroutine(
         SaveDataMgr saveDataMgr,
-        string requestedSaveName,
-        string playerName)
+        NewWorldCreationRequest request)
     {
         // 先让加载 Prefab 完成一帧渲染，再执行存档和世界初始化。
         yield return null;
@@ -267,10 +291,11 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         {
             saveDataMgr.ResetChunkDifferenceState();
             saveDataMgr.SaveData = new GameSaveData();
-            ApplyPendingNewWorldDifficulty(saveDataMgr.SaveData);
-            SetWorldLoadingView("正在创建新世界", "正在生成世界种子…", 0.2f);
+            saveDataMgr.CurrentContrrolPlayerName = request.PlayerName;
+            ApplyNewWorldDifficulty(saveDataMgr.SaveData, request);
+            ReportWorldEntryProgress("正在创建新世界", "正在生成世界种子…", 0.2f);
 
-            string inputSeed = ReadyGameSaveData.SaveSeed?.Trim();
+            string inputSeed = request.Seed;
             bool isNoSeedInput = string.IsNullOrEmpty(inputSeed) || inputSeed == "0";
 
             if (isNoSeedInput)
@@ -292,23 +317,38 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             UnityEngine.Random.InitState(saveDataMgr.SaveData.Seed);
 
-            SetWorldLoadingView("正在创建新世界", "正在创建星球数据…", 0.32f);
+            ReadyPlanetData = FastCloner.FastCloner.DeepClone(request.PlanetData);
+            ReadyTimeData = request.TimeData.CreateRuntimeCopy();
+            ReadyGameSaveData = new GameSaveData { SaveSeed = request.Seed };
+
+            ReportWorldEntryProgress("正在创建新世界", "正在创建星球数据…", 0.32f);
             SetNewPlanetData(ReadyPlanetData, ReadyTimeData);
-            SetWorldLoadingView("正在创建新世界", "正在写入首个存档…", 0.45f);
-            if (!saveDataMgr.TryCreateNewSave(saveDataMgr.SaveData, requestedSaveName, out string createdSaveName))
+            ReportWorldEntryProgress("正在创建新世界", "正在写入首个存档…", 0.45f);
+            if (!saveDataMgr.TryCreateNewSave(saveDataMgr.SaveData, request.SaveName, out string createdSaveName))
             {
-                FailWorldEntryLoading("首个存档文件未能写入磁盘。");
+                FailWorldEntry("首个存档文件未能写入磁盘。");
                 yield break;
             }
 
             Debug.Log($"[GameManager] 已创建新世界存档：{createdSaveName}");
-            SetWorldLoadingView("正在创建新世界", "存档已创建，正在进入世界…", 0.55f);
-            ContinueGameInternal(playerName);
+            ReportWorldEntryProgress("正在创建新世界", "存档已创建，正在进入世界…", 0.55f);
+            ContinueGameInternal(request.PlayerName, request.PlanetData.Name);
         }
         catch (Exception exception)
         {
-            FailWorldEntryLoading("创建新世界时发生错误。", exception);
+            FailWorldEntry("创建新世界时发生错误。", exception);
         }
+    }
+
+    private static void ApplyNewWorldDifficulty(
+        GameSaveData saveData,
+        NewWorldCreationRequest request)
+    {
+        if (saveData == null || request == null)
+            return;
+
+        saveData.Difficulty = request.Difficulty;
+        GameDifficultyCatalog.WriteCustomRules(saveData, request.CustomDifficultyRules);
     }
 
     private static string GenerateRandomSeedString()
@@ -370,7 +410,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (!EnsureContentReady("继续游戏"))
             return;
 
-        if (!BeginWorldEntryLoading("正在进入存档", "正在准备世界数据…", 0.12f))
+        if (!BeginWorldEntry("正在进入存档", "正在准备世界数据…", 0.12f))
             return;
 
         StartCoroutine(ContinueGameCoroutine(PlayerName));
@@ -383,40 +423,80 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         ContinueGameInternal(playerName);
     }
 
-    private void ContinueGameInternal(string playerName)
+    private void ContinueGameInternal(string playerName, string fallbackPlanetName = null)
     {
         try
         {
             SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
             if (saveDataMgr?.SaveData == null)
             {
-                FailWorldEntryLoading("当前没有可进入的存档数据。");
+                FailWorldEntry("当前没有可进入的存档数据。");
                 return;
             }
 
+            saveDataMgr.CurrentContrrolPlayerName = playerName;
+
             // 1. 根据存档立即确定玩家所在的星球名
             saveDataMgr.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData);
-            string planetName = playerData != null ? playerData.CurrentSceneName : ReadyPlanetData.Name;
-            SetWorldLoadingView("正在进入存档", $"正在加载星球：{planetName}", 0.38f);
+            string planetName = ResolveWorldKeyForPlayer(
+                saveDataMgr.SaveData,
+                playerData,
+                fallbackPlanetName);
+            if (string.IsNullOrWhiteSpace(planetName))
+            {
+                FailWorldEntry("存档中没有可进入的星球数据。");
+                return;
+            }
+
+            ReportWorldEntryProgress("正在进入存档", $"正在加载星球：{planetName}", 0.38f);
 
             // 根据用户当前控制的玩家名称加载玩家。
             RunWorld(NewScenename: planetName, () =>
             {
                 try
                 {
-                    SetWorldLoadingView("正在进入存档", "正在创建玩家并准备出生区域…", 0.66f);
+                    ReportWorldEntryProgress("正在进入存档", "正在创建玩家并准备出生区域…", 0.66f);
                     LoadPlayer(playerName: playerName);
                 }
                 catch (Exception exception)
                 {
-                    FailWorldEntryLoading("加载玩家时发生错误。", exception);
+                    FailWorldEntry("加载玩家时发生错误。", exception);
                 }
             });
         }
         catch (Exception exception)
         {
-            FailWorldEntryLoading("进入存档时发生错误。", exception);
+            FailWorldEntry("进入存档时发生错误。", exception);
         }
+    }
+
+    private string ResolveWorldKeyForPlayer(
+        GameSaveData saveData,
+        Data_Player playerData,
+        string preferredWorldKey)
+    {
+        if (saveData?.PlanetData_Dict == null)
+            return string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(playerData?.CurrentSceneName))
+            return playerData.CurrentSceneName;
+
+        if (!string.IsNullOrWhiteSpace(preferredWorldKey) &&
+            saveData.PlanetData_Dict.ContainsKey(preferredWorldKey))
+        {
+            return preferredWorldKey;
+        }
+
+        if (!string.IsNullOrWhiteSpace(ReadyPlanetData?.Name) &&
+            saveData.PlanetData_Dict.ContainsKey(ReadyPlanetData.Name))
+        {
+            return ReadyPlanetData.Name;
+        }
+
+        foreach (string worldKey in saveData.PlanetData_Dict.Keys)
+            return worldKey;
+
+        return string.Empty;
     }
 
     public void RunWorld(string NewScenename, Action onOldSceneUnloaded = null)
@@ -634,6 +714,11 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     private void LoadPlayer(string playerName)
     {
         Player player = ItemMgr.Instance.LoadPlayer(playerName);
+        if (player?.Data != null)
+        {
+            player.Data.CurrentSceneName = SceneManager.GetActiveScene().name;
+            SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
+        }
 
         if (RequiresInitialPlayerPlacement(player))
         {
@@ -666,19 +751,19 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         if (player == null || player.Data == null)
         {
-            FailWorldEntryLoading("新玩家数据无效，无法准备出生区域。");
+            FailWorldEntry("新玩家数据无效，无法准备出生区域。");
             yield break;
         }
 
         Vector2Int seedAnchor = GetSeedAnchorPosition();
         int worldSeed = GetActiveWorldGenerationSeed();
-        SetWorldLoadingView("正在进入存档", "正在根据世界种子定位安全出生点…", 0.7f);
+        ReportWorldEntryProgress("正在进入存档", "正在根据世界种子定位安全出生点…", 0.7f);
 
         // 读取已加载的 MapCore Prefab 配置做纯采样，不实例化 Map 或 Chunk。
         // 玩家位置设置完成后才触发 Event_PlayerEnterWorld，由 Mod_ChunkLoader 正常流送周围区块。
         if (!TryFindNearestLand(seedAnchor, out Vector2Int landPosition, out string failureReason))
         {
-            FailWorldEntryLoading(
+            FailWorldEntry(
                 $"{failureReason} seed={worldSeed}, anchor={seedAnchor}。请检查世界噪声缩放和生物群系配置。");
             yield break;
         }

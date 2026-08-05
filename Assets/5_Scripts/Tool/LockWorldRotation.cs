@@ -8,13 +8,13 @@ public class LockWorldRotation : MonoBehaviour
 
     void Start()
     {
-        // ¼ÇÂ¼³õÊ¼µÄÊÀ½çĞı×ª
+        // è®°å½•åˆå§‹çš„ä¸–ç•Œæ—‹è½¬
         initialRotation = transform.rotation;
     }
 
     void FixedUpdate()
     {
-        // Ã¿Ö¡Ç¿ÖÆ»¹Ô­Îª³õÊ¼ÊÀ½çĞı×ª
+        // æ¯å¸§å¼ºåˆ¶è¿˜åŸä¸ºåˆå§‹ä¸–ç•Œæ—‹è½¬
         transform.rotation = initialRotation;
     }
 }

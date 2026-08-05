@@ -3,20 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 using TheKiwiCoder;
 
-[NodeMenu("ActionNode/¼ì²â/¼ì²âÊÇ·ñ¿ÉÒÔÊ¹ÓÃ¼¼ÄÜ")]
+[NodeMenu("ActionNode/æ£€æµ‹/æ£€æµ‹æ˜¯å¦å¯ä»¥ä½¿ç”¨æŠ€èƒ½")]
 public class AISkillCooldownTime : ActionNode
 {
-    [Header("ÀäÈ´Ê±¼ä£¨Ãë£©")]
+    [Header("å†·å´æ—¶é—´ï¼ˆç§’ï¼‰")]
     public float cooldownTime = 1.0f;
 
-    [Header("ÀäÈ´½ø¶È±¶ÂÊ£¨µ÷½ÚÀäÈ´ËÙ¶È£©")]
+    [Header("å†·å´è¿›åº¦å€ç‡ï¼ˆè°ƒèŠ‚å†·å´é€Ÿåº¦ï¼‰")]
     public float cooldownRateMultiplier = 1.0f;
 
-    [Header("µ÷ÊÔĞÅÏ¢")]
+    [Header("è°ƒè¯•ä¿¡æ¯")]
     [SerializeField] private bool isCoolingDown = false;
     [SerializeField] private float accumulatedCooldownProgress = 0f;
 
-    private float lastAccessTime = 0f; // ÉÏ´Î½Úµã±»·ÃÎÊµÄÊ±¼ä
+    private float lastAccessTime = 0f; // ä¸Šæ¬¡èŠ‚ç‚¹è¢«è®¿é—®çš„æ—¶é—´
 
     protected override void OnStart()
     {
@@ -42,7 +42,7 @@ public class AISkillCooldownTime : ActionNode
 
         if (!isCoolingDown)
         {
-            // ÀäÈ´½áÊø => ¼¼ÄÜ¿ÉÓÃ
+            // å†·å´ç»“æŸ => æŠ€èƒ½å¯ç”¨
             StartCooldown();
             return State.Success;
         }
@@ -51,27 +51,27 @@ public class AISkillCooldownTime : ActionNode
     }
 
 
-    // ÊÖ¶¯¿ªÊ¼ÀäÈ´
+    // æ‰‹åŠ¨å¼€å§‹å†·å´
     public void StartCooldown()
     {
         isCoolingDown = true;
         accumulatedCooldownProgress = 0f;
     }
 
-    // »ñÈ¡Ê£ÓàÀäÈ´Ê±¼ä
+    // è·å–å‰©ä½™å†·å´æ—¶é—´
     public float GetRemainingCooldownTime()
     {
         if (!isCoolingDown) return 0f;
         return Mathf.Max(0f, cooldownTime - accumulatedCooldownProgress);
     }
 
-    // ¼ì²éÊÇ·ñÀäÈ´Íê±Ï
+    // æ£€æŸ¥æ˜¯å¦å†·å´å®Œæ¯•
     public bool IsCooledDown()
     {
         return !isCoolingDown;
     }
 
-    // Ç¿ÖÆÖØÖÃ
+    // å¼ºåˆ¶é‡ç½®
     public void ResetCooldown()
     {
         isCoolingDown = false;

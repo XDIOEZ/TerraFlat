@@ -21,16 +21,16 @@ public class CheckAICanMoveTo : ActionNode
     protected override State OnUpdate() 
     {
    
-        // Èç¹ûÂ·¾¶ÎŞĞ§£¨ÈçÄ¿±ê²»¿É´ï£©£¬·µ»ØÊ§°Ü
+        // å¦‚æœè·¯å¾„æ— æ•ˆï¼ˆå¦‚ç›®æ ‡ä¸å¯è¾¾ï¼‰ï¼Œè¿”å›å¤±è´¥
         if (navMesh.pathStatus == NavMeshPathStatus.PathPartial)
         {
             //   67 78 89 910 1011 1213 1314 1415 1516 1617 1718 1920 2021
-            Debug.Log("ÒÆ¶¯×´Ì¬Òì³£");
+            Debug.Log("ç§»åŠ¨çŠ¶æ€å¼‚å¸¸");
             return State.Failure;
         }
         else
         {
-            Debug.Log("ÒÆ¶¯×´Ì¬Õı³£");
+            Debug.Log("ç§»åŠ¨çŠ¶æ€æ­£å¸¸");
             return State.Success;
         }
      

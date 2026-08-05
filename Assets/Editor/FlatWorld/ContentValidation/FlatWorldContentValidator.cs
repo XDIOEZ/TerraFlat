@@ -207,7 +207,28 @@ public static class FlatWorldContentValidator
             RegisterPrefabAlias(context, report, prefab.name, record, "GameObject.name");
 
             if (item == null)
+            {
+                foreach (Module module in record.Modules)
+                {
+                    if (module == null)
+                        continue;
+
+                    RegisterPrefabAlias(
+                        context,
+                        report,
+                        module.CanonicalModuleId,
+                        record,
+                        "Module.CanonicalModuleId");
+                    RegisterPrefabAlias(
+                        context,
+                        report,
+                        module._Data?.ID,
+                        record,
+                        "ModuleData.ID");
+                }
+
                 continue;
+            }
 
             context.ItemPrefabs.Add(record);
             if (item.itemData == null)

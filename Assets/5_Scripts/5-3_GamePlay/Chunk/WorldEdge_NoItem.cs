@@ -9,23 +9,23 @@ public class WorldEdge_NoItem : MonoBehaviour
 {
     public string TPTOSceneName;
 
-    [Tooltip("´¥·¢´«ËÍÇ°µÄµÈ´ıÊ±¼ä£¨ÊÜ timeScale Ó°Ïì£©")]
+    [Tooltip("è§¦å‘ä¼ é€å‰çš„ç­‰å¾…æ—¶é—´ï¼ˆå— timeScale å½±å“ï¼‰")]
     public float teleportDelay = 5f;
 
-    [Tooltip("´«ËÍºóÏòµØÍ¼ÖĞĞÄµÄÆ«ÒÆÁ¿")]
+    [Tooltip("ä¼ é€åå‘åœ°å›¾ä¸­å¿ƒçš„åç§»é‡")]
     public float centerOffset = 2f;
 
     private bool _canTeleport = false;
 
     void Start()
     {
-        // Æô¶¯Ğ­³Ì£¬µÈ´ıÖ¸¶¨Ê±¼ä£¨ÊÜ timeScale Ó°Ïì£©
+        // å¯åŠ¨åç¨‹ï¼Œç­‰å¾…æŒ‡å®šæ—¶é—´ï¼ˆå— timeScale å½±å“ï¼‰
         StartCoroutine(EnableTeleportAfterDelay(teleportDelay));
     }
 
     IEnumerator EnableTeleportAfterDelay(float delay)
     {
-        yield return new WaitForSeconds(delay); // »áÊÜ Time.timeScale Ó°Ïì
+        yield return new WaitForSeconds(delay); // ä¼šå— Time.timeScale å½±å“
         _canTeleport = true;
     }
 
@@ -42,12 +42,12 @@ public class WorldEdge_NoItem : MonoBehaviour
 
                 if (Mathf.Abs(transform.position.y) > Mathf.Abs(transform.position.x))
                 {
-                    // ´¹Ö±·½Ïò±ßÔµ£¬·´×ªY²¢ÏòÖĞĞÄÆ«ÒÆ
+                    // å‚ç›´æ–¹å‘è¾¹ç¼˜ï¼Œåè½¬Yå¹¶å‘ä¸­å¿ƒåç§»
                     newPosition.y = -newPosition.y + Mathf.Sign(-newPosition.y) * centerOffset;
                 }
                 else
                 {
-                    // Ë®Æ½·½Ïò±ßÔµ£¬·´×ªX²¢ÏòÖĞĞÄÆ«ÒÆ
+                    // æ°´å¹³æ–¹å‘è¾¹ç¼˜ï¼Œåè½¬Xå¹¶å‘ä¸­å¿ƒåç§»
                     newPosition.x = -newPosition.x + Mathf.Sign(-newPosition.x) * centerOffset;
                 }
 
@@ -56,7 +56,7 @@ public class WorldEdge_NoItem : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("´«ËÍ³¡¾°Ãû³ÆÎª¿Õ£¡");
+                Debug.LogWarning("ä¼ é€åœºæ™¯åç§°ä¸ºç©ºï¼");
             }
         }
     }

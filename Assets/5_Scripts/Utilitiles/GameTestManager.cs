@@ -8,32 +8,32 @@ public class GameTestManager : MonoBehaviour
     // Start is called before the first frame update
     void Update()
     {
-        // ¼ì²âÊó±ê×ó¼üÊÇ·ñ°´ÏÂ
+        // æ£€æµ‹é¼ æ ‡å·¦é”®æ˜¯å¦æŒ‰ä¸‹
         if (Input.GetMouseButtonDown(0))
         {
-            // »ñÈ¡Ö÷ÉãÏñ»ú
+            // è·å–ä¸»æ‘„åƒæœº
             Camera mainCamera = Camera.main;
             if (mainCamera == null)
             {
-                Debug.LogWarning("³¡¾°ÖĞÃ»ÓĞÖ÷ÉãÏñ»ú£¡");
+                Debug.LogWarning("åœºæ™¯ä¸­æ²¡æœ‰ä¸»æ‘„åƒæœºï¼");
                 return;
             }
 
-            // ´ÓÉãÏñ»úÎ»ÖÃÏòÊó±êµã»÷Î»ÖÃ·¢ÉäÉäÏß
+            // ä»æ‘„åƒæœºä½ç½®å‘é¼ æ ‡ç‚¹å‡»ä½ç½®å‘å°„å°„çº¿
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
-            // ½øĞĞÉäÏß¼ì²â
+            // è¿›è¡Œå°„çº¿æ£€æµ‹
             if (Physics.Raycast(ray, out hit))
             {
-                // »ñÈ¡»÷ÖĞµÄÓÎÏ·¶ÔÏó
+                // è·å–å‡»ä¸­çš„æ¸¸æˆå¯¹è±¡
                 GameObject hitObject = hit.collider.gameObject;
-                // Êä³ö»÷ÖĞÎïÌåµÄÃû³Æ
-                Debug.Log("»÷ÖĞµÄÎïÌå: " + hitObject.name);
+                // è¾“å‡ºå‡»ä¸­ç‰©ä½“çš„åç§°
+                Debug.Log("å‡»ä¸­çš„ç‰©ä½“: " + hitObject.name);
             }
             else
             {
-                Debug.Log("ÉäÏßÎ´»÷ÖĞÈÎºÎÎïÌå¡£");
+                Debug.Log("å°„çº¿æœªå‡»ä¸­ä»»ä½•ç‰©ä½“ã€‚");
             }
         }
     }

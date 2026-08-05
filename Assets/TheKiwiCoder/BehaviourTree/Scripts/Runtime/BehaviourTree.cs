@@ -127,10 +127,10 @@ namespace TheKiwiCoder {
 
         public Node CloneNode(Node original)
         {
-            // ¸´ÖÆ²¢³õÊ¼»¯
+            // å¤åˆ¶å¹¶åˆå§‹åŒ–
             var clone = Instantiate(original);
             clone.guid = GUID.Generate().ToString();
-            // ¼ÓÈëÁĞ±íÓë Asset
+            // åŠ å…¥åˆ—è¡¨ä¸ Asset
             nodes.Add(clone);
 #if UNITY_EDITOR
             AssetDatabase.AddObjectToAsset(clone, this);
@@ -142,10 +142,10 @@ namespace TheKiwiCoder {
         public Node CloneANode(Node original)
         {
 
-            // ¸´ÖÆ²¢³õÊ¼»¯
+            // å¤åˆ¶å¹¶åˆå§‹åŒ–
             var clone = Instantiate(original);
             clone.guid = GUID.Generate().ToString();
-            // ¼ÓÈëÁĞ±íÓë Asset
+            // åŠ å…¥åˆ—è¡¨ä¸ Asset
 #if UNITY_EDITOR
             AssetDatabase.AddObjectToAsset(clone, this);
             EditorUtility.SetDirty(this);

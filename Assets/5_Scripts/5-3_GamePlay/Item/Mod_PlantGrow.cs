@@ -2,7 +2,7 @@ using MemoryPack;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-[System.Obsolete("¾É°æ½ÚµãÉú²ú³É³¤Ä£¿é£¬½ö±£Áô MOD ¼æÈİ£»ÕıÊ½Å©×÷ÎïÍ³Ò»Ê¹ÓÃ Mod_Grow¡£", false)]
+[System.Obsolete("æ—§ç‰ˆèŠ‚ç‚¹ç”Ÿäº§æˆé•¿æ¨¡å—ï¼Œä»…ä¿ç•™ MOD å…¼å®¹ï¼›æ­£å¼å†œä½œç‰©ç»Ÿä¸€ä½¿ç”¨ Mod_Growã€‚", false)]
 public class Mod_PlantGrow : Module
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
@@ -19,10 +19,10 @@ public class Mod_PlantGrow : Module
 
     public override void ModUpdate(float deltaTime)
     {
-        // Î´Æô¶¯»òÊı¾İÎª¿Õ»òÒÑ¾­Íê³ÉÔò²»¼ÌĞøÖ´ĞĞ
+        // æœªå¯åŠ¨æˆ–æ•°æ®ä¸ºç©ºæˆ–å·²ç»å®Œæˆåˆ™ä¸ç»§ç»­æ‰§è¡Œ
         if (!_Data.isRunning || _data == null || _data.progress >= _data.progress_Max.Value)
         {
-            // ¼ì²éÊÇ·ñĞèÒªÑ­»·
+            // æ£€æŸ¥æ˜¯å¦éœ€è¦å¾ªç¯
             if (_Data.isRunning && _data.isLoop && _data.progress >= _data.progress_Max.Value)
             {
                 ResetModule();
@@ -30,13 +30,13 @@ public class Mod_PlantGrow : Module
             return;
         }
 
-        // ¸üĞÂÉú²ú½ø¶È
+        // æ›´æ–°ç”Ÿäº§è¿›åº¦
         _data.progress +=
             _data.productionSpeed.Value *
             GameDifficultyService.Current.Production.CropGrowthMultiplier *
             deltaTime;
 
-        // ¼ì²éÊÇ·ñ´ïµ½ÌØÊâÉú²úµã
+        // æ£€æŸ¥æ˜¯å¦è¾¾åˆ°ç‰¹æ®Šç”Ÿäº§ç‚¹
         if (_data.nodeIndex < _data.specialProductionPoints.Count &&
             _data.progress > _data.specialProductionPoints[_data.nodeIndex].InvokeValue)
         {
@@ -53,17 +53,17 @@ public class Mod_PlantGrow : Module
   
 
     /// <summary>
-    /// ÖØÖÃÄ£¿é£¨ÓÃÓÚÑ­»·£©
+    /// é‡ç½®æ¨¡å—ï¼ˆç”¨äºå¾ªç¯ï¼‰
     /// </summary>
     private void ResetModule()
     {
         _data.progress = 0;
         _data.nodeIndex = 0;
-     //   Debug.Log("Ä£¿éÒÑÖØÖÃ£¬Ñ­»·¿ªÊ¼£¡");
+     //   Debug.Log("æ¨¡å—å·²é‡ç½®ï¼Œå¾ªç¯å¼€å§‹ï¼");
     }
 
     /// <summary>
-    /// Éú²úÎïÆ·£¨¸ù¾İµ±Ç°½ÚµãµÄµôÂäÊı¾İÊµÀı»¯ÎïÆ·£©
+    /// ç”Ÿäº§ç‰©å“ï¼ˆæ ¹æ®å½“å‰èŠ‚ç‚¹çš„æ‰è½æ•°æ®å®ä¾‹åŒ–ç‰©å“ï¼‰
     /// </summary>
     private void ProduceItem(LootData loot)
     {
@@ -79,11 +79,11 @@ public class Mod_PlantGrow : Module
                 return;
             }
 
-            // µ÷ÓÃÎïÆ·¹ÜÀíÆ÷ÊµÀı»¯ÎïÆ·
+            // è°ƒç”¨ç‰©å“ç®¡ç†å™¨å®ä¾‹åŒ–ç‰©å“
             Item product = ItemMgr.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
             if (product == null)
             {
-                Debug.LogWarning($"ÎŞ·¨ÊµÀı»¯ÎïÆ·: {loot.lootName}");
+                Debug.LogWarning($"æ— æ³•å®ä¾‹åŒ–ç‰©å“: {loot.lootName}");
                 _data.nodeIndex++;
                 OnAction.Invoke(_data.nodeIndex);
                 return;
@@ -123,25 +123,25 @@ public class Mod_PlantGrow : Module
 public partial class Mod_PlantGrow_Data
 {
 
-    [Tooltip("ÊÇ·ñÑ­»·Ö´ĞĞ")]
+    [Tooltip("æ˜¯å¦å¾ªç¯æ‰§è¡Œ")]
     public bool isLoop = false;
 
-    [Tooltip("µ±Ç°Éú²ú½ø¶È")]
+    [Tooltip("å½“å‰ç”Ÿäº§è¿›åº¦")]
     public float progress;
 
-    [Tooltip("Éú²ú½ø¶ÈÉÏÏŞ")]
+    [Tooltip("ç”Ÿäº§è¿›åº¦ä¸Šé™")]
     public GameValue_float progress_Max = new();
 
-    [Tooltip("Ã¿ÃëÉú²úËÙ¶È")]
+    [Tooltip("æ¯ç§’ç”Ÿäº§é€Ÿåº¦")]
     public GameValue_float productionSpeed = new();
 
-    [Tooltip("ÌØÊâÉú²úµãÁĞ±í")]
+    [Tooltip("ç‰¹æ®Šç”Ÿäº§ç‚¹åˆ—è¡¨")]
     public List<Float_Loot_List> specialProductionPoints = new();
 
-    [Tooltip("µ±Ç°ÌØÊâÉú²úµãµÄË÷Òı")]
+    [Tooltip("å½“å‰ç‰¹æ®Šç”Ÿäº§ç‚¹çš„ç´¢å¼•")]
     public int nodeIndex= 0;
 
-    // ³õÊ¼»¯Ä¬ÈÏÖµ
+    // åˆå§‹åŒ–é»˜è®¤å€¼
     public Mod_PlantGrow_Data()
     {
         isLoop = false;
@@ -158,7 +158,7 @@ public partial class Float_Loot_List
     public string NodeName;
     public float InvokeValue;
 
-    [Header("µôÂäÊı¾İ")]
+    [Header("æ‰è½æ•°æ®")]
     public LootData loot;
 
     public bool DestroySelf = false;

@@ -110,14 +110,9 @@ public static class ItemDefinitionRuntime
         Item item,
         ItemData itemData)
     {
-        var available = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (Module module in item.GetComponentsInChildren<Module>(true))
-        {
-            string id = ResolveModuleId(module);
-            if (string.IsNullOrWhiteSpace(id))
-                continue;
-            available[id] = available.TryGetValue(id, out int count) ? count + 1 : 1;
-        }
+        List<Module> available = item.GetComponentsInChildren<Module>(true)
+            .Where(module => module != null)
+            .ToList();
 
         foreach (KeyValuePair<string, ModuleData> pair in
                  itemData.ModuleDataDic ?? new Dictionary<string, ModuleData>())
@@ -126,13 +121,17 @@ public static class ItemDefinitionRuntime
             ModuleData moduleData = pair.Value;
             if (moduleData == null || string.IsNullOrWhiteSpace(moduleData.ID))
                 continue;
-            if (available.TryGetValue(moduleData.ID, out int count) && count > 0)
+
+            string prefabId = definition.GetModulePrefabId(stableName, moduleData.ID);
+            int embeddedIndex = available.FindIndex(module =>
+                module.MatchesPersistedId(moduleData.ID) ||
+                module.MatchesPersistedId(prefabId));
+            if (embeddedIndex >= 0)
             {
-                available[moduleData.ID] = count - 1;
+                available.RemoveAt(embeddedIndex);
                 continue;
             }
 
-            string prefabId = definition.GetModulePrefabId(stableName, moduleData.ID);
             GameObject moduleObject = gameRes.InstantiatePrefab(prefabId, parent: item.transform);
             Module module = moduleObject?.GetComponentInChildren<Module>(true);
             if (module == null)
@@ -143,14 +142,5 @@ public static class ItemDefinitionRuntime
             moduleObject.transform.localRotation = Quaternion.identity;
             moduleObject.transform.localScale = Vector3.one;
         }
-    }
-
-    private static string ResolveModuleId(Module module)
-    {
-        if (!string.IsNullOrWhiteSpace(module?._Data?.ID))
-            return module._Data.ID;
-        if (module == null)
-            return null;
-        return string.IsNullOrWhiteSpace(module.gameObject.name) ? module.GetType().Name : module.gameObject.name;
     }
 }

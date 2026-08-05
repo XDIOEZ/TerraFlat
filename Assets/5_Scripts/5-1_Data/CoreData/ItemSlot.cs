@@ -9,10 +9,10 @@ using UltEvents;
 [MemoryPackable]
 public partial class ItemSlot
 {
-    //TODO ÉèÖÃ²å²ÛËùÊô
-    // µ±Ç°²å²ÛÖÐµÄÎïÆ·Êý¾Ý   
+    //TODO è®¾ç½®æ’æ§½æ‰€å±ž
+    // å½“å‰æ’æ§½ä¸­çš„ç‰©å“æ•°æ®   
     [ShowInInspector]
-    public ItemData itemData = null; // ¹Ø¼üÐÞ¸Ä
+    public ItemData itemData = null; // å…³é”®ä¿®æ”¹
 
     public List<string> CanAcceptTags = new List<string>();
 
@@ -27,7 +27,7 @@ public partial class ItemSlot
     {
         get
         {
-            // È·±£ÊÂ¼þ²»Îª¿Õ£¨·ÀÖ¹·´ÐòÁÐ»¯ºóÊÂ¼þ¶ªÊ§£©
+            // ç¡®ä¿äº‹ä»¶ä¸ä¸ºç©ºï¼ˆé˜²æ­¢ååºåˆ—åŒ–åŽäº‹ä»¶ä¸¢å¤±ï¼‰
             if (_onSlotDataChanged == null)
             {
                 _onSlotDataChanged = new();
@@ -46,7 +46,7 @@ public partial class ItemSlot
     private UltEvent<ItemSlot> _onSlotDataChanged = new();
 
 
-    #region  ÁÙÊ±±äÁ¿
+    #region  ä¸´æ—¶å˜é‡
 
     [MemoryPackIgnore]
     [FastClonerIgnore]
@@ -89,71 +89,71 @@ public partial class ItemSlot
 
     #endregion
 
-    #region ÔöÉ¾¸Ä
+    #region å¢žåˆ æ”¹
 /// <summary>
-/// Ïò²å²ÛÖÐÌí¼ÓÒ»¸öÎïÆ·¡£
-/// Èô²å²ÛÎª¿Õ£¬ÔòÖ±½Ó·ÅÖÃ¸ÃÎïÆ·¡£
-/// Èô²å²ÛÖÐÒÑÓÐÏàÍ¬IDµÄÎïÆ·£¬ÔòÔö¼ÓÆä¶ÑµþÊýÁ¿¡£
+/// å‘æ’æ§½ä¸­æ·»åŠ ä¸€ä¸ªç‰©å“ã€‚
+/// è‹¥æ’æ§½ä¸ºç©ºï¼Œåˆ™ç›´æŽ¥æ”¾ç½®è¯¥ç‰©å“ã€‚
+/// è‹¥æ’æ§½ä¸­å·²æœ‰ç›¸åŒIDçš„ç‰©å“ï¼Œåˆ™å¢žåŠ å…¶å †å æ•°é‡ã€‚
 /// </summary>
-/// <param name="itemData">ÒªÌí¼ÓµÄÎïÆ·Êý¾Ý¡£</param>
+/// <param name="itemData">è¦æ·»åŠ çš„ç‰©å“æ•°æ®ã€‚</param>
 public void AddItem(ItemData itemData)
 {
     if (this.itemData == null)
     {
-        // ²å²ÛÎª¿Õ£¬Ö±½Ó·ÅÖÃÎïÆ·
+        // æ’æ§½ä¸ºç©ºï¼Œç›´æŽ¥æ”¾ç½®ç‰©å“
         this.itemData = itemData;
     }
     else if (this.itemData.IDName == itemData.IDName)
     {
-        // ²å²ÛÖÐÒÑÓÐÏàÍ¬IDµÄÎïÆ·£¬Ôö¼Ó¶ÑµþÊýÁ¿
+        // æ’æ§½ä¸­å·²æœ‰ç›¸åŒIDçš„ç‰©å“ï¼Œå¢žåŠ å †å æ•°é‡
         this.itemData.Stack.Amount += itemData.Stack.Amount;
     }
-    // Èô²å²ÛÖÐÓÐ²»Í¬IDµÄÎïÆ·£¬Ôò²»½øÐÐÈÎºÎ²Ù×÷
+    // è‹¥æ’æ§½ä¸­æœ‰ä¸åŒIDçš„ç‰©å“ï¼Œåˆ™ä¸è¿›è¡Œä»»ä½•æ“ä½œ
     
-    // ´¥·¢UI¸üÐÂÊÂ¼þ
+    // è§¦å‘UIæ›´æ–°äº‹ä»¶
     RefreshUI();
 }
 
 /// <summary>
-/// Ïú»Ù²å²ÛÖÐµÄ²¿·Ö»òÈ«²¿ÎïÆ·¡£
-/// ÈôÏú»ÙÊýÁ¿Ð¡ÓÚ¶ÑµþÊýÁ¿£¬Ôò¼õÉÙ¶Ñµþ£»·ñÔò£¬Çå¿Õ²å²Û¡£
+/// é”€æ¯æ’æ§½ä¸­çš„éƒ¨åˆ†æˆ–å…¨éƒ¨ç‰©å“ã€‚
+/// è‹¥é”€æ¯æ•°é‡å°äºŽå †å æ•°é‡ï¼Œåˆ™å‡å°‘å †å ï¼›å¦åˆ™ï¼Œæ¸…ç©ºæ’æ§½ã€‚
 /// </summary>
-/// <param name="destroyCount">ÒªÏú»ÙµÄÎïÆ·ÊýÁ¿¡£</param>
+/// <param name="destroyCount">è¦é”€æ¯çš„ç‰©å“æ•°é‡ã€‚</param>
 public void DestroyItem(float destroyCount)
 {
     if (itemData != null)
     {
         if (itemData.Stack.Amount > destroyCount)
         {
-            // Ïú»ÙÊýÁ¿Ð¡ÓÚ¶ÑµþÊýÁ¿£¬¼õÉÙ¶Ñµþ
+            // é”€æ¯æ•°é‡å°äºŽå †å æ•°é‡ï¼Œå‡å°‘å †å 
             itemData.Stack.Amount -= destroyCount;
         }
         else
         {
-            // Ïú»ÙÊýÁ¿´óÓÚ»òµÈÓÚ¶ÑµþÊýÁ¿£¬Çå¿Õ²å²Û
+            // é”€æ¯æ•°é‡å¤§äºŽæˆ–ç­‰äºŽå †å æ•°é‡ï¼Œæ¸…ç©ºæ’æ§½
             itemData = null;
         }
     }
     
-    // ´¥·¢UI¸üÐÂÊÂ¼þ
+    // è§¦å‘UIæ›´æ–°äº‹ä»¶
     RefreshUI();
 }
 
 /// <summary>
-/// ÓëÁíÒ»¸ö²å²Û½»»»ÎïÆ·¡£
-/// ÈôÁíÒ»¸ö²å²ÛÖÐÓÐÎïÆ·£º
-/// - Èôµ±Ç°²å²ÛÎª¿Õ£¬½«ÁíÒ»¸ö²å²ÛµÄÎïÆ·ÒÆÖÁµ±Ç°²å²Û¡£
-/// - Èôµ±Ç°²å²ÛÖÐÓÐÏàÍ¬IDµÄÎïÆ·£¬ºÏ²¢¶ÑµþÊýÁ¿¡£
+/// ä¸Žå¦ä¸€ä¸ªæ’æ§½äº¤æ¢ç‰©å“ã€‚
+/// è‹¥å¦ä¸€ä¸ªæ’æ§½ä¸­æœ‰ç‰©å“ï¼š
+/// - è‹¥å½“å‰æ’æ§½ä¸ºç©ºï¼Œå°†å¦ä¸€ä¸ªæ’æ§½çš„ç‰©å“ç§»è‡³å½“å‰æ’æ§½ã€‚
+/// - è‹¥å½“å‰æ’æ§½ä¸­æœ‰ç›¸åŒIDçš„ç‰©å“ï¼Œåˆå¹¶å †å æ•°é‡ã€‚
 /// </summary>
-/// <param name="ItemSlot_Input">Òª½»»»µÄ²å²Û¶ÔÏó¡£</param>
+/// <param name="ItemSlot_Input">è¦äº¤æ¢çš„æ’æ§½å¯¹è±¡ã€‚</param>
 public void Change(ItemSlot _ItemData_Input)
 {
-    // µ±Ç°²å²ÛµÄÎïÆ·ºÍÊäÈë²å²ÛµÄÎïÆ·²»Í¬£¬½»»»ÎïÆ·
+    // å½“å‰æ’æ§½çš„ç‰©å“å’Œè¾“å…¥æ’æ§½çš„ç‰©å“ä¸åŒï¼Œäº¤æ¢ç‰©å“
     ItemData temp = itemData;
     itemData = _ItemData_Input.itemData;
     _ItemData_Input.itemData = temp;
     
-    // ´¥·¢Á½¸ö²å²ÛµÄUI¸üÐÂÊÂ¼þ
+    // è§¦å‘ä¸¤ä¸ªæ’æ§½çš„UIæ›´æ–°äº‹ä»¶
     RefreshUI();
     _ItemData_Input.RefreshUI();
 }

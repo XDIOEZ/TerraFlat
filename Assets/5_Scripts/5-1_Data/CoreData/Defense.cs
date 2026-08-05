@@ -12,7 +12,7 @@ public partial class Defense
     public float maxDefenseToughness = 0;
     public float maxDefenseMagic = 0;
 
-    //ÖØĞ´+ÔËËã·û
+    //é‡å†™+è¿ç®—ç¬¦
     public static Defense operator +(Defense a, Defense b)
     {
         Defense result = new Defense(0, 0);
@@ -20,7 +20,7 @@ public partial class Defense
         result.defenseToughness = a.defenseToughness + b.defenseToughness;
         return result;
     }
-    //ÖØĞ´-ÔËËã·û
+    //é‡å†™-è¿ç®—ç¬¦
     public static Defense operator -(Defense a, Defense b)
     {
         Defense result = new Defense(0, 0);
@@ -29,10 +29,10 @@ public partial class Defense
         return result;
     }
 
-    //ÖØĞ´TOSTRING·½·¨
+    //é‡å†™TOSTRINGæ–¹æ³•
     public override string ToString()
     {
-        return "·ÀÓùÇ¿¶È: " + defenseStrength + " ÈÍĞÔ: " + defenseToughness;
+        return "é˜²å¾¡å¼ºåº¦: " + defenseStrength + " éŸ§æ€§: " + defenseToughness;
     }
 
     public Defense(float defenseStrength, float defenseToughness)

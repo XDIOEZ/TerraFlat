@@ -9,6 +9,7 @@ using UnityEngine;
 public class BuffManager : Module
 {
     private const float TickInterval = 0.1f;
+    private const string LegacyModuleId = "Buff模块";
 
     [ShowInInspector]
     public Dictionary<string, BuffInstance> ActiveBuffs =
@@ -24,6 +25,13 @@ public class BuffManager : Module
 
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => TickInterval;
+    public override string CanonicalModuleId => ModText.BuffManager;
+
+    public override bool MatchesPersistedId(string persistedId)
+    {
+        return base.MatchesPersistedId(persistedId) ||
+               string.Equals(persistedId?.Trim(), LegacyModuleId, StringComparison.OrdinalIgnoreCase);
+    }
 
     public event Action<BuffInstance> BuffAdded;
     public event Action<BuffInstance> BuffRemoved;
@@ -429,4 +437,9 @@ public static class BloodLossBuffIds
     public const string BloodLoss = "失血";
     public const string Bleeding = "流血";
     public const string Hemorrhage = "出血";
+}
+
+public static class BurningBuffIds
+{
+    public const string Burning = "燃烧";
 }

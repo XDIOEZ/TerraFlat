@@ -101,25 +101,8 @@ public class ItemMods
         {
             foreach (Module candidate in candidates)
             {
-                if (candidate == null)
-                    continue;
-
-                if (string.Equals(candidate.gameObject.name, modID, StringComparison.OrdinalIgnoreCase))
-                {
+                if (candidate != null && candidate.MatchesPersistedId(modID))
                     return candidate;
-                }
-            }
-        }
-
-        foreach (List<Module> candidates in Mods_List.Values)
-        {
-            foreach (Module candidate in candidates)
-            {
-                if (candidate != null &&
-                    string.Equals(candidate.GetType().Name, modID, StringComparison.OrdinalIgnoreCase))
-                {
-                    return candidate;
-                }
             }
         }
 

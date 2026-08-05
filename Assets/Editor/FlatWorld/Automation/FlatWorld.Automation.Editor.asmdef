@@ -2,7 +2,10 @@
     "name": "FlatWorld.Automation.Editor",
     "rootNamespace": "FlatWorld.Automation",
     "references": [
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "GamePlay",
+        "Data",
+        "GUID:6b2403a08572f7c49b7802a26e472b30"
     ],
     "includePlatforms": [
         "Editor"

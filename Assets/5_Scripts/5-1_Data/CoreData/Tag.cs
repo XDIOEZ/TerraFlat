@@ -6,15 +6,15 @@ public static class Tag
 {
     public const string Player = "Player";
 
-    [Tooltip("×°±¸")]
+    [Tooltip("è£…å¤‡")]
     public const string Equipment = "Equipment";
-    [Tooltip("Ê³²İ¶¯Îï")]
+    [Tooltip("é£Ÿè‰åŠ¨ç‰©")]
     public const string Vegetarian = "Vegetarian";
-    [Tooltip("Ö²Îï")]
+    [Tooltip("æ¤ç‰©")]
     public const string Plant = "Plant";
-    [Tooltip("Ê÷")]
+    [Tooltip("æ ‘")]
     public const string Tree = "Tree";
-    [Tooltip("·À¾ß")]
+    [Tooltip("é˜²å…·")]
     public const string Armor = "Armor";
 
 

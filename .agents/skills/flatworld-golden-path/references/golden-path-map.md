@@ -1,0 +1,49 @@
+# FlatWorld 黄金路径扩展图
+
+## 权威文件
+
+- 主流程：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathCommand.cs`
+- 场景编排：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.cs`
+- 复杂领域场景：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.<Subsystem>.cs`
+- 测试入口：`.agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path`
+
+`--golden-path` 通过 Editor 状态机从真实 `GameStartScene` 启动；功能场景以上述 Editor 文件为唯一权威入口，不要在 Unity Test Framework 测试中再复制一套。
+命令在接管每个请求前强制刷新 AssetDatabase，确保 Editor 失焦或关闭 Auto Refresh 时也不会运行旧脚本。
+进入真实启动场景前会临时启用标准 Domain Reload，并在结束后按磁盘 `EditorSettings.asset` 的原值恢复，避免前一个 PlayMode 测试留下静态单例或事件。
+
+## 阶段选择
+
+| 扩展阶段 | 适用行为 | 典型断言 |
+| --- | --- | --- |
+| `OnWorldReady` | 玩家模块、初始 Buff、背包、装备、建筑、可确定生成的 AI | 模块存在，公开 API 改变运行时状态 |
+| `OnTraversalTick` | 需持续观测的 Buff Tick、体力、环境、AI 追踪 | 运行阶段按 Editor 帧驱动，效果在玩家移动时逐步发生 |
+| `OnChunkReady` | 跨 Chunk 玩法、一次性阶段断言 | 目标 Chunk Ready，玩法状态与 Chunk 字典同时健康 |
+| `BeforeWorldExit` | 存档捕获、长时状态、退出前结果 | 权威状态已进入存档根或结果已完成 |
+| `Cleanup` | 会影响后续或留存的测试状态 | 通过和失败路径都恢复速度、生命、Buff 与临时对象 |
+
+若功能必须验证“退出后重进世界”，应显式扩展主流程的重进阶段，不得用内存状态假装完成存档往返。
+
+## 场景组织约定
+
+- 阶段方法只做编排，具体功能用子方法和私有静态状态实现。
+- 每个生产功能保留一个代表性完整场景；边界组合留在领域 Smoke 测试。
+- 场景使用真实 Prefab、管理器和公开生产 API；不复制生产算法，不用反射直接改私有字段。
+- 等待运行时结果时记录截止时间，在后续 Tick 检查；禁止 `Thread.Sleep`、忙等待或阻塞 Editor 主线程。
+- 对组件、配置或入口缺失直接抛出带业务语义的异常；禁止因为功能缺失而静默返回伪装通过。
+- 会影响后续场景的速度、生命、Buff、物品或生成对象必须在断言后恢复；需跨阶段保留的状态要有明确的最终清理。
+
+## 当前玩法场景
+
+| 场景 | 安排阶段 | 观测与断言 | 清理 |
+| --- | --- | --- | --- |
+| 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
+
+## 示例：燃烧 Buff
+
+1. 按 `flatworld-buff` 定位真实 Buff 注册和添加 API。
+2. 在首个合适的 `OnTraversalTick` 记录玩家生命、Buff 层数和截止时间，然后通过公开 API 施加燃烧；用私有状态确保只施加一次。
+3. 后续 `OnTraversalTick` 只观测 Tick 结果，不阻塞原有移动。
+4. 在后续 `OnChunkReady` 断言 Buff 已注册、至少产生一次 Tick 效果，且 Chunk 窗口仍健康。
+5. 在 `Cleanup` 移除测试 Buff 并恢复生命，通过和失败路径都执行。
+
+不要在 Skill 中硬编 Buff ID 或伪造 API；每次从当前生产实现获取真实入口。

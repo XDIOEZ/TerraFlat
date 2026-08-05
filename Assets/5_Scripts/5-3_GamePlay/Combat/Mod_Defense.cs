@@ -31,7 +31,7 @@ public partial class Mod_Defense : Module
 
     public override void Save()
     {
-        // 取消Load中的加成
+        // 鍙栨秷Load涓殑鍔犳垚
         if (item.Mods.ContainsKey(ModText.Hp))
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;

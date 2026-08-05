@@ -8,26 +8,26 @@ using UnityEngine.UI;
 
 public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler, IPointerUpHandler, IScrollHandler
 {
-    #region ×Ö¶Î
+    #region å­—æ®µ
     /// <summary>
-    /// ²ÛÎ»Ë÷Òı£¨Ìæ´ú¶ÔDataµÄÖ±½ÓÒıÓÃ£©
+    /// æ§½ä½ç´¢å¼•ï¼ˆæ›¿ä»£å¯¹Dataçš„ç›´æ¥å¼•ç”¨ï¼‰
     /// </summary>
     public int slotIndex = -1;
 
-    [Tooltip("ÏÔÊ¾µ±Ç°ÎïÌåµÄÍ¼±ê")]
+    [Tooltip("æ˜¾ç¤ºå½“å‰ç‰©ä½“çš„å›¾æ ‡")]
     public Image image;
 
-    [Tooltip("ÏÔÊ¾µ±Ç°ÎïÌåµÄÊıÁ¿")]
+    [Tooltip("æ˜¾ç¤ºå½“å‰ç‰©ä½“çš„æ•°é‡")]
     public TMP_Text text;
 
-    [Tooltip("ÎïÌå±»µã»÷µÄÊÂ¼ş£¨×ó¼ü£©")]
+    [Tooltip("ç‰©ä½“è¢«ç‚¹å‡»çš„äº‹ä»¶ï¼ˆå·¦é”®ï¼‰")]
     public UltEvent<int> OnLeftClick = new UltEvent<int>();
 
     public UltEvent<int, float> _OnScroll = new UltEvent<int, float>();
 
     public UltEvent<int> OnRightClick = new UltEvent<int>();
 
-    [Tooltip("Shift+×ó¼ü¿ìËÙ×ªÒÆÊÂ¼ş")]
+    [Tooltip("Shift+å·¦é”®å¿«é€Ÿè½¬ç§»äº‹ä»¶")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
     private GameObject currentMenuInstance;
@@ -40,17 +40,17 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     private int _lastHandledShiftQuickTransferSessionId = -1;
 
     /// <summary>
-    /// ÓÃÓÚ»ñÈ¡²ÛÎ»Êı¾İµÄÎ¯ÍĞ£¨½â³ı¶ÔDataµÄÖ±½ÓÒÀÀµ£©
+    /// ç”¨äºè·å–æ§½ä½æ•°æ®çš„å§”æ‰˜ï¼ˆè§£é™¤å¯¹Dataçš„ç›´æ¥ä¾èµ–ï¼‰
     /// </summary>
     public System.Func<int, ItemSlot> GetSlotDataFunc { get; set; }
 
     /// <summary>
-    /// Çå¿ÕÊı¾İµÄÎ¯ÍĞ
+    /// æ¸…ç©ºæ•°æ®çš„å§”æ‰˜
     /// </summary>
     public System.Action<int> ClearSlotDataAction { get; set; }
     #endregion
 
-    #region UnityÉúÃüÖÜÆÚ·½·¨
+    #region Unityç”Ÿå‘½å‘¨æœŸæ–¹æ³•
     private void Start()
     {
         image = image ?? GetComponentInChildren<Image>();
@@ -66,9 +66,9 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     }
     #endregion
 
-    #region ¹«¹²·½·¨
+    #region å…¬å…±æ–¹æ³•
     /// <summary>
-    /// ³õÊ¼»¯²ÛÎ»£¨Ìæ´ú Data = ... µÄÖ±½Ó¸³Öµ£©
+    /// åˆå§‹åŒ–æ§½ä½ï¼ˆæ›¿ä»£ Data = ... çš„ç›´æ¥èµ‹å€¼ï¼‰
     /// </summary>
     public void InitializeSlot(int index, System.Func<int, ItemSlot> getSlotFunc, System.Action<int> clearAction)
     {
@@ -78,13 +78,13 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     }
 
     /// <summary>
-    /// »ñÈ¡µ±Ç°²ÛÎ»Êı¾İ
+    /// è·å–å½“å‰æ§½ä½æ•°æ®
     /// </summary>
     private ItemSlot GetSlotData()
     {
         if (GetSlotDataFunc == null)
         {
-            Debug.LogWarning($"[ItemSlot_UI] GetSlotDataFunc Î´ÉèÖÃ£¬²ÛÎ»Ë÷Òı: {slotIndex}");
+            Debug.LogWarning($"[ItemSlot_UI] GetSlotDataFunc æœªè®¾ç½®ï¼Œæ§½ä½ç´¢å¼•: {slotIndex}");
             return null;
         }
         return GetSlotDataFunc(slotIndex);
@@ -110,7 +110,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     }
     #endregion
 
-    #region Êó±êµã»÷´¦Àí
+    #region é¼ æ ‡ç‚¹å‡»å¤„ç†
     private void HandleLeftClick()
     {
         OnLeftClick.Invoke(slotIndex);
@@ -122,7 +122,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     }
     #endregion
 
-    #region ¹öÂÖÊÂ¼ş´¦Àí
+    #region æ»šè½®äº‹ä»¶å¤„ç†
     public void OnScroll(PointerEventData eventData)
     {
         if (!isPointerOver) return;
@@ -137,26 +137,26 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
 
     private void HandleScrollUp()
     {
-        Debug.Log("¹öÂÖÏòÉÏ£ºÖ´ĞĞÄã¶¨ÒåµÄĞĞÎª£¨ÈçÔö¼ÓÑ¡ÔñÊıÁ¿£©");
+        Debug.Log("æ»šè½®å‘ä¸Šï¼šæ‰§è¡Œä½ å®šä¹‰çš„è¡Œä¸ºï¼ˆå¦‚å¢åŠ é€‰æ‹©æ•°é‡ï¼‰");
         _OnScroll.Invoke(slotIndex, 1);
     }
 
     private void HandleScrollDown()
     {
-        Debug.Log("¹öÂÖÏòÏÂ£ºÖ´ĞĞÄã¶¨ÒåµÄĞĞÎª£¨Èç¼õÉÙÑ¡ÔñÊıÁ¿£©");
+        Debug.Log("æ»šè½®å‘ä¸‹ï¼šæ‰§è¡Œä½ å®šä¹‰çš„è¡Œä¸ºï¼ˆå¦‚å‡å°‘é€‰æ‹©æ•°é‡ï¼‰");
 
         _OnScroll.Invoke(slotIndex, -1);
     }
     #endregion
 
-    #region ´´½¨ÓÒ¼ü²Ëµ¥·½·¨
+    #region åˆ›å»ºå³é”®èœå•æ–¹æ³•
     void CreateRightClickUI()
     {
         OnRightClick.Invoke(slotIndex);
     }
     #endregion
 
-    #region ½Ó¿ÚÊµÏÖ
+    #region æ¥å£å®ç°
     public void OnPointerDown(PointerEventData eventData)
     {
         if (eventData.button == PointerEventData.InputButton.Left && IsShiftPressed())
@@ -201,7 +201,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     }
     #endregion
 
-    #region Shift¿ìËÙ×ªÒÆ
+    #region Shiftå¿«é€Ÿè½¬ç§»
     private bool TryInvokeShiftQuickTransfer()
     {
         if (_lastHandledShiftQuickTransferSessionId == _shiftQuickTransferSessionId)
@@ -229,7 +229,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     }
     #endregion
 
-    #region UI¸üĞÂ·½·¨
+    #region UIæ›´æ–°æ–¹æ³•
     private void UpdateItemAmount()
     {
         ItemSlot slotData = GetSlotData();
@@ -245,7 +245,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
         if (itemAmount == 0)
         {
             text.enabled = false;
-            // Çå¿Õ²ÛÎ»Êı¾İ
+            // æ¸…ç©ºæ§½ä½æ•°æ®
             ClearSlotDataAction?.Invoke(slotIndex);
         }
         else
@@ -273,7 +273,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
         GameObject go = GameRes.Instance.AllPrefabs[slotData.itemData.IDName];
         if (go == null)
         {
-            Debug.LogWarning($"[ItemSlot_UI] ÎŞ·¨ÕÒµ½Ô¤ÖÆÌå: {slotData.itemData.IDName}");
+            Debug.LogWarning($"[ItemSlot_UI] æ— æ³•æ‰¾åˆ°é¢„åˆ¶ä½“: {slotData.itemData.IDName}");
             image.gameObject.SetActive(false);
             return;
         }

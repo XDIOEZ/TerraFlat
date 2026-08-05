@@ -40,6 +40,49 @@ public partial class TimeData
     public int TotalDays = 0;
     
     public TimeData() { }
+
+    /// <summary>
+    /// 创建运行时安全副本。AnimationCurve 和 Gradient 都持有 Unity 原生资源，
+    /// 不能交给通用反射深拷贝，否则多个托管包装器可能重复释放同一原生指针。
+    /// </summary>
+    public TimeData CreateRuntimeCopy()
+    {
+        return new TimeData
+        {
+            CurrentTime = CurrentTime,
+            DayLength = DayLength,
+            LightParams = CopyAnimationCurve(LightParams),
+            dayNightGradient = CopyGradient(dayNightGradient),
+            TimeScaleModifier = TimeScaleModifier,
+            ReferenceScene = ReferenceScene,
+            TotalDays = TotalDays
+        };
+    }
+
+    private static AnimationCurve CopyAnimationCurve(AnimationCurve source)
+    {
+        if (source == null)
+            return null;
+
+        return new AnimationCurve(source.keys)
+        {
+            preWrapMode = source.preWrapMode,
+            postWrapMode = source.postWrapMode
+        };
+    }
+
+    private static Gradient CopyGradient(Gradient source)
+    {
+        if (source == null)
+            return null;
+
+        var copy = new Gradient
+        {
+            mode = source.mode
+        };
+        copy.SetKeys(source.colorKeys, source.alphaKeys);
+        return copy;
+    }
     
     /// <summary>
     /// 获取当前天数（基于当前时间计算）

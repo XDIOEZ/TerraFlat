@@ -12,11 +12,11 @@ public class WorldUI_temp : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        //获取子物体上的tmptext组件
+        //鑾峰彇瀛愮墿浣撲笂鐨則mptext缁勪欢
         if (text == null)
          text = GetComponentInChildren<TextMeshProUGUI>();
         
-        //设置文本内容
+        //璁剧疆鏂囨湰鍐呭
     }
 
     // Update is called once per frame
