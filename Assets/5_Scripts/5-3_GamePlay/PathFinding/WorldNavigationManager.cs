@@ -203,34 +203,23 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
         int mapId = map.GetInstanceID();
         Data_TileMap mapData = map.Data;
-        HashSet<Vector2Int> nextCells = RentMapCellSet(mapData.Width * mapData.Height);
+        HashSet<Vector2Int> nextCells = RentMapCellSet(mapData.CountNonEmptyCells());
         cellsByMap.TryGetValue(mapId, out HashSet<Vector2Int> previousCells);
         bool ownershipTransferred = false;
 
         grid.BeginBatchUpdate();
         try
         {
-            List<TileData>[,] tileArray = mapData.TileData_Array;
-            int width = mapData.Width;
-            int height = mapData.Height;
-            Vector2Int origin = mapData.position;
-            for (int x = 0; x < width; x++)
+            foreach (OccupiedTileCell occupiedCell in mapData.EnumerateOccupiedCells())
             {
-                for (int y = 0; y < height; y++)
-                {
-                    List<TileData> tiles = tileArray[x, y];
-                    if (tiles == null || tiles.Count == 0)
-                        continue;
-
-                    Vector2Int worldCell = new(origin.x + x, origin.y + y);
-                    TileData topTile = tiles[^1];
-                    bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(
-                        worldCell,
-                        topTile.IsWalkable);
-                    grid.SetCell(worldCell, topTile.Penalty, walkable);
-                    nextCells.Add(worldCell);
-                    terrainOwnerByCell[worldCell] = mapId;
-                }
+                Vector2Int worldCell = occupiedCell.WorldPosition;
+                TileData topTile = occupiedCell.Stack.GetFromTop();
+                bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(
+                    worldCell,
+                    topTile.IsWalkable);
+                grid.SetCell(worldCell, topTile.Penalty, walkable);
+                nextCells.Add(worldCell);
+                terrainOwnerByCell[worldCell] = mapId;
             }
 
             if (previousCells != null)
@@ -559,12 +548,11 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
         Vector2 center = WorldNavigationGrid.CellCenter(worldCell);
         chunkManager.GetChunkBy_ItemPosition(center, out Chunk chunk);
-        List<TileData> tiles = chunk?.Map?.Data?.GetTileListAt(worldCell);
-        if (tiles == null || tiles.Count == 0)
+        TileData topTile = chunk?.Map?.Data?.GetTopTile(worldCell);
+        if (topTile == null)
             return false;
 
         sourceMap = chunk.Map;
-        TileData topTile = tiles[^1];
         cell = new WorldNavigationCell(
             topTile.Penalty,
             BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, topTile.IsWalkable));

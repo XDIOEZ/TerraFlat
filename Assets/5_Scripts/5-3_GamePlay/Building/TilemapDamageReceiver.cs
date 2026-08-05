@@ -45,7 +45,7 @@ public sealed class TilemapDamageReceiver : MonoBehaviour
                     continue;
 
                 Vector2Int worldCell = new Vector2Int(x, y);
-                TileData topTile = map.Data.GetTileDataAt(worldCell);
+                TileData topTile = map.Data.GetTopTile(worldCell);
                 if (!BlockingTilemapLayer.IsBlockingTile(topTile))
                     continue;
 

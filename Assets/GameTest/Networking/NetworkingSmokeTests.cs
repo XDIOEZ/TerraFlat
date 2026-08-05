@@ -40,6 +40,42 @@ namespace FlatWorld.GameTest.Networking
 
         [Test]
         [Category("Networking.Smoke")]
+        public void GameplayAndMapGenerationProtocolsUseNewVersionsAndRejectOldPeers()
+        {
+            System.Reflection.Assembly gameplayAssembly = System.Reflection.Assembly.Load(
+                "FlatWorld.Networking.Gameplay");
+            System.Type gameplayProtocol = gameplayAssembly.GetType(
+                "FlatWorld.Networking.Gameplay.NetworkGameplayProtocol",
+                throwOnError: true);
+            System.Type mapProtocol = gameplayAssembly.GetType(
+                "FlatWorld.Networking.Gameplay.NetworkMapGenerationProtocol",
+                throwOnError: true);
+
+            int gameplayVersion = (int)gameplayProtocol.GetField("CurrentVersion").GetRawConstantValue();
+            int mapVersion = (int)mapProtocol.GetField("CurrentVersion").GetRawConstantValue();
+            Assert.That(gameplayVersion, Is.EqualTo(9));
+            Assert.That(mapVersion, Is.EqualTo(2));
+
+            System.Reflection.MethodInfo calculateHash = mapProtocol.GetMethod(
+                "CalculateSettingsHash",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            Assert.That(calculateHash, Is.Not.Null);
+            object[] settings = { 12345, 2048, 0.01f, true, 100, 100 };
+            uint first = (uint)calculateHash.Invoke(null, settings);
+            uint repeated = (uint)calculateHash.Invoke(null, settings);
+            Assert.That(repeated, Is.EqualTo(first));
+            Assert.That(
+                (uint)calculateHash.Invoke(null, new object[] { 12346, 2048, 0.01f, true, 100, 100 }),
+                Is.Not.EqualTo(first));
+
+            string managerSource = File.ReadAllText(
+                "Assets/5_Scripts/5-4_Networking/Gameplay/FlatWorldGameNetworkManager.cs");
+            Assert.That(managerSource, Does.Contain("hello.Version != NetworkGameplayProtocol.CurrentVersion"));
+            Assert.That(managerSource, Does.Contain("snapshot.GenerationProtocol != NetworkMapGenerationProtocol.CurrentVersion"));
+        }
+
+        [Test]
+        [Category("Networking.Smoke")]
         public void NetworkPlayerNameLabelIsAuthoredInPrefab()
         {
             const string prefabPath = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
@@ -65,19 +101,19 @@ namespace FlatWorld.GameTest.Networking
         [Category("Networking.Smoke")]
         public void TunnelEndpointUsesEmbeddedPort(
             string value,
-            ushort fallbackPort,
+            int fallbackPort,
             string expectedHost,
-            ushort expectedPort)
+            int expectedPort)
         {
             bool parsed = NetworkConnectionEndpoint.TryParse(
                 value,
-                fallbackPort,
+                checked((ushort)fallbackPort),
                 out NetworkConnectionEndpoint endpoint,
                 out string error);
 
             Assert.That(parsed, Is.True, error);
             Assert.That(endpoint.Host, Is.EqualTo(expectedHost));
-            Assert.That(endpoint.Port, Is.EqualTo(expectedPort));
+            Assert.That(endpoint.Port, Is.EqualTo(checked((ushort)expectedPort)));
         }
 
         [TestCase("tcp://tunnel.example.com:24567")]

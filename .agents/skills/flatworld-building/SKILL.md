@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 建造系统定位
 
-> 最后核对：2026-08-03。建筑占地会直接影响导航。
+> 最后核对：2026-08-05。建筑占地会直接影响导航。
 
 ## 修改前先读
 
@@ -50,6 +50,7 @@ Summoner（库存中的持久化载体）
 - `BuildingRole` 明确区分 `Summoner` 与 `PlacedBuilding`，禁止再用血量或位置推断角色。
 - 动态占地不修改地形 `TileData`，由 `BuildingOccupancyRegistry` 叠加阻挡。
 - “建筑阻挡层”只处理矿洞岩壁、地牢墙体、结构模板墙体等静态 Tile 障碍；数据顶层需使用 `TileTag=Blocking` 且 `IsWalkable=false`。玩家放置/拆除的动态建筑仍是 GameObject，并继续注册 `BuildingOccupancyRegistry`，不得迁移到 Tilemap。
+- 静态地形只能通过 `Data_TileMap` 的地形栈 API 读取顶层或修改层级；建筑占地保持独立，不得直接取得或改写格子的可变 Tile 列表。
 - 放置和拆除必须保持事务顺序，失败时不能同时丢失召唤器和世界建筑。
 - 联机权威校验位于 `Mod_Building` 与网络序列化桥接，客户端预览不能作为服务端最终依据。
 - 教程进度事件必须使用请求开始时捕获的 `_placementActor`：单机仅在创建建筑且成功消耗召唤器后发布；联机仅在 accepted 回执并应用权威剩余数量后发布。Reject、创建失败或 actor 丢失路径不得发布。
@@ -71,6 +72,7 @@ Summoner（库存中的持久化载体）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-05：静态结构与阻挡层迁移到连续 `TileStackCell` API；动态建筑继续只叠加 `BuildingOccupancyRegistry`，导航同时读取地形栈顶层与建筑占用。
 - 2026-07-31：新增正式 `MineEntrance`/`MineEntrance_Summoner` 建筑对；安装后的建筑可进入矿洞，召唤器不可触发，拆除与 Chunk 存档继续复用建筑快照事务。
 - 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；明确只承载地图生成的静态墙体，动态建造系统继续使用建筑实体、快照和占地注册表。
 - 2026-07-30：结构作者物件新增稳定 `MemberId` 和容器槽位配置；遗迹中的箱子等带 `Mod_Inventory` 建筑可在结构编辑器中选择目标库存并按真实槽位配置物品。Loot Marker 仍只负责按 `ContentId` 生成物件。

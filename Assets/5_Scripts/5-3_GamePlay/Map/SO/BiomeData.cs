@@ -5,23 +5,19 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "BiomeData", menuName = "ScriptObjects/Biome Data")]
 public class BiomeData : ScriptableObject
 {
-    [Header("»ù±¾ĞÅÏ¢")]
+    [Header("åŸºæœ¬ä¿¡æ¯")]
+    [Tooltip("ç”¨äºç»“æ„åŒ¹é…ã€å†…å®¹å“ˆå¸Œå’Œè°ƒè¯•çš„ç¨³å®šè‹±æ–‡ ID")]
+    public string BiomeId;
     public string BiomeName;
     [Multiline] public string Description;
     public Color PreviewColor = Color.white;
 
-    [Header("»·¾³Ìõ¼ş")]
+    [Header("ç¯å¢ƒæ¡ä»¶")]
     public EnvironmentConditionRange Condition;
 
 
-    [Header("µØĞÎÅäÖÃ")]
+    [Header("åœ°å½¢é…ç½®")]
     public BiomeTerrainConfig TerrainConfig;
-
-    [Header("ÎÂ¶È±íÏÖ£¨¡æ£©")]
-    [Tooltip("¿ªÆôºó£¬´ËÈºÏµ»áÊ¹ÓÃ×¨ÊôÎÂ¶ÈÇø¼ä¸²¸ÇÈ«¾ÖÎÂ¶ÈÓ³Éä")]
-    public bool UseCustomTemperatureRange = false;
-    [Tooltip("´ËÈºÏµµÄÉãÊÏÎÂ¶ÈÇø¼ä£¨x=×îµÍÎÂ£¬y=×î¸ßÎÂ£©")]
-    public Vector2 TemperatureRangeCelsius = new Vector2(20f, 30f);
 
     public bool IsEnvironmentValid(EnvironmentLayers layers, int x, int y)
     {
@@ -30,21 +26,16 @@ public class BiomeData : ScriptableObject
     
     private void OnValidate()
     {
-        // µ÷ÓÃ×ÓÀàµÄOnValidateº¯Êı
+        // è°ƒç”¨å­ç±»çš„OnValidateå‡½æ•°
         if (Condition != null)
         {
-            // EnvironmentConditionRangeµÄÑéÖ¤»áÔÚUnity±à¼­Æ÷ÖĞ×Ô¶¯´¦Àí
+            // EnvironmentConditionRangeçš„éªŒè¯ä¼šåœ¨Unityç¼–è¾‘å™¨ä¸­è‡ªåŠ¨å¤„ç†
         }
         
         if (TerrainConfig != null)
         {
             TerrainConfig.OnValidate();
-            // BiomeTerrainConfigµÄÑéÖ¤»áÔÚUnity±à¼­Æ÷ÖĞ×Ô¶¯´¦Àí
-        }
-
-        if (TemperatureRangeCelsius.x > TemperatureRangeCelsius.y)
-        {
-            TemperatureRangeCelsius.y = TemperatureRangeCelsius.x;
+            // BiomeTerrainConfigçš„éªŒè¯ä¼šåœ¨Unityç¼–è¾‘å™¨ä¸­è‡ªåŠ¨å¤„ç†
         }
     }
 }

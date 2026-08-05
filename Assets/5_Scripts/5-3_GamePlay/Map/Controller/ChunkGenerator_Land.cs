@@ -1,205 +1,141 @@
-﻿using System;
+using Sirenix.OdinInspector;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Tilemaps;
-using Sirenix.OdinInspector;
 
-/// <summary>
-/// 随机地图生成器：
-/// - 基于噪声 + 生物群系（Biome）
-/// - 支持分帧生成 / 大地图无缝衔接 / 群系资源随机生成
-/// - 记录每个格子的环境因子 (EnvFactorsGrid)
-/// - 支持 Gizmos 可视化调试
-/// - 支持按键获取Tile环境参数（默认F3）
-/// </summary>
-[System.Serializable]
+[Serializable]
 public class ChunkGenerator_Land : ChunkGeneratorBase
 {
-    #region 配置参数
-    [FoldoutGroup("高级/运行时回退", Expanded = false)]
-    [LabelText("回退星球配置")]
-    [PropertyTooltip("仅用于脱离正式生成管线时调试。正常运行会由 MapGenerationContext 中的存档星球数据覆盖。")]
-    public PlanetData plantData;
-
-    [FoldoutGroup("高级/运行时引用", Expanded = false)]
-    [LabelText("Grid 引用")]
-    [PropertyTooltip("可选。未指定时自动从当前 Map 或子对象获取。")]
-    public Grid mapGrid;
-
-    [FoldoutGroup("高级/运行时引用", Expanded = false)]
-    [LabelText("目标 Tilemap")]
-    [PropertyTooltip("可选。未指定时自动从当前 Map 子对象获取。")]
-    public Tilemap targetTilemap;
-
-    // 旧字段当前未参与温度计算，隐藏但保留序列化数据。
-    [HideInInspector] public float Equator = 0;
-
     [Title("1. 生物群系")]
     [LabelText("有序群系列表")]
-    [PropertyTooltip("根据环境范围按列表顺序匹配群系。顺序会影响重叠范围的最终结果。")]
-    public List<BiomeData> biomes;
+    [PropertyTooltip("按列表顺序解析；顺序固定代表优先级。")]
+    public List<BiomeData> biomes = new();
 
     [Title("2. 温度映射")]
-    [LabelText("温度映射配置")]
-    [PropertyTooltip("将归一化温度 0~1 转换为摄氏温度。为空时使用下方默认区间。")]
-    public TemperatureMappingProfile temperatureMappingProfile;
-
-    [LabelText("默认摄氏区间")]
-    [PropertyTooltip("仅在温度映射配置为空时使用，X 为最低温，Y 为最高温。")]
-    public Vector2 defaultTemperatureRangeCelsius = new Vector2(-10f, 16f);
+    [LabelText("摄氏温度区间")]
+    public Vector2 TemperatureCelsiusRange = new Vector2(0f, 50f);
 
     [Title("3. 环境噪声通道")]
     [LabelText("噪声配置")]
-    [PropertyTooltip("每项通过环境通道决定用途；同类型配置会取平均值，未配置通道固定回退为 0.5。最终频率还会乘 PlanetData 的世界坐标缩放。")]
-    [SerializeReference]
-    public List<BaseNoise> NoiseConfigs = new List<BaseNoise>();
+    public List<TerrainNoiseConfig> NoiseConfigs = new();
 
-    [ShowInInspector, ReadOnly, MultiLineProperty(3)]
+    [ShowInInspector, Sirenix.OdinInspector.ReadOnly, MultiLineProperty(3)]
     [LabelText("通道配置摘要")]
     private string NoiseConfigurationSummary => BuildNoiseConfigurationSummary();
 
-    // 旧调试字段当前未接入绘制逻辑，隐藏但保留序列化数据。
-    [HideInInspector]
-    public bool showBiomeOverlay = false;
-
     [Title("4. 高度后处理")]
     [LabelText("启用高度二次强化")]
-    [PropertyTooltip("开启后让高地更高、低地更低；会直接改变地形生成结果。")]
-    public bool enableHeightSecondaryBoost = false;
+    public bool enableHeightSecondaryBoost;
 
     [LabelText("强化强度")]
-    [PropertyTooltip("0 表示无额外效果，1 表示明显强化。")]
     [Range(0f, 2f)]
     public float heightSecondaryBoostStrength = 1f;
-    #endregion
 
-    #region 只读属性
+    public override GenerationStage Stage => GenerationStage.BaseTerrain;
     public Vector2 ChunkSize => ChunkMgr.GetChunkSize();
-    #endregion
+    public float NoiseScale => ResolveNoiseScale(_sourcePlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData());
 
-    #region 内部变量
-    [NonSerialized]
-    private int generationSeed;
+    [NonSerialized] private PlanetData _sourcePlanetData;
+    [NonSerialized] private int _generationSeed = 1;
+    [NonSerialized] private BiomeResolver _resolver;
+    [NonSerialized] private byte[] _runtimeBiomeIndices;
+    [NonSerialized] private int _runtimeBiomeWidth;
+    [NonSerialized] private int _runtimeBiomeHeight;
+    [NonSerialized] private Vector2Int _runtimeBiomeOrigin;
 
-    private int Seed => generationSeed != 0
-        ? generationSeed
-        : (SaveDataMgr.Instance?.SaveData?.Seed ?? 1);
-
-    public float NoiseScale => ResolveNoiseScale(plantData);
-
-    /// <summary>
-    /// 返回用于世界坐标采样的有效缩放。出生点可以直接读取 MapCore Prefab 的生成器，
-    /// 因此必须允许调用方传入当前存档的 PlanetData，而不是修改 Prefab 上的调试回退数据。
-    /// </summary>
-    private static float ResolveNoiseScale(PlanetData sourcePlanetData)
-    {
-        float configuredScale = sourcePlanetData != null
-            ? sourcePlanetData.NoiseScale
-            : PlanetData.DefaultNoiseScale;
-
-        // 早期存档缺少该字段时会反序列化为 0；零缩放会让整个世界命中同一个噪声点，
-        // 因而可能全部生成水或陆地。运行时统一迁移为项目默认值。
-        if (configuredScale <= 0f)
-            return PlanetData.DefaultNoiseScale;
-
-        return PlanetData.NormalizeNoiseScale(configuredScale);
-    }
-
-    [NonSerialized]
-    private bool _hasLoggedNoiseConfigsNull;
-
-    [NonSerialized]
-    private bool _hasLoggedNoiseConfigsEmpty;
-
-    [NonSerialized]
-    private bool _hasLoggedMissingLandNoise;
-
-    [NonSerialized]
-    private bool _hasLoggedInvalidNoiseSample;
-
-    #endregion
-
-    #region Unity 生命周期
-    public override void Init(Map map)
-    {
-        base.Init(map);
-        Map = map;
-
-        // 1. 自动获取Grid组件（优先级：手动指定 > 当前对象 > 子对象）
-        if (mapGrid == null)
-        {
-            mapGrid = map.GetComponent<Grid>();
-            if (mapGrid == null)
-            {
-                mapGrid = map.GetComponentInChildren<Grid>(includeInactive: false);
-            }
-        }
-
-        // 2. 自动获取当前对象的子对象Tilemap
-        if (targetTilemap == null)
-        {
-            Tilemap[] childTilemaps = map.GetComponentsInChildren<Tilemap>(includeInactive: false);
-            if (childTilemaps != null && childTilemaps.Length > 0)
-            {
-                targetTilemap = childTilemaps[0];
-            }
-            else
-            {
-                Debug.LogError($"[RandomMapGenerator] 当前对象下未找到任何Tilemap子对象！");
-            }
-        }
-    }
-
-    #endregion
-
-    #region 管线入口
-    public override void Generate(MapGenerationContext context)
-    {
-        if (context == null)
-        {
-            LogNullContext(nameof(ChunkGenerator_Land));
-            return;
-        }
-
-        if (context.Map == null)
-        {
-            LogNullMap(nameof(ChunkGenerator_Land));
-            return;
-        }
-
-        generationSeed = context.WorldSeed;
-        GenerateRandomMap_TileData(context.Map, context.PlanetData);
-    }
+    [NonSerialized] private bool _jobActive;
+    [NonSerialized] private JobHandle _activeHandle;
+    [NonSerialized] private NativeArray<TerrainNoiseConfig> _activeNoiseConfigs;
+    [NonSerialized] private NativeArray<CompiledBiomeRange> _activeBiomeRanges;
+    [NonSerialized] private NativeArray<float4> _activeEnvironment;
+    [NonSerialized] private NativeArray<byte> _activeBiomeIndices;
 
     public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
     {
-        if (context == null)
-        {
-            LogNullContext(nameof(ChunkGenerator_Land));
-            yield break;
-        }
+        if (context?.Map == null)
+            throw new ArgumentNullException(nameof(context), "[ChunkGenerator_Land] 缺少地图生成上下文。");
 
-        if (context.Map == null)
-        {
-            LogNullMap(nameof(ChunkGenerator_Land));
-            yield break;
-        }
-
-        generationSeed = context.WorldSeed;
         Map = context.Map;
-        plantData = context.PlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData() ?? plantData;
-        InitializeGenerationEnvironment(Map);
+        _sourcePlanetData = context.PlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData();
+        _generationSeed = context.WorldSeed == 0 ? 1 : context.WorldSeed;
+        ValidateConfiguration();
+        InitializeMapStorage(Map);
 
-        Vector2Int startPos = Map.Data.position;
-        Vector2 size = ChunkSize;
-        var budget = new ChunkGenerationWorkBudget(Map, workBatchSize);
+        int width = Map.Data.Width;
+        int height = Map.Data.Height;
+        int cellCount = checked(width * height);
+        TerrainNoiseConfig[] noiseConfigs = NoiseConfigs.ToArray();
+        CompiledBiomeRange[] biomeRanges = _resolver.CopyCompiledRanges();
 
-        for (int x = 0; x < size.x; x++)
+        _activeNoiseConfigs = new NativeArray<TerrainNoiseConfig>(noiseConfigs, Allocator.Persistent);
+        _activeBiomeRanges = new NativeArray<CompiledBiomeRange>(biomeRanges, Allocator.Persistent);
+        _activeEnvironment = new NativeArray<float4>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+        _activeBiomeIndices = new NativeArray<byte>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+
+        var job = new LandEnvironmentJob
         {
-            for (int y = 0; y < size.y; y++)
+            Origin = new int2(Map.Data.position.x, Map.Data.position.y),
+            Width = width,
+            NoiseScale = ResolveNoiseScale(_sourcePlanetData),
+            WorldSeed = _generationSeed,
+            TemperatureCelsiusRange = new float2(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y),
+            EnableHeightBoost = enableHeightSecondaryBoost,
+            HeightBoostStrength = heightSecondaryBoostStrength,
+            NoiseConfigs = _activeNoiseConfigs,
+            BiomeRanges = _activeBiomeRanges,
+            Environment = _activeEnvironment,
+            BiomeIndices = _activeBiomeIndices
+        };
+
+        _activeHandle = job.Schedule(cellCount, 64);
+        _jobActive = true;
+        try
+        {
+            while (!_activeHandle.IsCompleted)
             {
-                GenerateTile(Map, startPos, x, y, renderImmediately: false);
+                if (context.IsCancellationRequested)
+                    yield break;
+                yield return null;
+            }
+
+            _activeHandle.Complete();
+            var managedBiomeIndices = new byte[cellCount];
+            _activeBiomeIndices.CopyTo(managedBiomeIndices);
+            SetRuntimeBiomeCache(_resolver, managedBiomeIndices, width, height, Map.Data.position);
+            context.SetBiomeCache(_resolver, managedBiomeIndices, width, height);
+
+            var budget = new ChunkGenerationWorkBudget(Map, Mathf.Max(1, workBatchSize));
+            for (int index = 0; index < cellCount; index++)
+            {
+                int localX = index % width;
+                int localY = index / width;
+                Vector2Int worldPosition = Map.Data.position + new Vector2Int(localX, localY);
+                byte biomeIndex = managedBiomeIndices[index];
+                BiomeData biome = _resolver.GetBiome(biomeIndex);
+                if (biome == null)
+                    throw new InvalidOperationException($"位置 {worldPosition} 未匹配任何 Biome。");
+
+                float4 environment = _activeEnvironment[index];
+                Map.Data.SetEnvironmentAtLocal(
+                    localX,
+                    localY,
+                    environment.x,
+                    environment.y,
+                    environment.z,
+                    environment.w);
+
+                Tile_Block tileBlock = GetTerrainTileBlock(biome);
+                TileData tile = tileBlock.tileDataTemplate.Clone();
+                tile.Initialize_Env(Map.Data.EnvironmentLayers, localX, localY);
+                tile.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
+                if (!Map.Data.SetBaseTile(worldPosition, tile))
+                    throw new InvalidOperationException($"无法写入基础地形：{worldPosition}");
+
                 if (!budget.ShouldYield())
                     continue;
 
@@ -207,198 +143,88 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 budget.BeginNextFrame();
             }
         }
+        finally
+        {
+            CompleteAndDisposeActiveJob();
+        }
     }
-    #endregion
 
-    #region 主逻辑
-    /// <summary>
-    /// 生成随机地图的主要入口方法
-    /// </summary>
+    public override void CancelPendingWork()
+    {
+        CompleteAndDisposeActiveJob();
+    }
+
     [Button("生成随机地图")]
-    [Tooltip("根据当前配置生成随机地图")]
     public void GenerateRandomMap_TileData(Map map, PlanetData planetData)
     {
-        Map = map;
+        if (map == null)
+            throw new ArgumentNullException(nameof(map));
 
-        // 以参数为准：允许外部显式传入 PlanetData
-        // 若未传入，则退回到存档当前星球，再退回到 Inspector 字段
-        plantData = planetData ?? SaveDataMgr.Instance.GetCurrentPlanetData() ?? plantData;
-
-        // === 初始化生成环境 ===
-        InitializeGenerationEnvironment(map);
-
-        // === 启动地图生成 ===
-        StartMapGeneration(map);
-    }
-
-    /// <summary>
-    /// 初始化生成环境
-    /// </summary>
-    private void InitializeGenerationEnvironment(Map map)
-    {
-        // 清空旧数据
-        ClearMap(map);
-
-        // 设置地图位置（从父对象位置获取）
-        map.Data.position = new Vector2Int(
-            Mathf.RoundToInt(map.transform.parent.position.x),
-            Mathf.RoundToInt(map.transform.parent.position.y)
-        );
-
-        // 初始化环境因子网格
-        Vector2 size = ChunkSize;
-        map.Data.EnsureEnvironmentStorage((int)size.x, (int)size.y);
-    }
-
-    /// <summary>
-    /// 启动地图生成流程
-    /// </summary>
-    private void StartMapGeneration(Map map)
-    {
-        Vector2Int startPos = map.Data.position;
-        Vector2 size = ChunkSize;
-
-        // 先按同步方式生成（协程分帧后续再做优化）
-        GenerateAllTiles(map, startPos, size);
-    }
-    #endregion
-
-    #region 地图生成流程
-    /// <summary>
-    /// 立即生成所有地图瓦片（无分帧）
-    /// </summary>
-    private void GenerateAllTiles(Map map, Vector2Int startPos, Vector2 size)
-    {
-        for (int x = 0; x < size.x; x++)
-        {
-            for (int y = 0; y < size.y; y++)
-            {
-                GenerateTile(map, startPos, x, y, renderImmediately: true);
-            }
-        }
-        // 注意：收尾（TileLoaded/烘焙/刷新）由 Map.GenerateByPipeline() 统一处理，
-        // 以保证后续生成器（例如河流）可以基于本次大陆生成结果继续加工。
-    }
-
-    private void GenerateTile(Map map, Vector2Int startPos, int x, int y, bool renderImmediately)
-    {
-        Vector2Int worldPos = new Vector2Int(startPos.x + x, startPos.y + y);
-        Vector2Int localPos = worldPos - map.Data.position;
-
-        CalculateEnvironmentFactors(
-            worldPos,
-            out float temperature,
-            out float humidity,
-            out float precipitation,
-            out float solidity,
-            out float hight,
-            out float pollution);
-
-        float defaultTempCelsius = EvaluateTemperatureCelsius(temperature, null);
-        StoreEnvironmentFactors(
+        DimensionManager dimensionManager = DimensionManager.Instance;
+        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        var context = new MapGenerationContext(
             map,
-            localPos,
-            temperature,
-            defaultTempCelsius,
-            humidity,
-            precipitation,
-            solidity,
-            hight,
-            pollution);
-
-        BiomeData biome = GenerateBiomeTile(map, localPos);
-        if (biome == null)
-            return;
-
-        float temperatureCelsius = EvaluateTemperatureCelsius(temperature, biome);
-        StoreEnvironmentFactors(
-            map,
-            localPos,
-            temperature,
-            temperatureCelsius,
-            humidity,
-            precipitation,
-            solidity,
-            hight,
-            pollution);
-
-        GenerateTerrainTile(map, worldPos, localPos, biome, renderImmediately);
+            planetData,
+            dimensionManager != null ? dimensionManager.GetActiveGenerationSeed(baseSeed) : baseSeed,
+            dimensionManager != null ? dimensionManager.ActiveAddress : default,
+            dimensionManager != null ? dimensionManager.ActiveDefinition : null);
+        GenerateImmediate(context);
     }
-    #endregion
 
-    #region 地块生成逻辑
-
-    /// <summary>
-    /// 计算指定位置的环境参数
-    /// </summary>
-    private void CalculateEnvironmentFactors(
-        Vector2Int worldPos,
-        out float temperature,
-        out float humidity,
-        out float precipitation,
-        out float solidity,
-        out float hight,
-        out float pollution)
+    public EnvironmentSample SampleEnvironmentAtWorld(Vector2Int worldPosition, int worldSeed)
     {
-        float gx = worldPos.x * NoiseScale;
-        float gy = worldPos.y * NoiseScale;
-        SampleEnvironmentFactors(
-            gx,
-            gy,
-            Seed,
-            out temperature,
-            out humidity,
-            out precipitation,
-            out solidity,
-            out hight,
-            out pollution);
+        return SampleEnvironmentAtWorld(
+            worldPosition,
+            worldSeed,
+            _sourcePlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData());
     }
 
-    /// <summary>
-    /// 不创建 Chunk，直接使用与正式地形生成相同的噪声配置预测任意世界坐标。
-    /// </summary>
-    public EnvironmentSample SampleEnvironmentAtWorld(Vector2Int worldPos, int worldSeed)
-    {
-        return SampleEnvironmentAtWorld(worldPos, worldSeed, plantData);
-    }
-
-    /// <summary>
-    /// 不修改运行时生成器状态，直接按指定星球数据采样环境。
-    /// 用于玩家出生前的纯种子定位：此时尚未创建任何 Chunk 或 Map 实例。
-    /// </summary>
     public EnvironmentSample SampleEnvironmentAtWorld(
-        Vector2Int worldPos,
+        Vector2Int worldPosition,
         int worldSeed,
         PlanetData sourcePlanetData)
     {
         float noiseScale = ResolveNoiseScale(sourcePlanetData);
-        float gx = worldPos.x * noiseScale;
-        float gy = worldPos.y * noiseScale;
-        SampleEnvironmentFactors(
-            gx,
-            gy,
+        SampleChannels(
+            new float2(worldPosition.x * noiseScale, worldPosition.y * noiseScale),
             worldSeed == 0 ? 1 : worldSeed,
             out float temperature,
-            out float humidity,
             out float precipitation,
-            out float solidity,
-            out float hight,
-            out float pollution);
-
-        return new EnvironmentSample(
-            temperature,
-            EvaluateTemperatureCelsius(temperature, null),
-            humidity,
-            precipitation,
-            solidity,
-            hight,
-            pollution);
+            out float height);
+        float celsius = math.lerp(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y, temperature);
+        return new EnvironmentSample(temperature, celsius, precipitation, height);
     }
 
-    /// <summary>
-    /// 以正式地形生成相同的噪声和生物群系规则，预测一个可行走陆地格。
-    /// 此方法不会创建或加载 Chunk，适合出生点等必须避免批量加载世界的调用方。
-    /// </summary>
+    public bool TryResolveBiome(EnvironmentSample sample, out BiomeData biome)
+    {
+        EnsureResolver();
+        biome = _resolver.Resolve(sample);
+        return biome != null;
+    }
+
+    public bool TryGetBiomeAtWorld(Vector2Int worldPosition, out BiomeData biome)
+    {
+        biome = null;
+        EnsureResolver();
+        if (Map?.Data == null || !Map.Data.TryGetEnvironmentLocalPos(worldPosition, out Vector2Int localPosition))
+            return false;
+
+        if (_runtimeBiomeIndices != null &&
+            _runtimeBiomeOrigin == Map.Data.position &&
+            _runtimeBiomeWidth == Map.Data.Width &&
+            _runtimeBiomeHeight == Map.Data.Height)
+        {
+            int index = localPosition.y * _runtimeBiomeWidth + localPosition.x;
+            biome = _resolver.GetBiome(_runtimeBiomeIndices[index]);
+            return biome != null;
+        }
+
+        RebuildRuntimeBiomeCacheFromEnvironment();
+        int rebuiltIndex = localPosition.y * _runtimeBiomeWidth + localPosition.x;
+        biome = _resolver.GetBiome(_runtimeBiomeIndices[rebuiltIndex]);
+        return biome != null;
+    }
+
     public bool TryFindWalkableTerrainNear(
         Vector2Int anchor,
         int worldSeed,
@@ -409,17 +235,13 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         return TryFindWalkableTerrainNear(
             anchor,
             worldSeed,
-            plantData,
+            _sourcePlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData(),
             null,
             maxSearchRadius,
             maxSamples,
             out terrainPosition);
     }
 
-    /// <summary>
-    /// 以 MapCore Prefab 的地形规则和当前存档的星球数据，纯计算一个安全出生候选格。
-    /// 不会实例化 Map/Chunk；若提供河流生成器，也会排除会被后续河流管线覆盖的水格。
-    /// </summary>
     public bool TryFindWalkableTerrainNear(
         Vector2Int anchor,
         int worldSeed,
@@ -433,13 +255,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int searchRadius = Mathf.Max(0, maxSearchRadius);
         int sampleBudget = Mathf.Max(1, maxSamples);
         int sampled = 0;
+        var preview = new TerrainPreviewSampler(this, riverGenerator, sourcePlanetData, worldSeed);
 
-        if (IsWalkableTerrainAtWorld(anchor, worldSeed, sourcePlanetData, riverGenerator))
+        if (IsWalkableTerrainAtWorld(anchor, preview))
             return true;
-
         sampled++;
 
-        // 先细查锚点附近，通常可以给新玩家一个更自然的初始位置。
         int localRadius = Mathf.Min(searchRadius, 8);
         for (int y = -localRadius; y <= localRadius && sampled < sampleBudget; y++)
         {
@@ -450,450 +271,419 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
                 Vector2Int candidate = anchor + new Vector2Int(x, y);
                 sampled++;
-                if (!IsWalkableTerrainAtWorld(candidate, worldSeed, sourcePlanetData, riverGenerator))
-                    continue;
-
-                terrainPosition = candidate;
-                return true;
+                if (IsWalkableTerrainAtWorld(candidate, preview))
+                {
+                    terrainPosition = candidate;
+                    return true;
+                }
             }
         }
 
         if (searchRadius == 0 || sampled >= sampleBudget)
             return false;
 
-        // 再在整个允许范围内均匀取样。相比逐格螺旋扫描，这给出明确的
-        // 工作上限，即使错误配置把整张世界生成成水也不会卡住主线程。
         int gridSize = Mathf.Max(2, Mathf.CeilToInt(Mathf.Sqrt(sampleBudget - sampled)));
         for (int y = 0; y < gridSize && sampled < sampleBudget; y++)
         {
             for (int x = 0; x < gridSize && sampled < sampleBudget; x++)
             {
-                float normalizedX = (x + 0.5f) / gridSize;
-                float normalizedY = (y + 0.5f) / gridSize;
                 Vector2Int candidate = new Vector2Int(
-                    anchor.x + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, normalizedX)),
-                    anchor.y + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, normalizedY)));
-
+                    anchor.x + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, (x + 0.5f) / gridSize)),
+                    anchor.y + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, (y + 0.5f) / gridSize)));
                 sampled++;
-                if (!IsWalkableTerrainAtWorld(candidate, worldSeed, sourcePlanetData, riverGenerator))
-                    continue;
-
-                terrainPosition = candidate;
-                return true;
+                if (IsWalkableTerrainAtWorld(candidate, preview))
+                {
+                    terrainPosition = candidate;
+                    return true;
+                }
             }
         }
 
         return false;
     }
 
-    /// <summary>
-    /// 判断指定世界坐标按当前大陆生成配置最终会落在可行走的基础地形上。
-    /// 不带河流参数的旧调用只检查大陆；出生流程使用下方重载并传入河流生成器。
-    /// </summary>
-    public bool IsWalkableTerrainAtWorld(Vector2Int worldPos, int worldSeed)
+    public bool IsWalkableTerrainAtWorld(Vector2Int worldPosition, int worldSeed)
     {
-        return IsWalkableTerrainAtWorld(worldPos, worldSeed, plantData, riverGenerator: null);
+        return IsWalkableTerrainAtWorld(
+            worldPosition,
+            worldSeed,
+            _sourcePlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData(),
+            null);
     }
 
-    /// <summary>
-    /// 纯判断指定位置最终是否会是可行走基础地形。传入河流生成器后，
-    /// 会使用相同世界种子排除将被河流覆盖的格子。
-    /// </summary>
     public bool IsWalkableTerrainAtWorld(
-        Vector2Int worldPos,
+        Vector2Int worldPosition,
         int worldSeed,
         PlanetData sourcePlanetData,
         ChunkGenerator_River riverGenerator)
     {
-        if (biomes == null || biomes.Count == 0)
-            return false;
-
-        if (riverGenerator != null && riverGenerator.TryEvaluateRiverCell(worldPos, worldSeed, out _))
-            return false;
-
-        EnvironmentSample sample = SampleEnvironmentAtWorld(worldPos, worldSeed, sourcePlanetData);
-        for (int i = 0; i < biomes.Count; i++)
-        {
-            BiomeData biome = biomes[i];
-            if (biome == null || biome.Condition == null || !biome.Condition.IsMatch(sample))
-                continue;
-
-            BiomeTerrainConfig terrainConfig = biome.TerrainConfig;
-            if (terrainConfig?.TileSpawns_NoSO == null || terrainConfig.TileSpawns_NoSO.Count == 0)
-                return false;
-
-            Tile_Block tileBlock = terrainConfig.TileSpawns_NoSO[0]?.TileBlock;
-            TileData tileTemplate = tileBlock?.tileDataTemplate;
-            return tileTemplate != null && !(tileTemplate is TileData_Water) && tileTemplate.IsWalkable;
-        }
-
-        return false;
+        var preview = new TerrainPreviewSampler(this, riverGenerator, sourcePlanetData, worldSeed);
+        return IsWalkableTerrainAtWorld(worldPosition, preview);
     }
 
-    /// <summary>
-    /// 采样环境因子（一次遍历 NoiseConfigs，每个 noise 执行一次 Sample）
-    /// </summary>
-    private void SampleEnvironmentFactors(
-        float x,
-        float y,
-        int seed,
-        out float temperature,
-        out float humidity,
-        out float precipitation,
-        out float solidity,
-        out float hight,
-        out float pollution)
+    private static bool IsWalkableTerrainAtWorld(
+        Vector2Int worldPosition,
+        TerrainPreviewSampler preview)
     {
-        // 默认值：当某个类型未配置噪声时使用
-        const float defaultValue = 0.5f;
-        pollution = 0f;
+        if (!preview.TrySample(worldPosition, out TerrainPreviewSample sample) || sample.IsRiver)
+            return false;
 
-        if (NoiseConfigs == null)
-        {
-            if (!_hasLoggedNoiseConfigsNull)
-            {
-                _hasLoggedNoiseConfigsNull = true;
-                Debug.LogError("[ChunkGenerator_Land] ❌ NoiseConfigs 为 null，无法采样环境因子（将使用默认值 Env=0.5）。");
-            }
-            temperature = defaultValue;
-            humidity = defaultValue;
-            precipitation = defaultValue;
-            solidity = defaultValue;
-            hight = defaultValue;
-            return;
-        }
+        TileData template = GetTerrainTileBlock(sample.Biome)?.tileDataTemplate;
+        return template != null && template is not TileData_Water && template.IsWalkable;
+    }
 
-        if (NoiseConfigs.Count == 0)
-        {
-            if (!_hasLoggedNoiseConfigsEmpty)
-            {
-                _hasLoggedNoiseConfigsEmpty = true;
-                Debug.LogWarning("[ChunkGenerator_Land] ⚠️ NoiseConfigs 为空，无法采样环境因子（将使用默认值 Env=0.5）。");
-            }
-            temperature = defaultValue;
-            humidity = defaultValue;
-            precipitation = defaultValue;
-            solidity = defaultValue;
-            hight = defaultValue;
-            return;
-        }
+    public byte[] CopyRuntimeBiomeIndices()
+    {
+        return _runtimeBiomeIndices == null ? null : (byte[])_runtimeBiomeIndices.Clone();
+    }
 
-        float sumTemperature = 0f;
-        float sumHumidity = 0f;
-        float sumPrecipitation = 0f;
-        float sumSolidity = 0f;
-        float sumHeight = 0f;
+    public void ValidateConfiguration()
+    {
+        if (NoiseConfigs == null || NoiseConfigs.Count != 3)
+            throw new InvalidOperationException("地形必须恰好配置高度、降水、温度三个噪声通道。");
 
-        int countTemperature = 0;
-        int countHumidity = 0;
-        int countPrecipitation = 0;
-        int countSolidity = 0;
-        int countHeight = 0;
-
+        var configuredChannels = new HashSet<NoiseType>();
         for (int i = 0; i < NoiseConfigs.Count; i++)
         {
-            var noise = NoiseConfigs[i];
-            if (noise == null)
-                continue;
-
-            float v = noise.Sample(x, y, seed);
-            if (float.IsNaN(v) || float.IsInfinity(v))
-            {
-                if (!_hasLoggedInvalidNoiseSample)
-                {
-                    _hasLoggedInvalidNoiseSample = true;
-                    Debug.LogWarning(
-                        $"[ChunkGenerator_Land] 噪声配置 {noise.GetType().Name}/{noise.noiseType} 返回了非法值，已回退为 0.5。请检查频率、八度和振幅参数。",
-                        Map);
-                }
-
-                v = defaultValue;
-            }
-            else
-            {
-                v = Mathf.Clamp01(v);
-            }
-
-            switch (noise.noiseType)
-            {
-                case NoiseType.Temperature:
-                    sumTemperature += v;
-                    countTemperature++;
-                    break;
-                case NoiseType.Humidity:
-                    sumHumidity += v;
-                    countHumidity++;
-                    break;
-                case NoiseType.Precipitation:
-                    sumPrecipitation += v;
-                    countPrecipitation++;
-                    break;
-                case NoiseType.Solidity:
-                    sumSolidity += v;
-                    countSolidity++;
-                    break;
-                case NoiseType.Land:
-                    sumHeight += v;
-                    countHeight++;
-                    break;
-                case NoiseType.River:
-                    // 当前版本暂不启用河流：保留枚举兼容，但不影响 Env
-                    break;
-                default:
-                    break;
-            }
+            TerrainNoiseConfig config = NoiseConfigs[i];
+            if (!TerrainNoiseKernel.IsValid(config, out string reason))
+                throw new InvalidOperationException($"NoiseConfigs[{i}] 非法：{reason}");
+            if (!configuredChannels.Add(config.noiseType))
+                throw new InvalidOperationException($"噪声通道重复：{config.noiseType}");
         }
 
-        temperature = countTemperature > 0 ? (sumTemperature / countTemperature) : defaultValue;
-        humidity = countHumidity > 0 ? (sumHumidity / countHumidity) : defaultValue;
-        precipitation = countPrecipitation > 0 ? (sumPrecipitation / countPrecipitation) : defaultValue;
-        solidity = countSolidity > 0 ? (sumSolidity / countSolidity) : defaultValue;
-        hight = countHeight > 0 ? (sumHeight / countHeight) : defaultValue;
-        hight = ApplyHeightSecondaryBoost(hight);
-
-        if (countHeight == 0 && !_hasLoggedMissingLandNoise)
+        foreach (NoiseType required in Enum.GetValues(typeof(NoiseType)))
         {
-            _hasLoggedMissingLandNoise = true;
-            Debug.LogWarning("[ChunkGenerator_Land] ⚠️ 未配置任何 NoiseType.Land 噪声，高度将使用默认值 0.5。");
+            if (!configuredChannels.Contains(required))
+                throw new InvalidOperationException($"缺少必需噪声通道：{required}");
         }
 
-        temperature = Mathf.Clamp01(temperature);
-        humidity = Mathf.Clamp01(humidity);
-        precipitation = Mathf.Clamp01(precipitation);
-        solidity = Mathf.Clamp01(solidity);
-        hight = Mathf.Clamp01(hight);
+        if (!IsFinite(TemperatureCelsiusRange.x) || !IsFinite(TemperatureCelsiusRange.y) ||
+            TemperatureCelsiusRange.x > TemperatureCelsiusRange.y)
+        {
+            throw new InvalidOperationException("摄氏温度区间非法。");
+        }
+
+        if (!IsFinite(heightSecondaryBoostStrength) || heightSecondaryBoostStrength < 0f)
+            throw new InvalidOperationException("高度二次强化强度必须是有限非负数。");
+
+        _resolver = new BiomeResolver(biomes);
+        for (int i = 0; i < biomes.Count; i++)
+            GetTerrainTileBlock(biomes[i]);
     }
 
-    #region 配置摘要
+    public static float ResolveNoiseScale(PlanetData sourcePlanetData)
+    {
+        float configuredScale = sourcePlanetData != null
+            ? sourcePlanetData.NoiseScale
+            : PlanetData.DefaultNoiseScale;
+        if (!IsFinite(configuredScale) || configuredScale <= 0f)
+            return PlanetData.DefaultNoiseScale;
+        return PlanetData.NormalizeNoiseScale(configuredScale);
+    }
+
+    private void InitializeMapStorage(Map map)
+    {
+        if (map.Data == null)
+            map.Data = new Data_TileMap();
+
+        if (map.transform.parent != null)
+        {
+            map.Data.position = new Vector2Int(
+                Mathf.RoundToInt(map.transform.parent.position.x),
+                Mathf.RoundToInt(map.transform.parent.position.y));
+        }
+
+        Vector2 chunkSize = ChunkSize;
+        int width = Mathf.Max(1, Mathf.RoundToInt(chunkSize.x));
+        int height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
+        map.Data.EnsureTileStorage(width, height);
+        map.Data.ClearAllTiles();
+        map.Data.EnsureEnvironmentStorage(width, height);
+    }
+
+    private void SampleChannels(
+        float2 worldScaledPosition,
+        int worldSeed,
+        out float temperature,
+        out float precipitation,
+        out float height)
+    {
+        float3 sums = float3.zero;
+        int3 counts = int3.zero;
+        if (NoiseConfigs != null)
+        {
+            for (int i = 0; i < NoiseConfigs.Count; i++)
+            {
+                TerrainNoiseConfig config = NoiseConfigs[i];
+                float value = TerrainNoiseKernel.Sample(config, worldScaledPosition, worldSeed);
+                AccumulateChannel(config.noiseType, value, ref sums, ref counts);
+            }
+        }
+
+        temperature = counts.x > 0 ? sums.x / counts.x : TerrainNoiseKernel.DefaultChannelValue;
+        precipitation = counts.y > 0 ? sums.y / counts.y : TerrainNoiseKernel.DefaultChannelValue;
+        height = counts.z > 0 ? sums.z / counts.z : TerrainNoiseKernel.DefaultChannelValue;
+        height = TerrainNoiseKernel.ApplyHeightBoost(height, enableHeightSecondaryBoost, heightSecondaryBoostStrength);
+    }
+
+    private static void AccumulateChannel(
+        NoiseType type,
+        float value,
+        ref float3 sums,
+        ref int3 counts)
+    {
+        switch (type)
+        {
+            case NoiseType.Temperature:
+                sums.x += value;
+                counts.x++;
+                break;
+            case NoiseType.Precipitation:
+                sums.y += value;
+                counts.y++;
+                break;
+            case NoiseType.Height:
+                sums.z += value;
+                counts.z++;
+                break;
+        }
+    }
+
+    private void EnsureResolver()
+    {
+        _resolver ??= new BiomeResolver(biomes);
+    }
+
+    private void SetRuntimeBiomeCache(
+        BiomeResolver resolver,
+        byte[] indices,
+        int width,
+        int height,
+        Vector2Int origin)
+    {
+        _resolver = resolver;
+        _runtimeBiomeIndices = indices;
+        _runtimeBiomeWidth = width;
+        _runtimeBiomeHeight = height;
+        _runtimeBiomeOrigin = origin;
+    }
+
+    private void RebuildRuntimeBiomeCacheFromEnvironment()
+    {
+        int width = Map.Data.Width;
+        int height = Map.Data.Height;
+        var indices = new byte[width * height];
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                var sample = new EnvironmentSample(
+                    Map.Data.EnvironmentLayers.Temperature[x, y],
+                    Map.Data.EnvironmentLayers.TemperatureCelsius[x, y],
+                    Map.Data.EnvironmentLayers.Precipitation[x, y],
+                    Map.Data.EnvironmentLayers.Height[x, y]);
+                indices[y * width + x] = _resolver.ResolveIndex(sample);
+            }
+        }
+
+        SetRuntimeBiomeCache(_resolver, indices, width, height, Map.Data.position);
+    }
+
+    internal static Tile_Block GetTerrainTileBlock(BiomeData biome)
+    {
+        if (biome?.TerrainConfig?.TileSpawns_NoSO == null || biome.TerrainConfig.TileSpawns_NoSO.Count == 0)
+            throw new InvalidOperationException($"Biome {biome?.BiomeId ?? "null"} 缺少基础 Tile 配置。");
+
+        Tile_Block block = biome.TerrainConfig.TileSpawns_NoSO[0]?.TileBlock;
+        if (block?.tileDataTemplate == null)
+            throw new InvalidOperationException($"Biome {biome.BiomeId} 的基础 Tile 无效。");
+        return block;
+    }
+
     private string BuildNoiseConfigurationSummary()
     {
         if (NoiseConfigs == null)
-            return "配置列表为空引用；全部环境通道将回退为 0.5。";
+            return "未配置";
 
-        int land = CountNoiseType(NoiseType.Land);
-        int temperature = CountNoiseType(NoiseType.Temperature);
-        int humidity = CountNoiseType(NoiseType.Humidity);
-        int precipitation = CountNoiseType(NoiseType.Precipitation);
-        int solidity = CountNoiseType(NoiseType.Solidity);
-
-        return
-            $"高度 Land: {FormatNoiseCount(land)} | 温度 Temperature: {FormatNoiseCount(temperature)}\n" +
-            $"湿度 Humidity: {FormatNoiseCount(humidity)} | 降水 Precipitation: {FormatNoiseCount(precipitation)}\n" +
-            $"土壤 Solidity: {FormatNoiseCount(solidity)} | 同类型多项将取平均值";
-    }
-
-    private int CountNoiseType(NoiseType type)
-    {
-        if (NoiseConfigs == null)
-            return 0;
-
-        int count = 0;
+        int height = 0;
+        int precipitation = 0;
+        int temperature = 0;
         for (int i = 0; i < NoiseConfigs.Count; i++)
         {
-            if (NoiseConfigs[i] != null && NoiseConfigs[i].noiseType == type)
-                count++;
+            switch (NoiseConfigs[i].noiseType)
+            {
+                case NoiseType.Height: height++; break;
+                case NoiseType.Precipitation: precipitation++; break;
+                case NoiseType.Temperature: temperature++; break;
+            }
         }
 
-        return count;
+        return $"高度 {height} | 降水 {precipitation} | 温度 {temperature}";
     }
 
-    private static string FormatNoiseCount(int count)
+    private void CompleteAndDisposeActiveJob()
     {
-        return count > 0 ? $"{count} 项" : "未配置（0.5）";
-    }
-    #endregion
-
-    private float ApplyHeightSecondaryBoost(float height)
-    {
-        if (!enableHeightSecondaryBoost)
-            return Mathf.Clamp01(height);
-
-        float h = Mathf.Clamp01(height);
-        float d = h - 0.5f;
-
-        // 二次项强化：中心附近变化小，两端变化更明显
-        float boosted = h + Mathf.Sign(d) * d * d * 4f * Mathf.Max(0f, heightSecondaryBoostStrength);
-        return Mathf.Clamp01(boosted);
+        if (_jobActive)
+            _activeHandle.Complete();
+        if (_activeNoiseConfigs.IsCreated)
+            _activeNoiseConfigs.Dispose();
+        if (_activeBiomeRanges.IsCreated)
+            _activeBiomeRanges.Dispose();
+        if (_activeEnvironment.IsCreated)
+            _activeEnvironment.Dispose();
+        if (_activeBiomeIndices.IsCreated)
+            _activeBiomeIndices.Dispose();
+        _jobActive = false;
     }
 
-    private float EvaluateTemperatureCelsius(float normalizedTemperature, BiomeData biome)
+    private static bool IsFinite(float value)
     {
-        float t = Mathf.Clamp01(normalizedTemperature);
+        return !float.IsNaN(value) && !float.IsInfinity(value);
+    }
 
-        if (temperatureMappingProfile != null)
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
+    private struct LandEnvironmentJob : IJobParallelFor
+    {
+        public int2 Origin;
+        public int Width;
+        public float NoiseScale;
+        public int WorldSeed;
+        public float2 TemperatureCelsiusRange;
+        public bool EnableHeightBoost;
+        public float HeightBoostStrength;
+
+        [Unity.Collections.ReadOnly] public NativeArray<TerrainNoiseConfig> NoiseConfigs;
+        [Unity.Collections.ReadOnly] public NativeArray<CompiledBiomeRange> BiomeRanges;
+        [WriteOnly] public NativeArray<float4> Environment;
+        [WriteOnly] public NativeArray<byte> BiomeIndices;
+
+        public void Execute(int index)
         {
-            return temperatureMappingProfile.Evaluate(t);
+            int localX = index % Width;
+            int localY = index / Width;
+            float2 scaledPosition = new float2(
+                (Origin.x + localX) * NoiseScale,
+                (Origin.y + localY) * NoiseScale);
+
+            float3 sums = float3.zero;
+            int3 counts = int3.zero;
+            for (int i = 0; i < NoiseConfigs.Length; i++)
+            {
+                TerrainNoiseConfig config = NoiseConfigs[i];
+                float value = TerrainNoiseKernel.Sample(config, scaledPosition, WorldSeed);
+                AccumulateChannel(config.noiseType, value, ref sums, ref counts);
+            }
+
+            float temperature = counts.x > 0 ? sums.x / counts.x : TerrainNoiseKernel.DefaultChannelValue;
+            float precipitation = counts.y > 0 ? sums.y / counts.y : TerrainNoiseKernel.DefaultChannelValue;
+            float height = counts.z > 0 ? sums.z / counts.z : TerrainNoiseKernel.DefaultChannelValue;
+            height = TerrainNoiseKernel.ApplyHeightBoost(height, EnableHeightBoost, HeightBoostStrength);
+            float celsius = math.lerp(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y, temperature);
+
+            byte biomeIndex = BiomeResolver.UnmatchedIndex;
+            for (int i = 0; i < BiomeRanges.Length; i++)
+            {
+                CompiledBiomeRange range = BiomeRanges[i];
+                if (!range.Matches(temperature, precipitation, height))
+                    continue;
+                biomeIndex = range.Index;
+                break;
+            }
+
+            Environment[index] = new float4(temperature, celsius, precipitation, height);
+            BiomeIndices[index] = biomeIndex;
         }
-
-        return Mathf.Lerp(defaultTemperatureRangeCelsius.x, defaultTemperatureRangeCelsius.y, t);
     }
+}
 
+public readonly struct TerrainPreviewSample
+{
+    public EnvironmentSample Environment { get; }
+    public BiomeData Biome { get; }
+    public bool IsRiver { get; }
+    public float RiverDepth { get; }
+    public bool HasWater { get; }
+    public float WaterSalt { get; }
+    public float WaterDepth { get; }
 
-
-    /// <summary>
-    /// 存储环境参数到网格
-    /// </summary>
-    private void StoreEnvironmentFactors(
-        Map map,
-        Vector2Int localPos,
-        float temperature,
-        float temperatureCelsius,
-        float humidity,
-        float precipitation,
-        float solidity,
-        float hight,
-        float pollution)
-    {
-        if (map == null || map.Data == null || map.Data.EnvironmentLayers == null)
-        {
-            Debug.LogError("[环境存储] ❌ EnvironmentLayers 未初始化");
-            return;
-        }
-
-        int width = map.Data.EnvironmentLayers.Width;
-        int height = map.Data.EnvironmentLayers.Height;
-
-        // 边界检查
-        if (localPos.x < 0 || localPos.x >= width ||
-            localPos.y < 0 || localPos.y >= height)
-        {
-            return; // 超出范围，直接跳过
-        }
-
-        map.Data.SetEnvironmentAtLocal(
-            localPos.x,
-            localPos.y,
-            temperature,
-            temperatureCelsius,
-            humidity,
-            precipitation,
-            solidity,
-            hight,
-            pollution);
-    }
-
-    /// <summary>
-    /// 生成生物群系对应的地形瓦片
-    /// </summary>
-    private BiomeData GenerateBiomeTile(Map map, Vector2Int localPos)
-    {
-        // 1. 匹配生物群系
-        BiomeData biome = FindMatchingBiome(localPos);
-        if (biome == null)
-        {
-            Vector2Int worldPos = map.Data.position + localPos;
-            Debug.LogWarning($"[生物群系] ⚠️ 位置 {worldPos} 无法匹配任何生物群系");
-            return null;
-        }
-
-        return biome;
-    }
-
-    /// <summary>
-    /// 查找匹配的生物群系（带缓存优化）
-    /// </summary>
-    private BiomeData FindMatchingBiome(Vector2Int localPos)
-    {
-        EnvironmentLayers layers = Map != null && Map.Data != null ? Map.Data.EnvironmentLayers : null;
-
-        foreach (var biome in biomes)
-        {
-            if (biome != null && biome.IsEnvironmentValid(layers, localPos.x, localPos.y))
-                return biome;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// 查询当前已生成地图上指定世界格所属的生物群系。
-    /// </summary>
-    public bool TryGetBiomeAtWorld(Vector2Int worldPos, out BiomeData biome)
-    {
-        biome = null;
-        if (Map == null || Map.Data == null || Map.Data.EnvironmentLayers == null || biomes == null)
-            return false;
-
-        if (!Map.Data.TryGetEnvironmentLocalPos(worldPos, out Vector2Int localPos))
-            return false;
-
-        biome = FindMatchingBiome(localPos);
-        return biome != null;
-    }
-
-    /// <summary>
-    /// 生成地形瓦片数据并添加到地图
-    /// </summary>
-    private void GenerateTerrainTile(
-        Map map,
-        Vector2Int worldPos,
-        Vector2Int localPos,
+    public TerrainPreviewSample(
+        EnvironmentSample environment,
         BiomeData biome,
-        bool renderImmediately)
+        bool isRiver,
+        float riverDepth,
+        bool hasWater,
+        float waterSalt,
+        float waterDepth)
     {
-        // 1. 获取 Tile_Block SO
-        Tile_Block tileBlock = biome.TerrainConfig.Get_Tile_Block();
+        Environment = environment;
+        Biome = biome;
+        IsRiver = isRiver;
+        RiverDepth = riverDepth;
+        HasWater = hasWater;
+        WaterSalt = waterSalt;
+        WaterDepth = waterDepth;
+    }
+}
 
-        // 2. 直接从 Tile_Block 的模板生成 TileData（无需额外缓存）
-        TileData template = tileBlock.tileDataTemplate;
+public sealed class TerrainPreviewSampler
+{
+    private readonly ChunkGenerator_Land _land;
+    private readonly ChunkGenerator_River _river;
+    private readonly PlanetData _planetData;
+    private readonly int _worldSeed;
 
-        // 3. 克隆 TileData（使用手写 Clone，避免通用深拷贝开销）
-        var tile = template.Clone();
+    public TerrainPreviewSampler(
+        ChunkGenerator_Land land,
+        ChunkGenerator_River river,
+        PlanetData planetData,
+        int worldSeed)
+    {
+        _land = land ?? throw new ArgumentNullException(nameof(land));
+        _river = river;
+        _planetData = planetData;
+        _worldSeed = worldSeed == 0 ? 1 : worldSeed;
+        _land.ValidateConfiguration();
+        _river?.ValidateConfiguration();
+    }
 
-        // 4. 初始化瓦片（根据环境因子调整）
-        tile.Initialize_Env(map.Data.EnvironmentLayers, localPos.x, localPos.y);
-
-        // 5. 设置瓦片位置
-        tile.position = new Vector3Int(worldPos.x, worldPos.y, 0);
-
-        // 6. 仅添加到地图数据层；实际 Tilemap 绘制由 Map 自身的加载/刷新流程负责
-        map.ADDTileData(worldPos, tile);
-
-        // 手动同步生成入口仍立即绘制；运行时异步管线统一交给 Map 分帧写入。
-        if (renderImmediately)
+    public bool TrySample(Vector2Int worldPosition, out TerrainPreviewSample preview)
+    {
+        EnvironmentSample baseEnvironment = _land.SampleEnvironmentAtWorld(worldPosition, _worldSeed, _planetData);
+        if (!_land.TryResolveBiome(baseEnvironment, out BiomeData biome))
         {
-            var unityTileBase = tileBlock.GetTileBaseAsset();
-            map.tileMap.SetTile(new Vector3Int(worldPos.x, worldPos.y, 0), unityTileBase);
+            preview = default;
+            return false;
         }
+
+        TileData baseTerrain = ChunkGenerator_Land.GetTerrainTileBlock(biome).tileDataTemplate;
+        float depth = 0f;
+        bool isRiver = _river != null &&
+                       _river.TryEvaluateAppliedRiverCell(
+                           worldPosition,
+                           _worldSeed,
+                           baseTerrain,
+                           out depth);
+        EnvironmentSample finalEnvironment = isRiver
+            ? new EnvironmentSample(
+                baseEnvironment.Temperature,
+                baseEnvironment.TemperatureCelsius,
+                1f,
+                baseEnvironment.Height)
+            : baseEnvironment;
+        bool baseHasWater = baseTerrain is TileData_Water;
+        TileData_Water baseWater = baseTerrain as TileData_Water;
+        float baseWaterDepth = baseHasWater
+            ? TileData_Water.CalculateDepthFromHeight(baseEnvironment.Height)
+            : 0f;
+        preview = new TerrainPreviewSample(
+            finalEnvironment,
+            biome,
+            isRiver,
+            isRiver ? depth : 0f,
+            isRiver || baseHasWater,
+            isRiver ? 0f : baseWater?.salt ?? 0f,
+            isRiver ? depth : baseWaterDepth);
+        return true;
     }
-
-    #endregion
-
-    #region 工具方法
-
-    /// <summary>
-    /// 清除当前地图的所有瓦片和数据
-    /// </summary>
-    private void ClearMap(Map map)
-    {
-        if (map == null)
-            return;
-
-        if (map.tileMap != null)
-            map.tileMap.ClearAllTiles();
-
-        if (map.Data != null)
-            map.Data.ClearAllTiles();
-    }
-
-    /// <summary>
-    /// 地图生成完成后的回调方法
-    /// </summary>
-    // 旧版在生成器内收尾；现改为由 Map 统一收尾（见 Map.GenerateByPipeline）。
-
-    /// <summary>
-    /// Xorshift32 伪随机数生成器
-    /// </summary>
-    private static uint Xorshift32(ref uint state)
-    {
-        state ^= state << 13;
-        state ^= state >> 17;
-        state ^= state << 5;
-        return state;
-    }
-    #endregion
-
-    #region 鼠标位置环境参数检测
-    // 此生成器不直接处理鼠标检测与调试输出。
-    // 相关运行时调试已由 EnvironmentInfoDisplay 等工具脚本负责，以保持本类职责单一。
-    #endregion
 }

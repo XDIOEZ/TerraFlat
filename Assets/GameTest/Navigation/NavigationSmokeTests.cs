@@ -34,6 +34,74 @@ namespace FlatWorld.GameTest.Navigation
         }
 
         [Test]
+        [Category("Navigation.Smoke")]
+        public void TopTileAndBuildingOccupancyJointlyControlWalkability()
+        {
+            WorldNavigationManager manager = CreateManagerForTest();
+            GameObject mapObject = new("NavigationTileStackMap");
+            GameObject buildingObject = new("NavigationOccupancyBuilding");
+            Mod_Building building = null;
+            try
+            {
+                global::Map map = mapObject.AddComponent<global::Map>();
+                map.Data = new Data_TileMap { position = new Vector2Int(40, -12) };
+                map.Data.EnsureTileStorage(1, 1);
+                Vector2Int cell = map.Data.position;
+                map.Data.SetBaseTile(cell, new TileData_Universal
+                {
+                    ID = "walkable_floor",
+                    IsWalkable = true,
+                    Penalty = GroundPenalty
+                });
+
+                manager.RegisterMap(map);
+                Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell floorCell), Is.True);
+                Assert.That(floorCell.Walkable, Is.True);
+
+                map.Data.PushTile(cell, new TileData_Universal
+                {
+                    ID = "blocking_overlay",
+                    TileTag = BlockingTilemapLayer.BlockingTileTag,
+                    IsWalkable = false,
+                    Penalty = 0u
+                });
+                manager.RegisterMap(map);
+                Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell blockedByTile), Is.True);
+                Assert.That(blockedByTile.Walkable, Is.False);
+
+                Assert.That(map.Data.RemoveTile(cell), Is.True);
+                manager.RegisterMap(map);
+                Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell restoredFloor), Is.True);
+                Assert.That(restoredFloor.Walkable, Is.True);
+
+                building = buildingObject.AddComponent<Mod_Building>();
+                building.Data.Role = BuildingRole.PlacedBuilding;
+                building.Data.State = BuildingState.Installed;
+                typeof(Mod_Building)
+                    .GetField("_currentState", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(building, BuildingState.Installed);
+                Assert.That(building.IsInstalled(), Is.True, "测试建筑必须处于有效占地状态。");
+                BuildingOccupancyRegistry.Register(building, new[] { cell });
+                manager.RegisterMap(map);
+                Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell occupied), Is.True);
+                Assert.That(occupied.Walkable, Is.False);
+
+                BuildingOccupancyRegistry.Unregister(building);
+                manager.RegisterMap(map);
+                Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell unoccupied), Is.True);
+                Assert.That(unoccupied.Walkable, Is.True);
+            }
+            finally
+            {
+                if (building != null)
+                    BuildingOccupancyRegistry.Unregister(building);
+                Object.DestroyImmediate(buildingObject);
+                Object.DestroyImmediate(mapObject);
+                Object.DestroyImmediate(manager.gameObject);
+            }
+        }
+
+        [Test]
         [Category("Navigation.Debug")]
         public void RuntimePathOverlayCanBeToggledWithoutEditorGizmos()
         {
@@ -70,7 +138,7 @@ namespace FlatWorld.GameTest.Navigation
                 body.position = new Vector2(1.5f, 1.5f);
 
                 WorldNavigationAgent agent = actor.AddComponent<WorldNavigationAgent>();
-                agent.Bind(body);
+                agent.Bind(body, manager);
                 agent.SetDestination(new Vector2(9.5f, 1.5f), forceRepath: true);
                 agent.Tick(0.02f);
                 Assert.That(manager.ProcessPathRequests(1), Is.EqualTo(1));
@@ -309,7 +377,7 @@ namespace FlatWorld.GameTest.Navigation
                 body.position = new Vector2(1.5f, 1.5f);
 
                 WorldNavigationAgent agent = actor.AddComponent<WorldNavigationAgent>();
-                agent.Bind(body);
+                agent.Bind(body, manager);
                 agent.Configure(0.1f, 0.5f, 10f, 0.01f);
                 agent.MaxSpeed = 2f;
                 agent.SetDestination(new Vector2(8.5f, 1.5f), forceRepath: true);

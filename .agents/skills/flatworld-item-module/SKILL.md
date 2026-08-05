@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld Item / Module 系统定位
 
-> 最后核对：2026-08-04。绝大多数玩法最终挂接到 Item 的 Module。
+> 最后核对：2026-08-05。绝大多数玩法最终挂接到 Item 的 Module。
 
 ## 修改前先读
 
@@ -36,6 +36,7 @@ ItemMaker / ItemMgr 实例化
 - 玩家实体：`Assets/5_Scripts/5-3_GamePlay/Item/Player.cs`。
 - 创建入口：`Assets/5_Scripts/5-3_GamePlay/Item/ItemMaker.cs`。
 - 数据基类：`Assets/5_Scripts/5-1_Data/ItemData/ItemData.cs`。
+- 地图 ItemData：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`；格子地形栈：`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
 - 联网序列化：`Assets/5_Scripts/5-3_GamePlay/Item/ItemNetworkStateSerialization.cs`。
 - 远端模块边界：`Assets/5_Scripts/5-3_GamePlay/Item/IRemoteNetworkModule.cs`。
 - Item Prefab：`Assets/2_Prefabs/Item/`。
@@ -48,11 +49,14 @@ ItemMaker / ItemMgr 实例化
 - `ItemMgr` 使用 EveryFrame、Fast(0.05s)、Normal(0.1s)、Slow(0.25s) 的 8 桶错帧调度。
 - `ItemMods` 增删模块、对象池复用和模块配置变化必须使调度缓存失效。
 - FixedInterval 模块接收真实累计 `deltaTime`，不要假设每次调用等于固定间隔。
+- `Data_TileMap` 仍是 `ItemData` 联合序列化成员；地形栈必须通过 `TileStackCell`/`TileStackView` API 访问，禁止恢复逐格 `List<TileData>` 或暴露可变列表。
+- 物品环境初始化只保留温度、摄氏温度、降水、高度、光照五张网格；生产速度的环境系数读取降水，不再读取湿度。
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-05：`Data_TileMap` 改为 MemoryPack 持久化 `TileStackCell[,]`，继续保持 ItemData 联合序列化身份；环境初始化收敛为五张网格，生产环境系数统一读取降水，`ItemModule.Smoke` 覆盖新栈往返与初始化契约。
 - 2026-08-04：`Item.ModuleLoad()` 先按持久化 ID 匹配模块；旧实体 Prefab 的运行时模块若使用通用 ID，则回退按子物体名或组件类型匹配，避免将内嵌 AI/动画模块误判为缺失并错误实例化独立 Prefab。无法恢复的模块必须记录明确错误并跳过，禁止解引用空对象。
 - 2026-08-03：`Item.Get_NewItemData()` 的 Prefab 模板提取只复制静态 Item/ModuleData，不执行 Item 或 Module 的 `Load/Save`；空模块 ID 会按模块物体名补齐，`GameRes` 以请求 ID 固化新数据，`ItemMgr` 在进入任何字典前拒绝空 `IDName`。
 - 2026-07-30：农业模块边界收敛；`Mod_Seed` 的低频 Tick 仅迁移旧落地种子，`Mod_Grow` 低频 Tick 成为唯一作物成长与成熟状态机，`Mod_FarmlandSupply` 为休眠模块且仅响应物品使用事件；`Item.ModuleLoad()` 会先清理 Apple/AppleTree 的废弃农业模块数据再执行缺失模块自动修复。

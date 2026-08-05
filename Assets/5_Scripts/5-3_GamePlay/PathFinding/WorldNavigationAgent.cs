@@ -94,7 +94,14 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
     public void Bind(Rigidbody2D rigidbody2D)
     {
+        Bind(rigidbody2D, null);
+    }
+
+    public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager)
+    {
         body = rigidbody2D != null ? rigidbody2D : GetComponent<Rigidbody2D>();
+        if (manager != null)
+            navigationManager = manager;
         lastProgressPosition = CurrentPosition;
         lastProgressTime = Time.time + schedulingPhase * 0.2f;
     }

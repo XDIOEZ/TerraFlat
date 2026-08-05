@@ -199,6 +199,97 @@ namespace FlatWorld.GameTest.Dimension
 
         [Test]
         [Category("Dimension.Smoke")]
+        public void CaveBurstGenerationMatchesScalarClassificationAndUsesTwoLayerWalls()
+        {
+            const string floorPath = "Assets/4_ScriptObjects/4-1_TileBlock/TileBase_Stone.asset";
+            const string wallPath = "Assets/4_ScriptObjects/4-1_TileBlock/TileBase_StoneWall.asset";
+            Tile_Block floorBlock = AssetDatabase.LoadAssetAtPath<Tile_Block>(floorPath);
+            Tile_Block wallBlock = AssetDatabase.LoadAssetAtPath<Tile_Block>(wallPath);
+            Assert.That(floorBlock, Is.Not.Null);
+            Assert.That(wallBlock, Is.Not.Null);
+
+            DimensionDefinition definition = DimensionDefinition.CreateCave();
+            GameRes resources = GameRes.Instance;
+            bool hadFloor = resources.TileBlockDict.TryGetValue(definition.CaveFloorTileId, out Tile_Block oldFloor);
+            bool hadWall = resources.TileBlockDict.TryGetValue(definition.CaveWallTileId, out Tile_Block oldWall);
+            GameObject mapObject = new GameObject("CaveJobConsistencyMap");
+            try
+            {
+                resources.TileBlockDict[definition.CaveFloorTileId] = floorBlock;
+                resources.TileBlockDict[definition.CaveWallTileId] = wallBlock;
+                global::Map map = mapObject.AddComponent<global::Map>();
+                map.Data = new Data_TileMap { position = Vector2Int.zero };
+                var generator = new ChunkGenerator_Cave();
+                const int worldSeed = 918273;
+                var context = new MapGenerationContext(
+                    map,
+                    new PlanetData { NoiseScale = PlanetData.DefaultNoiseScale },
+                    worldSeed,
+                    new WorldAddress("cave_job", WorldAddress.CaveDimensionId),
+                    definition);
+
+                generator.Generate(context);
+
+                Vector2Int size = new Vector2Int(map.Data.Width, map.Data.Height);
+                int openCount = 0;
+                int closedCount = 0;
+                Vector2Int firstClosed = default;
+                for (int y = 0; y < size.y; y++)
+                {
+                    for (int x = 0; x < size.x; x++)
+                    {
+                        Vector2Int world = map.Data.position + new Vector2Int(x, y);
+                        byte classification = ChunkGenerator_Cave.SampleCellClassification(
+                            world,
+                            definition,
+                            worldSeed,
+                            size);
+                        Assert.That(map.Data.GetTileAt(world, 0).ID, Is.EqualTo(definition.CaveFloorTileId));
+                        if (classification == ChunkGenerator_Cave.CaveCellClassification.Closed)
+                        {
+                            if (closedCount == 0)
+                                firstClosed = world;
+                            closedCount++;
+                            Assert.That(map.Data.GetLayerCount(world), Is.EqualTo(2));
+                            Assert.That(map.Data.GetTopTile(world).ID, Is.EqualTo(definition.CaveWallTileId));
+                            Assert.That(BlockingTilemapLayer.IsBlockingTile(map.Data.GetTopTile(world)), Is.True);
+                        }
+                        else
+                        {
+                            openCount++;
+                            Assert.That(map.Data.GetLayerCount(world), Is.EqualTo(1));
+                        }
+                    }
+                }
+
+                Assert.That(openCount, Is.GreaterThan(0));
+                Assert.That(closedCount, Is.GreaterThan(0));
+                Assert.That(map.Data.CountOverflowAllocations(), Is.Zero);
+                Assert.That(map.Data.EnvironmentLayers.IsValidSize(size.x, size.y), Is.True);
+
+                var container = new Ex_ModData_MemoryPackable();
+                container.WriteData<ItemData>(map.Data);
+                Data_TileMap restored = container.GetData<ItemData>() as Data_TileMap;
+                Assert.That(restored, Is.Not.Null);
+                Assert.That(restored.GetLayerCount(firstClosed), Is.EqualTo(2));
+                Assert.That(restored.GetTopTile(firstClosed).ID, Is.EqualTo(definition.CaveWallTileId));
+            }
+            finally
+            {
+                if (hadFloor)
+                    resources.TileBlockDict[definition.CaveFloorTileId] = oldFloor;
+                else
+                    resources.TileBlockDict.Remove(definition.CaveFloorTileId);
+                if (hadWall)
+                    resources.TileBlockDict[definition.CaveWallTileId] = oldWall;
+                else
+                    resources.TileBlockDict.Remove(definition.CaveWallTileId);
+                Object.DestroyImmediate(mapObject);
+            }
+        }
+
+        [Test]
+        [Category("Dimension.Smoke")]
         public void CaveTileBlocksSeparateFloorAndWallNavigation()
         {
             Tile_Block floor = AssetDatabase.LoadAssetAtPath<Tile_Block>(

@@ -1,117 +1,173 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 [Serializable]
 public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
 {
     private const int LooseOreSeedSalt = 0x6C8E9CF5;
+
     // Mine prefabs are authored as one world cell (1x1). Keep generated and restored
     // cave mines at that size so visuals, colliders and navigation agree.
     public const float GeneratedResourceUniformScale = 1f;
 
+    public override GenerationStage Stage => GenerationStage.BaseTerrain;
     public static Quaternion GeneratedResourceRotation => Quaternion.identity;
     public static Vector3 GeneratedResourceScale =>
         new(GeneratedResourceUniformScale, GeneratedResourceUniformScale, 1f);
 
-    public override void Generate(MapGenerationContext context)
-    {
-        IEnumerator routine = GenerateAsync(context, int.MaxValue);
-        while (routine.MoveNext())
-        {
-        }
-    }
+    [NonSerialized] private bool _jobActive;
+    [NonSerialized] private JobHandle _activeHandle;
+    [NonSerialized] private NativeArray<byte> _activeOpenMask;
+    [NonSerialized] private NativeArray<byte> _activeClassifications;
 
     public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
     {
         if (context?.Map == null)
-        {
-            LogNullMap(nameof(ChunkGenerator_Cave));
-            yield break;
-        }
+            throw new ArgumentNullException(nameof(context), "[ChunkGenerator_Cave] Missing map generation context.");
 
         Map = context.Map;
         DimensionDefinition definition = context.DimensionDefinition;
         if (definition == null || definition.GenerationMode != DimensionGenerationMode.Cave)
-        {
-            Debug.LogError("[ChunkGenerator_Cave] 缺少矿洞维度配置。", Map);
-            yield break;
-        }
+            throw new InvalidOperationException("[ChunkGenerator_Cave] A cave dimension definition is required.");
 
         Tile_Block floorBlock = GameRes.Instance?.GetTileBlock(definition.CaveFloorTileId);
         if (floorBlock?.tileDataTemplate == null)
-        {
-            Debug.LogError($"[ChunkGenerator_Cave] 找不到地面配置：{definition.CaveFloorTileId}", Map);
-            yield break;
-        }
+            throw new InvalidOperationException($"[ChunkGenerator_Cave] Missing cave floor tile: {definition.CaveFloorTileId}");
 
         Tile_Block wallBlock = GameRes.Instance?.GetTileBlock(definition.CaveWallTileId);
         if (wallBlock?.tileDataTemplate == null)
-        {
-            Debug.LogError($"[ChunkGenerator_Cave] 找不到岩壁配置：{definition.CaveWallTileId}", Map);
-            yield break;
-        }
+            throw new InvalidOperationException($"[ChunkGenerator_Cave] Missing cave wall tile: {definition.CaveWallTileId}");
 
         List<DimensionResourceRule> resources = ResolveResources(definition.CaveResources);
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        int width = Mathf.Max(1, Mathf.RoundToInt(chunkSize.x));
-        int height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
-        Vector2Int portalChunkSize = new Vector2Int(width, height);
-        int batchSize = Mathf.Max(1, workBatchSize);
-        int processed = 0;
+        Vector2 configuredChunkSize = ChunkMgr.GetChunkSize();
+        int width = Mathf.Max(1, Mathf.RoundToInt(configuredChunkSize.x));
+        int height = Mathf.Max(1, Mathf.RoundToInt(configuredChunkSize.y));
+        int cellCount = checked(width * height);
+        int haloWidth = checked(width + 2);
+        int haloHeight = checked(height + 2);
+        int haloCellCount = checked(haloWidth * haloHeight);
 
-        Map.Data.position = new Vector2Int(
-            Mathf.RoundToInt(Map.transform.parent.position.x),
-            Mathf.RoundToInt(Map.transform.parent.position.y));
-        Map.Data.EnsureTileDataArray(width, height, initCells: false);
+        Transform parent = Map.transform.parent;
+        Map.Data.position = parent != null
+            ? new Vector2Int(Mathf.RoundToInt(parent.position.x), Mathf.RoundToInt(parent.position.y))
+            : Vector2Int.zero;
+        Map.Data.EnsureTileStorage(width, height);
         Map.Data.ClearAllTiles();
         Map.Data.EnsureEnvironmentStorage(width, height);
 
-        Vector2 safeCenter = definition.DefaultSpawnPosition;
-        float safeRadiusSqr = definition.CaveSafeRadius * definition.CaveSafeRadius;
+        CaveLayoutConfig layoutConfig = CaveLayoutSampler.CreateConfig(
+            definition,
+            new Vector2Int(width, height));
+        _activeOpenMask = new NativeArray<byte>(
+            haloCellCount,
+            Allocator.Persistent,
+            NativeArrayOptions.UninitializedMemory);
+        _activeClassifications = new NativeArray<byte>(
+            cellCount,
+            Allocator.Persistent,
+            NativeArrayOptions.UninitializedMemory);
 
-        for (int x = 0; x < width; x++)
+        var openMaskJob = new CaveOpenMaskJob
         {
-            for (int y = 0; y < height; y++)
-            {
-                Vector2Int worldPos = new Vector2Int(Map.Data.position.x + x, Map.Data.position.y + y);
-                TileData floorTile = floorBlock.tileDataTemplate.Clone();
-                Map.ADDTileData(worldPos, floorTile);
-                Map.Data.SetEnvironmentAtLocal(x, y, 0.3f, 12f, 0.7f, 0f, 0.95f, 0.05f);
-                Map.Data.SetLightAtLocal(x, y, definition.FixedLighting);
+            HaloOrigin = new int2(Map.Data.position.x - 1, Map.Data.position.y - 1),
+            HaloWidth = haloWidth,
+            Config = layoutConfig,
+            WorldSeed = context.WorldSeed,
+            OpenMask = _activeOpenMask
+        };
+        JobHandle openMaskHandle = openMaskJob.Schedule(haloCellCount, 64);
+        var classificationJob = new CaveClassifyJob
+        {
+            Width = width,
+            HaloWidth = haloWidth,
+            OpenMask = _activeOpenMask,
+            Classifications = _activeClassifications
+        };
+        _activeHandle = classificationJob.Schedule(cellCount, 64, openMaskHandle);
+        _jobActive = true;
 
-                bool isOpen = CaveLayoutSampler.IsOpenAtWorld(
-                    worldPos,
-                    definition,
-                    context.WorldSeed,
-                    portalChunkSize);
-                if (!isOpen)
+        try
+        {
+            while (!_activeHandle.IsCompleted)
+            {
+                if (context.IsCancellationRequested)
+                    yield break;
+                yield return null;
+            }
+
+            _activeHandle.Complete();
+            Vector2 safeCenter = definition.DefaultSpawnPosition;
+            float safeRadiusSqr = definition.CaveSafeRadius * definition.CaveSafeRadius;
+            var budget = new ChunkGenerationWorkBudget(Map, Mathf.Max(1, workBatchSize));
+
+            for (int index = 0; index < cellCount; index++)
+            {
+                int localX = index % width;
+                int localY = index / width;
+                Vector2Int localPosition = new(localX, localY);
+                Vector2Int worldPosition = Map.Data.position + localPosition;
+
+                TileData floorTile = floorBlock.tileDataTemplate.Clone();
+                floorTile.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
+                if (!Map.Data.SetBaseTile(worldPosition, floorTile))
+                    throw new InvalidOperationException($"Unable to write cave floor at {worldPosition}.");
+
+                Map.Data.SetEnvironmentAtLocal(localX, localY, 0.3f, 12f, 0f, 0.05f);
+                Map.Data.SetLightAtLocal(localX, localY, definition.FixedLighting);
+
+                byte classification = _activeClassifications[index];
+                if (classification == CaveCellClassification.Closed)
                 {
                     TileData wallTile = wallBlock.tileDataTemplate.Clone();
-                    Map.ADDTileData(worldPos, wallTile);
+                    wallTile.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
+                    if (!Map.Data.PushTile(worldPosition, wallTile))
+                        throw new InvalidOperationException($"Unable to write cave wall at {worldPosition}.");
                 }
-                else if ((new Vector2(worldPos.x + 0.5f, worldPos.y + 0.5f) - safeCenter).sqrMagnitude > safeRadiusSqr)
+                else if ((new Vector2(worldPosition.x + 0.5f, worldPosition.y + 0.5f) - safeCenter).sqrMagnitude > safeRadiusSqr)
                 {
-                    Vector2Int localPos = new Vector2Int(x, y);
-                    bool spawnedMine = CaveLayoutSampler.IsWallEdge(
-                                           worldPos,
-                                           definition,
-                                           context.WorldSeed,
-                                           portalChunkSize) &&
-                                       TrySpawnResource(context, definition, resources, worldPos, localPos);
+                    bool spawnedMine = classification == CaveCellClassification.WallEdge &&
+                                       TrySpawnResource(context, definition, resources, worldPosition, localPosition);
                     if (!spawnedMine)
-                        TrySpawnLooseOre(context, definition, resources, worldPos, localPos);
+                        TrySpawnLooseOre(context, definition, resources, worldPosition, localPosition);
                 }
 
-                processed++;
-                if (processed >= batchSize)
-                {
-                    processed = 0;
-                    yield return null;
-                }
+                if (!budget.ShouldYield())
+                    continue;
+
+                yield return null;
+                budget.BeginNextFrame();
             }
         }
+        finally
+        {
+            CompleteAndDisposeActiveJob();
+        }
+    }
+
+    public override void CancelPendingWork()
+    {
+        CompleteAndDisposeActiveJob();
+    }
+
+    public static byte SampleCellClassification(
+        Vector2Int worldPosition,
+        DimensionDefinition definition,
+        int worldSeed,
+        Vector2Int chunkSize = default)
+    {
+        CaveLayoutConfig config = CaveLayoutSampler.CreateConfig(definition, chunkSize);
+        int2 position = new(worldPosition.x, worldPosition.y);
+        if (!CaveLayoutSampler.IsOpenAtWorld(position, config, worldSeed))
+            return CaveCellClassification.Closed;
+        return CaveLayoutSampler.IsWallEdge(position, config, worldSeed)
+            ? CaveCellClassification.WallEdge
+            : CaveCellClassification.Open;
     }
 
     private static List<DimensionResourceRule> ResolveResources(List<DimensionResourceRule> configured)
@@ -254,19 +310,30 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         Vector2Int worldPos,
         int worldSeed)
     {
-        float seedOffset = Mathf.Abs(worldSeed % 100000) * 0.001f;
+        float2 seedOffset = TerrainNoiseKernel.GetSeedOffset(worldSeed, NoiseType.Height);
         for (int i = 0; i < resources.Count; i++)
         {
             DimensionResourceRule rule = resources[i];
-            float scale = Mathf.Max(0.0001f, rule.VeinScale);
-            float sample = Mathf.PerlinNoise(
-                (worldPos.x + rule.NoiseOffset + seedOffset) * scale,
-                (worldPos.y - rule.NoiseOffset + seedOffset) * scale);
-            if (sample >= Mathf.Clamp01(rule.VeinThreshold))
+            float scale = math.max(0.0001f, rule.VeinScale);
+            float sample = TerrainNoiseKernel.SampleCNoise01(new float2(
+                (worldPos.x + rule.NoiseOffset + seedOffset.x) * scale,
+                (worldPos.y - rule.NoiseOffset + seedOffset.y) * scale));
+            if (sample >= math.saturate(rule.VeinThreshold))
                 return rule;
         }
 
         return resources[^1];
+    }
+
+    private void CompleteAndDisposeActiveJob()
+    {
+        if (_jobActive)
+            _activeHandle.Complete();
+        if (_activeOpenMask.IsCreated)
+            _activeOpenMask.Dispose();
+        if (_activeClassifications.IsCreated)
+            _activeClassifications.Dispose();
+        _jobActive = false;
     }
 
     private static int StableGuid(int worldSeed, Vector2Int worldPos, string itemId)
@@ -299,5 +366,63 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         state ^= state >> 17;
         state ^= state << 5;
         return (state & 0xFFFFFF) / (float)0x1000000;
+    }
+
+    public static class CaveCellClassification
+    {
+        public const byte Closed = 0;
+        public const byte Open = 1;
+        public const byte WallEdge = 2;
+    }
+
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
+    private struct CaveOpenMaskJob : IJobParallelFor
+    {
+        public int2 HaloOrigin;
+        public int HaloWidth;
+        public CaveLayoutConfig Config;
+        public int WorldSeed;
+        [WriteOnly] public NativeArray<byte> OpenMask;
+
+        public void Execute(int index)
+        {
+            int localX = index % HaloWidth;
+            int localY = index / HaloWidth;
+            OpenMask[index] = CaveLayoutSampler.IsOpenAtWorld(
+                HaloOrigin + new int2(localX, localY),
+                Config,
+                WorldSeed)
+                ? (byte)1
+                : (byte)0;
+        }
+    }
+
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
+    private struct CaveClassifyJob : IJobParallelFor
+    {
+        public int Width;
+        public int HaloWidth;
+        [ReadOnly] public NativeArray<byte> OpenMask;
+        [WriteOnly] public NativeArray<byte> Classifications;
+
+        public void Execute(int index)
+        {
+            int localX = index % Width;
+            int localY = index / Width;
+            int haloIndex = (localY + 1) * HaloWidth + localX + 1;
+            if (OpenMask[haloIndex] == 0)
+            {
+                Classifications[index] = CaveCellClassification.Closed;
+                return;
+            }
+
+            bool wallEdge = OpenMask[haloIndex - 1] == 0 ||
+                            OpenMask[haloIndex + 1] == 0 ||
+                            OpenMask[haloIndex - HaloWidth] == 0 ||
+                            OpenMask[haloIndex + HaloWidth] == 0;
+            Classifications[index] = wallEdge
+                ? CaveCellClassification.WallEdge
+                : CaveCellClassification.Open;
+        }
     }
 }

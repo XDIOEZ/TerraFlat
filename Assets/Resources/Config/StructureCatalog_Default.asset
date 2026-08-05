@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: StructureCatalog_Default
   m_EditorClassIdentifier: 
   Enabled: 1
-  GenerationVersion: 1
+  GenerationVersion: 2
   Definitions:
   - {fileID: 11400000, guid: 10e9a86fdf584e6488329ea23a104857, type: 2}
   - {fileID: 11400000, guid: 772698442da74eb419380918663c858a, type: 2}

@@ -8,11 +8,11 @@ disable-model-invocation: false
 
 # FlatWorld 导航系统定位
 
-> 最后核对：2026-08-03。导航权威数据不是 Physics2D 碰撞扫描。
+> 最后核对：2026-08-05。导航权威数据不是 Physics2D 碰撞扫描。
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/PathFinding/AstarGameManager.cs`：GridGraph 初始化、移动、脏区、节点写入。
+1. `Assets/5_Scripts/5-3_GamePlay/PathFinding/WorldNavigationManager.cs`：稀疏世界网格、Map 注册、批处理修订和路径请求。
 2. `Assets/5_Scripts/5-3_GamePlay/Building/BuildingOccupancyRegistry.cs`：动态建筑占地覆盖层。
 3. `Assets/5_Scripts/5-3_GamePlay/Map/Base/Map.cs`：TileData 变化到导航脏区的桥接。
 4. `Assets/5_Scripts/5-3_GamePlay/Move/Mover_AI.cs`：AI 运行时移动。
@@ -20,11 +20,11 @@ disable-model-invocation: false
 ## 权威数据与链路
 
 ```text
-TileData（地形可走性/权重）
+Data_TileMap.GetTopTile（地形顶层可走性/权重）
 + BuildingOccupancyRegistry（动态建筑阻挡）
 → Map.MarkPenaltyDirty
-→ AstarGameManager.QueueNavigationCell / QueueNavigationRegion
-→ AstarWorkItem 写节点并重算连接
+→ WorldNavigationManager.QueueNavigationCell(s) / RegisterMap
+→ WorldNavigationGrid 批量发布修订
 ```
 
 ## 关键调用方
@@ -37,11 +37,11 @@ TileData（地形可走性/权重）
 
 ## 当前约束
 
-- `AstarGameManager` 维护每轴最大 512 的局部 GridGraph。
-- 首次 Scan 后应用 TileData；跨 Chunk 使用 `GridGraph.TranslateInDirection` 更新边缘。
-- `Mod_ChunkLoader` 完成网格移动后不得再调用全窗口 `RefreshChunkPenalty`。
-- Ghost 等障碍敏感 AI 不得直接 `MoveTowards`；使用 `Seeker + AILerp`。
-- 提交目的地或生成点前，使用 `TryGetNodePenalty_GridGraphFast` 验证节点可走。
+- `WorldNavigationManager` 维护绝对世界坐标的稀疏 `WorldNavigationGrid`，每个已就绪 Map 一次批量注册所有非空格。
+- 导航始终读取地形栈顶层；移除覆盖层后必须自动恢复基础层的 `Penalty/IsWalkable`。
+- 建筑不改写地形栈权威数据，只通过 `BuildingOccupancyRegistry.GetEffectiveWalkable()` 叠加动态不可走性。
+- 失败 Chunk 不得注册导航格或留在加载等待中；`ChunkMgr` 必须以失败回调结束等待者并安全回收。
+- `WorldNavigationAgent` / `Mover_AI` 必须通过 `WorldNavigationManager` 提交路径请求，不得回退到物理全场扫描或直接穿越不可走格。
 - 联机时导航图跟随本地 owned 玩家，Chunk 流送仍按所有观察者并集。
 - 地下矿洞开放格顶层为 `TileBase_Stone`（`IsWalkable=true`、`Penalty=1000`），岩壁顶层为 `TileBase_StoneWall`（`IsWalkable=false`、`Penalty=0`）；独立“建筑阻挡层”的 TilemapCollider 只负责实体物理碰撞，A* 仍以顶层 TileData 为权威。
 
@@ -58,6 +58,8 @@ TileData（地形可走性/权重）
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-08-05：导航地形读取迁移到 `TileStackCell` 顶层 API；覆盖层移除后恢复基础层状态，并继续与 `BuildingOccupancyRegistry` 动态占地叠加。失败 Chunk 不进入导航 Ready/注册链。
 
 - 2026-07-31：静态阻挡 Tile 独立渲染到“建筑阻挡层”，但导航仍读取原数据格顶层；禁止改为扫描该 TilemapCollider 决定节点权重。
 - 2026-07-31：矿洞生成新增不可走岩壁 TileData；房间和隧道在地图初次完成后统一进入现有全 Chunk 导航更新，不逐格触发烘焙。
