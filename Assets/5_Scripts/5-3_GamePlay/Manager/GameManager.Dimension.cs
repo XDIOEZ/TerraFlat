@@ -18,6 +18,7 @@ public partial class GameManager
     internal void NotifyDimensionWorldExiting()
     {
         Event_GameWorldExit?.Invoke();
+        ChunkGenerator_River.ClearHydrologyCache();
     }
 
     internal void NotifyDimensionWorldEntered()

@@ -29,6 +29,9 @@ public sealed class MapGenerationContext
     public int WorldSeed { get; }
     public WorldAddress WorldAddress { get; }
     public DimensionDefinition DimensionDefinition { get; }
+    public IWorldGenerationDomain WorldDomain { get; }
+    public ChunkGenerator_Land ClimateService { get; }
+    public ChunkGenerator_River HydrologyService { get; }
     public StructureGenerationMask StructureMask { get; }
 
     public MapGenerationState State { get; private set; } = MapGenerationState.Created;
@@ -51,13 +54,17 @@ public sealed class MapGenerationContext
         PlanetData planetData,
         int worldSeed,
         WorldAddress worldAddress,
-        DimensionDefinition dimensionDefinition)
+        DimensionDefinition dimensionDefinition,
+        IWorldGenerationDomain worldDomain = null)
     {
         Map = map ?? throw new ArgumentNullException(nameof(map));
         PlanetData = planetData;
         WorldSeed = worldSeed == 0 ? 1 : worldSeed;
         WorldAddress = worldAddress;
         DimensionDefinition = dimensionDefinition;
+        WorldDomain = worldDomain ?? UnboundedWorldGenerationDomain.Instance;
+        ClimateService = map.LandGenerator;
+        HydrologyService = map.GetGenerator<ChunkGenerator_River>();
         int width = map.Data?.Width ?? 0;
         int height = map.Data?.Height ?? 0;
         StructureMask = new StructureGenerationMask(width, height);

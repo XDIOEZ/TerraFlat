@@ -1,6 +1,9 @@
+using AOT;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Unity.Burst;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -12,9 +15,194 @@ public enum NoiseType
     Temperature = 3
 }
 
+public readonly struct WindSample
+{
+    public Vector2 Direction { get; }
+
+    public WindSample(Vector2 direction)
+    {
+        Direction = direction.sqrMagnitude > 0.000001f
+            ? direction.normalized
+            : Vector2.right;
+    }
+}
+
+public readonly struct ClimateSample
+{
+    public EnvironmentSample Environment { get; }
+    public float BasePrecipitation { get; }
+    public WindSample Wind { get; }
+
+    public ClimateSample(
+        EnvironmentSample environment,
+        float basePrecipitation,
+        WindSample wind)
+    {
+        Environment = environment;
+        BasePrecipitation = Mathf.Clamp01(basePrecipitation);
+        Wind = wind;
+    }
+}
+
+[Serializable]
+public struct WindFieldConfig
+{
+    [MinValue(8f), LabelText("风区尺寸")]
+    public float RegionSize;
+
+    [LabelText("风场种子盐")]
+    public int SeedSalt;
+
+    public static WindFieldConfig Default => new()
+    {
+        RegionSize = 256f,
+        SeedSalt = unchecked((int)0x6A09E667)
+    };
+}
+
+public interface IWindFieldProvider
+{
+    uint GenerationSignature { get; }
+
+    WindSample Sample(Vector2Int worldPosition, int worldSeed, in WindFieldConfig config);
+}
+
+public interface IWorldGenerationDomain
+{
+    uint GenerationSignature { get; }
+
+    bool Contains(Vector2Int worldPosition);
+
+    bool TryResolveOutflow(
+        Vector2Int fromWorldPosition,
+        Vector2Int outsideCandidate,
+        out Vector2Int outflowPosition);
+}
+
+public sealed class UnboundedWorldGenerationDomain : IWorldGenerationDomain
+{
+    public static readonly UnboundedWorldGenerationDomain Instance = new();
+
+    public uint GenerationSignature => 0x554E4244u;
+
+    private UnboundedWorldGenerationDomain()
+    {
+    }
+
+    public bool Contains(Vector2Int worldPosition)
+    {
+        return true;
+    }
+
+    public bool TryResolveOutflow(
+        Vector2Int fromWorldPosition,
+        Vector2Int outsideCandidate,
+        out Vector2Int outflowPosition)
+    {
+        outflowPosition = default;
+        return false;
+    }
+}
+
+public sealed class RegionalRandomWindFieldProvider : IWindFieldProvider
+{
+    public static readonly RegionalRandomWindFieldProvider Instance = new();
+
+    public uint GenerationSignature => 0x52574E44u;
+
+    private RegionalRandomWindFieldProvider()
+    {
+    }
+
+    public WindSample Sample(Vector2Int worldPosition, int worldSeed, in WindFieldConfig config)
+    {
+        float2 direction = WindFieldKernel.Sample(
+            new float2(worldPosition.x, worldPosition.y),
+            worldSeed,
+            config);
+        return new WindSample(new Vector2(direction.x, direction.y));
+    }
+}
+
+internal static class WindFieldKernel
+{
+    internal static float2 Sample(float2 worldPosition, int worldSeed, in WindFieldConfig config)
+    {
+        float regionSize = math.max(8f, math.isfinite(config.RegionSize) ? config.RegionSize : 256f);
+        float2 gridPosition = worldPosition / regionSize;
+        int2 cell = (int2)math.floor(gridPosition);
+        float2 t = math.frac(gridPosition);
+        t = t * t * (3f - 2f * t);
+
+        float2 bottom = math.lerp(
+            DirectionAt(cell.x, cell.y, worldSeed, config.SeedSalt),
+            DirectionAt(cell.x + 1, cell.y, worldSeed, config.SeedSalt),
+            t.x);
+        float2 top = math.lerp(
+            DirectionAt(cell.x, cell.y + 1, worldSeed, config.SeedSalt),
+            DirectionAt(cell.x + 1, cell.y + 1, worldSeed, config.SeedSalt),
+            t.x);
+        float2 blended = math.lerp(bottom, top, t.y);
+        if (!math.all(math.isfinite(blended)) || math.lengthsq(blended) <= 0.000001f)
+            return DirectionAt(cell.x, cell.y, worldSeed, config.SeedSalt);
+        return math.normalize(blended);
+    }
+
+    private static float2 DirectionAt(int regionX, int regionY, int worldSeed, int seedSalt)
+    {
+        uint hash = unchecked((uint)(worldSeed == 0 ? 1 : worldSeed));
+        hash = Mix(hash ^ unchecked((uint)seedSalt));
+        hash = Mix(hash ^ unchecked((uint)regionX * 0x9E3779B9u));
+        hash = Mix(hash ^ unchecked((uint)regionY * 0x85EBCA6Bu));
+        float angle = (hash & 0x00FFFFFFu) / 16777216f * math.PI * 2f;
+        return new float2(math.cos(angle), math.sin(angle));
+    }
+
+    private static uint Mix(uint value)
+    {
+        value ^= value >> 16;
+        value *= 0x7FEB352Du;
+        value ^= value >> 15;
+        value *= 0x846CA68Bu;
+        value ^= value >> 16;
+        return value;
+    }
+}
+
+public static class ClimateFieldKernel
+{
+    public static float ApplyOrographicPrecipitation(
+        float basePrecipitation,
+        float currentHeight,
+        float meanUpwindHeight,
+        float maxUpwindHeight,
+        float windwardGain,
+        float leewardLoss)
+    {
+        float safeBase = math.saturate(math.isfinite(basePrecipitation)
+            ? basePrecipitation
+            : TerrainNoiseKernel.DefaultChannelValue);
+        float safeHeight = math.saturate(math.isfinite(currentHeight)
+            ? currentHeight
+            : TerrainNoiseKernel.DefaultChannelValue);
+        float safeMean = math.saturate(math.isfinite(meanUpwindHeight)
+            ? meanUpwindHeight
+            : safeHeight);
+        float safeMaximum = math.saturate(math.isfinite(maxUpwindHeight)
+            ? maxUpwindHeight
+            : safeHeight);
+        float uplift = math.max(0f, safeHeight - safeMean);
+        float rainShadow = math.max(0f, safeMaximum - safeHeight);
+        return math.saturate(
+            safeBase +
+            uplift * math.max(0f, windwardGain) -
+            rainShadow * math.max(0f, leewardLoss));
+    }
+}
+
 public static class TerrainGenerationSignature
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     public static uint CalculateDefault()
     {
@@ -78,6 +266,12 @@ public static class TerrainGenerationSignature
         hash = StructureHashUtility.Add(hash, land.TemperatureCelsiusRange.y);
         hash = StructureHashUtility.Add(hash, land.enableHeightSecondaryBoost);
         hash = StructureHashUtility.Add(hash, land.heightSecondaryBoostStrength);
+        hash = StructureHashUtility.Add(hash, land.WindField.RegionSize);
+        hash = StructureHashUtility.Add(hash, land.WindField.SeedSalt);
+        hash = StructureHashUtility.Add(hash, land.OrographicSampleDistance);
+        hash = StructureHashUtility.Add(hash, land.OrographicSampleCount);
+        hash = StructureHashUtility.Add(hash, land.WindwardRainGain);
+        hash = StructureHashUtility.Add(hash, land.LeewardRainLoss);
 
         IReadOnlyList<TerrainNoiseConfig> configs = land.NoiseConfigs;
         hash = StructureHashUtility.Add(hash, configs?.Count ?? 0);
@@ -130,13 +324,21 @@ public static class TerrainGenerationSignature
     private static uint AddRiver(uint hash, ChunkGenerator_River river)
     {
         hash = StructureHashUtility.Add(hash, river.seed);
-        hash = StructureHashUtility.Add(hash, river.channelSpacing);
-        hash = StructureHashUtility.Add(hash, river.channelHalfWidth);
-        hash = StructureHashUtility.Add(hash, river.bendAmplitude);
-        hash = StructureHashUtility.Add(hash, river.bendFrequency);
-        hash = StructureHashUtility.Add(hash, river.widthVariation);
-        hash = StructureHashUtility.Add(hash, river.flowDirection.x);
-        hash = StructureHashUtility.Add(hash, river.flowDirection.y);
+        hash = StructureHashUtility.Add(hash, river.hydrologyRegionSize);
+        hash = StructureHashUtility.Add(hash, river.runoffCellSize);
+        hash = StructureHashUtility.Add(hash, river.runoffSampleStride);
+        hash = StructureHashUtility.Add(hash, river.maxTraceSteps);
+        hash = StructureHashUtility.Add(hash, river.seaLevel);
+        hash = StructureHashUtility.Add(hash, river.infiltrationFloor);
+        hash = StructureHashUtility.Add(hash, river.riverStartFlow);
+        hash = StructureHashUtility.Add(hash, river.fullWidthFlow);
+        hash = StructureHashUtility.Add(hash, river.maxRiverWidth);
+        hash = StructureHashUtility.Add(hash, river.meanderTieTolerance);
+        hash = StructureHashUtility.Add(hash, river.minLakeCells);
+        hash = StructureHashUtility.Add(hash, river.maxLakeCells);
+        hash = StructureHashUtility.Add(hash, river.maxLakeLevelRise);
+        hash = StructureHashUtility.Add(hash, river.lakeMinFlow);
+        hash = StructureHashUtility.Add(hash, river.maxCachedRegions);
         hash = StructureHashUtility.Add(hash, (int)river.writeMode);
         hash = StructureHashUtility.Add(hash, river.riverDepthMin);
         hash = StructureHashUtility.Add(hash, river.riverDepthMax);
@@ -190,12 +392,39 @@ public static class TerrainNoiseKernel
 {
     public const float DefaultChannelValue = 0.5f;
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate float SampleFunction(
+        TerrainNoiseConfig config,
+        float2 worldScaledPosition,
+        int worldSeed);
+
+    private static readonly FunctionPointer<SampleFunction> BurstSampleFunction =
+        BurstCompiler.CompileFunctionPointer<SampleFunction>(SampleCompiled);
+
     public static float Sample(in TerrainNoiseConfig config, Vector2 worldScaledPosition, int worldSeed)
     {
         return Sample(config, new float2(worldScaledPosition.x, worldScaledPosition.y), worldSeed);
     }
 
     internal static float Sample(in TerrainNoiseConfig config, float2 worldScaledPosition, int worldSeed)
+    {
+        return BurstSampleFunction.Invoke(config, worldScaledPosition, worldSeed);
+    }
+
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
+    [MonoPInvokeCallback(typeof(SampleFunction))]
+    private static float SampleCompiled(
+        TerrainNoiseConfig config,
+        float2 worldScaledPosition,
+        int worldSeed)
+    {
+        return SampleBurst(config, worldScaledPosition, worldSeed);
+    }
+
+    internal static float SampleBurst(
+        in TerrainNoiseConfig config,
+        float2 worldScaledPosition,
+        int worldSeed)
     {
         float coordScale = FinitePositiveOr(config.coordScale, 1f);
         float baseFrequency = FinitePositiveOr(config.frequency, 0.01f);

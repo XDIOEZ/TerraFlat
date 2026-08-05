@@ -36,6 +36,22 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     [Range(0f, 2f)]
     public float heightSecondaryBoostStrength = 1f;
 
+    [Title("5. 风场与地形降雨")]
+    [LabelText("区域风场")]
+    public WindFieldConfig WindField = WindFieldConfig.Default;
+
+    [LabelText("逆风采样距离"), Min(8)]
+    public int OrographicSampleDistance = 64;
+
+    [LabelText("逆风采样数"), Range(1, 8)]
+    public int OrographicSampleCount = 4;
+
+    [LabelText("迎风增雨强度"), Range(0f, 2f)]
+    public float WindwardRainGain = 0.8f;
+
+    [LabelText("背风雨影强度"), Range(0f, 2f)]
+    public float LeewardRainLoss = 0.6f;
+
     public override GenerationStage Stage => GenerationStage.BaseTerrain;
     public Vector2 ChunkSize => ChunkMgr.GetChunkSize();
     public float NoiseScale => ResolveNoiseScale(_sourcePlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData());
@@ -47,13 +63,28 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     [NonSerialized] private int _runtimeBiomeWidth;
     [NonSerialized] private int _runtimeBiomeHeight;
     [NonSerialized] private Vector2Int _runtimeBiomeOrigin;
+    [NonSerialized] private IWindFieldProvider _windFieldProvider;
+    [NonSerialized] private IWorldGenerationDomain _worldDomain;
 
     [NonSerialized] private bool _jobActive;
     [NonSerialized] private JobHandle _activeHandle;
     [NonSerialized] private NativeArray<TerrainNoiseConfig> _activeNoiseConfigs;
     [NonSerialized] private NativeArray<CompiledBiomeRange> _activeBiomeRanges;
     [NonSerialized] private NativeArray<float4> _activeEnvironment;
+    [NonSerialized] private NativeArray<float2> _activeWind;
     [NonSerialized] private NativeArray<byte> _activeBiomeIndices;
+
+    public IWindFieldProvider WindFieldProvider
+    {
+        get => _windFieldProvider ??= RegionalRandomWindFieldProvider.Instance;
+        set => _windFieldProvider = value ?? throw new ArgumentNullException(nameof(value));
+    }
+
+    public IWorldGenerationDomain WorldDomain
+    {
+        get => _worldDomain ??= UnboundedWorldGenerationDomain.Instance;
+        set => _worldDomain = value ?? throw new ArgumentNullException(nameof(value));
+    }
 
     public override IEnumerator GenerateAsync(MapGenerationContext context, int workBatchSize)
     {
@@ -63,6 +94,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         Map = context.Map;
         _sourcePlanetData = context.PlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData();
         _generationSeed = context.WorldSeed == 0 ? 1 : context.WorldSeed;
+        WorldDomain = context.WorldDomain;
         ValidateConfiguration();
         InitializeMapStorage(Map);
 
@@ -75,35 +107,69 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         _activeNoiseConfigs = new NativeArray<TerrainNoiseConfig>(noiseConfigs, Allocator.Persistent);
         _activeBiomeRanges = new NativeArray<CompiledBiomeRange>(biomeRanges, Allocator.Persistent);
         _activeEnvironment = new NativeArray<float4>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+        _activeWind = new NativeArray<float2>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
         _activeBiomeIndices = new NativeArray<byte>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-
-        var job = new LandEnvironmentJob
-        {
-            Origin = new int2(Map.Data.position.x, Map.Data.position.y),
-            Width = width,
-            NoiseScale = ResolveNoiseScale(_sourcePlanetData),
-            WorldSeed = _generationSeed,
-            TemperatureCelsiusRange = new float2(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y),
-            EnableHeightBoost = enableHeightSecondaryBoost,
-            HeightBoostStrength = heightSecondaryBoostStrength,
-            NoiseConfigs = _activeNoiseConfigs,
-            BiomeRanges = _activeBiomeRanges,
-            Environment = _activeEnvironment,
-            BiomeIndices = _activeBiomeIndices
-        };
-
-        _activeHandle = job.Schedule(cellCount, 64);
-        _jobActive = true;
         try
         {
-            while (!_activeHandle.IsCompleted)
+            if (WindFieldProvider is RegionalRandomWindFieldProvider)
             {
-                if (context.IsCancellationRequested)
-                    yield break;
-                yield return null;
+                var job = new LandEnvironmentJob
+                {
+                    Origin = new int2(Map.Data.position.x, Map.Data.position.y),
+                    Width = width,
+                    NoiseScale = ResolveNoiseScale(_sourcePlanetData),
+                    WorldSeed = _generationSeed,
+                    TemperatureCelsiusRange = new float2(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y),
+                    EnableHeightBoost = enableHeightSecondaryBoost,
+                    HeightBoostStrength = heightSecondaryBoostStrength,
+                    WindField = WindField,
+                    OrographicSampleDistance = OrographicSampleDistance,
+                    OrographicSampleCount = OrographicSampleCount,
+                    WindwardRainGain = WindwardRainGain,
+                    LeewardRainLoss = LeewardRainLoss,
+                    NoiseConfigs = _activeNoiseConfigs,
+                    BiomeRanges = _activeBiomeRanges,
+                    Environment = _activeEnvironment,
+                    Wind = _activeWind,
+                    BiomeIndices = _activeBiomeIndices
+                };
+
+                _activeHandle = job.Schedule(cellCount, 64);
+                _jobActive = true;
+                while (!_activeHandle.IsCompleted)
+                {
+                    if (context.IsCancellationRequested)
+                        yield break;
+                    yield return null;
+                }
+
+                _activeHandle.Complete();
+            }
+            else
+            {
+                var samplingBudget = new ChunkGenerationWorkBudget(Map, Mathf.Max(1, workBatchSize));
+                for (int index = 0; index < cellCount; index++)
+                {
+                    int localX = index % width;
+                    int localY = index / width;
+                    Vector2Int worldPosition = Map.Data.position + new Vector2Int(localX, localY);
+                    ClimateSample sample = SampleClimateAtWorld(worldPosition, _generationSeed, _sourcePlanetData);
+                    EnvironmentSample environment = sample.Environment;
+                    _activeEnvironment[index] = new float4(
+                        environment.Temperature,
+                        environment.TemperatureCelsius,
+                        environment.Precipitation,
+                        environment.Height);
+                    _activeWind[index] = new float2(sample.Wind.Direction.x, sample.Wind.Direction.y);
+                    _activeBiomeIndices[index] = _resolver.ResolveIndex(environment);
+
+                    if (!samplingBudget.ShouldYield())
+                        continue;
+                    yield return null;
+                    samplingBudget.BeginNextFrame();
+                }
             }
 
-            _activeHandle.Complete();
             var managedBiomeIndices = new byte[cellCount];
             _activeBiomeIndices.CopyTo(managedBiomeIndices);
             SetRuntimeBiomeCache(_resolver, managedBiomeIndices, width, height, Map.Data.position);
@@ -118,7 +184,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 byte biomeIndex = managedBiomeIndices[index];
                 BiomeData biome = _resolver.GetBiome(biomeIndex);
                 if (biome == null)
-                    throw new InvalidOperationException($"位置 {worldPosition} 未匹配任何 Biome。");
+                {
+                    float4 invalidEnvironment = _activeEnvironment[index];
+                    throw new InvalidOperationException(
+                        $"位置 {worldPosition} 未匹配任何 Biome：" +
+                        $"T={invalidEnvironment.x}, P={invalidEnvironment.z}, H={invalidEnvironment.w}。");
+                }
 
                 float4 environment = _activeEnvironment[index];
                 Map.Data.SetEnvironmentAtLocal(
@@ -128,6 +199,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                     environment.y,
                     environment.z,
                     environment.w);
+                float2 wind = _activeWind[index];
+                Map.Data.SetWindAtLocal(localX, localY, new Vector2(wind.x, wind.y));
 
                 Tile_Block tileBlock = GetTerrainTileBlock(biome);
                 TileData tile = tileBlock.tileDataTemplate.Clone();
@@ -184,15 +257,71 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int worldSeed,
         PlanetData sourcePlanetData)
     {
+        return SampleClimateAtWorld(worldPosition, worldSeed, sourcePlanetData).Environment;
+    }
+
+    public virtual ClimateSample SampleClimateAtWorld(Vector2Int worldPosition, int worldSeed)
+    {
+        return SampleClimateAtWorld(
+            worldPosition,
+            worldSeed,
+            _sourcePlanetData ?? SaveDataMgr.Instance?.GetCurrentPlanetData());
+    }
+
+    public virtual ClimateSample SampleClimateAtWorld(
+        Vector2Int worldPosition,
+        int worldSeed,
+        PlanetData sourcePlanetData)
+    {
+        if (!WorldDomain.Contains(worldPosition))
+            throw new ArgumentOutOfRangeException(nameof(worldPosition), $"世界坐标不在当前生成域内：{worldPosition}");
+
         float noiseScale = ResolveNoiseScale(sourcePlanetData);
+        int generationSeed = worldSeed == 0 ? 1 : worldSeed;
         SampleChannels(
             new float2(worldPosition.x * noiseScale, worldPosition.y * noiseScale),
-            worldSeed == 0 ? 1 : worldSeed,
+            generationSeed,
             out float temperature,
-            out float precipitation,
+            out float basePrecipitation,
             out float height);
+        WindSample wind = WindFieldProvider.Sample(worldPosition, generationSeed, WindField);
+        int sampleCount = Mathf.Clamp(OrographicSampleCount, 1, 8);
+        float sampleDistance = Mathf.Max(8f, OrographicSampleDistance);
+        float meanUpwindHeight = 0f;
+        float maxUpwindHeight = 0f;
+        Vector2 windDirection = wind.Direction;
+        for (int sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++)
+        {
+            float distance = sampleDistance * sampleIndex / sampleCount;
+            Vector2 sampleWorld = (Vector2)worldPosition - windDirection * distance;
+            float upwindHeight = SampleHeightChannel(
+                new float2(sampleWorld.x * noiseScale, sampleWorld.y * noiseScale),
+                generationSeed);
+            meanUpwindHeight += upwindHeight;
+            maxUpwindHeight = Mathf.Max(maxUpwindHeight, upwindHeight);
+        }
+
+        meanUpwindHeight /= sampleCount;
+        float precipitation = ClimateFieldKernel.ApplyOrographicPrecipitation(
+            basePrecipitation,
+            height,
+            meanUpwindHeight,
+            maxUpwindHeight,
+            WindwardRainGain,
+            LeewardRainLoss);
         float celsius = math.lerp(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y, temperature);
-        return new EnvironmentSample(temperature, celsius, precipitation, height);
+        return new ClimateSample(
+            new EnvironmentSample(temperature, celsius, precipitation, height),
+            basePrecipitation,
+            wind);
+    }
+
+    public virtual float SampleHeightAtWorld(Vector2Int worldPosition, int worldSeed, PlanetData sourcePlanetData = null)
+    {
+        float noiseScale = ResolveNoiseScale(sourcePlanetData ?? _sourcePlanetData);
+        return SampleHeightChannel(
+            new float2(worldPosition.x * noiseScale, worldPosition.y * noiseScale),
+            worldSeed == 0 ? 1 : worldSeed);
     }
 
     public bool TryResolveBiome(EnvironmentSample sample, out BiomeData biome)
@@ -325,7 +454,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         Vector2Int worldPosition,
         TerrainPreviewSampler preview)
     {
-        if (!preview.TrySample(worldPosition, out TerrainPreviewSample sample) || sample.IsRiver)
+        if (!preview.TrySample(worldPosition, out TerrainPreviewSample sample) || sample.HasWater)
             return false;
 
         TileData template = GetTerrainTileBlock(sample.Biome)?.tileDataTemplate;
@@ -337,7 +466,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         return _runtimeBiomeIndices == null ? null : (byte[])_runtimeBiomeIndices.Clone();
     }
 
-    public void ValidateConfiguration()
+    public virtual void ValidateConfiguration()
     {
         if (NoiseConfigs == null || NoiseConfigs.Count != 3)
             throw new InvalidOperationException("地形必须恰好配置高度、降水、温度三个噪声通道。");
@@ -366,6 +495,15 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
         if (!IsFinite(heightSecondaryBoostStrength) || heightSecondaryBoostStrength < 0f)
             throw new InvalidOperationException("高度二次强化强度必须是有限非负数。");
+        if (!IsFinite(WindField.RegionSize) || WindField.RegionSize < 8f)
+            throw new InvalidOperationException("风区尺寸必须是大于等于 8 的有限数。");
+        if (OrographicSampleDistance < 8 || OrographicSampleCount < 1 || OrographicSampleCount > 8)
+            throw new InvalidOperationException("地形降雨采样距离或数量非法。");
+        if (!IsFinite(WindwardRainGain) || WindwardRainGain < 0f ||
+            !IsFinite(LeewardRainLoss) || LeewardRainLoss < 0f)
+        {
+            throw new InvalidOperationException("地形降雨增益必须是有限非负数。");
+        }
 
         _resolver = new BiomeResolver(biomes);
         for (int i = 0; i < biomes.Count; i++)
@@ -425,6 +563,51 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         precipitation = counts.y > 0 ? sums.y / counts.y : TerrainNoiseKernel.DefaultChannelValue;
         height = counts.z > 0 ? sums.z / counts.z : TerrainNoiseKernel.DefaultChannelValue;
         height = TerrainNoiseKernel.ApplyHeightBoost(height, enableHeightSecondaryBoost, heightSecondaryBoostStrength);
+    }
+
+    private float SampleHeightChannel(float2 worldScaledPosition, int worldSeed)
+    {
+        float sum = 0f;
+        int count = 0;
+        if (NoiseConfigs != null)
+        {
+            for (int i = 0; i < NoiseConfigs.Count; i++)
+            {
+                TerrainNoiseConfig config = NoiseConfigs[i];
+                if (config.noiseType != NoiseType.Height)
+                    continue;
+                sum += TerrainNoiseKernel.Sample(config, worldScaledPosition, worldSeed);
+                count++;
+            }
+        }
+
+        float height = count > 0 ? sum / count : TerrainNoiseKernel.DefaultChannelValue;
+        return TerrainNoiseKernel.ApplyHeightBoost(
+            height,
+            enableHeightSecondaryBoost,
+            heightSecondaryBoostStrength);
+    }
+
+    private static float SampleHeightChannel(
+        NativeArray<TerrainNoiseConfig> configs,
+        float2 worldScaledPosition,
+        int worldSeed,
+        bool enableHeightBoost,
+        float heightBoostStrength)
+    {
+        float sum = 0f;
+        int count = 0;
+        for (int i = 0; i < configs.Length; i++)
+        {
+            TerrainNoiseConfig config = configs[i];
+            if (config.noiseType != NoiseType.Height)
+                continue;
+            sum += TerrainNoiseKernel.SampleBurst(config, worldScaledPosition, worldSeed);
+            count++;
+        }
+
+        float height = count > 0 ? sum / count : TerrainNoiseKernel.DefaultChannelValue;
+        return TerrainNoiseKernel.ApplyHeightBoost(height, enableHeightBoost, heightBoostStrength);
     }
 
     private static void AccumulateChannel(
@@ -532,6 +715,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             _activeBiomeRanges.Dispose();
         if (_activeEnvironment.IsCreated)
             _activeEnvironment.Dispose();
+        if (_activeWind.IsCreated)
+            _activeWind.Dispose();
         if (_activeBiomeIndices.IsCreated)
             _activeBiomeIndices.Dispose();
         _jobActive = false;
@@ -552,33 +737,65 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         public float2 TemperatureCelsiusRange;
         public bool EnableHeightBoost;
         public float HeightBoostStrength;
+        public WindFieldConfig WindField;
+        public int OrographicSampleDistance;
+        public int OrographicSampleCount;
+        public float WindwardRainGain;
+        public float LeewardRainLoss;
 
         [Unity.Collections.ReadOnly] public NativeArray<TerrainNoiseConfig> NoiseConfigs;
         [Unity.Collections.ReadOnly] public NativeArray<CompiledBiomeRange> BiomeRanges;
         [WriteOnly] public NativeArray<float4> Environment;
+        [WriteOnly] public NativeArray<float2> Wind;
         [WriteOnly] public NativeArray<byte> BiomeIndices;
 
         public void Execute(int index)
         {
             int localX = index % Width;
             int localY = index / Width;
-            float2 scaledPosition = new float2(
-                (Origin.x + localX) * NoiseScale,
-                (Origin.y + localY) * NoiseScale);
+            float2 worldPosition = new float2(Origin.x + localX, Origin.y + localY);
+            float2 scaledPosition = worldPosition * NoiseScale;
 
             float3 sums = float3.zero;
             int3 counts = int3.zero;
             for (int i = 0; i < NoiseConfigs.Length; i++)
             {
                 TerrainNoiseConfig config = NoiseConfigs[i];
-                float value = TerrainNoiseKernel.Sample(config, scaledPosition, WorldSeed);
+                float value = TerrainNoiseKernel.SampleBurst(config, scaledPosition, WorldSeed);
                 AccumulateChannel(config.noiseType, value, ref sums, ref counts);
             }
 
             float temperature = counts.x > 0 ? sums.x / counts.x : TerrainNoiseKernel.DefaultChannelValue;
-            float precipitation = counts.y > 0 ? sums.y / counts.y : TerrainNoiseKernel.DefaultChannelValue;
+            float basePrecipitation = counts.y > 0 ? sums.y / counts.y : TerrainNoiseKernel.DefaultChannelValue;
             float height = counts.z > 0 ? sums.z / counts.z : TerrainNoiseKernel.DefaultChannelValue;
             height = TerrainNoiseKernel.ApplyHeightBoost(height, EnableHeightBoost, HeightBoostStrength);
+            float2 wind = WindFieldKernel.Sample(worldPosition, WorldSeed, WindField);
+            int sampleCount = math.clamp(OrographicSampleCount, 1, 8);
+            float sampleDistance = math.max(8f, OrographicSampleDistance);
+            float meanUpwindHeight = 0f;
+            float maxUpwindHeight = 0f;
+            for (int sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++)
+            {
+                float distance = sampleDistance * sampleIndex / sampleCount;
+                float2 upwindScaledPosition = (worldPosition - wind * distance) * NoiseScale;
+                float upwindHeight = SampleHeightChannel(
+                    NoiseConfigs,
+                    upwindScaledPosition,
+                    WorldSeed,
+                    EnableHeightBoost,
+                    HeightBoostStrength);
+                meanUpwindHeight += upwindHeight;
+                maxUpwindHeight = math.max(maxUpwindHeight, upwindHeight);
+            }
+
+            meanUpwindHeight /= sampleCount;
+            float precipitation = ClimateFieldKernel.ApplyOrographicPrecipitation(
+                basePrecipitation,
+                height,
+                meanUpwindHeight,
+                maxUpwindHeight,
+                WindwardRainGain,
+                LeewardRainLoss);
             float celsius = math.lerp(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y, temperature);
 
             byte biomeIndex = BiomeResolver.UnmatchedIndex;
@@ -592,6 +809,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             }
 
             Environment[index] = new float4(temperature, celsius, precipitation, height);
+            Wind[index] = wind;
             BiomeIndices[index] = biomeIndex;
         }
     }
@@ -601,7 +819,10 @@ public readonly struct TerrainPreviewSample
 {
     public EnvironmentSample Environment { get; }
     public BiomeData Biome { get; }
-    public bool IsRiver { get; }
+    public HydrologyWaterKind WaterKind { get; }
+    public float Flow { get; }
+    public bool IsRiver => WaterKind == HydrologyWaterKind.River;
+    public bool IsLake => WaterKind == HydrologyWaterKind.Lake;
     public float RiverDepth { get; }
     public bool HasWater { get; }
     public float WaterSalt { get; }
@@ -610,7 +831,8 @@ public readonly struct TerrainPreviewSample
     public TerrainPreviewSample(
         EnvironmentSample environment,
         BiomeData biome,
-        bool isRiver,
+        HydrologyWaterKind waterKind,
+        float flow,
         float riverDepth,
         bool hasWater,
         float waterSalt,
@@ -618,7 +840,8 @@ public readonly struct TerrainPreviewSample
     {
         Environment = environment;
         Biome = biome;
-        IsRiver = isRiver;
+        WaterKind = waterKind;
+        Flow = Mathf.Max(0f, flow);
         RiverDepth = riverDepth;
         HasWater = hasWater;
         WaterSalt = waterSalt;
@@ -645,6 +868,7 @@ public sealed class TerrainPreviewSampler
         _worldSeed = worldSeed == 0 ? 1 : worldSeed;
         _land.ValidateConfiguration();
         _river?.ValidateConfiguration();
+        _river?.ConfigureQueryContext(_land, _planetData, _worldSeed);
     }
 
     public bool TrySample(Vector2Int worldPosition, out TerrainPreviewSample preview)
@@ -657,33 +881,27 @@ public sealed class TerrainPreviewSampler
         }
 
         TileData baseTerrain = ChunkGenerator_Land.GetTerrainTileBlock(biome).tileDataTemplate;
-        float depth = 0f;
-        bool isRiver = _river != null &&
-                       _river.TryEvaluateAppliedRiverCell(
-                           worldPosition,
-                           _worldSeed,
-                           baseTerrain,
-                           out depth);
-        EnvironmentSample finalEnvironment = isRiver
-            ? new EnvironmentSample(
-                baseEnvironment.Temperature,
-                baseEnvironment.TemperatureCelsius,
-                1f,
-                baseEnvironment.Height)
-            : baseEnvironment;
+        HydrologyCellSample hydrology = default;
+        bool hasHydrology = _river != null &&
+                            _river.TryEvaluateAppliedHydrologyCell(
+                                worldPosition,
+                                _worldSeed,
+                                baseTerrain,
+                                out hydrology);
         bool baseHasWater = baseTerrain is TileData_Water;
         TileData_Water baseWater = baseTerrain as TileData_Water;
         float baseWaterDepth = baseHasWater
             ? TileData_Water.CalculateDepthFromHeight(baseEnvironment.Height)
             : 0f;
         preview = new TerrainPreviewSample(
-            finalEnvironment,
+            baseEnvironment,
             biome,
-            isRiver,
-            isRiver ? depth : 0f,
-            isRiver || baseHasWater,
-            isRiver ? 0f : baseWater?.salt ?? 0f,
-            isRiver ? depth : baseWaterDepth);
+            hasHydrology ? hydrology.WaterKind : HydrologyWaterKind.None,
+            hasHydrology ? hydrology.Flow : 0f,
+            hasHydrology && hydrology.WaterKind == HydrologyWaterKind.River ? hydrology.Depth : 0f,
+            hasHydrology || baseHasWater,
+            hasHydrology ? 0f : baseWater?.salt ?? 0f,
+            hasHydrology ? hydrology.Depth : baseWaterDepth);
         return true;
     }
 }

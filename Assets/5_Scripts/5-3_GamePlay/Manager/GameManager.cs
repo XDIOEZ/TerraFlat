@@ -100,6 +100,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     protected override void OnDestroy()
     {
+        ChunkGenerator_River.ClearHydrologyCache();
         ResetWorldEntryLifecycle();
         DisposeWorldEntryPresentation();
         base.OnDestroy();
@@ -125,6 +126,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 通知所有订阅者：游戏世界已退出
         Event_GameWorldExit?.Invoke();
+        ChunkGenerator_River.ClearHydrologyCache();
 
         // 安全检查：确保核心管理器已初始化
         if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||

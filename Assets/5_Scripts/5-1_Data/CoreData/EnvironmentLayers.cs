@@ -30,6 +30,8 @@ public partial class EnvironmentLayers
     public float[,] TemperatureCelsius = new float[0, 0]; // 温度摄氏层（℃）
     public float[,] Precipitation = new float[0, 0]; // 降水层
     public float[,] Height = new float[0, 0]; // 海拔层
+    public float[,] WindX = new float[0, 0]; // 生成期风向 X（单位向量）
+    public float[,] WindY = new float[0, 0]; // 生成期风向 Y（单位向量）
     public float[,] Light = new float[0, 0]; // 光照亮度层（0=完全黑暗，1=最大亮度）
 
     public int Width => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(0) : 0;
@@ -49,6 +51,8 @@ public partial class EnvironmentLayers
             && IsSameSize(TemperatureCelsius, width, height)
             && IsSameSize(Precipitation, width, height)
             && IsSameSize(Height, width, height)
+            && IsSameSize(WindX, width, height)
+            && IsSameSize(WindY, width, height)
             && IsSameSize(Light, width, height);
     }
 
@@ -64,6 +68,8 @@ public partial class EnvironmentLayers
         if (!IsSameSize(TemperatureCelsius, width, height)) TemperatureCelsius = new float[width, height];
         if (!IsSameSize(Precipitation, width, height)) Precipitation = new float[width, height];
         if (!IsSameSize(Height, width, height)) Height = new float[width, height];
+        if (!IsSameSize(WindX, width, height)) WindX = new float[width, height];
+        if (!IsSameSize(WindY, width, height)) WindY = new float[width, height];
         if (!IsSameSize(Light, width, height)) Light = new float[width, height];
     }
 
@@ -84,6 +90,26 @@ public partial class EnvironmentLayers
     public void SetPrecipitation(int x, int y, float value)
     {
         Precipitation[x, y] = Mathf.Clamp01(value);
+    }
+
+    public void SetWind(int x, int y, Vector2 direction)
+    {
+        Vector2 normalized = direction.sqrMagnitude > 0.000001f
+            ? direction.normalized
+            : Vector2.right;
+        WindX[x, y] = normalized.x;
+        WindY[x, y] = normalized.y;
+    }
+
+    public Vector2 GetWind(int x, int y)
+    {
+        if (!Contains(x, y))
+            return Vector2.right;
+
+        Vector2 direction = new Vector2(WindX[x, y], WindY[x, y]);
+        return direction.sqrMagnitude > 0.000001f
+            ? direction.normalized
+            : Vector2.right;
     }
 
     public void SetLight(int x, int y, float value)

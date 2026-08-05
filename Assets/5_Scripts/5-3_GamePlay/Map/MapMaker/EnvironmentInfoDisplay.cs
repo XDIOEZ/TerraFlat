@@ -448,8 +448,8 @@ private void UpdateMouseInfo()
         int lineCount = 0;
         if (currentPage == 0)
         {
-            // 标题、坐标、生物群系、温湿、降水坚固、高度
-            lineCount += 6;
+            // 标题、坐标、群系、温度、基础/最终降雨、风场、高度与水文
+            lineCount += 9;
         }
         else
         {
@@ -479,13 +479,40 @@ private void UpdateMouseInfo()
             float temperature = map.Data.EnvironmentLayers.Temperature[hoveredLocalPos.x, hoveredLocalPos.y];
             float precipitation = map.Data.EnvironmentLayers.Precipitation[hoveredLocalPos.x, hoveredLocalPos.y];
             float height = map.Data.EnvironmentLayers.Height[hoveredLocalPos.x, hoveredLocalPos.y];
+            Vector2 wind = map.Data.EnvironmentLayers.GetWind(hoveredLocalPos.x, hoveredLocalPos.y);
+            float basePrecipitation = precipitation;
+            int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+            DimensionManager dimensionManager = DimensionManager.Instance;
+            int worldSeed = dimensionManager != null
+                ? dimensionManager.GetActiveGenerationSeed(baseSeed)
+                : baseSeed;
+            if (map.LandGenerator != null)
+            {
+                ClimateSample climate = map.LandGenerator.SampleClimateAtWorld(
+                    hoveredGridPos,
+                    worldSeed,
+                    SaveDataMgr.Instance?.GetCurrentPlanetData());
+                basePrecipitation = climate.BasePrecipitation;
+            }
+
+            HydrologyCellSample hydrology = default;
+            map.GetGenerator<ChunkGenerator_River>()?.TrySampleHydrologyCell(
+                hoveredGridPos,
+                worldSeed,
+                out hydrology);
+            float windAngle = Mathf.Atan2(wind.y, wind.x) * Mathf.Rad2Deg;
 
             GUILayout.Label($"<b>环境信息</b>", labelStyle);
             GUILayout.Label($"坐标: ({hoveredGridPos.x}, {hoveredGridPos.y})", labelStyle);
             GUILayout.Label($"生物群系: {hoveredBiomeName}", labelStyle);
             GUILayout.Label($"温度: {temperature:F2} ({displayTempCelsius:F1}℃)", labelStyle);
-            GUILayout.Label($"降水量: {precipitation:F2}", labelStyle);
+            GUILayout.Label($"基础降水: {basePrecipitation:F2}", labelStyle);
+            GUILayout.Label($"最终降雨: {precipitation:F2}", labelStyle);
+            GUILayout.Label($"风向: ({wind.x:F2}, {wind.y:F2}) {windAngle:F0}°", labelStyle);
             GUILayout.Label($"高度: {height:F2}", labelStyle);
+            GUILayout.Label(
+                $"水文: {hydrology.WaterKind}  汇流 {hydrology.Flow:F2}  水深 {hydrology.Depth:F2}",
+                labelStyle);
         }
         else
         {

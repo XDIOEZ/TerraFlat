@@ -26,7 +26,7 @@ description: "Use when validating FlatWorld Unity changes, running GameTest cate
 # 只检查全部 C# 的 UTF-8 编码与非法替换字符
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --check-encoding
 
-# 固定黄金路径：启动游戏、代码创建世界、移动两圈并验证 Chunk 流送
+# 固定黄金路径：启动游戏、代码创建世界、直线长距离移动并验证 Chunk 流送
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path
 
 # 同时运行多个相关分类
