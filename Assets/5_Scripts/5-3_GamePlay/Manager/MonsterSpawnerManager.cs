@@ -702,7 +702,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     {
         for (int i = 0; i < _playerPositions.Count; i++)
         {
-            if ((_playerPositions[i] - position).sqrMagnitude <= 0.01f)
+            if (WorldTopologyRuntime.SqrDistance(_playerPositions[i], position) <= 0.01f)
                 return;
         }
 
@@ -714,7 +714,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         float distanceSqr = Mathf.Max(0f, distance) * Mathf.Max(0f, distance);
         for (int i = 0; i < _playerPositions.Count; i++)
         {
-            if ((_playerPositions[i] - position).sqrMagnitude < distanceSqr)
+            if (WorldTopologyRuntime.SqrDistance(_playerPositions[i], position) < distanceSqr)
                 return true;
         }
 
@@ -734,7 +734,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         for (int i = 0; i < _playerPositions.Count; i++)
         {
             Vector3 playerPosition = _playerPositions[i];
-            if ((candidate - playerPosition).sqrMagnitude > radiusSqr)
+            if (WorldTopologyRuntime.SqrDistance(candidate, playerPosition) > radiusSqr)
                 continue;
 
             int nearbyCount = 0;
@@ -742,7 +742,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             {
                 Item item = pair.Key;
                 if (item != null && pair.Value == config &&
-                    (item.transform.position - playerPosition).sqrMagnitude <= radiusSqr)
+                    WorldTopologyRuntime.SqrDistance(item.transform.position, playerPosition) <= radiusSqr)
                 {
                     nearbyCount++;
                 }
@@ -995,7 +995,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         for (int playerIndex = 0; playerIndex < _playerPositions.Count; playerIndex++)
         {
             Vector3 playerPosition = _playerPositions[playerIndex];
-            if ((item.transform.position - playerPosition).sqrMagnitude > radiusSqr)
+            if (WorldTopologyRuntime.SqrDistance(item.transform.position, playerPosition) > radiusSqr)
                 continue;
 
             int nearbyCount = 0;
@@ -1005,7 +1005,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 if (candidate == null || pair.Value != config || pendingOverflow.Contains(candidate))
                     continue;
 
-                if ((candidate.transform.position - playerPosition).sqrMagnitude <= radiusSqr)
+                if (WorldTopologyRuntime.SqrDistance(candidate.transform.position, playerPosition) <= radiusSqr)
                     nearbyCount++;
             }
 

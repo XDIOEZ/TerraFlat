@@ -100,6 +100,8 @@ public class Mod_BaseDroper : Module
     [Tooltip("静态丢弃物品方法，供外部模块调用")]
     public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, MoveMode mode = MoveMode.BezierCurve, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
     {
+        startPos = WorldTopologyRuntime.NormalizePosition(startPos);
+        endPos = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
         item.transform.position = startPos;
 
         // 根据移动模式计算控制点
@@ -171,6 +173,7 @@ public class Mod_BaseDroper : Module
             // 垂直方向叠加正弦高度
             pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
 
+            pos = WorldTopologyRuntime.NormalizePosition(pos);
             drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
             drop.item.transform.Rotate(Vector3.forward * 360f * deltaTime);
 

@@ -113,6 +113,10 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     private void UpdateHoveredSlot()
     {
+        hoveredSlot = null;
+        if (Mouse.current == null || EventSystem.current == null)
+            return;
+
         Vector2 mousePosition = Mouse.current.position.ReadValue();
 
         List<RaycastResult> results = new List<RaycastResult>();
@@ -123,7 +127,6 @@ public class Module_DiscardItem : Mod_BaseDroper
 
         EventSystem.current.RaycastAll(pointerEventData, results);
 
-        hoveredSlot = null;
         if (results.Count > 0)
         {
             foreach (var r in results)
@@ -382,7 +385,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             Vector2 startPos = transform.position;
             Vector2 endPos = DropPos;
 
-            float distance = Vector2.Distance(startPos, endPos);
+            float distance = WorldTopologyRuntime.Distance(startPos, endPos);
             float animTime = baseDropDuration + distance * distanceSensitivity;
 
             // 调用父类 DropItem 实现动画控制

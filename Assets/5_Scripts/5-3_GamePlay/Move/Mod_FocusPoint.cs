@@ -134,14 +134,14 @@ public partial class Mod_FocusPoint : Module
         foreach (var targetTrans in targetRotationTransforms)
         {
             // 计算目标对象到鼠标位置的距离
-            float distanceToMouse = Vector2.Distance(targetTrans.position, targetPosition);
+            float distanceToMouse = WorldTopologyRuntime.Distance(targetTrans.position, targetPosition);
 
             // 如果距离小于阈值，则停止旋转，保留当前角度
             if (distanceToMouse <= Data.StopRotationDistance)
                 continue;
 
             // 计算目标对象到鼠标位置的方向
-            Vector2 direction = targetPosition - targetTrans.position;
+            Vector2 direction = WorldTopologyRuntime.ShortestDelta(targetTrans.position, targetPosition);
             
             // 根据玩家朝向调整方向
             if (playerFacingDirection < 0) // 玩家朝左

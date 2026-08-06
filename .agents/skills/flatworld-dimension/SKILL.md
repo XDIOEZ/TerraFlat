@@ -132,3 +132,8 @@ DimensionPortal.Interact
 ## 修改后维护本 Skill
 
 改变世界键格式、动态 Scene、切换链、目录字段、生成种子、玩家位置命名空间、矿洞资源、环境覆盖、联机限制或测试目录后必须同步更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
+
+## 有限世界继承契约（2026-08-06）
+
+- `EnsureWorldData` 从地表深克隆新维度世界时必须继承 `PlanetData.TopologyMode`、`Radius` 和 `ChunkSize`，只清空维度独立的地图字典与环境运行态。
+- 旧 Infinite 地表克隆出的维度仍为 Infinite；覆盖位于 `WorldTopologyDimensionSmokeTests`（`Dimension.Smoke`）。

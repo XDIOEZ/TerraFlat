@@ -57,7 +57,7 @@ public class Mod_Droping : Module
 
         // Chunk 归属按地面轨迹计算。贝塞尔高度和 arcHeight 只是表现层高度，
         // 不能让物品在抛起时误切换到上方相邻 Chunk。
-        Vector2 ownershipPos = Vector2.Lerp(drop.startPos, drop.endPos, t);
+        Vector2 ownershipPos = WorldTopologyRuntime.NormalizePosition(Vector2.Lerp(drop.startPos, drop.endPos, t));
 
         // 使用存储在drop中的控制点进行贝塞尔插值计算位置
         Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
@@ -66,6 +66,7 @@ public class Mod_Droping : Module
         pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
 
         // 更新物品位置和旋转
+        pos = WorldTopologyRuntime.NormalizePosition(pos);
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
@@ -77,7 +78,7 @@ public class Mod_Droping : Module
         {
             if (!hasTargetChunk)
             {
-                RequestTargetChunk(Chunk.GetChunkPosition(drop.endPos));
+                RequestTargetChunk(Chunk.GetChunkPosition(WorldTopologyRuntime.NormalizePosition(drop.endPos)));
                 return;
             }
 
@@ -195,6 +196,8 @@ public class Mod_Droping : Module
     /// </summary>
     public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, bool isLinear = false, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
     {
+        startPos = WorldTopologyRuntime.NormalizePosition(startPos);
+        endPos = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
         item.transform.position = startPos;
 
         // 根据是否直线运动计算控制点

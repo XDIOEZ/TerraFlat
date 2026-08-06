@@ -31,7 +31,7 @@ public class GhostContactDamage : MonoBehaviour
 
     private void TryDamagePlayer(Collider2D other)
     {
-        Player player = other != null ? other.GetComponentInParent<Player>() : null;
+        Player player = WorldTopologyColliderProxy.ResolveComponent<Player>(other);
         if (player == null || player.itemData == null)
             return;
 

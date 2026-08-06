@@ -166,6 +166,7 @@ public class Mod_PlayerTraits : Module
 
         // 保持 z 为 0（2D）
         mouseWorldPosition.z = 0;
+        mouseWorldPosition = WorldTopologyRuntime.NormalizePosition(mouseWorldPosition);
 
         // 设置玩家位置
         target.transform.position = mouseWorldPosition;

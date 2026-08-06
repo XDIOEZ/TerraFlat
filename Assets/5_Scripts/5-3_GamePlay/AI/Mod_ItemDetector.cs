@@ -307,7 +307,7 @@ public class Mod_ItemDetector : Module
             if (!matches)
                 continue;
 
-            float distanceSqr = (detectedItem.transform.position - origin).sqrMagnitude;
+            float distanceSqr = WorldTopologyRuntime.SqrDistance(origin, detectedItem.transform.position);
             if (distanceSqr >= closestDistanceSqr)
                 continue;
 

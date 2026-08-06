@@ -605,7 +605,7 @@ namespace FlatWorld.Networking.Gameplay
                 return false;
             }
 
-            if (Vector2.Distance(connection.identity.transform.position, item.transform.position) > MaxPickupDistance)
+            if (WorldTopologyRuntime.Distance(connection.identity.transform.position, item.transform.position) > MaxPickupDistance)
             {
                 item = null;
                 return false;
@@ -742,8 +742,10 @@ namespace FlatWorld.Networking.Gameplay
             if (!ValidateSpawnRequest(connection, request) || ItemMgr.Instance.GetItemByGuid(request.ItemGuid) != null)
                 return;
 
-            Vector2 start = request.StartPosition;
-            Vector2 end = start + Vector2.ClampMagnitude(request.EndPosition - start, MaxDropDistance);
+            Vector2 start = WorldTopologyRuntime.NormalizePosition(request.StartPosition);
+            Vector2 end = start + Vector2.ClampMagnitude(
+                WorldTopologyRuntime.ShortestDelta(start, request.EndPosition),
+                MaxDropDistance);
             Vector3 scale = SanitizeScale(request.Scale);
             Item item = null;
 
@@ -1208,7 +1210,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (building == null || !building.CanCommitDismantle)
                     throw new InvalidOperationException("目标不是可拆除的建筑");
 
-                if (Vector2.Distance(connection.identity.transform.position, buildingItem.transform.position) >
+                if (WorldTopologyRuntime.Distance(connection.identity.transform.position, buildingItem.transform.position) >
                     MaxPickupDistance)
                 {
                     throw new InvalidOperationException("目标超出拆除距离");
@@ -1306,7 +1308,7 @@ namespace FlatWorld.Networking.Gameplay
             if (connection?.identity == null || request.RequestToken == 0 || request.SourceItemGuid == 0 ||
                 string.IsNullOrWhiteSpace(request.ItemId) || request.ItemId.Length > 128 ||
                 !IsFinite(request.Position) ||
-                Vector2.Distance(connection.identity.transform.position, request.Position) > MaxBuildingRequestDistance)
+                WorldTopologyRuntime.Distance(connection.identity.transform.position, request.Position) > MaxBuildingRequestDistance)
             {
                 reason = "身份、坐标或距离校验失败";
                 return false;
@@ -1465,7 +1467,7 @@ namespace FlatWorld.Networking.Gameplay
                 return false;
             }
 
-            return Vector2.Distance(connection.identity.transform.position, request.StartPosition) <= 8f;
+            return WorldTopologyRuntime.Distance(connection.identity.transform.position, request.StartPosition) <= 8f;
         }
 
         private static void CapturePose(Item item, StateRecord state)

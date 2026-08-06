@@ -95,3 +95,7 @@ GameStartScene
 ## 修改后维护本 Skill
 
 若改变生命周期事件、入口脚本、场景名、UI partial、资源加载顺序或管理器 Prefab/场景位置，必须同步更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。近期变更最多保留 8 条，先写日期、再写影响与新约束。
+
+## 近期变更
+
+- 2026-08-06：新世界 UI 默认提交 `WorldTopologyMode.Wrapped`；`PlanetData` 本身仍默认 Infinite，避免旧存档或非 UI 构造被自动转换。Wrapped 创建请求必须有正半径、正 Chunk 尺寸和可构造对齐边界。

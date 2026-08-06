@@ -12,8 +12,8 @@ using Sirenix.OdinInspector;
 /// </summary>
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 3;
-    private const int ModdedSaveVersion = 2;
+    private const int CompactSaveVersion = 4;
+    private const int ModdedSaveVersion = 3;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
@@ -47,6 +47,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// </summary>
     private PlanetData GetActivePlanetData()
     {
+        if (TryGetActivePlanetData(out PlanetData planetData))
+            return planetData;
+
         if (SaveData?.PlanetData_Dict == null)
         {
             Debug.LogWarning("⚠️ SaveData或PlanetData_Dict为null");
@@ -54,13 +57,24 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
 
         string activeSceneName = SceneManager.GetActiveScene().name;
-        if (SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out PlanetData planetData))
-        {
-            return planetData;
-        }
-
         Debug.LogWarning($"⚠️ 未找到场景 {activeSceneName} 的星球数据");
         return null;
+    }
+
+    /// <summary>
+    /// Quiet topology lookup for hot paths such as movement, navigation and
+    /// distance checks. Missing active-world data is a normal infinite-world
+    /// fallback here and must not emit one warning per queried cell.
+    /// </summary>
+    public bool TryGetActivePlanetData(out PlanetData planetData)
+    {
+        planetData = null;
+        if (SaveData?.PlanetData_Dict == null)
+            return false;
+
+        string activeSceneName = SceneManager.GetActiveScene().name;
+        return SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out planetData) &&
+               planetData != null;
     }
 
     protected override void Awake()

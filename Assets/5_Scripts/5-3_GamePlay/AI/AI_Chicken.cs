@@ -540,7 +540,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	{
 		Item closestThreat = _detector.FindClosestItemByTags(threatTags, transform.position);
 		float closestDistanceSqr = closestThreat != null
-			? (closestThreat.transform.position - transform.position).sqrMagnitude
+			? WorldTopologyRuntime.SqrDistance(transform.position, closestThreat.transform.position)
 			: float.MaxValue;
 
 		if (!fleeFromPlayer)
@@ -553,7 +553,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			if (!(detectedItem is Player))
 				continue;
 
-			float distanceSqr = (detectedItem.transform.position - transform.position).sqrMagnitude;
+			float distanceSqr = WorldTopologyRuntime.SqrDistance(transform.position, detectedItem.transform.position);
 			if (distanceSqr >= closestDistanceSqr)
 				continue;
 
@@ -633,33 +633,29 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 		Vector2 origin = transform.position;
 		float radius = Mathf.Max(eatDistance, grassSearchRadius);
-		Vector2 chunkSize = ChunkMgr.GetChunkSize();
-		int stepX = Mathf.Max(1, (int)chunkSize.x);
-		int stepY = Mathf.Max(1, (int)chunkSize.y);
-		Vector2 searchExtent = Vector2.one * radius;
-		Vector2Int minChunk = Chunk.GetChunkPosition(origin - searchExtent, chunkSize);
-		Vector2Int maxChunk = Chunk.GetChunkPosition(origin + searchExtent, chunkSize);
 		float closestDistanceSqr = float.MaxValue;
 
-		for (int x = minChunk.x; x <= maxChunk.x; x += stepX)
+		foreach (Chunk chunk in chunkManager.Chunk_Dic_Active_ByPos.Values)
 		{
-			for (int y = minChunk.y; y <= maxChunk.y; y += stepY)
+			if (chunk == null || chunk.Map == null)
+				continue;
+
+			Vector2 mapCenter = chunk.Map.Data != null
+				? chunk.Map.Data.position + new Vector2(chunk.Map.Data.Width * 0.5f, chunk.Map.Data.Height * 0.5f)
+				: (Vector2)chunk.transform.position;
+			Vector2 queryOrigin = WorldTopologyRuntime.NearestImagePosition(mapCenter, origin);
+			if (!chunk.Map.TryFindClosestGrass(queryOrigin, radius, out Vector2Int candidate))
 			{
-				if (!chunkManager.TryGetActiveChunkByPos(new Vector2Int(x, y), out Chunk chunk) ||
-				    chunk.Map == null ||
-				    !chunk.Map.TryFindClosestGrass(origin, radius, out Vector2Int candidate))
-				{
-					continue;
-				}
-
-				float distanceSqr = (GetGrassWorldPosition(candidate) - origin).sqrMagnitude;
-				if (distanceSqr >= closestDistanceSqr)
-					continue;
-
-				closestMap = chunk.Map;
-				closestPosition = candidate;
-				closestDistanceSqr = distanceSqr;
+				continue;
 			}
+
+			float distanceSqr = WorldTopologyRuntime.SqrDistance(origin, GetGrassWorldPosition(candidate));
+			if (distanceSqr >= closestDistanceSqr)
+				continue;
+
+			closestMap = chunk.Map;
+			closestPosition = candidate;
+			closestDistanceSqr = distanceSqr;
 		}
 
 		return closestMap != null;
@@ -681,7 +677,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private float GetGrassTargetDistance()
 	{
-		return Vector2.Distance(transform.position, GetGrassTargetWorldPosition());
+		return WorldTopologyRuntime.Distance(transform.position, GetGrassTargetWorldPosition());
 	}
 
 	private Vector2 GetGrassTargetWorldPosition()

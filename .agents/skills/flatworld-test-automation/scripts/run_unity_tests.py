@@ -25,6 +25,56 @@ GOLDEN_REQUEST_PREFIX = "golden-request-"
 GOLDEN_RUNNING_PREFIX = "golden-running-"
 GOLDEN_RESULT_PREFIX = "golden-result-"
 
+DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
+    "schemaVersion": 1,
+    "presetName": "default",
+    "world": {
+        "seed": 424242,
+        "radius": 512,
+        "chunkSizeX": 16,
+        "chunkSizeY": 16,
+        "noiseScale": 0.01,
+        "topologyMode": "Wrapped",
+        "difficulty": "Simple",
+        "autoGenerateMap": True,
+    },
+    "player": {
+        "cameraOrthographicSize": 10.0,
+        "wrapMoveSpeed": 12.0,
+        "maximumMoveSpeed": 24.0,
+        "waypointCount": 12,
+        "waypointStepChunks": 1.5,
+        "middleScreenshotWaypointIndex": 5,
+    },
+    "scenarios": {"worldWrap": True, "hydrology": True, "burningBuff": True},
+    "hydrology": {
+        "overrideGeneration": False,
+        "hydrologyRegionSize": 256,
+        "runoffCellSize": 64,
+        "runoffSampleStride": 8,
+        "maxTraceSteps": 512,
+        "seaLevel": 0.5,
+        "infiltrationFloor": 0.25,
+        "riverStartFlow": 0.12,
+        "fullWidthFlow": 2.5,
+        "maxRiverWidth": 5,
+        "lakeMinFlow": 0.35,
+        "windwardRainGain": 0.8,
+        "leewardRainLoss": 0.6,
+    },
+    "execution": {
+        "startupTimeoutSeconds": 90.0,
+        "worldEntryTimeoutSeconds": 180.0,
+        "moveTimeoutSeconds": 20.0,
+        "screenshotTimeoutSeconds": 15.0,
+        "minimumVisitedChunks": 10,
+        "minimumObservedChunks": 50,
+        "screenshotSettleFrames": 2,
+        "screenshotSettleSeconds": 0.35,
+        "positionTolerance": 0.5,
+    },
+}
+
 
 class RunnerError(RuntimeError):
     pass
@@ -41,6 +91,18 @@ def parse_args() -> argparse.Namespace:
         "--golden-path",
         action="store_true",
         help="Run the deterministic create-world, move-player, and chunk-streaming path.",
+    )
+    parser.add_argument(
+        "--golden-config",
+        type=Path,
+        help="JSON file containing partial GoldenPath executor configuration.",
+    )
+    parser.add_argument(
+        "--golden-set",
+        action="append",
+        default=[],
+        metavar="PATH=JSON_VALUE",
+        help="Override one GoldenPath configuration field; repeat as needed.",
     )
     parser.add_argument("--list-categories", action="store_true", help="List categories declared under Assets/GameTest.")
     parser.add_argument(
@@ -59,6 +121,8 @@ def parse_args() -> argparse.Namespace:
         if args.all or args.category or args.test:
             parser.error("--golden-path cannot be combined with --all/--category/--test")
         args.category = [GOLDEN_PATH_CATEGORY]
+    elif args.golden_config is not None or args.golden_set:
+        parser.error("--golden-config/--golden-set require --golden-path")
 
     args.category = unique_nonempty(args.category)
     args.test = unique_nonempty(args.test)
@@ -79,6 +143,80 @@ def parse_args() -> argparse.Namespace:
 
 def unique_nonempty(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value.strip() for value in values if value.strip()))
+
+
+def build_golden_configuration(args: argparse.Namespace) -> dict[str, Any]:
+    configuration = json.loads(json.dumps(DEFAULT_GOLDEN_CONFIGURATION))
+    if args.golden_config is not None:
+        path = args.golden_config.expanduser().resolve()
+        try:
+            supplied = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise RunnerError(f"Could not read GoldenPath configuration {path}: {error}") from error
+        if not isinstance(supplied, dict):
+            raise RunnerError("GoldenPath configuration root must be a JSON object.")
+        merge_known_configuration(configuration, supplied, "")
+
+    for assignment in args.golden_set:
+        if "=" not in assignment:
+            raise RunnerError(f"Invalid --golden-set {assignment!r}; expected PATH=JSON_VALUE.")
+        dotted_path, raw_value = assignment.split("=", 1)
+        try:
+            value = json.loads(raw_value)
+        except json.JSONDecodeError:
+            value = raw_value
+        set_known_configuration_value(configuration, dotted_path.strip(), value)
+    return configuration
+
+
+def merge_known_configuration(
+    target: dict[str, Any], supplied: dict[str, Any], prefix: str
+) -> None:
+    for key, value in supplied.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if key not in target:
+            raise RunnerError(f"Unknown GoldenPath configuration field: {path}")
+        if isinstance(target[key], dict):
+            if not isinstance(value, dict):
+                raise RunnerError(f"GoldenPath configuration section {path} must be an object.")
+            merge_known_configuration(target[key], value, path)
+        else:
+            require_matching_configuration_type(path, target[key], value)
+            target[key] = value
+
+
+def set_known_configuration_value(
+    configuration: dict[str, Any], dotted_path: str, value: Any
+) -> None:
+    parts = [part for part in dotted_path.split(".") if part]
+    if not parts:
+        raise RunnerError("GoldenPath override path cannot be empty.")
+    current: dict[str, Any] = configuration
+    for part in parts[:-1]:
+        if part not in current or not isinstance(current[part], dict):
+            raise RunnerError(f"Unknown GoldenPath configuration section: {dotted_path}")
+        current = current[part]
+    leaf = parts[-1]
+    if leaf not in current or isinstance(current[leaf], dict):
+        raise RunnerError(f"Unknown GoldenPath configuration field: {dotted_path}")
+    require_matching_configuration_type(dotted_path, current[leaf], value)
+    current[leaf] = value
+
+
+def require_matching_configuration_type(path: str, expected: Any, value: Any) -> None:
+    if isinstance(expected, bool):
+        valid = isinstance(value, bool)
+    elif isinstance(expected, int):
+        valid = isinstance(value, int) and not isinstance(value, bool)
+    elif isinstance(expected, float):
+        valid = isinstance(value, (int, float)) and not isinstance(value, bool)
+    else:
+        valid = isinstance(value, type(expected))
+    if not valid:
+        raise RunnerError(
+            f"GoldenPath configuration field {path} expects "
+            f"{type(expected).__name__}, got {type(value).__name__}."
+        )
 
 
 def is_unity_project(path: Path) -> bool:
@@ -231,6 +369,7 @@ def run_golden_path_in_open_editor(
         {
             "id": request_id,
             "createdUtc": utc_now(),
+            "configuration": build_golden_configuration(args),
         },
     )
 

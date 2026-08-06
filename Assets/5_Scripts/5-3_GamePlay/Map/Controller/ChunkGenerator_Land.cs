@@ -111,6 +111,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         _activeBiomeIndices = new NativeArray<byte>(cellCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
         try
         {
+            WorldTopologyDomain topologyDomain = ResolveTopologyDomain(_sourcePlanetData);
             if (WindFieldProvider is RegionalRandomWindFieldProvider)
             {
                 var job = new LandEnvironmentJob
@@ -118,6 +119,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                     Origin = new int2(Map.Data.position.x, Map.Data.position.y),
                     Width = width,
                     NoiseScale = ResolveNoiseScale(_sourcePlanetData),
+                    TopologyDomain = topologyDomain,
                     WorldSeed = _generationSeed,
                     TemperatureCelsiusRange = new float2(TemperatureCelsiusRange.x, TemperatureCelsiusRange.y),
                     EnableHeightBoost = enableHeightSecondaryBoost,
@@ -240,7 +242,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             planetData,
             dimensionManager != null ? dimensionManager.GetActiveGenerationSeed(baseSeed) : baseSeed,
             dimensionManager != null ? dimensionManager.ActiveAddress : default,
-            dimensionManager != null ? dimensionManager.ActiveDefinition : null);
+            dimensionManager != null ? dimensionManager.ActiveDefinition : null,
+            WrappedWorldGenerationDomain.Create(planetData));
         GenerateImmediate(context);
     }
 
@@ -273,18 +276,32 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int worldSeed,
         PlanetData sourcePlanetData)
     {
+        if (WorldDomain is WrappedWorldGenerationDomain wrappedDomain)
+            worldPosition = wrappedDomain.Bounds.NormalizeCell(worldPosition);
+        else if (WorldTopologyBounds.TryCreate(sourcePlanetData, out WorldTopologyBounds sourceBounds))
+            worldPosition = sourceBounds.NormalizeCell(worldPosition);
+
         if (!WorldDomain.Contains(worldPosition))
             throw new ArgumentOutOfRangeException(nameof(worldPosition), $"世界坐标不在当前生成域内：{worldPosition}");
 
         float noiseScale = ResolveNoiseScale(sourcePlanetData);
+        WorldTopologyDomain topologyDomain = ResolveTopologyDomain(sourcePlanetData);
         int generationSeed = worldSeed == 0 ? 1 : worldSeed;
         SampleChannels(
-            new float2(worldPosition.x * noiseScale, worldPosition.y * noiseScale),
+            new float2(worldPosition.x, worldPosition.y),
+            noiseScale,
             generationSeed,
+            topologyDomain,
             out float temperature,
             out float basePrecipitation,
             out float height);
-        WindSample wind = WindFieldProvider.Sample(worldPosition, generationSeed, WindField);
+        WindSample wind = WindFieldProvider is RegionalRandomWindFieldProvider
+            ? new WindSample(ToVector2(WindFieldKernel.Sample(
+                new float2(worldPosition.x, worldPosition.y),
+                generationSeed,
+                WindField,
+                topologyDomain)))
+            : WindFieldProvider.Sample(worldPosition, generationSeed, WindField);
         int sampleCount = Mathf.Clamp(OrographicSampleCount, 1, 8);
         float sampleDistance = Mathf.Max(8f, OrographicSampleDistance);
         float meanUpwindHeight = 0f;
@@ -295,8 +312,10 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             float distance = sampleDistance * sampleIndex / sampleCount;
             Vector2 sampleWorld = (Vector2)worldPosition - windDirection * distance;
             float upwindHeight = SampleHeightChannel(
-                new float2(sampleWorld.x * noiseScale, sampleWorld.y * noiseScale),
-                generationSeed);
+                new float2(sampleWorld.x, sampleWorld.y),
+                noiseScale,
+                generationSeed,
+                topologyDomain);
             meanUpwindHeight += upwindHeight;
             maxUpwindHeight = Mathf.Max(maxUpwindHeight, upwindHeight);
         }
@@ -319,9 +338,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     public virtual float SampleHeightAtWorld(Vector2Int worldPosition, int worldSeed, PlanetData sourcePlanetData = null)
     {
         float noiseScale = ResolveNoiseScale(sourcePlanetData ?? _sourcePlanetData);
+        WorldTopologyDomain topologyDomain = ResolveTopologyDomain(sourcePlanetData ?? _sourcePlanetData);
         return SampleHeightChannel(
-            new float2(worldPosition.x * noiseScale, worldPosition.y * noiseScale),
-            worldSeed == 0 ? 1 : worldSeed);
+            new float2(worldPosition.x, worldPosition.y),
+            noiseScale,
+            worldSeed == 0 ? 1 : worldSeed,
+            topologyDomain);
     }
 
     public bool TryResolveBiome(EnvironmentSample sample, out BiomeData biome)
@@ -380,12 +402,20 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int maxSamples,
         out Vector2Int terrainPosition)
     {
+        bool wrapped = WorldTopologyBounds.TryCreate(
+            sourcePlanetData,
+            out WorldTopologyBounds topologyBounds);
+        if (wrapped)
+            anchor = topologyBounds.NormalizeCell(anchor);
+
         terrainPosition = anchor;
         int searchRadius = Mathf.Max(0, maxSearchRadius);
         int sampleBudget = Mathf.Max(1, maxSamples);
         int sampled = 0;
         var preview = new TerrainPreviewSampler(this, riverGenerator, sourcePlanetData, worldSeed);
+        HashSet<Vector2Int> visited = wrapped ? new HashSet<Vector2Int>() : null;
 
+        visited?.Add(anchor);
         if (IsWalkableTerrainAtWorld(anchor, preview))
             return true;
         sampled++;
@@ -399,6 +429,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                     continue;
 
                 Vector2Int candidate = anchor + new Vector2Int(x, y);
+                if (wrapped)
+                {
+                    candidate = topologyBounds.NormalizeCell(candidate);
+                    if (!visited.Add(candidate))
+                        continue;
+                }
                 sampled++;
                 if (IsWalkableTerrainAtWorld(candidate, preview))
                 {
@@ -419,6 +455,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 Vector2Int candidate = new Vector2Int(
                     anchor.x + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, (x + 0.5f) / gridSize)),
                     anchor.y + Mathf.RoundToInt(Mathf.Lerp(-searchRadius, searchRadius, (y + 0.5f) / gridSize)));
+                if (wrapped)
+                {
+                    candidate = topologyBounds.NormalizeCell(candidate);
+                    if (!visited.Add(candidate))
+                        continue;
+                }
                 sampled++;
                 if (IsWalkableTerrainAtWorld(candidate, preview))
                 {
@@ -541,8 +583,10 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
     }
 
     private void SampleChannels(
-        float2 worldScaledPosition,
+        float2 worldPosition,
+        float noiseScale,
         int worldSeed,
+        in WorldTopologyDomain topologyDomain,
         out float temperature,
         out float precipitation,
         out float height)
@@ -554,7 +598,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             for (int i = 0; i < NoiseConfigs.Count; i++)
             {
                 TerrainNoiseConfig config = NoiseConfigs[i];
-                float value = TerrainNoiseKernel.Sample(config, worldScaledPosition, worldSeed);
+                float value = TerrainNoiseKernel.SampleBurst(
+                    config,
+                    worldPosition,
+                    noiseScale,
+                    worldSeed,
+                    topologyDomain);
                 AccumulateChannel(config.noiseType, value, ref sums, ref counts);
             }
         }
@@ -565,7 +614,11 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         height = TerrainNoiseKernel.ApplyHeightBoost(height, enableHeightSecondaryBoost, heightSecondaryBoostStrength);
     }
 
-    private float SampleHeightChannel(float2 worldScaledPosition, int worldSeed)
+    private float SampleHeightChannel(
+        float2 worldPosition,
+        float noiseScale,
+        int worldSeed,
+        in WorldTopologyDomain topologyDomain)
     {
         float sum = 0f;
         int count = 0;
@@ -576,7 +629,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 TerrainNoiseConfig config = NoiseConfigs[i];
                 if (config.noiseType != NoiseType.Height)
                     continue;
-                sum += TerrainNoiseKernel.Sample(config, worldScaledPosition, worldSeed);
+                sum += TerrainNoiseKernel.SampleBurst(
+                    config,
+                    worldPosition,
+                    noiseScale,
+                    worldSeed,
+                    topologyDomain);
                 count++;
             }
         }
@@ -590,8 +648,10 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
 
     private static float SampleHeightChannel(
         NativeArray<TerrainNoiseConfig> configs,
-        float2 worldScaledPosition,
+        float2 worldPosition,
+        float noiseScale,
         int worldSeed,
+        in WorldTopologyDomain topologyDomain,
         bool enableHeightBoost,
         float heightBoostStrength)
     {
@@ -602,7 +662,12 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             TerrainNoiseConfig config = configs[i];
             if (config.noiseType != NoiseType.Height)
                 continue;
-            sum += TerrainNoiseKernel.SampleBurst(config, worldScaledPosition, worldSeed);
+            sum += TerrainNoiseKernel.SampleBurst(
+                config,
+                worldPosition,
+                noiseScale,
+                worldSeed,
+                topologyDomain);
             count++;
         }
 
@@ -727,12 +792,22 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         return !float.IsNaN(value) && !float.IsInfinity(value);
     }
 
+    private static WorldTopologyDomain ResolveTopologyDomain(PlanetData planetData)
+    {
+        return WorldTopologyBounds.TryCreate(planetData, out WorldTopologyBounds bounds)
+            ? bounds.ToDomain()
+            : default;
+    }
+
+    private static Vector2 ToVector2(float2 value) => new(value.x, value.y);
+
     [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct LandEnvironmentJob : IJobParallelFor
     {
         public int2 Origin;
         public int Width;
         public float NoiseScale;
+        public WorldTopologyDomain TopologyDomain;
         public int WorldSeed;
         public float2 TemperatureCelsiusRange;
         public bool EnableHeightBoost;
@@ -754,14 +829,17 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             int localX = index % Width;
             int localY = index / Width;
             float2 worldPosition = new float2(Origin.x + localX, Origin.y + localY);
-            float2 scaledPosition = worldPosition * NoiseScale;
-
             float3 sums = float3.zero;
             int3 counts = int3.zero;
             for (int i = 0; i < NoiseConfigs.Length; i++)
             {
                 TerrainNoiseConfig config = NoiseConfigs[i];
-                float value = TerrainNoiseKernel.SampleBurst(config, scaledPosition, WorldSeed);
+                float value = TerrainNoiseKernel.SampleBurst(
+                    config,
+                    worldPosition,
+                    NoiseScale,
+                    WorldSeed,
+                    TopologyDomain);
                 AccumulateChannel(config.noiseType, value, ref sums, ref counts);
             }
 
@@ -769,7 +847,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             float basePrecipitation = counts.y > 0 ? sums.y / counts.y : TerrainNoiseKernel.DefaultChannelValue;
             float height = counts.z > 0 ? sums.z / counts.z : TerrainNoiseKernel.DefaultChannelValue;
             height = TerrainNoiseKernel.ApplyHeightBoost(height, EnableHeightBoost, HeightBoostStrength);
-            float2 wind = WindFieldKernel.Sample(worldPosition, WorldSeed, WindField);
+            float2 wind = WindFieldKernel.Sample(worldPosition, WorldSeed, WindField, TopologyDomain);
             int sampleCount = math.clamp(OrographicSampleCount, 1, 8);
             float sampleDistance = math.max(8f, OrographicSampleDistance);
             float meanUpwindHeight = 0f;
@@ -777,11 +855,13 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             for (int sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++)
             {
                 float distance = sampleDistance * sampleIndex / sampleCount;
-                float2 upwindScaledPosition = (worldPosition - wind * distance) * NoiseScale;
+                float2 upwindPosition = worldPosition - wind * distance;
                 float upwindHeight = SampleHeightChannel(
                     NoiseConfigs,
-                    upwindScaledPosition,
+                    upwindPosition,
+                    NoiseScale,
                     WorldSeed,
+                    TopologyDomain,
                     EnableHeightBoost,
                     HeightBoostStrength);
                 meanUpwindHeight += upwindHeight;
@@ -866,6 +946,7 @@ public sealed class TerrainPreviewSampler
         _river = river;
         _planetData = planetData;
         _worldSeed = worldSeed == 0 ? 1 : worldSeed;
+        _land.WorldDomain = WrappedWorldGenerationDomain.Create(planetData);
         _land.ValidateConfiguration();
         _river?.ValidateConfiguration();
         _river?.ConfigureQueryContext(_land, _planetData, _worldSeed);
@@ -873,6 +954,9 @@ public sealed class TerrainPreviewSampler
 
     public bool TrySample(Vector2Int worldPosition, out TerrainPreviewSample preview)
     {
+        if (WorldTopologyBounds.TryCreate(_planetData, out WorldTopologyBounds bounds))
+            worldPosition = bounds.NormalizeCell(worldPosition);
+
         EnvironmentSample baseEnvironment = _land.SampleEnvironmentAtWorld(worldPosition, _worldSeed, _planetData);
         if (!_land.TryResolveBiome(baseEnvironment, out BiomeData biome))
         {

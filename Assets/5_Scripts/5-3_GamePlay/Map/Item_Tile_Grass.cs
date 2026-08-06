@@ -25,6 +25,7 @@ public class Item_Tile_Grass : Item
         // 获取鼠标在屏幕上的位置
         Vector3 mouseScreenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
+        worldPos = WorldTopologyRuntime.NormalizePosition(worldPos);
 
         // 获取 MapCore 对象和 Map 脚本
         GameObject mapCore = GameObject.FindGameObjectWithTag("MapCore");

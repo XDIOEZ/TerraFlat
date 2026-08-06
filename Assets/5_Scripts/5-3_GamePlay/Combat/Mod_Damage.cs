@@ -131,7 +131,8 @@ public class Mod_Damage : Module, IDamageSender
     {
         // 碰撞检测和伤害处理逻辑
         if (damageCollider == null || !damageCollider.enabled) return;
-        if (!other.TryGetComponent(out DamageReceiver receiver)) return;
+        DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
+        if (receiver == null) return;
 
         // 添加到内部接收器列表
         if (!insideReceivers.Contains(receiver))
@@ -163,7 +164,8 @@ public class Mod_Damage : Module, IDamageSender
     public void OnTriggerExit2D(Collider2D other)
     {
         // 从内部接收器列表中移除
-        if (other.TryGetComponent(out DamageReceiver receiver))
+        DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
+        if (receiver != null)
         {
             insideReceivers.Remove(receiver);
         }

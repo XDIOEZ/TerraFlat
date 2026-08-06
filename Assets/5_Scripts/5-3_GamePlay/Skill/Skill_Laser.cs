@@ -177,24 +177,27 @@ public class Skill_Laser : Skill
 
         // 获取实时的目标点
         Vector2 currentTargetPoint = runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point;
+        Vector2 visualTargetPoint = laserCastingPoint != null
+            ? WorldTopologyRuntime.NearestImagePosition(laserCastingPoint.position, currentTargetPoint)
+            : currentTargetPoint;
 
         // 更新激光线起点和终点
         if (lineRenderer != null)
         {
             lineRenderer.SetPosition(0, laserCastingPoint.position);
-            lineRenderer.SetPosition(1, new Vector3(currentTargetPoint.x, currentTargetPoint.y));
+            lineRenderer.SetPosition(1, new Vector3(visualTargetPoint.x, visualTargetPoint.y));
         }
 
         // 更新特效位置
         if (laserEffect != null)
         {
-            laserEffect.position = new Vector3(currentTargetPoint.x, currentTargetPoint.y, 0);
+            laserEffect.position = new Vector3(visualTargetPoint.x, visualTargetPoint.y, 0);
         }
 
         // 更新碰撞器的大小和旋转以匹配激光线
         if (laserCollider != null)
         {
-            UpdateLaserCollider(currentTargetPoint);
+            UpdateLaserCollider(visualTargetPoint);
         }
 
         // 更新进度
@@ -218,7 +221,7 @@ public class Skill_Laser : Skill
         Vector2 center = (startPoint + endPoint) * 0.5f;
 
         // 计算激光线的长度
-        float length = Vector2.Distance(startPoint, endPoint);
+        float length = (endPoint - startPoint).magnitude;
 
         // 设置碰撞器的位置到中心点
         laserCollider.transform.position = new Vector3(center.x, center.y, laserCollider.transform.position.z);

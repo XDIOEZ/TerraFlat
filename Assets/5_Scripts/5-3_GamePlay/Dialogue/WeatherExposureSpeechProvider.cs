@@ -124,7 +124,7 @@ namespace FlatWorld.Dialogue
                 heatSourceLayerMask);
             for (int i = 0; i < hits.Length; i++)
             {
-                Item nearbyItem = hits[i] != null ? hits[i].GetComponentInParent<Item>() : null;
+                Item nearbyItem = WorldTopologyColliderProxy.ResolveComponent<Item>(hits[i]);
                 if (nearbyItem == null || nearbyItem == actorItem || nearbyItem.itemMods == null)
                     continue;
 

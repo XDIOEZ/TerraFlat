@@ -240,7 +240,7 @@ public class GameController : Module
         Vector2 screenPos = GetPointerScreenPosition();
         Vector3 worldPos = _mainCamera.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, Mathf.Abs(_mainCamera.transform.position.z)));
         worldPos.z = 0f;
-        return worldPos;
+        return WorldTopologyRuntime.NormalizePosition(worldPos);
     }
 
 #endregion

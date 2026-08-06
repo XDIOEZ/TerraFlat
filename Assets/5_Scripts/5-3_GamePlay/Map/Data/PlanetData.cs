@@ -12,6 +12,17 @@ public enum WeatherType
     Storm
 }
 
+/// <summary>
+/// Defines how world coordinates behave outside the generated map range.
+/// Keep the numeric values stable because this enum is persisted by MemoryPack.
+/// </summary>
+[System.Serializable]
+public enum WorldTopologyMode
+{
+    Infinite = 0,
+    Wrapped = 1
+}
+
 [MemoryPackable]
 [System.Serializable]
 public partial class PlanetData
@@ -98,6 +109,11 @@ public partial class PlanetData
 
     [LabelText("暴风天气修正"), SuffixLabel("℃", true), PropertyTooltip("暴风天气对环境温度的额外修正值。")]
     public float StormTemperatureOffset = -6f;
+
+    // Keep this field at the end of the MemoryPack layout. Older saves omit it
+    // and therefore retain the enum default: Infinite.
+    [LabelText("World Topology")]
+    public WorldTopologyMode TopologyMode = WorldTopologyMode.Infinite;
     #endregion
 
 }

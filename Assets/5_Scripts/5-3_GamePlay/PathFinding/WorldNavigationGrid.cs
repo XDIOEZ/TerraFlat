@@ -15,8 +15,8 @@ public readonly struct WorldNavigationCell
 }
 
 /// <summary>
-/// Sparse navigation storage keyed by absolute world cells. It has no fixed world bounds and
-/// only contains cells belonging to currently loaded chunks.
+/// Sparse navigation storage keyed by canonical world cells. Infinite worlds keep absolute
+/// coordinates; wrapped worlds connect opposite boundary cells as direct neighbours.
 /// </summary>
 public sealed class WorldNavigationGrid
 {
@@ -42,10 +42,16 @@ public sealed class WorldNavigationGrid
     public int CellCount => cells.Count;
 
     public static Vector2Int WorldToCell(Vector2 worldPosition)
-        => new(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y));
+        => NormalizeCell(new Vector2Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y)));
 
     public static Vector2 CellCenter(Vector2Int cell)
-        => new(cell.x + 0.5f, cell.y + 0.5f);
+    {
+        cell = NormalizeCell(cell);
+        return new Vector2(cell.x + 0.5f, cell.y + 0.5f);
+    }
+
+    public static Vector2Int NormalizeCell(Vector2Int cell)
+        => WorldTopologyRuntime.NormalizeCell(cell);
 
     public void BeginBatchUpdate()
     {
@@ -86,6 +92,7 @@ public sealed class WorldNavigationGrid
 
     public void SetCell(Vector2Int position, uint penalty, bool walkable)
     {
+        position = NormalizeCell(position);
         WorldNavigationCell next = new(penalty, walkable && penalty > 0u);
         bool hasCurrent = cells.TryGetValue(position, out WorldNavigationCell current);
         if (hasCurrent &&
@@ -105,6 +112,7 @@ public sealed class WorldNavigationGrid
 
     public bool RemoveCell(Vector2Int position)
     {
+        position = NormalizeCell(position);
         if (!cells.TryGetValue(position, out WorldNavigationCell current))
             return false;
 
@@ -120,11 +128,14 @@ public sealed class WorldNavigationGrid
     {
         int removed = 0;
         bool invalidatesExistingPaths = false;
+        var visited = new HashSet<Vector2Int>();
         for (int y = region.yMin; y < region.yMax; y++)
         {
             for (int x = region.xMin; x < region.xMax; x++)
             {
-                Vector2Int position = new(x, y);
+                Vector2Int position = NormalizeCell(new Vector2Int(x, y));
+                if (!visited.Add(position))
+                    continue;
                 if (cells.TryGetValue(position, out WorldNavigationCell current))
                 {
                     bool blocked = blockerCounts.TryGetValue(position, out int blockerCount) && blockerCount > 0;
@@ -143,6 +154,7 @@ public sealed class WorldNavigationGrid
 
     public bool TryGetCell(Vector2Int position, out WorldNavigationCell cell)
     {
+        position = NormalizeCell(position);
         if (!cells.TryGetValue(position, out WorldNavigationCell terrain))
         {
             cell = default;
@@ -165,7 +177,9 @@ public sealed class WorldNavigationGrid
             return;
         }
 
-        HashSet<Vector2Int> next = new(occupiedCells);
+        var next = new HashSet<Vector2Int>();
+        foreach (Vector2Int occupiedCell in occupiedCells)
+            next.Add(NormalizeCell(occupiedCell));
         if (blockerCells.TryGetValue(blockerId, out HashSet<Vector2Int> current) && current.SetEquals(next))
             return;
 
@@ -221,6 +235,7 @@ public sealed class WorldNavigationGrid
 
     public bool TryFindNearestWalkable(Vector2Int origin, int maxRadius, out Vector2Int result)
     {
+        origin = NormalizeCell(origin);
         if (IsWalkable(origin))
         {
             result = origin;
@@ -258,8 +273,11 @@ public sealed class WorldNavigationGrid
     public bool CanTraverse(Vector2Int from, Vector2Int to, out int traversalCost)
     {
         traversalCost = 0;
-        int dx = to.x - from.x;
-        int dy = to.y - from.y;
+        from = NormalizeCell(from);
+        to = NormalizeCell(to);
+        Vector2Int delta = WorldTopologyRuntime.ShortestDelta(from, to);
+        int dx = delta.x;
+        int dy = delta.y;
         int absX = Mathf.Abs(dx);
         int absY = Mathf.Abs(dy);
         if (absX > 1 || absY > 1 || (absX == 0 && absY == 0))
@@ -272,8 +290,8 @@ public sealed class WorldNavigationGrid
 
         bool diagonal = absX == 1 && absY == 1;
         if (diagonal &&
-            (!IsWalkable(new Vector2Int(from.x + dx, from.y)) ||
-             !IsWalkable(new Vector2Int(from.x, from.y + dy))))
+            (!IsWalkable(NormalizeCell(new Vector2Int(from.x + dx, from.y))) ||
+             !IsWalkable(NormalizeCell(new Vector2Int(from.x, from.y + dy)))))
         {
             return false;
         }
@@ -372,15 +390,19 @@ public sealed class WorldNavigationGrid
             !IsAllowedLineCell(to, maxPenalty, enforcePenaltyLimit))
             return false;
 
+        from = NormalizeCell(from);
+        to = NormalizeCell(to);
+        Vector2Int shortest = WorldTopologyRuntime.ShortestDelta(from, to);
+        Vector2Int unwrappedTo = from + shortest;
         int x = from.x;
         int y = from.y;
-        int dx = Mathf.Abs(to.x - from.x);
-        int dy = Mathf.Abs(to.y - from.y);
-        int stepX = from.x < to.x ? 1 : -1;
-        int stepY = from.y < to.y ? 1 : -1;
+        int dx = Mathf.Abs(shortest.x);
+        int dy = Mathf.Abs(shortest.y);
+        int stepX = shortest.x >= 0 ? 1 : -1;
+        int stepY = shortest.y >= 0 ? 1 : -1;
         int error = dx - dy;
 
-        while (x != to.x || y != to.y)
+        while (x != unwrappedTo.x || y != unwrappedTo.y)
         {
             int previousX = x;
             int previousY = y;
@@ -399,13 +421,13 @@ public sealed class WorldNavigationGrid
             }
 
             if (x != previousX && y != previousY &&
-                (!IsWalkable(new Vector2Int(x, previousY)) ||
-                 !IsWalkable(new Vector2Int(previousX, y))))
+                (!IsWalkable(NormalizeCell(new Vector2Int(x, previousY))) ||
+                 !IsWalkable(NormalizeCell(new Vector2Int(previousX, y)))))
             {
                 return false;
             }
 
-            if (!IsAllowedLineCell(new Vector2Int(x, y), maxPenalty, enforcePenaltyLimit))
+            if (!IsAllowedLineCell(NormalizeCell(new Vector2Int(x, y)), maxPenalty, enforcePenaltyLimit))
                 return false;
         }
 
@@ -428,6 +450,8 @@ public sealed class WorldNavigationGrid
             throw new ArgumentNullException(nameof(result));
 
         result.Clear();
+        start = NormalizeCell(start);
+        goal = NormalizeCell(goal);
         if (!IsWalkable(start) || !IsWalkable(goal))
             return false;
         if (start == goal)
@@ -456,7 +480,7 @@ public sealed class WorldNavigationGrid
 
             for (int i = 0; i < NeighbourOffsets.Length; i++)
             {
-                Vector2Int neighbour = entry.Cell + NeighbourOffsets[i];
+                Vector2Int neighbour = NormalizeCell(entry.Cell + NeighbourOffsets[i]);
                 if (!CanTraverse(entry.Cell, neighbour, out int stepCost))
                     continue;
 
@@ -478,7 +502,7 @@ public sealed class WorldNavigationGrid
 
     private bool TryWalkableOffset(Vector2Int origin, int x, int y, out Vector2Int result)
     {
-        result = new Vector2Int(origin.x + x, origin.y + y);
+        result = NormalizeCell(new Vector2Int(origin.x + x, origin.y + y));
         return IsWalkable(result);
     }
 
@@ -517,8 +541,9 @@ public sealed class WorldNavigationGrid
 
     private static int Heuristic(Vector2Int from, Vector2Int to)
     {
-        int dx = Mathf.Abs(to.x - from.x);
-        int dy = Mathf.Abs(to.y - from.y);
+        Vector2Int delta = WorldTopologyRuntime.ShortestDelta(from, to);
+        int dx = Mathf.Abs(delta.x);
+        int dy = Mathf.Abs(delta.y);
         int diagonal = Mathf.Min(dx, dy);
         int straight = Mathf.Max(dx, dy) - diagonal;
         return diagonal * 14 + straight * 10;

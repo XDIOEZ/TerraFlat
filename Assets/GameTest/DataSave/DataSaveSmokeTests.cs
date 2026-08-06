@@ -271,10 +271,10 @@ namespace FlatWorld.GameTest.DataSave
 
         [Test]
         [Category("DataSave.Smoke")]
-        public void SaveFormatVersionThreeRejectsLegacyAndHeaderlessPayloads()
+        public void SaveFormatVersionFourRejectsLegacyAndHeaderlessPayloads()
         {
-            Assert.That(ReadPrivateVersion("CompactSaveVersion"), Is.EqualTo(3));
-            Assert.That(ReadPrivateVersion("ModdedSaveVersion"), Is.EqualTo(2));
+            Assert.That(ReadPrivateVersion("CompactSaveVersion"), Is.EqualTo(4));
+            Assert.That(ReadPrivateVersion("ModdedSaveVersion"), Is.EqualTo(3));
 
             SaveDataMgr existing = Object.FindObjectOfType<SaveDataMgr>();
             GameObject owner = null;

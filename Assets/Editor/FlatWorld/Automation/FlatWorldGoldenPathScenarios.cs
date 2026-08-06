@@ -16,6 +16,7 @@ namespace FlatWorld.Automation
         internal Vector2 CurrentPosition { get; }
         internal Vector2 TargetPosition { get; }
         internal Vector2Int ExpectedChunk { get; }
+        internal FlatWorldGoldenPathConfiguration Configuration { get; }
 
         internal FlatWorldGoldenPathScenarioContext(
             GameManager gameManager,
@@ -26,7 +27,8 @@ namespace FlatWorld.Automation
             int waypointCount,
             Vector2 currentPosition,
             Vector2 targetPosition,
-            Vector2Int expectedChunk)
+            Vector2Int expectedChunk,
+            FlatWorldGoldenPathConfiguration configuration)
         {
             GameManager = gameManager;
             SaveDataManager = saveDataManager;
@@ -37,6 +39,7 @@ namespace FlatWorld.Automation
             CurrentPosition = currentPosition;
             TargetPosition = targetPosition;
             ExpectedChunk = expectedChunk;
+            Configuration = configuration;
         }
     }
 
@@ -52,33 +55,42 @@ namespace FlatWorld.Automation
             // 在新的黄金路径开始前重置各玩法场景的静态状态。
             ResetBurningBuffScenario();
             ResetHydrologyScenario();
+            ResetWorldWrapScenario();
         }
 
         internal static void OnWorldReady(FlatWorldGoldenPathScenarioContext context)
         {
             // 玩家和初始 Chunk 就绪后的一次性安排挂在这里。
-            BeginHydrologyScenario(context);
+            if (context.Configuration.scenarios.hydrology)
+                BeginHydrologyScenario(context);
         }
 
         internal static void OnTraversalTick(FlatWorldGoldenPathScenarioContext context)
         {
             // 与移动并行、需要跨 Tick 观测的场景挂在这里。
             // 该回调会重复执行，子场景必须幂等且不得阻塞。
-            TickBurningBuffScenario(context);
+            if (context.Configuration.scenarios.burningBuff)
+                TickBurningBuffScenario(context);
         }
 
         internal static void OnChunkReady(FlatWorldGoldenPathScenarioContext context)
         {
             // 每个目标 Chunk 就绪后的阶段断言挂在这里。
-            VerifyBurningBuffAtChunkReady(context);
-            VerifyHydrologyAtChunkReady(context);
+            if (context.Configuration.scenarios.burningBuff)
+                VerifyBurningBuffAtChunkReady(context);
+            if (context.Configuration.scenarios.hydrology)
+                VerifyHydrologyAtChunkReady(context);
         }
 
         internal static void BeforeWorldExit(FlatWorldGoldenPathScenarioContext context)
         {
             // 完成移动后、退出世界前的长时状态断言挂在这里。
-            AssertBurningBuffScenarioCompleted();
-            AssertHydrologyScenarioCompleted();
+            if (context.Configuration.scenarios.burningBuff)
+                AssertBurningBuffScenarioCompleted();
+            if (context.Configuration.scenarios.hydrology)
+                AssertHydrologyScenarioCompleted();
+            if (context.Configuration.scenarios.worldWrap)
+                AssertWorldWrapScenarioCompleted();
         }
 
         internal static void Cleanup(FlatWorldGoldenPathScenarioContext context)
@@ -86,6 +98,7 @@ namespace FlatWorld.Automation
             // 通过和失败都会调用；在这里恢复 Buff、生命、物品和临时对象。
             CleanupBurningBuffScenario();
             CleanupHydrologyScenario();
+            CleanupWorldWrapScenario();
         }
     }
 }

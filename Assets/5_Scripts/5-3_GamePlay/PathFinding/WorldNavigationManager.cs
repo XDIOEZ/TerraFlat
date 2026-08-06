@@ -212,7 +212,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         {
             foreach (OccupiedTileCell occupiedCell in mapData.EnumerateOccupiedCells())
             {
-                Vector2Int worldCell = occupiedCell.WorldPosition;
+                Vector2Int worldCell = WorldNavigationGrid.NormalizeCell(occupiedCell.WorldPosition);
                 TileData topTile = occupiedCell.Stack.GetFromTop();
                 bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(
                     worldCell,
@@ -464,6 +464,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
     private void RefreshCellFromLoadedMap(Vector2Int worldCell)
     {
+        worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
         if (TryReadCellFromLoadedMap(worldCell, out WorldNavigationCell cell, out Map sourceMap))
         {
             grid.SetCell(worldCell, cell.Penalty, cell.Walkable);
@@ -481,6 +482,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         if (map == null)
             return;
 
+        worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
+
         int mapId = map.GetInstanceID();
         if (!cellsByMap.TryGetValue(mapId, out HashSet<Vector2Int> ownedCells))
         {
@@ -494,6 +497,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
     private void RemoveCellOwner(Vector2Int worldCell)
     {
+        worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
         if (!terrainOwnerByCell.TryGetValue(worldCell, out int mapId))
             return;
 
@@ -540,6 +544,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         out WorldNavigationCell cell,
         out Map sourceMap)
     {
+        worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
         cell = default;
         sourceMap = null;
         ChunkMgr chunkManager = ChunkMgr.Instance;
@@ -717,12 +722,13 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         request.GoalCell = goal;
         request.PreparedRevision = grid.Revision;
 
-        int directDistance = Mathf.Max(Mathf.Abs(goal.x - start.x), Mathf.Abs(goal.y - start.y));
+        Vector2Int directDelta = WorldTopologyRuntime.ShortestDelta(start, goal);
+        int directDistance = Mathf.Max(Mathf.Abs(directDelta.x), Mathf.Abs(directDelta.y));
         if (start == goal ||
             (directDistance <= Mathf.Max(1, maxDirectLineOfSightCells) && grid.HasLineOfSight(start, goal)))
         {
             Vector2 resolved = goal == requestedGoal
-                ? request.Destination
+                ? WorldTopologyRuntime.NormalizePosition(request.Destination)
                 : WorldNavigationGrid.CellCenter(goal);
             ScheduleSuccess(request, resolved, new[] { resolved }, true);
             return;
@@ -890,7 +896,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         IReadOnlyList<Vector2Int> offsets = WorldNavigationGrid.GetNeighbourOffsets();
         for (int i = 0; i < offsets.Count; i++)
         {
-            Vector2Int neighbour = current.Cell + offsets[i];
+            Vector2Int neighbour = WorldNavigationGrid.NormalizeCell(current.Cell + offsets[i]);
             // Reverse search: an agent standing at neighbour must be able to move to current.
             if (!grid.CanTraverse(neighbour, current.Cell, out int traversalCost))
                 continue;
@@ -1280,11 +1286,14 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         public bool IsAffected(IReadOnlyList<Vector2Int> changedCells)
         {
             IReadOnlyList<Vector2Int> offsets = WorldNavigationGrid.GetNeighbourOffsets();
+            bool wrapped = WorldTopologyRuntime.TryGetActiveBounds(out _);
             for (int i = 0; i < changedCells.Count; i++)
             {
                 Vector2Int changed = changedCells[i];
-                if (changed.x < minX - 1 || changed.x > maxX + 1 ||
+                if (!wrapped &&
+                    (changed.x < minX - 1 || changed.x > maxX + 1 ||
                     changed.y < minY - 1 || changed.y > maxY + 1)
+                   )
                 {
                     continue;
                 }
@@ -1294,7 +1303,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
                 for (int offsetIndex = 0; offsetIndex < offsets.Count; offsetIndex++)
                 {
-                    if (costs.ContainsKey(changed + offsets[offsetIndex]))
+                    if (costs.ContainsKey(WorldNavigationGrid.NormalizeCell(changed + offsets[offsetIndex])))
                         return true;
                 }
             }
@@ -1409,7 +1418,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         {
             reachesDestination = false;
             resolvedDestination = request.GoalCell == WorldNavigationGrid.WorldToCell(request.Destination)
-                ? request.Destination
+                ? WorldTopologyRuntime.NormalizePosition(request.Destination)
                 : WorldNavigationGrid.CellCenter(request.GoalCell);
 
             if (start != Goal && !nextTowardGoal.ContainsKey(start))
@@ -1458,7 +1467,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             Vector2 pathEnd = reachesDestination
                 ? resolvedDestination
                 : WorldNavigationGrid.CellCenter(raw[^1]);
-            if (smoothed.Count == 0 || (smoothed[^1] - pathEnd).sqrMagnitude > 0.0001f)
+            if (smoothed.Count == 0 || WorldTopologyRuntime.SqrDistance(smoothed[^1], pathEnd) > 0.0001f)
                 smoothed.Add(pathEnd);
             else
                 smoothed[^1] = pathEnd;

@@ -32,7 +32,7 @@ namespace FlatWorld.GameTest.Map
             Assert.That(river.minLakeCells, Is.EqualTo(18));
             Assert.That(river.maxLakeCells, Is.EqualTo(220));
             Assert.That(river.maxCachedRegions, Is.EqualTo(9));
-            Assert.That(TerrainGenerationSignature.CurrentVersion, Is.EqualTo(3));
+            Assert.That(TerrainGenerationSignature.CurrentVersion, Is.EqualTo(4));
 
             string[] removedMaskFields =
             {

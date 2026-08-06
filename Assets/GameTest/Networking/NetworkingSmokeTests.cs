@@ -53,20 +53,28 @@ namespace FlatWorld.GameTest.Networking
 
             int gameplayVersion = (int)gameplayProtocol.GetField("CurrentVersion").GetRawConstantValue();
             int mapVersion = (int)mapProtocol.GetField("CurrentVersion").GetRawConstantValue();
-            Assert.That(gameplayVersion, Is.EqualTo(9));
-            Assert.That(mapVersion, Is.EqualTo(2));
+            Assert.That(gameplayVersion, Is.EqualTo(10));
+            Assert.That(mapVersion, Is.EqualTo(4));
 
             System.Reflection.MethodInfo calculateHash = mapProtocol.GetMethod(
                 "CalculateSettingsHash",
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
             Assert.That(calculateHash, Is.Not.Null);
-            object[] settings = { 12345, 2048, 0.01f, true, 100, 100 };
+            object[] settings = { 12345, 2048, 0.01f, true, 100, 100, WorldTopologyMode.Wrapped };
             uint first = (uint)calculateHash.Invoke(null, settings);
             uint repeated = (uint)calculateHash.Invoke(null, settings);
             Assert.That(repeated, Is.EqualTo(first));
             Assert.That(
-                (uint)calculateHash.Invoke(null, new object[] { 12346, 2048, 0.01f, true, 100, 100 }),
+                (uint)calculateHash.Invoke(null, new object[] { 12346, 2048, 0.01f, true, 100, 100, WorldTopologyMode.Wrapped }),
                 Is.Not.EqualTo(first));
+            Assert.That(
+                (uint)calculateHash.Invoke(null, new object[] { 12345, 2048, 0.01f, true, 100, 100, WorldTopologyMode.Infinite }),
+                Is.Not.EqualTo(first));
+
+            System.Type snapshotType = gameplayAssembly.GetType(
+                "FlatWorld.Networking.Gameplay.NetworkWorldSnapshot",
+                throwOnError: true);
+            Assert.That(snapshotType.GetField("TopologyMode"), Is.Not.Null);
 
             string managerSource = File.ReadAllText(
                 "Assets/5_Scripts/5-4_Networking/Gameplay/FlatWorldGameNetworkManager.cs");
@@ -76,11 +84,59 @@ namespace FlatWorld.GameTest.Networking
 
         [Test]
         [Category("Networking.Smoke")]
+        public void ServerMovementValidationAcceptsLegalSeamCrossingAndClampsIllegalJump()
+        {
+            System.Reflection.Assembly gameplayAssembly = System.Reflection.Assembly.Load(
+                "FlatWorld.Networking.Gameplay");
+            System.Type playerType = gameplayAssembly.GetType(
+                "FlatWorld.Networking.Gameplay.NetworkWorldPlayer",
+                throwOnError: true);
+            System.Reflection.MethodInfo validate = playerType.GetMethod(
+                "CalculateAcceptedPosition",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            Assert.That(validate, Is.Not.Null);
+
+            var planet = new PlanetData
+            {
+                Radius = 16,
+                ChunkSize = new Vector2Int(16, 16),
+                TopologyMode = WorldTopologyMode.Wrapped
+            };
+            var accepted = new Vector3(15f, 0f, 0f);
+
+            Vector3 legal = (Vector3)validate.Invoke(
+                null,
+                new object[] { accepted, new Vector3(-15f, 0f, 0f), 3f, planet });
+            Assert.That(legal, Is.EqualTo(new Vector3(-15f, 0f, 0f)),
+                "A two-unit seam crossing must not be rejected as a thirty-unit teleport.");
+
+            Vector3 clamped = (Vector3)validate.Invoke(
+                null,
+                new object[] { accepted, new Vector3(0f, 0f, 0f), 3f, planet });
+            Assert.That(WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds), Is.True);
+            Assert.That(bounds.ShortestDelta(accepted, clamped).magnitude, Is.EqualTo(3f).Within(0.0001f));
+
+            string playerSource = File.ReadAllText(
+                "Assets/5_Scripts/5-4_Networking/Gameplay/NetworkWorldPlayer.cs");
+            string streamingSource = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Manager/ChunkMgr.Networking.cs");
+            Assert.That(playerSource, Does.Contain("WorldTopologyRuntime.ShortestDelta"));
+            Assert.That(playerSource, Does.Contain("WorldTopologyRuntime.NormalizePosition"));
+            Assert.That(streamingSource, Does.Contain("NormalizeChunkPosition"));
+            Assert.That(streamingSource, Does.Contain("WorldTopologyRuntime.ShortestDelta"));
+        }
+
+        [Test]
+        [Category("Networking.Smoke")]
         public void NetworkPlayerNameLabelIsAuthoredInPrefab()
         {
             const string prefabPath = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Assert.That(prefab, Is.Not.Null, $"缺少联机玩家 Prefab：{prefabPath}");
+            Assert.That(
+                prefab.GetComponentsInChildren<Collider2D>(true),
+                Is.Empty,
+                "FlatWorldNetworkPlayer 只能作为无碰撞网络代理，实体碰撞由核心 Player Prefab 负责。");
 
             Transform label = prefab.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(item => item.name == "玩家名称");
@@ -89,6 +145,8 @@ namespace FlatWorld.GameTest.Networking
 
             string source = File.ReadAllText(
                 "Assets/5_Scripts/5-4_Networking/Gameplay/NetworkWorldPlayer.cs");
+            Assert.That(source, Does.Contain("ItemMgr.Instance.LoadNetworkPlayer"),
+                "本地与远程联机角色必须继续复用正式核心 Player Prefab。");
             Assert.That(source, Does.Not.Contain("new GameObject(\"玩家名称\")"));
             Assert.That(source, Does.Not.Contain("AddComponent<TextMeshPro>"));
         }

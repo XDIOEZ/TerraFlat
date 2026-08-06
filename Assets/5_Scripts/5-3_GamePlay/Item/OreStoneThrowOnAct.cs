@@ -212,7 +212,7 @@ public class OreStoneThrowOnAct : MonoBehaviour
         if (_focusPoint != null)
         {
             Vector2 to = _focusPoint.Data.DefaultSkill_Point;
-            Vector2 direction = (to - from).normalized;
+            Vector2 direction = WorldTopologyRuntime.ShortestDelta(from, to).normalized;
             if (direction.sqrMagnitude > 0.0001f)
             {
                 return direction;

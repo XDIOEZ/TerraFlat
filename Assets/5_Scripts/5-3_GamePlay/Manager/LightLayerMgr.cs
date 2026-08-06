@@ -271,7 +271,7 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         if (outerRadius <= 0f)
             return 0f;
 
-        float distance = Vector2.Distance(worldPos, light.transform.position);
+        float distance = WorldTopologyRuntime.Distance(worldPos, light.transform.position);
         if (distance >= outerRadius)
             return 0f;
 

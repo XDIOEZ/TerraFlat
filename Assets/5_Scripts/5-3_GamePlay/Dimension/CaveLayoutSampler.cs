@@ -8,6 +8,7 @@ internal struct CaveLayoutConfig
     public float EntranceChunkChance;
     public float EntranceSafeRadius;
     public int2 ChunkSize;
+    public WorldTopologyDomain Topology;
 }
 
 public static class CaveLayoutSampler
@@ -20,7 +21,8 @@ public static class CaveLayoutSampler
 
     internal static CaveLayoutConfig CreateConfig(
         DimensionDefinition definition,
-        Vector2Int requestedChunkSize = default)
+        Vector2Int requestedChunkSize = default,
+        PlanetData planetData = null)
     {
         Vector2 rawChunkSize = requestedChunkSize == default
             ? ChunkMgr.GetChunkSize()
@@ -35,7 +37,10 @@ public static class CaveLayoutSampler
             EntranceSafeRadius = math.max(1f, definition?.CaveEntranceSafeRadius ?? 3f),
             ChunkSize = new int2(
                 math.max(1, Mathf.RoundToInt(rawChunkSize.x)),
-                math.max(1, Mathf.RoundToInt(rawChunkSize.y)))
+                math.max(1, Mathf.RoundToInt(rawChunkSize.y))),
+            Topology = WorldTopologyBounds.TryCreate(planetData, out WorldTopologyBounds bounds)
+                ? bounds.ToDomain()
+                : default
         };
     }
 
@@ -53,41 +58,42 @@ public static class CaveLayoutSampler
 
     internal static bool IsOpenAtWorld(int2 worldCell, CaveLayoutConfig config, int worldSeed)
     {
+        worldCell = config.Topology.Normalize(worldCell);
         float2 point = new float2(worldCell.x + 0.5f, worldCell.y + 0.5f);
         if (IsInsidePortalNetwork(point, config, worldSeed))
             return true;
 
-        float2 entrance = config.DefaultSpawnPosition;
+        float2 entrance = config.Topology.Normalize(config.DefaultSpawnPosition);
         float entranceRadius = math.max(4f, config.CaveSafeRadius + 1f);
-        if (math.lengthsq(point - entrance) <= entranceRadius * entranceRadius)
+        if (DistanceSq(point, entrance, config) <= entranceRadius * entranceRadius)
             return true;
 
-        int2 entranceRegion = GetRegionCoordinates(entrance);
-        RoomData entranceRoom = CreateRoom(entranceRegion.x, entranceRegion.y, worldSeed);
-        if (IsInsideTunnel(point, entrance, entranceRoom.Center, Hash(worldSeed, entranceRegion.x, entranceRegion.y, 7919)))
+        int2 entranceRegion = GetRegionCoordinates(entrance, config);
+        RoomData entranceRoom = CreateRoom(entranceRegion.x, entranceRegion.y, worldSeed, config);
+        if (IsInsideTunnel(point, entrance, entranceRoom.Center, Hash(worldSeed, entranceRegion.x, entranceRegion.y, 7919), config))
             return true;
 
-        int2 region = GetRegionCoordinates(point);
+        int2 region = GetRegionCoordinates(point, config);
         for (int x = region.x - 1; x <= region.x + 1; x++)
         {
             for (int y = region.y - 1; y <= region.y + 1; y++)
             {
-                RoomData room = CreateRoom(x, y, worldSeed);
-                if (IsInsideRoom(point, room, worldSeed))
+                RoomData room = CreateRoom(x, y, worldSeed, config);
+                if (IsInsideRoom(point, room, worldSeed, config))
                     return true;
 
-                RoomData right = CreateRoom(x + 1, y, worldSeed);
-                if (IsInsideTunnel(point, room.Center, right.Center, Hash(worldSeed, x, y, 101)))
+                RoomData right = CreateRoom(x + 1, y, worldSeed, config);
+                if (IsInsideTunnel(point, room.Center, right.Center, HashRoom(config, worldSeed, x, y, 101), config))
                     return true;
 
-                RoomData up = CreateRoom(x, y + 1, worldSeed);
-                if (IsInsideTunnel(point, room.Center, up.Center, Hash(worldSeed, x, y, 211)))
+                RoomData up = CreateRoom(x, y + 1, worldSeed, config);
+                if (IsInsideTunnel(point, room.Center, up.Center, HashRoom(config, worldSeed, x, y, 211), config))
                     return true;
 
-                if ((Hash(worldSeed, x, y, 307) & 3u) == 0u)
+                if ((HashRoom(config, worldSeed, x, y, 307) & 3u) == 0u)
                 {
-                    RoomData diagonal = CreateRoom(x + 1, y + 1, worldSeed);
-                    if (IsInsideTunnel(point, room.Center, diagonal.Center, Hash(worldSeed, x, y, 401)))
+                    RoomData diagonal = CreateRoom(x + 1, y + 1, worldSeed, config);
+                    if (IsInsideTunnel(point, room.Center, diagonal.Center, HashRoom(config, worldSeed, x, y, 401), config))
                         return true;
                 }
             }
@@ -122,15 +128,31 @@ public static class CaveLayoutSampler
         return GetDepositStrength(new int2(worldCell.x, worldCell.y), worldSeed);
     }
 
+    public static float GetDepositStrength(Vector2Int worldCell, int worldSeed, PlanetData planetData)
+    {
+        CaveLayoutConfig config = CreateConfig(null, default, planetData);
+        return GetDepositStrength(new int2(worldCell.x, worldCell.y), worldSeed, config);
+    }
+
     internal static float GetDepositStrength(int2 worldCell, int worldSeed)
     {
+        return GetDepositStrength(worldCell, worldSeed, default);
+    }
+
+    internal static float GetDepositStrength(int2 worldCell, int worldSeed, CaveLayoutConfig config)
+    {
+        worldCell = config.Topology.Normalize(worldCell);
         float2 seedOffset = TerrainNoiseKernel.GetSeedOffset(worldSeed, NoiseType.Height);
-        float broad = TerrainNoiseKernel.SampleCNoise01(new float2(
-            (worldCell.x + seedOffset.x + 1703f) * 0.052f,
-            (worldCell.y + seedOffset.y - 2909f) * 0.052f));
-        float detail = TerrainNoiseKernel.SampleCNoise01(new float2(
-            (worldCell.x - seedOffset.x + 421f) * 0.14f,
-            (worldCell.y - seedOffset.y + 947f) * 0.14f));
+        float broad = SamplePeriodicNoise(
+            new float2(worldCell.x, worldCell.y),
+            new float2(seedOffset.x + 1703f, seedOffset.y - 2909f),
+            0.052f,
+            config.Topology);
+        float detail = SamplePeriodicNoise(
+            new float2(worldCell.x, worldCell.y),
+            new float2(-seedOffset.x + 421f, -seedOffset.y + 947f),
+            0.14f,
+            config.Topology);
         return broad * 0.72f + detail * 0.28f;
     }
 
@@ -141,7 +163,7 @@ public static class CaveLayoutSampler
             return false;
 
         int2 chunkSize = math.max(new int2(1), config.ChunkSize);
-        int2 currentChunk = GetChunkOrigin(point, chunkSize);
+        int2 currentChunk = GetChunkOrigin(point, chunkSize, config);
         float safeRadius = math.max(1f, config.EntranceSafeRadius);
         float connectionReach = RegionSize + MaximumRoomRadius + safeRadius;
         int searchX = math.max(1, (int)math.ceil(connectionReach / chunkSize.x));
@@ -152,6 +174,7 @@ public static class CaveLayoutSampler
             for (int chunkY = -searchY; chunkY <= searchY; chunkY++)
             {
                 int2 chunkOrigin = currentChunk + new int2(chunkX * chunkSize.x, chunkY * chunkSize.y);
+                chunkOrigin = NormalizeChunkOrigin(chunkOrigin, config);
                 if (!DimensionPortalLayout.ShouldGenerateEntrance(chunkOrigin, worldSeed, chance))
                     continue;
 
@@ -163,16 +186,18 @@ public static class CaveLayoutSampler
                         worldSeed,
                         candidateIndex);
                     float2 entranceCenter = new float2(entranceCell.x + 0.5f, entranceCell.y + 0.5f);
-                    if (math.lengthsq(point - entranceCenter) <= safeRadius * safeRadius)
+                    entranceCenter = config.Topology.Normalize(entranceCenter);
+                    if (DistanceSq(point, entranceCenter, config) <= safeRadius * safeRadius)
                         return true;
 
-                    int2 region = GetRegionCoordinates(entranceCenter);
-                    RoomData room = CreateRoom(region.x, region.y, worldSeed);
+                    int2 region = GetRegionCoordinates(entranceCenter, config);
+                    RoomData room = CreateRoom(region.x, region.y, worldSeed, config);
                     if (IsInsideTunnel(
                             point,
                             entranceCenter,
                             room.Center,
-                            Hash(worldSeed, entranceCell.x, entranceCell.y, 7919 + candidateIndex * 397)))
+                            Hash(worldSeed, entranceCell.x, entranceCell.y, 7919 + candidateIndex * 397),
+                            config))
                     {
                         return true;
                     }
@@ -183,36 +208,55 @@ public static class CaveLayoutSampler
         return false;
     }
 
-    private static RoomData CreateRoom(int regionX, int regionY, int worldSeed)
+    private static RoomData CreateRoom(
+        int regionX,
+        int regionY,
+        int worldSeed,
+        CaveLayoutConfig config)
     {
-        uint state = Hash(worldSeed, regionX, regionY, 17);
-        float jitter = RegionSize * 0.32f;
+        int2 regionCount = GetRegionCount(config);
+        int2 canonicalRegion = CanonicalRegion(new int2(regionX, regionY), regionCount, config.Topology.IsWrapped);
+        uint state = Hash(worldSeed, canonicalRegion.x, canonicalRegion.y, 17);
+        float2 regionExtent = GetRegionExtent(config, regionCount);
+        float2 jitter = regionExtent * 0.32f;
         return new RoomData
         {
-            Center = new float2(
-                regionX * RegionSize + RegionSize * 0.5f + math.lerp(-jitter, jitter, NextUnitFloat(ref state)),
-                regionY * RegionSize + RegionSize * 0.5f + math.lerp(-jitter, jitter, NextUnitFloat(ref state))),
+            Center = GetRegionMin(config, canonicalRegion, regionExtent) + regionExtent * 0.5f +
+                     new float2(
+                         math.lerp(-jitter.x, jitter.x, NextUnitFloat(ref state)),
+                         math.lerp(-jitter.y, jitter.y, NextUnitFloat(ref state))),
             RadiusX = math.lerp(MinimumRoomRadius, MaximumRoomRadius, NextUnitFloat(ref state)),
             RadiusY = math.lerp(MinimumRoomRadius * 0.82f, MaximumRoomRadius * 0.94f, NextUnitFloat(ref state)),
             AngleRadians = math.lerp(-math.PI, math.PI, NextUnitFloat(ref state))
         };
     }
 
-    private static bool IsInsideRoom(float2 point, RoomData room, int worldSeed)
+    private static bool IsInsideRoom(
+        float2 point,
+        RoomData room,
+        int worldSeed,
+        CaveLayoutConfig config)
     {
-        float2 delta = point - room.Center;
+        float2 delta = ShortestDelta(room.Center, point, config);
         math.sincos(room.AngleRadians, out float sin, out float cos);
         float localX = delta.x * cos + delta.y * sin;
         float localY = -delta.x * sin + delta.y * cos;
         float normalizedDistance = math.sqrt(
             localX * localX / (room.RadiusX * room.RadiusX) +
             localY * localY / (room.RadiusY * room.RadiusY));
-        float edgeNoise = SampleEdgeNoise(point, worldSeed, 0.16f, 503f);
+        float edgeNoise = SampleEdgeNoise(point, worldSeed, 0.16f, 503f, config);
         return normalizedDistance <= 1f + (edgeNoise - 0.5f) * 0.24f;
     }
 
-    private static bool IsInsideTunnel(float2 point, float2 start, float2 end, uint state)
+    private static bool IsInsideTunnel(
+        float2 point,
+        float2 start,
+        float2 end,
+        uint state,
+        CaveLayoutConfig config)
     {
+        end = start + ShortestDelta(start, end, config);
+        point = start + ShortestDelta(start, point, config);
         float2 direction = end - start;
         float length = math.length(direction);
         if (length <= 0.001f)
@@ -222,7 +266,7 @@ public static class CaveLayoutSampler
         float2 bendA = math.lerp(start, end, 0.34f) + perpendicular * math.lerp(-5.5f, 5.5f, NextUnitFloat(ref state));
         float2 bendB = math.lerp(start, end, 0.67f) + perpendicular * math.lerp(-5.5f, 5.5f, NextUnitFloat(ref state));
         float radius = math.lerp(MinimumTunnelRadius, MaximumTunnelRadius, NextUnitFloat(ref state));
-        float edgeNoise = SampleEdgeNoise(point, (int)state, 0.21f, 883f);
+        float edgeNoise = SampleEdgeNoise(point, (int)state, 0.21f, 883f, config);
         float effectiveRadius = radius + (edgeNoise - 0.5f) * 0.55f;
 
         float distance = math.min(
@@ -242,22 +286,129 @@ public static class CaveLayoutSampler
         return math.distance(point, start + segment * t);
     }
 
-    private static float SampleEdgeNoise(float2 point, int worldSeed, float scale, float salt)
+    private static float SampleEdgeNoise(
+        float2 point,
+        int worldSeed,
+        float scale,
+        float salt,
+        CaveLayoutConfig config)
     {
         float2 seedOffset = TerrainNoiseKernel.GetSeedOffset(worldSeed, NoiseType.Height);
-        return TerrainNoiseKernel.SampleCNoise01(new float2(
-            (point.x + seedOffset.x + salt) * scale,
-            (point.y + seedOffset.y - salt) * scale));
+        return SamplePeriodicNoise(
+            point,
+            new float2(seedOffset.x + salt, seedOffset.y - salt),
+            scale,
+            config.Topology);
     }
 
-    private static int2 GetRegionCoordinates(float2 point)
+    private static int2 GetRegionCoordinates(float2 point, CaveLayoutConfig config)
     {
-        return (int2)math.floor(point / RegionSize);
+        if (!config.Topology.IsWrapped)
+            return (int2)math.floor(point / RegionSize);
+
+        int2 count = GetRegionCount(config);
+        float2 extent = GetRegionExtent(config, count);
+        float2 normalized = config.Topology.Normalize(point);
+        return CanonicalRegion(
+            (int2)math.floor((normalized - config.Topology.Min) / extent),
+            count,
+            true);
     }
 
-    private static int2 GetChunkOrigin(float2 point, int2 chunkSize)
+    private static int2 GetChunkOrigin(float2 point, int2 chunkSize, CaveLayoutConfig config)
     {
-        return (int2)math.floor(point / chunkSize) * chunkSize;
+        if (!config.Topology.IsWrapped)
+            return (int2)math.floor(point / chunkSize) * chunkSize;
+
+        float2 normalized = config.Topology.Normalize(point);
+        int2 relative = (int2)math.floor(normalized) - config.Topology.Min;
+        return config.Topology.Min + (relative / chunkSize) * chunkSize;
+    }
+
+    private static int2 NormalizeChunkOrigin(int2 chunkOrigin, CaveLayoutConfig config)
+    {
+        return config.Topology.IsWrapped
+            ? config.Topology.Normalize(chunkOrigin)
+            : chunkOrigin;
+    }
+
+    private static float DistanceSq(float2 first, float2 second, CaveLayoutConfig config)
+    {
+        return math.lengthsq(ShortestDelta(first, second, config));
+    }
+
+    private static float2 ShortestDelta(float2 from, float2 to, CaveLayoutConfig config)
+    {
+        return config.Topology.ShortestDelta(from, to);
+    }
+
+    private static int2 GetRegionCount(CaveLayoutConfig config)
+    {
+        return config.Topology.IsWrapped
+            ? math.max(new int2(1), (int2)math.round(
+                new float2(config.Topology.Span.x, config.Topology.Span.y) / RegionSize))
+            : new int2(int.MaxValue);
+    }
+
+    private static float2 GetRegionExtent(CaveLayoutConfig config, int2 regionCount)
+    {
+        return config.Topology.IsWrapped
+            ? new float2(config.Topology.Span.x, config.Topology.Span.y) / regionCount
+            : new float2(RegionSize);
+    }
+
+    private static float2 GetRegionMin(
+        CaveLayoutConfig config,
+        int2 region,
+        float2 regionExtent)
+    {
+        return config.Topology.IsWrapped
+            ? new float2(config.Topology.Min.x, config.Topology.Min.y) + region * regionExtent
+            : region * RegionSize;
+    }
+
+    private static int2 CanonicalRegion(int2 region, int2 count, bool wrapped)
+    {
+        if (!wrapped)
+            return region;
+
+        int x = region.x % count.x;
+        int y = region.y % count.y;
+        if (x < 0) x += count.x;
+        if (y < 0) y += count.y;
+        return new int2(x, y);
+    }
+
+    private static uint HashRoom(
+        CaveLayoutConfig config,
+        int worldSeed,
+        int regionX,
+        int regionY,
+        int salt)
+    {
+        int2 canonical = CanonicalRegion(
+            new int2(regionX, regionY),
+            GetRegionCount(config),
+            config.Topology.IsWrapped);
+        return Hash(worldSeed, canonical.x, canonical.y, salt);
+    }
+
+    private static float SamplePeriodicNoise(
+        float2 point,
+        float2 offset,
+        float scale,
+        WorldTopologyDomain topology)
+    {
+        if (!topology.IsWrapped)
+            return TerrainNoiseKernel.SampleCNoise01((point + offset) * scale);
+
+        float2 span = new float2(topology.Span.x, topology.Span.y);
+        float2 repeat = math.max(new float2(1f), math.round(span * scale));
+        float2 phase = offset * scale;
+        phase -= math.floor(phase / repeat) * repeat;
+        float2 samplePosition = (point - topology.Min) / span * repeat + phase;
+        float value = noise.pnoise(samplePosition, repeat) * 0.5f + 0.5f;
+        return math.isfinite(value) ? math.saturate(value) : TerrainNoiseKernel.DefaultChannelValue;
     }
 
     internal static uint Hash(int worldSeed, int x, int y, int salt)

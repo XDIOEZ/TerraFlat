@@ -90,8 +90,9 @@ namespace FlatWorld.Networking.Gameplay
             int colorIndex = Mathf.Abs(playerIndex) % PlayerColors.Length;
             playerColor = PlayerColors[colorIndex];
             authoritativePosition = transform.position;
-            remoteTargetPosition = transform.position;
-            remoteSnapshotStartPosition = transform.position;
+            authoritativePosition = WorldTopologyRuntime.NormalizePosition(authoritativePosition);
+            remoteTargetPosition = authoritativePosition;
+            remoteSnapshotStartPosition = authoritativePosition;
             authoritativeVelocity = Vector2.zero;
             authoritativeFacingLeft = false;
             authoritativeVisualState = NetworkPlayerVisualState.Idle;
@@ -178,7 +179,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (corePlayer != null)
             {
-                Vector3 itemPosition = corePlayer.transform.position;
+                Vector3 itemPosition = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
                 if (IsValidPosition(itemPosition))
                     transform.position = itemPosition;
             }
@@ -188,6 +189,7 @@ namespace FlatWorld.Networking.Gameplay
                 Vector2 input = ReadMovementInput();
                 Vector3 nextPosition = transform.position +
                                        new Vector3(input.x, input.y, 0f) * (movementSpeed * Time.deltaTime);
+                nextPosition = WorldTopologyRuntime.NormalizePosition(nextPosition);
                 if (IsValidPosition(nextPosition))
                     transform.position = nextPosition;
             }
@@ -322,14 +324,15 @@ namespace FlatWorld.Networking.Gameplay
             if (!IsValidPosition(requestedPosition))
                 return;
 
-            requestedPosition.z = 0f;
             Vector3 acceptedPosition = IsValidPosition(authoritativePosition)
                 ? authoritativePosition
                 : transform.position;
-            Vector3 delta = requestedPosition - acceptedPosition;
             float maxStep = Mathf.Max(0.5f, movementSpeed * 0.35f);
-            if (delta.sqrMagnitude > maxStep * maxStep)
-                requestedPosition = acceptedPosition + Vector3.ClampMagnitude(delta, maxStep);
+            requestedPosition = CalculateAcceptedPosition(
+                acceptedPosition,
+                requestedPosition,
+                maxStep,
+                SaveDataMgr.Instance?.Active_PlanetData);
 
             float maxVelocity = Mathf.Max(movementSpeed * 4f, remotePositionLerpSpeed);
             if (!IsValidVelocity(requestedVelocity))
@@ -361,11 +364,13 @@ namespace FlatWorld.Networking.Gameplay
 
             BeginRemoteSnapshot(newPosition, authoritativeVelocity);
             float snapDistance = isOwned ? 4f : 10f;
-            if ((transform.position - newPosition).sqrMagnitude > snapDistance * snapDistance)
+            Vector2 correctionDelta = WorldTopologyRuntime.ShortestDelta(transform.position, newPosition);
+            if (correctionDelta.sqrMagnitude > snapDistance * snapDistance)
             {
-                transform.position = newPosition;
-                remoteSnapshotStartPosition = newPosition;
-                SyncCorePlayerPosition(newPosition);
+                Vector3 canonicalPosition = WorldTopologyRuntime.NormalizePosition(newPosition);
+                transform.position = canonicalPosition;
+                remoteSnapshotStartPosition = canonicalPosition;
+                SyncCorePlayerPosition(canonicalPosition);
             }
         }
 
@@ -389,8 +394,9 @@ namespace FlatWorld.Networking.Gameplay
                 : networkSendInterval;
             lastRemoteSnapshotTime = now;
 
-            remoteSnapshotStartPosition = transform.position;
-            remoteTargetPosition = targetPosition;
+            remoteSnapshotStartPosition = WorldTopologyRuntime.NormalizePosition(transform.position);
+            Vector2 shortestDelta = WorldTopologyRuntime.ShortestDelta(remoteSnapshotStartPosition, targetPosition);
+            remoteTargetPosition = remoteSnapshotStartPosition + new Vector3(shortestDelta.x, shortestDelta.y, 0f);
             remoteVelocity = IsValidVelocity(velocity) ? velocity : Vector2.zero;
             remoteSnapshotElapsed = 0f;
             remoteSnapshotDuration = Mathf.Clamp(
@@ -419,6 +425,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!IsValidPosition(visualPosition))
                 return;
 
+            visualPosition = WorldTopologyRuntime.NormalizePosition(visualPosition);
             transform.position = visualPosition;
             SyncCorePlayerPosition(visualPosition);
 
@@ -724,6 +731,43 @@ namespace FlatWorld.Networking.Gameplay
                    !float.IsNaN(velocity.y) && !float.IsInfinity(velocity.y);
         }
 
+        /// <summary>
+        /// Pure server movement validator used by runtime synchronization and smoke tests.
+        /// Wrapped seam crossings use their shortest displacement before step clamping.
+        /// </summary>
+        public static Vector3 CalculateAcceptedPosition(
+            Vector3 acceptedPosition,
+            Vector3 requestedPosition,
+            float maxStep,
+            PlanetData planetData)
+        {
+            maxStep = Mathf.Max(0f, maxStep);
+            acceptedPosition.z = 0f;
+            requestedPosition.z = 0f;
+
+            Vector3 delta;
+            if (WorldTopologyBounds.TryCreate(planetData, out WorldTopologyBounds bounds))
+            {
+                acceptedPosition = bounds.NormalizePosition(acceptedPosition);
+                requestedPosition = bounds.NormalizePosition(requestedPosition);
+                Vector2 shortest = bounds.ShortestDelta(acceptedPosition, requestedPosition);
+                delta = new Vector3(shortest.x, shortest.y, 0f);
+            }
+            else
+            {
+                delta = requestedPosition - acceptedPosition;
+            }
+
+            if (delta.sqrMagnitude > maxStep * maxStep)
+                delta = Vector3.ClampMagnitude(delta, maxStep);
+
+            Vector3 result = acceptedPosition + delta;
+            result.z = 0f;
+            return WorldTopologyBounds.TryCreate(planetData, out bounds)
+                ? bounds.NormalizePosition(result)
+                : result;
+        }
+
         private Vector2 ReadOwnedVelocity()
         {
             Vector3 currentPosition = corePlayer != null ? corePlayer.transform.position : transform.position;
@@ -733,7 +777,10 @@ namespace FlatWorld.Networking.Gameplay
             {
                 float elapsed = now - lastOwnedMotionSampleTime;
                 if (elapsed > 0.0001f)
-                    sampledVelocity = (currentPosition - lastOwnedMotionSamplePosition) / elapsed;
+                {
+                    Vector2 delta = WorldTopologyRuntime.ShortestDelta(lastOwnedMotionSamplePosition, currentPosition);
+                    sampledVelocity = delta / elapsed;
+                }
             }
 
             lastOwnedMotionSamplePosition = currentPosition;

@@ -6,10 +6,22 @@
 - 场景编排：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.cs`
 - 复杂领域场景：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.<Subsystem>.cs`
 - 测试入口：`.agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path`
+- 配置模型：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathConfiguration.cs`
+- 生产系统执行器：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathExecutor.cs`
+- 地图生成临时入口：`Assets/5_Scripts/5-3_GamePlay/Map/WorldGenerationRuntimeHooks.cs`
 
 `--golden-path` 通过 Editor 状态机从真实 `GameStartScene` 启动；功能场景以上述 Editor 文件为唯一权威入口，不要在 Unity Test Framework 测试中再复制一套。
 命令在接管每个请求前强制刷新 AssetDatabase，确保 Editor 失焦或关闭 Auto Refresh 时也不会运行旧脚本。
 进入真实启动场景前会临时启用标准 Domain Reload，并在结束后按磁盘 `EditorSettings.asset` 的原值恢复，避免前一个 PlayMode 测试留下静态单例或事件。
+
+可用 `--golden-config <partial.json>` 或重复的 `--golden-set section.field=<json-value>` 构造本次场景。结果 JSON 的 `configuration` 保存合并、验证后的完整快照；复现失败时直接复用该对象。临时配置只能调整隔离运行时实例，禁止用 Editor API 写 Prefab、SO 或 ProjectSettings 来构造场景。
+
+## 运行产物与审计
+
+- 每次请求的结构化结果位于 `Library/FlatWorldSkillTests/golden-result-<request-id>.json`。不能只看终端 `PASS`；必须打开该文件，确认 `state=completed`、`outcome=Passed`、`failed=0` 且 `failures` 为空。
+- 主流程监听本次 Play Mode 的 `Error`、`Exception` 和 `Assert`，出现时会把错误消息与堆栈写入结构化失败。运行前用 Unity MCP 清空 Console，运行后用 MCP `read_console` 读取错误详情；不要扫描完整 `Editor.log`。MCP 断线时先重连正确的 Unity 实例。
+- 三张截图位于 `Library/FlatWorldSkillTests/GoldenPathCaptures/<request-id>/initial.png`、`middle.png` 和 `final.png`，并通过结果 JSON 的 `screenshotPaths` 返回。Agent 必须逐张实际打开，检查黑屏、空白、纯色、紫色材质、错误遮罩，以及玩家、地形、主要 HUD 和阶段变化是否正常。
+- 截图审计只补充视觉覆盖，不替代运行时状态断言。结构化结果、运行时报错检查或任一截图审计失败时，都应诊断、修复并重新执行完整黄金路径。
 
 ## 阶段选择
 
@@ -37,6 +49,7 @@
 | 场景 | 安排阶段 | 观测与断言 | 清理 |
 | --- | --- | --- | --- |
 | 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
+| 有限世界右边界环绕 | `OnWorldReady` 后、首次截图和长距离移动前，将真实玩家移动到右边界并通过 `Mover.Move` 越界 | 等待规范目标 Chunk Ready，验证环绕余量、玩家数据、Chunk 字典和地图存档键；恢复原位置并再次等待原 Chunk Ready | 通过和失败路径都恢复位置、速度与移动速度 |
 
 ## 示例：燃烧 Buff
 

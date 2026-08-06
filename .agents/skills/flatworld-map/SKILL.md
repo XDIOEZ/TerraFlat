@@ -120,3 +120,9 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 ## 修改后维护本 Skill
 
 移动生成器、地图 Prefab、Biome/Structure/Tile 资源，改变 Chunk 生命周期、生成顺序、MapSave 结构或就绪条件后，必须同步更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
+
+## 有限环绕世界契约（2026-08-06）
+
+- `WorldTopologyBounds` 是世界坐标、格子和 Chunk 原点归一化及最短环面位移的唯一公共入口。
+- `ChunkMgr` 的查询、队列、窗口、字典和 MapSave 键必须使用规范 Chunk 原点；窗口必须去重，有限世界不得产生边界外键。
+- 一期不承诺周期性地形接缝或边缘镜像画面；相关回归位于 `WorldTopologySmokeTests`（`Map.Smoke`）。

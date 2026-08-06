@@ -70,6 +70,7 @@ public class Mod_FarmlandSupply : Module
         }
 
         Vector3 mouseWorldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mouseWorldPosition = WorldTopologyRuntime.NormalizePosition(mouseWorldPosition);
         if (!TryResolveFarmland(mouseWorldPosition, out Vector2Int tilePos, out TileData_Farmland farmlandData))
         {
             Debug.LogWarning($"[Mod_FarmlandSupply] {mouseWorldPosition} 不是耕地，未消耗物品", item);

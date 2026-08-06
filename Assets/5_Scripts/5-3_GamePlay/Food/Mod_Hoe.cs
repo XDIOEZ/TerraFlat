@@ -92,6 +92,7 @@ public partial class Mod_Hoe : Module
 
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
+        mouseWorldPos = WorldTopologyRuntime.NormalizePosition(mouseWorldPos);
 
         if (!TryResolveMapByWorldPos(mouseWorldPos, out Map targetMap))
         {

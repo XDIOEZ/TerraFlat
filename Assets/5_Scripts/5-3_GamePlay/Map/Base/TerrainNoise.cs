@@ -122,30 +122,81 @@ public sealed class RegionalRandomWindFieldProvider : IWindFieldProvider
             config);
         return new WindSample(new Vector2(direction.x, direction.y));
     }
+
+    public WindSample Sample(
+        Vector2Int worldPosition,
+        int worldSeed,
+        in WindFieldConfig config,
+        in WorldTopologyBounds bounds)
+    {
+        float2 direction = WindFieldKernel.Sample(
+            new float2(worldPosition.x, worldPosition.y),
+            worldSeed,
+            config,
+            bounds.ToDomain());
+        return new WindSample(new Vector2(direction.x, direction.y));
+    }
 }
 
 internal static class WindFieldKernel
 {
     internal static float2 Sample(float2 worldPosition, int worldSeed, in WindFieldConfig config)
     {
+        return Sample(worldPosition, worldSeed, config, default);
+    }
+
+    internal static float2 Sample(
+        float2 worldPosition,
+        int worldSeed,
+        in WindFieldConfig config,
+        in WorldTopologyDomain domain)
+    {
         float regionSize = math.max(8f, math.isfinite(config.RegionSize) ? config.RegionSize : 256f);
-        float2 gridPosition = worldPosition / regionSize;
+        float2 gridPosition;
+        int2 repeat = default;
+        if (domain.IsWrapped)
+        {
+            repeat = math.max(new int2(1), (int2)math.round(new float2(domain.Span.x, domain.Span.y) / regionSize));
+            gridPosition = (worldPosition - domain.Min) /
+                           new float2(domain.Span.x, domain.Span.y) * repeat;
+        }
+        else
+        {
+            gridPosition = worldPosition / regionSize;
+        }
+
         int2 cell = (int2)math.floor(gridPosition);
         float2 t = math.frac(gridPosition);
         t = t * t * (3f - 2f * t);
 
+        int2 c00 = CanonicalCell(cell, repeat, domain.IsWrapped);
+        int2 c10 = CanonicalCell(cell + new int2(1, 0), repeat, domain.IsWrapped);
+        int2 c01 = CanonicalCell(cell + new int2(0, 1), repeat, domain.IsWrapped);
+        int2 c11 = CanonicalCell(cell + new int2(1, 1), repeat, domain.IsWrapped);
+
         float2 bottom = math.lerp(
-            DirectionAt(cell.x, cell.y, worldSeed, config.SeedSalt),
-            DirectionAt(cell.x + 1, cell.y, worldSeed, config.SeedSalt),
+            DirectionAt(c00.x, c00.y, worldSeed, config.SeedSalt),
+            DirectionAt(c10.x, c10.y, worldSeed, config.SeedSalt),
             t.x);
         float2 top = math.lerp(
-            DirectionAt(cell.x, cell.y + 1, worldSeed, config.SeedSalt),
-            DirectionAt(cell.x + 1, cell.y + 1, worldSeed, config.SeedSalt),
+            DirectionAt(c01.x, c01.y, worldSeed, config.SeedSalt),
+            DirectionAt(c11.x, c11.y, worldSeed, config.SeedSalt),
             t.x);
         float2 blended = math.lerp(bottom, top, t.y);
         if (!math.all(math.isfinite(blended)) || math.lengthsq(blended) <= 0.000001f)
-            return DirectionAt(cell.x, cell.y, worldSeed, config.SeedSalt);
+            return DirectionAt(c00.x, c00.y, worldSeed, config.SeedSalt);
         return math.normalize(blended);
+    }
+
+    private static int2 CanonicalCell(int2 cell, int2 repeat, bool wrapped)
+    {
+        if (!wrapped)
+            return cell;
+        int x = cell.x % repeat.x;
+        int y = cell.y % repeat.y;
+        if (x < 0) x += repeat.x;
+        if (y < 0) y += repeat.y;
+        return new int2(x, y);
     }
 
     private static float2 DirectionAt(int regionX, int regionY, int worldSeed, int seedSalt)
@@ -202,7 +253,7 @@ public static class ClimateFieldKernel
 
 public static class TerrainGenerationSignature
 {
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     public static uint CalculateDefault()
     {
@@ -411,6 +462,21 @@ public static class TerrainNoiseKernel
         return BurstSampleFunction.Invoke(config, worldScaledPosition, worldSeed);
     }
 
+    public static float Sample(
+        in TerrainNoiseConfig config,
+        Vector2 worldPosition,
+        float noiseScale,
+        int worldSeed,
+        in WorldTopologyDomain domain)
+    {
+        return SampleBurst(
+            config,
+            new float2(worldPosition.x, worldPosition.y),
+            noiseScale,
+            worldSeed,
+            domain);
+    }
+
     [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     [MonoPInvokeCallback(typeof(SampleFunction))]
     private static float SampleCompiled(
@@ -443,6 +509,53 @@ public static class TerrainNoiseKernel
         for (int octave = 0; octave < octaves; octave++)
         {
             float value = noise.cnoise(samplePosition * octaveFrequency) * 0.5f + 0.5f;
+            sum += math.saturate(value) * amplitude;
+            amplitudeSum += amplitude;
+            amplitude *= persistence;
+            octaveFrequency *= lacunarity;
+        }
+
+        if (!math.isfinite(sum) || !math.isfinite(amplitudeSum) || amplitudeSum <= 0.000001f)
+            return DefaultChannelValue;
+
+        return math.saturate(sum / amplitudeSum);
+    }
+
+    internal static float SampleBurst(
+        in TerrainNoiseConfig config,
+        float2 worldPosition,
+        float noiseScale,
+        int worldSeed,
+        in WorldTopologyDomain domain)
+    {
+        if (!domain.IsWrapped)
+            return SampleBurst(config, worldPosition * noiseScale, worldSeed);
+
+        float safeNoiseScale = math.max(0f, math.isfinite(noiseScale) ? noiseScale : PlanetData.DefaultNoiseScale);
+        float coordScale = FinitePositiveOr(config.coordScale, 1f);
+        float baseFrequency = FinitePositiveOr(config.frequency, 0.01f);
+        float lacunarity = FinitePositiveOr(config.lacunarity, 2f);
+        float persistence = math.clamp(FiniteOr(config.persistence, 0.5f), 0f, 1f);
+        int octaves = math.clamp(config.octaves, 1, 12);
+        float2 offset = new float2(
+            FiniteOr(config.coordOffset.x, 0f),
+            FiniteOr(config.coordOffset.y, 0f)) + GetSeedOffset(worldSeed, config.noiseType);
+        float2 relative = worldPosition - domain.Min;
+        float2 span = new float2(domain.Span.x, domain.Span.y);
+
+        float sum = 0f;
+        float amplitudeSum = 0f;
+        float amplitude = 1f;
+        float octaveFrequency = baseFrequency;
+        for (int octave = 0; octave < octaves; octave++)
+        {
+            float2 repeat = math.max(
+                new float2(1f),
+                math.round(span * safeNoiseScale * coordScale * octaveFrequency));
+            float2 phase = offset * octaveFrequency;
+            phase -= math.floor(phase / repeat) * repeat;
+            float2 samplePosition = relative / span * repeat + phase;
+            float value = noise.pnoise(samplePosition, repeat) * 0.5f + 0.5f;
             sum += math.saturate(value) * amplitude;
             amplitudeSum += amplitude;
             amplitude *= persistence;

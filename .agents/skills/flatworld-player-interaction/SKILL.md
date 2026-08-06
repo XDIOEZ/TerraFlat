@@ -62,6 +62,7 @@ Input System / PlayerInputActions
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-06：正式 Player 根实体碰撞体固定使用 Layer 10 的 `Player` 物理层；Physics 2D 仅关闭 Player↔Player，玩家仍与地图、建筑、怪物和伤害层碰撞，单机与联机核心角色共用该规则。
 - 2026-08-04：GM Buff 分发使用本地玩家 `GameController` 的左键事件选择世界目标；只处理带 `BuffManager` 的对象，避免向不兼容对象运行时注入模块。
 - 2026-07-31：正式矿坑交互传递入口 Item GUID；只有已安装 `MineEntrance` 可进入矿洞，`CaveExit` 返回绑定地表入口，Summoner 交互会被拒绝。
 - 2026-07-31：手柄 Binding 与双 Control Scheme 固化进输入资产；绑定服务新增键鼠/手柄分页、Button/Vector2 重绑、同设备冲突检测和分页恢复默认，并保留设备切换事件与可嵌套玩法输入锁。
@@ -74,7 +75,7 @@ Input System / PlayerInputActions
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/PlayerInteraction/PlayerInteractionSmokeTests.cs`；当前覆盖玩家实体、输入控制器、绑定服务、玩家 Prefab、双 Control Scheme、关键手柄 Binding、键鼠/手柄分页条目、Vector2 手柄控制和分页恢复默认隔离。
+- 基础测试脚本：`Assets/GameTest/PlayerInteraction/PlayerInteractionSmokeTests.cs`；当前覆盖玩家实体、输入控制器、绑定服务、玩家 Prefab、Player 物理层与自碰撞屏蔽、双 Control Scheme、关键手柄 Binding、键鼠/手柄分页条目、Vector2 手柄控制和分页恢复默认隔离。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；玩家交互测试约定目录：`Assets/GameTest/PlayerInteraction/`；场景目录：`Assets/GameTest/Scenes/PlayerInteraction/`；冒烟分类：`PlayerInteraction.Smoke`。
 - 新增输入、移动、摄像机、焦点、交互发送接收或玩家 Prefab 行为时必须增加系统测试；修复 Bug 时先增加回归测试。输入到移动或交互主流程变化时同步更新玩家冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；输入测试必须使用可注入输入，不能依赖真实鼠标、键盘或手柄操作。
@@ -86,3 +87,17 @@ Input System / PlayerInputActions
 ## 修改后维护本 Skill
 
 改变 Input Action 名称、玩家 Prefab、控制器模块、交互协议、摄像机/焦点路径或本地玩家解析方式后，必须更新本 Skill；影响 UI、网络或 Item 注册时同步更新对应 Skill。
+
+## 玩家环绕契约（2026-08-06）
+
+- `Player.prefab` 根节点挂载 `PlayerWorldWrapController`；仅 `Player.IsLocalProfile` 且当前拓扑为 Wrapped 时处理 Rigidbody2D 越界。
+- 环绕必须保留速度、Z 与越界余量，同步 `Data_Player.transform.position`，并通知 Chunk/导航窗口立即刷新。
+- URP 边缘镜像相机必须作为主 Base Camera 的 Overlay camera stack 渲染；独立 Base 相机会清空颜色缓冲，在边界截图中形成黑块。镜像相机不渲染 UI、没有 Collider/AudioListener，退出世界时从 stack 移除。
+- AI、掉落物、投射物等其他动态实体不在一期范围；四向与无限模式回归位于 `PlayerWorldWrapSmokeTests`。
+
+## 玩家物理碰撞契约（2026-08-06）
+
+- `Player.prefab` 根节点及其非 Trigger 实体碰撞体固定使用 Layer 10 的 `Player` 层；不得递归覆盖模块或攻击 Trigger 的专用 Layer。
+- Physics 2D Layer Collision Matrix 只关闭 `Player ↔ Player`；玩家之间可以重叠，不产生推挤或阻挡。
+- `Player` 必须继续与 `Default`、`Collider`、`DamageReciver` 和 `DamageSender` 碰撞；攻击、治疗、拾取与交互由原系统继续结算。
+- `FlatWorldNetworkPlayer.prefab` 保持无 Collider 的网络代理；本地和远程实体统一由核心 Player Prefab 提供碰撞规则，无需增加 Mirror 同步字段。

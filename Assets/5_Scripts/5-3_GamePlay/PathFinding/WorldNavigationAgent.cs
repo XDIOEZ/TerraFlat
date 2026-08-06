@@ -128,7 +128,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         bool firstDestination = !hasDestination;
         float destinationChangeDistance = EffectiveDestinationChangeDistance;
         bool changed = firstDestination ||
-                       (target - submittedDestination).sqrMagnitude >
+                       WorldTopologyRuntime.SqrDistance(target, submittedDestination) >
                        destinationChangeDistance * destinationChangeDistance;
 
         destination = target;
@@ -175,7 +175,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         ReachedDestination = true;
         CancelPendingRequest();
         if (hasDestination &&
-            (!hasPath || (destination - activePathDestination).sqrMagnitude > 0.0001f))
+            (!hasPath || WorldTopologyRuntime.SqrDistance(destination, activePathDestination) > 0.0001f))
             destinationDirty = true;
         ApplyVelocity(Vector2.zero, 0f);
 
@@ -278,7 +278,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         }
 
         Vector2 waypoint = waypoints[waypointIndex];
-        Vector2 delta = waypoint - current;
+        Vector2 delta = WorldTopologyRuntime.ShortestDelta(current, waypoint);
         float distance = delta.magnitude;
         if (distance <= 0.0001f)
         {
@@ -332,7 +332,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         float destinationChangeDistance = EffectiveDestinationChangeDistance;
         bool destinationMovedToAnotherCell =
-            (destination - submittedDestination).sqrMagnitude >
+            WorldTopologyRuntime.SqrDistance(destination, submittedDestination) >
             destinationChangeDistance * destinationChangeDistance &&
             WorldNavigationGrid.WorldToCell(destination) !=
             WorldNavigationGrid.WorldToCell(submittedDestination);
@@ -401,7 +401,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         {
             bool finalWaypoint = waypointIndex == waypoints.Length - 1;
             float threshold = finalWaypoint ? stopDistance : EffectiveWaypointDistance;
-            if ((waypoints[waypointIndex] - current).sqrMagnitude > threshold * threshold)
+            if (WorldTopologyRuntime.SqrDistance(current, waypoints[waypointIndex]) > threshold * threshold)
                 break;
 
             waypointIndex++;
@@ -468,7 +468,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
     private void RecoverIfStalled(Vector2 current)
     {
-        if ((current - lastProgressPosition).sqrMagnitude >=
+        if (WorldTopologyRuntime.SqrDistance(lastProgressPosition, current) >=
             progressDistanceThreshold * progressDistanceThreshold)
         {
             lastProgressPosition = current;
@@ -497,17 +497,17 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     }
 
     private bool HasReachedCurrentDestination(Vector2 current)
-        => (current - destination).sqrMagnitude <= stopDistance * stopDistance;
+        => WorldTopologyRuntime.SqrDistance(current, destination) <= stopDistance * stopDistance;
 
     private bool HasReachedResolvedDestination(Vector2 current)
     {
         if (!pathReachesDestination ||
-            (destination - activePathDestination).sqrMagnitude > 0.0001f)
+            WorldTopologyRuntime.SqrDistance(destination, activePathDestination) > 0.0001f)
         {
             return false;
         }
 
-        return (current - resolvedDestination).sqrMagnitude <= stopDistance * stopDistance;
+        return WorldTopologyRuntime.SqrDistance(current, resolvedDestination) <= stopDistance * stopDistance;
     }
 
     private void InvalidateCurrentPath()
@@ -555,12 +555,14 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         output.Add(new Vector3(current.x, current.y, z));
 
         int firstWaypoint = Mathf.Max(0, waypointIndex);
+        Vector2 previous = current;
         for (int i = firstWaypoint; i < waypoints.Length; i++)
         {
-            Vector2 waypoint = waypoints[i];
+            Vector2 waypoint = WorldTopologyRuntime.NearestImagePosition(previous, waypoints[i]);
             Vector3 point = new(waypoint.x, waypoint.y, z);
             if ((point - output[^1]).sqrMagnitude > 0.0001f)
                 output.Add(point);
+            previous = waypoint;
         }
 
         return output.Count > 1;

@@ -437,7 +437,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		// 已有闲逛目标，检查是否到达
 		if (_hasWanderTarget)
 		{
-			float distance = Vector2.Distance(transform.position, _wanderTarget);
+			float distance = WorldTopologyRuntime.Distance(transform.position, _wanderTarget);
 			if (distance <= cfg.stopDistance || _mover.HasReachedTarget)
 			{
 				_hasWanderTarget = false;
@@ -483,10 +483,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 			cfg.penaltyWeight,
 			minimumWanderDistance);
 
-		_wanderTarget = new Vector3(
+		_wanderTarget = WorldTopologyRuntime.NormalizePosition(new Vector3(
 			transform.position.x + offset.x,
 			transform.position.y + offset.y,
-			transform.position.z);
+			transform.position.z));
 		_hasWanderTarget = true;
 		MoveTo(_wanderTarget);
 	}
@@ -543,13 +543,13 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	protected Vector2 GetDirectionAwayFrom(Vector3 sourcePosition)
 	{
 		Vector2 currentPosition = transform.position;
-		Vector2 away = currentPosition - (Vector2)sourcePosition;
+		Vector2 away = WorldTopologyRuntime.ShortestDelta(sourcePosition, currentPosition);
 		if (away.sqrMagnitude > 0.0001f)
 			return away.normalized;
 
 		if (_mover != null)
 		{
-			Vector2 currentHeading = _mover.TargetPosition - currentPosition;
+			Vector2 currentHeading = WorldTopologyRuntime.ShortestDelta(currentPosition, _mover.TargetPosition);
 			if (currentHeading.sqrMagnitude > 0.0001f)
 				return currentHeading.normalized;
 		}
@@ -720,14 +720,14 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	/// <summary>远离指定位置方向移动</summary>
 	protected void MoveAwayFrom(Vector3 sourcePosition, float distance)
 	{
-		Vector3 awayDir = (transform.position - sourcePosition).normalized;
-		MoveTo(transform.position + awayDir * distance);
+		Vector2 awayDir = WorldTopologyRuntime.ShortestDelta(sourcePosition, transform.position).normalized;
+		MoveTo(WorldTopologyRuntime.NormalizePosition(transform.position + (Vector3)(awayDir * distance)));
 	}
 
 	/// <summary>面向目标方向（不移动，仅设置朝向）。攻击前可立即完成翻转。</summary>
 	protected void FaceTarget(Vector3 targetPosition, bool immediate = false)
 	{
-		Vector2 direction = targetPosition - transform.position;
+		Vector2 direction = WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition);
 		if (direction.sqrMagnitude < 0.0001f)
 		{
 			return;
@@ -757,7 +757,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	/// <summary>计算到目标的 2D 距离</summary>
 	protected float DistanceTo(Transform target)
 	{
-		return Vector2.Distance(transform.position, target.position);
+		return WorldTopologyRuntime.Distance(transform.position, target.position);
 	}
 #endregion
 

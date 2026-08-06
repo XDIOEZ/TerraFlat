@@ -290,7 +290,7 @@ public static class StructureRuntimeRegistry
             if (location.WorldSeed != worldSeed || location.StructureId != structureId)
                 continue;
 
-            float distance = (location.EntrancePosition - origin).sqrMagnitude;
+            float distance = WorldTopologyRuntime.SqrDistance(origin, location.EntrancePosition);
             if (distance >= nearestDistance)
                 continue;
 

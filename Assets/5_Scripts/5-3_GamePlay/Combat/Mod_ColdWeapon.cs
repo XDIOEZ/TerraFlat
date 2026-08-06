@@ -386,7 +386,9 @@ public partial class Mod_ColdWeapon : Module
         Vector2 startPosition = (item.transform.parent != null) ? (Vector2)item.transform.parent.position : (Vector2)transform.parent.position;
 
         // 焦点（如鼠标）及当前武器位置
-        Vector2 focusPoint = faceMouse != null ? faceMouse.Data.See_Point : startPosition;
+        Vector2 focusPoint = faceMouse != null
+            ? WorldTopologyRuntime.NearestImagePosition(startPosition, faceMouse.Data.See_Point)
+            : startPosition;
         Vector2 swordPos = item.transform.position;
         Vector2 swordRel = swordPos - startPosition;
         float swordDist = swordRel.magnitude;
@@ -506,7 +508,9 @@ public partial class Mod_ColdWeapon : Module
     private void DrawHelperGizmos()
     {
         Vector2 startPosition = (item != null && item.transform.parent != null) ? (Vector2)item.transform.parent.position : (Vector2)transform.parent.position;
-        Vector2 focusPoint = faceMouse != null ? faceMouse.Data.See_Point : startPosition;
+        Vector2 focusPoint = faceMouse != null
+            ? WorldTopologyRuntime.NearestImagePosition(startPosition, faceMouse.Data.See_Point)
+            : startPosition;
 
         // 起点 -> 焦点
         Gizmos.color = Color.yellow;
@@ -540,6 +544,7 @@ public partial class Mod_ColdWeapon : Module
 
     private Vector2 CalculateTargetPoint(Vector2 startPosition, Vector2 focusPoint, float maxDistance)
     {
+        focusPoint = WorldTopologyRuntime.NearestImagePosition(startPosition, focusPoint);
         Vector2 directionVector = focusPoint - startPosition;
         float mouseDist = directionVector.magnitude;
 

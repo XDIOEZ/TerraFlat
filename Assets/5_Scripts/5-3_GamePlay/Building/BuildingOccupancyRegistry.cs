@@ -16,6 +16,7 @@ public static class BuildingOccupancyRegistry
 
     public static bool IsOccupied(Vector2Int cell, Mod_Building except = null)
     {
+        cell = WorldTopologyRuntime.NormalizeCell(cell);
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
             return false;
 
@@ -39,7 +40,9 @@ public static class BuildingOccupancyRegistry
         if (building == null || cells == null)
             return;
 
-        HashSet<Vector2Int> nextCells = new(cells);
+        var nextCells = new HashSet<Vector2Int>();
+        foreach (Vector2Int cell in cells)
+            nextCells.Add(WorldTopologyRuntime.NormalizeCell(cell));
         if (CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> currentCells) &&
             currentCells.SetEquals(nextCells))
         {
@@ -87,6 +90,7 @@ public static class BuildingOccupancyRegistry
 
     private static void RefreshCell(Vector2Int cell)
     {
+        cell = WorldTopologyRuntime.NormalizeCell(cell);
         if (ChunkMgr.Instance == null)
             return;
 

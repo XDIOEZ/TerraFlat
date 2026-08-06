@@ -24,6 +24,7 @@ public partial class GameManager
     public const string NewGameSaveInputKey = "新增存档名称输入框";
     public const string NewGameRadiusInputKey = "星球半径输入框";
     public const string NewGameNoiseInputKey = "噪声缩放输入框";
+    public const string NewGameTopologyToggleKey = "有限循环世界";
     public const string NewGameDifficultyButtonKey = "难度设置";
     public const string NewGameDifficultyPanelKey = "新世界难度设置面板";
     public const string NewGameDifficultyCloseButtonKey = "关闭难度设置";
@@ -83,6 +84,7 @@ public partial class GameManager
 
     private GameDifficultyId pendingNewWorldDifficulty = GameDifficultyId.Simple;
     private GameDifficultyRuleValues pendingCustomDifficultyRules = new GameDifficultyRuleValues();
+    private WorldTopologyMode pendingNewWorldTopology = WorldTopologyMode.Wrapped;
 
     private GameObject worldLoadingView;
     private Canvas worldLoadingCanvas;
@@ -372,10 +374,16 @@ public partial class GameManager
 
         TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
         TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
+        Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
         radiusInput?.SetTextWithoutNotify(ReadyPlanetData.Radius.ToString(CultureInfo.InvariantCulture));
         noiseInput?.SetTextWithoutNotify(ReadyPlanetData.NoiseScale.ToString("0.########", CultureInfo.InvariantCulture));
         radiusInput?.onValueChanged.AddListener(OnPlanetRadiusChanged);
         noiseInput?.onValueChanged.AddListener(OnPlanetNoiseScaleChanged);
+        topologyToggle?.SetIsOnWithoutNotify(pendingNewWorldTopology == WorldTopologyMode.Wrapped);
+        if (radiusInput != null)
+            radiusInput.interactable = pendingNewWorldTopology == WorldTopologyMode.Wrapped;
+        topologyToggle?.onValueChanged.AddListener(isOn => OnWorldTopologyChanged(panel, isOn));
+        ReadyPlanetData.TopologyMode = pendingNewWorldTopology;
         BindNewGameDifficultyControls(panel);
         panel.PrepareForGamepadNavigation(NewGameStartButtonKey);
         panel.Open();
@@ -437,7 +445,13 @@ public partial class GameManager
 
         TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
         TMP_InputField noiseInput = panel.GetInputField(NewGameNoiseInputKey);
-        if (!TryParsePlanetRadius(radiusInput?.text, out int radius))
+        Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
+        WorldTopologyMode topologyMode = topologyToggle != null
+            ? (topologyToggle.isOn ? WorldTopologyMode.Wrapped : WorldTopologyMode.Infinite)
+            : pendingNewWorldTopology;
+        int radius = Mathf.Max(1, ReadyPlanetData?.Radius ?? PlanetData.DefaultRadius);
+        if (topologyMode == WorldTopologyMode.Wrapped &&
+            !TryParsePlanetRadius(radiusInput?.text, out radius))
         {
             Debug.LogWarning($"[GameManager] 星球半径无效：{radiusInput?.text}。请输入大于 0 的整数。");
             return false;
@@ -453,7 +467,9 @@ public partial class GameManager
         ReadyPlanetData ??= new PlanetData();
         ReadyPlanetData.Radius = radius;
         ReadyPlanetData.NoiseScale = noiseScale;
-        radiusInput.SetTextWithoutNotify(radius.ToString(CultureInfo.InvariantCulture));
+        ReadyPlanetData.TopologyMode = topologyMode;
+        pendingNewWorldTopology = topologyMode;
+        radiusInput?.SetTextWithoutNotify(radius.ToString(CultureInfo.InvariantCulture));
         noiseInput.SetTextWithoutNotify(noiseScale.ToString("0.########", CultureInfo.InvariantCulture));
 
         request = new NewWorldCreationRequest(
@@ -881,6 +897,17 @@ public partial class GameManager
         }
 
         Debug.LogWarning($"输入的噪声缩放值无效：{value}");
+    }
+
+    private void OnWorldTopologyChanged(BasePanel panel, bool wrapped)
+    {
+        pendingNewWorldTopology = wrapped ? WorldTopologyMode.Wrapped : WorldTopologyMode.Infinite;
+        ReadyPlanetData ??= new PlanetData();
+        ReadyPlanetData.TopologyMode = pendingNewWorldTopology;
+
+        TMP_InputField radiusInput = panel?.GetInputField(NewGameRadiusInputKey);
+        if (radiusInput != null)
+            radiusInput.interactable = wrapped;
     }
 
     private static bool TryParsePlanetRadius(string value, out int radius)

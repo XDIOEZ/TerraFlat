@@ -30,6 +30,29 @@ namespace FlatWorld.GameTest.ItemModule
 
         [Test]
         [Category("ItemModule.Smoke")]
+        public void DiscardModuleToleratesMissingMouseOrEventSystemDuringWorldStartup()
+        {
+            string source = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Item/Module_DiscardItem.cs");
+            int methodIndex = source.IndexOf("private void UpdateHoveredSlot()",
+                System.StringComparison.Ordinal);
+            int guardIndex = source.IndexOf(
+                "Mouse.current == null || EventSystem.current == null",
+                methodIndex,
+                System.StringComparison.Ordinal);
+            int readIndex = source.IndexOf(
+                "Mouse.current.position.ReadValue()",
+                methodIndex,
+                System.StringComparison.Ordinal);
+
+            Assert.That(methodIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(guardIndex, Is.GreaterThan(methodIndex));
+            Assert.That(readIndex, Is.GreaterThan(guardIndex),
+                "世界启动或无输入设备测试环境中，丢弃模块必须先检查 Mouse/EventSystem。 ");
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
         public void KnifeDefinitionsShareOneShellAndUseNamedModuleDictionary()
         {
             string path = Path.Combine(Application.dataPath, "StreamingAssets/GameConfig/Items/items.json");

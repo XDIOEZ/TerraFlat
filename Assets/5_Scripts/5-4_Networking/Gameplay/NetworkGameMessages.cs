@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 9;
+        public const int CurrentVersion = 10;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -55,6 +55,7 @@ namespace FlatWorld.Networking.Gameplay
         public bool AutoGenerateMap;
         public int ChunkSizeX;
         public int ChunkSizeY;
+        public int TopologyMode;
         public uint GenerationSettingsHash;
         public byte[] CompressedSaveData;
     }
@@ -70,6 +71,7 @@ namespace FlatWorld.Networking.Gameplay
         public bool AutoGenerateMap;
         public int ChunkSizeX;
         public int ChunkSizeY;
+        public int TopologyMode;
         public uint GenerationSettingsHash;
         public int CompressedBytes;
         public int ChunkCount;
@@ -85,7 +87,7 @@ namespace FlatWorld.Networking.Gameplay
 
     public static class NetworkMapGenerationProtocol
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 4;
 
         public static uint CalculateSettingsHash(
             int seed,
@@ -93,7 +95,8 @@ namespace FlatWorld.Networking.Gameplay
             float noiseScale,
             bool autoGenerateMap,
             int chunkSizeX,
-            int chunkSizeY)
+            int chunkSizeY,
+            WorldTopologyMode topologyMode)
         {
             unchecked
             {
@@ -105,6 +108,7 @@ namespace FlatWorld.Networking.Gameplay
                 hash = Add(hash, autoGenerateMap ? 1 : 0);
                 hash = Add(hash, chunkSizeX);
                 hash = Add(hash, chunkSizeY);
+                hash = Add(hash, (int)topologyMode);
                 hash = Add(hash, TerrainGenerationSignature.CalculateDefault());
                 return hash;
             }

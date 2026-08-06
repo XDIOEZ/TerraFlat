@@ -295,7 +295,8 @@ namespace FlatWorld.Networking.Gameplay
                 synchronizedPlanet.NoiseScale,
                 synchronizedPlanet.AutoGenerateMap,
                 synchronizedPlanet.ChunkSize.x,
-                synchronizedPlanet.ChunkSize.y);
+                synchronizedPlanet.ChunkSize.y,
+                synchronizedPlanet.TopologyMode);
             int transferId = unchecked(++nextSnapshotTransferId);
             if (transferId == 0)
                 transferId = unchecked(++nextSnapshotTransferId);
@@ -312,6 +313,7 @@ namespace FlatWorld.Networking.Gameplay
                 AutoGenerateMap = synchronizedPlanet.AutoGenerateMap,
                 ChunkSizeX = synchronizedPlanet.ChunkSize.x,
                 ChunkSizeY = synchronizedPlanet.ChunkSize.y,
+                TopologyMode = (int)synchronizedPlanet.TopologyMode,
                 GenerationSettingsHash = generationSettingsHash,
                 CompressedBytes = snapshot.Length,
                 ChunkCount = chunkCount,
@@ -378,6 +380,7 @@ namespace FlatWorld.Networking.Gameplay
                     AutoGenerateMap = begin.AutoGenerateMap,
                     ChunkSizeX = begin.ChunkSizeX,
                     ChunkSizeY = begin.ChunkSizeY,
+                    TopologyMode = begin.TopologyMode,
                     GenerationSettingsHash = begin.GenerationSettingsHash
                 }
             };
@@ -555,6 +558,14 @@ namespace FlatWorld.Networking.Gameplay
             planet.NoiseScale = PlanetData.NormalizeNoiseScale(snapshot.NoiseScale);
             planet.AutoGenerateMap = snapshot.AutoGenerateMap;
             planet.ChunkSize = new Vector2Int(chunkSizeX, chunkSizeY);
+            if (!System.Enum.IsDefined(typeof(WorldTopologyMode), snapshot.TopologyMode))
+                throw new InvalidOperationException($"Invalid synchronized topology mode: {snapshot.TopologyMode}");
+            planet.TopologyMode = (WorldTopologyMode)snapshot.TopologyMode;
+            if (planet.TopologyMode == WorldTopologyMode.Wrapped &&
+                !WorldTopologyBounds.TryCreate(planet, out _))
+            {
+                throw new InvalidOperationException("Synchronized wrapped-world bounds are invalid.");
+            }
 
             uint localSettingsHash = NetworkMapGenerationProtocol.CalculateSettingsHash(
                 SaveDataMgr.Instance.SaveData.Seed,
@@ -562,7 +573,8 @@ namespace FlatWorld.Networking.Gameplay
                 planet.NoiseScale,
                 planet.AutoGenerateMap,
                 planet.ChunkSize.x,
-                planet.ChunkSize.y);
+                planet.ChunkSize.y,
+                planet.TopologyMode);
             if (localSettingsHash != snapshot.GenerationSettingsHash)
             {
                 throw new InvalidOperationException(
@@ -572,11 +584,23 @@ namespace FlatWorld.Networking.Gameplay
             if (planet.MapData_Dict == null)
                 planet.MapData_Dict = new Dictionary<string, MapSave>();
 
+            Dictionary<string, MapSave> canonicalMaps = new Dictionary<string, MapSave>();
             foreach (KeyValuePair<string, MapSave> pair in planet.MapData_Dict)
             {
                 if (pair.Value != null && TryParseChunkPosition(pair.Key, out Vector2Int mapPosition))
+                {
+                    if (WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds))
+                        mapPosition = bounds.NormalizeChunkOrigin(mapPosition);
                     pair.Value.MapPosition = mapPosition;
+                    pair.Value.Name = mapPosition.ToString();
+                    canonicalMaps[pair.Value.Name] = pair.Value;
+                }
+                else
+                {
+                    canonicalMaps[pair.Key] = pair.Value;
+                }
             }
+            planet.MapData_Dict = canonicalMaps;
 
             Debug.Log(
                 $"[联机地图] 噪声配置已同步：Seed={SaveDataMgr.Instance.SaveData.Seed}, " +
@@ -596,6 +620,11 @@ namespace FlatWorld.Networking.Gameplay
             int chunkSizeX = IsValidChunkSize(planet.ChunkSize.x) ? planet.ChunkSize.x : 16;
             int chunkSizeY = IsValidChunkSize(planet.ChunkSize.y) ? planet.ChunkSize.y : 16;
             planet.ChunkSize = new Vector2Int(chunkSizeX, chunkSizeY);
+            if (planet.TopologyMode != WorldTopologyMode.Infinite &&
+                planet.TopologyMode != WorldTopologyMode.Wrapped)
+            {
+                planet.TopologyMode = WorldTopologyMode.Infinite;
+            }
         }
 
         private static bool TryParseChunkPosition(string value, out Vector2Int position)
