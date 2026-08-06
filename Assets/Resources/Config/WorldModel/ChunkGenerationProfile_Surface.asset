@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 958c54338f944234e89ef98fd9a244eb, type: 3}
+  m_Name: ChunkGenerationProfile_Surface
+  m_EditorClassIdentifier:
+  profileId: surface.default
+  generationSignature: 5
+  chunkWidth: 16
+  chunkHeight: 16
+  numericParameters:
+  - Id: terrain.groundTileId
+    Value: 1
+  - Id: terrain.waterTileId
+    Value: 2
+  - Id: terrain.waterThreshold
+    Value: 0.18
+  - Id: terrain.saltWaterTileId
+    Value: 6
+  - Id: terrain.sandTileId
+    Value: 3
+  - Id: terrain.stoneTileId
+    Value: 4
+  - Id: terrain.snowTileId
+    Value: 5
+  - Id: terrain.seaLevel
+    Value: 0.3
+  - Id: terrain.beachLevel
+    Value: 0.355
+  - Id: terrain.noiseScale
+    Value: 0.0085
+  - Id: terrain.octaves
+    Value: 4
+  - Id: climate.noiseScale
+    Value: 0.004
+  - Id: climate.octaves
+    Value: 3
+  - Id: river.enabled
+    Value: 1
+  - Id: river.noiseScale
+    Value: 0.006
+  - Id: river.width
+    Value: 0.085
+  - Id: river.flowThreshold
+    Value: 0.62
+  - Id: grass.density
+    Value: 0.24
+  - Id: structure.enabled
+    Value: 1
+  - Id: structure.regionSize
+    Value: 96
+  - Id: structure.spawnChance
+    Value: 0.18
+  - Id: structure.radius
+    Value: 2
+  - Id: structure.groundTileId
+    Value: 3
+  - Id: terrain.biomeCount
+    Value: 6
+  - Id: navigation.defaultCost
+    Value: 1
+  textParameters:
+  - Id: terrain.mode
+    Value: surface

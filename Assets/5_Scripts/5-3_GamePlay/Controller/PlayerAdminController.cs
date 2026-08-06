@@ -9,6 +9,8 @@ public class PlayerAdminController : Module
     #region 常量与字段
 
     private const string AdminName = "管理员";
+    public const float MinAdminMoveSpeedMultiplier = 0.1f;
+    public const float MaxAdminMoveSpeedMultiplier = 100f;
     private static readonly float[] AdminMoveSpeedPresets = { 1f, 2f, 3f, 5f };
 
     public static bool TeleportToMouseShortcutEnabled { get; private set; } = true;
@@ -282,15 +284,22 @@ public class PlayerAdminController : Module
         }
 
         selectedMultiplier = AdminMoveSpeedPresets[nextIndex];
-        if (TryApplyAdminMoveSpeedMultiplier(selectedMultiplier))
+        if (TrySetAdminMoveSpeedMultiplier(selectedMultiplier, out selectedMultiplier))
             return true;
 
         selectedMultiplier = AdminMoveSpeedMultiplier;
         return false;
     }
 
-    private bool TryApplyAdminMoveSpeedMultiplier(float multiplier)
+    public bool TrySetAdminMoveSpeedMultiplier(float multiplier, out float appliedMultiplier)
     {
+        appliedMultiplier = AdminMoveSpeedMultiplier;
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier))
+        {
+            Debug.LogWarning("[Admin] Player move speed multiplier must be a finite number.");
+            return false;
+        }
+
         ResolveAdminRuntimeReferences();
         if (playerMover?.Speed == null)
         {
@@ -298,7 +307,10 @@ public class PlayerAdminController : Module
             return false;
         }
 
-        multiplier = Mathf.Clamp(multiplier, AdminMoveSpeedPresets[0], AdminMoveSpeedPresets[AdminMoveSpeedPresets.Length - 1]);
+        multiplier = Mathf.Clamp(
+            multiplier,
+            MinAdminMoveSpeedMultiplier,
+            MaxAdminMoveSpeedMultiplier);
         if (adminMoveSpeedTarget != playerMover)
         {
             adminMoveSpeedTarget = playerMover;
@@ -310,7 +322,8 @@ public class PlayerAdminController : Module
             playerMover.Speed.MultiplicativeModifier / previousMultiplier * multiplier;
         appliedAdminMoveSpeedMultiplier = multiplier;
         AdminMoveSpeedMultiplier = multiplier;
-        Debug.Log($"[Admin] Player move speed multiplier set to {multiplier:0.#}x.");
+        appliedMultiplier = multiplier;
+        Debug.Log($"[Admin] Player move speed multiplier set to {multiplier:0.##}x.");
         return true;
     }
 

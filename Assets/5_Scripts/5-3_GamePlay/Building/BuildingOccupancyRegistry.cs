@@ -95,11 +95,9 @@ public static class BuildingOccupancyRegistry
             return;
 
         Vector2 center = new(cell.x + 0.5f, cell.y + 0.5f);
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(center, out Chunk chunk);
-        if ((chunk?.Map?.Data?.GetLayerCount(cell) ?? 0) == 0)
+        var address = ChunkMgr.Instance.ResolveWorldAddress(center);
+        if (!ChunkMgr.Instance.TryGetChunkRuntime(address, out var chunk) || chunk.Terrain == null)
             return;
-
-        chunk.Map.MarkPenaltyDirty(cell);
-        chunk.Map.BackTilePenalty_Async();
+        WorldNavigationManager.Instance?.QueueNavigationCell(cell);
     }
 }

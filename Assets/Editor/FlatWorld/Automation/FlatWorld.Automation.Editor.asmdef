@@ -4,6 +4,7 @@
     "references": [
         "UnityEditor.TestRunner",
         "GamePlay",
+        "FlatWorld.WorldModel",
         "Data",
         "GUID:6b2403a08572f7c49b7802a26e472b30"
     ],

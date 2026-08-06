@@ -69,7 +69,9 @@ namespace FlatWorld.GameTest.Navigation
 
             Assert.That(controller, Does.Contain("chunkLoader.RefreshAfterWorldWrap()"));
             Assert.That(loader, Does.Contain("RefreshChunksAroundPlayer()"));
-            Assert.That(loader, Does.Contain("RequestNavMeshRefresh"));
+            Assert.That(loader, Does.Contain("RefreshRuntimeWindow"));
+            Assert.That(loader, Does.Not.Contain("LoadChunkCloseToPlayer"));
+            Assert.That(loader, Does.Not.Contain("RequestNavMeshRefresh"));
         }
     }
 }

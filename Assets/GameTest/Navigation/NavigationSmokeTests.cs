@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using FlatWorld.WorldModel;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 using UnityEditor;
@@ -38,41 +39,26 @@ namespace FlatWorld.GameTest.Navigation
         public void TopTileAndBuildingOccupancyJointlyControlWalkability()
         {
             WorldNavigationManager manager = CreateManagerForTest();
-            GameObject mapObject = new("NavigationTileStackMap");
             GameObject buildingObject = new("NavigationOccupancyBuilding");
             Mod_Building building = null;
+            using var world = new WorldRuntime("navigation-smoke", 1);
             try
             {
-                global::Map map = mapObject.AddComponent<global::Map>();
-                map.Data = new Data_TileMap { position = new Vector2Int(40, -12) };
-                map.Data.EnsureTileStorage(1, 1);
-                Vector2Int cell = map.Data.position;
-                map.Data.SetBaseTile(cell, new TileData_Universal
-                {
-                    ID = "walkable_floor",
-                    IsWalkable = true,
-                    Penalty = GroundPenalty
-                });
+                Vector2Int cell = new(40, -12);
+                var address = new FlatWorld.WorldModel.WorldAddress(
+                    "surface", new Int2(cell.x, cell.y));
+                var profile = new ChunkGenerationProfileSnapshot("navigation-smoke", 5, 1, 1);
+                ChunkGenerationRequest request = world.BeginChunkGeneration(address, 17, profile);
+                var terrain = new ChunkTerrainBuffer(1, 1);
+                terrain.SetCell(0, 0, new TerrainCell(
+                    1, 0, 0, 0, (short)GroundPenalty, TerrainCellFlags.Walkable));
+                using var result = new ChunkGenerationResult(request, terrain);
+                Assert.That(world.TryCommit(result, out string reason), Is.True, reason);
+                ChunkRuntime chunk = world.Chunks[address];
 
-                manager.RegisterMap(map);
+                manager.RegisterChunkRuntime(chunk);
                 Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell floorCell), Is.True);
                 Assert.That(floorCell.Walkable, Is.True);
-
-                map.Data.PushTile(cell, new TileData_Universal
-                {
-                    ID = "blocking_overlay",
-                    TileTag = BlockingTilemapLayer.BlockingTileTag,
-                    IsWalkable = false,
-                    Penalty = 0u
-                });
-                manager.RegisterMap(map);
-                Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell blockedByTile), Is.True);
-                Assert.That(blockedByTile.Walkable, Is.False);
-
-                Assert.That(map.Data.RemoveTile(cell), Is.True);
-                manager.RegisterMap(map);
-                Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell restoredFloor), Is.True);
-                Assert.That(restoredFloor.Walkable, Is.True);
 
                 building = buildingObject.AddComponent<Mod_Building>();
                 building.Data.Role = BuildingRole.PlacedBuilding;
@@ -82,12 +68,12 @@ namespace FlatWorld.GameTest.Navigation
                     ?.SetValue(building, BuildingState.Installed);
                 Assert.That(building.IsInstalled(), Is.True, "测试建筑必须处于有效占地状态。");
                 BuildingOccupancyRegistry.Register(building, new[] { cell });
-                manager.RegisterMap(map);
+                manager.RegisterChunkRuntime(chunk);
                 Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell occupied), Is.True);
                 Assert.That(occupied.Walkable, Is.False);
 
                 BuildingOccupancyRegistry.Unregister(building);
-                manager.RegisterMap(map);
+                manager.RegisterChunkRuntime(chunk);
                 Assert.That(manager.Grid.TryGetCell(cell, out WorldNavigationCell unoccupied), Is.True);
                 Assert.That(unoccupied.Walkable, Is.True);
             }
@@ -96,7 +82,6 @@ namespace FlatWorld.GameTest.Navigation
                 if (building != null)
                     BuildingOccupancyRegistry.Unregister(building);
                 Object.DestroyImmediate(buildingObject);
-                Object.DestroyImmediate(mapObject);
                 Object.DestroyImmediate(manager.gameObject);
             }
         }

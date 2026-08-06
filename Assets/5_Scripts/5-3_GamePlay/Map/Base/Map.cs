@@ -50,8 +50,21 @@ public class Map : Item
     [SerializeField, Min(0.25f)]
     private float proceduralGenerationFrameBudgetMilliseconds = 1.5f;
 
-    public float ProceduralGenerationFrameBudgetMilliseconds =>
-        Mathf.Max(0.25f, proceduralGenerationFrameBudgetMilliseconds);
+    public float ProceduralGenerationFrameBudgetMilliseconds => Mathf.Max(
+        0.25f,
+        proceduralGenerationFrameBudgetMilliseconds * ChunkMgr.CurrentChunkLoadSpeedMultiplier);
+
+    public float TilemapLoadFrameBudgetMilliseconds => Mathf.Max(
+        0.25f,
+        loadTileFrameBudgetMilliseconds * ChunkMgr.CurrentChunkLoadSpeedMultiplier);
+
+    public int ProceduralGenerationCellsPerFrame => Mathf.Max(
+        1,
+        Mathf.RoundToInt(proceduralGenerationCellsPerFrame * ChunkMgr.CurrentChunkLoadSpeedMultiplier));
+
+    public int ScaledTilemapLoadBatchSize => Mathf.Max(
+        16,
+        Mathf.RoundToInt(TilemapLoadBatchSize * ChunkMgr.CurrentChunkLoadSpeedMultiplier));
 
     private float backTilePenaltyWaitSeconds = -1f;
     private WaitForSeconds backTilePenaltyWait;
@@ -388,7 +401,7 @@ public class Map : Item
                 }
                 generatorRoutine = generator.GenerateAsync(
                     context,
-                    Mathf.Max(1, proceduralGenerationCellsPerFrame));
+                    ProceduralGenerationCellsPerFrame);
             }
             catch (Exception exception)
             {
@@ -747,10 +760,10 @@ public class Map : Item
         }
 
         EnsureTilemapRowBuffers(Data.Width);
-        int batchSize = TilemapLoadBatchSize;
+        int batchSize = ScaledTilemapLoadBatchSize;
         int processedCount = 0;
         int processedThisFrame = 0;
-        double frameBudgetMilliseconds = Mathf.Max(0.25f, loadTileFrameBudgetMilliseconds);
+        double frameBudgetMilliseconds = TilemapLoadFrameBudgetMilliseconds;
         double ticksPerMillisecond = System.Diagnostics.Stopwatch.Frequency / 1000d;
         long frameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 

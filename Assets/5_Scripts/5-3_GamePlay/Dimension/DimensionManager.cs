@@ -70,6 +70,16 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             : ActiveDefinition.MapCorePrefabId;
     }
 
+    public ChunkGenerationProfileSO GetActiveGenerationProfile()
+    {
+        return ActiveDefinition?.GenerationProfile;
+    }
+
+    public ChunkView GetActiveChunkViewPrefab()
+    {
+        return ActiveDefinition?.ChunkViewPrefab;
+    }
+
     public int GetActiveGenerationSeed(int baseSeed)
     {
         return GetGenerationSeed(baseSeed, ActiveAddress, ActiveDefinition);

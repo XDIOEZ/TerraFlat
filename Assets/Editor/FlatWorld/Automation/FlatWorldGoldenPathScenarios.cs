@@ -56,6 +56,9 @@ namespace FlatWorld.Automation
             ResetBurningBuffScenario();
             ResetHydrologyScenario();
             ResetWorldWrapScenario();
+            ResetWorldModelScenario();
+            ResetPlayerMoveSpeedScenario();
+            ResetChunkLoadSpeedScenario();
         }
 
         internal static void OnWorldReady(FlatWorldGoldenPathScenarioContext context)
@@ -63,6 +66,9 @@ namespace FlatWorld.Automation
             // 玩家和初始 Chunk 就绪后的一次性安排挂在这里。
             if (context.Configuration.scenarios.hydrology)
                 BeginHydrologyScenario(context);
+            BeginWorldModelScenario(context);
+            RunPlayerMoveSpeedScenario(context);
+            RunChunkLoadSpeedScenario(context);
         }
 
         internal static void OnTraversalTick(FlatWorldGoldenPathScenarioContext context)
@@ -91,6 +97,9 @@ namespace FlatWorld.Automation
                 AssertHydrologyScenarioCompleted();
             if (context.Configuration.scenarios.worldWrap)
                 AssertWorldWrapScenarioCompleted();
+            AssertWorldModelScenarioCompleted();
+            AssertPlayerMoveSpeedScenarioCompleted();
+            AssertChunkLoadSpeedScenarioCompleted();
         }
 
         internal static void Cleanup(FlatWorldGoldenPathScenarioContext context)
@@ -99,6 +108,9 @@ namespace FlatWorld.Automation
             CleanupBurningBuffScenario();
             CleanupHydrologyScenario();
             CleanupWorldWrapScenario();
+            CleanupWorldModelScenario();
+            CleanupPlayerMoveSpeedScenario();
+            CleanupChunkLoadSpeedScenario();
         }
     }
 }

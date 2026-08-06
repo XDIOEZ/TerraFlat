@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using UnityEngine;
+using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 namespace FlatWorld.Automation
 {
@@ -86,7 +88,7 @@ namespace FlatWorld.Automation
             SetWorldWrapPlayerPosition(_worldWrapBoundaryStart, Vector2.zero);
             _worldWrapChunkLoader.RefreshChunksAroundPlayer();
             _worldWrapExpectedChunk = ChunkMgr.NormalizeChunkPosition(
-                Chunk.GetChunkPosition(_worldWrapBoundaryStart, _worldWrapBounds.ChunkSize));
+                GetChunkOrigin(_worldWrapBoundaryStart, _worldWrapBounds.ChunkSize));
             _worldWrapPhase = WorldWrapPhase.WaitForBoundaryChunk;
             Debug.Log($"[GoldenPath][WorldWrap] Preparing right boundary at {_worldWrapBoundaryStart}.");
         }
@@ -122,7 +124,7 @@ namespace FlatWorld.Automation
 
                     AssertWorldWrapPlayerData(current, 0.75f);
                     _worldWrapExpectedChunk = ChunkMgr.NormalizeChunkPosition(
-                        Chunk.GetChunkPosition(current, _worldWrapBounds.ChunkSize));
+                        GetChunkOrigin(current, _worldWrapBounds.ChunkSize));
                     _worldWrapPhase = WorldWrapPhase.WaitForWrappedChunk;
                     Debug.Log(
                         $"[GoldenPath][WorldWrap] Crossed to {current}; " +
@@ -186,7 +188,7 @@ namespace FlatWorld.Automation
 
             RestoreWorldWrapPlayer();
             _worldWrapExpectedChunk = ChunkMgr.NormalizeChunkPosition(
-                Chunk.GetChunkPosition(_worldWrapOriginalPosition, _worldWrapBounds.ChunkSize));
+                GetChunkOrigin(_worldWrapOriginalPosition, _worldWrapBounds.ChunkSize));
             _worldWrapPhase = WorldWrapPhase.WaitForRestoredChunk;
         }
 
@@ -198,9 +200,15 @@ namespace FlatWorld.Automation
         private static bool IsWorldWrapChunkReady(Vector2Int chunkPosition)
         {
             ChunkMgr manager = ChunkMgr.Instance;
-            return manager != null &&
-                   manager.TryGetActiveChunkByPos(chunkPosition, out Chunk chunk) &&
-                   chunk != null && chunk.IsReady;
+            if (manager == null)
+                return false;
+            RuntimeWorldAddress address = manager.ResolveWorldAddress(
+                new Vector2(chunkPosition.x + 0.5f, chunkPosition.y + 0.5f));
+            return manager.TryGetChunkRuntime(address, out ChunkRuntime chunk) &&
+                   chunk.DataStatus == ChunkDataStatus.Ready &&
+                   chunk.SimulationStatus == ChunkSimulationStatus.Active &&
+                   chunk.PresentationStatus == ChunkPresentationStatus.Bound &&
+                   manager.TryGetRuntimeChunkView(address, out _);
         }
 
         private static bool IsWorldWrapVisualSeamReady(Vector2Int chunkPosition)
@@ -227,10 +235,10 @@ namespace FlatWorld.Automation
                 ? halfHeight * Mathf.Max(0.01f, camera.aspect)
                 : halfHeight;
             Vector2 cameraPosition = camera.transform.position;
-            Vector2Int minChunk = Chunk.GetChunkPosition(
+            Vector2Int minChunk = GetChunkOrigin(
                 cameraPosition - new Vector2(halfWidth, halfHeight),
                 bounds.ChunkSize);
-            Vector2Int maxChunk = Chunk.GetChunkPosition(
+            Vector2Int maxChunk = GetChunkOrigin(
                 cameraPosition + new Vector2(halfWidth, halfHeight),
                 bounds.ChunkSize);
             var required = new HashSet<Vector2Int>();
@@ -245,21 +253,17 @@ namespace FlatWorld.Automation
             ChunkMgr manager = ChunkMgr.Instance;
             foreach (Vector2Int requiredChunk in required)
             {
-                if (manager == null ||
-                    !manager.TryGetActiveChunkByPos(requiredChunk, out Chunk chunk) ||
-                    chunk == null || !chunk.IsReady || chunk.Map == null ||
-                    !chunk.Map.IsTilemapVisualReady)
+                if (manager == null)
+                    continue;
+                RuntimeWorldAddress address = manager.ResolveWorldAddress(
+                    new Vector2(requiredChunk.x + 0.5f, requiredChunk.y + 0.5f));
+                if (!manager.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
+                    chunk.DataStatus != ChunkDataStatus.Ready ||
+                    chunk.PresentationStatus != ChunkPresentationStatus.Bound ||
+                    !manager.TryGetRuntimeChunkView(address, out ChunkView view))
                 {
                     continue;
                 }
-
-                WrappedTilemapCollisionProxy proxy =
-                    chunk.Map.GetComponent<WrappedTilemapCollisionProxy>();
-                if (proxy == null)
-                    continue;
-                proxy.RefreshNow();
-                if (proxy.EligibleSourceColliderCount > 0 && proxy.ActiveProxyCount == 0)
-                    continue;
                 _worldWrapVisibleReadyCount++;
             }
 
@@ -273,57 +277,47 @@ namespace FlatWorld.Automation
             _worldWrapNextDiagnosticTime = Time.realtimeSinceStartup + 5f;
 
             ChunkMgr manager = ChunkMgr.Instance;
-            Chunk chunk = null;
-            bool hasChunk = manager != null &&
-                            manager.TryGetActiveChunkByPos(_worldWrapExpectedChunk, out chunk);
+            ChunkRuntime chunk = null;
+            RuntimeWorldAddress address = manager != null
+                ? manager.ResolveWorldAddress(new Vector2(
+                    _worldWrapExpectedChunk.x + 0.5f, _worldWrapExpectedChunk.y + 0.5f))
+                : default;
+            bool hasChunk = manager != null && manager.TryGetChunkRuntime(address, out chunk);
             Camera camera = Camera.main;
             WrappedWorldCameraRenderer renderer =
                 camera != null ? camera.GetComponent<WrappedWorldCameraRenderer>() : null;
-            Map map = hasChunk ? chunk?.Map : null;
-            WrappedTilemapCollisionProxy proxy =
-                map != null ? map.GetComponent<WrappedTilemapCollisionProxy>() : null;
             Debug.Log(
                 $"[GoldenPath][WorldWrap] Waiting: {reason}; expected={_worldWrapExpectedChunk}, " +
-                $"pending={manager?.HasPendingChunkLoads}, activeChunk={hasChunk}, " +
-                $"state={(hasChunk && chunk != null ? chunk.LifecycleState.ToString() : "missing")}, " +
-                $"mapVisual={map?.IsTilemapVisualReady}, camera={camera?.transform.position}, " +
+                $"pending={manager?.HasPendingChunkDataLoads}, activeChunk={hasChunk}, " +
+                $"data={(hasChunk ? chunk.DataStatus.ToString() : "missing")}, " +
+                $"simulation={(hasChunk ? chunk.SimulationStatus.ToString() : "missing")}, " +
+                $"presentation={(hasChunk ? chunk.PresentationStatus.ToString() : "missing")}, " +
+                $"camera={camera?.transform.position}, " +
                 $"cameraReplicas={renderer?.ActiveReplicaCount}, " +
-                $"visibleChunks={_worldWrapVisibleReadyCount}/{_worldWrapVisibleRequiredCount}, " +
-                $"collisionSources={proxy?.EligibleSourceColliderCount}, " +
-                $"collisionProxies={proxy?.ActiveProxyCount}.");
+                $"visibleChunks={_worldWrapVisibleReadyCount}/{_worldWrapVisibleRequiredCount}.");
         }
 
         private static void ValidateWorldWrapChunkAndSaveCoordinates()
         {
             ChunkMgr manager = ChunkMgr.Instance;
-            if (manager == null || manager.Chunk_Dic_ByPos.Count == 0)
+            if (manager == null || manager.Chunks.Count == 0)
                 throw new InvalidOperationException("World-wrap target has no registered chunks.");
 
-            foreach (KeyValuePair<Vector2Int, Chunk> entry in manager.Chunk_Dic_ByPos)
+            foreach (KeyValuePair<RuntimeWorldAddress, ChunkRuntime> entry in manager.Chunks)
             {
-                if (!_worldWrapBounds.Contains(entry.Key))
-                    throw new InvalidOperationException($"Chunk dictionary has out-of-bounds key {entry.Key}.");
-                if (entry.Value == null || entry.Value.MapSave == null ||
-                    entry.Value.MapSave.MapPosition != entry.Key ||
-                    entry.Value.MapSave.Name != entry.Key.ToString())
-                {
-                    throw new InvalidOperationException($"Chunk save identity is not canonical at {entry.Key}.");
-                }
+                var origin = new Vector2Int(entry.Key.ChunkOrigin.X, entry.Key.ChunkOrigin.Y);
+                if (!_worldWrapBounds.Contains(origin))
+                    throw new InvalidOperationException($"Chunk model has out-of-bounds address {entry.Key}.");
+                if (entry.Value == null || entry.Value.Address != entry.Key)
+                    throw new InvalidOperationException($"Chunk model identity is not canonical at {entry.Key}.");
             }
+        }
 
-            PlanetData planet = SaveDataMgr.Instance?.Active_PlanetData;
-            if (planet?.MapData_Dict == null)
-                throw new InvalidOperationException("Wrapped planet save dictionary is unavailable.");
-            foreach (KeyValuePair<string, MapSave> entry in planet.MapData_Dict)
-            {
-                if (entry.Value == null)
-                    continue;
-                if (!_worldWrapBounds.Contains(entry.Value.MapPosition) ||
-                    entry.Key != entry.Value.MapPosition.ToString())
-                {
-                    throw new InvalidOperationException($"Planet save has non-canonical Chunk key {entry.Key}.");
-                }
-            }
+        private static Vector2Int GetChunkOrigin(Vector2 position, Vector2Int chunkSize)
+        {
+            return new Vector2Int(
+                Mathf.FloorToInt(position.x / chunkSize.x) * chunkSize.x,
+                Mathf.FloorToInt(position.y / chunkSize.y) * chunkSize.y);
         }
 
         private static void AssertWorldWrapPlayerData(Vector2 expected, float tolerance = 0.01f)
