@@ -52,6 +52,7 @@ Input System / PlayerInputActions
 - `GameController.Load()` / `Save()` 不持有世界存档数据；按键覆盖由 `InputBindingService` 通过 `PlayerPrefsInputBindingStore` 独立加载和保存。
 - `InputBindingService` 按 `KeyboardMouse` / `Gamepad` 分组提供可编辑条目；重绑候选只能来自当前分页设备，Button 与 Vector2 分别限制控制类型，冲突只在同设备组内检测，恢复默认只清除当前分页覆盖。
 - `Player.IsLocalProfile`、`IsNewProfile`、`WasProfileDataCreated` 与 `ProfileContextChanged` 仅为运行时档案上下文，不进入 `Data_Player` 序列化布局；新玩家判定来自数据是否创建，禁止用出生位置或本地控制权猜测。
+- GM 自定义移速统一调用 `PlayerAdminController.TrySetAdminMoveSpeedMultiplier`；输入范围为 `0.1–100x`，替换上一次管理员倍率并保留 Buff、装备等其他乘法修饰，禁止直接覆写 `Mover.Speed.MultiplicativeModifier`。
 - 聊天按键契约：裸 `T` 打开聊天，`Enter` 提交，`Esc` 取消；打开期间同时设置 `GameController.SetGameplayInputLocked(true)` 并挂起 `InputBindingService` 的 Win10 Action Map，关闭时恢复之前的锁状态。
 - 管理员传送使用 `Ctrl+T`，且管理员快捷键尊重 `IsGameplayInputLocked`；聊天控制器忽略带 Ctrl 的 T，避免同时打开聊天和传送。
 - 玩家移动耐力不得直接修改 `Mod_Stamina.CurrentValue`；`Mover` 统一调用 `AddStamina()`，由该入口应用自定义难度的耐力消耗/恢复倍率。
@@ -62,6 +63,7 @@ Input System / PlayerInputActions
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-06：GM 玩家移速改为可输入小数倍率并显式应用，支持 `0.1–100x`；管理员倍率替换更新，不与现有 Buff/装备倍率重复叠乘。
 - 2026-08-06：正式 Player 根实体碰撞体固定使用 Layer 10 的 `Player` 物理层；Physics 2D 仅关闭 Player↔Player，玩家仍与地图、建筑、怪物和伤害层碰撞，单机与联机核心角色共用该规则。
 - 2026-08-04：GM Buff 分发使用本地玩家 `GameController` 的左键事件选择世界目标；只处理带 `BuffManager` 的对象，避免向不兼容对象运行时注入模块。
 - 2026-07-31：正式矿坑交互传递入口 Item GUID；只有已安装 `MineEntrance` 可进入矿洞，`CaveExit` 返回绑定地表入口，Summoner 交互会被拒绝。
@@ -71,11 +73,9 @@ Input System / PlayerInputActions
 - 2026-07-29：Player Prefab 接入本地聊天输入；聊天期间暂停玩法输入，管理员传送由裸 T 改为 Ctrl+T，并隔离远程 Player。
 - 2026-07-29：玩家步行/奔跑耐力消耗改走 `Mod_Stamina.AddStamina()`，与攻击和食物恢复共享难度倍率入口。
 - 2026-07-28：Player 增加本地/新建档案运行时上下文；Player Prefab 根节点接入 `NewPlayerGuideController`，远程副本不获得教程或本地自言自语资格。
-- 2026-07-27：输入中心同时支持键鼠与手柄虚拟光标，业务模块应从 `GameController` 获取统一指针世界坐标。
-
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/PlayerInteraction/PlayerInteractionSmokeTests.cs`；当前覆盖玩家实体、输入控制器、绑定服务、玩家 Prefab、Player 物理层与自碰撞屏蔽、双 Control Scheme、关键手柄 Binding、键鼠/手柄分页条目、Vector2 手柄控制和分页恢复默认隔离。
+- 基础测试脚本：`Assets/GameTest/PlayerInteraction/PlayerInteractionSmokeTests.cs`；当前覆盖玩家实体、输入控制器、绑定服务、玩家 Prefab、Player 物理层与自碰撞屏蔽、GM 小数移速倍率输入及非叠乘应用、双 Control Scheme、关键手柄 Binding、键鼠/手柄分页条目、Vector2 手柄控制和分页恢复默认隔离。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；玩家交互测试约定目录：`Assets/GameTest/PlayerInteraction/`；场景目录：`Assets/GameTest/Scenes/PlayerInteraction/`；冒烟分类：`PlayerInteraction.Smoke`。
 - 新增输入、移动、摄像机、焦点、交互发送接收或玩家 Prefab 行为时必须增加系统测试；修复 Bug 时先增加回归测试。输入到移动或交互主流程变化时同步更新玩家冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；输入测试必须使用可注入输入，不能依赖真实鼠标、键盘或手柄操作。

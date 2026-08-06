@@ -16,6 +16,8 @@ MonoBehaviour:
   - DimensionId: surface
     DisplayName: "\u5730\u8868"
     GenerationMode: 0
+    GenerationProfile: {fileID: 11400000, guid: aa7b6291e6ab42aa8b7d9924dd7c5eef, type: 2}
+    ChunkViewPrefab: {fileID: 2002, guid: 5fd5ad0c427441e78f6085d92b935fd9, type: 3}
     MapCorePrefabId: MapCore
     SeedSalt: 0
     DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
@@ -36,6 +38,8 @@ MonoBehaviour:
   - DimensionId: cave
     DisplayName: "\u5730\u4E0B\u77FF\u6D1E"
     GenerationMode: 1
+    GenerationProfile: {fileID: 11400000, guid: aa7b6291e6ab42aa8b7d9924dd7c5eef, type: 2}
+    ChunkViewPrefab: {fileID: 2002, guid: 5fd5ad0c427441e78f6085d92b935fd9, type: 3}
     MapCorePrefabId: MapCore
     SeedSalt: 7919
     DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}

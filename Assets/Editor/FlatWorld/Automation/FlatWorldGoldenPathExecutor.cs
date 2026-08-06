@@ -15,8 +15,6 @@ namespace FlatWorld.Automation
         {
             Configuration = configuration ?? FlatWorldGoldenPathConfiguration.CreateDefault();
             Configuration.Validate();
-            WorldGenerationRuntimeHooks.BeforeMapGeneration -= ConfigureMapBeforeGeneration;
-            WorldGenerationRuntimeHooks.BeforeMapGeneration += ConfigureMapBeforeGeneration;
         }
 
         internal NewWorldCreationRequest CreateWorldRequest(string suffix)
@@ -54,35 +52,6 @@ namespace FlatWorld.Automation
             chunkLoader?.RefreshChunksForCameraView();
         }
 
-        private void ConfigureMapBeforeGeneration(Map map)
-        {
-            GoldenPathHydrologyConfiguration settings = Configuration.hydrology;
-            if (!settings.overrideGeneration)
-                return;
-
-            ChunkGenerator_Land land = map.LandGenerator;
-            ChunkGenerator_River river = map.GetGenerator<ChunkGenerator_River>();
-            if (land == null || river == null)
-                throw new InvalidOperationException("Configured hydrology scenario requires land and river generators.");
-
-            land.WindwardRainGain = settings.windwardRainGain;
-            land.LeewardRainLoss = settings.leewardRainLoss;
-            river.hydrologyRegionSize = settings.hydrologyRegionSize;
-            river.runoffCellSize = settings.runoffCellSize;
-            river.runoffSampleStride = settings.runoffSampleStride;
-            river.maxTraceSteps = settings.maxTraceSteps;
-            river.seaLevel = settings.seaLevel;
-            river.infiltrationFloor = settings.infiltrationFloor;
-            river.riverStartFlow = settings.riverStartFlow;
-            river.fullWidthFlow = settings.fullWidthFlow;
-            river.maxRiverWidth = settings.maxRiverWidth;
-            river.lakeMinFlow = settings.lakeMinFlow;
-            river.ValidateConfiguration();
-        }
-
-        public void Dispose()
-        {
-            WorldGenerationRuntimeHooks.BeforeMapGeneration -= ConfigureMapBeforeGeneration;
-        }
+        public void Dispose() { }
     }
 }

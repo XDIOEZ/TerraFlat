@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 public readonly struct WorldNavigationPathResult
 {
@@ -65,6 +67,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
     private readonly WorldNavigationGrid grid = new();
     private readonly Dictionary<int, HashSet<Vector2Int>> cellsByMap = new(128);
+    private readonly Dictionary<RuntimeWorldAddress, HashSet<Vector2Int>> cellsByRuntimeChunk = new();
+    private readonly Dictionary<Vector2Int, RuntimeWorldAddress> runtimeTerrainOwnerByCell = new(8192);
     private readonly Stack<HashSet<Vector2Int>> mapCellSetPool = new(32);
     private readonly Dictionary<Vector2Int, int> terrainOwnerByCell = new(8192);
     private readonly Dictionary<Vector2Int, GoalField> fieldsByGoal = new(32);
@@ -186,6 +190,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         grid.Clear();
         RecycleAllMapCellSets();
         terrainOwnerByCell.Clear();
+        cellsByRuntimeChunk.Clear();
+        runtimeTerrainOwnerByCell.Clear();
         observedGridRevision = grid.Revision;
         activeWorldKey = string.Empty;
         enabled = false;
@@ -195,86 +201,83 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
     public void RegisterMap(Map map)
     {
-        if (map?.Data == null)
+        if (map?.chunk == null || ChunkMgr.Instance == null)
             return;
-
-        if (string.IsNullOrEmpty(activeWorldKey))
-            CaptureActiveWorldKey();
-
-        int mapId = map.GetInstanceID();
-        Data_TileMap mapData = map.Data;
-        HashSet<Vector2Int> nextCells = RentMapCellSet(mapData.CountNonEmptyCells());
-        cellsByMap.TryGetValue(mapId, out HashSet<Vector2Int> previousCells);
-        bool ownershipTransferred = false;
-
-        grid.BeginBatchUpdate();
-        try
-        {
-            foreach (OccupiedTileCell occupiedCell in mapData.EnumerateOccupiedCells())
-            {
-                Vector2Int worldCell = WorldNavigationGrid.NormalizeCell(occupiedCell.WorldPosition);
-                TileData topTile = occupiedCell.Stack.GetFromTop();
-                bool walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(
-                    worldCell,
-                    topTile.IsWalkable);
-                grid.SetCell(worldCell, topTile.Penalty, walkable);
-                nextCells.Add(worldCell);
-                terrainOwnerByCell[worldCell] = mapId;
-            }
-
-            if (previousCells != null)
-            {
-                foreach (Vector2Int previousCell in previousCells)
-                {
-                    if (!nextCells.Contains(previousCell) &&
-                        terrainOwnerByCell.TryGetValue(previousCell, out int ownerId) &&
-                        ownerId == mapId)
-                    {
-                        terrainOwnerByCell.Remove(previousCell);
-                        grid.RemoveCell(previousCell);
-                    }
-                }
-            }
-
-            cellsByMap[mapId] = nextCells;
-            ownershipTransferred = true;
-        }
-        finally
-        {
-            grid.EndBatchUpdate();
-            if (ownershipTransferred)
-                ReturnMapCellSet(previousCells);
-            else
-                ReturnMapCellSet(nextCells);
-        }
+        RuntimeWorldAddress address = ChunkMgr.Instance.ResolveWorldAddress(map.chunk.transform.position);
+        if (ChunkMgr.Instance.TryGetChunkRuntime(address, out ChunkRuntime runtimeChunk))
+            RegisterChunkRuntime(runtimeChunk);
     }
 
     public void UnregisterMap(Map map)
     {
-        if (map == null)
+        if (map?.chunk == null || ChunkMgr.Instance == null)
+            return;
+        UnregisterChunkRuntime(ChunkMgr.Instance.ResolveWorldAddress(map.chunk.transform.position));
+    }
+
+    public void RegisterChunkRuntime(ChunkRuntime chunk)
+    {
+        if (chunk?.Terrain == null || chunk.DataStatus != ChunkDataStatus.Ready)
             return;
 
-        int mapId = map.GetInstanceID();
-        if (!cellsByMap.TryGetValue(mapId, out HashSet<Vector2Int> ownedCells))
+        UnregisterChunkRuntime(chunk.Address);
+        var ownedCells = new HashSet<Vector2Int>();
+        ChunkTerrainData terrain = chunk.Terrain;
+        grid.BeginBatchUpdate();
+        try
+        {
+            for (int y = 0; y < terrain.Height; y++)
+            {
+                for (int x = 0; x < terrain.Width; x++)
+                {
+                    Vector2Int worldCell = WorldNavigationGrid.NormalizeCell(new Vector2Int(
+                        chunk.Address.ChunkOrigin.X + x,
+                        chunk.Address.ChunkOrigin.Y + y));
+                    TerrainCell terrainCell = terrain.GetCell(x, y);
+                    bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
+                                    (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
+                    walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable);
+                    uint penalty = walkable ? (uint)Mathf.Max(1, terrainCell.NavigationCost) : 0u;
+                    grid.SetCell(worldCell, penalty, walkable);
+                    ownedCells.Add(worldCell);
+                    runtimeTerrainOwnerByCell[worldCell] = chunk.Address;
+                }
+            }
+            cellsByRuntimeChunk[chunk.Address] = ownedCells;
+        }
+        finally
+        {
+            grid.EndBatchUpdate();
+        }
+    }
+
+    public void UnregisterChunkRuntime(ChunkRuntime chunk)
+    {
+        if (chunk != null)
+            UnregisterChunkRuntime(chunk.Address);
+    }
+
+    public void UnregisterChunkRuntime(RuntimeWorldAddress address)
+    {
+        if (!cellsByRuntimeChunk.TryGetValue(address, out HashSet<Vector2Int> ownedCells))
             return;
 
         grid.BeginBatchUpdate();
         try
         {
-            cellsByMap.Remove(mapId);
+            cellsByRuntimeChunk.Remove(address);
             foreach (Vector2Int worldCell in ownedCells)
             {
-                if (!terrainOwnerByCell.TryGetValue(worldCell, out int ownerId) || ownerId != mapId)
+                if (!runtimeTerrainOwnerByCell.TryGetValue(worldCell, out RuntimeWorldAddress owner) ||
+                    owner != address)
                     continue;
-
-                terrainOwnerByCell.Remove(worldCell);
+                runtimeTerrainOwnerByCell.Remove(worldCell);
                 grid.RemoveCell(worldCell);
             }
         }
         finally
         {
             grid.EndBatchUpdate();
-            ReturnMapCellSet(ownedCells);
         }
     }
 
@@ -357,10 +360,10 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             return true;
         }
 
-        if (TryReadCellFromLoadedMap(cellPosition, out cell, out Map sourceMap))
+        if (TryReadCellFromRuntime(cellPosition, out cell, out ChunkRuntime sourceChunk))
         {
             grid.SetCell(cellPosition, cell.Penalty, cell.Walkable);
-            AssignCellOwner(sourceMap, cellPosition);
+            AssignRuntimeCellOwner(sourceChunk, cellPosition);
             penalty = cell.Penalty;
             walkable = cell.Walkable;
             return true;
@@ -408,19 +411,19 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
     private void RegisterActiveMaps()
     {
         ChunkMgr chunkManager = ChunkMgr.Instance;
-        if (chunkManager?.Chunk_Dic_Active_ByPos == null)
+        if (chunkManager?.WorldRuntime == null)
             return;
 
         grid.BeginBatchUpdate();
         try
         {
-            foreach (Chunk chunk in chunkManager.Chunk_Dic_Active_ByPos.Values)
+            foreach (ChunkRuntime chunk in chunkManager.Chunks.Values)
             {
-                if (chunk == null || !chunk.gameObject.activeInHierarchy || chunk.Map == null)
+                if (chunk == null || !chunk.HasNavigationLease ||
+                    chunk.DataStatus != ChunkDataStatus.Ready)
                     continue;
-
-                if (!cellsByMap.ContainsKey(chunk.Map.GetInstanceID()))
-                    RegisterMap(chunk.Map);
+                if (!cellsByRuntimeChunk.ContainsKey(chunk.Address))
+                    RegisterChunkRuntime(chunk);
             }
         }
         finally
@@ -455,6 +458,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             grid.Clear();
             RecycleAllMapCellSets();
             terrainOwnerByCell.Clear();
+            cellsByRuntimeChunk.Clear();
+            runtimeTerrainOwnerByCell.Clear();
             observedGridRevision = grid.Revision;
             scheduleIndex = 0;
         }
@@ -465,10 +470,10 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
     private void RefreshCellFromLoadedMap(Vector2Int worldCell)
     {
         worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
-        if (TryReadCellFromLoadedMap(worldCell, out WorldNavigationCell cell, out Map sourceMap))
+        if (TryReadCellFromRuntime(worldCell, out WorldNavigationCell cell, out ChunkRuntime sourceChunk))
         {
             grid.SetCell(worldCell, cell.Penalty, cell.Walkable);
-            AssignCellOwner(sourceMap, worldCell);
+            AssignRuntimeCellOwner(sourceChunk, worldCell);
         }
         else
         {
@@ -539,29 +544,48 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         cellsByMap.Clear();
     }
 
-    private static bool TryReadCellFromLoadedMap(
+    private static bool TryReadCellFromRuntime(
         Vector2Int worldCell,
         out WorldNavigationCell cell,
-        out Map sourceMap)
+        out ChunkRuntime sourceChunk)
     {
         worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
         cell = default;
-        sourceMap = null;
+        sourceChunk = null;
         ChunkMgr chunkManager = ChunkMgr.Instance;
         if (chunkManager == null)
             return false;
 
         Vector2 center = WorldNavigationGrid.CellCenter(worldCell);
-        chunkManager.GetChunkBy_ItemPosition(center, out Chunk chunk);
-        TileData topTile = chunk?.Map?.Data?.GetTopTile(worldCell);
-        if (topTile == null)
+        RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(center);
+        if (!chunkManager.TryGetChunkRuntime(address, out sourceChunk) || sourceChunk.Terrain == null)
             return false;
-
-        sourceMap = chunk.Map;
+        int localX = worldCell.x - sourceChunk.Address.ChunkOrigin.X;
+        int localY = worldCell.y - sourceChunk.Address.ChunkOrigin.Y;
+        if ((uint)localX >= (uint)sourceChunk.Terrain.Width ||
+            (uint)localY >= (uint)sourceChunk.Terrain.Height)
+            return false;
+        TerrainCell terrainCell = sourceChunk.Terrain.GetCell(localX, localY);
+        bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
+                        (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
         cell = new WorldNavigationCell(
-            topTile.Penalty,
-            BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, topTile.IsWalkable));
+            walkable ? (uint)Mathf.Max(1, terrainCell.NavigationCost) : 0u,
+            BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable));
         return true;
+    }
+
+    private void AssignRuntimeCellOwner(ChunkRuntime chunk, Vector2Int worldCell)
+    {
+        if (chunk == null)
+            return;
+        worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
+        if (!cellsByRuntimeChunk.TryGetValue(chunk.Address, out HashSet<Vector2Int> cells))
+        {
+            cells = new HashSet<Vector2Int>();
+            cellsByRuntimeChunk[chunk.Address] = cells;
+        }
+        cells.Add(worldCell);
+        runtimeTerrainOwnerByCell[worldCell] = chunk.Address;
     }
 
     #endregion

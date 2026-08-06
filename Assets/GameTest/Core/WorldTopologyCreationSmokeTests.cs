@@ -63,6 +63,8 @@ namespace FlatWorld.GameTest.Core
                 "Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathExecutor.cs");
             string commandSource = File.ReadAllText(
                 "Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathCommand.cs");
+            string topologyScenarioSource = File.ReadAllText(
+                "Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.WorldTopology.cs");
             string runnerSource = File.ReadAllText(
                 ".agents/skills/flatworld-test-automation/scripts/run_unity_tests.py");
 
@@ -71,8 +73,11 @@ namespace FlatWorld.GameTest.Core
             Assert.That(configurationSource, Does.Contain("cameraOrthographicSize"));
             Assert.That(executorSource, Does.Contain("CreateWorldRequest"));
             Assert.That(executorSource, Does.Contain("ConfigurePlayer"));
-            Assert.That(executorSource, Does.Contain(
-                "WorldGenerationRuntimeHooks.BeforeMapGeneration"));
+            Assert.That(executorSource, Does.Not.Contain("BeforeMapGeneration"));
+            Assert.That(executorSource, Does.Not.Contain("Map map"));
+            Assert.That(topologyScenarioSource, Does.Contain("TryGetChunkRuntime"));
+            Assert.That(topologyScenarioSource, Does.Contain("ChunkPresentationStatus.Bound"));
+            Assert.That(topologyScenarioSource, Does.Not.Contain("Chunk_Dic_ByPos"));
             Assert.That(commandSource, Does.Contain("_executor.Configuration"));
             Assert.That(commandSource, Does.Contain("public FlatWorldGoldenPathConfiguration configuration"));
             Assert.That(runnerSource, Does.Contain("--golden-config"));

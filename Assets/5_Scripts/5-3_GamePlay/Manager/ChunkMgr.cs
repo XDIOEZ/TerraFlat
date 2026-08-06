@@ -344,6 +344,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void OnSceneChange()
     {
+        ResetWorldRuntimeForSceneChange();
         // 停止所有正在运行的协程
         foreach (Coroutine coroutine in RandomMapCoroutines)
         {
@@ -430,14 +431,14 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     {
         while (_pendingChunkLoadQueue.Count > 0)
         {
-            while (_chunksLoading.Count >= Mathf.Max(1, maxConcurrentChunkLoads))
+            while (_chunksLoading.Count >= EffectiveMaxConcurrentChunkLoads)
                 yield return null;
 
-            int budget = Mathf.Max(1, maxChunkLoadPerFrame);
+            int budget = EffectiveMaxChunkLoadPerFrame;
 
             while (budget > 0 &&
                    _pendingChunkLoadQueue.Count > 0 &&
-                   _chunksLoading.Count < Mathf.Max(1, maxConcurrentChunkLoads))
+                   _chunksLoading.Count < EffectiveMaxConcurrentChunkLoads)
             {
                 int bestIndex = GetBestPendingChunkIndex();
                 Vector2Int chunkPos = _pendingChunkLoadQueue[bestIndex];

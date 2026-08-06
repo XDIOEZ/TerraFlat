@@ -3,9 +3,11 @@ using System.Linq;
 using System.Reflection;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace FlatWorld.GameTest.PlayerInteraction
 {
@@ -66,6 +68,79 @@ namespace FlatWorld.GameTest.PlayerInteraction
                     Physics2D.GetIgnoreLayerCollision(playerLayer, otherLayer),
                     Is.False,
                     $"Player 与 {layerName} 的碰撞不能被关闭。");
+            }
+        }
+
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
+        public void AdminMoveSpeedAcceptsDecimalMultiplierAndPreservesOtherModifiers()
+        {
+            GameObject owner = new GameObject("AdminMoveSpeed_Test");
+            try
+            {
+                Mover mover = owner.AddComponent<Mover>();
+                PlayerAdminController controller = owner.AddComponent<PlayerAdminController>();
+                mover.Speed.MultiplicativeModifier = 1.25f;
+
+                Assert.That(
+                    controller.TrySetAdminMoveSpeedMultiplier(2.5f, out float applied),
+                    Is.True);
+                Assert.That(applied, Is.EqualTo(2.5f).Within(0.001f));
+                Assert.That(controller.AdminMoveSpeedMultiplier, Is.EqualTo(2.5f).Within(0.001f));
+                Assert.That(mover.Speed.MultiplicativeModifier, Is.EqualTo(3.125f).Within(0.001f));
+
+                Assert.That(controller.TrySetAdminMoveSpeedMultiplier(4f, out applied), Is.True);
+                Assert.That(applied, Is.EqualTo(4f).Within(0.001f));
+                Assert.That(
+                    mover.Speed.MultiplicativeModifier,
+                    Is.EqualTo(5f).Within(0.001f),
+                    "重复输入倍率时必须替换管理员倍率，不能继续叠乘。 ");
+
+                Assert.That(controller.TrySetAdminMoveSpeedMultiplier(500f, out applied), Is.True);
+                Assert.That(applied, Is.EqualTo(PlayerAdminController.MaxAdminMoveSpeedMultiplier));
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+            }
+        }
+
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
+        public void GmPlayerPageBuildsDecimalMoveSpeedInputWithApplyButton()
+        {
+            GameObject owner = new GameObject("GmMoveSpeedUi_Test");
+            owner.SetActive(false);
+            try
+            {
+                GMReflectionConsole console = owner.AddComponent<GMReflectionConsole>();
+                MethodInfo buildWindow = typeof(GMReflectionConsole).GetMethod(
+                    "BuildTabbedWindow",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(buildWindow, Is.Not.Null);
+                buildWindow.Invoke(console, null);
+
+                TMP_InputField input = typeof(GMReflectionConsole).GetField(
+                        "playerMoveSpeedInput",
+                        BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.GetValue(console) as TMP_InputField;
+                Button applyButton = typeof(GMReflectionConsole).GetField(
+                        "playerMoveSpeedApplyButton",
+                        BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.GetValue(console) as Button;
+
+                Assert.That(input, Is.Not.Null);
+                Assert.That(input.contentType, Is.EqualTo(TMP_InputField.ContentType.DecimalNumber));
+                Assert.That(applyButton, Is.Not.Null);
+                Assert.That(input.transform.parent, Is.SameAs(applyButton.transform.parent));
+                Assert.That(
+                    input.transform.parent.GetComponent<HorizontalLayoutGroup>(),
+                    Is.Not.Null,
+                    "倍率输入框与应用按钮必须由同一水平布局约束。 ");
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
             }
         }
 

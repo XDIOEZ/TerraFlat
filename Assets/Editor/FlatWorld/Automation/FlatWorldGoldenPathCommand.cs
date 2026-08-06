@@ -73,6 +73,8 @@ namespace FlatWorld.Automation
         private static string _terminalWorldEntryStatus;
         private static Action<WorldEntryProgressInfo> _worldEntryHandler;
         private static bool _worldSetupApplied;
+        private static bool _worldExitCompleted;
+        private static string _completionMessage;
 
         static FlatWorldGoldenPathCommand()
         {
@@ -270,6 +272,18 @@ namespace FlatWorld.Automation
                     case RuntimePhase.RestoreWorldWrap:
                         TickRestoreWorldWrap();
                         break;
+                    case RuntimePhase.MoveWorldModelAway:
+                        TickMoveWorldModelAway();
+                        break;
+                    case RuntimePhase.WaitWorldModelAway:
+                        TickWaitWorldModelAway();
+                        break;
+                    case RuntimePhase.MoveWorldModelReturn:
+                        TickMoveWorldModelReturn();
+                        break;
+                    case RuntimePhase.WaitWorldModelReturn:
+                        TickWaitWorldModelReturn();
+                        break;
                     case RuntimePhase.MoveToWaypoint:
                         TickMoveToWaypoint();
                         break;
@@ -278,6 +292,9 @@ namespace FlatWorld.Automation
                         break;
                     case RuntimePhase.WaitForScreenshot:
                         TickWaitForScreenshot();
+                        break;
+                    case RuntimePhase.WaitForWorldExit:
+                        TickWaitForWorldExit();
                         break;
                 }
             }
@@ -413,7 +430,7 @@ namespace FlatWorld.Automation
             _waypointIndex = 0;
             _visitedChunks = new HashSet<Vector2Int>
             {
-                Chunk.GetChunkPosition(_startPosition, _chunkSize)
+                ChunkMgr.Instance.ResolveRuntimeChunkOrigin(_startPosition)
             };
             _observedChunks = new HashSet<Vector2Int>();
             _screenshotPaths = new List<string>(3);
@@ -464,6 +481,71 @@ namespace FlatWorld.Automation
                 return;
             }
 
+            BeginWorldModelExcursion();
+        }
+
+        private static void BeginWorldModelExcursion()
+        {
+            FlatWorldGoldenPathScenarios.BeginWorldModelExcursion(_travelDirection, _chunkSize);
+            _runtimePhase = RuntimePhase.MoveWorldModelAway;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.moveTimeoutSeconds;
+        }
+
+        private static void TickMoveWorldModelAway()
+        {
+            MoveWorldModelPlayer(FlatWorldGoldenPathScenarios.WorldModelAwayPosition,
+                RuntimePhase.WaitWorldModelAway);
+        }
+
+        private static void TickWaitWorldModelAway()
+        {
+            if (!FlatWorldGoldenPathScenarios.TickWorldModelAway())
+            {
+                ThrowIfTimedOut("起始无头区块未在 destroyDistance 内进入休眠并解绑表现。");
+                return;
+            }
+            _runtimePhase = RuntimePhase.MoveWorldModelReturn;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.moveTimeoutSeconds;
+        }
+
+        private static void TickMoveWorldModelReturn()
+        {
+            MoveWorldModelPlayer(FlatWorldGoldenPathScenarios.WorldModelStartPosition,
+                RuntimePhase.WaitWorldModelReturn);
+        }
+
+        private static void MoveWorldModelPlayer(Vector2 target, RuntimePhase completedPhase)
+        {
+            if (_mover == null || _mover.rb == null)
+                throw new InvalidOperationException("无头模型往返时玩家 Mover 已销毁。");
+            float distance = WorldTopologyRuntime.Distance(_mover.rb.position, target);
+            if (distance > 0.2f)
+            {
+                ThrowIfTimedOut($"无头模型往返未在限定时间内到达 {target}。");
+                _mover.Speed.BaseValue = Mathf.Clamp(distance * 8f, 2f,
+                    _executor.Configuration.player.maximumMoveSpeed);
+                _mover.Move(target, Mathf.Max(Time.deltaTime, 0.02f));
+                return;
+            }
+            _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
+            _expectedChunk = ChunkMgr.NormalizeChunkPosition(
+                ChunkMgr.Instance.ResolveRuntimeChunkOrigin(_mover.rb.position));
+            _runtimePhase = completedPhase;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
+        }
+
+        private static void TickWaitWorldModelReturn()
+        {
+            if (!IsChunkReadyAt(ChunkMgr.Instance, _expectedChunk) ||
+                !FlatWorldGoldenPathScenarios.TickWorldModelReturn())
+            {
+                ThrowIfTimedOut("返回起点后区块模型或表现未完成无重复重绑。");
+                return;
+            }
+            _visitedChunks.Add(_expectedChunk);
             BeginNextWaypoint();
         }
 
@@ -488,7 +570,7 @@ namespace FlatWorld.Automation
 
             _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
             _expectedChunk = ChunkMgr.NormalizeChunkPosition(
-                Chunk.GetChunkPosition(_mover.rb.position, _chunkSize));
+                ChunkMgr.Instance.ResolveRuntimeChunkOrigin(_mover.rb.position));
             _runtimePhase = RuntimePhase.WaitForChunk;
             _phaseDeadline = EditorApplication.timeSinceStartup +
                              _executor.Configuration.execution.worldEntryTimeoutSeconds;
@@ -606,7 +688,7 @@ namespace FlatWorld.Automation
                     }
                     else
                     {
-                        BeginNextWaypoint();
+                        BeginWorldModelExcursion();
                     }
                     break;
                 case ScreenshotContinuation.ContinueTraversal:
@@ -658,9 +740,9 @@ namespace FlatWorld.Automation
             }
 
             Vector2Int startChunk = ChunkMgr.NormalizeChunkPosition(
-                Chunk.GetChunkPosition(_startPosition, _chunkSize));
+                ChunkMgr.Instance.ResolveRuntimeChunkOrigin(_startPosition));
             Vector2Int finalChunk = ChunkMgr.NormalizeChunkPosition(
-                Chunk.GetChunkPosition(finalPosition, _chunkSize));
+                ChunkMgr.Instance.ResolveRuntimeChunkOrigin(finalPosition));
             if (finalChunk == startChunk && _visitedChunks.Count < 2)
                 throw new InvalidOperationException("直线长距离移动结束后玩家仍位于初始 Chunk。");
 
@@ -668,10 +750,27 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException("起点、中点、终点三张 Game View PNG 未全部有效写入。");
 
             FlatWorldGoldenPathScenarios.BeforeWorldExit(CreateScenarioContext());
-            FinishRuntime(
-                true,
-                $"创建世界、随机直线移动及 Chunk 流送验证全部通过；" +
-                $"玩家 Chunk={_visitedChunks.Count}，累计活动 Chunk={_observedChunks.Count}。");
+            _completionMessage =
+                $"创建世界、无头区块休眠重绑、随机直线移动、保存退出及 Chunk 流送验证全部通过；" +
+                $"玩家 Chunk={_visitedChunks.Count}，累计活动 Chunk={_observedChunks.Count}。";
+            _worldExitCompleted = false;
+            _runtimePhase = RuntimePhase.WaitForWorldExit;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
+            _gameManager.StartCoroutine(_gameManager.BackToHelloScene_Coroutine(
+                _player, () => _worldExitCompleted = true));
+        }
+
+        private static void TickWaitForWorldExit()
+        {
+            if (!_worldExitCompleted ||
+                !string.Equals(SceneManager.GetActiveScene().name, "GameStartScene",
+                    StringComparison.Ordinal))
+            {
+                ThrowIfTimedOut("完整保存退出流程未在限定时间内返回 GameStartScene。");
+                return;
+            }
+            FinishRuntime(true, _completionMessage);
         }
 
         private static Vector2 SelectDeterministicDirection(int seed)
@@ -722,8 +821,14 @@ namespace FlatWorld.Automation
             if (chunkManager == null || _observedChunks == null)
                 return;
 
-            foreach (Vector2Int chunkPosition in chunkManager.Chunk_Dic_Active_ByPos.Keys)
-                _observedChunks.Add(chunkPosition);
+            foreach (KeyValuePair<FlatWorld.WorldModel.WorldAddress,
+                         FlatWorld.WorldModel.ChunkRuntime> pair in chunkManager.Chunks)
+            {
+                if (pair.Value.SimulationStatus ==
+                    FlatWorld.WorldModel.ChunkSimulationStatus.Active)
+                    _observedChunks.Add(new Vector2Int(pair.Key.ChunkOrigin.X,
+                        pair.Key.ChunkOrigin.Y));
+            }
         }
 
         private static bool IsValidPng(string path)
@@ -768,42 +873,72 @@ namespace FlatWorld.Automation
 
         private static bool IsChunkWindowReady(ChunkMgr chunkManager)
         {
-            if (chunkManager == null || chunkManager.HasPendingChunkLoads ||
-                chunkManager.Chunk_Dic_Active_ByPos.Count == 0)
+            if (chunkManager == null || chunkManager.HasPendingChunkDataLoads ||
+                chunkManager.Chunks.Count == 0)
             {
                 return false;
             }
 
-            return chunkManager.Chunk_Dic_Active_ByPos.Values.All(chunk =>
-                chunk != null && chunk.IsReady);
+            int activeCount = 0;
+            foreach (KeyValuePair<FlatWorld.WorldModel.WorldAddress,
+                         FlatWorld.WorldModel.ChunkRuntime> entry in chunkManager.Chunks)
+            {
+                FlatWorld.WorldModel.ChunkRuntime runtime = entry.Value;
+                if (runtime.SimulationStatus != FlatWorld.WorldModel.ChunkSimulationStatus.Active)
+                    continue;
+                activeCount++;
+                if (runtime.DataStatus != FlatWorld.WorldModel.ChunkDataStatus.Ready ||
+                    runtime.PresentationStatus != FlatWorld.WorldModel.ChunkPresentationStatus.Bound ||
+                    !runtime.HasNavigationLease ||
+                    !chunkManager.TryGetRuntimeChunkView(entry.Key, out ChunkView view))
+                    return false;
+                UnityEngine.Tilemaps.Tilemap ground = view.transform.Find("Ground")?.
+                    GetComponent<UnityEngine.Tilemaps.Tilemap>();
+                if (ground == null || ground.GetUsedTilesCount() == 0)
+                    return false;
+            }
+            return activeCount > 0;
         }
 
         private static bool IsChunkReadyAt(ChunkMgr chunkManager, Vector2Int chunkPosition)
         {
-            return IsChunkWindowReady(chunkManager) &&
-                   chunkManager.TryGetActiveChunkByPos(chunkPosition, out Chunk chunk) &&
-                   chunk != null &&
-                   chunk.IsReady;
+            if (!IsChunkWindowReady(chunkManager))
+                return false;
+            FlatWorld.WorldModel.WorldAddress address =
+                chunkManager.ResolveWorldAddress(chunkPosition);
+            return chunkManager.TryGetChunkRuntime(address, out var chunk) &&
+                   chunk.DataStatus == FlatWorld.WorldModel.ChunkDataStatus.Ready &&
+                   chunk.SimulationStatus == FlatWorld.WorldModel.ChunkSimulationStatus.Active &&
+                   chunkManager.TryGetRuntimeChunkView(address, out _);
         }
 
         private static void ValidateChunkDictionaries(ChunkMgr chunkManager)
         {
-            if (chunkManager == null || chunkManager.HasPendingChunkLoads ||
-                chunkManager.Chunk_Dic_Active_ByPos.Count == 0)
+            if (chunkManager == null || chunkManager.HasPendingChunkDataLoads ||
+                chunkManager.Chunks.Count == 0)
             {
-                throw new InvalidOperationException("Chunk 激活字典尚未稳定。");
+                throw new InvalidOperationException("Chunk 模型窗口尚未稳定。");
             }
 
-            foreach (KeyValuePair<Vector2Int, Chunk> entry in chunkManager.Chunk_Dic_Active_ByPos)
+            int activeCount = 0;
+            foreach (KeyValuePair<FlatWorld.WorldModel.WorldAddress,
+                         FlatWorld.WorldModel.ChunkRuntime> entry in chunkManager.Chunks)
             {
-                if (entry.Value == null)
-                    throw new InvalidOperationException($"激活 Chunk 字典包含空对象：{entry.Key}");
-                if (!entry.Value.IsReady)
+                if (entry.Value.SimulationStatus !=
+                    FlatWorld.WorldModel.ChunkSimulationStatus.Active)
+                    continue;
+                activeCount++;
+                if (entry.Value.DataStatus != FlatWorld.WorldModel.ChunkDataStatus.Ready ||
+                    entry.Value.PresentationStatus !=
+                    FlatWorld.WorldModel.ChunkPresentationStatus.Bound)
                 {
                     throw new InvalidOperationException(
-                        $"激活 Chunk 尚未 Ready：{entry.Key}, state={entry.Value.LifecycleState}");
+                        $"激活 Chunk 模型尚未完整就绪：{entry.Key}, " +
+                        $"data={entry.Value.DataStatus}, view={entry.Value.PresentationStatus}");
                 }
             }
+            if (activeCount == 0)
+                throw new InvalidOperationException("没有活动 Chunk 模型。");
         }
 
         private static void FinishRuntime(bool passed, string message, string stackTrace = "")
@@ -1228,6 +1363,8 @@ namespace FlatWorld.Automation
             _terminalWorldEntryStatus = null;
             _worldEntryHandler = null;
             _worldSetupApplied = false;
+            _worldExitCompleted = false;
+            _completionMessage = null;
         }
 
         private enum RuntimePhase
@@ -1237,9 +1374,14 @@ namespace FlatWorld.Automation
             WaitForWorld,
             VerifyWorldWrap,
             RestoreWorldWrap,
+            MoveWorldModelAway,
+            WaitWorldModelAway,
+            MoveWorldModelReturn,
+            WaitWorldModelReturn,
             MoveToWaypoint,
             WaitForChunk,
             WaitForScreenshot,
+            WaitForWorldExit,
             Finishing
         }
 

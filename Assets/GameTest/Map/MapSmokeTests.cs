@@ -4,10 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 
 namespace FlatWorld.GameTest.Map
 {
@@ -634,6 +636,76 @@ namespace FlatWorld.GameTest.Map
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(concurrentField, Is.Not.Null);
             Assert.That((int)concurrentField.GetValue(chunkManager), Is.EqualTo(1));
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void ChunkLoadSpeedApiScalesRuntimeBudgetsAndClampsInput()
+        {
+            const string worldManagerPath = "Assets/2_Prefabs/GameManager/WorldManager.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(worldManagerPath);
+            Assert.That(prefab, Is.Not.Null);
+            ChunkMgr chunkManager = prefab.GetComponentInChildren<ChunkMgr>(true);
+            Assert.That(chunkManager, Is.Not.Null);
+
+            Assert.That(
+                chunkManager.TrySetChunkLoadSpeedMultiplier(2.5f, out float appliedMultiplier),
+                Is.True);
+            Assert.That(appliedMultiplier, Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(chunkManager.ChunkLoadSpeedMultiplier, Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(chunkManager.EffectiveMaxChunkLoadPerFrame, Is.EqualTo(3));
+            Assert.That(chunkManager.EffectiveMaxConcurrentChunkLoads, Is.EqualTo(3));
+
+            Assert.That(
+                chunkManager.TrySetChunkLoadSpeedMultiplier(100f, out appliedMultiplier),
+                Is.True);
+            Assert.That(appliedMultiplier, Is.EqualTo(ChunkMgr.MaxChunkLoadSpeedMultiplier));
+
+            Assert.That(
+                chunkManager.TrySetChunkLoadSpeedMultiplier(float.NaN, out appliedMultiplier),
+                Is.False);
+            Assert.That(appliedMultiplier, Is.EqualTo(ChunkMgr.MaxChunkLoadSpeedMultiplier));
+
+            Assert.That(chunkManager.TrySetChunkLoadSpeedMultiplier(1f, out _), Is.True);
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void GmWorldPageBuildsDecimalChunkLoadSpeedInputWithApplyButton()
+        {
+            GameObject owner = new GameObject("GmChunkLoadSpeedUi_Test");
+            owner.SetActive(false);
+            try
+            {
+                GMReflectionConsole console = owner.AddComponent<GMReflectionConsole>();
+                MethodInfo buildWindow = typeof(GMReflectionConsole).GetMethod(
+                    "BuildTabbedWindow",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(buildWindow, Is.Not.Null);
+                buildWindow.Invoke(console, null);
+
+                TMP_InputField input = typeof(GMReflectionConsole).GetField(
+                        "chunkLoadSpeedInput",
+                        BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.GetValue(console) as TMP_InputField;
+                Button applyButton = typeof(GMReflectionConsole).GetField(
+                        "chunkLoadSpeedApplyButton",
+                        BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.GetValue(console) as Button;
+
+                Assert.That(input, Is.Not.Null);
+                Assert.That(input.contentType, Is.EqualTo(TMP_InputField.ContentType.DecimalNumber));
+                Assert.That(applyButton, Is.Not.Null);
+                Assert.That(input.transform.parent, Is.SameAs(applyButton.transform.parent));
+                Assert.That(
+                    input.transform.parent.GetComponent<HorizontalLayoutGroup>(),
+                    Is.Not.Null,
+                    "区块倍率输入框与应用按钮必须由同一水平布局约束。 ");
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+            }
         }
 
         [Test]

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88d35e6c7a3eba746bf10c0ea4248632, type: 3}
+  m_Name: ChunkTilePalette_Default
+  m_EditorClassIdentifier:
+  entries:
+  - TileId: 1
+    Tile: {fileID: 11400000, guid: 6d0eadd27bd6e5745af12546e6ae687d, type: 2}
+  - TileId: 2
+    Tile: {fileID: 11400000, guid: 57d25a3fd2bb6fb4e822c2992f71ab13, type: 2}
+  - TileId: 3
+    Tile: {fileID: 11400000, guid: 25706c96a4c97da4ea78a1295d5bfc75, type: 2}
+  - TileId: 4
+    Tile: {fileID: 11400000, guid: cb24d3aa826798842b55495dd2d23ead, type: 2}
+  - TileId: 5
+    Tile: {fileID: 11400000, guid: 99e3d307db8a6e54686e4d72966983bb, type: 2}
+  - TileId: 6
+    Tile: {fileID: 11400000, guid: 17927379171a0244184e81b4a99c4c43, type: 2}

@@ -1,8 +1,6 @@
-using AOT;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Mathematics;
 using UnityEngine;
@@ -253,7 +251,7 @@ public static class ClimateFieldKernel
 
 public static class TerrainGenerationSignature
 {
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
 
     public static uint CalculateDefault()
     {
@@ -443,15 +441,6 @@ public static class TerrainNoiseKernel
 {
     public const float DefaultChannelValue = 0.5f;
 
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate float SampleFunction(
-        TerrainNoiseConfig config,
-        float2 worldScaledPosition,
-        int worldSeed);
-
-    private static readonly FunctionPointer<SampleFunction> BurstSampleFunction =
-        BurstCompiler.CompileFunctionPointer<SampleFunction>(SampleCompiled);
-
     public static float Sample(in TerrainNoiseConfig config, Vector2 worldScaledPosition, int worldSeed)
     {
         return Sample(config, new float2(worldScaledPosition.x, worldScaledPosition.y), worldSeed);
@@ -459,7 +448,10 @@ public static class TerrainNoiseKernel
 
     internal static float Sample(in TerrainNoiseConfig config, float2 worldScaledPosition, int worldSeed)
     {
-        return BurstSampleFunction.Invoke(config, worldScaledPosition, worldSeed);
+        // Burst jobs call SampleBurst directly. Main-thread sampling does not need a separately
+        // compiled function pointer, which produced an invalid Burst entry-point exception during
+        // domain reload on Unity 2022.3.
+        return SampleBurst(config, worldScaledPosition, worldSeed);
     }
 
     public static float Sample(
@@ -475,16 +467,6 @@ public static class TerrainNoiseKernel
             noiseScale,
             worldSeed,
             domain);
-    }
-
-    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
-    [MonoPInvokeCallback(typeof(SampleFunction))]
-    private static float SampleCompiled(
-        TerrainNoiseConfig config,
-        float2 worldScaledPosition,
-        int worldSeed)
-    {
-        return SampleBurst(config, worldScaledPosition, worldSeed);
     }
 
     internal static float SampleBurst(

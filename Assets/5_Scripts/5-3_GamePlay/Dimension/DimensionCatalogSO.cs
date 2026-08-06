@@ -35,6 +35,11 @@ public sealed class DimensionDefinition
     public string DimensionId = WorldAddress.SurfaceDimensionId;
     public string DisplayName = "地表";
     public DimensionGenerationMode GenerationMode = DimensionGenerationMode.Surface;
+    [Tooltip("主线程创建的纯数据生成配置快照来源。")]
+    public ChunkGenerationProfileSO GenerationProfile;
+    [Tooltip("区块表现租约使用的纯表现 Prefab。")]
+    public ChunkView ChunkViewPrefab;
+    [Obsolete("Use GenerationProfile and ChunkViewPrefab. MapCore is no longer an authority.")]
     public string MapCorePrefabId = "MapCore";
     public int SeedSalt;
     public Vector3 DefaultSpawnPosition = new Vector3(0.5f, 0.5f, 0f);

@@ -72,14 +72,7 @@ public class Mod_ChunkLoader : Module
     // 动态视距引用
     private Camera _boundCamera;
     private Mod_Cam _cameraFollowManager;
-    private bool _isNavRefreshRunning;
-    private bool _hasQueuedNavRefresh;
     private bool _adminManualLoadDistanceOverride;
-    private Vector2 _queuedNavRefreshCenter;
-    private int _queuedNavRefreshLoadDistance; // 排队请求的加载距离
-    private int _pendingRefreshLoadDistance; // 当前刷新使用的加载距离
-    private Vector2Int _pendingRefreshCenterChunk; // 当前刷新使用的区块中心坐标
-    private Coroutine _delayedNavRefreshCoroutine;
     private bool _externalStreamingManaged;
     #endregion
 
@@ -103,6 +96,8 @@ public class Mod_ChunkLoader : Module
     }
 
     public int CurrentLoadChunkDistance => LoadChunkDistance;
+    public int CurrentUnActiveChunkDistance => UnActiveDistance;
+    public int CurrentDestroyChunkDistance => DestroyChunkDistance;
     #endregion
 
     #region 生命周期方法
@@ -128,7 +123,7 @@ public class Mod_ChunkLoader : Module
     public override void Load()
     {
         ModData.ReadData(ref distanceConfig);
-        lastChunkPos = Chunk.GetChunkPosition(transform.position);
+        lastChunkPos = ResolveChunkOrigin(transform.position);
         _cameraFollowManager = item.GetComponentInChildren<Mod_Cam>();
     }
 
@@ -166,7 +161,7 @@ public class Mod_ChunkLoader : Module
     [Button("刷新周围区块")]
     public void RefreshChunksAroundPlayer()
     {
-        lastChunkPos = Chunk.GetChunkPosition(transform.position);
+        lastChunkPos = ResolveChunkOrigin(transform.position);
         needsChunkUpdate = false;
 
         if (ChunkMgr.Instance == null)
@@ -239,7 +234,7 @@ public class Mod_ChunkLoader : Module
 
     private void DetectChunkChange()
     {
-        Vector2 currentChunkPos = Chunk.GetChunkPosition(transform.position);
+        Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
         if (currentChunkPos != lastChunkPos)
         {
             lastChunkPos = currentChunkPos;
@@ -251,131 +246,11 @@ public class Mod_ChunkLoader : Module
     {
         if (ChunkMgr.Instance == null) return;
 
-        // 保存当前的加载距离，避免回调触发时 LoadChunkDistance 已被修改
-        int currentLoadDistance = LoadChunkDistance;
-        // 将 Vector2 center 转为 Vector2Int 区块坐标，确保权重烘焙使用固定中心
-        Vector2Int centerChunkPos = new Vector2Int(Mathf.RoundToInt(chunkPos.x), Mathf.RoundToInt(chunkPos.y));
-
-        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] UpdateChunks | chunkPos={chunkPos} centerChunkPos={centerChunkPos} LoadDistance={currentLoadDistance} UnActiveDistance={UnActiveDistance} DestroyDistance={DestroyChunkDistance}");
-
-        // 停止上一轮保底协程
-        if (_delayedNavRefreshCoroutine != null)
-        {
-            StopCoroutine(_delayedNavRefreshCoroutine);
-            _delayedNavRefreshCoroutine = null;
-        }
-
-        ChunkMgr.Instance.ResetChunkLoadQueue();
-        ChunkMgr.Instance.DestroyChunk_In_Distance(gameObject, DestroyChunkDistance);
-        ChunkMgr.Instance.SwitchActiveChunks_TO_UnActive(gameObject, UnActiveDistance);
-        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, currentLoadDistance, () =>
-        {
-            if (WorldNavigationManager.Instance == null)
-            {
-                Debug.LogError("[区块加载器] WorldNavigationManager 未初始化", this);
-                return;
-            }
-            if (WorldNavigationManager.Instance.EnableDebugLogs) Debug.Log($"[WorldNav][ChunkLoader] 所有区块加载完成，刷新导航 | center={chunkPos} centerChunkPos={centerChunkPos} currentLoadDistance={currentLoadDistance}");
-            _pendingRefreshLoadDistance = currentLoadDistance;
-            _pendingRefreshCenterChunk = centerChunkPos;
-            RequestNavMeshRefresh(chunkPos);
-        });
-
-        // 保底：即使回调因竞态未触发，也确保权重烘焙管线启动
-        if (!_isNavRefreshRunning)
-        {
-            _delayedNavRefreshCoroutine = StartCoroutine(DelayedNavMeshRefreshCoroutine(chunkPos, currentLoadDistance, centerChunkPos));
-        }
-    }
-
-    /// <summary>
-    /// 保底协程：等待区块加载就绪后触发NavMesh刷新和权重烘焙。
-    /// 如果回调已触发NavMesh刷新，此协程会被 _isNavRefreshRunning 标志跳过。
-    /// </summary>
-    private System.Collections.IEnumerator DelayedNavMeshRefreshCoroutine(Vector2 center, int loadDistance, Vector2Int centerChunkPos)
-    {
-        // 等待所有待加载区块处理完毕，避免在区块未激活时就触发烘焙
-        if (ChunkMgr.Instance != null)
-        {
-            int waitFrames = 0;
-            while (ChunkMgr.Instance.HasPendingChunkLoads && waitFrames < 120)
-            {
-                waitFrames++;
-                yield return null;
-            }
-        }
-
-        // 额外等待 2 帧确保区块激活状态同步
-        yield return null;
-        yield return null;
-
-        _delayedNavRefreshCoroutine = null;
-
-        // 如果回调链已触发NavMesh刷新，则跳过
-        if (_isNavRefreshRunning)
-        {
-            if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 导航已在刷新，跳过保底 | center={center}");
-            yield break;
-        }
-
-        if (WorldNavigationManager.Instance == null)
-        {
-            Debug.LogError("[区块加载器] WorldNavigationManager 未初始化", this);
-            yield break;
-        }
-
-        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 保底刷新 | center={center} loadDistance={loadDistance} centerChunkPos={centerChunkPos}");
-        _pendingRefreshLoadDistance = loadDistance;
-        _pendingRefreshCenterChunk = centerChunkPos;
-        RequestNavMeshRefresh(center);
-    }
-
-    private void RequestNavMeshRefresh(Vector2 center)
-    {
-        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] RequestNavigationRefresh | center={center} running={_isNavRefreshRunning} LoadDistance={LoadChunkDistance}");
-
-        if (_isNavRefreshRunning)
-        {
-            _hasQueuedNavRefresh = true;
-            _queuedNavRefreshCenter = center;
-            _queuedNavRefreshLoadDistance = LoadChunkDistance; // 保存排队请求的距离
-            if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 刷新运行中，合并后续请求 | queuedCenter={center} queuedLoadDistance={_queuedNavRefreshLoadDistance}");
-            return;
-        }
-
-        _isNavRefreshRunning = true;
-        _pendingRefreshLoadDistance = LoadChunkDistance; // 保存当前刷新使用的距离
-
-        WorldNavigationManager navigation = WorldNavigationManager.Instance;
-        if (navigation == null)
-        {
-            _isNavRefreshRunning = false;
-            return;
-        }
-
-        if (navigation.EnableDebugLogs) Debug.Log($"[WorldNav][ChunkLoader] 注册已加载区块 | pendingLoadDistance={_pendingRefreshLoadDistance}");
-        navigation.RefreshLoadedRegion(center, _pendingRefreshLoadDistance, OnMeshUpdateComplete);
-    }
-
-    private void OnMeshUpdateComplete()
-    {
-        _isNavRefreshRunning = false;
-        int completedLoadDistance = _pendingRefreshLoadDistance;
-        Vector2Int completedCenterChunk = _pendingRefreshCenterChunk;
-        if (WorldNavigationManager.Instance?.EnableDebugLogs == true) Debug.Log($"[WorldNav][ChunkLoader] 导航刷新完成 | queued={_hasQueuedNavRefresh} completedLoadDistance={completedLoadDistance} completedCenterChunk={completedCenterChunk}");
-
-        if (_hasQueuedNavRefresh)
-        {
-            _hasQueuedNavRefresh = false;
-            _pendingRefreshLoadDistance = _queuedNavRefreshLoadDistance;
-            // 排队请求的中心坐标需要重新计算（排队请求来自 RefreshChunksAroundPlayer，使用当时的 lastChunkPos）
-            _pendingRefreshCenterChunk = new Vector2Int(Mathf.RoundToInt(_queuedNavRefreshCenter.x), Mathf.RoundToInt(_queuedNavRefreshCenter.y));
-            RequestNavMeshRefresh(_queuedNavRefreshCenter);
-            return;
-        }
-
-        if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
-            Debug.Log($"[WorldNav] 增量导航更新完成 | centerChunk={completedCenterChunk} LoadDistance={completedLoadDistance}");
+        ChunkMgr.Instance.RefreshRuntimeWindow(
+            chunkPos,
+            LoadChunkDistance,
+            DestroyChunkDistance,
+            includeLocalPresentation: true);
     }
 
     #endregion
@@ -400,6 +275,14 @@ public class Mod_ChunkLoader : Module
             return defaultAutoGenerate;
         }
         return SaveDataMgr.Instance.SaveData.CurrentPlanetData.AutoGenerateMap;
+    }
+
+    private static Vector2 ResolveChunkOrigin(Vector2 worldPosition)
+    {
+        if (ChunkMgr.Instance == null)
+            return worldPosition;
+        Vector2Int origin = ChunkMgr.Instance.ResolveRuntimeChunkOrigin(worldPosition);
+        return origin;
     }
 
     #endregion

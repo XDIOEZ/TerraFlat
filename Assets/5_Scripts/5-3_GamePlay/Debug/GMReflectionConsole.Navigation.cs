@@ -329,12 +329,7 @@ public sealed partial class GMReflectionConsole
             "Ctrl+T 传送：开",
             "T键 Ctrl+T 传送开关 快捷键",
             ToggleTeleportShortcut);
-        playerMoveSpeedButton = CreateSearchableButton(
-            grid,
-            GmPageId.Player,
-            "玩家移速：1x",
-            "玩家 移动速度 跑图 speed",
-            CyclePlayerMoveSpeed);
+        CreatePlayerMoveSpeedControl(grid);
         CreateSearchableButton(
             grid,
             GmPageId.Player,
@@ -390,7 +385,7 @@ public sealed partial class GMReflectionConsole
         GmPageView page = CreatePage(GmPageId.World);
         AddPageIntro(page.Content, "世界与环境", "天气、时间、区块加载、视野和导航调试功能。 ");
 
-        Transform grid = CreateActionGrid(page.Content, 4, 256f, 36f, 10);
+        Transform grid = CreateActionGrid(page.Content, 4, 256f, 36f, 11);
         CreateSearchableButton(grid, GmPageId.World, "晴天", "天气 晴 clear weather", () => InvokeByTypeName("GameDebugManager", "SetClearWeather"));
         CreateSearchableButton(grid, GmPageId.World, "下雨", "天气 雨 rain weather", () => InvokeByTypeName("GameDebugManager", "SetRainWeather"));
         CreateSearchableButton(grid, GmPageId.World, "环境信息", "环境 温度 信息 debug", () => InvokeByTypeName("GameDebugManager", "ToggleEnvironmentInfo"));
@@ -400,6 +395,7 @@ public sealed partial class GMReflectionConsole
         CreateSearchableButton(grid, GmPageId.World, "时间重置", "时间 恢复 reset", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"));
         CreateSearchableButton(grid, GmPageId.World, "刷新区块", "区块 chunk 刷新", () => InvokeByTypeName("Mod_ChunkLoader", "RefreshChunksAroundPlayer"));
         CreateSearchableButton(grid, GmPageId.World, "区块距离 +1", "区块 加载距离 chunk distance", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"));
+        CreateChunkLoadSpeedControl(grid);
         navigationPathButton = CreateSearchableButton(
             grid,
             GmPageId.World,
@@ -408,6 +404,7 @@ public sealed partial class GMReflectionConsole
             ToggleNavigationPathHints);
 
         RefreshNavigationPathButton();
+        RefreshChunkLoadSpeedControl();
     }
 
     private void BuildStructurePage()
@@ -507,6 +504,104 @@ public sealed partial class GMReflectionConsole
         Button button = CreateButton(parent, label, action, 0f, height);
         RegisterSearchEntry(pageId, label, keywords, button.transform as RectTransform);
         return button;
+    }
+
+    private void CreatePlayerMoveSpeedControl(Transform parent)
+    {
+        GameObject row = CreateUiObject("Player Move Speed Multiplier", parent);
+        Image background = row.AddComponent<Image>();
+        background.color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        Outline outline = row.AddComponent<Outline>();
+        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
+        outline.effectDistance = new Vector2(1f, -1f);
+
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(6, 6, 3, 3);
+        layout.spacing = 5f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+
+        TextMeshProUGUI label = CreateText(
+            row.transform,
+            "移速倍率",
+            12f,
+            new Color(0.95f, 0.91f, 0.84f));
+        label.alignment = TextAlignmentOptions.Center;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.raycastTarget = false;
+        label.gameObject.AddComponent<LayoutElement>().preferredWidth = 78f;
+
+        playerMoveSpeedInput = CreateInputField(row.transform, "倍率", 84f, false);
+        playerMoveSpeedInput.contentType = TMP_InputField.ContentType.DecimalNumber;
+        playerMoveSpeedInput.characterLimit = 7;
+        playerMoveSpeedInput.textComponent.alignment = TextAlignmentOptions.Center;
+        playerMoveSpeedInput.onSubmit.AddListener(_ => ApplyPlayerMoveSpeedInput());
+
+        playerMoveSpeedApplyButton = CreateButton(
+            row.transform,
+            "应用",
+            ApplyPlayerMoveSpeedInput,
+            60f,
+            30f);
+
+        RegisterSearchEntry(
+            GmPageId.Player,
+            "玩家移速倍率",
+            "玩家 移动速度 跑图 speed multiplier 倍率",
+            row.transform as RectTransform);
+    }
+
+    private void CreateChunkLoadSpeedControl(Transform parent)
+    {
+        GameObject row = CreateUiObject("Chunk Load Speed Multiplier", parent);
+        Image background = row.AddComponent<Image>();
+        background.color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        Outline outline = row.AddComponent<Outline>();
+        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
+        outline.effectDistance = new Vector2(1f, -1f);
+
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(6, 6, 3, 3);
+        layout.spacing = 5f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+
+        TextMeshProUGUI label = CreateText(
+            row.transform,
+            "加载倍率",
+            12f,
+            new Color(0.95f, 0.91f, 0.84f));
+        label.alignment = TextAlignmentOptions.Center;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.raycastTarget = false;
+        label.gameObject.AddComponent<LayoutElement>().preferredWidth = 78f;
+
+        chunkLoadSpeedInput = CreateInputField(row.transform, "倍率", 84f, false);
+        chunkLoadSpeedInput.contentType = TMP_InputField.ContentType.DecimalNumber;
+        chunkLoadSpeedInput.characterLimit = 7;
+        chunkLoadSpeedInput.textComponent.alignment = TextAlignmentOptions.Center;
+        chunkLoadSpeedInput.onSubmit.AddListener(_ => ApplyChunkLoadSpeedInput());
+
+        chunkLoadSpeedApplyButton = CreateButton(
+            row.transform,
+            "应用",
+            ApplyChunkLoadSpeedInput,
+            60f,
+            30f);
+
+        RegisterSearchEntry(
+            GmPageId.World,
+            "区块加载倍率",
+            "区块 加载 生成 speed multiplier 倍率",
+            row.transform as RectTransform);
     }
 
     private void SetActivePage(GmPageId pageId)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using TMPro;
@@ -78,6 +79,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private TextMeshProUGUI commandCountText;
     private Button teleportShortcutButton;
     private Button playerMoveSpeedButton;
+    private TMP_InputField playerMoveSpeedInput;
+    private Button playerMoveSpeedApplyButton;
+    private TMP_InputField chunkLoadSpeedInput;
+    private Button chunkLoadSpeedApplyButton;
     private Button navigationPathButton;
     private Transform commandGrid;
     private Transform airdropItemGrid;
@@ -1227,6 +1232,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshBuffTargetingControls();
         RefreshTeleportShortcutButton();
         RefreshPlayerMoveSpeedButton();
+        RefreshChunkLoadSpeedControl();
         RefreshNavigationPathButton();
         RefreshItemIds();
         RefreshAiCreatureIds();
@@ -1257,18 +1263,132 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             multiplier > 1f ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
     }
 
-    private void RefreshPlayerMoveSpeedButton()
+    private void ApplyPlayerMoveSpeedInput()
     {
-        if (playerMoveSpeedButton == null)
+        if (playerMoveSpeedInput == null)
             return;
 
+        string value = playerMoveSpeedInput.text?.Trim();
+        bool parsed = float.TryParse(
+                          value,
+                          NumberStyles.Float,
+                          CultureInfo.InvariantCulture,
+                          out float requestedMultiplier) ||
+                      float.TryParse(
+                          value,
+                          NumberStyles.Float,
+                          CultureInfo.CurrentCulture,
+                          out requestedMultiplier);
+        if (!parsed || float.IsNaN(requestedMultiplier) || float.IsInfinity(requestedMultiplier))
+        {
+            SetStatus("请输入有效的移动速度倍率，例如 1、2.5 或 10。", Color.yellow);
+            RefreshPlayerMoveSpeedButton();
+            return;
+        }
+
+        PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        if (controller == null)
+        {
+            SetStatus("未找到本地玩家，无法调整移动速度。", Color.yellow);
+            RefreshPlayerMoveSpeedButton();
+            return;
+        }
+
+        if (!controller.TrySetAdminMoveSpeedMultiplier(requestedMultiplier, out float appliedMultiplier))
+        {
+            SetStatus("未找到玩家移动模块，移动速度调整失败。", Color.yellow);
+            RefreshPlayerMoveSpeedButton();
+            return;
+        }
+
+        playerMoveSpeedInput.SetTextWithoutNotify(
+            appliedMultiplier.ToString("0.##", CultureInfo.InvariantCulture));
+        RefreshPlayerMoveSpeedButton();
+        SetStatus(
+            $"玩家移动速度已调整为 {appliedMultiplier:0.##} 倍。",
+            appliedMultiplier > 1f
+                ? new Color(0.35f, 0.95f, 0.85f)
+                : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void RefreshPlayerMoveSpeedButton()
+    {
         PlayerAdminController controller = FindFirstComponent("PlayerAdminController") as PlayerAdminController;
         float multiplier = controller != null ? controller.AdminMoveSpeedMultiplier : 1f;
-        TextMeshProUGUI label = playerMoveSpeedButton.GetComponentInChildren<TextMeshProUGUI>(true);
-        if (label != null)
-            label.text = $"玩家移速：{multiplier:0.#}x";
+        if (playerMoveSpeedInput != null && !playerMoveSpeedInput.isFocused)
+            playerMoveSpeedInput.SetTextWithoutNotify(multiplier.ToString("0.##", CultureInfo.InvariantCulture));
 
-        Image image = playerMoveSpeedButton.GetComponent<Image>();
+        if (playerMoveSpeedButton != null)
+        {
+            TextMeshProUGUI label = playerMoveSpeedButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (label != null)
+                label.text = $"玩家移速：{multiplier:0.##}x";
+        }
+
+        Button statusButton = playerMoveSpeedApplyButton ?? playerMoveSpeedButton;
+        Image image = statusButton != null ? statusButton.GetComponent<Image>() : null;
+        if (image != null)
+        {
+            image.color = multiplier > 1f
+                ? new Color(0.10f, 0.45f, 0.31f, 1f)
+                : new Color(0.094f, 0.212f, 0.251f, 1f);
+        }
+    }
+
+    private void ApplyChunkLoadSpeedInput()
+    {
+        if (chunkLoadSpeedInput == null)
+            return;
+
+        string value = chunkLoadSpeedInput.text?.Trim();
+        bool parsed = float.TryParse(
+                          value,
+                          NumberStyles.Float,
+                          CultureInfo.InvariantCulture,
+                          out float requestedMultiplier) ||
+                      float.TryParse(
+                          value,
+                          NumberStyles.Float,
+                          CultureInfo.CurrentCulture,
+                          out requestedMultiplier);
+        if (!parsed || float.IsNaN(requestedMultiplier) || float.IsInfinity(requestedMultiplier))
+        {
+            SetStatus("请输入有效的区块加载倍率，例如 0.5、2 或 5。", Color.yellow);
+            RefreshChunkLoadSpeedControl();
+            return;
+        }
+
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null ||
+            !chunkManager.TrySetChunkLoadSpeedMultiplier(requestedMultiplier, out float appliedMultiplier))
+        {
+            SetStatus("未找到区块管理器，加载速度调整失败。", Color.yellow);
+            RefreshChunkLoadSpeedControl();
+            return;
+        }
+
+        chunkLoadSpeedInput.SetTextWithoutNotify(
+            appliedMultiplier.ToString("0.##", CultureInfo.InvariantCulture));
+        RefreshChunkLoadSpeedControl();
+        SetStatus(
+            $"区块加载速度已调整为 {appliedMultiplier:0.##} 倍。",
+            appliedMultiplier > 1f
+                ? new Color(0.35f, 0.95f, 0.85f)
+                : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void RefreshChunkLoadSpeedControl()
+    {
+        float multiplier = ChunkMgr.CurrentChunkLoadSpeedMultiplier;
+        if (chunkLoadSpeedInput != null && !chunkLoadSpeedInput.isFocused)
+        {
+            chunkLoadSpeedInput.SetTextWithoutNotify(
+                multiplier.ToString("0.##", CultureInfo.InvariantCulture));
+        }
+
+        Image image = chunkLoadSpeedApplyButton != null
+            ? chunkLoadSpeedApplyButton.GetComponent<Image>()
+            : null;
         if (image != null)
         {
             image.color = multiplier > 1f

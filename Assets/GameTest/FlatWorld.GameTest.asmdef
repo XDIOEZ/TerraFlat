@@ -11,14 +11,17 @@
         "UI",
         "m_Utilitiles",
         "Unity.TextMeshPro",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "FlatWorld.WorldModel",
+        "MemoryPack.Unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Newtonsoft.Json.dll"
+        "Newtonsoft.Json.dll",
+        "MemoryPack.Core.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],
