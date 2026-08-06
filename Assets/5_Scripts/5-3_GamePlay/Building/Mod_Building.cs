@@ -837,7 +837,7 @@ public class Mod_Building : Module
             return false;
         }
 
-        if (Vector2.Distance(authorityPosition, position) > Mathf.Max(1f, Data.maxVisibleDistance))
+        if (WorldTopologyRuntime.Distance(authorityPosition, position) > Mathf.Max(1f, Data.maxVisibleDistance))
         {
             reason = "目标超出建造距离";
             return false;
@@ -866,7 +866,7 @@ public class Mod_Building : Module
         Collider2D[] overlaps = Physics2D.OverlapBoxAll(bounds.center, overlapSize, 0f);
         for (int i = 0; i < overlaps.Length; i++)
         {
-            Collider2D overlap = overlaps[i];
+            Collider2D overlap = WorldTopologyColliderProxy.Resolve(overlaps[i]);
             if (overlap == null || overlap.isTrigger ||
                 (item != null && overlap.transform.IsChildOf(item.transform)) ||
                 overlap.CompareTag("Player") || overlap.gameObject.tag == "IgnoreShadow")
@@ -899,7 +899,8 @@ public class Mod_Building : Module
         {
             for (int y = minY; y <= maxY; y++)
             {
-                Vector2 tileCenter = new(x + 0.5f, y + 0.5f);
+                Vector2Int worldCell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(x, y));
+                Vector2 tileCenter = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
                 ChunkMgr.Instance.GetChunkBy_ItemPosition(tileCenter, out Chunk chunk);
                 if (chunk?.Map?.Data == null)
                 {
@@ -907,7 +908,6 @@ public class Mod_Building : Module
                     return false;
                 }
 
-                Vector2Int worldCell = new Vector2Int(x, y);
                 TileData topTile = chunk.Map.Data.GetTopTile(worldCell);
                 if (topTile == null)
                 {
@@ -921,7 +921,7 @@ public class Mod_Building : Module
                     return false;
                 }
 
-                if (BuildingOccupancyRegistry.IsOccupied(new Vector2Int(x, y), this))
+                if (BuildingOccupancyRegistry.IsOccupied(worldCell, this))
                 {
                     reason = $"地块 ({x},{y}) 已被建筑占用";
                     return false;
@@ -1084,7 +1084,7 @@ public class Mod_Building : Module
         }
 
         GhostShadow.transform.position = mouse;
-        float distance = Vector2.Distance(GetAuthorityPosition(), mouse);
+        float distance = WorldTopologyRuntime.Distance(GetAuthorityPosition(), mouse);
         float maximumPlacementDistance = Mathf.Max(1f, Data.maxVisibleDistance);
         float alpha = Mathf.Clamp01(Mathf.InverseLerp(
             maximumPlacementDistance + 1.5f,
@@ -1384,7 +1384,8 @@ public class Mod_Building : Module
             : GetSummonerPrefabId(buildingPrefabId);
 
     private static Vector3 NormalizePlacement(Vector3 position)
-        => new(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f, 0f);
+        => WorldTopologyRuntime.NormalizePosition(
+            new Vector3(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f, 0f));
 
     private static bool IsFinite(Vector3 value)
         => !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&

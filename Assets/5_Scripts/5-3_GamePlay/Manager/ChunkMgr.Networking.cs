@@ -94,9 +94,9 @@ public partial class ChunkMgr
             {
                 for (int offsetY = -radius; offsetY <= radius; offsetY++)
                 {
-                    result.Add(new Vector2Int(
+                    result.Add(NormalizeChunkPosition(new Vector2Int(
                         (centerIndexX + offsetX) * _cachedChunkStepX,
-                        (centerIndexY + offsetY) * _cachedChunkStepY));
+                        (centerIndexY + offsetY) * _cachedChunkStepY)));
                 }
             }
         }
@@ -115,10 +115,11 @@ public partial class ChunkMgr
 
         for (int i = 0; i < observerPositions.Count; i++)
         {
-            Vector2Int observerChunkPos = Chunk.GetChunkPosition(observerPositions[i]);
+            Vector2Int observerChunkPos = NormalizeChunkPosition(Chunk.GetChunkPosition(observerPositions[i]));
             Vector2 observerChunkCenter = (Vector2)observerChunkPos + _cachedChunkSize * 0.5f;
-            if (Mathf.Abs(chunkCenter.x - observerChunkCenter.x) <= maxDistanceX &&
-                Mathf.Abs(chunkCenter.y - observerChunkCenter.y) <= maxDistanceY)
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(observerChunkCenter, chunkCenter);
+            if (Mathf.Abs(delta.x) <= maxDistanceX &&
+                Mathf.Abs(delta.y) <= maxDistanceY)
             {
                 return true;
             }

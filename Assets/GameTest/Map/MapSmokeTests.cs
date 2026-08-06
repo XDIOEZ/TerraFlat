@@ -28,6 +28,45 @@ namespace FlatWorld.GameTest.Map
 
         [Test]
         [Category("Map.Smoke")]
+        public void RuntimeGenerationConfigurationHookRunsBeforeMapActivation()
+        {
+            var mapObject = new GameObject("RuntimeGenerationHookProbe");
+            global::Map map = mapObject.AddComponent<global::Map>();
+            int invocationCount = 0;
+            System.Action<global::Map> handler = configuredMap =>
+            {
+                Assert.That(configuredMap, Is.SameAs(map));
+                invocationCount++;
+            };
+
+            try
+            {
+                WorldGenerationRuntimeHooks.BeforeMapGeneration += handler;
+                WorldGenerationRuntimeHooks.ApplyBeforeMapGeneration(map);
+                Assert.That(invocationCount, Is.EqualTo(1));
+
+                string chunkManagerSource = File.ReadAllText(
+                    "Assets/5_Scripts/5-3_GamePlay/Manager/ChunkMgr.cs");
+                int hookIndex = chunkManagerSource.IndexOf(
+                    "WorldGenerationRuntimeHooks.ApplyBeforeMapGeneration(map)",
+                    System.StringComparison.Ordinal);
+                int activationIndex = chunkManagerSource.IndexOf(
+                    "map.Act()",
+                    hookIndex,
+                    System.StringComparison.Ordinal);
+                Assert.That(hookIndex, Is.GreaterThanOrEqualTo(0));
+                Assert.That(activationIndex, Is.GreaterThan(hookIndex),
+                    "临时生成参数必须在真实 Map 激活和生成前应用。");
+            }
+            finally
+            {
+                WorldGenerationRuntimeHooks.BeforeMapGeneration -= handler;
+                Object.DestroyImmediate(mapObject);
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
         public void MapCoreHasExplicitTerrainNoiseChannels()
         {
             const string prefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
@@ -513,6 +552,60 @@ namespace FlatWorld.GameTest.Map
                 Assert.That(land.IsWalkableTerrainAtWorld(position, seed, activePlanetData, river), Is.True);
                 Assert.That(river.TryEvaluateRiverCell(position, seed, out _), Is.False,
                     "安全出生点不能落在随后会生成河流的格子。 ");
+            }
+        }
+
+        [Test]
+        [Category("Map.Smoke")]
+        public void WrappedTerrainPreviewAndSpawnSearchNormalizeMultiSpanCoordinates()
+        {
+            const string prefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                global::Map map = instance.GetComponent<global::Map>();
+                ChunkGenerator_Land land = map.LandGenerator;
+                ChunkGenerator_River river = map.GetGenerator<ChunkGenerator_River>();
+                var planet = new PlanetData
+                {
+                    Radius = 512,
+                    ChunkSize = new Vector2Int(16, 16),
+                    NoiseScale = PlanetData.DefaultNoiseScale,
+                    TopologyMode = WorldTopologyMode.Wrapped
+                };
+                Assert.That(WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds), Is.True);
+                const int worldSeed = 731927;
+                Vector2Int canonical = new(-142, 411);
+                Vector2Int remoteImage = canonical + new Vector2Int(
+                    bounds.Span.x * 3,
+                    -bounds.Span.y * 5);
+
+                var preview = new TerrainPreviewSampler(land, river, planet, worldSeed);
+                Assert.That(preview.TrySample(canonical, out TerrainPreviewSample first), Is.True);
+                Assert.That(preview.TrySample(remoteImage, out TerrainPreviewSample repeated), Is.True);
+                Assert.That(repeated.Environment.Height,
+                    Is.EqualTo(first.Environment.Height).Within(0.00001f));
+                Assert.That(repeated.Environment.Temperature,
+                    Is.EqualTo(first.Environment.Temperature).Within(0.00001f));
+                Assert.That(repeated.Environment.Precipitation,
+                    Is.EqualTo(first.Environment.Precipitation).Within(0.00001f));
+                Assert.That(repeated.HasWater, Is.EqualTo(first.HasWater));
+
+                Assert.That(land.TryFindWalkableTerrainNear(
+                    remoteImage,
+                    worldSeed,
+                    planet,
+                    river,
+                    maxSearchRadius: 512,
+                    maxSamples: 4096,
+                    out Vector2Int spawn), Is.True);
+                Assert.That(bounds.Contains(spawn), Is.True);
+                Assert.That(land.IsWalkableTerrainAtWorld(spawn, worldSeed, planet, river), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
             }
         }
 

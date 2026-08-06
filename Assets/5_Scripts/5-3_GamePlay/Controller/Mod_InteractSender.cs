@@ -177,7 +177,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
         }
 
-        float currentDistance = Vector2.Distance(item.transform.position, currentReceiverComponent.transform.position);
+        float currentDistance = WorldTopologyRuntime.Distance(item.transform.position, currentReceiverComponent.transform.position);
         if (currentDistance <= maxInteractDistance)
             return;
 
@@ -209,7 +209,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (interactCollider == null || !interactCollider.enabled)
             return;
 
-        var receiver = other.GetComponent<IInteractable>();
+        var receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(other);
         if (receiver == null)
             return;
 
@@ -224,7 +224,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (interactCollider == null || !interactCollider.enabled)
             return;
 
-        var receiver = other.GetComponent<IInteractable>();
+        var receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(other);
         if (receiver == null)
             return;
 
@@ -237,7 +237,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        var receiver = other.GetComponent<IInteractable>();
+        var receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(other);
         if (receiver == null)
             return;
 

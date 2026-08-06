@@ -144,6 +144,9 @@ public class ItemMaker
         float maxHeight
     )
     {
+        startPos = WorldTopologyRuntime.NormalizePosition(startPos);
+        Vector2 nearestEnd = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
+        endPos = new Vector3(nearestEnd.x, nearestEnd.y, endPos.z);
         float timeElapsed = 0f;
         float distance = Vector3.Distance(startPos, endPos);
         float duration = baseDuration + distance * distanceSensitivity;
@@ -159,13 +162,14 @@ public class ItemMaker
         while (timeElapsed < duration)
         {
             float t = timeElapsed / duration;
-            itemTransform.position = CalculateBezierPoint(t, startPos, controlPoint, endPos);
+            itemTransform.position = WorldTopologyRuntime.NormalizePosition(
+                CalculateBezierPoint(t, startPos, controlPoint, endPos));
             itemTransform.Rotate(Vector3.forward, rotationSpeed * Time.deltaTime);
             timeElapsed += Time.deltaTime;
             yield return null;
         }
 
-        itemTransform.position = endPos;
+        itemTransform.position = WorldTopologyRuntime.NormalizePosition(endPos);
 
         item.StartCoroutine(LandingSettleEffect(itemTransform, item, Random.Range(bounceHeightMin, bounceHeightMax)));
         item.itemData.Stack.CanBePickedUp = true;

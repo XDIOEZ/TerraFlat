@@ -178,19 +178,26 @@ public static class NewGamePrefabBuilder
         string defaultNoiseScale = PlanetData.DefaultNoiseScale.ToString("0.########", CultureInfo.InvariantCulture);
         CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(306f, -164f), new Vector2(266f, 64f), TMP_InputField.ContentType.DecimalNumber);
 
+        Toggle topologyToggle = CreateToggle(
+            panel.transform,
+            font,
+            GameManager.NewGameTopologyToggleKey,
+            "有限循环世界",
+            "越过上下左右边界后从对侧返回；关闭则使用原有无限世界。",
+            new Vector2(24f, -242f),
+            new Vector2(548f, 62f));
+        topologyToggle.isOn = true;
+
         Image profile = CreateImage("世界生成概览", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(profile.rectTransform, new Vector2(24f, -252f), new Vector2(548f, 174f), new Vector2(0f, 1f));
+        SetRect(profile.rectTransform, new Vector2(24f, -316f), new Vector2(548f, 112f), new Vector2(0f, 1f));
 
         TMP_Text profileEyebrow = CreateText("世界生成概览眉题", profile.transform, "GENERATION PROFILE", font, 12f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(profileEyebrow.rectTransform, new Vector2(18f, -14f), new Vector2(320f, 22f), new Vector2(0f, 1f));
         profileEyebrow.characterSpacing = 2f;
 
-        CreateProfileRow(profile.transform, font, "地形生成", "程序化生成", 48f);
-        CreateProfileRow(profile.transform, font, "世界种子", "自动随机", 82f);
-        CreateProfileRow(profile.transform, font, "出生区域", "自动寻找安全陆地", 116f);
-
-        TMP_Text tip = CreateText("世界参数提示", profile.transform, "推荐首次游玩保留默认参数。", font, 13f, new Color(0.74f, 0.67f, 0.54f, 1f), FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(tip.rectTransform, new Vector2(18f, -146f), new Vector2(500f, 22f), new Vector2(0f, 1f));
+        CreateProfileRow(profile.transform, font, "地形生成", "程序化生成", 42f);
+        CreateProfileRow(profile.transform, font, "世界种子", "自动随机", 70f);
+        CreateProfileRow(profile.transform, font, "出生区域", "自动寻找安全陆地", 98f);
     }
 
     private static void BuildFooter(Transform card, TMP_FontAsset font)
@@ -542,9 +549,9 @@ public static class NewGamePrefabBuilder
         Stretch(mark.rectTransform, 6f, 6f, 6f, 6f);
 
         TMP_Text titleText = CreateText(name + "_标题", toggleObject.transform, title, font, 16f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, new Vector2(58f, -14f), new Vector2(276f, 28f), new Vector2(0f, 1f));
+        SetRect(titleText.rectTransform, new Vector2(58f, -8f), new Vector2(Mathf.Max(120f, size.x - 74f), 24f), new Vector2(0f, 1f));
         TMP_Text descriptionText = CreateText(name + "_说明", toggleObject.transform, description, font, 12.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(descriptionText.rectTransform, new Vector2(58f, -48f), new Vector2(276f, 48f), new Vector2(0f, 1f));
+        SetRect(descriptionText.rectTransform, new Vector2(58f, -34f), new Vector2(Mathf.Max(120f, size.x - 74f), Mathf.Max(22f, size.y - 36f)), new Vector2(0f, 1f));
         descriptionText.enableWordWrapping = true;
         descriptionText.overflowMode = TextOverflowModes.Ellipsis;
 

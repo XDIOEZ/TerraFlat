@@ -298,10 +298,14 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         WorldAddress address)
     {
         var output = new List<HydrologyRegionEntry>(4);
-        int minRegionX = FloorDiv(origin.x, hydrologyRegionSize);
-        int maxRegionX = FloorDiv(origin.x + width - 1, hydrologyRegionSize);
-        int minRegionY = FloorDiv(origin.y, hydrologyRegionSize);
-        int maxRegionY = FloorDiv(origin.y + height - 1, hydrologyRegionSize);
+        Vector2Int minRegion = GetRegionCoordinate(origin, _activeWorldDomain);
+        Vector2Int maxRegion = GetRegionCoordinate(
+            origin + new Vector2Int(width - 1, height - 1),
+            _activeWorldDomain);
+        int minRegionX = minRegion.x;
+        int maxRegionX = maxRegion.x;
+        int minRegionY = minRegion.y;
+        int maxRegionY = maxRegion.y;
         for (int regionY = minRegionY; regionY <= maxRegionY; regionY++)
         {
             for (int regionX = minRegionX; regionX <= maxRegionX; regionX++)
@@ -328,12 +332,16 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         out HydrologyCellSample sample)
     {
         sample = default;
-        if (land == null || !land.WorldDomain.Contains(worldPosition))
+        if (land == null)
             return false;
 
-        Vector2Int regionCoordinate = new(
-            FloorDiv(worldPosition.x, hydrologyRegionSize),
-            FloorDiv(worldPosition.y, hydrologyRegionSize));
+        if (!land.WorldDomain.Contains(worldPosition))
+        {
+            if (!land.WorldDomain.TryResolveOutflow(worldPosition, worldPosition, out worldPosition))
+                return false;
+        }
+
+        Vector2Int regionCoordinate = GetRegionCoordinate(worldPosition, land.WorldDomain);
         HydrologyRegionEntry entry = HydrologyRegionCache.GetOrCreate(
             this,
             land,
@@ -397,6 +405,23 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         return remainder != 0 && ((remainder < 0) != (divisor < 0))
             ? quotient - 1
             : quotient;
+    }
+
+    private Vector2Int GetRegionCoordinate(
+        Vector2Int worldPosition,
+        IWorldGenerationDomain domain)
+    {
+        if (domain is WrappedWorldGenerationDomain wrapped)
+        {
+            Vector2Int canonical = wrapped.Bounds.NormalizeCell(worldPosition);
+            return new Vector2Int(
+                FloorDiv(canonical.x - wrapped.Bounds.Min.x, hydrologyRegionSize),
+                FloorDiv(canonical.y - wrapped.Bounds.Min.y, hydrologyRegionSize));
+        }
+
+        return new Vector2Int(
+            FloorDiv(worldPosition.x, hydrologyRegionSize),
+            FloorDiv(worldPosition.y, hydrologyRegionSize));
     }
 
     private static bool IsFinite01(float value)
@@ -672,6 +697,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         private readonly Dictionary<Vector2Int, float> _flow = new();
         private readonly Dictionary<Vector2Int, BasinResult> _basins = new();
         private readonly Dictionary<Vector2Int, float> _basinFlow = new();
+        private readonly HashSet<Vector2Int> _processedSourceOrigins = new();
 
         private int _nextSourceCellX;
         private int _nextSourceCellY;
@@ -688,15 +714,20 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
             _land = land;
             _planetData = planetData;
             _worldSeed = worldSeed == 0 ? 1 : worldSeed;
-            _regionOrigin = regionCoordinate * river.hydrologyRegionSize;
+            _regionOrigin = land.WorldDomain is WrappedWorldGenerationDomain wrapped
+                ? wrapped.Bounds.Min + regionCoordinate * river.hydrologyRegionSize
+                : regionCoordinate * river.hydrologyRegionSize;
             int padding = river.maxTraceSteps + Mathf.Max(2, river.maxRiverWidth / 2);
-            _minSourceCellX = FloorDiv(_regionOrigin.x - padding, river.runoffCellSize);
+            Vector2Int sourceAnchor = land.WorldDomain is WrappedWorldGenerationDomain wrappedSource
+                ? wrappedSource.Bounds.Min
+                : Vector2Int.zero;
+            _minSourceCellX = FloorDiv(_regionOrigin.x - padding - sourceAnchor.x, river.runoffCellSize);
             _maxSourceCellX = FloorDiv(
-                _regionOrigin.x + river.hydrologyRegionSize - 1 + padding,
+                _regionOrigin.x + river.hydrologyRegionSize - 1 + padding - sourceAnchor.x,
                 river.runoffCellSize);
-            _minSourceCellY = FloorDiv(_regionOrigin.y - padding, river.runoffCellSize);
+            _minSourceCellY = FloorDiv(_regionOrigin.y - padding - sourceAnchor.y, river.runoffCellSize);
             _maxSourceCellY = FloorDiv(
-                _regionOrigin.y + river.hydrologyRegionSize - 1 + padding,
+                _regionOrigin.y + river.hydrologyRegionSize - 1 + padding - sourceAnchor.y,
                 river.runoffCellSize);
             _nextSourceCellX = _minSourceCellX;
             _nextSourceCellY = _minSourceCellY;
@@ -820,7 +851,16 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         {
             int cellSize = _river.runoffCellSize;
             int stride = _river.runoffSampleStride;
-            Vector2Int cellOrigin = new(sourceCellX * cellSize, sourceCellY * cellSize);
+            Vector2Int sourceAnchor = _land.WorldDomain is WrappedWorldGenerationDomain wrapped
+                ? wrapped.Bounds.Min
+                : Vector2Int.zero;
+            Vector2Int cellOrigin = sourceAnchor + new Vector2Int(sourceCellX * cellSize, sourceCellY * cellSize);
+            if (!TryResolvePosition(cellOrigin, out Vector2Int canonicalCellOrigin) ||
+                !_processedSourceOrigins.Add(canonicalCellOrigin))
+            {
+                return;
+            }
+
             float runoffSum = 0f;
             int sampleCount = 0;
             Vector2Int source = default;
@@ -830,7 +870,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
                 for (int localX = stride / 2; localX < cellSize; localX += stride)
                 {
                     Vector2Int worldPosition = cellOrigin + new Vector2Int(localX, localY);
-                    if (!_land.WorldDomain.Contains(worldPosition))
+                    if (!TryResolvePosition(worldPosition, out worldPosition))
                         continue;
                     ClimateSample climate = _land.SampleClimateAtWorld(worldPosition, _worldSeed, _planetData);
                     EnvironmentSample environment = climate.Environment;
@@ -898,11 +938,8 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
             bool found = false;
             for (int i = 0; i < Neighbors.Length; i++)
             {
-                Vector2Int candidate = current + Neighbors[i];
-                if (!_land.WorldDomain.Contains(candidate))
-                {
-                    return _land.WorldDomain.TryResolveOutflow(current, candidate, out next);
-                }
+                if (!TryResolvePosition(current + Neighbors[i], out Vector2Int candidate))
+                    continue;
 
                 float height = _land.SampleHeightAtWorld(candidate, _worldSeed, _planetData);
                 if (height >= currentHeight - DownhillEpsilon)
@@ -951,15 +988,8 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
                 for (int i = 0; i < Neighbors.Length; i++)
                 {
-                    Vector2Int candidate = boundary.Position + Neighbors[i];
-                    if (!_land.WorldDomain.Contains(candidate))
-                    {
-                        hasOutlet = _land.WorldDomain.TryResolveOutflow(
-                            boundary.Position,
-                            candidate,
-                            out outlet);
-                        break;
-                    }
+                    if (!TryResolvePosition(boundary.Position + Neighbors[i], out Vector2Int candidate))
+                        continue;
                     if (basin.Contains(candidate))
                         continue;
                     float candidateHeight = _land.SampleHeightAtWorld(candidate, _worldSeed, _planetData);
@@ -989,8 +1019,8 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         {
             for (int i = 0; i < Neighbors.Length; i++)
             {
-                Vector2Int candidate = center + Neighbors[i];
-                if (basin.Contains(candidate) || !queued.Add(candidate) || !_land.WorldDomain.Contains(candidate))
+                if (!TryResolvePosition(center + Neighbors[i], out Vector2Int candidate) ||
+                    basin.Contains(candidate) || !queued.Add(candidate))
                     continue;
                 frontier.Add(new FrontierCell(
                     candidate,
@@ -1000,12 +1030,17 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
         private void AddDiagonalBridge(Vector2Int current, Vector2Int next, float contribution)
         {
-            int deltaX = next.x - current.x;
-            int deltaY = next.y - current.y;
+            Vector2Int delta = _land.WorldDomain is WrappedWorldGenerationDomain wrapped
+                ? wrapped.Bounds.ShortestDelta(current, next)
+                : next - current;
+            int deltaX = delta.x;
+            int deltaY = delta.y;
             if (deltaX == 0 || deltaY == 0)
                 return;
-            Vector2Int horizontal = new(next.x, current.y);
-            Vector2Int vertical = new(current.x, next.y);
+            Vector2Int horizontal = current + new Vector2Int(deltaX, 0);
+            Vector2Int vertical = current + new Vector2Int(0, deltaY);
+            TryResolvePosition(horizontal, out horizontal);
+            TryResolvePosition(vertical, out vertical);
             float horizontalHeight = _land.SampleHeightAtWorld(horizontal, _worldSeed, _planetData);
             float verticalHeight = _land.SampleHeightAtWorld(vertical, _worldSeed, _planetData);
             AddFlow(horizontalHeight <= verticalHeight ? horizontal : vertical, contribution);
@@ -1013,6 +1048,8 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
         private void AddFlow(Vector2Int position, float contribution)
         {
+            if (!TryResolvePosition(position, out position))
+                return;
             _flow.TryGetValue(position, out float existing);
             _flow[position] = existing + contribution;
         }
@@ -1022,8 +1059,16 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
             Vector2Int worldPosition,
             HydrologyCellSample sample)
         {
+            worldPosition = ToNearestRegionImage(worldPosition);
             int localX = worldPosition.x - _regionOrigin.x;
             int localY = worldPosition.y - _regionOrigin.y;
+            if ((uint)localX >= (uint)_river.hydrologyRegionSize ||
+                (uint)localY >= (uint)_river.hydrologyRegionSize)
+            {
+                throw new InvalidOperationException(
+                    $"Hydrology cell {worldPosition} is outside region {_regionOrigin} " +
+                    $"size {_river.hydrologyRegionSize} after topology projection.");
+            }
             int index = localY * _river.hydrologyRegionSize + localX;
             HydrologyCellSample existing = cells[index];
             if (existing.WaterKind == HydrologyWaterKind.Lake &&
@@ -1038,16 +1083,40 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
         private bool ContainsCore(Vector2Int position)
         {
+            position = ToNearestRegionImage(position);
             return (uint)(position.x - _regionOrigin.x) < (uint)_river.hydrologyRegionSize &&
-                   (uint)(position.y - _regionOrigin.y) < (uint)_river.hydrologyRegionSize;
+                   (uint)(position.y - _regionOrigin.y) < (uint)_river.hydrologyRegionSize &&
+                   TryResolvePosition(position, out _);
         }
 
         private bool ContainsExpanded(Vector2Int position, int margin)
         {
+            position = ToNearestRegionImage(position);
             return position.x >= _regionOrigin.x - margin &&
                    position.y >= _regionOrigin.y - margin &&
                    position.x < _regionOrigin.x + _river.hydrologyRegionSize + margin &&
                    position.y < _regionOrigin.y + _river.hydrologyRegionSize + margin;
+        }
+
+        private bool TryResolvePosition(Vector2Int position, out Vector2Int resolved)
+        {
+            if (_land.WorldDomain.Contains(position))
+            {
+                resolved = position;
+                return true;
+            }
+
+            return _land.WorldDomain.TryResolveOutflow(position, position, out resolved);
+        }
+
+        private Vector2Int ToNearestRegionImage(Vector2Int position)
+        {
+            if (_land.WorldDomain is not WrappedWorldGenerationDomain wrapped)
+                return position;
+
+            Vector2Int center = _regionOrigin +
+                                new Vector2Int(_river.hydrologyRegionSize / 2, _river.hydrologyRegionSize / 2);
+            return center + wrapped.Bounds.ShortestDelta(center, position);
         }
 
         private static float Hash01(Vector2Int position, int salt)

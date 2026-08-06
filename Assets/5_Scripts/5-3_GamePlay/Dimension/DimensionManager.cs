@@ -733,7 +733,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         foreach (Item candidate in exits)
         {
-            if (candidate != null && (candidate.transform.position - desiredPosition).sqrMagnitude <= 0.01f)
+            if (candidate != null && WorldTopologyRuntime.SqrDistance(candidate.transform.position, desiredPosition) <= 0.01f)
                 return candidate;
         }
 

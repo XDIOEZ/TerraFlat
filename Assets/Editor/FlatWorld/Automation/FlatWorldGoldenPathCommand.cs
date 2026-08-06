@@ -37,25 +37,11 @@ namespace FlatWorld.Automation
         private const string InteractionModeKey = "InteractionMode";
         private const double PollIntervalSeconds = 0.2d;
         private const double RuntimePollIntervalSeconds = 0.01d;
-        private const double StartupTimeoutSeconds = 90d;
-        private const double WorldEntryTimeoutSeconds = 180d;
-        private const double MoveTimeoutSeconds = 20d;
-        private const double ScreenshotTimeoutSeconds = 15d;
-        private const float MaximumTestSpeed = 24f;
-        private const int GoldenWorldSeed = 424242;
-        private const int StraightWaypointCount = 12;
-        private const int MiddleScreenshotWaypointIndex = 5;
-        private const int MinimumVisitedChunkCount = 10;
-        private const int MinimumObservedChunkCount = 50;
-        private const int ScreenshotSettleFrameCount = 2;
-        private const double ScreenshotSettleSeconds = 0.35d;
-        private const float WaypointStepInChunks = 1.5f;
-        private const float PositionTolerance = 0.5f;
-
         private static readonly string CommandDirectory = Path.GetFullPath(
             Path.Combine(Application.dataPath, "..", "Library", "FlatWorldSkillTests"));
 
         private static GoldenPathRequest _activeRequest;
+        private static FlatWorldGoldenPathExecutor _executor;
         private static string _runningPath;
         private static double _nextPollTime;
         private static RuntimePhase _runtimePhase;
@@ -86,6 +72,7 @@ namespace FlatWorld.Automation
         private static WorldEntryProgressState? _terminalWorldEntryState;
         private static string _terminalWorldEntryStatus;
         private static Action<WorldEntryProgressInfo> _worldEntryHandler;
+        private static bool _worldSetupApplied;
 
         static FlatWorldGoldenPathCommand()
         {
@@ -233,12 +220,27 @@ namespace FlatWorld.Automation
         {
             ResetRuntimeReferences();
             FlatWorldGoldenPathScenarios.Reset();
-            _runtimePhase = RuntimePhase.WaitForStartup;
             _runtimeStartedAt = EditorApplication.timeSinceStartup;
-            _phaseDeadline = _runtimeStartedAt + StartupTimeoutSeconds;
             Application.logMessageReceived -= OnRuntimeLog;
             Application.logMessageReceived += OnRuntimeLog;
-            Debug.Log("[FlatWorldGoldenPath] 已在 GameStartScene 启动代码级黄金路径。");
+
+            try
+            {
+                _executor = new FlatWorldGoldenPathExecutor(
+                    _activeRequest.configuration ?? FlatWorldGoldenPathConfiguration.CreateDefault());
+                _activeRequest.configuration = _executor.Configuration;
+                _runtimePhase = RuntimePhase.WaitForStartup;
+                _phaseDeadline = _runtimeStartedAt +
+                                 _executor.Configuration.execution.startupTimeoutSeconds;
+                Debug.Log(
+                    $"[FlatWorldGoldenPath] Effective configuration: " +
+                    JsonUtility.ToJson(_executor.Configuration));
+                Debug.Log("[FlatWorldGoldenPath] 已在 GameStartScene 启动代码级黄金路径。");
+            }
+            catch (Exception exception)
+            {
+                FinishRuntime(false, exception.Message, exception.ToString());
+            }
         }
 
         private static void TickRuntimeExecution()
@@ -261,6 +263,12 @@ namespace FlatWorld.Automation
                         break;
                     case RuntimePhase.WaitForWorld:
                         TickWaitForWorld();
+                        break;
+                    case RuntimePhase.VerifyWorldWrap:
+                        TickVerifyWorldWrap();
+                        break;
+                    case RuntimePhase.RestoreWorldWrap:
+                        TickRestoreWorldWrap();
                         break;
                     case RuntimePhase.MoveToWaypoint:
                         TickMoveToWaypoint();
@@ -302,20 +310,7 @@ namespace FlatWorld.Automation
             _saveDataManager.UserSavePath = temporarySaveDirectory;
 
             string suffix = _activeRequest.id.Substring(0, Math.Min(8, _activeRequest.id.Length));
-            var request = new NewWorldCreationRequest(
-                $"GoldenPathSave_{suffix}",
-                $"GoldenPathPlayer_{suffix}",
-                GoldenWorldSeed.ToString(),
-                new PlanetData
-                {
-                    Name = $"GoldenPathWorld_{suffix}",
-                    Radius = 256,
-                    NoiseScale = PlanetData.DefaultNoiseScale,
-                    ChunkSize = new Vector2Int(16, 16),
-                    AutoGenerateMap = true
-                },
-                new TimeData(),
-                GameDifficultyId.Simple);
+            NewWorldCreationRequest request = _executor.CreateWorldRequest(suffix);
 
             _worldEntryHandler = progress =>
             {
@@ -330,7 +325,8 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException("公开世界创建入口拒绝了合法请求。");
 
             _runtimePhase = RuntimePhase.WaitForWorld;
-            _phaseDeadline = EditorApplication.timeSinceStartup + WorldEntryTimeoutSeconds;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
         }
 
         private static void TickWaitForWorld()
@@ -344,11 +340,39 @@ namespace FlatWorld.Automation
                          !_gameManager.IsWorldEntryInProgress &&
                          ItemMgr.Instance != null &&
                          ItemMgr.Instance.User_Player != null &&
-                         ChunkMgr.Instance != null &&
-                         IsChunkWindowReady(ChunkMgr.Instance);
+                         ChunkMgr.Instance != null;
             if (!ready)
             {
                 ThrowIfTimedOut("世界、玩家或初始 Chunk 窗口未在限定时间内完成。");
+                return;
+            }
+
+            if (!_worldSetupApplied)
+            {
+                Player configuredPlayer = ItemMgr.Instance.User_Player;
+                Mover configuredMover = configuredPlayer.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+                Mod_ChunkLoader configuredChunkLoader =
+                    configuredPlayer.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
+                if (configuredMover == null || configuredMover.rb == null || configuredMover.Speed == null)
+                    throw new InvalidOperationException("GoldenPath player has no usable Mover.");
+                if (configuredChunkLoader == null)
+                    throw new InvalidOperationException("GoldenPath player has no Chunk loader.");
+
+                _player = configuredPlayer;
+                _mover = configuredMover;
+                _originalMoveSpeed = configuredMover.Speed.BaseValue;
+                foreach (Collider2D collider in configuredPlayer.GetComponentsInChildren<Collider2D>(true))
+                    collider.enabled = false;
+                _executor.ConfigurePlayer(configuredPlayer, configuredChunkLoader);
+                _worldSetupApplied = true;
+                _phaseDeadline = EditorApplication.timeSinceStartup +
+                                 _executor.Configuration.execution.worldEntryTimeoutSeconds;
+                return;
+            }
+
+            if (!IsChunkWindowReady(ChunkMgr.Instance))
+            {
+                ThrowIfTimedOut("Configured camera Chunk window did not become Ready.");
                 return;
             }
 
@@ -373,12 +397,19 @@ namespace FlatWorld.Automation
             _originalMoveSpeed = _mover.Speed.BaseValue;
             _startPosition = _mover.rb.position;
             _chunkSize = ChunkMgr.GetChunkSize();
-            _travelDirection = SelectDeterministicDirection(GoldenWorldSeed);
-            float waypointStep = Mathf.Max(_chunkSize.x, _chunkSize.y) * WaypointStepInChunks;
-            _plannedTravelDistance = waypointStep * StraightWaypointCount;
-            _waypoints = Enumerable.Range(1, StraightWaypointCount)
-                .Select(index => _startPosition + _travelDirection * (waypointStep * index))
-                .ToArray();
+            GoldenPathPlayerConfiguration playerConfig = _executor.Configuration.player;
+            _travelDirection = SelectDeterministicDirection(_executor.Configuration.world.seed);
+            float waypointStep = Mathf.Max(_chunkSize.x, _chunkSize.y) *
+                                 playerConfig.waypointStepChunks;
+            _plannedTravelDistance = waypointStep * playerConfig.waypointCount;
+            _waypoints = new Vector2[playerConfig.waypointCount];
+            Vector2 routePosition = _startPosition;
+            for (int index = 0; index < _waypoints.Length; index++)
+            {
+                routePosition = WorldTopologyRuntime.NormalizePosition(
+                    routePosition + _travelDirection * waypointStep);
+                _waypoints[index] = routePosition;
+            }
             _waypointIndex = 0;
             _visitedChunks = new HashSet<Vector2Int>
             {
@@ -388,11 +419,52 @@ namespace FlatWorld.Automation
             _screenshotPaths = new List<string>(3);
             RecordObservedActiveChunks(ChunkMgr.Instance);
             FlatWorldGoldenPathScenarios.OnWorldReady(CreateScenarioContext());
+            if (_executor.Configuration.scenarios.worldWrap)
+            {
+                FlatWorldGoldenPathScenarios.BeginWorldWrapScenario(CreateScenarioContext());
+                _runtimePhase = RuntimePhase.VerifyWorldWrap;
+                _phaseDeadline = EditorApplication.timeSinceStartup +
+                                 _executor.Configuration.execution.worldEntryTimeoutSeconds;
+            }
+            else
+            {
+                BeginInitialScreenshot();
+            }
+        }
+
+        private static void TickVerifyWorldWrap()
+        {
+            if (!FlatWorldGoldenPathScenarios.TickWorldWrapScenario(CreateScenarioContext()))
+            {
+                ThrowIfTimedOut("玩家右边界环绕、目标 Chunk Ready 或原位置恢复超时。");
+                return;
+            }
+
             PrepareDaylightForVisualCapture();
             Debug.Log(
                 $"[FlatWorldGoldenPath] 直线路线 direction={_travelDirection}, " +
-                $"waypoints={StraightWaypointCount}, distance={_plannedTravelDistance:0.##}。");
+                $"waypoints={_waypoints.Length}, distance={_plannedTravelDistance:0.##}。");
             BeginScreenshotCapture("initial", ScreenshotContinuation.BeginTraversal);
+        }
+
+        private static void BeginInitialScreenshot()
+        {
+            PrepareDaylightForVisualCapture();
+            Debug.Log(
+                $"[FlatWorldGoldenPath] route direction={_travelDirection}, " +
+                $"waypoints={_waypoints.Length}, distance={_plannedTravelDistance:0.##}.");
+            BeginScreenshotCapture("initial", ScreenshotContinuation.BeginTraversal);
+        }
+
+        private static void TickRestoreWorldWrap()
+        {
+            if (!FlatWorldGoldenPathScenarios.TickWorldWrapRestoration(CreateScenarioContext()))
+            {
+                ThrowIfTimedOut("玩家右边界环绕后的原位置恢复或目标 Chunk Ready 超时。");
+                return;
+            }
+
+            BeginNextWaypoint();
         }
 
         private static void TickMoveToWaypoint()
@@ -402,19 +474,24 @@ namespace FlatWorld.Automation
 
             Vector2 target = _waypoints[_waypointIndex];
             FlatWorldGoldenPathScenarios.OnTraversalTick(CreateScenarioContext());
-            float distance = Vector2.Distance(_mover.rb.position, target);
+            float distance = WorldTopologyRuntime.Distance(_mover.rb.position, target);
             if (distance > 0.2f)
             {
                 ThrowIfTimedOut($"Mover.Move 未在限定时间内到达 {target}。");
-                _mover.Speed.BaseValue = Mathf.Clamp(distance * 8f, 2f, MaximumTestSpeed);
+                _mover.Speed.BaseValue = Mathf.Clamp(
+                    distance * 8f,
+                    2f,
+                    _executor.Configuration.player.maximumMoveSpeed);
                 _mover.Move(target, Mathf.Max(Time.deltaTime, 0.02f));
                 return;
             }
 
             _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
-            _expectedChunk = Chunk.GetChunkPosition(_mover.rb.position, _chunkSize);
+            _expectedChunk = ChunkMgr.NormalizeChunkPosition(
+                Chunk.GetChunkPosition(_mover.rb.position, _chunkSize));
             _runtimePhase = RuntimePhase.WaitForChunk;
-            _phaseDeadline = EditorApplication.timeSinceStartup + WorldEntryTimeoutSeconds;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
         }
 
         private static void TickWaitForChunk()
@@ -429,7 +506,8 @@ namespace FlatWorld.Automation
             _visitedChunks.Add(_expectedChunk);
             RecordObservedActiveChunks(ChunkMgr.Instance);
             FlatWorldGoldenPathScenarios.OnChunkReady(CreateScenarioContext());
-            bool captureMiddle = _waypointIndex == MiddleScreenshotWaypointIndex;
+            bool captureMiddle = _waypointIndex ==
+                                 _executor.Configuration.player.middleScreenshotWaypointIndex;
             bool captureFinal = _waypointIndex == _waypoints.Length - 1;
             _waypointIndex++;
             if (captureFinal)
@@ -450,7 +528,8 @@ namespace FlatWorld.Automation
         private static void BeginNextWaypoint()
         {
             _runtimePhase = RuntimePhase.MoveToWaypoint;
-            _phaseDeadline = EditorApplication.timeSinceStartup + MoveTimeoutSeconds;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.moveTimeoutSeconds;
         }
 
         private static void BeginScreenshotCapture(
@@ -466,11 +545,14 @@ namespace FlatWorld.Automation
             DeleteIfExists(_pendingScreenshotPath);
             _screenshotContinuation = continuation;
             _screenshotRequested = false;
-            _screenshotCaptureAfterFrame = Time.frameCount + ScreenshotSettleFrameCount;
+            _screenshotCaptureAfterFrame = Time.frameCount +
+                                           _executor.Configuration.execution.screenshotSettleFrames;
             _screenshotCaptureNotBefore =
-                EditorApplication.timeSinceStartup + ScreenshotSettleSeconds;
+                EditorApplication.timeSinceStartup +
+                _executor.Configuration.execution.screenshotSettleSeconds;
             _runtimePhase = RuntimePhase.WaitForScreenshot;
-            _phaseDeadline = EditorApplication.timeSinceStartup + ScreenshotTimeoutSeconds;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.screenshotTimeoutSeconds;
         }
 
         private static void TickWaitForScreenshot()
@@ -515,6 +597,18 @@ namespace FlatWorld.Automation
             switch (continuation)
             {
                 case ScreenshotContinuation.BeginTraversal:
+                    if (_executor.Configuration.scenarios.worldWrap)
+                    {
+                        FlatWorldGoldenPathScenarios.BeginWorldWrapRestoration();
+                        _runtimePhase = RuntimePhase.RestoreWorldWrap;
+                        _phaseDeadline = EditorApplication.timeSinceStartup +
+                                         _executor.Configuration.execution.worldEntryTimeoutSeconds;
+                    }
+                    else
+                    {
+                        BeginNextWaypoint();
+                    }
+                    break;
                 case ScreenshotContinuation.ContinueTraversal:
                     BeginNextWaypoint();
                     break;
@@ -528,40 +622,46 @@ namespace FlatWorld.Automation
 
         private static void CompleteTraversal()
         {
-            if (_visitedChunks.Count < MinimumVisitedChunkCount)
+            int minimumVisited = _executor.Configuration.execution.minimumVisitedChunks;
+            int minimumObserved = _executor.Configuration.execution.minimumObservedChunks;
+            float positionTolerance = _executor.Configuration.execution.positionTolerance;
+            if (_visitedChunks.Count < minimumVisited)
             {
                 throw new InvalidOperationException(
                     $"直线移动仅覆盖 {_visitedChunks.Count} 个玩家 Chunk，" +
-                    $"少于要求的 {MinimumVisitedChunkCount} 个。");
+                    $"少于要求的 {minimumVisited} 个。");
             }
 
-            if (_observedChunks.Count < MinimumObservedChunkCount)
+            if (_observedChunks.Count < minimumObserved)
             {
                 throw new InvalidOperationException(
                     $"直线流送累计仅观察到 {_observedChunks.Count} 个活动 Chunk，" +
-                    $"少于要求的 {MinimumObservedChunkCount} 个。");
+                    $"少于要求的 {minimumObserved} 个。");
             }
 
             Vector2 finalPosition = _mover.rb.position;
+            bool wrapped = WorldTopologyRuntime.TryGetActiveBounds(out _);
             Vector2 displacement = finalPosition - _startPosition;
             float forwardDistance = Vector2.Dot(displacement, _travelDirection);
             float lateralError = Mathf.Abs(
                 displacement.x * _travelDirection.y - displacement.y * _travelDirection.x);
-            if (Mathf.Abs(forwardDistance - _plannedTravelDistance) > PositionTolerance)
+            if (!wrapped && Mathf.Abs(forwardDistance - _plannedTravelDistance) > positionTolerance)
             {
                 throw new InvalidOperationException(
                     $"直线移动距离异常：计划 {_plannedTravelDistance:0.###}，" +
                     $"实际投影 {forwardDistance:0.###}。");
             }
-            if (lateralError > PositionTolerance)
+            if (!wrapped && lateralError > positionTolerance)
             {
                 throw new InvalidOperationException(
-                    $"直线移动横向偏差 {lateralError:0.###} 超过容差 {PositionTolerance:0.###}。");
+                    $"直线移动横向偏差 {lateralError:0.###} 超过容差 {positionTolerance:0.###}。");
             }
 
-            Vector2Int startChunk = Chunk.GetChunkPosition(_startPosition, _chunkSize);
-            Vector2Int finalChunk = Chunk.GetChunkPosition(finalPosition, _chunkSize);
-            if (finalChunk == startChunk)
+            Vector2Int startChunk = ChunkMgr.NormalizeChunkPosition(
+                Chunk.GetChunkPosition(_startPosition, _chunkSize));
+            Vector2Int finalChunk = ChunkMgr.NormalizeChunkPosition(
+                Chunk.GetChunkPosition(finalPosition, _chunkSize));
+            if (finalChunk == startChunk && _visitedChunks.Count < 2)
                 throw new InvalidOperationException("直线长距离移动结束后玩家仍位于初始 Chunk。");
 
             if (_screenshotPaths.Count != 3 || _screenshotPaths.Any(path => !IsValidPng(path)))
@@ -766,7 +866,10 @@ namespace FlatWorld.Automation
                 _waypoints?.Length ?? 0,
                 currentPosition,
                 targetPosition,
-                _expectedChunk);
+                _expectedChunk,
+                _executor?.Configuration ??
+                _activeRequest?.configuration ??
+                FlatWorldGoldenPathConfiguration.CreateDefault());
         }
 
         private static GoldenPathResponse CreateResponse(bool passed, string message, string stackTrace)
@@ -803,7 +906,9 @@ namespace FlatWorld.Automation
                         }
                     },
                 message = passed ? message ?? string.Empty : string.Empty,
-                screenshotPaths = _screenshotPaths?.ToArray() ?? Array.Empty<string>()
+                screenshotPaths = _screenshotPaths?.ToArray() ?? Array.Empty<string>(),
+                configuration = _activeRequest.configuration ??
+                                FlatWorldGoldenPathConfiguration.CreateDefault()
             };
         }
 
@@ -859,6 +964,7 @@ namespace FlatWorld.Automation
             GoldenPathRequest request = JsonUtility.FromJson<GoldenPathRequest>(File.ReadAllText(path));
             if (request == null || !string.Equals(request.id, id, StringComparison.Ordinal))
                 throw new InvalidDataException("黄金路径请求 JSON 无效或 ID 不匹配。");
+            request.configuration ??= FlatWorldGoldenPathConfiguration.CreateDefault();
             return request;
         }
 
@@ -1093,6 +1199,8 @@ namespace FlatWorld.Automation
         private static void ResetRuntimeReferences()
         {
             Application.logMessageReceived -= OnRuntimeLog;
+            _executor?.Dispose();
+            _executor = null;
             _runtimePhase = RuntimePhase.None;
             _runtimeError = null;
             _gameManager = null;
@@ -1119,6 +1227,7 @@ namespace FlatWorld.Automation
             _terminalWorldEntryState = null;
             _terminalWorldEntryStatus = null;
             _worldEntryHandler = null;
+            _worldSetupApplied = false;
         }
 
         private enum RuntimePhase
@@ -1126,6 +1235,8 @@ namespace FlatWorld.Automation
             None,
             WaitForStartup,
             WaitForWorld,
+            VerifyWorldWrap,
+            RestoreWorldWrap,
             MoveToWaypoint,
             WaitForChunk,
             WaitForScreenshot,
@@ -1145,6 +1256,7 @@ namespace FlatWorld.Automation
         {
             public string id;
             public string createdUtc;
+            public FlatWorldGoldenPathConfiguration configuration;
         }
 
         [Serializable]
@@ -1167,6 +1279,7 @@ namespace FlatWorld.Automation
             public List<GoldenPathFailure> failures;
             public string message;
             public string[] screenshotPaths;
+            public FlatWorldGoldenPathConfiguration configuration;
         }
 
         [Serializable]

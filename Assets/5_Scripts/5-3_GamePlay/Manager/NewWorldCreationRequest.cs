@@ -64,6 +64,20 @@ public sealed class NewWorldCreationRequest
             return false;
         }
 
+        if (PlanetData.TopologyMode != WorldTopologyMode.Infinite &&
+            PlanetData.TopologyMode != WorldTopologyMode.Wrapped)
+        {
+            error = "Unsupported world topology mode.";
+            return false;
+        }
+
+        if (PlanetData.TopologyMode == WorldTopologyMode.Wrapped &&
+            !WorldTopologyBounds.TryCreate(PlanetData, out _))
+        {
+            error = "Wrapped worlds require positive chunk dimensions and constructible aligned bounds.";
+            return false;
+        }
+
         if (!global::PlanetData.IsValidNoiseScale(PlanetData.NoiseScale))
         {
             error = "世界坐标缩放必须是合法有限值。";

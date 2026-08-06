@@ -196,7 +196,7 @@ public class AI_Ghost : Module
         Transform player = ItemMgr.Instance?.UserPlayerTransform;
         if (player != null)
         {
-            float distanceSqr = ((Vector2)player.position - (Vector2)item.transform.position).sqrMagnitude;
+            float distanceSqr = WorldTopologyRuntime.SqrDistance(item.transform.position, player.position);
             if (distanceSqr <= perceptionRadius * perceptionRadius &&
                 lightManager.IsCompletelyDark(player.position))
             {
@@ -209,7 +209,7 @@ public class AI_Ghost : Module
 
         _state = GhostState.Wander;
         if (_hasMoveTarget &&
-            Vector2.Distance(item.transform.position, _moveTarget) > 0.2f)
+            WorldTopologyRuntime.Distance(item.transform.position, _moveTarget) > 0.2f)
         {
             return;
         }

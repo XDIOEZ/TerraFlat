@@ -80,3 +80,9 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 ## 修改后维护本 Skill
 
 改变图尺寸、节点权重规则、脏区 API、建筑占地、AI 移动组件、联机跟随策略或导航测试路径后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
+
+## 有限世界一期导航边界（2026-08-06）
+
+- 玩家环绕后只刷新对侧的规范 Chunk 导航窗口和权重。
+- 一期明确不在地图两侧建立 A* 邻接边，AI 不跨缝寻路；不要把环面坐标最短位移误解为导航图连边。
+- `WorldTopologyNavigationSmokeTests`（`Navigation.Smoke`）保护该范围。

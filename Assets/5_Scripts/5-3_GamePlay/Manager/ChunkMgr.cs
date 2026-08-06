@@ -159,7 +159,12 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     private static string ChunkNameFromPos(Vector2Int chunkPos)
     {
-        return chunkPos.ToString();
+        return NormalizeChunkPosition(chunkPos).ToString();
+    }
+
+    public static Vector2Int NormalizeChunkPosition(Vector2Int chunkPos)
+    {
+        return WorldTopologyRuntime.NormalizeChunkOrigin(chunkPos);
     }
 
     private void HookChunkReadyEvent(Chunk chunk)
@@ -264,7 +269,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         if (chunk == null)
             return false;
 
-        chunkPos = chunk.MapSave?.MapPosition ?? Chunk.GetChunkPosition(chunk.transform.position);
+        chunkPos = NormalizeChunkPosition(
+            chunk.MapSave?.MapPosition ?? Chunk.GetChunkPosition(chunk.transform.position));
         return true;
     }
 
@@ -286,8 +292,9 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return 0;
         }
 
-        int dx = Mathf.Abs(chunkPos.x - _loadPriorityCenterChunk.x) / _cachedChunkStepX;
-        int dy = Mathf.Abs(chunkPos.y - _loadPriorityCenterChunk.y) / _cachedChunkStepY;
+        Vector2Int delta = WorldTopologyRuntime.ShortestDelta(_loadPriorityCenterChunk, chunkPos);
+        int dx = Mathf.Abs(delta.x) / _cachedChunkStepX;
+        int dy = Mathf.Abs(delta.y) / _cachedChunkStepY;
         return dx + dy;
     }
 
@@ -312,16 +319,19 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     public bool TryGetChunkByPos(Vector2Int chunkPos, out Chunk chunk)
     {
+        chunkPos = NormalizeChunkPosition(chunkPos);
         return Chunk_Dic_ByPos.TryGetValue(chunkPos, out chunk) && chunk != null;
     }
 
     public bool TryGetActiveChunkByPos(Vector2Int chunkPos, out Chunk chunk)
     {
+        chunkPos = NormalizeChunkPosition(chunkPos);
         return Chunk_Dic_Active_ByPos.TryGetValue(chunkPos, out chunk) && chunk != null;
     }
 
     public bool TryGetUnActiveChunkByPos(Vector2Int chunkPos, out Chunk chunk)
     {
+        chunkPos = NormalizeChunkPosition(chunkPos);
         return Chunk_Dic_UnActive_ByPos.TryGetValue(chunkPos, out chunk) && chunk != null;
     }
 
@@ -379,6 +389,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     public void RequestLoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
+        chunkPos = NormalizeChunkPosition(chunkPos);
         CancelDeferredChunkDeactivation(chunkPos);
 
         if (TryGetActiveChunkByPos(chunkPos, out var activeChunk))
@@ -506,7 +517,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         // 用世界坐标 / chunkSize 计算出玩家所在 chunk 的索引（对负坐标也正确）
         int playerChunkIndexX = Mathf.FloorToInt(player.transform.position.x / _cachedChunkSize.x);
         int playerChunkIndexY = Mathf.FloorToInt(player.transform.position.y / _cachedChunkSize.y);
-        _loadPriorityCenterChunk = new Vector2Int(playerChunkIndexX * _cachedChunkStepX, playerChunkIndexY * _cachedChunkStepY);
+        _loadPriorityCenterChunk = NormalizeChunkPosition(
+            new Vector2Int(playerChunkIndexX * _cachedChunkStepX, playerChunkIndexY * _cachedChunkStepY));
         _hasLoadPriorityCenter = true;
 
         if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
@@ -532,6 +544,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             TryInvokeComplete();
         }
 
+        HashSet<Vector2Int> targetPositions = new HashSet<Vector2Int>();
         for (int ix = playerChunkIndexX - radius; ix <= playerChunkIndexX + radius; ix++)
         {
             for (int iy = playerChunkIndexY - radius; iy <= playerChunkIndexY + radius; iy++)
@@ -539,20 +552,23 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 // 计算该 chunk 的左下角世界坐标（保持为整数，和你原来用 RoundToInt 的风格一致）
                 int originX = ix * _cachedChunkStepX;
                 int originY = iy * _cachedChunkStepY;
-                Vector2Int chunkPos = new Vector2Int(originX, originY);
+                targetPositions.Add(NormalizeChunkPosition(new Vector2Int(originX, originY)));
+            }
+        }
 
-                if (onAllChunksLoaded != null)
+        foreach (Vector2Int chunkPos in targetPositions)
+        {
+            if (onAllChunksLoaded != null)
+            {
+                targetCount++;
+                RequestLoadChunk_By_Position(chunkPos, loadedChunk =>
                 {
-                    targetCount++;
-                    RequestLoadChunk_By_Position(chunkPos, loadedChunk =>
-                    {
-                        WaitForChunkReady(loadedChunk, HandleTargetChunkReady);
-                    });
-                }
-                else if (!TryGetActiveChunkByPos(chunkPos, out _))
-                {
-                    RequestLoadChunk_By_Position(chunkPos);
-                }
+                    WaitForChunkReady(loadedChunk, HandleTargetChunkReady);
+                });
+            }
+            else if (!TryGetActiveChunkByPos(chunkPos, out _))
+            {
+                RequestLoadChunk_By_Position(chunkPos);
             }
         }
 
@@ -585,6 +601,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void RefreshChunkPenalty(Vector2Int centerChunkPos, int Distance = 1)
     {
+        centerChunkPos = NormalizeChunkPosition(centerChunkPos);
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1;
 
@@ -602,6 +619,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         Debug.Log($"[WorldNav][ChunkMgr] RefreshChunkPenalty | centerChunkPos={centerChunkPos} Distance={Distance} centerIndex=({centerChunkIndexX},{centerChunkIndexY}) ActiveChunkCount={Chunk_Dic_Active_ByPos.Count}");
 
         int updatedCount = 0;
+        HashSet<Vector2Int> refreshedPositions = new HashSet<Vector2Int>();
 
         for (int ix = centerChunkIndexX - radius; ix <= centerChunkIndexX + radius; ix++)
         {
@@ -609,7 +627,9 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             {
                 int originX = ix * _cachedChunkStepX;
                 int originY = iy * _cachedChunkStepY;
-                Vector2Int chunkPos = new Vector2Int(originX, originY);
+                Vector2Int chunkPos = NormalizeChunkPosition(new Vector2Int(originX, originY));
+                if (!refreshedPositions.Add(chunkPos))
+                    continue;
 
                 if (TryGetActiveChunkByPos(chunkPos, out Chunk chunk) && chunk.Map != null)
                 {
@@ -643,15 +663,31 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public void UpdateItem_ChunkOwner(Item item)
     {
-        Vector2Int chunkPos = Chunk.GetChunkPosition(item.transform.position);
-        if (TryGetActiveChunkByPos(chunkPos, out Chunk chunk))
+        if (item == null)
+            return;
+
+        Vector2 worldPosition = item.transform.position;
+        if (WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds) &&
+            !bounds.Contains(worldPosition))
         {
-            chunk.AddItem(item);
+            // A dynamic Rigidbody2D can be observed by Update between the physics
+            // integration that crossed the seam and WorldTopologyBody.FixedUpdate.
+            // Do not index that transient, non-canonical image into either edge Chunk.
+            return;
         }
-        else if (TryGetUnActiveChunkByPos(chunkPos, out chunk))
+
+        Vector2Int chunkPos = NormalizeChunkPosition(Chunk.GetChunkPosition(worldPosition));
+        Chunk targetChunk = null;
+        if (!TryGetActiveChunkByPos(chunkPos, out targetChunk) &&
+            !TryGetUnActiveChunkByPos(chunkPos, out targetChunk))
         {
-            chunk.AddItem(item);
+            return;
         }
+
+        Chunk previousChunk = item.GetComponentInParent<Chunk>();
+        if (previousChunk != null && previousChunk != targetChunk)
+            previousChunk.RemoveItem(item);
+        targetChunk.AddItem(item);
     }
     #endregion
 
@@ -720,8 +756,9 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             // ✅ 区块中心点
             Vector2 chunkCenter = (Vector2)chunk.transform.position + _cachedChunkSize * 0.5f;
 
-            if (Mathf.Abs(chunkCenter.x - playerChunkCenter.x) > Distance * _cachedChunkSize.x ||
-                Mathf.Abs(chunkCenter.y - playerChunkCenter.y) > Distance * _cachedChunkSize.y)
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(playerChunkCenter, chunkCenter);
+            if (Mathf.Abs(delta.x) > Distance * _cachedChunkSize.x ||
+                Mathf.Abs(delta.y) > Distance * _cachedChunkSize.y)
             {
                 if (TryGetChunkPos(chunk, out Vector2Int chunkPos))
                 {
@@ -759,7 +796,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
         Distance = Mathf.Max(1, Distance);
         int radius = Distance - 1;
-        Vector2Int playerChunkPos = Chunk.GetChunkPosition(playerPos);
+        Vector2Int playerChunkPos = NormalizeChunkPosition(Chunk.GetChunkPosition(playerPos));
         RefreshChunkStepCache();
 
         _targetKeepAliveWindow.Clear();
@@ -767,10 +804,10 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         {
             for (int iy = -radius; iy <= radius; iy++)
             {
-                Vector2Int windowPos = new Vector2Int(
+                Vector2Int windowPos = NormalizeChunkPosition(new Vector2Int(
                     playerChunkPos.x + ix * _cachedChunkStepX,
                     playerChunkPos.y + iy * _cachedChunkStepY
-                );
+                ));
                 _targetKeepAliveWindow.Add(windowPos);
             }
         }
@@ -866,7 +903,10 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        Vector2Int chunkPos = chunk.MapSave.MapPosition;
+        Vector2Int chunkPos = NormalizeChunkPosition(chunk.MapSave.MapPosition);
+        chunk.MapSave.MapPosition = chunkPos;
+        chunk.MapSave.Name = ChunkNameFromPos(chunkPos);
+        chunk.transform.position = new Vector3(chunkPos.x, chunkPos.y, chunk.transform.position.z);
         if (isActive)
         {
             CancelDeferredChunkDeactivation(chunkPos);
@@ -960,7 +1000,10 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        Vector2Int chunkPos = chunk.MapSave.MapPosition;
+        Vector2Int chunkPos = NormalizeChunkPosition(chunk.MapSave.MapPosition);
+        chunk.MapSave.MapPosition = chunkPos;
+        chunk.MapSave.Name = ChunkNameFromPos(chunkPos);
+        chunk.transform.position = new Vector3(chunkPos.x, chunkPos.y, chunk.transform.position.z);
         Chunk_Dic_ByPos[chunkPos] = chunk;
         Chunk_Dic_Active_ByPos[chunkPos] = chunk;
         Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
@@ -976,6 +1019,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// </summary>
     public Chunk LoadChunk_By_Position(Vector2Int chunkPos, System.Action<Chunk> onChunkLoaded = null)
     {
+        chunkPos = NormalizeChunkPosition(chunkPos);
         // 同步调用方可能在区块尚未 Ready 时重复查询；已经注册的激活区块必须直接复用，
         // 否则会为同一坐标反复创建 MapCore，并覆盖字典中的旧实例。
         if (TryGetActiveChunkByPos(chunkPos, out Chunk activeChunk) && activeChunk != null)
@@ -1192,6 +1236,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         }
 
         DimensionManager.Instance.ConfigureMap(map);
+        WorldGenerationRuntimeHooks.ApplyBeforeMapGeneration(map);
 
         // 配置地图属性
         map.ParentObject = chunk.gameObject;
@@ -1222,8 +1267,10 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return;
         }
 
-        string chunkKey = chunk.MapSave.Name;
-        Vector2Int chunkPos = chunk.MapSave.MapPosition;
+        Vector2Int chunkPos = NormalizeChunkPosition(chunk.MapSave.MapPosition);
+        chunk.MapSave.MapPosition = chunkPos;
+        chunk.MapSave.Name = ChunkNameFromPos(chunkPos);
+        chunk.transform.position = new Vector3(chunkPos.x, chunkPos.y, chunk.transform.position.z);
         Chunk_Dic_ByPos[chunkPos] = chunk;
         Chunk_Dic_Active_ByPos[chunkPos] = chunk;
         Chunk_Dic_UnActive_ByPos.Remove(chunkPos);
@@ -1246,10 +1293,8 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return null;
         }
 
-        if (string.IsNullOrEmpty(mapSave.Name))
-        {
-            mapSave.Name = ChunkNameFromPos(mapSave.MapPosition);
-        }
+        mapSave.MapPosition = NormalizeChunkPosition(mapSave.MapPosition);
+        mapSave.Name = ChunkNameFromPos(mapSave.MapPosition);
 
         return AcquireChunk(mapSave);
     }
@@ -1348,7 +1393,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public void GetClosestChunk(Vector2 pos, out Chunk closestChunk)
     {
         closestChunk = null;
-        Vector2Int centerChunkPos = Chunk.GetChunkPosition(pos);
+        Vector2Int centerChunkPos = NormalizeChunkPosition(Chunk.GetChunkPosition(pos));
         RefreshChunkStepCache();
 
         if (Chunk_Dic_Active_ByPos == null || Chunk_Dic_Active_ByPos.Count == 0)
@@ -1380,18 +1425,19 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
                     continue;
                 }
 
-                Vector2Int neighborPos = new Vector2Int(
+                Vector2Int neighborPos = NormalizeChunkPosition(new Vector2Int(
                     centerChunkPos.x + dx * _cachedChunkStepX,
                     centerChunkPos.y + dy * _cachedChunkStepY
-                );
+                ));
 
                 if (!TryGetActiveChunkByPos(neighborPos, out Chunk neighborChunk))
                 {
                     continue;
                 }
 
-                int coordDist = Mathf.Abs(neighborPos.x - centerChunkPos.x) / _cachedChunkStepX
-                    + Mathf.Abs(neighborPos.y - centerChunkPos.y) / _cachedChunkStepY;
+                Vector2Int delta = WorldTopologyRuntime.ShortestDelta(centerChunkPos, neighborPos);
+                int coordDist = Mathf.Abs(delta.x) / _cachedChunkStepX
+                    + Mathf.Abs(delta.y) / _cachedChunkStepY;
                 if (coordDist < minCoordDist)
                 {
                     minCoordDist = coordDist;
@@ -1417,8 +1463,9 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
                 continue;
             }
 
-            int coordDist = Mathf.Abs(activePos.x - centerChunkPos.x) / _cachedChunkStepX
-                + Mathf.Abs(activePos.y - centerChunkPos.y) / _cachedChunkStepY;
+            Vector2Int delta = WorldTopologyRuntime.ShortestDelta(centerChunkPos, activePos);
+            int coordDist = Mathf.Abs(delta.x) / _cachedChunkStepX
+                + Mathf.Abs(delta.y) / _cachedChunkStepY;
             if (coordDist < minCoordDist)
             {
                 minCoordDist = coordDist;

@@ -27,6 +27,50 @@ namespace FlatWorld.GameTest.PlayerInteraction
 
         [Test]
         [Category("PlayerInteraction.Smoke")]
+        public void PlayerPhysicsLayerDisablesOnlyPlayerBodyCollisions()
+        {
+            const int expectedPlayerLayer = 10;
+            int playerLayer = LayerMask.NameToLayer("Player");
+            Assert.That(playerLayer, Is.EqualTo(expectedPlayerLayer),
+                "Player 物理层必须固定为 Layer 10，避免占用现有的未命名 Layer 9。");
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Player/Player.prefab");
+            Assert.That(prefab, Is.Not.Null);
+
+            Collider2D[] bodyColliders = prefab
+                .GetComponentsInChildren<Collider2D>(true)
+                .Where(collider => collider != null && !collider.isTrigger)
+                .ToArray();
+            Assert.That(bodyColliders, Is.Not.Empty, "Player Prefab 缺少实体碰撞体。");
+            Assert.That(
+                bodyColliders.All(collider => collider.gameObject.layer == playerLayer),
+                Is.True,
+                "Player 的非 Trigger 实体碰撞体必须位于 Player 层。");
+
+            Assert.That(Physics2D.GetIgnoreLayerCollision(playerLayer, playerLayer), Is.True,
+                "玩家之间必须允许互相穿过。");
+
+            string[] retainedCollisionLayers =
+            {
+                "Default",
+                "Collider",
+                "DamageReciver",
+                "DamageSender"
+            };
+            foreach (string layerName in retainedCollisionLayers)
+            {
+                int otherLayer = LayerMask.NameToLayer(layerName);
+                Assert.That(otherLayer, Is.GreaterThanOrEqualTo(0), $"缺少物理层：{layerName}");
+                Assert.That(
+                    Physics2D.GetIgnoreLayerCollision(playerLayer, otherLayer),
+                    Is.False,
+                    $"Player 与 {layerName} 的碰撞不能被关闭。");
+            }
+        }
+
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
         public void InputAssetContainsStableGamepadFoundation()
         {
             InputActionAsset asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(

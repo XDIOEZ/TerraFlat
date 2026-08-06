@@ -178,6 +178,15 @@ public class Mod_ChunkLoader : Module
         UpdateChunks(lastChunkPos);
     }
 
+    /// <summary>Immediately refreshes the canonical window after a local world wrap.</summary>
+    public void RefreshAfterWorldWrap()
+    {
+        if (_externalStreamingManaged)
+            return;
+
+        RefreshChunksAroundPlayer();
+    }
+
     /// <summary>
     /// 相机视野变化后立即刷新区块
     /// </summary>

@@ -156,6 +156,7 @@ public class Map : Item
             activeGenerationContext?.MarkSucceeded();
             if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
                 Debug.Log($"[WorldNav][Map] FinalizeTilemapLoad | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded}");
+            WrappedTilemapCollisionProxy.Ensure(this);
             OnTilemapLoaded();
             NotifyChunkReady();
             activeGenerationContext = null;
@@ -367,7 +368,8 @@ public class Map : Item
             planetData,
             worldSeed,
             worldAddress,
-            dimensionManager != null ? dimensionManager.ActiveDefinition : null);
+            dimensionManager != null ? dimensionManager.ActiveDefinition : null,
+            WrappedWorldGenerationDomain.Create(planetData));
         activeGenerationContext = context;
 
         GenerationStage? activeStage = null;
@@ -1366,6 +1368,7 @@ public class Map : Item
 
     public void UpdateTileBaseAtPosition(Vector2Int position)
     {
+        WrappedTilemapCollisionProxy.MarkDirty(this);
         Vector3Int position3D = new Vector3Int(position.x, position.y, 0);
 
         if (!Data.TryGetStackView(position, out TileStackView stack) || stack.Count == 0)

@@ -1,0 +1,29 @@
+{
+  "presetName": "wrapped-river-fast",
+  "world": {
+    "radius": 64
+  },
+  "player": {
+    "cameraOrthographicSize": 8.0,
+    "wrapMoveSpeed": 32.0,
+    "maximumMoveSpeed": 40.0,
+    "waypointCount": 8,
+    "waypointStepChunks": 1.0,
+    "middleScreenshotWaypointIndex": 3
+  },
+  "hydrology": {
+    "overrideGeneration": true,
+    "hydrologyRegionSize": 64,
+    "runoffCellSize": 16,
+    "runoffSampleStride": 4,
+    "maxTraceSteps": 128,
+    "infiltrationFloor": 0.0,
+    "riverStartFlow": 0.02,
+    "fullWidthFlow": 0.2,
+    "lakeMinFlow": 0.05
+  },
+  "execution": {
+    "minimumVisitedChunks": 4,
+    "minimumObservedChunks": 16
+  }
+}

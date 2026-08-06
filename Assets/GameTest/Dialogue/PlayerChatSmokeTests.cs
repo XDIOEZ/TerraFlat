@@ -102,7 +102,7 @@ namespace FlatWorld.GameTest.Dialogue
         public void SubmitText_UsesExistingSpeechBubbleChain()
         {
             Player player = CreateLocalPlayer("ChatSpeechActor");
-            EnsureMainCamera();
+            EnsureMainCamera(player);
             PlayerChatInputController chat =
                 player.GetComponent<PlayerChatInputController>();
             CharacterSoliloquyController speech =
@@ -130,7 +130,7 @@ namespace FlatWorld.GameTest.Dialogue
         public void SlashCommand_UsesExplicitHandlerAndReturnsFeedback()
         {
             Player player = CreateLocalPlayer("ChatCommandActor");
-            EnsureMainCamera();
+            EnsureMainCamera(player);
             TestCommandHandler handler =
                 player.gameObject.AddComponent<TestCommandHandler>();
             PlayerChatInputController chat =
@@ -184,12 +184,10 @@ namespace FlatWorld.GameTest.Dialogue
 
         private static void RegisterRuntimeDialoguePrefabs()
         {
-            GameRes gameRes = Object.FindObjectOfType<GameRes>();
-            if (gameRes == null)
-            {
-                GameObject resourceObject = new GameObject("ChatTestGameRes");
-                gameRes = resourceObject.AddComponent<GameRes>();
-            }
+            EnsureRuntimeUiRoot();
+
+            GameRes gameRes = GameRes.Instance;
+            Assert.That(gameRes, Is.Not.Null, "运行时资源单例不可用。");
 
             RegisterRuntimePrefab(
                 gameRes,
@@ -201,6 +199,21 @@ namespace FlatWorld.GameTest.Dialogue
                 "Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_CharacterSpeechBubble.prefab");
         }
 
+        private static void EnsureRuntimeUiRoot()
+        {
+            UIManager uiManager = UIManager.Instance;
+            Assert.That(uiManager, Is.Not.Null, "UI 管理器单例不可用。");
+            if (uiManager.panelRoot != null)
+                return;
+
+            GameObject rootPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Resources/UI/UIRoot.prefab");
+            Assert.That(rootPrefab, Is.Not.Null, "缺少运行时 UI 根 Prefab。");
+            GameObject root = Object.Instantiate(rootPrefab);
+            root.name = "PanelRoot";
+            uiManager.panelRoot = root.transform;
+        }
+
         private static void RegisterRuntimePrefab(GameRes gameRes, string key, string path)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -208,16 +221,22 @@ namespace FlatWorld.GameTest.Dialogue
             gameRes.AllPrefabs[key] = prefab;
         }
 
-        private static void EnsureMainCamera()
+        private static void EnsureMainCamera(Player player)
         {
-            if (Camera.main != null)
-                return;
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                GameObject cameraObject = new GameObject("ChatTestMainCamera");
+                cameraObject.tag = "MainCamera";
+                camera = cameraObject.AddComponent<Camera>();
+                camera.orthographic = true;
+                camera.transform.position = new Vector3(0f, 0f, -10f);
+            }
 
-            GameObject cameraObject = new GameObject("ChatTestMainCamera");
-            cameraObject.tag = "MainCamera";
-            Camera camera = cameraObject.AddComponent<Camera>();
-            camera.orthographic = true;
-            camera.transform.position = new Vector3(0f, 0f, -10f);
+            Vector3 actorPosition = player.transform.position;
+            actorPosition.x = camera.transform.position.x;
+            actorPosition.y = camera.transform.position.y;
+            player.transform.position = actorPosition;
         }
 
         private sealed class TestCommandHandler : MonoBehaviour, IPlayerChatCommandHandler

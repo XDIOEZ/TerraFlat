@@ -105,3 +105,9 @@ disable-model-invocation: false
 ## 修改后维护本 Skill
 
 任何 UI Prefab 移动、重命名、删除，控件节点名变化，PanelKey 变化，动态 UI 文件拆分，`PanelRoot` 规则或领域控制器绑定变化后，必须在同一任务内更新本 Skill 的路径、命名契约和近期变更；涉及具体系统时也更新该系统 Skill。
+
+## 新世界拓扑控件（2026-08-06）
+
+- `UI_NewGame.prefab` 与 `NewGamePrefabBuilder` 都必须包含 `GameManager.NewGameTopologyToggleKey`（“有限循环世界”）Toggle，默认开启。
+- Toggle 关闭时半径输入框必须禁用，并提交 Infinite；开启时提交 Wrapped。控件继续由 `BasePanel.PrepareForGamepadNavigation` 纳入焦点链。
+- Prefab、默认值和绑定契约由 `WorldTopologyUISmokeTests`（`UI.Smoke`）保护。

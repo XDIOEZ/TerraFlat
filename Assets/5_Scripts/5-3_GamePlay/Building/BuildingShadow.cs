@@ -179,9 +179,10 @@ public class BuildingShadow : MonoBehaviour
 
     private bool IsObstacle(Collider2D collision)
     {
-        return collision != null && !collision.isTrigger && collision.gameObject != gameObject &&
-               !collision.CompareTag("Player") && collision.gameObject.tag != "IgnoreShadow" &&
-               !collision.transform.IsChildOf(transform);
+        Collider2D source = WorldTopologyColliderProxy.Resolve(collision);
+        return source != null && !source.isTrigger && source.gameObject != gameObject &&
+               source.GetComponentInParent<Player>() == null && source.gameObject.tag != "IgnoreShadow" &&
+               !source.transform.IsChildOf(transform);
     }
 
     private void PruneDestroyedObstacles()

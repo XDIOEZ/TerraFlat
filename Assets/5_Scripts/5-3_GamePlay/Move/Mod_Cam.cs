@@ -31,6 +31,7 @@ public class Mod_Cam : Module
     public Player Player;
     public GameController GameController;
     private Mod_ChunkLoader _chunkLoader;
+    private WrappedWorldCameraRenderer _wrappedWorldRenderer;
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
@@ -103,6 +104,14 @@ public class Mod_Cam : Module
         if (Vcam != null && CameraFollowItem != null)
         {
             Vcam.Follow = CameraFollowItem.transform;
+        }
+
+        if (ControllerCamera != null)
+        {
+            _wrappedWorldRenderer = ControllerCamera.GetComponent<WrappedWorldCameraRenderer>();
+            if (_wrappedWorldRenderer == null)
+                _wrappedWorldRenderer = ControllerCamera.gameObject.AddComponent<WrappedWorldCameraRenderer>();
+            _wrappedWorldRenderer.Configure(ControllerCamera, Vcam, CameraFollowItem?.transform);
         }
     
         // 初始化相机视野（正交大小）
@@ -179,6 +188,19 @@ public class Mod_Cam : Module
             _chunkLoader.RefreshChunksForCameraView();
 
         // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
+    }
+
+    /// <summary>Sets an absolute gameplay view size and refreshes the streamed Chunk window.</summary>
+    public void SetOrthographicSize(float value)
+    {
+        if (Vcam == null)
+            throw new System.InvalidOperationException("Camera module has no Cinemachine virtual camera.");
+        povValue = Mathf.Clamp(value, MinPovValue, MaxPovValue);
+        Vcam.m_Lens.OrthographicSize = povValue;
+        if (ControllerCamera != null)
+            ControllerCamera.orthographicSize = povValue;
+        _chunkLoader ??= GetComponentInParent<Mod_ChunkLoader>();
+        _chunkLoader?.RefreshChunksForCameraView();
     }
 
     public void EnableUnlimitedView()

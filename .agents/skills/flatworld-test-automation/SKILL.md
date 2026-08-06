@@ -19,6 +19,7 @@ description: "Use when validating FlatWorld Unity changes, running GameTest cate
 
 4. 若 `python` 不在 PATH，先获取 Codex 工作区依赖，再用返回的 Python 绝对路径执行同一脚本。
 5. 根据进程退出码和结构化失败信息处理结果；不要仅根据 Unity 进程退出码判断测试通过。
+6. 需要检查 Unity 日志时只使用 MCP Console：运行前 `read_console(action="clear")`，运行后 `read_console(action="get", types=["error"], format="detailed")`。不要读取或全文扫描 `Editor.log`；MCP 不可用时先恢复 Unity 连接。
 
 常用调用：
 
@@ -26,8 +27,13 @@ description: "Use when validating FlatWorld Unity changes, running GameTest cate
 # 只检查全部 C# 的 UTF-8 编码与非法替换字符
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --check-encoding
 
-# 固定黄金路径：启动游戏、代码创建世界、直线长距离移动并验证 Chunk 流送
+# 默认黄金路径：启动游戏、代码创建世界、执行玩法场景并验证 Chunk 流送
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path
+
+# 临时局部配置，或重复 --golden-set 覆盖单个配置字段
+python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py `
+  --golden-path `
+  --golden-config .agents/skills/flatworld-golden-path/references/wrapped-river-fast.json
 
 # 同时运行多个相关分类
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py `
@@ -52,7 +58,8 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 - 两种通道都把机器可读结果写入被 Git 忽略的 `Library/FlatWorldSkillTests/`。
 - 每次测试前先扫描全部 `Assets/**/*.cs`；发现非 UTF-8 或 `U+FFFD (�)` 时一次性列出并终止，不再让 Unity 逐文件编译报错。
 - 打开的 Editor 会在接管请求前同步刷新 AssetDatabase，确保失焦或关闭 Auto Refresh 时也会先编译 AI 的最新修改。
-- `--golden-path` 使用隔离临时存档并只调用公开生产 API；不点击 UI、不发送物理输入、不做截图判断。
+- `--golden-path` 使用隔离临时存档并只调用公开生产 API；不点击 UI、不发送物理输入。`--golden-config` 接收局部 JSON，重复的 `--golden-set section.field=<json-value>` 可做最后覆盖；未知字段和类型错误必须在运行前拒绝。
+- 黄金路径运行结束后必须按 `$flatworld-golden-path` 读取结构化 JSON、检查本次 `Error/Exception/Assert`，并逐张目视 `initial/middle/final`；截图只做视觉审计，不替代状态断言。
 - Editor 桥接通道在 PlayMode 前后保存并按字节恢复已知易变字体资源，避免动态字形写回污染 Git；不主动切换或保存用户场景。
 - Editor 桥接通道会跨 PlayMode Domain Reload 从 `running/pending` 状态恢复请求、重新挂接 TestRunner 回调，并持久化易变资源快照；测试不依赖用户的 Enter Play Mode 设置。
 

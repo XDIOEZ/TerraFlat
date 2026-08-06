@@ -153,7 +153,7 @@ public sealed class AIAdvanceStateNode<TState> : AIStateNode<TState> where TStat
         }
 
         float arrivalDistance = Mathf.Max(0.05f, _getArrivalDistance());
-        Vector3 offset = target.Position - _getCurrentPosition();
+        Vector2 offset = WorldTopologyRuntime.ShortestDelta(_getCurrentPosition(), target.Position);
         if (offset.sqrMagnitude <= arrivalDistance * arrivalDistance)
         {
             _stopMovement();

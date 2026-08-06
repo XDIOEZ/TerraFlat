@@ -430,7 +430,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 				_attack.StartWindow(
 					_animator,
 					animAttack,
-					targetPosition - transform.position);
+					WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
 			}
 		}
 		else

@@ -315,13 +315,14 @@ public partial class Mover : Module
         }
 
         float arriveThreshold = 0.1f;
-        if (Vector2.Distance(rb.position, targetPosition) < arriveThreshold)
+        Vector2 delta = WorldTopologyRuntime.ShortestDelta(rb.position, targetPosition);
+        if (delta.magnitude < arriveThreshold)
         {
             rb.velocity = Vector2.zero;
             return;
         }
 
-        Vector2 direction = (targetPosition - rb.position).normalized;
+        Vector2 direction = delta.normalized;
         rb.velocity = direction * Speed.Value;
     }
 

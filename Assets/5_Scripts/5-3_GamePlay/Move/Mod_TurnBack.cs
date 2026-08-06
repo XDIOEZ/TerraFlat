@@ -90,7 +90,7 @@ public class Mod_TurnBack : Module
         Vector2 characterPos = transform.position;
         Vector2 mousePos = faceMouse.Data.See_Point;
 
-        Vector2 directionToTarget = mousePos - characterPos;
+        Vector2 directionToTarget = WorldTopologyRuntime.ShortestDelta(characterPos, mousePos);
         if (directionToTarget.sqrMagnitude < 0.001f) return;
 
         TurnBodyToDirection(directionToTarget);

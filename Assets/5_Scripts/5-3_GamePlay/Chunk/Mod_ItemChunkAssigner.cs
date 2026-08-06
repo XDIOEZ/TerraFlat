@@ -27,16 +27,11 @@ public class Mod_ItemChunkAssigner : Module
         if (_Data.isRunning == false)
             return;
 
-        Vector2Int currentChunkPos = Chunk.GetChunkPosition(transform.position);
+        Vector2Int currentChunkPos = ChunkMgr.NormalizeChunkPosition(
+            Chunk.GetChunkPosition(transform.position));
         if (currentChunkPos != lastChunkPos)
         {
-            // 从旧区块中移除物品引用
-            if (ChunkMgr.Instance.TryGetChunkByPos(lastChunkPos, out Chunk oldChunk))
-            {
-                oldChunk.RemoveItem(item);
-            }
-            
-            // 更新物品的区块归属
+            // ChunkMgr performs the old-owner removal and new-owner insertion atomically.
             lastChunkPos = currentChunkPos;
             ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
         }

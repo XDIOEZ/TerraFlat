@@ -68,6 +68,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
     private readonly List<PerceptionItemSnapshot> _perceptionSnapshotData = new(256);
     private readonly HashSet<long> _perceptionSnapshotCells = new();
     private readonly HashSet<Item> _perceptionSnapshotItemSet = new();
+    private readonly HashSet<Item> _perceptionResultItemSet = new();
     private readonly List<Item> _detectorApplyBuffer = new(64);
 
     private NativeList<PerceptionItemSnapshot> _inFlightItemSnapshots;
@@ -110,6 +111,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
         public float Radius;
         public int LayerMask;
         public int ExcludedInstanceId;
+        public WorldTopologyDomain Topology;
     }
 
     [BurstCompile]
@@ -126,37 +128,47 @@ public class ItemMgr : SingletonMono<ItemMgr>
             NativeStream.Writer writer = Results;
             writer.BeginForEachIndex(queryIndex);
 
-            int minCellX = WorldToCell(query.Center.x - query.Radius) - 1;
-            int maxCellX = WorldToCell(query.Center.x + query.Radius) + 1;
-            int minCellY = WorldToCell(query.Center.y - query.Radius) - 1;
-            int maxCellY = WorldToCell(query.Center.y + query.Radius) + 1;
-
-            for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+            int minImage = query.Topology.IsWrapped ? -1 : 0;
+            int maxImage = query.Topology.IsWrapped ? 1 : 0;
+            for (int imageX = minImage; imageX <= maxImage; imageX++)
             {
-                for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+                for (int imageY = minImage; imageY <= maxImage; imageY++)
                 {
-                    long cellKey = PackCell(cellX, cellY);
-                    if (!SpatialMap.TryGetFirstValue(cellKey, out int itemIndex, out NativeParallelMultiHashMapIterator<long> iterator))
-                        continue;
-
-                    do
+                    float2 imageCenter = query.Center + new float2(
+                        imageX * query.Topology.Span.x,
+                        imageY * query.Topology.Span.y);
+                    int minCellX = WorldToCell(imageCenter.x - query.Radius) - 1;
+                    int maxCellX = WorldToCell(imageCenter.x + query.Radius) + 1;
+                    int minCellY = WorldToCell(imageCenter.y - query.Radius) - 1;
+                    int maxCellY = WorldToCell(imageCenter.y + query.Radius) + 1;
+                    for (int cellX = minCellX; cellX <= maxCellX; cellX++)
                     {
-                        PerceptionItemSnapshot candidate = Items[itemIndex];
-                        if (candidate.InstanceId == query.ExcludedInstanceId ||
-                            (candidate.LayerBit & query.LayerMask) == 0)
+                        for (int cellY = minCellY; cellY <= maxCellY; cellY++)
                         {
-                            continue;
+                            long cellKey = PackCell(cellX, cellY);
+                            if (!SpatialMap.TryGetFirstValue(cellKey, out int itemIndex, out NativeParallelMultiHashMapIterator<long> iterator))
+                                continue;
+
+                            do
+                            {
+                                PerceptionItemSnapshot candidate = Items[itemIndex];
+                                if (candidate.InstanceId == query.ExcludedInstanceId ||
+                                    (candidate.LayerBit & query.LayerMask) == 0)
+                                {
+                                    continue;
+                                }
+
+                                float2 distanceToBounds = math.max(
+                                    math.abs(candidate.BoundsCenter - imageCenter) - candidate.BoundsExtents,
+                                    0f);
+                                if (math.lengthsq(distanceToBounds) > query.Radius * query.Radius)
+                                    continue;
+
+                                writer.Write(itemIndex);
+                            }
+                            while (SpatialMap.TryGetNextValue(out itemIndex, ref iterator));
                         }
-
-                        float2 distanceToBounds = math.max(
-                            math.abs(candidate.BoundsCenter - query.Center) - candidate.BoundsExtents,
-                            0f);
-                        if (math.lengthsq(distanceToBounds) > query.Radius * query.Radius)
-                            continue;
-
-                        writer.Write(itemIndex);
                     }
-                    while (SpatialMap.TryGetNextValue(out itemIndex, ref iterator));
                 }
             }
 
@@ -554,6 +566,8 @@ public class ItemMgr : SingletonMono<ItemMgr>
         RefreshItemSpatialIndex(item);
         RefreshPerceptionColliderCache(item);
         RegisterItemSchedule(item);
+        WorldTopologyBody.Ensure(item);
+        WorldTopologyProxySource.Ensure(item);
 
         if (item is Map mapItem)
         {
@@ -568,6 +582,18 @@ public class ItemMgr : SingletonMono<ItemMgr>
             context = item?.itemData != null ? item.itemData.IDName : item?.name;
         }
         RegisterRuntimeItem(item, context);
+    }
+
+    public void NotifyRuntimeItemMoved(Item item)
+    {
+        if (item == null || item.itemData == null ||
+            !WorldRunTimeItems.TryGetValue(item.itemData.Guid, out Item registered) || registered != item)
+        {
+            return;
+        }
+
+        RefreshItemSpatialIndex(item);
+        RefreshPerceptionColliderCache(item);
     }
 
     /// <summary>
@@ -1122,6 +1148,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
     private void BuildDetectorQuerySnapshot()
     {
         _perceptionQueryData.Clear();
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         for (int i = 0; i < _inFlightDetectors.Count; i++)
         {
             Mod_ItemDetector detector = _inFlightDetectors[i];
@@ -1132,7 +1159,8 @@ public class ItemMgr : SingletonMono<ItemMgr>
                 Center = new float2(detectorPosition.x, detectorPosition.y),
                 Radius = Mathf.Max(0f, detector.DetectionRadius),
                 LayerMask = detector.itemLayer.value,
-                ExcludedInstanceId = excludedItem != null ? excludedItem.GetInstanceID() : 0
+                ExcludedInstanceId = excludedItem != null ? excludedItem.GetInstanceID() : 0,
+                Topology = topology
             });
         }
     }
@@ -1147,24 +1175,33 @@ public class ItemMgr : SingletonMono<ItemMgr>
         for (int queryIndex = 0; queryIndex < _perceptionQueryData.Count; queryIndex++)
         {
             DetectorQuerySnapshot query = _perceptionQueryData[queryIndex];
-            int minCellX = WorldToPerceptionCell(query.Center.x - query.Radius) - 1;
-            int maxCellX = WorldToPerceptionCell(query.Center.x + query.Radius) + 1;
-            int minCellY = WorldToPerceptionCell(query.Center.y - query.Radius) - 1;
-            int maxCellY = WorldToPerceptionCell(query.Center.y + query.Radius) + 1;
-
-            for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+            int minImage = query.Topology.IsWrapped ? -1 : 0;
+            int maxImage = query.Topology.IsWrapped ? 1 : 0;
+            for (int imageX = minImage; imageX <= maxImage; imageX++)
             {
-                for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+                for (int imageY = minImage; imageY <= maxImage; imageY++)
                 {
-                    long cellKey = PackPerceptionCell(cellX, cellY);
-                    if (!_perceptionSnapshotCells.Add(cellKey) ||
-                        !_perceptionCells.TryGetValue(cellKey, out HashSet<Item> cellItems))
+                    float centerX = query.Center.x + imageX * query.Topology.Span.x;
+                    float centerY = query.Center.y + imageY * query.Topology.Span.y;
+                    int minCellX = WorldToPerceptionCell(centerX - query.Radius) - 1;
+                    int maxCellX = WorldToPerceptionCell(centerX + query.Radius) + 1;
+                    int minCellY = WorldToPerceptionCell(centerY - query.Radius) - 1;
+                    int maxCellY = WorldToPerceptionCell(centerY + query.Radius) + 1;
+                    for (int cellX = minCellX; cellX <= maxCellX; cellX++)
                     {
-                        continue;
-                    }
+                        for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+                        {
+                            long cellKey = PackPerceptionCell(cellX, cellY);
+                            if (!_perceptionSnapshotCells.Add(cellKey) ||
+                                !_perceptionCells.TryGetValue(cellKey, out HashSet<Item> cellItems))
+                            {
+                                continue;
+                            }
 
-                    foreach (Item candidate in cellItems)
-                        TryAddPerceptionSnapshot(candidate);
+                            foreach (Item candidate in cellItems)
+                                TryAddPerceptionSnapshot(candidate);
+                        }
+                    }
                 }
             }
         }
@@ -1265,6 +1302,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
             DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
             int candidateCount = reader.BeginForEachIndex(queryIndex);
             _detectorApplyBuffer.Clear();
+            _perceptionResultItemSet.Clear();
 
             for (int candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++)
             {
@@ -1277,7 +1315,7 @@ public class ItemMgr : SingletonMono<ItemMgr>
                 if (!IsSnapshotItemStillValid(candidate, snapshot))
                     continue;
 
-                if (!PassesColliderPerceptionFilter(candidate, query))
+                if (!_perceptionResultItemSet.Add(candidate) || !PassesColliderPerceptionFilter(candidate, query))
                     continue;
 
                 _detectorApplyBuffer.Add(candidate);
@@ -1318,9 +1356,20 @@ public class ItemMgr : SingletonMono<ItemMgr>
             if (collider == null || !collider.enabled || !collider.gameObject.activeInHierarchy)
                 continue;
 
-            Vector2 closestPoint = collider.ClosestPoint(center);
-            if ((closestPoint - center).sqrMagnitude <= radiusSqr)
-                return true;
+            int minImage = query.Topology.IsWrapped ? -1 : 0;
+            int maxImage = query.Topology.IsWrapped ? 1 : 0;
+            for (int imageX = minImage; imageX <= maxImage; imageX++)
+            {
+                for (int imageY = minImage; imageY <= maxImage; imageY++)
+                {
+                    Vector2 imageCenter = center + new Vector2(
+                        imageX * query.Topology.Span.x,
+                        imageY * query.Topology.Span.y);
+                    Vector2 closestPoint = collider.ClosestPoint(imageCenter);
+                    if ((closestPoint - imageCenter).sqrMagnitude <= radiusSqr)
+                        return true;
+                }
+            }
         }
 
         return false;
@@ -1361,21 +1410,30 @@ public class ItemMgr : SingletonMono<ItemMgr>
         if (radius < 0f)
             return;
 
-        int minCellX = WorldToPerceptionCell(center.x - radius) - 1;
-        int maxCellX = WorldToPerceptionCell(center.x + radius) + 1;
-        int minCellY = WorldToPerceptionCell(center.y - radius) - 1;
-        int maxCellY = WorldToPerceptionCell(center.y + radius) + 1;
-
-        for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        int minImage = topology.IsWrapped ? -1 : 0;
+        int maxImage = topology.IsWrapped ? 1 : 0;
+        for (int imageX = minImage; imageX <= maxImage; imageX++)
         {
-            for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+            for (int imageY = minImage; imageY <= maxImage; imageY++)
             {
-                long cellKey = PackPerceptionCell(cellX, cellY);
-                if (!_perceptionCells.TryGetValue(cellKey, out HashSet<Item> cellItems))
-                    continue;
+                Vector2 imageCenter = center + new Vector2(imageX * topology.Span.x, imageY * topology.Span.y);
+                int minCellX = WorldToPerceptionCell(imageCenter.x - radius) - 1;
+                int maxCellX = WorldToPerceptionCell(imageCenter.x + radius) + 1;
+                int minCellY = WorldToPerceptionCell(imageCenter.y - radius) - 1;
+                int maxCellY = WorldToPerceptionCell(imageCenter.y + radius) + 1;
+                for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+                {
+                    for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+                    {
+                        long cellKey = PackPerceptionCell(cellX, cellY);
+                        if (!_perceptionCells.TryGetValue(cellKey, out HashSet<Item> cellItems))
+                            continue;
 
-                foreach (Item candidate in cellItems)
-                    TryAddSpatialCandidate(candidate, center, radius, layerMask, excludedItem, results, dedupe);
+                        foreach (Item candidate in cellItems)
+                            TryAddSpatialCandidate(candidate, imageCenter, radius, layerMask, excludedItem, results, dedupe);
+                    }
+                }
             }
         }
     }

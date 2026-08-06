@@ -288,7 +288,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 
 		Vector3 cohesionAnchor = _alphaWolf != null ? _alphaWolf.transform.position : _packCenter;
-		Vector2 toPack = (Vector2)(cohesionAnchor - transform.position);
+		Vector2 toPack = WorldTopologyRuntime.ShortestDelta(transform.position, cohesionAnchor);
 		if (toPack.sqrMagnitude > 0.0001f)
 		{
 			offset += toPack.normalized * (wanderRadius * wanderCohesionWeight);
@@ -443,7 +443,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 				_attack.StartWindow(
 					_animator,
 					animAttack,
-					targetPosition - transform.position);
+					WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
 			}
 		}
 		else

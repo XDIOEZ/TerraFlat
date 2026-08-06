@@ -117,3 +117,9 @@ GameSaveData
 ## 修改后维护本 Skill
 
 新增/移动数据类、存档 partial、配置表、Addressables 标签、资源目录或序列化迁移入口后，必须更新本 Skill 的数据链、路径和近期变更；不要只记录类名而遗漏持久化位置。
+
+## 有限环绕世界存档契约（2026-08-06）
+
+- `PlanetData.TopologyMode` 必须保持在 MemoryPack 布局末尾；枚举 `Infinite = 0` 保证旧布局缺失字段时仍为无限世界。
+- 有限世界保存的 `MapData_Dict` 键与 `MapSave.MapPosition/Name` 必须是规范 Chunk 坐标。
+- 往返与旧默认值由 `WorldTopologyDataSaveSmokeTests`（`DataSave.Smoke`）保护。

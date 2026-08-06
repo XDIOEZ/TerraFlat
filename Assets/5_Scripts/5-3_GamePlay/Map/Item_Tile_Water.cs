@@ -21,6 +21,7 @@ public class Item_Tile_Water : Item
         // 获取鼠标在屏幕上的位置
         Vector3 mouseScreenPos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
+        worldPos = WorldTopologyRuntime.NormalizePosition(worldPos);
 
         Map mapCoreScript = (Map)ItemMgr.Instance.GetItemsByNameID("MapCore")[0];
 

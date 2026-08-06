@@ -173,7 +173,7 @@ public class ItemPicker : Module
         }
 
         // 获取物品组件
-        var pickAble = other.GetComponent<Item>();
+        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
 
         if (pickAble != null && pickAble.itemData.Stack.CanBePickedUp)
         {
@@ -318,14 +318,18 @@ public class ItemPicker : Module
         Vector3 targetLocalPoint,
         int itemIdentity)
     {
-        Vector3 startPosition = visualRoot.transform.position;
         Vector3 initialScale = visualRoot.transform.localScale;
         float duration = Mathf.Max(0.05f, pickupSuctionDuration);
         float elapsed = 0f;
 
         Vector3 initialTarget = target != null
             ? target.TransformPoint(targetLocalPoint)
-            : startPosition;
+            : visualRoot.transform.position;
+        Vector3 startPosition = WorldTopologyRuntime.NearestImagePosition(
+            initialTarget,
+            visualRoot.transform.position);
+        startPosition.z = visualRoot.transform.position.z;
+        visualRoot.transform.position = startPosition;
         Vector2 direction = initialTarget - startPosition;
         Vector2 perpendicular = direction.sqrMagnitude > 0.0001f
             ? new Vector2(-direction.y, direction.x).normalized
@@ -341,7 +345,9 @@ public class ItemPicker : Module
             elapsed += Time.deltaTime;
             float normalizedTime = Mathf.Clamp01(elapsed / duration);
             float suctionTime = normalizedTime * normalizedTime * normalizedTime;
-            Vector3 targetPosition = target.TransformPoint(targetLocalPoint);
+            Vector3 targetPosition = WorldTopologyRuntime.NearestImagePosition(
+                visualRoot.transform.position,
+                target.TransformPoint(targetLocalPoint));
             float arcWeight = Mathf.Sin(normalizedTime * Mathf.PI);
 
             visualRoot.transform.position =

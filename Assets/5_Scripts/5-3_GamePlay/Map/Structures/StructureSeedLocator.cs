@@ -230,6 +230,34 @@ public static class StructureSeedLocator
             regionSize);
 
         float nearestDistance = float.MaxValue;
+        if (WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
+        {
+            int minRegionX = StructureSeedPlanner.FloorDiv(bounds.Min.x, regionSize);
+            int maxRegionX = StructureSeedPlanner.FloorDiv(bounds.MaxExclusive.x - 1, regionSize);
+            int minRegionY = StructureSeedPlanner.FloorDiv(bounds.Min.y, regionSize);
+            int maxRegionY = StructureSeedPlanner.FloorDiv(bounds.MaxExclusive.y - 1, regionSize);
+            for (int regionX = minRegionX; regionX <= maxRegionX; regionX++)
+            {
+                for (int regionY = minRegionY; regionY <= maxRegionY; regionY++)
+                {
+                    EvaluateRegion(
+                        regionX,
+                        regionY,
+                        worldSeed,
+                        catalog,
+                        targetDefinition,
+                        searchOrigin,
+                        terrainPreview,
+                        chunkSize,
+                        ref nearest,
+                        ref nearestDistance,
+                        ref scannedRegionCount);
+                }
+            }
+
+            return nearest != null;
+        }
+
         for (int ring = 0; ring <= MaxRegionSearchRadius; ring++)
         {
             float futureRingMinimumDistance =
@@ -333,6 +361,12 @@ public static class StructureSeedLocator
             return;
         }
 
+        if (WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds) &&
+            !bounds.Contains(target.WorldOrigin))
+        {
+            return;
+        }
+
         Vector2Int chunkOrigin = new(
             StructureSeedPlanner.FloorDiv(target.WorldOrigin.x, chunkSize.x) * chunkSize.x,
             StructureSeedPlanner.FloorDiv(target.WorldOrigin.y, chunkSize.y) * chunkSize.y);
@@ -349,7 +383,7 @@ public static class StructureSeedLocator
         }
 
         Vector2 entrance = StructureSeedPlanner.ResolveTeleportPoint(accepted);
-        float distance = (entrance - searchOrigin).sqrMagnitude;
+        float distance = WorldTopologyRuntime.SqrDistance(searchOrigin, entrance);
         if (distance >= nearestDistance)
             return;
 

@@ -63,7 +63,8 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
 
         CaveLayoutConfig layoutConfig = CaveLayoutSampler.CreateConfig(
             definition,
-            new Vector2Int(width, height));
+            new Vector2Int(width, height),
+            context.PlanetData);
         _activeOpenMask = new NativeArray<byte>(
             haloCellCount,
             Allocator.Persistent,
@@ -104,6 +105,7 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
             _activeHandle.Complete();
             Vector2 safeCenter = definition.DefaultSpawnPosition;
             float safeRadiusSqr = definition.CaveSafeRadius * definition.CaveSafeRadius;
+            WorldTopologyDomain topology = layoutConfig.Topology;
             var budget = new ChunkGenerationWorkBudget(Map, Mathf.Max(1, workBatchSize));
 
             for (int index = 0; index < cellCount; index++)
@@ -129,7 +131,9 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
                     if (!Map.Data.PushTile(worldPosition, wallTile))
                         throw new InvalidOperationException($"Unable to write cave wall at {worldPosition}.");
                 }
-                else if ((new Vector2(worldPosition.x + 0.5f, worldPosition.y + 0.5f) - safeCenter).sqrMagnitude > safeRadiusSqr)
+                else if (math.lengthsq(topology.ShortestDelta(
+                             new float2(safeCenter.x, safeCenter.y),
+                             new float2(worldPosition.x + 0.5f, worldPosition.y + 0.5f))) > safeRadiusSqr)
                 {
                     bool spawnedMine = classification == CaveCellClassification.WallEdge &&
                                        TrySpawnResource(context, definition, resources, worldPosition, localPosition);
@@ -162,6 +166,25 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         Vector2Int chunkSize = default)
     {
         CaveLayoutConfig config = CaveLayoutSampler.CreateConfig(definition, chunkSize);
+        return SampleCellClassification(worldPosition, config, worldSeed);
+    }
+
+    public static byte SampleCellClassification(
+        Vector2Int worldPosition,
+        DimensionDefinition definition,
+        int worldSeed,
+        Vector2Int chunkSize,
+        PlanetData planetData)
+    {
+        CaveLayoutConfig config = CaveLayoutSampler.CreateConfig(definition, chunkSize, planetData);
+        return SampleCellClassification(worldPosition, config, worldSeed);
+    }
+
+    private static byte SampleCellClassification(
+        Vector2Int worldPosition,
+        CaveLayoutConfig config,
+        int worldSeed)
+    {
         int2 position = new(worldPosition.x, worldPosition.y);
         if (!CaveLayoutSampler.IsOpenAtWorld(position, config, worldSeed))
             return CaveCellClassification.Closed;
@@ -197,7 +220,10 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
             return false;
 
         uint state = MixSeed(worldPos.x, worldPos.y, context.WorldSeed);
-        float depositStrength = CaveLayoutSampler.GetDepositStrength(worldPos, context.WorldSeed);
+        float depositStrength = CaveLayoutSampler.GetDepositStrength(
+            worldPos,
+            context.WorldSeed,
+            context.PlanetData);
         float depositFactor = Mathf.InverseLerp(0.48f, 0.82f, depositStrength);
         if (depositFactor <= 0f)
             return false;
@@ -207,7 +233,11 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         if (spawnRoll > spawnChance)
             return false;
 
-        DimensionResourceRule selected = SelectResource(resources, worldPos, context.WorldSeed);
+        DimensionResourceRule selected = SelectResource(
+            resources,
+            worldPos,
+            context.WorldSeed,
+            context.PlanetData);
         if (selected == null)
             return false;
 
@@ -241,7 +271,11 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
         if (NextUnitFloat(ref state) > Mathf.Clamp01(definition.CaveLooseOreDensity))
             return false;
 
-        DimensionResourceRule selected = SelectResource(resources, worldPos, context.WorldSeed);
+        DimensionResourceRule selected = SelectResource(
+            resources,
+            worldPos,
+            context.WorldSeed,
+            context.PlanetData);
         string pickupItemId = GetLooseOreItemId(selected?.ItemId);
         if (string.IsNullOrEmpty(pickupItemId) || GameRes.Instance?.GetPrefab(pickupItemId, false) == null)
             return false;
@@ -308,16 +342,32 @@ public sealed class ChunkGenerator_Cave : ChunkGeneratorBase
     private static DimensionResourceRule SelectResource(
         List<DimensionResourceRule> resources,
         Vector2Int worldPos,
-        int worldSeed)
+        int worldSeed,
+        PlanetData planetData)
     {
-        float2 seedOffset = TerrainNoiseKernel.GetSeedOffset(worldSeed, NoiseType.Height);
+        WorldTopologyDomain topology = WorldTopologyBounds.TryCreate(planetData, out WorldTopologyBounds bounds)
+            ? bounds.ToDomain()
+            : default;
         for (int i = 0; i < resources.Count; i++)
         {
             DimensionResourceRule rule = resources[i];
             float scale = math.max(0.0001f, rule.VeinScale);
-            float sample = TerrainNoiseKernel.SampleCNoise01(new float2(
-                (worldPos.x + rule.NoiseOffset + seedOffset.x) * scale,
-                (worldPos.y - rule.NoiseOffset + seedOffset.y) * scale));
+            TerrainNoiseConfig noiseConfig = new()
+            {
+                noiseType = NoiseType.Height,
+                coordScale = 1f,
+                frequency = scale,
+                octaves = 1,
+                lacunarity = 2f,
+                persistence = 0.5f,
+                coordOffset = new Vector2(rule.NoiseOffset, -rule.NoiseOffset)
+            };
+            float sample = TerrainNoiseKernel.Sample(
+                noiseConfig,
+                new Vector2(worldPos.x, worldPos.y),
+                1f,
+                worldSeed,
+                topology);
             if (sample >= math.saturate(rule.VeinThreshold))
                 return rule;
         }

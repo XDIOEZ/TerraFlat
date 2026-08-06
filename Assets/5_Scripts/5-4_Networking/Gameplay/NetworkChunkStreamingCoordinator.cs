@@ -46,6 +46,25 @@ namespace FlatWorld.Networking.Gameplay
             instance.lastObserverSignature = int.MinValue;
         }
 
+        public static void RequestImmediateRefresh()
+        {
+            if (instance == null)
+                return;
+
+            instance.lastObserverSignature = int.MinValue;
+            instance.nextRefreshTime = 0f;
+        }
+
+        private void OnEnable()
+        {
+            WorldTopologyRuntime.LocalPlayerWrapped += RequestImmediateRefresh;
+        }
+
+        private void OnDisable()
+        {
+            WorldTopologyRuntime.LocalPlayerWrapped -= RequestImmediateRefresh;
+        }
+
         private static void EnsureInstance()
         {
             if (instance != null)
@@ -77,7 +96,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!IsValidObserverPosition(position))
                     continue;
 
-                Vector2Int chunkPosition = Chunk.GetChunkPosition(position);
+                Vector2Int chunkPosition = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(position));
                 observerPositions.Add(position);
                 unchecked
                 {
@@ -122,7 +141,7 @@ namespace FlatWorld.Networking.Gameplay
             if (anchor == null || !IsValidObserverPosition(anchor.position))
                 return;
 
-            Vector2Int anchorChunk = Chunk.GetChunkPosition(anchor.position);
+            Vector2Int anchorChunk = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(anchor.position));
             if (anchorChunk == lastNavigationAnchorChunk)
                 return;
 

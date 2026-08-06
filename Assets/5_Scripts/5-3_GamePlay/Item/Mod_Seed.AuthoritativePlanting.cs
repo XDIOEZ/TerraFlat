@@ -21,6 +21,7 @@ public partial class Mod_Seed
         }
 
         Vector3 mouseWorldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mouseWorldPosition = WorldTopologyRuntime.NormalizePosition(mouseWorldPosition);
         if (!TryResolveMapByWorldPos(mouseWorldPosition, out Map targetMap) || targetMap.tileMap == null)
         {
             Debug.LogWarning($"[Mod_Seed] 播种失败：目标位置 {mouseWorldPosition} 不在已加载地图中", item);
