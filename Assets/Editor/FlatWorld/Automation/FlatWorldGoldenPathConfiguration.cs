@@ -46,6 +46,10 @@ namespace FlatWorld.Automation
 
             Require(player.cameraOrthographicSize >= 5f && player.cameraOrthographicSize <= 100f,
                 "player.cameraOrthographicSize must be in [5, 100].");
+            Require(player.screenshotOrthographicSize >= player.cameraOrthographicSize &&
+                    player.screenshotOrthographicSize <= 100f,
+                "player.screenshotOrthographicSize must be in " +
+                "[player.cameraOrthographicSize, 100].");
             Require(player.wrapMoveSpeed > 0f && player.maximumMoveSpeed > 0f,
                 "player movement speeds must be positive.");
             Require(player.waypointCount >= 2 && player.waypointCount <= 256,
@@ -117,6 +121,7 @@ namespace FlatWorld.Automation
     internal sealed class GoldenPathPlayerConfiguration
     {
         public float cameraOrthographicSize = 10f;
+        public float screenshotOrthographicSize = 20f;
         public float wrapMoveSpeed = 12f;
         public float maximumMoveSpeed = 24f;
         public int waypointCount = 12;

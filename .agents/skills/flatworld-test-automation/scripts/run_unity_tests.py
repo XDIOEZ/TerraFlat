@@ -40,6 +40,7 @@ DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
     },
     "player": {
         "cameraOrthographicSize": 10.0,
+        "screenshotOrthographicSize": 20.0,
         "wrapMoveSpeed": 12.0,
         "maximumMoveSpeed": 24.0,
         "waypointCount": 12,
@@ -86,6 +87,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--category", action="append", default=[], help="NUnit category; repeat as needed.")
     parser.add_argument("--test", action="append", default=[], help="Exact fully qualified test name; repeat as needed.")
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Run the curated, one-critical-check-per-subsystem Smoke category.",
+    )
     parser.add_argument("--all", action="store_true", help="Run the entire FlatWorld.GameTest assembly.")
     parser.add_argument(
         "--golden-path",
@@ -118,11 +124,15 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
 
     if args.golden_path:
-        if args.all or args.category or args.test:
-            parser.error("--golden-path cannot be combined with --all/--category/--test")
+        if args.smoke or args.all or args.category or args.test:
+            parser.error("--golden-path cannot be combined with --smoke/--all/--category/--test")
         args.category = [GOLDEN_PATH_CATEGORY]
     elif args.golden_config is not None or args.golden_set:
         parser.error("--golden-config/--golden-set require --golden-path")
+    elif args.smoke:
+        if args.all or args.category or args.test:
+            parser.error("--smoke cannot be combined with --all/--category/--test")
+        args.category = ["Smoke"]
 
     args.category = unique_nonempty(args.category)
     args.test = unique_nonempty(args.test)

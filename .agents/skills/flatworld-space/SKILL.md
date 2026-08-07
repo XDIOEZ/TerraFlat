@@ -12,10 +12,10 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Space/SpaceMgr.cs`：运行时星球创建、索引、生命周期与保存入口。
-2. `Assets/5_Scripts/5-3_GamePlay/Space/PlanetData.cs`：公转、自转与运行时轨迹 partial。
-3. `Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`：星球基础、地图、温度与天气 partial。
-4. `Assets/5_Scripts/5-3_GamePlay/Space/Module_Fly.cs`：飞行模块。
+1. `Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceMgr.cs`：运行时星球创建、索引、生命周期与保存入口。
+2. `Assets/5_Scripts/5-3_GamePlay/World/Space/PlanetData.cs`：公转、自转与运行时轨迹 partial。
+3. `Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs`：星球基础、地图、温度与天气 partial。
+4. `Assets/5_Scripts/5-3_GamePlay/World/Space/Module_Fly.cs`：飞行模块。
 5. 设计星球着陆或离开星球时同步读取 `flatworld-dimension`；星球与维度统一由 `WorldAddress` 表达。
 
 ## 资源与场景

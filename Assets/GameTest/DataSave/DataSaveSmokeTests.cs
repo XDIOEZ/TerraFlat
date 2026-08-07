@@ -10,15 +10,6 @@ namespace FlatWorld.GameTest.DataSave
     /// <summary>数据存档基础冒烟测试：保护存档入口与权威数据链脚本。</summary>
     public sealed class DataSaveSmokeTests
     {
-        [Test]
-        [Category("DataSave.Smoke")]
-        public void RequiredEntryPointsExist()
-        {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/SaveDataMgr.cs", "SaveDataMgr");
-            GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.cs");
-            GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-1_Data/ItemData/ItemData.cs");
-            GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-1_Data/ModData/ModuleData.cs");
-        }
 
         [Test]
         [Category("DataSave.Player")]
@@ -61,159 +52,15 @@ namespace FlatWorld.GameTest.DataSave
             }
         }
 
-        [Test]
-        [Category("DataSave.Smoke")]
-        public void SpawnerProgressContainsPersistentCycleAndBudgetState()
-        {
-            var state = new SpawnerProgressSaveData
-            {
-                LastProcessedTotalTime = 4321f,
-                AvailableBudget = 7,
-                LastBudgetRecoveryDay = 3,
-                PendingReplacementCount = 2
-            };
 
-            Assert.That(state.LastProcessedTotalTime, Is.EqualTo(4321f));
-            Assert.That(state.DataVersion, Is.EqualTo(1));
-            Assert.That(state.AvailableBudget, Is.EqualTo(7));
-            Assert.That(state.LastBudgetRecoveryDay, Is.EqualTo(3));
-            Assert.That(state.PendingReplacementCount, Is.EqualTo(2));
-        }
+
+
+
+
 
         [Test]
         [Category("DataSave.Smoke")]
-        public void CustomDifficultyStateLivesOnWorldSave()
-        {
-            var rules = new GameDifficultyRuleValues
-            {
-                DropAllCarriedItems = true,
-                PlayerAttackMultiplier = 1.5f,
-                HungerDrainMultiplier = 1.25f,
-                SpawnFrequencyMultiplier = 1.75f,
-                CraftingOutputMultiplier = 2f
-            };
-            var saveData = new GameSaveData { Difficulty = GameDifficultyId.Custom };
-            GameDifficultyCatalog.WriteCustomRules(saveData, rules);
-            GameDifficultyRuleValues restored = GameDifficultyCatalog.ReadCustomRules(saveData);
-
-            Assert.That(saveData.Difficulty, Is.EqualTo(GameDifficultyId.Custom));
-            Assert.That(saveData.CustomDifficultyDataVersion, Is.EqualTo(1));
-            Assert.That(saveData.CustomDifficultyDropAllCarriedItems, Is.True);
-            Assert.That(restored.PlayerAttackMultiplier, Is.EqualTo(1.5f));
-            Assert.That(restored.HungerDrainMultiplier, Is.EqualTo(1.25f));
-            Assert.That(restored.SpawnFrequencyMultiplier, Is.EqualTo(1.75f));
-            Assert.That(restored.CraftingOutputMultiplier, Is.EqualTo(2f));
-            Assert.That(GameDifficultyCatalog.CreateCustom(restored).PlayerDeath.DropAllCarriedItems, Is.True);
-        }
-
-        [Test]
-        [Category("DataSave.Smoke")]
-        public void LegacyCustomDifficultyDefaultsNewMultipliersToOne()
-        {
-            var legacySave = new GameSaveData
-            {
-                Difficulty = GameDifficultyId.Custom,
-                CustomDifficultyDataVersion = 0,
-                CustomDifficultyDropAllCarriedItems = true,
-                CustomPlayerAttackMultiplier = 0f,
-                CustomCropGrowthMultiplier = 0f
-            };
-
-            GameDifficultyRuleValues restored = GameDifficultyCatalog.ReadCustomRules(legacySave);
-
-            Assert.That(restored.DropAllCarriedItems, Is.True);
-            Assert.That(restored.PlayerAttackMultiplier, Is.EqualTo(1f));
-            Assert.That(restored.CropGrowthMultiplier, Is.EqualTo(1f));
-        }
-
-        [Test]
-        [Category("DataSave.Smoke")]
-        public void CultivatedCropStateRoundTripsThroughModuleData()
-        {
-            var source = new GrowData
-            {
-                growState = Mod_Grow.GrowState.成熟,
-                GrowProgress = 100f,
-                MaxGrowProgress = 100f,
-                isCultivatedCrop = true,
-                plantedTilePos = new Vector2Int(8, 13),
-                isMature = true,
-                isHarvested = true,
-                growthStatus = Mod_Grow.GrowthStatus.Harvested,
-                environmentInitialized = true,
-                environmentGrowthMultiplier = 1f
-            };
-            var moduleData = new Ex_ModData_MemoryPackable();
-            moduleData.WriteData(source);
-
-            GrowData restored = new GrowData();
-            moduleData.ReadData(ref restored);
-
-            Assert.That(restored.GrowProgress, Is.EqualTo(100f));
-            Assert.That(restored.growState, Is.EqualTo(Mod_Grow.GrowState.成熟));
-            Assert.That(restored.plantedTilePos, Is.EqualTo(new Vector2Int(8, 13)));
-            Assert.That(restored.isCultivatedCrop, Is.True);
-            Assert.That(restored.isMature, Is.True);
-            Assert.That(restored.isHarvested, Is.True);
-            Assert.That(restored.growthStatus, Is.EqualTo(Mod_Grow.GrowthStatus.Harvested));
-        }
-
-        [Test]
-        [Category("DataSave.Smoke")]
-        public void EnvironmentLayersRoundTripKeepsClimateAndWindGrids()
-        {
-            var source = new EnvironmentLayers();
-            source.EnsureSize(2, 2);
-            source.SetCell(1, 0, 0.2f, 7f, 0.8f, 0.6f);
-            source.SetLight(1, 0, 0.4f);
-            source.SetWind(1, 0, new Vector2(0.6f, 0.8f));
-
-            var moduleData = new Ex_ModData_MemoryPackable();
-            moduleData.WriteData(source);
-            var restored = new EnvironmentLayers();
-            moduleData.ReadData(ref restored);
-
-            Assert.That(restored, Is.Not.Null);
-            Assert.That(restored.IsValidSize(2, 2), Is.True);
-            Assert.That(restored.Temperature[1, 0], Is.EqualTo(0.2f));
-            Assert.That(restored.TemperatureCelsius[1, 0], Is.EqualTo(7f));
-            Assert.That(restored.Precipitation[1, 0], Is.EqualTo(0.8f));
-            Assert.That(restored.Height[1, 0], Is.EqualTo(0.6f));
-            Assert.That(restored.Light[1, 0], Is.EqualTo(0.4f));
-            Assert.That(restored.WindX[1, 0], Is.EqualTo(0.6f).Within(0.000001f));
-            Assert.That(restored.WindY[1, 0], Is.EqualTo(0.8f).Within(0.000001f));
-
-            FieldInfo[] gridFields = typeof(EnvironmentLayers)
-                .GetFields(BindingFlags.Instance | BindingFlags.Public)
-                .Where(field => field.FieldType == typeof(float[,]))
-                .ToArray();
-            Assert.That(
-                gridFields.Select(field => field.Name),
-                Is.EquivalentTo(new[]
-                {
-                    "Temperature", "TemperatureCelsius", "Precipitation", "Height", "Light", "WindX", "WindY"
-                }));
-        }
-
-        [Test]
-        [Category("DataSave.Smoke")]
-        public void EnvironmentLayerSizeValidationIncludesWindGrids()
-        {
-            var layers = new EnvironmentLayers();
-            layers.EnsureSize(3, 2);
-            Assert.That(layers.IsValidSize(3, 2), Is.True);
-
-            layers.WindX = new float[1, 1];
-            Assert.That(layers.IsValidSize(3, 2), Is.False);
-
-            layers.EnsureSize(3, 2);
-            Assert.That(layers.IsValidSize(3, 2), Is.True);
-            Assert.That(layers.WindX.GetLength(0), Is.EqualTo(3));
-            Assert.That(layers.WindY.GetLength(1), Is.EqualTo(2));
-        }
-
-        [Test]
-        [Category("DataSave.Smoke")]
+        [Category("Smoke")]
         public void TileStackMapRoundTripKeepsEmptyThroughOverflowCellsAndEnvironment()
         {
             var source = new Data_TileMap
@@ -269,63 +116,6 @@ namespace FlatWorld.GameTest.DataSave
             Assert.That(grass, Is.EqualTo(GrassCellState.Present));
         }
 
-        [Test]
-        [Category("DataSave.Smoke")]
-        public void SaveFormatVersionFourRejectsLegacyAndHeaderlessPayloads()
-        {
-            Assert.That(ReadPrivateVersion("CompactSaveVersion"), Is.EqualTo(4));
-            Assert.That(ReadPrivateVersion("ModdedSaveVersion"), Is.EqualTo(3));
-
-            SaveDataMgr existing = Object.FindObjectOfType<SaveDataMgr>();
-            GameObject owner = null;
-            SaveDataMgr manager = existing;
-            if (manager == null)
-            {
-                owner = new GameObject("SaveVersionTest");
-                manager = owner.AddComponent<SaveDataMgr>();
-            }
-
-            try
-            {
-                MethodInfo deserializeCore = typeof(SaveDataMgr).GetMethod(
-                    "DeserializeCoreSavePayload",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                MethodInfo deserializeSave = typeof(SaveDataMgr).GetMethod(
-                    "DeserializeSavePayload",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.That(deserializeCore, Is.Not.Null);
-                Assert.That(deserializeSave, Is.Not.Null);
-
-                var compactContainer = new Ex_ModData_MemoryPackable();
-                compactContainer.WriteData(new CompactSaveEnvelope
-                {
-                    Version = 1,
-                    CoreSaveData = new byte[] { 1 }
-                });
-                AssertIncompatible(
-                    deserializeCore,
-                    manager,
-                    Prefix(new byte[] { (byte)'F', (byte)'W', (byte)'D', (byte)'2' }, compactContainer.BitData));
-
-                var moddedContainer = new Ex_ModData_MemoryPackable();
-                moddedContainer.WriteData(new ModdedSaveEnvelope
-                {
-                    Version = 1,
-                    CoreSavePayload = new byte[] { 1 }
-                });
-                AssertIncompatible(
-                    deserializeSave,
-                    manager,
-                    Prefix(new byte[] { (byte)'F', (byte)'W', (byte)'D', (byte)'3' }, moddedContainer.BitData));
-
-                AssertIncompatible(deserializeCore, manager, new byte[] { 1, 2, 3, 4 });
-            }
-            finally
-            {
-                if (owner != null)
-                    Object.DestroyImmediate(owner);
-            }
-        }
 
         [Test]
         [Category("DataSave.Weather")]

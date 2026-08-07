@@ -12,31 +12,31 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Time/DayTimeSystem.cs`：当前多场景时间、天数、全局光照和存档同步入口。
-2. `Assets/5_Scripts/5-3_GamePlay/Time/TimeData.cs`：时间运行数据。
-3. `Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.cs`：天气状态、天气温度修正和雨效入口。
-4. `Assets/5_Scripts/5-3_GamePlay/Manager/WeatherEventScheduler.cs`：纯数据、确定性、绝对时间边界的降雨事件状态机。
-5. `Assets/5_Scripts/5-3_GamePlay/Manager/TemperatureMgr.cs`：环境温度与角色温度伤害计算。
+1. `Assets/5_Scripts/5-3_GamePlay/World/Time/DayTimeSystem.cs`：当前多场景时间、天数、全局光照和存档同步入口。
+2. `Assets/5_Scripts/5-3_GamePlay/World/Time/TimeData.cs`：时间运行数据。
+3. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherMgr.cs`：天气状态、天气温度修正和雨效入口。
+4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherEventScheduler.cs`：纯数据、确定性、绝对时间边界的降雨事件状态机。
+5. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/TemperatureMgr.cs`：环境温度与角色温度伤害计算。
 
 ## 时间与光照
 
-- 世界时间：`Assets/5_Scripts/5-3_GamePlay/Time/DayTimeSystem.cs`。
-- 时间存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetTimeData.cs`。
-- 地块光照层：`Assets/5_Scripts/5-3_GamePlay/Manager/LightLayerMgr.cs`。
-- 季节/特殊日并行实现：`Assets/5_Scripts/5-3_GamePlay/Time/DayNightTimeManager.cs`。
-- 空主体旧入口：`Assets/5_Scripts/5-3_GamePlay/Time/GameTimeManager.cs`，不要作为主时间系统。
+- 世界时间：`Assets/5_Scripts/5-3_GamePlay/World/Time/DayTimeSystem.cs`。
+- 时间存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetTimeData.cs`。
+- 地块光照层：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/LightLayerMgr.cs`。
+- 季节/特殊日并行实现：`Assets/5_Scripts/5-3_GamePlay/World/Time/DayNightTimeManager.cs`。
+- 空主体旧入口：`Assets/5_Scripts/5-3_GamePlay/World/Time/GameTimeManager.cs`，不要作为主时间系统。
 - `DayTimeSystem.AdvanceTime()` 统一结算跨日并发布 `TimeAdvanced` / `DayChanged`；`TryGetResolvedTimeData()` 解析场景时间引用并限制循环深度。
 - `DayTimeSystem.TimeRun()` 在场景 `TimeScaleModifier` 基础上乘 `GameDifficultyService.Current.World.TimeSpeedMultiplier`；0% 可冻结自然昼夜推进，但显式调用 `AdvanceTime()` 的跳时逻辑不受影响。
 - `SerializableTimeData` 必须往返保存 `TotalDays`，生成周期等跨日系统依赖 `TimeData.GetTotalGameTime()`。
 
 ## 天气与温度
 
-- 星球天气数据：`Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`。
+- 星球天气数据：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs`。
 - 地表静态降水层：`EnvironmentLayers.Precipitation` 由 `ChunkGenerator_Land` 根据最终高度图生成；它影响群系、资源和自然作物环境，不等同于 `WeatherMgr` 的动态降雨事件强度。
-- 雨效控制：`Assets/5_Scripts/5-3_GamePlay/Manager/RainEffectController.cs`。
-- 权威天气事件接线：`Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.AuthoritativeEvent.cs`。
-- 角色温度模块：`Assets/5_Scripts/5-3_GamePlay/Item/Mod_Temperature.cs`。
-- 玩家雨中暴露与火源恢复：`Assets/5_Scripts/5-3_GamePlay/Dialogue/WeatherExposureSpeechProvider.cs`。
+- 雨效控制：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/RainEffectController.cs`。
+- 权威天气事件接线：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherMgr.AuthoritativeEvent.cs`。
+- 角色温度模块：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Mod_Temperature.cs`。
+- 玩家雨中暴露与火源恢复：`Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/WeatherExposureSpeechProvider.cs`。
 - 天气资源：`Assets/Resources/Weather/`。
 - 雨效 Prefab：`Assets/Resources/Weather/RainEffect.prefab`。
 
@@ -87,7 +87,7 @@ GameManager.Event_GameWorldEnter
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；时间与天气测试必须注入确定值，不能依赖真实等待或随机天气。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Environment.Smoke`；脚本不会产生 Unity 测试交互卡片，也无需视觉模型。涉及温度或天气细节时追加对应分类；只有光照、雨效等最终观感变化才做定向截图。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
-- 维度固定光照与禁天气配置由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
+- 环境系统的专项行为位于 `Assets/GameTest/Environment/EnvironmentSmokeTests.cs`；维度固定光照与禁天气配置不再属于精简 Smoke 集合。
 
 ## 修改后维护本 Skill
 

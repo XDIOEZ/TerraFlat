@@ -1,49 +1,24 @@
-# FlatWorld Networking Foundation
+# FlatWorld 联机系统
 
-Installed backend: **Mirror 96.11.0**, using KCP transport by default.
+当前后端为 **Mirror 96.11.0**，默认使用 KCP/UDP 传输。
 
-## Boundary rule
+## 运行入口
 
-Gameplay code depends on `FlatWorld.Networking.Core`, never directly on
-Mirror. Only code inside the `Mirror` folder may reference Mirror types.
+- `Gameplay/NetworkGameBootstrap.cs` 在 `GameStartScene` 自动装配正式联机入口。
+- `Gameplay/FlatWorldGameNetworkManager.cs` 负责 Host、Client、世界快照与玩家进入流程。
+- `Core/GameNetwork.cs` 是游戏系统访问会话状态和权威判断的统一入口。
+- `Resources/Networking/FlatWorldNetworkPlayer.prefab` 是正式网络玩家 Prefab。
 
-Key entry points:
+## 分层约束
 
-- `GameNetwork.Session`: host/client/server lifecycle.
-- `GameNetwork.HasStateAuthority`: server-authoritative simulation gate that
-  remains `true` in the existing offline game.
-- `INetworkEntityContext`: per-object state and input authority.
+- 普通游戏系统只依赖 `FlatWorld.Networking.Core`，不得直接依赖 Mirror。
+- Mirror 类型只允许出现在 `Mirror` 与 `Gameplay` 适配层。
+- 世界状态修改必须由 `GameNetwork.HasStateAuthority` 门控；离线、Host 与 Server
+  拥有状态权威，普通 Client 只应用服务端结果。
+- 本地输入使用实体的 `HasInputAuthority` 判断，远程玩家只作为视觉副本。
 
-## Bootstrap when multiplayer implementation starts
+## 验证
 
-1. Create a persistent `NetworkManager` object in a bootstrap scene.
-2. Add `FlatWorldNetworkManager`; `KcpTransport` is added automatically.
-3. Keep `Auto Create Player` disabled until the player prefab is converted.
-4. Add `NetworkIdentity` and `MirrorNetworkEntityContext` to the player prefab.
-5. Gate local input with `HasInputAuthority` and world mutation with
-   `GameNetwork.HasStateAuthority`.
-
-## Recommended migration order
-
-1. Player spawn, ownership, movement and camera.
-2. Interaction commands and server-side validation.
-3. Item spawning, inventory and equipment snapshots.
-4. Combat, AI and building authority.
-5. Chunk/world events, time and weather synchronization.
-6. Host/server-only saving and reconnect handling.
-
-Do not replace `Instantiate` with `NetworkServer.Spawn` throughout gameplay.
-Add a spawn service behind the Core boundary when item/world synchronization
-is implemented, then migrate call sites feature by feature.
-
-## Isolated connection test
-
-Use `FlatWorld > Networking Test > Create or Update Test Scene`, then open
-`Assets/3_Scenes/NetworkTest.unity` and press Play. The HUD can start a Host,
-Client or dedicated Server. The generated player prefab tests ownership and
-client-to-server transform synchronization.
-
-For an automated two-process smoke test, build with `FlatWorld > Networking
-Test > Build Windows Test Player`, then run one process with
-`-networkRole host` and another with `-networkRole client -networkAddress
-127.0.0.1`. Add `-networkAutoMove -networkExitAfter 15` for unattended tests.
+联机自动化验证统一位于 `Assets/GameTest/Networking/`，使用
+`Networking.Smoke` 分类。早期独立胶囊人测试场景、测试 Prefab 和双进程构建器
+已被正式游戏联机链路取代，不再作为运行或构建入口。

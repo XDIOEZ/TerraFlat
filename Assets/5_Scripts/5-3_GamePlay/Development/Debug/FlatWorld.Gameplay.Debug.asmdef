@@ -1,0 +1,23 @@
+{
+    "name": "FlatWorld.Gameplay.Debug",
+    "rootNamespace": "",
+    "references": [
+        "GamePlay",
+        "Data",
+        "m_Utilitiles",
+        "UI",
+        "Kybernetik.UltEvents",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -15,10 +15,11 @@ namespace FlatWorld.GameTest.Dimension
             IDName = "DimensionTileEffectTestItem"
         };
 
-        public override ItemData itemData
+        public override ItemData itemData => Data;
+
+        protected override void SetItemData(ItemData value)
         {
-            get => Data;
-            set => Data = (Data_GeneralItem)value;
+            Data = RequireData<Data_GeneralItem>(value);
         }
     }
 

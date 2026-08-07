@@ -10,6 +10,8 @@ namespace FlatWorld.Automation
     internal sealed class FlatWorldGoldenPathExecutor : IDisposable
     {
         internal FlatWorldGoldenPathConfiguration Configuration { get; }
+        private Mod_Cam _camera;
+        private Mod_ChunkLoader _chunkLoader;
 
         internal FlatWorldGoldenPathExecutor(FlatWorldGoldenPathConfiguration configuration)
         {
@@ -43,15 +45,46 @@ namespace FlatWorld.Automation
         {
             if (player == null)
                 throw new ArgumentNullException(nameof(player));
-            Mod_Cam camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
-            if (camera == null)
+            _camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
+            _chunkLoader = chunkLoader ?? throw new ArgumentNullException(nameof(chunkLoader));
+            if (_camera == null)
                 throw new InvalidOperationException("GoldenPath executor cannot find the real player camera module.");
-            if (Configuration.player.cameraOrthographicSize > camera.MaxPovValue)
-                camera.EnableUnlimitedView();
-            camera.SetOrthographicSize(Configuration.player.cameraOrthographicSize);
-            chunkLoader?.RefreshChunksForCameraView();
+            ApplyViewSize(Configuration.player.cameraOrthographicSize);
         }
 
-        public void Dispose() { }
+        internal void ConfigureScreenshotView()
+        {
+            EnsureCameraConfigured();
+            ApplyViewSize(Configuration.player.screenshotOrthographicSize);
+        }
+
+        internal void RestoreTraversalView()
+        {
+            if (_camera == null)
+                return;
+            ApplyViewSize(Configuration.player.cameraOrthographicSize);
+        }
+
+        private void ApplyViewSize(float orthographicSize)
+        {
+            if (orthographicSize > _camera.MaxPovValue)
+                _camera.EnableUnlimitedView();
+            _camera.SetOrthographicSize(orthographicSize);
+            _chunkLoader.RefreshChunksForCameraView();
+        }
+
+        private void EnsureCameraConfigured()
+        {
+            if (_camera == null || _chunkLoader == null)
+                throw new InvalidOperationException(
+                    "GoldenPath screenshot view was requested before the player camera was configured.");
+        }
+
+        public void Dispose()
+        {
+            RestoreTraversalView();
+            _camera = null;
+            _chunkLoader = null;
+        }
     }
 }

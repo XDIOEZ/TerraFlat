@@ -12,21 +12,21 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.cs`：世界生命周期、新建/继续/退出、出生点、核心事件。
-2. `Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.UI.cs`：主菜单、新游戏、存档面板绑定与控件命名契约。
-3. `Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs`：Addressables 本体资源加载完成后接入 MOD。
-4. `Assets/5_Scripts/5-3_GamePlay/Manager/SceneMgr.cs`：通用同步/异步场景服务。
-5. `Assets/5_Scripts/5-3_GamePlay/Manager/ItemMgr.cs`：单机/联机 Player 加载、创建与本地档案上下文建立。
+1. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs`：世界生命周期、新建/继续/退出、出生点、核心事件。
+2. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.UI.cs`：主菜单、新游戏、存档面板绑定与控件命名契约。
+3. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameRes.cs`：Addressables 本体资源加载完成后接入 MOD。
+4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/SceneMgr.cs`：通用同步/异步场景服务。
+5. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/ItemMgr.Players.cs`：单机/联机 Player 加载、创建与本地档案上下文建立。
 6. 涉及星球表面、矿洞或跨世界旅行时同步读取 `flatworld-dimension`，权威入口为 `DimensionManager` 与 `GameManager.Dimension.cs`。
 
 ## 关键入口与路径
 
 - 世界事件：`GameManager.Event_GameWorldEnter`、`Event_GameWorldExit`、`Event_PlayerEnterWorld`。
-- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Manager/AutoSaveController.cs`。
-- 玩家控制入口：`Assets/5_Scripts/5-3_GamePlay/Controller/GameController.cs`。
+- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/AutoSaveController.cs`。
+- 玩家控制入口：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs`。
 - 玩家档案上下文：`ItemMgr.LoadOrCreatePlayerData(..., out wasCreated)`；创建、加载、网络提升与远程副本配置都必须显式调用 `Player.SetProfileContext()`。
-- 输入重绑定：`Assets/5_Scripts/5-3_GamePlay/Controller/InputBindingService.cs`。
-- 管理/调试控制：`Assets/5_Scripts/5-3_GamePlay/Controller/PlayerAdminController.cs`。
+- 输入重绑定：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/InputBindingService.cs`。
+- 管理/调试控制：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/PlayerAdminController.cs`。
 - 主菜单场景：`Assets/3_Scenes/GameStartScene.unity`。
 - 管理器场景：`Assets/3_Scenes/Manager.unity`。
 - 开发场景：`Assets/3_Scenes/Develop.unity`。
@@ -50,7 +50,7 @@ GameStartScene
 
 ## 易误判点
 
-- `Assets/5_Scripts/5-3_GamePlay/Manager/GameWorldSceneManager.cs` 仅保留简单切场景逻辑，不是世界生命周期权威入口。
+- `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameWorldSceneManager.cs` 仅保留简单切场景逻辑，不是世界生命周期权威入口。
 - 维度运行使用以 `WorldKey` 命名的动态空 Scene，不进入 Build Settings；`GameManager.RunWorld()` 仍是进入目标世界的权威入口，维度切换通过 partial 桥复用加载 UI 和世界事件。
 - 无资源引用且未实现的旧 `Manager/SceneChange.cs` 已删除；场景切换应使用 `SceneMgr` 或明确的世界生命周期入口，不要恢复旧 `IInteract` 传送组件。
 - UI 绑定已从 `GameManager.cs` 拆到 `GameManager.UI.cs`；修改主菜单控件名时两处职责不要重新混合。
@@ -89,7 +89,7 @@ GameStartScene
 - 新增启动、世界创建、继续游戏、场景切换或退出行为时必须增加系统测试；修复 Bug 时先增加回归测试。全局生命周期变化时同步更新最小启动冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用临时世界和临时存档，并在结束时清理全局对象与事件订阅。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Core.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有场景或界面最终观感变化才做定向截图。
-- 维度生命周期契约由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
+- 维度管理器的基础 PlayMode 生命周期由 `Assets/GameTest/Dimension/DimensionLifecycleTests.cs`（`Dimension.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

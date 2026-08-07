@@ -8,11 +8,11 @@ disable-model-invocation: false
 
 # FlatWorld 特效、Shader 与工具定位
 
-> 最后核对：2026-07-30。
+> 最后核对：2026-08-07。
 
 ## 运行时视觉
 
-- 特效管理器：`Assets/5_Scripts/5-3_GamePlay/Manager/VisualEffectManager.cs`。
+- 特效管理器：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/VisualEffectManager.cs`。
 - 特效脚本：`Assets/5_Scripts/SpecialEffects/`。
 - 伤害文字：`Assets/5_Scripts/SpecialEffects/DamageTextEffect.cs`。
 - 水体效果：`Assets/5_Scripts/SpecialEffects/Mod_FVX_Water.cs`。
@@ -23,13 +23,18 @@ disable-model-invocation: false
 ## 编辑器与调试
 
 - 项目编辑器脚本：`Assets/5_Scripts/5-2_Editor/`。
-- 额外编辑器目录：`Assets/Editor/`。
+- FlatWorld 编辑器工具根目录：`Assets/Editor/FlatWorld/`；目录职责见同目录 `README.md`。
+- 内容工具：`ContentTools/{Items,Migrations,Validation}/`。
+- 数值表工具及其配置：`DataTables/{Food,Prefab}/`。
+- Prefab 构建器：`PrefabBuilders/{UI,Building}/`。
+- 编辑器效率工具：`Productivity/`；黄金路径与结构工具仍分别位于 `Automation/`、`Structures/`。
 - 结构编辑器：`Assets/5_Scripts/5-2_Editor/Structures/`。
 - MOD 模板工具：`Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs`。
 - 音频生成工具：`Assets/5_Scripts/5-6_Audio/Editor/`。
-- 游戏调试目录：`Assets/5_Scripts/5-3_GamePlay/Debug/`。
-- 调试管理器：`Assets/5_Scripts/5-3_GamePlay/Manager/GameDebugManager.cs`。
-- 会话日志管理器：`Assets/5_Scripts/5-3_GamePlay/Manager/GameLogManager.cs`；启动时自动收集 Unity 日志到 `Application.persistentDataPath/GameLogs/`，业务关键流程使用 `Log`、`LogWarning`、`LogError`、`LogException` 记录带调用位置的 `[WORK]` 日志。
+- 游戏调试目录：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`。
+- 游戏调试程序集：`FlatWorld.Gameplay.Debug`；它是依赖 `GamePlay` 的叶子程序集，生产运行时代码不得反向引用 `GMReflectionConsole`。
+- 调试管理器：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameDebugManager.cs`。
+- 会话日志管理器：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameLogManager.cs`；启动时自动收集 Unity 日志到 `Application.persistentDataPath/GameLogs/`，业务关键流程使用 `Log`、`LogWarning`、`LogError`、`LogException` 记录带调用位置的 `[WORK]` 日志。
 - 通用工具：`Assets/5_Scripts/Tool/`、`Assets/5_Scripts/Utilitiles/`。
 
 ## 修改前检查
@@ -43,9 +48,12 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-07：整理 `Assets/Editor/FlatWorld`，按 Automation、ContentTools、DataTables、PrefabBuilders、Productivity、Structures 六类归档；配置资源与对应窗口同目录，脚本 GUID 和菜单路径保持不变。
+- 2026-08-07：`Development/Debug` 拆为 `FlatWorld.Gameplay.Debug` 叶子程序集；GM 控制台仍可访问主体运行时系统，`FlatWorld.GameTest` 显式引用该程序集以保留 Buff 目标反射测试。
+
 - 2026-07-31：新增自动持久化的游戏会话日志管理器，支持场景、帧、线程、堆栈、业务调用位置、定时刷新、文件轮转与旧日志清理。
 - 2026-07-30：遗迹编辑器右侧属性区支持滚动和容器可视化配置；可选择多库存目标，并按目标 Prefab 的真实槽位以物品 Prefab 预览、数量上限、清空操作完成配置，烘焙前校验成员 ID、槽位、容量和物品引用。
-- 2026-07-29：新增统一只读内容校验器 `Assets/Editor/FlatWorld/ContentValidation/FlatWorldContentValidator.cs`；菜单 `FlatWorld/内容配置/校验全部本体内容` 覆盖本体配置，`IPreprocessBuildWithReport` 在正式构建前以同一规则阻断错误，禁止自动修改资产。
+- 2026-07-29：新增统一只读内容校验器 `Assets/Editor/FlatWorld/ContentTools/Validation/FlatWorldContentValidator.cs`；菜单 `FlatWorld/内容配置/校验全部本体内容` 覆盖本体配置，`IPreprocessBuildWithReport` 在正式构建前以同一规则阻断错误，禁止自动修改资产。
 - 2026-07-27：完成运行时特效、Shader 与编辑器工具路径首版拆分。
 
 ## 修改后自动测试

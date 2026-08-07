@@ -1,0 +1,4626 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "BasicItem_Base",
+      "abstract": true,
+      "shellPrefab": "Bone",
+      "visual": {
+        "rendererPath": "Render"
+      }
+    },
+    {
+      "id": "Bone",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/Bone.prefab",
+      "gameName": "Bone",
+      "description": "物品名称：Bone\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n    - Material\r\n  Material:\r\n    - Wood\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_327.png[Item_Tool_327]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "CharredMatter",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/CharredMatter.prefab",
+      "gameName": "CharredMatter",
+      "description": "物品名称：CharredMatter\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n    - Material\r\n  Material:\r\n    - Wood\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/resources_basic.png[resources_basic_4]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Earth",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/Earth.prefab",
+      "gameName": "Earth",
+      "description": "物品名称：Earth\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_231.png[Item_Tool_231]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Leaf",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/Leaf.prefab",
+      "gameName": "Leaf",
+      "description": "物品名称：Leaf\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Plant/Tree/plants.png[plants_57]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 1.0,
+                "Max_Carbohydrates": 1.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 1.0,
+                "Max_Water": 1.0,
+                "Vitamins": 2.0,
+                "Max_Vitamins": 2.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Humus",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Leather",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/Leather.prefab",
+      "gameName": "Leather",
+      "description": "物品名称：Leather\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_69]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false,
+            "$transform": {
+              "localPosition": {
+                "x": 34.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 2.0,
+                "y": 2.0,
+                "z": 2.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Plank",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/Plank.prefab",
+      "gameName": "Plank",
+      "description": "物品名称：Plank\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Plant/Tree/item299.png[item299]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "RawHide",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/RawHide.prefab",
+      "gameName": "RawHide",
+      "description": "物品名称：RawHide\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/RawHide.png[RawHide]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false,
+            "$transform": {
+              "localPosition": {
+                "x": 34.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 2.0,
+                "y": 2.0,
+                "z": 2.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Rope",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/Rope.prefab",
+      "gameName": "Rope",
+      "description": "物品名称：Rope\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_80]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Twine",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Item/Twine.prefab",
+      "gameName": "Twine",
+      "description": "物品名称：Twine\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Plant/Tree/item302.png[item302]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.75,
+          "y": 0.75,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.75,
+            "y": 0.75
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_Bronze",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_Bronze.prefab",
+      "gameName": "Ingot_Bronze",
+      "description": "物品名称：Ingot_Bronze\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Copper\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_003.png[Item_ingot_003]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_Copper",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_Copper.prefab",
+      "gameName": "Ingot_Copper",
+      "description": "铜（Copper）是一种过渡金属元素，化学符号为Cu，原子序数为29。铜是人类最早使用的金属之一，早在史前时代，人们就开始采掘露天铜矿，并用获取的铜制造武器、工具和其他器皿",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_402.png[Item_Tool_402]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_RawIron",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_RawIron.prefab",
+      "gameName": "Ingot_RawIron",
+      "description": "物品名称：Ingot_RawIron\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Iron\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Ore/ores.png[ores_10]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_Steel",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_Steel.prefab",
+      "gameName": "Ingot_Steel",
+      "description": "物品名称：Ingot_Steel\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_001.png[Item_ingot_001]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_Tin",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_Tin.prefab",
+      "gameName": "Ingot_Tin",
+      "description": "物品名称：Ingot_Tin\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Copper\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_394.png[Item_Tool_394]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ingot_WroughtIron",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_WroughtIron.prefab",
+      "gameName": "Ingot_WroughtIron",
+      "description": "物品名称：Ingot_WroughtIron\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Iron\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_004.png[Item_ingot_004]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Coal",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Coal.prefab",
+      "gameName": "Ore_Coal",
+      "description": "物品名称：Ore_Coal\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_229.png[Item_Tool_229]",
+        "rendererLocalPosition": {
+          "x": -1.203,
+          "y": 1.012,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 100.2,
+                "y": 100.2
+              },
+              "MaxTemperature": 1800.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false,
+            "$transform": {
+              "localPosition": {
+                "x": 34.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 2.0,
+                "y": 2.0,
+                "z": 2.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Copper",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Copper.prefab",
+      "gameName": "Ore_Copper",
+      "description": "物品名称：Ore_Copper\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_399.png[Item_Tool_399]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Flint",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Flint.prefab",
+      "gameName": "Ore_Flint",
+      "description": "物品名称：Ore_Flint\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_239.png[Item_Tool_239]",
+        "rendererLocalPosition": {
+          "x": -1.22,
+          "y": 2.21,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Iron",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Iron.prefab",
+      "gameName": "Ore_Iron",
+      "description": "物品名称：Ore_Iron\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ore(),物品材质：Tin\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_391.png[Item_Tool_391]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_MagicalStone",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_MagicalStone.prefab",
+      "gameName": "Ore_MagicalStone",
+      "description": "物品名称：Ore_MagicalStone\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:11.78\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/resources_basic.png[resources_basic_36]",
+        "rendererLocalPosition": {
+          "x": 0.9618472,
+          "y": -2.39137888,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 0.9641509,
+          "g": 0.9917271,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "Mod_SkillManager_Item": {
+          "prefab": "Mod_SkillManager_Item",
+          "id": "Mod_SkillManager_Item",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "SkillNames": [],
+              "CurrentSelectIndex": 0
+            },
+            "CurrentSelectSkilIndex": 0,
+            "SkillNameList": [
+              "测试"
+            ],
+            "skillDataList": [],
+            "UpdateSkillList": [],
+            "castingPoints": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ore_Tin",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Tin.prefab",
+      "gameName": "Ore_Tin",
+      "description": "物品名称：Ore_Tin\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ore(),物品材质：Copper\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_393.png[Item_Tool_393]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": -0.02907759,
+            "y": 0.00348931551
+          },
+          "path": "",
+          "size": {
+            "x": 0.6999204,
+            "y": 0.630134463
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Apple",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Apple.prefab",
+      "gameName": "Apple",
+      "description": "一天一苹果,医生远离我",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_013.png[Item_Food_013]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 40.0,
+                "Max_Carbohydrates": 40.0,
+                "Fat": 1.0,
+                "Max_Fat": 1.0,
+                "Protein": 1.0,
+                "Max_Protein": 1.0,
+                "Water": 55.0,
+                "Max_Water": 55.0,
+                "Vitamins": 20.0,
+                "Max_Vitamins": 20.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Berry",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Berry.prefab",
+      "gameName": "Berry",
+      "description": "一种在野外灌木丛中常见的小型果实，食用后可恢复少量饥饿值",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_54]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 15.0,
+                "Max_Carbohydrates": 15.0,
+                "Fat": 1.0,
+                "Max_Fat": 1.0,
+                "Protein": 1.0,
+                "Max_Protein": 1.0,
+                "Water": 20.0,
+                "Max_Water": 20.0,
+                "Vitamins": 12.0,
+                "Max_Vitamins": 12.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Humus",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Addle",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Addle.prefab",
+      "gameName": "Coconut_Addle",
+      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-脏水.png[椰子壳-脏水]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 60.0,
+                "Max_Water": 60.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Humus",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.drink",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 1,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Green",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Green.prefab",
+      "gameName": "Coconut_Green",
+      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_165.png[Item_Tool_165]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Half",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Half.prefab",
+      "gameName": "Coconut_Half",
+      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_009.png[Item_Food_009]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Nude",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Nude.prefab",
+      "gameName": "Coconut_Nude",
+      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_98]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Shell",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Shell.prefab",
+      "gameName": "Coconut_Shell",
+      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png[椰子壳-空]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_Water",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Water.prefab",
+      "gameName": "Coconut_Water",
+      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png[椰子壳-有水]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 10.0,
+                "Max_Carbohydrates": 10.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 150.0,
+                "Max_Water": 150.0,
+                "Vitamins": 4.0,
+                "Max_Vitamins": 4.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Humus",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.drink",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 1,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Coconut_WaterSalt",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_WaterSalt.prefab",
+      "gameName": "Coconut_WaterSalt",
+      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png[椰子壳-有水]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 0.0,
+                "Max_Water": 0.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Humus",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.drink",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 1,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "CoconutMeat",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/CoconutMeat.prefab",
+      "gameName": "CoconutMeat",
+      "description": "椰肉",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/椰肉.png[椰肉]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30.0,
+                "Max_Carbohydrates": 30.0,
+                "Fat": 60.0,
+                "Max_Fat": 60.0,
+                "Protein": 8.0,
+                "Max_Protein": 8.0,
+                "Water": 25.0,
+                "Max_Water": 25.0,
+                "Vitamins": 8.0,
+                "Max_Vitamins": 8.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Humus",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Egg",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Egg.prefab",
+      "gameName": "Egg",
+      "description": "可以是任何动物的蛋",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_115.png[Item_Tool_115]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.025,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.25,
+          "y": 0.25,
+          "z": 0.25
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.00164681673,
+            "y": 0.09310749
+          },
+          "path": "",
+          "size": {
+            "x": 0.204313278,
+            "y": 0.270090818
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 2.0,
+                "Max_Carbohydrates": 2.0,
+                "Fat": 15.0,
+                "Max_Fat": 15.0,
+                "Protein": 25.0,
+                "Max_Protein": 25.0,
+                "Water": 10.0,
+                "Max_Water": 10.0,
+                "Vitamins": 8.0,
+                "Max_Vitamins": 8.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "生产模块": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Chicken",
+                "itemCountMin": 1,
+                "itemCountMax": 1,
+                "MaxProductionTime": 100.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": 1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": false,
+                "DestroySelf": true,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": {
+                  "x": 0.0,
+                  "y": 1000.0
+                }
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Egg_Cooked",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Egg_Cooked.prefab",
+      "gameName": "Egg_Cooked",
+      "description": "物品名称：CookedEgg\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Fried_Egg.png[Fried_Egg]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 2.0,
+                "Max_Carbohydrates": 2.0,
+                "Fat": 18.0,
+                "Max_Fat": 18.0,
+                "Protein": 35.0,
+                "Max_Protein": 35.0,
+                "Water": 7.0,
+                "Max_Water": 7.0,
+                "Vitamins": 10.0,
+                "Max_Vitamins": 10.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Fat",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Fat.prefab",
+      "gameName": "Fat",
+      "description": "物品名称：Fat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_10]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 100.0,
+                "Max_Fat": 100.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 0.0,
+                "Max_Water": 0.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Meat",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Meat.prefab",
+      "gameName": "Meat",
+      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_107]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 25.0,
+                "Max_Fat": 25.0,
+                "Protein": 55.0,
+                "Max_Protein": 55.0,
+                "Water": 15.0,
+                "Max_Water": 15.0,
+                "Vitamins": 5.0,
+                "Max_Vitamins": 5.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Meat_Cooked",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Meat_Cooked.prefab",
+      "gameName": "Meat_Cooked",
+      "description": "物品名称：CookedMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_93]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 30.0,
+                "Max_Fat": 30.0,
+                "Protein": 80.0,
+                "Max_Protein": 80.0,
+                "Water": 8.0,
+                "Max_Water": 8.0,
+                "Vitamins": 7.0,
+                "Max_Vitamins": 7.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Meat_Dehydrate",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Meat_Dehydrate.prefab",
+      "gameName": "Meat_Dehydrate",
+      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/resources_basic.png[resources_basic_77]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 30.0,
+                "Max_Fat": 30.0,
+                "Protein": 100.0,
+                "Max_Protein": 100.0,
+                "Water": 2.0,
+                "Max_Water": 2.0,
+                "Vitamins": 5.0,
+                "Max_Vitamins": 5.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Meat_Rotten",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Meat_Rotten.prefab",
+      "gameName": "Meat_Rotten",
+      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/pixelate (1).png[pixelate (1)]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 5.0,
+                "Max_Fat": 5.0,
+                "Protein": 10.0,
+                "Max_Protein": 10.0,
+                "Water": 0.0,
+                "Max_Water": 0.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": false,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Tea",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Food/Tea.prefab",
+      "gameName": "Tea",
+      "description": "泡茶喝",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Tea.png[Tea]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "Mod_Food",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 120.0,
+                "Max_Water": 120.0,
+                "Vitamins": 6.0,
+                "Max_Vitamins": 6.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.drink",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 1,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    }
+  ]
+}

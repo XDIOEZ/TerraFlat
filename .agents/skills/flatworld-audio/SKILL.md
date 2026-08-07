@@ -20,8 +20,8 @@ disable-model-invocation: false
 ## 关键路径
 
 - 音频类型：`Assets/5_Scripts/5-6_Audio/Runtime/AudioTypes.cs`。
-- 实体发声：`Assets/5_Scripts/5-3_GamePlay/Audio/Mod_AudioEmitter.cs`。
-- 战斗路由：`Assets/5_Scripts/5-3_GamePlay/Combat/CombatAudioRouter.cs`。
+- 实体发声：`Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/Mod_AudioEmitter.cs`。
+- 战斗路由：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/CombatAudioRouter.cs`。
 - UI 音频：`Assets/5_Scripts/5-5_UI/Audio/`。
 - 编辑器生成：`Assets/5_Scripts/5-6_Audio/Editor/`。
 - Catalog/Config：`Assets/Resources/Audio/`。

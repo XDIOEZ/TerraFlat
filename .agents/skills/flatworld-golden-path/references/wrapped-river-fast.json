@@ -5,6 +5,7 @@
   },
   "player": {
     "cameraOrthographicSize": 8.0,
+    "screenshotOrthographicSize": 24.0,
     "wrapMoveSpeed": 32.0,
     "maximumMoveSpeed": 40.0,
     "waypointCount": 8,

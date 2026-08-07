@@ -8,14 +8,14 @@ disable-model-invocation: false
 
 # FlatWorld Item / Module 系统定位
 
-> 最后核对：2026-08-05。绝大多数玩法最终挂接到 Item 的 Module。
+> 最后核对：2026-08-07。绝大多数玩法最终挂接到 Item 的 Module。
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Item/Item.cs`：Item 生命周期、模块加载保存与局部调度缓存。
-2. `Assets/5_Scripts/5-3_GamePlay/Item/Module.cs`：模块基类、`TickMode`、`FixedTickInterval`。
-3. `Assets/5_Scripts/5-3_GamePlay/Item/ItemMods.cs`：按名称/ID 的模块索引与调度失效。
-4. `Assets/5_Scripts/5-3_GamePlay/Manager/ItemMgr.cs`：全局注册、对象池、分桶 Tick、玩家索引、AI 感知空间索引。
+1. `Assets/5_Scripts/5-3_GamePlay/Entities/Item/Item.cs`：Item 生命周期、模块加载保存与局部调度缓存。
+2. `Assets/5_Scripts/5-3_GamePlay/Entities/Item/Module.cs`：模块基类、`TickMode`、`FixedTickInterval`。
+3. `Assets/5_Scripts/5-3_GamePlay/Entities/Item/ItemMods.cs`：按名称/ID 的模块索引与调度失效。
+4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/ItemMgr*.cs`：`ItemMgr.cs` 保留公共 API 与 Unity 生命周期；Spawning、Perception、Players、RandomDrop partial 分别承载实例生成销毁、感知空间索引、玩家加载和随机掉落。
 
 ## 核心链路
 
@@ -31,16 +31,17 @@ ItemMaker / ItemMgr 实例化
 
 ## 关键文件与资源
 
-- 抽象实体：`Assets/5_Scripts/5-3_GamePlay/Item/Item.cs`。
-- 通用实体：`Assets/5_Scripts/5-3_GamePlay/Item/GameItem.cs`。
-- 玩家实体：`Assets/5_Scripts/5-3_GamePlay/Item/Player.cs`。
-- 创建入口：`Assets/5_Scripts/5-3_GamePlay/Item/ItemMaker.cs`。
+- 抽象实体：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Item.cs`。
+- 通用实体：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/GameItem.cs`。
+- 玩家实体：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Player.cs`。
+- 创建入口：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/ItemMaker.cs`。
 - 数据基类：`Assets/5_Scripts/5-1_Data/ItemData/ItemData.cs`。
 - 地图 ItemData：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`；格子地形栈：`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
-- 联网序列化：`Assets/5_Scripts/5-3_GamePlay/Item/ItemNetworkStateSerialization.cs`。
-- 远端模块边界：`Assets/5_Scripts/5-3_GamePlay/Item/IRemoteNetworkModule.cs`。
+- 联网序列化：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/ItemNetworkStateSerialization.cs`。
+- 远端模块边界：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/IRemoteNetworkModule.cs`。
 - Item Prefab：`Assets/2_Prefabs/Item/`。
 - Module Prefab：`Assets/2_Prefabs/Module/`。
+- 本体物品入口：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；定义按最终解析出的 `shellPrefab` 放在 `Items/shells/*.json`，文件使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed` 业务名。`ItemDefinitionCatalogLoader` 只加载 Manifest 显式启用的包，先全局合并再解析跨文件 `parent`，是物品静态配置的唯一真源。
 
 ## 调度约束
 
@@ -56,21 +57,24 @@ ItemMaker / ItemMgr 实例化
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-07：物品分包文件与 Manifest `id` 改用简洁业务名 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；Manifest 的 `shellPrefab` 继续保留真实 Prefab ID，两者禁止混用。
+- 2026-08-07：`ItemMgr` 按公共生命周期、实例生成销毁、感知空间索引、玩家加载和随机掉落拆为五个 partial 文件；仅调整物理组织，公共签名与序列化字段保持不变。
+- 2026-08-07：本体物品目录改为 `item-manifest.json` 显式聚合 7 个 `shells/*.json` 分包；分包按继承解析后的 `shellPrefab` 分类，所有启用包合并后再统一解析 `parent`，旧单文件 `items.json` 已移除。
+- 2026-08-07：移除旧装备/防御/食物 Excel→Prefab 同步链；`StreamingAssets/GameConfig/Items` 的 Manifest 分包成为本体物品及模块参数的唯一编辑源，禁止恢复 Excel 双向同步。
 - 2026-08-05：`Data_TileMap` 改为 MemoryPack 持久化 `TileStackCell[,]`，继续保持 ItemData 联合序列化身份；环境初始化收敛为五张网格，生产环境系数统一读取降水，`ItemModule.Smoke` 覆盖新栈往返与初始化契约。
 - 2026-08-04：`Module.CanonicalModuleId` 统一模板、存档与运行时索引使用的模块 ID；`Item.ModuleLoad()` 会按旧 ID/Prefab 子物体名匹配后迁移为规范 ID，`GameRes` 为独立模块 Prefab 注册规范 ID 与旧序列化 ID 别名。`ItemDefinitionRuntime` 在实例化独立模块前也必须按规范 ID、旧 ID、子物体名和组件类型复用共享外壳中的模块，避免把内置的 `Mod_Weapon_AnimationAction` 误判为缺失。
 - 2026-08-04：`Item.ModuleLoad()` 先按持久化 ID 匹配模块；旧实体 Prefab 的运行时模块若使用通用 ID，则回退按子物体名或组件类型匹配，避免将内嵌 AI/动画模块误判为缺失并错误实例化独立 Prefab。无法恢复的模块必须记录明确错误并跳过，禁止解引用空对象。
 - 2026-08-03：`Item.Get_NewItemData()` 的 Prefab 模板提取只复制静态 Item/ModuleData，不执行 Item 或 Module 的 `Load/Save`；空模块 ID 会按模块物体名补齐，`GameRes` 以请求 ID 固化新数据，`ItemMgr` 在进入任何字典前拒绝空 `IDName`。
 - 2026-07-30：农业模块边界收敛；`Mod_Seed` 的低频 Tick 仅迁移旧落地种子，`Mod_Grow` 低频 Tick 成为唯一作物成长与成熟状态机，`Mod_FarmlandSupply` 为休眠模块且仅响应物品使用事件；`Item.ModuleLoad()` 会先清理 Apple/AppleTree 的废弃农业模块数据再执行缺失模块自动修复。
 - 2026-07-30：删除无引用且未完成的 `Mod_HealthPoints`，禁止通过通用 Module 重新建立与 `DamageReceiver` 并行的生命值状态。
-- 2026-07-29：统一内容校验器建立 Prefab 名与 `ItemData.IDName` 注册快照，报告重复/覆盖键、模块数据空值与 ID、模块 Prefab 可解析性、`ModuleDataDic` 键值一致性、Missing Script/序列化丢失引用及显示名/描述污染。
-- 2026-07-27：Item/Module 已采用声明式分级调度；堆肥/晾肉/生产 0.5s，库存/生长/种子/温度/GPS 0.25s，食物/熔炉/打火工具 0.1s，门/动画接收器/体力 UI 可休眠。
-- 2026-07-27：`ItemMgr` 的感知空间索引同时服务 AI；修改实体注册、移动同步或对象池时必须检查 AI Skill。
 
 ## 易误判点
 
 - 远程网络视觉副本不得注册进本地 Tick、AI 感知或本地存档索引。
 - `Item.OnDestroy` 与主动 `PrepareForDespawn` 有防重复逻辑，不能在外部再次保存/销毁同一 Item。
 - 新模块不仅要创建脚本，还要检查 Module Prefab、ModuleData、Addressables 标签和目标 Item Prefab 挂载。
+- `Items/shells/` 不会被自动扫描；新增分包必须登记进 `item-manifest.json`。修改物品最终 `shellPrefab` 后，也必须把原始定义移到对应模板包，否则加载器会按 Manifest 的 `shellPrefab` 分类约束直接报错。
+- Manifest 的 `id/path` 是面向配置者的分包名称，可以与技术 Prefab ID 不同；`shellPrefab` 才是运行时查找 Prefab 的真实键，重命名分包时不要连带修改它。
 - 旧 `Item/Mod_HealthPoints.cs` 已确认无代码或资源引用并删除；实体生命值不是通用 Item Module 扩展点，统一由战斗系统 `DamageReceiver` 管理。
 
 ## 高耦合联动
@@ -86,7 +90,7 @@ ItemMaker / ItemMgr 实例化
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`；当前基础覆盖 ItemMgr、Item、Module、Item/Module Prefab 入口，以及 JSON 物品定义复用共享外壳模块的 ID/类型别名。
+- 基础测试脚本：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`；当前只保留 Manifest 分包聚合/外壳分类与模块规范 ID/数据重绑定两个关键契约。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；Item/Module 测试约定目录：`Assets/GameTest/ItemModule/`；场景目录：`Assets/GameTest/Scenes/ItemModule/`；冒烟分类：`ItemModule.Smoke`。
 - 新增实体创建销毁、模块加载保存、Tick 调度、对象池或运行时注册行为时必须增加系统测试；修复 Bug 时先增加回归测试。Item 完整生命周期变化时同步更新冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试结束必须验证注册表、调度器、空间索引和对象池不存在残留引用。
@@ -95,4 +99,4 @@ ItemMaker / ItemMgr 实例化
 
 ## 修改后维护本 Skill
 
-改变 Item/Module 生命周期、Tick 档位、池化规则、注册索引、Prefab 目录或网络边界后，必须更新本 Skill；若调整具体玩法模块，也同步更新该玩法 Skill 的近期变更。
+改变 Item/Module 生命周期、Tick 档位、池化规则、注册索引、Prefab 目录、物品 JSON 定义或网络边界后，必须更新本 Skill；若调整具体玩法模块，也同步更新该玩法 Skill 的近期变更。

@@ -31,7 +31,7 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 
    ```powershell
    python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-config .agents/skills/flatworld-golden-path/references/wrapped-river-fast.json
-   python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-set world.radius=64 --golden-set player.maximumMoveSpeed=40.0
+   python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-set world.radius=64 --golden-set player.maximumMoveSpeed=40.0 --golden-set player.screenshotOrthographicSize=24.0
    ```
 
    AI 可以按本次目标临时配置世界种子/尺寸/Chunk、拓扑、玩家视野与移动、启用的子场景、河流生成参数、超时和覆盖量门槛。新增可调系统参数时，必须同时更新 C# 配置默认值、Python 默认字典、验证、执行器应用逻辑、结果回显和示例；未知字段或类型不匹配必须在启动 Unity 场景前失败。
@@ -69,6 +69,7 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 - `FlatWorldGoldenPathConfiguration` 是版本化、强验证的输入和结果快照；运行结果必须回显最终有效配置，便于复现 AI 临时构造的场景。
 - `FlatWorldGoldenPathExecutor` 是生产系统入口适配层：通过 `NewWorldCreationRequest` 创建真实世界，通过玩家模块 API 调视野，通过 `WorldGenerationRuntimeHooks` 在 `Map.Act()` 前配置当前 Map 实例。
+- `player.cameraOrthographicSize` 控制移动阶段视距；`player.screenshotOrthographicSize` 仅在三次截图前临时拉远相机，通过真实 `Mod_Cam` 刷新可见 Chunk 窗口并等待全部 Ready，截图后恢复移动视距。
 - `WorldGenerationRuntimeHooks` 默认没有订阅者；执行器结束或 Domain Reload 时必须解除订阅，所以临时河流/地形参数不会污染 Prefab、后续游戏或存档默认配置。
 - 状态化子场景继续负责跨帧的调用、观测、断言和清理；配置决定场景是否启用及运行参数，执行器不绕过生产系统直接伪造结果。
 - 快速有限世界/强化河流示例见 `references/wrapped-river-fast.json`。

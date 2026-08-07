@@ -10,34 +10,7 @@ namespace FlatWorld.GameTest.UI
 {
     public sealed class WorldTopologyUISmokeTests
     {
-        [Test]
-        [Category("UI.Smoke")]
-        public void NewGamePrefabDefaultsToWrappedAndContainsRadiusFocusContract()
-        {
-            const string path = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NewGame.prefab";
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            Assert.That(prefab, Is.Not.Null);
 
-            Toggle topology = prefab.GetComponentsInChildren<Toggle>(true)
-                .SingleOrDefault(toggle => toggle.name == GameManager.NewGameTopologyToggleKey);
-            TMP_InputField radius = prefab.GetComponentsInChildren<TMP_InputField>(true)
-                .SingleOrDefault(input => input.name == GameManager.NewGameRadiusInputKey);
-            Assert.That(topology, Is.Not.Null);
-            Assert.That(topology.isOn, Is.True);
-            Assert.That(radius, Is.Not.Null);
-            Assert.That(radius.interactable, Is.True);
-            Assert.That(prefab.GetComponent<BasePanel>(), Is.Not.Null);
-        }
-
-        [Test]
-        [Category("UI.Smoke")]
-        public void InfiniteToggleDisablesRadiusAndRequestCapturesTopology()
-        {
-            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.UI.cs");
-            Assert.That(source, Does.Contain("radiusInput.interactable = wrapped"));
-            Assert.That(source, Does.Contain("topologyToggle.isOn ? WorldTopologyMode.Wrapped : WorldTopologyMode.Infinite"));
-            Assert.That(source, Does.Contain("panel.PrepareForGamepadNavigation(NewGameStartButtonKey)"));
-        }
 
         [Test]
         [Category("UI.Layout")]

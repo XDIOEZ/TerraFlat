@@ -9,11 +9,11 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffManager.cs`：添加、查询、叠加、移除、事件、固定间隔 Tick 与 MemoryPack 存档入口。
-2. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffDefinition.cs`、`BuffDefinitionDto.cs`、`BuffDefinitionFactory.cs`：运行时定义、JSON DTO、严格校验与效果处理器缓存。
-3. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffInstance.cs`：持续时间、Start/Tick/Stop、过期和可持久化运行时状态。
-4. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffEffectDispatcher.cs`：`typeId` 到 C# 效果函数的唯一映射。
-5. `Assets/5_Scripts/5-3_GamePlay/Buff/BuffCatalogLoader.cs` 与 `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json`：本体 Buff 分包加载入口与清单。
+1. `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffManager.cs`：添加、查询、叠加、移除、事件、固定间隔 Tick 与 MemoryPack 存档入口。
+2. `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffDefinition.cs`、`BuffDefinitionDto.cs`、`BuffDefinitionFactory.cs`：运行时定义、JSON DTO、严格校验与效果处理器缓存。
+3. `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffInstance.cs`：持续时间、Start/Tick/Stop、过期和可持久化运行时状态。
+4. `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffEffectDispatcher.cs`：`typeId` 到 C# 效果函数的唯一映射。
+5. `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffCatalogLoader.cs` 与 `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json`：本体 Buff 分包加载入口与清单。
 
 主链路：`buff-manifest.json -> 启用的 Buff 分包 / MOD Def -> BuffDefinitionFactory -> GameRes.RegisterBuff -> BuffManager.AddBuff -> BuffInstance -> BuffEffectDispatcher`。
 

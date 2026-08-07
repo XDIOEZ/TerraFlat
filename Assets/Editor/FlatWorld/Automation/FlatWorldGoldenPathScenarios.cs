@@ -59,6 +59,7 @@ namespace FlatWorld.Automation
             ResetWorldModelScenario();
             ResetPlayerMoveSpeedScenario();
             ResetChunkLoadSpeedScenario();
+            ResetItemLifecycleScenario();
         }
 
         internal static void OnWorldReady(FlatWorldGoldenPathScenarioContext context)
@@ -69,6 +70,7 @@ namespace FlatWorld.Automation
             BeginWorldModelScenario(context);
             RunPlayerMoveSpeedScenario(context);
             RunChunkLoadSpeedScenario(context);
+            BeginItemLifecycleScenario(context);
         }
 
         internal static void OnTraversalTick(FlatWorldGoldenPathScenarioContext context)
@@ -86,6 +88,7 @@ namespace FlatWorld.Automation
                 VerifyBurningBuffAtChunkReady(context);
             if (context.Configuration.scenarios.hydrology)
                 VerifyHydrologyAtChunkReady(context);
+            VerifyItemLifecycleAtChunkReady(context);
         }
 
         internal static void BeforeWorldExit(FlatWorldGoldenPathScenarioContext context)
@@ -100,6 +103,7 @@ namespace FlatWorld.Automation
             AssertWorldModelScenarioCompleted();
             AssertPlayerMoveSpeedScenarioCompleted();
             AssertChunkLoadSpeedScenarioCompleted();
+            AssertItemLifecycleScenarioCompleted(context);
         }
 
         internal static void Cleanup(FlatWorldGoldenPathScenarioContext context)
@@ -111,6 +115,7 @@ namespace FlatWorld.Automation
             CleanupWorldModelScenario();
             CleanupPlayerMoveSpeedScenario();
             CleanupChunkLoadSpeedScenario();
+            CleanupItemLifecycleScenario();
         }
     }
 }

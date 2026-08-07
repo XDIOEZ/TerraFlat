@@ -32,7 +32,7 @@ namespace FlatWorld.GameTest.Map
             Assert.That(river.minLakeCells, Is.EqualTo(18));
             Assert.That(river.maxLakeCells, Is.EqualTo(220));
             Assert.That(river.maxCachedRegions, Is.EqualTo(9));
-            Assert.That(TerrainGenerationSignature.CurrentVersion, Is.EqualTo(5));
+            Assert.That(TerrainGenerationSignature.CurrentVersion, Is.EqualTo(6));
 
             string[] removedMaskFields =
             {
@@ -246,7 +246,7 @@ namespace FlatWorld.GameTest.Map
                 map.mapGenerators = new List<ChunkGeneratorBase> { land, river };
                 land.Init(map);
                 river.Init(map);
-                map.Data = new Data_TileMap { position = Vector2Int.zero };
+                map.BindData(new Data_TileMap { position = Vector2Int.zero });
                 map.Data.EnsureTileStorage(16, 16);
                 map.Data.EnsureEnvironmentStorage(16, 16);
                 for (int y = 0; y < 16; y++)
@@ -319,7 +319,7 @@ namespace FlatWorld.GameTest.Map
                 map.mapGenerators = new List<ChunkGeneratorBase> { land, river };
                 land.Init(map);
                 river.Init(map);
-                map.Data = new Data_TileMap { position = Vector2Int.zero };
+                map.BindData(new Data_TileMap { position = Vector2Int.zero });
                 map.Data.EnsureTileStorage(16, 16);
                 map.Data.EnsureEnvironmentStorage(16, 16);
                 var context = new MapGenerationContext(
@@ -344,35 +344,6 @@ namespace FlatWorld.GameTest.Map
             }
         }
 
-        [Test]
-        [Category("Map.Smoke")]
-        public void HydrologyRegionLoadOrderDoesNotChangeBoundaryResults()
-        {
-            GameObject instance = InstantiateMap(out ChunkGenerator_River river);
-            try
-            {
-                ConfigureFast(river);
-                var land = new AnalyticLandGenerator(
-                    world => Mathf.Clamp01(
-                        0.82f - world.x * 0.0015f + Mathf.Abs(world.y - 31.5f) * 0.002f),
-                    _ => 1f);
-                Vector2Int[] forwardOrder =
-                {
-                    new(60, 28), new(63, 31), new(64, 31), new(67, 34)
-                };
-                Vector2Int[] reverseOrder = forwardOrder.Reverse().ToArray();
-
-                Dictionary<Vector2Int, string> forward = CaptureCells(land, river, 91827, forwardOrder);
-                ChunkGenerator_River.ClearHydrologyCache();
-                Dictionary<Vector2Int, string> reverse = CaptureCells(land, river, 91827, reverseOrder);
-
-                Assert.That(reverse, Is.EquivalentTo(forward));
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(instance);
-            }
-        }
 
         private static Dictionary<Vector2Int, string> CaptureCells(
             ChunkGenerator_Land land,

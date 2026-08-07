@@ -15,8 +15,8 @@ disable-model-invocation: false
 1. `Assets/5_Scripts/5-0_WorldModel/ChunkRuntime.cs`：区块纯数据、三类租约与数据/模拟/表现状态。
 2. `Assets/5_Scripts/5-0_WorldModel/ChunkTerrainData.cs`：地形、环境、草地、阻挡与导航权威查询。
 3. `Assets/5_Scripts/5-0_WorldModel/ChunkMgr.cs`：纯 C# 缓存、生成调度、三级窗口与逐出。
-4. `Assets/5_Scripts/5-3_GamePlay/Manager/ChunkMgr.WorldRuntime.cs`、`ChunkMgr.RuntimeWindow.cs`：Unity 侧主线程提交与视图租约适配。
-5. `Assets/5_Scripts/5-3_GamePlay/WorldModel/Presentation/ChunkView.cs`：Tilemap、草地、环境、碰撞和导航表现绑定。
+4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/ChunkMgr.WorldRuntime.cs`、`ChunkMgr.RuntimeWindow.cs`：Unity 侧主线程提交与视图租约适配。
+5. `Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkView.cs`：Tilemap、草地、环境、碰撞和导航表现绑定。
 6. 旧 `Chunk`、`Map`、`Data_TileMap` 仍是待移除的迁移源，不得再扩展为新区块权威；普通物品、玩家、AI、建筑等实体继续使用现有 `Item/Module`。
 7. 涉及地下矿洞或跨星球地图时读取 `flatworld-dimension`；维度配置入口为 `DimensionManager.ConfigureMap()`。
 
@@ -34,20 +34,20 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 
 ## 关键文件
 
-- 联机扩展：`Assets/5_Scripts/5-3_GamePlay/Manager/ChunkMgr.Networking.cs`。
-- 玩家区块加载器：`Assets/5_Scripts/5-3_GamePlay/Chunk/Mod_ChunkLoader.cs`。
-- Item 区块归属：`Assets/5_Scripts/5-3_GamePlay/Chunk/Mod_ItemChunkAssigner.cs`。
-- 生成上下文：`Assets/5_Scripts/5-3_GamePlay/Map/Base/MapGenerationContext.cs`。
-- 地形生成：`Assets/5_Scripts/5-3_GamePlay/Map/Controller/ChunkGenerator_Land.cs`。
-- 统一噪声核与生成签名：`Assets/5_Scripts/5-3_GamePlay/Map/Base/TerrainNoise.cs`。
-- Biome 集中解析：`Assets/5_Scripts/5-3_GamePlay/Map/Base/BiomeResolver.cs`。
-- 河流生成：`Assets/5_Scripts/5-3_GamePlay/Map/Controller/ChunkGenerator_River.cs`。
-- 物品生成：`Assets/5_Scripts/5-3_GamePlay/Map/Controller/ChunkGenerator_SpawnItems.cs`。
-- 结构生成：`Assets/5_Scripts/5-3_GamePlay/Map/Structures/ChunkGenerator_Structures.cs`。
-- 矿洞生成：`Assets/5_Scripts/5-3_GamePlay/Dimension/ChunkGenerator_Cave.cs`。
-- 地图存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/MapSave.cs`。
+- 联机扩展：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/ChunkMgr.Networking.cs`。
+- 玩家区块加载器：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_ChunkLoader.cs`。
+- Item 区块归属：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_ItemChunkAssigner.cs`。
+- 生成上下文：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/MapGenerationContext.cs`。
+- 地形生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_Land.cs`。
+- 统一噪声核与生成签名：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/TerrainNoise.cs`。
+- Biome 集中解析：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/BiomeResolver.cs`。
+- 河流生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_River.cs`。
+- 物品生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_SpawnItems.cs`。
+- 结构生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/ChunkGenerator_Structures.cs`。
+- 矿洞生成：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/ChunkGenerator_Cave.cs`。
+- 地图存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MapSave.cs`。
 - Tilemap 数据：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`、`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
-- 静态阻挡层：`Assets/5_Scripts/5-3_GamePlay/Map/BlockingTilemapLayer.cs`。
+- 静态阻挡层：`Assets/5_Scripts/5-3_GamePlay/World/Map/BlockingTilemapLayer.cs`。
 - 地块权威数据：`Assets/5_Scripts/5-1_Data/TileData/`。
 
 ## 资源目录
@@ -58,7 +58,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - TileBlock SO：`Assets/4_ScriptObjects/4-1_TileBlock/`。
 - Biome SO：`Assets/4_ScriptObjects/4-8_Biome/`。
 - Structure SO：`Assets/4_ScriptObjects/4-9_Structures/`。
-- 结构目录：`Assets/5_Scripts/5-3_GamePlay/Map/Structures/`。
+- 结构目录：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/`。
 - 结构目录资产：`Assets/Resources/Config/StructureCatalog_Default.asset`。
 
 ## 系统边界
@@ -123,7 +123,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 新增 Chunk 流送、Tilemap、程序生成、Biome、River、Structure 或地图差量行为时必须增加系统测试；修复 Bug 时先增加回归测试。中心 Chunk 加载与卸载主流程变化时同步更新地图冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；程序生成必须固定种子，测试结束必须清理 Chunk、Tilemap 与临时地图数据。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Map.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有地形、河流或 Tilemap 最终观感变化才做定向截图。
-- 地表兼容、矿洞目录、洞穴布局确定性、阻挡层路由、墙地可走性和资源生成入口由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
+- 维度管理器的基础 PlayMode 生命周期由 `Assets/GameTest/Dimension/DimensionLifecycleTests.cs`（`Dimension.Smoke`）覆盖；地图 Smoke 不再承载完整洞穴生成契约。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
@@ -136,4 +136,4 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - `ChunkMgr` 的查询、队列、窗口、字典和 MapSave 键必须使用规范 Chunk 原点；窗口必须去重，有限世界不得产生边界外键。
 - 纯生成请求必须携带 `ChunkGenerationTopologySnapshot`；地形、气候、河流、洞穴和离散草地采样在两个轴及四角重复，边界相邻格不得出现非周期断层。
 - 活跃与 `destroyDistance` 保留窗口都以归一化后的 Chunk 地址集合判断，不得用规范坐标的直接绝对差计算跨接缝距离。
-- 相关回归位于 `WorldTopologySmokeTests`（`Map.Smoke`）及 `WorldModelSmokeTests`（`WorldModel.Smoke`）。
+- 相关精简回归位于 `MapSmokeTests`（`Map.Smoke`）及 `WorldModelSmokeTests`（`WorldModel.Smoke`）。

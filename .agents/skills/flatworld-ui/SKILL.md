@@ -14,8 +14,8 @@ disable-model-invocation: false
 
 1. `Assets/5_Scripts/5-5_UI/UIManager.cs`：面板根节点、创建、注册、查询、显示和销毁。
 2. `Assets/5_Scripts/5-5_UI/BasePanel.cs`：密封通用面板组件、控件收集、开关和拖拽；不得在初始化时修改视觉结构。
-3. `Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.UI.cs`：主菜单、新游戏、存档面板及控件命名契约。
-4. `Assets/5_Scripts/5-3_GamePlay/Manager/SaveDataManager_UI.cs`：存档动态列表与玩家按钮。
+3. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.UI.cs`：主菜单、新游戏、存档面板及控件命名契约。
+4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/SaveDataManager_UI.cs`：存档动态列表与玩家按钮。
 
 ## 关键脚本
 
@@ -23,8 +23,8 @@ disable-model-invocation: false
 - 通用旧基类：`Assets/5_Scripts/5-5_UI/BaseUIManager.cs`。
 - 旧视觉主题工具：`Assets/5_Scripts/5-5_UI/FlatWorldUITheme.cs`；正式运行时面板不再调用，Prefab 是视觉真相。
 - UI 反馈：`Assets/5_Scripts/5-5_UI/FlatWorldUIFeedback.cs`。
-- 游戏内适配：`Assets/5_Scripts/5-3_GamePlay/UI/`。
-- 开发调试控制台：`Assets/5_Scripts/5-3_GamePlay/Debug/GMReflectionConsole.cs` 及其 `Navigation`/`Buffs` partial；F4 GM 工具是既有的运行时调试 Canvas，属于正式 Prefab UI 规则之外的开发者专用例外。
+- 游戏内适配：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/`。
+- 开发调试控制台：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.cs` 及其 `Navigation`/`Buffs` partial；F4 GM 工具是既有的运行时调试 Canvas，属于正式 Prefab UI 规则之外的开发者专用例外。
 - UI 音频绑定：`Assets/5_Scripts/5-5_UI/Audio/`。
 - UI Prefab 根目录：`Assets/2_Prefabs/2-1_UI/`。
 - PanelRoot Prefab：`Assets/Resources/UI/UIRoot.prefab`；`UIManager` 必须从该 Prefab 实例化，禁止运行时拼装 Canvas。
@@ -50,14 +50,14 @@ disable-model-invocation: false
 
 ## 正式运行时 Prefab
 
-- 设置入口控制器：`Assets/5_Scripts/5-3_GamePlay/UI/{AudioSettingsPanelLauncher,UISettingsPanelLauncher,AutoSaveSettingsPanelLauncher,DifficultySettingsPanelLauncher,InputBindingPanelLauncher}.cs`。
+- 设置入口控制器：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{AudioSettingsPanelLauncher,UISettingsPanelLauncher,AutoSaveSettingsPanelLauncher,DifficultySettingsPanelLauncher,InputBindingPanelLauncher}.cs`。
 - 设置面板：`UI_AudioSettings`、`UI_InterfaceSettings`、`UI_AutoSaveSettings`、`UI_DifficultySettings`、`UI_InputBindingSettings`。
 - 按键绑定面板固定节点：`设备分页`、`键鼠分页按钮`、`手柄分页按钮`、`绑定列表/Content`、`恢复默认按钮`、`完成按钮`；分页只重建 `UI_InputBindingRow` 实例，不得运行时创建行内部视觉节点。
 - 设置入口按钮预制在 `Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab`：`音量调节`、`UI设置`、`自动保存`、`游戏难度`、`按键绑定`。
 - 世界加载面板：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_WorldLoading.prefab`；根 Canvas 使用最高层 Overlay 并跨场景保留，固定节点为 `加载标题`、`加载状态`、`加载进度`、`加载进度文本`、`加载提示`。
 - 对话 UI：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab` 是底部半透明 Minecraft 风格单行输入条；`UI_CharacterSpeechBubble.prefab` 是角色头顶气泡。聊天控件固定节点为 `Text Area`、`Placeholder`、`Text`。
 - `GameManager.UI.cs` 只实例化和更新加载 Prefab；禁止用 `new GameObject` 或 `AddComponent` 在运行时构建加载视觉。新建和进入存档时由 `GameManager.cs` 驱动阶段文字与进度。
-- 统一重建器：`Assets/Editor/FlatWorld/RuntimeUIPrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI`；运行时资产修改后通过该入口重建并在 Prefab Mode 中人工检查。
+- 统一重建器：`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI`；运行时资产修改后通过该入口重建并在 Prefab Mode 中人工检查。
 - `Assets/2_Prefabs` 是 Addressables 文件夹条目并带 `Prefab` 标签，其下新增运行时面板会由 `GameRes` 按 Prefab 名预加载。
 
 ## 主菜单与存档
@@ -67,7 +67,7 @@ disable-model-invocation: false
 - 主菜单控件名常量统一位于 `GameManager.UI.cs`，不要散落魔法字符串。
 - 新世界难度入口位于 `UI_NewGame.prefab` 底部；弹层包含官方预设/自定义主分页，自定义页再分为 `自定义分类页_战斗`、`自定义分类页_生存`、`自定义分类页_世界`、`自定义分类页_生产`。当前共 16 个 `难度_*倍率` Slider 与 `死亡掉落全部物品` Toggle，全部由 `GameManager.UI.cs` 的公开命名常量绑定；百分比文本统一命名为 `{SliderKey}_数值`。
 - 官方预设按钮由 `GameDifficultyCatalog.All` 驱动，统一命名为 `官方难度预设_{GameDifficultyId}`；新增官方难度后重建 Prefab 即可自动生成列表项。
-- 新世界 UI 的权威重建入口为 `Assets/Editor/FlatWorld/NewGamePrefabBuilder.cs`（菜单 `FlatWorld/UI/Rebuild New Game UI`）；修改难度布局后必须通过该入口重建 Prefab。
+- 新世界 UI 的权威重建入口为 `Assets/Editor/FlatWorld/PrefabBuilders/UI/NewGamePrefabBuilder.cs`（菜单 `FlatWorld/UI/Rebuild New Game UI`）；修改难度布局后必须通过该入口重建 Prefab。
 
 ## 联机动态 UI
 
@@ -75,7 +75,7 @@ disable-model-invocation: false
 - UI 状态绑定：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkModeUIController.UI.cs`。
 - Prefab 加载：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkModePanelView.cs`，文件中声明的是 `NetworkModeUIController` partial，不存在独立 `NetworkModePanelView` 类型；运行时不再构建 UI。
 - 联机面板：`Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NetworkMode.prefab`，由 `GameRes` 通过 `Prefab` Addressables 标签预加载后实例化。
-- 编辑器重建器：`Assets/Editor/FlatWorld/NetworkModePrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Network Mode UI`。
+- 编辑器重建器：`Assets/Editor/FlatWorld/PrefabBuilders/UI/NetworkModePrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Network Mode UI`。
 
 ## 近期变更
 
@@ -99,7 +99,7 @@ disable-model-invocation: false
 - 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；必须验证控件命名契约、组件类型、事件绑定和重复打开关闭，视觉观感仍交由人工确认。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category UI.Smoke`；无需视觉模型或测试工具卡片。涉及核心流程、玩家输入、存档、联机或音频时追加对应分类；只有布局、配色或最终视觉观感变化才做定向截图。
-- 玩家聊天 UI 行为由 `Assets/GameTest/Dialogue/PlayerChatSmokeTests.cs` 覆盖；`DialogueSmokeTests.RuntimeDialogueUIUsesInspectablePrefabs` 保护聊天框/气泡 Prefab 节点契约和“运行时不构造视觉树”约束。
+- UI 核心取消路由由 `Assets/GameTest/UI/UISmokeTests.cs`（`UI.Smoke`）覆盖；聊天与气泡的详细行为不再属于精简 Smoke 集合。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
