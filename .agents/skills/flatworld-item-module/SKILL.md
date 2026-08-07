@@ -41,7 +41,7 @@ ItemMaker / ItemMgr 实例化
 - 远端模块边界：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/IRemoteNetworkModule.cs`。
 - Item Prefab：`Assets/2_Prefabs/Item/`。
 - Module Prefab：`Assets/2_Prefabs/Module/`。
-- 本体物品入口：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；定义按最终解析出的 `shellPrefab` 放在 `Items/shells/*.json`，文件使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed` 业务名。`ItemDefinitionCatalogLoader` 只加载 Manifest 显式启用的包，先全局合并再解析跨文件 `parent`，是物品静态配置的唯一真源。
+- 本体物品入口：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；定义按最终解析出的 `shellPrefab` 放在 `Items/shells/*.json`，分包 `id/path`、`shellPrefab` 和模板 Prefab 根名称统一使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`。`ItemDefinitionCatalogLoader` 只加载 Manifest 显式启用的包，先全局合并再解析跨文件 `parent`，是物品静态配置的唯一真源。
 
 ## 调度约束
 
@@ -57,7 +57,7 @@ ItemMaker / ItemMgr 实例化
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-07：物品分包文件与 Manifest `id` 改用简洁业务名 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；Manifest 的 `shellPrefab` 继续保留真实 Prefab ID，两者禁止混用。
+- 2026-08-07：物品分包 `id/path`、Manifest `shellPrefab`、模板 Prefab 文件名和根对象名统一为 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；具体物品 `ItemData.IDName` 继续保留 `Axe_Stone/Bone/...`，避免破坏存档、配方与玩法引用。
 - 2026-08-07：`ItemMgr` 按公共生命周期、实例生成销毁、感知空间索引、玩家加载和随机掉落拆为五个 partial 文件；仅调整物理组织，公共签名与序列化字段保持不变。
 - 2026-08-07：本体物品目录改为 `item-manifest.json` 显式聚合 7 个 `shells/*.json` 分包；分包按继承解析后的 `shellPrefab` 分类，所有启用包合并后再统一解析 `parent`，旧单文件 `items.json` 已移除。
 - 2026-08-07：移除旧装备/防御/食物 Excel→Prefab 同步链；`StreamingAssets/GameConfig/Items` 的 Manifest 分包成为本体物品及模块参数的唯一编辑源，禁止恢复 Excel 双向同步。
@@ -74,7 +74,7 @@ ItemMaker / ItemMgr 实例化
 - `Item.OnDestroy` 与主动 `PrepareForDespawn` 有防重复逻辑，不能在外部再次保存/销毁同一 Item。
 - 新模块不仅要创建脚本，还要检查 Module Prefab、ModuleData、Addressables 标签和目标 Item Prefab 挂载。
 - `Items/shells/` 不会被自动扫描；新增分包必须登记进 `item-manifest.json`。修改物品最终 `shellPrefab` 后，也必须把原始定义移到对应模板包，否则加载器会按 Manifest 的 `shellPrefab` 分类约束直接报错。
-- Manifest 的 `id/path` 是面向配置者的分包名称，可以与技术 Prefab ID 不同；`shellPrefab` 才是运行时查找 Prefab 的真实键，重命名分包时不要连带修改它。
+- 当前 7 个本体分包的 `id`、文件名、`shellPrefab` 与模板 Prefab 根名称必须保持一致；具体物品 ID 与模板身份是两套概念，禁止为了统一模板名而修改 Prefab 内的 `ItemData.IDName`。
 - 旧 `Item/Mod_HealthPoints.cs` 已确认无代码或资源引用并删除；实体生命值不是通用 Item Module 扩展点，统一由战斗系统 `DamageReceiver` 管理。
 
 ## 高耦合联动

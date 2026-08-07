@@ -32,7 +32,7 @@ public static class ItemDefinitionMigrationTool
 
     private static readonly Dictionary<string, string> PreservedSourcePaths = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Dagger_Stone"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger_Stone.prefab",
+        ["Dagger_Stone"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab",
         ["Dagger_Copper"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger_Copper.prefab",
         ["Dagger_Bone"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger_Bone.prefab",
         ["Knife_Flint"] = "Assets/2_Prefabs/Weapon/Weapon/Knife_Flint.prefab"
@@ -42,10 +42,10 @@ public static class ItemDefinitionMigrationTool
     {
         new(
             "BasicItem_Base",
-            "Assets/2_Prefabs/Item/Bone.prefab",
+            "Assets/2_Prefabs/Item/Prop.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Item/Bone.prefab",
+                "Assets/2_Prefabs/Item/Prop.prefab",
                 "Assets/2_Prefabs/Item/CharredMatter.prefab",
                 "Assets/2_Prefabs/Item/Earth.prefab",
                 "Assets/2_Prefabs/Item/Leaf.prefab",
@@ -87,18 +87,18 @@ public static class ItemDefinitionMigrationTool
             }),
         new(
             "WoodTool_Base",
-            "Assets/2_Prefabs/Item/Stick_Wood.prefab",
+            "Assets/2_Prefabs/Item/Stick.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Item/Stick_Wood.prefab",
+                "Assets/2_Prefabs/Item/Stick.prefab",
                 "Assets/2_Prefabs/Item/Log.prefab"
             }),
         new(
             "Axe_Base",
-            "Assets/2_Prefabs/Weapon/Axe/Axe_Stone.prefab",
+            "Assets/2_Prefabs/Weapon/Axe/Axe.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Weapon/Axe/Axe_Stone.prefab",
+                "Assets/2_Prefabs/Weapon/Axe/Axe.prefab",
                 "Assets/2_Prefabs/Weapon/Axe/Axe_Flint.prefab",
                 "Assets/2_Prefabs/Weapon/Axe/Axe_Copper.prefab",
                 "Assets/2_Prefabs/Weapon/Axe/Axe_Bronze.prefab",
@@ -107,10 +107,10 @@ public static class ItemDefinitionMigrationTool
             }),
         new(
             "Pickaxe_Base",
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Stone.prefab",
+            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Stone.prefab",
+                "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab",
                 "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Copper.prefab",
                 "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Bronze.prefab",
                 "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_RawIron.prefab",
@@ -118,18 +118,18 @@ public static class ItemDefinitionMigrationTool
             }),
         new(
             "Spear_Base",
-            "Assets/2_Prefabs/Weapon/Weapon/Spear_Stone.prefab",
+            "Assets/2_Prefabs/Weapon/Weapon/Spear.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Weapon/Weapon/Spear_Stone.prefab",
+                "Assets/2_Prefabs/Weapon/Weapon/Spear.prefab",
                 "Assets/2_Prefabs/Weapon/Weapon/Spear_Copper.prefab",
                 "Assets/2_Prefabs/Weapon/Weapon/Spear_Iron.prefab",
                 "Assets/2_Prefabs/Weapon/Weapon/Spear_Stone_Animation.prefab"
             }),
         new(
             "Seed_Base",
-            "Assets/2_Prefabs/Seed/Seed_Apple.prefab",
-            new[] { "Assets/2_Prefabs/Seed/Seed_Apple.prefab" })
+            "Assets/2_Prefabs/Seed/Seed.prefab",
+            new[] { "Assets/2_Prefabs/Seed/Seed.prefab" })
     };
 
     private static bool requestHookInstalled;
@@ -235,7 +235,7 @@ public static class ItemDefinitionMigrationTool
         Directory.CreateDirectory(PackageRootPath);
         foreach (string shellPrefab in packageOrder)
         {
-            string packageName = GetPackageName(shellPrefab);
+            string packageName = shellPrefab;
             string relativePath = "shells/" + GetSafePackageFileName(packageName) + ".json";
             string assetPath = CatalogRootPath + "/" + relativePath;
             if (!currentGeneratedPaths.Add(assetPath))
@@ -269,22 +269,6 @@ public static class ItemDefinitionMigrationTool
             JsonConvert.SerializeObject(manifest, Formatting.Indented),
             new UTF8Encoding(false));
         AssetDatabase.ImportAsset(ManifestPath, ImportAssetOptions.ForceUpdate);
-    }
-
-    /// <summary>把技术性的外壳 Prefab ID 映射为便于编辑的业务分包名。</summary>
-    private static string GetPackageName(string shellPrefab)
-    {
-        return shellPrefab switch
-        {
-            "Dagger_Stone" => "Dagger",
-            "Bone" => "Prop",
-            "Stick_Wood" => "Stick",
-            "Axe_Stone" => "Axe",
-            "Pickaxe_Stone" => "Pickaxe",
-            "Spear_Stone" => "Spear",
-            "Seed_Apple" => "Seed",
-            _ => shellPrefab
-        };
     }
 
     /// <summary>只清理上一个 Manifest 明确登记在 shells/ 下的旧生成包。</summary>

@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: 5576520961231444442}
   - component: {fileID: 3822890805342605569}
   m_Layer: 0
-  m_Name: Bone
+  m_Name: Prop
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
