@@ -4,43 +4,43 @@
     {
       "id": "Dagger",
       "path": "shells/Dagger.json",
-      "shellPrefab": "Dagger_Stone",
+      "shellPrefab": "Dagger",
       "enabled": true
     },
     {
       "id": "Prop",
       "path": "shells/Prop.json",
-      "shellPrefab": "Bone",
+      "shellPrefab": "Prop",
       "enabled": true
     },
     {
       "id": "Stick",
       "path": "shells/Stick.json",
-      "shellPrefab": "Stick_Wood",
+      "shellPrefab": "Stick",
       "enabled": true
     },
     {
       "id": "Axe",
       "path": "shells/Axe.json",
-      "shellPrefab": "Axe_Stone",
+      "shellPrefab": "Axe",
       "enabled": true
     },
     {
       "id": "Pickaxe",
       "path": "shells/Pickaxe.json",
-      "shellPrefab": "Pickaxe_Stone",
+      "shellPrefab": "Pickaxe",
       "enabled": true
     },
     {
       "id": "Spear",
       "path": "shells/Spear.json",
-      "shellPrefab": "Spear_Stone",
+      "shellPrefab": "Spear",
       "enabled": true
     },
     {
       "id": "Seed",
       "path": "shells/Seed.json",
-      "shellPrefab": "Seed_Apple",
+      "shellPrefab": "Seed",
       "enabled": true
     }
   ]

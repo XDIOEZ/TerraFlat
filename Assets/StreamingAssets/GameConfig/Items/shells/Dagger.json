@@ -4,7 +4,7 @@
     {
       "id": "Knife_Base",
       "abstract": true,
-      "shellPrefab": "Dagger_Stone",
+      "shellPrefab": "Dagger",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -99,7 +99,7 @@
           }
         }
       },
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger_Stone.prefab"
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab"
     },
     {
       "id": "Dagger_Copper",

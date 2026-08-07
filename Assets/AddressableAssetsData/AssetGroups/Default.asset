@@ -198,7 +198,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1708703c07cce624892b595ae445e268
-    m_Address: Assets/2_Prefabs/Weapon/Weapon/Dagger_Stone.prefab
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -276,7 +276,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2867b73ca70b9c04cac4f3aa8fe446b9
-    m_Address: Assets/2_Prefabs/Weapon/Weapon/Spear_Stone.prefab
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/Spear.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -654,7 +654,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 648dac1c2de9b3544ad86849c39a90fd
-    m_Address: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Stone.prefab
+    m_Address: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -744,7 +744,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 76afaf461fddb7e4c8771cb15aea456f
-    m_Address: Assets/2_Prefabs/Item/Stick_Wood.prefab
+    m_Address: Assets/2_Prefabs/Item/Stick.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -768,7 +768,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7fa1725ad46407f47a171f54026e684b
-    m_Address: Assets/2_Prefabs/Item/Bone.prefab
+    m_Address: Assets/2_Prefabs/Item/Prop.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -960,7 +960,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9edc5571020b8c042adbb67fe384f5ca
-    m_Address: Assets/2_Prefabs/Seed/Seed_Apple.prefab
+    m_Address: Assets/2_Prefabs/Seed/Seed.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1351,7 +1351,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d2a3c08c6a3925746b84b9c128f8c793
-    m_Address: Assets/2_Prefabs/Weapon/Axe/Axe_Stone.prefab
+    m_Address: Assets/2_Prefabs/Weapon/Axe/Axe.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

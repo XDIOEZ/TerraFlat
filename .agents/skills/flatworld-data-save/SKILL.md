@@ -92,7 +92,7 @@ GameSaveData
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-07：物品 Manifest 的分包 `id/path` 改用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed` 业务名；`shellPrefab` 仍保存 `Axe_Stone/Bone/...` 等真实 Addressables Prefab 键。
+- 2026-08-07：物品 Manifest 的分包 `id/path`、`shellPrefab` 与模板 Prefab 根名称统一使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；重命名时保留 `.meta` GUID，并同步 Addressables Address 与 `sourcePrefab`，具体物品 ID 不变。
 - 2026-08-07：物品配置从单个 `items.json` 拆为 `item-manifest.json` + 按最终 `shellPrefab` 分类的 `shells/*.json`；加载器在全局合并后解析跨包继承，并拒绝路径越界、重复包、重复物品和错误外壳分类。
 - 2026-08-07：移除旧 `Assets/GameConfig/` Excel/Legacy 数据和 Excel→Prefab/JSON 同步工具链；物品与配方正式以 `StreamingAssets/GameConfig` JSON 为唯一真源，内容校验不再要求工作簿。
 - 2026-08-07：移除无外部引用的旧 `Assets/Saves/` 二进制地图/默认存档及会重建该目录的 `BundleSystem` 编辑工具；正式存档路径仍为 `Application.persistentDataPath/Saves/LocalSaveData/`。

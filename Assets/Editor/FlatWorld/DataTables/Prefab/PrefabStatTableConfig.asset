@@ -74,7 +74,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: d2a3c08c6a3925746b84b9c128f8c793, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe_Stone.prefab
+    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe.prefab
     PrefabName: Axe_Stone
     MaxHp: 0
     Hp: 0
@@ -164,7 +164,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 4375072302657932727, guid: 1708703c07cce624892b595ae445e268, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Dagger_Stone.prefab
+    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab
     PrefabName: Dagger_Stone
     MaxHp: 0
     Hp: 0
@@ -394,7 +394,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: 648dac1c2de9b3544ad86849c39a90fd, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Stone.prefab
+    PrefabPath: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab
     PrefabName: Pickaxe_Stone
     MaxHp: 0
     Hp: 0
@@ -464,7 +464,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 1913413943585218338, guid: 2867b73ca70b9c04cac4f3aa8fe446b9, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Spear_Stone.prefab
+    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Spear.prefab
     PrefabName: Spear_Stone
     MaxHp: 0
     Hp: 0
@@ -494,7 +494,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
-    PrefabPath: Assets/2_Prefabs/Item/Stick_Wood.prefab
+    PrefabPath: Assets/2_Prefabs/Item/Stick.prefab
     PrefabName: Stick_Wood
     MaxHp: 0
     Hp: 0

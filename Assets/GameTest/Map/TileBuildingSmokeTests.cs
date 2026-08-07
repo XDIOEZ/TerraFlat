@@ -10,7 +10,7 @@ namespace FlatWorld.GameTest.Map
     {
         private static readonly string[] PickaxePrefabPaths =
         {
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Stone.prefab",
+            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab",
             "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Copper.prefab",
             "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Bronze.prefab",
             "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_RawIron.prefab",

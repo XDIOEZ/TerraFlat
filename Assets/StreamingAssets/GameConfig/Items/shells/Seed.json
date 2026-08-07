@@ -4,7 +4,7 @@
     {
       "id": "Seed_Base",
       "abstract": true,
-      "shellPrefab": "Seed_Apple",
+      "shellPrefab": "Seed",
       "visual": {
         "rendererPath": "Render"
       }
@@ -12,7 +12,7 @@
     {
       "id": "Seed_Apple",
       "parent": "Seed_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Seed/Seed_Apple.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Seed/Seed.prefab",
       "gameName": "Seed_Apple",
       "description": "一天一苹果,医生远离我",
       "durability": 1.0,
