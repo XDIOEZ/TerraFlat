@@ -8,7 +8,7 @@
 - 测试入口：`.agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path`
 - 配置模型：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathConfiguration.cs`
 - 生产系统执行器：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathExecutor.cs`
-- 地图生成临时入口：`Assets/5_Scripts/5-3_GamePlay/Map/WorldGenerationRuntimeHooks.cs`
+- 地图生成临时入口：`Assets/5_Scripts/5-3_GamePlay/World/Map/WorldGenerationRuntimeHooks.cs`
 
 `--golden-path` 通过 Editor 状态机从真实 `GameStartScene` 启动；功能场景以上述 Editor 文件为唯一权威入口，不要在 Unity Test Framework 测试中再复制一套。
 命令在接管每个请求前强制刷新 AssetDatabase，确保 Editor 失焦或关闭 Auto Refresh 时也不会运行旧脚本。

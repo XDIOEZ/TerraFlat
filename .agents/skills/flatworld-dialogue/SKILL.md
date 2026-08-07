@@ -12,16 +12,16 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Dialogue/CharacterSoliloquyController.cs`：唯一调度入口。
-2. `Assets/5_Scripts/5-3_GamePlay/Dialogue/CharacterSpeechContracts.cs`：上下文、Provider、Presenter、Trigger 接口与请求模型。
-3. `Assets/5_Scripts/5-3_GamePlay/Dialogue/ScreenSpaceSpeechBubblePresenter.cs`：屏幕空间气泡。
-4. `Assets/5_Scripts/5-3_GamePlay/Dialogue/HungerSpeechProvider.cs`：只读取 `Mod_Food` 并贡献饥饿 Facts。
-5. `Assets/5_Scripts/5-3_GamePlay/Dialogue/ConfiguredSpeechProvider.cs`：JSON 条目匹配、上升沿、运行时冷却和一次性完成标记。
-6. `Assets/5_Scripts/5-3_GamePlay/Dialogue/CharacterSpeechConfigLoader.cs`：Resources 多文件加载、确定排序、合并与容错校验。
-7. `Assets/5_Scripts/5-3_GamePlay/Guide/NewPlayerGuideController.cs`：只贡献教程 Facts，不创建第二套调度器或直接调用气泡。
-8. `Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatInputController.cs`：本地玩家 T 键聊天、输入锁、气泡提交与斜杠命令分发。
-9. `Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatContracts.cs`：显式命令处理器接口与提交上下文。
-10. `Assets/5_Scripts/5-3_GamePlay/Dialogue/WeatherExposureSpeechProvider.cs`：天气、雨中暴露、火源 Facts 与玩家运行时体温修正。
+1. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/CharacterSoliloquyController.cs`：唯一调度入口。
+2. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/CharacterSpeechContracts.cs`：上下文、Provider、Presenter、Trigger 接口与请求模型。
+3. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/ScreenSpaceSpeechBubblePresenter.cs`：屏幕空间气泡。
+4. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/HungerSpeechProvider.cs`：只读取 `Mod_Food` 并贡献饥饿 Facts。
+5. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/ConfiguredSpeechProvider.cs`：JSON 条目匹配、上升沿、运行时冷却和一次性完成标记。
+6. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/CharacterSpeechConfigLoader.cs`：Resources 多文件加载、确定排序、合并与容错校验。
+7. `Assets/5_Scripts/5-3_GamePlay/Presentation/Guide/NewPlayerGuideController.cs`：只贡献教程 Facts，不创建第二套调度器或直接调用气泡。
+8. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/PlayerChatInputController.cs`：本地玩家 T 键聊天、输入锁、气泡提交与斜杠命令分发。
+9. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/PlayerChatContracts.cs`：显式命令处理器接口与提交上下文。
+10. `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/WeatherExposureSpeechProvider.cs`：天气、雨中暴露、火源 Facts 与玩家运行时体温修正。
 
 ## 自言自语数据链
 
@@ -51,7 +51,7 @@ ICharacterSpeechContextContributor
 - 饥饿迁移配置：`Assets/Resources/Dialogue/Soliloquy/need_hunger.json`。
 - 生存引导配置：`Assets/Resources/Dialogue/Soliloquy/guide_survival.json`；九个阶段均使用 Ambient、StateChanged + Idle、一次性完成标记，教程不得使用 Emergency 抢占生存警告。
 - 降雨反馈配置：`Assets/Resources/Dialogue/Soliloquy/weather_rain.json`；覆盖预兆、雨中暴露、强降雨、火源恢复与雨后恢复。
-- 编辑器校验：`FlatWorld/自言自语/校验配置 JSON`；实现位于 `Assets/5_Scripts/5-3_GamePlay/Dialogue/Editor/ConfiguredSpeechJsonValidator.cs`。
+- 编辑器校验：`FlatWorld/自言自语/校验配置 JSON`；实现位于 `Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/Editor/ConfiguredSpeechJsonValidator.cs`。
 - 配置按资源名确定排序；跨文件重复 ID 报错。单个坏文件或坏条目只被跳过，其他有效条目继续加载。
 - 新增 Fact 时必须同时更新 Contributor、`CharacterSpeechFacts` 和 `CharacterSpeechConfigLoader` 的已知 Fact 注册表。
 
@@ -60,7 +60,7 @@ ICharacterSpeechContextContributor
 - 聊天输入：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab`，固定节点 `Text Area`、`Placeholder`、`Text`。
 - 角色气泡：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_CharacterSpeechBubble.prefab`，固定节点 `Tail`、`Message`，根节点包含 `CanvasGroup`。
 - `PlayerChatInputController` 与 `ScreenSpaceSpeechBubblePresenter` 只通过 `GameRes` 实例化 Prefab、查找节点和更新数据，禁止运行时创建背景、文本、输入框或气泡尾部。
-- Prefab 查询键统一位于 `Assets/5_Scripts/5-5_UI/RuntimeUIPrefabKeys.cs`；重建入口为 `Assets/Editor/FlatWorld/RuntimeUIPrefabBuilder.cs` 的菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI`。
+- Prefab 查询键统一位于 `Assets/5_Scripts/5-5_UI/RuntimeUIPrefabKeys.cs`；重建入口为 `Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs` 的菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI`。
 - `FlatWorld.Dialogue.asmdef` 直接引用 `GamePlay`、`UI` 与 `m_Utilitiles`；访问 `GameRes.Instance` 时不要移除基类程序集引用。
 
 ## 系统边界
@@ -90,7 +90,7 @@ ICharacterSpeechContextContributor
 - 测试失败时优先修复生产代码，禁止删除测试、弱化断言或修改 JSON 输入来制造通过；随机台词测试必须限制为唯一候选或固定随机状态。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Dialogue.Smoke`；无需视觉模型或测试工具卡片。涉及一次性完成标记、玩家状态、UI 气泡或联机边界时追加对应分类；只有气泡布局或最终观感变化才做定向截图。
 - 教程链测试位于 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`，分类 `Guide.Smoke`；覆盖 Facts、JSON、一次性标记、Player Prefab、远程隔离与成功事件边界。
-- 玩家聊天测试位于 `Assets/GameTest/Dialogue/PlayerChatSmokeTests.cs`，同时归类 `Dialogue.Smoke`、`PlayerInteraction.Smoke`、`UI.Smoke`；覆盖本地/远程资格、输入锁恢复、Prefab 单例接线、气泡提交、命令处理和 Ctrl+T 冲突。
+- 精简 Smoke 位于 `Assets/GameTest/Dialogue/DialogueSmokeTests.cs`（`Dialogue.Smoke`），只保留关键饥饿事实触发配置台词的行为；玩家聊天细节不再属于 Smoke 集合。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

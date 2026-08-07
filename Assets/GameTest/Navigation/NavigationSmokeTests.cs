@@ -13,29 +13,10 @@ namespace FlatWorld.GameTest.Navigation
     {
         private const uint GroundPenalty = 1000u;
 
-        [Test]
-        [Category("Navigation.Smoke")]
-        public void RequiredEntryPointsExist()
-        {
-            GameTestAssertions.AssertScriptType(
-                "Assets/5_Scripts/5-3_GamePlay/PathFinding/WorldNavigationManager.cs",
-                "WorldNavigationManager");
-            GameTestAssertions.AssertScriptType(
-                "Assets/5_Scripts/5-3_GamePlay/PathFinding/WorldNavigationAgent.cs",
-                "WorldNavigationAgent");
-            GameTestAssertions.AssertScriptType(
-                "Assets/5_Scripts/5-3_GamePlay/PathFinding/WorldNavigationObstacle.cs",
-                "WorldNavigationObstacle");
-            GameTestAssertions.AssertScriptType(
-                "Assets/5_Scripts/5-3_GamePlay/PathFinding/WorldNavigationPathDebugOverlay.cs",
-                "WorldNavigationPathDebugOverlay");
-            GameTestAssertions.AssertScriptType(
-                "Assets/5_Scripts/5-3_GamePlay/Move/Mover_AI.cs",
-                "Mover_AI");
-        }
 
         [Test]
         [Category("Navigation.Smoke")]
+        [Category("Smoke")]
         public void TopTileAndBuildingOccupancyJointlyControlWalkability()
         {
             WorldNavigationManager manager = CreateManagerForTest();

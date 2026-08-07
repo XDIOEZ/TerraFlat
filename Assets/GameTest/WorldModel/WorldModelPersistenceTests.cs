@@ -73,7 +73,7 @@ namespace FlatWorld.GameTest.WorldModel
                 DimensionDefinition definition = catalog.Find(dimensionId);
                 Assert.That(definition, Is.Not.Null, dimensionId);
                 Assert.That(definition.GenerationProfile, Is.Not.Null, dimensionId);
-                Assert.That(definition.GenerationProfile.GenerationSignature, Is.EqualTo(5));
+                Assert.That(definition.GenerationProfile.GenerationSignature, Is.EqualTo(6));
                 Assert.That(definition.ChunkViewPrefab, Is.Not.Null, dimensionId);
                 Assert.That(definition.ChunkViewPrefab.GetComponent<global::Map>(), Is.Null,
                     "ChunkView prefab must not carry the legacy Map authority.");
@@ -176,6 +176,76 @@ namespace FlatWorld.GameTest.WorldModel
         }
 
         [Test]
+        public void DefaultSmallWrappedRuntimeTraversalContainsFreshWaterRivers()
+        {
+            ChunkGenerationProfileSO profileAsset =
+                AssetDatabase.LoadAssetAtPath<ChunkGenerationProfileSO>(
+                    "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset");
+            Assert.That(profileAsset, Is.Not.Null);
+            ChunkGenerationProfileSnapshot profile = profileAsset.CreateSnapshot();
+            var topology = new ChunkGenerationTopologySnapshot(
+                new Int2(-64, -64), new Int2(128, 128));
+            var addresses = new HashSet<FlatWorld.WorldModel.WorldAddress>();
+
+            int startOriginX = FloorToChunkOrigin(topology.NormalizeX(362), profile.Width);
+            int startOriginY = FloorToChunkOrigin(topology.NormalizeY(-109), profile.Height);
+            for (int offsetY = -2; offsetY <= 2; offsetY++)
+            for (int offsetX = -2; offsetX <= 2; offsetX++)
+            {
+                addresses.Add(new FlatWorld.WorldModel.WorldAddress(
+                    "surface",
+                    new Int2(
+                        topology.NormalizeX(startOriginX + offsetX * profile.Width),
+                        topology.NormalizeY(startOriginY + offsetY * profile.Height))));
+            }
+
+            float routeStep = profile.Width / Mathf.Sqrt(2f);
+            for (int waypoint = 1; waypoint <= 8; waypoint++)
+            {
+                int originX = FloorToChunkOrigin(
+                    topology.NormalizeX(Mathf.FloorToInt(362.5f - routeStep * waypoint)),
+                    profile.Width);
+                int originY = FloorToChunkOrigin(
+                    topology.NormalizeY(Mathf.FloorToInt(-108.5f - routeStep * waypoint)),
+                    profile.Height);
+                addresses.Add(new FlatWorld.WorldModel.WorldAddress(
+                    "surface", new Int2(originX, originY)));
+            }
+
+            using var world = new WorldRuntime("small-wrapped-river-coverage", 1);
+            var generator = new DeterministicChunkGenerator();
+            foreach (FlatWorld.WorldModel.WorldAddress address in addresses)
+            {
+                // GameManager stores the stable FNV-1a value of the user-facing seed "424242".
+                ChunkGenerationRequest request = world.BeginChunkGeneration(
+                    address, -780190301, profile, topology);
+                using ChunkGenerationResult result = generator.Generate(
+                    request, CancellationToken.None);
+                Assert.That(world.TryCommit(result, out string rejection), Is.True, rejection);
+            }
+
+            int riverCells = 0;
+            int totalCells = 0;
+            foreach (ChunkRuntime chunk in world.Chunks.Values)
+            {
+                ChunkTerrainData terrain = chunk.Terrain;
+                totalCells += terrain.CellCount;
+                for (int y = 0; y < terrain.Height; y++)
+                for (int x = 0; x < terrain.Width; x++)
+                {
+                    if (terrain.TryGetEnvironmentValue("riverDepth", x, y, out float depth) &&
+                        depth > 0f)
+                        riverCells++;
+                }
+            }
+
+            Assert.That(riverCells, Is.GreaterThan(0),
+                "The default small wrapped runtime traversal must not stay completely dry.");
+            Assert.That(riverCells, Is.LessThan(totalCells / 3),
+                "Fresh-water channels must not flood most of the streamed traversal window.");
+        }
+
+        [Test]
         public void DefaultWrappedTraversalDoesNotCrossACompletelyDryRegion()
         {
             ChunkGenerationProfileSO profileAsset =
@@ -245,6 +315,11 @@ namespace FlatWorld.GameTest.WorldModel
                 request, CancellationToken.None);
             Assert.That(world.TryCommit(result, out string rejection), Is.True, rejection);
             return world;
+        }
+
+        private static int FloorToChunkOrigin(int value, int chunkSize)
+        {
+            return Mathf.FloorToInt(value / (float)chunkSize) * chunkSize;
         }
     }
 }

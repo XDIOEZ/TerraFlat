@@ -12,10 +12,10 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Mods/ModRuntimeManager.cs`：扫描、校验、排序、加载、卸载和全局状态。
-2. `Assets/5_Scripts/5-3_GamePlay/Mods/ModManifest.cs`：manifest、依赖、Bundle、内容定义与存档记录。
-3. `Assets/5_Scripts/5-3_GamePlay/Mods/ModApi.cs`：公开给 MOD/Lua 的游戏 API。
-4. `Assets/5_Scripts/5-3_GamePlay/Mods/ModLuaRuntime.cs`：Lua 运行时。
+1. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModRuntimeManager.cs`：扫描、校验、排序、加载、卸载和全局状态。
+2. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModManifest.cs`：manifest、依赖、Bundle、内容定义与存档记录。
+3. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModApi.cs`：公开给 MOD/Lua 的游戏 API。
+4. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModLuaRuntime.cs`：Lua 运行时。
 
 ## 加载链
 
@@ -32,10 +32,10 @@ GameRes 完成本体 Addressables
 
 ## 关键文件
 
-- Lua 行为组件：`Assets/5_Scripts/5-3_GamePlay/Mods/Mod_LuaBehaviour.cs`。
-- MOD 存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.Mods.cs`。
+- Lua 行为组件：`Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/Mod_LuaBehaviour.cs`。
+- MOD 存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData.Mods.cs`。
 - 示例模板：`Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs`。
-- 本体资源衔接：`Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs`。
+- 本体资源衔接：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameRes.cs`。
 - MOD `definitionFiles` 可直接声明 `recipes` 数组，格式复用本体 `RecipeDto`；配方 ID 必须使用 MOD 命名空间。
 - 旧 `assets[].type = recipe` AssetBundle 仍通过 `LegacyRecipeConverter` 转成 `RuntimeRecipe`，仅作为兼容桥。
 

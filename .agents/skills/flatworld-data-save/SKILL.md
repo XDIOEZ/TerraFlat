@@ -1,6 +1,6 @@
 ---
 name: flatworld-data-save
-description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack 存档、自动保存、区块差量、玩家数据、星球数据、Addressables 配置或 Excel 配置。关键词：SaveDataMgr、GameSaveData、ItemData、ModuleData、MapSave、PlanetData。"
+description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack 存档、自动保存、区块差量、玩家数据、星球数据、Addressables 或 JSON 配置。关键词：SaveDataMgr、GameSaveData、ItemData、ModuleData、MapSave、PlanetData。"
 argument-hint: "数据、存档或资源注册问题"
 user-invocable: true
 disable-model-invocation: false
@@ -8,12 +8,12 @@ disable-model-invocation: false
 
 # FlatWorld 数据与存档定位
 
-> 最后核对：2026-08-05。序列化字段改动属于高影响变更。
+> 最后核对：2026-08-07。序列化字段改动属于高影响变更。
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Manager/SaveDataMgr.cs`：磁盘读写、压缩、备份、差量、联机快照。
-2. `Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.cs`：总存档根对象。
+1. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/SaveDataMgr.cs`：磁盘读写、压缩、备份、差量、联机快照。
+2. `Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData.cs`：总存档根对象。
 3. `Assets/5_Scripts/5-1_Data/ItemData/ItemData.cs`：物品数据与 `ModuleDataDic`。
 4. `Assets/5_Scripts/5-1_Data/ModData/ModuleData.cs`：模块持久化基类。
 
@@ -37,26 +37,28 @@ GameSaveData
 - 模块数据：`Assets/5_Scripts/5-1_Data/ModData/`。
 - 地块数据：`Assets/5_Scripts/5-1_Data/TileData/`。
 - 地图栈存储：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`、`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
-- 存档 partial：`Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.*.cs`。
-- 地图存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/MapSave.cs`。
-- 星球存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/PlanetData.cs`。
-- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Manager/AutoSaveController.cs`。
-- `ItemSpecialData` 命名空间合并：`Assets/5_Scripts/5-3_GamePlay/Progress/ItemSpecialDataJsonStore.cs`。
-- 维度位置与入口锚点进度：`Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionTravelProgressStore.cs`。
+- 存档 partial：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData.*.cs`。
+- 地图存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MapSave.cs`。
+- 星球存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs`。
+- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/AutoSaveController.cs`。
+- `ItemSpecialData` 命名空间合并：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/ItemSpecialDataJsonStore.cs`。
+- 维度位置与入口锚点进度：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionTravelProgressStore.cs`。
 - Addressables：`Assets/AddressableAssetsData/`。
-- Excel 配置：`Assets/GameConfig/Excel/`；读取工具为 `Assets/5_Scripts/Utilitiles/ExcelManager.cs`。
+- 本体 JSON 配置：`Assets/StreamingAssets/GameConfig/`；物品、配方与 Buff 分别使用 `Items/`、`Recipes/`、`Buffs/`。
 
 ## 资源注册边界
 
-- `Assets/5_Scripts/5-3_GamePlay/Manager/GameRes.cs` 按 Addressables 标签注册 Prefab、TileBase、TileBlock、Buff、InventoryInit、Skill；配方由 `Assets/StreamingAssets/GameConfig/Recipes/recipe-manifest.json` 聚合业务分包后注册。
+- `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameRes.cs` 按 Addressables 标签注册 Prefab、TileBase、TileBlock、Buff、InventoryInit、Skill；物品由 `Items/item-manifest.json` 按解析后的 `shellPrefab` 聚合分包，配方由 `Recipes/recipe-manifest.json` 聚合业务分包后注册。
 - 仅移动资源文件并不能保证运行时可用；需同时验证 Addressables 地址/标签与 `GameRes` 字典键。
-- 配方编辑源为 `Assets/GameConfig/Excel/RecipeConfig.xlsx`，由 Editor 工具整表校验并根据 `Recipes.Package` 导出 8 个业务 JSON；运行时不读取 Excel。
-- 玩家正式存档位于 `Application.persistentDataPath`；`Assets/Saves/` 主要用于项目内编辑或测试资源。
+- 物品与配方均以 `Assets/StreamingAssets/GameConfig/` 下的 JSON 为唯一真源；旧 `Assets/GameConfig/` Excel/Legacy 目录及 Excel 同步工具链已移除，禁止恢复双向同步。
+- 玩家正式存档位于 `Application.persistentDataPath/Saves/LocalSaveData/`；旧 `Assets/Saves/` 与无引用的 `BundleSystem` 编辑工具已移除，禁止再将项目 `Assets` 目录作为存档输出位置。
 - 新建存档首写与已有存档进入的等待反馈由 `GameManager` 的 `UI_WorldLoading.prefab` 生命周期负责；`SaveDataMgr` 仍只承担磁盘读写，不得直接创建 UI。
 
 ## 易误判点
 
-- `PlanetData` 是 partial class，另一部分位于 `Assets/5_Scripts/5-3_GamePlay/Space/PlanetData.cs`。
+- Addressables 的 `Address` 是独立于 `AssetPath` 的逻辑键，条目通过 `.meta` GUID 跟踪资源真实位置；即使物品 JSON 的 `spriteAddress` 长得像 `Assets/...` 路径，只要在 Unity 内移动资源且 GUID、Address、子 Sprite 名不变，就不要连带改 JSON。只有修改 Address、修改 `[子 Sprite 名]`、丢失 GUID/重新创建条目或工具重写 Address 时才同步 JSON；使用 `Use Existing Build` 时移动或改动资源后还要重建 Addressables 内容。
+- Item Manifest 是唯一入口，不会扫描目录自动发现 JSON；所有启用包会先合并再统一解析 `parent`，因此继承可以跨文件。Manifest 声明了 `shellPrefab` 时，包内每条定义的最终解析值必须与它一致。
+- `PlanetData` 是 partial class，另一部分位于 `Assets/5_Scripts/5-3_GamePlay/World/Space/PlanetData.cs`。
 - 新增 MemoryPack 派生类型时必须检查 `MemoryPackUnion` 与格式版本。当任务明确不兼容旧布局时，必须在解析入口明确拒绝，不得静默迁移、覆盖或删除用户文件。
 - `Data_TileMap` 当前 MemoryPack 布局持久化 `TileStackCell[,]`；单层/双层格不分配 `OverflowLayers`，第三层起才分配。非空格计数缓存不进存档。
 - 环境只持久化五张网格：归一化温度、摄氏温度、降水、高度、光照；不得恢复湿度、固体比例或污染网格。
@@ -90,6 +92,10 @@ GameSaveData
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-07：物品 Manifest 的分包 `id/path` 改用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed` 业务名；`shellPrefab` 仍保存 `Axe_Stone/Bone/...` 等真实 Addressables Prefab 键。
+- 2026-08-07：物品配置从单个 `items.json` 拆为 `item-manifest.json` + 按最终 `shellPrefab` 分类的 `shells/*.json`；加载器在全局合并后解析跨包继承，并拒绝路径越界、重复包、重复物品和错误外壳分类。
+- 2026-08-07：移除旧 `Assets/GameConfig/` Excel/Legacy 数据和 Excel→Prefab/JSON 同步工具链；物品与配方正式以 `StreamingAssets/GameConfig` JSON 为唯一真源，内容校验不再要求工作簿。
+- 2026-08-07：移除无外部引用的旧 `Assets/Saves/` 二进制地图/默认存档及会重建该目录的 `BundleSystem` 编辑工具；正式存档路径仍为 `Application.persistentDataPath/Saves/LocalSaveData/`。
 - 2026-08-05：`Data_TileMap` 由每格 `List<TileData>` 切换为 MemoryPack `TileStackCell[,]`，环境固定五张网格；紧凑存档与 MOD 封装升到版本 2，明确拒绝版本 1 和无头旧二进制数据。
 
 - 2026-07-31：`flatworld.dimensions` 新增按地表入口 GUID 保存的矿坑双向锚点；正式 `CaveExit` 在 Chunk Ready 后创建并进入差量 `ChangedItems`，未改变 MemoryPack 布局。
@@ -97,11 +103,6 @@ GameSaveData
 - 2026-07-30：星球存档追加天气阶段、绝对时间边界、确定性随机游标和事件序号；旧存档由 `WeatherEventScheduler.InitializeIfNeeded()` 根据已有天气迁移。
 - 2026-07-30：作物存档补齐种植格、成长阶段、成熟、已收获和反馈状态；旧 `GrowData` BitData 可迁移，区块卸载重载后不会重置成长或再次收获。
 - 2026-07-29：新建存档首写和进入已选存档接入 Prefab 加载反馈；存档层职责不变，界面由 GameManager 驱动并持续到玩家周围区块就绪。
-- 2026-07-29：新增统一只读内容校验入口，检查本体 Prefab/物品注册键、Addressables `Assets/2_Prefabs` 的 `Prefab` 标签，以及天气、结构、Spawner、联机玩家、音频和对话的固定 Resources 路径；正式构建前有错误会被阻断。
-- 2026-07-29：自定义难度存档升级为版本 1，新增 16 个倍率字段并加入旧存档默认 100% 的迁移保护。
-- 2026-07-29：世界难度存档支持 `Custom` 类型与自定义死亡掉落规则；新世界创建前选择会随首个存档一起写入。
-- 2026-07-29：生成器存档增加版本、跨窗口总时间游标、生态预算与补位债务；时间存档补齐 `TotalDays`。
-- 2026-07-28：配方存储由单 JSON 改为清单驱动的业务分包；编辑层统一、存储层分包、运行时聚合注册。
 
 ## 修改后自动测试
 
@@ -111,7 +112,7 @@ GameSaveData
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；不得写入玩家真实存档，必须使用临时路径并验证序列化前后关键字段一致。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category DataSave.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类。
 - 教程存档、旧数据兼容及命名空间共存由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
-- 维度世界键兼容与默认目录由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）覆盖。
+- 维度管理器的基础 PlayMode 生命周期由 `Assets/GameTest/Dimension/DimensionLifecycleTests.cs`（`Dimension.Smoke`）覆盖；维度世界键兼容不再属于精简 Smoke 集合。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
@@ -122,4 +123,4 @@ GameSaveData
 
 - `PlanetData.TopologyMode` 必须保持在 MemoryPack 布局末尾；枚举 `Infinite = 0` 保证旧布局缺失字段时仍为无限世界。
 - 有限世界保存的 `MapData_Dict` 键与 `MapSave.MapPosition/Name` 必须是规范 Chunk 坐标。
-- 往返与旧默认值由 `WorldTopologyDataSaveSmokeTests`（`DataSave.Smoke`）保护。
+- `DataSaveSmokeTests`（`DataSave.Smoke`）保留 TileStackMap 关键数据的 MemoryPack 往返行为。

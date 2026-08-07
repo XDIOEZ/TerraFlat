@@ -8,11 +8,12 @@ namespace FlatWorld.GameTest.Modding
     {
         [Test]
         [Category("Modding.Smoke")]
+        [Category("Smoke")]
         public void RequiredEntryPointsExist()
         {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Mods/ModRuntimeManager.cs", "ModRuntimeManager");
-            GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-3_GamePlay/Mods/ModManifest.cs");
-            GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-3_GamePlay/Mods/ModLuaRuntime.cs");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModRuntimeManager.cs", "ModRuntimeManager");
+            GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModManifest.cs");
+            GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModLuaRuntime.cs");
             GameTestAssertions.AssertAssetExists("Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs");
         }
     }

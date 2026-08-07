@@ -118,7 +118,7 @@ public static class DimensionProjectInstaller
                 root.layer = colliderLayer;
 
             GameItem item = root.AddComponent<GameItem>();
-            item.Data = new Data_GeneralItem
+            item.BindData(new Data_GeneralItem
             {
                 IDName = "CaveExit",
                 GameName = "矿洞出口",
@@ -139,7 +139,7 @@ public static class DimensionProjectInstaller
                     scale = Vector3.one
                 },
                 Guid = 194873622
-            };
+            });
 
             BoxCollider2D interaction = root.AddComponent<BoxCollider2D>();
             interaction.isTrigger = true;
@@ -242,7 +242,7 @@ public static class DimensionProjectInstaller
     private static string BuildPortalComponentYaml(long rootId, long componentId, string targetDimensionId, bool requiresBuilding)
     {
         string scriptGuid = AssetDatabase.AssetPathToGUID(
-            "Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionPortal.cs");
+            "Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionPortal.cs");
         return
             $"\n--- !u!114 &{componentId}\n" +
             "MonoBehaviour:\n" +

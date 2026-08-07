@@ -68,6 +68,7 @@ namespace FlatWorld.Automation
         private static int _screenshotCaptureAfterFrame;
         private static double _screenshotCaptureNotBefore;
         private static bool _screenshotRequested;
+        private static bool _screenshotViewApplied;
         private static ScreenshotContinuation _screenshotContinuation;
         private static WorldEntryProgressState? _terminalWorldEntryState;
         private static string _terminalWorldEntryStatus;
@@ -621,6 +622,9 @@ namespace FlatWorld.Automation
             if (_mover != null && _mover.rb != null)
                 _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
 
+            _executor.ConfigureScreenshotView();
+            _screenshotViewApplied = true;
+
             string directory = GetScreenshotDirectory(_activeRequest.id);
             Directory.CreateDirectory(directory);
             _pendingScreenshotPath = Path.GetFullPath(Path.Combine(directory, name + ".png"));
@@ -650,7 +654,8 @@ namespace FlatWorld.Automation
                                   Screen.width > 0 &&
                                   Screen.height > 0 &&
                                   gameCamera != null &&
-                                  gameCamera.isActiveAndEnabled;
+                                  gameCamera.isActiveAndEnabled &&
+                                  IsChunkWindowReady(ChunkMgr.Instance);
                 if (!canCapture)
                 {
                     ThrowIfTimedOut("Game View 相机未在截图超时前就绪。");
@@ -675,6 +680,7 @@ namespace FlatWorld.Automation
             _pendingScreenshotPath = null;
             _screenshotRequested = false;
             _screenshotContinuation = ScreenshotContinuation.None;
+            RestoreTraversalViewAfterScreenshot();
 
             switch (continuation)
             {
@@ -949,6 +955,7 @@ namespace FlatWorld.Automation
 
             try
             {
+                RestoreTraversalViewAfterScreenshot();
                 FlatWorldGoldenPathScenarios.Cleanup(CreateScenarioContext());
             }
             catch (Exception cleanupException)
@@ -1358,6 +1365,7 @@ namespace FlatWorld.Automation
             _screenshotCaptureAfterFrame = 0;
             _screenshotCaptureNotBefore = 0d;
             _screenshotRequested = false;
+            _screenshotViewApplied = false;
             _screenshotContinuation = ScreenshotContinuation.None;
             _terminalWorldEntryState = null;
             _terminalWorldEntryStatus = null;
@@ -1365,6 +1373,14 @@ namespace FlatWorld.Automation
             _worldSetupApplied = false;
             _worldExitCompleted = false;
             _completionMessage = null;
+        }
+
+        private static void RestoreTraversalViewAfterScreenshot()
+        {
+            if (!_screenshotViewApplied)
+                return;
+            _screenshotViewApplied = false;
+            _executor?.RestoreTraversalView();
         }
 
         private enum RuntimePhase

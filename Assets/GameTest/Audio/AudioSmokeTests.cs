@@ -10,6 +10,7 @@ namespace FlatWorld.GameTest.Audio
     {
         [Test]
         [Category("Audio.Smoke")]
+        [Category("Smoke")]
         public void RequiredEntryPointsAndAssetsExist()
         {
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-6_Audio/Runtime/AudioService.cs", "AudioService");

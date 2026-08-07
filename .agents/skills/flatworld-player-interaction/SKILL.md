@@ -12,25 +12,25 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Item/Player.cs`：玩家 Item 实体。
+1. `Assets/5_Scripts/5-3_GamePlay/Entities/Item/Player.cs`：玩家 Item 实体。
 2. `Assets/5_Scripts/5-1_Data/ItemData/Data_Player.cs`：玩家持久化数据。
-3. `Assets/5_Scripts/5-3_GamePlay/Controller/GameController.cs`：输入动作、鼠标/手柄、虚拟光标、输入锁定。
-4. `Assets/5_Scripts/5-3_GamePlay/Controller/InputBindingService.cs`：输入绑定服务。
+3. `Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs`：输入动作、鼠标/手柄、虚拟光标、输入锁定。
+4. `Assets/5_Scripts/5-3_GamePlay/Player/Controller/InputBindingService.cs`：输入绑定服务。
 5. `Assets/PlayerInput/PlayerInputActions.inputactions`：键鼠/手柄动作、Control Scheme 与稳定 Binding 的权威来源。
 
 ## 关键功能
 
-- 交互发送：`Assets/5_Scripts/5-3_GamePlay/Controller/Mod_InteractSender.cs`。
-- 交互接收：`Assets/5_Scripts/5-3_GamePlay/Controller/Mod_InteractReciver.cs`。
-- 管理员控制：`Assets/5_Scripts/5-3_GamePlay/Controller/PlayerAdminController.cs`。
-- 移动/朝向：`Assets/5_Scripts/5-3_GamePlay/Move/`。
-- 摄像机模块：`Assets/5_Scripts/5-3_GamePlay/Move/Mod_Cam.cs`。
-- 世界焦点：`Assets/5_Scripts/5-3_GamePlay/Move/Mod_FocusPoint.cs`。
-- AI 焦点：`Assets/5_Scripts/5-3_GamePlay/Move/Mod_FocusPoint_AI.cs`。
+- 交互发送：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_InteractSender.cs`。
+- 交互接收：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/Mod_InteractReciver.cs`。
+- 管理员控制：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/PlayerAdminController.cs`。
+- 移动/朝向：`Assets/5_Scripts/5-3_GamePlay/Entities/Move/`。
+- 摄像机模块：`Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Cam.cs`。
+- 世界焦点：`Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_FocusPoint.cs`。
+- AI 焦点：`Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_FocusPoint_AI.cs`。
 - 玩家 Prefab：`Assets/2_Prefabs/Player/`。
 - Player 根 Prefab 当前包含 `CharacterSoliloquyController`、`ConfiguredSpeechProvider`、`HungerSpeechProvider`、`ScreenSpaceSpeechBubblePresenter` 与唯一一个 `NewPlayerGuideController`。
 - Player 根 Prefab 还包含唯一一个 `PlayerChatInputController`；仅 `IsLocalProfile=true` 的玩家监听聊天输入。
-- 维度入口：`Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionPortal.cs`，通过现有 `IInteractable`/E 键链请求 `DimensionManager` 切换并传递所属入口 Item 上下文。
+- 维度入口：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionPortal.cs`，通过现有 `IInteractable`/E 键链请求 `DimensionManager` 切换并传递所属入口 Item 上下文。
 
 ## 调用边界
 
@@ -75,13 +75,13 @@ Input System / PlayerInputActions
 - 2026-07-28：Player 增加本地/新建档案运行时上下文；Player Prefab 根节点接入 `NewPlayerGuideController`，远程副本不获得教程或本地自言自语资格。
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/PlayerInteraction/PlayerInteractionSmokeTests.cs`；当前覆盖玩家实体、输入控制器、绑定服务、玩家 Prefab、Player 物理层与自碰撞屏蔽、GM 小数移速倍率输入及非叠乘应用、双 Control Scheme、关键手柄 Binding、键鼠/手柄分页条目、Vector2 手柄控制和分页恢复默认隔离。
+- 精简 Smoke：`Assets/GameTest/PlayerInteraction/PlayerWorldWrapSmokeTests.cs`；当前只保留玩家跨四边与角落环绕时速度和数据不丢失这一关键行为。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；玩家交互测试约定目录：`Assets/GameTest/PlayerInteraction/`；场景目录：`Assets/GameTest/Scenes/PlayerInteraction/`；冒烟分类：`PlayerInteraction.Smoke`。
 - 新增输入、移动、摄像机、焦点、交互发送接收或玩家 Prefab 行为时必须增加系统测试；修复 Bug 时先增加回归测试。输入到移动或交互主流程变化时同步更新玩家冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；输入测试必须使用可注入输入，不能依赖真实鼠标、键盘或手柄操作。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category PlayerInteraction.Smoke`；无需视觉模型或测试工具卡片。涉及 UI、Item/Module、建筑、地图或联机玩家时追加对应分类；只有光标、相机或交互反馈最终观感变化才做定向截图。
 - Player 教程资格、Prefab 接线与远程隔离由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
-- 玩家聊天的本地资格、输入锁恢复、Prefab 接线与按键冲突由 `Assets/GameTest/Dialogue/PlayerChatSmokeTests.cs` 覆盖。
+- 玩家聊天的输入锁、Prefab 接线与按键冲突不再属于精简 Smoke 集合，修改聊天系统时按需运行或补充专项测试。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

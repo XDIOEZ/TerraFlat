@@ -12,10 +12,10 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/PathFinding/WorldNavigationManager.cs`：稀疏世界网格、Map 注册、批处理修订和路径请求。
-2. `Assets/5_Scripts/5-3_GamePlay/Building/BuildingOccupancyRegistry.cs`：动态建筑占地覆盖层。
-3. `Assets/5_Scripts/5-3_GamePlay/Map/Base/Map.cs`：TileData 变化到导航脏区的桥接。
-4. `Assets/5_Scripts/5-3_GamePlay/Move/Mover_AI.cs`：AI 运行时移动。
+1. `Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationManager.cs`：稀疏世界网格、Map 注册、批处理修订和路径请求。
+2. `Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingOccupancyRegistry.cs`：动态建筑占地覆盖层。
+3. `Assets/5_Scripts/5-3_GamePlay/World/Map/Base/Map.cs`：TileData 变化到导航脏区的桥接。
+4. `Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mover_AI.cs`：AI 运行时移动。
 
 ## 权威数据与链路
 
@@ -29,10 +29,10 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 
 ## 关键调用方
 
-- Chunk 跟随：`Assets/5_Scripts/5-3_GamePlay/Chunk/Mod_ChunkLoader.cs`。
+- Chunk 跟随：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_ChunkLoader.cs`。
 - 联机本地导航窗口：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkChunkStreamingCoordinator.cs`。
-- AI 目标与移动：`Assets/5_Scripts/5-3_GamePlay/AI/`、`Assets/5_Scripts/5-3_GamePlay/Move/Mover_AI.cs`。
-- 动态建筑：`Assets/5_Scripts/5-3_GamePlay/Building/Mod_Building.cs`。
+- AI 目标与移动：`Assets/5_Scripts/5-3_GamePlay/Entities/AI/`、`Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mover_AI.cs`。
+- 动态建筑：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs`。
 - Ghost 导航编辑器检查：`Assets/5_Scripts/5-2_Editor/GhostNavigationTest/`。
 
 ## 当前约束
@@ -74,7 +74,7 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 - 新增 A*、动态脏区、TileData 权重、建筑占地或 AI 移动行为时必须增加系统测试；修复 Bug 时先增加回归测试。可达路径与动态障碍更新主流程变化时同步更新导航冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；路径测试必须使用确定地图与起终点，并验证不可达路径不会产生伪结果。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Navigation.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；路径可视化仅在最终调试显示变化时截图。
-- 矿洞墙地可走性契约由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
+- 导航精简 Smoke 位于 `Assets/GameTest/Navigation/NavigationSmokeTests.cs`，保留地形与建筑占地共同控制可走性的关键行为。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
@@ -85,4 +85,4 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 
 - 玩家环绕后只刷新对侧的规范 Chunk 导航窗口和权重。
 - 一期明确不在地图两侧建立 A* 邻接边，AI 不跨缝寻路；不要把环面坐标最短位移误解为导航图连边。
-- `WorldTopologyNavigationSmokeTests`（`Navigation.Smoke`）保护该范围。
+- 世界环绕寻路不再属于精简 Smoke 集合；修改有限世界拓扑时应按需运行或补充专项测试。

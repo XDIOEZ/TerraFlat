@@ -12,15 +12,15 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Inventory/Inventory.cs`：库存数据更新、输入绑定、面板创建与容器交互。
-2. `Assets/5_Scripts/5-3_GamePlay/Inventory/Mod_Inventory.cs`：Item 上的库存模块。
-3. `Assets/5_Scripts/5-3_GamePlay/Crafting/`：配方动作和制作规则。
-4. `Assets/5_Scripts/5-3_GamePlay/Equipment/Mod_Equipment.cs`：当前装备系统入口。
+1. `Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Inventory.cs`：库存数据更新、输入绑定、面板创建与容器交互。
+2. `Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_Inventory.cs`：Item 上的库存模块。
+3. `Assets/5_Scripts/5-3_GamePlay/Items/Crafting/`：配方动作和制作规则。
+4. `Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Mod_Equipment.cs`：当前装备系统入口。
 
 ## 背包与 UI
 
 - 基础数据：`Assets/5_Scripts/5-1_Data/CoreData/Inventory_Data.cs`、`ItemSlot.cs`、`ItemStack.cs`。
-- 槽位 UI：`Assets/5_Scripts/5-3_GamePlay/Inventory/ItemSlot_UI.cs`。
+- 槽位 UI：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`。
 - 背包 UI：`Inventory_UI.cs`。
 - 快捷栏：`Inventory_HotBar.cs`。
 - 手柄基础入口：B 打开背包、十字键上打开装备、下打开手工制作、左右独立切换快捷栏；快捷栏动作不得复用 `CtrlMouse` 相机缩放。
@@ -30,14 +30,14 @@ disable-model-invocation: false
 - 初始库存 SO：`Assets/4_ScriptObjects/4-6_InventoryInit/`。
 - 背包面板 Prefab：`Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Bag.prefab`；`整理` Button 必须预制，`InventorySortButton` 只负责查找、绑定和调用 `SortDefault()`。
 - 槽位 Prefab：`Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Slot.prefab`；制作产物预览必须预制 `Crafting Output Ghost` 与 `Crafting Output Reveal` 两个 Image，`CraftingOutputPreview` 只更新 Sprite、颜色、显隐和填充量。
-- 上述视觉节点由 `Assets/Editor/FlatWorld/RuntimeUIPrefabBuilder.cs` 的菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI` 固化；运行时禁止缺失时补建视觉节点。
+- 上述视觉节点由 `Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs` 的菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI` 固化；运行时禁止缺失时补建视觉节点。
 
 ## 制作与装备
 
 - 配方权威目录：`Assets/StreamingAssets/GameConfig/Recipes/`；`recipe-manifest.json` 按顺序声明 8 个业务分包，启动时聚合后转换为 `RuntimeRecipe`。
 - 固定分包：`crafting/{survival,tools,weapons,buildings}.json`、`cooking/{basic_food,advanced_food}.json`、`smelting/{ores,alloys}.json`。
 - `crafting/buildings.json` 包含 `core:矿坑入口`：8 个 `Ore_Stone` + 中心 `Log`，产出 `MineEntrance_Summoner`。
-- 配方 Excel：`Assets/GameConfig/Excel/RecipeConfig.xlsx`；`Recipes.Package` 决定配方导出分包，编辑器同步入口为 `Assets/Editor/FlatWorld/ExcelConfig/RecipeExcelSyncService.cs`。
+- 配方 JSON 是唯一编辑源；直接维护 manifest 声明的 8 个业务分包。建筑生成器需变更产物 ID 时通过 `Assets/Editor/FlatWorld/ContentTools/Items/RecipeJsonEditorService.cs` 定向修改对应 JSON。
 - 运行时模型与校验：`RecipeDto.cs`、`RuntimeRecipe.cs`、`RecipeRuntimeFactory.cs`、`RecipeCatalogLoader.cs`。
 - 制作公共核心：`CraftingRecipeMatcher.cs` 负责有序/无序、ExactItem/Tag、镜像和紧凑网格匹配并返回精确槽位消费计划；`CraftingTransaction.cs` 在深拷贝快照上统一扣料和放置全部产物；`CraftingService.cs` 统一预览、提交、动作与成功事件；`CraftingResult.cs` 提供失败原因和入口能力。
 - 动作执行：JSON 只保存 `action.type + 参数`，由 `RecipeActionRunner` 的 C# Handler 执行；当前支持 `change_durability`。
@@ -50,22 +50,22 @@ disable-model-invocation: false
 - 制作容量预检禁止直接依赖 `Inventory_Data.TryAddItem(..., false)`，因为其成功语义允许部分容纳；多输出必须在同一快照中全部放置成功后才可提交，失败不得扣料或留下部分产物。
 - 配方动作成功后再完成库存通知并发布 `GameplayProgressEvents.CraftSucceeded(actor, stableId)`；动作异常必须恢复事务快照，进度事件监听器异常只记录日志，不反向撤销已完成制作。
 - 玩家背包只在自己的 Bag 最终打开后发布 `InventoryOpened`；`ItemPicker` 只在 `TryAddItem` 成功并完成状态更新后发布 `PickupSucceeded`。箱子、工作台、非玩家容器与失败入包不得推进教程。
-- 装备定义：`Assets/5_Scripts/5-3_GamePlay/Equipment/Equipment_SO.cs`。
-- 装备效果实例：`Assets/5_Scripts/5-3_GamePlay/Equipment/EquipmentInstance*.cs`。
-- 装备存储模块：`Assets/5_Scripts/5-3_GamePlay/Equipment/Module_Equipment_Store.cs`。
+- 装备定义：`Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Equipment_SO.cs`。
+- 装备效果实例：`Assets/5_Scripts/5-3_GamePlay/Items/Equipment/EquipmentInstance*.cs`。
+- 装备存储模块：`Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Module_Equipment_Store.cs`。
 
 ## 食物与农业
 
-- 食物模块：`Assets/5_Scripts/5-3_GamePlay/Item/Mod_Food.cs`。
+- 食物模块：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Mod_Food.cs`。
 - 首种权威作物固定为 `Seed_Apple → AppleTree → Apple + Seed_Apple`：`Seed_Apple` 是唯一播种入口，`Apple` 只作为食物；成熟交互固定返还 1 颗种子，食物产量可受世界掉落倍率影响，因此循环可持续但不会指数增殖。
 - `Mod_Seed` 只负责耕地/水肥/同格占用校验、扣除种子和直接创建 `AppleTree`；旧存档中的落地种子会把原进度迁移给 `Mod_Grow`，不再自行结算成长。
 - `Mod_Grow` 是唯一成长状态机；扩展实现位于 `Mod_Grow.AuthoritativeCrop.cs`，在单点公式中各乘一次耕地、水肥、天气和 `CropGrowthMultiplier`，保存种植格、进度、阶段、成熟、已收获、反馈状态和自然环境初始化状态。
 - `Mod_PlantGrow` 已标记废弃，仅保留旧 MOD 二进制/脚本兼容；本体 Prefab 禁止挂载。`Mod_Production` 不再挂在 `AppleTree`，成熟产物只能通过 `Mod_Grow` 的一次性交互收获生成。
 - `Item.ModuleLoad()` 会在自动修复模块前迁移旧农业数据：Apple 删除旧 `Mod_Seed` 数据，AppleTree 删除旧“生产模块”数据；禁止移除此迁移，否则旧区块重载会重新挂回第二播种入口或无限生产。
-- 耕地补给：`Assets/5_Scripts/5-3_GamePlay/Food/Mod_FarmlandSupply.cs`；当前挂在 `Fertilizer.prefab`，单次补充水分与肥力，资源已满或目标不是耕地时不消耗。
+- 耕地补给：`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_FarmlandSupply.cs`；当前挂在 `Fertilizer.prefab`，单次补充水分与肥力，资源已满或目标不是耕地时不消耗。
 - 缺水、缺肥、耕地丢失、恢复成长、成熟和已收获只在状态变化或交互时反馈，禁止低频 Tick 持续刷日志。
 - 自定义难度统一入口：`Mod_Food.ConsumeNutrition()` 处理饥饿消耗，`Mod_Stamina.AddStamina()` 按正负值处理耐力恢复/消耗，`Mod_Grow` 处理作物生长，`BerryBush` 处理野生浆果成长与产量，`Mod_Fuel.ConsumeFuel()` 处理燃料消耗。
-- 农具/杂草表现：`Assets/5_Scripts/5-3_GamePlay/Food/`。
+- 农具/杂草表现：`Assets/5_Scripts/5-3_GamePlay/Items/Food/`。
 - 耕地数据：`Assets/5_Scripts/5-1_Data/TileData/TileData_Farmland.cs`。
 - 烹饪 SO：`Assets/4_ScriptObjects/4-5_Cook/`。
 
@@ -77,19 +77,22 @@ disable-model-invocation: false
 - `Assets/2_Prefabs/Plant/`
 - `Assets/2_Prefabs/Seed/`
 - `Assets/2_Prefabs/Tools/`
-- 表格配置：`Assets/GameConfig/Excel/`；配方表为 `RecipeConfig.xlsx`，保存后会校验并按 `Package` 导出多个 JSON。
+- 通用手持物/武器 Animator：`Assets/8_Animations/Item/Weapon/Weapon_Uni.controller`；动画状态名固定为 `Idle_0`、`Attack_1`、`Attack_2`，与物品 JSON 和 Prefab 的 `Mod_Weapon_AnimationAction` 配置一致。
+- 旧 `Assets/GameConfig/` Excel/Legacy 配置与自动同步工具链已移除；禁止恢复 Excel→Prefab 或 Excel→JSON 双重真源。
 
 ## 易误判点
 
-- `Assets/5_Scripts/5-3_GamePlay/Equipment/Module_Equipment.cs` 已废弃，优先使用 `Mod_Equipment.cs`。
+- `Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Module_Equipment.cs` 已废弃，优先使用 `Mod_Equipment.cs`。
 - 遗迹容器内容不使用空壳 `Mod_Box`，由 `StructureContainerContents` 配置并在结构物件 `Load()` 后写入 `Mod_Inventory`；固定槽位配置会完整覆盖目标库存，空配置可表示空箱子。
 - Inventory 持有数据和 UI 生命周期，但实际运行更新仍受 Item/Module Tick 调度影响。
-- 配方不再依赖 `CraftingRecipe` Addressables 标签；修改 Excel 后检查清单、对应分包 JSON、物品 ID 与 `GameRes` 配方字典。
+- 配方不再依赖 `CraftingRecipe` Addressables 标签；修改 JSON 后检查清单、对应分包、物品 ID 与 `GameRes` 配方字典。
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-07：将旧 `Assets/9_Anim` 的通用武器 Animator 与三段动画归并到 `Assets/8_Animations/Item/Weapon/`，保留 GUID 和 `Idle_0/Attack_1/Attack_2` 状态契约。
+- 2026-08-07：删除配方与 Prefab 的 Excel 同步链，配方以 manifest + 8 个 JSON 分包为唯一真源；内容校验只验证 JSON，建筑生成器通过 `RecipeJsonEditorService` 定向重连产物 ID。
 - 2026-08-05：`Inventory.OnValidate()` 在动态组件或空序列化数据场景下先创建 `Inventory_Data`，避免快捷栏及编辑器校验因空数据抛异常。
 - 2026-08-04：快捷栏新建/旧版数据默认选中 1 号位，合法存档仍恢复原选中位；初次创建选框时直接对齐槽位，后续切换继续保留不改父节点的移动动画。
 - 2026-08-03：配方分包启动加载改用共享 StreamingAssets 文本协程；桌面/编辑器读取文件，Android/WebGL 通过 `UnityWebRequest` 读取包内清单与分包，保持先聚合校验再统一注册。
@@ -97,11 +100,7 @@ disable-model-invocation: false
 - 2026-07-31：背包、装备、手工制作和快捷栏接入稳定手柄 Action；移除手工制作硬编码 `Input.GetKeyDown(H)`，模态库存面板增加手柄焦点与可嵌套玩法输入锁。
 - 2026-07-30：完成首种苹果作物闭环；`Mod_Seed` 收敛为播种入口，`Mod_Grow` 统一水肥/天气/难度成长、阶段、成熟、一次性收获与存档，AppleTree 移除无限 `Mod_Production`，Apple 移除播种模块，Fertilizer 接入水肥补给。
 - 2026-07-30：遗迹生成支持按真实库存槽位配置容器物品；运行时复用 `Item.Get_NewItemData()` 初始化完整模块数据，覆盖内部 GUID 为结构种子派生值，并通过既有 `Inventory_ModuleData` 自然进入存档基线。
-- 2026-07-29：统一内容校验器会读取配方 manifest 和全部启用分包，校验配方结构、跨分包重复 ID、输入/输出 `itemId` 引用及配方 Excel；缺失物品 ID 在构建前作为错误报告。
-- 2026-07-29：背包整理按钮和制作产物 Ghost/Reveal 图层固化进 UI Prefab；运行时脚本删除视觉兜底创建，只绑定预制节点。
-- 2026-07-29：自定义难度接入饥饿、耐力消耗/恢复、作物生长、熔炼速度、燃料消耗、制作产量与植物产出数量；所有入口统一读取 `GameDifficultyService`。
-- 2026-07-29：确认 8 个业务分包与旧 `Assets/StreamingAssets/GameConfig/recipes.json` 的 38 个配方 ID 完全一致后，删除旧单文件及“将单 JSON 迁移为业务分包”一次性编辑器入口；运行时与 Excel 只使用清单和分包。
-- 2026-07-29：四套制作算法收敛到 `CraftingRecipeMatcher + CraftingTransaction + CraftingService + CraftingResult`；统一镜像/Tag/紧凑网格匹配、组合容量预检、原子扣料与多输出，并修复 `Mod_HandMade.GetDefaultTargetInventory()`。
+- 2026-07-29：统一内容校验器会读取配方 manifest 和全部启用分包，校验配方结构、跨分包重复 ID 及输入/输出 `itemId` 引用；缺失物品 ID 在构建前作为错误报告。
 
 ## 修改后自动测试
 
@@ -117,4 +116,4 @@ disable-model-invocation: false
 
 ## 修改后维护本 Skill
 
-移动 Inventory/Equipment/Food Prefab，修改配方 JSON/Excel/DTO/Handler、槽位模型、配方注册、装备入口、农业 TileData 或控件命名后，必须更新本 Skill。
+移动 Inventory/Equipment/Food Prefab，修改配方 JSON/DTO/Handler、槽位模型、配方注册、装备入口、农业 TileData 或控件命名后，必须更新本 Skill。

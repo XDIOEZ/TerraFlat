@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 5
+  generationSignature: 6
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:

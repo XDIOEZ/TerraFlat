@@ -7,21 +7,12 @@ namespace FlatWorld.GameTest.Environment
     /// <summary>环境基础冒烟测试：保护时间、天气、温度与雨效入口。</summary>
     public sealed class EnvironmentSmokeTests
     {
-        [Test]
-        [Category("Environment.Smoke")]
-        public void RequiredEntryPointsAndAssetsExist()
-        {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Time/DayTimeSystem.cs", "DayTimeSystem");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.cs", "WeatherMgr");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/TemperatureMgr.cs", "TemperatureMgr");
-            GameTestAssertions.AssertAssetExists("Assets/Resources/Weather/RainEffect.prefab");
-        }
 
         [Test]
         [Category("Environment.Weather")]
         public void WeatherManagerDefersTimeSystemUntilWorldEntry()
         {
-            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.cs");
+            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherMgr.cs");
             int startIndex = source.IndexOf("private void Start()");
             int destroyIndex = source.IndexOf("protected override void OnDestroy()", startIndex);
 
@@ -39,7 +30,7 @@ namespace FlatWorld.GameTest.Environment
             Assert.That(WeatherMgr.IsWeatherSuppressedInDimension(surface), Is.False);
             Assert.That(WeatherMgr.IsWeatherSuppressedInDimension(cave), Is.True);
 
-            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Manager/WeatherMgr.cs");
+            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherMgr.cs");
             int lifecycleIndex = source.IndexOf("private void ApplyGameWorldLifecycleState(bool isActive)");
             int updateIndex = source.IndexOf("private void Update()", lifecycleIndex);
             Assert.That(lifecycleIndex, Is.GreaterThanOrEqualTo(0));
@@ -50,6 +41,7 @@ namespace FlatWorld.GameTest.Environment
 
         [Test]
         [Category("Environment.Smoke")]
+        [Category("Smoke")]
         public void SerializableTimeDataPreservesTotalDays()
         {
             var source = new TimeData

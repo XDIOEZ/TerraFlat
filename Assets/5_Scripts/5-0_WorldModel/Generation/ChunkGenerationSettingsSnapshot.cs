@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace FlatWorld.WorldModel
 {
+    /// <summary>要生成普通地表，还是地下洞穴。</summary>
     public enum ChunkGenerationMode
     {
         Surface,
@@ -10,15 +11,16 @@ namespace FlatWorld.WorldModel
     }
 
     /// <summary>
-    /// Strongly typed, engine-free generation configuration captured on the Unity main thread.
-    /// The source dictionaries remain available for mod-defined stages; built-in stages never
-    /// need to inspect a ScriptableObject or another Unity object.
+    /// 把 Unity 面板里的零散设置整理成一份后台生成器能直接使用的配置。
+    /// 这里会补上缺省值并限制不合理的数字。整理完以后，后台线程就不用再碰 Unity 对象。
+    /// 原始设置字典仍然保留，方便 MOD 读取自己添加的参数。
     /// </summary>
     public sealed class ChunkGenerationSettingsSnapshot
     {
         internal ChunkGenerationSettingsSnapshot(IReadOnlyDictionary<string, double> numbers,
             IReadOnlyDictionary<string, string> texts)
         {
+            // 所有默认值和数字范围都在这里一次处理好，后面生成每个格子时就不用反复检查。
             Mode = GetText(texts, "terrain.mode", "surface").Equals("cave",
                 StringComparison.OrdinalIgnoreCase) ? ChunkGenerationMode.Cave : ChunkGenerationMode.Surface;
             GroundTileId = GetInt(numbers, "terrain.groundTileId", 1);
@@ -56,7 +58,9 @@ namespace FlatWorld.WorldModel
                 "navigation.defaultCost", 1), 1, short.MaxValue);
         }
 
+        /// <summary>生成地表还是洞穴。</summary>
         public ChunkGenerationMode Mode { get; }
+        // 下面这些都是地块的数字编号，不直接保存 Unity 里的 Tile 图片资源。
         public int GroundTileId { get; }
         public int FreshWaterTileId { get; }
         public int SaltWaterTileId { get; }
@@ -65,29 +69,43 @@ namespace FlatWorld.WorldModel
         public int SnowTileId { get; }
         public int CaveFloorTileId { get; }
         public int CaveWallTileId { get; }
+        /// <summary>高度低于这个数时生成海洋。</summary>
         public double SeaLevel { get; }
+        /// <summary>高于海面但低于这个数时生成沙滩。</summary>
         public double BeachLevel { get; }
+        /// <summary>温度低于这个数时可以生成雪地。</summary>
         public double SnowTemperature { get; }
+        /// <summary>控制山地变化有多快；数值越小，大片地形通常越平缓。</summary>
         public double TerrainScale { get; }
+        /// <summary>控制温度和降水区域变化有多快。</summary>
         public double ClimateScale { get; }
+        /// <summary>高度随机图叠加多少层细节；越多越细，但计算也更多。</summary>
         public int HeightOctaves { get; }
+        /// <summary>气候随机图叠加多少层细节。</summary>
         public int ClimateOctaves { get; }
+        /// <summary>地表要不要生成河流。</summary>
         public bool RiverEnabled { get; }
         public double RiverScale { get; }
         public double RiverWidth { get; }
         public double RiverThreshold { get; }
+        /// <summary>合适的地面上长出草的基本概率。</summary>
         public double GrassDensity { get; }
+        /// <summary>是否生成遗迹等结构；同样的种子会得到同样的位置。</summary>
         public bool StructureEnabled { get; }
         public int StructureRegionSize { get; }
         public double StructureChance { get; }
         public int StructureRadius { get; }
         public int StructureGroundTileId { get; }
+        /// <summary>要生成哪种资源；空字符串表示不生成。</summary>
         public string ResourceSpawnTypeId { get; }
         public double ResourceDensity { get; }
         public int ResourceMinSpacing { get; }
+        /// <summary>洞穴随机值高于这个数时挖成空地，否则保留岩壁。</summary>
         public double CaveOpenThreshold { get; }
+        /// <summary>普通地面默认有多难走；数字越大，寻路越不喜欢走。</summary>
         public short DefaultNavigationCost { get; }
 
+        // 这些小方法只从当前这份设置里取值，不会偷偷读取全局设置。
         private static int GetInt(IReadOnlyDictionary<string, double> values, string key, int fallback) =>
             values.TryGetValue(key, out double value) ? (int)value : fallback;
 

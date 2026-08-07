@@ -12,27 +12,27 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/AI/AI_Base.cs`：通用状态机、计时器、感知刷新、模块绑定。
-2. `Assets/5_Scripts/5-3_GamePlay/AI/AI_StateMachineRunner.cs`：评估、切换、Tick 流程。
-3. `Assets/5_Scripts/5-3_GamePlay/AI/Mod_ItemDetector.cs`：感知请求与进入/离开集合。
-4. `Assets/5_Scripts/5-3_GamePlay/Manager/ItemMgr.cs`：空间哈希、批量感知 Job、Item 注册。
+1. `Assets/5_Scripts/5-3_GamePlay/Entities/AI/AI_Base.cs`：通用状态机、计时器、感知刷新、模块绑定。
+2. `Assets/5_Scripts/5-3_GamePlay/Entities/AI/AI_StateMachineRunner.cs`：评估、切换、Tick 流程。
+3. `Assets/5_Scripts/5-3_GamePlay/Entities/AI/Mod_ItemDetector.cs`：感知请求与进入/离开集合。
+4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/ItemMgr.cs`：空间哈希、批量感知 Job、Item 注册。
 
 ## 具体实现
 
-- 攻击控制：`Assets/5_Scripts/5-3_GamePlay/AI/AI_AttackController.cs`。
-- 闲逛工具：`Assets/5_Scripts/5-3_GamePlay/AI/AI_WanderUtility.cs`。
+- 攻击控制：`Assets/5_Scripts/5-3_GamePlay/Entities/AI/AI_AttackController.cs`。
+- 闲逛工具：`Assets/5_Scripts/5-3_GamePlay/Entities/AI/AI_WanderUtility.cs`。
 - 鸡：`AI_Chicken.cs`。
 - 野猪：`AI_WildBoar.cs`。
 - 狼：`AI_Wolf.cs`。
 - Ghost：`AI_Ghost.cs`。
-- AI 移动：`Assets/5_Scripts/5-3_GamePlay/Move/Mover_AI.cs`。
+- AI 移动：`Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mover_AI.cs`。
 - 生物 Prefab：`Assets/2_Prefabs/Entity_AI/`。
 
 ## 生成系统
 
-- 管理器：`Assets/5_Scripts/5-3_GamePlay/Manager/MonsterSpawnerManager.cs`。
-- 配置类型：`Assets/5_Scripts/5-3_GamePlay/Spawner/SpawnerConfig.cs`。
-- 存档：`Assets/5_Scripts/5-3_GamePlay/Map/Data/GameSaveData.MonsterSpawner.cs`、`MonsterSpawnerSaveData.cs`。
+- 管理器：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/MonsterSpawnerManager.cs`。
+- 配置类型：`Assets/5_Scripts/5-3_GamePlay/Entities/Spawner/SpawnerConfig.cs`。
+- 存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData.MonsterSpawner.cs`、`MonsterSpawnerSaveData.cs`。
 - 配置资产：`Assets/Resources/Config/SpawnerConfig*.asset`。
 - 生成组：`SpawnerConfig.asset` 仅含 Chicken/WildBoar 资源动物；`SpawnerConfig_Wolves.asset` 仅含 Wolf 普通敌人；`SpawnerConfig_Ghost.asset` 为里程碑成长的夜间敌人。
 - `SpawnEntry.Probability` 是归一化相对权重，并带生态成本与物种存活上限；配置同时提供组上限、玩家周边上限、预算恢复、群系、局部光照和远距离回收规则。
@@ -57,7 +57,7 @@ Mod_ItemDetector 提交请求
 
 ## 新旧 AI 边界
 
-- 新 AI：`Assets/5_Scripts/5-3_GamePlay/AI/` 的通用状态机体系。
+- 新 AI：`Assets/5_Scripts/5-3_GamePlay/Entities/AI/` 的通用状态机体系。
 - 旧 Kiwi 行为树：`Assets/4_ScriptObjects/4-7_BehaviourTrees/`、`Assets/TheKiwiCoder/`。
 - 修改前必须确认目标 Prefab 实际挂载状态机模块还是旧行为树。
 

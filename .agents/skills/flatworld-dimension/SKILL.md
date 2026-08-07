@@ -12,13 +12,13 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Dimension/WorldAddress.cs`：星球与维度的稳定世界地址。
-2. `Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionManager.cs`：维度激活、动态 Scene、切换、失败恢复与生成配置。
-3. `Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionCatalogSO.cs`：维度定义、入口目标、环境覆盖和矿洞资源规则。
-4. `Assets/5_Scripts/5-3_GamePlay/Dimension/DimensionTravelProgressStore.cs`：玩家每维度最后位置与矿坑入口/出口锚点。
-5. `Assets/5_Scripts/5-3_GamePlay/Dimension/ChunkGenerator_Cave.cs`：地下矿洞地面与矿脉生成。
-6. `Assets/5_Scripts/5-3_GamePlay/Dimension/CaveLayoutSampler.cs`：跨 Chunk 连续的房间、弯曲隧道、入口室和矿床强度采样。
-7. `Assets/5_Scripts/5-3_GamePlay/Manager/GameManager.Dimension.cs`：复用世界加载 UI 与生命周期事件的桥接入口。
+1. `Assets/5_Scripts/5-3_GamePlay/World/Dimension/WorldAddress.cs`：星球与维度的稳定世界地址。
+2. `Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionManager.cs`：维度激活、动态 Scene、切换、失败恢复与生成配置。
+3. `Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionCatalogSO.cs`：维度定义、入口目标、环境覆盖和矿洞资源规则。
+4. `Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionTravelProgressStore.cs`：玩家每维度最后位置与矿坑入口/出口锚点。
+5. `Assets/5_Scripts/5-3_GamePlay/World/Dimension/ChunkGenerator_Cave.cs`：地下矿洞地面与矿脉生成。
+6. `Assets/5_Scripts/5-3_GamePlay/World/Dimension/CaveLayoutSampler.cs`：跨 Chunk 连续的房间、弯曲隧道、入口室和矿床强度采样。
+7. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.Dimension.cs`：复用世界加载 UI 与生命周期事件的桥接入口。
 
 ## 世界地址契约
 
@@ -111,7 +111,7 @@ DimensionPortal.Interact
 
 ## 修改后验证
 
-- 基础测试：`Assets/GameTest/Dimension/DimensionSmokeTests.cs`；分类：`Dimension.Smoke`。
+- 基础测试：`Assets/GameTest/Dimension/DimensionLifecycleTests.cs`；分类：`Dimension.Smoke`。
 - 当前覆盖世界键地表兼容/往返、默认目录与矿洞环境配置、洞穴布局确定性、开放/封闭格混合、阻挡层路由、岩壁可走性、正式入口/召唤器/出口角色、锚点 JSON 往返、矿坑配方，以及五种矿物只能掉落 `Ore_*`。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Dimension.Smoke`；无需视觉模型或测试工具卡片。涉及 Tile Effect 时追加 `--category Dimension.TileEffects`；只有维度场景最终观感变化才做定向截图。
 - 手动 Play Mode 建议验证：地表入口交互、矿洞大量生成矿物、开采掉落、返回地表、两边位置恢复、退出重进后的 Chunk 差量。
@@ -136,4 +136,4 @@ DimensionPortal.Interact
 ## 有限世界继承契约（2026-08-06）
 
 - `EnsureWorldData` 从地表深克隆新维度世界时必须继承 `PlanetData.TopologyMode`、`Radius` 和 `ChunkSize`，只清空维度独立的地图字典与环境运行态。
-- 旧 Infinite 地表克隆出的维度仍为 Infinite；覆盖位于 `WorldTopologyDimensionSmokeTests`（`Dimension.Smoke`）。
+- 旧 Infinite 地表克隆兼容不再属于精简 Smoke 集合；修改拓扑迁移逻辑时应补跑对应专项测试。

@@ -8,6 +8,7 @@ namespace FlatWorld.GameTest.Dimension
     {
         [UnityTest]
         [Category("Dimension.Smoke")]
+        [Category("Smoke")]
         public IEnumerator FastPlayModeCreatesDimensionManager()
         {
             yield return null;

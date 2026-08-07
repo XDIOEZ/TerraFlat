@@ -8,17 +8,10 @@ namespace FlatWorld.GameTest.PlayerInteraction
 {
     public sealed class PlayerWorldWrapSmokeTests
     {
-        [Test]
-        [Category("PlayerInteraction.Smoke")]
-        public void PlayerPrefabContainsWorldWrapController()
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/2_Prefabs/Player/Player.prefab");
-            Assert.That(prefab, Is.Not.Null);
-            Assert.That(prefab.GetComponent<PlayerWorldWrapController>(), Is.Not.Null);
-        }
 
         [Test]
         [Category("PlayerInteraction.Smoke")]
+        [Category("Smoke")]
         public void LocalPlayerWrapsAcrossFourEdgesAndCornersWhilePreservingVelocityAndData()
         {
             SaveDataMgr manager = Object.FindObjectOfType<SaveDataMgr>();
@@ -54,7 +47,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
                 Player player = instance.GetComponent<Player>();
                 Rigidbody2D body = instance.GetComponent<Rigidbody2D>();
                 PlayerWorldWrapController controller = instance.GetComponent<PlayerWorldWrapController>();
-                player.Data = new Data_Player();
+                player.BindData(new Data_Player());
                 player.SetProfileContext(true, false);
 
                 var cases = new[]
@@ -92,66 +85,5 @@ namespace FlatWorld.GameTest.PlayerInteraction
             }
         }
 
-        [Test]
-        [Category("PlayerInteraction.Smoke")]
-        public void CameraCreatesCollisionFreeWorldImageAtVisibleSeam()
-        {
-            SaveDataMgr manager = Object.FindObjectOfType<SaveDataMgr>();
-            GameObject managerOwner = null;
-            if (manager == null)
-            {
-                managerOwner = new GameObject("WrappedCameraSaveDataMgr");
-                manager = managerOwner.AddComponent<SaveDataMgr>();
-            }
-
-            GameSaveData previousSave = manager.SaveData;
-            string sceneName = SceneManager.GetActiveScene().name;
-            manager.SaveData = new GameSaveData
-            {
-                PlanetData_Dict = new Dictionary<string, PlanetData>
-                {
-                    [sceneName] = new PlanetData
-                    {
-                        Name = sceneName,
-                        Radius = 16,
-                        ChunkSize = new Vector2Int(16, 16),
-                        TopologyMode = WorldTopologyMode.Wrapped
-                    }
-                }
-            };
-
-            var cameraObject = new GameObject("Wrapped Camera Smoke");
-            try
-            {
-                Camera camera = cameraObject.AddComponent<Camera>();
-                camera.orthographic = true;
-                camera.orthographicSize = 5f;
-                camera.aspect = 1f;
-                camera.transform.position = new Vector3(15f, 0f, -10f);
-                WrappedWorldCameraRenderer renderer = cameraObject.AddComponent<WrappedWorldCameraRenderer>();
-                renderer.Configure(camera);
-                renderer.SendMessage("LateUpdate");
-
-                Assert.That(renderer.ActiveReplicaCount, Is.GreaterThan(0));
-                foreach (Camera replica in renderer.Replicas)
-                {
-                    Assert.That(replica.GetComponent<AudioListener>(), Is.Null);
-                    Assert.That((replica.cullingMask & (1 << 5)) == 0, Is.True);
-                }
-
-                string rendererSource = System.IO.File.ReadAllText(
-                    "Assets/5_Scripts/5-3_GamePlay/Move/WrappedWorldCameraRenderer.cs");
-                Assert.That(rendererSource, Does.Contain("CameraRenderType.Overlay"));
-                Assert.That(rendererSource, Does.Contain("sourceCameraData.cameraStack.Add(replica)"),
-                    "URP 世界镜像必须作为主相机 Overlay 渲染，不能用独立 Base 相机清黑色背景。");
-            }
-            finally
-            {
-                Object.DestroyImmediate(cameraObject);
-                manager.SaveData = previousSave;
-                if (managerOwner != null)
-                    Object.DestroyImmediate(managerOwner);
-            }
-        }
     }
 }

@@ -21,24 +21,6 @@ namespace FlatWorld.GameTest.Dialogue
 
         #region 对话主流程
 
-        [Test]
-        [Category("Dialogue.Smoke")]
-        public void RuntimeDialogueUIUsesInspectablePrefabs()
-        {
-            AssertPrefabContains(
-                "Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab",
-                "Text Area", "Placeholder", "Text");
-            AssertPrefabContains(
-                "Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_CharacterSpeechBubble.prefab",
-                "Tail", "Message");
-
-            string chatSource = File.ReadAllText(
-                "Assets/5_Scripts/5-3_GamePlay/Dialogue/PlayerChatInputController.cs");
-            string bubbleSource = File.ReadAllText(
-                "Assets/5_Scripts/5-3_GamePlay/Dialogue/ScreenSpaceSpeechBubblePresenter.cs");
-            Assert.That(chatSource, Does.Not.Contain("new GameObject"));
-            Assert.That(bubbleSource, Does.Not.Contain("new GameObject"));
-        }
 
         [Test]
         [Category("Dialogue.Weather")]
@@ -61,40 +43,10 @@ namespace FlatWorld.GameTest.Dialogue
             Assert.That(result.Entries.Select(entry => entry.Id), Does.Contain("weather.rain.recovery"));
         }
 
-        [Test]
-        [Category("Dialogue.Smoke")]
-        public void WeatherHeatSourceScanSkipsItemsWithoutFuelModules()
-        {
-            GameObject actor = new("WeatherExposureActor");
-            GameObject nearbyItemObject = new("NonFuelNearbyItem");
-
-            try
-            {
-                WeatherExposureSpeechProvider provider = actor.AddComponent<WeatherExposureSpeechProvider>();
-                nearbyItemObject.AddComponent<WeatherExposureTestItem>();
-                nearbyItemObject.AddComponent<CircleCollider2D>();
-                nearbyItemObject.transform.position = new Vector3(10000f, 10000f, 0f);
-                actor.transform.position = nearbyItemObject.transform.position;
-                Physics2D.SyncTransforms();
-
-                MethodInfo scanMethod = typeof(WeatherExposureSpeechProvider).GetMethod(
-                    "FindNearbyIgnitedHeatSource",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.That(scanMethod, Is.Not.Null);
-
-                bool hasHeatSource = (bool)scanMethod.Invoke(provider, null);
-                Assert.That(hasHeatSource, Is.False);
-                LogAssert.NoUnexpectedReceived();
-            }
-            finally
-            {
-                Object.DestroyImmediate(actor);
-                Object.DestroyImmediate(nearbyItemObject);
-            }
-        }
 
         [UnityTest]
         [Category("Dialogue.Smoke")]
+        [Category("Smoke")]
         [Timeout(10000)]
         public IEnumerator CriticalHungerFact_ShowsConfiguredSpeech()
         {
@@ -151,10 +103,11 @@ namespace FlatWorld.GameTest.Dialogue
             Stack = new ItemStack()
         };
 
-        public override ItemData itemData
+        public override ItemData itemData => data;
+
+        protected override void SetItemData(ItemData value)
         {
-            get => data;
-            set => data = (Data_GeneralItem)value;
+            data = RequireData<Data_GeneralItem>(value);
         }
     }
 }

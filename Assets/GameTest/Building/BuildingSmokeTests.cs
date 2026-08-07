@@ -8,10 +8,11 @@ namespace FlatWorld.GameTest.Building
     {
         [Test]
         [Category("Building.Smoke")]
+        [Category("Smoke")]
         public void RequiredEntryPointsAndAssetsExist()
         {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Building/Mod_Building.cs", "Mod_Building");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Building/BuildingOccupancyRegistry.cs", "BuildingOccupancyRegistry");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs", "Mod_Building");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingOccupancyRegistry.cs", "BuildingOccupancyRegistry");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/BuildingShadow.prefab");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/MineEntrance.prefab");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab");

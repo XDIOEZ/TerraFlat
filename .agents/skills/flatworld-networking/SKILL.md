@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 联机系统定位
 
-> 最后核对：2026-08-05。修改时严格区分本地权威实体与远程视觉副本。
+> 最后核对：2026-08-07。修改时严格区分本地权威实体与远程视觉副本。
 
 ## 修改前先读
 
@@ -31,10 +31,10 @@ disable-model-invocation: false
 - Chunk 流送：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkChunkStreamingCoordinator.cs`。
 - Item 状态：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkItemStateCoordinator.cs`。
 - 天气状态：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkWeatherStateCoordinator.cs`。
-- Item 序列化桥：`Assets/5_Scripts/5-3_GamePlay/Item/ItemNetworkStateSerialization.cs`。
+- Item 序列化桥：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/ItemNetworkStateSerialization.cs`。
 - 玩家视觉：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkPlayerVisualState.cs`。
 - 消息定义：`Assets/5_Scripts/5-4_Networking/Gameplay/NetworkGameMessages.cs`。
-- 当前协议：`NetworkGameplayProtocol.CurrentVersion=9`、`NetworkMapGenerationProtocol.CurrentVersion=2`。
+- 当前协议：`NetworkGameplayProtocol.CurrentVersion=10`、`NetworkMapGenerationProtocol.CurrentVersion=4`。
 
 ## 联机 UI
 
@@ -42,16 +42,14 @@ disable-model-invocation: false
 - UI 状态：`NetworkModeUIController.UI.cs`。
 - Prefab 加载：`NetworkModePanelView.cs`，实际类型为 `NetworkModeUIController` partial；运行时只调用 `GameRes.InstantiatePrefab("UI_NetworkMode")`，不得创建视觉节点。
 - 联机面板 Prefab：`Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NetworkMode.prefab`；位于 Addressables 的 `Assets/2_Prefabs` 文件夹条目下，由 `GameRes` 的 `Prefab` 标签预加载。
-- Prefab 编辑器重建入口：`Assets/Editor/FlatWorld/NetworkModePrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Network Mode UI`；玩家可直接打开 Prefab 检查和编辑布局。
+- Prefab 编辑器重建入口：`Assets/Editor/FlatWorld/PrefabBuilders/UI/NetworkModePrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Network Mode UI`；玩家可直接打开 Prefab 检查和编辑布局。
 - 穿透端点解析：`Core/NetworkConnectionEndpoint.cs`；客户端地址支持域名、IPv4、IPv6、`域名:端口`、`kcp://` 与 `udp://`，地址内端口优先于 UI 默认端口。
 - 当前传输为 KCP/UDP；内网穿透服务必须建立 UDP 隧道，TCP/HTTP 隧道会在连接前被拒绝。
 
 ## 资源与测试
 
 - 网络玩家 Prefab：`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`；根下必须预制名为 `玩家名称` 的 `TextMeshPro`，`NetworkWorldPlayer` 只更新文字与颜色，不得运行时创建名称视觉。
-- 测试脚本：`Assets/5_Scripts/5-4_Networking/Tests/`。
-- 测试 Prefab：`Assets/2_Prefabs/NetworkingTest/`。
-- 测试场景：`Assets/3_Scenes/NetworkTest.unity`。
+- 自动化测试：`Assets/GameTest/Networking/`，统一使用正式联机入口与资源，不再维护独立测试场景和测试 Prefab。
 
 ## 权威边界
 
@@ -83,6 +81,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-07：删除已被正式游戏联机链路和统一 GameTest 取代的早期胶囊人双进程测试 Harness、`NetworkTest` 场景与测试 Prefab；正式构建仅保留 `GameStartScene`，联机验证统一归入 `Assets/GameTest/Networking/`。
 - 2026-08-05：Gameplay 协议升到 9，地图生成协议升到 2；快照设置哈希新增三通道噪声、稳定 BiomeId、分阶段管线与结构目录签名，旧协议明确拒绝。
 
 - 2026-07-31：明确维度切换首版仅离线可用，联机会话主动拒绝地表/矿洞迁移；后续需新增完整服务器权威协议后再开放。
@@ -93,15 +92,14 @@ disable-model-invocation: false
 - 2026-07-29：生态生成器接入 `GameNetwork.HasStateAuthority`，离线与 Host/Server 结算，普通客户端只应用权威世界状态。
 - 2026-07-28：网络 Player 创建链增加显式本地档案上下文；远程副本隔离自言自语与新手教程，本地提升通过 `ProfileContextChanged` 恢复。
 - 2026-07-27：联机 UI 使用 `NetworkModeUIController` 三个 partial 文件分离会话、UI 状态和动态视觉树。
-- 2026-07-27：本地导航窗口跟随 owned 玩家；远程副本继续排除出本地 Tick/感知/存档。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；当前基础覆盖网络启动器、正式管理器、天气状态协调器、玩家 Prefab、预制玩家名称节点、联机 UI Prefab、GameRes 实例化约束、网络测试场景入口与 UDP 穿透端点解析/拒绝规则。
-- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；网络测试约定目录：`Assets/GameTest/Networking/`；场景目录：`Assets/GameTest/Scenes/Networking/`；冒烟分类：`Networking.Smoke`。现有独立进程 Harness 位于 `Assets/5_Scripts/5-4_Networking/Tests/`，不得重复实现。
-- 新增 Host/Client、会话、网络玩家、世界快照、Chunk、Item 或建筑同步行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心连接与同步流程变化时同步更新网络测试场景和现有 Harness。
+- 基础测试脚本：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；联机回归统一在正式游戏程序集与正式资源上验证。
+- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；网络测试约定目录：`Assets/GameTest/Networking/`；场景目录：`Assets/GameTest/Scenes/Networking/`；冒烟分类：`Networking.Smoke`。不得重新引入独立胶囊人测试 Harness、专用测试 Prefab 或正式 Build Settings 中的测试场景。
+- 新增 Host/Client、会话、网络玩家、世界快照、Chunk、Item 或建筑同步行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心连接与同步流程变化时同步更新正式场景资源与统一 GameTest。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；端口、临时存档和生成进程必须隔离，测试结束必须关闭测试实例并清理状态。
-- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Networking.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；独立进程 Harness 仍按其原有入口运行。
+- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Networking.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类。
 - 远程 Player 教程/自言自语隔离由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
@@ -111,6 +109,6 @@ disable-model-invocation: false
 
 ## 有限环绕世界协议契约（2026-08-06）
 
-- Gameplay 协议为 `10`，地图生成协议为 `3`；快照和生成设置 hash 必须包含 `TopologyMode`，旧协议必须拒绝。
+- Gameplay 协议为 `10`，地图生成协议为 `4`；快照和生成设置 hash 必须包含 `TopologyMode`，旧协议必须拒绝。
 - 服务端用环面最短位移校验移动步长并发布规范坐标；远程插值也必须取最短环面目标。
 - 多观察者 Chunk 窗口按规范坐标合并去重，销毁距离用最短环面位移；覆盖位于 `Networking.Smoke`。

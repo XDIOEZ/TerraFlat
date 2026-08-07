@@ -13,10 +13,11 @@ namespace FlatWorld.GameTest.ItemModule
             Stack = new ItemStack()
         };
 
-        public override ItemData itemData
+        public override ItemData itemData => data;
+
+        protected override void SetItemData(ItemData value)
         {
-            get => data;
-            set => data = (Data_GeneralItem)value;
+            data = RequireData<Data_GeneralItem>(value);
         }
     }
 

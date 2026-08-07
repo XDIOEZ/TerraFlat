@@ -1,15 +1,39 @@
 ---
 name: flatworld-test-automation
-description: "Use when validating FlatWorld Unity changes, running GameTest categories, checking compilation, or diagnosing automated test failures without screenshots or interactive Unity test-tool calls. Keywords: GameTest, Smoke, run tests, regression, Unity Test Framework, test category."
+description: "Use when validating FlatWorld Unity changes, deciding whether tests are warranted, running GameTest categories, checking compilation, or diagnosing automated test failures without screenshots or interactive Unity test-tool calls. Ordinary cleanup and small changes stop at static checks, compilation, and necessary Console checks; run gameplay/full tests only for system-level major changes or explicit user requests. Keywords: GameTest, Smoke, run tests, regression, Unity Test Framework, test category."
 ---
 
 # FlatWorld 测试自动化
 
 优先执行确定性测试脚本。不要用截图、视觉模型或交互式测试卡片验证编译、资源路径、Prefab 组件、数据、状态机或纯逻辑行为。
 
+## 测试触发门槛
+
+默认不运行 Unity Test Runner、`Runtime.GoldenPath`、多进程联机验证或实机/完整测试。普通整理和小修改只执行静态检查、相关程序集编译与必要的 MCP Console 错误检查。
+
+普通改动包括：
+
+- 文件夹整理、资源或脚本移动/改名，且 GUID、序列化结构和运行行为不变。
+- 文档、注释、格式、命名、编辑器工具布局或局部配置修正。
+- 影响范围明确、可由引用扫描、静态诊断和编译充分验证的小改动。
+
+仅在以下任一条件成立时运行 Test Runner、Golden Path、实机或完整测试：
+
+- 用户明确要求运行测试。
+- 改动属于系统级重大变更，例如启动/世界生命周期、存档格式、网络协议或权威边界、世界生成、核心架构/API、跨系统事务或大规模 Prefab/数据迁移。
+- 改动改变真实运行时玩法主流程，且仅靠静态检查、编译和 Console 无法覆盖关键风险。
+
+各领域 Skill 中列出的测试分类只是满足上述门槛后的候选测试集合，不代表每次修改都自动获准执行。拿不准是否达到门槛时，先完成静态验证并在总结中给出建议，不主动升级到实机或完整测试。
+
 ## 运行测试
 
-1. 从当前领域 Skill 的“修改后自动测试/验证”段选择最小相关分类。
+测试分类保持精简边界：
+
+- `Smoke` 是跨领域精简集合，每个子系统最多保留一个最关键检查；`<Domain>.Smoke` 用于单独运行该领域的同一个检查。
+- `Runtime.GoldenPath` 单独负责真实启动、创建世界、玩家生成、Chunk 流送、保存退出；不得把这条重流程复制进快速 `Smoke`。
+- 不再保留通用的 `<Domain>.Unit` / `<Domain>.Contract` 回归脚本；确有长期价值的专项验证使用已有明确分类，避免重新膨胀全局冒烟。
+
+1. 先确认改动达到“测试触发门槛”，再从当前领域 Skill 的“修改后自动测试/验证”段选择最小相关分类。
 2. 修改了可在真实单机世界执行的运行时玩法时，同时使用 `$flatworld-golden-path`，主动扩展完整流程场景。
 3. 执行：
 
@@ -24,6 +48,9 @@ description: "Use when validating FlatWorld Unity changes, running GameTest cate
 常用调用：
 
 ```powershell
+# 运行精简冒烟：每个子系统一个关键检查
+python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --smoke
+
 # 只检查全部 C# 的 UTF-8 编码与非法替换字符
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --check-encoding
 
@@ -41,7 +68,7 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py `
 
 # 精确运行一个测试
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py `
-  --test FlatWorld.GameTest.Combat.CombatSmokeTests.RequiredEntryPointsAndAssetsExist
+  --test FlatWorld.GameTest.Combat.CombatSmokeTests.HitSlowdownReducesAndRestoresMoverSpeed
 
 # 查看项目中声明的全部 Category
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --list-categories
@@ -76,3 +103,16 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 ## 视觉验证边界
 
 仅当任务实际改变布局、颜色、动画、粒子、Shader 最终观感或相机呈现，且这些结果无法由对象、组件、材质和参数断言覆盖时，才在自动测试通过后做一次针对性的视觉检查。普通代码、数据、Prefab 接线和回归测试不得调用视觉模型。
+
+需要视觉检查时只获取游戏渲染画面，不截取 Unity Editor、整个应用窗口或操作系统桌面：
+
+1. `Runtime.GoldenPath` 已在运行时通过 `ScreenCapture` 生成完整 Game 画面。优先从结果 JSON 的 `screenshotPaths` 读取 `initial/middle/final`，再用 `view_image` 打开；不得为同一轮验证额外操作 Unity 窗口截图。
+2. 没有现成截图、且确实需要临时查看当前游戏画面时，使用 `manage_camera(action="screenshot", capture_source="game_view", camera="MainCamera", include_image=True, max_resolution=512)`。明确指定 `game_view`，不得改用 `scene_view` 或桌面截图作为玩法画面。
+3. 截图前后保持用户当前 Editor 布局、Game View 缩放、宽高比、分辨率、停靠状态和 Play Mode 状态不变。禁止额外点击或调用菜单、快捷键、窗口管理命令来聚焦、弹出或最大化 Game View；禁止为了截图暂停、停止或重启用户正在进行的游戏。
+4. 若 Game 画面无法在不改变上述状态的前提下取得，停止视觉检查并报告原因；不得回退到放大窗口、全屏桌面截图或重新排布 Editor。
+
+## 近期变更
+
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-08-07：视觉检查统一读取 Golden Path 的 Game 画面或显式使用 `capture_source="game_view"`；禁止为截图聚焦、弹出、最大化或重新排布 Unity 窗口。

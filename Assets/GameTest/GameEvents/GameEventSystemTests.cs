@@ -87,7 +87,7 @@ namespace FlatWorld.GameTest.GameEvents
             {
                 ItemMgr itemManager = managerObject.AddComponent<ItemMgr>();
                 GameItem meat = meatObject.AddComponent<GameItem>();
-                meat.Data = new Data_GeneralItem
+                meat.BindData(new Data_GeneralItem
                 {
                     IDName = "Meat",
                     Guid = 731,
@@ -97,7 +97,7 @@ namespace FlatWorld.GameTest.GameEvents
                         Amount = 1f,
                         CanBePickedUp = true
                     }
-                };
+                });
                 meat.transform.position = new Vector3(8f, 3f, 0f);
                 itemManager.RuntimeItemsGroup["Meat"] = new List<Item> { meat };
 

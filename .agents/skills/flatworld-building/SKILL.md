@@ -12,10 +12,10 @@ disable-model-invocation: false
 
 ## 修改前先读
 
-1. `Assets/5_Scripts/5-3_GamePlay/Building/Mod_Building.cs`：放置、拆除、状态、角色、快照和联机事务。
-2. `Assets/5_Scripts/5-3_GamePlay/Building/BuildingShadow.cs`：放置预览与候选位置。
-3. `Assets/5_Scripts/5-3_GamePlay/Building/BuildingOccupancyRegistry.cs`：运行时动态占地。
-4. `Assets/5_Scripts/5-3_GamePlay/PathFinding/AstarGameManager.cs`：占地变化后的导航更新。
+1. `Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs`：放置、拆除、状态、角色、快照和联机事务。
+2. `Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingShadow.cs`：放置预览与候选位置。
+3. `Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingOccupancyRegistry.cs`：运行时动态占地。
+4. `Assets/5_Scripts/5-3_GamePlay/World/PathFinding/AstarGameManager.cs`：占地变化后的导航更新。
 
 ## 核心模型
 
@@ -33,14 +33,14 @@ Summoner（库存中的持久化载体）
 
 ## 关键文件与资源
 
-- 门：`Assets/5_Scripts/5-3_GamePlay/Building/Mod_Door.cs`。
-- 堆肥箱：`Assets/5_Scripts/5-3_GamePlay/Building/Mod_CompostBin.cs`。
-- 结构生成：`Assets/5_Scripts/5-3_GamePlay/Map/Structures/ChunkGenerator_Structures.cs`。
-- 结构数据：`Assets/5_Scripts/5-3_GamePlay/Map/Structures/StructureData.cs`。
-- 结构作者组件：`Assets/5_Scripts/5-3_GamePlay/Map/Structures/StructureItemAuthoring.cs`。
+- 门：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Door.cs`。
+- 堆肥箱：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_CompostBin.cs`。
+- 结构生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/ChunkGenerator_Structures.cs`。
+- 结构数据：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureData.cs`。
+- 结构作者组件：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureItemAuthoring.cs`。
 - 结构 SO：`Assets/4_ScriptObjects/4-9_Structures/`。
 - 结构目录：`Assets/Resources/Config/StructureCatalog_Default.asset`。
-- 静态 Tile 阻挡层：`Assets/5_Scripts/5-3_GamePlay/Map/BlockingTilemapLayer.cs`。
+- 静态 Tile 阻挡层：`Assets/5_Scripts/5-3_GamePlay/World/Map/BlockingTilemapLayer.cs`。
 - 建筑 Prefab：`Assets/2_Prefabs/Building/`。
 - 正式矿坑建筑：`Assets/2_Prefabs/Building/MineEntrance.prefab`；对应召唤器为 `Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab`。
 - 编辑器工具：`Assets/5_Scripts/5-2_Editor/Structures/`。
@@ -89,7 +89,7 @@ Summoner（库存中的持久化载体）
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试创建的占地、Prefab 和临时快照必须清理。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Building.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有放置预览或最终外观变化才做定向截图。
 - 建筑教程事件的 actor、稳定 ID 与成功锚点由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
-- 静态阻挡 Tile 的层级路由与墙地可走性由 `Assets/GameTest/Dimension/DimensionSmokeTests.cs`（`Dimension.Smoke`）补充覆盖。
+- 建筑占地与地形共同控制可走性的关键行为由 `Assets/GameTest/Navigation/NavigationSmokeTests.cs`（`Navigation.Smoke`）覆盖。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill

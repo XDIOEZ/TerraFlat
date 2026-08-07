@@ -8,9 +8,10 @@ namespace FlatWorld.GameTest.EffectsTools
     {
         [Test]
         [Category("EffectsTools.Smoke")]
+        [Category("Smoke")]
         public void RequiredEntryPointsAndAssetsExist()
         {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Manager/VisualEffectManager.cs", "VisualEffectManager");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/VisualEffectManager.cs", "VisualEffectManager");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/SpecialEffects/DamageTextEffect.cs", "DamageTextEffect");
             GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/ParticleEffect", "t:Prefab");
             GameTestAssertions.AssertFolderContainsAsset("Assets/Shaders", "t:Shader");

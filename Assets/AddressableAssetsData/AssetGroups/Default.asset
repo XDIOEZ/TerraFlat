@@ -1422,12 +1422,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: dfb54154f48975249a320ea8607f624b
-    m_Address: Assets/2_Prefabs/NetworkingTest/NetworkTestPlayer.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e00b181a6243dfe4ba98db751aa25634
     m_Address: Assets/2_Prefabs/Food/CompostBin.prefab
     m_ReadOnly: 0

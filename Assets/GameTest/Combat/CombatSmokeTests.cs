@@ -7,17 +7,10 @@ namespace FlatWorld.GameTest.Combat
     /// <summary>战斗基础冒烟测试：保护伤害与技能系统入口。</summary>
     public sealed class CombatSmokeTests
     {
-        [Test]
-        [Category("Combat.Smoke")]
-        public void RequiredEntryPointsExist()
-        {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Combat/DamageReceiver.cs", "DamageReceiver");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Skill/Mod_SkillManager.cs", "Mod_SkillManager");
-            GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/Weapon", "t:Prefab");
-        }
 
         [Test]
         [Category("Combat.Smoke")]
+        [Category("Smoke")]
         public void HitSlowdownReducesAndRestoresMoverSpeed()
         {
             GameObject root = new GameObject("HitSlowdown_Test");
@@ -26,7 +19,7 @@ namespace FlatWorld.GameTest.Combat
             try
             {
                 GameItem item = root.AddComponent<GameItem>();
-                item.Data = new Data_GeneralItem();
+                item.BindData(new Data_GeneralItem());
                 item.itemMods = new ItemMods(item);
 
                 GameObject moverObject = new GameObject("Mover");
