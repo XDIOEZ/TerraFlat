@@ -1,4 +1,4 @@
-// AI-Context: 游戏世界总生命周期与出生点服务；出生点必须直接按种子和 MapCore 配置纯计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时创建任何 Chunk 或默认投放到水面。
+// AI-Context: 游戏世界总生命周期与出生点服务；出生点必须按新版纯生成 Profile 计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时注册运行时 Chunk 或默认投放到水面。
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -850,8 +850,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 用当前维度的 MapCore Prefab 与存档星球数据采样候选陆地。
-    /// 该路径绝不能因搜索而实例化 Map 或创建 Chunk。
+    /// 用当前维度的纯生成 Profile 与存档星球数据采样候选陆地。
+    /// 该路径只创建可释放的临时地形，不实例化 Map，也不注册运行时 Chunk。
     /// </summary>
     private bool TryFindNearestLand(Vector2Int anchor, out Vector2Int landPos)
     {
@@ -865,24 +865,38 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         landPos = anchor;
         failureReason = string.Empty;
-        if (!TryGetSpawnTerrainSampler(
-                out ChunkGenerator_Land landGenerator,
-                out ChunkGenerator_River riverGenerator,
-                out PlanetData planetData,
+        ChunkMgr runtimeManager = ChunkMgr.Instance;
+        if (runtimeManager?.WorldRuntime != null && runtimeManager.Chunks.Count > 0 &&
+            runtimeManager.TryFindRuntimeWalkableLandNear(
+                anchor,
+                Mathf.Max(1, spawnLandMaxSearchRadius),
+                Mathf.Max(1, spawnTerrainSampleBudget),
+                out landPos))
+        {
+            return true;
+        }
+
+        if (!TryGetSpawnGenerationInput(
+                out FlatWorld.WorldModel.ChunkGenerationProfileSnapshot profile,
+                out FlatWorld.WorldModel.ChunkGenerationTopologySnapshot topology,
+                out string dimensionId,
                 out failureReason))
         {
             return false;
         }
 
-        if (landGenerator.TryFindWalkableTerrainNear(
-            anchor,
-            GetActiveWorldGenerationSeed(),
-            planetData,
-            riverGenerator,
-            Mathf.Max(1, spawnLandMaxSearchRadius),
-            Mathf.Max(1, spawnTerrainSampleBudget),
-            out landPos))
+        var generator = new FlatWorld.WorldModel.DeterministicChunkGenerator();
+        if (generator.TryFindWalkableSurfaceNear(
+                dimensionId,
+                GetActiveWorldGenerationSeed(),
+                profile,
+                topology,
+                new FlatWorld.WorldModel.Int2(anchor.x, anchor.y),
+                Mathf.Max(1, spawnLandMaxSearchRadius),
+                Mathf.Max(1, spawnTerrainSampleBudget),
+                out FlatWorld.WorldModel.Int2 result))
         {
+            landPos = new Vector2Int(result.X, result.Y);
             return true;
         }
 
@@ -891,18 +905,17 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 从当前维度的 MapCore Prefab 获取地形采样器。该 Prefab 仅作为只读配置源，
-    /// 不会 Instantiate，也不会写入运行时生成器的 PlanetData。
+    /// 从当前维度取得正式纯生成快照、坐标缩放与有限世界拓扑。
     /// </summary>
-    private static bool TryGetSpawnTerrainSampler(
-        out ChunkGenerator_Land landGenerator,
-        out ChunkGenerator_River riverGenerator,
-        out PlanetData planetData,
+    private static bool TryGetSpawnGenerationInput(
+        out FlatWorld.WorldModel.ChunkGenerationProfileSnapshot profile,
+        out FlatWorld.WorldModel.ChunkGenerationTopologySnapshot topology,
+        out string dimensionId,
         out string failureReason)
     {
-        landGenerator = null;
-        riverGenerator = null;
-        planetData = null;
+        profile = null;
+        topology = default;
+        dimensionId = string.Empty;
         failureReason = string.Empty;
 
         SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
@@ -912,7 +925,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        planetData = saveDataMgr.GetCurrentPlanetData();
+        PlanetData planetData = saveDataMgr.GetCurrentPlanetData();
         if (planetData == null)
         {
             failureReason = "当前场景未找到对应的星球生成数据。";
@@ -932,31 +945,30 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        string mapCorePrefabId = dimensionManager.GetActiveMapCorePrefabId();
-        GameObject mapCorePrefab = GameRes.Instance?.GetPrefab(mapCorePrefabId, logError: false);
-        if (mapCorePrefab == null)
+        ChunkGenerationProfileSO profileAsset = dimensionManager.GetActiveGenerationProfile();
+        if (profileAsset == null)
         {
-            failureReason = $"缺少当前维度的 MapCore Prefab：{mapCorePrefabId}。";
+            failureReason = "当前维度缺少区块生成 Profile。";
             return false;
         }
 
-        Map mapTemplate = mapCorePrefab.GetComponent<Map>();
-        if (mapTemplate == null)
-            mapTemplate = mapCorePrefab.GetComponentInChildren<Map>(true);
-        if (mapTemplate == null)
+        float noiseScale = planetData.NoiseScale;
+        if (float.IsNaN(noiseScale) || float.IsInfinity(noiseScale) || noiseScale <= 0f)
+            noiseScale = PlanetData.DefaultNoiseScale;
+        noiseScale = PlanetData.NormalizeNoiseScale(noiseScale);
+        profile = profileAsset.CreateSnapshot().WithNumericParameter(
+            "world.coordinateScale", noiseScale);
+        dimensionId = dimensionManager.ActiveDefinition?.DimensionId;
+        if (string.IsNullOrWhiteSpace(dimensionId))
+            dimensionId = WorldAddress.SurfaceDimensionId;
+
+        if (WorldTopologyBounds.TryCreate(planetData, out WorldTopologyBounds bounds))
         {
-            failureReason = $"MapCore Prefab 缺少 Map 组件：{mapCorePrefabId}。";
-            return false;
+            topology = new FlatWorld.WorldModel.ChunkGenerationTopologySnapshot(
+                new FlatWorld.WorldModel.Int2(bounds.Min.x, bounds.Min.y),
+                new FlatWorld.WorldModel.Int2(bounds.Span.x, bounds.Span.y));
         }
 
-        landGenerator = mapTemplate.LandGenerator;
-        if (landGenerator == null)
-        {
-            failureReason = $"MapCore Prefab 缺少 ChunkGenerator_Land：{mapCorePrefabId}。";
-            return false;
-        }
-
-        riverGenerator = mapTemplate.GetGenerator<ChunkGenerator_River>();
         return true;
     }
 
@@ -974,6 +986,13 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     private static bool TryGetLoadedLandTile(Vector2Int worldPosition)
     {
         ChunkMgr chunkMgr = ChunkMgr.Instance;
+        if (chunkMgr != null && chunkMgr.TryGetRuntimeTerrainTile(
+                worldPosition + new Vector2(0.5f, 0.5f), out RuntimeTerrainTileSample sample))
+        {
+            return (sample.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) == 0 &&
+                   sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y);
+        }
+
         if (chunkMgr == null ||
             !chunkMgr.TryGetActiveChunkByPos(Chunk.GetChunkPosition(worldPosition), out Chunk chunk) ||
             chunk?.Map?.Data == null ||

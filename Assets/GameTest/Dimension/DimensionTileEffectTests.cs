@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.WorldModel;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -25,6 +26,35 @@ namespace FlatWorld.GameTest.Dimension
 
     public sealed class DimensionTileEffectTests
     {
+        [Test]
+        [Category("Dimension.TileEffects")]
+        public void RuntimeFreshWaterResolvesConfiguredTileBehaviourAndDepth()
+        {
+            ChunkGenerationProfileSO profile = AssetDatabase.LoadAssetAtPath<ChunkGenerationProfileSO>(
+                "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset");
+            Assert.That(profile, Is.Not.Null);
+            Assert.That(GameRes.Instance, Is.Not.Null);
+
+            using var buffer = new ChunkTerrainBuffer(1, 1);
+            buffer.SetCell(0, 0, new TerrainCell(
+                2, 0, 0, 1, 1, TerrainCellFlags.Walkable | TerrainCellFlags.Water));
+            buffer.SetEnvironmentValue("riverDepth", 0, 0, 0.65f);
+            using ChunkTerrainData terrain = buffer.Seal();
+
+            bool resolved = ChunkRuntimeTileEffectResolver.TryCreateTileEffectData(
+                profile.CreateSnapshot(), terrain, Vector2Int.zero, new Vector2Int(10, 20),
+                out TileData tileData, out Tile_Block tileBlock);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(tileBlock.tileItemName, Is.EqualTo("Tile_Water_Fresh"));
+            Assert.That(tileData, Is.TypeOf<TileData_Water>());
+            Assert.That(((TileData_Water)tileData).deepValue, Is.EqualTo(0.65f).Within(0.0001f));
+            Assert.That(tileData.position, Is.EqualTo(new Vector3Int(10, 20, 0)));
+            Tile_Water behaviour = tileBlock.behaviours.OfType<Tile_Water>().Single();
+            Assert.That(behaviour.BuffInfo, Does.Contain("水体减速"));
+            Assert.That(behaviour.BuffInfo, Does.Contain("潮湿"));
+        }
+
         [Test]
         [Category("Dimension.TileEffects")]
         public void TransitionExitRemovesWaterSlowdownBeforeBuffSave()

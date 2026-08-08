@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 12
+  generationSignature: 17
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -32,9 +32,11 @@ MonoBehaviour:
   - Id: terrain.snowTileId
     Value: 5
   - Id: terrain.seaLevel
-    Value: 0.3
+    Value: 0.5
   - Id: terrain.beachLevel
-    Value: 0.355
+    Value: 0.51
+  - Id: terrain.mountainLevel
+    Value: 0.72
   - Id: terrain.noiseScale
     Value: 0.0085
   - Id: terrain.octaves
@@ -43,8 +45,72 @@ MonoBehaviour:
     Value: 0.004
   - Id: climate.octaves
     Value: 3
+  - Id: terrain.height.coordScale
+    Value: 2
+  - Id: terrain.height.frequency
+    Value: 0.05
+  - Id: terrain.height.octaves
+    Value: 5
+  - Id: terrain.height.lacunarity
+    Value: 2
+  - Id: terrain.height.persistence
+    Value: 0.45
+  - Id: terrain.height.offsetX
+    Value: 9000
+  - Id: terrain.height.offsetY
+    Value: 0
+  - Id: terrain.height.secondaryBoostEnabled
+    Value: 1
+  - Id: terrain.height.secondaryBoostStrength
+    Value: 1
+  - Id: climate.precipitation.coordScale
+    Value: 10
+  - Id: climate.precipitation.frequency
+    Value: 0.02
+  - Id: climate.precipitation.octaves
+    Value: 4
+  - Id: climate.precipitation.lacunarity
+    Value: 2
+  - Id: climate.precipitation.persistence
+    Value: 0.55
+  - Id: climate.precipitation.offsetX
+    Value: 0
+  - Id: climate.precipitation.offsetY
+    Value: 0
+  - Id: climate.temperature.coordScale
+    Value: 10
+  - Id: climate.temperature.frequency
+    Value: 0.015
+  - Id: climate.temperature.octaves
+    Value: 4
+  - Id: climate.temperature.lacunarity
+    Value: 2
+  - Id: climate.temperature.persistence
+    Value: 0.55
+  - Id: climate.temperature.offsetX
+    Value: 0
+  - Id: climate.temperature.offsetY
+    Value: 0
+  - Id: climate.temperature.celsiusMin
+    Value: 0
+  - Id: climate.temperature.celsiusMax
+    Value: 50
+  - Id: climate.wind.regionSize
+    Value: 256
+  - Id: climate.wind.seedSalt
+    Value: 1779033703
+  - Id: climate.orographic.sampleDistance
+    Value: 64
+  - Id: climate.orographic.sampleCount
+    Value: 4
+  - Id: climate.orographic.windwardGain
+    Value: 0.8
+  - Id: climate.orographic.leewardLoss
+    Value: 0.6
   - Id: river.enabled
     Value: 1
+  - Id: river.hydrologyRegionSize
+    Value: 256
   - Id: river.runoffCellSize
     Value: 64
   - Id: river.runoffSampleStride
@@ -65,6 +131,10 @@ MonoBehaviour:
     Value: 7
   - Id: river.meanderTieTolerance
     Value: 0
+  - Id: river.meanderStrength
+    Value: 0.85
+  - Id: river.meanderScale
+    Value: 48
   - Id: river.valleyDetailWeight
     Value: 4
   - Id: river.lookAheadWeight
@@ -83,6 +153,16 @@ MonoBehaviour:
     Value: 0.2
   - Id: river.depthMax
     Value: 0.9
+  - Id: river.minLakeCells
+    Value: 18
+  - Id: river.maxLakeCells
+    Value: 220
+  - Id: river.maxLakeLevelRise
+    Value: 0.045
+  - Id: river.lakeMinFlow
+    Value: 0.35
+  - Id: river.maxCachedRegions
+    Value: 9
   - Id: grass.density
     Value: 0.24
   - Id: structure.enabled
@@ -96,9 +176,37 @@ MonoBehaviour:
   - Id: structure.groundTileId
     Value: 3
   - Id: terrain.biomeCount
-    Value: 6
+    Value: 8
+  - Id: biome.desert.minimumHeight
+    Value: 0.51
+  - Id: biome.desert.maximumPrecipitation
+    Value: 0.28
+  - Id: biome.grassland.minimumTemperature
+    Value: 0.25
+  - Id: biome.grassland.maximumTemperature
+    Value: 0.75
+  - Id: biome.grassland.minimumPrecipitation
+    Value: 0.25
+  - Id: biome.grassland.maximumPrecipitation
+    Value: 0.75
   - Id: navigation.defaultCost
     Value: 1
   textParameters:
   - Id: terrain.mode
     Value: surface
+  - Id: climate.algorithm
+    Value: legacyLand
+  - Id: river.algorithm
+    Value: heightDriven
+  - Id: tile.block.1
+    Value: Tile_Grass
+  - Id: tile.block.2
+    Value: Tile_Water_Fresh
+  - Id: tile.block.3
+    Value: Tile_Sand
+  - Id: tile.block.4
+    Value: Tile_Stone
+  - Id: tile.block.5
+    Value: Tile_Snow
+  - Id: tile.block.6
+    Value: Tile_Water_Salt

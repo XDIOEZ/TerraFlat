@@ -113,6 +113,7 @@ DimensionPortal.Interact
 
 - 基础测试：`Assets/GameTest/Dimension/DimensionLifecycleTests.cs`；分类：`Dimension.Smoke`。
 - 当前覆盖世界键地表兼容/往返、默认目录与矿洞环境配置、洞穴布局确定性、开放/封闭格混合、阻挡层路由、岩壁可走性、正式入口/召唤器/出口角色、锚点 JSON 往返、矿坑配方，以及五种矿物只能掉落 `Ore_*`。
+- 地块效果专项：`Assets/GameTest/Dimension/DimensionTileEffectTests.cs`；覆盖运行时淡水 TileId 到 `Tile_Water_Fresh`/水深/Buff 行为的还原，以及切维度前退出与普通保存不退出水体。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Dimension.Smoke`；无需视觉模型或测试工具卡片。涉及 Tile Effect 时追加 `--category Dimension.TileEffects`；只有维度场景最终观感变化才做定向截图。
 - 手动 Play Mode 建议验证：地表入口交互、矿洞大量生成矿物、开采掉落、返回地表、两边位置恢复、退出重进后的 Chunk 差量。
 
@@ -120,6 +121,8 @@ DimensionPortal.Interact
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：WorldModel 运行时窗口现在用 `DimensionManager.GetActiveGenerationSeed()` 派生区块种子，与出生点纯采样及旧 Map 生成保持一致，不同维度继续隔离确定性地形和 GUID 空间。
+- 2026-08-08：地块效果接收器改读 `ChunkRuntime/ChunkTerrainData`，运行时水体通过 Surface Profile 的 `tile.block.<TileId>` 映射恢复现有 `Tile_Water` 行为；切换世界仍使用进入缓存精确退出，旧 `Map` 仅作兼容回退。
 - 2026-08-05：矿洞生成改为带一格边界的 Burst 开放掩码与分类 Job；主线程通过新地形栈 API 写入地板/墙体两层，取消和销毁必须完成并释放 NativeArray。
 
 - 2026-07-31：移除玩家旁免费运行时 Portal；新增可建造/可拆除/可存档 `MineEntrance`、不可拾取差量存档 `CaveExit` 和按入口 GUID 绑定的双向锚点。

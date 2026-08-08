@@ -65,6 +65,7 @@ Mod_ItemDetector 提交请求
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：`MonsterSpawnerManager` 每帧按生物当前位置查询新版 `ChunkView` 是否真实绑定；离开表现区的自然生物会整对象休眠并停止 Item Tick，返回且地形完成绑定后再唤醒。`_chunkDormantItems` 只记录管理器自己隐藏的实体，禁止误唤醒死亡、对象池或其他系统主动隐藏的对象；专用服务器无本地表现时不应用该休眠。
 - 2026-08-03：生物 Prefab 模板提取不再执行 AI Module 的 `Load/Save`；`MonsterSpawnerManager` 追踪种群前过滤空物种 ID，生成失败日志保留完整异常堆栈。
 - 2026-07-29：统一内容校验器检查全部 Resources `SpawnerConfig` 的 `PersistentId`、生物 ID、组内/跨配置重复、权重、生态参数、Prefab 引用、允许群系及 `WorldManager.prefab._spawnerConfigs` 活跃引用。
 - 2026-07-29：生物生成接入自定义频率与种群倍率；0% 频率会推进时间游标但不补算停用期间窗口，种群倍率会动态裁剪预算和待生成债务。

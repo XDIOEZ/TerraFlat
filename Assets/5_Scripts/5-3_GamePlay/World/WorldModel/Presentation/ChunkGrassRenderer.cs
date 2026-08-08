@@ -2,10 +2,13 @@ using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using Unity.Profiling;
 
 /// <summary>Pure presentation adapter for the model-owned grass layer.</summary>
 public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
 {
+    private static readonly ProfilerMarker RenderAllMarker =
+        new("FlatWorld.ChunkStreaming.RenderGrass");
     private const byte Present = 2;
     private const int CommonVariantCount = 24;
 
@@ -63,12 +66,30 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
         if (tilemap == null || runtimeTiles.Count == 0 || terrain == null)
             return;
 
-        tilemap.ClearAllTiles();
-        for (int y = 0; y < terrain.Height; y++)
-        for (int x = 0; x < terrain.Width; x++)
+        using (RenderAllMarker.Auto())
         {
-            if (terrain.GetGrass(x, y) == Present)
-                RenderPresentCell(x, y);
+            tilemap.ClearAllTiles();
+            var tiles = new TileBase[terrain.CellCount];
+            for (int y = 0; y < terrain.Height; y++)
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                if (terrain.GetGrass(x, y) == Present)
+                {
+                    uint state = MixSeed(
+                        boundChunk.Address.ChunkOrigin.X + x,
+                        boundChunk.Address.ChunkOrigin.Y + y);
+                    tiles[y * terrain.Width + x] = runtimeTiles[SelectVariant(ref state)];
+                }
+            }
+
+            tilemap.SetTilesBlock(
+                new BoundsInt(0, 0, 0, terrain.Width, terrain.Height, 1), tiles);
+            for (int y = 0; y < terrain.Height; y++)
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                if (terrain.GetGrass(x, y) == Present)
+                    ApplyPresentCellVisual(x, y);
+            }
         }
     }
 
@@ -90,6 +111,23 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
         int variantIndex = SelectVariant(ref state);
         Vector3Int cell = new(x, y, 0);
         tilemap.SetTile(cell, runtimeTiles[variantIndex]);
+
+        ApplyPresentCellVisual(cell, ref state);
+    }
+
+    /// <summary>重放确定性随机序列，并只应用矩阵与色调。</summary>
+    private void ApplyPresentCellVisual(int x, int y)
+    {
+        int worldX = boundChunk.Address.ChunkOrigin.X + x;
+        int worldY = boundChunk.Address.ChunkOrigin.Y + y;
+        uint state = MixSeed(worldX, worldY);
+        SelectVariant(ref state);
+        ApplyPresentCellVisual(new Vector3Int(x, y, 0), ref state);
+    }
+
+    /// <summary>设置单格草地的偏移、缩放、翻转和色调。</summary>
+    private void ApplyPresentCellVisual(Vector3Int cell, ref uint state)
+    {
 
         float offsetX = Mathf.Lerp(-positionJitter, positionJitter, Next01(ref state));
         float offsetY = Mathf.Lerp(-positionJitter, positionJitter, Next01(ref state));

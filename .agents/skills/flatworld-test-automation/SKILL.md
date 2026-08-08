@@ -115,4 +115,9 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：`Building.Smoke` 新增旧建筑材质丢失时虚影保留默认 Sprite 材质的运行时实例回归；Golden Path 建筑场景复用生产预览解析 API。
+- 2026-08-08：`Map.Smoke` 新增运行时区块与出生点共用维度派生种子的源码接线回归，防止黄金路径中新玩家出生格加载后从陆地变成水面。
+- 2026-08-08：`Runtime.GoldenPath` 将当前 Unity 进程 ID 原子写入 running 请求本体以跨 Domain Reload 续接，避免 EditorSettings/PlayMode 重载时 0 秒误报中断，且不会掩盖真正的编辑器重启。
+- 2026-08-08：WorldModel Golden Path 往返阶段现在覆盖自然生物随 `ChunkView` 解绑休眠、重绑唤醒；普通 Bug 修复仍默认只做静态诊断、程序集编译和 Console 检查，除非用户明确要求或达到系统级测试门槛。
+- 2026-08-08：区块流送大改的静态验收新增 WorldModel CPU 并发安全上限、HeightDriven 相邻 Chunk 区域缓存复用，以及 UI 流送性能 Prefab/入口命名契约；未获用户明确要求时仍只做 Unity 编译与 Console 检查，不主动运行 Test Runner。
 - 2026-08-07：视觉检查统一读取 Golden Path 的 Game 画面或显式使用 `capture_source="game_view"`；禁止为截图聚焦、弹出、最大化或重新排布 Unity 窗口。

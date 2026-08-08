@@ -138,18 +138,69 @@ namespace FlatWorld.GameTest.WorldModel
                     "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset");
             Assert.That(profileAsset, Is.Not.Null);
             ChunkGenerationProfileSnapshot profile = profileAsset.CreateSnapshot();
+            Assert.That(profile.Settings.SurfaceClimateAlgorithm,
+                Is.EqualTo(SurfaceClimateAlgorithm.LegacyLand));
+            Assert.That(profile.Settings.HeightNoise.CoordinateScale,
+                Is.EqualTo(2d).Within(0.000001d));
+            Assert.That(profile.Settings.HeightNoise.Frequency,
+                Is.EqualTo(0.05d).Within(0.000001d));
+            Assert.That(profile.Settings.HeightNoise.Octaves, Is.EqualTo(5));
+            Assert.That(profile.Settings.HeightNoise.Persistence,
+                Is.EqualTo(0.45d).Within(0.000001d));
+            Assert.That(profile.Settings.HeightNoise.OffsetX,
+                Is.EqualTo(9000d).Within(0.000001d));
+            Assert.That(profile.Settings.HeightSecondaryBoostEnabled, Is.True);
+            Assert.That(profile.Settings.HeightSecondaryBoostStrength,
+                Is.EqualTo(1d).Within(0.000001d));
+            Assert.That(profile.Settings.MountainLevel,
+                Is.EqualTo(0.72d).Within(0.000001d));
+            Assert.That(profile.Settings.SeaLevel,
+                Is.EqualTo(0.5d).Within(0.000001d));
+            Assert.That(profile.Settings.BeachLevel,
+                Is.EqualTo(0.51d).Within(0.000001d));
+            Assert.That(profile.Settings.PrecipitationNoise.CoordinateScale,
+                Is.EqualTo(10d).Within(0.000001d));
+            Assert.That(profile.Settings.PrecipitationNoise.Frequency,
+                Is.EqualTo(0.02d).Within(0.000001d));
+            Assert.That(profile.Settings.PrecipitationNoise.Octaves, Is.EqualTo(4));
+            Assert.That(profile.Settings.TemperatureNoise.CoordinateScale,
+                Is.EqualTo(10d).Within(0.000001d));
+            Assert.That(profile.Settings.TemperatureNoise.Frequency,
+                Is.EqualTo(0.015d).Within(0.000001d));
+            Assert.That(profile.Settings.TemperatureNoise.Octaves, Is.EqualTo(4));
+            Assert.That(profile.Settings.TemperatureCelsiusMin, Is.EqualTo(0d));
+            Assert.That(profile.Settings.TemperatureCelsiusMax, Is.EqualTo(50d));
+            Assert.That(profile.Settings.WindRegionSize,
+                Is.EqualTo(256d).Within(0.000001d));
+            Assert.That(profile.Settings.WindSeedSalt, Is.EqualTo(1779033703));
+            Assert.That(profile.Settings.OrographicSampleDistance,
+                Is.EqualTo(64d).Within(0.000001d));
+            Assert.That(profile.Settings.OrographicSampleCount, Is.EqualTo(4));
+            Assert.That(profile.Settings.WindwardRainGain,
+                Is.EqualTo(0.8d).Within(0.000001d));
+            Assert.That(profile.Settings.LeewardRainLoss,
+                Is.EqualTo(0.6d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverAlgorithm,
+                Is.EqualTo(RiverGenerationAlgorithm.HeightDriven));
+            Assert.That(profile.Settings.RiverHydrologyRegionSize, Is.EqualTo(256));
             Assert.That(profile.Settings.RiverRunoffCellSize, Is.EqualTo(64));
             Assert.That(profile.Settings.RiverRunoffSampleStride, Is.EqualTo(8));
             Assert.That(profile.Settings.RiverMaxTraceSteps, Is.EqualTo(384));
             Assert.That(profile.Settings.RiverMinimumVisibleCourseLength, Is.EqualTo(96));
-            Assert.That(profile.Settings.RiverStartFlow, Is.EqualTo(0.405d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverStartFlow,
+                Is.EqualTo(0.405d).Within(0.000001d));
             Assert.That(profile.Settings.RiverTributaryStartFlow,
                 Is.EqualTo(0.195d).Within(0.000001d));
-            Assert.That(profile.Settings.RiverFullWidthFlow, Is.EqualTo(1.2d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverFullWidthFlow,
+                Is.EqualTo(1.2d).Within(0.000001d));
             Assert.That(profile.Settings.RiverMaxWidth, Is.EqualTo(7));
             Assert.That(
                 profile.Settings.RiverMeanderTieTolerance,
                 Is.EqualTo(0d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverMeanderStrength,
+                Is.EqualTo(0.85d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverMeanderScale,
+                Is.EqualTo(48d).Within(0.000001d));
             Assert.That(profile.Settings.RiverValleyDetailWeight,
                 Is.EqualTo(4d).Within(0.000001d));
             Assert.That(profile.Settings.RiverLookAheadWeight,
@@ -158,6 +209,12 @@ namespace FlatWorld.GameTest.WorldModel
             Assert.That(profile.Settings.RiverFloodplainStartFlow,
                 Is.EqualTo(0.405d).Within(0.000001d));
             Assert.That(profile.Settings.RiverFloodplainMaxRadius, Is.EqualTo(8));
+            Assert.That(profile.Settings.RiverMinLakeCells, Is.EqualTo(18));
+            Assert.That(profile.Settings.RiverMaxLakeCells, Is.EqualTo(220));
+            Assert.That(profile.Settings.RiverMaxLakeLevelRise,
+                Is.EqualTo(0.045d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverLakeMinFlow,
+                Is.EqualTo(0.35d).Within(0.000001d));
             Assert.That(profile.NumericParameters.ContainsKey("river.noiseScale"), Is.False);
 
             using var world = new WorldRuntime("surface-coverage", 1);
@@ -178,6 +235,7 @@ namespace FlatWorld.GameTest.WorldModel
             int floodplainCells = 0;
             int alluvialCells = 0;
             int grassCells = 0;
+            int typedFreshWaterCells = 0;
             foreach (ChunkRuntime chunk in world.Chunks.Values)
             {
                 ChunkTerrainData terrain = chunk.Terrain;
@@ -188,6 +246,15 @@ namespace FlatWorld.GameTest.WorldModel
                         depth > 0f)
                     {
                         riverCells++;
+                        Assert.That(
+                            terrain.TryGetEnvironmentValue("riverKind", x, y, out float kind),
+                            Is.True);
+                        Assert.That(kind, Is.EqualTo(1f).Within(0.001f)
+                            .Or.EqualTo(2f).Within(0.001f));
+                        Assert.That(
+                            terrain.TryGetEnvironmentValue("riverSurfaceLevel", x, y, out _),
+                            Is.True);
+                        typedFreshWaterCells++;
                     }
                     if (terrain.TryGetEnvironmentValue("riverFloodplain", x, y,
                             out float floodplain) && floodplain > 0f)
@@ -197,6 +264,10 @@ namespace FlatWorld.GameTest.WorldModel
                             terrain.GetCell(x, y).GroundTileId == profile.Settings.SandTileId)
                             alluvialCells++;
                     }
+                    Assert.That(
+                        terrain.TryGetEnvironmentValue("mountain", x, y, out float mountain),
+                        Is.True);
+                    Assert.That(mountain, Is.InRange(0f, 1f));
                     if (terrain.GetGrass(x, y) == 2)
                         grassCells++;
                 }
@@ -210,7 +281,8 @@ namespace FlatWorld.GameTest.WorldModel
                 "The floodplain must include visible walkable alluvial sediment tiles.");
             Assert.That(grassCells, Is.GreaterThan(500),
                 "The default local window must contain visible grass detail coverage.");
-            AssertDefaultProfileIncludesConnectedTributaries(profile);
+            Assert.That(typedFreshWaterCells, Is.EqualTo(riverCells),
+                "Every fresh-water cell must expose riverKind and riverSurfaceLevel.");
         }
 
         [Test]
@@ -237,6 +309,7 @@ namespace FlatWorld.GameTest.WorldModel
             Assert.That(stretched.RiverMinimumVisibleCourseLength, Is.EqualTo(192));
             Assert.That(stretched.RiverMaxWidth, Is.EqualTo(10));
             Assert.That(stretched.RiverLookAheadDistance, Is.EqualTo(12));
+            Assert.That(stretched.RiverMeanderScale, Is.EqualTo(96d));
 
             Assert.That(compressed.WorldCoordinateDistanceScale, Is.EqualTo(0.5d));
             Assert.That(compressed.TerrainScale, Is.EqualTo(0.017d).Within(0.0000001d));
@@ -247,6 +320,44 @@ namespace FlatWorld.GameTest.WorldModel
             Assert.That(compressed.RiverMinimumVisibleCourseLength, Is.EqualTo(48));
             Assert.That(compressed.RiverMaxWidth, Is.EqualTo(5));
             Assert.That(compressed.RiverLookAheadDistance, Is.EqualTo(3));
+            Assert.That(compressed.RiverMeanderScale, Is.EqualTo(24d));
+        }
+
+        [Test]
+        public void SurfaceMountainRuleUsesWalkableStoneGround()
+        {
+            ChunkGenerationProfileSO profileAsset =
+                AssetDatabase.LoadAssetAtPath<ChunkGenerationProfileSO>(
+                    "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset");
+            Assert.That(profileAsset, Is.Not.Null);
+            ChunkGenerationProfileSnapshot profile = profileAsset.CreateSnapshot()
+                .WithNumericParameter("terrain.seaLevel", 0d)
+                .WithNumericParameter("terrain.beachLevel", 0d)
+                .WithNumericParameter("terrain.mountainLevel", 0d)
+                .WithNumericParameter("river.enabled", 0d)
+                .WithNumericParameter("structure.enabled", 0d);
+            var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0));
+            using var world = new WorldRuntime("mountain-stone-coverage", 1);
+            ChunkGenerationRequest request = world.BeginChunkGeneration(
+                address, 424242, profile);
+            using ChunkGenerationResult result = new DeterministicChunkGenerator().Generate(
+                request, CancellationToken.None);
+            Assert.That(world.TryCommit(result, out string rejection), Is.True, rejection);
+            Assert.That(world.TryGetChunk(address, out ChunkRuntime chunk), Is.True);
+
+            for (int y = 0; y < chunk.Terrain.Height; y++)
+            for (int x = 0; x < chunk.Terrain.Width; x++)
+            {
+                TerrainCell cell = chunk.Terrain.GetCell(x, y);
+                Assert.That(cell.GroundTileId, Is.EqualTo(profile.Settings.StoneTileId));
+                Assert.That((cell.Flags & TerrainCellFlags.Walkable) != 0, Is.True);
+                Assert.That((cell.Flags & TerrainCellFlags.Water) == 0, Is.True);
+                Assert.That(cell.BiomeId, Is.EqualTo(7));
+                Assert.That(chunk.Terrain.TryGetEnvironmentValue(
+                    "mountain", x, y, out float mountain), Is.True);
+                Assert.That(mountain, Is.EqualTo(1f));
+                Assert.That(chunk.Terrain.GetGrass(x, y), Is.EqualTo(1));
+            }
         }
 
         [Test]
@@ -263,6 +374,55 @@ namespace FlatWorld.GameTest.WorldModel
                 broadTerrainRivers.SetEquals(detailedTerrainRivers),
                 Is.False,
                 "只改变高度图后河道必须随坡向改变，不能继续由独立函数固定绘制。");
+        }
+
+        [Test]
+        public void HeightDrivenRiversReuseOneBoundedRegionAcrossAdjacentChunks()
+        {
+            var profile = new ChunkGenerationProfileSnapshot(
+                "height-driven-cache",
+                DeterministicChunkGenerator.CurrentGenerationSignature,
+                16,
+                16,
+                new Dictionary<string, double>
+                {
+                    ["terrain.seaLevel"] = 0,
+                    ["terrain.beachLevel"] = 0,
+                    ["river.enabled"] = 1,
+                    ["river.hydrologyRegionSize"] = 64,
+                    ["river.maxCachedRegions"] = 2,
+                    ["river.runoffCellSize"] = 16,
+                    ["river.runoffSampleStride"] = 8,
+                    ["river.maxTraceSteps"] = 32,
+                    ["river.minimumVisibleCourseLength"] = 0,
+                    ["river.infiltrationFloor"] = 0,
+                    ["river.startFlow"] = 0.01,
+                    ["river.tributaryStartFlow"] = 0.01,
+                    ["river.fullWidthFlow"] = 0.5,
+                    ["river.maxWidth"] = 1,
+                    ["structure.enabled"] = 0,
+                    ["grass.density"] = 0
+                },
+                new Dictionary<string, string>
+                {
+                    ["river.algorithm"] = "heightDriven"
+                });
+            using var world = new WorldRuntime("height-driven-cache", 1);
+            var generator = new DeterministicChunkGenerator();
+            ChunkGenerationRequest first = world.BeginChunkGeneration(
+                new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0)),
+                1234,
+                profile);
+            ChunkGenerationRequest second = world.BeginChunkGeneration(
+                new FlatWorld.WorldModel.WorldAddress("surface", new Int2(16, 0)),
+                1234,
+                profile);
+
+            using ChunkGenerationResult firstResult = generator.Generate(first, CancellationToken.None);
+            using ChunkGenerationResult secondResult = generator.Generate(second, CancellationToken.None);
+
+            Assert.That(generator.CachedHeightDrivenRegionCount, Is.EqualTo(1),
+                "同一 64×64 水文区域内的相邻区块不应重复追踪整张河网。");
         }
 
         [Test]
@@ -441,6 +601,10 @@ namespace FlatWorld.GameTest.WorldModel
                     ["river.meanderTieTolerance"] = 0.002,
                     ["structure.enabled"] = 0,
                     ["grass.density"] = 0
+                },
+                new Dictionary<string, string>
+                {
+                    ["river.algorithm"] = "heightDriven"
                 });
         }
 
@@ -473,51 +637,6 @@ namespace FlatWorld.GameTest.WorldModel
             }
 
             return mask;
-        }
-
-        /// <summary>用单次大范围固定生成验证成熟主河会带回低流量支流。</summary>
-        private static void AssertDefaultProfileIncludesConnectedTributaries(
-            ChunkGenerationProfileSnapshot profile)
-        {
-            const int sampleSize = 384;
-            var sampleProfile = new ChunkGenerationProfileSnapshot(
-                profile.ProfileId + ".tributary-sample",
-                profile.Signature,
-                sampleSize,
-                sampleSize,
-                new Dictionary<string, double>(profile.NumericParameters),
-                new Dictionary<string, string>(profile.TextParameters));
-            var address = new FlatWorld.WorldModel.WorldAddress(
-                "surface",
-                new Int2(-sampleSize / 2, -sampleSize / 2));
-            using var world = new WorldRuntime("surface-tributary-coverage", 1);
-            ChunkGenerationRequest request = world.BeginChunkGeneration(address, 424242, sampleProfile);
-            using ChunkGenerationResult result = new DeterministicChunkGenerator().Generate(
-                request,
-                CancellationToken.None);
-            Assert.That(world.TryCommit(result, out string rejection), Is.True, rejection);
-            Assert.That(world.TryGetChunk(address, out ChunkRuntime chunk), Is.True);
-
-            int tributaryCells = 0;
-            for (int y = 0; y < chunk.Terrain.Height; y++)
-            for (int x = 0; x < chunk.Terrain.Width; x++)
-            {
-                if (!chunk.Terrain.TryGetEnvironmentValue("riverDepth", x, y, out float depth) ||
-                    depth <= 0f ||
-                    !chunk.Terrain.TryGetEnvironmentValue("riverFlow", x, y, out float flow))
-                {
-                    continue;
-                }
-
-                if (flow >= profile.Settings.RiverTributaryStartFlow &&
-                    flow < profile.Settings.RiverStartFlow)
-                {
-                    tributaryCells++;
-                }
-            }
-
-            Assert.That(tributaryCells, Is.GreaterThan(0),
-                "Long main rivers must retain connected low-flow tributaries.");
         }
 
         private static int FloorToChunkOrigin(int value, int chunkSize)

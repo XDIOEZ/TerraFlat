@@ -59,6 +59,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：新版 `TileEffectReceiver` 通过 `ChunkTerrainData` 恢复河流/海洋的 `Tile_Water` 行为；进入水体添加 `水体减速`、`潮湿`，离开时成对移除并恢复移动倍率，旧 `Map` 仅作兼容回退。
 - 2026-08-05：本体 combat 分包新增稳定 ID `燃烧`：持续 5 秒、每秒 1 点真实伤害、重复施加刷新持续时间；真实单机黄金路径会在玩家移动阶段施加并跨 Tick 验证伤害，随后移除 Buff、恢复生命。
 - 2026-08-04：`BuffManager` 的规范模块 ID 固定为 `BuffManager`，并兼容旧存档/Prefab 中的 `Buff模块`；模板提取和模块自动修复不得再把旧 ID 写回运行时索引。
 - 2026-08-04：F4 GM 控制台新增 Buff 分发分页；确认后通过本地 `GameController.LeftClick` 点选带 `BuffManager` 的目标施加已注册 Buff，支持限时 Buff 的时长覆盖与重复施加；清除模式调用 `ClearAllBuffs()`，不会绕过 Stop/Removed 生命周期。
@@ -68,6 +69,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 - Buff 冒烟测试：`Assets/GameTest/Buff/BuffSmokeTests.cs`；分类：`Buff.Smoke`。
 - GM Buff 目标解析与时长覆盖：`Assets/GameTest/Buff/GmBuffTargetingTests.cs`；分类：`Buff.GM`。
+- 水体地块驱动 Buff 回归：`Assets/GameTest/Dimension/DimensionTileEffectTests.cs`；分类：`Dimension.TileEffects`。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Buff.Smoke`；无需视觉模型、截图或测试工具卡片。
 - 仅按“高耦合联动”表命中项追加分类。
 - 新行为先增加确定性回归测试；测试失败时优先修复生产代码，禁止删除测试或弱化断言。

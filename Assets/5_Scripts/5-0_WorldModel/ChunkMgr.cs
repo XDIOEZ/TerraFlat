@@ -35,14 +35,20 @@ namespace FlatWorld.WorldModel
     {
         public ChunkWindowRequest(WorldAddress center, int activeDistance, int destroyDistance,
             bool requestPresentation, int worldSeed, ChunkGenerationProfileSnapshot profile,
-            ChunkGenerationTopologySnapshot topology = default)
+            ChunkGenerationTopologySnapshot topology = default, int dataDistance = 0)
         {
             if (activeDistance <= 0)
                 throw new ArgumentOutOfRangeException(nameof(activeDistance));
+            dataDistance = dataDistance <= 0 ? activeDistance : dataDistance;
+            if (dataDistance < activeDistance)
+                throw new ArgumentOutOfRangeException(nameof(dataDistance));
             if (destroyDistance < activeDistance)
+                throw new ArgumentOutOfRangeException(nameof(destroyDistance));
+            if (destroyDistance < dataDistance)
                 throw new ArgumentOutOfRangeException(nameof(destroyDistance));
             Center = center;
             ActiveDistance = activeDistance;
+            DataDistance = dataDistance;
             DestroyDistance = destroyDistance;
             RequestPresentation = requestPresentation;
             WorldSeed = worldSeed;
@@ -53,7 +59,9 @@ namespace FlatWorld.WorldModel
         public WorldAddress Center { get; }
         /// <summary>中心周围多远以内的区块需要加载并运行。</summary>
         public int ActiveDistance { get; }
-        /// <summary>中心周围多远以内的区块暂时不要删除，不能比激活范围更小。</summary>
+        /// <summary>中心周围多远以内只提前生成数据，不领取模拟和表现租约。</summary>
+        public int DataDistance { get; }
+        /// <summary>中心周围多远以内的区块暂时不要删除，不能比数据预取范围更小。</summary>
         public int DestroyDistance { get; }
         /// <summary>这些区块除了运行逻辑外，是否还要在 Unity 里显示出来。</summary>
         public bool RequestPresentation { get; }
@@ -129,6 +137,12 @@ namespace FlatWorld.WorldModel
         public bool HasUnsettledGenerationTasks => _generationTasks.Count > 0;
         /// <summary>最多允许几个区块同时在后台生成。</summary>
         public int MaxGenerationConcurrency => _scheduler.MaxConcurrency;
+        /// <summary>仍在调度器队列中等待线程的生成任务数量。</summary>
+        public int QueuedGenerationCount => _scheduler.QueuedCount;
+        /// <summary>当前真正占用后台线程执行生成算法的任务数量。</summary>
+        public int ActiveGenerationCount => _scheduler.ActiveCount;
+        /// <summary>已经完成、等待主线程提交给世界的结果数量。</summary>
+        public int PendingCommitCount => _completed.Count;
         /// <summary>当前哪些区块需要在 Unity 画面中显示。</summary>
         public IEnumerable<WorldAddress> PresentationDemand =>
             _presentationDemand.Count == 0 ? _emptyAddresses : _presentationDemand;
@@ -140,6 +154,42 @@ namespace FlatWorld.WorldModel
         /// <summary>先把地址换算正确，再领取一张区块使用票。</summary>
         public ChunkLease AcquireLease(WorldAddress address, ChunkLeaseKind kind) =>
             World.AcquireChunkLease(_normalizer.Normalize(address), kind);
+
+        /// <summary>运行时调整纯区块生成并发；降低上限不会中断已经开始的生成。</summary>
+        public void SetMaxGenerationConcurrency(int maxConcurrency)
+        {
+            ThrowIfDisposed();
+            _scheduler.SetMaxConcurrency(maxConcurrency);
+        }
+
+        #region 窗口数据优先级
+
+        /// <summary>一个数据加载目标及其相对玩家的调度优先级。</summary>
+        private readonly struct WindowDataTarget
+        {
+            public WindowDataTarget(ChunkWindowRequest request, bool active, int ring)
+            {
+                Request = request;
+                Active = active;
+                Ring = ring;
+            }
+
+            public ChunkWindowRequest Request { get; }
+            public bool Active { get; }
+            public int Ring { get; }
+
+            /// <summary>判断候选目标是否比已记录目标更值得先生成。</summary>
+            public bool IsHigherPriorityThan(WindowDataTarget other)
+            {
+                if (Active != other.Active)
+                    return Active;
+                if (Ring != other.Ring)
+                    return Ring < other.Ring;
+                return false;
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// 请求加载一个区块。
@@ -193,16 +243,17 @@ namespace FlatWorld.WorldModel
             ThrowIfDisposed();
             if (requests == null)
                 throw new ArgumentNullException(nameof(requests));
-            // 分别记下“要运行”“只保留”“要显示”的区块。绕回世界另一边后，重复地址会自动合并。
+            // 分别记下“要运行”“提前生成”“只保留”“要显示”的区块。绕回后重复地址自动合并。
             var targets = new HashSet<WorldAddress>();
+            var dataTargets = new Dictionary<WorldAddress, WindowDataTarget>();
             var retainedTargets = new HashSet<WorldAddress>();
             var presentationTargets = new HashSet<WorldAddress>();
-            var targetRequests = new Dictionary<WorldAddress, ChunkWindowRequest>();
             for (int requestIndex = 0; requestIndex < requests.Count; requestIndex++)
             {
                 ChunkWindowRequest request = requests[requestIndex];
                 WorldAddress center = _normalizer.Normalize(request.Center);
                 int activeRadius = request.ActiveDistance - 1;
+                int dataRadius = request.DataDistance - 1;
                 int destroyRadius = request.DestroyDistance - 1;
                 // 先算较大的保留范围，避免玩家刚走开一点，区块就马上被删除。
                 for (int x = -destroyRadius; x <= destroyRadius; x++)
@@ -215,15 +266,23 @@ namespace FlatWorld.WorldModel
                                 center.ChunkOrigin.Y + y * request.Profile.Height))));
                     }
                 }
-                for (int x = -activeRadius; x <= activeRadius; x++)
+                for (int x = -dataRadius; x <= dataRadius; x++)
                 {
-                    for (int y = -activeRadius; y <= activeRadius; y++)
+                    for (int y = -dataRadius; y <= dataRadius; y++)
                     {
                         var address = _normalizer.Normalize(new WorldAddress(center.DimensionId,
                             new Int2(center.ChunkOrigin.X + x * request.Profile.Width,
                                 center.ChunkOrigin.Y + y * request.Profile.Height)));
+                        int ring = Math.Max(Math.Abs(x), Math.Abs(y));
+                        bool active = ring <= activeRadius;
+                        var candidate = new WindowDataTarget(request, active, ring);
+                        if (!dataTargets.TryGetValue(address, out WindowDataTarget existing) ||
+                            candidate.IsHigherPriorityThan(existing))
+                            dataTargets[address] = candidate;
+
+                        if (!active)
+                            continue;
                         targets.Add(address);
-                        targetRequests[address] = request;
                         if (request.RequestPresentation)
                             presentationTargets.Add(address);
                     }
@@ -240,7 +299,16 @@ namespace FlatWorld.WorldModel
                     _simulationLeases.Add(address,
                         World.AcquireChunkLease(address, ChunkLeaseKind.Simulation));
                 SetPresentationDemand(address, presentationTargets.Contains(address));
-                ChunkWindowRequest targetRequest = targetRequests[address];
+            }
+
+            // 可见圈始终排在预取圈前面；同一圈按地址稳定排序，不再计算移动预测。
+            var orderedDataTargets = new List<WorldAddress>(dataTargets.Keys);
+            orderedDataTargets.Sort((left, right) =>
+                CompareWindowDataTargets(left, right, dataTargets));
+            for (int i = 0; i < orderedDataTargets.Count; i++)
+            {
+                WorldAddress address = orderedDataTargets[i];
+                ChunkWindowRequest targetRequest = dataTargets[address].Request;
                 _ = RequestChunkDataAsync(address, targetRequest.WorldSeed, targetRequest.Profile,
                     topology: targetRequest.Topology);
             }
@@ -272,15 +340,32 @@ namespace FlatWorld.WorldModel
                 EvictChunk(evictions[i]);
         }
 
+        /// <summary>按可见性、距离和稳定地址排列窗口数据请求。</summary>
+        private static int CompareWindowDataTargets(WorldAddress left, WorldAddress right,
+            IReadOnlyDictionary<WorldAddress, WindowDataTarget> targets)
+        {
+            WindowDataTarget leftTarget = targets[left];
+            WindowDataTarget rightTarget = targets[right];
+            if (leftTarget.Active != rightTarget.Active)
+                return leftTarget.Active ? -1 : 1;
+            int ring = leftTarget.Ring.CompareTo(rightTarget.Ring);
+            if (ring != 0)
+                return ring;
+            return left.CompareTo(right);
+        }
+
         /// <summary>
         /// 取回所有已经做完的后台任务，并逐个处理成功、取消或失败。
         /// 有效结果会正式交给世界；返回值表示这次一共处理了几个任务。
         /// </summary>
-        public int CommitCompleted()
+        public int CommitCompleted(int maxCount = int.MaxValue)
         {
             ThrowIfDisposed();
+            if (maxCount <= 0)
+                return 0;
             int count = 0;
-            while (_completed.TryDequeue(out GenerationCompletion completion))
+            while (count < maxCount &&
+                   _completed.TryDequeue(out GenerationCompletion completion))
             {
                 count++;
                 _generationTasks.Remove(completion.Task);
@@ -331,9 +416,10 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>先处理后台结果，再让世界逻辑向前运行一步。</summary>
-        public void Advance(float deltaSeconds, bool authoritativeSimulation = true)
+        public void Advance(float deltaSeconds, bool authoritativeSimulation = true,
+            int maxCompletedCommits = 1)
         {
-            CommitCompleted();
+            CommitCompleted(maxCompletedCommits);
             if (authoritativeSimulation)
                 World.Tick(deltaSeconds);
         }

@@ -50,14 +50,14 @@ disable-model-invocation: false
 
 ## 正式运行时 Prefab
 
-- 设置入口控制器：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{AudioSettingsPanelLauncher,UISettingsPanelLauncher,AutoSaveSettingsPanelLauncher,DifficultySettingsPanelLauncher,InputBindingPanelLauncher}.cs`。
-- 设置面板：`UI_AudioSettings`、`UI_InterfaceSettings`、`UI_AutoSaveSettings`、`UI_DifficultySettings`、`UI_InputBindingSettings`。
+- 设置入口控制器：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{AudioSettingsPanelLauncher,UISettingsPanelLauncher,AutoSaveSettingsPanelLauncher,WorldStreamingSettingsPanelLauncher,DifficultySettingsPanelLauncher,InputBindingPanelLauncher}.cs`。
+- 设置面板：`UI_AudioSettings`、`UI_InterfaceSettings`、`UI_AutoSaveSettings`、`UI_WorldStreamingSettings`、`UI_DifficultySettings`、`UI_InputBindingSettings`。
 - 按键绑定面板固定节点：`设备分页`、`键鼠分页按钮`、`手柄分页按钮`、`绑定列表/Content`、`恢复默认按钮`、`完成按钮`；分页只重建 `UI_InputBindingRow` 实例，不得运行时创建行内部视觉节点。
-- 设置入口按钮预制在 `Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab`：`音量调节`、`UI设置`、`自动保存`、`游戏难度`、`按键绑定`。
+- 设置入口按钮预制在 `Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab`：`音量调节`、`UI设置`、`自动保存`、`流送性能`、`游戏难度`、`按键绑定`。
 - 世界加载面板：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_WorldLoading.prefab`；根 Canvas 使用最高层 Overlay 并跨场景保留，固定节点为 `加载标题`、`加载状态`、`加载进度`、`加载进度文本`、`加载提示`。
 - 对话 UI：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab` 是底部半透明 Minecraft 风格单行输入条；`UI_CharacterSpeechBubble.prefab` 是角色头顶气泡。聊天控件固定节点为 `Text Area`、`Placeholder`、`Text`。
 - `GameManager.UI.cs` 只实例化和更新加载 Prefab；禁止用 `new GameObject` 或 `AddComponent` 在运行时构建加载视觉。新建和进入存档时由 `GameManager.cs` 驱动阶段文字与进度。
-- 统一重建器：`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`，菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI`；运行时资产修改后通过该入口重建并在 Prefab Mode 中人工检查。
+- 统一重建器：`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`；全量菜单为 `FlatWorld/UI/Rebuild Runtime Prefab UI`，仅重建流送设置使用 `FlatWorld/UI/Rebuild World Streaming Settings UI`，避免无关 Prefab 重写。
 - `Assets/2_Prefabs` 是 Addressables 文件夹条目并带 `Prefab` 标签，其下新增运行时面板会由 `GameRes` 按 Prefab 名预加载。
 
 ## 主菜单与存档
@@ -82,6 +82,8 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：F4 GM 物品空投目录改用 `GameRes.GetAllItemIds()` 与 `TryGetItemPresentation()`，名称和图标来自 JSON 最终物品定义，不再显示共享模板外壳的名称与贴图。
+- 2026-08-08：新增 `UI_WorldStreamingSettings.prefab` 与设置入口“流送性能”，提供自动、流畅优先（单后台线程）和高吞吐（安全多线程）三档；`WorldStreamingPreferences` 用 PlayerPrefs 持久化并即时更新 ChunkMgr，`UISmokeTests` 固定面板和入口命名契约。
 - 2026-08-08：`UI_NewGame.prefab` 的“世界生成概览”改为可选世界种子输入框；玩家可输入数字或文字，留空自动随机，控件由 `NewGamePrefabBuilder` 权威重建。
 - 2026-08-08：新世界的玩家名称与存档名称都改为可选；任一留空时，`NewWorldCreationRequest` 自动补同一个八位纯数字名称，`UI_NewGame.prefab` 与重建器同步提示该行为。
 - 2026-08-04：`UI_GameSaveManager` 新增“删除存档按钮”；默认禁用，选中世界后启用，调用 `SaveDataMgr.DeleteSave` 清理完整存档族并刷新列表、清空角色选择。
@@ -90,12 +92,10 @@ disable-model-invocation: false
 - 2026-07-29：玩家聊天输入支持裸 T 打开、Enter 发送、Esc 取消；打开期间锁定玩法输入，提交文字由现有角色气泡显示。
 - 2026-07-29：新增 `UI_WorldLoading.prefab`；新建世界和进入已有存档时以跨场景 Overlay 显示阶段、进度和提示，直至玩家及首批周围区块就绪。
 - 2026-07-29：设置、按键绑定动态行、聊天输入、角色气泡、背包整理、制作预览和联机玩家名称全部固化为可视化 Prefab；新增统一重建器与 `RuntimeUIPrefabKeys`，运行时只加载、实例化和绑定数据。
-- 2026-07-29：`UIRoot.prefab` 移至 `Assets/Resources/UI/`；`UIManager` 删除运行时 Canvas 构建兜底，`BasePanel`/`BaseUIManager` 停止应用会修改视觉的运行时主题。
-- 2026-07-29：联机面板固化为可在 Unity 中直接查看和编辑的 `UI_NetworkMode.prefab`；运行时只通过 `GameRes` 实例化，移除全部视觉节点构建代码。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs` 与 `Assets/GameTest/UI/WorldTopologyUISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约、按键绑定双分页节点、Resources UIRoot、五个设置 Prefab、按键行 Prefab、世界加载 Prefab、设置入口节点、正式脚本无运行时视觉构建、新世界难度命名契约，以及可选世界种子输入框的命名与卡片边界；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
+- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs` 与 `Assets/GameTest/UI/WorldTopologyUISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约、按键绑定双分页节点、Resources UIRoot、六个设置 Prefab、流送性能入口、按键行 Prefab、世界加载 Prefab、新世界难度命名契约，以及可选世界种子输入框的命名与卡片边界；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；UI 测试约定目录：`Assets/GameTest/UI/`；场景目录：`Assets/GameTest/Scenes/UI/`；冒烟分类：`UI.Smoke`。
 - 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；必须验证控件命名契约、组件类型、事件绑定和重复打开关闭，视觉观感仍交由人工确认。

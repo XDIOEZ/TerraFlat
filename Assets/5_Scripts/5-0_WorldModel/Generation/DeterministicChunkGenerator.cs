@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -10,8 +11,16 @@ namespace FlatWorld.WorldModel
     /// </summary>
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
-        /// <summary>纯区块生成规则版本；河谷选路或河网筛选规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 12;
+        /// <summary>纯区块生成规则版本；气候、群系、河谷选路或河网筛选规则改变时递增。</summary>
+        public const int CurrentGenerationSignature = 17;
+
+        private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
+        private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
+            heightDrivenRegionCache = new();
+        private readonly ConcurrentQueue<HeightDrivenRegionKey> heightDrivenCacheOrder = new();
+
+        /// <summary>供纯算法诊断确认新版水文缓存保持有界。</summary>
+        internal int CachedHeightDrivenRegionCount => heightDrivenRegionCache.Count;
 
         // 草地状态用 1 和 2；数字 0 专门表示“这个格子还没处理过”，方便排查问题。
         private const byte GrassEmpty = 1;
@@ -36,9 +45,20 @@ namespace FlatWorld.WorldModel
                 bool cave = settings.Mode == ChunkGenerationMode.Cave ||
                             request.Address.DimensionId.IndexOf("cave",
                                 StringComparison.OrdinalIgnoreCase) >= 0;
-                HeightDrivenRiverMap riverMap = !cave && settings.RiverEnabled
-                    ? BuildHeightDrivenRiverMap(request, settings, cancellationToken)
-                    : null;
+                GeneratedHydrologyMap riverMap = null;
+                if (!cave && settings.RiverEnabled)
+                {
+                    riverMap = settings.RiverAlgorithm == RiverGenerationAlgorithm.Legacy
+                        ? legacyHydrologyKernel.Build(
+                            request,
+                            settings,
+                            position => SampleHeight(
+                                request, settings, position.X, position.Y),
+                            position => SamplePrecipitation(
+                                request, settings, position.X, position.Y),
+                            cancellationToken)
+                        : BuildHeightDrivenRiverMap(request, settings, cancellationToken);
+                }
                 for (int y = 0; y < profile.Height; y++)
                 {
                     for (int x = 0; x < profile.Width; x++)
@@ -71,6 +91,191 @@ namespace FlatWorld.WorldModel
             }
         }
 
+        #region 地表位置查询
+
+        /// <summary>
+        /// 使用与正式区块完全相同的 Profile、气候、Biome、河流和结构结果寻找可走陆地。
+        /// 搜索只创建临时纯数据，不注册运行时 Chunk；先按高度跳过海洋，再按需生成候选区块。
+        /// </summary>
+        public bool TryFindWalkableSurfaceNear(
+            string dimensionId,
+            int worldSeed,
+            ChunkGenerationProfileSnapshot profile,
+            ChunkGenerationTopologySnapshot topology,
+            Int2 anchor,
+            int maxRadius,
+            int sampleBudget,
+            out Int2 worldCell,
+            CancellationToken cancellationToken = default)
+        {
+            if (profile == null)
+                throw new ArgumentNullException(nameof(profile));
+            if (profile.Settings.Mode != ChunkGenerationMode.Surface)
+            {
+                worldCell = anchor;
+                return false;
+            }
+
+            dimensionId = string.IsNullOrWhiteSpace(dimensionId) ? "surface" : dimensionId;
+            maxRadius = Math.Max(0, maxRadius);
+            sampleBudget = Math.Max(1, sampleBudget);
+            worldCell = anchor;
+            IReadOnlyList<Int2> candidates = BuildSurfaceSearchCandidates(
+                anchor, topology, maxRadius, sampleBudget);
+            var requests = new Dictionary<Int2, ChunkGenerationRequest>();
+            var generatedTerrain = new Dictionary<Int2, ChunkTerrainData>();
+            try
+            {
+                foreach (Int2 candidate in candidates)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    Int2 origin = ResolveSearchChunkOrigin(candidate, profile, topology);
+                    if (!requests.TryGetValue(origin, out ChunkGenerationRequest request))
+                    {
+                        request = new ChunkGenerationRequest(
+                            1,
+                            new WorldAddress(dimensionId, origin),
+                            worldSeed == 0 ? 1 : worldSeed,
+                            1,
+                            profile,
+                            topology);
+                        requests.Add(origin, request);
+                    }
+
+                    if (SampleHeight(request, profile.Settings, candidate.X, candidate.Y) <
+                        profile.Settings.SeaLevel)
+                    {
+                        continue;
+                    }
+
+                    if (!generatedTerrain.TryGetValue(origin, out ChunkTerrainData terrain))
+                    {
+                        using ChunkGenerationResult result = Generate(request, cancellationToken);
+                        terrain = result.ConsumeTerrain();
+                        generatedTerrain.Add(origin, terrain);
+                    }
+
+                    int localX = candidate.X - origin.X;
+                    int localY = candidate.Y - origin.Y;
+                    if ((uint)localX >= (uint)terrain.Width ||
+                        (uint)localY >= (uint)terrain.Height)
+                    {
+                        continue;
+                    }
+
+                    TerrainCell cell = terrain.GetCell(localX, localY);
+                    if ((cell.Flags & TerrainCellFlags.Water) != 0 ||
+                        !terrain.IsWalkable(localX, localY))
+                    {
+                        continue;
+                    }
+
+                    worldCell = candidate;
+                    return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                foreach (ChunkTerrainData terrain in generatedTerrain.Values)
+                    terrain.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 先密集检查锚点附近，再把剩余预算均匀铺满完整半径，避免预算被近处海面耗尽。
+        /// </summary>
+        private static IReadOnlyList<Int2> BuildSurfaceSearchCandidates(
+            Int2 anchor,
+            ChunkGenerationTopologySnapshot topology,
+            int maxRadius,
+            int sampleBudget)
+        {
+            var candidates = new List<Int2>(sampleBudget);
+            var visited = new HashSet<Int2>();
+
+            void AddCandidate(int offsetX, int offsetY)
+            {
+                if (candidates.Count >= sampleBudget)
+                    return;
+
+                var candidate = new Int2(
+                    topology.NormalizeX(anchor.X + offsetX),
+                    topology.NormalizeY(anchor.Y + offsetY));
+                if (visited.Add(candidate))
+                    candidates.Add(candidate);
+            }
+
+            int localRadius = Math.Min(maxRadius, 8);
+            for (int radius = 0; radius <= localRadius && candidates.Count < sampleBudget; radius++)
+            {
+                for (int offsetY = -radius;
+                     offsetY <= radius && candidates.Count < sampleBudget;
+                     offsetY++)
+                for (int offsetX = -radius;
+                     offsetX <= radius && candidates.Count < sampleBudget;
+                     offsetX++)
+                {
+                    if (radius > 0 && Math.Abs(offsetX) != radius &&
+                        Math.Abs(offsetY) != radius)
+                    {
+                        continue;
+                    }
+
+                    AddCandidate(offsetX, offsetY);
+                }
+            }
+
+            int remainingBudget = sampleBudget - candidates.Count;
+            if (maxRadius <= localRadius || remainingBudget <= 0)
+                return candidates;
+
+            int gridSize = Math.Max(1, (int)Math.Floor(Math.Sqrt(remainingBudget)));
+            var gridOffsets = new List<Int2>(gridSize * gridSize);
+            for (int gridY = 0; gridY < gridSize; gridY++)
+            for (int gridX = 0; gridX < gridSize; gridX++)
+            {
+                int offsetX = (int)Math.Round(
+                    -maxRadius + 2d * maxRadius * (gridX + 0.5d) / gridSize,
+                    MidpointRounding.AwayFromZero);
+                int offsetY = (int)Math.Round(
+                    -maxRadius + 2d * maxRadius * (gridY + 0.5d) / gridSize,
+                    MidpointRounding.AwayFromZero);
+                gridOffsets.Add(new Int2(offsetX, offsetY));
+            }
+
+            // 全域网格也按距离由近到远检查，避免明明近处有陆地却先选中远端格子。
+            gridOffsets.Sort((left, right) =>
+            {
+                int leftDistance = Math.Max(Math.Abs(left.X), Math.Abs(left.Y));
+                int rightDistance = Math.Max(Math.Abs(right.X), Math.Abs(right.Y));
+                int distanceComparison = leftDistance.CompareTo(rightDistance);
+                if (distanceComparison != 0)
+                    return distanceComparison;
+                int yComparison = left.Y.CompareTo(right.Y);
+                return yComparison != 0 ? yComparison : left.X.CompareTo(right.X);
+            });
+            foreach (Int2 offset in gridOffsets)
+                AddCandidate(offset.X, offset.Y);
+
+            return candidates;
+        }
+
+        /// <summary>按世界拓扑和 Profile 尺寸计算候选格所属的规范区块原点。</summary>
+        private static Int2 ResolveSearchChunkOrigin(Int2 position,
+            ChunkGenerationProfileSnapshot profile,
+            ChunkGenerationTopologySnapshot topology)
+        {
+            int anchorX = topology.IsWrapped ? topology.Min.X : 0;
+            int anchorY = topology.IsWrapped ? topology.Min.Y : 0;
+            int originX = anchorX + FloorDiv(position.X - anchorX, profile.Width) * profile.Width;
+            int originY = anchorY + FloorDiv(position.Y - anchorY, profile.Height) * profile.Height;
+            return new Int2(topology.NormalizeX(originX), topology.NormalizeY(originY));
+        }
+
+        #endregion
+
         #region 地表与高度图采样
 
         /// <summary>根据高度、温度、降水和河流结果，生成一个地表格子的完整数据。</summary>
@@ -78,7 +283,7 @@ namespace FlatWorld.WorldModel
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             ChunkTerrainBuffer terrain,
-            HeightDrivenRiverMap riverMap,
+            GeneratedHydrologyMap riverMap,
             int x,
             int y,
             int worldX,
@@ -87,17 +292,43 @@ namespace FlatWorld.WorldModel
             // 如果世界会绕回另一边，先把越界坐标换回世界内，保证两侧地形能严丝合缝。
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
-            double height = SampleHeight(request, settings, worldX, worldY);
-            double temperatureNoise = Fractal(CreateSeed(request, 0x85ebca6bu), worldX, worldY,
-                settings.ClimateScale, settings.ClimateOctaves, 2.07d, 0.5d, request.Topology);
-            // 越靠近寒冷纬度、海拔越高，温度越低；最后把结果限制在 0 到 1 之间。
-            double latitudeCooling = Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
-            double temperature = Clamp01(temperatureNoise - latitudeCooling -
-                                         Math.Max(0d, height - 0.68d) * 0.55d);
-            double precipitation = SamplePrecipitation(request, settings, worldX, worldY);
-
+            double height;
+            double basePrecipitation;
+            double precipitation;
+            double windX;
+            double windY;
+            double temperature;
+            double temperatureCelsius;
+            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+            {
+                LegacyClimateSample climate = LegacyTerrainClimateKernel.SampleClimate(
+                    request, settings, worldX, worldY);
+                height = climate.Height;
+                temperature = climate.Temperature;
+                temperatureCelsius = climate.TemperatureCelsius;
+                basePrecipitation = climate.BasePrecipitation;
+                precipitation = climate.Precipitation;
+                windX = climate.WindX;
+                windY = climate.WindY;
+            }
+            else
+            {
+                height = SampleHeight(request, settings, worldX, worldY);
+                precipitation = SamplePrecipitation(request, settings, worldX, worldY);
+                basePrecipitation = precipitation;
+                windX = 1d;
+                windY = 0d;
+                double temperatureNoise = Fractal(CreateSeed(request, 0x85ebca6bu),
+                    worldX, worldY, settings.ClimateScale, settings.ClimateOctaves,
+                    2.07d, 0.5d, request.Topology);
+                // 简化模式保留纬度与海拔降温；旧版 Land 模式使用独立温度通道。
+                double latitudeCooling = Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
+                temperature = Clamp01(temperatureNoise - latitudeCooling -
+                                      Math.Max(0d, height - 0.68d) * 0.55d);
+                temperatureCelsius = -20d + temperature * 65d;
+            }
             bool ocean = height < settings.SeaLevel;
-            RiverCell riverCell = default;
+            GeneratedHydrologyCell riverCell = default;
             bool river = !ocean && riverMap != null &&
                          riverMap.TryGet(worldX, worldY, out riverCell);
             double floodplain = !ocean && riverMap != null
@@ -105,56 +336,65 @@ namespace FlatWorld.WorldModel
                 : 0d;
             double moisture = Clamp01(
                 precipitation * 0.78d + (1d - height) * 0.22d + floodplain * 0.18d);
-            bool beach = !ocean && !river && height < settings.BeachLevel;
-            bool alluvial = !ocean && !river && !beach &&
-                             floodplain >= settings.RiverAlluvialTileThreshold;
-            bool snow = !ocean && !river && temperature <= settings.SnowTemperature;
+            SurfaceBiomeKind biome = SurfaceBiomeClassifier.Resolve(
+                settings, height, temperature, precipitation, moisture, river);
+            bool mountain = biome == SurfaceBiomeKind.Stone;
+            bool alluvial =
+                (biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest) &&
+                floodplain >= settings.RiverAlluvialTileThreshold;
 
             // 一个格子可能同时符合几个条件，所以按顺序决定：先海洋、再河流，然后才是沙滩和气候地区。
             int biomeId;
             int groundTileId;
             TerrainCellFlags flags;
             short navigationCost = settings.DefaultNavigationCost;
-            if (ocean)
+            if (biome == SurfaceBiomeKind.Ocean)
             {
-                biomeId = 0;
+                biomeId = (int)biome;
                 groundTileId = settings.SaltWaterTileId;
                 flags = TerrainCellFlags.Water;
                 navigationCost = short.MaxValue;
             }
-            else if (river)
+            else if (biome == SurfaceBiomeKind.River)
             {
-                biomeId = 1;
+                biomeId = (int)biome;
                 groundTileId = settings.FreshWaterTileId;
                 flags = TerrainCellFlags.Water;
                 navigationCost = short.MaxValue;
             }
-            else if (beach)
+            else if (biome == SurfaceBiomeKind.Stone)
             {
-                biomeId = 2;
+                // 旧版石地群系从 0.72 高度开始；二维地图直接用石头地面表达山体。
+                biomeId = (int)biome;
+                groundTileId = settings.StoneTileId;
+                flags = TerrainCellFlags.Walkable;
+            }
+            else if (biome == SurfaceBiomeKind.Beach)
+            {
+                biomeId = (int)biome;
                 groundTileId = settings.SandTileId;
                 flags = TerrainCellFlags.Walkable;
             }
             else if (alluvial)
             {
                 // 主河低坡两侧的浅色沙土带用来表现反复沉积形成的冲积平原。
-                biomeId = 4;
+                biomeId = (int)biome;
                 groundTileId = settings.SandTileId;
                 flags = TerrainCellFlags.Walkable;
             }
-            else if (snow)
+            else if (biome == SurfaceBiomeKind.Snow)
             {
-                biomeId = 6;
+                biomeId = (int)biome;
                 groundTileId = settings.SnowTileId;
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
             }
             else
             {
-                bool arid = precipitation < 0.28d;
-                bool forest = moisture > 0.62d;
-                biomeId = arid ? 3 : forest ? 5 : 4;
-                groundTileId = arid ? settings.SandTileId : settings.GroundTileId;
+                biomeId = (int)biome;
+                groundTileId = biome == SurfaceBiomeKind.Desert
+                    ? settings.SandTileId
+                    : settings.GroundTileId;
                 flags = TerrainCellFlags.Walkable;
             }
 
@@ -164,12 +404,20 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("height", x, y, (float)height);
             terrain.SetEnvironmentValue("temperature", x, y, (float)temperature);
             terrain.SetEnvironmentValue("temperature.celsius", x, y,
-                (float)(-20d + temperature * 65d));
+                (float)temperatureCelsius);
+            terrain.SetEnvironmentValue("basePrecipitation", x, y, (float)basePrecipitation);
             terrain.SetEnvironmentValue("precipitation", x, y, (float)precipitation);
+            terrain.SetEnvironmentValue("windX", x, y, (float)windX);
+            terrain.SetEnvironmentValue("windY", x, y, (float)windY);
             terrain.SetEnvironmentValue("moisture", x, y, (float)moisture);
+            terrain.SetEnvironmentValue("mountain", x, y, mountain ? 1f : 0f);
             terrain.SetEnvironmentValue("riverDepth", x, y, river ? (float)riverCell.Depth : 0f);
             terrain.SetEnvironmentValue("riverFlow", x, y, river ? (float)riverCell.Flow : 0f);
             terrain.SetEnvironmentValue("riverFloodplain", x, y, (float)floodplain);
+            terrain.SetEnvironmentValue("riverSurfaceLevel", x, y,
+                river ? (float)riverCell.SurfaceLevel : 0f);
+            terrain.SetEnvironmentValue("riverKind", x, y,
+                river ? (float)riverCell.Kind : 0f);
 
             // 草长不长只看世界种子、坐标和湿度，不用会变化的全局随机数，所以每次结果相同。
             bool grass = (flags & TerrainCellFlags.Walkable) != 0 &&
@@ -187,6 +435,11 @@ namespace FlatWorld.WorldModel
             int worldX,
             int worldY)
         {
+            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+            {
+                return LegacyTerrainClimateKernel.SampleHeight(
+                    request, settings, worldX, worldY);
+            }
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
             return Fractal(
@@ -207,6 +460,11 @@ namespace FlatWorld.WorldModel
             int worldX,
             int worldY)
         {
+            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+            {
+                return LegacyTerrainClimateKernel.SamplePrecipitation(
+                    request, settings, worldX, worldY);
+            }
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
             return Fractal(
@@ -239,26 +497,60 @@ namespace FlatWorld.WorldModel
             new Int2(-1, 0), new Int2(1, 0), new Int2(0, -1), new Int2(0, 1)
         };
 
-        // D∞ 连续坡向按逆时针排序；相邻两个方向之间用有序抖动分配格子。
+        // D∞ 连续坡向按逆时针排序；连续偏转只在严格下坡候选中改变选路。
         private static readonly Int2[] RiverDirectionsCounterClockwise =
         {
             new Int2(1, 0), new Int2(1, 1), new Int2(0, 1), new Int2(-1, 1),
             new Int2(-1, 0), new Int2(-1, -1), new Int2(0, -1), new Int2(1, -1)
         };
 
-        private static readonly int[] RiverDirectionDither4X4 =
-        {
-             0,  8,  2, 10,
-            12,  4, 14,  6,
-             3, 11,  1,  9,
-            15,  7, 13,  5
-        };
-
         /// <summary>
         /// 从与地表完全相同的高度图和降水图构建当前区块的河道。
         /// 河流只负责沿低处汇流；不再使用独立噪声场或正弦函数直接绘制河带。
         /// </summary>
-        private static HeightDrivenRiverMap BuildHeightDrivenRiverMap(
+        private GeneratedHydrologyMap BuildHeightDrivenRiverMap(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            CancellationToken cancellationToken)
+        {
+            HeightDrivenRegionDescriptor region = ResolveHeightDrivenRegion(request, settings);
+            var key = new HeightDrivenRegionKey(
+                request.WorldEpoch,
+                request.Address.DimensionId,
+                request.WorldSeed,
+                request.Profile.GenerationFingerprint,
+                request.Topology,
+                region.Origin,
+                region.Width,
+                region.Height);
+            var candidate = new Lazy<GeneratedHydrologyMap>(() =>
+                BuildHeightDrivenRiverRegion(
+                    CreateHeightDrivenRegionRequest(request, region),
+                    settings,
+                    cancellationToken),
+                LazyThreadSafetyMode.ExecutionAndPublication);
+            Lazy<GeneratedHydrologyMap> shared = heightDrivenRegionCache.GetOrAdd(key, candidate);
+            if (ReferenceEquals(shared, candidate))
+            {
+                heightDrivenCacheOrder.Enqueue(key);
+                TrimHeightDrivenRegionCache(settings.RiverMaxCachedRegions);
+            }
+
+            try
+            {
+                return shared.Value;
+            }
+            catch
+            {
+                if (heightDrivenRegionCache.TryGetValue(key, out Lazy<GeneratedHydrologyMap> failed) &&
+                    ReferenceEquals(failed, shared))
+                    heightDrivenRegionCache.TryRemove(key, out _);
+                throw;
+            }
+        }
+
+        /// <summary>按世界固定区域单次构建河网；同区域相邻区块只会共享这一份结果。</summary>
+        private static GeneratedHydrologyMap BuildHeightDrivenRiverRegion(
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             CancellationToken cancellationToken)
@@ -305,7 +597,7 @@ namespace FlatWorld.WorldModel
                 settings.RiverStartFlow,
                 settings.RiverTributaryStartFlow,
                 settings.RiverMinimumVisibleCourseLength);
-            var riverCells = new Dictionary<Int2, RiverCell>();
+            var riverCells = new Dictionary<Int2, GeneratedHydrologyCell>();
             var floodplainCells = new Dictionary<Int2, double>();
             foreach (KeyValuePair<Int2, double> pair in flowByCell)
             {
@@ -346,7 +638,8 @@ namespace FlatWorld.WorldModel
                             ? 1d
                             : 1d - Clamp01(distance / (radius + 0.5d));
                         double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
-                        SetRiverCell(riverCells, waterPosition, new RiverCell(pair.Value, depth));
+                        SetRiverCell(riverCells, waterPosition, new GeneratedHydrologyCell(
+                            GeneratedHydrologyKind.River, pair.Value, depth));
                     }
                 }
 
@@ -360,7 +653,68 @@ namespace FlatWorld.WorldModel
                     floodplainCells);
             }
 
-            return new HeightDrivenRiverMap(riverCells, floodplainCells);
+            return new GeneratedHydrologyMap(riverCells, floodplainCells);
+        }
+
+        /// <summary>把缓存限制在配置上限内，优先移除最早加入的区域。</summary>
+        private void TrimHeightDrivenRegionCache(int maximumRegions)
+        {
+            maximumRegions = Math.Max(1, maximumRegions);
+            while (heightDrivenRegionCache.Count > maximumRegions &&
+                   heightDrivenCacheOrder.TryDequeue(out HeightDrivenRegionKey oldest))
+                heightDrivenRegionCache.TryRemove(oldest, out _);
+        }
+
+        /// <summary>按有限世界左下角或无限世界原点，把区块归入稳定的水文区域。</summary>
+        private static HeightDrivenRegionDescriptor ResolveHeightDrivenRegion(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings)
+        {
+            int size = settings.RiverHydrologyRegionSize;
+            int anchorX = request.Topology.IsWrapped ? request.Topology.Min.X : 0;
+            int anchorY = request.Topology.IsWrapped ? request.Topology.Min.Y : 0;
+            int normalizedX = request.Topology.NormalizeX(request.Address.ChunkOrigin.X);
+            int normalizedY = request.Topology.NormalizeY(request.Address.ChunkOrigin.Y);
+            int originX = anchorX + FloorDiv(normalizedX - anchorX, size) * size;
+            int originY = anchorY + FloorDiv(normalizedY - anchorY, size) * size;
+            int width = size;
+            int height = size;
+            if (request.Topology.IsWrapped)
+            {
+                width = Math.Min(size,
+                    request.Topology.Min.X + request.Topology.Span.X - originX);
+                height = Math.Min(size,
+                    request.Topology.Min.Y + request.Topology.Span.Y - originY);
+            }
+            return new HeightDrivenRegionDescriptor(
+                new Int2(originX, originY), Math.Max(1, width), Math.Max(1, height));
+        }
+
+        /// <summary>复制原配置，仅把生成范围扩大为水文区域，不读取任何 Unity 对象。</summary>
+        private static ChunkGenerationRequest CreateHeightDrivenRegionRequest(
+            ChunkGenerationRequest source,
+            HeightDrivenRegionDescriptor region)
+        {
+            var numbers = new Dictionary<string, double>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, double> pair in source.Profile.NumericParameters)
+                numbers.Add(pair.Key, pair.Value);
+            var texts = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, string> pair in source.Profile.TextParameters)
+                texts.Add(pair.Key, pair.Value);
+            var profile = new ChunkGenerationProfileSnapshot(
+                source.Profile.ProfileId,
+                source.Profile.Signature,
+                region.Width,
+                region.Height,
+                numbers,
+                texts);
+            return new ChunkGenerationRequest(
+                source.WorldEpoch,
+                new WorldAddress(source.Address.DimensionId, region.Origin),
+                source.WorldSeed,
+                source.RequestVersion,
+                profile,
+                source.Topology);
         }
 
         /// <summary>
@@ -592,8 +946,8 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>
-        /// 用高度图的连续负梯度求 D∞ 坡向，再在相邻两个格方向间做固定有序抖动。
-        /// 这样仍严格下坡且每格只有一个下游，但不会长期锁在水平、竖直或 45°。
+        /// 用高度图的连续负梯度求 D∞ 坡向，再叠加世界坐标连续变化的轻微偏转。
+        /// 偏转只负责在下坡方向间选路，不生成水体；每个实际河格仍严格低于上游。
         /// </summary>
         private static bool TryChooseDInfinityDownhill(
             HydrologySamplingContext sampling,
@@ -622,11 +976,13 @@ namespace FlatWorld.WorldModel
             double angle = Math.Atan2(-gradientY, -gradientX);
             if (angle < 0d)
                 angle += Math.PI * 2d;
-            double directionPosition = angle / (Math.PI / 4d);
+            double directionPosition = angle / (Math.PI / 4d) +
+                                       sampling.MeanderBias(current) *
+                                       sampling.Settings.RiverMeanderStrength;
             int lowerIndex = PositiveMod((int)Math.Floor(directionPosition), 8);
             int upperIndex = (lowerIndex + 1) & 7;
             double upperWeight = directionPosition - Math.Floor(directionPosition);
-            double dither = ResolveDirectionDither(current);
+            double dither = ResolveDirectionDither(sampling, current);
             bool preferUpper = upperWeight >= dither;
 
             Int2 firstDirection = RiverDirectionsCounterClockwise[
@@ -655,12 +1011,17 @@ namespace FlatWorld.WorldModel
             return next != current && sampling.Height(next) < currentHeight - DownhillEpsilon;
         }
 
-        /// <summary>根据坐标取一个固定的小扰动，避免所有河流总是朝完全相同的方向走。</summary>
-        private static double ResolveDirectionDither(Int2 position)
+        /// <summary>按世界种子与坐标分配相邻坡向，避免固定 4×4 图案形成周期直线。</summary>
+        private static double ResolveDirectionDither(
+            HydrologySamplingContext sampling,
+            Int2 position)
         {
-            int x = PositiveMod(position.X, 4);
-            int y = PositiveMod(position.Y, 4);
-            return (RiverDirectionDither4X4[y * 4 + x] + 0.5d) / 16d;
+            position = sampling.Normalize(position);
+            return Hash01(
+                sampling.Request.WorldSeed,
+                position.X,
+                position.Y,
+                0x27d4eb2fu);
         }
 
         /// <summary>只在低坡且已有明显汇流的主河两侧生成宽缓冲积带。</summary>
@@ -789,17 +1150,18 @@ namespace FlatWorld.WorldModel
 
         /// <summary>保存更深或更大流量的河道结果，避免较弱结果覆盖较强结果。</summary>
         private static void SetRiverCell(
-            Dictionary<Int2, RiverCell> cells,
+            Dictionary<Int2, GeneratedHydrologyCell> cells,
             Int2 position,
-            RiverCell candidate)
+            GeneratedHydrologyCell candidate)
         {
-            if (cells.TryGetValue(position, out RiverCell current) &&
+            if (cells.TryGetValue(position, out GeneratedHydrologyCell current) &&
                 current.Depth >= candidate.Depth && current.Flow >= candidate.Flow)
             {
                 return;
             }
 
-            cells[position] = new RiverCell(
+            cells[position] = new GeneratedHydrologyCell(
+                GeneratedHydrologyKind.River,
                 Math.Max(current.Flow, candidate.Flow),
                 Math.Max(current.Depth, candidate.Depth));
         }
@@ -830,17 +1192,82 @@ namespace FlatWorld.WorldModel
             return Clamp01((value - from) / Math.Max(0.0001d, to - from));
         }
 
-        private readonly struct RiverCell
+        /// <summary>水文区域的绝对原点和实际尺寸。</summary>
+        private readonly struct HeightDrivenRegionDescriptor
         {
-            /// <summary>创建一条河道格子的流量和深度数据。</summary>
-            public RiverCell(double flow, double depth)
+            public HeightDrivenRegionDescriptor(Int2 origin, int width, int height)
             {
-                Flow = Math.Max(0d, flow);
-                Depth = Clamp01(depth);
+                Origin = origin;
+                Width = width;
+                Height = height;
             }
 
-            public double Flow { get; }
-            public double Depth { get; }
+            public Int2 Origin { get; }
+            public int Width { get; }
+            public int Height { get; }
+        }
+
+        /// <summary>隔离世界、种子、配置、拓扑和区域的新版水文缓存键。</summary>
+        private readonly struct HeightDrivenRegionKey : IEquatable<HeightDrivenRegionKey>
+        {
+            public HeightDrivenRegionKey(long epoch, string dimensionId, int worldSeed,
+                ulong profileFingerprint, ChunkGenerationTopologySnapshot topology,
+                Int2 origin, int width, int height)
+            {
+                Epoch = epoch;
+                DimensionId = dimensionId;
+                WorldSeed = worldSeed;
+                ProfileFingerprint = profileFingerprint;
+                IsWrapped = topology.IsWrapped;
+                TopologyMin = topology.Min;
+                TopologySpan = topology.Span;
+                Origin = origin;
+                Width = width;
+                Height = height;
+            }
+
+            private long Epoch { get; }
+            private string DimensionId { get; }
+            private int WorldSeed { get; }
+            private ulong ProfileFingerprint { get; }
+            private bool IsWrapped { get; }
+            private Int2 TopologyMin { get; }
+            private Int2 TopologySpan { get; }
+            private Int2 Origin { get; }
+            private int Width { get; }
+            private int Height { get; }
+
+            public bool Equals(HeightDrivenRegionKey other) =>
+                Epoch == other.Epoch &&
+                string.Equals(DimensionId, other.DimensionId, StringComparison.Ordinal) &&
+                WorldSeed == other.WorldSeed &&
+                ProfileFingerprint == other.ProfileFingerprint &&
+                IsWrapped == other.IsWrapped &&
+                TopologyMin.Equals(other.TopologyMin) &&
+                TopologySpan.Equals(other.TopologySpan) &&
+                Origin.Equals(other.Origin) &&
+                Width == other.Width &&
+                Height == other.Height;
+
+            public override bool Equals(object obj) =>
+                obj is HeightDrivenRegionKey other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = Epoch.GetHashCode();
+                    hash = hash * 397 ^ StringComparer.Ordinal.GetHashCode(DimensionId);
+                    hash = hash * 397 ^ WorldSeed;
+                    hash = hash * 397 ^ ProfileFingerprint.GetHashCode();
+                    hash = hash * 397 ^ IsWrapped.GetHashCode();
+                    hash = hash * 397 ^ TopologyMin.GetHashCode();
+                    hash = hash * 397 ^ TopologySpan.GetHashCode();
+                    hash = hash * 397 ^ Origin.GetHashCode();
+                    hash = hash * 397 ^ Width;
+                    return hash * 397 ^ Height;
+                }
+            }
         }
 
         private readonly struct DownstreamChoice
@@ -856,42 +1283,13 @@ namespace FlatWorld.WorldModel
             public Int2 Next { get; }
         }
 
-        private sealed class HeightDrivenRiverMap
-        {
-            private readonly IReadOnlyDictionary<Int2, RiverCell> cells;
-            private readonly IReadOnlyDictionary<Int2, double> floodplainCells;
-
-            /// <summary>保存当前区块需要使用的河道和冲积带查询表。</summary>
-            public HeightDrivenRiverMap(
-                IReadOnlyDictionary<Int2, RiverCell> cells,
-                IReadOnlyDictionary<Int2, double> floodplainCells)
-            {
-                this.cells = cells ?? throw new ArgumentNullException(nameof(cells));
-                this.floodplainCells = floodplainCells ??
-                                       throw new ArgumentNullException(nameof(floodplainCells));
-            }
-
-            /// <summary>查询指定世界坐标是否属于河道，并返回河流数据。</summary>
-            public bool TryGet(int worldX, int worldY, out RiverCell cell)
-            {
-                return cells.TryGetValue(new Int2(worldX, worldY), out cell);
-            }
-
-            /// <summary>查询指定世界坐标的冲积带强度；不在冲积带时返回 0。</summary>
-            public double GetFloodplainStrength(int worldX, int worldY)
-            {
-                return floodplainCells.TryGetValue(new Int2(worldX, worldY), out double strength)
-                    ? strength
-                    : 0d;
-            }
-        }
-
         /// <summary>复用单次区块水文计算中的高度和降水采样，避免重复计算同一格噪声。</summary>
         private sealed class HydrologySamplingContext
         {
             private readonly Dictionary<Int2, double> heightCache = new();
             private readonly Dictionary<Int2, double> precipitationCache = new();
             private readonly Dictionary<Int2, double> routingHeightCache = new();
+            private readonly Dictionary<Int2, double> meanderBiasCache = new();
             private readonly Dictionary<Int2, DownstreamChoice> downstreamCache = new();
 
             /// <summary>创建一次水文采样上下文，并准备各类采样缓存。</summary>
@@ -954,6 +1352,41 @@ namespace FlatWorld.WorldModel
                                   Height(new Int2(position.X, position.Y + detailRadius))) / 8d;
                 value = center + (center - average) * Settings.RiverValleyDetailWeight;
                 routingHeightCache.Add(position, value);
+                return value;
+            }
+
+            /// <summary>
+            /// 读取缓慢变化的确定性选路偏转。它不参与水量与水体绘制，
+            /// 只让长距离坡向不再永久锁在水平、竖直或 45° 网格线上。
+            /// </summary>
+            public double MeanderBias(Int2 position)
+            {
+                position = Normalize(position);
+                if (meanderBiasCache.TryGetValue(position, out double value))
+                    return value;
+
+                double scale = Settings.RiverMeanderScale;
+                double broad = Fractal(
+                    CreateSeed(Request, 0x632be59bu),
+                    position.X,
+                    position.Y,
+                    1d / scale,
+                    2,
+                    2.03d,
+                    0.52d,
+                    Request.Topology);
+                double detail = Fractal(
+                    CreateSeed(Request, 0x85157af5u),
+                    position.X,
+                    position.Y,
+                    1d / Math.Max(8d, scale * 0.43d),
+                    2,
+                    2.11d,
+                    0.48d,
+                    Request.Topology);
+                value = Math.Max(-1d, Math.Min(1d,
+                    (broad * 0.72d + detail * 0.28d - 0.5d) * 2.6d));
+                meanderBiasCache.Add(position, value);
                 return value;
             }
 

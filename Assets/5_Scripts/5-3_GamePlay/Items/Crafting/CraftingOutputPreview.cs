@@ -46,9 +46,9 @@ public sealed class CraftingOutputPreview : MonoBehaviour
         if (itemData == null || string.IsNullOrEmpty(itemData.IDName) || GameRes.Instance == null)
             return null;
 
-        GameObject prefab = GameRes.Instance.GetPrefab(itemData.IDName);
-        SpriteRenderer renderer = prefab != null ? prefab.GetComponentInChildren<SpriteRenderer>() : null;
-        return renderer != null ? renderer.sprite : null;
+        return GameRes.Instance.TryGetItemPresentation(itemData.IDName, out _, out Sprite sprite)
+            ? sprite
+            : null;
     }
 
     public void Show(ItemData itemData, float progress01 = 0f)

@@ -205,6 +205,11 @@ public sealed class RuntimeItemDefinition
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
 
+    /// <summary>JSON 定义中的游戏显示名；空值时回退到稳定物品 ID。</summary>
+    public string DisplayName => string.IsNullOrWhiteSpace(templateData?.GameName)
+        ? Id
+        : templateData.GameName;
+
     public RuntimeItemDefinition(
         string id,
         string shellPrefabId,

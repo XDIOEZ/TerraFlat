@@ -74,14 +74,15 @@ GameStartScene
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：新玩家出生点纯采样与 `ChunkMgr.RefreshRuntimeWindow()` 统一使用 `DimensionManager.GetActiveGenerationSeed()`；禁止一个使用维度派生种子、另一个使用基础存档种子，否则预测陆地会在真实区块加载后变成水面。
+- 2026-08-08：新玩家纯地形出生搜索改为“锚点附近密集方环 + 剩余预算覆盖完整配置半径”；避免 4096 次采样被近处连续海面耗尽而实际只检查约 32 格，最终候选仍以正式区块结果确认非水且可走后再触发 `Event_PlayerEnterWorld`。
 - 2026-08-08：新世界 UI 接入手动世界种子；空白输入随机生成，数字、文字及 `0` 都作为可复现种子保存，`ReadyGameSaveData` 同步记录最终解析后的字符串与整数种子。
 - 2026-08-08：新世界 `PlanetData.NoiseScale` 在 `ChunkMgr.RefreshRuntimeWindow()` 创建纯生成快照时写入 `world.coordinateScale`，确保玩家选择的世界坐标缩放同时作用于 WorldModel 地形、气候和河流水文尺度；后台任务继续只读取不可变 Profile，不直接访问 Unity 单例。
 - 2026-08-08：`NewWorldCreationRequest` 接受空玩家名和空存档名；任一留空时统一补同一个八位纯数字名称，确保无需命名即可创建并进入新世界。
 - 2026-08-08：编辑器 Addressables Play Mode 固定使用 `BuildScriptFastMode`（索引 0），避免 `GameRes` 从旧 Bundle 读取已迁移前的 Prefab；清除 `GeneralWorldEdge.prefab` 上已删除 `SceneChange` 的残留组件，并为 `GameStartScene/Main Camera` 补齐主菜单阶段的 `AudioListener`；正式 Player 构建仍使用独立的 Packed Build 流程。
 - 2026-08-06：新世界 UI 默认提交 `WorldTopologyMode.Wrapped`；`PlanetData` 本身仍默认 Infinite，避免旧存档或非 UI 构造被自动转换。Wrapped 创建请求必须有正半径、正 Chunk 尺寸和可构造对齐边界。
-- 2026-08-04：新玩家进入存档时，出生点必须以当前维度的 MapCore Prefab 配置、当前 `PlanetData` 和派生种子纯计算；先写玩家坐标再触发 `Event_PlayerEnterWorld`，由 `Mod_ChunkLoader` 流送周围 Chunk。定位阶段不得实例化 Map/Chunk，河流格同样必须排除；区块存档统一由 `SaveDataMgr` 扫描。
+- 2026-08-04：新玩家进入存档时，出生点必须以当前维度的纯生成 Profile、当前 `PlanetData` 和派生种子计算；先写玩家坐标再触发 `Event_PlayerEnterWorld`，由 `Mod_ChunkLoader` 流送周围 Chunk。定位阶段不得注册运行时 Chunk，河流格同样必须排除；区块存档统一由 `SaveDataMgr` 扫描。
 - 2026-08-04：`GameStartIndex` 启动主菜单时，若自动单例已抢占为无 UI 配置的 `GameManager`，场景中的 `WorldManager` 配置实例必须接管；主菜单 Prefab 缺失必须输出明确错误。
-- 2026-07-31：新增维度世界切换链；动态 Scene、玩家释放/重建和失败恢复复用现有世界生命周期与加载遮罩，未建立第二套权威入口。
 
 ## 修改后自动测试
 

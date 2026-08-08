@@ -38,12 +38,6 @@ public partial class Mover : Module
     [Tooltip("速度源")]
     [SerializeField] public Mover_SaveData Data = new();
 
-    [Header("奔跑输入设置")]
-    [SerializeField]
-    [Min(0.05f)]
-    [Tooltip("Shift 按住不超过该时长时视为短按，并切换常驻奔跑/移动。")]
-    private float runToggleTapThreshold = 0.25f;
-
     public List<Vector2> MemoryPath_Forbidden = new();  // 禁止路径点
     public bool IsLock = false;
     public bool hightReaction = false;
@@ -56,7 +50,6 @@ public partial class Mover : Module
 
     private InputAction moveAction;
     private InputAction runAction;
-    private bool runToggleEnabled;
     public Rigidbody2D rb;
 
     public Mod_Stamina stamina;                         // 体力模块
@@ -143,8 +136,6 @@ public partial class Mover : Module
         set => Data.RunStaminaThreshold = value;
     }
 
-    public float RunToggleTapThreshold => Mathf.Max(0.05f, runToggleTapThreshold);
-    public bool IsRunToggleEnabled => runToggleEnabled;
     #endregion
 
     #region Unity 生命周期
@@ -249,29 +240,18 @@ public partial class Mover : Module
     #region 公共方法
     public void HandleRunInputPressed()
     {
+        // Shift 按下后进入奔跑，保持输入期间持续奔跑。
         SetRunState(true);
     }
 
     public void HandleRunInputReleased(double heldDuration)
     {
-        bool isShortPress = heldDuration <= RunToggleTapThreshold;
-        if (!isShortPress)
-        {
-            runToggleEnabled = false;
-            SetRunState(false);
-            return;
-        }
-
-        bool shouldKeepRunning = !runToggleEnabled;
-        SetRunState(shouldKeepRunning);
-        runToggleEnabled = shouldKeepRunning && IsRunning;
+        // 保留时长参数兼容输入回调；无论按住多久，松开都恢复普通移动。
+        SetRunState(false);
     }
 
     public void SetRunState(bool isRun)
     {
-        if (!isRun)
-            runToggleEnabled = false;
-
         if (item != null)
         {
             GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);

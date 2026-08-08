@@ -1,7 +1,18 @@
 {
   "schemaVersion": 1,
-  "recordType": "river-parameter-tuning",
-  "system": "FlatWorld.WorldModel.HeightDrivenRiver",
+  "recordType": "river-parameter-tuning-archive",
+  "system": "FlatWorld.WorldModel.HeightDrivenRiverComparison",
+  "status": "active-height-driven-default",
+  "activeSurfaceHydrology": {
+    "algorithm": "heightDriven",
+    "generationSignature": 16,
+    "hydrologyRegionSize": 256,
+    "maxTraceSteps": 384,
+    "riverStartFlow": 0.405,
+    "fullWidthFlow": 1.2,
+    "maxRiverWidth": 7,
+    "note": "2026-08-08 Surface 使用 heightDriven，并在严格下坡约束内增加连续坡向偏转；legacy 内核继续保留作可选对照。"
+  },
   "authority": {
     "profile": "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset",
     "defaults": "Assets/5_Scripts/5-0_WorldModel/Generation/ChunkGenerationSettingsSnapshot.cs",
@@ -18,13 +29,15 @@
     "visualAcceptanceOrthographicSize": 24,
     "note": "半径 64 的快速环绕世界会把基础高度周期压成约一个大起伏，只能做连通性检查，不能再作为河流写实度结论。"
   },
-  "currentParameters": {
+  "heightDrivenComparisonParameters": {
     "world.coordinateScale.reference": 0.01,
     "world.coordinateDistanceScale.minimum": 0.25,
     "world.coordinateDistanceScale.maximum": 4.0,
     "river.startFlow": 0.405,
     "river.tributaryStartFlow": 0.195,
     "river.meanderTieTolerance": 0.0,
+    "river.meanderStrength": 0.85,
+    "river.meanderScale": 48.0,
     "river.runoffCellSize": 64,
     "river.runoffSampleStride": 8,
     "river.maxTraceSteps": 384,
@@ -39,13 +52,13 @@
     "river.floodplainMaxSlope": 0.08,
     "river.alluvialTileThreshold": 0.62
   },
-  "currentAlgorithm": {
-    "routing": "height-gradient D-infinity direction with 4x4 ordered raster dither",
+  "heightDrivenComparisonAlgorithm": {
+    "routing": "height-gradient D-infinity direction with smooth seeded steering bias and seeded coordinate dither; every accepted receiver remains strictly downhill",
     "fallback": "strict-downhill valley residual plus downstream look-ahead",
     "network": "one deterministic downstream receiver per cell; mature main-river components must contain at least 96 cells; lower-flow tributary components are shown only when connected to a retained main river",
     "floodplain": "accumulated flow plus local height slope; no independent river noise",
     "worldScale": "terrain and climate frequency multiply by world.coordinateScale / 0.01; river distance parameters multiply by the inverse ratio clamped to 0.25-4; lateral width and floodplain parameters use the square root of that distance ratio",
-    "visualStatus": "玩家已确认河宽与弯曲程度合适；本轮只把最长河程从 256 调到 384，等待同种子新世界视觉反馈"
+    "visualStatus": "连续坡向偏转已编译接入；等待同种子新世界或未生成区块截图确认长直段是否消失"
   },
   "tracks": {
     "density": {
@@ -187,6 +200,18 @@
           "feedback": "自动化通过，部分 45°锁向消失；initial 与 final 仍能看到较长水平河段，冲积沉积带也不够连续。",
           "result": "数据与生命周期通过，视觉仍不通过",
           "decision": "本修改批次已用满 3 次 Golden Path；停止重跑。下一批应改用区域级流量累计、曲线中心线和下游低坡河漫滩整形，而不是继续放大单格选路参数。"
+        },
+        {
+          "batch": "smooth-downhill-steering",
+          "round": 1,
+          "method": "D∞ 高度坡向 + 两尺度连续坐标偏转 + 种子坐标抖动",
+          "trial": {
+            "river.meanderStrength": 0.85,
+            "river.meanderScale": 48.0,
+            "river.meanderTieTolerance": 0.0
+          },
+          "constraint": "偏转只在严格下坡邻格间选路，不负责绘制水体，也不能跨过海拔上升格",
+          "result": "主程序集、GameTest 程序集与 Unity 编译通过；视觉结果等待用户在新世界或未生成区块验收"
         }
       ]
     }

@@ -83,12 +83,14 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private Button playerMoveSpeedApplyButton;
     private TMP_InputField chunkLoadSpeedInput;
     private Button chunkLoadSpeedApplyButton;
+    private Button chunkLoadSpeedUnlimitedButton;
     private Button navigationPathButton;
     private Transform commandGrid;
     private Transform airdropItemGrid;
     private Transform aiCreatureGrid;
     private Sprite dropMarkerSprite;
     private Coroutine restoreAdminCoroutine;
+    private Coroutine restorePreferencesCoroutine;
     private bool legacyF4WasRebound;
     private int selectedStructureIndex;
     private static TMP_FontAsset uiFont;
@@ -109,12 +111,16 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         EnsureEventSystem();
         BuildWindow();
         RebindLegacyF4Conflict();
+        ApplyPersistedTogglePreferences();
+        RestartRestorePreferences();
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
     private void OnDestroy()
     {
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        if (restorePreferencesCoroutine != null)
+            StopCoroutine(restorePreferencesCoroutine);
         DisposeBuffTargeting();
         UnbindGameEventManager();
     }
@@ -143,6 +149,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         RebindLegacyF4Conflict();
         HandleBuffTargetingSceneChanged();
+        ApplyPersistedTogglePreferences();
+        RestartRestorePreferences();
         if ((windowRoot != null && windowRoot.activeSelf) ||
             (airdropBrowserRoot != null && airdropBrowserRoot.activeSelf) ||
             (aiCreatureBrowserRoot != null && aiCreatureBrowserRoot.activeSelf))
@@ -150,6 +158,66 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             RefreshRuntimeData();
         }
     }
+
+    #region GM 偏好恢复
+
+    /// <summary>立即恢复不依赖场景对象的 GM 开关。</summary>
+    private static void ApplyPersistedTogglePreferences()
+    {
+        bool teleportEnabled = GMConsolePreferences.TeleportShortcutEnabled;
+        if (PlayerAdminController.TeleportToMouseShortcutEnabled != teleportEnabled)
+            PlayerAdminController.ToggleTeleportToMouseShortcut();
+
+        WorldNavigationPathDebugOverlay.SetRoutesVisible(
+            GMConsolePreferences.NavigationPathVisible);
+    }
+
+    /// <summary>场景切换后等待玩家与区块管理器出现，再恢复运行时倍率。</summary>
+    private void RestartRestorePreferences()
+    {
+        if (restorePreferencesCoroutine != null)
+            StopCoroutine(restorePreferencesCoroutine);
+
+        restorePreferencesCoroutine = StartCoroutine(RestorePersistedRuntimePreferences());
+    }
+
+    private IEnumerator RestorePersistedRuntimePreferences()
+    {
+        bool playerSpeedRestored = false;
+        bool chunkSpeedRestored = false;
+        var retryDelay = new WaitForSecondsRealtime(0.25f);
+
+        while (!playerSpeedRestored || !chunkSpeedRestored)
+        {
+            if (!playerSpeedRestored &&
+                FindFirstComponent("PlayerAdminController") is PlayerAdminController controller)
+            {
+                playerSpeedRestored = controller.TrySetAdminMoveSpeedMultiplier(
+                    GMConsolePreferences.PlayerMoveSpeedMultiplier,
+                    out _);
+            }
+
+            ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+            if (!chunkSpeedRestored && chunkManager != null)
+            {
+                float requestedMultiplier = GMConsolePreferences.ChunkLoadSpeedUnlimited
+                    ? float.PositiveInfinity
+                    : GMConsolePreferences.ChunkLoadSpeedMultiplier;
+                chunkSpeedRestored = chunkManager.TrySetChunkLoadSpeedMultiplier(
+                    requestedMultiplier,
+                    out _);
+            }
+
+            if (!playerSpeedRestored || !chunkSpeedRestored)
+                yield return retryDelay;
+        }
+
+        restorePreferencesCoroutine = null;
+        if (windowRoot != null && windowRoot.activeSelf)
+            RefreshRuntimeData();
+    }
+
+    #endregion
 
     private void SetWindowVisible(bool visible)
     {
@@ -1257,6 +1325,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
+        GMConsolePreferences.SetPlayerMoveSpeed(multiplier);
         RefreshPlayerMoveSpeedButton();
         SetStatus(
             $"玩家移动速度已调整为 {multiplier:0.#} 倍。",
@@ -1303,6 +1372,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         playerMoveSpeedInput.SetTextWithoutNotify(
             appliedMultiplier.ToString("0.##", CultureInfo.InvariantCulture));
+        GMConsolePreferences.SetPlayerMoveSpeed(appliedMultiplier);
         RefreshPlayerMoveSpeedButton();
         SetStatus(
             $"玩家移动速度已调整为 {appliedMultiplier:0.##} 倍。",
@@ -1341,24 +1411,29 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
 
         string value = chunkLoadSpeedInput.text?.Trim();
-        bool parsed = float.TryParse(
+        bool unlimitedRequested = IsUnlimitedChunkLoadValue(value);
+        float requestedMultiplier = float.NaN;
+        bool parsed = unlimitedRequested || float.TryParse(
                           value,
                           NumberStyles.Float,
                           CultureInfo.InvariantCulture,
-                          out float requestedMultiplier) ||
+                          out requestedMultiplier) ||
                       float.TryParse(
                           value,
                           NumberStyles.Float,
                           CultureInfo.CurrentCulture,
                           out requestedMultiplier);
-        if (!parsed || float.IsNaN(requestedMultiplier) || float.IsInfinity(requestedMultiplier))
+        if (unlimitedRequested)
+            requestedMultiplier = float.PositiveInfinity;
+
+        if (!parsed || float.IsNaN(requestedMultiplier) || float.IsNegativeInfinity(requestedMultiplier))
         {
-            SetStatus("请输入有效的区块加载倍率，例如 0.5、2 或 5。", Color.yellow);
+            SetStatus("请输入有效倍率，或输入‘无限’取消加载上限。", Color.yellow);
             RefreshChunkLoadSpeedControl();
             return;
         }
 
-        ChunkMgr chunkManager = ChunkMgr.Instance;
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager == null ||
             !chunkManager.TrySetChunkLoadSpeedMultiplier(requestedMultiplier, out float appliedMultiplier))
         {
@@ -1367,23 +1442,48 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
-        chunkLoadSpeedInput.SetTextWithoutNotify(
-            appliedMultiplier.ToString("0.##", CultureInfo.InvariantCulture));
+        GMConsolePreferences.SetChunkLoadSpeed(
+            appliedMultiplier,
+            chunkManager.IsChunkLoadSpeedUnlimited);
         RefreshChunkLoadSpeedControl();
-        SetStatus(
-            $"区块加载速度已调整为 {appliedMultiplier:0.##} 倍。",
-            appliedMultiplier > 1f
-                ? new Color(0.35f, 0.95f, 0.85f)
-                : new Color(0.66f, 0.71f, 0.71f));
+        ShowChunkLoadSpeedStatus(chunkManager, appliedMultiplier);
+    }
+
+    private void ToggleUnlimitedChunkLoadSpeed()
+    {
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager == null)
+        {
+            SetStatus("未找到区块管理器，加载速度调整失败。", Color.yellow);
+            return;
+        }
+
+        float requestedMultiplier = chunkManager.IsChunkLoadSpeedUnlimited
+            ? GMConsolePreferences.ChunkLoadSpeedMultiplier
+            : float.PositiveInfinity;
+        if (!chunkManager.TrySetChunkLoadSpeedMultiplier(
+                requestedMultiplier,
+                out float appliedMultiplier))
+        {
+            SetStatus("区块加载速度调整失败。", Color.yellow);
+            return;
+        }
+
+        GMConsolePreferences.SetChunkLoadSpeed(
+            appliedMultiplier,
+            chunkManager.IsChunkLoadSpeedUnlimited);
+        RefreshChunkLoadSpeedControl();
+        ShowChunkLoadSpeedStatus(chunkManager, appliedMultiplier);
     }
 
     private void RefreshChunkLoadSpeedControl()
     {
         float multiplier = ChunkMgr.CurrentChunkLoadSpeedMultiplier;
+        bool unlimited = ChunkMgr.CurrentChunkLoadSpeedUnlimited;
         if (chunkLoadSpeedInput != null && !chunkLoadSpeedInput.isFocused)
         {
             chunkLoadSpeedInput.SetTextWithoutNotify(
-                multiplier.ToString("0.##", CultureInfo.InvariantCulture));
+                unlimited ? "无限" : multiplier.ToString("0.##", CultureInfo.InvariantCulture));
         }
 
         Image image = chunkLoadSpeedApplyButton != null
@@ -1391,15 +1491,58 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             : null;
         if (image != null)
         {
-            image.color = multiplier > 1f
+            image.color = unlimited || multiplier > 1f
                 ? new Color(0.10f, 0.45f, 0.31f, 1f)
                 : new Color(0.094f, 0.212f, 0.251f, 1f);
         }
+
+        if (chunkLoadSpeedUnlimitedButton == null)
+            return;
+
+        TextMeshProUGUI label =
+            chunkLoadSpeedUnlimitedButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = unlimited ? "恢复" : "无限";
+
+        Image unlimitedImage = chunkLoadSpeedUnlimitedButton.GetComponent<Image>();
+        if (unlimitedImage != null)
+        {
+            unlimitedImage.color = unlimited
+                ? new Color(0.66f, 0.32f, 0.15f, 1f)
+                : new Color(0.094f, 0.212f, 0.251f, 1f);
+        }
+    }
+
+    private static bool IsUnlimitedChunkLoadValue(string value)
+    {
+        return string.Equals(value, "无限", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "无限制", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "inf", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "infinity", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "unlimited", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ShowChunkLoadSpeedStatus(ChunkMgr chunkManager, float appliedMultiplier)
+    {
+        if (chunkManager.IsChunkLoadSpeedUnlimited)
+        {
+            SetStatus(
+                $"区块加载已设为自动最大；后台并发 {chunkManager.EffectiveBackgroundGenerationConcurrency}，仍保留主线程安全预算。",
+                new Color(0.35f, 0.95f, 0.85f));
+            return;
+        }
+
+        SetStatus(
+            $"区块加载速度已调整为 {appliedMultiplier:0.##} 倍。",
+            appliedMultiplier > 1f
+                ? new Color(0.35f, 0.95f, 0.85f)
+                : new Color(0.66f, 0.71f, 0.71f));
     }
 
     private void ToggleTeleportShortcut()
     {
         bool enabled = PlayerAdminController.ToggleTeleportToMouseShortcut();
+        GMConsolePreferences.SetTeleportShortcut(enabled);
         RefreshTeleportShortcutButton();
         SetStatus(
             enabled ? "Ctrl+T 鼠标传送已开启。" : "Ctrl+T 鼠标传送已关闭。",
@@ -1428,6 +1571,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void ToggleNavigationPathHints()
     {
         bool visible = WorldNavigationPathDebugOverlay.ToggleRoutesVisible();
+        GMConsolePreferences.SetNavigationPathVisible(visible);
         RefreshNavigationPathButton();
         SetStatus(
             visible ? "AI 导航路线提示已开启。" : "AI 导航路线提示已关闭。",
@@ -1630,43 +1774,26 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void RefreshItemIds()
     {
         availableAirdropItems.Clear();
-        Component gameRes = FindFirstComponent("GameRes");
-        object prefabDictionary = ReadMember(gameRes, "AllPrefabs");
-        if (prefabDictionary is IDictionary dictionary)
+        GameRes gameRes = FindFirstComponent("GameRes") as GameRes;
+        if (gameRes != null)
         {
             HashSet<string> discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (DictionaryEntry entry in dictionary)
+            foreach (string itemId in gameRes.GetAllItemIds())
             {
-                if (!(entry.Key is string itemId) ||
-                    string.IsNullOrWhiteSpace(itemId) ||
+                if (string.IsNullOrWhiteSpace(itemId) ||
                     !discoveredIds.Add(itemId) ||
-                    !(entry.Value is GameObject prefab))
+                    !gameRes.TryGetItemPresentation(
+                        itemId,
+                        out string displayName,
+                        out Sprite icon))
                 {
                     continue;
                 }
-
-                Item item = prefab.GetComponent<Item>() ?? prefab.GetComponentInChildren<Item>(true);
-                if (item == null)
-                    continue;
-
-                ItemData data = null;
-                try
-                {
-                    data = item.itemData;
-                }
-                catch (Exception exception)
-                {
-                    Debug.LogWarning($"[GM] 读取空投物品 {itemId} 的 ItemData 失败：{exception.Message}");
-                }
-
-                Sprite icon = item.Sprite != null ? item.Sprite.sprite : null;
-                if (icon == null)
-                    icon = prefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite;
 
                 availableAirdropItems.Add(new AirdropItemEntry
                 {
                     ItemId = itemId,
-                    DisplayName = !string.IsNullOrWhiteSpace(data?.GameName) ? data.GameName : itemId,
+                    DisplayName = displayName,
                     Icon = icon
                 });
             }

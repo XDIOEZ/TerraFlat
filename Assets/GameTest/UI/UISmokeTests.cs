@@ -14,6 +14,29 @@ namespace FlatWorld.GameTest.UI
     public sealed class UISmokeTests
     {
 
+        [Test]
+        [Category("UI.Smoke")]
+        [Category("Smoke")]
+        public void WorldStreamingSettingsPrefabAndEntryFollowNamingContract()
+        {
+            AssertPrefabContains(
+                "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_WorldStreamingSettings.prefab",
+                "性能模式下拉列表",
+                "状态文本",
+                "取消按钮",
+                "应用按钮");
+            AssertPrefabContains(
+                "Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab",
+                "流送性能");
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_WorldStreamingSettings.prefab");
+            RectTransform rect = prefab.GetComponent<RectTransform>();
+            Assert.That(rect.sizeDelta.x, Is.LessThanOrEqualTo(680f));
+            Assert.That(rect.sizeDelta.y, Is.LessThanOrEqualTo(420f));
+            Assert.That(prefab.GetComponent<VerticalLayoutGroup>(), Is.Not.Null);
+        }
+
 
 [Test]
         [Category("UI.Smoke")]
