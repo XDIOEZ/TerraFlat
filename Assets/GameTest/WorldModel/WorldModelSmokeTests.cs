@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using FlatWorld.WorldModel;
 using NUnit.Framework;
@@ -28,6 +29,28 @@ namespace FlatWorld.GameTest.WorldModel
             using (chunk.AcquireLease(ChunkLeaseKind.Simulation))
                 Assert.That(chunk.SimulationStatus, Is.EqualTo(ChunkSimulationStatus.Active));
             Assert.That(chunk.SimulationStatus, Is.EqualTo(ChunkSimulationStatus.Dormant));
+        }
+
+        [Test]
+        [Category("WorldModel.Smoke")]
+        [Category("Smoke")]
+        public void ChunkGenerationConcurrencyCanChangeAtRuntime()
+        {
+            using var world = new WorldRuntime("scheduler-smoke", 1);
+            using var manager = new FlatWorld.WorldModel.ChunkMgr(
+                world,
+                new DeterministicChunkGenerator(),
+                2);
+
+            int safeCeiling = Math.Max(1,
+                Math.Min(4, global::System.Environment.ProcessorCount / 3));
+            Assert.That(manager.MaxGenerationConcurrency, Is.EqualTo(Math.Min(2, safeCeiling)));
+            manager.SetMaxGenerationConcurrency(5);
+            Assert.That(manager.MaxGenerationConcurrency, Is.EqualTo(safeCeiling));
+            manager.SetMaxGenerationConcurrency(int.MaxValue);
+            Assert.That(manager.MaxGenerationConcurrency, Is.EqualTo(safeCeiling));
+            manager.SetMaxGenerationConcurrency(1);
+            Assert.That(manager.MaxGenerationConcurrency, Is.EqualTo(1));
         }
     }
 }

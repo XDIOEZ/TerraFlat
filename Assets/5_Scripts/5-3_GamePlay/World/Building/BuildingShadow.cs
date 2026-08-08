@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class BuildingShadow : MonoBehaviour
 {
+    private const string PreviewSortingLayer = "Shadow";
+
     public List<GameObject> AroundObjects = new();
     public SpriteRenderer ShadowRenderer;
     public Color ShadowColor = new(1f, 1f, 1f, 0.7f);
@@ -86,12 +88,23 @@ public class BuildingShadow : MonoBehaviour
             throw new MissingComponentException("BuildingShadow 缺少 SpriteRenderer 引用");
 
         ShadowRenderer.sprite = sourceRenderer.sprite;
-        ShadowRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
-        ShadowRenderer.sortingOrder = sourceRenderer.sortingOrder - 1;
+        // 虚影必须继承建筑实际材质；预制体材质丢失时仍可稳定显示。
+        // 建筑旧资源的材质引用可能已经丢失；此时保留虚影 Prefab 的默认 Sprite 材质。
+        if (sourceRenderer.sharedMaterial != null)
+            ShadowRenderer.sharedMaterial = sourceRenderer.sharedMaterial;
+        if (ShadowRenderer.sharedMaterial == null)
+            throw new MissingComponentException("BuildingShadow 缺少可用 Sprite 材质");
+        int previewLayerId = SortingLayer.NameToID(PreviewSortingLayer);
+        ShadowRenderer.sortingLayerID = previewLayerId != 0
+            ? previewLayerId
+            : sourceRenderer.sortingLayerID;
+        ShadowRenderer.sortingOrder = sourceRenderer.sortingOrder;
         ShadowRenderer.flipX = sourceRenderer.flipX;
         ShadowRenderer.flipY = sourceRenderer.flipY;
         ShadowRenderer.drawMode = sourceRenderer.drawMode;
         ShadowRenderer.size = sourceRenderer.size;
+        ShadowRenderer.maskInteraction = sourceRenderer.maskInteraction;
+        ShadowRenderer.enabled = true;
 
         Transform shadowTransform = ShadowRenderer.transform;
         shadowTransform.localPosition = sourceRoot.InverseTransformPoint(sourceRenderer.transform.position);

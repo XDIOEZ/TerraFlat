@@ -43,6 +43,7 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 - 失败 Chunk 不得注册导航格或留在加载等待中；`ChunkMgr` 必须以失败回调结束等待者并安全回收。
 - `WorldNavigationAgent` / `Mover_AI` 必须通过 `WorldNavigationManager` 提交路径请求，不得回退到物理全场扫描或直接穿越不可走格。
 - 联机时导航图跟随本地 owned 玩家，Chunk 流送仍按所有观察者并集。
+- WorldModel 数据预取圈只生成 `ChunkRuntime`，不得注册导航；区块进入可见圈后由 `ChunkMgr.RuntimeWindow` 表现协程完成 `ChunkView.Bind()` 才领取 Navigation 租约并注册。排队期间离开窗口或世界重置必须取消表现项，只有 `ChunkView.IsBound` 的区块可以持有导航租约。
 - 地下矿洞开放格顶层为 `TileBase_Stone`（`IsWalkable=true`、`Penalty=1000`），岩壁顶层为 `TileBase_StoneWall`（`IsWalkable=false`、`Penalty=0`）；独立“建筑阻挡层”的 TilemapCollider 只负责实体物理碰撞，A* 仍以顶层 TileData 为权威。
 
 ## 高耦合联动
@@ -59,6 +60,7 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：WorldModel 外圈改为空闲单任务预取且不再做方向预测；预取区块不注册 A*。可见区块的 `ChunkView` 依次跨帧绑定地面、环境、碰撞、草地和 Navigation，完成前离开窗口会用绑定版本安全终止，只有最终绑定的 View 持有唯一 Navigation 租约。
 - 2026-08-05：导航地形读取迁移到 `TileStackCell` 顶层 API；覆盖层移除后恢复基础层状态，并继续与 `BuildingOccupancyRegistry` 动态占地叠加。失败 Chunk 不进入导航 Ready/注册链。
 
 - 2026-07-31：静态阻挡 Tile 独立渲染到“建筑阻挡层”，但导航仍读取原数据格顶层；禁止改为扫描该 TilemapCollider 决定节点权重。

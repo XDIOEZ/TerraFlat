@@ -96,7 +96,7 @@ public partial class MonsterSpawnerManager
 
             if (IsNearAnyPlayer(candidate, exclusionDistance) ||
                 (request.RequireOutsidePlayerView && IsVisibleByAnyActiveCamera(candidate)) ||
-                !TryGetLoadedMap(candidate, out Map map) ||
+                !TryGetLoadedTerrainContext(candidate, out Map map) ||
                 !IsWalkableSpawnPosition(candidate) ||
                 !IsEventBiomeAllowed(request.AllowedBiomes, map, candidate) ||
                 !IsEventLightAllowed(request, candidate))
@@ -137,22 +137,18 @@ public partial class MonsterSpawnerManager
         if (allowedBiomes == null || allowedBiomes.Count == 0)
             return true;
 
-        ChunkGenerator_Land landGenerator = map?.LandGenerator;
         Vector2Int worldCell = new(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y));
-        if (landGenerator == null || !landGenerator.TryGetBiomeAtWorld(worldCell, out BiomeData biome))
-            return false;
-
-        for (int i = 0; i < allowedBiomes.Count; i++)
+        ChunkMgr runtimeManager = ChunkMgr.Instance;
+        if (runtimeManager != null && runtimeManager.TryGetRuntimeBiomeName(
+                worldCell + new Vector2(0.5f, 0.5f), out string runtimeBiomeName))
         {
-            string allowed = allowedBiomes[i];
-            if (string.Equals(allowed, biome.BiomeName, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(allowed, biome.name, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            return IsAllowedBiomeName(allowedBiomes, runtimeBiomeName, runtimeBiomeName);
         }
 
-        return false;
+        ChunkGenerator_Land landGenerator = map?.LandGenerator;
+        if (landGenerator == null || !landGenerator.TryGetBiomeAtWorld(worldCell, out BiomeData biome))
+            return false;
+        return IsAllowedBiomeName(allowedBiomes, biome.BiomeName, biome.name);
     }
 
     private static bool IsEventLightAllowed(

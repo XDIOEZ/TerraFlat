@@ -44,6 +44,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private readonly Dictionary<DamageReceiver, Item> _deathReceivers = new();
     private readonly Dictionary<Item, DamageReceiver> _receiverByItem = new();
     private readonly Dictionary<Item, float> _farAwaySince = new();
+    private readonly HashSet<Item> _chunkDormantItems = new();
     private readonly Dictionary<string, float> _nextSpawnRetryTime = new(StringComparer.Ordinal);
     private readonly Dictionary<string, float> _nextRecoveryCheckTime = new(StringComparer.Ordinal);
     private readonly List<Vector3> _playerPositions = new(4);
@@ -126,6 +127,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void Update()
     {
+        RefreshChunkDormancy();
+
         if (!GameNetwork.HasStateAuthority)
             return;
 
@@ -557,7 +560,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
             if (IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) ||
                 !IsWithinPlayerPopulationLimit(config, candidate) ||
-                !TryGetLoadedMap(candidate, out Map map) ||
+                !TryGetLoadedTerrainContext(candidate, out Map map) ||
                 !IsWalkableSpawnPosition(candidate) ||
                 !IsBiomeAllowed(config, map, candidate) ||
                 !IsLightAllowed(config, candidate))
@@ -581,14 +584,19 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return navigation.TryGetCell(worldPos, out _, out bool walkable) && walkable;
     }
 
-    private static bool TryGetLoadedMap(Vector3 worldPos, out Map map)
+    /// <summary>优先确认新版权威地形已提交；旧 Map 仅作为迁移期回退。</summary>
+    private static bool TryGetLoadedTerrainContext(Vector3 worldPos, out Map map)
     {
         map = null;
-        if (ChunkMgr.Instance == null)
+        ChunkMgr manager = ChunkMgr.Instance;
+        if (manager == null)
             return false;
 
+        if (manager.TryGetRuntimeTerrainTile(worldPos, out _))
+            return true;
+
         Vector2Int chunkPos = Chunk.GetChunkPosition(worldPos);
-        if (!ChunkMgr.Instance.TryGetActiveChunkByPos(chunkPos, out Chunk chunk) ||
+        if (!manager.TryGetActiveChunkByPos(chunkPos, out Chunk chunk) ||
             chunk == null ||
             chunk.Map == null ||
             !chunk.Map.IsReadyForChunkLifecycle)
@@ -605,16 +613,32 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (config.AllowedBiomeNames == null || config.AllowedBiomeNames.Count == 0)
             return true;
 
-        ChunkGenerator_Land landGenerator = map?.LandGenerator;
         Vector2Int worldCell = new(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y));
+        ChunkMgr runtimeManager = ChunkMgr.Instance;
+        if (runtimeManager != null && runtimeManager.TryGetRuntimeBiomeName(
+                worldCell + new Vector2(0.5f, 0.5f), out string runtimeBiomeName))
+        {
+            return IsAllowedBiomeName(
+                config.AllowedBiomeNames, runtimeBiomeName, runtimeBiomeName);
+        }
+
+        // 旧 Map 仍存在时保留只读回退，避免迁移期间尚未提交的表现区块失去生成条件。
+        ChunkGenerator_Land landGenerator = map?.LandGenerator;
         if (landGenerator == null || !landGenerator.TryGetBiomeAtWorld(worldCell, out BiomeData biome))
             return false;
 
-        for (int i = 0; i < config.AllowedBiomeNames.Count; i++)
+        return IsAllowedBiomeName(config.AllowedBiomeNames, biome.BiomeName, biome.name);
+    }
+
+    /// <summary>兼容旧 BiomeData 的显示名与资源名。</summary>
+    private static bool IsAllowedBiomeName(IReadOnlyList<string> allowedBiomeNames,
+        string displayName, string assetName)
+    {
+        for (int i = 0; i < allowedBiomeNames.Count; i++)
         {
-            string allowedName = config.AllowedBiomeNames[i];
-            if (string.Equals(allowedName, biome.BiomeName, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(allowedName, biome.name, StringComparison.OrdinalIgnoreCase))
+            string allowedName = allowedBiomeNames[i];
+            if (string.Equals(allowedName, displayName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(allowedName, assetName, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -835,6 +859,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void ClearTrackedPopulation()
     {
+        RestoreChunkDormantItems();
         foreach (DamageReceiver receiver in _deathReceivers.Keys)
         {
             if (receiver != null)
@@ -845,7 +870,20 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _receiverByItem.Clear();
         _trackedItems.Clear();
         _farAwaySince.Clear();
+        _chunkDormantItems.Clear();
         _trackedPopulation = 0;
+    }
+
+    /// <summary>管理器退出世界或重建索引前释放自己施加的休眠，避免留下永久隐藏实体。</summary>
+    private void RestoreChunkDormantItems()
+    {
+        foreach (Item item in _chunkDormantItems)
+        {
+            if (item != null && !item.DestructionHandled && !item.gameObject.activeSelf)
+                item.gameObject.SetActive(true);
+        }
+
+        _chunkDormantItems.Clear();
     }
 
     private void OnRuntimeItemInstantiated(Item item)
@@ -878,6 +916,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             receiver.DeathStarted += OnTrackedItemDeathStarted;
         }
 
+        RefreshTrackedItemChunkDormancy(item);
         _trackedPopulation = _trackedItems.Count;
     }
 
@@ -888,6 +927,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         _trackedItems.Remove(item);
         _farAwaySince.Remove(item);
+        _chunkDormantItems.Remove(item);
         if (_receiverByItem.TryGetValue(item, out DamageReceiver receiver))
         {
             _receiverByItem.Remove(item);
@@ -897,6 +937,43 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         }
 
         _trackedPopulation = _trackedItems.Count;
+    }
+
+    /// <summary>让自然生物随新版区块画面休眠，并在画面重新绑定后恢复。</summary>
+    private void RefreshChunkDormancy()
+    {
+        if (_trackedItems.Count == 0 || ChunkMgr.Instance == null)
+            return;
+
+        _itemSnapshot.Clear();
+        foreach (Item item in _trackedItems.Keys)
+            _itemSnapshot.Add(item);
+
+        for (int i = 0; i < _itemSnapshot.Count; i++)
+            RefreshTrackedItemChunkDormancy(_itemSnapshot[i]);
+    }
+
+    /// <summary>只唤醒由本管理器主动休眠的实体，避免干扰死亡与对象池状态。</summary>
+    private void RefreshTrackedItemChunkDormancy(Item item)
+    {
+        if (item == null || item.DestructionHandled || ChunkMgr.Instance == null)
+            return;
+
+        bool presentationReady = ChunkMgr.Instance.IsRuntimeEntityPresentationReady(
+            item.transform.position);
+        if (!presentationReady)
+        {
+            if (item.gameObject.activeSelf)
+            {
+                _chunkDormantItems.Add(item);
+                item.gameObject.SetActive(false);
+            }
+
+            return;
+        }
+
+        if (_chunkDormantItems.Remove(item) && !item.gameObject.activeSelf)
+            item.gameObject.SetActive(true);
     }
 
     private void OnTrackedItemDeathStarted(DamageReceiver receiver)

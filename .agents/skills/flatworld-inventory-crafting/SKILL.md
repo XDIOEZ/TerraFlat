@@ -91,6 +91,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：背包槽位与制作产物预览统一通过 `GameRes.TryGetItemPresentation()` 获取显示贴图；JSON 物品不再从 `AllPrefabs` 的共享模板外壳读取错误图标。
 - 2026-08-08：删除已完整迁移到 JSON 的本体旧配方 SO 与对应 Addressables 目录条目：`4-4_Composite`、`4-5_Cook`；保留旧配方类型仅用于 MOD AssetBundle 兼容。
 - 2026-08-07：将旧 `Assets/9_Anim` 的通用武器 Animator 与三段动画归并到 `Assets/8_Animations/Item/Weapon/`，保留 GUID 和 `Idle_0/Attack_1/Attack_2` 状态契约。
 - 2026-08-07：删除配方与 Prefab 的 Excel 同步链，配方以 manifest + 8 个 JSON 分包为唯一真源；内容校验只验证 JSON，建筑生成器通过 `RecipeJsonEditorService` 定向重连产物 ID。
@@ -100,7 +101,6 @@ disable-model-invocation: false
 - 2026-07-31：建筑配方新增 `core:矿坑入口`，正式产出可放置的 `MineEntrance_Summoner`；内建配方总数更新为 39。
 - 2026-07-31：背包、装备、手工制作和快捷栏接入稳定手柄 Action；移除手工制作硬编码 `Input.GetKeyDown(H)`，模态库存面板增加手柄焦点与可嵌套玩法输入锁。
 - 2026-07-30：完成首种苹果作物闭环；`Mod_Seed` 收敛为播种入口，`Mod_Grow` 统一水肥/天气/难度成长、阶段、成熟、一次性收获与存档，AppleTree 移除无限 `Mod_Production`，Apple 移除播种模块，Fertilizer 接入水肥补给。
-- 2026-07-30：遗迹生成支持按真实库存槽位配置容器物品；运行时复用 `Item.Get_NewItemData()` 初始化完整模块数据，覆盖内部 GUID 为结构种子派生值，并通过既有 `Inventory_ModuleData` 自然进入存档基线。
 
 ## 修改后自动测试
 

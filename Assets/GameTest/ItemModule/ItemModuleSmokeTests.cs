@@ -21,6 +21,14 @@ namespace FlatWorld.GameTest.ItemModule
                 Assert.That(ids.Add(definition.Id), Is.True, $"重复物品 ID：{definition.Id}");
                 Assert.That(definition.ShellPrefab, Is.Not.Null.And.Not.Empty,
                     $"物品 {definition.Id} 没有解析出 shellPrefab");
+
+                if (definition.Abstract)
+                    continue;
+
+                Assert.That(definition.GameName, Is.Not.Null.And.Not.Empty,
+                    $"物品 {definition.Id} 没有 JSON 显示名");
+                Assert.That(definition.Visual?.SpriteAddress, Is.Not.Null.And.Not.Empty,
+                    $"物品 {definition.Id} 没有 JSON 显示贴图地址");
             }
         }
 

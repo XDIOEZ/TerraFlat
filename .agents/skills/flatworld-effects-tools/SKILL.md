@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 特效、Shader 与工具定位
 
-> 最后核对：2026-08-07。
+> 最后核对：2026-08-08。
 
 ## 运行时视觉
 
@@ -48,6 +48,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：`GMReflectionConsole` 的玩家移速、区块加载有限倍率/无限状态、Ctrl+T 传送、AI 路线提示和当前页签改用 `GMConsolePreferences`/`PlayerPrefs` 持久化；场景切换后等待真实玩家与 `ChunkMgr` 出现再恢复，不在菜单场景自动创建区块管理器。
 - 2026-08-07：整理 `Assets/Editor/FlatWorld`，按 Automation、ContentTools、DataTables、PrefabBuilders、Productivity、Structures 六类归档；配置资源与对应窗口同目录，脚本 GUID 和菜单路径保持不变。
 - 2026-08-07：`Development/Debug` 拆为 `FlatWorld.Gameplay.Debug` 叶子程序集；GM 控制台仍可访问主体运行时系统，`FlatWorld.GameTest` 显式引用该程序集以保留 Buff 目标反射测试。
 

@@ -7,12 +7,14 @@ namespace FlatWorld.Automation
         private const float GoldenChunkLoadSpeedMultiplier = 2.5f;
         private static ChunkMgr goldenChunkManager;
         private static float originalChunkLoadSpeedMultiplier;
+        private static bool originalChunkLoadSpeedUnlimited;
         private static bool chunkLoadSpeedScenarioCompleted;
 
         private static void ResetChunkLoadSpeedScenario()
         {
             goldenChunkManager = null;
             originalChunkLoadSpeedMultiplier = 1f;
+            originalChunkLoadSpeedUnlimited = false;
             chunkLoadSpeedScenarioCompleted = false;
         }
 
@@ -22,7 +24,10 @@ namespace FlatWorld.Automation
             if (goldenChunkManager == null)
                 throw new InvalidOperationException("Golden Path 找不到 ChunkMgr，无法验证区块加载倍率。 ");
 
-            originalChunkLoadSpeedMultiplier = goldenChunkManager.ChunkLoadSpeedMultiplier;
+            originalChunkLoadSpeedUnlimited = goldenChunkManager.IsChunkLoadSpeedUnlimited;
+            originalChunkLoadSpeedMultiplier = originalChunkLoadSpeedUnlimited
+                ? 1f
+                : goldenChunkManager.ChunkLoadSpeedMultiplier;
             try
             {
                 if (!goldenChunkManager.TrySetChunkLoadSpeedMultiplier(
@@ -41,19 +46,38 @@ namespace FlatWorld.Automation
                 }
 
                 if (goldenChunkManager.EffectiveMaxChunkLoadPerFrame < 2 ||
-                    goldenChunkManager.EffectiveMaxConcurrentChunkLoads < 2)
+                    goldenChunkManager.EffectiveMaxConcurrentChunkLoads < 2 ||
+                    goldenChunkManager.RuntimeChunks.MaxGenerationConcurrency !=
+                    goldenChunkManager.EffectiveBackgroundGenerationConcurrency)
                 {
                     throw new InvalidOperationException(
-                        "区块加载倍率没有提升实际队列预算或并发上限。 ");
+                        "区块加载倍率没有同步提升旧队列或新 WorldModel 生成并发。 ");
+                }
+
+                if (!goldenChunkManager.TrySetChunkLoadSpeedMultiplier(
+                        float.PositiveInfinity,
+                        out appliedMultiplier) ||
+                    !goldenChunkManager.IsChunkLoadSpeedUnlimited ||
+                    !float.IsPositiveInfinity(appliedMultiplier) ||
+                    goldenChunkManager.EffectiveMaxChunkLoadPerFrame != 4 ||
+                    goldenChunkManager.EffectiveMaxConcurrentChunkLoads !=
+                    ChunkMgr.SafeBackgroundGenerationCeiling ||
+                    goldenChunkManager.EffectiveBackgroundGenerationConcurrency !=
+                    ChunkMgr.SafeBackgroundGenerationCeiling ||
+                    goldenChunkManager.RuntimeChunks.MaxGenerationConcurrency !=
+                    ChunkMgr.SafeBackgroundGenerationCeiling ||
+                    ChunkMgr.ScaleCurrentChunkLoadItemBudget(256, 1) != 1024 ||
+                    Math.Abs(ChunkMgr.ScaleCurrentChunkLoadFrameBudget(1.5f, 0.25f) - 3f) > 0.001f)
+                {
+                    throw new InvalidOperationException(
+                        "区块加载自动最大状态没有应用 CPU 与主线程安全上限。 ");
                 }
 
                 chunkLoadSpeedScenarioCompleted = true;
             }
             finally
             {
-                goldenChunkManager.TrySetChunkLoadSpeedMultiplier(
-                    originalChunkLoadSpeedMultiplier,
-                    out _);
+                RestoreOriginalChunkLoadSpeed();
             }
         }
 
@@ -65,14 +89,20 @@ namespace FlatWorld.Automation
 
         private static void CleanupChunkLoadSpeedScenario()
         {
-            if (goldenChunkManager != null)
-            {
-                goldenChunkManager.TrySetChunkLoadSpeedMultiplier(
-                    originalChunkLoadSpeedMultiplier,
-                    out _);
-            }
-
+            RestoreOriginalChunkLoadSpeed();
             goldenChunkManager = null;
+        }
+
+        private static void RestoreOriginalChunkLoadSpeed()
+        {
+            if (goldenChunkManager == null)
+                return;
+
+            goldenChunkManager.TrySetChunkLoadSpeedMultiplier(
+                originalChunkLoadSpeedUnlimited
+                    ? float.PositiveInfinity
+                    : originalChunkLoadSpeedMultiplier,
+                out _);
         }
     }
 }

@@ -7,12 +7,17 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using RuntimeChunkMgr = FlatWorld.WorldModel.ChunkMgr;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
+using Unity.Profiling;
 
 public partial class ChunkMgr
 {
+    private static readonly ProfilerMarker WorldRuntimeAdvanceMarker =
+        new("FlatWorld.ChunkStreaming.CommitAndTick");
     [Header("无头世界模型")]
     [SerializeField] private ChunkGenerationProfileSO defaultGenerationProfile;
     [SerializeField, Min(1)] private int backgroundGenerationConcurrency = 2;
+    [Tooltip("主线程每帧最多提交的后台生成结果。提交会计算哈希并发布事件，建议保持 1。")]
+    [SerializeField, Range(1, 4)] private int maxChunkCommitsPerFrame = 1;
     [SerializeField] private bool authoritativeSimulation = true;
 
     private RuntimeChunkMgr runtimeChunkManager;
@@ -41,6 +46,8 @@ public partial class ChunkMgr
         base.Awake();
         if (instance != this)
             return;
+        WorldStreamingPreferences.Changed -= ApplyWorldStreamingPreferences;
+        WorldStreamingPreferences.Changed += ApplyWorldStreamingPreferences;
         InitializeWorldRuntime();
         runtimeHost = GetComponent<WorldRuntimeHost>();
         if (runtimeHost == null)
@@ -51,6 +58,7 @@ public partial class ChunkMgr
     /// <summary>销毁场景时释放后台生成任务、区块数据和画面绑定。</summary>
     protected override void OnDestroy()
     {
+        WorldStreamingPreferences.Changed -= ApplyWorldStreamingPreferences;
         ShutdownWorldRuntime();
         base.OnDestroy();
     }
@@ -138,8 +146,18 @@ public partial class ChunkMgr
     /// <summary>推进纯世界模拟，并修复后台生成完成后的画面绑定。</summary>
     internal void AdvanceWorldRuntime(float deltaSeconds)
     {
-        runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation);
+        using (WorldRuntimeAdvanceMarker.Auto())
+        {
+            runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
+                Mathf.Max(1, maxChunkCommitsPerFrame));
+        }
         ReconcileRuntimeWindowBindings();
+    }
+
+    /// <summary>玩家修改性能模式后，立即调整后台线程数量。</summary>
+    private void ApplyWorldStreamingPreferences()
+    {
+        ApplyChunkLoadSpeedToRuntimeScheduler();
     }
 
     /// <summary>创建世界模型、确定性生成器和后台任务调度器。</summary>
@@ -158,7 +176,7 @@ public partial class ChunkMgr
             worldId = "world";
         var world = new WorldRuntime(worldId, runtimeEpoch);
         runtimeChunkManager = new RuntimeChunkMgr(world, new DeterministicChunkGenerator(),
-            Mathf.Max(1, backgroundGenerationConcurrency), new UnityWorldAddressNormalizer());
+            EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
     }
 
     /// <summary>切换场景时清空旧区块，并让新场景使用新的世界纪元。</summary>

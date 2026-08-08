@@ -1,53 +1,60 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+using FlatWorld.WorldModel;
 using UltEvents;
 using UnityEngine;
 
 /// <summary>
-/// Tile效果接收器模块，用于处理物品与地图Tile的交互
-/// 负责检测物品所在的Tile变化，并触发相应的进入、退出和更新事件
+/// 地块效果接收器。优先读取 ChunkRuntime/ChunkTerrainData 权威地形，进入、离开或地块来源变化时
+/// 调用 Tile_Block 行为；旧 Map 仅作为尚未迁移场景的兼容回退。
 /// </summary>
 public class TileEffectReceiver : Module
 {
-    #region 公共变量
+    #region Inspector
+
     [Header("位置信息")]
     public Vector2Int lastGridPos;
-    [Header("当前所处地图缓存")]
+
+    [Header("旧 Map 兼容缓存")]
     public Map Cache_map;
 
     [Header("Tile事件")]
-    public UltEvent<TileData> OnTileEnterEvent = new UltEvent<TileData>();
-    public UltEvent<TileData> OnTileExitEvent = new UltEvent<TileData>();
+    public UltEvent<TileData> OnTileEnterEvent = new();
+    public UltEvent<TileData> OnTileExitEvent = new();
 
-    [Tooltip("当前踩着的TileData缓存，供其他模块引用")]
+    [Tooltip("当前踩着的 TileData 缓存，供其他模块引用")]
     public TileData currentTileData;
+
+    #endregion
+
+    #region 运行时状态
 
     private Tile_Block activeTileBlock;
     private TileData activeTileData;
     private Map activeTileMap;
+    private ChunkTerrainData activeRuntimeTerrain;
+    private int activeRuntimeTileId;
     private Vector2Int activeGridPos;
     private bool hasActiveTileEffects;
     private bool isPreparedForWorldTransition;
 
     public bool HasActiveTileEffects => hasActiveTileEffects;
-    #endregion
+    public override string CanonicalModuleId => ModText.TileEffectReceiver;
 
-    #region 静态缓存相关
-
-    // 预留：如需对 Tile_Block 做本地缓存，可以在此添加字典
-    // 目前直接通过 GameRes.GetTileBlock 按需获取，避免与旧的 Prefab/IBlockTile 缓存混用
     #endregion
 
     #region 模块数据
+
     public Ex_ModData_MemoryPackable ModSaveData;
+
     public override ModuleData _Data
     {
         get => ModSaveData;
         set => ModSaveData = (Ex_ModData_MemoryPackable)value;
     }
+
     #endregion
 
     #region 生命周期
+
     private void Start()
     {
         enabled = true;
@@ -56,146 +63,64 @@ public class TileEffectReceiver : Module
 
     private void OnValidate()
     {
-        // 设置模块ID
-        _Data.ID = ModText.TileEffectReceiver;
+        if (_Data != null)
+            _Data.ID = ModText.TileEffectReceiver;
     }
 
     public override void ModUpdate(float deltaTime)
     {
-        UpdateMapReference();
-
+        UpdateLegacyMapReference();
         Vector2Int currentGridPos = GetCurrentGridPos();
-        if (currentGridPos != lastGridPos)
+        if (currentGridPos != lastGridPos || !IsActiveSourceCurrent(currentGridPos))
         {
-            // 先退出旧的Tile
             ExitCurrentTileEffects();
-
-            // 获取新位置所在的Chunk
-            Chunk chunk = null;
-            ChunkMgr.Instance?.GetChunkBy_ItemPosition(currentGridPos, out chunk);
-
-            if (chunk == null)
-            {
-                // 踏上空白地图，不触发事件；后续地图可用时会自动重试进入。
-                Cache_map = null;
-                lastGridPos = currentGridPos;
-                currentTileData = null;
-                return;
-            }
-
-            Cache_map = chunk.Map;
             lastGridPos = currentGridPos;
-
-            // 进入新的Tile
-            OnTileEnter(currentGridPos);
-        }
-        else if (!hasActiveTileEffects || activeTileMap != Cache_map)
-        {
-            // 地图/维度加载可能在玩家生成后才完成，即使坐标没变也要补触发进入事件。
-            ExitCurrentTileEffects();
-            OnTileEnter(currentGridPos);
+            EnterTile(currentGridPos);
         }
 
-        // 每帧更新当前Tile状态
-        OnTileUpdate(currentGridPos);
+        UpdateCurrentTile(deltaTime);
     }
+
     #endregion
 
-    #region 模块接口实现
+    #region 模块接口
+
     public override void Load()
     {
-        ModSaveData.ReadData(ref lastGridPos);
-        InitializeMap();
+        ModSaveData?.ReadData(ref lastGridPos);
+        UpdateLegacyMapReference();
     }
 
     public override void Save()
     {
-        // 保存必须保持无副作用；普通自动保存不代表玩家离开了当前地块。
-        ModSaveData.WriteData(lastGridPos);
+        // 自动保存不代表离开当前地块，保存过程不能撤销环境效果。
+        ModSaveData?.WriteData(lastGridPos);
     }
-
 
     public override void Act()
     {
         base.Act();
     }
+
     #endregion
 
-    #region 初始化方法
-    /// <summary>
-    /// 初始化地图引用
-    /// </summary>
-    private void InitializeMap()
+    #region 地块事件
+
+    private bool EnterTile(Vector2Int gridPos)
     {
-        if (Cache_map != null) return;
-
-        // 从当前位置获取Chunk和Map引用
-        Chunk chunk;
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(transform.position, out chunk);
-
-        if (chunk == null)
+        if (item == null || !TryResolveTileEffect(gridPos, out TileEffectResolution resolution))
         {
-            Debug.LogWarning($"TileEffectReceiver: 未找到有效的 Chunk 组件！{(item != null ? $"对象: {item.itemData.IDName}" : "")}");
-            return;
+            currentTileData = null;
+            return false;
         }
 
-        Cache_map = chunk.Map;
-        // 如果仍未找到Map，尝试在场景中查找
-        if (Cache_map == null)
-        {
-            Cache_map = FindFirstObjectByType<Map>();
-        }
-
-        if (Cache_map == null)
-        {
-            Debug.LogError("TileEffectReceiver: 未找到有效的 Map 组件！");
-            enabled = false;
-        }
+        CacheActiveTile(gridPos, resolution);
+        resolution.TileBlock.OnEnter(item, resolution.TileData, resolution.Map, this);
+        OnTileEnterEvent.Invoke(resolution.TileData);
+        return true;
     }
 
-    /// <summary>
-    /// 更新地图引用
-    /// 当当前Map为空或未激活时重新获取Map引用
-    /// </summary>
-    private void UpdateMapReference()
-    {
-        if (ChunkMgr.Instance == null) return;
-
-        if (Cache_map == null || !Cache_map.gameObject.activeInHierarchy)
-        {
-            Chunk chunk;
-            ChunkMgr.Instance.GetChunkBy_ItemPosition(transform.position, out chunk);
-            Cache_map = chunk?.Map;
-        }
-    }
-    #endregion
-
-    #region Tile事件处理
-    /// <summary>
-    /// 处理进入Tile的逻辑
-    /// </summary>
-    private void OnTileEnter(Vector2Int gridPos)
-    {
-        if (item == null) return;
-
-        if (TryGetTileBlock(gridPos, out TileData tileData, out Tile_Block tileBlock))
-        {
-            tileBlock.OnEnter(item, tileData, Cache_map, this);
-
-            activeTileBlock = tileBlock;
-            activeTileData = tileData;
-            activeTileMap = Cache_map;
-            activeGridPos = gridPos;
-            hasActiveTileEffects = true;
-            isPreparedForWorldTransition = false;
-            currentTileData = tileData;
-            OnTileEnterEvent.Invoke(tileData);
-        }
-    }
-
-    /// <summary>
-    /// 退出当前已进入的 Tile。使用进入时缓存，避免换维度后错误地去新地图查旧坐标。
-    /// </summary>
+    /// <summary>使用进入时缓存退出，避免换维度后拿新地图错误查询旧坐标。</summary>
     private bool ExitCurrentTileEffects()
     {
         if (!hasActiveTileEffects)
@@ -207,13 +132,7 @@ public class TileEffectReceiver : Module
         Tile_Block tileBlock = activeTileBlock;
         TileData tileData = activeTileData;
         Map tileMap = activeTileMap;
-
-        // 先清状态，确保事件回调或重复调用不会执行两次 OnExit。
-        activeTileBlock = null;
-        activeTileData = null;
-        activeTileMap = null;
-        hasActiveTileEffects = false;
-        currentTileData = null;
+        ClearActiveTile();
 
         if (item == null || tileBlock == null || tileData == null)
             return false;
@@ -223,28 +142,29 @@ public class TileEffectReceiver : Module
         return true;
     }
 
-    /// <summary>
-    /// 世界切换保存前显式退出当前地块，让环境 Buff 先被精确撤销并写入存档。
-    /// </summary>
+    private void UpdateCurrentTile(float deltaTime)
+    {
+        if (!hasActiveTileEffects || item == null || activeTileBlock == null || activeTileData == null)
+            return;
+
+        currentTileData = activeTileData;
+        activeTileBlock.OnUpdate(item, activeTileData, activeTileMap, this, deltaTime);
+    }
+
+    /// <summary>世界切换保存前撤销脚下地块效果，防止环境 Buff 带到下一维度。</summary>
     public void PrepareForWorldTransition()
     {
         if (isPreparedForWorldTransition)
             return;
 
         isPreparedForWorldTransition = true;
-
-        // 兼容旧存档或延迟地图加载：若尚未记录进入态，尝试从当前旧地图补获一次。
-        if (!hasActiveTileEffects && item != null && Cache_map != null)
+        if (!hasActiveTileEffects && item != null)
         {
             Vector2Int gridPos = GetCurrentGridPos();
-            if (TryGetTileBlock(gridPos, out TileData tileData, out Tile_Block tileBlock))
+            if (TryResolveTileEffect(gridPos, out TileEffectResolution resolution))
             {
-                activeTileBlock = tileBlock;
-                activeTileData = tileData;
-                activeTileMap = Cache_map;
-                activeGridPos = gridPos;
-                hasActiveTileEffects = true;
-                currentTileData = tileData;
+                CacheActiveTile(gridPos, resolution);
+                isPreparedForWorldTransition = true;
                 lastGridPos = gridPos;
             }
         }
@@ -252,17 +172,15 @@ public class TileEffectReceiver : Module
         ExitCurrentTileEffects();
     }
 
-    /// <summary>
-    /// 地图加载完成或切换失败恢复后，重新绑定玩家脚下的地块效果。
-    /// </summary>
+    /// <summary>地图加载完成或切换失败恢复后，立即重新绑定脚下地块效果。</summary>
     public bool RefreshCurrentTileEffects()
     {
-        UpdateMapReference();
-        if (item == null || Cache_map == null)
+        UpdateLegacyMapReference();
+        if (item == null)
             return false;
 
         Vector2Int gridPos = GetCurrentGridPos();
-        if (hasActiveTileEffects && activeTileMap == Cache_map && activeGridPos == gridPos)
+        if (IsActiveSourceCurrent(gridPos))
         {
             lastGridPos = gridPos;
             return true;
@@ -270,83 +188,136 @@ public class TileEffectReceiver : Module
 
         ExitCurrentTileEffects();
         lastGridPos = gridPos;
-        OnTileEnter(gridPos);
-        return hasActiveTileEffects;
+        return EnterTile(gridPos);
     }
 
-    /// <summary>
-    /// 处理Tile更新的逻辑
-    /// </summary>
-    private void OnTileUpdate(Vector2Int gridPos)
+    #endregion
+
+    #region 查询与缓存
+
+    private bool TryResolveTileEffect(Vector2Int gridPos, out TileEffectResolution resolution)
     {
-        if (Cache_map == null || item == null) return;
-
-        if (TryGetTileBlock(gridPos, out TileData tileData, out Tile_Block tileBlock))
+        ChunkMgr manager = ChunkMgr.Instance;
+        if (manager != null && manager.TryGetRuntimeTileEffect(transform.position,
+                out RuntimeTerrainTileSample sample, out TileData runtimeData,
+                out Tile_Block runtimeBlock))
         {
-            // 更新当前TileData缓存
-            currentTileData = tileData;
-            tileBlock.OnUpdate(item, tileData, Cache_map, this, Time.deltaTime);
+            resolution = new TileEffectResolution(runtimeBlock, runtimeData, null,
+                sample.Terrain, sample.TopTileId);
+            return true;
         }
+
+        TileData legacyData = Cache_map?.GetTile(gridPos);
+        if (legacyData != null && GameRes.Instance != null)
+        {
+            Tile_Block legacyBlock = GameRes.Instance.GetTileBlock(legacyData.Name);
+            if (legacyBlock != null)
+            {
+                resolution = new TileEffectResolution(legacyBlock, legacyData, Cache_map, null, 0);
+                return true;
+            }
+        }
+
+        resolution = default;
+        return false;
     }
-    #endregion
 
-    #region 缓存管理方法
-    // 旧的 Prefab/IBlockTile 缓存逻辑已移除，如需缓存 Tile_Block 可在此根据需要重新实现
-    #endregion
+    private bool IsActiveSourceCurrent(Vector2Int gridPos)
+    {
+        if (!hasActiveTileEffects || activeGridPos != gridPos)
+            return false;
 
-    #region 辅助方法
-    /// <summary>
-    /// 获取当前网格坐标
-    /// </summary>
+        if (activeRuntimeTerrain != null)
+        {
+            ChunkMgr manager = ChunkMgr.Instance;
+            return manager != null &&
+                   manager.TryGetRuntimeTerrainTile(transform.position,
+                       out RuntimeTerrainTileSample sample) &&
+                   ReferenceEquals(sample.Terrain, activeRuntimeTerrain) &&
+                   sample.TopTileId == activeRuntimeTileId;
+        }
+
+        return activeTileMap != null && activeTileMap == Cache_map &&
+               ReferenceEquals(activeTileData, Cache_map.GetTile(gridPos));
+    }
+
+    private void CacheActiveTile(Vector2Int gridPos, TileEffectResolution resolution)
+    {
+        activeTileBlock = resolution.TileBlock;
+        activeTileData = resolution.TileData;
+        activeTileMap = resolution.Map;
+        activeRuntimeTerrain = resolution.RuntimeTerrain;
+        activeRuntimeTileId = resolution.RuntimeTileId;
+        activeGridPos = gridPos;
+        hasActiveTileEffects = true;
+        isPreparedForWorldTransition = false;
+        currentTileData = resolution.TileData;
+    }
+
+    private void ClearActiveTile()
+    {
+        activeTileBlock = null;
+        activeTileData = null;
+        activeTileMap = null;
+        activeRuntimeTerrain = null;
+        activeRuntimeTileId = 0;
+        hasActiveTileEffects = false;
+        currentTileData = null;
+    }
+
+    private void UpdateLegacyMapReference()
+    {
+        ChunkMgr manager = ChunkMgr.Instance;
+        if (manager == null ||
+            manager.TryGetRuntimeTerrainTile(transform.position, out _))
+            return;
+
+        manager.GetChunkBy_ItemPosition(transform.position, out Chunk chunk);
+        Map currentMap = chunk?.Map;
+        if (currentMap != null || Cache_map == null || !Cache_map.gameObject.activeInHierarchy)
+            Cache_map = currentMap;
+    }
+
     private Vector2Int GetCurrentGridPos()
     {
-        // 若地图为空，则返回上一次的坐标
-        if (Cache_map == null) return lastGridPos;
-
-        Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
-        return new Vector2Int(cell.x, cell.y);
-    }
-
-    /// <summary>
-    /// 尝试获取指定位置的 Tile_Block SO 和 TileData
-    /// </summary>
-    private bool TryGetTileBlock(Vector2Int pos, out TileData tileData, out Tile_Block tileBlock)
-    {
-        tileData = null;
-        tileBlock = null;
-
-        // 获取 TileData
-        tileData = Cache_map?.GetTile(pos);
-        if (tileData == null)
-            return false;
-
-        // 通过 TileData.Name 作为 key 获取对应的 Tile_Block SO
-        // 注意：要求 Tile_Block.tileItemName 与 TileData.Name 对应，例如 "TileItem_Water" 等
-        if (GameRes.Instance == null)
+        if (Cache_map != null && Cache_map.tileMap != null)
         {
-            // 退出 Play Mode 时 GameRes 会先销毁，此时 TileEffectReceiver 的 OnExit 只需静默结束。
-            if (Application.isPlaying)
-                Debug.LogError("TileEffectReceiver: GameRes.Instance 为空，无法获取 Tile_Block");
-            return false;
+            Vector3Int cell = Cache_map.tileMap.WorldToCell(transform.position);
+            return WorldTopologyRuntime.NormalizeCell(new Vector2Int(cell.x, cell.y));
         }
 
-        tileBlock = GameRes.Instance.GetTileBlock(tileData.Name);
-        if (tileBlock == null)
-        {
-            Debug.LogWarning($"TileEffectReceiver: 找不到对应的 Tile_Block SO，Key = {tileData.Name};");
-            return false;
-        }
-
-        return true;
+        Vector2 normalized = WorldTopologyRuntime.NormalizePosition(transform.position);
+        return new Vector2Int(Mathf.FloorToInt(normalized.x), Mathf.FloorToInt(normalized.y));
     }
 
-    /// <summary>
-    /// 获取当前Tile数据
-    /// </summary>
     public TileData GetCurrentTileData()
     {
-        var pos = GetCurrentGridPos();
-        return Cache_map?.GetTile(pos);
+        if (currentTileData != null)
+            return currentTileData;
+
+        return TryResolveTileEffect(GetCurrentGridPos(), out TileEffectResolution resolution)
+            ? resolution.TileData
+            : null;
     }
+
+    private readonly struct TileEffectResolution
+    {
+        public TileEffectResolution(Tile_Block tileBlock, TileData tileData, Map map,
+            ChunkTerrainData runtimeTerrain, int runtimeTileId)
+        {
+            TileBlock = tileBlock;
+            TileData = tileData;
+            Map = map;
+            RuntimeTerrain = runtimeTerrain;
+            RuntimeTileId = runtimeTileId;
+        }
+
+        public Tile_Block TileBlock { get; }
+        public TileData TileData { get; }
+        public Map Map { get; }
+        public ChunkTerrainData RuntimeTerrain { get; }
+        public int RuntimeTileId { get; }
+    }
+
     #endregion
 }

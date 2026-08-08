@@ -52,6 +52,7 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
+        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.InputBindingSettings + ".prefab", BuildInputBindingSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab", BuildInputBindingRow);
@@ -67,6 +68,27 @@ public static class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化设置、世界加载、聊天、气泡、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
+    }
+
+    /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild World Streaming Settings UI")]
+    public static void RebuildWorldStreamingSettingsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsRoot);
+        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab",
+            BuildWorldStreamingSettings);
+        UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab",
+            AddWorldStreamingEntryButton);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化区块流送性能设置 Prefab 与入口按钮。");
     }
 
     private static void SaveNewPrefab(string path, System.Func<GameObject> factory)
@@ -271,6 +293,37 @@ public static class RuntimeUIPrefabBuilder
 
         TextMeshProUGUI status = CreateText("状态文本", root.transform, "当前设置：每 10 分钟自动保存。", 13f, Teal);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+
+        Transform footer = CreateFooter(root.transform);
+        CreateButton("取消按钮", footer, "取消", 82f, 36f, false);
+        CreateButton("应用按钮", footer, "应用", 92f, 36f, true);
+        return root;
+    }
+
+    /// <summary>构建区块流送性能模式面板，所有控件均由布局组件约束。</summary>
+    private static GameObject BuildWorldStreamingSettings()
+    {
+        GameObject root = CreatePanelRoot(
+            RuntimeUIPrefabKeys.WorldStreamingSettings, new Vector2(680f, 420f));
+        CreateHeader(root.transform, "区块流送性能", "关闭按钮");
+        CreateHint(root.transform,
+            "自动适合多数设备；流畅优先减少 CPU 争用；高吞吐会在安全上限内使用多个后台线程。",
+            58f);
+
+        GameObject modeRow = CreateRow("性能模式行", root.transform, 54f);
+        CreateRowLabel(modeRow.transform, "性能模式", 122f);
+        TMP_Dropdown dropdown = CreateDropdown("性能模式下拉列表", modeRow.transform);
+        dropdown.gameObject.AddComponent<LayoutElement>().preferredWidth = 430f;
+
+        TextMeshProUGUI explanation = CreateText(
+            "模式说明", root.transform,
+            "纯地形数据在后台生成；Tilemap、碰撞和导航始终在主线程逐帧绘制。",
+            13f, Muted);
+        explanation.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
+
+        TextMeshProUGUI status = CreateText(
+            "状态文本", root.transform, "当前：自动平衡。", 13f, Teal);
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         Transform footer = CreateFooter(root.transform);
         CreateButton("取消按钮", footer, "取消", 82f, 36f, false);
@@ -498,8 +551,18 @@ public static class RuntimeUIPrefabBuilder
         EnsureEntryButton(content, "音量调节");
         EnsureEntryButton(content, "UI设置");
         EnsureEntryButton(content, "自动保存");
+        EnsureEntryButton(content, "流送性能");
         EnsureEntryButton(content, "游戏难度");
         EnsureEntryButton(content, "按键绑定");
+    }
+
+    /// <summary>只向现有设置列表追加流送性能入口。</summary>
+    private static void AddWorldStreamingEntryButton(GameObject root)
+    {
+        Transform content = FindTransform(root.transform, "Content");
+        if (content == null)
+            throw new MissingReferenceException("Info_Button_List.prefab 缺少 Content。");
+        EnsureEntryButton(content, "流送性能");
     }
 
     private static void EnsureEntryButton(Transform content, string name)

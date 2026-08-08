@@ -25,22 +25,16 @@ namespace FlatWorld.GameTest.PlayerInteraction
 
         [Test]
         [Category("PlayerInteraction.Input")]
-        public void ShortShiftPressTogglesPersistentRunState()
+        public void ShortShiftPressDoesNotToggleRunState()
         {
-            double shortPressDuration = mover.RunToggleTapThreshold * 0.5d;
-
             mover.HandleRunInputPressed();
-            mover.HandleRunInputReleased(shortPressDuration);
 
             Assert.That(mover.IsRunning, Is.True);
-            Assert.That(mover.IsRunToggleEnabled, Is.True);
             Assert.That(mover.Speed.Value, Is.EqualTo(10f).Within(0.001f));
 
-            mover.HandleRunInputPressed();
-            mover.HandleRunInputReleased(shortPressDuration);
+            mover.HandleRunInputReleased(0.1d);
 
             Assert.That(mover.IsRunning, Is.False);
-            Assert.That(mover.IsRunToggleEnabled, Is.False);
             Assert.That(mover.Speed.Value, Is.EqualTo(5f).Within(0.001f));
         }
 
@@ -48,33 +42,30 @@ namespace FlatWorld.GameTest.PlayerInteraction
         [Category("PlayerInteraction.Input")]
         public void LongShiftPressRunsOnlyUntilRelease()
         {
-            double longPressDuration = mover.RunToggleTapThreshold * 2d;
-
             mover.HandleRunInputPressed();
 
             Assert.That(mover.IsRunning, Is.True);
             Assert.That(mover.Speed.Value, Is.EqualTo(10f).Within(0.001f));
 
-            mover.HandleRunInputReleased(longPressDuration);
+            mover.HandleRunInputReleased(1d);
 
             Assert.That(mover.IsRunning, Is.False);
-            Assert.That(mover.IsRunToggleEnabled, Is.False);
             Assert.That(mover.Speed.Value, Is.EqualTo(5f).Within(0.001f));
         }
 
         [Test]
         [Category("PlayerInteraction.Input")]
-        public void LongShiftPressCancelsAnExistingRunToggle()
+        public void RepeatedShiftPressesDoNotCreatePersistentRunState()
         {
             mover.HandleRunInputPressed();
-            mover.HandleRunInputReleased(mover.RunToggleTapThreshold * 0.5d);
-            Assert.That(mover.IsRunToggleEnabled, Is.True);
+            mover.HandleRunInputReleased(1d);
+            Assert.That(mover.IsRunning, Is.False);
 
             mover.HandleRunInputPressed();
-            mover.HandleRunInputReleased(mover.RunToggleTapThreshold * 2d);
+            Assert.That(mover.IsRunning, Is.True);
+            mover.HandleRunInputReleased(1d);
 
             Assert.That(mover.IsRunning, Is.False);
-            Assert.That(mover.IsRunToggleEnabled, Is.False);
             Assert.That(mover.Speed.Value, Is.EqualTo(5f).Within(0.001f));
         }
     }

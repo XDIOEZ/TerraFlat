@@ -884,7 +884,8 @@ public class Mod_Building : Module
     private bool CheckTilePenalties(Bounds bounds, out string reason)
     {
         reason = null;
-        if (ChunkMgr.Instance == null)
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null)
         {
             reason = "区块管理器尚未就绪";
             return false;
@@ -901,24 +902,45 @@ public class Mod_Building : Module
             {
                 Vector2Int worldCell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(x, y));
                 Vector2 tileCenter = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
-                ChunkMgr.Instance.GetChunkBy_ItemPosition(tileCenter, out Chunk chunk);
-                if (chunk?.Map?.Data == null)
+                if (chunkManager.TryGetRuntimeTerrainTile(
+                        tileCenter, out RuntimeTerrainTileSample runtimeTile))
                 {
-                    reason = $"地块 ({x},{y}) 尚未加载";
-                    return false;
-                }
+                    if (runtimeTile.TopTileId == 0)
+                    {
+                        reason = $"地块 ({x},{y}) 不可建造";
+                        return false;
+                    }
 
-                TileData topTile = chunk.Map.Data.GetTopTile(worldCell);
-                if (topTile == null)
-                {
-                    reason = $"地块 ({x},{y}) 不可建造";
-                    return false;
+                    if (!runtimeTile.Terrain.IsWalkable(
+                            runtimeTile.LocalCell.x, runtimeTile.LocalCell.y) ||
+                        runtimeTile.Cell.NavigationCost > BlockedTilePenalty)
+                    {
+                        reason = $"地块 ({x},{y}) 不可通行";
+                        return false;
+                    }
                 }
-
-                if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
+                else
                 {
-                    reason = $"地块 ({x},{y}) 不可通行";
-                    return false;
+                    // 旧 Map 世界仍保留兼容回退；新区块权威不依赖表现对象。
+                    chunkManager.GetChunkBy_ItemPosition(tileCenter, out Chunk chunk);
+                    if (chunk?.Map?.Data == null)
+                    {
+                        reason = $"地块 ({x},{y}) 尚未加载";
+                        return false;
+                    }
+
+                    TileData topTile = chunk.Map.Data.GetTopTile(worldCell);
+                    if (topTile == null)
+                    {
+                        reason = $"地块 ({x},{y}) 不可建造";
+                        return false;
+                    }
+
+                    if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
+                    {
+                        reason = $"地块 ({x},{y}) 不可通行";
+                        return false;
+                    }
                 }
 
                 if (BuildingOccupancyRegistry.IsOccupied(worldCell, this))
@@ -1107,14 +1129,12 @@ public class Mod_Building : Module
                 ? shadowObject.GetComponentInChildren<BuildingShadow>(true)
                 : null;
 
-            SpriteRenderer source = GetBuildingPreviewRenderer();
-            if (GhostShadow == null || source == null)
+            if (GhostShadow == null ||
+                !TryGetBuildingPreviewVisual(out SpriteRenderer source,
+                    out Transform sourceRoot, out Bounds footprint))
                 throw new MissingComponentException("BuildingShadow 预制体或建筑 SpriteRenderer 配置不完整");
 
-            Transform sourceRoot = TryGetBuildingBodyPrefab(out GameObject buildingPrefab)
-                ? buildingPrefab.transform
-                : item.transform;
-            GhostShadow.InitShadow(source, sourceRoot, GetBuildingPreviewBounds());
+            GhostShadow.InitShadow(source, sourceRoot, footprint);
         }
         catch (Exception exception)
         {
@@ -1168,6 +1188,20 @@ public class Mod_Building : Module
         }
 
         return item.Sprite != null ? item.Sprite : item.GetComponentInChildren<SpriteRenderer>(true);
+    }
+
+    /// <summary>返回真实放置预览使用的图片、局部坐标根节点与占地范围。</summary>
+    public bool TryGetBuildingPreviewVisual(
+        out SpriteRenderer sourceRenderer,
+        out Transform sourceRoot,
+        out Bounds footprint)
+    {
+        sourceRenderer = GetBuildingPreviewRenderer();
+        sourceRoot = TryGetBuildingBodyPrefab(out GameObject buildingPrefab)
+            ? buildingPrefab.transform
+            : item != null ? item.transform : null;
+        footprint = GetBuildingPreviewBounds();
+        return sourceRenderer != null && sourceRoot != null;
     }
 
     private Bounds GetBuildingPreviewBounds()

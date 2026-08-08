@@ -8,6 +8,7 @@ public static class RuntimeUIPrefabKeys
     public const string AudioSettings = "UI_AudioSettings";
     public const string UISettings = "UI_InterfaceSettings";
     public const string AutoSaveSettings = "UI_AutoSaveSettings";
+    public const string WorldStreamingSettings = "UI_WorldStreamingSettings";
     public const string DifficultySettings = "UI_DifficultySettings";
     public const string InputBindingSettings = "UI_InputBindingSettings";
     public const string InputBindingRow = "UI_InputBindingRow";

@@ -67,12 +67,45 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 
 GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通过真实 `Mover.Move` 执行一次右边界环绕；等待对侧 Chunk Ready，验证玩家数据、Chunk/MapSave 规范键，然后恢复原位置并继续完整流程。复杂状态机位于 `FlatWorldGoldenPathScenarios.WorldTopology.cs`。
 
+## 当前运行时水体场景（2026-08-08）
+
+`OnChunkReady` 在活动 `ChunkRuntime` 中寻找一格可走陆地和一格水体，通过真实玩家 `TileEffectReceiver.RefreshCurrentTileEffects()` 验证进入水体获得 `水体减速/潮湿`、移动倍率按正式 Buff 配置下降、离开后移除并恢复；通过和失败路径都把玩家位置、速度及脚下地块效果恢复到检查前状态。实现位于 `FlatWorldGoldenPathScenarios.TileEffects.cs`。
+
+## 当前新玩家出生场景（2026-08-08）
+
+`OnWorldReady` 在初始 Chunk 窗口稳定后直接读取玩家脚下的 `ChunkRuntime/ChunkTerrainData`，断言出生格非水且可走，并核对运行时位置与 `Data_Player` 存档位置一致；场景不移动玩家、不改生成参数。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
+
+## 当前建筑放置场景（2026-08-08）
+
+`OnWorldReady` 使用正式 `Wall_Wood_Summoner` 在玩家附近扫描可放置的新版权威地块，通过 `ValidateAuthoritativePlacement()` 与 `TryCreateInstalledBuilding()` 验证新区块读取、建筑实例和 `BuildingOccupancyRegistry` 动态占地；同时初始化正式 `BuildingShadow`，断言图片、材质和 `Shadow` 排序层接线，随后立即清理虚影、建筑和召唤器。实现位于 `FlatWorldGoldenPathScenarios.Building.cs`。
+
+## 当前 GM 区块加载调速场景（2026-08-08）
+
+`OnWorldReady` 先通过 `ChunkMgr.TrySetChunkLoadSpeedMultiplier()` 验证有限倍率会提升旧队列预算并同步到新 WorldModel 的实际生成并发，再传入正无穷验证“自动最大”会达到 CPU 安全并发上限、旧管线四倍数量预算与两倍毫秒预算，而不会返回 `int.MaxValue/Infinity` 堵塞主线程。`finally` 和统一 `Cleanup` 都按场景开始前的有限/无限状态恢复。实现位于 `FlatWorldGoldenPathScenarios.ChunkLoading.cs`。
+
+## 当前 WorldModel 流送场景（2026-08-08）
+
+`OnWorldReady` 断言主线程表现协程队列已排空且空闲预取实际并发不超过 1；已完成的 `LoadChunkDistance..UnActiveDistance` 外圈数据必须保持 Dormant 且不持有 Simulation/Presentation/Navigation 租约，但不要求整圈阻塞式生成完。原有往返场景离开可见圈后验证 View 与三类租约释放，并验证固定创建的 Chicken 已随起始区块休眠；返回时等待分帧表现完成，再验证该生物恢复、同一 `ChunkRuntime`、地形哈希、唯一租约和 `ChunkCommitted` 订阅均未重复。清理阶段销毁测试生物。实现位于 `FlatWorldGoldenPathScenarios.WorldModel.cs`。
+
+## 近期变更
+
+> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+
+- 2026-08-08：`OnWorldReady` 使用真实玩家 `Mover.HandleRunInputPressed/Released()` 验证长按松开保持常驻奔跑，并由下一次短按关闭后恢复原速度倍率。
+- 2026-08-08：建筑场景改为调用 `Mod_Building.TryGetBuildingPreviewVisual()` 获取召唤器真实预览来源，并断言旧建筑材质缺失时虚影仍保留有效默认材质、图片与 `Shadow` 排序层。
+- 2026-08-08：黄金路径启动器把当前 Unity 进程 ID 原子写入 `golden-running-*` 请求本体；EditorSettings 或 PlayMode 引发 Domain Reload、且 `SessionState` 尚未恢复时可安全续接，编辑器真正重启后仍按中断处理。
+- 2026-08-08：WorldModel 往返场景加入真实 Chicken 的区块显隐回归：离开起始 View 后必须 inactive，返回且 View 重绑后必须 active，并在统一 Cleanup 通过 `ItemMgr.DespawnItem()` 清理。
+
+## 当前地表气候与水文场景（2026-08-08）
+
+Hydrology 场景要求每个模型区块提供 `temperature/temperature.celsius/basePrecipitation/precipitation/windX/windY`，断言旧版温度通道按 Profile 映射到 `0..50℃`、区域风向为单位向量，且移动窗口内实际出现迎风增雨或背风雨影；同时用 `SurfaceBiomeClassifier` 核对旧 Biome 有序规则，并要求 `mountain`、`riverSurfaceLevel/riverKind`。高海拔非水格必须使用二维石地，淡水格必须标记为 `River(1)` 或 `Lake(2)`；若遇到湖泊还会断言湖面高度存在且不低于湖底高度。正式 Surface 默认使用带连续下坡偏转的 D∞ 高度汇流，旧版 D8 内核继续由纯测试覆盖盆地与出口行为。
+
 ## 配置执行器契约（2026-08-06）
 
 - `FlatWorldGoldenPathConfiguration` 是版本化、强验证的输入和结果快照；运行结果必须回显最终有效配置，便于复现 AI 临时构造的场景。
 - `FlatWorldGoldenPathExecutor` 是生产系统入口适配层：通过 `NewWorldCreationRequest` 创建真实世界，通过玩家模块 API 调视野，通过 `WorldGenerationRuntimeHooks` 在 `Map.Act()` 前配置当前 Map 实例。
 - `player.cameraOrthographicSize` 控制移动阶段视距；`player.screenshotOrthographicSize` 仅在三次截图前临时拉远相机，通过真实 `Mod_Cam` 刷新可见 Chunk 窗口并等待全部 Ready，截图后恢复移动视距。
-- WorldModel 往返场景验证 `ChunkCommitted` 订阅数必须等于当前 `PresentationStatus=Bound` 的 View 数；不得再与截图缩放切换前的历史基线比较，因为相机恢复会合法改变表现窗口数量。
+- WorldModel 往返场景验证表现协程已排空，且 `ChunkCommitted` 订阅数必须等于当前 `PresentationStatus=Bound` 的 View 数；不得再与截图缩放切换前的历史基线比较，因为相机恢复会合法改变表现窗口数量。
 - `WorldGenerationRuntimeHooks` 默认没有订阅者；执行器结束或 Domain Reload 时必须解除订阅，所以临时河流/地形参数不会污染 Prefab、后续游戏或存档默认配置。
 - `world.noiseScale` 必须在进入世界后的 `ChunkMgr.ActiveGenerationProfile.Settings.WorldCoordinateScale` 中保持一致；河流距离倍率按 `clamp(0.01 / scale, 0.25, 4)` 回显，WorldModel 场景在 `OnWorldReady` 阶段断言该接线。
 - 状态化子场景继续负责跨帧的调用、观测、断言和清理；配置决定场景是否启用及运行参数，执行器不绕过生产系统直接伪造结果。

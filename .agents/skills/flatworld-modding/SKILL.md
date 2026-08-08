@@ -62,6 +62,7 @@ GameRes 完成本体 Addressables
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：本体与 MOD 的 JSON 物品显示统一通过 `GameRes.TryGetItemPresentation()` 读取解析后的 `gameName` 与 `visual.spriteAddress`；共享外壳只负责实例结构，不再作为 UI 显示数据源。
 - 2026-07-28：MOD 定义文件新增纯 JSON `recipes`，加载顺序为先物品 Def、再校验并注册配方；保留旧 Recipe AssetBundle 转换兼容。
 - 2026-07-27：当前 MOD 流程在本体资源加载后执行，支持 manifest 依赖排序、AssetBundle、JSON Item 定义、Lua 生命周期与集合哈希。
 

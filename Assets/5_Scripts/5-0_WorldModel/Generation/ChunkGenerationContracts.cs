@@ -76,6 +76,9 @@ namespace FlatWorld.WorldModel
                 textParameters == null
                     ? new Dictionary<string, string>(StringComparer.Ordinal)
                     : new Dictionary<string, string>(textParameters, StringComparer.Ordinal));
+            GenerationFingerprint = CalculateGenerationFingerprint(
+                ProfileId, Signature, Width, Height,
+                this.numericParameters, this.textParameters);
             Settings = new ChunkGenerationSettingsSnapshot(this.numericParameters, this.textParameters);
         }
 
@@ -87,6 +90,8 @@ namespace FlatWorld.WorldModel
         public int Width { get; }
         /// <summary>一个区块有多少行格子。</summary>
         public int Height { get; }
+        /// <summary>配置内容的稳定指纹，用于跨窗口复用纯生成缓存。</summary>
+        public ulong GenerationFingerprint { get; }
         /// <summary>给 MOD 使用的数字设置副本。</summary>
         public IReadOnlyDictionary<string, double> NumericParameters => numericParameters;
         /// <summary>给 MOD 使用的文字设置副本。</summary>
@@ -113,6 +118,57 @@ namespace FlatWorld.WorldModel
                 Height,
                 numbers,
                 new Dictionary<string, string>(textParameters, StringComparer.Ordinal));
+        }
+
+        /// <summary>按键排序计算稳定 FNV-1a，避免依赖字典枚举顺序和进程随机哈希。</summary>
+        private static ulong CalculateGenerationFingerprint(string profileId, int signature,
+            int width, int height, IReadOnlyDictionary<string, double> numbers,
+            IReadOnlyDictionary<string, string> texts)
+        {
+            ulong hash = 14695981039346656037UL;
+            AddString(ref hash, profileId);
+            AddLong(ref hash, signature);
+            AddLong(ref hash, width);
+            AddLong(ref hash, height);
+
+            var numberKeys = new List<string>(numbers.Keys);
+            numberKeys.Sort(StringComparer.Ordinal);
+            for (int i = 0; i < numberKeys.Count; i++)
+            {
+                string key = numberKeys[i];
+                AddString(ref hash, key);
+                AddLong(ref hash, BitConverter.DoubleToInt64Bits(numbers[key]));
+            }
+
+            var textKeys = new List<string>(texts.Keys);
+            textKeys.Sort(StringComparer.Ordinal);
+            for (int i = 0; i < textKeys.Count; i++)
+            {
+                string key = textKeys[i];
+                AddString(ref hash, key);
+                AddString(ref hash, texts[key] ?? string.Empty);
+            }
+            return hash;
+        }
+
+        private static void AddString(ref ulong hash, string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+                AddLong(ref hash, value[i]);
+            AddLong(ref hash, 0xff);
+        }
+
+        private static void AddLong(ref ulong hash, long value)
+        {
+            unchecked
+            {
+                ulong bits = (ulong)value;
+                for (int i = 0; i < 8; i++)
+                {
+                    hash ^= (byte)(bits >> (i * 8));
+                    hash *= 1099511628211UL;
+                }
+            }
         }
     }
 

@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 建造系统定位
 
-> 最后核对：2026-08-05。建筑占地会直接影响导航。
+> 最后核对：2026-08-08。建筑占地会直接影响导航。
 
 ## 修改前先读
 
@@ -72,6 +72,8 @@ Summoner（库存中的持久化载体）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：`Mod_Building.TryGetBuildingPreviewVisual()` 统一暴露真实预览图片/根节点/占地；`BuildingShadow` 仅在本体材质有效时继承，否则保留 Prefab 默认 Sprite 材质，避免旧建筑材质 GUID 丢失后虚影再次变空。
+- 2026-08-08：建筑召唤器的预览与最终放置改为优先读取 `ChunkMgr.TryGetRuntimeTerrainTile()` 的 `ChunkRuntime/ChunkTerrainData` 权威地块，旧 `Chunk.Map` 仅作兼容回退；`BuildingShadow` 继承建筑本体材质并使用 `Shadow` 排序层，修复新区块下“地块尚未加载”和虚影不显示。
 - 2026-08-05：静态结构与阻挡层迁移到连续 `TileStackCell` API；动态建筑继续只叠加 `BuildingOccupancyRegistry`，导航同时读取地形栈顶层与建筑占用。
 - 2026-07-31：新增正式 `MineEntrance`/`MineEntrance_Summoner` 建筑对；安装后的建筑可进入矿洞，召唤器不可触发，拆除与 Chunk 存档继续复用建筑快照事务。
 - 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；明确只承载地图生成的静态墙体，动态建造系统继续使用建筑实体、快照和占地注册表。
@@ -83,7 +85,7 @@ Summoner（库存中的持久化载体）
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Building/BuildingSmokeTests.cs`；当前基础覆盖建筑模块、动态占地、放置预览 Prefab 与结构目录入口。
+- 基础测试脚本：`Assets/GameTest/Building/BuildingSmokeTests.cs`；当前基础覆盖建筑模块、动态占地、放置预览 Prefab、虚影材质/排序层与结构目录入口。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；建筑测试约定目录：`Assets/GameTest/Building/`；场景目录：`Assets/GameTest/Scenes/Building/`；冒烟分类：`Building.Smoke`。
 - 新增放置、占地、安装拆除或建筑快照行为时必须增加系统测试；修复 Bug 时先增加回归测试。建筑主流程变化时同步更新建筑冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试创建的占地、Prefab 和临时快照必须清理。

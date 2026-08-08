@@ -13,6 +13,7 @@ namespace FlatWorld.Automation
         private static ulong _modelTerrainHash;
         private static Vector2 _modelStartPosition;
         private static Vector2 _modelAwayPosition;
+        private static Item _modelVisibilityCreature;
         private static bool _modelDormancyObserved;
         private static bool _modelRebindObserved;
 
@@ -26,6 +27,7 @@ namespace FlatWorld.Automation
             _modelTerrainHash = 0;
             _modelStartPosition = default;
             _modelAwayPosition = default;
+            _modelVisibilityCreature = null;
             _modelDormancyObserved = false;
             _modelRebindObserved = false;
         }
@@ -35,6 +37,10 @@ namespace FlatWorld.Automation
             ChunkMgr manager = ChunkMgr.Instance;
             if (manager?.WorldRuntime == null)
                 throw new InvalidOperationException("无头世界模型未在进入世界时创建。");
+            if (manager.PendingRuntimeChunkPresentationCount != 0)
+                throw new InvalidOperationException("进入世界后主线程区块表现队列仍未排空。");
+            if (manager.RuntimeChunkPrefetchInFlightCount > 1)
+                throw new InvalidOperationException("空闲数据预取并发超过安全上限 1。");
 
             ChunkGenerationSettingsSnapshot settings = manager.ActiveGenerationProfile?.Settings;
             if (settings == null)
@@ -76,10 +82,16 @@ namespace FlatWorld.Automation
             }
 
             _modelTerrainHash = _modelStartChunk.Terrain.ComputeStableHash();
+            _modelVisibilityCreature = ItemMgr.Instance.InstantiateItem(
+                "Chicken", _modelStartPosition, Quaternion.identity, Vector3.one);
+            if (_modelVisibilityCreature == null)
+                throw new InvalidOperationException("无法创建用于区块实体显隐验证的 Chicken。");
+            _modelVisibilityCreature.Load();
+            AssertWorldModelPrefetchRing(manager, FlatWorldGoldenPathCommandPlayerLoader());
 
             Debug.Log(
                 $"[GoldenPath][WorldModel] 已记录起始区块 {_modelStartAddress}，" +
-                $"hash={_modelTerrainHash}。");
+                $"hash={_modelTerrainHash}，待预取={manager.PendingRuntimeChunkPrefetchCount}。");
         }
 
         internal static void BeginWorldModelExcursion(Vector2 direction, Vector2 chunkSize)
@@ -131,6 +143,10 @@ namespace FlatWorld.Automation
             if (retained.SimulationLeaseCount != 0 || retained.PresentationLeaseCount != 0 ||
                 retained.NavigationLeaseCount != 0)
                 throw new InvalidOperationException("休眠区块仍持有模拟、表现或导航租约。");
+            if (_modelVisibilityCreature == null)
+                throw new InvalidOperationException("区块休眠验证期间测试生物被意外回收。");
+            if (_modelVisibilityCreature.gameObject.activeInHierarchy)
+                return false;
             AssertWorldModelIdentity(retained);
             _modelDormancyObserved = true;
             Debug.Log("[GoldenPath][WorldModel] 起始区块已失去 View 并保留无头模型，Tick 已休眠。");
@@ -141,6 +157,7 @@ namespace FlatWorld.Automation
         {
             ChunkMgr manager = ChunkMgr.Instance;
             if (manager?.WorldRuntime == null ||
+                manager.PendingRuntimeChunkPresentationCount != 0 ||
                 !manager.TryGetChunkRuntime(_modelStartAddress, out ChunkRuntime rebound) ||
                 rebound.DataStatus != ChunkDataStatus.Ready ||
                 rebound.SimulationStatus != ChunkSimulationStatus.Active ||
@@ -149,6 +166,10 @@ namespace FlatWorld.Automation
             {
                 return false;
             }
+            if (_modelVisibilityCreature == null)
+                throw new InvalidOperationException("区块返回验证期间测试生物被意外回收。");
+            if (!_modelVisibilityCreature.gameObject.activeInHierarchy)
+                return false;
 
             if (!ReferenceEquals(rebound, _modelStartChunk))
                 throw new InvalidOperationException("返回起点后无头区块对象未复用。");
@@ -176,6 +197,37 @@ namespace FlatWorld.Automation
             return true;
         }
 
+        /// <summary>验证已经完成的外圈预取没有提前领取模拟、表现或导航租约。</summary>
+        private static void AssertWorldModelPrefetchRing(ChunkMgr manager, Mod_ChunkLoader loader)
+        {
+            if (loader.CurrentUnActiveChunkDistance <= loader.CurrentLoadChunkDistance)
+                return;
+
+            ChunkGenerationProfileSnapshot profile = manager.ActiveGenerationProfile;
+            foreach (ChunkRuntime chunk in manager.Chunks.Values)
+            {
+                Vector2Int origin = new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+                Vector2Int start = new(_modelStartAddress.ChunkOrigin.X, _modelStartAddress.ChunkOrigin.Y);
+                Vector2Int delta = WorldTopologyRuntime.ShortestDelta(start, origin);
+                int ringX = Mathf.Abs(Mathf.RoundToInt(delta.x / (float)profile.Width));
+                int ringY = Mathf.Abs(Mathf.RoundToInt(delta.y / (float)profile.Height));
+                int ring = Mathf.Max(ringX, ringY);
+                if (ring < loader.CurrentLoadChunkDistance ||
+                    ring >= loader.CurrentUnActiveChunkDistance)
+                    continue;
+                if (chunk.DataStatus != ChunkDataStatus.Ready ||
+                    chunk.SimulationStatus != ChunkSimulationStatus.Dormant ||
+                    chunk.SimulationLeaseCount != 0 || chunk.PresentationLeaseCount != 0 ||
+                    chunk.NavigationLeaseCount != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"预取区块不应提前激活或绘制：{chunk.Address}。");
+                }
+            }
+            if (manager.RuntimeChunkPrefetchInFlightCount > 1)
+                throw new InvalidOperationException("外圈预取同时运行超过 1 项。");
+        }
+
         private static void AssertWorldModelIdentity(ChunkRuntime chunk)
         {
             if (chunk.Terrain == null || chunk.Terrain.ComputeStableHash() != _modelTerrainHash)
@@ -190,6 +242,9 @@ namespace FlatWorld.Automation
 
         private static void CleanupWorldModelScenario()
         {
+            if (_modelVisibilityCreature != null && ItemMgr.Instance != null)
+                ItemMgr.Instance.DespawnItem(_modelVisibilityCreature, saveData: false);
+            _modelVisibilityCreature = null;
             _modelStartChunk = null;
         }
     }

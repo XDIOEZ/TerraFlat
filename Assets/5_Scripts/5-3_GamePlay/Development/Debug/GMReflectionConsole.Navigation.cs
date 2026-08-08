@@ -131,7 +131,11 @@ public sealed partial class GMReflectionConsole
         RebuildCommandPage();
         BuildAirdropBrowser(canvasObject.transform);
         BuildAiCreatureBrowser(canvasObject.transform);
-        SetActivePage(GmPageId.Player);
+        int savedPageIndex = GMConsolePreferences.ActivePageIndex;
+        GmPageId savedPage = Enum.IsDefined(typeof(GmPageId), savedPageIndex)
+            ? (GmPageId)savedPageIndex
+            : GmPageId.Player;
+        SetActivePage(savedPage);
 
         Canvas.ForceUpdateCanvases();
         ClampTabbedWindowToCanvas();
@@ -582,11 +586,11 @@ public sealed partial class GMReflectionConsole
         label.enableWordWrapping = false;
         label.overflowMode = TextOverflowModes.Ellipsis;
         label.raycastTarget = false;
-        label.gameObject.AddComponent<LayoutElement>().preferredWidth = 78f;
+        label.gameObject.AddComponent<LayoutElement>().preferredWidth = 60f;
 
-        chunkLoadSpeedInput = CreateInputField(row.transform, "倍率", 84f, false);
-        chunkLoadSpeedInput.contentType = TMP_InputField.ContentType.DecimalNumber;
-        chunkLoadSpeedInput.characterLimit = 7;
+        chunkLoadSpeedInput = CreateInputField(row.transform, "倍率/无限", 58f, false);
+        chunkLoadSpeedInput.contentType = TMP_InputField.ContentType.Standard;
+        chunkLoadSpeedInput.characterLimit = 12;
         chunkLoadSpeedInput.textComponent.alignment = TextAlignmentOptions.Center;
         chunkLoadSpeedInput.onSubmit.AddListener(_ => ApplyChunkLoadSpeedInput());
 
@@ -594,13 +598,20 @@ public sealed partial class GMReflectionConsole
             row.transform,
             "应用",
             ApplyChunkLoadSpeedInput,
-            60f,
+            48f,
+            30f);
+
+        chunkLoadSpeedUnlimitedButton = CreateButton(
+            row.transform,
+            "无限",
+            ToggleUnlimitedChunkLoadSpeed,
+            54f,
             30f);
 
         RegisterSearchEntry(
             GmPageId.World,
             "区块加载倍率",
-            "区块 加载 生成 speed multiplier 倍率",
+            "区块 加载 生成 speed multiplier 倍率 无限 无限制",
             row.transform as RectTransform);
     }
 
@@ -608,6 +619,8 @@ public sealed partial class GMReflectionConsole
     {
         if (!gmPages.TryGetValue(pageId, out GmPageView selected) || selected.Root == null)
             return;
+
+        GMConsolePreferences.SetActivePageIndex((int)pageId);
 
         foreach (KeyValuePair<GmPageId, GmPageView> pair in gmPages)
         {

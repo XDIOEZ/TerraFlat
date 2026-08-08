@@ -10,6 +10,137 @@ namespace FlatWorld.WorldModel
         Cave
     }
 
+    /// <summary>地表河流使用新版高度汇流，还是迁移后的旧版区域水文。</summary>
+    public enum RiverGenerationAlgorithm
+    {
+        HeightDriven,
+        Legacy
+    }
+
+    /// <summary>地表气候继续使用新版简化噪声，还是复用旧版 Land 采样规则。</summary>
+    public enum SurfaceClimateAlgorithm
+    {
+        Simple,
+        LegacyLand
+    }
+
+    /// <summary>
+    /// 地表群系的稳定编号。0—5 与旧版 MapCore 的有序 BiomeData 保持一致，
+    /// 河流、雪地和二维石地山体使用新版扩展编号。
+    /// </summary>
+    public enum SurfaceBiomeKind
+    {
+        Ocean = 0,
+        River = 1,
+        Beach = 2,
+        Desert = 3,
+        Grassland = 4,
+        Forest = 5,
+        Snow = 6,
+        Stone = 7
+    }
+
+    /// <summary>
+    /// 纯数据地表群系判定器。LegacyLand 模式适配旧版“石地→沙漠→沙滩→草原→森林→海洋”
+    /// 的优先级；河流仍作为新版水文覆盖层优先于陆地群系。
+    /// </summary>
+    public static class SurfaceBiomeClassifier
+    {
+        #region 判定
+
+        /// <summary>根据同一份生成快照判定一个地表格的稳定群系编号。</summary>
+        public static SurfaceBiomeKind Resolve(
+            ChunkGenerationSettingsSnapshot settings,
+            double height,
+            double temperature,
+            double precipitation,
+            double moisture,
+            bool river)
+        {
+            if (height < settings.SeaLevel)
+                return SurfaceBiomeKind.Ocean;
+            if (river)
+                return SurfaceBiomeKind.River;
+            if (height >= settings.MountainLevel)
+                return SurfaceBiomeKind.Stone;
+
+            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+            {
+                if (height >= settings.DesertMinimumHeight &&
+                    precipitation <= settings.DesertMaximumPrecipitation)
+                {
+                    return SurfaceBiomeKind.Desert;
+                }
+
+                if (height <= settings.BeachLevel)
+                    return SurfaceBiomeKind.Beach;
+
+                bool grassland =
+                    temperature >= settings.GrasslandMinimumTemperature &&
+                    temperature <= settings.GrasslandMaximumTemperature &&
+                    precipitation >= settings.GrasslandMinimumPrecipitation &&
+                    precipitation <= settings.GrasslandMaximumPrecipitation;
+                return grassland ? SurfaceBiomeKind.Grassland : SurfaceBiomeKind.Forest;
+            }
+
+            if (height <= settings.BeachLevel)
+                return SurfaceBiomeKind.Beach;
+            if (temperature <= settings.SnowTemperature)
+                return SurfaceBiomeKind.Snow;
+            if (precipitation < settings.DesertMaximumPrecipitation)
+                return SurfaceBiomeKind.Desert;
+            return moisture > 0.62d ? SurfaceBiomeKind.Forest : SurfaceBiomeKind.Grassland;
+        }
+
+        #endregion
+
+        #region 兼容名称
+
+        /// <summary>把稳定群系编号转换成旧玩法配置使用的中文名称。</summary>
+        public static string GetLegacyName(int biomeId)
+        {
+            return (SurfaceBiomeKind)biomeId switch
+            {
+                SurfaceBiomeKind.Ocean => "海洋",
+                SurfaceBiomeKind.River => "河流",
+                SurfaceBiomeKind.Beach => "沙滩",
+                SurfaceBiomeKind.Desert => "沙漠",
+                SurfaceBiomeKind.Grassland => "温带草原",
+                SurfaceBiomeKind.Forest => "森林",
+                SurfaceBiomeKind.Snow => "雪地",
+                SurfaceBiomeKind.Stone => "石地",
+                _ => string.Empty
+            };
+        }
+
+        #endregion
+    }
+
+    /// <summary>一条旧版地形噪声通道的纯数据快照。</summary>
+    public readonly struct TerrainNoiseChannelSettings
+    {
+        /// <summary>保存坐标、频率、八度与偏移；所有值已由配置快照校验。</summary>
+        public TerrainNoiseChannelSettings(double coordinateScale, double frequency, int octaves,
+            double lacunarity, double persistence, double offsetX, double offsetY)
+        {
+            CoordinateScale = coordinateScale;
+            Frequency = frequency;
+            Octaves = octaves;
+            Lacunarity = lacunarity;
+            Persistence = persistence;
+            OffsetX = offsetX;
+            OffsetY = offsetY;
+        }
+
+        public double CoordinateScale { get; }
+        public double Frequency { get; }
+        public int Octaves { get; }
+        public double Lacunarity { get; }
+        public double Persistence { get; }
+        public double OffsetX { get; }
+        public double OffsetY { get; }
+    }
+
     /// <summary>
     /// 把 Unity 面板里的零散设置整理成一份后台生成器能直接使用的配置。
     /// 这里会补上缺省值并限制不合理的数字。整理完以后，后台线程就不用再碰 Unity 对象。
@@ -38,7 +169,25 @@ namespace FlatWorld.WorldModel
             CaveWallTileId = GetInt(numbers, "cave.wallTileId", StoneTileId);
             SeaLevel = Clamp01(GetDouble(numbers, "terrain.seaLevel", 0.30d));
             BeachLevel = Clamp01(GetDouble(numbers, "terrain.beachLevel", SeaLevel + 0.055d));
+            MountainLevel = Clamp(
+                GetDouble(numbers, "terrain.mountainLevel", 0.72d),
+                BeachLevel,
+                1d);
             SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
+            DesertMinimumHeight = Clamp01(
+                GetDouble(numbers, "biome.desert.minimumHeight", 0.51d));
+            DesertMaximumPrecipitation = Clamp01(
+                GetDouble(numbers, "biome.desert.maximumPrecipitation", 0.28d));
+            GrasslandMinimumTemperature = Clamp01(
+                GetDouble(numbers, "biome.grassland.minimumTemperature", 0.25d));
+            GrasslandMaximumTemperature = Math.Max(
+                GrasslandMinimumTemperature,
+                Clamp01(GetDouble(numbers, "biome.grassland.maximumTemperature", 0.75d)));
+            GrasslandMinimumPrecipitation = Clamp01(
+                GetDouble(numbers, "biome.grassland.minimumPrecipitation", 0.25d));
+            GrasslandMaximumPrecipitation = Math.Max(
+                GrasslandMinimumPrecipitation,
+                Clamp01(GetDouble(numbers, "biome.grassland.maximumPrecipitation", 0.75d)));
             WorldCoordinateScale = NonNegativeFinite(
                 GetDouble(numbers, "world.coordinateScale", DefaultWorldCoordinateScale),
                 DefaultWorldCoordinateScale);
@@ -57,7 +206,39 @@ namespace FlatWorld.WorldModel
                                0.004d) * worldFrequencyScale;
             HeightOctaves = Clamp(GetInt(numbers, "terrain.octaves", 4), 1, 8);
             ClimateOctaves = Clamp(GetInt(numbers, "climate.octaves", 3), 1, 8);
+            SurfaceClimateAlgorithm = ParseSurfaceClimateAlgorithm(
+                GetText(texts, "climate.algorithm", "simple"));
+            HeightNoise = CreateNoiseChannel(numbers, "terrain.height", 2d, 0.05d, 5,
+                2d, 0.45d, 9000d, 0d);
+            PrecipitationNoise = CreateNoiseChannel(numbers, "climate.precipitation", 10d,
+                0.02d, 4, 2d, 0.55d, 0d, 0d);
+            TemperatureNoise = CreateNoiseChannel(numbers, "climate.temperature", 10d,
+                0.015d, 4, 2d, 0.55d, 0d, 0d);
+            TemperatureCelsiusMin = Finite(
+                GetDouble(numbers, "climate.temperature.celsiusMin", 0d), 0d);
+            TemperatureCelsiusMax = Math.Max(
+                TemperatureCelsiusMin,
+                Finite(GetDouble(numbers, "climate.temperature.celsiusMax", 50d), 50d));
+            HeightSecondaryBoostEnabled = GetBool(
+                numbers, "terrain.height.secondaryBoostEnabled", true);
+            HeightSecondaryBoostStrength = NonNegativeFinite(
+                GetDouble(numbers, "terrain.height.secondaryBoostStrength", 1d), 1d);
+            WindRegionSize = Math.Max(8d, FinitePositive(
+                GetDouble(numbers, "climate.wind.regionSize", 256d), 256d));
+            WindSeedSalt = GetInt(numbers, "climate.wind.seedSalt", 1779033703);
+            OrographicSampleDistance = Math.Max(8d, FinitePositive(
+                GetDouble(numbers, "climate.orographic.sampleDistance", 64d), 64d));
+            OrographicSampleCount = Clamp(
+                GetInt(numbers, "climate.orographic.sampleCount", 4), 1, 8);
+            WindwardRainGain = NonNegativeFinite(
+                GetDouble(numbers, "climate.orographic.windwardGain", 0.8d), 0.8d);
+            LeewardRainLoss = NonNegativeFinite(
+                GetDouble(numbers, "climate.orographic.leewardLoss", 0.6d), 0.6d);
             RiverEnabled = GetBool(numbers, "river.enabled", true);
+            RiverAlgorithm = ParseRiverAlgorithm(
+                GetText(texts, "river.algorithm", "heightDriven"));
+            RiverHydrologyRegionSize = Clamp(
+                GetInt(numbers, "river.hydrologyRegionSize", 256), 64, 1024);
             RiverRunoffCellSize = ScaleDistance(
                 GetInt(numbers, "river.runoffCellSize", 64),
                 WorldCoordinateDistanceScale,
@@ -75,7 +256,7 @@ namespace FlatWorld.WorldModel
                 GetInt(numbers, "river.maxTraceSteps", 384),
                 WorldCoordinateDistanceScale,
                 32,
-                1024);
+                2048);
             RiverMinimumVisibleCourseLength = ScaleDistance(
                 GetInt(numbers, "river.minimumVisibleCourseLength", 96),
                 WorldCoordinateDistanceScale,
@@ -95,6 +276,11 @@ namespace FlatWorld.WorldModel
                 GetInt(numbers, "river.maxWidth", 7), lateralDistanceScale, 1, 15);
             RiverMeanderTieTolerance = Clamp(
                 GetDouble(numbers, "river.meanderTieTolerance", 0d), 0d, 0.02d);
+            RiverMeanderStrength = Clamp(
+                GetDouble(numbers, "river.meanderStrength", 0.85d), 0d, 1.5d);
+            RiverMeanderScale = Math.Max(8d, FinitePositive(
+                GetDouble(numbers, "river.meanderScale", 48d), 48d) *
+                WorldCoordinateDistanceScale);
             RiverValleyDetailWeight = Clamp(
                 GetDouble(numbers, "river.valleyDetailWeight", 4d), 0d, 4d);
             RiverLookAheadWeight = Clamp(
@@ -120,6 +306,16 @@ namespace FlatWorld.WorldModel
             RiverDepthMax = Math.Max(
                 RiverDepthMin,
                 Clamp01(GetDouble(numbers, "river.depthMax", 0.9d)));
+            RiverMinLakeCells = Clamp(
+                GetInt(numbers, "river.minLakeCells", 18), 1, 4096);
+            RiverMaxLakeCells = Clamp(
+                GetInt(numbers, "river.maxLakeCells", 220), RiverMinLakeCells, 4096);
+            RiverMaxLakeLevelRise = Clamp(
+                GetDouble(numbers, "river.maxLakeLevelRise", 0.045d), 0.001d, 0.25d);
+            RiverLakeMinFlow = Positive(
+                GetDouble(numbers, "river.lakeMinFlow", 0.35d), 0.35d);
+            RiverMaxCachedRegions = Clamp(
+                GetInt(numbers, "river.maxCachedRegions", 9), 1, 32);
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
             StructureEnabled = GetBool(numbers, "structure.enabled", true);
             StructureRegionSize = Math.Max(8, GetInt(numbers, "structure.regionSize", 96));
@@ -151,8 +347,18 @@ namespace FlatWorld.WorldModel
         public double SeaLevel { get; }
         /// <summary>高于海面但低于这个数时生成沙滩。</summary>
         public double BeachLevel { get; }
+        /// <summary>高度达到这个数时使用可行走的石地表现二维山地。</summary>
+        public double MountainLevel { get; }
         /// <summary>温度低于这个数时可以生成雪地。</summary>
         public double SnowTemperature { get; }
+        /// <summary>旧版有序群系判定中沙漠允许的最低高度和最高降水。</summary>
+        public double DesertMinimumHeight { get; }
+        public double DesertMaximumPrecipitation { get; }
+        /// <summary>旧版温带草原允许的温度与降水闭区间。</summary>
+        public double GrasslandMinimumTemperature { get; }
+        public double GrasslandMaximumTemperature { get; }
+        public double GrasslandMinimumPrecipitation { get; }
+        public double GrasslandMaximumPrecipitation { get; }
         /// <summary>玩家为当前世界选择的坐标倍率；默认 0.01。</summary>
         public double WorldCoordinateScale { get; }
         /// <summary>坐标倍率换算成格子距离后的反比倍率，限制在 0.25 到 4。</summary>
@@ -165,8 +371,34 @@ namespace FlatWorld.WorldModel
         public int HeightOctaves { get; }
         /// <summary>气候随机图叠加多少层细节。</summary>
         public int ClimateOctaves { get; }
+        /// <summary>地表高度和降水使用哪套采样规则。</summary>
+        public SurfaceClimateAlgorithm SurfaceClimateAlgorithm { get; }
+        /// <summary>旧版 Land 高度噪声通道。</summary>
+        public TerrainNoiseChannelSettings HeightNoise { get; }
+        /// <summary>旧版 Land 基础降水噪声通道。</summary>
+        public TerrainNoiseChannelSettings PrecipitationNoise { get; }
+        /// <summary>旧版 Land 温度噪声通道及归一化温度对应的摄氏范围。</summary>
+        public TerrainNoiseChannelSettings TemperatureNoise { get; }
+        public double TemperatureCelsiusMin { get; }
+        public double TemperatureCelsiusMax { get; }
+        /// <summary>是否把高于和低于中值的高度差再次平方强化。</summary>
+        public bool HeightSecondaryBoostEnabled { get; }
+        public double HeightSecondaryBoostStrength { get; }
+        /// <summary>区域风向插值网格的世界尺寸。</summary>
+        public double WindRegionSize { get; }
+        public int WindSeedSalt { get; }
+        /// <summary>沿逆风方向检查地形的最远距离与采样数。</summary>
+        public double OrographicSampleDistance { get; }
+        public int OrographicSampleCount { get; }
+        /// <summary>迎风坡增雨和背风坡雨影强度。</summary>
+        public double WindwardRainGain { get; }
+        public double LeewardRainLoss { get; }
         /// <summary>地表要不要生成河流。</summary>
         public bool RiverEnabled { get; }
+        /// <summary>河流算法；默认保留新版高度汇流，正式地表可显式选择旧版区域水文。</summary>
+        public RiverGenerationAlgorithm RiverAlgorithm { get; }
+        /// <summary>旧版区域水文一次生成并缓存的正方形边长。</summary>
+        public int RiverHydrologyRegionSize { get; }
         /// <summary>每隔多少格汇总一次降水径流，并选择该区域的高处作为支流源头。</summary>
         public int RiverRunoffCellSize { get; }
         /// <summary>径流区域内采样高度图与降水图的步长。</summary>
@@ -187,6 +419,10 @@ namespace FlatWorld.WorldModel
         public int RiverMaxWidth { get; }
         /// <summary>等高邻格之间仅用于稳定选路的微小扰动，不负责绘制河流形状。</summary>
         public double RiverMeanderTieTolerance { get; }
+        /// <summary>在严格下坡候选方向内施加的连续弯曲强度，单位为八方向扇区。</summary>
+        public double RiverMeanderStrength { get; }
+        /// <summary>连续弯曲场的世界格尺度；越大，河弯越舒缓。</summary>
+        public double RiverMeanderScale { get; }
         /// <summary>放大高度图中的细谷，使主河优先贴着真实谷底弯曲。</summary>
         public double RiverValleyDetailWeight { get; }
         /// <summary>选下坡格时参考前方谷地的权重，减少短视直线和锯齿。</summary>
@@ -203,6 +439,16 @@ namespace FlatWorld.WorldModel
         public double RiverAlluvialTileThreshold { get; }
         public double RiverDepthMin { get; }
         public double RiverDepthMax { get; }
+        /// <summary>盆地至少包含多少格才会表现成湖泊。</summary>
+        public int RiverMinLakeCells { get; }
+        /// <summary>盆地扩张与湖泊表现允许的最大格数。</summary>
+        public int RiverMaxLakeCells { get; }
+        /// <summary>盆地水面相对汇水洼地允许抬升的最大高度。</summary>
+        public double RiverMaxLakeLevelRise { get; }
+        /// <summary>累计径流达到该值后，合格盆地才会表现为湖泊。</summary>
+        public double RiverLakeMinFlow { get; }
+        /// <summary>每个纯生成器实例最多保留多少个已完成水文区域。</summary>
+        public int RiverMaxCachedRegions { get; }
         /// <summary>合适的地面上长出草的基本概率。</summary>
         public double GrassDensity { get; }
         /// <summary>是否生成遗迹等结构；同样的种子会得到同样的位置。</summary>
@@ -238,6 +484,55 @@ namespace FlatWorld.WorldModel
             string fallback) => values.TryGetValue(key, out string value) &&
                                !string.IsNullOrWhiteSpace(value) ? value : fallback;
 
+        /// <summary>严格解析河流算法，避免配置拼写错误时静默换成另一套世界生成规则。</summary>
+        private static RiverGenerationAlgorithm ParseRiverAlgorithm(string value)
+        {
+            if (value.Equals("heightDriven", StringComparison.OrdinalIgnoreCase))
+                return RiverGenerationAlgorithm.HeightDriven;
+            if (value.Equals("legacy", StringComparison.OrdinalIgnoreCase))
+                return RiverGenerationAlgorithm.Legacy;
+            throw new ArgumentException($"Unknown river algorithm: {value}", nameof(value));
+        }
+
+        /// <summary>严格解析地表气候算法，避免配置拼写错误改变整张世界地图。</summary>
+        private static SurfaceClimateAlgorithm ParseSurfaceClimateAlgorithm(string value)
+        {
+            if (value.Equals("simple", StringComparison.OrdinalIgnoreCase))
+                return SurfaceClimateAlgorithm.Simple;
+            if (value.Equals("legacy", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("legacyLand", StringComparison.OrdinalIgnoreCase))
+            {
+                return SurfaceClimateAlgorithm.LegacyLand;
+            }
+            throw new ArgumentException($"Unknown climate algorithm: {value}", nameof(value));
+        }
+
+        /// <summary>从数值表构造一条经过约束的旧版噪声通道。</summary>
+        private static TerrainNoiseChannelSettings CreateNoiseChannel(
+            IReadOnlyDictionary<string, double> values,
+            string prefix,
+            double defaultCoordinateScale,
+            double defaultFrequency,
+            int defaultOctaves,
+            double defaultLacunarity,
+            double defaultPersistence,
+            double defaultOffsetX,
+            double defaultOffsetY)
+        {
+            return new TerrainNoiseChannelSettings(
+                FinitePositive(GetDouble(values, prefix + ".coordScale", defaultCoordinateScale),
+                    defaultCoordinateScale),
+                FinitePositive(GetDouble(values, prefix + ".frequency", defaultFrequency),
+                    defaultFrequency),
+                Clamp(GetInt(values, prefix + ".octaves", defaultOctaves), 1, 12),
+                FinitePositive(GetDouble(values, prefix + ".lacunarity", defaultLacunarity),
+                    defaultLacunarity),
+                Clamp(Finite(GetDouble(values, prefix + ".persistence", defaultPersistence),
+                    defaultPersistence), 0d, 1d),
+                Finite(GetDouble(values, prefix + ".offsetX", defaultOffsetX), defaultOffsetX),
+                Finite(GetDouble(values, prefix + ".offsetY", defaultOffsetY), defaultOffsetY));
+        }
+
         /// <summary>把整数限制在指定的最小值和最大值之间。</summary>
         private static int Clamp(int value, int min, int max) =>
             value < min ? min : value > max ? max : value;
@@ -264,6 +559,20 @@ namespace FlatWorld.WorldModel
             return double.IsNaN(value) || double.IsInfinity(value) || value < 0d
                 ? fallback
                 : value;
+        }
+
+        /// <summary>返回有限正数；非法值使用给定默认值。</summary>
+        private static double FinitePositive(double value, double fallback)
+        {
+            return double.IsNaN(value) || double.IsInfinity(value) || value <= 0d
+                ? fallback
+                : value;
+        }
+
+        /// <summary>返回有限数；NaN 与无穷值使用给定默认值。</summary>
+        private static double Finite(double value, double fallback)
+        {
+            return double.IsNaN(value) || double.IsInfinity(value) ? fallback : value;
         }
     }
 }

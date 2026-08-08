@@ -264,30 +264,28 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     {
         ItemSlot slotData = GetSlotData();
 
-        if (slotData == null || slotData.itemData == null || string.IsNullOrEmpty(slotData.itemData.IDName))
+        if (slotData == null ||
+            slotData.itemData == null ||
+            string.IsNullOrEmpty(slotData.itemData.IDName) ||
+            GameRes.Instance == null)
         {
             image.gameObject.SetActive(false);
             return;
         }
 
-        GameObject go = GameRes.Instance.AllPrefabs[slotData.itemData.IDName];
-        if (go == null)
+        if (!GameRes.Instance.TryGetItemPresentation(
+                slotData.itemData.IDName,
+                out _,
+                out Sprite sprite) ||
+            sprite == null)
         {
-            Debug.LogWarning($"[ItemSlot_UI] 无法找到预制体: {slotData.itemData.IDName}");
+            Debug.LogWarning($"[ItemSlot_UI] 无法找到物品显示贴图: {slotData.itemData.IDName}");
             image.gameObject.SetActive(false);
             return;
         }
 
-        SpriteRenderer spriteRenderer = go.GetComponentInChildren<SpriteRenderer>();
-        if (spriteRenderer != null)
-        {
-            image.sprite = spriteRenderer.sprite;
-            image.gameObject.SetActive(true);
-        }
-        else
-        {
-            image.gameObject.SetActive(false);
-        }
+        image.sprite = sprite;
+        image.gameObject.SetActive(true);
     }
     #endregion
 }

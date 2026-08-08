@@ -15,7 +15,7 @@ public class Mod_ChunkLoader : Module
     [System.Serializable]
     public struct ChunkDistanceConfig
     {
-        [Tooltip("区块失活距离（超过此距离的区块将被设为非激活）")]
+        [Tooltip("区块数据预取距离（可见圈外只提前生成数据，不绘制也不运行）")]
         public int UnActiveDistance;
 
         [Tooltip("区块销毁距离（超过此距离的区块将被销毁）")]
@@ -74,6 +74,7 @@ public class Mod_ChunkLoader : Module
     private Mod_Cam _cameraFollowManager;
     private bool _adminManualLoadDistanceOverride;
     private bool _externalStreamingManaged;
+    private bool _hasTrackedChunkPosition;
     #endregion
 
     #region 属性访问器
@@ -118,12 +119,15 @@ public class Mod_ChunkLoader : Module
     {
         if (_Data != null)
             _Data.ID = ModText.ChunkLoader;
+        NormalizeDistanceConfig();
     }
 
     public override void Load()
     {
         ModData.ReadData(ref distanceConfig);
+        NormalizeDistanceConfig();
         lastChunkPos = ResolveChunkOrigin(transform.position);
+        _hasTrackedChunkPosition = true;
         _cameraFollowManager = item.GetComponentInChildren<Mod_Cam>();
     }
 
@@ -161,7 +165,8 @@ public class Mod_ChunkLoader : Module
     [Button("刷新周围区块")]
     public void RefreshChunksAroundPlayer()
     {
-        lastChunkPos = ResolveChunkOrigin(transform.position);
+        Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
+        TrackChunkPosition(currentChunkPos);
         needsChunkUpdate = false;
 
         if (ChunkMgr.Instance == null)
@@ -170,7 +175,7 @@ public class Mod_ChunkLoader : Module
             return;
         }
 
-        UpdateChunks(lastChunkPos);
+        UpdateChunks(currentChunkPos);
     }
 
     /// <summary>Immediately refreshes the canonical window after a local world wrap.</summary>
@@ -235,11 +240,26 @@ public class Mod_ChunkLoader : Module
     private void DetectChunkChange()
     {
         Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
-        if (currentChunkPos != lastChunkPos)
+        if (TrackChunkPosition(currentChunkPos))
         {
-            lastChunkPos = currentChunkPos;
             needsChunkUpdate = true;
         }
+    }
+
+    /// <summary>记录最近区块位置，只在真正跨区块时触发窗口刷新。</summary>
+    private bool TrackChunkPosition(Vector2 currentChunkPos)
+    {
+        if (!_hasTrackedChunkPosition)
+        {
+            lastChunkPos = currentChunkPos;
+            _hasTrackedChunkPosition = true;
+            return true;
+        }
+        if (currentChunkPos == lastChunkPos)
+            return false;
+
+        lastChunkPos = currentChunkPos;
+        return true;
     }
 
     private void UpdateChunks(Vector2 chunkPos)
@@ -250,7 +270,8 @@ public class Mod_ChunkLoader : Module
             chunkPos,
             LoadChunkDistance,
             DestroyChunkDistance,
-            includeLocalPresentation: true);
+            includeLocalPresentation: true,
+            prefetchDistance: UnActiveDistance);
     }
 
     #endregion
@@ -263,7 +284,20 @@ public class Mod_ChunkLoader : Module
         distanceConfig.UnActiveDistance = Mathf.Max(1, distanceConfig.UnActiveDistance + adjustment);
         distanceConfig.DestroyChunkDistance = Mathf.Max(1, distanceConfig.DestroyChunkDistance + adjustment);
         distanceConfig.LoadChunkDistance = Mathf.Max(1, distanceConfig.LoadChunkDistance + adjustment);
+        NormalizeDistanceConfig();
         needsChunkUpdate = true;
+    }
+
+    /// <summary>保证可见、预取、保留三圈按顺序递增，并始终保留至少一圈数据预取。</summary>
+    private void NormalizeDistanceConfig()
+    {
+        distanceConfig.LoadChunkDistance = Mathf.Max(1, distanceConfig.LoadChunkDistance);
+        distanceConfig.UnActiveDistance = Mathf.Max(
+            distanceConfig.LoadChunkDistance + 1,
+            distanceConfig.UnActiveDistance);
+        distanceConfig.DestroyChunkDistance = Mathf.Max(
+            distanceConfig.UnActiveDistance,
+            distanceConfig.DestroyChunkDistance);
     }
 
     private bool GetAutoGenerateMapSetting()

@@ -600,6 +600,35 @@ public void HotReloadAllResources()
         return ItemDefinitions.TryGetValue(itemId, out definition);
     }
 
+    /// <summary>获取物品界面显示信息；JSON 定义优先，旧物品回退到独立 Prefab。</summary>
+    public bool TryGetItemPresentation(string itemId, out string displayName, out Sprite sprite)
+    {
+        displayName = string.Empty;
+        sprite = null;
+        if (string.IsNullOrWhiteSpace(itemId))
+            return false;
+
+        string requestedId = itemId.Trim();
+        if (TryGetItemDefinition(requestedId, out RuntimeItemDefinition definition))
+        {
+            displayName = definition.DisplayName;
+            sprite = definition.Sprite;
+            return true;
+        }
+
+        if (!AllPrefabs.TryGetValue(requestedId, out GameObject prefab) || prefab == null)
+            return false;
+
+        Item item = prefab.GetComponent<Item>() ?? prefab.GetComponentInChildren<Item>(true);
+        displayName = !string.IsNullOrWhiteSpace(item?.itemData?.GameName)
+            ? item.itemData.GameName
+            : requestedId;
+        sprite = item?.Sprite != null
+            ? item.Sprite.sprite
+            : prefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite;
+        return item != null;
+    }
+
     /// <summary>按物品 ID 创建数据；JSON 定义优先，未迁移物品回退到旧 Prefab。</summary>
     public ItemData CreateItemData(string itemId)
     {

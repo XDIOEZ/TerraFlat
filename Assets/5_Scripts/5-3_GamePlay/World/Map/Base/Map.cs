@@ -53,21 +53,19 @@ public class Map : Item
     [SerializeField, Min(0.25f)]
     private float proceduralGenerationFrameBudgetMilliseconds = 1.5f;
 
-    public float ProceduralGenerationFrameBudgetMilliseconds => Mathf.Max(
-        0.25f,
-        proceduralGenerationFrameBudgetMilliseconds * ChunkMgr.CurrentChunkLoadSpeedMultiplier);
+    public float ProceduralGenerationFrameBudgetMilliseconds =>
+        ChunkMgr.ScaleCurrentChunkLoadFrameBudget(
+            proceduralGenerationFrameBudgetMilliseconds,
+            0.25f);
 
-    public float TilemapLoadFrameBudgetMilliseconds => Mathf.Max(
-        0.25f,
-        loadTileFrameBudgetMilliseconds * ChunkMgr.CurrentChunkLoadSpeedMultiplier);
+    public float TilemapLoadFrameBudgetMilliseconds =>
+        ChunkMgr.ScaleCurrentChunkLoadFrameBudget(loadTileFrameBudgetMilliseconds, 0.25f);
 
-    public int ProceduralGenerationCellsPerFrame => Mathf.Max(
-        1,
-        Mathf.RoundToInt(proceduralGenerationCellsPerFrame * ChunkMgr.CurrentChunkLoadSpeedMultiplier));
+    public int ProceduralGenerationCellsPerFrame =>
+        ChunkMgr.ScaleCurrentChunkLoadItemBudget(proceduralGenerationCellsPerFrame, 1);
 
-    public int ScaledTilemapLoadBatchSize => Mathf.Max(
-        16,
-        Mathf.RoundToInt(TilemapLoadBatchSize * ChunkMgr.CurrentChunkLoadSpeedMultiplier));
+    public int ScaledTilemapLoadBatchSize =>
+        ChunkMgr.ScaleCurrentChunkLoadItemBudget(TilemapLoadBatchSize, 16);
 
     private float backTilePenaltyWaitSeconds = -1f;
     private WaitForSeconds backTilePenaltyWait;

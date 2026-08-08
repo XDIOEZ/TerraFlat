@@ -81,6 +81,7 @@ public class SettingCanvas : Module, IInstanceUI
         AudioSettingsPanelLauncher.Ensure(basePanel.transform);
         UISettingsPanelLauncher.Ensure(basePanel.transform);
         AutoSaveSettingsPanelLauncher.Ensure(basePanel.transform);
+        WorldStreamingSettingsPanelLauncher.Ensure(basePanel.transform);
         DifficultySettingsPanelLauncher.Ensure(basePanel.transform);
         InputBindingPanelLauncher.Ensure(basePanel.transform, gameController);
         basePanel.SetPanelName(PanelName);

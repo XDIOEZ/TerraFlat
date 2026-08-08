@@ -56,6 +56,7 @@ Input System / PlayerInputActions
 - 聊天按键契约：裸 `T` 打开聊天，`Enter` 提交，`Esc` 取消；打开期间同时设置 `GameController.SetGameplayInputLocked(true)` 并挂起 `InputBindingService` 的 Win10 Action Map，关闭时恢复之前的锁状态。
 - 管理员传送使用 `Ctrl+T`，且管理员快捷键尊重 `IsGameplayInputLocked`；聊天控制器忽略带 Ctrl 的 T，避免同时打开聊天和传送。
 - 玩家移动耐力不得直接修改 `Mod_Stamina.CurrentValue`；`Mover` 统一调用 `AddStamina()`，由该入口应用自定义难度的耐力消耗/恢复倍率。
+- 奔跑输入统一由 `Mover.HandleRunInputPressed/Released()` 管理：Shift 按住时进入奔跑，松开后恢复普通移动；体力不足或输入锁定仍会强制结束奔跑。
 - 完整维度切换通过 `ItemMgr.ReleasePlayerForWorldTransition()` 注销旧世界玩家，再由现有加载链重建；不得只移动 Transform 后保留旧 Chunk、Item 索引或场景归属。
 - `Mod_InteractSender` 使用碰撞体所在 GameObject 的 `GetComponent<IInteractable>()`；矿坑入口/出口的 Trigger 与 `DimensionPortal` 必须同节点。`MineEntrance_Summoner` 虽复制入口组件，也必须由建筑角色检查拒绝交互。
 
@@ -63,6 +64,7 @@ Input System / PlayerInputActions
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：玩家 Shift 按住时奔跑，松开后恢复普通移动，不再通过短按切换常驻奔跑。
 - 2026-08-06：GM 玩家移速改为可输入小数倍率并显式应用，支持 `0.1–100x`；管理员倍率替换更新，不与现有 Buff/装备倍率重复叠乘。
 - 2026-08-06：正式 Player 根实体碰撞体固定使用 Layer 10 的 `Player` 物理层；Physics 2D 仅关闭 Player↔Player，玩家仍与地图、建筑、怪物和伤害层碰撞，单机与联机核心角色共用该规则。
 - 2026-08-04：GM Buff 分发使用本地玩家 `GameController` 的左键事件选择世界目标；只处理带 `BuffManager` 的对象，避免向不兼容对象运行时注入模块。
@@ -72,12 +74,12 @@ Input System / PlayerInputActions
 - 2026-07-30：玩家 `Act()` 改为显式安全空行为；`GameController` 明确不负责按键持久化，继续由 `InputBindingService` 独立管理。
 - 2026-07-29：Player Prefab 接入本地聊天输入；聊天期间暂停玩法输入，管理员传送由裸 T 改为 Ctrl+T，并隔离远程 Player。
 - 2026-07-29：玩家步行/奔跑耐力消耗改走 `Mod_Stamina.AddStamina()`，与攻击和食物恢复共享难度倍率入口。
-- 2026-07-28：Player 增加本地/新建档案运行时上下文；Player Prefab 根节点接入 `NewPlayerGuideController`，远程副本不获得教程或本地自言自语资格。
 ## 修改后自动测试
 
 - 精简 Smoke：`Assets/GameTest/PlayerInteraction/PlayerWorldWrapSmokeTests.cs`；当前只保留玩家跨四边与角落环绕时速度和数据不丢失这一关键行为。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；玩家交互测试约定目录：`Assets/GameTest/PlayerInteraction/`；场景目录：`Assets/GameTest/Scenes/PlayerInteraction/`；冒烟分类：`PlayerInteraction.Smoke`。
 - 新增输入、移动、摄像机、焦点、交互发送接收或玩家 Prefab 行为时必须增加系统测试；修复 Bug 时先增加回归测试。输入到移动或交互主流程变化时同步更新玩家冒烟场景。
+- 奔跑按键状态回归位于 `Assets/GameTest/PlayerInteraction/MoverRunInputTests.cs`，分类为 `PlayerInteraction.Input`；覆盖按下进入奔跑、短/长按松开恢复普通移动以及重复按键不形成常驻状态。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；输入测试必须使用可注入输入，不能依赖真实鼠标、键盘或手柄操作。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category PlayerInteraction.Smoke`；无需视觉模型或测试工具卡片。涉及 UI、Item/Module、建筑、地图或联机玩家时追加对应分类；只有光标、相机或交互反馈最终观感变化才做定向截图。
 - Player 教程资格、Prefab 接线与远程隔离由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。

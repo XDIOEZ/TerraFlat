@@ -185,6 +185,8 @@ namespace FlatWorld.Automation
             {
                 File.Move(requestPath, runningPath);
                 GoldenPathRequest request = ReadRequest(id, runningPath);
+                request.ownerProcessId = System.Diagnostics.Process.GetCurrentProcess().Id;
+                AtomicWrite(runningPath, JsonUtility.ToJson(request, true));
                 SetActiveRequest(request, runningPath);
 
                 if (EditorUtility.scriptCompilationFailed)
@@ -1087,17 +1089,28 @@ namespace FlatWorld.Automation
                 return;
 
             string runningId = Path.GetFileNameWithoutExtension(running).Substring(RunningPrefix.Length);
-            if (string.Equals(
-                    SessionState.GetString(ActiveIdSessionKey, string.Empty),
-                    runningId,
-                    StringComparison.Ordinal))
+            GoldenPathRequest runningRequest = ReadRequest(runningId, running);
+            bool activeSessionMatches = string.Equals(
+                SessionState.GetString(ActiveIdSessionKey, string.Empty),
+                runningId,
+                StringComparison.Ordinal);
+            bool currentProcessOwnsRequest = runningRequest.ownerProcessId ==
+                                             System.Diagnostics.Process.GetCurrentProcess().Id;
+            if (activeSessionMatches || currentProcessOwnsRequest)
             {
-                SetActiveRequest(ReadRequest(runningId, running), running);
+                SetActiveRequest(runningRequest, running);
+                if (!activeSessionMatches)
+                {
+                    // EditorSettings 或 PlayMode 引发的 Domain Reload 可能早于 SessionState 恢复。
+                    SessionState.SetString(ActiveIdSessionKey, runningId);
+                    SessionState.SetString(
+                        StageSessionKey,
+                        EditorApplication.isPlaying ? "runtime" : "entering");
+                }
                 return;
             }
 
-            GoldenPathRequest staleRequest = ReadRequest(runningId, running);
-            SetActiveRequest(staleRequest, running);
+            SetActiveRequest(runningRequest, running);
             WriteFailureBeforePlay("Unity 在上一次黄金路径执行中退出，已清理中断请求。");
         }
 
@@ -1414,6 +1427,7 @@ namespace FlatWorld.Automation
         {
             public string id;
             public string createdUtc;
+            public int ownerProcessId;
             public FlatWorldGoldenPathConfiguration configuration;
         }
 
