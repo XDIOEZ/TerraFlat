@@ -17,6 +17,7 @@ public partial class ChunkMgr
     private readonly List<RuntimeWorldAddress> runtimeWindowRemovalBuffer = new();
     private readonly Queue<ChunkView> chunkViewPool = new();
 
+    /// <summary>尝试找到指定区块当前正在使用的画面对象。</summary>
     public bool TryGetRuntimeChunkView(RuntimeWorldAddress address, out ChunkView view)
     {
         view = null;
@@ -26,6 +27,7 @@ public partial class ChunkMgr
         return view != null && view.IsBound;
     }
 
+    /// <summary>以玩家附近位置刷新区块窗口，启动生成、绑定画面并回收远处区块。</summary>
     public void RefreshRuntimeWindow(Vector2 center, int activeDistance, int destroyDistance,
         bool includeLocalPresentation)
     {
@@ -37,6 +39,8 @@ public partial class ChunkMgr
         ChunkGenerationProfileSnapshot profile = profileAsset != null
             ? profileAsset.CreateSnapshot()
             : defaultGenerationSnapshot;
+        profile = ApplyWorldCoordinateScale(profile);
+        activeGenerationSnapshot = profile;
         ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();
         int stepX = profile.Width;
         int stepY = profile.Height;
@@ -82,6 +86,7 @@ public partial class ChunkMgr
 
     }
 
+    /// <summary>等待区块数据生成完成，再把区块绑定到可复用的 ChunkView。</summary>
     private async void BeginRuntimeChunkBinding(RuntimeWorldAddress address,
         RuntimeChunkBinding binding, ChunkGenerationProfileSnapshot snapshot, int seed,
         ChunkGenerationTopologySnapshot topology)
@@ -112,6 +117,7 @@ public partial class ChunkMgr
         }
     }
 
+    /// <summary>优先从对象池取出 ChunkView，没有可用对象时才实例化新的。</summary>
     private ChunkView AcquireChunkView(ChunkView prefab)
     {
         while (chunkViewPool.Count > 0)
@@ -123,10 +129,7 @@ public partial class ChunkMgr
         return Instantiate(prefab, transform);
     }
 
-    /// <summary>
-    /// Completes presentation after background commits and repairs bindings whose model was
-    /// evicted while an older completion/event was still in flight.
-    /// </summary>
+    /// <summary>后台生成完成后修复画面绑定，处理旧任务晚到或区块被回收的情况。</summary>
     private void ReconcileRuntimeWindowBindings()
     {
         if (runtimeChunkManager == null || activeRuntimeBindings.Count == 0)
@@ -162,6 +165,7 @@ public partial class ChunkMgr
         }
     }
 
+    /// <summary>解除指定区块的画面绑定，并把 ChunkView 放回对象池。</summary>
     private void DeactivateRuntimeBinding(RuntimeWorldAddress address)
     {
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
@@ -177,6 +181,7 @@ public partial class ChunkMgr
         }
     }
 
+    /// <summary>清空全部区块画面绑定和窗口目标记录。</summary>
     private void ClearRuntimeWindowBindings()
     {
         runtimeWindowRemovalBuffer.Clear();

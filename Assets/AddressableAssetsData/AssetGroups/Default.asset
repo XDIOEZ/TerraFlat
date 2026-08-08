@@ -683,12 +683,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6ab24a325d4d2c84682dc38bedd41163
-    m_Address: Assets/4_ScriptObjects/4-4_Composite
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - CraftingRecipe
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6b482d47c04124340abeb0703ea48c4c
     m_Address: "Assets/2_Prefabs/Module/\u6389\u843D\u6A21\u5757.prefab"
     m_ReadOnly: 0
@@ -1091,12 +1085,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ad835bb3ac4f9ca4891ba15924362b31
-    m_Address: Assets/4_ScriptObjects/4-5_Cook
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - CraftingRecipe
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ae0742267fe3e7b498e8ab9d28074677
     m_Address: Assets/2_Prefabs/Module/World/Module_ChunkLoder.prefab

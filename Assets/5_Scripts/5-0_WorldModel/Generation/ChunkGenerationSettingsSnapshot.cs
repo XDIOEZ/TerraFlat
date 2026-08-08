@@ -17,6 +17,11 @@ namespace FlatWorld.WorldModel
     /// </summary>
     public sealed class ChunkGenerationSettingsSnapshot
     {
+        private const double DefaultWorldCoordinateScale = 0.01d;
+        private const double MinimumWorldDistanceScale = 0.25d;
+        private const double MaximumWorldDistanceScale = 4d;
+
+        /// <summary>把配置表里的原始参数整理成生成器可以直接使用的安全数值。</summary>
         internal ChunkGenerationSettingsSnapshot(IReadOnlyDictionary<string, double> numbers,
             IReadOnlyDictionary<string, string> texts)
         {
@@ -34,14 +39,87 @@ namespace FlatWorld.WorldModel
             SeaLevel = Clamp01(GetDouble(numbers, "terrain.seaLevel", 0.30d));
             BeachLevel = Clamp01(GetDouble(numbers, "terrain.beachLevel", SeaLevel + 0.055d));
             SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
-            TerrainScale = Positive(GetDouble(numbers, "terrain.noiseScale", 0.0085d), 0.0085d);
-            ClimateScale = Positive(GetDouble(numbers, "climate.noiseScale", 0.004d), 0.004d);
+            WorldCoordinateScale = NonNegativeFinite(
+                GetDouble(numbers, "world.coordinateScale", DefaultWorldCoordinateScale),
+                DefaultWorldCoordinateScale);
+            double worldFrequencyScale = WorldCoordinateScale / DefaultWorldCoordinateScale;
+            WorldCoordinateDistanceScale = WorldCoordinateScale <= 0d
+                ? MaximumWorldDistanceScale
+                : Clamp(
+                    DefaultWorldCoordinateScale / WorldCoordinateScale,
+                    MinimumWorldDistanceScale,
+                    MaximumWorldDistanceScale);
+            TerrainScale = Positive(
+                               GetDouble(numbers, "terrain.noiseScale", 0.0085d),
+                               0.0085d) * worldFrequencyScale;
+            ClimateScale = Positive(
+                               GetDouble(numbers, "climate.noiseScale", 0.004d),
+                               0.004d) * worldFrequencyScale;
             HeightOctaves = Clamp(GetInt(numbers, "terrain.octaves", 4), 1, 8);
             ClimateOctaves = Clamp(GetInt(numbers, "climate.octaves", 3), 1, 8);
             RiverEnabled = GetBool(numbers, "river.enabled", true);
-            RiverScale = Positive(GetDouble(numbers, "river.noiseScale", 0.0025d), 0.0025d);
-            RiverWidth = Clamp01(GetDouble(numbers, "river.width", 0.055d));
-            RiverThreshold = Clamp01(GetDouble(numbers, "river.flowThreshold", 0.62d));
+            RiverRunoffCellSize = ScaleDistance(
+                GetInt(numbers, "river.runoffCellSize", 64),
+                WorldCoordinateDistanceScale,
+                16,
+                256);
+            int runoffSampleStride = ScaleDistance(
+                GetInt(numbers, "river.runoffSampleStride", 8),
+                WorldCoordinateDistanceScale,
+                1,
+                RiverRunoffCellSize);
+            while (RiverRunoffCellSize % runoffSampleStride != 0)
+                runoffSampleStride--;
+            RiverRunoffSampleStride = runoffSampleStride;
+            RiverMaxTraceSteps = ScaleDistance(
+                GetInt(numbers, "river.maxTraceSteps", 384),
+                WorldCoordinateDistanceScale,
+                32,
+                1024);
+            RiverMinimumVisibleCourseLength = ScaleDistance(
+                GetInt(numbers, "river.minimumVisibleCourseLength", 96),
+                WorldCoordinateDistanceScale,
+                0,
+                RiverMaxTraceSteps);
+            RiverInfiltrationFloor = Clamp01(
+                GetDouble(numbers, "river.infiltrationFloor", 0.25d));
+            RiverStartFlow = Positive(GetDouble(numbers, "river.startFlow", 0.405d), 0.405d);
+            RiverTributaryStartFlow = Math.Min(
+                RiverStartFlow,
+                Positive(GetDouble(numbers, "river.tributaryStartFlow", 0.195d), 0.195d));
+            RiverFullWidthFlow = Math.Max(
+                RiverStartFlow,
+                Positive(GetDouble(numbers, "river.fullWidthFlow", 1.2d), 1.2d));
+            double lateralDistanceScale = Math.Sqrt(WorldCoordinateDistanceScale);
+            RiverMaxWidth = ScaleDistance(
+                GetInt(numbers, "river.maxWidth", 7), lateralDistanceScale, 1, 15);
+            RiverMeanderTieTolerance = Clamp(
+                GetDouble(numbers, "river.meanderTieTolerance", 0d), 0d, 0.02d);
+            RiverValleyDetailWeight = Clamp(
+                GetDouble(numbers, "river.valleyDetailWeight", 4d), 0d, 4d);
+            RiverLookAheadWeight = Clamp(
+                GetDouble(numbers, "river.lookAheadWeight", 0.55d), 0d, 0.8d);
+            RiverLookAheadDistance = ScaleDistance(
+                GetInt(numbers, "river.lookAheadDistance", 6),
+                WorldCoordinateDistanceScale,
+                1,
+                24);
+            RiverFloodplainStartFlow = Math.Max(
+                RiverStartFlow,
+                Positive(GetDouble(numbers, "river.floodplainStartFlow", 0.405d), 0.405d));
+            RiverFloodplainMaxRadius = ScaleDistance(
+                GetInt(numbers, "river.floodplainMaxRadius", 8),
+                lateralDistanceScale,
+                0,
+                24);
+            RiverFloodplainMaxSlope = Positive(
+                GetDouble(numbers, "river.floodplainMaxSlope", 0.08d), 0.08d);
+            RiverAlluvialTileThreshold = Clamp01(
+                GetDouble(numbers, "river.alluvialTileThreshold", 0.62d));
+            RiverDepthMin = Clamp01(GetDouble(numbers, "river.depthMin", 0.2d));
+            RiverDepthMax = Math.Max(
+                RiverDepthMin,
+                Clamp01(GetDouble(numbers, "river.depthMax", 0.9d)));
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
             StructureEnabled = GetBool(numbers, "structure.enabled", true);
             StructureRegionSize = Math.Max(8, GetInt(numbers, "structure.regionSize", 96));
@@ -75,6 +153,10 @@ namespace FlatWorld.WorldModel
         public double BeachLevel { get; }
         /// <summary>温度低于这个数时可以生成雪地。</summary>
         public double SnowTemperature { get; }
+        /// <summary>玩家为当前世界选择的坐标倍率；默认 0.01。</summary>
+        public double WorldCoordinateScale { get; }
+        /// <summary>坐标倍率换算成格子距离后的反比倍率，限制在 0.25 到 4。</summary>
+        public double WorldCoordinateDistanceScale { get; }
         /// <summary>控制山地变化有多快；数值越小，大片地形通常越平缓。</summary>
         public double TerrainScale { get; }
         /// <summary>控制温度和降水区域变化有多快。</summary>
@@ -85,9 +167,42 @@ namespace FlatWorld.WorldModel
         public int ClimateOctaves { get; }
         /// <summary>地表要不要生成河流。</summary>
         public bool RiverEnabled { get; }
-        public double RiverScale { get; }
-        public double RiverWidth { get; }
-        public double RiverThreshold { get; }
+        /// <summary>每隔多少格汇总一次降水径流，并选择该区域的高处作为支流源头。</summary>
+        public int RiverRunoffCellSize { get; }
+        /// <summary>径流区域内采样高度图与降水图的步长。</summary>
+        public int RiverRunoffSampleStride { get; }
+        /// <summary>一条支流沿高度图向下游追踪的最大格数。</summary>
+        public int RiverMaxTraceSteps { get; }
+        /// <summary>低于该连通河程的短小河网整条隐藏，避免只露出零碎水线。</summary>
+        public int RiverMinimumVisibleCourseLength { get; }
+        /// <summary>低于该值的降水被地表吸收，不形成有效径流。</summary>
+        public double RiverInfiltrationFloor { get; }
+        /// <summary>累计径流达到该值后形成可见河道。</summary>
+        public double RiverStartFlow { get; }
+        /// <summary>只有汇入成熟主河时，累计径流达到该值的细支流才会显示。</summary>
+        public double RiverTributaryStartFlow { get; }
+        /// <summary>累计径流达到该值后河道扩展到最大宽度。</summary>
+        public double RiverFullWidthFlow { get; }
+        /// <summary>河道允许扩展到的最大格宽。</summary>
+        public int RiverMaxWidth { get; }
+        /// <summary>等高邻格之间仅用于稳定选路的微小扰动，不负责绘制河流形状。</summary>
+        public double RiverMeanderTieTolerance { get; }
+        /// <summary>放大高度图中的细谷，使主河优先贴着真实谷底弯曲。</summary>
+        public double RiverValleyDetailWeight { get; }
+        /// <summary>选下坡格时参考前方谷地的权重，减少短视直线和锯齿。</summary>
+        public double RiverLookAheadWeight { get; }
+        /// <summary>河流选路向前查看高度图的格数。</summary>
+        public int RiverLookAheadDistance { get; }
+        /// <summary>汇流达到该值后，低坡河段开始形成冲积平原。</summary>
+        public double RiverFloodplainStartFlow { get; }
+        /// <summary>主河两侧冲积平原允许扩展的最大半径。</summary>
+        public int RiverFloodplainMaxRadius { get; }
+        /// <summary>高于该局部坡度时不生成宽冲积平原。</summary>
+        public double RiverFloodplainMaxSlope { get; }
+        /// <summary>冲积强度超过该值时使用沙土 Tile 表现沉积带。</summary>
+        public double RiverAlluvialTileThreshold { get; }
+        public double RiverDepthMin { get; }
+        public double RiverDepthMax { get; }
         /// <summary>合适的地面上长出草的基本概率。</summary>
         public double GrassDensity { get; }
         /// <summary>是否生成遗迹等结构；同样的种子会得到同样的位置。</summary>
@@ -106,23 +221,49 @@ namespace FlatWorld.WorldModel
         public short DefaultNavigationCost { get; }
 
         // 这些小方法只从当前这份设置里取值，不会偷偷读取全局设置。
+        /// <summary>读取一个整数参数；找不到时返回默认值。</summary>
         private static int GetInt(IReadOnlyDictionary<string, double> values, string key, int fallback) =>
             values.TryGetValue(key, out double value) ? (int)value : fallback;
 
+        /// <summary>读取一个小数参数；找不到时返回默认值。</summary>
         private static double GetDouble(IReadOnlyDictionary<string, double> values, string key,
             double fallback) => values.TryGetValue(key, out double value) ? value : fallback;
 
+        /// <summary>读取一个开关参数；数值大于 0.5 时视为开启。</summary>
         private static bool GetBool(IReadOnlyDictionary<string, double> values, string key,
             bool fallback) => values.TryGetValue(key, out double value) ? value > 0.5d : fallback;
 
+        /// <summary>读取一个文本参数；空文本或找不到时返回默认值。</summary>
         private static string GetText(IReadOnlyDictionary<string, string> values, string key,
             string fallback) => values.TryGetValue(key, out string value) &&
                                !string.IsNullOrWhiteSpace(value) ? value : fallback;
 
+        /// <summary>把整数限制在指定的最小值和最大值之间。</summary>
         private static int Clamp(int value, int min, int max) =>
             value < min ? min : value > max ? max : value;
 
+        /// <summary>把小数限制在指定的最小值和最大值之间。</summary>
+        private static double Clamp(double value, double min, double max) =>
+            value < min ? min : value > max ? max : value;
+
+        /// <summary>把小数限制在 0 到 1 之间。</summary>
         private static double Clamp01(double value) => value < 0d ? 0d : value > 1d ? 1d : value;
+        /// <summary>返回正数参数；输入不合法时使用默认值。</summary>
         private static double Positive(double value, double fallback) => value > 0d ? value : fallback;
+
+        /// <summary>距离类参数按世界坐标倍率反向换算，并保留安全上下限。</summary>
+        private static int ScaleDistance(int value, double scale, int min, int max)
+        {
+            int scaled = (int)Math.Round(value * scale, MidpointRounding.AwayFromZero);
+            return Clamp(scaled, min, max);
+        }
+
+        /// <summary>过滤负数和无穷数，保证坐标缩放参数可以安全参与计算。</summary>
+        private static double NonNegativeFinite(double value, double fallback)
+        {
+            return double.IsNaN(value) || double.IsInfinity(value) || value < 0d
+                ? fallback
+                : value;
+        }
     }
 }

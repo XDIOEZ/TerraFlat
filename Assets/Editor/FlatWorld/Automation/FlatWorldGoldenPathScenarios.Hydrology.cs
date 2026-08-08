@@ -15,6 +15,9 @@ namespace FlatWorld.Automation
         private static bool _hydrologyRainShadowObserved;
         private static bool _hydrologyWaterObserved;
         private static bool _hydrologyRiverObserved;
+        private static bool _hydrologyRiverFlowObserved;
+        private static bool _hydrologyFloodplainObserved;
+        private static bool _hydrologyFloodplainPresentationObserved;
         private static bool _hydrologyRiverPresentationObserved;
         private static bool _hydrologyGrassObserved;
         private static bool _hydrologyGrassPresentationObserved;
@@ -28,6 +31,9 @@ namespace FlatWorld.Automation
             _hydrologyRainShadowObserved = false;
             _hydrologyWaterObserved = false;
             _hydrologyRiverObserved = false;
+            _hydrologyRiverFlowObserved = false;
+            _hydrologyFloodplainObserved = false;
+            _hydrologyFloodplainPresentationObserved = false;
             _hydrologyRiverPresentationObserved = false;
             _hydrologyGrassObserved = false;
             _hydrologyGrassPresentationObserved = false;
@@ -64,6 +70,7 @@ namespace FlatWorld.Automation
                                           _hydrologyRainShadowObserved &&
                                           _hydrologyWaterObserved &&
                                           _hydrologyRiverObserved &&
+                                          _hydrologyRiverFlowObserved &&
                                           _hydrologyRiverPresentationObserved &&
                                           _hydrologyGrassObserved &&
                                           _hydrologyGrassPresentationObserved &&
@@ -78,7 +85,7 @@ namespace FlatWorld.Automation
             string[] required =
             {
                 "height", "temperature", "temperature.celsius", "precipitation",
-                "moisture", "riverDepth", "grass"
+                "moisture", "riverDepth", "riverFlow", "riverFloodplain", "grass"
             };
             for (int i = 0; i < required.Length; i++)
             {
@@ -121,7 +128,23 @@ namespace FlatWorld.Automation
                     riverDepth > 0f)
                 {
                     _hydrologyRiverObserved = true;
+                    if (!terrain.TryGetEnvironmentValue("riverFlow", x, y, out float riverFlow) ||
+                        riverFlow <= 0f)
+                    {
+                        throw new InvalidOperationException(
+                            $"Chunk {chunk.Address} 河流格缺少高度汇流值：{x},{y}。");
+                    }
+                    _hydrologyRiverFlowObserved = true;
                     _hydrologyRiverPresentationObserved |=
+                        groundTilemap != null && groundTilemap.GetTile(localCell) != null;
+                }
+
+                if (terrain.TryGetEnvironmentValue("riverFloodplain", x, y,
+                        out float floodplain) && floodplain > 0f &&
+                    (cell.Flags & TerrainCellFlags.Water) == 0)
+                {
+                    _hydrologyFloodplainObserved = true;
+                    _hydrologyFloodplainPresentationObserved |=
                         groundTilemap != null && groundTilemap.GetTile(localCell) != null;
                 }
 
@@ -144,6 +167,9 @@ namespace FlatWorld.Automation
                     $"完整移动前未完成模型水文验证：chunks={HydrologyValidatedChunks.Count}, " +
                     $"climate={_hydrologyClimateObserved}, variation={_hydrologyRainShadowObserved}, " +
                     $"water={_hydrologyWaterObserved}, river={_hydrologyRiverObserved}, " +
+                    $"riverFlow={_hydrologyRiverFlowObserved}, " +
+                    $"floodplain={_hydrologyFloodplainObserved}, " +
+                    $"floodplainView={_hydrologyFloodplainPresentationObserved}, " +
                     $"riverView={_hydrologyRiverPresentationObserved}, grass={_hydrologyGrassObserved}, " +
                     $"grassView={_hydrologyGrassPresentationObserved}, " +
                     $"biome={_biomeElevationRulesObserved}。");

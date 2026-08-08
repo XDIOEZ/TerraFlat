@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld UI 系统定位
 
-> 最后核对：2026-07-29。修改 Prefab 位置或控件节点名后必须立即更新本 Skill。
+> 最后核对：2026-08-08。修改 Prefab 位置或控件节点名后必须立即更新本 Skill。
 
 ## 修改前先读
 
@@ -68,6 +68,7 @@ disable-model-invocation: false
 - 新世界难度入口位于 `UI_NewGame.prefab` 底部；弹层包含官方预设/自定义主分页，自定义页再分为 `自定义分类页_战斗`、`自定义分类页_生存`、`自定义分类页_世界`、`自定义分类页_生产`。当前共 16 个 `难度_*倍率` Slider 与 `死亡掉落全部物品` Toggle，全部由 `GameManager.UI.cs` 的公开命名常量绑定；百分比文本统一命名为 `{SliderKey}_数值`。
 - 官方预设按钮由 `GameDifficultyCatalog.All` 驱动，统一命名为 `官方难度预设_{GameDifficultyId}`；新增官方难度后重建 Prefab 即可自动生成列表项。
 - 新世界 UI 的权威重建入口为 `Assets/Editor/FlatWorld/PrefabBuilders/UI/NewGamePrefabBuilder.cs`（菜单 `FlatWorld/UI/Rebuild New Game UI`）；修改难度布局后必须通过该入口重建 Prefab。
+- 新世界种子输入框固定命名为 `GameManager.NewGameSeedInputKey`（“世界种子输入框”），位于“世界生成概览”卡片内；允许数字或文字，留空时由 `GameManager` 随机生成。
 
 ## 联机动态 UI
 
@@ -81,6 +82,8 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：`UI_NewGame.prefab` 的“世界生成概览”改为可选世界种子输入框；玩家可输入数字或文字，留空自动随机，控件由 `NewGamePrefabBuilder` 权威重建。
+- 2026-08-08：新世界的玩家名称与存档名称都改为可选；任一留空时，`NewWorldCreationRequest` 自动补同一个八位纯数字名称，`UI_NewGame.prefab` 与重建器同步提示该行为。
 - 2026-08-04：`UI_GameSaveManager` 新增“删除存档按钮”；默认禁用，选中世界后启用，调用 `SaveDataMgr.DeleteSave` 清理完整存档族并刷新列表、清空角色选择。
 - 2026-08-04：F4 GM 控制台新增 `Buff` 分页，提供目录浏览/ID 输入、限时持续时间覆盖、施加次数、确认/取消点选及清除 Buff 开关；页内状态显示当前点选模式。
 - 2026-07-31：`BasePanel` 增加通用手柄导航；`UI_InputBindingSettings` 固化键鼠/手柄分页，运行时按设备筛选重绑行、切换焦点并恢复当前分页默认值。
@@ -89,12 +92,10 @@ disable-model-invocation: false
 - 2026-07-29：设置、按键绑定动态行、聊天输入、角色气泡、背包整理、制作预览和联机玩家名称全部固化为可视化 Prefab；新增统一重建器与 `RuntimeUIPrefabKeys`，运行时只加载、实例化和绑定数据。
 - 2026-07-29：`UIRoot.prefab` 移至 `Assets/Resources/UI/`；`UIManager` 删除运行时 Canvas 构建兜底，`BasePanel`/`BaseUIManager` 停止应用会修改视觉的运行时主题。
 - 2026-07-29：联机面板固化为可在 Unity 中直接查看和编辑的 `UI_NetworkMode.prefab`；运行时只通过 `GameRes` 实例化，移除全部视觉节点构建代码。
-- 2026-07-29：自定义难度扩展为战斗、生存、世界、生产四个分类页，提供 16 个倍率滑条与死亡掉落开关；详情卡实时汇总四类规则。
-- 2026-07-29：联机动态面板的地址输入支持直接粘贴 `域名:端口`、`kcp://` 或 `udp://` 穿透端点，并明确提示必须使用 UDP 隧道；控件节点名保持不变。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约、按键绑定双分页节点、Resources UIRoot、五个设置 Prefab、按键行 Prefab、世界加载 Prefab、设置入口节点、正式脚本无运行时视觉构建，以及新世界难度命名契约；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
+- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs` 与 `Assets/GameTest/UI/WorldTopologyUISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约、按键绑定双分页节点、Resources UIRoot、五个设置 Prefab、按键行 Prefab、世界加载 Prefab、设置入口节点、正式脚本无运行时视觉构建、新世界难度命名契约，以及可选世界种子输入框的命名与卡片边界；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；UI 测试约定目录：`Assets/GameTest/UI/`；场景目录：`Assets/GameTest/Scenes/UI/`；冒烟分类：`UI.Smoke`。
 - 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；必须验证控件命名契约、组件类型、事件绑定和重复打开关闭，视觉观感仍交由人工确认。

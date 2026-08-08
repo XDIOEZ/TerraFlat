@@ -13,7 +13,6 @@ namespace FlatWorld.Automation
         private static ulong _modelTerrainHash;
         private static Vector2 _modelStartPosition;
         private static Vector2 _modelAwayPosition;
-        private static int _chunkCommittedSubscriptions;
         private static bool _modelDormancyObserved;
         private static bool _modelRebindObserved;
 
@@ -27,7 +26,6 @@ namespace FlatWorld.Automation
             _modelTerrainHash = 0;
             _modelStartPosition = default;
             _modelAwayPosition = default;
-            _chunkCommittedSubscriptions = 0;
             _modelDormancyObserved = false;
             _modelRebindObserved = false;
         }
@@ -37,6 +35,22 @@ namespace FlatWorld.Automation
             ChunkMgr manager = ChunkMgr.Instance;
             if (manager?.WorldRuntime == null)
                 throw new InvalidOperationException("无头世界模型未在进入世界时创建。");
+
+            ChunkGenerationSettingsSnapshot settings = manager.ActiveGenerationProfile?.Settings;
+            if (settings == null)
+                throw new InvalidOperationException("无头世界模型缺少当前生成参数快照。");
+            double expectedScale = context.Configuration.world.noiseScale;
+            double expectedDistanceScale = expectedScale <= 0d
+                ? 4d
+                : Math.Max(0.25d, Math.Min(4d, 0.01d / expectedScale));
+            if (Math.Abs(settings.WorldCoordinateScale - expectedScale) > 0.000001d ||
+                Math.Abs(settings.WorldCoordinateDistanceScale - expectedDistanceScale) > 0.000001d)
+            {
+                throw new InvalidOperationException(
+                    $"世界坐标缩放未进入区块与河流生成：配置={expectedScale:F6}, " +
+                    $"Profile={settings.WorldCoordinateScale:F6}, " +
+                    $"河流距离倍率={settings.WorldCoordinateDistanceScale:F3}。");
+            }
 
             _modelStartPosition = context.CurrentPosition;
         }
@@ -63,8 +77,6 @@ namespace FlatWorld.Automation
 
             _modelTerrainHash = _modelStartChunk.Terrain.ComputeStableHash();
 
-            WorldEventBus events = manager.WorldRuntime.Events;
-            _chunkCommittedSubscriptions = events.SubscriptionCount<ChunkCommitted>();
             Debug.Log(
                 $"[GoldenPath][WorldModel] 已记录起始区块 {_modelStartAddress}，" +
                 $"hash={_modelTerrainHash}。");
@@ -145,9 +157,18 @@ namespace FlatWorld.Automation
                 rebound.NavigationLeaseCount != 1 || !rebound.HasNavigationLease)
                 throw new InvalidOperationException("返回起点后的模拟、表现或导航租约发生重复。");
             WorldEventBus events = manager.WorldRuntime.Events;
-            if (events.SubscriptionCount<ChunkCommitted>() != _chunkCommittedSubscriptions)
+            int boundViewCount = 0;
+            foreach (ChunkRuntime chunk in manager.Chunks.Values)
             {
-                throw new InvalidOperationException("返回起点后的区块事件订阅数量发生泄漏或重复。");
+                if (chunk.PresentationStatus == ChunkPresentationStatus.Bound)
+                    boundViewCount++;
+            }
+            if (events.SubscriptionCount<ChunkCommitted>() != boundViewCount)
+            {
+                throw new InvalidOperationException(
+                    $"返回起点后的区块事件订阅与已绑定 View 不一致：" +
+                    $"subscriptions={events.SubscriptionCount<ChunkCommitted>()}, " +
+                    $"views={boundViewCount}。");
             }
 
             _modelRebindObserved = true;

@@ -64,6 +64,7 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：`Tree_Coconut.prefab` 清除旧 `Data.HurtActions/Data.DeathActions` 的 SerializeReference override 与错误类型名，只保留当前 `DamageReceiver.HurtActions` 的 `DamageReciver_Action_SpawnItem` 引用；Prefab 变体不得同时维护新旧动作字段。
 - 2026-08-07：将旧 `Assets/9_Anim` 的通用武器 Animator、待机与两段攻击动画归并到 `Assets/8_Animations/Item/Weapon/`，GUID 与武器动画状态契约保持不变。
 - 2026-07-31：实体受到直接攻击并存活时临时降低移动速度，连续受击刷新减速时间，结束后恢复原有速度倍率。
 - 2026-07-31：为地下矿洞修正煤、铜、锡、铁、石矿的确定性矿石掉落，移除继承模板的非矿物掉落。

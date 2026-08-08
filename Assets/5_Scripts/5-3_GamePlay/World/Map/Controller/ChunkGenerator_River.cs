@@ -109,7 +109,10 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
             _activePlanetData,
             _activeWorldSeed,
             _activeWorldAddress);
-        int sourcesPerFrame = Mathf.Max(1, workBatchSize / Mathf.Max(1, runoffCellSize));
+        HydrologySpatialSettings spatialSettings = ResolveSpatialSettings(_activePlanetData);
+        int sourcesPerFrame = Mathf.Max(
+            1,
+            workBatchSize / Mathf.Max(1, spatialSettings.RunoffCellSize));
         for (int i = 0; i < entries.Count; i++)
         {
             HydrologyRegionEntry entry = entries[i];
@@ -434,6 +437,62 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         return !float.IsNaN(value) && !float.IsInfinity(value) && value > 0f;
     }
 
+    #region 世界坐标缩放
+
+    /// <summary>
+    /// 世界坐标倍率越小，地貌越舒展，因此径流单元、追踪距离和河宽按反比放大。
+    /// 倍率限制在 0.25x 到 4x，避免极端输入造成水文区域计算失控。
+    /// </summary>
+    private HydrologySpatialSettings ResolveSpatialSettings(PlanetData planetData)
+    {
+        float coordinateScale = ChunkGenerator_Land.ResolveNoiseScale(planetData);
+        float distanceScale = coordinateScale <= 0f
+            ? 4f
+            : Mathf.Clamp(PlanetData.DefaultNoiseScale / coordinateScale, 0.25f, 4f);
+        float lateralScale = Mathf.Sqrt(distanceScale);
+        int effectiveRunoffCellSize = ScaleDistance(runoffCellSize, distanceScale, 16, 256);
+        int effectiveSampleStride = ScaleDistance(
+            runoffSampleStride,
+            distanceScale,
+            1,
+            effectiveRunoffCellSize);
+        while (effectiveRunoffCellSize % effectiveSampleStride != 0)
+            effectiveSampleStride--;
+
+        return new HydrologySpatialSettings(
+            effectiveRunoffCellSize,
+            effectiveSampleStride,
+            ScaleDistance(maxTraceSteps, distanceScale, 32, 2048),
+            ScaleDistance(maxRiverWidth, lateralScale, 1, 15));
+    }
+
+    private static int ScaleDistance(int value, float scale, int minimum, int maximum)
+    {
+        return Mathf.Clamp(Mathf.RoundToInt(value * scale), minimum, maximum);
+    }
+
+    private readonly struct HydrologySpatialSettings
+    {
+        public HydrologySpatialSettings(
+            int runoffCellSize,
+            int runoffSampleStride,
+            int maxTraceSteps,
+            int maxRiverWidth)
+        {
+            RunoffCellSize = runoffCellSize;
+            RunoffSampleStride = runoffSampleStride;
+            MaxTraceSteps = maxTraceSteps;
+            MaxRiverWidth = maxRiverWidth;
+        }
+
+        public int RunoffCellSize { get; }
+        public int RunoffSampleStride { get; }
+        public int MaxTraceSteps { get; }
+        public int MaxRiverWidth { get; }
+    }
+
+    #endregion
+
     private sealed class HydrologyRegionResult
     {
         private readonly HydrologyCellSample[] _cells;
@@ -688,6 +747,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         private readonly ChunkGenerator_River _river;
         private readonly ChunkGenerator_Land _land;
         private readonly PlanetData _planetData;
+        private readonly HydrologySpatialSettings _spatialSettings;
         private readonly int _worldSeed;
         private readonly Vector2Int _regionOrigin;
         private readonly int _minSourceCellX;
@@ -713,22 +773,28 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
             _river = river;
             _land = land;
             _planetData = planetData;
+            _spatialSettings = river.ResolveSpatialSettings(planetData);
             _worldSeed = worldSeed == 0 ? 1 : worldSeed;
             _regionOrigin = land.WorldDomain is WrappedWorldGenerationDomain wrapped
                 ? wrapped.Bounds.Min + regionCoordinate * river.hydrologyRegionSize
                 : regionCoordinate * river.hydrologyRegionSize;
-            int padding = river.maxTraceSteps + Mathf.Max(2, river.maxRiverWidth / 2);
+            int padding = _spatialSettings.MaxTraceSteps +
+                          Mathf.Max(2, _spatialSettings.MaxRiverWidth / 2);
             Vector2Int sourceAnchor = land.WorldDomain is WrappedWorldGenerationDomain wrappedSource
                 ? wrappedSource.Bounds.Min
                 : Vector2Int.zero;
-            _minSourceCellX = FloorDiv(_regionOrigin.x - padding - sourceAnchor.x, river.runoffCellSize);
+            _minSourceCellX = FloorDiv(
+                _regionOrigin.x - padding - sourceAnchor.x,
+                _spatialSettings.RunoffCellSize);
             _maxSourceCellX = FloorDiv(
                 _regionOrigin.x + river.hydrologyRegionSize - 1 + padding - sourceAnchor.x,
-                river.runoffCellSize);
-            _minSourceCellY = FloorDiv(_regionOrigin.y - padding - sourceAnchor.y, river.runoffCellSize);
+                _spatialSettings.RunoffCellSize);
+            _minSourceCellY = FloorDiv(
+                _regionOrigin.y - padding - sourceAnchor.y,
+                _spatialSettings.RunoffCellSize);
             _maxSourceCellY = FloorDiv(
                 _regionOrigin.y + river.hydrologyRegionSize - 1 + padding - sourceAnchor.y,
-                river.runoffCellSize);
+                _spatialSettings.RunoffCellSize);
             _nextSourceCellX = _minSourceCellX;
             _nextSourceCellY = _minSourceCellY;
         }
@@ -765,7 +831,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
             int size = _river.hydrologyRegionSize;
             var cells = new HydrologyCellSample[size * size];
-            int maximumRadius = Mathf.Max(0, (_river.maxRiverWidth - 1) / 2);
+            int maximumRadius = Mathf.Max(0, (_spatialSettings.MaxRiverWidth - 1) / 2);
             foreach (KeyValuePair<Vector2Int, float> pair in _flow)
             {
                 if (pair.Value < _river.riverStartFlow ||
@@ -778,7 +844,8 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
                     _river.riverStartFlow,
                     Mathf.Max(_river.riverStartFlow + 0.001f, _river.fullWidthFlow),
                     pair.Value);
-                int width = 1 + Mathf.RoundToInt(widthT * (_river.maxRiverWidth - 1));
+                int width = 1 + Mathf.RoundToInt(
+                    widthT * (_spatialSettings.MaxRiverWidth - 1));
                 int radius = Mathf.Clamp((width - 1 + 1) / 2, 0, maximumRadius);
                 float centerDepth = Mathf.Lerp(
                     _river.riverDepthMin,
@@ -849,8 +916,8 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
         private void ProcessRunoffCell(int sourceCellX, int sourceCellY)
         {
-            int cellSize = _river.runoffCellSize;
-            int stride = _river.runoffSampleStride;
+            int cellSize = _spatialSettings.RunoffCellSize;
+            int stride = _spatialSettings.RunoffSampleStride;
             Vector2Int sourceAnchor = _land.WorldDomain is WrappedWorldGenerationDomain wrapped
                 ? wrapped.Bounds.Min
                 : Vector2Int.zero;
@@ -903,7 +970,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         {
             Vector2Int current = source;
             var visited = new HashSet<Vector2Int>();
-            for (int step = 0; step < _river.maxTraceSteps; step++)
+            for (int step = 0; step < _spatialSettings.MaxTraceSteps; step++)
             {
                 if (!_land.WorldDomain.Contains(current) || !visited.Add(current))
                     break;

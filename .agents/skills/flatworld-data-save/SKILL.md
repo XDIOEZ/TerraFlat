@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 数据与存档定位
 
-> 最后核对：2026-08-07。序列化字段改动属于高影响变更。
+> 最后核对：2026-08-08。序列化字段改动属于高影响变更。
 
 ## 修改前先读
 
@@ -63,7 +63,8 @@ GameSaveData
 - `Data_TileMap` 当前 MemoryPack 布局持久化 `TileStackCell[,]`；单层/双层格不分配 `OverflowLayers`，第三层起才分配。非空格计数缓存不进存档。
 - 环境只持久化五张网格：归一化温度、摄氏温度、降水、高度、光照；不得恢复湿度、固体比例或污染网格。
 - 区块差量 DTO 仍用有序 Tile 列表表达单格层级，但基线哈希、捕获、应用和复用缓冲区都必须通过地形栈 API，不得反射或暴露底层数组。
-- 当前 `CompactSaveVersion=2`、`ModdedSaveVersion=2`。版本 1 和无文件头旧二进制存档返回 `SaveVersionIncompatibleException`；正式文件版本不兼容时不得回退到备份伪装成恢复成功。
+- 当前 `CompactSaveVersion=4`、`ModdedSaveVersion=3`。版本不匹配和无文件头旧二进制存档返回 `SaveVersionIncompatibleException`；正式文件版本不兼容时不得回退到备份伪装成恢复成功。
+- 世界种子同时保存原始字符串 `GameSaveData.SaveSeed` 与稳定整数 `GameSaveData.Seed`；新世界仅在输入为空白时随机生成，手动输入的数字、文字及 `0` 必须保留原始文本并稳定映射，不得在存档层二次随机。
 - 世界难度位于 `GameSaveData.Difficulty.cs`：`Difficulty` 保存官方预设或自定义类型，`CustomDifficultyDataVersion` 当前为 1，另有死亡掉落开关与战斗、生存、世界、生产共 16 个倍率字段。读写必须通过 `GameDifficultyCatalog.ReadCustomRules()` / `WriteCustomRules()`；旧存档版本为 0 时保留旧死亡掉落值，其余新增倍率统一迁移为 100%。
 - 联机世界快照由 `SaveDataMgr` 生成/应用，但网络传输流程位于 Networking Skill。
 - 对话与教程不得各自覆盖 `Data_Player.ItemSpecialData`：统一通过 `ItemSpecialDataJsonStore` 替换目标命名空间并保留未知根属性；旧非 JSON 字符串保存到 `flatworld.legacyItemSpecialData`。
@@ -92,6 +93,8 @@ GameSaveData
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：新世界种子支持 UI 手动输入数字或文字；空白时由 `GameManager` 随机生成，`SaveSeed` 保存最终文本、`Seed` 保存稳定映射整数，手动 `0` 不再视为空输入。
+- 2026-08-08：`SaveDataMgr.TryCreateNewSave` 的空名称兜底改为八位纯数字；正式新世界请求会提前为玩家名和存档名补同一个随机数字，存档层继续负责文件名清理与防覆盖编号。
 - 2026-08-07：物品 Manifest 的分包 `id/path`、`shellPrefab` 与模板 Prefab 根名称统一使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；重命名时保留 `.meta` GUID，并同步 Addressables Address 与 `sourcePrefab`，具体物品 ID 不变。
 - 2026-08-07：物品配置从单个 `items.json` 拆为 `item-manifest.json` + 按最终 `shellPrefab` 分类的 `shells/*.json`；加载器在全局合并后解析跨包继承，并拒绝路径越界、重复包、重复物品和错误外壳分类。
 - 2026-08-07：移除旧 `Assets/GameConfig/` Excel/Legacy 数据和 Excel→Prefab/JSON 同步工具链；物品与配方正式以 `StreamingAssets/GameConfig` JSON 为唯一真源，内容校验不再要求工作簿。
@@ -101,8 +104,6 @@ GameSaveData
 - 2026-07-31：`flatworld.dimensions` 新增按地表入口 GUID 保存的矿坑双向锚点；正式 `CaveExit` 在 Chunk Ready 后创建并进入差量 `ChangedItems`，未改变 MemoryPack 布局。
 - 2026-07-31：新增维度存档隔离；以兼容旧地表键的 `WorldKey` 复用 `PlanetData_Dict`，玩家各维度位置进入 `flatworld.dimensions`，未改变 MemoryPack 布局。
 - 2026-07-30：星球存档追加天气阶段、绝对时间边界、确定性随机游标和事件序号；旧存档由 `WeatherEventScheduler.InitializeIfNeeded()` 根据已有天气迁移。
-- 2026-07-30：作物存档补齐种植格、成长阶段、成熟、已收获和反馈状态；旧 `GrowData` BitData 可迁移，区块卸载重载后不会重置成长或再次收获。
-- 2026-07-29：新建存档首写和进入已选存档接入 Prefab 加载反馈；存档层职责不变，界面由 GameManager 驱动并持续到玩家周围区块就绪。
 
 ## 修改后自动测试
 

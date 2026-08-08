@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 1,
+  "recordType": "river-parameter-tuning",
+  "system": "FlatWorld.WorldModel.HeightDrivenRiver",
+  "authority": {
+    "profile": "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset",
+    "defaults": "Assets/5_Scripts/5-0_WorldModel/Generation/ChunkGenerationSettingsSnapshot.cs",
+    "generator": "Assets/5_Scripts/5-0_WorldModel/Generation/DeterministicChunkGenerator.cs"
+  },
+  "constraints": {
+    "heightDriven": true,
+    "worldCoordinateScaleAffectsHydrology": true,
+    "independentRiverNoiseAllowed": false,
+    "trigonometricRiverBandAllowed": false,
+    "evaluateOnNewWorldOrUngeneratedChunks": true,
+    "compareWithSameWorldSeedAndCameraArea": true,
+    "visualAcceptanceWorldRadius": 512,
+    "visualAcceptanceOrthographicSize": 24,
+    "note": "半径 64 的快速环绕世界会把基础高度周期压成约一个大起伏，只能做连通性检查，不能再作为河流写实度结论。"
+  },
+  "currentParameters": {
+    "world.coordinateScale.reference": 0.01,
+    "world.coordinateDistanceScale.minimum": 0.25,
+    "world.coordinateDistanceScale.maximum": 4.0,
+    "river.startFlow": 0.405,
+    "river.tributaryStartFlow": 0.195,
+    "river.meanderTieTolerance": 0.0,
+    "river.runoffCellSize": 64,
+    "river.runoffSampleStride": 8,
+    "river.maxTraceSteps": 384,
+    "river.minimumVisibleCourseLength": 96,
+    "river.fullWidthFlow": 1.2,
+    "river.maxWidth": 7,
+    "river.valleyDetailWeight": 4.0,
+    "river.lookAheadWeight": 0.55,
+    "river.lookAheadDistance": 6,
+    "river.floodplainStartFlow": 0.405,
+    "river.floodplainMaxRadius": 8,
+    "river.floodplainMaxSlope": 0.08,
+    "river.alluvialTileThreshold": 0.62
+  },
+  "currentAlgorithm": {
+    "routing": "height-gradient D-infinity direction with 4x4 ordered raster dither",
+    "fallback": "strict-downhill valley residual plus downstream look-ahead",
+    "network": "one deterministic downstream receiver per cell; mature main-river components must contain at least 96 cells; lower-flow tributary components are shown only when connected to a retained main river",
+    "floodplain": "accumulated flow plus local height slope; no independent river noise",
+    "worldScale": "terrain and climate frequency multiply by world.coordinateScale / 0.01; river distance parameters multiply by the inverse ratio clamped to 0.25-4; lateral width and floodplain parameters use the square root of that distance ratio",
+    "visualStatus": "玩家已确认河宽与弯曲程度合适；本轮只把最长河程从 256 调到 384，等待同种子新世界视觉反馈"
+  },
+  "tracks": {
+    "density": {
+      "metric": "同一相机方框内可见的独立河道和低汇流细支流数量",
+      "parameter": "river.startFlow",
+      "monotonicDirection": "数值越高，可见河道越少",
+      "precision": 0.005,
+      "rounds": [
+        {
+          "round": 1,
+          "interval": [0.12, 0.5],
+          "trial": 0.31,
+          "feedback": "仍然过于密集，同一方框可见多条河流",
+          "result": "偏低",
+          "nextInterval": [0.31, 0.5]
+        },
+        {
+          "round": 2,
+          "interval": [0.31, 0.5],
+          "trial": 0.405,
+          "feedback": "Golden Path 固定种子 424242：initial 与 middle 各出现一条主河，final 无河；同屏多支流问题已消失。",
+          "result": "可接受，略偏稀",
+          "finalInterval": [0.31, 0.405],
+          "decision": "暂时保留 0.405；若以后确认过稀，再回到该区间继续二分。"
+        }
+      ]
+    },
+    "fragmentation": {
+      "metric": "正常截图视野内孤立短河段数量，以及保留河网的连续河程",
+      "parameter": "river.minimumVisibleCourseLength",
+      "monotonicDirection": "数值越高，短河网越少，保留下来的最短河程越长",
+      "precision": 16,
+      "rounds": [
+        {
+          "round": 1,
+          "interval": [0, 192],
+          "trial": 96,
+          "feedback": "固定种子、世界半径 512、截图视野 24：initial 仅剩一条长河，middle 无河，final 为连续大水体；未再观察到孤立短碎河段。",
+          "result": "可接受",
+          "finalInterval": [0, 96],
+          "decision": "保留 96；不继续提高，以免正常视野完全看不到内陆河流。"
+        }
+      ]
+    },
+    "tributaries": {
+      "metric": "连入成熟主河、但流量低于主河显示阈值的小支流格数量",
+      "parameter": "river.tributaryStartFlow",
+      "monotonicDirection": "数值越低，连入主河的细支流越多、上游延伸越长",
+      "precision": 0.01,
+      "rounds": [
+        {
+          "round": 1,
+          "interval": [0.12, 0.405],
+          "trial": 0.265,
+          "feedback": "固定种子 424242 的 144x144 局部覆盖未观察到低于主河阈值的连接支流。",
+          "result": "偏高",
+          "nextInterval": [0.12, 0.265]
+        },
+        {
+          "round": 2,
+          "interval": [0.12, 0.265],
+          "trial": 0.195,
+          "feedback": "固定种子 424242 的 384x384 覆盖确认存在连入成熟主河的低流量格；扩大视野 Golden Path 的 final 截图可见主河右端细支流。",
+          "result": "可接受",
+          "finalInterval": [0.195, 0.265],
+          "decision": "保留 0.195；支流必须连入至少 96 格的成熟主河，避免重新产生孤立碎河。"
+        }
+      ]
+    },
+    "length": {
+      "metric": "成熟主河在同一世界种子与相机范围内的连续可见河程",
+      "parameter": "river.maxTraceSteps",
+      "monotonicDirection": "数值越高，河流在到达海洋、洼地或追踪上限前允许延伸得越远",
+      "precision": 64,
+      "rounds": [
+        {
+          "round": 1,
+          "interval": [256, 512],
+          "trial": 384,
+          "feedback": "玩家确认河流粗细和弯曲程度合适，但当前 256 的河流长度仍然不够。",
+          "result": "等待视觉反馈",
+          "nextAction": "使用相同世界种子生成新世界或观察尚未生成的区块；若仍短则下界改为 384，若过长则上界改为 384。"
+        }
+      ]
+    },
+    "worldCoordinateScale": {
+      "metric": "玩家改变世界坐标缩放后，地貌频率、径流源间距、最长河程、最短可见河程、前视距离与河道横向尺度同步变化",
+      "parameter": "world.coordinateScale",
+      "reference": 0.01,
+      "mapping": "距离倍率 = clamp(0.01 / world.coordinateScale, 0.25, 4.0)；0 使用 4.0 安全上限",
+      "examples": [
+        {
+          "worldCoordinateScale": 0.005,
+          "distanceScale": 2.0,
+          "river.runoffCellSize": 128,
+          "river.maxTraceSteps": 768,
+          "river.minimumVisibleCourseLength": 192
+        },
+        {
+          "worldCoordinateScale": 0.02,
+          "distanceScale": 0.5,
+          "river.runoffCellSize": 32,
+          "river.maxTraceSteps": 192,
+          "river.minimumVisibleCourseLength": 48
+        }
+      ],
+      "status": "代码与编译覆盖完成；跨缩放视觉对比留给新世界人工验收"
+    },
+    "curvature": {
+      "metric": "长距离水平、垂直或四十五度笔直河段的出现程度",
+      "parameter": "river.meanderTieTolerance",
+      "note": "该参数只改变近似等高下坡邻格的选路，视觉弯曲度不是严格单调，因此按单因素试验记录，不把一次截图当作可靠二分结论。",
+      "rounds": [
+        {
+          "round": 1,
+          "interval": [0.002, 0.02],
+          "previous": 0.002,
+          "trial": 0.011,
+          "feedback": "Golden Path initial 仍有跨屏长对角线，middle 仍有长竖直段；只改善了局部转折。",
+          "result": "弯曲度不足",
+          "nextAction": "停止继续对该参数做二分；D8 最陡下降在连续坡面会长期选择同一方向，需要单独设计方向惯性或曲率代价，同时继续服从高度下降约束。"
+        },
+        {
+          "round": 2,
+          "method": "高度图细谷残差 + 下游前视",
+          "trial": {
+            "river.meanderTieTolerance": 0.0,
+            "river.valleyDetailWeight": 4.0,
+            "river.lookAheadWeight": 0.55,
+            "river.lookAheadDistance": 6
+          },
+          "feedback": "正常半径 512 的 final 仍出现长对角线与竖直段；只放大谷底评分无法解除八方向锁定。",
+          "result": "不通过",
+          "nextAction": "改为高度梯度 D∞ 连续坡向，再做栅格化。"
+        },
+        {
+          "round": 3,
+          "method": "高度梯度 D∞ + 4x4 有序栅格抖动",
+          "feedback": "自动化通过，部分 45°锁向消失；initial 与 final 仍能看到较长水平河段，冲积沉积带也不够连续。",
+          "result": "数据与生命周期通过，视觉仍不通过",
+          "decision": "本修改批次已用满 3 次 Golden Path；停止重跑。下一批应改用区域级流量累计、曲线中心线和下游低坡河漫滩整形，而不是继续放大单格选路参数。"
+        }
+      ]
+    }
+  },
+  "validationRuns": [
+    {
+      "type": "Runtime.GoldenPath",
+      "id": "da55fb8d2b8745fe820115bd6d5a925c",
+      "worldSeed": 424242,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Passed",
+      "failed": 0,
+      "consoleErrors": 0,
+      "result": "Library/FlatWorldSkillTests/golden-result-da55fb8d2b8745fe820115bd6d5a925c.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/da55fb8d2b8745fe820115bd6d5a925c/initial.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/da55fb8d2b8745fe820115bd6d5a925c/middle.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/da55fb8d2b8745fe820115bd6d5a925c/final.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "playerTerrainAndHudVisible": true,
+        "blackBlankPurpleOrErrorOverlay": false,
+        "density": "可接受，略偏稀",
+        "curvature": "仍有明显长直段，不可接受"
+      }
+    },
+    {
+      "type": "Runtime.GoldenPath",
+      "batch": "normal-scale-alluvial-river",
+      "attempt": 1,
+      "id": "5a774c14a26e4a8ea8b4ec9f7f881d72",
+      "worldSeed": 424242,
+      "worldRadius": 512,
+      "screenshotOrthographicSize": 24,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Failed",
+      "failed": 1,
+      "failure": "返回起点后的区块事件订阅基线计数不稳定；已改为订阅数对比当前已绑定 View 数。",
+      "result": "Library/FlatWorldSkillTests/golden-result-5a774c14a26e4a8ea8b4ec9f7f881d72.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/5a774c14a26e4a8ea8b4ec9f7f881d72/initial.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "curvature": "仍有长对角线和水平段",
+        "alluvialPlain": "未形成可识别的沿河冲积带"
+      }
+    },
+    {
+      "type": "Runtime.GoldenPath",
+      "batch": "normal-scale-alluvial-river",
+      "attempt": 2,
+      "id": "9cdb5eaf0fdc4b1cbfb30ddaeecc5fc1",
+      "worldSeed": 424242,
+      "worldRadius": 512,
+      "screenshotOrthographicSize": 24,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Failed",
+      "failed": 1,
+      "failure": "任意移动中心区块不保证经过成熟河漫滩，Golden Path 不再把 floodplainObserved 当作随机路线必达条件；环境层存在与固定种子数据覆盖仍保留断言。",
+      "result": "Library/FlatWorldSkillTests/golden-result-9cdb5eaf0fdc4b1cbfb30ddaeecc5fc1.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/9cdb5eaf0fdc4b1cbfb30ddaeecc5fc1/initial.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/9cdb5eaf0fdc4b1cbfb30ddaeecc5fc1/middle.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/9cdb5eaf0fdc4b1cbfb30ddaeecc5fc1/final.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "curvature": "宽主河仍有长 45°、水平和竖直段",
+        "alluvialPlain": "浅色大片主要是干旱沙地，不是连续沿河沉积"
+      }
+    },
+    {
+      "type": "Runtime.GoldenPath",
+      "batch": "normal-scale-alluvial-river",
+      "attempt": 3,
+      "id": "c7aa1d5e089541479815ebe0b80947aa",
+      "worldSeed": 424242,
+      "worldRadius": 512,
+      "screenshotOrthographicSize": 24,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Passed",
+      "failed": 0,
+      "consoleErrors": 0,
+      "result": "Library/FlatWorldSkillTests/golden-result-c7aa1d5e089541479815ebe0b80947aa.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/c7aa1d5e089541479815ebe0b80947aa/initial.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/c7aa1d5e089541479815ebe0b80947aa/middle.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/c7aa1d5e089541479815ebe0b80947aa/final.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "playerTerrainAndHudVisible": true,
+        "blackBlankPurpleOrErrorOverlay": false,
+        "curvature": "部分方向锁定改善，但仍有较长水平河段",
+        "alluvialPlain": "局部出现浅色水岸，尚未形成稳定、连续的写实冲积平原",
+        "accepted": false
+      }
+    },
+    {
+      "type": "Runtime.GoldenPath",
+      "batch": "long-sparse-river-network",
+      "attempt": 1,
+      "id": "de60ec37b119477a8c37cffae738a3b6",
+      "worldSeed": 424242,
+      "worldRadius": 512,
+      "screenshotOrthographicSize": 24,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Passed",
+      "failed": 0,
+      "consoleErrors": 0,
+      "result": "Library/FlatWorldSkillTests/golden-result-de60ec37b119477a8c37cffae738a3b6.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/de60ec37b119477a8c37cffae738a3b6/initial.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/de60ec37b119477a8c37cffae738a3b6/middle.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/de60ec37b119477a8c37cffae738a3b6/final.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "playerTerrainAndHudVisible": true,
+        "blackBlankPurpleOrErrorOverlay": false,
+        "independentRiverNetworks": "initial 1，middle 0，final 为连续大水体",
+        "fragmentation": "未观察到孤立短碎河段",
+        "courseLength": "initial 河道横跨大段视野，达到本轮长河目标",
+        "remainingIssue": "长水平段和硬转角仍需后续单独改善",
+        "acceptedForCurrentGoal": true
+      }
+    },
+    {
+      "type": "WorldModel.FixedSeedCoverage",
+      "batch": "connected-tributaries",
+      "id": "dbb35f3ec7b5439283e2a688437fbb57",
+      "worldSeed": 424242,
+      "coverage": "384x384",
+      "state": "completed",
+      "outcome": "Passed",
+      "failed": 0,
+      "result": "Library/FlatWorldSkillTests/result-dbb35f3ec7b5439283e2a688437fbb57.json",
+      "assertion": "存在流量介于 0.195 与 0.405 之间、且连入至少 96 格成熟主河的可见支流格"
+    },
+    {
+      "type": "Runtime.GoldenPath",
+      "batch": "connected-tributaries",
+      "attempt": 1,
+      "id": "64657c1a98274eb19db3bfce6cba495f",
+      "worldSeed": 424242,
+      "worldRadius": 512,
+      "screenshotOrthographicSize": 24,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Passed",
+      "failed": 0,
+      "consoleErrors": 0,
+      "result": "Library/FlatWorldSkillTests/golden-result-64657c1a98274eb19db3bfce6cba495f.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/64657c1a98274eb19db3bfce6cba495f/initial.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/64657c1a98274eb19db3bfce6cba495f/middle.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/64657c1a98274eb19db3bfce6cba495f/final.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "playerTerrainAndHudVisible": true,
+        "blackBlankPurpleOrErrorOverlay": false,
+        "sampling": "路线仅掠过水岸，没有清楚截到带支流的河段",
+        "acceptedForCurrentGoal": false
+      }
+    },
+    {
+      "type": "Runtime.GoldenPath",
+      "batch": "connected-tributaries",
+      "attempt": 2,
+      "id": "09cb60d924994a1494014ef39e3b6ea8",
+      "worldSeed": 314159,
+      "worldRadius": 512,
+      "screenshotOrthographicSize": 24,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Failed",
+      "failed": 1,
+      "consoleErrors": 0,
+      "failure": "固定路线所加载的 16 个区块均为干旱区域，没有观察到水体或河流",
+      "result": "Library/FlatWorldSkillTests/golden-result-09cb60d924994a1494014ef39e3b6ea8.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/09cb60d924994a1494014ef39e3b6ea8/initial.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/09cb60d924994a1494014ef39e3b6ea8/middle.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/09cb60d924994a1494014ef39e3b6ea8/final.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "playerTerrainAndHudVisible": true,
+        "blackBlankPurpleOrErrorOverlay": false,
+        "sampling": "干旱路线，不用于河流视觉结论",
+        "acceptedForCurrentGoal": false
+      }
+    },
+    {
+      "type": "Runtime.GoldenPath",
+      "batch": "connected-tributaries",
+      "attempt": 3,
+      "id": "a45879bb43ed4a28b1037de501734563",
+      "worldSeed": 424242,
+      "worldRadius": 512,
+      "screenshotOrthographicSize": 40,
+      "hydrologyOverride": false,
+      "state": "completed",
+      "outcome": "Passed",
+      "failed": 0,
+      "consoleErrors": 0,
+      "result": "Library/FlatWorldSkillTests/golden-result-a45879bb43ed4a28b1037de501734563.json",
+      "screenshots": [
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/a45879bb43ed4a28b1037de501734563/initial.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/a45879bb43ed4a28b1037de501734563/middle.png",
+        "Library/FlatWorldSkillTests/GoldenPathCaptures/a45879bb43ed4a28b1037de501734563/final.png"
+      ],
+      "visualAudit": {
+        "allImagesReadable": true,
+        "playerTerrainAndHudVisible": true,
+        "blackBlankPurpleOrErrorOverlay": false,
+        "courseLength": "主河连续跨越扩大视野并延伸出画面",
+        "tributaries": "final 的主河右端可见一条较细连接支流；initial 也能看到细长上游水道",
+        "fragmentation": "没有观察到与主河脱离的短碎支流",
+        "remainingIssue": "局部长水平段和直角转折仍然存在",
+        "acceptedForCurrentGoal": true
+      }
+    }
+  ]
+}

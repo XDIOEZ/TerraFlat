@@ -61,6 +61,8 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 
 纯 Editor 工具、纯视觉布局、不参与运行时的数据整理，或必须依赖不可确定外部服务的功能可不加入。必须在最终总结中给出具体原因，并仍保留领域级自动测试。
 
+空玩家名/存档名的随机数字补全发生在进入世界前，并且结果刻意非确定；保留 Core Smoke 的格式与请求验证覆盖，Golden Path 继续显式命名隔离存档和玩家，便于定位运行产物。
+
 ## 当前有限世界场景（2026-08-06）
 
 GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通过真实 `Mover.Move` 执行一次右边界环绕；等待对侧 Chunk Ready，验证玩家数据、Chunk/MapSave 规范键，然后恢复原位置并继续完整流程。复杂状态机位于 `FlatWorldGoldenPathScenarios.WorldTopology.cs`。
@@ -70,6 +72,8 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 - `FlatWorldGoldenPathConfiguration` 是版本化、强验证的输入和结果快照；运行结果必须回显最终有效配置，便于复现 AI 临时构造的场景。
 - `FlatWorldGoldenPathExecutor` 是生产系统入口适配层：通过 `NewWorldCreationRequest` 创建真实世界，通过玩家模块 API 调视野，通过 `WorldGenerationRuntimeHooks` 在 `Map.Act()` 前配置当前 Map 实例。
 - `player.cameraOrthographicSize` 控制移动阶段视距；`player.screenshotOrthographicSize` 仅在三次截图前临时拉远相机，通过真实 `Mod_Cam` 刷新可见 Chunk 窗口并等待全部 Ready，截图后恢复移动视距。
+- WorldModel 往返场景验证 `ChunkCommitted` 订阅数必须等于当前 `PresentationStatus=Bound` 的 View 数；不得再与截图缩放切换前的历史基线比较，因为相机恢复会合法改变表现窗口数量。
 - `WorldGenerationRuntimeHooks` 默认没有订阅者；执行器结束或 Domain Reload 时必须解除订阅，所以临时河流/地形参数不会污染 Prefab、后续游戏或存档默认配置。
+- `world.noiseScale` 必须在进入世界后的 `ChunkMgr.ActiveGenerationProfile.Settings.WorldCoordinateScale` 中保持一致；河流距离倍率按 `clamp(0.01 / scale, 0.25, 4)` 回显，WorldModel 场景在 `OnWorldReady` 阶段断言该接线。
 - 状态化子场景继续负责跨帧的调用、观测、断言和清理；配置决定场景是否启用及运行参数，执行器不绕过生产系统直接伪造结果。
 - 快速有限世界/强化河流示例见 `references/wrapped-river-fast.json`。

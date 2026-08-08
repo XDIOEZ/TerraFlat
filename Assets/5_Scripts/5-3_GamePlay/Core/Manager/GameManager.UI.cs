@@ -24,6 +24,7 @@ public partial class GameManager
     public const string NewGameSaveInputKey = "新增存档名称输入框";
     public const string NewGameRadiusInputKey = "星球半径输入框";
     public const string NewGameNoiseInputKey = "噪声缩放输入框";
+    public const string NewGameSeedInputKey = "世界种子输入框";
     public const string NewGameTopologyToggleKey = "有限循环世界";
     public const string NewGameDifficultyButtonKey = "难度设置";
     public const string NewGameDifficultyPanelKey = "新世界难度设置面板";
@@ -436,6 +437,7 @@ public partial class GameManager
         UIManager.Instance?.TryGetPanel(NewGamePanelKey, out panel);
         string saveName = panel?.GetInputField(NewGameSaveInputKey)?.text;
         string playerName = panel?.GetInputField(NewGamePlayerInputKey)?.text;
+        string worldSeed = panel?.GetInputField(NewGameSeedInputKey)?.text;
 
         if (panel == null)
         {
@@ -475,7 +477,7 @@ public partial class GameManager
         request = new NewWorldCreationRequest(
             saveName,
             playerName,
-            ReadyGameSaveData?.SaveSeed,
+            worldSeed,
             ReadyPlanetData,
             ReadyTimeData,
             pendingNewWorldDifficulty,

@@ -298,7 +298,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             ReportWorldEntryProgress("正在创建新世界", "正在生成世界种子…", 0.2f);
 
             string inputSeed = request.Seed;
-            bool isNoSeedInput = string.IsNullOrEmpty(inputSeed) || inputSeed == "0";
+            bool isNoSeedInput = string.IsNullOrWhiteSpace(inputSeed);
 
             if (isNoSeedInput)
             {
@@ -321,7 +321,11 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             ReadyPlanetData = FastCloner.FastCloner.DeepClone(request.PlanetData);
             ReadyTimeData = request.TimeData.CreateRuntimeCopy();
-            ReadyGameSaveData = new GameSaveData { SaveSeed = request.Seed };
+            ReadyGameSaveData = new GameSaveData
+            {
+                SaveSeed = saveDataMgr.SaveData.SaveSeed,
+                Seed = saveDataMgr.SaveData.Seed
+            };
 
             ReportWorldEntryProgress("正在创建新世界", "正在创建星球数据…", 0.32f);
             SetNewPlanetData(ReadyPlanetData, ReadyTimeData);

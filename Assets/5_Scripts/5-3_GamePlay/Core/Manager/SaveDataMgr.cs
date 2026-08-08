@@ -296,7 +296,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         value = value.Trim().TrimEnd('.', ' ');
         if (string.IsNullOrWhiteSpace(value) || value == "." || value == "..")
         {
-            value = $"世界_{DateTime.Now:yyyyMMdd_HHmmss}";
+            value = NewWorldCreationRequest.CreateRandomNumericName();
         }
 
         const int maxLength = 48;
