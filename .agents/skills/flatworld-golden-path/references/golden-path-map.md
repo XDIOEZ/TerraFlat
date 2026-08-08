@@ -50,7 +50,7 @@
 | --- | --- | --- | --- |
 | 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
 | 有限世界右边界环绕 | `OnWorldReady` 后、首次截图和长距离移动前，将真实玩家移动到右边界并通过 `Mover.Move` 越界 | 等待规范目标 Chunk Ready，验证环绕余量、玩家数据、Chunk 字典和地图存档键；恢复原位置并再次等待原 Chunk Ready | 通过和失败路径都恢复位置、速度与移动速度 |
-| WorldModel 河流与草地表现 | `OnWorldReady` 扫描已绑定模型区块，后续在每次 `OnChunkReady` 累积观察 | 断言气候层、淡水 `riverDepth`、草状态存在，并确认对应 Ground/Grass Tilemap 已实际写入 Tile | 仅清空场景累计状态，不修改生产世界 |
+| WorldModel 河流、冲积平原与草地表现 | `OnWorldReady` 先核对 `world.noiseScale` 已进入纯 Profile 及河流距离倍率，再扫描已绑定模型区块；后续在每次 `OnChunkReady` 累积观察 | 断言世界坐标缩放接线、气候层、淡水 `riverDepth`、高度汇流 `riverFlow`、低坡冲积层 `riverFloodplain` 与草状态存在，并确认对应 Ground/Grass Tilemap 已实际写入 Tile | 仅清空场景累计状态，不修改生产世界 |
 | GM 自定义玩家移速倍率 | `OnWorldReady` 通过真实 `PlayerAdminController.TrySetAdminMoveSpeedMultiplier` 输入 `2.75x` | 断言管理员倍率与 `Mover.Speed.MultiplicativeModifier` 同步变化，且其他乘法修饰保持不变 | 立即恢复原管理员倍率；失败清理路径再次兜底恢复 |
 | GM 自定义区块加载倍率 | `OnWorldReady` 通过真实 `ChunkMgr.TrySetChunkLoadSpeedMultiplier` 输入 `2.5x` | 断言公开倍率与实际每帧队列预算、并发上限同步提升 | 立即恢复原倍率；失败清理路径再次兜底恢复 |
 

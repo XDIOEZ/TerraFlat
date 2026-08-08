@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 6
+  generationSignature: 12
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -45,12 +45,44 @@ MonoBehaviour:
     Value: 3
   - Id: river.enabled
     Value: 1
-  - Id: river.noiseScale
-    Value: 0.006
-  - Id: river.width
-    Value: 0.085
-  - Id: river.flowThreshold
+  - Id: river.runoffCellSize
+    Value: 64
+  - Id: river.runoffSampleStride
+    Value: 8
+  - Id: river.maxTraceSteps
+    Value: 384
+  - Id: river.minimumVisibleCourseLength
+    Value: 96
+  - Id: river.infiltrationFloor
+    Value: 0.25
+  - Id: river.startFlow
+    Value: 0.405
+  - Id: river.tributaryStartFlow
+    Value: 0.195
+  - Id: river.fullWidthFlow
+    Value: 1.2
+  - Id: river.maxWidth
+    Value: 7
+  - Id: river.meanderTieTolerance
+    Value: 0
+  - Id: river.valleyDetailWeight
+    Value: 4
+  - Id: river.lookAheadWeight
+    Value: 0.55
+  - Id: river.lookAheadDistance
+    Value: 6
+  - Id: river.floodplainStartFlow
+    Value: 0.405
+  - Id: river.floodplainMaxRadius
+    Value: 8
+  - Id: river.floodplainMaxSlope
+    Value: 0.08
+  - Id: river.alluvialTileThreshold
     Value: 0.62
+  - Id: river.depthMin
+    Value: 0.2
+  - Id: river.depthMax
+    Value: 0.9
   - Id: grass.density
     Value: 0.24
   - Id: structure.enabled

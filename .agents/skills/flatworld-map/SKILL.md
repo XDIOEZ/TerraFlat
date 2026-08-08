@@ -42,6 +42,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 统一噪声核与生成签名：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/TerrainNoise.cs`。
 - Biome 集中解析：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/BiomeResolver.cs`。
 - 河流生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_River.cs`。
+- 无头河流调参记录：`.agents/river-heightmap-tuning.json`。
 - 物品生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_SpawnItems.cs`。
 - 结构生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/ChunkGenerator_Structures.cs`。
 - 矿洞生成：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/ChunkGenerator_Cave.cs`。
@@ -78,7 +79,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - `Map` 按阶段和序列化原序稳定排序，且必须恰好有一个 `BaseTerrain`。生成器仅以 `GenerateAsync` 为逻辑入口；失败或取消时必须完成并释放 Job/NativeArray。
 - 必需阶段、差量应用或 Tilemap 最终化失败时，Chunk 进入 `Failed`，不设置 `TileLoaded`、不捕获成功基线、不渲染也不发送 Ready；`ChunkMgr` 必须解除 loading 并结束等待者。
 - 初次 Tilemap 渲染按行复用数组并调用 `SetTilesBlock`，同一次遍历产生地面与顶层阻挡层，最后统一刷新碰撞体；单格实时编辑仍走单格刷新。
-- `ChunkGenerator_River` 正式入口使用世界坐标连续水带：单次遍历当前 Chunk，不建立水文 halo、汇流图或湖泊缓存；河流形状由间距、宽度、弯曲幅度/频率和方向配置。
+- Unity 旧 Map 管线的 `ChunkGenerator_River` 与无头 `DeterministicChunkGenerator` 都必须从各自权威高度图和降水图计算径流：无头生成器以高度梯度 D∞ 坡向栅格化、严格下坡接收格和汇流量扩宽主河，并由汇流与局部坡度输出 `riverFloodplain`；正式地表先以 `river.minimumVisibleCourseLength` 保留成熟主河，再只显示流量达到 `river.tributaryStartFlow` 且连入成熟主河的细支流；新世界 `PlanetData.NoiseScale` 必须写入纯 Profile 的 `world.coordinateScale`，地形/气候频率按 `scale/0.01` 变化，径流单元、追踪河程、最短河程和前视距离按反比 `clamp(0.01/scale, 0.25, 4)` 变化；不能靠继续抬高 `river.startFlow` 把河道切得更碎，禁止恢复独立河流噪声、正弦水带或其他脱离高度图的函数绘制。
 - `MapGenerationContext` 现携带 `WorldAddress` 与 `DimensionDefinition`；基础种子按 `WorldKey + SeedSalt` 派生，保证同星球不同维度的地图、确定性 Item GUID 和 Chunk 差量隔离。
 - `ChunkMgr.TryCreateMapCore()` 按当前维度的 `MapCorePrefabId` 创建地图；矿洞运行时替换为 `ChunkGenerator_Cave`，地表继续使用 MapCore 原生成管线。
 - 矿洞的房间/隧道由 `CaveLayoutSampler` 以绝对世界坐标采样；每格先铺可走地面，封闭格再叠加不可走岩壁，保证 Tilemap、导航和 Chunk 存档读取同一顶层 `TileData`。
@@ -101,20 +102,16 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：为无头 `DeterministicChunkGenerator`、`ChunkMgr.WorldRuntime`、运行时区块窗口和生成 Profile 快照补齐通俗中文方法注释；仅整理说明，不改变生成规则或区块生命周期。
+- 2026-08-08：按长度二分试验只将无头河流 `river.maxTraceSteps` 从 256 提至 384，不改河宽、弯曲、密度或支流阈值；玩家已认可前两项观感，生成签名升至 12，试验区间与后续分支记录在 `.agents/river-heightmap-tuning.json`。
+- 2026-08-08：玩家的新世界“世界坐标缩放”现写入 WorldModel Profile；纯生成器与旧 `ChunkGenerator_River` 的径流单元、采样步长、最长/最短河程和前视距离按坐标倍率反比缩放，河宽与冲积半径按平方根缩放，安全范围为 `0.25x-4x`；生成签名升至 11，并补固定参数覆盖与 Golden Path 接线断言。
+- 2026-08-08：无头河网新增 `river.tributaryStartFlow=0.195` 两级显示：主河仍需满足 `river.startFlow=0.405` 与最短 96 格，低流量支流只有连入成熟主河才显示；固定种子 384x384 数据覆盖、Map Smoke、扩大视野 Golden Path 与 Console 均通过，截图可见连续长主河和细支流，记录已同步到 `.agents/river-heightmap-tuning.json`。
+- 2026-08-08：无头河流新增 `river.minimumVisibleCourseLength=96`，按四邻域整条剔除未达最短河程的短小河网，不再通过抬高汇流阈值制造更短片段；固定种子、世界半径 512、截图视野 24 的 Map Smoke 与 Golden Path 通过，三张截图未见孤立短碎河段，本轮记录已写入 `.agents/river-heightmap-tuning.json`。
+- 2026-08-08：无头河流改为高度梯度 D∞ 有序栅格化，主河按汇流扩宽并输出低坡 `riverFloodplain`/冲积沉积带；正常半径 512、缩放 24 的第 3 次 Golden Path 自动化与 Console 通过，但目视仍有长水平段且冲积带不够连续，三轮结果已写入 `.agents/river-heightmap-tuning.json`，本批停止重跑。
+- 2026-08-08：高度图水文调参记录落到 `.agents/river-heightmap-tuning.json`；Golden Path 固定种子确认 `river.startFlow=0.405` 的密度可接受但略偏稀，`river.meanderTieTolerance=0.011` 仍无法消除 D8 长直段，后续应改方向惯性/曲率代价而非继续盲目二分该参数。
+- 2026-08-08：修正无头 `DeterministicChunkGenerator` 的河流权威：移除独立 `riverField` 与环绕世界 `Math.Sin` 保底水带，改为复用地表高度/降水图进行确定性下坡汇流，并输出 `riverFlow` 供运行时与 Golden Path 验证。
+- 2026-08-08：`GeneralWorldEdge.prefab` 移除已删除 `SceneChange` 留下的 Missing Script；世界边界继续只保留表现与物理组件，不承担切场景职责。
 - 2026-08-07：迁移范围收缩为 Chunk 数据/表现分离；`ChunkRuntime` 和 `ChunkTerrainData` 负责区块权威，`ChunkView` 只负责渲染/碰撞/导航适配，所有玩法实体继续保留 `Item/Module`。
-- 2026-08-07：纯 Chunk 生成请求携带有限世界拓扑快照；地形、气候、河流和洞穴噪声在东西、南北及四角周期连续，休眠保留窗口按规范地址集合判断，禁止接缝对侧 Chunk 被误逐出。
-- 2026-08-06：新增 `ChunkMgr.TrySetChunkLoadSpeedMultiplier()` 公开 API，以 `0.1x-10x` 统一缩放加载队列、程序生成与 Tilemap 铺图预算，并接入 GM 世界页倍率输入框。
-- 2026-08-05：地形生成收敛为三通道 `TerrainNoiseKernel`、稳定 `BiomeResolver`、四阶段异步管线和 `TerrainPreviewSampler`；地图存储切换为 `TileStackCell[,]`，增加 Burst 地表/河流/洞穴 Job、Chunk Failed 收口与分行 `SetTilesBlock` 渲染。
-
-- 2026-08-04：`ChunkGenerator_Land` 可直接以 MapCore Prefab 配置、当前 `PlanetData` 与世界种子采样安全陆地；`ChunkGenerator_River` 支持显式种子查询以排除河流格。出生定位不实例化 Map/Chunk，之后由玩家流送模块加载周围区块；直接加载入口优先复用已激活 Chunk，旧存档零 `NoiseScale` 仍在运行时回退默认值。
-- 2026-08-03：地表河流改为性能优先的世界坐标连续水带，移除水文 halo/汇流/湖泊计算；Land、River、SpawnItems、Structures 统一受毫秒预算分帧，ChunkMgr 限制同时仅生成一个区块，资源列表不再重复生成。
-- 2026-08-03：MapCore 通过旧 Prefab 入口提取模板 `ItemData` 时不再运行 `Map.Load()` / `Map.Save()`，防止无 Chunk 父节点的临时 Map 启动地形生成或 Tilemap 存储。
-- 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；阻挡 Tile 与地面分层渲染，支持独立碰撞和单格刷新，同时不改变顶层 TileData 导航/存档契约。
-- 2026-07-31：矿洞地图由整块石地改为跨 Chunk 连续的房间与弯曲隧道；新增地面/岩壁双层 TileData、Tilemap 墙体碰撞和沿墙聚集矿床。
-- 2026-07-31：地图生成接入维度上下文和派生种子；新增全石地面、入口安全区和确定性矿脉生成器，各维度使用独立 `PlanetData.MapData_Dict`。
-- 2026-07-31：修复区块分帧生成或 Tilemap 写入期间被流送失活后形成整块黑洞；地图就绪状态新增 Tilemap 视觉完成条件，区块失活会等待地图完整就绪，重新激活时可恢复中断的视觉加载。
-- 2026-07-30：整理地形噪声 Inspector 与参数职责，统一世界坐标缩放默认值和合法性校验；新建世界会在点击创建时重新读取半径/尺度；旧河流噪声配置已明确标记为兼容项，正式河流仅配置 `ChunkGenerator_River` 水文参数。
-- 2026-07-30：遗迹普通物件支持模板内唯一 `MemberId` 与固定槽位容器内容；结构生成在世界 Item `Load()` 后按 `Mod_Inventory` 目标库存写入物品，并为容器内物品派生确定性 GUID。配置会进入结构目录内容哈希和区块程序生成基线。
 
 ## 修改后自动测试
 

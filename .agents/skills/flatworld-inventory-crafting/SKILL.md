@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 背包、制作、装备与农业定位
 
-> 最后核对：2026-08-05。
+> 最后核对：2026-08-08。
 
 ## 修改前先读
 
@@ -43,7 +43,7 @@ disable-model-invocation: false
 - 动作执行：JSON 只保存 `action.type + 参数`，由 `RecipeActionRunner` 的 C# Handler 执行；当前支持 `change_durability`。
 - 输入 `amount = 0` 表示参与配方签名匹配但不消耗，主要用于工具/催化材料；空槽同样为 0，但不填写 `itemId`/`tag`。
 - 配方运行时注册：`GameRes.recipeById` 按 ID 查询，`GameRes.recipeDict` 保留旧输入签名查询兼容。
-- 旧 `Recipe`/`CookRecipe` SO 只作为迁移和旧 MOD AssetBundle 兼容桥，不再是本体运行时配方来源。
+- 旧 `Recipe`/`CookRecipe` 类型只作为旧 MOD AssetBundle 兼容桥；本体旧配方 SO 目录 `Assets/4_ScriptObjects/4-4_Composite/`、`Assets/4_ScriptObjects/4-5_Cook/` 已删除，禁止恢复为双重真源。
 - 四个制作入口 `Mod_HandMade`、`Mod_HandCraftTable`、`Mod_MakeTable`、`Inventory_WorkBench` 只保留点击进度、库存引用、`CraftingCapabilities` 和成功表现，制作与预览必须调用 `CraftingService`，禁止恢复入口私有匹配、容量、扣料或产出算法。
 - `CraftingService.TryPrepareOutputs()` 是通用制作产量难度入口；两套熔炉兼容实现 `Mod_Furnace` 与 `Inventory_Furnace` 也必须同步应用制作产量和熔炼速度倍率，避免不同入口结果不一致。
 - `Mod_HandCraftTable` 固定 2x2，并允许产物在输出槽不足时写入扣料后释放的输入槽；大工作台允许在正方形输入网格中匹配最小包围区域。
@@ -67,7 +67,7 @@ disable-model-invocation: false
 - 自定义难度统一入口：`Mod_Food.ConsumeNutrition()` 处理饥饿消耗，`Mod_Stamina.AddStamina()` 按正负值处理耐力恢复/消耗，`Mod_Grow` 处理作物生长，`BerryBush` 处理野生浆果成长与产量，`Mod_Fuel.ConsumeFuel()` 处理燃料消耗。
 - 农具/杂草表现：`Assets/5_Scripts/5-3_GamePlay/Items/Food/`。
 - 耕地数据：`Assets/5_Scripts/5-1_Data/TileData/TileData_Farmland.cs`。
-- 烹饪 SO：`Assets/4_ScriptObjects/4-5_Cook/`。
+- 烹饪与熔炼配方同样维护在 `Assets/StreamingAssets/GameConfig/Recipes/cooking/`、`smelting/` JSON 分包中。
 
 ## 资源目录
 
@@ -91,6 +91,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：删除已完整迁移到 JSON 的本体旧配方 SO 与对应 Addressables 目录条目：`4-4_Composite`、`4-5_Cook`；保留旧配方类型仅用于 MOD AssetBundle 兼容。
 - 2026-08-07：将旧 `Assets/9_Anim` 的通用武器 Animator 与三段动画归并到 `Assets/8_Animations/Item/Weapon/`，保留 GUID 和 `Idle_0/Attack_1/Attack_2` 状态契约。
 - 2026-08-07：删除配方与 Prefab 的 Excel 同步链，配方以 manifest + 8 个 JSON 分包为唯一真源；内容校验只验证 JSON，建筑生成器通过 `RecipeJsonEditorService` 定向重连产物 ID。
 - 2026-08-05：`Inventory.OnValidate()` 在动态组件或空序列化数据场景下先创建 `Inventory_Data`，避免快捷栏及编辑器校验因空数据抛异常。
@@ -100,7 +101,6 @@ disable-model-invocation: false
 - 2026-07-31：背包、装备、手工制作和快捷栏接入稳定手柄 Action；移除手工制作硬编码 `Input.GetKeyDown(H)`，模态库存面板增加手柄焦点与可嵌套玩法输入锁。
 - 2026-07-30：完成首种苹果作物闭环；`Mod_Seed` 收敛为播种入口，`Mod_Grow` 统一水肥/天气/难度成长、阶段、成熟、一次性收获与存档，AppleTree 移除无限 `Mod_Production`，Apple 移除播种模块，Fertilizer 接入水肥补给。
 - 2026-07-30：遗迹生成支持按真实库存槽位配置容器物品；运行时复用 `Item.Get_NewItemData()` 初始化完整模块数据，覆盖内部 GUID 为结构种子派生值，并通过既有 `Inventory_ModuleData` 自然进入存档基线。
-- 2026-07-29：统一内容校验器会读取配方 manifest 和全部启用分包，校验配方结构、跨分包重复 ID 及输入/输出 `itemId` 引用；缺失物品 ID 在构建前作为错误报告。
 
 ## 修改后自动测试
 

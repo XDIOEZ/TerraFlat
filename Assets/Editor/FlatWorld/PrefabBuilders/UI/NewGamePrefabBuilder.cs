@@ -118,7 +118,7 @@ public static class NewGamePrefabBuilder
         TMP_Text title = CreateText("新世界标题", card, "创建新世界", font, 42f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(title.rectTransform, new Vector2(42f, -60f), new Vector2(600f, 58f), new Vector2(0f, 1f));
 
-        TMP_Text description = CreateText("新世界说明", card, "为新的旅程命名，并决定这个世界最初的轮廓。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text description = CreateText("新世界说明", card, "名称可选；决定这个世界最初的轮廓。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(description.rectTransform, new Vector2(42f, -116f), new Vector2(720f, 30f), new Vector2(0f, 1f));
 
         CreateButton(card, font, GameManager.NewGameBackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, 17f, new Vector2(1f, 1f));
@@ -141,11 +141,11 @@ public static class NewGamePrefabBuilder
         TMP_Text heading = CreateText("身份与存档标题", panel.transform, "身份与存档", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(24f, -58f), new Vector2(320f, 34f), new Vector2(0f, 1f));
 
-        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "你在这个世界中的身份", new Vector2(24f, -108f), 452f);
-        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "例如：旅人", string.Empty, new Vector2(24f, -152f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "可留空，自动生成数字", new Vector2(24f, -108f), 452f);
+        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "可选，例如：旅人", string.Empty, new Vector2(24f, -152f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
 
-        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "用于识别这段旅程", new Vector2(24f, -244f), 452f);
-        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "例如：篝火以北", string.Empty, new Vector2(24f, -288f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "可留空，自动生成数字", new Vector2(24f, -244f), 452f);
+        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "可选，例如：篝火以北", string.Empty, new Vector2(24f, -288f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
 
         Image note = CreateImage("存档命名提示底板", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
         SetRect(note.rectTransform, new Vector2(24f, -380f), new Vector2(452f, 50f), new Vector2(0f, 1f));
@@ -157,7 +157,7 @@ public static class NewGamePrefabBuilder
         noteAccent.rectTransform.sizeDelta = new Vector2(4f, 0f);
         noteAccent.raycastTarget = false;
 
-        TMP_Text noteText = CreateText("存档命名提示", note.transform, "名称可稍后修改；存档会保存在本地。", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text noteText = CreateText("存档命名提示", note.transform, "两个名称都可留空；系统会自动填写同一个随机数字。", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         Stretch(noteText.rectTransform, 18f, 12f, 8f, 8f);
     }
 
@@ -195,9 +195,18 @@ public static class NewGamePrefabBuilder
         SetRect(profileEyebrow.rectTransform, new Vector2(18f, -14f), new Vector2(320f, 22f), new Vector2(0f, 1f));
         profileEyebrow.characterSpacing = 2f;
 
-        CreateProfileRow(profile.transform, font, "地形生成", "程序化生成", 42f);
-        CreateProfileRow(profile.transform, font, "世界种子", "自动随机", 70f);
-        CreateProfileRow(profile.transform, font, "出生区域", "自动寻找安全陆地", 98f);
+        TMP_Text seedHint = CreateText("世界种子提示", profile.transform, "留空则随机 · 支持数字或文字", font, 12f, Muted, FontStyles.Normal, TextAlignmentOptions.Right);
+        SetRect(seedHint.rectTransform, new Vector2(-18f, -14f), new Vector2(300f, 22f), new Vector2(1f, 1f));
+
+        CreateInput(
+            profile.transform,
+            font,
+            GameManager.NewGameSeedInputKey,
+            "留空自动生成随机种子",
+            string.Empty,
+            new Vector2(18f, -42f),
+            new Vector2(512f, 52f),
+            TMP_InputField.ContentType.Standard);
     }
 
     private static void BuildFooter(Transform card, TMP_FontAsset font)
@@ -577,14 +586,6 @@ public static class NewGamePrefabBuilder
         SetRect(titleText.rectTransform, position, new Vector2(width, 24f), new Vector2(0f, 1f));
         TMP_Text subtitleText = CreateText(name + "_说明", parent, subtitle, font, 12f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(subtitleText.rectTransform, position + new Vector2(0f, -24f), new Vector2(width, 22f), new Vector2(0f, 1f));
-    }
-
-    private static void CreateProfileRow(Transform parent, TMP_FontAsset font, string label, string value, float top)
-    {
-        TMP_Text labelText = CreateText(label + "_标签", parent, label, font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(labelText.rectTransform, new Vector2(18f, -top), new Vector2(220f, 24f), new Vector2(0f, 1f));
-        TMP_Text valueText = CreateText(label + "_数值", parent, value, font, 14f, Cream, FontStyles.Bold, TextAlignmentOptions.Right);
-        SetRect(valueText.rectTransform, new Vector2(-18f, -top), new Vector2(280f, 24f), new Vector2(1f, 1f));
     }
 
     private static TMP_InputField CreateInput(Transform parent, TMP_FontAsset font, string name, string placeholderValue, string initialValue, Vector2 position, Vector2 size, TMP_InputField.ContentType contentType)

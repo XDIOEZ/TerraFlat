@@ -1,4 +1,3 @@
-using System.IO;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 
@@ -10,7 +9,7 @@ namespace FlatWorld.GameTest.Core
         [Test]
         [Category("Core.Smoke")]
         [Category("Smoke")]
-        public void RequiredEntryPointsAndScenesExist()
+        public void RequiredEntryPointsScenesAndOptionalNamesRemainValid()
         {
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs", "GameManager");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/NewWorldCreationRequest.cs", "NewWorldCreationRequest");
@@ -18,10 +17,17 @@ namespace FlatWorld.GameTest.Core
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/SceneMgr.cs", "SceneMgr");
             GameTestAssertions.AssertAssetExists("Assets/3_Scenes/GameStartScene.unity");
             GameTestAssertions.AssertAssetExists("Assets/3_Scenes/Manager.unity");
+
+            var request = new NewWorldCreationRequest(
+                " ",
+                null,
+                "12345",
+                new PlanetData { Name = "测试世界" },
+                new TimeData());
+
+            Assert.That(request.SaveName, Does.Match("^[0-9]{8}$"));
+            Assert.That(request.PlayerName, Is.EqualTo(request.SaveName));
+            Assert.That(request.TryValidate(out string error), Is.True, error);
         }
-
-
-
-
     }
 }

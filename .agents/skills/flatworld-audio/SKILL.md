@@ -43,6 +43,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-08：`GameStartScene/Main Camera` 固定挂载 `AudioListener`，保证主菜单及资源加载阶段始终存在监听器；进入世界后随主菜单场景卸载，由玩家相机监听器接管。
 - 2026-07-30：新增原创 `weather.rain.loop` Ambient Cue；降雨开始时淡入、结束时淡出，状态未变化不重复播放。
 - 2026-07-28：从原音频与对话混合 Skill 中拆分，音频 Skill 仅维护音频服务、Cue、路由与资源边界。
 - 2026-07-27：音频统一通过跨场景 `AudioService` 与 Cue Catalog。

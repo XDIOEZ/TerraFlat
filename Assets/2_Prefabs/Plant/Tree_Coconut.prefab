@@ -562,36 +562,12 @@ PrefabInstance:
       value: 4916460273582997509
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.HurtActions.Array.size
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DeathActions.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.HurtActions.Array.data[0]
-      value: 4916460273582997507
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DeathActions.Array.data[0]
-      value: 4916460273582997506
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.Weakness.Array.data[0].Tag
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.Weakness.Array.data[0].Level
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506]
-      value: GamePlay DamageReceiver/DamageReciver_Action_SpawnItem
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507]
-      value: GamePlay DamageReceiver/DamageReciver_Action_SpawnItem
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509]
@@ -606,14 +582,6 @@ PrefabInstance:
       value: Chicken
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509].Enabled
       value: 1
       objectReference: {fileID: 0}
@@ -626,14 +594,6 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].SpawnRadius
-      value: 1.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].SpawnRadius
-      value: 1.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509].SpawnRadius
       value: 2
       objectReference: {fileID: 0}
@@ -642,40 +602,8 @@ PrefabInstance:
       value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].ThrowDuration
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].ThrowDuration
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509].ThrowDuration
       value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].Loot.MaxAmount
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].Loot.MinAmount
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].ThrowArcHeight
-      value: 0.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].Loot.MaxAmount
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].Loot.MinAmount
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].ThrowArcHeight
-      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509].Loot.MaxAmount
@@ -690,22 +618,6 @@ PrefabInstance:
       value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].Loot.DropChance
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].Loot.LootPrefab
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].Loot.DropChance
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].Loot.LootPrefab
-      value: 
-      objectReference: {fileID: 4346459173911706397, guid: d998a14325020fb4d9425377c26c66db, type: 3}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509].Loot.DropChance
       value: 0.01
       objectReference: {fileID: 0}
@@ -714,24 +626,8 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4346459173911706397, guid: d998a14325020fb4d9425377c26c66db, type: 3}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].ThrowBezierOffset
-      value: 0.8
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].ThrowBezierOffset
-      value: 0.8
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509].ThrowBezierOffset
       value: 0.8
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997506].Loot.LootPrefabName
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: managedReferences[4916460273582997507].Loot.LootPrefabName
-      value: Coconut_Green
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[4916460273582997509].Loot.LootPrefabName

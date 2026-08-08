@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 /// <summary>
 /// 创建新世界所需的完整输入快照。
@@ -7,6 +8,11 @@ using System;
 [Serializable]
 public sealed class NewWorldCreationRequest
 {
+    private const uint GeneratedNameMinimum = 10000000;
+    private const uint GeneratedNameRange = 90000000;
+
+    #region 请求数据
+
     public string SaveName { get; }
     public string PlayerName { get; }
     public string Seed { get; }
@@ -14,6 +20,10 @@ public sealed class NewWorldCreationRequest
     public TimeData TimeData { get; }
     public GameDifficultyId Difficulty { get; }
     public GameDifficultyRuleValues CustomDifficultyRules { get; }
+
+    #endregion
+
+    #region 构造与默认命名
 
     public NewWorldCreationRequest(
         string saveName,
@@ -24,8 +34,11 @@ public sealed class NewWorldCreationRequest
         GameDifficultyId difficulty = GameDifficultyId.Simple,
         GameDifficultyRuleValues customDifficultyRules = null)
     {
-        SaveName = saveName?.Trim() ?? string.Empty;
-        PlayerName = playerName?.Trim() ?? string.Empty;
+        bool requiresGeneratedName = string.IsNullOrWhiteSpace(saveName) ||
+                                     string.IsNullOrWhiteSpace(playerName);
+        string generatedName = requiresGeneratedName ? CreateRandomNumericName() : string.Empty;
+        SaveName = ResolveNameOrDefault(saveName, generatedName);
+        PlayerName = ResolveNameOrDefault(playerName, generatedName);
         Seed = seed?.Trim() ?? string.Empty;
         PlanetData = planetData == null
             ? null
@@ -37,6 +50,28 @@ public sealed class NewWorldCreationRequest
         CustomDifficultyRules = (customDifficultyRules ?? new GameDifficultyRuleValues()).Clone();
         CustomDifficultyRules.Normalize();
     }
+
+    /// <summary>生成八位纯数字名称，供未命名的新世界和玩家使用。</summary>
+    public static string CreateRandomNumericName()
+    {
+        unchecked
+        {
+            uint randomBits = (uint)Guid.NewGuid().GetHashCode() ^ (uint)Environment.TickCount;
+            uint value = GeneratedNameMinimum + randomBits % GeneratedNameRange;
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>保留玩家输入；空白名称统一使用本次请求的随机数字。</summary>
+    private static string ResolveNameOrDefault(string requestedName, string generatedName)
+    {
+        string value = requestedName?.Trim() ?? string.Empty;
+        return string.IsNullOrWhiteSpace(value) ? generatedName : value;
+    }
+
+    #endregion
+
+    #region 请求验证
 
     public bool TryValidate(out string error)
     {
@@ -87,4 +122,6 @@ public sealed class NewWorldCreationRequest
         error = string.Empty;
         return true;
     }
+
+    #endregion
 }

@@ -34,10 +34,11 @@ namespace Gaskellgames.FolderSystem
             Dictionary<string,Texture> iconDictionary = IconDictionaryCreator.iconDictionary;
 
             // check for valid draw
-            if (path == "") { return; }
+            // 脚本或目录移动后，ProjectBrowser 可能短暂回调已经失效的旧 GUID。
+            if (string.IsNullOrEmpty(path) || !AssetDatabase.IsValidFolder(path)) { return; }
             if (Event.current.type != EventType.Repaint) { return; }
+            if (iconDictionary == null) { return; }
             if (!iconDictionary.ContainsKey(Path.GetFileName(path))) { return; }
-            if (!File.GetAttributes(path).HasFlag(FileAttributes.Directory)) { return; }
 
             // get image position
             float positionX = position.x - 1;

@@ -93,6 +93,27 @@ namespace FlatWorld.WorldModel
         public IReadOnlyDictionary<string, string> TextParameters => textParameters;
         /// <summary>游戏自带生成器使用的、已经整理和检查过的设置。</summary>
         public ChunkGenerationSettingsSnapshot Settings { get; }
+
+        /// <summary>复制 Profile 并覆盖一个数字参数；用于把当前世界级设置安全传给后台任务。</summary>
+        public ChunkGenerationProfileSnapshot WithNumericParameter(string id, double value)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("Parameter id is required.", nameof(id));
+            if (double.IsNaN(value) || double.IsInfinity(value))
+                throw new ArgumentOutOfRangeException(nameof(value));
+
+            var numbers = new Dictionary<string, double>(numericParameters, StringComparer.Ordinal)
+            {
+                [id] = value
+            };
+            return new ChunkGenerationProfileSnapshot(
+                ProfileId,
+                Signature,
+                Width,
+                Height,
+                numbers,
+                new Dictionary<string, string>(textParameters, StringComparer.Ordinal));
+        }
     }
 
     /// <summary>
