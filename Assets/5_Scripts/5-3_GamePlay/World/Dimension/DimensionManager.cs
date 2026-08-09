@@ -65,9 +65,11 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
     public string GetActiveMapCorePrefabId()
     {
+#pragma warning disable 0618 // 旧 ChunkMgr 兼容路径仍需读取旧 MapCore 配置；新版 WorldModel 不使用该入口。
         return string.IsNullOrWhiteSpace(ActiveDefinition?.MapCorePrefabId)
             ? "MapCore"
             : ActiveDefinition.MapCorePrefabId;
+#pragma warning restore 0618
     }
 
     public ChunkGenerationProfileSO GetActiveGenerationProfile()

@@ -27,6 +27,7 @@ public sealed class ChunkView : MonoBehaviour
     private void Awake()
     {
         EnsureNaturalItemRenderer();
+        EnsureLightOccluderRenderer();
     }
 
     public void Bind(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime, bool includeNavigation = true)
@@ -158,6 +159,19 @@ public sealed class ChunkView : MonoBehaviour
         naturalItems.AddComponent<ChunkNaturalItemRenderer>();
     }
 
+    /// <summary>旧 ChunkView Prefab 无需手工改层级，首次加载时自动补齐 LightOccluders 子节点。</summary>
+    private void EnsureLightOccluderRenderer()
+    {
+        ChunkLightOccluderRenderer renderer =
+            GetComponentInChildren<ChunkLightOccluderRenderer>(true);
+        if (renderer != null)
+            return;
+
+        var lightOccluders = new GameObject("LightOccluders");
+        lightOccluders.transform.SetParent(transform, false);
+        lightOccluders.AddComponent<ChunkLightOccluderRenderer>();
+    }
+
     /// <summary>建立租约和事件，再由同步或分帧入口绑定各表现组件。</summary>
     private void PrepareBinding(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime,
         bool includeNavigation)
@@ -184,12 +198,14 @@ public sealed class ChunkView : MonoBehaviour
             return 1;
         if (renderer is ChunkCollisionRenderer)
             return 2;
-        if (renderer is ChunkGrassRenderer)
+        if (renderer is ChunkLightOccluderRenderer)
             return 3;
-        if (renderer is ChunkNavigationBinder)
+        if (renderer is ChunkGrassRenderer)
             return 4;
-        if (renderer is ChunkNaturalItemRenderer)
+        if (renderer is ChunkNavigationBinder)
             return 5;
+        if (renderer is ChunkNaturalItemRenderer)
+            return 6;
         return 2;
     }
 }

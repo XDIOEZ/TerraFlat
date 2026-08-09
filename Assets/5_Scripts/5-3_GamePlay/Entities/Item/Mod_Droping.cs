@@ -29,9 +29,17 @@ public class Mod_Droping : Module
     public override void Load()
     {
         modData.ReadData(ref drop);
-        LastChunk = item != null ? item.GetComponentInParent<Chunk>() : null;
-		// 新版生态物品挂在 NaturalItems 下，不允许掉落动画回退到旧 Chunk 加载链。
-		usesLegacyChunkOwnership = LastChunk != null || !IsWorldModelNaturalItem(item);
+
+        // 掉落物先尝试绑定新版 ChunkView。新区块窗口已启用时，即使当前画面尚未
+        // 完成绑定也不能回退到旧 Chunk 查询，否则灌木死亡掉落会触发同步加载卡顿。
+        bool attachedToWorldModel = item != null &&
+            ItemWorldPlacement.TryAttachWorldModelDrop(item, item.transform.position);
+        bool worldModelActive = ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive;
+        usesLegacyChunkOwnership = !attachedToWorldModel && !worldModelActive;
+        LastChunk = usesLegacyChunkOwnership && item != null
+            ? item.GetComponentInParent<Chunk>()
+            : null;
         item.itemData.Stack.CanBePickedUp = false;
     }
 
@@ -64,6 +72,14 @@ public class Mod_Droping : Module
         // Chunk 归属按地面轨迹计算。贝塞尔高度和 arcHeight 只是表现层高度，
         // 不能让物品在抛起时误切换到上方相邻 Chunk。
         Vector2 ownershipPos = WorldTopologyRuntime.NormalizePosition(Vector2.Lerp(drop.startPos, drop.endPos, t));
+
+        // 区块画面可能正在分帧绑定；新版掉落在动画期间重试归属，
+        // 仍只访问 WorldModel，不触发旧 Chunk 加载。
+        if (!usesLegacyChunkOwnership &&
+            drop.item.GetComponentInParent<ChunkNaturalItemRenderer>(true) == null)
+        {
+            ItemWorldPlacement.TryAttachWorldModelDrop(drop.item, ownershipPos);
+        }
 
         // 使用存储在drop中的控制点进行贝塞尔插值计算位置
         Vector2 pos = Bezier2(drop.startPos, drop.controlPos, drop.endPos, t);
@@ -98,13 +114,6 @@ public class Mod_Droping : Module
             drop = null; // 销毁droping
         }
     }
-
-	/// <summary>判断物品是否由新版 WorldModel 的 NaturalItems 节点管理。</summary>
-	private static bool IsWorldModelNaturalItem(Item targetItem)
-	{
-		return targetItem != null &&
-			targetItem.GetComponentInParent<ChunkNaturalItemRenderer>(true) != null;
-	}
 
     /// <summary>
     /// 更新物品所属的 Chunk。只有确认目标 Chunk 可用后才解除旧归属。

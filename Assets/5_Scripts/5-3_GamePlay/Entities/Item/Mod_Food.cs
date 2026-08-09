@@ -41,6 +41,9 @@ public readonly struct FoodConsumeResult
 
 public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 {
+    // 口渴状态每 5 秒结算一次单次伤害，避免按模块 Tick 连续掉血。
+    private const float WaterDamageTickInterval = 5f;
+
     public override string CanonicalModuleId => ModText.Food;
 
     [Serializable]
@@ -102,6 +105,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         public bool Enabled = true;
         public float HealSpeed = 1f;
+        [Tooltip("口渴状态每次扣除的生命值（每 5 秒触发一次）")]
         public float WaterSelfHurt = 1f;
         public float ProteinSelfHurt = 1f;
         public float VitaminSelfHurt = 1f;
@@ -190,6 +194,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     [MemoryPackIgnore]
     private float _hungerDamageTickTimer;
 
+    [MemoryPackIgnore]
+    private float _waterDamageTickTimer; // 口渴伤害累计计时
+
     [NonSerialized]
     private float _runtimeNutritionConsumeMultiplier = 1f;
 
@@ -222,6 +229,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         FoodModData.ApplyToFoodData();
         RuntimeNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
+        _waterDamageTickTimer = 0f;
 
         ResolveFoodRuntimeModules();
         LoadRuntimeStateFromLegacyData();
@@ -276,6 +284,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         EatingProgress = 0f;
         RuntimeNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
+        _waterDamageTickTimer = 0f;
         ConsumeCompleted = null;
         ReleaseRuntimeBindings(destroyPanel: true);
     }
@@ -285,6 +294,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         EatingProgress = 0f;
         RuntimeNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
+        _waterDamageTickTimer = 0f;
         ConsumeCompleted = null;
         ReleaseRuntimeBindings(destroyPanel: true);
     }
@@ -1000,6 +1010,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         if (!HealthState.Enabled || _damageReceiver == null)
         {
+            _waterDamageTickTimer = 0f;
             return;
         }
 
@@ -1028,7 +1039,16 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
         if (nutrition.Water <= 0)
         {
-            _damageReceiver.ForceHurt(HealthState.WaterSelfHurt * timeDelta);
+            _waterDamageTickTimer += Mathf.Max(0f, timeDelta);
+            while (_waterDamageTickTimer >= WaterDamageTickInterval)
+            {
+                _damageReceiver.ForceHurt(HealthState.WaterSelfHurt);
+                _waterDamageTickTimer -= WaterDamageTickInterval;
+            }
+        }
+        else
+        {
+            _waterDamageTickTimer = 0f;
         }
 
         if (nutrition.Vitamins <= 0)
@@ -1041,6 +1061,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         Data.nutrition.Max();
         _hungerDamageTickTimer = 0f;
+        _waterDamageTickTimer = 0f;
         DataUpdate?.Invoke();
 
         if (Data.ShowCanvas)

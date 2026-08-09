@@ -1,4 +1,5 @@
 using NaughtyAttributes;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -350,52 +351,46 @@ public class Module_DiscardItem : Mod_BaseDroper
             newItemData.Stack.CanBePickedUp = false;
             newItemData.inHand = false;
 
-            // 减少原物品数量
-            slot.Amount -= count;
-
             Item newObject = null;
-            // 实例化新物体
-            ChunkMgr.Instance.TryGetActiveChunkByPos(Chunk.GetChunkPosition(transform.position), out Chunk chunk);
-            if (chunk != null)
+            try
             {
-                newObject = ItemMgr.Instance.InstantiateItem(newItemData, chunk.gameObject);
+                // 不再先查旧 Chunk；ItemWorldPlacement 和 Mod_Droping 会接入新版 ChunkView。
+                Vector2 startPos = transform.position;
+                Vector2 endPos = DropPos;
+                newObject = ItemMgr.Instance.InstantiateItem(
+                    newItemData,
+                    startPos,
+                    Quaternion.identity,
+                    Vector3.one * 0.5f);
+                if (newObject == null)
+                    throw new InvalidOperationException("ItemMgr 未返回掉落物实例。");
+
+                Item newItem = newObject.GetComponent<Item>();
+                if (newItem == null)
+                    throw new InvalidOperationException("新物体中缺少 Item 组件。");
+
+                float distance = WorldTopologyRuntime.Distance(startPos, endPos);
+                float animTime = baseDropDuration + distance * distanceSensitivity;
+
+                newItem.Load();
+                newItem.SetInHand(false);
+                DropItem_Pos(newItem, startPos, endPos, animTime);
+
+                // 生成和掉落动画都成功后才提交背包扣减，失败时不会丢失玩家物品。
+                slot.Amount -= count;
+                if (slot.Amount <= 0)
+                    slot.ClearData();
             }
-
-            if (newObject == null)
+            catch (Exception exception)
             {
-                Debug.LogError("实例化失败，找不到资源：" + newItemData.IDName);
-                return;
-            }
+                if (newObject != null && !newObject.DestructionHandled &&
+                    ItemMgr.Instance != null)
+                {
+                    ItemMgr.Instance.DespawnItem(newObject,
+                        saveData: false, detachFromChunk: false);
+                }
 
-            Item newItem = newObject.GetComponent<Item>();
-            if (newItem == null)
-            {
-                Debug.LogError("新物体中缺少 Item 组件！");
-                return;
-            }
-
-            // 使用 InstantiateItem 中新生成的 GUID 和数据
-            // 不再手动设置 newItem.itemData = newItemData，因为 InstantiateItem 已经处理了这一步
-
-            // 设置掉落物状态：缩放为0.5倍
-            newItem.transform.localScale = Vector3.one * 0.5f;
-
-            // 计算位置
-            Vector2 startPos = transform.position;
-            Vector2 endPos = DropPos;
-
-            float distance = WorldTopologyRuntime.Distance(startPos, endPos);
-            float animTime = baseDropDuration + distance * distanceSensitivity;
-
-            // 调用父类 DropItem 实现动画控制
-            newItem.Load();
-            newItem.SetInHand(false);
-            DropItem_Pos(newItem, startPos, endPos, animTime);
-
-            // 只有当物品完全丢弃完后才清除数据
-            if (slot.Amount <= 0)
-            {
-                slot.ClearData();
+                Debug.LogError($"掉落物生成失败：{newItemData.IDName}，{exception.Message}", this);
             }
         }
 
