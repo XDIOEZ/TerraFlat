@@ -83,7 +83,13 @@
       "description": "用石料制作的小刀。",
       "volume": 3,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[石制小刀]"
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[石制小刀]",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "flipX": true
       },
       "modules": {
         "damage": {
@@ -112,7 +118,13 @@
       "description": "用铜制作的小刀。",
       "volume": 3,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_19]"
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_19]",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "flipX": true
       },
       "modules": {
         "damage": {
@@ -147,7 +159,13 @@
       "description": "用骨料制作的小刀。",
       "volume": 2,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_006.png"
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_006.png",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 315.0
+        },
+        "flipX": false
       },
       "modules": {
         "damage": {
@@ -169,7 +187,13 @@
       "description": "用燧石制作的小刀。",
       "volume": 2,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Gun/iron-weapons.png[iron-weapons_248]"
+        "spriteAddress": "Assets/6_Art/item/Gun/iron-weapons.png[iron-weapons_248]",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 315.0
+        },
+        "flipX": true
       },
       "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Knife_Flint.prefab"
     }
