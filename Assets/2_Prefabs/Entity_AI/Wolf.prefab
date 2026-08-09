@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  detectionRadius: 14
+  detectionRadius: 40
   itemLayer:
     serializedVersion: 2
     m_Bits: 1527
@@ -702,7 +702,7 @@ MonoBehaviour:
   playerTags:
   - Player
   detectorRefreshInterval: 0.6
-  allyCallDistance: 15
+  allyCallDistance: 40
   packAssistDuration: 5
   packCallCooldown: 0.8
   enableChaseFormation: 1

@@ -199,7 +199,7 @@ MonoBehaviour:
   statusTint: {r: 1, g: 1, b: 1, a: 1}
   statusTintStrength: 0
   statusTransitionSeconds: 0.12
-  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
   defaultFlashDuration: 0.2
   defaultFlashCount: 1
 --- !u!114 &912345678901234574

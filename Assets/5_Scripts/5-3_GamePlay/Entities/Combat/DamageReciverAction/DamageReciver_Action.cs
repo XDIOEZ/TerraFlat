@@ -107,15 +107,10 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
 
     private static Item InstantiateDropItem(string itemName, Vector2 spawnPos)
     {
-        Chunk chunk = null;
-        if (ChunkMgr.Instance != null)
-        {
-            ChunkMgr.Instance.TryGetActiveChunkByPos(Chunk.GetChunkPosition(spawnPos), out chunk);
-        }
-
-        Item spawnedItem = chunk != null
-            ? ItemMgr.Instance.InstantiateItem(itemName, spawnPos, Quaternion.identity, Vector3.one, chunk.gameObject)
-            : ItemMgr.Instance.InstantiateItem(itemName, spawnPos);
+        // 归属由 Mod_Droping.Load 统一绑定到新版 ChunkView，
+        // 这里不再同步查询旧 Chunk，也不在击杀瞬间触发旧区块加载。
+        Item spawnedItem = ItemMgr.Instance.InstantiateItem(
+            itemName, spawnPos, Quaternion.identity, Vector3.one);
 
         if (spawnedItem == null)
         {

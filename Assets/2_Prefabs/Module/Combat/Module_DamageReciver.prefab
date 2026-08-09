@@ -146,7 +146,7 @@ MonoBehaviour:
   hurtAudioCueId: 
   flashCount: 1
   flashDuration: 0.2
-  flashColor: {r: 1, g: 1, b: 1, a: 1}
+  flashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
   shakeDuration: 0.15
   shakeMagnitude: 0.1
   PanelPrefab: {fileID: 7613977154932231161, guid: b614f979ae7094b42b6d0f058d4052cc, type: 3}

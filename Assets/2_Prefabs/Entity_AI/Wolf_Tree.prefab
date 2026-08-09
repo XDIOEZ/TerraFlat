@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  detectionRadius: 8
+  detectionRadius: 40
   itemLayer:
     serializedVersion: 2
     m_Bits: 1527
