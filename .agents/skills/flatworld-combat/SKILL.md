@@ -5,7 +5,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 # FlatWorld 战斗与技能定位
 
-> 最后核对：2026-08-07。
+> 最后核对：2026-08-09。
 
 ## 修改前先读
 
@@ -66,20 +66,21 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：修复幽灵受伤不闪红：幽灵 Prefab 增加 `ActorRenderEffectController` 与 `ActorRenderColorEffect`，`DamageReceiver` 现在能找到统一 MPB 受击模块；伤害结算和死亡边界不变。
+- 2026-08-09：AI 攻击窗口启用时仅对 `Mod_Damage_AI` 主动执行 `OverlapCollider` 重叠扫描，并按窗口记录已命中接收器，修复野猪首击缺少 `OnTriggerEnter2D` 时的伤害遗漏；普通武器仍保持原触发逻辑。
+- 2026-08-09：受击闪烁统一改为明显红色；`DamageReceiver.flashColor`、`ActorRenderColorEffect.hitFlashColor`、角色 Animator Prefab 和 Sprite Shader 默认值一致，仍通过 MPB 播放，不创建材质实例。
+- 2026-08-09：战斗战利品生成不再在击杀瞬间查旧 `Chunk`；`DamageReciver_Action_SpawnItem` 交给 `Mod_Droping` 绑定新版 `ChunkView` 临时节点，灌木死亡掉落不再触发旧区块同步加载。
+- 2026-08-09：环境口渴伤害继续统一调用 `DamageReceiver.ForceHurt()`，由 `Mod_Food` 每 5 秒发送一次 `WaterSelfHurt`；不改 `DamageReceiver` 的权威结算与环境伤害倍率。
 - 2026-08-09：野猪独立 `AttackTrigger_AI` 覆盖改为 `2.2×0.9`、圆角 `0.45` 的横向胶囊伤害触发盒；AI 进入攻击同步按横向 `1.6`、竖向 `0.45` 椭圆判断，避免上下方向空挥。
 - 2026-08-09：`AI_AttackController` 在伤害窗口启用时才同步攻击事件状态；野猪起手首帧继续保持 `IsAttacking=false`，避免首击发生额外攻击开始/停止脉冲，伤害窗口参数不变。
 - 2026-08-09：通用武器动画模块在载入与回到待机时强制关闭命中碰撞体；`Axe.prefab` 修正伤害模块错误的 `m_Enabled=1` 覆盖，斧头及同类手持物只会在攻击动画命中帧内结算伤害。
 - 2026-08-09：管理员无敌默认改为关闭，运行时重置同样保持关闭；默认名为“管理员”的 Player Prefab 现在可正常受伤和死亡，仍可由管理员开关主动开启无敌。
 - 2026-08-09：野猪 `Attack.anim` 禁用循环并延长至一次伤害起手到下一次起手的完整 `2.18s` 周期；`0.06s` 开始、`0.12s` 持续的伤害窗口和前冲峰值保持不变，避免冷却中重复播放攻击表演。
-- 2026-08-09：修复身体部位生命的零权重残血软锁：随机命中无候选时回退结算仍存活部位，确保生命可降至 0 并进入既有死亡流程；`Combat.Smoke` 增加回归覆盖。
-- 2026-08-09：管理员无敌改为 `PlayerAdminController` 可切换运行时状态；开启时即时恢复受击生命并拦截濒死，关闭后完整恢复普通伤害、环境伤害与死亡流程。
-- 2026-08-08：`DamageReceiver` 的受击闪白改由角色渲染 MPB 模块驱动，连续命中震动可重触发且不再创建材质实例。
-- 2026-08-08：野猪 `Attack.anim` 增加 `0→0.22→0` 的局部前冲位置曲线，峰值覆盖 `0.2s` 伤害窗口，与 `AttackTrigger_AI` 的前方判定盒保持一致。
-- 2026-08-08：野猪 `AttackTrigger_AI` 的伤害触发盒调整为 `1.6×1.6`，并与 AI 攻击距离 `1.4` 对齐，减少攻击动画已播放但玩家未进入伤害碰撞体的情况。
 
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/Combat/CombatSmokeTests.cs`；当前基础覆盖伤害接收、零权重身体部位的残血回退、受击减速与恢复、技能管理和武器 Prefab 入口。
+- AI 攻击窗口首击重叠扫描回归位于 `Assets/GameTest/AI/AISmokeTests.cs`（`AI.Smoke`），仅断言 `Mod_Damage_AI` 进入补查路径，普通武器模块不进入。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；战斗测试约定目录：`Assets/GameTest/Combat/`；场景目录：`Assets/GameTest/Scenes/Combat/`；冒烟分类：`Combat.Smoke`。
 - 新增伤害、死亡、掉落、武器或技能行为时必须增加系统测试；修复 Bug 时先增加回归测试。攻击到受伤、死亡与掉落主流程变化时同步更新战斗冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；伤害随机项必须固定输入，死亡和掉落事件必须验证不会重复触发。

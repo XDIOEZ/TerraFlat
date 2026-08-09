@@ -72,6 +72,7 @@ Summoner（库存中的持久化载体）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：新区块静态阻挡层新增 `LightOccluders` 子层；石墙写入/移除 `ChunkTerrainData.BlockingTileId` 时同步刷新 URP 2D 阴影体，动态建筑仍保持 GameObject 与 `BuildingOccupancyRegistry` 模型。
 - 2026-08-09：13 个建筑召唤器的 Item/Module 数据迁移到 `Items/shells/*_Summoner.json`；每个召唤器 Prefab 继续作为唯一运行时外壳，已放置建筑本体、快照、占地注册表和放置链路不改动。
 - 2026-08-09：旧 `TileItem_StoneWall` 通过 `Item_Tile_Grass` 兼容壳映射到 `TileBase_BuiltStoneWall`，右键直接复用新区块放置入口并创建始终可见的 `BuildingShadow`；冒烟与黄金路径覆盖旧物品预览。
 - 2026-08-09：石墙格子建筑迁移到新版 `ChunkTerrainData.BlockingTileId`，`TileBuildingSystem` 优先写入新区块并保留旧 `Map` 回退；新增 Surface Profile/Tile Palette 的 `tile.block.8` 映射、运行时移除回滚和黄金路径验证。
@@ -81,7 +82,6 @@ Summoner（库存中的持久化载体）
 - 2026-08-05：静态结构与阻挡层迁移到连续 `TileStackCell` API；动态建筑继续只叠加 `BuildingOccupancyRegistry`，导航同时读取地形栈顶层与建筑占用。
 - 2026-07-31：新增正式 `MineEntrance`/`MineEntrance_Summoner` 建筑对；安装后的建筑可进入矿洞，召唤器不可触发，拆除与 Chunk 存档继续复用建筑快照事务。
 - 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；明确只承载地图生成的静态墙体，动态建造系统继续使用建筑实体、快照和占地注册表。
-- 2026-07-30：结构作者物件新增稳定 `MemberId` 和容器槽位配置；遗迹中的箱子等带 `Mod_Inventory` 建筑可在结构编辑器中选择目标库存并按真实槽位配置物品。Loot Marker 仍只负责按 `ContentId` 生成物件。
 
 ## 修改后自动测试
 

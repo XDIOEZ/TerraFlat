@@ -65,20 +65,20 @@ Mod_ItemDetector 提交请求
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：幽灵 Prefab 根节点补挂 `ActorRenderEffectController` 与 `ActorRenderColorEffect`，使 `DamageReceiver` 能找到 `Visual` 的统一 MPB 受击表现；不改变幽灵 AI、碰撞和移动逻辑。
+- 2026-08-09：现代狼与旧行为树狼的 `Mod_ItemDetector.detectionRadius` 统一扩大到 `40`，现代狼 `allyCallDistance` 同步为 `40`，覆盖玩家最大视野并高于野猪；新增 `AI.Smoke` 玩家/同伴感知范围回归断言。
+- 2026-08-09：AI 攻击伤害窗口开启时对 `Mod_Damage_AI` 主动扫描当前重叠目标并按窗口去重，修复野猪首击无新 Enter 事件时不掉血；新增 AI.Smoke 首击范围回归断言，武器模块不参与扫描。
+- 2026-08-09：Ghost 的 `Visual` 子节点加入实例错相位的正弦上下浮动，默认幅度 `0.12`、频率 `1.4Hz`；同时挂接 `Assets/8_Animations/Character/Ghost/Idle.anim` 的 8 FPS 尾巴循环动画，帧图为 `Assets/6_Art/Generated/Ghost/Ghost_Idle_Sheet.png`。两种表现都不影响根物体、碰撞、寻路和“光耀” Buff。
 - 2026-08-09：幽灵在感知范围内先锁定玩家再处理避光逻辑，追击时改用直接世界位移并跳过导航可走性/玩家黑暗检查；“光耀” Buff 仅在自身亮度严格大于 0.5 时维持，新增 AI.Smoke 阈值回归断言。
 - 2026-08-09：修复现代狼与旧行为树狼的玩家感知层遮罩，统一包含 Player 层及狼根物体层；幽灵补充本地玩家 Transform 回退解析，仍保持只在完全黑暗中追击玩家，并新增 AI.Smoke 回归断言。
 - 2026-08-09：野猪攻击改为横向半轴 1.6、竖向半轴 0.45 的椭圆判定；独立 `AttackTrigger_AI` 覆盖使用 `2.2×0.9`、圆角 `0.45` 的横向胶囊触发盒，通用模块和狼不受影响。
 - 2026-08-09：GM 生物召唤必须直接走 `ItemMgr.InstantiateItem(...) → Item.Load()`，与 `MonsterSpawnerManager.SpawnMonster()` 保持同序；生成后以 `IAIActor.ActorItem` 复核绑定，失败通过 `ItemMgr.DespawnItem(saveData:false)` 回收，禁止遗留未初始化 AI。
 - 2026-08-09：`AI_AttackController` 不再在攻击起手预先置 `IsAttacking=true`；改在 `DamageWindowStartDelay` 结束、实际伤害碰撞启用时同步置真，消除野猪 `Attack.anim` 首帧 0 与控制器 true 的冲突，首次与后续攻击共用同一事件时序。
 - 2026-08-09：实体 AI 的运行时归属统一迁到 `ItemMgr` 的 `WorldModel.WorldAddress` 索引，并挂在场景级 `RuntimeEntities` 根节点；旧 `Mod_ItemChunkAssigner` 仅保留模块/存档兼容 ID，Ghost、Chicken、生成器和光照查询不得再读取旧 `Chunk/Map`。
-- 2026-08-09：野猪 `Attack.anim` 的完整周期固定为 `attackDamageStartDelay + attackDamageWindow + attackCooldown`（当前为 `2.18s`），关闭 Clip 循环；局部前冲仍在 `0.06s` 命中起始、`0.18s` 窗口结束时回位，`AISmokeTests` 同时断言有效帧、完整周期与非循环。
-- 2026-08-09：小鸡饥饿觅食优先查询 `ChunkMgr.TryFindRuntimeGrassNear()`，进食通过 `TryConsumeRuntimeGrass()` 原子消费 `ChunkTerrainData` 草层并由变更事件刷新渲染；旧 `Map` 草层仅作迁移回退，不再使用草 Item 实体。
-- 2026-08-09：`AI_Wolf` 追击玩家时以持久化 Item Guid 保持同翼排序，优先留在自身左右翼的浅扇形槽位；仅将有限分离偏移写入缓存寻路目的地，保持 `Mover_AI → WorldNavigationAgent` 权威移动链路。槽位受攻击安全半径和左右攻击方向约束，未靠近自身槽位不会提前攻击，不可走时回退原直接追击。
-- 2026-08-09：`MonsterSpawnerManager.RebuildTrackedPopulation()` 先执行 `ItemMgr.CleanupNullItems()`，`TrackItem()` 必须先以 Unity 空值语义拒绝已销毁或已处理的 Item，再访问组件；退出重进不得让旧 `GameItem` 中断 `Event_GameWorldEnter`。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/AI/AISmokeTests.cs`；当前覆盖状态机、感知、生物 Prefab、狼群追击站位的左右分线/攻击安全半径、战斗动物追击触发/感知半径、幽灵 0.5 光照伤害阈值、野猪横宽竖窄攻击椭圆、攻击窗口与动画曲线、Chicken 模板 Item/Module 字典键、生成组唯一物种归属、持久化 ID 与归一化权重分布。
+- 基础测试脚本：`Assets/GameTest/AI/AISmokeTests.cs`；当前覆盖状态机、感知、生物 Prefab、狼群追击站位的左右分线/攻击安全半径、狼玩家/同伴感知范围、战斗动物追击触发/感知半径、幽灵 0.5 光照伤害阈值、AI 攻击首击重叠扫描范围、野猪横宽竖窄攻击椭圆、攻击窗口与动画曲线、Chicken 模板 Item/Module 字典键、生成组唯一物种归属、持久化 ID 与归一化权重分布。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；AI 测试约定目录：`Assets/GameTest/AI/`；场景目录：`Assets/GameTest/Scenes/AI/`；冒烟分类：`AI.Smoke`。
 - 新增 AI 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。感知、目标选择、状态切换、攻击或闲逛主流程变化时同步更新 AI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试、放宽断言或改写输入来制造通过；随机行为必须固定种子或注入确定输入。

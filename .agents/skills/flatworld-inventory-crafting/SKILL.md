@@ -23,7 +23,7 @@ disable-model-invocation: false
 - 槽位 UI：`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`。
 - 背包 UI：`Inventory_UI.cs`。
 - 快捷栏：`Inventory_HotBar.cs`。
-- 手柄基础入口：B 打开背包、十字键上打开装备、下打开手工制作、左右独立切换快捷栏；快捷栏动作不得复用 `CtrlMouse` 相机缩放。
+- 手柄基础入口：B 返回、十字键上打开装备、下打开手工制作、左右独立切换快捷栏；键盘 B 仍打开背包，快捷栏动作不得复用 `CtrlMouse` 相机缩放。
 - 库存/装备/手工制作面板打开时通过 `BasePanel.Opened/Closed` 持有玩家输入锁；自身开关键仍允许关闭当前面板，其他面板锁定期间不得串开。
 - 背包槽位的橙色焦点框保留用于手柄；键鼠模式的 W/A/S/D 必须只移动玩家，不能经 `FlatWorldUI/Navigate` 切换槽位焦点。
 - 手持库存：`Inventory_Hand.cs`、`Mod_Hand.cs`。
@@ -86,24 +86,23 @@ disable-model-invocation: false
 - `Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Module_Equipment.cs` 已废弃，优先使用 `Mod_Equipment.cs`。
 - 遗迹容器内容不使用空壳 `Mod_Box`，由 `StructureContainerContents` 配置并在结构物件 `Load()` 后写入 `Mod_Inventory`；固定槽位配置会完整覆盖目标库存，空配置可表示空箱子。
 - Inventory 持有数据和 UI 生命周期，但实际运行更新仍受 Item/Module Tick 调度影响。
-- `ToggleActionName = B` 的库存由自身直接开关，不能先调用 `TryCloseTopmostCancelPanel`；库存派生的右键菜单及其物品详情必须在库存关闭时一并销毁，避免悬空 UI 或需要第二次 B。
+- `ToggleActionName = B` 的库存仍由键盘 B 自身直接开关；手柄 B 走全局取消关闭库存，不能让两条路径重复消费，库存派生的右键菜单及其物品详情必须在库存关闭时一并销毁。
 - 配方不再依赖 `CraftingRecipe` Addressables 标签；修改 JSON 后检查清单、对应分包、物品 ID 与 `GameRes` 配方字典。
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：拆分库存槽位的键鼠点击与手柄确认入口；键鼠在手上已有物品时保留手部交换，手柄使用当前快捷栏槽位，避免两种交换状态互相占用。
 - 2026-08-09：BerryBush 的新版生态掉落物挂到 `NaturalItems`，采摘不再通过旧 `ChunkMgr` 触发区块加载；临时浆果由自然物表现层在区块解绑时回收。
-- 2026-08-09：B 开关库存不再让全局取消栈抢先消费；同一按键直接关闭背包/装备库存，并回收该库存打开的右键菜单和物品详情，避免残留悬空面板。
+- 2026-08-09：手柄 B 默认改为返回，不再打开背包；键盘 B 保留背包开关，库存面板统一接入 `BasePanel` 的手柄取消关闭。
+- 2026-08-09：快捷栏 HUD 槽位关闭 EventSystem 手柄导航，并跳过通用背包面板焦点准备；左摇杆移动不再改动当前快捷栏，十字键切换保持不变。
+- 2026-08-09：键盘 B 开关库存不再让全局取消栈抢先消费；手柄 B 统一返回并通过 `BasePanel` 关闭打开的库存，同时回收该库存打开的右键菜单和物品详情。
 - 2026-08-09：修正背包键鼠冲突：保留槽位橙色焦点框，但运行时 UI 导航完全删除 W/A/S/D，键盘移动不再切换选中槽位，手柄导航保持原行为。
 - 2026-08-09：玩家背包左键改为写入快捷栏当前选中槽并立即同步手持实例，避免物品只进入不可见的 `Inventory_Hand` 缓冲槽；箱子、工作台等独立库存仍保留手部交换。
 - 2026-08-09：库存槽位、动态模块按钮和物品上下文菜单接入手柄焦点、主要/次要操作、滚动跟随与嵌套返回，避免手柄在纯统计条和滚动条上浪费导航步数。
 - 2026-08-08：背包槽位与制作产物预览统一通过 `GameRes.TryGetItemPresentation()` 获取显示贴图；JSON 物品不再从 `AllPrefabs` 的共享模板外壳读取错误图标。
 - 2026-08-08：删除已完整迁移到 JSON 的本体旧配方 SO 与对应 Addressables 目录条目：`4-4_Composite`、`4-5_Cook`；保留旧配方类型仅用于 MOD AssetBundle 兼容。
-- 2026-08-07：将旧 `Assets/9_Anim` 的通用武器 Animator 与三段动画归并到 `Assets/8_Animations/Item/Weapon/`，保留 GUID 和 `Idle_0/Attack_1/Attack_2` 状态契约。
-- 2026-08-07：删除配方与 Prefab 的 Excel 同步链，配方以 manifest + 8 个 JSON 分包为唯一真源；内容校验只验证 JSON，建筑生成器通过 `RecipeJsonEditorService` 定向重连产物 ID。
-- 2026-08-05：`Inventory.OnValidate()` 在动态组件或空序列化数据场景下先创建 `Inventory_Data`，避免快捷栏及编辑器校验因空数据抛异常。
-
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前覆盖库存模块、装备、配方、制作公共核心、初始库存资源入口、快捷栏初始选框对齐与切换父节点稳定性，以及 `UI_Bag` 整理按钮和 `UI_Slot` 制作预览图层命名契约。

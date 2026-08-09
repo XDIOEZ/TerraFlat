@@ -98,6 +98,9 @@ StreamingAssets/GameConfig/Items/*.json
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：新增 Buff 状态 HUD 的动态/静态文案（`状态效果 / BUFFS`、`暂无状态`、`永久`、`剩余 {0}s`）；已登记到 `EnglishUiOverrides` 并同步写入 `FlatWorldUI` 中英文 String Table，语言切换由 HUD 事件刷新。
+- 2026-08-09：按键绑定 UI 新增“清除”及清除状态文案；中文源模板与英文表达已登记到 `EnglishUiOverrides`，并同步写入 `FlatWorldUI` 的中英文 String Table。
+- 2026-08-09：新增保存状态动态文案“正在保存…”/“保存失败”；通过 `EnglishUiOverrides`、`FlatWorldUI` 中英文表和 `GameSaveStatusHUD` 的语言事件刷新。
 - 2026-08-09：新增 `FlatWorldUI` 独立 String Table；编辑器扫描正式 UI Prefab 与运行时模板，`BasePanel`/`FlatWorldUIAutoLocalizer`/`LocalizedTextBinder` 负责静态文本绑定，语言切换通过 `LanguageChanged` 刷新。
 - 2026-08-09：物品 JSON 支持 `labelKey` 与 `descriptionKey`；本体 `FlatWorld` 表由编辑器菜单从 `StreamingAssets/GameConfig/Items/` 同步，英语内容不会覆盖人工翻译。
 - 2026-08-09：语言选择使用 `zh-CN`/`en`，通过 `FlatWorld.Localization.Locale` 持久化；主菜单设置已接入语言切换。

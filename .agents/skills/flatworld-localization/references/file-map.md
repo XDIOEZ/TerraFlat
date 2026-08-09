@@ -30,7 +30,7 @@
 | --- | --- | --- |
 | `Assets/StreamingAssets/GameConfig/Items/` | 物品 JSON 的稳定 `id`、旧中文 `gameName/description`、可选 `labelKey/descriptionKey` | 由 Setup 菜单同步至 `FlatWorld` 表；业务配置不按语言复制 |
 | `Assets/2_Prefabs/2-1_UI/` | 正式 UI Prefab 的 TMP 静态文本 | Setup 扫描 CJK 文本；运行时由 `BasePanel` 自动绑定 |
-| `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/` | 设置面板、输入绑定、难度等动态 UI | 赋值点使用 `GetUiText/GetUiFormat`，新增模板同步到编辑器覆盖字典 |
+| `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/` | 设置面板、输入绑定、难度、`GameSaveStatusHUD`、`PlayerBuffStatusHUD`/`BuffStatusRowView` 等动态 UI | 赋值点使用 `GetUiText/GetUiFormat`，新增模板同步到编辑器覆盖字典 |
 | `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.UI.cs` | 主菜单、世界加载、难度和语言状态文本 | 不要把 UI 文本常量继续直接赋给 TMP |
 | `Assets/Resources/Dialogue/Soliloquy/` | 角色自言自语 JSON | 属于 `flatworld-dialogue`；未来使用独立 `FlatWorldDialogue` 表 |
 

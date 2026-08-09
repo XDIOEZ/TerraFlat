@@ -75,6 +75,7 @@ ICharacterSpeechContextContributor
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：玩家聊天输入框为空或仅包含空白字符时按 Enter 直接关闭输入框，不重新聚焦，也不发布空聊天消息；有内容时继续沿原提交链处理。
 - 2026-08-09：`ScreenSpaceSpeechBubblePresenter` 不再将角色气泡置顶，改为固定在 `PanelRoot` 最底层；背包及其他交互面板始终显示在气泡上方。
 - 2026-08-04：`WeatherExposureSpeechProvider` 扫描附近火源时，先确认物品存在燃料模块再读取点燃状态；普通物品不是错误条件，必须静默跳过，避免按扫描频率重复输出“找不到燃料模块”警告。
 - 2026-07-30：新增天气 Facts Contributor 与 `weather_rain.json`；现有 Controller 通过扩展发现自动接入，不建立第二套天气台词调度器。
