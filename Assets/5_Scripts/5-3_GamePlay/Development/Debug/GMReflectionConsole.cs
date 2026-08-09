@@ -1806,8 +1806,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OpenAirdropBrowser()
     {
-        windowRoot.SetActive(false);
+        windowRoot.SetActive(true);
+        aiCreatureBrowserRoot.SetActive(false);
         airdropBrowserRoot.SetActive(true);
+        SyncBrowserRootsToWindow();
         RefreshItemIds();
         SetAirdropBrowserStatus("点击任意物品即可空投到玩家附近。", new Color(0.66f, 0.71f, 0.71f));
     }
@@ -1816,12 +1818,15 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         airdropBrowserRoot.SetActive(false);
         windowRoot.SetActive(true);
+        ClampTabbedWindowToCanvas();
     }
 
     private void OpenAiCreatureBrowser()
     {
-        windowRoot.SetActive(false);
+        windowRoot.SetActive(true);
+        airdropBrowserRoot.SetActive(false);
         aiCreatureBrowserRoot.SetActive(true);
+        SyncBrowserRootsToWindow();
         RefreshAiCreatureIds();
         SetAiCreatureBrowserStatus(
             "点击任意生物即可召唤；批量召唤会自动散布，避免重叠。",
@@ -1832,6 +1837,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         aiCreatureBrowserRoot.SetActive(false);
         windowRoot.SetActive(true);
+        ClampTabbedWindowToCanvas();
     }
 
     private void RefreshItemIds()
