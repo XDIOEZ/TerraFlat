@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 namespace FlatWorld.Automation
@@ -7,12 +8,19 @@ namespace FlatWorld.Automation
     internal static partial class FlatWorldGoldenPathScenarios
     {
         private const string GoldenBuildingSummonerId = "Wall_Wood_Summoner";
+        private const string GoldenStoneWallTileBlockId = "TileBase_BuiltStoneWall";
+        private const int GoldenStoneWallRuntimeTileId = 8;
         private const string BuildingPreviewSortingLayer = "Shadow";
         private const int BuildingSearchRadius = 8;
 
         private static Item _buildingScenarioSummoner;
         private static Item _buildingScenarioPlacedBuilding;
+        private static Item _buildingScenarioLegacyStoneWall;
         private static GameObject _buildingScenarioShadowObject;
+        private static Vector3 _buildingScenarioPlacement;
+        private static TileBuildingCell _buildingScenarioStoneCell;
+        private static bool _buildingScenarioStonePlaced;
+        private static bool _buildingScenarioStoneScenarioCompleted;
         private static bool _buildingPlacementScenarioCompleted;
 
         #region 生命周期
@@ -21,7 +29,12 @@ namespace FlatWorld.Automation
         {
             _buildingScenarioSummoner = null;
             _buildingScenarioPlacedBuilding = null;
+            _buildingScenarioLegacyStoneWall = null;
             _buildingScenarioShadowObject = null;
+            _buildingScenarioPlacement = default;
+            _buildingScenarioStoneCell = default;
+            _buildingScenarioStonePlaced = false;
+            _buildingScenarioStoneScenarioCompleted = false;
             _buildingPlacementScenarioCompleted = false;
         }
 
@@ -49,6 +62,7 @@ namespace FlatWorld.Automation
 
             Vector3 placement = FindValidBuildingPlacement(
                 summonerModule, playerPosition, out string lastReason);
+            _buildingScenarioPlacement = placement;
             if (!summonerModule.TryCreateInstalledBuilding(
                     placement, out _buildingScenarioPlacedBuilding, out string createReason))
             {
@@ -68,6 +82,10 @@ namespace FlatWorld.Automation
             }
 
             VerifyBuildingShadow(summonerModule);
+            // 先清理木墙实体，复用已验证的安全格测试新区块石墙，避免动态占地影响候选搜索。
+            CleanupBuildingPlacementObjects();
+            RunStoneWallChunkPlacementScenario(_buildingScenarioPlacement);
+            RunLegacyStoneWallPreviewScenario(context);
             _buildingPlacementScenarioCompleted = true;
             Debug.Log(
                 $"[GoldenPath][Building] 新区块放置、动态占地与虚影验证通过：" +
@@ -79,6 +97,9 @@ namespace FlatWorld.Automation
         {
             if (!_buildingPlacementScenarioCompleted)
                 throw new InvalidOperationException("完整黄金路径结束前未完成新区块建筑放置验证。");
+
+            if (!_buildingScenarioStoneScenarioCompleted)
+                throw new InvalidOperationException("完整黄金路径结束前未完成新区块石墙迁移验证。");
         }
 
         private static void CleanupBuildingPlacementScenario()
@@ -88,7 +109,115 @@ namespace FlatWorld.Automation
 
         #endregion
 
+        #region 新区块格子建筑
+
+        private static void RunStoneWallChunkPlacementScenario(Vector3 authorityPosition)
+        {
+            ChunkMgr chunkManager = ChunkMgr.Instance;
+            if (chunkManager?.RuntimeChunks == null)
+                throw new InvalidOperationException("石墙黄金路径缺少新区块运行时。");
+
+            Vector2Int anchor = WorldTopologyRuntime.NormalizeCell(Vector2Int.FloorToInt(authorityPosition));
+            string lastReason = "未找到候选格子";
+            for (int radius = 0; radius <= BuildingSearchRadius && !_buildingScenarioStonePlaced; radius++)
+            {
+                for (int y = -radius; y <= radius && !_buildingScenarioStonePlaced; y++)
+                for (int x = -radius; x <= radius && !_buildingScenarioStonePlaced; x++)
+                {
+                    if (radius > 0 && Mathf.Abs(x) != radius && Mathf.Abs(y) != radius)
+                        continue;
+
+                    Vector2Int cell = WorldTopologyRuntime.NormalizeCell(anchor + new Vector2Int(x, y));
+                    Vector3 placement = new(cell.x + 0.5f, cell.y + 0.5f, 0f);
+                    if (!chunkManager.TryGetRuntimeTerrainTile(placement,
+                            out RuntimeTerrainTileSample sample))
+                    {
+                        lastReason = "目标新区块尚未就绪";
+                        continue;
+                    }
+
+                    if (BuildingOccupancyRegistry.IsOccupied(cell))
+                    {
+                        lastReason = $"地块 {cell} 已被建筑占用";
+                        continue;
+                    }
+
+                    if (!TileBuildingSystem.TryPlace(placement, GoldenStoneWallTileBlockId,
+                            out _buildingScenarioStoneCell, out lastReason))
+                        continue;
+
+                    _buildingScenarioStonePlaced = true;
+                    TerrainCell placedTerrain = _buildingScenarioStoneCell.RuntimeChunk.Terrain.GetCell(
+                        _buildingScenarioStoneCell.LocalPosition.x,
+                        _buildingScenarioStoneCell.LocalPosition.y);
+                    if (!_buildingScenarioStoneCell.UsesRuntimeTerrain ||
+                        _buildingScenarioStoneCell.RuntimeTileId != GoldenStoneWallRuntimeTileId ||
+                        placedTerrain.BlockingTileId != _buildingScenarioStoneCell.RuntimeTileId ||
+                        (placedTerrain.Flags & TerrainCellFlags.Blocking) == 0 ||
+                        sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y))
+                    {
+                        throw new InvalidOperationException(
+                            $"石墙没有写入新区块阻挡层：cell={cell}, tile={placedTerrain.BlockingTileId}。");
+                    }
+
+                    if (!TileBuildingSystem.TryRemove(_buildingScenarioStoneCell,
+                            spawnDrop: false, out string removeReason))
+                        throw new InvalidOperationException($"石墙新区块回滚失败：{removeReason}。");
+
+                    _buildingScenarioStonePlaced = false;
+                    _buildingScenarioStoneScenarioCompleted = true;
+                    Debug.Log($"[GoldenPath][Building] 石墙已迁移到新区块阻挡层：cell={cell}, tileId={_buildingScenarioStoneCell.RuntimeTileId}。");
+                }
+            }
+
+            if (!_buildingScenarioStoneScenarioCompleted)
+                throw new InvalidOperationException($"玩家附近没有可验证的新区块石墙格子：{lastReason}。");
+        }
+
+        #endregion
+
         #region 放置与虚影
+
+        private static void RunLegacyStoneWallPreviewScenario(
+            FlatWorldGoldenPathScenarioContext context)
+        {
+            ItemData legacyData = GameRes.Instance.CreateItemData("TileItem_StoneWall");
+            if (legacyData == null)
+                throw new InvalidOperationException("找不到旧石墙物品 TileItem_StoneWall。");
+
+            legacyData.inHand = true;
+            legacyData.Stack.Amount = Mathf.Max(2f, legacyData.Stack.Amount);
+            _buildingScenarioLegacyStoneWall = ItemMgr.Instance.InstantiateItem(
+                legacyData, context.Player.transform.position, Quaternion.identity, Vector3.one);
+            _buildingScenarioLegacyStoneWall.Owner = context.Player;
+            _buildingScenarioLegacyStoneWall.Load();
+
+            Item_Tile_Grass legacyStoneWall = _buildingScenarioLegacyStoneWall as Item_Tile_Grass;
+            Vector3 placement = default;
+            string reason = null;
+            if (legacyStoneWall == null ||
+                !legacyStoneWall.TryRefreshPlacementPreview(
+                    out placement, out reason) ||
+                !legacyStoneWall.HasPlacementPreview)
+            {
+                throw new InvalidOperationException(
+                    $"旧石墙右键预览没有生成：{reason ?? "未知原因"}。");
+            }
+
+            BuildingShadow shadow = legacyStoneWall.PlacementShadow;
+            int shadowLayer = SortingLayer.NameToID(BuildingPreviewSortingLayer);
+            if (shadow == null || shadow.ShadowRenderer == null ||
+                !shadow.ShadowRenderer.enabled || shadow.ShadowRenderer.sprite == null ||
+                shadow.ShadowRenderer.sortingLayerID != shadowLayer ||
+                shadow.ShadowRenderer.sortingOrder <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"旧石墙预览不可见：placement={placement}。");
+            }
+
+            Debug.Log(
+                $"[GoldenPath][Building] 旧石墙已生成可见虚影并接入新区块预览：placement={placement}。");
+        }
 
         private static Vector3 FindValidBuildingPlacement(
             Mod_Building summonerModule,
@@ -155,6 +284,13 @@ namespace FlatWorld.Automation
 
         private static void CleanupBuildingPlacementObjects()
         {
+            if (_buildingScenarioStonePlaced)
+            {
+                TileBuildingSystem.TryRemove(_buildingScenarioStoneCell,
+                    spawnDrop: false, out _);
+                _buildingScenarioStonePlaced = false;
+            }
+
             if (_buildingScenarioShadowObject != null)
             {
                 _buildingScenarioShadowObject.SetActive(false);
@@ -172,6 +308,12 @@ namespace FlatWorld.Automation
             {
                 ItemMgr.Instance.DespawnItem(_buildingScenarioSummoner, false);
                 _buildingScenarioSummoner = null;
+            }
+
+            if (_buildingScenarioLegacyStoneWall != null && ItemMgr.Instance != null)
+            {
+                ItemMgr.Instance.DespawnItem(_buildingScenarioLegacyStoneWall, false);
+                _buildingScenarioLegacyStoneWall = null;
             }
         }
 

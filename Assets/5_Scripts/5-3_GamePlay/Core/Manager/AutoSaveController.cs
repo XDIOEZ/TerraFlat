@@ -1,5 +1,7 @@
 // AI-Context: 自动保存的全局偏好与运行时调度器；偏好写入 PlayerPrefs，只有进入游戏世界后才按未缩放时间触发正式存档。
 using System;
+using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public static class AutoSavePreferences
@@ -49,6 +51,8 @@ public sealed class AutoSaveController : MonoBehaviour
     private GameManager gameManager;
     private double nextSaveTime = -1d;
     private bool isSaving;
+    private bool isCapturing;
+    private Task<bool> pendingSaveWrite;
 
     public static AutoSaveController Ensure(GameManager manager)
     {
@@ -87,6 +91,8 @@ public sealed class AutoSaveController : MonoBehaviour
         Unsubscribe();
         AutoSavePreferences.Changed -= ResetSchedule;
         nextSaveTime = -1d;
+        // 协程在禁用时由 Unity 停止；后台写盘任务仍保持，重新启用后会继续轮询并清理状态。
+        isCapturing = false;
     }
 
     private void Subscribe()
@@ -111,6 +117,13 @@ public sealed class AutoSaveController : MonoBehaviour
 
     private void Update()
     {
+        // 后台写盘期间仍允许 Unity 正常处理输入、物理和实体 Tick；完成后再记录结果。
+        if (isSaving)
+        {
+            if (isCapturing || !TryCompletePendingSave())
+                return;
+        }
+
         if (!CanRun())
         {
             nextSaveTime = -1d;
@@ -157,22 +170,65 @@ public sealed class AutoSaveController : MonoBehaviour
     private void SaveNow()
     {
         isSaving = true;
+        isCapturing = true;
         ScheduleFromNow();
+        StartCoroutine(SaveNowCoroutine());
+    }
+
+    /// <summary>分帧采集世界快照；磁盘任务创建后由 Update 非阻塞轮询。</summary>
+    private IEnumerator SaveNowCoroutine()
+    {
+        Task<bool> writeTask = null;
+        yield return gameManager.SaveGameInBackgroundCoroutine(task => writeTask = task);
+
+        isCapturing = false;
+        if (writeTask != null)
+        {
+            pendingSaveWrite = writeTask;
+            yield break;
+        }
+
+        pendingSaveWrite = Task.FromException<bool>(
+            new InvalidOperationException("自动保存未创建后台写入任务。"));
+    }
+
+    /// <summary>轮询后台磁盘写入，绝不在主线程等待任务完成。</summary>
+    private bool TryCompletePendingSave()
+    {
+        if (pendingSaveWrite == null)
+        {
+            isSaving = false;
+            return true;
+        }
+
+        if (!pendingSaveWrite.IsCompleted)
+            return false;
 
         try
         {
-            gameManager.SaveGame();
-            Debug.Log($"[AutoSave] 自动保存完成，下次将在 {AutoSavePreferences.IntervalMinutes} 分钟后触发。");
+            bool wroteToDisk = pendingSaveWrite.GetAwaiter().GetResult();
+            if (wroteToDisk)
+            {
+                Debug.Log(
+                    $"[AutoSave] 自动保存完成，下次将在 {AutoSavePreferences.IntervalMinutes} 分钟后触发。");
+            }
+            else
+            {
+                Debug.Log("[AutoSave] 自动保存已被较新的手动或退出保存取代。");
+            }
         }
         catch (Exception exception)
         {
             Debug.LogException(new InvalidOperationException(
-                "[AutoSave] 自动保存失败，已保留下一个保存周期。",
+                "[AutoSave] 后台写盘失败，已保留下一个保存周期。",
                 exception));
         }
         finally
         {
+            pendingSaveWrite = null;
             isSaving = false;
         }
+
+        return true;
     }
 }

@@ -15,11 +15,13 @@ namespace FlatWorld.WorldModel
         private readonly byte[] grass;
         private readonly IReadOnlyDictionary<int, int[]> extendedTileStacks;
         private readonly IReadOnlyDictionary<Int2, int> occupancy;
+        private readonly NaturalItemPlacement[] ecologyPlacements;
 
         private ChunkRuntimeSnapshot(WorldAddress address, int width, int height,
             TerrainCell[] terrainCells, Dictionary<string, float[]> environmentLayers,
             byte[] grass, IReadOnlyDictionary<int, int[]> extendedTileStacks,
-            IReadOnlyDictionary<Int2, int> occupancy, ulong stableHash)
+            IReadOnlyDictionary<Int2, int> occupancy,
+            NaturalItemPlacement[] ecologyPlacements, ulong stableHash)
         {
             Address = address;
             Width = width;
@@ -29,6 +31,7 @@ namespace FlatWorld.WorldModel
             this.grass = grass ?? Array.Empty<byte>();
             this.extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
             this.occupancy = occupancy ?? new Dictionary<Int2, int>();
+            this.ecologyPlacements = ecologyPlacements ?? Array.Empty<NaturalItemPlacement>();
             StableHash = stableHash;
         }
 
@@ -48,6 +51,8 @@ namespace FlatWorld.WorldModel
         public IReadOnlyDictionary<int, int[]> ExtendedTileStacks => extendedTileStacks;
         /// <summary>哪些格子被哪些物品占用的副本。</summary>
         public IReadOnlyDictionary<Int2, int> Occupancy => occupancy;
+        /// <summary>区块照片里的自然物品放置记录。</summary>
+        public IReadOnlyList<NaturalItemPlacement> EcologyPlacements => ecologyPlacements;
         /// <summary>地形内容的“指纹”；内容相同，通常就会得到相同数字。</summary>
         public ulong StableHash { get; }
 
@@ -66,7 +71,11 @@ namespace FlatWorld.WorldModel
                 occupied.Add(pair.Key, pair.Value);
             return new ChunkRuntimeSnapshot(chunk.Address, terrain.Width, terrain.Height,
                 terrain.CopyCells(), layers, terrain.CopyGrass(), terrain.CopyExtendedTileStacks(),
-                occupied, terrain.ComputeStableHash());
+                occupied,
+                chunk.Ecology?.Placements == null
+                    ? Array.Empty<NaturalItemPlacement>()
+                    : new List<NaturalItemPlacement>(chunk.Ecology.Placements).ToArray(),
+                terrain.ComputeStableHash());
         }
     }
 

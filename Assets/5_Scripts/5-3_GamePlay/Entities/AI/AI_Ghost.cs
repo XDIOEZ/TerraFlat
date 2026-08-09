@@ -21,15 +21,17 @@ public partial class GhostAISaveData
 }
 
 /// <summary>
-/// Ghost artificial intelligence module.
-/// Uses the infinite-world navigation service while selecting only completely dark destinations.
-/// If there is nowhere dark to retreat to it enters a radiance state and takes periodic true damage.
+/// 幽灵 AI：在感知范围内直接追击本地玩家，追击时不受地形可走性和玩家所在光照限制。
+/// 幽灵自身所在位置的亮度严格大于 0.5 时持续添加“光耀” Buff，亮度小于等于 0.5 时移除。
 /// </summary>
-public class AI_Ghost : Module
+public class AI_Ghost : Module, IAIActor
 {
     private const string ModuleId = "AI_Ghost";
     private const string RadianceBuffId = "光耀";
     private const float LightEpsilon = 0.0001f;
+
+    /// <summary>光照强度严格大于该值时，幽灵才持续受到光耀伤害。</summary>
+    public const float LightDamageThreshold = 0.5f;
 
     public Ex_ModData_MemoryPackable ModData = new();
     public override ModuleData _Data
@@ -77,6 +79,7 @@ public class AI_Ghost : Module
     private DamageReceiver _damageReceiver;
     private BuffManager _buffManager;
     private WorldNavigationAgent _pathAgent;
+    private Rigidbody2D _rigidbody;
     private Vector3 _visualBaseLocalPosition;
     private Vector2 _moveTarget;
     private bool _hasMoveTarget;
@@ -84,6 +87,9 @@ public class AI_Ghost : Module
     private bool _loggedMissingRadianceBuff;
 
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    public Item ActorItem => item;
+    public bool IsAlive => item != null && !item.DestructionHandled &&
+                           (_damageReceiver == null || _damageReceiver.Hp > 0f);
 
     public override void Awake()
     {
@@ -111,6 +117,7 @@ public class AI_Ghost : Module
         if (visualTransform != null)
             _visualBaseLocalPosition = visualTransform.localPosition;
 
+        _rigidbody = item.GetComponent<Rigidbody2D>();
         EnsureNavigationAgent();
         _moveTarget = Data.WanderTarget;
         _hasMoveTarget = Data.HasWanderTarget;
@@ -165,10 +172,34 @@ public class AI_Ghost : Module
     private void EvaluateState()
     {
         LightLayerMgr lightManager = LightLayerMgr.Instance;
-        if (lightManager == null ||
-            !lightManager.TryGetLightLevel(item.transform.position, out float currentLight))
+        float currentLight = 0f;
+        bool hasLightLevel = lightManager != null &&
+                             lightManager.TryGetLightLevel(
+                                 item.transform.position,
+                                 out currentLight);
+
+        if (hasLightLevel && ShouldTakeLightDamage(currentLight))
+            EnsureRadianceBuff();
+        else
+            RemoveRadianceBuff();
+
+        // 先锁定玩家，再处理避光状态，避免玩家站在有光区域时幽灵永远只会撤退。
+        Transform player = ResolvePlayerTransform();
+        if (player != null &&
+            WorldTopologyRuntime.SqrDistance(item.transform.position, player.position) <=
+            perceptionRadius * perceptionRadius)
         {
+            _state = GhostState.Chase;
+            _moveTarget = player.position;
+            _hasMoveTarget = true;
+            return;
+        }
+
+        if (!hasLightLevel)
+        {
+            _state = GhostState.Wander;
             _hasMoveTarget = false;
+            StopMoving();
             return;
         }
 
@@ -176,7 +207,6 @@ public class AI_Ghost : Module
         {
             if (TryFindDarkPosition(item.transform.position, retreatSearchRadius, out Vector2 retreatTarget))
             {
-                RemoveRadianceBuff();
                 _state = GhostState.RetreatFromLight;
                 _moveTarget = retreatTarget;
                 _hasMoveTarget = true;
@@ -189,22 +219,6 @@ public class AI_Ghost : Module
             }
 
             return;
-        }
-
-        RemoveRadianceBuff();
-
-        Transform player = ItemMgr.Instance?.UserPlayerTransform;
-        if (player != null)
-        {
-            float distanceSqr = WorldTopologyRuntime.SqrDistance(item.transform.position, player.position);
-            if (distanceSqr <= perceptionRadius * perceptionRadius &&
-                lightManager.IsCompletelyDark(player.position))
-            {
-                _state = GhostState.Chase;
-                _moveTarget = player.position;
-                _hasMoveTarget = true;
-                return;
-            }
         }
 
         _state = GhostState.Wander;
@@ -222,16 +236,10 @@ public class AI_Ghost : Module
 
     private void Move(float deltaTime)
     {
-        if (_pathAgent == null || !_hasMoveTarget || _state == GhostState.Radiance)
-        {
-            StopMoving();
-            return;
-        }
-
         if (_state == GhostState.Chase)
         {
-            Transform player = ItemMgr.Instance?.UserPlayerTransform;
-            if (player == null || !LightLayerMgr.Instance.IsCompletelyDark(player.position))
+            Transform player = ResolvePlayerTransform();
+            if (player == null)
             {
                 _hasMoveTarget = false;
                 StopMoving();
@@ -239,6 +247,14 @@ public class AI_Ghost : Module
             }
 
             _moveTarget = player.position;
+            MoveDirectlyTowards(_moveTarget, chaseSpeed, deltaTime);
+            return;
+        }
+
+        if (_pathAgent == null || !_hasMoveTarget || _state == GhostState.Radiance)
+        {
+            StopMoving();
+            return;
         }
 
         float speed = _state switch
@@ -258,8 +274,7 @@ public class AI_Ghost : Module
         _pathAgent.MaxSpeed = speed;
         _pathAgent.SetDestination(_moveTarget);
         _pathAgent.Tick(deltaTime);
-
-        UpdateChunkOwnership();
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
 
         if (_pathAgent.ReachedDestination)
         {
@@ -268,16 +283,84 @@ public class AI_Ghost : Module
         }
     }
 
+    #region 直接追击
+
+    /// <summary>亮度严格大于一半时才开启持续光照伤害。</summary>
+    public static bool ShouldTakeLightDamage(float lightLevel)
+    {
+        return lightLevel > LightDamageThreshold;
+    }
+
+    /// <summary>直接沿世界最短方向移动，追击时跳过导航可走性和障碍物检查。</summary>
+    private void MoveDirectlyTowards(Vector2 target, float speed, float deltaTime)
+    {
+        Vector2 delta = WorldTopologyRuntime.ShortestDelta(item.transform.position, target);
+        float distance = delta.magnitude;
+        if (distance <= 0.05f)
+        {
+            _hasMoveTarget = false;
+            StopMoving();
+            return;
+        }
+
+        float stepDistance = Mathf.Max(0f, speed) * Mathf.Max(0f, deltaTime);
+        Vector2 nextPosition = distance <= stepDistance
+            ? target
+            : (Vector2)item.transform.position + delta / distance * stepDistance;
+        Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(nextPosition);
+
+        if (_rigidbody != null)
+        {
+            _rigidbody.position = normalizedPosition;
+            _rigidbody.velocity = Vector2.zero;
+        }
+
+        item.transform.position = new Vector3(
+            normalizedPosition.x,
+            normalizedPosition.y,
+            item.transform.position.z);
+        if (item.itemData?.transform != null)
+            item.itemData.transform.position = item.transform.position;
+
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+    }
+
+    #endregion
+
     private void StopMoving()
     {
         _pathAgent?.Stop();
     }
 
+    #region 玩家目标解析
+
+    /// <summary>
+    /// 获取当前本地玩家，优先使用 ItemMgr 的正式入口；当存档玩家名尚未同步时，
+    /// 回退到 Player_DIC 中已标记为本地档案且仍处于激活状态的玩家，避免幽灵目标为空。
+    /// </summary>
+    private Transform ResolvePlayerTransform()
+    {
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager == null)
+            return null;
+
+        Transform playerTransform = itemManager.UserPlayerTransform;
+        if (playerTransform != null && playerTransform.gameObject.activeInHierarchy)
+            return playerTransform;
+
+        foreach (Player player in itemManager.Player_DIC.Values)
+        {
+            if (player != null && player.IsLocalProfile && player.gameObject.activeInHierarchy)
+                return player.transform;
+        }
+
+        return null;
+    }
+
+    #endregion
+
     private bool CanMoveTo(Vector2 next)
     {
-        if (!TryGetActiveChunk(next, out _))
-            return false;
-
         if (!IsWalkable(next))
             return false;
 
@@ -323,8 +406,7 @@ public class AI_Ghost : Module
                     Mathf.Cos(angle),
                     Mathf.Sin(angle)) * distance;
 
-                if (TryGetActiveChunk(candidate, out _) &&
-                    lightManager.IsCompletelyDark(candidate) &&
+                if (lightManager.IsCompletelyDark(candidate) &&
                     IsWalkable(candidate))
                 {
                     position = candidate;
@@ -334,31 +416,6 @@ public class AI_Ghost : Module
         }
 
         return false;
-    }
-
-    private static bool TryGetActiveChunk(Vector2 position, out Chunk chunk)
-    {
-        chunk = null;
-        if (ChunkMgr.Instance == null)
-            return false;
-
-        return ChunkMgr.Instance.TryGetActiveChunkByPos(
-                   Chunk.GetChunkPosition(position),
-                   out chunk) &&
-               chunk != null;
-    }
-
-    private void UpdateChunkOwnership()
-    {
-        if (!TryGetActiveChunk(item.transform.position, out Chunk targetChunk))
-            return;
-
-        Chunk currentChunk = item.GetComponentInParent<Chunk>();
-        if (currentChunk == targetChunk)
-            return;
-
-        currentChunk?.RemoveItem(item);
-        targetChunk.AddItem(item);
     }
 
     private void EnsureRadianceBuff()

@@ -39,6 +39,7 @@ public static class MainMenuPrefabBuilder
             BuildBackground(root.transform, backgroundSprite);
             BuildBrand(root.transform, font);
             BuildMenuCard(root.transform, font);
+            BuildSettingsButton(root.transform, font);
             BuildFooter(root.transform, font);
 
             EditorUtility.SetDirty(root);
@@ -186,6 +187,81 @@ public static class MainMenuPrefabBuilder
         CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 292f, false, true);
     }
 
+    /// <summary>创建主菜单右上角的设置入口；当前只负责展示，不绑定设置逻辑。</summary>
+    private static void BuildSettingsButton(Transform root, TMP_FontAsset font)
+    {
+        GameObject buttonObject = new GameObject(
+            GameManager.MainMenuSettingsButtonKey,
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button));
+        buttonObject.layer = LayerMask.NameToLayer("UI");
+        buttonObject.transform.SetParent(root, false);
+
+        RectTransform rect = buttonObject.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.one;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = Vector2.one;
+        rect.anchoredPosition = new Vector2(-108f, -74f);
+        rect.sizeDelta = new Vector2(188f, 58f);
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = InkSoft;
+        Outline outline = buttonObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.55f, 0.68f, 0.70f, 0.30f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        outline.useGraphicAlpha = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.transition = Selectable.Transition.ColorTint;
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1.18f, 1.15f, 1.08f, 1f);
+        colors.pressedColor = new Color(0.74f, 0.78f, 0.80f, 1f);
+        colors.selectedColor = FlatWorldUITheme.Selection;
+        colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.55f);
+        colors.colorMultiplier = 1f;
+        colors.fadeDuration = 0.12f;
+        button.colors = colors;
+
+        TMP_Text eyebrow = CreateText(
+            "设置眉题",
+            buttonObject.transform,
+            "OPTIONS",
+            font,
+            11f,
+            Amber,
+            FontStyles.Bold,
+            TextAlignmentOptions.Left);
+        eyebrow.characterSpacing = 2f;
+        SetRect(eyebrow.rectTransform, new Vector2(18f, -8f), new Vector2(126f, 18f), new Vector2(0f, 1f));
+
+        TMP_Text title = CreateText(
+            "设置标题",
+            buttonObject.transform,
+            "设置",
+            font,
+            21f,
+            Cream,
+            FontStyles.Bold,
+            TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(18f, -29f), new Vector2(126f, 28f), new Vector2(0f, 1f));
+
+        TMP_Text arrow = CreateText(
+            "设置箭头",
+            buttonObject.transform,
+            ">",
+            font,
+            22f,
+            Muted,
+            FontStyles.Bold,
+            TextAlignmentOptions.Center);
+        SetRect(arrow.rectTransform, new Vector2(-22f, 0f), new Vector2(28f, 36f), Vector2.one * 0.5f);
+    }
+
     private static void CreateMenuButton(
         Transform parent,
         TMP_FontAsset font,
@@ -225,7 +301,7 @@ public static class MainMenuPrefabBuilder
         colors.normalColor = Color.white;
         colors.highlightedColor = primary ? new Color(1.13f, 1.08f, 0.98f, 1f) : new Color(1.22f, 1.19f, 1.12f, 1f);
         colors.pressedColor = new Color(0.74f, 0.78f, 0.80f, 1f);
-        colors.selectedColor = colors.highlightedColor;
+        colors.selectedColor = FlatWorldUITheme.Selection;
         colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.55f);
         colors.colorMultiplier = 1f;
         colors.fadeDuration = 0.12f;

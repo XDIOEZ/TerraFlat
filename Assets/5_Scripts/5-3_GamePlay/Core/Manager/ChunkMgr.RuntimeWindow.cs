@@ -66,6 +66,33 @@ public partial class ChunkMgr
     /// <summary>当前真正进入纯生成管线的低优先级预取数量，正常不超过 1。</summary>
     public int RuntimeChunkPrefetchInFlightCount => runtimePrefetchInFlightCount;
 
+    /// <summary>
+    /// 当前活动视野内的区块是否都已经完成数据提交和 ChunkView 表现绑定。
+    /// 维度切换使用它等待完整视野，不能只判断玩家脚下的中心区块。
+    /// </summary>
+    public bool AreRuntimeWindowPresentationsReady
+    {
+        get
+        {
+            if (!runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count == 0)
+                return true;
+            if (PendingRuntimeChunkPresentationCount > 0)
+                return false;
+
+            foreach (RuntimeWorldAddress address in runtimeWindowTargets)
+            {
+                if (!TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
+                    chunk == null ||
+                    chunk.DataStatus != ChunkDataStatus.Ready ||
+                    chunk.Terrain == null ||
+                    !TryGetRuntimeChunkView(address, out _))
+                    return false;
+            }
+
+            return true;
+        }
+    }
+
     #region 窗口刷新
 
     /// <summary>尝试找到指定区块当前正在使用的画面对象。</summary>
@@ -113,6 +140,14 @@ public partial class ChunkMgr
             ? profileAsset.CreateSnapshot()
             : defaultGenerationSnapshot;
         profile = ApplyWorldCoordinateScale(profile);
+        profile = ApplyPersistedEcologyConfiguration(profile);
+        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        if (baseSeed == 0)
+            baseSeed = 1;
+        // 地表入口与矿洞出口必须共享同一份门户随机种子，不能使用各自维度派生种子。
+        profile = profile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
+        // 矿洞额外带入地表冻结 Profile，后台才能复算“实际可放”的同一个入口候选。
+        profile = AttachCavePortalPairing(profile, baseSeed);
         activeGenerationSnapshot = profile;
         ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();
         int stepX = profile.Width;
@@ -120,9 +155,6 @@ public partial class ChunkMgr
         Vector2Int centerOrigin = NormalizeChunkPosition(new Vector2Int(
             Mathf.FloorToInt(center.x / stepX) * stepX,
             Mathf.FloorToInt(center.y / stepY) * stepY));
-        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
-        if (baseSeed == 0)
-            baseSeed = 1;
         DimensionManager dimensionManager = DimensionManager.Instance;
         int seed = dimensionManager != null
             ? dimensionManager.GetActiveGenerationSeed(baseSeed)
@@ -300,7 +332,10 @@ public partial class ChunkMgr
             ChunkRuntime chunk = await RequestChunkDataAsync(address, seed, snapshot,
                 topology: topology);
             if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding current) ||
-                !ReferenceEquals(current, binding) || !binding.WantsPresentation)
+                !ReferenceEquals(current, binding))
+                return;
+            SaveDataMgr.Instance?.RestoreRuntimeAiEntitiesForChunk(address);
+            if (!binding.WantsPresentation)
                 return;
             QueueRuntimeChunkPresentation(address, binding, chunk);
         }
@@ -474,10 +509,12 @@ public partial class ChunkMgr
         foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
         {
             RuntimeChunkBinding binding = pair.Value;
-            if (!binding.WantsPresentation)
-                continue;
             if (!runtimeChunkManager.TryGetChunk(pair.Key, out ChunkRuntime current) ||
                 current.DataStatus != ChunkDataStatus.Ready || current.Terrain == null)
+                continue;
+
+            SaveDataMgr.Instance?.RestoreRuntimeAiEntitiesForChunk(pair.Key);
+            if (!binding.WantsPresentation)
                 continue;
 
             if (binding.View != null && binding.View.IsBound &&

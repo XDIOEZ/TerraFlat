@@ -278,7 +278,7 @@ public static class NetworkModePrefabBuilder
         ColorBlock colors = input.colors;
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(1.12f, 1.08f, 1f, 1f);
-        colors.selectedColor = colors.highlightedColor;
+        colors.selectedColor = FlatWorldUITheme.Selection;
         colors.disabledColor = new Color(0.58f, 0.60f, 0.60f, 0.55f);
         colors.fadeDuration = 0.12f;
         input.colors = colors;
@@ -326,7 +326,7 @@ public static class NetworkModePrefabBuilder
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(1.18f, 1.13f, 1.04f, 1f);
         colors.pressedColor = new Color(0.72f, 0.76f, 0.78f, 1f);
-        colors.selectedColor = colors.highlightedColor;
+        colors.selectedColor = FlatWorldUITheme.Selection;
         colors.disabledColor = new Color(0.42f, 0.43f, 0.44f, 0.56f);
         colors.fadeDuration = 0.12f;
         button.colors = colors;

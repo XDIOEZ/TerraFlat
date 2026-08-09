@@ -663,7 +663,7 @@ public static class NewGamePrefabBuilder
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(1.16f, 1.11f, 1.02f, 1f);
         colors.pressedColor = new Color(0.72f, 0.76f, 0.78f, 1f);
-        colors.selectedColor = colors.highlightedColor;
+        colors.selectedColor = FlatWorldUITheme.Selection;
         colors.disabledColor = new Color(0.42f, 0.43f, 0.44f, 0.56f);
         colors.fadeDuration = 0.12f;
         button.colors = colors;

@@ -1,6 +1,11 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+/// <summary>
+/// 相机跟随式雨效控制器。
+/// 雨层固定在正交相机上缘，并按雨滴初速度、相机高度和 1.12 倍安全余量动态计算生命周期，
+/// 使雨滴刚好持续到画面下缘外侧，避免寿命过长散落到地图外或寿命过短导致下半屏断雨。
+/// </summary>
 public class RainEffectController : MonoBehaviour
 {
 #region 字段
@@ -13,6 +18,9 @@ public class RainEffectController : MonoBehaviour
     [SerializeField] private bool _syncScaleByOrthographicSize = true; // 是否按正交尺寸同步缩放
     [SerializeField] private float _referenceOrthographicSize = 5f; // 正交相机参考尺寸
     [SerializeField] private float _coveragePadding = 1.1f; // 覆盖冗余倍率，避免缩放露边
+    [SerializeField] private bool _fitLifetimeToCamera = true; // 是否根据相机高度补足雨滴生命周期
+    [SerializeField, Min(0.01f)] private float _minimumParticleLifetime = 0.35f; // 生命周期下限
+    [SerializeField, Min(1f)] private float _lifetimeCoverageMultiplier = 1.12f; // 下边缘安全覆盖倍率
     [SerializeField] private ParticleSystem[] _targetParticleSystems; // 受控粒子系统列表（为空则自动查找子节点）
     [SerializeField] private float _minEmissionFactor = 0.05f; // 最小发射倍率（0~1）
     [SerializeField] private float _minMaxParticlesFactor = 0.1f; // 最小粒子上限倍率（0~1）
@@ -22,6 +30,7 @@ public class RainEffectController : MonoBehaviour
     private float[] _baseRateOverTimeMultipliers; // 初始每秒发射倍率
     private float[] _baseRateOverDistanceMultipliers; // 初始按距离发射倍率
     private int[] _baseMaxParticles; // 初始最大粒子数
+    private float[] _lastAppliedLifetimes; // 最近写入的生命周期，避免每帧重复设置
 
 #endregion
 
@@ -43,6 +52,8 @@ public class RainEffectController : MonoBehaviour
     {
         _referenceOrthographicSize = Mathf.Max(0.01f, _referenceOrthographicSize);
         _coveragePadding = Mathf.Max(1f, _coveragePadding);
+        _minimumParticleLifetime = Mathf.Max(0.01f, _minimumParticleLifetime);
+        _lifetimeCoverageMultiplier = Mathf.Max(1f, _lifetimeCoverageMultiplier);
         _minEmissionFactor = Mathf.Clamp01(_minEmissionFactor);
         _minMaxParticlesFactor = Mathf.Clamp01(_minMaxParticlesFactor);
     }
@@ -108,6 +119,8 @@ public class RainEffectController : MonoBehaviour
             transform.rotation = targetCamera.transform.rotation;
         }
 
+        SyncParticleLifetimeToCamera(targetCamera, runtimeOffset);
+
         if (!_syncScaleByOrthographicSize || !targetCamera.orthographic)
         {
             return;
@@ -138,6 +151,63 @@ public class RainEffectController : MonoBehaviour
         float adaptiveYOffset = targetCamera.orthographicSize * _offsetHeightFactor;
         runtimeOffset.y += adaptiveYOffset;
         return runtimeOffset;
+    }
+
+    /// <summary>按从发射边缘到相机下缘的实际距离调整生命周期。</summary>
+    private void SyncParticleLifetimeToCamera(Camera targetCamera, Vector3 runtimeOffset)
+    {
+        if (!_fitLifetimeToCamera || !targetCamera.orthographic)
+        {
+            return;
+        }
+
+        EnsureParticleSystemCache();
+        if (_runtimeParticleSystems == null || _runtimeParticleSystems.Length == 0)
+        {
+            return;
+        }
+
+        // 发射边缘位于相机上方，目标距离为发射高度到下边缘，并额外越过少量边界防止露缝。
+        float fallDistance = Mathf.Max(0.01f, runtimeOffset.y + targetCamera.orthographicSize);
+        for (int i = 0; i < _runtimeParticleSystems.Length; i++)
+        {
+            ParticleSystem particleSystem = _runtimeParticleSystems[i];
+            if (particleSystem == null)
+            {
+                continue;
+            }
+
+            ParticleSystem.MainModule main = particleSystem.main;
+            float fallSpeed = GetMaximumStartSpeed(main.startSpeed);
+            if (fallSpeed <= 0.01f)
+            {
+                continue;
+            }
+
+            float targetLifetime = Mathf.Max(
+                _minimumParticleLifetime,
+                fallDistance / fallSpeed * _lifetimeCoverageMultiplier);
+            if (_lastAppliedLifetimes != null && i < _lastAppliedLifetimes.Length &&
+                Mathf.Approximately(_lastAppliedLifetimes[i], targetLifetime))
+            {
+                continue;
+            }
+
+            main.startLifetime = targetLifetime;
+            if (_lastAppliedLifetimes != null && i < _lastAppliedLifetimes.Length)
+            {
+                _lastAppliedLifetimes[i] = targetLifetime;
+            }
+        }
+    }
+
+    /// <summary>取得当前粒子系统的最大初始下落速度。</summary>
+    private static float GetMaximumStartSpeed(ParticleSystem.MinMaxCurve startSpeed)
+    {
+        return Mathf.Max(
+            Mathf.Abs(startSpeed.constantMin),
+            Mathf.Abs(startSpeed.constantMax),
+            Mathf.Abs(startSpeed.curveMultiplier));
     }
 
     private void EnsureParticleSystemCache()
@@ -172,6 +242,7 @@ public class RainEffectController : MonoBehaviour
             _baseRateOverTimeMultipliers = new float[0];
             _baseRateOverDistanceMultipliers = new float[0];
             _baseMaxParticles = new int[0];
+            _lastAppliedLifetimes = new float[0];
             return;
         }
 
@@ -179,6 +250,7 @@ public class RainEffectController : MonoBehaviour
         _baseRateOverTimeMultipliers = new float[count];
         _baseRateOverDistanceMultipliers = new float[count];
         _baseMaxParticles = new int[count];
+        _lastAppliedLifetimes = new float[count];
 
         for (int i = 0; i < count; i++)
         {
@@ -188,6 +260,7 @@ public class RainEffectController : MonoBehaviour
             _baseRateOverTimeMultipliers[i] = emission.rateOverTimeMultiplier;
             _baseRateOverDistanceMultipliers[i] = emission.rateOverDistanceMultiplier;
             _baseMaxParticles[i] = Mathf.Max(1, main.maxParticles);
+            _lastAppliedLifetimes[i] = -1f;
         }
     }
 

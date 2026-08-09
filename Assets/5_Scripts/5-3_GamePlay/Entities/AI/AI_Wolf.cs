@@ -63,6 +63,21 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	private float _packCallCooldownTimer;
 	private Vector3 _packCenter;
 	private bool _hasPackMate;
+
+	// 追击阵型：缓存一个稳定的寻路目标，避免每帧向导航层注入转向力。
+	[SerializeField, ReadOnly]
+	private Vector3 _chaseFormationTarget;
+
+	[SerializeField, ReadOnly]
+	private int _chaseFormationSlot = -1;
+
+	[SerializeField, ReadOnly]
+	private int _chaseFormationMemberCount;
+
+	private bool _hasChaseFormationTarget;
+	private readonly List<AI_Wolf> _chaseFormationMembers = new List<AI_Wolf>(8);
+	private static readonly Comparison<AI_Wolf> ChaseFormationMemberComparer = CompareChaseFormationMembers;
+
 	private AI_AttackController _attack = new AI_AttackController();
 #endregion
 
@@ -88,6 +103,32 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	[TabGroup("配置", "群体"), BoxGroup("配置/群体/协作"), LabelText("呼叫冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float packCallCooldown = 0.8f;
 
+	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), LabelText("启用追击站位")]
+	public bool enableChaseFormation = true;
+
+	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), HorizontalGroup("配置/群体/追击站位/参数1"), LabelText("最少成员"), MinValue(2)]
+	public int chaseFormationMinMembers = 2;
+	[HorizontalGroup("配置/群体/追击站位/参数1"), LabelText("站位半径"), SuffixLabel("米", true), MinValue(0.05f)]
+	public float chaseFormationRadius = 1.05f;
+
+	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), HorizontalGroup("配置/群体/追击站位/参数2"), LabelText("纵向间隔"), SuffixLabel("米", true), MinValue(0f)]
+	public float chaseFormationVerticalSpacing = 0.42f;
+	[HorizontalGroup("配置/群体/追击站位/参数2"), LabelText("最大纵向比例"), Range(0.1f, 0.85f)]
+	public float chaseFormationMaxVerticalRatio = 0.55f;
+
+	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), HorizontalGroup("配置/群体/追击站位/参数3"), LabelText("攻击安全余量"), SuffixLabel("米", true), MinValue(0.01f)]
+	public float chaseFormationAttackMargin = 0.18f;
+	[HorizontalGroup("配置/群体/追击站位/参数3"), LabelText("攻击槽容差"), SuffixLabel("米", true), MinValue(0.01f)]
+	public float chaseFormationAttackSlotTolerance = 0.14f;
+
+	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), HorizontalGroup("配置/群体/追击站位/参数4"), LabelText("分离距离"), SuffixLabel("米", true), MinValue(0.05f)]
+	public float chaseSeparationDistance = 0.85f;
+	[HorizontalGroup("配置/群体/追击站位/参数4"), LabelText("分离强度"), Range(0f, 2f)]
+	public float chaseSeparationStrength = 0.7f;
+
+	[TabGroup("配置", "群体"), BoxGroup("配置/群体/追击站位"), LabelText("最大分离偏移"), SuffixLabel("米", true), MinValue(0f)]
+	public float chaseSeparationMaxOffset = 0.2f;
+
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr1"), LabelText("警觉距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float alertDetectDistance = 10f;
 	[HorizontalGroup("配置/行为/战斗/Hr1"), LabelText("追击触发"), SuffixLabel("米", true), MinValue(0.1f)]
@@ -101,7 +142,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackCooldown = 2f;
 	[HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("伤害窗口"), SuffixLabel("秒", true), MinValue(0.01f)]
-	public float attackDamageWindow = 0.2f;
+	public float attackDamageWindow = 0.33333334f;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("攻击窗口延迟"), SuffixLabel("秒", true), MinValue(0f)]
+	public float attackDamageStartDelay = 0.35f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("警觉维持时长"), SuffixLabel("秒", true), MinValue(0f)]
 	public float alertKeepDuration = 2f;
@@ -222,13 +265,20 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		_alphaWolf = this;
 		_packCenter = transform.position;
 		_currentThreat = null;
+		ClearChaseFormation();
 		_attack.Reset();
 		_attack.Cooldown = attackCooldown;
 		_attack.DamageWindow = attackDamageWindow;
+		_attack.DamageWindowStartDelay = attackDamageStartDelay;
 	}
 
 	protected override void OnBindExtraModules()
 	{
+		if (_detector != null)
+		{
+			// 感知半径至少覆盖追击触发距离；丢失距离由当前目标记忆维持。
+			_detector.DetectionRadius = Mathf.Max(_detector.DetectionRadius, chaseTriggerDistance);
+		}
 		_attack.Bind(item);
 	}
 
@@ -252,6 +302,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		RefreshPackStatus();
 		RefreshThreatTarget();
+		RefreshChaseFormationTarget();
 	}
 
 	protected override void OnBeforeSwitchState(WolfState previous, WolfState next)
@@ -272,10 +323,20 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 			_attack.OnExitAttackState();
 		}
 
+		if (previous == WolfState.Chase && next != WolfState.Chase)
+		{
+			ClearChaseFormation();
+		}
+
 		// 进入攻击状态：重置窗口触发标记
 		if (next == WolfState.Attack)
 		{
 			_attack.OnEnterAttackState();
+		}
+
+		if (next == WolfState.Chase)
+		{
+			RefreshChaseFormationTarget();
 		}
 	}
 
@@ -299,7 +360,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		string roleText = _isAlphaWolf ? "头狼" : "跟随";
 		string advanceText = HasAdvanceCommand ? " | 推进: 是" : string.Empty;
-		return $" | 狼群数: {_packCount} | 角色: {roleText}{advanceText}";
+		string formationText = _hasChaseFormationTarget
+			? $" | 追击位: {GetChaseFormationSlotLabel(_chaseFormationSlot)}/{_chaseFormationMemberCount}"
+			: string.Empty;
+		return $" | 狼群数: {_packCount} | 角色: {roleText}{formationText}{advanceText}";
 	}
 #endregion
 
@@ -323,6 +387,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		Data.AdvanceArrivalDistance = Mathf.Max(0.05f, command.ArrivalDistance);
 		Data.AttackActorsOnRoute = command.AttackActorsOnRoute;
 		_currentThreat = null;
+		ClearChaseFormation();
 		_alertTimer = 0f;
 		_packAssistTimer = 0f;
 
@@ -344,6 +409,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 
 		_currentThreat = threatSource;
+		ClearChaseFormation();
 		_alertTimer = alertKeepDuration;
 		_packAssistTimer = packAssistDuration;
 		CallNearbyWolves(threatSource);
@@ -367,6 +433,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 
 		_currentThreat = threatSource;
+		ClearChaseFormation();
 		_alertTimer = Mathf.Max(_alertTimer, alertKeepDuration);
 		_packAssistTimer = Mathf.Max(_packAssistTimer, packAssistDuration);
 
@@ -374,6 +441,30 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		{
 			Debug.Log($"[WolfAI] {name} 收到同伴呼叫，呼叫者={caller?.name}, 目标={threatSource.name}", this);
 		}
+	}
+#endregion
+
+#region PublicUtility - 追击站位
+	/// <summary>
+	/// 计算左右浅扇形中的稳定槽位偏移。纵向偏移始终受半径比例限制，
+	/// 保留较大的 X 分量，以兼容当前仅左右朝向的攻击碰撞体。
+	/// </summary>
+	public static Vector2 CalculateChaseFormationSlotOffset(
+		int slotIndex,
+		float formationRadius,
+		float verticalSpacing,
+		float maxVerticalRatio)
+	{
+		float radius = Mathf.Max(0.05f, formationRadius);
+		int safeSlotIndex = Mathf.Max(0, slotIndex);
+		int pairIndex = safeSlotIndex / 2;
+		float laneDirection = (safeSlotIndex & 1) == 0 ? -1f : 1f;
+
+		float requestedVertical = GetFormationVerticalOffset(pairIndex, Mathf.Max(0f, verticalSpacing));
+		float maxVertical = radius * Mathf.Clamp(maxVerticalRatio, 0.05f, 0.85f);
+		float vertical = Mathf.Clamp(requestedVertical, -maxVertical, maxVertical);
+		float horizontal = Mathf.Sqrt(Mathf.Max(0f, radius * radius - vertical * vertical));
+		return new Vector2(horizontal * laneDirection, vertical);
 	}
 #endregion
 
@@ -417,7 +508,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		if (_currentThreat == null) { StopMove(); return; }
 
-		MoveTo(_currentThreat.transform.position);
+		MoveTo(_hasChaseFormationTarget
+			? _chaseFormationTarget
+			: _currentThreat.transform.position);
 		TryCallNearbyWolves();
 	}
 
@@ -521,8 +614,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		float distance = DistanceTo(_currentThreat.transform);
 
 		if (!IsAggressiveAdvanceActive() && _packCount < 2) return false;
+		if (distance > attackTriggerDistance) return false;
 
-		return distance <= attackTriggerDistance;
+		// 已分配追击槽位时先走到自己的攻击站位，再切攻击，避免刚进范围就把狼群锁成一团。
+		return HasReachedChaseFormationAttackSlot();
 	}
 
 	/// <summary>追击条件：双狼以上且在追击范围内</summary>
@@ -662,8 +757,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 
 		if (_currentThreat == null) return;
-		if (_packAssistTimer > 0f) return;
-		_currentThreat = null;
+		if (DistanceTo(_currentThreat.transform) > chaseLossDistance)
+			_currentThreat = null;
 	}
 
 	private Item FindClosestAdvanceAggressionTarget()
@@ -672,16 +767,16 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		if (allItems == null || allItems.Count == 0) return null;
 
 		Item closest = null;
-		float closestDistance = float.MaxValue;
+		float closestDistanceSqr = float.MaxValue;
 		foreach (Item candidate in allItems)
 		{
 			if (!IsLivingActorTarget(candidate)) continue;
 
-			float distance = DistanceTo(candidate.transform);
-			if (distance < closestDistance)
+			float distanceSqr = WorldTopologyRuntime.SqrDistance(transform.position, candidate.transform.position);
+			if (distanceSqr < closestDistanceSqr)
 			{
 				closest = candidate;
-				closestDistance = distance;
+				closestDistanceSqr = distanceSqr;
 			}
 		}
 
@@ -718,23 +813,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 
 	private Item FindClosestPlayerThreat()
 	{
-		List<Item> allItems = _detector.CurrentItemsInArea;
-		if (allItems == null || allItems.Count == 0) return null;
-
-		Item closest = null;
-		float closestDistance = float.MaxValue;
-
-		foreach (Item it in allItems)
-		{
-			if (it == null || !IsPlayerThreat(it)) continue;
-			float distance = DistanceTo(it.transform);
-			if (distance < closestDistance)
-			{
-				closest = it;
-				closestDistance = distance;
-			}
-		}
-		return closest;
+		return _detector.FindClosestItemByTags(
+			playerTags,
+			transform.position,
+			includeUnityPlayerTag: true);
 	}
 
 	private bool IsPlayerThreat(Item target)
@@ -751,6 +833,227 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 				return true;
 		}
 		return false;
+	}
+
+	/// <summary>刷新追击槽位：同一目标的狼按稳定 ID 排序，并在左右浅扇形中分配不同目的地。</summary>
+	private void RefreshChaseFormationTarget()
+	{
+		ClearChaseFormation();
+
+		if (!enableChaseFormation || _currentThreat == null || !IsPlayerChaseTarget(_currentThreat))
+			return;
+
+		_chaseFormationMembers.Add(this);
+		List<Item> detectedItems = _detector?.CurrentItemsInArea;
+		if (detectedItems == null)
+			return;
+
+		for (int i = 0; i < detectedItems.Count; i++)
+		{
+			if (!TryGetWolfAlly(detectedItems[i], out AI_Wolf ally) ||
+				!IsEligibleChaseFormationMember(ally, _currentThreat) ||
+				_chaseFormationMembers.Contains(ally))
+			{
+				continue;
+			}
+
+			_chaseFormationMembers.Add(ally);
+		}
+
+		if (_chaseFormationMembers.Count < Mathf.Max(2, chaseFormationMinMembers))
+		{
+			ClearChaseFormation();
+			return;
+		}
+
+		_chaseFormationMembers.Sort(ChaseFormationMemberComparer);
+		int slotIndex = ResolveChaseFormationSlotIndex(_currentThreat.transform.position);
+		if (slotIndex < 0)
+		{
+			ClearChaseFormation();
+			return;
+		}
+
+		float maxFormationRadius = Mathf.Max(
+			0.05f,
+			attackTriggerDistance - Mathf.Max(0.05f, chaseFormationAttackMargin));
+		float formationRadius = Mathf.Clamp(chaseFormationRadius, 0.05f, maxFormationRadius);
+		Vector2 slotOffset = CalculateChaseFormationSlotOffset(
+			slotIndex,
+			formationRadius,
+			chaseFormationVerticalSpacing,
+			chaseFormationMaxVerticalRatio);
+		Vector2 desiredOffset = Vector2.ClampMagnitude(
+			slotOffset + CalculateChaseSeparationOffset(),
+			maxFormationRadius);
+
+		Vector3 targetPosition = _currentThreat.transform.position;
+		Vector3 formationTarget = WorldTopologyRuntime.NormalizePosition(targetPosition + (Vector3)desiredOffset);
+		if (!IsWalkableFormationDestination(formationTarget))
+		{
+			// 分离偏移踩到障碍时，优先保留原槽位；槽位同样不可走时回退旧追击逻辑。
+			formationTarget = WorldTopologyRuntime.NormalizePosition(targetPosition + (Vector3)slotOffset);
+			if (!IsWalkableFormationDestination(formationTarget))
+			{
+				ClearChaseFormation();
+				return;
+			}
+		}
+
+		_chaseFormationTarget = formationTarget;
+		_chaseFormationSlot = slotIndex;
+		_chaseFormationMemberCount = _chaseFormationMembers.Count;
+		_hasChaseFormationTarget = true;
+	}
+
+	/// <summary>计算过近同伴带来的有限分离偏移，结果只影响下次寻路目标，不改写导航速度。</summary>
+	private Vector2 CalculateChaseSeparationOffset()
+	{
+		float separationDistance = Mathf.Max(0.05f, chaseSeparationDistance);
+		float maxOffset = Mathf.Max(0f, chaseSeparationMaxOffset);
+		if (maxOffset <= 0f || chaseSeparationStrength <= 0f || _chaseFormationMembers.Count < 2)
+			return Vector2.zero;
+
+		float separationDistanceSqr = separationDistance * separationDistance;
+		Vector2 separation = Vector2.zero;
+		for (int i = 0; i < _chaseFormationMembers.Count; i++)
+		{
+			AI_Wolf ally = _chaseFormationMembers[i];
+			if (ally == null || ally == this)
+				continue;
+
+			Vector2 away = WorldTopologyRuntime.ShortestDelta(ally.transform.position, transform.position);
+			float distanceSqr = away.sqrMagnitude;
+			if (distanceSqr >= separationDistanceSqr)
+				continue;
+
+			if (distanceSqr <= 0.0001f)
+			{
+				away = CompareChaseFormationMembers(this, ally) <= 0 ? Vector2.down : Vector2.up;
+				separation += away;
+				continue;
+			}
+
+			float distance = Mathf.Sqrt(distanceSqr);
+			separation += away / distance * (1f - distance / separationDistance);
+		}
+
+		return separation.sqrMagnitude <= 0.0001f
+			? Vector2.zero
+			: Vector2.ClampMagnitude(separation * (separationDistance * chaseSeparationStrength), maxOffset);
+	}
+
+	/// <summary>只让正在围攻同一玩家、且没有进入撤退状态的同伴占用追击槽位。</summary>
+	private static bool IsEligibleChaseFormationMember(AI_Wolf wolf, Item threat)
+	{
+		return wolf != null && wolf.isActiveAndEnabled && wolf._isReady &&
+			wolf._currentThreat == threat &&
+			wolf._currentState != WolfState.Avoid && wolf._currentState != WolfState.Flee;
+	}
+
+	/// <summary>优先占据自己所在的左右翼，避免为了固定编号从玩家身体中央穿过。</summary>
+	private int ResolveChaseFormationSlotIndex(Vector3 targetPosition)
+	{
+		int leftLaneCount = 0;
+		int rightLaneCount = 0;
+		for (int memberIndex = 0; memberIndex < _chaseFormationMembers.Count; memberIndex++)
+		{
+			AI_Wolf member = _chaseFormationMembers[memberIndex];
+			bool useRightLane = ShouldUseRightChaseLane(member, targetPosition, memberIndex);
+			int slotIndex = useRightLane
+				? rightLaneCount++ * 2 + 1
+				: leftLaneCount++ * 2;
+			if (member == this)
+				return slotIndex;
+		}
+
+		return -1;
+	}
+
+	/// <summary>横向位置明确时保留原侧；与玩家 X 轴重合时按稳定排序交替分翼。</summary>
+	private static bool ShouldUseRightChaseLane(AI_Wolf wolf, Vector3 targetPosition, int stableMemberIndex)
+	{
+		if (wolf == null)
+			return (stableMemberIndex & 1) != 0;
+
+		float horizontalOffset = WorldTopologyRuntime.ShortestDelta(targetPosition, wolf.transform.position).x;
+		if (Mathf.Abs(horizontalOffset) > 0.05f)
+			return horizontalOffset > 0f;
+
+		return (stableMemberIndex & 1) != 0;
+	}
+
+	/// <summary>兼容 Item 标签缺失但 Unity Tag 标记为 Player 的本地玩家。</summary>
+	private bool IsPlayerChaseTarget(Item target)
+	{
+		return IsPlayerThreat(target) || (target != null && target.CompareTag("Player"));
+	}
+
+	/// <summary>阵型追击期间，只有足够靠近自身槽位才允许进入攻击状态。</summary>
+	private bool HasReachedChaseFormationAttackSlot()
+	{
+		if (!_hasChaseFormationTarget)
+			return true;
+
+		float tolerance = Mathf.Min(
+			Mathf.Max(0.01f, chaseFormationAttackSlotTolerance),
+			Mathf.Max(0.05f, chaseFormationAttackMargin));
+		return WorldTopologyRuntime.SqrDistance(transform.position, _chaseFormationTarget) <= tolerance * tolerance;
+	}
+
+	/// <summary>导航未就绪时交给既有导航重试；就绪后只接受可走阵型目标。</summary>
+	private static bool IsWalkableFormationDestination(Vector3 destination)
+	{
+		WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
+		return navigation == null || !navigation.IsNavigationReady || navigation.IsWalkable((Vector2)destination);
+	}
+
+	/// <summary>清除瞬态站位缓存，避免目标切换或脱战后沿用旧阵型。</summary>
+	private void ClearChaseFormation()
+	{
+		_chaseFormationMembers.Clear();
+		_chaseFormationTarget = transform.position;
+		_chaseFormationSlot = -1;
+		_chaseFormationMemberCount = 0;
+		_hasChaseFormationTarget = false;
+	}
+
+	/// <summary>优先使用持久化 Item Guid 排序，对象池复用时再回退到实例 ID。</summary>
+	private static int CompareChaseFormationMembers(AI_Wolf left, AI_Wolf right)
+	{
+		if (ReferenceEquals(left, right))
+			return 0;
+		if (left == null)
+			return -1;
+		if (right == null)
+			return 1;
+
+		int leftGuid = left.item?.itemData?.Guid ?? 0;
+		int rightGuid = right.item?.itemData?.Guid ?? 0;
+		int guidComparison = leftGuid.CompareTo(rightGuid);
+		return guidComparison != 0
+			? guidComparison
+			: left.GetInstanceID().CompareTo(right.GetInstanceID());
+	}
+
+	/// <summary>第一个左右槽位在正侧面，后续槽位按上下交错排列。</summary>
+	private static float GetFormationVerticalOffset(int pairIndex, float spacing)
+	{
+		if (pairIndex <= 0 || spacing <= 0f)
+			return 0f;
+
+		int layer = (pairIndex + 1) / 2;
+		return (pairIndex & 1) == 1 ? layer * spacing : -layer * spacing;
+	}
+
+	/// <summary>把内部槽位索引转换为便于调试的左右翼编号。</summary>
+	private static string GetChaseFormationSlotLabel(int slotIndex)
+	{
+		if (slotIndex < 0)
+			return "-";
+
+		string lane = (slotIndex & 1) == 0 ? "左翼" : "右翼";
+		return $"{lane}{slotIndex / 2 + 1}";
 	}
 
 	/// <summary>呼叫附近狼群同伴支援</summary>
@@ -860,6 +1163,16 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 				Gizmos.DrawLine(center, alphaPos);
 				Handles.Label(alphaPos + Vector3.up * 0.42f, "头狼 alphaWolf");
 			}
+		}
+
+		if (_hasChaseFormationTarget)
+		{
+			Gizmos.color = new Color(0.65f, 0.25f, 1f, 0.9f);
+			Gizmos.DrawLine(center, _chaseFormationTarget);
+			Gizmos.DrawWireSphere(_chaseFormationTarget, 0.1f);
+			Handles.Label(
+				_chaseFormationTarget + Vector3.up * 0.2f,
+				$"追击位 {GetChaseFormationSlotLabel(_chaseFormationSlot)}/{_chaseFormationMemberCount}");
 		}
 	}
 

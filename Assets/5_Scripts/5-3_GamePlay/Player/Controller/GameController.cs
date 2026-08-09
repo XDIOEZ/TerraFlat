@@ -70,6 +70,8 @@ public class GameController : Module
         _inputActions = new PlayerInputActions();
         ConfigureDeviceBindings();
         InputBindings = new InputBindingService(_inputActions.asset);
+        InputBindings.BindingsChanged += HandleBindingsChanged;
+        EventSystemGuard.ConfigureInputActions(_inputActions.asset);
         InitializeVirtualCursor();
     }
 
@@ -103,6 +105,9 @@ public class GameController : Module
     public void OnDestroy()
     {
         InputBindings?.Dispose();
+        if (InputBindings != null)
+            InputBindings.BindingsChanged -= HandleBindingsChanged;
+        EventSystemGuard.ClearInputActions(_inputActions?.asset);
         InputBindings = null;
         _inputActions?.Dispose();
         _inputActions = null;
@@ -121,7 +126,13 @@ public class GameController : Module
     public void LeftClickAction(InputAction.CallbackContext obj) /// 左键按下
     {
         UpdateCurrentInputDevice(obj);
-        if (IsGameplayInputLocked || IsPointerOverUI())
+        if (obj.control?.device is Gamepad && EventSystemGuard.TryHandleGamepadVirtualCursorClick())
+        {
+            _suppressLeftClickUntilRelease = true;
+            return;
+        }
+
+        if (IsGameplayInputLocked || IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive)
         {
             _suppressLeftClickUntilRelease = true;
             return;
@@ -151,7 +162,13 @@ public class GameController : Module
     public void RightClickAction(InputAction.CallbackContext obj) /// 右键按下
     {
         UpdateCurrentInputDevice(obj);
-        if (IsGameplayInputLocked || IsPointerOverUI())
+        if (obj.control?.device is Gamepad && EventSystemGuard.TryHandleGamepadContextAction())
+        {
+            _suppressRightClickUntilRelease = true;
+            return;
+        }
+
+        if (IsGameplayInputLocked || IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive)
         {
             _suppressRightClickUntilRelease = true;
             return;
@@ -216,6 +233,9 @@ public class GameController : Module
 
     public bool IsPointerOverUI()
     {
+        if (IsUsingGamepad && EventSystemGuard.IsGamepadUISelectionActive)
+            return true;
+
         EventSystem eventSystem = EventSystem.current;
         if (eventSystem == null)
             return false;
@@ -254,7 +274,7 @@ public class GameController : Module
         _inputActions.Win10.RightClick.performed += RightClickAction;
         _inputActions.Win10.RightClick.canceled += RightClickUpAction;
 
-        _inputActions.Win10.Move_Player.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.Move_Player.performed += HandleMoveInputPerformed;
         _inputActions.Win10.Move_Player.canceled += UpdateCurrentInputDevice;
         _inputActions.Win10.Mouse.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.performed += UpdateCurrentInputDevice;
@@ -282,7 +302,7 @@ public class GameController : Module
         _inputActions.Win10.RightClick.performed -= RightClickAction;
         _inputActions.Win10.RightClick.canceled -= RightClickUpAction;
 
-        _inputActions.Win10.Move_Player.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.Move_Player.performed -= HandleMoveInputPerformed;
         _inputActions.Win10.Move_Player.canceled -= UpdateCurrentInputDevice;
         _inputActions.Win10.Mouse.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.performed -= UpdateCurrentInputDevice;
@@ -342,6 +362,7 @@ public class GameController : Module
             return;
 
         _currentInputDevice = deviceType;
+        EventSystemGuard.SetGamepadMode(deviceType == InputDeviceType.Gamepad);
         ActiveInputDeviceChanged?.Invoke(deviceType);
     }
 
@@ -357,6 +378,7 @@ public class GameController : Module
         }
 
         _virtualCursorInitialized = true;
+        EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
     }
 
     private void UpdateVirtualCursor(float deltaTime) /// 更新手柄虚拟光标
@@ -390,6 +412,25 @@ public class GameController : Module
         float maxY = Mathf.Max(minY, Screen.height - CursorClampPadding);
         _virtualCursorScreenPosition.x = Mathf.Clamp(_virtualCursorScreenPosition.x, minX, maxX);
         _virtualCursorScreenPosition.y = Mathf.Clamp(_virtualCursorScreenPosition.y, minY, maxY);
+        EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    /// <summary>
+    /// 左摇杆用于 UI 焦点导航时退出虚拟光标模式。
+    /// </summary>
+    private void HandleMoveInputPerformed(InputAction.CallbackContext context)
+    {
+        UpdateCurrentInputDevice(context);
+        if (context.control?.device is Gamepad)
+            EventSystemGuard.NotifyGamepadFocusInput();
+    }
+
+    /// <summary>
+    /// 重绑完成后刷新 UI 专用动作，使 UI 与玩家操作保持一致。
+    /// </summary>
+    private void HandleBindingsChanged()
+    {
+        EventSystemGuard.SynchronizeUIInputBindings(_inputActions?.asset);
     }
 
 #endregion

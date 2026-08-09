@@ -1,8 +1,10 @@
 // AI-Context: FlatWorld 全局 UI 视觉规范；集中处理面板、按钮、输入框、滑条、槽位和文字风格，不承载任何业务逻辑。
 
 using System;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -20,6 +22,10 @@ public static class FlatWorldUITheme
     public static readonly Color TextSecondary = Hex("A8B5B5");
     public static readonly Color Accent = Hex("D47E3A");
     public static readonly Color AccentHover = Hex("E59B59");
+    // 手柄/键盘导航选中态使用独立强调色，避免与鼠标悬停态混淆。
+    public static readonly Color Selection = Hex("F0A35A");
+    public static readonly Color SelectionOutline = Hex("FFE0A3", 0.98f);
+    public static readonly Vector2 SelectionOutlineDistance = new Vector2(3f, -3f);
     public static readonly Color Teal = Hex("4D9E95");
     public static readonly Color Danger = Hex("A94F45");
 
@@ -45,6 +51,12 @@ public static class FlatWorldUITheme
     private static readonly string[] PanelWords =
     {
         "背景", "底板", "面板", "窗口", "卡片", "Background", "Panel", "Window"
+    };
+
+    // 只有明确属于设置/难度面板的滑块才允许参与手柄导航。
+    private static readonly string[] GamepadInteractiveSliderRoots =
+    {
+        "UI_NewGame", "NewGame", "UI_AudioSettings", "UI_InterfaceSettings", "Settings", "Setting", "设置", "难度"
     };
 
     private static readonly (string Key, string Title, string Eyebrow)[] WindowTitles =
@@ -74,6 +86,7 @@ public static class FlatWorldUITheme
             return;
 
         FlatWorldAudioUIFeedback.EnsureFor(root);
+        ApplySelectionColors(root);
 
         if (UsesBespokeVisuals(root))
             return;
@@ -88,6 +101,148 @@ public static class FlatWorldUITheme
         StyleScrollbars(root);
         StyleTexts(root);
         DecoratePanel(root, isHud);
+    }
+
+    /// <summary>
+    /// 统一设置所有可导航控件的选中颜色，保留悬停色以区分鼠标悬停与手柄焦点。
+    /// </summary>
+    public static void ApplySelectionColors(Transform root)
+    {
+        if (root == null)
+            return;
+
+        Selectable[] selectables = root.GetComponentsInChildren<Selectable>(true);
+        foreach (Selectable selectable in selectables)
+        {
+            if (selectable == null)
+                continue;
+
+            ColorBlock colors = selectable.colors;
+            colors.selectedColor = Selection;
+            selectable.colors = colors;
+        }
+
+        ApplyGamepadNavigationPolicy(root);
+    }
+
+    /// <summary>
+    /// 排除纯显示滑块和滚动条，避免它们消耗手柄导航输入或成为默认焦点。
+    /// </summary>
+    public static void ApplyGamepadNavigationPolicy(Transform root)
+    {
+        if (root == null)
+            return;
+
+        Selectable[] selectables = root.GetComponentsInChildren<Selectable>(true);
+        foreach (Selectable selectable in selectables)
+        {
+            if (!IsGamepadNavigationExcluded(selectable))
+                continue;
+
+            Navigation navigation = selectable.navigation;
+            navigation.mode = Navigation.Mode.None;
+            navigation.selectOnUp = null;
+            navigation.selectOnDown = null;
+            navigation.selectOnLeft = null;
+            navigation.selectOnRight = null;
+            selectable.navigation = navigation;
+        }
+
+        foreach (Selectable selectable in selectables)
+        {
+            if (selectable == null || IsGamepadNavigationExcluded(selectable))
+                continue;
+
+            Navigation navigation = selectable.navigation;
+            if (navigation.mode != Navigation.Mode.Explicit)
+                continue;
+
+            bool changed = false;
+            if (navigation.selectOnUp != null && IsGamepadNavigationExcluded(navigation.selectOnUp))
+            {
+                navigation.selectOnUp = null;
+                changed = true;
+            }
+
+            if (navigation.selectOnDown != null && IsGamepadNavigationExcluded(navigation.selectOnDown))
+            {
+                navigation.selectOnDown = null;
+                changed = true;
+            }
+
+            if (navigation.selectOnLeft != null && IsGamepadNavigationExcluded(navigation.selectOnLeft))
+            {
+                navigation.selectOnLeft = null;
+                changed = true;
+            }
+
+            if (navigation.selectOnRight != null && IsGamepadNavigationExcluded(navigation.selectOnRight))
+            {
+                navigation.selectOnRight = null;
+                changed = true;
+            }
+
+            if (changed)
+                selectable.navigation = navigation;
+
+            // 旧 Prefab 中常见的“空显式导航”无法移动焦点，运行时统一降级为自动导航。
+            if (navigation.mode == Navigation.Mode.Explicit &&
+                navigation.selectOnUp == null &&
+                navigation.selectOnDown == null &&
+                navigation.selectOnLeft == null &&
+                navigation.selectOnRight == null)
+            {
+                navigation.mode = Navigation.Mode.Automatic;
+                selectable.navigation = navigation;
+            }
+        }
+
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return;
+
+        Selectable currentSelection = eventSystem.currentSelectedGameObject != null
+            ? eventSystem.currentSelectedGameObject.GetComponent<Selectable>()
+            : null;
+        if (currentSelection != null && IsGamepadNavigationExcluded(currentSelection))
+            eventSystem.SetSelectedGameObject(null);
+    }
+
+    /// <summary>
+    /// 判断控件是否不应成为手柄/键盘导航焦点。
+    /// </summary>
+    public static bool IsGamepadNavigationExcluded(Selectable selectable)
+    {
+        if (selectable == null)
+            return false;
+
+        if (selectable is Scrollbar)
+            return true;
+
+        if (selectable is Slider slider)
+            return !IsGamepadInteractiveSlider(slider);
+
+        return false;
+    }
+
+    /// <summary>
+    /// 设置面板滑块保留手柄调节能力，其他滑块默认按纯显示控件处理。
+    /// </summary>
+    private static bool IsGamepadInteractiveSlider(Slider slider)
+    {
+        if (slider == null)
+            return false;
+
+        Transform current = slider.transform;
+        while (current != null)
+        {
+            if (ContainsAny(current.name, GamepadInteractiveSliderRoots))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
     }
 
     private static void StyleImages(Transform root, bool isHud)
@@ -175,7 +330,9 @@ public static class FlatWorldUITheme
                 ? Hex("F4D6A2")
                 : primary ? Hex("FFD7A8") : Hex("D5E3DF");
             colors.pressedColor = Hex("B9C3C0", 0.82f);
-            colors.selectedColor = colors.highlightedColor;
+            colors.selectedColor = slotButton
+                ? Hex("E2B878")
+                : primary ? AccentHover : destructive ? Hex("E06F5E") : Selection;
             colors.disabledColor = Hex("777D7C", 0.48f);
             colors.colorMultiplier = 1f;
             colors.fadeDuration = 0.11f;
@@ -219,7 +376,7 @@ public static class FlatWorldUITheme
             ColorBlock colors = field.colors;
             colors.normalColor = Color.white;
             colors.highlightedColor = Hex("E6D5BB");
-            colors.selectedColor = colors.highlightedColor;
+            colors.selectedColor = Selection;
             colors.disabledColor = Hex("707879", 0.52f);
             colors.fadeDuration = 0.11f;
             field.colors = colors;
@@ -461,14 +618,14 @@ public static class FlatWorldUITheme
 
         if (titleText != null)
         {
-            titleText.text = title;
+            titleText.text = FlatWorldLocalizationService.GetUiText(title);
             titleText.fontSize = 18f;
             SetRect(titleText.rectTransform, new Vector2(18f, -3f), new Vector2(titleText.rectTransform.sizeDelta.x, 24f), new Vector2(0f, 1f));
         }
 
         if (eyebrowText != null)
         {
-            eyebrowText.text = eyebrow;
+            eyebrowText.text = FlatWorldLocalizationService.GetUiText(eyebrow);
             eyebrowText.fontSize = 9.5f;
             SetRect(eyebrowText.rectTransform, new Vector2(18f, -25f), new Vector2(eyebrowText.rectTransform.sizeDelta.x, 16f), new Vector2(0f, 1f));
         }
@@ -582,7 +739,31 @@ public static class FlatWorldUITheme
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Ellipsis;
         text.raycastTarget = false;
+
+        if (ContainsChinese(value))
+        {
+            LocalizedTextBinder binder = go.AddComponent<LocalizedTextBinder>();
+            binder.Configure(
+                FlatWorldLocalizationService.UiTable,
+                FlatWorldLocalizationService.GetUiTextKey(value),
+                value);
+        }
+
         return text;
+    }
+
+    private static bool ContainsChinese(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return false;
+
+        foreach (char character in value)
+        {
+            if (character >= '\u4E00' && character <= '\u9FFF')
+                return true;
+        }
+
+        return false;
     }
 
     private static void Stretch(RectTransform rect)

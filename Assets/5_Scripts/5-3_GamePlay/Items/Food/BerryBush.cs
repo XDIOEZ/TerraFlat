@@ -162,15 +162,17 @@ public class BerryBush : MonoBehaviour, IInteractable
 	}
 
 	/// <summary>
-	/// 按玩家丢弃手持物的流程创建掉落物：优先挂到当前激活 Chunk 下。
+	/// 按玩家丢弃手持物的流程创建掉落物：新版生态区块挂到 NaturalItems，旧场景才回退旧 Chunk。
 	/// </summary>
 	private Item InstantiateBerryLikePlayerDrop(Vector2 spawnPos)
 	{
-		ChunkMgr.Instance.TryGetActiveChunkByPos(Chunk.GetChunkPosition(spawnPos), out Chunk chunk);
-
-		Item berry = chunk != null
-			? ItemMgr.Instance.InstantiateItem(BerryItemId, spawnPos, Quaternion.identity, Vector3.one, chunk.gameObject)
-			: ItemMgr.Instance.InstantiateItem(BerryItemId, spawnPos);
+		GameObject dropParent = ResolveBerryDropParent(spawnPos);
+		Item berry = ItemMgr.Instance.InstantiateItem(
+			BerryItemId,
+			spawnPos,
+			Quaternion.identity,
+			Vector3.one,
+			dropParent);
 
 		if (berry == null)
 		{
@@ -179,7 +181,29 @@ public class BerryBush : MonoBehaviour, IInteractable
 
 		berry.Load();
 		berry.SetInHand(false);
+		GetComponentInParent<ChunkNaturalItemRenderer>(true)?.RegisterTransientItem(berry);
 		return berry;
+	}
+
+	/// <summary>
+	/// 新版 WorldModel 物品不能为了掉落物触发旧 Chunk 加载；旧场景仍保留原有归属。
+	/// </summary>
+	private GameObject ResolveBerryDropParent(Vector2 spawnPos)
+	{
+		ChunkNaturalItemRenderer naturalRenderer =
+			GetComponentInParent<ChunkNaturalItemRenderer>(true);
+		if (naturalRenderer != null)
+			return naturalRenderer.gameObject;
+
+		ChunkMgr chunkMgr = ChunkMgr.Instance;
+		if (chunkMgr != null &&
+			chunkMgr.TryGetActiveChunkByPos(Chunk.GetChunkPosition(spawnPos), out Chunk chunk) &&
+			chunk != null)
+		{
+			return chunk.gameObject;
+		}
+
+		return null;
 	}
 
 	/// <summary>
@@ -241,7 +265,7 @@ public class BerryBush : MonoBehaviour, IInteractable
 #region Sprite解析
 
 	/// <summary>
-	/// 参考晾肉架：优先使用手动覆盖Sprite，否则尝试从产物Prefab读取并缓存Sprite。
+	/// 优先使用手动覆盖Sprite；默认从 JSON 构建的运行时物品定义读取产物图标。
 	/// </summary>
 	private void EnsureReadySpriteConfigured()
 	{
@@ -250,7 +274,7 @@ public class BerryBush : MonoBehaviour, IInteractable
 			return;
 		}
 
-		Sprite sprite = ReadySpriteOverride != null ? ReadySpriteOverride : ResolveBerrySprite(BerryItemId);
+		Sprite sprite = ReadySpriteOverride != null ? ReadySpriteOverride : ResolveRuntimeItemSprite(BerryItemId);
 		for (int i = 0; i < ReadySpriteRenderers.Count; i++)
 		{
 			SpriteRenderer renderer = ReadySpriteRenderers[i];
@@ -335,7 +359,7 @@ public class BerryBush : MonoBehaviour, IInteractable
 		}
 	}
 
-	private Sprite ResolveBerrySprite(string itemId)
+	private Sprite ResolveRuntimeItemSprite(string itemId)
 	{
 		if (string.IsNullOrWhiteSpace(itemId))
 		{
@@ -347,21 +371,19 @@ public class BerryBush : MonoBehaviour, IInteractable
 			return cache;
 		}
 
-		Sprite sprite = null;
-		if (GameRes.Instance != null &&
-			GameRes.Instance.AllPrefabs != null &&
-			GameRes.Instance.AllPrefabs.TryGetValue(itemId, out GameObject prefab) &&
-			prefab != null)
+		GameRes gameRes = GameRes.Instance;
+		if (gameRes != null &&
+			gameRes.TryGetItemDefinition(itemId.Trim(), out RuntimeItemDefinition definition) &&
+			definition.Sprite != null)
 		{
-			SpriteRenderer renderer = prefab.GetComponentInChildren<SpriteRenderer>();
-			if (renderer != null)
-			{
-				sprite = renderer.sprite;
-			}
+			_spriteCache[itemId] = definition.Sprite;
+			return definition.Sprite;
 		}
 
-		_spriteCache[itemId] = sprite;
-		return sprite;
+		Debug.LogWarning(
+			$"[BerryBush] 未能从 JSON 运行时物品定义解析成熟提示图标，物品ID={itemId}",
+			this);
+		return null;
 	}
 
 #endregion

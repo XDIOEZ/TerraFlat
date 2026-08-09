@@ -42,23 +42,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 127a5dab9b627634abf29ac972d80516, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
     Name: "\u88C5\u5907\u6A21\u5757"
-    ID:
+    ID: 
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -72,13 +72,13 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
   EquipmentInventory:
     item: {fileID: 0}
     InventoryPanel_Prefab: {fileID: 7912998792349077291, guid: 0fc8137885e212a4db27be3ec37ff185, type: 3}
     basePanel: {fileID: 0}
     Data:
-      Name:
+      Name: 
       itemSlots:
       - CanAcceptTags: []
         SlotMaxVolume: 0
@@ -96,8 +96,8 @@ MonoBehaviour:
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -154,23 +154,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2341cfdc5c0e7b24b8ca7a6abbb013e7, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   modData:
-    Name:
-    ID:
+    Name: 
+    ID: 
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -184,7 +184,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
   Data:
     CurrentTemperature: 36.5
     AmbientTemperature: 20
@@ -196,6 +196,7 @@ MonoBehaviour:
     HotDamagePerSecond: 1
     RuntimeAmbientOffset: 0
     RuntimeChangeSpeedMultiplier: 1
+    RuntimeCoolingSpeedMultiplier: 1
   OnTemperatureChanged:
     _PersistentCalls: []
 --- !u!1 &4411885219965820198
@@ -240,8 +241,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 78c11b47d3d359d4d9b8161a394391c5, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
     Name: "UI_\u5FEB\u6377\u680F"
@@ -249,14 +250,14 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -270,7 +271,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
   RawData: []
   RuntimeInventory:
     rid: 4916459727764848643
@@ -328,8 +329,8 @@ MonoBehaviour:
           IsInjected: 0
           PanelPosition: {x: 0, y: 0, z: 0}
           PanelIsOpen: 0
-          ToggleActionName:
-          UIPrefabName:
+          ToggleActionName: 
+          UIPrefabName: 
           Event_RefreshUI:
             _PersistentCalls: []
           Event_OnBeforeDataChanged:
@@ -363,6 +364,7 @@ GameObject:
   - component: {fileID: 3734231163300843963}
   - component: {fileID: 8533438104814499899}
   - component: {fileID: 8512309475123094754}
+  - component: {fileID: 3014530349160003128}
   m_Layer: 10
   m_Name: Player
   m_TagString: Untagged
@@ -433,18 +435,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!114 &8512309475123094754
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4678875130974218576}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f8c5ccf89d24eae91d5444a9803817f, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
 --- !u!61 &27656915510777888
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -500,8 +490,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9ff3122b11e316645a690d33684ef0c2, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   _mainCamera: {fileID: 0}
   CtrlIsDown: 0
@@ -519,19 +509,19 @@ MonoBehaviour:
   RightClickUp:
     _PersistentCalls: []
   _modData:
-    Name:
-    ID:
+    Name: 
+    ID: 
     isRunning: 0
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -545,7 +535,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
 --- !u!114 &6883143605326503467
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -556,8 +546,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a6f6f2106a20d7d4987858d5cc13c5a2, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   Owner: {fileID: 0}
   OnUIRefresh:
     _PersistentCalls: []
@@ -571,7 +561,7 @@ MonoBehaviour:
   OnDurabilityModified:
     _PersistentCalls: []
   updateInterval: 0
-  Data:
+  data:
     IDName: Player
     GameName: "\u73A9\u5BB6"
     Description: "\u7269\u54C1\u540D\u79F0\uFF1APlayer\n\u7269\u54C1ID\uFF1A30\n\u7269\u54C1\u63CF\u8FF0\uFF1A\u7269\u54C1\u540D\u79F0\uFF1APlayer_behavior\n\u7269\u54C1ID\uFF1A21\n\u7269\u54C1\u63CF\u8FF0\uFF1A\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1A\u7269\u54C1\u7C7B\u578B\uFF1ANone(None),\u7269\u54C1\u6750\u8D28\uFF1ANone\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u4F4D\u7F6E\uFF1A(0.00,
@@ -591,7 +581,7 @@ MonoBehaviour:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 0}
       scale: {x: 1, y: 1, z: 1}
-    ItemSpecialData:
+    ItemSpecialData: 
     inHand: 0
     Guid: -112887599
     CurrentSceneName: "\u5730\u7403"
@@ -629,8 +619,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c7edb27ca9ef94748848deea627fc92b, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   player: {fileID: 6883143605326503467}
   playerTraits: {fileID: 0}
@@ -646,19 +636,19 @@ MonoBehaviour:
   maxTimeScale: 10
   timeScaleHintDuration: 1
   ModSaveData:
-    Name:
-    ID:
+    Name: 
+    ID: 
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -672,7 +662,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
 --- !u!114 &9206547286300101542
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -683,23 +673,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cb6e67a20d4b0df469e14737cbef57fc, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModData:
-    Name:
+    Name: 
     ID: PlayerDeathState
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -713,7 +703,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
   respawnHpRate: 1
   dyingPanelPrefab: {fileID: 0}
   dyingPanelPrefabName: UI_Death
@@ -732,23 +722,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 56faea2b516a34c47b6cee182e326bd9, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
-    Name:
-    ID:
+    Name: 
+    ID: 
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -762,7 +752,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
   ButtonPrefab: {fileID: 3948103345439709801, guid: d52e8e0393ca8974095cb621f030f5c1, type: 3}
   UIContainer: {fileID: 0}
   UIButton_Instances: []
@@ -777,8 +767,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d78cb4a275f9405481768a633eeda67c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   initialDelay: 5
   minIdleInterval: 18
   maxIdleInterval: 32
@@ -795,8 +785,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f7333db1987e4fdfb4bbbe997ef424b5, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   lowThreshold: 0.4
   criticalThreshold: 0.15
 --- !u!114 &8512309475123094753
@@ -809,8 +799,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60b11994e2e14d319ad81ba2013fcc98, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   worldOffset: {x: 0, y: 1.25, z: 0}
   safeMargin: 18
   minWidth: 170
@@ -830,8 +820,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a3172df8e3600764598249a1b4f62ae9, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   providerOrder: 1000
 --- !u!114 &8865909770618348367
 MonoBehaviour:
@@ -843,8 +833,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f2a810c41357e5142b06ca3f156640b9, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &3734231163300843963
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -855,10 +845,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dbac7a19d553ba1458d59b769c4e2163, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   characterLimit: 160
-  openKey: 34
   speechPriority: 25
 --- !u!114 &8533438104814499899
 MonoBehaviour:
@@ -870,8 +859,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d038b8f0da728374599a9a919217ddda, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   heatSourceRadius: 6
   scanInterval: 0.5
   heatSourceLayerMask:
@@ -882,6 +871,30 @@ MonoBehaviour:
   rainCoolingSpeedMultiplier: 4
   heatSourceAmbientBonus: 10
   heatRecoverySpeedMultiplier: 5
+--- !u!114 &8512309475123094754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f8c5ccf89d24eae91d5444a9803817f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &3014530349160003128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07578ac3ec0f1c249b41b054bc9a3355, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7418924436426645882
 GameObject:
   m_ObjectHideFlags: 0
@@ -924,23 +937,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bc4fa7874fd02c14aa661bd2c3bd2137, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   FoodModData:
-    Name:
-    ID:
+    Name: 
+    ID: 
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -978,18 +991,18 @@ MonoBehaviour:
       PanelPosition: {x: 0, y: 0}
       WaterConsumeSpeedRate: 1
       nutritionConsumeRate: 1
-      ObserverState:
+      ObserverState: 
     EnableSpoilage: 1
     SpoilageElapsedSeconds: 0
     SpoilageIntervalSeconds: 1800
     SpoilageTargetItemID: Meat_Rotten
     RuntimeSpoilageDeltaSeconds: 0
     RuntimeResolvedIntervalSeconds: 0
-    RuntimeResolvedTargetItemID:
-    RuntimeCurrentItemID:
+    RuntimeResolvedTargetItemID: 
+    RuntimeCurrentItemID: 
     RuntimeTriggered: 0
     RuntimeInvalid: 0
-    RuntimeInvalidReason:
+    RuntimeInvalidReason: 
   EatingProgress: 0
   DataUpdate:
     _PersistentCalls: []
@@ -1055,23 +1068,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3a1287b990d35d3489f05c14737c3620, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   ModSaveData:
     Name: "\u5DE5\u4F5C\u53F0\u6A21\u5757_\u624B\u5DE5"
-    ID:
+    ID: 
     isRunning: 1
     Type: 0
     RuntimeOwnerInventoryData:
-      Name:
+      Name: 
       itemSlots: []
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -1085,14 +1098,14 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData:
+    BitData: 
   RawData: []
   inputInventory:
     item: {fileID: 0}
     InventoryPanel_Prefab: {fileID: 0}
     basePanel: {fileID: 0}
     Data:
-      Name:
+      Name: 
       itemSlots:
       - CanAcceptTags: []
         SlotMaxVolume: 0
@@ -1110,8 +1123,8 @@ MonoBehaviour:
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -1126,7 +1139,7 @@ MonoBehaviour:
     InventoryPanel_Prefab: {fileID: 0}
     basePanel: {fileID: 0}
     Data:
-      Name:
+      Name: 
       itemSlots:
       - CanAcceptTags: []
         SlotMaxVolume: 0
@@ -1135,8 +1148,8 @@ MonoBehaviour:
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
       PanelIsOpen: 0
-      ToggleActionName:
-      UIPrefabName:
+      ToggleActionName: 
+      UIPrefabName: 
       Event_RefreshUI:
         _PersistentCalls: []
       Event_OnBeforeDataChanged:
@@ -1280,7 +1293,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2690356196676944319, guid: 5615491ee5491d545ac4c633133d01cc, type: 3}
       propertyPath: CamPrefab
-      value:
+      value: 
       objectReference: {fileID: 5819911811838294429, guid: 42acff50be302dc4d99613be14b0844e, type: 3}
     - target: {fileID: 5306952090881228637, guid: 5615491ee5491d545ac4c633133d01cc, type: 3}
       propertyPath: m_Name
@@ -1354,7 +1367,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958215070207355882, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}
       propertyPath: GameController
-      value:
+      value: 
       objectReference: {fileID: 7199555808017476116}
     - target: {fileID: 7704802002852346167, guid: 9d6c3cee7e6aea74d892677e88925c7f, type: 3}
       propertyPath: m_Name
@@ -1442,7 +1455,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
       propertyPath: distanceConfig.UnActiveDistance
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1349947316172305539, guid: ae0742267fe3e7b498e8ab9d28074677, type: 3}
       propertyPath: distanceConfig.LoadChunkDistance
@@ -1622,7 +1635,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3771913252704867776, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
       propertyPath: Prefab_UI
-      value:
+      value: 
       objectReference: {fileID: 4930435994399523088, guid: ae7d61a702120fe43a5c3fdcfea8279e, type: 3}
     - target: {fileID: 3771913252704867776, guid: 050f0e3d37d8b3241b174df6ad8fd017, type: 3}
       propertyPath: Data.MaxStamina
@@ -1762,7 +1775,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6380976053858111116, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
       propertyPath: m_Controller
-      value:
+      value: 
       objectReference: {fileID: 9100000, guid: bb8d01322c362534b9cb2810c1e3fa0e, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1828,7 +1841,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4439271918981187979, guid: 52846d0816513ac489300d4d4c7f5c1c, type: 3}
       propertyPath: player
-      value:
+      value: 
       objectReference: {fileID: 6883143605326503467}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1854,7 +1867,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3264581480783965184, guid: f1d7b5a1e3e07cc499990b3552108139, type: 3}
       propertyPath: controlledTransforms_Direction.Array.data[0]
-      value:
+      value: 
       objectReference: {fileID: 8789379722561364081}
     - target: {fileID: 4631601396337587673, guid: f1d7b5a1e3e07cc499990b3552108139, type: 3}
       propertyPath: m_LocalPosition.x

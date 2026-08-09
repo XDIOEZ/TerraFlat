@@ -40,6 +40,7 @@ public struct AI_IdleConfig
 /// - 待机 / 闲逛行为
 /// - 动画播放
 /// - 调试显示
+/// - 状态评估降频（行为节点仍逐帧执行）
 ///
 /// 子类只需实现差异化的状态评估、帧逻辑和配置即可。
 /// </summary>
@@ -72,6 +73,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	// --- 通用计时器 ---
 	protected float _detectorRefreshTimer;
+	private float _stateDecisionTimer;
 	protected float _wanderWaitTimer;
 	protected float _idleRemainTimer;
 
@@ -148,6 +150,9 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	/// <summary>仅用于抑制 Idle/Move 在边界条件下的逐帧抖动，高优先级状态不受限制。</summary>
 	protected virtual float LocomotionStateDebounce => 0.15f;
+
+	/// <summary>状态条件评估间隔；移动、攻击窗口和计时器仍保持逐帧更新。</summary>
+	protected virtual float StateDecisionInterval => 0.15f;
 #endregion
 
 #region Virtual - 扩展钩子
@@ -193,6 +198,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	{
 		_stateElapsed = 0f;
 		_detectorRefreshTimer = GetDetectorPhaseOffset();
+		_stateDecisionTimer = 0f;
 		_wanderWaitTimer = 0f;
 		_hasWanderTarget = false;
 		_lastPlayedAnimation = null;
@@ -228,18 +234,26 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		// 通用计时器递减（不限状态的计时器）
 		_wanderWaitTimer = DecrementTimer(_wanderWaitTimer, deltaTime);
 
-		// 刷新检测器与前置数据
+		// 感知请求按原有计时器刷新；状态条件按固定间隔评估，避免逐帧重复扫描同一快照。
 		TryRefreshDetector();
-		OnPreEvaluate();
+		if (ShouldEvaluateState(deltaTime))
+		{
+			OnPreEvaluate();
 
-		// ---- 状态机核心循环：评估 → 切换 → 当前节点帧逻辑 ----
-		AI_StateMachineRunner.EvaluateAndTick(
-			_stateMachine,
-			_currentState,
-			EvaluateNextState,
-			SwitchState,
-			deltaTime,
-			CanTransitionTo);
+			// ---- 状态机核心循环：评估 → 切换 → 当前节点帧逻辑 ----
+			AI_StateMachineRunner.EvaluateAndTick(
+				_stateMachine,
+				_currentState,
+				EvaluateNextState,
+				SwitchState,
+				deltaTime,
+				CanTransitionTo);
+		}
+		else
+		{
+			// 降低条件扫描频率，但不降低移动、攻击窗口和状态计时器的帧率。
+			_stateMachine.Tick(deltaTime);
+		}
 
 		SynchronizeLocomotionAnimation();
 	}
@@ -406,6 +420,21 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #endregion
 
 #region Common Tick
+	/// <summary>消费一次状态评估时间片；卡顿时丢弃追赶次数，避免同帧连续扫描。</summary>
+	private bool ShouldEvaluateState(float deltaTime)
+	{
+		float interval = StateDecisionInterval;
+		if (interval <= 0f)
+			return true;
+
+		_stateDecisionTimer -= Mathf.Max(0f, deltaTime);
+		if (_stateDecisionTimer > 0f)
+			return false;
+
+		_stateDecisionTimer = Mathf.Max(0.05f, interval);
+		return true;
+	}
+
 	/// <summary>待机帧逻辑：停止移动，递减待机计时器</summary>
 	protected void TickIdle(float deltaTime)
 	{
@@ -841,6 +870,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		_recentDamageThreat = damageInfo.Attacker;
 		_lastDamageThreatPosition = damageInfo.Attacker.transform.position;
 		_damageThreatRemain = Mathf.Max(0.1f, DamageThreatMemoryDuration);
+		_stateDecisionTimer = 0f;
 		OnDamageThreatUpdated(damageInfo);
 	}
 

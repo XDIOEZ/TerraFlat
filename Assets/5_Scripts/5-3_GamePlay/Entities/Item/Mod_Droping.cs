@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class Mod_Droping : Module
 {
+	#region 运行时归属
 
     public override ModuleData _Data
     {
@@ -12,6 +13,9 @@ public class Mod_Droping : Module
     public Mod_BaseDroper.Drop drop;
     public Ex_ModData modData;
     public Chunk LastChunk; // 上一帧 item 所处的 chunk
+    private bool usesLegacyChunkOwnership;
+
+	#endregion
 
     [Header("丢弃动画参数")]
     [Tooltip("垂直方向最大高度（与之前一致）")]
@@ -26,6 +30,8 @@ public class Mod_Droping : Module
     {
         modData.ReadData(ref drop);
         LastChunk = item != null ? item.GetComponentInParent<Chunk>() : null;
+		// 新版生态物品挂在 NaturalItems 下，不允许掉落动画回退到旧 Chunk 加载链。
+		usesLegacyChunkOwnership = LastChunk != null || !IsWorldModelNaturalItem(item);
         item.itemData.Stack.CanBePickedUp = false;
     }
 
@@ -70,24 +76,35 @@ public class Mod_Droping : Module
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
-        // 更新 Chunk 归属
-        bool hasTargetChunk = UpdateChunkOwner(drop.item, ownershipPos);
+        // 旧 Chunk 物品仍同步归属；新版生态物品保持在 NaturalItems 下，不触发旧区块加载。
+        bool hasTargetChunk = !usesLegacyChunkOwnership ||
+            UpdateChunkOwner(drop.item, ownershipPos);
 
         // 检查动画是否完成
         if (t >= 1f)
         {
-            if (!hasTargetChunk)
+            if (usesLegacyChunkOwnership && !hasTargetChunk)
             {
                 RequestTargetChunk(Chunk.GetChunkPosition(WorldTopologyRuntime.NormalizePosition(drop.endPos)));
                 return;
             }
 
-            // 确保 Chunk 内的位置索引记录的是最终落点，而不是动画起点。
-            LastChunk.AddItem(drop.item);
+            if (usesLegacyChunkOwnership)
+            {
+                // 确保 Chunk 内的位置索引记录的是最终落点，而不是动画起点。
+                LastChunk.AddItem(drop.item);
+            }
             drop.item.itemData.Stack.CanBePickedUp = true;
             drop = null; // 销毁droping
         }
     }
+
+	/// <summary>判断物品是否由新版 WorldModel 的 NaturalItems 节点管理。</summary>
+	private static bool IsWorldModelNaturalItem(Item targetItem)
+	{
+		return targetItem != null &&
+			targetItem.GetComponentInParent<ChunkNaturalItemRenderer>(true) != null;
+	}
 
     /// <summary>
     /// 更新物品所属的 Chunk。只有确认目标 Chunk 可用后才解除旧归属。

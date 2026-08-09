@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -56,7 +57,11 @@ private void Open()
 
         selectedDifficulty = GameDifficultyService.CurrentId;
         RefreshSelectionVisuals();
-        SetStatus($"当前存档难度：{GameDifficultyService.Current.DisplayName}", false);
+        SetStatus(
+            FlatWorldLocalizationService.GetUiFormat(
+                "当前存档难度：{0}",
+                LocalizeDifficultyName(GameDifficultyService.Current)),
+            false);
         settingsPanel.Open();
         settingsPanel.transform.SetAsLastSibling();
         Canvas.ForceUpdateCanvases();
@@ -118,21 +123,29 @@ private void EnsureWindow()
         selectedDifficulty = difficulty;
         RefreshSelectionVisuals();
         GameDifficultyDefinition definition = GameDifficultyCatalog.Get(difficulty);
-        SetStatus($"已选择：{definition.DisplayName}。点击“应用”后生效。", false);
+        SetStatus(
+            FlatWorldLocalizationService.GetUiFormat(
+                "已选择：{0}。点击“应用”后生效。",
+                LocalizeDifficultyName(definition)),
+            false);
     }
 
     private void Apply()
     {
         if (!GameDifficultyService.TrySetCurrent(selectedDifficulty, out string error))
         {
-            SetStatus(error, true);
+            SetStatus(FlatWorldLocalizationService.GetUiText(error), true);
             return;
         }
 
         GameDifficultyDefinition definition = GameDifficultyCatalog.Get(selectedDifficulty);
         UpdateEntryLabel();
         RefreshSelectionVisuals();
-        SetStatus($"已应用：{definition.DisplayName}。设置将在正常存档时写入磁盘。", false);
+        SetStatus(
+            FlatWorldLocalizationService.GetUiFormat(
+                "已应用：{0}。设置将在正常存档时写入磁盘。",
+                LocalizeDifficultyName(definition)),
+            false);
     }
 
     private void RefreshSelectionVisuals()
@@ -155,7 +168,9 @@ private void EnsureWindow()
 
         SetButtonLabel(
             entryButton,
-            $"{EntryButtonName}：{GameDifficultyService.Current.DisplayName}");
+            FlatWorldLocalizationService.GetUiFormat(
+                "游戏难度：{0}",
+                LocalizeDifficultyName(GameDifficultyService.Current)));
     }
 
     private void SetStatus(string message, bool isError)
@@ -186,7 +201,7 @@ private void OnDestroy()
 
 
 
-    private static void SetButtonLabel(Button button, string label)
+private static void SetButtonLabel(Button button, string label)
     {
         if (button == null)
             return;
@@ -201,6 +216,14 @@ private void OnDestroy()
         Text legacyText = button.GetComponentInChildren<Text>(true);
         if (legacyText != null)
             legacyText.text = label;
+    }
+
+    private static string LocalizeDifficultyName(GameDifficultyDefinition definition)
+    {
+        if (definition == null)
+            return string.Empty;
+
+        return FlatWorldLocalizationService.GetUiText(definition.DisplayName);
     }
 
 

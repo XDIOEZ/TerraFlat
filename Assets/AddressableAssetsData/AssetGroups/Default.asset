@@ -29,12 +29,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 00d67b3edb83a734eb42c550ef8852f6
-    m_Address: Assets/2_Prefabs/TileBlock/TileItem_Grass.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 018ed509539fc28468cb88879c9f8966
     m_Address: "Assets/2_Prefabs/Space/\u6C34\u661F.prefab"
     m_ReadOnly: 0
@@ -58,6 +52,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 03533b7d72493a24d92611920ea24b4f
+    m_Address: Assets/6_Art/Building/Wall_Wood_Medium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0389d777920d856458f6db3a2e122e34
     m_Address: Assets/6_Art/item/Plant/GrassAndFlower.png
@@ -109,6 +109,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0be51199011097e49b9e67cd1c7d8486
     m_Address: Assets/6_Art/Food/Fried_Egg.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0c0fcf1252967d246bb822de654a7b07
+    m_Address: Assets/6_Art/Building/Wall_Stone_Medium.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -239,6 +245,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1e02dd721a59db1498040b6ccd224c64
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_MainMenuSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 20fa46eba2a77114f8e5b6ae80b2af5a
     m_Address: Assets/2_Prefabs/Module/World/Module_TileReciver.prefab
     m_ReadOnly: 0
@@ -340,6 +352,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 317545efc361a3143807103bf36506d3
+    m_Address: Assets/6_Art/Building/Meatrack.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3206a0b4db2f5564ca00d3dcf354bc77
     m_Address: Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab
@@ -443,6 +461,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 421894eb8d0de4140b86e04a41026904
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_WorldStreamingSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 42acff50be302dc4d99613be14b0844e
     m_Address: Assets/2_Prefabs/Module/Cam/Main Camera.prefab
     m_ReadOnly: 0
@@ -479,6 +503,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 46bec2f007662bf42aba264dec445378
+    m_Address: Assets/6_Art/Building/Door_Stone_Close.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 471c4ce24372590429646f3580bb9fd3
     m_Address: Assets/2_Prefabs/Mine/Mine_Copper.prefab
     m_ReadOnly: 0
@@ -487,6 +517,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 473f485126015cc4b84fb49bca1191ea
     m_Address: Assets/6_Art/item/Tool_Weapon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 484f9f8cde0587f44b49f5fb8d8732b3
+    m_Address: Assets/6_Art/item/Equipment/Wood Equipment/Wood Chestplate.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -538,12 +574,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 557a871734f51524682e543106eb309f
-    m_Address: Assets/2_Prefabs/Equipment/Chestplate_Wood.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5615491ee5491d545ac4c633133d01cc
     m_Address: Assets/2_Prefabs/Module/Module_Cam.prefab
@@ -629,6 +659,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5fd5ad0c427441e78f6085d92b935fd9
+    m_Address: Assets/2_Prefabs/WorldModel/ChunkView.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5fd8b428d015c7044aee5e5491698e72
     m_Address: Assets/2_Prefabs/2-1_UI/Base_UI/UI_SelectBox.prefab
     m_ReadOnly: 0
@@ -646,6 +682,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 642410d366c9d5e4bb7e8fe2a2a24a5f
+    m_Address: "Assets/6_Art/Food/\u8150\u690D.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 64842fb553039f44a99a4fe673c1babf
     m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_DifficultySettings.prefab
@@ -857,11 +899,23 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c9ac7f0b89993d4caac553bb4ce34f7
+    m_Address: Assets/2_Prefabs/ParticleEffect/BloodDropStatusEffect.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8d957a5691b916f48b40231a4b297ea4
     m_Address: Assets/2_Prefabs/Skills/FireBall.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 902952c12669acc448ab8712e0c96250
+    m_Address: Assets/6_Art/item/Equipment/Jade Equipment/Jade Chestplate.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 919298e480c9ff54bab22393ad6c54b1
     m_Address: Assets/2_Prefabs/Module/Skill/Module_SkillManager_AI.prefab
@@ -877,12 +931,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 92c40ea4c73544d4e9061baa2ca3b5ee
     m_Address: Assets/2_Prefabs/Tools/Summoners/SparkMaker_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 947555c30fcaed346b47ef9fe73f313f
-    m_Address: Assets/2_Prefabs/Materials/Humus.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -917,14 +965,14 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 98884601a3d373a40ab86aff00f45a08
-    m_Address: Assets/2_Prefabs/Module/Module_AutoChunkOwner.prefab
+  - m_GUID: 985f25c4e151e2b48bd110594bf011fe
+    m_Address: Assets/6_Art/Building/Door_Wood_Close.png
     m_ReadOnly: 0
     m_SerializedLabels:
-    - Prefab
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 98dec10f825f70a42813d13105431a62
-    m_Address: Assets/2_Prefabs/Equipment/Chestplate_Twine.prefab
+  - m_GUID: 98884601a3d373a40ab86aff00f45a08
+    m_Address: Assets/2_Prefabs/Module/Module_AutoChunkOwner.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -952,6 +1000,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9de1db5190b67f540b562921ffb5cd5d
+    m_Address: Assets/6_Art/Building/Tileset.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9edc5571020b8c042adbb67fe384f5ca
     m_Address: Assets/2_Prefabs/Seed/Seed.prefab
@@ -1019,11 +1073,23 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a372184789e8d4f419a9f088452f62bb
+    m_Address: Assets/6_Art/Characters/Hana Caraka - Base Character [sample]/walk.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a427477b3d8f14d43a13bb2a3620ef8e
     m_Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u810F\u6C34.png"
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a52a21712cdc8eb4ca21707fc3604247
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/System/UI_PlayerWorldCoordinate.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a588cc1b750da76439797f1756447a6e
     m_Address: "Assets/2_Prefabs/Module/Var/\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757
@@ -1182,6 +1248,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: be58e61687cd00241a96a8404cb301bb
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_CoordinateDisplaySettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bef35c376aeb59546adadda04aaa61f7
     m_Address: Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab
     m_ReadOnly: 0
@@ -1235,6 +1307,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c6cf9338f948d7443923ed0066456b11
+    m_Address: "Assets/6_Art/item/\u5E10\u7BF7.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c6f55e2336b63394fbc8d77a46530e95
     m_Address: Assets/2_Prefabs/Equipment/StorageBag_Leather.prefab
@@ -1325,6 +1403,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d18a42050ee44b141961b1b517915c87
+    m_Address: Assets/6_Art/item/Tool/Item_Tool_077.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d24e46f0dd4ed92499330994f5eeb75d
     m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_MeatRack.prefab
@@ -1448,6 +1532,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e8bfaef07b026a54da8a2e2fd6559c58
     m_Address: Assets/2_Prefabs/Building/MineEntrance.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e92ff9f445bbe42498036ec3756abe05
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Furnace.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

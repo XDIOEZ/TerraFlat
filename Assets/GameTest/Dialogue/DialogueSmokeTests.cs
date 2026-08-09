@@ -81,6 +81,45 @@ namespace FlatWorld.GameTest.Dialogue
             Assert.That(probe.IsVisible, Is.True, "Presenter 未收到有效台词。");
         }
 
+        [Test]
+        [Category("Dialogue.Smoke")]
+        [Category("Smoke")]
+        public void SpeechBubblePresenter_StaysBelowInteractivePanels()
+        {
+            GameObject root = new GameObject("DialogueLayerRoot", typeof(RectTransform));
+            GameObject inventory = new GameObject("InventoryPanel", typeof(RectTransform));
+            GameObject bubble = new GameObject("SpeechBubble", typeof(RectTransform));
+            GameObject presenterObject = new GameObject("SpeechBubblePresenter");
+
+            try
+            {
+                inventory.transform.SetParent(root.transform, false);
+                bubble.transform.SetParent(root.transform, false);
+
+                ScreenSpaceSpeechBubblePresenter presenter =
+                    presenterObject.AddComponent<ScreenSpaceSpeechBubblePresenter>();
+                FieldInfo viewRectField = typeof(ScreenSpaceSpeechBubblePresenter).GetField(
+                    "viewRect",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                MethodInfo placeMethod = typeof(ScreenSpaceSpeechBubblePresenter).GetMethod(
+                    "PlaceBelowInteractivePanels",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+
+                Assert.That(viewRectField, Is.Not.Null);
+                Assert.That(placeMethod, Is.Not.Null);
+                viewRectField.SetValue(presenter, bubble.GetComponent<RectTransform>());
+                placeMethod.Invoke(presenter, null);
+
+                Assert.That(bubble.transform.GetSiblingIndex(), Is.EqualTo(0));
+                Assert.That(inventory.transform.GetSiblingIndex(), Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(presenterObject);
+                Object.DestroyImmediate(root);
+            }
+        }
+
         private static void AssertPrefabContains(string prefabPath, params string[] expectedNames)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);

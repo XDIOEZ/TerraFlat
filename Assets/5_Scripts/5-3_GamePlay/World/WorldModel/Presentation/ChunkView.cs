@@ -23,6 +23,12 @@ public sealed class ChunkView : MonoBehaviour
     public bool IsBound => chunk != null && presentationComplete;
     public bool IsBinding => chunk != null && !presentationComplete;
 
+    /// <summary>确保运行时区块表现拥有独立的自然物品父节点。</summary>
+    private void Awake()
+    {
+        EnsureNaturalItemRenderer();
+    }
+
     public void Bind(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime, bool includeNavigation = true)
     {
         if (worldRuntime == null)
@@ -102,6 +108,13 @@ public sealed class ChunkView : MonoBehaviour
         presentationComplete = false;
     }
 
+    /// <summary>保存当前 ChunkView 下自然物的权威状态。</summary>
+    public void CaptureNaturalItemState()
+    {
+        ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
+        renderer?.CaptureState();
+    }
+
     private void OnDisable() => Unbind();
     private void OnDestroy() => Unbind();
 
@@ -131,6 +144,18 @@ public sealed class ChunkView : MonoBehaviour
         }
         renderers.Sort((left, right) =>
             ResolveRendererPriority(left).CompareTo(ResolveRendererPriority(right)));
+    }
+
+    /// <summary>旧 ChunkView Prefab 无需手工改层级，首次加载时自动补齐 NaturalItems 子节点。</summary>
+    private void EnsureNaturalItemRenderer()
+    {
+        ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
+        if (renderer != null)
+            return;
+
+        var naturalItems = new GameObject("NaturalItems");
+        naturalItems.transform.SetParent(transform, false);
+        naturalItems.AddComponent<ChunkNaturalItemRenderer>();
     }
 
     /// <summary>建立租约和事件，再由同步或分帧入口绑定各表现组件。</summary>
@@ -163,6 +188,8 @@ public sealed class ChunkView : MonoBehaviour
             return 3;
         if (renderer is ChunkNavigationBinder)
             return 4;
+        if (renderer is ChunkNaturalItemRenderer)
+            return 5;
         return 2;
     }
 }

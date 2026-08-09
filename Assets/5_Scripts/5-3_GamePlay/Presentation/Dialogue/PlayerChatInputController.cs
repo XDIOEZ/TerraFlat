@@ -49,6 +49,7 @@ namespace FlatWorld.Dialogue
         private bool previousGameplayLock;
         private Coroutine focusRoutine;
         private InputAction openChatAction;
+        private InputAction cancelChatAction;
 
         public bool IsOpen => isOpen;
         public TMP_InputField InputField => inputField;
@@ -134,17 +135,31 @@ namespace FlatWorld.Dialogue
             InputActionMap actionMap = gameController?.InputAsset?
                 .FindActionMap("Win10", false);
             openChatAction = actionMap?.FindAction(OpenChatActionName, false);
+            InputActionMap uiActionMap = gameController?.InputAsset?
+                .FindActionMap("FlatWorldUI", false);
+            cancelChatAction = uiActionMap?.FindAction("Cancel", false) ??
+                               actionMap?.FindAction("B", false);
             if (openChatAction != null)
                 openChatAction.performed += HandleOpenChatPerformed;
+            if (cancelChatAction != null)
+                cancelChatAction.performed += HandleCancelChatPerformed;
         }
 
         private void UnbindOpenChatInput()
         {
             if (openChatAction == null)
+            {
+                if (cancelChatAction != null)
+                    cancelChatAction.performed -= HandleCancelChatPerformed;
+                cancelChatAction = null;
                 return;
+            }
 
             openChatAction.performed -= HandleOpenChatPerformed;
+            if (cancelChatAction != null)
+                cancelChatAction.performed -= HandleCancelChatPerformed;
             openChatAction = null;
+            cancelChatAction = null;
         }
 
         private void HandleOpenChatPerformed(InputAction.CallbackContext context)
@@ -158,6 +173,14 @@ namespace FlatWorld.Dialogue
             }
 
             OpenChat();
+        }
+
+        private void HandleCancelChatPerformed(InputAction.CallbackContext context)
+        {
+            if (!isOpen || EventSystemGuard.IsVirtualKeyboardOpen)
+                return;
+
+            CloseChat(clearText: true);
         }
 
         /// <summary>重新扫描玩家节点上的显式命令处理器。</summary>
@@ -393,8 +416,16 @@ private bool EnsureView()
             inputField.contentType = TMP_InputField.ContentType.Standard;
             inputField.richText = false;
             inputField.restoreOriginalTextOnEscape = false;
+            inputField.onSubmit.RemoveListener(HandleInputFieldSubmitted);
+            inputField.onSubmit.AddListener(HandleInputFieldSubmitted);
             viewObject.SetActive(false);
             return true;
+        }
+
+        private void HandleInputFieldSubmitted(string submittedText)
+        {
+            if (isOpen)
+                SubmitCurrentText();
         }
 
 

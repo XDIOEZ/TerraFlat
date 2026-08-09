@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public sealed class DimensionPortal : MonoBehaviour, IInteractable
+public sealed class DimensionPortal : MonoBehaviour, IInteractable, IItemPoolLifecycle
 {
     #region 配置
 
@@ -19,6 +19,7 @@ public sealed class DimensionPortal : MonoBehaviour, IInteractable
     private bool transitionRequested;
     private Vector2Int anchorCell;
     private bool initialized;
+    private bool generatedWorldPortal;
 
     #endregion
 
@@ -27,6 +28,10 @@ public sealed class DimensionPortal : MonoBehaviour, IInteractable
         targetDimensionId = targetDimension;
         anchorCell = GetCurrentCell();
         initialized = true;
+        generatedWorldPortal = false;
+        transitionRequested = false;
+        portalItem = null;
+        building = null;
     }
 
     private void OnEnable()
@@ -40,6 +45,26 @@ public sealed class DimensionPortal : MonoBehaviour, IInteractable
     {
         targetDimensionId = targetDimension;
         requiresInstalledBuilding = requireInstalledBuilding;
+        generatedWorldPortal = false;
+        initialized = false;
+        transitionRequested = false;
+        portalItem = null;
+        building = null;
+    }
+
+    /// <summary>
+    /// 由新版 ChunkView 为确定性自然入口调用。
+    /// 该入口不依赖旧 Chunk/Map 锚点，另一维度使用同世界格的稳定出口。
+    /// </summary>
+    public void ConfigureGenerated(string targetDimension, Item ownerItem = null)
+    {
+        targetDimensionId = targetDimension;
+        requiresInstalledBuilding = false;
+        generatedWorldPortal = true;
+        initialized = false;
+        transitionRequested = false;
+        portalItem = ownerItem;
+        building = ownerItem?.GetComponentInChildren<Mod_Building>(true);
     }
 
     public void OnInteractStart(Item playerItem)
@@ -51,6 +76,13 @@ public sealed class DimensionPortal : MonoBehaviour, IInteractable
         if (string.IsNullOrWhiteSpace(targetDimensionId))
         {
             Debug.LogWarning("[DimensionPortal] 未配置目标维度。", this);
+            return;
+        }
+
+        if (generatedWorldPortal)
+        {
+            transitionRequested = DimensionManager.Instance.TryBeginGeneratedPortalTransition(
+                player, targetDimensionId, portalItem);
             return;
         }
 
@@ -87,4 +119,30 @@ public sealed class DimensionPortal : MonoBehaviour, IInteractable
             Mathf.FloorToInt(transform.position.x),
             Mathf.FloorToInt(transform.position.y));
     }
+
+    #region 对象池生命周期
+
+    /// <summary>从对象池取出时清理上一次维度入口留下的运行时状态。</summary>
+    public void OnItemTakenFromPool()
+    {
+        ResetRuntimeState();
+    }
+
+    /// <summary>回收到对象池时清理锚点和交互缓存，避免下一次复用误删或误传送。</summary>
+    public void OnItemReturnedToPool()
+    {
+        ResetRuntimeState();
+    }
+
+    private void ResetRuntimeState()
+    {
+        portalItem = null;
+        building = null;
+        transitionRequested = false;
+        anchorCell = default;
+        initialized = false;
+        generatedWorldPortal = false;
+    }
+
+    #endregion
 }

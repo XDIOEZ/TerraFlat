@@ -117,8 +117,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 5
-      minScalar: 5
+      scalar: 0.35
+      minScalar: 0.35
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -4851,6 +4851,9 @@ MonoBehaviour:
   _syncScaleByOrthographicSize: 0
   _referenceOrthographicSize: 5
   _coveragePadding: 1.1
+  _fitLifetimeToCamera: 1
+  _minimumParticleLifetime: 0.35
+  _lifetimeCoverageMultiplier: 1.12
   _targetParticleSystems: []
   _minEmissionFactor: 0.05
   _minMaxParticlesFactor: 1

@@ -18,6 +18,7 @@ public class Mod_PlayerTraits : Module
     }
 
     private Player player;
+    private PlayerAdminController adminController;
 
     public override void Awake()
     {
@@ -55,10 +56,10 @@ public class Mod_PlayerTraits : Module
     /// </summary>
     public void Death()
     {
-        // 管理员模式下忽略死亡
-        if (player?.Data?.Name_User == "管理员")
+        // 仅无敌开启的管理员忽略理智等主动触发的死亡。
+        if (HasAdminInvincibility())
         {
-            Debug.Log("[Mod_PlayerTraits] 管理员模式生效，已忽略死亡。");
+            Debug.Log("[Mod_PlayerTraits] 管理员无敌生效，已忽略死亡。");
             return;
         }
 
@@ -198,5 +199,20 @@ public class Mod_PlayerTraits : Module
 
         Debug.LogWarning("[Mod_PlayerTraits] 未找到 Player 组件");
         return false;
+    }
+
+    /// <summary>读取管理员控制器的无敌状态；旧存档缺失控制器时兼容原管理员行为。</summary>
+    private bool HasAdminInvincibility()
+    {
+        if (player == null)
+            TryGetPlayer(out _);
+
+        if (adminController == null)
+            adminController = player?.GetComponentInChildren<PlayerAdminController>(true);
+
+        if (adminController != null)
+            return adminController.IsAdminInvincibilityEnabled;
+
+        return player?.Data?.Name_User == "管理员";
     }
 }

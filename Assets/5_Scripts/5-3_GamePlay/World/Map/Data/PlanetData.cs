@@ -114,6 +114,10 @@ public partial class PlanetData
     // and therefore retain the enum default: Infinite.
     [LabelText("World Topology")]
     public WorldTopologyMode TopologyMode = WorldTopologyMode.Infinite;
+
+    // Keep newly appended world-level data after all legacy fields so older MemoryPack saves remain readable.
+    [LabelText("生态世界数据")]
+    public EcologyWorldSaveData Ecology = new();
     #endregion
 
 }

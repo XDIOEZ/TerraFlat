@@ -68,6 +68,8 @@ public sealed class DimensionDefinition
             DimensionId = WorldAddress.SurfaceDimensionId,
             DisplayName = "地表",
             GenerationMode = DimensionGenerationMode.Surface,
+            GenerationProfile = Resources.Load<ChunkGenerationProfileSO>(
+                "Config/WorldModel/ChunkGenerationProfile_Surface"),
             PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.CaveDimensionId,
             EnableMonsterSpawning = true
@@ -81,6 +83,8 @@ public sealed class DimensionDefinition
             DimensionId = WorldAddress.CaveDimensionId,
             DisplayName = "地下矿洞",
             GenerationMode = DimensionGenerationMode.Cave,
+            GenerationProfile = Resources.Load<ChunkGenerationProfileSO>(
+                "Config/WorldModel/ChunkGenerationProfile_Cave"),
             SeedSalt = 7919,
             PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.SurfaceDimensionId,

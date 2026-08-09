@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 地图与 Chunk 系统定位
 
-> 最后核对：2026-08-08。
+> 最后核对：2026-08-09。
 
 ## 修改前先读
 
@@ -88,8 +88,8 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - Unity 旧 Map 管线的 `ChunkGenerator_River` 与无头 `DeterministicChunkGenerator` 都必须从各自权威高度图和降水图计算径流。无头 Profile 通过文本参数 `river.algorithm=heightDriven|legacy` 保留两套纯算法：正式 Surface 默认使用 `heightDriven` 的 D∞、成熟主河和连通支流筛选，避免 D8 在连续坡面产生密集平行直河；`legacy` 仅作对照，保留实例级并发安全区域缓存、D8 严格下坡、`ResolveBasin` 湖泊与最低出口续流。两者都只能写 `ChunkTerrainBuffer`，都输出 `riverDepth/riverFlow/riverFloodplain/riverSurfaceLevel/riverKind`；`riverKind` 为 `0=None,1=River,2=Lake`。新世界 `PlanetData.NoiseScale` 必须写入纯 Profile 的 `world.coordinateScale`，地形/气候频率按 `scale/0.01` 变化，径流单元和追踪距离按反比 `clamp(0.01/scale, 0.25, 4)` 变化；禁止独立河流噪声、正弦水带或其他脱离高度图的函数绘制。
 - 无头 Surface 使用旧版高度二次强化后的 `height` 分类二维山地：`height >= terrain.mountainLevel`（默认 `0.72`）且不是水体时写入可行走的 `StoneTileId` 地面和 `mountain=1` 环境值；河流优先覆盖山地，结构可在生成末尾覆盖基础石地。
 - `MapGenerationContext` 现携带 `WorldAddress` 与 `DimensionDefinition`；基础种子按 `WorldKey + SeedSalt` 派生，保证同星球不同维度的地图、确定性 Item GUID 和 Chunk 差量隔离。
-- `ChunkMgr.TryCreateMapCore()` 按当前维度的 `MapCorePrefabId` 创建地图；矿洞运行时替换为 `ChunkGenerator_Cave`，地表继续使用 MapCore 原生成管线。
-- 矿洞的房间/隧道由 `CaveLayoutSampler` 以绝对世界坐标采样；每格先铺可走地面，封闭格再叠加不可走岩壁，保证 Tilemap、导航和 Chunk 存档读取同一顶层 `TileData`。
+- `ChunkMgr.TryCreateMapCore()` 和 `ChunkGenerator_Cave` 仅保留给旧 `Map` 兼容路径；新版 WorldModel 的矿洞不再调用旧 Chunk/Map 生成接口。
+- 新版矿洞由 `CaveLayoutKernel` 在后台以绝对世界坐标复现房间、弯曲隧道与入口安全网络，`DeterministicChunkGenerator` 直接输出地面/岩壁 `ChunkTerrainData`；`CaveLayoutSampler` 仅保留旧存档兼容。
 - `BlockingTilemapLayer` 负责 `TileTag=Blocking` 的静态 Tile 障碍：地面 Tilemap 渲染阻挡层下方的数据，独立“建筑阻挡层”渲染顶层障碍并持有 `TilemapCollider2D`；A* 与存档仍读取原顶层 TileData。
 - 动态可放置建筑不得写入阻挡 Tilemap，继续使用 GameObject Collider + `BuildingOccupancyRegistry`；阻挡层只服务矿洞岩壁、地牢墙体和结构模板中的静态 Tile 障碍。
 - `ChunkMgr.TrySetChunkLoadSpeedMultiplier()` 是运行时区块加载调速的统一公开入口；有限倍率同时缩放旧队列和新 WorldModel 生成并发。传入正无穷表示“自动最大”，后台生成按约三分之一逻辑处理器且最多 4 项，旧管线数量预算最多四倍、毫秒预算最多两倍；禁止重新返回 `int.MaxValue/Infinity`。运行中调整必须立即调用 `SetMaxGenerationConcurrency()`，降低上限不强杀已开始任务。Tilemap、碰撞和导航继续由主线程协程按表现组件逐帧绑定。调速不得改变加载距离、世界数据或确定性生成结果。
@@ -103,23 +103,23 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 | `TileData` 可走性、Penalty、顶层 Tile 或导航脏格/脏区通知 | `flatworld-navigation` | A* 仍从权威 TileData 取值，节点和连接在数据变化后刷新 | `Navigation.Smoke` |
 | Chunk 激活窗口、加载/卸载、对象池、Ready 条件或 MapCore 创建 | `flatworld-navigation`；涉及观察者/维度时再加载 `flatworld-networking`、`flatworld-dimension` | GridGraph 窗口、观察者并集、维度 MapCore 与延迟失活顺序 | `Navigation.Smoke`；按命中项追加 `Networking.Smoke` 或 `Dimension.Smoke` |
 | `MapSave`、Chunk 差量、确定性 Item GUID 或 Item 区块归属 | `flatworld-data-save`、`flatworld-item-module` | 基线与 ChangedItems、不重复注册、卸载重载结果一致 | `DataSave.Smoke`、`ItemModule.Smoke` |
+| `ChunkEcologyData`、`CaveGenerationFeatureGenerator`、自然物规则、生态放置或 `ChunkNaturalItemRenderer` | `flatworld-data-save`、`flatworld-item-module`、`flatworld-dimension` | 地表生态与矿洞矿脉/传送门均可重放；水域、结构、岩壁和差量过滤正确，Item 池化后不复活 | `WorldModel.Ecology`、`WorldModel.Cave`、`DataSave.Ecology`、`ItemModule.Smoke` |
 | 结构生成、静态阻挡层或动态建筑边界 | `flatworld-building`、`flatworld-navigation` | 静态 Tile 阻挡与 `BuildingOccupancyRegistry` 动态占地不混用 | `Building.Smoke`、`Navigation.Smoke` |
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-08：`ChunkMgr.RefreshRuntimeWindow()` 的 WorldModel 请求改用当前维度派生种子，与出生点、旧 Map 和维度生成契约一致；`Map.Smoke` 固定保护该接线，避免出生采样与真实地块生成两套地形。
-- 2026-08-08：`ChunkMgr.RuntimeWindow` 新增本地实体画面就绪查询，以实际已绑定 `ChunkView` 为准；`MonsterSpawnerManager` 据此让根节点自然生物随可见区块休眠/唤醒，避免预取数据已存在但地形尚未绘制时生物暴露在黑区。无本地表现的专用服务器与旧区块流程保持实体运行。
-- 2026-08-08：建筑放置校验已接入 `ChunkMgr.TryGetRuntimeTerrainTile()`，预览和最终提交直接读取 Ready 的 `ChunkRuntime/ChunkTerrainData`；旧 `Chunk.Map` 只在旧世界管线中回退，动态占地仍由 `BuildingOccupancyRegistry` 独立维护。
-- 2026-08-08：WorldModel 跑图优化为“可见优先 + 空闲预取 + 分帧表现”：外圈不再一次性排队或计算移动预测，只有可见数据与画面就绪后才允许 1 项预取；后台并发按 CPU 限为最多 4，每帧只提交 1 个结果，“无限”改为自动最大但保留安全预算。`ChunkView` 按地面→环境→碰撞→草地→导航逐帧绑定，草地 Tile 使用 `SetTilesBlock`；设置面板新增自动/流畅/高吞吐 PlayerPrefs 模式。
-- 2026-08-08：HeightDriven 河流改为按 `river.hydrologyRegionSize`（默认 256）并发单飞构建并在相邻 Chunk 间共享，有界缓存使用 Profile 稳定指纹隔离配置；正式生成签名升至 17，`WorldModelPersistenceTests` 覆盖同区域复用。
-- 2026-08-08：新增 `Assets/5_Scripts/5-2_Editor/WorldGeneration/WorldTerrainPreviewWindow.cs`，菜单为 `FlatWorld/世界生成/地形预览器`；窗口用 `ChunkGenerationProfileSO` 快照和正式 `DeterministicChunkGenerator` 后台生成一格一像素的地形/群系/高度图，支持种子、中心、预览宽高、环绕半径、`world.coordinateScale` 与 Profile 全量数值临时覆盖，并统计水域/可行走占比；左侧画布支持以鼠标位置为中心的滚轮缩放、右键边界平移及“适应”复位，放大内容始终裁剪在画布内；当前 Profile 的 87 个数值键与运行时坐标缩放均在名称旁显示通俗实际作用，已废弃兼容键会明确标注当前不生效；输入变化后旧画面会标记过期，环绕模式显示实际周期并提供对齐的一周期/2×2 验证，2×2 仅生成一份正式周期再按规范坐标平铺；新增“应用当前参数到 Profile SO”，确认后通过 Undo/SerializedObject 覆盖并立即保存匹配参数，运行时由 PlanetData 管理的 `world.coordinateScale` 明确不写入。
-- 2026-08-08：`DeterministicChunkGenerator.TryFindWalkableSurfaceNear()` 不再把全部预算耗在锚点近处的逐格方环；先精确检查 8 格，再以确定性网格覆盖完整出生半径，候选仍生成正式区块并排除水体/不可走格。`MapSmokeTests` 固定覆盖 seed `-329089282`、anchor `(368,-429)`、4096 预算的回归。
-- 2026-08-08：正式 Surface 生成签名升至 16；`LegacyTerrainClimateKernel` 补齐旧版 Temperature(NoiseType=3) 与 `0..50℃` 映射，纯 `SurfaceBiomeClassifier` 适配旧 Biome 顺序和阈值，海面/沙滩恢复 `0.5/0.51`。D∞ 河流新增 `river.meanderStrength=0.85`、`river.meanderScale=48` 的连续坡向偏转与种子坐标抖动，所有河格仍须严格下坡；`ChunkMgr` 新增权威 Biome/可走陆地查询，出生校验和怪物群系过滤优先读取 `ChunkRuntime`。
-- 2026-08-08：旧版 D8 水文截图出现密集平行直河、短碎段和成片冲积条带后，正式 Surface 恢复 `river.algorithm=heightDriven` 及已验收的 `0.405/0.195/96/384` 主河参数；旧版高度、降水、风场与地形降雨继续供 D∞ 水文采样。并按旧石地群系接入 `terrain.mountainLevel=0.72`、可行走 `Tile_Stone` 与 `mountain` 环境层，修正 Legacy 洪泛平原区域边距，生成签名升至 15。
-- 2026-08-08：无头 Surface Profile 新增 `climate.algorithm=legacyLand`，以纯 `LegacyTerrainClimateKernel` 迁移旧 `ChunkGenerator_Land` 的高度/基础降水经典 Perlin、高度二次强化、区域风场和地形降雨；新增 `basePrecipitation/windX/windY` 环境层，生成签名升至 14。
-- 2026-08-08：无头地表曾默认切换到迁移后的 `river.algorithm=legacy` 进行截图对比；新增纯 `LegacyHydrologyKernel`、实例级并发安全有界区域缓存、盆地湖泊与最低出口续流，并补 `riverSurfaceLevel/riverKind` 环境层；对比后保留内核但不再作为正式 Surface 默认。
+- 2026-08-09：维度切换重新使用玩家 `Mod_ChunkLoader` 的活动/预取/销毁窗口；`ChunkMgr` 暴露活动视野绑定完成状态，避免 1x1 中心区块请求覆盖完整视野。
+- 2026-08-09：矿洞出口通过 `CavePortalPairingSnapshot` 复算冻结地表的概率格、候选顺序和可放置性；洞穴只输出同格的唯一 `CaveExit`，不再枚举四个回退候选。新世界 Surface/Cave 默认入口概率均为 1%。
+- 2026-08-09：WorldModel 自然物的采摘掉落保持在 `NaturalItems` 表现节点，不再用旧 `ChunkMgr` 加载目标区块；解绑时回收临时掉落，避免旧区块与新版表现窗口交叉触发。
+- 2026-08-09：旧 `TileItem_StoneWall` 的右键放置不再写旧 `Map.Data`，通过 `TileBuildingSystem` 写入 `ChunkTerrainData.BlockingTileId`；新增 `CanSetBlockingTile` 供预览阶段检查扩展地块堆栈。
+- 2026-08-09：`ChunkTerrainData` 新增运行时阻挡地块写入/移除接口；新版区块渲染器通过 `TerrainChangeKind.TileStack` 即时刷新石墙，动态建筑不再依赖旧 `Map.Data`。
+- 2026-08-09：新版矿洞迁入纯 WorldModel：`CaveLayoutKernel` 输出连续房间/隧道/安全区地形，`CaveGenerationFeatureGenerator` 输出稳定洞壁矿脉、散矿和跨维度入口；洞穴继续复用 `ChunkEcologyData` 作为无 Unity 引用的世界物品记录。地形预览器构造快照时必须传递 `CaveResourceRules`，并以 `cave.portal.chunkWidth/Height` 保留正式概率格，不能让临时大预览区块稀释传送门密度。
+- 2026-08-09：地形预览器读取自然物图标时不再单独探测 Prefab 根节点，改为遍历层级内的 `SpriteRenderer`，兼容根节点无渲染器的 Weed 等物品；画布裁剪改用 `try/finally`，单个图标资源异常不会破坏后续 IMGUI 布局。
+- 2026-08-09：旧 `Chunk` 加载、运行时字典、位置数组和保存流程统一排除实体 AI；AI 按纯 `WorldAddress` 随新版数据窗口恢复，即使无本地 `ChunkView` 也会加载，旧 Chunk 只保留一次性迁移拦截。
+- 2026-08-09：地形预览器在单格达到可配屏幕像素时，按可见格索引读取 JSON `SpriteAddress` 或旧 Prefab 主 `SpriteRenderer` 绘制自然物图标；缩小时不查询 Sprite、不遍历点位，单帧限额并提示继续放大；图标仅编辑器画布，不实例化 Item。
+
 
 ## 修改后自动测试
 

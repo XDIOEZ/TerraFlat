@@ -281,7 +281,7 @@ public class Chunk : MonoBehaviour
 
             foreach (var itemData in items.Value)
             {
-                if (itemData == null) continue;
+                if (itemData == null || RuntimeAiEntityUtility.IsAiData(itemData)) continue;
 
                 Item item = ItemMgr.Instance.InstantiateItem(itemData, gameObject);
                 if (item == null) continue;
@@ -322,7 +322,7 @@ public class Chunk : MonoBehaviour
 
             foreach (var itemData in items.Value)
             {
-                if (itemData == null) continue;
+                if (itemData == null || RuntimeAiEntityUtility.IsAiData(itemData)) continue;
 
                 Item item = ItemMgr.Instance.InstantiateItem(itemData, gameObject);
                 if (item == null) continue;
@@ -368,7 +368,7 @@ public class Chunk : MonoBehaviour
     /// </summary>
     private void LoadSingleItem(ItemData itemData)
     {
-        if (itemData == null) return;
+        if (itemData == null || RuntimeAiEntityUtility.IsAiData(itemData)) return;
 
         Item item = ItemMgr.Instance.InstantiateItem(itemData, gameObject);
         if (item == null) return;
@@ -495,7 +495,7 @@ public class Chunk : MonoBehaviour
         // 调用所有item的Save方法
         foreach (var item in RunTimeItems.Values)
         {
-            if (item == null) continue;
+            if (item == null || RuntimeAiEntityUtility.IsAiEntity(item)) continue;
 
             item.Save();
             MapSave.AddItemData(item.itemData);
@@ -532,7 +532,7 @@ public class Chunk : MonoBehaviour
             if (item == null)
                 continue;
 
-            if (item is Map)
+            if (item is Map || RuntimeAiEntityUtility.IsAiEntity(item))
                 continue;
 
             AddToPositionArray(item);
@@ -608,6 +608,12 @@ public class Chunk : MonoBehaviour
             return;
         }
 
+        if (RuntimeAiEntityUtility.IsAiEntity(item))
+        {
+            ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
+            return;
+        }
+
         RunTimeItems[item.itemData.Guid] = item;
         AddToGroup(item);
 
@@ -629,6 +635,12 @@ public class Chunk : MonoBehaviour
         if (item.itemData == null)
         {
             Debug.LogError($"[Chunk] AddItem失败: itemData为空, item={item.name}", item);
+            return;
+        }
+
+        if (RuntimeAiEntityUtility.IsAiEntity(item))
+        {
+            ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
             return;
         }
 

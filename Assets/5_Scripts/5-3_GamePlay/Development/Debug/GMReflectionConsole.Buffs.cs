@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public sealed partial class GMReflectionConsole
 {
+    #region Buff 目录与目标列表
+
     private enum BuffTargetingMode
     {
         None,
@@ -15,24 +17,38 @@ public sealed partial class GMReflectionConsole
     }
 
     private const int MaxBuffApplicationsPerClick = 99;
+    private const float BuffTargetRefreshInterval = 0.5f;
+
+    /// <summary>运行时 Buff 目标列表中的一个索引按钮与其对应组件。</summary>
+    private sealed class BuffTargetEntry
+    {
+        public BuffManager Manager;
+        public Button Button;
+    }
 
     private readonly List<BuffDefinition> availableBuffDefinitions = new();
+    private readonly List<BuffManager> availableBuffTargets = new();
+    private readonly List<BuffTargetEntry> buffTargetEntries = new();
 
-    private GameController buffTargetingController;
     private TMP_InputField buffIdInput;
     private TMP_InputField buffDurationInput;
     private TMP_InputField buffApplicationCountInput;
     private TextMeshProUGUI buffDefinitionHintText;
+    private TextMeshProUGUI buffTargetListSummaryText;
     private TextMeshProUGUI buffTargetingHintText;
     private Button buffApplyButton;
     private Button buffCancelButton;
     private Button buffClearButton;
+    private Transform buffTargetListContent;
+    private ScrollRect buffTargetListScroll;
     private int selectedBuffDefinitionIndex = -1;
     private BuffTargetingMode buffTargetingMode;
     private string pendingBuffId;
     private float? pendingBuffDurationSeconds;
     private int pendingBuffApplicationCount = 1;
-    private float nextBuffInputResolveTime;
+    private float nextBuffTargetRefreshTime;
+
+    #endregion
 
     private void BuildBuffPage()
     {
@@ -40,7 +56,7 @@ public sealed partial class GMReflectionConsole
         AddPageIntro(
             page.Content,
             "Buff 分发",
-            "选择已加载的 Buff，设置限时 Buff 的持续时间与施加次数；确认后用左键点选带有 BuffManager 的玩家或生物。 ");
+            "选择已加载的 Buff，设置限时 Buff 的持续时间与施加次数；然后点击下方目标列表中的索引按钮施加。 ");
 
         GameObject selectionRow = CreateUiObject("Buff Definition Row", page.Content);
         selectionRow.AddComponent<LayoutElement>().preferredHeight = 40f;
@@ -85,6 +101,7 @@ public sealed partial class GMReflectionConsole
         parameterHint.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
         buffDefinitionHintText = AddPageHint(page.Content, "正在读取 Buff 目录…", 52f);
+        BuildBuffTargetList(page.Content);
 
         Transform actionGrid = CreateActionGrid(page.Content, 3, 338f, 40f, 3);
         buffApplyButton = CreateSearchableButton(
@@ -98,14 +115,14 @@ public sealed partial class GMReflectionConsole
             actionGrid,
             GmPageId.Buff,
             "取消",
-            "Buff 取消 停止 左键分发",
+            "Buff 取消 停止 目标列表 分发",
             CancelBuffTargeting,
             40f);
         buffClearButton = CreateSearchableButton(
             actionGrid,
             GmPageId.Buff,
             "清除 Buff",
-            "Buff 清除 清空 目标 左键",
+            "Buff 清除 清空 目标列表 索引",
             ToggleClearBuffTargeting,
             40f);
 
@@ -115,7 +132,125 @@ public sealed partial class GMReflectionConsole
             34f);
 
         RefreshBuffDefinitions();
+        RefreshBuffTargetList();
         RefreshBuffTargetingControls();
+    }
+
+    /// <summary>创建当前加载场景中可接受 Buff 的对象滚动列表。</summary>
+    private void BuildBuffTargetList(Transform parent)
+    {
+        GameObject header = CreateUiObject("Buff Target List Header", parent);
+        header.AddComponent<LayoutElement>().preferredHeight = 30f;
+
+        HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
+        headerLayout.spacing = 8f;
+        headerLayout.childAlignment = TextAnchor.MiddleLeft;
+        headerLayout.childControlWidth = true;
+        headerLayout.childControlHeight = true;
+        headerLayout.childForceExpandWidth = false;
+
+        TextMeshProUGUI title = CreateText(
+            header.transform,
+            "可接受 Buff 的运行对象（点击索引）",
+            13f,
+            new Color(0.82f, 0.82f, 0.78f));
+        title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        buffTargetListSummaryText = CreateText(
+            header.transform,
+            "正在读取目标…",
+            11f,
+            new Color(0.62f, 0.69f, 0.70f));
+        buffTargetListSummaryText.alignment = TextAlignmentOptions.Right;
+        buffTargetListSummaryText.enableWordWrapping = false;
+        buffTargetListSummaryText.overflowMode = TextOverflowModes.Ellipsis;
+        buffTargetListSummaryText.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
+
+        CreateButton(header.transform, "刷新目标", () => RefreshBuffTargetList(), 84f, 28f);
+
+        GameObject listRoot = CreateUiObject("Buff Target List", parent);
+        listRoot.AddComponent<Image>().color = new Color(0.028f, 0.071f, 0.094f, 1f);
+        Outline outline = listRoot.AddComponent<Outline>();
+        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        listRoot.AddComponent<LayoutElement>().preferredHeight = 206f;
+        buffTargetListContent = ConfigureBuffTargetScroll(listRoot, 7f, out buffTargetListScroll);
+    }
+
+    /// <summary>配置带遮罩和滚动条的 Buff 目标列表。</summary>
+    private static Transform ConfigureBuffTargetScroll(
+        GameObject root,
+        float inset,
+        out ScrollRect scroll)
+    {
+        scroll = root.AddComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 28f;
+
+        GameObject viewport = CreateUiObject("Viewport", root.transform);
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = new Vector2(inset, inset);
+        viewportRect.offsetMax = new Vector2(-inset - 18f, -inset);
+        viewport.AddComponent<RectMask2D>();
+        scroll.viewport = viewportRect;
+
+        GameObject content = CreateUiObject("Content", viewport.transform);
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
+        contentLayout.padding = new RectOffset(0, 0, 0, 4);
+        contentLayout.spacing = 6f;
+        contentLayout.childControlWidth = true;
+        contentLayout.childControlHeight = true;
+        contentLayout.childForceExpandWidth = true;
+        contentLayout.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.content = contentRect;
+
+        GameObject scrollbarObject = CreateUiObject("Scrollbar", root.transform);
+        RectTransform scrollbarRect = scrollbarObject.GetComponent<RectTransform>();
+        scrollbarRect.anchorMin = new Vector2(1f, 0f);
+        scrollbarRect.anchorMax = new Vector2(1f, 1f);
+        scrollbarRect.pivot = new Vector2(1f, 0.5f);
+        scrollbarRect.offsetMin = new Vector2(-14f, inset);
+        scrollbarRect.offsetMax = new Vector2(-4f, -inset);
+        Image scrollbarBackground = scrollbarObject.AddComponent<Image>();
+        scrollbarBackground.color = new Color(0.08f, 0.13f, 0.15f, 1f);
+
+        GameObject slidingArea = CreateUiObject("Sliding Area", scrollbarObject.transform);
+        RectTransform slidingRect = slidingArea.GetComponent<RectTransform>();
+        slidingRect.anchorMin = Vector2.zero;
+        slidingRect.anchorMax = Vector2.one;
+        slidingRect.offsetMin = new Vector2(2f, 2f);
+        slidingRect.offsetMax = new Vector2(-2f, -2f);
+
+        GameObject handle = CreateUiObject("Handle", slidingArea.transform);
+        RectTransform handleRect = handle.GetComponent<RectTransform>();
+        handleRect.anchorMin = Vector2.zero;
+        handleRect.anchorMax = Vector2.one;
+        handleRect.offsetMin = Vector2.zero;
+        handleRect.offsetMax = Vector2.zero;
+        Image handleImage = handle.AddComponent<Image>();
+        handleImage.color = new Color(0.42f, 0.54f, 0.56f, 1f);
+
+        Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
+        scrollbar.handleRect = handleRect;
+        scrollbar.targetGraphic = handleImage;
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        return content.transform;
     }
 
     private static TextMeshProUGUI CreateBuffFieldLabel(Transform parent, string label, float width)
@@ -237,37 +372,219 @@ public sealed partial class GMReflectionConsole
         buffDefinitionHintText.color = new Color(0.66f, 0.71f, 0.71f);
     }
 
-    private void BeginBuffApplyTargeting()
+    /// <summary>窗口打开期间定时同步当前加载场景中的 Buff 接收对象。</summary>
+    private void UpdateBuffTargetListIfNeeded()
+    {
+        if (buffTargetListContent == null || !buffTargetListContent.gameObject.activeInHierarchy)
+            return;
+
+        if (Time.unscaledTime < nextBuffTargetRefreshTime)
+            return;
+
+        nextBuffTargetRefreshTime = Time.unscaledTime + BuffTargetRefreshInterval;
+        RefreshBuffTargetList(false);
+    }
+
+    /// <summary>重新扫描并刷新可接受 Buff 的目标索引按钮。</summary>
+    private void RefreshBuffTargetList(bool forceRebuild = true)
+    {
+        List<BuffManager> discoveredTargets = FindBuffManagersInLoadedScenes();
+        bool targetsChanged = forceRebuild || availableBuffTargets.Count != discoveredTargets.Count;
+
+        if (!targetsChanged)
+        {
+            for (int i = 0; i < discoveredTargets.Count; i++)
+            {
+                if (availableBuffTargets[i] != discoveredTargets[i])
+                {
+                    targetsChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if (targetsChanged && buffTargetListContent != null)
+        {
+            availableBuffTargets.Clear();
+            availableBuffTargets.AddRange(discoveredTargets);
+            buffTargetEntries.Clear();
+            ClearChildren(buffTargetListContent);
+
+            if (availableBuffTargets.Count == 0)
+            {
+                AddPageHint(
+                    buffTargetListContent,
+                    "当前加载场景没有运行中的 BuffManager 目标。",
+                    34f);
+            }
+            else
+            {
+                for (int i = 0; i < availableBuffTargets.Count; i++)
+                {
+                    int targetIndex = i;
+                    BuffManager target = availableBuffTargets[i];
+                    Button button = CreateButton(
+                        buffTargetListContent,
+                        FormatBuffTargetLabel(targetIndex, target),
+                        () => HandleBuffTargetButtonClicked(targetIndex),
+                        0f,
+                        34f);
+                    buffTargetEntries.Add(new BuffTargetEntry
+                    {
+                        Manager = target,
+                        Button = button
+                    });
+                }
+            }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(buffTargetListContent as RectTransform);
+            if (buffTargetListScroll != null)
+                buffTargetListScroll.verticalNormalizedPosition = 1f;
+        }
+        else if (targetsChanged)
+        {
+            availableBuffTargets.Clear();
+            availableBuffTargets.AddRange(discoveredTargets);
+        }
+
+        for (int i = 0; i < buffTargetEntries.Count; i++)
+        {
+            BuffTargetEntry entry = buffTargetEntries[i];
+            if (entry?.Button != null && entry.Manager != null)
+                SetBuffTargetButtonLabel(entry.Button, i, entry.Manager);
+        }
+
+        if (buffTargetListSummaryText != null)
+        {
+            buffTargetListSummaryText.text = availableBuffTargets.Count > 0
+                ? $"当前目标：{availableBuffTargets.Count} 个"
+                : "当前目标：0 个";
+        }
+
+        nextBuffTargetRefreshTime = Time.unscaledTime + BuffTargetRefreshInterval;
+    }
+
+    /// <summary>扫描所有已加载场景，只保留激活且可运行的 BuffManager。</summary>
+    private static List<BuffManager> FindBuffManagersInLoadedScenes()
+    {
+        BuffManager[] managers = FindObjectsOfType<BuffManager>(true);
+        List<BuffManager> targets = new(managers.Length);
+        for (int i = 0; i < managers.Length; i++)
+        {
+            BuffManager manager = managers[i];
+            if (manager == null || !manager.isActiveAndEnabled || !manager.gameObject.scene.IsValid())
+                continue;
+
+            targets.Add(manager);
+        }
+
+        targets.Sort(CompareBuffManagers);
+        return targets;
+    }
+
+    private static int CompareBuffManagers(BuffManager left, BuffManager right)
+    {
+        int nameComparison = StringComparer.OrdinalIgnoreCase.Compare(
+            GetBuffTargetName(left),
+            GetBuffTargetName(right));
+        return nameComparison != 0
+            ? nameComparison
+            : left.GetInstanceID().CompareTo(right.GetInstanceID());
+    }
+
+    private static string FormatBuffTargetLabel(int index, BuffManager manager)
+    {
+        int activeBuffCount = manager?.ActiveBuffs?.Count ?? 0;
+        return $"[{index}] {GetBuffTargetName(manager)}  ·  当前 Buff {activeBuffCount} 个";
+    }
+
+    private static void SetBuffTargetButtonLabel(Button button, int index, BuffManager manager)
+    {
+        TextMeshProUGUI text = button != null
+            ? button.GetComponentInChildren<TextMeshProUGUI>(true)
+            : null;
+        if (text != null)
+            text.text = FormatBuffTargetLabel(index, manager);
+    }
+
+    /// <summary>点击目标索引后按当前模式施加或清除 Buff。</summary>
+    private void HandleBuffTargetButtonClicked(int targetIndex)
+    {
+        if (targetIndex < 0 || targetIndex >= availableBuffTargets.Count)
+        {
+            RefreshBuffTargetList();
+            SetStatus("Buff 目标列表已更新，请重新点击目标索引。", Color.yellow);
+            return;
+        }
+
+        BuffManager target = availableBuffTargets[targetIndex];
+        if (target == null || !target.isActiveAndEnabled || !target.gameObject.scene.IsValid())
+        {
+            RefreshBuffTargetList();
+            SetStatus("该 Buff 目标已失效，目标列表已刷新。", Color.yellow);
+            return;
+        }
+
+        if (buffTargetingMode == BuffTargetingMode.Clear)
+        {
+            ClearBuffsFromTarget(target);
+            return;
+        }
+
+        if (buffTargetingMode == BuffTargetingMode.None)
+        {
+            if (!TryPreparePendingBuffApplication())
+                return;
+
+            StartBuffTargeting(BuffTargetingMode.Apply);
+            ApplyBuffToTarget(target);
+            StopBuffTargeting();
+            return;
+        }
+
+        ApplyBuffToTarget(target);
+    }
+
+    private bool TryPreparePendingBuffApplication()
     {
         string buffId = buffIdInput?.text?.Trim();
         BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(buffId);
         if (definition == null)
         {
             SetStatus("请先选择一个已加载的 Buff。", Color.yellow);
-            return;
+            return false;
         }
 
         if (!TryReadBuffDurationOverride(out float? durationOverride, out string durationError))
         {
             SetStatus(durationError, Color.yellow);
-            return;
+            return false;
         }
 
         if (durationOverride.HasValue && definition.IsPermanent)
         {
             SetStatus("永久 Buff 不能覆盖持续时间；请清空持续时间输入框后再确认。", Color.yellow);
-            return;
+            return false;
         }
 
         if (!TryReadBuffApplicationCount(out int applicationCount, out string countError))
         {
             SetStatus(countError, Color.yellow);
-            return;
+            return false;
         }
 
         pendingBuffId = definition.Id;
         pendingBuffDurationSeconds = durationOverride;
         pendingBuffApplicationCount = applicationCount;
+        return true;
+    }
+
+    private void BeginBuffApplyTargeting()
+    {
+        if (!TryPreparePendingBuffApplication())
+            return;
+
         StartBuffTargeting(BuffTargetingMode.Apply);
     }
 
@@ -319,7 +636,7 @@ public sealed partial class GMReflectionConsole
     {
         if (buffTargetingMode == BuffTargetingMode.Clear)
         {
-            StopBuffTargeting("清除 Buff 点选操作已关闭。");
+            StopBuffTargeting("清除 Buff 目标操作已关闭。");
             return;
         }
 
@@ -337,20 +654,12 @@ public sealed partial class GMReflectionConsole
             return;
         }
 
-        StopBuffTargeting("Buff 点选操作已取消。");
+        StopBuffTargeting("Buff 目标操作已取消。");
     }
 
     private void StartBuffTargeting(BuffTargetingMode mode)
     {
         buffTargetingMode = mode;
-        if (!EnsureBuffTargetingInputController())
-        {
-            buffTargetingMode = BuffTargetingMode.None;
-            RefreshBuffTargetingControls();
-            SetStatus("未找到本地玩家输入控制器，无法进入 Buff 点选操作。", Color.yellow);
-            return;
-        }
-
         RefreshBuffTargetingControls();
         if (mode == BuffTargetingMode.Apply)
         {
@@ -358,13 +667,13 @@ public sealed partial class GMReflectionConsole
                 ? $"，持续 {pendingBuffDurationSeconds.Value:0.##} 秒"
                 : string.Empty;
             SetStatus(
-                $"已进入 Buff 分发模式：{pendingBuffId} ×{pendingBuffApplicationCount}{durationText}。请用左键点选世界对象；点击“取消”可关闭。",
+                $"已进入 Buff 分发模式：{pendingBuffId} ×{pendingBuffApplicationCount}{durationText}。请点击下方目标索引；点击“取消”可关闭。",
                 new Color(0.35f, 0.95f, 0.85f));
         }
         else
         {
             SetStatus(
-                "已进入清除 Buff 模式：请用左键点选世界对象；再次点击“清除 Buff”可退出。",
+                "已进入清除 Buff 模式：请点击下方目标索引；再次点击“清除 Buff”可退出。",
                 new Color(1f, 0.71f, 0.30f));
         }
     }
@@ -375,61 +684,19 @@ public sealed partial class GMReflectionConsole
         pendingBuffId = null;
         pendingBuffDurationSeconds = null;
         pendingBuffApplicationCount = 1;
-        UnbindBuffTargetingInputController();
         RefreshBuffTargetingControls();
 
         if (!string.IsNullOrWhiteSpace(statusMessage))
             SetStatus(statusMessage, new Color(0.66f, 0.71f, 0.71f));
     }
 
-    private bool EnsureBuffTargetingInputController()
-    {
-        Transform localPlayer = GetLocalPlayerTransform();
-        GameController controller = localPlayer != null
-            ? localPlayer.GetComponentInChildren<GameController>(true)
-            : null;
-        controller ??= FindFirstComponent("GameController") as GameController;
-        if (controller == null)
-            return false;
-
-        if (buffTargetingController == controller)
-            return true;
-
-        UnbindBuffTargetingInputController();
-        buffTargetingController = controller;
-        buffTargetingController.LeftClick.DynamicCalls += HandleBuffTargetingClick;
-        return true;
-    }
-
-    private void UnbindBuffTargetingInputController()
-    {
-        if (buffTargetingController != null && buffTargetingController.LeftClick != null)
-            buffTargetingController.LeftClick.DynamicCalls -= HandleBuffTargetingClick;
-
-        buffTargetingController = null;
-    }
-
-    private void UpdateBuffTargetingInput()
-    {
-        if (buffTargetingMode == BuffTargetingMode.None || buffTargetingController != null)
-            return;
-
-        if (Time.unscaledTime < nextBuffInputResolveTime)
-            return;
-
-        nextBuffInputResolveTime = Time.unscaledTime + 0.5f;
-        EnsureBuffTargetingInputController();
-    }
-
     private void HandleBuffTargetingSceneChanged()
     {
         if (buffTargetingMode != BuffTargetingMode.None)
-            StopBuffTargeting("场景已切换，Buff 点选操作已自动取消。");
-        else
-            UnbindBuffTargetingInputController();
+            StopBuffTargeting("场景已切换，Buff 目标操作已自动取消。");
 
-        nextBuffInputResolveTime = 0f;
         RefreshBuffDefinitions();
+        RefreshBuffTargetList();
     }
 
     private void DisposeBuffTargeting()
@@ -438,45 +705,23 @@ public sealed partial class GMReflectionConsole
         pendingBuffId = null;
         pendingBuffDurationSeconds = null;
         pendingBuffApplicationCount = 1;
-        UnbindBuffTargetingInputController();
     }
 
-    private void HandleBuffTargetingClick()
+    private void ClearBuffsFromTarget(BuffManager target)
     {
-        if (buffTargetingMode == BuffTargetingMode.None || buffTargetingController == null)
-            return;
-
-        Vector3 worldPosition;
-        try
-        {
-            worldPosition = buffTargetingController.GetMouseWorldPosition();
-        }
-        catch (Exception exception)
-        {
-            SetStatus($"无法读取鼠标世界坐标：{exception.Message}", Color.yellow);
-            return;
-        }
-
-        BuffManager target = FindBuffManagerAt(worldPosition);
-        if (target == null)
-        {
-            SetStatus("未点选到支持 Buff 的游戏对象；目标需要带有 BuffManager。", Color.yellow);
-            return;
-        }
-
         string targetName = GetBuffTargetName(target);
-        if (buffTargetingMode == BuffTargetingMode.Clear)
-        {
-            int clearedCount = target.ActiveBuffs?.Count ?? 0;
-            target.ClearAllBuffs();
-            SetStatus(
-                clearedCount > 0
-                    ? $"已清除 {targetName} 身上的 {clearedCount} 个 Buff。"
-                    : $"{targetName} 当前没有可清除的 Buff。",
-                new Color(1f, 0.71f, 0.30f));
-            return;
-        }
+        int clearedCount = target.ActiveBuffs?.Count ?? 0;
+        target.ClearAllBuffs();
+        SetStatus(
+            clearedCount > 0
+                ? $"已清除 {targetName} 身上的 {clearedCount} 个 Buff。"
+                : $"{targetName} 当前没有可清除的 Buff。",
+            new Color(1f, 0.71f, 0.30f));
+    }
 
+    private void ApplyBuffToTarget(BuffManager target)
+    {
+        string targetName = GetBuffTargetName(target);
         if (string.IsNullOrWhiteSpace(pendingBuffId))
         {
             StopBuffTargeting("Buff 分发参数已失效，操作已关闭。");
@@ -513,28 +758,11 @@ public sealed partial class GMReflectionConsole
             new Color(0.35f, 0.95f, 0.85f));
     }
 
-    private static BuffManager FindBuffManagerAt(Vector2 worldPosition)
-    {
-        Collider2D[] colliders = Physics2D.OverlapPointAll(worldPosition);
-        for (int i = 0; i < colliders.Length; i++)
-        {
-            Collider2D collider = colliders[i];
-            if (collider == null)
-                continue;
-
-            Item item = collider.GetComponentInParent<Item>();
-            BuffManager manager = item != null
-                ? item.GetComponentInChildren<BuffManager>(true)
-                : collider.GetComponentInParent<BuffManager>();
-            if (manager != null && manager.isActiveAndEnabled)
-                return manager;
-        }
-
-        return null;
-    }
-
     private static string GetBuffTargetName(BuffManager manager)
     {
+        if (manager == null)
+            return "未知目标";
+
         Item item = manager.GetComponentInParent<Item>();
         if (item != null && !string.IsNullOrWhiteSpace(item.name))
             return item.name;
@@ -549,11 +777,11 @@ public sealed partial class GMReflectionConsole
 
         SetBuffButtonPresentation(
             buffApplyButton,
-            applying ? "正在点选施加" : "确认并点选施加",
+            applying ? "正在分发 Buff" : "确认并点选施加",
             applying ? new Color(0.18f, 0.48f, 0.33f, 1f) : new Color(0.66f, 0.32f, 0.15f, 1f));
         SetBuffButtonPresentation(
             buffCancelButton,
-            buffTargetingMode == BuffTargetingMode.None ? "取消" : "取消点选操作",
+            buffTargetingMode == BuffTargetingMode.None ? "取消" : "取消分发操作",
             new Color(0.094f, 0.212f, 0.251f, 1f));
         SetBuffButtonPresentation(
             buffClearButton,
@@ -566,18 +794,19 @@ public sealed partial class GMReflectionConsole
         if (applying)
         {
             buffTargetingHintText.text =
-                $"分发模式已开启：{pendingBuffId} ×{pendingBuffApplicationCount}。左键点选可持续对多个目标施加；可关闭 GM 面板后操作。";
+                $"分发模式已开启：{pendingBuffId} ×{pendingBuffApplicationCount}。点击下方目标索引可连续施加。";
             buffTargetingHintText.color = new Color(0.35f, 0.95f, 0.85f);
         }
         else if (clearing)
         {
             buffTargetingHintText.text =
-                "清除模式已开启：左键点选目标会清除其全部 Buff；再次点击“清除 Buff”即可退出。";
+                "清除模式已开启：点击下方目标索引会清除其全部 Buff；再次点击“清除 Buff”即可退出。";
             buffTargetingHintText.color = new Color(1f, 0.71f, 0.30f);
         }
         else
         {
-            buffTargetingHintText.text = "当前未启用 Buff 点选操作。";
+            buffTargetingHintText.text =
+                "选择 Buff 后可直接点击下方目标索引；也可先点“确认并点选施加”进入连续分发。";
             buffTargetingHintText.color = new Color(0.66f, 0.71f, 0.71f);
         }
     }

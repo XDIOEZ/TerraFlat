@@ -328,6 +328,41 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "entity.spawnCount", 0d) / 256d));
             ResourceMinSpacing = Clamp(GetInt(numbers, "resource.minSpacing", 5), 1, 64);
             CaveOpenThreshold = Clamp01(GetDouble(numbers, "cave.openThreshold", 0.52d));
+            CaveRegionSize = Clamp(GetInt(numbers, "cave.regionSize", 20), 4, 128);
+            CaveRoomMinRadius = Positive(GetDouble(numbers, "cave.room.minRadius", 3.8d), 3.8d);
+            CaveRoomMaxRadius = Math.Max(
+                CaveRoomMinRadius,
+                Positive(GetDouble(numbers, "cave.room.maxRadius", 6.8d), 6.8d));
+            CaveTunnelMinRadius = Positive(
+                GetDouble(numbers, "cave.tunnel.minRadius", 1.35d), 1.35d);
+            CaveTunnelMaxRadius = Math.Max(
+                CaveTunnelMinRadius,
+                Positive(GetDouble(numbers, "cave.tunnel.maxRadius", 2.15d), 2.15d));
+            CaveSpawnX = Finite(GetDouble(numbers, "cave.spawn.x", 0.5d), 0.5d);
+            CaveSpawnY = Finite(GetDouble(numbers, "cave.spawn.y", 0.5d), 0.5d);
+            CaveSpawnSafeRadius = NonNegativeFinite(
+                GetDouble(numbers, "cave.spawn.safeRadius", 4d), 4d);
+            CavePortalEnabled = GetBool(numbers, "cave.portal.enabled", true);
+            CavePortalChunkChance = Clamp01(
+                GetDouble(numbers, "cave.portal.chunkChance", 0d));
+            CavePortalSafeRadius = Math.Max(1d, Positive(
+                GetDouble(numbers, "cave.portal.safeRadius", 3d), 3d));
+            // 为 0 时沿用当前 Profile 的区块尺寸；编辑器连续预览会显式保留正式区块尺寸。
+            CavePortalChunkWidth = Math.Max(0,
+                GetInt(numbers, "cave.portal.chunkWidth", 0));
+            CavePortalChunkHeight = Math.Max(0,
+                GetInt(numbers, "cave.portal.chunkHeight", 0));
+            CavePortalBaseSeed = GetInt(numbers, "cave.portal.baseSeed", 0);
+            CavePortalSeedSalt = GetInt(numbers, "cave.portal.seedSalt", 7919);
+            CaveResourceDensity = Clamp01(
+                GetDouble(numbers, "cave.resource.density", 0.14d));
+            CaveLooseOreDensity = Clamp01(
+                GetDouble(numbers, "cave.resource.looseDensity", 0d));
+            CavePortalItemId = GetText(texts, "cave.portal.itemId", "CaveExit");
+            CavePortalTargetDimensionId = GetText(
+                texts,
+                "cave.portal.targetDimensionId",
+                Mode == ChunkGenerationMode.Cave ? "surface" : "cave");
             DefaultNavigationCost = (short)Clamp(GetInt(numbers,
                 "navigation.defaultCost", 1), 1, short.MaxValue);
         }
@@ -463,6 +498,30 @@ namespace FlatWorld.WorldModel
         public int ResourceMinSpacing { get; }
         /// <summary>洞穴随机值高于这个数时挖成空地，否则保留岩壁。</summary>
         public double CaveOpenThreshold { get; }
+        /// <summary>旧矿洞房间网络使用的逻辑区域边长。</summary>
+        public int CaveRegionSize { get; }
+        public double CaveRoomMinRadius { get; }
+        public double CaveRoomMaxRadius { get; }
+        public double CaveTunnelMinRadius { get; }
+        public double CaveTunnelMaxRadius { get; }
+        /// <summary>矿洞默认出生点及其不可放矿安全半径。</summary>
+        public double CaveSpawnX { get; }
+        public double CaveSpawnY { get; }
+        public double CaveSpawnSafeRadius { get; }
+        /// <summary>跨维度天然入口的成对布局参数。</summary>
+        public bool CavePortalEnabled { get; }
+        public double CavePortalChunkChance { get; }
+        public double CavePortalSafeRadius { get; }
+        /// <summary>传送门概率格的宽高；0 表示跟随当前生成 Profile 的区块尺寸。</summary>
+        public int CavePortalChunkWidth { get; }
+        public int CavePortalChunkHeight { get; }
+        public int CavePortalBaseSeed { get; }
+        public int CavePortalSeedSalt { get; }
+        public string CavePortalItemId { get; }
+        public string CavePortalTargetDimensionId { get; }
+        /// <summary>洞壁矿脉与散落矿石的密度。</summary>
+        public double CaveResourceDensity { get; }
+        public double CaveLooseOreDensity { get; }
         /// <summary>普通地面默认有多难走；数字越大，寻路越不喜欢走。</summary>
         public short DefaultNavigationCost { get; }
 

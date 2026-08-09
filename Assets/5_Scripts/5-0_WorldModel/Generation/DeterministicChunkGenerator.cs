@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河谷选路或河网筛选规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 17;
+        public const int CurrentGenerationSignature = 20;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -23,8 +23,8 @@ namespace FlatWorld.WorldModel
         internal int CachedHeightDrivenRegionCount => heightDrivenRegionCache.Count;
 
         // 草地状态用 1 和 2；数字 0 专门表示“这个格子还没处理过”，方便排查问题。
-        private const byte GrassEmpty = 1;
-        private const byte GrassPresent = 2;
+        private const byte GrassEmpty = ChunkTerrainData.GrassEmpty;
+        private const byte GrassPresent = ChunkTerrainData.GrassPresent;
         // 这个数字表示“随机地形算法的版本”。只有确实要让旧世界换一种地形排列时才增加它。
         // 普通设置变化不应该改它，否则同一个旧世界的山川和气候会被整个重新随机。
         private const uint NoiseLayoutVersion = 5u;
@@ -82,7 +82,26 @@ namespace FlatWorld.WorldModel
                 {
                     ApplyStructures(request, settings, terrain, cancellationToken);
                 }
-                return new ChunkGenerationResult(request, terrain);
+                ChunkEcologyData ecology;
+                if (cave)
+                {
+                    // 洞穴不走地表生态规则，改由迁移后的房间/隧道矿脉阶段输出纯 Item 放置记录。
+                    ecology = CaveGenerationFeatureGenerator.GenerateCave(
+                        request, terrain, cancellationToken);
+                }
+                else
+                {
+                    ChunkEcologyData surfaceEcology = ChunkEcologyGenerator.Generate(
+                        request,
+                        terrain,
+                        profile.EcologyGlobalMultiplier,
+                        profile.EcologyRules,
+                        cancellationToken);
+                    // 天然矿洞入口优先占用候选格，避免与树木、灌木等生态物重叠。
+                    ecology = CaveGenerationFeatureGenerator.AppendSurfacePortals(
+                        request, terrain, surfaceEcology);
+                }
+                return new ChunkGenerationResult(request, terrain, ecology);
             }
             catch
             {
@@ -418,6 +437,7 @@ namespace FlatWorld.WorldModel
                 river ? (float)riverCell.SurfaceLevel : 0f);
             terrain.SetEnvironmentValue("riverKind", x, y,
                 river ? (float)riverCell.Kind : 0f);
+            terrain.SetEnvironmentValue("structure", x, y, 0f);
 
             // 草长不长只看世界种子、坐标和湿度，不用会变化的全局随机数，所以每次结果相同。
             bool grass = (flags & TerrainCellFlags.Walkable) != 0 &&
@@ -1405,7 +1425,7 @@ namespace FlatWorld.WorldModel
 
         #endregion
 
-        /// <summary>根据洞穴噪声生成一个可行走的洞穴地面格或不可行走的岩壁格。</summary>
+        /// <summary>根据迁移后的房间、隧道和入口安全网络生成洞穴地面或岩壁格。</summary>
         private static void GenerateCaveCell(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, ChunkTerrainBuffer terrain,
             int x, int y, int worldX, int worldY)
@@ -1413,14 +1433,12 @@ namespace FlatWorld.WorldModel
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
             // 洞穴格子只有两种：能走的空地，或不能穿过的岩壁。岩壁下面仍保留一层洞穴地面。
-            double cavern = Fractal(CreateSeed(request, 0x7f4a7c15u), worldX, worldY,
-                settings.TerrainScale * 1.7d, 4, 2.08d, 0.52d, request.Topology);
-            bool open = cavern >= settings.CaveOpenThreshold;
+            bool open = CaveLayoutKernel.IsOpenAtWorld(request, settings, worldX, worldY);
             TerrainCellFlags flags = open ? TerrainCellFlags.Walkable : TerrainCellFlags.Blocking;
             terrain.SetCell(x, y, new TerrainCell(settings.CaveFloorTileId, 0,
                 open ? 0 : settings.CaveWallTileId, 100, open ? settings.DefaultNavigationCost :
                 short.MaxValue, flags));
-            terrain.SetEnvironmentValue("height", x, y, (float)cavern);
+            terrain.SetEnvironmentValue("height", x, y, open ? 1f : 0f);
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
@@ -1481,6 +1499,7 @@ namespace FlatWorld.WorldModel
                                 current.NavigationCost, current.Flags));
                             terrain.SetGrass(x, y, GrassEmpty);
                             terrain.SetEnvironmentValue("grass", x, y, 0f);
+                            terrain.SetEnvironmentValue("structure", x, y, 1f);
                         }
                     }
 

@@ -25,6 +25,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private Dictionary<string, Slider> sliders = new Dictionary<string, Slider>();
     private Dictionary<string, ScrollRect> scrollRects = new Dictionary<string, ScrollRect>();
     private Dictionary<string, Image> images = new Dictionary<string, Image>();
+    private readonly HashSet<Button> autoBoundButtons = new HashSet<Button>();
+    private readonly HashSet<Toggle> autoBoundToggles = new HashSet<Toggle>();
 
     /// <summary>
     /// 当前全局层级顺序，确保拖拽物体始终显示在最上层
@@ -79,9 +81,15 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     public bool IsCancelShortcutTarget =>
         gamepadNavigationPrepared && closeOnEscapeShortcut && isOpen && gameObject.activeInHierarchy;
 
+    /// <summary>
+    /// 当前面板是否已经接入手柄导航契约。
+    /// </summary>
+    public bool IsGamepadNavigationPrepared => gamepadNavigationPrepared;
+
     private void Awake()
     {
         EnsureRuntimeReferences();
+        FlatWorldUITheme.ApplyGamepadNavigationPolicy(transform);
     }
 
     #region  Unity生命周期
@@ -90,10 +98,15 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
 
+        // 静态 UI 文本统一绑定到本地化表；不改动 Prefab 的视觉布局。
+        FlatWorldUIAutoLocalizer.BindStaticTexts(transform);
+
         EnsureRuntimeReferences();
 
-        // 只补充非视觉的音频反馈；颜色、布局和装饰必须在 Prefab 中完成。
+        // 运行时补充音频与导航选中反馈；布局仍由 Prefab 和主题负责。
         FlatWorldAudioUIFeedback.EnsureFor(transform);
+        FlatWorldUITheme.ApplySelectionColors(transform);
+        FlatWorldUIFeedback.EnsureFor(transform);
 
         // 初始化面板状态
         if (canvasGroup != null)
@@ -164,6 +177,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     {
         EnsureRuntimeReferences();
 
+        autoBoundButtons.RemoveWhere(button => button == null);
+        autoBoundToggles.RemoveWhere(toggle => toggle == null);
+
         // 清空现有字典
         buttons.Clear();
         inputFields.Clear();
@@ -181,7 +197,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             {
                 buttons[btn.name] = btn;
                 // 为按钮绑定点击事件
-                btn.onClick.AddListener(() => OnClick(btn.name));
+                if (autoBoundButtons.Add(btn))
+                    btn.onClick.AddListener(() => OnClick(btn.name));
             }
         }
 
@@ -213,7 +230,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             {
                 toggles[toggle.name] = toggle;
                 // 为Toggle绑定值改变事件
-                toggle.onValueChanged.AddListener((value) => OnValueChanged(toggle.name, value));
+                if (autoBoundToggles.Add(toggle))
+                    toggle.onValueChanged.AddListener((value) => OnValueChanged(toggle.name, value));
             }
         }
 
@@ -272,10 +290,12 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         closeOnGamepadCancel = closeOnCancel;
         closeOnEscapeShortcut = closeOnEscape;
         preferredSelectableName = preferredControlName;
+        FlatWorldUITheme.ApplyGamepadNavigationPolicy(transform);
         EnsureAutomaticNavigation();
+        EnsureSelectionFollowers();
 
         if (isOpen)
-            SelectDefaultControl();
+            SelectDefaultForGamepad();
     }
 
     /// <summary>
@@ -302,8 +322,10 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
         if (gamepadNavigationPrepared)
         {
+            FlatWorldUITheme.ApplyGamepadNavigationPolicy(transform);
             EnsureAutomaticNavigation();
-            SelectDefaultControl();
+            EnsureSelectionFollowers();
+            SelectDefaultForGamepad();
         }
 
         if (!wasOpen && isOpen)
@@ -378,16 +400,27 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         for (int i = 0; i < selectables.Length; i++)
         {
             Selectable selectable = selectables[i];
-            if (selectable == null || selectable.navigation.mode != Navigation.Mode.None)
+            if (selectable == null || FlatWorldUITheme.IsGamepadNavigationExcluded(selectable))
                 continue;
 
             Navigation navigation = selectable.navigation;
+            bool emptyExplicitNavigation = navigation.mode == Navigation.Mode.Explicit &&
+                navigation.selectOnUp == null &&
+                navigation.selectOnDown == null &&
+                navigation.selectOnLeft == null &&
+                navigation.selectOnRight == null;
+            if (navigation.mode != Navigation.Mode.None && !emptyExplicitNavigation)
+                continue;
+
             navigation.mode = Navigation.Mode.Automatic;
             selectable.navigation = navigation;
         }
     }
 
-    private void SelectDefaultControl()
+    /// <summary>
+    /// 选择当前面板的默认手柄控件，供动态面板在完成子节点创建后重新调用。
+    /// </summary>
+    public void SelectDefaultForGamepad()
     {
         EventSystem eventSystem = EventSystem.current;
         if (eventSystem == null)
@@ -413,7 +446,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             for (int i = 0; i < selectables.Length; i++)
             {
                 Selectable selectable = selectables[i];
-                if (CanSelect(selectable) && selectable.name == preferredSelectableName)
+                if (CanSelect(selectable) &&
+                    (selectable.name == preferredSelectableName ||
+                     selectable.name.StartsWith(preferredSelectableName, StringComparison.OrdinalIgnoreCase)))
                     return selectable;
             }
         }
@@ -437,8 +472,10 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private static bool CanSelect(Selectable selectable)
     {
         return selectable != null &&
+               !FlatWorldUITheme.IsGamepadNavigationExcluded(selectable) &&
                selectable.gameObject.activeInHierarchy &&
-               selectable.IsInteractable();
+               selectable.IsInteractable() &&
+               selectable.navigation.mode != Navigation.Mode.None;
     }
 
     private void RestorePreviousSelection()
@@ -455,6 +492,26 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         previousSelectedObject = null;
         eventSystem.SetSelectedGameObject(
             restoreTarget != null && restoreTarget.activeInHierarchy ? restoreTarget : null);
+    }
+
+    /// <summary>
+    /// 为滚动容器内的可选控件补充自动滚动跟随器。
+    /// </summary>
+    private void EnsureSelectionFollowers()
+    {
+        Selectable[] selectables = GetComponentsInChildren<Selectable>(true);
+        for (int i = 0; i < selectables.Length; i++)
+        {
+            Selectable selectable = selectables[i];
+            if (selectable == null || FlatWorldUITheme.IsGamepadNavigationExcluded(selectable))
+                continue;
+
+            if (selectable.GetComponentInParent<ScrollRect>() != null &&
+                selectable.GetComponent<GamepadUISelectionFollower>() == null)
+            {
+                selectable.gameObject.AddComponent<GamepadUISelectionFollower>();
+            }
+        }
     }
 
     private void OnDestroy()
@@ -898,7 +955,15 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     public void RefreshUIComponents()
     {
         CollectUIComponents();
+        FlatWorldUIAutoLocalizer.BindStaticTexts(transform);
+        FlatWorldUITheme.ApplySelectionColors(transform);
         FlatWorldAudioUIFeedback.EnsureFor(transform);
+        FlatWorldUIFeedback.EnsureFor(transform);
+        if (gamepadNavigationPrepared)
+        {
+            EnsureAutomaticNavigation();
+            EnsureSelectionFollowers();
+        }
     }
 
     #endregion

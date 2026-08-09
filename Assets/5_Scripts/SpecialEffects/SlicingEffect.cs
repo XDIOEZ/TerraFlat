@@ -10,9 +10,42 @@ public class SlicingEffect : GameEffect
     private Transform weaponTransform; // 武器变换组件
     private Vector2 startWeaponPosition; // 武器初始位置
     private bool hasStarted = false;
+    private bool returnScheduled;
+    private float returnAtTime;
+
+    #region Pool Lifecycle
+
+    public override void OnSpawnedFromPool()
+    {
+        StopAllCoroutines();
+        weaponTransform = null;
+        hasStarted = false;
+        returnScheduled = false;
+        returnAtTime = 0f;
+    }
+
+    public override void OnReturnedToPool()
+    {
+        StopAllCoroutines();
+        weaponTransform = null;
+        hasStarted = false;
+        returnScheduled = false;
+        returnAtTime = 0f;
+    }
+
+    #endregion
 
     public override void Effect(Transform Sender, object args)
     {
+        StopAllCoroutines();
+        returnScheduled = false;
+
+        if (Sender == null)
+        {
+            ReturnToPoolOrDestroy();
+            return;
+        }
+
         // 记录武器初始位置和变换组件
         weaponTransform = Sender;
         startWeaponPosition = Sender.position;
@@ -30,7 +63,7 @@ public class SlicingEffect : GameEffect
             // 检查weaponTransform是否存在，如果不存在则销毁特效
             if (weaponTransform == null)
             {
-                Destroy(gameObject);
+                ReturnToPoolOrDestroy();
                 yield break;
             }
             yield return null;
@@ -39,7 +72,7 @@ public class SlicingEffect : GameEffect
         // 检查weaponTransform是否存在，如果不存在则销毁特效
         if (weaponTransform == null)
         {
-            Destroy(gameObject);
+            ReturnToPoolOrDestroy();
             yield break;
         }
 
@@ -58,8 +91,9 @@ public class SlicingEffect : GameEffect
         euler.z += angle;
         transform.rotation = Quaternion.Euler(euler);
 
-        // 销毁特效
-        Destroy(gameObject, lifetime);
+        // 由 Update 统一调度回收，避免每次播放创建延迟销毁对象。
+        returnAtTime = Time.time + Mathf.Max(0f, lifetime);
+        returnScheduled = true;
     }
 
     // Start is called before the first frame update
@@ -78,10 +112,17 @@ public class SlicingEffect : GameEffect
     // Update is called once per frame
     void Update()
     {
-        // 检查weaponTransform是否存在，如果不存在则销毁特效
+        // 检查weaponTransform是否存在，如果不存在则回收特效
         if (weaponTransform == null)
         {
-            Destroy(gameObject);
+            if (hasStarted)
+                ReturnToPoolOrDestroy();
+            return;
+        }
+
+        if (returnScheduled && Time.time >= returnAtTime)
+        {
+            ReturnToPoolOrDestroy();
         }
     }
 }

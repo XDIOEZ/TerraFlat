@@ -41,7 +41,7 @@ ItemMaker / ItemMgr 实例化
 - 远端模块边界：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/IRemoteNetworkModule.cs`。
 - Item Prefab：`Assets/2_Prefabs/Item/`。
 - Module Prefab：`Assets/2_Prefabs/Module/`。
-- 本体物品入口：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；定义按最终解析出的 `shellPrefab` 放在 `Items/shells/*.json`，分包 `id/path`、`shellPrefab` 和模板 Prefab 根名称统一使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`。`ItemDefinitionCatalogLoader` 只加载 Manifest 显式启用的包，先全局合并再解析跨文件 `parent`，是物品静态配置的唯一真源。
+- 本体物品入口：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；定义按最终解析出的 `shellPrefab` 放在 `Items/shells/*.json`，分包 `id/path`、`shellPrefab` 和模板 Prefab 根名称保持一致（现有模板包括 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`，新增专用外壳时按实际 Prefab 名登记）。`ItemDefinitionCatalogLoader` 只加载 Manifest 显式启用的包，先全局合并再解析跨文件 `parent`，是物品静态配置的唯一真源。
 
 ## 调度约束
 
@@ -57,16 +57,16 @@ ItemMaker / ItemMgr 实例化
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-08：自然生成生物仍保留在 `ItemMgr` 运行时注册表中，但离开已绑定 `ChunkView` 后由 `MonsterSpawnerManager` 关闭 GameObject；`ItemTickScheduler` 会跳过 inactive Item，因此休眠期间不再渲染、感知或模拟。返回时只恢复该管理器亲自休眠的实体，不得把死亡或池化 Item 重新激活。
-- 2026-08-08：`RuntimeItemDefinition.DisplayName` 与 `GameRes.TryGetItemPresentation()` 成为物品 UI 名称/图标的统一入口；JSON 物品必须使用解析后的 `gameName`、`visual.spriteAddress`，禁止从共享外壳 Prefab 读取模板显示信息。
-- 2026-08-08：`TileEffectReceiver.CanonicalModuleId` 固定为 `ModText.TileEffectReceiver`，避免旧 Prefab/存档序列化 ID 影响玩家模块索引；其 Save 保持无副作用，世界切换仍通过显式 `PrepareForWorldTransition()` 撤销环境效果。
-- 2026-08-08：编辑器 Addressables Play Mode 必须使用 `BuildScriptFastMode`（`AddressableAssetSettings.m_ActivePlayerDataBuilderIndex = 0`），确保 `GameRes` 直接加载当前 Item/Module Prefab；打包模式会读取旧 Bundle，表现为外壳缺少 ItemData 或内嵌模块无法解析。
-- 2026-08-07：物品分包 `id/path`、Manifest `shellPrefab`、模板 Prefab 文件名和根对象名统一为 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；具体物品 `ItemData.IDName` 继续保留 `Axe_Stone/Bone/...`，避免破坏存档、配方与玩法引用。
-- 2026-08-07：`ItemMgr` 按公共生命周期、实例生成销毁、感知空间索引、玩家加载和随机掉落拆为五个 partial 文件；仅调整物理组织，公共签名与序列化字段保持不变。
-- 2026-08-07：本体物品目录改为 `item-manifest.json` 显式聚合 7 个 `shells/*.json` 分包；分包按继承解析后的 `shellPrefab` 分类，所有启用包合并后再统一解析 `parent`，旧单文件 `items.json` 已移除。
-- 2026-08-07：移除旧装备/防御/食物 Excel→Prefab 同步链；`StreamingAssets/GameConfig/Items` 的 Manifest 分包成为本体物品及模块参数的唯一编辑源，禁止恢复 Excel 双向同步。
-- 2026-08-05：`Data_TileMap` 改为 MemoryPack 持久化 `TileStackCell[,]`，继续保持 ItemData 联合序列化身份；环境初始化收敛为五张网格，生产环境系数统一读取降水，`ItemModule.Smoke` 覆盖新栈往返与初始化契约。
-- 2026-08-04：`Module.CanonicalModuleId` 统一模板、存档与运行时索引使用的模块 ID；`Item.ModuleLoad()` 会按旧 ID/Prefab 子物体名匹配后迁移为规范 ID，`GameRes` 为独立模块 Prefab 注册规范 ID 与旧序列化 ID 别名。`ItemDefinitionRuntime` 在实例化独立模块前也必须按规范 ID、旧 ID、子物体名和组件类型复用共享外壳中的模块，避免把内置的 `Mod_Weapon_AnimationAction` 误判为缺失。
+- 2026-08-09：建筑召唤器 Item 数据进入 JSON 分包；每个召唤器保留独立 Prefab 外壳，JSON 接管 ItemData/ModuleData，复杂 Module 参数留在壳体以保持建筑放置、库存、设备和专用组件引用。
+- 2026-08-09：本体物品迁移器新增 Humus 与胸甲定义；胸甲 `Module_Equipment_Store` 的 SerializeReference 装备实例使用受限类型标签恢复，JSON 参数不启用任意 TypeNameHandling，避免抽象类型实例化失败或扩大反射面。
+- 2026-08-09：`DimensionPortal` 实现 Item 池生命周期清理；复用对象时重置锚点、初始化和传送状态，生成出口显式绑定宿主 `Item`，避免旧运行时状态污染新出口。
+- 2026-08-09：确定性 `CaveExit` 仍是不可拾取的永久基线物品；矿洞侧现在仅接收与地表入口同坐标的一条放置记录，`ChunkNaturalItemRenderer` 不创建额外运行时出口。
+- 2026-08-09：新版自然物的临时掉落不再进入旧 `Chunk` 归属更新或 `RequestLoadChunk`，`ChunkNaturalItemRenderer` 统一登记并在解绑时无存档回收，避免 Item 掉落动画触发旧区块加载卡顿。
+- 2026-08-09：`ChunkNaturalItemRenderer` 识别带目标维度的确定性 `CaveExit`，在 `Load()` 后调用 `DimensionPortal.ConfigureGenerated()` 并禁拾取；天然传送门只由基线恢复，解绑/保存时不得写入自然物删除或状态差量，其他洞穴矿物仍走原有稳定 GUID、环境初始化和池化回收。
+- 2026-08-09：GM 生物召唤不再通过反射只执行 `InstantiateItem`；必须以 `ItemMgr` 直接生成、立即 `Load()` 并校验 `IAIActor` 反向绑定。初始化或类型校验失败时从运行时注册表 Despawn，避免对象池、Tick 和 AI 索引残留半初始化实体。
+- 2026-08-09：`ItemMgr.RuntimeEntities` 新增 AI 分类缓存、`WorldAddress` 正反向索引和场景级 `RuntimeEntities` 根节点；Item 注册、移动、池化及场景直接销毁必须同步注销，普通 Item Tick 禁止重复扫描组件树。
+- 2026-08-09：灌木成熟提示必须从 `GameRes.TryGetItemDefinition(itemId).Sprite` 取得 JSON 解析出的 `RuntimeItemDefinition` 图标；`Berry` 的真源为 `Items/shells/Prop.json` 中的 `visual.spriteAddress`，禁止从共享外壳或 `Berry.prefab` 的 SpriteRenderer 读取。
+- 2026-08-09：`ItemMgr.Update/LateUpdate` 仅在 `GameManager.IsInGameWorld` 为真时调度 Item 与感知；退出阶段只完成但不应用已提交的感知 Job。主菜单退出必须走 `ReleasePlayerForWorldTransition()`，并在 Chunk/场景卸载后调用 `CleanupNullItems()`，禁止让已销毁 Item 留在注册表供下一世界读取。
 
 ## 易误判点
 
@@ -74,7 +74,7 @@ ItemMaker / ItemMgr 实例化
 - `Item.OnDestroy` 与主动 `PrepareForDespawn` 有防重复逻辑，不能在外部再次保存/销毁同一 Item。
 - 新模块不仅要创建脚本，还要检查 Module Prefab、ModuleData、Addressables 标签和目标 Item Prefab 挂载。
 - `Items/shells/` 不会被自动扫描；新增分包必须登记进 `item-manifest.json`。修改物品最终 `shellPrefab` 后，也必须把原始定义移到对应模板包，否则加载器会按 Manifest 的 `shellPrefab` 分类约束直接报错。
-- 当前 7 个本体分包的 `id`、文件名、`shellPrefab` 与模板 Prefab 根名称必须保持一致；具体物品 ID 与模板身份是两套概念，禁止为了统一模板名而修改 Prefab 内的 `ItemData.IDName`。
+- 所有本体分包的 `id`、文件名、`shellPrefab` 与模板 Prefab 根名称必须保持一致；具体物品 ID 与模板身份是两套概念，禁止为了统一模板名而修改 Prefab 内的 `ItemData.IDName`。
 - 旧 `Item/Mod_HealthPoints.cs` 已确认无代码或资源引用并删除；实体生命值不是通用 Item Module 扩展点，统一由战斗系统 `DamageReceiver` 管理。
 
 ## 高耦合联动

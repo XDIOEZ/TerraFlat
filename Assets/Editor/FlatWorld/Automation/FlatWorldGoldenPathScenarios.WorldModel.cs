@@ -14,6 +14,8 @@ namespace FlatWorld.Automation
         private static Vector2 _modelStartPosition;
         private static Vector2 _modelAwayPosition;
         private static Item _modelVisibilityCreature;
+        private static int _modelSavedCreatureGuid;
+        private static RuntimeWorldAddress _modelSavedCreatureAddress;
         private static bool _modelDormancyObserved;
         private static bool _modelRebindObserved;
 
@@ -28,6 +30,8 @@ namespace FlatWorld.Automation
             _modelStartPosition = default;
             _modelAwayPosition = default;
             _modelVisibilityCreature = null;
+            _modelSavedCreatureGuid = 0;
+            _modelSavedCreatureAddress = default;
             _modelDormancyObserved = false;
             _modelRebindObserved = false;
         }
@@ -39,6 +43,8 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException("无头世界模型未在进入世界时创建。");
             if (manager.PendingRuntimeChunkPresentationCount != 0)
                 throw new InvalidOperationException("进入世界后主线程区块表现队列仍未排空。");
+            if (!manager.AreRuntimeWindowPresentationsReady)
+                throw new InvalidOperationException("进入世界后活动视野没有完成全部 ChunkView 绑定。");
             if (manager.RuntimeChunkPrefetchInFlightCount > 1)
                 throw new InvalidOperationException("空闲数据预取并发超过安全上限 1。");
 
@@ -84,9 +90,12 @@ namespace FlatWorld.Automation
             _modelTerrainHash = _modelStartChunk.Terrain.ComputeStableHash();
             _modelVisibilityCreature = ItemMgr.Instance.InstantiateItem(
                 "Chicken", _modelStartPosition, Quaternion.identity, Vector3.one);
-            if (_modelVisibilityCreature == null)
+            if (_modelVisibilityCreature == null || _modelVisibilityCreature.DestructionHandled ||
+                ItemMgr.Instance.GetItemByGuid(_modelVisibilityCreature.itemData?.Guid ?? 0) !=
+                _modelVisibilityCreature)
                 throw new InvalidOperationException("无法创建用于区块实体显隐验证的 Chicken。");
             _modelVisibilityCreature.Load();
+            AssertRuntimeAiMigration(manager, _modelVisibilityCreature, _modelStartAddress);
             AssertWorldModelPrefetchRing(manager, FlatWorldGoldenPathCommandPlayerLoader());
 
             Debug.Log(
@@ -170,6 +179,7 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException("区块返回验证期间测试生物被意外回收。");
             if (!_modelVisibilityCreature.gameObject.activeInHierarchy)
                 return false;
+            AssertRuntimeAiMigration(manager, _modelVisibilityCreature, _modelStartAddress);
 
             if (!ReferenceEquals(rebound, _modelStartChunk))
                 throw new InvalidOperationException("返回起点后无头区块对象未复用。");
@@ -238,6 +248,78 @@ namespace FlatWorld.Automation
         {
             if (!_modelDormancyObserved || !_modelRebindObserved)
                 throw new InvalidOperationException("完整黄金路径结束前未完成无头区块休眠与重绑验证。");
+
+            PrepareRuntimeAiReentryEntity();
+        }
+
+        /// <summary>重进世界后验证 AI 由新版地址存档恢复，且没有重新挂回旧 Chunk。</summary>
+        internal static bool TickWorldModelAiReentry()
+        {
+            if (_modelSavedCreatureGuid == 0 || ItemMgr.Instance == null || ChunkMgr.Instance == null)
+                return false;
+
+            Item restored = ItemMgr.Instance.GetItemByGuid(_modelSavedCreatureGuid);
+            if (restored == null)
+                return false;
+
+            AssertRuntimeAiMigration(ChunkMgr.Instance, restored, _modelSavedCreatureAddress);
+            Debug.Log("[GoldenPath][WorldModel] AI WorldAddress 存档、退出清理与重进恢复通过。");
+            return true;
+        }
+
+        private static void PrepareRuntimeAiReentryEntity()
+        {
+            ItemMgr itemManager = ItemMgr.Instance;
+            ChunkMgr chunkManager = ChunkMgr.Instance;
+            Transform player = itemManager?.UserPlayerTransform;
+            if (itemManager == null || chunkManager == null || player == null)
+                throw new InvalidOperationException("退出前无法准备 AI WorldAddress 存档回归实体。");
+
+            if (_modelVisibilityCreature == null)
+            {
+                _modelVisibilityCreature = itemManager.InstantiateItem(
+                    "Chicken", player.position, Quaternion.identity, Vector3.one);
+                _modelVisibilityCreature?.Load();
+            }
+            else
+            {
+                _modelVisibilityCreature.transform.position = player.position;
+                itemManager.NotifyRuntimeItemMoved(_modelVisibilityCreature);
+            }
+
+            if (_modelVisibilityCreature?.itemData == null ||
+                !itemManager.TryGetRuntimeEntityAddress(
+                    _modelVisibilityCreature, out _modelSavedCreatureAddress))
+            {
+                throw new InvalidOperationException("退出前 Chicken 未进入新版 WorldAddress 实体索引。");
+            }
+
+            _modelSavedCreatureGuid = _modelVisibilityCreature.itemData.Guid;
+            AssertRuntimeAiMigration(chunkManager, _modelVisibilityCreature, _modelSavedCreatureAddress);
+        }
+
+        private static void AssertRuntimeAiMigration(
+            ChunkMgr manager,
+            Item creature,
+            RuntimeWorldAddress expectedAddress)
+        {
+            if (manager == null || creature == null)
+                throw new InvalidOperationException("AI WorldAddress 断言缺少管理器或实体。");
+            if (creature.GetComponentInParent<Chunk>() != null)
+                throw new InvalidOperationException("AI 实体仍挂在旧 Chunk 层级下。");
+            if (creature.transform.parent == null ||
+                !string.Equals(creature.transform.parent.name, "RuntimeEntities", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("AI 实体没有挂到场景级 RuntimeEntities 根节点。");
+            }
+            RuntimeWorldAddress actual = default;
+            if (ItemMgr.Instance == null ||
+                !ItemMgr.Instance.TryGetRuntimeEntityAddress(creature, out actual) ||
+                actual != expectedAddress)
+            {
+                throw new InvalidOperationException(
+                    $"AI 实体 WorldAddress 不一致：expected={expectedAddress}, actual={actual}。");
+            }
         }
 
         private static void CleanupWorldModelScenario()

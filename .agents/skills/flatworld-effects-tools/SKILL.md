@@ -8,14 +8,16 @@ disable-model-invocation: false
 
 # FlatWorld 特效、Shader 与工具定位
 
-> 最后核对：2026-08-08。
+> 最后核对：2026-08-09。
 
 ## 运行时视觉
 
 - 特效管理器：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/VisualEffectManager.cs`。
 - 特效脚本：`Assets/5_Scripts/SpecialEffects/`。
 - 伤害文字：`Assets/5_Scripts/SpecialEffects/DamageTextEffect.cs`。
-- 水体效果：`Assets/5_Scripts/SpecialEffects/Mod_FVX_Water.cs`。
+- 水体效果：`Assets/5_Scripts/SpecialEffects/Mod_FVX_Water.cs`；角色浸没表现由 `Assets/5_Scripts/5-3_GamePlay/Presentation/ActorRenderEffectController.cs`、`WaterImmersionRenderEffect.cs` 和 `Assets/5_Scripts/5-3_GamePlay/World/Map/TileBehv/Tile_Water.cs` 协作处理；角色受击/状态染色由同目录 `ActorRenderColorEffect.cs` 通过 MPB 接入。
+- Buff 附着表现：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorStatusVisualEffectController.cs` 监听 `BuffManager` 事件并播放配置化 Sprite 序列、低强度状态光晕或 `VisualEffectManager` 池化粒子；当前燃烧复用 `Assets/6_Art/PraticalEffect/Burning/CreatureBurning_Sheet.png` 的八帧，出血类状态复用 `BloodDropStatusEffect`，`光耀` 复用 `Assets/6_Art/PraticalEffect/Circle.png` 做低透明度呼吸光，装配于 `Module_Animator.prefab` 与 `Animator/Module_Animator_AI.prefab`。运行时子精灵带 `ActorRenderEffectExclude`，不会被角色水下/受击 MPB 覆盖。
+- 雨滴落地水花：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/RainGroundSplashController.cs` 复用单个世界空间粒子系统；`WeatherMgr.cs` 独立加载 `Assets/Resources/Weather/RainGroundSplash.prefab`，配套 `Assets/Shaders/Shader/Rain-GroundSplash.shader` 与 `Assets/Resources/Weather/Materials/RainGroundSplash.mat`；原雨层的位置与覆盖范围由 `RainEffectController`/`RainEffect.prefab` 维护。
 - 粒子 Prefab：`Assets/2_Prefabs/ParticleEffect/`。
 - 项目 Shader 脚本目录：`Assets/5_Scripts/Shader/`。
 - Shader 资源目录：`Assets/Shaders/`。
@@ -48,14 +50,16 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-08：`GMReflectionConsole` 的玩家移速、区块加载有限倍率/无限状态、Ctrl+T 传送、AI 路线提示和当前页签改用 `GMConsolePreferences`/`PlayerPrefs` 持久化；场景切换后等待真实玩家与 `ChunkMgr` 出现再恢复，不在菜单场景自动创建区块管理器。
-- 2026-08-07：整理 `Assets/Editor/FlatWorld`，按 Automation、ContentTools、DataTables、PrefabBuilders、Productivity、Structures 六类归档；配置资源与对应窗口同目录，脚本 GUID 和菜单路径保持不变。
-- 2026-08-07：`Development/Debug` 拆为 `FlatWorld.Gameplay.Debug` 叶子程序集；GM 控制台仍可访问主体运行时系统，`FlatWorld.GameTest` 显式引用该程序集以保留 Buff 目标反射测试。
-
-- 2026-07-31：新增自动持久化的游戏会话日志管理器，支持场景、帧、线程、堆栈、业务调用位置、定时刷新、文件轮转与旧日志清理。
-- 2026-07-30：遗迹编辑器右侧属性区支持滚动和容器可视化配置；可选择多库存目标，并按目标 Prefab 的真实槽位以物品 Prefab 预览、数量上限、清空操作完成配置，烘焙前校验成员 ID、槽位、容量和物品引用。
-- 2026-07-29：新增统一只读内容校验器 `Assets/Editor/FlatWorld/ContentTools/Validation/FlatWorldContentValidator.cs`；菜单 `FlatWorld/内容配置/校验全部本体内容` 覆盖本体配置，`IPreprocessBuildWithReport` 在正式构建前以同一规则阻断错误，禁止自动修改资产。
-- 2026-07-27：完成运行时特效、Shader 与编辑器工具路径首版拆分。
+- 2026-08-09：状态表现控制器新增 `光耀` 低强度状态光晕；复用 `Circle.png` 作为金黄色圆形叠加，以轻微呼吸缩放和透明度变化表现发光，Buff 移除/对象禁用时隐藏，不改变 Buff 伤害逻辑。
+- 2026-08-09：状态表现控制器新增 VisualEffectManager 池化粒子配置；`出血`、`流血`、`失血` 共用 `BloodDropStatusEffect` 循环红色血滴，按当前角色 Sprite 高度跟随位置和排序，并在 Buff 移除/对象禁用时回收到对象池。
+- 2026-08-09：燃烧附着火焰的垂直锚点增加可配置偏移，玩家与 AI 默认向下移动角色高度的 `5%`，避免火焰底部露出玩家脚部；不改变缩放、帧率和 Buff 生命周期。
+- 2026-08-09：新增配置化角色状态附着特效控制器；燃烧 Buff 添加时立即显示并以 `10fps` 循环八帧火焰，续期不中断、移除/过期立即隐藏。火焰依据当前角色 Sprite 高度自适应缩放和排序，玩家与 AI 共用动画模块均已接线。
+- 2026-08-09：雨效改为由 `RainEffectController` 单点跟随相机顶部，`WeatherMgr` 不再重复写入根 Transform；保留原单边顶部发射线，粒子寿命按正交相机高度、初始下落速度和 `1.12` 倍余量动态计算，确保下半屏持续有雨且不会无限落到地图外。`RainGroundSplash` 优先采样非水非阻挡地形，区块尚未 Ready 时在可视范围降级发射；频率提升至小雨 `12/s`、暴雨 `48/s`，生命周期 `0.32–0.5s`、上限 `80`，保证中雨约 12 个同时可见水花。
+- 2026-08-09：草地 Tilemap 接入独立 `Grass-Sway-Lit` Shader，使用 GPU 顶点风场、根部固定的弯曲权重和共享材质参数；`ChunkGrassRenderer`、`GrassDetailLayer` 及对应 Prefab 共用该材质并扩展裁剪边界。
+- 2026-08-09：新增独立 `RainGroundSplash` 表现层；由 `WeatherMgr` 单独加载，使用世界空间环形粒子表示雨滴落地，不改变天气数据与地形数据。
+- 2026-08-08：角色受击改用 MPB 颜色模块，伤害数字支持弹性/暴击/类型颜色，`GameEffect` 与 `VisualEffectManager` 统一池化回收和视觉状态重置。
+- 2026-08-08：水体连接处加入基于 Shader 时间的双层正弦波动画，水线与水下透明边界同步起伏，并开放波幅、频率和速度参数。
+- 2026-08-08：新增通用角色渲染效果控制器与水体浸没模块；统一 MPB 写入，支持 `deepValue` 驱动的水下染色、透明度、柔和水线及深水保留头部，并接入玩家/AI 动画 Prefab。
 
 ## 修改后自动测试
 

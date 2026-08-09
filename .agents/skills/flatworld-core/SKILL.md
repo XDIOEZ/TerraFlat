@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 核心生命周期定位
 
-> 最后核对：2026-08-08。路径相对仓库根目录。
+> 最后核对：2026-08-09。路径相对仓库根目录。
 
 ## 修改前先读
 
@@ -72,21 +72,21 @@ GameStartScene
 
 ## 近期变更
 
-> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
+> 最多保留 8 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：维度切换加载目标玩家后必须按其相机视距主动刷新完整 Chunk 窗口，并在解锁输入前等待活动视野绑定完成；不能只等待玩家脚下区块。
+- 2026-08-09：新玩家完成安全陆地定位后，将主世界初始出生点写入玩家 `ItemSpecialData`；`Mod_PlayerDeathState` 加载旧存档时按同一世界种子补齐，死亡复活优先回到该持久坐标，不再把当前死亡位置当作正常出生点。
+- 2026-08-09：维度切换进入目标 Scene 后由 `DimensionManager` 主动驱动 `ChunkMgr.RefreshRuntimeWindow()` 并等待目标 `ChunkView` 完整绑定；WorldModel 运行时窗口会注入基础世界种子到 `cave.portal.baseSeed`，使地表入口与矿洞出口使用同一稳定布局。
+- 2026-08-09：自动保存经 `GameManager.SaveGameInBackgroundCoroutine()` 先分帧捕获旧 Chunk，再由 `SaveDataMgr` 后台原子写盘；同一文件的写入版本保证手动/退出保存优先，自动保存不得锁玩家输入、Mover 或 `Time.timeScale`。
+- 2026-08-09：返回主菜单时必须先将 `IsInGameWorld` 置为 false 并 `ResetWorldEntryLifecycle()`，再通过 `ItemMgr.ReleasePlayerForWorldTransition()` 注销 Player；等待 Chunk 回收后清理运行时 Item 注册，并在 `LoadSceneMode.Single` 完成后核验旧动态世界 Scene 已卸载。禁止直接 `Destroy(Player.gameObject)`，否则 AI 感知与 MonsterSpawner 可能读取 Unity 伪空对象，进而中断下一次 `RunWorld()`。
 - 2026-08-08：新玩家出生点纯采样与 `ChunkMgr.RefreshRuntimeWindow()` 统一使用 `DimensionManager.GetActiveGenerationSeed()`；禁止一个使用维度派生种子、另一个使用基础存档种子，否则预测陆地会在真实区块加载后变成水面。
 - 2026-08-08：新玩家纯地形出生搜索改为“锚点附近密集方环 + 剩余预算覆盖完整配置半径”；避免 4096 次采样被近处连续海面耗尽而实际只检查约 32 格，最终候选仍以正式区块结果确认非水且可走后再触发 `Event_PlayerEnterWorld`。
-- 2026-08-08：新世界 UI 接入手动世界种子；空白输入随机生成，数字、文字及 `0` 都作为可复现种子保存，`ReadyGameSaveData` 同步记录最终解析后的字符串与整数种子。
-- 2026-08-08：新世界 `PlanetData.NoiseScale` 在 `ChunkMgr.RefreshRuntimeWindow()` 创建纯生成快照时写入 `world.coordinateScale`，确保玩家选择的世界坐标缩放同时作用于 WorldModel 地形、气候和河流水文尺度；后台任务继续只读取不可变 Profile，不直接访问 Unity 单例。
-- 2026-08-08：`NewWorldCreationRequest` 接受空玩家名和空存档名；任一留空时统一补同一个八位纯数字名称，确保无需命名即可创建并进入新世界。
-- 2026-08-08：编辑器 Addressables Play Mode 固定使用 `BuildScriptFastMode`（索引 0），避免 `GameRes` 从旧 Bundle 读取已迁移前的 Prefab；清除 `GeneralWorldEdge.prefab` 上已删除 `SceneChange` 的残留组件，并为 `GameStartScene/Main Camera` 补齐主菜单阶段的 `AudioListener`；正式 Player 构建仍使用独立的 Packed Build 流程。
-- 2026-08-06：新世界 UI 默认提交 `WorldTopologyMode.Wrapped`；`PlanetData` 本身仍默认 Infinite，避免旧存档或非 UI 构造被自动转换。Wrapped 创建请求必须有正半径、正 Chunk 尺寸和可构造对齐边界。
-- 2026-08-04：新玩家进入存档时，出生点必须以当前维度的纯生成 Profile、当前 `PlanetData` 和派生种子计算；先写玩家坐标再触发 `Event_PlayerEnterWorld`，由 `Mod_ChunkLoader` 流送周围 Chunk。定位阶段不得注册运行时 Chunk，河流格同样必须排除；区块存档统一由 `SaveDataMgr` 扫描。
-- 2026-08-04：`GameStartIndex` 启动主菜单时，若自动单例已抢占为无 UI 配置的 `GameManager`，场景中的 `WorldManager` 配置实例必须接管；主菜单 Prefab 缺失必须输出明确错误。
 
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/Core/CoreSmokeTests.cs`；当前覆盖 GameManager、GameRes、SceneMgr、启动/管理器场景入口、空玩家/存档名称自动生成八位数字，以及新建/进入存档必须使用 Prefab 加载界面、先等待渲染帧并持续到区块队列完成、出生点必须纯种子定位后再交给玩家流送模块加载 Chunk、禁止 GameManager 重复扫描保存区块的源码契约。
+- `Runtime.GoldenPath` 在完整退出后会从刚写入的隔离存档重新进入同一玩家/世界键，断言旧动态 Scene、`Player_DIC` 与 Item 注册表均已清理，再执行第二次退出。
+- `Runtime.GoldenPath` 的 `FlatWorldGoldenPathScenarios.AutoSave.cs` 在 `OnWorldReady` 启动正式自动保存链，移动阶段断言后台写入完成且输入锁、Mover/Rigidbody2D 与时间缩放保持可用。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；核心流程测试约定目录：`Assets/GameTest/Core/`；场景目录：`Assets/GameTest/Scenes/Core/`；冒烟分类：`Core.Smoke`。
 - 新增启动、世界创建、继续游戏、场景切换或退出行为时必须增加系统测试；修复 Bug 时先增加回归测试。全局生命周期变化时同步更新最小启动冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用临时世界和临时存档，并在结束时清理全局对象与事件订阅。

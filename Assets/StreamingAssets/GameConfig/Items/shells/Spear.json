@@ -132,7 +132,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -316,7 +316,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -500,7 +500,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -684,7 +684,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],

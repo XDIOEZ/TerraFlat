@@ -10,6 +10,7 @@
         "GamePlay",
         "Data",
         "UI",
+        "PlayerInput",
         "m_Utilitiles",
         "Unity.TextMeshPro",
         "Unity.InputSystem",

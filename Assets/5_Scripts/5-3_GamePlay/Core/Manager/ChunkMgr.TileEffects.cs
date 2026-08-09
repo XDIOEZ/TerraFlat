@@ -153,6 +153,54 @@ public partial class ChunkMgr
                sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y);
     }
 
+    /// <summary>在已加载的新版权威草层中寻找最近的一格草。</summary>
+    public bool TryFindRuntimeGrassNear(Vector2 worldPosition, float searchRadius,
+        out RuntimeTerrainTileSample sample)
+    {
+        sample = default;
+        if (runtimeChunkManager == null || searchRadius < 0f)
+            return false;
+
+        Vector2 normalizedPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);
+        int minX = Mathf.FloorToInt(normalizedPosition.x - searchRadius);
+        int maxX = Mathf.FloorToInt(normalizedPosition.x + searchRadius);
+        int minY = Mathf.FloorToInt(normalizedPosition.y - searchRadius);
+        int maxY = Mathf.FloorToInt(normalizedPosition.y + searchRadius);
+        float radiusSqr = searchRadius * searchRadius;
+        float closestDistanceSqr = float.MaxValue;
+        bool found = false;
+
+        for (int x = minX; x <= maxX; x++)
+        for (int y = minY; y <= maxY; y++)
+        {
+            Vector2 candidateCenter = new(x + 0.5f, y + 0.5f);
+            float distanceSqr = WorldTopologyRuntime.SqrDistance(normalizedPosition, candidateCenter);
+            if (distanceSqr > radiusSqr || distanceSqr >= closestDistanceSqr)
+                continue;
+
+            if (!TryGetRuntimeTerrainTile(candidateCenter, out RuntimeTerrainTileSample candidate) ||
+                candidate.Terrain.GetGrass(candidate.LocalCell.x, candidate.LocalCell.y) !=
+                ChunkTerrainData.GrassPresent)
+                continue;
+
+            sample = candidate;
+            closestDistanceSqr = distanceSqr;
+            found = true;
+        }
+
+        return found;
+    }
+
+    /// <summary>从新版权威草层原子消费一格草，数据变化会驱动草 Tilemap 清除。</summary>
+    public bool TryConsumeRuntimeGrass(Vector2Int worldCell)
+    {
+        if (!TryGetRuntimeTerrainTile(new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f),
+                out RuntimeTerrainTileSample sample))
+            return false;
+
+        return sample.Terrain.TryConsumeGrass(sample.LocalCell.x, sample.LocalCell.y);
+    }
+
     /// <summary>在已加载权威区块内按确定性方环顺序寻找最近可行走陆地。</summary>
     public bool TryFindRuntimeWalkableLandNear(Vector2Int anchor, int maxRadius,
         int sampleBudget, out Vector2Int worldCell)

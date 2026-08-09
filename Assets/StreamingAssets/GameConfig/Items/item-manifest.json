@@ -14,6 +14,12 @@
       "enabled": true
     },
     {
+      "id": "Chestplate_Iron",
+      "path": "shells/Chestplate_Iron.json",
+      "shellPrefab": "Chestplate_Iron",
+      "enabled": true
+    },
+    {
       "id": "Stick",
       "path": "shells/Stick.json",
       "shellPrefab": "Stick",
@@ -41,6 +47,84 @@
       "id": "Seed",
       "path": "shells/Seed.json",
       "shellPrefab": "Seed",
+      "enabled": true
+    },
+    {
+      "id": "BlastFurnace_Summoner",
+      "path": "shells/BlastFurnace_Summoner.json",
+      "shellPrefab": "BlastFurnace_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Bonfire_Summoner",
+      "path": "shells/Bonfire_Summoner.json",
+      "shellPrefab": "Bonfire_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Chest_Wood_Summoner",
+      "path": "shells/Chest_Wood_Summoner.json",
+      "shellPrefab": "Chest_Wood_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Door_Stone_Summoner",
+      "path": "shells/Door_Stone_Summoner.json",
+      "shellPrefab": "Door_Stone_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Door_Wood_Summoner",
+      "path": "shells/Door_Wood_Summoner.json",
+      "shellPrefab": "Door_Wood_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Meatrack_Summoner",
+      "path": "shells/Meatrack_Summoner.json",
+      "shellPrefab": "Meatrack_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "MineEntrance_Summoner",
+      "path": "shells/MineEntrance_Summoner.json",
+      "shellPrefab": "MineEntrance_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Scarecrow_Summoner",
+      "path": "shells/Scarecrow_Summoner.json",
+      "shellPrefab": "Scarecrow_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Smelter_Summoner",
+      "path": "shells/Smelter_Summoner.json",
+      "shellPrefab": "Smelter_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Tent_Summoner",
+      "path": "shells/Tent_Summoner.json",
+      "shellPrefab": "Tent_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Wall_Stone_Summoner",
+      "path": "shells/Wall_Stone_Summoner.json",
+      "shellPrefab": "Wall_Stone_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "Wall_Wood_Summoner",
+      "path": "shells/Wall_Wood_Summoner.json",
+      "shellPrefab": "Wall_Wood_Summoner",
+      "enabled": true
+    },
+    {
+      "id": "WorkBench_Summoner",
+      "path": "shells/WorkBench_Summoner.json",
+      "shellPrefab": "WorkBench_Summoner",
       "enabled": true
     }
   ]

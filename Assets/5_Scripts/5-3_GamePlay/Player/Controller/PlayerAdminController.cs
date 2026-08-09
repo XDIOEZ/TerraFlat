@@ -15,6 +15,9 @@ public class PlayerAdminController : Module
 
     public static bool TeleportToMouseShortcutEnabled { get; private set; } = true;
 
+    /// <summary>本次运行中管理员无敌开关；默认关闭，不写入玩家存档。</summary>
+    public static bool AdminInvincibilityEnabled { get; private set; } = false;
+
     [Header("核心引用")]
     [Tooltip("要控制的玩家组件")]
     public Player player;
@@ -63,6 +66,7 @@ public class PlayerAdminController : Module
     private GameController gameController;
     private Mover playerMover;
     private Mover adminMoveSpeedTarget;
+    private DamageReceiver boundDamageReceiver;
     private float appliedAdminMoveSpeedMultiplier = 1f;
 
     public float AdminMoveSpeedMultiplier { get; private set; } = 1f;
@@ -78,6 +82,7 @@ public class PlayerAdminController : Module
     private static void ResetRuntimeSettings()
     {
         TeleportToMouseShortcutEnabled = true;
+        AdminInvincibilityEnabled = false;
     }
 
     private void Start()
@@ -129,10 +134,13 @@ public class PlayerAdminController : Module
             if (playerMover == null)
                 playerMover = player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
         }
+
+        BindAdminDamageReceiver();
     }
 
     private void OnDestroy()
     {
+        UnbindAdminDamageReceiver();
         Time.timeScale = initialUnityTimeScale;
     }
 
@@ -181,6 +189,58 @@ public class PlayerAdminController : Module
     private bool IsAdmin()
     {
         return player?.Data?.Name_User == AdminName;
+    }
+
+    /// <summary>当前玩家是否拥有管理员权限。</summary>
+    public bool IsAdministrator => IsAdmin();
+
+    /// <summary>管理员权限与无敌开关同时开启时，玩家才受无敌保护。</summary>
+    public bool IsAdminInvincibilityEnabled => IsAdministrator && AdminInvincibilityEnabled;
+
+    /// <summary>为当前本地玩家开启管理员权限，兼容既有 F1 行为。</summary>
+    public bool TryEnableAdministrator()
+    {
+        ResolveAdminSurvivalReferences();
+        if (player?.Data == null)
+        {
+            return false;
+        }
+
+        player.Data.Name_User = AdminName;
+        return true;
+    }
+
+    /// <summary>仅管理员可切换无敌；重新开启时立即恢复生存状态。</summary>
+    public bool TrySetAdminInvincibilityEnabled(bool enabled)
+    {
+        if (!IsAdministrator)
+        {
+            return false;
+        }
+
+        AdminInvincibilityEnabled = enabled;
+        if (!enabled)
+        {
+            return true;
+        }
+
+        ResolveAdminSurvivalReferences();
+        RestoreAdminVitalStats();
+        ResumeDyingStateForAdminInvincibility();
+        return true;
+    }
+
+    /// <summary>切换当前管理员玩家的无敌状态。</summary>
+    public bool TryToggleAdminInvincibility(out bool enabled)
+    {
+        enabled = AdminInvincibilityEnabled;
+        if (!IsAdministrator)
+        {
+            return false;
+        }
+
+        enabled = !AdminInvincibilityEnabled;
+        return TrySetAdminInvincibilityEnabled(enabled);
     }
 
     private void HandleAdminInput()
@@ -271,6 +331,27 @@ public class PlayerAdminController : Module
         }
     }
 
+    /// <summary>懒获取无敌恢复所需的生存模块，并保持伤害事件绑定有效。</summary>
+    private void ResolveAdminSurvivalReferences()
+    {
+        if (player == null)
+            player = GetComponentInParent<Player>();
+
+        if (player?.itemMods == null)
+            return;
+
+        if (damageReceiver == null)
+            damageReceiver = player.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+
+        if (sanMod == null)
+            sanMod = player.itemMods.GetMod_ByID<Mod_San>(Mod_San.ModuleId);
+
+        if (foodMod == null)
+            foodMod = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
+
+        BindAdminDamageReceiver();
+    }
+
     public bool TryCycleAdminMoveSpeedMultiplier(out float selectedMultiplier)
     {
         int nextIndex = 0;
@@ -343,6 +424,16 @@ public class PlayerAdminController : Module
 
     private void KeepAdminAlive()
     {
+        if (!IsAdminInvincibilityEnabled)
+            return;
+
+        ResolveAdminSurvivalReferences();
+        RestoreAdminVitalStats();
+    }
+
+    /// <summary>无敌开启时把生命、理智与饥饿恢复到满值。</summary>
+    private void RestoreAdminVitalStats()
+    {
         if (damageReceiver != null && damageReceiver.MaxHp > 0f && damageReceiver.Hp < damageReceiver.MaxHp)
         {
             damageReceiver.Hp = damageReceiver.MaxHp;
@@ -354,6 +445,45 @@ public class PlayerAdminController : Module
         }
 
         KeepAdminNotHungry();
+    }
+
+    /// <summary>伤害结算后立刻回满生命，避免致死伤害进入玩家濒死流程。</summary>
+    private void HandleAdminDamageReceived(DamageReceiverDamageInfo damageInfo)
+    {
+        _ = damageInfo;
+        if (!IsAdminInvincibilityEnabled)
+            return;
+
+        RestoreAdminVitalStats();
+    }
+
+    /// <summary>绑定生命模块事件，生命模块替换时自动解除旧监听。</summary>
+    private void BindAdminDamageReceiver()
+    {
+        if (boundDamageReceiver == damageReceiver)
+            return;
+
+        UnbindAdminDamageReceiver();
+        boundDamageReceiver = damageReceiver;
+        if (boundDamageReceiver != null)
+            boundDamageReceiver.OnDamageReceived += HandleAdminDamageReceived;
+    }
+
+    /// <summary>解除生命模块事件，避免场景重建后遗留监听。</summary>
+    private void UnbindAdminDamageReceiver()
+    {
+        if (boundDamageReceiver != null)
+            boundDamageReceiver.OnDamageReceived -= HandleAdminDamageReceived;
+
+        boundDamageReceiver = null;
+    }
+
+    /// <summary>重新开启无敌时，若玩家已处于濒死则立即恢复操作。</summary>
+    private void ResumeDyingStateForAdminInvincibility()
+    {
+        Mod_PlayerDeathState deathState = player?.itemMods?
+            .GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
+        deathState?.TryResumeFromAdminInvincibility();
     }
 
     private void KeepAdminNotHungry()

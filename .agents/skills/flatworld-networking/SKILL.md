@@ -81,7 +81,9 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：矿洞出口配对指纹纳入既有 `GenerationFingerprint`，因此地图生成协议的设置哈希会同时校验冻结地表 Profile、地表种子和拓扑；联机仍拒绝不同纯生成结果。
 - 2026-08-07：删除已被正式游戏联机链路和统一 GameTest 取代的早期胶囊人双进程测试 Harness、`NetworkTest` 场景与测试 Prefab；正式构建仅保留 `GameStartScene`，联机验证统一归入 `Assets/GameTest/Networking/`。
+- 2026-08-09：地图生成协议升至 6；`NetworkMapGenerationProtocol.CalculateSettingsHash()` 改纳入完整 `GenerationFingerprint`，覆盖洞穴房间/隧道、矿脉规则和天然传送门参数。Host/Client Profile 不一致时拒绝不同纯生成结果；维度切换本身仍保持离线限制。
 - 2026-08-05：Gameplay 协议升到 9，地图生成协议升到 2；快照设置哈希新增三通道噪声、稳定 BiomeId、分阶段管线与结构目录签名，旧协议明确拒绝。
 
 - 2026-07-31：明确维度切换首版仅离线可用，联机会话主动拒绝地表/矿洞迁移；后续需新增完整服务器权威协议后再开放。
@@ -91,7 +93,6 @@ disable-model-invocation: false
 - 2026-07-29：联机面板支持直接粘贴 UDP 内网穿透完整地址；Core 统一解析端点并校验协议、主机、端口，Mirror 客户端使用解析后的域名/IP 与外部端口连接。
 - 2026-07-29：生态生成器接入 `GameNetwork.HasStateAuthority`，离线与 Host/Server 结算，普通客户端只应用权威世界状态。
 - 2026-07-28：网络 Player 创建链增加显式本地档案上下文；远程副本隔离自言自语与新手教程，本地提升通过 `ProfileContextChanged` 恢复。
-- 2026-07-27：联机 UI 使用 `NetworkModeUIController` 三个 partial 文件分离会话、UI 状态和动态视觉树。
 
 ## 修改后自动测试
 
@@ -109,6 +110,6 @@ disable-model-invocation: false
 
 ## 有限环绕世界协议契约（2026-08-06）
 
-- Gameplay 协议为 `10`，地图生成协议为 `4`；快照和生成设置 hash 必须包含 `TopologyMode`，旧协议必须拒绝。
+- Gameplay 协议为 `10`，地图生成协议为 `5`；快照和生成设置 hash 必须包含 `TopologyMode` 与生态配置指纹，旧协议必须拒绝。
 - 服务端用环面最短位移校验移动步长并发布规范坐标；远程插值也必须取最短环面目标。
 - 多观察者 Chunk 窗口按规范坐标合并去重，销毁距离用最短环面位移；覆盖位于 `Networking.Smoke`。

@@ -30,6 +30,14 @@ public static class ItemDefinitionMigrationTool
         "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint"
     };
 
+    private static readonly HashSet<string> EquipmentInstanceTypeNames = new(StringComparer.Ordinal)
+    {
+        nameof(EquipmentInstance_Debug),
+        nameof(EquipmentInstance_Bag),
+        nameof(EquipmentInstance_Speed),
+        nameof(EquipmentInstance_Defense)
+    };
+
     private static readonly Dictionary<string, string> PreservedSourcePaths = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Dagger_Stone"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab",
@@ -83,7 +91,17 @@ public static class ItemDefinitionMigrationTool
                 "Assets/2_Prefabs/Food/Meat_Cooked.prefab",
                 "Assets/2_Prefabs/Food/Meat_Dehydrate.prefab",
                 "Assets/2_Prefabs/Food/Meat_Rotten.prefab",
-                "Assets/2_Prefabs/Food/Tea.prefab"
+                "Assets/2_Prefabs/Food/Tea.prefab",
+                "Assets/2_Prefabs/Materials/Humus.prefab"
+            }),
+        new(
+            "Equipment_Base",
+            "Assets/2_Prefabs/Equipment/Chestplate_Iron.prefab",
+            new[]
+            {
+                "Assets/2_Prefabs/Equipment/Chestplate_Iron.prefab",
+                "Assets/2_Prefabs/Equipment/Chestplate_Twine.prefab",
+                "Assets/2_Prefabs/Equipment/Chestplate_Wood.prefab"
             }),
         new(
             "WoodTool_Base",
@@ -129,7 +147,74 @@ public static class ItemDefinitionMigrationTool
         new(
             "Seed_Base",
             "Assets/2_Prefabs/Seed/Seed.prefab",
-            new[] { "Assets/2_Prefabs/Seed/Seed.prefab" })
+            new[] { "Assets/2_Prefabs/Seed/Seed.prefab" }),
+        // 建筑召唤器保留各自的 Item Prefab 作为运行时外壳；JSON 只接管 ItemData/ModuleData，
+        // 这样建筑放置、快照、占地和专用 UI/组件引用仍由原召唤器壳体提供。
+        new(
+            "BuildingSummoner_BlastFurnace_Base",
+            "Assets/2_Prefabs/Building/Summoners/BlastFurnace_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/BlastFurnace_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_Bonfire_Base",
+            "Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_ChestWood_Base",
+            "Assets/2_Prefabs/Building/Summoners/Chest_Wood_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Chest_Wood_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_DoorStone_Base",
+            "Assets/2_Prefabs/Building/Summoners/Door_Stone_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Door_Stone_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_DoorWood_Base",
+            "Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_Meatrack_Base",
+            "Assets/2_Prefabs/Building/Summoners/Meatrack_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Meatrack_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_MineEntrance_Base",
+            "Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_Scarecrow_Base",
+            "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_Smelter_Base",
+            "Assets/2_Prefabs/Building/Summoners/Smelter_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Smelter_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_Tent_Base",
+            "Assets/2_Prefabs/Building/Summoners/Tent_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Tent_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_WallStone_Base",
+            "Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_WallWood_Base",
+            "Assets/2_Prefabs/Building/Summoners/Wall_Wood_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/Wall_Wood_Summoner.prefab" },
+            preserveShellModuleFields: true),
+        new(
+            "BuildingSummoner_WorkBench_Base",
+            "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab" },
+            preserveShellModuleFields: true)
     };
 
     private static bool requestHookInstalled;
@@ -425,7 +510,9 @@ public static class ItemDefinitionMigrationTool
             if (moduleData.HasValues)
                 moduleDefinition["data"] = moduleData;
 
-            JObject parameters = SerializeModuleParameters(module);
+            JObject parameters = group.PreserveShellModuleFields
+                ? new JObject()
+                : SerializeModuleParameters(module);
             if (parameters.HasValues)
                 moduleDefinition["parameters"] = parameters;
             modules[stableName] = moduleDefinition;
@@ -628,10 +715,11 @@ public static class ItemDefinitionMigrationTool
             if (value is IEnumerable enumerable)
             {
                 JArray array = new();
+                Type elementType = GetEnumerableElementType(declaredType);
                 foreach (object element in enumerable)
                 {
-                    if (TrySerializeValue(element, element?.GetType() ?? typeof(object), visited, depth + 1,
-                            out JToken child))
+                    if (TrySerializeValue(element, elementType ?? element?.GetType() ?? typeof(object), visited, depth + 1,
+                        out JToken child))
                         array.Add(child);
                 }
                 token = array;
@@ -650,6 +738,15 @@ public static class ItemDefinitionMigrationTool
                         result[field.Name] = child;
                 }
             }
+
+            // SerializeReference 的装备实例需要显式类型标签，运行时只接受白名单类型。
+            if (declaredType == typeof(EquipmentInstance) &&
+                typeof(EquipmentInstance).IsAssignableFrom(type))
+            {
+                if (!EquipmentInstanceTypeNames.Contains(type.Name))
+                    throw new InvalidDataException($"装备实例类型未登记，不能迁移：{type.FullName}");
+                result["$concreteType"] = type.Name;
+            }
             token = result;
             return true;
         }
@@ -658,6 +755,21 @@ public static class ItemDefinitionMigrationTool
             if (trackReference)
                 visited.Remove(value);
         }
+    }
+
+    private static Type GetEnumerableElementType(Type declaredType)
+    {
+        if (declaredType == null || declaredType == typeof(string))
+            return null;
+        if (declaredType.IsArray)
+            return declaredType.GetElementType();
+        if (declaredType.IsGenericType)
+        {
+            Type[] arguments = declaredType.GetGenericArguments();
+            if (arguments.Length == 1)
+                return arguments[0];
+        }
+        return null;
     }
 
     private static bool IsUnitySerializedField(FieldInfo field)
@@ -915,16 +1027,22 @@ public static class ItemDefinitionMigrationTool
 
     private sealed class MigrationGroup
     {
-        public MigrationGroup(string baseId, string shellPath, string[] sourcePaths)
+        public MigrationGroup(
+            string baseId,
+            string shellPath,
+            string[] sourcePaths,
+            bool preserveShellModuleFields = false)
         {
             BaseId = baseId;
             ShellPath = shellPath;
             SourcePaths = sourcePaths;
+            PreserveShellModuleFields = preserveShellModuleFields;
         }
 
         public string BaseId { get; }
         public string ShellPath { get; }
         public string[] SourcePaths { get; }
+        public bool PreserveShellModuleFields { get; }
     }
 
     private sealed class MigrationPreview

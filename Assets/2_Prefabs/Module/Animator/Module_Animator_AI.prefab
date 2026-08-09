@@ -12,7 +12,10 @@ GameObject:
   - component: {fileID: 5802457204138852704}
   - component: {fileID: 1252656688152752650}
   - component: {fileID: 1835563831416809626}
-  - component: {fileID: 6462083789832097017}
+  - component: {fileID: 912345678901234569}
+  - component: {fileID: 912345678901234570}
+  - component: {fileID: 912345678901234572}
+  - component: {fileID: 912345678901234574}
   m_Layer: 0
   m_Name: Module_Animator_AI
   m_TagString: Untagged
@@ -145,7 +148,7 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
---- !u!114 &6462083789832097017
+--- !u!114 &912345678901234569
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -154,7 +157,92 @@ MonoBehaviour:
   m_GameObject: {fileID: 2231892886818212503}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3b67aa8cbbb77cc46b3d33b67e456f2a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  submergeScale: 1
+  m_Script: {fileID: 11500000, guid: 92b131e600ce4cd88ee96dd3f8edecdc, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  includeChildRenderers: 1
+  includeInactiveRenderers: 1
+  explicitRenderers: []
+--- !u!114 &912345678901234570
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2231892886818212503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17b511ae08624ae4865474a51118eea8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  underwaterTint: {r: 0.18, g: 0.42, b: 0.78, a: 1}
+  waterLineColor: {r: 0.65, g: 0.9, b: 1, a: 1}
+  underwaterAlpha: 0.1
+  waterFeather: 0.035
+  waterLineWidth: 0.035
+  waterWaveAmplitude: 0.018
+  waterWaveFrequency: 8
+  waterWaveSpeed: 2.4
+  transitionSeconds: 0.18
+--- !u!114 &912345678901234572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2231892886818212503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a5acb82949e4b3b87e1e21766f0565a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  statusTint: {r: 1, g: 1, b: 1, a: 1}
+  statusTintStrength: 0
+  statusTransitionSeconds: 0.12
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultFlashDuration: 0.2
+  defaultFlashCount: 1
+--- !u!114 &912345678901234574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2231892886818212503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba69093b3c794079b3ddf1dbda9bf410, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  statusEffects:
+  - buffId: 燃烧
+    frames:
+    - {fileID: 1068388729, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    - {fileID: -576119264, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    - {fileID: -384271369, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    - {fileID: 773869024, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    - {fileID: -1285974526, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    - {fileID: -1109397528, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    - {fileID: 1061549572, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    - {fileID: -1041119646, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
+    framesPerSecond: 10
+    sizeMultiplier: 1.1
+    verticalOffsetNormalized: -0.05
+     sortingOrderOffset: 1
+     tint: {r: 1, g: 1, b: 1, a: 1}
+  particleEffects:
+   - buffId: 出血|流血|失血
+     effectName: BloodDropStatusEffect
+     horizontalOffsetNormalized: 0
+     verticalOffsetNormalized: 0.06
+     sortingOrderOffset: 2
+  glowEffects:
+  - buffId: 光耀
+    sprite: {fileID: 21300000, guid: 6f62c397230d6d845b87a8e53d67c0e1, type: 3}
+    tint: {r: 1, g: 0.86, b: 0.35, a: 0.14}
+    sizeMultiplier: 1.65
+    pulseSpeed: 1.4
+    pulseAmplitude: 0.08
+    verticalOffsetNormalized: 0
+    sortingOrderOffset: -1
+  reconciliationInterval: 0.2

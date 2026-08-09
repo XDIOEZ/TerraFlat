@@ -563,7 +563,9 @@ public static class ItemDefinitionCatalogLoader
             dto.Visual,
             sprite,
             moduleParameters,
-            modulePrefabIds);
+            modulePrefabIds,
+            dto.LabelKey,
+            dto.DescriptionKey);
     }
 
     private static void PopulateTemplateData(JObject data, ItemData template, string itemId)

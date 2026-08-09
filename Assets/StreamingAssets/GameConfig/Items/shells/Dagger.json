@@ -78,6 +78,8 @@
       "id": "Dagger_Stone",
       "parent": "Knife_Base",
       "gameName": "石制小刀",
+      "labelKey": "item.Dagger_Stone.name",
+      "descriptionKey": "item.Dagger_Stone.description",
       "description": "用石料制作的小刀。",
       "volume": 3,
       "visual": {
@@ -105,6 +107,8 @@
       "id": "Dagger_Copper",
       "parent": "Knife_Base",
       "gameName": "铜制小刀",
+      "labelKey": "item.Dagger_Copper.name",
+      "descriptionKey": "item.Dagger_Copper.description",
       "description": "用铜制作的小刀。",
       "volume": 3,
       "visual": {
@@ -138,6 +142,8 @@
       "id": "Dagger_Bone",
       "parent": "Knife_Base",
       "gameName": "骨制小刀",
+      "labelKey": "item.Dagger_Bone.name",
+      "descriptionKey": "item.Dagger_Bone.description",
       "description": "用骨料制作的小刀。",
       "volume": 2,
       "visual": {
@@ -158,6 +164,8 @@
       "id": "Knife_Flint",
       "parent": "Knife_Base",
       "gameName": "燧石小刀",
+      "labelKey": "item.Knife_Flint.name",
+      "descriptionKey": "item.Knife_Flint.description",
       "description": "用燧石制作的小刀。",
       "volume": 2,
       "visual": {

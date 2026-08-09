@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -49,13 +50,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	private Item _currentThreat;
 
 	[SerializeField, ReadOnly]
-	private Map _currentGrassMap;
-
-	[SerializeField, ReadOnly]
 	private Vector2Int _currentGrassTarget;
 
 	[SerializeField, ReadOnly]
 	private bool _hasGrassTarget;
+
+	// 新版权威草层目标；不创建或查找草 Item 实体。
+	private ChunkTerrainData _currentGrassRuntimeTerrain;
+	private Vector2Int _currentGrassRuntimeLocal;
+	private bool _hasRuntimeGrassTarget;
 
 	private float _mateRequestRemain;
 	private float _sleepCooldownTimer;
@@ -369,10 +372,14 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			if (GetGrassTargetDistance() > eatDistance || _stateElapsed < grassEatDuration)
 				return;
 
-			Map grassMap = _currentGrassMap;
 			Vector2Int grassPosition = _currentGrassTarget;
 			ClearGrassTarget();
-			if (grassMap != null && grassMap.RemoveGrassAt(grassPosition))
+
+			ChunkMgr chunkManager = ChunkMgr.Instance;
+			bool consumed = chunkManager != null &&
+				chunkManager.TryConsumeRuntimeGrass(grassPosition);
+
+			if (consumed)
 				ConsumeGrass(grassPosition);
 			return;
 		}
@@ -613,66 +620,50 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			return false;
 
 		_grassSearchCooldown = Mathf.Max(0.05f, detectorRefreshInterval);
-		if (!TryFindClosestGrass(out Map grassMap, out Vector2Int grassPosition))
-			return false;
 
-		_currentGrassMap = grassMap;
-		_currentGrassTarget = grassPosition;
-		_hasGrassTarget = true;
-		_currentFoodTarget = null;
-		return true;
-	}
-
-	private bool TryFindClosestGrass(out Map closestMap, out Vector2Int closestPosition)
-	{
-		closestMap = null;
-		closestPosition = default;
 		ChunkMgr chunkManager = ChunkMgr.Instance;
-		if (chunkManager == null)
-			return false;
-
 		Vector2 origin = transform.position;
 		float radius = Mathf.Max(eatDistance, grassSearchRadius);
-		float closestDistanceSqr = float.MaxValue;
-
-		foreach (Chunk chunk in chunkManager.Chunk_Dic_Active_ByPos.Values)
+		if (chunkManager != null &&
+			chunkManager.TryFindRuntimeGrassNear(origin, radius,
+				out RuntimeTerrainTileSample runtimeGrass))
 		{
-			if (chunk == null || chunk.Map == null)
-				continue;
-
-			Vector2 mapCenter = chunk.Map.Data != null
-				? chunk.Map.Data.position + new Vector2(chunk.Map.Data.Width * 0.5f, chunk.Map.Data.Height * 0.5f)
-				: (Vector2)chunk.transform.position;
-			Vector2 queryOrigin = WorldTopologyRuntime.NearestImagePosition(mapCenter, origin);
-			if (!chunk.Map.TryFindClosestGrass(queryOrigin, radius, out Vector2Int candidate))
-			{
-				continue;
-			}
-
-			float distanceSqr = WorldTopologyRuntime.SqrDistance(origin, GetGrassWorldPosition(candidate));
-			if (distanceSqr >= closestDistanceSqr)
-				continue;
-
-			closestMap = chunk.Map;
-			closestPosition = candidate;
-			closestDistanceSqr = distanceSqr;
+			_currentGrassRuntimeTerrain = runtimeGrass.Terrain;
+			_currentGrassRuntimeLocal = runtimeGrass.LocalCell;
+			_currentGrassTarget = runtimeGrass.WorldCell;
+			_hasGrassTarget = true;
+			_hasRuntimeGrassTarget = true;
+			_currentFoodTarget = null;
+			return true;
 		}
 
-		return closestMap != null;
+		return false;
 	}
 
 	private bool HasValidGrassTarget()
 	{
-		return _hasGrassTarget &&
-		       _currentGrassMap != null &&
-		       _currentGrassMap.HasGrassAt(_currentGrassTarget);
+		if (!_hasGrassTarget)
+			return false;
+
+		if (_hasRuntimeGrassTarget)
+		{
+			return _currentGrassRuntimeTerrain != null &&
+			       !_currentGrassRuntimeTerrain.IsDisposed &&
+			       _currentGrassRuntimeTerrain.GetGrass(
+				       _currentGrassRuntimeLocal.x, _currentGrassRuntimeLocal.y) ==
+				       ChunkTerrainData.GrassPresent;
+		}
+
+		return false;
 	}
 
 	private void ClearGrassTarget()
 	{
-		_currentGrassMap = null;
 		_currentGrassTarget = default;
 		_hasGrassTarget = false;
+		_currentGrassRuntimeTerrain = null;
+		_currentGrassRuntimeLocal = default;
+		_hasRuntimeGrassTarget = false;
 	}
 
 	private float GetGrassTargetDistance()

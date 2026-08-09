@@ -44,11 +44,11 @@ TagManager:
   - name: Tilemap
     uniqueID: 3043294057
     locked: 0
-  - name: Shadow
-    uniqueID: 3566478867
-    locked: 0
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Shadow
+    uniqueID: 3566478867
     locked: 0
   - name: Player
     uniqueID: 3196478823

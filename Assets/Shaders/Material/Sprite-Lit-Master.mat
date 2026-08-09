@@ -46,14 +46,29 @@ Material:
     m_Ints: []
     m_Floats:
     - _BodyClip: 0
-    - _BodyMaxV: 0.9000001
+    - _BodyMaxV: 0.8500004
     - _BodyMinV: 0
     - _Dissolve: 0
     - _EnableExternalAlpha: 0
+    - _ActorTintStrength: 0
     - _HitFlash: 0
+    - _WaterAlpha: 1
+    - _WaterEnabled: 0
+    - _WaterFeather: 0.035
+    - _WaterLineStrength: 0
+    - _WaterLineWidth: 0.035
+    - _WaterSurfaceV: 0
+    - _WaterTintStrength: 0
+    - _WaterWaveAmplitude: 0.018
+    - _WaterWaveFrequency: 8
+    - _WaterWaveSpeed: 2.4
     - _WaterY: 0
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _ActorTint: {r: 1, g: 1, b: 1, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+    - _HitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+    - _WaterLineColor: {r: 0.65, g: 0.9, b: 1, a: 1}
+    - _WaterTint: {r: 0.17999998, g: 0.41999996, b: 0.78, a: 1}
   m_BuildTextureStacks: []

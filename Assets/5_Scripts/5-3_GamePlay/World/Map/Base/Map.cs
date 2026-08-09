@@ -1285,10 +1285,17 @@ public class Map : Item
     #endregion
 
     #region Tile操作方法
-    public bool RemoveGrassAt(Vector2Int position)
+    /// <summary>消费旧地图草层中的一格草。</summary>
+    public bool TryConsumeGrassAt(Vector2Int position)
     {
         GrassDetailLayer grassLayer = GetComponent<GrassDetailLayer>();
-        return grassLayer != null && grassLayer.RemoveGrassAt(this, position);
+        return grassLayer != null && grassLayer.TryConsumeGrassAt(this, position);
+    }
+
+    /// <summary>兼容旧调用方；草不再作为 Item 实体处理。</summary>
+    public bool RemoveGrassAt(Vector2Int position)
+    {
+        return TryConsumeGrassAt(position);
     }
 
     public bool HasGrassAt(Vector2Int position)

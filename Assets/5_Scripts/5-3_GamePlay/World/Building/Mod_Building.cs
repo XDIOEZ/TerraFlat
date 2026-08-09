@@ -258,11 +258,7 @@ public class Mod_Building : Module
                 return;
             }
 
-            TileBuildingSystem.TryRemove(
-                placedCell.Map,
-                placedCell.Position,
-                spawnDrop: false,
-                out _);
+            TileBuildingSystem.TryRemove(placedCell, spawnDrop: false, out _);
             Debug.LogWarning("[格子建筑安装] 消耗建造材料失败，已回滚墙体", item);
             return;
         }

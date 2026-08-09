@@ -174,6 +174,9 @@ public partial class ItemMgr
         WorldTopologyBody.Ensure(item);
         WorldTopologyProxySource.Ensure(item);
 
+        if (TryRegisterRuntimeAiEntity(item))
+            ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
+
         if (item is Map mapItem)
         {
             _cachedMap = mapItem;
@@ -197,7 +200,7 @@ public partial class ItemMgr
             return;
         }
 
-        RefreshItemSpatialIndex(item);
+        RefreshRuntimeItemIndexes(item);
         RefreshPerceptionColliderCache(item);
     }
 
@@ -215,6 +218,7 @@ public partial class ItemMgr
         if (item == null || item.itemData == null) return;
 
         _runtimeRegistry.Remove(item);
+        RemoveRuntimeAiEntity(item);
 
         if (item is Map)
         {

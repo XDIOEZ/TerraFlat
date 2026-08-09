@@ -46,6 +46,8 @@ public class Mod_Weapon_AnimationAction : Module
     [ShowInInspector, ReadOnly]
     private int currentStateHash;
     private GameController cachedController;
+    // 缓存命中模块，确保待机状态不保留伤害碰撞体。
+    private Mod_Damage cachedDamageModule;
     private bool isHoldingInput;
     #endregion
     #region 基础参数
@@ -76,6 +78,7 @@ public class Mod_Weapon_AnimationAction : Module
         }
         animator = item.GetComponentInChildren<Animator>();
         ApplyAttackSpeedToAnimator();
+        DisableDamageOutsideAttack(force: true);
     }
 
     public override void Save()
@@ -101,6 +104,8 @@ public class Mod_Weapon_AnimationAction : Module
                 ResetToIdle();
             }
 
+            DisableDamageOutsideAttack();
+
             return;
         }
 
@@ -122,6 +127,11 @@ public class Mod_Weapon_AnimationAction : Module
         if (isAttacking && Time.time > comboDeadline)
         {
             ResetToIdle();
+        }
+
+        if (!isAttacking)
+        {
+            DisableDamageOutsideAttack();
         }
     }
 
@@ -286,6 +296,21 @@ public class Mod_Weapon_AnimationAction : Module
         queuedNext = false;
         currentStateHash = 0;
         animator.Play(idleAnimationName, 0, 0f);
+        DisableDamageOutsideAttack(force: true);
+    }
+
+    /// <summary>待机时关闭伤害碰撞体，防止 Prefab 默认值异常造成常驻伤害。</summary>
+    private void DisableDamageOutsideAttack(bool force = false)
+    {
+        if (cachedDamageModule == null && item != null)
+        {
+            cachedDamageModule = item.GetComponentInChildren<Mod_Damage>(true);
+        }
+
+        if (cachedDamageModule != null && (force || cachedDamageModule.IsDamageEnabled()))
+        {
+            cachedDamageModule.SetDamageEnabled(false);
+        }
     }
 
     private static bool IsLegacyPointerOverUI()

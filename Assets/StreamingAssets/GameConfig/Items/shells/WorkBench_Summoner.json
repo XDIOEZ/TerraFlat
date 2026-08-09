@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "BuildingSummoner_WorkBench_Base",
+      "abstract": true,
+      "shellPrefab": "WorkBench_Summoner",
+      "visual": {
+        "rendererPath": "Module_Renderer"
+      }
+    },
+    {
+      "id": "WorkBench_Summoner",
+      "parent": "BuildingSummoner_WorkBench_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab",
+      "gameName": "WorkBench",
+      "description": "物品名称：WorkBench\n物品描述：\n物品体积：100\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n    - Construct\r\n  Material:\r\n    - Wood\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 100.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Tileset.png[workbenches]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.99,
+            "y": 0.99
+          }
+        }
+      },
+      "modules": {
+        "Module_WorkBench": {
+          "prefab": "Mod_MakeTable",
+          "id": "Module_WorkBench",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WorkBench\",\"SummonerPrefabId\":\"WorkBench_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_Interaction": {
+          "prefab": "Module_Interaction",
+          "id": "Module_Interaction",
+          "enabled": false,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    }
+  ]
+}

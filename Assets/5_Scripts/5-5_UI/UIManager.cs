@@ -225,6 +225,40 @@ public class UIManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// 找到当前最上层、已接入手柄导航的打开面板，并把焦点交还给它。
+    /// </summary>
+    public bool SelectTopmostGamepadPanel()
+    {
+        EnsurePanelRootExists();
+        BasePanel panel = FindTopmostGamepadPanel(panelRoot);
+        if (panel == null)
+            return false;
+
+        panel.SelectDefaultForGamepad();
+        return true;
+    }
+
+    private static BasePanel FindTopmostGamepadPanel(Transform root)
+    {
+        if (root == null)
+            return null;
+
+        for (int childIndex = root.childCount - 1; childIndex >= 0; childIndex--)
+        {
+            Transform child = root.GetChild(childIndex);
+            BasePanel[] childPanels = child.GetComponentsInChildren<BasePanel>(true);
+            for (int panelIndex = childPanels.Length - 1; panelIndex >= 0; panelIndex--)
+            {
+                BasePanel panel = childPanels[panelIndex];
+                if (panel != null && panel.IsOpen() && panel.IsGamepadNavigationPrepared)
+                    return panel;
+            }
+        }
+
+        return null;
+    }
+
     public static BasePanel FindTopmostCancelPanel(
         Transform root,
         BasePanel excludedPanel = null)

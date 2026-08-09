@@ -30,6 +30,8 @@ public class BaseUIManager : MonoBehaviour
         // 自动获取所有子对象上的UI组件
         CollectUIComponents();
         FlatWorldAudioUIFeedback.EnsureFor(transform);
+        FlatWorldUITheme.ApplySelectionColors(transform);
+        FlatWorldUIFeedback.EnsureFor(transform);
     }
 
     /// <summary>
@@ -362,7 +364,9 @@ public class BaseUIManager : MonoBehaviour
     public void RefreshUIComponents()
     {
         CollectUIComponents();
+        FlatWorldUITheme.ApplySelectionColors(transform);
         FlatWorldAudioUIFeedback.EnsureFor(transform);
+        FlatWorldUIFeedback.EnsureFor(transform);
     }
 
     /// <summary>

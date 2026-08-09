@@ -39,6 +39,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private DayTimeSystem _dayTimeSystem;
     private Dictionary<string, SpawnerProgressSaveData> _runtimeStates = new();
+    private static readonly HashSet<string> RegisteredSpeciesIds = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SpawnerConfig> _configBySpecies = new(StringComparer.Ordinal);
     private readonly Dictionary<Item, SpawnerConfig> _trackedItems = new();
     private readonly Dictionary<DamageReceiver, Item> _deathReceivers = new();
@@ -55,6 +56,15 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     #endregion
 
     #region Unity 生命周期
+
+    protected override void Awake()
+    {
+        base.Awake();
+        if (Instance != this)
+            return;
+        if (_spawnerConfigs != null && _spawnerConfigs.Count > 0)
+            BuildSpeciesLookup();
+    }
 
     private void Start()
     {
@@ -560,9 +570,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
             if (IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) ||
                 !IsWithinPlayerPopulationLimit(config, candidate) ||
-                !TryGetLoadedTerrainContext(candidate, out Map map) ||
+                !IsRuntimeTerrainReady(candidate) ||
                 !IsWalkableSpawnPosition(candidate) ||
-                !IsBiomeAllowed(config, map, candidate) ||
+                !IsBiomeAllowed(config, candidate) ||
                 !IsLightAllowed(config, candidate))
             {
                 continue;
@@ -584,31 +594,14 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return navigation.TryGetCell(worldPos, out _, out bool walkable) && walkable;
     }
 
-    /// <summary>优先确认新版权威地形已提交；旧 Map 仅作为迁移期回退。</summary>
-    private static bool TryGetLoadedTerrainContext(Vector3 worldPos, out Map map)
+    /// <summary>只有新版权威地形已提交的格子才允许生成实体。</summary>
+    private static bool IsRuntimeTerrainReady(Vector3 worldPos)
     {
-        map = null;
         ChunkMgr manager = ChunkMgr.Instance;
-        if (manager == null)
-            return false;
-
-        if (manager.TryGetRuntimeTerrainTile(worldPos, out _))
-            return true;
-
-        Vector2Int chunkPos = Chunk.GetChunkPosition(worldPos);
-        if (!manager.TryGetActiveChunkByPos(chunkPos, out Chunk chunk) ||
-            chunk == null ||
-            chunk.Map == null ||
-            !chunk.Map.IsReadyForChunkLifecycle)
-        {
-            return false;
-        }
-
-        map = chunk.Map;
-        return true;
+        return manager != null && manager.TryGetRuntimeTerrainTile(worldPos, out _);
     }
 
-    private static bool IsBiomeAllowed(SpawnerConfig config, Map map, Vector3 worldPos)
+    private static bool IsBiomeAllowed(SpawnerConfig config, Vector3 worldPos)
     {
         if (config.AllowedBiomeNames == null || config.AllowedBiomeNames.Count == 0)
             return true;
@@ -622,12 +615,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 config.AllowedBiomeNames, runtimeBiomeName, runtimeBiomeName);
         }
 
-        // 旧 Map 仍存在时保留只读回退，避免迁移期间尚未提交的表现区块失去生成条件。
-        ChunkGenerator_Land landGenerator = map?.LandGenerator;
-        if (landGenerator == null || !landGenerator.TryGetBiomeAtWorld(worldCell, out BiomeData biome))
-            return false;
-
-        return IsAllowedBiomeName(config.AllowedBiomeNames, biome.BiomeName, biome.name);
+        return false;
     }
 
     /// <summary>兼容旧 BiomeData 的显示名与资源名。</summary>
@@ -818,6 +806,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private void BuildSpeciesLookup()
     {
         _configBySpecies.Clear();
+        RegisteredSpeciesIds.Clear();
 
         for (int i = 0; i < _spawnerConfigs.Count; i++)
         {
@@ -840,8 +829,25 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 }
 
                 _configBySpecies[entry.PrefabName] = config;
+                RegisteredSpeciesIds.Add(entry.PrefabName);
             }
         }
+    }
+
+    /// <summary>无须创建管理器实例即可查询已注册物种，供存档数据分类使用。</summary>
+    public static bool IsRegisteredSpeciesId(string itemId)
+    {
+        return !string.IsNullOrWhiteSpace(itemId) && RegisteredSpeciesIds.Contains(itemId);
+    }
+
+    /// <summary>判断物品 ID 是否属于生态生成器管理的实体物种。</summary>
+    public bool IsManagedSpeciesId(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+            return false;
+        if (_configBySpecies.Count == 0 && _spawnerConfigs != null && _spawnerConfigs.Count > 0)
+            BuildSpeciesLookup();
+        return _configBySpecies.ContainsKey(itemId);
     }
 
     private void RebuildTrackedPopulation()
@@ -850,6 +856,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         ItemMgr itemMgr = ItemMgr.Instance;
         if (itemMgr == null)
             return;
+
+        // 世界场景卸载后的 Unity 伪空对象不能参与新世界的种群重建。
+        itemMgr.CleanupNullItems();
 
         foreach (Item item in itemMgr.WorldRunTimeItems.Values)
             TrackItem(item);
@@ -899,7 +908,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void TrackItem(Item item)
     {
-        string speciesId = item?.itemData?.IDName;
+        if (item == null || item.DestructionHandled)
+            return;
+
+        string speciesId = item.itemData?.IDName;
         if (string.IsNullOrWhiteSpace(speciesId) ||
             _trackedItems.ContainsKey(item) ||
             !_configBySpecies.TryGetValue(speciesId, out SpawnerConfig config))

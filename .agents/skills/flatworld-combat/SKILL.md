@@ -19,6 +19,7 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 
 - 武器：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_ColdWeapon.cs`。
 - 伤害模块：`Mod_Damage.cs`、`Mod_Damage_AI.cs`。
+- 受击表现：`DamageReceiver.cs` 触发 `Assets/5_Scripts/5-3_GamePlay/Presentation/ActorRenderColorEffect.cs`，由角色渲染控制器统一提交 MPB。
 - 防御模块：`Mod_Defense.cs`。
 - 受伤/死亡动作：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/DamageReciverAction/`。
 - 战利品：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/LootEntry.cs`。
@@ -39,6 +40,7 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 
 - `DamageReceiver` 是生命值权威模块；远程网络应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
 - 旧 `Mod_HealthPoints` 已删除；禁止重新建立第二套生命值模块，生命、死亡与通用战利品继续统一走 `DamageReceiver`。
+- 管理员无敌不改写 `DamageReceiver` 的权威结算：`PlayerAdminController` 仅在管理员无敌开启时监听 `OnDamageReceived` 回满生命，`Mod_PlayerDeathState` 作为致死回调兜底拦截濒死；关闭开关后不得残留伤害监听效果。
 - 技能定义由 `GameRes.SkillDict` 注册，资源移动要检查 Addressables `Skill` 标签。
 - 伤害死亡回调可能生成 Item、播放音效和更新 UI，修改时检查这些订阅者。
 - `DamageReceiver.DeathStarted` 是带接收器参数的真实死亡信号；未被外部消费的死亡最终必须走 `ItemMgr.DespawnItem(item, saveData:false)`，同步清理运行时索引和 Chunk 存档，禁止直接 `Destroy` 遗留幽灵注册。
@@ -64,24 +66,25 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-08：`Tree_Coconut.prefab` 清除旧 `Data.HurtActions/Data.DeathActions` 的 SerializeReference override 与错误类型名，只保留当前 `DamageReceiver.HurtActions` 的 `DamageReciver_Action_SpawnItem` 引用；Prefab 变体不得同时维护新旧动作字段。
-- 2026-08-07：将旧 `Assets/9_Anim` 的通用武器 Animator、待机与两段攻击动画归并到 `Assets/8_Animations/Item/Weapon/`，GUID 与武器动画状态契约保持不变。
-- 2026-07-31：实体受到直接攻击并存活时临时降低移动速度，连续受击刷新减速时间，结束后恢复原有速度倍率。
-- 2026-07-31：为地下矿洞修正煤、铜、锡、铁、石矿的确定性矿石掉落，移除继承模板的非矿物掉落。
-- 2026-07-30：删除无引用的旧 `Mod_HealthPoints`；清理 `DamageReceiver.DropLoot()` 过时 TODO，并在调用掉落行为前过滤实例化失败结果。
-- 2026-07-29：统一内容校验器递归扫描 Prefab 与 ScriptableObject 中的 `LootEntry`/旧 `LootData`，报告战利品 ID、Prefab 对应关系、概率、数量范围和丢失引用。
-- 2026-07-29：自定义难度接入玩家伤害、生物伤害、生物等效生命、环境伤害、治疗和战利品数量；统一从 `GameDifficultyService` 读取，禁止发送端重复乘算。
-- 2026-07-29：难度目录增加新世界自定义类型；玩家死亡掉落继续通过 `GameDifficultyService` 统一读取，支持预设与自定义规则共用结算链。
-- 2026-07-29：死亡销毁统一接入 `ItemMgr` 注销链，并增加生态补位使用的 `DeathStarted` 事件。
-- 2026-07-27：战斗网络边界明确为本地权威结算、远端仅应用模块数据与表现。
+- 2026-08-09：野猪独立 `AttackTrigger_AI` 覆盖改为 `2.2×0.9`、圆角 `0.45` 的横向胶囊伤害触发盒；AI 进入攻击同步按横向 `1.6`、竖向 `0.45` 椭圆判断，避免上下方向空挥。
+- 2026-08-09：`AI_AttackController` 在伤害窗口启用时才同步攻击事件状态；野猪起手首帧继续保持 `IsAttacking=false`，避免首击发生额外攻击开始/停止脉冲，伤害窗口参数不变。
+- 2026-08-09：通用武器动画模块在载入与回到待机时强制关闭命中碰撞体；`Axe.prefab` 修正伤害模块错误的 `m_Enabled=1` 覆盖，斧头及同类手持物只会在攻击动画命中帧内结算伤害。
+- 2026-08-09：管理员无敌默认改为关闭，运行时重置同样保持关闭；默认名为“管理员”的 Player Prefab 现在可正常受伤和死亡，仍可由管理员开关主动开启无敌。
+- 2026-08-09：野猪 `Attack.anim` 禁用循环并延长至一次伤害起手到下一次起手的完整 `2.18s` 周期；`0.06s` 开始、`0.12s` 持续的伤害窗口和前冲峰值保持不变，避免冷却中重复播放攻击表演。
+- 2026-08-09：修复身体部位生命的零权重残血软锁：随机命中无候选时回退结算仍存活部位，确保生命可降至 0 并进入既有死亡流程；`Combat.Smoke` 增加回归覆盖。
+- 2026-08-09：管理员无敌改为 `PlayerAdminController` 可切换运行时状态；开启时即时恢复受击生命并拦截濒死，关闭后完整恢复普通伤害、环境伤害与死亡流程。
+- 2026-08-08：`DamageReceiver` 的受击闪白改由角色渲染 MPB 模块驱动，连续命中震动可重触发且不再创建材质实例。
+- 2026-08-08：野猪 `Attack.anim` 增加 `0→0.22→0` 的局部前冲位置曲线，峰值覆盖 `0.2s` 伤害窗口，与 `AttackTrigger_AI` 的前方判定盒保持一致。
+- 2026-08-08：野猪 `AttackTrigger_AI` 的伤害触发盒调整为 `1.6×1.6`，并与 AI 攻击距离 `1.4` 对齐，减少攻击动画已播放但玩家未进入伤害碰撞体的情况。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/Combat/CombatSmokeTests.cs`；当前基础覆盖伤害接收、受击减速与恢复、技能管理和武器 Prefab 入口。
+- 基础测试脚本：`Assets/GameTest/Combat/CombatSmokeTests.cs`；当前基础覆盖伤害接收、零权重身体部位的残血回退、受击减速与恢复、技能管理和武器 Prefab 入口。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；战斗测试约定目录：`Assets/GameTest/Combat/`；场景目录：`Assets/GameTest/Scenes/Combat/`；冒烟分类：`Combat.Smoke`。
 - 新增伤害、死亡、掉落、武器或技能行为时必须增加系统测试；修复 Bug 时先增加回归测试。攻击到受伤、死亡与掉落主流程变化时同步更新战斗冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；伤害随机项必须固定输入，死亡和掉落事件必须验证不会重复触发。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Combat.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有攻击特效或界面观感变化才做定向截图。
+- 管理员无敌的真实伤害/死亡回归由 `FlatWorldGoldenPathScenarios.PlayerMovement.cs` 在 `OnWorldReady` 通过 `DamageReceiver.ForceHurt()` 覆盖；Cleanup 必须恢复生命、玩家名与无敌开关。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 - 战斗精简 Smoke 位于 `Assets/GameTest/Combat/CombatSmokeTests.cs`（`Combat.Smoke`），保留受击减速与恢复这一关键行为；矿物掉落细节不再属于 Smoke 集合。
 

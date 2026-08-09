@@ -228,6 +228,7 @@ public abstract class Item : MonoBehaviour
         if (destructionHandled)
             return;
 
+        ItemMgr.GetInstance()?.NotifyRuntimeItemDestroyed(this);
         destructionHandled = true;
         OnItemDestroy.Invoke(this);
         if (isInitialized && itemData != null)

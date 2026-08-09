@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5467129436201843001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5467129436201843002}
+  - component: {fileID: 5467129436201843003}
+  m_Layer: 0
+  m_Name: RainGroundSplash
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5467129436201843002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5467129436201843001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5467129436201843003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5467129436201843001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17a3d18142624d52af99ed862a877d05, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _splashMaterial: {fileID: 2100000, guid: 375f5f2297d44c9a93a76b128cc52f12, type: 2}
+  _sortingLayerName: Default
+  _sortingOrder: 40
+  _splashZ: 0
+  _maxParticles: 80
+  _lightRainSplashesPerSecond: 12
+  _heavyRainSplashesPerSecond: 48
+  _groundSampleAttempts: 10
+  _cameraPadding: {x: 0.15, y: 0.15}
+  _lifetimeRange: {x: 0.32, y: 0.5}
+  _sizeRange: {x: 0.36, y: 0.58}
+  _splashColor: {r: 0.72, g: 0.94, b: 1, a: 0.78}

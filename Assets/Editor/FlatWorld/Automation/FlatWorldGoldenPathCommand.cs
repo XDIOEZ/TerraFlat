@@ -76,6 +76,9 @@ namespace FlatWorld.Automation
         private static bool _worldSetupApplied;
         private static bool _worldExitCompleted;
         private static string _completionMessage;
+        private static string _reentrySaveName;
+        private static string _reentryPlayerName;
+        private static string _reentryWorldKey;
 
         static FlatWorldGoldenPathCommand()
         {
@@ -298,6 +301,12 @@ namespace FlatWorld.Automation
                         break;
                     case RuntimePhase.WaitForWorldExit:
                         TickWaitForWorldExit();
+                        break;
+                    case RuntimePhase.WaitForWorldReentry:
+                        TickWaitForWorldReentry();
+                        break;
+                    case RuntimePhase.WaitForFinalWorldExit:
+                        TickWaitForFinalWorldExit();
                         break;
                 }
             }
@@ -758,8 +767,9 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException("起点、中点、终点三张 Game View PNG 未全部有效写入。");
 
             FlatWorldGoldenPathScenarios.BeforeWorldExit(CreateScenarioContext());
+            CaptureWorldReentryExpectation();
             _completionMessage =
-                $"创建世界、无头区块休眠重绑、随机直线移动、保存退出及 Chunk 流送验证全部通过；" +
+                $"创建世界、无头区块休眠重绑、随机直线移动、保存退出、重进及 Chunk 流送验证全部通过；" +
                 $"玩家 Chunk={_visitedChunks.Count}，累计活动 Chunk={_observedChunks.Count}。";
             _worldExitCompleted = false;
             _runtimePhase = RuntimePhase.WaitForWorldExit;
@@ -778,6 +788,132 @@ namespace FlatWorld.Automation
                 ThrowIfTimedOut("完整保存退出流程未在限定时间内返回 GameStartScene。");
                 return;
             }
+
+            VerifyWorldExitCleanup();
+            BeginWorldReentry();
+        }
+
+        /// <summary>记录退出前可从磁盘恢复的存档、玩家和动态世界键。</summary>
+        private static void CaptureWorldReentryExpectation()
+        {
+            if (_saveDataManager?.SaveData == null || _player?.Data == null)
+                throw new InvalidOperationException("退出重进回归缺少当前存档或玩家数据。");
+
+            _reentrySaveName = _saveDataManager.SaveData.saveName;
+            _reentryPlayerName = _player.Data.Name_User;
+            _reentryWorldKey = _player.Data.CurrentSceneName;
+            if (string.IsNullOrWhiteSpace(_reentrySaveName) ||
+                string.IsNullOrWhiteSpace(_reentryPlayerName) ||
+                string.IsNullOrWhiteSpace(_reentryWorldKey))
+            {
+                throw new InvalidOperationException("退出重进回归缺少有效的存档名、玩家名或世界键。");
+            }
+        }
+
+        /// <summary>验证退出已移除动态世界与玩家运行时注册，避免下一次创建同名场景失败。</summary>
+        private static void VerifyWorldExitCleanup()
+        {
+            Scene oldWorldScene = SceneManager.GetSceneByName(_reentryWorldKey);
+            if (oldWorldScene.IsValid() && oldWorldScene.isLoaded)
+            {
+                throw new InvalidOperationException(
+                    $"退出后动态世界场景仍处于已加载状态：{_reentryWorldKey}。");
+            }
+
+            ItemMgr itemManager = ItemMgr.Instance;
+            if (itemManager == null)
+                throw new InvalidOperationException("退出后 ItemMgr 不可用，无法验证运行时注册表。");
+
+            if (itemManager.Player_DIC.ContainsKey(_reentryPlayerName))
+            {
+                throw new InvalidOperationException("退出后旧玩家仍保留在 Player_DIC 中。");
+            }
+
+            foreach (Item item in itemManager.WorldRunTimeItems.Values)
+            {
+                if (item == null)
+                    throw new InvalidOperationException("退出后 ItemMgr 运行时注册表仍包含已销毁对象。");
+            }
+        }
+
+        /// <summary>用刚写入的隔离存档重新进入同一世界，覆盖退出→重进回归。</summary>
+        private static void BeginWorldReentry()
+        {
+            string savePath = Path.Combine(_saveDataManager.UserSavePath, _reentrySaveName + ".bytes");
+            if (!File.Exists(savePath))
+                throw new InvalidOperationException($"退出重进回归找不到存档文件：{savePath}");
+
+            _saveDataManager.LoadSaveByDisk(savePath);
+            if (_saveDataManager.SaveData == null ||
+                !_saveDataManager.SaveData.PlayerData_Dict.ContainsKey(_reentryPlayerName))
+            {
+                throw new InvalidOperationException("退出重进回归未能从磁盘恢复原玩家存档。");
+            }
+
+            _terminalWorldEntryState = null;
+            _terminalWorldEntryStatus = null;
+            _gameManager.ContinueGame(_reentryPlayerName);
+            _runtimePhase = RuntimePhase.WaitForWorldReentry;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
+        }
+
+        /// <summary>等待重新进入完成并验证同名动态场景可被重新创建。</summary>
+        private static void TickWaitForWorldReentry()
+        {
+            if (_terminalWorldEntryState == WorldEntryProgressState.Failed)
+            {
+                throw new InvalidOperationException(
+                    $"退出后重进世界失败：{_terminalWorldEntryStatus ?? "未知错误"}");
+            }
+
+            ItemMgr itemManager = ItemMgr.Instance;
+            bool ready = _gameManager != null &&
+                         _gameManager.IsInGameWorld &&
+                         !_gameManager.IsWorldEntryInProgress &&
+                         itemManager != null &&
+                         itemManager.User_Player != null &&
+                         ChunkMgr.Instance != null;
+            if (!ready || !IsChunkWindowReady(ChunkMgr.Instance) ||
+                !FlatWorldGoldenPathScenarios.TickWorldModelAiReentry())
+            {
+                ThrowIfTimedOut("退出后重进世界、AI 实体或初始 Chunk 窗口未在限定时间内完成。");
+                return;
+            }
+
+            Player reenteredPlayer = itemManager.User_Player;
+            if (reenteredPlayer.Data == null ||
+                !string.Equals(reenteredPlayer.Data.Name_User, _reentryPlayerName, StringComparison.Ordinal) ||
+                !string.Equals(SceneManager.GetActiveScene().name, _reentryWorldKey, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("退出后重进没有恢复到原玩家或原动态世界场景。");
+            }
+
+            Scene reenteredWorldScene = SceneManager.GetSceneByName(_reentryWorldKey);
+            if (!reenteredWorldScene.IsValid() || !reenteredWorldScene.isLoaded)
+                throw new InvalidOperationException("退出后重进未创建有效的动态世界场景。");
+
+            _player = reenteredPlayer;
+            _mover = reenteredPlayer.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+            _worldExitCompleted = false;
+            _runtimePhase = RuntimePhase.WaitForFinalWorldExit;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
+            _gameManager.StartCoroutine(_gameManager.BackToHelloScene_Coroutine(
+                reenteredPlayer, () => _worldExitCompleted = true));
+        }
+
+        /// <summary>第二次退出只负责还原测试环境，确保运行结束时仍回到主菜单。</summary>
+        private static void TickWaitForFinalWorldExit()
+        {
+            if (!_worldExitCompleted ||
+                !string.Equals(SceneManager.GetActiveScene().name, "GameStartScene",
+                    StringComparison.Ordinal))
+            {
+                ThrowIfTimedOut("退出重进回归后的最终退出未在限定时间内返回 GameStartScene。");
+                return;
+            }
+
             FinishRuntime(true, _completionMessage);
         }
 
@@ -1386,6 +1522,9 @@ namespace FlatWorld.Automation
             _worldSetupApplied = false;
             _worldExitCompleted = false;
             _completionMessage = null;
+            _reentrySaveName = null;
+            _reentryPlayerName = null;
+            _reentryWorldKey = null;
         }
 
         private static void RestoreTraversalViewAfterScreenshot()
@@ -1411,6 +1550,8 @@ namespace FlatWorld.Automation
             WaitForChunk,
             WaitForScreenshot,
             WaitForWorldExit,
+            WaitForWorldReentry,
+            WaitForFinalWorldExit,
             Finishing
         }
 

@@ -78,6 +78,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private TextMeshProUGUI structureHintText;
     private TextMeshProUGUI commandCountText;
     private Button teleportShortcutButton;
+    private Button adminInvincibilityButton;
     private Button playerMoveSpeedButton;
     private TMP_InputField playerMoveSpeedInput;
     private Button playerMoveSpeedApplyButton;
@@ -127,7 +128,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void Update()
     {
-        UpdateBuffTargetingInput();
+        UpdateBuffTargetListIfNeeded();
 
         bool f4Pressed = Keyboard.current != null
             ? Keyboard.current.f4Key.wasPressedThisFrame
@@ -636,6 +637,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         airdropBrowserCountText.gameObject.AddComponent<LayoutElement>().preferredWidth = 240f;
 
         airdropItemGrid = CreateCatalogScrollGrid(airdropBrowserRoot.transform, "Airdrop Item Scroll");
+        // 让空投物品按钮在可用区域内水平居中，减少右侧多余留白。
+        GridLayoutGroup airdropGridLayout = airdropItemGrid.GetComponent<GridLayoutGroup>();
+        if (airdropGridLayout != null)
+            airdropGridLayout.childAlignment = TextAnchor.UpperCenter;
 
         airdropBrowserStatusText = CreateText(
             airdropBrowserRoot.transform,
@@ -1297,8 +1302,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RebindLegacyF4Conflict();
         BindGameEventManager();
         RefreshBuffDefinitions();
+        RefreshBuffTargetList();
         RefreshBuffTargetingControls();
         RefreshTeleportShortcutButton();
+        RefreshAdminInvincibilityButton();
         RefreshPlayerMoveSpeedButton();
         RefreshChunkLoadSpeedControl();
         RefreshNavigationPathButton();
@@ -1547,6 +1554,53 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SetStatus(
             enabled ? "Ctrl+T 鼠标传送已开启。" : "Ctrl+T 鼠标传送已关闭。",
             enabled ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void ToggleAdminInvincibility()
+    {
+        PlayerAdminController controller =
+            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        if (controller == null || !controller.TryToggleAdminInvincibility(out bool enabled))
+        {
+            RefreshAdminInvincibilityButton();
+            SetStatus("请先启用管理员模式，才能切换无敌。", Color.yellow);
+            return;
+        }
+
+        RefreshAdminInvincibilityButton();
+        SetStatus(
+            enabled ? "管理员无敌已开启。" : "管理员无敌已关闭，生命与生存状态将正常结算。",
+            enabled ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.90f, 0.62f, 0.30f));
+    }
+
+    private void RefreshAdminInvincibilityButton()
+    {
+        if (adminInvincibilityButton == null)
+            return;
+
+        PlayerAdminController controller =
+            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        bool canToggle = controller != null && controller.IsAdministrator;
+        bool enabled = canToggle && controller.IsAdminInvincibilityEnabled;
+
+        TextMeshProUGUI label = adminInvincibilityButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+        {
+            label.text = canToggle
+                ? (enabled ? "管理员无敌：开" : "管理员无敌：关")
+                : "管理员无敌：需权限";
+        }
+
+        adminInvincibilityButton.interactable = canToggle;
+        Image image = adminInvincibilityButton.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = !canToggle
+                ? new Color(0.12f, 0.16f, 0.18f, 1f)
+                : enabled
+                    ? new Color(0.10f, 0.45f, 0.31f, 1f)
+                    : new Color(0.44f, 0.23f, 0.16f, 1f);
+        }
     }
 
     private void RefreshTeleportShortcutButton()
@@ -2122,9 +2176,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
-        if (!TryResolveItemSpawner(out Component itemManager, out MethodInfo spawnMethod, out string error))
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager == null)
         {
-            SetAiCreatureResult($"召唤失败：{error}", new Color(1f, 0.42f, 0.38f));
+            SetAiCreatureResult("召唤失败：未找到 ItemMgr。", new Color(1f, 0.42f, 0.38f));
             return;
         }
 
@@ -2133,9 +2188,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         for (int i = 0; i < amount; i++)
         {
             Vector3 spawnPosition = GetAiCreatureSpawnPosition(player.position, i, amount);
-            if (TryInvokeItemSpawner(
+            if (TrySpawnInitializedAiCreature(
                     itemManager,
-                    spawnMethod,
                     entry.ItemId,
                     spawnPosition,
                     out _,
@@ -2172,6 +2226,108 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         Vector3 position = playerPosition + offset;
         position.z = playerPosition.z;
         return position;
+    }
+
+    /// <summary>
+    /// GM 生物必须沿用自然生成的完整链路：ItemMgr 注册后立即 Load，
+    /// 否则 AI 的状态机、感知和移动模块都不会完成初始化。
+    /// </summary>
+    private static bool TrySpawnInitializedAiCreature(
+        ItemMgr itemManager,
+        string itemId,
+        Vector3 spawnPosition,
+        out Item spawnedItem,
+        out string error)
+    {
+        spawnedItem = null;
+        if (itemManager == null)
+        {
+            error = "未找到 ItemMgr。";
+            return false;
+        }
+
+        try
+        {
+            spawnedItem = itemManager.InstantiateItem(
+                itemId,
+                spawnPosition,
+                Quaternion.identity,
+                Vector3.one);
+            if (spawnedItem == null)
+            {
+                error = "ItemMgr 未返回 Item 实例。";
+                return false;
+            }
+
+            if (!TryGetRuntimeAiActor(spawnedItem, out _))
+            {
+                error = $"{itemId} 不包含可运行的 AI 模块。";
+                DespawnFailedAiCreature(itemManager, spawnedItem);
+                spawnedItem = null;
+                return false;
+            }
+
+            if (!spawnedItem.IsInitialized)
+                spawnedItem.Load();
+
+            if (!spawnedItem.IsInitialized ||
+                !TryGetRuntimeAiActor(spawnedItem, out IAIActor actor) ||
+                !ReferenceEquals(actor.ActorItem, spawnedItem))
+            {
+                error = $"{itemId} 的 AI 初始化未完成。";
+                DespawnFailedAiCreature(itemManager, spawnedItem);
+                spawnedItem = null;
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+            Debug.LogException(exception);
+            DespawnFailedAiCreature(itemManager, spawnedItem);
+            spawnedItem = null;
+            return false;
+        }
+    }
+
+    /// <summary>从实例层级寻找真实 AI 标记，避免把仅有相似名称的普通物品当作生物生成。</summary>
+    private static bool TryGetRuntimeAiActor(Item item, out IAIActor actor)
+    {
+        actor = null;
+        if (item == null)
+            return false;
+
+        MonoBehaviour[] behaviours = item.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is IAIActor candidate)
+            {
+                actor = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>初始化或校验失败时通过 ItemMgr 回收临时实体，避免残留未完成初始化的对象。</summary>
+    private static void DespawnFailedAiCreature(ItemMgr itemManager, Item item)
+    {
+        if (item == null || item.DestructionHandled)
+            return;
+
+        try
+        {
+            itemManager?.DespawnItem(item, saveData: false);
+        }
+        catch (Exception cleanupException)
+        {
+            Debug.LogWarning($"[GM] 回收失败的 AI 生物失败：{cleanupException.Message}");
+            UnityEngine.Object.Destroy(item.gameObject);
+        }
     }
 
     private void SetAiCreatureResult(string message, Color color)
@@ -2408,7 +2564,16 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void SetAdministrator()
     {
-        Component controller = FindFirstComponent("PlayerAdminController");
+        PlayerAdminController adminController =
+            FindFirstComponent("PlayerAdminController") as PlayerAdminController;
+        if (adminController != null && adminController.TryEnableAdministrator())
+        {
+            RefreshAdminInvincibilityButton();
+            SetStatus("管理员已启用（兼容现有 F1 管理员逻辑）。", new Color(0.35f, 0.95f, 0.85f));
+            return;
+        }
+
+        Component controller = adminController;
         object player = ReadMember(controller, "player") ?? FindFirstComponent("Player");
         object playerData = ReadMember(player, "Data");
         if (playerData == null || !WriteMember(playerData, "Name_User", AdministratorName))
@@ -2417,6 +2582,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             return;
         }
 
+        RefreshAdminInvincibilityButton();
         SetStatus("管理员已启用（兼容现有 F1 管理员逻辑）。", new Color(0.35f, 0.95f, 0.85f));
     }
 

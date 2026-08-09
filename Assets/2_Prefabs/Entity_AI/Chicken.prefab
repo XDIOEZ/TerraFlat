@@ -1221,6 +1221,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Module_Detector
       objectReference: {fileID: 0}
+    - target: {fileID: 4504417401669657616, guid: f13b81f3d392ba844bd4703a6aa081cc, type: 3}
+      propertyPath: itemLayer.m_Bits
+      value: 1025
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -12,6 +12,7 @@ namespace FlatWorld.Automation
 
         private static BuffManager _burningBuffManager;
         private static DamageReceiver _burningDamageReceiver;
+        private static ActorStatusVisualEffectController _burningVisualController;
         private static float _healthBeforeBurning;
         private static float _observedBurningDamage;
         private static double _burningTickDeadline;
@@ -24,6 +25,7 @@ namespace FlatWorld.Automation
         {
             _burningBuffManager = null;
             _burningDamageReceiver = null;
+            _burningVisualController = null;
             _healthBeforeBurning = 0f;
             _observedBurningDamage = 0f;
             _burningTickDeadline = 0d;
@@ -64,10 +66,17 @@ namespace FlatWorld.Automation
 
             _burningBuffManager = player.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
             _burningDamageReceiver = player.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+            _burningVisualController = player.GetComponentInChildren<ActorStatusVisualEffectController>(true);
             if (_burningBuffManager == null)
                 throw new InvalidOperationException("真实玩家缺少 BuffManager，无法测试燃烧 Buff。");
             if (_burningDamageReceiver == null)
                 throw new InvalidOperationException("真实玩家缺少 DamageReceiver，无法观察燃烧伤害。");
+            if (_burningVisualController == null ||
+                !_burningVisualController.IsStatusVisualConfigured(BurningBuffIds.Burning) ||
+                _burningVisualController.GetStatusVisualFrameCount(BurningBuffIds.Burning) != 8)
+            {
+                throw new InvalidOperationException("真实玩家缺少有效的八帧燃烧状态表现配置。");
+            }
             if (_burningBuffManager.HasBuff(BurningBuffIds.Burning))
                 throw new InvalidOperationException("黄金路径开始前玩家已存在燃烧 Buff，测试前置状态不干净。");
 
@@ -83,6 +92,10 @@ namespace FlatWorld.Automation
             {
                 throw new InvalidOperationException("通过 BuffManager.AddBuff 施加燃烧 Buff 失败。");
             }
+
+            _burningVisualController.RefreshStatusVisuals();
+            if (!_burningVisualController.IsStatusVisualActive(BurningBuffIds.Burning))
+                throw new InvalidOperationException("燃烧 Buff 已生效，但角色火焰表现没有同步启用。");
 
             _burningApplied = true;
             _burningTickDeadline = EditorApplication.timeSinceStartup + BurningTickTimeoutSeconds;
@@ -145,6 +158,13 @@ namespace FlatWorld.Automation
             if (_burningBuffManager != null)
                 _burningBuffManager.RemoveBuff(BurningBuffIds.Burning);
 
+            if (_burningVisualController != null)
+            {
+                _burningVisualController.RefreshStatusVisuals();
+                if (_burningVisualController.IsStatusVisualActive(BurningBuffIds.Burning))
+                    throw new InvalidOperationException("燃烧 Buff 清理后角色火焰表现仍处于启用状态。");
+            }
+
             if (_burningHealthCaptured && _burningDamageReceiver != null)
             {
                 _burningDamageReceiver.OnDamageReceived -= OnBurningDamageReceived;
@@ -156,6 +176,7 @@ namespace FlatWorld.Automation
 
             _burningBuffManager = null;
             _burningDamageReceiver = null;
+            _burningVisualController = null;
             _burningHealthCaptured = false;
         }
     }

@@ -6,7 +6,16 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler, IPointerUpHandler, IScrollHandler
+public class ItemSlot_UI : MonoBehaviour,
+    IPointerDownHandler,
+    IPointerEnterHandler,
+    IPointerExitHandler,
+    IPointerUpHandler,
+    IScrollHandler,
+    ISubmitHandler,
+    ISelectHandler,
+    IDeselectHandler,
+    IGamepadContextActionHandler
 {
     #region 字段
     /// <summary>
@@ -32,6 +41,14 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
 
     private GameObject currentMenuInstance;
 
+    private Outline selectionOutline;
+    private bool selectionOutlineCreated;
+    private bool selectionOutlineBaselineCaptured;
+    private bool selectionOutlineBaselineEnabled;
+    private Color selectionOutlineBaselineColor;
+    private Vector2 selectionOutlineBaselineDistance;
+    private bool selectionOutlineBaselineUsesGraphicAlpha;
+
 
     private bool isPointerOver = false;
 
@@ -55,6 +72,7 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
     {
         image = image ?? GetComponentInChildren<Image>();
         text = text ?? GetComponentInChildren<TMP_Text>();
+        EnsureSelectionOutline();
     }
 
     public void OnDestroy()
@@ -63,6 +81,8 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
         OnRightClick.Clear();
         OnShiftQuickTransfer.Clear();
         _OnScroll.Clear();
+        if (selectionOutlineCreated && selectionOutline != null)
+            Destroy(selectionOutline);
     }
     #endregion
 
@@ -198,6 +218,89 @@ public class ItemSlot_UI : MonoBehaviour, IPointerDownHandler, IPointerEnterHand
         {
             _isShiftQuickTransferDragging = false;
         }
+    }
+
+    /// <summary>
+    /// 手柄 A/Submit 直接执行槽位的主要操作，补齐旧槽位仅支持鼠标 PointerDown 的缺口。
+    /// </summary>
+    public void OnSubmit(BaseEventData eventData)
+    {
+        eventData.Use();
+        HandleLeftClick();
+    }
+
+    /// <summary>
+    /// 手柄次要键打开当前槽位的物品操作菜单。
+    /// </summary>
+    public bool HandleGamepadContextAction()
+    {
+        if (!isActiveAndEnabled)
+            return false;
+
+        CreateRightClickUI();
+        return true;
+    }
+
+    /// <summary>
+    /// 手柄选中槽位时加深描边，取消选中后恢复原始描边。
+    /// </summary>
+    public void OnSelect(BaseEventData eventData)
+    {
+        EnsureSelectionOutline();
+        if (selectionOutline == null)
+            return;
+
+        selectionOutline.enabled = true;
+        selectionOutline.effectColor = FlatWorldUITheme.SelectionOutline;
+        selectionOutline.effectDistance = FlatWorldUITheme.SelectionOutlineDistance;
+        selectionOutline.useGraphicAlpha = false;
+    }
+
+    public void OnDeselect(BaseEventData eventData)
+    {
+        RestoreSelectionOutline();
+    }
+
+    private void EnsureSelectionOutline()
+    {
+        if (selectionOutline != null && selectionOutlineBaselineCaptured)
+            return;
+
+        selectionOutline = GetComponent<Outline>();
+        if (selectionOutline == null)
+        {
+            Image targetImage = GetComponent<Image>() ?? image;
+            if (targetImage != null)
+            {
+                selectionOutline = targetImage.GetComponent<Outline>();
+                if (selectionOutline == null)
+                {
+                    selectionOutline = targetImage.gameObject.AddComponent<Outline>();
+                    selectionOutlineCreated = true;
+                    selectionOutline.enabled = false;
+                }
+            }
+        }
+
+        if (selectionOutline == null)
+            return;
+
+        selectionOutlineBaselineEnabled = selectionOutline.enabled;
+        selectionOutlineBaselineColor = selectionOutline.effectColor;
+        selectionOutlineBaselineDistance = selectionOutline.effectDistance;
+        selectionOutlineBaselineUsesGraphicAlpha = selectionOutline.useGraphicAlpha;
+        selectionOutlineBaselineCaptured = true;
+    }
+
+    private void RestoreSelectionOutline()
+    {
+        if (selectionOutline == null || !selectionOutlineBaselineCaptured)
+            return;
+
+        selectionOutline.enabled = selectionOutlineBaselineEnabled;
+        selectionOutline.effectColor = selectionOutlineBaselineColor;
+        selectionOutline.effectDistance = selectionOutlineBaselineDistance;
+        selectionOutline.useGraphicAlpha = selectionOutlineBaselineUsesGraphicAlpha;
     }
     #endregion
 

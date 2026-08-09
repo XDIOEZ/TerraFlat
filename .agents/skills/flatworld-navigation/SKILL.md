@@ -60,6 +60,9 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：幽灵追击状态改为直接沿世界最短方向位移，明确跳过地形可走性和导航路径校验；非追击状态仍保留原导航代理用于避光/闲逛移动。
+- 2026-08-09：新版矿洞在 `DeterministicChunkGenerator` 已将房间/隧道写为可走地面、岩壁写为顶层 Blocking Cell；`ChunkView` 绑定时继续一次性把同一 `ChunkTerrainData` 交给碰撞与导航，矿脉和传送门 Item 不反向修改导航权威。
+- 2026-08-09：Ghost 继续以 `WorldNavigationAgent` 和新版权威地形校验目的地；移动后只通知 `ItemMgr` 刷新 `WorldAddress` 实体索引，不再检查旧活动 Chunk 或通过父级切换归属。
 - 2026-08-08：WorldModel 外圈改为空闲单任务预取且不再做方向预测；预取区块不注册 A*。可见区块的 `ChunkView` 依次跨帧绑定地面、环境、碰撞、草地和 Navigation，完成前离开窗口会用绑定版本安全终止，只有最终绑定的 View 持有唯一 Navigation 租约。
 - 2026-08-05：导航地形读取迁移到 `TileStackCell` 顶层 API；覆盖层移除后恢复基础层状态，并继续与 `BuildingOccupancyRegistry` 动态占地叠加。失败 Chunk 不进入导航 Ready/注册链。
 

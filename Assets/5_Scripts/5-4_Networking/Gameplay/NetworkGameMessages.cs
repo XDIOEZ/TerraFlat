@@ -87,7 +87,7 @@ namespace FlatWorld.Networking.Gameplay
 
     public static class NetworkMapGenerationProtocol
     {
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 6;
 
         public static uint CalculateSettingsHash(
             int seed,
@@ -96,7 +96,8 @@ namespace FlatWorld.Networking.Gameplay
             bool autoGenerateMap,
             int chunkSizeX,
             int chunkSizeY,
-            WorldTopologyMode topologyMode)
+            WorldTopologyMode topologyMode,
+            ulong generationFingerprint = 0UL)
         {
             unchecked
             {
@@ -110,6 +111,8 @@ namespace FlatWorld.Networking.Gameplay
                 hash = Add(hash, chunkSizeY);
                 hash = Add(hash, (int)topologyMode);
                 hash = Add(hash, TerrainGenerationSignature.CalculateDefault());
+                hash = Add(hash, unchecked((uint)generationFingerprint));
+                hash = Add(hash, unchecked((uint)(generationFingerprint >> 32)));
                 return hash;
             }
         }

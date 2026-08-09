@@ -1,5 +1,6 @@
 // AI-Context: 设置菜单的自动保存入口及运行时 uGUI 面板；下拉列表提供常用间隔与“永远不自动保存”，输入框提供自定义分钟数。
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,17 +12,6 @@ public sealed class AutoSaveSettingsPanelLauncher : MonoBehaviour
     private const int CustomOptionIndex = 6;
 
     private static readonly int[] PresetMinutes = { 0, 1, 5, 10, 15, 30, -1 };
-    private static readonly List<string> PresetLabels = new List<string>
-    {
-        "永远不自动保存",
-        "每 1 分钟",
-        "每 5 分钟",
-        "每 10 分钟",
-        "每 15 分钟",
-        "每 30 分钟",
-        "自定义间隔"
-    };
-
     private Button entryButton;
     private BasePanel settingsPanel;
     private TMP_Dropdown intervalDropdown;
@@ -104,7 +94,7 @@ private void EnsureWindow()
         if (intervalDropdown != null)
         {
             intervalDropdown.ClearOptions();
-            intervalDropdown.AddOptions(PresetLabels);
+            intervalDropdown.AddOptions(BuildPresetLabels());
             intervalDropdown.onValueChanged.AddListener(OnPresetChanged);
         }
 
@@ -163,11 +153,19 @@ private void EnsureWindow()
             intervalInput.SetTextWithoutNotify(PresetMinutes[selectedIndex].ToString());
 
         if (selectedIndex == 0)
-            SetStatus("已选择：永远不自动保存。点击“应用”后生效。", false);
+            SetStatus(
+                FlatWorldLocalizationService.GetUiText("已选择：永远不自动保存。点击“应用”后生效。"),
+                false);
         else if (custom)
-            SetStatus("请输入 1–1440 分钟，然后点击“应用”。", false);
+            SetStatus(
+                FlatWorldLocalizationService.GetUiText("请输入 1–1440 分钟，然后点击“应用”。"),
+                false);
         else
-            SetStatus($"已选择：每 {PresetMinutes[selectedIndex]} 分钟自动保存。", false);
+            SetStatus(
+                FlatWorldLocalizationService.GetUiFormat(
+                    "已选择：每 {0} 分钟自动保存。",
+                    PresetMinutes[selectedIndex]),
+                false);
     }
 
     private void Apply()
@@ -187,7 +185,9 @@ private void EnsureWindow()
                 minutes < AutoSavePreferences.MinIntervalMinutes ||
                 minutes > AutoSavePreferences.MaxIntervalMinutes)
             {
-                SetStatus("请输入 1–1440 之间的整数分钟数。", true);
+                SetStatus(
+                    FlatWorldLocalizationService.GetUiText("请输入 1–1440 之间的整数分钟数。"),
+                    true);
                 return;
             }
         }
@@ -204,9 +204,25 @@ private void EnsureWindow()
     private void SetCurrentStatus()
     {
         if (!AutoSavePreferences.Enabled)
-            SetStatus("当前设置：永远不自动保存。", false);
+            SetStatus(
+                FlatWorldLocalizationService.GetUiText("当前设置：永远不自动保存。"),
+                false);
         else
-            SetStatus($"当前设置：每 {AutoSavePreferences.IntervalMinutes} 分钟自动保存。", false);
+            SetStatus(
+                FlatWorldLocalizationService.GetUiFormat(
+                    "当前设置：每 {0} 分钟自动保存。",
+                    AutoSavePreferences.IntervalMinutes),
+                false);
+    }
+
+    private static List<string> BuildPresetLabels()
+    {
+        var labels = new List<string>(PresetMinutes.Length);
+        labels.Add(FlatWorldLocalizationService.GetUiText("永远不自动保存"));
+        for (int i = 1; i < PresetMinutes.Length - 1; i++)
+            labels.Add(FlatWorldLocalizationService.GetUiFormat("每 {0} 分钟", PresetMinutes[i]));
+        labels.Add(FlatWorldLocalizationService.GetUiText("自定义间隔"));
+        return labels;
     }
 
     private void SetStatus(string message, bool isError)

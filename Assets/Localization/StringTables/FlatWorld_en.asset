@@ -1,0 +1,511 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: FlatWorld_en
+  m_EditorClassIdentifier: 
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: a6b2aa1bb32def84a8055087b25aa325, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 4702777344
+    m_Localized: Stone Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4774080512
+    m_Localized: A tool for chopping wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274816
+    m_Localized: Flint Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274817
+    m_Localized: A tool for chopping wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274818
+    m_Localized: Copper Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274819
+    m_Localized: A tool for chopping wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274820
+    m_Localized: Bronze Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274821
+    m_Localized: A tool for chopping wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274822
+    m_Localized: Raw Iron Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274823
+    m_Localized: A tool for chopping wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274824
+    m_Localized: Iron Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274825
+    m_Localized: A tool for chopping wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663424
+    m_Localized: Stone Dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663425
+    m_Localized: A small blade made from stone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663426
+    m_Localized: Copper Dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663427
+    m_Localized: A small blade made from copper.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663428
+    m_Localized: Bone Dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663429
+    m_Localized: A small blade made from bone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663430
+    m_Localized: Flint Knife
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663431
+    m_Localized: A small blade made from flint.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246336
+    m_Localized: Stone Pickaxe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246337
+    m_Localized: A tool for mining stone and ore.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246338
+    m_Localized: Copper Pickaxe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246339
+    m_Localized: A tool for mining stone and ore.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246340
+    m_Localized: Bronze Pickaxe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246341
+    m_Localized: A tool for mining stone and ore.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634944
+    m_Localized: Raw Iron Pickaxe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634945
+    m_Localized: A tool for mining stone and ore.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634946
+    m_Localized: Iron Pickaxe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634947
+    m_Localized: A tool for mining stone and ore.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938112
+    m_Localized: Bone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938113
+    m_Localized: Bone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938114
+    m_Localized: Charred Matter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938115
+    m_Localized: Charred Matter.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938116
+    m_Localized: Earth
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938117
+    m_Localized: Earth.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938118
+    m_Localized: Leaf
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938119
+    m_Localized: Leaf.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938120
+    m_Localized: Leather
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938121
+    m_Localized: Leather.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938122
+    m_Localized: Plank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938123
+    m_Localized: Plank.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938124
+    m_Localized: Raw Hide
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938125
+    m_Localized: Raw Hide.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938126
+    m_Localized: Rope
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938127
+    m_Localized: Rope.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938128
+    m_Localized: Twine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938129
+    m_Localized: Twine.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938130
+    m_Localized: Bronze Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938131
+    m_Localized: A refined metal bar used for crafting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938132
+    m_Localized: Copper Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938133
+    m_Localized: A refined metal bar used for crafting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938134
+    m_Localized: Raw Iron Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938135
+    m_Localized: A refined metal bar used for crafting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938136
+    m_Localized: Steel Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938137
+    m_Localized: A refined metal bar used for crafting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938138
+    m_Localized: Tin Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938139
+    m_Localized: A refined metal bar used for crafting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938140
+    m_Localized: Wrought Iron Ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938141
+    m_Localized: A refined metal bar used for crafting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938142
+    m_Localized: Coal Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938143
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938144
+    m_Localized: Copper Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938145
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938146
+    m_Localized: Flint Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938147
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938148
+    m_Localized: Iron Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938149
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938150
+    m_Localized: Magic Stone Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938151
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938152
+    m_Localized: Tin Ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938153
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938154
+    m_Localized: Apple
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938155
+    m_Localized: A fresh apple. An apple a day keeps the doctor away.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938156
+    m_Localized: Wild Berry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938157
+    m_Localized: A small wild berry that restores a little hunger when eaten.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938158
+    m_Localized: Cooked Coconut
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938159
+    m_Localized: A cooked coconut dish.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938160
+    m_Localized: Green Coconut
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938161
+    m_Localized: A young green coconut.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938162
+    m_Localized: Half Coconut
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326720
+    m_Localized: Half of a coconut.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326721
+    m_Localized: Husked Coconut
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326722
+    m_Localized: A coconut with its husk removed.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326723
+    m_Localized: Coconut Shell
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326724
+    m_Localized: An empty coconut shell.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326725
+    m_Localized: Coconut Water
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326726
+    m_Localized: Refreshing water from a coconut.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326727
+    m_Localized: Salted Coconut Water
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326728
+    m_Localized: Salted coconut water.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326729
+    m_Localized: Coconut Meat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326730
+    m_Localized: Edible coconut flesh.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326731
+    m_Localized: Egg
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326732
+    m_Localized: An egg from an animal.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326733
+    m_Localized: Cooked Egg
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326734
+    m_Localized: A cooked egg.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326735
+    m_Localized: Fat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326736
+    m_Localized: Fat.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326737
+    m_Localized: Raw Meat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326738
+    m_Localized: Raw meat.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326739
+    m_Localized: Cooked Meat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326740
+    m_Localized: Cooked meat.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326741
+    m_Localized: Dehydrated Meat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326742
+    m_Localized: Dehydrated meat.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326743
+    m_Localized: Rotten Meat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326744
+    m_Localized: Rotten meat. It should not be eaten.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326745
+    m_Localized: Tea
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326746
+    m_Localized: A warm drink made from tea leaves.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4891521024
+    m_Localized: Apple Seed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4891521025
+    m_Localized: A seed that can grow into an apple tree.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103936
+    m_Localized: Stone Spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103937
+    m_Localized: A weapon for attacking from a short distance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103938
+    m_Localized: Copper Spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103939
+    m_Localized: A weapon for attacking from a short distance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103940
+    m_Localized: Iron Spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103941
+    m_Localized: A weapon for attacking from a short distance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103942
+    m_Localized: Stone Spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103943
+    m_Localized: A weapon for attacking from a short distance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298240
+    m_Localized: Wooden Stick
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298241
+    m_Localized: Wooden Stick.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298242
+    m_Localized: Log
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298243
+    m_Localized: Log.
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

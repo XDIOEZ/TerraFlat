@@ -218,6 +218,7 @@ MonoBehaviour:
   scaleRange: {x: 0.85, y: 1.15}
   accentVariantChance: 0.2
   sortingOrderOffset: 1
+  grassMaterial: {fileID: 2100000, guid: 14e44684465b403baf074b99152e2ff3, type: 2}
 --- !u!1 &3401113203274231406
 GameObject:
   m_ObjectHideFlags: 0

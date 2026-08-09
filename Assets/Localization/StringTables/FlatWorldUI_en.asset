@@ -1,0 +1,1589 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: FlatWorldUI_en
+  m_EditorClassIdentifier: 
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: 97b6da030a122b84bafa606b8b1b64db, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 5952679936
+    m_Localized: Inventory
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6015594496
+    m_Localized: "Organize carried supplies \xB7 drag to swap positions"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6023983104
+    m_Localized: Resource List
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6023983105
+    m_Localized: Organize
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6095286272
+    m_Localized: Campfire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6095286273
+    m_Localized: "Maintain fuel \xB7 process food and basic materials"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6095286274
+    m_Localized: Input
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6095286275
+    m_Localized: Work Status
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6095286276
+    m_Localized: Output
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6095286277
+    m_Localized: Start Processing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6133035008
+    m_Localized: Compost Bin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6133035009
+    m_Localized: "Add compostables \xB7 wait for natural conversion"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6166589440
+    m_Localized: JOURNEY INTERRUPTED / SURVIVAL LOG
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6166589441
+    m_Localized: Journey Paused
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6166589442
+    m_Localized: Return to this world with what you learned.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6166589443
+    m_Localized: Wake Up Again
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6170783744
+    m_Localized: End This Journey
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6216921088
+    m_Localized: Equipment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6221115392
+    m_Localized: Drag equipment into slots to update your survival setup
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6275641344
+    m_Localized: Fire Drill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6279835648
+    m_Localized: "Hold the action key to continue \xB7 release to pause"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6279835649
+    m_Localized: Input Materials
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6279835650
+    m_Localized: Expected Output
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6279835651
+    m_Localized: Execute
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6321778688
+    m_Localized: Start Fire with Flint
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6384693248
+    m_Localized: Furnace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6384693249
+    m_Localized: "Control fuel and temperature \xB7 wait for smelting to finish"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6384693250
+    m_Localized: Start Smelting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6384693251
+    m_Localized: 'Input:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6384693252
+    m_Localized: 'Output:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6426636288
+    m_Localized: MODULES  /  INTERFACE MODULES
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6426636289
+    m_Localized: UI Menu Dropdown
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6506328064
+    m_Localized: Handcrafting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6506328065
+    m_Localized: "Add materials \xB7 check the output \xB7 start crafting"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6506328066
+    m_Localized: StartCrafting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6602797056
+    m_Localized: Workbench
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6602797057
+    m_Localized: "Combine materials \xB7 move the finished product to your inventory"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6602797058
+    m_Localized: Material Matrix
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6602797059
+    m_Localized: Crafting Result
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6695071744
+    m_Localized: Drying Rack
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6695071745
+    m_Localized: "Keep it ventilated \xB7 watch the processing progress"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6799929344
+    m_Localized: Feature List
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317952
+    m_Localized: Choose an action to continue
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317953
+    m_Localized: Available Actions
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317954
+    m_Localized: Save and Return to Main Menu Button
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317955
+    m_Localized: Save Game
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317956
+    m_Localized: Save and Exit Game Button
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317957
+    m_Localized: Volume Controls
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317958
+    m_Localized: UI Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317959
+    m_Localized: Auto Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6808317960
+    m_Localized: Game Difficulty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6812512256
+    m_Localized: Key Bindings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6812512257
+    m_Localized: Streaming Performance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6812512258
+    m_Localized: Test
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6883815424
+    m_Localized: SaveActions
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6883815425
+    m_Localized: Delete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6883815426
+    m_Localized: Rename
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6938341376
+    m_Localized: ARCHIVE  /  WorldSave
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6938341377
+    m_Localized: Select Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6938341378
+    m_Localized: Continue from the previous campfire and choose the character you
+      will control.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6938341379
+    m_Localized: Return to Main Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6938341380
+    m_Localized: World Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6946729984
+    m_Localized: Select a world; right-click an entry to manage its save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6946729985
+    m_Localized: CurrentSelect
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6946729986
+    m_Localized: No Save Selected
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6946729987
+    m_Localized: Load Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6946729988
+    m_Localized: Delete Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6950924288
+    m_Localized: Available Characters
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6950924289
+    m_Localized: Choose a character after loading a save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6950924290
+    m_Localized: Current Character
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6950924291
+    m_Localized: Player Name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6950924292
+    m_Localized: Choose a character or enter a new name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6950924293
+    m_Localized: 'The character name determines who you control after entering the
+      world.
+
+      You can also create a new character on your first entry.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6950924294
+    m_Localized: SelectWorld  >  Load Save  >  Choose Character  >  Enter World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6955118592
+    m_Localized: Enter World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6997061632
+    m_Localized: FLAT WORLD  /  SURVIVAL SANDBOX
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255936
+    m_Localized: Flat World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255937
+    m_Localized: Start at a campfire and survive this vast world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255938
+    m_Localized: Begin Journey
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255939
+    m_Localized: Choose a way to enter the world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255940
+    m_Localized: Continue Journey
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255941
+    m_Localized: Load Existing World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255942
+    m_Localized: New World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255943
+    m_Localized: Customize Your Start
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255944
+    m_Localized: Multiplayer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255945
+    m_Localized: Survive together with friends.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001255946
+    m_Localized: Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7009644544
+    m_Localized: DEVELOPMENT BUILD  /  THE WORLD IS STILL GROWING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7009644545
+    m_Localized: "EXPLORE  \xB7  BUILD  \xB7  SURVIVE"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7064170496
+    m_Localized: MULTIPLAYER  /  NETWORK SESSION
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7064170497
+    m_Localized: Create your world, or use UDP traversal to join the journey.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7064170498
+    m_Localized: Connection Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7068364800
+    m_Localized: Your display name in the multiplayer world
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7068364801
+    m_Localized: "Player_0000\u200B"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7068364802
+    m_Localized: Host / UDP Traversal Address
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7068364803
+    m_Localized: 'For example: tunnel.example.com:24567'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7068364804
+    m_Localized: Host / Default Port
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7068364805
+    m_Localized: World Sync
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559104
+    m_Localized: "You can paste domain:port\uFF1Btraversal protocolmust be UDP\uFF0Caddressincludes
+      a port and overrides the default port\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559105
+    m_Localized: Session Status
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559106
+    m_Localized: Offline
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559107
+    m_Localized: Current Connection
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559108
+    m_Localized: 'Players: 0 / 2'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559109
+    m_Localized: 'Move  WASD / Arrow Keys
+
+      Close  Use the top-right button'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559110
+    m_Localized: Create Host
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559111
+    m_Localized: Join Friend
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7072559112
+    m_Localized: Disconnect
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971136
+    m_Localized: NEW WORLD  /  WorldGenerate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971137
+    m_Localized: Create New World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971138
+    m_Localized: Name is optional; it determines the initial shape of this world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971139
+    m_Localized: Identity & Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971140
+    m_Localized: Leave blank to generate a number automatically
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971141
+    m_Localized: Optional, e.g. Traveler
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971142
+    m_Localized: Save Name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971143
+    m_Localized: Optional, e.g. North of the Campfire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971144
+    m_Localized: Both names may be left blank; the system will fill in the same random
+      number.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971145
+    m_Localized: World Parameters
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971146
+    m_Localized: Planet Radius
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7210971147
+    m_Localized: Larger values provide a wider exploration range
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359744
+    m_Localized: World Coordinate Scale
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359745
+    m_Localized: Smaller values are more spacious; larger values are denser
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359746
+    m_Localized: Finite Loop World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359747
+    m_Localized: Cross a boundary to return from the opposite side; turn it off to
+      use the original infinite world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359748
+    m_Localized: "Leave blank for random \xB7 numbers or text are supported"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359749
+    m_Localized: Leave blank to generate a random seed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359750
+    m_Localized: "DIFFICULTY SETTINGS  \xB7  EASY"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359751
+    m_Localized: CONFIRM IDENTITY  >  ADJUST RULES  >  GENERATE WORLD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359752
+    m_Localized: Generate World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359753
+    m_Localized: DIFFICULTY  /  SANDBOX RULES
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359754
+    m_Localized: Choose an official preset or create your own rules.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359755
+    m_Localized: Close
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359756
+    m_Localized: Official Preset
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359757
+    m_Localized: Custom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359758
+    m_Localized: Presets will continue to expand while keeping rule combinations
+      clear.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359759
+    m_Localized: Easy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359760
+    m_Localized: "Keep all items on death \xB7 preserve the current game setup. The
+      player drops no carried items on death."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7219359761
+    m_Localized: Hard
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554048
+    m_Localized: "Drop all items on death \xB7 hostile creatures are more dangerous,
+      survival drains are faster, recovery is slower, and all carried items are dropped
+      on death."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554049
+    m_Localized: Custom Rules
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554050
+    m_Localized: All 17 rules are connected to the actual game systems.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554051
+    m_Localized: Combat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554052
+    m_Localized: Survival
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554053
+    m_Localized: World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554054
+    m_Localized: Production
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554055
+    m_Localized: Player Damage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554056
+    m_Localized: Damage dealt by the player and held weapons
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7223554057
+    m_Localized: Creature Damage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748352
+    m_Localized: Damage dealt by non-player attackers
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748353
+    m_Localized: Creature Health
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748354
+    m_Localized: Equivalent durability of creatures and destructible entities
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748355
+    m_Localized: Environmental Damage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748356
+    m_Localized: Hunger, temperature, bleeding, and true damage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748357
+    m_Localized: Hunger Drain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748358
+    m_Localized: Natural drain rate of nutrition and hydration
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748359
+    m_Localized: Stamina Consumption
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748360
+    m_Localized: Stamina cost of moving, running, and attacking
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748361
+    m_Localized: Stamina Recovery
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748362
+    m_Localized: Stamina recovery when well nourished
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748363
+    m_Localized: Healing Effect
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748364
+    m_Localized: Food, sleep, and other healing effects
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748365
+    m_Localized: Drop All Items on Death
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748366
+    m_Localized: Time Speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748367
+    m_Localized: Day/night and in-game day progression speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748368
+    m_Localized: Spawn Frequency
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748369
+    m_Localized: Daily spawn window and amount spawned each time
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748370
+    m_Localized: Population Cap
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748371
+    m_Localized: Ecosystem budget and creature population cap
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7227748372
+    m_Localized: Loot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136960
+    m_Localized: Output quantity of creatures, resources, and plants
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136961
+    m_Localized: Crop Growth
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136962
+    m_Localized: Maturity speed of seeds, crops, and berries
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136963
+    m_Localized: Smelting Speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136964
+    m_Localized: Furnace production progress speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136965
+    m_Localized: Fuel Consumption
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136966
+    m_Localized: Consumption speed of all fuel modules
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136967
+    m_Localized: Crafting Output
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136968
+    m_Localized: Handcrafting, workbench, and furnace output
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7236136969
+    m_Localized: Keep the current game setup. The player drops no carried items on
+      death.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7240331264
+    m_Localized: Rules Currently Connected
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7240331265
+    m_Localized: 'Combat: Player 100% / CreatureDamage 100% / CreatureHealth 100%'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7240331266
+    m_Localized: Official presets and the custom panel share the same save rules,
+      so players will not need to recreate worlds as the system expands.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7240331267
+    m_Localized: Difficulty belongs to the current world save. After entering the
+      game, you can switch official presets in the settings panel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7240331268
+    m_Localized: Confirm Selection
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7294857216
+    m_Localized: Interface Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7294857217
+    m_Localized: Setup Complete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7345188864
+    m_Localized: Debug Information Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7382937600
+    m_Localized: Character Stats
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7382937601
+    m_Localized: Carbohydrates
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7382937602
+    m_Localized: Fat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7382937603
+    m_Localized: Protein
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7382937604
+    m_Localized: Water
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7382937605
+    m_Localized: Vitamins
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7382937606
+    m_Localized: Body Temperature
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7437463552
+    m_Localized: RESTING / THE WORLD CONTINUES OUTSIDE THE CAMPFIRE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7462629376
+    m_Localized: Characters will speak here.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7491989504
+    m_Localized: Enter a message and press Enter to send (/ at the beginning can
+      be used for commands).
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321152
+    m_Localized: Master volume controls all sounds; other channels can be adjusted
+      separately. Settings are saved automatically.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321153
+    m_Localized: Master Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321154
+    m_Localized: Music Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321155
+    m_Localized: SFX Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321156
+    m_Localized: UI Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321157
+    m_Localized: Ambience Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321158
+    m_Localized: Voice Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321159
+    m_Localized: Restore Defaults
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7542321160
+    m_Localized: Done
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847104
+    m_Localized: Auto-save runs in the game world using real time; settings are saved
+      immediately.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847105
+    m_Localized: Save Mode
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847106
+    m_Localized: Options
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847107
+    m_Localized: Interval (minutes)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847108
+    m_Localized: "Input 1\u20131440"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847109
+    m_Localized: 'Current setting: auto-save every 10 minutes.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847110
+    m_Localized: Cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7596847111
+    m_Localized: Apply
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7651373056
+    m_Localized: Difficulty belongs to the current save and takes effect immediately.
+      Choose a preset and click Apply.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7651373057
+    m_Localized: Hostile creatures are more dangerous, survival drains are faster,
+      recovery is slower, and all carried items are dropped on death.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7651373058
+    m_Localized: 'Current save difficulty: Easy'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7705899008
+    m_Localized: Move Up
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7705899009
+    m_Localized: Modify
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7743647744
+    m_Localized: Configure keyboard/mouse and gamepad separately; duplicate bindings
+      are blocked and changes are saved automatically.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7747842048
+    m_Localized: Keyboard & Mouse
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7747842049
+    m_Localized: Gamepad
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7747842050
+    m_Localized: Select an action and press a new key.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7789785088
+    m_Localized: UI Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7789785089
+    m_Localized: "Changes apply immediately and are saved automatically\uFF1BPrefab
+      the layout in the Prefab is the base layout shown at runtime\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7789785090
+    m_Localized: UI Scale
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7789785091
+    m_Localized: Fit Screen Safe Area
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7789785092
+    m_Localized: 'Safe Area: On (Recommended)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699648
+    m_Localized: Game Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699649
+    m_Localized: Adjust display size, graphics, and language. These options are a
+      UI preview and will be connected later.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699650
+    m_Localized: Display
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699651
+    m_Localized: Window Size
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699652
+    m_Localized: Display Mode
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699653
+    m_Localized: Fullscreen Window
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699654
+    m_Localized: Graphics
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699655
+    m_Localized: Graphics Preset
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699656
+    m_Localized: High (Recommended)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7852699657
+    m_Localized: Effects Quality
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7861088256
+    m_Localized: High
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7861088257
+    m_Localized: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7861088258
+    m_Localized: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7861088259
+    m_Localized: Simplified Chinese
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7861088260
+    m_Localized: This is a UI preview. Settings will be connected in a later version.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7861088261
+    m_Localized: Back
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7894642688
+    m_Localized: Chunk Streaming Performance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7898836992
+    m_Localized: "Automatically fits most devices\uFF1Bsmooth performance firstreducing
+      CPU contention\uFF1Bhigh throughput uses multiple background threads within
+      safe limits\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7898836993
+    m_Localized: Performance Mode
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7898836994
+    m_Localized: Terrain data is generated in the background; tilemaps, collisions,
+      and navigation are drawn frame by frame on the main thread.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7898836995
+    m_Localized: 'Current: Automatic Balance.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7932391424
+    m_Localized: Entering World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7932391425
+    m_Localized: "Preparing World Data\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7932391426
+    m_Localized: Please wait. You will enter automatically when the world is ready.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7970140160
+    m_Localized: Item Actions
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7970140161
+    m_Localized: Use Item
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7970140162
+    m_Localized: View Item Info
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8037249024
+    m_Localized: Save Entries
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8045637632
+    m_Localized: Select  /  Right-click to Manage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8070803456
+    m_Localized: Item Details
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8083386368
+    m_Localized: Debug message
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726418870272
+    m_Localized: Both names may be left blank; default names will be used.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726485979136
+    m_Localized: Difficulty Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173440
+    m_Localized: Create your world or paste the address provided by a friend.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173441
+    m_Localized: Medium
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173442
+    m_Localized: Low
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173443
+    m_Localized: Automatic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173444
+    m_Localized: On
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173445
+    m_Localized: Off (Recommended)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173446
+    m_Localized: Return to Game
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173447
+    m_Localized: Pause
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173448
+    m_Localized: Help
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173449
+    m_Localized: Confirm
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173450
+    m_Localized: OK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173451
+    m_Localized: Yes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173452
+    m_Localized: No
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173453
+    m_Localized: Player_0000
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173454
+    m_Localized: Settings Status
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173455
+    m_Localized: 'Current language: Simplified Chinese'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173456
+    m_Localized: 'Current language: English'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173457
+    m_Localized: Select World  >  Load Save  >  Choose Character
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173458
+    m_Localized: Create your world, or paste the address provided by a friend
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173459
+    m_Localized: You can paste domain:port directly; the traversal protocol must
+      be
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173460
+    m_Localized: 'Combat: Player 100% / Creature Damage'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173461
+    m_Localized: Changes apply immediately and are saved automatically; Prefab
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173462
+    m_Localized: Automatically fits most devices; prioritizes smooth performance
+      by reducing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173463
+    m_Localized: 'Safe Area: Off'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173464
+    m_Localized: Survival Status
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173465
+    m_Localized: Debug Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173466
+    m_Localized: Catch your breath, then return to this world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173467
+    m_Localized: 'Game Difficulty: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173468
+    m_Localized: 'Current Save Difficulty: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173469
+    m_Localized: 'Selected: {0}. Click Apply to take effect.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173470
+    m_Localized: 'Applied: {0}. The setting will be written to disk on the next normal
+      save.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173471
+    m_Localized: Drop on Death
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173472
+    m_Localized: Keep on Death
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726490173473
+    m_Localized: 'Combat: Player {0} / Creature Damage {1} / Creature Health {2}
+
+      Survival:
+      Hunger {3} / Stamina {4} / {5}
+
+      World: Time {6} / Spawns {7} / Loot {8}
+
+      Production:
+      Growth {9} / Smelting {10} / Crafting {11}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367744
+    m_Localized: "Difficulty Settings  \xB7  {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367745
+    m_Localized: Never Auto Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367746
+    m_Localized: Every {0} Minutes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367747
+    m_Localized: Custom Interval
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367748
+    m_Localized: 'Selected: Never Auto Save. Click Apply to take effect.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367749
+    m_Localized: "Enter 1\u20131440 minutes, then click Apply."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367750
+    m_Localized: 'Selected: Auto-save every {0} minutes.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367751
+    m_Localized: Enter an integer number of minutes between 1 and 1440.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367752
+    m_Localized: 'Current setting: Never Auto Save.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367753
+    m_Localized: 'Current setting: Auto-save every {0} minutes.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367754
+    m_Localized: "Waiting for input\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367755
+    m_Localized: "Rebinding \u201C{0}\u201D; press Esc / Gamepad B to cancel. Use
+      Backspace / Start when binding that key."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367756
+    m_Localized: "\u201C{0}\u201D saved."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367757
+    m_Localized: This change was canceled.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367758
+    m_Localized: "This key is already used by \u201C{0}\u201D; no changes were made."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367759
+    m_Localized: another action
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367760
+    m_Localized: 'Rebind failed: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367761
+    m_Localized: Unknown error
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367762
+    m_Localized: 'Current: {0}. Select an action and enter a new control; conflicts
+      are blocked and changes are saved automatically.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367763
+    m_Localized: Automatic (Recommended)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367764
+    m_Localized: Smooth First (Single Background Thread)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367765
+    m_Localized: High Throughput (Safe Multithreading)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367766
+    m_Localized: 'Current: single background-thread generation + frame-by-frame main-thread
+      drawing ({0} generation tasks concurrent).'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367767
+    m_Localized: 'Current: safe multithreaded high throughput ({0} generation tasks
+      concurrent).'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367768
+    m_Localized: 'Current: automatic balance ({0} generation tasks concurrent).'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367769
+    m_Localized: Switching Dimension
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367770
+    m_Localized: 'Traveling to: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367771
+    m_Localized: Creating New World
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367772
+    m_Localized: "Preparing new save data\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367773
+    m_Localized: "Generating world seed\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367774
+    m_Localized: "Creating planet data\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367775
+    m_Localized: "Writing the first save\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367776
+    m_Localized: "Save created; entering the world\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367777
+    m_Localized: Entering Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367778
+    m_Localized: 'Loading planet: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367779
+    m_Localized: "Creating the player and preparing the spawn area\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367780
+    m_Localized: "Locating a safe spawn point from the world seed\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367781
+    m_Localized: "Loading the area around the player\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367782
+    m_Localized: "Generating and loading nearby chunks\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367783
+    m_Localized: "Saving the current dimension\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367784
+    m_Localized: "Creating the target dimension\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367785
+    m_Localized: "Loading the target dimension\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367786
+    m_Localized: "Securing the cave exit\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367787
+    m_Localized: '{0} bindings restored to defaults.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367788
+    m_Localized: Move Down
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367789
+    m_Localized: Move Left
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367790
+    m_Localized: Move Right
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367791
+    m_Localized: Primary Action
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367792
+    m_Localized: Secondary Action
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367793
+    m_Localized: Interact
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367794
+    m_Localized: Drop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367795
+    m_Localized: Inventory
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367796
+    m_Localized: Equipment Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367797
+    m_Localized: Run
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367798
+    m_Localized: Character Stats Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367799
+    m_Localized: Camera Zoom Modifier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367800
+    m_Localized: Open Chat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367801
+    m_Localized: Hotbar 1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367802
+    m_Localized: Hotbar 2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367803
+    m_Localized: Hotbar 3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367804
+    m_Localized: Hotbar 4
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367805
+    m_Localized: Hotbar 5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367806
+    m_Localized: Hotbar 6
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367807
+    m_Localized: Hotbar 7
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367808
+    m_Localized: Hotbar 8
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367809
+    m_Localized: Hotbar 9
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367810
+    m_Localized: Close Panel / Open Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367811
+    m_Localized: Virtual Cursor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367812
+    m_Localized: Nutrition Panel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367813
+    m_Localized: Previous Hotbar Slot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6726494367814
+    m_Localized: Next Hotbar Slot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357758091264
+    m_Localized: INVENTORY  /  FIELD KIT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617216
+    m_Localized: EQUIPMENT  /  SURVIVAL SETUP
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617217
+    m_Localized: CRAFTING  /  BASIC CRAFT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617218
+    m_Localized: WORKBENCH  /  FINE CRAFT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617219
+    m_Localized: FURNACE  /  SMELTING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617220
+    m_Localized: BONFIRE  /  FIRE MANAGEMENT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617221
+    m_Localized: COMPOST  /  RESOURCE CYCLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617222
+    m_Localized: MEAT RACK  /  FOOD PROCESSING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617223
+    m_Localized: FIRECRAFT  /  FIRE STARTING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617224
+    m_Localized: SURVIVAL  /  MODULE STATUS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617225
+    m_Localized: ITEM  /  OBSERVATION LOG
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617226
+    m_Localized: ACTIONS  /  QUICK ACCESS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617227
+    m_Localized: DEVELOPMENT  /  RUNTIME INFO
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617228
+    m_Localized: Using custom player rules; all carried items are dropped on death.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617229
+    m_Localized: Using custom player rules; all carried items are kept after death.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617230
+    m_Localized: No game save is currently loaded; difficulty cannot be changed.
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

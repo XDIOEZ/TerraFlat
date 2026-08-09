@@ -671,6 +671,17 @@ namespace InputSystem
                 },
                 {
                     ""name"": """",
+                    ""id"": ""2c9f4e08-2d9b-4ab4-b4a2-d11f8ef4a6b1"",
+                    ""path"": ""<Gamepad>/rightShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""OpenChat"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""5d34c481-8501-4aca-abe0-2b2618af12ab"",
                     ""path"": ""<Keyboard>/e"",
                     ""interactions"": """",

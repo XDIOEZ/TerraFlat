@@ -20,8 +20,10 @@ public class AI_AttackController
 #region Fields
 	private readonly List<Mod_Damage> _damageMods = new List<Mod_Damage>();
 	private float _cooldownTimer;
+	private float _windowStartDelayTimer;
 	private float _windowRemainTimer;
 	private bool _windowTriggered;
+	private bool _damageWindowActive;
 	/// <summary>缓存的动画接收器引用，用于同步 IsAttacking 状态</summary>
 	private Mod_AnimatorController_Receiver _animatorReceiver;
 	/// <summary>是否已取消 Mod_Damage_AI 的动画事件订阅</summary>
@@ -35,11 +37,17 @@ public class AI_AttackController
 	/// <summary>伤害窗口持续时间（秒）</summary>
 	public float DamageWindow { get; set; }
 
+	/// <summary>攻击动画开始后，延迟多少秒开启伤害碰撞。</summary>
+	public float DamageWindowStartDelay { get; set; }
+
 	/// <summary>冷却是否已结束</summary>
 	public bool IsCooldownDone => _cooldownTimer <= 0f;
 
 	/// <summary>是否已触发当前伤害窗口（防止同一窗口内重复触发）</summary>
 	public bool IsWindowTriggered => _windowTriggered;
+
+	/// <summary>伤害碰撞当前是否处于有效窗口。</summary>
+	public bool IsDamageWindowActive => _damageWindowActive;
 
 	/// <summary>是否找到伤害组件</summary>
 	public bool HasDamageMods => _damageMods.Count > 0;
@@ -75,8 +83,10 @@ public class AI_AttackController
 	public void Reset()
 	{
 		_cooldownTimer = 0f;
+		_windowStartDelayTimer = 0f;
 		_windowRemainTimer = 0f;
 		_windowTriggered = false;
+		_damageWindowActive = false;
 		SetDamageEnabled(false);
 		SetAnimatorAttacking(false);
 	}
@@ -99,20 +109,31 @@ public class AI_AttackController
 			_cooldownTimer = Mathf.Max(0f, _cooldownTimer - deltaTime);
 		}
 
-		// 伤害窗口计时器递减
-		if (_windowRemainTimer <= 0f)
+		float remainingDeltaTime = Mathf.Max(0f, deltaTime);
+		if (_windowStartDelayTimer > 0f)
 		{
-			return;
+			if (remainingDeltaTime < _windowStartDelayTimer)
+			{
+				_windowStartDelayTimer -= remainingDeltaTime;
+				return;
+			}
+
+			remainingDeltaTime -= _windowStartDelayTimer;
+			_windowStartDelayTimer = 0f;
+			ActivateDamageWindow();
 		}
 
-		_windowRemainTimer = Mathf.Max(0f, _windowRemainTimer - deltaTime);
-		if (_windowRemainTimer > 0f)
-		{
+		// 伤害窗口计时器递减
+		if (_windowRemainTimer <= 0f)
 			return;
-		}
+
+		_windowRemainTimer = Mathf.Max(0f, _windowRemainTimer - remainingDeltaTime);
+		if (_windowRemainTimer > 0f)
+			return;
 
 		// 伤害窗口结束：关闭伤害碰撞，开始冷却
 		SetDamageEnabled(false);
+		_damageWindowActive = false;
 		SetAnimatorAttacking(false);
 		_windowTriggered = false;
 		if (Cooldown > 0f)
@@ -124,8 +145,8 @@ public class AI_AttackController
 	/// <summary>
 	/// 开启攻击伤害窗口：
 	/// - 标记窗口已触发
-	/// - 同步动画接收器的 IsAttacking 状态
-	/// - 启用伤害碰撞
+	/// - 起手阶段保持动画接收器的 IsAttacking 关闭
+	/// - 到达动画有效帧后同步 IsAttacking 并启用伤害碰撞
 	/// - 通过动画控制器播放攻击动画
 	/// </summary>
 	public void StartWindow(
@@ -135,25 +156,33 @@ public class AI_AttackController
 	{
 		AlignDamageDirection(attackDirection);
 		_windowTriggered = true;
-		_windowRemainTimer = Mathf.Max(0.01f, DamageWindow);
+		_windowStartDelayTimer = Mathf.Max(0f, DamageWindowStartDelay);
+		_windowRemainTimer = 0f;
+		_damageWindowActive = false;
 
-		// 先同步 IsAttacking = true，确保 Mod_AnimatorController_Receiver 状态正确
-		SetAnimatorAttacking(true);
+		// Attack.anim 的首帧为 IsAttacking=false。起手也保持 false，避免首击时
+		// 控制器先写 true、动画首帧又回写 false，从而产生额外的启动/停止事件。
+		SetAnimatorAttacking(false);
 
-		// 再启用伤害碰撞
-		SetDamageEnabled(true);
+		// 动画有效帧到达前保持伤害关闭，避免攻击起手帧提前命中。
+		SetDamageEnabled(false);
 
 		// 播放攻击动画
 		if (animator != null && !string.IsNullOrEmpty(attackAnimName))
 		{
 			animator.ForcePlayAnimation(attackAnimName);
 		}
+
+		if (_windowStartDelayTimer <= 0f)
+			ActivateDamageWindow();
 	}
 
 	/// <summary>停止攻击伤害窗口（关闭伤害碰撞）</summary>
 	public void StopWindow()
 	{
+		_windowStartDelayTimer = 0f;
 		_windowRemainTimer = 0f;
+		_damageWindowActive = false;
 		SetDamageEnabled(false);
 		SetAnimatorAttacking(false);
 	}
@@ -180,6 +209,19 @@ public class AI_AttackController
 #endregion
 
 #region Private
+	/// <summary>到达动画有效帧后开启伤害碰撞窗口。</summary>
+	private void ActivateDamageWindow()
+	{
+		if (_damageWindowActive)
+			return;
+
+		_damageWindowActive = true;
+		_windowRemainTimer = Mathf.Max(0.01f, DamageWindow);
+		// 视觉/事件状态与实际伤害窗口同时开始，首击和后续攻击使用同一时序。
+		SetAnimatorAttacking(true);
+		SetDamageEnabled(true);
+	}
+
 	/// <summary>
 	/// 取消所有 Mod_Damage_AI 的动画事件订阅。
 	/// Mod_Damage_AI 在 Load() 中订阅了 OnAttackStart/OnAttackStop，
