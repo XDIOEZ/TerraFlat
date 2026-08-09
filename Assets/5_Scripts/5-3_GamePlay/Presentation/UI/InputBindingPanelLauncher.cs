@@ -16,6 +16,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         public InputBindingEntry Entry;
         public TextMeshProUGUI BindingText;
         public Button RebindButton;
+        public Button ClearButton;
     }
 
     private readonly List<BindingRow> rows = new List<BindingRow>();
@@ -221,7 +222,8 @@ private void EnsurePanel()
             TextMeshProUGUI label = FindText(rowObject.transform, "操作名称");
             TextMeshProUGUI bindingText = FindText(rowObject.transform, "绑定值");
             Button rebindButton = FindButton(rowObject.transform, "修改按钮");
-            if (label == null || bindingText == null || rebindButton == null)
+            Button clearButton = FindButton(rowObject.transform, "清除按钮");
+            if (label == null || bindingText == null || rebindButton == null || clearButton == null)
             {
                 Debug.LogError("[InputBindingPanelLauncher] 按键绑定行 Prefab 控件命名契约不完整。", rowObject);
                 Destroy(rowObject);
@@ -236,9 +238,11 @@ private void EnsurePanel()
                 Root = rowObject,
                 Entry = entry,
                 BindingText = bindingText,
-                RebindButton = rebindButton
+                RebindButton = rebindButton,
+                ClearButton = clearButton
             };
             rebindButton.onClick.AddListener(() => BeginRebind(row));
+            clearButton.onClick.AddListener(() => ClearBinding(row));
             rows.Add(row);
         }
 
@@ -346,6 +350,31 @@ private void EnsurePanel()
         });
     }
 
+    #region 单项绑定清除
+
+    /// <summary>清除当前设备页选中操作的绑定，并让空绑定立即显示为未绑定。</summary>
+    private void ClearBinding(BindingRow row)
+    {
+        if (bindingService == null || row == null || bindingService.IsRebinding)
+            return;
+
+        if (!bindingService.ClearBinding(row.Entry))
+        {
+            SetStatus(
+                FlatWorldLocalizationService.GetUiText("清除绑定失败。"),
+                true);
+            return;
+        }
+
+        RefreshRows();
+        SetStatus(
+            FlatWorldLocalizationService.GetUiFormat(
+                "“{0}”的绑定已清除。",
+                FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
+    }
+
+    #endregion
+
     private void ResetToDefaults()
     {
         if (bindingService == null)
@@ -381,6 +410,8 @@ private void EnsurePanel()
         {
             if (rows[i]?.RebindButton != null)
                 rows[i].RebindButton.interactable = interactable;
+            if (rows[i]?.ClearButton != null)
+                rows[i].ClearButton.interactable = interactable;
         }
 
         if (keyboardMouseTabButton != null)

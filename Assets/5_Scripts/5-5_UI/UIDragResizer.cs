@@ -45,7 +45,6 @@ public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         if (isDragging) return;
 
         Vector2 local;
-        Camera cam = null;
         // 尝试使用当前 EventCamera，如果没有就传 null（Screen Space Overlay）
         if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
         {

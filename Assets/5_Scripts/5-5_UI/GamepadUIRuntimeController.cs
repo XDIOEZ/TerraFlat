@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
 
 /// <summary>
@@ -21,6 +22,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
 
     private InputActionAsset inputAsset;
     private InputAction cancelAction;
+    private InputAction submitAction;
     private RectTransform canvasRect;
     private Canvas canvas;
     private RectTransform cursorRect;
@@ -29,6 +31,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private EventSystem pointerEventSystem;
     private GameObject hoveredObject;
     private TMP_InputField suppressedInputField;
+    private int suppressedInputFieldFrame = -1;
     private Vector2 cursorScreenPosition;
     private bool cursorPositionInitialized;
     private bool gamepadMode;
@@ -50,6 +53,9 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     {
         GamepadVirtualKeyboardController.Closed -= OnVirtualKeyboardClosed;
         UnbindCancelAction();
+        submitAction = null;
+        suppressedInputField = null;
+        suppressedInputFieldFrame = -1;
         ClearHoverTarget();
         SetCursorVisible(false);
     }
@@ -62,7 +68,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
             return;
 
         EnsureCursorVisual();
-        TryOpenKeyboardForSelectedInputField();
+        TryOpenKeyboardForSelectedInputFieldOnSubmit();
 
         if (!cursorMode)
             return;
@@ -152,6 +158,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     {
         inputAsset = asset;
         BindCancelAction(asset);
+        BindSubmitAction(asset);
         EnsureCursorVisual();
     }
 
@@ -164,6 +171,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         if (!enabled)
         {
             suppressedInputField = null;
+            suppressedInputFieldFrame = -1;
             ExitCursorMode(false);
         }
     }
@@ -175,6 +183,14 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     {
         if (!gamepadMode)
             return;
+
+        // 纯游戏场景和常驻 HUD 下左摇杆只负责移动，不能抢走右摇杆准星；打开模态面板后才切回 UI 焦点。
+        if (cursorMode)
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            if (manager == null || !manager.HasOpenModalGamepadNavigationPanel())
+                return;
+        }
 
         ExitCursorMode(true);
         ClearSuppressedInputFieldIfSelectionChanged();
@@ -209,6 +225,10 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         if (eventSystem == null)
             return false;
 
+        // 槽位的手柄确认必须走独立事件，不能伪装成键鼠 PointerDown，避免两套交换状态互相覆盖。
+        if (TryHandleGamepadPrimaryAction(hoveredObject))
+            return true;
+
         PointerEventData data = GetPointerEventData(eventSystem);
         data.button = PointerEventData.InputButton.Left;
         data.clickCount = 1;
@@ -237,6 +257,27 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         return cursorMode ? hoveredObject : EventSystem.current?.currentSelectedGameObject;
     }
 
+    /// <summary>
+    /// 向当前虚拟光标目标发送手柄主要操作；普通 Button 继续使用原有 Pointer 事件。
+    /// </summary>
+    private static bool TryHandleGamepadPrimaryAction(GameObject target)
+    {
+        if (target == null)
+            return false;
+
+        MonoBehaviour[] behaviours = target.GetComponentsInParent<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is IGamepadPrimaryActionHandler handler &&
+                handler.HandleGamepadPrimaryAction())
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     #endregion
 
     #region 全局返回
@@ -260,8 +301,18 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         cancelAction = null;
     }
 
+    /// <summary>接入跟随玩家重绑结果的 UI 确认动作。</summary>
+    private void BindSubmitAction(InputActionAsset asset)
+    {
+        submitAction = asset?.FindActionMap("FlatWorldUI", false)?.FindAction("Submit", false);
+    }
+
     private void OnCancelPerformed(InputAction.CallbackContext context)
     {
+        // 手柄 B 现在只存在于 FlatWorldUI/Cancel 的默认回退绑定，首次按下时也要切换到手柄模式。
+        if (context.control?.device is Gamepad && !gamepadMode)
+            EventSystemGuard.SetGamepadMode(true);
+
         if (!gamepadMode)
             return;
 
@@ -283,10 +334,13 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     #region 输入框与焦点
 
     /// <summary>
-    /// 手柄选中 TMP 输入框后打开游戏内虚拟键盘。
+    /// 只有手柄确认当前 TMP 输入框时，才打开游戏内虚拟键盘。
     /// </summary>
-    private void TryOpenKeyboardForSelectedInputField()
+    private void TryOpenKeyboardForSelectedInputFieldOnSubmit()
     {
+        if (!WasGamepadSubmitPressedThisFrame())
+            return;
+
         if (cursorMode || GamepadVirtualKeyboardController.IsOpen)
             return;
 
@@ -300,24 +354,61 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
 
         ClearSuppressedInputFieldIfSelectionChanged();
         if (inputField == suppressedInputField)
-            return;
+        {
+            if (Time.frameCount == suppressedInputFieldFrame)
+                return;
+
+            suppressedInputField = null;
+            suppressedInputFieldFrame = -1;
+        }
 
         GamepadVirtualKeyboardController.Show(inputField);
     }
 
+    /// <summary>记录虚拟键盘关闭当帧，防止关闭键的同一次确认重新打开输入框。</summary>
     private void OnVirtualKeyboardClosed(TMP_InputField inputField)
     {
         suppressedInputField = inputField;
+        suppressedInputFieldFrame = Time.frameCount;
     }
 
+    /// <summary>焦点离开原输入框后解除关闭保护。</summary>
     private void ClearSuppressedInputFieldIfSelectionChanged()
     {
         if (suppressedInputField == null)
             return;
 
         GameObject selectedObject = EventSystem.current?.currentSelectedGameObject;
-        if (selectedObject == null || selectedObject.GetComponentInParent<TMP_InputField>() != suppressedInputField)
+        if (selectedObject == null ||
+            selectedObject.GetComponentInParent<TMP_InputField>() != suppressedInputField)
+        {
             suppressedInputField = null;
+            suppressedInputFieldFrame = -1;
+        }
+    }
+
+    /// <summary>判断本帧是否由手柄提交，避免键盘 Enter 误打开虚拟键盘。</summary>
+    private bool WasGamepadSubmitPressedThisFrame()
+    {
+        if (submitAction != null)
+        {
+            for (int i = 0; i < submitAction.controls.Count; i++)
+            {
+                InputControl control = submitAction.controls[i];
+                if (control.device is Gamepad &&
+                    control is ButtonControl button &&
+                    button.wasPressedThisFrame)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // 主菜单没有玩家输入资产，使用系统默认的 A/确认键作为兜底。
+        Gamepad gamepad = Gamepad.current;
+        return gamepad != null && gamepad.buttonSouth.wasPressedThisFrame;
     }
 
     #endregion

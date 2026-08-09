@@ -3,6 +3,7 @@ using InputSystem;
 using UnityEngine;
 using UnityEngine.UI;
 using Sirenix.OdinInspector;
+using FlatWorld.Networking;
 
 public class SettingCanvas : Module, IInstanceUI
 {
@@ -15,6 +16,8 @@ public class SettingCanvas : Module, IInstanceUI
     // 输入InputAction组件
     private PlayerInputActions playerInputActions;
     GameController gameController;
+    private bool settingsPauseActive;
+    private float timeScaleBeforeSettings;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
 
     public override void Awake()
@@ -90,6 +93,8 @@ public class SettingCanvas : Module, IInstanceUI
         basePanel.PrepareForGamepadNavigation();
         basePanel.Opened += AcquirePanelInputLock;
         basePanel.Closed += ReleasePanelInputLock;
+        basePanel.Opened += AcquireSettingsPause;
+        basePanel.Closed += ReleaseSettingsPause;
         return true;
     }
 
@@ -190,10 +195,44 @@ public class SettingCanvas : Module, IInstanceUI
         {
             basePanel.Opened -= AcquirePanelInputLock;
             basePanel.Closed -= ReleasePanelInputLock;
+            basePanel.Opened -= AcquireSettingsPause;
+            basePanel.Closed -= ReleaseSettingsPause;
         }
 
         ReleasePanelInputLock();
+        ReleaseSettingsPause();
     }
+
+    #region 单机设置暂停
+
+    /// <summary>单机打开世界设置时暂停时间；联机设置不修改全局时间流速。</summary>
+    private void AcquireSettingsPause()
+    {
+        GameManager gameManager = GameManager.Instance;
+        if (settingsPauseActive ||
+            GameNetwork.IsOnline ||
+            gameManager == null ||
+            !gameManager.IsInGameWorld)
+        {
+            return;
+        }
+
+        timeScaleBeforeSettings = Time.timeScale;
+        Time.timeScale = 0f;
+        settingsPauseActive = true;
+    }
+
+    /// <summary>关闭设置或销毁模块时恢复打开设置前的时间流速。</summary>
+    private void ReleaseSettingsPause()
+    {
+        if (!settingsPauseActive)
+            return;
+
+        Time.timeScale = timeScaleBeforeSettings;
+        settingsPauseActive = false;
+    }
+
+    #endregion
 
     private void AcquirePanelInputLock()
     {

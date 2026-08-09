@@ -7,3 +7,11 @@ public interface IGamepadContextActionHandler
 {
     bool HandleGamepadContextAction();
 }
+
+/// <summary>
+/// 手柄主要操作契约。实现者可在虚拟光标点击时接收独立于鼠标 PointerDown 的确认事件。
+/// </summary>
+public interface IGamepadPrimaryActionHandler
+{
+    bool HandleGamepadPrimaryAction();
+}

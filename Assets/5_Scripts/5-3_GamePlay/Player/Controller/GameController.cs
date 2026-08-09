@@ -30,11 +30,14 @@ public class GameController : Module
     public bool EnableGamepadAdapter = true; // 是否启用手柄适配
     public bool UseGamepadVirtualCursor = true; // 手柄模式下是否启用虚拟光标
     public float GamepadCursorSpeed = 1300f; // 虚拟光标速度（像素/秒）
+    [Min(1f)] public float GamepadCursorRadius = 120f; // 游戏内准星相对玩家的屏幕半径
     public float GamepadCursorDeadZone = 0.18f; // 摇杆死区
     public float CursorClampPadding = 6f; // 光标屏幕边缘留白
 
     private InputDeviceType _currentInputDevice = InputDeviceType.KeyboardMouse; // 当前输入源缓存
     private Vector2 _virtualCursorScreenPosition; // 手柄虚拟光标位置
+    private Vector2 _gamepadAimDirection = Vector2.right; // 游戏内手柄准星方向
+    private bool _gamepadAimDirectionInitialized; // 是否已经收到有效右摇杆方向
     private bool _virtualCursorInitialized; // 虚拟光标是否初始化
     private bool _isGameplayInputLocked; // 濒死/过场时是否锁定玩家输入
     private bool _suppressLeftClickUntilRelease;
@@ -394,7 +397,14 @@ public class GameController : Module
         }
 
         Vector2 look = _inputActions.Win10.GamepadCursor.ReadValue<Vector2>();
-        if (look.sqrMagnitude < GamepadCursorDeadZone * GamepadCursorDeadZone)
+        float deadZoneSquared = GamepadCursorDeadZone * GamepadCursorDeadZone;
+        if (!EventSystemGuard.HasOpenModalGamepadNavigationPanel)
+        {
+            UpdateGameplayRadialCursor(look, deadZoneSquared);
+            return;
+        }
+
+        if (look.sqrMagnitude < deadZoneSquared)
         {
             return;
         }
@@ -413,6 +423,67 @@ public class GameController : Module
         _virtualCursorScreenPosition.x = Mathf.Clamp(_virtualCursorScreenPosition.x, minX, maxX);
         _virtualCursorScreenPosition.y = Mathf.Clamp(_virtualCursorScreenPosition.y, minY, maxY);
         EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    /// <summary>按玩家屏幕位置和右摇杆方向更新游戏内径向准星。</summary>
+    private void UpdateGameplayRadialCursor(Vector2 look, float deadZoneSquared)
+    {
+        if (look.sqrMagnitude >= deadZoneSquared)
+        {
+            _gamepadAimDirection = look.normalized;
+            _gamepadAimDirectionInitialized = true;
+        }
+
+        // 未推动过右摇杆前不主动显示准星；一旦确定方向，玩家移动或按其他键时仍持续保持准星。
+        if (!_gamepadAimDirectionInitialized)
+        {
+            return;
+        }
+
+        Vector2 playerScreenPosition = GetPlayerScreenPosition();
+        _virtualCursorScreenPosition = CalculateGameplayRadialCursorScreenPosition(
+            playerScreenPosition,
+            _gamepadAimDirection,
+            GamepadCursorRadius,
+            new Vector2(Screen.width, Screen.height),
+            CursorClampPadding);
+        _virtualCursorInitialized = true;
+        EventSystemGuard.NotifyGamepadCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    /// <summary>获取玩家在当前相机下的屏幕中心位置。</summary>
+    private Vector2 GetPlayerScreenPosition()
+    {
+        if (_mainCamera != null)
+        {
+            Vector3 screenPosition = _mainCamera.WorldToScreenPoint(transform.position);
+            if (screenPosition.z >= 0f)
+                return new Vector2(screenPosition.x, screenPosition.y);
+        }
+
+        return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+    }
+
+    /// <summary>计算固定半径准星位置，并限制在屏幕安全范围内。</summary>
+    private static Vector2 CalculateGameplayRadialCursorScreenPosition(
+        Vector2 playerScreenPosition,
+        Vector2 aimDirection,
+        float radius,
+        Vector2 screenSize,
+        float padding)
+    {
+        Vector2 direction = aimDirection.sqrMagnitude > 0.0001f
+            ? aimDirection.normalized
+            : Vector2.right;
+        Vector2 cursorPosition = playerScreenPosition + direction * Mathf.Max(1f, radius);
+
+        float minX = Mathf.Min(Mathf.Max(0f, padding), screenSize.x * 0.5f);
+        float maxX = Mathf.Max(minX, screenSize.x - padding);
+        float minY = Mathf.Min(Mathf.Max(0f, padding), screenSize.y * 0.5f);
+        float maxY = Mathf.Max(minY, screenSize.y - padding);
+        cursorPosition.x = Mathf.Clamp(cursorPosition.x, minX, maxX);
+        cursorPosition.y = Mathf.Clamp(cursorPosition.y, minY, maxY);
+        return cursorPosition;
     }
 
     /// <summary>
