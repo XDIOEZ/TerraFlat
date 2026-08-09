@@ -63,6 +63,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private GameObject windowRoot;
     private GameObject airdropBrowserRoot;
     private GameObject aiCreatureBrowserRoot;
+    private RectTransform airdropBrowserRect;
+    private RectTransform aiCreatureBrowserRect;
     private TMP_InputField itemIdInput;
     private TMP_InputField amountInput;
     private TMP_InputField airdropSearchInput;
@@ -89,6 +91,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private Transform commandGrid;
     private Transform airdropItemGrid;
     private Transform aiCreatureGrid;
+    private GridLayoutGroup airdropItemGridLayout;
+    private GridLayoutGroup aiCreatureGridLayout;
     private Sprite dropMarkerSprite;
     private Coroutine restoreAdminCoroutine;
     private Coroutine restorePreferencesCoroutine;
@@ -559,6 +563,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         airdropBrowserRoot = CreateUiObject("GM Airdrop Browser", canvasTransform);
         RectTransform panelRect = airdropBrowserRoot.GetComponent<RectTransform>();
+        airdropBrowserRect = panelRect;
         panelRect.anchorMin = panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = new Vector2(1120f, 760f);
@@ -638,9 +643,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         airdropItemGrid = CreateCatalogScrollGrid(airdropBrowserRoot.transform, "Airdrop Item Scroll");
         // 让空投物品按钮在可用区域内水平居中，减少右侧多余留白。
-        GridLayoutGroup airdropGridLayout = airdropItemGrid.GetComponent<GridLayoutGroup>();
-        if (airdropGridLayout != null)
-            airdropGridLayout.childAlignment = TextAnchor.UpperCenter;
+        airdropItemGridLayout = airdropItemGrid.GetComponent<GridLayoutGroup>();
+        if (airdropItemGridLayout != null)
+            airdropItemGridLayout.childAlignment = TextAnchor.UpperCenter;
 
         airdropBrowserStatusText = CreateText(
             airdropBrowserRoot.transform,
@@ -658,6 +663,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         aiCreatureBrowserRoot = CreateUiObject("GM AI Creature Browser", canvasTransform);
         RectTransform panelRect = aiCreatureBrowserRoot.GetComponent<RectTransform>();
+        aiCreatureBrowserRect = panelRect;
         panelRect.anchorMin = panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = new Vector2(1120f, 760f);
@@ -736,6 +742,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         aiCreatureBrowserCountText.gameObject.AddComponent<LayoutElement>().preferredWidth = 240f;
 
         aiCreatureGrid = CreateCatalogScrollGrid(aiCreatureBrowserRoot.transform, "AI Creature Scroll");
+        aiCreatureGridLayout = aiCreatureGrid.GetComponent<GridLayoutGroup>();
+        if (aiCreatureGridLayout != null)
+            aiCreatureGridLayout.childAlignment = TextAnchor.UpperCenter;
 
         aiCreatureBrowserStatusText = CreateText(
             aiCreatureBrowserRoot.transform,
@@ -761,8 +770,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         outline.effectDistance = new Vector2(1f, -1f);
         LayoutElement scrollLayout = scrollObject.AddComponent<LayoutElement>();
         scrollLayout.flexibleHeight = 1f;
-        scrollLayout.minHeight = 560f;
-        scrollLayout.preferredHeight = 560f;
+        scrollLayout.minHeight = 220f;
+        scrollLayout.preferredHeight = 0f;
 
         ScrollRect scroll = scrollObject.AddComponent<ScrollRect>();
         scroll.horizontal = false;
