@@ -39,9 +39,17 @@ public sealed partial class GMReflectionConsole
         public RectTransform Target;
     }
 
+    /// <summary>记录运行时操作网格的最大列数，用于按实际视口宽度重新布局。</summary>
+    private sealed class GmResponsiveGrid
+    {
+        public GridLayoutGroup Grid;
+        public int MaxColumns;
+        public float CellHeight;
+    }
+
     private readonly Dictionary<GmPageId, GmPageView> gmPages = new();
     private readonly List<GmSearchEntry> gmSearchEntries = new();
-    private readonly List<GridLayoutGroup> gmResponsiveGrids = new();
+    private readonly List<GmResponsiveGrid> gmResponsiveGrids = new();
 
     private RectTransform gmCanvasRect;
     private RectTransform gmWindowRect;
@@ -50,6 +58,7 @@ public sealed partial class GMReflectionConsole
     private TextMeshProUGUI gmSearchSummaryText;
     private GameObject gmSearchResultsRoot;
     private Transform gmSearchResultsContent;
+    private RectTransform gmSearchResultsRect;
     private RectTransform gameEventPageContent;
     private RectTransform commandPageContent;
     private GameEventManager boundGameEventManager;
@@ -213,7 +222,9 @@ public sealed partial class GMReflectionConsole
     {
         gmSearchResultsRoot = CreateUiObject("Search Results", windowRoot.transform);
         LayoutElement resultsLayout = gmSearchResultsRoot.AddComponent<LayoutElement>();
-        resultsLayout.preferredHeight = 150f;
+        resultsLayout.ignoreLayout = true;
+        gmSearchResultsRect = gmSearchResultsRoot.GetComponent<RectTransform>();
+        ConfigureSearchResultsOverlay(gmSearchResultsRect, 150f);
         gmSearchResultsRoot.AddComponent<Image>().color = new Color(0.025f, 0.065f, 0.086f, 1f);
         Outline outline = gmSearchResultsRoot.AddComponent<Outline>();
         outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.35f);
@@ -221,6 +232,20 @@ public sealed partial class GMReflectionConsole
 
         gmSearchResultsContent = ConfigureVerticalScroll(gmSearchResultsRoot, 7f, out _);
         gmSearchResultsRoot.SetActive(false);
+    }
+
+    /// <summary>把搜索结果定位在搜索框下方，不参与主窗口纵向布局。</summary>
+    private static void ConfigureSearchResultsOverlay(RectTransform resultsRect, float height)
+    {
+        if (resultsRect == null)
+            return;
+
+        const float topOffset = 128f;
+        resultsRect.anchorMin = new Vector2(0f, 1f);
+        resultsRect.anchorMax = new Vector2(1f, 1f);
+        resultsRect.pivot = new Vector2(0.5f, 1f);
+        resultsRect.offsetMin = new Vector2(8f, -topOffset - height);
+        resultsRect.offsetMax = new Vector2(-8f, -topOffset);
     }
 
     private void BuildTabBar()
