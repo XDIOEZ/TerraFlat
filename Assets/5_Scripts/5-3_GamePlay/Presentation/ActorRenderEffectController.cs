@@ -231,7 +231,7 @@ public abstract class ActorRenderEffectModule : MonoBehaviour
 
 /// <summary>
 /// 标记不参与角色主体 MPB 合成的附属 Renderer。
-/// 状态火焰、头顶图标等独立表现可使用此标记，避免受到角色受击闪白、水下染色或透明度控制。
+/// 状态火焰、头顶图标等独立表现可使用此标记，避免受到角色受击闪红、水下染色或透明度控制。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ActorRenderEffectExclude : MonoBehaviour

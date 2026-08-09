@@ -29,7 +29,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         _ActorTint ("Actor Status Tint", Color) = (1,1,1,1)
         _ActorTintStrength ("Actor Status Tint Strength", Range(0,1)) = 0
         _HitFlash ("Hit Flash", Range(0,1)) = 0
-        _HitFlashColor ("Hit Flash Color", Color) = (1,1,1,1)
+        _HitFlashColor ("Hit Flash Color", Color) = (1,0.08,0.08,1)
 
         _Dissolve ("Dissolve", Range(0,1)) = 0
         _DissolveTex ("Dissolve Noise", 2D) = "white" {}
@@ -219,7 +219,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                         lineMask * saturate(_WaterLineColor.a));
                 }
 
-                // === 角色状态染色与受击闪白 ===
+                // === 角色状态染色与受击闪红 ===
                 main.rgb = lerp(main.rgb, _ActorTint.rgb, saturate(_ActorTintStrength));
                 main.rgb = lerp(main.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
 
@@ -401,6 +401,10 @@ Shader "Game/2D/Sprite-Lit-Master"
             float _WaterWaveAmplitude;
             float _WaterWaveFrequency;
             float _WaterWaveSpeed;
+            float4 _ActorTint;
+            float _ActorTintStrength;
+            float _HitFlash;
+            float4 _HitFlashColor;
 
             Varyings UnlitVertex(Attributes attributes)
             {
@@ -463,7 +467,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                         lineMask * saturate(_WaterLineColor.a));
                 }
 
-                // === 角色状态染色与受击闪白 ===
+                // === 角色状态染色与受击闪红 ===
                 mainTex.rgb = lerp(mainTex.rgb, _ActorTint.rgb, saturate(_ActorTintStrength));
                 mainTex.rgb = lerp(mainTex.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
 
