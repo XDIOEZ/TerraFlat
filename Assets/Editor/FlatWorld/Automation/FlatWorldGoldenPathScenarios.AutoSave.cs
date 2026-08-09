@@ -13,6 +13,7 @@ namespace FlatWorld.Automation
         private static Task<bool> autoSaveWriteTask;
         private static GameController autoSaveGameController;
         private static bool autoSaveSnapshotPending;
+        private static bool manualSaveRequested;
         private static bool autoSaveScenarioCompleted;
         private static double autoSaveDeadline;
         private static float autoSaveInitialTimeScale;
@@ -22,6 +23,7 @@ namespace FlatWorld.Automation
             autoSaveWriteTask = null;
             autoSaveGameController = null;
             autoSaveSnapshotPending = false;
+            manualSaveRequested = false;
             autoSaveScenarioCompleted = false;
             autoSaveDeadline = 0d;
             autoSaveInitialTimeScale = 1f;
@@ -81,6 +83,25 @@ namespace FlatWorld.Automation
                     $"AutoSave: 保存改变了全局时间缩放：{autoSaveInitialTimeScale} -> {Time.timeScale}。");
             }
 
+            // 同一场景继续验证玩家点击“保存游戏”走的是分帧快照与后台写盘路径。
+            if (!manualSaveRequested)
+            {
+                manualSaveRequested = true;
+                context.GameManager.SaveGame();
+                autoSaveDeadline = Time.realtimeSinceStartupAsDouble + 10d;
+                return;
+            }
+
+            if (context.GameManager.IsSaveInProgress)
+            {
+                if (Time.realtimeSinceStartupAsDouble > autoSaveDeadline)
+                    throw new InvalidOperationException("AutoSave: 手动保存超过 10 秒未完成。");
+                return;
+            }
+
+            if (context.GameManager.LastSaveSucceeded != true)
+                throw new InvalidOperationException("AutoSave: 手动保存未成功完成。");
+
             autoSaveScenarioCompleted = true;
         }
 
@@ -95,6 +116,7 @@ namespace FlatWorld.Automation
             autoSaveWriteTask = null;
             autoSaveGameController = null;
             autoSaveSnapshotPending = false;
+            manualSaveRequested = false;
         }
     }
 }

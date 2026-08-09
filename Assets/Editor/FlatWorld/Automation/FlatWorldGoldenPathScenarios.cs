@@ -94,6 +94,7 @@ namespace FlatWorld.Automation
             // 该回调会重复执行，子场景必须幂等且不得阻塞。
             if (context.Configuration.scenarios.burningBuff)
                 TickBurningBuffScenario(context);
+            TickItemLifecycleDropScenario();
             TickAutoSaveScenario(context);
         }
 

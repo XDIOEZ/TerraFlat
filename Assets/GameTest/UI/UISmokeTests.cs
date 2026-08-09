@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using FlatWorld.GameTest.Shared;
 using InputSystem;
 using NUnit.Framework;
@@ -53,7 +54,115 @@ namespace FlatWorld.GameTest.UI
 
         [Test]
         [Category("UI.Smoke")]
-        public void RuntimeUiCancelDoesNotBindInventoryToggleKey()
+        public void GamepadInputFocusDoesNotOpenVirtualKeyboardBeforeSubmit()
+        {
+            EventSystem previousEventSystem = EventSystem.current;
+            GameObject eventSystemObject = new GameObject("输入框焦点测试_EventSystem");
+            GameObject inputObject = new GameObject(
+                "输入框焦点测试",
+                typeof(RectTransform),
+                typeof(TMP_InputField));
+            GameObject controllerObject = new GameObject("输入框焦点测试_Controller");
+
+            try
+            {
+                EventSystem eventSystem = eventSystemObject.AddComponent<EventSystem>();
+                GamepadUIRuntimeController controller =
+                    controllerObject.AddComponent<GamepadUIRuntimeController>();
+                EventSystem.current = eventSystem;
+                eventSystem.SetSelectedGameObject(inputObject);
+                controller.SetGamepadMode(true);
+
+                MethodInfo updateMethod = typeof(GamepadUIRuntimeController).GetMethod(
+                    "Update",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(updateMethod, Is.Not.Null, "手柄 UI 控制器必须保留运行时更新入口。");
+                updateMethod.Invoke(controller, null);
+
+                Assert.That(
+                    GamepadVirtualKeyboardController.IsOpen,
+                    Is.False,
+                    "手柄焦点移动到输入框时不能自动打开虚拟键盘，必须等待确认键。");
+            }
+            finally
+            {
+                if (GamepadVirtualKeyboardController.IsOpen)
+                    GamepadVirtualKeyboardController.Cancel();
+
+                EventSystem.current = previousEventSystem;
+                Object.DestroyImmediate(controllerObject);
+                Object.DestroyImmediate(inputObject);
+                Object.DestroyImmediate(eventSystemObject);
+            }
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void LeftStickFocusInputKeepsGameplayVirtualCursorWithoutUiPanel()
+        {
+            GameObject controllerObject = new GameObject("虚拟准星隔离测试_Controller");
+
+            try
+            {
+                GamepadUIRuntimeController controller =
+                    controllerObject.AddComponent<GamepadUIRuntimeController>();
+                controller.SetGamepadMode(true);
+                controller.NotifyCursorPosition(new Vector2(100f, 100f));
+                Assert.That(controller.IsVirtualCursorMode, Is.True);
+
+                controller.NotifyFocusInput();
+
+                Assert.That(
+                    controller.IsVirtualCursorMode,
+                    Is.True,
+                    "没有打开 UI 面板时，左摇杆移动不能退出右摇杆虚拟准星模式。");
+            }
+            finally
+            {
+                Object.DestroyImmediate(controllerObject);
+            }
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void GamepadGameplayCursorUsesPlayerCenterAndStickDirection()
+        {
+            MethodInfo radialMethod = typeof(GameController).GetMethod(
+                "CalculateGameplayRadialCursorScreenPosition",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(radialMethod, Is.Not.Null, "游戏内手柄准星必须保留径向定位计算入口。");
+
+            Vector2 playerScreenPosition = new Vector2(400f, 300f);
+            Vector2 upPosition = (Vector2)radialMethod.Invoke(
+                null,
+                new object[]
+                {
+                    playerScreenPosition,
+                    Vector2.up,
+                    120f,
+                    new Vector2(800f, 600f),
+                    6f
+                });
+            Vector2 rightPosition = (Vector2)radialMethod.Invoke(
+                null,
+                new object[]
+                {
+                    playerScreenPosition,
+                    Vector2.right,
+                    120f,
+                    new Vector2(800f, 600f),
+                    6f
+                });
+
+            Assert.That(upPosition.x, Is.EqualTo(400f).Within(0.01f));
+            Assert.That(upPosition.y, Is.EqualTo(420f).Within(0.01f));
+            Assert.That(rightPosition.x, Is.EqualTo(520f).Within(0.01f));
+            Assert.That(rightPosition.y, Is.EqualTo(300f).Within(0.01f));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void RuntimeUiCancelUsesGamepadBAndDoesNotBindKeyboardB()
         {
             PlayerInputActions inputActions = new PlayerInputActions();
 
@@ -70,13 +179,52 @@ namespace FlatWorld.GameTest.UI
                     .ToArray();
 
                 Assert.That(paths, Does.Contain("<Keyboard>/escape"));
+                Assert.That(paths, Does.Contain("<Gamepad>/buttonEast"),
+                    "手柄 B 必须保留为 UI 返回键。");
                 Assert.That(paths, Does.Not.Contain("<Keyboard>/b"),
                     "键盘 B 只能交给背包开关，不能同时触发 UI 取消。");
+
+                InputAction gameplayB = inputActions.asset
+                    .FindActionMap("Win10", false)?
+                    .FindAction("B", false)
+                    ?? throw new AssertionException("玩家输入缺少 B 动作。");
+                Assert.That(
+                    gameplayB.bindings.Any(binding =>
+                        binding.groups.IndexOf("Gamepad", StringComparison.OrdinalIgnoreCase) >= 0),
+                    Is.False,
+                    "手柄 B 不能继续绑定到背包开关动作。");
             }
             finally
             {
                 inputActions.Dispose();
             }
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        [Category("UI.Layout")]
+        public void InputBindingRowProvidesModifyAndClearButtons()
+        {
+            const string rowPath =
+                "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InputBindingRow.prefab";
+
+            AssertPrefabContains(
+                rowPath,
+                "操作名称",
+                "绑定值",
+                "修改按钮",
+                "清除按钮");
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(rowPath)
+                ?? throw new AssertionException($"缺少按键绑定行 Prefab：{rowPath}");
+            Button rebindButton = prefab.GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "修改按钮");
+            Button clearButton = prefab.GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "清除按钮");
+
+            Assert.That(rebindButton.transform.parent, Is.EqualTo(clearButton.transform.parent));
+            Assert.That(rebindButton.GetComponent<LayoutElement>(), Is.Not.Null);
+            Assert.That(clearButton.GetComponent<LayoutElement>(), Is.Not.Null);
         }
 
         [Test]
@@ -194,6 +342,22 @@ namespace FlatWorld.GameTest.UI
 
         [Test]
         [Category("UI.Smoke")]
+        public void InGameSettingsPauseOnlyInSinglePlayerWorld()
+        {
+            const string sourcePath =
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/Module_Setting.cs";
+            string source = File.ReadAllText(sourcePath);
+
+            Assert.That(source, Does.Contain("basePanel.Opened += AcquireSettingsPause;"));
+            Assert.That(source, Does.Contain("basePanel.Closed += ReleaseSettingsPause;"));
+            Assert.That(source, Does.Contain("GameNetwork.IsOnline"));
+            Assert.That(source, Does.Contain("gameManager.IsInGameWorld"));
+            Assert.That(source, Does.Contain("Time.timeScale = 0f;"));
+            Assert.That(source, Does.Contain("Time.timeScale = timeScaleBeforeSettings;"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
         [Category("Smoke")]
         public void PlayerWorldCoordinateHudPrefabAndPlayerBindingFollowContract()
         {
@@ -219,6 +383,100 @@ namespace FlatWorld.GameTest.UI
                 ?? throw new AssertionException($"缺少玩家 Prefab：{playerPath}");
             Assert.That(playerPrefab.GetComponent<PlayerWorldCoordinateHUD>(), Is.Not.Null,
                 "Player 必须挂载 PlayerWorldCoordinateHUD，才能在进入世界后自动创建坐标面板。");
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        [Category("UI.Layout")]
+        public void SaveStatusHudAndManualSaveFollowAsyncContract()
+        {
+            const string hudPath =
+                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_SaveStatus.prefab";
+            const string gameManagerPath =
+                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs";
+
+            AssertPrefabContains(hudPath, "背景", "强调线", "保存状态文本");
+            GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(hudPath)
+                ?? throw new AssertionException($"缺少保存状态 HUD Prefab：{hudPath}");
+            RectTransform rootRect = hudPrefab.GetComponent<RectTransform>()
+                ?? throw new AssertionException("保存状态 HUD 根节点缺少 RectTransform。");
+            Assert.That(rootRect.anchorMin, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(rootRect.anchorMax, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(rootRect.pivot, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(hudPrefab.GetComponent<CanvasGroup>(), Is.Not.Null);
+            foreach (Graphic graphic in hudPrefab.GetComponentsInChildren<Graphic>(true))
+                Assert.That(graphic.raycastTarget, Is.False, $"保存状态 HUD 不应拦截输入：{graphic.name}");
+
+            string source = File.ReadAllText(gameManagerPath);
+            Assert.That(source, Does.Contain("SaveGameInBackgroundCoroutineWithStatus"));
+            Assert.That(source, Does.Contain("BeginSaveStatus();"));
+            Assert.That(source, Does.Contain("while (!writeTask.IsCompleted)"));
+            Assert.That(source, Does.Contain("CompleteSaveStatus(succeeded);"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        [Category("UI.Layout")]
+        public void BuffStatusHudPrefabAndPlayerBindingFollowContract()
+        {
+            const string hudPath =
+                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_BuffStatus.prefab";
+            const string itemPath =
+                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_BuffStatusItem.prefab";
+            const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
+            const string sourcePath =
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerBuffStatusHUD.cs";
+
+            AssertPrefabContains(
+                hudPath,
+                "背景",
+                "强调线",
+                "标题",
+                "数量文本",
+                "空状态文本",
+                "内容列表",
+                "Viewport",
+                "Content");
+            AssertPrefabContains(itemPath, "占位图标", "占位符文本", "状态名称", "剩余时间");
+
+            GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(hudPath)
+                ?? throw new AssertionException($"缺少 Buff HUD Prefab：{hudPath}");
+            RectTransform rootRect = hudPrefab.GetComponent<RectTransform>()
+                ?? throw new AssertionException("Buff HUD 根节点缺少 RectTransform。");
+            Assert.That(rootRect.anchorMin, Is.EqualTo(new Vector2(0f, 0.5f)));
+            Assert.That(rootRect.anchorMax, Is.EqualTo(new Vector2(0f, 0.5f)));
+            Assert.That(rootRect.pivot, Is.EqualTo(new Vector2(0f, 0.5f)));
+            Assert.That(rootRect.anchoredPosition, Is.EqualTo(new Vector2(32f, 0f)));
+            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(320f, 360f)));
+            Assert.That(hudPrefab.GetComponent<CanvasGroup>(), Is.Not.Null);
+
+            ScrollRect scroll = hudPrefab.GetComponentsInChildren<ScrollRect>(true)
+                .Single(item => item.name == "内容列表");
+            Assert.That(scroll.vertical, Is.True);
+            Assert.That(scroll.horizontal, Is.False);
+            Assert.That(scroll.viewport, Is.Not.Null);
+            Assert.That(scroll.content, Is.Not.Null);
+            Assert.That(scroll.content.GetComponent<VerticalLayoutGroup>(), Is.Not.Null);
+            Assert.That(scroll.content.GetComponent<ContentSizeFitter>(), Is.Not.Null);
+
+            foreach (Graphic graphic in hudPrefab.GetComponentsInChildren<Graphic>(true))
+                Assert.That(graphic.raycastTarget, Is.False, $"Buff HUD 不应拦截输入：{graphic.name}");
+
+            GameObject itemPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(itemPath)
+                ?? throw new AssertionException($"缺少 Buff 行 Prefab：{itemPath}");
+            foreach (Graphic graphic in itemPrefab.GetComponentsInChildren<Graphic>(true))
+                Assert.That(graphic.raycastTarget, Is.False, $"Buff 行不应拦截输入：{graphic.name}");
+
+            GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(playerPath)
+                ?? throw new AssertionException($"缺少玩家 Prefab：{playerPath}");
+            Assert.That(playerPrefab.GetComponent<PlayerBuffStatusHUD>(), Is.Not.Null,
+                "Player 必须挂载 PlayerBuffStatusHUD，才能显示本地玩家 Buff。");
+
+            string source = File.ReadAllText(sourcePath);
+            Assert.That(source, Does.Contain("BuffAdded"));
+            Assert.That(source, Does.Contain("BuffRemoved"));
+            Assert.That(source, Does.Contain("ActiveBuffs"));
+            Assert.That(source, Does.Contain("GetUiFormat"));
         }
 
         [Test]

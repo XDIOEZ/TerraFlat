@@ -14,6 +14,40 @@ namespace FlatWorld.GameTest.InventoryCrafting
     public sealed class InventoryCraftingSmokeTests
     {
 
+        [Test]
+        [Category("InventoryCrafting.Smoke")]
+        [Category("Smoke")]
+        public void HotbarSlotsDoNotEnterGamepadNavigation()
+        {
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_HotBar.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少快捷栏 Prefab：{prefabPath}");
+
+            GameObject instance = UnityEngine.Object.Instantiate(prefab);
+            try
+            {
+                Button[] slots = instance.GetComponentsInChildren<Button>(true);
+                Assert.That(slots, Is.Not.Empty, "快捷栏必须包含槽位按钮。");
+
+                FlatWorldUITheme.ApplyGamepadNavigationPolicy(instance.transform);
+                foreach (Button slot in slots)
+                {
+                    Assert.That(
+                        FlatWorldUITheme.IsGamepadNavigationExcluded(slot),
+                        Is.True,
+                        $"快捷栏槽位 {slot.name} 不应成为手柄焦点。");
+                    Assert.That(
+                        slot.navigation.mode,
+                        Is.EqualTo(UnityEngine.UI.Navigation.Mode.None),
+                        $"快捷栏槽位 {slot.name} 的导航必须关闭。");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
 
         [Test]
         [Category("InventoryCrafting.Smoke")]
@@ -122,6 +156,128 @@ namespace FlatWorld.GameTest.InventoryCrafting
                     hotbar.RuntimeInventory.Data.itemSlots[0].itemData?.IDName,
                     Is.EqualTo("Regression_Item"),
                     "玩家背包左键应将物品放入当前快捷栏槽位。");
+            }
+            finally
+            {
+                Inventory_Hand.PlayerHand = previousPlayerHand;
+                UnityEngine.Object.DestroyImmediate(playerObject);
+            }
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Smoke")]
+        [Category("Smoke")]
+        public void PlayerBagKeyboardMouseClickSwapsWithHeldHandItem()
+        {
+            GameObject playerObject = new("PlayerBagKeyboardMouseSwap_Test");
+            Inventory previousPlayerHand = Inventory_Hand.PlayerHand;
+
+            try
+            {
+                Player player = playerObject.AddComponent<Player>();
+                Inventory hand = new Inventory
+                {
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Hand)
+                };
+                hand.Data.itemSlots[0].itemData = new Data_GeneralItem
+                {
+                    IDName = "Held_Item",
+                    Stack = new ItemStack { Amount = 1f, Volume = 1f }
+                };
+
+                Inventory bag = new Inventory
+                {
+                    item = player,
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Bag)
+                };
+                bag.Data.itemSlots[0].itemData = new Data_GeneralItem
+                {
+                    IDName = "Bag_Item",
+                    Stack = new ItemStack { Amount = 1f, Volume = 1f }
+                };
+
+                Inventory_Hand.PlayerHand = hand;
+                bag.OnLeftClick(0);
+
+                Assert.That(bag.Data.itemSlots[0].itemData?.IDName, Is.EqualTo("Held_Item"),
+                    "键鼠点击时，背包槽位应接收手上原有物品。");
+                Assert.That(hand.Data.itemSlots[0].itemData?.IDName, Is.EqualTo("Bag_Item"),
+                    "键鼠点击时，背包物品应交换到手上槽位。");
+            }
+            finally
+            {
+                Inventory_Hand.PlayerHand = previousPlayerHand;
+                UnityEngine.Object.DestroyImmediate(playerObject);
+            }
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Smoke")]
+        [Category("Smoke")]
+        public void PlayerBagGamepadSubmitUsesHotbarWithoutOccupyingMouseHandSwap()
+        {
+            GameObject playerObject = new("PlayerBagGamepadSwap_Test");
+            Inventory previousPlayerHand = Inventory_Hand.PlayerHand;
+
+            try
+            {
+                Player player = playerObject.AddComponent<Player>();
+                Inventory_HotBar hotbar = playerObject.AddComponent<Inventory_HotBar>();
+                hotbar.RuntimeInventory = new Inventory_HotBar.HotBarRuntimeInventory
+                {
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Hotbar)
+                };
+                hotbar.RuntimeInventory.Owner = null;
+                hotbar.RuntimeInventory.Data.itemSlots[0].itemData = new Data_GeneralItem
+                {
+                    IDName = "Hotbar_Item",
+                    Stack = new ItemStack { Amount = 1f, Volume = 1f }
+                };
+
+                Inventory hand = new Inventory
+                {
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Hand)
+                };
+                hand.Data.itemSlots[0].itemData = new Data_GeneralItem
+                {
+                    IDName = "Held_Item",
+                    Stack = new ItemStack { Amount = 1f, Volume = 1f }
+                };
+
+                player.itemMods.BindOwner(player);
+                player.itemMods.Mods_List[ModText.Hotbar] = new List<Module> { hotbar };
+
+                Inventory bag = new Inventory
+                {
+                    item = player,
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Bag),
+                    DefaultTarget_Inventory = hand
+                };
+                bag.Data.itemSlots[0].itemData = new Data_GeneralItem
+                {
+                    IDName = "Bag_Item",
+                    Stack = new ItemStack { Amount = 1f, Volume = 1f }
+                };
+
+                Inventory_Hand.PlayerHand = hand;
+                bag.OnGamepadSubmit(0);
+
+                Assert.That(bag.Data.itemSlots[0].itemData?.IDName, Is.EqualTo("Hotbar_Item"),
+                    "手柄确认应与当前快捷栏槽位交换。");
+                Assert.That(hotbar.RuntimeInventory.Data.itemSlots[0].itemData?.IDName, Is.EqualTo("Bag_Item"),
+                    "手柄确认应把背包物品放入当前快捷栏槽位。");
+                Assert.That(hand.Data.itemSlots[0].itemData?.IDName, Is.EqualTo("Held_Item"),
+                    "手柄交换不应占用键鼠的手上槽位。");
             }
             finally
             {
