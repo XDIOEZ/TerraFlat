@@ -756,8 +756,9 @@ public sealed partial class GMReflectionConsole
             .ToList();
 
         gmSearchResultsRoot.SetActive(true);
-        LayoutElement resultsLayout = gmSearchResultsRoot.GetComponent<LayoutElement>();
-        resultsLayout.preferredHeight = Mathf.Clamp(matches.Count * 36f + 18f, 56f, 158f);
+        gmSearchResultsRoot.transform.SetAsLastSibling();
+        float resultsHeight = Mathf.Clamp(matches.Count * 36f + 18f, 56f, 158f);
+        ConfigureSearchResultsOverlay(gmSearchResultsRect, resultsHeight);
         gmSearchSummaryText.text = matches.Count > 0 ? $"找到 {matches.Count} 项" : "没有匹配项";
 
         if (matches.Count == 0)
