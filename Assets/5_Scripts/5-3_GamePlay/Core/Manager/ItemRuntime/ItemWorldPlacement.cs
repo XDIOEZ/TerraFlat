@@ -19,6 +19,14 @@ internal static class ItemWorldPlacement
             return;
         }
 
+        // 新版区块窗口尚未绑定目标画面时，物品先留在运行时根节点，
+        // 由 Mod_Droping.Load 再绑定到 ChunkView；这里绝不能触发旧 Chunk 查找。
+        if (ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive)
+        {
+            return;
+        }
+
         Vector2Int chunkPosition = Chunk.GetChunkPosition(position);
         if (ChunkMgr.Instance.TryGetActiveChunkByPos(chunkPosition, out Chunk chunk))
         {
@@ -40,6 +48,35 @@ internal static class ItemWorldPlacement
         {
             itemObject.transform.SetParent(inactiveChunk.transform, true);
         }
+    }
+
+    /// <summary>
+    /// 将一个正在执行掉落动画的物品绑定到新版 ChunkView 临时物品节点。
+    /// 不访问旧 Chunk 字典，也不请求旧区块加载。
+    /// </summary>
+    internal static bool TryAttachWorldModelDrop(Item item, Vector2 position)
+    {
+        if (item == null || item.gameObject == null)
+            return false;
+
+        ChunkNaturalItemRenderer existingOwner =
+            item.GetComponentInParent<ChunkNaturalItemRenderer>(true);
+        if (existingOwner != null)
+        {
+            existingOwner.RegisterTransientItem(item);
+            return true;
+        }
+
+        ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
+        if (chunkMgr == null || !chunkMgr.IsWorldModelRuntimeActive ||
+            !chunkMgr.TryGetRuntimeDropParent(position, out ChunkNaturalItemRenderer owner))
+        {
+            return false;
+        }
+
+        item.transform.SetParent(owner.transform, true);
+        owner.RegisterTransientItem(item);
+        return true;
     }
 
     /// <summary>将实体 AI 从旧 Chunk 所有权中摘除并挂到场景中性根节点。</summary>

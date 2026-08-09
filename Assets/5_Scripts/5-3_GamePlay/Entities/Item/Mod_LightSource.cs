@@ -46,6 +46,34 @@ public class Mod_LightSource : Module
         ApplyToUnityLight();
     }
 
+    #region 2D光源平面约束
+
+    /// <summary>
+    /// 玩家转身会让手持物绕 Y 轴插值旋转；Point Light2D 必须保持在 XY 平面，避免中途被投影成扁椭圆。
+    /// </summary>
+    private void LateUpdate()
+    {
+        KeepPointLightOn2DPlane();
+    }
+
+    /// <summary>只修正 Point Light2D 的世界 X/Y 旋转，保留 Z 轴朝向。</summary>
+    private void KeepPointLightOn2DPlane()
+    {
+        if (TargetLight == null || TargetLight.lightType != Light2D.LightType.Point)
+            return;
+
+        Vector3 worldEuler = TargetLight.transform.eulerAngles;
+        if (Mathf.Abs(Mathf.DeltaAngle(worldEuler.x, 0f)) < 0.01f &&
+            Mathf.Abs(Mathf.DeltaAngle(worldEuler.y, 0f)) < 0.01f)
+        {
+            return;
+        }
+
+        TargetLight.transform.rotation = Quaternion.Euler(0f, 0f, worldEuler.z);
+    }
+
+    #endregion
+
     public override void Load()
     {
         Data ??= new LightSourceData();
@@ -139,6 +167,7 @@ public class Mod_LightSource : Module
         }
 
         TargetLight.enabled = Data.IsEnabled && Data.Intensity > 0f && Data.Range > 0f;
+        KeepPointLightOn2DPlane();
     }
 }
 

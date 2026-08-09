@@ -15,7 +15,8 @@ public class ItemSlot_UI : MonoBehaviour,
     ISubmitHandler,
     ISelectHandler,
     IDeselectHandler,
-    IGamepadContextActionHandler
+    IGamepadContextActionHandler,
+    IGamepadPrimaryActionHandler
 {
     #region 字段
     /// <summary>
@@ -31,6 +32,9 @@ public class ItemSlot_UI : MonoBehaviour,
 
     [Tooltip("物体被点击的事件（左键）")]
     public UltEvent<int> OnLeftClick = new UltEvent<int>();
+
+    [Tooltip("手柄确认槽位事件，与鼠标点击路径分离")]
+    public UltEvent<int> OnGamepadSubmit = new UltEvent<int>();
 
     public UltEvent<int, float> _OnScroll = new UltEvent<int, float>();
 
@@ -78,6 +82,7 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnDestroy()
     {
         OnLeftClick.Clear();
+        OnGamepadSubmit.Clear();
         OnRightClick.Clear();
         OnShiftQuickTransfer.Clear();
         _OnScroll.Clear();
@@ -226,7 +231,38 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnSubmit(BaseEventData eventData)
     {
         eventData.Use();
-        HandleLeftClick();
+        // InputSystem 的 Submit 同时包含 Enter 与手柄 A；Enter 仍按键鼠路径处理。
+        if (WasKeyboardSubmitPressedThisFrame())
+            HandleLeftClick();
+        else
+            HandleGamepadPrimaryAction();
+    }
+
+    /// <summary>
+    /// 手柄 A/Submit 的独立确认入口，避免复用键鼠点击时的交换状态。
+    /// </summary>
+    public bool HandleGamepadPrimaryAction()
+    {
+        if (!isActiveAndEnabled)
+            return false;
+
+        OnGamepadSubmit.Invoke(slotIndex);
+        return true;
+    }
+
+    /// <summary>
+    /// 识别键盘 Enter，避免键盘确认误进入手柄交换目标。
+    /// </summary>
+    private static bool WasKeyboardSubmitPressedThisFrame()
+    {
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null)
+        {
+            return keyboard.enterKey.wasPressedThisFrame ||
+                   keyboard.numpadEnterKey.wasPressedThisFrame;
+        }
+
+        return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
     }
 
     /// <summary>

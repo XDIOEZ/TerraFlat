@@ -6,7 +6,7 @@ using UnityEngine;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>
-/// ChunkView 的自然生态物品表现适配器。
+/// ChunkView 的自然生态与临时掉落物表现适配器。
 /// 后台只返回 NaturalItemPlacement；本组件在主线程通过 ItemMgr 创建现有 Item，显式挂在
 /// NaturalItems 子节点，并在区块卸载前把权威状态写回 PlanetData 的生态差量存档。
 /// </summary>
@@ -29,7 +29,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         return spawnedItems.TryGetValue(guid, out item) && item != null;
     }
 
-    /// <summary>登记采摘掉落物，使区块解绑时只回收临时物品而不写入生态存档。</summary>
+    /// <summary>登记区块临时掉落物，使解绑时回收它而不写入生态存档。</summary>
     public void RegisterTransientItem(Item item)
     {
         if (item == null || item.DestructionHandled || !transientItems.Add(item))

@@ -42,6 +42,7 @@ public class Inventory
     private GameController _boundController;
     private InputAction _boundToggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
+    private bool _isProcessingGamepadSubmit;
     // 当前背包打开的物品上下文菜单；关闭背包时必须随背包一起回收。
     private BasePanel _activeContextMenuPanel;
 
@@ -156,7 +157,7 @@ public class Inventory
                 return;
             }
 
-            // B 是库存自身的开关键，不能交给全局取消栈抢先消费。
+            // 键盘 B 是库存自身的开关键；手柄 B 已交给全局返回动作。
             SwitchUI();
         };
 
@@ -275,8 +276,11 @@ public class Inventory
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
         ResolvePanelInputController();
-        bool closeOnCancel = !string.Equals(ToggleActionName, "B", StringComparison.OrdinalIgnoreCase);
-        basePanel.PrepareForGamepadNavigation(closeOnCancel: closeOnCancel);
+        // 常驻快捷栏不进入 EventSystem 焦点链，避免左摇杆移动时把 HUD 槽位当成导航目标。
+        if (!IsHotBarInventory())
+        {
+            basePanel.PrepareForGamepadNavigation(closeOnCancel: true);
+        }
         basePanel.Opened += AcquirePanelInputLock;
         basePanel.Closed += ReleasePanelInputLock;
         basePanel.Closed += CloseActiveContextMenu;
@@ -432,9 +436,12 @@ public class Inventory
         // 槽位是运行时动态创建的，必须在创建完成后重新收集组件并补齐导航图。
         Canvas.ForceUpdateCanvases();
         basePanel.RefreshUIComponents();
-        basePanel.PrepareForGamepadNavigation(
-            preferredControlName: "UI_Slot",
-            closeOnCancel: !string.Equals(ToggleActionName, "B", StringComparison.OrdinalIgnoreCase));
+        if (!IsHotBarInventory())
+        {
+            basePanel.PrepareForGamepadNavigation(
+                preferredControlName: "UI_Slot",
+                closeOnCancel: true);
+        }
     }
     //同步UI与Data
     public void SyncData()
@@ -490,11 +497,13 @@ public class Inventory
             );
 
             itemSlotUI.OnLeftClick.Clear();
+            itemSlotUI.OnGamepadSubmit.Clear();
             itemSlotUI._OnScroll.Clear();
             itemSlotUI.OnRightClick.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
 
             itemSlotUI.OnLeftClick += OnLeftClick;
+            itemSlotUI.OnGamepadSubmit += OnGamepadSubmit;
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnRightClick += OnRightClick;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
@@ -550,11 +559,13 @@ public class Inventory
             });
 
         slotUI.OnLeftClick.Clear();
+        slotUI.OnGamepadSubmit.Clear();
         slotUI._OnScroll.Clear();
         slotUI.OnRightClick.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
 
         slotUI.OnLeftClick += OnLeftClick;
+        slotUI.OnGamepadSubmit += OnGamepadSubmit;
         slotUI._OnScroll += OnScroll;
         slotUI.OnRightClick += OnRightClick;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
@@ -754,12 +765,48 @@ public class Inventory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public virtual void OnLeftClick(int index)
     {
+        ProcessSlotInteraction(
+            index,
+            _isProcessingGamepadSubmit
+                ? SlotInteractionSource.Gamepad
+                : SlotInteractionSource.KeyboardMouse);
+    }
+
+    /// <summary>
+    /// 手柄 A/Submit 的槽位操作入口，使用独立的快捷栏目标，不改写键鼠手上槽位状态。
+    /// </summary>
+    public virtual void OnGamepadSubmit(int index)
+    {
+        bool previousValue = _isProcessingGamepadSubmit;
+        _isProcessingGamepadSubmit = true;
+        try
+        {
+            // 通过虚拟标记调用虚拟 OnLeftClick，保留装备栏、快捷栏等派生库存的专用校验。
+            OnLeftClick(index);
+        }
+        finally
+        {
+            _isProcessingGamepadSubmit = previousValue;
+        }
+    }
+
+    private enum SlotInteractionSource
+    {
+        KeyboardMouse,
+        Gamepad
+    }
+
+    /// <summary>
+    /// 执行一次槽位交换，并让输入设备决定本次使用的目标库存。
+    /// </summary>
+    private void ProcessSlotInteraction(int index, SlotInteractionSource source)
+    {
         if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
             return;
 
-        if (!TryEnsureDefaultTargetInventory())
+        if (!TryResolveSlotInteractionTarget(source))
         {
-            Debug.LogWarning($"[Inventory.OnLeftClick] DefaultTarget_Inventory 未设置，当前库存={Data.Name}, 索引={index}");
+            Debug.LogWarning($"[Inventory.ProcessSlotInteraction] DefaultTarget_Inventory 未设置，当前库存={Data.Name}, 索引={index}, 输入={source}");
             return;
         }
 
@@ -772,6 +819,34 @@ public class Inventory
             hotBarInventory.SyncHeldItemImmediately();
 
         RefreshUI(index);
+    }
+
+    /// <summary>
+    /// 键鼠优先保留已有的手上物品交换；手柄则固定使用当前快捷栏槽位。
+    /// </summary>
+    private bool TryResolveSlotInteractionTarget(SlotInteractionSource source)
+    {
+        if (IsPlayerBagInventory() && source == SlotInteractionSource.Gamepad)
+        {
+            Inventory hotBar = GetPlayerHotBarInventory();
+            if (IsValidQuickTransferTarget(hotBar))
+            {
+                DefaultTarget_Inventory = hotBar;
+                return true;
+            }
+        }
+
+        if (IsPlayerBagInventory() && source == SlotInteractionSource.KeyboardMouse)
+        {
+            Inventory handInventory = GetPlayerHandInventory();
+            if (HasHeldItem(handInventory))
+            {
+                DefaultTarget_Inventory = handInventory;
+                return true;
+            }
+        }
+
+        return TryEnsureDefaultTargetInventory();
     }
 
     private bool TryEnsureDefaultTargetInventory()
@@ -794,21 +869,51 @@ public class Inventory
         if (DefaultTarget_Inventory != null && DefaultTarget_Inventory.Data != null && DefaultTarget_Inventory.Data.itemSlots != null && DefaultTarget_Inventory.Data.itemSlots.Count > 0)
             return true;
 
-        if (Inventory_Hand.PlayerHand != null && Inventory_Hand.PlayerHand.Data != null && Inventory_Hand.PlayerHand.Data.itemSlots != null && Inventory_Hand.PlayerHand.Data.itemSlots.Count > 0)
+        Inventory handInventory = GetPlayerHandInventory();
+        if (IsValidQuickTransferTarget(handInventory))
         {
-            DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
+            DefaultTarget_Inventory = handInventory;
             return true;
         }
 
+        return false;
+    }
+
+    /// <summary>
+    /// 获取当前玩家的手上库存，优先使用背包所属玩家，避免静态引用残留到旧玩家。
+    /// </summary>
+    private Inventory GetPlayerHandInventory()
+    {
+        Inventory handInventory = item?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+        if (IsValidQuickTransferTarget(handInventory))
+            return handInventory;
+
         if (item != null && item.itemMods != null && item.itemMods.ContainsKey_ID(ModText.Hand))
         {
-            var handInventoryProvider = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>();
-            var handInventory = handInventoryProvider?.GetDefaultTargetInventory();
-            if (handInventory != null && handInventory.Data != null && handInventory.Data.itemSlots != null && handInventory.Data.itemSlots.Count > 0)
-            {
-                DefaultTarget_Inventory = handInventory;
+            IInventory handInventoryProvider = item.itemMods.GetMod_ByID(ModText.Hand).GetComponent<IInventory>();
+            handInventory = handInventoryProvider?.GetDefaultTargetInventory();
+            if (IsValidQuickTransferTarget(handInventory))
+                return handInventory;
+        }
+
+        return IsValidQuickTransferTarget(Inventory_Hand.PlayerHand)
+            ? Inventory_Hand.PlayerHand
+            : null;
+    }
+
+    /// <summary>
+    /// 判断手上槽位是否确实持有可交换物品。
+    /// </summary>
+    private static bool HasHeldItem(Inventory handInventory)
+    {
+        if (!IsValidQuickTransferTarget(handInventory))
+            return false;
+
+        for (int i = 0; i < handInventory.Data.itemSlots.Count; i++)
+        {
+            ItemSlot slot = handInventory.Data.itemSlots[i];
+            if (slot?.itemData != null && slot.itemData.Stack != null && slot.itemData.Stack.Amount > 0f)
                 return true;
-            }
         }
 
         return false;

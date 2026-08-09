@@ -90,6 +90,9 @@ public class ItemMaker
     [Tooltip("根据Item掉落物品 附带动画")]
     public void DropItem_cric(Item item, Vector3 startPos, float radius)
     {
+        item.transform.position = WorldTopologyRuntime.NormalizePosition(startPos);
+        ItemWorldPlacement.TryAttachWorldModelDrop(item, item.transform.position);
+
         // 设置物品暂时不可被拾取
         item.itemData.Stack.CanBePickedUp = false;
 
@@ -116,6 +119,9 @@ public class ItemMaker
     [Tooltip("根据Item掉落物品 附带动画（简化参数）")]
     public void DropItemWithAnimation(Transform itemTransform, Vector3 startPos, Vector3 endPos, Item item)
     {
+        item.transform.position = WorldTopologyRuntime.NormalizePosition(startPos);
+        ItemWorldPlacement.TryAttachWorldModelDrop(item, item.transform.position);
+
         itemTransform.GetComponent<MonoBehaviour>().StartCoroutine(
             ParabolaAnimation(
                 itemTransform,

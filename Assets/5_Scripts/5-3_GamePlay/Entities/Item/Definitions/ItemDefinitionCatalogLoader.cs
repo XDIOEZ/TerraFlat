@@ -541,7 +541,11 @@ public static class ItemDefinitionCatalogLoader
             if (prototype?._Data == null)
                 throw new InvalidDataException($"物品 {id} 找不到模块 Prefab/外壳模块：{moduleId}");
 
-            ModuleData moduleData = FastCloner.FastCloner.DeepClone(prototype._Data);
+            // 以 object 作为泛型实参，避免深拷贝按 ModuleData 静态类型退化为错误的 Ex_ModData。
+            ModuleData moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
+            if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
+                throw new InvalidDataException(
+                    $"物品 {id} 的模块 {moduleName} 数据类型复制失败：期望 {prototype._Data.GetType().Name}，实际 {moduleData?.GetType().Name ?? "null"}");
             PopulateModuleData(moduleDto.Data, moduleData, id, moduleName);
             moduleData.Name = moduleName;
             moduleData.ID = string.IsNullOrWhiteSpace(moduleDto.Id)
@@ -628,9 +632,17 @@ public static class ItemDefinitionCatalogLoader
     private static Module ResolveModulePrototype(GameRes gameRes, GameObject shell, string moduleId)
     {
         GameObject modulePrefab = gameRes.GetPrefab(moduleId, false);
-        Module module = modulePrefab?.GetComponentInChildren<Module>(true);
-        if (module != null)
-            return module;
+        if (modulePrefab != null)
+        {
+            // 一个旧模块 Prefab 可能同时包含 Item 和多个 Module，必须按持久化 ID 选中目标类型，不能取第一个组件。
+            Module[] candidates = modulePrefab.GetComponentsInChildren<Module>(true);
+            Module matched = candidates.FirstOrDefault(candidate =>
+                candidate != null && candidate.MatchesPersistedId(moduleId));
+            if (matched != null)
+                return matched;
+            if (candidates.Length == 1)
+                return candidates[0];
+        }
 
         return shell.GetComponentsInChildren<Module>(true)
             .FirstOrDefault(candidate => candidate != null && candidate.MatchesPersistedId(moduleId));

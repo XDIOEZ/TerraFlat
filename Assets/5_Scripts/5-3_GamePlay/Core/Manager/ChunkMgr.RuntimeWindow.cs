@@ -67,6 +67,13 @@ public partial class ChunkMgr
     public int RuntimeChunkPrefetchInFlightCount => runtimePrefetchInFlightCount;
 
     /// <summary>
+    /// 本地 WorldModel 区块窗口已经启用。掉落物等运行时实体在此状态下不得再触发旧 Chunk 加载。
+    /// </summary>
+    public bool IsWorldModelRuntimeActive =>
+        runtimeChunkManager != null &&
+        (runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count > 0);
+
+    /// <summary>
     /// 当前活动视野内的区块是否都已经完成数据提交和 ChunkView 表现绑定。
     /// 维度切换使用它等待完整视野，不能只判断玩家脚下的中心区块。
     /// </summary>
@@ -105,12 +112,44 @@ public partial class ChunkMgr
         return view != null && view.IsBound;
     }
 
+    /// <summary>按世界坐标查找已绑定的新版区块画面。</summary>
+    public bool TryGetRuntimeChunkView(Vector2 worldPosition, out ChunkView view)
+    {
+        view = null;
+        if (!TryResolveRuntimeAddress(worldPosition, out RuntimeWorldAddress address))
+            return false;
+        return TryGetRuntimeChunkView(address, out view);
+    }
+
+    /// <summary>查找新版区块的临时物品节点，供掉落物统一归属。</summary>
+    public bool TryGetRuntimeDropParent(Vector2 worldPosition,
+        out ChunkNaturalItemRenderer renderer)
+    {
+        renderer = null;
+        if (!TryGetRuntimeChunkView(worldPosition, out ChunkView view))
+            return false;
+
+        renderer = view.GetComponentInChildren<ChunkNaturalItemRenderer>(true);
+        return renderer != null && renderer.isActiveAndEnabled;
+    }
+
     /// <summary>当前位置的区块画面是否已完成绑定，可供本地实体安全显示。</summary>
     public bool IsRuntimeEntityPresentationReady(Vector2 worldPosition)
     {
         // 专用服务器或旧版区块流程不创建本地画面，不能因此暂停权威实体。
         if (!runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count == 0)
             return true;
+        return TryGetRuntimeChunkView(worldPosition, out _);
+    }
+
+    /// <summary>使用当前生成 Profile 将世界坐标换算为新版区块地址。</summary>
+    private bool TryResolveRuntimeAddress(Vector2 worldPosition,
+        out RuntimeWorldAddress address)
+    {
+        address = default;
+        if (runtimeChunkManager == null ||
+            !runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count == 0)
+            return false;
 
         ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile;
         int stepX = Math.Max(1, profile?.Width ?? Mathf.RoundToInt(GetChunkSize().x));
@@ -118,9 +157,9 @@ public partial class ChunkMgr
         Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
             Mathf.FloorToInt(worldPosition.x / stepX) * stepX,
             Mathf.FloorToInt(worldPosition.y / stepY) * stepY));
-        var address = new RuntimeWorldAddress(
+        address = new RuntimeWorldAddress(
             ResolveCurrentDimensionId(), new Int2(origin.x, origin.y));
-        return TryGetRuntimeChunkView(address, out _);
+        return true;
     }
 
     /// <summary>以玩家附近位置刷新区块窗口，启动生成、绑定画面并回收远处区块。</summary>

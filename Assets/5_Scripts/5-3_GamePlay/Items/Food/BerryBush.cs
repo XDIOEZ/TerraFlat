@@ -195,6 +195,11 @@ public class BerryBush : MonoBehaviour, IInteractable
 		if (naturalRenderer != null)
 			return naturalRenderer.gameObject;
 
+		// 新版区块已经接管窗口时，找不到自然物父节点也不能触发旧 Chunk 查找。
+		if (ChunkMgr.ExistingInstance != null &&
+			ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive)
+			return null;
+
 		ChunkMgr chunkMgr = ChunkMgr.Instance;
 		if (chunkMgr != null &&
 			chunkMgr.TryGetActiveChunkByPos(Chunk.GetChunkPosition(spawnPos), out Chunk chunk) &&
