@@ -892,12 +892,22 @@ public static class ItemDefinitionMigrationTool
         if (settings == null)
             throw new InvalidOperationException("AddressableAssetSettings 未初始化");
         AddressableAssetEntry entry = settings.CreateOrMoveEntry(guid, settings.DefaultGroup);
-        entry.address = assetPath;
+        // 方括号会被 Addressables 同时用于解析真实内部路径和子资源名，资源目录必须先改成安全名称。
+        string address = GetSpriteAssetAddress(assetPath);
+        entry.address = address;
         entry.SetLabel(ItemSpriteLabel, true, true);
         settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entry, true);
 
         UnityEngine.Object mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
-        return ReferenceEquals(mainAsset, sprite) ? assetPath : $"{assetPath}[{sprite.name}]";
+        return ReferenceEquals(mainAsset, sprite) ? address : $"{address}[{sprite.name}]";
+    }
+
+    private static string GetSpriteAssetAddress(string assetPath)
+    {
+        if (assetPath.IndexOf('[') >= 0 || assetPath.IndexOf(']') >= 0)
+            throw new InvalidDataException(
+                $"Sprite 路径包含 Addressables 保留方括号：{assetPath}；请先重命名资源目录或文件后再迁移");
+        return assetPath;
     }
 
     private static void RebuildRuntimePrefabAddressables()
