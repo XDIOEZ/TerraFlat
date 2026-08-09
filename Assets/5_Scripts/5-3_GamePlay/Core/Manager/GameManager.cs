@@ -23,6 +23,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     public bool IsInGameWorld { get; private set; } = false;
 
+    /// <summary>最近一次手动保存结果；保存进行中为 null。</summary>
+    public bool? LastSaveSucceeded { get; private set; }
+
 
 
     #endregion
@@ -1046,14 +1049,55 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 保存游戏数据专用方法，仅执行保存操作不进行其他逻辑处理
+    /// 保存游戏数据专用方法；分帧采集区块并后台原子写盘，不阻塞主线程。
     /// </summary>
     public void SaveGame()
     {
-        CaptureSaveGameState();
+        if (manualSaveCoroutine != null)
+            return;
 
-        // SaveDataMgr 在写盘前统一保存全部已加载区块。
-        SaveDataMgr.Instance.Save_And_WriteToDisk();
+        LastSaveSucceeded = null;
+        BeginSaveStatus();
+        manualSaveCoroutine = StartCoroutine(SaveGameInBackgroundCoroutineWithStatus());
+    }
+
+    private Coroutine manualSaveCoroutine;
+
+    /// <summary>等待分帧快照与后台写盘完成，结束后更新右上角保存状态。</summary>
+    private IEnumerator SaveGameInBackgroundCoroutineWithStatus()
+    {
+        Task<bool> writeTask = null;
+        bool succeeded = false;
+        Exception saveFailure = null;
+
+        yield return SaveGameInBackgroundCoroutine(task => writeTask = task);
+        if (writeTask == null)
+        {
+            saveFailure = new InvalidOperationException("手动保存未创建后台写入任务。");
+        }
+        else
+        {
+            while (!writeTask.IsCompleted)
+                yield return null;
+
+            try
+            {
+                succeeded = writeTask.GetAwaiter().GetResult();
+            }
+            catch (Exception exception)
+            {
+                saveFailure = exception;
+            }
+        }
+
+        if (saveFailure != null)
+        {
+            Debug.LogException(new InvalidOperationException("[GameManager] 手动保存失败。", saveFailure));
+        }
+
+        LastSaveSucceeded = succeeded;
+        CompleteSaveStatus(succeeded);
+        manualSaveCoroutine = null;
     }
 
     /// <summary>
