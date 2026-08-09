@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// 角色通用颜色与受击表现模块。
-/// 通过 ActorRenderEffectController 统一写入 MaterialPropertyBlock，提供可复用的状态染色、受击闪白和渐变强度。
-/// 受击持续时间默认 0.2 秒、闪烁次数默认 1 次；不会访问 Renderer.material，因此不会为每个角色创建材质实例。
+/// 通过 ActorRenderEffectController 统一写入 MaterialPropertyBlock，提供可复用的状态染色、受击闪红和渐变强度。
+/// 受击持续时间默认 0.2 秒、闪烁次数默认 1 次、受击颜色为明显的红色；不会访问 Renderer.material，因此不会为每个角色创建材质实例。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ActorRenderColorEffect : ActorRenderEffectModule
@@ -24,8 +24,8 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
     [SerializeField, Range(0f, 1f)] private float statusTintStrength;
     [SerializeField, Min(0f)] private float statusTransitionSeconds = 0.12f;
 
-    [Header("受击闪白")]
-    [SerializeField] private Color hitFlashColor = Color.white;
+    [Header("受击闪红")]
+    [SerializeField] private Color hitFlashColor = new Color(1f, 0.08f, 0.08f, 1f);
     [SerializeField, Min(0.01f)] private float defaultFlashDuration = 0.2f;
     [SerializeField, Min(1)] private int defaultFlashCount = 1;
     [SerializeField] private AnimationCurve flashIntensity = new AnimationCurve(
@@ -44,7 +44,7 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
     private float flashElapsed;
     private float flashDuration;
     private int flashCount;
-    private Color currentFlashColor = Color.white;
+    private Color currentFlashColor = new Color(1f, 0.08f, 0.08f, 1f);
     private float currentFlashAmount;
 
     #endregion
@@ -89,7 +89,7 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
         SetStatusTint(Color.white, 0f);
     }
 
-    /// <summary>播放一次受击闪白，可被重复命中重新触发。</summary>
+    /// <summary>播放一次受击闪红，可被重复命中重新触发。</summary>
     public void PlayHitFlash(Color color, float duration, int count)
     {
         currentFlashColor = color;
@@ -98,7 +98,7 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
         flashElapsed = 0f;
     }
 
-    /// <summary>使用组件默认参数播放受击闪白。</summary>
+    /// <summary>使用组件默认参数播放受击闪红。</summary>
     public void PlayHitFlash()
     {
         PlayHitFlash(hitFlashColor, defaultFlashDuration, defaultFlashCount);

@@ -68,7 +68,7 @@ Material:
     - _ActorTint: {r: 1, g: 1, b: 1, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
-    - _HitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+    - _HitFlashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
     - _WaterLineColor: {r: 0.65, g: 0.9, b: 1, a: 1}
     - _WaterTint: {r: 0.17999998, g: 0.41999996, b: 0.78, a: 1}
   m_BuildTextureStacks: []
