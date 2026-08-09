@@ -142,9 +142,29 @@ namespace FlatWorld.Automation
                         continue;
                     }
 
+                    ChunkLightOccluderRenderer lightOccluder = null;
+                    int originalOccluderCount = -1;
+                    if (chunkManager.TryGetRuntimeChunkView(
+                            sample.Address,
+                            out ChunkView existingView))
+                    {
+                        lightOccluder = existingView.GetComponentInChildren<
+                            ChunkLightOccluderRenderer>(true);
+                        originalOccluderCount = lightOccluder?.ActiveOccluderCount ?? -1;
+                    }
+
                     if (!TileBuildingSystem.TryPlace(placement, GoldenStoneWallTileBlockId,
                             out _buildingScenarioStoneCell, out lastReason))
                         continue;
+
+                    if (lightOccluder == null || !lightOccluder.IsBound ||
+                        lightOccluder.ActiveOccluderCount <= originalOccluderCount)
+                    {
+                        throw new InvalidOperationException(
+                            $"石墙写入后光照遮挡层没有同步增加：cell={cell}, " +
+                            $"before={originalOccluderCount}, " +
+                            $"after={lightOccluder?.ActiveOccluderCount ?? -1}。");
+                    }
 
                     _buildingScenarioStonePlaced = true;
                     TerrainCell placedTerrain = _buildingScenarioStoneCell.RuntimeChunk.Terrain.GetCell(
@@ -163,6 +183,14 @@ namespace FlatWorld.Automation
                     if (!TileBuildingSystem.TryRemove(_buildingScenarioStoneCell,
                             spawnDrop: false, out string removeReason))
                         throw new InvalidOperationException($"石墙新区块回滚失败：{removeReason}。");
+
+                    if (lightOccluder.ActiveOccluderCount != originalOccluderCount)
+                    {
+                        throw new InvalidOperationException(
+                            $"石墙移除后光照遮挡层没有恢复：cell={cell}, " +
+                            $"expected={originalOccluderCount}, " +
+                            $"actual={lightOccluder.ActiveOccluderCount}。");
+                    }
 
                     _buildingScenarioStonePlaced = false;
                     _buildingScenarioStoneScenarioCompleted = true;

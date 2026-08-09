@@ -152,6 +152,47 @@ namespace FlatWorld.GameTest.AI
             AssertDetectorCoversTriggerDistance(wolf, wolfPrefab, wolf.chaseTriggerDistance);
         }
 
+        /// <summary>狼的玩家/同伴感知范围覆盖最大玩家视野，并明显大于野猪。</summary>
+        [Test]
+        [Category("AI.Smoke")]
+        [Category("Smoke")]
+        public void WolfPerceptionAndPackCallRangesCoverPlayerView()
+        {
+            const float expectedWolfPerceptionRadius = 40f;
+            GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
+            GameObject wolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Wolf.prefab");
+            GameObject legacyWolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Wolf_Tree.prefab");
+
+            Mod_ItemDetector wildBoarDetector = wildBoarPrefab != null
+                ? wildBoarPrefab.GetComponentInChildren<Mod_ItemDetector>(true)
+                : null;
+            Mod_ItemDetector wolfDetector = wolfPrefab != null
+                ? wolfPrefab.GetComponentInChildren<Mod_ItemDetector>(true)
+                : null;
+            Mod_ItemDetector legacyWolfDetector = legacyWolfPrefab != null
+                ? legacyWolfPrefab.GetComponentInChildren<Mod_ItemDetector>(true)
+                : null;
+            AI_Wolf wolf = wolfPrefab != null
+                ? wolfPrefab.GetComponentInChildren<AI_Wolf>(true)
+                : null;
+
+            Assert.That(wildBoarDetector, Is.Not.Null);
+            Assert.That(wolfDetector, Is.Not.Null);
+            Assert.That(legacyWolfDetector, Is.Not.Null);
+            Assert.That(wolf, Is.Not.Null);
+            Assert.That(wolfDetector.DetectionRadius, Is.GreaterThan(wildBoarDetector.DetectionRadius));
+            Assert.That(wolfDetector.DetectionRadius, Is.GreaterThanOrEqualTo(expectedWolfPerceptionRadius));
+            Assert.That(legacyWolfDetector.DetectionRadius, Is.GreaterThanOrEqualTo(expectedWolfPerceptionRadius));
+            Assert.That(wolf.allyCallDistance, Is.GreaterThanOrEqualTo(expectedWolfPerceptionRadius));
+            Assert.That(
+                wolf.allyCallDistance,
+                Is.LessThanOrEqualTo(wolfDetector.DetectionRadius + 0.0001f),
+                "同伴呼叫范围不能超过实际感知范围。");
+        }
+
         /// <summary>狼的检测遮罩必须包含玩家层和自身层，否则既无法锁定玩家也无法组成狼群。</summary>
         [Test]
         [Category("AI.Smoke")]
@@ -197,6 +238,39 @@ namespace FlatWorld.GameTest.AI
 
             attackController.Update(0.12f);
             Assert.That(attackController.IsDamageWindowActive, Is.False);
+        }
+
+        /// <summary>首击窗口必须补查 AI 触发器内已有目标，且不能把扫描扩散到武器模块。</summary>
+        [Test]
+        [Category("AI.Smoke")]
+        [Category("Smoke")]
+        public void AttackControllerFirstWindowScansOnlyAIDamageModules()
+        {
+            GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
+            Mod_Damage_AI aiDamage = wildBoarPrefab != null
+                ? wildBoarPrefab.GetComponentInChildren<Mod_Damage_AI>(true)
+                : null;
+            GameObject weaponObject = new GameObject("Generic Damage Test");
+
+            try
+            {
+                Mod_Damage genericDamage = weaponObject.AddComponent<Mod_Damage>();
+
+                Assert.That(aiDamage, Is.Not.Null);
+                Assert.That(aiDamage.EnableOnTriggerEnterDamage, Is.True);
+                Assert.That(aiDamage.DamageInterval, Is.EqualTo(-1f));
+                Assert.That(
+                    AI_AttackController.ShouldScanCurrentOverlapsOnWindowStart(aiDamage),
+                    Is.True);
+                Assert.That(
+                    AI_AttackController.ShouldScanCurrentOverlapsOnWindowStart(genericDamage),
+                    Is.False);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(weaponObject);
+            }
         }
 
         /// <summary>野猪攻击触发器与 AI 判定必须共用横宽竖窄的椭圆范围。</summary>
