@@ -25,6 +25,9 @@ public class UIManager : MonoBehaviour
             return _instance;
         }
     }
+
+    /// <summary>只读取当前已存在的 UIManager，不在输入轮询中隐式创建对象。</summary>
+    public static UIManager ExistingInstance => _instance;
     #endregion
 
     #region 字段声明
@@ -237,6 +240,33 @@ public class UIManager : MonoBehaviour
 
         panel.SelectDefaultForGamepad();
         return true;
+    }
+
+    /// <summary>判断当前是否存在打开且已接入手柄焦点导航的面板。</summary>
+    public bool HasOpenGamepadNavigationPanel()
+    {
+        return panelRoot != null && FindTopmostGamepadPanel(panelRoot) != null;
+    }
+
+    /// <summary>判断当前是否存在打开且需要接管玩法输入的模态手柄面板。</summary>
+    public bool HasOpenModalGamepadNavigationPanel()
+    {
+        if (panelRoot == null)
+            return false;
+
+        for (int childIndex = panelRoot.childCount - 1; childIndex >= 0; childIndex--)
+        {
+            Transform child = panelRoot.GetChild(childIndex);
+            BasePanel[] childPanels = child.GetComponentsInChildren<BasePanel>(true);
+            for (int panelIndex = childPanels.Length - 1; panelIndex >= 0; panelIndex--)
+            {
+                BasePanel panel = childPanels[panelIndex];
+                if (panel != null && panel.IsCancelShortcutTarget)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     private static BasePanel FindTopmostGamepadPanel(Transform root)

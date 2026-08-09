@@ -16,6 +16,9 @@ public static class RuntimeUIPrefabKeys
     public const string InputBindingRow = "UI_InputBindingRow";
     public const string WorldLoading = "UI_WorldLoading";
     public const string PlayerWorldCoordinate = "UI_PlayerWorldCoordinate";
+    public const string SaveStatus = "UI_SaveStatus";
+    public const string BuffStatus = "UI_BuffStatus";
+    public const string BuffStatusItem = "UI_BuffStatusItem";
 
     #endregion
 

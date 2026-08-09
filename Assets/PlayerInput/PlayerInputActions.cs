@@ -473,17 +473,6 @@ namespace InputSystem
                 },
                 {
                     ""name"": """",
-                    ""id"": ""db1476f7-7414-453c-b651-efb9c89691e5"",
-                    ""path"": ""<Gamepad>/buttonEast"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Gamepad"",
-                    ""action"": ""B"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""740a4f78-51fb-482a-b7e6-6c084a50b944"",
                     ""path"": ""<Keyboard>/escape"",
                     ""interactions"": """",

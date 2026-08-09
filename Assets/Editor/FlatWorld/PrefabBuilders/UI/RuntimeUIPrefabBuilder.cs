@@ -21,6 +21,7 @@ public static class RuntimeUIPrefabBuilder
     private const string SystemRoot = RuntimeRoot + "System/";
     private const string InventoryRoot = "Assets/2_Prefabs/2-1_UI/InventoryUI/";
     private const string NetworkPlayerPrefab = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
+    private const string PlayerPrefab = "Assets/2_Prefabs/Player/Player.prefab";
 
     private static readonly Color Canvas = new Color(0.025f, 0.043f, 0.058f, 0.99f);
     private static readonly Color Surface = new Color(0.045f, 0.075f, 0.095f, 0.99f);
@@ -65,15 +66,18 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.CharacterSpeechBubble + ".prefab", BuildSpeechBubble);
         SaveNewPrefab(SystemRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
         SavePlayerWorldCoordinatePrefab();
+        SaveSaveStatusPrefab();
+        SaveBuffStatusPrefabs();
 
         UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", ConfigureSettingsActionListPages);
         UpdateExistingPrefab(InventoryRoot + "UI_Bag.prefab", AddInventorySortButton);
         UpdateExistingPrefab(InventoryRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
+        UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化设置、设置列表分页、显示设置、世界加载、聊天、气泡、玩家坐标、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
+        Debug.Log("[Runtime UI] 已固化设置、设置列表分页、显示设置、世界加载、保存状态、Buff 状态、聊天、气泡、玩家坐标、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
     }
 
     /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
@@ -135,6 +139,43 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化玩家世界坐标 HUD Prefab。");
     }
 
+    /// <summary>只重建右上角保存状态提示，避免无关运行时 Prefab 被重写。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Save Status HUD")]
+    public static void RebuildSaveStatusHUD()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SystemRoot);
+        SaveSaveStatusPrefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化右上角保存状态提示 Prefab。");
+    }
+
+    /// <summary>只重建左侧中部 Buff 提示栏及玩家挂载组件，避免无关 Prefab 被重写。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Buff Status HUD")]
+    public static void RebuildBuffStatusHUD()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SystemRoot);
+        SaveBuffStatusPrefabs();
+        UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化左侧中部 Buff 状态提示栏，并挂载到 Player.prefab。");
+    }
+
     /// <summary>只重建坐标显示设置和设置列表分页，避免无关运行时 Prefab 被重写。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Coordinate Display Settings UI")]
     public static void RebuildCoordinateDisplaySettingsUI()
@@ -152,6 +193,26 @@ public static class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化坐标显示设置 Prefab 与设置列表三分页。");
+    }
+
+    /// <summary>只重建动态按键绑定行，便于单独调整修改与清除按钮。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Input Binding UI")]
+    public static void RebuildInputBindingUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsRoot);
+        SaveNewPrefab(
+            SettingsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab",
+            BuildInputBindingRow);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化按键绑定行 Prefab，包含修改与清除按钮。");
     }
 
     private static void SaveNewPrefab(string path, System.Func<GameObject> factory)
@@ -174,6 +235,25 @@ public static class RuntimeUIPrefabBuilder
         string prefabPath = SystemRoot + RuntimeUIPrefabKeys.PlayerWorldCoordinate + ".prefab";
         SaveNewPrefab(prefabPath, BuildPlayerWorldCoordinateHUD);
         EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>保存右上角保存状态提示并登记为运行时 Prefab。</summary>
+    private static void SaveSaveStatusPrefab()
+    {
+        string prefabPath = SystemRoot + RuntimeUIPrefabKeys.SaveStatus + ".prefab";
+        SaveNewPrefab(prefabPath, BuildSaveStatusHUD);
+        EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>保存 Buff 状态面板和可复用行 Prefab，并登记为运行时 Addressable。</summary>
+    private static void SaveBuffStatusPrefabs()
+    {
+        string panelPath = SystemRoot + RuntimeUIPrefabKeys.BuffStatus + ".prefab";
+        string itemPath = SystemRoot + RuntimeUIPrefabKeys.BuffStatusItem + ".prefab";
+        SaveNewPrefab(panelPath, BuildBuffStatusHUD);
+        SaveNewPrefab(itemPath, BuildBuffStatusItem);
+        EnsureRuntimePrefabAddressable(panelPath);
+        EnsureRuntimePrefabAddressable(itemPath);
     }
 
     /// <summary>保存坐标显示设置并登记为可由 GameRes 查询的正式运行时 Prefab。</summary>
@@ -274,6 +354,196 @@ public static class RuntimeUIPrefabBuilder
         coordinates.enableWordWrapping = false;
         coordinates.overflowMode = TextOverflowModes.Ellipsis;
         SetTopLeft(coordinates.rectTransform, 18f, 34f, 258f, 26f);
+
+        return root;
+    }
+
+    /// <summary>构建不拦截输入的右上角保存状态卡片，默认隐藏并由 GameSaveStatusHUD 控制显隐。</summary>
+    private static GameObject BuildSaveStatusHUD()
+    {
+        GameObject root = CreateUIObject(RuntimeUIPrefabKeys.SaveStatus, null, typeof(CanvasGroup));
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(1f, 1f);
+        rootRect.anchorMax = new Vector2(1f, 1f);
+        rootRect.pivot = new Vector2(1f, 1f);
+        rootRect.anchoredPosition = new Vector2(-32f, -118f);
+        rootRect.sizeDelta = new Vector2(260f, 52f);
+
+        CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        canvasGroup.alpha = 0f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+
+        Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.94f));
+        background.raycastTarget = false;
+        Stretch(background.rectTransform);
+        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.48f));
+
+        Image accent = CreateImage("强调线", root.transform, Amber);
+        accent.raycastTarget = false;
+        RectTransform accentRect = accent.rectTransform;
+        accentRect.anchorMin = new Vector2(0f, 0f);
+        accentRect.anchorMax = new Vector2(0f, 1f);
+        accentRect.pivot = new Vector2(0f, 0.5f);
+        accentRect.anchoredPosition = Vector2.zero;
+        accentRect.sizeDelta = new Vector2(4f, -14f);
+
+        TextMeshProUGUI status = CreateText("保存状态文本", root.transform, "正在保存…", 16f, Cream);
+        status.fontStyle = FontStyles.Bold;
+        status.alignment = TextAlignmentOptions.MidlineLeft;
+        status.enableWordWrapping = false;
+        status.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopStretch(status.rectTransform, new Vector2(18f, 0f), new Vector2(-14f, 0f));
+        return root;
+    }
+
+    /// <summary>构建屏幕左侧中部的非交互 Buff 状态栏，超出高度时由 ScrollRect 裁剪。</summary>
+    private static GameObject BuildBuffStatusHUD()
+    {
+        GameObject root = CreateUIObject(RuntimeUIPrefabKeys.BuffStatus, null, typeof(CanvasGroup));
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(0f, 0.5f);
+        rootRect.anchorMax = new Vector2(0f, 0.5f);
+        rootRect.pivot = new Vector2(0f, 0.5f);
+        rootRect.anchoredPosition = new Vector2(32f, 0f);
+        rootRect.sizeDelta = new Vector2(320f, 360f);
+
+        CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+
+        Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.92f));
+        background.raycastTarget = false;
+        Stretch(background.rectTransform);
+        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.46f));
+
+        Image accent = CreateImage("强调线", root.transform, Amber);
+        accent.raycastTarget = false;
+        RectTransform accentRect = accent.rectTransform;
+        accentRect.anchorMin = new Vector2(0f, 0f);
+        accentRect.anchorMax = new Vector2(0f, 1f);
+        accentRect.pivot = new Vector2(0f, 0.5f);
+        accentRect.anchoredPosition = Vector2.zero;
+        accentRect.sizeDelta = new Vector2(4f, -18f);
+
+        TextMeshProUGUI title = CreateText("标题", root.transform, "状态效果 / BUFFS", 13f, Amber);
+        title.fontStyle = FontStyles.Bold;
+        title.characterSpacing = 1f;
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(title.rectTransform, 18f, 12f, 220f, 22f);
+
+        TextMeshProUGUI count = CreateText("数量文本", root.transform, "0", 13f, Muted);
+        count.alignment = TextAlignmentOptions.MidlineRight;
+        count.enableWordWrapping = false;
+        count.overflowMode = TextOverflowModes.Ellipsis;
+        count.rectTransform.anchorMin = new Vector2(1f, 1f);
+        count.rectTransform.anchorMax = new Vector2(1f, 1f);
+        count.rectTransform.pivot = new Vector2(1f, 1f);
+        count.rectTransform.anchoredPosition = new Vector2(-18f, -12f);
+        count.rectTransform.sizeDelta = new Vector2(52f, 22f);
+
+        GameObject scrollRoot = CreateUIObject("内容列表", root.transform, typeof(ScrollRect));
+        SetTopLeft(scrollRoot.GetComponent<RectTransform>(), 16f, 48f, 288f, 292f);
+
+        GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D));
+        Stretch(viewport.GetComponent<RectTransform>());
+
+        GameObject content = CreateUIObject("Content", viewport.transform);
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
+        contentLayout.spacing = 7f;
+        contentLayout.childControlWidth = true;
+        contentLayout.childControlHeight = true;
+        contentLayout.childForceExpandWidth = true;
+        contentLayout.childForceExpandHeight = false;
+        content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = scrollRoot.GetComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 26f;
+        scroll.viewport = viewport.GetComponent<RectTransform>();
+        scroll.content = contentRect;
+
+        TextMeshProUGUI empty = CreateText("空状态文本", root.transform, "暂无状态", 13f, Muted);
+        empty.alignment = TextAlignmentOptions.Center;
+        empty.enableWordWrapping = false;
+        empty.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(empty.rectTransform, 20f, 182f, 280f, 24f);
+
+        return root;
+    }
+
+    /// <summary>构建 Buff 行：统一占位图标、名称和剩余时间，不依赖具体 Buff 美术资源。</summary>
+    private static GameObject BuildBuffStatusItem()
+    {
+        GameObject root = CreateUIObject(
+            RuntimeUIPrefabKeys.BuffStatusItem,
+            null,
+            typeof(Image),
+            typeof(BuffStatusRowView));
+        LayoutElement rowElement = root.AddComponent<LayoutElement>();
+        rowElement.preferredHeight = 58f;
+
+        Image background = root.GetComponent<Image>();
+        background.color = new Color(0.055f, 0.105f, 0.12f, 0.92f);
+        background.raycastTarget = false;
+        AddOutline(background, new Color(0.55f, 0.68f, 0.70f, 0.22f));
+
+        HorizontalLayoutGroup rowLayout = root.AddComponent<HorizontalLayoutGroup>();
+        rowLayout.padding = new RectOffset(10, 10, 8, 8);
+        rowLayout.spacing = 10f;
+        rowLayout.childAlignment = TextAnchor.MiddleLeft;
+        rowLayout.childControlWidth = true;
+        rowLayout.childControlHeight = true;
+        rowLayout.childForceExpandWidth = false;
+        rowLayout.childForceExpandHeight = false;
+
+        GameObject iconObject = CreateUIObject("占位图标", root.transform, typeof(Image));
+        LayoutElement iconElement = iconObject.AddComponent<LayoutElement>();
+        iconElement.preferredWidth = 38f;
+        iconElement.preferredHeight = 38f;
+        Image icon = iconObject.GetComponent<Image>();
+        icon.color = new Color(0.26f, 0.61f, 0.57f, 0.85f);
+        icon.raycastTarget = false;
+        AddOutline(icon, new Color(0.95f, 0.91f, 0.81f, 0.42f));
+
+        TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, "?", 20f, Cream);
+        placeholder.fontStyle = FontStyles.Bold;
+        placeholder.alignment = TextAlignmentOptions.Center;
+        placeholder.enableWordWrapping = false;
+        Stretch(placeholder.rectTransform);
+
+        GameObject info = CreateUIObject("状态信息", root.transform);
+        LayoutElement infoElement = info.AddComponent<LayoutElement>();
+        infoElement.flexibleWidth = 1f;
+        VerticalLayoutGroup infoLayout = info.AddComponent<VerticalLayoutGroup>();
+        infoLayout.spacing = 1f;
+        infoLayout.childAlignment = TextAnchor.MiddleLeft;
+        infoLayout.childControlWidth = true;
+        infoLayout.childControlHeight = true;
+        infoLayout.childForceExpandWidth = true;
+        infoLayout.childForceExpandHeight = false;
+
+        TextMeshProUGUI name = CreateText("状态名称", info.transform, "Buff", 15f, Cream);
+        name.fontStyle = FontStyles.Bold;
+        name.enableWordWrapping = false;
+        name.overflowMode = TextOverflowModes.Ellipsis;
+        name.gameObject.AddComponent<LayoutElement>().preferredHeight = 23f;
+
+        TextMeshProUGUI remaining = CreateText("剩余时间", info.transform, "剩余 30s", 11f, Muted);
+        remaining.enableWordWrapping = false;
+        remaining.overflowMode = TextOverflowModes.Ellipsis;
+        remaining.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         return root;
     }
@@ -654,6 +924,7 @@ public static class RuntimeUIPrefabBuilder
         binding.alignment = TextAlignmentOptions.MidlineRight;
         binding.gameObject.AddComponent<LayoutElement>().preferredWidth = 190f;
         CreateButton("修改按钮", root.transform, "修改", 86f, 34f, true);
+        CreateButton("清除按钮", root.transform, "清除", 86f, 34f, false);
         return root;
     }
 
@@ -1020,6 +1291,19 @@ public static class RuntimeUIPrefabBuilder
         label.fontSize = 2.4f;
         label.color = Color.white;
         label.sortingOrder = 100;
+    }
+
+    /// <summary>确保本地玩家 Prefab 挂载 Buff HUD 控制器；控制器本身只负责实例化正式 UI Prefab。</summary>
+    private static void EnsurePlayerBuffStatusHUD(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        if (root.GetComponent<PlayerBuffStatusHUD>() == null)
+        {
+            root.AddComponent<PlayerBuffStatusHUD>();
+            EditorUtility.SetDirty(root);
+        }
     }
 
     #endregion

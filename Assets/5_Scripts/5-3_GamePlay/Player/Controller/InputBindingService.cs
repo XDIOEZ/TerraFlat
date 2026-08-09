@@ -149,7 +149,6 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("RightClick", null, "次要操作", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("E", null, "交互", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("F", null, "丢弃", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
-        new BindingSpec("B", null, "背包", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("P", null, "装备面板", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("H", null, "手工制作", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("Shift", null, "奔跑", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
@@ -209,6 +208,9 @@ public sealed class InputBindingService : IDisposable
             return "未绑定";
         }
 
+        if (string.IsNullOrEmpty(entry.Action.bindings[entry.BindingIndex].effectivePath))
+            return "未绑定";
+
         string display = entry.Action.GetBindingDisplayString(
             entry.BindingIndex,
             InputBinding.DisplayStringOptions.DontIncludeInteractions);
@@ -262,6 +264,7 @@ public sealed class InputBindingService : IDisposable
         InputAction action = entry.Action;
         int bindingIndex = entry.BindingIndex;
         string previousOverridePath = action.bindings[bindingIndex].overridePath;
+        bool hadPreviousOverride = previousOverridePath != null;
 
         restoreMapAfterRebind = actionMap.enabled;
         if (restoreMapAfterRebind)
@@ -308,7 +311,11 @@ public sealed class InputBindingService : IDisposable
                     InputBindingEntry conflict = FindConflict(entry);
                     if (conflict != null)
                     {
-                        RestoreOverride(action, bindingIndex, previousOverridePath);
+                        RestoreOverride(
+                            action,
+                            bindingIndex,
+                            previousOverridePath,
+                            hadPreviousOverride);
                         FinishRebind(new InputRebindResult
                         {
                             Status = InputRebindStatus.Conflict,
@@ -329,7 +336,11 @@ public sealed class InputBindingService : IDisposable
         }
         catch (Exception exception)
         {
-            RestoreOverride(action, bindingIndex, previousOverridePath);
+            RestoreOverride(
+                action,
+                bindingIndex,
+                previousOverridePath,
+                hadPreviousOverride);
             FinishRebind(new InputRebindResult
             {
                 Status = InputRebindStatus.Failed,
@@ -367,6 +378,30 @@ public sealed class InputBindingService : IDisposable
         SaveOverrides();
         BindingsChanged?.Invoke();
     }
+
+    #region 单项绑定清除
+
+    /// <summary>清除单个绑定；使用空覆盖路径禁用默认绑定，并立即持久化当前设备组。</summary>
+    public bool ClearBinding(InputBindingEntry entry)
+    {
+        ThrowIfDisposed();
+        CancelActiveRebind();
+
+        if (!IsValidEntry(entry))
+            return false;
+
+        entry.Action.ApplyBindingOverride(
+            entry.BindingIndex,
+            new InputBinding
+            {
+                overridePath = string.Empty
+            });
+        SaveOverrides();
+        BindingsChanged?.Invoke();
+        return true;
+    }
+
+    #endregion
 
     public void Dispose()
     {
@@ -558,12 +593,15 @@ public sealed class InputBindingService : IDisposable
     private static void RestoreOverride(
         InputAction action,
         int bindingIndex,
-        string previousOverridePath)
+        string previousOverridePath,
+        bool hadPreviousOverride)
     {
-        if (string.IsNullOrEmpty(previousOverridePath))
+        if (!hadPreviousOverride)
             action.RemoveBindingOverride(bindingIndex);
         else
-            action.ApplyBindingOverride(bindingIndex, previousOverridePath);
+            action.ApplyBindingOverride(
+                bindingIndex,
+                previousOverridePath ?? string.Empty);
     }
 
     private void SaveOverrides()

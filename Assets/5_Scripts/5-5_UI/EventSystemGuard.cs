@@ -167,7 +167,7 @@ public static class EventSystemGuard
             ApplyBindingOverride(submit, 2 + i, null);
 
         InputAction cancel = uiMap.FindAction("Cancel", false);
-        // 键盘 B 属于库存开关，不能同时触发 EventSystem 的取消事件。
+        // 键盘 B 仍属于库存开关；手柄 B 没有 Win10/B 绑定，由 UI Cancel 使用默认 buttonEast 返回。
         ApplyBindingOverride(cancel, 0, FindFirstGroupBindingPath(escapeAction, "Keyboard&Mouse", "<Keyboard>/escape"));
         ApplyBindingOverride(cancel, 1, FindFirstGroupBindingPath(cancelAction, "Gamepad", "<Gamepad>/buttonEast"));
         ApplyBindingOverride(cancel, 2, FindFirstGroupBindingPath(escapeAction, "Gamepad", "<Gamepad>/start"));
@@ -337,6 +337,26 @@ public static class EventSystemGuard
     }
 
     public static bool IsVirtualKeyboardOpen => GamepadVirtualKeyboardController.IsOpen;
+
+    /// <summary>当前是否存在打开且接入手柄导航的 UI 面板。</summary>
+    public static bool HasOpenGamepadNavigationPanel
+    {
+        get
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            return manager != null && manager.HasOpenGamepadNavigationPanel();
+        }
+    }
+
+    /// <summary>当前是否存在打开且需要接管玩法输入的模态手柄面板。</summary>
+    public static bool HasOpenModalGamepadNavigationPanel
+    {
+        get
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            return manager != null && manager.HasOpenModalGamepadNavigationPanel();
+        }
+    }
 
     public static bool TryHandleGamepadContextAction()
     {

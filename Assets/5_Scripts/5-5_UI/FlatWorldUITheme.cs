@@ -59,6 +59,12 @@ public static class FlatWorldUITheme
         "UI_NewGame", "NewGame", "UI_AudioSettings", "UI_InterfaceSettings", "Settings", "Setting", "设置", "难度"
     };
 
+    // 常驻 HUD 不应成为手柄焦点；快捷栏由玩家输入动作和自身选中框驱动。
+    private static readonly string[] GamepadNavigationExcludedRootNames =
+    {
+        "UI_HotBar"
+    };
+
     private static readonly (string Key, string Title, string Eyebrow)[] WindowTitles =
     {
         ("UI_Bag", "行囊", "INVENTORY  /  随身物资"),
@@ -216,11 +222,34 @@ public static class FlatWorldUITheme
         if (selectable == null)
             return false;
 
+        if (IsUnderGamepadNavigationExcludedRoot(selectable.transform))
+            return true;
+
         if (selectable is Scrollbar)
             return true;
 
         if (selectable is Slider slider)
             return !IsGamepadInteractiveSlider(slider);
+
+        return false;
+    }
+
+    /// <summary>判断控件是否属于不参与手柄焦点的常驻 HUD。</summary>
+    private static bool IsUnderGamepadNavigationExcludedRoot(Transform target)
+    {
+        for (Transform current = target; current != null; current = current.parent)
+        {
+            for (int i = 0; i < GamepadNavigationExcludedRootNames.Length; i++)
+            {
+                if (string.Equals(
+                        current.name,
+                        GamepadNavigationExcludedRootNames[i],
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
 
         return false;
     }
